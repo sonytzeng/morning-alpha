@@ -261,7 +261,7 @@ export function checkTXFStatus(
 
 /**
  * Get the previous trading day (YYYY-MM-DD) before the given date.
- * Skips weekends (Sat/Sun). Does NOT account for Taiwan holidays.
+ * Skips weekends (Sat/Sun) and known Taiwan market holidays.
  *
  * @param dateStr - YYYY-MM-DD format
  * @returns YYYY-MM-DD of the previous trading day
@@ -269,17 +269,24 @@ export function checkTXFStatus(
 export function getPreviousTradingDay(dateStr: string): string {
   const parts = dateStr.split('-');
   if (parts.length !== 3) return dateStr;
-  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  const d = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])));
 
-  // Step back one day at a time, skipping weekends
-  do {
-    d.setDate(d.getDate() - 1);
-  } while (d.getDay() === 0 || d.getDay() === 6);
+  // Step back one day at a time, skipping weekends and Taiwan market holidays.
+  let safety = 0;
+  while (safety < 30) {
+    safety++;
+    d.setUTCDate(d.getUTCDate() - 1);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const check = `${y}-${m}-${dd}`;
+    const dow = d.getUTCDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const isHoliday = !!TAIWAN_HOLIDAYS[check];
+    if (!isWeekend && !isHoliday) return check;
+  }
 
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
+  return dateStr;
 }
 
 // ── Market Close helpers ──

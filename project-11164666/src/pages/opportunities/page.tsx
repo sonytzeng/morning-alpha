@@ -1,13 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
-import { supabase } from '@/lib/supabase';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
-import { formatTaipeiDate } from '@/utils/tradingDay';
 import { renderSafeText } from '@/utils/renderSafe';
 import { trackPageView, trackEvent } from '@/utils/analytics';
+import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 
 // ═══════════════════════════════════════════════════
 // V9.0: Three-tier beneficiary stock types
@@ -83,29 +82,30 @@ function OpportunitiesContent() {
   const [dataBasisNote, setDataBasisNote] = useState<string>('');
   const [doNotDoList, setDoNotDoList] = useState<string[]>([]);
   const [invalidationItems, setInvalidationItems] = useState<string[]>([]);
+  const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
+  const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
 
   useEffect(() => {
     trackPageView('/opportunities');
     async function load() {
       try {
         setLoading(true);
-        const { data: report } = await supabase
-          .from('reports')
-          .select('*')
-          .order('report_date', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const resolved = await resolveActiveMorningAlphaReport();
+        const report = resolved.rawRow;
 
         if (!report) { setDs(null); return; }
 
         const displayState = getMorningAlphaDisplayState(report as Record<string, unknown> | null);
         setDs(displayState);
+        setIsHistoricalFallback(resolved.isHistoricalFallback);
+        setFallbackReportDate(resolved.fallbackReportDate);
 
-        if (displayState.isMarketClosed) {
+        if (displayState.isMarketClosed || displayState.marketStatus !== 'trading' || resolved.isHistoricalFallback) {
           setCoreStocks([]);
           setExtendedStocks([]);
           setScenarioStocks([]);
-          setDataStatus('insufficient');
+          setDataStatus(resolved.isHistoricalFallback ? 'historical_fallback' : 'insufficient');
+          setDataBasisNote(resolved.isHistoricalFallback ? `上一份報告日期：${resolved.fallbackReportDate || displayState.reportDate}` : '今日非交易日，不產生今日受惠股。');
           return;
         }
 
@@ -191,7 +191,7 @@ function OpportunitiesContent() {
   }
 
   // ═══ Market closed ═══
-  if (ds.isMarketClosed) {
+  if (ds.isMarketClosed || ds.marketStatus !== 'trading') {
     return (
       <div className="min-h-screen bg-background-50 flex flex-col">
         <Navbar />
@@ -201,9 +201,9 @@ function OpportunitiesContent() {
               <i className="ri-calendar-close-line text-secondary-500 text-2xl"></i>
             </div>
             <h1 className="text-foreground-900 font-bold text-xl mb-2">今日台股休市</h1>
-            <p className="text-foreground-500 text-sm mb-2">日期：{ds.reportDate}</p>
+            <p className="text-foreground-500 text-sm mb-2">日期：{ds.currentDate}</p>
             {ds.holidayName && <p className="text-foreground-400 text-sm mb-4">休市原因：{ds.holidayName}</p>}
-            <p className="text-foreground-400 text-xs leading-relaxed mb-5">{ds.todayQuote}</p>
+            <p className="text-foreground-400 text-xs leading-relaxed mb-5">今日台股休市，不產生今日受惠股。請於下一個交易日再查看最新主線地圖。</p>
             <Link to="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-sm">返回首頁</Link>
           </div>
         </main>
@@ -212,7 +212,27 @@ function OpportunitiesContent() {
     );
   }
 
-  const todayTaipeiStr = formatTaipeiDate();
+  if (isHistoricalFallback) {
+    return (
+      <div className="min-h-screen bg-background-50 flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="max-w-md text-center bg-background-100 border border-background-200/70 rounded-2xl p-6">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center">
+              <i className="ri-time-line text-amber-500 text-2xl"></i>
+            </div>
+            <h1 className="text-foreground-900 font-bold text-xl mb-2">今日盤前報告尚未產生</h1>
+            <p className="text-foreground-500 text-sm mb-2">今日日期：{ds.currentDate}</p>
+            {fallbackReportDate && <p className="text-foreground-400 text-sm mb-4">上一份報告參考：{fallbackReportDate}</p>}
+            <p className="text-foreground-400 text-xs leading-relaxed mb-5">今日受惠股需等待 07:30 盤前報告產生後才會顯示。為避免誤導，這裡不會把上一份報告的受惠股顯示成今日名單。</p>
+            <Link to="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-sm">返回首頁</Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   const hasCore = coreStocks.length > 0;
   const hasExtended = extendedStocks.length > 0;
   const hasScenario = scenarioStocks.length > 0;

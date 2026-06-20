@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
+// DEPRECATED: superseded by fetch-market-data-v10.
+// This legacy function is intentionally disabled to prevent accidental writes to market_data.
 // ===== fetch-market-data-v7 =====
 // Purpose: Fetch market data from Yahoo Finance and write to market_data table
 // Supports: IXIC, SOX, TSM, DXY, CL, SPX, VIX, US10Y, NVDA, AMD
@@ -110,6 +112,33 @@ Deno.serve(async (req) => {
   const now = new Date().toISOString();
 
   console.log(`[MARKET:${requestId}] start - ${now}`);
+
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info, x-cron-secret",
+      },
+    });
+  }
+
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: "DEPRECATED_FUNCTION_DISABLED",
+      reason: "fetch-market-data-v7 is deprecated and no longer writes market_data. Use fetch-market-data-v10.",
+      replacement: "fetch-market-data-v10",
+    }),
+    {
+      status: 410,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+    },
+  );
 
   // ===== 1. Auth =====
   const adminSecret = Deno.env.get("ADMIN_API_SECRET") || "";

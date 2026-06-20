@@ -13,7 +13,6 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-secret, x-cron-secret",
 };
 
-const CRON_SECRET = "MorningAlpha_0730_CRON_2026";
 const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
@@ -143,7 +142,16 @@ Deno.serve(async (req) => {
 
     // ── Auth: x-cron-secret ──
     const incomingCronSecret = req.headers.get("x-cron-secret") || "";
-    if (incomingCronSecret !== CRON_SECRET) {
+    const cronSecret = Deno.env.get("CRON_SECRET") || "";
+    if (!cronSecret) {
+      console.error(`[${batchTag}] CRON_SECRET is not configured`);
+      return new Response(
+        JSON.stringify({ success: false, error: "Server configuration error", reason: "CRON_SECRET is not configured" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+      );
+    }
+
+    if (incomingCronSecret !== cronSecret) {
       return new Response(
         JSON.stringify({ success: false, error: "Unauthorized" }),
         { status: 401, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },

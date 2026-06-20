@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// DEPRECATED: superseded by generate-daily-report-v7.
+// This legacy function is intentionally disabled to prevent accidental writes to reports.
 // ===== AI Daily Report Auto-Generation Engine V6 =====
 // Morning Alpha V6: 新聞引用強制版（News-Grounding Enforced）
 // 核心原則：
@@ -97,6 +99,16 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
+
+  return corsResponse(
+    {
+      success: false,
+      error: 'DEPRECATED_FUNCTION_DISABLED',
+      reason: 'generate-daily-report is deprecated and no longer writes reports. Use generate-daily-report-v7 via cron-generate-report.',
+      replacement: 'generate-daily-report-v7',
+    },
+    410
+  );
 
   const startTime = Date.now();
   const logs: string[] = [];

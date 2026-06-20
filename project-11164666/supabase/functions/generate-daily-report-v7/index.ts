@@ -22,6 +22,22 @@ function getTaiwanTradingDayInfo(dateString:string):TradingDayInfo{
   }catch{return{is_trading_day:false,market_closed:true,holiday_name:'交易日判斷異常',reason:'TRADING_DAY_GATE_ERROR'};}
 }
 
+function formatTaiwanDateFromUtc(d:Date):string{
+  return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+}
+
+function getPreviousTaiwanTradingDay(todayDate:string):string{
+  const parts=todayDate.split('-').map(Number);
+  if(parts.length!==3||parts.some(isNaN))throw new Error('INVALID_TODAY_DATE_FOR_PREVIOUS_TRADING_DAY');
+  const d=new Date(Date.UTC(parts[0],parts[1]-1,parts[2]));
+  for(let i=0;i<30;i++){
+    d.setUTCDate(d.getUTCDate()-1);
+    const candidate=formatTaiwanDateFromUtc(d);
+    if(getTaiwanTradingDayInfo(candidate).is_trading_day)return candidate;
+  }
+  throw new Error('PREVIOUS_TAIWAN_TRADING_DAY_NOT_FOUND');
+}
+
 function buildMarketClosedReport(todayDate:string,tdInfo:TradingDayInfo):Record<string,unknown>{
   const holidayLabel=tdInfo.holiday_name||'休市日';
   return{
@@ -60,6 +76,7 @@ type SectorRotationRow={sector:string;sub_sector:string;rotation_score:number;di
 
 function safeInteger(v:unknown,fallback:number=50):number{if(v===null||v===undefined)return fallback;const n=Number(v);if(Number.isNaN(n))return fallback;if(n>=0&&n<=1)return Math.round(n*100);if(n>100)return 100;if(n<0)return 0;return Math.round(n);}
 function convictionLevelFromConfidence(c:number):string{if(c>=75)return'★★★★★';if(c>=60)return'★★★★☆';return'★★★☆☆';}
+function isStrongSectorRotation(s:SectorRotationRow):boolean{return s.rotation_score>=70&&(s.direction==='strong_positive'||s.direction==='positive'||s.signal_label==='強勢主流'||s.signal_label==='轉強');}
 
 const CATALYST_TYPE_MAP:Record<string,string>={'2330':'SEMICONDUCTOR','2454':'SEMICONDUCTOR','3443':'SEMICONDUCTOR','3034':'SEMICONDUCTOR','2303':'SEMICONDUCTOR','2382':'AI_SERVER','3231':'AI_SERVER','6669':'AI_SERVER','2357':'AI_SERVER','2376':'AI_SERVER','2317':'AI_SERVER','2356':'AI_SERVER','3017':'COOLING','3324':'COOLING','3711':'ADVANCED_PACKAGING','8046':'ADVANCED_PACKAGING','3037':'ADVANCED_PACKAGING','3661':'SEMICONDUCTOR','2308':'AI_SERVER','2408':'MEMORY','2344':'MEMORY','2337':'MEMORY','8299':'MEMORY','3081':'CPO','2345':'CPO','4906':'CPO','6239':'SEMICONDUCTOR','2881':'DEFENSIVE','2882':'DEFENSIVE','2891':'DEFENSIVE','2603':'CYCLICAL','2615':'CYCLICAL','2610':'CYCLICAL','1301':'CYCLICAL','1303':'CYCLICAL','1326':'CYCLICAL','2412':'DEFENSIVE','3045':'DEFENSIVE','4904':'DEFENSIVE',};
 function catalystTypeForStock(symbol:string):string{return CATALYST_TYPE_MAP[symbol]||'SEMICONDUCTOR';}
@@ -128,8 +145,8 @@ function finalSanitizeTWStocks(stocks:Record<string,unknown>[],_fallback:Record<
   return result.slice(0,12);
 }
 
-async function fetchTodaySectorRotation(supabase:ReturnType<typeof createClient>,todayDate:string,log:(m:string)=>void):Promise<SectorRotationRow[]>{
-  try{const r=await supabase.from('sector_rotation_scores').select('sector,sub_sector,rotation_score,direction,signal_label,leading_symbols,lagging_symbols,summary').eq('score_date',todayDate).order('rotation_score',{ascending:false}).limit(10);const{data,error}=safeUnwrap<Record<string,unknown>[]>(r,log,'sector_rotation');if(error||!data?.length){log('[fetchTodaySectorRotation] no data for '+todayDate);return [];}const rows:SectorRotationRow[]=data.map(function(row){return{sector:String(row.sector||''),sub_sector:String(row.sub_sector||''),rotation_score:Number(row.rotation_score)||0,direction:String(row.direction||''),signal_label:String(row.signal_label||''),leading_symbols:Array.isArray(row.leading_symbols)?row.leading_symbols.map(String):[],lagging_symbols:Array.isArray(row.lagging_symbols)?row.lagging_symbols.map(String):[],summary:row.summary?String(row.summary):undefined}});log('[fetchTodaySectorRotation] got '+rows.length+' sectors');return rows;}catch(e){log('[fetchTodaySectorRotation] exception: '+(e instanceof Error?e.message:String(e)));return [];}
+async function fetchSectorRotationForDate(supabase:ReturnType<typeof createClient>,scoreDate:string,log:(m:string)=>void):Promise<SectorRotationRow[]>{
+  try{const r=await supabase.from('sector_rotation_scores').select('sector,sub_sector,rotation_score,direction,signal_label,leading_symbols,lagging_symbols,summary').eq('score_date',scoreDate).order('rotation_score',{ascending:false}).limit(10);const{data,error}=safeUnwrap<Record<string,unknown>[]>(r,log,'sector_rotation');if(error||!data?.length){log('[fetchSectorRotationForDate] no data for '+scoreDate);return [];}const rows:SectorRotationRow[]=data.map(function(row){return{sector:String(row.sector||''),sub_sector:String(row.sub_sector||''),rotation_score:Number(row.rotation_score)||0,direction:String(row.direction||''),signal_label:String(row.signal_label||''),leading_symbols:Array.isArray(row.leading_symbols)?row.leading_symbols.map(String):[],lagging_symbols:Array.isArray(row.lagging_symbols)?row.lagging_symbols.map(String):[],summary:row.summary?String(row.summary):undefined}});log('[fetchSectorRotationForDate] got '+rows.length+' sectors for '+scoreDate);return rows;}catch(e){log('[fetchSectorRotationForDate] exception: '+(e instanceof Error?e.message:String(e)));return [];}
 }
 
 // ═══ V9.0 THREE-TIER BENEFICIARY ═══
@@ -166,7 +183,7 @@ function buildThreeTierBeneficiaryStocks(md:MarketIndicator[],sectorData:SectorR
     return{core_beneficiary_stocks:insufficientStocks.slice(0,3),extended_watchlist:[],scenario_watchlist:[],data_status:'insufficient',data_basis_note:'今日海外市場資料不足（缺少 NVDA/SOX/SPX 等關鍵指標），僅提供核心觀察股，不擴充延伸名單。',todayStocks:insufficientStocks.slice(0,5),fullStocks:insufficientStocks.slice(0,8)};
   }
 
-  const strongSectors=sectorData.filter(function(s){return s.rotation_score>=70&&(s.direction==='strong_positive'||s.signal_label==='強勢主流')}).slice(0,3);
+  const strongSectors=sectorData.filter(isStrongSectorRotation).slice(0,3);
 
   // TIER 1: CORE (3)
   const coreStocks:Record<string,unknown>[]=[];const coreSeen=new Set<string>();
@@ -608,7 +625,9 @@ Deno.serve(async (req:Request)=>{
     const{marketData,dataCount}=await fetchMarketData(supabase,log);log('MARKET_DATA count='+dataCount);
     const hasMarketData=dataCount>0;const reportMode=determineReportMode(dow,hasMarketData,dataCount);
     const{newsData}=await fetchMarketNews(supabase,log);log('NEWS count='+newsData.length);
-    const sectorData=await fetchTodaySectorRotation(supabase,todayDate,log);log('SECTOR_ROTATION rows='+sectorData.length);
+    const sectorRotationReferenceDate=getPreviousTaiwanTradingDay(todayDate);log('SECTOR_ROTATION reference_date='+sectorRotationReferenceDate+' basis=previous_trading_day');
+    const sectorData=await fetchSectorRotationForDate(supabase,sectorRotationReferenceDate,log);log('SECTOR_ROTATION rows='+sectorData.length);
+    if(sectorData.length===0)log('SECTOR_ROTATION_MISSING reference_date='+sectorRotationReferenceDate+'; continuing without fallback to today');
 
     let rawDataForDates:Record<string,unknown>[]=[];try{const rr=await supabase.from('market_data').select('symbol,captured_at').order('captured_at',{ascending:false}).limit(30);const{data}=safeUnwrap<Record<string,unknown>[]>(rr,log,'rawForDates');if(data)rawDataForDates=data;}catch{log('rawForDates fetch failed')}
     const dates=computeDatesFromMarketData(rawDataForDates);log('DATES tw_core='+dates.twCoreDate+' us_global='+dates.usGlobalDate);
@@ -627,8 +646,8 @@ Deno.serve(async (req:Request)=>{
       const openAiKey=Deno.env.get('OPENAI_API_KEY')||'';
       if(openAiKey){
         log('OPENAI_MODE');
-        const strongSectors=sectorData.filter(function(s){return s.rotation_score>=70&&(s.direction==='strong_positive'||s.signal_label==='強勢主流')}).slice(0,3);
-        const sectorContextSummary=strongSectors.length>0?strongSectors.map(function(s){return s.sector+'(輪動分數='+s.rotation_score+')'}).join('；'):'今日無強勢族群資料';
+        const strongSectors=sectorData.filter(isStrongSectorRotation).slice(0,3);
+        const sectorContextSummary=strongSectors.length>0?strongSectors.map(function(s){return s.sector+'(輪動分數='+s.rotation_score+')'}).join('；'):'上一交易日類股輪動資料缺失或無強勢族群';
         const sysPrompt=buildOpenAISystemPrompt();const userPrompt=buildOpenAIUserPrompt(marketData,newsData,todayDate,dates,sectorContextSummary);
         const openAiResult=await callOpenAI(sysPrompt,userPrompt,openAiKey,log);
         if(openAiResult){
@@ -656,6 +675,10 @@ Deno.serve(async (req:Request)=>{
     aiStrategyJson.version=VERSION;aiStrategyJson.generated_at=new Date().toISOString();
     aiStrategyJson.tw_stock_filter_applied=true;aiStrategyJson.research_card_format=true;
     aiStrategyJson.fields_complete_guaranteed=true;aiStrategyJson.write_time_guarantee=true;aiStrategyJson.member_note_format='plain_text_string';
+    aiStrategyJson.sector_rotation_reference_date=sectorRotationReferenceDate;
+    aiStrategyJson.sector_rotation_basis='previous_trading_day';
+    aiStrategyJson.sector_rotation_rows=sectorData.length;
+    aiStrategyJson.sector_rotation_data_status=sectorData.length>0?'available':'missing_previous_trading_day';
 
     const marketBias=String(aiStrategyJson.market_bias||classifyMarketBias(dScore.baseScore));
     const rawConfidenceScore=Number(aiStrategyJson.confidence_score)||dScore.baseScore;

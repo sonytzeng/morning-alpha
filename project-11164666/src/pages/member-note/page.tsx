@@ -4,11 +4,176 @@ import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
-import { formatTaipeiDate } from '@/utils/tradingDay';
 import { renderSafeText } from '@/utils/renderSafe';
-import { parseAIStrategy, type ParsedAIStrategy } from '@/utils/aiStrategyParser';
+import {
+  hasValidMemberResearchNoteV2,
+  hasValidMemberResearchText,
+  parseAIStrategy,
+  type MemberResearchNoteV2,
+  type ParsedAIStrategy,
+} from '@/utils/aiStrategyParser';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { trackPageView, trackEvent } from '@/utils/analytics';
+
+function EmptyNoteBlock() {
+  return (
+    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+      <p className="text-white/35 text-xs leading-relaxed">本段資料不足，等待下一次報告補齊。</p>
+    </div>
+  );
+}
+
+function hasItems<T>(items: T[] | undefined): items is T[] {
+  return Array.isArray(items) && items.length > 0;
+}
+
+function MemberResearchNoteV2View({
+  note,
+  reportDate,
+  twCoreDate,
+  isHistoricalFallback,
+}: {
+  note: MemberResearchNoteV2;
+  reportDate: string;
+  twCoreDate: string;
+  isHistoricalFallback: boolean;
+}) {
+  return (
+    <section>
+      <div className="relative bg-gradient-to-br from-navy-900/80 via-navy-900/60 to-navy-900/80 border border-forest-500/10 rounded-2xl p-5 md:p-8 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px bg-gradient-to-r from-transparent via-forest-400/30 to-transparent"></div>
+
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/12 rounded-full border border-emerald-400/35 mb-4">
+            <i className="ri-eye-line text-emerald-400 text-xs"></i>
+            <span className="text-emerald-300 text-[10px] font-semibold uppercase tracking-wider">
+              {isHistoricalFallback ? '歷史資料模式' : '完整研究筆記'}
+            </span>
+          </div>
+          <h2 className="text-white font-bold text-lg md:text-xl mb-2">
+            第二層：{isHistoricalFallback ? '歷史盤前研究筆記' : '完整盤前研究筆記'}
+          </h2>
+          <p className="text-slate-300 text-xs mb-3">
+            本篇為 {reportDate} 盤前研究筆記，行情基準採用最近完整交易日 {twCoreDate}。
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+            <h3 className="text-white font-semibold text-sm mb-3">隔夜事件鏈</h3>
+            {hasItems(note.overnight_chain) ? (
+              <div className="space-y-3">
+                {note.overnight_chain.map((item, idx) => (
+                  <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                    <p className="text-white/80 text-sm font-medium">{renderSafeText(item.event || '—')}</p>
+                    <p className="text-white/40 text-xs mt-1">來源市場：{renderSafeText(item.source_market || '—')}｜信心：{item.confidence ?? '—'}</p>
+                    <p className="text-white/55 text-xs mt-2 leading-relaxed">{renderSafeText(item.impact_logic || '—')}</p>
+                    <p className="text-forest-300/70 text-xs mt-1 leading-relaxed">台股映射：{renderSafeText(item.taiwan_mapping || '—')}</p>
+                  </div>
+                ))}
+              </div>
+            ) : <EmptyNoteBlock />}
+          </section>
+
+          <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+            <h3 className="text-white font-semibold text-sm mb-3">台股映射</h3>
+            {hasItems(note.taiwan_impact_map) ? (
+              <div className="space-y-3">
+                {note.taiwan_impact_map.map((item, idx) => (
+                  <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <p className="text-white/80 text-sm font-medium">{renderSafeText(item.sector || '—')}</p>
+                      {item.sensitivity && <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-400/20">{item.sensitivity}</span>}
+                    </div>
+                    <p className="text-white/55 text-xs leading-relaxed">{renderSafeText(item.why_it_matters || '—')}</p>
+                    {hasItems(item.affected_stocks) && <p className="text-sky-300/70 text-xs mt-1">影響標的：{item.affected_stocks.join('、')}</p>}
+                    {item.invalidation && <p className="text-red-400/70 text-xs mt-1">失效：{renderSafeText(item.invalidation)}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : <EmptyNoteBlock />}
+          </section>
+
+          <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+            <h3 className="text-white font-semibold text-sm mb-3">第一受惠股候選</h3>
+            {hasItems(note.beneficiary_candidates) ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {note.beneficiary_candidates.map((item, idx) => (
+                  <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                    <p className="text-white/85 text-sm font-semibold">{renderSafeText(item.stock_code || '—')} {renderSafeText(item.stock_name || '')}</p>
+                    <p className="text-white/35 text-[10px] mt-0.5">{renderSafeText(item.sector || '—')}｜信心：{item.confidence ?? '—'}</p>
+                    <p className="text-white/55 text-xs mt-2 leading-relaxed">{renderSafeText(item.reason || '—')}</p>
+                    {hasItems(item.evidence) && <p className="text-forest-300/70 text-xs mt-1">證據：{item.evidence.join('；')}</p>}
+                    {item.risk && <p className="text-red-400/70 text-xs mt-1">風險：{renderSafeText(item.risk)}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : <EmptyNoteBlock />}
+          </section>
+
+          <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+            <h3 className="text-white font-semibold text-sm mb-3">盤中驗證條件</h3>
+            {hasItems(note.intraday_validation) ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {note.intraday_validation.map((item, idx) => (
+                  <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                    <p className="text-sky-300/80 text-xs font-semibold mb-1">{renderSafeText(item.time_window || '—')}</p>
+                    <p className="text-white/55 text-xs leading-relaxed">{renderSafeText(item.what_to_watch || '—')}</p>
+                    <p className="text-forest-300/70 text-xs mt-2">確認：{renderSafeText(item.bullish_confirm || '—')}</p>
+                    <p className="text-red-400/70 text-xs mt-1">失敗：{renderSafeText(item.bearish_fail || '—')}</p>
+                    <p className="text-white/35 text-xs mt-1">中性：{renderSafeText(item.neutral_condition || '—')}</p>
+                  </div>
+                ))}
+              </div>
+            ) : <EmptyNoteBlock />}
+          </section>
+
+          <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+            <h3 className="text-white font-semibold text-sm mb-3">失效條件</h3>
+            {hasItems(note.invalidation_rules) ? (
+              <div className="space-y-3">
+                {note.invalidation_rules.map((item, idx) => (
+                  <div key={idx} className="p-3 rounded-lg bg-red-500/[0.03] border border-red-500/10">
+                    <p className="text-white/80 text-sm font-medium">{renderSafeText(item.condition || '—')}</p>
+                    <p className="text-white/50 text-xs mt-1">{renderSafeText(item.meaning || '—')}</p>
+                    <p className="text-amber-300/70 text-xs mt-1">行動：{renderSafeText(item.action_note || '—')}</p>
+                  </div>
+                ))}
+              </div>
+            ) : <EmptyNoteBlock />}
+          </section>
+
+          <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+            <h3 className="text-white font-semibold text-sm mb-3">收盤後回饋</h3>
+            {note.closing_feedback_plan ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                  <p className="text-violet-300/80 text-[10px] mb-1">比較項目</p>
+                  <p className="text-white/55 text-xs">{renderSafeText(note.closing_feedback_plan.what_to_compare || '—')}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                  <p className="text-violet-300/80 text-[10px] mb-1">成功標準</p>
+                  <p className="text-white/55 text-xs">{renderSafeText(note.closing_feedback_plan.success_criteria || '—')}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                  <p className="text-violet-300/80 text-[10px] mb-1">落空追蹤</p>
+                  <p className="text-white/55 text-xs">{renderSafeText(note.closing_feedback_plan.miss_reason_tracking || '—')}</p>
+                </div>
+              </div>
+            ) : <EmptyNoteBlock />}
+          </section>
+
+          <section className="p-4 rounded-xl bg-amber-500/[0.04] border border-amber-400/20">
+            <h3 className="text-white font-semibold text-sm mb-2">會員價值一句話</h3>
+            {note.subscriber_value_sentence ? (
+              <p className="text-amber-300/80 text-sm leading-relaxed">{renderSafeText(note.subscriber_value_sentence)}</p>
+            ) : <p className="text-white/35 text-xs leading-relaxed">本段資料不足，等待下一次報告補齊。</p>}
+          </section>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function MemberNoteContent() {
   const [loading, setLoading] = useState(true);
@@ -20,7 +185,6 @@ function MemberNoteContent() {
     twCoreDate: string;
     usGlobalDate: string;
     created_at: string;
-    todaySummary: string;
   } | null>(null);
   const [strategy, setStrategy] = useState<ParsedAIStrategy | null>(null);
   const [marketClosed, setMarketClosed] = useState<{ closed: boolean; holidayName: string | null }>({ closed: false, holidayName: null });
@@ -75,7 +239,6 @@ function MemberNoteContent() {
           twCoreDate: twDate,
           usGlobalDate: usDate,
           created_at: r.created_at || '—',
-          todaySummary: (r.today_summary as string) || '',
         });
         // V9.0: Causal overnight impact chains
         const cChains = Array.isArray(ai.causal_overnight_impact_chains)
@@ -149,7 +312,7 @@ function MemberNoteContent() {
               非交易日
             </span>
             <p className="text-slate-400 text-sm mb-1">
-              日期：{dsState?.currentDate || reportData.reportDate}（{dsState?.currentWeekday || ''}）
+              日期：{dsState?.currentDate || reportData?.reportDate || '—'}（{dsState?.currentWeekday || ''}）
             </p>
             <p className="text-slate-500 text-sm mb-4">
               原因：{dsState?.holidayName || marketClosed.holidayName || '休市'}
@@ -191,11 +354,13 @@ function MemberNoteContent() {
     );
   }
 
-  const { reportDate, marketBias, confidenceScore, twCoreDate, usGlobalDate, todaySummary } = reportData;
+  const { reportDate, marketBias, confidenceScore, twCoreDate, usGlobalDate } = reportData;
 
-  // V8.2.1: member_research_note 優先，null 時 fallback 到 today_summary
-  const memberNoteContent = strategy.member_research_note || todaySummary || null;
-  const hasMemberNote = !!memberNoteContent;
+  const memberNoteV2 = hasValidMemberResearchNoteV2(strategy) ? strategy.member_research_note_v2 : null;
+  const memberNoteText = !memberNoteV2 && hasValidMemberResearchText(strategy) && typeof strategy.member_research_note === 'string'
+    ? strategy.member_research_note
+    : null;
+  const hasMemberNote = !!memberNoteV2 || !!memberNoteText;
   const hasReasoningChain = strategy.reasoning_chain.length > 0;
   const hasOvernightChains = strategy.overnight_impact_chain.length > 0 || causalChains.length > 0;
   const hasValidationPlan = !!strategy.intraday_validation_plan;
@@ -262,8 +427,14 @@ function MemberNoteContent() {
           {/* ═══════════════════════════════ */}
           {/* MEMBER RESEARCH NOTE SECTIONS */}
           {/* ═══════════════════════════════ */}
-          {hasMemberNote && memberNoteContent ? (
-            typeof memberNoteContent === 'string' ? (
+          {memberNoteV2 ? (
+            <MemberResearchNoteV2View
+              note={memberNoteV2}
+              reportDate={reportDate}
+              twCoreDate={twCoreDate}
+              isHistoricalFallback={isHistoricalFallback}
+            />
+          ) : hasMemberNote && memberNoteText ? (
               /* ═══ 純文字多段落路徑 (V8.2.1) ═══ */
               <section>
                 <div className="relative bg-gradient-to-br from-navy-900/80 via-navy-900/60 to-navy-900/80 border border-forest-500/10 rounded-2xl p-5 md:p-8 overflow-hidden">
@@ -272,10 +443,10 @@ function MemberNoteContent() {
                   <div className="text-center mb-6">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/12 rounded-full border border-emerald-400/35 mb-4">
                       <i className="ri-eye-line text-emerald-400 text-xs"></i>
-                      <span className="text-emerald-300 text-[10px] font-semibold uppercase tracking-wider">完整研究筆記</span>
+                      <span className="text-emerald-300 text-[10px] font-semibold uppercase tracking-wider">{isHistoricalFallback ? '歷史資料模式' : '完整研究筆記'}</span>
                     </div>
                     <h2 className="text-white font-bold text-lg md:text-xl mb-2">
-                      第二層：完整盤前研究筆記
+                      第二層：{isHistoricalFallback ? '歷史盤前研究筆記' : '完整盤前研究筆記'}
                     </h2>
                     <p className="text-slate-300 text-xs mb-3">
                       本篇為 {reportDate} 盤前研究筆記，行情基準採用最近完整交易日 {twCoreDate}。
@@ -284,7 +455,7 @@ function MemberNoteContent() {
 
                   {/* V8.2.1: 多段落渲染，每段獨立顯示，不做截斷 */}
                   <div className="p-4 md:p-6 rounded-xl bg-white/[0.02] border border-white/5 space-y-4">
-                    {memberNoteContent.split('\n').filter(Boolean).map((paragraph, i) => (
+                    {memberNoteText.split('\n').filter(Boolean).map((paragraph, i) => (
                       <p key={i} className="text-white/70 text-sm leading-relaxed">
                         {paragraph.trim()}
                       </p>
@@ -292,151 +463,14 @@ function MemberNoteContent() {
                   </div>
                 </div>
               </section>
-            ) : (
-            /* ═══ 結構化物件路徑 ═══ */
-            <section>
-              <div className="relative bg-gradient-to-br from-navy-900/80 via-navy-900/60 to-navy-900/80 border border-forest-500/10 rounded-2xl p-5 md:p-8 overflow-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px bg-gradient-to-r from-transparent via-forest-400/30 to-transparent"></div>
-
-                <div className="text-center mb-6">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/12 rounded-full border border-emerald-400/35 mb-4">
-                    <i className="ri-eye-line text-emerald-400 text-xs"></i>
-                    <span className="text-emerald-300 text-[10px] font-semibold uppercase tracking-wider">完整研究筆記</span>
-                  </div>
-                  <h2 className="text-white font-bold text-lg md:text-xl mb-2">
-                    第二層：完整盤前研究筆記
-                  </h2>
-                  <p className="text-slate-300 text-xs mb-3">
-                    本篇為 {reportDate} 盤前研究筆記，行情基準採用最近完整交易日 {twCoreDate}。
-                  </p>
-                </div>
-
-                {/* Executive Brief */}
-                {memberNoteContent.executive_brief?.one_line && (
-                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 mb-4">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">執行摘要</p>
-                    <p className="text-white/70 text-sm leading-relaxed">{memberNoteContent.executive_brief.one_line}</p>
-                    {memberNoteContent.executive_brief.why_today_matters && (
-                      <p className="text-white/45 text-xs mt-2">{memberNoteContent.executive_brief.why_today_matters}</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Sections — accordion, first expanded by default */}
-                <div className="space-y-3">
-                  {memberNoteContent.sections.map((sec, idx) => (
-                    <details key={sec.key || idx} className="group" open={idx === 0}>
-                      <summary className="p-4 rounded-xl bg-navy-800/50 border border-white/5 hover:border-forest-500/20 transition-colors cursor-pointer list-none">
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-md bg-forest-500/10 border border-forest-500/20 flex items-center justify-center flex-shrink-0">
-                            <span className="text-forest-400 text-[10px] font-bold">{idx + 1}</span>
-                          </div>
-                          <h3 className="text-white font-semibold text-sm">{renderSafeText(sec.title)}</h3>
-                          <i className="ri-arrow-down-s-line text-white/30 text-sm ml-auto group-open:rotate-180 transition-transform"></i>
-                        </div>
-                      </summary>
-                      <div className="mt-2 p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-3">
-                        {sec.conclusion && (
-                          <div>
-                            <p className="text-forest-400/60 text-[10px] uppercase tracking-wider mb-1">結論</p>
-                            <p className="text-white/70 text-sm leading-relaxed">{renderSafeText(sec.conclusion)}</p>
-                          </div>
-                        )}
-                        {sec.data_points && sec.data_points.length > 0 && (
-                          <div>
-                            <p className="text-forest-400/60 text-[10px] uppercase tracking-wider mb-1">資料點</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {sec.data_points.map((dp, i) => (
-                                <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/50">
-                                  {renderSafeText(dp)}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {sec.reasoning && (
-                          <div>
-                            <p className="text-forest-400/60 text-[10px] uppercase tracking-wider mb-1">推理</p>
-                            <p className="text-white/60 text-xs leading-relaxed">{renderSafeText(sec.reasoning)}</p>
-                          </div>
-                        )}
-                        {sec.market_mechanism && (
-                          <div>
-                            <p className="text-forest-400/60 text-[10px] uppercase tracking-wider mb-1">市場機制</p>
-                            <p className="text-white/50 text-xs leading-relaxed">{renderSafeText(sec.market_mechanism)}</p>
-                          </div>
-                        )}
-                        {sec.intraday_confirmation && (
-                          <div>
-                            <p className="text-forest-400/60 text-[10px] uppercase tracking-wider mb-1">盤中驗證</p>
-                            <p className="text-white/50 text-xs leading-relaxed">{renderSafeText(sec.intraday_confirmation)}</p>
-                          </div>
-                        )}
-                        {sec.invalidation_conditions && (
-                          <div>
-                            <p className="text-red-400/60 text-[10px] uppercase tracking-wider mb-1">失效條件</p>
-                            <p className="text-red-400/70 text-xs leading-relaxed">{renderSafeText(sec.invalidation_conditions)}</p>
-                          </div>
-                        )}
-                        {sec.member_takeaway && (
-                          <div>
-                            <p className="text-forest-400/60 text-[10px] uppercase tracking-wider mb-1">會員提醒</p>
-                            <p className="text-amber-400/70 text-xs leading-relaxed">{renderSafeText(sec.member_takeaway)}</p>
-                          </div>
-                        )}
-                        {sec.chains && sec.chains.length > 0 && (
-                          <div>
-                            <p className="text-forest-400/60 text-[10px] uppercase tracking-wider mb-1">影響鏈</p>
-                            <div className="space-y-2">
-                              {sec.chains.map((c, i) => (
-                                <div key={i} className="p-2 rounded-lg bg-navy-800/50 border border-white/5">
-                                  <p className="text-white/60 text-xs"><span className="text-white/30">催化：</span>{renderSafeText(c.catalyst)}</p>
-                                  {c.taiwan_market_impact && <p className="text-forest-400/60 text-[11px] mt-0.5">台股影響：{renderSafeText(c.taiwan_market_impact)}</p>}
-                                  {c.affected_sectors && c.affected_sectors.length > 0 && <p className="text-white/45 text-[11px] mt-0.5">族群：{c.affected_sectors.map((s: string) => s).join('、')}</p>}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {sec.timeline && sec.timeline.length > 0 && (
-                          <div>
-                            <p className="text-forest-400/60 text-[10px] uppercase tracking-wider mb-1">盤中追蹤</p>
-                            <div className="space-y-2">
-                              {sec.timeline.map((t, i) => (
-                                <div key={i} className="p-2 rounded-lg bg-navy-800/50 border border-white/5">
-                                  <p className="text-white/50 text-xs"><span className="text-amber-400/60">{renderSafeText(t.time)}</span> — {renderSafeText(t.question)}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {sec.evidence_items && sec.evidence_items.length > 0 && (
-                          <div>
-                            <p className="text-forest-400/60 text-[10px] uppercase tracking-wider mb-1">證據</p>
-                            <div className="space-y-2">
-                              {sec.evidence_items.map((ei, i) => (
-                                <div key={i} className="p-2 rounded-lg bg-navy-800/50 border border-white/5">
-                                  <p className="text-white/60 text-xs"><span className="text-white/30">訊號：</span>{renderSafeText(ei.signal)}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </details>
-                  ))}
-                </div>
-              </div>
-            </section>
-            )
           ) : (
             /* ═══ 無內容路徑 ═══ */
             <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-6 text-center">
               <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-navy-800/80 flex items-center justify-center">
                 <i className="ri-book-open-line text-white/15 text-2xl"></i>
               </div>
-              <p className="text-slate-300 text-sm mb-2">今日完整研究筆記尚未生成</p>
-              <p className="text-slate-500 text-xs max-w-md mx-auto">完整研究筆記會在每日盤前報告產生後自動填入，通常於 07:30 前完成。若已過該時間仍未顯示，請稍後重新整理。</p>
+              <p className="text-slate-300 text-sm mb-2">完整研究筆記尚未生成</p>
+              <p className="text-slate-500 text-xs max-w-md mx-auto">目前只有公開摘要，尚不足以形成會員研究筆記。</p>
             </section>
           )}
 

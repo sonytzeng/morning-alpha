@@ -192,6 +192,51 @@ export interface ClosingFeedbackPlan {
   what_to_adjust_tomorrow: string;
 }
 
+export interface MemberResearchNoteV2 {
+  overnight_chain?: Array<{
+    event?: string;
+    source_market?: string;
+    impact_logic?: string;
+    taiwan_mapping?: string;
+    confidence?: number;
+  }>;
+  taiwan_impact_map?: Array<{
+    sector?: string;
+    why_it_matters?: string;
+    affected_stocks?: string[];
+    sensitivity?: string;
+    invalidation?: string;
+  }>;
+  beneficiary_candidates?: Array<{
+    stock_code?: string;
+    stock_name?: string;
+    sector?: string;
+    reason?: string;
+    evidence?: string[];
+    risk?: string;
+    confidence?: number;
+  }>;
+  intraday_validation?: Array<{
+    time_window?: string;
+    what_to_watch?: string;
+    bullish_confirm?: string;
+    bearish_fail?: string;
+    neutral_condition?: string;
+  }>;
+  invalidation_rules?: Array<{
+    condition?: string;
+    meaning?: string;
+    action_note?: string;
+  }>;
+  closing_feedback_plan?: {
+    what_to_compare?: string;
+    success_criteria?: string;
+    miss_reason_tracking?: string;
+  };
+  subscriber_value_sentence?: string;
+  data_status?: 'complete' | 'partial' | 'insufficient';
+}
+
 export interface RenewalValueBlock {
   why_member_should_read_today: string;
   what_free_news_does_not_provide: string;
@@ -239,6 +284,7 @@ export interface ParsedAIStrategy {
 
   // Member research note (9 sections)
   member_research_note: string | MemberResearchNote | null;
+  member_research_note_v2: MemberResearchNoteV2 | null;
 
   // Key observations (for "三件重要的事")
   key_observations: KeyObservation[];
@@ -344,6 +390,21 @@ function grabArr<T>(obj: unknown, key: string): T[] {
   if (!obj || typeof obj !== 'object') return [];
   const o = obj as Record<string, unknown>;
   return Array.isArray(o[key]) ? (o[key] as T[]) : [];
+}
+
+function optionalStr(obj: unknown, key: string): string | undefined {
+  const value = grabStr(obj, key);
+  return value || undefined;
+}
+
+function optionalNum(obj: unknown, key: string): number | undefined {
+  const value = grabNum(obj, key, Number.NaN);
+  return Number.isNaN(value) ? undefined : value;
+}
+
+function nonEmptyStrings(values: unknown[]): string[] | undefined {
+  const result = values.map(String).map((v) => v.trim()).filter(Boolean);
+  return result.length > 0 ? result : undefined;
 }
 
 // ═══════════════════════════════════════════════════
@@ -474,6 +535,59 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
     } // end else (structured object)
   }
 
+  // ── Member Research Note V2 ──
+  const mrnV2Raw = grabObj(ai, 'member_research_note_v2');
+  const memberResearchNoteV2: MemberResearchNoteV2 | null = mrnV2Raw ? {
+    overnight_chain: grabArr<Record<string, unknown>>(mrnV2Raw, 'overnight_chain').map((item) => ({
+      event: optionalStr(item, 'event'),
+      source_market: optionalStr(item, 'source_market'),
+      impact_logic: optionalStr(item, 'impact_logic'),
+      taiwan_mapping: optionalStr(item, 'taiwan_mapping'),
+      confidence: optionalNum(item, 'confidence'),
+    })),
+    taiwan_impact_map: grabArr<Record<string, unknown>>(mrnV2Raw, 'taiwan_impact_map').map((item) => ({
+      sector: optionalStr(item, 'sector'),
+      why_it_matters: optionalStr(item, 'why_it_matters'),
+      affected_stocks: nonEmptyStrings(grabArr<unknown>(item, 'affected_stocks')),
+      sensitivity: optionalStr(item, 'sensitivity'),
+      invalidation: optionalStr(item, 'invalidation'),
+    })),
+    beneficiary_candidates: grabArr<Record<string, unknown>>(mrnV2Raw, 'beneficiary_candidates').map((item) => ({
+      stock_code: optionalStr(item, 'stock_code'),
+      stock_name: optionalStr(item, 'stock_name'),
+      sector: optionalStr(item, 'sector'),
+      reason: optionalStr(item, 'reason'),
+      evidence: nonEmptyStrings(grabArr<unknown>(item, 'evidence')),
+      risk: optionalStr(item, 'risk'),
+      confidence: optionalNum(item, 'confidence'),
+    })),
+    intraday_validation: grabArr<Record<string, unknown>>(mrnV2Raw, 'intraday_validation').map((item) => ({
+      time_window: optionalStr(item, 'time_window'),
+      what_to_watch: optionalStr(item, 'what_to_watch'),
+      bullish_confirm: optionalStr(item, 'bullish_confirm'),
+      bearish_fail: optionalStr(item, 'bearish_fail'),
+      neutral_condition: optionalStr(item, 'neutral_condition'),
+    })),
+    invalidation_rules: grabArr<Record<string, unknown>>(mrnV2Raw, 'invalidation_rules').map((item) => ({
+      condition: optionalStr(item, 'condition'),
+      meaning: optionalStr(item, 'meaning'),
+      action_note: optionalStr(item, 'action_note'),
+    })),
+    closing_feedback_plan: (() => {
+      const rawPlan = grabObj(mrnV2Raw, 'closing_feedback_plan');
+      if (!rawPlan) return undefined;
+      return {
+        what_to_compare: optionalStr(rawPlan, 'what_to_compare'),
+        success_criteria: optionalStr(rawPlan, 'success_criteria'),
+        miss_reason_tracking: optionalStr(rawPlan, 'miss_reason_tracking'),
+      };
+    })(),
+    subscriber_value_sentence: optionalStr(mrnV2Raw, 'subscriber_value_sentence'),
+    data_status: ['complete', 'partial', 'insufficient'].includes(grabStr(mrnV2Raw, 'data_status'))
+      ? grabStr(mrnV2Raw, 'data_status') as MemberResearchNoteV2['data_status']
+      : undefined,
+  } : null;
+
   // ── Key observations (from ai_strategy_json directly) ──
   const keyObsFromAI = grabArr<Record<string, unknown>>(ai, 'key_observations');
   const keyObservations: KeyObservation[] = keyObsFromAI.map((k) => ({
@@ -603,10 +717,11 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
     data_date_aligned: dataDateAligned,
     publish_ready: publishReady,
     is_template_like: isTemplateLike,
-    canShowMemberContent: !!memberResearchNote,
+    canShowMemberContent: hasValidMemberResearchTextValue(memberResearchNote) || hasValidMemberResearchNoteV2Value(memberResearchNoteV2),
     market_data_latest_date: marketDataLatestDate,
     free_summary: freeSummary,
     member_research_note: memberResearchNote,
+    member_research_note_v2: memberResearchNoteV2,
     key_observations: keyObservations,
     reasoning_chain: reasoningChain,
     overnight_impact_chain: overnightImpactChain,
@@ -721,8 +836,59 @@ const GENERIC_VAGUE_PATTERNS = [
   '關注半導體', '保持靈活', '市場方向：中性震盪', '等待更多市場訊號',
 ];
 
+const INVALID_MEMBER_NOTE_PATTERNS = [
+  '休市',
+  '尚未生成',
+  '尚未產生',
+  '暫無資料',
+  '資料不足',
+  '等待盤前報告',
+  '等待下一次報告',
+];
+
 function isGenericVague(text: string): boolean {
   return GENERIC_VAGUE_PATTERNS.some((p) => text.includes(p));
+}
+
+function hasAnyObjectText(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  return Object.values(value as Record<string, unknown>).some((item) => {
+    if (typeof item === 'string') return item.trim().length > 0;
+    if (typeof item === 'number') return Number.isFinite(item);
+    if (Array.isArray(item)) return item.length > 0;
+    return false;
+  });
+}
+
+export function hasValidMemberResearchText(strategy: ParsedAIStrategy): boolean {
+  return hasValidMemberResearchTextValue(strategy.member_research_note);
+}
+
+function hasValidMemberResearchTextValue(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const text = value.trim();
+  if (text.length < 300) return false;
+  if (INVALID_MEMBER_NOTE_PATTERNS.some((pattern) => text.includes(pattern))) return false;
+  return true;
+}
+
+export function hasValidMemberResearchNoteV2(strategy: ParsedAIStrategy): boolean {
+  return hasValidMemberResearchNoteV2Value(strategy.member_research_note_v2);
+}
+
+function hasValidMemberResearchNoteV2Value(note: MemberResearchNoteV2 | null): boolean {
+  if (!note) return false;
+
+  const nonEmptySections = [
+    note.overnight_chain?.some(hasAnyObjectText),
+    note.taiwan_impact_map?.some(hasAnyObjectText),
+    note.beneficiary_candidates?.some(hasAnyObjectText),
+    note.intraday_validation?.some(hasAnyObjectText),
+    note.invalidation_rules?.some(hasAnyObjectText),
+    note.closing_feedback_plan ? hasAnyObjectText(note.closing_feedback_plan) : false,
+  ].filter(Boolean).length;
+
+  return nonEmptySections >= 2;
 }
 
 /**
@@ -772,17 +938,7 @@ export function getTopItems(strategy: ParsedAIStrategy): { title: string; conten
  * V7.53: Check if member_research_note has real content (flat or sections-based).
  */
 export function hasMemberResearchNote(strategy: ParsedAIStrategy): boolean {
-  const mn = strategy.member_research_note;
-  if (!mn) return false;
-  // Plain text string → has content
-  if (typeof mn === 'string') return mn.trim().length > 0;
-  // Check flat fields
-  if (!!mn.title || !!mn.executive_view || !!mn.data_basis || !!mn.main_thesis || !!mn.risk_notes) return true;
-  // Check key_observations
-  if (Array.isArray(mn.key_observations) && mn.key_observations.length > 0) return true;
-  // Check old sections array
-  if (Array.isArray(mn.sections) && mn.sections.length > 0) return true;
-  return false;
+  return hasValidMemberResearchNoteV2(strategy) || hasValidMemberResearchText(strategy);
 }
 
 /**

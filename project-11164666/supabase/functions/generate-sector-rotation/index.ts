@@ -15,7 +15,6 @@ type MarketRow = {
   change_percent: number;
   captured_at: string | null;
   updated_at: string | null;
-  created_at: string | null;
 };
 
 type SectorConfig = {
@@ -96,11 +95,11 @@ function normalizeSymbol(symbol: string): string {
 }
 
 function rowTimestamp(row: MarketRow): string {
-  return row.updated_at || row.captured_at || row.created_at || "";
+  return row.captured_at || row.updated_at || "";
 }
 
 function isWithinCloseWindow(row: MarketRow, start: string, end: string): boolean {
-  const candidates = [row.updated_at, row.captured_at, row.created_at].filter(Boolean) as string[];
+  const candidates = [row.captured_at, row.updated_at].filter(Boolean) as string[];
   return candidates.some((ts) => ts >= start && ts <= end);
 }
 
@@ -115,7 +114,6 @@ function mapMarketRow(row: Record<string, unknown>): MarketRow | null {
     change_percent: change,
     captured_at: row.captured_at ? String(row.captured_at) : null,
     updated_at: row.updated_at ? String(row.updated_at) : null,
-    created_at: row.created_at ? String(row.created_at) : null,
   };
 }
 
@@ -281,16 +279,15 @@ Deno.serve(async (req) => {
     });
 
     const closeWindow = taipeiWindowUtc(scoreDate);
-    const marketSelect = "symbol,name,change_percent,captured_at,updated_at,created_at";
-    const [capturedResult, updatedResult, createdResult, newsResult, reportResult] = await Promise.all([
+    const marketSelect = "symbol,name,market,value,change_percent,status,taiwan_impact,captured_at,change,updated_at";
+    const [capturedResult, updatedResult, newsResult, reportResult] = await Promise.all([
       supabase.from("market_data").select(marketSelect).gte("captured_at", closeWindow.start).lte("captured_at", closeWindow.end).limit(200),
       supabase.from("market_data").select(marketSelect).gte("updated_at", closeWindow.start).lte("updated_at", closeWindow.end).limit(200),
-      supabase.from("market_data").select(marketSelect).gte("created_at", closeWindow.start).lte("created_at", closeWindow.end).limit(200),
       supabase.from("market_news").select("title,taiwan_impact_summary,related_sectors,published_at,created_at").gte("created_at", `${scoreDate}T00:00:00+08:00`).limit(100),
       supabase.from("reports").select("id,report_date,market_bias,summary,ai_strategy_json").eq("report_date", scoreDate).maybeSingle(),
     ]);
 
-    const marketError = capturedResult.error || updatedResult.error || createdResult.error;
+    const marketError = capturedResult.error || updatedResult.error;
     if (marketError) {
       console.error(`${logPrefix} market_data query failed: ${marketError.message}`);
       return jsonResponse({ success: false, reason: "MARKET_DATA_QUERY_FAILED", detail: marketError.message, score_date: scoreDate }, 500);
@@ -299,7 +296,6 @@ Deno.serve(async (req) => {
     const rawRows = [
       ...(capturedResult.data || []),
       ...(updatedResult.data || []),
-      ...(createdResult.data || []),
     ] as Record<string, unknown>[];
 
     const rows = latestRowsBySymbol(rawRows.map(mapMarketRow).filter((row): row is MarketRow => row !== null));

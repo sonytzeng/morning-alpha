@@ -143,8 +143,8 @@ function buildObservations(report: Report | null, radar: RadarView | null): stri
   const items: string[] = [];
 
   if (radar) {
-    items.push(`盤中雷達：${safeText(radar.radar_status)}，方向 ${safeText(radar.market_bias)}，把握度 ${safeText(radar.confidence_score)}/100。`);
-    items.push(`台股三核心：TAIEX ${pct(radar.taiex_change)}、TXF ${pct(radar.txf_change)}、2330 ${pct(radar.tsmc_change)}。`);
+    const radarLine = safeText(radar.summary || radar.radar_status, '');
+    if (radarLine) items.push(radarLine);
   }
 
   const mrn = asObj(ai.member_research_note);
@@ -158,19 +158,6 @@ function buildObservations(report: Report | null, radar: RadarView | null): stri
   for (const r of reasonChain) {
     const line = `${safeText(r.step, '')}${r.evidence ? `：${safeText(r.evidence, '')}` : ''}`;
     if (line.trim() && !items.includes(line)) items.push(line);
-  }
-
-  while (items.length < 5) {
-    const fallback = [
-      '09:30 先確認 TAIEX、TXF、2330 是否同向。',
-      '10:30 檢查權值股與 AI 伺服器族群是否延續。',
-      '若盤中走勢與盤前假設相反，今日判讀必須降級。',
-      '不要把受惠名單當成直接買進清單。',
-      '收盤後需回寫驗證結果，避免明天沿用錯誤劇本。',
-    ];
-    const next = fallback.find((x) => !items.includes(x));
-    if (!next) break;
-    items.push(next);
   }
 
   return items.slice(0, 5);
@@ -512,14 +499,23 @@ function TodayReportContent() {
             </h2>
 
             <div className="space-y-3">
-              {observations.map((item, idx) => (
-                <div key={idx} className="flex gap-3 p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                  <div className="w-7 h-7 rounded-md bg-slate-700/70 border border-slate-600/50 flex items-center justify-center flex-shrink-0">
-                    <span className="text-slate-300 text-xs font-bold">{idx + 1}</span>
+              {observations.length > 0 ? (
+                observations.map((item, idx) => (
+                  <div key={idx} className="flex gap-3 p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                    <div className="w-7 h-7 rounded-md bg-slate-700/70 border border-slate-600/50 flex items-center justify-center flex-shrink-0">
+                      <span className="text-slate-300 text-xs font-bold">{idx + 1}</span>
+                    </div>
+                    <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(item)}</p>
                   </div>
-                  <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(item)}</p>
+                ))
+              ) : (
+                <div className="flex gap-3 p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                  <div className="w-7 h-7 rounded-md bg-slate-700/70 border border-slate-600/50 flex items-center justify-center flex-shrink-0">
+                    <i className="ri-database-2-line text-slate-300 text-xs"></i>
+                  </div>
+                  <p className="text-slate-200 text-sm leading-relaxed">目前資料不足，等待盤前報告補齊。</p>
                 </div>
-              ))}
+              )}
             </div>
           </section>
 

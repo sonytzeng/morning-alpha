@@ -41,7 +41,6 @@ type SectorScore = {
   summary: string;
   generated_at: string;
   created_at: string;
-  updated_at: string;
 };
 
 const SECTORS: SectorConfig[] = [
@@ -234,7 +233,6 @@ function buildSectorScore(params: {
     summary: `根據 ${details}，${sector.sector}平均漲跌幅為 ${avgChange >= 0 ? "+" : ""}${round(avgChange, 2)}%，market_score=${marketScore}，news_score=${newsScore}，confidence_score=${confidenceScore}。`,
     generated_at: now,
     created_at: now,
-    updated_at: now,
   };
 }
 

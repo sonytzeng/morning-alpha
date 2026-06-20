@@ -159,7 +159,9 @@ export function getMorningAlphaDisplayState(
     : 'trading' as MarketStatusType;
 
   // ── Market closed: force all trading values to neutral ──
-  if (closed) {
+  // Use today's Taipei trading status, not the active report date, so historical
+  // fallback reports cannot overwrite weekend / holiday gates.
+  if (closed || isTodayNonTrading) {
     return {
       reportDate: currentDate, // V10.0: Show TODAY's date, not last report date
       isMarketClosed: true,

@@ -24,6 +24,8 @@ function MemberNoteContent() {
   } | null>(null);
   const [strategy, setStrategy] = useState<ParsedAIStrategy | null>(null);
   const [marketClosed, setMarketClosed] = useState<{ closed: boolean; holidayName: string | null }>({ closed: false, holidayName: null });
+  const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
+  const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
   // V9.0: Causal overnight impact chains from new format
   const [causalChains, setCausalChains] = useState<Record<string, unknown>[]>([]);
   // V10.0: Display state for market status fields
@@ -35,7 +37,12 @@ function MemberNoteContent() {
       try {
         setLoading(true);
         const resolved = await resolveActiveMorningAlphaReport();
+        setIsHistoricalFallback(resolved.isHistoricalFallback);
+        setFallbackReportDate(resolved.fallbackReportDate);
         const r = resolved.rawRow;
+        const ds = getMorningAlphaDisplayState(r as Record<string, unknown> | null);
+        setDsState(ds);
+        setMarketClosed({ closed: ds.isMarketClosed, holidayName: ds.holidayName });
         if (!r) {
           setReportData(null);
           return;
@@ -61,10 +68,6 @@ function MemberNoteContent() {
         const twDate = (ai.tw_core_date as string) || (ai.market_data_date as string) || r.report_date || '—';
         const usDate = (ai.us_global_date as string) || (ai.us_market_date as string) || '—';
 
-        // V10.0: Unified display state — compute FIRST before using
-        const ds = getMorningAlphaDisplayState(r as Record<string, unknown> | null);
-        setDsState(ds);
-
         setReportData({
           reportDate: r.report_date || '—',
           marketBias: ds.marketBias,
@@ -74,9 +77,6 @@ function MemberNoteContent() {
           created_at: r.created_at || '—',
           todaySummary: (r.today_summary as string) || '',
         });
-
-        setMarketClosed({ closed: ds.isMarketClosed, holidayName: ds.holidayName });
-
         // V9.0: Causal overnight impact chains
         const cChains = Array.isArray(ai.causal_overnight_impact_chains)
           ? (ai.causal_overnight_impact_chains as Record<string, unknown>[])
@@ -131,25 +131,6 @@ function MemberNoteContent() {
     );
   }
 
-  if (!reportData || !strategy) {
-    return (
-      <div className="min-h-screen bg-navy-950 flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center px-4">
-          <div className="text-center max-w-md">
-            <i className="ri-book-open-line text-white/20 text-3xl mb-3"></i>
-            <h2 className="text-white font-semibold text-base mb-2">今日報告尚未產生</h2>
-            <p className="text-white/50 text-sm mb-4">每天 07:30 自動生成，請稍後再回來查看。</p>
-            <Link to="/" className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors inline-block whitespace-nowrap border border-white/10">
-              返回首頁
-            </Link>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
   // V10.0: Market closed — show today's market status, NOT last report date
   if (marketClosed.closed) {
     const nextDate = dsState?.nextTradingDate || '—';
@@ -191,6 +172,25 @@ function MemberNoteContent() {
     );
   }
 
+  if (!reportData || !strategy) {
+    return (
+      <div className="min-h-screen bg-navy-950 flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center max-w-md">
+            <i className="ri-book-open-line text-white/20 text-3xl mb-3"></i>
+            <h2 className="text-white font-semibold text-base mb-2">今日報告尚未產生</h2>
+            <p className="text-white/50 text-sm mb-4">每天 07:30 自動生成，請稍後再回來查看。</p>
+            <Link to="/" className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors inline-block whitespace-nowrap border border-white/10">
+              返回首頁
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   const { reportDate, marketBias, confidenceScore, twCoreDate, usGlobalDate, todaySummary } = reportData;
 
   // V8.2.1: member_research_note 優先，null 時 fallback 到 today_summary
@@ -223,6 +223,12 @@ function MemberNoteContent() {
                 <i className="ri-check-line text-[9px]"></i>
                 完整公開
               </span>
+              {isHistoricalFallback && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-500/12 text-sky-300 text-[10px] font-medium rounded-full border border-sky-400/25 whitespace-nowrap">
+                  <i className="ri-history-line text-[9px]"></i>
+                  歷史資料模式：{fallbackReportDate || reportDate}
+                </span>
+              )}
             </div>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-forest-500/12 text-forest-300 text-[10px] font-medium rounded-full border border-forest-400/35 whitespace-nowrap">
               <i className="ri-calendar-line"></i>

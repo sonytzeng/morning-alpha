@@ -168,6 +168,8 @@ function TodayReportContent() {
   const [radar, setRadar] = useState<RadarView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
+  const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
   // V8.4: Unified display state — same source as Home, Opportunities, WarRoom, MemberNote
   const [displayState, setDisplayState] = useState<MorningAlphaDisplayState | null>(null);
   const marketClosed = displayState
@@ -187,6 +189,10 @@ function TodayReportContent() {
         const finalReport = resolved.rawRow
           ? mapRowToReport(resolved.rawRow as unknown as Record<string, unknown>)
           : null;
+        setIsHistoricalFallback(resolved.isHistoricalFallback);
+        setFallbackReportDate(resolved.fallbackReportDate);
+        const ds = getMorningAlphaDisplayState(resolved.rawRow as Record<string, unknown> | null);
+        setDisplayState(ds);
 
         if (!finalReport) {
           setReport(null);
@@ -195,10 +201,6 @@ function TodayReportContent() {
         }
 
         setReport(finalReport);
-
-        // V8.4: Unified display state — same parser as all other pages
-        const ds = getMorningAlphaDisplayState(resolved.rawRow as Record<string, unknown> | null);
-        setDisplayState(ds);
 
         // V8: Radar ONLY from ai_strategy_json.opening_radar — no table fallback
         const radarFromReport = normalizeRadarFromReport(finalReport);
@@ -304,25 +306,6 @@ function TodayReportContent() {
     );
   }
 
-  if (!report) {
-    return (
-      <div className="min-h-screen bg-navy-950 flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center px-4">
-          <div className="max-w-md text-center bg-navy-900/70 border border-navy-800 rounded-2xl p-6">
-            <i className="ri-time-line text-slate-500 text-3xl" />
-            <h1 className="text-white font-bold mt-3">今日報告尚未產生</h1>
-            <p className="text-slate-400 text-sm mt-2">每天 07:30 自動生成，請稍後再查看。</p>
-            <Link to="/" className="inline-block mt-5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
-              返回首頁
-            </Link>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
   // V10.0: Market closed — show today's market status, NOT last report date
   if (marketClosed.closed) {
     const nextDate = displayState?.nextTradingDate || '—';
@@ -341,7 +324,7 @@ function TodayReportContent() {
               非交易日
             </span>
             <p className="text-slate-400 text-sm mb-1">
-              日期：{displayState?.currentDate || report.report_date}（{displayState?.currentWeekday || ''}）
+              日期：{displayState?.currentDate || report?.report_date || todayStr}（{displayState?.currentWeekday || ''}）
             </p>
             <p className="text-slate-500 text-sm mb-4">
               原因：{displayState?.holidayName || marketClosed.holidayName || '休市'}
@@ -364,6 +347,25 @@ function TodayReportContent() {
     );
   }
 
+  if (!report) {
+    return (
+      <div className="min-h-screen bg-navy-950 flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="max-w-md text-center bg-navy-900/70 border border-navy-800 rounded-2xl p-6">
+            <i className="ri-time-line text-slate-500 text-3xl" />
+            <h1 className="text-white font-bold mt-3">今日報告尚未產生</h1>
+            <p className="text-slate-400 text-sm mt-2">每天 07:30 自動生成，請稍後再查看。</p>
+            <Link to="/" className="inline-block mt-5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
+              返回首頁
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col overflow-x-hidden">
       <Navbar />
@@ -375,7 +377,7 @@ function TodayReportContent() {
               <div className="w-7 h-7 rounded-md bg-emerald-500/15 flex items-center justify-center">
                 <i className="ri-line-chart-line text-emerald-400 text-sm" />
               </div>
-              <h1 className="text-white font-bold text-sm md:text-base">今日盤前判斷</h1>
+              <h1 className="text-white font-bold text-sm md:text-base">{isHistoricalFallback ? '歷史資料模式' : '今日盤前判斷'}</h1>
 
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${getBiasClass(displayBias)}`}>
                 <i className="ri-record-circle-line text-[9px]" />
@@ -394,7 +396,7 @@ function TodayReportContent() {
 
               {!isReportForToday && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 text-red-300 text-[10px] font-medium rounded-full border border-red-400/25">
-                  非今日報告：今日為 {todayStr}
+                  歷史資料模式：{fallbackReportDate || report.report_date}，今日為 {todayStr}
                 </span>
               )}
             </div>
@@ -404,7 +406,7 @@ function TodayReportContent() {
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6">
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              今日狀態總覽
+              {isHistoricalFallback ? '歷史報告總覽' : '今日狀態總覽'}
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -446,7 +448,7 @@ function TodayReportContent() {
 
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              今日一句話
+              {isHistoricalFallback ? '報告一句話' : '今日一句話'}
             </h2>
             <p className="text-slate-200 text-sm leading-relaxed">
               <strong className="text-slate-50">
@@ -495,7 +497,7 @@ function TodayReportContent() {
 
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              今日重要觀察
+              {isHistoricalFallback ? '報告重要觀察' : '今日重要觀察'}
             </h2>
 
             <div className="space-y-3">
@@ -523,7 +525,7 @@ function TodayReportContent() {
             <section className="bg-navy-900/70 border border-amber-500/15 rounded-2xl p-5 md:p-6">
               <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
                 <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
-                  今日受惠觀察
+                  {isHistoricalFallback ? '歷史受惠觀察' : '今日受惠觀察'}
                 </h2>
                 <span className="text-amber-300 text-[10px] px-2 py-1 rounded-full bg-amber-500/10 border border-amber-400/20">
                   觀察名單，不是買進訊號

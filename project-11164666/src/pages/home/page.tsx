@@ -118,8 +118,8 @@ function HomePageContent() {
   // V377: Simplified display mode — report exists + is for today = normal
   // V8.3: Added market-closed check from ai_strategy_json
   const displayMode = useMemo(() => {
-    if (!reportExists) return 'no-report';
     if (marketClosedInfo.closed) return 'market-closed';
+    if (!reportExists) return 'no-report';
     if (!isTodayReport) return 'not-today';
     return 'normal';
   }, [reportExists, isTodayReport, marketClosedInfo]);
@@ -177,7 +177,7 @@ function HomePageContent() {
       case 'no-report':
         return { label: '目前暫時無法讀取今日資料，請稍後再試', color: 'bg-amber-500/12 border-amber-400/35 text-amber-300', dot: 'bg-amber-400', icon: 'ri-time-line' };
       case 'not-today':
-        return { label: '今日盤前參考最近完整交易日資料', color: 'bg-sky-500/12 border-sky-400/35 text-sky-300', dot: 'bg-sky-400', icon: 'ri-calendar-check-line' };
+        return { label: '歷史資料模式', color: 'bg-sky-500/12 border-sky-400/35 text-sky-300', dot: 'bg-sky-400', icon: 'ri-history-line' };
       case 'market-closed':
         return { label: '🔴 非交易日', color: 'bg-red-500/12 border-red-400/35 text-red-300', dot: 'bg-red-400', icon: 'ri-calendar-close-line' };
       case 'normal':
@@ -256,7 +256,7 @@ function HomePageContent() {
             )}
 
             {/* ═══ V10.0: Market Closed — Today's Market Status (NOT last report date) ═══ */}
-            {displayMode === 'market-closed' && hasReportData && (
+            {displayMode === 'market-closed' && (
               <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-6 mb-6">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-400/20 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -298,7 +298,7 @@ function HomePageContent() {
             )}
 
             {/* ═══ V10.0: Market Closed — Next Update Time Card ═══ */}
-            {displayMode === 'market-closed' && hasReportData && (
+            {displayMode === 'market-closed' && (
               <section className="w-full px-4 md:px-6 pb-10 md:pb-14">
                 <div className="max-w-5xl mx-auto w-full">
                   <div className="bg-background-100 border border-background-200/70 rounded-2xl p-6 md:p-8">
@@ -383,7 +383,7 @@ function HomePageContent() {
                 }}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm rounded-xl transition-colors whitespace-nowrap min-h-[48px]"
               >
-                {isTodayReport ? '查看今日盤前判斷' : '查看報告內容'}
+                {isTodayReport ? '查看今日盤前判斷' : '查看歷史資料模式'}
                 <i className="ri-arrow-right-line"></i>
               </Link>
               {isTodayReport && (
@@ -430,7 +430,7 @@ function HomePageContent() {
                     <span className="text-foreground-400 text-[10px] w-28 flex-shrink-0 uppercase tracking-wider">報告日期</span>
                     <span className="text-foreground-900 text-xs font-semibold">{displayReportDate}</span>
                     {!isTodayReport && (
-                      <span className="text-red-500 text-[10px] font-medium ml-auto">非今日報告</span>
+                      <span className="text-red-500 text-[10px] font-medium ml-auto">歷史資料模式</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -548,7 +548,7 @@ function HomePageContent() {
                   上一份盤前報告參考｜{displayReportDate}
                 </h2>
                 <p className="text-foreground-500 text-sm leading-relaxed mb-4">
-                  今日 {todayTaipeiStr} 尚無盤前報告，以下為最近一份報告（{displayReportDate}）僅供參考，非今日盤前報告。
+                  今日 {todayTaipeiStr} 尚無盤前報告，以下為歷史資料模式（{displayReportDate}）僅供參考，非今日盤前報告。
                 </p>
                 <div className="bg-amber-500/[0.04] border border-amber-400/20 rounded-xl p-4 mb-5">
                   <p className="text-amber-700 text-xs leading-relaxed">

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { fetchMarketDataBySymbols } from '@/services/marketDataService';
+import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import type { Report } from '@/types/report';
 
 // ==================== TYPES ====================
@@ -71,26 +72,10 @@ const CORE_SYMBOLS = ['TAIEX', 'TXF', '2330', 'TSM', 'SOX', 'VIX', 'DXY', 'US10Y
 
 // ==================== SUPABASE HELPERS ====================
 
-export async function getLatestReport(): Promise<Report | null> {
-  const today = new Date().toISOString().slice(0, 10);
-
-  const { data } = await supabase
-    .from('reports')
-    .select('*')
-    .eq('report_date', today)
-    .maybeSingle();
-
-  if (data) return mapRowToReport(data as Record<string, unknown>);
-
-  const { data: latest } = await supabase
-    .from('reports')
-    .select('*')
-    .order('report_date', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (latest) return mapRowToReport(latest as Record<string, unknown>);
-  return null;
+export async function getActiveReport(): Promise<Report | null> {
+  const resolved = await resolveActiveMorningAlphaReport();
+  if (!resolved.rawRow || resolved.isHistoricalFallback) return null;
+  return mapRowToReport(resolved.rawRow as unknown as Record<string, unknown>);
 }
 
 export async function getSelectedMarketNews(): Promise<NewsSnapshot[]> {

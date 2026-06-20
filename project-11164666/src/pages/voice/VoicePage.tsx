@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import {
-  getLatestReport,
+  getActiveReport,
   getSelectedMarketNews,
   getLatestMarketData,
   getTodayVoiceReport,
@@ -38,7 +38,7 @@ export default function VoicePage() {
 
         // Step 2: Fall back — generate from reports + market_data + market_news
         const [report, marketData, marketNews] = await Promise.all([
-          getLatestReport(),
+          getActiveReport(),
           getLatestMarketData(),
           getSelectedMarketNews(),
         ]);

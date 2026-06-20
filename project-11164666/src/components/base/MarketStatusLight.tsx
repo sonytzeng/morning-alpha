@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getLatestReports } from '@/services/reportService';
+import { mapRowToReport } from '@/services/reportService';
+import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import type { Report } from '@/types/report';
 import type { IntradayCheck } from '@/services/intradayCheckService';
 import type { MarketState } from '@/services/marketStateEngine';
@@ -217,8 +218,10 @@ export function useMarketStatus(report?: Report | null, intradayCheck?: Intraday
     if (skipFetch) return; // V28: when marketState is passed, skip internal fetch entirely
     async function load() {
       try {
-        const reports = await getLatestReports(1);
-        const r = reports[0] || null;
+        const resolved = await resolveActiveMorningAlphaReport();
+        const r = resolved.rawRow && !resolved.isHistoricalFallback
+          ? mapRowToReport(resolved.rawRow as unknown as Record<string, unknown>)
+          : null;
         const s = deriveStatus(r, null);
         setStatus(s);
         setConfig(STATUS_MAP[s]);

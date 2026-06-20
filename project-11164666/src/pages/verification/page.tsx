@@ -2,11 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
-import { getTodayReport } from '@/services/reportService';
 import { getTodayIntradayCheck } from '@/services/intradayCheckService';
 import { getTodayOpeningRadar, type OpeningRadar } from '@/services/openingRadarService';
 import { getDataTimestamps, formatTimestampForDisplay } from '@/services/dataTimestampService';
-import { supabase } from '@/lib/supabase';
 import type { Report } from '@/types/report';
 import type { IntradayCheck } from '@/services/intradayCheckService';
 import { trackPageView } from '@/utils/analytics';
@@ -167,8 +165,8 @@ export default function VerificationPage() {
         setLoading(true);
         setError(null);
 
-        const [reportData, intradayData, radarData, newsItems, tsData, healthData, newsStatsData] = await Promise.all([
-          getTodayReport(),
+        const [resolved, intradayData, radarData, newsItems, tsData, healthData, newsStatsData] = await Promise.all([
+          resolveActiveMorningAlphaReport(),
           getTodayIntradayCheck(),
           getTodayOpeningRadar(),
           getSelectedMarketNews(8),
@@ -180,6 +178,22 @@ export default function VerificationPage() {
         // V8: Monthly stats computed from available data (no direct intraday_checks query)
         const monthlyStatsFallback = { totalPredictions: 0, confirmedCount: 0, failedCount: 0, successRate: 0 };
 
+        let reportData: Report | null = resolved.rawRow
+          ? mapRowToReport(resolved.rawRow as unknown as Record<string, unknown>)
+          : null;
+
+        // V7.53: Apply market bias downgrade for post-close
+        if (reportData && radarData) {
+          const downgradedBias = applyMarketBiasDowngrade(reportData.market_bias, {
+            taiexChange: radarData.taiex_change ?? null,
+            txfChange: radarData.txf_change ?? null,
+            tsmc2330Change: radarData.tsmc_change ?? null,
+          });
+          if (downgradedBias && downgradedBias !== reportData.market_bias) {
+            reportData = { ...reportData, market_bias: downgradedBias };
+          }
+        }
+
         setReport(reportData);
         setIntraday(intradayData);
         setOpeningRadar(radarData);
@@ -189,45 +203,6 @@ export default function VerificationPage() {
         setNewsStats(newsStatsData);
         setMonthlyStats(monthlyStatsFallback);
 
-        // V14: On weekends when today's report is missing, try latest report fallback
-        if (isWeekend && !reportData) {
-          try {
-            const { data: fallbackReportData } = await supabase
-              .from('reports')
-              .select('*')
-              .order('report_date', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            if (fallbackReportData) {
-              setReport(mapRowToReport(fallbackReportData as Record<string, unknown>));
-            }
-          } catch {
-            // ignore fallback errors
-          }
-        }
-
-        // V7.53: Use resolveActiveMorningAlphaReport — SINGLE SOURCE OF TRUTH
-        const resolved = await resolveActiveMorningAlphaReport();
-        const resolvedRow = resolved.rawRow;
-        let resolvedReportData: Report | null = null;
-
-        if (resolvedRow) {
-          resolvedReportData = mapRowToReport(resolvedRow as unknown as Record<string, unknown>);
-          const ai = (resolvedRow.ai_strategy_json as Record<string, unknown>) || {};
-          // setCloseValidation((ai.close_validation as Record<string, unknown>) || null);
-
-          // V7.53: Apply market bias downgrade for post-close
-          if (resolvedReportData && radarData) {
-            const downgradedBias = applyMarketBiasDowngrade(resolvedReportData.market_bias, {
-              taiexChange: radarData.taiex_change ?? null,
-              txfChange: radarData.txf_change ?? null,
-              tsmc2330Change: radarData.tsmc_change ?? null,
-            });
-            if (downgradedBias && downgradedBias !== resolvedReportData.market_bias) {
-              resolvedReportData = { ...resolvedReportData, market_bias: downgradedBias };
-            }
-          }
-        }
         getRecentCloseMarketReviews(7)
           .then((cmrs) => {
             setCloseMarketReviews(cmrs);

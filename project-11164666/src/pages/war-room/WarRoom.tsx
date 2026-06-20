@@ -56,7 +56,7 @@ function WarRoomContent() {
   }, [morningState]);
   const marketClosedInfo = displayState
     ? { closed: displayState.isMarketClosed, holidayName: displayState.holidayName }
-    : { closed: false, holidayName: null as string | null };
+    : { closed: isWeekend, holidayName: isWeekend ? '週末休市' : null as string | null };
 
   // Taipei hour for status logic
   const taipeiHour = useMemo(() => {
@@ -140,29 +140,6 @@ function WarRoomContent() {
     );
   }
 
-  if (error || !report) {
-    return (
-      <div className="min-h-screen bg-navy-950 flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center px-4">
-          <div className="text-center max-w-md">
-            <i className="ri-radar-line text-white/20 text-3xl mb-3"></i>
-            <h2 className="text-white font-semibold text-base mb-2">
-              {error ? '讀取失敗' : '尚無盤前報告資料'}
-            </h2>
-            <p className="text-white/50 text-sm mb-4">
-              {error ? error : '目前沒有任何盤前報告資料。請確認資料來源是否正常運作。'}
-            </p>
-            <Link to="/" className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors inline-block whitespace-nowrap border border-white/10">
-              返回首頁
-            </Link>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
   // V10.0: Market closed — show today's market status, NOT last report date
   if (marketClosedInfo.closed) {
     const nextDate = displayState?.nextTradingDate || '—';
@@ -181,7 +158,7 @@ function WarRoomContent() {
               非交易日
             </span>
             <p className="text-slate-400 text-sm mb-1">
-              日期：{displayState?.currentDate || report.report_date}（{displayState?.currentWeekday || ''}）
+              日期：{displayState?.currentDate || report?.report_date || todayTaipeiStr}（{displayState?.currentWeekday || ''}）
             </p>
             <p className="text-slate-500 text-sm mb-4">
               原因：{displayState?.holidayName || marketClosedInfo.holidayName || '休市'}
@@ -195,6 +172,29 @@ function WarRoomContent() {
               今日台股休市，盤中追蹤暫停。所有分析功能將於下一個交易日自動恢復。
             </p>
             <Link to="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
+              返回首頁
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !report) {
+    return (
+      <div className="min-h-screen bg-navy-950 flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center max-w-md">
+            <i className="ri-radar-line text-white/20 text-3xl mb-3"></i>
+            <h2 className="text-white font-semibold text-base mb-2">
+              {error ? '讀取失敗' : '尚無盤前報告資料'}
+            </h2>
+            <p className="text-white/50 text-sm mb-4">
+              {error ? error : '目前沒有任何盤前報告資料。請確認資料來源是否正常運作。'}
+            </p>
+            <Link to="/" className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors inline-block whitespace-nowrap border border-white/10">
               返回首頁
             </Link>
           </div>
@@ -278,7 +278,7 @@ function WarRoomContent() {
             {isHistoricalFallback && fallbackReportDate && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-500/12 text-sky-300 text-[10px] font-medium rounded-full border border-sky-500/20 whitespace-nowrap">
                 <i className="ri-history-line"></i>
-                歷史資料：{fallbackReportDate}
+                歷史資料模式：{fallbackReportDate}
               </span>
             )}
           </div>

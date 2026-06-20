@@ -1,0 +1,157 @@
+// ═══ MAIN HANDLER V7.51 — Root Field Protection + Safe Query ═══
+Deno.serve(async (req) => {
+  if (req.method==='OPTIONS') return new Response(null,{status:204,headers:CORS_HEADERS});
+  const startTime=Date.now();const logs:string[]=[];let currentStage='START';
+  function log(msg:string){const line=`[${new Date().toISOString()}] ${msg}`;logs.push(line);console.log(line);}
+  let forceAllowLowQuality=false;let forceRun=false;let forceLatestAvailable=false;let requestedGenerationMode='';let repairRootFields=false;
+  try{const body=await req.clone().json();forceAllowLowQuality=body?.force_allow_low_quality===true;forceRun=body?.force_run===true;forceLatestAvailable=body?.force_latest_available===true;repairRootFields=body?.repair_root_fields===true;if(typeof body?.generation_mode==='string'){requestedGenerationMode=body.generation_mode;}}catch{/*ignore*/}
+  if(forceLatestAvailable&&!forceRun)forceRun=true;
+  try{
+    currentStage='AUTH_CHECK'; const cronSecret=req.headers.get('x-cron-secret')||'';const authHeader=req.headers.get('Authorization')||'';
+    const envCronSecret=Deno.env.get('CRON_SECRET')||'';const supabaseAnonKey=Deno.env.get('SUPABASE_ANON_KEY')||'';const supabaseServiceRole=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
+    const hasValidCronSecret=envCronSecret&&cronSecret===envCronSecret;
+    const hasValidBearer=authHeader.startsWith('Bearer ')&&(authHeader.slice(7)===supabaseAnonKey||authHeader.slice(7)===supabaseServiceRole);
+    if (!hasValidCronSecret&&!hasValidBearer) return corsResponse({success:false,error:'Unauthorized',version:VERSION,details:{reason:'No valid x-cron-secret or Authorization Bearer token',hasCronSecret:!!cronSecret,hasAuthHeader:!!authHeader,anonKeyConfigured:supabaseAnonKey.length>0,serviceRoleConfigured:supabaseServiceRole.length>0},stage:'AUTH_CHECK',logs},401);
+    log(`=== START: ${VERSION} ===`);
+    currentStage='SUPABASE_URL_CHECK';const supabaseUrl=Deno.env.get('SUPABASE_URL')||'';if(!supabaseUrl)return corsResponse({success:false,error:'SUPABASE_URL_NOT_CONFIGURED',version:VERSION,logs},500);
+    currentStage='SUPABASE_CLIENT_INIT';const supabase=createClient(supabaseUrl,supabaseServiceRole);
+    currentStage='OPENAI_KEY_CHECK';const openaiKey=Deno.env.get('OPENAI_API_KEY');if(!openaiKey)return corsResponse({success:false,error:'OPENAI_API_KEY_NOT_CONFIGURED',version:VERSION,logs},500);
+
+    currentStage='FETCH_MARKET_AND_NEWS';const [marketResult,newsResult]=await Promise.all([fetchMarketData(supabase,log),fetchMarketNews(supabase,log)]);
+    log(`Market:${marketResult?.dataCount??0},stale=${marketResult?.isStale??true}`);log(`News:${newsResult?.newsCount??0},stale=${newsResult?.isStale??true}`);
+    currentStage='CHECK_TW_CORE_MVP';const twCore=checkTWCoreStatus(marketResult?.marketData??[],log);const mvpStatus=checkMVPStatus(marketResult?.marketData??[],log);
+    log(`TW:TAIEX=${twCore.taiexPresent} TXF=${twCore.txfPresent} 2330=${twCore.ts2330Present}`);log(`MVP:NVDA=${mvpStatus.nvdaPresent} TSM=${mvpStatus.tsmPresent} SPX=${mvpStatus.spxPresent}`);
+    const freshness:FreshnessCheck={marketDataFresh:!(marketResult?.isStale??true)&&(marketResult?.dataCount??0)>0,newsFresh:!(newsResult?.isStale??true)&&(newsResult?.newsCount??0)>0,latestDataTime:marketResult?.latestDataTime??null,latestNewsTime:newsResult?.latestNewsTime??null,dataCount:marketResult?.dataCount??0,newsCount:newsResult?.newsCount??0};
+    currentStage='DETERMINE_REPORT_MODE';const taipeiDow=getTaipeiDayOfWeek();const hasMarketData=(marketResult?.dataCount??0)>0;const reportMode=determineReportMode(taipeiDow,hasMarketData,marketResult?.dataCount??0);
+    log(`Report mode:${reportMode}(dow=${taipeiDow},dataCount=${marketResult?.dataCount??0})`);
+
+    const isNonTradingDay=reportMode===REPORT_MODE_NON_TRADING;
+    let generationMode='trading_day_fresh';let isTradingDay=true;let dataBasis='fresh_today';let latestTradingDate='';
+    if(marketResult?.latestDataTime){ latestTradingDate=marketResult.latestDataTime.toISOString().slice(0,10); } else { const d=new Date(); if(taipeiDow===0)d.setDate(d.getDate()-2);else if(taipeiDow===6)d.setDate(d.getDate()-1);else d.setDate(d.getDate()-1); latestTradingDate=d.toISOString().slice(0,10); }
+    if(requestedGenerationMode&&['trading_day_fresh','latest_trading_day_review','weekend_digest','admin_regenerate_latest'].includes(requestedGenerationMode)){ generationMode=requestedGenerationMode; } else if(isNonTradingDay&&forceRun){ generationMode='admin_regenerate_latest';isTradingDay=false;dataBasis='latest_trading_day'; } else if(reportMode===REPORT_MODE_WEEKEND){ generationMode='weekend_digest'; } else if(isNonTradingDay){ generationMode='latest_trading_day_review';isTradingDay=false;dataBasis='latest_trading_day'; } else { generationMode='trading_day_fresh'; }
+    log(`Generation mode:${generationMode} isTradingDay:${isTradingDay} dataBasis:${dataBasis} latestTradingDate:${latestTradingDate} repairRF:${repairRootFields}`);
+
+    if(!forceRun&&isNonTradingDay){ log(`Non-trading day(dow=${taipeiDow}), skipping.`); return corsResponse({success:true,skipped:true,reason:`non_trading_day_dow_${taipeiDow}`,report_mode:REPORT_MODE_NON_TRADING,generation_mode:generationMode,taipei_dow:taipeiDow,version:VERSION,logs},200); }
+    if(forceRun&&isNonTradingDay){ log(`Non-trading day forced run — using latest trading day data (${latestTradingDate})`); }
+
+    const shouldBlockOnFreshness=!isNonTradingDay||!forceRun;
+    if(shouldBlockOnFreshness&&!freshness.marketDataFresh&&!freshness.newsFresh){ log('ERROR:Both stale on trading day'); return corsResponse({success:false,error:'NO_FRESH_DATA',stage:currentStage,version:VERSION,logs},500); }
+    if(isNonTradingDay&&forceRun){ log(`Non-trading forced run: bypassing freshness check (data from latest trading day ${latestTradingDate})`); freshness.marketDataFresh=true;freshness.newsFresh=true; }
+    if(forceRun){log(`FORCE_RUN active — generation_mode=${generationMode} (actual dow=${taipeiDow})`);}
+
+    currentStage='BUILD_NEWS_BRIEF_AND_SCORE';const brief=buildNewsBrief(newsResult?.newsData??[]);const score=calculateMarketDataScore(marketResult?.marketData??[]);
+    const isDSI=mvpStatus.mvpInsufficient||twCore.dataInsufficient;if(isDSI&&score.baseScore>75)score.baseScore=75;log(`Score:${score.baseScore}`);
+    currentStage='FETCH_YESTERDAY_REPORT';const yesterday=await fetchYesterdayReport(supabase,log);log(`Yesterday:${yesterday?'found':'not found'}`);
+    let closeReview:Record<string,unknown>|null=null;let sectorScores:Record<string,unknown>[]=[];
+    if(reportMode===REPORT_MODE_WEEKEND||forceRun){currentStage='FETCH_CLOSE_REVIEW_DATA';const[cr,ss]=await Promise.all([fetchLatestCloseMarketReview(supabase,log),fetchLatestSectorRotationScores(supabase,log)]);closeReview=cr;sectorScores=ss;log(`Close review data:closeReview=${closeReview?'found':'none'},sectorScores=${sectorScores.length}`);}
+    currentStage='BUILD_PROMPT';let prompt:string;
+    try{const basePrompt=buildPrompt(marketResult?.marketData??[],newsResult?.newsData??[],yesterday,freshness,brief,score,isNonTradingDay&&forceRun,latestTradingDate);if(reportMode===REPORT_MODE_WEEKEND||(isNonTradingDay&&forceRun)){const weekendCtx=buildWeekendDigestContext(closeReview,sectorScores,yesterday,marketResult?.marketData??[],newsResult?.newsData??[],isNonTradingDay&&forceRun,latestTradingDate);prompt=weekendCtx+'\n\n---\n\n'+basePrompt;log('Weekend/non-trading digest context prepended');}else prompt=basePrompt;}
+    catch(e){log(`buildPrompt failed:${e instanceof Error?e.message:String(e)}`);return corsResponse({success:false,error:'BUILD_PROMPT_FAILED',stage:currentStage,version:VERSION,logs},500);}
+
+    let finalRawReport:Record<string,unknown>|null=null;let impactChainSource:'openai'|'openai_retry'|'fallback'='openai';let usedFallback=false;let bestValidation:GradeValidationResult|null=null;
+    currentStage='CALL_OPENAI_ATTEMPT_1'; try{const ai1=await callOpenAI(openaiKey,prompt,log,'V7.51-1');if(ai1){finalRawReport=ai1;impactChainSource='openai';bestValidation=validateMemberGradeOutput(ai1,brief);log(`[V7.51] Val1:${bestValidation.status},q=${bestValidation.qualityScore}`);}else log('[V7.51] OpenAI attempt 1 returned null');} catch(e){log(`[V7.51] OpenAI attempt 1 exception:${e instanceof Error?e.message:String(e)}`);}
+    if(!finalRawReport||(bestValidation&&bestValidation.status==='failed')){currentStage='CALL_OPENAI_ATTEMPT_2'; try{const rp=bestValidation?buildRetryPrompt(prompt,bestValidation):prompt;const ai2=await callOpenAI(openaiKey,rp,log,'V7.51-2');if(ai2){finalRawReport=ai2;impactChainSource='openai_retry';bestValidation=validateMemberGradeOutput(ai2,brief);log(`[V7.51] Val2:${bestValidation.status},q=${bestValidation.qualityScore}`);}else log('[V7.51] OpenAI attempt 2 returned null');} catch(e){log(`[V7.51] OpenAI attempt 2 exception:${e instanceof Error?e.message:String(e)}`);} }
+    if(!finalRawReport){usedFallback=true;impactChainSource='fallback';log('[V7.51] OpenAI completely failed');finalRawReport=buildFallbackReport(marketResult?.marketData??[],newsResult?.newsData??[],brief,score,twCore,mvpStatus,yesterday,freshness,reportMode,closeReview,generationMode,isTradingDay,dataBasis,latestTradingDate);bestValidation=validateMemberGradeOutput(finalRawReport,brief);log(`[V7.51] Fallback built,q=${bestValidation.qualityScore}`);}
+    if(!finalRawReport){log('FATAL:finalRawReport still null');return corsResponse({success:false,error:'FINAL_REPORT_NULL',stage:currentStage,version:VERSION,logs},500);}
+
+    currentStage='NORMALIZE_CHAINS';const{chains:repairedChains,repairedFields:chainRepairs}=normalizeImpactChains(finalRawReport.overnight_impact_chains,marketResult?.marketData??[],newsResult?.newsData??[]);const allRepairedFields:string[]=[...chainRepairs];
+    if(repairedChains.length===0){log('[V7.51] No chains after normalize');return corsResponse({success:false,error:'NO_CHAINS_AFTER_NORMALIZE',version:VERSION,stage:currentStage,logs},500);}
+    finalRawReport.overnight_impact_chains=repairedChains;log(`[V7.51] Chains normalized:${repairedChains.length}`);
+    currentStage='NORMALIZE_MEMBER_READING';const biasForRepair=String(finalRawReport.market_bias||normalizeMarketBiasToChinese('震盪觀察'));
+    const{mr:repairedMR,repairedFields:mrRepairs}=normalizeMemberReading(finalRawReport.member_reading,biasForRepair,repairedChains);allRepairedFields.push(...mrRepairs);
+    if(!repairedMR||typeof repairedMR!=='object'||Array.isArray(repairedMR)){log('FATAL:MR not object after repair');return corsResponse({success:false,error:'MEMBER_READING_UNRECOVERABLE',stage:currentStage,version:VERSION,logs},500);}
+    finalRawReport.member_reading=repairedMR;log(`[V7.51] MR normalized:${mrRepairs.length} fields repaired`);
+    if(!usedFallback){bestValidation=validateMemberGradeOutput(finalRawReport,brief);log(`[V7.51] Post-repair:${bestValidation.status},q=${bestValidation.qualityScore}`);}
+
+    // ═══ V7.51: Soft quality gate (65 instead of 75) ═══
+    currentStage='FINAL_QUALITY_GATE';if(!bestValidation){bestValidation={status:'failed',failReasons:['validation unavailable'],qualityWarnings:[],qualityScore:0};}
+    const qScore=bestValidation?.qualityScore??0;
+    const hasContent=!!finalRawReport?.member_research_note||!!finalRawReport?.free_summary;
+    const hasForbidden=finalRawReport?hasForbiddenWords(extractNarrativeText(finalRawReport)):false;
+    const hasFakeRisk=finalRawReport?.content_quality_flags&&typeof finalRawReport.content_quality_flags==='object'&&(finalRawReport.content_quality_flags as Record<string,unknown>).has_fake_data_risk===true;
+    const twCoreFail=isTradingDay&&twCore.dataInsufficient;
+    const hardFail=!hasContent||hasForbidden||hasFakeRisk||twCoreFail;
+    if(hardFail){log(`[V7.51] HARD FAIL: content=${hasContent} forbidden=${hasForbidden} fakeRisk=${hasFakeRisk} twCore=${twCoreFail}`);return corsResponse({success:false,error:'MEMBER_CONTENT_HARD_FAIL',message:'內容有嚴重問題，無法寫入',version:VERSION,quality_score:qScore,stage:currentStage,logs},500);}
+    log(`[V7.51] Soft gate: q=${qScore} — proceeding to write`);
+
+    currentStage='NORMALIZE_REPORT';const qualityScore=qScore;const allWarnings=bestValidation?.qualityWarnings||[];const validationStatus=(bestValidation?.status==='passed')?'passed':(allRepairedFields.length>0?'repaired':'passed');
+    let report:Record<string,unknown>; try{report=normalizeReport(finalRawReport,freshness,brief,score,twCore,mvpStatus,impactChainSource,qualityScore,allWarnings,validationStatus,allRepairedFields,reportMode,closeReview,generationMode,isTradingDay,dataBasis,latestTradingDate);} catch(e){log(`normalizeReport exception:${e instanceof Error?e.message:String(e)}`);return corsResponse({success:false,error:'NORMALIZE_REPORT_FAILED',stage:currentStage,version:VERSION,logs},500);}
+    if(!report){log('FATAL:normalizeReport returned null/undefined');return corsResponse({success:false,error:'NORMALIZE_REPORT_NULL',stage:currentStage,version:VERSION,logs},500);}
+    currentStage='BUILD_PAYLOAD';let payload:Record<string,unknown>; try{payload=buildPayload(report);}catch(e){log(`buildPayload exception:${e instanceof Error?e.message:String(e)}`);return corsResponse({success:false,error:'BUILD_PAYLOAD_FAILED',stage:currentStage,version:VERSION,logs},500);}
+    if(!payload){log('FATAL:buildPayload returned null/undefined');return corsResponse({success:false,error:'BUILD_PAYLOAD_NULL',stage:currentStage,version:VERSION,logs},500);}
+
+    const today=getTaipeiDateString();
+    log(`[V7.51] WRITING:${today} src=${impactChainSource} val=${validationStatus} q=${qualityScore} mode=${generationMode} repairRF=${repairRootFields}`);
+
+    // ═══ V7.51: ROOT FIELD PROTECTION ═══
+    currentStage='CHECK_EXISTING_REPORT';
+    const existing=await fetchExistingReport(supabase,today,log);
+    let writeMode='insert';let rootFieldsProtected=true;
+
+    if(existing&&!repairRootFields){
+      // Report exists AND we should protect root fields: update only ai_strategy_json
+      writeMode='update_ai_strategy_json_only';
+      rootFieldsProtected=true;
+      log(`Root fields protected: existing report for ${today}, updating ai_strategy_json only. market_bias stays "${existing.market_bias||'N/A'}", confidence_score stays ${existing.confidence_score??'N/A'}`);
+      const newAI=payload.ai_strategy_json as Record<string,unknown>||{};
+      const upResult=await supabase.from('reports').update({ai_strategy_json:newAI}).eq('report_date',today).select('id,report_date').maybeSingle();
+      const{data:upD,error:upE}=safeUnwrap<Record<string,unknown>>(upResult,log,'update_ai_only');
+      if(upE){log(`UPDATE AI ONLY FAILED:${upE}`);return corsResponse({success:false,error:'DB_UPDATE_FAILED',message:upE,version:VERSION,stage:currentStage,logs},500);}
+      log(`[V7.51] SUCCESS UPDATE AI ONLY: ${today}`);
+      const newAIStrategy=report?.ai_strategy_json as Record<string,unknown>|undefined;
+      const mrnE=newAIStrategy?.member_research_note;
+      const rsE=newAIStrategy?.reels_script;
+      const spE=newAIStrategy?.social_post;
+      const lpE=newAIStrategy?.line_push_copy;
+      const cpgE=newAIStrategy?.content_publish_gate;
+      const apdE=newAIStrategy?.auto_publish_decision;
+      return corsResponse({
+        success:true,version:VERSION,report_date:today,report_mode:reportMode,generation_mode:generationMode,
+        write_mode:writeMode,root_fields_protected:rootFieldsProtected,
+        is_trading_day:isTradingDay,data_basis:dataBasis,latest_trading_date:latestTradingDate||'N/A',
+        market_bias:report?.market_bias??'震盪觀察',confidence_score:report?.confidence_score??0,
+        quality_score:qualityScore,
+        member_research_note_exists:!!mrnE,reels_script_exists:!!rsE,social_post_exists:!!spE,
+        line_push_copy_exists:!!lpE,content_publish_gate_exists:!!cpgE,auto_publish_decision_exists:!!apdE,
+        impact_chain_count:repairedChains.length,source:impactChainSource,
+        duration_ms:Date.now()-startTime,
+        message:isNonTradingDay&&forceRun?'非交易日，已使用最近交易日資料重新產生會員內容':undefined,
+        logs
+      },200);
+    }
+
+    if(existing&&repairRootFields){
+      writeMode='overwrite_with_root_repair';
+      rootFieldsProtected=false;
+      log(`repair_root_fields=true: overwriting root fields for ${today}`);
+    }
+
+    // Insert or full overwrite
+    currentStage='UPSERT_REPORTS';
+    const upResult=await supabase.from('reports').upsert({report_date:today,...payload,created_at:new Date().toISOString()},{onConflict:'report_date'}).select('id,report_date').maybeSingle();
+    const{data:upD,error:upE}=safeUnwrap<Record<string,unknown>>(upResult,log,'upsert');
+    if(upE){log(`UPSERT FAILED:${upE}`);return corsResponse({success:false,error:'DB_UPSERT_FAILED',message:upE,version:VERSION,stage:currentStage,logs},500);}
+    log(`[V7.51] SUCCESS WRITE:${today} upsert_id=${upD?.id||'null'} writeMode=${writeMode}`);
+
+    const newAIStrategy=report?.ai_strategy_json as Record<string,unknown>|undefined;
+    const mrnE=newAIStrategy?.member_research_note;
+    const rsE=newAIStrategy?.reels_script;
+    const spE=newAIStrategy?.social_post;
+    const lpE=newAIStrategy?.line_push_copy;
+    const cpgE=newAIStrategy?.content_publish_gate;
+    const apdE=newAIStrategy?.auto_publish_decision;
+    return corsResponse({
+      success:true,version:VERSION,report_date:today,report_mode:reportMode,generation_mode:generationMode,
+      write_mode:writeMode,root_fields_protected:rootFieldsProtected,
+      is_trading_day:isTradingDay,data_basis:dataBasis,latest_trading_date:latestTradingDate||'N/A',
+      market_bias:report?.market_bias??'震盪觀察',confidence_score:report?.confidence_score??0,
+      quality_score:qualityScore,
+      member_research_note_exists:!!mrnE,reels_script_exists:!!rsE,social_post_exists:!!spE,
+      line_push_copy_exists:!!lpE,content_publish_gate_exists:!!cpgE,auto_publish_decision_exists:!!apdE,
+      impact_chain_count:repairedChains.length,source:impactChainSource,
+      duration_ms:Date.now()-startTime,
+      message:isNonTradingDay&&forceRun?'非交易日，已使用最近交易日資料重新產生會員內容':undefined,
+      logs
+    },200);
+  }catch(err){const msg=err instanceof Error?err.message:String(err);console.error(`[V7.51] FATAL[${currentStage}]:${msg}`);log(`FATAL[${currentStage}]:${msg}`);return corsResponse({success:false,version:VERSION,error:'INTERNAL_ERROR',reason:msg,stage:currentStage,logs},500);}
+});

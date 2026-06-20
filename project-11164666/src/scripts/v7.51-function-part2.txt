@@ -1,0 +1,199 @@
+function normalizeNewAIFields(raw:Record<string,unknown>,bias:string,confScore:number,isDSI:boolean,isNonTrading:boolean,chains:Record<string,unknown>[],closeReview:Record<string,unknown>|null,isTradingDay:boolean,dataBasis:string,latestTradingDate:string): Record<string,unknown> {
+  const today=getTaipeiDateString();
+  let freeSummary:Record<string,unknown>;
+  if (raw.free_summary&&typeof raw.free_summary==='object'&&!Array.isArray(raw.free_summary)) {
+    freeSummary={...(raw.free_summary as Record<string,unknown>)};if(!freeSummary.today_status)freeSummary.today_status=isNonTrading?`非交易日回顧，最近交易日為${latestTradingDate}`:`今日盤前假設為${bias}`;if(!freeSummary.one_sentence)freeSummary.one_sentence=String(raw.summary||`今日市場觀察中。`);if(!freeSummary.market_bias)freeSummary.market_bias=bias;if(freeSummary.confidence_score==null)freeSummary.confidence_score=confScore;if(!freeSummary.do_not_do)freeSummary.do_not_do='不要在資料不足時硬做方向判斷。';if(!freeSummary.mindset)freeSummary.mindset=isNonTrading?'非交易日，回顧最近盤勢節奏。':'盤前先看懂市場站哪一邊。';if(!freeSummary.cta_hint)freeSummary.cta_hint='查看完整盤前判讀';
+  } else {
+    freeSummary={today_status:isDSI?'今日核心資料不足，以觀察為主。':isNonTrading?`非交易日回顧，最近交易日${latestTradingDate}`:`今日盤前假設為${bias}`,one_sentence:String(raw.summary||`今日市場觀察中，盤前假設為${bias}。`),market_bias:bias,confidence_score:confScore,do_not_do:'不要在資料不足時硬做方向判斷。',mindset:isNonTrading?'非交易日，回顧最近盤勢節奏。':'盤前先看懂市場站哪一邊。',cta_hint:'查看完整盤前判讀'};
+  }
+  let memberResearchNote:Record<string,unknown>;
+  if (raw.member_research_note&&typeof raw.member_research_note==='object'&&!Array.isArray(raw.member_research_note)) {
+    memberResearchNote={...(raw.member_research_note as Record<string,unknown>)};if(!memberResearchNote.generated_for_date)memberResearchNote.generated_for_date=today;if(memberResearchNote.is_trading_day==null)memberResearchNote.is_trading_day=isTradingDay;if(!memberResearchNote.data_basis)memberResearchNote.data_basis=dataBasis;if(!memberResearchNote.latest_trading_date&&latestTradingDate)memberResearchNote.latest_trading_date=latestTradingDate;const secs=memberResearchNote.sections;if(!Array.isArray(secs)||secs.length<9){memberResearchNote.sections=buildFallbackNotebookSections(bias,confScore,isDSI,chains);}
+  } else {
+    memberResearchNote={title:isNonTrading?'Morning Alpha 最近交易日研究筆記':'Morning Alpha 今日研究筆記',generated_for_date:today,is_trading_day:isTradingDay,data_basis:dataBasis,latest_trading_date:latestTradingDate||undefined,sections:buildFallbackNotebookSections(bias,confScore,isDSI,chains)};
+  }
+  const secs2=memberResearchNote.sections;
+  if (Array.isArray(secs2)) {
+    for (const s of secs2) {
+      if (typeof s==='object'&&s!==null) {
+        const so=s as Record<string,unknown>;
+        if (so.key==='close_review'&&typeof so.verification_result==='string') {
+          if (hasForbiddenVerdict(so.verification_result)) so.verification_result='資料不足，不做驗證';
+          if (!VERIFICATION_RESULTS.includes(so.verification_result)) {
+            if (so.verification_result.includes('方向一致')) so.verification_result='方向一致';
+            else if (so.verification_result.includes('保守')) so.verification_result='部分命中，盤前偏保守';
+            else if (so.verification_result.includes('積極')) so.verification_result='部分命中，盤前偏積極';
+            else if (so.verification_result.includes('未命中')) so.verification_result='未命中';
+            else so.verification_result='資料不足，不做驗證';
+          }
+        }
+      }
+    }
+  }
+  let reelsScript:Record<string,unknown>;
+  if (raw.reels_script&&typeof raw.reels_script==='object'&&!Array.isArray(raw.reels_script)) {
+    reelsScript={...(raw.reels_script as Record<string,unknown>)};if(!reelsScript.hook_0_5_sec)reelsScript.hook_0_5_sec=isNonTrading?`非交易日回顧，最近交易日市場${bias}。`:`今天市場${bias}，一個關鍵訊號值得先看。`;if(!reelsScript.full_script)reelsScript.full_script=[reelsScript.hook_0_5_sec,reelsScript.core_5_25_sec,reelsScript.risk_25_40_sec,reelsScript.watch_40_55_sec,reelsScript.cta_55_60_sec].filter(Boolean).join('\n\n');
+  } else {
+    reelsScript={hook_0_5_sec:isNonTrading?`非交易日回顧，最近交易日市場${bias}。`:`今天市場${bias}，一個關鍵訊號值得先看。`,core_5_25_sec:`盤前假設為${bias}，把握度${confScore}/100。`,risk_25_40_sec:'不要在資料不足時硬做方向判斷。',watch_40_55_sec:'觀察台積電、台指期與半導體族群方向一致性。',cta_55_60_sec:'這不是明牌，是盤前判斷節奏。追蹤Morning Alpha。',full_script:''};reelsScript.full_script=`${reelsScript.hook_0_5_sec}\n\n${reelsScript.core_5_25_sec}\n\n${reelsScript.risk_25_40_sec}\n\n${reelsScript.watch_40_55_sec}\n\n${reelsScript.cta_55_60_sec}`;
+  }
+  let socialPost:Record<string,unknown>;
+  if (raw.social_post&&typeof raw.social_post==='object'&&!Array.isArray(raw.social_post)) {
+    socialPost={...(raw.social_post as Record<string,unknown>)};
+  } else {
+    socialPost={title:isNonTrading?`Morning Alpha 最近交易日回顧：${bias}`:`Morning Alpha 今日盤前：${bias}`,three_points:[`盤前假設為${bias}，把握度${confScore}/100`,'觀察台積電、台指期與半導體族群','盤中以實際資金流向為準'],risk_reminder:'不要在資料不足時硬做方向判斷。',cta:'追蹤Morning Alpha，看每日盤前判斷節奏。',full_post:''};socialPost.full_post=`${socialPost.title}\n\n📊 三個重點\n1. ${(socialPost.three_points as string[])[0]}\n2. ${(socialPost.three_points as string[])[1]}\n3. ${(socialPost.three_points as string[])[2]}\n\n⚠️ ${socialPost.risk_reminder}\n\n—\n${socialPost.cta}`;
+  }
+  let linePushCopy:Record<string,unknown>;
+  if (raw.line_push_copy&&typeof raw.line_push_copy==='object'&&!Array.isArray(raw.line_push_copy)) {
+    linePushCopy={...(raw.line_push_copy as Record<string,unknown>)};
+  } else {
+    linePushCopy={title:isNonTrading?'Morning Alpha 最近交易日回顧':'Morning Alpha 今日盤前',market_bias:bias,confidence:`${confScore}/100`,one_sentence:String(raw.summary||`今日盤前假設為${bias}。`),do_not_do:'不要在資料不足時硬做方向判斷',watch_point:'台積電、台指期、半導體族群',cta:'查看完整判讀'};
+  }
+  let doNotDoList:string[];
+  if (Array.isArray(raw.do_not_do_list)&&raw.do_not_do_list.length>=3) { doNotDoList=raw.do_not_do_list.map(String).slice(0,5); }
+  else { doNotDoList=['不要只因為前一交易日美股走勢，就直接推論今日台股方向。','不要在台積電與台指期不同步時，急著追任何族群。','不要把開盤前15分鐘的強弱當成全天方向。','不要在資料不足時硬做方向判斷。','不要忽略收盤驗證，收盤才是檢查盤前劇本的關鍵。']; }
+  let invalidationConditions:Record<string,unknown>[];
+  if (Array.isArray(raw.invalidation_conditions)&&raw.invalidation_conditions.length>=2) { invalidationConditions=raw.invalidation_conditions.filter(x=>typeof x==='object'&&x!==null) as Record<string,unknown>[]; }
+  else { invalidationConditions=[{condition:'若台積電開盤方向與盤前假設相反',meaning:'代表盤前判斷需要降權或修正',required_adjustment:'將盤前假設降級為觀察模式'},{condition:'若台指期與加權指數不同步',meaning:'代表市場共識尚未形成',required_adjustment:'降低方向性判斷的權重'}]; }
+  let intradayTrackingPlan:Record<string,unknown>[];
+  if (Array.isArray(raw.intraday_tracking_plan)&&raw.intraday_tracking_plan.length>=4) { intradayTrackingPlan=raw.intraday_tracking_plan.filter(x=>typeof x==='object'&&x!==null) as Record<string,unknown>[]; }
+  else { intradayTrackingPlan=[{time:'09:00-09:15',question:'開盤方向是否與盤前假設一致？',what_to_watch:'台積電開盤方向、台指期是否支持現貨',interpretation:'若開盤方向與盤前劇本相反，需立即降權盤前判斷'},{time:'09:30',question:'權值股與族群是否同步？',what_to_watch:'半導體族群是否擴散',interpretation:'若權值股方向分歧，盤前假設可信度下降'},{time:'10:30',question:'資金是否擴散或只集中少數股票？',what_to_watch:'族群全面聯動還是只漲權值',interpretation:'若資金只集中1-2檔，代表市場信心不足'},{time:'13:00前',question:'是否接近收盤驗證條件？',what_to_watch:'開高後是否出現明顯賣壓',interpretation:'盤前假設是否被盤中驗證或需要修正'}]; }
+  let tomorrowWatchPoints:string[];
+  if (Array.isArray(raw.tomorrow_watch_points)&&raw.tomorrow_watch_points.length>0) { tomorrowWatchPoints=raw.tomorrow_watch_points.map(String).slice(0,5); }
+  else { tomorrowWatchPoints=['收盤驗證後自動更新。']; }
+  let contentQualityFlags:Record<string,unknown>;
+  if (raw.content_quality_flags&&typeof raw.content_quality_flags==='object'&&!Array.isArray(raw.content_quality_flags)) { contentQualityFlags={...(raw.content_quality_flags as Record<string,unknown>)}; }
+  else { contentQualityFlags={has_member_research_note:!!raw.member_research_note,has_reels_script:!!raw.reels_script,has_social_post:!!raw.social_post,has_line_push_copy:!!raw.line_push_copy,has_do_not_do_list:doNotDoList.length>=3,has_invalidation_conditions:invalidationConditions.length>=2,has_intraday_tracking_plan:intradayTrackingPlan.length>=4,is_template_like:false,has_forbidden_words:false,has_fake_data_risk:false,quality_note:'AI生成，需人工抽檢。'}; }
+  const boolKeysCQF=['has_member_research_note','has_reels_script','has_social_post','has_line_push_copy','has_do_not_do_list','has_invalidation_conditions','has_intraday_tracking_plan','is_template_like','has_forbidden_words','has_fake_data_risk'];
+  for (const k of boolKeysCQF) { if (contentQualityFlags[k]==null) contentQualityFlags[k]=false; }
+  if (!contentQualityFlags.quality_note) contentQualityFlags.quality_note='AI生成，需人工抽檢。';
+  const hasFreeSummary=!!raw.free_summary; const hasMemberNote=!!raw.member_research_note;
+  const hasReelsScript=!!raw.reels_script; const hasSocialPost=!!raw.social_post; const hasLinePush=!!raw.line_push_copy;
+  const hasForbidden=(contentQualityFlags.has_forbidden_words===true); const hasFakeRisk=(contentQualityFlags.has_fake_data_risk===true);
+  const gateQualityScore=hasMemberNote?Math.max(50,Math.min(100,contentQualityFlags.has_member_research_note?85:50)):(hasFreeSummary?40:20);
+  let gateOverallStatus:string; const gateReasons:string[]=[]; const gateBlocking:string[]=[];
+  if (!hasMemberNote){gateOverallStatus='不建議公開';gateBlocking.push('缺少會員研究筆記');gateReasons.push('會員研究筆記尚未產生');}
+  else if (!hasFreeSummary){gateOverallStatus='需人工確認';gateReasons.push('免費摘要缺失，但會員筆記可用');}
+  else if (hasForbidden){gateOverallStatus='不建議公開';gateBlocking.push('內容含有禁詞');}
+  else if (hasFakeRisk){gateOverallStatus='需人工確認';gateBlocking.push('內容可能有假資料風險');}
+  else if (gateQualityScore>=80&&!hasForbidden&&!hasFakeRisk){gateOverallStatus='可公開';gateReasons.push('所有內容欄位完整，品質達標');}
+  else if (gateQualityScore>=60){gateOverallStatus='需人工確認';gateReasons.push('內容品質中等，建議人工檢查後公開');}
+  else {gateOverallStatus='不建議公開';gateBlocking.push('會員內容品質不足');}
+  const contentPublishGate:Record<string,unknown>={ overall_status:gateOverallStatus, free_summary_status:hasFreeSummary?'可用':'不可用', member_content_status:hasMemberNote?'完整':'缺失', reels_status:hasReelsScript?'可用':'不可用', line_push_status:hasLinePush?'可用':'不可用', quality_score:gateQualityScore, member_value_score:hasMemberNote?Math.min(gateQualityScore+5,100):0, reasons:gateReasons, blocking_issues:gateBlocking, suggested_action:gateOverallStatus==='可公開'?'自動公開':gateOverallStatus==='需人工確認'?'人工審核':'等待重新產生', };
+  let autoDecision:string;let autoReason:string;let ownerAction:boolean;let urgency:string;let ownerMsg:string;
+  if (gateOverallStatus==='可公開'){ autoDecision='自動公開'; autoReason=`所有內容欄位完整，品質分數 ${gateQualityScore}/100。無禁詞與假資料風險，系統判定可自動公開。`; ownerAction=false; urgency='low'; ownerMsg='今日內容已自動公開，無需站長處理。'; }
+  else if (gateOverallStatus==='需人工確認'){ autoDecision='需人工確認'; autoReason=`會員內容品質分數 ${gateQualityScore}/100。${gateReasons.join('；')}。建議站長登入後台檢視後決定。`; ownerAction=true; urgency='normal'; ownerMsg='今日會員內容已產生但品質偏低或部分缺失，建議站長登入後台檢視後決定是否公開。'; }
+  else { autoDecision='自動擋下'; autoReason=gateBlocking.length>0?gateBlocking.join('；'):'會員內容未達公開標準'; ownerAction=true; urgency='high'; ownerMsg=`今日會員內容被自動擋下：${gateBlocking.join('、')||'品質不足'}。請重新觸發 generate-daily-report-v7 或檢查資料來源。`; }
+  const autoPublishDecision:Record<string,unknown>={ decision:autoDecision, decided_at:new Date().toISOString(), reason:autoReason, requires_owner_action:ownerAction, urgency, owner_message:ownerMsg, };
+  let recentValidationFeedback:Record<string,unknown>;
+  if (closeReview&&typeof closeReview==='object'){ recentValidationFeedback={ available:true, last_review_date:closeReview.review_date||closeReview.created_at||null, verification_result:closeReview.verification_result||closeReview.conclusion||'無資料', market_bias_accuracy:closeReview.market_bias_accuracy||closeReview.direction_match||null, key_insight:closeReview.key_insight||closeReview.summary||'無', }; }
+  else { recentValidationFeedback={ available:false, reason:'尚無收盤驗證資料。系統會在使用者累積足夠交易日後自動產生收盤驗證回饋。', }; }
+  return { free_summary:freeSummary, member_research_note:memberResearchNote, reels_script:reelsScript, social_post:socialPost, line_push_copy:linePushCopy, do_not_do_list:doNotDoList, invalidation_conditions:invalidationConditions, intraday_tracking_plan:intradayTrackingPlan, tomorrow_watch_points:tomorrowWatchPoints, content_quality_flags:contentQualityFlags, content_publish_gate:contentPublishGate, auto_publish_decision:autoPublishDecision, recent_validation_feedback:recentValidationFeedback, };
+}
+
+function normalizeReport(raw:Record<string,unknown>,fresh:FreshnessCheck,brief:NewsBrief,score:MarketDataScore,twCore:TWCoreStatus,mvpStatus:MVPStatus,source:string,qualityScore:number,externalWarnings:string[]=[],validationStatusOverride:string='fail',repairedFields:string[]=[],reportMode:string=REPORT_MODE_NORMAL,closeReview:Record<string,unknown>|null=null,generationMode:string='trading_day_fresh',isTradingDay:boolean=true,dataBasis:string='',latestTradingDate:string=''): Record<string,unknown> {
+  const sn=(v:unknown,fb=0)=>{const n=Number(v);return Number.isNaN(n)?fb:n;}; const ss=(v:unknown,fb='')=>v==null?fb:String(v); const sa=(v:unknown,fb:string[]=[])=>{if(Array.isArray(v))return v.map(String).filter(Boolean);if(typeof v==='string'&&v.trim())return v.split(/[,，、;；\n]/).map(s=>s.trim()).filter(Boolean);return fb;}; const so=(v:unknown,fb:Record<string,unknown>[]=[])=>Array.isArray(v)?v.filter((x):x is Record<string,unknown>=>typeof x==='object'&&x!==null):fb; const sobj=(v:unknown,fb:Record<string,unknown>={})=>v&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:fb;
+  const strat=sobj(raw.today_strategy||raw.ai_strategy_json);const tStrat={do:sa(strat.do),avoid:sa(strat.avoid)};
+  const evts=so(raw.global_events_json).map(e=>({source:ss(e.source,'全球'),event:ss(e.event,'國際市場變動'),taiwanImpact:ss(e.taiwanImpact||e.taiwan_impact,'影響開盤'),beginnerTip:ss(e.beginnerTip||e.beginner_tip,'觀察'),relatedSector:ss(e.relatedSector||e.related_sector,'大盤')}));
+  const risks=so(raw.risk_factors_json).map(r=>({title:ss(r.title||r.factor,'市場風險'),level:(String(r.level||'medium').toLowerCase().includes('high')?'high':String(r.level||'medium').toLowerCase().includes('low')?'low':'medium'),description:ss(r.description||r.impact,'留意波動')}));
+  const ws=so(raw.watch_sectors_json||raw.watch_sectors).map(s=>({sector:ss(s.sector||s.name,'大盤'),direction:ss(s.direction||s.trend||'中性'),reason:ss(s.reason||s.why,'暫無')}));
+  const wsFb=Object.entries(brief.sectorCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([sc])=>({sector:sc,direction:'觀察',reason:'新聞統計'}));
+  const aiRawConfidence=Math.max(0,Math.min(100,sn(raw.confidence_score,50)));const rawSenti=sn(raw.sentiment_score,score.baseScore);
+  const finalSenti=Math.max(Math.max(0,score.baseScore-10),Math.min(Math.min(100,score.baseScore+10),rawSenti));
+  const isDSI=twCore.dataInsufficient||mvpStatus.mvpInsufficient;
+  const cvResult=crossValidate(aiRawConfidence,finalSenti,score.baseScore,score.reasons,score.riskReasons,twCore.dataInsufficient,mvpStatus.mvpInsufficient);
+  let effConf=cvResult.confidenceScore;if(isDSI){if(twCore.dataInsufficient&&effConf>70)effConf=70;if(mvpStatus.mvpInsufficient&&effConf>65)effConf=65;}
+  let fsSafe=finalSenti;if(fsSafe>=85&&effConf<50)fsSafe=Math.min(fsSafe,60);
+  let sL:string;if(isDSI)sL=fsSafe<=20?'極度保守':fsSafe<=40?'保守':fsSafe<=60?'中性':fsSafe<=80?'偏多':'偏多';
+  else {sL=ss(raw.sentiment_label,fsSafe<=20?'極度保守':fsSafe<=40?'保守':fsSafe<=60?'中性':fsSafe<=80?'偏多':'強勢偏多');if(!['極度保守','保守','中性','偏多','強勢偏多'].includes(sL))sL=fsSafe<=20?'極度保守':fsSafe<=40?'保守':fsSafe<=60?'中性':fsSafe<=80?'偏多':'強勢偏多';}
+  const rawBias=ss(raw.market_bias,'');const compBias=classifyMarketBias(effConf,twCore.dataInsufficient,mvpStatus.mvpInsufficient);
+  let finalBias=rawBias?normalizeMarketBiasToChinese(rawBias):compBias;if(source==='fallback')finalBias=compBias;
+  const rawSum=ss(raw.summary,brief.topNews.length>0?`今日市場關注${brief.topNews[0].title.slice(0,30)}...`:'情報整理中...');
+  const summary=sanitizeAIOutput(buildSummaryWithCap(rawSum,twCore.dataInsufficient,mvpStatus.mvpInsufficient),isDSI);
+  const todaySummary=sanitizeAIOutput(buildSummaryWithCap(ss(raw.today_summary,rawSum),twCore.dataInsufficient,mvpStatus.mvpInsufficient),isDSI);
+  const rawChains=Array.isArray(raw.overnight_impact_chains)?(raw.overnight_impact_chains as Record<string,unknown>[]):[];
+  const impactChains=rawChains.filter(c=>typeof c==='object'&&c!==null);
+  const rawMR=raw.member_reading;let memberReading:Record<string,unknown>;let mrSource=source;const qw:string[]=[...externalWarnings];
+  if (rawMR&&typeof rawMR==='object'&&!Array.isArray(rawMR)){const mo=rawMR as Record<string,unknown>;if(typeof mo.core_script==='string'&&countChineseChars(mo.core_script)>=30)memberReading=mo;else{memberReading=fallbackMemberReading(finalBias,impactChains,brief,score);mrSource='fallback';qw.push('MR fallback');}}
+  else {memberReading=fallbackMemberReading(finalBias,impactChains,brief,score);mrSource='fallback';qw.push('MR fallback (missing)');}
+  const fvs=source==='fallback'?'fail':validationStatusOverride;const impactSrc=source==='fallback'?'fallback':'openai';
+  const isNonTrading=reportMode===REPORT_MODE_NON_TRADING;
+  const newAIFields=normalizeNewAIFields(raw,finalBias,effConf,isDSI,isNonTrading,impactChains,closeReview,isTradingDay,dataBasis,latestTradingDate);
+  const freshnessNote=!isTradingDay?'非交易日，使用最近交易日資料':'';
+  return {
+    today_quote:ss(raw.today_quote,'市場每天都有訊號，但你的情緒不該是其中之一。'), summary,market_bias:finalBias,confidence_score:effConf,
+    confidence_label:ss(raw.confidence_label,effConf>=90?'高度信心':effConf>=75?'中高信心':effConf>=50?'尚可':'偏低'),
+    sentiment_score:fsSafe,sentiment_label:sL, sentiment_reason:ss(raw.sentiment_reason,score.reasons.join('、')),
+    risk_reason:ss(raw.risk_reason,score.riskReasons.join('、')), today_strategy:tStrat,can_watch:sa(raw.can_watch,[]),
+    avoid_today:sa(raw.avoid_today,['追高','重壓']), fear_greed:Math.max(0,Math.min(100,sn(raw.fear_greed,50))),fear_greed_summary:ss(raw.fear_greed_summary,'中等'),
+    vix:sn(raw.vix,18),vix_summary:ss(raw.vix_summary,'波動正常'),
+    risk_factors_json:risks.length?risks:[{title:'市場波動',level:'medium',description:'分批觀察'}],
+    watch_sectors_json:ws.length?ws:(wsFb.length?wsFb:[{sector:'大盤',direction:'中性',reason:'觀望'}]),
+    focus_stock_json:so(raw.focus_stock_json).map(f=>({group:ss(f.group||f.sector,'大盤'),direction:ss(f.direction,'觀察'),reason:ss(f.reason,'觀望')})),
+    tomorrow_watch_json:so(raw.tomorrow_watch_json).map(t=>({name:ss(t.name,'大盤'),reason:ss(t.reason,'觀察')})),
+    global_events_json:evts.length?evts:[{source:'全球',event:'國際變動',taiwanImpact:'影響開盤',beginnerTip:'觀察',relatedSector:'大盤'}],
+    ai_strategy_json:{ version:VERSION,report_mode:reportMode,generation_mode:generationMode, source,validation_status:fvs,impact_chain_source:impactSrc, member_reading_source:mrSource,quality_score:qualityScore,quality_warnings:qw, repaired_fields:repairedFields,generated_at:new Date().toISOString(), is_trading_day:isTradingDay,data_basis:dataBasis||'latest_trading_day',latest_trading_date:latestTradingDate||'', freshness_note:freshnessNote, overnight_impact_chains:impactChains,member_reading:memberReading, free_summary:newAIFields.free_summary, member_research_note:newAIFields.member_research_note, reels_script:newAIFields.reels_script, social_post:newAIFields.social_post, line_push_copy:newAIFields.line_push_copy, do_not_do_list:newAIFields.do_not_do_list, invalidation_conditions:newAIFields.invalidation_conditions, intraday_tracking_plan:newAIFields.intraday_tracking_plan, tomorrow_watch_points:newAIFields.tomorrow_watch_points, content_quality_flags:newAIFields.content_quality_flags, content_publish_gate:newAIFields.content_publish_gate, auto_publish_decision:newAIFields.auto_publish_decision, recent_validation_feedback:newAIFields.recent_validation_feedback, data_health:{market_data_fresh:fresh.marketDataFresh,news_fresh:fresh.newsFresh,data_count:fresh.dataCount,news_count:fresh.newsCount,tw_core_insufficient:twCore.dataInsufficient,mvp_insufficient:mvpStatus.mvpInsufficient,score_base:score.baseScore}, legacy:{conservative:ss(sobj(raw.ai_strategy_json).conservative,'先觀察'),aggressive:ss(sobj(raw.ai_strategy_json).aggressive,'留意熱門'),overall_advice:ss(sobj(raw.ai_strategy_json).overall_advice,'建議觀望'),risk_warning:ss(sobj(raw.ai_strategy_json).risk_warning,'投資有風險')}, } as unknown as Record<string,unknown>,
+    important_news_json:(so(raw.important_news_json).length?so(raw.important_news_json):brief.topNews.slice(0,3).map(n=>({title:n.title,summary:n.taiwan_impact_summary||'關注',impact:n.taiwan_impact_summary||'待觀察',sectors:Array.isArray(n.related_sectors)?n.related_sectors:[]}))).map(n=>({title:ss(n.title,'新聞'),summary:ss(n.summary,'關注'),impact:ss(n.impact,'待觀察'),sectors:sa((n as Record<string,unknown>).sectors)})),
+    yesterday_summary:ss(raw.yesterday_summary,'昨日正常波動'),today_summary:todaySummary,
+    ai_psychology:ss(raw.ai_psychology,'別因情緒做錯決定。'),ai_retail_reminder:ss(raw.ai_retail_reminder,'冷靜觀察比衝動進場更重要。'),
+    ai_confidence_reason:ss(raw.ai_confidence_reason,'建議觀察後再決定。'),
+    script_valid_conditions:sa(raw.script_valid_conditions,['主流沒有快速退潮']),
+    script_invalid_conditions:sa(raw.script_invalid_conditions,['開高走低']),
+    today_key_signal:ss(raw.today_key_signal,'觀察主流延續'),
+    today_key_signal_reason:ss(raw.today_key_signal_reason,'確認方向'),
+    intraday_checkpoints:so(raw.intraday_checkpoints,[{time:'09:00',check:'開盤',why:'不急'},{time:'10:30',check:'主流',why:'確認'}]),
+    overnight_impact_chains:impactChains,impact_chain_quality_score:qualityScore,
+    _member_reading:memberReading,_member_reading_source:mrSource,
+    _quality_warnings:qw,_repaired_fields:repairedFields,
+    _cross_validated:cvResult.recalibrated,_cross_validation_reason:cvResult.reason||'',
+    _tw_core_insufficient:twCore.dataInsufficient,_mvp_insufficient:mvpStatus.mvpInsufficient,
+    member_reading_source:mrSource,quality_warnings:qw,repaired_fields:repairedFields,
+  } as unknown as Record<string,unknown>;
+}
+
+function fallbackMemberReading(bias:string,chains:Record<string,unknown>[],brief:NewsBrief,score:MarketDataScore): Record<string,unknown> {
+  const ts=Object.entries(brief.sectorCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([s])=>s);
+  const rt=score.riskReasons.length>0?score.riskReasons.join('、'):'暫無明確風險';
+  const pt=score.reasons.length>0?score.reasons.join('、'):'訊號中性';
+  const cs=`今日盤前市場狀態為「${bias}」。主要觀察方向：${ts.length>0?ts.join('、')+'等族群':'大盤整體方向'}。正面訊號：${pt}。風險提醒：${rt}。${chains.length>0?`隔夜影響鏈共${chains.length}條。`:'今日建議以觀察為主。'}本判讀為AI備援內容，僅供參考，不構成投資建議。`;
+  return {core_script:cs,what_not_to_do:['不要只因單一美股訊號就判斷台股方向。','不要在數據未確認前急著追價。','不要把盤前假設當成已成立的盤中結論。'],watchlist_logic:[`重點觀察${ts.length>0?ts[0]||'大盤':'大盤'}族群方向`,'注意權值股是否帶量表態','盤中確認族群輪動是否出現明確主線'],closing_validation_focus:[`收盤後確認「${bias}」的盤前判斷是否成立`,'確認今日市場數據是否支持盤前判斷']};
+}
+
+function buildPayload(report:Record<string,unknown>): Record<string,unknown> {
+  const keys=['summary','market_bias','confidence_score','confidence_label','today_quote','today_strategy','can_watch','avoid_today','fear_greed','fear_greed_summary','vix','vix_summary','risk_factors_json','watch_sectors_json','focus_stock_json','tomorrow_watch_json','global_events_json','ai_strategy_json','important_news_json','yesterday_summary','today_summary','ai_psychology','ai_retail_reminder','ai_confidence_reason','sentiment_score','sentiment_label','sentiment_reason','risk_reason'];
+  const p:Record<string,unknown>={}; for (const k of keys) { if (k in report) p[k]=report[k]; }
+  if (!p.ai_strategy_json||typeof p.ai_strategy_json!=='object') p.ai_strategy_json={};
+  const ai={...(p.ai_strategy_json as Record<string,unknown>)};
+  if (Array.isArray(report.script_valid_conditions)) ai.script_valid_conditions=report.script_valid_conditions;
+  if (Array.isArray(report.script_invalid_conditions)) ai.script_invalid_conditions=report.script_invalid_conditions;
+  if (report.today_key_signal) ai.today_key_signal=report.today_key_signal;
+  if (report.today_key_signal_reason) ai.today_key_signal_reason=report.today_key_signal_reason;
+  if (Array.isArray(report.intraday_checkpoints)) ai.intraday_checkpoints=report.intraday_checkpoints;
+  p.ai_strategy_json=ai;return p;
+}
+
+function buildFallbackReport(md:MarketIndicator[],nd:MarketNewsItem[],brief:NewsBrief,score:MarketDataScore,twCore:TWCoreStatus,mvpStatus:MVPStatus,yesterday:Record<string,unknown>|null,fresh:FreshnessCheck,reportMode:string,closeReview:Record<string,unknown>|null=null,generationMode:string='trading_day_fresh',isTradingDay:boolean=true,dataBasis:string='',latestTradingDate:string=''): Record<string,unknown> {
+  const tn=brief.topNews.slice(0,3);const ts=Object.entries(brief.sectorCounts).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const fb=classifyMarketBias(score.baseScore,twCore.dataInsufficient,mvpStatus.mvpInsufficient);
+  const isDSI=twCore.dataInsufficient||mvpStatus.mvpInsufficient; const isNonTrading=reportMode===REPORT_MODE_NON_TRADING;
+  const d=isDSI?'資料不足。':'備援內容。';
+  const fcs:Record<string,unknown>[]=ts.map(([sec,cnt])=>({chain_title:`${sec}族群需觀察盤中方向`,direction:'neutral',source_events:tn.slice(0,2).map(n=>({title:n.title||'新聞',source:n.source||'未知',published_at:n.published_at||new Date().toISOString(),why_relevant:`可能影響${sec}相關個股`})),market_evidence:[{symbol:'TAIEX',change_percent:'0.0',interpretation:'台股加權方向未明'}],causal_path:[`${sec}相關新聞增加`,'市場關注度上升','需觀察開盤資金'],why_it_matters:`${sec}族群在新聞提及${cnt}次。`,taiwan_sector_impact:`${sec}族群可能受隔夜消息影響。`,affected_sectors:[{sector_name:sec,impact_direction:'watch',reason:`新聞提及${cnt}次`}],representative_stocks:[{symbol:'2330',name:'台積電',role:'權值龍頭',reason:'台積電是權值股核心',watch_condition:'觀察是否站穩平盤'},{symbol:'2454',name:'聯發科',role:'IC設計',reason:'聯發科反映科技情緒',watch_condition:'觀察是否同步表態'},{symbol:'2382',name:'廣達',role:'AI伺服器',reason:'廣達反映AI需求',watch_condition:'觀察資金承接'}],intraday_watch_points:[{time:'09:15',watch:'觀察權值股方向',bullish_confirm:'開高且方向一致',bearish_confirm:'開低且無買盤'}],confirm_conditions:['方向一致'],invalid_conditions:['方向分歧量縮'],plain_language_summary:`${d}先觀察${sec}族群表現。`,_fallback:true}));
+  const confScore=Math.min(score.baseScore,50);
+  const fbNewFields=normalizeNewAIFields({},fb,confScore,isDSI,isNonTrading,fcs,closeReview,isTradingDay,dataBasis,latestTradingDate);
+  return {
+    market_bias:fb,summary:`${d}市場關注${tn.map(n=>n.title?.slice(0,20)).join('、')}`,confidence_score:confScore,sentiment_score:Math.min(score.baseScore,50),
+    sentiment_label:'中性',sentiment_reason:score.reasons.join('、'),risk_reason:score.riskReasons.join('、'),today_quote:'備援模式：以盤中數據為準。',
+    today_strategy:{do:['觀察'],avoid:['衝動']},can_watch:ts.map(([s])=>s),avoid_today:['追高','重壓'],overnight_impact_chains:fcs,
+    member_reading:{core_script:`${d}今日建議以觀察為主。`,what_not_to_do:['不要在方向不明時進場','不要根據不完整資訊做決定','不要急於追價'],watchlist_logic:['等待開盤確認','觀察權值股','注意族群輪動'],closing_validation_focus:['收盤確認方向','確認明日資訊']},
+    member_reading_source:'fallback',quality_warnings:['fallback'],fear_greed:50,vix:18,
+    ai_strategy_json:{ version:VERSION,report_mode:reportMode,generation_mode:generationMode,source:'fallback',validation_status:'fail',impact_chain_source:'fallback', member_reading_source:'fallback',quality_score:confScore,quality_warnings:['fallback'],generated_at:new Date().toISOString(), is_trading_day:isTradingDay,data_basis:dataBasis||'latest_trading_day',latest_trading_date:latestTradingDate||'', freshness_note:!isTradingDay?'非交易日備援，使用最近交易日資料':'', overnight_impact_chains:fcs,member_reading:{core_script:`${d}今日建議以觀察為主。`}, free_summary:fbNewFields.free_summary,member_research_note:fbNewFields.member_research_note, reels_script:fbNewFields.reels_script,social_post:fbNewFields.social_post,line_push_copy:fbNewFields.line_push_copy, do_not_do_list:fbNewFields.do_not_do_list,invalidation_conditions:fbNewFields.invalidation_conditions, intraday_tracking_plan:fbNewFields.intraday_tracking_plan,tomorrow_watch_points:fbNewFields.tomorrow_watch_points, content_quality_flags:fbNewFields.content_quality_flags, content_publish_gate:fbNewFields.content_publish_gate, auto_publish_decision:fbNewFields.auto_publish_decision, recent_validation_feedback:fbNewFields.recent_validation_feedback, data_health:{market_data_fresh:fresh.marketDataFresh,news_fresh:fresh.newsFresh,data_count:fresh.dataCount,news_count:fresh.newsCount,tw_core_insufficient:twCore.dataInsufficient,mvp_insufficient:mvpStatus.mvpInsufficient,score_base:score.baseScore},legacy:{}, } as unknown as Record<string,unknown>,
+    important_news_json:tn.map(n=>({title:n.title||'新聞',summary:n.taiwan_impact_summary||'關注',impact:n.taiwan_impact_summary||'待觀察',sectors:Array.isArray(n.related_sectors)?n.related_sectors:[]})),
+    yesterday_summary:yesterday?`昨日：${yesterday.market_bias||'無'}`:'無昨日',today_summary:d,
+    ai_psychology:'保持冷靜',ai_retail_reminder:'備援僅供參考',ai_confidence_reason:'AI未成功產生判讀',
+    script_valid_conditions:['開盤方向明確'],script_invalid_conditions:['方向不明'],today_key_signal:'觀察',today_key_signal_reason:'備援',
+    watch_sectors_json:ts.map(([s])=>({sector:s,direction:'觀察',reason:'備援'})),
+    risk_factors_json:[{title:'備援',level:'medium',description:'AI未成功'}],
+    global_events_json:[{source:'備援',event:'備援',taiwanImpact:'觀察',beginnerTip:'觀察',relatedSector:'大盤'}],
+    focus_stock_json:[{group:'大盤',direction:'觀察',reason:'備援'}],tomorrow_watch_json:[{name:'大盤',reason:'備援'}],
+    intraday_checkpoints:[{time:'09:00',check:'開盤',why:'確認'}],correction_guide:'備援模式',confidence_label:'偏低',impact_chain_quality_score:confScore,
+  };
+}

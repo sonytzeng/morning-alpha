@@ -7,6 +7,9 @@ import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/li
 import { renderSafeText } from '@/utils/renderSafe';
 import { trackPageView, trackEvent } from '@/utils/analytics';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
+import { parseAIStrategy, type V8BeneficiaryChain } from '@/utils/aiStrategyParser';
+import type { Report } from '@/types/report';
+import BeneficiaryChainCard from '@/components/v8/BeneficiaryChainCard';
 
 // ═══════════════════════════════════════════════════
 // V9.0: Three-tier beneficiary stock types
@@ -84,6 +87,7 @@ function OpportunitiesContent() {
   const [invalidationItems, setInvalidationItems] = useState<string[]>([]);
   const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
   const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
+  const [v8BeneficiaryChain, setV8BeneficiaryChain] = useState<V8BeneficiaryChain | null>(null);
 
   useEffect(() => {
     trackPageView('/opportunities');
@@ -93,7 +97,7 @@ function OpportunitiesContent() {
         const resolved = await resolveActiveMorningAlphaReport();
         const report = resolved.rawRow;
 
-        if (!report) { setDs(null); return; }
+        if (!report) { setDs(null); setV8BeneficiaryChain(null); return; }
 
         const displayState = getMorningAlphaDisplayState(report as Record<string, unknown> | null);
         setDs(displayState);
@@ -104,6 +108,7 @@ function OpportunitiesContent() {
           setCoreStocks([]);
           setExtendedStocks([]);
           setScenarioStocks([]);
+          setV8BeneficiaryChain(null);
           setDataStatus(resolved.isHistoricalFallback ? 'historical_fallback' : 'insufficient');
           setDataBasisNote(resolved.isHistoricalFallback ? `上一份報告日期：${resolved.fallbackReportDate || displayState.reportDate}` : '今日非交易日，不產生今日受惠股。');
           return;
@@ -111,6 +116,8 @@ function OpportunitiesContent() {
 
         // V9.0: Read three-tier stocks
         const ai = displayState.rawAI || {};
+        const parsed = parseAIStrategy(report as unknown as Report);
+        setV8BeneficiaryChain(parsed.v8_beneficiary_chain);
         const core = (ai.core_beneficiary_stocks as Record<string, unknown>[]) || [];
         const ext = (ai.extended_watchlist as Record<string, unknown>[]) || [];
         const scen = (ai.scenario_watchlist as Record<string, unknown>[]) || [];
@@ -237,6 +244,7 @@ function OpportunitiesContent() {
   const hasExtended = extendedStocks.length > 0;
   const hasScenario = scenarioStocks.length > 0;
   const hasAnyStocks = hasCore || hasExtended || hasScenario;
+  const hasV8BeneficiaryChain = v8BeneficiaryChain?.status === 'ready' && (v8BeneficiaryChain.beneficiaries || []).length > 0;
 
   return (
     <div className="min-h-screen bg-background-50 flex flex-col overflow-x-hidden">
@@ -298,8 +306,12 @@ function OpportunitiesContent() {
             )}
           </div>
 
+          {hasV8BeneficiaryChain && (
+            <BeneficiaryChainCard chain={v8BeneficiaryChain} tone="light" />
+          )}
+
           {/* ══════════ INSUFFICIENT DATA WARNING ══════════ */}
-          {dataStatus === 'insufficient' && !hasAnyStocks && (
+          {!hasV8BeneficiaryChain && dataStatus === 'insufficient' && !hasAnyStocks && (
             <div className="p-6 rounded-2xl bg-amber-50 border border-amber-200 text-center">
               <div className="w-12 h-12 rounded-xl bg-background-100 flex items-center justify-center mx-auto mb-3">
                 <i className="ri-database-2-line text-amber-500/70 text-xl"></i>
@@ -310,7 +322,7 @@ function OpportunitiesContent() {
           )}
 
           {/* ══════════ SECTION 1: 核心受惠股 ══════════ */}
-          {hasCore && (
+          {!hasV8BeneficiaryChain && hasCore && (
             <section>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-primary-100 border border-primary-200 flex items-center justify-center">
@@ -388,7 +400,7 @@ function OpportunitiesContent() {
           )}
 
           {/* ══════════ SECTION 2: 延伸觀察股 ══════════ */}
-          {hasExtended && (
+          {!hasV8BeneficiaryChain && hasExtended && (
             <section>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-accent-100 border border-accent-200 flex items-center justify-center">
@@ -434,7 +446,7 @@ function OpportunitiesContent() {
           )}
 
           {/* ══════════ SECTION 3: 情境觀察股 ══════════ */}
-          {hasScenario && (
+          {!hasV8BeneficiaryChain && hasScenario && (
             <section>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-secondary-100 border border-secondary-200 flex items-center justify-center">
@@ -514,7 +526,7 @@ function OpportunitiesContent() {
           )}
 
           {/* ══════════ EMPTY STATE ══════════ */}
-          {!hasAnyStocks && dataStatus !== 'insufficient' && (
+          {!hasV8BeneficiaryChain && !hasAnyStocks && dataStatus !== 'insufficient' && (
             <section className="p-6 rounded-2xl bg-background-100 border border-background-200/70 text-center">
               <div className="w-12 h-12 rounded-xl bg-background-50 flex items-center justify-center mx-auto mb-3">
                 <i className="ri-focus-3-line text-foreground-300 text-xl"></i>

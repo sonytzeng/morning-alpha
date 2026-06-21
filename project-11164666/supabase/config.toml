@@ -1,0 +1,9 @@
+
+[functions.generate-daily-report-v7]
+verify_jwt = false
+
+[functions.daily-health-check]
+verify_jwt = false
+
+[functions.closing-verification-engine]
+verify_jwt = false

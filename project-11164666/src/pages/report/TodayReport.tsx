@@ -9,9 +9,12 @@ import { trackPageView } from '@/utils/analytics';
 import { trackEngagementEvent } from '@/services/engagementService';
 import { renderSafeText } from '@/utils/renderSafe';
 import { formatTaipeiDate } from '@/utils/tradingDay';
+import { parseAIStrategy } from '@/utils/aiStrategyParser';
 import type { Report } from '@/types/report';
 import { isAISemiconductorWeak, isAIStock, DEFENSE_KEYWORDS } from '@/utils/marketBiasDowngrade';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
+import DailySentenceCard from '@/components/v8/DailySentenceCard';
+import OvernightCausalChainCard from '@/components/v8/OvernightCausalChainCard';
 
 type AnyObj = Record<string, any>;
 
@@ -219,6 +222,7 @@ function TodayReportContent() {
   const todayStr = formatTaipeiDate();
   const isReportForToday = report?.report_date === todayStr;
   const ai = asObj((report as AnyObj | null)?.ai_strategy_json);
+  const parsedStrategy = useMemo(() => parseAIStrategy(report), [report]);
 
   // V8.4: Unified display state — marketBias and confidenceScore from getMorningAlphaDisplayState
   // Same values as Home, Opportunities, WarRoom, MemberNote. No opening_radar override.
@@ -457,6 +461,8 @@ function TodayReportContent() {
             </p>
           </section>
 
+          <DailySentenceCard dailySentence={parsedStrategy.v8_daily_sentence} tone="dark" />
+
           {radar && (
             <section className="bg-navy-900/70 border border-cyan-500/20 rounded-2xl p-5 md:p-6">
               <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
@@ -561,6 +567,8 @@ function TodayReportContent() {
               </div>
             </section>
           )}
+
+          <OvernightCausalChainCard chain={parsedStrategy.v8_overnight_causal_chain} tone="dark" />
 
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6 text-center">
             <h2 className="text-white font-bold text-base mb-3">完整研究筆記</h2>

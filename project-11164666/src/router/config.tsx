@@ -7,6 +7,7 @@ import AdminLayout from "../pages/admin/Admin";
 import AdminTodayContent from "../pages/admin/today-content/page";
 import AdminPublish from "../pages/admin/scripts/page";
 import AdminSystemStatus from "../pages/admin/system-check/page";
+import AdminSystemHealth from "../pages/admin/system-health/page";
 import AdminDataHealth from "../pages/admin/data-truth/page";
 import ReportsCenter from "../pages/reports/ReportsCenter";
 import ReportDetail from "../pages/reports/ReportDetail";
@@ -91,6 +92,7 @@ const routes: RouteObject[] = [
       { path: "today-content", element: <AdminTodayContent /> },
       { path: "publish", element: <AdminPublish /> },
       { path: "system-status", element: <AdminSystemStatus /> },
+      { path: "system-health", element: <AdminSystemHealth /> },
       { path: "data-health", element: <AdminDataHealth /> },
       // V377: Legacy redirects
       { path: "dashboard", element: <Navigate to="/admin/today-content" replace /> },
@@ -99,7 +101,6 @@ const routes: RouteObject[] = [
       { path: "system-check", element: <Navigate to="/admin/system-status" replace /> },
       { path: "data-truth", element: <AdminDataHealth /> },
       { path: "system", element: <Navigate to="/admin/system-status" replace /> },
-      { path: "system-health", element: <Navigate to="/admin/system-status" replace /> },
       { path: "growth", element: <Navigate to="/admin/today-content" replace /> },
       { path: "settings", element: <Navigate to="/admin/system-status" replace /> },
     ],

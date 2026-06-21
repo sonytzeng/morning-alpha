@@ -237,6 +237,44 @@ export interface MemberResearchNoteV2 {
   data_status?: 'complete' | 'partial' | 'insufficient';
 }
 
+export interface V8Beneficiary {
+  symbol: string;
+  name: string;
+  sector: string;
+  reason_chain: string[];
+  confidence_score: number;
+  risk_level: 'low' | 'medium' | 'high';
+  invalidation_condition: string;
+}
+
+export interface V8BeneficiaryChain {
+  status: 'ready' | 'insufficient';
+  source_signals: unknown[];
+  beneficiaries: V8Beneficiary[];
+}
+
+export interface V8OvernightChainItem {
+  theme: string;
+  event: string;
+  causal_steps: string[];
+  taiwan_impact: '偏多' | '偏空' | '中性' | '觀察';
+  affected_sectors: string[];
+  watch_points: string[];
+  invalidation_condition: string;
+}
+
+export interface V8OvernightCausalChain {
+  status: 'ready' | 'insufficient';
+  chains: V8OvernightChainItem[];
+}
+
+export interface V8DailySentence {
+  status: 'ready' | 'insufficient';
+  sentence: string;
+  logic_source: string[];
+  tone: 'clear, sharp, human-readable';
+}
+
 export interface RenewalValueBlock {
   why_member_should_read_today: string;
   what_free_news_does_not_provide: string;
@@ -285,6 +323,11 @@ export interface ParsedAIStrategy {
   // Member research note (9 sections)
   member_research_note: string | MemberResearchNote | null;
   member_research_note_v2: MemberResearchNoteV2 | null;
+
+  // V8 JSON contract
+  v8_beneficiary_chain: V8BeneficiaryChain;
+  v8_overnight_causal_chain: V8OvernightCausalChain;
+  v8_daily_sentence: V8DailySentence;
 
   // Key observations (for "三件重要的事")
   key_observations: KeyObservation[];
@@ -405,6 +448,98 @@ function optionalNum(obj: unknown, key: string): number | undefined {
 function nonEmptyStrings(values: unknown[]): string[] | undefined {
   const result = values.map(String).map((v) => v.trim()).filter(Boolean);
   return result.length > 0 ? result : undefined;
+}
+
+function clampScore(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  if (Number.isNaN(n)) return fallback;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+function parseV8Status(value: unknown): 'ready' | 'insufficient' {
+  return value === 'ready' ? 'ready' : 'insufficient';
+}
+
+function parseRiskLevel(value: unknown): 'low' | 'medium' | 'high' {
+  if (value === 'low' || value === 'medium' || value === 'high') return value;
+  return 'medium';
+}
+
+function parseTaiwanImpact(value: unknown): '偏多' | '偏空' | '中性' | '觀察' {
+  if (value === '偏多' || value === '偏空' || value === '中性' || value === '觀察') return value;
+  return '觀察';
+}
+
+export function emptyV8BeneficiaryChain(): V8BeneficiaryChain {
+  return { status: 'insufficient', source_signals: [], beneficiaries: [] };
+}
+
+export function emptyV8OvernightCausalChain(): V8OvernightCausalChain {
+  return { status: 'insufficient', chains: [] };
+}
+
+export function emptyV8DailySentence(): V8DailySentence {
+  return { status: 'insufficient', sentence: '', logic_source: [], tone: 'clear, sharp, human-readable' };
+}
+
+function parseV8BeneficiaryChain(raw: unknown): V8BeneficiaryChain {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return emptyV8BeneficiaryChain();
+  const obj = raw as Record<string, unknown>;
+  const beneficiaries = Array.isArray(obj.beneficiaries)
+    ? (obj.beneficiaries as unknown[]).map((item) => {
+      const row = item && typeof item === 'object' && !Array.isArray(item) ? item as Record<string, unknown> : {};
+      return {
+        symbol: grabStr(row, 'symbol'),
+        name: grabStr(row, 'name'),
+        sector: grabStr(row, 'sector'),
+        reason_chain: grabArr<unknown>(row, 'reason_chain').map(String).map((v) => v.trim()).filter(Boolean),
+        confidence_score: clampScore(row.confidence_score, 0),
+        risk_level: parseRiskLevel(row.risk_level),
+        invalidation_condition: grabStr(row, 'invalidation_condition'),
+      };
+    }).filter((item) => item.symbol && item.name && item.reason_chain.length > 0)
+    : [];
+
+  return {
+    status: parseV8Status(obj.status),
+    source_signals: Array.isArray(obj.source_signals) ? obj.source_signals : [],
+    beneficiaries,
+  };
+}
+
+function parseV8OvernightCausalChain(raw: unknown): V8OvernightCausalChain {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return emptyV8OvernightCausalChain();
+  const obj = raw as Record<string, unknown>;
+  const chains = Array.isArray(obj.chains)
+    ? (obj.chains as unknown[]).map((item) => {
+      const row = item && typeof item === 'object' && !Array.isArray(item) ? item as Record<string, unknown> : {};
+      return {
+        theme: grabStr(row, 'theme'),
+        event: grabStr(row, 'event'),
+        causal_steps: grabArr<unknown>(row, 'causal_steps').map(String).map((v) => v.trim()).filter(Boolean),
+        taiwan_impact: parseTaiwanImpact(row.taiwan_impact),
+        affected_sectors: grabArr<unknown>(row, 'affected_sectors').map(String).map((v) => v.trim()).filter(Boolean),
+        watch_points: grabArr<unknown>(row, 'watch_points').map(String).map((v) => v.trim()).filter(Boolean),
+        invalidation_condition: grabStr(row, 'invalidation_condition'),
+      };
+    }).filter((item) => item.event && item.causal_steps.length > 0)
+    : [];
+
+  return {
+    status: parseV8Status(obj.status),
+    chains,
+  };
+}
+
+function parseV8DailySentence(raw: unknown): V8DailySentence {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return emptyV8DailySentence();
+  const obj = raw as Record<string, unknown>;
+  return {
+    status: parseV8Status(obj.status),
+    sentence: grabStr(obj, 'sentence'),
+    logic_source: grabArr<unknown>(obj, 'logic_source').map(String).map((v) => v.trim()).filter(Boolean),
+    tone: 'clear, sharp, human-readable',
+  };
 }
 
 // ═══════════════════════════════════════════════════
@@ -588,6 +723,11 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
       : undefined,
   } : null;
 
+  // ── V8 JSON contract ──
+  const v8BeneficiaryChain = parseV8BeneficiaryChain(ai.v8_beneficiary_chain);
+  const v8OvernightCausalChain = parseV8OvernightCausalChain(ai.v8_overnight_causal_chain);
+  const v8DailySentence = parseV8DailySentence(ai.v8_daily_sentence);
+
   // ── Key observations (from ai_strategy_json directly) ──
   const keyObsFromAI = grabArr<Record<string, unknown>>(ai, 'key_observations');
   const keyObservations: KeyObservation[] = keyObsFromAI.map((k) => ({
@@ -722,6 +862,9 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
     free_summary: freeSummary,
     member_research_note: memberResearchNote,
     member_research_note_v2: memberResearchNoteV2,
+    v8_beneficiary_chain: v8BeneficiaryChain,
+    v8_overnight_causal_chain: v8OvernightCausalChain,
+    v8_daily_sentence: v8DailySentence,
     key_observations: keyObservations,
     reasoning_chain: reasoningChain,
     overnight_impact_chain: overnightImpactChain,

@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { path: '/admin/today-content', label: '今日內容', icon: 'ri-file-text-line' },
   { path: '/admin/publish', label: '發布素材', icon: 'ri-film-line' },
   { path: '/admin/system-status', label: '系統狀態', icon: 'ri-shield-check-line' },
+  { path: '/admin/system-health', label: 'P4 健康儀表板', icon: 'ri-pulse-line' },
   { path: '/admin/data-health', label: '資料健康檢查', icon: 'ri-search-eye-line' },
 ];
 

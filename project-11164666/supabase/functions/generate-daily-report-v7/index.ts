@@ -46,6 +46,7 @@ function buildMarketClosedReport(todayDate:string,tdInfo:TradingDayInfo):Record<
     market_bias:'休市',confidence_score:null,sentiment_score:50,quality_score:75,member_value_score:70,
     today_quote:'今日台股休市，不產生盤前交易判斷。',
     member_research_note:'今日台股'+holidayLabel+'，Morning Alpha 不產生盤前研究筆記。請於下一個台股交易日再查看完整盤前研究內容。',
+    member_research_note_v2:{overnight_chain:[],taiwan_impact_map:[],beneficiary_candidates:[],intraday_validation:[],invalidation_rules:[],closing_feedback_plan:{what_to_compare:'今日台股休市，無收盤驗證。',success_criteria:'休市日不評分。',miss_reason_tracking:'下一個交易日恢復追蹤。'},subscriber_value_sentence:'今日台股'+holidayLabel+'休市，完整會員研究筆記不生成。',data_status:'insufficient'},
     today_beneficiary_stocks:[],beneficiary_stocks:[],
     core_beneficiary_stocks:[],extended_watchlist:[],scenario_watchlist:[],
     data_status:'insufficient',data_basis_note:'今日台股'+holidayLabel+'休市，不進行受惠股分析。',
@@ -73,6 +74,7 @@ type TWCoreStatus={taiexPresent:boolean;txfPresent:boolean;ts2330Present:boolean
 type MVPStatus={nvdaPresent:boolean;tsmPresent:boolean;spxPresent:boolean;mvpCount:number;mvpInsufficient:boolean};
 
 type SectorRotationRow={sector:string;sub_sector:string;rotation_score:number;direction:string;signal_label:string;leading_symbols:string[];lagging_symbols:string[];summary?:string};
+type MemberResearchNoteV2={overnight_chain:Record<string,unknown>[];taiwan_impact_map:Record<string,unknown>[];beneficiary_candidates:Record<string,unknown>[];intraday_validation:Record<string,unknown>[];invalidation_rules:Record<string,unknown>[];closing_feedback_plan:Record<string,unknown>;subscriber_value_sentence:string;data_status:'complete'|'partial'|'insufficient'};
 
 function safeInteger(v:unknown,fallback:number=50):number{if(v===null||v===undefined)return fallback;const n=Number(v);if(Number.isNaN(n))return fallback;if(n>=0&&n<=1)return Math.round(n*100);if(n>100)return 100;if(n<0)return 0;return Math.round(n);}
 function convictionLevelFromConfidence(c:number):string{if(c>=75)return'★★★★★';if(c>=60)return'★★★★☆';return'★★★☆☆';}
@@ -372,6 +374,46 @@ function buildMemberResearchNoteText(md:MarketIndicator[],todayDate:string,dates
   return result;
 }
 
+function memberNoteDataStatus(candidateCount:number,sectorCount:number,newsCount:number):'complete'|'partial'|'insufficient'{if(candidateCount>=8&&sectorCount>0)return'complete';if(candidateCount>0||sectorCount>0||newsCount>0)return'partial';return'insufficient';}
+function confidenceNumberFromStock(s:Record<string,unknown>):number{const raw=s.confidence??s.confidence_score;if(raw!==undefined&&raw!==null){const n=Number(raw);if(!Number.isNaN(n))return safeInteger(n,60)}const lv=String(s.confidence_level||'').toLowerCase();if(lv==='high')return 82;if(lv==='medium')return 68;if(lv==='low')return 52;const stars=String(s.conviction_level||'');if(stars.includes('★★★★★'))return 82;if(stars.includes('★★★★'))return 68;return 55;}
+function buildCandidateEvidence(stock:Record<string,unknown>,sectorData:SectorRotationRow[],newsData:MarketNewsItem[],causalChains:Record<string,unknown>[]):string[]{
+  const sym=String(stock.symbol||stock.stock_id||'');const sector=String(stock.sector||stock.group||'');const ev:string[]=[];
+  const dataBasis=String(stock.data_basis||'').trim();if(dataBasis)ev.push('既有受惠股資料：'+dataBasis);
+  const reason=String(stock.reason||stock.member_thesis||'').trim();if(reason)ev.push('既有受惠股理由：'+reason.slice(0,120));
+  const sec=sectorData.find(function(s){return s.leading_symbols.includes(sym)||s.sector===sector||s.sub_sector===sector});if(sec)ev.push('類股輪動：'+sec.sector+' 分數 '+sec.rotation_score+' / '+sec.signal_label);
+  const news=newsData.find(function(n){const rel=Array.isArray(n.related_sectors)?n.related_sectors.join(' '):'';return (!!sector&&(rel.includes(sector)||n.title.includes(sector)||String(n.taiwan_impact_summary||'').includes(sector)))||n.title.includes(sym)});if(news)ev.push('市場新聞：'+news.title.slice(0,120));
+  const chain=causalChains.find(function(c){return String(c.stock_selection_logic||'').includes(sym)||String(c.sector_transmission||'').includes(sym)||String(c.taiwan_market_bridge||'').includes(sector)});if(chain)ev.push('隔夜傳導：'+String(chain.overseas_trigger||chain.catalyst||'跨市場事件').slice(0,120));
+  return ev.filter(Boolean).slice(0,4);
+}
+function buildBeneficiaryCandidatesV2(stocks:Record<string,unknown>[],sectorData:SectorRotationRow[],newsData:MarketNewsItem[],causalChains:Record<string,unknown>[]):Record<string,unknown>[]{
+  const result:Record<string,unknown>[]=[];const seen=new Set<string>();
+  for(const stock of stocks){
+    const symbol=String(stock.symbol||stock.stock_id||'').trim();const name=String(stock.name||stock.stock_name||STOCK_NAMES[symbol]||'').trim();
+    if(!isValidTaiwanStock(symbol,name)||seen.has(symbol))continue;
+    const reason=String(stock.reason||stock.member_thesis||'').trim();const risk=String(stock.risk||stock.risk_note||'').trim();const evidence=buildCandidateEvidence(stock,sectorData,newsData,causalChains);
+    if(!reason||!risk||evidence.length===0)continue;
+    result.push({stock_code:symbol,stock_name:name,sector:String(stock.sector||stock.group||catalystTypeForStock(symbol)),reason,evidence,risk,confidence:confidenceNumberFromStock(stock)});
+    seen.add(symbol);if(result.length>=15)break;
+  }
+  return result;
+}
+function buildMemberResearchNoteV2(_md:MarketIndicator[],newsData:MarketNewsItem[],todayDate:string,_dates:{twCoreDate:string;usGlobalDate:string},dScore:MarketDataScore,marketBias:string,confidenceScore:number,sectorData:SectorRotationRow[],causalChains:Record<string,unknown>[],beneficiaryStocks:Record<string,unknown>[],log:(m:string)=>void):MemberResearchNoteV2{
+  const candidates=buildBeneficiaryCandidatesV2(beneficiaryStocks,sectorData,newsData,causalChains);
+  const overnight=causalChains.map(function(c){return{event:String(c.overseas_trigger||c.catalyst||'隔夜市場事件'),source_market:String(c.overseas_trigger||'').includes('NVDA')||String(c.overseas_trigger||'').includes('SOX')?'美股科技/半導體':'海外市場',impact_logic:String(c.first_order_impact||c.stock_selection_logic||'依既有 overnight chain 觀察跨市場傳導'),taiwan_mapping:String(c.taiwan_market_bridge||c.sector_transmission||'映射至台股相關族群'),confidence:confidenceScore};}).filter(function(x){return x.event&&x.event!=='隔夜市場事件'}).slice(0,5);
+  const sectorMaps:Record<string,unknown>[]=[];
+  for(const s of sectorData.slice(0,6)){sectorMaps.push({sector:s.sector,why_it_matters:s.summary||('上一交易日類股輪動分數 '+s.rotation_score+'，訊號 '+s.signal_label),affected_stocks:s.leading_symbols.filter(function(sym){return isValidTaiwanStock(sym,STOCK_NAMES[sym]||'')}).slice(0,8),sensitivity:s.rotation_score>=80?'高':s.rotation_score>=65?'中':'低',invalidation:s.sector+'開盤轉弱或領先股不再同步，則輪動假設降級。'});}
+  if(sectorMaps.length===0){const sectorSeen=new Set<string>();for(const c of candidates){const sector=String(c.sector||'');if(!sector||sectorSeen.has(sector))continue;sectorSeen.add(sector);sectorMaps.push({sector,why_it_matters:'由既有受惠股候選反推的觀察族群，缺少上一交易日 sector_rotation_scores 支撐，僅列為 partial。',affected_stocks:[String(c.stock_code||'')],sensitivity:'低',invalidation:'若開盤沒有族群同步性，本段觀察失效。'});if(sectorMaps.length>=4)break;}}
+  const intraday=[{time_window:'09:00-09:30',what_to_watch:'開盤是否反映 '+marketBias+'，並確認台指期、2330 與候選族群是否同向。',bullish_confirm:'候選族群多數站上平盤且成交量放大。',bearish_fail:'開盤反向跳空超過 1% 或 2330/台指期同步轉弱。',neutral_condition:'指數平盤震盪且候選股缺乏同步性。'},{time_window:'10:00-11:30',what_to_watch:'觀察資金是否從權值股擴散到候選族群。',bullish_confirm:'核心候選與延伸候選同步轉強，且非單一個股獨強。',bearish_fail:'只有少數股票獨強，族群內部無擴散。',neutral_condition:'量能不足或漲跌家數分歧。'},{time_window:'13:00-13:30',what_to_watch:'尾盤是否維持盤前假設，並準備收盤後驗證。',bullish_confirm:'收盤前仍維持族群同步與量價結構。',bearish_fail:'開高走低或尾盤資金明顯撤離。',neutral_condition:'尾盤收斂至平盤附近，隔日需重新評估。'}];
+  const invalidation=[{condition:'開盤方向與盤前 '+marketBias+' 相反超過 1%',meaning:'盤前假設失效',action_note:'停止用盤前框架解讀盤中走勢，改用即時盤面重新評估。'},{condition:'候選族群只有單一權值股表態',meaning:'資金未擴散，受惠股名單可信度下降',action_note:'把延伸候選降級為觀察，不追價。'}];
+  if(dScore.riskReasons.length>0&&dScore.riskReasons[0]!=='暫無明顯風險訊號')invalidation.push({condition:dScore.riskReasons.join('、'),meaning:'風險因子擴大',action_note:'降低方向信心，等待收盤驗證。'});
+  const status=memberNoteDataStatus(candidates.length,sectorData.length,newsData.length);
+  log('[buildMemberResearchNoteV2] candidates='+candidates.length+' sectors='+sectorData.length+' news='+newsData.length+' status='+status);
+  return{overnight_chain:overnight,taiwan_impact_map:sectorMaps,beneficiary_candidates:candidates,intraday_validation:intraday,invalidation_rules:invalidation,closing_feedback_plan:{what_to_compare:'比較 '+todayDate+' 收盤後候選股、族群輪動與盤前 '+marketBias+' 是否一致。',success_criteria:'至少一個主要族群與多數候選股方向符合盤前推理鏈，且失效條件未觸發。',miss_reason_tracking:'若落空，回查 market_data、sector_rotation_scores、market_news 與 overnight chain 哪一段傳導失真。'},subscriber_value_sentence:status==='complete'?'本篇把隔夜事件、台股族群與個股驗證條件串成一條可回測的盤前假設，不保證獲利，但能讓今天的觀察更有章法。':status==='partial'?'目前資料足以形成部分盤前假設，但候選股或類股輪動證據不足，需等盤中驗證補強。':'目前真實資料不足，不產生完整會員研究筆記，也不硬湊受惠股。',data_status:status};
+}
+
+function hasValidMemberResearchNoteV2Object(note:unknown):boolean{if(!note||typeof note!=='object'||Array.isArray(note))return false;const n=note as Record<string,unknown>;const sections=[n.overnight_chain,n.taiwan_impact_map,n.beneficiary_candidates,n.intraday_validation,n.invalidation_rules,n.closing_feedback_plan].filter(function(v){return Array.isArray(v)?v.length>0:!!v&&typeof v==='object'});return sections.length>=2;}
+function sanitizeMemberResearchNoteV2(note:unknown,fallback:MemberResearchNoteV2,log:(m:string)=>void):MemberResearchNoteV2{if(!hasValidMemberResearchNoteV2Object(note)){log('[member_note_v2] invalid or missing, using deterministic fallback');return fallback;}const n=note as Record<string,unknown>;const rawCandidates=Array.isArray(n.beneficiary_candidates)?n.beneficiary_candidates as Record<string,unknown>[]:[];const candidates=rawCandidates.map(function(c){const sym=String(c.stock_code||c.symbol||'').trim();const nm=String(c.stock_name||c.name||STOCK_NAMES[sym]||'').trim();const ev=Array.isArray(c.evidence)?c.evidence.map(String).filter(Boolean):[];return{stock_code:sym,stock_name:nm,sector:String(c.sector||c.group||''),reason:String(c.reason||'').trim(),evidence:ev,risk:String(c.risk||c.risk_note||'').trim(),confidence:confidenceNumberFromStock(c)};}).filter(function(c){return isValidTaiwanStock(c.stock_code,c.stock_name)&&c.reason.length>0&&c.risk.length>0&&c.evidence.length>0;}).slice(0,15);return{overnight_chain:Array.isArray(n.overnight_chain)?n.overnight_chain as Record<string,unknown>[]:fallback.overnight_chain,taiwan_impact_map:Array.isArray(n.taiwan_impact_map)?n.taiwan_impact_map as Record<string,unknown>[]:fallback.taiwan_impact_map,beneficiary_candidates:candidates.length>0?candidates:fallback.beneficiary_candidates,intraday_validation:Array.isArray(n.intraday_validation)?n.intraday_validation as Record<string,unknown>[]:fallback.intraday_validation,invalidation_rules:Array.isArray(n.invalidation_rules)?n.invalidation_rules as Record<string,unknown>[]:fallback.invalidation_rules,closing_feedback_plan:n.closing_feedback_plan&&typeof n.closing_feedback_plan==='object'?n.closing_feedback_plan as Record<string,unknown>:fallback.closing_feedback_plan,subscriber_value_sentence:String(n.subscriber_value_sentence||fallback.subscriber_value_sentence),data_status:['complete','partial','insufficient'].includes(String(n.data_status))?String(n.data_status) as 'complete'|'partial'|'insufficient':fallback.data_status};}
+
 function mergeBeneficiaryStocks(openai:Record<string,unknown>[]|undefined,deterministic:Record<string,unknown>[],_minCount:number):Record<string,unknown>[]{
   const r:Record<string,unknown>[]=[];const s=new Set<string>();
   if(Array.isArray(openai)){for(const i of openai){const sym=String(i.symbol||i.stock_id||i.code||'');if(sym&&!s.has(sym)){r.push({...i,not_buy_signal:true});s.add(sym)}}}
@@ -495,6 +537,7 @@ function buildDeterministicAIStrategyJson(md:MarketIndicator[],newsData:MarketNe
   const intradayTrackingPlan=buildDeterministicIntradayTrackingPlan();
   const watchSectorsDetailed=buildDeterministicWatchSectorsDetailed(md,dScore);
   const memberNoteText=buildMemberResearchNoteText(md,todayDate,dates,dScore,marketBias,confidenceScore,threeTier.todayStocks,reportMode,log);
+  const memberNoteV2=buildMemberResearchNoteV2(md,newsData,todayDate,dates,dScore,marketBias,confidenceScore,sectorData,causalChains,threeTier.fullStocks,log);
   const intradayValidationPlan={open_0900_0930:'觀察開盤是否反映 '+marketBias+' 方向',mid_session_1000_1130:'觀察量能與族群擴散是否跟上',afternoon_1300_1330:'觀察尾盤資金流向',fail_signals:['開盤反向跳空超過 1%','量能大幅萎縮','主要權值股開盤即轉弱']};
   const renewalValueBlock={why_member_should_read_today:'今日 '+todayDate+' 盤前報告基於真實市場數據，方向：'+marketBias+'，信心：'+confidenceScore+'/100',what_free_news_does_not_provide:'量化市場數據、跨市場連動分析、盤前綜合判斷',tomorrow_followup_hook:'明日將持續追蹤市場方向是否驗證'};
 
@@ -506,9 +549,10 @@ function buildDeterministicAIStrategyJson(md:MarketIndicator[],newsData:MarketNe
     confidence_score:confidenceScore,market_bias:marketBias,today_quote:todayQuote,
     tw_core_present:!twStatus.dataInsufficient,us_global_present:!mvpStatus.mvpInsufficient,
     beneficiary_engine_version:'V9.0_THREE_TIER_BENEFICIARY',
-    tw_stock_filter_applied:true,research_card_format:true,fields_complete_guaranteed:true,write_time_guarantee:true,member_note_format:'plain_text_string',
+    tw_stock_filter_applied:true,research_card_format:true,fields_complete_guaranteed:true,write_time_guarantee:true,member_note_format:'plain_text_and_v2',
     free_summary:{today_status:reportMode===REPORT_MODE_NON_TRADING?'非交易日':'交易日盤前',one_sentence:oneSentence,market_bias:marketBias,confidence_score:confidenceScore,do_not_do:doNotDoList.join(' '),mindset:'盤前判斷僅供參考，實際操作以開盤後市場走勢為準。',cta_hint:'查看完整盤前報告'},
     member_research_note:memberNoteText,
+    member_research_note_v2:memberNoteV2,
     core_beneficiary_stocks:threeTier.core_beneficiary_stocks,extended_watchlist:threeTier.extended_watchlist,scenario_watchlist:threeTier.scenario_watchlist,
     data_status:threeTier.data_status,data_basis_note:threeTier.data_basis_note,
     today_beneficiary_stocks:threeTier.todayStocks,beneficiary_stocks:threeTier.fullStocks,
@@ -530,10 +574,11 @@ function buildDeterministicAIStrategyJson(md:MarketIndicator[],newsData:MarketNe
 async function callOpenAI(systemPrompt:string,userPrompt:string,apiKey:string,log:(m:string)=>void):Promise<Record<string,unknown>|null>{
   try{log('OPENAI_START');const start=Date.now();const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:systemPrompt},{role:'user',content:userPrompt}],temperature:0.4,max_tokens:4000,response_format:{type:'json_object'}})});const elapsed=Date.now()-start;if(!res.ok){log('OPENAI_FAILED:HTTP_'+res.status);return null}const j:Record<string,unknown>=await res.json();const content=j.choices?.[0]?.message?.content;if(typeof content==='string'){try{return JSON.parse(content)}catch{log('OPENAI_PARSE_FAIL');return null}}log('OPENAI_NO_CONTENT');return null}catch(e){log('OPENAI_EXCEPTION:'+(e instanceof Error?e.message:String(e)));return null}
 }
-function buildOpenAISystemPrompt():string{return'你是 Morning Alpha 的盤前報告 AI。根據提供的真實市場數據產出完整 JSON。會員研究筆記必須是純文字字串（string），800-1500字，包含七個段落。today_beneficiary_stocks 只可輸出台股個股。方向只可用：偏多觀察、中性偏多、震盪觀察、偏弱觀察、高風險日。';}
+function buildOpenAISystemPrompt():string{return'你是 Morning Alpha 的盤前報告 AI。根據提供的真實市場數據產出完整 JSON。必須同時輸出 member_research_note 舊純文字相容欄位，以及 member_research_note_v2 結構化會員研究筆記。member_research_note 不可拿 summary、free_summary、today_summary 改寫充數。member_research_note_v2 必須包含 overnight_chain、taiwan_impact_map、beneficiary_candidates、intraday_validation、invalidation_rules、closing_feedback_plan、subscriber_value_sentence、data_status。推理鏈必須是：隔夜事件 → 台股族群 → 個股 → 盤中驗證 → 失效條件。beneficiary_candidates 目標 8 到 15 檔，但禁止硬湊；每檔必須有 reason、evidence、risk、confidence，evidence 只能來自提供的 market_data、sector_rotation_scores、market_news、overnight chain 或既有 beneficiary stocks。資料不足時 data_status 必須是 partial 或 insufficient，不可保證漲跌或獲利。today_beneficiary_stocks 只可輸出台股個股。方向只可用：偏多觀察、中性偏多、震盪觀察、偏弱觀察、高風險日。';}
 function buildOpenAIUserPrompt(md:MarketIndicator[],newsData:MarketNewsItem[],todayDate:string,dates:{twCoreDate:string;usGlobalDate:string},sectorContextSummary:string):string{
   const mdLines=md.map(function(m){return m.symbol+' | '+m.name+' | 值='+m.value+' | 變動='+(m.changePercent>=0?'+':'')+m.changePercent.toFixed(2)+'%'}).join('\n');
-  return'今日日期：'+todayDate+'\n台股基準：'+dates.twCoreDate+'\n海外基準：'+dates.usGlobalDate+'\n\n產業輪動：'+(sectorContextSummary||'無')+'\n\n市場數據：\n'+mdLines+'\n\n請產生今日盤前報告 JSON。member_research_note 必須是純文字字串，不是 JSON 物件。';
+  const newsLines=newsData.slice(0,12).map(function(n){return n.title+' | '+(n.taiwan_impact_summary||'')}).join('\n');
+  return'今日日期：'+todayDate+'\n台股基準：'+dates.twCoreDate+'\n海外基準：'+dates.usGlobalDate+'\n\n產業輪動（sector_rotation_scores）：'+(sectorContextSummary||'無')+'\n\n市場數據（market_data）：\n'+mdLines+'\n\n市場新聞（market_news）：\n'+(newsLines||'無')+'\n\n請產生今日盤前報告 JSON。member_research_note 是 800-1500 字純文字相容欄位；member_research_note_v2 是結構化物件，schema: {overnight_chain:[{event,source_market,impact_logic,taiwan_mapping,confidence}], taiwan_impact_map:[{sector,why_it_matters,affected_stocks,sensitivity,invalidation}], beneficiary_candidates:[{stock_code,stock_name,sector,reason,evidence,risk,confidence}], intraday_validation:[{time_window,what_to_watch,bullish_confirm,bearish_fail,neutral_condition}], invalidation_rules:[{condition,meaning,action_note}], closing_feedback_plan:{what_to_compare,success_criteria,miss_reason_tracking}, subscriber_value_sentence, data_status}. 不可把 summary/free_summary 當會員筆記，不可編造未在資料或既有受惠股中有支撐的股票。';
 }
 
 async function writeReport(supabase:ReturnType<typeof createClient>,todayDate:string,aiStrategyJson:Record<string,unknown>,marketBias:string,rawConfidenceScore:number|null,reportMode:string,md:MarketIndicator[],log:(m:string)=>void,tdInfo?:TradingDayInfo):Promise<{reportId:string}|null>{
@@ -638,6 +683,7 @@ Deno.serve(async (req:Request)=>{
     const deterministicJson=buildDeterministicAIStrategyJson(marketData,newsData,todayDate,dates,dScore,twStatus,mvpStatus,reportMode,sectorData,log);
     const marketBiasDet=classifyMarketBias(dScore.baseScore);const confScoreDet=dScore.baseScore;
     const detMemberNoteText=typeof deterministicJson.member_research_note==='string'?String(deterministicJson.member_research_note):buildMemberResearchNoteText(marketData,todayDate,dates,dScore,marketBiasDet,confScoreDet,Array.isArray(deterministicJson.today_beneficiary_stocks)?deterministicJson.today_beneficiary_stocks as Record<string,unknown>[]:[],reportMode,log);
+    const detMemberNoteV2=deterministicJson.member_research_note_v2 as MemberResearchNoteV2;
 
     let aiStrategyJson:Record<string,unknown>;
     if(skipOpenAI){
@@ -667,14 +713,19 @@ Deno.serve(async (req:Request)=>{
           openAiResult.beneficiary_stocks=finalSanitizeTWStocks(mergeBeneficiaryStocks(enrich(oaiFullTW),sectorResult.fullStocks,8),[],'openai-merge-full',log);
           const oaiMRN=openAiResult.member_research_note;
           if(typeof oaiMRN!=='string'||String(oaiMRN).trim().length<300){log('Overwriting OpenAI member_research_note');openAiResult.member_research_note=detMemberNoteText;}
+          openAiResult.member_research_note_v2=sanitizeMemberResearchNoteV2(openAiResult.member_research_note_v2,detMemberNoteV2,log);
           aiStrategyJson=openAiResult;aiStrategyJson.openai_used=true;aiStrategyJson.build_method='openai_with_three_tier';
         }else{log('OPENAI_FAILED');aiStrategyJson=deterministicJson;aiStrategyJson.openai_used=false;aiStrategyJson.build_method='deterministic_fallback_three_tier';}
       }else{log('NO_OPENAI_KEY');aiStrategyJson=deterministicJson;aiStrategyJson.openai_used=false;aiStrategyJson.build_method='deterministic_no_key_three_tier';}
     }
 
+    if(!hasValidMemberResearchNoteV2Object(aiStrategyJson.member_research_note_v2)){
+      log('[member_note_v2] final guard applied deterministic fallback');
+      aiStrategyJson.member_research_note_v2=detMemberNoteV2;
+    }
     aiStrategyJson.version=VERSION;aiStrategyJson.generated_at=new Date().toISOString();
     aiStrategyJson.tw_stock_filter_applied=true;aiStrategyJson.research_card_format=true;
-    aiStrategyJson.fields_complete_guaranteed=true;aiStrategyJson.write_time_guarantee=true;aiStrategyJson.member_note_format='plain_text_string';
+    aiStrategyJson.fields_complete_guaranteed=true;aiStrategyJson.write_time_guarantee=true;aiStrategyJson.member_note_format='plain_text_and_v2';
     aiStrategyJson.sector_rotation_reference_date=sectorRotationReferenceDate;
     aiStrategyJson.sector_rotation_basis='previous_trading_day';
     aiStrategyJson.sector_rotation_rows=sectorData.length;

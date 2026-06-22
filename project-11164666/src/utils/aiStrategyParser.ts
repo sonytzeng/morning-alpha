@@ -550,12 +550,6 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
   const raw = (report as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
   const ai = raw || {};
 
-  // DEBUG: 確認 ai_strategy_json 的內容
-  console.log('[aiStrategyParser] RAW ai_strategy_json', raw);
-  console.log('[aiStrategyParser] ai keys:', Object.keys(ai));
-  console.log('[aiStrategyParser] member_research_note raw:', ai?.member_research_note);
-  console.log('[aiStrategyParser] member_research_note type:', typeof ai?.member_research_note);
-
   // ── Version & Source ──
   const aiVersion = grabStr(ai, 'version', 'ai_version');
   const source = grabStr(ai, 'source');
@@ -591,9 +585,6 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
     || grabStringOrObj(ai, 'complete_research_note')
     || grabStringOrObj(ai, 'full_research_note')
     || grabStringOrObj(ai, 'research_note');
-
-  console.log('[aiStrategyParser] mrnRaw (after fallback chain):', mrnRaw);
-  console.log('[aiStrategyParser] mrnRaw type:', typeof mrnRaw);
 
   let memberResearchNote: string | MemberResearchNote | null = null;
 

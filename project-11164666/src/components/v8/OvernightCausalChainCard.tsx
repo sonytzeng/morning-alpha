@@ -59,8 +59,8 @@ export default function OvernightCausalChainCard({ chain, tone = 'dark' }: { cha
                   <div>
                     <p className={`mb-1 text-[10px] uppercase tracking-wider ${mutedClass}`}>affected_sectors</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {(item.affected_sectors || []).map((sector) => (
-                        <span key={sector} className={`rounded-full px-2 py-0.5 text-[10px] ${dark ? 'bg-slate-700 text-slate-300' : 'bg-background-100 text-foreground-600'}`}>{safe(sector)}</span>
+                      {(item.affected_sectors || []).map((sector, idx) => (
+                        <span key={`${sector}-${idx}`} className={`rounded-full px-2 py-0.5 text-[10px] ${dark ? 'bg-slate-700 text-slate-300' : 'bg-background-100 text-foreground-600'}`}>{safe(sector)}</span>
                       ))}
                     </div>
                   </div>

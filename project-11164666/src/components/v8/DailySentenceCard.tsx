@@ -39,8 +39,8 @@ export default function DailySentenceCard({ dailySentence, tone = 'dark' }: { da
             <p className={`mb-2 text-[10px] uppercase tracking-wider ${mutedClass}`}>logic_source</p>
             {sources.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {sources.map((source) => (
-                  <span key={source} className={`rounded-full px-2.5 py-1 text-[10px] ${dark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-violet-50 text-violet-700 border border-violet-100'}`}>
+                {sources.map((source, idx) => (
+                  <span key={`${source}-${idx}`} className={`rounded-full px-2.5 py-1 text-[10px] ${dark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-violet-50 text-violet-700 border border-violet-100'}`}>
                     {source}
                   </span>
                 ))}

@@ -34,28 +34,137 @@ interface TierStock {
   not_buy_signal?: boolean;
 }
 
-function parseTierStock(raw: Record<string, unknown>): TierStock | null {
-  const stockId = String(raw.stock_id || raw.symbol || '');
-  const stockName = String(raw.stock_name || raw.name || '');
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function asRecordArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+    : [];
+}
+
+function compactText(value: unknown): string {
+  return String(value ?? '').trim();
+}
+
+function confidenceLevelFrom(value: unknown): TierStock['confidence_level'] {
+  const normalized = compactText(value).toLowerCase();
+  if (normalized === 'high' || normalized === 'medium' || normalized === 'low') return normalized;
+
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (Number.isFinite(numeric)) {
+    if (numeric >= 75) return 'high';
+    if (numeric >= 50) return 'medium';
+  }
+
+  return 'low';
+}
+
+function parseEvidence(value: unknown): string {
+  if (Array.isArray(value)) return value.map((item) => compactText(item)).filter(Boolean).join('；');
+  return compactText(value);
+}
+
+function hasExplicitStockIdentity(row: Record<string, unknown>): boolean {
+  const stockId = compactText(row.stock_id || row.symbol || row.stock_code || row.code || row.ticker);
+  const stockName = compactText(row.stock_name || row.name || row.stock || row.company_name || row.title);
+  return Boolean(stockId && stockName);
+}
+
+function parseTierStock(
+  raw: Record<string, unknown>,
+  fallbackLevel: TierStock['beneficiary_level'] = 'extended',
+  fallbackDataBasis = '',
+): TierStock | null {
+  const stockId = compactText(raw.stock_id || raw.symbol || raw.stock_code || raw.code || raw.ticker);
+  const stockName = compactText(raw.stock_name || raw.name || raw.stock || raw.company_name || raw.title);
   if (!stockId || !stockName) return null;
+
+  const rawLevel = compactText(raw.beneficiary_level);
+  const beneficiaryLevel: TierStock['beneficiary_level'] = rawLevel === 'core' || rawLevel === 'extended' || rawLevel === 'scenario'
+    ? rawLevel
+    : fallbackLevel;
+
   return {
     stock_id: stockId,
     stock_name: stockName,
-    sector: String(raw.sector || raw.group || ''),
-    beneficiary_level: (raw.beneficiary_level as TierStock['beneficiary_level']) || 'extended',
-    trigger_event: String(raw.trigger_event || ''),
-    reason: String(raw.reason || ''),
-    risk_note: String(raw.risk_note || raw.risk || ''),
-    confidence_level: (raw.confidence_level as TierStock['confidence_level']) || 'low',
-    data_basis: String(raw.data_basis || ''),
+    sector: compactText(raw.sector || raw.group || raw.category || raw.industry),
+    beneficiary_level: beneficiaryLevel,
+    trigger_event: compactText(raw.trigger_event || raw.catalyst || raw.catalyst_type || raw.event),
+    reason: compactText(raw.reason || raw.thesis || raw.member_thesis || raw.why_it_matters || raw.score_reason),
+    risk_note: compactText(raw.risk_note || raw.risk || raw.invalidation_condition || raw.failure_conditions),
+    confidence_level: confidenceLevelFrom(raw.confidence_level || raw.confidence || raw.confidence_score),
+    data_basis: compactText(raw.data_basis || raw.source_type || raw.source || fallbackDataBasis || parseEvidence(raw.evidence)),
     symbol: stockId,
     name: stockName,
-    direction: String(raw.direction || '觀察'),
-    conviction_level: String(raw.conviction_level || ''),
-    catalyst_type: String(raw.catalyst_type || ''),
-    watch_point: String(raw.watch_point || ''),
+    direction: compactText(raw.direction || '觀察'),
+    conviction_level: compactText(raw.conviction_level || ''),
+    catalyst_type: compactText(raw.catalyst_type || ''),
+    watch_point: compactText(raw.watch_point || raw.what_to_watch),
     not_buy_signal: raw.not_buy_signal !== false,
   };
+}
+
+function mapTierStocks(
+  rows: unknown,
+  level: TierStock['beneficiary_level'],
+  dataBasis: string,
+): TierStock[] {
+  return asRecordArray(rows)
+    .map((row) => parseTierStock(row, level, dataBasis))
+    .filter((stock): stock is TierStock => stock !== null);
+}
+
+function mapMemberResearchCandidates(rows: unknown): TierStock[] {
+  return asRecordArray(rows)
+    .map((row) => parseTierStock({
+      ...row,
+      stock_id: row.stock_id || row.symbol || row.stock_code,
+      stock_name: row.stock_name || row.name,
+      risk_note: row.risk_note || row.risk,
+      data_basis: row.data_basis || parseEvidence(row.evidence) || 'member_research_note_v2.beneficiary_candidates',
+    }, 'core', 'member_research_note_v2.beneficiary_candidates'))
+    .filter((stock): stock is TierStock => stock !== null);
+}
+
+function dedupeTierStocks(stocks: TierStock[], used = new Set<string>()): TierStock[] {
+  const result: TierStock[] = [];
+
+  stocks.forEach((stock) => {
+    const key = stock.stock_id.trim().toUpperCase();
+    if (!key || used.has(key)) return;
+    used.add(key);
+    result.push(stock);
+  });
+
+  return result;
+}
+
+function resolveLegacyBeneficiaries(ai: Record<string, unknown>, report: Record<string, unknown>) {
+  const memberResearchNoteV2 = asRecord(ai.member_research_note_v2);
+  const used = new Set<string>();
+
+  // Debug-safe resolver: use only real existing V7/member-note fields, never static fallback stocks.
+  const coreStocks = dedupeTierStocks([
+    ...mapTierStocks(ai.core_beneficiary_stocks, 'core', 'core_beneficiary_stocks'),
+    ...mapTierStocks(ai.beneficiary_stocks, 'core', 'beneficiary_stocks'),
+    ...mapTierStocks(ai.today_beneficiary_stocks, 'core', 'today_beneficiary_stocks'),
+    ...mapMemberResearchCandidates(memberResearchNoteV2.beneficiary_candidates),
+    ...mapTierStocks(report.focus_stock_json, 'core', 'reports.focus_stock_json'),
+  ], used);
+
+  const extendedStocks = dedupeTierStocks([
+    ...mapTierStocks(ai.extended_watchlist, 'extended', 'extended_watchlist'),
+    ...mapTierStocks(ai.watchlist, 'extended', 'watchlist'),
+    ...mapTierStocks(asRecordArray(report.watch_sectors_json).filter(hasExplicitStockIdentity), 'extended', 'reports.watch_sectors_json'),
+  ], used);
+
+  const scenarioStocks = dedupeTierStocks([
+    ...mapTierStocks(ai.scenario_watchlist, 'scenario', 'scenario_watchlist'),
+  ], used);
+
+  return { coreStocks, extendedStocks, scenarioStocks };
 }
 
 // ═══════════════════════════════════════════════════
@@ -114,18 +223,16 @@ function OpportunitiesContent() {
           return;
         }
 
-        // V9.0: Read three-tier stocks
+        // V9.0/V8 preview: V8 ready wins; otherwise fall back to real V7 beneficiary fields.
         const ai = displayState.rawAI || {};
         const parsed = parseAIStrategy(report as unknown as Report);
+        const legacyBeneficiaries = resolveLegacyBeneficiaries(ai, report as Record<string, unknown>);
         setV8BeneficiaryChain(parsed.v8_beneficiary_chain);
-        const core = (ai.core_beneficiary_stocks as Record<string, unknown>[]) || [];
-        const ext = (ai.extended_watchlist as Record<string, unknown>[]) || [];
-        const scen = (ai.scenario_watchlist as Record<string, unknown>[]) || [];
         const dStatus = String(ai.data_status || displayState.dataStatus || '');
 
-        setCoreStocks(core.map(parseTierStock).filter((s): s is TierStock => s !== null));
-        setExtendedStocks(ext.map(parseTierStock).filter((s): s is TierStock => s !== null));
-        setScenarioStocks(scen.map(parseTierStock).filter((s): s is TierStock => s !== null));
+        setCoreStocks(legacyBeneficiaries.coreStocks);
+        setExtendedStocks(legacyBeneficiaries.extendedStocks);
+        setScenarioStocks(legacyBeneficiaries.scenarioStocks);
         setDataStatus(dStatus);
         setDataBasisNote(String(ai.data_basis_note || displayState.dataBasisNote || ''));
 
@@ -245,6 +352,8 @@ function OpportunitiesContent() {
   const hasScenario = scenarioStocks.length > 0;
   const hasAnyStocks = hasCore || hasExtended || hasScenario;
   const hasV8BeneficiaryChain = v8BeneficiaryChain?.status === 'ready' && (v8BeneficiaryChain.beneficiaries || []).length > 0;
+  const coreDisplayCount = hasV8BeneficiaryChain ? (v8BeneficiaryChain?.beneficiaries || []).length : coreStocks.length;
+  const watchDisplayCount = hasV8BeneficiaryChain ? 0 : extendedStocks.length + scenarioStocks.length;
 
   return (
     <div className="min-h-screen bg-background-50 flex flex-col overflow-x-hidden">
@@ -284,11 +393,11 @@ function OpportunitiesContent() {
               </div>
               <div className="p-3 rounded-xl bg-background-100 border border-background-200/70">
                 <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">核心受惠</p>
-                <p className="text-foreground-900 font-bold text-sm">{coreStocks.length} 檔</p>
+                <p className="text-foreground-900 font-bold text-sm">{coreDisplayCount} 檔</p>
               </div>
               <div className="p-3 rounded-xl bg-background-100 border border-background-200/70">
                 <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">觀察名單</p>
-                <p className="text-foreground-900 font-bold text-sm">{extendedStocks.length + scenarioStocks.length} 檔</p>
+                <p className="text-foreground-900 font-bold text-sm">{watchDisplayCount} 檔</p>
               </div>
             </div>
 

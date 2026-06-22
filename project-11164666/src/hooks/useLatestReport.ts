@@ -22,6 +22,7 @@ import type { PremiumNewsItem } from '@/services/premiumReportEngine';
 import { normalizeMorningAlphaReport, isActualNonTradingDay, type MorningAlphaNormalizedReport } from '@/lib/morningAlphaReportAdapter';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import { applyMarketBiasDowngrade } from '@/utils/marketBiasDowngrade';
+import { getMorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 
 function parseAiStrategyObject(value: unknown): Record<string, unknown> {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -38,6 +39,20 @@ function parseAiStrategyObject(value: unknown): Record<string, unknown> {
     }
   }
   return {};
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function getClosingVerificationFromSources(...sources: unknown[]): Record<string, unknown> | null {
+  for (const source of sources) {
+    const parsed = parseAiStrategyObject(source);
+    if (isRecord(parsed.closing_verification)) {
+      return parsed.closing_verification;
+    }
+  }
+  return null;
 }
 
 export interface UseLatestReportResult {
@@ -217,10 +232,18 @@ export function useLatestReport(): UseLatestReportResult {
       }
 
       if (!activeCloseVerif) {
-        const ai = parseAiStrategyObject((rptRow as Record<string, unknown>).ai_strategy_json);
+        const rawRow = rptRow as Record<string, unknown>;
+        const displayState = getMorningAlphaDisplayState(rawRow);
+        const closingVerification = getClosingVerificationFromSources(
+          rpt.ai_strategy_json,
+          rawRow.ai_strategy_json,
+          parseAiStrategyObject(rawRow.ai_strategy_json),
+          resolved.report.strategy,
+          displayState.rawAI,
+        );
         activeCloseVerif = mapClosingVerificationToCloseMarketReview(
-          rpt.report_date || String((rptRow as Record<string, unknown>).report_date || ''),
-          ai.closing_verification,
+          rpt.report_date || String(rawRow.report_date || ''),
+          closingVerification,
         );
       }
 

@@ -23,6 +23,9 @@ export interface CloseMarketReview {
   defensive_call_success: boolean;
   ai_too_bullish: boolean;
   ai_too_bearish: boolean;
+  accuracy_score?: number | null;
+  no_fake_data?: boolean;
+  source?: string;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +47,10 @@ function safeBoolean(val: unknown, fallback = false): boolean {
   if (typeof val === 'string') return val.toLowerCase() === 'true';
   if (typeof val === 'number') return val === 1;
   return fallback;
+}
+
+function safeObject(val: unknown): Record<string, unknown> {
+  return val && typeof val === 'object' && !Array.isArray(val) ? val as Record<string, unknown> : {};
 }
 
 export function mapRowToCloseMarketReview(row: Record<string, unknown>): CloseMarketReview {
@@ -70,8 +77,61 @@ export function mapRowToCloseMarketReview(row: Record<string, unknown>): CloseMa
     defensive_call_success: safeBoolean(row.defensive_call_success),
     ai_too_bullish: safeBoolean(row.ai_too_bullish),
     ai_too_bearish: safeBoolean(row.ai_too_bearish),
+    accuracy_score: safeNumber(row.accuracy_score),
+    no_fake_data: safeBoolean(row.no_fake_data),
     created_at: String(row.created_at || ''),
     updated_at: String(row.updated_at || ''),
+  };
+}
+
+export function mapClosingVerificationToCloseMarketReview(
+  reportDate: string,
+  closingVerification: unknown,
+): CloseMarketReview | null {
+  const verification = safeObject(closingVerification);
+  if (Object.keys(verification).length === 0) return null;
+
+  const reason = safeObject(verification.reason);
+  const status = safeString(verification.status);
+  const predictionResult = safeString(verification.prediction_result);
+  const verifiedAt = safeString(verification.verified_at) || new Date().toISOString();
+  const taiexChange = safeNumber(verification.actual_taiex_change);
+  const isPendingRealData =
+    status === 'pending_real_market_data' ||
+    predictionResult === 'PENDING_REAL_MARKET_DATA';
+
+  const verificationNote = isPendingRealData
+    ? '收盤驗證已執行，但尚缺真實台股收盤資料。'
+    : safeString(reason.message) || [predictionResult, status].filter(Boolean).join('｜') || null;
+
+  return {
+    id: `ai_strategy_json.closing_verification.${reportDate}`,
+    report_date: reportDate,
+    premarket_bias: safeString(verification.predicted_bias),
+    premarket_confidence: safeNumber(verification.confidence_score),
+    premarket_summary: null,
+    opening_radar_status: null,
+    opening_radar_bias: null,
+    opening_radar_confidence: null,
+    opening_radar_summary: null,
+    actual_market_result: safeString(verification.actual_direction),
+    verification_result: predictionResult || status,
+    verification_label: predictionResult || status,
+    verification_note: verificationNote,
+    taiex_change: taiexChange,
+    tsmc_change: null,
+    txf_change: null,
+    data_quality: isPendingRealData ? 'pending_real_market_data' : 'verified',
+    missing_data: isPendingRealData ? 'TAIEX_CLOSE' : null,
+    intraday_correction_success: false,
+    defensive_call_success: false,
+    ai_too_bullish: false,
+    ai_too_bearish: false,
+    accuracy_score: safeNumber(verification.accuracy_score),
+    no_fake_data: verification.no_fake_data === true,
+    source: 'ai_strategy_json.closing_verification',
+    created_at: verifiedAt,
+    updated_at: verifiedAt,
   };
 }
 

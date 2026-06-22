@@ -247,7 +247,17 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
   let closeReviewStatus: SegmentStatus;
   let closeDisplay: SegmentDisplay;
 
-  if (closeIsToday && closeReview) {
+  if (closeIsToday && closeReview?.verification_result === 'PENDING_REAL_MARKET_DATA') {
+    closeReviewStatus = 'pending';
+    closeDisplay = {
+      statusText: '等待真實收盤資料',
+      description: '收盤驗證已執行，但尚缺真實台股收盤資料。系統未使用假資料。',
+      color: 'amber',
+      showContent: true,
+      dataDate: todayDate,
+      isToday: true,
+    };
+  } else if (closeIsToday && closeReview) {
     closeReviewStatus = 'ready';
     closeDisplay = {
       statusText: '收盤驗證已完成',

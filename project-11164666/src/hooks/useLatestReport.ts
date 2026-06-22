@@ -12,7 +12,7 @@ import {
 import { generateIntelligence, type IntelligenceResult } from '@/services/intelligenceEngine';
 import { generatePremiumReport, type PremiumReportResult } from '@/services/premiumReportEngine';
 import { getTodayOnlyMarketData } from '@/services/marketStateEngine';
-import { getTodayCloseMarketReview, mapRowToCloseMarketReview, type CloseMarketReview } from '@/services/closeMarketReviewService';
+import { getTodayCloseMarketReview, mapClosingVerificationToCloseMarketReview, type CloseMarketReview } from '@/services/closeMarketReviewService';
 import { formatTaipeiDate } from '@/utils/tradingDay';
 import { parseAIStrategy, getBestOneLiner, getDisplayBias, getDisplayConfidence, getDataDate, getSourceStatusText, hasRealKeyObservations, getTopItems, shouldShowNonTradingDayWarning, hasTodayGeneratedReport, getReportDisplayDate, getMarketDataBasisDate, type ParsedAIStrategy } from '@/utils/aiStrategyParser';
 import type { Report } from '@/types/report';
@@ -22,6 +22,23 @@ import type { PremiumNewsItem } from '@/services/premiumReportEngine';
 import { normalizeMorningAlphaReport, isActualNonTradingDay, type MorningAlphaNormalizedReport } from '@/lib/morningAlphaReportAdapter';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import { applyMarketBiasDowngrade } from '@/utils/marketBiasDowngrade';
+
+function parseAiStrategyObject(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? parsed as Record<string, unknown>
+        : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
 
 export interface UseLatestReportResult {
   report: Report | null;
@@ -193,22 +210,18 @@ export function useLatestReport(): UseLatestReportResult {
       let activeRadar: OpeningRadar | null = radarRes;
       let activeCloseVerif: CloseMarketReview | null = null;
 
-      if (resolved.isHistoricalFallback && resolved.fallbackReportDate) {
-        // V8: Use ai_strategy_json data only — no direct table queries
-        // Opening radar and close verification from report fallback handled by services
-        try {
-          const cmr = await getTodayCloseMarketReview();
-          activeCloseVerif = cmr;
-        } catch {
-          activeCloseVerif = null;
-        }
-      } else {
-        try {
-          const cmr = await getTodayCloseMarketReview();
-          activeCloseVerif = cmr;
-        } catch {
-          activeCloseVerif = null;
-        }
+      try {
+        activeCloseVerif = await getTodayCloseMarketReview();
+      } catch {
+        activeCloseVerif = null;
+      }
+
+      if (!activeCloseVerif) {
+        const ai = parseAiStrategyObject((rptRow as Record<string, unknown>).ai_strategy_json);
+        activeCloseVerif = mapClosingVerificationToCloseMarketReview(
+          rpt.report_date || String((rptRow as Record<string, unknown>).report_date || ''),
+          ai.closing_verification,
+        );
       }
 
       setOpeningRadar(activeRadar);

@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import { renderSafeText } from '@/utils/renderSafe';
+import type { Report } from '@/types/report';
 import {
   hasValidMemberResearchNoteV2,
   hasValidMemberResearchText,
@@ -15,16 +16,122 @@ import {
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { trackPageView, trackEvent } from '@/utils/analytics';
 
-function EmptyNoteBlock() {
-  return (
-    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-      <p className="text-white/35 text-xs leading-relaxed">本段資料不足，等待下一次報告補齊。</p>
-    </div>
-  );
-}
-
 function hasItems<T>(items: T[] | undefined): items is T[] {
   return Array.isArray(items) && items.length > 0;
+}
+
+type MemberBeneficiaryCandidate = {
+  symbol?: string;
+  name: string;
+  sector?: string;
+  reason?: string;
+  risk?: string;
+  watchPoint?: string;
+  confidence?: string | number;
+  evidence?: string[];
+};
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function asRecordArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+    : [];
+}
+
+function textValue(value: unknown): string {
+  return String(value ?? '').trim();
+}
+
+function firstText(...values: unknown[]): string {
+  for (const value of values) {
+    const text = textValue(value);
+    if (text) return text;
+  }
+  return '';
+}
+
+function normalizeLegacyBeneficiary(row: Record<string, unknown>): MemberBeneficiaryCandidate | null {
+  const name = firstText(row.stock_name, row.name);
+  if (!name) return null;
+
+  const evidence = Array.isArray(row.evidence)
+    ? row.evidence.map((item) => textValue(item)).filter(Boolean)
+    : undefined;
+
+  return {
+    symbol: firstText(row.symbol, row.stock_id, row.stock_code),
+    name,
+    sector: firstText(row.sector, row.group),
+    reason: firstText(row.reason, row.rationale),
+    risk: firstText(row.risk_note, row.risk),
+    watchPoint: firstText(row.watch_point),
+    confidence: row.confidence ?? row.confidence_level ?? row.confidence_score,
+    evidence,
+  };
+}
+
+function normalizeV2Beneficiary(item: NonNullable<MemberResearchNoteV2['beneficiary_candidates']>[number]): MemberBeneficiaryCandidate | null {
+  const row = asRecord(item);
+  const name = firstText(row.stock_name, row.name);
+  if (!name) return null;
+
+  return {
+    symbol: firstText(row.stock_code, row.symbol, row.stock_id),
+    name,
+    sector: firstText(row.sector, row.group),
+    reason: firstText(row.reason, row.rationale),
+    risk: firstText(row.risk, row.risk_note),
+    watchPoint: firstText(row.watch_point),
+    confidence: row.confidence ?? row.confidence_level ?? row.confidence_score,
+    evidence: Array.isArray(row.evidence) ? row.evidence.map((value) => textValue(value)).filter(Boolean) : undefined,
+  };
+}
+
+function valueHasContent(value: unknown): boolean {
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value === 'boolean') return true;
+  if (Array.isArray(value)) return value.length > 0;
+  if (value && typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).some(valueHasContent);
+  }
+  return false;
+}
+
+function getObjectLines(value: Record<string, unknown>, preferredKeys: string[]): Array<{ label: string; value: string }> {
+  const preferred = preferredKeys
+    .map((key) => ({ label: key, value: textValue(value[key]) }))
+    .filter((item) => item.value);
+
+  if (preferred.length > 0) return preferred.slice(0, 6);
+
+  return Object.entries(value)
+    .filter(([, item]) => ['string', 'number', 'boolean'].includes(typeof item) && textValue(item))
+    .slice(0, 6)
+    .map(([key, item]) => ({ label: key, value: textValue(item) }));
+}
+
+function getDataLines(value: unknown, preferredKeys: string[]): Array<{ label: string; value: string }> {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    const text = textValue(value);
+    return text ? [{ label: 'summary', value: text }] : [];
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item, idx) => ({ label: `item_${idx + 1}`, value: textValue(item) }))
+      .filter((item) => item.value)
+      .slice(0, 6);
+  }
+
+  if (value && typeof value === 'object') {
+    return getObjectLines(value as Record<string, unknown>, preferredKeys);
+  }
+
+  return [];
 }
 
 function MemberResearchNoteV2View({
@@ -32,11 +139,15 @@ function MemberResearchNoteV2View({
   reportDate,
   twCoreDate,
   isHistoricalFallback,
+  beneficiaryCandidates,
+  hasClosingVerification,
 }: {
   note: MemberResearchNoteV2;
   reportDate: string;
   twCoreDate: string;
   isHistoricalFallback: boolean;
+  beneficiaryCandidates: MemberBeneficiaryCandidate[];
+  hasClosingVerification: boolean;
 }) {
   return (
     <section>
@@ -59,9 +170,9 @@ function MemberResearchNoteV2View({
         </div>
 
         <div className="space-y-4">
-          <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <h3 className="text-white font-semibold text-sm mb-3">隔夜事件鏈</h3>
-            {hasItems(note.overnight_chain) ? (
+          {hasItems(note.overnight_chain) && (
+            <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <h3 className="text-white font-semibold text-sm mb-3">隔夜事件鏈</h3>
               <div className="space-y-3">
                 {note.overnight_chain.map((item, idx) => (
                   <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
@@ -72,12 +183,12 @@ function MemberResearchNoteV2View({
                   </div>
                 ))}
               </div>
-            ) : <EmptyNoteBlock />}
-          </section>
+            </section>
+          )}
 
-          <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <h3 className="text-white font-semibold text-sm mb-3">台股映射</h3>
-            {hasItems(note.taiwan_impact_map) ? (
+          {hasItems(note.taiwan_impact_map) && (
+            <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <h3 className="text-white font-semibold text-sm mb-3">台股映射</h3>
               <div className="space-y-3">
                 {note.taiwan_impact_map.map((item, idx) => (
                   <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
@@ -91,29 +202,32 @@ function MemberResearchNoteV2View({
                   </div>
                 ))}
               </div>
-            ) : <EmptyNoteBlock />}
-          </section>
+            </section>
+          )}
 
-          <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <h3 className="text-white font-semibold text-sm mb-3">第一受惠股候選</h3>
-            {hasItems(note.beneficiary_candidates) ? (
+          {hasItems(beneficiaryCandidates) && (
+            <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <h3 className="text-white font-semibold text-sm mb-3">第一受惠股候選</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {note.beneficiary_candidates.map((item, idx) => (
+                {beneficiaryCandidates.map((item, idx) => (
                   <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
-                    <p className="text-white/85 text-sm font-semibold">{renderSafeText(item.stock_code || '—')} {renderSafeText(item.stock_name || '')}</p>
-                    <p className="text-white/35 text-[10px] mt-0.5">{renderSafeText(item.sector || '—')}｜信心：{item.confidence ?? '—'}</p>
+                    <p className="text-white/85 text-sm font-semibold">{[item.symbol, item.name].filter(Boolean).join(' ')}</p>
+                    <p className="text-white/35 text-[10px] mt-0.5">
+                      {renderSafeText(item.sector || '—')}{item.confidence !== undefined && item.confidence !== '' ? `｜信心：${item.confidence}` : ''}
+                    </p>
                     <p className="text-white/55 text-xs mt-2 leading-relaxed">{renderSafeText(item.reason || '—')}</p>
                     {hasItems(item.evidence) && <p className="text-forest-300/70 text-xs mt-1">證據：{item.evidence.join('；')}</p>}
                     {item.risk && <p className="text-red-400/70 text-xs mt-1">風險：{renderSafeText(item.risk)}</p>}
+                    {item.watchPoint && <p className="text-sky-300/70 text-xs mt-1">觀察：{renderSafeText(item.watchPoint)}</p>}
                   </div>
                 ))}
               </div>
-            ) : <EmptyNoteBlock />}
-          </section>
+            </section>
+          )}
 
-          <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <h3 className="text-white font-semibold text-sm mb-3">盤中驗證條件</h3>
-            {hasItems(note.intraday_validation) ? (
+          {hasItems(note.intraday_validation) && (
+            <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <h3 className="text-white font-semibold text-sm mb-3">盤中驗證條件</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {note.intraday_validation.map((item, idx) => (
                   <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
@@ -125,12 +239,12 @@ function MemberResearchNoteV2View({
                   </div>
                 ))}
               </div>
-            ) : <EmptyNoteBlock />}
-          </section>
+            </section>
+          )}
 
-          <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <h3 className="text-white font-semibold text-sm mb-3">失效條件</h3>
-            {hasItems(note.invalidation_rules) ? (
+          {hasItems(note.invalidation_rules) && (
+            <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <h3 className="text-white font-semibold text-sm mb-3">失效條件</h3>
               <div className="space-y-3">
                 {note.invalidation_rules.map((item, idx) => (
                   <div key={idx} className="p-3 rounded-lg bg-red-500/[0.03] border border-red-500/10">
@@ -140,12 +254,15 @@ function MemberResearchNoteV2View({
                   </div>
                 ))}
               </div>
-            ) : <EmptyNoteBlock />}
-          </section>
+            </section>
+          )}
 
-          <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <h3 className="text-white font-semibold text-sm mb-3">收盤後回饋</h3>
-            {note.closing_feedback_plan ? (
+          {!hasClosingVerification && note.closing_feedback_plan && (
+            <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <h3 className="text-white font-semibold text-sm">收盤後回饋</h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-400/20">待收盤驗證</span>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
                   <p className="text-violet-300/80 text-[10px] mb-1">比較項目</p>
@@ -160,15 +277,15 @@ function MemberResearchNoteV2View({
                   <p className="text-white/55 text-xs">{renderSafeText(note.closing_feedback_plan.miss_reason_tracking || '—')}</p>
                 </div>
               </div>
-            ) : <EmptyNoteBlock />}
-          </section>
+            </section>
+          )}
 
-          <section className="p-4 rounded-xl bg-amber-500/[0.04] border border-amber-400/20">
-            <h3 className="text-white font-semibold text-sm mb-2">會員價值一句話</h3>
-            {note.subscriber_value_sentence ? (
+          {note.subscriber_value_sentence && (
+            <section className="p-4 rounded-xl bg-amber-500/[0.04] border border-amber-400/20">
+              <h3 className="text-white font-semibold text-sm mb-2">會員價值一句話</h3>
               <p className="text-amber-300/80 text-sm leading-relaxed">{renderSafeText(note.subscriber_value_sentence)}</p>
-            ) : <p className="text-white/35 text-xs leading-relaxed">本段資料不足，等待下一次報告補齊。</p>}
-          </section>
+            </section>
+          )}
         </div>
       </div>
     </section>
@@ -212,22 +329,12 @@ function MemberNoteContent() {
           return;
         }
 
-        // DEBUG: 確認從 Supabase 拿到的原始資料
-        console.log('[MemberNote] REPORT RAW ROW', r);
-        console.log('[MemberNote] AI STRATEGY JSON (raw)', r.ai_strategy_json);
-        console.log('[MemberNote] AI STRATEGY JSON (type)', typeof r.ai_strategy_json);
-
         // V8.2.1 SAFETY: ai_strategy_json 可能是已解析的 object（jsonb 自動展開）
         // 也可能是 JSON string（Edge Function 雙重序列化時的保護）
         const rawAiJson = r.ai_strategy_json;
         const ai = typeof rawAiJson === 'string'
-          ? (() => { try { const parsed = JSON.parse(rawAiJson); console.log('[MemberNote] ai_strategy_json was string, parsed to object', parsed); return parsed as Record<string, unknown>; } catch { console.warn('[MemberNote] ai_strategy_json parse failed, using empty'); return {}; } })()
+          ? (() => { try { return JSON.parse(rawAiJson) as Record<string, unknown>; } catch { return {}; } })()
           : (rawAiJson as Record<string, unknown>) || {};
-
-        console.log('[MemberNote] AI STRATEGY (parsed)', ai);
-        console.log('[MemberNote] MEMBER RESEARCH NOTE (raw value)', ai?.member_research_note);
-        console.log('[MemberNote] MEMBER RESEARCH NOTE (type)', typeof ai?.member_research_note);
-        console.log('[MemberNote] MEMBER RESEARCH NOTE (length)', typeof ai?.member_research_note === 'string' ? (ai.member_research_note as string).length : 'N/A');
 
         const twDate = (ai.tw_core_date as string) || (ai.market_data_date as string) || r.report_date || '—';
         const usDate = (ai.us_global_date as string) || (ai.us_market_date as string) || '—';
@@ -246,10 +353,7 @@ function MemberNoteContent() {
           : [];
         setCausalChains(cChains);
 
-        const parsed = parseAIStrategy(r as unknown as Record<string, unknown>);
-        console.log('[MemberNote] PARSED STRATEGY', parsed);
-        console.log('[MemberNote] PARSED MEMBER NOTE', parsed?.member_research_note);
-        console.log('[MemberNote] PARSED MEMBER NOTE type', typeof parsed?.member_research_note);
+        const parsed = parseAIStrategy(r as unknown as Report);
         setStrategy(parsed);
       } catch (err) {
         setError(err instanceof Error ? err.message : '讀取資料失敗');
@@ -368,6 +472,41 @@ function MemberNoteContent() {
   const hasClosingPlan = !!strategy.closing_feedback_plan;
   const hasRenewalBlock = !!strategy.renewal_value_block;
   const hasPremiumSummary = !!strategy.premium_value_summary;
+  const rawAI = asRecord(strategy.raw);
+  const researcherSummary = firstText(
+    memberNoteV2?.subscriber_value_sentence,
+    strategy.premium_value_summary?.strongest_member_value_today,
+    rawAI.today_quote,
+  ) || '本段資料不足，等待下一次交易日報告補齊。';
+  const v2BeneficiaryCandidates = (memberNoteV2?.beneficiary_candidates || [])
+    .map(normalizeV2Beneficiary)
+    .filter((candidate): candidate is MemberBeneficiaryCandidate => candidate !== null);
+  const legacyBeneficiaryCandidates = asRecordArray(rawAI.beneficiary_stocks)
+    .map(normalizeLegacyBeneficiary)
+    .filter((candidate): candidate is MemberBeneficiaryCandidate => candidate !== null);
+  const beneficiaryCandidates = hasItems(v2BeneficiaryCandidates) ? v2BeneficiaryCandidates : legacyBeneficiaryCandidates;
+  const openingRadar = rawAI.opening_radar;
+  const closingVerification = rawAI.closing_verification;
+  const hasOpeningRadar = valueHasContent(openingRadar);
+  const hasClosingVerification = valueHasContent(closingVerification);
+  const openingRadarLines = getDataLines(openingRadar, [
+    'status',
+    'radar_status',
+    'summary',
+    'market_bias',
+    'bias',
+    'watch_point',
+    'what_to_watch',
+  ]);
+  const closingVerificationLines = getDataLines(closingVerification, [
+    'prediction_result',
+    'verification_result',
+    'result',
+    'summary',
+    'actual_direction',
+    'accuracy_score',
+    'reason',
+  ]);
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col overflow-x-hidden">
@@ -424,6 +563,57 @@ function MemberNoteContent() {
             </div>
           </div>
 
+          {/* Researcher Summary */}
+          <section className="bg-navy-900/60 border border-forest-500/10 rounded-2xl p-5 md:p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <i className="ri-quill-pen-line text-forest-400 text-sm"></i>
+              <h2 className="text-white font-bold text-base">研究員摘要</h2>
+            </div>
+            <p className="text-white/70 text-sm leading-relaxed">{renderSafeText(researcherSummary)}</p>
+          </section>
+
+          {hasOpeningRadar && (
+            <section className="bg-navy-900/60 border border-sky-500/10 rounded-2xl p-5 md:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <i className="ri-radar-line text-sky-400 text-sm"></i>
+                <h2 className="text-white font-bold text-base">盤中雷達狀態</h2>
+              </div>
+              {openingRadarLines.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {openingRadarLines.map((item, idx) => (
+                    <div key={`${item.label}-${idx}`} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                      <p className="text-sky-400/60 text-[10px] uppercase tracking-wider mb-1">{renderSafeText(item.label)}</p>
+                      <p className="text-white/60 text-xs leading-relaxed">{renderSafeText(item.value)}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-white/50 text-xs leading-relaxed">盤中雷達資料已存在，等待下一版格式化顯示。</p>
+              )}
+            </section>
+          )}
+
+          {hasClosingVerification && (
+            <section className="bg-navy-900/60 border border-violet-500/10 rounded-2xl p-5 md:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <i className="ri-check-double-line text-violet-400 text-sm"></i>
+                <h2 className="text-white font-bold text-base">實際收盤驗證</h2>
+              </div>
+              {closingVerificationLines.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {closingVerificationLines.map((item, idx) => (
+                    <div key={`${item.label}-${idx}`} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                      <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">{renderSafeText(item.label)}</p>
+                      <p className="text-white/60 text-xs leading-relaxed">{renderSafeText(item.value)}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-white/50 text-xs leading-relaxed">已收到收盤驗證資料，等待下一版格式化顯示。</p>
+              )}
+            </section>
+          )}
+
           {/* ═══════════════════════════════ */}
           {/* MEMBER RESEARCH NOTE SECTIONS */}
           {/* ═══════════════════════════════ */}
@@ -433,6 +623,8 @@ function MemberNoteContent() {
               reportDate={reportDate}
               twCoreDate={twCoreDate}
               isHistoricalFallback={isHistoricalFallback}
+              beneficiaryCandidates={beneficiaryCandidates}
+              hasClosingVerification={hasClosingVerification}
             />
           ) : hasMemberNote && memberNoteText ? (
               /* ═══ 純文字多段落路徑 (V8.2.1) ═══ */
@@ -471,6 +663,29 @@ function MemberNoteContent() {
               </div>
               <p className="text-slate-300 text-sm mb-2">完整研究筆記尚未生成</p>
               <p className="text-slate-500 text-xs max-w-md mx-auto">目前只有公開摘要，尚不足以形成會員研究筆記。</p>
+            </section>
+          )}
+
+          {!memberNoteV2 && hasItems(beneficiaryCandidates) && (
+            <section className="bg-navy-900/60 border border-amber-500/10 rounded-2xl p-5 md:p-6">
+              <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
+                <i className="ri-focus-3-line text-amber-400 text-sm"></i>
+                第一受惠股候選
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {beneficiaryCandidates.map((item, idx) => (
+                  <div key={`${item.symbol || item.name}-${idx}`} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                    <p className="text-white/85 text-sm font-semibold">{[item.symbol, item.name].filter(Boolean).join(' ')}</p>
+                    <p className="text-white/35 text-[10px] mt-0.5">
+                      {renderSafeText(item.sector || '—')}{item.confidence !== undefined && item.confidence !== '' ? `｜信心：${item.confidence}` : ''}
+                    </p>
+                    {item.reason && <p className="text-white/55 text-xs mt-2 leading-relaxed">{renderSafeText(item.reason)}</p>}
+                    {hasItems(item.evidence) && <p className="text-forest-300/70 text-xs mt-1">證據：{item.evidence.join('；')}</p>}
+                    {item.risk && <p className="text-red-400/70 text-xs mt-1">風險：{renderSafeText(item.risk)}</p>}
+                    {item.watchPoint && <p className="text-sky-300/70 text-xs mt-1">觀察：{renderSafeText(item.watchPoint)}</p>}
+                  </div>
+                ))}
+              </div>
             </section>
           )}
 
@@ -641,12 +856,15 @@ function MemberNoteContent() {
           )}
 
           {/* F: Closing Feedback Plan */}
-          {hasClosingPlan && strategy.closing_feedback_plan && (
+          {!hasClosingVerification && hasClosingPlan && strategy.closing_feedback_plan && (
             <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
-              <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
-                <i className="ri-check-double-line text-violet-400 text-sm"></i>
-                收盤回饋計畫
-              </h2>
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <h2 className="text-white font-bold text-base flex items-center gap-2">
+                  <i className="ri-check-double-line text-violet-400 text-sm"></i>
+                  收盤回饋計畫
+                </h2>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-400/20">待收盤驗證</span>
+              </div>
               <div className="space-y-3">
                 {strategy.closing_feedback_plan.what_to_check_after_close && (
                   <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">

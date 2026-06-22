@@ -22,7 +22,8 @@ interface TierStock {
   trigger_event: string;
   reason: string;
   risk_note: string;
-  confidence_level: 'high' | 'medium' | 'low';
+  confidence_level?: 'high' | 'medium' | 'low';
+  has_confidence: boolean;
   data_basis: string;
   // legacy compat
   symbol?: string;
@@ -66,10 +67,14 @@ function parseEvidence(value: unknown): string {
   return compactText(value);
 }
 
+function hasConfidenceValue(raw: Record<string, unknown>): boolean {
+  return raw.confidence_level !== undefined || raw.confidence !== undefined || raw.confidence_score !== undefined || raw.score !== undefined;
+}
+
 function hasExplicitStockIdentity(row: Record<string, unknown>): boolean {
   const stockId = compactText(row.stock_id || row.symbol || row.stock_code || row.code || row.ticker);
   const stockName = compactText(row.stock_name || row.name || row.stock || row.company_name || row.title);
-  return Boolean(stockId && stockName);
+  return Boolean(stockId || stockName);
 }
 
 function parseTierStock(
@@ -79,7 +84,7 @@ function parseTierStock(
 ): TierStock | null {
   const stockId = compactText(raw.stock_id || raw.symbol || raw.stock_code || raw.code || raw.ticker);
   const stockName = compactText(raw.stock_name || raw.name || raw.stock || raw.company_name || raw.title);
-  if (!stockId || !stockName) return null;
+  if (!stockId && !stockName) return null;
 
   const rawLevel = compactText(raw.beneficiary_level);
   const beneficiaryLevel: TierStock['beneficiary_level'] = rawLevel === 'core' || rawLevel === 'extended' || rawLevel === 'scenario'
@@ -88,13 +93,14 @@ function parseTierStock(
 
   return {
     stock_id: stockId,
-    stock_name: stockName,
+    stock_name: stockName || stockId,
     sector: compactText(raw.sector || raw.group || raw.category || raw.industry),
     beneficiary_level: beneficiaryLevel,
     trigger_event: compactText(raw.trigger_event || raw.catalyst || raw.catalyst_type || raw.event),
     reason: compactText(raw.reason || raw.thesis || raw.member_thesis || raw.why_it_matters || raw.score_reason),
     risk_note: compactText(raw.risk_note || raw.risk || raw.invalidation_condition || raw.failure_conditions),
-    confidence_level: confidenceLevelFrom(raw.confidence_level || raw.confidence || raw.confidence_score),
+    confidence_level: hasConfidenceValue(raw) ? confidenceLevelFrom(raw.confidence_level || raw.confidence || raw.confidence_score || raw.score) : undefined,
+    has_confidence: hasConfidenceValue(raw),
     data_basis: compactText(raw.data_basis || raw.source_type || raw.source || fallbackDataBasis || parseEvidence(raw.evidence)),
     symbol: stockId,
     name: stockName,
@@ -132,7 +138,7 @@ function dedupeTierStocks(stocks: TierStock[], used = new Set<string>()): TierSt
   const result: TierStock[] = [];
 
   stocks.forEach((stock) => {
-    const key = stock.stock_id.trim().toUpperCase();
+    const key = (stock.stock_id ? `ID:${stock.stock_id}` : `NAME:${stock.stock_name}`).trim().toUpperCase();
     if (!key || used.has(key)) return;
     used.add(key);
     result.push(stock);
@@ -446,7 +452,7 @@ function OpportunitiesContent() {
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {coreStocks.map((stock, idx) => {
-                  const conf = confidenceBadge(stock.confidence_level);
+                  const conf = stock.has_confidence ? confidenceBadge(stock.confidence_level || 'low') : null;
                   const lvl = levelBadge(stock.beneficiary_level);
                   return (
                     <div key={idx} className="p-4 rounded-xl bg-background-100 border border-primary-200/70 flex flex-col">
@@ -456,11 +462,13 @@ function OpportunitiesContent() {
                           <span className={`w-1 h-1 rounded-full ${lvl.dot}`}></span>
                           {lvl.label}
                         </span>
-                        <span className="text-foreground-900 font-bold text-sm whitespace-nowrap">{stock.stock_id} {stock.stock_name}</span>
-                        <span className={`ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${conf.cls}`}>
-                          <span className={`w-1 h-1 rounded-full ${conf.dot}`}></span>
-                          {conf.label}
-                        </span>
+                        <span className="text-foreground-900 font-bold text-sm whitespace-nowrap">{[stock.stock_id, stock.stock_name].filter(Boolean).join(' ')}</span>
+                        {conf && (
+                          <span className={`ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${conf.cls}`}>
+                            <span className={`w-1 h-1 rounded-full ${conf.dot}`}></span>
+                            {conf.label}
+                          </span>
+                        )}
                       </div>
 
                       {/* Sector */}
@@ -524,7 +532,7 @@ function OpportunitiesContent() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {extendedStocks.map((stock, idx) => {
-                  const conf = confidenceBadge(stock.confidence_level);
+                  const conf = stock.has_confidence ? confidenceBadge(stock.confidence_level || 'low') : null;
                   const lvl = levelBadge(stock.beneficiary_level);
                   return (
                     <div key={idx} className="p-3 rounded-xl bg-background-100 border border-background-200/70 flex flex-col">
@@ -533,11 +541,13 @@ function OpportunitiesContent() {
                           <span className={`w-1 h-1 rounded-full ${lvl.dot}`}></span>
                           {lvl.label}
                         </span>
-                        <span className="text-foreground-900 font-bold text-xs whitespace-nowrap">{stock.stock_id} {stock.stock_name}</span>
-                        <span className={`ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${conf.cls}`}>
-                          <span className={`w-1 h-1 rounded-full ${conf.dot}`}></span>
-                          {conf.label}
-                        </span>
+                        <span className="text-foreground-900 font-bold text-xs whitespace-nowrap">{[stock.stock_id, stock.stock_name].filter(Boolean).join(' ')}</span>
+                        {conf && (
+                          <span className={`ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${conf.cls}`}>
+                            <span className={`w-1 h-1 rounded-full ${conf.dot}`}></span>
+                            {conf.label}
+                          </span>
+                        )}
                       </div>
                       {stock.sector && <span className="text-foreground-400 text-[9px] uppercase tracking-wider mb-1.5">{stock.sector}</span>}
                       {stock.reason && <p className="text-foreground-500 text-[11px] leading-relaxed mb-2">{stock.reason}</p>}
@@ -570,7 +580,7 @@ function OpportunitiesContent() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {scenarioStocks.map((stock, idx) => {
-                  const conf = confidenceBadge(stock.confidence_level);
+                  const conf = stock.has_confidence ? confidenceBadge(stock.confidence_level || 'low') : null;
                   const lvl = levelBadge(stock.beneficiary_level);
                   return (
                     <div key={idx} className="p-3 rounded-xl bg-background-100 border border-secondary-200/70 flex flex-col">
@@ -579,11 +589,13 @@ function OpportunitiesContent() {
                           <span className={`w-1 h-1 rounded-full ${lvl.dot}`}></span>
                           {lvl.label}
                         </span>
-                        <span className="text-foreground-900 font-bold text-xs whitespace-nowrap">{stock.stock_id} {stock.stock_name}</span>
-                        <span className={`ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${conf.cls}`}>
-                          <span className={`w-1 h-1 rounded-full ${conf.dot}`}></span>
-                          {conf.label}
-                        </span>
+                        <span className="text-foreground-900 font-bold text-xs whitespace-nowrap">{[stock.stock_id, stock.stock_name].filter(Boolean).join(' ')}</span>
+                        {conf && (
+                          <span className={`ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${conf.cls}`}>
+                            <span className={`w-1 h-1 rounded-full ${conf.dot}`}></span>
+                            {conf.label}
+                          </span>
+                        )}
                       </div>
                       {/* Trigger event as the main highlight for scenario stocks */}
                       {stock.trigger_event && (

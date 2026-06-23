@@ -35,6 +35,12 @@ function parseTimestamp(value: string): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function hasLiveIntradayContract(radar: Record<string, unknown>): boolean {
+  return String(radar.captured_at || '').trim().length > 0
+    && String(radar.source_kind || '').trim() === 'intraday_live'
+    && String(radar.data_source || '').trim() === 'market_data';
+}
+
 function hasPreviousCloseSource(radar: Record<string, unknown>, reportAI: Record<string, unknown>): boolean {
   const text = [
     radar.source_kind,
@@ -87,8 +93,11 @@ export function isFreshIntradayData(
   if (Object.keys(radar).length === 0) {
     return { fresh: false, timestamp: null, timestampLabel: null, reason: 'NO_INTRADAY_SOURCE' };
   }
+  if (!hasLiveIntradayContract(radar)) {
+    return { fresh: false, timestamp: null, timestampLabel: null, reason: 'MISSING_LIVE_INTRADAY_CONTRACT' };
+  }
 
-  const timestamp = firstString(radar, ['checked_at', 'captured_at', 'updated_at', 'generated_at', 'created_at']);
+  const timestamp = firstString(radar, ['captured_at']);
   const parsed = parseTimestamp(timestamp);
   if (!parsed) {
     return { fresh: false, timestamp: null, timestampLabel: null, reason: 'NO_INTRADAY_TIMESTAMP' };

@@ -20,6 +20,10 @@ export interface OpeningRadar {
   premarket_confidence: number | null;
   is_premarket_overridden: boolean;
   override_reason: string | null;
+  captured_at: string | null;
+  source_kind: string | null;
+  data_source: string | null;
+  market_data_date: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -64,6 +68,10 @@ export function mapRowToOpeningRadar(row: Record<string, unknown>): OpeningRadar
     premarket_confidence: safeNumber(row.premarket_confidence),
     is_premarket_overridden: safeBoolean(row.is_premarket_overridden),
     override_reason: safeString(row.override_reason),
+    captured_at: safeString(row.captured_at),
+    source_kind: safeString(row.source_kind),
+    data_source: safeString(row.data_source),
+    market_data_date: safeString(row.market_data_date),
     created_at: String(row.created_at || ''),
     updated_at: String(row.updated_at || ''),
   };
@@ -91,6 +99,10 @@ export async function getTodayOpeningRadar(): Promise<OpeningRadar | null> {
     console.log(
       '[Morning Alpha Radar Freshness] getTodayOpeningRadar',
       `\n  report_date=${rd.report_date}`,
+      `\n  captured_at=${rd.captured_at}`,
+      `\n  source_kind=${rd.source_kind}`,
+      `\n  data_source=${rd.data_source}`,
+      `\n  market_data_date=${rd.market_data_date}`,
       `\n  updated_at=${rd.updated_at}`,
       `\n  created_at=${rd.created_at}`,
       `\n  radar_status=${rd.radar_status}`,

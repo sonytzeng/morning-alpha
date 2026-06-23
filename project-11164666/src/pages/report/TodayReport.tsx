@@ -248,7 +248,7 @@ function TodayReportContent() {
   const displayScoreText = hasFreshIntradayRadar && displayScore != null ? `${displayScore}/100` : '待驗證';
   const oneLiner = hasFreshIntradayRadar
     ? getOneLiner(report, effectiveIntradayRadar)
-    : '盤中資料尚未同步，等待 09:00 後即時資料驗證。';
+    : '目前僅保留07:30盤前假設，今日方向需等待09:00後有效盤中資料驗證。';
   const observations = useMemo(
     () => (hasFreshIntradayRadar ? buildObservations(report, effectiveIntradayRadar) : []),
     [report, effectiveIntradayRadar, hasFreshIntradayRadar],

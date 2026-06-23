@@ -21,6 +21,22 @@ function getTaiwanDateString(): string {
   return `${y}-${m}-${d}`;
 }
 
+function taipeiDateTimeToUtcIso(date: string, hour: number, minute = 0, addDays = 0): string {
+  const [year, month, day] = date.split('-').map((v) => Number(v));
+  return new Date(Date.UTC(year, month - 1, day + addDays, hour - 8, minute, 0, 0)).toISOString();
+}
+
+function taipeiDateFromIso(iso: string): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
+  const y = parts.find((p) => p.type === 'year')?.value || '';
+  const m = parts.find((p) => p.type === 'month')?.value || '';
+  const d = parts.find((p) => p.type === 'day')?.value || '';
+  return y && m && d ? `${y}-${m}-${d}` : null;
+}
+
 function getTaipeiHourMinute(): { hour: number; minute: number } {
   const now = new Date();
   const tw = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
@@ -58,6 +74,14 @@ function findSymbol(data: MarketDataRow[], candidates: string[]): MarketDataRow 
     if (found) return found;
   }
   return null;
+}
+
+function getLatestCapturedAt(data: MarketDataRow[]): string | null {
+  let latest = '';
+  for (const row of data) {
+    if (row.captured_at && (!latest || row.captured_at > latest)) latest = row.captured_at;
+  }
+  return latest || null;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -326,12 +350,14 @@ Deno.serve(async (req) => {
 
     log(`Premarket from reports: bias="${premarketBias}", confidence=${premarketConfidence}`);
 
-    // 2. Fetch latest market_data
-    const thirtySixHoursAgo = new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString();
+    // 2. Fetch today's live market_data only. Previous close snapshots must not become intraday radar.
+    const openStartIso = taipeiDateTimeToUtcIso(today, 9);
+    const now = new Date().toISOString();
     const { data: marketRows } = await supabase
       .from('market_data')
       .select('symbol, name, value, change_percent, captured_at')
-      .gte('captured_at', thirtySixHoursAgo)
+      .gte('captured_at', openStartIso)
+      .lte('captured_at', now)
       .order('captured_at', { ascending: false })
       .limit(50);
 
@@ -343,7 +369,26 @@ Deno.serve(async (req) => {
       captured_at: String(r.captured_at || ''),
     }));
 
-    log(`Market data rows: ${marketData.length}, symbols: ${marketData.map(r => r.symbol).join(', ')}`);
+    const latestCapturedAt = getLatestCapturedAt(marketData);
+    const marketDataDate = latestCapturedAt ? taipeiDateFromIso(latestCapturedAt) : null;
+    log(`Market data rows: ${marketData.length}, window=${openStartIso}..${now}, latest_captured_at=${latestCapturedAt || 'none'}, market_data_date=${marketDataDate || 'none'}, symbols: ${marketData.map(r => r.symbol).join(', ')}`);
+
+    if (!latestCapturedAt || marketDataDate !== today) {
+      log('NO_VALID_INTRADAY_DATA: no market_data captured at or after Taiwan 09:00 today');
+      return new Response(JSON.stringify({
+        success: false,
+        reason: 'NO_VALID_INTRADAY_DATA',
+        report_date: today,
+        window_start: openStartIso,
+        window_end: now,
+        market_data_rows: marketData.length,
+        latest_captured_at: latestCapturedAt,
+        market_data_date: marketDataDate,
+        version: 'V3.1',
+        request_id: requestId,
+        logs,
+      }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
+    }
 
     // 3. Compute radar
     const radar = computeRadar(marketData, premarketBias, premarketConfidence, log);
@@ -351,7 +396,6 @@ Deno.serve(async (req) => {
     log(`Radar: status=${radar.radar_status}, bias=${radar.market_bias}, confidence=${radar.confidence_score}, overridden=${radar.is_premarket_overridden}`);
 
     // 4. Upsert to opening_market_radar
-    const now = new Date().toISOString();
     const upsertData: Record<string, unknown> = {
       report_date: today,
       radar_status: radar.radar_status,
@@ -371,6 +415,10 @@ Deno.serve(async (req) => {
       premarket_confidence: premarketConfidence,
       is_premarket_overridden: radar.is_premarket_overridden,
       override_reason: radar.override_reason,
+      captured_at: latestCapturedAt,
+      source_kind: 'intraday_live',
+      data_source: 'market_data',
+      market_data_date: marketDataDate,
       created_at: now,
       updated_at: now,
     };
@@ -408,6 +456,10 @@ Deno.serve(async (req) => {
       taiex_change: radar.taiex_change,
       txf_change: radar.txf_change,
       tsmc_change: radar.tsmc_change,
+      captured_at: latestCapturedAt,
+      source_kind: 'intraday_live',
+      data_source: 'market_data',
+      market_data_date: marketDataDate,
       after_open: afterOpen,
       duration_ms: Date.now() - startTime,
       logs,

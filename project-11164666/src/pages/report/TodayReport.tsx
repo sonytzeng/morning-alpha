@@ -84,6 +84,15 @@ function getRadarClass(status?: string | null): string {
   return 'bg-amber-500/12 text-amber-300 border-amber-400/30';
 }
 
+function biasFromRadarStatus(status?: string | null): string {
+  const s = safeText(status, '');
+  if (s.includes('明顯偏弱')) return '明顯偏弱';
+  if (s.includes('盤中轉弱')) return '偏弱觀察';
+  if (s.includes('偏強確認')) return '偏強確認';
+  if (s.includes('觀察中')) return '觀察中';
+  return '觀察中';
+}
+
 function normalizeRadarFromReport(report: Report | null): RadarView | null {
   if (!report) return null;
 
@@ -117,39 +126,6 @@ function normalizeRadarFromReport(report: Report | null): RadarView | null {
   }
 
   return null;
-}
-
-function getOneLiner(report: Report | null, radar: RadarView | null): string {
-  const ai = asObj((report as AnyObj | null)?.ai_strategy_json);
-
-  // V8.2: ai.today_quote → ai.summary first (unified contract)
-  const todayQuote = safeText(ai.today_quote, '');
-  if (todayQuote) return todayQuote;
-
-  const aiSummary = safeText(ai.summary, '');
-  if (aiSummary) return aiSummary;
-
-  const radarSummary = safeText(radar?.summary, '');
-  if (radarSummary) return radarSummary;
-
-  const radarQuote = safeText(radar?.today_quote, '');
-  if (radarQuote) return radarQuote;
-
-  const todaySummary = safeText((report as AnyObj | null)?.today_summary, '');
-  if (todaySummary) return todaySummary;
-
-  const summary = safeText((report as AnyObj | null)?.summary, '');
-  if (summary) return summary;
-
-  const free = asObj(ai.free_summary);
-  const freeSentence = safeText(free.one_sentence, '');
-  if (freeSentence) return freeSentence;
-
-  const member = asObj(ai.member_reading);
-  const memberSummary = safeText(member.summary, '');
-  if (memberSummary) return memberSummary;
-
-  return '';
 }
 
 function buildObservations(report: Report | null, radar: RadarView | null): string[] {
@@ -238,23 +214,24 @@ function TodayReportContent() {
   // V8.4: Unified display state — marketBias and confidenceScore from getMorningAlphaDisplayState
   // Same values as Home, Opportunities, WarRoom, MemberNote. No opening_radar override.
   const displayBias = displayState?.marketBias || '—';
-  const displayScore = displayState?.confidenceScore ?? null;
   const intradayFreshness = useMemo(() => isFreshIntradayData(report as AnyObj | null, radar as AnyObj | null), [report, radar]);
   const hasFreshIntradayRadar = intradayFreshness.fresh;
   const effectiveIntradayRadar = hasFreshIntradayRadar ? radar : null;
-  const radarStatus = hasFreshIntradayRadar ? (radar?.radar_status || '中性觀察') : '盤中資料尚未同步';
+  const radarStatus = hasFreshIntradayRadar ? safeText(radar?.radar_status, '中性觀察') : '盤中資料尚未同步';
+  const radarBias = safeText(radar?.market_bias, '') || biasFromRadarStatus(radarStatus);
+  const radarConfidence = radar?.confidence_score ?? null;
   const premarketBiasLabel = safeText(displayBias, '待判斷');
-  const safeDisplayBias = hasFreshIntradayRadar ? displayBias : `盤前假設：${premarketBiasLabel}`;
-  const displayScoreText = hasFreshIntradayRadar && displayScore != null ? `${displayScore}/100` : '待驗證';
+  const safeDisplayBias = hasFreshIntradayRadar ? radarBias : `盤前假設：${premarketBiasLabel}`;
+  const displayScoreText = hasFreshIntradayRadar && radarConfidence != null ? `${safeText(radarConfidence)}/100` : '待驗證';
   const oneLiner = hasFreshIntradayRadar
-    ? getOneLiner(report, effectiveIntradayRadar)
+    ? safeText(effectiveIntradayRadar?.summary, '盤中雷達尚未提供有效摘要。')
     : '目前僅保留07:30盤前假設，今日方向需等待09:00後有效盤中資料驗證。';
   const observations = useMemo(
     () => (hasFreshIntradayRadar ? buildObservations(report, effectiveIntradayRadar) : []),
     [report, effectiveIntradayRadar, hasFreshIntradayRadar],
   );
   const safeDailySentence = hasFreshIntradayRadar
-    ? parsedStrategy.v8_daily_sentence
+    ? { status: 'ready' as const, sentence: oneLiner, logic_source: ['opening_market_radar.summary'], tone: 'clear, sharp, human-readable' as const }
     : { status: 'insufficient' as const, sentence: '', logic_source: [], tone: 'clear, sharp, human-readable' as const };
 
   const marketDataBasisDate =

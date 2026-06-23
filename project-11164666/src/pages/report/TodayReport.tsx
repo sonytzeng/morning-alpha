@@ -15,6 +15,7 @@ import { isAISemiconductorWeak, isAIStock, DEFENSE_KEYWORDS } from '@/utils/mark
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import DailySentenceCard from '@/components/v8/DailySentenceCard';
 import OvernightCausalChainCard from '@/components/v8/OvernightCausalChainCard';
+import { isFreshIntradayData } from '@/utils/intradayFreshness';
 
 type AnyObj = Record<string, any>;
 
@@ -33,6 +34,10 @@ type RadarView = {
   sox_change?: number | null;
   vix_change?: number | null;
   us10y_change?: number | null;
+  checked_at?: string;
+  captured_at?: string;
+  updated_at?: string;
+  created_at?: string;
   generated_at?: string;
   data_source?: string;
 };
@@ -100,6 +105,10 @@ function normalizeRadarFromReport(report: Report | null): RadarView | null {
       sox_change: toNumber(opening.sox_change),
       vix_change: toNumber(opening.vix_change),
       us10y_change: toNumber(opening.us10y_change),
+      checked_at: safeText(opening.checked_at, ''),
+      captured_at: safeText(opening.captured_at, ''),
+      updated_at: safeText(opening.updated_at, ''),
+      created_at: safeText(opening.created_at, ''),
       generated_at: safeText(opening.generated_at, ''),
       data_source: safeText(opening.data_source, 'reports.ai_strategy_json.opening_radar'),
     };
@@ -228,9 +237,12 @@ function TodayReportContent() {
   // Same values as Home, Opportunities, WarRoom, MemberNote. No opening_radar override.
   const displayBias = displayState?.marketBias || '—';
   const displayScore = displayState?.confidenceScore ?? null;
-  const radarStatus = radar?.radar_status || '尚未同步';
-  const oneLiner = getOneLiner(report, radar);
-  const observations = useMemo(() => buildObservations(report, radar), [report, radar]);
+  const intradayFreshness = useMemo(() => isFreshIntradayData(report as AnyObj | null, radar as AnyObj | null), [report, radar]);
+  const hasFreshIntradayRadar = intradayFreshness.fresh;
+  const effectiveIntradayRadar = hasFreshIntradayRadar ? radar : null;
+  const radarStatus = hasFreshIntradayRadar ? (radar?.radar_status || '中性觀察') : '盤中資料尚未同步';
+  const oneLiner = getOneLiner(report, effectiveIntradayRadar);
+  const observations = useMemo(() => buildObservations(report, effectiveIntradayRadar), [report, effectiveIntradayRadar]);
 
   const marketDataBasisDate =
     safeText(ai.market_data_latest_date || ai.tw_core_date || report?.report_date, '—');
@@ -246,8 +258,8 @@ function TodayReportContent() {
     });
 
     // V8: Use radar.sox_change & radar.tsmc_change from ai_strategy_json
-    const soxPct = radar?.sox_change ?? null;
-    const tsmcCore = radar?.tsmc_change ?? null;
+    const soxPct = effectiveIntradayRadar?.sox_change ?? null;
+    const tsmcCore = effectiveIntradayRadar?.tsmc_change ?? null;
 
     const aiSemiconductorWeak = isAISemiconductorWeak(
       { taiexChange: null, txfChange: null, tsmc2330Change: tsmcCore },
@@ -438,7 +450,7 @@ function TodayReportContent() {
                   <div>
                     <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-0.5">盤中資料</p>
                     <p className="text-sky-100 text-xs font-semibold">
-                      {radar ? `已同步：${radarStatus}` : '等待 09:30 開盤雷達更新'}
+                      {hasFreshIntradayRadar ? `已同步：${radarStatus}` : '盤中資料尚未同步'}
                     </p>
                   </div>
                 </div>
@@ -463,43 +475,67 @@ function TodayReportContent() {
 
           <DailySentenceCard dailySentence={parsedStrategy.v8_daily_sentence} tone="dark" />
 
-          {radar && (
-            <section className="bg-navy-900/70 border border-cyan-500/20 rounded-2xl p-5 md:p-6">
-              <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-                <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
-                  盤中雷達
-                </h2>
-                <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-full border ${getRadarClass(radarStatus)}`}>
-                  <i className="ri-radar-line" />
-                  {radarStatus}
-                </span>
-              </div>
+          <section className="bg-navy-900/70 border border-cyan-500/20 rounded-2xl p-5 md:p-6">
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
+                盤中雷達
+              </h2>
+              <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-full border ${getRadarClass(radarStatus)}`}>
+                <i className="ri-radar-line" />
+                {radarStatus}
+              </span>
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
-                <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                  <p className="text-slate-400 text-[10px] mb-1">TAIEX</p>
-                  <p className="text-slate-100 font-bold">{pct(radar.taiex_change)}</p>
+            {hasFreshIntradayRadar && radar ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+                  <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                    <p className="text-slate-400 text-[10px] mb-1">TAIEX</p>
+                    <p className="text-slate-100 font-bold">{pct(radar.taiex_change)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                    <p className="text-slate-400 text-[10px] mb-1">TXF</p>
+                    <p className="text-slate-100 font-bold">{pct(radar.txf_change)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                    <p className="text-slate-400 text-[10px] mb-1">2330</p>
+                    <p className="text-slate-100 font-bold">{pct(radar.tsmc_change)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                    <p className="text-slate-400 text-[10px] mb-1">雷達分數</p>
+                    <p className="text-slate-100 font-bold">{safeText(radar.confidence_score)}/100</p>
+                  </div>
                 </div>
-                <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                  <p className="text-slate-400 text-[10px] mb-1">TXF</p>
-                  <p className="text-slate-100 font-bold">{pct(radar.txf_change)}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                  <p className="text-slate-400 text-[10px] mb-1">2330</p>
-                  <p className="text-slate-100 font-bold">{pct(radar.tsmc_change)}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                  <p className="text-slate-400 text-[10px] mb-1">雷達分數</p>
-                  <p className="text-slate-100 font-bold">{safeText(radar.confidence_score)}/100</p>
-                </div>
-              </div>
 
-              <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-2">雷達說明</p>
-                <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(radar.summary)}</p>
+                <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                  <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-2">雷達說明</p>
+                  <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(radar.summary)}</p>
+                  <p className="text-slate-500 text-[10px] mt-3">
+                    資料時間：{intradayFreshness.timestampLabel || safeText(radar.updated_at || radar.generated_at)}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                  <p className="text-slate-100 font-semibold text-sm mb-2">盤中資料尚未同步</p>
+                  <p className="text-slate-400 text-sm leading-relaxed">
+                    目前僅顯示 07:30 盤前假設，尚未取得今日 09:00 後盤中資料。昨日收盤漲跌不會作為今日盤中確認。
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                    <p className="text-slate-400 text-[10px] mb-1">盤前假設</p>
+                    <p className="text-slate-100 font-bold">{displayBias}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                    <p className="text-slate-400 text-[10px] mb-1">今日待驗證</p>
+                    <p className="text-slate-100 font-bold">TAIEX、TXF、2330 是否同向</p>
+                  </div>
+                </div>
               </div>
-            </section>
-          )}
+            )}
+          </section>
 
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">

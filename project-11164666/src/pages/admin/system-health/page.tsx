@@ -181,7 +181,7 @@ export default function SystemHealthDashboard() {
                     {data?.canEnterV8 ? 'can_enter_v8 = true' : 'can_enter_v8 = false'}
                   </p>
                   <p className="mt-2 text-xs text-foreground-400">
-                    條件：health_score >= 90、report_date 正確、member_research_note_v2 存在，且沒有阻塞 issues。
+                    條件：health_score 大於等於 90、report_date 正確、member_research_note_v2 存在，且沒有阻塞 issues。
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

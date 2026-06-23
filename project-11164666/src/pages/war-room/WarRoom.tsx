@@ -270,9 +270,9 @@ function WarRoomContent() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/12 border border-emerald-400/35 rounded-full text-emerald-300 text-[10px] font-medium whitespace-nowrap">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                盤中追蹤已更新
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium whitespace-nowrap border ${segmentBadgeStyle(tracking.intraday.color)}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${tracking.intraday.color === 'green' ? 'bg-emerald-400' : tracking.intraday.color === 'red' ? 'bg-red-400' : tracking.intraday.color === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
+                {tracking.intraday.statusText}
               </span>
             </div>
             {isHistoricalFallback && fallbackReportDate && (
@@ -373,34 +373,27 @@ function WarRoomContent() {
                     <p className="text-white/50 text-xs leading-relaxed">{openingRadar.summary}</p>
                   )}
                 </div>
-                {/* Market data snapshot — use ALL marketData, not just today-only */}
-                {marketData && marketData.length > 0 && (
+                {/* Intraday snapshot: only openingRadar values after freshness gate passes. */}
+                {openingRadar && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {['TAIEX', 'TXF', '2330', 'SPX', 'SOX'].map((sym) => {
-                      const m = marketData.find((d) => d.symbol === sym);
-                      if (!m) {
-                        return (
-                          <div key={sym} className="p-2 rounded-lg bg-white/[0.02] border border-white/5">
-                            <span className="text-white/20 text-[9px] block">{sym}</span>
-                            <span className="text-white/30 text-xs font-mono">資料待更新</span>
-                          </div>
-                        );
-                      }
-                      const changeVal = m.change_percent ?? m.change ?? 0;
-                      const changeNum = Number(changeVal);
-                      const isUp = changeNum > 0;
-                      const isDown = changeNum < 0;
+                    {[
+                      { symbol: 'TAIEX', change: openingRadar.taiex_change },
+                      { symbol: 'TXF', change: openingRadar.txf_change },
+                      { symbol: '2330', change: openingRadar.tsmc_change },
+                    ].map((item) => {
+                      const changeNum = item.change == null ? null : Number(item.change);
+                      const isUp = changeNum !== null && changeNum > 0;
+                      const isDown = changeNum !== null && changeNum < 0;
                       return (
-                        <div key={sym} className="p-2 rounded-lg bg-white/[0.02] border border-white/5">
-                          <span className="text-white/30 text-[9px] block">{sym}</span>
+                        <div key={item.symbol} className="p-2 rounded-lg bg-white/[0.02] border border-white/5">
+                          <span className="text-white/30 text-[9px] block">{item.symbol}</span>
                           <div className="flex items-baseline gap-1.5">
-                            <span className={`text-xs font-mono font-medium ${isUp ? 'text-red-400' : isDown ? 'text-emerald-400' : 'text-slate-400'}`}>
-                              {m.value != null ? (typeof m.value === 'number' ? m.value.toLocaleString('en-US', { minimumFractionDigits: sym === '2330' ? 0 : 2, maximumFractionDigits: 2 }) : String(m.value)) : '—'}
-                            </span>
-                            {!Number.isNaN(changeNum) && (
+                            {changeNum !== null && !Number.isNaN(changeNum) ? (
                               <span className={`text-[10px] font-mono ${isUp ? 'text-red-400' : isDown ? 'text-emerald-400' : 'text-slate-400'}`}>
                                 {changeNum >= 0 ? '+' : ''}{changeNum.toFixed(2)}%
                               </span>
+                            ) : (
+                              <span className="text-white/30 text-xs font-mono">資料待更新</span>
                             )}
                           </div>
                         </div>

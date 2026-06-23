@@ -18,6 +18,7 @@ import type { CloseMarketReview } from '@/services/closeMarketReviewService';
 import type { SupabaseMarketData } from '@/services/marketDataService';
 import type { SectorRotationItem, SectorRotationFreshness } from '@/services/sectorRotationService';
 import type { Report } from '@/types/report';
+import { isFreshIntradayData } from '@/utils/intradayFreshness';
 
 // ═══════════════════════════════════════════
 // Helpers
@@ -144,7 +145,7 @@ export interface IntradayTrackingInput {
 export function resolveIntradayTrackingState(input: IntradayTrackingInput): IntradayTrackingState {
   const {
     report, reportDate, premarketBaseDate, todayDate,
-    openingRadar, marketDataTodayOnly, marketData,
+    openingRadar, marketDataTodayOnly,
     closeReview, sectorItems, sectorScoreDate, sectorFreshness,
     taipeiHour, isWeekend,
   } = input;
@@ -171,10 +172,12 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
 
   // ═══ 2. Intraday Radar (09:30) ═══
   const radarDate = openingRadar?.report_date || null;
+  const radarFreshness = isFreshIntradayData({ report_date: reportDate }, openingRadar as unknown as Record<string, unknown> | null);
   const radarIsToday = isDateToday(radarDate, todayDate);
+  const radarIsFreshToday = radarFreshness.fresh;
 
   // Check if market_data has today data with TW core symbols
-  const todayMkt = marketDataTodayOnly ?? marketData ?? [];
+  const todayMkt = marketDataTodayOnly ?? [];
   const hasTaiex = todayMkt.some((m) => m.symbol === 'TAIEX');
   const hasTsmc = todayMkt.some((m) => m.symbol === '2330');
   const hasTxf = todayMkt.some((m) => m.symbol === 'TXF');
@@ -183,12 +186,12 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
   let intradayStatus: SegmentStatus;
   let radarDisplay: SegmentDisplay;
 
-  if (radarIsToday && openingRadar) {
+  if (radarIsFreshToday && openingRadar) {
     // Today's radar exists
     intradayStatus = 'ready';
     radarDisplay = {
       statusText: '盤中雷達已更新',
-      description: `資料日期：${todayDate}｜狀態：${openingRadar.radar_status || '—'}`,
+      description: `資料時間：${radarFreshness.timestampLabel || todayDate}｜狀態：${openingRadar.radar_status || '—'}`,
       color: 'green',
       showContent: true,
       dataDate: todayDate,
@@ -210,7 +213,9 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
     intradayStatus = 'stale';
     radarDisplay = {
       statusText: '盤中雷達尚未更新',
-      description: `目前僅有 ${radarDate || '—'} 的舊雷達資料。今日尚未開盤或資料尚未更新。請等待 09:30 / 10:30 / 13:00。`,
+      description: radarIsToday
+        ? '盤中資料尚未同步。目前僅顯示 07:30 盤前假設，尚未取得今日 09:00 後盤中資料。昨日收盤漲跌不會作為今日盤中確認。'
+        : `目前僅有 ${radarDate || '—'} 的舊雷達資料。今日尚未開盤或資料尚未更新。請等待 09:30 / 10:30 / 13:00。`,
       color: 'red',
       showContent: false,
       dataDate: radarDate,
@@ -376,7 +381,7 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
     sectorRotationStatus,
 
     hasTodayMarketData,
-    hasTodayOpeningRadar: radarIsToday,
+    hasTodayOpeningRadar: radarIsFreshToday,
     hasTodayCloseReview: closeIsToday,
     hasTodaySectorRotation: sectorIsToday && canUseAsToday,
 

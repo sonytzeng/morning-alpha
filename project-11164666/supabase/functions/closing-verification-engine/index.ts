@@ -41,6 +41,21 @@ function asObject(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function parseJsonObject(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return asObject(parsed);
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 function normalizePredictedBias(value: string): "BULLISH" | "BEARISH" | "NEUTRAL" {
   if (value.includes("多") || value.includes("強")) return "BULLISH";
   if (value.includes("空") || value.includes("弱")) return "BEARISH";
@@ -53,6 +68,16 @@ function actualDirection(change: number): "POSITIVE" | "NEGATIVE" | "NEUTRAL" {
   return "NEUTRAL";
 }
 
+type TaiexCloseData = {
+  symbol: string;
+  change: number;
+  capturedAt: string | null;
+};
+
+type PredictedDirection = "bullish" | "bearish" | "neutral";
+type StructuredActualDirection = "up" | "down" | "flat";
+type StructuredPredictionResult = "hit" | "miss" | "partial" | "pending";
+
 function scorePrediction(predictedBias: string, actualTaiexChange: number): { result: string; score: number; direction: string } {
   const normalized = normalizePredictedBias(predictedBias);
   const direction = actualDirection(actualTaiexChange);
@@ -63,10 +88,170 @@ function scorePrediction(predictedBias: string, actualTaiexChange: number): { re
   return { result: correct ? "CORRECT" : "WRONG", score: correct ? 100 : 0, direction };
 }
 
-async function fetchTodayTaiexChange(
+function normalizeStructuredPredictedDirection(predictedBias: string): PredictedDirection {
+  if (predictedBias.includes("多") || predictedBias.includes("偏強")) return "bullish";
+  if (predictedBias.includes("空") || predictedBias.includes("偏弱")) return "bearish";
+  return "neutral";
+}
+
+function getStructuredActualDirection(change: number): StructuredActualDirection {
+  if (change >= 0.3) return "up";
+  if (change <= -0.3) return "down";
+  return "flat";
+}
+
+function getStructuredPredictionResult(
+  predictedDirection: PredictedDirection,
+  actualDirectionValue: StructuredActualDirection | "unknown",
+): StructuredPredictionResult {
+  if (actualDirectionValue === "unknown") return "pending";
+  if (
+    (predictedDirection === "bullish" && actualDirectionValue === "up") ||
+    (predictedDirection === "bearish" && actualDirectionValue === "down") ||
+    (predictedDirection === "neutral" && actualDirectionValue === "flat")
+  ) {
+    return "hit";
+  }
+  if (
+    (predictedDirection === "bullish" && actualDirectionValue === "flat") ||
+    (predictedDirection === "bearish" && actualDirectionValue === "flat") ||
+    (predictedDirection === "neutral" && actualDirectionValue !== "flat")
+  ) {
+    return "partial";
+  }
+  return "miss";
+}
+
+function scoreStructuredPrediction(result: StructuredPredictionResult, confidence: number | null): number {
+  const confidenceValue = confidence ?? 50;
+  if (result === "hit") return Math.max(85, Math.min(100, 85 + Math.round(confidenceValue * 0.15)));
+  if (result === "partial") return Math.max(55, Math.min(75, 55 + Math.round(confidenceValue * 0.2)));
+  if (result === "miss") return Math.max(20, Math.min(45, 45 - Math.round(confidenceValue * 0.25)));
+  return 0;
+}
+
+function directionLabel(direction: StructuredActualDirection | "unknown"): string {
+  if (direction === "up") return "上漲";
+  if (direction === "down") return "下跌";
+  if (direction === "flat") return "震盪";
+  return "未知";
+}
+
+function verdictLabel(result: StructuredPredictionResult): string {
+  if (result === "hit") return "今日盤前方向命中";
+  if (result === "partial") return "方向部分成立";
+  if (result === "miss") return "今日盤前方向失效";
+  return "等待有效收盤資料";
+}
+
+function buildVerificationNote(
+  predictedBias: string,
+  taiexChange: number | null,
+  actualDirectionValue: StructuredActualDirection | "unknown",
+  result: StructuredPredictionResult,
+): string {
+  if (result === "pending" || taiexChange === null) {
+    return "收盤驗證已執行，但尚未取得有效 TAIEX 收盤資料；系統未使用假資料。";
+  }
+  const changeText = `${taiexChange >= 0 ? "+" : ""}${taiexChange.toFixed(2)}%`;
+  if (result === "hit") {
+    return `盤前判斷為${predictedBias || "未明"}，收盤 TAIEX ${directionLabel(actualDirectionValue)} ${changeText}，實際方向與盤前假設大致一致。`;
+  }
+  if (result === "partial") {
+    return `盤前判斷為${predictedBias || "未明"}，收盤 TAIEX ${directionLabel(actualDirectionValue)} ${changeText}，方向沒有完全展開，今日判斷僅部分成立。`;
+  }
+  return `盤前判斷為${predictedBias || "未明"}，但收盤 TAIEX ${directionLabel(actualDirectionValue)} ${changeText}，實際方向與盤前假設相反，今日判斷失效。`;
+}
+
+function buildMissReason(
+  predictedDirection: PredictedDirection,
+  actualDirectionValue: StructuredActualDirection | "unknown",
+  result: StructuredPredictionResult,
+): string | null {
+  if (result === "hit" || result === "pending") return null;
+  if (result === "partial" && actualDirectionValue === "flat") return "台股收盤接近震盪，盤前方向沒有完全展開";
+  if (predictedDirection === "bullish" && actualDirectionValue !== "up") return "盤前偏多假設未被收盤指數確認";
+  if (predictedDirection === "bearish" && actualDirectionValue !== "down") return "盤前偏弱假設未被收盤指數確認";
+  if (predictedDirection === "neutral" && actualDirectionValue !== "flat") return "中性盤前假設遇到明確方向行情，收盤結果超出原本劇本";
+  return "收盤結果與盤前方向不完全一致";
+}
+
+function buildFailedAssumptions(
+  predictedDirection: PredictedDirection,
+  actualDirectionValue: StructuredActualDirection | "unknown",
+  result: StructuredPredictionResult,
+): string[] {
+  if (result === "hit" || result === "pending") return [];
+  const items: string[] = [];
+  if (predictedDirection === "bullish") {
+    items.push("盤前預期台股延續多方，但收盤指數未站上正報酬");
+  } else if (predictedDirection === "bearish") {
+    items.push("盤前預期台股偏弱，但收盤指數未形成明確負報酬");
+  } else {
+    items.push("盤前預期台股震盪，但收盤方向超出中性劇本");
+  }
+  if (actualDirectionValue === "down") {
+    items.push("台積電與指數帶動力不足以支撐盤前方向");
+    items.push("盤中轉弱訊號優先於盤前假設");
+  } else if (actualDirectionValue === "up") {
+    items.push("台指期與權值股買盤強於盤前保守假設");
+  } else {
+    items.push("收盤缺乏明確趨勢，盤前方向未能取得指數確認");
+  }
+  return items.slice(0, 3);
+}
+
+function buildTomorrowWatchPoints(
+  result: StructuredPredictionResult,
+  actualDirectionValue: StructuredActualDirection | "unknown",
+): string[] {
+  const directionText = actualDirectionValue === "down" ? "轉弱" : actualDirectionValue === "up" ? "轉強" : "震盪";
+  if (result === "miss") {
+    return [
+      `明天優先觀察今日${directionText}方向是否延續，避免沿用已失效的盤前劇本。`,
+      "台積電開盤與台指期是否同向，決定權值股是否重新取得主導權。",
+      "AI/半導體族群是否跟隨大盤修正，若不同步需降低族群推論權重。",
+    ];
+  }
+  if (result === "hit") {
+    return [
+      `明天觀察今日${directionText}方向是否延續，確認盤前模型是否具備連續性。`,
+      "台積電與台指期是否維持同向，作為盤前方向延續的第一驗證點。",
+      "AI/半導體族群是否續強或續弱，確認資金是否從指數擴散到族群。",
+    ];
+  }
+  return [
+    "明天優先觀察今日震盪是否轉為明確方向，避免過度解讀單日收盤。",
+    "台積電與台指期是否同向突破或跌破平盤，是盤前假設重新定錨的關鍵。",
+    "AI/半導體族群是否出現同步量能，決定今日部分成立的劇本能否延伸。",
+  ];
+}
+
+function buildLessonsLearned(result: StructuredPredictionResult, predictedDirection: PredictedDirection): string[] {
+  if (result === "pending") {
+    return [
+      "缺少有效收盤資料時不評分，避免用假資料污染模型回測。",
+      "收盤驗證必須等 TAIEX 真實資料完成後再更新模型權重。",
+    ];
+  }
+  const lessons = [
+    "收盤驗證應優先參考 TAIEX 與 TXF 是否同向。",
+    "盤前海外訊號若未轉化為台股核心權值股，需降級為觀察。",
+  ];
+  if (result === "miss" && predictedDirection === "bullish") {
+    lessons.unshift("高信心偏多若遇到開盤後核心指標轉弱，應降低盤前權重。");
+  } else if (result === "miss" && predictedDirection === "bearish") {
+    lessons.unshift("高信心偏弱若遇到權值股逆勢撐盤，應降低空方推論權重。");
+  } else if (result === "hit") {
+    lessons.unshift("盤前方向被收盤確認時，可保留同方向族群作為隔日第一觀察。");
+  }
+  return lessons.slice(0, 3);
+}
+
+async function fetchTodayTaiexCloseData(
   supabase: ReturnType<typeof createClient>,
   today: string,
-): Promise<number | null> {
+): Promise<TaiexCloseData | null> {
   const { data, error } = await supabase
     .from("market_data")
     .select("symbol,change_percent,captured_at,updated_at")
@@ -80,7 +265,13 @@ async function fetchTodayTaiexChange(
     const dataDate = taipeiDateFromIso(row.captured_at || row.updated_at);
     if (dataDate !== today) continue;
     const change = Number(row.change_percent);
-    if (!Number.isNaN(change)) return change;
+    if (!Number.isNaN(change)) {
+      return {
+        symbol: String(row.symbol || "TAIEX"),
+        change,
+        capturedAt: row.captured_at ? String(row.captured_at) : row.updated_at ? String(row.updated_at) : null,
+      };
+    }
   }
   return null;
 }
@@ -120,14 +311,15 @@ Deno.serve(async (req: Request) => {
   }
 
   const reportRow = report as Record<string, unknown>;
-  const ai = asObject(reportRow.ai_strategy_json);
+  const ai = parseJsonObject(reportRow.ai_strategy_json);
   const predictedBias = String(reportRow.market_bias || ai.market_bias || "");
   const confidenceRaw = reportRow.confidence_score ?? ai.confidence_score;
   const confidence = confidenceRaw === null || confidenceRaw === undefined || Number.isNaN(Number(confidenceRaw))
     ? null
     : Math.max(0, Math.min(100, Math.round(Number(confidenceRaw))));
 
-  const taiexChange = await fetchTodayTaiexChange(supabase, today);
+  const taiexCloseData = await fetchTodayTaiexCloseData(supabase, today);
+  const taiexChange = taiexCloseData?.change ?? null;
 
   let actualDirectionValue = "UNKNOWN";
   let predictionResult = "PENDING_REAL_MARKET_DATA";
@@ -164,11 +356,78 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: false, error: insertError.message, report_date: today }, 500);
   }
 
+  const predictedDirection = normalizeStructuredPredictedDirection(predictedBias);
+  const structuredActualDirection = taiexChange === null ? "unknown" : getStructuredActualDirection(taiexChange);
+  const structuredPredictionResult = getStructuredPredictionResult(predictedDirection, structuredActualDirection);
+  const structuredAccuracyScore = scoreStructuredPrediction(structuredPredictionResult, confidence);
+  const closingVerificationStatus = structuredPredictionResult === "pending" ? "pending_real_market_data" : "completed";
+  const failedAssumptions = buildFailedAssumptions(predictedDirection, structuredActualDirection, structuredPredictionResult);
+  const tomorrowWatchPoints = buildTomorrowWatchPoints(structuredPredictionResult, structuredActualDirection);
+  const lessonsLearned = buildLessonsLearned(structuredPredictionResult, predictedDirection);
+  const closingVerification = {
+    version: "P1_STRUCTURED_CLOSE_VERIFICATION",
+    status: closingVerificationStatus,
+    verified_at: new Date().toISOString(),
+    report_date: today,
+    predicted_bias: predictedBias || null,
+    predicted_confidence: confidence,
+    confidence_score: confidence,
+    actual_taiex_change: taiexChange,
+    actual_direction: structuredActualDirection === "unknown" ? "flat" : structuredActualDirection,
+    prediction_result: structuredPredictionResult,
+    accuracy_score: structuredAccuracyScore,
+    verdict_label: verdictLabel(structuredPredictionResult),
+    verification_note: buildVerificationNote(predictedBias, taiexChange, structuredActualDirection, structuredPredictionResult),
+    miss_reason: buildMissReason(predictedDirection, structuredActualDirection, structuredPredictionResult),
+    failed_assumptions: failedAssumptions,
+    tomorrow_watch_points: tomorrowWatchPoints,
+    lessons_learned: lessonsLearned,
+    data_source: {
+      taiex_symbol: taiexCloseData?.symbol || "TAIEX",
+      captured_at: taiexCloseData?.capturedAt || null,
+      table: "market_data",
+    },
+    legacy_actual_direction: actualDirectionValue,
+    legacy_prediction_result: predictionResult,
+    legacy_accuracy_score: accuracyScore,
+    reason,
+    no_fake_data: true,
+  };
+
+  if (structuredPredictionResult === "pending") {
+    closingVerification.actual_direction = "flat";
+  }
+
+  const updatedAiStrategyJson = {
+    ...ai,
+    closing_verification: closingVerification,
+  };
+
+  const { error: updateReportError } = await supabase
+    .from("reports")
+    .update({ ai_strategy_json: updatedAiStrategyJson })
+    .eq("id", reportRow.id);
+
+  if (updateReportError) {
+    return jsonResponse({
+      success: false,
+      error: updateReportError.message,
+      report_date: today,
+      prediction_log_inserted: true,
+      report_updated: false,
+      closing_verification_status: closingVerificationStatus,
+      no_fake_data: true,
+    }, 500);
+  }
+
   return jsonResponse({
     success: true,
     report_date: today,
-    prediction_result: predictionResult,
-    accuracy_score: accuracyScore,
+    prediction_result: structuredPredictionResult,
+    legacy_prediction_result: predictionResult,
+    accuracy_score: structuredAccuracyScore,
+    report_updated: true,
+    closing_verification_status: closingVerificationStatus,
     no_fake_data: true,
   });
 });

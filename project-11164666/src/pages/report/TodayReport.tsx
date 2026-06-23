@@ -216,22 +216,29 @@ function TodayReportContent() {
   const displayBias = displayState?.marketBias || '—';
   const intradayFreshness = useMemo(() => isFreshIntradayData(report as AnyObj | null, radar as AnyObj | null), [report, radar]);
   const hasFreshIntradayRadar = intradayFreshness.fresh;
-  const effectiveIntradayRadar = hasFreshIntradayRadar ? radar : null;
-  const radarStatus = hasFreshIntradayRadar ? safeText(radar?.radar_status, '中性觀察') : '盤中資料尚未同步';
-  const radarBias = safeText(radar?.market_bias, '') || biasFromRadarStatus(radarStatus);
-  const radarConfidence = radar?.confidence_score ?? null;
   const premarketBiasLabel = safeText(displayBias, '待判斷');
-  const safeDisplayBias = hasFreshIntradayRadar ? radarBias : `盤前假設：${premarketBiasLabel}`;
-  const displayScoreText = hasFreshIntradayRadar && radarConfidence != null ? `${safeText(radarConfidence)}/100` : '待驗證';
-  const oneLiner = hasFreshIntradayRadar
-    ? safeText(effectiveIntradayRadar?.summary, '盤中雷達尚未提供有效摘要。')
+  const effectiveIntradayRadar = hasFreshIntradayRadar ? radar : null;
+  const overviewRadarStatusText = hasFreshIntradayRadar && radar
+    ? safeText(radar.radar_status, '觀察中')
+    : '盤中資料尚未同步';
+  const overviewBiasText = hasFreshIntradayRadar && radar
+    ? safeText(radar.market_bias, '') || biasFromRadarStatus(overviewRadarStatusText)
+    : `盤前假設：${premarketBiasLabel}`;
+  const overviewScoreText = hasFreshIntradayRadar && radar
+    ? (radar.confidence_score != null ? `${safeText(radar.confidence_score)}/100` : '—')
+    : '待驗證';
+  const overviewSyncText = hasFreshIntradayRadar && radar
+    ? `已同步：${overviewRadarStatusText}`
+    : '尚未同步';
+  const todaySentenceText = hasFreshIntradayRadar && radar?.summary
+    ? safeText(radar.summary)
     : '目前僅保留07:30盤前假設，今日方向需等待09:00後有效盤中資料驗證。';
   const observations = useMemo(
     () => (hasFreshIntradayRadar ? buildObservations(report, effectiveIntradayRadar) : []),
     [report, effectiveIntradayRadar, hasFreshIntradayRadar],
   );
   const safeDailySentence = hasFreshIntradayRadar
-    ? { status: 'ready' as const, sentence: oneLiner, logic_source: ['opening_market_radar.summary'], tone: 'clear, sharp, human-readable' as const }
+    ? { status: 'ready' as const, sentence: todaySentenceText, logic_source: ['opening_market_radar.summary'], tone: 'clear, sharp, human-readable' as const }
     : { status: 'insufficient' as const, sentence: '', logic_source: [], tone: 'clear, sharp, human-readable' as const };
 
   const marketDataBasisDate =
@@ -385,14 +392,14 @@ function TodayReportContent() {
               </div>
               <h1 className="text-white font-bold text-sm md:text-base">{isHistoricalFallback ? '歷史資料模式' : '今日盤前判斷'}</h1>
 
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${getBiasClass(safeDisplayBias)}`}>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${getBiasClass(overviewBiasText)}`}>
                 <i className="ri-record-circle-line text-[9px]" />
-                {safeDisplayBias}
+                {overviewBiasText}
               </span>
 
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${getRadarClass(radarStatus)}`}>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${getRadarClass(overviewRadarStatusText)}`}>
                 <i className="ri-radar-line text-[9px]" />
-                {radarStatus}
+                {overviewRadarStatusText}
               </span>
 
               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-500/10 text-sky-300 text-[10px] font-medium rounded-full border border-sky-400/25">
@@ -418,17 +425,17 @@ function TodayReportContent() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                 <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">目前方向</p>
-                <p className="text-slate-50 font-bold text-base">{safeDisplayBias}</p>
+                <p className="text-slate-50 font-bold text-base">{overviewBiasText}</p>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                 <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">判斷把握度</p>
-                <p className="text-slate-50 font-bold text-base">{displayScoreText}</p>
+                <p className="text-slate-50 font-bold text-base">{overviewScoreText}</p>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                 <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">雷達狀態</p>
-                <p className="text-slate-50 font-bold text-base">{radarStatus}</p>
+                <p className="text-slate-50 font-bold text-base">{overviewRadarStatusText}</p>
               </div>
 
               <div className="p-3 rounded-xl bg-sky-500/[0.06] border border-sky-500/20 sm:col-span-3">
@@ -440,7 +447,7 @@ function TodayReportContent() {
                   <div>
                     <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-0.5">盤中資料</p>
                     <p className="text-sky-100 text-xs font-semibold">
-                      {hasFreshIntradayRadar ? `已同步：${radarStatus}` : '盤中資料尚未同步'}
+                      {overviewSyncText}
                     </p>
                   </div>
                 </div>
@@ -458,7 +465,7 @@ function TodayReportContent() {
             </h2>
             <p className="text-slate-200 text-sm leading-relaxed">
               <strong className="text-slate-50">
-                {renderSafeText(oneLiner || '盤中雷達尚未提供有效摘要。')}
+                {renderSafeText(todaySentenceText || '盤中雷達尚未提供有效摘要。')}
               </strong>
             </p>
           </section>
@@ -470,9 +477,9 @@ function TodayReportContent() {
               <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
                 盤中雷達
               </h2>
-              <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-full border ${getRadarClass(radarStatus)}`}>
+              <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-full border ${getRadarClass(overviewRadarStatusText)}`}>
                 <i className="ri-radar-line" />
-                {radarStatus}
+                {overviewRadarStatusText}
               </span>
             </div>
 

@@ -409,6 +409,16 @@ function WarRoomContent() {
             {(!tracking.intraday.showContent || !tracking.intraday.isToday) && (
               <div>
                 <p className="text-white/50 text-sm mb-2">{tracking.intraday.description}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前假設</p>
+                    <p className="text-white/80 text-sm font-medium">{displayState?.marketBias || '偏多觀察'}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">今日待驗證</p>
+                    <p className="text-white/80 text-sm font-medium">TAIEX、TXF、2330 是否同向</p>
+                  </div>
+                </div>
                 {tracking.isOpeningRadarStale && openingRadar && (
                   <div className="mt-3 p-3 rounded-lg bg-red-500/[0.06] border border-red-500/15">
                     <p className="text-red-300/70 text-xs">

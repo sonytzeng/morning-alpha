@@ -40,6 +40,7 @@ type RadarView = {
   created_at?: string;
   generated_at?: string;
   data_source?: string;
+  source_kind?: string;
 };
 
 function asObj(value: unknown): AnyObj {
@@ -110,7 +111,8 @@ function normalizeRadarFromReport(report: Report | null): RadarView | null {
       updated_at: safeText(opening.updated_at, ''),
       created_at: safeText(opening.created_at, ''),
       generated_at: safeText(opening.generated_at, ''),
-      data_source: safeText(opening.data_source, 'reports.ai_strategy_json.opening_radar'),
+      data_source: 'reports.ai_strategy_json.opening_radar',
+      source_kind: 'report_snapshot',
     };
   }
 

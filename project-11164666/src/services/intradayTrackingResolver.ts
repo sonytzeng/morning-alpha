@@ -197,6 +197,19 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
       dataDate: todayDate,
       isToday: true,
     };
+  } else if (openingRadar && !radarIsFreshToday) {
+    // A radar row exists, but it is not a verified today intraday record. Never render its numbers.
+    intradayStatus = 'stale';
+    radarDisplay = {
+      statusText: '盤中資料尚未同步',
+      description: radarIsToday
+        ? '盤中資料尚未同步。目前僅顯示 07:30 盤前假設，尚未取得今日 09:00 後盤中資料。昨日收盤漲跌不會作為今日盤中確認。'
+        : `目前僅有 ${radarDate || '—'} 的舊雷達資料。今日尚未開盤或資料尚未更新。請等待 09:30 / 10:30 / 13:00。`,
+      color: 'amber',
+      showContent: false,
+      dataDate: radarDate,
+      isToday: false,
+    };
   } else if (hasTodayMarketData) {
     // No radar but market_data has today data
     intradayStatus = 'pending';
@@ -207,19 +220,6 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
       showContent: true,
       dataDate: todayDate,
       isToday: true,
-    };
-  } else if (openingRadar && !radarIsToday) {
-    // Only old radar data exists
-    intradayStatus = 'stale';
-    radarDisplay = {
-      statusText: '盤中雷達尚未更新',
-      description: radarIsToday
-        ? '盤中資料尚未同步。目前僅顯示 07:30 盤前假設，尚未取得今日 09:00 後盤中資料。昨日收盤漲跌不會作為今日盤中確認。'
-        : `目前僅有 ${radarDate || '—'} 的舊雷達資料。今日尚未開盤或資料尚未更新。請等待 09:30 / 10:30 / 13:00。`,
-      color: 'red',
-      showContent: false,
-      dataDate: radarDate,
-      isToday: false,
     };
   } else if (isWeekend) {
     intradayStatus = 'not_updated';

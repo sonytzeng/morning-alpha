@@ -37,6 +37,9 @@ function parseTimestamp(value: string): Date | null {
 
 function hasPreviousCloseSource(radar: Record<string, unknown>, reportAI: Record<string, unknown>): boolean {
   const text = [
+    radar.source_kind,
+    radar.source_type,
+    radar.record_source,
     radar.data_source,
     radar.source,
     radar.data_basis,
@@ -49,6 +52,9 @@ function hasPreviousCloseSource(radar: Record<string, unknown>, reportAI: Record
 
   return text.includes('previous close')
     || text.includes('previous_close')
+    || text.includes('report_snapshot')
+    || text.includes('report snapshot')
+    || text.includes('report ai_strategy_json')
     || text.includes('reports.ai_strategy_json.opening_radar')
     || text.includes('ai_strategy_json.opening_radar')
     || text.includes('tw_core')

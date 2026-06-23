@@ -84,15 +84,6 @@ function getRadarClass(status?: string | null): string {
   return 'bg-amber-500/12 text-amber-300 border-amber-400/30';
 }
 
-function toObservationBiasLabel(bias: string): string {
-  const b = safeText(bias, '觀察');
-  if (b.includes('偏多')) return '偏多觀察';
-  if (b.includes('偏空') || b.includes('偏弱')) return '偏弱觀察';
-  if (b.includes('中性')) return '中性觀察';
-  if (b.includes('觀察')) return b;
-  return `${b}觀察`;
-}
-
 function normalizeRadarFromReport(report: Report | null): RadarView | null {
   if (!report) return null;
 
@@ -252,11 +243,12 @@ function TodayReportContent() {
   const hasFreshIntradayRadar = intradayFreshness.fresh;
   const effectiveIntradayRadar = hasFreshIntradayRadar ? radar : null;
   const radarStatus = hasFreshIntradayRadar ? (radar?.radar_status || '中性觀察') : '盤中資料尚未同步';
-  const safeDisplayBias = hasFreshIntradayRadar ? displayBias : `盤前假設：${displayBias}`;
+  const premarketBiasLabel = safeText(displayBias, '待判斷');
+  const safeDisplayBias = hasFreshIntradayRadar ? displayBias : `盤前假設：${premarketBiasLabel}`;
   const displayScoreText = hasFreshIntradayRadar && displayScore != null ? `${displayScore}/100` : '待驗證';
   const oneLiner = hasFreshIntradayRadar
     ? getOneLiner(report, effectiveIntradayRadar)
-    : '目前僅保留 07:30 盤前假設，今日盤中方向需等待 09:00 後有效資料確認。';
+    : '盤中資料尚未同步，等待 09:00 後即時資料驗證。';
   const observations = useMemo(
     () => (hasFreshIntradayRadar ? buildObservations(report, effectiveIntradayRadar) : []),
     [report, effectiveIntradayRadar, hasFreshIntradayRadar],
@@ -547,7 +539,7 @@ function TodayReportContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">盤前假設</p>
-                    <p className="text-slate-100 font-bold">{toObservationBiasLabel(displayBias)}</p>
+                    <p className="text-slate-100 font-bold">{premarketBiasLabel}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">今日待驗證</p>

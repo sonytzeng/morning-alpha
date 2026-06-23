@@ -40,7 +40,7 @@ function formatPercent(value: number | null): string {
 }
 
 function formatCloseResult(change: number | null, direction: string): string {
-  if (change === null) return direction || '—';
+  if (change === null) return '等待收盤資料';
   return `TAIEX ${formatPercent(change)}${direction ? `｜${direction}` : ''}`;
 }
 
@@ -106,16 +106,22 @@ function WarRoomContent() {
   }, [morningState]);
   const reportAI = isRecord(report?.ai_strategy_json) ? report.ai_strategy_json as Record<string, unknown> : null;
   const rawAI = displayState?.rawAI ?? reportAI;
-  const closeVerification = rawAI?.closing_verification || todayCloseVerification;
+  const closeVerification = rawAI?.closing_verification || todayCloseVerification || null;
   const closeVerificationRecord =
     isRecord(closeVerification) && Object.keys(closeVerification).length > 0 ? closeVerification : null;
   const closePredictedBias = safeText(
-    closeVerificationRecord?.predicted_bias ?? closeVerificationRecord?.premarket_bias ?? displayState?.marketBias,
+    closeVerificationRecord?.predicted_bias ?? displayState?.marketBias ?? rawAI?.market_bias,
     '—',
   );
-  const closeTaiexChange = safeNumber(
-    closeVerificationRecord?.actual_taiex_change ?? closeVerificationRecord?.taiex_change,
+  const closePredictedScore = safeNumber(
+    closeVerificationRecord?.predicted_confidence ??
+      closeVerificationRecord?.confidence_score ??
+      displayState?.confidenceScore,
   );
+  const closeTaiexChange =
+    typeof closeVerificationRecord?.actual_taiex_change === 'number'
+      ? closeVerificationRecord.actual_taiex_change
+      : null;
   const closeActualDirection = safeText(closeVerificationRecord?.actual_direction);
   const closeResultText = formatCloseResult(closeTaiexChange, closeActualDirection);
   const closeAccuracyScore = safeNumber(closeVerificationRecord?.accuracy_score);
@@ -125,7 +131,10 @@ function WarRoomContent() {
       closeVerificationRecord?.verification_result ??
       closeVerificationRecord?.verification_label,
   );
-  const closeVerificationNote = safeText(closeVerificationRecord?.verification_note);
+  const closeVerificationNote = safeText(
+    closeVerificationRecord?.verification_note,
+    '今日尚未完成收盤驗證，收盤後系統會回寫盤前判斷是否成立。',
+  );
   const closeMissReason = safeText(closeVerificationRecord?.miss_reason);
   const closeFailedAssumptions = safeStringArray(closeVerificationRecord?.failed_assumptions);
   const closeTomorrowWatchPoints = safeStringArray(closeVerificationRecord?.tomorrow_watch_points);
@@ -540,6 +549,9 @@ function WarRoomContent() {
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
                     <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前假設</p>
                     <p className="text-white/80 text-sm font-medium break-words">{closePredictedBias}</p>
+                    {closePredictedScore !== null && (
+                      <p className="text-white/35 text-xs mt-1">{closePredictedScore}/100</p>
+                    )}
                   </div>
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
                     <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">收盤結果</p>
@@ -553,12 +565,10 @@ function WarRoomContent() {
                   </div>
                 </div>
 
-                {closeVerificationNote && (
-                  <div className={`p-4 rounded-xl border ${segmentBorder(closeTone)} ${segmentBg(closeTone)}`}>
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">驗證說明</p>
-                    <p className="text-slate-200 text-xs leading-relaxed">{closeVerificationNote}</p>
-                  </div>
-                )}
+                <div className={`p-4 rounded-xl border ${segmentBorder(closeTone)} ${segmentBg(closeTone)}`}>
+                  <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">驗證說明</p>
+                  <p className="text-slate-200 text-xs leading-relaxed">{closeVerificationNote}</p>
+                </div>
 
                 {closeMissReason && (
                   <div className="p-4 rounded-xl bg-red-500/[0.04] border border-red-400/20">

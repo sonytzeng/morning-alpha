@@ -16,6 +16,7 @@ import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/li
 import DailySentenceCard from '@/components/v8/DailySentenceCard';
 import OvernightCausalChainCard from '@/components/v8/OvernightCausalChainCard';
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
+import { getTodayOpeningRadar } from '@/services/openingRadarService';
 
 type AnyObj = Record<string, any>;
 
@@ -41,6 +42,7 @@ type RadarView = {
   generated_at?: string;
   data_source?: string;
   source_kind?: string;
+  market_data_date?: string;
 };
 
 function asObj(value: unknown): AnyObj {
@@ -155,7 +157,8 @@ function buildObservations(report: Report | null, radar: RadarView | null): stri
 
 function TodayReportContent() {
   const [report, setReport] = useState<Report | null>(null);
-  const [radar, setRadar] = useState<RadarView | null>(null);
+  const [reportSnapshotRadar, setReportSnapshotRadar] = useState<RadarView | null>(null);
+  const [liveRadar, setLiveRadar] = useState<RadarView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
@@ -181,20 +184,24 @@ function TodayReportContent() {
           : null;
         setIsHistoricalFallback(resolved.isHistoricalFallback);
         setFallbackReportDate(resolved.fallbackReportDate);
-        const ds = getMorningAlphaDisplayState(resolved.rawRow as Record<string, unknown> | null);
-        setDisplayState(ds);
-
         if (!finalReport) {
           setReport(null);
-          setRadar(null);
+          setReportSnapshotRadar(null);
+          setLiveRadar(null);
+          setDisplayState(getMorningAlphaDisplayState(resolved.rawRow as Record<string, unknown> | null));
           return;
         }
 
         setReport(finalReport);
 
-        // V8: Radar ONLY from ai_strategy_json.opening_radar — no table fallback
         const radarFromReport = normalizeRadarFromReport(finalReport);
-        setRadar(radarFromReport);
+        const radarFromTable = await getTodayOpeningRadar();
+        setReportSnapshotRadar(radarFromReport);
+        setLiveRadar(radarFromTable);
+        setDisplayState(getMorningAlphaDisplayState(
+          resolved.rawRow as Record<string, unknown> | null,
+          radarFromTable as unknown as Record<string, unknown> | null,
+        ));
       } catch (err) {
         console.error('TodayReport load failed:', err);
         setError(err instanceof Error ? err.message : '讀取今日判斷失敗');
@@ -215,24 +222,24 @@ function TodayReportContent() {
   // Same values as Home, Opportunities, WarRoom, MemberNote. No opening_radar override.
   const displayBias = displayState?.marketBias || '—';
   const displayScore = displayState?.confidenceScore ?? null;
-  const intradayFreshness = useMemo(() => isFreshIntradayData(report as AnyObj | null, radar as AnyObj | null), [report, radar]);
+  const intradayFreshness = useMemo(() => isFreshIntradayData(report as AnyObj | null, liveRadar as AnyObj | null), [report, liveRadar]);
   const hasFreshIntradayRadar = intradayFreshness.fresh;
   const premarketBiasLabel = safeText(displayBias, '待判斷');
-  const effectiveIntradayRadar = hasFreshIntradayRadar ? radar : null;
-  const overviewRadarStatusText = hasFreshIntradayRadar && radar
-    ? safeText(radar.radar_status, '觀察中')
+  const effectiveIntradayRadar = hasFreshIntradayRadar ? liveRadar : null;
+  const overviewRadarStatusText = hasFreshIntradayRadar && liveRadar
+    ? safeText(liveRadar.radar_status, '觀察中')
     : '盤中資料尚未同步';
-  const overviewBiasText = hasFreshIntradayRadar && radar
-    ? safeText(radar.market_bias, '') || biasFromRadarStatus(overviewRadarStatusText)
+  const overviewBiasText = hasFreshIntradayRadar && liveRadar
+    ? safeText(liveRadar.market_bias, '') || biasFromRadarStatus(overviewRadarStatusText)
     : `盤前假設：${premarketBiasLabel}`;
-  const overviewScoreText = hasFreshIntradayRadar && radar
-    ? (radar.confidence_score != null ? `${safeText(radar.confidence_score)}/100` : '—')
+  const overviewScoreText = hasFreshIntradayRadar && liveRadar
+    ? (liveRadar.confidence_score != null ? `${safeText(liveRadar.confidence_score)}/100` : '—')
     : '待驗證';
-  const overviewSyncText = hasFreshIntradayRadar && radar
+  const overviewSyncText = hasFreshIntradayRadar && liveRadar
     ? `已同步：${overviewRadarStatusText}`
     : '尚未同步';
-  const todaySentenceText = hasFreshIntradayRadar && radar?.summary
-    ? safeText(radar.summary)
+  const todaySentenceText = hasFreshIntradayRadar && liveRadar?.summary
+    ? safeText(liveRadar.summary)
     : '目前僅保留07:30盤前假設，今日方向需等待09:00後有效盤中資料驗證。';
   const observations = useMemo(
     () => (hasFreshIntradayRadar ? buildObservations(report, effectiveIntradayRadar) : []),
@@ -427,9 +434,11 @@ function TodayReportContent() {
               <p>overviewScoreText: {overviewScoreText}</p>
               <p>overviewRadarStatusText: {overviewRadarStatusText}</p>
               <p>overviewSyncText: {overviewSyncText}</p>
-              <p>radar.market_bias: {String(radar?.market_bias ?? 'null')}</p>
-              <p>radar.radar_status: {String(radar?.radar_status ?? 'null')}</p>
-              <p>radar.confidence_score: {String(radar?.confidence_score ?? 'null')}</p>
+              <p>liveRadar.market_bias: {String(liveRadar?.market_bias ?? 'null')}</p>
+              <p>liveRadar.radar_status: {String(liveRadar?.radar_status ?? 'null')}</p>
+              <p>liveRadar.confidence_score: {String(liveRadar?.confidence_score ?? 'null')}</p>
+              <p>reportSnapshotRadar.market_bias: {String(reportSnapshotRadar?.market_bias ?? 'null')}</p>
+              <p>reportSnapshotRadar.confidence_score: {String(reportSnapshotRadar?.confidence_score ?? 'null')}</p>
               <p>displayBias: {String(displayBias ?? 'null')}</p>
               <p>displayScore: {String(displayScore ?? 'null')}</p>
             </div>
@@ -504,32 +513,32 @@ function TodayReportContent() {
               </span>
             </div>
 
-            {hasFreshIntradayRadar && radar ? (
+            {hasFreshIntradayRadar && liveRadar ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">TAIEX</p>
-                    <p className="text-slate-100 font-bold">{pct(radar.taiex_change)}</p>
+                    <p className="text-slate-100 font-bold">{pct(liveRadar.taiex_change)}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">TXF</p>
-                    <p className="text-slate-100 font-bold">{pct(radar.txf_change)}</p>
+                    <p className="text-slate-100 font-bold">{pct(liveRadar.txf_change)}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">2330</p>
-                    <p className="text-slate-100 font-bold">{pct(radar.tsmc_change)}</p>
+                    <p className="text-slate-100 font-bold">{pct(liveRadar.tsmc_change)}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">雷達分數</p>
-                    <p className="text-slate-100 font-bold">{safeText(radar.confidence_score)}/100</p>
+                    <p className="text-slate-100 font-bold">{safeText(liveRadar.confidence_score)}/100</p>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
                   <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-2">雷達說明</p>
-                  <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(radar.summary)}</p>
+                  <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(liveRadar.summary)}</p>
                   <p className="text-slate-500 text-[10px] mt-3">
-                    資料時間：{intradayFreshness.timestampLabel || safeText(radar.updated_at || radar.generated_at)}
+                    資料時間：{intradayFreshness.timestampLabel || safeText(liveRadar.updated_at || liveRadar.generated_at)}
                   </p>
                 </div>
               </>

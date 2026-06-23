@@ -221,11 +221,11 @@ function TodayReportContent() {
   // V8.4: Unified display state — marketBias and confidenceScore from getMorningAlphaDisplayState
   // Same values as Home, Opportunities, WarRoom, MemberNote. No opening_radar override.
   const displayBias = displayState?.marketBias || '—';
-  const displayScore = displayState?.confidenceScore ?? null;
   const intradayFreshness = useMemo(() => isFreshIntradayData(report as AnyObj | null, liveRadar as AnyObj | null), [report, liveRadar]);
   const hasFreshIntradayRadar = intradayFreshness.fresh;
   const premarketBiasLabel = safeText(displayBias, '待判斷');
   const activeIntradayRadar = hasFreshIntradayRadar ? liveRadar : null;
+  const effectiveIntradayRadar = activeIntradayRadar;
   const overviewRadarStatusText = activeIntradayRadar
     ? safeText(activeIntradayRadar.radar_status, '觀察中')
     : '盤中資料尚未同步';
@@ -425,28 +425,6 @@ function TodayReportContent() {
         </div>
 
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6">
-          <section className="bg-slate-950/90 border border-amber-400/40 rounded-2xl p-4 text-[11px] text-amber-100 font-mono overflow-x-auto">
-            <p className="text-amber-300 font-bold mb-2">P6B DEBUG PANEL</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
-              <p>P6B_VERSION: 6f464f5-debug</p>
-              <p>hasFreshIntradayRadar: {String(hasFreshIntradayRadar)}</p>
-              <p>overviewBiasText: {overviewBiasText}</p>
-              <p>overviewScoreText: {overviewScoreText}</p>
-              <p>overviewRadarStatusText: {overviewRadarStatusText}</p>
-              <p>overviewSyncText: {overviewSyncText}</p>
-              <p>liveRadar.market_bias: {String(liveRadar?.market_bias ?? 'null')}</p>
-              <p>liveRadar.radar_status: {String(liveRadar?.radar_status ?? 'null')}</p>
-              <p>liveRadar.confidence_score: {String(liveRadar?.confidence_score ?? 'null')}</p>
-              <p>reportSnapshotRadar.market_bias: {String(reportSnapshotRadar?.market_bias ?? 'null')}</p>
-              <p>reportSnapshotRadar.confidence_score: {String(reportSnapshotRadar?.confidence_score ?? 'null')}</p>
-              <p>displayBias: {String(displayBias ?? 'null')}</p>
-              <p>displayScore: {String(displayScore ?? 'null')}</p>
-            </div>
-            <pre className="mt-2 whitespace-pre-wrap break-words text-amber-200/80">
-              intradayFreshness: {JSON.stringify(intradayFreshness)}
-            </pre>
-          </section>
-
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
               {isHistoricalFallback ? '歷史報告總覽' : '今日狀態總覽'}

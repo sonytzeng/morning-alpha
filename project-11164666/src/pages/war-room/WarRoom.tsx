@@ -39,6 +39,23 @@ function formatPercent(value: number | null): string {
   return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
 }
 
+function formatCloseResult(change: number | null, direction: string): string {
+  if (change === null) return direction || '—';
+  return `TAIEX ${formatPercent(change)}${direction ? `｜${direction}` : ''}`;
+}
+
+function formatVerdictLabel(value: unknown, fallback: unknown): string {
+  const label = safeText(value);
+  if (label && !['hit', 'miss', 'partial', 'pending'].includes(label.toLowerCase())) return label;
+
+  const result = safeText(fallback || value).toLowerCase();
+  if (result === 'hit') return '今日盤前方向命中';
+  if (result === 'partial') return '方向部分成立';
+  if (result === 'miss') return '今日盤前方向失效';
+  if (result === 'pending' || result === 'pending_real_market_data') return '等待有效收盤資料';
+  return '等待有效收盤資料';
+}
+
 function closeVerificationTone(value: string): SegmentDisplay['color'] {
   if (value.includes('命中') || value === 'hit') return 'green';
   if (value.includes('部分') || value === 'partial' || value.includes('等待') || value === 'pending') return 'amber';
@@ -87,24 +104,26 @@ function WarRoomContent() {
     if (!morningState?.resolveResult?.rawRow) return null;
     return getMorningAlphaDisplayState(morningState.resolveResult.rawRow as Record<string, unknown> | null ?? null);
   }, [morningState]);
-  const rawAI = displayState?.rawAI ?? null;
+  const reportAI = isRecord(report?.ai_strategy_json) ? report.ai_strategy_json as Record<string, unknown> : null;
+  const rawAI = displayState?.rawAI ?? reportAI;
   const closeVerification = rawAI?.closing_verification || todayCloseVerification;
   const closeVerificationRecord =
     isRecord(closeVerification) && Object.keys(closeVerification).length > 0 ? closeVerification : null;
   const closePredictedBias = safeText(
-    closeVerificationRecord?.predicted_bias ?? closeVerificationRecord?.premarket_bias,
+    closeVerificationRecord?.predicted_bias ?? closeVerificationRecord?.premarket_bias ?? displayState?.marketBias,
     '—',
   );
   const closeTaiexChange = safeNumber(
     closeVerificationRecord?.actual_taiex_change ?? closeVerificationRecord?.taiex_change,
   );
+  const closeActualDirection = safeText(closeVerificationRecord?.actual_direction);
+  const closeResultText = formatCloseResult(closeTaiexChange, closeActualDirection);
   const closeAccuracyScore = safeNumber(closeVerificationRecord?.accuracy_score);
-  const closeVerdictLabel = safeText(
-    closeVerificationRecord?.verdict_label ??
-      closeVerificationRecord?.verification_label ??
+  const closeVerdictLabel = formatVerdictLabel(
+    closeVerificationRecord?.verdict_label,
+    closeVerificationRecord?.prediction_result ??
       closeVerificationRecord?.verification_result ??
-      closeVerificationRecord?.prediction_result,
-    '等待有效收盤資料',
+      closeVerificationRecord?.verification_label,
   );
   const closeVerificationNote = safeText(closeVerificationRecord?.verification_note);
   const closeMissReason = safeText(closeVerificationRecord?.miss_reason);
@@ -509,20 +528,23 @@ function WarRoomContent() {
             </div>
             {closeVerificationRecord ? (
               <div className="space-y-3">
-                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border ${segmentBadgeStyle(closeTone)}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${closeTone === 'green' ? 'bg-emerald-400' : closeTone === 'red' ? 'bg-red-400' : closeTone === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
-                  {closeVerdictLabel}
+                <div>
+                  <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1.5">驗證結論</p>
+                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border ${segmentBadgeStyle(closeTone)}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${closeTone === 'green' ? 'bg-emerald-400' : closeTone === 'red' ? 'bg-red-400' : closeTone === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
+                    {closeVerdictLabel}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前假設</p>
                     <p className="text-white/80 text-sm font-medium break-words">{closePredictedBias}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">實際台股</p>
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">收盤結果</p>
                     <p className={`text-sm font-medium ${closeTaiexChange === null ? 'text-white/50' : closeTaiexChange >= 0 ? 'text-red-300' : 'text-emerald-300'}`}>
-                      {formatPercent(closeTaiexChange)}
+                      {closeResultText}
                     </p>
                   </div>
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">

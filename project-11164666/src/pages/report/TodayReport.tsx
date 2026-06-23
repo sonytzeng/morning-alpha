@@ -252,8 +252,8 @@ function TodayReportContent() {
   const hasFreshIntradayRadar = intradayFreshness.fresh;
   const effectiveIntradayRadar = hasFreshIntradayRadar ? radar : null;
   const radarStatus = hasFreshIntradayRadar ? (radar?.radar_status || '中性觀察') : '盤中資料尚未同步';
-  const safeDisplayBias = hasFreshIntradayRadar ? displayBias : toObservationBiasLabel(displayBias);
-  const displayScoreText = hasFreshIntradayRadar && displayScore != null ? `${displayScore}/100` : '盤前劇本，不評分';
+  const safeDisplayBias = hasFreshIntradayRadar ? displayBias : `盤前假設：${displayBias}`;
+  const displayScoreText = hasFreshIntradayRadar && displayScore != null ? `${displayScore}/100` : '待驗證';
   const oneLiner = hasFreshIntradayRadar
     ? getOneLiner(report, effectiveIntradayRadar)
     : '目前僅保留 07:30 盤前假設，今日盤中方向需等待 09:00 後有效資料確認。';
@@ -547,7 +547,7 @@ function TodayReportContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">盤前假設</p>
-                    <p className="text-slate-100 font-bold">{safeDisplayBias}</p>
+                    <p className="text-slate-100 font-bold">{toObservationBiasLabel(displayBias)}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">今日待驗證</p>

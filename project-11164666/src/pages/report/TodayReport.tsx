@@ -225,25 +225,25 @@ function TodayReportContent() {
   const intradayFreshness = useMemo(() => isFreshIntradayData(report as AnyObj | null, liveRadar as AnyObj | null), [report, liveRadar]);
   const hasFreshIntradayRadar = intradayFreshness.fresh;
   const premarketBiasLabel = safeText(displayBias, '待判斷');
-  const effectiveIntradayRadar = hasFreshIntradayRadar ? liveRadar : null;
-  const overviewRadarStatusText = hasFreshIntradayRadar && liveRadar
-    ? safeText(liveRadar.radar_status, '觀察中')
+  const activeIntradayRadar = hasFreshIntradayRadar ? liveRadar : null;
+  const overviewRadarStatusText = activeIntradayRadar
+    ? safeText(activeIntradayRadar.radar_status, '觀察中')
     : '盤中資料尚未同步';
-  const overviewBiasText = hasFreshIntradayRadar && liveRadar
-    ? safeText(liveRadar.market_bias, '') || biasFromRadarStatus(overviewRadarStatusText)
+  const overviewBiasText = activeIntradayRadar
+    ? safeText(activeIntradayRadar.market_bias, '') || biasFromRadarStatus(overviewRadarStatusText)
     : `盤前假設：${premarketBiasLabel}`;
-  const overviewScoreText = hasFreshIntradayRadar && liveRadar
-    ? (liveRadar.confidence_score != null ? `${safeText(liveRadar.confidence_score)}/100` : '—')
+  const overviewScoreText = activeIntradayRadar
+    ? (activeIntradayRadar.confidence_score != null ? `${safeText(activeIntradayRadar.confidence_score)}/100` : '—')
     : '待驗證';
-  const overviewSyncText = hasFreshIntradayRadar && liveRadar
+  const overviewSyncText = activeIntradayRadar
     ? `已同步：${overviewRadarStatusText}`
     : '尚未同步';
-  const todaySentenceText = hasFreshIntradayRadar && liveRadar?.summary
-    ? safeText(liveRadar.summary)
+  const todaySentenceText = activeIntradayRadar?.summary
+    ? safeText(activeIntradayRadar.summary)
     : '目前僅保留07:30盤前假設，今日方向需等待09:00後有效盤中資料驗證。';
   const observations = useMemo(
-    () => (hasFreshIntradayRadar ? buildObservations(report, effectiveIntradayRadar) : []),
-    [report, effectiveIntradayRadar, hasFreshIntradayRadar],
+    () => (activeIntradayRadar ? buildObservations(report, activeIntradayRadar) : []),
+    [report, activeIntradayRadar],
   );
   const safeDailySentence = hasFreshIntradayRadar
     ? { status: 'ready' as const, sentence: todaySentenceText, logic_source: ['opening_market_radar.summary'], tone: 'clear, sharp, human-readable' as const }
@@ -513,32 +513,32 @@ function TodayReportContent() {
               </span>
             </div>
 
-            {hasFreshIntradayRadar && liveRadar ? (
+            {activeIntradayRadar ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">TAIEX</p>
-                    <p className="text-slate-100 font-bold">{pct(liveRadar.taiex_change)}</p>
+                    <p className="text-slate-100 font-bold">{pct(activeIntradayRadar.taiex_change)}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">TXF</p>
-                    <p className="text-slate-100 font-bold">{pct(liveRadar.txf_change)}</p>
+                    <p className="text-slate-100 font-bold">{pct(activeIntradayRadar.txf_change)}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">2330</p>
-                    <p className="text-slate-100 font-bold">{pct(liveRadar.tsmc_change)}</p>
+                    <p className="text-slate-100 font-bold">{pct(activeIntradayRadar.tsmc_change)}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">雷達分數</p>
-                    <p className="text-slate-100 font-bold">{safeText(liveRadar.confidence_score)}/100</p>
+                    <p className="text-slate-100 font-bold">{safeText(activeIntradayRadar.confidence_score)}/100</p>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
                   <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-2">雷達說明</p>
-                  <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(liveRadar.summary)}</p>
+                  <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(activeIntradayRadar.summary)}</p>
                   <p className="text-slate-500 text-[10px] mt-3">
-                    資料時間：{intradayFreshness.timestampLabel || safeText(liveRadar.updated_at || liveRadar.generated_at)}
+                    資料時間：{intradayFreshness.timestampLabel || safeText(activeIntradayRadar.updated_at || activeIntradayRadar.generated_at)}
                   </p>
                 </div>
               </>

@@ -11,10 +11,12 @@
  * 3. If ai_strategy_json exists, root columns are NEVER used to override
  * 4. isMarketClosed is computed HERE, once, not in each page
  * 5. When isMarketClosed=true, all trading values are forced to neutral
- * 6. opening_radar is supplementary ONLY — never overrides marketBias/confidenceScore
+ * 6. opening_market_radar may override marketBias/confidenceScore ONLY when it
+ *    passes the true intraday freshness contract.
  */
 
 import { getMarketStatus, type MarketStatusType } from '@/utils/tradingDay';
+import { isFreshIntradayData } from '@/utils/intradayFreshness';
 
 // ═══════════════════════════════════════════════════
 // Output Type — FIXED STRUCTURE
@@ -108,6 +110,24 @@ function grabObj(obj: Record<string, unknown> | null, key: string): Record<strin
   return null;
 }
 
+function getFreshRadarOverride(
+  rawRow: Record<string, unknown> | null,
+  openingRadar: Record<string, unknown> | null,
+): { marketBias: string; confidenceScore: number | null } | null {
+  if (!rawRow || !openingRadar) return null;
+  const freshness = isFreshIntradayData(rawRow, openingRadar);
+  if (!freshness.fresh) return null;
+
+  const marketBias = grabStr(openingRadar, 'market_bias', 'radar_status');
+  const confidenceScore = grabNum(openingRadar, 'confidence_score');
+  if (!marketBias && confidenceScore === null) return null;
+
+  return {
+    marketBias: marketBias || '觀察中',
+    confidenceScore,
+  };
+}
+
 /**
  * Unified market-closed check.
  * Sources: ai_strategy_json.is_trading_day, market_closed, holiday_name, market_bias
@@ -133,6 +153,7 @@ function computeIsMarketClosed(ai: Record<string, unknown> | null): { closed: bo
 
 export function getMorningAlphaDisplayState(
   rawRow: Record<string, unknown> | null,
+  liveOpeningRadar: Record<string, unknown> | null = null,
 ): MorningAlphaDisplayState {
   const ai = (rawRow?.ai_strategy_json as Record<string, unknown>) || null;
   const reportDate = (rawRow?.report_date as string) || '—';
@@ -194,13 +215,17 @@ export function getMorningAlphaDisplayState(
   // ── Trading day: ai_strategy_json is primary, root columns are fallback ONLY ──
   const aiExists = ai && Object.keys(ai).length > 0;
 
-  const marketBias = aiExists
+  const reportMarketBias = aiExists
     ? (grabStr(ai, 'market_bias') || (rawRow?.market_bias as string) || '觀察中')
     : ((rawRow?.market_bias as string) || '觀察中');
 
-  const confidenceScore = aiExists
+  const reportConfidenceScore = aiExists
     ? (grabNum(ai, 'confidence_score') ?? (rawRow?.confidence_score as number | null) ?? null)
     : ((rawRow?.confidence_score as number | null) ?? null);
+
+  const radarOverride = getFreshRadarOverride(rawRow, liveOpeningRadar);
+  const marketBias = radarOverride?.marketBias ?? reportMarketBias;
+  const confidenceScore = radarOverride ? radarOverride.confidenceScore : reportConfidenceScore;
 
   const confidenceLabel = confidenceScore === null
     ? '休市不評分'

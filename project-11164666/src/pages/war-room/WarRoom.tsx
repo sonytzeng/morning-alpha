@@ -13,6 +13,39 @@ import { resolveIntradayTrackingState, type IntradayTrackingState, type SegmentD
 import { useState, useEffect, useMemo } from 'react';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function safeText(value: unknown, fallback = ''): string {
+  if (value === null || value === undefined) return fallback;
+  const text = String(value).trim();
+  return text || fallback;
+}
+
+function safeNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function safeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => safeText(item)).filter(Boolean);
+}
+
+function formatPercent(value: number | null): string {
+  if (value === null) return '—';
+  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+}
+
+function closeVerificationTone(value: string): SegmentDisplay['color'] {
+  if (value.includes('命中') || value === 'hit') return 'green';
+  if (value.includes('部分') || value === 'partial' || value.includes('等待') || value === 'pending') return 'amber';
+  if (value.includes('失效') || value === 'miss') return 'red';
+  return 'slate';
+}
+
 export default function WarRoom() {
   return (
     <ErrorBoundary
@@ -54,6 +87,33 @@ function WarRoomContent() {
     if (!morningState?.resolveResult?.rawRow) return null;
     return getMorningAlphaDisplayState(morningState.resolveResult.rawRow as Record<string, unknown> | null ?? null);
   }, [morningState]);
+  const rawAI = displayState?.rawAI ?? null;
+  const closeVerification = rawAI?.closing_verification || todayCloseVerification;
+  const closeVerificationRecord =
+    isRecord(closeVerification) && Object.keys(closeVerification).length > 0 ? closeVerification : null;
+  const closePredictedBias = safeText(
+    closeVerificationRecord?.predicted_bias ?? closeVerificationRecord?.premarket_bias,
+    '—',
+  );
+  const closeTaiexChange = safeNumber(
+    closeVerificationRecord?.actual_taiex_change ?? closeVerificationRecord?.taiex_change,
+  );
+  const closeAccuracyScore = safeNumber(closeVerificationRecord?.accuracy_score);
+  const closeVerdictLabel = safeText(
+    closeVerificationRecord?.verdict_label ??
+      closeVerificationRecord?.verification_label ??
+      closeVerificationRecord?.verification_result ??
+      closeVerificationRecord?.prediction_result,
+    '等待有效收盤資料',
+  );
+  const closeVerificationNote = safeText(closeVerificationRecord?.verification_note);
+  const closeMissReason = safeText(closeVerificationRecord?.miss_reason);
+  const closeFailedAssumptions = safeStringArray(closeVerificationRecord?.failed_assumptions);
+  const closeTomorrowWatchPoints = safeStringArray(closeVerificationRecord?.tomorrow_watch_points);
+  const closeLessonsLearned = safeStringArray(closeVerificationRecord?.lessons_learned);
+  const closeTone = closeVerificationTone(
+    safeText(closeVerificationRecord?.prediction_result || closeVerdictLabel),
+  );
   const marketClosedInfo = displayState
     ? { closed: displayState.isMarketClosed, holidayName: displayState.holidayName }
     : { closed: isWeekend, holidayName: isWeekend ? '週末休市' : null as string | null };
@@ -447,53 +507,96 @@ function WarRoomContent() {
                 {tracking.closeReview.statusText}
               </span>
             </div>
-            {tracking.closeReview.showContent && todayCloseVerification && (
+            {closeVerificationRecord ? (
               <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border ${segmentBadgeStyle(closeTone)}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${closeTone === 'green' ? 'bg-emerald-400' : closeTone === 'red' ? 'bg-red-400' : closeTone === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
+                  {closeVerdictLabel}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前假設</p>
-                    <p className="text-white/80 text-sm font-medium">{displayState?.marketBias || '—'}</p>
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
+                    <p className="text-white/80 text-sm font-medium break-words">{closePredictedBias}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">收盤結果</p>
-                    <p className="text-white/80 text-sm font-medium">
-                      {todayCloseVerification.taiex_change !== null
-                        ? `TAIEX ${todayCloseVerification.taiex_change >= 0 ? '+' : ''}${todayCloseVerification.taiex_change.toFixed(2)}%`
-                        : '—'}
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">實際台股</p>
+                    <p className={`text-sm font-medium ${closeTaiexChange === null ? 'text-white/50' : closeTaiexChange >= 0 ? 'text-red-300' : 'text-emerald-300'}`}>
+                      {formatPercent(closeTaiexChange)}
                     </p>
                   </div>
-                </div>
-                {/* Verification conclusion */}
-                <div className={`p-4 rounded-xl border ${
-                  (todayCloseVerification.verification_result || '').includes('部分命中') ? 'bg-amber-500/[0.06] border-amber-400/35' :
-                  (todayCloseVerification.verification_result || '').includes('方向一致') || (todayCloseVerification.verification_result || '').includes('大致一致') ? 'bg-emerald-500/12 border-emerald-400/40' :
-                  'bg-white/[0.02] border-white/5'
-                }`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <p className={`font-semibold text-sm ${
-                      (todayCloseVerification.verification_result || '').includes('方向一致') || (todayCloseVerification.verification_result || '').includes('大致一致') ? 'text-emerald-200' :
-                      (todayCloseVerification.verification_result || '').includes('部分命中') ? 'text-amber-200' : 'text-slate-100'
-                    }`}>
-                      驗證結論：{todayCloseVerification.verification_result || '—'}
-                    </p>
-                    {((todayCloseVerification.verification_result || '').includes('方向一致') || (todayCloseVerification.verification_result || '').includes('大致一致')) && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/12 border border-emerald-400/30 rounded-full text-emerald-300 text-[9px] font-medium">
-                        <i className="ri-check-line text-[8px]"></i>
-                        盤後驗證通過
-                      </span>
-                    )}
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">驗證分數</p>
+                    <p className="text-white/80 text-sm font-medium">{closeAccuracyScore !== null ? `${closeAccuracyScore}/100` : '—'}</p>
                   </div>
-                  {todayCloseVerification.verification_note && (
-                    <p className="text-slate-300 text-xs leading-relaxed">{todayCloseVerification.verification_note}</p>
-                  )}
                 </div>
+
+                {closeVerificationNote && (
+                  <div className={`p-4 rounded-xl border ${segmentBorder(closeTone)} ${segmentBg(closeTone)}`}>
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">驗證說明</p>
+                    <p className="text-slate-200 text-xs leading-relaxed">{closeVerificationNote}</p>
+                  </div>
+                )}
+
+                {closeMissReason && (
+                  <div className="p-4 rounded-xl bg-red-500/[0.04] border border-red-400/20">
+                    <p className="text-red-300 text-[10px] uppercase tracking-wider mb-2">失效原因</p>
+                    <p className="text-red-100/80 text-xs leading-relaxed">{closeMissReason}</p>
+                  </div>
+                )}
+
+                {closeFailedAssumptions.length > 0 && (
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">失效假設</p>
+                    <ul className="space-y-2">
+                      {closeFailedAssumptions.map((item, idx) => (
+                        <li key={`${item}-${idx}`} className="flex items-start gap-2 text-slate-300 text-xs leading-relaxed">
+                          <span className="text-red-300 mt-0.5">•</span>
+                          <span className="min-w-0 break-words">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {closeTomorrowWatchPoints.length > 0 && (
+                  <div className="p-4 rounded-xl bg-sky-500/[0.04] border border-sky-400/20">
+                    <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-2">明日觀察重點</p>
+                    <ul className="space-y-2">
+                      {closeTomorrowWatchPoints.map((item, idx) => (
+                        <li key={`${item}-${idx}`} className="flex items-start gap-2 text-slate-200 text-xs leading-relaxed">
+                          <span className="text-sky-300 mt-0.5">•</span>
+                          <span className="min-w-0 break-words">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {closeLessonsLearned.length > 0 && (
+                  <div className="p-4 rounded-xl bg-violet-500/[0.04] border border-violet-400/20">
+                    <p className="text-violet-300 text-[10px] uppercase tracking-wider mb-2">模型修正筆記</p>
+                    <ul className="space-y-2">
+                      {closeLessonsLearned.map((item, idx) => (
+                        <li key={`${item}-${idx}`} className="flex items-start gap-2 text-slate-200 text-xs leading-relaxed">
+                          <span className="text-violet-300 mt-0.5">•</span>
+                          <span className="min-w-0 break-words">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <p className="text-white/40 text-xs leading-relaxed">
                   每次收盤驗證都是下一次判斷的基礎。回看盤前假設與實際走勢的差異，累積更穩定的市場節奏。
                 </p>
               </div>
-            )}
-            {!tracking.closeReview.showContent && (
-              <p className="text-white/50 text-sm">{tracking.closeReview.description}</p>
+            ) : (
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                <p className="text-white/50 text-sm leading-relaxed">
+                  今日尚未完成收盤驗證，收盤後系統會回寫盤前判斷是否成立。
+                </p>
+              </div>
             )}
           </section>
 

@@ -378,15 +378,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({
         success: false,
         reason: 'NO_VALID_INTRADAY_DATA',
-        report_date: today,
-        window_start: openStartIso,
-        window_end: now,
-        market_data_rows: marketData.length,
-        latest_captured_at: latestCapturedAt,
-        market_data_date: marketDataDate,
-        version: 'V3.1',
-        request_id: requestId,
-        logs,
       }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
     }
 
@@ -404,17 +395,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({
         success: false,
         reason: 'NO_VALID_INTRADAY_DATA',
-        detail: 'MISSING_REQUIRED_CORE_SYMBOLS',
-        missing_symbols: missingCoreSymbols,
-        report_date: today,
-        window_start: openStartIso,
-        window_end: now,
-        market_data_rows: marketData.length,
-        latest_captured_at: latestCapturedAt,
-        market_data_date: marketDataDate,
-        version: 'V3.1',
-        request_id: requestId,
-        logs,
       }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
     }
 
@@ -446,7 +426,7 @@ Deno.serve(async (req) => {
       captured_at: latestCapturedAt,
       source_kind: 'intraday_live',
       data_source: 'market_data',
-      market_data_date: marketDataDate,
+      market_data_date: today,
       created_at: now,
       updated_at: now,
     };

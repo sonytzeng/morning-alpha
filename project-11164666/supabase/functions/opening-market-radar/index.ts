@@ -390,6 +390,34 @@ Deno.serve(async (req) => {
       }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
     }
 
+    const requiredTaiex = findSymbol(marketData, ['TAIEX', 'TWII', '^TWII']);
+    const requiredTxf = findSymbol(marketData, ['TXF', 'TX', 'TXF1']);
+    const requiredTsmc = findSymbol(marketData, ['2330', '2330.TW', 'TSMC_TW']);
+    const missingCoreSymbols = [
+      requiredTaiex ? '' : 'TAIEX',
+      requiredTxf ? '' : 'TXF',
+      requiredTsmc ? '' : '2330',
+    ].filter(Boolean);
+
+    if (missingCoreSymbols.length > 0) {
+      log(`NO_VALID_INTRADAY_DATA: missing required core symbols ${missingCoreSymbols.join(', ')}`);
+      return new Response(JSON.stringify({
+        success: false,
+        reason: 'NO_VALID_INTRADAY_DATA',
+        detail: 'MISSING_REQUIRED_CORE_SYMBOLS',
+        missing_symbols: missingCoreSymbols,
+        report_date: today,
+        window_start: openStartIso,
+        window_end: now,
+        market_data_rows: marketData.length,
+        latest_captured_at: latestCapturedAt,
+        market_data_date: marketDataDate,
+        version: 'V3.1',
+        request_id: requestId,
+        logs,
+      }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
+    }
+
     // 3. Compute radar
     const radar = computeRadar(marketData, premarketBias, premarketConfidence, log);
 

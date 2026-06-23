@@ -84,6 +84,15 @@ function getRadarClass(status?: string | null): string {
   return 'bg-amber-500/12 text-amber-300 border-amber-400/30';
 }
 
+function toObservationBiasLabel(bias: string): string {
+  const b = safeText(bias, '觀察');
+  if (b.includes('偏多')) return '偏多觀察';
+  if (b.includes('偏空') || b.includes('偏弱')) return '偏弱觀察';
+  if (b.includes('中性')) return '中性觀察';
+  if (b.includes('觀察')) return b;
+  return `${b}觀察`;
+}
+
 function normalizeRadarFromReport(report: Report | null): RadarView | null {
   if (!report) return null;
 
@@ -243,8 +252,18 @@ function TodayReportContent() {
   const hasFreshIntradayRadar = intradayFreshness.fresh;
   const effectiveIntradayRadar = hasFreshIntradayRadar ? radar : null;
   const radarStatus = hasFreshIntradayRadar ? (radar?.radar_status || '中性觀察') : '盤中資料尚未同步';
-  const oneLiner = getOneLiner(report, effectiveIntradayRadar);
-  const observations = useMemo(() => buildObservations(report, effectiveIntradayRadar), [report, effectiveIntradayRadar]);
+  const safeDisplayBias = hasFreshIntradayRadar ? displayBias : toObservationBiasLabel(displayBias);
+  const displayScoreText = hasFreshIntradayRadar && displayScore != null ? `${displayScore}/100` : '盤前劇本，不評分';
+  const oneLiner = hasFreshIntradayRadar
+    ? getOneLiner(report, effectiveIntradayRadar)
+    : '目前僅保留 07:30 盤前假設，今日盤中方向需等待 09:00 後有效資料確認。';
+  const observations = useMemo(
+    () => (hasFreshIntradayRadar ? buildObservations(report, effectiveIntradayRadar) : []),
+    [report, effectiveIntradayRadar, hasFreshIntradayRadar],
+  );
+  const safeDailySentence = hasFreshIntradayRadar
+    ? parsedStrategy.v8_daily_sentence
+    : { status: 'insufficient' as const, sentence: '', logic_source: [], tone: 'clear, sharp, human-readable' as const };
 
   const marketDataBasisDate =
     safeText(ai.market_data_latest_date || ai.tw_core_date || report?.report_date, '—');
@@ -397,9 +416,9 @@ function TodayReportContent() {
               </div>
               <h1 className="text-white font-bold text-sm md:text-base">{isHistoricalFallback ? '歷史資料模式' : '今日盤前判斷'}</h1>
 
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${getBiasClass(displayBias)}`}>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${getBiasClass(safeDisplayBias)}`}>
                 <i className="ri-record-circle-line text-[9px]" />
-                {displayBias}
+                {safeDisplayBias}
               </span>
 
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${getRadarClass(radarStatus)}`}>
@@ -430,12 +449,12 @@ function TodayReportContent() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                 <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">目前方向</p>
-                <p className="text-slate-50 font-bold text-base">{displayBias}</p>
+                <p className="text-slate-50 font-bold text-base">{safeDisplayBias}</p>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                 <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">判斷把握度</p>
-                <p className="text-slate-50 font-bold text-base">{displayScore != null ? `${displayScore}/100` : '—'}</p>
+                <p className="text-slate-50 font-bold text-base">{displayScoreText}</p>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
@@ -475,7 +494,7 @@ function TodayReportContent() {
             </p>
           </section>
 
-          <DailySentenceCard dailySentence={parsedStrategy.v8_daily_sentence} tone="dark" />
+          <DailySentenceCard dailySentence={safeDailySentence} tone="dark" />
 
           <section className="bg-navy-900/70 border border-cyan-500/20 rounded-2xl p-5 md:p-6">
             <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
@@ -528,7 +547,7 @@ function TodayReportContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">盤前假設</p>
-                    <p className="text-slate-100 font-bold">{displayBias}</p>
+                    <p className="text-slate-100 font-bold">{safeDisplayBias}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <p className="text-slate-400 text-[10px] mb-1">今日待驗證</p>

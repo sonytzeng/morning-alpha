@@ -72,6 +72,7 @@ type TaiexCloseData = {
   symbol: string;
   change: number;
   capturedAt: string | null;
+  updatedAt: string | null;
 };
 
 type PredictedDirection = "bullish" | "bearish" | "neutral";
@@ -248,32 +249,59 @@ function buildLessonsLearned(result: StructuredPredictionResult, predictedDirect
   return lessons.slice(0, 3);
 }
 
-async function fetchTodayTaiexCloseData(
+function isValidDateString(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function getCloseWindowRange(taipeiDate: string): { start: string; end: string } {
+  return {
+    start: `${taipeiDate}T05:30:00.000Z`,
+    end: `${taipeiDate}T07:30:00.000Z`,
+  };
+}
+
+async function parseRequestBody(req: Request): Promise<Record<string, unknown>> {
+  try {
+    const body = await req.json();
+    return asObject(body);
+  } catch {
+    return {};
+  }
+}
+
+async function fetchTaiexCloseDataForDate(
   supabase: ReturnType<typeof createClient>,
-  today: string,
-): Promise<TaiexCloseData | null> {
+  targetDate: string,
+): Promise<{ closeData: TaiexCloseData | null; closeWindow: { start: string; end: string } }> {
+  const closeWindow = getCloseWindowRange(targetDate);
   const { data, error } = await supabase
     .from("market_data")
     .select("symbol,change_percent,captured_at,updated_at")
     .in("symbol", ["TAIEX", "TWII", "^TWII"])
+    .gte("captured_at", closeWindow.start)
+    .lte("captured_at", closeWindow.end)
     .order("captured_at", { ascending: false })
     .limit(10);
 
-  if (error || !Array.isArray(data)) return null;
+  if (error || !Array.isArray(data)) return { closeData: null, closeWindow };
 
   for (const row of data as Record<string, unknown>[]) {
     const dataDate = taipeiDateFromIso(row.captured_at || row.updated_at);
-    if (dataDate !== today) continue;
+    if (dataDate !== targetDate) continue;
     const change = Number(row.change_percent);
     if (!Number.isNaN(change)) {
       return {
-        symbol: String(row.symbol || "TAIEX"),
-        change,
-        capturedAt: row.captured_at ? String(row.captured_at) : row.updated_at ? String(row.updated_at) : null,
+        closeData: {
+          symbol: String(row.symbol || "TAIEX"),
+          change,
+          capturedAt: row.captured_at ? String(row.captured_at) : row.updated_at ? String(row.updated_at) : null,
+          updatedAt: row.updated_at ? String(row.updated_at) : null,
+        },
+        closeWindow,
       };
     }
   }
-  return null;
+  return { closeData: null, closeWindow };
 }
 
 Deno.serve(async (req: Request) => {
@@ -292,22 +320,64 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: false, error: "Supabase credentials missing" }, 500);
   }
 
+  const requestBody = await parseRequestBody(req);
+  const today = getTaipeiDateString();
+  const backfillMode = requestBody.backfill === true;
+  const requestedTargetDate = requestBody.target_date;
+
+  if (backfillMode && !isValidDateString(requestedTargetDate)) {
+    return jsonResponse({
+      success: false,
+      error: "INVALID_TARGET_DATE",
+      today_date: today,
+      backfill_mode: true,
+      no_fake_data: true,
+    }, 400);
+  }
+
+  const verificationDate = backfillMode && isValidDateString(requestedTargetDate)
+    ? requestedTargetDate
+    : today;
+
+  if (verificationDate > today) {
+    return jsonResponse({
+      success: false,
+      error: "TARGET_DATE_IN_FUTURE",
+      verification_date: verificationDate,
+      today_date: today,
+      backfill_mode: backfillMode,
+      no_fake_data: true,
+    }, 400);
+  }
+
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const today = getTaipeiDateString();
   const { data: report, error: reportError } = await supabase
     .from("reports")
     .select("id,report_date,market_bias,confidence_score,ai_strategy_json")
-    .eq("report_date", today)
+    .eq("report_date", verificationDate)
     .maybeSingle();
 
   if (reportError) {
-    return jsonResponse({ success: false, error: reportError.message, report_date: today }, 500);
+    return jsonResponse({
+      success: false,
+      error: reportError.message,
+      verification_date: verificationDate,
+      today_date: today,
+      backfill_mode: backfillMode,
+    }, 500);
   }
   if (!report) {
-    return jsonResponse({ success: false, error: "MISSING_REPORT", report_date: today, no_fake_data: true }, 404);
+    return jsonResponse({
+      success: false,
+      error: "MISSING_REPORT",
+      verification_date: verificationDate,
+      today_date: today,
+      backfill_mode: backfillMode,
+      no_fake_data: true,
+    }, 404);
   }
 
   const reportRow = report as Record<string, unknown>;
@@ -318,31 +388,94 @@ Deno.serve(async (req: Request) => {
     ? null
     : Math.max(0, Math.min(100, Math.round(Number(confidenceRaw))));
 
-  const taiexCloseData = await fetchTodayTaiexCloseData(supabase, today);
+  const { closeData: taiexCloseData, closeWindow } = await fetchTaiexCloseDataForDate(supabase, verificationDate);
   const taiexChange = taiexCloseData?.change ?? null;
 
-  let actualDirectionValue = "UNKNOWN";
-  let predictionResult = "PENDING_REAL_MARKET_DATA";
-  let accuracyScore = 0;
-  let reason: Record<string, unknown> = {
-    message: "Missing real TAIEX close data. No fake fallback used.",
-  };
-
-  if (taiexChange !== null) {
-    const scored = scorePrediction(predictedBias, taiexChange);
-    actualDirectionValue = scored.direction;
-    predictionResult = scored.result;
-    accuracyScore = scored.score;
-    reason = {
-      predicted_bias: predictedBias,
-      normalized_predicted_bias: normalizePredictedBias(predictedBias),
-      rule: "BULLISH>0, BEARISH<0, NEUTRAL abs(change)<0.5",
-      no_fake_fallback: true,
+  if (taiexChange === null) {
+    const pendingClosingVerification: Record<string, unknown> = {
+      version: "P20_CLOSE_WINDOW_VERIFICATION",
+      status: "pending_real_market_data",
+      verified_at: new Date().toISOString(),
+      report_date: verificationDate,
+      predicted_bias: predictedBias || null,
+      predicted_confidence: confidence,
+      confidence_score: confidence,
+      actual_taiex_change: null,
+      actual_direction: "unknown",
+      verdict_label: "等待有效收盤資料",
+      verification_note: "收盤驗證已執行，但尚未取得 13:30-15:30 台北收盤窗口內的 TAIEX 資料；系統未使用假資料。",
+      miss_reason: null,
+      failed_assumptions: [],
+      tomorrow_watch_points: buildTomorrowWatchPoints("pending", "unknown"),
+      lessons_learned: buildLessonsLearned("pending", normalizeStructuredPredictedDirection(predictedBias)),
+      data_source: {
+        source: "market_data",
+        symbol: "TAIEX",
+        taiex_symbol: "TAIEX",
+        captured_at: null,
+        updated_at: null,
+        close_window_start: closeWindow.start,
+        close_window_end: closeWindow.end,
+        table: "market_data",
+      },
+      reason: {
+        message: "Missing real TAIEX close data in strict close window. No fake fallback used.",
+      },
+      no_fake_data: true,
     };
+
+    const { error: updatePendingError } = await supabase
+      .from("reports")
+      .update({ ai_strategy_json: { ...ai, closing_verification: pendingClosingVerification } })
+      .eq("id", reportRow.id);
+
+    if (updatePendingError) {
+      return jsonResponse({
+        success: false,
+        error: updatePendingError.message,
+        code: "NO_CLOSE_DATA",
+        verification_date: verificationDate,
+        today_date: today,
+        backfill_mode: backfillMode,
+        close_window_start: closeWindow.start,
+        close_window_end: closeWindow.end,
+        status: "pending_real_market_data",
+        report_updated: false,
+        log_inserted: false,
+        no_fake_data: true,
+      }, 500);
+    }
+
+    return jsonResponse({
+      success: false,
+      code: "NO_CLOSE_DATA",
+      verification_date: verificationDate,
+      today_date: today,
+      backfill_mode: backfillMode,
+      close_window_start: closeWindow.start,
+      close_window_end: closeWindow.end,
+      status: "pending_real_market_data",
+      report_updated: true,
+      log_inserted: false,
+      no_fake_data: true,
+    });
   }
 
+  const scored = scorePrediction(predictedBias, taiexChange);
+  const actualDirectionValue = scored.direction;
+  const predictionResult = scored.result;
+  const accuracyScore = scored.score;
+  const reason: Record<string, unknown> = {
+    predicted_bias: predictedBias,
+    normalized_predicted_bias: normalizePredictedBias(predictedBias),
+    rule: "BULLISH>0, BEARISH<0, NEUTRAL abs(change)<0.5",
+    no_fake_fallback: true,
+    close_window_start: closeWindow.start,
+    close_window_end: closeWindow.end,
+  };
+
   const { error: insertError } = await supabase.from("prediction_accuracy_logs").insert({
-    report_date: today,
+    report_date: verificationDate,
     predicted_bias: predictedBias || null,
     confidence,
     actual_taiex_change: taiexChange,
@@ -353,22 +486,27 @@ Deno.serve(async (req: Request) => {
   });
 
   if (insertError) {
-    return jsonResponse({ success: false, error: insertError.message, report_date: today }, 500);
+    return jsonResponse({
+      success: false,
+      error: insertError.message,
+      verification_date: verificationDate,
+      today_date: today,
+      backfill_mode: backfillMode,
+    }, 500);
   }
 
   const predictedDirection = normalizeStructuredPredictedDirection(predictedBias);
   const structuredActualDirection = taiexChange === null ? "unknown" : getStructuredActualDirection(taiexChange);
   const structuredPredictionResult = getStructuredPredictionResult(predictedDirection, structuredActualDirection);
   const structuredAccuracyScore = scoreStructuredPrediction(structuredPredictionResult, confidence);
-  const closingVerificationStatus = structuredPredictionResult === "pending" ? "pending_real_market_data" : "completed";
   const failedAssumptions = buildFailedAssumptions(predictedDirection, structuredActualDirection, structuredPredictionResult);
   const tomorrowWatchPoints = buildTomorrowWatchPoints(structuredPredictionResult, structuredActualDirection);
   const lessonsLearned = buildLessonsLearned(structuredPredictionResult, predictedDirection);
   const closingVerification = {
-    version: "P1_STRUCTURED_CLOSE_VERIFICATION",
-    status: closingVerificationStatus,
+    version: "P20_CLOSE_WINDOW_VERIFICATION",
+    status: "completed",
     verified_at: new Date().toISOString(),
-    report_date: today,
+    report_date: verificationDate,
     predicted_bias: predictedBias || null,
     predicted_confidence: confidence,
     confidence_score: confidence,
@@ -383,8 +521,13 @@ Deno.serve(async (req: Request) => {
     tomorrow_watch_points: tomorrowWatchPoints,
     lessons_learned: lessonsLearned,
     data_source: {
-      taiex_symbol: taiexCloseData?.symbol || "TAIEX",
-      captured_at: taiexCloseData?.capturedAt || null,
+      source: "market_data",
+      symbol: taiexCloseData.symbol,
+      taiex_symbol: taiexCloseData.symbol,
+      captured_at: taiexCloseData.capturedAt,
+      updated_at: taiexCloseData.updatedAt,
+      close_window_start: closeWindow.start,
+      close_window_end: closeWindow.end,
       table: "market_data",
     },
     legacy_actual_direction: actualDirectionValue,
@@ -393,10 +536,6 @@ Deno.serve(async (req: Request) => {
     reason,
     no_fake_data: true,
   };
-
-  if (structuredPredictionResult === "pending") {
-    closingVerification.actual_direction = "flat";
-  }
 
   const updatedAiStrategyJson = {
     ...ai,
@@ -412,22 +551,29 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       success: false,
       error: updateReportError.message,
-      report_date: today,
+      verification_date: verificationDate,
+      today_date: today,
+      backfill_mode: backfillMode,
       prediction_log_inserted: true,
       report_updated: false,
-      closing_verification_status: closingVerificationStatus,
+      closing_verification_status: "completed",
       no_fake_data: true,
     }, 500);
   }
 
   return jsonResponse({
     success: true,
-    report_date: today,
+    verification_date: verificationDate,
+    today_date: today,
+    backfill_mode: backfillMode,
     prediction_result: structuredPredictionResult,
+    verdict_label: verdictLabel(structuredPredictionResult),
     legacy_prediction_result: predictionResult,
     accuracy_score: structuredAccuracyScore,
+    actual_taiex_change: taiexChange,
     report_updated: true,
-    closing_verification_status: closingVerificationStatus,
+    log_inserted: true,
+    closing_verification_status: "completed",
     no_fake_data: true,
   });
 });

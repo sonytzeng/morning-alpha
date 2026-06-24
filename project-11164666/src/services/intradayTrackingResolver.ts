@@ -248,14 +248,15 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
   const closeDate = closeReview?.report_date || null;
   const closeIsToday = isDateToday(closeDate, todayDate);
   const isAfterClose = taipeiHour >= 14 || (taipeiHour === 13 && new Date().getMinutes() >= 30);
+  const closeVerificationResult = String(closeReview?.verification_result || '').toLowerCase();
 
   let closeReviewStatus: SegmentStatus;
   let closeDisplay: SegmentDisplay;
 
-  if (closeIsToday && closeReview?.verification_result === 'PENDING_REAL_MARKET_DATA') {
+  if (closeIsToday && closeVerificationResult === 'pending_real_market_data') {
     closeReviewStatus = 'pending';
     closeDisplay = {
-      statusText: '等待真實收盤資料',
+      statusText: '收盤驗證等待有效收盤資料',
       description: '收盤驗證已執行，但尚缺真實台股收盤資料。系統未使用假資料。',
       color: 'amber',
       showContent: true,

@@ -42,6 +42,33 @@ type SectorScore = {
   created_at: string;
 };
 
+type TradingDayInfo = {
+  isTradingDay: boolean;
+  marketClosed: boolean;
+  reason: string;
+  holidayName: string | null;
+};
+
+type RequestBody = {
+  backfill?: boolean;
+  target_date?: string;
+};
+
+const TAIWAN_HOLIDAYS_2026: Record<string, string> = {
+  "2026-01-01": "元旦",
+  "2026-02-16": "春節休市",
+  "2026-02-17": "春節休市",
+  "2026-02-18": "春節休市",
+  "2026-02-19": "春節休市",
+  "2026-02-20": "春節休市",
+  "2026-02-27": "和平紀念日補假",
+  "2026-04-03": "兒童節補假",
+  "2026-04-06": "清明節補假",
+  "2026-06-19": "端午節",
+  "2026-09-25": "中秋節",
+  "2026-10-09": "國慶日補假",
+};
+
 const SECTORS: SectorConfig[] = [
   { sector: "半導體", symbols: ["2330", "TSM", "NVDA", "SOX"], keywords: ["半導體", "晶片", "台積電", "tsmc", "nvidia", "nvda", "sox", "semiconductor", "chip"] },
   { sector: "AI伺服器", symbols: ["NVDA", "AMD", "SMCI", "2382", "3231", "6669"], keywords: ["AI", "伺服器", "server", "nvidia", "nvda", "amd", "smci", "廣達", "緯創"] },
@@ -83,6 +110,43 @@ function taipeiWindowUtc(date: string): { start: string; end: string } {
     start: `${date}T05:30:00.000Z`,
     end: `${date}T07:30:00.000Z`,
   };
+}
+
+function isValidDateString(date: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
+}
+
+function getTaiwanTradingDayInfo(date: string): TradingDayInfo {
+  if (!isValidDateString(date)) {
+    return { isTradingDay: false, marketClosed: true, reason: "INVALID_DATE", holidayName: "日期格式錯誤" };
+  }
+
+  const [year, month, day] = date.split("-").map(Number);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  const dayOfWeek = utcDate.getUTCDay();
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    return { isTradingDay: false, marketClosed: true, reason: "WEEKEND", holidayName: "週末休市" };
+  }
+
+  const holidayName = TAIWAN_HOLIDAYS_2026[date] || null;
+  if (holidayName) {
+    return { isTradingDay: false, marketClosed: true, reason: "HOLIDAY", holidayName };
+  }
+
+  return { isTradingDay: true, marketClosed: false, reason: "TRADING_DAY_CONFIRMED", holidayName: null };
+}
+
+async function readRequestBody(req: Request): Promise<RequestBody> {
+  try {
+    const raw = await req.text();
+    if (!raw.trim()) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as RequestBody : {};
+  } catch {
+    return {};
+  }
 }
 
 function toNumber(value: unknown): number | null {
@@ -245,11 +309,16 @@ Deno.serve(async (req) => {
 
   const requestId = crypto.randomUUID().slice(0, 8);
   const taipei = getTaipeiParts();
-  const scoreDate = taipei.date;
+  let scoreDate = taipei.date;
   const now = new Date().toISOString();
   const logPrefix = `[SECTOR:${requestId}]`;
 
   try {
+    const body = await readRequestBody(req);
+    const backfillMode = body.backfill === true && typeof body.target_date === "string" && body.target_date.trim().length > 0;
+    const targetDate = backfillMode ? body.target_date!.trim() : taipei.date;
+    scoreDate = targetDate;
+
     const expectedSecret = Deno.env.get("CRON_SECRET") || "";
     if (!expectedSecret) {
       console.error(`${logPrefix} CRON_SECRET is not configured`);
@@ -262,9 +331,73 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: false, error: "Unauthorized", score_date: scoreDate }, 401);
     }
 
-    if (taipei.hour < 14 || (taipei.hour === 14 && taipei.minute < 15)) {
+    if (!isValidDateString(scoreDate)) {
+      console.warn(`${logPrefix} invalid target_date: ${scoreDate}`);
+      return jsonResponse({
+        success: false,
+        code: "INVALID_TARGET_DATE",
+        reason: "INVALID_TARGET_DATE",
+        score_date: scoreDate,
+        backfill_mode: backfillMode,
+        skipped_reason: "target_date must use YYYY-MM-DD",
+      }, 400);
+    }
+
+    if (scoreDate > taipei.date) {
+      console.warn(`${logPrefix} future target_date rejected: ${scoreDate}`);
+      return jsonResponse({
+        success: false,
+        code: "FUTURE_TARGET_DATE_NOT_ALLOWED",
+        reason: "FUTURE_TARGET_DATE_NOT_ALLOWED",
+        score_date: scoreDate,
+        today_date: taipei.date,
+        backfill_mode: backfillMode,
+        skipped_reason: "target_date cannot be later than Taiwan today",
+      }, 400);
+    }
+
+    if (body.backfill === true && !backfillMode) {
+      console.warn(`${logPrefix} backfill requested without valid target_date`);
+      return jsonResponse({
+        success: false,
+        code: "BACKFILL_TARGET_DATE_REQUIRED",
+        reason: "BACKFILL_TARGET_DATE_REQUIRED",
+        score_date: scoreDate,
+        today_date: taipei.date,
+        backfill_mode: false,
+        skipped_reason: "backfill=true requires target_date",
+      }, 400);
+    }
+
+    const tradingDay = getTaiwanTradingDayInfo(scoreDate);
+    if (!tradingDay.isTradingDay) {
+      console.log(`${logPrefix} market closed for ${scoreDate}: ${tradingDay.reason}`);
+      return jsonResponse({
+        success: false,
+        code: "MARKET_CLOSED",
+        reason: "MARKET_CLOSED",
+        score_date: scoreDate,
+        today_date: taipei.date,
+        backfill_mode: backfillMode,
+        market_closed: true,
+        trading_day_reason: tradingDay.reason,
+        holiday_name: tradingDay.holidayName,
+        skipped_reason: tradingDay.holidayName || tradingDay.reason,
+      }, 200);
+    }
+
+    const isTodayRun = scoreDate === taipei.date;
+    if (isTodayRun && (taipei.hour < 14 || (taipei.hour === 14 && taipei.minute < 15))) {
       console.log(`${logPrefix} too early for close rotation: ${scoreDate} ${taipei.hour}:${taipei.minute}`);
-      return jsonResponse({ success: false, reason: "TOO_EARLY_FOR_CLOSE_ROTATION", score_date: scoreDate }, 200);
+      return jsonResponse({
+        success: false,
+        code: "TOO_EARLY_FOR_CLOSE_ROTATION",
+        reason: "TOO_EARLY_FOR_CLOSE_ROTATION",
+        score_date: scoreDate,
+        today_date: taipei.date,
+        backfill_mode: backfillMode,
+        skipped_reason: "Taiwan close rotation is allowed after 14:15 Asia/Taipei",
+      }, 200);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -290,7 +423,16 @@ Deno.serve(async (req) => {
     const marketError = capturedResult.error || updatedResult.error;
     if (marketError) {
       console.error(`${logPrefix} market_data query failed: ${marketError.message}`);
-      return jsonResponse({ success: false, reason: "MARKET_DATA_QUERY_FAILED", detail: marketError.message, score_date: scoreDate }, 500);
+      return jsonResponse({
+        success: false,
+        code: "MARKET_DATA_QUERY_FAILED",
+        reason: "MARKET_DATA_QUERY_FAILED",
+        detail: marketError.message,
+        score_date: scoreDate,
+        backfill_mode: backfillMode,
+        close_window_start: closeWindow.start,
+        close_window_end: closeWindow.end,
+      }, 500);
     }
 
     const rawRows = [
@@ -301,7 +443,19 @@ Deno.serve(async (req) => {
     const rows = latestRowsBySymbol(rawRows.map(mapMarketRow).filter((row): row is MarketRow => row !== null));
     if (rows.length === 0) {
       console.log(`${logPrefix} no close-window market_data for ${scoreDate}`);
-      return jsonResponse({ success: false, reason: "NO_CLOSE_MARKET_DATA", score_date: scoreDate }, 200);
+      return jsonResponse({
+        success: false,
+        code: "NO_CLOSE_MARKET_DATA",
+        reason: "NO_CLOSE_MARKET_DATA",
+        score_date: scoreDate,
+        today_date: taipei.date,
+        backfill_mode: backfillMode,
+        close_window_start: closeWindow.start,
+        close_window_end: closeWindow.end,
+        market_data_count: 0,
+        usable_sector_count: 0,
+        skipped_reason: "No market_data rows in Taiwan close window",
+      }, 200);
     }
 
     const newsRows = (newsResult.data || []) as Record<string, unknown>[];
@@ -324,17 +478,40 @@ Deno.serve(async (req) => {
 
     if (sectorRows.length === 0) {
       console.log(`${logPrefix} no mapped sectors from ${rows.map((row) => row.symbol).join(",")}`);
-      return jsonResponse({ success: false, reason: "NO_USABLE_SECTOR_DATA", score_date: scoreDate }, 200);
+      return jsonResponse({
+        success: false,
+        code: "NO_USABLE_SECTOR_DATA",
+        reason: "NO_USABLE_SECTOR_DATA",
+        score_date: scoreDate,
+        today_date: taipei.date,
+        backfill_mode: backfillMode,
+        close_window_start: closeWindow.start,
+        close_window_end: closeWindow.end,
+        market_data_count: rows.length,
+        usable_sector_count: 0,
+        skipped_reason: "No configured sector had usable mapped symbols",
+      }, 200);
     }
 
-    const { error: deleteError } = await supabase
+    const { count: deletedCount, error: deleteError } = await supabase
       .from("sector_rotation_scores")
-      .delete()
+      .delete({ count: "exact" })
       .eq("score_date", scoreDate);
 
     if (deleteError) {
       console.error(`${logPrefix} delete failed: ${deleteError.message}`);
-      return jsonResponse({ success: false, reason: "DELETE_EXISTING_SECTOR_ROWS_FAILED", detail: deleteError.message, score_date: scoreDate }, 500);
+      return jsonResponse({
+        success: false,
+        code: "DELETE_EXISTING_SECTOR_ROWS_FAILED",
+        reason: "DELETE_EXISTING_SECTOR_ROWS_FAILED",
+        detail: deleteError.message,
+        score_date: scoreDate,
+        backfill_mode: backfillMode,
+        close_window_start: closeWindow.start,
+        close_window_end: closeWindow.end,
+        market_data_count: rows.length,
+        usable_sector_count: sectorRows.length,
+      }, 500);
     }
 
     const { error: insertError } = await supabase
@@ -342,14 +519,34 @@ Deno.serve(async (req) => {
       .insert(sectorRows);
 
     if (insertError) {
-      console.error(`${logPrefix} insert failed: ${insertError.message}`);
-      return jsonResponse({ success: false, reason: "INSERT_SECTOR_ROWS_FAILED", detail: insertError.message, score_date: scoreDate }, 500);
+      console.error(`${logPrefix} insert failed after deleting ${deletedCount || 0} existing rows for ${scoreDate}: ${insertError.message}`);
+      return jsonResponse({
+        success: false,
+        code: "INSERT_SECTOR_ROWS_FAILED",
+        reason: "INSERT_SECTOR_ROWS_FAILED",
+        detail: insertError.message,
+        score_date: scoreDate,
+        backfill_mode: backfillMode,
+        close_window_start: closeWindow.start,
+        close_window_end: closeWindow.end,
+        market_data_count: rows.length,
+        usable_sector_count: sectorRows.length,
+        deleted_count: deletedCount || 0,
+      }, 500);
     }
 
-    console.log(`${logPrefix} inserted ${sectorRows.length} sector rows for ${scoreDate}`);
+    console.log(`${logPrefix} inserted ${sectorRows.length} sector rows for ${scoreDate} backfill=${backfillMode} deleted=${deletedCount || 0} market_rows=${rows.length}`);
     return jsonResponse({
       success: true,
       score_date: scoreDate,
+      today_date: taipei.date,
+      backfill_mode: backfillMode,
+      close_window_start: closeWindow.start,
+      close_window_end: closeWindow.end,
+      market_data_count: rows.length,
+      usable_sector_count: sectorRows.length,
+      deleted_count: deletedCount || 0,
+      inserted_count: sectorRows.length,
       inserted: sectorRows.length,
       sectors: sectorRows.map((row) => ({
         sector: row.sector,

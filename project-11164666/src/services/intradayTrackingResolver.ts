@@ -309,7 +309,7 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
     closeReviewStatus = 'pending';
     closeDisplay = {
       statusText: '今日收盤驗證尚未產生',
-      description: '收盤時間已過，等待 close-market-review 排程執行。',
+      description: '收盤時間已過，等待 closing-verification-engine 寫入收盤驗證。',
       color: 'amber',
       showContent: false,
       dataDate: null,

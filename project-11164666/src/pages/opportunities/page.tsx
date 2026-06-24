@@ -10,6 +10,9 @@ import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport'
 import { parseAIStrategy, type V8BeneficiaryChain } from '@/utils/aiStrategyParser';
 import type { Report } from '@/types/report';
 import BeneficiaryChainCard from '@/components/v8/BeneficiaryChainCard';
+import PaywallCard from '@/components/paywall/PaywallCard';
+import { getCurrentEntitlement, hasFeature } from '@/services/entitlementService';
+import type { UserEntitlement } from '@/types/subscription';
 
 // ═══════════════════════════════════════════════════
 // V9.0: Three-tier beneficiary stock types
@@ -203,6 +206,7 @@ function OpportunitiesContent() {
   const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
   const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
   const [v8BeneficiaryChain, setV8BeneficiaryChain] = useState<V8BeneficiaryChain | null>(null);
+  const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null);
 
   useEffect(() => {
     trackPageView('/opportunities');
@@ -258,6 +262,12 @@ function OpportunitiesContent() {
       }
     }
     load();
+  }, []);
+
+  useEffect(() => {
+    // P27 is UI scaffold only. Full security requires P28 server-side payload trimming and P29 RLS lockdown.
+    // Do not treat frontend gating as data security.
+    getCurrentEntitlement().then(setEntitlement).catch(() => setEntitlement(null));
   }, []);
 
   // ═══ Loading ═══
@@ -363,6 +373,8 @@ function OpportunitiesContent() {
   const confidenceText = ds.confidenceScore != null && ds.confidenceScore > 0
     ? `${ds.confidenceScore}/100`
     : '待驗證';
+  const canViewOpportunitiesFull = hasFeature(entitlement, 'opportunities_full');
+  const teaserStock = coreStocks[0] || extendedStocks[0] || scenarioStocks[0] || null;
 
   return (
     <div className="min-h-screen bg-background-50 flex flex-col overflow-x-hidden">
@@ -424,12 +436,38 @@ function OpportunitiesContent() {
             )}
           </div>
 
-          {hasV8BeneficiaryChain && (
+          {hasV8BeneficiaryChain && canViewOpportunitiesFull && (
             <BeneficiaryChainCard chain={v8BeneficiaryChain} tone="light" />
           )}
 
+          {!canViewOpportunitiesFull && (
+            <section className="space-y-4">
+              {teaserStock && (
+                <div className="p-5 rounded-2xl bg-background-100 border border-background-200/70">
+                  <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-2">免費觀察股</p>
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <span className="text-foreground-900 font-bold text-base">{[teaserStock.stock_id, teaserStock.stock_name].filter(Boolean).join(' ')}</span>
+                    {teaserStock.sector && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-100 text-accent-700 border border-accent-200">{teaserStock.sector}</span>
+                    )}
+                  </div>
+                  <p className="text-foreground-500 text-xs leading-relaxed">
+                    免費版僅提供一檔公開觀察股與今日追蹤數量；完整推理鏈、驗證訊號與失效條件保留在會員版。
+                  </p>
+                </div>
+              )}
+              <PaywallCard
+                title="升級會員查看完整受惠股地圖"
+                description={`今日共追蹤 ${coreDisplayCount + watchDisplayCount} 檔。完整受惠股、why_this_stock、validation_signal、invalidation_condition 與 source_signals 已收在會員版。`}
+                requiredTier="member"
+                featureList={['完整受惠股名單', '第一受惠股推理鏈', '盤中驗證與失效條件']}
+                tone="light"
+              />
+            </section>
+          )}
+
           {/* ══════════ INSUFFICIENT DATA WARNING ══════════ */}
-          {!hasV8BeneficiaryChain && dataStatus === 'insufficient' && !hasAnyStocks && (
+          {canViewOpportunitiesFull && !hasV8BeneficiaryChain && dataStatus === 'insufficient' && !hasAnyStocks && (
             <div className="p-6 rounded-2xl bg-amber-50 border border-amber-200 text-center">
               <div className="w-12 h-12 rounded-xl bg-background-100 flex items-center justify-center mx-auto mb-3">
                 <i className="ri-database-2-line text-amber-500/70 text-xl"></i>
@@ -440,7 +478,7 @@ function OpportunitiesContent() {
           )}
 
           {/* ══════════ SECTION 1: 核心受惠股 ══════════ */}
-          {!hasV8BeneficiaryChain && hasCore && (
+          {canViewOpportunitiesFull && !hasV8BeneficiaryChain && hasCore && (
             <section>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-primary-100 border border-primary-200 flex items-center justify-center">
@@ -520,7 +558,7 @@ function OpportunitiesContent() {
           )}
 
           {/* ══════════ SECTION 2: 延伸觀察股 ══════════ */}
-          {!hasV8BeneficiaryChain && hasExtended && (
+          {canViewOpportunitiesFull && !hasV8BeneficiaryChain && hasExtended && (
             <section>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-accent-100 border border-accent-200 flex items-center justify-center">
@@ -568,7 +606,7 @@ function OpportunitiesContent() {
           )}
 
           {/* ══════════ SECTION 3: 情境觀察股 ══════════ */}
-          {!hasV8BeneficiaryChain && hasScenario && (
+          {canViewOpportunitiesFull && !hasV8BeneficiaryChain && hasScenario && (
             <section>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-secondary-100 border border-secondary-200 flex items-center justify-center">
@@ -617,7 +655,7 @@ function OpportunitiesContent() {
           )}
 
           {/* ══════════ SECTION 4: 今日不追高提醒 ══════════ */}
-          {(doNotDoList.length > 0 || invalidationItems.length > 0) && (
+          {canViewOpportunitiesFull && (doNotDoList.length > 0 || invalidationItems.length > 0) && (
             <section className="p-5 md:p-6 rounded-2xl bg-background-100 border border-amber-200/70">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center">
@@ -650,7 +688,7 @@ function OpportunitiesContent() {
           )}
 
           {/* ══════════ EMPTY STATE ══════════ */}
-          {!hasV8BeneficiaryChain && !hasAnyStocks && dataStatus !== 'insufficient' && (
+          {canViewOpportunitiesFull && !hasV8BeneficiaryChain && !hasAnyStocks && dataStatus !== 'insufficient' && (
             <section className="p-6 rounded-2xl bg-background-100 border border-background-200/70 text-center">
               <div className="w-12 h-12 rounded-xl bg-background-50 flex items-center justify-center mx-auto mb-3">
                 <i className="ri-focus-3-line text-foreground-300 text-xl"></i>

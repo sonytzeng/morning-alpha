@@ -12,6 +12,9 @@ import { fetchSectorRotationScores, getSignalColor, computeSectorRotationFreshne
 import { resolveIntradayTrackingState, type IntradayTrackingState, type SegmentDisplay } from '@/services/intradayTrackingResolver';
 import { useState, useEffect, useMemo } from 'react';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
+import PaywallCard from '@/components/paywall/PaywallCard';
+import { getCurrentEntitlement, hasFeature } from '@/services/entitlementService';
+import type { UserEntitlement } from '@/types/subscription';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -96,12 +99,20 @@ function WarRoomContent() {
   const [sectorFreshness, setSectorFreshness] = useState<SectorRotationFreshness | null>(null);
 
   const [earlyBirdOpen, setEarlyBirdOpen] = useState(false);
+  const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null);
 
   const isWeekend = isTaipeiWeekendToday();
   const isNonTradingDay = isWeekend;
   const todayTaipeiStr = formatTaipeiDate();
   // V27: Is the active report for today?
   const isReportForToday = report?.report_date === todayTaipeiStr;
+  const canViewWarRoomFull = hasFeature(entitlement, 'war_room_full');
+
+  useEffect(() => {
+    // P27 is UI scaffold only. Full security requires P28 server-side payload trimming and P29 RLS lockdown.
+    // Do not treat frontend gating as data security.
+    getCurrentEntitlement().then(setEntitlement).catch(() => setEntitlement(null));
+  }, []);
 
   // V8.4: Unified display state — same parser as all other pages
   const displayState: MorningAlphaDisplayState | null = useMemo(() => {
@@ -474,7 +485,7 @@ function WarRoomContent() {
                 {tracking.intraday.statusText}
               </span>
             </div>
-            {tracking.intraday.showContent && openingRadar && tracking.intraday.isToday && (
+            {tracking.intraday.showContent && openingRadar && tracking.intraday.isToday && canViewWarRoomFull && (
               <div className="space-y-3">
                 {/* Radar summary card */}
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
@@ -519,6 +530,15 @@ function WarRoomContent() {
                   資料日期：{tracking.intradayRadarDate}｜觀察節點：09:30、10:30、13:30
                 </p>
               </div>
+            )}
+            {tracking.intraday.showContent && openingRadar && tracking.intraday.isToday && !canViewWarRoomFull && (
+              <PaywallCard
+                title="升級會員查看盤中驗證細節"
+                description="盤中雷達細節、指標同步性與驗證訊號已收在會員版，避免把盤前劇本誤讀成盤中結論。"
+                requiredTier="member"
+                featureList={['盤中雷達摘要', 'TAIEX / TXF / 2330 同步驗證', '盤中劇本失效提醒']}
+                ctaText="查看會員方案"
+              />
             )}
             {(!tracking.intraday.showContent || !tracking.intraday.isToday) && (
               <div>
@@ -571,83 +591,95 @@ function WarRoomContent() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前假設</p>
-                    <p className="text-white/80 text-sm font-medium break-words">{closePredictedBias}</p>
-                    {closePredictedScore !== null && (
-                      <p className="text-white/35 text-xs mt-1">{closePredictedScore}/100</p>
+                {canViewWarRoomFull ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                        <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前假設</p>
+                        <p className="text-white/80 text-sm font-medium break-words">{closePredictedBias}</p>
+                        {closePredictedScore !== null && (
+                          <p className="text-white/35 text-xs mt-1">{closePredictedScore}/100</p>
+                        )}
+                      </div>
+                      <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                        <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">收盤結果</p>
+                        <p className={`text-sm font-medium ${closeTaiexChange === null ? 'text-white/50' : closeTaiexChange >= 0 ? 'text-red-300' : 'text-emerald-300'}`}>
+                          {closeResultText}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                        <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">驗證分數</p>
+                        <p className="text-white/80 text-sm font-medium">{closeAccuracyScore !== null ? `${closeAccuracyScore}/100` : '—'}</p>
+                      </div>
+                    </div>
+
+                    <div className={`p-4 rounded-xl border ${segmentBorder(closeTone)} ${segmentBg(closeTone)}`}>
+                      <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">驗證說明</p>
+                      <p className="text-slate-200 text-xs leading-relaxed">{closeVerificationNote}</p>
+                    </div>
+
+                    {closeMissReason && (
+                      <div className="p-4 rounded-xl bg-red-500/[0.04] border border-red-400/20">
+                        <p className="text-red-300 text-[10px] uppercase tracking-wider mb-2">失效原因</p>
+                        <p className="text-red-100/80 text-xs leading-relaxed">{closeMissReason}</p>
+                      </div>
                     )}
-                  </div>
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">收盤結果</p>
-                    <p className={`text-sm font-medium ${closeTaiexChange === null ? 'text-white/50' : closeTaiexChange >= 0 ? 'text-red-300' : 'text-emerald-300'}`}>
-                      {closeResultText}
+
+                    {closeFailedAssumptions.length > 0 && (
+                      <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                        <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">失效假設</p>
+                        <ul className="space-y-2">
+                          {closeFailedAssumptions.map((item, idx) => (
+                            <li key={`${item}-${idx}`} className="flex items-start gap-2 text-slate-300 text-xs leading-relaxed">
+                              <span className="text-red-300 mt-0.5">•</span>
+                              <span className="min-w-0 break-words">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {closeTomorrowWatchPoints.length > 0 && (
+                      <div className="p-4 rounded-xl bg-sky-500/[0.04] border border-sky-400/20">
+                        <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-2">明日觀察重點</p>
+                        <ul className="space-y-2">
+                          {closeTomorrowWatchPoints.map((item, idx) => (
+                            <li key={`${item}-${idx}`} className="flex items-start gap-2 text-slate-200 text-xs leading-relaxed">
+                              <span className="text-sky-300 mt-0.5">•</span>
+                              <span className="min-w-0 break-words">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {closeLessonsLearned.length > 0 && (
+                      <div className="p-4 rounded-xl bg-violet-500/[0.04] border border-violet-400/20">
+                        <p className="text-violet-300 text-[10px] uppercase tracking-wider mb-2">模型修正筆記</p>
+                        <ul className="space-y-2">
+                          {closeLessonsLearned.map((item, idx) => (
+                            <li key={`${item}-${idx}`} className="flex items-start gap-2 text-slate-200 text-xs leading-relaxed">
+                              <span className="text-violet-300 mt-0.5">•</span>
+                              <span className="min-w-0 break-words">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <p className="text-white/40 text-xs leading-relaxed">
+                      每次收盤驗證都是下一次判斷的基礎。回看盤前假設與實際走勢的差異，累積更穩定的市場節奏。
                     </p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">驗證分數</p>
-                    <p className="text-white/80 text-sm font-medium">{closeAccuracyScore !== null ? `${closeAccuracyScore}/100` : '—'}</p>
-                  </div>
-                </div>
-
-                <div className={`p-4 rounded-xl border ${segmentBorder(closeTone)} ${segmentBg(closeTone)}`}>
-                  <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">驗證說明</p>
-                  <p className="text-slate-200 text-xs leading-relaxed">{closeVerificationNote}</p>
-                </div>
-
-                {closeMissReason && (
-                  <div className="p-4 rounded-xl bg-red-500/[0.04] border border-red-400/20">
-                    <p className="text-red-300 text-[10px] uppercase tracking-wider mb-2">失效原因</p>
-                    <p className="text-red-100/80 text-xs leading-relaxed">{closeMissReason}</p>
-                  </div>
+                  </>
+                ) : (
+                  <PaywallCard
+                    title="升級會員查看完整收盤驗證"
+                    description="免費版顯示今日命中或失準結果；會員可查看驗證說明、失效假設、明日觀察重點與模型修正筆記。"
+                    requiredTier="member"
+                    featureList={['驗證說明', '失效假設與明日觀察', '模型修正筆記']}
+                    tone="dark"
+                  />
                 )}
-
-                {closeFailedAssumptions.length > 0 && (
-                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">失效假設</p>
-                    <ul className="space-y-2">
-                      {closeFailedAssumptions.map((item, idx) => (
-                        <li key={`${item}-${idx}`} className="flex items-start gap-2 text-slate-300 text-xs leading-relaxed">
-                          <span className="text-red-300 mt-0.5">•</span>
-                          <span className="min-w-0 break-words">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {closeTomorrowWatchPoints.length > 0 && (
-                  <div className="p-4 rounded-xl bg-sky-500/[0.04] border border-sky-400/20">
-                    <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-2">明日觀察重點</p>
-                    <ul className="space-y-2">
-                      {closeTomorrowWatchPoints.map((item, idx) => (
-                        <li key={`${item}-${idx}`} className="flex items-start gap-2 text-slate-200 text-xs leading-relaxed">
-                          <span className="text-sky-300 mt-0.5">•</span>
-                          <span className="min-w-0 break-words">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {closeLessonsLearned.length > 0 && (
-                  <div className="p-4 rounded-xl bg-violet-500/[0.04] border border-violet-400/20">
-                    <p className="text-violet-300 text-[10px] uppercase tracking-wider mb-2">模型修正筆記</p>
-                    <ul className="space-y-2">
-                      {closeLessonsLearned.map((item, idx) => (
-                        <li key={`${item}-${idx}`} className="flex items-start gap-2 text-slate-200 text-xs leading-relaxed">
-                          <span className="text-violet-300 mt-0.5">•</span>
-                          <span className="min-w-0 break-words">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <p className="text-white/40 text-xs leading-relaxed">
-                  每次收盤驗證都是下一次判斷的基礎。回看盤前假設與實際走勢的差異，累積更穩定的市場節奏。
-                </p>
               </div>
             ) : (
               <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">

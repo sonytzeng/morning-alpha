@@ -15,8 +15,11 @@ import { isAISemiconductorWeak, isAIStock, DEFENSE_KEYWORDS } from '@/utils/mark
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import DailySentenceCard from '@/components/v8/DailySentenceCard';
 import OvernightCausalChainCard from '@/components/v8/OvernightCausalChainCard';
+import PaywallCard from '@/components/paywall/PaywallCard';
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
 import { getTodayOpeningRadar } from '@/services/openingRadarService';
+import { getCurrentEntitlement, hasFeature } from '@/services/entitlementService';
+import type { UserEntitlement } from '@/types/subscription';
 
 type AnyObj = Record<string, any>;
 
@@ -163,6 +166,7 @@ function TodayReportContent() {
   const [error, setError] = useState<string | null>(null);
   const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
   const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
+  const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null);
   // V8.4: Unified display state — same source as Home, Opportunities, WarRoom, MemberNote
   const [displayState, setDisplayState] = useState<MorningAlphaDisplayState | null>(null);
   const marketClosed = displayState
@@ -213,6 +217,12 @@ function TodayReportContent() {
     load();
   }, []);
 
+  useEffect(() => {
+    // P27 is UI scaffold only. Full security requires P28 server-side payload trimming and P29 RLS lockdown.
+    // Do not treat frontend gating as data security.
+    getCurrentEntitlement().then(setEntitlement).catch(() => setEntitlement(null));
+  }, []);
+
   const todayStr = formatTaipeiDate();
   const isReportForToday = report?.report_date === todayStr;
   const ai = asObj((report as AnyObj | null)?.ai_strategy_json);
@@ -248,6 +258,7 @@ function TodayReportContent() {
   const safeDailySentence = hasFreshIntradayRadar
     ? { status: 'ready' as const, sentence: todaySentenceText, logic_source: ['opening_market_radar.summary'], tone: 'clear, sharp, human-readable' as const }
     : { status: 'insufficient' as const, sentence: '', logic_source: [], tone: 'clear, sharp, human-readable' as const };
+  const canViewTodayReportFull = hasFeature(entitlement, 'today_report_full');
 
   const marketDataBasisDate =
     safeText(ai.market_data_latest_date || ai.tw_core_date || report?.report_date, '—');
@@ -571,7 +582,7 @@ function TodayReportContent() {
             </div>
           </section>
 
-          {beneficiaryStocks.length > 0 && (
+          {beneficiaryStocks.length > 0 && canViewTodayReportFull && (
             <section className="bg-navy-900/70 border border-amber-500/15 rounded-2xl p-5 md:p-6">
               <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
                 <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
@@ -612,32 +623,54 @@ function TodayReportContent() {
             </section>
           )}
 
-          <OvernightCausalChainCard chain={parsedStrategy.v8_overnight_causal_chain} tone="dark" />
+          {beneficiaryStocks.length > 0 && !canViewTodayReportFull && (
+            <PaywallCard
+              title="升級會員查看完整盤前研究鏈"
+              description={`今日已追蹤 ${beneficiaryStocks.length} 檔受惠觀察股。完整受惠股、盤中驗證、失效條件與收盤回測，已收在會員版。`}
+              requiredTier="member"
+              featureList={['完整今日受惠股', '受惠推理與驗證訊號', '失效條件與風險提醒']}
+              tone="dark"
+            />
+          )}
 
-          <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6 text-center">
-            <h2 className="text-white font-bold text-base mb-3">完整研究筆記</h2>
-            <p className="text-slate-400 text-sm leading-relaxed max-w-xl mx-auto mb-5">
-              完整版包含盤中驗證、失效條件、受惠族群與收盤回饋。若盤中雷達與盤前假設相反，系統會以雷達為優先顯示。
-            </p>
+          {canViewTodayReportFull ? (
+            <>
+              <OvernightCausalChainCard chain={parsedStrategy.v8_overnight_causal_chain} tone="dark" />
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link
-                to={`/reports/${report.report_date}`}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl transition-colors"
-              >
-                查看完整判讀
-                <i className="ri-arrow-right-line" />
-              </Link>
+              <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6 text-center">
+                <h2 className="text-white font-bold text-base mb-3">完整研究筆記</h2>
+                <p className="text-slate-400 text-sm leading-relaxed max-w-xl mx-auto mb-5">
+                  完整版包含盤中驗證、失效條件、受惠族群與收盤回饋。若盤中雷達與盤前假設相反，系統會以雷達為優先顯示。
+                </p>
 
-              <Link
-                to="/member-note"
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 text-slate-200 font-semibold text-sm rounded-xl transition-colors border border-white/10"
-              >
-                查看完整研究筆記
-                <i className="ri-arrow-right-line" />
-              </Link>
-            </div>
-          </section>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Link
+                    to={`/reports/${report.report_date}`}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl transition-colors"
+                  >
+                    查看完整判讀
+                    <i className="ri-arrow-right-line" />
+                  </Link>
+
+                  <Link
+                    to="/member-note"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 text-slate-200 font-semibold text-sm rounded-xl transition-colors border border-white/10"
+                  >
+                    查看完整研究筆記
+                    <i className="ri-arrow-right-line" />
+                  </Link>
+                </div>
+              </section>
+            </>
+          ) : (
+            <PaywallCard
+              title="完整研究筆記已收在會員版"
+              description="會員可查看 overnight causal chain、盤中驗證、失效條件與完整收盤回測，不只看方向，也看判斷如何被驗證。"
+              requiredTier="member"
+              featureList={['前夜事件傳導鏈', '盤中驗證與失效條件', '完整研究筆記與回測']}
+              tone="dark"
+            />
+          )}
         </div>
       </main>
 

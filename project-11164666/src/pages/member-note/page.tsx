@@ -15,6 +15,9 @@ import {
 } from '@/utils/aiStrategyParser';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { trackPageView, trackEvent } from '@/utils/analytics';
+import PaywallCard from '@/components/paywall/PaywallCard';
+import { getCurrentEntitlement, hasFeature } from '@/services/entitlementService';
+import type { UserEntitlement } from '@/types/subscription';
 
 function hasItems<T>(items: T[] | undefined): items is T[] {
   return Array.isArray(items) && items.length > 0;
@@ -311,6 +314,7 @@ function MemberNoteContent() {
   const [causalChains, setCausalChains] = useState<Record<string, unknown>[]>([]);
   // V10.0: Display state for market status fields
   const [dsState, setDsState] = useState<MorningAlphaDisplayState | null>(null);
+  const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null);
 
   useEffect(() => {
     trackPageView('/member-note');
@@ -362,6 +366,12 @@ function MemberNoteContent() {
       }
     }
     load();
+  }, []);
+
+  useEffect(() => {
+    // P27 is UI scaffold only. Full security requires P28 server-side payload trimming and P29 RLS lockdown.
+    // Do not treat frontend gating as data security.
+    getCurrentEntitlement().then(setEntitlement).catch(() => setEntitlement(null));
   }, []);
 
   if (loading) {
@@ -507,6 +517,12 @@ function MemberNoteContent() {
     'accuracy_score',
     'reason',
   ]);
+  const canViewMemberNoteFull = hasFeature(entitlement, 'member_note_full');
+  const canViewVipFundFlow = hasFeature(entitlement, 'vip_fund_flow');
+  const hasVipResearchFields = valueHasContent(memberNoteV2?.fund_flow_scenario)
+    || valueHasContent(memberNoteV2?.market_mispricing)
+    || valueHasContent(memberNoteV2?.institutional_behavior)
+    || valueHasContent(memberNoteV2?.tomorrow_extension_watch);
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col overflow-x-hidden">
@@ -525,7 +541,7 @@ function MemberNoteContent() {
               </h1>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/12 text-emerald-300 text-[10px] font-medium rounded-full border border-emerald-400/35 whitespace-nowrap">
                 <i className="ri-check-line text-[9px]"></i>
-                完整公開
+                {canViewMemberNoteFull ? '會員內容' : '免費摘要'}
               </span>
               {isHistoricalFallback && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-500/12 text-sky-300 text-[10px] font-medium rounded-full border border-sky-400/25 whitespace-nowrap">
@@ -617,16 +633,18 @@ function MemberNoteContent() {
           {/* ═══════════════════════════════ */}
           {/* MEMBER RESEARCH NOTE SECTIONS */}
           {/* ═══════════════════════════════ */}
-          {memberNoteV2 ? (
-            <MemberResearchNoteV2View
-              note={memberNoteV2}
-              reportDate={reportDate}
-              twCoreDate={twCoreDate}
-              isHistoricalFallback={isHistoricalFallback}
-              beneficiaryCandidates={beneficiaryCandidates}
-              hasClosingVerification={hasClosingVerification}
-            />
-          ) : hasMemberNote && memberNoteText ? (
+          {canViewMemberNoteFull ? (
+            <>
+              {memberNoteV2 ? (
+                <MemberResearchNoteV2View
+                  note={memberNoteV2}
+                  reportDate={reportDate}
+                  twCoreDate={twCoreDate}
+                  isHistoricalFallback={isHistoricalFallback}
+                  beneficiaryCandidates={beneficiaryCandidates}
+                  hasClosingVerification={hasClosingVerification}
+                />
+              ) : hasMemberNote && memberNoteText ? (
               /* ═══ 純文字多段落路徑 (V8.2.1) ═══ */
               <section>
                 <div className="relative bg-gradient-to-br from-navy-900/80 via-navy-900/60 to-navy-900/80 border border-forest-500/10 rounded-2xl p-5 md:p-8 overflow-hidden">
@@ -655,7 +673,7 @@ function MemberNoteContent() {
                   </div>
                 </div>
               </section>
-          ) : (
+              ) : (
             /* ═══ 無內容路徑 ═══ */
             <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-6 text-center">
               <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-navy-800/80 flex items-center justify-center">
@@ -664,9 +682,9 @@ function MemberNoteContent() {
               <p className="text-slate-300 text-sm mb-2">完整研究筆記尚未生成</p>
               <p className="text-slate-500 text-xs max-w-md mx-auto">目前只有公開摘要，尚不足以形成會員研究筆記。</p>
             </section>
-          )}
+              )}
 
-          {!memberNoteV2 && hasItems(beneficiaryCandidates) && (
+              {!memberNoteV2 && hasItems(beneficiaryCandidates) && (
             <section className="bg-navy-900/60 border border-amber-500/10 rounded-2xl p-5 md:p-6">
               <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
                 <i className="ri-focus-3-line text-amber-400 text-sm"></i>
@@ -687,10 +705,10 @@ function MemberNoteContent() {
                 ))}
               </div>
             </section>
-          )}
+              )}
 
-          {/* B: Reasoning Chain */}
-          {hasReasoningChain && (
+              {/* B: Reasoning Chain */}
+              {hasReasoningChain && (
             <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
               <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
                 <i className="ri-link text-forest-400 text-sm"></i>
@@ -709,10 +727,10 @@ function MemberNoteContent() {
                 ))}
               </div>
             </section>
-          )}
+              )}
 
-          {/* C: 隔夜影響鏈 */}
-          {hasOvernightChains && (
+              {/* C: 隔夜影響鏈 */}
+              {hasOvernightChains && (
             <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
               <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
                 <i className="ri-global-line text-amber-400 text-sm"></i>
@@ -804,10 +822,10 @@ function MemberNoteContent() {
                 </div>
               )}
             </section>
-          )}
+              )}
 
-          {/* D: Intraday Validation Plan */}
-          {hasValidationPlan && strategy.intraday_validation_plan && (
+              {/* D: Intraday Validation Plan */}
+              {hasValidationPlan && strategy.intraday_validation_plan && (
             <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
               <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
                 <i className="ri-timer-line text-sky-400 text-sm"></i>
@@ -834,10 +852,10 @@ function MemberNoteContent() {
                 )}
               </div>
             </section>
-          )}
+              )}
 
-          {/* E: Invalidation Conditions */}
-          {hasInvalidation && (
+              {/* E: Invalidation Conditions */}
+              {hasInvalidation && (
             <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
               <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
                 <i className="ri-close-circle-line text-red-400 text-sm"></i>
@@ -853,10 +871,10 @@ function MemberNoteContent() {
                 ))}
               </div>
             </section>
-          )}
+              )}
 
-          {/* F: Closing Feedback Plan */}
-          {!hasClosingVerification && hasClosingPlan && strategy.closing_feedback_plan && (
+              {/* F: Closing Feedback Plan */}
+              {!hasClosingVerification && hasClosingPlan && strategy.closing_feedback_plan && (
             <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
               <div className="flex items-center gap-2 mb-4 flex-wrap">
                 <h2 className="text-white font-bold text-base flex items-center gap-2">
@@ -886,10 +904,10 @@ function MemberNoteContent() {
                 )}
               </div>
             </section>
-          )}
+              )}
 
-          {/* G: Renewal Value Block */}
-          {hasRenewalBlock && strategy.renewal_value_block && (
+              {/* G: Renewal Value Block */}
+              {hasRenewalBlock && strategy.renewal_value_block && (
             <section className="bg-navy-900/60 border border-amber-500/10 rounded-2xl p-5 md:p-6">
               <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
                 <i className="ri-bookmark-line text-amber-400 text-sm"></i>
@@ -916,10 +934,10 @@ function MemberNoteContent() {
                 )}
               </div>
             </section>
-          )}
+              )}
 
-          {/* H: Premium Value Summary */}
-          {hasPremiumSummary && strategy.premium_value_summary && (
+              {/* H: Premium Value Summary */}
+              {hasPremiumSummary && strategy.premium_value_summary && (
             <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
               <h2 className="text-white font-bold text-base mb-4">研究內容價值摘要</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -937,6 +955,25 @@ function MemberNoteContent() {
                 )}
               </div>
             </section>
+              )}
+              {hasVipResearchFields && !canViewVipFundFlow && (
+                <PaywallCard
+                  title="VIP 功能即將開放"
+                  description="法人可能行為、資金流推演、市場錯價與隔日延伸觀察會收在 VIP 版，供高頻回訪與週度回測使用。"
+                  requiredTier="vip"
+                  featureList={['fund_flow_scenario', 'market_mispricing', 'institutional_behavior', 'tomorrow_extension_watch']}
+                  tone="dark"
+                />
+              )}
+            </>
+          ) : (
+            <PaywallCard
+              title="升級會員查看完整盤前研究筆記"
+              description="免費版保留今日核心 thesis 與摘要；完整 overnight chain、第一受惠股推理、盤中驗證、失效條件與收盤回測收在會員版。"
+              requiredTier="member"
+              featureList={['完整研究筆記', '第一受惠股推理鏈', '盤中驗證與收盤回測']}
+              tone="dark"
+            />
           )}
 
           {/* WHY COME BACK */}

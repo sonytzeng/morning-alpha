@@ -91,6 +91,7 @@ type MarketIndicator={symbol:string;name:string;market:string;value:number;chang
 type MarketNewsItem={id:string;title:string;source:string;url:string;published_at:string|null;created_at:string;related_sectors:string[]|null;taiwan_impact_summary:string|null;raw_payload:Record<string,unknown>|null};
 type FetchNewsResult={newsData:MarketNewsItem[];latestNewsTime:Date|null;isStale:boolean;newsCount:number};
 type MarketDataScore={baseScore:number;reasons:string[];riskReasons:string[];details:Record<string,number>};
+type ReportConfidenceScore={score:number;breakdown:Record<string,unknown>};
 type TWCoreStatus={taiexPresent:boolean;txfPresent:boolean;ts2330Present:boolean;missingCount:number;dataInsufficient:boolean};
 type MVPStatus={nvdaPresent:boolean;tsmPresent:boolean;spxPresent:boolean;mvpCount:number;mvpInsufficient:boolean};
 
@@ -692,6 +693,24 @@ function calculateMarketDataScore(md:MarketIndicator[]):MarketDataScore{
   return{baseScore:Math.max(0,Math.min(100,s)),reasons:rs.length?rs:['市場訊號中性'],riskReasons:rr.length?rr:['暫無明顯風險訊號'],details:dt};
 }
 
+function hasAnySymbol(md:MarketIndicator[],syms:string[]):boolean{return md.some(function(m){return syms.includes(m.symbol.toUpperCase())});}
+function calculateReportConfidenceScore(params:{marketData:MarketIndicator[];newsData:MarketNewsItem[];sectorData:SectorRotationRow[];dates:{twCoreDate:string;usGlobalDate:string};dataQuality:string;missingSources:string[];openAIUsed:boolean}):ReportConfidenceScore{
+  const md=Array.isArray(params.marketData)?params.marketData:[];const news=Array.isArray(params.newsData)?params.newsData:[];const sectors=Array.isArray(params.sectorData)?params.sectorData:[];const missing=Array.isArray(params.missingSources)?params.missingSources:[];
+  const marketDataPoints=md.length>0?25:0;
+  const twCoreCount=[hasAnySymbol(md,['TAIEX','TWII','^TWII']),hasAnySymbol(md,['2330','2330.TW']),hasAnySymbol(md,['TXF','TX','MTX'])].filter(Boolean).length;
+  const twCorePoints=Math.round((twCoreCount/3)*20);
+  const usCoreCount=[hasAnySymbol(md,['SPX','SP500','GSPC']),hasAnySymbol(md,['IXIC','NASDAQ']),hasAnySymbol(md,['SOX','PHLX']),hasAnySymbol(md,['NVDA']),hasAnySymbol(md,['TSM','TSMC'])].filter(Boolean).length;
+  const usCorePoints=Math.round((Math.min(usCoreCount,5)/5)*20);
+  const newsPoints=news.length>0?10:0;
+  const sectorPoints=sectors.length>0?10:0;
+  const openAIPoints=params.openAIUsed?10:0;
+  const datePoints=params.dates.twCoreDate&&params.dates.usGlobalDate?5:0;
+  const degradedPenalty=params.dataQuality==='degraded'?Math.min(10,Math.max(5,missing.length*3)):0;
+  const raw=marketDataPoints+twCorePoints+usCorePoints+newsPoints+sectorPoints+openAIPoints+datePoints-degradedPenalty;
+  const score=Math.max(0,Math.min(100,Math.round(raw)));
+  return{score,breakdown:{market_data_points:marketDataPoints,market_data_count:md.length,tw_core_points:twCorePoints,tw_core_count:twCoreCount,us_core_points:usCorePoints,us_core_count:usCoreCount,news_points:newsPoints,news_count:news.length,sector_rotation_points:sectorPoints,sector_rotation_rows:sectors.length,openai_points:openAIPoints,openai_used:params.openAIUsed,date_points:datePoints,data_quality:params.dataQuality,missing_sources:missing,degraded_penalty:degradedPenalty,raw_score:raw,score_semantics:'confidence_score=data completeness + signal consistency + report usability; market_bias_score=directional bias score'}};
+}
+
 function extractMarketNumericPayload(md:MarketIndicator[]):Record<string,unknown>{
   const f=(syms:string[])=>{for(const sy of syms){const x=md.find(function(m){return m.symbol.toUpperCase()===sy.toUpperCase()});if(x)return x}return null};const p:Record<string,unknown>={};
   const vix=f(['VIX','VIXINDEX']);if(vix&&!Number.isNaN(vix.value))p.vix=vix.value;
@@ -757,11 +776,11 @@ function buildVividTodayQuote(md:MarketIndicator[],dScore:MarketDataScore,market
     if(spx&&spx.changePercent<-0.5)return 'SPX '+fmtPct(spx.changePercent)+' 走弱，外資今天可能站在賣方。不要跟外資對做，他們賣的時候散戶硬接通常是最貴的學費。等賣壓宣洩完再觀察。';
     return '盤前數據偏弱，今天不適合追任何方向。與其勉強進場，不如保留現金等更好的機會。市場永遠有明天，但子彈用完就沒了。';
   }
-  return '今日盤前市場方向：'+marketBias+'，信心 '+dScore.baseScore+'/100。開盤後以實際走勢為最終判斷，勿憑盤前預期操作。';
+  return '今日盤前市場方向：'+marketBias+'，方向分數 '+dScore.baseScore+'/100。開盤後以實際走勢為最終判斷，勿憑盤前預期操作。';
 }
 
-function buildDeterministicAIStrategyJson(md:MarketIndicator[],newsData:MarketNewsItem[],todayDate:string,dates:{twCoreDate:string;usGlobalDate:string;dataTimeBasis:string},dScore:MarketDataScore,twStatus:TWCoreStatus,mvpStatus:MVPStatus,reportMode:string,sectorData:SectorRotationRow[],log:(m:string)=>void):Record<string,unknown>{
-  const marketBias=classifyMarketBias(dScore.baseScore);const confidenceScore=dScore.baseScore;
+function buildDeterministicAIStrategyJson(md:MarketIndicator[],newsData:MarketNewsItem[],todayDate:string,dates:{twCoreDate:string;usGlobalDate:string;dataTimeBasis:string},dScore:MarketDataScore,twStatus:TWCoreStatus,mvpStatus:MVPStatus,reportMode:string,sectorData:SectorRotationRow[],log:(m:string)=>void,confidenceResult?:ReportConfidenceScore):Record<string,unknown>{
+  const marketBias=classifyMarketBias(dScore.baseScore);const confidenceScore=confidenceResult?.score??dScore.baseScore;
   const todayQuote=buildVividTodayQuote(md,dScore,marketBias);const oneSentence=todayQuote;
   const doNotDoList:string[]=[];
   if(marketBias==='偏弱觀察')doNotDoList.push('避免追空殺低，等待止跌訊號。');
@@ -787,7 +806,8 @@ function buildDeterministicAIStrategyJson(md:MarketIndicator[],newsData:MarketNe
     target_date:todayDate,tw_core_date:dates.twCoreDate,us_global_date:dates.usGlobalDate,data_time_basis:dates.dataTimeBasis,
     report_mode:reportMode,quality_score:75,member_value_score:70,
     no_fake_fallback:true,fake_fallback_used:false,data_date_aligned:true,publish_ready:true,
-    confidence_score:confidenceScore,market_bias:marketBias,today_quote:todayQuote,
+    confidence_score:confidenceScore,market_bias_score:dScore.baseScore,market_bias:marketBias,today_quote:todayQuote,
+    confidence_breakdown:confidenceResult?.breakdown||{score_semantics:'legacy confidence_score used market_bias_score before P15 split'},
     tw_core_present:!twStatus.dataInsufficient,us_global_present:!mvpStatus.mvpInsufficient,
     beneficiary_engine_version:'V9.0_THREE_TIER_BENEFICIARY',
     tw_stock_filter_applied:true,research_card_format:true,fields_complete_guaranteed:true,write_time_guarantee:true,member_note_format:'plain_text_and_v2',
@@ -951,10 +971,12 @@ Deno.serve(async (req:Request)=>{
     const dScore=calculateMarketDataScore(marketData);const twStatus=checkTWCoreStatus(marketData,log);const mvpStatus=checkMVPStatus(marketData,log);
     log('SCORE='+dScore.baseScore+' BIAS='+classifyMarketBias(dScore.baseScore));
     timer.mark('MARKET_SCORING_DONE');
+    let confidenceResult=calculateReportConfidenceScore({marketData,newsData,sectorData,dates,dataQuality,missingSources,openAIUsed:false});
+    log('CONFIDENCE_SCORE='+confidenceResult.score+' MARKET_BIAS_SCORE='+dScore.baseScore);
 
-    const deterministicJson=buildDeterministicAIStrategyJson(marketData,newsData,todayDate,dates,dScore,twStatus,mvpStatus,reportMode,sectorData,log);
+    const deterministicJson=buildDeterministicAIStrategyJson(marketData,newsData,todayDate,dates,dScore,twStatus,mvpStatus,reportMode,sectorData,log,confidenceResult);
     timer.mark('DETERMINISTIC_REPORT_BUILT');
-    const marketBiasDet=classifyMarketBias(dScore.baseScore);const confScoreDet=dScore.baseScore;
+    const marketBiasDet=classifyMarketBias(dScore.baseScore);const confScoreDet=confidenceResult.score;
     const detMemberNoteText=typeof deterministicJson.member_research_note==='string'?String(deterministicJson.member_research_note):buildMemberResearchNoteText(marketData,todayDate,dates,dScore,marketBiasDet,confScoreDet,Array.isArray(deterministicJson.today_beneficiary_stocks)?deterministicJson.today_beneficiary_stocks as Record<string,unknown>[]:[],reportMode,log);
     const detMemberNoteV2=deterministicJson.member_research_note_v2 as MemberResearchNoteV2;
     const safeV8Fallback=buildV8InsufficientContract();
@@ -973,7 +995,10 @@ Deno.serve(async (req:Request)=>{
         timer.mark('OPENAI_STEP_DONE');
         if(openAiResult){
           log('OPENAI_RESULT_RECEIVED');
-          if(openAiResult.confidence_score!==undefined&&openAiResult.confidence_score!==null)openAiResult.confidence_score=safeInteger(openAiResult.confidence_score,dScore.baseScore);
+          confidenceResult=calculateReportConfidenceScore({marketData,newsData,sectorData,dates,dataQuality,missingSources,openAIUsed:true});
+          openAiResult.confidence_score=confidenceResult.score;
+          openAiResult.confidence_breakdown=confidenceResult.breakdown;
+          openAiResult.market_bias_score=dScore.baseScore;
           const oaiTodayRaw=Array.isArray(openAiResult.today_beneficiary_stocks)?openAiResult.today_beneficiary_stocks as Record<string,unknown>[]:[];
           const oaiFullRaw=Array.isArray(openAiResult.beneficiary_stocks)?openAiResult.beneficiary_stocks as Record<string,unknown>[]:[];
           const oaiTodayTW=preFilterOpenaiTWStocks(oaiTodayRaw,log);const oaiFullTW=preFilterOpenaiTWStocks(oaiFullRaw,log);
@@ -1024,6 +1049,9 @@ Deno.serve(async (req:Request)=>{
     aiStrategyJson.sector_rotation_basis='previous_trading_day';
     aiStrategyJson.sector_rotation_rows=sectorData.length;
     aiStrategyJson.sector_rotation_data_status=sectorData.length>0?'available':'missing_previous_trading_day';
+    aiStrategyJson.market_bias_score=dScore.baseScore;
+    aiStrategyJson.confidence_score=confidenceResult.score;
+    aiStrategyJson.confidence_breakdown=confidenceResult.breakdown;
     aiStrategyJson.data_quality=dataQuality;
     aiStrategyJson.missing_sources=missingSources;
     aiStrategyJson.performance_timing={total_before_write_ms:timer.total(),data_quality:dataQuality,missing_sources:missingSources};
@@ -1031,7 +1059,8 @@ Deno.serve(async (req:Request)=>{
     timer.mark('FINAL_GUARDS_DONE');
 
     const marketBias=String(aiStrategyJson.market_bias||classifyMarketBias(dScore.baseScore));
-    const rawConfidenceScore=Number(aiStrategyJson.confidence_score)||dScore.baseScore;
+    const confidenceRaw=Number(aiStrategyJson.confidence_score);
+    const rawConfidenceScore=Number.isNaN(confidenceRaw)?confidenceResult.score:confidenceRaw;
     const writeResult=await writeReport(supabase,todayDate,aiStrategyJson,marketBias,rawConfidenceScore,reportMode,marketData,log,tradingDayInfo);
     timer.mark('REPORT_WRITTEN');
     if(!writeResult?.reportId){log('WRITE_FAILED');return corsResponse({success:false,error:'Failed to write report',report_date:todayDate,version:VERSION,logs},500);}

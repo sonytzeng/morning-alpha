@@ -46,14 +46,19 @@ function HomePageContent() {
   const fallbackMorningAlpha = data?.morningAlpha ?? null;
 
   // Date display — morningState first, then data.report, then today
-  const displayReportDate = ms?.reportDate || fallbackReport?.report_date || fallbackMorningAlpha?.reportDate || todayTaipeiStr;
+  const dataStatus = ms?.dataStatus ?? null;
+  const displayReportDate = dataStatus === 'missing_today_report' || dataStatus === 'market_closed'
+    ? todayTaipeiStr
+    : (ms?.reportDate || fallbackReport?.report_date || fallbackMorningAlpha?.reportDate || todayTaipeiStr);
   const displayMarketDataDate = ms?.marketDataDate || ms?.activeReport?.marketDataBasisDate || fallbackMorningAlpha?.marketDataBasisDate || '—';
   const displayUsMarketDate = ms?.usMarketDate || fallbackMorningAlpha?.usMarketBasisDate || '—';
   const displayCreatedAt = ms?.createdAtTaipei || '—';
 
   // Status — morningState first, then fallback
   const isTodayReport = ms?.isReportForToday ?? (fallbackReport?.report_date === todayTaipeiStr);
-  const reportExists = ms?.reportExists ?? (!!fallbackReport || !!fallbackMorningAlpha?.reportId);
+  const reportExists = dataStatus === 'missing_today_report'
+    ? false
+    : (ms?.reportExists ?? (!!fallbackReport || !!fallbackMorningAlpha?.reportId));
   const publishReady = ms?.publishReady ?? fallbackMorningAlpha?.publishReady ?? false;
   // ═══ V8.4 UNIFIED DATA CONTRACT — Single display state for ALL 5 pages ═══
   // Home, TodayReport, Opportunities, WarRoom, MemberNote ALL read from the same parser.
@@ -118,11 +123,13 @@ function HomePageContent() {
   // V377: Simplified display mode — report exists + is for today = normal
   // V8.3: Added market-closed check from ai_strategy_json
   const displayMode = useMemo(() => {
-    if (marketClosedInfo.closed) return 'market-closed';
+    if (dataStatus === 'market_closed' || marketClosedInfo.closed) return 'market-closed';
+    if (dataStatus === 'missing_today_report') return 'no-report';
+    if (dataStatus === 'stale_reference_only') return 'not-today';
     if (!reportExists) return 'no-report';
     if (!isTodayReport) return 'not-today';
     return 'normal';
-  }, [reportExists, isTodayReport, marketClosedInfo]);
+  }, [dataStatus, reportExists, isTodayReport, marketClosedInfo]);
 
   // V28: hasReportData — true when we have data from EITHER morningState or fallback
   const hasReportData = hasMorningState || !!fallbackReport || !!fallbackMorningAlpha?.reportId;
@@ -348,14 +355,14 @@ function HomePageContent() {
                     {statusBadge.label}
                   </span>
                   {displayMode === 'normal' && (
-                    <span className="text-white/40 text-xs">本篇為 {displayReportDate} 盤前報告，台股基準採用 {displayMarketDataDate} 收盤資料，美股與海外基準採用 {displayUsMarketDate} 盤前資料。</span>
+                    <span className="text-white/40 text-xs">本篇為 {displayReportDate} 盤前報告，台股基準採用 {displayMarketDataDate}{displayMarketDataDate === displayReportDate ? ' 資料基準' : ' 收盤資料'}，美股與海外基準採用 {displayUsMarketDate} 盤前資料。</span>
                   )}
                 </div>
 
                 {/* Market data basis — clear & explicit */}
                 <div className="flex flex-col gap-1.5 mb-4 max-w-2xl">
                   <p className="text-white/50 text-xs leading-relaxed">
-                    台股盤前基準：<span className="text-white/70 font-semibold">{displayMarketDataDate} 收盤</span>
+                    台股盤前基準：<span className="text-white/70 font-semibold">{displayMarketDataDate}{displayMarketDataDate === displayReportDate ? ' 資料基準' : ' 收盤'}</span>
                     {displayReportDate !== displayMarketDataDate && displayMarketDataDate !== '—' && (
                       <span className="text-white/35 ml-2">（前一個完整交易日，正常盤前邏輯）</span>
                     )}
@@ -435,7 +442,7 @@ function HomePageContent() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-foreground-400 text-[10px] w-28 flex-shrink-0 uppercase tracking-wider">台股盤前基準</span>
-                    <span className="text-foreground-900 text-xs font-semibold">{displayMarketDataDate} 收盤</span>
+                    <span className="text-foreground-900 text-xs font-semibold">{displayMarketDataDate}{displayMarketDataDate === displayReportDate ? ' 資料基準' : ' 收盤'}</span>
                     {displayReportDate !== displayMarketDataDate && displayMarketDataDate !== '—' && (
                       <span className="text-emerald-600 text-[10px]">（正常盤前邏輯）</span>
                     )}

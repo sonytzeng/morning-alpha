@@ -228,7 +228,7 @@ function TodayReportContent() {
   const effectiveIntradayRadar = activeIntradayRadar;
   const overviewRadarStatusText = activeIntradayRadar
     ? safeText(activeIntradayRadar.radar_status, '觀察中')
-    : '盤中資料尚未同步';
+    : '盤中資料未同步';
   const overviewBiasText = activeIntradayRadar
     ? safeText(activeIntradayRadar.market_bias, '') || biasFromRadarStatus(overviewRadarStatusText)
     : `盤前假設：${premarketBiasLabel}`;
@@ -237,7 +237,7 @@ function TodayReportContent() {
     : '待驗證';
   const overviewSyncText = activeIntradayRadar
     ? `已同步：${overviewRadarStatusText}`
-    : '尚未同步';
+    : '盤中資料未同步';
   const todaySentenceText = activeIntradayRadar?.summary
     ? safeText(activeIntradayRadar.summary)
     : '目前僅保留07:30盤前假設，今日方向需等待09:00後有效盤中資料驗證。';
@@ -251,6 +251,9 @@ function TodayReportContent() {
 
   const marketDataBasisDate =
     safeText(ai.market_data_latest_date || ai.tw_core_date || report?.report_date, '—');
+  const marketDataBasisLabel = marketDataBasisDate === report?.report_date
+    ? `${marketDataBasisDate} 資料基準`
+    : `${marketDataBasisDate} 收盤`;
 
   // V8: Beneficiary stocks filtered via ai_strategy_json radar data (not market_data table)
   const beneficiaryStocks = (() => {
@@ -450,7 +453,7 @@ function TodayReportContent() {
                 <div className="flex items-center gap-4 flex-wrap">
                   <div>
                     <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-0.5">台股盤前基準</p>
-                    <p className="text-sky-200 text-xs font-semibold">{marketDataBasisDate} 收盤</p>
+                    <p className="text-sky-200 text-xs font-semibold">{marketDataBasisLabel}</p>
                   </div>
                   <div>
                     <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-0.5">盤中資料</p>
@@ -523,7 +526,7 @@ function TodayReportContent() {
             ) : (
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                  <p className="text-slate-100 font-semibold text-sm mb-2">盤中資料尚未同步</p>
+                  <p className="text-slate-100 font-semibold text-sm mb-2">盤中資料未同步</p>
                   <p className="text-slate-400 text-sm leading-relaxed">
                     目前僅顯示 07:30 盤前假設，尚未取得今日 09:00 後盤中資料。昨日收盤漲跌不會作為今日盤中確認。
                   </p>

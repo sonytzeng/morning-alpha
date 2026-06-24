@@ -360,6 +360,9 @@ function OpportunitiesContent() {
   const hasV8BeneficiaryChain = v8BeneficiaryChain?.status === 'ready' && (v8BeneficiaryChain.beneficiaries || []).length > 0;
   const coreDisplayCount = hasV8BeneficiaryChain ? (v8BeneficiaryChain?.beneficiaries || []).length : coreStocks.length;
   const watchDisplayCount = hasV8BeneficiaryChain ? 0 : extendedStocks.length + scenarioStocks.length;
+  const confidenceText = ds.confidenceScore != null && ds.confidenceScore > 0
+    ? `${ds.confidenceScore}/100`
+    : '待驗證';
 
   return (
     <div className="min-h-screen bg-background-50 flex flex-col overflow-x-hidden">
@@ -395,7 +398,7 @@ function OpportunitiesContent() {
               </div>
               <div className="p-3 rounded-xl bg-background-100 border border-background-200/70">
                 <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">把握度</p>
-                <p className="text-foreground-900 font-bold text-sm">{ds.confidenceScore != null ? `${ds.confidenceScore}/100` : '—'}</p>
+                <p className="text-foreground-900 font-bold text-sm">{confidenceText}</p>
               </div>
               <div className="p-3 rounded-xl bg-background-100 border border-background-200/70">
                 <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">核心受惠</p>

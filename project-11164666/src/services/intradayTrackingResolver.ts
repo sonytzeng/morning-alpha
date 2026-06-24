@@ -201,9 +201,9 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
     // A radar row exists, but it is not a verified today intraday record. Never render its numbers.
     intradayStatus = 'stale';
     radarDisplay = {
-      statusText: '盤中資料尚未同步',
+      statusText: '盤中資料未同步',
       description: radarIsToday
-        ? '盤中資料尚未同步。目前僅顯示 07:30 盤前假設，尚未取得今日 09:00 後盤中資料。昨日收盤漲跌不會作為今日盤中確認。'
+        ? '盤中資料未同步。目前僅顯示 07:30 盤前假設，尚未取得今日 09:00 後盤中資料。昨日收盤漲跌不會作為今日盤中確認。'
         : `目前僅有 ${radarDate || '—'} 的舊雷達資料。今日尚未開盤或資料尚未更新。請等待 09:30 / 10:30 / 13:00。`,
       color: 'amber',
       showContent: false,
@@ -345,14 +345,23 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
       dataDate: todayDate,
       isToday: true,
     };
-  } else if (sectorItems.length > 0 && sectorScoreDate) {
-    // Has data but not today's
+  } else if (sectorItems.length > 0 && sectorScoreDate && (sectorFreshness?.canUseAsReference ?? false)) {
     sectorRotationStatus = 'stale_reference';
     sectorDisplay = {
       statusText: '上一交易日類股參考',
-      description: `資料日期：${sectorScoreDate}｜此資料為上一筆類股輪動參考，不代表今日即時輪動。`,
+      description: `資料日期：${sectorScoreDate}｜此資料為上一交易日類股輪動參考，不代表今日即時輪動，也不參與今日判斷分數。`,
       color: 'slate',
       showContent: true,
+      dataDate: sectorScoreDate,
+      isToday: false,
+    };
+  } else if (sectorItems.length > 0 && sectorScoreDate) {
+    sectorRotationStatus = 'stale';
+    sectorDisplay = {
+      statusText: '今日類股輪動尚未產生',
+      description: sectorFreshness?.warning || `目前最新類股資料為 ${sectorScoreDate}，未更新至今日可用基準，暫不顯示舊分數。`,
+      color: 'amber',
+      showContent: false,
       dataDate: sectorScoreDate,
       isToday: false,
     };

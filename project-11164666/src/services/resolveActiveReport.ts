@@ -16,7 +16,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { formatTaipeiDate } from '@/utils/tradingDay';
+import { getFrontendMarketDateState, type FrontendMarketStatus } from '@/utils/marketDate';
 import {
   REPORTS_STABLE_COLUMNS,
   fetchBestReport,
@@ -49,6 +49,85 @@ export interface ResolveResult {
   isHistoricalFallback: boolean;
   /** The fallback report_date if using historical data */
   fallbackReportDate: string | null;
+  /** Asia/Taipei current date */
+  today_date: string;
+  /** Today's TWSE status, independent from report_date */
+  market_status: FrontendMarketStatus;
+  /** Weekend / holiday reason when market is closed */
+  closed_reason: string | null;
+  /** Active report only when it is valid for today's foreground use */
+  active_report: MorningAlphaNormalizedReport | null;
+  active_report_date: string | null;
+  market_data_date: string | null;
+  is_today_report: boolean;
+  is_stale_report: boolean;
+  stale_reason: string | null;
+  data_status: 'ready' | 'missing_today_report' | 'market_closed' | 'stale_reference_only';
+}
+
+function toReportRow(data: Record<string, unknown>): ReportRow {
+  return {
+    id: String(data.id || ''),
+    report_date: String(data.report_date || ''),
+    market_bias: data.market_bias ? String(data.market_bias) : null,
+    confidence_score: data.confidence_score != null ? Number(data.confidence_score) : null,
+    created_at: String(data.created_at || ''),
+    ai_strategy_json: (data.ai_strategy_json as Record<string, unknown>) || null,
+    summary: data.summary ? String(data.summary) : null,
+    watch_sectors_json: Array.isArray(data.watch_sectors_json) ? (data.watch_sectors_json as Record<string, unknown>[]) : null,
+  };
+}
+
+function getMarketDataDate(row: ReportRow | null): string | null {
+  const ai = row?.ai_strategy_json as Record<string, unknown> | null;
+  const value = ai?.market_data_date || ai?.tw_core_date || null;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function buildResolveResult(params: {
+  report: MorningAlphaNormalizedReport;
+  rawRow: ReportRow | null;
+  source: ResolveResult['source'];
+  queriedDate: string;
+  todayDate: string;
+  marketStatus: FrontendMarketStatus;
+  closedReason: string | null;
+  dataStatus: ResolveResult['data_status'];
+  staleReason?: string | null;
+}): ResolveResult {
+  const {
+    report,
+    rawRow,
+    source,
+    queriedDate,
+    todayDate,
+    marketStatus,
+    closedReason,
+    dataStatus,
+    staleReason = null,
+  } = params;
+  const isTodayReport = !!rawRow && rawRow.report_date === todayDate;
+  const isHistoricalFallback = !!rawRow && rawRow.report_date !== todayDate;
+  const activeReport = dataStatus === 'ready' ? report : null;
+
+  return {
+    report,
+    rawRow,
+    source,
+    queriedDate,
+    isHistoricalFallback,
+    fallbackReportDate: isHistoricalFallback ? rawRow?.report_date ?? null : null,
+    today_date: todayDate,
+    market_status: marketStatus,
+    closed_reason: closedReason,
+    active_report: activeReport,
+    active_report_date: rawRow?.report_date ?? null,
+    market_data_date: getMarketDataDate(rawRow),
+    is_today_report: isTodayReport,
+    is_stale_report: dataStatus === 'stale_reference_only' || isHistoricalFallback,
+    stale_reason: staleReason,
+    data_status: dataStatus,
+  };
 }
 
 /**
@@ -59,7 +138,8 @@ export interface ResolveResult {
 export async function resolveActiveMorningAlphaReport(
   urlReportDate?: string | null,
 ): Promise<ResolveResult> {
-  const todayStr = formatTaipeiDate();
+  const market = getFrontendMarketDateState();
+  const todayStr = market.today_date;
 
   // ── Rule B: URL param only if valid ──
   if (urlReportDate && isValidDateParam(urlReportDate)) {
@@ -70,24 +150,19 @@ export async function resolveActiveMorningAlphaReport(
       .maybeSingle();
 
     if (!error && data) {
-      const row: ReportRow = {
-        id: String(data.id || ''),
-        report_date: String(data.report_date || ''),
-        market_bias: data.market_bias ? String(data.market_bias) : null,
-        confidence_score: data.confidence_score != null ? Number(data.confidence_score) : null,
-        created_at: String(data.created_at || ''),
-        ai_strategy_json: (data.ai_strategy_json as Record<string, unknown>) || null,
-        summary: data.summary ? String(data.summary) : null,
-        watch_sectors_json: Array.isArray(data.watch_sectors_json) ? (data.watch_sectors_json as Record<string, unknown>[]) : null,
-      };
-      return {
-        report: normalizeMorningAlphaReport(row),
+      const row = toReportRow(data as Record<string, unknown>);
+      const normalized = normalizeMorningAlphaReport(row);
+      return buildResolveResult({
+        report: normalized,
         rawRow: row,
         source: 'url_param',
         queriedDate: urlReportDate,
-        isHistoricalFallback: urlReportDate !== todayStr,
-        fallbackReportDate: urlReportDate !== todayStr ? urlReportDate : null,
-      };
+        todayDate: todayStr,
+        marketStatus: market.market_status,
+        closedReason: market.closed_reason,
+        dataStatus: urlReportDate === todayStr ? 'ready' : 'stale_reference_only',
+        staleReason: urlReportDate !== todayStr ? `URL 指定歷史報告 ${urlReportDate}` : null,
+      });
     }
     // URL param didn't match — fall through to normal resolution
   }
@@ -100,48 +175,60 @@ export async function resolveActiveMorningAlphaReport(
     .maybeSingle();
 
   if (!todayErr && todayData) {
-    const row: ReportRow = {
-      id: String(todayData.id || ''),
-      report_date: String(todayData.report_date || ''),
-      market_bias: todayData.market_bias ? String(todayData.market_bias) : null,
-      confidence_score: todayData.confidence_score != null ? Number(todayData.confidence_score) : null,
-      created_at: String(todayData.created_at || ''),
-      ai_strategy_json: (todayData.ai_strategy_json as Record<string, unknown>) || null,
-      summary: todayData.summary ? String(todayData.summary) : null,
-      watch_sectors_json: Array.isArray(todayData.watch_sectors_json) ? (todayData.watch_sectors_json as Record<string, unknown>[]) : null,
-    };
-    return {
+    const row = toReportRow(todayData as Record<string, unknown>);
+    return buildResolveResult({
       report: normalizeMorningAlphaReport(row),
       rawRow: row,
       source: 'today_match',
       queriedDate: todayStr,
-      isHistoricalFallback: false,
-      fallbackReportDate: null,
-    };
+      todayDate: todayStr,
+      marketStatus: market.market_status,
+      closedReason: market.closed_reason,
+      dataStatus: 'ready',
+    });
   }
 
-  // ── Rule B: Fallback to best report ──
-  const bestRow = await fetchBestReport();
+  // ── Market closed: latest report is reference only, never today's report ──
+  if (market.market_status === 'closed') {
+    const bestRow = await fetchBestReport();
 
-  if (bestRow) {
-    const isHistorical = bestRow.report_date !== todayStr;
-    return {
-      report: normalizeMorningAlphaReport(bestRow),
-      rawRow: bestRow,
-      source: 'best_fallback',
-      queriedDate: bestRow.report_date,
-      isHistoricalFallback: isHistorical,
-      fallbackReportDate: isHistorical ? bestRow.report_date : null,
-    };
+    if (bestRow) {
+      return buildResolveResult({
+        report: normalizeMorningAlphaReport(bestRow),
+        rawRow: bestRow,
+        source: 'best_fallback',
+        queriedDate: bestRow.report_date,
+        todayDate: todayStr,
+        marketStatus: market.market_status,
+        closedReason: market.closed_reason,
+        dataStatus: 'market_closed',
+        staleReason: `今日休市（${market.closed_reason || '休市'}），${bestRow.report_date} 僅供歷史參考`,
+      });
+    }
+
+    return buildResolveResult({
+      report: normalizeMorningAlphaReport(null),
+      rawRow: null,
+      source: 'empty',
+      queriedDate: todayStr,
+      todayDate: todayStr,
+      marketStatus: market.market_status,
+      closedReason: market.closed_reason,
+      dataStatus: 'market_closed',
+      staleReason: `今日休市（${market.closed_reason || '休市'}）`,
+    });
   }
 
-  // ── Rule F: No reports at all ──
-  return {
+  // ── Trading day: never backfill today with latest report ──
+  return buildResolveResult({
     report: normalizeMorningAlphaReport(null),
     rawRow: null,
     source: 'empty',
     queriedDate: todayStr,
-    isHistoricalFallback: false,
-    fallbackReportDate: null,
-  };
+    todayDate: todayStr,
+    marketStatus: market.market_status,
+    closedReason: market.closed_reason,
+    dataStatus: 'missing_today_report',
+    staleReason: '交易日尚未產生今日盤前報告',
+  });
 }

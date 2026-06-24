@@ -65,6 +65,11 @@ export interface MorningAlphaState {
   isReportForToday: boolean;
   /** True when a report exists AND its report_date is today */
   todayReportExists: boolean;
+  /** Today's TWSE status from the active report resolver */
+  marketStatus: 'open' | 'closed';
+  closedReason: string | null;
+  dataStatus: ResolveResult['data_status'];
+  staleReason: string | null;
 
   // ── Existence & Quality ──
   reportExists: boolean;
@@ -314,19 +319,23 @@ export async function resolveMorningAlphaState(
   const publishReady = normalized.publishReady;
 
   const displayStatus = {
-    overallLabel: !reportExists
-      ? '今日盤前報告尚未產生'
-      : !isReportForToday
-        ? `今日盤前報告尚未產生，最新報告日期為 ${reportDateStr}`
-        : '今日報告已產生',
+    overallLabel: resolved.data_status === 'market_closed'
+      ? `今日休市${resolved.closed_reason ? `（${resolved.closed_reason}）` : ''}`
+      : resolved.data_status === 'missing_today_report'
+        ? '今日盤前報告尚未產生'
+        : resolved.data_status === 'stale_reference_only'
+          ? `上一交易日參考（${reportDateStr}）`
+          : '今日報告已產生',
     memberContentLabel: hasMemberContent ? '完整公開' : '本報告尚未產生會員研究筆記',
     subscriptionLabel: '尚未啟用付款',
     visibilityLabel: '完整公開',
-    publishBadge: !reportExists
-      ? '尚未產生'
-      : !isReportForToday
-        ? '非今日報告'
-        : '今日報告已產生',
+    publishBadge: resolved.data_status === 'ready'
+      ? '今日報告已產生'
+      : resolved.data_status === 'market_closed'
+        ? '今日休市'
+        : resolved.data_status === 'stale_reference_only'
+          ? '歷史參考'
+          : '尚未產生',
   };
 
   const displayBadges = buildDisplayBadges(normalized, reportExists, publishReady);
@@ -364,6 +373,10 @@ export async function resolveMorningAlphaState(
     // ── Stable Mode ──
     isReportForToday,
     todayReportExists,
+    marketStatus: resolved.market_status,
+    closedReason: resolved.closed_reason,
+    dataStatus: resolved.data_status,
+    staleReason: resolved.stale_reason,
 
     // ── Existence & Quality ──
     reportExists,

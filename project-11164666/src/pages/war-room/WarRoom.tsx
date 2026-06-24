@@ -44,16 +44,20 @@ function formatCloseResult(change: number | null, direction: string): string {
   return `TAIEX ${formatPercent(change)}${direction ? `｜${direction}` : ''}`;
 }
 
+function normalizePredictionResult(value: unknown): string {
+  const v = String(value || '').toLowerCase();
+  if (v === 'hit' || v === 'correct') return '今日盤前方向命中';
+  if (v === 'partial') return '方向部分成立';
+  if (v === 'miss' || v === 'wrong') return '今日盤前方向失效';
+  if (v === 'pending' || v === 'pending_real_market_data') return '等待有效收盤資料';
+  return '等待有效收盤資料';
+}
+
 function formatVerdictLabel(value: unknown, fallback: unknown): string {
   const label = safeText(value);
   if (label && !['hit', 'miss', 'partial', 'pending'].includes(label.toLowerCase())) return label;
 
-  const result = safeText(fallback || value).toLowerCase();
-  if (result === 'hit') return '今日盤前方向命中';
-  if (result === 'partial') return '方向部分成立';
-  if (result === 'miss') return '今日盤前方向失效';
-  if (result === 'pending' || result === 'pending_real_market_data') return '等待有效收盤資料';
-  return '等待有效收盤資料';
+  return normalizePredictionResult(fallback || value);
 }
 
 function closeVerificationTone(value: string): SegmentDisplay['color'] {
@@ -106,7 +110,12 @@ function WarRoomContent() {
   }, [morningState]);
   const reportAI = isRecord(report?.ai_strategy_json) ? report.ai_strategy_json as Record<string, unknown> : null;
   const rawAI = displayState?.rawAI ?? reportAI;
-  const closeVerification = rawAI?.closing_verification || todayCloseVerification || null;
+  const closeVerification =
+    rawAI?.closing_verification && typeof rawAI.closing_verification === 'object'
+      ? rawAI.closing_verification as Record<string, unknown>
+      : todayCloseVerification && typeof todayCloseVerification === 'object'
+        ? todayCloseVerification as Record<string, unknown>
+        : null;
   const closeVerificationRecord =
     isRecord(closeVerification) && Object.keys(closeVerification).length > 0 ? closeVerification : null;
   const closePredictedBias = safeText(
@@ -118,23 +127,30 @@ function WarRoomContent() {
       closeVerificationRecord?.confidence_score ??
       displayState?.confidenceScore,
   );
+  const closeActualTaiexChangeRaw = closeVerificationRecord?.actual_taiex_change;
   const closeTaiexChange =
-    typeof closeVerificationRecord?.actual_taiex_change === 'number'
-      ? closeVerificationRecord.actual_taiex_change
+    typeof closeActualTaiexChangeRaw === 'number'
+      ? closeActualTaiexChangeRaw
+      : typeof closeActualTaiexChangeRaw === 'string' && closeActualTaiexChangeRaw.trim() !== ''
+        ? Number(closeActualTaiexChangeRaw)
+        : null;
+  const closeActualTaiexChange =
+    closeTaiexChange !== null && Number.isFinite(closeTaiexChange)
+      ? closeTaiexChange
       : null;
   const closeActualDirection = safeText(closeVerificationRecord?.actual_direction);
-  const closeResultText = formatCloseResult(closeTaiexChange, closeActualDirection);
+  const closeResultText =
+    closeActualTaiexChange !== null && Number.isFinite(closeActualTaiexChange)
+      ? `TAIEX ${closeActualTaiexChange >= 0 ? '+' : ''}${closeActualTaiexChange.toFixed(2)}%`
+      : '等待收盤資料';
   const closeAccuracyScore = safeNumber(closeVerificationRecord?.accuracy_score);
-  const closeVerdictLabel = formatVerdictLabel(
-    closeVerificationRecord?.verdict_label,
-    closeVerificationRecord?.prediction_result ??
-      closeVerificationRecord?.verification_result ??
-      closeVerificationRecord?.verification_label,
-  );
-  const closeVerificationNote = safeText(
-    closeVerificationRecord?.verification_note,
-    '今日尚未完成收盤驗證，收盤後系統會回寫盤前判斷是否成立。',
-  );
+  const closeVerdictLabel =
+    String(closeVerificationRecord?.verdict_label || '').trim() ||
+    normalizePredictionResult(closeVerificationRecord?.prediction_result || closeVerificationRecord?.status);
+  const closeVerificationNote =
+    String(closeVerificationRecord?.verification_note || '').trim() ||
+    String(closeVerificationRecord?.reason || '').trim() ||
+    '今日尚未完成收盤驗證，收盤後系統會回寫盤前判斷是否成立。';
   const closeMissReason = safeText(closeVerificationRecord?.miss_reason);
   const closeFailedAssumptions = safeStringArray(closeVerificationRecord?.failed_assumptions);
   const closeTomorrowWatchPoints = safeStringArray(closeVerificationRecord?.tomorrow_watch_points);
@@ -319,6 +335,16 @@ function WarRoomContent() {
       case 'slate': return 'bg-slate-700/60 text-slate-400 border-slate-600/50';
     }
   };
+
+  const showTodaySectorRotation = tracking.hasTodaySectorRotation && (sectorFreshness?.canUseAsTodayStrategy ?? false);
+  const showSectorReference = !showTodaySectorRotation && (sectorFreshness?.canUseAsReference ?? false) && sectorData.length > 0;
+  const showSectorCards = showTodaySectorRotation || showSectorReference;
+  const sectorTitle = showTodaySectorRotation
+    ? '今日類股輪動'
+    : showSectorReference
+      ? '上一交易日類股輪動參考'
+      : '類股輪動';
+  const sectorBadgeText = showSectorReference ? '歷史參考' : tracking.sectorRotation.statusText;
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col overflow-x-hidden">
@@ -640,23 +666,23 @@ function WarRoomContent() {
               <div className="flex items-center gap-2.5">
                 <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">14:20</span>
                 <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
-                  {tracking.hasTodaySectorRotation ? '今日類股輪動' : '類股輪動'}
+                  {sectorTitle}
                 </h2>
               </div>
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${segmentBadgeStyle(tracking.sectorRotation.color)}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${tracking.sectorRotation.color === 'green' ? 'bg-emerald-400' : tracking.sectorRotation.color === 'red' ? 'bg-red-400' : tracking.sectorRotation.color === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
-                {tracking.sectorRotation.statusText}
+                {sectorBadgeText}
               </span>
             </div>
 
-            {tracking.sectorRotation.showContent && sectorData.length > 0 ? (
+            {showSectorCards ? (
               <div className="space-y-3">
                 {/* Stale reference warning */}
-                {(tracking.sectorRotationStatus === 'stale_reference') && (
+                {showSectorReference && (
                   <div className="p-3 rounded-lg bg-amber-500/[0.06] border border-amber-400/30 flex items-start gap-2">
                     <i className="ri-history-line text-amber-400 text-sm mt-0.5"></i>
                     <p className="text-amber-300/70 text-xs leading-relaxed">
-                      此資料為上一筆類股輪動參考（{tracking.sectorRotationDate}），不代表今日即時輪動。
+                      此區塊為上一交易日類股輪動參考（{tracking.sectorRotationDate}），不代表今日即時輪動，也不參與今日判斷分數。
                     </p>
                   </div>
                 )}
@@ -665,7 +691,7 @@ function WarRoomContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {sectorData.slice(0, 6).map((item) => {
                     const colors = getSignalColor(item.signal_label);
-                    const isFresh = tracking.hasTodaySectorRotation;
+                    const isFresh = showTodaySectorRotation;
                     return (
                       <div key={item.sector} className={`p-3 rounded-xl border ${isFresh ? `${colors.bg} ${colors.border}` : 'bg-slate-800/70 border-slate-700/70'}`}>
                         <div className="flex items-center justify-between mb-1.5">
@@ -699,7 +725,7 @@ function WarRoomContent() {
             )}
 
             {/* Weak / Avoid sectors */}
-            {sectorLoaded && sectorData.filter((s) => s.rotation_score < 20).length > 0 && tracking.sectorRotation.showContent && (
+            {sectorLoaded && showTodaySectorRotation && sectorData.filter((s) => s.rotation_score < 20).length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/5">
                 <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] font-semibold mb-3">
                   相對弱勢 / 避開方向

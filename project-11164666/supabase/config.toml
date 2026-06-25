@@ -7,3 +7,6 @@ verify_jwt = false
 
 [functions.closing-verification-engine]
 verify_jwt = false
+
+[functions.get-report-payload]
+verify_jwt = false

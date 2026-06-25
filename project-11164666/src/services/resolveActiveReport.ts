@@ -44,7 +44,7 @@ export interface ResolveResult {
   /** The raw Supabase row */
   rawRow: ReportRow | null;
   /** Which resolution path was used */
-  source: 'server_trimmed_payload' | 'today_match' | 'best_fallback' | 'url_param' | 'empty';
+  source: 'server_trimmed_payload' | 'server_payload_unavailable' | 'today_match' | 'best_fallback' | 'url_param' | 'empty';
   /** The report_date that was queried */
   queriedDate: string;
   /** True when using historical fallback (not today's report) */
@@ -64,10 +64,10 @@ export interface ResolveResult {
   is_today_report: boolean;
   is_stale_report: boolean;
   stale_reason: string | null;
-  data_status: 'ready' | 'missing_today_report' | 'market_closed' | 'stale_reference_only';
+  data_status: 'ready' | 'missing_today_report' | 'market_closed' | 'stale_reference_only' | 'unavailable';
   tier: SubscriptionTier;
   locked_sections: string[];
-  payload_source: 'server_trimmed_payload' | 'direct_reports_fallback' | 'empty';
+  payload_source: 'server_trimmed_payload' | 'server_payload_unavailable' | 'direct_reports_fallback' | 'empty';
 }
 
 function toReportRow(data: Record<string, unknown>): ReportRow {
@@ -177,6 +177,62 @@ function getServerPayloadDataStatus(params: {
     dataStatus: 'missing_today_report',
     staleReason: '交易日尚未產生今日盤前報告',
   };
+}
+
+function getAllLockedSections(): string[] {
+  return [
+    'opportunities_full',
+    'member_note_full',
+    'war_room_full',
+    'vip_fund_flow',
+    'vip_accuracy_history',
+    'vip_alerts',
+  ];
+}
+
+function buildUnavailableReportRow(todayDate: string): ReportRow {
+  return {
+    id: `server-payload-unavailable:${todayDate}`,
+    report_date: todayDate,
+    market_bias: '資料暫不可用',
+    confidence_score: null,
+    created_at: '',
+    ai_strategy_json: null,
+    summary: '資料暫時無法載入，請稍後再試',
+    watch_sectors_json: null,
+  };
+}
+
+function buildServerPayloadUnavailableResult(params: {
+  todayDate: string;
+  marketStatus: FrontendMarketStatus;
+  closedReason: string | null;
+}): ResolveResult {
+  const { todayDate, marketStatus, closedReason } = params;
+  const row = buildUnavailableReportRow(todayDate);
+  return buildResolveResult({
+    report: normalizeMorningAlphaReport(row),
+    rawRow: row,
+    source: 'server_payload_unavailable',
+    queriedDate: todayDate,
+    todayDate,
+    marketStatus,
+    closedReason,
+    dataStatus: 'unavailable',
+    staleReason: '資料暫時無法載入，請稍後再試',
+    tier: 'free',
+    lockedSections: getAllLockedSections(),
+    payloadSource: 'server_payload_unavailable',
+  });
+}
+
+function isDebugFullFallbackEnabled(): boolean {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('debug_full_fallback') !== '1') return false;
+  const hostname = window.location.hostname;
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  return isLocalhost || import.meta.env.DEV === true;
 }
 
 async function resolveViaServerTrimmedPayload(params: {
@@ -330,8 +386,21 @@ export async function resolveActiveMorningAlphaReport(
     });
     if (serverResult) return serverResult;
   } catch (error) {
-    console.warn('SECURITY_FALLBACK_FULL_REPORT_USED', error);
+    if (isDebugFullFallbackEnabled()) {
+      // Dev-only. Never enable in production.
+      console.warn('SECURITY_DEBUG_FULL_REPORT_FALLBACK_USED', error);
+      return resolveActiveMorningAlphaReportFromReports(urlReportDate, market);
+    }
+    return buildServerPayloadUnavailableResult({
+      todayDate: todayStr,
+      marketStatus: market.market_status,
+      closedReason: market.closed_reason,
+    });
   }
 
-  return resolveActiveMorningAlphaReportFromReports(urlReportDate, market);
+  return buildServerPayloadUnavailableResult({
+    todayDate: todayStr,
+    marketStatus: market.market_status,
+    closedReason: market.closed_reason,
+  });
 }

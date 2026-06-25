@@ -24,6 +24,8 @@ import {
   type ReportRow,
   type MorningAlphaNormalizedReport,
 } from '@/lib/morningAlphaReportAdapter';
+import { callGetReportPayload } from '@/services/entitlementService';
+import type { ServerReportPayloadResponse, SubscriptionTier } from '@/types/subscription';
 
 /**
  * Validate that a string looks like a real YYYY-MM-DD date.
@@ -42,7 +44,7 @@ export interface ResolveResult {
   /** The raw Supabase row */
   rawRow: ReportRow | null;
   /** Which resolution path was used */
-  source: 'today_match' | 'best_fallback' | 'url_param' | 'empty';
+  source: 'server_trimmed_payload' | 'today_match' | 'best_fallback' | 'url_param' | 'empty';
   /** The report_date that was queried */
   queriedDate: string;
   /** True when using historical fallback (not today's report) */
@@ -63,6 +65,9 @@ export interface ResolveResult {
   is_stale_report: boolean;
   stale_reason: string | null;
   data_status: 'ready' | 'missing_today_report' | 'market_closed' | 'stale_reference_only';
+  tier: SubscriptionTier;
+  locked_sections: string[];
+  payload_source: 'server_trimmed_payload' | 'direct_reports_fallback' | 'empty';
 }
 
 function toReportRow(data: Record<string, unknown>): ReportRow {
@@ -84,6 +89,21 @@ function getMarketDataDate(row: ReportRow | null): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function toTrimmedReportRow(response: ServerReportPayloadResponse): ReportRow | null {
+  if (!response.payload || !response.report_date) return null;
+  const payload = response.payload;
+  return {
+    id: `server-trimmed:${response.report_date}`,
+    report_date: response.report_date,
+    market_bias: typeof payload.market_bias === 'string' ? payload.market_bias : null,
+    confidence_score: payload.confidence_score != null ? Number(payload.confidence_score) : null,
+    created_at: '',
+    ai_strategy_json: payload,
+    summary: typeof payload.today_quote === 'string' ? payload.today_quote : null,
+    watch_sectors_json: null,
+  };
+}
+
 function buildResolveResult(params: {
   report: MorningAlphaNormalizedReport;
   rawRow: ReportRow | null;
@@ -94,6 +114,9 @@ function buildResolveResult(params: {
   closedReason: string | null;
   dataStatus: ResolveResult['data_status'];
   staleReason?: string | null;
+  tier?: SubscriptionTier;
+  lockedSections?: string[];
+  payloadSource?: ResolveResult['payload_source'];
 }): ResolveResult {
   const {
     report,
@@ -105,6 +128,9 @@ function buildResolveResult(params: {
     closedReason,
     dataStatus,
     staleReason = null,
+    tier = 'free',
+    lockedSections = [],
+    payloadSource = rawRow ? 'direct_reports_fallback' : 'empty',
   } = params;
   const isTodayReport = !!rawRow && rawRow.report_date === todayDate;
   const isHistoricalFallback = !!rawRow && rawRow.report_date !== todayDate;
@@ -127,18 +153,69 @@ function buildResolveResult(params: {
     is_stale_report: dataStatus === 'stale_reference_only' || isHistoricalFallback,
     stale_reason: staleReason,
     data_status: dataStatus,
+    tier,
+    locked_sections: lockedSections,
+    payload_source: payloadSource,
   };
 }
 
-/**
- * Resolve the active Morning Alpha report.
- *
- * @param urlReportDate - Optional reportDate from URL params (e.g. from /reports/:reportDate)
- */
-export async function resolveActiveMorningAlphaReport(
-  urlReportDate?: string | null,
+function getServerPayloadDataStatus(params: {
+  rawRow: ReportRow;
+  todayDate: string;
+  marketStatus: FrontendMarketStatus;
+  closedReason: string | null;
+}): { dataStatus: ResolveResult['data_status']; staleReason: string | null } {
+  const { rawRow, todayDate, marketStatus, closedReason } = params;
+  if (rawRow.report_date === todayDate) return { dataStatus: 'ready', staleReason: null };
+  if (marketStatus === 'closed') {
+    return {
+      dataStatus: 'market_closed',
+      staleReason: `今日休市（${closedReason || '休市'}），${rawRow.report_date} 僅供歷史參考`,
+    };
+  }
+  return {
+    dataStatus: 'missing_today_report',
+    staleReason: '交易日尚未產生今日盤前報告',
+  };
+}
+
+async function resolveViaServerTrimmedPayload(params: {
+  urlReportDate?: string | null;
+  todayDate: string;
+  marketStatus: FrontendMarketStatus;
+  closedReason: string | null;
+}): Promise<ResolveResult | null> {
+  const { urlReportDate, todayDate, marketStatus, closedReason } = params;
+  const requestedDate = urlReportDate && isValidDateParam(urlReportDate) ? urlReportDate : null;
+  const response = await callGetReportPayload({ reportDate: requestedDate });
+  const row = toTrimmedReportRow(response);
+  if (!row) return null;
+  const normalized = normalizeMorningAlphaReport(row);
+  const isUrlHistorical = Boolean(requestedDate && requestedDate !== todayDate);
+  const status = isUrlHistorical
+    ? { dataStatus: 'stale_reference_only' as const, staleReason: `URL 指定歷史報告 ${requestedDate}` }
+    : getServerPayloadDataStatus({ rawRow: row, todayDate, marketStatus, closedReason });
+
+  return buildResolveResult({
+    report: normalized,
+    rawRow: row,
+    source: 'server_trimmed_payload',
+    queriedDate: requestedDate || row.report_date || todayDate,
+    todayDate,
+    marketStatus,
+    closedReason,
+    dataStatus: status.dataStatus,
+    staleReason: status.staleReason,
+    tier: response.tier,
+    lockedSections: response.locked_sections || [],
+    payloadSource: 'server_trimmed_payload',
+  });
+}
+
+async function resolveActiveMorningAlphaReportFromReports(
+  urlReportDate: string | null | undefined,
+  market: ReturnType<typeof getFrontendMarketDateState>,
 ): Promise<ResolveResult> {
-  const market = getFrontendMarketDateState();
   const todayStr = market.today_date;
 
   // ── Rule B: URL param only if valid ──
@@ -231,4 +308,30 @@ export async function resolveActiveMorningAlphaReport(
     dataStatus: 'missing_today_report',
     staleReason: '交易日尚未產生今日盤前報告',
   });
+}
+
+/**
+ * Resolve the active Morning Alpha report.
+ *
+ * @param urlReportDate - Optional reportDate from URL params (e.g. from /reports/:reportDate)
+ */
+export async function resolveActiveMorningAlphaReport(
+  urlReportDate?: string | null,
+): Promise<ResolveResult> {
+  const market = getFrontendMarketDateState();
+  const todayStr = market.today_date;
+
+  try {
+    const serverResult = await resolveViaServerTrimmedPayload({
+      urlReportDate,
+      todayDate: todayStr,
+      marketStatus: market.market_status,
+      closedReason: market.closed_reason,
+    });
+    if (serverResult) return serverResult;
+  } catch (error) {
+    console.warn('SECURITY_FALLBACK_FULL_REPORT_USED', error);
+  }
+
+  return resolveActiveMorningAlphaReportFromReports(urlReportDate, market);
 }

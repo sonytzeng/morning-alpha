@@ -26,7 +26,8 @@
  *   reportExists=true, publishReady=true → "可公開"
  *   LINE/Reels/Social readiness does NOT affect reportExists or display.
  *
- * Member content: ALWAYS public during beta. No paywall, no lock, no blur, no preview.
+ * P28: report content should come from server-trimmed payload when available.
+ * Frontend gates are display scaffolding only; raw data security requires server-side trimming + RLS.
  */
 
 import { resolveActiveMorningAlphaReport, type ResolveResult } from '@/services/resolveActiveReport';
@@ -70,6 +71,9 @@ export interface MorningAlphaState {
   closedReason: string | null;
   dataStatus: ResolveResult['data_status'];
   staleReason: string | null;
+  tier: ResolveResult['tier'];
+  lockedSections: string[];
+  payloadSource: ResolveResult['payload_source'];
 
   // ── Existence & Quality ──
   reportExists: boolean;
@@ -377,6 +381,9 @@ export async function resolveMorningAlphaState(
     closedReason: resolved.closed_reason,
     dataStatus: resolved.data_status,
     staleReason: resolved.stale_reason,
+    tier: resolved.tier,
+    lockedSections: resolved.locked_sections,
+    payloadSource: resolved.payload_source,
 
     // ── Existence & Quality ──
     reportExists,

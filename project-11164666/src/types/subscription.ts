@@ -15,3 +15,14 @@ export interface UserEntitlement {
   isLoggedIn: boolean;
   isAdmin: boolean;
 }
+
+export interface ServerReportPayloadResponse {
+  tier: SubscriptionTier;
+  report_date: string | null;
+  payload: Record<string, unknown> | null;
+  locked_sections: string[];
+  source: 'server_trimmed_payload';
+  dev_override?: boolean;
+  authenticated?: boolean;
+  error?: string;
+}

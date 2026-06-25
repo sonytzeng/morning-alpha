@@ -1,4 +1,7 @@
-import type { FeatureKey, SubscriptionTier, UserEntitlement } from '@/types/subscription';
+import { supabase } from '@/lib/supabase';
+import type { FeatureKey, ServerReportPayloadResponse, SubscriptionTier, UserEntitlement } from '@/types/subscription';
+
+const GET_REPORT_PAYLOAD_URL = 'https://cttfzgvhiewfckydcrci.supabase.co/functions/v1/get-report-payload';
 
 const FEATURE_KEYS: FeatureKey[] = [
   'today_report_full',
@@ -20,6 +23,19 @@ const TIER_LABELS: Record<SubscriptionTier, string> = {
 function normalizeTier(value: string | null): SubscriptionTier {
   if (value === 'member' || value === 'vip' || value === 'admin') return value;
   return 'free';
+}
+
+function getDemoTierOverride(): SubscriptionTier | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const rawQueryTier = params.get('tier');
+  if (rawQueryTier) {
+    const tier = normalizeTier(rawQueryTier);
+    window.localStorage.setItem('morning_alpha_demo_tier', tier);
+    return tier;
+  }
+  const storedTier = window.localStorage.getItem('morning_alpha_demo_tier');
+  return storedTier ? normalizeTier(storedTier) : null;
 }
 
 function buildFeatures(tier: SubscriptionTier): Record<FeatureKey, boolean> {
@@ -45,15 +61,7 @@ export async function getCurrentEntitlement(): Promise<UserEntitlement> {
   // P27 UI scaffold only.
   // TODO P28: replace this with server-side entitlement payload / Supabase verified entitlement.
   // TODO P29: enforce reports payload trimming and RLS. Frontend gating is not data security.
-  const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const rawQueryTier = params?.get('tier') || null;
-  const queryTier = rawQueryTier ? normalizeTier(rawQueryTier) : null;
-  const storedTier = typeof window !== 'undefined' ? normalizeTier(window.localStorage.getItem('morning_alpha_demo_tier')) : 'free';
-  const tier = queryTier || storedTier;
-
-  if (typeof window !== 'undefined' && rawQueryTier) {
-    window.localStorage.setItem('morning_alpha_demo_tier', tier);
-  }
+  const tier = getDemoTierOverride() || 'free';
 
   return {
     tier,
@@ -71,4 +79,43 @@ export function hasFeature(entitlement: UserEntitlement | null | undefined, feat
 
 export function getTierLabel(tier: SubscriptionTier): string {
   return TIER_LABELS[tier] || TIER_LABELS.free;
+}
+
+export async function callGetReportPayload(params: {
+  reportDate?: string | null;
+  tier?: SubscriptionTier | null;
+} = {}): Promise<ServerReportPayloadResponse> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token || '';
+  const demoTier = params.tier || getDemoTierOverride();
+
+  const body: Record<string, unknown> = {
+    report_date: params.reportDate || null,
+  };
+
+  // P28-2 scaffold: this sends ?tier=member/vip/admin only for dev payload testing
+  // and only the Edge Function may decide whether to honor it. TODO P29: remove
+  // frontend tier override after DB verified entitlement is live.
+  if (!accessToken && demoTier) {
+    body.tier = demoTier;
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch(GET_REPORT_PAYLOAD_URL, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  const json = await response.json().catch(() => null) as ServerReportPayloadResponse | null;
+  if (!response.ok || !json) {
+    throw new Error(json?.error || `get-report-payload failed: ${response.status}`);
+  }
+  return json;
 }

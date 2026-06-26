@@ -10,3 +10,6 @@ verify_jwt = false
 
 [functions.get-report-payload]
 verify_jwt = false
+
+[functions.generate-sector-rotation]
+verify_jwt = false

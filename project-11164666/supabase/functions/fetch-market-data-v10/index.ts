@@ -37,6 +37,12 @@ interface SymbolConfig {
   taiwanImpact: string;
 }
 
+type MarketDataPhase = "premarket" | "intraday" | "close" | "manual_backfill";
+
+interface RequestBody {
+  phase?: MarketDataPhase;
+}
+
 const SYMBOLS: SymbolConfig[] = [
   { finnhubSymbol: "SPX", displaySymbol: "SPX", name: "S&P 500", market: "US", taiwanImpact: "美股整體健康度指標" },
   { finnhubSymbol: "IXIC", displaySymbol: "IXIC", name: "Nasdaq", market: "US", taiwanImpact: "科技股風向標" },
@@ -55,6 +61,48 @@ const MVP_REQUIRED = ["NVDA", "TSM", "SPX"];
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getTaipeiParts(): { date: string; hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+
+  const value = (type: string) => parts.find((p) => p.type === type)?.value || "";
+  return {
+    date: `${value("year")}-${value("month")}-${value("day")}`,
+    hour: Number(value("hour")),
+    minute: Number(value("minute")),
+  };
+}
+
+function resolveDefaultPhase(hour: number, minute: number): MarketDataPhase {
+  const currentMinutes = hour * 60 + minute;
+  if (currentMinutes >= 5 * 60 && currentMinutes <= 8 * 60 + 59) return "premarket";
+  if (currentMinutes >= 9 * 60 && currentMinutes <= 13 * 60 + 29) return "intraday";
+  if (currentMinutes >= 13 * 60 + 30) return "close";
+  return "manual_backfill";
+}
+
+function isMarketDataPhase(value: unknown): value is MarketDataPhase {
+  return value === "premarket" || value === "intraday" || value === "close" || value === "manual_backfill";
+}
+
+async function readRequestBody(req: Request): Promise<RequestBody> {
+  try {
+    const raw = await req.text();
+    if (!raw.trim()) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as RequestBody : {};
+  } catch {
+    return {};
+  }
 }
 
 async function fetchFinnhubQuote(
@@ -178,10 +226,18 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const requestBody = await readRequestBody(req);
+    const taipei = getTaipeiParts();
+    const phase = isMarketDataPhase(requestBody.phase) ? requestBody.phase : resolveDefaultPhase(taipei.hour, taipei.minute);
+    const tradingDate = taipei.date;
 
     const inserted: Array<{ symbol: string; name: string; value: number; change_percent: number }> = [];
     const failed: string[] = [];
+    const snapshotErrors: Array<{ symbol: string; error: string }> = [];
+    let snapshotUpsertedCount = 0;
     const allSymbols = SYMBOLS.map((s) => s.displaySymbol);
+
+    console.log(`[${batchTag}] phase=${phase} trading_date=${tradingDate} taipei=${taipei.hour}:${String(taipei.minute).padStart(2, "0")}`);
 
     // ═══════════════════════════════════════════════════════
     // Fetch all symbols sequentially with delay
@@ -244,6 +300,45 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        const snapshotPayload = {
+          symbol: config.displaySymbol,
+          name: config.name,
+          market: config.market,
+          value: value,
+          change_percent: changePercent,
+          captured_at: capturedAt,
+          source: "finnhub",
+          phase,
+          trading_date: tradingDate,
+          raw: {
+            provider: "finnhub",
+            finnhub_symbol: config.finnhubSymbol,
+            display_symbol: config.displaySymbol,
+            quote: {
+              current: quote.c,
+              change: quote.d,
+              change_percent: quote.dp,
+              high: quote.h,
+              low: quote.l,
+              open: quote.o,
+              previous_close: quote.pc,
+              timestamp: quote.t,
+            },
+            request_id: requestId,
+          },
+        };
+
+        const { error: snapshotErr } = await supabase
+          .from("market_data_snapshots")
+          .upsert(snapshotPayload, { onConflict: "symbol,trading_date,phase" });
+
+        if (snapshotErr) {
+          console.error(`[${batchTag}] ${config.displaySymbol} snapshot DB error: ${snapshotErr.message}`);
+          snapshotErrors.push({ symbol: config.displaySymbol, error: snapshotErr.message });
+        } else {
+          snapshotUpsertedCount++;
+        }
+
         inserted.push({
           symbol: config.displaySymbol,
           name: config.name,
@@ -272,11 +367,15 @@ Deno.serve(async (req) => {
         success: true,
         version: "V10.7_FINNHUB_ONLY_TIMEOUT_SAFE",
         request_id: requestId,
+        phase,
+        trading_date: tradingDate,
         started_at: startedAt,
         completed_at: new Date().toISOString(),
         elapsed_seconds: parseFloat(elapsed),
         inserted: inserted,
         failed: failed,
+        snapshot_upserted_count: snapshotUpsertedCount,
+        snapshot_errors: snapshotErrors,
         symbols: allSymbols,
         healthy: healthy,
         timed_out: timedOut,

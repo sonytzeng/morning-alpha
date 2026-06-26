@@ -469,6 +469,7 @@ Deno.serve(async (req) => {
       captured_at: latestCapturedAt,
       source_kind: 'intraday_live',
       data_source: 'market_data',
+      input_source: marketDataSource,
       market_data_date: today,
       data_status: dataStatus,
       missing_sources: missingCoreSymbols,
@@ -483,7 +484,7 @@ Deno.serve(async (req) => {
       .from('opening_market_radar')
       .upsert(upsertData, { onConflict: 'report_date' });
 
-    if (upsertErr && /(data_status|missing_sources|radar_mode|txf_status)/i.test(upsertErr.message)) {
+    if (upsertErr && /(data_status|missing_sources|radar_mode|txf_status|input_source)/i.test(upsertErr.message)) {
       degradedMetadataPersisted = false;
       log(`Metadata column warning: ${upsertErr.message}; retrying without degraded metadata columns`);
       const compatibleUpsertData = { ...upsertData };
@@ -491,6 +492,7 @@ Deno.serve(async (req) => {
       delete compatibleUpsertData.missing_sources;
       delete compatibleUpsertData.radar_mode;
       delete compatibleUpsertData.txf_status;
+      delete compatibleUpsertData.input_source;
       const retry = await supabase
         .from('opening_market_radar')
         .upsert(compatibleUpsertData, { onConflict: 'report_date' });

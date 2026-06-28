@@ -140,6 +140,12 @@ export interface MorningAlphaNormalizedReport {
 export const REPORTS_STABLE_COLUMNS =
   'id, report_date, market_bias, confidence_score, ai_strategy_json, summary, created_at, watch_sectors_json';
 
+function isReportsRlsBlocked(error: { message?: string; code?: string } | null | undefined): boolean {
+  const message = String(error?.message || '').toLowerCase();
+  const code = String(error?.code || '').toLowerCase();
+  return code === '42501' || message.includes('permission denied') || message.includes('row-level security');
+}
+
 export async function fetchLatestReports(limit = 10): Promise<ReportRow[]> {
   const { data, error } = await supabase
     .from('reports')
@@ -148,7 +154,13 @@ export async function fetchLatestReports(limit = 10): Promise<ReportRow[]> {
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  if (error) throw new Error(`fetchLatestReports: ${error.message}`);
+  if (error) {
+    if (isReportsRlsBlocked(error)) {
+      console.warn('REPORTS_RLS_BLOCKED_PUBLIC_HISTORY', error.message);
+      return [];
+    }
+    throw new Error(`fetchLatestReports: ${error.message}`);
+  }
 
   return (data || []).map((r: Record<string, unknown>) => ({
     id: String(r.id || ''),
@@ -170,7 +182,13 @@ export async function fetchLatestSingleReport(): Promise<ReportRow | null> {
     .order('created_at', { ascending: false })
     .limit(1);
 
-  if (error) throw new Error(`fetchLatestSingleReport: ${error.message}`);
+  if (error) {
+    if (isReportsRlsBlocked(error)) {
+      console.warn('REPORTS_RLS_BLOCKED_PUBLIC_HISTORY', error.message);
+      return null;
+    }
+    throw new Error(`fetchLatestSingleReport: ${error.message}`);
+  }
   if (!data || data.length === 0) return null;
 
   const r = data[0] as Record<string, unknown>;

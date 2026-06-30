@@ -256,10 +256,21 @@ function TodayReportContent() {
   const publicSummary = asObj(ai.public_summary) || asObj(ai.free_summary);
   const parsedV8DailySentence = asObj(parsedStrategy.v8_daily_sentence);
   const rawV8DailySentence = asObj(ai.v8_daily_sentence);
+  const displayStateRecord = asObj(displayState as unknown);
+  const displayStateV8DailySentence = asObj(displayStateRecord.v8DailySentence);
+  const normalizedReport = asObj(displayStateRecord.activeReport);
+  const normalizedV8DailySentence = asObj(normalizedReport.v8DailySentence);
   const v8DailySentenceText =
     safeText(parsedV8DailySentence.sentence, '') ||
     safeText(rawV8DailySentence.sentence, '') ||
+    safeText(ai.v8_daily_sentence, '') ||
+    safeText(displayStateV8DailySentence.sentence, '') ||
+    safeText(displayStateRecord.v8DailySentence, '') ||
+    safeText(normalizedV8DailySentence.sentence, '') ||
+    safeText(normalizedReport.v8DailySentence, '') ||
     safeText(ai.daily_sentence, '') ||
+    safeText(displayStateRecord.dailySentence, '') ||
+    safeText(normalizedReport.dailySentence, '') ||
     safeText(publicSummary.daily_sentence, '') ||
     safeText(report?.summary, '') ||
     safeText(ai.summary, '');

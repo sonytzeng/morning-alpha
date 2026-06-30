@@ -39,14 +39,17 @@ function formatTaipeiTime(value: unknown): string {
   if (!raw) return '—';
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat('zh-TW', {
+  const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Taipei',
+    year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  }).format(date);
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value || '';
+  return `${part('year')}-${part('month')}-${part('day')} ${part('hour')}:${part('minute')}`;
 }
 
 function HomePageContent() {
@@ -62,11 +65,11 @@ function HomePageContent() {
     todayCloseVerification: data?.todayCloseVerification ?? null,
   });
 
-  // ═══ V27 Stable Mode: Use morningState as single source of truth ═══
+  // Stable mode: use morningState as single source of truth.
   const ms = morningState;
   const hasMorningState = !!ms;
 
-  // V28: When morningState is not yet available, use data.report as fallback
+  // When morningState is not yet available, use data.report as fallback.
   // This prevents blank pages when resolveMorningAlphaState silently fails.
   const fallbackReport = data?.report ?? null;
   const fallbackMorningAlpha = data?.morningAlpha ?? null;
@@ -86,11 +89,14 @@ function HomePageContent() {
     fallbackAI?.generated_at,
     fallbackAI?.generatedAt,
     fallbackAI?.report_generated_at,
+    (fallbackReport as Record<string, unknown> | null)?.generated_at,
     fallbackReport?.created_at,
     (fallbackReport as Record<string, unknown> | null)?.updated_at,
     nestedAI?.generated_at,
   );
-  const displayCreatedAt = ms?.createdAtTaipei || formatTaipeiTime(generatedAtFallback);
+  const displayCreatedAt = ms?.createdAtTaipei && ms.createdAtTaipei !== '—'
+    ? ms.createdAtTaipei
+    : formatTaipeiTime(generatedAtFallback);
 
   // Status — morningState first, then fallback
   const isTodayReport = ms?.isReportForToday ?? (fallbackReport?.report_date === todayTaipeiStr);
@@ -98,7 +104,7 @@ function HomePageContent() {
     ? false
     : (ms?.reportExists ?? (!!fallbackReport || !!fallbackMorningAlpha?.reportId));
   const publishReady = ms?.publishReady ?? fallbackMorningAlpha?.publishReady ?? false;
-  // ═══ V8.4 UNIFIED DATA CONTRACT — Single display state for ALL 5 pages ═══
+  // Unified data contract: single display state for all core pages.
   // Home, TodayReport, Opportunities, WarRoom, MemberNote ALL read from the same parser.
   // No more page-level ai_strategy_json parsing. No more root column fallback inconsistency.
   const displayState: MorningAlphaDisplayState = useMemo(() => {

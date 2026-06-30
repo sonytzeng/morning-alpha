@@ -51,7 +51,7 @@ export default function BeneficiaryChainCard({ chain, tone = 'light' }: { chain?
         <div className="mt-5 space-y-5">
           {sourceSignals.length > 0 && (
             <div>
-              <p className={`mb-2 text-xs font-semibold ${mutedClass}`}>source_signals</p>
+              <p className={`mb-2 text-xs font-semibold ${mutedClass}`}>來源訊號</p>
               <div className="flex flex-wrap gap-2">
                 {sourceSignals.slice(0, 8).map((signal, idx) => (
                   <span key={idx} className={`rounded-full px-2.5 py-1 text-[10px] ${dark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>

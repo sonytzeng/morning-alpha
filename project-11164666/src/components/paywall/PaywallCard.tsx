@@ -54,10 +54,6 @@ export default function PaywallCard({
             {ctaText}
             <i className="ri-arrow-right-line"></i>
           </button>
-
-          <p className={`text-[10px] leading-relaxed mt-3 ${isDark ? 'text-slate-500' : 'text-foreground-400'}`}>
-            P27 is UI scaffold only. Full security requires P28 server-side payload trimming and P29 RLS lockdown.
-          </p>
         </div>
       </div>
     </div>

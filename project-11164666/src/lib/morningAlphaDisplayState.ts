@@ -231,8 +231,15 @@ export function getMorningAlphaDisplayState(
     ? '休市不評分'
     : confidenceScore >= 75 ? '高' : confidenceScore >= 55 ? '中' : '低';
 
+  const v8DailySentence = grabObj(ai, 'v8_daily_sentence');
+  const publicSummary = grabObj(ai, 'public_summary') || grabObj(ai, 'free_summary');
   const todayQuote = aiExists
-    ? (grabStr(ai, 'today_quote', 'summary') || '')
+    ? (
+        grabStr(v8DailySentence, 'sentence') ||
+        grabStr(ai, 'daily_sentence', 'today_quote', 'today_sentence', 'summary') ||
+        grabStr(publicSummary, 'daily_sentence', 'one_liner', 'one_sentence', 'summary') ||
+        ''
+      )
     : '';
 
   const beneficiaryStocks = aiExists
@@ -265,9 +272,7 @@ export function getMorningAlphaDisplayState(
     ? ((ai.member_research_note as string | Record<string, unknown>) || null)
     : null;
 
-  const openingRadar = aiExists
-    ? (grabObj(ai, 'opening_radar'))
-    : null;
+  const openingRadar = liveOpeningRadar || (aiExists ? grabObj(ai, 'opening_radar') : null);
 
   const dataBasisLabel = aiExists
     ? (grabStr(ai, 'tw_core_date', 'market_data_latest_date', 'data_basis') || reportDate)

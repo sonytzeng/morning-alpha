@@ -109,7 +109,6 @@ function WarRoomContent() {
   const canViewWarRoomFull = hasFeature(entitlement, 'war_room_full');
 
   useEffect(() => {
-    // P27 is UI scaffold only. Full security requires P28 server-side payload trimming and P29 RLS lockdown.
     // Do not treat frontend gating as data security.
     getCurrentEntitlement().then(setEntitlement).catch(() => setEntitlement(null));
   }, []);
@@ -496,6 +495,12 @@ function WarRoomContent() {
                   </div>
                   {openingRadar.summary && (
                     <p className="text-white/50 text-xs leading-relaxed">{openingRadar.summary}</p>
+                  )}
+                  {((openingRadar as unknown as Record<string, unknown>).data_status === 'degraded'
+                    || (openingRadar as unknown as Record<string, unknown>).radar_mode === 'two_core_without_txf') && (
+                    <p className="mt-2 text-amber-300/80 text-xs leading-relaxed">
+                      盤中雷達以 TAIEX / 2330 雙核心資料產生，TXF 尚未接入完整驗證。
+                    </p>
                   )}
                 </div>
                 {/* Intraday snapshot: only openingRadar values after freshness gate passes. */}

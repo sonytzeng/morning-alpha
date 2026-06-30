@@ -55,6 +55,18 @@ function getClosingVerificationFromSources(...sources: unknown[]): Record<string
   return null;
 }
 
+function getOpeningRadarFromServerPayload(row: unknown): OpeningRadar | null {
+  const rawRow = parseAiStrategyObject(row);
+  const ai = parseAiStrategyObject(rawRow.ai_strategy_json);
+  const radar = isRecord(ai.opening_radar) ? ai.opening_radar : null;
+  if (!radar) return null;
+  return mapRowToOpeningRadar({
+    id: radar.id || `server-payload-${String(rawRow.report_date || radar.report_date || '')}`,
+    report_date: radar.report_date || rawRow.report_date,
+    ...radar,
+  });
+}
+
 export interface UseLatestReportResult {
   report: Report | null;
   openingRadar: OpeningRadar | null;
@@ -222,7 +234,7 @@ export function useLatestReport(): UseLatestReportResult {
       setIsHistoricalFallback(resolved.isHistoricalFallback);
       setFallbackReportDate(resolved.fallbackReportDate);
 
-      let activeRadar: OpeningRadar | null = radarRes;
+      let activeRadar: OpeningRadar | null = radarRes || getOpeningRadarFromServerPayload(rptRow);
       let activeCloseVerif: CloseMarketReview | null = null;
 
       try {

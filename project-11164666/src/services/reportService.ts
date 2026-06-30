@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { callGetReportPayload } from '@/services/entitlementService';
 import type {
   Report,
   RiskFactor,
@@ -111,52 +111,56 @@ export async function getTodayReport(): Promise<Report | null> {
   const twNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
   const today = `${twNow.getFullYear()}-${String(twNow.getMonth() + 1).padStart(2, '0')}-${String(twNow.getDate()).padStart(2, '0')}`;
 
-  // Stable column selection — only columns that definitely exist in reports table
-  const stableCols = 'id, report_date, market_bias, confidence_score, summary, ai_strategy_json, created_at';
-  const { data, error } = await supabase
-    .from('reports')
-    .select(stableCols)
-    .eq('report_date', today)
-    .maybeSingle();
-
-  if (error) {
-    console.error('getTodayReport error:', error.message);
+  try {
+    const response = await callGetReportPayload({ reportDate: today });
+    return mapRowToReport({
+      id: `server-trimmed:${response.report_date}`,
+      report_date: response.report_date,
+      market_bias: response.payload?.market_bias,
+      confidence_score: response.payload?.confidence_score,
+      summary: response.payload?.daily_sentence || response.payload?.today_quote,
+      ai_strategy_json: response.payload,
+      created_at: response.payload?.generated_at,
+    });
+  } catch (error) {
+    console.error('getTodayReport error:', error instanceof Error ? error.message : error);
     return null;
   }
-  if (!data) return null;
-
-  return mapRowToReport(data as Record<string, unknown>);
 }
 
 export async function getReportByDate(date: string): Promise<Report | null> {
-  const stableCols = 'id, report_date, market_bias, confidence_score, summary, ai_strategy_json, created_at';
-  const { data, error } = await supabase
-    .from('reports')
-    .select(stableCols)
-    .eq('report_date', date)
-    .maybeSingle();
-
-  if (error) {
-    console.error('getReportByDate error:', error.message);
+  try {
+    const response = await callGetReportPayload({ reportDate: date });
+    return mapRowToReport({
+      id: `server-trimmed:${response.report_date}`,
+      report_date: response.report_date,
+      market_bias: response.payload?.market_bias,
+      confidence_score: response.payload?.confidence_score,
+      summary: response.payload?.daily_sentence || response.payload?.today_quote,
+      ai_strategy_json: response.payload,
+      created_at: response.payload?.generated_at,
+    });
+  } catch (error) {
+    console.error('getReportByDate error:', error instanceof Error ? error.message : error);
     return null;
   }
-  if (!data) return null;
-
-  return mapRowToReport(data as Record<string, unknown>);
 }
 
 export async function getLatestReports(limit = 7): Promise<Report[]> {
-  const stableCols = 'id, report_date, market_bias, confidence_score, summary, ai_strategy_json, created_at';
-  const { data, error } = await supabase
-    .from('reports')
-    .select(stableCols)
-    .order('report_date', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error('getLatestReports error:', error.message);
+  try {
+    const response = await callGetReportPayload();
+    const report = mapRowToReport({
+      id: `server-trimmed:${response.report_date}`,
+      report_date: response.report_date,
+      market_bias: response.payload?.market_bias,
+      confidence_score: response.payload?.confidence_score,
+      summary: response.payload?.daily_sentence || response.payload?.today_quote,
+      ai_strategy_json: response.payload,
+      created_at: response.payload?.generated_at,
+    });
+    return limit > 0 ? [report] : [];
+  } catch (error) {
+    console.error('getLatestReports error:', error instanceof Error ? error.message : error);
     return [];
   }
-
-  return (data || []).map((row) => mapRowToReport(row as Record<string, unknown>));
 }

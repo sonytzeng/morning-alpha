@@ -46,6 +46,11 @@ type RadarView = {
   data_source?: string;
   source_kind?: string;
   market_data_date?: string;
+  data_status?: string;
+  missing_sources?: string[];
+  radar_mode?: string;
+  txf_status?: string;
+  input_source?: string;
 };
 
 function asObj(value: unknown): AnyObj {
@@ -125,8 +130,14 @@ function normalizeRadarFromReport(report: Report | null): RadarView | null {
       updated_at: safeText(opening.updated_at, ''),
       created_at: safeText(opening.created_at, ''),
       generated_at: safeText(opening.generated_at, ''),
-      data_source: 'reports.ai_strategy_json.opening_radar',
-      source_kind: 'report_snapshot',
+      data_source: safeText(opening.data_source, '') || 'reports.ai_strategy_json.opening_radar',
+      source_kind: safeText(opening.source_kind, '') || 'report_snapshot',
+      market_data_date: safeText(opening.market_data_date, ''),
+      data_status: safeText(opening.data_status, ''),
+      missing_sources: Array.isArray(opening.missing_sources) ? opening.missing_sources.map(String) : [],
+      radar_mode: safeText(opening.radar_mode, ''),
+      txf_status: safeText(opening.txf_status, ''),
+      input_source: safeText(opening.input_source, ''),
     };
   }
 
@@ -201,10 +212,10 @@ function TodayReportContent() {
         const radarFromReport = normalizeRadarFromReport(finalReport);
         const radarFromTable = await getTodayOpeningRadar();
         setReportSnapshotRadar(radarFromReport);
-        setLiveRadar(radarFromTable);
+        setLiveRadar((radarFromTable as unknown as RadarView | null) || radarFromReport);
         setDisplayState(getMorningAlphaDisplayState(
           resolved.rawRow as Record<string, unknown> | null,
-          radarFromTable as unknown as Record<string, unknown> | null,
+          (radarFromTable || radarFromReport) as unknown as Record<string, unknown> | null,
         ));
       } catch (err) {
         console.error('TodayReport load failed:', err);
@@ -218,7 +229,6 @@ function TodayReportContent() {
   }, []);
 
   useEffect(() => {
-    // P27 is UI scaffold only. Full security requires P28 server-side payload trimming and P29 RLS lockdown.
     // Do not treat frontend gating as data security.
     getCurrentEntitlement().then(setEntitlement).catch(() => setEntitlement(null));
   }, []);

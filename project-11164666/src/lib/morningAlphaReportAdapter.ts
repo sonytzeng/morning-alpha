@@ -350,7 +350,8 @@ export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlpha
   const usMarketBasisDate =
     grabStr(ai, 'us_global_date') || grabStr(ai, 'us_market_date') || raw.report_date || '—';
   // V28: Generated at — priority: ai_strategy_json.generated_at > report.created_at
-  const generatedAt = grabStr(ai, 'generated_at') || raw.created_at || '';
+  const rawUpdatedAt = (raw as unknown as Record<string, unknown>).updated_at;
+  const generatedAt = grabStr(ai, 'generated_at') || raw.created_at || (typeof rawUpdatedAt === 'string' ? rawUpdatedAt : '') || '';
 
   // ── Version & source (reports table has NO top-level ai_version) ──
   const aiVersion = grabStr(ai, 'version');
@@ -388,7 +389,7 @@ export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlpha
   const memberValuePass = memberValueScore >= 80;
 
   // ── Structured data ──
-  const freeSummary = grabObj(ai, 'free_summary');
+  const freeSummary = grabObj(ai, 'free_summary') || grabObj(ai, 'public_summary');
   const memberNote = grabObj(ai, 'member_research_note');
   const reasoningChain = grabArr(ai, 'reasoning_chain');
   const overnightImpactChain = grabArr(ai, 'overnight_impact_chain');
@@ -548,6 +549,23 @@ function computeOneSentence(
   socialPost: Record<string, unknown> | null,
   memberNote: Record<string, unknown> | null,
 ): string {
+  const v8DailySentence = grabObj(ai, 'v8_daily_sentence');
+  const v8Sentence = v8DailySentence?.sentence;
+  if (typeof v8Sentence === 'string' && v8Sentence.trim() && !isForbiddenOneLiner(v8Sentence)) {
+    return v8Sentence.trim();
+  }
+  const aiDailySentence = ai.daily_sentence;
+  if (typeof aiDailySentence === 'string' && aiDailySentence.trim() && !isForbiddenOneLiner(aiDailySentence)) {
+    return aiDailySentence.trim();
+  }
+  const aiTodayQuote = ai.today_quote;
+  if (typeof aiTodayQuote === 'string' && aiTodayQuote.trim() && !isForbiddenOneLiner(aiTodayQuote)) {
+    return aiTodayQuote.trim();
+  }
+  const fsDailySentence = freeSummary?.daily_sentence;
+  if (typeof fsDailySentence === 'string' && fsDailySentence.trim() && !isForbiddenOneLiner(fsDailySentence)) {
+    return fsDailySentence.trim();
+  }
   // V28: free_summary.one_liner (primary for one-liner)
   const fsOneLiner = freeSummary?.one_liner;
   if (typeof fsOneLiner === 'string' && fsOneLiner.trim() && !isForbiddenOneLiner(fsOneLiner)) {

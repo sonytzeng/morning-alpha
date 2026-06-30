@@ -369,7 +369,6 @@ function MemberNoteContent() {
   }, []);
 
   useEffect(() => {
-    // P27 is UI scaffold only. Full security requires P28 server-side payload trimming and P29 RLS lockdown.
     // Do not treat frontend gating as data security.
     getCurrentEntitlement().then(setEntitlement).catch(() => setEntitlement(null));
   }, []);

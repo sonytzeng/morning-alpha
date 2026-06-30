@@ -175,6 +175,10 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
   const radarFreshness = isFreshIntradayData({ report_date: reportDate }, openingRadar as unknown as Record<string, unknown> | null);
   const radarIsToday = isDateToday(radarDate, todayDate);
   const radarIsFreshToday = radarFreshness.fresh;
+  const radarRecord = openingRadar as unknown as Record<string, unknown> | null;
+  const radarDataStatus = String(radarRecord?.data_status || '').toLowerCase();
+  const radarMode = String(radarRecord?.radar_mode || '').toLowerCase();
+  const isTwoCoreDegradedRadar = radarDataStatus === 'degraded' || radarMode === 'two_core_without_txf';
 
   // Check if market_data has today data with TW core symbols
   const todayMkt = marketDataTodayOnly ?? [];
@@ -190,9 +194,11 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
     // Today's radar exists
     intradayStatus = 'ready';
     radarDisplay = {
-      statusText: '盤中雷達已更新',
-      description: `資料時間：${radarFreshness.timestampLabel || todayDate}｜狀態：${openingRadar.radar_status || '—'}`,
-      color: 'green',
+      statusText: isTwoCoreDegradedRadar ? '盤中雷達已更新（降級）' : '盤中雷達已更新',
+      description: isTwoCoreDegradedRadar
+        ? `盤中雷達以 TAIEX / 2330 雙核心資料產生，TXF 尚未接入完整驗證。資料時間：${radarFreshness.timestampLabel || todayDate}｜狀態：${openingRadar.radar_status || '—'}`
+        : `資料時間：${radarFreshness.timestampLabel || todayDate}｜狀態：${openingRadar.radar_status || '—'}`,
+      color: isTwoCoreDegradedRadar ? 'amber' : 'green',
       showContent: true,
       dataDate: todayDate,
       isToday: true,

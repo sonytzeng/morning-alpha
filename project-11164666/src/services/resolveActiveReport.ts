@@ -92,14 +92,19 @@ function getMarketDataDate(row: ReportRow | null): string | null {
 function toTrimmedReportRow(response: ServerReportPayloadResponse): ReportRow | null {
   if (!response.payload || !response.report_date) return null;
   const payload = response.payload;
+  const generatedAt = typeof payload.generated_at === 'string' ? payload.generated_at : '';
+  const dailySentence =
+    typeof payload.daily_sentence === 'string' ? payload.daily_sentence :
+    typeof payload.today_quote === 'string' ? payload.today_quote :
+    '';
   return {
     id: `server-trimmed:${response.report_date}`,
     report_date: response.report_date,
     market_bias: typeof payload.market_bias === 'string' ? payload.market_bias : null,
     confidence_score: payload.confidence_score != null ? Number(payload.confidence_score) : null,
-    created_at: '',
+    created_at: generatedAt,
     ai_strategy_json: payload,
-    summary: typeof payload.today_quote === 'string' ? payload.today_quote : null,
+    summary: dailySentence || null,
     watch_sectors_json: null,
   };
 }

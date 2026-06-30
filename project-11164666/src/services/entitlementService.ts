@@ -58,9 +58,8 @@ function buildFeatures(tier: SubscriptionTier): Record<FeatureKey, boolean> {
 }
 
 export async function getCurrentEntitlement(): Promise<UserEntitlement> {
-  // P27 UI scaffold only.
-  // TODO P28: replace this with server-side entitlement payload / Supabase verified entitlement.
-  // TODO P29: enforce reports payload trimming and RLS. Frontend gating is not data security.
+  // TODO: replace this with server-verified entitlement.
+  // Frontend gating is not data security.
   const tier = getDemoTierOverride() || 'free';
 
   return {

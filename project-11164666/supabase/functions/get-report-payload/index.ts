@@ -9,7 +9,14 @@ type ReportRow = Record<string, unknown> & {
   confidence_score?: number | string | null;
   summary?: string | null;
   created_at?: string | null;
+  updated_at?: string | null;
   ai_strategy_json?: unknown;
+};
+
+type PayloadContext = {
+  openingRadar: Record<string, unknown> | null;
+  sectorRotationRows: Record<string, unknown>[];
+  marketDataSnapshots: Record<string, unknown>[];
 };
 
 const CORS_HEADERS = {
@@ -113,14 +120,43 @@ function getTodayQuote(report: ReportRow, ai: Record<string, unknown>): string {
   const freeSummary = asObject(ai.free_summary);
   return (
     toStringValue(v8Sentence.sentence) ||
+    toStringValue(ai.daily_sentence) ||
     toStringValue(ai.today_quote) ||
     toStringValue(ai.today_sentence) ||
+    toStringValue(freeSummary.daily_sentence) ||
     toStringValue(freeSummary.one_liner) ||
     toStringValue(freeSummary.one_sentence) ||
     toStringValue(freeSummary.summary) ||
     toStringValue(report.summary) ||
     ""
   );
+}
+
+function getGeneratedAt(report: ReportRow, ai: Record<string, unknown>): string | null {
+  return (
+    toStringValue(ai.generated_at) ||
+    toStringValue(report.created_at) ||
+    toStringValue(report.updated_at) ||
+    null
+  );
+}
+
+function getMarketDate(report: ReportRow, ai: Record<string, unknown>): string | null {
+  return (
+    toStringValue(ai.market_data_date) ||
+    toStringValue(ai.tw_core_date) ||
+    toStringValue(ai.market_data_latest_date) ||
+    getReportDate(report) ||
+    null
+  );
+}
+
+function getConfidenceLabel(score: number | null): string {
+  if (score === null) return "資料完整度待確認";
+  if (score >= 75) return "高把握度";
+  if (score >= 55) return "中等把握度";
+  if (score > 0) return "偏低";
+  return "偏低，請查看缺失來源";
 }
 
 function getBeneficiaryArrays(ai: Record<string, unknown>): Record<string, unknown>[][] {
@@ -204,47 +240,79 @@ function buildInvalidationConditions(ai: Record<string, unknown>): unknown[] {
   ].filter(Boolean);
 }
 
-function buildPublicPayload(report: ReportRow): Record<string, unknown> {
+function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
   const ai = getAi(report);
   const confidenceScore = getConfidenceScore(report, ai);
-  const openingRadar = asObject(ai.opening_radar);
+  const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
+  const publicSummary = asObject(ai.public_summary);
+  const freeSummary = asObject(ai.free_summary);
+  const dailySentence = getTodayQuote(report, ai);
   return {
     report_date: getReportDate(report),
+    market_date: getMarketDate(report, ai),
+    base_date: getMarketDate(report, ai),
+    generated_at: getGeneratedAt(report, ai),
+    market_status: toStringValue(ai.market_status) || (ai.is_trading_day === false ? "closed" : "open"),
+    closed_reason: toStringValue(ai.closed_reason) || toStringValue(ai.holiday_name),
     market_bias: getMarketBias(report, ai),
+    confidence_score: confidenceScore,
+    confidence_label: getConfidenceLabel(confidenceScore),
     confidence_band: getConfidenceBand(confidenceScore),
-    today_quote: getTodayQuote(report, ai),
+    today_quote: dailySentence,
+    daily_sentence: dailySentence,
+    v8_daily_sentence: asObject(ai.v8_daily_sentence),
+    public_summary: Object.keys(publicSummary).length > 0 ? publicSummary : freeSummary,
     beneficiary_count: getBeneficiaryCount(ai),
     one_teaser_stock: buildTeaserStock(ai),
     opening_radar_status: toStringValue(openingRadar.radar_status) || toStringValue(openingRadar.status),
+    opening_radar: openingRadar,
+    input_source: toStringValue(openingRadar.input_source) || null,
+    degraded_metadata: {
+      data_status: toStringValue(openingRadar.data_status),
+      missing_sources: Array.isArray(openingRadar.missing_sources) ? openingRadar.missing_sources : [],
+      radar_mode: toStringValue(openingRadar.radar_mode),
+      txf_status: toStringValue(openingRadar.txf_status),
+      input_source: toStringValue(openingRadar.input_source),
+    },
+    sector_rotation_scores: ctx.sectorRotationRows,
+    market_data_snapshots: ctx.marketDataSnapshots,
     closing_verification: buildClosingVerdict(ai),
     data_quality: toStringValue(ai.data_quality) || toStringValue(ai.data_status) || toStringValue(asObject(ai.member_research_note_v2).data_status) || "unknown",
   };
 }
 
-function buildMemberPayload(report: ReportRow): Record<string, unknown> {
+function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
   const ai = getAi(report);
   const note = asObject(ai.member_research_note_v2);
+  const publicPayload = buildPublicPayload(report, ctx);
+  const publicDegradedMetadata = asObject(publicPayload.degraded_metadata);
   return {
-    ...buildPublicPayload(report),
+    ...publicPayload,
     confidence_score: getConfidenceScore(report, ai),
     today_beneficiary_stocks: asArray(ai.today_beneficiary_stocks),
     beneficiary_stocks: asArray(ai.beneficiary_stocks),
     core_beneficiary_stocks: asArray(ai.core_beneficiary_stocks),
+    source_signals: ai.source_signals || asObject(ai.v8_beneficiary_chain).source_signals || [],
+    why_this_stock: ai.why_this_stock || null,
+    degraded_metadata: {
+      ...publicDegradedMetadata,
+      report_data_quality: toStringValue(ai.data_quality) || toStringValue(ai.data_status),
+      missing_sources: Array.isArray(ai.missing_sources) ? ai.missing_sources : publicDegradedMetadata.missing_sources,
+    },
     member_research_note_v2: note,
     overnight_chain: note.overnight_chain || asObject(ai.v8_overnight_causal_chain).chains || ai.causal_overnight_impact_chains || [],
     validation_signal: buildValidationSignals(ai),
     invalidation_condition: buildInvalidationConditions(ai),
-    opening_radar: asObject(ai.opening_radar),
     closing_verification: buildClosingSummary(ai),
   };
 }
 
-function buildVipPayload(report: ReportRow): Record<string, unknown> {
+function buildVipPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
   const ai = getAi(report);
   const note = asObject(ai.member_research_note_v2);
   const closing = asObject(ai.closing_verification);
   return {
-    ...buildMemberPayload(report),
+    ...buildMemberPayload(report, ctx),
     fund_flow_scenario: note.fund_flow_scenario || ai.fund_flow_scenario || null,
     market_mispricing: note.market_mispricing || ai.market_mispricing || null,
     institutional_behavior: note.institutional_behavior || ai.institutional_behavior || null,
@@ -269,17 +337,53 @@ function buildAdminPayload(report: ReportRow): Record<string, unknown> {
   return report;
 }
 
-function buildPayload(report: ReportRow, tier: SubscriptionTier): Record<string, unknown> {
+function buildPayload(report: ReportRow, tier: SubscriptionTier, ctx: PayloadContext): Record<string, unknown> {
   if (tier === "admin") return buildAdminPayload(report);
-  if (tier === "vip") return buildVipPayload(report);
-  if (tier === "member") return buildMemberPayload(report);
-  return buildPublicPayload(report);
+  if (tier === "vip") return buildVipPayload(report, ctx);
+  if (tier === "member") return buildMemberPayload(report, ctx);
+  return buildPublicPayload(report, ctx);
 }
 
 function getLockedSections(tier: SubscriptionTier): string[] {
   if (tier === "admin" || tier === "vip") return [];
   if (tier === "member") return MEMBER_LOCKED_SECTIONS;
   return PUBLIC_LOCKED_SECTIONS;
+}
+
+async function fetchPayloadContext(
+  serviceClient: ReturnType<typeof createClient>,
+  reportDate: string,
+): Promise<PayloadContext> {
+  const [radarResult, sectorResult, snapshotResult] = await Promise.all([
+    serviceClient
+      .from("opening_market_radar")
+      .select("*")
+      .eq("report_date", reportDate)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    serviceClient
+      .from("sector_rotation_scores")
+      .select("score_date,sector,rotation_score,direction,signal_label,created_at")
+      .eq("score_date", reportDate)
+      .order("sector", { ascending: true }),
+    serviceClient
+      .from("market_data_snapshots")
+      .select("symbol,name,market,value,change_percent,captured_at,source,phase,trading_date")
+      .eq("trading_date", reportDate)
+      .order("captured_at", { ascending: false })
+      .limit(50),
+  ]);
+
+  if (radarResult.error) console.error("GET_REPORT_PAYLOAD_RADAR_QUERY_FAILED", radarResult.error.message);
+  if (sectorResult.error) console.error("GET_REPORT_PAYLOAD_SECTOR_QUERY_FAILED", sectorResult.error.message);
+  if (snapshotResult.error) console.error("GET_REPORT_PAYLOAD_SNAPSHOT_QUERY_FAILED", snapshotResult.error.message);
+
+  return {
+    openingRadar: radarResult.data ? radarResult.data as Record<string, unknown> : null,
+    sectorRotationRows: Array.isArray(sectorResult.data) ? sectorResult.data as Record<string, unknown>[] : [],
+    marketDataSnapshots: Array.isArray(snapshotResult.data) ? snapshotResult.data as Record<string, unknown>[] : [],
+  };
 }
 
 async function resolveTierFromRequest(
@@ -371,10 +475,12 @@ Deno.serve(async (req: Request) => {
     }, 404);
   }
 
+  const context = await fetchPayloadContext(serviceClient, getReportDate(report));
+
   return jsonResponse({
     tier,
     report_date: getReportDate(report),
-    payload: buildPayload(report, tier),
+    payload: buildPayload(report, tier, context),
     locked_sections: getLockedSections(tier),
     source: "server_trimmed_payload",
     dev_override: devOverride,

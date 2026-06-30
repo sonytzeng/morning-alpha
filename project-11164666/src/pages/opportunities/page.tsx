@@ -35,6 +35,8 @@ interface TierStock {
   conviction_level?: string;
   catalyst_type?: string;
   watch_point?: string;
+  validation_signal?: string;
+  source_signals?: string;
   not_buy_signal?: boolean;
 }
 
@@ -100,17 +102,19 @@ function parseTierStock(
     sector: compactText(raw.sector || raw.group || raw.category || raw.industry),
     beneficiary_level: beneficiaryLevel,
     trigger_event: compactText(raw.trigger_event || raw.catalyst || raw.catalyst_type || raw.event),
-    reason: compactText(raw.reason || raw.thesis || raw.member_thesis || raw.why_it_matters || raw.score_reason),
-    risk_note: compactText(raw.risk_note || raw.risk || raw.invalidation_condition || raw.failure_conditions),
+    reason: compactText(raw.reason || raw.why_this_stock || raw.thesis || raw.member_thesis || raw.why_it_matters || raw.score_reason),
+    risk_note: compactText(raw.risk_note || raw.risk || raw.invalidation_condition || raw.invalidation_conditions || raw.failure_conditions),
     confidence_level: hasConfidenceValue(raw) ? confidenceLevelFrom(raw.confidence_level || raw.confidence || raw.confidence_score || raw.score) : undefined,
     has_confidence: hasConfidenceValue(raw),
-    data_basis: compactText(raw.data_basis || raw.source_type || raw.source || fallbackDataBasis || parseEvidence(raw.evidence)),
+    data_basis: compactText(raw.data_basis || raw.source_type || raw.source || fallbackDataBasis || parseEvidence(raw.evidence) || parseEvidence(raw.source_signals)),
     symbol: stockId,
     name: stockName,
     direction: compactText(raw.direction || '觀察'),
     conviction_level: compactText(raw.conviction_level || ''),
     catalyst_type: compactText(raw.catalyst_type || ''),
-    watch_point: compactText(raw.watch_point || raw.what_to_watch),
+    watch_point: compactText(raw.watch_point || raw.validation_signal || raw.what_to_watch),
+    validation_signal: compactText(raw.validation_signal),
+    source_signals: parseEvidence(raw.source_signals),
     not_buy_signal: raw.not_buy_signal !== false,
   };
 }
@@ -265,7 +269,6 @@ function OpportunitiesContent() {
   }, []);
 
   useEffect(() => {
-    // P27 is UI scaffold only. Full security requires P28 server-side payload trimming and P29 RLS lockdown.
     // Do not treat frontend gating as data security.
     getCurrentEntitlement().then(setEntitlement).catch(() => setEntitlement(null));
   }, []);
@@ -368,6 +371,7 @@ function OpportunitiesContent() {
   const hasScenario = scenarioStocks.length > 0;
   const hasAnyStocks = hasCore || hasExtended || hasScenario;
   const hasV8BeneficiaryChain = v8BeneficiaryChain?.status === 'ready' && (v8BeneficiaryChain.beneficiaries || []).length > 0;
+  const hasAnyBeneficiaryStock = hasAnyStocks || hasV8BeneficiaryChain;
   const coreDisplayCount = hasV8BeneficiaryChain ? (v8BeneficiaryChain?.beneficiaries || []).length : coreStocks.length;
   const watchDisplayCount = hasV8BeneficiaryChain ? 0 : extendedStocks.length + scenarioStocks.length;
   const confidenceText = ds.confidenceScore != null && ds.confidenceScore > 0
@@ -440,7 +444,19 @@ function OpportunitiesContent() {
             <BeneficiaryChainCard chain={v8BeneficiaryChain} tone="light" />
           )}
 
-          {!canViewOpportunitiesFull && (
+          {!hasAnyBeneficiaryStock && (
+            <section className="p-6 rounded-2xl bg-background-100 border border-background-200/70 text-center">
+              <div className="w-12 h-12 rounded-xl bg-background-50 flex items-center justify-center mx-auto mb-3">
+                <i className="ri-focus-3-line text-foreground-300 text-xl"></i>
+              </div>
+              <h2 className="text-foreground-900 font-bold text-base mb-2">今日受惠股名單尚未產生</h2>
+              <p className="text-foreground-500 text-sm leading-relaxed">
+                請等待盤前報告或盤中雷達更新。
+              </p>
+            </section>
+          )}
+
+          {!canViewOpportunitiesFull && hasAnyBeneficiaryStock && (
             <section className="space-y-4">
               {teaserStock && (
                 <div className="p-5 rounded-2xl bg-background-100 border border-background-200/70">
@@ -533,6 +549,13 @@ function OpportunitiesContent() {
                         </div>
                       )}
 
+                      {stock.validation_signal && (
+                        <div className="mb-3">
+                          <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-0.5">盤中驗證</p>
+                          <p className="text-foreground-700 text-xs leading-relaxed">{stock.validation_signal}</p>
+                        </div>
+                      )}
+
                       {/* Risk */}
                       {stock.risk_note && (
                         <div className="mb-3 p-2 rounded-lg bg-red-50 border border-red-100">
@@ -548,6 +571,9 @@ function OpportunitiesContent() {
                             <i className="ri-database-2-line text-[8px]"></i>
                             {stock.data_basis}
                           </span>
+                          {stock.source_signals && (
+                            <p className="mt-1 text-foreground-300 text-[9px] leading-relaxed">來源訊號：{stock.source_signals}</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -592,6 +618,7 @@ function OpportunitiesContent() {
                       </div>
                       {stock.sector && <span className="text-foreground-400 text-[9px] uppercase tracking-wider mb-1.5">{stock.sector}</span>}
                       {stock.reason && <p className="text-foreground-500 text-[11px] leading-relaxed mb-2">{stock.reason}</p>}
+                      {stock.validation_signal && <p className="text-foreground-500 text-[10px] leading-relaxed mb-2"><span className="text-foreground-400">驗證：</span>{stock.validation_signal}</p>}
                       {stock.risk_note && <p className="text-red-500/70 text-[10px] leading-relaxed mb-2"><span className="text-red-400/60">風險：</span>{stock.risk_note}</p>}
                       {stock.data_basis && (
                         <div className="mt-auto pt-2 border-t border-background-200/50">
@@ -646,6 +673,7 @@ function OpportunitiesContent() {
                         </div>
                       )}
                       {stock.reason && <p className="text-foreground-500 text-[10px] leading-relaxed mb-1.5">{stock.reason}</p>}
+                      {stock.validation_signal && <p className="text-foreground-500 text-[9px] leading-relaxed mb-1.5"><span className="text-foreground-400">驗證：</span>{stock.validation_signal}</p>}
                       {stock.risk_note && <p className="text-red-500/70 text-[9px] leading-relaxed"><span className="text-red-400/60">失效：</span>{stock.risk_note}</p>}
                     </div>
                   );
@@ -693,8 +721,8 @@ function OpportunitiesContent() {
               <div className="w-12 h-12 rounded-xl bg-background-50 flex items-center justify-center mx-auto mb-3">
                 <i className="ri-focus-3-line text-foreground-300 text-xl"></i>
               </div>
-              <p className="text-foreground-500 text-sm leading-relaxed mb-1">今日受惠股尚未產生，等待下一次盤前報告更新</p>
-              <p className="text-foreground-400 text-xs">每天 07:30 系統根據真實市場數據動態產生個股清單。若資料為空，代表今日尚無足夠數據進行判斷，不應 fallback 到固定名單。</p>
+              <h2 className="text-foreground-900 font-bold text-base mb-2">今日受惠股名單尚未產生</h2>
+              <p className="text-foreground-500 text-sm leading-relaxed">請等待盤前報告或盤中雷達更新。</p>
             </section>
           )}
 

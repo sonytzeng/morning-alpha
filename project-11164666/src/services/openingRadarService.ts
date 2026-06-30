@@ -24,6 +24,11 @@ export interface OpeningRadar {
   source_kind: string | null;
   data_source: string | null;
   market_data_date: string | null;
+  data_status: string | null;
+  missing_sources: string[];
+  radar_mode: string | null;
+  txf_status: string | null;
+  input_source: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -45,6 +50,13 @@ function safeBoolean(val: unknown, fallback = false): boolean {
   if (typeof val === 'string') return val.toLowerCase() === 'true';
   if (typeof val === 'number') return val === 1;
   return fallback;
+}
+
+function safeStringArray(val: unknown): string[] {
+  if (!Array.isArray(val)) return [];
+  return val
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
 }
 
 export function mapRowToOpeningRadar(row: Record<string, unknown>): OpeningRadar {
@@ -72,6 +84,11 @@ export function mapRowToOpeningRadar(row: Record<string, unknown>): OpeningRadar
     source_kind: safeString(row.source_kind),
     data_source: safeString(row.data_source),
     market_data_date: safeString(row.market_data_date),
+    data_status: safeString(row.data_status),
+    missing_sources: safeStringArray(row.missing_sources),
+    radar_mode: safeString(row.radar_mode),
+    txf_status: safeString(row.txf_status),
+    input_source: safeString(row.input_source),
     created_at: String(row.created_at || ''),
     updated_at: String(row.updated_at || ''),
   };

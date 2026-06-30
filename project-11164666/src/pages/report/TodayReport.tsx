@@ -108,36 +108,43 @@ function normalizeRadarFromReport(report: Report | null): RadarView | null {
 
   const ai = asObj((report as AnyObj).ai_strategy_json);
   const opening = asObj(ai.opening_radar);
+  const intradayTracking = asObj(ai.intraday_tracking);
+  const intradayRadar = asObj(ai.intraday_radar);
+  const sourceRadar = Object.keys(opening).length > 0
+    ? opening
+    : Object.keys(intradayTracking).length > 0
+      ? intradayTracking
+      : intradayRadar;
 
-  if (Object.keys(opening).length > 0) {
+  if (Object.keys(sourceRadar).length > 0) {
     return {
-      version: safeText(opening.version, ''),
-      report_date: safeText(opening.report_date || report.report_date, ''),
-      radar_status: safeText(opening.radar_status || opening.status, ''),
-      market_bias: safeText(opening.market_bias || opening.bias, ''),
-      confidence_score: opening.confidence_score ?? null,
-      summary: safeText(opening.summary || opening.opening_summary, ''),
-      today_quote: safeText(opening.today_quote, ''),
-      taiex_change: toNumber(opening.taiex_change),
-      txf_change: toNumber(opening.txf_change),
-      tsmc_change: toNumber(opening.tsmc_change),
-      spx_change: toNumber(opening.spx_change),
-      sox_change: toNumber(opening.sox_change),
-      vix_change: toNumber(opening.vix_change),
-      us10y_change: toNumber(opening.us10y_change),
-      checked_at: safeText(opening.checked_at, ''),
-      captured_at: safeText(opening.captured_at, ''),
-      updated_at: safeText(opening.updated_at, ''),
-      created_at: safeText(opening.created_at, ''),
-      generated_at: safeText(opening.generated_at, ''),
-      data_source: safeText(opening.data_source, '') || 'reports.ai_strategy_json.opening_radar',
-      source_kind: safeText(opening.source_kind, '') || 'report_snapshot',
-      market_data_date: safeText(opening.market_data_date, ''),
-      data_status: safeText(opening.data_status, ''),
-      missing_sources: Array.isArray(opening.missing_sources) ? opening.missing_sources.map(String) : [],
-      radar_mode: safeText(opening.radar_mode, ''),
-      txf_status: safeText(opening.txf_status, ''),
-      input_source: safeText(opening.input_source, ''),
+      version: safeText(sourceRadar.version, ''),
+      report_date: safeText(sourceRadar.report_date || report.report_date, ''),
+      radar_status: safeText(sourceRadar.radar_status || sourceRadar.status, ''),
+      market_bias: safeText(sourceRadar.market_bias || sourceRadar.bias, ''),
+      confidence_score: sourceRadar.confidence_score ?? null,
+      summary: safeText(sourceRadar.summary || sourceRadar.opening_summary, ''),
+      today_quote: safeText(sourceRadar.today_quote, ''),
+      taiex_change: toNumber(sourceRadar.taiex_change),
+      txf_change: toNumber(sourceRadar.txf_change),
+      tsmc_change: toNumber(sourceRadar.tsmc_change),
+      spx_change: toNumber(sourceRadar.spx_change),
+      sox_change: toNumber(sourceRadar.sox_change),
+      vix_change: toNumber(sourceRadar.vix_change),
+      us10y_change: toNumber(sourceRadar.us10y_change),
+      checked_at: safeText(sourceRadar.checked_at, ''),
+      captured_at: safeText(sourceRadar.captured_at, ''),
+      updated_at: safeText(sourceRadar.updated_at, ''),
+      created_at: safeText(sourceRadar.created_at, ''),
+      generated_at: safeText(sourceRadar.generated_at, ''),
+      data_source: safeText(sourceRadar.data_source, '') || 'reports.ai_strategy_json.opening_radar',
+      source_kind: safeText(sourceRadar.source_kind, '') || 'report_snapshot',
+      market_data_date: safeText(sourceRadar.market_data_date, ''),
+      data_status: safeText(sourceRadar.data_status, ''),
+      missing_sources: Array.isArray(sourceRadar.missing_sources) ? sourceRadar.missing_sources.map(String) : [],
+      radar_mode: safeText(sourceRadar.radar_mode, ''),
+      txf_status: safeText(sourceRadar.txf_status, ''),
+      input_source: safeText(sourceRadar.input_source, ''),
     };
   }
 
@@ -246,6 +253,16 @@ function TodayReportContent() {
   const premarketBiasLabel = safeText(displayBias, '待判斷');
   const activeIntradayRadar = hasFreshIntradayRadar ? liveRadar : null;
   const effectiveIntradayRadar = activeIntradayRadar;
+  const publicSummary = asObj(ai.public_summary) || asObj(ai.free_summary);
+  const parsedV8DailySentence = asObj(parsedStrategy.v8_daily_sentence);
+  const rawV8DailySentence = asObj(ai.v8_daily_sentence);
+  const v8DailySentenceText =
+    safeText(parsedV8DailySentence.sentence, '') ||
+    safeText(rawV8DailySentence.sentence, '') ||
+    safeText(ai.daily_sentence, '') ||
+    safeText(publicSummary.daily_sentence, '') ||
+    safeText(report?.summary, '') ||
+    safeText(ai.summary, '');
   const overviewRadarStatusText = activeIntradayRadar
     ? safeText(activeIntradayRadar.radar_status, '觀察中')
     : '盤中資料未同步';
@@ -260,13 +277,20 @@ function TodayReportContent() {
     : '盤中資料未同步';
   const todaySentenceText = activeIntradayRadar?.summary
     ? safeText(activeIntradayRadar.summary)
-    : '目前僅保留07:30盤前假設，今日方向需等待09:00後有效盤中資料驗證。';
+    : v8DailySentenceText || '今日盤前一句尚未產生，請稍後再查看。';
   const observations = useMemo(
     () => (activeIntradayRadar ? buildObservations(report, activeIntradayRadar) : []),
     [report, activeIntradayRadar],
   );
-  const safeDailySentence = hasFreshIntradayRadar
-    ? { status: 'ready' as const, sentence: todaySentenceText, logic_source: ['opening_market_radar.summary'], tone: 'clear, sharp, human-readable' as const }
+  const safeDailySentence = v8DailySentenceText
+    ? {
+        status: 'ready' as const,
+        sentence: v8DailySentenceText,
+        logic_source: Array.isArray(parsedV8DailySentence.logic_source)
+          ? parsedV8DailySentence.logic_source.map(String)
+          : ['ai_strategy_json.v8_daily_sentence'],
+        tone: 'clear, sharp, human-readable' as const,
+      }
     : { status: 'insufficient' as const, sentence: '', logic_source: [], tone: 'clear, sharp, human-readable' as const };
   const canViewTodayReportFull = hasFeature(entitlement, 'today_report_full');
 
@@ -281,6 +305,7 @@ function TodayReportContent() {
     const raw = [
       ...asArray(ai.today_beneficiary_stocks),
       ...asArray(ai.beneficiary_stocks),
+      ...asArray(publicSummary.beneficiary_stocks),
     ].filter((item, index, arr) => {
       const symbol = safeText(item.symbol, '');
       return symbol && arr.findIndex((x) => safeText(x.symbol, '') === symbol) === index;

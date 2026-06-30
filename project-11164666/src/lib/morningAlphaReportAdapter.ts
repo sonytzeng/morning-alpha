@@ -10,7 +10,7 @@
  *   publishReady   → ai_strategy_json.content_publish_gate (primary) || ai_strategy_json.publish_ready (fallback)
  *   TW basis       → ai_strategy_json.tw_core_date > data_basis > market_data_date > selected_symbol_dates
  *   US basis       → ai_strategy_json.us_global_date > us_market_date
- *   generatedAt    → ai_strategy_json.generated_at > report.created_at
+ *   generatedAt    → generated_at aliases > report timestamps
  */
 
 import { supabase } from '@/lib/supabase';
@@ -26,6 +26,7 @@ export interface ReportRow {
   market_bias: string | null;
   confidence_score: number | null;
   created_at: string;
+  updated_at?: string | null;
   ai_strategy_json: Record<string, unknown> | null;
   summary: string | null;
   watch_sectors_json: Record<string, unknown>[] | null;
@@ -168,6 +169,7 @@ export async function fetchLatestReports(limit = 10): Promise<ReportRow[]> {
     market_bias: r.market_bias ? String(r.market_bias) : null,
     confidence_score: r.confidence_score != null ? Number(r.confidence_score) : null,
     created_at: String(r.created_at || ''),
+    updated_at: typeof r.updated_at === 'string' ? r.updated_at : null,
     ai_strategy_json: (r.ai_strategy_json as Record<string, unknown>) || null,
     summary: r.summary ? String(r.summary) : null,
     watch_sectors_json: Array.isArray(r.watch_sectors_json) ? (r.watch_sectors_json as Record<string, unknown>[]) : null,
@@ -198,6 +200,7 @@ export async function fetchLatestSingleReport(): Promise<ReportRow | null> {
     market_bias: r.market_bias ? String(r.market_bias) : null,
     confidence_score: r.confidence_score != null ? Number(r.confidence_score) : null,
     created_at: String(r.created_at || ''),
+    updated_at: typeof r.updated_at === 'string' ? r.updated_at : null,
     ai_strategy_json: (r.ai_strategy_json as Record<string, unknown>) || null,
     summary: r.summary ? String(r.summary) : null,
     watch_sectors_json: Array.isArray(r.watch_sectors_json) ? (r.watch_sectors_json as Record<string, unknown>[]) : null,
@@ -288,6 +291,25 @@ function grabArr(obj: unknown, key: string): Record<string, unknown>[] {
   return Array.isArray(o[key]) ? (o[key] as Record<string, unknown>[]) : [];
 }
 
+function firstNonEmptyString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function resolveGeneratedAt(raw: ReportRow, ai: Record<string, unknown>): string {
+  const rawRecord = raw as unknown as Record<string, unknown>;
+  return firstNonEmptyString(
+    ai.generated_at,
+    ai.generatedAt,
+    ai.report_generated_at,
+    rawRecord.created_at,
+    rawRecord.updated_at,
+    grabObj(ai, 'ai_strategy_json')?.generated_at,
+  );
+}
+
 // ═══════════════════════════════════════════════════
 // Core Normalization
 // ═══════════════════════════════════════════════════
@@ -340,7 +362,8 @@ export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlpha
 
   // ── IDs & dates ──
   const reportId = raw.id;
-  const reportCreatedAt = raw.created_at;
+  const generatedAt = resolveGeneratedAt(raw, ai);
+  const reportCreatedAt = generatedAt || raw.created_at;
   const reportDate = raw.report_date || formatTaipeiDate();
   const reportDisplayDate = raw.report_date || formatTaipeiDate();
   // V28: TW core date — priority: tw_core_date > data_basis > market_data_date > raw.report_date
@@ -349,10 +372,6 @@ export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlpha
   // V28: US/Global date — priority: us_global_date > us_market_date > raw.report_date
   const usMarketBasisDate =
     grabStr(ai, 'us_global_date') || grabStr(ai, 'us_market_date') || raw.report_date || '—';
-  // V28: Generated at — priority: ai_strategy_json.generated_at > report.created_at
-  const rawUpdatedAt = (raw as unknown as Record<string, unknown>).updated_at;
-  const generatedAt = grabStr(ai, 'generated_at') || raw.created_at || (typeof rawUpdatedAt === 'string' ? rawUpdatedAt : '') || '';
-
   // ── Version & source (reports table has NO top-level ai_version) ──
   const aiVersion = grabStr(ai, 'version');
   const source = grabStr(ai, 'source');

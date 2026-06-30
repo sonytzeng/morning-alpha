@@ -89,20 +89,56 @@ function getMarketDataDate(row: ReportRow | null): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function firstString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function getPayloadGeneratedAt(payload: Record<string, unknown>): string {
+  const nestedAI = asRecord(payload.ai_strategy_json);
+  return firstString(
+    payload.generated_at,
+    payload.generatedAt,
+    payload.report_generated_at,
+    payload.created_at,
+    payload.updated_at,
+    nestedAI?.generated_at,
+  );
+}
+
+function getPayloadDailySentence(payload: Record<string, unknown>): string {
+  const nestedAI = asRecord(payload.ai_strategy_json);
+  const publicSummary = asRecord(payload.public_summary) || asRecord(nestedAI?.public_summary) || asRecord(payload.free_summary);
+  const v8DailySentence = asRecord(nestedAI?.v8_daily_sentence) || asRecord(payload.v8_daily_sentence);
+  return firstString(
+    v8DailySentence?.sentence,
+    nestedAI?.daily_sentence,
+    payload.v8_daily_sentence,
+    payload.daily_sentence,
+    publicSummary?.daily_sentence,
+    payload.summary,
+    payload.today_quote,
+  );
+}
+
 function toTrimmedReportRow(response: ServerReportPayloadResponse): ReportRow | null {
   if (!response.payload || !response.report_date) return null;
   const payload = response.payload;
-  const generatedAt = typeof payload.generated_at === 'string' ? payload.generated_at : '';
-  const dailySentence =
-    typeof payload.daily_sentence === 'string' ? payload.daily_sentence :
-    typeof payload.today_quote === 'string' ? payload.today_quote :
-    '';
+  const generatedAt = getPayloadGeneratedAt(payload);
+  const dailySentence = getPayloadDailySentence(payload);
   return {
     id: `server-trimmed:${response.report_date}`,
     report_date: response.report_date,
     market_bias: typeof payload.market_bias === 'string' ? payload.market_bias : null,
     confidence_score: payload.confidence_score != null ? Number(payload.confidence_score) : null,
     created_at: generatedAt,
+    updated_at: firstString(payload.updated_at),
     ai_strategy_json: payload,
     summary: dailySentence || null,
     watch_sectors_json: null,

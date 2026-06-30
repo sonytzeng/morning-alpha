@@ -55,6 +55,45 @@ function safeJsonObject<T extends Record<string, unknown>>(val: unknown, fallbac
   return fallback ?? null;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function firstString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function getPayloadGeneratedAt(payload: Record<string, unknown> | undefined): string | null {
+  if (!payload) return null;
+  const nestedAI = asRecord(payload.ai_strategy_json);
+  return firstString(
+    payload.generated_at,
+    payload.generatedAt,
+    payload.report_generated_at,
+    payload.created_at,
+    payload.updated_at,
+    nestedAI?.generated_at,
+  );
+}
+
+function getPayloadSummary(payload: Record<string, unknown> | undefined): string | null {
+  if (!payload) return null;
+  const nestedAI = asRecord(payload.ai_strategy_json);
+  const publicSummary = asRecord(payload.public_summary) || asRecord(nestedAI?.public_summary) || asRecord(payload.free_summary);
+  const v8DailySentence = asRecord(nestedAI?.v8_daily_sentence) || asRecord(payload.v8_daily_sentence);
+  return firstString(
+    v8DailySentence?.sentence,
+    nestedAI?.daily_sentence,
+    payload.daily_sentence,
+    publicSummary?.daily_sentence,
+    payload.summary,
+    payload.today_quote,
+  );
+}
+
 export function mapRowToReport(row: Record<string, unknown>): Report {
   return {
     id: String(row.id || ''),
@@ -118,9 +157,9 @@ export async function getTodayReport(): Promise<Report | null> {
       report_date: response.report_date,
       market_bias: response.payload?.market_bias,
       confidence_score: response.payload?.confidence_score,
-      summary: response.payload?.daily_sentence || response.payload?.today_quote,
+      summary: getPayloadSummary(response.payload),
       ai_strategy_json: response.payload,
-      created_at: response.payload?.generated_at,
+      created_at: getPayloadGeneratedAt(response.payload),
     });
   } catch (error) {
     console.error('getTodayReport error:', error instanceof Error ? error.message : error);
@@ -136,9 +175,9 @@ export async function getReportByDate(date: string): Promise<Report | null> {
       report_date: response.report_date,
       market_bias: response.payload?.market_bias,
       confidence_score: response.payload?.confidence_score,
-      summary: response.payload?.daily_sentence || response.payload?.today_quote,
+      summary: getPayloadSummary(response.payload),
       ai_strategy_json: response.payload,
-      created_at: response.payload?.generated_at,
+      created_at: getPayloadGeneratedAt(response.payload),
     });
   } catch (error) {
     console.error('getReportByDate error:', error instanceof Error ? error.message : error);
@@ -154,9 +193,9 @@ export async function getLatestReports(limit = 7): Promise<Report[]> {
       report_date: response.report_date,
       market_bias: response.payload?.market_bias,
       confidence_score: response.payload?.confidence_score,
-      summary: response.payload?.daily_sentence || response.payload?.today_quote,
+      summary: getPayloadSummary(response.payload),
       ai_strategy_json: response.payload,
-      created_at: response.payload?.generated_at,
+      created_at: getPayloadGeneratedAt(response.payload),
     });
     return limit > 0 ? [report] : [];
   } catch (error) {

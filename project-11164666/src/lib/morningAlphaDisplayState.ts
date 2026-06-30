@@ -243,7 +243,11 @@ export function getMorningAlphaDisplayState(
     : '';
 
   const beneficiaryStocks = aiExists
-    ? [...grabArr(ai, 'today_beneficiary_stocks'), ...grabArr(ai, 'beneficiary_stocks')]
+    ? [
+        ...grabArr(ai, 'today_beneficiary_stocks'),
+        ...grabArr(ai, 'beneficiary_stocks'),
+        ...grabArr(publicSummary, 'beneficiary_stocks'),
+      ]
     : [];
 
   // V9.0: Three-tier beneficiary
@@ -272,7 +276,13 @@ export function getMorningAlphaDisplayState(
     ? ((ai.member_research_note as string | Record<string, unknown>) || null)
     : null;
 
-  const openingRadar = liveOpeningRadar || (aiExists ? grabObj(ai, 'opening_radar') : null);
+  const openingRadar = liveOpeningRadar || (aiExists
+    ? (
+        grabObj(ai, 'opening_radar') ||
+        grabObj(ai, 'intraday_tracking') ||
+        grabObj(ai, 'intraday_radar')
+      )
+    : null);
 
   const dataBasisLabel = aiExists
     ? (grabStr(ai, 'tw_core_date', 'market_data_latest_date', 'data_basis') || reportDate)

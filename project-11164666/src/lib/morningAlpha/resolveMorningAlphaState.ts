@@ -26,7 +26,7 @@
  *   reportExists=true, publishReady=true → "可公開"
  *   LINE/Reels/Social readiness does NOT affect reportExists or display.
  *
- * P28: report content should come from server-trimmed payload when available.
+ * Report content should come from server-trimmed payload when available.
  * Frontend gates are display scaffolding only; raw data security requires server-side trimming + RLS.
  */
 

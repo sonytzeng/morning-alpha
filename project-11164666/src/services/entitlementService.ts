@@ -92,8 +92,8 @@ export async function callGetReportPayload(params: {
     report_date: params.reportDate || null,
   };
 
-  // P28-2 scaffold: this sends ?tier=member/vip/admin only for dev payload testing
-  // and only the Edge Function may decide whether to honor it. TODO P29: remove
+  // Dev scaffold: this sends ?tier=member/vip/admin only for payload testing.
+  // Only the Edge Function may decide whether to honor it; replace with verified entitlement.
   // frontend tier override after DB verified entitlement is live.
   if (!accessToken && demoTier) {
     body.tier = demoTier;

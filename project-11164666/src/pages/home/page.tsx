@@ -23,6 +23,32 @@ export default function HomePage() {
   );
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function firstString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function formatTaipeiTime(value: unknown): string {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '—';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
 function HomePageContent() {
   const { data, loading, error, refresh, morningState } = useHomeDashboard();
 
@@ -52,7 +78,19 @@ function HomePageContent() {
     : (ms?.reportDate || fallbackReport?.report_date || fallbackMorningAlpha?.reportDate || todayTaipeiStr);
   const displayMarketDataDate = ms?.marketDataDate || ms?.activeReport?.marketDataBasisDate || fallbackMorningAlpha?.marketDataBasisDate || '—';
   const displayUsMarketDate = ms?.usMarketDate || fallbackMorningAlpha?.usMarketBasisDate || '—';
-  const displayCreatedAt = ms?.createdAtTaipei || '—';
+  const fallbackAI = asRecord(fallbackReport?.ai_strategy_json);
+  const nestedAI = asRecord(fallbackAI?.ai_strategy_json);
+  const generatedAtFallback = firstString(
+    ms?.activeReport?.generatedAt,
+    fallbackMorningAlpha?.generatedAt,
+    fallbackAI?.generated_at,
+    fallbackAI?.generatedAt,
+    fallbackAI?.report_generated_at,
+    fallbackReport?.created_at,
+    (fallbackReport as Record<string, unknown> | null)?.updated_at,
+    nestedAI?.generated_at,
+  );
+  const displayCreatedAt = ms?.createdAtTaipei || formatTaipeiTime(generatedAtFallback);
 
   // Status — morningState first, then fallback
   const isTodayReport = ms?.isReportForToday ?? (fallbackReport?.report_date === todayTaipeiStr);

@@ -156,6 +156,7 @@ function dedupeTierStocks(stocks: TierStock[], used = new Set<string>()): TierSt
 
 function resolveLegacyBeneficiaries(ai: Record<string, unknown>, report: Record<string, unknown>) {
   const memberResearchNoteV2 = asRecord(ai.member_research_note_v2);
+  const publicSummary = asRecord(ai.public_summary) || asRecord(ai.free_summary);
   const used = new Set<string>();
 
   // Debug-safe resolver: use only real existing V7/member-note fields, never static fallback stocks.
@@ -163,6 +164,7 @@ function resolveLegacyBeneficiaries(ai: Record<string, unknown>, report: Record<
     ...mapTierStocks(ai.core_beneficiary_stocks, 'core', 'core_beneficiary_stocks'),
     ...mapTierStocks(ai.beneficiary_stocks, 'core', 'beneficiary_stocks'),
     ...mapTierStocks(ai.today_beneficiary_stocks, 'core', 'today_beneficiary_stocks'),
+    ...mapTierStocks(publicSummary.beneficiary_stocks, 'core', 'public_summary.beneficiary_stocks'),
     ...mapMemberResearchCandidates(memberResearchNoteV2.beneficiary_candidates),
     ...mapTierStocks(report.focus_stock_json, 'core', 'reports.focus_stock_json'),
   ], used);
@@ -474,7 +476,7 @@ function OpportunitiesContent() {
               )}
               <PaywallCard
                 title="升級會員查看完整受惠股地圖"
-                description={`今日共追蹤 ${coreDisplayCount + watchDisplayCount} 檔。完整受惠股、why_this_stock、validation_signal、invalidation_condition 與 source_signals 已收在會員版。`}
+                description={`今日共追蹤 ${coreDisplayCount + watchDisplayCount} 檔。完整名單、個股受惠原因、盤中驗證訊號、失效條件與來源訊號已收在會員版。`}
                 requiredTier="member"
                 featureList={['完整受惠股名單', '第一受惠股推理鏈', '盤中驗證與失效條件']}
                 tone="light"

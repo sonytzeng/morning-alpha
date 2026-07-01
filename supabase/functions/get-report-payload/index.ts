@@ -13,6 +13,13 @@ type ReportRow = Record<string, unknown> & {
   ai_strategy_json?: unknown;
 };
 
+type ProfileRow = {
+  role?: string | null;
+  subscription_status?: string | null;
+  membership_tier?: string | null;
+  paid_until?: string | null;
+};
+
 type PayloadContext = {
   openingRadar: Record<string, unknown> | null;
   sectorRotationRows: Record<string, unknown>[];
@@ -86,6 +93,25 @@ function toNumberValue(value: unknown): number | null {
 function normalizeTier(value: unknown): SubscriptionTier {
   if (value === "member" || value === "vip" || value === "admin") return value;
   return "free";
+}
+
+function isPaidUntilValid(value: unknown): boolean {
+  const raw = toStringValue(value);
+  if (!raw) return true;
+  const paidUntil = Date.parse(raw);
+  if (!Number.isFinite(paidUntil)) return false;
+  return paidUntil >= Date.now();
+}
+
+function resolveTierFromProfile(profile: ProfileRow | null): SubscriptionTier {
+  if (!profile) return "free";
+  const subscriptionStatus = toStringValue(profile.subscription_status)?.toLowerCase() || "";
+  if (subscriptionStatus !== "active") return "free";
+  if (!isPaidUntilValid(profile.paid_until)) return "free";
+
+  const roleTier = normalizeTier(toStringValue(profile.role)?.toLowerCase());
+  if (roleTier !== "free") return roleTier;
+  return normalizeTier(toStringValue(profile.membership_tier)?.toLowerCase());
 }
 
 function isValidDate(value: unknown): value is string {
@@ -389,21 +415,31 @@ async function fetchPayloadContext(
 async function resolveTierFromRequest(
   req: Request,
   body: Record<string, unknown>,
-  supabaseUrl: string,
-  serviceRoleKey: string,
+  serviceClient: ReturnType<typeof createClient>,
 ): Promise<{ tier: SubscriptionTier; devOverride: boolean; userId: string | null }> {
   const authHeader = req.headers.get("Authorization") || "";
   const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length).trim() : "";
 
   if (bearer) {
-    const authClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-    const { data, error } = await authClient.auth.getUser(bearer);
+    const { data, error } = await serviceClient.auth.getUser(bearer);
     if (!error && data.user) {
-      // TODO P28/P29: replace free default with subscriptions/user_entitlements lookup.
       // Do not trust client-supplied tier when Authorization is present.
-      return { tier: "free", devOverride: false, userId: data.user.id };
+      const { data: profile, error: profileError } = await serviceClient
+        .from("profiles")
+        .select("role,subscription_status,membership_tier,paid_until")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.warn("GET_REPORT_PAYLOAD_PROFILE_LOOKUP_FAILED", profileError.message);
+        return { tier: "free", devOverride: false, userId: data.user.id };
+      }
+
+      return {
+        tier: resolveTierFromProfile(profile as ProfileRow | null),
+        devOverride: false,
+        userId: data.user.id,
+      };
     }
     return { tier: "free", devOverride: false, userId: null };
   }
@@ -437,7 +473,7 @@ Deno.serve(async (req: Request) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const { tier, devOverride, userId } = await resolveTierFromRequest(req, body, supabaseUrl, serviceRoleKey);
+  const { tier, devOverride, userId } = await resolveTierFromRequest(req, body, serviceClient);
 
   let query = serviceClient
     .from("reports")

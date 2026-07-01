@@ -164,6 +164,7 @@ function resolveLegacyBeneficiaries(ai: Record<string, unknown>, report: Record<
     ...mapTierStocks(ai.core_beneficiary_stocks, 'core', 'core_beneficiary_stocks'),
     ...mapTierStocks(ai.beneficiary_stocks, 'core', 'beneficiary_stocks'),
     ...mapTierStocks(ai.today_beneficiary_stocks, 'core', 'today_beneficiary_stocks'),
+    ...mapTierStocks(ai.one_teaser_stock ? [ai.one_teaser_stock] : [], 'core', 'one_teaser_stock'),
     ...mapTierStocks(publicSummary.beneficiary_stocks, 'core', 'public_summary.beneficiary_stocks'),
     ...mapMemberResearchCandidates(memberResearchNoteV2.beneficiary_candidates),
     ...mapTierStocks(report.focus_stock_json, 'core', 'reports.focus_stock_json'),
@@ -372,10 +373,17 @@ function OpportunitiesContent() {
   const hasExtended = extendedStocks.length > 0;
   const hasScenario = scenarioStocks.length > 0;
   const hasAnyStocks = hasCore || hasExtended || hasScenario;
+  const rawAI = (ds.rawAI || {}) as Record<string, unknown>;
+  const beneficiaryCountFallback = Number.isFinite(Number(rawAI.beneficiary_count)) ? Math.max(0, Number(rawAI.beneficiary_count)) : 0;
   const hasV8BeneficiaryChain = v8BeneficiaryChain?.status === 'ready' && (v8BeneficiaryChain.beneficiaries || []).length > 0;
-  const hasAnyBeneficiaryStock = hasAnyStocks || hasV8BeneficiaryChain;
+  const hasAnyBeneficiaryStock = hasAnyStocks || hasV8BeneficiaryChain || beneficiaryCountFallback > 0;
   const coreDisplayCount = hasV8BeneficiaryChain ? (v8BeneficiaryChain?.beneficiaries || []).length : coreStocks.length;
-  const watchDisplayCount = hasV8BeneficiaryChain ? 0 : extendedStocks.length + scenarioStocks.length;
+  const watchDisplayCount = hasV8BeneficiaryChain
+    ? 0
+    : hasAnyStocks
+      ? extendedStocks.length + scenarioStocks.length
+      : Math.max(0, beneficiaryCountFallback - coreDisplayCount);
+  const totalDisplayCount = Math.max(coreDisplayCount + watchDisplayCount, beneficiaryCountFallback);
   const confidenceText = ds.confidenceScore != null && ds.confidenceScore > 0
     ? `${ds.confidenceScore}/100`
     : '待驗證';
@@ -476,7 +484,7 @@ function OpportunitiesContent() {
               )}
               <PaywallCard
                 title="升級會員查看完整受惠股地圖"
-                description={`今日共追蹤 ${coreDisplayCount + watchDisplayCount} 檔。完整名單、個股受惠原因、盤中驗證訊號、失效條件與來源訊號已收在會員版。`}
+                description={`今日共追蹤 ${totalDisplayCount} 檔。完整名單、個股受惠原因、盤中驗證訊號、失效條件與來源訊號已收在會員版。`}
                 requiredTier="member"
                 featureList={['完整受惠股名單', '第一受惠股推理鏈', '盤中驗證與失效條件']}
                 tone="light"

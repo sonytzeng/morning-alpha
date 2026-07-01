@@ -1,7 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 // generate-sector-rotation
-// Produces sector_rotation_scores from real close-window market_data only.
+// Produces sector_rotation_scores from real close-window market data.
+// Prefer persisted close snapshots for reliable backfill, then fall back to latest market_data.
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -413,12 +414,23 @@ Deno.serve(async (req) => {
 
     const closeWindow = taipeiWindowUtc(scoreDate);
     const marketSelect = "symbol,name,market,value,change_percent,status,taiwan_impact,captured_at,change,updated_at";
-    const [capturedResult, updatedResult, newsResult, reportResult] = await Promise.all([
+    const snapshotSelect = "symbol,name,market,value,change_percent,captured_at,raw";
+    const [snapshotResult, capturedResult, updatedResult, newsResult, reportResult] = await Promise.all([
+      supabase
+        .from("market_data_snapshots")
+        .select(snapshotSelect)
+        .eq("trading_date", scoreDate)
+        .eq("phase", "close")
+        .limit(200),
       supabase.from("market_data").select(marketSelect).gte("captured_at", closeWindow.start).lte("captured_at", closeWindow.end).limit(200),
       supabase.from("market_data").select(marketSelect).gte("updated_at", closeWindow.start).lte("updated_at", closeWindow.end).limit(200),
       supabase.from("market_news").select("title,taiwan_impact_summary,related_sectors,published_at,created_at").gte("created_at", `${scoreDate}T00:00:00+08:00`).limit(100),
       supabase.from("reports").select("id,report_date,market_bias,summary,ai_strategy_json").eq("report_date", scoreDate).maybeSingle(),
     ]);
+
+    if (snapshotResult.error) {
+      console.warn(`${logPrefix} market_data_snapshots query warning: ${snapshotResult.error.message}; falling back to market_data`);
+    }
 
     const marketError = capturedResult.error || updatedResult.error;
     if (marketError) {
@@ -435,14 +447,17 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
-    const rawRows = [
+    const snapshotRows = snapshotResult.error ? [] : ((snapshotResult.data || []) as Record<string, unknown>[]);
+    const legacyRows = [
       ...(capturedResult.data || []),
       ...(updatedResult.data || []),
     ] as Record<string, unknown>[];
+    const marketDataSource = snapshotRows.length > 0 ? "market_data_snapshots" : "market_data";
+    const rawRows = snapshotRows.length > 0 ? snapshotRows : legacyRows;
 
     const rows = latestRowsBySymbol(rawRows.map(mapMarketRow).filter((row): row is MarketRow => row !== null));
     if (rows.length === 0) {
-      console.log(`${logPrefix} no close-window market_data for ${scoreDate}`);
+      console.log(`${logPrefix} no close-window market data for ${scoreDate} source=${marketDataSource}`);
       return jsonResponse({
         success: false,
         code: "NO_CLOSE_MARKET_DATA",
@@ -453,8 +468,10 @@ Deno.serve(async (req) => {
         close_window_start: closeWindow.start,
         close_window_end: closeWindow.end,
         market_data_count: 0,
+        market_data_source: marketDataSource,
+        snapshot_count: snapshotRows.length,
         usable_sector_count: 0,
-        skipped_reason: "No market_data rows in Taiwan close window",
+        skipped_reason: "No close-phase snapshots or market_data rows in Taiwan close window",
       }, 200);
     }
 
@@ -488,6 +505,8 @@ Deno.serve(async (req) => {
         close_window_start: closeWindow.start,
         close_window_end: closeWindow.end,
         market_data_count: rows.length,
+        market_data_source: marketDataSource,
+        snapshot_count: snapshotRows.length,
         usable_sector_count: 0,
         skipped_reason: "No configured sector had usable mapped symbols",
       }, 200);
@@ -510,6 +529,8 @@ Deno.serve(async (req) => {
         close_window_start: closeWindow.start,
         close_window_end: closeWindow.end,
         market_data_count: rows.length,
+        market_data_source: marketDataSource,
+        snapshot_count: snapshotRows.length,
         usable_sector_count: sectorRows.length,
       }, 500);
     }
@@ -530,12 +551,14 @@ Deno.serve(async (req) => {
         close_window_start: closeWindow.start,
         close_window_end: closeWindow.end,
         market_data_count: rows.length,
+        market_data_source: marketDataSource,
+        snapshot_count: snapshotRows.length,
         usable_sector_count: sectorRows.length,
         deleted_count: deletedCount || 0,
       }, 500);
     }
 
-    console.log(`${logPrefix} inserted ${sectorRows.length} sector rows for ${scoreDate} backfill=${backfillMode} deleted=${deletedCount || 0} market_rows=${rows.length}`);
+    console.log(`${logPrefix} inserted ${sectorRows.length} sector rows for ${scoreDate} backfill=${backfillMode} deleted=${deletedCount || 0} market_rows=${rows.length} source=${marketDataSource}`);
     return jsonResponse({
       success: true,
       score_date: scoreDate,
@@ -544,6 +567,8 @@ Deno.serve(async (req) => {
       close_window_start: closeWindow.start,
       close_window_end: closeWindow.end,
       market_data_count: rows.length,
+      market_data_source: marketDataSource,
+      snapshot_count: snapshotRows.length,
       usable_sector_count: sectorRows.length,
       deleted_count: deletedCount || 0,
       inserted_count: sectorRows.length,

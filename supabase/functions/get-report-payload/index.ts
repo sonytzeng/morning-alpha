@@ -100,7 +100,7 @@ function isPaidUntilValid(value: unknown): boolean {
   if (!raw) return true;
   const paidUntil = Date.parse(raw);
   if (!Number.isFinite(paidUntil)) return false;
-  return paidUntil >= Date.now();
+  return paidUntil > Date.now();
 }
 
 function resolveTierFromProfile(profile: ProfileRow | null): SubscriptionTier {

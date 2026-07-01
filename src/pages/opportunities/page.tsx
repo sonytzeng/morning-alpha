@@ -11,7 +11,7 @@ import { parseAIStrategy, type V8BeneficiaryChain } from '@/utils/aiStrategyPars
 import type { Report } from '@/types/report';
 import BeneficiaryChainCard from '@/components/v8/BeneficiaryChainCard';
 import PaywallCard from '@/components/paywall/PaywallCard';
-import { getCurrentEntitlement, hasFeature } from '@/services/entitlementService';
+import { hasFeature } from '@/services/entitlementService';
 import type { UserEntitlement } from '@/types/subscription';
 
 // ═══════════════════════════════════════════════════
@@ -154,6 +154,26 @@ function dedupeTierStocks(stocks: TierStock[], used = new Set<string>()): TierSt
   return result;
 }
 
+function buildEntitlementFromServerTier(tier: UserEntitlement['tier']): UserEntitlement {
+  const memberAccess = tier === 'member' || tier === 'vip' || tier === 'admin';
+  const vipAccess = tier === 'vip' || tier === 'admin';
+
+  return {
+    tier,
+    isLoggedIn: tier !== 'free',
+    isAdmin: tier === 'admin',
+    features: {
+      today_report_full: memberAccess,
+      opportunities_full: memberAccess,
+      member_note_full: memberAccess,
+      war_room_full: memberAccess,
+      vip_fund_flow: vipAccess,
+      vip_accuracy_history: vipAccess,
+      vip_alerts: vipAccess,
+    },
+  };
+}
+
 function resolveLegacyBeneficiaries(ai: Record<string, unknown>, report: Record<string, unknown>) {
   const memberResearchNoteV2 = asRecord(ai.member_research_note_v2);
   const publicSummary = asRecord(ai.public_summary) || asRecord(ai.free_summary);
@@ -221,6 +241,7 @@ function OpportunitiesContent() {
       try {
         setLoading(true);
         const resolved = await resolveActiveMorningAlphaReport();
+        setEntitlement(buildEntitlementFromServerTier(resolved.tier));
         const report = resolved.rawRow;
 
         if (!report) { setDs(null); setV8BeneficiaryChain(null); return; }
@@ -269,11 +290,6 @@ function OpportunitiesContent() {
       }
     }
     load();
-  }, []);
-
-  useEffect(() => {
-    // Do not treat frontend gating as data security.
-    getCurrentEntitlement().then(setEntitlement).catch(() => setEntitlement(null));
   }, []);
 
   // ═══ Loading ═══
@@ -386,6 +402,24 @@ function OpportunitiesContent() {
     : '待驗證';
   const canViewOpportunitiesFull = hasFeature(entitlement, 'opportunities_full');
   const teaserStock = coreStocks[0] || extendedStocks[0] || scenarioStocks[0] || null;
+  const memberFieldChecks = [
+    { key: 'core_beneficiary_stocks', label: '核心受惠股', present: asRecordArray(rawAI.core_beneficiary_stocks).length > 0 },
+    { key: 'beneficiary_stocks', label: '完整受惠股', present: asRecordArray(rawAI.beneficiary_stocks).length > 0 },
+    { key: 'today_beneficiary_stocks', label: '今日受惠股', present: asRecordArray(rawAI.today_beneficiary_stocks).length > 0 },
+    { key: 'extended_watchlist', label: '延伸觀察名單', present: asRecordArray(rawAI.extended_watchlist).length > 0 },
+    { key: 'scenario_watchlist', label: '情境觀察名單', present: asRecordArray(rawAI.scenario_watchlist).length > 0 },
+    { key: 'v8_beneficiary_chain', label: '第一受惠股推理鏈', present: Object.keys(asRecord(rawAI.v8_beneficiary_chain)).length > 0 || hasV8BeneficiaryChain },
+    { key: 'v8_overnight_causal_chain', label: '隔夜事件鏈', present: Object.keys(asRecord(rawAI.v8_overnight_causal_chain)).length > 0 },
+    { key: 'member_research_note_v2', label: '會員研究筆記', present: Object.keys(asRecord(rawAI.member_research_note_v2)).length > 0 },
+    { key: 'data_status', label: '資料狀態', present: Boolean(compactText(rawAI.data_status || rawAI.data_quality)) },
+    { key: 'data_basis_note', label: '資料基礎說明', present: Boolean(compactText(rawAI.data_basis_note || dataBasisNote)) },
+  ];
+  const missingMemberFieldKeys = memberFieldChecks.filter((item) => !item.present).map((item) => item.key);
+  const memberPayloadStatusText = canViewOpportunitiesFull
+    ? (missingMemberFieldKeys.length > 0
+      ? `Edge Function 未回傳 ${missingMemberFieldKeys.join(' / ')}`
+      : '會員 payload 已回傳完整受惠股與研究鏈欄位')
+    : '目前載入免費 payload；完整會員欄位會在登入會員後由 get-report-payload 回傳。';
 
   return (
     <div className="min-h-screen bg-background-50 flex flex-col overflow-x-hidden">
@@ -447,6 +481,58 @@ function OpportunitiesContent() {
             )}
           </div>
 
+          {hasAnyBeneficiaryStock && (
+            <section className="p-5 md:p-6 rounded-2xl bg-background-100 border border-background-200/70 space-y-4">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 text-[10px] font-medium">
+                      會員內容預覽 / 完整內容區
+                    </span>
+                    {!canViewOpportunitiesFull && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-background-50 text-foreground-500 border border-background-200 text-[10px] font-medium">
+                        免費觀看
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-foreground-900 font-bold text-base md:text-lg">今日共追蹤 {totalDisplayCount} 檔</h2>
+                  <p className="text-foreground-500 text-xs md:text-sm leading-relaxed mt-1">
+                    {canViewOpportunitiesFull
+                      ? '以下區塊直接顯示會員 payload 內的完整受惠股、推理鏈、盤中驗證訊號、失效條件與來源訊號。'
+                      : '免費區先公開 1 檔觀察股與總追蹤數；會員內容位置與資料狀態如下，避免只看到升級卡片卻不知道內容在哪。'}
+                  </p>
+                </div>
+                <div className="text-left md:text-right">
+                  <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">資料狀態</p>
+                  <p className={`text-xs leading-relaxed ${canViewOpportunitiesFull && missingMemberFieldKeys.length > 0 ? 'text-amber-600' : 'text-foreground-600'}`}>
+                    {memberPayloadStatusText}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {memberFieldChecks.map((item) => (
+                  <div key={item.key} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-background-50 border border-background-200/70">
+                    <span className="text-foreground-600 text-xs">{item.label}</span>
+                    <span className={`text-[10px] font-medium ${item.present ? 'text-primary-600' : 'text-foreground-300'}`}>
+                      {item.present ? '已回傳' : '未回傳'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {!canViewOpportunitiesFull && (
+                <PaywallCard
+                  title="升級會員查看完整受惠股地圖"
+                  description="今日受惠股完整推理、盤中驗證條件、失效條件與來源訊號已收在會員版。"
+                  requiredTier="member"
+                  featureList={['完整受惠股名單', '第一受惠股推理鏈', '盤中驗證與失效條件']}
+                  tone="light"
+                />
+              )}
+            </section>
+          )}
+
           {hasV8BeneficiaryChain && canViewOpportunitiesFull && (
             <BeneficiaryChainCard chain={v8BeneficiaryChain} tone="light" />
           )}
@@ -463,29 +549,21 @@ function OpportunitiesContent() {
             </section>
           )}
 
-          {!canViewOpportunitiesFull && hasAnyBeneficiaryStock && (
-            <section className="space-y-4">
-              {teaserStock && (
-                <div className="p-5 rounded-2xl bg-background-100 border border-background-200/70">
-                  <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-2">免費觀察股</p>
-                  <div className="flex items-center gap-2 flex-wrap mb-2">
-                    <span className="text-foreground-900 font-bold text-base">{[teaserStock.stock_id, teaserStock.stock_name].filter(Boolean).join(' ')}</span>
-                    {teaserStock.sector && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-100 text-accent-700 border border-accent-200">{teaserStock.sector}</span>
-                    )}
-                  </div>
-                  <p className="text-foreground-500 text-xs leading-relaxed">
-                    免費版僅提供一檔公開觀察股與今日追蹤數量；完整推理鏈、驗證訊號與失效條件保留在會員版。
-                  </p>
-                </div>
-              )}
-              <PaywallCard
-                title="升級會員查看完整受惠股地圖"
-                description={`今日共追蹤 ${totalDisplayCount} 檔。完整名單、個股受惠原因、盤中驗證訊號、失效條件與來源訊號已收在會員版。`}
-                requiredTier="member"
-                featureList={['完整受惠股名單', '第一受惠股推理鏈', '盤中驗證與失效條件']}
-                tone="light"
-              />
+          {!canViewOpportunitiesFull && hasAnyBeneficiaryStock && teaserStock && (
+            <section className="p-5 rounded-2xl bg-background-100 border border-background-200/70">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <p className="text-foreground-400 text-[10px] uppercase tracking-wider">免費觀察股</p>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-100 text-accent-700 border border-accent-200 text-[10px] font-medium">免費觀看</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <span className="text-foreground-900 font-bold text-base">{[teaserStock.stock_id, teaserStock.stock_name].filter(Boolean).join(' ')}</span>
+                {teaserStock.sector && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-100 text-accent-700 border border-accent-200">{teaserStock.sector}</span>
+                )}
+              </div>
+              <p className="text-foreground-500 text-xs leading-relaxed">
+                {teaserStock.reason || '免費版公開一檔觀察股與簡短方向；完整個股受惠原因、盤中驗證訊號、失效條件與來源訊號請查看會員內容區。'}
+              </p>
             </section>
           )}
 

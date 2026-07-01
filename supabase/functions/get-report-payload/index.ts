@@ -316,6 +316,8 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
 function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
   const ai = getAi(report);
   const note = asObject(ai.member_research_note_v2);
+  const v8BeneficiaryChain = asObject(ai.v8_beneficiary_chain);
+  const v8OvernightCausalChain = asObject(ai.v8_overnight_causal_chain);
   const publicPayload = buildPublicPayload(report, ctx);
   const publicDegradedMetadata = asObject(publicPayload.degraded_metadata);
   return {
@@ -324,15 +326,21 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     today_beneficiary_stocks: asArray(ai.today_beneficiary_stocks),
     beneficiary_stocks: asArray(ai.beneficiary_stocks),
     core_beneficiary_stocks: asArray(ai.core_beneficiary_stocks),
-    source_signals: ai.source_signals || asObject(ai.v8_beneficiary_chain).source_signals || [],
+    extended_watchlist: asArray(ai.extended_watchlist),
+    scenario_watchlist: asArray(ai.scenario_watchlist),
+    v8_beneficiary_chain: v8BeneficiaryChain,
+    v8_overnight_causal_chain: v8OvernightCausalChain,
+    source_signals: ai.source_signals || v8BeneficiaryChain.source_signals || [],
     why_this_stock: ai.why_this_stock || null,
+    data_status: toStringValue(ai.data_status) || toStringValue(note.data_status) || toStringValue(ai.data_quality) || null,
+    data_basis_note: toStringValue(ai.data_basis_note) || toStringValue(note.data_basis_note) || null,
     degraded_metadata: {
       ...publicDegradedMetadata,
       report_data_quality: toStringValue(ai.data_quality) || toStringValue(ai.data_status),
       missing_sources: Array.isArray(ai.missing_sources) ? ai.missing_sources : publicDegradedMetadata.missing_sources,
     },
     member_research_note_v2: note,
-    overnight_chain: note.overnight_chain || asObject(ai.v8_overnight_causal_chain).chains || ai.causal_overnight_impact_chains || [],
+    overnight_chain: note.overnight_chain || v8OvernightCausalChain.chains || ai.causal_overnight_impact_chains || [],
     validation_signal: buildValidationSignals(ai),
     invalidation_condition: buildInvalidationConditions(ai),
     closing_verification: buildClosingSummary(ai),

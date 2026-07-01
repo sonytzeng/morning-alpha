@@ -105,13 +105,19 @@ function isPaidUntilValid(value: unknown): boolean {
 
 function resolveTierFromProfile(profile: ProfileRow | null): SubscriptionTier {
   if (!profile) return "free";
+
+  const roleTier = normalizeTier(toStringValue(profile.role)?.toLowerCase());
+  if (roleTier === "admin") return "admin";
+
   const subscriptionStatus = toStringValue(profile.subscription_status)?.toLowerCase() || "";
   if (subscriptionStatus !== "active") return "free";
   if (!isPaidUntilValid(profile.paid_until)) return "free";
 
-  const roleTier = normalizeTier(toStringValue(profile.role)?.toLowerCase());
-  if (roleTier !== "free") return roleTier;
-  return normalizeTier(toStringValue(profile.membership_tier)?.toLowerCase());
+  if (roleTier === "vip" || roleTier === "member") return roleTier;
+
+  const membershipTier = normalizeTier(toStringValue(profile.membership_tier)?.toLowerCase());
+  if (membershipTier === "vip" || membershipTier === "member") return membershipTier;
+  return "free";
 }
 
 function isValidDate(value: unknown): value is string {
@@ -444,10 +450,11 @@ async function resolveTierFromRequest(
     return { tier: "free", devOverride: false, userId: null };
   }
 
-  // TODO P28: dev-only override for local/manual payload testing.
-  // Production entitlement must come from verified server-side subscriptions/user_entitlements, never from body.tier.
-  if (body.tier) {
-    return { tier: normalizeTier(body.tier), devOverride: true, userId: null };
+  // TODO P29: dev-only override for local/manual payload testing.
+  // Production entitlement must come from verified server-side profiles/subscriptions, never from client-supplied tier.
+  const devTier = body.tier || new URL(req.url).searchParams.get("tier");
+  if (devTier) {
+    return { tier: normalizeTier(devTier), devOverride: true, userId: null };
   }
   return { tier: "free", devOverride: false, userId: null };
 }

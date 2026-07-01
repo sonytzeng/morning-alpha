@@ -99,6 +99,18 @@ type SectorRotationRow={sector:string;sub_sector:string;rotation_score:number;di
 type MemberResearchNoteV2={overnight_chain:Record<string,unknown>[];taiwan_impact_map:Record<string,unknown>[];beneficiary_candidates:Record<string,unknown>[];intraday_validation:Record<string,unknown>[];invalidation_rules:Record<string,unknown>[];closing_feedback_plan:Record<string,unknown>;subscriber_value_sentence:string;data_status:'complete'|'partial'|'insufficient';today_core_thesis?:string;market_mispricing?:string;institutional_behavior?:string;fund_flow_scenario?:string;beneficiary_reasoning?:Record<string,unknown>[];close_backtest_plan?:Record<string,unknown>;tomorrow_extension_watch?:string[]};
 type V8Contract={v8_beneficiary_chain:Record<string,unknown>;v8_overnight_causal_chain:Record<string,unknown>;v8_daily_sentence:Record<string,unknown>};
 
+function applyMemberResearchNoteV2Aliases(ai:Record<string,unknown>):Record<string,unknown>{
+  const note=ai.member_research_note_v2;
+  if(!note||typeof note!=='object'||Array.isArray(note))return ai;
+  const n=note as Record<string,unknown>;
+  if(!n.thesis&&n.today_core_thesis)n.thesis=n.today_core_thesis;
+  if(!n.beneficiary_reasoning_chain&&Array.isArray(n.beneficiary_reasoning))n.beneficiary_reasoning_chain=n.beneficiary_reasoning;
+  if(!n.invalidation_conditions&&Array.isArray(n.invalidation_rules))n.invalidation_conditions=n.invalidation_rules;
+  if(!n.closing_feedback&&n.closing_feedback_plan&&typeof n.closing_feedback_plan==='object'&&!Array.isArray(n.closing_feedback_plan))n.closing_feedback=n.closing_feedback_plan;
+  if(!n.next_day_tracking&&Array.isArray(n.tomorrow_extension_watch))n.next_day_tracking=n.tomorrow_extension_watch;
+  return ai;
+}
+
 function safeInteger(v:unknown,fallback:number=50):number{if(v===null||v===undefined)return fallback;const n=Number(v);if(Number.isNaN(n))return fallback;if(n>=0&&n<=1)return Math.round(n*100);if(n>100)return 100;if(n<0)return 0;return Math.round(n);}
 function convictionLevelFromConfidence(c:number):string{if(c>=75)return'★★★★★';if(c>=60)return'★★★★☆';return'★★★☆☆';}
 function isStrongSectorRotation(s:SectorRotationRow):boolean{return s.rotation_score>=70&&(s.direction==='strong_positive'||s.direction==='positive'||s.signal_label==='強勢主流'||s.signal_label==='轉強');}
@@ -1101,6 +1113,7 @@ Deno.serve(async (req:Request)=>{
       log('[member_note_v2] final guard applied deterministic fallback');
       aiStrategyJson.member_research_note_v2=detMemberNoteV2;
     }
+    aiStrategyJson=applyMemberResearchNoteV2Aliases(aiStrategyJson);
     let finalV8=hasCompleteV8Contract(aiStrategyJson)?sanitizeV8ContractSafe(aiStrategyJson,log):safeV8Fallback;
     if(!v8ContractHasUsableData(finalV8)){
       const bridgeV8=buildV8ContractFromMemberNoteV2(aiStrategyJson.member_research_note_v2,aiStrategyJson.beneficiary_stocks as Record<string,unknown>[],marketData,sectorData);
@@ -1110,6 +1123,7 @@ Deno.serve(async (req:Request)=>{
     aiStrategyJson.v8_overnight_causal_chain=finalV8.v8_overnight_causal_chain;
     aiStrategyJson.v8_daily_sentence=finalV8.v8_daily_sentence;
     aiStrategyJson=sanitizePremarketTemporalFields(aiStrategyJson);
+    aiStrategyJson=applyMemberResearchNoteV2Aliases(aiStrategyJson);
     aiStrategyJson=limitBeneficiaryStockCounts(aiStrategyJson);
     aiStrategyJson.version=VERSION;aiStrategyJson.generated_at=new Date().toISOString();
     aiStrategyJson.tw_stock_filter_applied=true;aiStrategyJson.research_card_format=true;

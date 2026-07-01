@@ -21,6 +21,22 @@ function getTaiwanDateString(): string {
   return `${y}-${m}-${d}`;
 }
 
+function taipeiDateTimeToUtcIso(date: string, hour: number, minute = 0, addDays = 0): string {
+  const [year, month, day] = date.split('-').map((v) => Number(v));
+  return new Date(Date.UTC(year, month - 1, day + addDays, hour - 8, minute, 0, 0)).toISOString();
+}
+
+function taipeiDateFromIso(iso: string): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
+  const y = parts.find((p) => p.type === 'year')?.value || '';
+  const m = parts.find((p) => p.type === 'month')?.value || '';
+  const d = parts.find((p) => p.type === 'day')?.value || '';
+  return y && m && d ? `${y}-${m}-${d}` : null;
+}
+
 function getTaipeiHourMinute(): { hour: number; minute: number } {
   const now = new Date();
   const tw = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
@@ -33,6 +49,7 @@ interface MarketDataRow {
   value: number;
   change_percent: number;
   captured_at: string;
+  source?: string;
 }
 
 interface OpeningRadarResult {
@@ -58,6 +75,25 @@ function findSymbol(data: MarketDataRow[], candidates: string[]): MarketDataRow 
     if (found) return found;
   }
   return null;
+}
+
+function getLatestCapturedAt(data: MarketDataRow[]): string | null {
+  let latest = '';
+  for (const row of data) {
+    if (row.captured_at && (!latest || row.captured_at > latest)) latest = row.captured_at;
+  }
+  return latest || null;
+}
+
+function mapMarketDataRows(rows: Record<string, unknown>[] | null | undefined): MarketDataRow[] {
+  return (rows || []).map((r: Record<string, unknown>) => ({
+    symbol: String(r.symbol || ''),
+    name: String(r.name || r.symbol || ''),
+    value: Number(r.value || 0),
+    change_percent: Number(r.change_percent || 0),
+    captured_at: String(r.captured_at || ''),
+    source: r.source ? String(r.source) : undefined,
+  })).filter((r) => r.symbol && r.captured_at);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -326,24 +362,84 @@ Deno.serve(async (req) => {
 
     log(`Premarket from reports: bias="${premarketBias}", confidence=${premarketConfidence}`);
 
-    // 2. Fetch latest market_data
-    const thirtySixHoursAgo = new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString();
-    const { data: marketRows } = await supabase
-      .from('market_data')
-      .select('symbol, name, value, change_percent, captured_at')
-      .gte('captured_at', thirtySixHoursAgo)
+    // 2. Prefer today's intraday snapshots, then fall back to today's live market_data.
+    // TXF is not yet configured as a reliable source. TAIEX + 2330 can still produce a degraded radar.
+    const openStartIso = taipeiDateTimeToUtcIso(today, 9);
+    const now = new Date().toISOString();
+
+    const { data: snapshotRows, error: snapshotErr } = await supabase
+      .from('market_data_snapshots')
+      .select('symbol, name, value, change_percent, captured_at, source')
+      .eq('trading_date', today)
+      .eq('phase', 'intraday')
+      .in('symbol', ['TAIEX', 'TWII', '^TWII', 'TXF', 'TX', 'TXF1', '2330', '2330.TW', 'TSMC_TW'])
       .order('captured_at', { ascending: false })
       .limit(50);
 
-    const marketData: MarketDataRow[] = (marketRows || []).map((r: Record<string, unknown>) => ({
-      symbol: String(r.symbol || ''),
-      name: String(r.name || ''),
-      value: Number(r.value || 0),
-      change_percent: Number(r.change_percent || 0),
-      captured_at: String(r.captured_at || ''),
-    }));
+    if (snapshotErr) {
+      log(`Snapshot query warning: ${snapshotErr.message}`);
+    }
 
-    log(`Market data rows: ${marketData.length}, symbols: ${marketData.map(r => r.symbol).join(', ')}`);
+    const snapshotMarketData = mapMarketDataRows(snapshotRows as Record<string, unknown>[] | null | undefined);
+    let marketDataSource = 'market_data_snapshots';
+    let marketData = snapshotMarketData;
+
+    if (marketData.length === 0) {
+      log('No intraday snapshots found; falling back to market_data live rows');
+      const { data: marketRows } = await supabase
+      .from('market_data')
+      .select('symbol, name, value, change_percent, captured_at')
+      .gte('captured_at', openStartIso)
+      .lte('captured_at', now)
+      .order('captured_at', { ascending: false })
+      .limit(50);
+
+      marketData = mapMarketDataRows(marketRows as Record<string, unknown>[] | null | undefined);
+      marketDataSource = 'market_data';
+    }
+
+    const latestCapturedAt = getLatestCapturedAt(marketData);
+    const marketDataDate = latestCapturedAt ? taipeiDateFromIso(latestCapturedAt) : null;
+    log(`Market data rows: ${marketData.length}, source=${marketDataSource}, window=${openStartIso}..${now}, latest_captured_at=${latestCapturedAt || 'none'}, market_data_date=${marketDataDate || 'none'}, symbols: ${marketData.map(r => r.symbol).join(', ')}`);
+
+    if (!latestCapturedAt || marketDataDate !== today) {
+      log('NO_VALID_INTRADAY_DATA: no market_data captured at or after Taiwan 09:00 today');
+      return new Response(JSON.stringify({
+        success: false,
+        reason: 'NO_VALID_INTRADAY_DATA',
+      }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
+    }
+
+    const requiredTaiex = findSymbol(marketData, ['TAIEX', 'TWII', '^TWII']);
+    const requiredTxf = findSymbol(marketData, ['TXF', 'TX', 'TXF1']);
+    const requiredTsmc = findSymbol(marketData, ['2330', '2330.TW', 'TSMC_TW']);
+    const missingCoreSymbols = [
+      requiredTaiex ? '' : 'TAIEX',
+      requiredTxf ? '' : 'TXF',
+      requiredTsmc ? '' : '2330',
+    ].filter(Boolean);
+
+    const hasFullCore = Boolean(requiredTaiex && requiredTxf && requiredTsmc);
+    const hasTwoCoreWithoutTxf = Boolean(requiredTaiex && !requiredTxf && requiredTsmc);
+    const dataStatus = hasFullCore ? 'ready' : hasTwoCoreWithoutTxf ? 'degraded' : 'insufficient';
+    const radarMode = hasFullCore ? 'full_core' : hasTwoCoreWithoutTxf ? 'two_core_without_txf' : 'invalid_core_missing_taiex_or_2330';
+    const txfStatus = requiredTxf ? 'available' : 'not_configured_or_missing';
+
+    if (!requiredTaiex || !requiredTsmc) {
+      log(`NO_VALID_INTRADAY_DATA: missing required two-core symbols ${missingCoreSymbols.join(', ')}`);
+      return new Response(JSON.stringify({
+        success: false,
+        reason: 'NO_VALID_INTRADAY_DATA',
+        data_status: dataStatus,
+        missing_sources: missingCoreSymbols,
+        radar_mode: radarMode,
+        txf_status: txfStatus,
+      }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
+    }
+
+    if (hasTwoCoreWithoutTxf) {
+      log('DEGRADED_INTRADAY_DATA: TAIEX + 2330 present, TXF missing; continuing in two_core_without_txf mode');
+    }
 
     // 3. Compute radar
     const radar = computeRadar(marketData, premarketBias, premarketConfidence, log);
@@ -351,7 +447,6 @@ Deno.serve(async (req) => {
     log(`Radar: status=${radar.radar_status}, bias=${radar.market_bias}, confidence=${radar.confidence_score}, overridden=${radar.is_premarket_overridden}`);
 
     // 4. Upsert to opening_market_radar
-    const now = new Date().toISOString();
     const upsertData: Record<string, unknown> = {
       report_date: today,
       radar_status: radar.radar_status,
@@ -371,13 +466,38 @@ Deno.serve(async (req) => {
       premarket_confidence: premarketConfidence,
       is_premarket_overridden: radar.is_premarket_overridden,
       override_reason: radar.override_reason,
+      captured_at: latestCapturedAt,
+      source_kind: 'intraday_live',
+      data_source: 'market_data',
+      input_source: marketDataSource,
+      market_data_date: today,
+      data_status: dataStatus,
+      missing_sources: missingCoreSymbols,
+      radar_mode: radarMode,
+      txf_status: txfStatus,
       created_at: now,
       updated_at: now,
     };
 
-    const { error: upsertErr } = await supabase
+    let degradedMetadataPersisted = true;
+    let { error: upsertErr } = await supabase
       .from('opening_market_radar')
       .upsert(upsertData, { onConflict: 'report_date' });
+
+    if (upsertErr && /(data_status|missing_sources|radar_mode|txf_status|input_source)/i.test(upsertErr.message)) {
+      degradedMetadataPersisted = false;
+      log(`Metadata column warning: ${upsertErr.message}; retrying without degraded metadata columns`);
+      const compatibleUpsertData = { ...upsertData };
+      delete compatibleUpsertData.data_status;
+      delete compatibleUpsertData.missing_sources;
+      delete compatibleUpsertData.radar_mode;
+      delete compatibleUpsertData.txf_status;
+      delete compatibleUpsertData.input_source;
+      const retry = await supabase
+        .from('opening_market_radar')
+        .upsert(compatibleUpsertData, { onConflict: 'report_date' });
+      upsertErr = retry.error;
+    }
 
     if (upsertErr) {
       log(`DB ERROR: ${upsertErr.message}`);
@@ -408,6 +528,16 @@ Deno.serve(async (req) => {
       taiex_change: radar.taiex_change,
       txf_change: radar.txf_change,
       tsmc_change: radar.tsmc_change,
+      captured_at: latestCapturedAt,
+      source_kind: 'intraday_live',
+      data_source: 'market_data',
+      input_source: marketDataSource,
+      market_data_date: marketDataDate,
+      data_status: dataStatus,
+      missing_sources: missingCoreSymbols,
+      radar_mode: radarMode,
+      txf_status: txfStatus,
+      degraded_metadata_persisted: degradedMetadataPersisted,
       after_open: afterOpen,
       duration_ms: Date.now() - startTime,
       logs,

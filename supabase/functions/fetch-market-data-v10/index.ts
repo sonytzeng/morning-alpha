@@ -13,7 +13,6 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-secret, x-cron-secret",
 };
 
-const CRON_SECRET = "MorningAlpha_0730_CRON_2026";
 const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
@@ -30,12 +29,28 @@ interface FinnhubQuote {
   t: number;
 }
 
+interface MarketQuote {
+  value: number;
+  change: number;
+  changePercent: number;
+  capturedAt: string;
+  provider: string;
+  sourceSymbol: string;
+  raw: Record<string, unknown>;
+}
+
 interface SymbolConfig {
   finnhubSymbol: string;
   displaySymbol: string;
   name: string;
   market: string;
   taiwanImpact: string;
+}
+
+type MarketDataPhase = "premarket" | "intraday" | "close" | "manual_backfill";
+
+interface RequestBody {
+  phase?: MarketDataPhase;
 }
 
 const SYMBOLS: SymbolConfig[] = [
@@ -58,11 +73,53 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function getTaipeiParts(): { date: string; hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+
+  const value = (type: string) => parts.find((p) => p.type === type)?.value || "";
+  return {
+    date: `${value("year")}-${value("month")}-${value("day")}`,
+    hour: Number(value("hour")),
+    minute: Number(value("minute")),
+  };
+}
+
+function resolveDefaultPhase(hour: number, minute: number): MarketDataPhase {
+  const currentMinutes = hour * 60 + minute;
+  if (currentMinutes >= 5 * 60 && currentMinutes <= 8 * 60 + 59) return "premarket";
+  if (currentMinutes >= 9 * 60 && currentMinutes <= 13 * 60 + 29) return "intraday";
+  if (currentMinutes >= 13 * 60 + 30) return "close";
+  return "manual_backfill";
+}
+
+function isMarketDataPhase(value: unknown): value is MarketDataPhase {
+  return value === "premarket" || value === "intraday" || value === "close" || value === "manual_backfill";
+}
+
+async function readRequestBody(req: Request): Promise<RequestBody> {
+  try {
+    const raw = await req.text();
+    if (!raw.trim()) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as RequestBody : {};
+  } catch {
+    return {};
+  }
+}
+
 async function fetchFinnhubQuote(
   finnhubSymbol: string,
   apiKey: string,
   logPrefix: string,
-): Promise<FinnhubQuote | null> {
+): Promise<MarketQuote | null> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -106,7 +163,28 @@ async function fetchFinnhubQuote(
         return null;
       }
 
-      return data;
+      return {
+        value: data.c,
+        change: data.d,
+        changePercent: data.dp,
+        capturedAt: new Date().toISOString(),
+        provider: "finnhub",
+        sourceSymbol: finnhubSymbol,
+        raw: {
+          provider: "finnhub",
+          finnhub_symbol: finnhubSymbol,
+          quote: {
+            current: data.c,
+            change: data.d,
+            change_percent: data.dp,
+            high: data.h,
+            low: data.l,
+            open: data.o,
+            previous_close: data.pc,
+            timestamp: data.t,
+          },
+        },
+      };
     } catch (err) {
       clearTimeout(timeoutId);
       const isTimeout = err instanceof DOMException && err.name === "AbortError";
@@ -122,6 +200,213 @@ async function fetchFinnhubQuote(
       return null;
     }
   }
+  return null;
+}
+
+function extractNumber(source: Record<string, unknown>, keys: string[]): number | null {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const cleaned = value.replace(/,/g, "").trim();
+      if (cleaned && cleaned !== "-" && cleaned !== "--") {
+        const parsed = Number(cleaned);
+        if (Number.isFinite(parsed)) return parsed;
+      }
+    }
+  }
+  return null;
+}
+
+function taipeiDateTimeToIso(dateValue: unknown, timeValue: unknown): string {
+  const date = String(dateValue || "").replace(/\D/g, "");
+  const time = String(timeValue || "00:00:00").trim();
+  if (date.length === 8) {
+    const yyyy = date.slice(0, 4);
+    const mm = date.slice(4, 6);
+    const dd = date.slice(6, 8);
+    const normalizedTime = /^\d{2}:\d{2}:\d{2}$/.test(time) ? time : "00:00:00";
+    const parsed = new Date(`${yyyy}-${mm}-${dd}T${normalizedTime}+08:00`);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+  return new Date().toISOString();
+}
+
+function normalizeTimestamp(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    const millis = value > 1_000_000_000_000 ? value : value * 1000;
+    const parsed = new Date(millis);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const trimmed = value.trim();
+    if (/^\d+$/.test(trimmed)) {
+      const numeric = Number(trimmed);
+      if (Number.isFinite(numeric) && numeric > 0) return normalizeTimestamp(numeric);
+    }
+
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      const year = parsed.getUTCFullYear();
+      if (year >= 2000 && year <= 2100) return parsed.toISOString();
+    }
+  }
+
+  return new Date().toISOString();
+}
+
+function normalizeFugleQuote(data: Record<string, unknown>, sourceSymbol: string): MarketQuote | null {
+  const trade = data.trade && typeof data.trade === "object" && !Array.isArray(data.trade)
+    ? data.trade as Record<string, unknown>
+    : {};
+  const price = extractNumber(data, ["price", "closePrice", "lastPrice", "last", "z"]) ??
+    extractNumber(trade, ["price", "closePrice", "lastPrice", "last"]);
+  const previousClose = extractNumber(data, ["previousClose", "previous_close", "referencePrice", "y"]);
+  const change = extractNumber(data, ["change", "priceChange"]);
+  let changePercent = extractNumber(data, ["changePercent", "change_percent", "priceChangePercent"]);
+
+  if (price === null || price <= 0) return null;
+  const computedChange = change ?? (previousClose && previousClose > 0 ? price - previousClose : 0);
+  if (changePercent === null) {
+    changePercent = previousClose && previousClose > 0 ? (computedChange / previousClose) * 100 : 0;
+  }
+
+  const capturedAt = normalizeTimestamp(data.lastUpdated || data.last_updated || data.updatedAt || trade.at || data.time || data.date);
+  return {
+    value: price,
+    change: computedChange,
+    changePercent,
+    capturedAt,
+    provider: "fugle",
+    sourceSymbol,
+    raw: {
+      provider: "fugle",
+      source_symbol: sourceSymbol,
+      date: data.date || null,
+      type: data.type || null,
+      market: data.market || null,
+      exchange: data.exchange || null,
+      captured_at: capturedAt,
+      price,
+      change: computedChange,
+      change_percent: changePercent,
+    },
+  };
+}
+
+async function fetchFugleStockQuote(
+  symbol: string,
+  apiKey: string,
+  logPrefix: string,
+): Promise<MarketQuote | null> {
+  if (!apiKey) return null;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4_000);
+  try {
+    const response = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/${encodeURIComponent(symbol)}`, {
+      headers: {
+        "Accept": "application/json",
+        "X-API-KEY": apiKey,
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      console.warn(`[${logPrefix}] Fugle ${symbol} HTTP ${response.status}`);
+      return null;
+    }
+    const data = await response.json();
+    return normalizeFugleQuote(data && typeof data === "object" && !Array.isArray(data) ? data as Record<string, unknown> : {}, symbol);
+  } catch (err) {
+    clearTimeout(timeoutId);
+    console.warn(`[${logPrefix}] Fugle ${symbol} failed: ${err instanceof Error ? err.message : String(err)}`);
+    return null;
+  }
+}
+
+function normalizeTwseQuote(data: Record<string, unknown>, sourceSymbol: string): MarketQuote | null {
+  const rows = Array.isArray(data.msgArray) ? data.msgArray : [];
+  const row = rows[0] && typeof rows[0] === "object" && !Array.isArray(rows[0])
+    ? rows[0] as Record<string, unknown>
+    : {};
+  const price = extractNumber(row, ["z", "pz", "a"]);
+  const previousClose = extractNumber(row, ["y"]);
+  if (price === null || price <= 0 || previousClose === null || previousClose <= 0) return null;
+
+  const change = price - previousClose;
+  const changePercent = (change / previousClose) * 100;
+  const capturedAt = taipeiDateTimeToIso(row.d, row.t);
+  return {
+    value: price,
+    change,
+    changePercent,
+    capturedAt,
+    provider: "twse",
+    sourceSymbol,
+    raw: {
+      provider: "twse",
+      source_symbol: sourceSymbol,
+      date: row.d || null,
+      time: row.t || null,
+      price,
+      previous_close: previousClose,
+      change,
+      change_percent: changePercent,
+    },
+  };
+}
+
+async function fetchTwseQuote(
+  exCh: string,
+  sourceSymbol: string,
+  logPrefix: string,
+): Promise<MarketQuote | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4_000);
+  try {
+    const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${encodeURIComponent(exCh)}&json=1&delay=0&_=${Date.now()}`;
+    const response = await fetch(url, {
+      headers: {
+        "Accept": "application/json",
+        "Referer": "https://mis.twse.com.tw/stock/index.jsp",
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      console.warn(`[${logPrefix}] TWSE ${sourceSymbol} HTTP ${response.status}`);
+      return null;
+    }
+    const data = await response.json();
+    return normalizeTwseQuote(data && typeof data === "object" && !Array.isArray(data) ? data as Record<string, unknown> : {}, sourceSymbol);
+  } catch (err) {
+    clearTimeout(timeoutId);
+    console.warn(`[${logPrefix}] TWSE ${sourceSymbol} failed: ${err instanceof Error ? err.message : String(err)}`);
+    return null;
+  }
+}
+
+async function fetchTaiwanCoreQuote(
+  config: SymbolConfig,
+  fugleApiKey: string,
+  logPrefix: string,
+): Promise<MarketQuote | null> {
+  if (config.displaySymbol === "2330") {
+    return await fetchFugleStockQuote("2330", fugleApiKey, logPrefix) ??
+      await fetchTwseQuote("tse_2330.tw", "2330", logPrefix) ??
+      null;
+  }
+
+  if (config.displaySymbol === "TAIEX") {
+    const fugleIndexCandidates = ["IX0001", "TAIEX"];
+    for (const candidate of fugleIndexCandidates) {
+      const quote = await fetchFugleStockQuote(candidate, fugleApiKey, logPrefix);
+      if (quote) return { ...quote, sourceSymbol: candidate };
+    }
+    return await fetchTwseQuote("tse_t00.tw", "TAIEX", logPrefix);
+  }
+
   return null;
 }
 
@@ -143,7 +428,16 @@ Deno.serve(async (req) => {
 
     // ── Auth: x-cron-secret ──
     const incomingCronSecret = req.headers.get("x-cron-secret") || "";
-    if (incomingCronSecret !== CRON_SECRET) {
+    const cronSecret = Deno.env.get("CRON_SECRET") || "";
+    if (!cronSecret) {
+      console.error(`[${batchTag}] CRON_SECRET is not configured`);
+      return new Response(
+        JSON.stringify({ success: false, error: "Server configuration error", reason: "CRON_SECRET is not configured" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+      );
+    }
+
+    if (incomingCronSecret !== cronSecret) {
       return new Response(
         JSON.stringify({ success: false, error: "Unauthorized" }),
         { status: 401, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
@@ -158,6 +452,7 @@ Deno.serve(async (req) => {
         { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
       );
     }
+    const fugleApiKey = Deno.env.get("FUGLE_API_KEY") || "";
 
     // ── Supabase ──
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -170,10 +465,22 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const requestBody = await readRequestBody(req);
+    const taipei = getTaipeiParts();
+    const phase = isMarketDataPhase(requestBody.phase) ? requestBody.phase : resolveDefaultPhase(taipei.hour, taipei.minute);
+    const tradingDate = taipei.date;
 
     const inserted: Array<{ symbol: string; name: string; value: number; change_percent: number }> = [];
     const failed: string[] = [];
+    const snapshotErrors: Array<{ symbol: string; error: string }> = [];
+    const dbWriteErrors: Array<{ symbol: string; error: string }> = [];
+    const providerUsedBySymbol: Record<string, string> = {};
+    const twCoreSymbolsSuccess: string[] = [];
+    const twCoreSymbolsFailed: Array<{ symbol: string; reason: string }> = [];
+    let snapshotUpsertedCount = 0;
     const allSymbols = SYMBOLS.map((s) => s.displaySymbol);
+
+    console.log(`[${batchTag}] phase=${phase} trading_date=${tradingDate} taipei=${taipei.hour}:${String(taipei.minute).padStart(2, "0")}`);
 
     // ═══════════════════════════════════════════════════════
     // Fetch all symbols sequentially with delay
@@ -202,20 +509,32 @@ Deno.serve(async (req) => {
       console.log(`[${batchTag}] [${i + 1}/${SYMBOLS.length}] Fetching ${config.displaySymbol}...`);
 
       try {
-        const quote = await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`);
+        const quote = config.market === "TW"
+          ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`)
+          : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`);
 
         if (!quote) {
           console.error(`[${batchTag}] [${i + 1}/${SYMBOLS.length}] ${config.displaySymbol} fetch returned null`);
           failed.push(config.displaySymbol);
+          if (config.market === "TW") {
+            twCoreSymbolsFailed.push({
+              symbol: config.displaySymbol,
+              reason: config.displaySymbol === "2330"
+                ? "FUGLE_STOCK_AND_TWSE_FALLBACK_FAILED"
+                : "FUGLE_INDEX_AND_TWSE_FALLBACK_FAILED",
+            });
+          }
           continue;
         }
 
-        const value = quote.c;
-        const changePercent = quote.dp;
+        const value = quote.value;
+        const change = quote.change;
+        const changePercent = quote.changePercent;
+        const capturedAt = config.market === "TW" ? new Date().toISOString() : (quote.capturedAt || new Date().toISOString());
+        providerUsedBySymbol[config.displaySymbol] = quote.provider;
+        if (config.market === "TW") twCoreSymbolsSuccess.push(config.displaySymbol);
 
         console.log(`[${batchTag}] [${i + 1}/${SYMBOLS.length}] ${config.displaySymbol} ${value} (${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(2)}%)`);
-
-        const capturedAt = new Date().toISOString();
 
         const { error: insertErr } = await supabase
           .from("market_data")
@@ -233,7 +552,43 @@ Deno.serve(async (req) => {
         if (insertErr) {
           console.error(`[${batchTag}] ${config.displaySymbol} DB error: ${insertErr.message}`);
           failed.push(config.displaySymbol);
+          dbWriteErrors.push({ symbol: config.displaySymbol, error: insertErr.message });
           continue;
+        }
+
+        const snapshotPayload = {
+          symbol: config.displaySymbol,
+          name: config.name,
+          market: config.market,
+          value: value,
+          change_percent: changePercent,
+          captured_at: capturedAt,
+          source: quote.provider,
+          phase,
+          trading_date: tradingDate,
+          raw: {
+            provider: quote.provider,
+            source_symbol: quote.sourceSymbol,
+            display_symbol: config.displaySymbol,
+            source_raw: quote.raw,
+            quote: {
+              current: value,
+              change,
+              change_percent: changePercent,
+            },
+            request_id: requestId,
+          },
+        };
+
+        const { error: snapshotErr } = await supabase
+          .from("market_data_snapshots")
+          .upsert(snapshotPayload, { onConflict: "symbol,trading_date,phase" });
+
+        if (snapshotErr) {
+          console.error(`[${batchTag}] ${config.displaySymbol} snapshot DB error: ${snapshotErr.message}`);
+          snapshotErrors.push({ symbol: config.displaySymbol, error: snapshotErr.message });
+        } else {
+          snapshotUpsertedCount++;
         }
 
         inserted.push({
@@ -254,6 +609,11 @@ Deno.serve(async (req) => {
     // Determine health
     const mvpSuccess = MVP_REQUIRED.every((s) => inserted.find((i) => i.symbol === s));
     const healthy = mvpSuccess && inserted.length >= 3;
+    const twCoreStatus = {
+      taiex: twCoreSymbolsSuccess.includes("TAIEX") ? "ok" : "failed",
+      stock_2330: twCoreSymbolsSuccess.includes("2330") ? "ok" : "failed",
+      txf: "not_configured",
+    };
 
     const elapsed = ((Date.now() - startedMs) / 1000).toFixed(1);
 
@@ -264,11 +624,21 @@ Deno.serve(async (req) => {
         success: true,
         version: "V10.7_FINNHUB_ONLY_TIMEOUT_SAFE",
         request_id: requestId,
+        phase,
+        trading_date: tradingDate,
         started_at: startedAt,
         completed_at: new Date().toISOString(),
         elapsed_seconds: parseFloat(elapsed),
         inserted: inserted,
         failed: failed,
+        tw_core_status: twCoreStatus,
+        tw_core_symbols_success: twCoreSymbolsSuccess,
+        tw_core_symbols_failed: twCoreSymbolsFailed,
+        provider_used_by_symbol: providerUsedBySymbol,
+        db_write_errors: dbWriteErrors,
+        txf_status: "not_configured",
+        snapshot_upserted_count: snapshotUpsertedCount,
+        snapshot_errors: snapshotErrors,
         symbols: allSymbols,
         healthy: healthy,
         timed_out: timedOut,

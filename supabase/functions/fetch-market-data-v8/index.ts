@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
+// DEPRECATED: superseded by fetch-market-data-v10.
+// This legacy function is intentionally disabled to prevent accidental writes to market_data.
 // ===== fetch-market-data-v8 =====
 // Purpose: Fetch market data from Yahoo Finance
 // Supports: IXIC, SOX, TSM, DXY, CL, SPX, VIX, US10Y, NVDA, AMD (US Yahoo)
@@ -176,6 +178,16 @@ Deno.serve(async (req) => {
     if (req.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "DEPRECATED_FUNCTION_DISABLED",
+        reason: "fetch-market-data-v8 is deprecated and no longer writes market_data. Use fetch-market-data-v10.",
+        replacement: "fetch-market-data-v10",
+      }),
+      { status: 410, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+    );
 
     // === Auth: x-cron-secret vs CRON_SECRET ===
     const incomingCronSecret = req.headers.get("x-cron-secret") || "";

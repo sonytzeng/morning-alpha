@@ -3,7 +3,7 @@
  *
  * Every page (home, today-report, dashboard, war-room, admin) MUST use this function
  * to get the current active Morning Alpha report. No page should do its own
- * supabase.from('reports').select() directly.
+ * direct reports-table reads.
  *
  * Resolution rules:
  * A. Priority: today's report (report_date = todayTaipeiDate)
@@ -15,10 +15,8 @@
  * F. Never generates fake data
  */
 
-import { supabase } from '@/lib/supabase';
 import { getFrontendMarketDateState, type FrontendMarketStatus } from '@/utils/marketDate';
 import {
-  REPORTS_STABLE_COLUMNS,
   fetchBestReport,
   normalizeMorningAlphaReport,
   type ReportRow,
@@ -313,54 +311,8 @@ async function resolveActiveMorningAlphaReportFromReports(
   urlReportDate: string | null | undefined,
   market: ReturnType<typeof getFrontendMarketDateState>,
 ): Promise<ResolveResult> {
+  void urlReportDate;
   const todayStr = market.today_date;
-
-  // ── Rule B: URL param only if valid ──
-  if (urlReportDate && isValidDateParam(urlReportDate)) {
-    const { data, error } = await supabase
-      .from('reports')
-      .select(REPORTS_STABLE_COLUMNS)
-      .eq('report_date', urlReportDate)
-      .maybeSingle();
-
-    if (!error && data) {
-      const row = toReportRow(data as Record<string, unknown>);
-      const normalized = normalizeMorningAlphaReport(row);
-      return buildResolveResult({
-        report: normalized,
-        rawRow: row,
-        source: 'url_param',
-        queriedDate: urlReportDate,
-        todayDate: todayStr,
-        marketStatus: market.market_status,
-        closedReason: market.closed_reason,
-        dataStatus: urlReportDate === todayStr ? 'ready' : 'stale_reference_only',
-        staleReason: urlReportDate !== todayStr ? `URL 指定歷史報告 ${urlReportDate}` : null,
-      });
-    }
-    // URL param didn't match — fall through to normal resolution
-  }
-
-  // ── Rule A: Today's report first ──
-  const { data: todayData, error: todayErr } = await supabase
-    .from('reports')
-    .select(REPORTS_STABLE_COLUMNS)
-    .eq('report_date', todayStr)
-    .maybeSingle();
-
-  if (!todayErr && todayData) {
-    const row = toReportRow(todayData as Record<string, unknown>);
-    return buildResolveResult({
-      report: normalizeMorningAlphaReport(row),
-      rawRow: row,
-      source: 'today_match',
-      queriedDate: todayStr,
-      todayDate: todayStr,
-      marketStatus: market.market_status,
-      closedReason: market.closed_reason,
-      dataStatus: 'ready',
-    });
-  }
 
   // ── Market closed: latest report is reference only, never today's report ──
   if (market.market_status === 'closed') {

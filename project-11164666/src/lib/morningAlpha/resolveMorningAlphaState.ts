@@ -5,7 +5,7 @@
  * (home, today-report, war-room, member-note, admin, system-check) MUST use
  * this function and consume its output. No page is allowed to:
  *
- *   - Call supabase.from('reports') directly
+ *   - Read the reports table directly
  *   - Check ai_strategy_json.publish_ready inline
  *   - Read report.market_bias / report.confidence_score directly
  *   - Build its own data fetching logic

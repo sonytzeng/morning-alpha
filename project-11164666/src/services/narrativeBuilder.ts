@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { mapRowToReport } from '@/services/reportService';
+import { getTodayReport } from '@/services/reportService';
 import { mapRowToIntradayCheck, type IntradayCheck } from '@/services/intradayCheckService';
 import type { Report } from '@/types/report';
 import type { SupabaseMarketData } from '@/services/marketDataService';
@@ -48,16 +48,7 @@ function convertToNewsItem(row: Record<string, unknown>): NewsItem {
 // ==================== DATA FETCHERS ====================
 
 export async function getLatestReport(): Promise<Report | null> {
-  const now = new Date();
-  const twNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-  const today = `${twNow.getFullYear()}-${String(twNow.getMonth() + 1).padStart(2, '0')}-${String(twNow.getDate()).padStart(2, '0')}`;
-  const { data } = await supabase
-    .from('reports')
-    .select('id, report_date, market_bias, confidence_score, summary, ai_strategy_json, created_at')
-    .eq('report_date', today)
-    .maybeSingle();
-
-  return data ? mapRowToReport(data as Record<string, unknown>) : null;
+  return getTodayReport();
 }
 
 export async function getSelectedMarketNews(limit = 10): Promise<NewsItem[]> {

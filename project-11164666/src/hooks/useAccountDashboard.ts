@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { isTaipeiToday } from '@/services/marketSourceHealthService';
 import type { Report } from '@/types/report';
-import { mapRowToReport } from '@/services/reportService';
+import { getTodayReport } from '@/services/reportService';
 
 export interface AccountDashboardData {
   // Today report
@@ -71,26 +70,10 @@ async function loadAccountDashboard(): Promise<AccountDashboardData> {
     refreshedAt: new Date().toISOString(),
   };
 
-  const today = isTaipeiToday();
-
   try {
-    // V8: Only query reports table — single source of truth
-    const [reportRes, allReportsRes] = await Promise.all([
-      supabase
-        .from('reports')
-        .select('*')
-        .eq('report_date', today)
-        .maybeSingle(),
-      supabase
-        .from('reports')
-        .select('*')
-        .order('report_date', { ascending: false })
-        .limit(60),
-    ]);
-
-    // Process today report
-    if (reportRes.data && !reportRes.error) {
-      result.todayReport = mapRowToReport(reportRes.data as Record<string, unknown>);
+    const todayReport = await getTodayReport();
+    if (todayReport) {
+      result.todayReport = todayReport;
       result.hasTodayReport = true;
     }
 
@@ -110,18 +93,9 @@ async function loadAccountDashboard(): Promise<AccountDashboardData> {
     result.intradayRadarSummary = null;
     result.isTXFAvailable = false;
 
-    // Process all reports
-    if (allReportsRes.data && !allReportsRes.error) {
-      const allRows = allReportsRes.data as Array<Record<string, unknown>>;
-      const mappedReports = allRows.map((row) => mapRowToReport(row));
-
-      // Recent 7 and 30
-      result.recent7 = mappedReports.slice(0, 7);
-      result.recent30 = mappedReports.slice(0, 30);
-
-      // Compute streak from consecutive report_dates
-      result.streak = computeStreakFromReports(mappedReports);
-    }
+    result.recent7 = todayReport ? [todayReport] : [];
+    result.recent30 = todayReport ? [todayReport] : [];
+    result.streak = todayReport ? 1 : 0;
   } catch (err) {
     result.error = err instanceof Error ? err.message : '資料讀取失敗';
   }

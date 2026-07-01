@@ -13,8 +13,9 @@
  *   generatedAt    → generated_at aliases > report timestamps
  */
 
-import { supabase } from '@/lib/supabase';
 import { formatTaipeiDate, isTaipeiWeekendToday } from '@/utils/tradingDay';
+import { callGetReportPayload } from '@/services/entitlementService';
+import type { ServerReportPayloadResponse } from '@/types/subscription';
 
 // ═══════════════════════════════════════════════════
 // Raw Supabase Row Type
@@ -141,70 +142,75 @@ export interface MorningAlphaNormalizedReport {
 export const REPORTS_STABLE_COLUMNS =
   'id, report_date, market_bias, confidence_score, ai_strategy_json, summary, created_at, watch_sectors_json';
 
-function isReportsRlsBlocked(error: { message?: string; code?: string } | null | undefined): boolean {
-  const message = String(error?.message || '').toLowerCase();
-  const code = String(error?.code || '').toLowerCase();
-  return code === '42501' || message.includes('permission denied') || message.includes('row-level security');
+function payloadRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function firstPayloadString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function getPayloadGeneratedAt(payload: Record<string, unknown>): string {
+  const nestedAI = payloadRecord(payload.ai_strategy_json);
+  return firstPayloadString(
+    payload.generated_at,
+    payload.generatedAt,
+    payload.report_generated_at,
+    payload.created_at,
+    payload.updated_at,
+    nestedAI?.generated_at,
+  );
+}
+
+function getPayloadSummary(payload: Record<string, unknown>): string | null {
+  const nestedAI = payloadRecord(payload.ai_strategy_json);
+  const publicSummary = payloadRecord(payload.public_summary) || payloadRecord(nestedAI?.public_summary) || payloadRecord(payload.free_summary);
+  const v8DailySentence = payloadRecord(nestedAI?.v8_daily_sentence) || payloadRecord(payload.v8_daily_sentence);
+  return firstPayloadString(
+    v8DailySentence?.sentence,
+    nestedAI?.daily_sentence,
+    payload.daily_sentence,
+    publicSummary?.daily_sentence,
+    payload.summary,
+    payload.today_quote,
+  ) || null;
+}
+
+function mapServerPayloadToReportRow(response: ServerReportPayloadResponse): ReportRow | null {
+  const payload = payloadRecord(response.payload);
+  if (!payload || !response.report_date) return null;
+  const generatedAt = getPayloadGeneratedAt(payload);
+  return {
+    id: `server-trimmed:${response.report_date}`,
+    report_date: response.report_date,
+    market_bias: typeof payload.market_bias === 'string' ? payload.market_bias : null,
+    confidence_score: payload.confidence_score != null ? Number(payload.confidence_score) : null,
+    created_at: generatedAt,
+    updated_at: firstPayloadString(payload.updated_at) || null,
+    ai_strategy_json: payload,
+    summary: getPayloadSummary(payload),
+    watch_sectors_json: null,
+  };
 }
 
 export async function fetchLatestReports(limit = 10): Promise<ReportRow[]> {
-  const { data, error } = await supabase
-    .from('reports')
-    .select(REPORTS_STABLE_COLUMNS)
-    .order('report_date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    if (isReportsRlsBlocked(error)) {
-      console.warn('REPORTS_RLS_BLOCKED_PUBLIC_HISTORY', error.message);
-      return [];
-    }
-    throw new Error(`fetchLatestReports: ${error.message}`);
+  if (limit <= 0) return [];
+  try {
+    const response = await callGetReportPayload();
+    const row = mapServerPayloadToReportRow(response);
+    return row ? [row] : [];
+  } catch (error) {
+    console.warn('REPORTS_SERVER_PAYLOAD_UNAVAILABLE', error instanceof Error ? error.message : error);
+    return [];
   }
-
-  return (data || []).map((r: Record<string, unknown>) => ({
-    id: String(r.id || ''),
-    report_date: String(r.report_date || ''),
-    market_bias: r.market_bias ? String(r.market_bias) : null,
-    confidence_score: r.confidence_score != null ? Number(r.confidence_score) : null,
-    created_at: String(r.created_at || ''),
-    updated_at: typeof r.updated_at === 'string' ? r.updated_at : null,
-    ai_strategy_json: (r.ai_strategy_json as Record<string, unknown>) || null,
-    summary: r.summary ? String(r.summary) : null,
-    watch_sectors_json: Array.isArray(r.watch_sectors_json) ? (r.watch_sectors_json as Record<string, unknown>[]) : null,
-  }));
 }
 
 export async function fetchLatestSingleReport(): Promise<ReportRow | null> {
-  const { data, error } = await supabase
-    .from('reports')
-    .select(REPORTS_STABLE_COLUMNS)
-    .order('report_date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (error) {
-    if (isReportsRlsBlocked(error)) {
-      console.warn('REPORTS_RLS_BLOCKED_PUBLIC_HISTORY', error.message);
-      return null;
-    }
-    throw new Error(`fetchLatestSingleReport: ${error.message}`);
-  }
-  if (!data || data.length === 0) return null;
-
-  const r = data[0] as Record<string, unknown>;
-  return {
-    id: String(r.id || ''),
-    report_date: String(r.report_date || ''),
-    market_bias: r.market_bias ? String(r.market_bias) : null,
-    confidence_score: r.confidence_score != null ? Number(r.confidence_score) : null,
-    created_at: String(r.created_at || ''),
-    updated_at: typeof r.updated_at === 'string' ? r.updated_at : null,
-    ai_strategy_json: (r.ai_strategy_json as Record<string, unknown>) || null,
-    summary: r.summary ? String(r.summary) : null,
-    watch_sectors_json: Array.isArray(r.watch_sectors_json) ? (r.watch_sectors_json as Record<string, unknown>[]) : null,
-  };
+  const reports = await fetchLatestReports(1);
+  return reports[0] ?? null;
 }
 
 export async function fetchBestReport(): Promise<ReportRow | null> {

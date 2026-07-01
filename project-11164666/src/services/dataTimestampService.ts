@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { callGetReportPayload } from '@/services/entitlementService';
 
 export interface DataTimestamps {
   reportCreatedAt: string | null;
@@ -21,16 +22,22 @@ export async function getDataTimestamps(): Promise<DataTimestamps> {
     openingRadarCreatedAt: null,
   };
 
-  // 1. reports 最新一筆 created_at
+  // 1. Latest report generated timestamp from server-trimmed payload
   try {
-    const { data, error } = await supabase
-      .from('reports')
-      .select('created_at')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!error && data) {
-      results.reportCreatedAt = String(data.created_at || '');
+    const response = await callGetReportPayload();
+    const payload = response.payload || {};
+    const nestedAI = payload.ai_strategy_json && typeof payload.ai_strategy_json === 'object' && !Array.isArray(payload.ai_strategy_json)
+      ? payload.ai_strategy_json as Record<string, unknown>
+      : null;
+    const generatedAt =
+      payload.generated_at ||
+      payload.generatedAt ||
+      payload.report_generated_at ||
+      payload.created_at ||
+      payload.updated_at ||
+      nestedAI?.generated_at;
+    if (typeof generatedAt === 'string' && generatedAt.trim()) {
+      results.reportCreatedAt = generatedAt.trim();
     }
   } catch {
     // ignore

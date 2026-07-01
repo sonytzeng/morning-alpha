@@ -378,12 +378,9 @@ function OpportunitiesContent() {
   const hasV8BeneficiaryChain = v8BeneficiaryChain?.status === 'ready' && (v8BeneficiaryChain.beneficiaries || []).length > 0;
   const hasAnyBeneficiaryStock = hasAnyStocks || hasV8BeneficiaryChain || beneficiaryCountFallback > 0;
   const coreDisplayCount = hasV8BeneficiaryChain ? (v8BeneficiaryChain?.beneficiaries || []).length : coreStocks.length;
-  const watchDisplayCount = hasV8BeneficiaryChain
-    ? 0
-    : hasAnyStocks
-      ? extendedStocks.length + scenarioStocks.length
-      : Math.max(0, beneficiaryCountFallback - coreDisplayCount);
-  const totalDisplayCount = Math.max(coreDisplayCount + watchDisplayCount, beneficiaryCountFallback);
+  const parsedWatchCount = hasV8BeneficiaryChain ? 0 : extendedStocks.length + scenarioStocks.length;
+  const totalDisplayCount = Math.max(coreDisplayCount + parsedWatchCount, beneficiaryCountFallback);
+  const watchDisplayCount = Math.max(parsedWatchCount, totalDisplayCount - coreDisplayCount);
   const confidenceText = ds.confidenceScore != null && ds.confidenceScore > 0
     ? `${ds.confidenceScore}/100`
     : '待驗證';

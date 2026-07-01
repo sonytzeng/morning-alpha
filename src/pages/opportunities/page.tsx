@@ -402,24 +402,89 @@ function OpportunitiesContent() {
     : '待驗證';
   const canViewOpportunitiesFull = hasFeature(entitlement, 'opportunities_full');
   const teaserStock = coreStocks[0] || extendedStocks[0] || scenarioStocks[0] || null;
-  const memberFieldChecks = [
-    { key: 'core_beneficiary_stocks', label: '核心受惠股', present: asRecordArray(rawAI.core_beneficiary_stocks).length > 0 },
-    { key: 'beneficiary_stocks', label: '完整受惠股', present: asRecordArray(rawAI.beneficiary_stocks).length > 0 },
-    { key: 'today_beneficiary_stocks', label: '今日受惠股', present: asRecordArray(rawAI.today_beneficiary_stocks).length > 0 },
-    { key: 'extended_watchlist', label: '延伸觀察名單', present: asRecordArray(rawAI.extended_watchlist).length > 0 },
-    { key: 'scenario_watchlist', label: '情境觀察名單', present: asRecordArray(rawAI.scenario_watchlist).length > 0 },
-    { key: 'v8_beneficiary_chain', label: '第一受惠股推理鏈', present: Object.keys(asRecord(rawAI.v8_beneficiary_chain)).length > 0 || hasV8BeneficiaryChain },
-    { key: 'v8_overnight_causal_chain', label: '隔夜事件鏈', present: Object.keys(asRecord(rawAI.v8_overnight_causal_chain)).length > 0 },
-    { key: 'member_research_note_v2', label: '會員研究筆記', present: Object.keys(asRecord(rawAI.member_research_note_v2)).length > 0 },
-    { key: 'data_status', label: '資料狀態', present: Boolean(compactText(rawAI.data_status || rawAI.data_quality)) },
-    { key: 'data_basis_note', label: '資料基礎說明', present: Boolean(compactText(rawAI.data_basis_note || dataBasisNote)) },
+  const memberResearchNote = asRecord(rawAI.member_research_note_v2);
+  const extendedWatchlistCount = asRecordArray(rawAI.extended_watchlist).length || extendedStocks.length;
+  const scenarioWatchlistCount = asRecordArray(rawAI.scenario_watchlist).length || scenarioStocks.length;
+  const v8BeneficiaryChainRecord = asRecord(rawAI.v8_beneficiary_chain);
+  const v8OvernightChainRecord = asRecord(rawAI.v8_overnight_causal_chain);
+  const hasBeneficiaryChain = Object.keys(v8BeneficiaryChainRecord).length > 0 || hasV8BeneficiaryChain;
+  const hasOvernightChain = Object.keys(v8OvernightChainRecord).length > 0
+    || asRecordArray(memberResearchNote.overnight_chain).length > 0
+    || asRecordArray(rawAI.overnight_chain).length > 0;
+  const validationPointCount = [
+    ...coreStocks,
+    ...extendedStocks,
+    ...scenarioStocks,
+  ].filter((stock) => Boolean(stock.validation_signal || stock.watch_point)).length
+    + asRecordArray(rawAI.validation_signal).length
+    + asRecordArray(memberResearchNote.intraday_validation).length;
+  const invalidationPointCount = [
+    ...coreStocks,
+    ...extendedStocks,
+    ...scenarioStocks,
+  ].filter((stock) => Boolean(stock.risk_note)).length
+    + invalidationItems.length
+    + asRecordArray(rawAI.invalidation_condition).length
+    + asRecordArray(rawAI.invalidation_conditions).length
+    + asRecordArray(memberResearchNote.invalidation_conditions).length
+    + asRecordArray(memberResearchNote.invalidation_rules).length;
+  const hasMemberResearchNote = Object.keys(memberResearchNote).length > 0;
+  const memberValueItems = [
+    {
+      key: 'v8_beneficiary_chain',
+      label: '第一受惠股完整推理',
+      present: hasBeneficiaryChain,
+      detail: hasBeneficiaryChain ? '已回傳推理鏈' : 'Edge Function 未回傳 v8_beneficiary_chain',
+    },
+    {
+      key: 'today_beneficiaries',
+      label: `今日 ${totalDisplayCount} 檔受惠股`,
+      present: totalDisplayCount > 0,
+      detail: totalDisplayCount > 0 ? '已由 payload 計算追蹤數量' : '今日會員內容尚未產生',
+    },
+    {
+      key: 'extended_watchlist',
+      label: `延伸觀察名單 ${extendedWatchlistCount} 檔`,
+      present: extendedWatchlistCount > 0,
+      detail: extendedWatchlistCount > 0 ? '已回傳延伸觀察名單' : 'Edge Function 未回傳 extended_watchlist',
+    },
+    {
+      key: 'scenario_watchlist',
+      label: `情境觀察名單 ${scenarioWatchlistCount} 檔`,
+      present: scenarioWatchlistCount > 0,
+      detail: scenarioWatchlistCount > 0 ? '已回傳情境觀察名單' : 'Edge Function 未回傳 scenario_watchlist',
+    },
+    {
+      key: 'v8_overnight_causal_chain',
+      label: '隔夜事件影響鏈',
+      present: hasOvernightChain,
+      detail: hasOvernightChain ? '已回傳事件傳導鏈' : 'Edge Function 未回傳 v8_overnight_causal_chain',
+    },
+    {
+      key: 'member_research_note_v2',
+      label: 'AI 研究筆記',
+      present: hasMemberResearchNote,
+      detail: hasMemberResearchNote ? '已回傳研究筆記' : '今日會員內容尚未產生',
+    },
+    {
+      key: 'validation_points',
+      label: '盤中驗證重點',
+      present: validationPointCount > 0,
+      detail: validationPointCount > 0 ? `${validationPointCount} 個驗證訊號` : '今日會員內容尚未產生',
+    },
+    {
+      key: 'invalidation_points',
+      label: '失效條件與風險提醒',
+      present: invalidationPointCount > 0,
+      detail: invalidationPointCount > 0 ? `${invalidationPointCount} 個風險 / 失效條件` : '今日會員內容尚未產生',
+    },
   ];
-  const missingMemberFieldKeys = memberFieldChecks.filter((item) => !item.present).map((item) => item.key);
+  const missingMemberItems = memberValueItems.filter((item) => !item.present);
   const memberPayloadStatusText = canViewOpportunitiesFull
-    ? (missingMemberFieldKeys.length > 0
-      ? `Edge Function 未回傳 ${missingMemberFieldKeys.join(' / ')}`
-      : '會員 payload 已回傳完整受惠股與研究鏈欄位')
-    : '目前載入免費 payload；完整會員欄位會在登入會員後由 get-report-payload 回傳。';
+    ? (missingMemberItems.length > 0
+      ? missingMemberItems.map((item) => item.detail).join('；')
+      : '會員完整內容已回傳，可查看受惠股、推理鏈、驗證訊號與風險條件')
+    : '目前載入免費 payload；付費後可查看完整受惠股、推理鏈、盤中驗證與失效條件。';
 
   return (
     <div className="min-h-screen bg-background-50 flex flex-col overflow-x-hidden">
@@ -498,25 +563,28 @@ function OpportunitiesContent() {
                   <h2 className="text-foreground-900 font-bold text-base md:text-lg">今日共追蹤 {totalDisplayCount} 檔</h2>
                   <p className="text-foreground-500 text-xs md:text-sm leading-relaxed mt-1">
                     {canViewOpportunitiesFull
-                      ? '以下區塊直接顯示會員 payload 內的完整受惠股、推理鏈、盤中驗證訊號、失效條件與來源訊號。'
-                      : '免費區先公開 1 檔觀察股與總追蹤數；會員內容位置與資料狀態如下，避免只看到升級卡片卻不知道內容在哪。'}
+                      ? '以下整理目前會員版實際多看到的內容：完整受惠股、推理鏈、盤中驗證、失效條件與風險提醒。'
+                      : '免費區先公開 1 檔觀察股與總追蹤數；下方列出付費後會解鎖的完整內容，讓你知道會員版差在哪。'}
                   </p>
                 </div>
                 <div className="text-left md:text-right">
                   <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">資料狀態</p>
-                  <p className={`text-xs leading-relaxed ${canViewOpportunitiesFull && missingMemberFieldKeys.length > 0 ? 'text-amber-600' : 'text-foreground-600'}`}>
+                  <p className={`text-xs leading-relaxed ${canViewOpportunitiesFull && missingMemberItems.length > 0 ? 'text-amber-600' : 'text-foreground-600'}`}>
                     {memberPayloadStatusText}
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {memberFieldChecks.map((item) => (
-                  <div key={item.key} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-background-50 border border-background-200/70">
-                    <span className="text-foreground-600 text-xs">{item.label}</span>
-                    <span className={`text-[10px] font-medium ${item.present ? 'text-primary-600' : 'text-foreground-300'}`}>
-                      {item.present ? '已回傳' : '未回傳'}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {memberValueItems.map((item) => (
+                  <div key={item.key} className="flex items-start gap-3 p-3 rounded-xl bg-background-50 border border-background-200/70">
+                    <span className={`mt-0.5 inline-flex w-5 h-5 items-center justify-center rounded-full text-[11px] font-bold ${item.present ? 'bg-primary-100 text-primary-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {item.present ? '✓' : '!'}
                     </span>
+                    <div className="min-w-0">
+                      <p className="text-foreground-800 text-sm font-semibold leading-relaxed">{item.label}</p>
+                      <p className={`text-xs leading-relaxed mt-0.5 ${item.present ? 'text-foreground-500' : 'text-amber-600'}`}>{item.detail}</p>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -18,6 +18,7 @@ export default function Navbar({ marketState }: NavbarProps) {
     { to: '/opportunities', label: '今日受惠股' },
     { to: '/war-room', label: '盤中追蹤' },
     { to: '/member-note', label: '完整研究筆記' },
+    { to: '/performance', label: '歷史績效' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

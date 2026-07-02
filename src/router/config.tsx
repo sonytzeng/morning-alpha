@@ -14,6 +14,7 @@ import ReportDetail from "../pages/reports/ReportDetail";
 import WarRoom from "../pages/war-room/WarRoom";
 import Opportunities from "../pages/opportunities/page";
 import MemberNote from "../pages/member-note/page";
+import Performance from "../pages/performance/page";
 import VoicePage from "../pages/voice/VoicePage";
 import FaqPage from "../pages/faq/page";
 import TermsPage from "../pages/terms/page";
@@ -38,6 +39,10 @@ const routes: RouteObject[] = [
   {
     path: "/member-note",
     element: <MemberNote />,
+  },
+  {
+    path: "/performance",
+    element: <Performance />,
   },
   {
     path: "/reports",

@@ -122,23 +122,34 @@ function WarRoomContent() {
   const reportAI = isRecord(report?.ai_strategy_json) ? report.ai_strategy_json as Record<string, unknown> : null;
   const rawAI = displayState?.rawAI ?? reportAI;
   const closeVerification =
-    rawAI?.closing_verification && typeof rawAI.closing_verification === 'object'
-      ? rawAI.closing_verification as Record<string, unknown>
-      : todayCloseVerification && typeof todayCloseVerification === 'object'
-        ? todayCloseVerification as Record<string, unknown>
-        : null;
+    rawAI?.closing_verification_v2 && typeof rawAI.closing_verification_v2 === 'object'
+      ? rawAI.closing_verification_v2 as Record<string, unknown>
+      : rawAI?.closing_verification && typeof rawAI.closing_verification === 'object'
+        ? rawAI.closing_verification as Record<string, unknown>
+        : todayCloseVerification && typeof todayCloseVerification === 'object'
+          ? todayCloseVerification as Record<string, unknown>
+          : null;
   const closeVerificationRecord =
     isRecord(closeVerification) && Object.keys(closeVerification).length > 0 ? closeVerification : null;
   const closePredictedBias = safeText(
-    closeVerificationRecord?.predicted_bias ?? displayState?.marketBias ?? rawAI?.market_bias,
+    closeVerificationRecord?.predicted_bias ??
+      closeVerificationRecord?.opening_bias ??
+      displayState?.marketBias ??
+      rawAI?.market_bias,
     '—',
   );
   const closePredictedScore = safeNumber(
     closeVerificationRecord?.predicted_confidence ??
+      closeVerificationRecord?.opening_confidence ??
       closeVerificationRecord?.confidence_score ??
       displayState?.confidenceScore,
   );
-  const closeActualTaiexChangeRaw = closeVerificationRecord?.actual_taiex_change;
+  const closeActualTaiexClose =
+    isRecord(closeVerificationRecord?.actual_taiex_close) ? closeVerificationRecord.actual_taiex_close : null;
+  const closeActualTaiexChangeRaw =
+    closeVerificationRecord?.actual_taiex_change ??
+    closeActualTaiexClose?.change_percent ??
+    closeActualTaiexClose?.close_change_percent;
   const closeTaiexChange =
     typeof closeActualTaiexChangeRaw === 'number'
       ? closeActualTaiexChangeRaw
@@ -157,7 +168,11 @@ function WarRoomContent() {
   const closeAccuracyScore = safeNumber(closeVerificationRecord?.accuracy_score);
   const closeVerdictLabel =
     String(closeVerificationRecord?.verdict_label || '').trim() ||
-    normalizePredictionResult(closeVerificationRecord?.prediction_result || closeVerificationRecord?.status);
+    normalizePredictionResult(
+      closeVerificationRecord?.prediction_result ||
+      closeVerificationRecord?.hit_or_miss ||
+      closeVerificationRecord?.status,
+    );
   const closeVerificationNote =
     String(closeVerificationRecord?.verification_note || '').trim() ||
     String(closeVerificationRecord?.reason || '').trim() ||
@@ -167,7 +182,7 @@ function WarRoomContent() {
   const closeTomorrowWatchPoints = safeStringArray(closeVerificationRecord?.tomorrow_watch_points);
   const closeLessonsLearned = safeStringArray(closeVerificationRecord?.lessons_learned);
   const closeTone = closeVerificationTone(
-    safeText(closeVerificationRecord?.prediction_result || closeVerdictLabel),
+    safeText(closeVerificationRecord?.prediction_result || closeVerificationRecord?.hit_or_miss || closeVerdictLabel),
   );
   const marketClosedInfo = displayState
     ? { closed: displayState.isMarketClosed, holidayName: displayState.holidayName }

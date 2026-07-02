@@ -336,6 +336,7 @@ export interface ParsedAIStrategy {
   // Member research note (9 sections)
   member_research_note: string | MemberResearchNote | null;
   member_research_note_v2: MemberResearchNoteV2 | null;
+  closing_verification_v2: Record<string, unknown> | null;
 
   // V8 JSON contract
   v8_beneficiary_chain: V8BeneficiaryChain;
@@ -748,6 +749,7 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
   const v8BeneficiaryChain = parseV8BeneficiaryChain(ai.v8_beneficiary_chain);
   const v8OvernightCausalChain = parseV8OvernightCausalChain(ai.v8_overnight_causal_chain);
   const v8DailySentence = parseV8DailySentence(ai.v8_daily_sentence);
+  const closingVerificationV2 = grabObj(ai, 'closing_verification_v2');
 
   // ── Key observations (from ai_strategy_json directly) ──
   const keyObsFromAI = grabArr<Record<string, unknown>>(ai, 'key_observations');
@@ -883,6 +885,7 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
     free_summary: freeSummary,
     member_research_note: memberResearchNote,
     member_research_note_v2: memberResearchNoteV2,
+    closing_verification_v2: closingVerificationV2,
     v8_beneficiary_chain: v8BeneficiaryChain,
     v8_overnight_causal_chain: v8OvernightCausalChain,
     v8_daily_sentence: v8DailySentence,

@@ -94,29 +94,38 @@ export function mapClosingVerificationToCloseMarketReview(
   const reason = safeObject(verification.reason);
   const status = safeString(verification.status);
   const predictionResult = safeString(verification.prediction_result);
+  const hitOrMiss = safeString(verification.hit_or_miss);
   const verifiedAt = safeString(verification.verified_at) || new Date().toISOString();
-  const taiexChange = safeNumber(verification.actual_taiex_change);
+  const actualTaiexClose = safeObject(verification.actual_taiex_close);
+  const taiexChange =
+    safeNumber(verification.actual_taiex_change) ??
+    safeNumber(actualTaiexClose.change_percent) ??
+    safeNumber(actualTaiexClose.close_change_percent);
   const isPendingRealData =
     status === 'pending_real_market_data' ||
-    predictionResult === 'PENDING_REAL_MARKET_DATA';
+    predictionResult === 'PENDING_REAL_MARKET_DATA' ||
+    hitOrMiss === 'pending';
 
   const verificationNote = isPendingRealData
     ? '收盤驗證已執行，但尚缺真實台股收盤資料。'
-    : safeString(reason.message) || [predictionResult, status].filter(Boolean).join('｜') || null;
+    : safeString(verification.verification_note) ||
+      safeString(reason.message) ||
+      [predictionResult, hitOrMiss, status].filter(Boolean).join('｜') ||
+      null;
 
   return {
     id: `ai_strategy_json.closing_verification.${reportDate}`,
     report_date: reportDate,
-    premarket_bias: safeString(verification.predicted_bias),
-    premarket_confidence: safeNumber(verification.confidence_score),
+    premarket_bias: safeString(verification.predicted_bias) || safeString(verification.opening_bias),
+    premarket_confidence: safeNumber(verification.confidence_score) ?? safeNumber(verification.opening_confidence),
     premarket_summary: null,
     opening_radar_status: null,
     opening_radar_bias: null,
     opening_radar_confidence: null,
     opening_radar_summary: null,
     actual_market_result: safeString(verification.actual_direction),
-    verification_result: predictionResult || status,
-    verification_label: predictionResult || status,
+    verification_result: predictionResult || hitOrMiss || status,
+    verification_label: safeString(verification.verdict_label) || predictionResult || hitOrMiss || status,
     verification_note: verificationNote,
     taiex_change: taiexChange,
     tsmc_change: null,
@@ -129,7 +138,7 @@ export function mapClosingVerificationToCloseMarketReview(
     ai_too_bearish: false,
     accuracy_score: safeNumber(verification.accuracy_score),
     no_fake_data: verification.no_fake_data === true,
-    source: 'ai_strategy_json.closing_verification',
+    source: safeString(verification.version) ? 'ai_strategy_json.closing_verification_v2' : 'ai_strategy_json.closing_verification',
     created_at: verifiedAt,
     updated_at: verifiedAt,
   };

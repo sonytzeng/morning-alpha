@@ -48,6 +48,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function getClosingVerificationFromSources(...sources: unknown[]): Record<string, unknown> | null {
   for (const source of sources) {
     const parsed = parseAiStrategyObject(source);
+    if (isRecord(parsed.closing_verification_v2)) {
+      return parsed.closing_verification_v2;
+    }
     if (isRecord(parsed.closing_verification)) {
       return parsed.closing_verification;
     }

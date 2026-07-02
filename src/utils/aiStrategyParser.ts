@@ -193,6 +193,13 @@ export interface ClosingFeedbackPlan {
 }
 
 export interface MemberResearchNoteV2 {
+  opening_thesis?: Record<string, unknown>;
+  core_reasoning?: string[];
+  first_beneficiary_stock?: Record<string, unknown> | null;
+  risk_scenarios?: Record<string, unknown>[];
+  capital_rotation_scenarios?: Record<string, unknown>[];
+  tomorrow_follow_up?: Record<string, unknown>;
+  closing_feedback_placeholder?: Record<string, unknown>;
   overnight_chain?: Array<{
     event?: string;
     source_market?: string;
@@ -664,6 +671,14 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
   // ── Member Research Note V2 ──
   const mrnV2Raw = grabObj(ai, 'member_research_note_v2');
   const memberResearchNoteV2: MemberResearchNoteV2 | null = mrnV2Raw ? {
+    ...mrnV2Raw,
+    opening_thesis: grabObj(mrnV2Raw, 'opening_thesis') || undefined,
+    core_reasoning: nonEmptyStrings(grabArr<unknown>(mrnV2Raw, 'core_reasoning')),
+    first_beneficiary_stock: grabObj(mrnV2Raw, 'first_beneficiary_stock') || null,
+    risk_scenarios: grabArr<Record<string, unknown>>(mrnV2Raw, 'risk_scenarios'),
+    capital_rotation_scenarios: grabArr<Record<string, unknown>>(mrnV2Raw, 'capital_rotation_scenarios'),
+    tomorrow_follow_up: grabObj(mrnV2Raw, 'tomorrow_follow_up') || undefined,
+    closing_feedback_placeholder: grabObj(mrnV2Raw, 'closing_feedback_placeholder') || undefined,
     overnight_chain: grabArr<Record<string, unknown>>(mrnV2Raw, 'overnight_chain').map((item) => ({
       event: optionalStr(item, 'event'),
       source_market: optionalStr(item, 'source_market'),

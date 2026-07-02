@@ -137,6 +137,41 @@ function getDataLines(value: unknown, preferredKeys: string[]): Array<{ label: s
   return [];
 }
 
+
+function textList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((item) => textValue(item)).filter(Boolean);
+  const text = textValue(value);
+  return text ? [text] : [];
+}
+
+function recordList(value: unknown): Record<string, unknown>[] {
+  return asRecordArray(value);
+}
+
+function labelText(label: string): string {
+  const labels: Record<string, string> = {
+    summary: '摘要',
+    market_bias: '方向',
+    confidence_score: '把握度',
+    stock_code: '代號',
+    stock_name: '名稱',
+    sector: '族群',
+    benefit_source: '受惠來源',
+    relationship_to_thesis: '與主軸關係',
+    validation_signal: '盤中驗證',
+    invalidation_condition: '失效條件',
+    trigger: '觸發條件',
+    beneficiary_impact: '受惠股影響',
+    avoid: '今日避免',
+    condition: '條件',
+    response: '應對',
+    continuation_condition: '延續條件',
+    what_to_verify: '驗證項目',
+    expected_update: '更新方式',
+  };
+  return labels[label] || label.replace(/_/g, ' ');
+}
+
 function MemberResearchNoteV2View({
   note,
   reportDate,
@@ -173,6 +208,121 @@ function MemberResearchNoteV2View({
         </div>
 
         <div className="space-y-4">
+          {valueHasContent(note.opening_thesis) && (
+            <section className="p-4 rounded-xl bg-emerald-500/[0.04] border border-emerald-400/20">
+              <h3 className="text-white font-semibold text-sm mb-3">今日主軸</h3>
+              <div className="space-y-2">
+                {textList(asRecord(note.opening_thesis).summary).map((line, idx) => (
+                  <p key={idx} className="text-white/70 text-sm leading-relaxed">{renderSafeText(line)}</p>
+                ))}
+                {hasItems(textList(asRecord(note.opening_thesis).signals)) && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {textList(asRecord(note.opening_thesis).signals).map((signal, idx) => (
+                      <span key={idx} className="text-[10px] px-2 py-1 rounded-full bg-white/5 text-emerald-200 border border-white/10">{renderSafeText(signal)}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {hasItems(textList(note.core_reasoning)) && (
+            <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <h3 className="text-white font-semibold text-sm mb-3">核心推理</h3>
+              <ul className="space-y-2">
+                {textList(note.core_reasoning).map((line, idx) => (
+                  <li key={idx} className="flex gap-2 text-white/60 text-xs leading-relaxed">
+                    <span className="mt-1 w-1.5 h-1.5 rounded-full bg-forest-400/70 flex-shrink-0"></span>
+                    <span>{renderSafeText(line)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {valueHasContent(note.first_beneficiary_stock) && (
+            <section className="p-4 rounded-xl bg-amber-500/[0.04] border border-amber-400/20">
+              <h3 className="text-white font-semibold text-sm mb-3">第一受惠股推理</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {getDataLines(note.first_beneficiary_stock, ['stock_code', 'stock_name', 'sector', 'benefit_source', 'relationship_to_thesis', 'validation_signal', 'invalidation_condition']).map((item, idx) => (
+                  <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                    <p className="text-amber-300/80 text-[10px] mb-1">{labelText(item.label)}</p>
+                    <p className="text-white/65 text-xs leading-relaxed">{renderSafeText(item.value)}</p>
+                  </div>
+                ))}
+              </div>
+              {hasItems(textList(asRecord(note.first_beneficiary_stock).source_signals)) && (
+                <p className="text-forest-300/70 text-xs mt-3">來源訊號：{textList(asRecord(note.first_beneficiary_stock).source_signals).join('、')}</p>
+              )}
+            </section>
+          )}
+
+          {hasItems(recordList(note.capital_rotation_scenarios)) && (
+            <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <h3 className="text-white font-semibold text-sm mb-3">今日資金輪動劇本</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {recordList(note.capital_rotation_scenarios).map((scenario, idx) => (
+                  <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                    <p className="text-white/85 text-sm font-semibold mb-2">{renderSafeText(scenario.scenario || `劇本 ${idx + 1}`)}</p>
+                    <p className="text-white/55 text-xs leading-relaxed mb-2">觸發：{renderSafeText(scenario.trigger || '—')}</p>
+                    {hasItems(textList(scenario.groups_to_watch)) && <p className="text-sky-300/70 text-xs mb-2">觀察族群：{textList(scenario.groups_to_watch).join('、')}</p>}
+                    <p className="text-forest-300/70 text-xs leading-relaxed mb-2">影響：{renderSafeText(scenario.beneficiary_impact || '—')}</p>
+                    <p className="text-red-300/70 text-xs leading-relaxed">避免：{renderSafeText(scenario.avoid || '—')}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {hasItems(recordList(note.risk_scenarios)) && (
+            <section className="p-4 rounded-xl bg-red-500/[0.03] border border-red-500/10">
+              <h3 className="text-white font-semibold text-sm mb-3">風險劇本</h3>
+              <div className="space-y-3">
+                {recordList(note.risk_scenarios).map((risk, idx) => (
+                  <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-red-500/10">
+                    <p className="text-red-300/80 text-sm font-medium">{renderSafeText(risk.risk || `風險 ${idx + 1}`)}</p>
+                    <p className="text-white/55 text-xs mt-1">條件：{renderSafeText(risk.condition || '—')}</p>
+                    <p className="text-amber-300/70 text-xs mt-1">應對：{renderSafeText(risk.response || '—')}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {valueHasContent(note.tomorrow_follow_up) && (
+            <section className="p-4 rounded-xl bg-violet-500/[0.04] border border-violet-400/20">
+              <h3 className="text-white font-semibold text-sm mb-3">明日追蹤</h3>
+              {hasItems(textList(asRecord(note.tomorrow_follow_up).after_close_check)) && (
+                <ul className="space-y-2 mb-3">
+                  {textList(asRecord(note.tomorrow_follow_up).after_close_check).map((line, idx) => (
+                    <li key={idx} className="flex gap-2 text-white/60 text-xs leading-relaxed">
+                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-violet-300/80 flex-shrink-0"></span>
+                      <span>{renderSafeText(line)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-white/60 text-xs leading-relaxed">{renderSafeText(asRecord(note.tomorrow_follow_up).continuation_condition || '')}</p>
+              {hasItems(textList(asRecord(note.tomorrow_follow_up).carry_over_signals)) && (
+                <p className="text-violet-300/70 text-xs mt-2">保留訊號：{textList(asRecord(note.tomorrow_follow_up).carry_over_signals).join('、')}</p>
+              )}
+            </section>
+          )}
+
+          {valueHasContent(note.closing_feedback_placeholder) && !hasClosingVerification && (
+            <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <h3 className="text-white font-semibold text-sm mb-3">收盤後回測欄位</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {getDataLines(note.closing_feedback_placeholder, ['status', 'what_to_verify', 'expected_update']).map((item, idx) => (
+                  <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                    <p className="text-violet-300/80 text-[10px] mb-1">{labelText(item.label)}</p>
+                    <p className="text-white/55 text-xs leading-relaxed">{renderSafeText(item.value)}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {hasItems(note.overnight_chain) && (
             <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
               <h3 className="text-white font-semibold text-sm mb-3">隔夜事件鏈</h3>

@@ -168,6 +168,18 @@ function labelText(label: string): string {
     continuation_condition: '延續條件',
     what_to_verify: '驗證項目',
     expected_update: '更新方式',
+    tracked_count: '追蹤檔數',
+    with_close_data_count: '有收盤資料',
+    up_count: '上漲',
+    down_count: '下跌',
+    outperformed_taiex_count: '跑贏大盤',
+    keep: '保留',
+    downgrade: '降權',
+    watch_tomorrow: '明日觀察',
+    close_change_percent: '收盤漲跌',
+    taiex_relative_percent: '相對 TAIEX',
+    matched_logic: '是否符合邏輯',
+    note: '驗證說明',
   };
   return labels[label] || label.replace(/_/g, ' ');
 }
@@ -645,7 +657,9 @@ function MemberNoteContent() {
     .filter((candidate): candidate is MemberBeneficiaryCandidate => candidate !== null);
   const beneficiaryCandidates = hasItems(v2BeneficiaryCandidates) ? v2BeneficiaryCandidates : legacyBeneficiaryCandidates;
   const openingRadar = rawAI.opening_radar;
-  const closingVerification = rawAI.closing_verification;
+  const closingVerificationV2 = asRecord(rawAI.closing_verification_v2);
+  const closingVerification = valueHasContent(closingVerificationV2) ? closingVerificationV2 : rawAI.closing_verification;
+  const closingVerificationRecord = asRecord(closingVerification);
   const hasOpeningRadar = valueHasContent(openingRadar);
   const hasClosingVerification = valueHasContent(closingVerification);
   const openingRadarLines = getDataLines(openingRadar, [
@@ -666,6 +680,13 @@ function MemberNoteContent() {
     'accuracy_score',
     'reason',
   ]);
+  const closingTaiex = asRecord(closingVerificationRecord.actual_taiex_close);
+  const closingTsmc = asRecord(closingVerificationRecord.actual_2330_close);
+  const firstBeneficiaryValidation = asRecord(closingVerificationRecord.first_beneficiary_validation);
+  const beneficiaryListValidation = asRecord(closingVerificationRecord.beneficiary_list_validation);
+  const intradayReplaySignals = asRecordArray(closingVerificationRecord.intraday_validation_signals);
+  const sectorPerformance = asRecordArray(closingVerificationRecord.actual_sector_performance);
+  const tomorrowAdjustment = asRecord(closingVerificationRecord.tomorrow_adjustment);
   const canViewMemberNoteFull = hasFeature(entitlement, 'member_note_full');
   const canViewVipFundFlow = hasFeature(entitlement, 'vip_fund_flow');
   const hasVipResearchFields = valueHasContent(memberNoteV2?.fund_flow_scenario)
@@ -758,26 +779,118 @@ function MemberNoteContent() {
             </section>
           )}
 
-          {hasClosingVerification && (
-            <section className="bg-navy-900/60 border border-violet-500/10 rounded-2xl p-5 md:p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <i className="ri-check-double-line text-violet-400 text-sm"></i>
-                <h2 className="text-white font-bold text-base">實際收盤驗證</h2>
-              </div>
-              {closingVerificationLines.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {closingVerificationLines.map((item, idx) => (
-                    <div key={`${item.label}-${idx}`} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                      <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">{renderSafeText(item.label)}</p>
-                      <p className="text-white/60 text-xs leading-relaxed">{renderSafeText(item.value)}</p>
-                    </div>
-                  ))}
+          <section className="bg-navy-900/60 border border-violet-500/10 rounded-2xl p-5 md:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <i className="ri-check-double-line text-violet-400 text-sm"></i>
+              <h2 className="text-white font-bold text-base">收盤驗證</h2>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-400/20">
+                {hasClosingVerification ? renderSafeText(closingVerificationRecord.status || closingVerificationRecord.hit_or_miss || '已更新') : '收盤後更新'}
+              </span>
+            </div>
+
+            {hasClosingVerification ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                    <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
+                    <p className="text-white/70 text-xs leading-relaxed">{renderSafeText(closingVerificationRecord.opening_bias || closingVerificationRecord.predicted_bias || marketBias)}</p>
+                    <p className="text-white/35 text-[10px] mt-1">把握度：{renderSafeText(closingVerificationRecord.opening_confidence || closingVerificationRecord.predicted_confidence || confidenceScore || '—')}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                    <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">實際收盤</p>
+                    <p className="text-white/70 text-xs leading-relaxed">TAIEX {renderSafeText(closingTaiex.change_percent ?? closingVerificationRecord.actual_taiex_change ?? '待資料')}%</p>
+                    <p className="text-white/35 text-[10px] mt-1">2330 {renderSafeText(closingTsmc.change_percent ?? '待資料')}%</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                    <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">命中程度</p>
+                    <p className="text-white/70 text-xs leading-relaxed">{renderSafeText(closingVerificationRecord.hit_or_miss || closingVerificationRecord.prediction_result || closingVerificationRecord.verdict_label || '待驗證')}</p>
+                    <p className="text-white/35 text-[10px] mt-1">資料狀態：{renderSafeText(closingVerificationRecord.data_status || '—')}</p>
+                  </div>
                 </div>
-              ) : (
-                <p className="text-white/50 text-xs leading-relaxed">已收到收盤驗證資料，等待下一版格式化顯示。</p>
-              )}
-            </section>
-          )}
+
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                  <h3 className="text-white font-semibold text-sm mb-3">第一受惠股驗證</h3>
+                  {valueHasContent(firstBeneficiaryValidation.predicted_stock) && (
+                    <p className="text-white/65 text-xs leading-relaxed mb-3">
+                      盤前第一受惠股：{renderSafeText(asRecord(firstBeneficiaryValidation.predicted_stock).symbol || '')} {renderSafeText(asRecord(firstBeneficiaryValidation.predicted_stock).name || '')}
+                    </p>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {getDataLines(firstBeneficiaryValidation, ['close_change_percent', 'taiex_relative_percent', 'matched_logic', 'note']).map((item, idx) => (
+                      <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                        <p className="text-violet-300/80 text-[10px] mb-1">{labelText(item.label)}</p>
+                        <p className="text-white/60 text-xs leading-relaxed">{renderSafeText(item.value)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                  <h3 className="text-white font-semibold text-sm mb-3">受惠股名單驗證</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
+                    {['tracked_count', 'with_close_data_count', 'up_count', 'down_count', 'outperformed_taiex_count'].map((key) => (
+                      <div key={key} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                        <p className="text-white/35 text-[10px] mb-1">{labelText(key)}</p>
+                        <p className="text-white/75 text-sm font-semibold">{renderSafeText(beneficiaryListValidation[key] ?? '—')}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-white/45 text-xs leading-relaxed">比較方式：每檔受惠股收盤表現扣除 TAIEX 收盤漲跌幅，跑贏大盤才算相對成立；資料不足時標示 degraded，不硬判。</p>
+                </div>
+
+                {hasItems(intradayReplaySignals) && (
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                    <h3 className="text-white font-semibold text-sm mb-3">盤中驗證訊號回放</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {intradayReplaySignals.map((item, idx) => (
+                        <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                          <p className="text-sky-300/80 text-xs font-semibold mb-1">{renderSafeText(item.time || item.label || `訊號 ${idx + 1}`)}</p>
+                          <p className="text-white/35 text-[10px] mb-1">{renderSafeText(item.status || 'best_effort')}</p>
+                          <p className="text-white/55 text-xs leading-relaxed">{renderSafeText(item.finding || item.summary || '—')}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {hasItems(sectorPerformance) && (
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                    <h3 className="text-white font-semibold text-sm mb-3">類股收盤表現</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {sectorPerformance.slice(0, 4).map((item, idx) => (
+                        <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                          <p className="text-white/80 text-sm font-medium">{renderSafeText(item.sector || `類股 ${idx + 1}`)}</p>
+                          <p className="text-white/45 text-xs mt-1">輪動分數：{renderSafeText(item.rotation_score ?? '—')}｜{renderSafeText(item.signal_label || item.direction || '')}</p>
+                          <p className="text-white/55 text-xs mt-2 leading-relaxed">{renderSafeText(item.summary || '')}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-4 rounded-xl bg-violet-500/[0.04] border border-violet-400/20">
+                  <h3 className="text-white font-semibold text-sm mb-3">明日調整</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {['keep', 'downgrade', 'watch_tomorrow'].map((key) => (
+                      <div key={key} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                        <p className="text-violet-300/80 text-[10px] mb-2">{labelText(key)}</p>
+                        <ul className="space-y-1">
+                          {textList(tomorrowAdjustment[key]).map((line, idx) => (
+                            <li key={idx} className="text-white/55 text-xs leading-relaxed">• {renderSafeText(line)}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                <p className="text-white/70 text-sm font-medium mb-1">收盤驗證將於收盤後更新</p>
+                <p className="text-white/45 text-xs leading-relaxed">系統會在取得有效 TAIEX / 2330 收盤資料後，回測盤前方向、第一受惠股、受惠股名單與明日調整。</p>
+              </div>
+            )}
+          </section>
 
           {/* ═══════════════════════════════ */}
           {/* MEMBER RESEARCH NOTE SECTIONS */}

@@ -223,24 +223,28 @@ function buildTeaserStock(ai: Record<string, unknown>): Record<string, unknown> 
 }
 
 function buildClosingVerdict(ai: Record<string, unknown>): Record<string, unknown> | null {
-  const closing = asObject(ai.closing_verification);
+  const closingV2 = asObject(ai.closing_verification_v2);
+  const closing = Object.keys(closingV2).length > 0 ? closingV2 : asObject(ai.closing_verification);
   if (Object.keys(closing).length === 0) return null;
   return {
     status: toStringValue(closing.status),
-    verdict_label: toStringValue(closing.verdict_label),
-    prediction_result: toStringValue(closing.prediction_result),
+    verdict_label: toStringValue(closing.verdict_label) || toStringValue(closing.hit_or_miss),
+    prediction_result: toStringValue(closing.prediction_result) || toStringValue(closing.hit_or_miss),
   };
 }
 
 function buildClosingSummary(ai: Record<string, unknown>): Record<string, unknown> | null {
-  const closing = asObject(ai.closing_verification);
+  const closingV2 = asObject(ai.closing_verification_v2);
+  const closing = Object.keys(closingV2).length > 0 ? closingV2 : asObject(ai.closing_verification);
   if (Object.keys(closing).length === 0) return null;
+  const taiexClose = asObject(closing.actual_taiex_close);
   return {
+    ...closing,
     status: toStringValue(closing.status),
-    verdict_label: toStringValue(closing.verdict_label),
-    prediction_result: toStringValue(closing.prediction_result),
-    verification_note: toStringValue(closing.verification_note),
-    actual_taiex_change: toNumberValue(closing.actual_taiex_change),
+    verdict_label: toStringValue(closing.verdict_label) || toStringValue(closing.hit_or_miss),
+    prediction_result: toStringValue(closing.prediction_result) || toStringValue(closing.hit_or_miss),
+    verification_note: toStringValue(closing.verification_note) || toStringValue(closing.what_was_right),
+    actual_taiex_change: toNumberValue(closing.actual_taiex_change) ?? toNumberValue(taiexClose.change_percent),
     accuracy_score: toNumberValue(closing.accuracy_score),
     verified_at: toStringValue(closing.verified_at),
   };

@@ -73,6 +73,19 @@ type TaiexCloseData = {
   change: number;
   capturedAt: string | null;
   updatedAt: string | null;
+  value?: number | null;
+  source?: string | null;
+};
+
+type CloseMarketRow = {
+  symbol: string;
+  name: string | null;
+  value: number | null;
+  change: number | null;
+  capturedAt: string | null;
+  updatedAt: string | null;
+  source: string | null;
+  table: string;
 };
 
 type PredictedDirection = "bullish" | "bearish" | "neutral";
@@ -304,6 +317,284 @@ async function fetchTaiexCloseDataForDate(
   return { closeData: null, closeWindow };
 }
 
+function normalizeSymbol(value: unknown): string {
+  return String(value || "").trim().toUpperCase();
+}
+
+function readSymbolFromStock(row: unknown): string {
+  const obj = asObject(row);
+  return String(obj.symbol || obj.stock_code || obj.stock_id || obj.ticker || "").trim();
+}
+
+function readNameFromStock(row: unknown): string {
+  const obj = asObject(row);
+  return String(obj.name || obj.stock_name || obj.company_name || "").trim();
+}
+
+function extractPredictedBeneficiaryStocks(ai: Record<string, unknown>): Record<string, unknown>[] {
+  const primary = Array.isArray(ai.today_beneficiary_stocks) ? ai.today_beneficiary_stocks : [];
+  const secondary = Array.isArray(ai.beneficiary_stocks) ? ai.beneficiary_stocks : [];
+  const seen = new Set<string>();
+  const out: Record<string, unknown>[] = [];
+  for (const item of [...primary, ...secondary]) {
+    const obj = asObject(item);
+    const symbol = readSymbolFromStock(obj);
+    if (!symbol || seen.has(symbol)) continue;
+    seen.add(symbol);
+    out.push(obj);
+  }
+  return out.slice(0, 12);
+}
+
+function closeRowFromSnapshot(row: Record<string, unknown>): CloseMarketRow | null {
+  const symbol = normalizeSymbol(row.symbol);
+  const change = Number(row.change_percent);
+  const value = Number(row.value);
+  if (!symbol || Number.isNaN(change)) return null;
+  return {
+    symbol,
+    name: row.name ? String(row.name) : null,
+    value: Number.isNaN(value) ? null : value,
+    change,
+    capturedAt: row.captured_at ? String(row.captured_at) : null,
+    updatedAt: null,
+    source: row.source ? String(row.source) : "market_data_snapshots",
+    table: "market_data_snapshots",
+  };
+}
+
+function closeRowFromMarketData(row: Record<string, unknown>): CloseMarketRow | null {
+  const symbol = normalizeSymbol(row.symbol);
+  const change = Number(row.change_percent);
+  const value = Number(row.value);
+  if (!symbol || Number.isNaN(change)) return null;
+  return {
+    symbol,
+    name: row.name ? String(row.name) : null,
+    value: Number.isNaN(value) ? null : value,
+    change,
+    capturedAt: row.captured_at ? String(row.captured_at) : row.updated_at ? String(row.updated_at) : null,
+    updatedAt: row.updated_at ? String(row.updated_at) : null,
+    source: row.source ? String(row.source) : "market_data",
+    table: "market_data",
+  };
+}
+
+async function fetchCloseRowsForDate(
+  supabase: ReturnType<typeof createClient>,
+  targetDate: string,
+  symbols: string[],
+): Promise<{ rows: CloseMarketRow[]; closeWindow: { start: string; end: string }; source: string; degraded: boolean }> {
+  const closeWindow = getCloseWindowRange(targetDate);
+  const uniqueSymbols = Array.from(new Set(symbols.map(normalizeSymbol).filter(Boolean)));
+  if (uniqueSymbols.length === 0) return { rows: [], closeWindow, source: "none", degraded: true };
+
+  const snapshotResult = await supabase
+    .from("market_data_snapshots")
+    .select("symbol,name,value,change_percent,captured_at,source")
+    .eq("trading_date", targetDate)
+    .eq("phase", "close")
+    .in("symbol", uniqueSymbols)
+    .order("captured_at", { ascending: false });
+
+  if (!snapshotResult.error && Array.isArray(snapshotResult.data) && snapshotResult.data.length > 0) {
+    const rows = (snapshotResult.data as Record<string, unknown>[]).map(closeRowFromSnapshot).filter((row): row is CloseMarketRow => row !== null);
+    if (rows.length > 0) return { rows, closeWindow, source: "market_data_snapshots", degraded: false };
+  }
+
+  const marketDataResult = await supabase
+    .from("market_data")
+    .select("symbol,name,value,change_percent,captured_at,updated_at,source")
+    .in("symbol", uniqueSymbols)
+    .gte("captured_at", closeWindow.start)
+    .lte("captured_at", closeWindow.end)
+    .order("captured_at", { ascending: false });
+
+  if (!marketDataResult.error && Array.isArray(marketDataResult.data)) {
+    const rows = (marketDataResult.data as Record<string, unknown>[])
+      .filter((row) => taipeiDateFromIso(row.captured_at || row.updated_at) === targetDate)
+      .map(closeRowFromMarketData)
+      .filter((row): row is CloseMarketRow => row !== null);
+    return { rows, closeWindow, source: "market_data", degraded: rows.length === 0 };
+  }
+
+  return { rows: [], closeWindow, source: "market_data", degraded: true };
+}
+
+async function fetchSectorPerformanceForDate(
+  supabase: ReturnType<typeof createClient>,
+  targetDate: string,
+): Promise<Record<string, unknown>[]> {
+  const { data, error } = await supabase
+    .from("sector_rotation_scores")
+    .select("sector,sub_sector,rotation_score,direction,signal_label,summary,leading_symbols,lagging_symbols")
+    .eq("score_date", targetDate)
+    .order("rotation_score", { ascending: false })
+    .limit(10);
+  if (error || !Array.isArray(data)) return [];
+  return data as Record<string, unknown>[];
+}
+
+function rowBySymbol(rows: CloseMarketRow[], aliases: string[]): CloseMarketRow | null {
+  const aliasSet = new Set(aliases.map(normalizeSymbol));
+  return rows.find((row) => aliasSet.has(normalizeSymbol(row.symbol))) || null;
+}
+
+function compareBeneficiaryStocks(
+  predictedStocks: Record<string, unknown>[],
+  closeRows: CloseMarketRow[],
+  taiexChange: number | null,
+): Record<string, unknown> {
+  const items = predictedStocks.map((stock) => {
+    const symbol = normalizeSymbol(readSymbolFromStock(stock));
+    const close = rowBySymbol(closeRows, [symbol]);
+    const relative = close && taiexChange !== null && close.change !== null ? Number((close.change - taiexChange).toFixed(2)) : null;
+    return {
+      symbol,
+      name: readNameFromStock(stock) || String(stock.name || stock.stock_name || ""),
+      predicted_reason: String(stock.reason || stock.trigger_event || stock.why_this_stock || ""),
+      close_change_percent: close?.change ?? null,
+      taiex_relative_percent: relative,
+      outperformed_taiex: relative === null ? null : relative >= 0,
+      data_status: close ? "complete" : "missing_close_data",
+    };
+  });
+  const withData = items.filter((item) => typeof item.close_change_percent === "number");
+  return {
+    tracked_count: predictedStocks.length,
+    with_close_data_count: withData.length,
+    up_count: withData.filter((item) => Number(item.close_change_percent) > 0).length,
+    down_count: withData.filter((item) => Number(item.close_change_percent) < 0).length,
+    outperformed_taiex_count: withData.filter((item) => item.outperformed_taiex === true).length,
+    underperformed_taiex_count: withData.filter((item) => item.outperformed_taiex === false).length,
+    data_status: predictedStocks.length === 0 || withData.length < Math.max(1, Math.ceil(predictedStocks.length * 0.5)) ? "degraded" : "complete",
+    items,
+  };
+}
+
+function buildIntradayReplay(
+  ai: Record<string, unknown>,
+  intradayRows: CloseMarketRow[],
+  closeRows: CloseMarketRow[],
+  taiexChange: number | null,
+): Record<string, unknown>[] {
+  const openingRadar = asObject(ai.opening_radar);
+  const taiexIntraday = rowBySymbol(intradayRows, ["TAIEX", "TWII", "^TWII"]);
+  const tsmcIntraday = rowBySymbol(intradayRows, ["2330", "2330.TW"]);
+  const taiexClose = rowBySymbol(closeRows, ["TAIEX", "TWII", "^TWII"]);
+  return [
+    {
+      time: "09:30",
+      label: "開盤劇本驗證",
+      status: taiexIntraday ? "observed" : "best_effort",
+      finding: taiexIntraday ? `TAIEX 盤中 ${taiexIntraday.change !== null && taiexIntraday.change >= 0 ? "+" : ""}${taiexIntraday.change?.toFixed(2)}%，2330 ${tsmcIntraday?.change != null ? `${tsmcIntraday.change >= 0 ? "+" : ""}${tsmcIntraday.change.toFixed(2)}%` : "待資料"}` : "缺少 09:30 完整盤中快照，改用收盤資料回測。",
+    },
+    {
+      time: "10:30",
+      label: "趨勢延續檢查",
+      status: openingRadar.radar_status ? "observed" : "best_effort",
+      finding: openingRadar.radar_status ? `盤中雷達：${String(openingRadar.radar_status)}；${String(openingRadar.summary || "等待完整摘要")}` : "尚未取得完整 10:30 盤中雷達，使用 TAIEX / 2330 / 類股輪動做 best-effort。",
+    },
+    {
+      time: "close",
+      label: "收盤確認",
+      status: taiexClose ? "observed" : "pending",
+      finding: taiexChange === null ? "等待有效收盤資料。" : `TAIEX 收盤 ${taiexChange >= 0 ? "+" : ""}${taiexChange.toFixed(2)}%，用來確認盤前方向是否成立。`,
+    },
+  ];
+}
+
+function buildClosingVerificationV2(params: {
+  ai: Record<string, unknown>;
+  reportDate: string;
+  predictedBias: string;
+  confidence: number | null;
+  result: StructuredPredictionResult;
+  taiexClose: CloseMarketRow | null;
+  tsmcClose: CloseMarketRow | null;
+  predictedStocks: Record<string, unknown>[];
+  beneficiaryValidation: Record<string, unknown>;
+  sectorPerformance: Record<string, unknown>[];
+  intradayReplay: Record<string, unknown>[];
+  closeWindow: { start: string; end: string };
+  source: string;
+}): Record<string, unknown> {
+  const firstStock = params.predictedStocks[0] || null;
+  const firstSymbol = firstStock ? readSymbolFromStock(firstStock) : "";
+  const allItems = Array.isArray(params.beneficiaryValidation.items) ? params.beneficiaryValidation.items as Record<string, unknown>[] : [];
+  const firstItem = allItems.find((item) => normalizeSymbol(item.symbol) === normalizeSymbol(firstSymbol));
+  const firstOutperformed = typeof firstItem?.taiex_relative_percent === "number" ? Number(firstItem.taiex_relative_percent) >= 0 : null;
+  const dataStatus = params.taiexClose && params.tsmcClose && params.beneficiaryValidation.data_status === "complete" ? "complete" : "degraded";
+  return {
+    version: "S2_P2_CLOSE_VERIFICATION_V2",
+    status: params.taiexClose ? "completed" : "pending_real_market_data",
+    data_status: params.taiexClose ? dataStatus : "pending",
+    verified_at: new Date().toISOString(),
+    report_date: params.reportDate,
+    opening_bias: params.predictedBias || null,
+    opening_confidence: params.confidence,
+    predicted_beneficiary_stocks: params.predictedStocks.map((stock) => ({
+      symbol: readSymbolFromStock(stock),
+      name: readNameFromStock(stock),
+      reason: String(stock.reason || stock.trigger_event || stock.why_this_stock || ""),
+    })),
+    intraday_validation_signals: params.intradayReplay,
+    actual_taiex_close: params.taiexClose ? {
+      symbol: params.taiexClose.symbol,
+      value: params.taiexClose.value,
+      change_percent: params.taiexClose.change,
+      captured_at: params.taiexClose.capturedAt,
+      source: params.taiexClose.source,
+    } : null,
+    actual_2330_close: params.tsmcClose ? {
+      symbol: params.tsmcClose.symbol,
+      value: params.tsmcClose.value,
+      change_percent: params.tsmcClose.change,
+      captured_at: params.tsmcClose.capturedAt,
+      source: params.tsmcClose.source,
+    } : null,
+    actual_sector_performance: params.sectorPerformance,
+    hit_or_miss: params.result,
+    what_was_right: params.result === "hit"
+      ? "盤前方向獲得 TAIEX 收盤方向確認，可保留同方向族群作為隔日觀察。"
+      : params.result === "partial"
+        ? "盤前方向部分成立，但收盤沒有完全展開，需降低單日訊號權重。"
+        : params.result === "miss"
+          ? "收盤方向與盤前假設不一致，盤中反向訊號應優先於盤前敘事。"
+          : "尚未取得有效收盤資料，不評分。",
+    what_was_wrong: params.result === "miss"
+      ? "盤前假設未被收盤指數確認，需檢查 2330、TXF 與族群同步性是否提前轉弱。"
+      : params.result === "partial"
+        ? "方向沒有完全擴散到收盤，受惠股與大盤相對表現需要重新排序。"
+        : null,
+    first_beneficiary_validation: {
+      predicted_stock: firstStock ? { symbol: firstSymbol, name: readNameFromStock(firstStock), reason: String(firstStock.reason || firstStock.trigger_event || "") } : null,
+      close_change_percent: firstItem?.close_change_percent ?? null,
+      taiex_relative_percent: firstItem?.taiex_relative_percent ?? null,
+      matched_logic: firstOutperformed,
+      note: firstStock
+        ? firstOutperformed === null
+          ? "第一受惠股缺少有效收盤資料，今日不硬判。"
+          : firstOutperformed
+            ? "第一受惠股收盤表現跑贏或不弱於 TAIEX，受惠邏輯獲得相對確認。"
+            : "第一受惠股未跑贏 TAIEX，代表盤前傳導鏈需要降權。"
+        : "盤前未產生第一受惠股，無法驗證。",
+    },
+    beneficiary_list_validation: params.beneficiaryValidation,
+    tomorrow_adjustment: {
+      keep: params.result === "hit" ? ["保留今日被收盤確認的方向假設", "延續觀察跑贏 TAIEX 的受惠股"] : ["保留有真實資料支撐的市場訊號，不延伸失效敘事"],
+      downgrade: params.result === "miss" ? ["降低盤前方向權重", "降低未跑贏 TAIEX 的受惠股排序"] : params.result === "partial" ? ["降低單一族群擴散假設權重"] : [],
+      watch_tomorrow: ["隔夜 SOX / NASDAQ / NVDA 是否延續今日方向", "09:30 TAIEX、TXF、2330 是否同向", "今日跑贏大盤的族群是否延續到明天"],
+    },
+    data_source: {
+      table: params.source,
+      close_window_start: params.closeWindow.start,
+      close_window_end: params.closeWindow.end,
+      no_fake_data: true,
+    },
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return jsonResponse({ success: false, error: "Only POST allowed" }, 405);
@@ -388,10 +679,43 @@ Deno.serve(async (req: Request) => {
     ? null
     : Math.max(0, Math.min(100, Math.round(Number(confidenceRaw))));
 
-  const { closeData: taiexCloseData, closeWindow } = await fetchTaiexCloseDataForDate(supabase, verificationDate);
+  const predictedBeneficiaryStocks = extractPredictedBeneficiaryStocks(ai);
+  const beneficiarySymbols = predictedBeneficiaryStocks.map(readSymbolFromStock).filter(Boolean);
+  const symbolsToFetch = ["TAIEX", "TWII", "^TWII", "2330", "2330.TW", ...beneficiarySymbols];
+  const closeMarket = await fetchCloseRowsForDate(supabase, verificationDate, symbolsToFetch);
+  const closeWindow = closeMarket.closeWindow;
+  const taiexCloseRow = rowBySymbol(closeMarket.rows, ["TAIEX", "TWII", "^TWII"]);
+  const tsmcCloseRow = rowBySymbol(closeMarket.rows, ["2330", "2330.TW"]);
+  const taiexCloseData: TaiexCloseData | null = taiexCloseRow ? {
+    symbol: taiexCloseRow.symbol,
+    change: taiexCloseRow.change ?? 0,
+    value: taiexCloseRow.value,
+    capturedAt: taiexCloseRow.capturedAt,
+    updatedAt: taiexCloseRow.updatedAt,
+    source: taiexCloseRow.source,
+  } : null;
   const taiexChange = taiexCloseData?.change ?? null;
+  const sectorPerformance = await fetchSectorPerformanceForDate(supabase, verificationDate);
+  const beneficiaryValidation = compareBeneficiaryStocks(predictedBeneficiaryStocks, closeMarket.rows, taiexChange);
+  const intradayReplay = buildIntradayReplay(ai, [], closeMarket.rows, taiexChange);
 
   if (taiexChange === null) {
+    const pendingClosingVerificationV2 = buildClosingVerificationV2({
+      ai,
+      reportDate: verificationDate,
+      predictedBias,
+      confidence,
+      result: "pending",
+      taiexClose: null,
+      tsmcClose: tsmcCloseRow,
+      predictedStocks: predictedBeneficiaryStocks,
+      beneficiaryValidation,
+      sectorPerformance,
+      intradayReplay,
+      closeWindow,
+      source: closeMarket.source,
+    });
+
     const pendingClosingVerification: Record<string, unknown> = {
       version: "P20_CLOSE_WINDOW_VERIFICATION",
       status: "pending_real_market_data",
@@ -426,7 +750,7 @@ Deno.serve(async (req: Request) => {
 
     const { error: updatePendingError } = await supabase
       .from("reports")
-      .update({ ai_strategy_json: { ...ai, closing_verification: pendingClosingVerification } })
+      .update({ ai_strategy_json: { ...ai, closing_verification: pendingClosingVerification, closing_verification_v2: pendingClosingVerificationV2 } })
       .eq("id", reportRow.id);
 
     if (updatePendingError) {
@@ -521,14 +845,14 @@ Deno.serve(async (req: Request) => {
     tomorrow_watch_points: tomorrowWatchPoints,
     lessons_learned: lessonsLearned,
     data_source: {
-      source: "market_data",
+      source: taiexCloseData.source || closeMarket.source,
       symbol: taiexCloseData.symbol,
       taiex_symbol: taiexCloseData.symbol,
       captured_at: taiexCloseData.capturedAt,
       updated_at: taiexCloseData.updatedAt,
       close_window_start: closeWindow.start,
       close_window_end: closeWindow.end,
-      table: "market_data",
+      table: closeMarket.source,
     },
     legacy_actual_direction: actualDirectionValue,
     legacy_prediction_result: predictionResult,
@@ -537,9 +861,26 @@ Deno.serve(async (req: Request) => {
     no_fake_data: true,
   };
 
+  const closingVerificationV2 = buildClosingVerificationV2({
+    ai,
+    reportDate: verificationDate,
+    predictedBias,
+    confidence,
+    result: structuredPredictionResult,
+    taiexClose: taiexCloseRow,
+    tsmcClose: tsmcCloseRow,
+    predictedStocks: predictedBeneficiaryStocks,
+    beneficiaryValidation,
+    sectorPerformance,
+    intradayReplay,
+    closeWindow,
+    source: closeMarket.source,
+  });
+
   const updatedAiStrategyJson = {
     ...ai,
     closing_verification: closingVerification,
+    closing_verification_v2: closingVerificationV2,
   };
 
   const { error: updateReportError } = await supabase
@@ -574,6 +915,8 @@ Deno.serve(async (req: Request) => {
     report_updated: true,
     log_inserted: true,
     closing_verification_status: "completed",
+    closing_verification_v2_status: closingVerificationV2.status,
+    beneficiary_validation_status: beneficiaryValidation.data_status,
     no_fake_data: true,
   });
 });

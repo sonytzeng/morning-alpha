@@ -357,8 +357,142 @@ async function fetchFugleStockQuote(symbol: string, apiKey: string, logPrefix: s
   return fetchFugleQuoteFromPath("stock/intraday/quote", symbol, apiKey, logPrefix, "fugle", failureDetails);
 }
 
-async function fetchFugleFutOptQuote(symbol: string, apiKey: string, logPrefix: string, failureDetails?: ProviderFailureDetail[]): Promise<MarketQuote | null> {
-  return fetchFugleQuoteFromPath("futopt/intraday/quote", symbol, apiKey, logPrefix, "fugle_futopt", failureDetails);
+async function fetchFugleJson(
+  pathWithQuery: string,
+  apiKey: string,
+  logPrefix: string,
+  failureDetails?: ProviderFailureDetail[],
+): Promise<unknown | null> {
+  if (!apiKey) return null;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4_000);
+  try {
+    const response = await fetch(`https://api.fugle.tw/marketdata/v1.0/${pathWithQuery}`, {
+      headers: { "Accept": "application/json", "X-API-KEY": apiKey },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      let body = "";
+      try { body = (await response.text()).slice(0, 240); } catch { body = ""; }
+      console.warn(`[${logPrefix}] Fugle futopt discovery ${pathWithQuery} HTTP ${response.status} ${body}`);
+      failureDetails?.push({ provider: "fugle_futopt", symbol: "TXF", endpoint: pathWithQuery, status: response.status, error: body || undefined });
+      return null;
+    }
+    return await response.json();
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[${logPrefix}] Fugle futopt discovery ${pathWithQuery} failed: ${message}`);
+    failureDetails?.push({ provider: "fugle_futopt", symbol: "TXF", endpoint: pathWithQuery, error: message });
+    return null;
+  }
+}
+
+function flattenTickerRows(input: unknown): Record<string, unknown>[] {
+  const rows: Record<string, unknown>[] = [];
+  const visit = (value: unknown) => {
+    if (!value) return;
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item);
+      return;
+    }
+    if (typeof value !== "object") return;
+    const record = value as Record<string, unknown>;
+    const maybeSymbol = record.symbol ?? record.ticker ?? record.code ?? record.contractCode ?? record.contract_code;
+    if (typeof maybeSymbol === "string") rows.push(record);
+    for (const key of ["data", "items", "tickers", "products", "contracts", "results"]) visit(record[key]);
+  };
+  visit(input);
+  return rows;
+}
+
+function textField(row: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = row[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return "";
+}
+
+function isActiveContract(row: Record<string, unknown>): boolean {
+  const status = textField(row, ["status", "state", "tradeStatus", "tradingStatus", "isActive", "active"]).toLowerCase();
+  if (!status) return true;
+  if (["false", "0", "inactive", "expired", "delisted", "suspended", "halted", "closed"].includes(status)) return false;
+  return true;
+}
+
+function expiryMillis(row: Record<string, unknown>): number {
+  const expiry = textField(row, ["deliveryDate", "expiryDate", "expireDate", "lastTradingDate", "settlementDate"]);
+  if (expiry) {
+    const normalized = /^\d{8}$/.test(expiry) ? `${expiry.slice(0,4)}-${expiry.slice(4,6)}-${expiry.slice(6,8)}` : expiry;
+    const parsed = Date.parse(normalized);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  const ym = textField(row, ["deliveryMonth", "contractMonth", "yearMonth", "month"]);
+  if (/^\d{6}$/.test(ym)) {
+    const parsed = Date.parse(`${ym.slice(0,4)}-${ym.slice(4,6)}-01T00:00:00Z`);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function selectNearestTxfContract(rows: Record<string, unknown>[]): string | null {
+  const now = Date.now();
+  const candidates = rows
+    .map((row) => {
+      const symbol = textField(row, ["symbol", "ticker", "code", "contractCode", "contract_code"]);
+      const product = textField(row, ["product", "productId", "product_id", "rootSymbol", "underlying", "underlyingSymbol", "commodity", "type", "name"]);
+      return { row, symbol, product, expiry: expiryMillis(row) };
+    })
+    .filter((item) => item.symbol && /^TXF[A-Z0-9]+$/i.test(item.symbol))
+    .filter((item) => /TXF|臺指|台指|TAIEX/i.test(`${item.product} ${item.symbol}`))
+    .filter((item) => isActiveContract(item.row))
+    .sort((a, b) => {
+      const aFuture = a.expiry >= now ? 0 : 1;
+      const bFuture = b.expiry >= now ? 0 : 1;
+      if (aFuture !== bFuture) return aFuture - bFuture;
+      return a.expiry - b.expiry || a.symbol.localeCompare(b.symbol);
+    });
+  return candidates[0]?.symbol || null;
+}
+
+async function getActiveTxfContractSymbol(
+  apiKey: string,
+  logPrefix: string,
+  failureDetails?: ProviderFailureDetail[],
+): Promise<string | null> {
+  const endpoints = [
+    "futopt/intraday/tickers?type=FUTURE",
+    "futopt/intraday/tickers?type=FUTURES",
+    "futopt/intraday/tickers",
+    "futopt/products?type=FUTURE",
+    "futopt/products",
+  ];
+  for (const endpoint of endpoints) {
+    const json = await fetchFugleJson(endpoint, apiKey, logPrefix, failureDetails);
+    const rows = flattenTickerRows(json);
+    const symbol = selectNearestTxfContract(rows);
+    if (symbol) {
+      console.log(`[${logPrefix}] resolved TXF contract ${symbol} via ${endpoint}`);
+      return symbol;
+    }
+    if (json) failureDetails?.push({ provider: "fugle_futopt", symbol: "TXF", endpoint, error: "cannot_resolve_active_txf_contract" });
+  }
+  return null;
+}
+
+async function fetchFugleFutOptQuote(
+  symbol: string,
+  apiKey: string,
+  logPrefix: string,
+  session: "regular" | "afterhours",
+  failureDetails?: ProviderFailureDetail[],
+): Promise<MarketQuote | null> {
+  const query = session === "afterhours" ? "?session=afterhours" : "";
+  const quote = await fetchFugleQuoteFromPath(`futopt/intraday/quote${query}`, symbol, apiKey, logPrefix, "fugle_futopt", failureDetails);
+  return quote ? { ...quote, raw: { ...quote.raw, product: "TXF", session } } : null;
 }
 
 function normalizeTwseQuote(data: Record<string, unknown>, sourceSymbol: string): MarketQuote | null {
@@ -427,6 +561,7 @@ async function fetchTaiwanCoreQuote(
   config: SymbolConfig,
   fugleApiKey: string,
   logPrefix: string,
+  phase: MarketDataPhase,
   failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
   if (config.displaySymbol === "2330") {
@@ -445,11 +580,17 @@ async function fetchTaiwanCoreQuote(
   }
 
   if (config.displaySymbol === "TXF") {
-    const candidates = ["TXF", "TX", "TX1"];
-    for (const candidate of candidates) {
-      const quote = await fetchFugleFutOptQuote(candidate, fugleApiKey, logPrefix, failureDetails);
-      if (quote) return { ...quote, sourceSymbol: candidate };
+    const contractSymbol = await getActiveTxfContractSymbol(fugleApiKey, logPrefix, failureDetails);
+    if (!contractSymbol) {
+      failureDetails?.push({ provider: "fugle_futopt", symbol: "TXF", endpoint: "contract_resolution", error: "cannot_resolve_active_txf_contract" });
+      return null;
     }
+    const preferredSession: "regular" | "afterhours" = phase === "premarket" || phase === "manual_backfill" ? "afterhours" : "regular";
+    const fallbackSession: "regular" | "afterhours" = preferredSession === "afterhours" ? "regular" : "afterhours";
+    const quote = await fetchFugleFutOptQuote(contractSymbol, fugleApiKey, logPrefix, preferredSession, failureDetails);
+    if (quote) return { ...quote, sourceSymbol: contractSymbol, raw: { ...quote.raw, fallback_used: false } };
+    const fallbackQuote = await fetchFugleFutOptQuote(contractSymbol, fugleApiKey, logPrefix, fallbackSession, failureDetails);
+    if (fallbackQuote) return { ...fallbackQuote, sourceSymbol: contractSymbol, raw: { ...fallbackQuote.raw, fallback_used: true, fallback_from_session: preferredSession } };
   }
 
   return null;
@@ -556,7 +697,7 @@ Deno.serve(async (req) => {
 
       try {
         const quote = config.market === "TW"
-          ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, providerFailureDetails)
+          ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, providerFailureDetails)
           : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`);
 
         if (!quote) {

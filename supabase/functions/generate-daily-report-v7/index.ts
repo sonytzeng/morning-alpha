@@ -99,16 +99,18 @@ type SectorRotationRow={sector:string;sub_sector:string;rotation_score:number;di
 type MemberResearchNoteV2={overnight_chain:Record<string,unknown>[];taiwan_impact_map:Record<string,unknown>[];beneficiary_candidates:Record<string,unknown>[];intraday_validation:Record<string,unknown>[];invalidation_rules:Record<string,unknown>[];closing_feedback_plan:Record<string,unknown>;subscriber_value_sentence:string;data_status:'complete'|'partial'|'insufficient';today_core_thesis?:string;market_mispricing?:string;institutional_behavior?:string;fund_flow_scenario?:string;beneficiary_reasoning?:Record<string,unknown>[];close_backtest_plan?:Record<string,unknown>;tomorrow_extension_watch?:string[]};
 type V8Contract={v8_beneficiary_chain:Record<string,unknown>;v8_overnight_causal_chain:Record<string,unknown>;v8_daily_sentence:Record<string,unknown>};
 
-type BiasGuardrailResult={adjustedScore:number;riskSignals:string[];staleSignals:string[];negativeCoreCount:number;maxBias:string;shouldDowngrade:boolean};
+type BiasGuardrailResult={adjustedScore:number;riskSignals:string[];staleSignals:string[];unavailableSignals:string[];negativeCoreCount:number;maxBias:string;shouldDowngrade:boolean};
 function findIndicator(md:MarketIndicator[],syms:string[]):MarketIndicator|null{for(const sy of syms){const x=md.find(function(m){return m.symbol.toUpperCase()===sy.toUpperCase()});if(x)return x}return null;}
 function fmtSignedPct(v:number):string{return v>=0?'+'+v.toFixed(2)+'%':v.toFixed(2)+'%'}
 function marketDataAgeHours(m:MarketIndicator):number|null{const raw=m.updatedAt||'';const t=Date.parse(raw);if(!Number.isFinite(t))return null;return (Date.now()-t)/3600000;}
 function isCoreMarketDataStale(m:MarketIndicator):boolean{const age=marketDataAgeHours(m);return age===null||age>36;}
-function detectStaleCoreMarketData(md:MarketIndicator[]):string[]{const core=['SPX','IXIC','NASDAQ','SOX','PHLX','NVDA','TSM','TSMC','VIX','VIXINDEX','TXF','TAIEX','2330'];const out:string[]=[];for(const m of md){if(core.includes(m.symbol.toUpperCase())&&isCoreMarketDataStale(m))out.push(m.symbol+':'+(m.updatedAt||'unknown_time'));}return Array.from(new Set(out));}
+function isTXFSymbol(symbol:string):boolean{return ['TXF','TX','MTX','TXF1'].includes(symbol.toUpperCase());}
+function detectStaleCoreMarketData(md:MarketIndicator[]):string[]{const core=['SPX','IXIC','NASDAQ','SOX','PHLX','NVDA','TSM','TSMC','VIX','VIXINDEX','TAIEX','2330'];const out:string[]=[];for(const m of md){if(core.includes(m.symbol.toUpperCase())&&isCoreMarketDataStale(m))out.push(m.symbol+':'+(m.updatedAt||'unknown_time'));}return Array.from(new Set(out));}
+function detectUnavailableMarketData(md:MarketIndicator[]):string[]{const txf=findIndicator(md,['TXF','TX','MTX','TXF1']);return txf&&isCoreMarketDataStale(txf)?['TXF:no_authorized_source_or_contract_mapping'] : [];}
 function applyBiasGuardrails(md:MarketIndicator[],baseScore:number):BiasGuardrailResult{
   const sox=findIndicator(md,['SOX','PHLX']),nasdaq=findIndicator(md,['IXIC','NASDAQ']),nvda=findIndicator(md,['NVDA']),vix=findIndicator(md,['VIX','VIXINDEX']),tsm=findIndicator(md,['TSM','TSMC']),txf=findIndicator(md,['TXF','TX','MTX']);
-  let adjusted=baseScore;let cap=100;const riskSignals:string[]=[],staleSignals:string[]=[];let negativeCoreCount=0;
-  const usable=function(m:MarketIndicator|null,label:string):MarketIndicator|null{if(!m)return null;if(isCoreMarketDataStale(m)){staleSignals.push(label+' 資料過期（'+(m.updatedAt||'無時間')+'）');return null;}return m};
+  let adjusted=baseScore;let cap=100;const riskSignals:string[]=[],staleSignals:string[]=[],unavailableSignals:string[]=[];let negativeCoreCount=0;
+  const usable=function(m:MarketIndicator|null,label:string):MarketIndicator|null{if(!m)return null;if(isCoreMarketDataStale(m)){if(label==='TXF'){unavailableSignals.push('TXF 資料暫無授權來源或近月合約對應，今日不納入方向扣分');return null;}staleSignals.push(label+' 資料過期（'+(m.updatedAt||'無時間')+'）');return null;}return m};
   const sx=usable(sox,'SOX'),ix=usable(nasdaq,'NASDAQ'),nv=usable(nvda,'NVDA'),vx=usable(vix,'VIX'),tm=usable(tsm,'TSM ADR'),tf=usable(txf,'TXF');
   if(sx&&sx.changePercent<=-5){adjusted-=25;cap=Math.min(cap,35);riskSignals.push('SOX '+fmtSignedPct(sx.changePercent)+'，半導體風險升級');negativeCoreCount++;}
   else if(sx&&sx.changePercent<=-3){adjusted-=18;cap=Math.min(cap,50);riskSignals.push('SOX '+fmtSignedPct(sx.changePercent)+'，market_bias 不可高於中性觀察');negativeCoreCount++;}
@@ -126,11 +128,11 @@ function applyBiasGuardrails(md:MarketIndicator[],baseScore:number):BiasGuardrai
   if(negativeCoreCount>=2){cap=Math.min(cap,50);riskSignals.push('核心風險訊號至少 2 個為負，禁止高偏多敘事');}
   if(staleSignals.length>0){cap=Math.min(cap,55);riskSignals.push('核心市場資料有過期項目，今日降級觀察');}
   adjusted=Math.max(0,Math.min(cap,Math.round(adjusted)));
-  return{adjustedScore:adjusted,riskSignals:Array.from(new Set(riskSignals)),staleSignals:Array.from(new Set(staleSignals)),negativeCoreCount,maxBias:classifyMarketBias(adjusted),shouldDowngrade:adjusted!==baseScore||riskSignals.length>0||staleSignals.length>0};
+  return{adjustedScore:adjusted,riskSignals:Array.from(new Set(riskSignals)),staleSignals:Array.from(new Set(staleSignals)),unavailableSignals:Array.from(new Set(unavailableSignals)),negativeCoreCount,maxBias:classifyMarketBias(adjusted),shouldDowngrade:adjusted!==baseScore||riskSignals.length>0||staleSignals.length>0};
 }
 function buildGuardedLinePushCopy(todayDate:string,marketBias:string,confidenceScore:number,md:MarketIndicator[],guard:BiasGuardrailResult):Record<string,unknown>{
   const tsm=findIndicator(md,['TSM','TSMC']),nvda=findIndicator(md,['NVDA']),sox=findIndicator(md,['SOX','PHLX']),nasdaq=findIndicator(md,['IXIC','NASDAQ']),vix=findIndicator(md,['VIX','VIXINDEX']);
-  const mainRisk=guard.riskSignals[0]||guard.staleSignals[0]||'資料不足，今日降級觀察';
+  const mainRisk=guard.riskSignals[0]||guard.staleSignals[0]||guard.unavailableSignals[0]||'資料不足，今日降級觀察';
   let one='今日降級觀察，先看開盤量價是否驗證盤前假設。';
   if(tsm&&!isCoreMarketDataStale(tsm)&&tsm.changePercent<=-2)one='TSM ADR '+fmtSignedPct(tsm.changePercent)+' 壓低電子權值，今日先看 2330 是否止穩。';
   else if(sox&&!isCoreMarketDataStale(sox)&&sox.changePercent<=-3)one='SOX '+fmtSignedPct(sox.changePercent)+' 拖累半導體情緒，今日不宜用偏多劇本硬追。';
@@ -139,8 +141,8 @@ function buildGuardedLinePushCopy(todayDate:string,marketBias:string,confidenceS
   else if(guard.staleSignals.length>0)one='核心美股資料有過期項目，今日盤前判斷降級觀察。';
   const opportunity=marketBias.includes('弱')||marketBias==='震盪觀察'?'抗跌權值與防禦型資金流向':'半導體與 AI 供應鏈是否有族群同步性';
   const risk=vix&&!isCoreMarketDataStale(vix)&&vix.value>=22?'VIX '+vix.value.toFixed(1)+'，市場風險偏高':mainRisk;
-  const avoid=guard.staleSignals.length>0?'避免用過期美股訊號追多，先等開盤量價確認。':(marketBias.includes('多')?'避免把盤前偏多當成追價理由，等族群同步再確認。':'避免急著撿便宜，先等賣壓與量能訊號。');
-  return{title:'Morning Alpha｜'+todayDate,market_bias:marketBias,confidence:String(confidenceScore),one_sentence:one,opportunity,risk,do_not_do:avoid,watch_point:'09:30 看 TAIEX、2330 與主要族群是否同向',cta:'查看完整報告',guardrail_applied:guard.shouldDowngrade,guardrail_risk_signals:guard.riskSignals,stale_signals:guard.staleSignals};
+  const avoid=guard.staleSignals.length>0?'避免用過期美股訊號追多，先等開盤量價確認。':guard.unavailableSignals.length>0?'台指期資料暫無授權來源，不用期貨訊號放大方向判斷。':(marketBias.includes('多')?'避免把盤前偏多當成追價理由，等族群同步再確認。':'避免急著撿便宜，先等賣壓與量能訊號。');
+  return{title:'Morning Alpha｜'+todayDate,market_bias:marketBias,confidence:String(confidenceScore),one_sentence:one,opportunity,risk,do_not_do:avoid,watch_point:'09:30 看 TAIEX、2330 與主要族群是否同向；TXF 暫不納入方向確認',cta:'查看完整報告',guardrail_applied:guard.shouldDowngrade,guardrail_risk_signals:guard.riskSignals,stale_signals:guard.staleSignals,unavailable_signals:guard.unavailableSignals};
 }
 function applyFinalBiasGuardrails(ai:Record<string,unknown>,todayDate:string,md:MarketIndicator[],dScore:MarketDataScore,confidenceResult:ReportConfidenceScore):Record<string,unknown>{
   const originalScore=Number(dScore.details.bias_guardrail_original_score);
@@ -148,7 +150,7 @@ function applyFinalBiasGuardrails(ai:Record<string,unknown>,todayDate:string,md:
   let guardedConfidence=confidenceResult.score;
   if(guard.staleSignals.length>0||guard.negativeCoreCount>=2)guardedConfidence=Math.min(guardedConfidence,75);
   if(guard.adjustedScore<=40)guardedConfidence=Math.min(guardedConfidence,65);
-  out.market_bias_score=guard.adjustedScore;out.market_bias=guardedBias;out.confidence_score=guardedConfidence;out.bias_guardrails={applied:guard.shouldDowngrade,original_score:Number.isFinite(originalScore)?originalScore:dScore.baseScore,adjusted_score:guard.adjustedScore,original_confidence_score:confidenceResult.score,adjusted_confidence_score:guardedConfidence,risk_signals:guard.riskSignals,stale_signals:guard.staleSignals,negative_core_count:guard.negativeCoreCount,max_bias:guard.maxBias};
+  out.market_bias_score=guard.adjustedScore;out.market_bias=guardedBias;out.confidence_score=guardedConfidence;out.bias_guardrails={applied:guard.shouldDowngrade,original_score:Number.isFinite(originalScore)?originalScore:dScore.baseScore,adjusted_score:guard.adjustedScore,original_confidence_score:confidenceResult.score,adjusted_confidence_score:guardedConfidence,risk_signals:guard.riskSignals,stale_signals:guard.staleSignals,unavailable_signals:guard.unavailableSignals,negative_core_count:guard.negativeCoreCount,max_bias:guard.maxBias};
   if(guard.shouldDowngrade){
     const copy=buildGuardedLinePushCopy(todayDate,guardedBias,guardedConfidence,md,guard);out.line_push_copy=copy;
     out.today_quote=copy.one_sentence;
@@ -1098,8 +1100,8 @@ Deno.serve(async (req:Request)=>{
     const sectorData=sectorSettled.status==='fulfilled'?sectorSettled.value:[];
     const rawDataForDates=rawDatesSettled.status==='fulfilled'?rawDatesSettled.value:[];
     const marketData=marketFetch.marketData;const dataCount=marketFetch.dataCount;const newsData=newsFetch.newsData;
-    const staleCoreSources=detectStaleCoreMarketData(marketData);
-    const missingSources:string[]=[];if(dataCount===0)missingSources.push('market_data');if(newsData.length===0)missingSources.push('market_news');if(sectorData.length===0)missingSources.push('sector_rotation_scores:'+sectorRotationReferenceDate);if(rawDataForDates.length===0)missingSources.push('market_data_dates');for(const stale of staleCoreSources)missingSources.push('stale_market_data:'+stale);
+    const staleCoreSources=detectStaleCoreMarketData(marketData);const unavailableSources=detectUnavailableMarketData(marketData);
+    const missingSources:string[]=[];if(dataCount===0)missingSources.push('market_data');if(newsData.length===0)missingSources.push('market_news');if(sectorData.length===0)missingSources.push('sector_rotation_scores:'+sectorRotationReferenceDate);if(rawDataForDates.length===0)missingSources.push('market_data_dates');for(const stale of staleCoreSources)missingSources.push('stale_market_data:'+stale);for(const unavailable of unavailableSources)missingSources.push('unavailable_market_data:'+unavailable);
     const dataQuality=missingSources.length===0?'complete':'degraded';
     log('MARKET_DATA count='+dataCount);log('NEWS count='+newsData.length);log('SECTOR_ROTATION rows='+sectorData.length);log('DATA_QUALITY '+dataQuality+' missing_sources='+(missingSources.join(',')||'none'));
     timer.mark('PARALLEL_DATA_FETCH_DONE','data_quality='+dataQuality);

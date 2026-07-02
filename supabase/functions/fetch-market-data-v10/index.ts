@@ -39,6 +39,14 @@ interface MarketQuote {
   raw: Record<string, unknown>;
 }
 
+interface ProviderFailureDetail {
+  provider: string;
+  symbol: string;
+  endpoint: string;
+  status?: number;
+  error?: string;
+}
+
 interface SymbolConfig {
   finnhubSymbol: string;
   displaySymbol: string;
@@ -120,6 +128,7 @@ async function fetchFinnhubQuote(
   finnhubSymbol: string,
   apiKey: string,
   logPrefix: string,
+  failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController();
@@ -313,6 +322,7 @@ async function fetchFugleQuoteFromPath(
   apiKey: string,
   logPrefix: string,
   providerLabel: string,
+  failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
   if (!apiKey) return null;
   const controller = new AbortController();
@@ -328,6 +338,7 @@ async function fetchFugleQuoteFromPath(
     clearTimeout(timeoutId);
     if (!response.ok) {
       console.warn(`[${logPrefix}] Fugle ${providerLabel} ${symbol} HTTP ${response.status}`);
+      failureDetails?.push({ provider: providerLabel, symbol, endpoint: path, status: response.status });
       return null;
     }
     const data = await response.json();
@@ -335,17 +346,19 @@ async function fetchFugleQuoteFromPath(
     return quote ? { ...quote, provider: providerLabel, raw: { ...quote.raw, provider: providerLabel } } : null;
   } catch (err) {
     clearTimeout(timeoutId);
-    console.warn(`[${logPrefix}] Fugle ${providerLabel} ${symbol} failed: ${err instanceof Error ? err.message : String(err)}`);
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[${logPrefix}] Fugle ${providerLabel} ${symbol} failed: ${message}`);
+    failureDetails?.push({ provider: providerLabel, symbol, endpoint: path, error: message });
     return null;
   }
 }
 
-async function fetchFugleStockQuote(symbol: string, apiKey: string, logPrefix: string): Promise<MarketQuote | null> {
-  return fetchFugleQuoteFromPath("stock/intraday/quote", symbol, apiKey, logPrefix, "fugle");
+async function fetchFugleStockQuote(symbol: string, apiKey: string, logPrefix: string, failureDetails?: ProviderFailureDetail[]): Promise<MarketQuote | null> {
+  return fetchFugleQuoteFromPath("stock/intraday/quote", symbol, apiKey, logPrefix, "fugle", failureDetails);
 }
 
-async function fetchFugleFutOptQuote(symbol: string, apiKey: string, logPrefix: string): Promise<MarketQuote | null> {
-  return fetchFugleQuoteFromPath("futopt/intraday/quote", symbol, apiKey, logPrefix, "fugle_futopt");
+async function fetchFugleFutOptQuote(symbol: string, apiKey: string, logPrefix: string, failureDetails?: ProviderFailureDetail[]): Promise<MarketQuote | null> {
+  return fetchFugleQuoteFromPath("futopt/intraday/quote", symbol, apiKey, logPrefix, "fugle_futopt", failureDetails);
 }
 
 function normalizeTwseQuote(data: Record<string, unknown>, sourceSymbol: string): MarketQuote | null {
@@ -414,9 +427,10 @@ async function fetchTaiwanCoreQuote(
   config: SymbolConfig,
   fugleApiKey: string,
   logPrefix: string,
+  failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
   if (config.displaySymbol === "2330") {
-    return await fetchFugleStockQuote("2330", fugleApiKey, logPrefix) ??
+    return await fetchFugleStockQuote("2330", fugleApiKey, logPrefix, failureDetails) ??
       await fetchTwseQuote("tse_2330.tw", "2330", logPrefix) ??
       null;
   }
@@ -424,7 +438,7 @@ async function fetchTaiwanCoreQuote(
   if (config.displaySymbol === "TAIEX") {
     const fugleIndexCandidates = ["IX0001", "TAIEX"];
     for (const candidate of fugleIndexCandidates) {
-      const quote = await fetchFugleStockQuote(candidate, fugleApiKey, logPrefix);
+      const quote = await fetchFugleStockQuote(candidate, fugleApiKey, logPrefix, failureDetails);
       if (quote) return { ...quote, sourceSymbol: candidate };
     }
     return await fetchTwseQuote("tse_t00.tw", "TAIEX", logPrefix);
@@ -433,7 +447,7 @@ async function fetchTaiwanCoreQuote(
   if (config.displaySymbol === "TXF") {
     const candidates = ["TXF", "TX", "TX1"];
     for (const candidate of candidates) {
-      const quote = await fetchFugleFutOptQuote(candidate, fugleApiKey, logPrefix);
+      const quote = await fetchFugleFutOptQuote(candidate, fugleApiKey, logPrefix, failureDetails);
       if (quote) return { ...quote, sourceSymbol: candidate };
     }
   }
@@ -506,6 +520,7 @@ Deno.serve(async (req) => {
     const snapshotErrors: Array<{ symbol: string; error: string }> = [];
     const dbWriteErrors: Array<{ symbol: string; error: string }> = [];
     const providerUsedBySymbol: Record<string, string> = {};
+    const providerFailureDetails: ProviderFailureDetail[] = [];
     const twCoreSymbolsSuccess: string[] = [];
     const twCoreSymbolsFailed: Array<{ symbol: string; reason: string }> = [];
     let snapshotUpsertedCount = 0;
@@ -541,7 +556,7 @@ Deno.serve(async (req) => {
 
       try {
         const quote = config.market === "TW"
-          ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`)
+          ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, providerFailureDetails)
           : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`);
 
         if (!quote) {
@@ -674,6 +689,8 @@ Deno.serve(async (req) => {
         provider_used_by_symbol: providerUsedBySymbol,
         db_write_errors: dbWriteErrors,
         txf_status: twCoreStatus.txf,
+        txf_candidate_errors: providerFailureDetails.filter((f) => f.provider === "fugle_futopt"),
+        provider_failures: providerFailureDetails,
         snapshot_upserted_count: snapshotUpsertedCount,
         snapshot_errors: snapshotErrors,
         symbols: allSymbols,

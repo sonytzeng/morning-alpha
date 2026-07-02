@@ -86,6 +86,27 @@ function getBiasClass(bias?: string | null): string {
   return 'bg-amber-500/12 text-amber-300 border-amber-400/30';
 }
 
+
+function scoreTone(score: unknown): { stars: string; label: string; raw: string } {
+  const numeric = Number(score);
+  const raw = Number.isFinite(numeric) ? `${Math.round(numeric)}/100` : '';
+  if (!Number.isFinite(numeric)) return { stars: '☆☆☆☆☆', label: '待驗證', raw };
+  if (numeric >= 80) return { stars: '★★★★★', label: '高把握', raw };
+  if (numeric >= 65) return { stars: '★★★★☆', label: '中高把握', raw };
+  if (numeric >= 50) return { stars: '★★★☆☆', label: '觀察', raw };
+  if (numeric >= 35) return { stars: '★★☆☆☆', label: '低把握', raw };
+  return { stars: '★☆☆☆☆', label: '僅供觀察', raw };
+}
+
+function humanStatus(value: unknown): string {
+  const raw = safeText(value, '').toLowerCase();
+  if (!raw) return '待驗證';
+  if (['ready', 'complete', 'completed'].includes(raw)) return '資料已完成';
+  if (raw === 'mixed' || raw === 'partial') return '部分成立';
+  if (raw === 'pending' || raw === 'pending_real_market_data') return '等待收盤資料';
+  return safeText(value, '待驗證');
+}
+
 function getRadarClass(status?: string | null): string {
   const s = status || '';
   if (s.includes('偏強')) return 'bg-red-500/12 text-red-300 border-red-400/30';
@@ -292,15 +313,16 @@ function TodayReportContent() {
           : '等待收盤資料同步';
   const intradayPendingDescription = taipeiMinutes >= 815
     ? '已進入收盤資料等待區間，今日盤中雷達尚未形成可驗證資料；收盤驗證完成前不視為已完成。'
-    : '目前先保留盤前假設，盤中時間窗會在資料同步後更新；pending 不代表已完成。';
+    : '目前先保留盤前方向，盤中時間窗會在資料同步後更新；待驗證不代表已完成。';
   const overviewRadarStatusText = activeIntradayRadar
     ? safeText(activeIntradayRadar.radar_status, '觀察中')
     : intradayPendingTitle;
   const overviewBiasText = activeIntradayRadar
     ? safeText(activeIntradayRadar.market_bias, '') || biasFromRadarStatus(overviewRadarStatusText)
-    : `盤前假設：${premarketBiasLabel}`;
+    : `盤前方向：${premarketBiasLabel}`;
+  const radarScoreDisplay = scoreTone(activeIntradayRadar?.confidence_score);
   const overviewScoreText = activeIntradayRadar
-    ? (activeIntradayRadar.confidence_score != null ? `${safeText(activeIntradayRadar.confidence_score)}/100` : '—')
+    ? (activeIntradayRadar.confidence_score != null ? `${radarScoreDisplay.stars} ${radarScoreDisplay.label}` : '待驗證')
     : '待驗證';
   const overviewSyncText = activeIntradayRadar
     ? `已同步：${overviewRadarStatusText}`
@@ -318,7 +340,7 @@ function TodayReportContent() {
         sentence: v8DailySentenceText,
         logic_source: Array.isArray(parsedV8DailySentence.logic_source)
           ? parsedV8DailySentence.logic_source.map(String)
-          : ['ai_strategy_json.v8_daily_sentence'],
+          : ['盤前報告'],
         tone: 'clear, sharp, human-readable' as const,
       }
     : { status: 'insufficient' as const, sentence: '', logic_source: [], tone: 'clear, sharp, human-readable' as const };
@@ -506,7 +528,7 @@ function TodayReportContent() {
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6">
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              {isHistoricalFallback ? '歷史報告總覽' : '今日狀態總覽'}
+              {isHistoricalFallback ? '歷史報告總覽' : '今日盤前總覽'}
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -542,7 +564,7 @@ function TodayReportContent() {
             </div>
 
             <p className="text-slate-500 text-[10px] mt-3 leading-relaxed">
-              把握度不是漲跌分數，而是資料與劇本一致性的參考。盤中雷達同步後，畫面優先顯示 opening_radar，不再沿用舊盤前文字。
+              把握度不是漲跌分數，而是資料與劇本一致性的參考。盤中雷達同步後，畫面優先顯示盤中雷達，不再沿用舊盤前文字。
             </p>
           </section>
 
@@ -586,8 +608,9 @@ function TodayReportContent() {
                     <p className="text-slate-100 font-bold">{pct(activeIntradayRadar.tsmc_change)}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <p className="text-slate-400 text-[10px] mb-1">雷達分數</p>
-                    <p className="text-slate-100 font-bold">{safeText(activeIntradayRadar.confidence_score)}/100</p>
+                    <p className="text-slate-400 text-[10px] mb-1">判斷把握度</p>
+                    <p className="text-slate-100 font-bold">{scoreTone(activeIntradayRadar.confidence_score).stars} {scoreTone(activeIntradayRadar.confidence_score).label}</p>
+                    <p className="text-slate-500 text-[10px] mt-1">{safeText(activeIntradayRadar.confidence_score)}/100</p>
                   </div>
                 </div>
 
@@ -609,7 +632,7 @@ function TodayReportContent() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <p className="text-slate-400 text-[10px] mb-1">盤前假設</p>
+                    <p className="text-slate-400 text-[10px] mb-1">盤前方向</p>
                     <p className="text-slate-100 font-bold">{premarketBiasLabel}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
@@ -705,7 +728,7 @@ function TodayReportContent() {
               <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6 text-center">
                 <h2 className="text-white font-bold text-base mb-3">完整研究筆記</h2>
                 <p className="text-slate-400 text-sm leading-relaxed max-w-xl mx-auto mb-5">
-                  完整版包含盤中驗證、失效條件、受惠族群與收盤回饋。若盤中雷達與盤前假設相反，系統會以雷達為優先顯示。
+                  完整版包含盤中驗證、失效條件、受惠族群與收盤回饋。若盤中雷達與盤前方向相反，系統會以雷達為優先顯示。
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -730,7 +753,7 @@ function TodayReportContent() {
           ) : (
             <PaywallCard
               title="完整研究筆記已收在會員版"
-              description="會員可查看 overnight causal chain、盤中驗證、失效條件與完整收盤回測，不只看方向，也看判斷如何被驗證。"
+              description="會員可查看 前夜事件傳導鏈、盤中驗證、失效條件與完整收盤回測，不只看方向，也看判斷如何被驗證。"
               requiredTier="member"
               featureList={['前夜事件傳導鏈', '盤中驗證與失效條件', '完整研究筆記與回測']}
               tone="dark"

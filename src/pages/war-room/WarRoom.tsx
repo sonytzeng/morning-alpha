@@ -47,13 +47,37 @@ function formatCloseResult(change: number | null, direction: string): string {
   return `TAIEX ${formatPercent(change)}${direction ? `｜${direction}` : ''}`;
 }
 
+
+function scoreTone(score: unknown): { stars: string; label: string; raw: string } {
+  const numeric = Number(score);
+  const raw = Number.isFinite(numeric) ? `${Math.round(numeric)}/100` : '';
+  if (!Number.isFinite(numeric)) return { stars: '☆☆☆☆☆', label: '待驗證', raw };
+  if (numeric >= 80) return { stars: '★★★★★', label: '高把握', raw };
+  if (numeric >= 65) return { stars: '★★★★☆', label: '中高把握', raw };
+  if (numeric >= 50) return { stars: '★★★☆☆', label: '觀察', raw };
+  if (numeric >= 35) return { stars: '★★☆☆☆', label: '低把握', raw };
+  return { stars: '★☆☆☆☆', label: '僅供觀察', raw };
+}
+
+function humanStatus(value: unknown): string {
+  const raw = safeText(value, '').toLowerCase();
+  if (!raw) return '待驗證';
+  if (['ready', 'complete', 'completed'].includes(raw)) return '資料已完成';
+  if (raw === 'mixed' || raw === 'partial') return '部分成立';
+  if (raw === 'true') return '符合推論';
+  if (raw === 'false') return '未符合盤前推論';
+  if (raw === 'pending' || raw === 'pending_real_market_data') return '等待收盤資料';
+  if (raw === 'degraded') return '資料部分完成';
+  return safeText(value, '待驗證');
+}
+
 function normalizePredictionResult(value: unknown): string {
   const v = String(value || '').toLowerCase();
   if (v === 'hit' || v === 'correct') return '今日盤前方向命中';
   if (v === 'partial') return '方向部分成立';
   if (v === 'miss' || v === 'wrong') return '今日盤前方向失效';
-  if (v === 'pending' || v === 'pending_real_market_data') return '等待有效收盤資料';
-  return '等待有效收盤資料';
+  if (v === 'pending' || v === 'pending_real_market_data') return '等待收盤資料';
+  return '等待收盤資料';
 }
 
 function formatVerdictLabel(value: unknown, fallback: unknown): string {
@@ -181,6 +205,15 @@ function WarRoomContent() {
   const closeFailedAssumptions = safeStringArray(closeVerificationRecord?.failed_assumptions);
   const closeTomorrowWatchPoints = safeStringArray(closeVerificationRecord?.tomorrow_watch_points);
   const closeLessonsLearned = safeStringArray(closeVerificationRecord?.lessons_learned);
+  const isCloseVerificationPending = closeVerificationRecord
+    ? ['pending', 'pending_real_market_data'].includes(String(
+        closeVerificationRecord.status ||
+        closeVerificationRecord.hit_or_miss ||
+        closeVerificationRecord.prediction_result ||
+        closeVerificationRecord.data_status ||
+        '',
+      ).toLowerCase())
+    : false;
   const isCloseVerificationDegraded = closeVerificationRecord
     ? String(closeVerificationRecord.data_status || '').toLowerCase() === 'degraded'
       || String(closeVerificationRecord.status || '').toLowerCase() === 'direction_completed_data_degraded'
@@ -416,7 +449,7 @@ function WarRoomContent() {
             <div className="flex items-center gap-2">
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium whitespace-nowrap border ${segmentBadgeStyle(tracking.intraday.color)}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${tracking.intraday.color === 'green' ? 'bg-emerald-400' : tracking.intraday.color === 'red' ? 'bg-red-400' : tracking.intraday.color === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
-                {tracking.intraday.statusText}
+                {humanStatus(tracking.intraday.statusText)}
               </span>
             </div>
             {isHistoricalFallback && fallbackReportDate && (
@@ -454,13 +487,13 @@ function WarRoomContent() {
           )}
 
           {/* ═══════════════════════════════════════ */}
-          {/* CARD 1 — 07:30 盤前假設 */}
+          {/* CARD 1 — 07:30 盤前方向 */}
           {/* ═══════════════════════════════════════ */}
           <section className={`rounded-2xl border p-5 md:p-6 ${segmentBorder(tracking.premarket.color)} ${segmentBg(tracking.premarket.color)}`}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
                 <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-forest-500/10 text-forest-400 border border-forest-500/20 whitespace-nowrap">07:30</span>
-                <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">盤前假設</h2>
+                <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">盤前方向</h2>
               </div>
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${segmentBadgeStyle(tracking.premarket.color)}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${tracking.premarket.color === 'green' ? 'bg-emerald-400' : tracking.premarket.color === 'red' ? 'bg-red-400' : tracking.premarket.color === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
@@ -471,16 +504,16 @@ function WarRoomContent() {
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前假設</p>
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
                     <p className="text-white/80 text-sm font-medium">{displayState?.marketBias || '—'}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
                     <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">判斷把握度</p>
-                    <p className="text-white/80 text-sm font-medium">{displayState?.confidenceScore != null ? `${displayState.confidenceScore}/100` : '—'}</p>
+                    <p className="text-white/80 text-sm font-medium">{displayState?.confidenceScore != null ? `${scoreTone(displayState.confidenceScore).stars} ${scoreTone(displayState.confidenceScore).label}` : '待驗證'}</p>
                   </div>
                 </div>
                 <p className="text-white/40 text-xs leading-relaxed">
-                  盤前假設來自 {tracking.reportDate || '—'} 報告，市場資料基準採用最近完整交易日 {tracking.premarketBaseDate || '—'} 收盤資料。
+                  盤前方向來自 {tracking.reportDate || '—'} 報告，市場資料基準採用最近完整交易日 {tracking.premarketBaseDate || '—'} 收盤資料。
                   盤前尚未有今日完整收盤資料，本篇使用最近完整交易日作為市場基準。
                 </p>
               </div>
@@ -501,7 +534,7 @@ function WarRoomContent() {
               </div>
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${segmentBadgeStyle(tracking.intraday.color)}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${tracking.intraday.color === 'green' ? 'bg-emerald-400' : tracking.intraday.color === 'red' ? 'bg-red-400' : tracking.intraday.color === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
-                {tracking.intraday.statusText}
+                {humanStatus(tracking.intraday.statusText)}
               </span>
             </div>
             {tracking.intraday.showContent && openingRadar && tracking.intraday.isToday && canViewWarRoomFull && (
@@ -570,7 +603,7 @@ function WarRoomContent() {
                 <p className="text-white/50 text-sm mb-2">{tracking.intraday.description}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前假設</p>
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
                     <p className="text-white/80 text-sm font-medium">{displayState?.marketBias || '偏多觀察'}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
@@ -603,10 +636,15 @@ function WarRoomContent() {
               </div>
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${segmentBadgeStyle(tracking.closeReview.color)}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${tracking.closeReview.color === 'green' ? 'bg-emerald-400' : tracking.closeReview.color === 'red' ? 'bg-red-400' : tracking.closeReview.color === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
-                {tracking.closeReview.statusText}
+                {humanStatus(tracking.closeReview.statusText)}
               </span>
             </div>
-            {closeVerificationRecord ? (
+            {closeVerificationRecord && isCloseVerificationPending ? (
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                <p className="text-white/70 text-sm font-medium mb-1">等待收盤資料</p>
+                <p className="text-white/45 text-xs leading-relaxed">收盤驗證待完成。有效收盤資料同步後，才會展開驗證說明、失效假設與明日觀察。</p>
+              </div>
+            ) : closeVerificationRecord ? (
               <div className="space-y-3">
                 {isCloseVerificationDegraded && (
                   <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-400/20">
@@ -626,10 +664,10 @@ function WarRoomContent() {
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                        <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前假設</p>
+                        <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
                         <p className="text-white/80 text-sm font-medium break-words">{closePredictedBias}</p>
                         {closePredictedScore !== null && (
-                          <p className="text-white/35 text-xs mt-1">{closePredictedScore}/100</p>
+                          <p className="text-white/35 text-xs mt-1">{scoreTone(closePredictedScore).stars} {scoreTone(closePredictedScore).label}</p>
                         )}
                       </div>
                       <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
@@ -699,7 +737,7 @@ function WarRoomContent() {
                     )}
 
                     <p className="text-white/40 text-xs leading-relaxed">
-                      每次收盤驗證都是下一次判斷的基礎。回看盤前假設與實際走勢的差異，累積更穩定的市場節奏。
+                      每次收盤驗證都是下一次判斷的基礎。回看盤前方向與實際走勢的差異，累積更穩定的市場節奏。
                     </p>
                   </>
                 ) : (

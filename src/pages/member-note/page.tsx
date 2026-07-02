@@ -148,11 +148,45 @@ function recordList(value: unknown): Record<string, unknown>[] {
   return asRecordArray(value);
 }
 
+
+function humanStatus(value: unknown): string {
+  const raw = textValue(value).toLowerCase();
+  if (!raw) return '待驗證';
+  if (['ready', 'complete', 'completed'].includes(raw)) return '資料已完成';
+  if (raw === 'mixed' || raw === 'partial') return '部分成立';
+  if (raw === 'true') return '符合推論';
+  if (raw === 'false') return '未符合盤前推論';
+  if (raw === 'pending' || raw === 'pending_real_market_data') return '等待收盤資料';
+  if (raw === 'hit' || raw === 'correct') return '命中';
+  if (raw === 'miss' || raw === 'wrong') return '失準';
+  if (raw === 'degraded') return '資料部分完成';
+  return textValue(value);
+}
+
+function scoreTone(score: number | null): { stars: string; label: string } {
+  if (score === null || !Number.isFinite(score)) return { stars: '☆☆☆☆☆', label: '待驗證' };
+  if (score >= 80) return { stars: '★★★★★', label: '高把握' };
+  if (score >= 65) return { stars: '★★★★☆', label: '中高把握' };
+  if (score >= 50) return { stars: '★★★☆☆', label: '觀察' };
+  if (score >= 35) return { stars: '★★☆☆☆', label: '低把握' };
+  return { stars: '★☆☆☆☆', label: '僅供觀察' };
+}
+
+function firstLine(value: unknown): string {
+  return textList(value)[0] || '';
+}
+
 function labelText(label: string): string {
   const labels: Record<string, string> = {
     summary: '摘要',
     market_bias: '方向',
-    confidence_score: '把握度',
+    confidence_score: '判斷把握度',
+    status: '資料狀態',
+    data_status: '資料狀態',
+    logic_source: '判斷依據',
+    reason_chain: '推理鏈',
+    market_score: '市場分數',
+    news_score: '新聞分數',
     stock_code: '代號',
     stock_name: '名稱',
     sector: '族群',
@@ -349,7 +383,7 @@ function MemberResearchNoteV2View({
                 {note.overnight_chain.map((item, idx) => (
                   <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
                     <p className="text-white/80 text-sm font-medium">{renderSafeText(item.event || '—')}</p>
-                    <p className="text-white/40 text-xs mt-1">來源市場：{renderSafeText(item.source_market || '—')}｜信心：{item.confidence ?? '—'}</p>
+                    <p className="text-white/40 text-xs mt-1">來源市場：{renderSafeText(item.source_market || '—')}｜判斷把握度：{item.confidence ?? '—'}</p>
                     <p className="text-white/55 text-xs mt-2 leading-relaxed">{renderSafeText(item.impact_logic || '—')}</p>
                     <p className="text-forest-300/70 text-xs mt-1 leading-relaxed">台股映射：{renderSafeText(item.taiwan_mapping || '—')}</p>
                   </div>
@@ -385,7 +419,7 @@ function MemberResearchNoteV2View({
                   <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
                     <p className="text-white/85 text-sm font-semibold">{[item.symbol, item.name].filter(Boolean).join(' ')}</p>
                     <p className="text-white/35 text-[10px] mt-0.5">
-                      {renderSafeText(item.sector || '—')}{item.confidence !== undefined && item.confidence !== '' ? `｜信心：${item.confidence}` : ''}
+                      {renderSafeText(item.sector || '—')}{item.confidence !== undefined && item.confidence !== '' ? `｜判斷把握度：${item.confidence}` : ''}
                     </p>
                     <p className="text-white/55 text-xs mt-2 leading-relaxed">{renderSafeText(item.reason || '—')}</p>
                     {hasItems(item.evidence) && <p className="text-forest-300/70 text-xs mt-1">證據：{item.evidence.join('；')}</p>}
@@ -734,6 +768,40 @@ function MemberNoteContent() {
     || valueHasContent(memberNoteV2?.market_mispricing)
     || valueHasContent(memberNoteV2?.institutional_behavior)
     || valueHasContent(memberNoteV2?.tomorrow_extension_watch);
+  const scoreDisplay = scoreTone(confidenceScore);
+  const openingThesis = asRecord(memberNoteV2?.opening_thesis);
+  const firstStockNote = asRecord(memberNoteV2?.first_beneficiary_stock);
+  const todayOneLine = firstText(
+    rawAI.v8_daily_sentence && asRecord(rawAI.v8_daily_sentence).sentence,
+    researcherSummary,
+    openingThesis.summary,
+    rawAI.daily_sentence,
+  );
+  const importantObservation = firstText(
+    firstLine(openingThesis.summary),
+    firstLine(memberNoteV2?.core_reasoning),
+    firstLine(rawAI.do_not_do_list),
+  ) || '今天先看 2330、TAIEX 與 TXF 是否同向，沒有同步就不要急著放大部位。';
+  const firstStockName = [firstText(firstStockNote.stock_code, firstStockNote.symbol), firstText(firstStockNote.stock_name, firstStockNote.name)].filter(Boolean).join(' ') || [beneficiaryCandidates[0]?.symbol, beneficiaryCandidates[0]?.name].filter(Boolean).join(' ') || '尚未產生';
+  const firstStockReason = firstText(firstStockNote.relationship_to_thesis, firstStockNote.benefit_source, beneficiaryCandidates[0]?.reason, '等待完整受惠股推理補齊。');
+  const firstStockValidation = firstText(firstStockNote.validation_signal, beneficiaryCandidates[0]?.watchPoint, '09:30 後看 2330、TAIEX 與族群是否同步。');
+  const firstStockInvalidation = firstText(firstStockNote.invalidation_condition, beneficiaryCandidates[0]?.risk, firstLine(memberNoteV2?.invalidation_conditions), '若 2330 無法轉強且大盤續弱，今日推論降級。');
+  const rotationScenarios = recordList(memberNoteV2?.capital_rotation_scenarios);
+  const scenarioLabels = ['如果今天變強', '如果今天震盪', '如果今天轉弱'];
+  const dontDoItems = [
+    ...textList(rawAI.do_not_do_list),
+    ...textList(rawAI.avoid_today),
+    ...recordList(memberNoteV2?.risk_scenarios).map((item) => firstText(item.response, item.condition, item.risk)),
+    ...recordList(memberNoteV2?.invalidation_conditions).map((item) => firstText(item.action_note, item.condition, item.meaning)),
+    ...recordList(memberNoteV2?.invalidation_rules).map((item) => firstText(item.action_note, item.condition, item.meaning)),
+  ].filter(Boolean).slice(0, 5);
+  const closingResultText = hasCompletedClosingVerification
+    ? humanStatus(closingVerificationRecord.hit_or_miss || closingVerificationRecord.prediction_result || closingVerificationRecord.status)
+    : '等待收盤資料';
+  const firstBeneficiaryResult = firstText(firstBeneficiaryValidation.note, '收盤資料完成後更新。');
+  const listValidationResult = hasCompletedClosingVerification
+    ? `${renderSafeText(beneficiaryListValidation.with_close_data_count ?? 0)} / ${renderSafeText(beneficiaryListValidation.tracked_count ?? 0)} 檔已有收盤比較`
+    : '等待收盤資料';
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col overflow-x-hidden">
@@ -777,18 +845,63 @@ function MemberNoteContent() {
               <p className="text-slate-100 font-bold text-sm">{reportDate}</p>
             </div>
             <div className="p-3 rounded-xl bg-navy-900/60 border border-navy-800">
-              <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">盤前假設</p>
+              <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
               <p className="text-slate-100 font-bold text-sm">{marketBias}</p>
             </div>
             <div className="p-3 rounded-xl bg-navy-900/60 border border-navy-800">
-              <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">把握度</p>
-              <p className="text-slate-100 font-bold text-sm">{confidenceScore != null ? `${confidenceScore}/100` : '—'}</p>
+              <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">判斷把握度</p>
+              <p className="text-slate-100 font-bold text-sm">{scoreDisplay.stars} {scoreDisplay.label}</p>
+              {confidenceScore != null && <p className="text-slate-500 text-[10px] mt-1">{confidenceScore}/100</p>}
             </div>
             <div className="p-3 rounded-xl bg-navy-900/60 border border-navy-800">
               <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">資料基準</p>
               <p className="text-slate-200 text-xs">{twCoreDate} 收盤 / {usGlobalDate}</p>
             </div>
           </div>
+
+          {/* 30-second member read */}
+          <section className="bg-gradient-to-br from-forest-500/12 via-navy-900/70 to-navy-900/80 border border-forest-400/20 rounded-2xl p-5 md:p-6 space-y-4">
+            <div>
+              <p className="text-forest-300 text-[10px] uppercase tracking-[0.3em] font-semibold mb-2">今日一句</p>
+              <h2 className="text-white text-xl md:text-2xl font-bold leading-snug">{renderSafeText(todayOneLine)}</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="md:col-span-2 p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">今天最重要觀察</p>
+                <p className="text-white/75 text-sm leading-relaxed">今天只看一件事：{renderSafeText(importantObservation)}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-400/20">
+                <p className="text-amber-200 text-[10px] uppercase tracking-wider mb-2">今天不要做什麼</p>
+                <p className="text-amber-50/85 text-sm leading-relaxed">{renderSafeText(dontDoItems[0] || firstStockInvalidation)}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">第一受惠股</p>
+                <h3 className="text-white font-bold text-lg mb-2">{renderSafeText(firstStockName)}</h3>
+                <p className="text-white/65 text-xs leading-relaxed mb-2">為什麼看它：{renderSafeText(firstStockReason)}</p>
+                <p className="text-sky-200/80 text-xs leading-relaxed mb-2">09:30 驗證：{renderSafeText(firstStockValidation)}</p>
+                <p className="text-red-200/80 text-xs leading-relaxed">看錯訊號：{renderSafeText(firstStockInvalidation)}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">收盤驗證</p>
+                <p className="text-white/80 text-sm font-semibold mb-2">今天判斷：{closingResultText}</p>
+                <p className="text-white/60 text-xs leading-relaxed mb-1">第一受惠股：{renderSafeText(firstBeneficiaryResult)}</p>
+                <p className="text-white/45 text-xs leading-relaxed">受惠股名單：{listValidationResult}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {scenarioLabels.map((label, idx) => {
+                const scenario = rotationScenarios[idx] || {};
+                return (
+                  <div key={label} className="p-3 rounded-xl bg-navy-800/60 border border-white/5">
+                    <p className="text-white/85 text-sm font-semibold mb-2">{label}</p>
+                    <p className="text-white/55 text-xs leading-relaxed">{renderSafeText(firstText(scenario.trigger, scenario.beneficiary_impact, scenario.avoid, '等待盤中訊號確認。'))}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
 
           {/* Researcher Summary */}
           <section className="bg-navy-900/60 border border-forest-500/10 rounded-2xl p-5 md:p-6">
@@ -841,7 +954,7 @@ function MemberNoteContent() {
                   <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
                     <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
                     <p className="text-white/70 text-xs leading-relaxed">{renderSafeText(closingVerificationRecord.opening_bias || closingVerificationRecord.predicted_bias || marketBias)}</p>
-                    <p className="text-white/35 text-[10px] mt-1">把握度：{renderSafeText(closingVerificationRecord.opening_confidence || closingVerificationRecord.predicted_confidence || confidenceScore || '—')}</p>
+                    <p className="text-white/35 text-[10px] mt-1">判斷把握度：{renderSafeText(closingVerificationRecord.opening_confidence || closingVerificationRecord.predicted_confidence || confidenceScore || '—')}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
                     <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">實際收盤</p>
@@ -850,8 +963,8 @@ function MemberNoteContent() {
                   </div>
                   <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
                     <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">命中程度</p>
-                    <p className="text-white/70 text-xs leading-relaxed">{renderSafeText(closingVerificationRecord.hit_or_miss || closingVerificationRecord.prediction_result || closingVerificationRecord.verdict_label || '待驗證')}</p>
-                    <p className="text-white/35 text-[10px] mt-1">資料狀態：{renderSafeText(closingVerificationRecord.data_status || '—')}</p>
+                    <p className="text-white/70 text-xs leading-relaxed">{humanStatus(closingVerificationRecord.hit_or_miss || closingVerificationRecord.prediction_result || closingVerificationRecord.verdict_label || '待驗證')}</p>
+                    <p className="text-white/35 text-[10px] mt-1">資料狀態：{humanStatus(closingVerificationRecord.data_status || '—')}</p>
                   </div>
                 </div>
 
@@ -882,7 +995,7 @@ function MemberNoteContent() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-white/45 text-xs leading-relaxed">比較方式：每檔受惠股收盤表現扣除 TAIEX 收盤漲跌幅，跑贏大盤才算相對成立；資料不足時標示 degraded，不硬判。</p>
+                  <p className="text-white/45 text-xs leading-relaxed">比較方式：每檔受惠股收盤表現扣除 TAIEX 收盤漲跌幅，跑贏大盤才算相對成立；資料不足時標示資料不完整，不硬判。</p>
                 </div>
 
                 {hasItems(intradayReplayTimeWindows) && (
@@ -893,7 +1006,7 @@ function MemberNoteContent() {
                         <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <p className="text-sky-300/80 text-xs font-semibold">{renderSafeText(item.time || item.title || `時間窗 ${idx + 1}`)}</p>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 border border-white/10">{renderSafeText(item.status || 'pending')}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 border border-white/10">{humanStatus(item.status || '待驗證')}</span>
                           </div>
                           <p className="text-white/80 text-sm font-medium mb-2">{renderSafeText(item.title || '盤中驗證')}</p>
                           <p className="text-white/45 text-xs leading-relaxed mb-2">預期：{renderSafeText(item.expected_signal || '—')}</p>
@@ -912,7 +1025,7 @@ function MemberNoteContent() {
                       {intradayReplaySignals.map((item, idx) => (
                         <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
                           <p className="text-sky-300/80 text-xs font-semibold mb-1">{renderSafeText(item.time || item.label || `訊號 ${idx + 1}`)}</p>
-                          <p className="text-white/35 text-[10px] mb-1">{renderSafeText(item.status || 'best_effort')}</p>
+                          <p className="text-white/35 text-[10px] mb-1">{humanStatus(item.status || '資料不足')}</p>
                           <p className="text-white/55 text-xs leading-relaxed">{renderSafeText(item.finding || item.summary || '—')}</p>
                         </div>
                       ))}
@@ -954,7 +1067,7 @@ function MemberNoteContent() {
             ) : (
               <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
                 <p className="text-white/70 text-sm font-medium mb-1">收盤驗證將於收盤資料完成後更新</p>
-                <p className="text-white/45 text-xs leading-relaxed">目前為 pending，尚未納入績效統計。第一受惠股與受惠股名單會在有效收盤資料完成後回測，不硬判。</p>
+                <p className="text-white/45 text-xs leading-relaxed">目前為待驗證，尚未納入績效統計。第一受惠股與受惠股名單會在有效收盤資料完成後回測，不硬判。</p>
               </div>
             )}
           </section>
@@ -965,14 +1078,23 @@ function MemberNoteContent() {
           {canViewMemberNoteFull ? (
             <>
               {memberNoteV2 ? (
-                <MemberResearchNoteV2View
-                  note={memberNoteV2}
-                  reportDate={reportDate}
-                  twCoreDate={twCoreDate}
-                  isHistoricalFallback={isHistoricalFallback}
-                  beneficiaryCandidates={beneficiaryCandidates}
-                  hasClosingVerification={hasCompletedClosingVerification}
-                />
+                <details className="group rounded-2xl bg-navy-900/50 border border-navy-800 overflow-hidden">
+                  <summary className="cursor-pointer list-none px-5 py-4 flex items-center justify-between gap-3">
+                    <span className="text-white font-semibold text-sm">展開詳細研究資料</span>
+                    <span className="text-white/40 text-xs group-open:hidden">隔夜事件鏈、時間窗、類股輪動、原始推理鏈</span>
+                    <span className="hidden text-white/40 text-xs group-open:inline">收合詳細資料</span>
+                  </summary>
+                  <div className="px-4 pb-4 md:px-5 md:pb-5">
+                    <MemberResearchNoteV2View
+                      note={memberNoteV2}
+                      reportDate={reportDate}
+                      twCoreDate={twCoreDate}
+                      isHistoricalFallback={isHistoricalFallback}
+                      beneficiaryCandidates={beneficiaryCandidates}
+                      hasClosingVerification={hasCompletedClosingVerification}
+                    />
+                  </div>
+                </details>
               ) : hasMemberNote && memberNoteText ? (
               /* ═══ 純文字多段落路徑 (V8.2.1) ═══ */
               <section>
@@ -1024,7 +1146,7 @@ function MemberNoteContent() {
                   <div key={`${item.symbol || item.name}-${idx}`} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
                     <p className="text-white/85 text-sm font-semibold">{[item.symbol, item.name].filter(Boolean).join(' ')}</p>
                     <p className="text-white/35 text-[10px] mt-0.5">
-                      {renderSafeText(item.sector || '—')}{item.confidence !== undefined && item.confidence !== '' ? `｜信心：${item.confidence}` : ''}
+                      {renderSafeText(item.sector || '—')}{item.confidence !== undefined && item.confidence !== '' ? `｜判斷把握度：${item.confidence}` : ''}
                     </p>
                     {item.reason && <p className="text-white/55 text-xs mt-2 leading-relaxed">{renderSafeText(item.reason)}</p>}
                     {hasItems(item.evidence) && <p className="text-forest-300/70 text-xs mt-1">證據：{item.evidence.join('；')}</p>}
@@ -1290,7 +1412,7 @@ function MemberNoteContent() {
                   title="VIP 功能即將開放"
                   description="法人可能行為、資金流推演、市場錯價與隔日延伸觀察會收在 VIP 版，供高頻回訪與週度回測使用。"
                   requiredTier="vip"
-                  featureList={['fund_flow_scenario', 'market_mispricing', 'institutional_behavior', 'tomorrow_extension_watch']}
+                  featureList={['資金流劇本', '市場錯價觀察', '法人行為推演', '明日延伸追蹤']}
                   tone="dark"
                 />
               )}
@@ -1314,7 +1436,7 @@ function MemberNoteContent() {
               {[
                 '不是報明牌，是每天建立市場判斷節奏。',
                 '不是追新聞，是把新聞、指數、期貨、權值股與族群變成因果判斷。',
-                '收盤後會回驗盤前假設，慢慢形成你自己的市場直覺。',
+                '收盤後會回驗盤前方向，慢慢形成你自己的市場直覺。',
               ].map((point, idx) => (
                 <div key={idx} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
                   <div className="w-10 h-10 rounded-xl bg-forest-500/10 border border-forest-500/20 flex items-center justify-center mx-auto mb-3">

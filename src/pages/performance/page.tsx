@@ -53,8 +53,8 @@ type SummaryStats = {
 
 const STATUS_LABEL: Record<VerificationStatus, string> = {
   hit: '命中',
-  partial: '部分命中',
-  miss: '失誤',
+  partial: '部分成立',
+  miss: '失準',
   pending: '待驗證',
 };
 
@@ -116,8 +116,19 @@ function normalizeStatus(value: unknown): VerificationStatus {
   return 'pending';
 }
 
+function humanizeVerificationText(value: unknown): string {
+  const raw = String(value || '').toLowerCase();
+  if (!raw) return '資料不足，尚未納入統計';
+  if (['hit', 'correct', 'confirmed', 'success', 'true'].includes(raw)) return raw === 'true' ? '符合推論' : '命中';
+  if (['partial', 'mixed', 'partially_confirmed'].includes(raw)) return '部分成立';
+  if (['miss', 'wrong', 'failed', 'false'].includes(raw)) return raw === 'false' ? '未符合盤前推論' : '失準';
+  if (['pending', 'pending_real_market_data'].includes(raw)) return '待驗證';
+  if (raw.includes('degraded')) return '資料不完整';
+  return String(value || '資料不足，尚未納入統計');
+}
+
 function directionFromChange(change: number | null): string {
-  if (change === null) return '待收盤資料';
+  if (change === null) return '等待收盤資料';
   if (change >= 0.3) return '上漲';
   if (change <= -0.3) return '下跌';
   return '震盪';
@@ -131,6 +142,16 @@ function formatPercent(value: number | null): string {
 function formatRate(value: number | null): string {
   if (value === null) return '—';
   return `${Math.round(value * 100)}%`;
+}
+
+function formatDataQuality(value: string): string {
+  const normalized = value.toLowerCase();
+  if (normalized.includes('complete')) return '資料已完成';
+  if (normalized.includes('degraded')) return '資料不完整';
+  if (normalized.includes('partial')) return '部分完成';
+  if (normalized.includes('pending')) return '待驗證';
+  if (normalized.includes('unknown')) return '待確認';
+  return value || '待確認';
 }
 
 function getFirstBeneficiary(ai: Record<string, unknown>, memberNote: Record<string, unknown> | null) {
@@ -190,7 +211,7 @@ function buildPerformanceItem(row: ReportRecord): PerformanceItem {
           beatTaiexText: typeof beatTaiex === 'boolean'
             ? (beatTaiex ? '跑贏 TAIEX' : '未跑贏 TAIEX')
             : firstText(validation?.relative_result, validation?.beat_taiex_status) || '資料不足，尚未納入統計',
-          statusText: firstText(validation?.status, validation?.verification_status, validation?.result) || '資料不足，尚未納入統計',
+          statusText: humanizeVerificationText(firstText(validation?.status, validation?.verification_status, validation?.result)),
         }
       : null,
     thesisText: firstText(
@@ -319,21 +340,21 @@ export default function PerformancePage() {
       <main className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 md:py-12">
         <section className="rounded-lg border border-white/10 bg-gradient-to-br from-sky-500/12 via-white/[0.04] to-emerald-400/8 p-5 md:p-8">
           <div className="max-w-3xl">
-            <p className="text-sm font-medium text-sky-200/80">Prediction History & Performance Center</p>
+            <p className="text-sm font-medium text-sky-200/80">歷史預測與績效中心</p>
             <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white md:text-4xl">
               歷史預測與績效中心
             </h1>
             <p className="mt-4 text-sm leading-7 text-white/65 md:text-base">
-              回看 Morning Alpha 過去每天的盤前判斷、收盤驗證與第一受惠股表現。這裡不美化結果，也不把待驗證算成失誤；只把已驗證的天數誠實攤開。
+              回看 Morning Alpha 過去每天的盤前方向、收盤驗證與第一受惠股表現。這裡不美化結果，也不把待驗證算成失誤；只把已驗證的天數誠實攤開。
             </p>
           </div>
         </section>
 
         <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="已驗證天數" value={summary.verifiedDays} helper="pending 不納入分母" />
-          <StatCard label="Hit Rate" value={formatRate(summary.hitRate)} helper={`${summary.hit} hit / ${summary.miss} miss`} />
-          <StatCard label="含部分命中率" value={formatRate(summary.partialIncludedRate)} helper={`${summary.hit + summary.partial} hit + partial`} />
-          <StatCard label="待驗證 / 降級" value={`${summary.pending} / ${summary.degraded}`} helper="pending 不視為 miss" />
+          <StatCard label="已驗證天數" value={summary.verifiedDays} helper="待驗證不納入分母" />
+          <StatCard label="命中率" value={formatRate(summary.hitRate)} helper={`${summary.hit} 命中 / ${summary.miss} 失準`} />
+          <StatCard label="含部分命中率" value={formatRate(summary.partialIncludedRate)} helper={`${summary.hit + summary.partial} 命中或部分成立`} />
+          <StatCard label="待驗證 / 資料不完整" value={`${summary.pending} / ${summary.degraded}`} helper="待驗證不視為失準" />
         </section>
 
         <section className="mt-8">
@@ -378,7 +399,7 @@ export default function PerformancePage() {
                           </span>
                         </div>
                         <p className="mt-2 text-sm text-white/55">
-                          盤前判斷：<span className="text-white/80">{item.openingBias}</span>
+                          盤前方向：<span className="text-white/80">{item.openingBias}</span>
                         </p>
                       </div>
 
@@ -394,8 +415,8 @@ export default function PerformancePage() {
                           </div>
                         </div>
                         <div className="rounded-md bg-black/20 p-3">
-                          <div className="text-xs text-white/35">資料品質</div>
-                          <div className="mt-1 text-sm font-medium text-white/85">{item.dataQuality}</div>
+                          <div className="text-xs text-white/35">資料狀態</div>
+                          <div className="mt-1 text-sm font-medium text-white/85">{formatDataQuality(item.dataQuality)}</div>
                         </div>
                       </div>
 
@@ -441,12 +462,12 @@ export default function PerformancePage() {
                         </div>
 
                         <div className="space-y-5">
-                          <DetailList title="收盤驗證：判斷正確處" items={item.whatWasRight} emptyText="尚未產生 what_was_right。" />
-                          <DetailList title="收盤驗證：需要修正處" items={item.whatWasWrong} emptyText="尚未產生 what_was_wrong。" />
-                          <DetailList title="明日調整" items={item.tomorrowAdjustment} emptyText="尚未產生 tomorrow_adjustment。" />
+                          <DetailList title="收盤驗證：判斷正確處" items={item.whatWasRight} emptyText="尚未產生判斷正確處。" />
+                          <DetailList title="收盤驗證：需要修正處" items={item.whatWasWrong} emptyText="尚未產生需要修正處。" />
+                          <DetailList title="明日調整" items={item.tomorrowAdjustment} emptyText="尚未產生明日調整。" />
                           {!item.hasClosingVerificationV2 ? (
                             <p className="rounded-md border border-amber-300/20 bg-amber-300/8 p-3 text-xs text-amber-100/80">
-                              這筆報告尚未產生 closing_verification_v2，因此目前顯示為待驗證，不納入命中率分母。
+                              這筆報告尚未完成新版收盤驗證，因此目前顯示為待驗證，不納入命中率分母。
                             </p>
                           ) : null}
                           <Link

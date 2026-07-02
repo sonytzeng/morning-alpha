@@ -22,11 +22,11 @@ export default function OvernightCausalChainCard({ chain, tone = 'dark' }: { cha
     <section className={`rounded-2xl p-5 md:p-6 ${cardClass}`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className={`text-[10px] uppercase tracking-[0.3em] font-semibold ${dark ? 'text-cyan-300' : 'text-cyan-700'}`}>V8 Overnight Causal Chain</p>
+          <p className={`text-[10px] uppercase tracking-[0.3em] font-semibold ${dark ? 'text-cyan-300' : 'text-cyan-700'}`}>前夜事件傳導鏈</p>
           <h2 className="mt-2 text-base font-bold">前夜事件傳導鏈</h2>
         </div>
         <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${ready ? 'bg-cyan-500/12 text-cyan-500 border border-cyan-400/30' : 'bg-amber-500/12 text-amber-500 border border-amber-400/30'}`}>
-          status: {chain?.status || 'insufficient'}
+          {ready ? '資料已完成' : '資料尚未完成'}
         </span>
       </div>
 
@@ -46,7 +46,7 @@ export default function OvernightCausalChainCard({ chain, tone = 'dark' }: { cha
 
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>
-                  <p className={`mb-2 text-[10px] uppercase tracking-wider ${mutedClass}`}>causal_steps</p>
+                  <p className={`mb-2 text-[10px] uppercase tracking-wider ${mutedClass}`}>傳導步驟</p>
                   <ol className="space-y-1.5">
                     {(item.causal_steps || []).map((step, stepIdx) => (
                       <li key={stepIdx} className={`text-xs leading-relaxed ${dark ? 'text-slate-300' : 'text-foreground-700'}`}>
@@ -57,7 +57,7 @@ export default function OvernightCausalChainCard({ chain, tone = 'dark' }: { cha
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <p className={`mb-1 text-[10px] uppercase tracking-wider ${mutedClass}`}>affected_sectors</p>
+                    <p className={`mb-1 text-[10px] uppercase tracking-wider ${mutedClass}`}>影響族群</p>
                     <div className="flex flex-wrap gap-1.5">
                       {(item.affected_sectors || []).map((sector, idx) => (
                         <span key={`${sector}-${idx}`} className={`rounded-full px-2 py-0.5 text-[10px] ${dark ? 'bg-slate-700 text-slate-300' : 'bg-background-100 text-foreground-600'}`}>{safe(sector)}</span>
@@ -65,7 +65,7 @@ export default function OvernightCausalChainCard({ chain, tone = 'dark' }: { cha
                     </div>
                   </div>
                   <div>
-                    <p className={`mb-1 text-[10px] uppercase tracking-wider ${mutedClass}`}>watch_points</p>
+                    <p className={`mb-1 text-[10px] uppercase tracking-wider ${mutedClass}`}>盤中觀察</p>
                     <ul className="space-y-1">
                       {(item.watch_points || []).map((point, pointIdx) => (
                         <li key={pointIdx} className={`text-xs leading-relaxed ${dark ? 'text-slate-300' : 'text-foreground-700'}`}>- {safe(point)}</li>

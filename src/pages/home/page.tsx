@@ -447,14 +447,6 @@ function HomePageContent() {
                 查看今日受惠股
                 <i className="ri-arrow-right-line"></i>
               </Link>
-              <Link
-                to="/report/today"
-                onClick={() => trackEvent('click_full_report', { location: 'home_hero_secondary' })}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white/8 hover:bg-white/12 text-white/70 font-medium text-sm rounded-xl transition-colors whitespace-nowrap min-h-[48px] cursor-pointer border border-white/10"
-              >
-                {isTodayReport ? '查看今日盤前判斷' : '查看歷史資料模式'}
-                <i className="ri-arrow-right-line"></i>
-              </Link>
             </div>
             )}
 
@@ -478,7 +470,7 @@ function HomePageContent() {
                   </div>
                   <h2 className="text-foreground-900 font-bold text-lg mb-3">每天先建立方向感</h2>
                   <ul className="space-y-3">
-                    {['今日市場方向', '1 檔免費觀察股', '基礎風險提醒'].map((item) => (
+                    {['盤前方向', '1 檔免費觀察股', '基礎風險提醒'].map((item) => (
                       <li key={item} className="flex items-start gap-2 text-foreground-600 text-sm leading-relaxed">
                         <i className="ri-check-line text-emerald-600 text-sm mt-0.5"></i>
                         <span>{item}</span>
@@ -492,7 +484,7 @@ function HomePageContent() {
                     <i className="ri-vip-crown-line text-xs"></i>
                     會員版
                   </div>
-                  <h2 className="font-bold text-lg mb-3">把盤前假設變成可驗證劇本</h2>
+                  <h2 className="font-bold text-lg mb-3">把盤前方向變成可驗證劇本</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {['今日受惠股完整名單', '第一受惠股完整推理', '當沖資金驗證時間窗', '收盤驗證', '明日追蹤', '完整研究筆記'].map((item) => (
                       <div key={item} className="flex items-start gap-2 text-white/72 text-sm leading-relaxed">
@@ -584,7 +576,7 @@ function HomePageContent() {
                 {/* Today state + confidence */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
                   <div className="p-4 rounded-xl bg-background-50 border border-background-200/70">
-                    <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">今日狀態</p>
+                    <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
                     <div className="flex items-center gap-2">
                       <div className={`w-2.5 h-2.5 rounded-full ${
                         (displayBias || '').includes('偏多') || (displayBias || '').includes('偏強') ? 'bg-red-500' :
@@ -657,13 +649,6 @@ function HomePageContent() {
                         查看今日受惠股
                         <i className="ri-arrow-right-line"></i>
                       </Link>
-                      <Link
-                        to="/member-note"
-                        className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white/[0.04] hover:bg-white/[0.08] text-white/60 text-sm font-medium rounded-xl transition-colors border border-white/10 whitespace-nowrap"
-                      >
-                        查看完整研究筆記
-                        <i className="ri-arrow-right-line"></i>
-                      </Link>
                     </>
                   )}
                 </div>
@@ -685,7 +670,7 @@ function HomePageContent() {
                 </p>
                 <div className="bg-amber-500/[0.04] border border-amber-400/20 rounded-xl p-4 mb-5">
                   <p className="text-amber-700 text-xs leading-relaxed">
-                    盤前報告每天 07:30 自動產生。若時間已過仍未看到今日報告，請確認 generate-daily-report-v7 排程是否正常執行。
+                    盤前報告每天 07:30 自動產生。若時間已過仍未看到今日報告，請確認盤前報告排程是否正常執行。
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -746,7 +731,7 @@ function HomePageContent() {
                   完整盤前研究筆記
                 </h2>
                 <p className="text-foreground-500 text-sm leading-relaxed max-w-lg mx-auto mb-6">
-                  完整研究筆記、盤中驗證計畫、收盤回饋框架皆可直接查看。無需登入，完整公開。
+                  完整研究筆記、盤中驗證計畫、收盤回饋框架會依會員權限顯示，免費版保留核心摘要。
                 </p>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-center">
                   <Link

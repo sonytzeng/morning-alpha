@@ -168,6 +168,13 @@ function labelText(label: string): string {
     continuation_condition: '延續條件',
     what_to_verify: '驗證項目',
     expected_update: '更新方式',
+    purpose: '目的',
+    signals_to_watch: '觀察訊號',
+    bullish_confirmation: '成立訊號',
+    bearish_warning: '轉弱警訊',
+    action_note: '操作提醒',
+    expected_signal: '預期訊號',
+    actual_signal: '實際訊號',
     tracked_count: '追蹤檔數',
     with_close_data_count: '有收盤資料',
     up_count: '上漲',
@@ -384,6 +391,29 @@ function MemberResearchNoteV2View({
                     {hasItems(item.evidence) && <p className="text-forest-300/70 text-xs mt-1">證據：{item.evidence.join('；')}</p>}
                     {item.risk && <p className="text-red-400/70 text-xs mt-1">風險：{renderSafeText(item.risk)}</p>}
                     {item.watchPoint && <p className="text-sky-300/70 text-xs mt-1">觀察：{renderSafeText(item.watchPoint)}</p>}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {hasItems(recordList(note.intraday_time_windows)) && (
+            <section className="p-4 rounded-xl bg-sky-500/[0.04] border border-sky-400/20">
+              <h3 className="text-white font-semibold text-sm mb-3">當沖資金驗證時間窗</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {recordList(note.intraday_time_windows).map((item, idx) => (
+                  <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sky-300 text-xs font-semibold">{renderSafeText(item.time || `T${idx + 1}`)}</span>
+                      <p className="text-white/85 text-sm font-semibold">{renderSafeText(item.title || '盤中驗證')}</p>
+                    </div>
+                    <p className="text-white/55 text-xs leading-relaxed mb-2">{renderSafeText(item.purpose || '')}</p>
+                    {hasItems(textList(item.signals_to_watch)) && (
+                      <p className="text-sky-300/70 text-xs mb-2">觀察：{textList(item.signals_to_watch).join('、')}</p>
+                    )}
+                    <p className="text-forest-300/70 text-xs leading-relaxed mb-1">成立：{renderSafeText(item.bullish_confirmation || '—')}</p>
+                    <p className="text-red-300/70 text-xs leading-relaxed mb-1">警訊：{renderSafeText(item.bearish_warning || '—')}</p>
+                    <p className="text-amber-300/70 text-xs leading-relaxed">提醒：{renderSafeText(item.action_note || '待驗證')}</p>
                   </div>
                 ))}
               </div>
@@ -685,6 +715,7 @@ function MemberNoteContent() {
   const firstBeneficiaryValidation = asRecord(closingVerificationRecord.first_beneficiary_validation);
   const beneficiaryListValidation = asRecord(closingVerificationRecord.beneficiary_list_validation);
   const intradayReplaySignals = asRecordArray(closingVerificationRecord.intraday_validation_signals);
+  const intradayReplayTimeWindows = asRecordArray(closingVerificationRecord.intraday_replay_time_windows);
   const sectorPerformance = asRecordArray(closingVerificationRecord.actual_sector_performance);
   const tomorrowAdjustment = asRecord(closingVerificationRecord.tomorrow_adjustment);
   const canViewMemberNoteFull = hasFeature(entitlement, 'member_note_full');
@@ -837,6 +868,26 @@ function MemberNoteContent() {
                   </div>
                   <p className="text-white/45 text-xs leading-relaxed">比較方式：每檔受惠股收盤表現扣除 TAIEX 收盤漲跌幅，跑贏大盤才算相對成立；資料不足時標示 degraded，不硬判。</p>
                 </div>
+
+                {hasItems(intradayReplayTimeWindows) && (
+                  <div className="p-4 rounded-xl bg-sky-500/[0.04] border border-sky-400/20">
+                    <h3 className="text-white font-semibold text-sm mb-3">當沖資金驗證時間窗回放</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {intradayReplayTimeWindows.map((item, idx) => (
+                        <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <p className="text-sky-300/80 text-xs font-semibold">{renderSafeText(item.time || item.title || `時間窗 ${idx + 1}`)}</p>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 border border-white/10">{renderSafeText(item.status || 'pending')}</span>
+                          </div>
+                          <p className="text-white/80 text-sm font-medium mb-2">{renderSafeText(item.title || '盤中驗證')}</p>
+                          <p className="text-white/45 text-xs leading-relaxed mb-2">預期：{renderSafeText(item.expected_signal || '—')}</p>
+                          <p className="text-white/60 text-xs leading-relaxed mb-2">實際：{renderSafeText(item.actual_signal || '待驗證')}</p>
+                          <p className="text-amber-300/70 text-xs leading-relaxed">{renderSafeText(item.note || '資料不足，不硬判。')}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {hasItems(intradayReplaySignals) && (
                   <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">

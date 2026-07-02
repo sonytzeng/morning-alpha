@@ -504,6 +504,60 @@ function buildIntradayReplay(
   ];
 }
 
+function buildIntradayReplayTimeWindows(
+  ai: Record<string, unknown>,
+  closeRows: CloseMarketRow[],
+  taiexChange: number | null,
+): Record<string, unknown>[] {
+  const note = asObject(ai.member_research_note_v2);
+  const configured = Array.isArray(note.intraday_time_windows) ? note.intraday_time_windows as Record<string, unknown>[] : [];
+  const fallbackWindows: Record<string, unknown>[] = [
+    { time: "09:05", title: "開盤第一反應", purpose: "驗證隔夜美股、TSM ADR、TXF 是否反映到台股現貨。" },
+    { time: "09:30", title: "第一段資金確認", purpose: "看 2330、TAIEX、TXF 與半導體 / AI 是否同步。" },
+    { time: "10:30", title: "當沖主力確認", purpose: "判斷是假突破還是真資金。" },
+    { time: "11:30", title: "中場續航", purpose: "看資金是否從權值股擴散到中小型股。" },
+    { time: "13:00", title: "收盤前風險驗證", purpose: "看當沖回補 / 殺尾盤風險。" },
+  ];
+  const windows = configured.length > 0 ? configured : fallbackWindows;
+  const taiexClose = rowBySymbol(closeRows, ["TAIEX", "TWII", "^TWII"]);
+  const tsmcClose = rowBySymbol(closeRows, ["2330", "2330.TW"]);
+  const txfClose = rowBySymbol(closeRows, ["TXF", "TX", "MTX"]);
+  return windows.map((window) => {
+    const time = String(window.time || "");
+    const expectedParts = [
+      String(window.purpose || window.title || "盤中驗證"),
+      Array.isArray(window.signals_to_watch) ? (window.signals_to_watch as unknown[]).map(String).join("、") : "",
+    ].filter(Boolean);
+    const hasCloseData = !!taiexClose;
+    const actualParts = hasCloseData
+      ? [
+        `TAIEX 收盤 ${taiexChange !== null && taiexChange >= 0 ? "+" : ""}${taiexChange?.toFixed(2)}%`,
+        tsmcClose?.change != null ? `2330 ${tsmcClose.change >= 0 ? "+" : ""}${tsmcClose.change.toFixed(2)}%` : "2330 待資料",
+        txfClose?.change != null ? `TXF ${txfClose.change >= 0 ? "+" : ""}${txfClose.change.toFixed(2)}%` : "TXF 待資料",
+      ]
+      : ["尚未取得有效收盤窗口資料，該時間窗待驗證。"];
+    const status = !hasCloseData
+      ? "pending"
+      : tsmcClose?.change == null || txfClose?.change == null
+        ? "mixed"
+        : Math.sign(taiexChange || 0) === Math.sign(tsmcClose.change || 0)
+          ? "confirmed"
+          : "mixed";
+    return {
+      time,
+      title: String(window.title || time || "盤中驗證"),
+      expected_signal: expectedParts.join("；"),
+      actual_signal: actualParts.join("；"),
+      status,
+      note: status === "pending"
+        ? "資料不足，不硬判。"
+        : status === "confirmed"
+          ? "收盤方向與核心現貨訊號大致一致。"
+          : "部分核心資料缺失或訊號分歧，標記為 mixed。",
+    };
+  });
+}
+
 function buildClosingVerificationV2(params: {
   ai: Record<string, unknown>;
   reportDate: string;
@@ -516,6 +570,7 @@ function buildClosingVerificationV2(params: {
   beneficiaryValidation: Record<string, unknown>;
   sectorPerformance: Record<string, unknown>[];
   intradayReplay: Record<string, unknown>[];
+  intradayReplayTimeWindows: Record<string, unknown>[];
   closeWindow: { start: string; end: string };
   source: string;
 }): Record<string, unknown> {
@@ -539,6 +594,7 @@ function buildClosingVerificationV2(params: {
       reason: String(stock.reason || stock.trigger_event || stock.why_this_stock || ""),
     })),
     intraday_validation_signals: params.intradayReplay,
+    intraday_replay_time_windows: params.intradayReplayTimeWindows,
     actual_taiex_close: params.taiexClose ? {
       symbol: params.taiexClose.symbol,
       value: params.taiexClose.value,
@@ -698,6 +754,7 @@ Deno.serve(async (req: Request) => {
   const sectorPerformance = await fetchSectorPerformanceForDate(supabase, verificationDate);
   const beneficiaryValidation = compareBeneficiaryStocks(predictedBeneficiaryStocks, closeMarket.rows, taiexChange);
   const intradayReplay = buildIntradayReplay(ai, [], closeMarket.rows, taiexChange);
+  const intradayReplayTimeWindows = buildIntradayReplayTimeWindows(ai, closeMarket.rows, taiexChange);
 
   if (taiexChange === null) {
     const pendingClosingVerificationV2 = buildClosingVerificationV2({
@@ -712,6 +769,7 @@ Deno.serve(async (req: Request) => {
       beneficiaryValidation,
       sectorPerformance,
       intradayReplay,
+      intradayReplayTimeWindows,
       closeWindow,
       source: closeMarket.source,
     });
@@ -873,6 +931,7 @@ Deno.serve(async (req: Request) => {
     beneficiaryValidation,
     sectorPerformance,
     intradayReplay,
+    intradayReplayTimeWindows,
     closeWindow,
     source: closeMarket.source,
   });

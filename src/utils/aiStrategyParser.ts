@@ -200,6 +200,7 @@ export interface MemberResearchNoteV2 {
   capital_rotation_scenarios?: Record<string, unknown>[];
   tomorrow_follow_up?: Record<string, unknown>;
   closing_feedback_placeholder?: Record<string, unknown>;
+  intraday_time_windows?: Record<string, unknown>[];
   overnight_chain?: Array<{
     event?: string;
     source_market?: string;
@@ -679,6 +680,7 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
     capital_rotation_scenarios: grabArr<Record<string, unknown>>(mrnV2Raw, 'capital_rotation_scenarios'),
     tomorrow_follow_up: grabObj(mrnV2Raw, 'tomorrow_follow_up') || undefined,
     closing_feedback_placeholder: grabObj(mrnV2Raw, 'closing_feedback_placeholder') || undefined,
+    intraday_time_windows: grabArr<Record<string, unknown>>(mrnV2Raw, 'intraday_time_windows'),
     overnight_chain: grabArr<Record<string, unknown>>(mrnV2Raw, 'overnight_chain').map((item) => ({
       event: optionalStr(item, 'event'),
       source_market: optionalStr(item, 'source_market'),

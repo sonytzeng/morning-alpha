@@ -8,7 +8,13 @@ interface PaywallCardProps {
   featureList?: string[];
   ctaText?: string;
   onCtaClick?: () => void;
+  ctaHref?: string;
   tone?: 'light' | 'dark';
+}
+
+function getDefaultCtaHref(requiredTier: Exclude<SubscriptionTier, 'free' | 'admin'>): string {
+  const tier = requiredTier === 'vip' ? 'vip' : 'member';
+  return `/member-note?tier=${tier}`;
 }
 
 export default function PaywallCard({
@@ -18,9 +24,18 @@ export default function PaywallCard({
   featureList = [],
   ctaText = '查看會員方案',
   onCtaClick,
+  ctaHref,
   tone = 'dark',
 }: PaywallCardProps) {
   const isDark = tone === 'dark';
+  const targetHref = ctaHref || getDefaultCtaHref(requiredTier);
+  const handleCtaClick = () => {
+    if (onCtaClick) {
+      onCtaClick();
+      return;
+    }
+    window.location.href = targetHref;
+  };
 
   return (
     <div className={`rounded-2xl border p-5 md:p-6 ${isDark ? 'bg-slate-900/80 border-amber-400/20' : 'bg-amber-50 border-amber-200'}`}>
@@ -48,7 +63,7 @@ export default function PaywallCard({
 
           <button
             type="button"
-            onClick={onCtaClick}
+            onClick={handleCtaClick}
             className={`mt-5 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isDark ? 'bg-amber-400 text-slate-950 hover:bg-amber-300' : 'bg-foreground-900 text-white hover:bg-foreground-800'}`}
           >
             {ctaText}

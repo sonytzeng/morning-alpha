@@ -387,9 +387,12 @@ function HomePageContent() {
             {/* ═══ Normal / Needs Review ═══ */}
             {(displayMode === 'normal') && hasReportData && (
               <>
-                <h1 className="text-white font-bold text-2xl md:text-4xl lg:text-5xl mb-4 leading-tight max-w-3xl">
-                  今日盤前報告｜{displayReportDate}
+                <h1 className="text-white font-bold text-3xl md:text-5xl lg:text-6xl mb-4 leading-tight max-w-4xl">
+                  每天 07:30，先看懂台股今天的資金方向
                 </h1>
+                <p className="text-white/68 text-sm md:text-lg leading-relaxed max-w-3xl mb-5">
+                  Morning Alpha 追蹤美股、台指期、台積電、半導體與台股族群輪動，幫你把盤前雜訊整理成今日操作劇本。
+                </p>
 
                 {/* Status badge */}
                 <div className="flex items-center gap-2 mb-4">
@@ -427,34 +430,31 @@ function HomePageContent() {
             {displayMode !== 'market-closed' && (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-6">
               <Link
-                to="/report/today"
+                to="/member-note"
                 onClick={() => {
-                  trackEvent('click_full_report', { location: 'home_hero' });
+                  trackEvent('click_member_note', { location: 'home_hero' });
                   trackEngagementEvent('click_free_summary');
                 }}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm rounded-xl transition-colors whitespace-nowrap min-h-[48px]"
               >
+                查看今日完整研究筆記
+                <i className="ri-arrow-right-line"></i>
+              </Link>
+              <Link
+                to="/opportunities"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white/12 hover:bg-white/18 text-white font-medium text-sm rounded-xl transition-colors whitespace-nowrap min-h-[48px] cursor-pointer border border-white/15"
+              >
+                查看今日受惠股
+                <i className="ri-arrow-right-line"></i>
+              </Link>
+              <Link
+                to="/report/today"
+                onClick={() => trackEvent('click_full_report', { location: 'home_hero_secondary' })}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white/8 hover:bg-white/12 text-white/70 font-medium text-sm rounded-xl transition-colors whitespace-nowrap min-h-[48px] cursor-pointer border border-white/10"
+              >
                 {isTodayReport ? '查看今日盤前判斷' : '查看歷史資料模式'}
                 <i className="ri-arrow-right-line"></i>
               </Link>
-              {isTodayReport && (
-                <>
-                  <Link
-                    to="/opportunities"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white/12 hover:bg-white/18 text-white font-medium text-sm rounded-xl transition-colors whitespace-nowrap min-h-[48px] cursor-pointer border border-white/15"
-                  >
-                    查看今日受惠股
-                    <i className="ri-arrow-right-line"></i>
-                  </Link>
-                  <Link
-                    to="/member-note"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white/8 hover:bg-white/12 text-white/70 font-medium text-sm rounded-xl transition-colors whitespace-nowrap min-h-[48px] cursor-pointer border border-white/10"
-                  >
-                    查看完整研究筆記
-                    <i className="ri-arrow-right-line"></i>
-                  </Link>
-                </>
-              )}
             </div>
             )}
 
@@ -466,6 +466,88 @@ function HomePageContent() {
             </div>
           </div>
         </section>
+
+        {displayMode !== 'market-closed' && (
+          <section className="w-full px-4 md:px-6 pb-10 md:pb-14">
+            <div className="max-w-5xl mx-auto w-full space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-background-100 border border-background-200/70 rounded-2xl p-5 md:p-6">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 text-[10px] font-semibold mb-4">
+                    <i className="ri-eye-line text-xs"></i>
+                    免費版
+                  </div>
+                  <h2 className="text-foreground-900 font-bold text-lg mb-3">每天先建立方向感</h2>
+                  <ul className="space-y-3">
+                    {['今日市場方向', '1 檔免費觀察股', '基礎風險提醒'].map((item) => (
+                      <li key={item} className="flex items-start gap-2 text-foreground-600 text-sm leading-relaxed">
+                        <i className="ri-check-line text-emerald-600 text-sm mt-0.5"></i>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="bg-foreground-900 border border-foreground-800 rounded-2xl p-5 md:p-6 text-white">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/12 text-amber-200 border border-amber-300/25 text-[10px] font-semibold mb-4">
+                    <i className="ri-vip-crown-line text-xs"></i>
+                    會員版
+                  </div>
+                  <h2 className="font-bold text-lg mb-3">把盤前假設變成可驗證劇本</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {['今日受惠股完整名單', '第一受惠股完整推理', '當沖資金驗證時間窗', '收盤驗證', '明日追蹤', '完整研究筆記'].map((item) => (
+                      <div key={item} className="flex items-start gap-2 text-white/72 text-sm leading-relaxed">
+                        <i className="ri-check-line text-amber-300 text-sm mt-0.5"></i>
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-background-100 border border-background-200/70 rounded-2xl p-5 md:p-8">
+                <div className="max-w-3xl mb-6">
+                  <p className="text-primary-600 text-[10px] font-bold uppercase tracking-[0.24em] mb-2">MEMBER VALUE</p>
+                  <h2 className="text-foreground-900 font-bold text-xl md:text-2xl mb-3">會員不是多看幾檔股票，而是多看到推理鏈</h2>
+                  <p className="text-foreground-500 text-sm leading-relaxed">
+                    Morning Alpha 不是把股票清單丟給你，而是把隔夜事件、台股族群、第一受惠股、盤中驗證與收盤回測串成一條可以每天檢查的研究鏈。
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  {[
+                    ['為什麼選它', '看事件如何傳導到公司與族群。'],
+                    ['什麼情況失效', '先知道劇本錯了該看哪個警訊。'],
+                    ['盤中怎麼驗證', '09:05 到 13:00 分時間窗檢查資金。'],
+                    ['收盤後怎麼回測', '比較 TAIEX、2330、受惠股與類股輪動。'],
+                    ['明天是否延續', '保留成立訊號，降權失效假設。'],
+                  ].map(([title, body]) => (
+                    <div key={title} className="p-4 rounded-xl bg-background-50 border border-background-200/70">
+                      <p className="text-foreground-900 font-semibold text-sm mb-2">{title}</p>
+                      <p className="text-foreground-500 text-xs leading-relaxed">{body}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                  <Link
+                    to="/member-note"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm rounded-xl transition-colors whitespace-nowrap"
+                  >
+                    查看今日完整研究筆記
+                    <i className="ri-arrow-right-line"></i>
+                  </Link>
+                  <Link
+                    to="/opportunities"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-foreground-900 hover:bg-foreground-800 text-white font-medium text-sm rounded-xl transition-colors whitespace-nowrap"
+                  >
+                    查看今日受惠股
+                    <i className="ri-arrow-right-line"></i>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ═══════════════════════════════════════ */}
         {/* STABLE CONTENT — Only essential cards */}

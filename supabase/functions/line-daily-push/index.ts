@@ -324,63 +324,114 @@ function checkTradingDay(report: Record<string, unknown>): {
   return { isTradingDay: true, reason: 'TRADING_DAY_CONFIRMED', holidayName: null };
 }
 
-// ─── 推播訊息建構 (V2 logic, unchanged) ───
+// ─── 推播訊息建構：短版、低重複、以報告 guardrail copy 為準 ───
 function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
-  const bias = String(report.market_bias || '中性');
-  const confidence = Number(report.confidence_score || 50);
-  const summary = String(report.summary || '今日市場觀察中...');
-
-  // V2: use sentiment_score + sentiment_label when available
-  const sentimentScore = report.sentiment_score !== null && report.sentiment_score !== undefined
-    ? Number(report.sentiment_score)
-    : null;
-  const sentimentLabel = report.sentiment_label ? String(report.sentiment_label) : null;
-  const sentimentReason = report.sentiment_reason ? String(report.sentiment_reason) : null;
-  const riskReason = report.risk_reason ? String(report.risk_reason) : null;
-
-  const canWatch = safeStringArray(report.can_watch);
-  const avoidToday = safeStringArray(report.avoid_today);
-
-  // Build display sentiment line
-  let sentimentLine: string;
-  if (sentimentScore !== null && sentimentLabel) {
-    sentimentLine = `市場情緒：${sentimentScore}/100\n${sentimentLabel}`;
-  } else {
-    sentimentLine = `市場情緒：${bias}\nAI 信心：${confidence}/100`;
-  }
+  const ai = parseAiStrategy(report.ai_strategy_json);
+  const copy = parseRecord(ai.line_push_copy);
+  const bias = String(copy.market_bias || report.market_bias || '中性觀察');
+  const confidence = String(copy.confidence || report.confidence_score || '待驗證');
+  const todayLine = firstText(
+    copy.one_sentence,
+    ai.today_quote,
+    parseRecord(ai.free_summary).one_sentence,
+    report.summary,
+    '資料不足，今日降級觀察，開盤後再確認方向。',
+  );
+  const opportunity = firstText(
+    copy.opportunity,
+    copy.watch_point,
+    inferOpportunity(report, ai),
+    '等待開盤後族群同步性確認',
+  );
+  const risk = firstText(
+    copy.risk,
+    firstArrayText(parseRecord(ai.bias_guardrails).risk_signals),
+    report.risk_reason,
+    inferRisk(report, ai),
+    '資料不足，今日降級觀察',
+  );
+  const avoid = firstText(
+    copy.do_not_do,
+    parseRecord(ai.free_summary).do_not_do,
+    firstArrayText(report.avoid_today),
+    bias.includes('多') ? '避免把盤前偏多當成追價理由，先等量價確認。' : '避免急著撿便宜，先等賣壓與量能訊號。',
+  );
 
   let text = '';
-  text += 'Morning Alpha｜今日 AI 盤前提醒\n';
-  text += '━━━━━━━━━━\n\n';
-  text += `${sentimentLine}\n\n`;
-
-  if (sentimentReason) {
-    // Format: show up to 3 items from reason
-    const reasonItems = sentimentReason.split(/[、,，]/).slice(0, 3);
-    if (reasonItems.length > 0) {
-      text += `主要來源：\n${reasonItems.map((r) => `・${r.trim()}`).join('\n')}\n\n`;
-    }
-  }
-
-  text += `今天最重要的一句話：\n「${summary.slice(0, 100)}${summary.length > 100 ? '...' : ''}」\n\n`;
-
-  if (riskReason) {
-    const riskItems = riskReason.split(/[、,，]/).slice(0, 2);
-    if (riskItems.length > 0) {
-      text += `風險提醒：\n${riskItems.map((r) => `・${r.trim()}`).join('\n')}\n\n`;
-    }
-  } else if (canWatch.length > 0) {
-    text += `今天可以觀察：\n${canWatch.slice(0, 3).join('、')}\n\n`;
-  }
-
-  if (avoidToday.length > 0) {
-    text += `今天避免：\n${avoidToday.slice(0, 2).join('、')}\n\n`;
-  }
-
-  text += `查看今日完整策略：\n${siteUrl}/report/today\n\n`;
+  text += 'Morning Alpha｜今日盤前提醒\n\n';
+  text += `今日一句：\n${clipLine(todayLine, 70)}\n\n`;
+  text += `最大機會：\n${clipLine(opportunity, 60)}\n\n`;
+  text += `最大風險：\n${clipLine(risk, 70)}\n\n`;
+  text += `今天避免：\n${clipLine(avoid, 60)}\n\n`;
+  text += `完整策略：\n${siteUrl}/report/today\n\n`;
+  text += `盤前方向：${bias}｜把握度：${confidence}/100\n`;
   text += '提醒：本內容為 AI 市場情緒整理，不構成投資建議。';
 
   return { type: 'text', text };
+}
+
+function parseAiStrategy(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+  if (typeof value === 'string' && value.trim()) {
+    try { return JSON.parse(value) as Record<string, unknown>; } catch { return {}; }
+  }
+  return {};
+}
+
+function parseRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function firstText(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  }
+  return '';
+}
+
+function firstArrayText(value: unknown): string {
+  if (!Array.isArray(value)) return '';
+  return value.map((item) => String(item || '').trim()).find(Boolean) || '';
+}
+
+function clipLine(text: string, max: number): string {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  return clean.length > max ? clean.slice(0, max - 1) + '…' : clean;
+}
+
+function numeric(report: Record<string, unknown>, key: string): number | null {
+  const n = Number(report[key]);
+  return Number.isFinite(n) ? n : null;
+}
+
+function fmtPct(value: number): string {
+  return value >= 0 ? `+${value.toFixed(2)}%` : `${value.toFixed(2)}%`;
+}
+
+function inferRisk(report: Record<string, unknown>, ai: Record<string, unknown>): string {
+  const tsm = numeric(report, 'tsm_adr_change');
+  const nvda = numeric(report, 'nvda_change');
+  const sox = numeric(report, 'sox_change');
+  const nasdaq = numeric(report, 'nasdaq_change');
+  const guard = parseRecord(ai.bias_guardrails);
+  const stale = firstArrayText(guard.stale_signals);
+  if (stale) return stale;
+  if (tsm !== null && tsm <= -2) return `TSM ADR ${fmtPct(tsm)}，台股電子權值風險升級`;
+  if (sox !== null && sox <= -3) return `SOX ${fmtPct(sox)}，半導體風險升級`;
+  if (nasdaq !== null && nasdaq <= -1.5) return `NASDAQ ${fmtPct(nasdaq)}，成長股風險扣分`;
+  if (nvda !== null && nvda <= -2) return `NVDA ${fmtPct(nvda)}，AI 主線風險扣分`;
+  return '';
+}
+
+function inferOpportunity(report: Record<string, unknown>, ai: Record<string, unknown>): string {
+  const bias = String(ai.market_bias || report.market_bias || '');
+  const tsm = numeric(report, 'tsm_adr_change');
+  const sox = numeric(report, 'sox_change');
+  if (bias.includes('弱')) return '抗跌權值、防禦資金與開盤後止穩訊號';
+  if (tsm !== null && tsm < 0) return '台積電與電子權值能否抗住 ADR 壓力';
+  if (sox !== null && sox > 0) return '半導體與 AI 供應鏈是否同步擴散';
+  return '開盤後資金最先集中的族群';
 }
 
 function safeStringArray(val: unknown): string[] {

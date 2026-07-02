@@ -1,8 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 // ═══════════════════════════════════════════════════════════
-// fetch-market-data-v10 V10.7 — FINNHUB ONLY + 29s OVERALL TIMEOUT
-// Zero Yahoo Finance. Zero query1.finance.yahoo.com.
+// fetch-market-data-v10 V10.8 — PROVIDER FALLBACK + FRESHNESS METADATA
+// Uses Finnhub for US equities/ETF proxies, Fugle/TWSE for Taiwan core, best-effort Fugle futopt for TXF.
 // Each symbol: 6s timeout, max 1 retry.
 // Overall: 28s hard cap → always returns within 30s for cron.
 // ═══════════════════════════════════════════════════════════
@@ -54,16 +54,17 @@ interface RequestBody {
 }
 
 const SYMBOLS: SymbolConfig[] = [
-  { finnhubSymbol: "SPX", displaySymbol: "SPX", name: "S&P 500", market: "US", taiwanImpact: "美股整體健康度指標" },
-  { finnhubSymbol: "IXIC", displaySymbol: "IXIC", name: "Nasdaq", market: "US", taiwanImpact: "科技股風向標" },
-  { finnhubSymbol: "SOX", displaySymbol: "SOX", name: "費城半導體指數", market: "US", taiwanImpact: "半導體族群強弱指標" },
+  { finnhubSymbol: "SPY", displaySymbol: "SPX", name: "S&P 500（proxy: SPY ETF proxy）", market: "US", taiwanImpact: "美股整體健康度指標" },
+  { finnhubSymbol: "QQQ", displaySymbol: "IXIC", name: "Nasdaq（proxy: QQQ ETF proxy）", market: "US", taiwanImpact: "科技股風向標" },
+  { finnhubSymbol: "SOXX", displaySymbol: "SOX", name: "費城半導體指數（proxy: SOXX ETF proxy）", market: "US", taiwanImpact: "半導體族群強弱指標" },
   { finnhubSymbol: "NVDA", displaySymbol: "NVDA", name: "Nvidia", market: "US", taiwanImpact: "AI 龍頭，直接牽動台灣 AI 供應鏈" },
   { finnhubSymbol: "TSM", displaySymbol: "TSM", name: "TSMC ADR", market: "US", taiwanImpact: "台積電 ADR 連動台股價格" },
-  { finnhubSymbol: "VIX", displaySymbol: "VIX", name: "恐慌指數", market: "US", taiwanImpact: "市場恐慌情緒" },
+  { finnhubSymbol: "VXX", displaySymbol: "VIX", name: "恐慌指數（proxy: VXX ETN proxy）", market: "US", taiwanImpact: "市場恐慌情緒" },
   { finnhubSymbol: "DXY", displaySymbol: "DXY", name: "美元指數", market: "US", taiwanImpact: "影響外資流向與台幣匯率" },
   { finnhubSymbol: "US10Y", displaySymbol: "US10Y", name: "美國10年債殖利率", market: "US", taiwanImpact: "影響資金成本與科技股估值" },
   { finnhubSymbol: "TAIEX", displaySymbol: "TAIEX", name: "台股加權指數", market: "TW", taiwanImpact: "台股大盤整體風向指標" },
   { finnhubSymbol: "2330", displaySymbol: "2330", name: "台積電", market: "TW", taiwanImpact: "台股權值股龍頭" },
+  { finnhubSymbol: "TXF", displaySymbol: "TXF", name: "台指期", market: "TW", taiwanImpact: "台指期提供期貨領先訊號" },
 ];
 
 // MVP required symbols for safe bias to work
@@ -167,7 +168,7 @@ async function fetchFinnhubQuote(
         value: data.c,
         change: data.d,
         changePercent: data.dp,
-        capturedAt: new Date().toISOString(),
+        capturedAt: normalizeTimestamp(data.t || Date.now()),
         provider: "finnhub",
         sourceSymbol: finnhubSymbol,
         raw: {
@@ -182,6 +183,7 @@ async function fetchFinnhubQuote(
             open: data.o,
             previous_close: data.pc,
             timestamp: data.t,
+            captured_at: normalizeTimestamp(data.t || Date.now()),
           },
         },
       };
@@ -234,9 +236,19 @@ function taipeiDateTimeToIso(dateValue: unknown, timeValue: unknown): string {
 
 function normalizeTimestamp(value: unknown): string {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-    const millis = value > 1_000_000_000_000 ? value : value * 1000;
+    // Providers may return seconds, milliseconds, microseconds, or nanoseconds.
+    const millis = value > 1_000_000_000_000_000
+      ? Math.floor(value / 1_000_000)
+      : value > 100_000_000_000_000
+        ? Math.floor(value / 1_000)
+        : value > 1_000_000_000_000
+          ? value
+          : value * 1000;
     const parsed = new Date(millis);
-    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+    if (!Number.isNaN(parsed.getTime())) {
+      const year = parsed.getUTCFullYear();
+      if (year >= 2000 && year <= 2100) return parsed.toISOString();
+    }
   }
 
   if (typeof value === "string" && value.trim()) {
@@ -295,16 +307,18 @@ function normalizeFugleQuote(data: Record<string, unknown>, sourceSymbol: string
   };
 }
 
-async function fetchFugleStockQuote(
+async function fetchFugleQuoteFromPath(
+  path: string,
   symbol: string,
   apiKey: string,
   logPrefix: string,
+  providerLabel: string,
 ): Promise<MarketQuote | null> {
   if (!apiKey) return null;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 4_000);
   try {
-    const response = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/${encodeURIComponent(symbol)}`, {
+    const response = await fetch(`https://api.fugle.tw/marketdata/v1.0/${path}/${encodeURIComponent(symbol)}`, {
       headers: {
         "Accept": "application/json",
         "X-API-KEY": apiKey,
@@ -313,16 +327,25 @@ async function fetchFugleStockQuote(
     });
     clearTimeout(timeoutId);
     if (!response.ok) {
-      console.warn(`[${logPrefix}] Fugle ${symbol} HTTP ${response.status}`);
+      console.warn(`[${logPrefix}] Fugle ${providerLabel} ${symbol} HTTP ${response.status}`);
       return null;
     }
     const data = await response.json();
-    return normalizeFugleQuote(data && typeof data === "object" && !Array.isArray(data) ? data as Record<string, unknown> : {}, symbol);
+    const quote = normalizeFugleQuote(data && typeof data === "object" && !Array.isArray(data) ? data as Record<string, unknown> : {}, symbol);
+    return quote ? { ...quote, provider: providerLabel, raw: { ...quote.raw, provider: providerLabel } } : null;
   } catch (err) {
     clearTimeout(timeoutId);
-    console.warn(`[${logPrefix}] Fugle ${symbol} failed: ${err instanceof Error ? err.message : String(err)}`);
+    console.warn(`[${logPrefix}] Fugle ${providerLabel} ${symbol} failed: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
+}
+
+async function fetchFugleStockQuote(symbol: string, apiKey: string, logPrefix: string): Promise<MarketQuote | null> {
+  return fetchFugleQuoteFromPath("stock/intraday/quote", symbol, apiKey, logPrefix, "fugle");
+}
+
+async function fetchFugleFutOptQuote(symbol: string, apiKey: string, logPrefix: string): Promise<MarketQuote | null> {
+  return fetchFugleQuoteFromPath("futopt/intraday/quote", symbol, apiKey, logPrefix, "fugle_futopt");
 }
 
 function normalizeTwseQuote(data: Record<string, unknown>, sourceSymbol: string): MarketQuote | null {
@@ -405,6 +428,14 @@ async function fetchTaiwanCoreQuote(
       if (quote) return { ...quote, sourceSymbol: candidate };
     }
     return await fetchTwseQuote("tse_t00.tw", "TAIEX", logPrefix);
+  }
+
+  if (config.displaySymbol === "TXF") {
+    const candidates = ["TXF", "TX", "TX1"];
+    for (const candidate of candidates) {
+      const quote = await fetchFugleFutOptQuote(candidate, fugleApiKey, logPrefix);
+      if (quote) return { ...quote, sourceSymbol: candidate };
+    }
   }
 
   return null;
@@ -521,7 +552,9 @@ Deno.serve(async (req) => {
               symbol: config.displaySymbol,
               reason: config.displaySymbol === "2330"
                 ? "FUGLE_STOCK_AND_TWSE_FALLBACK_FAILED"
-                : "FUGLE_INDEX_AND_TWSE_FALLBACK_FAILED",
+                : config.displaySymbol === "TXF"
+                  ? "FUGLE_FUTOPT_FALLBACK_FAILED"
+                  : "FUGLE_INDEX_AND_TWSE_FALLBACK_FAILED",
             });
           }
           continue;
@@ -530,7 +563,7 @@ Deno.serve(async (req) => {
         const value = quote.value;
         const change = quote.change;
         const changePercent = quote.changePercent;
-        const capturedAt = config.market === "TW" ? new Date().toISOString() : (quote.capturedAt || new Date().toISOString());
+        const capturedAt = quote.capturedAt || new Date().toISOString();
         providerUsedBySymbol[config.displaySymbol] = quote.provider;
         if (config.market === "TW") twCoreSymbolsSuccess.push(config.displaySymbol);
 
@@ -570,6 +603,10 @@ Deno.serve(async (req) => {
             provider: quote.provider,
             source_symbol: quote.sourceSymbol,
             display_symbol: config.displaySymbol,
+            requested_at: startedAt,
+            returned_date: quote.capturedAt,
+            freshness_status: "provider_returned",
+            fallback_used: quote.sourceSymbol !== config.finnhubSymbol,
             source_raw: quote.raw,
             quote: {
               current: value,
@@ -612,7 +649,7 @@ Deno.serve(async (req) => {
     const twCoreStatus = {
       taiex: twCoreSymbolsSuccess.includes("TAIEX") ? "ok" : "failed",
       stock_2330: twCoreSymbolsSuccess.includes("2330") ? "ok" : "failed",
-      txf: "not_configured",
+      txf: twCoreSymbolsSuccess.includes("TXF") ? "ok" : "not_configured_or_failed",
     };
 
     const elapsed = ((Date.now() - startedMs) / 1000).toFixed(1);
@@ -622,7 +659,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        version: "V10.7_FINNHUB_ONLY_TIMEOUT_SAFE",
+        version: "V10.8_PROVIDER_FALLBACK_FRESHNESS",
         request_id: requestId,
         phase,
         trading_date: tradingDate,
@@ -636,7 +673,7 @@ Deno.serve(async (req) => {
         tw_core_symbols_failed: twCoreSymbolsFailed,
         provider_used_by_symbol: providerUsedBySymbol,
         db_write_errors: dbWriteErrors,
-        txf_status: "not_configured",
+        txf_status: twCoreStatus.txf,
         snapshot_upserted_count: snapshotUpsertedCount,
         snapshot_errors: snapshotErrors,
         symbols: allSymbols,
@@ -651,7 +688,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        version: "V10.7",
+        version: "V10.8",
         error: "INTERNAL_ERROR",
         reason: msg,
         inserted: [],

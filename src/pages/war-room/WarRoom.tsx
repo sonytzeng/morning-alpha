@@ -181,6 +181,10 @@ function WarRoomContent() {
   const closeFailedAssumptions = safeStringArray(closeVerificationRecord?.failed_assumptions);
   const closeTomorrowWatchPoints = safeStringArray(closeVerificationRecord?.tomorrow_watch_points);
   const closeLessonsLearned = safeStringArray(closeVerificationRecord?.lessons_learned);
+  const isCloseVerificationDegraded = closeVerificationRecord
+    ? String(closeVerificationRecord.data_status || '').toLowerCase() === 'degraded'
+      || String(closeVerificationRecord.status || '').toLowerCase() === 'direction_completed_data_degraded'
+    : false;
   const closeTone = closeVerificationTone(
     safeText(closeVerificationRecord?.prediction_result || closeVerificationRecord?.hit_or_miss || closeVerdictLabel),
   );
@@ -604,6 +608,12 @@ function WarRoomContent() {
             </div>
             {closeVerificationRecord ? (
               <div className="space-y-3">
+                {isCloseVerificationDegraded && (
+                  <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-400/20">
+                    <p className="text-amber-200 text-sm font-semibold mb-1">大盤方向已驗證，個股與類股資料仍不完整</p>
+                    <p className="text-amber-100/70 text-xs leading-relaxed">目前只完成大盤方向驗證；受惠股收盤資料或當日類股輪動尚未完整，因此不把本次驗證視為完整回測。</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1.5">驗證結論</p>
                   <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border ${segmentBadgeStyle(closeTone)}`}>

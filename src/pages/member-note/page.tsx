@@ -700,6 +700,8 @@ function MemberNoteContent() {
     || firstText(closingVerificationRecord.data_status).toLowerCase() === 'pending'
     || firstText(closingVerificationRecord.status).toLowerCase() === 'pending_real_market_data';
   const hasCompletedClosingVerification = hasClosingVerification && !isClosingVerificationPending;
+  const isClosingVerificationDegraded = hasCompletedClosingVerification
+    && firstText(closingVerificationRecord.data_status).toLowerCase() === 'degraded';
   const openingRadarLines = getDataLines(openingRadar, [
     'status',
     'radar_status',
@@ -823,12 +825,18 @@ function MemberNoteContent() {
               <i className="ri-check-double-line text-violet-400 text-sm"></i>
               <h2 className="text-white font-bold text-base">收盤驗證</h2>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-400/20">
-                {hasCompletedClosingVerification ? renderSafeText(closingVerificationRecord.status || closingVerificationRecord.hit_or_miss || '已更新') : '待資料完成'}
+                {hasCompletedClosingVerification ? (isClosingVerificationDegraded ? '大盤方向已驗證' : '收盤驗證已完成') : '收盤驗證待完成'}
               </span>
             </div>
 
             {hasCompletedClosingVerification ? (
               <div className="space-y-4">
+                {isClosingVerificationDegraded && (
+                  <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-400/20">
+                    <p className="text-amber-200 text-sm font-semibold mb-1">大盤方向已驗證，個股與類股資料仍不完整</p>
+                    <p className="text-amber-100/70 text-xs leading-relaxed">目前只完成大盤方向驗證；受惠股收盤資料或當日類股輪動尚未完整，因此不把本次驗證視為完整回測。</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
                     <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>

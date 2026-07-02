@@ -78,6 +78,70 @@ const SYMBOLS: SymbolConfig[] = [
 // MVP required symbols for safe bias to work
 const MVP_REQUIRED = ["NVDA", "TSM", "SPX"];
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function readStockSymbol(value: unknown): string {
+  const row = asRecord(value);
+  return String(row.symbol || row.ticker || row.stock_code || row.stock_id || "").trim().toUpperCase();
+}
+
+function readStockName(value: unknown): string {
+  const row = asRecord(value);
+  return String(row.name || row.stock_name || row.company_name || "").trim();
+}
+
+function isTaiwanStockSymbol(symbol: string): boolean {
+  return /^\d{4,6}$/.test(symbol);
+}
+
+function buildBeneficiarySymbolConfigs(ai: Record<string, unknown>): SymbolConfig[] {
+  const primary = Array.isArray(ai.today_beneficiary_stocks) ? ai.today_beneficiary_stocks : [];
+  const secondary = Array.isArray(ai.beneficiary_stocks) ? ai.beneficiary_stocks : [];
+  const existing = new Set(SYMBOLS.map((item) => item.displaySymbol.toUpperCase()));
+  const seen = new Set<string>();
+  const configs: SymbolConfig[] = [];
+
+  for (const item of [...primary, ...secondary]) {
+    const symbol = readStockSymbol(item);
+    if (!symbol || !isTaiwanStockSymbol(symbol) || existing.has(symbol) || seen.has(symbol)) continue;
+    seen.add(symbol);
+    configs.push({
+      finnhubSymbol: symbol,
+      displaySymbol: symbol,
+      name: readStockName(item) || symbol,
+      market: "TW",
+      taiwanImpact: "今日受惠股收盤驗證資料",
+    });
+    if (configs.length >= 12) break;
+  }
+
+  return configs;
+}
+
+async function fetchBeneficiarySymbolConfigsForDate(
+  supabase: ReturnType<typeof createClient>,
+  reportDate: string,
+  logPrefix: string,
+): Promise<SymbolConfig[]> {
+  const { data, error } = await supabase
+    .from("reports")
+    .select("ai_strategy_json")
+    .eq("report_date", reportDate)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(`[${logPrefix}] beneficiary symbol lookup skipped: ${error.message}`);
+    return [];
+  }
+
+  const ai = asRecord((data as Record<string, unknown> | null)?.ai_strategy_json);
+  return buildBeneficiarySymbolConfigs(ai);
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -593,6 +657,13 @@ async function fetchTaiwanCoreQuote(
     if (fallbackQuote) return { ...fallbackQuote, sourceSymbol: contractSymbol, raw: { ...fallbackQuote.raw, fallback_used: true, fallback_from_session: preferredSession } };
   }
 
+  if (isTaiwanStockSymbol(config.displaySymbol)) {
+    const symbol = config.displaySymbol;
+    return await fetchFugleStockQuote(symbol, fugleApiKey, logPrefix, failureDetails) ??
+      await fetchTwseQuote(`tse_${symbol}.tw`, symbol, logPrefix) ??
+      null;
+  }
+
   return null;
 }
 
@@ -656,6 +727,11 @@ Deno.serve(async (req) => {
     const phase = isMarketDataPhase(requestBody.phase) ? requestBody.phase : resolveDefaultPhase(taipei.hour, taipei.minute);
     const tradingDate = taipei.date;
 
+    const beneficiarySymbolConfigs = phase === "close"
+      ? await fetchBeneficiarySymbolConfigsForDate(supabase, tradingDate, batchTag)
+      : [];
+    const symbolConfigs = [...SYMBOLS, ...beneficiarySymbolConfigs];
+
     const inserted: Array<{ symbol: string; name: string; value: number; change_percent: number }> = [];
     const failed: string[] = [];
     const snapshotErrors: Array<{ symbol: string; error: string }> = [];
@@ -665,9 +741,9 @@ Deno.serve(async (req) => {
     const twCoreSymbolsSuccess: string[] = [];
     const twCoreSymbolsFailed: Array<{ symbol: string; reason: string }> = [];
     let snapshotUpsertedCount = 0;
-    const allSymbols = SYMBOLS.map((s) => s.displaySymbol);
+    const allSymbols = symbolConfigs.map((s) => s.displaySymbol);
 
-    console.log(`[${batchTag}] phase=${phase} trading_date=${tradingDate} taipei=${taipei.hour}:${String(taipei.minute).padStart(2, "0")}`);
+    console.log(`[${batchTag}] phase=${phase} trading_date=${tradingDate} taipei=${taipei.hour}:${String(taipei.minute).padStart(2, "0")} beneficiary_symbols=${beneficiarySymbolConfigs.map((s) => s.displaySymbol).join(",") || "none"}`);
 
     // ═══════════════════════════════════════════════════════
     // Fetch all symbols sequentially with delay
@@ -676,24 +752,24 @@ Deno.serve(async (req) => {
     // ═══════════════════════════════════════════════════════
     let timedOut = false;
 
-    for (let i = 0; i < SYMBOLS.length; i++) {
+    for (let i = 0; i < symbolConfigs.length; i++) {
       // Check overall timeout before each symbol
       if (Date.now() - startedMs > OVERALL_TIMEOUT_MS) {
-        console.warn(`[${batchTag}] OVERALL TIMEOUT after ${OVERALL_TIMEOUT_MS / 1000}s — ${SYMBOLS.length - i} symbols skipped`);
-        for (let j = i; j < SYMBOLS.length; j++) {
-          failed.push(SYMBOLS[j].displaySymbol);
+        console.warn(`[${batchTag}] OVERALL TIMEOUT after ${OVERALL_TIMEOUT_MS / 1000}s — ${symbolConfigs.length - i} symbols skipped`);
+        for (let j = i; j < symbolConfigs.length; j++) {
+          failed.push(symbolConfigs[j].displaySymbol);
         }
         timedOut = true;
         break;
       }
 
-      const config = SYMBOLS[i];
+      const config = symbolConfigs[i];
 
       if (i > 0) {
         await sleep(SYMBOL_DELAY_MS);
       }
 
-      console.log(`[${batchTag}] [${i + 1}/${SYMBOLS.length}] Fetching ${config.displaySymbol}...`);
+      console.log(`[${batchTag}] [${i + 1}/${symbolConfigs.length}] Fetching ${config.displaySymbol}...`);
 
       try {
         const quote = config.market === "TW"
@@ -701,7 +777,7 @@ Deno.serve(async (req) => {
           : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`);
 
         if (!quote) {
-          console.error(`[${batchTag}] [${i + 1}/${SYMBOLS.length}] ${config.displaySymbol} fetch returned null`);
+          console.error(`[${batchTag}] [${i + 1}/${symbolConfigs.length}] ${config.displaySymbol} fetch returned null`);
           failed.push(config.displaySymbol);
           if (config.market === "TW") {
             twCoreSymbolsFailed.push({
@@ -824,6 +900,7 @@ Deno.serve(async (req) => {
         elapsed_seconds: parseFloat(elapsed),
         inserted: inserted,
         failed: failed,
+        beneficiary_symbols_requested: beneficiarySymbolConfigs.map((s) => s.displaySymbol),
         tw_core_status: twCoreStatus,
         tw_core_symbols_success: twCoreSymbolsSuccess,
         tw_core_symbols_failed: twCoreSymbolsFailed,

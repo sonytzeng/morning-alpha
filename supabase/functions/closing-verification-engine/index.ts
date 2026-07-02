@@ -580,9 +580,14 @@ function buildClosingVerificationV2(params: {
   const firstItem = allItems.find((item) => normalizeSymbol(item.symbol) === normalizeSymbol(firstSymbol));
   const firstOutperformed = typeof firstItem?.taiex_relative_percent === "number" ? Number(firstItem.taiex_relative_percent) >= 0 : null;
   const dataStatus = params.taiexClose && params.tsmcClose && params.beneficiaryValidation.data_status === "complete" ? "complete" : "degraded";
+  const verificationStatus = params.taiexClose
+    ? dataStatus === "complete"
+      ? "completed"
+      : "direction_completed_data_degraded"
+    : "pending_real_market_data";
   return {
     version: "S2_P2_CLOSE_VERIFICATION_V2",
-    status: params.taiexClose ? "completed" : "pending_real_market_data",
+    status: verificationStatus,
     data_status: params.taiexClose ? dataStatus : "pending",
     verified_at: new Date().toISOString(),
     report_date: params.reportDate,
@@ -886,7 +891,7 @@ Deno.serve(async (req: Request) => {
   const lessonsLearned = buildLessonsLearned(structuredPredictionResult, predictedDirection);
   const closingVerification = {
     version: "P20_CLOSE_WINDOW_VERIFICATION",
-    status: "completed",
+    status: closingVerificationV2.status === "direction_completed_data_degraded" ? "direction_completed_data_degraded" : "completed",
     verified_at: new Date().toISOString(),
     report_date: verificationDate,
     predicted_bias: predictedBias || null,
@@ -956,7 +961,7 @@ Deno.serve(async (req: Request) => {
       backfill_mode: backfillMode,
       prediction_log_inserted: true,
       report_updated: false,
-      closing_verification_status: "completed",
+      closing_verification_status: closingVerificationV2.status === "direction_completed_data_degraded" ? "direction_completed_data_degraded" : "completed",
       no_fake_data: true,
     }, 500);
   }
@@ -973,7 +978,7 @@ Deno.serve(async (req: Request) => {
     actual_taiex_change: taiexChange,
     report_updated: true,
     log_inserted: true,
-    closing_verification_status: "completed",
+    closing_verification_status: closingVerificationV2.status === "direction_completed_data_degraded" ? "direction_completed_data_degraded" : "completed",
     closing_verification_v2_status: closingVerificationV2.status,
     beneficiary_validation_status: beneficiaryValidation.data_status,
     no_fake_data: true,

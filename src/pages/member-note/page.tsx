@@ -16,7 +16,7 @@ import {
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { trackPageView, trackEvent } from '@/utils/analytics';
 import PaywallCard from '@/components/paywall/PaywallCard';
-import { getCurrentEntitlement, hasFeature } from '@/services/entitlementService';
+import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
 import type { UserEntitlement } from '@/types/subscription';
 
 function hasItems<T>(items: T[] | undefined): items is T[] {
@@ -514,6 +514,7 @@ function MemberNoteContent() {
       try {
         setLoading(true);
         const resolved = await resolveActiveMorningAlphaReport();
+        setEntitlement(buildEntitlementFromTier(resolved.tier));
         setIsHistoricalFallback(resolved.isHistoricalFallback);
         setFallbackReportDate(resolved.fallbackReportDate);
         const r = resolved.rawRow;
@@ -560,10 +561,6 @@ function MemberNoteContent() {
     load();
   }, []);
 
-  useEffect(() => {
-    // Do not treat frontend gating as data security.
-    getCurrentEntitlement().then(setEntitlement).catch(() => setEntitlement(null));
-  }, []);
 
   if (loading) {
     return (
@@ -690,8 +687,19 @@ function MemberNoteContent() {
   const closingVerificationV2 = asRecord(rawAI.closing_verification_v2);
   const closingVerification = valueHasContent(closingVerificationV2) ? closingVerificationV2 : rawAI.closing_verification;
   const closingVerificationRecord = asRecord(closingVerification);
+  const closingStatus = firstText(
+    closingVerificationRecord.status,
+    closingVerificationRecord.hit_or_miss,
+    closingVerificationRecord.prediction_result,
+    closingVerificationRecord.verdict_label,
+  ).toLowerCase();
   const hasOpeningRadar = valueHasContent(openingRadar);
   const hasClosingVerification = valueHasContent(closingVerification);
+  const isClosingVerificationPending = !hasClosingVerification
+    || closingStatus.includes('pending')
+    || firstText(closingVerificationRecord.data_status).toLowerCase() === 'pending'
+    || firstText(closingVerificationRecord.status).toLowerCase() === 'pending_real_market_data';
+  const hasCompletedClosingVerification = hasClosingVerification && !isClosingVerificationPending;
   const openingRadarLines = getDataLines(openingRadar, [
     'status',
     'radar_status',
@@ -815,11 +823,11 @@ function MemberNoteContent() {
               <i className="ri-check-double-line text-violet-400 text-sm"></i>
               <h2 className="text-white font-bold text-base">收盤驗證</h2>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-400/20">
-                {hasClosingVerification ? renderSafeText(closingVerificationRecord.status || closingVerificationRecord.hit_or_miss || '已更新') : '收盤後更新'}
+                {hasCompletedClosingVerification ? renderSafeText(closingVerificationRecord.status || closingVerificationRecord.hit_or_miss || '已更新') : '待資料完成'}
               </span>
             </div>
 
-            {hasClosingVerification ? (
+            {hasCompletedClosingVerification ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
@@ -937,8 +945,8 @@ function MemberNoteContent() {
               </div>
             ) : (
               <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
-                <p className="text-white/70 text-sm font-medium mb-1">收盤驗證將於收盤後更新</p>
-                <p className="text-white/45 text-xs leading-relaxed">系統會在取得有效 TAIEX / 2330 收盤資料後，回測盤前方向、第一受惠股、受惠股名單與明日調整。</p>
+                <p className="text-white/70 text-sm font-medium mb-1">收盤驗證將於收盤資料完成後更新</p>
+                <p className="text-white/45 text-xs leading-relaxed">目前為 pending，尚未納入績效統計。第一受惠股與受惠股名單會在有效收盤資料完成後回測，不硬判。</p>
               </div>
             )}
           </section>
@@ -955,7 +963,7 @@ function MemberNoteContent() {
                   twCoreDate={twCoreDate}
                   isHistoricalFallback={isHistoricalFallback}
                   beneficiaryCandidates={beneficiaryCandidates}
-                  hasClosingVerification={hasClosingVerification}
+                  hasClosingVerification={hasCompletedClosingVerification}
                 />
               ) : hasMemberNote && memberNoteText ? (
               /* ═══ 純文字多段落路徑 (V8.2.1) ═══ */

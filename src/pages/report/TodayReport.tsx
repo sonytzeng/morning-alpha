@@ -18,7 +18,7 @@ import OvernightCausalChainCard from '@/components/v8/OvernightCausalChainCard';
 import PaywallCard from '@/components/paywall/PaywallCard';
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
 import { getTodayOpeningRadar } from '@/services/openingRadarService';
-import { getCurrentEntitlement, hasFeature } from '@/services/entitlementService';
+import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
 import type { UserEntitlement } from '@/types/subscription';
 
 type AnyObj = Record<string, any>;
@@ -201,6 +201,7 @@ function TodayReportContent() {
         setError(null);
 
         const resolved = await resolveActiveMorningAlphaReport();
+        setEntitlement(buildEntitlementFromTier(resolved.tier));
         const finalReport = resolved.rawRow
           ? mapRowToReport(resolved.rawRow as unknown as Record<string, unknown>)
           : null;
@@ -235,10 +236,6 @@ function TodayReportContent() {
     load();
   }, []);
 
-  useEffect(() => {
-    // Do not treat frontend gating as data security.
-    getCurrentEntitlement().then(setEntitlement).catch(() => setEntitlement(null));
-  }, []);
 
   const todayStr = formatTaipeiDate();
   const isReportForToday = report?.report_date === todayStr;
@@ -274,9 +271,31 @@ function TodayReportContent() {
     safeText(publicSummary.daily_sentence, '') ||
     safeText(report?.summary, '') ||
     safeText(ai.summary, '');
+  const taipeiNow = new Date();
+  const taipeiParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei',
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(taipeiNow);
+  const taipeiHour = Number(taipeiParts.find((part) => part.type === 'hour')?.value || 0);
+  const taipeiMinute = Number(taipeiParts.find((part) => part.type === 'minute')?.value || 0);
+  const taipeiMinutes = taipeiHour * 60 + taipeiMinute;
+  const intradayPendingTitle = taipeiMinutes < 570
+    ? '等待 09:30 第一段盤中資料'
+    : taipeiMinutes < 630
+      ? '09:30 盤中資料尚未同步'
+      : taipeiMinutes < 780
+        ? '10:30 / 13:00 盤中時間窗待同步'
+        : taipeiMinutes < 815
+          ? '等待 13:00 盤中資料同步'
+          : '等待收盤資料同步';
+  const intradayPendingDescription = taipeiMinutes >= 815
+    ? '已進入收盤資料等待區間，今日盤中雷達尚未形成可驗證資料；收盤驗證完成前不視為已完成。'
+    : '目前先保留盤前假設，盤中時間窗會在資料同步後更新；pending 不代表已完成。';
   const overviewRadarStatusText = activeIntradayRadar
     ? safeText(activeIntradayRadar.radar_status, '觀察中')
-    : '盤中資料未同步';
+    : intradayPendingTitle;
   const overviewBiasText = activeIntradayRadar
     ? safeText(activeIntradayRadar.market_bias, '') || biasFromRadarStatus(overviewRadarStatusText)
     : `盤前假設：${premarketBiasLabel}`;
@@ -285,7 +304,7 @@ function TodayReportContent() {
     : '待驗證';
   const overviewSyncText = activeIntradayRadar
     ? `已同步：${overviewRadarStatusText}`
-    : '盤中資料未同步';
+    : intradayPendingTitle;
   const todaySentenceText = activeIntradayRadar?.summary
     ? safeText(activeIntradayRadar.summary)
     : v8DailySentenceText || '今日盤前一句尚未產生，請稍後再查看。';
@@ -583,9 +602,9 @@ function TodayReportContent() {
             ) : (
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                  <p className="text-slate-100 font-semibold text-sm mb-2">盤中資料未同步</p>
+                  <p className="text-slate-100 font-semibold text-sm mb-2">{intradayPendingTitle}</p>
                   <p className="text-slate-400 text-sm leading-relaxed">
-                    目前僅顯示 07:30 盤前假設，尚未取得今日 09:00 後盤中資料。昨日收盤漲跌不會作為今日盤中確認。
+                    {intradayPendingDescription}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -622,7 +641,7 @@ function TodayReportContent() {
                   <div className="w-7 h-7 rounded-md bg-slate-700/70 border border-slate-600/50 flex items-center justify-center flex-shrink-0">
                     <i className="ri-database-2-line text-slate-300 text-xs"></i>
                   </div>
-                  <p className="text-slate-200 text-sm leading-relaxed">目前資料不足，等待盤前報告補齊。</p>
+                  <p className="text-slate-200 text-sm leading-relaxed">目前尚未形成可驗證的重要觀察，等待盤中或收盤資料完成。</p>
                 </div>
               )}
             </div>

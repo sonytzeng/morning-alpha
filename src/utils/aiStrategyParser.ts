@@ -231,6 +231,11 @@ export interface MemberResearchNoteV2 {
     bearish_fail?: string;
     neutral_condition?: string;
   }>;
+  invalidation_conditions?: Array<{
+    condition?: string;
+    meaning?: string;
+    action_note?: string;
+  }>;
   invalidation_rules?: Array<{
     condition?: string;
     meaning?: string;
@@ -711,7 +716,15 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
       bearish_fail: optionalStr(item, 'bearish_fail'),
       neutral_condition: optionalStr(item, 'neutral_condition'),
     })),
-    invalidation_rules: grabArr<Record<string, unknown>>(mrnV2Raw, 'invalidation_rules').map((item) => ({
+    invalidation_conditions: grabArr<Record<string, unknown>>(mrnV2Raw, 'invalidation_conditions').map((item) => ({
+      condition: optionalStr(item, 'condition'),
+      meaning: optionalStr(item, 'meaning'),
+      action_note: optionalStr(item, 'action_note'),
+    })),
+    invalidation_rules: [
+      ...grabArr<Record<string, unknown>>(mrnV2Raw, 'invalidation_rules'),
+      ...grabArr<Record<string, unknown>>(mrnV2Raw, 'invalidation_conditions'),
+    ].map((item) => ({
       condition: optionalStr(item, 'condition'),
       meaning: optionalStr(item, 'meaning'),
       action_note: optionalStr(item, 'action_note'),

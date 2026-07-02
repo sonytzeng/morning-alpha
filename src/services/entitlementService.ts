@@ -38,7 +38,7 @@ function getDemoTierOverride(): SubscriptionTier | null {
   return storedTier ? normalizeTier(storedTier) : null;
 }
 
-function buildFeatures(tier: SubscriptionTier): Record<FeatureKey, boolean> {
+export function buildFeatures(tier: SubscriptionTier): Record<FeatureKey, boolean> {
   const features = Object.fromEntries(FEATURE_KEYS.map((key) => [key, false])) as Record<FeatureKey, boolean>;
 
   if (tier === 'member' || tier === 'vip' || tier === 'admin') {
@@ -57,17 +57,20 @@ function buildFeatures(tier: SubscriptionTier): Record<FeatureKey, boolean> {
   return features;
 }
 
-export async function getCurrentEntitlement(): Promise<UserEntitlement> {
-  // TODO: replace this with server-verified entitlement.
-  // Frontend gating is not data security.
-  const tier = getDemoTierOverride() || 'free';
-
+export function buildEntitlementFromTier(tier: SubscriptionTier): UserEntitlement {
   return {
     tier,
     features: buildFeatures(tier),
     isLoggedIn: tier !== 'free',
     isAdmin: tier === 'admin',
   };
+}
+
+export async function getCurrentEntitlement(): Promise<UserEntitlement> {
+  // TODO P29: replace remaining demo-only callers with server-verified entitlement.
+  // Frontend gating is not data security.
+  const tier = getDemoTierOverride() || 'free';
+  return buildEntitlementFromTier(tier);
 }
 
 export function hasFeature(entitlement: UserEntitlement | null | undefined, featureKey: FeatureKey): boolean {

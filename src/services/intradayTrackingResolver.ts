@@ -207,10 +207,10 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
     // A radar row exists, but it is not a verified today intraday record. Never render its numbers.
     intradayStatus = 'stale';
     radarDisplay = {
-      statusText: '盤中資料未同步',
+      statusText: '盤中時間窗待同步',
       description: radarIsToday
-        ? '盤中資料未同步。目前僅顯示 07:30 盤前假設，尚未取得今日 09:00 後盤中資料。昨日收盤漲跌不會作為今日盤中確認。'
-        : `目前僅有 ${radarDate || '—'} 的舊雷達資料。今日尚未開盤或資料尚未更新。請等待 09:30 / 10:30 / 13:00。`,
+        ? '今日盤中雷達尚未形成可驗證資料。請依 09:30 / 10:30 / 13:00 時間窗檢查；pending 不代表已完成。'
+        : `目前僅有 ${radarDate || '—'} 的舊雷達資料。今日資料尚未更新，請等待 09:30 / 10:30 / 13:00 或收盤同步。`,
       color: 'amber',
       showContent: false,
       dataDate: radarDate,
@@ -242,7 +242,7 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
     intradayStatus = 'not_updated';
     radarDisplay = {
       statusText: '盤中雷達尚未更新',
-      description: '目前尚未取得今日盤中雷達資料，請等待 09:30 / 10:30 / 13:00 更新。',
+      description: '尚未取得今日盤中雷達資料。09:30 前顯示等待第一段盤中資料；13:35 後若仍無資料，請等待收盤資料同步。',
       color: 'amber',
       showContent: false,
       dataDate: null,
@@ -316,7 +316,7 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
     closeReviewStatus = 'pending';
     closeDisplay = {
       statusText: '今日收盤驗證尚未產生',
-      description: '收盤時間已過，等待 closing-verification-engine 寫入收盤驗證。',
+      description: '收盤時間已過，等待 closing-verification-engine 寫入收盤驗證；完成前狀態維持 pending。',
       color: 'amber',
       showContent: false,
       dataDate: null,

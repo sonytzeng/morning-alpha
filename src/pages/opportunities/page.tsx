@@ -11,7 +11,7 @@ import { parseAIStrategy, type V8BeneficiaryChain } from '@/utils/aiStrategyPars
 import type { Report } from '@/types/report';
 import BeneficiaryChainCard from '@/components/v8/BeneficiaryChainCard';
 import PaywallCard from '@/components/paywall/PaywallCard';
-import { hasFeature } from '@/services/entitlementService';
+import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
 import type { UserEntitlement } from '@/types/subscription';
 
 // ═══════════════════════════════════════════════════
@@ -154,26 +154,6 @@ function dedupeTierStocks(stocks: TierStock[], used = new Set<string>()): TierSt
   return result;
 }
 
-function buildEntitlementFromServerTier(tier: UserEntitlement['tier']): UserEntitlement {
-  const memberAccess = tier === 'member' || tier === 'vip' || tier === 'admin';
-  const vipAccess = tier === 'vip' || tier === 'admin';
-
-  return {
-    tier,
-    isLoggedIn: tier !== 'free',
-    isAdmin: tier === 'admin',
-    features: {
-      today_report_full: memberAccess,
-      opportunities_full: memberAccess,
-      member_note_full: memberAccess,
-      war_room_full: memberAccess,
-      vip_fund_flow: vipAccess,
-      vip_accuracy_history: vipAccess,
-      vip_alerts: vipAccess,
-    },
-  };
-}
-
 function resolveLegacyBeneficiaries(ai: Record<string, unknown>, report: Record<string, unknown>) {
   const memberResearchNoteV2 = asRecord(ai.member_research_note_v2);
   const publicSummary = asRecord(ai.public_summary) || asRecord(ai.free_summary);
@@ -241,7 +221,7 @@ function OpportunitiesContent() {
       try {
         setLoading(true);
         const resolved = await resolveActiveMorningAlphaReport();
-        setEntitlement(buildEntitlementFromServerTier(resolved.tier));
+        setEntitlement(buildEntitlementFromTier(resolved.tier));
         const report = resolved.rawRow;
 
         if (!report) { setDs(null); setV8BeneficiaryChain(null); return; }
@@ -417,7 +397,9 @@ function OpportunitiesContent() {
     ...scenarioStocks,
   ].filter((stock) => Boolean(stock.validation_signal || stock.watch_point)).length
     + asRecordArray(rawAI.validation_signal).length
-    + asRecordArray(memberResearchNote.intraday_validation).length;
+    + asRecordArray(memberResearchNote.intraday_validation).length
+    + asRecordArray(memberResearchNote.intraday_time_windows).length
+    + asRecordArray(rawAI.intraday_time_windows).length;
   const invalidationPointCount = [
     ...coreStocks,
     ...extendedStocks,
@@ -434,49 +416,49 @@ function OpportunitiesContent() {
       key: 'v8_beneficiary_chain',
       label: '第一受惠股完整推理',
       present: hasBeneficiaryChain,
-      detail: hasBeneficiaryChain ? '已回傳推理鏈' : 'Edge Function 未回傳 v8_beneficiary_chain',
+      detail: hasBeneficiaryChain ? '完整推理鏈已可查看' : '今日完整推理鏈尚未產生',
     },
     {
       key: 'today_beneficiaries',
       label: `今日 ${totalDisplayCount} 檔受惠股`,
       present: totalDisplayCount > 0,
-      detail: totalDisplayCount > 0 ? '已由 payload 計算追蹤數量' : '今日會員內容尚未產生',
+      detail: totalDisplayCount > 0 ? '已依今日報告計算追蹤數量' : '今日會員內容尚未完成',
     },
     {
       key: 'extended_watchlist',
       label: `延伸觀察名單 ${extendedWatchlistCount} 檔`,
       present: extendedWatchlistCount > 0,
-      detail: extendedWatchlistCount > 0 ? '已回傳延伸觀察名單' : 'Edge Function 未回傳 extended_watchlist',
+      detail: extendedWatchlistCount > 0 ? '延伸觀察名單已可查看' : '延伸觀察名單尚未產生',
     },
     {
       key: 'scenario_watchlist',
       label: `情境觀察名單 ${scenarioWatchlistCount} 檔`,
       present: scenarioWatchlistCount > 0,
-      detail: scenarioWatchlistCount > 0 ? '已回傳情境觀察名單' : 'Edge Function 未回傳 scenario_watchlist',
+      detail: scenarioWatchlistCount > 0 ? '情境觀察名單已可查看' : '情境觀察名單尚未產生',
     },
     {
       key: 'v8_overnight_causal_chain',
       label: '隔夜事件影響鏈',
       present: hasOvernightChain,
-      detail: hasOvernightChain ? '已回傳事件傳導鏈' : 'Edge Function 未回傳 v8_overnight_causal_chain',
+      detail: hasOvernightChain ? '隔夜事件影響鏈已可查看' : '隔夜事件影響鏈尚未產生',
     },
     {
       key: 'member_research_note_v2',
       label: 'AI 研究筆記',
       present: hasMemberResearchNote,
-      detail: hasMemberResearchNote ? '已回傳研究筆記' : '今日會員內容尚未產生',
+      detail: hasMemberResearchNote ? 'AI 研究筆記已可查看' : '今日會員內容尚未完成',
     },
     {
       key: 'validation_points',
       label: '盤中驗證重點',
       present: validationPointCount > 0,
-      detail: validationPointCount > 0 ? `${validationPointCount} 個驗證訊號` : '今日會員內容尚未產生',
+      detail: validationPointCount > 0 ? `${validationPointCount} 個驗證訊號` : '今日會員內容尚未完成',
     },
     {
       key: 'invalidation_points',
       label: '失效條件與風險提醒',
       present: invalidationPointCount > 0,
-      detail: invalidationPointCount > 0 ? `${invalidationPointCount} 個風險 / 失效條件` : '今日會員內容尚未產生',
+      detail: invalidationPointCount > 0 ? `${invalidationPointCount} 個風險 / 失效條件` : '今日會員內容尚未完成',
     },
   ];
   const missingMemberItems = memberValueItems.filter((item) => !item.present);

@@ -13,7 +13,7 @@ import { resolveIntradayTrackingState, type IntradayTrackingState, type SegmentD
 import { useState, useEffect, useMemo } from 'react';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import PaywallCard from '@/components/paywall/PaywallCard';
-import { getCurrentEntitlement, hasFeature } from '@/services/entitlementService';
+import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
 import type { UserEntitlement } from '@/types/subscription';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -109,9 +109,10 @@ function WarRoomContent() {
   const canViewWarRoomFull = hasFeature(entitlement, 'war_room_full');
 
   useEffect(() => {
-    // Do not treat frontend gating as data security.
-    getCurrentEntitlement().then(setEntitlement).catch(() => setEntitlement(null));
-  }, []);
+    if (morningState?.resolveResult?.tier) {
+      setEntitlement(buildEntitlementFromTier(morningState.resolveResult.tier));
+    }
+  }, [morningState?.resolveResult?.tier]);
 
   // V8.4: Unified display state — same parser as all other pages
   const displayState: MorningAlphaDisplayState | null = useMemo(() => {

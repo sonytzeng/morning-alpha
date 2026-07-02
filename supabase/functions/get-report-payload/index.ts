@@ -270,6 +270,7 @@ function buildInvalidationConditions(ai: Record<string, unknown>): unknown[] {
     candidate.risk_note,
   ]).filter(Boolean);
   return [
+    ...asArray(note.invalidation_conditions),
     ...asArray(note.invalidation_rules),
     ...asArray(ai.invalidation_conditions),
     ...candidateRisks,
@@ -344,10 +345,13 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
       missing_sources: Array.isArray(ai.missing_sources) ? ai.missing_sources : publicDegradedMetadata.missing_sources,
     },
     member_research_note_v2: note,
+    intraday_time_windows: asArray(note.intraday_time_windows),
+    intraday_replay_time_windows: asArray(asObject(ai.closing_verification_v2).intraday_replay_time_windows),
     overnight_chain: note.overnight_chain || v8OvernightCausalChain.chains || ai.causal_overnight_impact_chains || [],
     validation_signal: buildValidationSignals(ai),
     invalidation_condition: buildInvalidationConditions(ai),
     closing_verification: buildClosingSummary(ai),
+    closing_verification_v2: asObject(ai.closing_verification_v2),
   };
 }
 

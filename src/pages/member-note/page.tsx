@@ -5,6 +5,7 @@ import Footer from '@/components/feature/Footer';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import { renderSafeText } from '@/utils/renderSafe';
+import { valueHasContent } from '@/utils/contentHelpers';
 import type { Report } from '@/types/report';
 import {
   hasValidMemberResearchNoteV2,
@@ -93,16 +94,6 @@ function normalizeV2Beneficiary(item: NonNullable<MemberResearchNoteV2['benefici
   };
 }
 
-function valueHasContent(value: unknown): boolean {
-  if (typeof value === 'string') return value.trim().length > 0;
-  if (typeof value === 'number') return Number.isFinite(value);
-  if (typeof value === 'boolean') return true;
-  if (Array.isArray(value)) return value.length > 0;
-  if (value && typeof value === 'object') {
-    return Object.values(value as Record<string, unknown>).some(valueHasContent);
-  }
-  return false;
-}
 
 function getObjectLines(value: Record<string, unknown>, preferredKeys: string[]): Array<{ label: string; value: string }> {
   const preferred = preferredKeys

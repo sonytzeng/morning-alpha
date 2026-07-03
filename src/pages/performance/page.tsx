@@ -299,6 +299,16 @@ export default function PerformancePage() {
       setLoading(true);
       setErrorMessage('');
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!mounted) return;
+
+      if (!sessionData.session) {
+        setItems([]);
+        setErrorMessage('歷史績效資料目前需要登入會員權限。公開頁仍保留摘要，完整 30 日績效中心會在會員權限下顯示。');
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('reports')
         .select('id, report_date, market_bias, confidence_score, ai_strategy_json, created_at, updated_at')

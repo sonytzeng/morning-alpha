@@ -5,6 +5,7 @@ import Footer from '@/components/feature/Footer';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { renderSafeText } from '@/utils/renderSafe';
+import { valueHasContent } from '@/utils/contentHelpers';
 import { trackPageView, trackEvent } from '@/utils/analytics';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import { parseAIStrategy, type V8BeneficiaryChain } from '@/utils/aiStrategyParser';
@@ -53,6 +54,7 @@ function asRecordArray(value: unknown): Record<string, unknown>[] {
 function compactText(value: unknown): string {
   return String(value ?? '').trim();
 }
+
 
 function confidenceLevelFrom(value: unknown): TierStock['confidence_level'] {
   const normalized = compactText(value).toLowerCase();

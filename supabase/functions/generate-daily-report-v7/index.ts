@@ -1363,6 +1363,19 @@ async function verifyReportExists(supabase:ReturnType<typeof createClient>,today
   try{const r=await supabase.from('reports').select('id,report_date,ai_strategy_json').eq('report_date',todayDate).maybeSingle();const{data,error}=safeUnwrap<Record<string,unknown>>(r,log,'verify');if(error||!data)return null;return{reportId:String(data.id||''),aiJson:data.ai_strategy_json as Record<string,unknown>|null}}catch(e){log('verify exc: '+(e instanceof Error?e.message:String(e)));return null}
 }
 
+function buildSectorRotationStatus(todayDate:string,scoreDate:string,sectorData:SectorRotationRow[],marketData:MarketIndicator[]):Record<string,unknown>{
+  if(sectorData.length>0){return{score_date:scoreDate,status:'ready',source:'sector_rotation_scores',row_count:sectorData.length,is_today:scoreDate===todayDate,warning:scoreDate===todayDate?'今日類股輪動資料已產生':'目前使用上一交易日類股輪動作為盤前參考，今日類股輪動資料尚未產生。'};}
+  if(marketData.length>0){return{score_date:todayDate,status:'partial',source:'fallback_from_market_data',row_count:0,is_today:false,warning:'今日類股輪動資料尚未產生；僅能以既有 market_data 做保守觀察，不產生正式類股分數。'};}
+  return{score_date:todayDate,status:'missing',source:'missing',row_count:0,is_today:false,warning:'今日類股輪動資料尚未產生，且缺少可用 market_data。'};
+}
+
+function getTaipeiMinutesNow():number{const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit'}).formatToParts(new Date());const h=Number(parts.find((p)=>p.type==='hour')?.value||0);const m=Number(parts.find((p)=>p.type==='minute')?.value||0);return h*60+m;}
+function buildIntradaySyncStatus(todayDate:string):Record<string,unknown>{
+  const minutes=getTaipeiMinutesNow();
+  const windowStatus=(target:number)=>minutes<target?'pending':'missing';
+  return{report_date:todayDate,last_checked_at:new Date().toISOString(),windows:{'0930':windowStatus(570),'1030':windowStatus(630),'1300':windowStatus(780)},warning:minutes<570?'等待 09:30 第一段盤中資料':minutes<630?'09:30 盤中資料尚未同步':minutes<780?'10:30 資料尚未同步；13:00 尚未到時間窗':'13:00 盤中資料尚未同步，等待收盤資料或盤中同步補齊。'};
+}
+
 Deno.serve(async (req:Request)=>{
   const reqStart=Date.now();const logs:string[]=[];const log=function(m:string){const ts=new Date().toISOString().slice(11,19);logs.push('['+ts+'] '+m);console.log('[V9.0:'+ts+'] '+m)};
   const timer=createStepTimer(log);
@@ -1513,6 +1526,8 @@ Deno.serve(async (req:Request)=>{
     aiStrategyJson.sector_rotation_basis='previous_trading_day';
     aiStrategyJson.sector_rotation_rows=sectorData.length;
     aiStrategyJson.sector_rotation_data_status=sectorData.length>0?'available':'missing_previous_trading_day';
+    aiStrategyJson.sector_rotation_status=buildSectorRotationStatus(todayDate,sectorRotationReferenceDate,sectorData,marketData);
+    aiStrategyJson.intraday_sync_status=buildIntradaySyncStatus(todayDate);
     if(aiStrategyJson.market_bias_score===undefined)aiStrategyJson.market_bias_score=dScore.baseScore;
     if(aiStrategyJson.confidence_score===undefined)aiStrategyJson.confidence_score=confidenceResult.score;
     aiStrategyJson.confidence_breakdown=confidenceResult.breakdown;

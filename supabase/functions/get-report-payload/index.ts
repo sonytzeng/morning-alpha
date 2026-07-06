@@ -192,11 +192,18 @@ function getConfidenceLabel(score: number | null): string {
 }
 
 function getBeneficiaryArrays(ai: Record<string, unknown>): Record<string, unknown>[][] {
+  if (isV10BeneficiaryEnabled(ai)) {
+    return [asArray(ai.today_beneficiary_stocks_v10)];
+  }
   return [
     asArray(ai.today_beneficiary_stocks),
     asArray(ai.beneficiary_stocks),
     asArray(ai.core_beneficiary_stocks),
   ];
+}
+
+function isV10BeneficiaryEnabled(ai: Record<string, unknown>): boolean {
+  return ai.v10_beneficiary_enabled === true || toStringValue(ai.v10_beneficiary_enabled) === "true";
 }
 
 function getBeneficiaryCount(ai: Record<string, unknown>): number {
@@ -301,8 +308,16 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     public_summary: Object.keys(publicSummary).length > 0 ? publicSummary : freeSummary,
     beneficiary_count: getBeneficiaryCount(ai),
     one_teaser_stock: buildTeaserStock(ai),
+    v10_beneficiary_enabled: isV10BeneficiaryEnabled(ai),
+    today_beneficiary_stocks_v10: asArray(ai.today_beneficiary_stocks_v10),
+    v10_observation_watchlist: asArray(ai.v10_observation_watchlist),
+    v10_risk_watchlist: asArray(ai.v10_risk_watchlist),
+    v10_data_quality_status: toStringValue(ai.v10_data_quality_status),
+    v10_warning: toStringValue(ai.v10_warning),
+    v10_candidate_count: toNumberValue(ai.v10_candidate_count),
     opening_radar_status: toStringValue(openingRadar.radar_status) || toStringValue(openingRadar.status),
     opening_radar: openingRadar,
+    intraday_sync_status: asObject(ai.intraday_sync_status),
     input_source: toStringValue(openingRadar.input_source) || null,
     degraded_metadata: {
       data_status: toStringValue(openingRadar.data_status),
@@ -312,6 +327,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
       input_source: toStringValue(openingRadar.input_source),
     },
     sector_rotation_scores: ctx.sectorRotationRows,
+    sector_rotation_status: asObject(ai.sector_rotation_status),
     market_data_snapshots: ctx.marketDataSnapshots,
     closing_verification: buildClosingVerdict(ai),
     data_quality: toStringValue(ai.data_quality) || toStringValue(ai.data_status) || toStringValue(asObject(ai.member_research_note_v2).data_status) || "unknown",
@@ -333,6 +349,13 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     core_beneficiary_stocks: asArray(ai.core_beneficiary_stocks),
     extended_watchlist: asArray(ai.extended_watchlist),
     scenario_watchlist: asArray(ai.scenario_watchlist),
+    today_beneficiary_stocks_v10: asArray(ai.today_beneficiary_stocks_v10),
+    v10_observation_watchlist: asArray(ai.v10_observation_watchlist),
+    v10_risk_watchlist: asArray(ai.v10_risk_watchlist),
+    v10_beneficiary_enabled: isV10BeneficiaryEnabled(ai),
+    v10_data_quality_status: toStringValue(ai.v10_data_quality_status),
+    v10_warning: toStringValue(ai.v10_warning),
+    v10_candidate_count: toNumberValue(ai.v10_candidate_count),
     v8_beneficiary_chain: v8BeneficiaryChain,
     v8_overnight_causal_chain: v8OvernightCausalChain,
     source_signals: ai.source_signals || v8BeneficiaryChain.source_signals || [],

@@ -8,7 +8,7 @@ import type { Report } from '@/types/report';
 import { useLatestReport } from '@/hooks/useLatestReport';
 import { isTaipeiWeekendToday, formatTaipeiDate } from '@/utils/tradingDay';
 import { buildMarketState, type MarketState } from '@/services/marketStateEngine';
-import { fetchSectorRotationScores, getSignalColor, computeSectorRotationFreshness, type SectorRotationItem, type SectorRotationFreshness } from '@/services/sectorRotationService';
+import { getTodaySectorRotation, getSignalColor, computeSectorRotationFreshness, type SectorRotationItem, type SectorRotationFreshness } from '@/services/sectorRotationService';
 import { resolveIntradayTrackingState, type IntradayTrackingState, type SegmentDisplay } from '@/services/intradayTrackingResolver';
 import { useState, useEffect, useMemo } from 'react';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
@@ -240,12 +240,10 @@ function WarRoomContent() {
   });
 
   useEffect(() => {
-    fetchSectorRotationScores()
+    getTodaySectorRotation(todayTaipeiStr)
       .then((result) => {
-        if (result.items.length > 0) {
-          setSectorData(result.items);
-          setSectorScoreDate(result.scoreDate);
-        }
+        setSectorData(result.items);
+        setSectorScoreDate(result.scoreDate || todayTaipeiStr);
 
         const now = new Date();
         const taipeiNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));

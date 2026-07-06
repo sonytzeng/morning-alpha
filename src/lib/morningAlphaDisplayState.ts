@@ -57,6 +57,18 @@ export interface MorningAlphaDisplayState {
   dataBasisNote: string;
   /** V9.0: Causal overnight impact chains */
   causalOvernightImpactChains: Record<string, unknown>[];
+  /** V10: True when the report explicitly enables the three-layer beneficiary model. */
+  v10BeneficiaryEnabled: boolean;
+  /** V10: Strong beneficiaries only. Empty means no positive-evidence strong beneficiary. */
+  v10BeneficiaryStocks: Record<string, unknown>[];
+  /** V10: Neutral observation watchlist. Not a beneficiary list. */
+  v10ObservationWatchlist: Record<string, unknown>[];
+  /** V10: Negative-evidence risk watchlist. Not a short recommendation. */
+  v10RiskWatchlist: Record<string, unknown>[];
+  /** V10: Data quality status for the three-layer beneficiary model. */
+  v10DataQualityStatus: string;
+  /** V10: Human-readable warning from the V10 sidecar. */
+  v10Warning: string;
   /** The raw ai_strategy_json object (for pages that need additional fields) */
   rawAI: Record<string, unknown> | null;
   /** The raw report row (for pages that need root-level fields) */
@@ -108,6 +120,40 @@ function grabObj(obj: Record<string, unknown> | null, key: string): Record<strin
   if (!v) return null;
   if (typeof v === 'object' && !Array.isArray(v)) return v as Record<string, unknown>;
   return null;
+}
+
+function grabBool(obj: Record<string, unknown> | null, key: string): boolean {
+  if (!obj) return false;
+  const v = obj[key];
+  return v === true || v === 'true';
+}
+
+function humanizeV10MarketSentence(
+  sentence: string,
+  v10Enabled: boolean,
+  strong: Record<string, unknown>[],
+  observation: Record<string, unknown>[],
+  risk: Record<string, unknown>[],
+): string {
+  if (!v10Enabled) return sentence;
+  const looksLikeRawAxis = /今天要驗證的是\s+[A-Z_]+\s+能否/.test(sentence) || /SEMICONDUCTOR|AI_SERVER|ELECTRONIC_BLUE_CHIP/.test(sentence);
+  if (!looksLikeRawAxis) return sentence;
+
+  const firstIndustry = (rows: Record<string, unknown>[]) => {
+    const row = rows[0] || {};
+    return String(row.industry_name || row.industry || row.sector || '').trim() || String(row.industry_code || '').trim() || '主要族群';
+  };
+
+  if (strong.length > 0) {
+    return `今天先看資金是否集中到 ${firstIndustry(strong)}，再確認代表股是否同步轉強。`;
+  }
+  if (observation.length > 0) {
+    return '今天還沒有足夠正向證據支持強受惠股，先觀察資金是否從觀察族群中擴散。';
+  }
+  if (risk.length > 0) {
+    return '前夜資料對部分族群偏壓，今天先避免把風險族群誤判成受惠股。';
+  }
+  return sentence;
 }
 
 function getFreshRadarOverride(
@@ -201,6 +247,12 @@ export function getMorningAlphaDisplayState(
       dataStatus: 'insufficient',
       dataBasisNote: '休市日不進行受惠股分析',
       causalOvernightImpactChains: [],
+      v10BeneficiaryEnabled: false,
+      v10BeneficiaryStocks: [],
+      v10ObservationWatchlist: [],
+      v10RiskWatchlist: [],
+      v10DataQualityStatus: '',
+      v10Warning: '',
       rawAI: ai,
       rawRow,
       marketStatus: effectiveMarketStatus,
@@ -233,7 +285,13 @@ export function getMorningAlphaDisplayState(
 
   const v8DailySentence = grabObj(ai, 'v8_daily_sentence');
   const publicSummary = grabObj(ai, 'public_summary') || grabObj(ai, 'free_summary');
-  const todayQuote = aiExists
+  const v10BeneficiaryEnabled = aiExists ? grabBool(ai, 'v10_beneficiary_enabled') : false;
+  const v10BeneficiaryStocks = aiExists ? grabArr(ai, 'today_beneficiary_stocks_v10') : [];
+  const v10ObservationWatchlist = aiExists ? grabArr(ai, 'v10_observation_watchlist') : [];
+  const v10RiskWatchlist = aiExists ? grabArr(ai, 'v10_risk_watchlist') : [];
+  const v10DataQualityStatus = aiExists ? grabStr(ai, 'v10_data_quality_status') : '';
+  const v10Warning = aiExists ? grabStr(ai, 'v10_warning') : '';
+  const rawTodayQuote = aiExists
     ? (
         grabStr(v8DailySentence, 'sentence') ||
         grabStr(ai, 'daily_sentence', 'today_quote', 'today_sentence', 'summary') ||
@@ -241,30 +299,33 @@ export function getMorningAlphaDisplayState(
         ''
       )
     : '';
+  const todayQuote = humanizeV10MarketSentence(rawTodayQuote, v10BeneficiaryEnabled, v10BeneficiaryStocks, v10ObservationWatchlist, v10RiskWatchlist);
 
   const beneficiaryStocks = aiExists
-    ? [
-        ...grabArr(ai, 'today_beneficiary_stocks'),
-        ...grabArr(ai, 'beneficiary_stocks'),
-        ...grabArr(publicSummary, 'beneficiary_stocks'),
-      ]
+    ? (v10BeneficiaryEnabled
+        ? v10BeneficiaryStocks
+        : [
+            ...grabArr(ai, 'today_beneficiary_stocks'),
+            ...grabArr(ai, 'beneficiary_stocks'),
+            ...grabArr(publicSummary, 'beneficiary_stocks'),
+          ])
     : [];
 
-  // V9.0: Three-tier beneficiary
+  // V9/V10: Three-tier beneficiary. When V10 is enabled, never let V9 masquerade as strong beneficiaries.
   const coreBeneficiaryStocks = aiExists
-    ? grabArr(ai, 'core_beneficiary_stocks')
+    ? (v10BeneficiaryEnabled ? v10BeneficiaryStocks : grabArr(ai, 'core_beneficiary_stocks'))
     : [];
   const extendedWatchlist = aiExists
-    ? grabArr(ai, 'extended_watchlist')
+    ? (v10BeneficiaryEnabled ? v10ObservationWatchlist : grabArr(ai, 'extended_watchlist'))
     : [];
   const scenarioWatchlist = aiExists
-    ? grabArr(ai, 'scenario_watchlist')
+    ? (v10BeneficiaryEnabled ? v10RiskWatchlist : grabArr(ai, 'scenario_watchlist'))
     : [];
   const dataStatus = aiExists
-    ? (grabStr(ai, 'data_status') || 'unknown')
+    ? (v10BeneficiaryEnabled ? (v10DataQualityStatus || 'unknown') : (grabStr(ai, 'data_status') || 'unknown'))
     : 'unknown';
   const dataBasisNote = aiExists
-    ? (grabStr(ai, 'data_basis_note') || '')
+    ? (v10BeneficiaryEnabled ? (v10Warning || grabStr(ai, 'data_basis_note') || '') : (grabStr(ai, 'data_basis_note') || ''))
     : '';
 
   // V9.0: Causal overnight impact chains
@@ -306,6 +367,12 @@ export function getMorningAlphaDisplayState(
     dataStatus,
     dataBasisNote,
     causalOvernightImpactChains,
+    v10BeneficiaryEnabled,
+    v10BeneficiaryStocks,
+    v10ObservationWatchlist,
+    v10RiskWatchlist,
+    v10DataQualityStatus,
+    v10Warning,
     rawAI: ai,
     rawRow,
     marketStatus: effectiveMarketStatus,

@@ -307,13 +307,15 @@ function TodayReportContent() {
     : taipeiMinutes < 630
       ? '09:30 盤中資料尚未同步'
       : taipeiMinutes < 780
-        ? '10:30 / 13:00 盤中時間窗待同步'
+        ? '10:30 資料尚未同步，13:00 尚未到時間窗'
         : taipeiMinutes < 815
-          ? '等待 13:00 盤中資料同步'
+          ? '13:00 盤中資料尚未同步'
           : '等待收盤資料同步';
   const intradayPendingDescription = taipeiMinutes >= 815
-    ? '已進入收盤資料等待區間，今日盤中雷達尚未形成可驗證資料；收盤驗證完成前不視為已完成。'
-    : '目前先保留盤前方向，盤中時間窗會在資料同步後更新；待驗證不代表已完成。';
+    ? '已進入收盤資料等待區間，盤中時間窗仍未完整同步；收盤驗證完成前不視為已完成。'
+    : taipeiMinutes >= 630
+      ? '已過盤中驗證時間窗，缺少資料時會明確標示尚未同步，不視為系統已完成。'
+      : '目前先保留盤前方向，盤中時間窗會在資料同步後更新；待驗證不代表已完成。';
   const overviewRadarStatusText = activeIntradayRadar
     ? safeText(activeIntradayRadar.radar_status, '觀察中')
     : intradayPendingTitle;

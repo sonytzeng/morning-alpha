@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import { supabase } from '@/lib/supabase';
+import V11ObservationSection, { mapV11ObservationItems, type V11ObservationItem } from '@/components/v11/V11ObservationSection';
 
 type ReportRecord = {
   id: string;
@@ -38,6 +39,7 @@ type PerformanceItem = {
   tomorrowAdjustment: string[];
   hasMemberNote: boolean;
   hasClosingVerificationV2: boolean;
+  observationScripts: V11ObservationItem[];
 };
 
 type SummaryStats = {
@@ -233,6 +235,7 @@ function buildPerformanceItem(row: ReportRecord): PerformanceItem {
     tomorrowAdjustment: listFromUnknown(closing?.tomorrow_adjustment),
     hasMemberNote: Boolean(memberNote),
     hasClosingVerificationV2: Boolean(closingV2),
+    observationScripts: mapV11ObservationItems(ai.v10_observation_watchlist, 5),
   };
 }
 
@@ -468,6 +471,14 @@ export default function PerformancePage() {
                             <p className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-xs text-white/40">
                               舊版報告，研究筆記結構不足。
                             </p>
+                          ) : null}
+                          {item.observationScripts.length > 0 ? (
+                            <V11ObservationSection
+                              items={item.observationScripts}
+                              tone="dark"
+                              className="bg-transparent border-white/10"
+                              subtitle="用一分鐘回看：當天市場在等哪幾個訊號。"
+                            />
                           ) : null}
                         </div>
 

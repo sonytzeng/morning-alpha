@@ -17,6 +17,7 @@ import {
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { trackPageView, trackEvent } from '@/utils/analytics';
 import PaywallCard from '@/components/paywall/PaywallCard';
+import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
 import type { UserEntitlement } from '@/types/subscription';
 
@@ -777,6 +778,8 @@ function MemberNoteContent() {
   const firstStockReason = firstText(firstStockNote.relationship_to_thesis, firstStockNote.benefit_source, beneficiaryCandidates[0]?.reason, '等待完整受惠股推理補齊。');
   const firstStockValidation = firstText(firstStockNote.validation_signal, beneficiaryCandidates[0]?.watchPoint, '09:30 後看 2330、TAIEX 與族群是否同步。');
   const firstStockInvalidation = firstText(firstStockNote.invalidation_condition, beneficiaryCandidates[0]?.risk, firstLine(memberNoteV2?.invalidation_conditions), '若 2330 無法轉強且大盤續弱，今日推論降級。');
+  const v10BeneficiaryEnabled = displayState?.v10BeneficiaryEnabled === true || rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
+  const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist || displayState?.v10ObservationWatchlist, 5);
   const rotationScenarios = recordList(memberNoteV2?.capital_rotation_scenarios);
   const scenarioLabels = ['如果今天變強', '如果今天震盪', '如果今天轉弱'];
   const dontDoItems = [
@@ -893,6 +896,12 @@ function MemberNoteContent() {
               })}
             </div>
           </section>
+
+          <V11ObservationSection
+            items={v11ObservationScripts}
+            tone="dark"
+            subtitle="五條待確認線索：有變強的可能，也有停看的條件。"
+          />
 
           {/* Researcher Summary */}
           <section className="bg-navy-900/60 border border-forest-500/10 rounded-2xl p-5 md:p-6">
@@ -1126,7 +1135,7 @@ function MemberNoteContent() {
             </section>
               )}
 
-              {!memberNoteV2 && hasItems(beneficiaryCandidates) && (
+              {!v10BeneficiaryEnabled && !memberNoteV2 && hasItems(beneficiaryCandidates) && (
             <section className="bg-navy-900/60 border border-amber-500/10 rounded-2xl p-5 md:p-6">
               <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
                 <i className="ri-focus-3-line text-amber-400 text-sm"></i>

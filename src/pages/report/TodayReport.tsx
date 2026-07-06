@@ -16,6 +16,7 @@ import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/li
 import DailySentenceCard from '@/components/v8/DailySentenceCard';
 import OvernightCausalChainCard from '@/components/v8/OvernightCausalChainCard';
 import PaywallCard from '@/components/paywall/PaywallCard';
+import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
 import { getTodayOpeningRadar } from '@/services/openingRadarService';
 import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
@@ -347,6 +348,8 @@ function TodayReportContent() {
       }
     : { status: 'insufficient' as const, sentence: '', logic_source: [], tone: 'clear, sharp, human-readable' as const };
   const canViewTodayReportFull = hasFeature(entitlement, 'today_report_full');
+  const v10BeneficiaryEnabled = displayState?.v10BeneficiaryEnabled === true || ai.v10_beneficiary_enabled === true || ai.v10_beneficiary_enabled === 'true';
+  const v11ObservationScripts = mapV11ObservationItems(ai.v10_observation_watchlist || displayState?.v10ObservationWatchlist, 5);
 
   const marketDataBasisDate =
     safeText(ai.market_data_latest_date || ai.tw_core_date || report?.report_date, '—');
@@ -672,11 +675,19 @@ function TodayReportContent() {
             </div>
           </section>
 
-          {beneficiaryStocks.length > 0 && canViewTodayReportFull && (
+          {v10BeneficiaryEnabled && (
+            <V11ObservationSection
+              items={v11ObservationScripts}
+              tone="dark"
+              subtitle="不是股票清單，是今天要盯的五條資金線。"
+            />
+          )}
+
+          {!v10BeneficiaryEnabled && beneficiaryStocks.length > 0 && canViewTodayReportFull && (
             <section className="bg-navy-900/70 border border-amber-500/15 rounded-2xl p-5 md:p-6">
               <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
                 <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
-                  {isHistoricalFallback ? '歷史受惠觀察' : '今日受惠觀察'}
+                  {isHistoricalFallback ? '歷史資金觀察' : '今日資金觀察'}
                 </h2>
                 <span className="text-amber-300 text-[10px] px-2 py-1 rounded-full bg-amber-500/10 border border-amber-400/20">
                   觀察名單，不是買進訊號
@@ -713,10 +724,10 @@ function TodayReportContent() {
             </section>
           )}
 
-          {beneficiaryStocks.length > 0 && !canViewTodayReportFull && (
+          {!v10BeneficiaryEnabled && beneficiaryStocks.length > 0 && !canViewTodayReportFull && (
             <PaywallCard
               title="升級會員查看完整盤前研究鏈"
-              description={`今日已追蹤 ${beneficiaryStocks.length} 檔受惠觀察股。完整受惠股、盤中驗證、失效條件與收盤回測，已收在會員版。`}
+              description={`今日已追蹤 ${beneficiaryStocks.length} 檔資金觀察股。完整推理、盤中驗證、失效條件與收盤回測，已收在會員版。`}
               requiredTier="member"
               featureList={['完整今日受惠股', '受惠推理與驗證訊號', '失效條件與風險提醒']}
               tone="dark"

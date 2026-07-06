@@ -13,6 +13,7 @@ import { resolveIntradayTrackingState, type IntradayTrackingState, type SegmentD
 import { useState, useEffect, useMemo } from 'react';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import PaywallCard from '@/components/paywall/PaywallCard';
+import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
 import type { UserEntitlement } from '@/types/subscription';
 
@@ -289,6 +290,10 @@ function WarRoomContent() {
 
   const sectorCanUseAsTodayStrategy = sectorFreshness?.canUseAsTodayStrategy ?? false;
   const sectorIsStale = sectorFreshness?.isStale ?? false;
+  const v10BeneficiaryEnabled = displayState?.v10BeneficiaryEnabled === true
+    || rawAI?.v10_beneficiary_enabled === true
+    || rawAI?.v10_beneficiary_enabled === 'true';
+  const v11ObservationScripts = mapV11ObservationItems(rawAI?.v10_observation_watchlist || displayState?.v10ObservationWatchlist, 5);
 
   if (isLoading) {
     return (
@@ -520,6 +525,14 @@ function WarRoomContent() {
               <p className="text-white/40 text-xs leading-relaxed">{tracking.premarket.description}</p>
             )}
           </section>
+
+          {v10BeneficiaryEnabled && (
+            <V11ObservationSection
+              items={v11ObservationScripts}
+              tone="dark"
+              subtitle="盤中只看一件事：資金有沒有真的跟上。"
+            />
+          )}
 
           {/* ═══════════════════════════════════════ */}
           {/* CARD 2 — 09:30 盤中雷達 */}

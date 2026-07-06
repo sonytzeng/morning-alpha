@@ -12,6 +12,7 @@ import { parseAIStrategy, type V8BeneficiaryChain } from '@/utils/aiStrategyPars
 import type { Report } from '@/types/report';
 import BeneficiaryChainCard from '@/components/v8/BeneficiaryChainCard';
 import PaywallCard from '@/components/paywall/PaywallCard';
+import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
 import type { UserEntitlement } from '@/types/subscription';
 
@@ -587,7 +588,7 @@ function OpportunitiesContent() {
   const v10BeneficiaryStocks = mapV10OpportunityStocks(rawAI.today_beneficiary_stocks_v10 || ds.v10BeneficiaryStocks);
   const v10ObservationWatchlist = mapV10OpportunityStocks(rawAI.v10_observation_watchlist || ds.v10ObservationWatchlist);
   const v10RiskWatchlist = mapV10OpportunityStocks(rawAI.v10_risk_watchlist || ds.v10RiskWatchlist);
-  const v10ObservationNarratives = v10ObservationWatchlist.slice(0, 5);
+  const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist || ds.v10ObservationWatchlist, 5);
   const v10DataQualityStatus = compactText(rawAI.v10_data_quality_status || ds.v10DataQualityStatus);
   const v10Warning = compactText(rawAI.v10_warning || ds.v10Warning);
   const beneficiaryCountFallback = Number.isFinite(Number(rawAI.beneficiary_count)) ? Math.max(0, Number(rawAI.beneficiary_count)) : 0;
@@ -828,15 +829,14 @@ function OpportunitiesContent() {
                       <h3 className="text-foreground-900 font-bold text-sm">今日五大觀察劇本</h3>
                       <p className="text-foreground-400 text-xs">今天最值得追蹤、但還不構成強受惠的五件事。</p>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[10px]">{v10ObservationNarratives.length} 個劇本</span>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[10px]">{v11ObservationScripts.length} 個劇本</span>
                   </div>
-                  {v10ObservationNarratives.length > 0 ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                      {v10ObservationNarratives.map((stock) => <V10OpportunityCard key={`observation-${stock.symbol}-${stock.rank}`} stock={stock} tone="observation" />)}
-                    </div>
-                  ) : (
-                    <div className="p-4 rounded-xl bg-background-50 border border-background-200/70 text-foreground-500 text-sm">今日觀察劇本尚未產生。</div>
-                  )}
+                  <V11ObservationSection
+                    items={v11ObservationScripts}
+                    tone="light"
+                    className="p-0 border-0 bg-transparent"
+                    subtitle="像晨報一樣讀：今天先看哪五條線有沒有成形。"
+                  />
                 </div>
 
                 <div>

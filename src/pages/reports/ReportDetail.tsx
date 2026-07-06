@@ -9,6 +9,7 @@ import type { Report } from '@/types/report';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import { getTaipeiNow, formatTaipeiDate } from '@/utils/tradingDay';
 import { parseAIStrategy, type ParsedAIStrategy } from '@/utils/aiStrategyParser';
+import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 
 // ═══ Constants ═══
 const SECTOR_NAME_MAP: Record<string, string> = {
@@ -164,6 +165,9 @@ export default function ReportDetail() {
   const avoidRaw = safeArray(report.avoid_today);
   const keyDrivers = safeArray(report.key_drivers);
   const checkpoints = deriveCheckpoints(report);
+  const rawAI = (strategy.raw || {}) as Record<string, unknown>;
+  const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
+  const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist, 5);
 
   // Translated watch/avoid directions
   const watchSectors = canWatchRaw.map(translateSector).filter(Boolean) as string[];
@@ -410,14 +414,22 @@ export default function ReportDetail() {
               </div>
             </section>
 
-            {/* ── 3. 受惠族群 ── */}
-            {watchSectors.length > 0 && (
+            {v10BeneficiaryEnabled && (
+              <V11ObservationSection
+                items={v11ObservationScripts}
+                tone="dark"
+                subtitle="回看當天市場真正等哪幾個確認訊號。"
+              />
+            )}
+
+            {/* ── 3. 資金觀察方向 ── */}
+            {!v10BeneficiaryEnabled && watchSectors.length > 0 && (
             <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-6 h-6 rounded-md bg-emerald-500/15 flex items-center justify-center"><i className="ri-arrow-up-circle-line text-emerald-300 text-xs" /></div>
-                <p className="text-slate-400 text-[10px] uppercase tracking-[0.3em] font-semibold">受惠族群</p>
+                <p className="text-slate-400 text-[10px] uppercase tracking-[0.3em] font-semibold">資金觀察方向</p>
               </div>
-              <h2 className="text-slate-50 font-bold text-lg md:text-xl mb-4">受惠族群</h2>
+              <h2 className="text-slate-50 font-bold text-lg md:text-xl mb-4">資金觀察方向</h2>
               <div className="space-y-2">
                 {watchSectors.map((item, idx) => (
                   <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/15">

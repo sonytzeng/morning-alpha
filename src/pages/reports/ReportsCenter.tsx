@@ -10,6 +10,7 @@ import {
   getVerificationLabelStyle,
 } from '@/services/closeMarketReviewService';
 import type { Report } from '@/types/report';
+import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 
 export default function ReportsCenter() {
   const [reports7, setReports7] = useState<Report[]>([]);
@@ -91,6 +92,12 @@ export default function ReportsCenter() {
     if (score >= 20) return { label: '偏弱', color: 'text-amber-400/70' };
     return { label: '謹慎', color: 'text-red-400' };
   };
+
+  const selectedAI = selectedReport?.ai_strategy_json && typeof selectedReport.ai_strategy_json === 'object'
+    ? selectedReport.ai_strategy_json as Record<string, unknown>
+    : {};
+  const selectedV10Enabled = selectedAI.v10_beneficiary_enabled === true || selectedAI.v10_beneficiary_enabled === 'true';
+  const selectedV11ObservationScripts = mapV11ObservationItems(selectedAI.v10_observation_watchlist, 5);
 
   if (loading) {
     return (
@@ -499,11 +506,20 @@ export default function ReportsCenter() {
                 </div>
               )}
 
-              {/* 觀察名單 */}
-              {(selectedReport.focus_stock_json || []).length > 0 && (
+              {selectedV10Enabled && (
+                <V11ObservationSection
+                  items={selectedV11ObservationScripts}
+                  tone="dark"
+                  className="bg-transparent border-white/10"
+                  subtitle="用同一套 brief 回看：當天到底在等什麼。"
+                />
+              )}
+
+              {/* 資金觀察方向 */}
+              {!selectedV10Enabled && (selectedReport.focus_stock_json || []).length > 0 && (
                 <div>
                   <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-2">
-                    觀察名單
+                    資金觀察方向
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {(selectedReport.focus_stock_json || []).map((s, idx) => (

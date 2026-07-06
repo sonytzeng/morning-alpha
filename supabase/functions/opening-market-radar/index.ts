@@ -43,6 +43,133 @@ function getTaipeiHourMinute(): { hour: number; minute: number } {
   return { hour: tw.getHours(), minute: tw.getMinutes() };
 }
 
+function getTaipeiMinutesFromIso(iso: string | null): number | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei',
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(date);
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value || 0);
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value || 0);
+  return hour * 60 + minute;
+}
+
+function parseAiStrategyJson(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function buildIntradaySyncStatusFromRadar(reportDate: string, latestCapturedAt: string | null, radarReady: boolean): Record<string, unknown> {
+  const capturedMinutes = getTaipeiMinutesFromIso(latestCapturedAt);
+  const nowIso = new Date().toISOString();
+  const nowMinutes = getTaipeiMinutesFromIso(nowIso) ?? 0;
+  const statusForWindow = (target: number): 'ready' | 'pending' | 'missing' => {
+    if (capturedMinutes !== null && capturedMinutes >= target && radarReady) return 'ready';
+    if (nowMinutes < target) return 'pending';
+    return 'missing';
+  };
+  const windows = {
+    '0930': statusForWindow(9 * 60 + 30),
+    '1030': statusForWindow(10 * 60 + 30),
+    '1300': statusForWindow(13 * 60),
+  };
+  const values = Object.values(windows);
+  const warning = values.every((value) => value === 'ready')
+    ? '盤中資料已同步至最新可用時間窗。'
+    : values.includes('missing')
+      ? '部分盤中時間窗尚未同步，請確認 09:30 / 10:30 / 13:00 market data cron。'
+      : '等待下一段盤中資料同步。';
+  return {
+    report_date: reportDate,
+    last_checked_at: nowIso,
+    source: 'opening_market_radar_refresh',
+    captured_at: latestCapturedAt,
+    windows,
+    warning,
+  };
+}
+
+async function patchReportAfterRadar(
+  supabase: ReturnType<typeof createClient>,
+  reportDate: string,
+  openingRadar: Record<string, unknown>,
+  latestCapturedAt: string | null,
+  marketDataSource: string,
+  log: (message: string) => void,
+): Promise<{ patched: boolean; error: string | null }> {
+  const { data: reportRow, error: reportErr } = await supabase
+    .from('reports')
+    .select('id, ai_strategy_json')
+    .eq('report_date', reportDate)
+    .maybeSingle();
+
+  if (reportErr) {
+    log(`REPORT_REFRESH_ERROR: ${reportErr.message}`);
+    return { patched: false, error: reportErr.message };
+  }
+  if (!reportRow) {
+    log(`REPORT_REFRESH_SKIPPED: no report row for ${reportDate}`);
+    return { patched: false, error: 'report_not_found' };
+  }
+
+  const ai = parseAiStrategyJson((reportRow as Record<string, unknown>).ai_strategy_json);
+  const radarStatus = String(openingRadar.radar_status || '');
+  const radarSummary = String(openingRadar.summary || '');
+  const patchedAi: Record<string, unknown> = {
+    ...ai,
+    opening_radar_status: radarStatus,
+    opening_radar: openingRadar,
+    intraday_sync_status: buildIntradaySyncStatusFromRadar(reportDate, latestCapturedAt, true),
+    today_summary: radarSummary || ai.today_summary || ai.summary || '',
+    intraday_tracking: {
+      ...(ai.intraday_tracking && typeof ai.intraday_tracking === 'object' && !Array.isArray(ai.intraday_tracking) ? ai.intraday_tracking as Record<string, unknown> : {}),
+      source: 'opening_market_radar',
+      status: radarStatus,
+      market_bias: openingRadar.market_bias,
+      confidence_score: openingRadar.confidence_score,
+      summary: radarSummary,
+      captured_at: latestCapturedAt,
+      input_source: marketDataSource,
+      updated_at: new Date().toISOString(),
+    },
+    war_room: {
+      source: 'opening_market_radar',
+      status: radarStatus,
+      market_bias: openingRadar.market_bias,
+      confidence_score: openingRadar.confidence_score,
+      summary: radarSummary,
+      captured_at: latestCapturedAt,
+      input_source: marketDataSource,
+      updated_at: new Date().toISOString(),
+    },
+  };
+
+  const { error: updateErr } = await supabase
+    .from('reports')
+    .update({ ai_strategy_json: patchedAi })
+    .eq('id', String((reportRow as Record<string, unknown>).id || ''));
+
+  if (updateErr) {
+    log(`REPORT_REFRESH_ERROR: ${updateErr.message}`);
+    return { patched: false, error: updateErr.message };
+  }
+
+  log(`REPORT_REFRESH_OK: patched reports.ai_strategy_json for ${reportDate}`);
+  return { patched: true, error: null };
+}
+
 interface MarketDataRow {
   symbol: string;
   name: string;
@@ -512,6 +639,7 @@ Deno.serve(async (req) => {
     }
 
     log(`SUCCESS: Radar for ${today} written (premarket_bias from reports: "${premarketBias}")`);
+    const reportRefresh = await patchReportAfterRadar(supabase, today, upsertData, latestCapturedAt, marketDataSource, log);
 
     return new Response(JSON.stringify({
       success: true,
@@ -538,6 +666,7 @@ Deno.serve(async (req) => {
       radar_mode: radarMode,
       txf_status: txfStatus,
       degraded_metadata_persisted: degradedMetadataPersisted,
+      report_refresh: reportRefresh,
       after_open: afterOpen,
       duration_ms: Date.now() - startTime,
       logs,

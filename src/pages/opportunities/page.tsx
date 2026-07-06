@@ -55,6 +55,10 @@ interface V10OpportunityStock {
   riskFlags: string[];
   scoringReasons: string[];
   benefitChain: string[];
+  observationReason: string;
+  confirmationPendingReason: string;
+  stopObservingCondition: string;
+  observationChain: string[];
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -174,6 +178,10 @@ function mapV10OpportunityStocks(rows: unknown): V10OpportunityStock[] {
     riskFlags: stringArray(row.risk_flags),
     scoringReasons: stringArray(row.scoring_reasons),
     benefitChain: stringArray(row.benefit_chain),
+    observationReason: compactText(row.observation_reason),
+    confirmationPendingReason: compactText(row.confirmation_pending_reason),
+    stopObservingCondition: compactText(row.stop_observing_condition),
+    observationChain: stringArray(row.observation_chain),
   })).filter((stock) => Boolean(stock.symbol || stock.name));
 }
 
@@ -307,6 +315,41 @@ function V10OpportunityCard({ stock, tone }: { stock: V10OpportunityStock; tone:
     : tone === 'risk'
       ? 'bg-red-100 text-red-700 border-red-200'
       : 'bg-amber-100 text-amber-700 border-amber-200';
+
+  if (tone === 'observation') {
+    const reason = stock.observationReason || stock.scoringReasons.find((item) => item.includes('今天為什麼觀察'))?.replace(/^今天為什麼觀察？/, '') || '今天值得追蹤，但還沒有足夠證據列入強受惠股。';
+    const confirmation = stock.confirmationPendingReason || stock.scoringReasons.find((item) => item.includes('還缺什麼'))?.replace(/^還缺什麼？/, '') || '等待 09:30、10:30 或 13:00 的盤中資金確認。';
+    const stopCondition = stock.stopObservingCondition || stock.scoringReasons.find((item) => item.includes('不用再觀察的條件'))?.replace(/^不用再觀察的條件：/, '') || '若盤中沒有資金流入或成交量不足，今天就停止追蹤。';
+    return (
+      <div className={`p-4 rounded-xl border ${toneClass} flex flex-col gap-3`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-foreground-900 font-bold text-sm">{[stock.symbol, stock.name].filter(Boolean).join(' ')}</p>
+            <p className="text-foreground-500 text-[11px] leading-relaxed mt-1">{stock.industryName || stock.industryCode || '待確認族群'}</p>
+          </div>
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${badgeClass}`}>
+            觀察劇本
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          <div className="p-3 rounded-lg bg-background-100/80 border border-background-200/70">
+            <p className="text-foreground-400 text-[10px] mb-1">今天為什麼值得觀察？</p>
+            <p className="text-foreground-800 text-xs leading-relaxed">{reason}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-background-100/80 border border-background-200/70">
+            <p className="text-foreground-400 text-[10px] mb-1">今天真正要確認什麼？</p>
+            <p className="text-foreground-800 text-xs leading-relaxed">{confirmation}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-background-100/80 border border-background-200/70">
+            <p className="text-foreground-400 text-[10px] mb-1">什麼情況可以不用再看？</p>
+            <p className="text-foreground-800 text-xs leading-relaxed">{stopCondition}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`p-4 rounded-xl border ${toneClass} flex flex-col gap-3`}>
       <div className="flex items-start justify-between gap-3">
@@ -544,6 +587,7 @@ function OpportunitiesContent() {
   const v10BeneficiaryStocks = mapV10OpportunityStocks(rawAI.today_beneficiary_stocks_v10 || ds.v10BeneficiaryStocks);
   const v10ObservationWatchlist = mapV10OpportunityStocks(rawAI.v10_observation_watchlist || ds.v10ObservationWatchlist);
   const v10RiskWatchlist = mapV10OpportunityStocks(rawAI.v10_risk_watchlist || ds.v10RiskWatchlist);
+  const v10ObservationNarratives = v10ObservationWatchlist.slice(0, 5);
   const v10DataQualityStatus = compactText(rawAI.v10_data_quality_status || ds.v10DataQualityStatus);
   const v10Warning = compactText(rawAI.v10_warning || ds.v10Warning);
   const beneficiaryCountFallback = Number.isFinite(Number(rawAI.beneficiary_count)) ? Math.max(0, Number(rawAI.beneficiary_count)) : 0;
@@ -781,17 +825,17 @@ function OpportunitiesContent() {
                 <div>
                   <div className="flex items-center justify-between gap-3 mb-3">
                     <div>
-                      <h3 className="text-foreground-900 font-bold text-sm">今日觀察名單</h3>
-                      <p className="text-foreground-400 text-xs">觀察，不是進場訊號。</p>
+                      <h3 className="text-foreground-900 font-bold text-sm">今日五大觀察劇本</h3>
+                      <p className="text-foreground-400 text-xs">今天最值得追蹤、但還不構成強受惠的五件事。</p>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[10px]">{v10ObservationWatchlist.length} 檔</span>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[10px]">{v10ObservationNarratives.length} 個劇本</span>
                   </div>
-                  {v10ObservationWatchlist.length > 0 ? (
+                  {v10ObservationNarratives.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                      {v10ObservationWatchlist.map((stock) => <V10OpportunityCard key={`observation-${stock.symbol}-${stock.rank}`} stock={stock} tone="observation" />)}
+                      {v10ObservationNarratives.map((stock) => <V10OpportunityCard key={`observation-${stock.symbol}-${stock.rank}`} stock={stock} tone="observation" />)}
                     </div>
                   ) : (
-                    <div className="p-4 rounded-xl bg-background-50 border border-background-200/70 text-foreground-500 text-sm">今日觀察名單尚未產生。</div>
+                    <div className="p-4 rounded-xl bg-background-50 border border-background-200/70 text-foreground-500 text-sm">今日觀察劇本尚未產生。</div>
                   )}
                 </div>
 

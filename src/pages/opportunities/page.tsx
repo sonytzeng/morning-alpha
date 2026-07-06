@@ -200,6 +200,45 @@ function evidenceDirectionLabel(value: string): string {
   return '中性觀察';
 }
 
+function humanizeV10DebugText(value: string): string {
+  const raw = compactText(value);
+  const normalized = raw.toLowerCase();
+  if (!raw) return '';
+  if (normalized.includes('negative_evidence_blocks_high_beneficiary') || normalized.includes('exclude_from_top3_strong_beneficiary')) {
+    return '負向證據仍高，暫不列為強受惠股。';
+  }
+  if (normalized.includes('negative_evidence')) return '前夜訊號偏壓，今天需要盤中資金確認。';
+  if (normalized.includes('positive_evidence')) return '已有部分正向線索，但仍需盤中確認。';
+  if (normalized.includes('event_score') || normalized.includes('directional_event_score')) return '事件鏈尚未被盤中資金確認。';
+  if (normalized.includes('sector_score')) return '族群同步性仍不足。';
+  if (normalized.includes('market_score')) return '大盤條件尚未支持積極追價。';
+  if (normalized.includes('repeat_penalty')) return '近期重複出現，今日降低權重觀察。';
+  if (normalized.includes('insufficient') || normalized.includes('missing')) return '量價條件不足，僅列入觀察。';
+  return raw
+    .replace(/negative_evidence_count=\d+/gi, '負向證據仍需留意')
+    .replace(/positive_evidence_count=\d+/gi, '正向證據仍待確認')
+    .replace(/_/g, ' ');
+}
+
+function humanizeChainPart(value: string): string {
+  const raw = compactText(value);
+  const normalized = raw.toUpperCase();
+  const map: Record<string, string> = {
+    SEMICONDUCTOR: '半導體',
+    AI_SERVER: 'AI 伺服器',
+    ELECTRONIC_BLUE_CHIP: '電子權值',
+    FINANCIAL: '金融',
+    PETROCHEMICAL: '塑化',
+    SHIPPING: '航運',
+    OIL: '油價',
+    FX: '匯率',
+    RATE: '利率',
+    DXY: '美元指數',
+    US10Y: '美債殖利率',
+  };
+  return map[normalized] || raw.replace(/_/g, ' ');
+}
+
 function mapMemberResearchCandidates(rows: unknown): TierStock[] {
   return asRecordArray(rows)
     .map((row) => parseTierStock({
@@ -364,8 +403,8 @@ function V10OpportunityCard({ stock, tone }: { stock: V10OpportunityStock; tone:
           <p className="text-foreground-500 text-[11px] leading-relaxed">{stock.industryName || stock.industryCode || '未分類產業'}</p>
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="text-foreground-400 text-[10px]">分數</p>
-          <p className="text-foreground-900 font-bold text-sm">{stock.totalScore ?? '—'}</p>
+          <p className="text-foreground-400 text-[10px]">狀態</p>
+          <p className="text-foreground-900 font-bold text-sm">{tone === 'risk' ? '風險' : confidenceLevelLabel(stock.confidenceLevel)}</p>
         </div>
       </div>
 
@@ -375,17 +414,17 @@ function V10OpportunityCard({ stock, tone }: { stock: V10OpportunityStock; tone:
           <p className="text-foreground-800 text-xs font-semibold">{confidenceLevelLabel(stock.confidenceLevel)}</p>
         </div>
         <div className="p-2 rounded-lg bg-background-100/80 border border-background-200/70">
-          <p className="text-foreground-400 text-[10px] mb-0.5">證據數</p>
-          <p className="text-foreground-800 text-xs font-semibold">+{stock.positiveEvidenceCount} / -{stock.negativeEvidenceCount}</p>
+          <p className="text-foreground-400 text-[10px] mb-0.5">資金狀態</p>
+          <p className="text-foreground-800 text-xs font-semibold">{stock.netEvidenceDirection === 'negative' ? '偏壓' : stock.netEvidenceDirection === 'positive' ? '轉強' : '待確認'}</p>
         </div>
       </div>
 
       {stock.riskFlags.length > 0 && (
         <div className="p-2 rounded-lg bg-red-50 border border-red-100">
-          <p className="text-red-600 text-[10px] mb-1">風險標記</p>
+          <p className="text-red-600 text-[10px] mb-1">提醒</p>
           <div className="flex flex-wrap gap-1">
             {stock.riskFlags.slice(0, 3).map((flag) => (
-              <span key={flag} className="px-1.5 py-0.5 rounded-md bg-red-100 text-red-700 text-[9px]">{flag}</span>
+              <span key={flag} className="px-1.5 py-0.5 rounded-md bg-red-100 text-red-700 text-[9px]">{humanizeV10DebugText(flag)}</span>
             ))}
           </div>
         </div>
@@ -396,7 +435,7 @@ function V10OpportunityCard({ stock, tone }: { stock: V10OpportunityStock; tone:
           <p className="text-foreground-400 text-[10px] mb-1">評分依據</p>
           <ul className="space-y-1">
             {stock.scoringReasons.slice(0, 3).map((reason) => (
-              <li key={reason} className="text-foreground-600 text-[11px] leading-relaxed">• {reason}</li>
+              <li key={reason} className="text-foreground-600 text-[11px] leading-relaxed">• {humanizeV10DebugText(reason)}</li>
             ))}
           </ul>
         </div>
@@ -405,7 +444,7 @@ function V10OpportunityCard({ stock, tone }: { stock: V10OpportunityStock; tone:
       {stock.benefitChain.length > 0 && (
         <div className="mt-auto pt-2 border-t border-background-200/70">
           <p className="text-foreground-400 text-[10px] mb-1">傳導鏈</p>
-          <p className="text-foreground-600 text-[11px] leading-relaxed">{stock.benefitChain.join(' → ')}</p>
+          <p className="text-foreground-600 text-[11px] leading-relaxed">{stock.benefitChain.map(humanizeChainPart).join(' → ')}</p>
         </div>
       )}
     </div>

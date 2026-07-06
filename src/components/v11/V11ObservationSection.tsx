@@ -43,6 +43,8 @@ function narrativeFallback(row: Record<string, unknown>, matcher: string): strin
 }
 
 export function mapV11ObservationItems(rows: unknown, limit = 5): V11ObservationItem[] {
+  const seen = new Set<string>();
+
   return asRecordArray(rows)
     .map((row, index) => {
       const chain = textList(row.observation_chain || row.benefit_chain);
@@ -62,6 +64,17 @@ export function mapV11ObservationItems(rows: unknown, limit = 5): V11Observation
       };
     })
     .filter((item) => Boolean(item.symbol || item.name || item.observationReason))
+    .filter((item) => {
+      const key = [
+        item.industryCode || item.industryName,
+        item.observationReason,
+        item.confirmationPendingReason,
+        item.stopObservingCondition,
+      ].map((part) => part.trim().toLowerCase()).join('|');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .slice(0, limit);
 }
 

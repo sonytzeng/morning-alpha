@@ -320,12 +320,10 @@ function TodayReportContent() {
   const overviewRadarStatusText = activeIntradayRadar
     ? safeText(activeIntradayRadar.radar_status, '觀察中')
     : intradayPendingTitle;
-  const overviewBiasText = activeIntradayRadar
-    ? safeText(activeIntradayRadar.market_bias, '') || biasFromRadarStatus(overviewRadarStatusText)
-    : `盤前方向：${premarketBiasLabel}`;
-  const radarScoreDisplay = scoreTone(activeIntradayRadar?.confidence_score);
-  const overviewScoreText = activeIntradayRadar
-    ? (activeIntradayRadar.confidence_score != null ? `${radarScoreDisplay.stars} ${radarScoreDisplay.label}` : '待驗證')
+  const overviewBiasText = premarketBiasLabel;
+  const displayScore = scoreTone(displayState?.confidenceScore);
+  const overviewScoreText = displayState?.confidenceScore != null
+    ? `${displayScore.stars} ${displayScore.label}`
     : '待驗證';
   const overviewSyncText = activeIntradayRadar
     ? `已同步：${overviewRadarStatusText}`

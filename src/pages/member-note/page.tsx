@@ -778,8 +778,8 @@ function MemberNoteContent() {
   const firstStockReason = firstText(firstStockNote.relationship_to_thesis, firstStockNote.benefit_source, beneficiaryCandidates[0]?.reason, '等待完整受惠股推理補齊。');
   const firstStockValidation = firstText(firstStockNote.validation_signal, beneficiaryCandidates[0]?.watchPoint, '09:30 後看 2330、TAIEX 與族群是否同步。');
   const firstStockInvalidation = firstText(firstStockNote.invalidation_condition, beneficiaryCandidates[0]?.risk, firstLine(memberNoteV2?.invalidation_conditions), '若 2330 無法轉強且大盤續弱，今日推論降級。');
-  const v10BeneficiaryEnabled = displayState?.v10BeneficiaryEnabled === true || rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
-  const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist || displayState?.v10ObservationWatchlist, 5);
+  const v10BeneficiaryEnabled = dsState?.v10BeneficiaryEnabled === true || rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
+  const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist || dsState?.v10ObservationWatchlist, 5);
   const rotationScenarios = recordList(memberNoteV2?.capital_rotation_scenarios);
   const scenarioLabels = ['如果今天變強', '如果今天震盪', '如果今天轉弱'];
   const dontDoItems = [

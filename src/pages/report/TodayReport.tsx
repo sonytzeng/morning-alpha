@@ -413,6 +413,8 @@ type TradingScript = {
   status: string;
   condition: string;
   invalidation: string;
+  closeResult: string;
+  tomorrowAction: string;
 };
 
 function cleanScriptName(value: string): string {
@@ -516,11 +518,44 @@ function deriveScriptSupport(ai: AnyObj, scriptName: string, representatives: st
   };
 }
 
+function normalizeCloseResult(value: unknown): string {
+  const text = safeText(value, '').toLowerCase();
+  if (text.includes('hit') || text.includes('命中') || text.includes('confirmed')) return '成立';
+  if (text.includes('partial') || text.includes('mixed') || text.includes('部分')) return '待確認';
+  if (text.includes('miss') || text.includes('failed') || text.includes('失準')) return '未成立';
+  return '';
+}
+
+function buildCloseScriptOutcome(ai: AnyObj, representatives: string[]): { closeResult: string; tomorrowAction: string } {
+  const closing = Object.keys(asObj(ai.closing_verification_v2)).length > 0
+    ? asObj(ai.closing_verification_v2)
+    : asObj(ai.closing_verification);
+  const listValidation = asObj(closing.beneficiary_list_validation);
+  const items = Array.isArray(listValidation.items) ? listValidation.items.map(asObj) : [];
+  const repSymbols = representatives
+    .map((item) => item.split(' ')[0]?.trim())
+    .filter(Boolean);
+  const matched = items.filter((item) => repSymbols.includes(safeText(item.symbol, '')));
+  const completeMatched = matched.filter((item) => safeText(item.data_status, '') === 'complete');
+
+  if (completeMatched.length > 0) {
+    const outperformed = completeMatched.filter((item) => item.outperformed_taiex === true).length;
+    if (outperformed === completeMatched.length) return { closeResult: '成立', tomorrowAction: '延續觀察' };
+    if (outperformed === 0) return { closeResult: '未成立', tomorrowAction: '降級觀察' };
+    return { closeResult: '待確認', tomorrowAction: '降級觀察' };
+  }
+
+  const overall = normalizeCloseResult(closing.hit_or_miss || closing.status);
+  if (overall === '成立') return { closeResult: '成立', tomorrowAction: '延續觀察' };
+  if (overall === '未成立') return { closeResult: '未成立', tomorrowAction: '降級觀察' };
+  return { closeResult: '待確認', tomorrowAction: '降級觀察' };
+}
+
 function buildTradingScripts(
   items: V11ObservationItem[],
   statusText: string,
   ai: AnyObj,
-  limit = 5,
+  limit = 3,
 ): TradingScript[] {
   const grouped = new Map<string, V11ObservationItem[]>();
   for (const item of items) {
@@ -552,6 +587,7 @@ function buildTradingScripts(
         firstText(primary.stopObservingCondition, support.invalidation),
         '若開盤後沒有量能或代表股無法站穩，今天放棄。',
       );
+      const outcome = buildCloseScriptOutcome(ai, representatives);
 
       return {
         name,
@@ -560,6 +596,8 @@ function buildTradingScripts(
         status: primary.confirmationPendingReason ? '等待盤中確認' : statusText,
         condition,
         invalidation,
+        closeResult: outcome.closeResult,
+        tomorrowAction: outcome.tomorrowAction,
       };
     })
     .filter((item) => item.name && item.why)
@@ -932,45 +970,45 @@ function TodayReportContent() {
 
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              {isHistoricalFallback ? '歷史交易劇本' : '今日交易劇本'}
+              {isHistoricalFallback ? '歷史劇本驗證結果' : '今日劇本驗證結果'}
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-              {tradingScripts.length > 0 ? (
-                tradingScripts.map((item, idx) => (
-                  <article key={`${item.name}-${idx}`} className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <div className="mb-3">
-                      <p className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">劇本 {idx + 1}</p>
-                      <h3 className="text-slate-50 font-bold text-sm leading-snug line-clamp-2">{renderSafeText(item.name)}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {closingVerificationState.completed && tradingScripts.length > 0 ? (
+                tradingScripts.slice(0, 3).map((item) => (
+                  <article key={item.name} className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <h3 className="text-slate-50 font-bold text-base leading-snug">{renderSafeText(item.name)}</h3>
+                        <p className="text-slate-400 text-xs mt-1">{renderSafeText(item.representatives)}</p>
+                      </div>
+                      <span className={`shrink-0 px-2 py-1 rounded-full border text-[10px] font-semibold ${
+                        item.closeResult === '成立'
+                          ? 'bg-emerald-500/12 text-emerald-300 border-emerald-400/30'
+                          : item.closeResult === '未成立'
+                            ? 'bg-red-500/12 text-red-300 border-red-400/30'
+                            : 'bg-amber-500/12 text-amber-300 border-amber-400/30'
+                      }`}>
+                        收盤結果：{item.closeResult}
+                      </span>
                     </div>
-                    <div className="space-y-2">
+
+                    <div className="space-y-3">
                       <div>
-                        <p className="text-slate-500 text-[10px] mb-1">今天為什麼看</p>
-                        <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">{renderSafeText(item.why)}</p>
+                        <p className="text-slate-500 text-[10px] mb-1">驗證重點</p>
+                        <p className="text-slate-300 text-sm leading-relaxed">{renderSafeText(item.condition)}</p>
                       </div>
-                      <div>
-                        <p className="text-slate-500 text-[10px] mb-1">代表股</p>
-                        <p className="text-slate-200 text-xs font-semibold line-clamp-2">{renderSafeText(item.representatives)}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500 text-[10px] mb-1">目前狀態</p>
-                        <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">{renderSafeText(item.status)}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500 text-[10px] mb-1">今天怎麼驗證</p>
-                        <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">{renderSafeText(item.condition)}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500 text-[10px] mb-1">什麼時候放棄</p>
-                        <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">{renderSafeText(item.invalidation)}</p>
+                      <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-900/60 border border-slate-700/60 px-3 py-2">
+                        <span className="text-slate-500 text-[10px]">明日是否延續</span>
+                        <span className="text-slate-100 text-xs font-semibold">{renderSafeText(item.tomorrowAction)}</span>
                       </div>
                     </div>
                   </article>
                 ))
               ) : (
-                <div className="sm:col-span-2 lg:col-span-3 xl:col-span-5 flex gap-3 p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                <div className="md:col-span-3 flex gap-3 p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
                   <i className="ri-database-2-line text-slate-300 text-sm mt-0.5"></i>
-                  <p className="text-slate-200 text-sm leading-relaxed">目前尚未形成高品質交易劇本，等待盤中或收盤資料完成。</p>
+                  <p className="text-slate-200 text-sm leading-relaxed">收盤驗證資料不足，明日降級觀察。</p>
                 </div>
               )}
             </div>

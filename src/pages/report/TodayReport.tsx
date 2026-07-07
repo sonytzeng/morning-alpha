@@ -71,17 +71,6 @@ function getBiasClass(bias?: string | null): string {
 }
 
 
-function scoreTone(score: unknown): { stars: string; label: string; raw: string } {
-  const numeric = Number(score);
-  const raw = Number.isFinite(numeric) ? `${Math.round(numeric)}/100` : '';
-  if (!Number.isFinite(numeric)) return { stars: '☆☆☆☆☆', label: '待驗證', raw };
-  if (numeric >= 80) return { stars: '★★★★★', label: '高把握', raw };
-  if (numeric >= 65) return { stars: '★★★★☆', label: '中高把握', raw };
-  if (numeric >= 50) return { stars: '★★★☆☆', label: '觀察', raw };
-  if (numeric >= 35) return { stars: '★★☆☆☆', label: '低把握', raw };
-  return { stars: '★☆☆☆☆', label: '僅供觀察', raw };
-}
-
 function getRadarClass(status?: string | null): string {
   const s = status || '';
   if (s.includes('偏強')) return 'bg-red-500/12 text-red-300 border-red-400/30';
@@ -388,10 +377,10 @@ function buildVerificationFocus(
   if (minutes < 850) {
     return {
       currentStage: is1300Ready ? '13:00 風險確認已同步' : '13:00 資料尚未同步',
-      nextStep: '14:10 等待收盤資料同步',
+      nextStep: '14:10 等待收盤驗證資料同步',
       confirming: `${line} 是否守住盤中確認條件`,
       ifFailed,
-      dataStatus: is1300Ready ? '13:00 已同步，等待收盤資料' : '13:00 資料尚未同步，等待收盤資料',
+      dataStatus: is1300Ready ? '13:00 已同步，等待收盤驗證資料' : '13:00 資料尚未同步，等待收盤驗證資料',
       isSynced: is1300Ready,
     };
   }
@@ -692,16 +681,7 @@ function TodayReportContent() {
         : taipeiMinutes < 815
           ? '13:00 盤中資料尚未同步'
           : '等待收盤驗證資料同步';
-  const intradayPendingDescription = taipeiMinutes >= 815
-    ? '已進入收盤驗證等待區間，收盤驗證完成前不視為已完成。'
-    : taipeiMinutes >= 630
-      ? '已過盤中驗證時間窗，缺少資料時會明確標示尚未同步，不視為系統已完成。'
-      : '目前先保留盤前方向，盤中時間窗會在資料同步後更新；待驗證不代表已完成。';
   const overviewBiasText = premarketBiasLabel;
-  const displayScore = scoreTone(displayState?.confidenceScore);
-  const overviewScoreText = displayState?.confidenceScore != null
-    ? `${displayScore.stars} ${displayScore.label}`
-    : '待驗證';
   const v11ObservationScripts = mapV11ObservationItems(ai.v10_observation_watchlist || displayState?.v10ObservationWatchlist, 5);
   const intradaySyncView = getIntradaySyncView(ai);
   const closingVerificationState = getClosingVerificationState(ai);
@@ -718,14 +698,7 @@ function TodayReportContent() {
     closingVerificationState,
   );
   const overviewRadarStatusText = verificationFocus.dataStatus;
-  const overviewSyncText = verificationFocus.dataStatus;
   const tradingScripts = buildTradingScripts(v11ObservationScripts, verificationFocus.currentStage, ai);
-
-  const marketDataBasisDate =
-    safeText(ai.market_data_latest_date || ai.tw_core_date || report?.report_date, '—');
-  const marketDataBasisLabel = marketDataBasisDate === report?.report_date
-    ? `${marketDataBasisDate} 資料基準`
-    : `${marketDataBasisDate} 收盤`;
 
   if (loading) {
     return (
@@ -864,7 +837,7 @@ function TodayReportContent() {
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6">
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              {isHistoricalFallback ? '歷史操作總覽' : '今日操作總覽'}
+              {isHistoricalFallback ? '歷史決策面板' : '今日決策面板'}
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -874,43 +847,20 @@ function TodayReportContent() {
               </div>
 
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">今日操作狀態</p>
+                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">今日策略</p>
                 <p className="text-slate-50 font-bold text-base">{actionStatus}</p>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">今日主線</p>
+                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">今天劇本</p>
                 <p className="text-slate-50 font-bold text-base">{renderSafeText(mainLine)}</p>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">下一個驗證點</p>
+                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">下一步</p>
                 <p className="text-slate-50 font-bold text-base">{nextVerification}</p>
               </div>
-
-              <div className="p-3 rounded-xl bg-sky-500/[0.06] border border-sky-500/20 sm:col-span-2 lg:col-span-4">
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div>
-                    <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-0.5">台股盤前基準</p>
-                    <p className="text-sky-200 text-xs font-semibold">{marketDataBasisLabel}</p>
-                  </div>
-                  <div>
-                    <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-0.5">盤中資料</p>
-                    <p className="text-sky-100 text-xs font-semibold">
-                      {overviewSyncText}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-0.5">判斷把握度</p>
-                    <p className="text-sky-100 text-xs font-semibold">{overviewScoreText}</p>
-                  </div>
-                </div>
-              </div>
             </div>
-
-            <p className="text-slate-500 text-[10px] mt-3 leading-relaxed">
-              今日判斷頁只回答今天怎麼做。完整推理、受惠股與收盤回測，請到完整研究筆記查看。
-            </p>
           </section>
 
           <section className="bg-navy-900/70 border border-emerald-500/15 rounded-2xl p-5 md:p-6">

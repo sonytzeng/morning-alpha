@@ -226,15 +226,20 @@ function inferActionStatus(bias: string, score: number | null | undefined, radar
   return '等待量能確認';
 }
 
-function nextVerificationPoint(minutes: number, radar: RadarView | null, sync: IntradaySyncView): string {
+function nextVerificationPoint(
+  minutes: number,
+  radar: RadarView | null,
+  sync: IntradaySyncView,
+  closingState: ClosingVerificationState,
+): string {
   const is0930Ready = sync.status0930 === 'ready' || Boolean(radar);
   const is1030Ready = sync.status1030 === 'ready';
   const is1300Ready = sync.status1300 === 'ready';
   if (minutes < 570) return '09:30 看 2330、TAIEX、TXF 是否同向';
   if (minutes < 630) return is0930Ready ? '10:30 看主線是否擴散' : '09:30 開盤驗證資料同步';
   if (minutes < 780) return is1030Ready ? '13:00 看主線是否失效' : '10:30 主線確認資料同步';
-  if (minutes < 850) return is1300Ready ? '14:10 等待收盤資料同步' : '13:00 風險確認資料同步';
-  return '收盤後看驗證結果';
+  if (minutes < 850) return is1300Ready ? '14:10 等待收盤驗證資料同步' : '13:00 風險確認資料同步';
+  return closingState.nextStep;
 }
 
 function buildOperationSteps(
@@ -261,6 +266,13 @@ type IntradaySyncView = {
   status1300: IntradayWindowStatus;
   warning: string;
   lastCheckedAt: string;
+};
+
+type ClosingVerificationState = {
+  exists: boolean;
+  completed: boolean;
+  label: string;
+  nextStep: string;
 };
 
 function normalizeWindowStatus(value: unknown): IntradayWindowStatus {
@@ -293,6 +305,29 @@ function getIntradaySyncView(ai: AnyObj): IntradaySyncView {
   };
 }
 
+function getClosingVerificationState(ai: AnyObj): ClosingVerificationState {
+  const closingV2 = asObj(ai.closing_verification_v2);
+  const closingLegacy = asObj(ai.closing_verification);
+  const closing = Object.keys(closingV2).length > 0 ? closingV2 : closingLegacy;
+  const exists = Object.keys(closing).length > 0;
+  const status = safeText(closing.status || closing.data_status || closing.verification_status, '').toLowerCase();
+  const hasResult = Boolean(
+    safeText(closing.hit_or_miss || closing.result || closing.actual_direction || closing.what_was_right || closing.what_was_wrong, ''),
+  );
+  const completed = exists && (
+    ['completed', 'complete', 'ready', 'done'].some((keyword) => status.includes(keyword))
+    || status.includes('已完成')
+    || hasResult
+  );
+
+  return {
+    exists,
+    completed,
+    label: completed ? '收盤驗證已完成' : '等待收盤驗證資料同步',
+    nextStep: completed ? '查看收盤驗證結果' : '等待收盤驗證資料同步',
+  };
+}
+
 type VerificationFocus = {
   currentStage: string;
   nextStep: string;
@@ -308,6 +343,7 @@ function buildVerificationFocus(
   mainLine: string,
   pendingTitle: string,
   sync: IntradaySyncView,
+  closingState: ClosingVerificationState,
 ): VerificationFocus {
   const line = mainLine === '等待主線確認' ? '主線' : mainLine;
   const confirming = '2330、TAIEX、TXF 是否同向';
@@ -361,12 +397,12 @@ function buildVerificationFocus(
   }
 
   return {
-    currentStage: '等待收盤驗證',
-    nextStep: '收盤後確認今日判斷是否成立',
+    currentStage: closingState.label,
+    nextStep: closingState.nextStep,
     confirming: `${line} 是否延續到收盤`,
     ifFailed: '收盤驗證未完成前，不把盤中反彈當成確認。',
-    dataStatus: is1300Ready ? '13:00 已同步，等待收盤驗證' : '等待收盤資料同步',
-    isSynced: is1300Ready,
+    dataStatus: closingState.label,
+    isSynced: closingState.completed,
   };
 }
 
@@ -617,9 +653,9 @@ function TodayReportContent() {
         ? '10:30 資料尚未同步，13:00 尚未到時間窗'
         : taipeiMinutes < 815
           ? '13:00 盤中資料尚未同步'
-          : '等待收盤資料同步';
+          : '等待收盤驗證資料同步';
   const intradayPendingDescription = taipeiMinutes >= 815
-    ? '已進入收盤資料等待區間，盤中時間窗仍未完整同步；收盤驗證完成前不視為已完成。'
+    ? '已進入收盤驗證等待區間，收盤驗證完成前不視為已完成。'
     : taipeiMinutes >= 630
       ? '已過盤中驗證時間窗，缺少資料時會明確標示尚未同步，不視為系統已完成。'
       : '目前先保留盤前方向，盤中時間窗會在資料同步後更新；待驗證不代表已完成。';
@@ -630,11 +666,19 @@ function TodayReportContent() {
     : '待驗證';
   const v11ObservationScripts = mapV11ObservationItems(ai.v10_observation_watchlist || displayState?.v10ObservationWatchlist, 5);
   const intradaySyncView = getIntradaySyncView(ai);
+  const closingVerificationState = getClosingVerificationState(ai);
   const mainLine = inferMainLine(ai, displayState, v11ObservationScripts);
   const actionStatus = inferActionStatus(overviewBiasText, displayState?.confidenceScore, activeIntradayRadar, intradayPendingTitle);
-  const nextVerification = nextVerificationPoint(taipeiMinutes, activeIntradayRadar, intradaySyncView);
+  const nextVerification = nextVerificationPoint(taipeiMinutes, activeIntradayRadar, intradaySyncView, closingVerificationState);
   const operationSteps = buildOperationSteps(mainLine, nextVerification, actionStatus);
-  const verificationFocus = buildVerificationFocus(taipeiMinutes, activeIntradayRadar, mainLine, intradayPendingTitle, intradaySyncView);
+  const verificationFocus = buildVerificationFocus(
+    taipeiMinutes,
+    activeIntradayRadar,
+    mainLine,
+    intradayPendingTitle,
+    intradaySyncView,
+    closingVerificationState,
+  );
   const overviewRadarStatusText = verificationFocus.dataStatus;
   const overviewSyncText = verificationFocus.dataStatus;
   const tradingScripts = buildTradingScripts(v11ObservationScripts, verificationFocus.currentStage, ai);

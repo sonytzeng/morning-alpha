@@ -227,6 +227,46 @@ function buildOperationSteps(
   ];
 }
 
+type IntradayWindowStatus = 'ready' | 'pending' | 'missing' | 'unknown';
+
+type IntradaySyncView = {
+  status0930: IntradayWindowStatus;
+  status1030: IntradayWindowStatus;
+  status1300: IntradayWindowStatus;
+  warning: string;
+  lastCheckedAt: string;
+};
+
+function normalizeWindowStatus(value: unknown): IntradayWindowStatus {
+  const text = safeText(value, '').toLowerCase();
+  if (!text) return 'unknown';
+  if (['ready', 'complete', 'completed', 'synced'].includes(text)) return 'ready';
+  if (['missing', 'not_updated', 'failed', 'stale'].includes(text)) return 'missing';
+  if (['pending', 'waiting', 'not_started'].includes(text)) return 'pending';
+  return 'unknown';
+}
+
+function pickWindowStatus(windows: AnyObj, ...keys: string[]): IntradayWindowStatus {
+  for (const key of keys) {
+    const status = normalizeWindowStatus(windows[key]);
+    if (status !== 'unknown') return status;
+  }
+  return 'unknown';
+}
+
+function getIntradaySyncView(ai: AnyObj): IntradaySyncView {
+  const sync = asObj(ai.intraday_sync_status);
+  const windows = asObj(sync.windows);
+
+  return {
+    status0930: pickWindowStatus(windows, '0930', '09:30', '930', 'opening', 'open'),
+    status1030: pickWindowStatus(windows, '1030', '10:30', 'mainline', 'main_line'),
+    status1300: pickWindowStatus(windows, '1300', '13:00', 'risk', 'risk_check'),
+    warning: safeText(sync.warning, ''),
+    lastCheckedAt: safeText(sync.last_checked_at || sync.updated_at, ''),
+  };
+}
+
 type VerificationFocus = {
   currentStage: string;
   nextStep: string;
@@ -241,10 +281,14 @@ function buildVerificationFocus(
   radar: RadarView | null,
   mainLine: string,
   pendingTitle: string,
+  sync: IntradaySyncView,
 ): VerificationFocus {
   const line = mainLine === '等待主線確認' ? '主線' : mainLine;
   const confirming = '2330、TAIEX、TXF 是否同向';
   const ifFailed = `不追價，${line} 未確認前維持觀察。`;
+  const is0930Ready = sync.status0930 === 'ready' || Boolean(radar);
+  const is1030Ready = sync.status1030 === 'ready';
+  const is1300Ready = sync.status1300 === 'ready';
 
   if (minutes < 570) {
     return {
@@ -253,40 +297,40 @@ function buildVerificationFocus(
       confirming,
       ifFailed,
       dataStatus: '09:30 尚未到時間窗',
-      isSynced: Boolean(radar),
+      isSynced: is0930Ready,
     };
   }
 
   if (minutes < 630) {
     return {
-      currentStage: radar ? '09:30 開盤驗證中' : '09:30 資料尚未同步',
+      currentStage: is0930Ready ? '09:30 開盤驗證中' : '09:30 資料尚未同步',
       nextStep: '10:30 看主線是否擴散',
       confirming,
       ifFailed,
-      dataStatus: radar ? '09:30 已同步，10:30 尚未到時間窗' : pendingTitle,
-      isSynced: Boolean(radar),
+      dataStatus: is0930Ready ? '09:30 已同步，10:30 尚未到時間窗' : pendingTitle,
+      isSynced: is0930Ready,
     };
   }
 
   if (minutes < 780) {
     return {
-      currentStage: '10:30 主線確認中',
+      currentStage: is1030Ready ? '10:30 主線確認已同步' : '10:30 資料尚未同步',
       nextStep: '13:00 看是否失效',
       confirming: `${line} 是否從代表股擴散到同族群`,
       ifFailed,
-      dataStatus: radar ? '13:00 尚未到時間窗' : pendingTitle,
-      isSynced: Boolean(radar),
+      dataStatus: is1030Ready ? '10:30 已同步，13:00 尚未到時間窗' : '10:30 資料尚未同步，13:00 尚未到時間窗',
+      isSynced: is1030Ready,
     };
   }
 
   if (minutes < 850) {
     return {
-      currentStage: '13:00 風險確認中',
+      currentStage: is1300Ready ? '13:00 風險確認已同步' : '13:00 資料尚未同步',
       nextStep: '14:10 等待收盤資料同步',
       confirming: `${line} 是否守住盤中確認條件`,
       ifFailed,
-      dataStatus: radar ? '等待收盤資料同步' : pendingTitle,
-      isSynced: Boolean(radar),
+      dataStatus: is1300Ready ? '13:00 已同步，等待收盤資料' : '13:00 資料尚未同步，等待收盤資料',
+      isSynced: is1300Ready,
     };
   }
 
@@ -295,8 +339,8 @@ function buildVerificationFocus(
     nextStep: '收盤後確認今日判斷是否成立',
     confirming: `${line} 是否延續到收盤`,
     ifFailed: '收盤驗證未完成前，不把盤中反彈當成確認。',
-    dataStatus: radar ? '等待收盤資料同步' : pendingTitle,
-    isSynced: Boolean(radar),
+    dataStatus: is1300Ready ? '13:00 已同步，等待收盤驗證' : '等待收盤資料同步',
+    isSynced: is1300Ready,
   };
 }
 
@@ -463,25 +507,22 @@ function TodayReportContent() {
     : taipeiMinutes >= 630
       ? '已過盤中驗證時間窗，缺少資料時會明確標示尚未同步，不視為系統已完成。'
       : '目前先保留盤前方向，盤中時間窗會在資料同步後更新；待驗證不代表已完成。';
-  const overviewRadarStatusText = activeIntradayRadar
-    ? safeText(activeIntradayRadar.radar_status, '觀察中')
-    : intradayPendingTitle;
   const overviewBiasText = premarketBiasLabel;
   const displayScore = scoreTone(displayState?.confidenceScore);
   const overviewScoreText = displayState?.confidenceScore != null
     ? `${displayScore.stars} ${displayScore.label}`
     : '待驗證';
-  const overviewSyncText = activeIntradayRadar
-    ? `已同步：${overviewRadarStatusText}`
-    : intradayPendingTitle;
   const v10BeneficiaryEnabled = displayState?.v10BeneficiaryEnabled === true || ai.v10_beneficiary_enabled === true || ai.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(ai.v10_observation_watchlist || displayState?.v10ObservationWatchlist, 5);
   const mainLine = inferMainLine(ai, displayState, v11ObservationScripts);
   const actionStatus = inferActionStatus(overviewBiasText, displayState?.confidenceScore, activeIntradayRadar, intradayPendingTitle);
   const nextVerification = nextVerificationPoint(taipeiMinutes, activeIntradayRadar);
   const operationSteps = buildOperationSteps(mainLine, nextVerification, actionStatus);
-  const verificationFocus = buildVerificationFocus(taipeiMinutes, activeIntradayRadar, mainLine, intradayPendingTitle);
-  const verificationQuestions = buildVerificationQuestions(v11ObservationScripts, activeIntradayRadar ? `觀察中：${overviewRadarStatusText}` : intradayPendingTitle);
+  const intradaySyncView = getIntradaySyncView(ai);
+  const verificationFocus = buildVerificationFocus(taipeiMinutes, activeIntradayRadar, mainLine, intradayPendingTitle, intradaySyncView);
+  const overviewRadarStatusText = verificationFocus.dataStatus;
+  const overviewSyncText = verificationFocus.dataStatus;
+  const verificationQuestions = buildVerificationQuestions(v11ObservationScripts, verificationFocus.currentStage);
   const overnightChainViews = buildOvernightChainViews(parsedStrategy.v8_overnight_causal_chain);
   const canViewTodayReportFull = hasFeature(entitlement, 'today_report_full');
 
@@ -718,7 +759,7 @@ function TodayReportContent() {
 
           <section className="bg-navy-900/70 border border-emerald-500/15 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              今天操作策略
+              今天該怎麼做
             </h2>
             <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">

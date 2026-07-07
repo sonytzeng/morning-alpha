@@ -9,16 +9,11 @@ import { trackPageView } from '@/utils/analytics';
 import { trackEngagementEvent } from '@/services/engagementService';
 import { renderSafeText } from '@/utils/renderSafe';
 import { formatTaipeiDate } from '@/utils/tradingDay';
-import { parseAIStrategy } from '@/utils/aiStrategyParser';
 import type { Report } from '@/types/report';
-import { isAISemiconductorWeak, isAIStock, DEFENSE_KEYWORDS } from '@/utils/marketBiasDowngrade';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
-import PaywallCard from '@/components/paywall/PaywallCard';
 import { mapV11ObservationItems, type V11ObservationItem } from '@/components/v11/V11ObservationSection';
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
 import { getTodayOpeningRadar } from '@/services/openingRadarService';
-import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
-import type { UserEntitlement } from '@/types/subscription';
 
 type AnyObj = Record<string, any>;
 
@@ -54,10 +49,6 @@ type RadarView = {
 
 function asObj(value: unknown): AnyObj {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as AnyObj) : {};
-}
-
-function asArray(value: unknown): AnyObj[] {
-  return Array.isArray(value) ? value.filter((x) => x && typeof x === 'object') as AnyObj[] : [];
 }
 
 function toNumber(value: unknown): number | null {
@@ -153,12 +144,6 @@ function firstText(...values: unknown[]): string {
     if (text) return text;
   }
   return '';
-}
-
-function textList(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map((item) => safeText(item, '')).filter(Boolean);
-  const text = safeText(value, '');
-  return text ? [text] : [];
 }
 
 function uniqueBy<T>(items: T[], keyFor: (item: T) => string): T[] {
@@ -380,34 +365,6 @@ function buildVerificationQuestions(
   ).slice(0, limit);
 }
 
-type OvernightChainView = {
-  key: string;
-  event: string;
-  sector: string;
-  representative: string;
-  validation: string;
-  invalidation: string;
-};
-
-function buildOvernightChainViews(chain: unknown): OvernightChainView[] {
-  const rows = Array.isArray(chain)
-    ? asArray(chain)
-    : asArray(asObj(chain).chains || asObj(chain).items || asObj(chain).events);
-
-  const mapped = rows.map((row) => {
-    const chainParts = textList(row.chain || row.transmission_chain || row.observation_chain);
-    const event = firstText(row.event, row.event_title, row.chain_title, row.main_theme, chainParts[0], '前夜事件待整理');
-    const sector = firstText(row.sector, row.industry_name, row.industry, row.impact_sector, chainParts[1], '影響族群待確認');
-    const representative = firstText(row.representative_stock, row.stock, row.symbol && row.name ? `${row.symbol} ${row.name}` : '', chainParts[2], '代表股待確認');
-    const validation = firstText(row.validation, row.intraday_validation, row.validation_signal, row.watch_point, '盤中先看代表股與族群量能是否同步。');
-    const invalidation = firstText(row.invalidation, row.invalidation_condition, row.stop_condition, '若代表股無法站穩或族群未擴散，今日先降權。');
-    const key = firstText(row.event_key, row.sector, row.chain_title, row.main_theme, `${event}|${sector}`);
-    return { key, event, sector, representative, validation, invalidation };
-  });
-
-  return uniqueBy(mapped, (item) => item.key).slice(0, 4);
-}
-
 function TodayReportContent() {
   const [report, setReport] = useState<Report | null>(null);
   const [reportSnapshotRadar, setReportSnapshotRadar] = useState<RadarView | null>(null);
@@ -416,7 +373,6 @@ function TodayReportContent() {
   const [error, setError] = useState<string | null>(null);
   const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
   const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
-  const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null);
   // V8.4: Unified display state — same source as Home, Opportunities, WarRoom, MemberNote
   const [displayState, setDisplayState] = useState<MorningAlphaDisplayState | null>(null);
   const marketClosed = displayState
@@ -433,7 +389,6 @@ function TodayReportContent() {
         setError(null);
 
         const resolved = await resolveActiveMorningAlphaReport();
-        setEntitlement(buildEntitlementFromTier(resolved.tier));
         const finalReport = resolved.rawRow
           ? mapRowToReport(resolved.rawRow as unknown as Record<string, unknown>)
           : null;
@@ -472,8 +427,6 @@ function TodayReportContent() {
   const todayStr = formatTaipeiDate();
   const isReportForToday = report?.report_date === todayStr;
   const ai = asObj((report as AnyObj | null)?.ai_strategy_json);
-  const parsedStrategy = useMemo(() => parseAIStrategy(report), [report]);
-
   // V8.4: Unified display state — marketBias and confidenceScore from getMorningAlphaDisplayState
   // Same values as Home, Opportunities, WarRoom, MemberNote. No opening_radar override.
   const displayBias = displayState?.marketBias || '—';
@@ -481,8 +434,6 @@ function TodayReportContent() {
   const hasFreshIntradayRadar = intradayFreshness.fresh;
   const premarketBiasLabel = safeText(displayBias, '待判斷');
   const activeIntradayRadar = hasFreshIntradayRadar ? liveRadar : null;
-  const effectiveIntradayRadar = activeIntradayRadar;
-  const publicSummary = asObj(ai.public_summary) || asObj(ai.free_summary);
   const taipeiNow = new Date();
   const taipeiParts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Taipei',
@@ -512,7 +463,6 @@ function TodayReportContent() {
   const overviewScoreText = displayState?.confidenceScore != null
     ? `${displayScore.stars} ${displayScore.label}`
     : '待驗證';
-  const v10BeneficiaryEnabled = displayState?.v10BeneficiaryEnabled === true || ai.v10_beneficiary_enabled === true || ai.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(ai.v10_observation_watchlist || displayState?.v10ObservationWatchlist, 5);
   const mainLine = inferMainLine(ai, displayState, v11ObservationScripts);
   const actionStatus = inferActionStatus(overviewBiasText, displayState?.confidenceScore, activeIntradayRadar, intradayPendingTitle);
@@ -523,53 +473,12 @@ function TodayReportContent() {
   const overviewRadarStatusText = verificationFocus.dataStatus;
   const overviewSyncText = verificationFocus.dataStatus;
   const verificationQuestions = buildVerificationQuestions(v11ObservationScripts, verificationFocus.currentStage);
-  const overnightChainViews = buildOvernightChainViews(parsedStrategy.v8_overnight_causal_chain);
-  const canViewTodayReportFull = hasFeature(entitlement, 'today_report_full');
 
   const marketDataBasisDate =
     safeText(ai.market_data_latest_date || ai.tw_core_date || report?.report_date, '—');
   const marketDataBasisLabel = marketDataBasisDate === report?.report_date
     ? `${marketDataBasisDate} 資料基準`
     : `${marketDataBasisDate} 收盤`;
-
-  // V8: Beneficiary stocks filtered via ai_strategy_json radar data (not market_data table)
-  const beneficiaryStocks = (() => {
-    const raw = [
-      ...asArray(ai.today_beneficiary_stocks),
-      ...asArray(ai.beneficiary_stocks),
-      ...asArray(publicSummary.beneficiary_stocks),
-    ].filter((item, index, arr) => {
-      const symbol = safeText(item.symbol, '');
-      return symbol && arr.findIndex((x) => safeText(x.symbol, '') === symbol) === index;
-    });
-
-    // V8: Use radar.sox_change & radar.tsmc_change from ai_strategy_json
-    const soxPct = effectiveIntradayRadar?.sox_change ?? null;
-    const tsmcCore = effectiveIntradayRadar?.tsmc_change ?? null;
-
-    const aiSemiconductorWeak = isAISemiconductorWeak(
-      { taiexChange: null, txfChange: null, tsmc2330Change: tsmcCore },
-      soxPct,
-    );
-
-    if (!aiSemiconductorWeak) return raw.slice(0, 6);
-
-    const filtered = raw.filter((item) => !isAIStock({
-      group: safeText(item.group || item.sector || item.category, ''),
-      name: safeText(item.name, ''),
-      reason: safeText(item.reason || item.thesis, ''),
-    }));
-
-    const sorted = [...filtered].sort((a, b) => {
-      const aText = (safeText(a.group || a.sector || '', '') + safeText(a.reason || a.thesis || '', '')).toLowerCase();
-      const bText = (safeText(b.group || b.sector || '', '') + safeText(b.reason || b.thesis || '', '')).toLowerCase();
-      const aDef = DEFENSE_KEYWORDS.some((kw) => aText.includes(kw)) ? 1 : 0;
-      const bDef = DEFENSE_KEYWORDS.some((kw) => bText.includes(kw)) ? 1 : 0;
-      return bDef - aDef;
-    });
-
-    return sorted.slice(0, 6);
-  })();
 
   if (loading) {
     return (
@@ -814,44 +723,39 @@ function TodayReportContent() {
 
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              {isHistoricalFallback ? '歷史待驗證問題' : '今日五個待驗證問題'}
+              {isHistoricalFallback ? '歷史待驗證問題' : '今日待驗證問題'}
             </h2>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
               {verificationQuestions.length > 0 ? (
                 verificationQuestions.map((item, idx) => (
-                  <article key={`${item.question}-${idx}`} className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div>
-                        <p className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">問題 {idx + 1}</p>
-                        <h3 className="text-slate-50 font-bold text-base leading-snug">{renderSafeText(item.question)}</h3>
-                      </div>
-                      <span className="shrink-0 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-400/20 px-2 py-0.5 rounded-full">
-                        待驗證
-                      </span>
+                  <article key={`${item.question}-${idx}`} className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                    <div className="mb-3">
+                      <p className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">問題 {idx + 1}</p>
+                      <h3 className="text-slate-50 font-bold text-sm leading-snug line-clamp-2">{renderSafeText(item.question)}</h3>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <div>
                         <p className="text-slate-500 text-[10px] mb-1">代表股</p>
-                        <p className="text-slate-200 text-sm font-semibold">{renderSafeText(item.representative)}</p>
+                        <p className="text-slate-200 text-xs font-semibold line-clamp-2">{renderSafeText(item.representative)}</p>
                       </div>
                       <div>
                         <p className="text-slate-500 text-[10px] mb-1">目前狀態</p>
-                        <p className="text-slate-300 text-sm leading-relaxed">{renderSafeText(item.status)}</p>
+                        <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">{renderSafeText(item.status)}</p>
                       </div>
                       <div>
                         <p className="text-slate-500 text-[10px] mb-1">觀察條件</p>
-                        <p className="text-slate-300 text-sm leading-relaxed">{renderSafeText(item.condition)}</p>
+                        <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">{renderSafeText(item.condition)}</p>
                       </div>
                       <div>
                         <p className="text-slate-500 text-[10px] mb-1">失效條件</p>
-                        <p className="text-slate-300 text-sm leading-relaxed">{renderSafeText(item.invalidation)}</p>
+                        <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">{renderSafeText(item.invalidation)}</p>
                       </div>
                     </div>
                   </article>
                 ))
               ) : (
-                <div className="lg:col-span-2 flex gap-3 p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                <div className="sm:col-span-2 lg:col-span-3 xl:col-span-5 flex gap-3 p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
                   <i className="ri-database-2-line text-slate-300 text-sm mt-0.5"></i>
                   <p className="text-slate-200 text-sm leading-relaxed">目前尚未形成高品質待驗證問題，等待盤中或收盤資料完成。</p>
                 </div>
@@ -859,118 +763,15 @@ function TodayReportContent() {
             </div>
           </section>
 
-          {!v10BeneficiaryEnabled && beneficiaryStocks.length > 0 && canViewTodayReportFull && (
-            <section className="bg-navy-900/70 border border-amber-500/15 rounded-2xl p-5 md:p-6">
-              <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-                <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
-                  {isHistoricalFallback ? '歷史資金觀察' : '今日資金觀察'}
-                </h2>
-                <span className="text-amber-300 text-[10px] px-2 py-1 rounded-full bg-amber-500/10 border border-amber-400/20">
-                  觀察名單，不是買進訊號
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {beneficiaryStocks.map((stock, idx) => (
-                  <div key={`${safeText(stock.symbol)}-${idx}`} className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-slate-100 font-bold">{safeText(stock.symbol)}</span>
-                      <span className="text-slate-100 font-bold">{safeText(stock.name)}</span>
-                      <span className="ml-auto text-[10px] text-amber-300 bg-amber-500/10 border border-amber-400/20 px-2 py-0.5 rounded-full">
-                        觀察
-                      </span>
-                    </div>
-                    <p className="text-slate-300 text-xs leading-relaxed">{renderSafeText(stock.reason || stock.thesis || stock.watch_point)}</p>
-                    {stock.risk && (
-                      <p className="text-red-300/80 text-xs leading-relaxed mt-2">風險：{renderSafeText(stock.risk)}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {!v10BeneficiaryEnabled && beneficiaryStocks.length > 0 && !canViewTodayReportFull && (
-            <PaywallCard
-              title="升級會員查看完整盤前研究鏈"
-              description={`今日已追蹤 ${beneficiaryStocks.length} 檔資金觀察股。完整推理、盤中驗證、失效條件與收盤回測，已收在會員版。`}
-              requiredTier="member"
-              featureList={['完整今日受惠股', '受惠推理與驗證訊號', '失效條件與風險提醒']}
-              tone="dark"
-            />
-          )}
-
-          {canViewTodayReportFull ? (
-            <>
-              <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
-                <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-                  前夜事件傳導鏈
-                </h2>
-
-                {overnightChainViews.length > 0 ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    {overnightChainViews.map((item) => (
-                      <article key={item.key} className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                        <div className="space-y-3">
-                          <div>
-                            <p className="text-slate-500 text-[10px] mb-1">前夜事件</p>
-                            <p className="text-slate-100 text-sm font-semibold">{renderSafeText(item.event)}</p>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <p className="text-slate-500 text-[10px] mb-1">影響族群</p>
-                              <p className="text-slate-300 text-sm">{renderSafeText(item.sector)}</p>
-                            </div>
-                            <div>
-                              <p className="text-slate-500 text-[10px] mb-1">今天代表股</p>
-                              <p className="text-slate-300 text-sm">{renderSafeText(item.representative)}</p>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-slate-500 text-[10px] mb-1">今天怎麼驗證</p>
-                            <p className="text-slate-300 text-sm leading-relaxed">{renderSafeText(item.validation)}</p>
-                          </div>
-                          <div>
-                            <p className="text-slate-500 text-[10px] mb-1">失效條件</p>
-                            <p className="text-slate-300 text-sm leading-relaxed">{renderSafeText(item.invalidation)}</p>
-                          </div>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <p className="text-slate-300 text-sm leading-relaxed">前夜事件傳導鏈尚未整理完成，先以今日操作總覽與待驗證問題為主。</p>
-                  </div>
-                )}
-              </section>
-
-              <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6 text-center">
-                <h2 className="text-white font-bold text-base mb-3">下一步</h2>
-                <p className="text-slate-400 text-sm leading-relaxed max-w-xl mx-auto mb-5">
-                  今日判斷先看操作方向與下一個驗證點；完整推理、失效條件與收盤回測請進完整研究筆記。
-                </p>
-
-                <div className="flex justify-center">
-                  <Link
-                    to="/member-note"
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl transition-colors"
-                  >
-                    查看完整研究筆記
-                    <i className="ri-arrow-right-line" />
-                  </Link>
-                </div>
-              </section>
-            </>
-          ) : (
-            <PaywallCard
-              title="完整研究筆記已收在會員版"
-              description="會員可查看 前夜事件傳導鏈、盤中驗證、失效條件與完整收盤回測，不只看方向，也看判斷如何被驗證。"
-              requiredTier="member"
-              featureList={['前夜事件傳導鏈', '盤中驗證與失效條件', '完整研究筆記與回測']}
-              tone="dark"
-            />
-          )}
+          <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6 text-center">
+            <Link
+              to="/member-note"
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl transition-colors"
+            >
+              查看完整研究筆記
+              <i className="ri-arrow-right-line" />
+            </Link>
+          </section>
         </div>
       </main>
 

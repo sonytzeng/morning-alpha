@@ -59,6 +59,9 @@ type MarketDataPhase = "premarket" | "intraday" | "close" | "manual_backfill";
 
 interface RequestBody {
   phase?: MarketDataPhase;
+  include_beneficiary_close?: boolean;
+  beneficiary_close?: boolean;
+  beneficiary_close_only?: boolean;
 }
 
 const SYMBOLS: SymbolConfig[] = [
@@ -74,6 +77,8 @@ const SYMBOLS: SymbolConfig[] = [
   { finnhubSymbol: "2330", displaySymbol: "2330", name: "台積電", market: "TW", taiwanImpact: "台股權值股龍頭" },
   { finnhubSymbol: "TXF", displaySymbol: "TXF", name: "台指期", market: "TW", taiwanImpact: "台指期提供期貨領先訊號" },
 ];
+
+const CLOSE_CORE_SYMBOLS = new Set(["TAIEX", "2330", "TXF", "SPX", "IXIC", "SOX", "NVDA", "TSM", "VIX"]);
 
 // MVP required symbols for safe bias to work
 const MVP_REQUIRED = ["NVDA", "TSM", "SPX"];
@@ -726,11 +731,18 @@ Deno.serve(async (req) => {
     const taipei = getTaipeiParts();
     const phase = isMarketDataPhase(requestBody.phase) ? requestBody.phase : resolveDefaultPhase(taipei.hour, taipei.minute);
     const tradingDate = taipei.date;
+    const beneficiaryCloseOnly = phase === "close" && requestBody.beneficiary_close_only === true;
+    const includeBeneficiaryClose = phase === "close" && (beneficiaryCloseOnly || requestBody.include_beneficiary_close === true || requestBody.beneficiary_close === true);
 
-    const beneficiarySymbolConfigs = phase === "close"
+    const beneficiarySymbolConfigs = includeBeneficiaryClose
       ? await fetchBeneficiarySymbolConfigsForDate(supabase, tradingDate, batchTag)
       : [];
-    const symbolConfigs = [...SYMBOLS, ...beneficiarySymbolConfigs];
+    const coreSymbolConfigs = beneficiaryCloseOnly
+      ? []
+      : phase === "close"
+      ? SYMBOLS.filter((item) => CLOSE_CORE_SYMBOLS.has(item.displaySymbol))
+      : SYMBOLS;
+    const symbolConfigs = [...coreSymbolConfigs, ...beneficiarySymbolConfigs];
 
     const inserted: Array<{ symbol: string; name: string; value: number; change_percent: number }> = [];
     const failed: string[] = [];
@@ -743,7 +755,7 @@ Deno.serve(async (req) => {
     let snapshotUpsertedCount = 0;
     const allSymbols = symbolConfigs.map((s) => s.displaySymbol);
 
-    console.log(`[${batchTag}] phase=${phase} trading_date=${tradingDate} taipei=${taipei.hour}:${String(taipei.minute).padStart(2, "0")} beneficiary_symbols=${beneficiarySymbolConfigs.map((s) => s.displaySymbol).join(",") || "none"}`);
+    console.log(`[${batchTag}] phase=${phase} trading_date=${tradingDate} taipei=${taipei.hour}:${String(taipei.minute).padStart(2, "0")} close_core_only=${phase === "close" && !includeBeneficiaryClose} beneficiary_close_only=${beneficiaryCloseOnly} beneficiary_symbols=${beneficiarySymbolConfigs.map((s) => s.displaySymbol).join(",") || "none"}`);
 
     // ═══════════════════════════════════════════════════════
     // Fetch all symbols sequentially with delay
@@ -765,7 +777,7 @@ Deno.serve(async (req) => {
 
       const config = symbolConfigs[i];
 
-      if (i > 0) {
+      if (i > 0 && !(phase === "close" && !includeBeneficiaryClose)) {
         await sleep(SYMBOL_DELAY_MS);
       }
 
@@ -799,7 +811,7 @@ Deno.serve(async (req) => {
         providerUsedBySymbol[config.displaySymbol] = quote.provider;
         if (config.market === "TW") twCoreSymbolsSuccess.push(config.displaySymbol);
 
-        console.log(`[${batchTag}] [${i + 1}/${SYMBOLS.length}] ${config.displaySymbol} ${value} (${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(2)}%)`);
+        console.log(`[${batchTag}] [${i + 1}/${symbolConfigs.length}] ${config.displaySymbol} ${value} (${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(2)}%)`);
 
         const { error: insertErr } = await supabase
           .from("market_data")
@@ -901,6 +913,9 @@ Deno.serve(async (req) => {
         inserted: inserted,
         failed: failed,
         beneficiary_symbols_requested: beneficiarySymbolConfigs.map((s) => s.displaySymbol),
+        close_core_only: phase === "close" && !includeBeneficiaryClose,
+        beneficiary_close_only: beneficiaryCloseOnly,
+        beneficiary_close_deferred: phase === "close" && !includeBeneficiaryClose,
         tw_core_status: twCoreStatus,
         tw_core_symbols_success: twCoreSymbolsSuccess,
         tw_core_symbols_failed: twCoreSymbolsFailed,

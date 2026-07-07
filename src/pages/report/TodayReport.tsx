@@ -329,40 +329,93 @@ function buildVerificationFocus(
   };
 }
 
-type VerificationQuestion = {
-  question: string;
-  representative: string;
+type TradingScript = {
+  name: string;
+  why: string;
+  representatives: string;
   status: string;
   condition: string;
   invalidation: string;
 };
 
-function questionTitle(item: V11ObservationItem): string {
-  const chainTheme = item.observationChain.find((part) => part && !part.includes(item.symbol) && !part.includes(item.name));
-  if (chainTheme) return `${chainTheme}能不能接住資金？`;
-  if (item.industryName) return `${item.industryName}能不能接棒？`;
-  return '今天有沒有新主線？';
+function cleanScriptName(value: string): string {
+  const text = value.trim();
+  const map: Record<string, string> = {
+    SEMICONDUCTOR: '半導體',
+    AI_SERVER: 'AI供應鏈',
+    ELECTRONIC_BLUE_CHIP: '電子權值',
+    PCB: 'PCB',
+    CCL: 'CCL',
+    IC_DESIGN: 'IC設計',
+    HIGH_SPEED_TRANSMISSION: '高速傳輸',
+    THERMAL: '散熱',
+    MEMORY: '記憶體',
+  };
+  return map[text] || text.replace(/_/g, ' ');
 }
 
-function buildVerificationQuestions(
+function scriptNameFromItem(item: V11ObservationItem): string {
+  const chainTheme = item.observationChain.find((part) => {
+    const text = safeText(part, '');
+    return text && !text.includes(item.symbol) && !text.includes(item.name);
+  });
+  return cleanScriptName(firstText(item.industryName, item.industryCode, chainTheme, '今日主線'));
+}
+
+function compactSentence(value: string, fallback: string): string {
+  const text = safeText(value, fallback);
+  return text
+    .replace(/\s+/g, ' ')
+    .replace(/。.*$/, '。')
+    .trim();
+}
+
+function buildTradingScripts(
   items: V11ObservationItem[],
   statusText: string,
   limit = 5,
-): VerificationQuestion[] {
-  const questions = items
-    .map((item) => ({
-      question: questionTitle(item),
-      representative: [item.symbol, item.name].filter(Boolean).join(' ') || '待確認代表股',
-      status: item.confirmationPendingReason ? '等待盤中確認' : statusText,
-      condition: item.confirmationPendingReason || '需要代表股與大盤同向，且族群量能同步擴散。',
-      invalidation: item.stopObservingCondition || '若開盤後沒有量能或代表股無法站穩，今日不列為強主線。',
-    }))
-    .filter((item) => item.question && item.condition);
+): TradingScript[] {
+  const grouped = new Map<string, V11ObservationItem[]>();
+  for (const item of items) {
+    const name = scriptNameFromItem(item);
+    const current = grouped.get(name) || [];
+    current.push(item);
+    grouped.set(name, current);
+  }
 
-  return uniqueBy(
-    questions,
-    (item) => `${item.question}|${item.condition}|${item.invalidation}`,
-  ).slice(0, limit);
+  return Array.from(grouped.entries())
+    .map(([name, group]) => {
+      const representatives = uniqueBy(
+        group
+          .map((item) => [item.symbol, item.name].filter(Boolean).join(' ').trim())
+          .filter(Boolean),
+        (value) => value,
+      ).slice(0, 2);
+      const primary = group[0];
+      const why = compactSentence(
+        primary.observationReason,
+        `${name}還沒轉成強主線，今天先看資金是否願意靠過來。`,
+      );
+      const condition = compactSentence(
+        primary.confirmationPendingReason,
+        '需要代表股與大盤同向，且族群量能同步擴散。',
+      );
+      const invalidation = compactSentence(
+        primary.stopObservingCondition,
+        '若開盤後沒有量能或代表股無法站穩，今天放棄。',
+      );
+
+      return {
+        name,
+        why,
+        representatives: representatives.join(' / ') || '待確認代表股',
+        status: primary.confirmationPendingReason ? '等待盤中確認' : statusText,
+        condition,
+        invalidation,
+      };
+    })
+    .filter((item) => item.name && item.why)
+    .slice(0, limit);
 }
 
 function TodayReportContent() {
@@ -472,7 +525,7 @@ function TodayReportContent() {
   const verificationFocus = buildVerificationFocus(taipeiMinutes, activeIntradayRadar, mainLine, intradayPendingTitle, intradaySyncView);
   const overviewRadarStatusText = verificationFocus.dataStatus;
   const overviewSyncText = verificationFocus.dataStatus;
-  const verificationQuestions = buildVerificationQuestions(v11ObservationScripts, verificationFocus.currentStage);
+  const tradingScripts = buildTradingScripts(v11ObservationScripts, verificationFocus.currentStage);
 
   const marketDataBasisDate =
     safeText(ai.market_data_latest_date || ai.tw_core_date || report?.report_date, '—');
@@ -723,32 +776,36 @@ function TodayReportContent() {
 
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              {isHistoricalFallback ? '歷史待驗證問題' : '今日待驗證問題'}
+              {isHistoricalFallback ? '歷史交易劇本' : '今日交易劇本'}
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-              {verificationQuestions.length > 0 ? (
-                verificationQuestions.map((item, idx) => (
-                  <article key={`${item.question}-${idx}`} className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
+              {tradingScripts.length > 0 ? (
+                tradingScripts.map((item, idx) => (
+                  <article key={`${item.name}-${idx}`} className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
                     <div className="mb-3">
-                      <p className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">問題 {idx + 1}</p>
-                      <h3 className="text-slate-50 font-bold text-sm leading-snug line-clamp-2">{renderSafeText(item.question)}</h3>
+                      <p className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">劇本 {idx + 1}</p>
+                      <h3 className="text-slate-50 font-bold text-sm leading-snug line-clamp-2">{renderSafeText(item.name)}</h3>
                     </div>
                     <div className="space-y-2">
                       <div>
+                        <p className="text-slate-500 text-[10px] mb-1">今天為什麼看</p>
+                        <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">{renderSafeText(item.why)}</p>
+                      </div>
+                      <div>
                         <p className="text-slate-500 text-[10px] mb-1">代表股</p>
-                        <p className="text-slate-200 text-xs font-semibold line-clamp-2">{renderSafeText(item.representative)}</p>
+                        <p className="text-slate-200 text-xs font-semibold line-clamp-2">{renderSafeText(item.representatives)}</p>
                       </div>
                       <div>
                         <p className="text-slate-500 text-[10px] mb-1">目前狀態</p>
                         <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">{renderSafeText(item.status)}</p>
                       </div>
                       <div>
-                        <p className="text-slate-500 text-[10px] mb-1">觀察條件</p>
+                        <p className="text-slate-500 text-[10px] mb-1">今天怎麼驗證</p>
                         <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">{renderSafeText(item.condition)}</p>
                       </div>
                       <div>
-                        <p className="text-slate-500 text-[10px] mb-1">失效條件</p>
+                        <p className="text-slate-500 text-[10px] mb-1">什麼時候放棄</p>
                         <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">{renderSafeText(item.invalidation)}</p>
                       </div>
                     </div>
@@ -757,7 +814,7 @@ function TodayReportContent() {
               ) : (
                 <div className="sm:col-span-2 lg:col-span-3 xl:col-span-5 flex gap-3 p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
                   <i className="ri-database-2-line text-slate-300 text-sm mt-0.5"></i>
-                  <p className="text-slate-200 text-sm leading-relaxed">目前尚未形成高品質待驗證問題，等待盤中或收盤資料完成。</p>
+                  <p className="text-slate-200 text-sm leading-relaxed">目前尚未形成高品質交易劇本，等待盤中或收盤資料完成。</p>
                 </div>
               )}
             </div>

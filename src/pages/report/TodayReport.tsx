@@ -158,41 +158,82 @@ function uniqueBy<T>(items: T[], keyFor: (item: T) => string): T[] {
   return result;
 }
 
+const MAIN_LINE_KEYWORDS = [
+  '電子權值',
+  'AI供應鏈',
+  'AI伺服器',
+  '半導體',
+  '金融',
+  '航運',
+  '塑化',
+  'PCB',
+  'CCL',
+  'IC設計',
+  '高速傳輸',
+  '散熱',
+  '記憶體',
+  '營建',
+  '綠能',
+  '鋼鐵',
+  '生技',
+];
+
+function extractMainLineKeyword(value: unknown): string {
+  const text = safeText(value, '');
+  if (!text) return '';
+  return MAIN_LINE_KEYWORDS.find((keyword) => text.includes(keyword)) || '';
+}
+
+function normalizeMainLine(value: string): string {
+  const text = cleanScriptName(value);
+  if (['PCB', 'CCL', 'IC設計', '高速傳輸', '散熱', '記憶體', 'AI伺服器'].includes(text)) return 'AI供應鏈';
+  return text;
+}
+
 function inferMainLine(ai: AnyObj, displayState: MorningAlphaDisplayState | null, observations: V11ObservationItem[]): string {
   const thesis = asObj(asObj(ai.member_research_note_v2).opening_thesis);
   const strategySummary = asObj(ai.strategy_summary);
   const marketThesis = asObj(asObj(ai.v10_analysis_debug).market_thesis);
   const v10Thesis = asObj(marketThesis.market_thesis);
   const firstObservation = observations.find((item) => item.industryName || item.industryCode);
-
-  return firstText(
+  const candidate = firstText(
     strategySummary.main_theme,
     strategySummary.primary_theme,
     strategySummary.market_focus,
+    extractMainLineKeyword(strategySummary.summary),
+    extractMainLineKeyword(strategySummary.today_strategy),
+    extractMainLineKeyword(displayState?.todayQuote),
+    extractMainLineKeyword(displayState?.actionGuidance),
+    extractMainLineKeyword(v10Thesis.market_story),
+    extractMainLineKeyword(v10Thesis.taiwan_transmission),
     v10Thesis.primary_driver,
     thesis.primary_theme,
-    thesis.market_story,
+    extractMainLineKeyword(thesis.market_story),
     firstObservation?.industryName,
     firstObservation?.industryCode,
-    displayState?.actionGuidance,
     '等待主線確認',
   );
+
+  return normalizeMainLine(candidate);
 }
 
 function inferActionStatus(bias: string, score: number | null | undefined, radar: RadarView | null, pendingTitle: string): string {
   const radarStatus = safeText(radar?.radar_status, '');
-  if (radarStatus.includes('風險') || bias.includes('偏弱') || bias.includes('偏空')) return '風險升高';
-  if (!radar) return pendingTitle.includes('尚未同步') ? '等待確認' : '等待驗證';
-  if (radarStatus.includes('偏強') && typeof score === 'number' && score >= 65) return '可小量觀察';
-  if (radarStatus.includes('觀察') || bias.includes('觀察')) return '等待確認';
-  return '不追價';
+  if (radarStatus.includes('風險') || bias.includes('偏弱') || bias.includes('偏空')) return '不可追價';
+  if (!radar) return pendingTitle.includes('尚未同步') ? '等待資金同步' : '等待量能確認';
+  if (radarStatus.includes('偏強') && typeof score === 'number' && score >= 65) return '可觀察';
+  if (radarStatus.includes('觀察') || bias.includes('觀察')) return '主線形成中';
+  return '等待量能確認';
 }
 
-function nextVerificationPoint(minutes: number, radar: RadarView | null): string {
-  if (minutes < 570) return '09:30 看 2330 與電子量能';
-  if (minutes < 630) return radar ? '10:30 看主線是否擴散' : '09:30 開盤驗證資料同步';
-  if (minutes < 780) return '13:00 看主線是否失效';
-  if (minutes < 850) return '14:10 等待收盤資料同步';
+function nextVerificationPoint(minutes: number, radar: RadarView | null, sync: IntradaySyncView): string {
+  const is0930Ready = sync.status0930 === 'ready' || Boolean(radar);
+  const is1030Ready = sync.status1030 === 'ready';
+  const is1300Ready = sync.status1300 === 'ready';
+  if (minutes < 570) return '09:30 看 2330、TAIEX、TXF 是否同向';
+  if (minutes < 630) return is0930Ready ? '10:30 看主線是否擴散' : '09:30 開盤驗證資料同步';
+  if (minutes < 780) return is1030Ready ? '13:00 看主線是否失效' : '10:30 主線確認資料同步';
+  if (minutes < 850) return is1300Ready ? '14:10 等待收盤資料同步' : '13:00 風險確認資料同步';
   return '收盤後看驗證結果';
 }
 
@@ -370,9 +411,79 @@ function compactSentence(value: string, fallback: string): string {
     .trim();
 }
 
+function flattenReadableText(value: unknown): string {
+  if (typeof value === 'string' || typeof value === 'number') return safeText(value, '');
+  if (Array.isArray(value)) return value.map(flattenReadableText).filter(Boolean).join('。');
+  if (value && typeof value === 'object') {
+    return Object.values(value as AnyObj).map(flattenReadableText).filter(Boolean).join('。');
+  }
+  return '';
+}
+
+function collectRelatedLines(source: unknown, scriptName: string, representatives: string[]): string[] {
+  const rows = Array.isArray(source) ? source : Object.values(asObj(source));
+  const needles = [scriptName, ...representatives.map((item) => item.split(' ')[0]).filter(Boolean)]
+    .filter(Boolean)
+    .map((item) => item.toLowerCase());
+  const lines: string[] = [];
+
+  for (const row of rows) {
+    const text = flattenReadableText(row);
+    if (!text) continue;
+    const lower = text.toLowerCase();
+    if (needles.length > 0 && !needles.some((needle) => lower.includes(needle))) continue;
+    lines.push(text);
+  }
+
+  return uniqueBy(lines, (line) => line).slice(0, 3);
+}
+
+function deriveScriptSupport(ai: AnyObj, scriptName: string, representatives: string[]) {
+  const note = asObj(ai.member_research_note_v2);
+  const intradayTracking = asObj(ai.intraday_tracking);
+  const validation = asObj(ai.validation);
+  const openingRadar = asObj(ai.opening_radar);
+
+  return {
+    why: collectRelatedLines(
+      [
+        note.first_beneficiary_stock,
+        note.beneficiary_reasoning,
+        note.capital_rotation_scenarios,
+        note.opening_thesis,
+        ai.v8_beneficiary_chain,
+      ],
+      scriptName,
+      representatives,
+    )[0],
+    condition: collectRelatedLines(
+      [
+        note.intraday_time_windows,
+        note.intraday_validation,
+        intradayTracking,
+        validation,
+        openingRadar,
+      ],
+      scriptName,
+      representatives,
+    )[0],
+    invalidation: collectRelatedLines(
+      [
+        note.invalidation_conditions,
+        note.invalidation_rules,
+        note.risk_scenarios,
+        ai.risk_analysis,
+      ],
+      scriptName,
+      representatives,
+    )[0],
+  };
+}
+
 function buildTradingScripts(
   items: V11ObservationItem[],
   statusText: string,
+  ai: AnyObj,
   limit = 5,
 ): TradingScript[] {
   const grouped = new Map<string, V11ObservationItem[]>();
@@ -392,16 +503,17 @@ function buildTradingScripts(
         (value) => value,
       ).slice(0, 2);
       const primary = group[0];
+      const support = deriveScriptSupport(ai, name, representatives);
       const why = compactSentence(
-        primary.observationReason,
+        firstText(primary.observationReason, support.why),
         `${name}還沒轉成強主線，今天先看資金是否願意靠過來。`,
       );
       const condition = compactSentence(
-        primary.confirmationPendingReason,
+        firstText(primary.confirmationPendingReason, support.condition),
         '需要代表股與大盤同向，且族群量能同步擴散。',
       );
       const invalidation = compactSentence(
-        primary.stopObservingCondition,
+        firstText(primary.stopObservingCondition, support.invalidation),
         '若開盤後沒有量能或代表股無法站穩，今天放棄。',
       );
 
@@ -517,15 +629,15 @@ function TodayReportContent() {
     ? `${displayScore.stars} ${displayScore.label}`
     : '待驗證';
   const v11ObservationScripts = mapV11ObservationItems(ai.v10_observation_watchlist || displayState?.v10ObservationWatchlist, 5);
+  const intradaySyncView = getIntradaySyncView(ai);
   const mainLine = inferMainLine(ai, displayState, v11ObservationScripts);
   const actionStatus = inferActionStatus(overviewBiasText, displayState?.confidenceScore, activeIntradayRadar, intradayPendingTitle);
-  const nextVerification = nextVerificationPoint(taipeiMinutes, activeIntradayRadar);
+  const nextVerification = nextVerificationPoint(taipeiMinutes, activeIntradayRadar, intradaySyncView);
   const operationSteps = buildOperationSteps(mainLine, nextVerification, actionStatus);
-  const intradaySyncView = getIntradaySyncView(ai);
   const verificationFocus = buildVerificationFocus(taipeiMinutes, activeIntradayRadar, mainLine, intradayPendingTitle, intradaySyncView);
   const overviewRadarStatusText = verificationFocus.dataStatus;
   const overviewSyncText = verificationFocus.dataStatus;
-  const tradingScripts = buildTradingScripts(v11ObservationScripts, verificationFocus.currentStage);
+  const tradingScripts = buildTradingScripts(v11ObservationScripts, verificationFocus.currentStage, ai);
 
   const marketDataBasisDate =
     safeText(ai.market_data_latest_date || ai.tw_core_date || report?.report_date, '—');

@@ -13,10 +13,8 @@ import { parseAIStrategy } from '@/utils/aiStrategyParser';
 import type { Report } from '@/types/report';
 import { isAISemiconductorWeak, isAIStock, DEFENSE_KEYWORDS } from '@/utils/marketBiasDowngrade';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
-import DailySentenceCard from '@/components/v8/DailySentenceCard';
-import OvernightCausalChainCard from '@/components/v8/OvernightCausalChainCard';
 import PaywallCard from '@/components/paywall/PaywallCard';
-import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
+import { mapV11ObservationItems, type V11ObservationItem } from '@/components/v11/V11ObservationSection';
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
 import { getTodayOpeningRadar } from '@/services/openingRadarService';
 import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
@@ -68,12 +66,6 @@ function toNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function pct(value: unknown): string {
-  const n = toNumber(value);
-  if (n === null) return '—';
-  return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
-}
-
 function safeText(value: unknown, fallback = '—'): string {
   if (value === null || value === undefined) return fallback;
   const s = String(value).trim();
@@ -99,30 +91,12 @@ function scoreTone(score: unknown): { stars: string; label: string; raw: string 
   return { stars: '★☆☆☆☆', label: '僅供觀察', raw };
 }
 
-function humanStatus(value: unknown): string {
-  const raw = safeText(value, '').toLowerCase();
-  if (!raw) return '待驗證';
-  if (['ready', 'complete', 'completed'].includes(raw)) return '資料已完成';
-  if (raw === 'mixed' || raw === 'partial') return '部分成立';
-  if (raw === 'pending' || raw === 'pending_real_market_data') return '等待收盤資料';
-  return safeText(value, '待驗證');
-}
-
 function getRadarClass(status?: string | null): string {
   const s = status || '';
   if (s.includes('偏強')) return 'bg-red-500/12 text-red-300 border-red-400/30';
   if (s.includes('轉弱') || s.includes('偏弱') || s.includes('風險')) return 'bg-emerald-500/12 text-emerald-300 border-emerald-400/30';
   if (s.includes('資料不足')) return 'bg-slate-500/12 text-slate-300 border-slate-400/20';
   return 'bg-amber-500/12 text-amber-300 border-amber-400/30';
-}
-
-function biasFromRadarStatus(status?: string | null): string {
-  const s = safeText(status, '');
-  if (s.includes('明顯偏弱')) return '明顯偏弱';
-  if (s.includes('盤中轉弱')) return '偏弱觀察';
-  if (s.includes('偏強確認')) return '偏強確認';
-  if (s.includes('觀察中')) return '觀察中';
-  return '觀察中';
 }
 
 function normalizeRadarFromReport(report: Report | null): RadarView | null {
@@ -173,29 +147,221 @@ function normalizeRadarFromReport(report: Report | null): RadarView | null {
   return null;
 }
 
-function buildObservations(report: Report | null, radar: RadarView | null): string[] {
-  const ai = asObj((report as AnyObj | null)?.ai_strategy_json);
-  const items: string[] = [];
+function firstText(...values: unknown[]): string {
+  for (const value of values) {
+    const text = safeText(value, '');
+    if (text) return text;
+  }
+  return '';
+}
 
-  if (radar) {
-    const radarLine = safeText(radar.summary || radar.radar_status, '');
-    if (radarLine) items.push(radarLine);
+function textList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((item) => safeText(item, '')).filter(Boolean);
+  const text = safeText(value, '');
+  return text ? [text] : [];
+}
+
+function uniqueBy<T>(items: T[], keyFor: (item: T) => string): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const item of items) {
+    const key = keyFor(item).trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+  }
+  return result;
+}
+
+function inferMainLine(ai: AnyObj, displayState: MorningAlphaDisplayState | null, observations: V11ObservationItem[]): string {
+  const thesis = asObj(asObj(ai.member_research_note_v2).opening_thesis);
+  const strategySummary = asObj(ai.strategy_summary);
+  const marketThesis = asObj(asObj(ai.v10_analysis_debug).market_thesis);
+  const v10Thesis = asObj(marketThesis.market_thesis);
+  const firstObservation = observations.find((item) => item.industryName || item.industryCode);
+
+  return firstText(
+    strategySummary.main_theme,
+    strategySummary.primary_theme,
+    strategySummary.market_focus,
+    v10Thesis.primary_driver,
+    thesis.primary_theme,
+    thesis.market_story,
+    firstObservation?.industryName,
+    firstObservation?.industryCode,
+    displayState?.actionGuidance,
+    '等待主線確認',
+  );
+}
+
+function inferActionStatus(bias: string, score: number | null | undefined, radar: RadarView | null, pendingTitle: string): string {
+  const radarStatus = safeText(radar?.radar_status, '');
+  if (radarStatus.includes('風險') || bias.includes('偏弱') || bias.includes('偏空')) return '風險升高';
+  if (!radar) return pendingTitle.includes('尚未同步') ? '等待確認' : '等待驗證';
+  if (radarStatus.includes('偏強') && typeof score === 'number' && score >= 65) return '可小量觀察';
+  if (radarStatus.includes('觀察') || bias.includes('觀察')) return '等待確認';
+  return '不追價';
+}
+
+function nextVerificationPoint(minutes: number, radar: RadarView | null): string {
+  if (minutes < 570) return '09:30 看 2330 與電子量能';
+  if (minutes < 630) return radar ? '10:30 看主線是否擴散' : '09:30 開盤驗證資料同步';
+  if (minutes < 780) return '13:00 看主線是否失效';
+  if (minutes < 850) return '14:10 等待收盤資料同步';
+  return '收盤後看驗證結果';
+}
+
+function buildOperationSteps(
+  mainLine: string,
+  nextPoint: string,
+  actionStatus: string,
+): string[] {
+  const line = mainLine === '等待主線確認' ? '今日主線' : mainLine;
+  const conservative = actionStatus === '風險升高' || actionStatus === '不追價';
+
+  return [
+    `先看 ${nextPoint.replace(/^09:30 看 /, '').replace(/^10:30 看 /, '')}。`,
+    conservative ? `再確認 ${line} 是否止穩，不把反彈直接當成轉強。` : `再看 ${line} 是否從代表股擴散到同族群。`,
+    '未確認前不追價。',
+    '13:00 前若未擴散，今日維持觀察。',
+  ];
+}
+
+type VerificationFocus = {
+  currentStage: string;
+  nextStep: string;
+  confirming: string;
+  ifFailed: string;
+  dataStatus: string;
+  isSynced: boolean;
+};
+
+function buildVerificationFocus(
+  minutes: number,
+  radar: RadarView | null,
+  mainLine: string,
+  pendingTitle: string,
+): VerificationFocus {
+  const line = mainLine === '等待主線確認' ? '主線' : mainLine;
+  const confirming = '2330、TAIEX、TXF 是否同向';
+  const ifFailed = `不追價，${line} 未確認前維持觀察。`;
+
+  if (minutes < 570) {
+    return {
+      currentStage: '等待開盤驗證',
+      nextStep: '09:30 看 2330、TAIEX、TXF 是否同向',
+      confirming,
+      ifFailed,
+      dataStatus: '09:30 尚未到時間窗',
+      isSynced: Boolean(radar),
+    };
   }
 
-  const mrn = asObj(ai.member_research_note);
-  const keyObs = asArray(mrn.key_observations).slice(0, 3);
-  for (const k of keyObs) {
-    const line = safeText(k.content || k.title, '');
-    if (line) items.push(line);
+  if (minutes < 630) {
+    return {
+      currentStage: radar ? '09:30 開盤驗證中' : '09:30 資料尚未同步',
+      nextStep: '10:30 看主線是否擴散',
+      confirming,
+      ifFailed,
+      dataStatus: radar ? '09:30 已同步，10:30 尚未到時間窗' : pendingTitle,
+      isSynced: Boolean(radar),
+    };
   }
 
-  const reasonChain = asArray(ai.reasoning_chain).slice(0, 3);
-  for (const r of reasonChain) {
-    const line = `${safeText(r.step, '')}${r.evidence ? `：${safeText(r.evidence, '')}` : ''}`;
-    if (line.trim() && !items.includes(line)) items.push(line);
+  if (minutes < 780) {
+    return {
+      currentStage: '10:30 主線確認中',
+      nextStep: '13:00 看是否失效',
+      confirming: `${line} 是否從代表股擴散到同族群`,
+      ifFailed,
+      dataStatus: radar ? '13:00 尚未到時間窗' : pendingTitle,
+      isSynced: Boolean(radar),
+    };
   }
 
-  return items.slice(0, 5);
+  if (minutes < 850) {
+    return {
+      currentStage: '13:00 風險確認中',
+      nextStep: '14:10 等待收盤資料同步',
+      confirming: `${line} 是否守住盤中確認條件`,
+      ifFailed,
+      dataStatus: radar ? '等待收盤資料同步' : pendingTitle,
+      isSynced: Boolean(radar),
+    };
+  }
+
+  return {
+    currentStage: '等待收盤驗證',
+    nextStep: '收盤後確認今日判斷是否成立',
+    confirming: `${line} 是否延續到收盤`,
+    ifFailed: '收盤驗證未完成前，不把盤中反彈當成確認。',
+    dataStatus: radar ? '等待收盤資料同步' : pendingTitle,
+    isSynced: Boolean(radar),
+  };
+}
+
+type VerificationQuestion = {
+  question: string;
+  representative: string;
+  status: string;
+  condition: string;
+  invalidation: string;
+};
+
+function questionTitle(item: V11ObservationItem): string {
+  const chainTheme = item.observationChain.find((part) => part && !part.includes(item.symbol) && !part.includes(item.name));
+  if (chainTheme) return `${chainTheme}能不能接住資金？`;
+  if (item.industryName) return `${item.industryName}能不能接棒？`;
+  return '今天有沒有新主線？';
+}
+
+function buildVerificationQuestions(
+  items: V11ObservationItem[],
+  statusText: string,
+  limit = 5,
+): VerificationQuestion[] {
+  const questions = items
+    .map((item) => ({
+      question: questionTitle(item),
+      representative: [item.symbol, item.name].filter(Boolean).join(' ') || '待確認代表股',
+      status: item.confirmationPendingReason ? '等待盤中確認' : statusText,
+      condition: item.confirmationPendingReason || '需要代表股與大盤同向，且族群量能同步擴散。',
+      invalidation: item.stopObservingCondition || '若開盤後沒有量能或代表股無法站穩，今日不列為強主線。',
+    }))
+    .filter((item) => item.question && item.condition);
+
+  return uniqueBy(
+    questions,
+    (item) => `${item.question}|${item.condition}|${item.invalidation}`,
+  ).slice(0, limit);
+}
+
+type OvernightChainView = {
+  key: string;
+  event: string;
+  sector: string;
+  representative: string;
+  validation: string;
+  invalidation: string;
+};
+
+function buildOvernightChainViews(chain: unknown): OvernightChainView[] {
+  const rows = Array.isArray(chain)
+    ? asArray(chain)
+    : asArray(asObj(chain).chains || asObj(chain).items || asObj(chain).events);
+
+  const mapped = rows.map((row) => {
+    const chainParts = textList(row.chain || row.transmission_chain || row.observation_chain);
+    const event = firstText(row.event, row.event_title, row.chain_title, row.main_theme, chainParts[0], '前夜事件待整理');
+    const sector = firstText(row.sector, row.industry_name, row.industry, row.impact_sector, chainParts[1], '影響族群待確認');
+    const representative = firstText(row.representative_stock, row.stock, row.symbol && row.name ? `${row.symbol} ${row.name}` : '', chainParts[2], '代表股待確認');
+    const validation = firstText(row.validation, row.intraday_validation, row.validation_signal, row.watch_point, '盤中先看代表股與族群量能是否同步。');
+    const invalidation = firstText(row.invalidation, row.invalidation_condition, row.stop_condition, '若代表股無法站穩或族群未擴散，今日先降權。');
+    const key = firstText(row.event_key, row.sector, row.chain_title, row.main_theme, `${event}|${sector}`);
+    return { key, event, sector, representative, validation, invalidation };
+  });
+
+  return uniqueBy(mapped, (item) => item.key).slice(0, 4);
 }
 
 function TodayReportContent() {
@@ -273,26 +439,6 @@ function TodayReportContent() {
   const activeIntradayRadar = hasFreshIntradayRadar ? liveRadar : null;
   const effectiveIntradayRadar = activeIntradayRadar;
   const publicSummary = asObj(ai.public_summary) || asObj(ai.free_summary);
-  const parsedV8DailySentence = asObj(parsedStrategy.v8_daily_sentence);
-  const rawV8DailySentence = asObj(ai.v8_daily_sentence);
-  const displayStateRecord = asObj(displayState as unknown);
-  const displayStateV8DailySentence = asObj(displayStateRecord.v8DailySentence);
-  const normalizedReport = asObj(displayStateRecord.activeReport);
-  const normalizedV8DailySentence = asObj(normalizedReport.v8DailySentence);
-  const v8DailySentenceText =
-    safeText(parsedV8DailySentence.sentence, '') ||
-    safeText(rawV8DailySentence.sentence, '') ||
-    safeText(ai.v8_daily_sentence, '') ||
-    safeText(displayStateV8DailySentence.sentence, '') ||
-    safeText(displayStateRecord.v8DailySentence, '') ||
-    safeText(normalizedV8DailySentence.sentence, '') ||
-    safeText(normalizedReport.v8DailySentence, '') ||
-    safeText(ai.daily_sentence, '') ||
-    safeText(displayStateRecord.dailySentence, '') ||
-    safeText(normalizedReport.dailySentence, '') ||
-    safeText(publicSummary.daily_sentence, '') ||
-    safeText(report?.summary, '') ||
-    safeText(ai.summary, '');
   const taipeiNow = new Date();
   const taipeiParts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Taipei',
@@ -328,26 +474,16 @@ function TodayReportContent() {
   const overviewSyncText = activeIntradayRadar
     ? `已同步：${overviewRadarStatusText}`
     : intradayPendingTitle;
-  const todaySentenceText = activeIntradayRadar?.summary
-    ? safeText(activeIntradayRadar.summary)
-    : v8DailySentenceText || '今日盤前一句尚未產生，請稍後再查看。';
-  const observations = useMemo(
-    () => (activeIntradayRadar ? buildObservations(report, activeIntradayRadar) : []),
-    [report, activeIntradayRadar],
-  );
-  const safeDailySentence = v8DailySentenceText
-    ? {
-        status: 'ready' as const,
-        sentence: v8DailySentenceText,
-        logic_source: Array.isArray(parsedV8DailySentence.logic_source)
-          ? parsedV8DailySentence.logic_source.map(String)
-          : ['盤前報告'],
-        tone: 'clear, sharp, human-readable' as const,
-      }
-    : { status: 'insufficient' as const, sentence: '', logic_source: [], tone: 'clear, sharp, human-readable' as const };
-  const canViewTodayReportFull = hasFeature(entitlement, 'today_report_full');
   const v10BeneficiaryEnabled = displayState?.v10BeneficiaryEnabled === true || ai.v10_beneficiary_enabled === true || ai.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(ai.v10_observation_watchlist || displayState?.v10ObservationWatchlist, 5);
+  const mainLine = inferMainLine(ai, displayState, v11ObservationScripts);
+  const actionStatus = inferActionStatus(overviewBiasText, displayState?.confidenceScore, activeIntradayRadar, intradayPendingTitle);
+  const nextVerification = nextVerificationPoint(taipeiMinutes, activeIntradayRadar);
+  const operationSteps = buildOperationSteps(mainLine, nextVerification, actionStatus);
+  const verificationFocus = buildVerificationFocus(taipeiMinutes, activeIntradayRadar, mainLine, intradayPendingTitle);
+  const verificationQuestions = buildVerificationQuestions(v11ObservationScripts, activeIntradayRadar ? `觀察中：${overviewRadarStatusText}` : intradayPendingTitle);
+  const overnightChainViews = buildOvernightChainViews(parsedStrategy.v8_overnight_causal_chain);
+  const canViewTodayReportFull = hasFeature(entitlement, 'today_report_full');
 
   const marketDataBasisDate =
     safeText(ai.market_data_latest_date || ai.tw_core_date || report?.report_date, '—');
@@ -531,26 +667,31 @@ function TodayReportContent() {
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6">
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              {isHistoricalFallback ? '歷史報告總覽' : '今日盤前總覽'}
+              {isHistoricalFallback ? '歷史操作總覽' : '今日操作總覽'}
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">目前方向</p>
+                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">今日方向</p>
                 <p className="text-slate-50 font-bold text-base">{overviewBiasText}</p>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">判斷把握度</p>
-                <p className="text-slate-50 font-bold text-base">{overviewScoreText}</p>
+                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">今日操作狀態</p>
+                <p className="text-slate-50 font-bold text-base">{actionStatus}</p>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">雷達狀態</p>
-                <p className="text-slate-50 font-bold text-base">{overviewRadarStatusText}</p>
+                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">今日主線</p>
+                <p className="text-slate-50 font-bold text-base">{renderSafeText(mainLine)}</p>
               </div>
 
-              <div className="p-3 rounded-xl bg-sky-500/[0.06] border border-sky-500/20 sm:col-span-3">
+              <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">下一個驗證點</p>
+                <p className="text-slate-50 font-bold text-base">{nextVerification}</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-sky-500/[0.06] border border-sky-500/20 sm:col-span-2 lg:col-span-4">
                 <div className="flex items-center gap-4 flex-wrap">
                   <div>
                     <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-0.5">台股盤前基準</p>
@@ -562,32 +703,41 @@ function TodayReportContent() {
                       {overviewSyncText}
                     </p>
                   </div>
+                  <div>
+                    <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-0.5">判斷把握度</p>
+                    <p className="text-sky-100 text-xs font-semibold">{overviewScoreText}</p>
+                  </div>
                 </div>
               </div>
             </div>
 
             <p className="text-slate-500 text-[10px] mt-3 leading-relaxed">
-              把握度不是漲跌分數，而是資料與劇本一致性的參考。盤中雷達同步後，畫面優先顯示盤中雷達，不再沿用舊盤前文字。
+              今日判斷頁只回答今天怎麼做。完整推理、受惠股與收盤回測，請到完整研究筆記查看。
             </p>
           </section>
 
-          <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
+          <section className="bg-navy-900/70 border border-emerald-500/15 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              {isHistoricalFallback ? '報告一句話' : '今日一句話'}
+              今天操作策略
             </h2>
-            <p className="text-slate-200 text-sm leading-relaxed">
-              <strong className="text-slate-50">
-                {renderSafeText(todaySentenceText || '盤中雷達尚未提供有效摘要。')}
-              </strong>
-            </p>
+            <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                {operationSteps.map((step, index) => (
+                  <div key={`${step}-${index}`} className="flex gap-3">
+                    <div className="w-7 h-7 rounded-full bg-emerald-500/12 border border-emerald-400/25 text-emerald-200 text-xs font-bold flex items-center justify-center shrink-0">
+                      {index + 1}
+                    </div>
+                    <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(step)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
-
-          <DailySentenceCard dailySentence={safeDailySentence} tone="dark" />
 
           <section className="bg-navy-900/70 border border-cyan-500/20 rounded-2xl p-5 md:p-6">
             <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
               <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
-                盤中雷達
+                目前驗證焦點
               </h2>
               <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-full border ${getRadarClass(overviewRadarStatusText)}`}>
                 <i className="ri-radar-line" />
@@ -595,91 +745,78 @@ function TodayReportContent() {
               </span>
             </div>
 
-            {activeIntradayRadar ? (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
-                  <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <p className="text-slate-400 text-[10px] mb-1">TAIEX</p>
-                    <p className="text-slate-100 font-bold">{pct(activeIntradayRadar.taiex_change)}</p>
+            <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                {[
+                  { label: '目前階段', value: verificationFocus.currentStage },
+                  { label: '下一步', value: verificationFocus.nextStep },
+                  { label: '正在確認', value: verificationFocus.confirming },
+                  { label: '若失敗', value: verificationFocus.ifFailed },
+                  { label: '資料狀態', value: verificationFocus.dataStatus },
+                ].map((item) => (
+                  <div key={item.label} className="min-w-0">
+                    <p className="text-cyan-300 text-[10px] font-semibold mb-1">{item.label}</p>
+                    <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(item.value)}</p>
                   </div>
-                  <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <p className="text-slate-400 text-[10px] mb-1">TXF</p>
-                    <p className="text-slate-100 font-bold">{pct(activeIntradayRadar.txf_change)}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <p className="text-slate-400 text-[10px] mb-1">2330</p>
-                    <p className="text-slate-100 font-bold">{pct(activeIntradayRadar.tsmc_change)}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <p className="text-slate-400 text-[10px] mb-1">判斷把握度</p>
-                    <p className="text-slate-100 font-bold">{scoreTone(activeIntradayRadar.confidence_score).stars} {scoreTone(activeIntradayRadar.confidence_score).label}</p>
-                    <p className="text-slate-500 text-[10px] mt-1">{safeText(activeIntradayRadar.confidence_score)}/100</p>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                  <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-2">雷達說明</p>
-                  <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(activeIntradayRadar.summary)}</p>
-                  <p className="text-slate-500 text-[10px] mt-3">
-                    資料時間：{intradayFreshness.timestampLabel || safeText(activeIntradayRadar.updated_at || activeIntradayRadar.generated_at)}
-                  </p>
-                </div>
-              </>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                  <p className="text-slate-100 font-semibold text-sm mb-2">{intradayPendingTitle}</p>
-                  <p className="text-slate-400 text-sm leading-relaxed">
-                    {intradayPendingDescription}
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <p className="text-slate-400 text-[10px] mb-1">盤前方向</p>
-                    <p className="text-slate-100 font-bold">{premarketBiasLabel}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <p className="text-slate-400 text-[10px] mb-1">今日待驗證</p>
-                    <p className="text-slate-100 font-bold">TAIEX、TXF、2330 是否同向</p>
-                  </div>
-                </div>
+                ))}
               </div>
-            )}
+            </div>
+
+            <div className="mt-3 rounded-xl bg-sky-500/[0.06] border border-sky-500/20 px-4 py-3">
+              <p className="text-sky-200 text-xs leading-relaxed">
+                {verificationFocus.isSynced
+                  ? `資料已同步${intradayFreshness.timestampLabel ? `：${intradayFreshness.timestampLabel}` : ''}。`
+                  : '資料尚未同步，系統會在下一個驗證點更新。'}
+              </p>
+            </div>
           </section>
 
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              {isHistoricalFallback ? '報告重要觀察' : '今日重要觀察'}
+              {isHistoricalFallback ? '歷史待驗證問題' : '今日五個待驗證問題'}
             </h2>
 
-            <div className="space-y-3">
-              {observations.length > 0 ? (
-                observations.map((item, idx) => (
-                  <div key={idx} className="flex gap-3 p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <div className="w-7 h-7 rounded-md bg-slate-700/70 border border-slate-600/50 flex items-center justify-center flex-shrink-0">
-                      <span className="text-slate-300 text-xs font-bold">{idx + 1}</span>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {verificationQuestions.length > 0 ? (
+                verificationQuestions.map((item, idx) => (
+                  <article key={`${item.question}-${idx}`} className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <p className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">問題 {idx + 1}</p>
+                        <h3 className="text-slate-50 font-bold text-base leading-snug">{renderSafeText(item.question)}</h3>
+                      </div>
+                      <span className="shrink-0 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-400/20 px-2 py-0.5 rounded-full">
+                        待驗證
+                      </span>
                     </div>
-                    <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(item)}</p>
-                  </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-slate-500 text-[10px] mb-1">代表股</p>
+                        <p className="text-slate-200 text-sm font-semibold">{renderSafeText(item.representative)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 text-[10px] mb-1">目前狀態</p>
+                        <p className="text-slate-300 text-sm leading-relaxed">{renderSafeText(item.status)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 text-[10px] mb-1">觀察條件</p>
+                        <p className="text-slate-300 text-sm leading-relaxed">{renderSafeText(item.condition)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 text-[10px] mb-1">失效條件</p>
+                        <p className="text-slate-300 text-sm leading-relaxed">{renderSafeText(item.invalidation)}</p>
+                      </div>
+                    </div>
+                  </article>
                 ))
               ) : (
-                <div className="flex gap-3 p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                  <div className="w-7 h-7 rounded-md bg-slate-700/70 border border-slate-600/50 flex items-center justify-center flex-shrink-0">
-                    <i className="ri-database-2-line text-slate-300 text-xs"></i>
-                  </div>
-                  <p className="text-slate-200 text-sm leading-relaxed">目前尚未形成可驗證的重要觀察，等待盤中或收盤資料完成。</p>
+                <div className="lg:col-span-2 flex gap-3 p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                  <i className="ri-database-2-line text-slate-300 text-sm mt-0.5"></i>
+                  <p className="text-slate-200 text-sm leading-relaxed">目前尚未形成高品質待驗證問題，等待盤中或收盤資料完成。</p>
                 </div>
               )}
             </div>
           </section>
-
-          {v10BeneficiaryEnabled && (
-            <V11ObservationSection
-              items={v11ObservationScripts}
-              tone="dark"
-              subtitle="不是股票清單，是今天要盯的五條資金線。"
-            />
-          )}
 
           {!v10BeneficiaryEnabled && beneficiaryStocks.length > 0 && canViewTodayReportFull && (
             <section className="bg-navy-900/70 border border-amber-500/15 rounded-2xl p-5 md:p-6">
@@ -709,16 +846,6 @@ function TodayReportContent() {
                   </div>
                 ))}
               </div>
-
-              <div className="text-center mt-5">
-                <Link
-                  to="/opportunities"
-                  className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-amber-500/12 hover:bg-amber-500/18 text-amber-300 font-semibold text-sm rounded-xl transition-colors border border-amber-400/30"
-                >
-                  查看今日受惠股
-                  <i className="ri-arrow-right-line" />
-                </Link>
-              </div>
             </section>
           )}
 
@@ -734,26 +861,59 @@ function TodayReportContent() {
 
           {canViewTodayReportFull ? (
             <>
-              <OvernightCausalChainCard chain={parsedStrategy.v8_overnight_causal_chain} tone="dark" />
+              <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
+                <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
+                  前夜事件傳導鏈
+                </h2>
+
+                {overnightChainViews.length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    {overnightChainViews.map((item) => (
+                      <article key={item.key} className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-slate-500 text-[10px] mb-1">前夜事件</p>
+                            <p className="text-slate-100 text-sm font-semibold">{renderSafeText(item.event)}</p>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <p className="text-slate-500 text-[10px] mb-1">影響族群</p>
+                              <p className="text-slate-300 text-sm">{renderSafeText(item.sector)}</p>
+                            </div>
+                            <div>
+                              <p className="text-slate-500 text-[10px] mb-1">今天代表股</p>
+                              <p className="text-slate-300 text-sm">{renderSafeText(item.representative)}</p>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-slate-500 text-[10px] mb-1">今天怎麼驗證</p>
+                            <p className="text-slate-300 text-sm leading-relaxed">{renderSafeText(item.validation)}</p>
+                          </div>
+                          <div>
+                            <p className="text-slate-500 text-[10px] mb-1">失效條件</p>
+                            <p className="text-slate-300 text-sm leading-relaxed">{renderSafeText(item.invalidation)}</p>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                    <p className="text-slate-300 text-sm leading-relaxed">前夜事件傳導鏈尚未整理完成，先以今日操作總覽與待驗證問題為主。</p>
+                  </div>
+                )}
+              </section>
 
               <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6 text-center">
-                <h2 className="text-white font-bold text-base mb-3">完整研究筆記</h2>
+                <h2 className="text-white font-bold text-base mb-3">下一步</h2>
                 <p className="text-slate-400 text-sm leading-relaxed max-w-xl mx-auto mb-5">
-                  完整版包含盤中驗證、失效條件、受惠族群與收盤回饋。若盤中雷達與盤前方向相反，系統會以雷達為優先顯示。
+                  今日判斷先看操作方向與下一個驗證點；完整推理、失效條件與收盤回測請進完整研究筆記。
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Link
-                    to={`/reports/${report.report_date}`}
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl transition-colors"
-                  >
-                    查看完整判讀
-                    <i className="ri-arrow-right-line" />
-                  </Link>
-
+                <div className="flex justify-center">
                   <Link
                     to="/member-note"
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 text-slate-200 font-semibold text-sm rounded-xl transition-colors border border-white/10"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl transition-colors"
                   >
                     查看完整研究筆記
                     <i className="ri-arrow-right-line" />

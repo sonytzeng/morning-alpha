@@ -9,6 +9,13 @@ export type V11ObservationItem = {
   role: string;
   roleTitle: string;
   roleQuestion: string;
+  decisionStep: number | null;
+  nextRole: string;
+  decisionConfidence: number | null;
+  confirmationChecklist: string[];
+  riskChecklist: string[];
+  capitalRotationPath: string[];
+  externalPriority: { title: string; importance: number }[];
   title: string;
   question: string;
   narrative: string;
@@ -48,6 +55,13 @@ function numberOrNull(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function externalPriorityList(value: unknown): { title: string; importance: number }[] {
+  return asRecordArray(value)
+    .map((item) => ({ title: text(item.title), importance: numberOrNull(item.importance) ?? 0 }))
+    .filter((item) => item.title)
+    .slice(0, 3);
+}
+
 function narrativeFallback(row: Record<string, unknown>, matcher: string): string {
   return textList(row.scoring_reasons).find((item) => item.includes(matcher))?.replace(/^.*?[：:]/, '').trim() || '';
 }
@@ -75,6 +89,13 @@ export function mapV11ObservationItems(rows: unknown, limit = 5): V11Observation
         role: text(row.role),
         roleTitle: text(row.role_title),
         roleQuestion: text(row.role_question),
+        decisionStep: numberOrNull(row.decision_step),
+        nextRole: text(row.next_role),
+        decisionConfidence: numberOrNull(row.decision_confidence),
+        confirmationChecklist: textList(row.confirmation_checklist),
+        riskChecklist: textList(row.risk_checklist),
+        capitalRotationPath: textList(row.capital_rotation_path),
+        externalPriority: externalPriorityList(row.external_priority),
         title: text(row.title),
         question: text(row.question),
         narrative,
@@ -102,6 +123,32 @@ export function mapV11ObservationItems(rows: unknown, limit = 5): V11Observation
       return true;
     })
     .slice(0, limit);
+}
+
+function roleStepLabel(item: V11ObservationItem): string {
+  const fallback: Record<string, number> = {
+    MAIN_THESIS: 1,
+    CONFIRMATION: 2,
+    RISK: 3,
+    CAPITAL_NEXT: 4,
+    EXTERNAL: 5,
+  };
+  const step = item.decisionStep ?? fallback[item.role];
+  return step ? `STEP ${step}` : 'STEP';
+}
+
+function checklistFor(item: V11ObservationItem): string[] {
+  if (item.role === 'CONFIRMATION' && item.confirmationChecklist.length > 0) return item.confirmationChecklist;
+  if (item.role === 'RISK' && item.riskChecklist.length > 0) return item.riskChecklist;
+  if (item.role === 'EXTERNAL' && item.externalPriority.length > 0) {
+    return item.externalPriority.map((entry) => `${entry.title}｜重要度 ${entry.importance}/5`);
+  }
+  return [];
+}
+
+function flowFor(item: V11ObservationItem): string[] {
+  if (item.role === 'CAPITAL_NEXT' && item.capitalRotationPath.length > 0) return item.capitalRotationPath;
+  return item.observationChain;
 }
 
 function roleLabel(role: string): string {
@@ -148,11 +195,11 @@ function Card({ item, tone }: { item: V11ObservationItem; tone: 'light' | 'dark'
     <article className={`rounded-2xl border p-4 md:p-5 ${cardClass}`}>
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
-          <p className={`text-[10px] uppercase tracking-[0.22em] mb-1 ${labelClass}`}>{renderSafeText(roleLabel(item.role))}</p>
+          <p className={`text-[10px] uppercase tracking-[0.22em] mb-1 ${labelClass}`}>{renderSafeText(roleStepLabel(item))} · {renderSafeText(roleLabel(item.role))}</p>
           <h3 className={`text-base font-bold leading-snug ${titleClass}`}>{renderSafeText(scriptTitle(item))}</h3>
         </div>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] border ${isDark ? 'bg-amber-400/10 text-amber-200 border-amber-300/20' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
-          觀察，不是進場訊號
+          {item.decisionConfidence !== null ? `信心 ${Math.round(item.decisionConfidence)}` : '觀察'}
         </span>
       </div>
 
@@ -162,6 +209,14 @@ function Card({ item, tone }: { item: V11ObservationItem; tone: 'light' | 'dark'
           {[...(item.representativeSymbols.length > 0 ? item.representativeSymbols : [item.symbol]), ...(item.representativeNames.length > 0 ? item.representativeNames : [item.name])].filter(Boolean).slice(0, 2).join(' / ') || '待確認代表股'}
         </p>
       </div>
+
+      {flowFor(item).length > 1 && (
+        <div className={`mb-4 rounded-xl border px-3 py-2 text-xs ${isDark ? 'bg-white/[0.025] border-white/5 text-white/58' : 'bg-white border-background-200/70 text-foreground-500'}`}>
+          {flowFor(item).slice(0, 5).map((part, index) => (
+            <span key={`${part}-${index}`}>{index > 0 ? ' → ' : ''}{renderSafeText(part)}</span>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-3">
         <div>
@@ -175,6 +230,13 @@ function Card({ item, tone }: { item: V11ObservationItem; tone: 'light' | 'dark'
         <div>
           <p className={`text-[10px] font-semibold mb-1 ${labelClass}`}>今天看什麼</p>
           <p className={`text-sm leading-relaxed ${bodyClass}`}>{renderSafeText(item.validationPoint || item.confirmationPendingReason || '先看 09:30 後有沒有量能和同族群跟進。')}</p>
+          {checklistFor(item).length > 0 && (
+            <ul className={`mt-2 space-y-1 text-xs leading-relaxed ${bodyClass}`}>
+              {checklistFor(item).slice(0, 4).map((entry, index) => (
+                <li key={`${entry}-${index}`}>□ {renderSafeText(entry)}</li>
+              ))}
+            </ul>
+          )}
         </div>
         <div>
           <p className={`text-[10px] font-semibold mb-1 ${labelClass}`}>何時停看</p>

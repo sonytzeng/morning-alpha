@@ -3,8 +3,6 @@ import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import EarlyBirdModal from '@/components/feature/EarlyBirdModal';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
-import { supabase } from '@/lib/supabase';
-import type { Report } from '@/types/report';
 import { useLatestReport } from '@/hooks/useLatestReport';
 import { formatTaipeiDate, resolveMarketStatus } from '@/utils/tradingDay';
 import { buildMarketState, type MarketState } from '@/services/marketStateEngine';
@@ -13,10 +11,7 @@ import { resolveIntradayTrackingState, type IntradayTrackingState, type SegmentD
 import { useState, useEffect, useMemo } from 'react';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
-import PaywallCard from '@/components/paywall/PaywallCard';
-import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
-import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
-import type { UserEntitlement } from '@/types/subscription';
+import { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -34,19 +29,9 @@ function safeNumber(value: unknown): number | null {
   return Number.isFinite(num) ? num : null;
 }
 
-function safeStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => safeText(item)).filter(Boolean);
-}
-
 function formatPercent(value: number | null): string {
   if (value === null) return '—';
   return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-}
-
-function formatCloseResult(change: number | null, direction: string): string {
-  if (change === null) return '等待收盤資料';
-  return `TAIEX ${formatPercent(change)}${direction ? `｜${direction}` : ''}`;
 }
 
 
@@ -75,10 +60,10 @@ function humanStatus(value: unknown): string {
 
 function decisionStatusLabel(value: unknown): string {
   const raw = safeText(value).toLowerCase();
-  if (raw === 'confirmed') return '🟢 Confirmed';
-  if (raw === 'rejected') return '🔴 Rejected';
-  if (raw === 'completed') return '⚪ Completed';
-  return '🟡 Waiting';
+  if (raw === 'confirmed') return '🟢 已確認';
+  if (raw === 'rejected') return '🔴 已失效';
+  if (raw === 'completed') return '⚪ 今日驗證完成';
+  return '🟡 等待確認';
 }
 
 function compactChineseText(value: unknown, fallback: string, limit = 25): string {
@@ -119,20 +104,6 @@ function normalizePredictionResult(value: unknown): string {
   return '等待收盤資料';
 }
 
-function formatVerdictLabel(value: unknown, fallback: unknown): string {
-  const label = safeText(value);
-  if (label && !['hit', 'miss', 'partial', 'pending'].includes(label.toLowerCase())) return label;
-
-  return normalizePredictionResult(fallback || value);
-}
-
-function closeVerificationTone(value: string): SegmentDisplay['color'] {
-  if (value.includes('命中') || value === 'hit') return 'green';
-  if (value.includes('部分') || value === 'partial' || value.includes('等待') || value === 'pending') return 'amber';
-  if (value.includes('失效') || value === 'miss') return 'red';
-  return 'slate';
-}
-
 export default function WarRoom() {
   return (
     <ErrorBoundary
@@ -147,11 +118,9 @@ export default function WarRoom() {
 function WarRoomContent() {
   const { report, isLoading, error,
     openingRadar,
-    isHistoricalFallback, fallbackReportDate,
+    fallbackReportDate,
     marketData, marketDataTodayOnly,
     todayCloseVerification,
-    strategyBias,
-    strategyConfidence,
     strategyDataDate,
     morningState,
   } = useLatestReport();
@@ -162,7 +131,6 @@ function WarRoomContent() {
   const [sectorFreshness, setSectorFreshness] = useState<SectorRotationFreshness | null>(null);
 
   const [earlyBirdOpen, setEarlyBirdOpen] = useState(false);
-  const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null);
 
   const todayTaipeiStr = formatTaipeiDate();
   const canonicalMarketStatus = resolveMarketStatus(todayTaipeiStr);
@@ -170,14 +138,6 @@ function WarRoomContent() {
   const isWeekend = canonicalMarketStatus.market_status === 'WEEKEND';
   // V27: Is the active report for today?
   const isReportForToday = report?.report_date === todayTaipeiStr;
-  const canViewWarRoomFull = hasFeature(entitlement, 'war_room_full');
-
-  useEffect(() => {
-    if (morningState?.resolveResult?.tier) {
-      setEntitlement(buildEntitlementFromTier(morningState.resolveResult.tier));
-    }
-  }, [morningState?.resolveResult?.tier]);
-
   // V8.4: Unified display state — same parser as all other pages
   const displayState: MorningAlphaDisplayState | null = useMemo(() => {
     if (!morningState?.resolveResult?.rawRow) return null;
@@ -195,19 +155,6 @@ function WarRoomContent() {
           : null;
   const closeVerificationRecord =
     isRecord(closeVerification) && Object.keys(closeVerification).length > 0 ? closeVerification : null;
-  const closePredictedBias = safeText(
-    closeVerificationRecord?.predicted_bias ??
-      closeVerificationRecord?.opening_bias ??
-      displayState?.marketBias ??
-      rawAI?.market_bias,
-    '—',
-  );
-  const closePredictedScore = safeNumber(
-    closeVerificationRecord?.predicted_confidence ??
-      closeVerificationRecord?.opening_confidence ??
-      closeVerificationRecord?.confidence_score ??
-      displayState?.confidenceScore,
-  );
   const closeActualTaiexClose =
     isRecord(closeVerificationRecord?.actual_taiex_close) ? closeVerificationRecord.actual_taiex_close : null;
   const closeActualTaiexChangeRaw =
@@ -220,16 +167,10 @@ function WarRoomContent() {
       : typeof closeActualTaiexChangeRaw === 'string' && closeActualTaiexChangeRaw.trim() !== ''
         ? Number(closeActualTaiexChangeRaw)
         : null;
-  const closeActualTaiexChange =
-    closeTaiexChange !== null && Number.isFinite(closeTaiexChange)
-      ? closeTaiexChange
-      : null;
-  const closeActualDirection = safeText(closeVerificationRecord?.actual_direction);
   const closeResultText =
-    closeActualTaiexChange !== null && Number.isFinite(closeActualTaiexChange)
-      ? `TAIEX ${closeActualTaiexChange >= 0 ? '+' : ''}${closeActualTaiexChange.toFixed(2)}%`
+    closeTaiexChange !== null && Number.isFinite(closeTaiexChange)
+      ? `TAIEX ${closeTaiexChange >= 0 ? '+' : ''}${closeTaiexChange.toFixed(2)}%`
       : '等待收盤資料';
-  const closeAccuracyScore = safeNumber(closeVerificationRecord?.accuracy_score);
   const closeVerdictLabel =
     String(closeVerificationRecord?.verdict_label || '').trim() ||
     normalizePredictionResult(
@@ -237,14 +178,6 @@ function WarRoomContent() {
       closeVerificationRecord?.hit_or_miss ||
       closeVerificationRecord?.status,
     );
-  const closeVerificationNote =
-    String(closeVerificationRecord?.verification_note || '').trim() ||
-    String(closeVerificationRecord?.reason || '').trim() ||
-    '今日尚未完成收盤驗證，收盤後系統會回寫盤前判斷是否成立。';
-  const closeMissReason = safeText(closeVerificationRecord?.miss_reason);
-  const closeFailedAssumptions = safeStringArray(closeVerificationRecord?.failed_assumptions);
-  const closeTomorrowWatchPoints = safeStringArray(closeVerificationRecord?.tomorrow_watch_points);
-  const closeLessonsLearned = safeStringArray(closeVerificationRecord?.lessons_learned);
   const isCloseVerificationPending = closeVerificationRecord
     ? ['pending', 'pending_real_market_data'].includes(String(
         closeVerificationRecord.status ||
@@ -258,9 +191,6 @@ function WarRoomContent() {
     ? String(closeVerificationRecord.data_status || '').toLowerCase() === 'degraded'
       || String(closeVerificationRecord.status || '').toLowerCase() === 'direction_completed_data_degraded'
     : false;
-  const closeTone = closeVerificationTone(
-    safeText(closeVerificationRecord?.prediction_result || closeVerificationRecord?.hit_or_miss || closeVerdictLabel),
-  );
   const marketClosedInfo = displayState
     ? { closed: displayState.market_status !== 'OPEN', holidayName: displayState.holidayName }
     : { closed: isWeekend, holidayName: isWeekend ? '週末休市' : null as string | null };
@@ -326,8 +256,6 @@ function WarRoomContent() {
     });
   }, [report, strategyDataDate, todayTaipeiStr, openingRadar, marketDataTodayOnly, marketData, todayCloseVerification, sectorData, sectorScoreDate, sectorFreshness, taipeiHour, isWeekend]);
 
-  const sectorCanUseAsTodayStrategy = sectorFreshness?.canUseAsTodayStrategy ?? false;
-  const sectorIsStale = sectorFreshness?.isStale ?? false;
   const canonicalNarrative = buildCanonicalNarrative({
     displayState,
     ai: rawAI,
@@ -365,7 +293,7 @@ function WarRoomContent() {
             <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-500/10 border border-red-400/20 flex items-center justify-center">
               <span className="text-2xl">🔴</span>
             </div>
-            <h1 className="text-white font-bold text-xl mb-2">今日市場狀態</h1>
+            <h1 className="text-white font-bold text-xl mb-2">今天沒有盤中驗證</h1>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-red-500/12 border border-red-400/30 rounded-full text-red-300 text-[10px] font-semibold mb-3 whitespace-nowrap">
               <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
               非交易日
@@ -382,7 +310,7 @@ function WarRoomContent() {
               <p className="text-slate-500 text-[10px] mt-1">07:30 自動更新</p>
             </div>
             <p className="text-slate-500 text-xs leading-relaxed mb-5">
-              今日台股休市，盤中追蹤暫停。所有分析功能將於下一個交易日自動恢復。
+              今日台股休市，盤中追蹤暫停。若需參考，以下僅能查看最近交易日資料。
             </p>
             <Link to="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
               返回首頁
@@ -464,6 +392,59 @@ function WarRoomContent() {
     decisionStatus.next_step || canonicalNarrative.intraday_progress.next_step,
     decisionStatus.status,
   );
+  const tsmcChange = safeNumber(openingRadar?.tsmc_change);
+  const taiexChange = safeNumber(openingRadar?.taiex_change);
+  const txfChange = safeNumber(openingRadar?.txf_change);
+  const syncedStatus = (value: number | null) => {
+    if (value !== null) return '已同步';
+    return openingRadar ? '等待資料' : '尚未同步';
+  };
+  const evidenceConclusion = (() => {
+    if (decisionStatus.status === 'Rejected') return '因此，早上劇本已失效。';
+    if (decisionStatus.status === 'Confirmed') return '因此，目前維持早上劇本。';
+    if (decisionStatus.status === 'Completed') return '因此，今日驗證已完成。';
+    return '因此，目前維持等待確認。';
+  })();
+  const evidenceCards = [
+    {
+      label: '2330',
+      status: syncedStatus(tsmcChange),
+      note: tsmcChange !== null ? formatPercent(tsmcChange) : '缺少盤中資料',
+    },
+    {
+      label: 'TAIEX',
+      status: syncedStatus(taiexChange),
+      note: taiexChange !== null ? formatPercent(taiexChange) : '缺少盤中資料',
+    },
+    {
+      label: 'TXF',
+      status: syncedStatus(txfChange),
+      note: txfChange !== null ? formatPercent(txfChange) : '缺少盤中資料',
+    },
+    {
+      label: '主線族群',
+      status: showTodaySectorRotation ? '已同步' : showSectorReference ? '尚未同步' : '等待資料',
+      note: compactChineseText(sectorData[0]?.sector || canonicalNarrative.today_focus.headline || '等待資料', '等待資料', 18),
+    },
+  ];
+  const changedGroups = [
+    {
+      label: '已成立',
+      items: canonicalNarrative.intraday_progress.completed_steps.slice(0, 2),
+    },
+    {
+      label: '未成立',
+      items: decisionStatus.status === 'Waiting' ? [decisionWhy] : [],
+    },
+    {
+      label: '新增訊號',
+      items: [safeText(openingRadar?.summary)].filter(Boolean).slice(0, 2),
+    },
+    {
+      label: '失效條件',
+      items: [canonicalNarrative.decision_lifecycle.failure_condition.trigger].filter(Boolean).slice(0, 2),
+    },
+  ].filter((group) => group.items.length > 0);
 
 
   return (
@@ -479,7 +460,7 @@ function WarRoomContent() {
                 <i className="ri-sword-line text-amber-300 text-sm"></i>
               </div>
               <h1 className="text-slate-50 font-bold text-sm md:text-base whitespace-nowrap">
-                War Room
+                盤中追蹤
               </h1>
             </div>
           </div>
@@ -512,16 +493,16 @@ function WarRoomContent() {
 
           <section className="rounded-2xl border border-cyan-400/25 bg-cyan-500/[0.05] p-5 md:p-6">
             <div className="mb-5">
-              <p className="text-cyan-300 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">Decision Monitor</p>
+              <p className="text-cyan-300 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">目前判斷</p>
               <h2 className="text-white font-bold text-xl">今天早上的判斷，現在還成立嗎？</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10">
-                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">Status</p>
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">目前狀態</p>
                 <p className="text-white font-bold text-lg">{decisionStatusLabel(decisionStatus.status)}</p>
               </div>
               <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10">
-                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">Why</p>
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">為什麼</p>
                 <p className="text-white/80 text-sm font-medium leading-snug">{decisionWhy}</p>
               </div>
               <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10">
@@ -534,6 +515,57 @@ function WarRoomContent() {
               </div>
             </div>
           </section>
+
+          <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5 md:p-6">
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <div>
+                <p className="text-white/35 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">第二層</p>
+                <h2 className="text-white font-bold text-lg">目前依據</h2>
+              </div>
+              <p className="text-white/40 text-xs">只看目前判斷需要的四個證據。</p>
+            </div>
+            <div className="divide-y divide-white/8 rounded-xl border border-white/8 bg-navy-900/45 overflow-hidden">
+              {evidenceCards.map((item) => (
+                <div key={item.label} className="grid grid-cols-[86px_1fr] sm:grid-cols-[120px_1fr_120px] gap-3 px-4 py-3 items-center">
+                  <p className="text-white/45 text-xs font-semibold">{item.label}</p>
+                  <p className="text-white text-sm font-medium leading-snug break-words">{item.status}</p>
+                  <p className="text-white/35 text-xs sm:text-right">{compactChineseText(item.note, '等待資料', 18)}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-white/60 text-sm leading-snug mt-4">{evidenceConclusion}</p>
+          </section>
+
+          <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 md:p-6">
+            <div className="mb-4">
+              <p className="text-white/35 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">第三層</p>
+              <h2 className="text-white font-bold text-lg">哪些條件改變了</h2>
+            </div>
+            {changedGroups.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {changedGroups.map((group) => (
+                  <div key={group.label} className="p-4 rounded-xl bg-navy-900/60 border border-white/8">
+                    <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">{group.label}</p>
+                    <ul className="space-y-1">
+                      {group.items.slice(0, 2).map((item, idx) => (
+                        <li key={`${group.label}-${idx}`} className="text-white/75 text-sm leading-snug break-words">
+                          {compactChineseText(item, '等待資料確認。', 36)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-white/45 text-sm">目前尚無新的條件變化。</p>
+            )}
+          </section>
+
+          <div className="pt-2">
+            <p className="text-white/35 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">第四層</p>
+            <h2 className="text-white font-bold text-lg">深入盤中資訊</h2>
+            <p className="text-white/40 text-xs mt-1">以下保留完整資料，但不干擾前面三層決策。</p>
+          </div>
 
           {/* ═══════════════════════════════════════ */}
           {/* CARD 2 — 09:30 盤中雷達 */}
@@ -549,7 +581,7 @@ function WarRoomContent() {
                 {humanStatus(tracking.intraday.statusText)}
               </span>
             </div>
-            {tracking.intraday.showContent && openingRadar && tracking.intraday.isToday && canViewWarRoomFull && (
+            {tracking.intraday.showContent && openingRadar && tracking.intraday.isToday && (
               <div className="space-y-3">
                 {/* Radar summary card */}
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
@@ -600,15 +632,6 @@ function WarRoomContent() {
                   資料日期：{tracking.intradayRadarDate}｜觀察節點：09:30、10:30、13:30
                 </p>
               </div>
-            )}
-            {tracking.intraday.showContent && openingRadar && tracking.intraday.isToday && !canViewWarRoomFull && (
-              <PaywallCard
-                title="升級會員查看盤中驗證細節"
-                description="盤中雷達細節、指標同步性與驗證訊號已收在會員版，避免把盤前劇本誤讀成盤中結論。"
-                requiredTier="member"
-                featureList={['盤中雷達摘要', 'TAIEX / TXF / 2330 同步驗證', '盤中劇本失效提醒']}
-                ctaText="查看會員方案"
-              />
             )}
             {(!tracking.intraday.showContent || !tracking.intraday.isToday) && (
               <div>
@@ -674,14 +697,6 @@ function WarRoomContent() {
             )}
           </section>
 
-          {v10BeneficiaryEnabled && (
-            <V11ObservationSection
-              items={v11ObservationScripts}
-              tone="dark"
-              subtitle={canonicalNarrative.today_focus.summary || '盤中只看一件事：資金有沒有真的跟上。'}
-            />
-          )}
-
           {/* ═══════════════════════════════════════ */}
           {/* CARD 3 — 14:10 收盤驗證 */}
           {/* ═══════════════════════════════════════ */}
@@ -696,122 +711,32 @@ function WarRoomContent() {
                 {humanStatus(tracking.closeReview.statusText)}
               </span>
             </div>
-            {closeVerificationRecord && isCloseVerificationPending ? (
-              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
-                <p className="text-white/70 text-sm font-medium mb-1">等待收盤資料</p>
-                <p className="text-white/45 text-xs leading-relaxed">收盤驗證待完成。有效收盤資料同步後，才會展開驗證說明、失效假設與明日觀察。</p>
-              </div>
-            ) : closeVerificationRecord ? (
-              <div className="space-y-3">
-                {isCloseVerificationDegraded && (
-                  <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-400/20">
-                    <p className="text-amber-200 text-sm font-semibold mb-1">大盤方向已驗證，個股與類股資料仍不完整</p>
-                    <p className="text-amber-100/70 text-xs leading-relaxed">目前只完成大盤方向驗證；受惠股收盤資料或當日類股輪動尚未完整，因此不把本次驗證視為完整回測。</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1.5">驗證結論</p>
-                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border ${segmentBadgeStyle(closeTone)}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${closeTone === 'green' ? 'bg-emerald-400' : closeTone === 'red' ? 'bg-red-400' : closeTone === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
-                    {closeVerdictLabel}
-                  </div>
+            {closeVerificationRecord && !isCloseVerificationPending ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                  <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">結論</p>
+                  <p className="text-white text-sm font-semibold">{closeVerdictLabel}</p>
                 </div>
-
-                {canViewWarRoomFull ? (
-                  <>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                        <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
-                        <p className="text-white/80 text-sm font-medium break-words">{closePredictedBias}</p>
-                        {closePredictedScore !== null && (
-                          <p className="text-white/35 text-xs mt-1">{scoreTone(closePredictedScore).stars} {scoreTone(closePredictedScore).label}</p>
-                        )}
-                      </div>
-                      <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                        <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">收盤結果</p>
-                        <p className={`text-sm font-medium ${closeTaiexChange === null ? 'text-white/50' : closeTaiexChange >= 0 ? 'text-red-300' : 'text-emerald-300'}`}>
-                          {closeResultText}
-                        </p>
-                      </div>
-                      <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                        <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">驗證分數</p>
-                        <p className="text-white/80 text-sm font-medium">{closeAccuracyScore !== null ? `${closeAccuracyScore}/100` : '—'}</p>
-                      </div>
-                    </div>
-
-                    <div className={`p-4 rounded-xl border ${segmentBorder(closeTone)} ${segmentBg(closeTone)}`}>
-                      <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">驗證說明</p>
-                      <p className="text-slate-200 text-xs leading-relaxed">{closeVerificationNote}</p>
-                    </div>
-
-                    {closeMissReason && (
-                      <div className="p-4 rounded-xl bg-red-500/[0.04] border border-red-400/20">
-                        <p className="text-red-300 text-[10px] uppercase tracking-wider mb-2">失效原因</p>
-                        <p className="text-red-100/80 text-xs leading-relaxed">{closeMissReason}</p>
-                      </div>
-                    )}
-
-                    {closeFailedAssumptions.length > 0 && (
-                      <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                        <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">失效假設</p>
-                        <ul className="space-y-2">
-                          {closeFailedAssumptions.map((item, idx) => (
-                            <li key={`${item}-${idx}`} className="flex items-start gap-2 text-slate-300 text-xs leading-relaxed">
-                              <span className="text-red-300 mt-0.5">•</span>
-                              <span className="min-w-0 break-words">{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {closeTomorrowWatchPoints.length > 0 && (
-                      <div className="p-4 rounded-xl bg-sky-500/[0.04] border border-sky-400/20">
-                        <p className="text-sky-300 text-[10px] uppercase tracking-wider mb-2">明日觀察重點</p>
-                        <ul className="space-y-2">
-                          {closeTomorrowWatchPoints.map((item, idx) => (
-                            <li key={`${item}-${idx}`} className="flex items-start gap-2 text-slate-200 text-xs leading-relaxed">
-                              <span className="text-sky-300 mt-0.5">•</span>
-                              <span className="min-w-0 break-words">{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {closeLessonsLearned.length > 0 && (
-                      <div className="p-4 rounded-xl bg-violet-500/[0.04] border border-violet-400/20">
-                        <p className="text-violet-300 text-[10px] uppercase tracking-wider mb-2">模型修正筆記</p>
-                        <ul className="space-y-2">
-                          {closeLessonsLearned.map((item, idx) => (
-                            <li key={`${item}-${idx}`} className="flex items-start gap-2 text-slate-200 text-xs leading-relaxed">
-                              <span className="text-violet-300 mt-0.5">•</span>
-                              <span className="min-w-0 break-words">{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    <p className="text-white/40 text-xs leading-relaxed">
-                      每次收盤驗證都是下一次判斷的基礎。回看盤前方向與實際走勢的差異，累積更穩定的市場節奏。
-                    </p>
-                  </>
-                ) : (
-                  <PaywallCard
-                    title="升級會員查看完整收盤驗證"
-                    description="免費版顯示今日命中或失準結果；會員可查看驗證說明、失效假設、明日觀察重點與模型修正筆記。"
-                    requiredTier="member"
-                    featureList={['驗證說明', '失效假設與明日觀察', '模型修正筆記']}
-                    tone="dark"
-                  />
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                  <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">收盤結果</p>
+                  <p className={`text-sm font-semibold ${closeTaiexChange === null ? 'text-white/55' : closeTaiexChange >= 0 ? 'text-red-300' : 'text-emerald-300'}`}>
+                    {closeResultText}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                  <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">完整紀錄</p>
+                  <Link to="/performance" className="inline-flex text-amber-300 hover:text-amber-200 text-sm font-semibold">查看完整紀錄</Link>
+                </div>
+                {isCloseVerificationDegraded && (
+                  <p className="md:col-span-3 text-amber-200/80 text-xs leading-relaxed">
+                    大盤方向已驗證，個股與類股資料仍不完整。
+                  </p>
                 )}
               </div>
             ) : (
               <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                <p className="text-white/50 text-sm leading-relaxed">
-                  今日尚未完成收盤驗證，收盤後系統會回寫盤前判斷是否成立。
-                </p>
+                <p className="text-white/70 text-sm font-medium mb-1">等待收盤資料</p>
+                <p className="text-white/45 text-xs leading-relaxed">收盤驗證待完成，主流程先不展開完整細節。</p>
               </div>
             )}
           </section>
@@ -915,10 +840,45 @@ function WarRoomContent() {
             觀察節點：09:30、10:30、13:30。上述時間為 Morning Alpha 系統更新時間，非交易時間。
           </p>
 
+          {v10BeneficiaryEnabled && (
+            <section className="rounded-2xl border border-navy-800 bg-navy-900/70 p-5 md:p-6">
+              <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+                <div>
+                  <p className="text-amber-200/80 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">今日觀察劇本</p>
+                  <h2 className="text-white font-bold text-lg">五大觀察劇本</h2>
+                </div>
+                <span className="rounded-full px-2.5 py-1 text-[10px] border bg-amber-400/10 text-amber-200 border-amber-300/20">
+                  {v11ObservationScripts.length} 個劇本
+                </span>
+              </div>
+              {v11ObservationScripts.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {v11ObservationScripts.map((item, index) => (
+                    <article key={`${item.symbol || item.name || 'script'}-${item.rank ?? index}`} className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                      <div className="mb-2">
+                        <p className="text-white/35 text-[10px] uppercase tracking-wider mb-1">觀察，不是進場訊號</p>
+                        <h3 className="text-white text-sm font-semibold leading-snug truncate">{item.industryName || item.name || '觀察劇本'}</h3>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 text-xs leading-snug">
+                        <p><span className="text-white/35">代表股：</span><span className="text-white/70">{[item.symbol, item.name].filter(Boolean).join(' ') || '待確認'}</span></p>
+                        <p><span className="text-white/35">目前狀態：</span><span className="text-white/70">觀察中</span></p>
+                        <p><span className="text-white/35">確認或停看：</span><span className="text-white/70">{compactChineseText(item.confirmationPendingReason || item.stopObservingCondition || '等待下一個確認點。', '等待下一個確認點。', 36)}</span></p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-white/5 bg-white/[0.025] p-4 text-white/55 text-sm">
+                  今天還沒有值得放進觀察清單的明確線索。
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Member CTA */}
           <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6 text-center">
             <p className="text-slate-300 text-sm mb-3 leading-relaxed">
-              完整盤前研究筆記請前往研究筆記頁查看。
+              需要完整盤中推理與驗證細節？
             </p>
             <Link
               to="/member-note"

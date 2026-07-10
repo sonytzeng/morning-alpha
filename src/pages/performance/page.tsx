@@ -3,61 +3,44 @@ import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import { supabase } from '@/lib/supabase';
-import V11ObservationSection, { mapV11ObservationItems, type V11ObservationItem } from '@/components/v11/V11ObservationSection';
 
 type ReportRecord = {
   id: string;
   report_date: string;
-  market_bias: string | null;
-  confidence_score: number | null;
-  created_at: string | null;
-  updated_at: string | null;
   ai_strategy_json: Record<string, unknown> | null;
 };
 
-type VerificationStatus = 'hit' | 'partial' | 'miss' | 'pending';
+type VerificationStatus = 'hit' | 'partial' | 'miss' | 'pending' | 'no_data';
 
-type PerformanceItem = {
+type JournalItem = {
   id: string;
   reportDate: string;
-  openingBias: string;
-  actualDirection: string;
+  morningJudgment: string;
+  closingReality: string;
   status: VerificationStatus;
-  confidenceScore: number | null;
   dataQuality: string;
-  firstBeneficiary: {
-    symbol: string;
-    name: string;
-    performanceText: string;
-    beatTaiexText: string;
-    statusText: string;
-  } | null;
-  thesisText: string;
-  beneficiaryReasoning: string;
+  marketStatus: string;
+  isStatEligible: boolean;
+  statusNote: string;
   whatWasRight: string[];
   whatWasWrong: string[];
   tomorrowAdjustment: string[];
-  hasMemberNote: boolean;
-  hasClosingVerificationV2: boolean;
-  observationScripts: V11ObservationItem[];
 };
 
 type SummaryStats = {
-  verifiedDays: number;
+  validDays: number;
   hit: number;
   partial: number;
   miss: number;
-  pending: number;
-  degraded: number;
-  hitRate: number | null;
-  partialIncludedRate: number | null;
+  noData: number;
 };
 
 const STATUS_LABEL: Record<VerificationStatus, string> = {
-  hit: '命中',
+  hit: '成立',
   partial: '部分成立',
   miss: '失準',
   pending: '待驗證',
+  no_data: '資料不足',
 };
 
 const STATUS_CLASS: Record<VerificationStatus, string> = {
@@ -65,6 +48,7 @@ const STATUS_CLASS: Record<VerificationStatus, string> = {
   partial: 'border-amber-300/40 bg-amber-300/10 text-amber-100',
   miss: 'border-rose-400/40 bg-rose-400/10 text-rose-100',
   pending: 'border-white/15 bg-white/8 text-white/65',
+  no_data: 'border-slate-400/30 bg-slate-400/10 text-slate-200',
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -110,23 +94,25 @@ function listFromUnknown(value: unknown): string[] {
   return text ? [text] : [];
 }
 
+function listFromAdjustment(value: unknown): string[] {
+  if (Array.isArray(value) || typeof value === 'string' || typeof value === 'number') return listFromUnknown(value);
+  const record = asRecord(value);
+  if (!record) return [];
+  return [
+    ...listFromUnknown(record.downgrade),
+    ...listFromUnknown(record.watch_tomorrow),
+    ...listFromUnknown(record.keep),
+  ].filter(Boolean).slice(0, 5);
+}
+
 function normalizeStatus(value: unknown): VerificationStatus {
   const raw = String(value || '').toLowerCase();
+  if (!raw) return 'pending';
   if (['hit', 'correct', 'confirmed', 'success'].includes(raw)) return 'hit';
   if (['partial', 'mixed', 'partially_confirmed'].includes(raw)) return 'partial';
   if (['miss', 'wrong', 'failed'].includes(raw)) return 'miss';
+  if (raw.includes('degraded') || raw.includes('insufficient') || raw.includes('no_data')) return 'no_data';
   return 'pending';
-}
-
-function humanizeVerificationText(value: unknown): string {
-  const raw = String(value || '').toLowerCase();
-  if (!raw) return '資料不足，尚未納入統計';
-  if (['hit', 'correct', 'confirmed', 'success', 'true'].includes(raw)) return raw === 'true' ? '符合推論' : '命中';
-  if (['partial', 'mixed', 'partially_confirmed'].includes(raw)) return '部分成立';
-  if (['miss', 'wrong', 'failed', 'false'].includes(raw)) return raw === 'false' ? '未符合盤前推論' : '失準';
-  if (['pending', 'pending_real_market_data'].includes(raw)) return '待驗證';
-  if (raw.includes('degraded')) return '資料不完整';
-  return String(value || '資料不足，尚未納入統計');
 }
 
 function directionFromChange(change: number | null): string {
@@ -134,16 +120,6 @@ function directionFromChange(change: number | null): string {
   if (change >= 0.3) return '上漲';
   if (change <= -0.3) return '下跌';
   return '震盪';
-}
-
-function formatPercent(value: number | null): string {
-  if (value === null) return '—';
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-}
-
-function formatRate(value: number | null): string {
-  if (value === null) return '—';
-  return `${Math.round(value * 100)}%`;
 }
 
 function formatDataQuality(value: string): string {
@@ -156,107 +132,72 @@ function formatDataQuality(value: string): string {
   return value || '待確認';
 }
 
-function getFirstBeneficiary(ai: Record<string, unknown>, memberNote: Record<string, unknown> | null) {
-  const closing = asRecord(ai.closing_verification_v2);
-  const validation = asRecord(closing?.first_beneficiary_validation);
-  const noteFirst = asRecord(memberNote?.first_beneficiary_stock);
-  const candidates = [
-    validation?.predicted_stock,
-    validation?.stock,
-    noteFirst,
-    ...asArray(ai.today_beneficiary_stocks),
-    ...asArray(ai.beneficiary_stocks),
-  ];
-
-  for (const candidate of candidates) {
-    const record = asRecord(candidate);
-    if (!record) continue;
-    const symbol = firstText(record.symbol, record.ticker, record.stock_symbol);
-    const name = firstText(record.name, record.stock_name, record.company);
-    if (symbol || name) return { symbol, name, record, validation };
-  }
-
-  return null;
+function isCompleteDataStatus(value: string): boolean {
+  const normalized = value.toLowerCase();
+  return normalized === 'complete' || normalized === 'completed' || normalized === 'ready';
 }
 
-function buildPerformanceItem(row: ReportRecord): PerformanceItem {
+function buildJournalItem(row: ReportRecord): JournalItem {
   const ai = row.ai_strategy_json || {};
   const closingV2 = asRecord(ai.closing_verification_v2);
-  const closingLegacy = asRecord(ai.closing_verification);
-  const closing = closingV2 || closingLegacy || null;
-  const memberNote = asRecord(ai.member_research_note_v2);
+  const dataQuality = firstText(closingV2?.data_status, ai.data_quality, ai.data_status) || 'unknown';
+  const marketStatus = firstText(ai.market_status, ai.trading_day_reason) || 'UNKNOWN';
+  const status = closingV2 ? normalizeStatus(closingV2.hit_or_miss || closingV2.prediction_result || closingV2.status) : 'pending';
+  const verificationStatus = firstText(closingV2?.status);
+  const isOpenMarket = marketStatus === 'OPEN' || marketStatus === 'open';
+  const isCompleteData = isCompleteDataStatus(dataQuality);
+  const hasCompletedVerification = Boolean(closingV2) && !['pending', 'no_data'].includes(status);
+  const isStatEligible = isOpenMarket && isCompleteData && hasCompletedVerification;
 
   const actualTaiexChange = firstNumber(
-    closing?.actual_taiex_change,
-    asRecord(closing?.actual_taiex_close)?.change_percent,
-    asRecord(closing?.actual_taiex_close)?.change,
+    closingV2?.actual_taiex_change,
+    asRecord(closingV2?.actual_taiex_close)?.change_percent,
+    asRecord(closingV2?.actual_taiex_close)?.change,
   );
-
-  const firstBeneficiary = getFirstBeneficiary(ai, memberNote);
-  const validation = firstBeneficiary?.validation || null;
-  const firstChange = firstNumber(validation?.close_change_percent, validation?.actual_change_percent, validation?.return_percent);
-  const beatTaiex = validation?.outperformed_taiex;
 
   return {
     id: row.id,
     reportDate: row.report_date,
-    openingBias: firstText(closing?.opening_bias, closing?.predicted_bias, row.market_bias, ai.market_bias) || '待判斷',
-    actualDirection: firstText(closing?.actual_direction) || directionFromChange(actualTaiexChange),
-    status: normalizeStatus(closing?.hit_or_miss || closing?.prediction_result || closing?.status),
-    confidenceScore: firstNumber(closing?.opening_confidence, closing?.predicted_confidence, row.confidence_score, ai.confidence_score),
-    dataQuality: firstText(closing?.data_status, ai.data_quality, ai.data_status, memberNote?.data_status) || 'unknown',
-    firstBeneficiary: firstBeneficiary
-      ? {
-          symbol: firstBeneficiary.symbol,
-          name: firstBeneficiary.name,
-          performanceText: firstChange === null ? '資料不足' : formatPercent(firstChange),
-          beatTaiexText: typeof beatTaiex === 'boolean'
-            ? (beatTaiex ? '跑贏 TAIEX' : '未跑贏 TAIEX')
-            : firstText(validation?.relative_result, validation?.beat_taiex_status) || '資料不足，尚未納入統計',
-          statusText: humanizeVerificationText(firstText(validation?.status, validation?.verification_status, validation?.result)),
-        }
-      : null,
-    thesisText: firstText(
-      asRecord(memberNote?.opening_thesis)?.summary,
-      asRecord(memberNote?.today_core_thesis)?.summary,
-      memberNote?.today_core_thesis,
-      memberNote?.opening_thesis,
-      ai.today_quote,
-      ai.summary,
-    ) || '舊版報告，研究筆記結構不足',
-    beneficiaryReasoning: firstText(
-      asRecord(memberNote?.first_beneficiary_stock)?.why_this_stock,
-      asRecord(memberNote?.first_beneficiary_stock)?.reasoning,
-      memberNote?.beneficiary_reasoning,
-      asRecord(memberNote?.beneficiary_reasoning_chain)?.summary,
-    ) || '舊版報告，研究筆記結構不足',
-    whatWasRight: listFromUnknown(closing?.what_was_right),
-    whatWasWrong: listFromUnknown(closing?.what_was_wrong),
-    tomorrowAdjustment: listFromUnknown(closing?.tomorrow_adjustment),
-    hasMemberNote: Boolean(memberNote),
-    hasClosingVerificationV2: Boolean(closingV2),
-    observationScripts: mapV11ObservationItems(ai.v10_observation_watchlist, 5),
+    morningJudgment: firstText(closingV2?.opening_bias) || '尚未完成新版收盤驗證',
+    closingReality: firstText(closingV2?.actual_direction) || directionFromChange(actualTaiexChange),
+    status: isStatEligible ? status : (closingV2 ? 'no_data' : 'pending'),
+    dataQuality,
+    marketStatus,
+    isStatEligible,
+    statusNote: !isOpenMarket
+      ? '非交易日不納入統計'
+      : !closingV2
+        ? '尚未完成新版收盤驗證'
+        : !isCompleteData
+          ? `資料狀態：${formatDataQuality(dataQuality)}`
+          : verificationStatus || '已完成收盤驗證',
+    whatWasRight: listFromUnknown(closingV2?.what_was_right),
+    whatWasWrong: listFromUnknown(closingV2?.what_was_wrong),
+    tomorrowAdjustment: listFromAdjustment(closingV2?.tomorrow_adjustment),
   };
 }
 
-function calculateSummary(items: PerformanceItem[]): SummaryStats {
-  const verified = items.filter((item) => item.status !== 'pending');
-  const hit = verified.filter((item) => item.status === 'hit').length;
-  const partial = verified.filter((item) => item.status === 'partial').length;
-  const miss = verified.filter((item) => item.status === 'miss').length;
-  const pending = items.filter((item) => item.status === 'pending').length;
-  const degraded = items.filter((item) => item.dataQuality.toLowerCase().includes('degraded')).length;
+function calculateSummary(items: JournalItem[]): SummaryStats {
+  const eligible = items.filter((item) => item.isStatEligible);
+  const hit = eligible.filter((item) => item.status === 'hit').length;
+  const partial = eligible.filter((item) => item.status === 'partial').length;
+  const miss = eligible.filter((item) => item.status === 'miss').length;
+  const noData = items.length - eligible.length;
 
   return {
-    verifiedDays: verified.length,
+    validDays: eligible.length,
     hit,
     partial,
     miss,
-    pending,
-    degraded,
-    hitRate: verified.length > 0 ? hit / verified.length : null,
-    partialIncludedRate: verified.length > 0 ? (hit + partial) / verified.length : null,
+    noData,
   };
+}
+
+function getMonthlyLessons(items: JournalItem[]): string[] {
+  return items
+    .flatMap((item) => [...item.whatWasWrong, ...item.tomorrowAdjustment])
+    .filter(Boolean)
+    .slice(0, 5);
 }
 
 function StatCard({ label, value, helper }: { label: string; value: string | number; helper?: string }) {
@@ -290,7 +231,7 @@ function DetailList({ title, items, emptyText }: { title: string; items: string[
 }
 
 export default function PerformancePage() {
-  const [items, setItems] = useState<PerformanceItem[]>([]);
+  const [items, setItems] = useState<JournalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -307,14 +248,14 @@ export default function PerformancePage() {
 
       if (!sessionData.session) {
         setItems([]);
-        setErrorMessage('歷史績效資料目前需要登入會員權限。公開頁仍保留摘要，完整 30 日績效中心會在會員權限下顯示。');
+        setErrorMessage('Decision Journal 目前需要登入會員權限。完整 30 日回顧會在會員權限下顯示。');
         setLoading(false);
         return;
       }
 
       const { data, error } = await supabase
         .from('reports')
-        .select('id, report_date, market_bias, confidence_score, ai_strategy_json, created_at, updated_at')
+        .select('id, report_date, ai_strategy_json')
         .order('report_date', { ascending: false })
         .limit(30);
 
@@ -327,14 +268,14 @@ export default function PerformancePage() {
         setItems([]);
         setErrorMessage(
           isRlsBlocked
-            ? '歷史績效資料目前需要登入會員權限。公開頁仍保留摘要，完整 30 日績效中心會在會員權限下顯示。'
-            : '歷史績效資料暫時無法載入，請稍後再試。',
+            ? 'Decision Journal 目前需要登入會員權限。完整 30 日回顧會在會員權限下顯示。'
+            : 'Decision Journal 暫時無法載入，請稍後再試。',
         );
         setLoading(false);
         return;
       }
 
-      const normalized = ((data || []) as ReportRecord[]).map(buildPerformanceItem);
+      const normalized = ((data || []) as ReportRecord[]).map(buildJournalItem);
       setItems(normalized);
       setLoading(false);
     }
@@ -346,6 +287,8 @@ export default function PerformancePage() {
   }, []);
 
   const summary = useMemo(() => calculateSummary(items), [items]);
+  const monthlyLessons = useMemo(() => getMonthlyLessons(items), [items]);
+  const redoNotes = useMemo(() => items.flatMap((item) => item.tomorrowAdjustment).filter(Boolean).slice(0, 4), [items]);
 
   return (
     <div className="min-h-screen bg-[#07111f] text-white">
@@ -353,28 +296,32 @@ export default function PerformancePage() {
       <main className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 md:py-12">
         <section className="rounded-lg border border-white/10 bg-gradient-to-br from-sky-500/12 via-white/[0.04] to-emerald-400/8 p-5 md:p-8">
           <div className="max-w-3xl">
-            <p className="text-sm font-medium text-sky-200/80">歷史預測與績效中心</p>
+            <p className="text-sm font-medium text-sky-200/80">Decision Journal</p>
             <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white md:text-4xl">
-              歷史預測與績效中心
+              Decision Journal
             </h1>
             <p className="mt-4 text-sm leading-7 text-white/65 md:text-base">
-              回看 Morning Alpha 過去每天的盤前方向、收盤驗證與第一受惠股表現。這裡不美化結果，也不把待驗證算成失誤；只把已驗證的天數誠實攤開。
+              回看 Morning Alpha 過去如何判斷、哪些成立、哪些失效，以及收盤後留下的修正。這裡不美化結果，也不把資料不足包裝成命中。
             </p>
           </div>
         </section>
 
         <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="已驗證天數" value={summary.verifiedDays} helper="待驗證不納入分母" />
-          <StatCard label="命中率" value={formatRate(summary.hitRate)} helper={`${summary.hit} 命中 / ${summary.miss} 失準`} />
-          <StatCard label="含部分命中率" value={formatRate(summary.partialIncludedRate)} helper={`${summary.hit + summary.partial} 命中或部分成立`} />
-          <StatCard label="待驗證 / 資料不完整" value={`${summary.pending} / ${summary.degraded}`} helper="待驗證不視為失準" />
+          <StatCard label="完整成立" value={summary.hit} helper={`有效交易日 ${summary.validDays} 天`} />
+          <StatCard label="部分成立" value={summary.partial} helper="方向或條件只有部分被確認" />
+          <StatCard label="失效" value={summary.miss} helper="收盤結果推翻早上劇本" />
+          <StatCard label="資料不足" value={summary.noData} helper="休市、待驗證或資料不完整" />
         </section>
+
+        <p className="mt-3 text-xs leading-6 text-white/45">
+          只統計已完成收盤驗證且資料完整的交易日。休市、待驗證、資料不完整與舊版驗證不放進成立統計。
+        </p>
 
         <section className="mt-8">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-white">最近 30 筆交易日報告</h2>
-              <p className="mt-1 text-sm text-white/45">盤前方向、收盤結果、命中狀態與研究筆記摘要。</p>
+              <h2 className="text-xl font-semibold text-white">Today&apos;s Review Timeline</h2>
+              <p className="mt-1 text-sm text-white/45">最近 30 筆報告，依日期回看早上判斷與收盤現實。</p>
             </div>
             <Link
               to="/member-note"
@@ -386,16 +333,16 @@ export default function PerformancePage() {
 
           {loading ? (
             <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.04] p-6 text-sm text-white/55">
-              正在讀取歷史績效資料...
+              正在讀取 Decision Journal...
             </div>
           ) : errorMessage ? (
             <div className="mt-5 rounded-lg border border-amber-300/25 bg-amber-300/8 p-6">
-              <h3 className="text-base font-semibold text-amber-100">歷史績效暫時無法完整顯示</h3>
+              <h3 className="text-base font-semibold text-amber-100">Decision Journal 暫時無法完整顯示</h3>
               <p className="mt-2 text-sm leading-6 text-white/60">{errorMessage}</p>
             </div>
           ) : items.length === 0 ? (
             <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.04] p-6 text-sm text-white/55">
-              目前尚無可顯示的歷史報告。等盤前報告與收盤驗證累積後，這裡會自動呈現績效統計。
+              目前尚無可顯示的 Decision Journal。等盤前報告與收盤驗證累積後，這裡會自動呈現每日回顧。
             </div>
           ) : (
             <div className="mt-5 space-y-3">
@@ -412,24 +359,18 @@ export default function PerformancePage() {
                           </span>
                         </div>
                         <p className="mt-2 text-sm text-white/55">
-                          盤前方向：<span className="text-white/80">{item.openingBias}</span>
+                          早上判斷：<span className="text-white/80">{item.morningJudgment}</span>
                         </p>
                       </div>
 
-                      <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         <div className="rounded-md bg-black/20 p-3">
-                          <div className="text-xs text-white/35">實際收盤方向</div>
-                          <div className="mt-1 text-sm font-medium text-white/85">{item.actualDirection}</div>
-                        </div>
-                        <div className="rounded-md bg-black/20 p-3">
-                          <div className="text-xs text-white/35">判斷把握度</div>
-                          <div className="mt-1 text-sm font-medium text-white/85">
-                            {item.confidenceScore == null ? '待驗證' : `${item.confidenceScore}/100`}
-                          </div>
+                          <div className="text-xs text-white/35">收盤結果</div>
+                          <div className="mt-1 text-sm font-medium text-white/85">{item.closingReality}</div>
                         </div>
                         <div className="rounded-md bg-black/20 p-3">
                           <div className="text-xs text-white/35">資料狀態</div>
-                          <div className="mt-1 text-sm font-medium text-white/85">{formatDataQuality(item.dataQuality)}</div>
+                          <div className="mt-1 text-sm font-medium text-white/85">{item.statusNote}</div>
                         </div>
                       </div>
 
@@ -442,53 +383,17 @@ export default function PerformancePage() {
                       </button>
                     </div>
 
-                    <div className="mt-4 rounded-md border border-white/8 bg-black/15 p-3">
-                      <div className="text-xs text-white/35">第一受惠股表現摘要</div>
-                      {item.firstBeneficiary ? (
-                        <div className="mt-2 grid gap-2 text-sm text-white/65 sm:grid-cols-4">
-                          <span>{item.firstBeneficiary.name || item.firstBeneficiary.symbol || '未命名標的'}</span>
-                          <span>當日表現：{item.firstBeneficiary.performanceText}</span>
-                          <span>{item.firstBeneficiary.beatTaiexText}</span>
-                          <span>{item.firstBeneficiary.statusText}</span>
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-sm text-white/45">資料不足，尚未納入統計。</p>
-                      )}
-                    </div>
-
                     {expanded ? (
                       <div className="mt-5 grid gap-5 border-t border-white/10 pt-5 lg:grid-cols-2">
                         <div className="space-y-5">
-                          <div>
-                            <h4 className="text-sm font-semibold text-white">今日主軸</h4>
-                            <p className="mt-2 text-sm leading-6 text-white/60">{item.thesisText}</p>
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-semibold text-white">第一受惠股推理摘要</h4>
-                            <p className="mt-2 text-sm leading-6 text-white/60">{item.beneficiaryReasoning}</p>
-                          </div>
-                          {!item.hasMemberNote ? (
-                            <p className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-xs text-white/40">
-                              舊版報告，研究筆記結構不足。
-                            </p>
-                          ) : null}
-                          {item.observationScripts.length > 0 ? (
-                            <V11ObservationSection
-                              items={item.observationScripts}
-                              tone="dark"
-                              className="bg-transparent border-white/10"
-                              subtitle="用一分鐘回看：當天市場在等哪幾個訊號。"
-                            />
-                          ) : null}
+                          <DetailList title="哪些成立？" items={item.whatWasRight} emptyText="這一天尚未留下成立項目。" />
+                          <DetailList title="哪些失敗？" items={item.whatWasWrong} emptyText="這一天尚未留下失效項目。" />
                         </div>
-
                         <div className="space-y-5">
-                          <DetailList title="收盤驗證：判斷正確處" items={item.whatWasRight} emptyText="尚未產生判斷正確處。" />
-                          <DetailList title="收盤驗證：需要修正處" items={item.whatWasWrong} emptyText="尚未產生需要修正處。" />
-                          <DetailList title="明日調整" items={item.tomorrowAdjustment} emptyText="尚未產生明日調整。" />
-                          {!item.hasClosingVerificationV2 ? (
+                          <DetailList title="我們學到什麼？" items={item.tomorrowAdjustment} emptyText="這一天尚未留下明日調整。" />
+                          {!item.isStatEligible ? (
                             <p className="rounded-md border border-amber-300/20 bg-amber-300/8 p-3 text-xs text-amber-100/80">
-                              這筆報告尚未完成新版收盤驗證，因此目前顯示為待驗證，不納入命中率分母。
+                              {item.statusNote}，不納入完整成立統計。
                             </p>
                           ) : null}
                           <Link
@@ -506,6 +411,35 @@ export default function PerformancePage() {
             </div>
           )}
         </section>
+
+        {!loading && !errorMessage && monthlyLessons.length > 0 ? (
+          <section className="mt-8 rounded-lg border border-white/10 bg-white/[0.04] p-5 md:p-6">
+            <p className="text-sm font-medium text-sky-200/80">What We Learned</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">本月最大的修正</h2>
+            <ul className="mt-4 grid gap-3 md:grid-cols-2">
+              {monthlyLessons.map((lesson, index) => (
+                <li key={`${lesson}-${index}`} className="rounded-md border border-white/8 bg-black/15 p-3 text-sm leading-6 text-white/65">
+                  {lesson}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {!loading && !errorMessage && redoNotes.length > 0 ? (
+          <section className="mt-8 rounded-lg border border-white/10 bg-white/[0.04] p-5 md:p-6">
+            <p className="text-sm font-medium text-emerald-200/80">If We Could Do It Again</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">如果重來一次，我們會怎麼調整</h2>
+            <ul className="mt-4 space-y-3">
+              {redoNotes.map((note, index) => (
+                <li key={`${note}-${index}`} className="flex gap-3 text-sm leading-6 text-white/65">
+                  <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-300/80" />
+                  <span>{note}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </main>
       <Footer />
     </div>

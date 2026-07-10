@@ -12,7 +12,6 @@ import { formatTaipeiDate } from '@/utils/tradingDay';
 import type { Report } from '@/types/report';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { buildCanonicalNarrative, type CanonicalMorningNarrative } from '@/lib/canonicalNarrative';
-import type { V11ObservationItem } from '@/components/v11/V11ObservationSection';
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
 import { getTodayOpeningRadar } from '@/services/openingRadarService';
 
@@ -63,14 +62,6 @@ function safeText(value: unknown, fallback = '—'): string {
   const s = String(value).trim();
   return s.length > 0 && s !== 'null' && s !== 'undefined' ? s : fallback;
 }
-
-function getBiasClass(bias?: string | null): string {
-  const b = bias || '';
-  if (b.includes('偏多') || b === '偏多') return 'bg-red-500/12 text-red-300 border-red-400/30';
-  if (b.includes('偏空') || b.includes('偏弱') || b.includes('高風險')) return 'bg-emerald-500/12 text-emerald-300 border-emerald-400/30';
-  return 'bg-amber-500/12 text-amber-300 border-amber-400/30';
-}
-
 
 function getRadarClass(status?: string | null): string {
   const s = status || '';
@@ -136,86 +127,6 @@ function firstText(...values: unknown[]): string {
   return '';
 }
 
-function uniqueBy<T>(items: T[], keyFor: (item: T) => string): T[] {
-  const seen = new Set<string>();
-  const result: T[] = [];
-  for (const item of items) {
-    const key = keyFor(item).trim().toLowerCase();
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    result.push(item);
-  }
-  return result;
-}
-
-const MAIN_LINE_KEYWORDS = [
-  '電子權值',
-  'AI供應鏈',
-  'AI伺服器',
-  '半導體',
-  '金融',
-  '航運',
-  '塑化',
-  'PCB',
-  'CCL',
-  'IC設計',
-  '高速傳輸',
-  '散熱',
-  '記憶體',
-  '營建',
-  '綠能',
-  '鋼鐵',
-  '生技',
-];
-
-function extractMainLineKeyword(value: unknown): string {
-  const text = safeText(value, '');
-  if (!text) return '';
-  return MAIN_LINE_KEYWORDS.find((keyword) => text.includes(keyword)) || '';
-}
-
-function normalizeMainLine(value: string): string {
-  const text = cleanScriptName(value);
-  if (['PCB', 'CCL', 'IC設計', '高速傳輸', '散熱', '記憶體', 'AI伺服器'].includes(text)) return 'AI供應鏈';
-  return text;
-}
-
-function inferMainLine(ai: AnyObj, displayState: MorningAlphaDisplayState | null, observations: V11ObservationItem[]): string {
-  const thesis = asObj(asObj(ai.member_research_note_v2).opening_thesis);
-  const strategySummary = asObj(ai.strategy_summary);
-  const marketThesis = asObj(asObj(ai.v10_analysis_debug).market_thesis);
-  const v10Thesis = asObj(marketThesis.market_thesis);
-  const firstObservation = observations.find((item) => item.industryName || item.industryCode);
-  const candidate = firstText(
-    strategySummary.main_theme,
-    strategySummary.primary_theme,
-    strategySummary.market_focus,
-    extractMainLineKeyword(strategySummary.summary),
-    extractMainLineKeyword(strategySummary.today_strategy),
-    extractMainLineKeyword(displayState?.todayQuote),
-    extractMainLineKeyword(displayState?.actionGuidance),
-    extractMainLineKeyword(v10Thesis.market_story),
-    extractMainLineKeyword(v10Thesis.taiwan_transmission),
-    v10Thesis.primary_driver,
-    thesis.primary_theme,
-    extractMainLineKeyword(thesis.market_story),
-    firstObservation?.industryName,
-    firstObservation?.industryCode,
-    '等待主線確認',
-  );
-
-  return normalizeMainLine(candidate);
-}
-
-function inferActionStatus(bias: string, score: number | null | undefined, radar: RadarView | null, pendingTitle: string): string {
-  const radarStatus = safeText(radar?.radar_status, '');
-  if (radarStatus.includes('風險') || bias.includes('偏弱') || bias.includes('偏空')) return '不可追價';
-  if (!radar) return pendingTitle.includes('尚未同步') ? '等待資金同步' : '等待量能確認';
-  if (radarStatus.includes('偏強') && typeof score === 'number' && score >= 65) return '可觀察';
-  if (radarStatus.includes('觀察') || bias.includes('觀察')) return '主線形成中';
-  return '等待量能確認';
-}
-
 function nextVerificationPoint(
   minutes: number,
   radar: RadarView | null,
@@ -230,22 +141,6 @@ function nextVerificationPoint(
   if (minutes < 780) return is1030Ready ? '13:00 看主線是否失效' : '10:30 主線確認資料同步';
   if (minutes < 850) return is1300Ready ? '14:10 等待收盤驗證資料同步' : '13:00 風險確認資料同步';
   return closingState.nextStep;
-}
-
-function buildOperationSteps(
-  mainLine: string,
-  nextPoint: string,
-  actionStatus: string,
-): string[] {
-  const line = mainLine === '等待主線確認' ? '今日主線' : mainLine;
-  const conservative = actionStatus === '風險升高' || actionStatus === '不追價';
-
-  return [
-    `先看 ${nextPoint.replace(/^09:30 看 /, '').replace(/^10:30 看 /, '')}。`,
-    conservative ? `再確認 ${line} 是否止穩，不把反彈直接當成轉強。` : `再看 ${line} 是否從代表股擴散到同族群。`,
-    '未確認前不追價。',
-    '13:00 前若未擴散，今日維持觀察。',
-  ];
 }
 
 type IntradayWindowStatus = 'ready' | 'pending' | 'missing' | 'unknown';
@@ -327,298 +222,6 @@ type VerificationFocus = {
   isSynced: boolean;
 };
 
-function buildVerificationFocus(
-  minutes: number,
-  radar: RadarView | null,
-  mainLine: string,
-  pendingTitle: string,
-  sync: IntradaySyncView,
-  closingState: ClosingVerificationState,
-): VerificationFocus {
-  const line = mainLine === '等待主線確認' ? '主線' : mainLine;
-  const confirming = '2330、TAIEX、TXF 是否同向';
-  const ifFailed = `不追價，${line} 未確認前維持觀察。`;
-  const is0930Ready = sync.status0930 === 'ready' || Boolean(radar);
-  const is1030Ready = sync.status1030 === 'ready';
-  const is1300Ready = sync.status1300 === 'ready';
-
-  if (minutes < 570) {
-    return {
-      currentStage: '等待開盤驗證',
-      nextStep: '09:30 看 2330、TAIEX、TXF 是否同向',
-      confirming,
-      ifFailed,
-      dataStatus: '09:30 尚未到時間窗',
-      isSynced: is0930Ready,
-    };
-  }
-
-  if (minutes < 630) {
-    return {
-      currentStage: is0930Ready ? '09:30 開盤驗證中' : '09:30 資料尚未同步',
-      nextStep: '10:30 看主線是否擴散',
-      confirming,
-      ifFailed,
-      dataStatus: is0930Ready ? '09:30 已同步，10:30 尚未到時間窗' : pendingTitle,
-      isSynced: is0930Ready,
-    };
-  }
-
-  if (minutes < 780) {
-    return {
-      currentStage: is1030Ready ? '10:30 主線確認已同步' : '10:30 資料尚未同步',
-      nextStep: '13:00 看是否失效',
-      confirming: `${line} 是否從代表股擴散到同族群`,
-      ifFailed,
-      dataStatus: is1030Ready ? '10:30 已同步，13:00 尚未到時間窗' : '10:30 資料尚未同步，13:00 尚未到時間窗',
-      isSynced: is1030Ready,
-    };
-  }
-
-  if (minutes < 850) {
-    return {
-      currentStage: is1300Ready ? '13:00 風險確認已同步' : '13:00 資料尚未同步',
-      nextStep: '14:10 等待收盤驗證資料同步',
-      confirming: `${line} 是否守住盤中確認條件`,
-      ifFailed,
-      dataStatus: is1300Ready ? '13:00 已同步，等待收盤驗證資料' : '13:00 資料尚未同步，等待收盤驗證資料',
-      isSynced: is1300Ready,
-    };
-  }
-
-  return {
-    currentStage: closingState.label,
-    nextStep: closingState.nextStep,
-    confirming: `${line} 是否延續到收盤`,
-    ifFailed: '收盤驗證未完成前，不把盤中反彈當成確認。',
-    dataStatus: closingState.label,
-    isSynced: closingState.completed,
-  };
-}
-
-type TradingScript = {
-  name: string;
-  why: string;
-  representatives: string;
-  status: string;
-  condition: string;
-  invalidation: string;
-  closeResult: string;
-  tomorrowAction: string;
-};
-
-function cleanScriptName(value: string): string {
-  const text = value.trim();
-  const map: Record<string, string> = {
-    SEMICONDUCTOR: '半導體',
-    AI_SERVER: 'AI供應鏈',
-    ELECTRONIC_BLUE_CHIP: '電子權值',
-    PCB: 'PCB',
-    CCL: 'CCL',
-    IC_DESIGN: 'IC設計',
-    HIGH_SPEED_TRANSMISSION: '高速傳輸',
-    THERMAL: '散熱',
-    MEMORY: '記憶體',
-  };
-  return map[text] || text.replace(/_/g, ' ');
-}
-
-function scriptNameFromItem(item: V11ObservationItem): string {
-  const chainTheme = item.observationChain.find((part) => {
-    const text = safeText(part, '');
-    return text && !text.includes(item.symbol) && !text.includes(item.name);
-  });
-  return cleanScriptName(firstText(item.industryName, item.industryCode, chainTheme, '今日主線'));
-}
-
-function compactSentence(value: string, fallback: string): string {
-  const text = safeText(value, fallback);
-  return text
-    .replace(/\s+/g, ' ')
-    .replace(/。.*$/, '。')
-    .trim();
-}
-
-function flattenReadableText(value: unknown): string {
-  if (typeof value === 'string' || typeof value === 'number') return safeText(value, '');
-  if (Array.isArray(value)) return value.map(flattenReadableText).filter(Boolean).join('。');
-  if (value && typeof value === 'object') {
-    return Object.values(value as AnyObj).map(flattenReadableText).filter(Boolean).join('。');
-  }
-  return '';
-}
-
-function collectRelatedLines(source: unknown, scriptName: string, representatives: string[]): string[] {
-  const rows = Array.isArray(source) ? source : Object.values(asObj(source));
-  const needles = [scriptName, ...representatives.map((item) => item.split(' ')[0]).filter(Boolean)]
-    .filter(Boolean)
-    .map((item) => item.toLowerCase());
-  const lines: string[] = [];
-
-  for (const row of rows) {
-    const text = flattenReadableText(row);
-    if (!text) continue;
-    const lower = text.toLowerCase();
-    if (needles.length > 0 && !needles.some((needle) => lower.includes(needle))) continue;
-    lines.push(text);
-  }
-
-  return uniqueBy(lines, (line) => line).slice(0, 3);
-}
-
-function deriveScriptSupport(ai: AnyObj, scriptName: string, representatives: string[]) {
-  const note = asObj(ai.member_research_note_v2);
-  const intradayTracking = asObj(ai.intraday_tracking);
-  const validation = asObj(ai.validation);
-  const openingRadar = asObj(ai.opening_radar);
-
-  return {
-    why: collectRelatedLines(
-      [
-        note.first_beneficiary_stock,
-        note.beneficiary_reasoning,
-        note.capital_rotation_scenarios,
-        note.opening_thesis,
-        ai.v8_beneficiary_chain,
-      ],
-      scriptName,
-      representatives,
-    )[0],
-    condition: collectRelatedLines(
-      [
-        note.intraday_time_windows,
-        note.intraday_validation,
-        intradayTracking,
-        validation,
-        openingRadar,
-      ],
-      scriptName,
-      representatives,
-    )[0],
-    invalidation: collectRelatedLines(
-      [
-        note.invalidation_conditions,
-        note.invalidation_rules,
-        note.risk_scenarios,
-        ai.risk_analysis,
-      ],
-      scriptName,
-      representatives,
-    )[0],
-  };
-}
-
-function normalizeCloseResult(value: unknown): string {
-  const text = safeText(value, '').toLowerCase();
-  if (text.includes('hit') || text.includes('命中') || text.includes('confirmed')) return '成立';
-  if (text.includes('partial') || text.includes('mixed') || text.includes('部分')) return '待確認';
-  if (text.includes('miss') || text.includes('failed') || text.includes('失準')) return '未成立';
-  return '';
-}
-
-function buildCloseScriptOutcome(ai: AnyObj, representatives: string[]): { closeResult: string; tomorrowAction: string } {
-  const closing = Object.keys(asObj(ai.closing_verification_v2)).length > 0
-    ? asObj(ai.closing_verification_v2)
-    : asObj(ai.closing_verification);
-  const listValidation = asObj(closing.beneficiary_list_validation);
-  const items = Array.isArray(listValidation.items) ? listValidation.items.map(asObj) : [];
-  const repSymbols = representatives
-    .map((item) => item.split(' ')[0]?.trim())
-    .filter(Boolean);
-  const matched = items.filter((item) => repSymbols.includes(safeText(item.symbol, '')));
-  const completeMatched = matched.filter((item) => safeText(item.data_status, '') === 'complete');
-
-  if (completeMatched.length > 0) {
-    const outperformed = completeMatched.filter((item) => item.outperformed_taiex === true).length;
-    if (outperformed === completeMatched.length) return { closeResult: '成立', tomorrowAction: '延續觀察' };
-    if (outperformed === 0) return { closeResult: '未成立', tomorrowAction: '降級觀察' };
-    return { closeResult: '待確認', tomorrowAction: '降級觀察' };
-  }
-
-  const overall = normalizeCloseResult(closing.hit_or_miss || closing.status);
-  if (overall === '成立') return { closeResult: '成立', tomorrowAction: '延續觀察' };
-  if (overall === '未成立') return { closeResult: '未成立', tomorrowAction: '降級觀察' };
-  return { closeResult: '待確認', tomorrowAction: '降級觀察' };
-}
-
-function buildTradingScripts(
-  items: V11ObservationItem[],
-  statusText: string,
-  ai: AnyObj,
-  limit = 3,
-): TradingScript[] {
-  const grouped = new Map<string, V11ObservationItem[]>();
-  for (const item of items) {
-    const name = scriptNameFromItem(item);
-    const current = grouped.get(name) || [];
-    current.push(item);
-    grouped.set(name, current);
-  }
-
-  return Array.from(grouped.entries())
-    .map(([name, group]) => {
-      const representatives = uniqueBy(
-        group
-          .map((item) => [item.symbol, item.name].filter(Boolean).join(' ').trim())
-          .filter(Boolean),
-        (value) => value,
-      ).slice(0, 2);
-      const primary = group[0];
-      const support = deriveScriptSupport(ai, name, representatives);
-      const why = compactSentence(
-        firstText(primary.observationReason, support.why),
-        `${name}還沒轉成強主線，今天先看資金是否願意靠過來。`,
-      );
-      const condition = compactSentence(
-        firstText(primary.confirmationPendingReason, support.condition),
-        '需要代表股與大盤同向，且族群量能同步擴散。',
-      );
-      const invalidation = compactSentence(
-        firstText(primary.stopObservingCondition, support.invalidation),
-        '若開盤後沒有量能或代表股無法站穩，今天放棄。',
-      );
-      const outcome = buildCloseScriptOutcome(ai, representatives);
-
-      return {
-        name,
-        why,
-        representatives: representatives.join(' / ') || '待確認代表股',
-        status: primary.confirmationPendingReason ? '等待盤中確認' : statusText,
-        condition,
-        invalidation,
-        closeResult: outcome.closeResult,
-        tomorrowAction: outcome.tomorrowAction,
-      };
-    })
-    .filter((item) => item.name && item.why)
-    .slice(0, limit);
-}
-
-function buildCanonicalTradingScripts(
-  narrative: CanonicalMorningNarrative,
-  closingState: ClosingVerificationState,
-): TradingScript[] {
-  const lessons = narrative.closing_outcome.lessons;
-  const steps = narrative.today_script.steps.length > 0
-    ? narrative.today_script.steps
-    : [{ time: '', title: narrative.today_script.headline, detail: narrative.today_focus.summary, status: 'pending' as const }];
-
-  return steps.slice(0, 3).map((step, index) => {
-    const failure = narrative.failure_triggers[index] || narrative.failure_triggers[0];
-    const result = normalizeCloseResult(narrative.closing_outcome.result) || (closingState.completed ? '待確認' : '待確認');
-    return {
-      name: firstText(step.title, narrative.today_script.headline, '劇本 ' + (index + 1)),
-      why: firstText(narrative.today_focus.why, narrative.today_focus.summary, step.detail, '資料不足'),
-      representatives: firstText(step.time, '依完整研究筆記'),
-      status: step.status,
-      condition: firstText(step.detail, narrative.today_focus.why, '資料不足'),
-      invalidation: firstText(failure?.trigger, narrative.today_focus.risk, '資料不足'),
-      closeResult: result,
-      tomorrowAction: firstText(lessons[index], lessons[0], closingState.completed ? '延續觀察' : '等待收盤驗證資料同步'),
-    };
-  }).filter((item) => item.name && item.condition);
-}
-
 function TodayReportContent() {
   const [report, setReport] = useState<Report | null>(null);
   const [reportSnapshotRadar, setReportSnapshotRadar] = useState<RadarView | null>(null);
@@ -652,7 +255,7 @@ function TodayReportContent() {
           setReport(null);
           setReportSnapshotRadar(null);
           setLiveRadar(null);
-          setDisplayState(getMorningAlphaDisplayState(resolved.rawRow as Record<string, unknown> | null));
+          setDisplayState(getMorningAlphaDisplayState(resolved.rawRow as unknown as Record<string, unknown> | null));
           return;
         }
 
@@ -663,7 +266,7 @@ function TodayReportContent() {
         setReportSnapshotRadar(radarFromReport);
         setLiveRadar((radarFromTable as unknown as RadarView | null) || radarFromReport);
         setDisplayState(getMorningAlphaDisplayState(
-          resolved.rawRow as Record<string, unknown> | null,
+          resolved.rawRow as unknown as Record<string, unknown> | null,
           (radarFromTable || radarFromReport) as unknown as Record<string, unknown> | null,
         ));
       } catch (err) {
@@ -683,10 +286,8 @@ function TodayReportContent() {
   const ai = asObj((report as AnyObj | null)?.ai_strategy_json);
   // V8.4: Unified display state — marketBias and confidenceScore from getMorningAlphaDisplayState
   // Same values as Home, Opportunities, WarRoom, MemberNote. No opening_radar override.
-  const displayBias = displayState?.marketBias || '—';
   const intradayFreshness = useMemo(() => isFreshIntradayData(report as AnyObj | null, liveRadar as AnyObj | null), [report, liveRadar]);
   const hasFreshIntradayRadar = intradayFreshness.fresh;
-  const premarketBiasLabel = safeText(displayBias, '待判斷');
   const activeIntradayRadar = hasFreshIntradayRadar ? liveRadar : null;
   const taipeiNow = new Date();
   const taipeiParts = new Intl.DateTimeFormat('en-US', {
@@ -707,7 +308,6 @@ function TodayReportContent() {
         : taipeiMinutes < 815
           ? '13:00 盤中資料尚未同步'
           : '等待收盤驗證資料同步';
-  const overviewBiasText = premarketBiasLabel;
   const intradaySyncView = getIntradaySyncView(ai);
   const closingVerificationState = getClosingVerificationState(ai);
   const canonicalNarrative: CanonicalMorningNarrative = useMemo(() => buildCanonicalNarrative({
@@ -716,10 +316,6 @@ function TodayReportContent() {
     memberResearchNoteV2: asObj(ai.member_research_note_v2),
   }), [displayState, ai]);
   const decisionLifecycle = canonicalNarrative.decision_lifecycle;
-  const mainLine = firstText(
-    decisionLifecycle.current_thesis.title,
-    '資料不足',
-  );
   const actionStatus = firstText(
     decisionLifecycle.current_thesis.summary,
     canonicalNarrative.today_focus.action,
@@ -745,7 +341,6 @@ function TodayReportContent() {
     isSynced: canonicalNarrative.intraday_progress.status === 'ready' || canonicalNarrative.intraday_progress.status === 'completed',
   };
   const overviewRadarStatusText = verificationFocus.dataStatus;
-  const tradingScripts = buildCanonicalTradingScripts(canonicalNarrative, closingVerificationState);
 
   if (loading) {
     return (
@@ -857,11 +452,6 @@ function TodayReportContent() {
               </div>
               <h1 className="text-white font-bold text-sm md:text-base">{isHistoricalFallback ? '歷史資料模式' : '今日盤前判斷'}</h1>
 
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${getBiasClass(overviewBiasText)}`}>
-                <i className="ri-record-circle-line text-[9px]" />
-                {overviewBiasText}
-              </span>
-
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${getRadarClass(overviewRadarStatusText)}`}>
                 <i className="ri-radar-line text-[9px]" />
                 {overviewRadarStatusText}
@@ -884,50 +474,24 @@ function TodayReportContent() {
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6">
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              Today&apos;s Question
+              今天怎麼判斷？
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-emerald-300 text-[10px] uppercase tracking-wider mb-1">Question</p>
-                <p className="text-slate-50 font-bold text-lg leading-relaxed">{renderSafeText(decisionLifecycle.question.question)}</p>
+                <p className="text-emerald-300 text-[10px] uppercase tracking-wider mb-1">今日策略</p>
+                <p className="text-slate-50 font-bold text-lg leading-relaxed">{actionStatus}</p>
               </div>
               <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-emerald-300 text-[10px] uppercase tracking-wider mb-1">Why</p>
-                <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(decisionLifecycle.question.why)}</p>
-              </div>
-            </div>
-
-            <h3 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              Current Thesis
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">今日方向</p>
-                <p className="text-slate-50 font-bold text-base">{overviewBiasText}</p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">今日策略</p>
-                <p className="text-slate-50 font-bold text-base">{actionStatus}</p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">今天劇本</p>
-                <p className="text-slate-50 font-bold text-base">{renderSafeText(mainLine)}</p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">下一步</p>
-                <p className="text-slate-50 font-bold text-base">{nextVerification}</p>
+                <p className="text-emerald-300 text-[10px] uppercase tracking-wider mb-1">下一步</p>
+                <p className="text-slate-50 font-bold text-lg leading-relaxed">{nextVerification}</p>
               </div>
             </div>
           </section>
 
           <section className="bg-navy-900/70 border border-emerald-500/15 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              Validation Plan
+              今天怎麼確認？
             </h2>
             <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -946,7 +510,7 @@ function TodayReportContent() {
           <section className="bg-navy-900/70 border border-cyan-500/20 rounded-2xl p-5 md:p-6">
             <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
               <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
-                Failure Condition
+                今天什麼情況停止？
               </h2>
               <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-full border ${getRadarClass(overviewRadarStatusText)}`}>
                 <i className="ri-radar-line" />
@@ -980,73 +544,12 @@ function TodayReportContent() {
             </div>
           </section>
 
-          <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
-            <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              Closing Review
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
-              {[
-                ['Today\'s Question', decisionLifecycle.closing_review.question],
-                ['Prediction', decisionLifecycle.closing_review.prediction],
-                ['Reality', decisionLifecycle.closing_review.reality],
-                ['Lesson', decisionLifecycle.closing_review.lesson],
-                ['Tomorrow', decisionLifecycle.closing_review.tomorrow],
-              ].map(([label, value]) => (
-                <div key={label} className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                  <p className="text-slate-500 text-[10px] mb-1">{label}</p>
-                  <p className="text-slate-200 text-xs leading-relaxed">{renderSafeText(value)}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {closingVerificationState.completed && tradingScripts.length > 0 ? (
-                tradingScripts.slice(0, 3).map((item) => (
-                  <article key={item.name} className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div>
-                        <h3 className="text-slate-50 font-bold text-base leading-snug">{renderSafeText(item.name)}</h3>
-                        <p className="text-slate-400 text-xs mt-1">{renderSafeText(item.representatives)}</p>
-                      </div>
-                      <span className={`shrink-0 px-2 py-1 rounded-full border text-[10px] font-semibold ${
-                        item.closeResult === '成立'
-                          ? 'bg-emerald-500/12 text-emerald-300 border-emerald-400/30'
-                          : item.closeResult === '未成立'
-                            ? 'bg-red-500/12 text-red-300 border-red-400/30'
-                            : 'bg-amber-500/12 text-amber-300 border-amber-400/30'
-                      }`}>
-                        收盤結果：{item.closeResult}
-                      </span>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-slate-500 text-[10px] mb-1">驗證重點</p>
-                        <p className="text-slate-300 text-sm leading-relaxed">{renderSafeText(item.condition)}</p>
-                      </div>
-                      <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-900/60 border border-slate-700/60 px-3 py-2">
-                        <span className="text-slate-500 text-[10px]">明日是否延續</span>
-                        <span className="text-slate-100 text-xs font-semibold">{renderSafeText(item.tomorrowAction)}</span>
-                      </div>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <div className="md:col-span-3 flex gap-3 p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                  <i className="ri-database-2-line text-slate-300 text-sm mt-0.5"></i>
-                  <p className="text-slate-200 text-sm leading-relaxed">收盤驗證資料不足，明日降級觀察。</p>
-                </div>
-              )}
-            </div>
-          </section>
-
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6 text-center">
             <Link
               to="/member-note"
               className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl transition-colors"
             >
-              查看完整研究筆記
+              查看完整研究
               <i className="ri-arrow-right-line" />
             </Link>
           </section>

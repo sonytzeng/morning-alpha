@@ -6,6 +6,16 @@ export type V11ObservationItem = {
   industryCode: string;
   industryName: string;
   rank: number | null;
+  role: string;
+  roleTitle: string;
+  roleQuestion: string;
+  title: string;
+  question: string;
+  narrative: string;
+  validationPoint: string;
+  stopCondition: string;
+  representativeSymbols: string[];
+  representativeNames: string[];
   observationReason: string;
   confirmationPendingReason: string;
   stopObservingCondition: string;
@@ -48,28 +58,44 @@ export function mapV11ObservationItems(rows: unknown, limit = 5): V11Observation
   return asRecordArray(rows)
     .map((row, index) => {
       const chain = textList(row.observation_chain || row.benefit_chain);
+      const representativeSymbols = textList(row.representative_symbols);
+      const representativeNames = textList(row.representative_names);
       const industryName = text(row.industry_name || row.industry || row.sector || row.industry_code);
-      const symbol = text(row.symbol || row.stock_id || row.stock_code);
-      const name = text(row.name || row.stock_name || row.company_name);
+      const symbol = text(row.symbol || row.stock_id || row.stock_code || representativeSymbols[0]);
+      const name = text(row.name || row.stock_name || row.company_name || representativeNames[0]);
+      const narrative = text(row.narrative || row.description || row.reason) || text(row.observation_reason) || narrativeFallback(row, '為什麼');
+      const validationPoint = text(row.validation_point || row.confirmation_reason) || text(row.confirmation_pending_reason) || narrativeFallback(row, '還缺');
+      const stopCondition = text(row.stop_condition) || text(row.stop_observing_condition) || narrativeFallback(row, '不用再觀察');
       return {
         symbol,
         name,
         industryCode: text(row.industry_code),
         industryName,
         rank: numberOrNull(row.rank) ?? index + 1,
-        observationReason: text(row.observation_reason) || narrativeFallback(row, '為什麼'),
-        confirmationPendingReason: text(row.confirmation_pending_reason) || narrativeFallback(row, '還缺'),
-        stopObservingCondition: text(row.stop_observing_condition) || narrativeFallback(row, '不用再觀察'),
+        role: text(row.role),
+        roleTitle: text(row.role_title),
+        roleQuestion: text(row.role_question),
+        title: text(row.title),
+        question: text(row.question),
+        narrative,
+        validationPoint,
+        stopCondition,
+        representativeSymbols,
+        representativeNames,
+        observationReason: narrative,
+        confirmationPendingReason: validationPoint,
+        stopObservingCondition: stopCondition,
         observationChain: chain,
       };
     })
     .filter((item) => Boolean(item.symbol || item.name || item.observationReason))
     .filter((item) => {
       const key = [
-        item.industryCode || item.industryName,
-        item.observationReason,
-        item.confirmationPendingReason,
-        item.stopObservingCondition,
+        item.role || item.industryCode || item.industryName,
+        item.roleQuestion || item.question,
+        item.narrative || item.observationReason,
+        item.validationPoint || item.confirmationPendingReason,
+        item.stopCondition || item.stopObservingCondition,
       ].map((part) => part.trim().toLowerCase()).join('|');
       if (seen.has(key)) return false;
       seen.add(key);
@@ -78,18 +104,33 @@ export function mapV11ObservationItems(rows: unknown, limit = 5): V11Observation
     .slice(0, limit);
 }
 
+function roleLabel(role: string): string {
+  const labels: Record<string, string> = {
+    MAIN_THESIS: '今日主線',
+    CONFIRMATION: '確認條件',
+    RISK: '最大風險',
+    CAPITAL_NEXT: '資金下一站',
+    EXTERNAL: '外部變數',
+  };
+  return labels[role] || '觀察劇本';
+}
+
 function scriptTitle(item: V11ObservationItem): string {
-  const chainTheme = item.observationChain.find((part) => part && !part.includes(item.symbol) && !part.includes(item.name));
-  if (chainTheme) return `${chainTheme}能不能接住資金？`;
-  if (item.industryName) return `${item.industryName}能不能接棒？`;
+  if (item.roleQuestion) return item.roleQuestion;
+  if (item.roleTitle) return item.roleTitle;
+  if (item.title) return item.title;
+  if (item.question) return item.question;
+  if (item.industryName) return `${item.industryName}今天扮演什麼角色？`;
   return '今天有沒有新主線？';
 }
 
 function scriptSummary(item: V11ObservationItem): string {
   const target = [item.symbol, item.name].filter(Boolean).join(' ');
+  if (item.narrative) return item.narrative;
   if (item.observationReason) return item.observationReason;
+  if (item.observationChain.length > 0) return item.observationChain.join(' → ');
   if (item.industryName && target) return `${item.industryName}還沒轉成強受惠，先看 ${target} 是否出現第一個確認訊號。`;
-  if (item.industryName) return `${item.industryName}還在等待市場表態，今天先看資金是否願意靠過來。`;
+  if (item.industryName) return `${item.industryName}還在等待市場表態。`;
   return '這條線還沒有足夠正向證據，今天先放在觀察清單。';
 }
 
@@ -107,7 +148,7 @@ function Card({ item, tone }: { item: V11ObservationItem; tone: 'light' | 'dark'
     <article className={`rounded-2xl border p-4 md:p-5 ${cardClass}`}>
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
-          <p className={`text-[10px] uppercase tracking-[0.22em] mb-1 ${labelClass}`}>觀察劇本</p>
+          <p className={`text-[10px] uppercase tracking-[0.22em] mb-1 ${labelClass}`}>{renderSafeText(roleLabel(item.role))}</p>
           <h3 className={`text-base font-bold leading-snug ${titleClass}`}>{renderSafeText(scriptTitle(item))}</h3>
         </div>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] border ${isDark ? 'bg-amber-400/10 text-amber-200 border-amber-300/20' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
@@ -118,7 +159,7 @@ function Card({ item, tone }: { item: V11ObservationItem; tone: 'light' | 'dark'
       <div className={`mb-4 rounded-xl border px-3 py-2 ${isDark ? 'bg-black/15 border-white/5' : 'bg-white border-background-200/70'}`}>
         <p className={`text-xs ${mutedClass}`}>代表股</p>
         <p className={`text-sm font-semibold ${titleClass}`}>
-          {[item.symbol, item.name].filter(Boolean).join(' ') || '待確認代表股'}
+          {[...(item.representativeSymbols.length > 0 ? item.representativeSymbols : [item.symbol]), ...(item.representativeNames.length > 0 ? item.representativeNames : [item.name])].filter(Boolean).slice(0, 2).join(' / ') || '待確認代表股'}
         </p>
       </div>
 
@@ -133,11 +174,11 @@ function Card({ item, tone }: { item: V11ObservationItem; tone: 'light' | 'dark'
         </div>
         <div>
           <p className={`text-[10px] font-semibold mb-1 ${labelClass}`}>今天看什麼</p>
-          <p className={`text-sm leading-relaxed ${bodyClass}`}>{renderSafeText(item.confirmationPendingReason || '先看 09:30 後有沒有量能和同族群跟進。')}</p>
+          <p className={`text-sm leading-relaxed ${bodyClass}`}>{renderSafeText(item.validationPoint || item.confirmationPendingReason || '先看 09:30 後有沒有量能和同族群跟進。')}</p>
         </div>
         <div>
           <p className={`text-[10px] font-semibold mb-1 ${labelClass}`}>何時停看</p>
-          <p className={`text-sm leading-relaxed ${bodyClass}`}>{renderSafeText(item.stopObservingCondition || '若開盤後沒有資金跟進，今天先把這條線降權。')}</p>
+          <p className={`text-sm leading-relaxed ${bodyClass}`}>{renderSafeText(item.stopCondition || item.stopObservingCondition || '若開盤後沒有資金跟進，今天先把這條線降權。')}</p>
         </div>
       </div>
     </article>

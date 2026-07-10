@@ -407,7 +407,7 @@ a, button, .transition-all {
   }
 
   .ma-card-glass {
-    @apply rounded-2xl border border-white/12 bg-white/8 p-4 backdrop-blur-sm;
+    @apply rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm;
   }
 
   .ma-card-interactive {
@@ -435,23 +435,23 @@ a, button, .transition-all {
   }
 
   .ma-btn-primary {
-    @apply inline-flex min-h-[48px] items-center justify-center rounded-xl bg-amber-400 px-6 py-3.5 text-sm font-bold text-slate-950 transition-colors hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/45 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-amber-400 px-6 py-3.5 text-sm font-bold text-slate-950 transition-colors hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40 disabled:pointer-events-none disabled:opacity-50;
   }
 
   .ma-btn-secondary {
-    @apply inline-flex min-h-[44px] items-center justify-center rounded-xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 disabled:pointer-events-none disabled:opacity-50;
   }
 
   .ma-btn-outline {
-    @apply inline-flex min-h-[44px] items-center justify-center rounded-xl border border-background-200/70 bg-transparent px-5 py-3 text-sm font-semibold text-foreground-800 transition-colors hover:border-primary-400/40 hover:bg-primary-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/20 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-background-200/70 bg-transparent px-5 py-3 text-sm font-semibold text-foreground-800 transition-colors hover:border-primary-400/40 hover:bg-primary-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/20 disabled:pointer-events-none disabled:opacity-50;
   }
 
   .ma-btn-ghost {
-    @apply inline-flex min-h-[40px] items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-foreground-500 transition-colors hover:bg-background-100 hover:text-foreground-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/20 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-foreground-500 transition-colors hover:bg-background-100 hover:text-foreground-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/20 disabled:pointer-events-none disabled:opacity-50;
   }
 
   .ma-btn-danger {
-    @apply inline-flex min-h-[44px] items-center justify-center rounded-xl border border-rose-400/30 bg-rose-500/10 px-5 py-3 text-sm font-semibold text-rose-300 transition-colors hover:bg-rose-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/25 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-rose-400/30 bg-rose-500/10 px-5 py-3 text-sm font-semibold text-rose-300 transition-colors hover:bg-rose-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/25 disabled:pointer-events-none disabled:opacity-50;
   }
 
   .ma-badge {
@@ -459,19 +459,19 @@ a, button, .transition-all {
   }
 
   .ma-badge-success {
-    @apply border-emerald-400/35 bg-emerald-500/12 text-emerald-300;
+    @apply border-emerald-400/30 bg-emerald-500/10 text-emerald-300;
   }
 
   .ma-badge-warning {
-    @apply border-amber-400/35 bg-amber-500/12 text-amber-300;
+    @apply border-amber-400/30 bg-amber-500/10 text-amber-300;
   }
 
   .ma-badge-danger {
-    @apply border-rose-400/35 bg-rose-500/12 text-rose-300;
+    @apply border-rose-400/30 bg-rose-500/10 text-rose-300;
   }
 
   .ma-badge-info {
-    @apply border-sky-400/35 bg-sky-500/12 text-sky-300;
+    @apply border-sky-400/30 bg-sky-500/10 text-sky-300;
   }
 
   .ma-badge-neutral {
@@ -483,7 +483,7 @@ a, button, .transition-all {
   }
 
   .ma-callout {
-    @apply rounded-2xl border border-sky-400/20 bg-sky-500/8 p-5;
+    @apply rounded-2xl border border-sky-400/20 bg-sky-500/10 p-5;
   }
 
   .ma-divider {

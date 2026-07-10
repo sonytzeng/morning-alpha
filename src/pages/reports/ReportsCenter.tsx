@@ -12,6 +12,11 @@ import {
 import type { Report } from '@/types/report';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 
+const previewText = (report: Report) => {
+  const text = report.summary || report.today_summary || report.today_quote || '';
+  return text.trim();
+};
+
 export default function ReportsCenter() {
   const [reports7, setReports7] = useState<Report[]>([]);
   const [reports30, setReports30] = useState<Report[]>([]);
@@ -31,7 +36,6 @@ export default function ReportsCenter() {
         setReports7(all.slice(0, 7));
         setReports30(all.slice(7, 30));
 
-        // Fetch close market reviews for all report dates
         const allDates = all.map((r) => r.report_date);
         if (allDates.length > 0) {
           const cmrMap = await getCloseMarketReviewsByDates(allDates);
@@ -50,30 +54,14 @@ export default function ReportsCenter() {
     load();
   }, []);
 
-  // V377: 台股語境 — 偏多紅、偏空綠、震盪琥珀
   const getSentimentColor = (bias: string) => {
     if (bias.includes('偏多') || bias.includes('偏強') || bias.includes('強多')) {
-      return {
-        text: 'text-red-400',
-        bg: 'bg-red-500/10',
-        border: 'border-red-500/20',
-        dot: 'bg-red-400',
-      };
+      return { text: 'text-rose-300', badge: 'ma-badge-danger', dot: 'bg-rose-300' };
     }
     if (bias.includes('偏空') || bias.includes('偏弱') || bias.includes('強空')) {
-      return {
-        text: 'text-emerald-400',
-        bg: 'bg-emerald-500/10',
-        border: 'border-emerald-500/20',
-        dot: 'bg-emerald-400',
-      };
+      return { text: 'text-emerald-300', badge: 'ma-badge-success', dot: 'bg-emerald-300' };
     }
-    return {
-      text: 'text-amber-400',
-      bg: 'bg-amber-500/10',
-      border: 'border-amber-500/20',
-      dot: 'bg-amber-400',
-    };
+    return { text: 'text-amber-300', badge: 'ma-badge-warning', dot: 'bg-amber-300' };
   };
 
   const formatDate = (dateStr: string) => {
@@ -85,12 +73,12 @@ export default function ReportsCenter() {
   };
 
   const getScoreLabel = (score: number | null) => {
-    if (score === null || score === undefined) return { label: '觀察中', color: 'text-white/40' };
-    if (score >= 80) return { label: '高把握度', color: 'text-forest-400' };
-    if (score >= 60) return { label: '明確', color: 'text-forest-400/70' };
-    if (score >= 40) return { label: '中性', color: 'text-amber-400' };
-    if (score >= 20) return { label: '偏弱', color: 'text-amber-400/70' };
-    return { label: '謹慎', color: 'text-red-400' };
+    if (score === null || score === undefined) return { label: '觀察中', color: 'text-white/45' };
+    if (score >= 80) return { label: '高把握度', color: 'text-emerald-300' };
+    if (score >= 60) return { label: '明確', color: 'text-emerald-300/80' };
+    if (score >= 40) return { label: '中性', color: 'text-amber-300' };
+    if (score >= 20) return { label: '偏弱', color: 'text-amber-300/80' };
+    return { label: '謹慎', color: 'text-rose-300' };
   };
 
   const selectedAI = selectedReport?.ai_strategy_json && typeof selectedReport.ai_strategy_json === 'object'
@@ -98,15 +86,78 @@ export default function ReportsCenter() {
     : {};
   const selectedV10Enabled = selectedAI.v10_beneficiary_enabled === true || selectedAI.v10_beneficiary_enabled === 'true';
   const selectedV11ObservationScripts = mapV11ObservationItems(selectedAI.v10_observation_watchlist, 5);
+  const allReports = [...reports7, ...reports30];
+  const latestReportDate = allReports[0]?.report_date || '';
+
+  const renderReportCard = (r: Report, emphasis: 'featured' | 'compact' = 'compact') => {
+    const displayBias = getMarketBiasLabel(r.market_bias, r.confidence_score);
+    const color = getSentimentColor(r.market_bias || displayBias);
+    const scoreInfo = getScoreLabel(r.confidence_score);
+    const vLabel = verificationMap.get(r.report_date);
+    const summary = previewText(r);
+
+    return (
+      <article key={r.id} className="ma-card-interactive group">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <button type="button" onClick={() => setSelectedReport(r)} className="min-w-0 flex-1 text-left">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="ma-badge ma-badge-info">
+                <i className="ri-calendar-line text-[11px]" />
+                {formatDate(r.report_date)}
+              </span>
+              {vLabel && (
+                <span className={`ma-badge ${vLabel.bg} ${vLabel.border} ${vLabel.text}`}>
+                  <i className={`${vLabel.icon} text-[11px]`} />
+                  {vLabel.display}
+                </span>
+              )}
+              <span className={`ma-badge ${color.badge}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${color.dot}`} />
+                {displayBias}
+              </span>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-[112px_minmax(0,1fr)] md:items-start">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-center md:text-left">
+                <p className="text-white/35 text-[10px] uppercase tracking-[0.22em] mb-1">Report</p>
+                <p className="text-white text-lg font-bold leading-tight">{r.report_date}</p>
+                <p className={`mt-2 text-sm font-semibold ${scoreInfo.color}`}>{r.confidence_score ?? '—'}<span className="text-white/30 text-xs ml-1">/100</span></p>
+                <p className="text-white/40 text-xs mt-1">{scoreInfo.label}</p>
+              </div>
+
+              <div className="min-w-0">
+                <h3 className="ma-card-title text-white group-hover:text-amber-200 transition-colors">
+                  Morning Alpha 盤前研究｜{r.report_date}
+                </h3>
+                {summary && (
+                  <p className={`ma-body mt-2 text-white/65 ${emphasis === 'featured' ? 'line-clamp-3' : 'line-clamp-2'}`}>
+                    {summary.slice(0, 160)}
+                  </p>
+                )}
+                <p className="ma-caption mt-3 text-white/35">
+                  點擊卡片快速預覽；完整內容保留原始盤前判斷與驗證脈絡。
+                </p>
+              </div>
+            </div>
+          </button>
+
+          <Link to={`/reports/${r.report_date}`} className="ma-btn-outline shrink-0 border-white/10 text-white hover:bg-white/10 md:self-center">
+            查看完整報告
+            <i className="ri-arrow-right-up-line" />
+          </Link>
+        </div>
+      </article>
+    );
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-navy-950 flex flex-col">
+      <div className="ma-page flex flex-col">
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-8 h-8 border-2 border-white/20 border-t-white/60 rounded-full animate-spin mx-auto mb-3" />
-            <span className="text-white/50 text-sm">載入歷史報告...</span>
+            <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mx-auto mb-3" />
+            <span className="ma-body">載入歷史報告...</span>
           </div>
         </main>
         <Footer />
@@ -116,17 +167,14 @@ export default function ReportsCenter() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-navy-950 flex flex-col">
+      <div className="ma-page flex flex-col">
         <Navbar />
         <main className="flex-1 flex items-center justify-center px-4">
-          <div className="text-center max-w-md">
-            <i className="ri-error-warning-line text-red-500 text-3xl mb-3" />
-            <h2 className="text-white font-semibold text-base mb-2">讀取歷史報告失敗</h2>
-            <p className="text-white/50 text-sm mb-4">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors whitespace-nowrap border border-white/10"
-            >
+          <div className="ma-card max-w-md text-center">
+            <i className="ri-error-warning-line text-rose-400 text-3xl mb-3" />
+            <h2 className="ma-card-title mb-2">讀取歷史報告失敗</h2>
+            <p className="ma-body mb-4">{error}</p>
+            <button onClick={() => window.location.reload()} className="ma-btn-primary">
               重新載入
             </button>
           </div>
@@ -137,489 +185,194 @@ export default function ReportsCenter() {
   }
 
   return (
-    <div className="min-h-screen bg-navy-950 flex flex-col overflow-x-hidden">
+    <div className="ma-page flex flex-col overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
-        <div className="w-full px-4 md:px-6 py-6 md:py-10">
-          <div className="max-w-5xl mx-auto w-full space-y-8 md:space-y-10">
+        <section className="relative w-full overflow-hidden px-4 py-10 md:px-6 md:py-14">
+          <div className="absolute inset-0 bg-gradient-to-b from-[#07111f] via-[#0b1628] to-background-50" />
+          <div className="relative mx-auto grid w-full max-w-5xl gap-5 md:grid-cols-[minmax(0,1fr)_260px] md:items-end">
+            <div>
+              <p className="text-white/35 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">REPORTS CENTER</p>
+              <h1 className="text-white font-bold text-3xl md:text-5xl leading-tight mb-4">歷史研究報告</h1>
+              <p className="text-white/78 text-base md:text-lg leading-relaxed max-w-2xl">
+                回看 Morning Alpha 每個交易日的盤前判斷、關鍵劇本與驗證脈絡。
+              </p>
+              <p className="mt-3 text-white/40 text-xs leading-relaxed max-w-2xl">{MARKET_BIAS_EXPLANATION}</p>
+            </div>
 
-            {/* ===== HEADER ===== */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="ma-card-glass">
+              <p className="text-amber-200 text-[10px] uppercase tracking-[0.22em] font-semibold mb-2">Archive</p>
+              <p className="text-white text-4xl font-bold leading-none">{allReports.length}</p>
+              <p className="text-white/60 text-sm mt-2">已載入研究報告</p>
+              {latestReportDate && <p className="text-white/35 text-xs mt-4">最近更新：{latestReportDate}</p>}
+            </div>
+          </div>
+        </section>
+
+        <section className="ma-section pt-0">
+          <div className="ma-section-inner space-y-8 md:space-y-10">
+            <div className="ma-card flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-white/30 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">
-                  REPORTS ARCHIVE
-                </p>
-                <h1 className="text-white font-bold text-xl md:text-2xl mb-1">歷史驗證</h1>
-                <p className="text-white/50 text-sm">
-                  回顧過去每一天的盤前判斷，訓練自己對市場節奏的感知。
-                </p>
-                <p className="text-white/30 text-[10px] mt-2 leading-relaxed">{MARKET_BIAS_EXPLANATION}</p>
+                <p className="ma-eyebrow mb-1">FILTER</p>
+                <h2 className="ma-card-title">目前顯示最近 30 份報告</h2>
+                <p className="ma-body mt-1">保留既有資料排序與讀取邏輯；本頁未新增篩選條件。</p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border bg-white/5 border-white/10 text-white/40">
-                  <i className="ri-archive-line text-white/30" />
-                  共 {reports7.length + reports30.length} 份報告
-                </span>
+              <div className="flex flex-wrap gap-2">
+                <span className="ma-badge ma-badge-info">最近 7 份：{reports7.length}</span>
+                <span className="ma-badge ma-badge-neutral">更多歷史：{reports30.length}</span>
               </div>
             </div>
 
-            {/* ===== 最近 7 天 ===== */}
             <section>
               <div className="mb-4 md:mb-5">
-                <p className="text-white/30 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">
-                  LAST 7 DAYS
-                </p>
-                <h2 className="text-white font-bold text-lg md:text-xl">最近 7 天報告</h2>
+                <p className="ma-eyebrow mb-1">LATEST RESEARCH</p>
+                <h2 className="ma-section-title">最近 7 天報告</h2>
               </div>
-
               {reports7.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                  {reports7.map((r) => {
-                    const displayBias = getMarketBiasLabel(r.market_bias, r.confidence_score);
-                    const color = getSentimentColor(r.market_bias || displayBias);
-                    const scoreInfo = getScoreLabel(r.confidence_score);
-                    const combinedBias = `${scoreInfo.label}・${displayBias}`;
-                    const vLabel = verificationMap.get(r.report_date);
-                    return (
-                      <button
-                        key={r.id}
-                        onClick={() => setSelectedReport(r)}
-                        className="bg-navy-900/60 border border-navy-800 rounded-2xl p-4 md:p-5 text-left hover:border-navy-600 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-white/50 text-xs font-medium">
-                            {formatDate(r.report_date)}
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {vLabel && (
-                              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${vLabel.bg} ${vLabel.border} ${vLabel.text}`}>
-                                <i className={`${vLabel.icon} text-[9px]`}></i>
-                                {vLabel.display}
-                              </span>
-                            )}
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${color.bg} ${color.border} ${color.text}`}>
-                              <div className={`w-1 h-1 rounded-full ${color.dot}`} />
-                              {combinedBias}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`text-lg font-bold ${scoreInfo.color}`}>
-                            {r.confidence_score ?? 0}
-                          </span>
-                          <span className="text-white/30 text-xs">/100</span>
-                          <span className={`text-xs ${scoreInfo.color}`}>{scoreInfo.label}</span>
-                        </div>
-                        <p className="text-white/50 text-xs leading-relaxed line-clamp-2">
-                          {(r.summary || '').slice(0, 100) || r.today_quote || '無摘要'}
-                        </p>
-                        <div className="mt-3 flex items-center justify-between gap-2">
-                          <span className="text-white/30 text-[10px]">點擊卡片快速預覽</span>
-                          <Link
-                            to={`/reports/${r.report_date}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 text-[10px] font-medium transition-colors whitespace-nowrap"
-                          >
-                            <i className="ri-external-link-line" />
-                            查看完整報告
-                          </Link>
-                        </div>
-                      </button>
-                    );
-                  })}
+                <div className="space-y-4">
+                  {reports7.map((report) => renderReportCard(report, 'featured'))}
                 </div>
               ) : (
-                <div className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
-                  <p className="text-white/40 text-sm">暫無最近 7 天報告資料。</p>
+                <div className="ma-card text-center">
+                  <h3 className="ma-card-title">目前沒有符合條件的報告</h3>
+                  <p className="ma-body mt-2">調整日期或篩選條件後再查看。</p>
                 </div>
               )}
             </section>
 
-            {/* ===== 最近 30 天 ===== */}
             <section>
               <div className="mb-4 md:mb-5">
-                <p className="text-white/30 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">
-                  LAST 30 DAYS
-                </p>
-                <h2 className="text-white font-bold text-lg md:text-xl">最近 30 天報告</h2>
+                <p className="ma-eyebrow mb-1">ARCHIVE</p>
+                <h2 className="ma-section-title">更多歷史報告</h2>
               </div>
-
               {reports30.length > 0 ? (
-                <div className="bg-navy-900/60 border border-navy-800 rounded-2xl overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[560px]">
-                      <thead>
-                        <tr className="bg-white/5">
-                          <th className="px-4 py-3 text-left text-white/40 text-xs font-medium whitespace-nowrap">
-                            日期
-                          </th>
-                          <th className="px-4 py-3 text-left text-white/40 text-xs font-medium whitespace-nowrap">
-                            市場情緒
-                          </th>
-                          <th className="px-4 py-3 text-left text-white/40 text-xs font-medium whitespace-nowrap">
-                            分數
-                          </th>
-                          <th className="px-4 py-3 text-left text-white/40 text-xs font-medium whitespace-nowrap">
-                            摘要
-                          </th>
-                          <th className="px-4 py-3 text-right text-white/40 text-xs font-medium whitespace-nowrap">
-                            操作
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reports30.map((r) => {
-                          const displayBias = getMarketBiasLabel(r.market_bias, r.confidence_score);
-                          const color = getSentimentColor(r.market_bias || displayBias);
-                          const scoreInfo = getScoreLabel(r.confidence_score);
-                          const combinedBias = `${scoreInfo.label}・${displayBias}`;
-                          const vLabel = verificationMap.get(r.report_date);
-                          return (
-                            <tr
-                              key={r.id}
-                              className="border-t border-white/5 hover:bg-white/5 transition-colors"
-                            >
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <span className="text-white text-sm font-medium">
-                                  {formatDate(r.report_date)}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <div className="flex items-center gap-1.5">
-                                  {vLabel && (
-                                    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${vLabel.bg} ${vLabel.border} ${vLabel.text}`}>
-                                      <i className={`${vLabel.icon} text-[9px]`}></i>
-                                      {vLabel.display}
-                                    </span>
-                                  )}
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${color.bg} ${color.border} ${color.text}`}>
-                                    <div className={`w-1 h-1 rounded-full ${color.dot}`} />
-                                    {combinedBias}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <span className="text-white text-sm font-medium">
-                                  {r.confidence_score ?? 0}
-                                </span>
-                                <span className="text-white/30 text-xs ml-1">/100</span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <p className="text-white/50 text-xs leading-relaxed truncate max-w-xs">
-                                  {(r.summary || '').slice(0, 100) || r.today_quote || '無摘要'}
-                                </p>
-                              </td>
-                              <td className="px-4 py-3 text-right whitespace-nowrap">
-                                <Link
-                                  to={`/reports/${r.report_date}`}
-                                  className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 text-xs font-medium transition-colors"
-                                >
-                                  <i className="ri-external-link-line" />
-                                  完整報告
-                                </Link>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="space-y-4">
+                  {reports30.map((report) => renderReportCard(report))}
                 </div>
               ) : (
-                <div className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
-                  <p className="text-white/40 text-sm">暫無更多歷史報告資料。</p>
+                <div className="ma-card text-center">
+                  <h3 className="ma-card-title">目前沒有更多歷史報告</h3>
+                  <p className="ma-body mt-2">系統會在更多交易日累積後自動出現。</p>
                 </div>
               )}
             </section>
 
-            {/* ===== CTA ===== */}
-            <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-8 text-center">
-              <h3 className="text-white font-bold text-base md:text-lg mb-2">
-                想每天收到盤前報告？
-              </h3>
-              <p className="text-white/50 text-sm mb-4">
-                每天早上 07:30，幫你整理戰場情勢。
-              </p>
+            <section className="ma-card-elevated text-center">
+              <h3 className="text-white font-bold text-base md:text-lg mb-2">想每天收到盤前報告？</h3>
+              <p className="text-white/60 text-sm mb-5">每天早上 07:30，幫你整理戰場情勢。</p>
               <div className="flex flex-col gap-3 w-full sm:flex-row sm:justify-center">
-                <Link
-                  to="/report/today"
-                  className="inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-white/10 hover:bg-white/15 text-white text-sm font-medium rounded-xl transition-colors whitespace-nowrap min-h-[48px] w-full sm:w-auto border border-white/10"
-                >
+                <Link to="/report/today" className="ma-btn-primary w-full sm:w-auto">
                   <i className="ri-file-list-3-line" />
                   查看今日盤前判斷
                 </Link>
-                <Link
-                  to="/"
-                  className="inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-white/5 hover:bg-white/10 text-white/60 text-sm font-medium rounded-xl transition-colors border border-white/10 whitespace-nowrap min-h-[48px] w-full sm:w-auto"
-                >
+                <Link to="/" className="ma-btn-secondary w-full sm:w-auto">
                   <i className="ri-arrow-left-line" />
                   回首頁
                 </Link>
               </div>
             </section>
           </div>
-        </div>
+        </section>
       </main>
 
       <Footer />
 
-      {/* ===== 報告詳情 Modal ===== */}
       {selectedReport && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#07111f]/60 backdrop-blur-sm"
-          onClick={() => setSelectedReport(null)}
-        >
-          <div
-            className="bg-navy-900 border border-navy-700 rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-navy-900 border-b border-navy-700 px-5 md:px-6 py-4 flex items-center justify-between z-10">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-white font-bold text-sm">
-                    {formatDate(selectedReport.report_date)}
-                  </span>
-                  <span className="text-white/30 text-xs">
-                    {selectedReport.report_date}
-                  </span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#07111f]/70 backdrop-blur-sm" onClick={() => setSelectedReport(null)}>
+          <div className="ma-card-elevated w-full max-w-2xl max-h-[85vh] overflow-y-auto p-0" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 z-10 border-b border-white/10 bg-[#07111f]/95 px-5 py-4 md:px-6 flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className="text-white font-bold text-sm">{formatDate(selectedReport.report_date)}</span>
+                  <span className="text-white/35 text-xs">{selectedReport.report_date}</span>
+                  {(() => {
+                    const vLabel = verificationMap.get(selectedReport.report_date);
+                    if (!vLabel) return null;
+                    return <span className={`ma-badge ${vLabel.bg} ${vLabel.border} ${vLabel.text}`}><i className={`${vLabel.icon} text-[11px]`} />{vLabel.display}</span>;
+                  })()}
                 </div>
-                {(() => {
-                  const vLabel = verificationMap.get(selectedReport.report_date);
-                  if (vLabel) {
-                    return (
-                      <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${vLabel.bg} ${vLabel.border} ${vLabel.text}`}>
-                        <i className={`${vLabel.icon} text-[9px]`}></i>
-                        {vLabel.display}
-                      </span>
-                    );
-                  }
-                  return null;
-                })()}
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${getSentimentColor(selectedReport.market_bias || '').bg} ${getSentimentColor(selectedReport.market_bias || '').border} ${getSentimentColor(selectedReport.market_bias || '').text}`}>
-                  <div className={`w-1 h-1 rounded-full ${getSentimentColor(selectedReport.market_bias || '').dot}`} />
-                  {`${getScoreLabel(selectedReport.confidence_score).label}・${getMarketBiasLabel(selectedReport.market_bias, selectedReport.confidence_score)}`}
-                </span>
+                <p className="text-white/50 text-xs">快速預覽</p>
               </div>
-              <button
-                onClick={() => setSelectedReport(null)}
-                className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
-              >
+              <button onClick={() => setSelectedReport(null)} className="ma-btn-ghost text-white/60 hover:bg-white/10 hover:text-white">
                 <i className="ri-close-line text-lg" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="px-5 md:px-6 py-5 space-y-5">
-              {/* 分數 */}
-              <div className="flex items-center gap-3">
-                <div className="relative w-16 h-16">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
-                    <circle
-                      cx="50" cy="50" r="42"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="8"
-                      strokeLinecap="round"
-                      strokeDasharray={`${(selectedReport.confidence_score ?? 0) * 2.64} 264`}
-                      className={getSentimentColor(selectedReport.market_bias || '').text}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={`text-sm font-bold ${getSentimentColor(selectedReport.market_bias || '').text}`}>
-                      {selectedReport.confidence_score ?? 0}
-                    </span>
-                  </div>
+            <div className="px-5 py-5 md:px-6 space-y-5">
+              <div className="flex items-center gap-4">
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-center">
+                  <p className={`text-xl font-bold ${getSentimentColor(selectedReport.market_bias || '').text}`}>{selectedReport.confidence_score ?? 0}</p>
+                  <p className="text-white/35 text-xs">把握度</p>
                 </div>
                 <div>
                   <p className="text-white font-medium text-sm">劇本成立度</p>
-                  <p className="text-white/40 text-xs">
-                    {getScoreLabel(selectedReport.confidence_score).label}
-                  </p>
+                  <p className="text-white/45 text-xs">{getScoreLabel(selectedReport.confidence_score).label}</p>
                 </div>
               </div>
 
-              {/* AI 解讀 */}
               {(selectedReport.summary || selectedReport.ai_confidence_reason) && (
-                <div className="bg-amber-500/[0.03] border border-amber-500/10 rounded-xl p-4">
+                <div className="ma-callout bg-amber-500/[0.04] border-amber-400/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <i className="ri-sword-line text-amber-400/60 text-sm" />
-                    <span className="text-amber-400/70 text-xs font-medium">AI 軍師解讀</span>
+                    <i className="ri-sword-line text-amber-300 text-sm" />
+                    <span className="text-amber-200 text-xs font-semibold">AI 軍師解讀</span>
                   </div>
-                  <p className="text-white/70 text-sm leading-relaxed whitespace-pre-line">
-                    {selectedReport.summary || selectedReport.ai_confidence_reason}
-                  </p>
+                  <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{selectedReport.summary || selectedReport.ai_confidence_reason}</p>
                 </div>
               )}
 
-              {/* 今日策略 */}
               {selectedReport.today_strategy && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {(selectedReport.today_strategy.do || []).length > 0 && (
-                    <div>
-                      <h4 className="text-forest-400 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                        <i className="ri-check-line" />
-                        該做
-                      </h4>
-                      <div className="space-y-1.5">
-                        {(selectedReport.today_strategy.do || []).map((item, idx) => (
-                          <p key={idx} className="text-white/60 text-sm">{item}</p>
-                        ))}
-                      </div>
+                    <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4">
+                      <h4 className="text-emerald-200 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="ri-check-line" />該做</h4>
+                      <div className="space-y-1.5">{(selectedReport.today_strategy.do || []).map((item, idx) => <p key={idx} className="text-white/65 text-sm">{item}</p>)}</div>
                     </div>
                   )}
                   {(selectedReport.today_strategy.avoid || []).length > 0 && (
-                    <div>
-                      <h4 className="text-red-400 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                        <i className="ri-close-line" />
-                        不該做
-                      </h4>
-                      <div className="space-y-1.5">
-                        {(selectedReport.today_strategy.avoid || []).map((item, idx) => (
-                          <p key={idx} className="text-white/60 text-sm">{item}</p>
-                        ))}
-                      </div>
+                    <div className="rounded-xl border border-rose-400/20 bg-rose-500/10 p-4">
+                      <h4 className="text-rose-200 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="ri-close-line" />不該做</h4>
+                      <div className="space-y-1.5">{(selectedReport.today_strategy.avoid || []).map((item, idx) => <p key={idx} className="text-white/65 text-sm">{item}</p>)}</div>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* 主線 */}
               {(selectedReport.watch_sectors_json || []).length > 0 && (
                 <div>
-                  <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-2">
-                    今日主線
-                  </h4>
-                  <div className="space-y-1.5">
-                    {(selectedReport.watch_sectors_json || []).map((s, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <span className="text-white/30 text-xs">{idx + 1}.</span>
-                        <span className="text-white/70 text-sm">{s.sector}</span>
-                        {s.direction && (
-                          <span className="text-white/40 text-xs">({s.direction})</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  <h4 className="text-white/45 text-xs font-semibold uppercase tracking-wider mb-2">今日主線</h4>
+                  <div className="space-y-2">{(selectedReport.watch_sectors_json || []).map((s, idx) => <div key={idx} className="flex items-center gap-2 text-sm text-white/70"><span className="text-white/35 text-xs">{idx + 1}.</span><span>{s.sector}</span>{s.direction && <span className="text-white/40 text-xs">({s.direction})</span>}</div>)}</div>
                 </div>
               )}
 
               {selectedV10Enabled && (
-                <V11ObservationSection
-                  items={selectedV11ObservationScripts}
-                  tone="dark"
-                  className="bg-transparent border-white/10"
-                  subtitle="用同一套 brief 回看：當天到底在等什麼。"
-                />
+                <V11ObservationSection items={selectedV11ObservationScripts} tone="dark" className="bg-transparent border-white/10" subtitle="用同一套 brief 回看：當天到底在等什麼。" />
               )}
 
-              {/* 資金觀察方向 */}
               {!selectedV10Enabled && (selectedReport.focus_stock_json || []).length > 0 && (
                 <div>
-                  <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-2">
-                    資金觀察方向
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {(selectedReport.focus_stock_json || []).map((s, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-navy-800 border border-navy-700 rounded-lg text-white/70 text-xs"
-                      >
-                        {s.group}
-                        {s.direction && (
-                          <span className="text-white/40">· {s.direction}</span>
-                        )}
-                      </span>
-                    ))}
-                  </div>
+                  <h4 className="text-white/45 text-xs font-semibold uppercase tracking-wider mb-2">資金觀察方向</h4>
+                  <div className="flex flex-wrap gap-2">{(selectedReport.focus_stock_json || []).map((s, idx) => <span key={idx} className="ma-badge ma-badge-neutral">{s.group}{s.direction && <span className="text-white/40">· {s.direction}</span>}</span>)}</div>
                 </div>
               )}
 
-              {/* 風險因素 */}
               {(selectedReport.risk_factors_json || []).length > 0 && (
                 <div>
-                  <h4 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-2">
-                    風險因素
-                  </h4>
-                  <div className="space-y-1.5">
-                    {(selectedReport.risk_factors_json || []).map((r, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <span className={`text-xs font-medium ${r.level === 'high' ? 'text-red-400' : r.level === 'medium' ? 'text-amber-400' : 'text-white/40'}`}>
-                          {r.level === 'high' ? '高' : r.level === 'medium' ? '中' : '低'}
-                        </span>
-                        <span className="text-white/60 text-sm">{r.title}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <h4 className="text-white/45 text-xs font-semibold uppercase tracking-wider mb-2">風險因素</h4>
+                  <div className="space-y-2">{(selectedReport.risk_factors_json || []).map((r, idx) => <div key={idx} className="flex items-center gap-2 text-sm"><span className={`text-xs font-medium ${r.level === 'high' ? 'text-rose-300' : r.level === 'medium' ? 'text-amber-300' : 'text-white/45'}`}>{r.level === 'high' ? '高' : r.level === 'medium' ? '中' : '低'}</span><span className="text-white/65">{r.title}</span></div>)}</div>
                 </div>
               )}
 
-              {/* 語錄 */}
               {selectedReport.today_quote && (
-                <div className="bg-navy-800/50 border border-navy-700 rounded-xl p-4">
-                  <div className="flex items-start gap-2">
-                    <i className="ri-double-quotes-l text-amber-500/30 text-lg flex-shrink-0 mt-0.5" />
-                    <p className="text-amber-400/60 text-sm italic leading-relaxed">
-                      {selectedReport.today_quote}
-                    </p>
-                  </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                  <div className="flex items-start gap-2"><i className="ri-double-quotes-l text-amber-300/50 text-lg flex-shrink-0 mt-0.5" /><p className="text-amber-100/75 text-sm italic leading-relaxed">{selectedReport.today_quote}</p></div>
                 </div>
               )}
-
-              {/* 市場數據 */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {selectedReport.nasdaq_change !== null && (
-                  <div className="bg-navy-800/50 border border-navy-700 rounded-xl p-3 text-center">
-                    <p className="text-white/30 text-[10px] mb-1">Nasdaq</p>
-                    <p className={`text-sm font-semibold ${selectedReport.nasdaq_change >= 0 ? 'text-forest-400' : 'text-red-400'}`}>
-                      {selectedReport.nasdaq_change >= 0 ? '+' : ''}{selectedReport.nasdaq_change}%
-                    </p>
-                  </div>
-                )}
-                {selectedReport.sp500_change !== null && (
-                  <div className="bg-navy-800/50 border border-navy-700 rounded-xl p-3 text-center">
-                    <p className="text-white/30 text-[10px] mb-1">S&amp;P 500</p>
-                    <p className={`text-sm font-semibold ${selectedReport.sp500_change >= 0 ? 'text-forest-400' : 'text-red-400'}`}>
-                      {selectedReport.sp500_change >= 0 ? '+' : ''}{selectedReport.sp500_change}%
-                    </p>
-                  </div>
-                )}
-                {selectedReport.sox_change !== null && (
-                  <div className="bg-navy-800/50 border border-navy-700 rounded-xl p-3 text-center">
-                    <p className="text-white/30 text-[10px] mb-1">SOX</p>
-                    <p className={`text-sm font-semibold ${selectedReport.sox_change >= 0 ? 'text-forest-400' : 'text-red-400'}`}>
-                      {selectedReport.sox_change >= 0 ? '+' : ''}{selectedReport.sox_change}%
-                    </p>
-                  </div>
-                )}
-                {selectedReport.vix !== null && (
-                  <div className="bg-navy-800/50 border border-navy-700 rounded-xl p-3 text-center">
-                    <p className="text-white/30 text-[10px] mb-1">VIX</p>
-                    <p className={`text-sm font-semibold ${selectedReport.vix > 25 ? 'text-red-400' : selectedReport.vix > 18 ? 'text-amber-400' : 'text-forest-400'}`}>
-                      {selectedReport.vix}
-                    </p>
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="sticky bottom-0 bg-navy-900 border-t border-navy-700 px-5 md:px-6 py-4 flex items-center justify-end gap-3">
-              <button
-                onClick={() => setSelectedReport(null)}
-                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/60 text-sm rounded-xl transition-colors border border-white/10"
-              >
-                關閉
-              </button>
-              <Link
-                to="/report/today"
-                onClick={() => setSelectedReport(null)}
-                className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-sm rounded-xl transition-colors border border-amber-500/20"
-              >
-                查看今日報告
-              </Link>
+            <div className="sticky bottom-0 border-t border-white/10 bg-[#07111f]/95 px-5 py-4 md:px-6 flex items-center justify-end gap-3">
+              <button onClick={() => setSelectedReport(null)} className="ma-btn-ghost text-white/60 hover:bg-white/10 hover:text-white">關閉</button>
+              <Link to={`/reports/${selectedReport.report_date}`} onClick={() => setSelectedReport(null)} className="ma-btn-primary">查看完整報告</Link>
             </div>
           </div>
         </div>

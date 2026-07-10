@@ -12,6 +12,7 @@ import { getTodaySectorRotation, getSignalColor, computeSectorRotationFreshness,
 import { resolveIntradayTrackingState, type IntradayTrackingState, type SegmentDisplay } from '@/services/intradayTrackingResolver';
 import { useState, useEffect, useMemo } from 'react';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
+import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import PaywallCard from '@/components/paywall/PaywallCard';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
@@ -70,6 +71,14 @@ function humanStatus(value: unknown): string {
   if (raw === 'pending' || raw === 'pending_real_market_data') return '等待收盤資料';
   if (raw === 'degraded') return '資料部分完成';
   return safeText(value, '待驗證');
+}
+
+function decisionStatusLabel(value: unknown): string {
+  const raw = safeText(value).toLowerCase();
+  if (raw === 'confirmed') return 'Confirmed｜劇本成立中';
+  if (raw === 'rejected') return 'Rejected｜劇本已失效';
+  if (raw === 'completed') return 'Completed｜收盤驗證完成';
+  return 'Waiting｜等待確認';
 }
 
 function normalizePredictionResult(value: unknown): string {
@@ -290,6 +299,11 @@ function WarRoomContent() {
 
   const sectorCanUseAsTodayStrategy = sectorFreshness?.canUseAsTodayStrategy ?? false;
   const sectorIsStale = sectorFreshness?.isStale ?? false;
+  const canonicalNarrative = buildCanonicalNarrative({
+    displayState,
+    ai: rawAI,
+  });
+  const decisionLifecycle = canonicalNarrative.decision_lifecycle;
   const v10BeneficiaryEnabled = displayState?.v10BeneficiaryEnabled === true
     || rawAI?.v10_beneficiary_enabled === true
     || rawAI?.v10_beneficiary_enabled === 'true';
@@ -530,9 +544,31 @@ function WarRoomContent() {
             <V11ObservationSection
               items={v11ObservationScripts}
               tone="dark"
-              subtitle="盤中只看一件事：資金有沒有真的跟上。"
+              subtitle={canonicalNarrative.today_focus.summary || '盤中只看一件事：資金有沒有真的跟上。'}
             />
           )}
+
+          <section className="rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.04] p-5 md:p-6">
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <div>
+                <p className="text-cyan-300 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">Decision Status</p>
+                <h2 className="text-white font-bold text-lg">{decisionStatusLabel(decisionLifecycle.decision_status.status)}</h2>
+              </div>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/10 text-white/70 text-[10px] font-semibold">
+                同一問題：{decisionLifecycle.question.question}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">目前原因</p>
+                <p className="text-white/75 text-sm leading-relaxed">{safeText(decisionLifecycle.decision_status.reason, '等待資料確認。')}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">下一步</p>
+                <p className="text-white/75 text-sm leading-relaxed">{safeText(decisionLifecycle.decision_status.next_step, '等待下一個驗證點。')}</p>
+              </div>
+            </div>
+          </section>
 
           {/* ═══════════════════════════════════════ */}
           {/* CARD 2 — 09:30 盤中雷達 */}
@@ -615,11 +651,11 @@ function WarRoomContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
                     <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
-                    <p className="text-white/80 text-sm font-medium">{displayState?.marketBias || '偏多觀察'}</p>
+                    <p className="text-white/80 text-sm font-medium">{canonicalNarrative.today_focus.headline || displayState?.marketBias || '—'}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
                     <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">今日待驗證</p>
-                    <p className="text-white/80 text-sm font-medium">TAIEX、TXF、2330 是否同向</p>
+                    <p className="text-white/80 text-sm font-medium">{canonicalNarrative.intraday_progress.next_step || canonicalNarrative.today_script.current_step || '—'}</p>
                   </div>
                 </div>
                 {tracking.isOpeningRadarStale && openingRadar && (

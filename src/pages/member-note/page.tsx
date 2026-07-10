@@ -15,6 +15,7 @@ import {
   type ParsedAIStrategy,
 } from '@/utils/aiStrategyParser';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
+import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { trackPageView, trackEvent } from '@/utils/analytics';
 import PaywallCard from '@/components/paywall/PaywallCard';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
@@ -761,19 +762,28 @@ function MemberNoteContent() {
     || valueHasContent(memberNoteV2?.institutional_behavior)
     || valueHasContent(memberNoteV2?.tomorrow_extension_watch);
   const scoreDisplay = scoreTone(confidenceScore);
+  const canonicalNarrative = buildCanonicalNarrative({
+    displayState: dsState,
+    ai: rawAI,
+    memberResearchNoteV2: memberNoteV2 as unknown as Record<string, unknown> | null,
+  });
+  const decisionLifecycle = canonicalNarrative.decision_lifecycle;
   const openingThesis = asRecord(memberNoteV2?.opening_thesis);
   const firstStockNote = asRecord(memberNoteV2?.first_beneficiary_stock);
   const todayOneLine = firstText(
-    rawAI.v8_daily_sentence && asRecord(rawAI.v8_daily_sentence).sentence,
+    canonicalNarrative.today_focus.summary,
+    canonicalNarrative.today_focus.headline,
     researcherSummary,
     openingThesis.summary,
     rawAI.daily_sentence,
   );
   const importantObservation = firstText(
+    canonicalNarrative.today_focus.why,
+    canonicalNarrative.today_focus.action,
     firstLine(openingThesis.summary),
     firstLine(memberNoteV2?.core_reasoning),
     firstLine(rawAI.do_not_do_list),
-  ) || '今天先看 2330、TAIEX 與 TXF 是否同向，沒有同步就不要急著放大部位。';
+  ) || '資料不足，等待完整研究筆記補齊。';
   const firstStockName = [firstText(firstStockNote.stock_code, firstStockNote.symbol), firstText(firstStockNote.stock_name, firstStockNote.name)].filter(Boolean).join(' ') || [beneficiaryCandidates[0]?.symbol, beneficiaryCandidates[0]?.name].filter(Boolean).join(' ') || '尚未產生';
   const firstStockReason = firstText(firstStockNote.relationship_to_thesis, firstStockNote.benefit_source, beneficiaryCandidates[0]?.reason, '等待完整受惠股推理補齊。');
   const firstStockValidation = firstText(firstStockNote.validation_signal, beneficiaryCandidates[0]?.watchPoint, '09:30 後看 2330、TAIEX 與族群是否同步。');
@@ -783,6 +793,8 @@ function MemberNoteContent() {
   const rotationScenarios = recordList(memberNoteV2?.capital_rotation_scenarios);
   const scenarioLabels = ['如果今天變強', '如果今天震盪', '如果今天轉弱'];
   const dontDoItems = [
+    canonicalNarrative.today_focus.risk,
+    canonicalNarrative.failure_triggers[0]?.action,
     ...textList(rawAI.do_not_do_list),
     ...textList(rawAI.avoid_today),
     ...recordList(memberNoteV2?.risk_scenarios).map((item) => firstText(item.response, item.condition, item.risk)),
@@ -880,6 +892,7 @@ function MemberNoteContent() {
               <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
                 <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">收盤驗證</p>
                 <p className="text-white/80 text-sm font-semibold mb-2">今天判斷：{closingResultText}</p>
+                <p className="text-amber-200/80 text-xs leading-relaxed mb-2">每日一課：{renderSafeText(decisionLifecycle.daily_lesson)}</p>
                 <p className="text-white/60 text-xs leading-relaxed mb-1">第一受惠股：{renderSafeText(firstBeneficiaryResult)}</p>
                 <p className="text-white/45 text-xs leading-relaxed">受惠股名單：{listValidationResult}</p>
               </div>
@@ -944,6 +957,11 @@ function MemberNoteContent() {
 
             {hasCompletedClosingVerification ? (
               <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-violet-500/[0.04] border border-violet-400/20">
+                  <p className="text-violet-300 text-[10px] uppercase tracking-wider mb-2">Daily Lesson</p>
+                  <p className="text-white/80 text-sm font-semibold leading-relaxed">{renderSafeText(decisionLifecycle.daily_lesson)}</p>
+                  <p className="text-white/45 text-xs leading-relaxed mt-2">同一個問題：{renderSafeText(decisionLifecycle.closing_review.question)}</p>
+                </div>
                 {isClosingVerificationDegraded && (
                   <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-400/20">
                     <p className="text-amber-200 text-sm font-semibold mb-1">大盤方向已驗證，個股與類股資料仍不完整</p>

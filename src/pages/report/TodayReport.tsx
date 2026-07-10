@@ -11,7 +11,8 @@ import { renderSafeText } from '@/utils/renderSafe';
 import { formatTaipeiDate } from '@/utils/tradingDay';
 import type { Report } from '@/types/report';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
-import { mapV11ObservationItems, type V11ObservationItem } from '@/components/v11/V11ObservationSection';
+import { buildCanonicalNarrative, type CanonicalMorningNarrative } from '@/lib/canonicalNarrative';
+import type { V11ObservationItem } from '@/components/v11/V11ObservationSection';
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
 import { getTodayOpeningRadar } from '@/services/openingRadarService';
 
@@ -593,6 +594,31 @@ function buildTradingScripts(
     .slice(0, limit);
 }
 
+function buildCanonicalTradingScripts(
+  narrative: CanonicalMorningNarrative,
+  closingState: ClosingVerificationState,
+): TradingScript[] {
+  const lessons = narrative.closing_outcome.lessons;
+  const steps = narrative.today_script.steps.length > 0
+    ? narrative.today_script.steps
+    : [{ time: '', title: narrative.today_script.headline, detail: narrative.today_focus.summary, status: 'pending' as const }];
+
+  return steps.slice(0, 3).map((step, index) => {
+    const failure = narrative.failure_triggers[index] || narrative.failure_triggers[0];
+    const result = normalizeCloseResult(narrative.closing_outcome.result) || (closingState.completed ? '待確認' : '待確認');
+    return {
+      name: firstText(step.title, narrative.today_script.headline, '劇本 ' + (index + 1)),
+      why: firstText(narrative.today_focus.why, narrative.today_focus.summary, step.detail, '資料不足'),
+      representatives: firstText(step.time, '依完整研究筆記'),
+      status: step.status,
+      condition: firstText(step.detail, narrative.today_focus.why, '資料不足'),
+      invalidation: firstText(failure?.trigger, narrative.today_focus.risk, '資料不足'),
+      closeResult: result,
+      tomorrowAction: firstText(lessons[index], lessons[0], closingState.completed ? '延續觀察' : '等待收盤驗證資料同步'),
+    };
+  }).filter((item) => item.name && item.condition);
+}
+
 function TodayReportContent() {
   const [report, setReport] = useState<Report | null>(null);
   const [reportSnapshotRadar, setReportSnapshotRadar] = useState<RadarView | null>(null);
@@ -682,23 +708,44 @@ function TodayReportContent() {
           ? '13:00 盤中資料尚未同步'
           : '等待收盤驗證資料同步';
   const overviewBiasText = premarketBiasLabel;
-  const v11ObservationScripts = mapV11ObservationItems(ai.v10_observation_watchlist || displayState?.v10ObservationWatchlist, 5);
   const intradaySyncView = getIntradaySyncView(ai);
   const closingVerificationState = getClosingVerificationState(ai);
-  const mainLine = inferMainLine(ai, displayState, v11ObservationScripts);
-  const actionStatus = inferActionStatus(overviewBiasText, displayState?.confidenceScore, activeIntradayRadar, intradayPendingTitle);
-  const nextVerification = nextVerificationPoint(taipeiMinutes, activeIntradayRadar, intradaySyncView, closingVerificationState);
-  const operationSteps = buildOperationSteps(mainLine, nextVerification, actionStatus);
-  const verificationFocus = buildVerificationFocus(
-    taipeiMinutes,
-    activeIntradayRadar,
-    mainLine,
-    intradayPendingTitle,
-    intradaySyncView,
-    closingVerificationState,
+  const canonicalNarrative: CanonicalMorningNarrative = useMemo(() => buildCanonicalNarrative({
+    displayState,
+    ai,
+    memberResearchNoteV2: asObj(ai.member_research_note_v2),
+  }), [displayState, ai]);
+  const decisionLifecycle = canonicalNarrative.decision_lifecycle;
+  const mainLine = firstText(
+    decisionLifecycle.current_thesis.title,
+    '資料不足',
   );
+  const actionStatus = firstText(
+    decisionLifecycle.current_thesis.summary,
+    canonicalNarrative.today_focus.action,
+    '資料不足',
+  );
+  const nextVerification = firstText(
+    decisionLifecycle.validation_plan.next_step,
+    nextVerificationPoint(taipeiMinutes, activeIntradayRadar, intradaySyncView, closingVerificationState),
+  );
+  const operationSteps = decisionLifecycle.validation_plan.steps.length > 0
+    ? decisionLifecycle.validation_plan.steps.slice(0, 4).map((step) => firstText(step.detail, step.title, step.time)).filter(Boolean)
+    : [
+        decisionLifecycle.current_thesis.summary,
+        decisionLifecycle.validation_plan.next_step,
+        decisionLifecycle.failure_condition.action,
+      ].filter(Boolean).slice(0, 4);
+  const verificationFocus: VerificationFocus = {
+    currentStage: firstText(decisionLifecycle.decision_status.reason, canonicalNarrative.intraday_progress.current_step, '資料不足'),
+    nextStep: nextVerification,
+    confirming: firstText(decisionLifecycle.question.why, canonicalNarrative.today_focus.summary, '資料不足'),
+    ifFailed: firstText(decisionLifecycle.failure_condition.action, decisionLifecycle.failure_condition.trigger, '資料不足'),
+    dataStatus: firstText(canonicalNarrative.intraday_progress.status, intradayPendingTitle),
+    isSynced: canonicalNarrative.intraday_progress.status === 'ready' || canonicalNarrative.intraday_progress.status === 'completed',
+  };
   const overviewRadarStatusText = verificationFocus.dataStatus;
-  const tradingScripts = buildTradingScripts(v11ObservationScripts, verificationFocus.currentStage, ai);
+  const tradingScripts = buildCanonicalTradingScripts(canonicalNarrative, closingVerificationState);
 
   if (loading) {
     return (
@@ -837,8 +884,23 @@ function TodayReportContent() {
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6">
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              {isHistoricalFallback ? '歷史決策面板' : '今日決策面板'}
+              Today&apos;s Question
             </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                <p className="text-emerald-300 text-[10px] uppercase tracking-wider mb-1">Question</p>
+                <p className="text-slate-50 font-bold text-lg leading-relaxed">{renderSafeText(decisionLifecycle.question.question)}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                <p className="text-emerald-300 text-[10px] uppercase tracking-wider mb-1">Why</p>
+                <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(decisionLifecycle.question.why)}</p>
+              </div>
+            </div>
+
+            <h3 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
+              Current Thesis
+            </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
@@ -865,7 +927,7 @@ function TodayReportContent() {
 
           <section className="bg-navy-900/70 border border-emerald-500/15 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              今天該怎麼做
+              Validation Plan
             </h2>
             <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -884,7 +946,7 @@ function TodayReportContent() {
           <section className="bg-navy-900/70 border border-cyan-500/20 rounded-2xl p-5 md:p-6">
             <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
               <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
-                目前驗證焦點
+                Failure Condition
               </h2>
               <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-full border ${getRadarClass(overviewRadarStatusText)}`}>
                 <i className="ri-radar-line" />
@@ -895,11 +957,11 @@ function TodayReportContent() {
             <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                 {[
-                  { label: '目前階段', value: verificationFocus.currentStage },
+                  { label: '目前原因', value: verificationFocus.currentStage },
                   { label: '下一步', value: verificationFocus.nextStep },
                   { label: '正在確認', value: verificationFocus.confirming },
-                  { label: '若失敗', value: verificationFocus.ifFailed },
-                  { label: '資料狀態', value: verificationFocus.dataStatus },
+                  { label: '失效條件', value: firstText(decisionLifecycle.failure_condition.trigger, verificationFocus.ifFailed) },
+                  { label: '失敗後動作', value: verificationFocus.ifFailed },
                 ].map((item) => (
                   <div key={item.label} className="min-w-0">
                     <p className="text-cyan-300 text-[10px] font-semibold mb-1">{item.label}</p>
@@ -920,8 +982,23 @@ function TodayReportContent() {
 
           <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
             <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              {isHistoricalFallback ? '歷史劇本驗證結果' : '今日劇本驗證結果'}
+              Closing Review
             </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+              {[
+                ['Today\'s Question', decisionLifecycle.closing_review.question],
+                ['Prediction', decisionLifecycle.closing_review.prediction],
+                ['Reality', decisionLifecycle.closing_review.reality],
+                ['Lesson', decisionLifecycle.closing_review.lesson],
+                ['Tomorrow', decisionLifecycle.closing_review.tomorrow],
+              ].map(([label, value]) => (
+                <div key={label} className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70">
+                  <p className="text-slate-500 text-[10px] mb-1">{label}</p>
+                  <p className="text-slate-200 text-xs leading-relaxed">{renderSafeText(value)}</p>
+                </div>
+              ))}
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {closingVerificationState.completed && tradingScripts.length > 0 ? (

@@ -10,6 +10,7 @@ import { useHomeDashboard } from '@/hooks/useHomeDashboard';
 import { formatTaipeiDate } from '@/utils/tradingDay';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { buildMarketState, type MarketState } from '@/services/marketStateEngine';
+import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { renderSafeText } from '@/utils/renderSafe';
 
 export default function HomePage() {
@@ -116,74 +117,32 @@ function HomePageContent() {
   const displayConfidence = displayState.confidenceScore;
   const marketClosedInfo = { closed: displayState.market_status !== 'OPEN', holidayName: displayState.holidayName };
 
-  // ── One-liner: V8.4 unified — displayState.todayQuote first → ai fields fallback ──
-  const oneLiner = (() => {
-    // Prefer the unified parser's todayQuote (excludes 休市 messages)
-    if (displayState.todayQuote && displayState.todayQuote.length > 0 && !displayState.isMarketClosed) {
-      return displayState.todayQuote;
-    }
-    const ai = ms?.resolveResult?.rawRow?.ai_strategy_json as Record<string, unknown> | null;
-    if (!ai) return null;
-    const src =
-      (ai.today_quote as string)?.trim() ||
-      (ai.summary as string)?.trim() ||
-      (ai.free_summary as Record<string, unknown> | null)?.one_liner as string ||
-      (ai.one_liner as string)?.trim() ||
-      (ai.today_summary as string)?.trim() ||
-      ((ai.free_summary as Record<string, unknown> | null)?.one_sentence as string)?.trim() ||
-      (ai.free_summary as Record<string, unknown> | null)?.summary as string ||
-      (ai.free_summary as Record<string, unknown> | null)?.today_sentence as string ||
-      (ms?.resolveResult?.rawRow?.summary as string)?.trim() ||
-      '';
-    return src || null;
-  })();
-
-  // ── Don't-do today: priority from ai_strategy_json fields (no template fallback) ──
-  const dontDoToday = (() => {
-    const ai = ms?.resolveResult?.rawRow?.ai_strategy_json as Record<string, unknown> | null;
-    if (!ai) return null;
-    const src =
-      (ai.do_not_do as string)?.trim() ||
-      (ai.avoid_action as string)?.trim() ||
-      (ai.today_do_not_do as string)?.trim() ||
-      (ai.free_summary as Record<string, unknown> | null)?.do_not_do as string ||
-      (ai.free_summary as Record<string, unknown> | null)?.avoid_action as string ||
-      '';
-    return src || null;
-  })();
-
-  // ── Today mindset: priority from ai_strategy_json fields (no template fallback) ──
-  const todayMindset = (() => {
-    const ai = ms?.resolveResult?.rawRow?.ai_strategy_json as Record<string, unknown> | null;
-    if (!ai) return null;
-    const src =
-      (ai.today_mindset as string)?.trim() ||
-      (ai.mindset as string)?.trim() ||
-      (ai.member_mindset as string)?.trim() ||
-      '';
-    return src || null;
-  })();
-
   const homeAI = ms?.resolveResult?.rawRow?.ai_strategy_json as Record<string, unknown> | null;
-  const homeStrategySummary = asRecord(homeAI?.strategy_summary);
+  const canonicalNarrative = useMemo(() => buildCanonicalNarrative({
+    displayState,
+    ai: homeAI,
+  }), [displayState, homeAI]);
+  const decisionLifecycle = canonicalNarrative.decision_lifecycle;
   const homePrimaryTheme = firstString(
-    homeStrategySummary?.main_theme,
-    homeStrategySummary?.primary_theme,
-    homeStrategySummary?.market_focus,
-    displayState.todayQuote,
-    '今日主線',
+    canonicalNarrative.today_script.headline,
+    canonicalNarrative.today_focus.headline,
+    '資料不足',
   );
   const homeCoreScript = firstString(
-    oneLiner,
-    todayMindset,
-    displayState.todayQuote,
-    '今天先確認資金方向，不要急著找飆股。',
+    canonicalNarrative.today_focus.summary,
+    canonicalNarrative.today_focus.headline,
+    '資料不足，等待盤前報告補齊。',
   );
   const homeDontDo = firstString(
-    dontDoToday,
-    '主線沒有被量能確認前，不急著追價。',
+    canonicalNarrative.today_focus.risk,
+    canonicalNarrative.failure_triggers[0]?.action,
+    '資料不足，暫不建立操作提醒。',
   );
-  const homeNextVerification = '下一個盤中驗證點';
+  const homeNextVerification = firstString(
+    canonicalNarrative.intraday_progress.next_step,
+    canonicalNarrative.today_script.current_step,
+    '資料不足，等待下一個驗證點。',
+  );
 
   // V377: Simplified display mode — report exists + is for today = normal
   // V8.3: Added market-closed check from ai_strategy_json
@@ -540,6 +499,21 @@ function HomePageContent() {
         {(displayMode === 'normal') && hasReportData && (
           <section className="w-full px-4 md:px-6 pb-10 md:pb-14">
             <div className="max-w-5xl mx-auto w-full space-y-6">
+              <div className="bg-foreground-900 border border-foreground-800 rounded-2xl p-5 md:p-6 text-white">
+                <p className="text-amber-200 text-[10px] uppercase tracking-[0.24em] mb-3">Today&apos;s Question</p>
+                <h2 className="font-bold text-xl md:text-2xl leading-snug mb-3">今天最大的交易問題</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-white/35 text-[10px] uppercase tracking-wider mb-1">Question</p>
+                    <p className="text-white/88 text-base font-semibold leading-relaxed">{renderSafeText(decisionLifecycle.question.question)}</p>
+                  </div>
+                  <div>
+                    <p className="text-white/35 text-[10px] uppercase tracking-wider mb-1">Why</p>
+                    <p className="text-white/62 text-sm leading-relaxed">{renderSafeText(decisionLifecycle.question.why)}</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
                   ['市場方向', displayBias],

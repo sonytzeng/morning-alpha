@@ -4,6 +4,7 @@ import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
+import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { renderSafeText } from '@/utils/renderSafe';
 import { trackPageView, trackEvent } from '@/utils/analytics';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
@@ -590,6 +591,12 @@ function OpportunitiesContent() {
   const hasScenario = scenarioStocks.length > 0;
   const hasAnyStocks = hasCore || hasExtended || hasScenario;
   const rawAI = (ds.rawAI || {}) as Record<string, unknown>;
+  const canonicalNarrative = buildCanonicalNarrative({
+    displayState: ds,
+    ai: rawAI,
+    memberResearchNoteV2: asRecord(rawAI.member_research_note_v2),
+  });
+  const canonicalScriptHeadline = compactText(canonicalNarrative.today_script.headline || canonicalNarrative.today_focus.headline);
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true' || ds.v10BeneficiaryEnabled === true;
   const v10BeneficiaryStocks = mapV10OpportunityStocks(rawAI.today_beneficiary_stocks_v10 || ds.v10BeneficiaryStocks);
   const v10ObservationWatchlist = mapV10OpportunityStocks(rawAI.v10_observation_watchlist || ds.v10ObservationWatchlist);
@@ -604,8 +611,14 @@ function OpportunitiesContent() {
     : [...extendedStocks, ...scenarioStocks].map((stock, index) => legacyToV10(stock, index, 'observation'));
   const riskOpportunityStocks = v10BeneficiaryEnabled ? v10RiskWatchlist : [];
   const legacyRiskNotes = v10BeneficiaryEnabled ? [] : uniqueNonEmpty([...doNotDoList, ...invalidationItems], 5);
-  const observationGroups = uniqueNonEmpty(observationOpportunityStocks.map(stockScriptName), 3);
-  const riskGroups = uniqueNonEmpty(riskOpportunityStocks.map(stockScriptName), 3);
+  const observationGroups = uniqueNonEmpty([
+    canonicalScriptHeadline,
+    ...observationOpportunityStocks.map(stockScriptName),
+  ], 3);
+  const riskGroups = uniqueNonEmpty([
+    canonicalNarrative.today_focus.risk,
+    ...riskOpportunityStocks.map(stockScriptName),
+  ], 3);
   const pageQualityMessage = qualityMessage(v10DataQualityStatus, v10Warning);
   const hasStrongOpportunities = strongOpportunityStocks.length > 0;
   const hasObservationOpportunities = observationOpportunityStocks.length > 0;
@@ -694,7 +707,7 @@ function OpportunitiesContent() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h3 className="text-foreground-900 font-bold text-sm">{stockTitle(stock)}</h3>
-                        <p className="text-primary-700 text-[11px] mt-1">所屬劇本：{stockScriptName(stock)}</p>
+                        <p className="text-primary-700 text-[11px] mt-1">所屬劇本：{canonicalScriptHeadline || stockScriptName(stock)}</p>
                       </div>
                       <span className="px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 text-[10px]">{confidenceLevelLabel(stock.confidenceLevel)}</span>
                     </div>
@@ -737,7 +750,7 @@ function OpportunitiesContent() {
                   <article key={`observe-${stock.symbol}-${stock.rank}`} className="p-4 rounded-2xl bg-background-100 border border-amber-200/70 space-y-3">
                     <div>
                       <h3 className="text-foreground-900 font-bold text-sm">{stockTitle(stock)}</h3>
-                      <p className="text-amber-700 text-[11px] mt-1">{stockScriptName(stock)}</p>
+                      <p className="text-amber-700 text-[11px] mt-1">{canonicalScriptHeadline || stockScriptName(stock)}</p>
                     </div>
                     <div className="space-y-2">
                       <div>
@@ -778,7 +791,7 @@ function OpportunitiesContent() {
                   <article key={`risk-${stock.symbol}-${stock.rank}`} className="p-4 rounded-2xl bg-background-100 border border-red-200/70 space-y-3">
                     <div>
                       <h3 className="text-foreground-900 font-bold text-sm">{stockTitle(stock)}</h3>
-                      <p className="text-red-700 text-[11px] mt-1">{stockScriptName(stock)}</p>
+                      <p className="text-red-700 text-[11px] mt-1">{canonicalScriptHeadline || stockScriptName(stock)}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {riskReasons(stock).map((reason) => (

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveMarketStatus } from '../_shared/market-status.ts';
 
 // ═══════════════════════════════════════════════════════════
 // Opening Market Radar V3.1 — 開盤後覆蓋盤前劇本
@@ -470,6 +471,23 @@ Deno.serve(async (req) => {
     );
 
     const today = getTaiwanDateString();
+    const marketStatus = resolveMarketStatus(today);
+    if (!marketStatus.is_trading_day) {
+      log(`MARKET_CLOSED_SKIP status=${marketStatus.market_status} date=${today}`);
+      return new Response(JSON.stringify({
+        success: true,
+        skipped: true,
+        reason: 'MARKET_STATUS_NOT_OPEN',
+        report_date: today,
+        market_status: marketStatus.market_status,
+        session_type: marketStatus.session_type,
+        is_trading_day: marketStatus.is_trading_day,
+        market_message: marketStatus.market_message,
+        next_trading_day: marketStatus.next_trading_day,
+        version: 'V3.1',
+        logs,
+      }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
+    }
     const { hour, minute } = getTaipeiHourMinute();
     const timeVal = hour * 60 + minute;
     const afterOpen = timeVal >= 9 * 60 + 15;

@@ -1,3 +1,5 @@
+import { resolveMarketStatus as resolveCanonicalMarketStatus } from '../../supabase/functions/_shared/market-status';
+import type { MarketStatusCode, SessionType } from '../../supabase/functions/_shared/market-status';
 /**
  * Morning Alpha — Shared Trading Day & Data Freshness Utilities
  *
@@ -325,7 +327,23 @@ const TAIWAN_HOLIDAYS: Record<string, string> = {
   '2026-10-09': '國慶日補假',
 };
 
+export type { MarketStatusCode, SessionType };
+
 export type MarketStatusType = 'trading' | 'weekend' | 'holiday' | 'special_closed';
+
+export interface ResolvedMarketStatus {
+  market_status: MarketStatusCode;
+  market_date: string;
+  next_trading_day: string;
+  market_message: string;
+  closed_reason: string | null;
+  current_weekday: string;
+  next_trading_weekday: string;
+  next_update_time: string;
+  is_open: boolean;
+  is_trading_day: boolean;
+  session_type: SessionType;
+}
 
 export interface MarketStatus {
   currentDate: string;
@@ -371,69 +389,75 @@ function getNextTradingDay(dateStr: string): string {
   return dateStr;
 }
 
-export function getMarketStatus(dateStr?: string): MarketStatus {
+export function resolveMarketStatus(dateStr?: string): ResolvedMarketStatus {
   const todayStr = dateStr || formatTaipeiDate();
-  const parts = todayStr.split('-');
-  if (parts.length !== 3) {
-    return {
-      currentDate: todayStr, currentWeekday: '', marketStatus: 'trading',
-      holidayName: null, nextTradingDate: todayStr, nextTradingWeekday: '',
-      nextUpdateTime: '', statusLabel: '—', statusDot: '', statusDotColor: '',
-    };
-  }
+  const canonical = resolveCanonicalMarketStatus(todayStr);
+  const currentDate = dateFromYmd(canonical.market_date);
+  const nextDate = dateFromYmd(canonical.next_trading_day);
+  const currentWeekday = currentDate ? getChineseWeekday(currentDate) : '';
+  const nextWeekday = nextDate ? getChineseWeekday(nextDate) : '';
 
-  const d = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])));
-  const dow = d.getUTCDay();
-  const weekday = getChineseWeekday(d);
-  const isWeekend = dow === 0 || dow === 6;
-  const holidayName = TAIWAN_HOLIDAYS[todayStr] || null;
+  return {
+    market_status: canonical.market_status,
+    market_date: canonical.market_date,
+    next_trading_day: canonical.next_trading_day,
+    market_message: canonical.market_message,
+    closed_reason: canonical.closed_reason,
+    current_weekday: currentWeekday,
+    next_trading_weekday: nextWeekday,
+    next_update_time: canonical.market_status !== 'OPEN' ? `${canonical.next_trading_day}（${nextWeekday}）07:30` : '',
+    is_open: canonical.is_open,
+    is_trading_day: canonical.is_trading_day,
+    session_type: canonical.session_type,
+  };
+}
+
+function dateFromYmd(value: string): Date | null {
+  const parts = value.split('-').map(Number);
+  if (parts.length !== 3 || parts.some((item) => !Number.isFinite(item))) return null;
+  return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+}
+
+
+export function getMarketStatus(dateStr?: string): MarketStatus {
+  const resolved = resolveMarketStatus(dateStr);
+  const todayStr = resolved.market_date;
 
   let marketStatus: MarketStatusType;
-  let reason: string;
   let statusLabel: string;
   let statusDot: string;
   let statusDotColor: string;
 
-  if (isWeekend) {
+  if (resolved.market_status === 'OPEN') {
+    marketStatus = 'trading';
+    statusLabel = '交易日';
+    statusDot = '🟢';
+    statusDotColor = 'bg-emerald-500';
+  } else if (resolved.market_status === 'WEEKEND') {
     marketStatus = 'weekend';
-    reason = '週末休市';
     statusLabel = '非交易日';
     statusDot = '🔴';
     statusDotColor = 'bg-red-500';
-  } else if (holidayName) {
+  } else if (resolved.market_status === 'HOLIDAY') {
     marketStatus = 'holiday';
-    reason = holidayName;
     statusLabel = '非交易日';
     statusDot = '🔴';
     statusDotColor = 'bg-red-500';
   } else {
-    marketStatus = 'trading';
-    reason = '';
-    statusLabel = '交易日';
-    statusDot = '🟢';
-    statusDotColor = 'bg-emerald-500';
+    marketStatus = 'special_closed';
+    statusLabel = '非交易日';
+    statusDot = '🔴';
+    statusDotColor = 'bg-red-500';
   }
-
-  const nextTradingDate = marketStatus !== 'trading'
-    ? getNextTradingDay(todayStr)
-    : todayStr;
-  const nextD = ((s: string) => {
-    const p = s.split('-');
-    return new Date(Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])));
-  })(nextTradingDate);
-  const nextTradingWeekday = getChineseWeekday(nextD);
-  const nextUpdateTime = marketStatus !== 'trading'
-    ? `${nextTradingDate}（${nextTradingWeekday}）07:30`
-    : '';
 
   return {
     currentDate: todayStr,
-    currentWeekday: weekday,
+    currentWeekday: resolved.current_weekday,
     marketStatus,
-    holidayName,
-    nextTradingDate,
-    nextTradingWeekday,
-    nextUpdateTime,
+    holidayName: resolved.closed_reason,
+    nextTradingDate: resolved.next_trading_day,
+    nextTradingWeekday: resolved.next_trading_weekday,
+    nextUpdateTime: resolved.next_update_time,
     statusLabel,
     statusDot,
     statusDotColor,

@@ -114,7 +114,7 @@ function HomePageContent() {
   // These now read from the unified displayState — same values as TodayReport, Opportunities, WarRoom, MemberNote
   const displayBias = displayState.marketBias;
   const displayConfidence = displayState.confidenceScore;
-  const marketClosedInfo = { closed: displayState.isMarketClosed, holidayName: displayState.holidayName };
+  const marketClosedInfo = { closed: displayState.market_status !== 'OPEN', holidayName: displayState.holidayName };
 
   // ── One-liner: V8.4 unified — displayState.todayQuote first → ai fields fallback ──
   const oneLiner = (() => {
@@ -268,6 +268,55 @@ function HomePageContent() {
 
   const heroImageUrl = 'https://readdy.ai/api/search-image?query=Abstract%20artistic%20pre%20dawn%20sky%20with%20soft%20warm%20amber%20and%20deep%20navy%20gradient%2C%20minimalist%20geometric%20shapes%20suggesting%20market%20rhythm%20and%20discipline%2C%20calm%20atmospheric%20composition%20with%20subtle%20light%20rays%20breaking%20through%20darkness%2C%20no%20text%2C%20no%20people%2C%20editorial%20quality%2C%20clean%20elegant%20aesthetic%2C%20warm%20amber%20and%20cream%20tones%20against%20deep%20navy%20sky&width=1600&height=900&seq=ma-hero-v5&orientation=landscape';
 
+  const closedHero = (() => {
+    switch (displayState.market_status) {
+      case 'TYPHOON':
+        return {
+          title: '今日休市',
+          subtitle: '颱風停班停市',
+          body: 'Morning Alpha 今日不建立交易劇本。今日沒有盤中驗證，AI 已切換休市模式。',
+          primary: '查看昨日收盤驗證',
+          primaryTo: '/war-room',
+          secondary: '查看完整研究筆記',
+          secondaryTo: '/member-note',
+          chips: ['今晚國際市場', '下一交易日前瞻'],
+        };
+      case 'WEEKEND':
+        return {
+          title: '今天沒有台股交易',
+          subtitle: '週末休市',
+          body: 'Morning Alpha 今日不建立交易劇本，也不啟動盤中驗證。',
+          primary: '查看本週總結',
+          primaryTo: '/performance',
+          secondary: '查看完整研究筆記',
+          secondaryTo: '/member-note',
+          chips: ['本週總結', '下一交易日前瞻'],
+        };
+      case 'HOLIDAY':
+        return {
+          title: '今日國定假日休市',
+          subtitle: displayState.holidayName || '國定假日休市',
+          body: 'Morning Alpha 今日不建立交易劇本，也不啟動盤中驗證。',
+          primary: '查看昨日收盤驗證',
+          primaryTo: '/war-room',
+          secondary: '查看完整研究筆記',
+          secondaryTo: '/member-note',
+          chips: ['今晚國際市場', '下一交易日前瞻'],
+        };
+      default:
+        return {
+          title: '今日休市',
+          subtitle: displayState.market_message || displayState.holidayName || '休市',
+          body: 'Morning Alpha 今日不建立交易劇本，也不啟動盤中驗證。',
+          primary: '查看昨日收盤驗證',
+          primaryTo: '/war-room',
+          secondary: '查看完整研究筆記',
+          secondaryTo: '/member-note',
+          chips: ['今晚國際市場', '下一交易日前瞻'],
+        };
+    }
+  })();
+
   return (
     <div className="min-h-screen bg-background-50 flex flex-col overflow-x-hidden">
       <Navbar marketState={marketState} />
@@ -337,13 +386,15 @@ function HomePageContent() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h1 className="text-white font-bold text-xl md:text-2xl">
-                        今日市場狀態
+                        {closedHero.title}
                       </h1>
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-red-500/12 border border-red-400/30 rounded-full text-red-300 text-[10px] font-semibold whitespace-nowrap">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                        非交易日
+                        {closedHero.subtitle}
                       </span>
                     </div>
+
+                    <p className="text-white/78 text-sm leading-relaxed mb-4">{closedHero.body}</p>
 
                     {/* Date and reason */}
                     <div className="space-y-1.5 mb-4">
@@ -352,8 +403,8 @@ function HomePageContent() {
                         <span className="text-white/80 font-semibold">{displayState.currentDate}（{displayState.currentWeekday}）</span>
                       </p>
                       <p className="text-white/70 text-sm leading-relaxed">
-                        <span className="text-white/40">原因：</span>
-                        <span className="text-white/80">{displayState.holidayName || '休市'}</span>
+                        <span className="text-white/40">市場狀態：</span>
+                        <span className="text-white/80">{displayState.market_message}</span>
                       </p>
                       <p className="text-white/70 text-sm leading-relaxed">
                         <span className="text-white/40">下一個交易日：</span>
@@ -361,9 +412,16 @@ function HomePageContent() {
                       </p>
                     </div>
 
-                    <p className="text-white/30 text-xs leading-relaxed">
-                      Morning Alpha 將於下一個交易日上午 07:30 更新盤前研究筆記、受惠股與盤中追蹤。
-                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                      <Link to={closedHero.primaryTo} className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-bold">{closedHero.primary}</Link>
+                      <Link to={closedHero.secondaryTo} className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white text-xs font-semibold">{closedHero.secondary}</Link>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {closedHero.chips.map((chip) => (
+                        <span key={chip} className="inline-flex rounded-full border border-white/12 bg-white/8 px-3 py-1 text-white/62 text-[10px] font-semibold">{chip}</span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

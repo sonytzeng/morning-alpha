@@ -459,7 +459,7 @@ function OpportunitiesContent() {
         setIsHistoricalFallback(resolved.isHistoricalFallback);
         setFallbackReportDate(resolved.fallbackReportDate);
 
-        if (displayState.isMarketClosed || displayState.marketStatus !== 'trading' || resolved.isHistoricalFallback) {
+        if (displayState.market_status !== 'OPEN' || resolved.isHistoricalFallback) {
           setCoreStocks([]);
           setExtendedStocks([]);
           setScenarioStocks([]);
@@ -543,7 +543,7 @@ function OpportunitiesContent() {
   }
 
   // ═══ Market closed ═══
-  if (ds.isMarketClosed || ds.marketStatus !== 'trading') {
+  if (ds.market_status !== 'OPEN') {
     return (
       <div className="min-h-screen bg-background-50 flex flex-col">
         <Navbar />

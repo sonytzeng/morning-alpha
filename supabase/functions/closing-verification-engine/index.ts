@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveMarketStatus } from '../_shared/market-status.ts';
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -690,6 +691,21 @@ Deno.serve(async (req: Request) => {
   const verificationDate = backfillMode && isValidDateString(requestedTargetDate)
     ? requestedTargetDate
     : today;
+
+  const marketStatus = resolveMarketStatus(verificationDate);
+  if (!backfillMode && !marketStatus.is_trading_day) {
+    return jsonResponse({
+      success: true,
+      skipped: true,
+      reason: 'MARKET_STATUS_NOT_OPEN',
+      verification_date: verificationDate,
+      today_date: today,
+      market_status: marketStatus.market_status,
+      market_message: marketStatus.market_message,
+      next_trading_day: marketStatus.next_trading_day,
+      no_fake_data: true,
+    });
+  }
 
   if (verificationDate > today) {
     return jsonResponse({

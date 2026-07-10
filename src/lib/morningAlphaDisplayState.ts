@@ -15,7 +15,7 @@
  *    passes the true intraday freshness contract.
  */
 
-import { getMarketStatus, type MarketStatusType } from '@/utils/tradingDay';
+import { resolveMarketStatus, type MarketStatusCode, type MarketStatusType, type SessionType } from '@/utils/tradingDay';
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
 
 // ═══════════════════════════════════════════════════
@@ -73,7 +73,19 @@ export interface MorningAlphaDisplayState {
   rawAI: Record<string, unknown> | null;
   /** The raw report row (for pages that need root-level fields) */
   rawRow: Record<string, unknown> | null;
-  /** V10.0: Real-time market status — independent of report data. Always reflects TODAY. */
+  /** P0: Canonical market status — independent of report data. Always reflects TODAY. */
+  market_status: MarketStatusCode;
+  /** P0: Canonical market date (YYYY-MM-DD). */
+  market_date: string;
+  /** P0: Canonical non-trading / trading message. */
+  market_message: string;
+  /** P0: Canonical next trading day (YYYY-MM-DD). */
+  next_trading_day: string;
+  /** P0.1: Canonical trading-day flag. */
+  is_trading_day: boolean;
+  /** P0.1: Canonical session type. */
+  session_type: SessionType;
+  /** Legacy status retained for older components while they migrate. */
   marketStatus: MarketStatusType;
   /** V10.0: Today's date (YYYY-MM-DD) — the actual current date, NOT the report date */
   currentDate: string;
@@ -205,24 +217,31 @@ export function getMorningAlphaDisplayState(
   const reportDate = (rawRow?.report_date as string) || '—';
   const { closed, holidayName } = computeIsMarketClosed(ai);
 
-  // V10.0: Real-time market status — ALWAYS reflects today, independent of report data
-  const marketState = getMarketStatus();
-  const currentDate = marketState.currentDate;
-  const currentWeekday = marketState.currentWeekday;
-  const isTodayNonTrading = marketState.marketStatus !== 'trading';
-  const todayHolidayName = marketState.holidayName;
-  const nextTradingDate = marketState.nextTradingDate;
-  const nextTradingWeekday = marketState.nextTradingWeekday;
-  const nextUpdateTime = marketState.nextUpdateTime;
+  // P0: Canonical market status — ALWAYS reflects today, independent of report data
+  const marketState = resolveMarketStatus();
+  const currentDate = marketState.market_date;
+  const currentWeekday = marketState.current_weekday;
+  const isTodayNonTrading = marketState.market_status !== 'OPEN';
+  const todayHolidayName = marketState.closed_reason;
+  const nextTradingDate = marketState.next_trading_day;
+  const nextTradingWeekday = marketState.next_trading_weekday;
+  const nextUpdateTime = marketState.next_update_time;
+  const legacyMarketStatus: MarketStatusType = marketState.market_status === 'OPEN'
+    ? 'trading'
+    : marketState.market_status === 'WEEKEND'
+      ? 'weekend'
+      : marketState.market_status === 'HOLIDAY'
+        ? 'holiday'
+        : 'special_closed';
 
   // V10.0: The effective display reason: prefer today's market status over report's holiday name
   // Example: today is Saturday, report is from Friday (端午節) → display "週末休市" not "端午節"
   const effectiveHolidayName = isTodayNonTrading
-    ? (todayHolidayName || (marketState.marketStatus === 'weekend' ? '週末休市' : holidayName))
+    ? (todayHolidayName || (marketState.market_status === 'WEEKEND' ? '週末休市' : holidayName))
     : holidayName;
 
   const effectiveMarketStatus = isTodayNonTrading
-    ? marketState.marketStatus
+    ? legacyMarketStatus
     : 'trading' as MarketStatusType;
 
   // ── Market closed: force all trading values to neutral ──
@@ -255,6 +274,12 @@ export function getMorningAlphaDisplayState(
       v10Warning: '',
       rawAI: ai,
       rawRow,
+      market_status: marketState.market_status,
+      market_date: marketState.market_date,
+      market_message: marketState.market_message,
+      next_trading_day: marketState.next_trading_day,
+      is_trading_day: marketState.is_trading_day,
+      session_type: marketState.session_type,
       marketStatus: effectiveMarketStatus,
       currentDate,
       currentWeekday,
@@ -375,6 +400,12 @@ export function getMorningAlphaDisplayState(
     v10Warning,
     rawAI: ai,
     rawRow,
+    market_status: marketState.market_status,
+    market_date: marketState.market_date,
+    market_message: marketState.market_message,
+    next_trading_day: marketState.next_trading_day,
+    is_trading_day: marketState.is_trading_day,
+    session_type: marketState.session_type,
     marketStatus: effectiveMarketStatus,
     currentDate,
     currentWeekday,

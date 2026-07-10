@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { resolveMarketStatus } from '../_shared/market-status.ts';
 
 // ═══════════════════════════════════════════════════════════
 // fetch-market-data-v10 V10.8 — PROVIDER FALLBACK + FRESHNESS METADATA
@@ -731,6 +732,23 @@ Deno.serve(async (req) => {
     const taipei = getTaipeiParts();
     const phase = isMarketDataPhase(requestBody.phase) ? requestBody.phase : resolveDefaultPhase(taipei.hour, taipei.minute);
     const tradingDate = taipei.date;
+    const marketStatus = resolveMarketStatus(tradingDate);
+    if (!marketStatus.is_trading_day && requestBody.force_run !== true) {
+      console.log(`[${batchTag}] MARKET_CLOSED_SKIP status=${marketStatus.market_status} date=${tradingDate}`);
+      return new Response(JSON.stringify({
+        success: true,
+        skipped: true,
+        reason: "MARKET_STATUS_NOT_OPEN",
+        phase,
+        trading_date: tradingDate,
+        market_status: marketStatus.market_status,
+        session_type: marketStatus.session_type,
+        is_trading_day: marketStatus.is_trading_day,
+        market_message: marketStatus.market_message,
+        next_trading_day: marketStatus.next_trading_day,
+        version: VERSION,
+      }), { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+    }
     const beneficiaryCloseOnly = phase === "close" && requestBody.beneficiary_close_only === true;
     const includeBeneficiaryClose = phase === "close" && (beneficiaryCloseOnly || requestBody.include_beneficiary_close === true || requestBody.beneficiary_close === true);
 

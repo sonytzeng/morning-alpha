@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveMarketStatus } from '../_shared/market-status.ts';
 
 // ═══════════════════════════════════════════════════════════
 // Close Market Review V1.2 — 收盤驗證（精確收盤窗口 + 防覆蓋版）
@@ -226,6 +227,22 @@ Deno.serve(async (req) => {
     const forceParam = (url.searchParams.get('force') || '').toLowerCase();
     const isForce = forceParam === 'true';
     log(`Force overwrite: ${isForce}`);
+
+    const marketStatus = resolveMarketStatus(today);
+    if (!marketStatus.is_trading_day) {
+      log(`MARKET_CLOSED_SKIP status=${marketStatus.market_status} date=${today}`);
+      return jsonResponse({
+        success: true,
+        skipped: true,
+        reason: 'MARKET_STATUS_NOT_OPEN',
+        report_date: today,
+        market_status: marketStatus.market_status,
+        session_type: marketStatus.session_type,
+        is_trading_day: marketStatus.is_trading_day,
+        market_message: marketStatus.market_message,
+        next_trading_day: marketStatus.next_trading_day,
+      });
+    }
 
     // ═══ Step 0: 防覆蓋檢查 ═══
     const { data: existingReview } = await supabase

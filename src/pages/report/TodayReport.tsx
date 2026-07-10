@@ -604,7 +604,7 @@ function TodayReportContent() {
   // V8.4: Unified display state — same source as Home, Opportunities, WarRoom, MemberNote
   const [displayState, setDisplayState] = useState<MorningAlphaDisplayState | null>(null);
   const marketClosed = displayState
-    ? { closed: displayState.isMarketClosed, holidayName: displayState.holidayName }
+    ? { closed: displayState.market_status !== 'OPEN', holidayName: displayState.holidayName }
     : { closed: false, holidayName: null };
 
   useEffect(() => {

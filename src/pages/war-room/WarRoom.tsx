@@ -6,7 +6,7 @@ import ErrorBoundary from '@/components/base/ErrorBoundary';
 import { supabase } from '@/lib/supabase';
 import type { Report } from '@/types/report';
 import { useLatestReport } from '@/hooks/useLatestReport';
-import { isTaipeiWeekendToday, formatTaipeiDate } from '@/utils/tradingDay';
+import { formatTaipeiDate, resolveMarketStatus } from '@/utils/tradingDay';
 import { buildMarketState, type MarketState } from '@/services/marketStateEngine';
 import { getTodaySectorRotation, getSignalColor, computeSectorRotationFreshness, type SectorRotationItem, type SectorRotationFreshness } from '@/services/sectorRotationService';
 import { resolveIntradayTrackingState, type IntradayTrackingState, type SegmentDisplay } from '@/services/intradayTrackingResolver';
@@ -126,9 +126,10 @@ function WarRoomContent() {
   const [earlyBirdOpen, setEarlyBirdOpen] = useState(false);
   const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null);
 
-  const isWeekend = isTaipeiWeekendToday();
-  const isNonTradingDay = isWeekend;
   const todayTaipeiStr = formatTaipeiDate();
+  const canonicalMarketStatus = resolveMarketStatus(todayTaipeiStr);
+  const isNonTradingDay = canonicalMarketStatus.market_status !== 'OPEN';
+  const isWeekend = canonicalMarketStatus.market_status === 'WEEKEND';
   // V27: Is the active report for today?
   const isReportForToday = report?.report_date === todayTaipeiStr;
   const canViewWarRoomFull = hasFeature(entitlement, 'war_room_full');
@@ -223,7 +224,7 @@ function WarRoomContent() {
     safeText(closeVerificationRecord?.prediction_result || closeVerificationRecord?.hit_or_miss || closeVerdictLabel),
   );
   const marketClosedInfo = displayState
-    ? { closed: displayState.isMarketClosed, holidayName: displayState.holidayName }
+    ? { closed: displayState.market_status !== 'OPEN', holidayName: displayState.holidayName }
     : { closed: isWeekend, holidayName: isWeekend ? '週末休市' : null as string | null };
 
   // Taipei hour for status logic
@@ -251,11 +252,10 @@ function WarRoomContent() {
         const hour = taipeiNow.getHours();
         const min = taipeiNow.getMinutes();
         const isAfterClose = hour > 13 || (hour === 13 && min >= 30);
-        const weekend = taipeiNow.getDay() === 0 || taipeiNow.getDay() === 6;
         const hasCloseVerif = todayCloseVerification !== null && todayCloseVerification.report_date === todayTaipeiStr;
 
         let phaseForFreshness = 'intraday';
-        if (weekend) phaseForFreshness = 'pre_market';
+        if (isNonTradingDay) phaseForFreshness = 'pre_market';
         else if (isAfterClose && hasCloseVerif) phaseForFreshness = 'after_close_verified';
         else if (isAfterClose) phaseForFreshness = 'after_close_pending';
         else if (hour < 9) phaseForFreshness = 'pre_market';

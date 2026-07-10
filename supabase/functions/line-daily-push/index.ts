@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveMarketStatus } from '../_shared/market-status.ts';
 
 // LINE Daily Push V3 — 每天 07:33 推送 AI 盤前提醒
 // V3 升級：加入台股交易日 Gate，休市日不推播盤前報告
@@ -53,6 +54,110 @@ Deno.serve(async (req) => {
   // ─── V3: 取得台北今日日期 ───
   const taipeiToday = getTaipeiToday();
   console.log(`[LINE-PUSH-V3] Taipei today: ${taipeiToday}`);
+  const currentMarketStatus = resolveMarketStatus(taipeiToday);
+
+  if (!currentMarketStatus.is_trading_day) {
+    if (currentMarketStatus.market_status !== 'TYPHOON') {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          sent: false,
+          reason: 'MARKET_STATUS_NOT_OPEN',
+          date: taipeiToday,
+          market_status: currentMarketStatus.market_status,
+          session_type: currentMarketStatus.session_type,
+          is_trading_day: currentMarketStatus.is_trading_day,
+          market_message: currentMarketStatus.market_message,
+          next_trading_day: currentMarketStatus.next_trading_day,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const { data: subscribers, error: subError } = await supabase
+      .from('line_subscribers')
+      .select('id, line_user_id, display_name')
+      .eq('is_active', true);
+
+    if (subError) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch subscribers', detail: subError.message }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const message = buildMarketClosedLineMessage(siteUrl);
+    const messagePreview = message.text.slice(0, 200);
+    let sentCount = 0;
+    let failedCount = 0;
+    const now = new Date().toISOString();
+
+    for (const sub of subscribers || []) {
+      const userId = sub.line_user_id;
+      if (!userId) continue;
+      try {
+        const pushRes = await fetch('https://api.line.me/v2/bot/message/push', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${channelAccessToken}`,
+          },
+          body: JSON.stringify({ to: userId, messages: [message] }),
+        });
+
+        if (pushRes.ok) {
+          sentCount++;
+          await supabase.from('line_push_logs').insert({
+            line_user_id: userId,
+            push_type: 'market_closed_typhoon',
+            report_date: taipeiToday,
+            status: 'success',
+            message_preview: messagePreview,
+          });
+          await supabase
+            .from('line_subscribers')
+            .update({ last_pushed_at: now, updated_at: now })
+            .eq('line_user_id', userId);
+        } else {
+          const errText = await pushRes.text();
+          failedCount++;
+          await supabase.from('line_push_logs').insert({
+            line_user_id: userId,
+            push_type: 'market_closed_typhoon',
+            report_date: taipeiToday,
+            status: 'failed',
+            message_preview: messagePreview,
+            error_message: errText.slice(0, 500),
+          });
+        }
+      } catch (e) {
+        failedCount++;
+        const errMsg = e instanceof Error ? e.message : String(e);
+        await supabase.from('line_push_logs').insert({
+          line_user_id: userId,
+          push_type: 'market_closed_typhoon',
+          report_date: taipeiToday,
+          status: 'failed',
+          message_preview: messagePreview,
+          error_message: errMsg.slice(0, 500),
+        });
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        sent: true,
+        reason: 'TYPHOON_MARKET_CLOSED_PUSH',
+        date: taipeiToday,
+        market_status: currentMarketStatus.market_status,
+        total_subscribers: subscribers?.length || 0,
+        sent_count: sentCount,
+        failed_count: failedCount,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
 
   // 2. V3: 只查今天的報告，不查最新一筆（避免推到昨天的報告）
   const { data: report, error: reportError } = await supabase
@@ -322,6 +427,26 @@ function checkTradingDay(report: Record<string, unknown>): {
 
   // 所有檢查通過 → 交易日
   return { isTradingDay: true, reason: 'TRADING_DAY_CONFIRMED', holidayName: null };
+}
+
+
+function buildMarketClosedLineMessage(siteUrl: string) {
+  return {
+    type: 'text',
+    text: [
+      '【Morning Alpha】',
+      '',
+      '今日因停班停市，',
+      'Morning Alpha 已切換休市模式。',
+      '',
+      '今晚仍會整理：',
+      '美股',
+      '國際新聞',
+      '下一交易日重點。',
+      '',
+      siteUrl,
+    ].join('\n'),
+  };
 }
 
 // ─── 推播訊息建構：短版、低重複、以報告 guardrail copy 為準 ───

@@ -546,7 +546,7 @@ function MemberNoteContent() {
         const r = resolved.rawRow;
         const ds = getMorningAlphaDisplayState(r as Record<string, unknown> | null);
         setDsState(ds);
-        setMarketClosed({ closed: ds.isMarketClosed, holidayName: ds.holidayName });
+        setMarketClosed({ closed: ds.market_status !== 'OPEN', holidayName: ds.holidayName });
         if (!r) {
           setReportData(null);
           return;

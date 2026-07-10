@@ -66,6 +66,20 @@ function decisionStatusLabel(value: unknown): string {
   return '🟡 等待確認';
 }
 
+function compactDecisionStatusLabel(value: unknown): string {
+  const raw = safeText(value).toLowerCase();
+  if (raw === 'confirmed' || raw === 'completed') return '🟢 已確認';
+  if (raw === 'rejected') return '🔴 已失效';
+  return '🟡 等待確認';
+}
+
+function evidenceStatusMark(value: string): string {
+  if (value === '已同步') return '✅';
+  if (value === '已失效') return '❌';
+  if (value === '尚未同步') return '⏳';
+  return '…';
+}
+
 function compactChineseText(value: unknown, fallback: string, limit = 25): string {
   const text = safeText(value, fallback).replace(/\s+/g, '');
   return text.length > limit ? text.slice(0, limit) : text;
@@ -265,7 +279,6 @@ function WarRoomContent() {
     || rawAI?.v10_beneficiary_enabled === true
     || rawAI?.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(rawAI?.v10_observation_watchlist || displayState?.v10ObservationWatchlist, 5);
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -392,6 +405,10 @@ function WarRoomContent() {
     decisionStatus.next_step || canonicalNarrative.intraday_progress.next_step,
     decisionStatus.status,
   );
+  const observationStatus = compactDecisionStatusLabel(decisionStatus.status);
+  const observationNextLabel = nextReturnTime.includes('明日')
+    ? compactChineseText(canonicalNarrative.decision_lifecycle.failure_condition.trigger || '明日再確認。', '明日再確認。', 24)
+    : nextReturnTime;
   const tsmcChange = safeNumber(openingRadar?.tsmc_change);
   const taiexChange = safeNumber(openingRadar?.taiex_change);
   const txfChange = safeNumber(openingRadar?.txf_change);
@@ -466,7 +483,7 @@ function WarRoomContent() {
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-5">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-5 md:py-6 space-y-3">
 
           {/* ═══ Non-trading day banner ═══ */}
           {isNonTradingDay && (
@@ -491,60 +508,58 @@ function WarRoomContent() {
             </div>
           )}
 
-          <section className="rounded-2xl border border-cyan-400/25 bg-cyan-500/[0.05] p-5 md:p-6">
-            <div className="mb-5">
+          <section className="rounded-2xl border border-cyan-400/25 bg-cyan-500/[0.05] p-4 md:p-5">
+            <div className="mb-3">
               <p className="text-cyan-300 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">目前判斷</p>
               <h2 className="text-white font-bold text-xl">今天早上的判斷，現在還成立嗎？</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10">
                 <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">目前狀態</p>
-                <p className="text-white font-bold text-lg">{decisionStatusLabel(decisionStatus.status)}</p>
+                <p className="text-white font-bold text-base">{decisionStatusLabel(decisionStatus.status)}</p>
               </div>
-              <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10">
+              <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10">
                 <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">為什麼</p>
                 <p className="text-white/80 text-sm font-medium leading-snug">{decisionWhy}</p>
               </div>
-              <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10">
+              <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10">
                 <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">目前決策</p>
                 <p className="text-white/80 text-sm font-medium leading-snug">{currentDecision}</p>
               </div>
-              <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10">
+              <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10">
                 <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">下一次回來時間</p>
                 <p className="text-white/80 text-sm font-medium leading-snug">{nextReturnTime}</p>
               </div>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5 md:p-6">
-            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-              <div>
-                <p className="text-white/35 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">第二層</p>
-                <h2 className="text-white font-bold text-lg">目前依據</h2>
-              </div>
-              <p className="text-white/40 text-xs">只看目前判斷需要的四個證據。</p>
+          <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+              <h2 className="text-white font-bold text-base">目前依據</h2>
+              <p className="text-white/35 text-xs">四個核心證據</p>
             </div>
             <div className="divide-y divide-white/8 rounded-xl border border-white/8 bg-navy-900/45 overflow-hidden">
               {evidenceCards.map((item) => (
-                <div key={item.label} className="grid grid-cols-[86px_1fr] sm:grid-cols-[120px_1fr_120px] gap-3 px-4 py-3 items-center">
-                  <p className="text-white/45 text-xs font-semibold">{item.label}</p>
-                  <p className="text-white text-sm font-medium leading-snug break-words">{item.status}</p>
-                  <p className="text-white/35 text-xs sm:text-right">{compactChineseText(item.note, '等待資料', 18)}</p>
+                <div key={item.label} className="grid grid-cols-[72px_36px_1fr] sm:grid-cols-[90px_42px_1fr_100px] gap-2 px-3 py-2 items-center">
+                  <p className="text-white/55 text-xs font-semibold">{item.label}</p>
+                  <p className="text-sm">{evidenceStatusMark(item.status)}</p>
+                  <p className="text-white text-xs font-medium leading-snug">{item.status}</p>
+                  <p className="hidden sm:block text-white/35 text-xs text-right">{compactChineseText(item.note, '等待資料', 12)}</p>
                 </div>
               ))}
             </div>
-            <p className="text-white/60 text-sm leading-snug mt-4">{evidenceConclusion}</p>
+            <p className="text-white/60 text-xs leading-snug mt-3">{evidenceConclusion}</p>
           </section>
 
-          <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 md:p-6">
-            <div className="mb-4">
+          <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            <div className="mb-3">
               <p className="text-white/35 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">第三層</p>
-              <h2 className="text-white font-bold text-lg">哪些條件改變了</h2>
+              <h2 className="text-white font-bold text-base">哪些條件改變了</h2>
             </div>
             {changedGroups.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {changedGroups.map((group) => (
-                  <div key={group.label} className="p-4 rounded-xl bg-navy-900/60 border border-white/8">
+                  <div key={group.label} className="p-3 rounded-xl bg-navy-900/60 border border-white/8">
                     <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">{group.label}</p>
                     <ul className="space-y-1">
                       {group.items.slice(0, 2).map((item, idx) => (
@@ -561,17 +576,16 @@ function WarRoomContent() {
             )}
           </section>
 
-          <div className="pt-2">
-            <p className="text-white/35 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">第四層</p>
-            <h2 className="text-white font-bold text-lg">深入盤中資訊</h2>
-            <p className="text-white/40 text-xs mt-1">以下保留完整資料，但不干擾前面三層決策。</p>
+          <div className="pt-1">
+            <h2 className="text-white font-bold text-base">深入盤中資訊</h2>
+            <p className="text-white/35 text-xs mt-0.5">想深讀時再往下看。</p>
           </div>
 
           {/* ═══════════════════════════════════════ */}
           {/* CARD 2 — 09:30 盤中雷達 */}
           {/* ═══════════════════════════════════════ */}
-          <section className={`rounded-2xl border p-5 md:p-6 ${segmentBorder(tracking.intraday.color)} ${segmentBg(tracking.intraday.color)}`}>
-            <div className="flex items-center justify-between mb-4">
+          <section className={`rounded-2xl border p-4 ${segmentBorder(tracking.intraday.color)} ${segmentBg(tracking.intraday.color)}`}>
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
                 <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 whitespace-nowrap">09:30</span>
                 <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">盤中雷達</h2>
@@ -663,8 +677,8 @@ function WarRoomContent() {
           {/* ═══════════════════════════════════════ */}
           {/* CARD 1 — 07:30 盤前方向 */}
           {/* ═══════════════════════════════════════ */}
-          <section className={`rounded-2xl border p-5 md:p-6 ${segmentBorder(tracking.premarket.color)} ${segmentBg(tracking.premarket.color)}`}>
-            <div className="flex items-center justify-between mb-4">
+          <section className={`rounded-2xl border p-4 ${segmentBorder(tracking.premarket.color)} ${segmentBg(tracking.premarket.color)}`}>
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
                 <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-forest-500/10 text-forest-400 border border-forest-500/20 whitespace-nowrap">07:30</span>
                 <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">盤前方向</h2>
@@ -700,8 +714,8 @@ function WarRoomContent() {
           {/* ═══════════════════════════════════════ */}
           {/* CARD 3 — 14:10 收盤驗證 */}
           {/* ═══════════════════════════════════════ */}
-          <section className={`rounded-2xl border p-5 md:p-6 ${segmentBorder(tracking.closeReview.color)} ${segmentBg(tracking.closeReview.color)}`}>
-            <div className="flex items-center justify-between mb-4">
+          <section className={`rounded-2xl border p-4 ${segmentBorder(tracking.closeReview.color)} ${segmentBg(tracking.closeReview.color)}`}>
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
                 <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 whitespace-nowrap">14:10</span>
                 <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">收盤驗證</h2>
@@ -711,41 +725,28 @@ function WarRoomContent() {
                 {humanStatus(tracking.closeReview.statusText)}
               </span>
             </div>
-            {closeVerificationRecord && !isCloseVerificationPending ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                  <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">結論</p>
-                  <p className="text-white text-sm font-semibold">{closeVerdictLabel}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                  <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">收盤結果</p>
-                  <p className={`text-sm font-semibold ${closeTaiexChange === null ? 'text-white/55' : closeTaiexChange >= 0 ? 'text-red-300' : 'text-emerald-300'}`}>
-                    {closeResultText}
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                  <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">完整紀錄</p>
-                  <Link to="/performance" className="inline-flex text-amber-300 hover:text-amber-200 text-sm font-semibold">查看完整紀錄</Link>
-                </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl bg-white/[0.025] border border-white/5 px-3 py-2">
+              <div className="min-w-0">
+                <p className="text-white/35 text-[10px] uppercase tracking-wider">收盤驗證</p>
+                <p className="text-white/75 text-sm font-medium truncate">
+                  {closeVerificationRecord && !isCloseVerificationPending ? closeVerdictLabel : '未完成'}
+                  {closeVerificationRecord && !isCloseVerificationPending && closeResultText !== '等待收盤資料' ? `｜${closeResultText}` : ''}
+                </p>
                 {isCloseVerificationDegraded && (
-                  <p className="md:col-span-3 text-amber-200/80 text-xs leading-relaxed">
-                    大盤方向已驗證，個股與類股資料仍不完整。
-                  </p>
+                  <p className="text-amber-200/75 text-xs mt-0.5">個股與類股資料仍不完整。</p>
                 )}
               </div>
-            ) : (
-              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                <p className="text-white/70 text-sm font-medium mb-1">等待收盤資料</p>
-                <p className="text-white/45 text-xs leading-relaxed">收盤驗證待完成，主流程先不展開完整細節。</p>
-              </div>
-            )}
+              <Link to="/performance" className="shrink-0 inline-flex text-amber-300 hover:text-amber-200 text-sm font-semibold">
+                查看完整 Decision Journal →
+              </Link>
+            </div>
           </section>
 
           {/* ═══════════════════════════════════════ */}
           {/* CARD 4 — 14:20 類股輪動 */}
           {/* ═══════════════════════════════════════ */}
-          <section className={`rounded-2xl border p-5 md:p-6 ${segmentBorder(tracking.sectorRotation.color)} ${segmentBg(tracking.sectorRotation.color)}`}>
-            <div className="flex items-center justify-between mb-4">
+          <section className={`rounded-2xl border p-4 ${segmentBorder(tracking.sectorRotation.color)} ${segmentBg(tracking.sectorRotation.color)}`}>
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
                 <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">14:20</span>
                 <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
@@ -841,34 +842,28 @@ function WarRoomContent() {
           </p>
 
           {v10BeneficiaryEnabled && (
-            <section className="rounded-2xl border border-navy-800 bg-navy-900/70 p-5 md:p-6">
-              <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-                <div>
-                  <p className="text-amber-200/80 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">今日觀察劇本</p>
-                  <h2 className="text-white font-bold text-lg">五大觀察劇本</h2>
-                </div>
-                <span className="rounded-full px-2.5 py-1 text-[10px] border bg-amber-400/10 text-amber-200 border-amber-300/20">
-                  {v11ObservationScripts.length} 個劇本
+            <section className="rounded-2xl border border-navy-800 bg-navy-900/70 p-4">
+              <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <h2 className="text-white font-bold text-base">五大觀察劇本</h2>
+                <span className="rounded-full px-2 py-0.5 text-[10px] border bg-amber-400/10 text-amber-200 border-amber-300/20">
+                  {v11ObservationScripts.length} 個
                 </span>
               </div>
               {v11ObservationScripts.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2">
                   {v11ObservationScripts.map((item, index) => (
-                    <article key={`${item.symbol || item.name || 'script'}-${item.rank ?? index}`} className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
-                      <div className="mb-2">
-                        <p className="text-white/35 text-[10px] uppercase tracking-wider mb-1">觀察，不是進場訊號</p>
-                        <h3 className="text-white text-sm font-semibold leading-snug truncate">{item.industryName || item.name || '觀察劇本'}</h3>
-                      </div>
-                      <div className="grid grid-cols-1 gap-2 text-xs leading-snug">
+                    <article key={`${item.symbol || item.name || 'script'}-${item.rank ?? index}`} className="rounded-lg border border-white/8 bg-white/[0.025] p-2.5">
+                      <h3 className="text-white text-xs font-semibold leading-snug truncate mb-1.5">{item.industryName || item.name || '觀察劇本'}</h3>
+                      <div className="space-y-1 text-[11px] leading-snug">
+                        <p className="text-white/70">{observationStatus}</p>
                         <p><span className="text-white/35">代表股：</span><span className="text-white/70">{[item.symbol, item.name].filter(Boolean).join(' ') || '待確認'}</span></p>
-                        <p><span className="text-white/35">目前狀態：</span><span className="text-white/70">觀察中</span></p>
-                        <p><span className="text-white/35">確認或停看：</span><span className="text-white/70">{compactChineseText(item.confirmationPendingReason || item.stopObservingCondition || '等待下一個確認點。', '等待下一個確認點。', 36)}</span></p>
+                        <p><span className="text-white/35">確認：</span><span className="text-white/70">{observationNextLabel}</span></p>
                       </div>
                     </article>
                   ))}
                 </div>
               ) : (
-                <div className="rounded-xl border border-white/5 bg-white/[0.025] p-4 text-white/55 text-sm">
+                <div className="rounded-lg border border-white/5 bg-white/[0.025] p-3 text-white/55 text-xs">
                   今天還沒有值得放進觀察清單的明確線索。
                 </div>
               )}
@@ -876,16 +871,13 @@ function WarRoomContent() {
           )}
 
           {/* Member CTA */}
-          <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6 text-center">
-            <p className="text-slate-300 text-sm mb-3 leading-relaxed">
-              需要完整盤中推理與驗證細節？
-            </p>
+          <section className="bg-navy-900/60 border border-navy-800 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <p className="text-slate-300 text-sm">需要完整推理？</p>
             <Link
               to="/member-note"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-amber-500/12 hover:bg-amber-500/18 text-amber-300 text-sm font-medium rounded-xl transition-colors border border-amber-400/30 cursor-pointer whitespace-nowrap"
+              className="inline-flex items-center gap-2 text-amber-300 hover:text-amber-200 text-sm font-semibold whitespace-nowrap"
             >
-              查看完整研究筆記
-              <i className="ri-arrow-right-line"></i>
+              查看完整研究筆記 →
             </Link>
           </section>
 

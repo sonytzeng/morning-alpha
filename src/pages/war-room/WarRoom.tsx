@@ -75,10 +75,39 @@ function humanStatus(value: unknown): string {
 
 function decisionStatusLabel(value: unknown): string {
   const raw = safeText(value).toLowerCase();
-  if (raw === 'confirmed') return 'Confirmed｜劇本成立中';
-  if (raw === 'rejected') return 'Rejected｜劇本已失效';
-  if (raw === 'completed') return 'Completed｜收盤驗證完成';
-  return 'Waiting｜等待確認';
+  if (raw === 'confirmed') return '🟢 Confirmed';
+  if (raw === 'rejected') return '🔴 Rejected';
+  if (raw === 'completed') return '⚪ Completed';
+  return '🟡 Waiting';
+}
+
+function compactChineseText(value: unknown, fallback: string, limit = 25): string {
+  const text = safeText(value, fallback).replace(/\s+/g, '');
+  return text.length > limit ? text.slice(0, limit) : text;
+}
+
+function resolveCurrentDecision(status: unknown, closeResult?: unknown): string {
+  const raw = safeText(status).toLowerCase();
+  const result = safeText(closeResult).toLowerCase();
+  if (raw === 'rejected' || result === 'miss' || result === 'wrong') return '停止今日劇本';
+  if (raw === 'confirmed' || result === 'hit' || result === 'correct') return '維持早上劇本';
+  return '降低今日信心';
+}
+
+function resolveNextReturnTime(nextStep: unknown, status: unknown): string {
+  const step = safeText(nextStep);
+  const raw = safeText(status).toLowerCase();
+  if (raw === 'completed') return '明日 07:30';
+  if (step.includes('13')) return '13:00';
+  if (step.includes('10')) return '10:30';
+  if (step.includes('09') || step.includes('9')) return '09:30';
+
+  const taipeiNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+  const minutes = taipeiNow.getHours() * 60 + taipeiNow.getMinutes();
+  if (minutes < 9 * 60 + 30) return '09:30';
+  if (minutes < 10 * 60 + 30) return '10:30';
+  if (minutes < 13 * 60) return '13:00';
+  return '明日 07:30';
 }
 
 function normalizePredictionResult(value: unknown): string {
@@ -152,7 +181,7 @@ function WarRoomContent() {
   // V8.4: Unified display state — same parser as all other pages
   const displayState: MorningAlphaDisplayState | null = useMemo(() => {
     if (!morningState?.resolveResult?.rawRow) return null;
-    return getMorningAlphaDisplayState(morningState.resolveResult.rawRow as Record<string, unknown> | null ?? null);
+    return getMorningAlphaDisplayState((morningState.resolveResult.rawRow as unknown as Record<string, unknown>) ?? null);
   }, [morningState]);
   const reportAI = isRecord(report?.ai_strategy_json) ? report.ai_strategy_json as Record<string, unknown> : null;
   const rawAI = displayState?.rawAI ?? reportAI;
@@ -162,7 +191,7 @@ function WarRoomContent() {
       : rawAI?.closing_verification && typeof rawAI.closing_verification === 'object'
         ? rawAI.closing_verification as Record<string, unknown>
         : todayCloseVerification && typeof todayCloseVerification === 'object'
-          ? todayCloseVerification as Record<string, unknown>
+          ? todayCloseVerification as unknown as Record<string, unknown>
           : null;
   const closeVerificationRecord =
     isRecord(closeVerification) && Object.keys(closeVerification).length > 0 ? closeVerification : null;
@@ -425,6 +454,17 @@ function WarRoomContent() {
       ? '上一交易日類股輪動參考'
       : '類股輪動';
   const sectorBadgeText = showSectorReference ? '歷史參考' : tracking.sectorRotation.statusText;
+  const decisionStatus = decisionLifecycle.decision_status;
+  const decisionWhy = compactChineseText(decisionStatus.reason, '等待盤中資料確認。');
+  const currentDecision = resolveCurrentDecision(
+    decisionStatus.status,
+    closeVerificationRecord?.prediction_result || closeVerificationRecord?.hit_or_miss || closeVerificationRecord?.status,
+  );
+  const nextReturnTime = resolveNextReturnTime(
+    decisionStatus.next_step || canonicalNarrative.intraday_progress.next_step,
+    decisionStatus.status,
+  );
+
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col overflow-x-hidden">
@@ -439,42 +479,9 @@ function WarRoomContent() {
                 <i className="ri-sword-line text-amber-300 text-sm"></i>
               </div>
               <h1 className="text-slate-50 font-bold text-sm md:text-base whitespace-nowrap">
-                盤中追蹤
+                War Room
               </h1>
-              {/* Report date badge */}
-              {tracking.reportDate && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/12 text-emerald-300 text-[10px] font-medium rounded-full border border-emerald-400/35 whitespace-nowrap">
-                  <i className="ri-calendar-line"></i>
-                  報告日期：{tracking.reportDate}
-                </span>
-              )}
-              {/* Premarket base date badge */}
-              {tracking.premarketBaseDate && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-500/12 text-sky-300 text-[10px] font-medium rounded-full border border-sky-500/20 whitespace-nowrap">
-                  <i className="ri-database-2-line"></i>
-                  台股盤前基準：{tracking.premarketBaseDate} 收盤
-                </span>
-              )}
-              {/* Radar date badge */}
-              {tracking.intradayRadarDate && (
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border whitespace-nowrap ${tracking.hasTodayOpeningRadar ? 'bg-emerald-500/12 text-emerald-300 border-emerald-400/35' : 'bg-amber-500/12 text-amber-300 border-amber-400/35'}`}>
-                  <i className="ri-radar-line"></i>
-                  盤中雷達：{tracking.intradayRadarDate}
-                </span>
-              )}
             </div>
-            <div className="flex items-center gap-2">
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium whitespace-nowrap border ${segmentBadgeStyle(tracking.intraday.color)}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${tracking.intraday.color === 'green' ? 'bg-emerald-400' : tracking.intraday.color === 'red' ? 'bg-red-400' : tracking.intraday.color === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
-                {humanStatus(tracking.intraday.statusText)}
-              </span>
-            </div>
-            {isHistoricalFallback && fallbackReportDate && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-500/12 text-sky-300 text-[10px] font-medium rounded-full border border-sky-500/20 whitespace-nowrap">
-                <i className="ri-history-line"></i>
-                歷史資料模式：{fallbackReportDate}
-              </span>
-            )}
           </div>
         </div>
 
@@ -503,69 +510,27 @@ function WarRoomContent() {
             </div>
           )}
 
-          {/* ═══════════════════════════════════════ */}
-          {/* CARD 1 — 07:30 盤前方向 */}
-          {/* ═══════════════════════════════════════ */}
-          <section className={`rounded-2xl border p-5 md:p-6 ${segmentBorder(tracking.premarket.color)} ${segmentBg(tracking.premarket.color)}`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-forest-500/10 text-forest-400 border border-forest-500/20 whitespace-nowrap">07:30</span>
-                <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">盤前方向</h2>
-              </div>
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${segmentBadgeStyle(tracking.premarket.color)}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${tracking.premarket.color === 'green' ? 'bg-emerald-400' : tracking.premarket.color === 'red' ? 'bg-red-400' : tracking.premarket.color === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
-                {tracking.premarket.statusText}
-              </span>
+          <section className="rounded-2xl border border-cyan-400/25 bg-cyan-500/[0.05] p-5 md:p-6">
+            <div className="mb-5">
+              <p className="text-cyan-300 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">Decision Monitor</p>
+              <h2 className="text-white font-bold text-xl">今天早上的判斷，現在還成立嗎？</h2>
             </div>
-            {tracking.premarket.showContent && (
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
-                    <p className="text-white/80 text-sm font-medium">{displayState?.marketBias || '—'}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">判斷把握度</p>
-                    <p className="text-white/80 text-sm font-medium">{displayState?.confidenceScore != null ? `${scoreTone(displayState.confidenceScore).stars} ${scoreTone(displayState.confidenceScore).label}` : '待驗證'}</p>
-                  </div>
-                </div>
-                <p className="text-white/40 text-xs leading-relaxed">
-                  盤前方向來自 {tracking.reportDate || '—'} 報告，市場資料基準採用最近完整交易日 {tracking.premarketBaseDate || '—'} 收盤資料。
-                  盤前尚未有今日完整收盤資料，本篇使用最近完整交易日作為市場基準。
-                </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10">
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">Status</p>
+                <p className="text-white font-bold text-lg">{decisionStatusLabel(decisionStatus.status)}</p>
               </div>
-            )}
-            {!tracking.premarket.showContent && (
-              <p className="text-white/40 text-xs leading-relaxed">{tracking.premarket.description}</p>
-            )}
-          </section>
-
-          {v10BeneficiaryEnabled && (
-            <V11ObservationSection
-              items={v11ObservationScripts}
-              tone="dark"
-              subtitle={canonicalNarrative.today_focus.summary || '盤中只看一件事：資金有沒有真的跟上。'}
-            />
-          )}
-
-          <section className="rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.04] p-5 md:p-6">
-            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-              <div>
-                <p className="text-cyan-300 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">Decision Status</p>
-                <h2 className="text-white font-bold text-lg">{decisionStatusLabel(decisionLifecycle.decision_status.status)}</h2>
+              <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10">
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">Why</p>
+                <p className="text-white/80 text-sm font-medium leading-snug">{decisionWhy}</p>
               </div>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/10 text-white/70 text-[10px] font-semibold">
-                同一問題：{decisionLifecycle.question.question}
-              </span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">目前原因</p>
-                <p className="text-white/75 text-sm leading-relaxed">{safeText(decisionLifecycle.decision_status.reason, '等待資料確認。')}</p>
+              <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10">
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">目前決策</p>
+                <p className="text-white/80 text-sm font-medium leading-snug">{currentDecision}</p>
               </div>
-              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">下一步</p>
-                <p className="text-white/75 text-sm leading-relaxed">{safeText(decisionLifecycle.decision_status.next_step, '等待下一個驗證點。')}</p>
+              <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10">
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">下一次回來時間</p>
+                <p className="text-white/80 text-sm font-medium leading-snug">{nextReturnTime}</p>
               </div>
             </div>
           </section>
@@ -671,6 +636,51 @@ function WarRoomContent() {
               </div>
             )}
           </section>
+
+          {/* ═══════════════════════════════════════ */}
+          {/* CARD 1 — 07:30 盤前方向 */}
+          {/* ═══════════════════════════════════════ */}
+          <section className={`rounded-2xl border p-5 md:p-6 ${segmentBorder(tracking.premarket.color)} ${segmentBg(tracking.premarket.color)}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-forest-500/10 text-forest-400 border border-forest-500/20 whitespace-nowrap">07:30</span>
+                <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">盤前方向</h2>
+              </div>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${segmentBadgeStyle(tracking.premarket.color)}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${tracking.premarket.color === 'green' ? 'bg-emerald-400' : tracking.premarket.color === 'red' ? 'bg-red-400' : tracking.premarket.color === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
+                {tracking.premarket.statusText}
+              </span>
+            </div>
+            {tracking.premarket.showContent && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
+                    <p className="text-white/80 text-sm font-medium">{displayState?.marketBias || '—'}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">判斷把握度</p>
+                    <p className="text-white/80 text-sm font-medium">{displayState?.confidenceScore != null ? `${scoreTone(displayState.confidenceScore).stars} ${scoreTone(displayState.confidenceScore).label}` : '待驗證'}</p>
+                  </div>
+                </div>
+                <p className="text-white/40 text-xs leading-relaxed">
+                  盤前方向來自 {tracking.reportDate || '—'} 報告，市場資料基準採用最近完整交易日 {tracking.premarketBaseDate || '—'} 收盤資料。
+                  盤前尚未有今日完整收盤資料，本篇使用最近完整交易日作為市場基準。
+                </p>
+              </div>
+            )}
+            {!tracking.premarket.showContent && (
+              <p className="text-white/40 text-xs leading-relaxed">{tracking.premarket.description}</p>
+            )}
+          </section>
+
+          {v10BeneficiaryEnabled && (
+            <V11ObservationSection
+              items={v11ObservationScripts}
+              tone="dark"
+              subtitle={canonicalNarrative.today_focus.summary || '盤中只看一件事：資金有沒有真的跟上。'}
+            />
+          )}
 
           {/* ═══════════════════════════════════════ */}
           {/* CARD 3 — 14:10 收盤驗證 */}

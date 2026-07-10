@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Ban, CalendarCheck, CheckCircle2, Compass, Flag, Scale, ShieldCheck, Target, TrendingUp } from 'lucide-react';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import { supabase } from '@/lib/supabase';
@@ -346,12 +347,20 @@ function pct(value: number | null): string {
   return value === null ? '—' : `${Math.round(value)}%`;
 }
 
-function StatCard({ label, value, helper }: { label: string; value: string | number; helper: string }) {
+const KPI_ACCENT: Record<string, string> = {
+  complete: 'from-emerald-300 to-emerald-500',
+  partial: 'from-amber-200 to-amber-500',
+  failed: 'from-rose-300 to-rose-500',
+  valid: 'from-cyan-300 to-cyan-500',
+};
+
+function StatCard({ label, value, helper, accent }: { label: string; value: string | number; helper: string; accent: keyof typeof KPI_ACCENT }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
-      <div className="text-xs text-white/45">{label}</div>
-      <div className="mt-2 text-3xl font-semibold text-white">{value}</div>
-      <div className="mt-2 text-xs leading-5 text-white/40">{helper}</div>
+    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/55 p-5 shadow-[0_18px_60px_rgba(0,0,0,0.18)] transition duration-200 hover:-translate-y-0.5 hover:border-white/18">
+      <div className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${KPI_ACCENT[accent]}`} />
+      <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/42">{label}</div>
+      <div className="mt-3 text-4xl font-semibold tracking-tight text-white md:text-5xl">{value}</div>
+      <div className="mt-3 text-xs leading-5 text-white/36">{helper}</div>
     </div>
   );
 }
@@ -378,9 +387,32 @@ function DetailList({ title, items, emptyText }: { title: string; items: string[
 
 function MiniMetric({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border border-white/8 bg-black/15 px-3 py-2">
-      <div className="text-[11px] text-white/35">{label}</div>
-      <div className="mt-1 text-sm font-semibold text-white/85">{value}</div>
+    <div className="rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3">
+      <div className="text-[11px] font-medium text-white/38">{label}</div>
+      <div className="mt-1 text-lg font-semibold text-white/90">{value}</div>
+    </div>
+  );
+}
+
+function RuleItem({ icon: Icon, children }: { icon: typeof CheckCircle2; children: string }) {
+  return (
+    <li className="flex gap-3 rounded-2xl border border-white/8 bg-slate-950/30 p-4">
+      <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/8 text-cyan-200">
+        <Icon size={16} strokeWidth={1.8} />
+      </span>
+      <span className="text-sm leading-6 text-white/58">{children}</span>
+    </li>
+  );
+}
+
+function TimelineFact({ icon: Icon, label, value }: { icon: typeof Compass; label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/8 bg-slate-950/25 p-3">
+      <div className="flex items-center gap-2 text-[11px] font-medium text-white/35">
+        <Icon size={14} strokeWidth={1.8} />
+        {label}
+      </div>
+      <p className="mt-2 line-clamp-2 text-sm leading-5 text-white/72">{value}</p>
     </div>
   );
 }
@@ -448,26 +480,30 @@ export default function PerformancePage() {
   const lockedCount = Math.max(0, validEntries.length - visibleEntries.length);
 
   return (
-    <div className="min-h-screen bg-[#07111f] text-white">
+    <div className="min-h-screen bg-[#06101d] text-white">
       <Navbar />
-      <main className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6 md:py-12">
-        <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-sky-500/12 via-white/[0.045] to-emerald-400/8 p-5 md:p-8">
-          <div className="grid gap-6 lg:grid-cols-[1.5fr_0.8fr] lg:items-end">
+      <main className="mx-auto w-full max-w-7xl px-4 py-10 md:px-6 md:py-14">
+        <section className="overflow-hidden rounded-[28px] border border-cyan-500/15 bg-gradient-to-br from-slate-900/95 via-slate-900/72 to-slate-950/95 p-6 shadow-[0_30px_100px_rgba(0,0,0,0.28)] md:p-10">
+          <div className="grid gap-8 lg:grid-cols-[1.35fr_0.75fr] lg:items-center">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-200/80">Performance Center</p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white md:text-5xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-cyan-200/75">PERFORMANCE CENTER</p>
+              <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-tight text-white md:text-6xl">
                 歷史績效與決策日誌
               </h1>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-white/65 md:text-base">
+              <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300 md:text-base md:leading-8">
                 回看 Morning Alpha 過去如何判斷、哪些劇本成立、哪些失效，以及收盤驗證後留下的修正。只統計完成驗證的交易日，不把資料不足或休市包裝成績效。
               </p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <div className="text-xs text-white/40">統計期間</div>
-              <div className="mt-2 text-2xl font-semibold text-white">
-                {stats.validCount >= 30 ? '最近 30 個已完成驗證交易日' : `目前已完成驗證 ${stats.validCount} 個交易日`}
+            <div className="rounded-[26px] border border-cyan-500/20 bg-slate-900/80 p-6 shadow-[0_20px_80px_rgba(8,145,178,0.12)]">
+              <div className="flex items-center gap-2 text-xs font-medium text-cyan-200/70">
+                <CalendarCheck size={16} strokeWidth={1.8} />
+                目前已完成驗證
               </div>
-              <p className="mt-2 text-xs leading-5 text-white/45">不足 30 日時，只呈現已完成驗證的真實交易日。</p>
+              <div className="mt-4 flex items-end gap-3">
+                <span className="text-6xl font-semibold leading-none tracking-tight text-white md:text-7xl">{stats.validCount}</span>
+                <span className="pb-2 text-lg font-medium text-slate-300">交易日</span>
+              </div>
+              <p className="mt-4 text-xs leading-6 text-slate-400">不足 30 日時，只呈現已完成驗證的真實交易日。</p>
             </div>
           </div>
         </section>
@@ -496,23 +532,23 @@ export default function PerformancePage() {
           </section>
         ) : (
           <>
-            <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard label="完整成立" value={stats.complete} helper="已完成驗證交易日中的完整成立次數" />
-              <StatCard label="部分成立" value={stats.partial} helper="方向或條件僅部分確認" />
-              <StatCard label="失敗" value={stats.failed} helper="收盤結果明顯背離主要劇本" />
-              <StatCard label="有效驗證日" value={stats.validCount} helper="complete + partial + failed，不含資料不足" />
+            <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard label="完整成立" value={stats.complete} helper="已完成驗證交易日中的完整成立次數" accent="complete" />
+              <StatCard label="部分成立" value={stats.partial} helper="方向或條件僅部分確認" accent="partial" />
+              <StatCard label="失敗" value={stats.failed} helper="收盤結果明顯背離主要劇本" accent="failed" />
+              <StatCard label="有效驗證日" value={stats.validCount} helper="complete + partial + failed，不含資料不足" accent="valid" />
             </section>
 
-            <p className="mt-3 text-xs leading-6 text-white/45">
+            <p className="mt-4 text-xs leading-6 text-slate-500">
               另有 {insufficientCount} 筆未納入統計：休市、待驗證或資料不完整。
             </p>
 
-            <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-5 md:p-6">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <section className="mt-8 rounded-[26px] border border-white/10 bg-slate-900/50 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.2)] md:p-7">
+              <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200/75">近 30 個有效驗證日</p>
-                  <h2 className="mt-2 text-xl font-semibold text-white">績效總覽</h2>
-                  <p className="mt-2 text-sm leading-6 text-white/50">加權成立率 = 完整成立 + 部分成立 0.5 權重；這不是投資報酬率。</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-200/75">近 30 個有效驗證日</p>
+                  <h2 className="mt-2 text-2xl font-semibold text-white">績效總覽</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">加權成立率 = 完整成立 + 部分成立 0.5 權重；這不是投資報酬率。</p>
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <MiniMetric label="完整成立率" value={pct(stats.completeRate)} />
@@ -520,70 +556,73 @@ export default function PerformancePage() {
                   <MiniMetric label="有效日數" value={stats.validCount} />
                 </div>
               </div>
-              <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-gradient-to-r from-emerald-300 to-sky-300" style={{ width: `${Math.max(4, Math.min(100, stats.weightedSuccessRate ?? 0))}%` }} />
+              <div className="mt-6 h-3.5 overflow-hidden rounded-full bg-slate-700/80 ring-1 ring-white/5">
+                <div className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-sky-300 to-emerald-300 shadow-[0_0_28px_rgba(45,212,191,0.32)]" style={{ width: `${Math.max(4, Math.min(100, stats.weightedSuccessRate ?? 0))}%` }} />
               </div>
             </section>
 
-            <section className="mt-8">
+            <section className="mt-10">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-white">最近 10 個交易日結果</h2>
-                  <p className="mt-1 text-sm text-white/45">只顯示已完成收盤驗證且資料完整的交易日。</p>
+                  <h2 className="text-2xl font-semibold text-white">最近 10 個交易日結果</h2>
+                  <p className="mt-2 text-sm text-slate-500">只顯示已完成收盤驗證且資料完整的交易日。</p>
                 </div>
-                {!isSignedIn ? <p className="text-xs text-white/40">公開版顯示最近 3 筆，登入後查看 30 日回顧。</p> : null}
+                {!isSignedIn ? <p className="text-xs text-slate-500">公開版顯示最近 3 筆，登入後查看 30 日回顧。</p> : null}
               </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 {recentTimeline.map((entry) => (
-                  <Link key={`timeline-${entry.marketDate}`} to={`/reports/${entry.marketDate}`} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-sky-300/35">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold text-white">{entry.marketDate}</span>
-                      <span className={`rounded-full border px-2 py-0.5 text-[11px] ${OUTCOME_CLASS[entry.outcome]}`}>{OUTCOME_LABEL[entry.outcome]}</span>
+                  <Link key={`timeline-${entry.marketDate}`} to={`/reports/${entry.marketDate}`} className="group rounded-[24px] border border-white/10 bg-slate-900/45 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.16)] transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/30 hover:bg-slate-900/65">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-lg font-semibold tracking-tight text-white">{entry.marketDate}</span>
+                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${OUTCOME_CLASS[entry.outcome]}`}>{OUTCOME_LABEL[entry.outcome]}</span>
                     </div>
-                    <p className="mt-3 text-xs text-white/40">盤前主要方向</p>
-                    <p className="mt-1 line-clamp-2 text-sm leading-5 text-white/75">{entry.marketBias}</p>
-                    <p className="mt-3 text-xs text-white/40">收盤結果</p>
-                    <p className="mt-1 line-clamp-2 text-sm leading-5 text-white/65">{entry.closingSummary}</p>
-                    {entry.confidence !== null ? <p className="mt-3 text-xs text-sky-200/70">信心分數 {Math.round(entry.confidence)}</p> : null}
+                    <div className="mt-4 space-y-3">
+                      <TimelineFact icon={Compass} label="盤前" value={entry.marketBias} />
+                      <TimelineFact icon={Flag} label="收盤" value={entry.closingSummary} />
+                      {entry.confidence !== null ? <TimelineFact icon={Target} label="信心分數" value={String(Math.round(entry.confidence))} /> : null}
+                    </div>
                   </Link>
                 ))}
               </div>
             </section>
 
-            <section className="mt-8">
-              <h2 className="text-xl font-semibold text-white">Decision Journal</h2>
-              <p className="mt-1 text-sm text-white/45">我們如何判斷、哪些成立、哪些失敗，以及下一次怎麼修正。</p>
-              <div className="mt-4 space-y-3">
+            <section className="mt-10">
+              <h2 className="text-2xl font-semibold text-white">Decision Journal</h2>
+              <p className="mt-2 text-sm text-slate-500">我們如何判斷、哪些成立、哪些失敗，以及下一次怎麼修正。</p>
+              <div className="mt-5 space-y-4">
                 {visibleEntries.map((entry) => {
                   const expanded = expandedId === entry.reportId;
                   return (
-                    <article key={entry.reportId} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 md:p-5">
-                      <div className="grid gap-4 lg:grid-cols-[0.8fr_1.4fr_1.2fr_auto] lg:items-center">
+                    <article key={entry.reportId} className="rounded-[24px] border border-white/10 bg-slate-900/45 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.18)] md:p-6">
+                      <div className="grid gap-5 lg:grid-cols-[0.72fr_1.6fr_1.3fr_auto] lg:items-center">
                         <div>
-                          <div className="text-lg font-semibold text-white">{entry.marketDate}</div>
-                          <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${OUTCOME_CLASS[entry.outcome]}`}>
+                          <div className="text-xl font-semibold tracking-tight text-white">{entry.marketDate}</div>
+                          <span className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-medium ${OUTCOME_CLASS[entry.outcome]}`}>
                             {OUTCOME_LABEL[entry.outcome]}
                           </span>
                         </div>
-                        <div>
-                          <div className="text-xs text-white/35">盤前判斷</div>
-                          <div className="mt-1 line-clamp-2 text-sm leading-6 text-white/75">{entry.primaryScenario}</div>
+                        <div className="relative pl-5">
+                          <span className="absolute left-0 top-1 h-[calc(100%-0.25rem)] w-px bg-gradient-to-b from-cyan-300/60 to-white/5" />
+                          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/34">盤前判斷</div>
+                          <div className="mt-2 line-clamp-2 text-sm leading-6 text-white/78">{entry.primaryScenario}</div>
                         </div>
-                        <div>
-                          <div className="text-xs text-white/35">收盤驗證</div>
-                          <div className="mt-1 line-clamp-2 text-sm leading-6 text-white/75">{entry.closingSummary}</div>
+                        <div className="relative pl-5">
+                          <span className="absolute left-0 top-1 h-[calc(100%-0.25rem)] w-px bg-gradient-to-b from-emerald-300/55 to-white/5" />
+                          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/34">收盤驗證</div>
+                          <div className="mt-2 line-clamp-2 text-sm leading-6 text-white/72">{entry.closingSummary}</div>
+                          <div className="mt-2 line-clamp-1 text-xs text-slate-500">AI 修正：{entry.correctionSummary || '尚未留下修正'}</div>
                         </div>
                         <button
                           type="button"
                           onClick={() => setExpandedId(expanded ? null : entry.reportId)}
-                          className="rounded-xl border border-white/15 px-4 py-2 text-sm font-medium text-white/75 transition hover:border-white/30 hover:text-white"
+                          className="rounded-xl border border-cyan-300/20 px-4 py-2.5 text-sm font-medium text-cyan-100/80 transition duration-200 hover:border-cyan-300/45 hover:bg-cyan-300/8 hover:text-cyan-50"
                         >
                           {expanded ? '收合' : '查看紀錄'}
                         </button>
                       </div>
 
                       {expanded ? (
-                        <div className="mt-5 grid gap-5 border-t border-white/10 pt-5 lg:grid-cols-3">
+                        <div className="mt-6 grid gap-5 border-t border-white/10 pt-5 lg:grid-cols-3">
                           <DetailList title="為什麼成立或失敗" items={[...entry.whatWasRight, ...entry.whatWasWrong].filter(Boolean)} emptyText="本日尚未留下結構化原因。" />
                           <DetailList title="下一次修正" items={entry.tomorrowAdjustment} emptyText="本日尚未留下結構化修正。" />
                           <div>
@@ -600,7 +639,7 @@ export default function PerformancePage() {
                 })}
 
                 {!isSignedIn && lockedCount > 0 ? (
-                  <div className="rounded-2xl border border-amber-300/20 bg-amber-300/8 p-5 text-sm text-white/65">
+                  <div className="rounded-[24px] border border-amber-300/20 bg-amber-300/8 p-5 text-sm leading-6 text-amber-50/78">
                     還有 {lockedCount} 筆完整 Decision Journal 已鎖定。登入會員後可查看最近 30 個有效驗證交易日。
                   </div>
                 ) : null}
@@ -608,56 +647,70 @@ export default function PerformancePage() {
             </section>
 
             {validEntries.length >= 3 ? (
-              <section className="mt-8 grid gap-4 lg:grid-cols-2">
-                <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/8 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200/75">Best Case</p>
-                  <h2 className="mt-2 text-xl font-semibold text-white">最佳成立案例</h2>
+              <section className="mt-10 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-[24px] border border-emerald-300/18 bg-slate-900/48 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.18)] md:p-6">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200/75">
+                    <CheckCircle2 size={15} strokeWidth={1.8} />
+                    Best Case
+                  </div>
+                  <h2 className="mt-3 text-2xl font-semibold text-white">最佳成立案例</h2>
                   {bestCase ? (
-                    <div className="mt-4 text-sm leading-6 text-white/65">
+                    <div className="mt-4 text-sm leading-7 text-slate-300">
                       <p className="font-semibold text-white">{bestCase.marketDate}｜{bestCase.primaryScenario}</p>
                       <p className="mt-2">{bestCase.whatWasRight[0] || bestCase.closingSummary}</p>
                     </div>
                   ) : (
-                    <p className="mt-4 text-sm text-white/45">目前尚無完整成立案例。</p>
+                    <p className="mt-4 text-sm text-slate-500">目前尚無完整成立案例。</p>
                   )}
                 </div>
-                <div className="rounded-2xl border border-rose-300/20 bg-rose-300/8 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-rose-200/75">Correction Case</p>
-                  <h2 className="mt-2 text-xl font-semibold text-white">需要修正案例</h2>
+                <div className="rounded-[24px] border border-rose-300/18 bg-slate-900/48 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.18)] md:p-6">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-rose-200/75">
+                    <Target size={15} strokeWidth={1.8} />
+                    Correction Case
+                  </div>
+                  <h2 className="mt-3 text-2xl font-semibold text-white">需要修正案例</h2>
                   {failedCase ? (
-                    <div className="mt-4 text-sm leading-6 text-white/65">
+                    <div className="mt-4 text-sm leading-7 text-slate-300">
                       <p className="font-semibold text-white">{failedCase.marketDate}｜{failedCase.primaryScenario}</p>
                       <p className="mt-2">{failedCase.whatWasWrong[0] || failedCase.correctionSummary}</p>
                     </div>
                   ) : (
-                    <p className="mt-4 text-sm text-white/45">目前沒有已完成驗證的失敗案例。</p>
+                    <p className="mt-4 text-sm text-slate-500">目前沒有已完成驗證的失敗案例。</p>
                   )}
                 </div>
               </section>
             ) : null}
 
             {lessons.length > 0 ? (
-              <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.04] p-5 md:p-6">
-                <h2 className="text-xl font-semibold text-white">本月最大的修正</h2>
-                <ul className="mt-4 grid gap-3 md:grid-cols-2">
-                  {lessons.map((lesson, index) => (
-                    <li key={`${lesson}-${index}`} className="rounded-xl border border-white/8 bg-black/15 p-3 text-sm leading-6 text-white/65">
-                      {lesson}
-                    </li>
-                  ))}
-                </ul>
+              <section className="mt-10 overflow-hidden rounded-[24px] border border-white/10 bg-slate-900/50 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.18)] md:p-6">
+                <div className="flex gap-4">
+                  <div className="w-1 flex-shrink-0 rounded-full bg-gradient-to-b from-cyan-300 via-sky-300 to-emerald-300" />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-2xl font-semibold text-white">本月最大的修正</h2>
+                    <ul className="mt-4 grid gap-3 md:grid-cols-2">
+                      {lessons.map((lesson, index) => (
+                        <li key={`${lesson}-${index}`} className="rounded-2xl bg-slate-950/30 p-4 text-sm leading-7 text-slate-300">
+                          {lesson}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
               </section>
             ) : null}
           </>
         )}
 
-        <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.04] p-5 md:p-6">
-          <h2 className="text-lg font-semibold text-white">統計規則</h2>
-          <ul className="mt-3 grid gap-2 text-sm leading-6 text-white/55 md:grid-cols-2">
-            <li>只計入完成盤前報告與收盤驗證的交易日。</li>
-            <li>休市、待驗證、資料不完整不列入成功率。</li>
-            <li>部分成立以 0.5 權重計入加權成立率。</li>
-            <li>歷史結果只反映模型判斷紀錄，不代表投資報酬。</li>
+        <section className="mt-10 rounded-[24px] border border-white/10 bg-slate-900/45 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.16)] md:p-6">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={18} strokeWidth={1.8} className="text-cyan-200" />
+            <h2 className="text-xl font-semibold text-white">統計規則</h2>
+          </div>
+          <ul className="mt-4 grid gap-3 md:grid-cols-2">
+            <RuleItem icon={CalendarCheck}>完成盤前報告與收盤驗證才納入統計。</RuleItem>
+            <RuleItem icon={Ban}>休市、待驗證、資料不完整不列入成功率。</RuleItem>
+            <RuleItem icon={Scale}>部分成立以 0.5 權重計入加權成立率。</RuleItem>
+            <RuleItem icon={TrendingUp}>歷史結果只反映模型判斷紀錄，不代表投資報酬。</RuleItem>
           </ul>
         </section>
       </main>

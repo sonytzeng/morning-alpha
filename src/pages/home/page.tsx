@@ -426,43 +426,20 @@ function HomePageContent() {
             {(displayMode === 'normal') && hasReportData && (
               <>
                 <h1 className="text-white font-bold text-3xl md:text-5xl lg:text-6xl mb-4 leading-tight max-w-4xl">
-                  今天劇本
+                  今天唯一不能忽略的一件事
                 </h1>
-                <p className="text-white/86 text-base md:text-xl leading-relaxed max-w-3xl mb-3 font-semibold">
-                  {renderSafeText(homeCoreScript)}
+                <p className="text-white/86 text-base md:text-xl leading-relaxed max-w-3xl mb-4 font-semibold">
+                  {renderSafeText(decisionLifecycle.question.question || homeCoreScript)}
                 </p>
-                <p className="text-white/62 text-sm md:text-lg leading-relaxed max-w-3xl mb-5">
-                  今天先確認資金方向，不要急著找飆股。
-                </p>
-
-                {/* Status badge */}
-                <div className="flex items-center gap-2 mb-4">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border whitespace-nowrap ${statusBadge.color}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`}></span>
-                    <i className={`${statusBadge.icon} text-xs`}></i>
-                    {statusBadge.label}
-                  </span>
-                  {displayMode === 'normal' && (
-                    <span className="text-white/40 text-xs">本篇為 {displayReportDate} 盤前報告，台股基準採用 {displayMarketDataDate}{displayMarketDataDate === displayReportDate ? ' 資料基準' : ' 收盤資料'}，美股與海外基準採用 {displayUsMarketDate} 盤前資料。</span>
-                  )}
-                </div>
-
-                {/* Market data basis — clear & explicit */}
-                <div className="flex flex-col gap-1.5 mb-4 max-w-2xl">
-                  <p className="text-white/50 text-xs leading-relaxed">
-                    台股盤前基準：<span className="text-white/70 font-semibold">{displayMarketDataDate}{displayMarketDataDate === displayReportDate ? ' 資料基準' : ' 收盤'}</span>
-                    {displayReportDate !== displayMarketDataDate && displayMarketDataDate !== '—' && (
-                      <span className="text-white/35 ml-2">（前一個完整交易日，正常盤前邏輯）</span>
-                    )}
-                  </p>
-                  {displayUsMarketDate !== '—' && (
-                    <p className="text-white/40 text-xs leading-relaxed">
-                      美股與海外基準：<span className="text-white/60">{displayUsMarketDate}</span>
-                    </p>
-                  )}
-                  <p className="text-white/30 text-[10px] leading-relaxed">
-                    報告產生時間：{displayCreatedAt}
-                  </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-3xl mb-5">
+                  <div className="rounded-2xl border border-white/12 bg-white/8 p-4">
+                    <p className="text-amber-200 text-[10px] uppercase tracking-[0.22em] mb-2">今天最容易犯的錯</p>
+                    <p className="text-white/78 text-sm leading-relaxed font-semibold">{renderSafeText(homeDontDo)}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/12 bg-white/8 p-4">
+                    <p className="text-amber-200 text-[10px] uppercase tracking-[0.22em] mb-2">下一次回來</p>
+                    <p className="text-white/78 text-sm leading-relaxed font-semibold">{renderSafeText(homeNextVerification)}</p>
+                  </div>
                 </div>
               </>
             )}
@@ -478,46 +455,21 @@ function HomePageContent() {
                 }}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-sm rounded-xl transition-colors whitespace-nowrap min-h-[48px]"
               >
-                查看今天完整研究
+                開始今天交易準備
                 <i className="ri-arrow-right-line"></i>
               </Link>
             </div>
             )}
-
-            {/* Disclaimer */}
-            <div className="flex items-center gap-3 flex-wrap mt-5">
-              {['完整推理', '主線分析', '失效條件', '盤中驗證', '收盤回測'].map((item) => (
-                <span key={item} className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-white/62 text-[10px] font-semibold">
-                  <i className="ri-check-line text-amber-300"></i>
-                  {item}
-                </span>
-              ))}
-            </div>
           </div>
         </section>
 
         {(displayMode === 'normal') && hasReportData && (
           <section className="w-full px-4 md:px-6 pb-10 md:pb-14">
             <div className="max-w-5xl mx-auto w-full space-y-6">
-              <div className="bg-foreground-900 border border-foreground-800 rounded-2xl p-5 md:p-6 text-white">
-                <p className="text-amber-200 text-[10px] uppercase tracking-[0.24em] mb-3">Today&apos;s Question</p>
-                <h2 className="font-bold text-xl md:text-2xl leading-snug mb-3">今天最大的交易問題</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-white/35 text-[10px] uppercase tracking-wider mb-1">Question</p>
-                    <p className="text-white/88 text-base font-semibold leading-relaxed">{renderSafeText(decisionLifecycle.question.question)}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/35 text-[10px] uppercase tracking-wider mb-1">Why</p>
-                    <p className="text-white/62 text-sm leading-relaxed">{renderSafeText(decisionLifecycle.question.why)}</p>
-                  </div>
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                  ['市場方向', displayBias],
-                  ['今天不要做', homeDontDo],
+                  ['今天唯一不能忽略', decisionLifecycle.question.question],
+                  ['今天最大的風險', decisionLifecycle.question.why],
                   ['今天先看', homePrimaryTheme],
                   ['下一次驗證', homeNextVerification],
                 ].map(([title, body]) => (
@@ -528,11 +480,30 @@ function HomePageContent() {
                 ))}
               </div>
 
+              <div className="bg-background-100 border border-background-200/70 rounded-2xl p-5 md:p-6">
+                <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                  <div>
+                    <p className="text-primary-600 text-[10px] font-bold uppercase tracking-[0.24em] mb-1">Data Basis</p>
+                    <h2 className="text-foreground-900 font-bold text-lg">今日資料基準</h2>
+                  </div>
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border whitespace-nowrap ${statusBadge.color}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`}></span>
+                    <i className={`${statusBadge.icon} text-xs`}></i>
+                    {statusBadge.label}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs leading-relaxed">
+                  <p className="text-foreground-500">台股基準：<span className="text-foreground-800 font-semibold">{displayMarketDataDate}{displayMarketDataDate === displayReportDate ? ' 資料基準' : ' 收盤'}</span></p>
+                  <p className="text-foreground-500">美股與海外基準：<span className="text-foreground-800 font-semibold">{displayUsMarketDate}</span></p>
+                  <p className="text-foreground-500">報告產生時間：<span className="text-foreground-800 font-semibold">{displayCreatedAt}</span></p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  ['30 秒看今天', '先看方向、主線、不要做什麼，再決定要不要進一步讀完整研究。'],
                   ['昨天有沒有猜對？', '收盤後用回測檢查盤前判斷，不把敘事當成答案。'],
                   ['為什麼值得付費？', '會員看的不是更多股票，而是推理、失效條件、盤中驗證與收盤回測。'],
+                  ['每天怎麼使用？', '早上看劇本，盤中看是否成立，收盤後看今天學到什麼。'],
                 ].map(([title, body]) => (
                   <div key={title} className="bg-foreground-900 border border-foreground-800 rounded-2xl p-5 text-white">
                     <p className="text-amber-200 text-[10px] uppercase tracking-[0.22em] mb-2">Morning Alpha</p>

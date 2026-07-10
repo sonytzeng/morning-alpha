@@ -59,6 +59,19 @@ function firstText(...values: unknown[]): string {
   return '';
 }
 
+function uniqueTextList(values: unknown[], limit = 5): string[] {
+  const seen = new Set<string>();
+  const output: string[] = [];
+  for (const value of values) {
+    const text = textValue(value);
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    output.push(text);
+    if (output.length >= limit) break;
+  }
+  return output;
+}
+
 function normalizeLegacyBeneficiary(row: Record<string, unknown>): MemberBeneficiaryCandidate | null {
   const name = firstText(row.stock_name, row.name);
   if (!name) return null;
@@ -738,15 +751,6 @@ function MemberNoteContent() {
     'watch_point',
     'what_to_watch',
   ]);
-  const closingVerificationLines = getDataLines(closingVerification, [
-    'prediction_result',
-    'verification_result',
-    'result',
-    'summary',
-    'actual_direction',
-    'accuracy_score',
-    'reason',
-  ]);
   const closingTaiex = asRecord(closingVerificationRecord.actual_taiex_close);
   const closingTsmc = asRecord(closingVerificationRecord.actual_2330_close);
   const firstBeneficiaryValidation = asRecord(closingVerificationRecord.first_beneficiary_validation);
@@ -769,7 +773,6 @@ function MemberNoteContent() {
   });
   const decisionLifecycle = canonicalNarrative.decision_lifecycle;
   const openingThesis = asRecord(memberNoteV2?.opening_thesis);
-  const firstStockNote = asRecord(memberNoteV2?.first_beneficiary_stock);
   const todayOneLine = firstText(
     canonicalNarrative.today_focus.summary,
     canonicalNarrative.today_focus.headline,
@@ -777,21 +780,8 @@ function MemberNoteContent() {
     openingThesis.summary,
     rawAI.daily_sentence,
   );
-  const importantObservation = firstText(
-    canonicalNarrative.today_focus.why,
-    canonicalNarrative.today_focus.action,
-    firstLine(openingThesis.summary),
-    firstLine(memberNoteV2?.core_reasoning),
-    firstLine(rawAI.do_not_do_list),
-  ) || '資料不足，等待完整研究筆記補齊。';
-  const firstStockName = [firstText(firstStockNote.stock_code, firstStockNote.symbol), firstText(firstStockNote.stock_name, firstStockNote.name)].filter(Boolean).join(' ') || [beneficiaryCandidates[0]?.symbol, beneficiaryCandidates[0]?.name].filter(Boolean).join(' ') || '尚未產生';
-  const firstStockReason = firstText(firstStockNote.relationship_to_thesis, firstStockNote.benefit_source, beneficiaryCandidates[0]?.reason, '等待完整受惠股推理補齊。');
-  const firstStockValidation = firstText(firstStockNote.validation_signal, beneficiaryCandidates[0]?.watchPoint, '09:30 後看 2330、TAIEX 與族群是否同步。');
-  const firstStockInvalidation = firstText(firstStockNote.invalidation_condition, beneficiaryCandidates[0]?.risk, firstLine(memberNoteV2?.invalidation_conditions), '若 2330 無法轉強且大盤續弱，今日推論降級。');
   const v10BeneficiaryEnabled = dsState?.v10BeneficiaryEnabled === true || rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist || dsState?.v10ObservationWatchlist, 5);
-  const rotationScenarios = recordList(memberNoteV2?.capital_rotation_scenarios);
-  const scenarioLabels = ['如果今天變強', '如果今天震盪', '如果今天轉弱'];
   const dontDoItems = [
     canonicalNarrative.today_focus.risk,
     canonicalNarrative.failure_triggers[0]?.action,
@@ -801,14 +791,41 @@ function MemberNoteContent() {
     ...recordList(memberNoteV2?.invalidation_conditions).map((item) => firstText(item.action_note, item.condition, item.meaning)),
     ...recordList(memberNoteV2?.invalidation_rules).map((item) => firstText(item.action_note, item.condition, item.meaning)),
   ].filter(Boolean).slice(0, 5);
-  const closingResultText = hasCompletedClosingVerification
-    ? humanStatus(closingVerificationRecord.hit_or_miss || closingVerificationRecord.prediction_result || closingVerificationRecord.status)
-    : '等待收盤資料';
-  const firstBeneficiaryResult = firstText(firstBeneficiaryValidation.note, '收盤資料完成後更新。');
-  const listValidationResult = hasCompletedClosingVerification
-    ? `${renderSafeText(beneficiaryListValidation.with_close_data_count ?? 0)} / ${renderSafeText(beneficiaryListValidation.tracked_count ?? 0)} 檔已有收盤比較`
-    : '等待收盤資料';
-
+  const decisionStatusText = humanStatus(decisionLifecycle.decision_status.status);
+  const whyBullets = uniqueTextList([
+    decisionLifecycle.question.why,
+    decisionLifecycle.current_thesis.summary,
+    canonicalNarrative.today_focus.why,
+    canonicalNarrative.today_focus.summary,
+    openingThesis.summary,
+    firstLine(memberNoteV2?.core_reasoning),
+    researcherSummary,
+  ], 5);
+  const whyItems = whyBullets.length > 0 ? whyBullets : ['今日原因資料尚未完整，等待研究筆記補齊。'];
+  const rawChecklistItems = uniqueTextList([
+    ...decisionLifecycle.validation_plan.steps.map((step) => firstText(step.detail, step.title, step.time)),
+    decisionLifecycle.validation_plan.next_step,
+    canonicalNarrative.intraday_progress.current_step,
+    canonicalNarrative.intraday_progress.next_step,
+  ], 5);
+  const checklistItems = rawChecklistItems.length > 0 ? rawChecklistItems : ['今日驗證清單尚未完整，先等待下一個同步點。'];
+  const rawStopSignals = uniqueTextList([
+    decisionLifecycle.failure_condition.trigger,
+    decisionLifecycle.failure_condition.meaning,
+    decisionLifecycle.failure_condition.action,
+    ...canonicalNarrative.failure_triggers.flatMap((item) => [item.trigger, item.meaning, item.action]),
+    ...recordList(memberNoteV2?.risk_scenarios).map((item) => firstText(item.condition, item.risk, item.response)),
+    ...recordList(memberNoteV2?.invalidation_conditions).map((item) => firstText(item.condition, item.meaning, item.action_note)),
+    ...recordList(memberNoteV2?.invalidation_rules).map((item) => firstText(item.condition, item.meaning, item.action_note)),
+  ], 5);
+  const stopSignals = rawStopSignals.length > 0 ? rawStopSignals : ['今日失效條件尚未完整，暫不放大動作。'];
+  const todayTakeaway = hasCompletedClosingVerification
+    ? decisionLifecycle.daily_lesson
+    : firstText(
+        decisionLifecycle.current_thesis.summary,
+        canonicalNarrative.today_focus.summary,
+        todayOneLine,
+      );
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col overflow-x-hidden">
       <Navbar />
@@ -821,9 +838,12 @@ function MemberNoteContent() {
               <div className="w-7 h-7 rounded-md bg-forest-500/15 flex items-center justify-center">
                 <i className="ri-book-open-line text-forest-400 text-sm"></i>
               </div>
-              <h1 className="text-slate-50 font-bold text-sm md:text-base whitespace-nowrap">
-                完整盤前研究筆記
-              </h1>
+              <div>
+                <h1 className="text-slate-50 font-bold text-sm md:text-base whitespace-nowrap">
+                  Daily Playbook
+                </h1>
+                <p className="text-slate-400 text-[10px] mt-0.5">每天 5 分鐘完成今天交易準備。</p>
+              </div>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/12 text-emerald-300 text-[10px] font-medium rounded-full border border-emerald-400/35 whitespace-nowrap">
                 <i className="ri-check-line text-[9px]"></i>
                 {canViewMemberNoteFull ? '會員內容' : '免費摘要'}
@@ -865,55 +885,91 @@ function MemberNoteContent() {
             </div>
           </div>
 
-          {/* 30-second member read */}
+          {/* Daily Playbook — five-minute member read */}
           <section className="bg-gradient-to-br from-forest-500/12 via-navy-900/70 to-navy-900/80 border border-forest-400/20 rounded-2xl p-5 md:p-6 space-y-4">
             <div>
-              <p className="text-forest-300 text-[10px] uppercase tracking-[0.3em] font-semibold mb-2">今日一句</p>
-              <h2 className="text-white text-xl md:text-2xl font-bold leading-snug">{renderSafeText(todayOneLine)}</h2>
+              <p className="text-forest-300 text-[10px] uppercase tracking-[0.3em] font-semibold mb-2">Today&apos;s Mission</p>
+              <h2 className="text-white text-xl md:text-2xl font-bold leading-snug">{renderSafeText(decisionLifecycle.question.question)}</h2>
+              <p className="text-white/58 text-sm leading-relaxed mt-2">每天 5 分鐘完成今天交易準備。</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="md:col-span-2 p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">今天最重要觀察</p>
-                <p className="text-white/75 text-sm leading-relaxed">今天只看一件事：{renderSafeText(importantObservation)}</p>
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">目前判斷</p>
+                <p className="text-white/82 text-sm leading-relaxed">{renderSafeText(decisionLifecycle.current_thesis.summary || todayOneLine)}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">目前狀態</p>
+                <p className="text-white/82 text-sm font-semibold leading-relaxed">{renderSafeText(decisionStatusText)}</p>
+                <p className="text-white/45 text-xs leading-relaxed mt-1">{renderSafeText(decisionLifecycle.decision_status.reason)}</p>
               </div>
               <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-400/20">
-                <p className="text-amber-200 text-[10px] uppercase tracking-wider mb-2">今天不要做什麼</p>
-                <p className="text-amber-50/85 text-sm leading-relaxed">{renderSafeText(dontDoItems[0] || firstStockInvalidation)}</p>
+                <p className="text-amber-200 text-[10px] uppercase tracking-wider mb-2">今天最容易犯的錯</p>
+                <p className="text-amber-50/85 text-sm leading-relaxed">{renderSafeText(dontDoItems[0] || decisionLifecycle.failure_condition.action)}</p>
               </div>
+            </div>
+          </section>
+
+          <section className="bg-navy-900/60 border border-forest-500/10 rounded-2xl p-5 md:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <i className="ri-question-answer-line text-forest-400 text-sm"></i>
+              <h2 className="text-white font-bold text-base">Why This Matters</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">第一受惠股</p>
-                <h3 className="text-white font-bold text-lg mb-2">{renderSafeText(firstStockName)}</h3>
-                <p className="text-white/65 text-xs leading-relaxed mb-2">為什麼看它：{renderSafeText(firstStockReason)}</p>
-                <p className="text-sky-200/80 text-xs leading-relaxed mb-2">09:30 驗證：{renderSafeText(firstStockValidation)}</p>
-                <p className="text-red-200/80 text-xs leading-relaxed">看錯訊號：{renderSafeText(firstStockInvalidation)}</p>
-              </div>
-              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">收盤驗證</p>
-                <p className="text-white/80 text-sm font-semibold mb-2">今天判斷：{closingResultText}</p>
-                <p className="text-amber-200/80 text-xs leading-relaxed mb-2">每日一課：{renderSafeText(decisionLifecycle.daily_lesson)}</p>
-                <p className="text-white/60 text-xs leading-relaxed mb-1">第一受惠股：{renderSafeText(firstBeneficiaryResult)}</p>
-                <p className="text-white/45 text-xs leading-relaxed">受惠股名單：{listValidationResult}</p>
-              </div>
+              {whyItems.map((line, idx) => (
+                <div key={`${line}-${idx}`} className="flex gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                  <span className="w-6 h-6 rounded-full bg-forest-500/12 border border-forest-400/20 text-forest-200 text-xs font-semibold flex items-center justify-center shrink-0">{idx + 1}</span>
+                  <p className="text-white/68 text-sm leading-relaxed">{renderSafeText(line)}</p>
+                </div>
+              ))}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {scenarioLabels.map((label, idx) => {
-                const scenario = rotationScenarios[idx] || {};
-                return (
-                  <div key={label} className="p-3 rounded-xl bg-navy-800/60 border border-white/5">
-                    <p className="text-white/85 text-sm font-semibold mb-2">{label}</p>
-                    <p className="text-white/55 text-xs leading-relaxed">{renderSafeText(firstText(scenario.trigger, scenario.beneficiary_impact, scenario.avoid, '等待盤中訊號確認。'))}</p>
-                  </div>
-                );
-              })}
+          </section>
+
+          <section className="bg-navy-900/60 border border-sky-500/10 rounded-2xl p-5 md:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <i className="ri-checkbox-line text-sky-400 text-sm"></i>
+              <h2 className="text-white font-bold text-base">Decision Checklist</h2>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {checklistItems.map((item, idx) => (
+                <div key={`${item}-${idx}`} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                  <span className="mt-0.5 w-5 h-5 rounded-md border border-sky-400/35 bg-sky-500/10 text-sky-200 text-[10px] flex items-center justify-center">□</span>
+                  <p className="text-white/70 text-sm leading-relaxed">{renderSafeText(item)}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="bg-navy-900/60 border border-red-500/10 rounded-2xl p-5 md:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <i className="ri-stop-circle-line text-red-300 text-sm"></i>
+              <h2 className="text-white font-bold text-base">Stop Signals</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {stopSignals.map((item, idx) => (
+                <div key={`${item}-${idx}`} className="p-3 rounded-xl bg-red-500/[0.04] border border-red-400/15">
+                  <p className="text-red-200/85 text-sm leading-relaxed">{renderSafeText(item)}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="bg-navy-900/60 border border-amber-500/10 rounded-2xl p-5 md:p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <i className="ri-lightbulb-flash-line text-amber-300 text-sm"></i>
+              <h2 className="text-white font-bold text-base">Today&apos;s Takeaway</h2>
+            </div>
+            <p className="text-white/78 text-lg font-semibold leading-relaxed">
+              {renderSafeText(hasCompletedClosingVerification ? todayTakeaway : firstText(todayTakeaway, `今天如果只能記住一件事：${decisionLifecycle.question.question}`))}
+            </p>
+            <p className="text-white/42 text-xs leading-relaxed mt-2">
+              {hasCompletedClosingVerification ? '收盤後更新：今天真正學到什麼。' : '盤中尚未完成前，先用 Morning Thesis 管住節奏。'}
+            </p>
           </section>
 
           <V11ObservationSection
             items={v11ObservationScripts}
             tone="dark"
-            subtitle="五條待確認線索：有變強的可能，也有停看的條件。"
+            subtitle="Watchlist 不是主角；它只回答為什麼在名單、還缺什麼條件、什麼時候移除。"
           />
 
           {/* Researcher Summary */}

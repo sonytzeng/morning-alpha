@@ -8,6 +8,7 @@ import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { renderSafeText } from '@/utils/renderSafe';
 import { trackPageView, trackEvent } from '@/utils/analytics';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
+import { dedupePresentedOpportunities } from '@/lib/decisionPresentation';
 
 // ═══════════════════════════════════════════════════
 // V9.0: Three-tier beneficiary stock types
@@ -610,6 +611,8 @@ function OpportunitiesContent() {
     ? v10ObservationWatchlist
     : [...extendedStocks, ...scenarioStocks].map((stock, index) => legacyToV10(stock, index, 'observation'));
   const riskOpportunityStocks = v10BeneficiaryEnabled ? v10RiskWatchlist : [];
+  const presentedStrongStocks = dedupePresentedOpportunities(strongOpportunityStocks as unknown as Record<string, unknown>[], 6);
+  const presentedObservationStocks = dedupePresentedOpportunities(observationOpportunityStocks as unknown as Record<string, unknown>[], 9);
   const legacyRiskNotes = v10BeneficiaryEnabled ? [] : uniqueNonEmpty([...doNotDoList, ...invalidationItems], 5);
   const observationGroups = uniqueNonEmpty([
     canonicalScriptHeadline,
@@ -620,8 +623,8 @@ function OpportunitiesContent() {
     ...riskOpportunityStocks.map(stockScriptName),
   ], 3);
   const pageQualityMessage = qualityMessage(v10DataQualityStatus, v10Warning);
-  const hasStrongOpportunities = strongOpportunityStocks.length > 0;
-  const hasObservationOpportunities = observationOpportunityStocks.length > 0;
+  const hasStrongOpportunities = presentedStrongStocks.length > 0;
+  const hasObservationOpportunities = presentedObservationStocks.length > 0;
   const hasRiskOpportunities = riskOpportunityStocks.length > 0 || legacyRiskNotes.length > 0;
   const noStrongMessage = v10BeneficiaryEnabled
     ? '今日沒有足夠證據支持強受惠股，先觀察資金是否擴散。'
@@ -653,10 +656,9 @@ function OpportunitiesContent() {
           <section className="ma-card-elevated space-y-5">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
               <div>
-                <p className="text-primary-600 text-[11px] font-semibold tracking-[0.18em] uppercase mb-2">Opportunity Map</p>
                 <h2 className="text-foreground-900 font-bold text-xl md:text-2xl">今日受惠股總覽</h2>
                 <p className="text-foreground-500 text-sm leading-relaxed mt-2 max-w-2xl">
-                  這頁不把所有股票混成一張清單，而是拆成三種判斷：證據足夠的強受惠、只能觀察的劇本，以及今天應排除的風險。
+                  先看主線候選，再看仍待確認與今天應排除的標的。
                 </p>
               </div>
               <Link
@@ -672,7 +674,7 @@ function OpportunitiesContent() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="p-4 rounded-xl bg-background-50 border border-background-200/70">
                 <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">今天是否有強受惠股</p>
-                <p className="text-foreground-900 font-bold text-lg">{hasStrongOpportunities ? `${strongOpportunityStocks.length} 檔` : '沒有'}</p>
+                <p className="text-foreground-900 font-bold text-lg">{hasStrongOpportunities ? `${presentedStrongStocks.length} 檔` : '沒有'}</p>
               </div>
               <div className="p-4 rounded-xl bg-background-50 border border-background-200/70 md:col-span-1">
                 <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">如果沒有，原因</p>
@@ -697,33 +699,23 @@ function OpportunitiesContent() {
                 <h2 className="text-foreground-900 font-bold text-base md:text-lg">強受惠股</h2>
                 <p className="text-foreground-500 text-xs md:text-sm leading-relaxed">只有證據足夠、方向一致，才進入這一層。</p>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 text-[10px]">{strongOpportunityStocks.length} 檔</span>
+              <span className="px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 text-[10px]">{presentedStrongStocks.length} 檔</span>
             </div>
 
             {hasStrongOpportunities ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {strongOpportunityStocks.slice(0, 6).map((stock) => (
-                  <article key={`strong-${stock.symbol}-${stock.rank}`} className="ma-card-compact space-y-3">
+                {presentedStrongStocks.map((stock) => (
+                  <article key={`strong-${stock.symbol}-${stock.name}`} className="ma-card-compact">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="text-foreground-900 font-bold text-sm">{stockTitle(stock)}</h3>
-                        <p className="text-primary-700 text-[11px] mt-1">所屬劇本：{canonicalScriptHeadline || stockScriptName(stock)}</p>
+                        <h3 className="text-foreground-900 font-bold text-base">{stock.symbol} {stock.name}</h3>
+                        <p className="text-primary-300 text-xs mt-1">今日定位：{stock.roleLabel || '主線候選'}</p>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 text-[10px]">{confidenceLevelLabel(stock.confidenceLevel)}</span>
                     </div>
-                    <div className="grid grid-cols-1 gap-2">
-                      <div className="p-3 rounded-xl bg-background-50 border border-background-200/70">
-                        <p className="text-foreground-400 text-[10px] mb-1">為什麼入選</p>
-                        <p className="text-foreground-800 text-xs leading-relaxed">{beneficiaryReason(stock)}</p>
-                      </div>
-                      <div className="p-3 rounded-xl bg-background-50 border border-background-200/70">
-                        <p className="text-foreground-400 text-[10px] mb-1">今天怎麼驗證</p>
-                        <p className="text-foreground-800 text-xs leading-relaxed">{confirmationNeeded(stock)}</p>
-                      </div>
-                      <div className="p-3 rounded-xl bg-background-50 border border-background-200/70">
-                        <p className="text-foreground-400 text-[10px] mb-1">失效條件</p>
-                        <p className="text-foreground-800 text-xs leading-relaxed">{stopCondition(stock)}</p>
-                      </div>
+                    <div className="mt-4 space-y-2 text-xs leading-relaxed">
+                      {stock.oneLineReason && <p className="text-foreground-700">{stock.oneLineReason}</p>}
+                      {stock.confirmation && <p className="text-foreground-500"><span className="font-semibold text-foreground-700">今天確認：</span>{stock.confirmation}</p>}
+                      {stock.invalidation && <p className="text-rose-200/80"><span className="font-semibold">失效：</span>{stock.invalidation}</p>}
                     </div>
                   </article>
                 ))}
@@ -741,30 +733,21 @@ function OpportunitiesContent() {
                 <h2 className="text-foreground-900 font-bold text-base md:text-lg">觀察名單</h2>
                 <p className="text-foreground-500 text-xs md:text-sm leading-relaxed">可觀察，但不能追價；需要盤中證據補上。</p>
               </div>
-              <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">{observationOpportunityStocks.length} 檔</span>
+              <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">{presentedObservationStocks.length} 檔</span>
             </div>
 
             {hasObservationOpportunities ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {observationOpportunityStocks.slice(0, 9).map((stock) => (
-                  <article key={`observe-${stock.symbol}-${stock.rank}`} className="ma-card-compact space-y-3">
+                {presentedObservationStocks.map((stock) => (
+                  <article key={`observe-${stock.symbol}-${stock.name}`} className="ma-card-compact">
                     <div>
-                      <h3 className="text-foreground-900 font-bold text-sm">{stockTitle(stock)}</h3>
-                      <p className="text-amber-700 text-[11px] mt-1">{canonicalScriptHeadline || stockScriptName(stock)}</p>
+                      <h3 className="text-foreground-900 font-bold text-base">{stock.symbol} {stock.name}</h3>
+                      <p className="text-amber-300 text-xs mt-1">先觀察，不追價</p>
                     </div>
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-foreground-400 text-[10px] mb-1">觀察原因</p>
-                        <p className="text-foreground-800 text-xs leading-relaxed">{observationReason(stock)}</p>
-                      </div>
-                      <div>
-                        <p className="text-foreground-400 text-[10px] mb-1">需要補上的條件</p>
-                        <p className="text-foreground-800 text-xs leading-relaxed">{confirmationNeeded(stock)}</p>
-                      </div>
-                      <div>
-                        <p className="text-foreground-400 text-[10px] mb-1">何時升級 / 降級</p>
-                        <p className="text-foreground-800 text-xs leading-relaxed">{upgradeDowngradeText(stock)}</p>
-                      </div>
+                    <div className="mt-4 space-y-2 text-xs leading-relaxed">
+                      {stock.oneLineReason && <p className="text-foreground-700">{stock.oneLineReason}</p>}
+                      {stock.confirmation && <p className="text-foreground-500"><span className="font-semibold text-foreground-700">確認：</span>{stock.confirmation}</p>}
+                      {stock.invalidation && <p className="text-foreground-500"><span className="font-semibold text-foreground-700">失敗時：</span>{stock.invalidation}</p>}
                     </div>
                   </article>
                 ))}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Ban, CalendarCheck, CheckCircle2, Compass, Flag, Scale, ShieldCheck, Target, TrendingUp } from 'lucide-react';
+import { Ban, CalendarCheck, CheckCircle2, Flag, Scale, ShieldCheck, Target, TrendingUp } from 'lucide-react';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import { supabase } from '@/lib/supabase';
@@ -45,7 +45,6 @@ type DecisionJournalEntry = {
   hasClosingVerification: boolean;
   hasCompleteVerification: boolean;
   marketBias: string;
-  primaryScenario: string;
   closingSummary: string;
   correctionSummary: string;
   confidence: number | null;
@@ -258,25 +257,6 @@ function directionFromChange(change: number | null): string {
   return `TAIEX 收盤震盪 ${change.toFixed(2)}%`;
 }
 
-function derivePrimaryScenario(ai: Record<string, unknown>, closing: Record<string, unknown> | null, row: ReportRecord): string {
-  const note = asRecord(ai.member_research_note_v2);
-  const openingThesis = asRecord(note?.opening_thesis);
-  const focus = asRecord(ai.today_focus);
-  const narrative = asRecord(ai.canonical_narrative);
-  return firstText(
-    closing?.opening_bias,
-    focus?.summary,
-    narrative?.summary,
-    openingThesis?.summary,
-    note?.today_core_thesis,
-    ai.market_story,
-    ai.today_quote,
-    row.market_bias,
-    ai.market_bias,
-    '本日盤前主線尚未結構化',
-  );
-}
-
 function buildEntry(row: ReportRecord): DecisionJournalEntry {
   const ai = row.ai_strategy_json || {};
   const closing = asRecord(ai.closing_verification_v2);
@@ -312,7 +292,6 @@ function buildEntry(row: ReportRecord): DecisionJournalEntry {
     hasClosingVerification,
     hasCompleteVerification,
     marketBias: firstText(row.market_bias, ai.market_bias, closing?.opening_bias, '尚未結構化'),
-    primaryScenario: derivePrimaryScenario(ai, closing, row),
     closingSummary: firstText(closing?.actual_direction, closing?.verdict_label, directionFromChange(taiexChange)),
     correctionSummary: firstText(wrong[0], adjustment[0], '本日尚未留下結構化修正'),
     confidence: numberOrNull(row.confidence_score) ?? numberOrNull(ai.confidence_score) ?? numberOrNull(closing?.opening_confidence),
@@ -397,7 +376,7 @@ function RuleItem({ icon: Icon, children }: { icon: typeof CheckCircle2; childre
   );
 }
 
-function TimelineFact({ icon: Icon, label, value }: { icon: typeof Compass; label: string; value: string }) {
+function TimelineFact({ icon: Icon, label, value }: { icon: typeof Flag; label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-slate-950/25 p-3">
       <div className="flex items-center gap-2 text-[11px] font-medium text-white/35">
@@ -478,12 +457,12 @@ export default function PerformancePage() {
         <section className="ma-card-elevated overflow-hidden md:p-8">
           <div className="grid gap-8 lg:grid-cols-[1.35fr_0.75fr] lg:items-center">
             <div>
-              <p className="ma-eyebrow">Performance Center</p>
+              <p className="ma-eyebrow">決策學習</p>
               <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight text-white md:text-4xl">
-                歷史績效與決策日誌
+                昨天這個決定對不對？
               </h1>
               <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300 md:text-base md:leading-8">
-                回看 Morning Alpha 過去如何判斷、哪些劇本成立、哪些失效，以及收盤驗證後留下的修正。只統計完成驗證的交易日，不把資料不足或休市包裝成績效。
+                只看已完成的驗證結果、失敗原因與下一次改善；不重述當天劇本。
               </p>
             </div>
             <div className="ma-card-status">
@@ -569,9 +548,7 @@ export default function PerformancePage() {
                       <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${OUTCOME_CLASS[entry.outcome]}`}>{OUTCOME_LABEL[entry.outcome]}</span>
                     </div>
                     <div className="mt-4 space-y-3">
-                      <TimelineFact icon={Compass} label="盤前" value={entry.marketBias} />
-                      <TimelineFact icon={Flag} label="收盤" value={entry.closingSummary} />
-                      {entry.confidence !== null ? <TimelineFact icon={Target} label="信心分數" value={String(Math.round(entry.confidence))} /> : null}
+                      <TimelineFact icon={Flag} label="驗證結果" value={entry.closingSummary} />
                     </div>
                   </Link>
                 ))}
@@ -586,7 +563,7 @@ export default function PerformancePage() {
                   const expanded = expandedId === entry.reportId;
                   return (
                     <article key={entry.reportId} className="ma-card md:p-6">
-                      <div className="grid gap-5 lg:grid-cols-[0.72fr_1.6fr_1.3fr_auto] lg:items-center">
+                      <div className="grid gap-5 lg:grid-cols-[0.72fr_2fr_auto] lg:items-center">
                         <div>
                           <div className="text-xl font-semibold tracking-tight text-white">{entry.marketDate}</div>
                           <span className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-medium ${OUTCOME_CLASS[entry.outcome]}`}>
@@ -595,14 +572,9 @@ export default function PerformancePage() {
                         </div>
                         <div className="relative pl-5">
                           <span className="absolute left-0 top-1 h-[calc(100%-0.25rem)] w-px bg-background-300" />
-                          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/34">盤前判斷</div>
-                          <div className="mt-2 line-clamp-2 text-sm leading-6 text-white/78">{entry.primaryScenario}</div>
-                        </div>
-                        <div className="relative pl-5">
-                          <span className="absolute left-0 top-1 h-[calc(100%-0.25rem)] w-px bg-background-300" />
                           <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/34">收盤驗證</div>
                           <div className="mt-2 line-clamp-2 text-sm leading-6 text-white/72">{entry.closingSummary}</div>
-                          <div className="mt-2 line-clamp-1 text-xs text-slate-500">AI 修正：{entry.correctionSummary || '尚未留下修正'}</div>
+                          <div className="mt-2 line-clamp-1 text-xs text-slate-500">下一次修正：{entry.correctionSummary || '尚未留下修正'}</div>
                         </div>
                         <button
                           type="button"
@@ -648,7 +620,7 @@ export default function PerformancePage() {
                   <h2 className="mt-3 text-2xl font-semibold text-white">最佳成立案例</h2>
                   {bestCase ? (
                     <div className="mt-4 text-sm leading-7 text-slate-300">
-                      <p className="font-semibold text-white">{bestCase.marketDate}｜{bestCase.primaryScenario}</p>
+                      <p className="font-semibold text-white">{bestCase.marketDate}</p>
                       <p className="mt-2">{bestCase.whatWasRight[0] || bestCase.closingSummary}</p>
                     </div>
                   ) : (
@@ -663,7 +635,7 @@ export default function PerformancePage() {
                   <h2 className="mt-3 text-2xl font-semibold text-white">需要修正案例</h2>
                   {failedCase ? (
                     <div className="mt-4 text-sm leading-7 text-slate-300">
-                      <p className="font-semibold text-white">{failedCase.marketDate}｜{failedCase.primaryScenario}</p>
+                      <p className="font-semibold text-white">{failedCase.marketDate}</p>
                       <p className="mt-2">{failedCase.whatWasWrong[0] || failedCase.correctionSummary}</p>
                     </div>
                   ) : (

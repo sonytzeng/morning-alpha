@@ -4,9 +4,7 @@ import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
-import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
-import { renderSafeText } from '@/utils/renderSafe';
-import { trackPageView, trackEvent } from '@/utils/analytics';
+import { trackPageView } from '@/utils/analytics';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import { dedupePresentedOpportunities } from '@/lib/decisionPresentation';
 
@@ -68,6 +66,13 @@ function asRecordArray(value: unknown): Record<string, unknown>[] {
 
 function compactText(value: unknown): string {
   return String(value ?? '').trim();
+}
+
+function firstSentence(value: string | undefined, fallback: string): string {
+  const text = value?.trim() || '';
+  if (!text) return fallback;
+  const sentence = text.match(/^.*?[。！？!?](?:\s|$)/)?.[0]?.trim() || text;
+  return sentence.length > 76 ? `${sentence.slice(0, 75).trim()}…` : sentence;
 }
 
 
@@ -180,133 +185,6 @@ function mapV10OpportunityStocks(rows: unknown): V10OpportunityStock[] {
   })).filter((stock) => Boolean(stock.symbol || stock.name));
 }
 
-function confidenceLevelLabel(value: string): string {
-  const normalized = value.toLowerCase();
-  if (normalized === 'high') return '高把握';
-  if (normalized === 'medium') return '中把握';
-  if (normalized === 'insufficient') return '資料不足';
-  return '低把握';
-}
-
-function evidenceDirectionLabel(value: string): string {
-  if (value === 'positive') return '正向證據';
-  if (value === 'negative') return '負向證據';
-  return '中性觀察';
-}
-
-function humanizeChainPart(value: string): string {
-  const raw = compactText(value);
-  const normalized = raw.toUpperCase();
-  const map: Record<string, string> = {
-    SEMICONDUCTOR: '半導體',
-    AI_SERVER: 'AI 伺服器',
-    ELECTRONIC_BLUE_CHIP: '電子權值',
-    FINANCIAL: '金融',
-    PETROCHEMICAL: '塑化',
-    SHIPPING: '航運',
-    OIL: '油價',
-    FX: '匯率',
-    RATE: '利率',
-    DXY: '美元指數',
-    US10Y: '美債殖利率',
-  };
-  return map[normalized] || raw.replace(/_/g, ' ');
-}
-
-function uniqueNonEmpty(values: string[], limit = 4): string[] {
-  const seen = new Set<string>();
-  const result: string[] = [];
-  values.forEach((value) => {
-    const text = compactText(value);
-    if (!text || seen.has(text)) return;
-    seen.add(text);
-    result.push(text);
-  });
-  return result.slice(0, limit);
-}
-
-function stockTitle(stock: Pick<V10OpportunityStock, 'symbol' | 'name'>): string {
-  return [stock.symbol, stock.name].filter(Boolean).join(' ') || '未命名標的';
-}
-
-function stockScriptName(stock: V10OpportunityStock): string {
-  const chainParts = stock.benefitChain.length > 0 ? stock.benefitChain.map(humanizeChainPart) : stock.observationChain.map(humanizeChainPart);
-  const lastUsefulPart = [...chainParts].reverse().find((part) => part && !/^\d{4}$/.test(part));
-  return stock.industryName || stock.industryCode || lastUsefulPart || '待確認劇本';
-}
-
-function sentenceOrFallback(value: string, fallback: string): string {
-  const text = compactText(value);
-  if (!text) return fallback;
-  return text
-    .replace(/^今天為什麼觀察？/, '')
-    .replace(/^還缺什麼？/, '')
-    .replace(/^不用再觀察的條件：/, '')
-    .trim() || fallback;
-}
-
-function chainSentence(parts: string[], fallback: string): string {
-  const cleaned = uniqueNonEmpty(parts.map(humanizeChainPart), 5);
-  return cleaned.length >= 2 ? cleaned.join(' → ') : fallback;
-}
-
-function beneficiaryReason(stock: V10OpportunityStock): string {
-  return sentenceOrFallback(
-    stock.observationReason,
-    chainSentence(stock.benefitChain, '正向證據與族群同步性達到門檻，才列入強受惠股。'),
-  );
-}
-
-function observationReason(stock: V10OpportunityStock): string {
-  return sentenceOrFallback(
-    stock.observationReason,
-    chainSentence(stock.observationChain.length > 0 ? stock.observationChain : stock.benefitChain, '今天值得追蹤，但還沒有足夠證據列入強受惠股。'),
-  );
-}
-
-function confirmationNeeded(stock: V10OpportunityStock): string {
-  return sentenceOrFallback(
-    stock.confirmationPendingReason,
-    '需要代表股與大盤同向，且盤中量能開始擴散。',
-  );
-}
-
-function stopCondition(stock: V10OpportunityStock): string {
-  return sentenceOrFallback(
-    stock.stopObservingCondition,
-    '若代表股不同步或量能不足，今天降級觀察。',
-  );
-}
-
-function upgradeDowngradeText(stock: V10OpportunityStock): string {
-  return `補上條件：${confirmationNeeded(stock)}；降級條件：${stopCondition(stock)}`;
-}
-
-function riskReasons(stock: V10OpportunityStock): string[] {
-  const reasons = new Set<string>();
-  if (stock.negativeEvidenceCount > 0 || stock.netEvidenceDirection === 'negative') {
-    reasons.add('事件鏈未被市場確認');
-    reasons.add('不列為強受惠股');
-  }
-  if (stock.riskFlags.length > 0) {
-    reasons.add('量能不足');
-    reasons.add('主線未擴散');
-  }
-  if (stock.positiveEvidenceCount <= stock.negativeEvidenceCount) {
-    reasons.add('代表股不同步');
-  }
-  if (reasons.size === 0) reasons.add('今日證據不足，先排除強受惠判斷');
-  return Array.from(reasons).slice(0, 4);
-}
-
-function qualityMessage(status: string, warning: string): string {
-  const warningText = compactText(warning);
-  if (warningText) return warningText.replace(/_/g, ' ');
-  if (status === 'insufficient_positive_evidence') return '今日沒有足夠正向證據支持強受惠股，先觀察資金是否擴散。';
-  if (status) return humanStatus(status);
-  return '依今日資料分層顯示，不用舊名單補強受惠股。';
-}
-
 function legacyToV10(stock: TierStock, index: number, tone: 'beneficiary' | 'observation' | 'risk'): V10OpportunityStock {
   return {
     symbol: stock.stock_id,
@@ -384,56 +262,6 @@ function resolveLegacyBeneficiaries(ai: Record<string, unknown>, report: Record<
 }
 
 // ═══════════════════════════════════════════════════
-// Confidence level badge
-// ═══════════════════════════════════════════════════
-function confidenceBadge(level: string) {
-  if (level === 'high') return { label: '高把握', cls: 'bg-primary-100 text-primary-700 border-primary-200', dot: 'bg-primary-500' };
-  if (level === 'medium') return { label: '中把握', cls: 'bg-accent-100 text-accent-700 border-accent-200', dot: 'bg-accent-500' };
-  return { label: '低把握', cls: 'bg-secondary-100 text-secondary-700 border-secondary-200', dot: 'bg-secondary-400' };
-}
-
-function levelBadge(level: string) {
-  if (level === 'core') return { label: '核心受惠', cls: 'bg-primary-100 text-primary-700 border-primary-300', dot: 'bg-primary-500' };
-  if (level === 'extended') return { label: '延伸觀察', cls: 'bg-accent-100 text-accent-700 border-accent-300', dot: 'bg-accent-500' };
-  return { label: '情境觀察', cls: 'bg-secondary-100 text-secondary-700 border-secondary-200', dot: 'bg-secondary-400' };
-}
-
-
-function scoreTone(score: number | null): { stars: string; label: string } {
-  if (score === null || !Number.isFinite(score)) return { stars: '☆☆☆☆☆', label: '待驗證' };
-  if (score >= 80) return { stars: '★★★★★', label: '高把握' };
-  if (score >= 65) return { stars: '★★★★☆', label: '中高把握' };
-  if (score >= 50) return { stars: '★★★☆☆', label: '觀察' };
-  if (score >= 35) return { stars: '★★☆☆☆', label: '低把握' };
-  return { stars: '★☆☆☆☆', label: '僅供觀察' };
-}
-
-function humanStatus(value: unknown): string {
-  const raw = compactText(value).toLowerCase();
-  if (!raw) return '待驗證';
-  if (['ready', 'complete', 'completed'].includes(raw)) return '資料已完成';
-  if (raw === 'mixed' || raw === 'partial') return '部分成立';
-  if (raw === 'true') return '符合推論';
-  if (raw === 'false') return '未符合盤前推論';
-  if (raw === 'pending' || raw === 'pending_real_market_data') return '等待收盤資料';
-  if (raw === 'degraded') return '資料不完整';
-  return compactText(value);
-}
-
-function dataBasisLabel(value: unknown): string {
-  const text = compactText(value);
-  if (!text) return '';
-  const normalized = text.toLowerCase();
-  if (normalized.includes('member_research_note')) return '會員研究筆記';
-  if (normalized.includes('public_summary')) return '公開摘要';
-  if (normalized.includes('today_beneficiary') || normalized.includes('beneficiary_stocks') || normalized.includes('core_beneficiary')) return '今日受惠股名單';
-  if (normalized.includes('extended_watchlist')) return '延伸觀察名單';
-  if (normalized.includes('scenario_watchlist')) return '情境觀察名單';
-  if (normalized.includes('focus_stock') || normalized.includes('watch_sectors')) return '盤前報告資料';
-  return text.replace(/_/g, ' ');
-}
-
-// ═══════════════════════════════════════════════════
 function OpportunitiesContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -441,8 +269,6 @@ function OpportunitiesContent() {
   const [coreStocks, setCoreStocks] = useState<TierStock[]>([]);
   const [extendedStocks, setExtendedStocks] = useState<TierStock[]>([]);
   const [scenarioStocks, setScenarioStocks] = useState<TierStock[]>([]);
-  const [doNotDoList, setDoNotDoList] = useState<string[]>([]);
-  const [invalidationItems, setInvalidationItems] = useState<string[]>([]);
   const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
   const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
 
@@ -476,15 +302,6 @@ function OpportunitiesContent() {
         setExtendedStocks(legacyBeneficiaries.extendedStocks);
         setScenarioStocks(legacyBeneficiaries.scenarioStocks);
 
-        // Do-not-do
-        const dnd = Array.isArray(ai.do_not_do_list) ? (ai.do_not_do_list as string[]) : [];
-        const at = Array.isArray(ai.avoid_today) ? (ai.avoid_today as string[]) : [];
-        setDoNotDoList(dnd.length > 0 ? dnd : at);
-
-        const ic = Array.isArray(ai.invalidation_conditions)
-          ? (ai.invalidation_conditions as Record<string, unknown>[]).filter((inv) => inv.condition).map((inv) => String(inv.condition))
-          : [];
-        setInvalidationItems(ic);
       } catch (err) {
         setError(err instanceof Error ? err.message : '讀取資料失敗');
       } finally {
@@ -587,48 +404,20 @@ function OpportunitiesContent() {
     );
   }
 
-  const hasCore = coreStocks.length > 0;
-  const hasExtended = extendedStocks.length > 0;
-  const hasScenario = scenarioStocks.length > 0;
-  const hasAnyStocks = hasCore || hasExtended || hasScenario;
   const rawAI = (ds.rawAI || {}) as Record<string, unknown>;
-  const canonicalNarrative = buildCanonicalNarrative({
-    displayState: ds,
-    ai: rawAI,
-    memberResearchNoteV2: asRecord(rawAI.member_research_note_v2),
-  });
-  const canonicalScriptHeadline = compactText(canonicalNarrative.today_script.headline || canonicalNarrative.today_focus.headline);
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true' || ds.v10BeneficiaryEnabled === true;
   const v10BeneficiaryStocks = mapV10OpportunityStocks(rawAI.today_beneficiary_stocks_v10 || ds.v10BeneficiaryStocks);
   const v10ObservationWatchlist = mapV10OpportunityStocks(rawAI.v10_observation_watchlist || ds.v10ObservationWatchlist);
-  const v10RiskWatchlist = mapV10OpportunityStocks(rawAI.v10_risk_watchlist || ds.v10RiskWatchlist);
-  const v10DataQualityStatus = compactText(rawAI.v10_data_quality_status || ds.v10DataQualityStatus);
-  const v10Warning = compactText(rawAI.v10_warning || ds.v10Warning);
   const strongOpportunityStocks = v10BeneficiaryEnabled
     ? v10BeneficiaryStocks
     : coreStocks.map((stock, index) => legacyToV10(stock, index, 'beneficiary'));
   const observationOpportunityStocks = v10BeneficiaryEnabled
     ? v10ObservationWatchlist
     : [...extendedStocks, ...scenarioStocks].map((stock, index) => legacyToV10(stock, index, 'observation'));
-  const riskOpportunityStocks = v10BeneficiaryEnabled ? v10RiskWatchlist : [];
-  const presentedStrongStocks = dedupePresentedOpportunities(strongOpportunityStocks as unknown as Record<string, unknown>[], 6);
-  const presentedObservationStocks = dedupePresentedOpportunities(observationOpportunityStocks as unknown as Record<string, unknown>[], 9);
-  const legacyRiskNotes = v10BeneficiaryEnabled ? [] : uniqueNonEmpty([...doNotDoList, ...invalidationItems], 5);
-  const observationGroups = uniqueNonEmpty([
-    canonicalScriptHeadline,
-    ...observationOpportunityStocks.map(stockScriptName),
-  ], 3);
-  const riskGroups = uniqueNonEmpty([
-    canonicalNarrative.today_focus.risk,
-    ...riskOpportunityStocks.map(stockScriptName),
-  ], 3);
-  const pageQualityMessage = qualityMessage(v10DataQualityStatus, v10Warning);
-  const hasStrongOpportunities = presentedStrongStocks.length > 0;
-  const hasObservationOpportunities = presentedObservationStocks.length > 0;
-  const hasRiskOpportunities = riskOpportunityStocks.length > 0 || legacyRiskNotes.length > 0;
-  const noStrongMessage = v10BeneficiaryEnabled
-    ? '今日沒有足夠證據支持強受惠股，先觀察資金是否擴散。'
-    : '今日強受惠股尚未產生，先等待盤前報告或盤中驗證補齊。';
+  const presentedStocks = dedupePresentedOpportunities(
+    [...strongOpportunityStocks, ...observationOpportunityStocks] as unknown as Record<string, unknown>[],
+    12,
+  );
 
   return (
     <div className="ma-page flex flex-col overflow-x-hidden">
@@ -644,174 +433,44 @@ function OpportunitiesContent() {
               <h1 className="text-foreground-900 font-bold text-sm md:text-base whitespace-nowrap">
                 今日受惠股｜{ds.reportDate}
               </h1>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-accent-100 text-accent-700 text-[10px] font-medium rounded-full border border-accent-200 whitespace-nowrap">
-                <i className="ri-check-line text-[9px]"></i>
-                依今日證據分層
-              </span>
             </div>
           </div>
         </div>
 
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 md:space-y-8">
-          <section className="ma-card-elevated space-y-5">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-              <div>
-                <h2 className="text-foreground-900 font-bold text-xl md:text-2xl">今日受惠股總覽</h2>
-                <p className="text-foreground-500 text-sm leading-relaxed mt-2 max-w-2xl">
-                  先看主線候選，再看仍待確認與今天應排除的標的。
-                </p>
-              </div>
-              <Link
-                to="/member-note"
-                onClick={() => trackEvent('click_member_note', { location: 'opportunities_header' })}
-                className="ma-btn-primary whitespace-nowrap"
-              >
-                查看完整研究筆記
-                <i className="ri-arrow-right-line"></i>
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div className="p-4 rounded-xl bg-background-50 border border-background-200/70">
-                <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">今天是否有強受惠股</p>
-                <p className="text-foreground-900 font-bold text-lg">{hasStrongOpportunities ? `${presentedStrongStocks.length} 檔` : '沒有'}</p>
-              </div>
-              <div className="p-4 rounded-xl bg-background-50 border border-background-200/70 md:col-span-1">
-                <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">如果沒有，原因</p>
-                <p className="text-foreground-700 text-xs leading-relaxed">{hasStrongOpportunities ? '正向證據已達門檻。' : pageQualityMessage}</p>
-              </div>
-              <div className="p-4 rounded-xl bg-background-50 border border-background-200/70">
-                <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">主要觀察族群</p>
-                <p className="text-foreground-900 font-bold text-sm leading-relaxed">{observationGroups.length > 0 ? observationGroups.join('、') : '尚未形成觀察族群'}</p>
-              </div>
-              <div className="p-4 rounded-xl bg-background-50 border border-background-200/70">
-                <p className="text-foreground-400 text-[10px] uppercase tracking-wider mb-1">今天排除什麼</p>
-                <p className="text-foreground-900 font-bold text-sm leading-relaxed">
-                  {riskGroups.length > 0 ? riskGroups.join('、') : hasRiskOpportunities ? '未確認題材' : '尚無明確風險名單'}
-                </p>
-              </div>
+          <section className="ma-card-elevated">
+            <div>
+              <p className="text-xs font-semibold text-foreground-400">今日股票</p>
+              <h2 className="mt-2 text-foreground-900 font-bold text-2xl md:text-3xl">如果條件成立，要看誰？</h2>
+              <p className="text-foreground-500 text-sm leading-relaxed mt-2 max-w-2xl">每檔只保留今天需要的理由、確認與取消條件。</p>
             </div>
           </section>
 
           <section className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-foreground-900 font-bold text-base md:text-lg">強受惠股</h2>
-                <p className="text-foreground-500 text-xs md:text-sm leading-relaxed">只有證據足夠、方向一致，才進入這一層。</p>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 text-[10px]">{presentedStrongStocks.length} 檔</span>
+              <h2 className="text-foreground-900 font-bold text-base md:text-lg">今天要確認的股票</h2>
+              <span className="px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 text-[10px]">{presentedStocks.length} 檔</span>
             </div>
 
-            {hasStrongOpportunities ? (
+            {presentedStocks.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {presentedStrongStocks.map((stock) => (
-                  <article key={`strong-${stock.symbol}-${stock.name}`} className="ma-card-compact">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-foreground-900 font-bold text-base">{stock.symbol} {stock.name}</h3>
-                        <p className="text-primary-300 text-xs mt-1">今日定位：{stock.roleLabel || '主線候選'}</p>
-                      </div>
-                    </div>
-                    <div className="mt-4 space-y-2 text-xs leading-relaxed">
-                      {stock.oneLineReason && <p className="text-foreground-700">{stock.oneLineReason}</p>}
-                      {stock.confirmation && <p className="text-foreground-500"><span className="font-semibold text-foreground-700">今天確認：</span>{stock.confirmation}</p>}
-                      {stock.invalidation && <p className="text-rose-200/80"><span className="font-semibold">失效：</span>{stock.invalidation}</p>}
+                {presentedStocks.map((stock) => (
+                  <article key={`${stock.symbol}-${stock.name}`} className="ma-card-compact">
+                    <h3 className="text-foreground-900 font-bold text-base">{stock.symbol} {stock.name}</h3>
+                    <div className="mt-4 space-y-3 text-xs leading-relaxed">
+                      <div><p className="font-semibold text-foreground-400">今天理由</p><p className="mt-1 text-foreground-700">{firstSentence(stock.oneLineReason, '理由尚未完整。')}</p></div>
+                      <div><p className="font-semibold text-foreground-400">今天確認</p><p className="mt-1 text-foreground-700">{firstSentence(stock.confirmation, '確認訊號尚未提供。')}</p></div>
+                      <div><p className="font-semibold text-foreground-400">取消條件</p><p className="mt-1 text-rose-100/80">{firstSentence(stock.invalidation, '取消條件尚未提供。')}</p></div>
                     </div>
                   </article>
                 ))}
               </div>
             ) : (
               <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.06] p-5 text-sm leading-relaxed text-amber-200">
-                {noStrongMessage}
+                今日尚無可顯示的股票理由。
               </div>
             )}
           </section>
-
-          <section className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-foreground-900 font-bold text-base md:text-lg">觀察名單</h2>
-                <p className="text-foreground-500 text-xs md:text-sm leading-relaxed">可觀察，但不能追價；需要盤中證據補上。</p>
-              </div>
-              <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">{presentedObservationStocks.length} 檔</span>
-            </div>
-
-            {hasObservationOpportunities ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {presentedObservationStocks.map((stock) => (
-                  <article key={`observe-${stock.symbol}-${stock.name}`} className="ma-card-compact">
-                    <div>
-                      <h3 className="text-foreground-900 font-bold text-base">{stock.symbol} {stock.name}</h3>
-                      <p className="text-amber-300 text-xs mt-1">先觀察，不追價</p>
-                    </div>
-                    <div className="mt-4 space-y-2 text-xs leading-relaxed">
-                      {stock.oneLineReason && <p className="text-foreground-700">{stock.oneLineReason}</p>}
-                      {stock.confirmation && <p className="text-foreground-500"><span className="font-semibold text-foreground-700">確認：</span>{stock.confirmation}</p>}
-                      {stock.invalidation && <p className="text-foreground-500"><span className="font-semibold text-foreground-700">失敗時：</span>{stock.invalidation}</p>}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="p-5 rounded-2xl bg-background-100 border border-background-200/70 text-foreground-500 text-sm">
-                今日觀察名單尚未產生。
-              </div>
-            )}
-          </section>
-
-          <section className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-foreground-900 font-bold text-base md:text-lg">排除 / 風險名單</h2>
-                <p className="text-foreground-500 text-xs md:text-sm leading-relaxed">這裡不是放空建議，而是今天不應誤判成強受惠的族群或標的。</p>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 text-[10px]">{riskOpportunityStocks.length + legacyRiskNotes.length} 項</span>
-            </div>
-
-            {hasRiskOpportunities ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {riskOpportunityStocks.slice(0, 6).map((stock) => (
-                  <article key={`risk-${stock.symbol}-${stock.rank}`} className="ma-card-compact space-y-3">
-                    <div>
-                      <h3 className="text-foreground-900 font-bold text-sm">{stockTitle(stock)}</h3>
-                      <p className="text-red-700 text-[11px] mt-1">{canonicalScriptHeadline || stockScriptName(stock)}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {riskReasons(stock).map((reason) => (
-                        <span key={reason} className="rounded-lg border border-rose-400/15 bg-rose-500/[0.05] px-2 py-1 text-[11px] text-rose-200">{reason}</span>
-                      ))}
-                    </div>
-                    <p className="text-foreground-600 text-xs leading-relaxed">{stopCondition(stock)}</p>
-                  </article>
-                ))}
-                {legacyRiskNotes.map((note, index) => (
-                  <article key={`legacy-risk-${index}`} className="ma-card-compact space-y-2">
-                    <h3 className="text-foreground-900 font-bold text-sm">今日排除提醒</h3>
-                    <p className="text-foreground-700 text-xs leading-relaxed">{renderSafeText(note)}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-lg border border-rose-400/15 bg-rose-500/[0.05] px-2 py-1 text-[11px] text-rose-200">不列為強受惠股</span>
-                      <span className="rounded-lg border border-rose-400/15 bg-rose-500/[0.05] px-2 py-1 text-[11px] text-rose-200">等待市場確認</span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="p-5 rounded-2xl bg-background-100 border border-background-200/70 text-foreground-500 text-sm">
-                今日沒有明確排除名單；未被確認的題材仍不會列入強受惠股。
-              </div>
-            )}
-          </section>
-
-          <div className="flex justify-center pt-2 pb-4">
-            <Link
-              to="/member-note"
-              onClick={() => trackEvent('click_member_note', { location: 'opportunities_bottom' })}
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm rounded-xl transition-colors whitespace-nowrap"
-            >
-              <i className="ri-book-open-line"></i>
-              查看完整研究筆記
-            </Link>
-          </div>
 
           <p className="text-foreground-300 text-[10px] text-center leading-relaxed">
             本平台提供市場資訊整理與情緒判讀參考，不構成投資建議。所有內容由 Morning Alpha 產生。

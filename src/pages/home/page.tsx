@@ -4,7 +4,7 @@ import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
 import type { Report } from '@/types/report';
-import { trackPageView, trackEvent } from '@/utils/analytics';
+import { trackPageView } from '@/utils/analytics';
 import { trackEngagementEvent } from '@/services/engagementService';
 import { useHomeDashboard } from '@/hooks/useHomeDashboard';
 import { formatTaipeiDate } from '@/utils/tradingDay';
@@ -34,24 +34,6 @@ function firstString(...values: unknown[]): string {
     if (typeof value === 'string' && value.trim()) return value.trim();
   }
   return '';
-}
-
-function formatTaipeiTime(value: unknown): string {
-  const raw = typeof value === 'string' ? value.trim() : '';
-  if (!raw) return '—';
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return '—';
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Taipei',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(date);
-  const part = (type: string) => parts.find((item) => item.type === type)?.value || '';
-  return `${part('year')}-${part('month')}-${part('day')} ${part('hour')}:${part('minute')}`;
 }
 
 type TimelineStatus = 'completed' | 'current' | 'upcoming' | 'paused';
@@ -103,31 +85,11 @@ function HomePageContent() {
   const displayReportDate = dataStatus === 'missing_today_report' || dataStatus === 'market_closed'
     ? todayTaipeiStr
     : (ms?.reportDate || fallbackReport?.report_date || fallbackMorningAlpha?.reportDate || todayTaipeiStr);
-  const displayMarketDataDate = ms?.marketDataDate || ms?.activeReport?.marketDataBasisDate || fallbackMorningAlpha?.marketDataBasisDate || '—';
-  const displayUsMarketDate = ms?.usMarketDate || fallbackMorningAlpha?.usMarketBasisDate || '—';
-  const fallbackAI = asRecord(fallbackReport?.ai_strategy_json);
-  const nestedAI = asRecord(fallbackAI?.ai_strategy_json);
-  const generatedAtFallback = firstString(
-    ms?.activeReport?.generatedAt,
-    fallbackMorningAlpha?.generatedAt,
-    fallbackAI?.generated_at,
-    fallbackAI?.generatedAt,
-    fallbackAI?.report_generated_at,
-    (fallbackReport as Record<string, unknown> | null)?.generated_at,
-    fallbackReport?.created_at,
-    (fallbackReport as Record<string, unknown> | null)?.updated_at,
-    nestedAI?.generated_at,
-  );
-  const displayCreatedAt = ms?.createdAtTaipei && ms.createdAtTaipei !== '—'
-    ? ms.createdAtTaipei
-    : formatTaipeiTime(generatedAtFallback);
-
   // Status — morningState first, then fallback
   const isTodayReport = ms?.isReportForToday ?? (fallbackReport?.report_date === todayTaipeiStr);
   const reportExists = dataStatus === 'missing_today_report'
     ? false
     : (ms?.reportExists ?? (!!fallbackReport || !!fallbackMorningAlpha?.reportId));
-  const publishReady = ms?.publishReady ?? fallbackMorningAlpha?.publishReady ?? false;
   // Unified data contract: single display state for all core pages.
   // Home, TodayReport, Opportunities, WarRoom, MemberNote ALL read from the same parser.
   // No more page-level ai_strategy_json parsing. No more root column fallback inconsistency.
@@ -136,7 +98,6 @@ function HomePageContent() {
   }, [ms]);
 
   // These now read from the unified displayState — same values as TodayReport, Opportunities, WarRoom, MemberNote
-  const displayBias = displayState.marketBias;
   const marketClosedInfo = { closed: displayState.market_status !== 'OPEN', holidayName: displayState.holidayName };
 
   const homeAI = ms?.resolveResult?.rawRow?.ai_strategy_json as Record<string, unknown> | null;
@@ -144,26 +105,6 @@ function HomePageContent() {
     displayState,
     ai: homeAI,
   }), [displayState, homeAI]);
-  const homePrimaryTheme = firstString(
-    canonicalNarrative.today_script.headline,
-    canonicalNarrative.today_focus.headline,
-    '資料不足',
-  );
-  const homeCoreScript = firstString(
-    canonicalNarrative.today_focus.summary,
-    canonicalNarrative.today_focus.headline,
-    '資料不足，等待盤前報告補齊。',
-  );
-  const homeDontDo = firstString(
-    canonicalNarrative.today_focus.risk,
-    canonicalNarrative.failure_triggers[0]?.action,
-    '資料不足，暫不建立操作提醒。',
-  );
-  const homeNextVerification = firstString(
-    canonicalNarrative.intraday_progress.next_step,
-    canonicalNarrative.today_script.current_step,
-    '資料不足，等待下一個驗證點。',
-  );
 
   // V377: Simplified display mode — report exists + is for today = normal
   // V8.3: Added market-closed check from ai_strategy_json
@@ -208,42 +149,19 @@ function HomePageContent() {
   const currentTimelineNode = timelineNodes.find((node) => node.status === 'current')
     || timelineNodes.find((node) => node.status === 'upcoming')
     || timelineNodes[timelineNodes.length - 1];
-  const opportunitySource = displayState.v10BeneficiaryEnabled
-    ? displayState.v10BeneficiaryStocks
-    : displayState.coreBeneficiaryStocks.length > 0
-      ? displayState.coreBeneficiaryStocks
-      : displayState.beneficiaryStocks;
   const presentation = useMemo(() => buildDecisionPresentation({
     displayState,
     narrative: canonicalNarrative,
-    opportunitySource,
     nextCheckpointFallback: `${currentTimelineNode.time} ${currentTimelineNode.label}`,
-  }), [canonicalNarrative, currentTimelineNode.label, currentTimelineNode.time, displayState, opportunitySource]);
-  const missionHeadline = presentation.mission.title || homePrimaryTheme;
-  const missionSummary = presentation.mission.explanation || homeCoreScript;
-  const missionRisk = presentation.invalidationItems[0] || homeDontDo;
+  }), [canonicalNarrative, currentTimelineNode.label, currentTimelineNode.time, displayState]);
   const nextAction = presentation.primaryDecision.instruction;
+  const decisionContext = [
+    presentation.marketBiasLabel ? `今天市場${presentation.marketBiasLabel}。` : '',
+    presentation.primaryDecision.reason,
+  ].filter(Boolean).join(' ') || displayState.market_message || '市場資料尚在更新。';
   const nextActionTime = displayMode === 'market-closed'
     ? displayState.nextUpdateTime
     : formatCheckpoint(presentation.nextCheckpoint);
-  const opportunityPreview = presentation.opportunities.slice(0, 5);
-
-  const completedVerification = useMemo(() => {
-    const review = data?.todayCloseVerification;
-    if (review && firstString(review.verification_label, review.verification_result, review.verification_note)) {
-      return {
-        date: review.report_date,
-        result: firstString(review.verification_label, review.verification_result),
-        summary: firstString(review.verification_note, review.actual_market_result),
-      };
-    }
-    if (!hasCompletedClosing) return null;
-    return {
-      date: firstString(closingAI?.report_date, displayReportDate),
-      result: firstString(closingAI?.verdict_label, closingAI?.hit_or_miss, closingAI?.prediction_result),
-      summary: firstString(closingAI?.verification_note, closingAI?.summary, closingAI?.what_was_right),
-    };
-  }, [closingAI, data?.todayCloseVerification, displayReportDate, hasCompletedClosing]);
 
   // V28: hasReportData — true when we have data from EITHER morningState or fallback
   const hasReportData = hasMorningState || !!fallbackReport || !!fallbackMorningAlpha?.reportId;
@@ -291,29 +209,6 @@ function HomePageContent() {
       </div>
     );
   }
-
-  // V377: 3-state status badge — simple and professional
-  const statusBadge = (() => {
-    switch (displayMode) {
-      case 'no-report':
-        return { label: '目前暫時無法讀取今日資料，請稍後再試', color: 'bg-amber-500/12 border-amber-400/35 text-amber-300', dot: 'bg-amber-400', icon: 'ri-time-line' };
-      case 'not-today':
-        return { label: '歷史資料模式', color: 'bg-sky-500/12 border-sky-400/35 text-sky-300', dot: 'bg-sky-400', icon: 'ri-history-line' };
-      case 'market-closed':
-        return { label: '🔴 非交易日', color: 'bg-red-500/12 border-red-400/35 text-red-300', dot: 'bg-red-400', icon: 'ri-calendar-close-line' };
-      case 'normal':
-        return { label: '今日盤前報告已更新', color: 'bg-emerald-500/12 border-emerald-400/35 text-emerald-300', dot: 'bg-emerald-400', icon: 'ri-check-double-line' };
-    }
-  })();
-
-  // ═══ Bias color ═══
-  const biasColorClass = (() => {
-    const b = displayBias || '';
-    if (b.includes('偏多') || b.includes('偏強') || b.includes('強多')) return 'text-red-600';
-    if (b.includes('偏空') || b.includes('偏弱') || b.includes('強空')) return 'text-emerald-600';
-    if (b.includes('震盪') || b.includes('中性') || b.includes('觀察') || b.includes('盤整')) return 'text-amber-600';
-    return 'text-foreground-700';
-  })();
 
   const closedHero = (() => {
     switch (displayState.market_status) {
@@ -371,13 +266,10 @@ function HomePageContent() {
       <main className="flex-1 overflow-x-hidden">
 
         {/* ═══════════════════════════════════════ */}
-        {/* HERO — Simplified, date-focused */}
+        {/* HERO — Action, context, next */}
         {/* ═══════════════════════════════════════ */}
-        <section className="relative w-full overflow-hidden border-b border-background-200/70 bg-background-50 px-5 py-7 md:px-6 md:py-9">
+        <section className="relative w-full overflow-hidden border-b border-background-200/70 bg-background-50 px-5 py-4 md:px-6 md:py-5">
           <div className="relative max-w-5xl mx-auto w-full">
-            <p className="text-white/35 text-[10px] uppercase tracking-[0.3em] font-semibold mb-6">
-              MORNING ALPHA
-            </p>
 
             {/* ═══ Safe Mode: No Report ═══ */}
             {displayMode === 'no-report' && (
@@ -502,206 +394,23 @@ function HomePageContent() {
 
             {/* ═══ Normal / Needs Review ═══ */}
             {(displayMode === 'normal') && hasReportData && (
-              <div className="max-w-4xl">
-                <div className="mb-3 flex flex-wrap items-center gap-2.5 text-xs text-white/70">
-                  <span>{displayReportDate}</span>
-                  <span aria-hidden="true" className="text-white/25">•</span>
-                  <span>{displayState.market_message || '台股交易日'}</span>
-                  {presentation.marketBiasLabel && <span className="ma-badge ma-badge-neutral">市場傾向：{presentation.marketBiasLabel}</span>}
-                </div>
-                <p className="mb-2 text-xs font-semibold text-white/45">今日判斷</p>
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-3xl font-bold leading-tight text-white md:text-4xl">
-                    {presentation.primaryDecision.headline}
-                  </h1>
-                </div>
-                <p className="mt-3 text-lg font-bold leading-relaxed text-white md:text-xl">
+              <div className="flex min-h-[210px] max-w-4xl flex-col justify-center">
+                <p className="mb-2 text-xs font-semibold text-white/45">今日行動</p>
+                <h1 className="text-3xl font-bold leading-tight text-white md:text-4xl">
                   {renderSafeText(nextAction)}
-                </p>
-                <h2 className="mt-4 max-w-3xl text-base font-semibold leading-relaxed text-white/85 md:text-lg">
-                  今天要確認：{renderSafeText(missionHeadline)}
-                </h2>
-                {missionSummary && missionSummary !== missionHeadline && (
-                  <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-white/60">
-                    {renderSafeText(missionSummary)}
-                  </p>
-                )}
-                <div className="mt-4 flex flex-col gap-4 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-xs text-white/45">下一次確認</p>
-                    <p className="mt-1 text-sm font-bold text-amber-200">{nextActionTime}</p>
-                  </div>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <Link
-                      to="/report/today"
-                      onClick={() => trackEvent('click_today_report', { location: 'home_hero_v3' })}
-                      className="ma-btn-primary w-full sm:w-auto"
-                    >
-                      查看今日判斷
-                      <i className="ri-arrow-right-line" aria-hidden="true"></i>
-                    </Link>
-                    <Link
-                      to="/member-note"
-                      onClick={() => {
-                        trackEvent('click_member_note', { location: 'home_hero_v3' });
-                        trackEngagementEvent('click_free_summary');
-                      }}
-                      className="ma-btn-secondary w-full sm:w-auto"
-                    >
-                      完整研究
-                    </Link>
-                  </div>
+                </h1>
+                <div className="mt-4 max-w-2xl">
+                  <p className="text-xs font-semibold text-white/40">背景</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-white/72">{renderSafeText(decisionContext)}</p>
+                </div>
+                <div className="mt-4 border-t border-white/10 pt-3">
+                  <p className="text-xs text-white/45">下一步</p>
+                  <p className="mt-1 text-sm font-bold text-amber-200">{nextActionTime}</p>
                 </div>
               </div>
             )}
           </div>
         </section>
-
-        {(displayMode === 'normal' || displayMode === 'market-closed') && hasReportData && (
-          <section className="ma-section pt-0 md:pt-0" aria-labelledby="trading-timeline-title">
-            <div className="ma-section-inner">
-              <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
-                <div>
-                  <h2 id="trading-timeline-title" className="text-foreground-900 font-bold text-xl md:text-2xl">今天的判斷節奏</h2>
-                </div>
-                <p className="text-foreground-500 text-sm">
-                  {isClosedMarket ? '今日休市，交易流程暫停。' : `目前節點：${currentTimelineNode?.label || '等待今日流程'}`}
-                </p>
-              </div>
-              <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {timelineNodes.map((node) => {
-                  const statusLabel = node.status === 'completed' ? '已完成' : node.status === 'current' ? '目前' : node.status === 'paused' ? '休市暫停' : '稍後';
-                  const statusIcon = node.status === 'completed'
-                    ? 'ri-check-line'
-                    : node.status === 'current'
-                      ? 'ri-focus-3-line'
-                      : node.status === 'paused'
-                        ? 'ri-pause-line'
-                        : 'ri-time-line';
-                  const statusClass = node.status === 'current'
-                    ? 'border-amber-400/40 bg-amber-500/[0.06]'
-                    : node.status === 'completed'
-                      ? 'border-emerald-500/30 bg-emerald-500/[0.04]'
-                      : 'border-background-200/80 bg-background-100';
-                  const timeClass = node.status === 'current' ? 'text-amber-600' : 'text-foreground-700';
-
-                  return (
-                    <li
-                      key={node.time}
-                      aria-current={node.status === 'current' ? 'step' : undefined}
-                      className={`min-w-0 rounded-xl border p-3.5 ${statusClass}`}
-                    >
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <span className={`${timeClass} text-sm font-bold tabular-nums`}>{node.time}</span>
-                        <span className="inline-flex items-center gap-1 text-foreground-500 text-[10px] font-semibold tracking-wide">
-                          <i className={`${statusIcon} text-xs`} aria-hidden="true"></i>
-                          {statusLabel}
-                        </span>
-                      </div>
-                      <h3 className="text-foreground-900 font-bold text-sm mb-1">{node.label}</h3>
-                      <p className="text-foreground-500 text-xs leading-relaxed">{node.detail}</p>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
-          </section>
-        )}
-
-        {(displayMode === 'normal') && hasReportData && (
-          <section className="w-full px-4 md:px-6 pb-10 md:pb-14">
-            <div className="max-w-5xl mx-auto w-full space-y-10">
-              <div aria-labelledby="decision-snapshot-title">
-                <h2 id="decision-snapshot-title" className="text-foreground-900 font-bold text-xl md:text-2xl mb-5">今天的決策摘要</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <article className="ma-card-elevated md:col-span-2 min-w-0">
-                    <p className="text-foreground-400 text-xs font-semibold mb-2">今日主要劇本</p>
-                    <h3 className="text-foreground-900 font-bold text-xl md:text-2xl leading-snug mb-2 break-words">{renderSafeText(missionHeadline)}</h3>
-                    <p className="text-foreground-500 text-sm leading-relaxed break-words">{renderSafeText(missionSummary)}</p>
-                  </article>
-                  <div className="divide-y divide-background-200/70 overflow-hidden rounded-xl border border-background-200/70 bg-background-100">
-                    <article className="min-w-0 p-4">
-                      <p className="text-rose-300 text-xs font-semibold mb-1">停止條件</p>
-                      <p className="text-foreground-900 text-sm font-semibold leading-relaxed break-words">{renderSafeText(missionRisk)}</p>
-                    </article>
-                    <article className="min-w-0 p-4">
-                      <p className="text-foreground-400 text-xs font-semibold mb-1">現在行動</p>
-                      <p className="text-foreground-900 text-sm font-semibold leading-relaxed break-words">{renderSafeText(nextAction)}</p>
-                    </article>
-                    {presentation.confidence && (
-                      <article className="min-w-0 p-4">
-                        <p className="text-foreground-400 text-xs font-semibold mb-1">目前判斷信心</p>
-                        <p className="text-foreground-900 text-base font-bold">{presentation.confidence.score}%</p>
-                      </article>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {opportunityPreview.length > 0 && (
-                <div aria-labelledby="opportunity-preview-title">
-                  <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
-                    <div>
-                      <h2 id="opportunity-preview-title" className="text-foreground-900 font-bold text-xl md:text-2xl">今日優先觀察</h2>
-                    </div>
-                    <Link to="/opportunities" className="ma-btn-secondary">查看完整受惠股</Link>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {opportunityPreview.map((stock) => (
-                      <article key={`${stock.symbol}-${stock.name}`} className="min-w-0 bg-background-100 border border-background-200/70 rounded-2xl p-5">
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <div className="min-w-0">
-                            <p className="text-primary-600 text-xs font-bold mb-1">{stock.symbol}</p>
-                            <h3 className="text-foreground-900 font-bold break-words">{stock.name}</h3>
-                          </div>
-                          {stock.roleLabel && <span className="ma-badge ma-badge-neutral shrink-0">{stock.roleLabel}</span>}
-                        </div>
-                        {stock.oneLineReason && <p className="text-foreground-500 text-sm leading-relaxed break-words">{stock.oneLineReason}</p>}
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {completedVerification && (completedVerification.result || completedVerification.summary) && (
-                <article className="ma-card-elevated" aria-labelledby="previous-verification-title">
-                  <div className="flex items-start justify-between gap-5 flex-wrap">
-                    <div className="min-w-0 max-w-2xl">
-                      <p className="text-foreground-400 text-xs font-semibold mb-2">最近一次驗證</p>
-                      <h2 id="previous-verification-title" className="text-foreground-900 font-bold text-xl mb-3">最近一次收盤驗證</h2>
-                      <div className="flex items-center gap-3 flex-wrap mb-3">
-                        {completedVerification.date && <span className="text-foreground-400 text-xs">{completedVerification.date}</span>}
-                        {completedVerification.result && <span className="text-foreground-900 text-sm font-bold">{completedVerification.result}</span>}
-                      </div>
-                      {completedVerification.summary && <p className="text-foreground-500 text-sm leading-relaxed break-words">{completedVerification.summary}</p>}
-                    </div>
-                    <Link to="/performance" className="ma-btn-secondary shrink-0">查看歷史績效</Link>
-                  </div>
-                </article>
-              )}
-
-              <div className="bg-background-100 border border-background-200/70 rounded-2xl p-5 md:p-6">
-                <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-                  <div>
-                    <p className="text-foreground-400 text-xs font-semibold mb-1">資料基準</p>
-                    <h2 className="text-foreground-900 font-bold text-lg">今日資料基準</h2>
-                  </div>
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border whitespace-nowrap ${statusBadge.color}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`}></span>
-                    <i className={`${statusBadge.icon} text-xs`}></i>
-                    {statusBadge.label}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs leading-relaxed">
-                  <p className="text-foreground-500">台股基準：<span className="text-foreground-800 font-semibold">{displayMarketDataDate}{displayMarketDataDate === displayReportDate ? ' 資料基準' : ' 收盤'}</span></p>
-                  <p className="text-foreground-500">美股與海外基準：<span className="text-foreground-800 font-semibold">{displayUsMarketDate}</span></p>
-                  <p className="text-foreground-500">報告產生時間：<span className="text-foreground-800 font-semibold">{displayCreatedAt}</span></p>
-                </div>
-              </div>
-
-            </div>
-          </section>
-        )}
 
         {/* ═══ Safe Mode: Not Today — reference card only ═══ */}
         {displayMode === 'not-today' && hasReportData && (

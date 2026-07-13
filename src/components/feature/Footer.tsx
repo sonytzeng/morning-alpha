@@ -4,7 +4,7 @@ import { BRAND_NAME, BRAND_ICON_URL } from '@/config/brand';
 export default function Footer() {
   return (
     <footer className="mt-auto w-full border-t border-background-200/70 bg-background-50">
-      <div className="mx-auto w-full max-w-5xl px-4 py-7 md:px-6 md:py-8">
+      <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-6 md:py-7">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           {/* Brand + description */}
           <div className="max-w-xs">
@@ -19,27 +19,27 @@ export default function Footer() {
               />
               <span className="text-white/80 font-semibold text-sm">{BRAND_NAME}</span>
             </div>
-            <p className="text-white/35 text-xs leading-relaxed">
+            <p className="text-white/45 text-xs leading-relaxed">
               每天早上 30 秒，先看市場情緒與今天最容易失控的地方。不預測漲跌，只幫你在開盤前保留冷靜判斷。
             </p>
           </div>
 
           {/* Links */}
           <div className="flex items-center gap-4 md:gap-6 flex-wrap">
-            <Link to="/report/today" className="text-white/40 hover:text-white text-sm transition-colors whitespace-nowrap">
+            <Link to="/report/today" className="text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               今日判斷
             </Link>
-            <Link to="/war-room" className="text-white/40 hover:text-white text-sm transition-colors whitespace-nowrap">
+            <Link to="/war-room" className="text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               盤中追蹤
             </Link>
-            <a href="mailto:aijinetwork@gmail.com" className="text-white/40 hover:text-white text-sm transition-colors whitespace-nowrap">
+            <a href="mailto:aijinetwork@gmail.com" className="text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               客服信箱
             </a>
           </div>
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-background-200/70 pt-5 sm:flex-row">
+        <div className="mt-5 flex flex-col items-center justify-between gap-3 border-t border-background-200/70 pt-4 sm:flex-row">
           <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
             <p className="text-white/25 text-[11px]">
               &copy; 2026 {BRAND_NAME}. 愛吉網路資訊有限公司｜統編 60374105

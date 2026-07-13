@@ -24,9 +24,9 @@ export default function Navbar({ marketState }: NavbarProps) {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-background-200/70 bg-background-50/95 backdrop-blur-sm">
+    <nav className="sticky top-0 z-50 w-full border-b border-background-200/70 bg-background-50">
       <div className="mx-auto w-full max-w-5xl px-4 md:px-6">
-        <div className="flex items-center justify-between h-14 md:h-16">
+        <div className="flex h-14 items-center justify-between md:h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 flex-shrink-0">
             <img
@@ -53,7 +53,7 @@ export default function Navbar({ marketState }: NavbarProps) {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                className={`rounded-md px-3 py-2 text-xs font-semibold transition-colors whitespace-nowrap ${
                   isActive(link.to)
                     ? 'text-primary-300 bg-primary-500/10'
                     : 'text-white/50 hover:text-white hover:bg-white/5'

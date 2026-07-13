@@ -70,11 +70,21 @@ function compactText(value: unknown): string {
   return String(value ?? '').trim();
 }
 
-function firstSentence(value: string | undefined, fallback: string): string {
+const UNSAFE_OPPORTUNITY_TEXT = /event[\s_-]*score|market[\s_-]*score|ai[\s_-]*chain|undefined|null|確認訊號.{0,2}提供|取消條件.{0,2}提供|\b[a-z][a-z0-9]*_[a-z0-9_]+\b/i;
+
+function firstSentence(value: string | undefined): string | undefined {
   const text = value?.trim() || '';
-  if (!text) return fallback;
+  if (!text || UNSAFE_OPPORTUNITY_TEXT.test(text)) return undefined;
   const sentence = text.match(/^.*?[。！？!?](?:\s|$)/)?.[0]?.trim() || text;
   return sentence.length > 76 ? `${sentence.slice(0, 75).trim()}…` : sentence;
+}
+
+function opportunityBadge(roleLabel: string | undefined) {
+  const role = roleLabel?.trim() || '';
+  if (/停止|排除|風險|失效/.test(role)) return { label: '停止', className: 'ma-badge-danger' };
+  if (/確認|成立/.test(role)) return { label: '確認', className: 'ma-badge-success' };
+  if (/觀察|候選|等待/.test(role)) return { label: '觀察', className: 'ma-badge-warning' };
+  return { label: '資料待補', className: 'ma-badge-neutral' };
 }
 
 
@@ -420,9 +430,16 @@ function OpportunitiesContent() {
     [...strongOpportunityStocks, ...observationOpportunityStocks] as unknown as Record<string, unknown>[],
     12,
   );
+  const safePresentedStocks = presentedStocks.map((stock) => ({
+    stock,
+    reason: firstSentence(stock.oneLineReason),
+    confirmation: firstSentence(stock.confirmation),
+    invalidation: firstSentence(stock.invalidation),
+  }));
+  const completeEnoughStocks = safePresentedStocks.filter(({ reason, confirmation, invalidation }) => Boolean(reason || confirmation || invalidation));
 
   return (
-    <div className="ma-page flex flex-col overflow-x-hidden">
+    <div className="ma-page ma-launch-page flex flex-col overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
@@ -432,27 +449,33 @@ function OpportunitiesContent() {
           title="如果條件成立，要看誰？"
           subtitle="每檔只保留今天需要的理由、確認與取消條件。"
           decisionLabel="目前名單"
-          decision={`${presentedStocks.length} 檔待確認`}
+          decision={`${completeEnoughStocks.length} 檔待確認`}
           ctaLabel="查看完整研究筆記"
           ctaTo="/member-note"
         />
 
-        <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 md:space-y-8">
+        <div className="ma-section-inner space-y-12 px-4 py-10 md:px-6 md:py-12">
           <section className="space-y-3">
             <VisualSectionHeader icon="ri-stock-line" title="今天要確認的股票" description="理由、確認與取消條件使用同一個閱讀順序。" />
 
-            {presentedStocks.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {presentedStocks.map((stock) => (
-                  <article key={`${stock.symbol}-${stock.name}`} className="ma-card-compact">
-                    <h3 className="text-foreground-900 font-bold text-base">{stock.symbol} {stock.name}</h3>
-                    <div className="mt-4 space-y-3 text-xs leading-relaxed">
-                      <div><p className="font-semibold text-foreground-400">今天理由</p><p className="mt-1 text-foreground-700">{firstSentence(stock.oneLineReason, '理由尚未完整。')}</p></div>
-                      <div><p className="font-semibold text-foreground-400">今天確認</p><p className="mt-1 text-foreground-700">{firstSentence(stock.confirmation, '確認訊號尚未提供。')}</p></div>
-                      <div><p className="font-semibold text-foreground-400">取消條件</p><p className="mt-1 text-rose-100/80">{firstSentence(stock.invalidation, '取消條件尚未提供。')}</p></div>
+            {completeEnoughStocks.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {completeEnoughStocks.map(({ stock, reason, confirmation, invalidation }) => {
+                  const badge = opportunityBadge(stock.roleLabel);
+                  return (
+                  <article key={`${stock.symbol}-${stock.name}`} className="ma-card-compact min-w-0 p-6">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-base font-bold text-foreground-900">{stock.symbol} {stock.name}</h3>
+                      <span className={`ma-badge ${badge.className}`}>{badge.label}</span>
+                    </div>
+                    <div className="mt-4 divide-y divide-background-200/60 text-xs leading-relaxed">
+                      {reason && <div className="pb-3"><p className="font-semibold text-foreground-400">今天值得看的原因</p><p className="mt-1.5 text-foreground-700">{reason}</p></div>}
+                      {confirmation && <div className="py-3"><p className="font-semibold text-foreground-400">09:30 確認</p><p className="mt-1.5 text-foreground-700">{confirmation}</p></div>}
+                      {invalidation && <div className="pt-3"><p className="font-semibold text-rose-200/80">今天放棄條件</p><p className="mt-1.5 text-foreground-700">{invalidation}</p></div>}
                     </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.06] p-5 text-sm leading-relaxed text-amber-200">

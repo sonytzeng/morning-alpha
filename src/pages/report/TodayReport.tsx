@@ -398,7 +398,7 @@ function TodayReportContent() {
   }
 
   return (
-    <div className="ma-page flex flex-col overflow-x-hidden">
+    <div className="ma-page ma-launch-page flex flex-col overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
@@ -416,42 +416,46 @@ function TodayReportContent() {
           <div className="ma-section-inner px-4 pt-4 md:px-6"><span className="ma-badge ma-badge-danger">歷史資料：{fallbackReportDate || report.report_date}，今日為 {todayStr}</span></div>
         )}
 
-        <div className="ma-section-inner space-y-6 px-4 py-6 md:px-6 md:py-8">
-          <section className="ma-card" aria-labelledby="decision-tree-title">
-            <VisualSectionHeader icon="ri-git-branch-line" title="今天的判斷流程" description={`下一次確認：${nextDecisionTime}`} />
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-primary-400/20 bg-primary-500/[0.04] p-4">
-                <p className="text-sm font-bold text-primary-300">如果成立</p>
-                <div className="mt-4 space-y-2">
-                  {(successConditions.length > 0 ? successConditions : ['目前尚未形成確認訊號。']).map((item, index) => (
-                    <div key={`${item}-${index}`}>
-                      {index > 0 && <i className="ri-arrow-down-line mb-2 block text-foreground-400" aria-hidden="true" />}
-                      <p className="rounded-lg border border-background-200/70 bg-background-50 p-3 text-sm leading-relaxed text-foreground-700">{renderSafeText(item)}</p>
-                    </div>
-                  ))}
-                  <i className="ri-arrow-down-line block text-foreground-400" aria-hidden="true" />
-                  <div className="rounded-lg border border-primary-400/20 p-3">
-                    <p className="text-xs font-semibold text-primary-300">下一步</p>
-                    <Link to="/opportunities" className="mt-1 inline-flex items-center gap-1 text-sm font-bold text-foreground-900">查看今天要觀察的股票<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+        <div className="ma-section-inner px-4 py-10 md:px-6 md:py-12">
+          <section className="ma-card-primary p-6" aria-labelledby="decision-flow-title">
+            <VisualSectionHeader icon="ri-route-line" title="今天第一步" />
+            <div className="mx-auto mt-5 max-w-3xl">
+              <div className="rounded-2xl border border-background-200/70 bg-background-50 p-6">
+                <p className="text-base font-bold text-foreground-900">{renderSafeText(detailedAction)}</p>
+              </div>
+
+              <i className="ri-arrow-down-line my-3 block text-center text-lg text-foreground-400" aria-hidden="true" />
+
+              <p className="mb-3 text-sm font-bold text-primary-300">今天成立需要：</p>
+              <div className="space-y-3">
+                {(successConditions.length > 0 ? successConditions : ['資料待補']).map((item) => (
+                  <div key={item} className="flex min-h-14 items-center gap-3 rounded-2xl border border-primary-400/20 bg-primary-500/[0.04] px-5 py-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-primary-400/30 text-xs text-primary-300" aria-hidden="true">□</span>
+                    <p className="text-sm leading-relaxed text-foreground-800">{renderSafeText(item)}</p>
                   </div>
+                ))}
+              </div>
+
+              <i className="ri-arrow-down-line my-3 block text-center text-lg text-foreground-400" aria-hidden="true" />
+
+              <p className="mb-3 text-sm font-bold text-rose-200">如果失敗</p>
+              <div className="space-y-3 rounded-2xl border border-rose-400/20 bg-rose-500/[0.04] p-4">
+                {stopItems[0] && <p className="text-sm leading-relaxed text-foreground-700">{renderSafeText(stopItems[0])}</p>}
+                <div className="flex min-h-14 items-center gap-3 rounded-xl border border-rose-400/15 bg-background-50 px-5 py-3">
+                  <i className="ri-stop-circle-line text-lg text-rose-200" aria-hidden="true" />
+                  <p className="text-sm font-bold text-foreground-900">停止今天原本劇本</p>
+                </div>
+                <i className="ri-arrow-down-line block text-center text-foreground-400" aria-hidden="true" />
+                <div className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-background-200/70 bg-background-50 px-5 py-3">
+                  <p className="text-sm font-bold text-foreground-900">等待下一次確認</p>
+                  <span className="text-sm font-semibold text-amber-300">{nextDecisionTime}</span>
                 </div>
               </div>
-              <div className="rounded-xl border border-rose-400/15 bg-rose-500/[0.04] p-4">
-                <p className="text-sm font-bold text-rose-200">如果失敗</p>
-                <div className="mt-4 space-y-2">
-                  {(stopItems.length > 0 ? stopItems : ['失敗訊號尚未完整，先不要放大動作。']).map((item, index) => (
-                    <div key={`${item}-${index}`}>
-                      {index > 0 && <i className="ri-arrow-down-line mb-2 block text-foreground-400" aria-hidden="true" />}
-                      <p className="rounded-lg border border-rose-400/15 bg-background-50 p-3 text-sm leading-relaxed text-foreground-700">{renderSafeText(item)}</p>
-                    </div>
-                  ))}
-                  <i className="ri-arrow-down-line block text-foreground-400" aria-hidden="true" />
-                  <div className="rounded-lg border border-rose-400/20 p-3">
-                    <p className="text-xs font-semibold text-rose-200">停止</p>
-                    <p className="mt-1 text-sm font-bold text-foreground-900">停止原本計畫，等待新的證據。</p>
-                  </div>
-                </div>
-              </div>
+
+              <Link to="/opportunities" className="ma-btn-primary mt-6 w-full">
+                查看今天要觀察的股票
+                <i className="ri-arrow-right-line" aria-hidden="true" />
+              </Link>
             </div>
           </section>
         </div>

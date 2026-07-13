@@ -14,6 +14,7 @@ import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { renderSafeText } from '@/utils/renderSafe';
 import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
 import VisualPageHero from '@/components/feature/VisualPageHero';
+import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 
 export default function HomePage() {
   return (
@@ -45,6 +46,23 @@ interface TimelineNode {
   label: string;
   detail: string;
   status: TimelineStatus;
+}
+
+function strategyModeLabel(state: string): string {
+  switch (state) {
+    case 'ACT': return '執行模式';
+    case 'STOP': return '停止模式';
+    case 'CLOSED': return '休市模式';
+    case 'INSUFFICIENT_DATA': return '資料待補';
+    default: return '等待模式';
+  }
+}
+
+function dataReliabilityLabel(status: string): string {
+  const normalized = status.trim().toLowerCase();
+  if (['complete', 'completed', 'ready', 'reliable', 'ok'].includes(normalized)) return '高可靠';
+  if (['partial', 'degraded', 'limited', 'stale'].includes(normalized)) return '部分資料';
+  return '資料待補';
 }
 
 function getTaipeiMinutes(timestamp: number): number {
@@ -163,6 +181,48 @@ function HomePageContent() {
   const nextActionTime = displayMode === 'market-closed'
     ? displayState.nextUpdateTime
     : formatCheckpoint(presentation.nextCheckpoint);
+  const marketObservationCards = [
+    {
+      label: '盤前把握度',
+      value: typeof presentation.confidence?.score === 'number' ? `${presentation.confidence.score}/100` : '資料待補',
+      detail: presentation.confidence?.explanation,
+      tone: 'primary',
+    },
+    {
+      label: '市場可信度',
+      value: dataReliabilityLabel(displayState.dataStatus),
+      detail: undefined,
+      tone: 'primary',
+    },
+    {
+      label: '策略模式',
+      value: strategyModeLabel(presentation.primaryDecision.state),
+      detail: nextActionTime,
+      tone: 'amber',
+    },
+    {
+      label: '主線狀態',
+      value: presentation.primaryDecision.headline || '資料待補',
+      detail: undefined,
+      tone: presentation.primaryDecision.state === 'ACT'
+        ? 'primary'
+        : presentation.primaryDecision.state === 'STOP'
+          ? 'danger'
+          : 'amber',
+    },
+  ];
+  const riskCards = ['不要追高', '不要猜反彈', '不要重押單一方向'];
+  const observationCards = Array.from(new Set([
+    ...displayState.v10BeneficiaryStocks,
+    ...displayState.coreBeneficiaryStocks,
+    ...displayState.beneficiaryStocks,
+  ].map((stock) => firstString(
+    stock.industry_name,
+    stock.industryName,
+    stock.sector,
+    stock.industry,
+    stock.category,
+  )).filter(Boolean))).slice(0, 3);
 
   // V28: hasReportData — true when we have data from EITHER morningState or fallback
   const hasReportData = hasMorningState || !!fallbackReport || !!fallbackMorningAlpha?.reportId;
@@ -261,7 +321,7 @@ function HomePageContent() {
   })();
 
   return (
-    <div className="ma-page flex flex-col overflow-x-hidden">
+    <div className="ma-page ma-launch-page flex flex-col overflow-x-hidden">
       <Navbar marketState={marketState} />
 
       <main className="flex-1 overflow-x-hidden">
@@ -270,16 +330,65 @@ function HomePageContent() {
         {/* HERO — Action, context, next */}
         {/* ═══════════════════════════════════════ */}
         {displayMode === 'normal' && hasReportData && (
-          <VisualPageHero
-            eyebrow="今日行動"
-            icon="ri-focus-3-line"
-            title={renderSafeText(nextAction)}
-            subtitle={renderSafeText(decisionContext)}
-            decisionLabel="下一次確認"
-            decision={nextActionTime}
-            ctaLabel="查看今日判斷"
-            ctaTo="/report/today"
-          />
+          <>
+            <VisualPageHero
+              eyebrow="今日行動"
+              icon="ri-focus-3-line"
+              title={renderSafeText(nextAction)}
+              subtitle={renderSafeText(decisionContext)}
+              decisionLabel="下一次確認"
+              decision={nextActionTime}
+              ctaLabel="查看今日判斷"
+              ctaTo="/report/today"
+            />
+
+            <div className="ma-section-inner space-y-12 px-4 py-10 md:px-6 md:py-12">
+              <section aria-labelledby="market-observation-title">
+                <VisualSectionHeader icon="ri-radar-line" title="市場觀察重點" />
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {marketObservationCards.map((card) => (
+                    <article key={card.label} className="ma-card-compact min-w-0 p-6">
+                      <p className="ma-caption">{card.label}</p>
+                      <p className={`mt-2 text-base font-bold leading-snug ${card.tone === 'danger' ? 'text-rose-200' : card.tone === 'amber' ? 'text-amber-300' : 'text-primary-300'}`}>
+                        {renderSafeText(card.value)}
+                      </p>
+                      {card.detail && <p className="mt-2 text-xs leading-relaxed text-foreground-400">{renderSafeText(card.detail)}</p>}
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              <section aria-labelledby="risk-focus-title">
+                <VisualSectionHeader icon="ri-error-warning-line" title="今天不要做" />
+                <div className="grid gap-4 md:grid-cols-3">
+                  {riskCards.map((item, index) => (
+                    <article key={`${item}-${index}`} className="rounded-2xl border border-rose-400/15 bg-rose-500/[0.04] p-6">
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-rose-400/30 text-[10px] font-bold text-rose-200">{index + 1}</span>
+                        <p className="text-base font-bold leading-relaxed text-foreground-900">{item}</p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              <section aria-labelledby="observation-focus-title">
+                <VisualSectionHeader icon="ri-eye-line" title="今天要觀察" />
+                {observationCards.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  {observationCards.map((item, index) => (
+                    <article key={`${item}-${index}`} className="ma-card-compact flex items-start gap-3 p-6">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-primary-400/25 bg-primary-500/10 text-xs font-bold text-primary-300">{index + 1}</span>
+                      <p className="text-base font-bold leading-relaxed text-foreground-900">{renderSafeText(item)}</p>
+                    </article>
+                  ))}
+                </div>
+                ) : (
+                  <div className="ma-card-compact p-6 text-sm text-foreground-400">資料待補</div>
+                )}
+              </section>
+            </div>
+          </>
         )}
         {displayMode !== 'normal' && (
         <section className="relative w-full overflow-hidden border-b border-background-200/70 bg-background-50 px-5 py-4 md:px-6 md:py-5">

@@ -248,8 +248,7 @@ function MemberResearchNoteV2View({
 }) {
   return (
     <section>
-      <div className="relative bg-gradient-to-br from-navy-900/80 via-navy-900/60 to-navy-900/80 border border-forest-500/10 rounded-2xl p-5 md:p-8 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px bg-gradient-to-r from-transparent via-forest-400/30 to-transparent"></div>
+      <div className="ma-card-elevated overflow-hidden md:p-8">
 
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/12 rounded-full border border-emerald-400/35 mb-4">
@@ -827,12 +826,12 @@ function MemberNoteContent() {
         todayOneLine,
       );
   return (
-    <div className="min-h-screen bg-navy-950 flex flex-col overflow-x-hidden">
+    <div className="ma-page flex flex-col overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
         {/* HEADER */}
-        <div className="border-b border-navy-800 bg-navy-900/80 backdrop-blur-sm">
+        <div className="border-b border-background-200/70 bg-background-100/80">
           <div className="max-w-5xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-md bg-forest-500/15 flex items-center justify-center">
@@ -886,7 +885,7 @@ function MemberNoteContent() {
           </div>
 
           {/* Daily Playbook — five-minute member read */}
-          <section className="bg-gradient-to-br from-forest-500/12 via-navy-900/70 to-navy-900/80 border border-forest-400/20 rounded-2xl p-5 md:p-6 space-y-4">
+          <section className="ma-card-elevated space-y-4 border-primary-400/20">
             <div>
               <p className="text-forest-300 text-[10px] uppercase tracking-[0.3em] font-semibold mb-2">Today&apos;s Mission</p>
               <h2 className="text-white text-xl md:text-2xl font-bold leading-snug">{renderSafeText(decisionLifecycle.question.question)}</h2>
@@ -909,7 +908,7 @@ function MemberNoteContent() {
             </div>
           </section>
 
-          <section className="bg-navy-900/60 border border-forest-500/10 rounded-2xl p-5 md:p-6">
+          <section className="ma-card">
             <div className="flex items-center gap-2 mb-4">
               <i className="ri-question-answer-line text-forest-400 text-sm"></i>
               <h2 className="text-white font-bold text-base">Why This Matters</h2>
@@ -924,7 +923,7 @@ function MemberNoteContent() {
             </div>
           </section>
 
-          <section className="bg-navy-900/60 border border-sky-500/10 rounded-2xl p-5 md:p-6">
+          <section className="ma-card">
             <div className="flex items-center gap-2 mb-4">
               <i className="ri-checkbox-line text-sky-400 text-sm"></i>
               <h2 className="text-white font-bold text-base">Decision Checklist</h2>
@@ -939,7 +938,7 @@ function MemberNoteContent() {
             </div>
           </section>
 
-          <section className="bg-navy-900/60 border border-red-500/10 rounded-2xl p-5 md:p-6">
+          <section className="ma-card">
             <div className="flex items-center gap-2 mb-4">
               <i className="ri-stop-circle-line text-red-300 text-sm"></i>
               <h2 className="text-white font-bold text-base">Stop Signals</h2>
@@ -953,7 +952,7 @@ function MemberNoteContent() {
             </div>
           </section>
 
-          <section className="bg-navy-900/60 border border-amber-500/10 rounded-2xl p-5 md:p-6">
+          <section className="ma-card">
             <div className="flex items-center gap-2 mb-3">
               <i className="ri-lightbulb-flash-line text-amber-300 text-sm"></i>
               <h2 className="text-white font-bold text-base">Today&apos;s Takeaway</h2>
@@ -1172,8 +1171,7 @@ function MemberNoteContent() {
               ) : hasMemberNote && memberNoteText ? (
               /* ═══ 純文字多段落路徑 (V8.2.1) ═══ */
               <section>
-                <div className="relative bg-gradient-to-br from-navy-900/80 via-navy-900/60 to-navy-900/80 border border-forest-500/10 rounded-2xl p-5 md:p-8 overflow-hidden">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px bg-gradient-to-r from-transparent via-forest-400/30 to-transparent"></div>
+                <div className="ma-card-elevated overflow-hidden md:p-8">
 
                   <div className="text-center mb-6">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/12 rounded-full border border-emerald-400/35 mb-4">
@@ -1534,7 +1532,7 @@ function MemberNoteContent() {
             </Link>
             <Link
               to="/opportunities"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-amber-500/12 hover:bg-amber-500/18 text-amber-300 text-sm rounded-xl transition-colors border border-amber-400/30 whitespace-nowrap"
+              className="ma-btn-secondary whitespace-nowrap"
             >
               <i className="ri-focus-3-line"></i>
               查看今日受惠股

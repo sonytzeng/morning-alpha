@@ -313,13 +313,16 @@ a, button, .transition-all {
   --ma-bg-card: oklch(var(--background-100));
   --ma-bg-elevated: rgba(255, 255, 255, 0.04);
   --ma-bg-glass: rgba(255, 255, 255, 0.08);
+  --ma-bg-muted: oklch(var(--background-50) / 0.72);
   --ma-border: rgba(255, 255, 255, 0.10);
   --ma-border-subtle: oklch(var(--background-200) / 0.7);
+  --ma-border-strong: oklch(var(--primary-400) / 0.38);
   --ma-text-primary: oklch(var(--foreground-900));
   --ma-text-secondary: oklch(var(--foreground-500));
   --ma-text-muted: oklch(var(--foreground-400));
-  --ma-accent: oklch(var(--secondary-500));
-  --ma-cta: oklch(var(--accent-500));
+  --ma-text-disabled: oklch(var(--foreground-300));
+  --ma-accent: oklch(var(--accent-500));
+  --ma-cta: oklch(var(--primary-500));
   --ma-success: oklch(var(--primary-500));
   --ma-warning: oklch(var(--accent-500));
   --ma-danger: oklch(var(--accent-600));
@@ -403,7 +406,15 @@ a, button, .transition-all {
   }
 
   .ma-card-elevated {
-    @apply rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-lg shadow-black/10;
+    @apply rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg shadow-black/10;
+  }
+
+  .ma-card-compact {
+    @apply rounded-xl border border-background-200/70 bg-background-100 p-4;
+  }
+
+  .ma-card-status {
+    @apply rounded-xl border border-primary-400/30 bg-primary-500/[0.06] p-4;
   }
 
   .ma-card-glass {
@@ -435,7 +446,7 @@ a, button, .transition-all {
   }
 
   .ma-btn-primary {
-    @apply inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-amber-400 px-6 py-3.5 text-sm font-bold text-slate-950 transition-colors hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-primary-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/35 disabled:pointer-events-none disabled:opacity-50;
   }
 
   .ma-btn-secondary {

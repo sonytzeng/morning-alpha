@@ -571,8 +571,8 @@ function OpportunitiesContent() {
         <Navbar />
         <main className="flex-1 flex items-center justify-center px-4">
           <div className="max-w-md text-center bg-background-100 border border-background-200/70 rounded-2xl p-6">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center">
-              <i className="ri-time-line text-amber-500 text-2xl"></i>
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-amber-400/20 bg-amber-500/10">
+              <i className="ri-time-line text-amber-300 text-2xl"></i>
             </div>
             <h1 className="text-foreground-900 font-bold text-xl mb-2">今日盤前報告尚未產生</h1>
             <p className="text-foreground-500 text-sm mb-2">今日日期：{ds.currentDate}</p>
@@ -628,7 +628,7 @@ function OpportunitiesContent() {
     : '今日強受惠股尚未產生，先等待盤前報告或盤中驗證補齊。';
 
   return (
-    <div className="min-h-screen bg-background-50 flex flex-col overflow-x-hidden">
+    <div className="ma-page flex flex-col overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
@@ -650,7 +650,7 @@ function OpportunitiesContent() {
         </div>
 
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 md:space-y-8">
-          <section className="p-5 md:p-6 rounded-2xl bg-background-100 border border-background-200/70 space-y-5">
+          <section className="ma-card-elevated space-y-5">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
               <div>
                 <p className="text-primary-600 text-[11px] font-semibold tracking-[0.18em] uppercase mb-2">Opportunity Map</p>
@@ -662,7 +662,7 @@ function OpportunitiesContent() {
               <Link
                 to="/member-note"
                 onClick={() => trackEvent('click_member_note', { location: 'opportunities_header' })}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold transition-colors whitespace-nowrap"
+                className="ma-btn-primary whitespace-nowrap"
               >
                 查看完整研究筆記
                 <i className="ri-arrow-right-line"></i>
@@ -703,7 +703,7 @@ function OpportunitiesContent() {
             {hasStrongOpportunities ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {strongOpportunityStocks.slice(0, 6).map((stock) => (
-                  <article key={`strong-${stock.symbol}-${stock.rank}`} className="p-4 rounded-2xl bg-background-100 border border-primary-200/70 space-y-3">
+                  <article key={`strong-${stock.symbol}-${stock.rank}`} className="ma-card-compact space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h3 className="text-foreground-900 font-bold text-sm">{stockTitle(stock)}</h3>
@@ -729,7 +729,7 @@ function OpportunitiesContent() {
                 ))}
               </div>
             ) : (
-              <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 text-sm leading-relaxed">
+              <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.06] p-5 text-sm leading-relaxed text-amber-200">
                 {noStrongMessage}
               </div>
             )}
@@ -741,13 +741,13 @@ function OpportunitiesContent() {
                 <h2 className="text-foreground-900 font-bold text-base md:text-lg">觀察名單</h2>
                 <p className="text-foreground-500 text-xs md:text-sm leading-relaxed">可觀察，但不能追價；需要盤中證據補上。</p>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[10px]">{observationOpportunityStocks.length} 檔</span>
+              <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">{observationOpportunityStocks.length} 檔</span>
             </div>
 
             {hasObservationOpportunities ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {observationOpportunityStocks.slice(0, 9).map((stock) => (
-                  <article key={`observe-${stock.symbol}-${stock.rank}`} className="p-4 rounded-2xl bg-background-100 border border-amber-200/70 space-y-3">
+                  <article key={`observe-${stock.symbol}-${stock.rank}`} className="ma-card-compact space-y-3">
                     <div>
                       <h3 className="text-foreground-900 font-bold text-sm">{stockTitle(stock)}</h3>
                       <p className="text-amber-700 text-[11px] mt-1">{canonicalScriptHeadline || stockScriptName(stock)}</p>
@@ -788,26 +788,26 @@ function OpportunitiesContent() {
             {hasRiskOpportunities ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {riskOpportunityStocks.slice(0, 6).map((stock) => (
-                  <article key={`risk-${stock.symbol}-${stock.rank}`} className="p-4 rounded-2xl bg-background-100 border border-red-200/70 space-y-3">
+                  <article key={`risk-${stock.symbol}-${stock.rank}`} className="ma-card-compact space-y-3">
                     <div>
                       <h3 className="text-foreground-900 font-bold text-sm">{stockTitle(stock)}</h3>
                       <p className="text-red-700 text-[11px] mt-1">{canonicalScriptHeadline || stockScriptName(stock)}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {riskReasons(stock).map((reason) => (
-                        <span key={reason} className="px-2 py-1 rounded-lg bg-red-50 border border-red-100 text-red-700 text-[11px]">{reason}</span>
+                        <span key={reason} className="rounded-lg border border-rose-400/15 bg-rose-500/[0.05] px-2 py-1 text-[11px] text-rose-200">{reason}</span>
                       ))}
                     </div>
                     <p className="text-foreground-600 text-xs leading-relaxed">{stopCondition(stock)}</p>
                   </article>
                 ))}
                 {legacyRiskNotes.map((note, index) => (
-                  <article key={`legacy-risk-${index}`} className="p-4 rounded-2xl bg-background-100 border border-red-200/70 space-y-2">
+                  <article key={`legacy-risk-${index}`} className="ma-card-compact space-y-2">
                     <h3 className="text-foreground-900 font-bold text-sm">今日排除提醒</h3>
                     <p className="text-foreground-700 text-xs leading-relaxed">{renderSafeText(note)}</p>
                     <div className="flex flex-wrap gap-2">
-                      <span className="px-2 py-1 rounded-lg bg-red-50 border border-red-100 text-red-700 text-[11px]">不列為強受惠股</span>
-                      <span className="px-2 py-1 rounded-lg bg-red-50 border border-red-100 text-red-700 text-[11px]">等待市場確認</span>
+                      <span className="rounded-lg border border-rose-400/15 bg-rose-500/[0.05] px-2 py-1 text-[11px] text-rose-200">不列為強受惠股</span>
+                      <span className="rounded-lg border border-rose-400/15 bg-rose-500/[0.05] px-2 py-1 text-[11px] text-rose-200">等待市場確認</span>
                     </div>
                   </article>
                 ))}

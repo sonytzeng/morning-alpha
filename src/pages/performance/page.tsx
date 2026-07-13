@@ -347,17 +347,9 @@ function pct(value: number | null): string {
   return value === null ? '—' : `${Math.round(value)}%`;
 }
 
-const KPI_ACCENT: Record<string, string> = {
-  complete: 'from-emerald-300 to-emerald-500',
-  partial: 'from-amber-200 to-amber-500',
-  failed: 'from-rose-300 to-rose-500',
-  valid: 'from-cyan-300 to-cyan-500',
-};
-
-function StatCard({ label, value, helper, accent }: { label: string; value: string | number; helper: string; accent: keyof typeof KPI_ACCENT }) {
+function StatCard({ label, value, helper }: { label: string; value: string | number; helper: string; accent: string }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/55 p-5 shadow-[0_18px_60px_rgba(0,0,0,0.18)] transition duration-200 hover:-translate-y-0.5 hover:border-white/18">
-      <div className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${KPI_ACCENT[accent]}`} />
+    <div className="ma-card-compact">
       <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/42">{label}</div>
       <div className="mt-3 text-4xl font-semibold tracking-tight text-white md:text-5xl">{value}</div>
       <div className="mt-3 text-xs leading-5 text-white/36">{helper}</div>
@@ -480,22 +472,22 @@ export default function PerformancePage() {
   const lockedCount = Math.max(0, validEntries.length - visibleEntries.length);
 
   return (
-    <div className="min-h-screen bg-[#06101d] text-white">
+    <div className="ma-page">
       <Navbar />
-      <main className="mx-auto w-full max-w-7xl px-4 py-10 md:px-6 md:py-14">
-        <section className="overflow-hidden rounded-[28px] border border-cyan-500/15 bg-gradient-to-br from-slate-900/95 via-slate-900/72 to-slate-950/95 p-6 shadow-[0_30px_100px_rgba(0,0,0,0.28)] md:p-10">
+      <main className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-10">
+        <section className="ma-card-elevated overflow-hidden md:p-8">
           <div className="grid gap-8 lg:grid-cols-[1.35fr_0.75fr] lg:items-center">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-cyan-200/75">PERFORMANCE CENTER</p>
-              <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-tight text-white md:text-6xl">
+              <p className="ma-eyebrow">Performance Center</p>
+              <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight text-white md:text-4xl">
                 歷史績效與決策日誌
               </h1>
               <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300 md:text-base md:leading-8">
                 回看 Morning Alpha 過去如何判斷、哪些劇本成立、哪些失效，以及收盤驗證後留下的修正。只統計完成驗證的交易日，不把資料不足或休市包裝成績效。
               </p>
             </div>
-            <div className="rounded-[26px] border border-cyan-500/20 bg-slate-900/80 p-6 shadow-[0_20px_80px_rgba(8,145,178,0.12)]">
-              <div className="flex items-center gap-2 text-xs font-medium text-cyan-200/70">
+            <div className="ma-card-status">
+              <div className="flex items-center gap-2 text-xs font-medium text-primary-200/80">
                 <CalendarCheck size={16} strokeWidth={1.8} />
                 目前已完成驗證
               </div>
@@ -543,7 +535,7 @@ export default function PerformancePage() {
               另有 {insufficientCount} 筆未納入統計：休市、待驗證或資料不完整。
             </p>
 
-            <section className="mt-8 rounded-[26px] border border-white/10 bg-slate-900/50 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.2)] md:p-7">
+            <section className="ma-card mt-8 md:p-7">
               <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-200/75">近 30 個有效驗證日</p>
@@ -557,7 +549,7 @@ export default function PerformancePage() {
                 </div>
               </div>
               <div className="mt-6 h-3.5 overflow-hidden rounded-full bg-slate-700/80 ring-1 ring-white/5">
-                <div className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-sky-300 to-emerald-300 shadow-[0_0_28px_rgba(45,212,191,0.32)]" style={{ width: `${Math.max(4, Math.min(100, stats.weightedSuccessRate ?? 0))}%` }} />
+                <div className="h-full rounded-full bg-primary-500" style={{ width: `${Math.max(4, Math.min(100, stats.weightedSuccessRate ?? 0))}%` }} />
               </div>
             </section>
 
@@ -571,7 +563,7 @@ export default function PerformancePage() {
               </div>
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 {recentTimeline.map((entry) => (
-                  <Link key={`timeline-${entry.marketDate}`} to={`/reports/${entry.marketDate}`} className="group rounded-[24px] border border-white/10 bg-slate-900/45 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.16)] transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/30 hover:bg-slate-900/65">
+                  <Link key={`timeline-${entry.marketDate}`} to={`/reports/${entry.marketDate}`} className="ma-card-compact transition-colors hover:border-primary-400/30">
                     <div className="flex items-start justify-between gap-3">
                       <span className="text-lg font-semibold tracking-tight text-white">{entry.marketDate}</span>
                       <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${OUTCOME_CLASS[entry.outcome]}`}>{OUTCOME_LABEL[entry.outcome]}</span>
@@ -593,7 +585,7 @@ export default function PerformancePage() {
                 {visibleEntries.map((entry) => {
                   const expanded = expandedId === entry.reportId;
                   return (
-                    <article key={entry.reportId} className="rounded-[24px] border border-white/10 bg-slate-900/45 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.18)] md:p-6">
+                    <article key={entry.reportId} className="ma-card md:p-6">
                       <div className="grid gap-5 lg:grid-cols-[0.72fr_1.6fr_1.3fr_auto] lg:items-center">
                         <div>
                           <div className="text-xl font-semibold tracking-tight text-white">{entry.marketDate}</div>
@@ -602,12 +594,12 @@ export default function PerformancePage() {
                           </span>
                         </div>
                         <div className="relative pl-5">
-                          <span className="absolute left-0 top-1 h-[calc(100%-0.25rem)] w-px bg-gradient-to-b from-cyan-300/60 to-white/5" />
+                          <span className="absolute left-0 top-1 h-[calc(100%-0.25rem)] w-px bg-background-300" />
                           <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/34">盤前判斷</div>
                           <div className="mt-2 line-clamp-2 text-sm leading-6 text-white/78">{entry.primaryScenario}</div>
                         </div>
                         <div className="relative pl-5">
-                          <span className="absolute left-0 top-1 h-[calc(100%-0.25rem)] w-px bg-gradient-to-b from-emerald-300/55 to-white/5" />
+                          <span className="absolute left-0 top-1 h-[calc(100%-0.25rem)] w-px bg-background-300" />
                           <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/34">收盤驗證</div>
                           <div className="mt-2 line-clamp-2 text-sm leading-6 text-white/72">{entry.closingSummary}</div>
                           <div className="mt-2 line-clamp-1 text-xs text-slate-500">AI 修正：{entry.correctionSummary || '尚未留下修正'}</div>
@@ -648,7 +640,7 @@ export default function PerformancePage() {
 
             {validEntries.length >= 3 ? (
               <section className="mt-10 grid gap-4 lg:grid-cols-2">
-                <div className="rounded-[24px] border border-emerald-300/18 bg-slate-900/48 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.18)] md:p-6">
+                <div className="ma-card md:p-6">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200/75">
                     <CheckCircle2 size={15} strokeWidth={1.8} />
                     Best Case
@@ -663,7 +655,7 @@ export default function PerformancePage() {
                     <p className="mt-4 text-sm text-slate-500">目前尚無完整成立案例。</p>
                   )}
                 </div>
-                <div className="rounded-[24px] border border-rose-300/18 bg-slate-900/48 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.18)] md:p-6">
+                <div className="ma-card md:p-6">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-rose-200/75">
                     <Target size={15} strokeWidth={1.8} />
                     Correction Case
@@ -682,9 +674,9 @@ export default function PerformancePage() {
             ) : null}
 
             {lessons.length > 0 ? (
-              <section className="mt-10 overflow-hidden rounded-[24px] border border-white/10 bg-slate-900/50 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.18)] md:p-6">
+              <section className="ma-card mt-10 overflow-hidden md:p-6">
                 <div className="flex gap-4">
-                  <div className="w-1 flex-shrink-0 rounded-full bg-gradient-to-b from-cyan-300 via-sky-300 to-emerald-300" />
+                  <div className="w-1 flex-shrink-0 rounded-full bg-primary-500" />
                   <div className="min-w-0 flex-1">
                     <h2 className="text-2xl font-semibold text-white">本月最大的修正</h2>
                     <ul className="mt-4 grid gap-3 md:grid-cols-2">
@@ -701,9 +693,9 @@ export default function PerformancePage() {
           </>
         )}
 
-        <section className="mt-10 rounded-[24px] border border-white/10 bg-slate-900/45 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.16)] md:p-6">
+        <section className="ma-card mt-10 md:p-6">
           <div className="flex items-center gap-2">
-            <ShieldCheck size={18} strokeWidth={1.8} className="text-cyan-200" />
+            <ShieldCheck size={18} strokeWidth={1.8} className="text-primary-300" />
             <h2 className="text-xl font-semibold text-white">統計規則</h2>
           </div>
           <ul className="mt-4 grid gap-3 md:grid-cols-2">

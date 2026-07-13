@@ -465,16 +465,16 @@ function WarRoomContent() {
 
 
   return (
-    <div className="min-h-screen bg-navy-950 flex flex-col overflow-x-hidden">
+    <div className="ma-page flex flex-col overflow-x-hidden">
       <Navbar marketState={marketState} />
 
       <main className="flex-1 overflow-x-hidden">
         {/* ── TOP BAR ── */}
-        <div className="border-b border-navy-800 bg-navy-900/80 backdrop-blur-sm">
+        <div className="border-b border-background-200/70 bg-background-100/80">
           <div className="max-w-5xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-md bg-amber-500/15 flex items-center justify-center">
-                <i className="ri-sword-line text-amber-300 text-sm"></i>
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary-500/15">
+                <i className="ri-sword-line text-primary-300 text-sm"></i>
               </div>
               <h1 className="text-slate-50 font-bold text-sm md:text-base whitespace-nowrap">
                 盤中追蹤
@@ -508,9 +508,9 @@ function WarRoomContent() {
             </div>
           )}
 
-          <section className="rounded-2xl border border-cyan-400/25 bg-cyan-500/[0.05] p-4 md:p-5">
+          <section className="ma-card-elevated border-primary-400/25">
             <div className="mb-3">
-              <p className="text-cyan-300 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">目前判斷</p>
+              <p className="text-primary-300 text-[10px] tracking-[0.18em] font-semibold mb-1">目前判斷</p>
               <h2 className="text-white font-bold text-xl">今天早上的判斷，現在還成立嗎？</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
@@ -533,7 +533,7 @@ function WarRoomContent() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+          <section className="ma-card">
             <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
               <h2 className="text-white font-bold text-base">目前依據</h2>
               <p className="text-white/35 text-xs">四個核心證據</p>
@@ -551,7 +551,7 @@ function WarRoomContent() {
             <p className="text-white/60 text-xs leading-snug mt-3">{evidenceConclusion}</p>
           </section>
 
-          <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+          <section className="ma-card">
             <div className="mb-3">
               <p className="text-white/35 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">第三層</p>
               <h2 className="text-white font-bold text-base">哪些條件改變了</h2>

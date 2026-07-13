@@ -3,8 +3,8 @@ import { BRAND_NAME, BRAND_ICON_URL } from '@/config/brand';
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-navy-950 border-t border-navy-800 mt-auto">
-      <div className="w-full px-4 md:px-6 py-8 md:py-10">
+    <footer className="mt-auto w-full border-t border-background-200/70 bg-background-50">
+      <div className="mx-auto w-full max-w-5xl px-4 py-7 md:px-6 md:py-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           {/* Brand + description */}
           <div className="max-w-xs">
@@ -39,7 +39,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-6 pt-5 border-t border-navy-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-background-200/70 pt-5 sm:flex-row">
           <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
             <p className="text-white/25 text-[11px]">
               &copy; 2026 {BRAND_NAME}. 愛吉網路資訊有限公司｜統編 60374105

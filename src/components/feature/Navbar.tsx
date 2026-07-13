@@ -24,8 +24,8 @@ export default function Navbar({ marketState }: NavbarProps) {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="w-full bg-[#07111f]/[0.92] backdrop-blur-sm border-b border-[rgba(59,130,246,0.18)] sticky top-0 z-50">
-      <div className="w-full px-4 md:px-6">
+    <nav className="sticky top-0 z-50 w-full border-b border-background-200/70 bg-background-50/95 backdrop-blur-sm">
+      <div className="mx-auto w-full max-w-5xl px-4 md:px-6">
         <div className="flex items-center justify-between h-14 md:h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 flex-shrink-0">
@@ -55,7 +55,7 @@ export default function Navbar({ marketState }: NavbarProps) {
                 to={link.to}
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                   isActive(link.to)
-                    ? 'text-white bg-white/10'
+                    ? 'text-primary-300 bg-primary-500/10'
                     : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -77,7 +77,7 @@ export default function Navbar({ marketState }: NavbarProps) {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-[rgba(59,130,246,0.18)] bg-[#07111f]/[0.98]">
+        <div className="border-t border-background-200/70 bg-background-50 md:hidden">
           <div className="px-4 py-3 space-y-1">
             <div className="px-3 py-2.5">
               <MarketStatusLight compact marketState={marketState} />
@@ -89,14 +89,14 @@ export default function Navbar({ marketState }: NavbarProps) {
                 onClick={() => setMobileOpen(false)}
                 className={`block px-4 py-3 rounded-lg text-base font-medium ${
                   isActive(link.to)
-                    ? 'text-white bg-white/10'
+                    ? 'text-primary-300 bg-primary-500/10'
                     : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
               >
                 {link.label}
               </Link>
             ))}
-            <div className="pt-3 mt-3 border-t border-[rgba(59,130,246,0.12)]">
+            <div className="mt-3 border-t border-background-200/70 pt-3">
               <p className="text-white/15 text-[10px] text-center leading-relaxed">
                 愛吉網路資訊有限公司｜統編 60374105
               </p>

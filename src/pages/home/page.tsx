@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
@@ -51,6 +51,47 @@ function formatTaipeiTime(value: unknown): string {
   }).formatToParts(date);
   const part = (type: string) => parts.find((item) => item.type === type)?.value || '';
   return `${part('year')}-${part('month')}-${part('day')} ${part('hour')}:${part('minute')}`;
+}
+
+type TimelineStatus = 'completed' | 'current' | 'upcoming' | 'paused';
+
+interface TimelineNode {
+  time: string;
+  minute: number;
+  label: string;
+  detail: string;
+  status: TimelineStatus;
+}
+
+interface OpportunityPreviewItem {
+  symbol: string;
+  name: string;
+  priority: string;
+  reason: string;
+}
+
+function getTaipeiMinutes(timestamp: number): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei',
+    hourCycle: 'h23',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(new Date(timestamp));
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value || 0);
+  const minute = Number(parts.find((part) => part.type === 'minute')?.value || 0);
+  return hour * 60 + minute;
+}
+
+function mapOpportunityStock(stock: Record<string, unknown>): OpportunityPreviewItem | null {
+  const symbol = firstString(stock.symbol, stock.ticker, stock.code, stock.stock_code);
+  const name = firstString(stock.name, stock.stock_name, stock.company_name);
+  const priorityValue = stock.priority ?? stock.star_rating ?? stock.stars;
+  const priority = typeof priorityValue === 'string' || typeof priorityValue === 'number'
+    ? String(priorityValue)
+    : '';
+  const reason = firstString(stock.reason, stock.investment_reason, stock.why, stock.role, stock.selection_reason);
+  if (!symbol && !name) return null;
+  return { symbol, name, priority, reason };
 }
 
 function HomePageContent() {
@@ -155,6 +196,103 @@ function HomePageContent() {
     return 'normal';
   }, [dataStatus, reportExists, isTodayReport, marketClosedInfo]);
 
+  const [timelineNow, setTimelineNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = window.setInterval(() => setTimelineNow(Date.now()), 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const closingAI = asRecord(homeAI?.closing_verification_v2) || asRecord(homeAI?.closing_verification);
+  const closingStatus = firstString(closingAI?.status).toLowerCase();
+  const hasCompletedClosing = closingStatus === 'completed' || closingStatus === 'direction_completed_data_degraded';
+  const currentTaipeiMinutes = getTaipeiMinutes(timelineNow);
+  const timelineNodes: TimelineNode[] = useMemo(() => {
+    const baseNodes = [
+      { time: '07:30', minute: 450, label: '今日劇本', detail: '讀懂今天唯一要驗證的主線。' },
+      { time: '09:30', minute: 570, label: '開盤驗證', detail: '確認開盤方向是否支持盤前假設。' },
+      { time: '13:30', minute: 810, label: '主線追蹤', detail: '檢查主線擴散、失效條件與停損訊號。' },
+      { time: '14:10', minute: 850, label: '收盤驗證', detail: '用真實收盤結果回看今天的判斷。' },
+    ];
+    if (displayMode === 'market-closed' || !displayState.is_trading_day) {
+      return baseNodes.map((node) => ({ ...node, status: 'paused' as const }));
+    }
+    return baseNodes.map((node, index) => {
+      const nextNode = baseNodes[index + 1];
+      let status: TimelineStatus = currentTaipeiMinutes < node.minute ? 'upcoming' : 'current';
+      if (nextNode && currentTaipeiMinutes >= nextNode.minute) status = 'completed';
+      if (!nextNode && hasCompletedClosing) status = 'completed';
+      return { ...node, status };
+    });
+  }, [currentTaipeiMinutes, displayMode, displayState.is_trading_day, hasCompletedClosing]);
+
+  const currentTimelineNode = timelineNodes.find((node) => node.status === 'current')
+    || timelineNodes.find((node) => node.status === 'upcoming')
+    || timelineNodes[timelineNodes.length - 1];
+  const lifecycleStatus = decisionLifecycle.decision_status.status;
+  const missionStatus = displayMode === 'market-closed'
+    ? '今日流程暫停'
+    : lifecycleStatus === 'Completed' || lifecycleStatus === 'Rejected'
+      ? '已完成'
+      : lifecycleStatus === 'Confirmed'
+        ? '驗證中'
+        : currentTaipeiMinutes < 450 ? '準備中' : '等待驗證';
+  const missionStatusTone = missionStatus === '已完成'
+    ? 'ma-badge-success'
+    : missionStatus === '驗證中'
+      ? 'ma-badge-info'
+      : missionStatus === '今日流程暫停'
+        ? 'ma-badge-neutral'
+        : 'ma-badge-warning';
+  const missionHeadline = firstString(
+    decisionLifecycle.question.question,
+    canonicalNarrative.today_focus.headline,
+    homePrimaryTheme,
+  );
+  const missionSummary = firstString(
+    decisionLifecycle.current_thesis.summary,
+    canonicalNarrative.today_focus.summary,
+    homeCoreScript,
+  );
+  const missionRisk = firstString(
+    decisionLifecycle.failure_condition.trigger,
+    decisionLifecycle.failure_condition.meaning,
+    homeDontDo,
+  );
+  const nextAction = firstString(
+    decisionLifecycle.decision_status.next_step,
+    canonicalNarrative.intraday_progress.next_step,
+    homeNextVerification,
+  );
+  const nextActionTime = displayMode === 'market-closed'
+    ? displayState.nextUpdateTime
+    : `${currentTimelineNode.time} ${currentTimelineNode.label}`;
+
+  const opportunityPreview = useMemo(() => {
+    const source = displayState.v10BeneficiaryEnabled
+      ? displayState.v10BeneficiaryStocks
+      : displayState.coreBeneficiaryStocks.length > 0
+        ? displayState.coreBeneficiaryStocks
+        : displayState.beneficiaryStocks;
+    return source.map(mapOpportunityStock).filter((item): item is OpportunityPreviewItem => item !== null).slice(0, 5);
+  }, [displayState.beneficiaryStocks, displayState.coreBeneficiaryStocks, displayState.v10BeneficiaryEnabled, displayState.v10BeneficiaryStocks]);
+
+  const completedVerification = useMemo(() => {
+    const review = data?.todayCloseVerification;
+    if (review && firstString(review.verification_label, review.verification_result, review.verification_note)) {
+      return {
+        date: review.report_date,
+        result: firstString(review.verification_label, review.verification_result),
+        summary: firstString(review.verification_note, review.actual_market_result),
+      };
+    }
+    if (!hasCompletedClosing) return null;
+    return {
+      date: firstString(closingAI?.report_date, displayReportDate),
+      result: firstString(closingAI?.verdict_label, closingAI?.hit_or_miss, closingAI?.prediction_result),
+      summary: firstString(closingAI?.verification_note, closingAI?.summary, closingAI?.what_was_right),
+    };
+  }, [closingAI, data?.todayCloseVerification, displayReportDate, hasCompletedClosing]);
+
   // V28: hasReportData — true when we have data from EITHER morningState or fallback
   const hasReportData = hasMorningState || !!fallbackReport || !!fallbackMorningAlpha?.reportId;
 
@@ -225,8 +363,6 @@ function HomePageContent() {
     return 'text-foreground-700';
   })();
 
-  const heroImageUrl = 'https://readdy.ai/api/search-image?query=Abstract%20artistic%20pre%20dawn%20sky%20with%20soft%20warm%20amber%20and%20deep%20navy%20gradient%2C%20minimalist%20geometric%20shapes%20suggesting%20market%20rhythm%20and%20discipline%2C%20calm%20atmospheric%20composition%20with%20subtle%20light%20rays%20breaking%20through%20darkness%2C%20no%20text%2C%20no%20people%2C%20editorial%20quality%2C%20clean%20elegant%20aesthetic%2C%20warm%20amber%20and%20cream%20tones%20against%20deep%20navy%20sky&width=1600&height=900&seq=ma-hero-v5&orientation=landscape';
-
   const closedHero = (() => {
     switch (displayState.market_status) {
       case 'TYPHOON':
@@ -285,17 +421,7 @@ function HomePageContent() {
         {/* ═══════════════════════════════════════ */}
         {/* HERO — Simplified, date-focused */}
         {/* ═══════════════════════════════════════ */}
-        <section className="relative w-full px-5 md:px-6 pt-8 pb-10 md:pt-16 md:pb-16 overflow-hidden">
-          <div className="absolute inset-0">
-            <img
-              src={heroImageUrl}
-              alt=""
-              className="w-full h-full object-cover object-top"
-              loading="eager"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#07111f]/70 via-[#0b1628]/45 to-background-50"></div>
-          </div>
-
+        <section className="relative w-full border-b border-background-200/70 bg-background-50 px-5 pt-8 pb-10 md:px-6 md:pt-12 md:pb-12 overflow-hidden">
           <div className="relative max-w-5xl mx-auto w-full">
             <p className="text-white/35 text-[10px] uppercase tracking-[0.3em] font-semibold mb-6">
               MORNING ALPHA
@@ -372,7 +498,7 @@ function HomePageContent() {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                      <Link to={closedHero.primaryTo} className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-bold">{closedHero.primary}</Link>
+                      <Link to={closedHero.primaryTo} className="ma-btn-primary min-h-[40px] px-4 py-2 text-xs">{closedHero.primary}</Link>
                       <Link to={closedHero.secondaryTo} className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white text-xs font-semibold">{closedHero.secondary}</Link>
                     </div>
 
@@ -424,61 +550,185 @@ function HomePageContent() {
 
             {/* ═══ Normal / Needs Review ═══ */}
             {(displayMode === 'normal') && hasReportData && (
-              <>
-                <h1 className="text-white font-bold text-3xl md:text-5xl lg:text-6xl mb-4 leading-tight max-w-4xl">
-                  今天唯一不能忽略的一件事
+              <div className="max-w-4xl">
+                <div className="mb-5 flex flex-wrap items-center gap-2.5 text-xs text-white/70">
+                  <span>{displayReportDate}</span>
+                  <span aria-hidden="true" className="text-white/25">•</span>
+                  <span>{displayState.market_message || '台股交易日'}</span>
+                  <span className={`ma-badge ${missionStatusTone}`}>{missionStatus}</span>
+                </div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-amber-200">Today&apos;s Mission</p>
+                <h1 className="max-w-3xl text-3xl font-bold leading-tight text-white md:text-5xl lg:text-6xl">
+                  今天唯一要驗證的劇本
                 </h1>
-                <p className="text-white/86 text-base md:text-xl leading-relaxed max-w-3xl mb-4 font-semibold">
-                  {renderSafeText(decisionLifecycle.question.question || homeCoreScript)}
+                <p className="mt-5 max-w-3xl text-lg font-semibold leading-relaxed text-white/90 md:text-2xl">
+                  {renderSafeText(missionHeadline)}
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-3xl mb-5">
-                  <div className="rounded-2xl border border-white/12 bg-white/8 p-4">
-                    <p className="text-amber-200 text-[10px] uppercase tracking-[0.22em] mb-2">今天最容易犯的錯</p>
-                    <p className="text-white/78 text-sm leading-relaxed font-semibold">{renderSafeText(homeDontDo)}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/12 bg-white/8 p-4">
-                    <p className="text-amber-200 text-[10px] uppercase tracking-[0.22em] mb-2">下一次回來</p>
-                    <p className="text-white/78 text-sm leading-relaxed font-semibold">{renderSafeText(homeNextVerification)}</p>
+                {missionSummary && missionSummary !== missionHeadline && (
+                  <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/62 md:text-base">
+                    {renderSafeText(missionSummary)}
+                  </p>
+                )}
+                <div className="mt-6 max-w-2xl rounded-2xl border border-white/10 bg-white/[0.06] p-4 md:p-5">
+                  <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">下一個行動</p>
+                      <p className="mt-1 text-sm font-semibold leading-relaxed text-white">{renderSafeText(nextAction)}</p>
+                    </div>
+                    <div className="sm:text-right">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">下次回來</p>
+                      <p className="mt-1 whitespace-nowrap text-sm font-bold text-amber-200">{nextActionTime}</p>
+                    </div>
                   </div>
                 </div>
-              </>
-            )}
-
-            {/* CTA buttons — hidden on market-closed days */}
-            {displayMode !== 'market-closed' && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-6">
-              <Link
-                to="/member-note"
-                onClick={() => {
-                  trackEvent('click_member_note', { location: 'home_hero' });
-                  trackEngagementEvent('click_free_summary');
-                }}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-sm rounded-xl transition-colors whitespace-nowrap min-h-[48px]"
-              >
-                開始今天交易準備
-                <i className="ri-arrow-right-line"></i>
-              </Link>
-            </div>
+                <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Link
+                    to="/war-room"
+                    onClick={() => trackEvent('click_war_room', { location: 'home_hero_v2' })}
+                    className="ma-btn-primary w-full sm:w-auto"
+                  >
+                    開始今天判斷
+                    <i className="ri-arrow-right-line" aria-hidden="true"></i>
+                  </Link>
+                  <Link
+                    to="/member-note"
+                    onClick={() => {
+                      trackEvent('click_member_note', { location: 'home_hero_v2' });
+                      trackEngagementEvent('click_free_summary');
+                    }}
+                    className="ma-btn-secondary w-full sm:w-auto"
+                  >
+                    查看完整研究
+                  </Link>
+                </div>
+              </div>
             )}
           </div>
         </section>
 
+        {(displayMode === 'normal' || displayMode === 'market-closed') && hasReportData && (
+          <section className="ma-section pt-0 md:pt-0" aria-labelledby="trading-timeline-title">
+            <div className="ma-section-inner">
+              <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
+                <div>
+                  <p className="ma-eyebrow mb-2">Trading Timeline</p>
+                  <h2 id="trading-timeline-title" className="text-foreground-900 font-bold text-xl md:text-2xl">今天的判斷節奏</h2>
+                </div>
+                <p className="text-foreground-500 text-sm">
+                  {isClosedMarket ? '今日休市，交易流程暫停。' : `目前節點：${currentTimelineNode?.label || '等待今日流程'}`}
+                </p>
+              </div>
+              <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {timelineNodes.map((node) => {
+                  const statusLabel = node.status === 'completed' ? '已完成' : node.status === 'current' ? '目前' : node.status === 'paused' ? '休市暫停' : '稍後';
+                  const statusIcon = node.status === 'completed'
+                    ? 'ri-check-line'
+                    : node.status === 'current'
+                      ? 'ri-focus-3-line'
+                      : node.status === 'paused'
+                        ? 'ri-pause-line'
+                        : 'ri-time-line';
+                  const statusClass = node.status === 'current'
+                    ? 'border-amber-400/40 bg-amber-500/[0.06]'
+                    : node.status === 'completed'
+                      ? 'border-emerald-500/30 bg-emerald-500/[0.04]'
+                      : 'border-background-200/80 bg-background-100';
+                  const timeClass = node.status === 'current' ? 'text-amber-600' : 'text-foreground-700';
+
+                  return (
+                    <li
+                      key={node.time}
+                      aria-current={node.status === 'current' ? 'step' : undefined}
+                      className={`min-w-0 rounded-2xl border p-4 md:p-5 ${statusClass}`}
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <span className={`${timeClass} text-sm font-bold tabular-nums`}>{node.time}</span>
+                        <span className="inline-flex items-center gap-1 text-foreground-500 text-[10px] font-semibold tracking-wide">
+                          <i className={`${statusIcon} text-xs`} aria-hidden="true"></i>
+                          {statusLabel}
+                        </span>
+                      </div>
+                      <h3 className="text-foreground-900 font-bold text-sm mb-1">{node.label}</h3>
+                      <p className="text-foreground-500 text-xs leading-relaxed">{node.detail}</p>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          </section>
+        )}
+
         {(displayMode === 'normal') && hasReportData && (
           <section className="w-full px-4 md:px-6 pb-10 md:pb-14">
-            <div className="max-w-5xl mx-auto w-full space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {[
-                  ['今天唯一不能忽略', decisionLifecycle.question.question],
-                  ['今天最大的風險', decisionLifecycle.question.why],
-                  ['今天先看', homePrimaryTheme],
-                  ['下一次驗證', homeNextVerification],
-                ].map(([title, body]) => (
-                  <div key={title} className="bg-background-100 border border-background-200/70 rounded-2xl p-5">
-                    <p className="text-foreground-400 text-[10px] uppercase tracking-[0.22em] mb-2">{title}</p>
-                    <p className="text-foreground-900 text-sm font-bold leading-relaxed">{renderSafeText(body)}</p>
+            <div className="max-w-5xl mx-auto w-full space-y-10">
+              <div aria-labelledby="decision-snapshot-title">
+                <p className="ma-eyebrow mb-2">Decision Snapshot</p>
+                <h2 id="decision-snapshot-title" className="text-foreground-900 font-bold text-xl md:text-2xl mb-5">今天的決策摘要</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <article className="md:col-span-2 min-w-0 bg-foreground-900 border border-foreground-800 rounded-2xl p-5 md:p-7 text-white">
+                    <p className="text-amber-200 text-[10px] font-bold uppercase tracking-[0.22em] mb-3">Mission</p>
+                    <h3 className="font-bold text-xl md:text-2xl leading-snug mb-3 break-words">{renderSafeText(missionHeadline)}</h3>
+                    <p className="text-white/65 text-sm md:text-base leading-relaxed break-words">{renderSafeText(missionSummary)}</p>
+                  </article>
+                  <div className="grid grid-cols-1 gap-4">
+                    <article className="min-w-0 bg-background-100 border border-background-200/70 rounded-2xl p-5">
+                      <p className="text-red-600 text-[10px] font-bold uppercase tracking-[0.22em] mb-2">Risk</p>
+                      <p className="text-foreground-900 text-sm font-semibold leading-relaxed break-words">{renderSafeText(missionRisk)}</p>
+                    </article>
+                    <article className="min-w-0 bg-background-100 border border-background-200/70 rounded-2xl p-5">
+                      <p className="text-primary-600 text-[10px] font-bold uppercase tracking-[0.22em] mb-2">Next Step</p>
+                      <p className="text-foreground-900 text-sm font-semibold leading-relaxed break-words">{renderSafeText(nextAction)}</p>
+                    </article>
+                    <article className="min-w-0 bg-background-100 border border-background-200/70 rounded-2xl p-5">
+                      <p className="text-foreground-400 text-[10px] font-bold uppercase tracking-[0.22em] mb-2">Confidence</p>
+                      <p className="text-foreground-900 text-lg font-bold">{displayConfidence === null ? '待確認' : `${displayConfidence}%`}</p>
+                    </article>
                   </div>
-                ))}
+                </div>
               </div>
+
+              {opportunityPreview.length > 0 && (
+                <div aria-labelledby="opportunity-preview-title">
+                  <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
+                    <div>
+                      <p className="ma-eyebrow mb-2">Opportunity Preview</p>
+                      <h2 id="opportunity-preview-title" className="text-foreground-900 font-bold text-xl md:text-2xl">今日受惠股預覽</h2>
+                    </div>
+                    <Link to="/opportunities" className="ma-btn-secondary">查看完整受惠股</Link>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {opportunityPreview.map((stock) => (
+                      <article key={`${stock.symbol}-${stock.name}`} className="min-w-0 bg-background-100 border border-background-200/70 rounded-2xl p-5">
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="min-w-0">
+                            <p className="text-primary-600 text-xs font-bold mb-1">{stock.symbol}</p>
+                            <h3 className="text-foreground-900 font-bold break-words">{stock.name}</h3>
+                          </div>
+                          {stock.priority && <span className="shrink-0 text-amber-700 text-xs font-semibold">{stock.priority}</span>}
+                        </div>
+                        {stock.reason && <p className="text-foreground-500 text-sm leading-relaxed break-words">{stock.reason}</p>}
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {completedVerification && (completedVerification.result || completedVerification.summary) && (
+                <article className="bg-foreground-900 border border-foreground-800 rounded-2xl p-5 md:p-6 text-white" aria-labelledby="previous-verification-title">
+                  <div className="flex items-start justify-between gap-5 flex-wrap">
+                    <div className="min-w-0 max-w-2xl">
+                      <p className="text-amber-200 text-[10px] font-bold uppercase tracking-[0.22em] mb-2">Previous Verification</p>
+                      <h2 id="previous-verification-title" className="text-white font-bold text-xl mb-3">最近一次收盤驗證</h2>
+                      <div className="flex items-center gap-3 flex-wrap mb-3">
+                        {completedVerification.date && <span className="text-white/50 text-xs">{completedVerification.date}</span>}
+                        {completedVerification.result && <span className="text-white text-sm font-bold">{completedVerification.result}</span>}
+                      </div>
+                      {completedVerification.summary && <p className="text-white/65 text-sm leading-relaxed break-words">{completedVerification.summary}</p>}
+                    </div>
+                    <Link to="/performance" className="ma-btn-secondary shrink-0">查看歷史績效</Link>
+                  </div>
+                </article>
+              )}
 
               <div className="bg-background-100 border border-background-200/70 rounded-2xl p-5 md:p-6">
                 <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
@@ -499,44 +749,6 @@ function HomePageContent() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  ['昨天有沒有猜對？', '收盤後用回測檢查盤前判斷，不把敘事當成答案。'],
-                  ['為什麼值得付費？', '會員看的不是更多股票，而是推理、失效條件、盤中驗證與收盤回測。'],
-                  ['每天怎麼使用？', '早上看劇本，盤中看是否成立，收盤後看今天學到什麼。'],
-                ].map(([title, body]) => (
-                  <div key={title} className="bg-foreground-900 border border-foreground-800 rounded-2xl p-5 text-white">
-                    <p className="text-amber-200 text-[10px] uppercase tracking-[0.22em] mb-2">Morning Alpha</p>
-                    <h2 className="font-bold text-base mb-2">{title}</h2>
-                    <p className="text-white/62 text-sm leading-relaxed">{body}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-background-100 border border-background-200/70 rounded-2xl p-5 md:p-6">
-                <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
-                  <div>
-                    <p className="text-primary-600 text-[10px] font-bold uppercase tracking-[0.24em] mb-1">Trading Flow</p>
-                    <h2 className="text-foreground-900 font-bold text-xl">Morning Alpha 一天的交易流程</h2>
-                  </div>
-                  <span className="text-foreground-400 text-xs">盤前到收盤後，只做該做的檢查。</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                  {[
-                    ['07:30', '讀今天劇本'],
-                    ['09:30', '確認開盤方向'],
-                    ['10:30', '檢查主線擴散'],
-                    ['13:00', '排除失效劇本'],
-                    ['14:10', '等待收盤驗證'],
-                    ['隔天 07:30', '更新新劇本'],
-                  ].map(([time, text]) => (
-                    <div key={time} className="rounded-xl bg-background-50 border border-background-200/70 p-3">
-                      <p className="text-primary-600 text-xs font-bold mb-1">{time}</p>
-                      <p className="text-foreground-700 text-xs leading-relaxed">{text}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </section>
         )}

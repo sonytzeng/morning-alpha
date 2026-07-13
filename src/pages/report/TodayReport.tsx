@@ -63,14 +63,6 @@ function safeText(value: unknown, fallback = '—'): string {
   return s.length > 0 && s !== 'null' && s !== 'undefined' ? s : fallback;
 }
 
-function getRadarClass(status?: string | null): string {
-  const s = status || '';
-  if (s.includes('偏強')) return 'bg-red-500/12 text-red-300 border-red-400/30';
-  if (s.includes('轉弱') || s.includes('偏弱') || s.includes('風險')) return 'bg-emerald-500/12 text-emerald-300 border-emerald-400/30';
-  if (s.includes('資料不足')) return 'bg-slate-500/12 text-slate-300 border-slate-400/20';
-  return 'bg-amber-500/12 text-amber-300 border-amber-400/30';
-}
-
 function normalizeRadarFromReport(report: Report | null): RadarView | null {
   if (!report) return null;
 
@@ -125,6 +117,61 @@ function firstText(...values: unknown[]): string {
     if (text) return text;
   }
   return '';
+}
+
+function recordList(value: unknown): AnyObj[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is AnyObj => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+    : [];
+}
+
+function uniqueTextList(values: unknown[], limit = 5): string[] {
+  const seen = new Set<string>();
+  const output: string[] = [];
+  for (const value of values) {
+    const text = safeText(value, '');
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    output.push(text);
+    if (output.length >= limit) break;
+  }
+  return output;
+}
+
+type DecisionStock = {
+  symbol: string;
+  name: string;
+  sector: string;
+  reason: string;
+};
+
+function mapDecisionStock(value: AnyObj): DecisionStock | null {
+  const symbol = firstText(value.symbol, value.stock_code, value.stock_id, value.ticker, value.code);
+  const name = firstText(value.stock_name, value.name, value.company_name);
+  if (!symbol && !name) return null;
+  return {
+    symbol,
+    name,
+    sector: firstText(value.sector, value.group, value.industry),
+    reason: firstText(value.reason, value.rationale, value.investment_reason, value.benefit_source, value.watch_point),
+  };
+}
+
+function humanMarketConclusion(displayState: MorningAlphaDisplayState | null): string {
+  if (!displayState) return '資料不足';
+  if (!displayState.is_trading_day || displayState.market_status !== 'OPEN') return '休市';
+  const bias = safeText(displayState.marketBias, '');
+  if (bias.includes('多') || bias.includes('強')) return '偏多觀察';
+  if (bias.includes('空') || bias.includes('弱')) return '偏空防守';
+  if (!bias || bias.includes('不足')) return '資料不足';
+  return '等待確認';
+}
+
+function marketConclusionTone(conclusion: string): string {
+  if (conclusion === '偏多觀察') return 'ma-badge-success';
+  if (conclusion === '偏空防守') return 'ma-badge-danger';
+  if (conclusion === '休市' || conclusion === '資料不足') return 'ma-badge-neutral';
+  return 'ma-badge-warning';
 }
 
 function nextVerificationPoint(
@@ -213,15 +260,6 @@ function getClosingVerificationState(ai: AnyObj): ClosingVerificationState {
   };
 }
 
-type VerificationFocus = {
-  currentStage: string;
-  nextStep: string;
-  confirming: string;
-  ifFailed: string;
-  dataStatus: string;
-  isSynced: boolean;
-};
-
 function TodayReportContent() {
   const [report, setReport] = useState<Report | null>(null);
   const [reportSnapshotRadar, setReportSnapshotRadar] = useState<RadarView | null>(null);
@@ -299,15 +337,6 @@ function TodayReportContent() {
   const taipeiHour = Number(taipeiParts.find((part) => part.type === 'hour')?.value || 0);
   const taipeiMinute = Number(taipeiParts.find((part) => part.type === 'minute')?.value || 0);
   const taipeiMinutes = taipeiHour * 60 + taipeiMinute;
-  const intradayPendingTitle = taipeiMinutes < 570
-    ? '等待 09:30 第一段盤中資料'
-    : taipeiMinutes < 630
-      ? '09:30 盤中資料尚未同步'
-      : taipeiMinutes < 780
-        ? '10:30 資料尚未同步，13:00 尚未到時間窗'
-        : taipeiMinutes < 815
-          ? '13:00 盤中資料尚未同步'
-          : '等待收盤驗證資料同步';
   const intradaySyncView = getIntradaySyncView(ai);
   const closingVerificationState = getClosingVerificationState(ai);
   const canonicalNarrative: CanonicalMorningNarrative = useMemo(() => buildCanonicalNarrative({
@@ -316,32 +345,57 @@ function TodayReportContent() {
     memberResearchNoteV2: asObj(ai.member_research_note_v2),
   }), [displayState, ai]);
   const decisionLifecycle = canonicalNarrative.decision_lifecycle;
-  const actionStatus = firstText(
-    decisionLifecycle.current_thesis.summary,
-    canonicalNarrative.today_focus.action,
-    '資料不足',
+  const memberNoteV2 = asObj(ai.member_research_note_v2);
+  const marketConclusion = humanMarketConclusion(displayState);
+  const primaryScenario = firstText(
+    decisionLifecycle.question.question,
+    decisionLifecycle.current_thesis.title,
+    canonicalNarrative.today_focus.headline,
   );
+  const oneLineConclusion = firstText(
+    decisionLifecycle.current_thesis.summary,
+    canonicalNarrative.today_focus.summary,
+    displayState?.todayQuote,
+  );
+  const canActText = decisionLifecycle.decision_status.status === 'Confirmed'
+    ? '條件已確認，可依原定計畫行動'
+    : decisionLifecycle.decision_status.status === 'Rejected'
+      ? '原判斷已失效，停止原定計畫'
+      : decisionLifecycle.decision_status.status === 'Completed'
+        ? '今日判斷流程已完成'
+        : '先等待確認，不急著行動';
   const nextVerification = firstText(
     decisionLifecycle.validation_plan.next_step,
     nextVerificationPoint(taipeiMinutes, activeIntradayRadar, intradaySyncView, closingVerificationState),
   );
-  const operationSteps = decisionLifecycle.validation_plan.steps.length > 0
-    ? decisionLifecycle.validation_plan.steps.slice(0, 4).map((step) => firstText(step.detail, step.title, step.time)).filter(Boolean)
-    : [
-        decisionLifecycle.current_thesis.summary,
-        decisionLifecycle.validation_plan.next_step,
-        decisionLifecycle.failure_condition.action,
-      ].filter(Boolean).slice(0, 4);
-  const verificationFocus: VerificationFocus = {
-    currentStage: firstText(decisionLifecycle.decision_status.reason, canonicalNarrative.intraday_progress.current_step, '資料不足'),
-    nextStep: nextVerification,
-    confirming: firstText(decisionLifecycle.question.why, canonicalNarrative.today_focus.summary, '資料不足'),
-    ifFailed: firstText(decisionLifecycle.failure_condition.action, decisionLifecycle.failure_condition.trigger, '資料不足'),
-    dataStatus: firstText(canonicalNarrative.intraday_progress.status, intradayPendingTitle),
-    isSynced: canonicalNarrative.intraday_progress.status === 'ready' || canonicalNarrative.intraday_progress.status === 'completed',
-  };
-  const overviewRadarStatusText = verificationFocus.dataStatus;
-
+  const currentActions = uniqueTextList([
+    canonicalNarrative.today_focus.action,
+    decisionLifecycle.decision_status.next_step,
+    decisionLifecycle.validation_plan.next_step,
+  ], 3);
+  const successConditions = uniqueTextList([
+    ...decisionLifecycle.validation_plan.steps.map((step) => firstText(step.detail, step.title)),
+    canonicalNarrative.intraday_progress.current_step,
+    canonicalNarrative.intraday_progress.next_step,
+  ], 5);
+  const stopItems = uniqueTextList([
+    decisionLifecycle.failure_condition.trigger,
+    decisionLifecycle.failure_condition.meaning,
+    decisionLifecycle.failure_condition.action,
+    ...canonicalNarrative.failure_triggers.flatMap((item) => [item.trigger, item.meaning, item.action]),
+    ...recordList(memberNoteV2.risk_scenarios).map((item) => firstText(item.condition, item.risk, item.response)),
+    ...recordList(memberNoteV2.invalidation_conditions).map((item) => firstText(item.condition, item.meaning, item.action_note)),
+  ], 5);
+  const stockSource = displayState?.v10BeneficiaryEnabled
+    ? displayState.v10BeneficiaryStocks
+    : displayState?.coreBeneficiaryStocks.length
+      ? displayState.coreBeneficiaryStocks
+      : displayState?.beneficiaryStocks || [];
+  const priorityStocks = stockSource
+    .map((item) => mapDecisionStock(item))
+    .filter((item): item is DecisionStock => item !== null)
+    .slice(0, 5);
+  const prioritySectors = uniqueTextList(priorityStocks.map((item) => item.sector), 3);
   if (loading) {
     return (
       <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -440,118 +494,122 @@ function TodayReportContent() {
   }
 
   return (
-    <div className="min-h-screen bg-navy-950 flex flex-col overflow-x-hidden">
+    <div className="ma-page flex flex-col overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
-        <div className="border-b border-navy-800 bg-navy-900/80 backdrop-blur-sm">
-          <div className="max-w-5xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="w-7 h-7 rounded-md bg-emerald-500/15 flex items-center justify-center">
-                <i className="ri-line-chart-line text-emerald-400 text-sm" />
-              </div>
-              <h1 className="text-white font-bold text-sm md:text-base">{isHistoricalFallback ? '歷史資料模式' : '今日盤前判斷'}</h1>
-
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full border ${getRadarClass(overviewRadarStatusText)}`}>
-                <i className="ri-radar-line text-[9px]" />
-                {overviewRadarStatusText}
-              </span>
-
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-500/10 text-sky-300 text-[10px] font-medium rounded-full border border-sky-400/25">
-                <i className="ri-calendar-line text-[9px]" />
-                報告日期：{report.report_date}
-              </span>
-
-              {!isReportForToday && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 text-red-300 text-[10px] font-medium rounded-full border border-red-400/25">
-                  歷史資料模式：{fallbackReportDate || report.report_date}，今日為 {todayStr}
-                </span>
-              )}
-            </div>
+        <div className="border-b border-background-200/70 bg-background-100/80">
+          <div className="ma-section-inner flex flex-wrap items-center gap-3 px-4 py-3 md:px-6">
+            <h1 className="text-sm font-bold text-foreground-900 md:text-base">{isHistoricalFallback ? '歷史資料模式' : '今日判斷'}</h1>
+            <span className="ma-badge ma-badge-neutral"><i className="ri-calendar-line" aria-hidden="true" />{report.report_date}</span>
+            {!isReportForToday && (
+              <span className="ma-badge ma-badge-danger">歷史資料：{fallbackReportDate || report.report_date}，今日為 {todayStr}</span>
+            )}
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6">
-          <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6">
-            <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              今天怎麼判斷？
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-emerald-300 text-[10px] uppercase tracking-wider mb-1">今日策略</p>
-                <p className="text-slate-50 font-bold text-lg leading-relaxed">{actionStatus}</p>
+        <div className="ma-section-inner space-y-6 px-4 py-6 md:px-6 md:py-8">
+          <section className="ma-card-elevated" aria-labelledby="today-conclusion-title">
+            <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-foreground-400">今日結論</p>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <h2 id="today-conclusion-title" className="text-3xl font-bold leading-tight text-foreground-900 md:text-4xl">{marketConclusion}</h2>
+                  <span className={`ma-badge ${marketConclusionTone(marketConclusion)}`}>{displayState?.market_message || '等待市場狀態'}</span>
+                </div>
               </div>
-              <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-                <p className="text-emerald-300 text-[10px] uppercase tracking-wider mb-1">下一步</p>
-                <p className="text-slate-50 font-bold text-lg leading-relaxed">{nextVerification}</p>
+              <div className="max-w-md rounded-xl border border-background-200/70 bg-background-100 p-4 md:text-right">
+                <p className="text-xs text-foreground-400">今天能不能做？</p>
+                <p className="mt-1 text-base font-bold leading-relaxed text-foreground-900">{canActText}</p>
               </div>
             </div>
           </section>
 
-          <section className="bg-navy-900/70 border border-emerald-500/15 rounded-2xl p-5 md:p-6">
-            <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">
-              今天怎麼確認？
-            </h2>
-            <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                {operationSteps.map((step, index) => (
-                  <div key={`${step}-${index}`} className="flex gap-3">
-                    <div className="w-7 h-7 rounded-full bg-emerald-500/12 border border-emerald-400/25 text-emerald-200 text-xs font-bold flex items-center justify-center shrink-0">
-                      {index + 1}
-                    </div>
-                    <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(step)}</p>
+          <section className="ma-card" aria-labelledby="main-scenario-title">
+            <p className="text-xs font-semibold text-foreground-400">今天唯一劇本</p>
+            <h2 id="main-scenario-title" className="mt-3 text-2xl font-bold leading-snug text-foreground-900 md:text-3xl">{renderSafeText(primaryScenario)}</h2>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-foreground-500 md:text-base">{renderSafeText(oneLineConclusion)}</p>
+          </section>
+
+          <section className="ma-card" aria-labelledby="current-action-title">
+            <h2 id="current-action-title" className="ma-section-title mb-4">現在你要做什麼</h2>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {(currentActions.length > 0 ? currentActions : ['等待盤中資料']).map((action, index) => (
+                <div key={`${action}-${index}`} className="flex items-start gap-3 rounded-xl border border-background-200/70 bg-background-50 p-4">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-bold text-foreground-700">{index + 1}</span>
+                  <p className="text-sm leading-relaxed text-foreground-700">{renderSafeText(action)}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="ma-card" aria-labelledby="success-conditions-title">
+            <div className="mb-4">
+              <h2 id="success-conditions-title" className="ma-section-title">劇本成立條件</h2>
+              <p className="mt-2 text-sm text-foreground-500">出現以下訊號，今天的主要判斷才算成立。</p>
+            </div>
+            {successConditions.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {successConditions.map((item, index) => (
+                  <div key={`${item}-${index}`} className="flex items-start gap-3 rounded-xl border border-background-200/70 bg-background-50 p-4">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-foreground-400/40 text-[10px] text-foreground-500" aria-hidden="true">□</span>
+                    <p className="text-sm leading-relaxed text-foreground-700">{renderSafeText(item)}</p>
                   </div>
                 ))}
               </div>
-            </div>
+            ) : <p className="ma-body">目前尚未形成確認訊號。</p>}
           </section>
 
-          <section className="bg-navy-900/70 border border-cyan-500/20 rounded-2xl p-5 md:p-6">
-            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-              <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
-                今天什麼情況停止？
-              </h2>
-              <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-full border ${getRadarClass(overviewRadarStatusText)}`}>
-                <i className="ri-radar-line" />
-                {overviewRadarStatusText}
-              </span>
+          <section className="ma-card" aria-labelledby="stop-title">
+            <div className="mb-4 flex items-start gap-3">
+              <i className="ri-stop-circle-line mt-0.5 text-rose-300" aria-hidden="true" />
+              <div>
+                <h2 id="stop-title" className="ma-section-title">劇本失敗條件</h2>
+                <p className="mt-2 text-sm text-foreground-500">任何一項出現，就停止原本判斷。</p>
+              </div>
             </div>
-
-            <div className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/70">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                {[
-                  { label: '目前原因', value: verificationFocus.currentStage },
-                  { label: '下一步', value: verificationFocus.nextStep },
-                  { label: '正在確認', value: verificationFocus.confirming },
-                  { label: '失效條件', value: firstText(decisionLifecycle.failure_condition.trigger, verificationFocus.ifFailed) },
-                  { label: '失敗後動作', value: verificationFocus.ifFailed },
-                ].map((item) => (
-                  <div key={item.label} className="min-w-0">
-                    <p className="text-cyan-300 text-[10px] font-semibold mb-1">{item.label}</p>
-                    <p className="text-slate-200 text-sm leading-relaxed">{renderSafeText(item.value)}</p>
+            {stopItems.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {stopItems.map((item, index) => (
+                  <div key={`${item}-${index}`} className="rounded-xl border border-rose-400/15 bg-rose-500/[0.04] p-4">
+                    <p className="text-sm leading-relaxed text-rose-100/80">{renderSafeText(item)}</p>
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="mt-3 rounded-xl bg-sky-500/[0.06] border border-sky-500/20 px-4 py-3">
-              <p className="text-sky-200 text-xs leading-relaxed">
-                {verificationFocus.isSynced
-                  ? `資料已同步${intradayFreshness.timestampLabel ? `：${intradayFreshness.timestampLabel}` : ''}。`
-                  : '資料尚未同步，系統會在下一個驗證點更新。'}
-              </p>
-            </div>
+            ) : <p className="ma-body">失效條件尚未完整，暫不放大動作。</p>}
           </section>
 
-          <section className="bg-navy-900/70 border border-navy-800 rounded-2xl p-5 md:p-6 text-center">
-            <Link
-              to="/member-note"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl transition-colors"
-            >
-              查看完整研究
-              <i className="ri-arrow-right-line" />
-            </Link>
+          {(prioritySectors.length > 0 || priorityStocks.length > 0) && (
+            <section className="ma-card" aria-labelledby="priority-title">
+              <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <h2 id="priority-title" className="ma-section-title">今天優先觀察</h2>
+                </div>
+                <Link to="/opportunities" className="ma-btn-outline">查看全部觀察名單</Link>
+              </div>
+              {prioritySectors.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {prioritySectors.map((sector) => <span key={sector} className="ma-badge ma-badge-neutral">{sector}</span>)}
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {priorityStocks.map((stock) => (
+                  <article key={`${stock.symbol}-${stock.name}`} className="min-w-0 rounded-xl border border-background-200/70 bg-background-50 p-4">
+                    <p className="text-xs font-bold text-foreground-500">{stock.symbol}</p>
+                    <h3 className="mt-1 font-bold text-foreground-900">{stock.name}</h3>
+                    {stock.reason && <p className="mt-2 text-xs leading-relaxed text-foreground-500">{stock.reason}</p>}
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="ma-card-elevated flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="next-return-title">
+            <div className="min-w-0">
+              <h2 id="next-return-title" className="ma-section-title">下一次回來</h2>
+              <p className="mt-2 text-sm font-semibold leading-relaxed text-amber-300">{renderSafeText(nextVerification)}</p>
+            </div>
+            <Link to="/member-note" className="ma-btn-primary w-full sm:w-auto">查看完整研究<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
           </section>
         </div>
       </main>

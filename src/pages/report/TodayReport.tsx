@@ -15,6 +15,8 @@ import { buildCanonicalNarrative, type CanonicalMorningNarrative } from '@/lib/c
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
 import { getTodayOpeningRadar } from '@/services/openingRadarService';
 import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
+import VisualPageHero from '@/components/feature/VisualPageHero';
+import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 
 type AnyObj = Record<string, any>;
 
@@ -400,39 +402,23 @@ function TodayReportContent() {
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
-        <div className="border-b border-background-200/70 bg-background-100/80">
-          <div className="ma-section-inner flex flex-wrap items-center gap-3 px-4 py-3 md:px-6">
-            <h1 className="text-sm font-bold text-foreground-900 md:text-base">{isHistoricalFallback ? '歷史資料模式' : '今日判斷'}</h1>
-            <span className="ma-badge ma-badge-neutral"><i className="ri-calendar-line" aria-hidden="true" />{report.report_date}</span>
-            {!isReportForToday && (
-              <span className="ma-badge ma-badge-danger">歷史資料：{fallbackReportDate || report.report_date}，今日為 {todayStr}</span>
-            )}
-          </div>
-        </div>
+        <VisualPageHero
+          eyebrow={isHistoricalFallback ? `歷史資料 · ${report.report_date}` : `今日判斷 · ${report.report_date}`}
+          icon="ri-route-line"
+          title="今天怎麼做？"
+          subtitle={renderSafeText(decisionContext)}
+          decisionLabel="目前行動"
+          decision={renderSafeText(detailedAction)}
+          ctaLabel="查看今天要觀察的股票"
+          ctaTo="/opportunities"
+        />
+        {!isReportForToday && (
+          <div className="ma-section-inner px-4 pt-4 md:px-6"><span className="ma-badge ma-badge-danger">歷史資料：{fallbackReportDate || report.report_date}，今日為 {todayStr}</span></div>
+        )}
 
         <div className="ma-section-inner space-y-6 px-4 py-6 md:px-6 md:py-8">
-          <section className="ma-card-elevated" aria-labelledby="today-action-title">
-            <h2 id="today-action-title" className="text-2xl font-bold text-foreground-900 md:text-3xl">今天怎麼做？</h2>
-            <div className="mt-5 max-w-3xl space-y-3">
-              <div>
-                <p className="text-xs font-semibold text-primary-300">行動</p>
-                <p className="mt-1.5 text-lg font-bold leading-relaxed text-foreground-900">{renderSafeText(detailedAction)}</p>
-              </div>
-              <div className="flex items-center gap-3 text-foreground-400" aria-hidden="true"><span className="h-px flex-1 bg-background-200" /><i className="ri-arrow-down-line" /></div>
-              <div>
-                <p className="text-xs font-semibold text-foreground-400">原因</p>
-                <p className="mt-1.5 text-sm leading-relaxed text-foreground-700">{renderSafeText(decisionContext)}</p>
-              </div>
-              <div className="flex items-center gap-3 text-foreground-400" aria-hidden="true"><span className="h-px flex-1 bg-background-200" /><i className="ri-arrow-down-line" /></div>
-              <div>
-                <p className="text-xs font-semibold text-foreground-400">下一次確認</p>
-                <p className="mt-1.5 text-base font-bold text-amber-200">{renderSafeText(nextDecisionTime)}</p>
-              </div>
-            </div>
-          </section>
-
           <section className="ma-card" aria-labelledby="decision-tree-title">
-            <h2 id="decision-tree-title" className="ma-section-title">今天的判斷流程</h2>
+            <VisualSectionHeader icon="ri-git-branch-line" title="今天的判斷流程" description={`下一次確認：${nextDecisionTime}`} />
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div className="rounded-xl border border-primary-400/20 bg-primary-500/[0.04] p-4">
                 <p className="text-sm font-bold text-primary-300">如果成立</p>

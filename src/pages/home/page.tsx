@@ -13,6 +13,7 @@ import { buildMarketState, type MarketState } from '@/services/marketStateEngine
 import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { renderSafeText } from '@/utils/renderSafe';
 import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
+import VisualPageHero from '@/components/feature/VisualPageHero';
 
 export default function HomePage() {
   return (
@@ -260,7 +261,7 @@ function HomePageContent() {
   })();
 
   return (
-    <div className="min-h-screen bg-background-50 flex flex-col overflow-x-hidden">
+    <div className="ma-page flex flex-col overflow-x-hidden">
       <Navbar marketState={marketState} />
 
       <main className="flex-1 overflow-x-hidden">
@@ -268,6 +269,19 @@ function HomePageContent() {
         {/* ═══════════════════════════════════════ */}
         {/* HERO — Action, context, next */}
         {/* ═══════════════════════════════════════ */}
+        {displayMode === 'normal' && hasReportData && (
+          <VisualPageHero
+            eyebrow="今日行動"
+            icon="ri-focus-3-line"
+            title={renderSafeText(nextAction)}
+            subtitle={renderSafeText(decisionContext)}
+            decisionLabel="下一次確認"
+            decision={nextActionTime}
+            ctaLabel="查看今日判斷"
+            ctaTo="/report/today"
+          />
+        )}
+        {displayMode !== 'normal' && (
         <section className="relative w-full overflow-hidden border-b border-background-200/70 bg-background-50 px-5 py-4 md:px-6 md:py-5">
           <div className="relative max-w-5xl mx-auto w-full">
 
@@ -392,25 +406,9 @@ function HomePageContent() {
               </section>
             )}
 
-            {/* ═══ Normal / Needs Review ═══ */}
-            {(displayMode === 'normal') && hasReportData && (
-              <div className="flex min-h-[210px] max-w-4xl flex-col justify-center">
-                <p className="mb-2 text-xs font-semibold text-white/45">今日行動</p>
-                <h1 className="text-3xl font-bold leading-tight text-white md:text-4xl">
-                  {renderSafeText(nextAction)}
-                </h1>
-                <div className="mt-4 max-w-2xl">
-                  <p className="text-xs font-semibold text-white/40">背景</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-white/72">{renderSafeText(decisionContext)}</p>
-                </div>
-                <div className="mt-4 border-t border-white/10 pt-3">
-                  <p className="text-xs text-white/45">下一步</p>
-                  <p className="mt-1 text-sm font-bold text-amber-200">{nextActionTime}</p>
-                </div>
-              </div>
-            )}
           </div>
         </section>
+        )}
 
         {/* ═══ Safe Mode: Not Today — reference card only ═══ */}
         {displayMode === 'not-today' && hasReportData && (

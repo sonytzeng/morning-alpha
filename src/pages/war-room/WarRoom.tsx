@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
+import VisualPageHero from '@/components/feature/VisualPageHero';
+import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 import Footer from '@/components/feature/Footer';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
 import { useLatestReport } from '@/hooks/useLatestReport';
@@ -427,19 +429,16 @@ function WarRoomContent() {
       <Navbar marketState={marketState} />
 
       <main className="flex-1 overflow-x-hidden">
-        {/* ── TOP BAR ── */}
-        <div className="border-b border-background-200/70 bg-background-100/80">
-          <div className="max-w-5xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary-500/15">
-                <i className="ri-sword-line text-primary-300 text-sm"></i>
-              </div>
-              <h1 className="text-slate-50 font-bold text-sm md:text-base whitespace-nowrap">
-                盤中追蹤
-              </h1>
-            </div>
-          </div>
-        </div>
+        <VisualPageHero
+          eyebrow="盤中追蹤"
+          icon="ri-pulse-line"
+          title="今天早上的判斷，現在還成立嗎？"
+          subtitle={decisionWhy}
+          decisionLabel="下一次確認"
+          decision={nextReturnTime}
+          ctaLabel="查看今日判斷"
+          ctaTo="/report/today"
+        />
 
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-5 md:py-6 space-y-3">
 
@@ -466,21 +465,18 @@ function WarRoomContent() {
             </div>
           )}
 
-          <section className="ma-card-elevated border-primary-400/25">
-            <div className="mb-3">
-              <p className="text-primary-300 text-[10px] tracking-[0.18em] font-semibold mb-1">目前判斷</p>
-              <h2 className="text-white font-bold text-xl">今天早上的判斷，現在還成立嗎？</h2>
-            </div>
+          <section className="ma-card-primary">
+            <VisualSectionHeader icon="ri-focus-3-line" title="目前判斷" description={decisionWhy} />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10">
+              <div className="ma-card-compact">
                 <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">目前狀態</p>
                 <p className="text-white font-bold text-base">{decisionStatusLabel(decisionStatus.status)}</p>
               </div>
-              <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10">
+              <div className="ma-card-compact">
                 <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">最新驗證</p>
                 <p className="text-white/80 text-sm font-medium leading-snug">{decisionWhy}</p>
               </div>
-              <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10">
+              <div className="ma-card-compact">
                 <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">下一次確認</p>
                 <p className="text-white/80 text-sm font-medium leading-snug">{nextReturnTime}</p>
               </div>
@@ -488,10 +484,7 @@ function WarRoomContent() {
           </section>
 
           <section className="ma-card">
-            <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-              <h2 className="text-white font-bold text-base">目前依據</h2>
-              <p className="text-white/35 text-xs">四個核心證據</p>
-            </div>
+            <VisualSectionHeader icon="ri-scales-3-line" title="目前依據" description="四個核心證據" />
             <div className="divide-y divide-white/8 rounded-xl border border-white/8 bg-navy-900/45 overflow-hidden">
               {evidenceCards.map((item) => (
                 <div key={item.label} className="grid grid-cols-[72px_36px_1fr] sm:grid-cols-[90px_42px_1fr_100px] gap-2 px-3 py-2 items-center">
@@ -506,10 +499,7 @@ function WarRoomContent() {
           </section>
 
           <section className="ma-card">
-            <div className="mb-3">
-              <p className="text-white/35 text-[10px] uppercase tracking-[0.3em] font-semibold mb-1">第三層</p>
-              <h2 className="text-white font-bold text-base">哪些條件改變了</h2>
-            </div>
+            <VisualSectionHeader icon="ri-exchange-line" title="哪些條件改變了" />
             {changedGroups.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {changedGroups.map((group) => (
@@ -530,10 +520,7 @@ function WarRoomContent() {
             )}
           </section>
 
-          <div className="pt-1">
-            <h2 className="text-white font-bold text-base">深入盤中資訊</h2>
-            <p className="text-white/35 text-xs mt-0.5">想深讀時再往下看。</p>
-          </div>
+          <VisualSectionHeader icon="ri-radar-line" title="深入盤中資訊" description="想深讀時再往下看。" />
 
           {/* ═══════════════════════════════════════ */}
           {/* CARD 2 — 09:30 盤中雷達 */}

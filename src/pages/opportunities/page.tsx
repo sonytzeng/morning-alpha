@@ -7,6 +7,8 @@ import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/li
 import { trackPageView } from '@/utils/analytics';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import { dedupePresentedOpportunities } from '@/lib/decisionPresentation';
+import VisualPageHero from '@/components/feature/VisualPageHero';
+import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 
 // ═══════════════════════════════════════════════════
 // V9.0: Three-tier beneficiary stock types
@@ -424,33 +426,20 @@ function OpportunitiesContent() {
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
-        <div className="border-b border-background-200/70 bg-background-100/80 backdrop-blur-sm">
-          <div className="max-w-5xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-md bg-primary-100 flex items-center justify-center">
-                <i className="ri-compass-3-line text-primary-500 text-sm"></i>
-              </div>
-              <h1 className="text-foreground-900 font-bold text-sm md:text-base whitespace-nowrap">
-                今日受惠股｜{ds.reportDate}
-              </h1>
-            </div>
-          </div>
-        </div>
+        <VisualPageHero
+          eyebrow={`今日受惠股 · ${ds.reportDate}`}
+          icon="ri-compass-3-line"
+          title="如果條件成立，要看誰？"
+          subtitle="每檔只保留今天需要的理由、確認與取消條件。"
+          decisionLabel="目前名單"
+          decision={`${presentedStocks.length} 檔待確認`}
+          ctaLabel="查看完整研究筆記"
+          ctaTo="/member-note"
+        />
 
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 md:space-y-8">
-          <section className="ma-card-elevated">
-            <div>
-              <p className="text-xs font-semibold text-foreground-400">今日股票</p>
-              <h2 className="mt-2 text-foreground-900 font-bold text-2xl md:text-3xl">如果條件成立，要看誰？</h2>
-              <p className="text-foreground-500 text-sm leading-relaxed mt-2 max-w-2xl">每檔只保留今天需要的理由、確認與取消條件。</p>
-            </div>
-          </section>
-
           <section className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-foreground-900 font-bold text-base md:text-lg">今天要確認的股票</h2>
-              <span className="px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 text-[10px]">{presentedStocks.length} 檔</span>
-            </div>
+            <VisualSectionHeader icon="ri-stock-line" title="今天要確認的股票" description="理由、確認與取消條件使用同一個閱讀順序。" />
 
             {presentedStocks.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

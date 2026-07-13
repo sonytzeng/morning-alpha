@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Ban, CalendarCheck, CheckCircle2, Flag, Scale, ShieldCheck, Target, TrendingUp } from 'lucide-react';
 import Navbar from '@/components/feature/Navbar';
+import VisualPageHero from '@/components/feature/VisualPageHero';
+import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 import Footer from '@/components/feature/Footer';
 import { supabase } from '@/lib/supabase';
 
@@ -344,7 +346,7 @@ function DetailList({ title, items, emptyText }: { title: string; items: string[
         <ul className="mt-2 space-y-2 text-sm text-white/65">
           {items.map((item, index) => (
             <li key={`${title}-${index}`} className="flex gap-2">
-              <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-sky-300/70" />
+              <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary-300/70" />
               <span>{item}</span>
             </li>
           ))}
@@ -453,31 +455,17 @@ export default function PerformancePage() {
   return (
     <div className="ma-page">
       <Navbar />
+      <VisualPageHero
+        eyebrow="決策學習"
+        icon="ri-history-line"
+        title="昨天這個決定對不對？"
+        subtitle="只看已完成的驗證結果、失敗原因與下一次改善；不重述當天劇本。"
+        decisionLabel="目前已完成驗證"
+        decision={`${stats.validCount} 個交易日`}
+        ctaLabel="查看最近驗證"
+        ctaTo={validEntries[0] ? `/reports/${validEntries[0].marketDate}` : "/reports"}
+      />
       <main className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-10">
-        <section className="ma-card-elevated overflow-hidden md:p-8">
-          <div className="grid gap-8 lg:grid-cols-[1.35fr_0.75fr] lg:items-center">
-            <div>
-              <p className="ma-eyebrow">決策學習</p>
-              <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight text-white md:text-4xl">
-                昨天這個決定對不對？
-              </h1>
-              <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300 md:text-base md:leading-8">
-                只看已完成的驗證結果、失敗原因與下一次改善；不重述當天劇本。
-              </p>
-            </div>
-            <div className="ma-card-status">
-              <div className="flex items-center gap-2 text-xs font-medium text-primary-200/80">
-                <CalendarCheck size={16} strokeWidth={1.8} />
-                目前已完成驗證
-              </div>
-              <div className="mt-4 flex items-end gap-3">
-                <span className="text-6xl font-semibold leading-none tracking-tight text-white md:text-7xl">{stats.validCount}</span>
-                <span className="pb-2 text-lg font-medium text-slate-300">交易日</span>
-              </div>
-              <p className="mt-4 text-xs leading-6 text-slate-400">不足 30 日時，只呈現已完成驗證的真實交易日。</p>
-            </div>
-          </div>
-        </section>
 
         {loading ? (
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-sm text-white/55">
@@ -515,10 +503,10 @@ export default function PerformancePage() {
             </p>
 
             <section className="ma-card mt-8 md:p-7">
+              <VisualSectionHeader icon="ri-bar-chart-box-line" title="績效總覽" description="加權成立率不是投資報酬率。" />
               <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-200/75">近 30 個有效驗證日</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">績效總覽</h2>
                   <p className="mt-2 text-sm leading-6 text-slate-400">加權成立率 = 完整成立 + 部分成立 0.5 權重；這不是投資報酬率。</p>
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-center">
@@ -592,7 +580,7 @@ export default function PerformancePage() {
                           <div>
                             <h4 className="text-sm font-semibold text-white">研究筆記</h4>
                             <p className="mt-2 text-sm leading-6 text-white/45">{entry.statusNote}</p>
-                            <Link to={`/reports/${entry.marketDate}`} className="mt-3 inline-flex text-sm font-semibold text-sky-200 hover:text-sky-100">
+                            <Link to={`/reports/${entry.marketDate}`} className="mt-3 inline-flex text-sm font-semibold text-primary-200 hover:text-primary-100">
                               查看完整研究筆記 →
                             </Link>
                           </div>

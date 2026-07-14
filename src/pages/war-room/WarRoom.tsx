@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
-import VisualPageHero from '@/components/feature/VisualPageHero';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 import Footer from '@/components/feature/Footer';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
@@ -21,6 +20,18 @@ function safeText(value: unknown, fallback = ''): string {
   if (value === null || value === undefined) return fallback;
   const text = String(value).trim();
   return text || fallback;
+}
+
+function firstRecordText(record: Record<string, unknown> | null, keys: string[], fallback = ''): string {
+  if (!record) return fallback;
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' || typeof value === 'number') {
+      const text = safeText(value);
+      if (text) return text;
+    }
+  }
+  return fallback;
 }
 
 function safeNumber(value: unknown): number | null {
@@ -423,24 +434,94 @@ function WarRoomContent() {
     },
   ].filter((group) => group.items.length > 0);
 
+  const capitalRotation = isRecord(rawAI?.capital_rotation_path) ? rawAI.capital_rotation_path : null;
+  const intradaySummaryCards = [
+    { label: '最新方向', value: safeText(openingRadar?.radar_status, humanStatus(tracking.intraday.statusText)), detail: openingRadar?.summary ? compactChineseText(openingRadar.summary, '', 30) : decisionWhy, tone: 'blue' },
+    { label: '資金', value: firstRecordText(capitalRotation, ['current_focus', 'summary', 'direction'], '資料待補'), detail: sectorData[0]?.sector ? `目前關注：${sectorData[0].sector}` : '', tone: 'green' },
+    { label: '主線', value: safeText(sectorData[0]?.sector || canonicalNarrative.today_focus.headline, '資料待補'), detail: canonicalNarrative.today_focus.summary, tone: 'amber' },
+    { label: '目前動作', value: safeText(decisionStatus.next_step || canonicalNarrative.intraday_progress.current_step, '等待確認'), detail: nextReturnTime, tone: decisionStatus.status === 'Rejected' ? 'red' : 'green' },
+  ];
+  const supportingSignals = Array.from(new Set([
+    ...canonicalNarrative.intraday_progress.completed_steps,
+    ...evidenceCards.filter((item) => item.status === '已同步').map((item) => `${item.label} ${item.note}`),
+  ].filter(Boolean))).slice(0, 3);
+  const opposingSignals = Array.from(new Set([
+    canonicalNarrative.decision_lifecycle.failure_condition.trigger,
+    ...canonicalNarrative.failure_triggers.map((item) => item.trigger),
+  ].filter(Boolean))).slice(0, 3);
+  const phase2Timeline = [
+    { time: '09:00', label: '盤前確認' },
+    { time: '09:30', label: '開盤驗證' },
+    { time: '10:30', label: '主線確認' },
+    { time: '13:30', label: '午後追蹤' },
+    { time: '14:10', label: '收盤驗證' },
+  ];
+  const observationSource = [
+    ...(displayState?.v10ObservationWatchlist || []),
+    ...(displayState?.coreBeneficiaryStocks || []),
+  ].slice(0, 3);
+  const phase2Observations = observationSource.map((item) => ({
+    name: firstRecordText(item, ['stock_name', 'name', 'symbol', 'stock_code']),
+    status: firstRecordText(item, ['role_label', 'status', 'signal_label'], '資料待補'),
+    next: firstRecordText(item, ['confirmation', 'validation_signal', 'watch_point'], nextReturnTime),
+    stop: firstRecordText(item, ['invalidation', 'invalidation_condition', 'risk_note'], canonicalNarrative.decision_lifecycle.failure_condition.trigger),
+  })).filter((item) => item.name);
+
 
   return (
-    <div className="ma-page flex flex-col overflow-x-hidden">
+    <div className="ma-page ma-pixel-page ma-war-room-page flex flex-col overflow-x-hidden">
       <Navbar marketState={marketState} />
 
       <main className="flex-1 overflow-x-hidden">
-        <VisualPageHero
-          eyebrow="盤中追蹤"
-          icon="ri-pulse-line"
-          title="今天早上的判斷，現在還成立嗎？"
-          subtitle={decisionWhy}
-          decisionLabel="下一次確認"
-          decision={nextReturnTime}
-          ctaLabel="查看今日判斷"
-          ctaTo="/report/today"
-        />
+        <section className="ma-pixel-hero">
+          <div className="ma-pixel-content ma-pixel-hero-grid">
+            <div className="ma-pixel-hero-copy">
+              <p className="ma-pixel-eyebrow"><i className="ri-pulse-line" aria-hidden="true" />盤中追蹤</p>
+              <h1>盤中即時追蹤</h1>
+              <p className="ma-pixel-hero-subtitle">{safeText(decisionWhy)}</p>
+              <div className="ma-pixel-cta-row"><Link to="/report/today" className="ma-pixel-primary-button">查看今日判斷<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>
+            </div>
+            <aside className="ma-phase2-status-card">
+              <div><span>目前狀態</span><strong>{decisionStatusLabel(decisionStatus.status)}</strong></div>
+              <div><span>最新確認</span><p>{safeText(decisionWhy)}</p></div>
+              <div><span>下一次確認</span><p>{nextReturnTime}</p></div>
+            </aside>
+          </div>
+        </section>
 
-        <div className="max-w-5xl mx-auto px-4 md:px-6 py-5 md:py-6 space-y-3">
+        <div className="ma-pixel-content ma-pixel-page-sections">
+          <section>
+            <VisualSectionHeader icon="ri-radar-line" title="盤中重點" />
+            <div className="ma-phase2-kpi-grid">
+              {intradaySummaryCards.map((item) => (
+                <article key={item.label} className={`ma-phase2-kpi-card is-${item.tone}`}>
+                  <p>{item.label}</p><strong>{safeText(item.value)}</strong>{item.detail && <span>{safeText(item.detail)}</span>}
+                </article>
+              ))}
+            </div>
+          </section>
+
+          {(supportingSignals.length > 0 || opposingSignals.length > 0) && (
+            <section className="ma-phase2-signal-grid">
+              <div className="ma-phase2-list-panel is-support"><VisualSectionHeader icon="ri-check-line" title="支持原判斷" />{supportingSignals.map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-check-line" aria-hidden="true" /><span>{safeText(item)}</span></div>)}</div>
+              <div className="ma-phase2-list-panel is-oppose"><VisualSectionHeader icon="ri-close-line" title="反對原判斷" />{opposingSignals.map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-close-line" aria-hidden="true" /><span>{safeText(item)}</span></div>)}</div>
+            </section>
+          )}
+
+          <section>
+            <VisualSectionHeader icon="ri-time-line" title="盤中時間軸" />
+            <div className="ma-phase2-timeline">{phase2Timeline.map((item) => <div key={item.time} className="ma-phase2-timeline-node"><span /><strong>{item.time}</strong><p>{item.label}</p></div>)}</div>
+          </section>
+
+          {phase2Observations.length > 0 && (
+            <section>
+              <VisualSectionHeader icon="ri-eye-line" title="目前觀察" />
+              <div className="ma-phase2-observation-grid">{phase2Observations.map((item) => <article key={item.name} className="ma-phase2-observation-card"><div><h3>{safeText(item.name)}</h3><span>{safeText(item.status)}</span></div><dl><div><dt>下一確認</dt><dd>{safeText(item.next)}</dd></div><div><dt>停止條件</dt><dd>{safeText(item.stop)}</dd></div></dl></article>)}</div>
+            </section>
+          )}
+        </div>
+
+        <div className="ma-phase2-legacy-detail max-w-5xl mx-auto px-4 md:px-6 py-5 md:py-6 space-y-3">
 
           {/* ═══ Non-trading day banner ═══ */}
           {isNonTradingDay && (

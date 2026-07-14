@@ -825,13 +825,78 @@ function MemberNoteContent() {
         canonicalNarrative.today_focus.summary,
         todayOneLine,
       );
+  const primaryCausalChain = causalChains[0] || {};
+  const primaryOvernightChain = strategy.overnight_impact_chain[0];
+  const sectorTransmission = Array.isArray(primaryCausalChain.sector_transmission)
+    ? primaryCausalChain.sector_transmission.map((item) => textValue(item)).filter(Boolean).join('、')
+    : beneficiaryCandidates.map((item) => item.sector).filter(Boolean).slice(0, 3).join('、');
+  const representativeStocks = beneficiaryCandidates
+    .slice(0, 3)
+    .map((item) => `${item.symbol ? `${item.symbol} ` : ''}${item.name}`)
+    .join('、');
+  const researchFlow = [
+    { label: '事件', value: firstText(primaryCausalChain.overseas_trigger, primaryOvernightChain?.catalyst, strategy.reasoning_chain[0]?.step) },
+    { label: '市場', value: firstText(primaryCausalChain.first_order_impact, canonicalNarrative.today_focus.summary, strategy.reasoning_chain[1]?.step) },
+    { label: '產業', value: sectorTransmission },
+    { label: '台股', value: firstText(primaryCausalChain.taiwan_market_bridge, strategy.reasoning_chain[2]?.step, todayOneLine) },
+    { label: '代表股', value: representativeStocks },
+    { label: '確認', value: firstText(checklistItems[0], decisionLifecycle.validation_plan.next_step) },
+  ].filter((item) => item.value);
+  const researchSummaryCards = [
+    { label: '市場', value: marketBias },
+    { label: '主線', value: firstText(decisionLifecycle.current_thesis.summary, todayOneLine) },
+    { label: '風險', value: firstText(decisionLifecycle.failure_condition.trigger, stopSignals[0]) },
+    { label: '下一確認', value: firstText(decisionLifecycle.validation_plan.next_step, checklistItems[0]) },
+  ];
+  const researchGuidance = [
+    { label: '先看什麼', value: firstText(checklistItems[0], decisionLifecycle.current_thesis.summary) },
+    { label: '避免什麼', value: firstText(dontDoItems[0], decisionLifecycle.failure_condition.action) },
+    { label: '何時回來', value: firstText(decisionLifecycle.validation_plan.next_step, canonicalNarrative.intraday_progress.next_step) },
+  ].filter((item) => item.value);
   return (
-    <div className="ma-page flex flex-col overflow-x-hidden">
+    <div className="ma-page ma-pixel-page ma-research-note-page flex flex-col overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
+        <section className="ma-pixel-hero">
+          <div className="ma-pixel-content ma-pixel-hero-grid">
+            <div className="ma-pixel-hero-copy">
+              <p className="ma-pixel-eyebrow"><i className="ri-book-open-line" aria-hidden="true" />完整研究邏輯 · {reportDate}</p>
+              <h1>完整研究筆記</h1>
+              <p className="ma-pixel-hero-subtitle">{renderSafeText(todayOneLine)}</p>
+              <div className="ma-pixel-cta-row"><Link to="/war-room" className="ma-pixel-primary-button">查看盤中追蹤<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>
+            </div>
+            <aside className="ma-phase2-status-card ma-research-summary-card">
+              <div><span>市場方向</span><strong>{renderSafeText(marketBias)}</strong></div>
+              <div><span>信心</span><p>{confidenceScore != null ? `${confidenceScore}/100 · ${scoreDisplay.label}` : scoreDisplay.label}</p></div>
+              <div><span>資料狀態</span><p>{renderSafeText(dsState?.dataBasisLabel || dsState?.dataStatus || '資料待補')}</p></div>
+            </aside>
+          </div>
+        </section>
+
+        <div className="ma-pixel-content ma-pixel-page-sections">
+          <section>
+            <div className="ma-phase2-kpi-grid">{researchSummaryCards.map((item) => <article key={item.label} className="ma-phase2-kpi-card"><p>{item.label}</p><strong>{renderSafeText(item.value)}</strong></article>)}</div>
+          </section>
+
+          {canViewMemberNoteFull ? (
+            <>
+              {researchFlow.length > 0 && <section><div className="ma-phase2-section-heading"><i className="ri-links-line" aria-hidden="true" /><div><h2>垂直推導</h2><p>從事件一路確認到代表股。</p></div></div><div className="ma-research-flow">{researchFlow.map((item, index) => <article key={item.label} className="ma-research-flow-node"><span>{index + 1}</span><div><p>{item.label}</p><strong>{renderSafeText(item.value)}</strong></div></article>)}</div></section>}
+
+              <section className="ma-phase2-signal-grid">
+                <div className="ma-phase2-list-panel is-support"><div className="ma-phase2-section-heading"><i className="ri-check-line" aria-hidden="true" /><div><h2>支持</h2></div></div>{whyItems.slice(0, 3).map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-check-line" aria-hidden="true" /><span>{renderSafeText(item)}</span></div>)}</div>
+                <div className="ma-phase2-list-panel is-oppose"><div className="ma-phase2-section-heading"><i className="ri-close-line" aria-hidden="true" /><div><h2>反對</h2></div></div>{stopSignals.slice(0, 3).map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-close-line" aria-hidden="true" /><span>{renderSafeText(item)}</span></div>)}</div>
+              </section>
+
+              {researchGuidance.length > 0 && <section><div className="ma-phase2-section-heading"><i className="ri-compass-3-line" aria-hidden="true" /><div><h2>今天如何使用</h2></div></div><div className="ma-research-guidance-grid">{researchGuidance.map((item) => <article key={item.label}><p>{item.label}</p><strong>{renderSafeText(item.value)}</strong></article>)}</div></section>}
+            </>
+          ) : (
+            <PaywallCard title="升級會員查看完整盤前研究筆記" description="完整研究推導、支持與反對證據，以及今日使用方式收在會員版。" requiredTier="member" featureList={['完整研究推導', '支持與反對證據', '今日使用方式']} tone="dark" />
+          )}
+        </div>
+
         {/* HEADER */}
-        <div className="border-b border-background-200/70 bg-background-100/80">
+        <div className="ma-phase2-legacy-detail border-b border-background-200/70 bg-background-100/80">
           <div className="max-w-5xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-md bg-forest-500/15 flex items-center justify-center">
@@ -861,7 +926,7 @@ function MemberNoteContent() {
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 md:space-y-8">
+        <div className="ma-phase2-legacy-detail max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 md:space-y-8">
 
           {/* REPORT META */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

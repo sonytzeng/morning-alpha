@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Ban, CalendarCheck, CheckCircle2, Flag, Scale, ShieldCheck, Target, TrendingUp } from 'lucide-react';
 import Navbar from '@/components/feature/Navbar';
-import VisualPageHero from '@/components/feature/VisualPageHero';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 import Footer from '@/components/feature/Footer';
 import { supabase } from '@/lib/supabase';
@@ -453,19 +452,65 @@ export default function PerformancePage() {
   const lockedCount = Math.max(0, validEntries.length - visibleEntries.length);
 
   return (
-    <div className="ma-page">
+    <div className="ma-page ma-pixel-page ma-performance-page flex flex-col overflow-x-hidden">
       <Navbar />
-      <VisualPageHero
-        eyebrow="決策學習"
-        icon="ri-history-line"
-        title="昨天這個決定對不對？"
-        subtitle="只看已完成的驗證結果、失敗原因與下一次改善；不重述當天劇本。"
-        decisionLabel="目前已完成驗證"
-        decision={`${stats.validCount} 個交易日`}
-        ctaLabel="查看最近驗證"
-        ctaTo={validEntries[0] ? `/reports/${validEntries[0].marketDate}` : "/reports"}
-      />
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-10">
+      <main className="flex-1 overflow-x-hidden">
+        <section className="ma-pixel-hero">
+          <div className="ma-pixel-content ma-pixel-hero-grid">
+            <div className="ma-pixel-hero-copy">
+              <p className="ma-pixel-eyebrow"><i className="ri-history-line" aria-hidden="true" />決策學習</p>
+              <h1>歷史績效回顧</h1>
+              <p className="ma-pixel-hero-subtitle">只看已完成驗證的結果、失敗原因與下一次改善。</p>
+              <div className="ma-pixel-cta-row"><Link to={validEntries[0] ? `/reports/${validEntries[0].marketDate}` : '/reports'} className="ma-pixel-primary-button">查看績效分析<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>
+            </div>
+            <aside className="ma-phase2-status-card">
+              <div><span>命中率</span><strong>{pct(stats.weightedSuccessRate)}</strong></div>
+              <div><span>完成驗證</span><p>{stats.validCount} 個交易日</p></div>
+              <div><span>最近資料</span><p>{validEntries[0]?.marketDate || '資料待補'}</p></div>
+            </aside>
+          </div>
+        </section>
+
+        <div className="ma-pixel-content ma-pixel-page-sections">
+          {loading ? (
+            <div className="ma-phase2-state-card">正在讀取歷史績效...</div>
+          ) : errorMessage ? (
+            <div className="ma-phase2-state-card is-warning"><strong>歷史績效暫時無法完整顯示</strong><p>{errorMessage}</p></div>
+          ) : stats.validCount === 0 ? (
+            <div className="ma-phase2-state-card"><strong>尚未累積完成驗證的交易日</strong><p>資料仍在累積，不以休市或不完整資料填充績效。</p></div>
+          ) : (
+            <>
+              <section>
+                <VisualSectionHeader icon="ri-bar-chart-box-line" title="績效概覽" />
+                <div className="ma-phase2-kpi-grid">
+                  <article className="ma-phase2-kpi-card"><p>驗證次數</p><strong>{stats.validCount}</strong><span>有效交易日</span></article>
+                  <article className="ma-phase2-kpi-card is-green"><p>完整成立</p><strong>{stats.complete}</strong><span>已完成驗證</span></article>
+                  <article className="ma-phase2-kpi-card is-amber"><p>加權命中率</p><strong>{pct(stats.weightedSuccessRate)}</strong><span>部分成立以 0.5 計</span></article>
+                  <article className="ma-phase2-kpi-card is-blue"><p>完整成立率</p><strong>{pct(stats.completeRate)}</strong><span>不含資料不足</span></article>
+                </div>
+              </section>
+
+              <section>
+                <VisualSectionHeader icon="ri-journal-line" title="Decision Journal" description="每列只保留結果、成功、失敗與改善。" />
+                <div className="ma-performance-journal">{visibleEntries.map((entry) => <article key={entry.reportId} className="ma-performance-journal-row"><header><div><strong>{entry.marketDate}</strong><span>{entry.marketBias}</span></div><span className={`ma-phase2-outcome is-${entry.outcome}`}>{OUTCOME_LABEL[entry.outcome]}</span></header><div className="ma-performance-journal-facts"><div><span>結果</span><p>{entry.closingSummary}</p></div>{entry.whatWasRight[0] && <div><span>一句成功</span><p>{entry.whatWasRight[0]}</p></div>}{entry.whatWasWrong[0] && <div><span>一句失敗</span><p>{entry.whatWasWrong[0]}</p></div>}{entry.tomorrowAdjustment[0] && <div><span>一句改善</span><p>{entry.tomorrowAdjustment[0]}</p></div>}</div></article>)}</div>
+              </section>
+
+              <section>
+                <VisualSectionHeader icon="ri-shield-check-line" title="Quality" />
+                <div className="ma-performance-quality-grid">
+                  <article><p>已找到報告</p><strong>{stats.totalReports}</strong><span>公開資料樣本</span></article>
+                  <article><p>完成收盤驗證</p><strong>{stats.closingVerificationCount}</strong><span>具備驗證紀錄</span></article>
+                  <article><p>未納入統計</p><strong>{stats.insufficient}</strong><span>休市、待驗證或資料不足</span></article>
+                </div>
+              </section>
+
+              {lessons[0] && <section><VisualSectionHeader icon="ri-refresh-line" title="最近改善" /><article className="ma-performance-improvement"><i className="ri-lightbulb-line" aria-hidden="true" /><p>{lessons[0]}</p></article></section>}
+            </>
+          )}
+        </div>
+      </main>
+
+      <div className="ma-phase2-legacy-detail mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-10">
 
         {loading ? (
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-sm text-white/55">
@@ -665,7 +710,7 @@ export default function PerformancePage() {
             <RuleItem icon={TrendingUp}>歷史結果只反映模型判斷紀錄，不代表投資報酬。</RuleItem>
           </ul>
         </section>
-      </main>
+      </div>
       <Footer />
     </div>
   );

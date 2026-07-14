@@ -7,7 +7,6 @@ import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/li
 import { trackPageView } from '@/utils/analytics';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import { dedupePresentedOpportunities } from '@/lib/decisionPresentation';
-import VisualPageHero from '@/components/feature/VisualPageHero';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 
 // ═══════════════════════════════════════════════════
@@ -439,22 +438,26 @@ function OpportunitiesContent() {
   const completeEnoughStocks = safePresentedStocks.filter(({ reason, confirmation, invalidation }) => Boolean(reason || confirmation || invalidation));
 
   return (
-    <div className="ma-page ma-launch-page flex flex-col overflow-x-hidden">
+    <div className="ma-page ma-pixel-page ma-opportunities-page flex flex-col overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
-        <VisualPageHero
-          eyebrow={`今日受惠股 · ${ds.reportDate}`}
-          icon="ri-compass-3-line"
-          title="如果條件成立，要看誰？"
-          subtitle="每檔只保留今天需要的理由、確認與取消條件。"
-          decisionLabel="目前名單"
-          decision={`${completeEnoughStocks.length} 檔待確認`}
-          ctaLabel="查看完整研究筆記"
-          ctaTo="/member-note"
-        />
+        <section className="ma-pixel-hero">
+          <div className="ma-pixel-content ma-pixel-hero-grid">
+            <div className="ma-pixel-hero-copy">
+              <p className="ma-pixel-eyebrow"><i className="ri-compass-3-line" aria-hidden="true" />今日機會 · {ds.reportDate}</p>
+              <h1>精選機會清單</h1>
+              <p className="ma-pixel-hero-subtitle">理由、確認時機與放棄條件。</p>
+            </div>
+            <aside className="ma-pixel-checkpoint-card">
+              <p>今日精選</p>
+              <strong>{completeEnoughStocks.length} 檔</strong>
+              <Link to="/member-note" className="ma-pixel-text-link">查看完整研究筆記<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+            </aside>
+          </div>
+        </section>
 
-        <div className="ma-section-inner space-y-14 px-5 pb-14 pt-14 md:px-12">
+        <div className="ma-pixel-content ma-pixel-page-sections">
           <section className="space-y-3">
             <VisualSectionHeader icon="ri-stock-line" title="今天要確認的股票" description="理由、確認與取消條件使用同一個閱讀順序。" />
 
@@ -463,12 +466,12 @@ function OpportunitiesContent() {
                 {completeEnoughStocks.map(({ stock, reason, confirmation, invalidation }) => {
                   const badge = opportunityBadge(stock.roleLabel);
                   return (
-                  <article key={`${stock.symbol}-${stock.name}`} className="ma-card-compact ma-opportunity-card min-w-0 p-6">
+                  <article key={`${stock.symbol}-${stock.name}`} className="ma-opportunity-card">
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="text-base font-bold text-foreground-900">{stock.symbol} {stock.name}</h3>
                       <span className={`ma-badge ${badge.className}`}>{badge.label}</span>
                     </div>
-                    <div className="ma-opportunity-details mt-4 divide-y divide-background-200/60">
+                    <div className="ma-opportunity-details">
                       {reason && <div className="pb-3"><p className="font-semibold text-foreground-400">今天值得看的原因</p><p className="mt-1.5 text-foreground-700">{reason}</p></div>}
                       {confirmation && <div className="py-3"><p className="font-semibold text-foreground-400">09:30 確認</p><p className="mt-1.5 text-foreground-700">{confirmation}</p></div>}
                       {invalidation && <div className="pt-3"><p className="font-semibold text-rose-200/80">今天放棄條件</p><p className="mt-1.5 text-foreground-700">{invalidation}</p></div>}

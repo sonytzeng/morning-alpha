@@ -13,7 +13,6 @@ import { buildMarketState, type MarketState } from '@/services/marketStateEngine
 import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { renderSafeText } from '@/utils/renderSafe';
 import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
-import VisualPageHero from '@/components/feature/VisualPageHero';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 
 export default function HomePage() {
@@ -191,7 +190,7 @@ function HomePageContent() {
     {
       label: '市場可信度',
       value: dataReliabilityLabel(displayState.dataStatus),
-      detail: undefined,
+      detail: displayState.dataBasisNote,
       tone: 'primary',
     },
     {
@@ -203,7 +202,7 @@ function HomePageContent() {
     {
       label: '主線狀態',
       value: presentation.primaryDecision.headline || '資料待補',
-      detail: undefined,
+      detail: presentation.primaryDecision.reason,
       tone: presentation.primaryDecision.state === 'ACT'
         ? 'primary'
         : presentation.primaryDecision.state === 'STOP'
@@ -211,7 +210,7 @@ function HomePageContent() {
           : 'amber',
     },
   ];
-  const riskCards = ['不要追高', '不要猜反彈', '不要重押單一方向'];
+  const riskCards = presentation.invalidationItems.slice(0, 3);
   const observationCards = Array.from(new Set([
     ...displayState.v10BeneficiaryStocks,
     ...displayState.coreBeneficiaryStocks,
@@ -321,7 +320,7 @@ function HomePageContent() {
   })();
 
   return (
-    <div className="ma-page ma-launch-page flex flex-col overflow-x-hidden">
+    <div className="ma-page ma-pixel-page ma-home-page flex flex-col overflow-x-hidden">
       <Navbar marketState={marketState} />
 
       <main className="flex-1 overflow-x-hidden">
@@ -331,21 +330,29 @@ function HomePageContent() {
         {/* ═══════════════════════════════════════ */}
         {displayMode === 'normal' && hasReportData && (
           <>
-            <VisualPageHero
-              eyebrow="今日行動"
-              icon="ri-focus-3-line"
-              title={renderSafeText(nextAction)}
-              subtitle={renderSafeText(decisionContext)}
-              decisionLabel="下一次確認"
-              decision={nextActionTime}
-              ctaLabel="查看今日判斷"
-              ctaTo="/report/today"
-            />
+            <section className="ma-pixel-hero">
+              <div className="ma-pixel-content ma-pixel-hero-grid">
+                <div className="ma-pixel-hero-copy">
+                  <p className="ma-pixel-eyebrow"><i className="ri-focus-3-line" aria-hidden="true" />今日行動</p>
+                  <h1>{renderSafeText(nextAction)}</h1>
+                  <p className="ma-pixel-hero-subtitle">{renderSafeText(decisionContext)}</p>
+                  <div className="ma-pixel-cta-row">
+                    <Link to="/report/today" className="ma-pixel-primary-button">查看今日判斷<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+                    <Link to="/member-note" className="ma-pixel-text-link">查看今日劇本<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+                  </div>
+                </div>
+                <aside className="ma-pixel-checkpoint-card">
+                  <p>下一次確認</p>
+                  <strong>{nextActionTime}</strong>
+                  <span>{currentTimelineNode.label}</span>
+                </aside>
+              </div>
+            </section>
 
-            <div className="ma-section-inner space-y-14 px-5 pb-14 pt-14 md:px-12">
+            <div className="ma-pixel-content ma-pixel-page-sections">
               <section aria-labelledby="market-observation-title">
                 <VisualSectionHeader icon="ri-radar-line" title="市場觀察重點" />
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="ma-home-highlight-grid">
                   {marketObservationCards.map((card) => (
                     <article key={card.label} className="ma-card-compact ma-highlight-card min-w-0 p-6">
                       <p className="ma-caption">{card.label}</p>
@@ -358,45 +365,43 @@ function HomePageContent() {
                 </div>
               </section>
 
-              <section aria-labelledby="risk-focus-title">
-                <VisualSectionHeader icon="ri-error-warning-line" title="今天不要做" />
-                <div className="grid gap-4 md:grid-cols-3">
-                  {riskCards.map((item, index) => (
-                    <article key={`${item}-${index}`} className="ma-card-secondary ma-avoid-card p-6">
-                      <div className="flex items-start gap-3">
-                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-rose-400/30 text-[10px] font-bold text-rose-200">{index + 1}</span>
-                        <p className="text-base font-bold leading-relaxed text-foreground-900">{item}</p>
+              <div className="ma-home-panel-grid">
+                <section className="ma-home-list-panel" aria-labelledby="risk-focus-title">
+                  <VisualSectionHeader icon="ri-error-warning-line" title="今天不要做" />
+                  {riskCards.length > 0 ? <div className="ma-home-compact-list">
+                    {riskCards.map((item) => (
+                      <div key={item} className="ma-home-compact-row is-danger">
+                        <i className="ri-forbid-line" aria-hidden="true" />
+                        <div><strong>{renderSafeText(item)}</strong></div>
                       </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
+                    ))}
+                  </div> : <p className="ma-pixel-empty-state">資料待補</p>}
+                </section>
 
-              <section aria-labelledby="observation-focus-title">
-                <VisualSectionHeader icon="ri-eye-line" title="今天要觀察" />
-                {observationCards.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-3">
-                  {observationCards.map((item, index) => (
-                    <article key={`${item}-${index}`} className="ma-card-secondary ma-watch-card flex items-start gap-3 p-6">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-primary-400/25 bg-primary-500/10 text-xs font-bold text-primary-300">{index + 1}</span>
-                      <p className="text-base font-bold leading-relaxed text-foreground-900">{renderSafeText(item)}</p>
-                    </article>
-                  ))}
-                </div>
-                ) : (
-                  <div className="ma-card-compact p-6 text-sm text-foreground-400">資料待補</div>
-                )}
-              </section>
+                <section className="ma-home-list-panel" aria-labelledby="observation-focus-title">
+                  <VisualSectionHeader icon="ri-eye-line" title="今天要觀察" />
+                  {observationCards.length > 0 ? (
+                    <div className="ma-home-compact-list">
+                      {observationCards.map((item) => (
+                        <div key={item} className="ma-home-compact-row is-success">
+                          <i className="ri-focus-2-line" aria-hidden="true" />
+                          <div><strong>{renderSafeText(item)}</strong></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="ma-pixel-empty-state">資料待補</p>}
+                </section>
+              </div>
 
               <section aria-labelledby="launch-timeline-title">
                 <VisualSectionHeader icon="ri-time-line" title="今日關注時間軸" />
-                <div className="ma-compact-timeline" role="list">
+                <div className="ma-pixel-timeline" role="list">
                   {timelineNodes.map((node) => (
-                    <div key={node.time} className={`ma-compact-timeline-node is-${node.status}`} role="listitem">
-                      <span className="ma-compact-timeline-dot" aria-hidden="true" />
-                      <p className="ma-compact-timeline-time">{node.time}</p>
-                      <p className="ma-compact-timeline-label">{node.label}</p>
-                      <p className="ma-compact-timeline-state">
+                    <div key={node.time} className={`ma-pixel-timeline-node is-${node.status}`} role="listitem">
+                      <span className="ma-pixel-timeline-dot" aria-hidden="true" />
+                      <p className="ma-pixel-timeline-time">{node.time}</p>
+                      <p className="ma-pixel-timeline-label">{node.label}</p>
+                      <p className="ma-pixel-timeline-state">
                         {node.status === 'completed' ? '已完成' : node.status === 'current' ? '目前' : node.status === 'paused' ? '暫停' : '稍後'}
                       </p>
                     </div>

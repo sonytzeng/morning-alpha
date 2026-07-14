@@ -15,7 +15,6 @@ import { buildCanonicalNarrative, type CanonicalMorningNarrative } from '@/lib/c
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
 import { getTodayOpeningRadar } from '@/services/openingRadarService';
 import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
-import VisualPageHero from '@/components/feature/VisualPageHero';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 
 type AnyObj = Record<string, any>;
@@ -399,71 +398,64 @@ function TodayReportContent() {
   }
 
   return (
-    <div className="ma-page ma-launch-page flex flex-col overflow-x-hidden">
+    <div className="ma-page ma-pixel-page ma-today-page flex flex-col overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
-        <VisualPageHero
-          eyebrow={isHistoricalFallback ? `歷史資料 · ${report.report_date}` : `今日判斷 · ${report.report_date}`}
-          icon="ri-route-line"
-          title="今天怎麼做？"
-          subtitle={renderSafeText(decisionContext)}
-          decisionLabel="目前行動"
-          decision={renderSafeText(detailedAction)}
-          ctaLabel="查看今天要觀察的股票"
-          ctaTo="/opportunities"
-        />
+        <section className="ma-pixel-hero">
+          <div className="ma-pixel-content ma-pixel-hero-grid">
+            <div className="ma-pixel-hero-copy">
+              <p className="ma-pixel-eyebrow"><i className="ri-route-line" aria-hidden="true" />{isHistoricalFallback ? `歷史資料 · ${report.report_date}` : `今日腳本 · ${report.report_date}`}</p>
+              <h1>決策流程</h1>
+              <p className="ma-pixel-hero-subtitle">{renderSafeText(decisionContext)}</p>
+              <div className="ma-pixel-cta-row"><Link to="/opportunities" className="ma-pixel-text-link">查看今天要觀察的股票<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>
+            </div>
+            <aside className="ma-pixel-checkpoint-card">
+              <p>目前行動</p>
+              <strong>{renderSafeText(detailedAction)}</strong>
+              <span>{nextDecisionTime}</span>
+            </aside>
+          </div>
+        </section>
         {!isReportForToday && (
           <div className="ma-section-inner px-4 pt-4 md:px-6"><span className="ma-badge ma-badge-danger">歷史資料：{fallbackReportDate || report.report_date}，今日為 {todayStr}</span></div>
         )}
 
-        <div className="ma-section-inner px-5 pb-14 pt-14 md:px-12">
-          <section className="ma-card-primary ma-decision-flow-card p-6" aria-labelledby="decision-flow-title">
+        <div className="ma-pixel-content ma-pixel-page-sections">
+          <section className="ma-today-flow-section" aria-labelledby="decision-flow-title">
             <VisualSectionHeader icon="ri-route-line" title="今天第一步" />
-            <div className="ma-decision-flow mx-auto mt-6 max-w-4xl">
-              <article className="ma-flow-step is-success">
-                <span className="ma-flow-index">1</span>
-                <div>
-                  <h3>開盤第一反應</h3>
-                  <p>{renderSafeText(detailedAction)}</p>
-                </div>
+            <div className="ma-today-flow">
+              <article className="ma-today-step is-success">
+                <span className="ma-today-step-index">1</span>
+                <div className="ma-today-step-content"><h3>開盤第一反應</h3><p>{renderSafeText(detailedAction)}</p></div>
+                <span className="ma-today-step-status">目前</span>
               </article>
 
-              {flowConditions.map((item, index) => (
-                <article key={`${item}-${index}`} className="ma-flow-step is-success">
-                  <span className="ma-flow-index">{index + 2}</span>
-                  <div>
-                    <h3>{index === 0 ? '成立條件' : '繼續確認'}</h3>
-                    <p>{renderSafeText(item)}</p>
-                  </div>
-                </article>
-              ))}
-
-              <article className="ma-flow-step is-warning">
-                <span className="ma-flow-index">{flowConditions.length + 2}</span>
-                <div>
-                  <h3>如果失敗</h3>
-                  <p>{stopItems[0] ? renderSafeText(stopItems[0]) : '停止今天原本劇本。'}</p>
-                </div>
+              <article className="ma-today-step is-success">
+                <span className="ma-today-step-index">2</span>
+                <div className="ma-today-step-content"><h3>成立條件</h3><ul>{flowConditions.slice(0, 3).map((item) => <li key={item}>{renderSafeText(item)}</li>)}</ul></div>
+                <span className="ma-today-step-status">待確認</span>
               </article>
 
-              <article className="ma-flow-step is-danger">
-                <span className="ma-flow-index">{flowConditions.length + 3}</span>
-                <div>
-                  <h3>停止今天原本劇本</h3>
-                  <p>不再執行原有策略。</p>
-                </div>
+              <article className="ma-today-step is-warning">
+                <span className="ma-today-step-index">3</span>
+                <div className="ma-today-step-content"><h3>如果失敗</h3><ul>{(stopItems.length > 0 ? stopItems.slice(0, 3) : ['資料待補']).map((item) => <li key={item}>{renderSafeText(item)}</li>)}</ul></div>
+                <span className="ma-today-step-status">未觸發</span>
               </article>
 
-              <article className="ma-flow-step is-neutral">
-                <span className="ma-flow-index">{flowConditions.length + 4}</span>
-                <div>
-                  <h3>等待下一次確認</h3>
-                  <p>{nextDecisionTime}</p>
-                </div>
+              <article className="ma-today-step is-danger">
+                <span className="ma-today-step-index">4</span>
+                <div className="ma-today-step-content"><h3>停止原本劇本</h3></div>
+                <span className="ma-today-step-status">待觸發</span>
               </article>
 
-              <Link to="/opportunities" className="ma-btn-primary mt-6 w-full">
+              <article className="ma-today-step is-info">
+                <span className="ma-today-step-index">5</span>
+                <div className="ma-today-step-content"><h3>等待下一次確認</h3><p>{nextDecisionTime}</p></div>
+                <span className="ma-today-step-status">待確認</span>
+              </article>
+
+              <Link to="/opportunities" className="ma-pixel-primary-button ma-today-bottom-cta">
                 查看今天要觀察的股票
                 <i className="ri-arrow-right-line" aria-hidden="true" />
               </Link>

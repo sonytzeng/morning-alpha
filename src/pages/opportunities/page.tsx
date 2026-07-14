@@ -454,21 +454,21 @@ function OpportunitiesContent() {
           ctaTo="/member-note"
         />
 
-        <div className="ma-section-inner space-y-12 px-4 py-10 md:px-6 md:py-12">
+        <div className="ma-section-inner space-y-14 px-5 pb-14 pt-14 md:px-12">
           <section className="space-y-3">
             <VisualSectionHeader icon="ri-stock-line" title="今天要確認的股票" description="理由、確認與取消條件使用同一個閱讀順序。" />
 
             {completeEnoughStocks.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="ma-opportunity-grid">
                 {completeEnoughStocks.map(({ stock, reason, confirmation, invalidation }) => {
                   const badge = opportunityBadge(stock.roleLabel);
                   return (
-                  <article key={`${stock.symbol}-${stock.name}`} className="ma-card-compact min-w-0 p-6">
+                  <article key={`${stock.symbol}-${stock.name}`} className="ma-card-compact ma-opportunity-card min-w-0 p-6">
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="text-base font-bold text-foreground-900">{stock.symbol} {stock.name}</h3>
                       <span className={`ma-badge ${badge.className}`}>{badge.label}</span>
                     </div>
-                    <div className="mt-4 divide-y divide-background-200/60 text-xs leading-relaxed">
+                    <div className="ma-opportunity-details mt-4 divide-y divide-background-200/60">
                       {reason && <div className="pb-3"><p className="font-semibold text-foreground-400">今天值得看的原因</p><p className="mt-1.5 text-foreground-700">{reason}</p></div>}
                       {confirmation && <div className="py-3"><p className="font-semibold text-foreground-400">09:30 確認</p><p className="mt-1.5 text-foreground-700">{confirmation}</p></div>}
                       {invalidation && <div className="pt-3"><p className="font-semibold text-rose-200/80">今天放棄條件</p><p className="mt-1.5 text-foreground-700">{invalidation}</p></div>}

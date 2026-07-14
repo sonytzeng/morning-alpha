@@ -342,12 +342,12 @@ function HomePageContent() {
               ctaTo="/report/today"
             />
 
-            <div className="ma-section-inner space-y-12 px-4 py-10 md:px-6 md:py-12">
+            <div className="ma-section-inner space-y-14 px-5 pb-14 pt-14 md:px-12">
               <section aria-labelledby="market-observation-title">
                 <VisualSectionHeader icon="ri-radar-line" title="市場觀察重點" />
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {marketObservationCards.map((card) => (
-                    <article key={card.label} className="ma-card-compact min-w-0 p-6">
+                    <article key={card.label} className="ma-card-compact ma-highlight-card min-w-0 p-6">
                       <p className="ma-caption">{card.label}</p>
                       <p className={`mt-2 text-base font-bold leading-snug ${card.tone === 'danger' ? 'text-rose-200' : card.tone === 'amber' ? 'text-amber-300' : 'text-primary-300'}`}>
                         {renderSafeText(card.value)}
@@ -362,7 +362,7 @@ function HomePageContent() {
                 <VisualSectionHeader icon="ri-error-warning-line" title="今天不要做" />
                 <div className="grid gap-4 md:grid-cols-3">
                   {riskCards.map((item, index) => (
-                    <article key={`${item}-${index}`} className="rounded-2xl border border-rose-400/15 bg-rose-500/[0.04] p-6">
+                    <article key={`${item}-${index}`} className="ma-card-secondary ma-avoid-card p-6">
                       <div className="flex items-start gap-3">
                         <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-rose-400/30 text-[10px] font-bold text-rose-200">{index + 1}</span>
                         <p className="text-base font-bold leading-relaxed text-foreground-900">{item}</p>
@@ -377,7 +377,7 @@ function HomePageContent() {
                 {observationCards.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-3">
                   {observationCards.map((item, index) => (
-                    <article key={`${item}-${index}`} className="ma-card-compact flex items-start gap-3 p-6">
+                    <article key={`${item}-${index}`} className="ma-card-secondary ma-watch-card flex items-start gap-3 p-6">
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-primary-400/25 bg-primary-500/10 text-xs font-bold text-primary-300">{index + 1}</span>
                       <p className="text-base font-bold leading-relaxed text-foreground-900">{renderSafeText(item)}</p>
                     </article>
@@ -386,6 +386,22 @@ function HomePageContent() {
                 ) : (
                   <div className="ma-card-compact p-6 text-sm text-foreground-400">資料待補</div>
                 )}
+              </section>
+
+              <section aria-labelledby="launch-timeline-title">
+                <VisualSectionHeader icon="ri-time-line" title="今日關注時間軸" />
+                <div className="ma-compact-timeline" role="list">
+                  {timelineNodes.map((node) => (
+                    <div key={node.time} className={`ma-compact-timeline-node is-${node.status}`} role="listitem">
+                      <span className="ma-compact-timeline-dot" aria-hidden="true" />
+                      <p className="ma-compact-timeline-time">{node.time}</p>
+                      <p className="ma-compact-timeline-label">{node.label}</p>
+                      <p className="ma-compact-timeline-state">
+                        {node.status === 'completed' ? '已完成' : node.status === 'current' ? '目前' : node.status === 'paused' ? '暫停' : '稍後'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </section>
             </div>
           </>

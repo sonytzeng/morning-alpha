@@ -15,7 +15,6 @@ import { buildCanonicalNarrative, type CanonicalMorningNarrative } from '@/lib/c
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
 import { getTodayOpeningRadar } from '@/services/openingRadarService';
 import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
-import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 
 type AnyObj = Record<string, any>;
 
@@ -145,6 +144,45 @@ type ClosingVerificationState = {
   label: string;
   nextStep: string;
 };
+
+type TodayValidationStatus = 'confirmed' | 'current' | 'pending' | 'failed' | 'missing';
+
+function firstPopulatedText(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  }
+  return '';
+}
+
+function listText(value: unknown): string {
+  if (Array.isArray(value)) return value.map((item) => safeText(item, '')).filter(Boolean).join('、');
+  return safeText(value, '');
+}
+
+function formatMarketChange(value: number | null): string {
+  if (value === null) return '資料待補';
+  const prefix = value > 0 ? '+' : '';
+  return `${prefix}${value.toFixed(2)}%`;
+}
+
+function snapshotChange(ai: AnyObj, keys: string[]): number | null {
+  const snapshot = asObj(ai.market_snapshot);
+  for (const key of keys) {
+    const row = asObj(snapshot[key]);
+    const value = toNumber(row.change_percent ?? row.change ?? row.changePercent);
+    if (value !== null) return value;
+  }
+  return null;
+}
+
+function validationStatusLabel(status: TodayValidationStatus): string {
+  if (status === 'confirmed') return '已確認';
+  if (status === 'current') return '確認中';
+  if (status === 'failed') return '未成立';
+  if (status === 'missing') return '資料待補';
+  return '待確認';
+}
 
 function normalizeWindowStatus(value: unknown): IntradayWindowStatus {
   const text = safeText(value, '').toLowerCase();
@@ -287,19 +325,119 @@ function TodayReportContent() {
   const presentation = useMemo(() => buildDecisionPresentation({
     displayState,
     narrative: canonicalNarrative,
+    opportunitySource: displayState
+      ? displayState.v10BeneficiaryEnabled
+        ? [...displayState.v10BeneficiaryStocks, ...displayState.v10ObservationWatchlist]
+        : [...displayState.coreBeneficiaryStocks, ...displayState.beneficiaryStocks]
+      : [],
     nextCheckpointFallback,
   }), [canonicalNarrative, displayState, nextCheckpointFallback]);
   const primaryScenario = presentation.mission.title;
   const oneLineConclusion = presentation.mission.explanation;
   const successConditions = presentation.confirmationItems;
-  const stopItems = presentation.invalidationItems;
   const flowConditions = successConditions.length > 0 ? successConditions : ['資料待補'];
-  const detailedAction = presentation.actionItems.find((item) => item !== presentation.primaryDecision.instruction)
-    || presentation.actionItems[0]
-    || presentation.primaryDecision.reason
-    || presentation.primaryDecision.instruction;
-  const decisionContext = [primaryScenario, oneLineConclusion].filter(Boolean).join('：');
   const nextDecisionTime = formatCheckpoint(presentation.nextCheckpoint);
+  const confidenceScore = presentation.confidence?.score;
+  const validationSteps = canonicalNarrative.decision_lifecycle.validation_plan.steps.slice(0, 5);
+  const validationItems: Array<{ label: string; detail: string; status: TodayValidationStatus }> = validationSteps.length > 0
+    ? validationSteps.map((step) => ({
+        label: firstPopulatedText(step.title, step.detail),
+        detail: step.title && step.detail && step.title !== step.detail ? step.detail : '',
+        status: step.status === 'completed'
+          ? 'confirmed' as const
+          : step.status === 'current'
+            ? 'current' as const
+            : step.status === 'missing'
+              ? 'missing' as const
+              : 'pending' as const,
+      }))
+    : flowConditions.map((label) => ({ label, detail: '', status: 'missing' as const }));
+  const confirmedValidationCount = validationItems.filter((item) => item.status === 'confirmed').length;
+  const scriptProgress = validationItems.length > 0
+    ? Math.round((confirmedValidationCount / validationItems.length) * 100)
+    : null;
+
+  const marketMetrics = [
+    {
+      label: '加權指數',
+      value: formatMarketChange(activeIntradayRadar?.taiex_change ?? snapshotChange(ai, ['taiex', 'TAIEX'])),
+      icon: 'ri-line-chart-line',
+    },
+    {
+      label: '台指期',
+      value: formatMarketChange(activeIntradayRadar?.txf_change ?? report?.taiex_futures_change ?? snapshotChange(ai, ['txf', 'TXF'])),
+      icon: 'ri-funds-line',
+    },
+    {
+      label: '台積電',
+      value: formatMarketChange(activeIntradayRadar?.tsmc_change ?? snapshotChange(ai, ['2330', 'tsmc', 'TSMC'])),
+      icon: 'ri-cpu-line',
+    },
+    {
+      label: '費半',
+      value: formatMarketChange(activeIntradayRadar?.sox_change ?? report?.sox_change ?? snapshotChange(ai, ['sox', 'SOX'])),
+      icon: 'ri-global-line',
+    },
+    {
+      label: '美股期貨',
+      value: formatMarketChange(toNumber(ai.us_futures_change ?? ai.nasdaq_futures_change ?? ai.nq_futures_change)),
+      icon: 'ri-bar-chart-grouped-line',
+    },
+    {
+      label: 'AI 市場健康度',
+      value: confidenceScore == null ? '資料待補' : `${confidenceScore}/100`,
+      icon: 'ri-pulse-line',
+    },
+  ];
+
+  const riskValue = firstPopulatedText(asObj(ai.public_summary).risk_level, ai.risk_level, ai.risk_status);
+  const riskTone = /高|high|danger/i.test(riskValue)
+    ? 'danger'
+    : /中|medium|warning/i.test(riskValue)
+      ? 'warning'
+      : /低|low|safe/i.test(riskValue)
+        ? 'success'
+        : 'neutral';
+  const avoidAction = report?.avoid_today?.find((item) => Boolean(item?.trim())) || '';
+  const focusStocks = presentation.opportunities
+    .filter((stock) => stock.oneLineReason || stock.confirmation || stock.invalidation)
+    .slice(0, 3);
+
+  const rotation = asObj(ai.capital_rotation_path);
+  const reduceWeight = firstPopulatedText(
+    listText(rotation.reduce_weight),
+    listText(rotation.reduce),
+    listText(rotation.decrease),
+    listText(ai.reduce_sector_weights),
+  );
+  const increaseWeight = firstPopulatedText(
+    listText(rotation.increase_weight),
+    listText(rotation.increase),
+    listText(rotation.add),
+    listText(ai.increase_sector_weights),
+  );
+  const activeFailure = canonicalNarrative.failure_triggers[0]
+    || (presentation.primaryDecision.state === 'STOP' ? canonicalNarrative.decision_lifecycle.failure_condition : null);
+
+  const timelineDefinitions = [
+    { time: '08:30', minutes: 510, label: '盤前完成' },
+    { time: '09:00', minutes: 540, label: '開盤確認' },
+    { time: '13:00', minutes: 780, label: '盤中確認' },
+    { time: '13:30', minutes: 810, label: '更新劇本' },
+    { time: '14:10', minutes: 850, label: '收盤驗證' },
+  ];
+  const currentTimelineIndex = timelineDefinitions.reduce(
+    (activeIndex, item, index) => taipeiMinutes >= item.minutes ? index : activeIndex,
+    0,
+  );
+  const decisionTimeline = timelineDefinitions.map((item, index) => ({
+    ...item,
+    state: closingVerificationState.completed || index < currentTimelineIndex
+      ? 'completed'
+      : index === currentTimelineIndex
+        ? 'current'
+        : 'upcoming',
+  }));
   if (loading) {
     return (
       <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -402,18 +540,31 @@ function TodayReportContent() {
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
-        <section className="ma-pixel-hero">
-          <div className="ma-pixel-content ma-pixel-hero-grid">
-            <div className="ma-pixel-hero-copy">
-              <p className="ma-pixel-eyebrow"><i className="ri-route-line" aria-hidden="true" />{isHistoricalFallback ? `歷史資料 · ${report.report_date}` : `今日腳本 · ${report.report_date}`}</p>
-              <h1>決策流程</h1>
-              <p className="ma-pixel-hero-subtitle">{renderSafeText(decisionContext)}</p>
-              <div className="ma-pixel-cta-row"><Link to="/opportunities" className="ma-pixel-text-link">查看今天要觀察的股票<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>
+        <section className="ma-today-v3-hero">
+          <div className="ma-pixel-content ma-today-v3-hero-grid">
+            <div className="ma-today-v3-hero-copy">
+              <p className="ma-pixel-eyebrow"><i className="ri-focus-3-line" aria-hidden="true" />AI 今日決策中心 · {isHistoricalFallback ? `歷史資料 ${report.report_date}` : report.report_date}</p>
+              <h1>今日劇本</h1>
+              <p className="ma-today-v3-scenario">{renderSafeText(primaryScenario)}</p>
+              {oneLineConclusion && <p className="ma-today-v3-context">{renderSafeText(oneLineConclusion)}</p>}
+              <div className="ma-today-v3-hero-metrics">
+                <div><span>AI 信心</span><strong>{confidenceScore == null ? '待確認' : `${confidenceScore}/100`}</strong></div>
+                <div><span>劇本成立程度</span><strong>{scriptProgress == null ? '待確認' : `${scriptProgress}%`}</strong></div>
+                <div><span>下一次確認</span><strong>{presentation.nextCheckpoint.time || '待確認'}</strong><small>{presentation.nextCheckpoint.label}</small></div>
+              </div>
+              {scriptProgress != null && (
+                <div className="ma-today-v3-hero-progress" role="progressbar" aria-label="劇本成立程度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={scriptProgress}>
+                  <span style={{ width: `${scriptProgress}%` }} />
+                </div>
+              )}
             </div>
-            <aside className="ma-pixel-checkpoint-card">
-              <p>目前行動</p>
-              <strong>{renderSafeText(detailedAction)}</strong>
-              <span>{nextDecisionTime}</span>
+            <aside className="ma-today-v3-advice-card">
+              <p className="ma-today-v3-card-eyebrow"><i className="ri-sparkling-2-line" aria-hidden="true" />AI 建議</p>
+              <span className={`ma-today-v3-state is-${presentation.primaryDecision.state.toLowerCase()}`}>{presentation.primaryDecision.headline}</span>
+              <h2>{renderSafeText(presentation.primaryDecision.instruction)}</h2>
+              {avoidAction && <div><span>不要</span><strong>{renderSafeText(avoidAction)}</strong></div>}
+              <div><span>等待</span><strong>{renderSafeText(nextDecisionTime)}</strong></div>
+              <div><span>目前風險</span><strong className={`is-${riskTone}`}>{renderSafeText(riskValue || '待確認')}</strong></div>
             </aside>
           </div>
         </section>
@@ -421,45 +572,78 @@ function TodayReportContent() {
           <div className="ma-section-inner px-4 pt-4 md:px-6"><span className="ma-badge ma-badge-danger">歷史資料：{fallbackReportDate || report.report_date}，今日為 {todayStr}</span></div>
         )}
 
-        <div className="ma-pixel-content ma-pixel-page-sections">
-          <section className="ma-today-flow-section" aria-labelledby="decision-flow-title">
-            <VisualSectionHeader icon="ri-route-line" title="今天第一步" />
-            <div className="ma-today-flow">
-              <article className="ma-today-step is-success">
-                <span className="ma-today-step-index">1</span>
-                <div className="ma-today-step-content"><h3>開盤第一反應</h3><p>{renderSafeText(detailedAction)}</p></div>
-                <span className="ma-today-step-status">目前</span>
-              </article>
-
-              <article className="ma-today-step is-success">
-                <span className="ma-today-step-index">2</span>
-                <div className="ma-today-step-content"><h3>成立條件</h3><ul>{flowConditions.slice(0, 3).map((item) => <li key={item}>{renderSafeText(item)}</li>)}</ul></div>
-                <span className="ma-today-step-status">待確認</span>
-              </article>
-
-              <article className="ma-today-step is-warning">
-                <span className="ma-today-step-index">3</span>
-                <div className="ma-today-step-content"><h3>如果失敗</h3><ul>{(stopItems.length > 0 ? stopItems.slice(0, 3) : ['資料待補']).map((item) => <li key={item}>{renderSafeText(item)}</li>)}</ul></div>
-                <span className="ma-today-step-status">未觸發</span>
-              </article>
-
-              <article className="ma-today-step is-danger">
-                <span className="ma-today-step-index">4</span>
-                <div className="ma-today-step-content"><h3>停止原本劇本</h3></div>
-                <span className="ma-today-step-status">待觸發</span>
-              </article>
-
-              <article className="ma-today-step is-info">
-                <span className="ma-today-step-index">5</span>
-                <div className="ma-today-step-content"><h3>等待下一次確認</h3><p>{nextDecisionTime}</p></div>
-                <span className="ma-today-step-status">待確認</span>
-              </article>
-
-              <Link to="/opportunities" className="ma-pixel-primary-button ma-today-bottom-cta">
-                查看今天要觀察的股票
-                <i className="ri-arrow-right-line" aria-hidden="true" />
-              </Link>
+        <div className="ma-pixel-content ma-today-v3-sections">
+          <section>
+            <header className="ma-today-v3-section-header"><div><p>MARKET DASHBOARD</p><h2>市場即時儀表板</h2></div><span>{hasFreshIntradayRadar ? '盤中資料已同步' : '依目前可用資料'}</span></header>
+            <div className="ma-today-v3-kpi-grid">
+              {marketMetrics.map((metric) => (
+                <article key={metric.label} className="ma-today-v3-kpi-card">
+                  <i className={metric.icon} aria-hidden="true" />
+                  <span>{metric.label}</span>
+                  <strong>{metric.value}</strong>
+                </article>
+              ))}
             </div>
+          </section>
+
+          <section className="ma-today-v3-validation-card">
+            <header className="ma-today-v3-section-header"><div><p>SCENARIO VALIDATION</p><h2>劇本驗證 Checklist</h2></div><strong>{scriptProgress == null ? '待確認' : `${scriptProgress}%`}</strong></header>
+            <div className="ma-today-v3-checklist">
+              {validationItems.map((item, index) => (
+                <article key={`${item.label}-${index}`} className={`is-${item.status}`}>
+                  <i className={item.status === 'confirmed' ? 'ri-checkbox-circle-fill' : item.status === 'failed' ? 'ri-close-circle-fill' : item.status === 'current' ? 'ri-loader-4-line' : 'ri-checkbox-blank-circle-line'} aria-hidden="true" />
+                  <div><strong>{renderSafeText(item.label)}</strong>{item.detail && <p>{renderSafeText(item.detail)}</p>}</div>
+                  <span>{validationStatusLabel(item.status)}</span>
+                </article>
+              ))}
+            </div>
+            {scriptProgress != null && <div className="ma-today-v3-validation-progress"><span style={{ width: `${scriptProgress}%` }} /></div>}
+          </section>
+
+          {focusStocks.length > 0 && (
+            <section>
+              <header className="ma-today-v3-section-header"><div><p>FOCUS STOCKS</p><h2>今日重點股票</h2></div><Link to="/opportunities">查看完整名單<i className="ri-arrow-right-line" aria-hidden="true" /></Link></header>
+              <div className="ma-today-v3-stock-grid">
+                {focusStocks.map((stock) => (
+                  <Link key={`${stock.symbol}-${stock.name}`} to="/opportunities" className="ma-today-v3-stock-card">
+                    <div><div><span>{stock.symbol}</span><h3>{stock.name}</h3></div>{stock.roleLabel && <b>{stock.roleLabel}</b>}</div>
+                    {stock.oneLineReason && <p>{stock.oneLineReason}</p>}
+                    {stock.confirmation && <small><i className="ri-focus-3-line" aria-hidden="true" />{stock.confirmation}</small>}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {activeFailure && (
+            <section className="ma-today-v3-correction-card">
+              <header className="ma-today-v3-section-header"><div><p>SCENARIO REVISION</p><h2>劇本修正</h2></div><span className={`is-${presentation.primaryDecision.state === 'STOP' ? 'danger' : 'warning'}`}>{presentation.primaryDecision.state === 'STOP' ? '已觸發' : '監控中'}</span></header>
+              <div className="ma-today-v3-correction-grid">
+                {activeFailure.trigger && <div><span>目前失敗原因</span><strong>{renderSafeText(activeFailure.trigger)}</strong></div>}
+                {activeFailure.action && <div><span>AI 修正方向</span><strong>{renderSafeText(activeFailure.action)}</strong></div>}
+                {reduceWeight && <div><span>降低權重</span><strong>{renderSafeText(reduceWeight)}</strong></div>}
+                {increaseWeight && <div><span>提高權重</span><strong>{renderSafeText(increaseWeight)}</strong></div>}
+                <div><span>下一次確認</span><strong>{renderSafeText(nextDecisionTime)}</strong></div>
+              </div>
+            </section>
+          )}
+
+          <section>
+            <header className="ma-today-v3-section-header"><div><p>DECISION TIMELINE</p><h2>今日決策節點</h2></div></header>
+            <div className="ma-today-v3-timeline">
+              {decisionTimeline.map((item) => (
+                <article key={item.time} className={`is-${item.state}`}><i aria-hidden="true" /><strong>{item.time}</strong><span>{item.label}</span><small>{item.state === 'completed' ? '已完成' : item.state === 'current' ? '目前節點' : '未開始'}</small></article>
+              ))}
+            </div>
+          </section>
+
+          <section className="ma-today-v3-journey">
+            <div><p>NEXT JOURNEY</p><h2>下一步</h2><span>從盤中追蹤到收盤驗證，把今天的決策走完。</span></div>
+            <nav aria-label="今日決策下一步">
+              <Link to="/war-room"><i className="ri-radar-line" aria-hidden="true" /><span>War Room<small>盤中追蹤</small></span><b>01</b></Link>
+              <Link to="/verification"><i className="ri-checkbox-circle-line" aria-hidden="true" /><span>收盤驗證<small>確認劇本結果</small></span><b>02</b></Link>
+              <Link to="/performance"><i className="ri-line-chart-line" aria-hidden="true" /><span>歷史績效<small>累積決策學習</small></span><b>03</b></Link>
+            </nav>
           </section>
         </div>
       </main>

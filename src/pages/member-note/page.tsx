@@ -16,6 +16,7 @@ import {
 } from '@/utils/aiStrategyParser';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
+import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
 import { trackPageView, trackEvent } from '@/utils/analytics';
 import PaywallCard from '@/components/paywall/PaywallCard';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
@@ -30,9 +31,13 @@ type MemberBeneficiaryCandidate = {
   symbol?: string;
   name: string;
   sector?: string;
+  role?: string;
   reason?: string;
   risk?: string;
   watchPoint?: string;
+  confirmation?: string;
+  invalidation?: string;
+  transmissionPath?: string;
   confidence?: string | number;
   evidence?: string[];
 };
@@ -57,6 +62,96 @@ function firstText(...values: unknown[]): string {
     if (text) return text;
   }
   return '';
+}
+
+const researchLabelMap: Record<string, string> = {
+  SEMICONDUCTOR: '半導體',
+  DEFENSIVE: '防禦型資金',
+  MEMORY: '記憶體',
+  AI_SERVER: 'AI 伺服器',
+  FINANCIAL: '金融',
+  ELECTRONICS: '電子權值',
+  MAIN_THESIS: '核心主軸',
+  SECONDARY_CANDIDATE: '次要觀察',
+  RISK_HEDGE: '風險對沖',
+};
+
+function normalizeResearchText(value: unknown): string {
+  return textValue(value)
+    .replace(/\s+/g, ' ')
+    .replace(/[，﹐]/g, '，')
+    .replace(/[。｡]/g, '。')
+    .replace(/[：﹕]/g, '：')
+    .replace(/^(?:摘要|事件|觸發標籤|產業|主軸|說明)\s*[：:]\s*/i, '')
+    .trim();
+}
+
+function researchComparisonKey(value: unknown): string {
+  return normalizeResearchText(value)
+    .toLocaleLowerCase('zh-TW')
+    .replace(/[\s，。、；：！？,.!?;:'"「」『』（）()【】\[\]—–-]/g, '');
+}
+
+function isDuplicateResearchText(a: unknown, b: unknown): boolean {
+  const left = researchComparisonKey(a);
+  const right = researchComparisonKey(b);
+  if (!left || !right) return false;
+  if (left === right) return true;
+
+  const shorter = left.length <= right.length ? left : right;
+  const longer = left.length > right.length ? left : right;
+  return shorter.length >= 18 && shorter.length / longer.length >= 0.72 && longer.includes(shorter);
+}
+
+function isDebugResearchText(value: unknown): boolean {
+  const text = normalizeResearchText(value);
+  if (!text || /^(?:null|undefined)$/i.test(text)) return true;
+  return /^(?:event_score|market_score|score)$/i.test(text)
+    || /\b(?:event_score|market_score|score)\s*=/i.test(text)
+    || /^\s*[a-z][a-z0-9_]*\s*=\s*.+$/i.test(text)
+    || /^\s*[\[{].*[\]}]\s*$/s.test(text);
+}
+
+function uniqueResearchItems(values: unknown[], excluded: unknown[] = [], limit = 5): string[] {
+  const output: string[] = [];
+  for (const value of values) {
+    const normalized = normalizeResearchText(value);
+    if (!normalized || isDebugResearchText(normalized)) continue;
+    const text = /^[A-Z][A-Z0-9_ ›→-]*$/.test(normalized) || /^[a-z][a-z0-9_]*$/.test(normalized)
+      ? formatResearchLabel(normalized)
+      : normalized;
+    if (excluded.some((item) => isDuplicateResearchText(text, item))) continue;
+    if (output.some((item) => isDuplicateResearchText(text, item))) continue;
+    output.push(text);
+    if (output.length >= limit) break;
+  }
+  return output;
+}
+
+function firstUniqueResearchText(values: unknown[], excluded: unknown[], fallback: string): string {
+  return uniqueResearchItems(values, excluded, 1)[0] || fallback;
+}
+
+function formatResearchLabel(value: unknown): string {
+  const text = normalizeResearchText(value);
+  if (!text || isDebugResearchText(text)) return '';
+  if (/[›→>]/.test(text)) {
+    return text
+      .split(/\s*[›→>]\s*/)
+      .map((part) => formatResearchLabel(part))
+      .filter(Boolean)
+      .join(' › ');
+  }
+  const enumKey = text.replace(/[\s-]+/g, '_').toUpperCase();
+  if (researchLabelMap[enumKey]) return researchLabelMap[enumKey];
+  if (/^[A-Z][A-Z0-9_ -]*$/.test(text) || /^[a-z][a-z0-9_]*$/.test(text)) {
+    return text
+      .split(/[_\s-]+/)
+      .filter(Boolean)
+      .map((part) => researchLabelMap[part.toUpperCase()] || part.toLocaleLowerCase('zh-TW'))
+      .join(' ');
+  }
+  return text;
 }
 
 function uniqueTextList(values: unknown[], limit = 5): string[] {
@@ -84,9 +179,13 @@ function normalizeLegacyBeneficiary(row: Record<string, unknown>): MemberBenefic
     symbol: firstText(row.symbol, row.stock_id, row.stock_code),
     name,
     sector: firstText(row.sector, row.group),
-    reason: firstText(row.reason, row.rationale),
-    risk: firstText(row.risk_note, row.risk),
-    watchPoint: firstText(row.watch_point),
+    role: firstText(row.role, row.narrative_role, row.classification, row.group),
+    reason: firstText(row.thesis, row.reason, row.narrative, row.rationale, row.transmission_path),
+    risk: firstText(row.risk_note, row.risk, row.invalidation, row.stop_condition),
+    watchPoint: firstText(row.watch_point, row.observation),
+    confirmation: firstText(row.confirmation, row.validation_signal, row.observation, row.catalyst, row.watch_point),
+    invalidation: firstText(row.invalidation, row.invalidation_condition, row.risk, row.risk_note, row.stop_condition),
+    transmissionPath: firstText(row.transmission_path),
     confidence: row.confidence ?? row.confidence_level ?? row.confidence_score,
     evidence,
   };
@@ -101,9 +200,13 @@ function normalizeV2Beneficiary(item: NonNullable<MemberResearchNoteV2['benefici
     symbol: firstText(row.stock_code, row.symbol, row.stock_id),
     name,
     sector: firstText(row.sector, row.group),
-    reason: firstText(row.reason, row.rationale),
-    risk: firstText(row.risk, row.risk_note),
-    watchPoint: firstText(row.watch_point),
+    role: firstText(row.role, row.narrative_role, row.classification, row.group),
+    reason: firstText(row.thesis, row.reason, row.narrative, row.rationale, row.transmission_path),
+    risk: firstText(row.risk, row.risk_note, row.invalidation, row.stop_condition),
+    watchPoint: firstText(row.watch_point, row.observation),
+    confirmation: firstText(row.confirmation, row.validation_signal, row.observation, row.catalyst, row.watch_point),
+    invalidation: firstText(row.invalidation, row.invalidation_condition, row.risk, row.risk_note, row.stop_condition),
+    transmissionPath: firstText(row.transmission_path),
     confidence: row.confidence ?? row.confidence_level ?? row.confidence_score,
     evidence: Array.isArray(row.evidence) ? row.evidence.map((value) => textValue(value)).filter(Boolean) : undefined,
   };
@@ -772,16 +875,29 @@ function MemberNoteContent() {
   });
   const decisionLifecycle = canonicalNarrative.decision_lifecycle;
   const openingThesis = asRecord(memberNoteV2?.opening_thesis);
-  const todayOneLine = firstText(
+  const decisionPresentation = buildDecisionPresentation({
+    displayState: dsState,
+    narrative: canonicalNarrative,
+    opportunitySource: hasItems(v2BeneficiaryCandidates)
+      ? memberNoteV2?.beneficiary_candidates || []
+      : asRecordArray(rawAI.beneficiary_stocks),
+    nextCheckpointFallback: decisionLifecycle.validation_plan.next_step,
+  });
+  const readableMarketDirection = formatResearchLabel(marketBias);
+  const readableThesis = formatResearchLabel(decisionLifecycle.current_thesis.summary);
+  const heroConclusion = firstUniqueResearchText([
     canonicalNarrative.today_focus.summary,
+    decisionPresentation.primaryDecision.headline,
+    readableMarketDirection && readableThesis ? `${readableMarketDirection}：${readableThesis}` : '',
     canonicalNarrative.today_focus.headline,
     researcherSummary,
     openingThesis.summary,
     rawAI.daily_sentence,
-  );
+  ], [], '今日研究結論仍在整理');
+  const todayOneLine = heroConclusion;
   const v10BeneficiaryEnabled = dsState?.v10BeneficiaryEnabled === true || rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist || dsState?.v10ObservationWatchlist, 5);
-  const dontDoItems = [
+  const dontDoItems = uniqueResearchItems([
     canonicalNarrative.today_focus.risk,
     canonicalNarrative.failure_triggers[0]?.action,
     ...textList(rawAI.do_not_do_list),
@@ -789,26 +905,21 @@ function MemberNoteContent() {
     ...recordList(memberNoteV2?.risk_scenarios).map((item) => firstText(item.response, item.condition, item.risk)),
     ...recordList(memberNoteV2?.invalidation_conditions).map((item) => firstText(item.action_note, item.condition, item.meaning)),
     ...recordList(memberNoteV2?.invalidation_rules).map((item) => firstText(item.action_note, item.condition, item.meaning)),
-  ].filter(Boolean).slice(0, 5);
+  ], [heroConclusion], 5);
   const decisionStatusText = humanStatus(decisionLifecycle.decision_status.status);
-  const whyBullets = uniqueTextList([
-    decisionLifecycle.question.why,
-    decisionLifecycle.current_thesis.summary,
-    canonicalNarrative.today_focus.why,
-    canonicalNarrative.today_focus.summary,
-    openingThesis.summary,
-    firstLine(memberNoteV2?.core_reasoning),
-    researcherSummary,
-  ], 5);
-  const whyItems = whyBullets.length > 0 ? whyBullets : ['今日原因資料尚未完整，等待研究筆記補齊。'];
-  const rawChecklistItems = uniqueTextList([
+  const rawChecklistItems = uniqueResearchItems([
     ...decisionLifecycle.validation_plan.steps.map((step) => firstText(step.detail, step.title, step.time)),
     decisionLifecycle.validation_plan.next_step,
     canonicalNarrative.intraday_progress.current_step,
     canonicalNarrative.intraday_progress.next_step,
-  ], 5);
+  ], [heroConclusion], 5);
   const checklistItems = rawChecklistItems.length > 0 ? rawChecklistItems : ['今日驗證清單尚未完整，先等待下一個同步點。'];
-  const rawStopSignals = uniqueTextList([
+  const heroValidation = firstUniqueResearchText([
+    decisionLifecycle.validation_plan.next_step,
+    formatCheckpoint(decisionPresentation.nextCheckpoint),
+    ...checklistItems,
+  ], [heroConclusion], '等待下一個可用確認訊號');
+  const rawStopSignals = uniqueResearchItems([
     decisionLifecycle.failure_condition.trigger,
     decisionLifecycle.failure_condition.meaning,
     decisionLifecycle.failure_condition.action,
@@ -816,8 +927,32 @@ function MemberNoteContent() {
     ...recordList(memberNoteV2?.risk_scenarios).map((item) => firstText(item.condition, item.risk, item.response)),
     ...recordList(memberNoteV2?.invalidation_conditions).map((item) => firstText(item.condition, item.meaning, item.action_note)),
     ...recordList(memberNoteV2?.invalidation_rules).map((item) => firstText(item.condition, item.meaning, item.action_note)),
-  ], 5);
+  ], [heroConclusion, heroValidation], 5);
   const stopSignals = rawStopSignals.length > 0 ? rawStopSignals : ['今日失效條件尚未完整，暫不放大動作。'];
+  const whyItems = uniqueResearchItems([
+    decisionLifecycle.question.why,
+    canonicalNarrative.today_focus.why,
+    ...textList(memberNoteV2?.core_reasoning),
+    ...textList(openingThesis.signals),
+    ...beneficiaryCandidates.flatMap((item) => item.evidence || []),
+    ...checklistItems,
+    researcherSummary,
+  ], [heroConclusion, heroValidation, ...stopSignals], 3);
+  const supportItems = whyItems.length > 0 ? whyItems : ['尚未取得額外支持證據'];
+  const opposeItems = uniqueResearchItems([
+    decisionLifecycle.failure_condition.meaning,
+    ...canonicalNarrative.failure_triggers.map((item) => item.meaning),
+    ...recordList(memberNoteV2?.risk_scenarios).map((item) => firstText(item.risk, item.condition)),
+    ...recordList(memberNoteV2?.invalidation_conditions).map((item) => firstText(item.meaning, item.condition)),
+  ], [heroConclusion, heroValidation, ...supportItems], 3);
+  const oppositionItems = opposeItems.length > 0 ? opposeItems : ['尚未出現明確反向證據'];
+  const invalidationItems = uniqueResearchItems([
+    decisionLifecycle.failure_condition.trigger,
+    decisionLifecycle.failure_condition.action,
+    ...canonicalNarrative.failure_triggers.flatMap((item) => [item.trigger, item.action]),
+    ...recordList(memberNoteV2?.invalidation_conditions).flatMap((item) => [item.condition, item.action_note]),
+    ...recordList(memberNoteV2?.invalidation_rules).flatMap((item) => [item.condition, item.action_note]),
+  ], [...supportItems, ...oppositionItems], 3);
   const todayTakeaway = hasCompletedClosingVerification
     ? decisionLifecycle.daily_lesson
     : firstText(
@@ -827,32 +962,116 @@ function MemberNoteContent() {
       );
   const primaryCausalChain = causalChains[0] || {};
   const primaryOvernightChain = strategy.overnight_impact_chain[0];
-  const sectorTransmission = Array.isArray(primaryCausalChain.sector_transmission)
-    ? primaryCausalChain.sector_transmission.map((item) => textValue(item)).filter(Boolean).join('、')
-    : beneficiaryCandidates.map((item) => item.sector).filter(Boolean).slice(0, 3).join('、');
+  const capitalRotation = asRecord(rawAI.capital_rotation_path);
+  const externalPriority = asRecord(rawAI.external_priority);
+  const sectorTransmission = uniqueResearchItems(
+    Array.isArray(primaryCausalChain.sector_transmission)
+      ? primaryCausalChain.sector_transmission.map(formatResearchLabel)
+      : beneficiaryCandidates.map((item) => formatResearchLabel(item.sector)),
+    [],
+    3,
+  ).join('、');
   const representativeStocks = beneficiaryCandidates
     .slice(0, 3)
     .map((item) => `${item.symbol ? `${item.symbol} ` : ''}${item.name}`)
     .join('、');
+  const summaryMainline = firstUniqueResearchText([
+    sectorTransmission,
+    capitalRotation.main_theme,
+    capitalRotation.theme,
+    externalPriority.theme,
+    beneficiaryCandidates.map((item) => formatResearchLabel(item.sector)).filter(Boolean).join('、'),
+  ], [heroConclusion], '等待盤中訊號');
+  const summaryRisk = firstUniqueResearchText(stopSignals, [heroConclusion, heroValidation], '等待反向訊號');
+  const summaryNext = firstUniqueResearchText([
+    decisionLifecycle.validation_plan.next_step,
+    formatCheckpoint(decisionPresentation.nextCheckpoint),
+    ...checklistItems,
+  ], [heroConclusion], '等待盤中訊號');
+  const externalEvent = firstUniqueResearchText([
+    primaryCausalChain.overseas_trigger,
+    primaryOvernightChain?.catalyst,
+    externalPriority.event,
+    externalPriority.summary,
+    strategy.reasoning_chain[0]?.step,
+  ], [heroConclusion, heroValidation, summaryMainline], '目前尚缺明確外部事件證據');
+  const capitalIndustryReaction = firstUniqueResearchText([
+    capitalRotation.summary,
+    capitalRotation.direction,
+    capitalRotation.next_role,
+    primaryCausalChain.first_order_impact,
+    sectorTransmission,
+    strategy.reasoning_chain[1]?.step,
+  ], [heroConclusion, heroValidation, externalEvent], '目前尚缺明確資金／產業反應證據');
+  const taiwanMapping = firstUniqueResearchText([
+    primaryCausalChain.taiwan_market_bridge,
+    asRecord(primaryOvernightChain).taiwan_mapping,
+    strategy.reasoning_chain[2]?.step,
+  ], [heroConclusion, heroValidation, externalEvent, capitalIndustryReaction], '目前尚缺明確台股映射證據');
+  const flowValidation = firstUniqueResearchText([
+    ...checklistItems,
+    decisionLifecycle.validation_plan.next_step,
+  ], [heroConclusion, heroValidation, externalEvent, capitalIndustryReaction, taiwanMapping], '目前尚缺明確成立驗證條件');
   const researchFlow = [
-    { label: '事件', value: firstText(primaryCausalChain.overseas_trigger, primaryOvernightChain?.catalyst, strategy.reasoning_chain[0]?.step) },
-    { label: '市場', value: firstText(primaryCausalChain.first_order_impact, canonicalNarrative.today_focus.summary, strategy.reasoning_chain[1]?.step) },
-    { label: '產業', value: sectorTransmission },
-    { label: '台股', value: firstText(primaryCausalChain.taiwan_market_bridge, strategy.reasoning_chain[2]?.step, todayOneLine) },
-    { label: '代表股', value: representativeStocks },
-    { label: '確認', value: firstText(checklistItems[0], decisionLifecycle.validation_plan.next_step) },
-  ].filter((item) => item.value);
-  const researchSummaryCards = [
-    { label: '市場', value: marketBias },
-    { label: '主線', value: firstText(decisionLifecycle.current_thesis.summary, todayOneLine) },
-    { label: '風險', value: firstText(decisionLifecycle.failure_condition.trigger, stopSignals[0]) },
-    { label: '下一確認', value: firstText(decisionLifecycle.validation_plan.next_step, checklistItems[0]) },
+    { label: '外部事件', question: '發生了什麼？', value: externalEvent },
+    { label: '資金／產業反應', question: '理論上資金會往哪裡移動？', value: capitalIndustryReaction },
+    { label: '台股映射', question: '這件事如何映射到台灣市場？', value: taiwanMapping },
+    { label: '代表股票', question: '哪些股票代表這條路徑？', value: representativeStocks || '目前尚缺明確代表股票' },
+    { label: '驗證條件', question: '什麼現象出現才算成立？', value: flowValidation },
   ];
+  const researchSummaryCards = [
+    { label: '市場', value: formatResearchLabel(marketBias) || '資料待補' },
+    { label: '主線', value: summaryMainline },
+    { label: '風險', value: summaryRisk },
+    { label: '下一確認', value: summaryNext },
+  ];
+  const researchStocks = beneficiaryCandidates.slice(0, 3).map((item) => {
+    const reason = firstUniqueResearchText(
+      [item.reason, item.transmissionPath],
+      [heroConclusion, ...researchFlow.map((flow) => flow.value)],
+      '',
+    );
+    const confirmation = firstUniqueResearchText(
+      [item.confirmation, item.watchPoint, ...(item.evidence || [])],
+      [heroConclusion, reason],
+      '',
+    );
+    const invalidation = firstUniqueResearchText(
+      [item.invalidation, item.risk],
+      [heroConclusion, reason, confirmation],
+      '',
+    );
+    return {
+      ...item,
+      displayRole: formatResearchLabel(item.role || item.sector) || '代表觀察',
+      displayReason: reason || '目前列為此劇本的代表觀察股。',
+      displayConfirmation: confirmation || '等待盤中價格與資金承接確認。',
+      displayInvalidation: invalidation || '若市場方向與主線不同步，則降低觀察優先級。',
+      reasonFallback: !reason,
+      confirmationFallback: !confirmation,
+      invalidationFallback: !invalidation,
+    };
+  });
   const researchGuidance = [
-    { label: '先看什麼', value: firstText(checklistItems[0], decisionLifecycle.current_thesis.summary) },
-    { label: '避免什麼', value: firstText(dontDoItems[0], decisionLifecycle.failure_condition.action) },
-    { label: '何時回來', value: firstText(decisionLifecycle.validation_plan.next_step, canonicalNarrative.intraday_progress.next_step) },
-  ].filter((item) => item.value);
+    { label: '先看什麼', value: firstUniqueResearchText([
+      canonicalNarrative.intraday_progress.current_step,
+      ...checklistItems,
+    ], [heroConclusion, heroValidation, summaryNext, flowValidation], '先等待開盤第一反應與主線同步訊號') },
+    { label: '避免什麼', value: firstUniqueResearchText(
+      [...dontDoItems, decisionLifecycle.failure_condition.action],
+      [heroConclusion, summaryRisk, ...oppositionItems],
+      '證據不足時避免提前下注',
+    ) },
+    { label: '何時回來', value: firstUniqueResearchText([
+      canonicalNarrative.intraday_progress.next_step,
+      formatCheckpoint(decisionPresentation.nextCheckpoint),
+    ], [heroConclusion, heroValidation, summaryNext], '依下一個盤中同步節點回來確認') },
+  ];
+  const nextConfirmationDetail = firstUniqueResearchText([
+    canonicalNarrative.intraday_progress.next_step,
+    formatCheckpoint(decisionPresentation.nextCheckpoint),
+    decisionLifecycle.validation_plan.next_step,
+  ], [heroConclusion, heroValidation, summaryNext, ...researchGuidance.map((item) => item.value)], '下一個節點到達後重新檢查劇本狀態。');
   return (
     <div className="ma-page ma-pixel-page ma-research-note-page flex flex-col overflow-x-hidden">
       <Navbar />
@@ -863,13 +1082,12 @@ function MemberNoteContent() {
             <div className="ma-pixel-hero-copy">
               <p className="ma-pixel-eyebrow"><i className="ri-book-open-line" aria-hidden="true" />完整研究邏輯 · {reportDate}</p>
               <h1>完整研究筆記</h1>
-              <p className="ma-pixel-hero-subtitle">{renderSafeText(todayOneLine)}</p>
-              <div className="ma-pixel-cta-row"><Link to="/war-room" className="ma-pixel-primary-button">查看盤中追蹤<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>
+              <p className="ma-pixel-hero-subtitle">{renderSafeText(heroConclusion)}</p>
             </div>
             <aside className="ma-phase2-status-card ma-research-summary-card">
-              <div><span>市場方向</span><strong>{renderSafeText(marketBias)}</strong></div>
+              <div><span>市場方向</span><strong>{renderSafeText(formatResearchLabel(marketBias) || '資料待補')}</strong></div>
               <div><span>信心</span><p>{confidenceScore != null ? `${confidenceScore}/100 · ${scoreDisplay.label}` : scoreDisplay.label}</p></div>
-              <div><span>資料狀態</span><p>{renderSafeText(dsState?.dataBasisLabel || dsState?.dataStatus || '資料待補')}</p></div>
+              <div><span>今天最重要驗證</span><p>{renderSafeText(heroValidation)}</p></div>
             </aside>
           </div>
         </section>
@@ -881,14 +1099,40 @@ function MemberNoteContent() {
 
           {canViewMemberNoteFull ? (
             <>
-              {researchFlow.length > 0 && <section><div className="ma-phase2-section-heading"><i className="ri-links-line" aria-hidden="true" /><div><h2>垂直推導</h2><p>從事件一路確認到代表股。</p></div></div><div className="ma-research-flow">{researchFlow.map((item, index) => <article key={item.label} className="ma-research-flow-node"><span>{index + 1}</span><div><p>{item.label}</p><strong>{renderSafeText(item.value)}</strong></div></article>)}</div></section>}
+              <section><div className="ma-phase2-section-heading"><i className="ri-links-line" aria-hidden="true" /><div><h2>傳導路徑</h2><p>從外部事件一路驗證到代表股票。</p></div></div><div className="ma-research-flow">{researchFlow.map((item, index) => <article key={item.label} className="ma-research-flow-node"><span>{index + 1}</span><div><p>{item.label} · {item.question}</p><strong>{renderSafeText(item.value)}</strong></div></article>)}</div></section>
 
               <section className="ma-phase2-signal-grid">
-                <div className="ma-phase2-list-panel is-support"><div className="ma-phase2-section-heading"><i className="ri-check-line" aria-hidden="true" /><div><h2>支持</h2></div></div>{whyItems.slice(0, 3).map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-check-line" aria-hidden="true" /><span>{renderSafeText(item)}</span></div>)}</div>
-                <div className="ma-phase2-list-panel is-oppose"><div className="ma-phase2-section-heading"><i className="ri-close-line" aria-hidden="true" /><div><h2>反對</h2></div></div>{stopSignals.slice(0, 3).map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-close-line" aria-hidden="true" /><span>{renderSafeText(item)}</span></div>)}</div>
+                <div className="ma-phase2-list-panel is-support"><div className="ma-phase2-section-heading"><i className="ri-check-line" aria-hidden="true" /><div><h2>支持證據</h2></div></div>{supportItems.map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-check-line" aria-hidden="true" /><span>{renderSafeText(item)}</span></div>)}</div>
+                <div className="ma-phase2-list-panel is-oppose"><div className="ma-phase2-section-heading"><i className="ri-close-line" aria-hidden="true" /><div><h2>反對證據</h2></div></div>{oppositionItems.map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-close-line" aria-hidden="true" /><span>{renderSafeText(item)}</span></div>)}</div>
               </section>
 
-              {researchGuidance.length > 0 && <section><div className="ma-phase2-section-heading"><i className="ri-compass-3-line" aria-hidden="true" /><div><h2>今天如何使用</h2></div></div><div className="ma-research-guidance-grid">{researchGuidance.map((item) => <article key={item.label}><p>{item.label}</p><strong>{renderSafeText(item.value)}</strong></article>)}</div></section>}
+              {researchStocks.length > 0 && (
+                <section>
+                  <div className="ma-phase2-section-heading"><i className="ri-stock-line" aria-hidden="true" /><div><h2>代表股票</h2><p>每檔股票只呈現既有劇本角色與可驗證條件。</p></div></div>
+                  <div className="ma-research-stock-grid grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    {researchStocks.map((stock) => (
+                      <article key={`${stock.symbol || 'stock'}-${stock.name}`} className="ma-research-stock-card min-w-0 rounded-[14px] border border-[#20364A] bg-[#0B1A2A] p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div><span className="text-xs font-bold text-[#14C982]">{stock.symbol || '代號待補'}</span><h3 className="mt-1 text-lg font-bold text-[#F4F7FB]">{renderSafeText(stock.name)}</h3></div>
+                          <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-bold text-emerald-300">{renderSafeText(stock.displayRole)}</span>
+                        </div>
+                        <div className="mt-5 space-y-4">
+                          <div><p className="text-xs text-[#6F7F90]">入選原因 {stock.reasonFallback && <em className="ml-1 not-italic text-[#8D99A7]">UI fallback</em>}</p><p className="mt-1 text-sm leading-6 text-[#B5C1CF]">{renderSafeText(stock.displayReason)}</p></div>
+                          <div className="border-t border-[#20364A] pt-4"><p className="text-xs text-[#6F7F90]">成立條件 {stock.confirmationFallback && <em className="ml-1 not-italic text-[#8D99A7]">UI fallback</em>}</p><p className="mt-1 text-sm leading-6 text-[#B5C1CF]">{renderSafeText(stock.displayConfirmation)}</p></div>
+                          <div className="border-t border-[#20364A] pt-4"><p className="text-xs text-[#6F7F90]">失效條件 {stock.invalidationFallback && <em className="ml-1 not-italic text-[#8D99A7]">UI fallback</em>}</p><p className="mt-1 text-sm leading-6 text-[#B5C1CF]">{renderSafeText(stock.displayInvalidation)}</p></div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section><div className="ma-phase2-section-heading"><i className="ri-compass-3-line" aria-hidden="true" /><div><h2>今天如何使用</h2></div></div><div className="ma-research-guidance-grid">{researchGuidance.map((item) => <article key={item.label}><p>{item.label}</p><strong>{renderSafeText(item.value)}</strong></article>)}</div></section>
+
+              <section className="ma-phase2-signal-grid">
+                <div className="ma-phase2-list-panel is-oppose"><div className="ma-phase2-section-heading"><i className="ri-error-warning-line" aria-hidden="true" /><div><h2>失效條件</h2><p>出現以下訊號時，停止沿用原劇本。</p></div></div>{invalidationItems.length > 0 ? invalidationItems.map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-close-line" aria-hidden="true" /><span>{renderSafeText(item)}</span></div>) : <div className="ma-phase2-signal-row"><i className="ri-information-line" aria-hidden="true" /><span>尚未取得可用失效條件</span></div>}</div>
+                <div className="ma-phase2-list-panel"><div className="ma-phase2-section-heading"><i className="ri-time-line" aria-hidden="true" /><div><h2>下一次確認</h2><p>回到下一個節點，重新檢查劇本是否成立。</p></div></div><div className="ma-phase2-signal-row"><i className="ri-arrow-right-line" aria-hidden="true" /><span>{renderSafeText(nextConfirmationDetail)}</span></div><Link to="/war-room" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-2 text-sm font-semibold text-emerald-300">查看盤中追蹤<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>
+              </section>
             </>
           ) : (
             <PaywallCard title="升級會員查看完整盤前研究筆記" description="完整研究推導、支持與反對證據，以及今日使用方式收在會員版。" requiredTier="member" featureList={['完整研究推導', '支持與反對證據', '今日使用方式']} tone="dark" />

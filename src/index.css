@@ -1024,17 +1024,17 @@ a, button, .transition-all {
 
   /* Today V3 — AI decision center. All rules are page-scoped. */
   .ma-today-page .ma-today-v3-hero {
-    min-height: 390px;
-    padding: 52px 32px;
+    min-height: 284px;
+    padding: 30px 32px;
     border-bottom: 1px solid #20364A;
     background: #071321;
   }
 
   .ma-today-page .ma-today-v3-hero-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.75fr);
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
     align-items: stretch;
-    gap: 32px;
+    gap: 20px;
   }
 
   .ma-today-page .ma-today-v3-hero-copy {
@@ -1045,29 +1045,30 @@ a, button, .transition-all {
   }
 
   .ma-today-page .ma-today-v3-hero-copy h1 {
-    margin-top: 18px;
-    color: #A9B6C5;
-    font-size: 16px;
+    max-width: 720px;
+    margin-top: 12px;
+    color: #F4F7FB;
+    font-size: 44px;
     font-weight: 700;
-    line-height: 24px;
+    line-height: 52px;
+    letter-spacing: -0.025em;
   }
 
   .ma-today-page .ma-today-v3-scenario {
     max-width: 720px;
-    margin-top: 8px;
-    color: #F4F7FB;
-    font-size: 42px;
+    margin-top: 6px;
+    color: #A9B6C5;
+    font-size: 21px;
     font-weight: 700;
-    line-height: 1.25;
-    letter-spacing: -0.025em;
+    line-height: 30px;
   }
 
   .ma-today-page .ma-today-v3-context {
     max-width: 680px;
-    margin-top: 14px;
+    margin-top: 6px;
     color: #A9B6C5;
     font-size: 16px;
-    line-height: 28px;
+    line-height: 24px;
   }
 
   .ma-today-page .ma-today-v3-hero-metrics {
@@ -1075,7 +1076,7 @@ a, button, .transition-all {
     max-width: 720px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1px;
-    margin-top: 28px;
+    margin-top: 16px;
     overflow: hidden;
     border: 1px solid #20364A;
     border-radius: 14px;
@@ -1084,7 +1085,7 @@ a, button, .transition-all {
 
   .ma-today-page .ma-today-v3-hero-metrics > div {
     min-width: 0;
-    padding: 14px 16px;
+    padding: 9px 12px;
     background: #0B1A2A;
   }
 
@@ -1093,8 +1094,8 @@ a, button, .transition-all {
     display: block;
     overflow: hidden;
     color: #6F7F90;
-    font-size: 12px;
-    line-height: 18px;
+    font-size: 11px;
+    line-height: 16px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1104,8 +1105,8 @@ a, button, .transition-all {
     margin-top: 4px;
     overflow: hidden;
     color: #F4F7FB;
-    font-size: 18px;
-    line-height: 26px;
+    font-size: 16px;
+    line-height: 22px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1113,7 +1114,7 @@ a, button, .transition-all {
   .ma-today-page .ma-today-v3-hero-progress {
     width: min(720px, 100%);
     height: 4px;
-    margin-top: 12px;
+    margin-top: 8px;
     overflow: hidden;
     border-radius: 999px;
     background: #1A2838;
@@ -1132,7 +1133,7 @@ a, button, .transition-all {
     min-width: 0;
     flex-direction: column;
     justify-content: center;
-    padding: 28px;
+    padding: 22px 24px;
     border: 1px solid rgba(20, 201, 130, 0.35);
     border-radius: 18px;
     background: #0B1A2A;
@@ -1151,7 +1152,7 @@ a, button, .transition-all {
 
   .ma-today-page .ma-today-v3-state {
     align-self: flex-start;
-    margin-top: 20px;
+    margin-top: 12px;
     padding: 6px 10px;
     border-radius: 999px;
     background: rgba(243, 174, 43, 0.15);
@@ -1177,18 +1178,18 @@ a, button, .transition-all {
   }
 
   .ma-today-page .ma-today-v3-advice-card h2 {
-    margin: 12px 0 18px;
+    margin: 8px 0 12px;
     color: #F4F7FB;
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 700;
-    line-height: 36px;
+    line-height: 38px;
   }
 
   .ma-today-page .ma-today-v3-advice-card > div {
     display: grid;
     grid-template-columns: 62px minmax(0, 1fr);
     gap: 12px;
-    padding-block: 10px;
+    padding-block: 7px;
     border-top: 1px solid #172A3B;
   }
 
@@ -1219,8 +1220,8 @@ a, button, .transition-all {
   .ma-today-page .ma-today-v3-sections {
     display: flex;
     flex-direction: column;
-    gap: 48px;
-    padding-block: 48px 64px;
+    gap: 40px;
+    padding-block: 30px 56px;
   }
 
   .ma-today-page .ma-today-v3-section-header {
@@ -1277,17 +1278,17 @@ a, button, .transition-all {
 
   .ma-today-page .ma-today-v3-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 16px;
   }
 
   .ma-today-page .ma-today-v3-kpi-card {
     display: flex;
     min-width: 0;
-    min-height: 142px;
+    min-height: 112px;
     flex-direction: column;
     justify-content: space-between;
-    padding: 18px;
+    padding: 16px 18px;
     border: 1px solid #20364A;
     border-radius: 14px;
     background: #0B1A2A;
@@ -1299,7 +1300,7 @@ a, button, .transition-all {
   }
 
   .ma-today-page .ma-today-v3-kpi-card > span {
-    margin-top: 16px;
+    margin-top: 10px;
     color: #6F7F90;
     font-size: 12px;
     line-height: 18px;
@@ -1311,6 +1312,23 @@ a, button, .transition-all {
     color: #F4F7FB;
     font-size: 18px;
     line-height: 26px;
+  }
+
+  .ma-today-page .ma-today-v3-kpi-card.is-primary {
+    border-color: rgba(20, 201, 130, 0.38);
+    background: #102236;
+  }
+
+  .ma-today-page .ma-today-v3-kpi-card.is-primary > strong {
+    font-size: 21px;
+  }
+
+  .ma-today-page .ma-today-v3-kpi-card.is-secondary {
+    background: #0B1A2A;
+  }
+
+  .ma-today-page .ma-today-v3-kpi-card.is-secondary > i {
+    color: #6F7F90;
   }
 
   .ma-today-page .ma-today-v3-validation-card {
@@ -1335,9 +1353,9 @@ a, button, .transition-all {
   .ma-today-page .ma-today-v3-checklist > article {
     display: grid;
     min-height: 78px;
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-columns: 46px 24px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     padding: 14px 16px;
     border: 1px solid #20364A;
     border-radius: 12px;
@@ -1347,6 +1365,14 @@ a, button, .transition-all {
   .ma-today-page .ma-today-v3-checklist > article > i {
     color: #6F7F90;
     font-size: 20px;
+  }
+
+  .ma-today-page .ma-today-v3-checklist > article > small {
+    color: #6F7F90;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
   }
 
   .ma-today-page .ma-today-v3-checklist > article.is-confirmed > i {
@@ -1498,35 +1524,76 @@ a, button, .transition-all {
     background: #101927;
   }
 
-  .ma-today-page .ma-today-v3-correction-grid {
+  .ma-today-page .ma-today-v3-correction-flow {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1px;
-    overflow: hidden;
-    border: 1px solid #20364A;
-    border-radius: 12px;
-    background: #20364A;
+    grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 14px;
   }
 
-  .ma-today-page .ma-today-v3-correction-grid > div {
+  .ma-today-page .ma-today-v3-correction-flow > div {
     min-width: 0;
-    padding: 18px;
+    padding: 20px;
+    border: 1px solid #20364A;
+    border-radius: 14px;
     background: #0B1A2A;
   }
 
-  .ma-today-page .ma-today-v3-correction-grid span {
+  .ma-today-page .ma-today-v3-correction-flow > div > b {
+    display: block;
+    margin-bottom: 12px;
+    color: #F05B67;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+
+  .ma-today-page .ma-today-v3-correction-flow > div.is-after > b {
+    color: #14C982;
+  }
+
+  .ma-today-page .ma-today-v3-correction-flow > i {
+    align-self: center;
+    color: #F3AE2B;
+    font-size: 24px;
+    text-align: center;
+  }
+
+  .ma-today-page .ma-today-v3-correction-flow > div > div + div {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #172A3B;
+  }
+
+  .ma-today-page .ma-today-v3-correction-flow span,
+  .ma-today-page .ma-today-v3-correction-card > footer span {
     display: block;
     color: #6F7F90;
     font-size: 12px;
     line-height: 18px;
   }
 
-  .ma-today-page .ma-today-v3-correction-grid strong {
+  .ma-today-page .ma-today-v3-correction-flow strong,
+  .ma-today-page .ma-today-v3-correction-card > footer strong {
     display: block;
     margin-top: 6px;
     color: #F4F7FB;
     font-size: 14px;
     line-height: 22px;
+  }
+
+  .ma-today-page .ma-today-v3-correction-card > footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #20364A;
+  }
+
+  .ma-today-page .ma-today-v3-correction-card > footer strong {
+    margin-top: 0;
+    text-align: right;
   }
 
   .ma-today-page .ma-today-v3-timeline {
@@ -1625,8 +1692,8 @@ a, button, .transition-all {
 
   .ma-today-page .ma-today-v3-journey nav {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr) 20px minmax(0, 1fr);
+    gap: 8px;
   }
 
   .ma-today-page .ma-today-v3-journey nav > a {
@@ -1670,6 +1737,13 @@ a, button, .transition-all {
   .ma-today-page .ma-today-v3-journey nav b {
     color: #33475C;
     font-size: 12px;
+  }
+
+  .ma-today-page .ma-today-v3-journey-connector {
+    align-self: center;
+    color: #33475C;
+    font-size: 18px;
+    text-align: center;
   }
 
   .ma-opportunity-grid {
@@ -1733,6 +1807,35 @@ a, button, .transition-all {
     .ma-pixel-page nav > div,
     .ma-pixel-page footer > div {
       padding-inline: 32px;
+    }
+  }
+
+  @media (max-width: 1023px) and (min-width: 768px) {
+    .ma-today-page .ma-today-v3-hero-grid {
+      grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+      gap: 16px;
+    }
+
+    .ma-today-page .ma-today-v3-hero-copy h1 {
+      font-size: 38px;
+      line-height: 46px;
+    }
+
+    .ma-today-page .ma-today-v3-advice-card {
+      padding: 20px;
+    }
+
+    .ma-today-page .ma-today-v3-checklist {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ma-today-page .ma-today-v3-stock-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ma-today-page .ma-today-v3-journey {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 20px;
     }
   }
 
@@ -1874,7 +1977,7 @@ a, button, .transition-all {
 
     .ma-today-page .ma-today-v3-hero {
       min-height: 0;
-      padding: 36px 20px;
+      padding: 28px 20px;
     }
 
     .ma-today-page .ma-today-v3-hero-grid,
@@ -1882,17 +1985,21 @@ a, button, .transition-all {
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .ma-today-page .ma-today-v3-scenario {
+    .ma-today-page .ma-today-v3-hero-copy h1 {
       font-size: 34px;
-      line-height: 44px;
+      line-height: 42px;
+    }
+
+    .ma-today-page .ma-today-v3-scenario {
+      font-size: 19px;
+      line-height: 28px;
     }
 
     .ma-today-page .ma-today-v3-hero-metrics,
     .ma-today-page .ma-today-v3-kpi-grid,
     .ma-today-page .ma-today-v3-checklist,
     .ma-today-page .ma-today-v3-stock-grid,
-    .ma-today-page .ma-today-v3-correction-grid,
-    .ma-today-page .ma-today-v3-journey nav {
+    .ma-today-page .ma-today-v3-correction-flow {
       grid-template-columns: minmax(0, 1fr);
     }
 
@@ -1901,7 +2008,7 @@ a, button, .transition-all {
     }
 
     .ma-today-page .ma-today-v3-hero-metrics > div {
-      min-height: 74px;
+      min-height: 62px;
     }
 
     .ma-today-page .ma-today-v3-advice-card,
@@ -1927,12 +2034,16 @@ a, button, .transition-all {
     }
 
     .ma-today-page .ma-today-v3-checklist > article {
-      grid-template-columns: 28px minmax(0, 1fr);
+      grid-template-columns: 44px 24px minmax(0, 1fr);
     }
 
     .ma-today-page .ma-today-v3-checklist > article > span {
-      grid-column: 2;
+      grid-column: 3;
       justify-self: start;
+    }
+
+    .ma-today-page .ma-today-v3-correction-flow > i {
+      transform: rotate(90deg);
     }
 
     .ma-today-page .ma-today-v3-timeline {
@@ -1962,9 +2073,73 @@ a, button, .transition-all {
       min-height: 88px;
     }
 
+    .ma-today-page .ma-today-v3-journey nav {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+    }
+
+    .ma-today-page .ma-today-v3-journey-connector {
+      transform: rotate(90deg);
+    }
+
     .ma-opportunities-page .ma-opportunity-card {
       min-height: 0;
       max-height: none;
+    }
+  }
+
+  @media (max-width: 390px) {
+    .ma-today-page .ma-today-v3-hero-copy h1 {
+      font-size: 31px;
+      line-height: 39px;
+    }
+
+    .ma-today-page .ma-today-v3-hero-metrics {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .ma-today-page .ma-today-v3-hero-metrics > div {
+      padding: 9px 8px;
+    }
+
+    .ma-today-page .ma-today-v3-hero-metrics span,
+    .ma-today-page .ma-today-v3-hero-metrics small {
+      overflow: visible;
+      font-size: 10px;
+      line-height: 14px;
+      text-overflow: clip;
+      white-space: normal;
+    }
+
+    .ma-today-page .ma-today-v3-hero-metrics strong {
+      font-size: 14px;
+      line-height: 20px;
+    }
+
+    .ma-today-page .ma-today-v3-correction-card > footer {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .ma-today-page .ma-today-v3-correction-card > footer strong {
+      text-align: left;
+    }
+  }
+
+  @media (max-width: 375px) {
+    .ma-today-page .ma-today-v3-hero-copy h1 {
+      font-size: 29px;
+      line-height: 37px;
+    }
+
+    .ma-today-page .ma-today-v3-advice-card h2 {
+      font-size: 26px;
+      line-height: 34px;
+    }
+
+    .ma-today-page .ma-today-v3-checklist > article {
+      grid-template-columns: 40px 22px minmax(0, 1fr);
+      padding-inline: 12px;
     }
   }
 

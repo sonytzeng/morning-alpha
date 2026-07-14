@@ -146,6 +146,7 @@ type ClosingVerificationState = {
 };
 
 type TodayValidationStatus = 'confirmed' | 'current' | 'pending' | 'failed' | 'missing';
+type TodayTimelineState = 'completed' | 'current' | 'upcoming';
 
 function firstPopulatedText(...values: unknown[]): string {
   for (const value of values) {
@@ -153,6 +154,22 @@ function firstPopulatedText(...values: unknown[]): string {
     if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   }
   return '';
+}
+
+function safeStockDisplayText(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  const text = value.trim();
+  if (!text || text === 'null' || text === 'undefined') return '';
+
+  const debugLikePatterns = [
+    /\b(?:event_)?score\s*=/i,
+    /^\s*[a-z][a-z0-9_]*\s*=\s*[^=]+\s*$/i,
+    /^\s*[a-z][a-z0-9]*_[a-z0-9_]+\s*$/i,
+    /^\s*[-+]?\d+(?:\.\d+)?(?:\s*\/\s*\d+|\s*%)?\s*$/,
+    /^\s*[\[{].*[\]}]\s*$/s,
+  ];
+
+  return debugLikePatterns.some((pattern) => pattern.test(text)) ? '' : text;
 }
 
 function listText(value: unknown): string {
@@ -362,31 +379,37 @@ function TodayReportContent() {
       label: '加權指數',
       value: formatMarketChange(activeIntradayRadar?.taiex_change ?? snapshotChange(ai, ['taiex', 'TAIEX'])),
       icon: 'ri-line-chart-line',
+      priority: 'primary',
     },
     {
       label: '台指期',
       value: formatMarketChange(activeIntradayRadar?.txf_change ?? report?.taiex_futures_change ?? snapshotChange(ai, ['txf', 'TXF'])),
       icon: 'ri-funds-line',
+      priority: 'primary',
     },
     {
       label: '台積電',
       value: formatMarketChange(activeIntradayRadar?.tsmc_change ?? snapshotChange(ai, ['2330', 'tsmc', 'TSMC'])),
       icon: 'ri-cpu-line',
+      priority: 'primary',
     },
     {
       label: '費半',
       value: formatMarketChange(activeIntradayRadar?.sox_change ?? report?.sox_change ?? snapshotChange(ai, ['sox', 'SOX'])),
       icon: 'ri-global-line',
+      priority: 'secondary',
     },
     {
       label: '美股期貨',
       value: formatMarketChange(toNumber(ai.us_futures_change ?? ai.nasdaq_futures_change ?? ai.nq_futures_change)),
       icon: 'ri-bar-chart-grouped-line',
+      priority: 'secondary',
     },
     {
       label: 'AI 市場健康度',
       value: confidenceScore == null ? '資料待補' : `${confidenceScore}/100`,
       icon: 'ri-pulse-line',
+      priority: 'secondary',
     },
   ];
 
@@ -401,7 +424,17 @@ function TodayReportContent() {
   const avoidAction = report?.avoid_today?.find((item) => Boolean(item?.trim())) || '';
   const focusStocks = presentation.opportunities
     .filter((stock) => stock.oneLineReason || stock.confirmation || stock.invalidation)
-    .slice(0, 3);
+    .slice(0, 3)
+    .map((stock) => {
+      const readableTexts = [stock.oneLineReason, stock.confirmation, stock.invalidation]
+        .map(safeStockDisplayText)
+        .filter(Boolean);
+      return {
+        ...stock,
+        displayHeadline: readableTexts[0] || '等待盤中確認',
+        displayObservation: readableTexts[1] || 'AI 正觀察資金承接與價格反應。',
+      };
+    });
 
   const rotation = asObj(ai.capital_rotation_path);
   const reduceWeight = firstPopulatedText(
@@ -428,16 +461,35 @@ function TodayReportContent() {
   ];
   const currentTimelineIndex = timelineDefinitions.reduce(
     (activeIndex, item, index) => taipeiMinutes >= item.minutes ? index : activeIndex,
-    0,
+    -1,
   );
-  const decisionTimeline = timelineDefinitions.map((item, index) => ({
-    ...item,
-    state: closingVerificationState.completed || index < currentTimelineIndex
-      ? 'completed'
-      : index === currentTimelineIndex
-        ? 'current'
-        : 'upcoming',
-  }));
+  const historicalTimelineStates: TodayTimelineState[] = timelineDefinitions.map((_, index) => {
+    if (closingVerificationState.completed) return 'completed';
+    const stepStatus = validationSteps[index]?.status;
+    if (stepStatus === 'completed') return 'completed';
+    if (stepStatus === 'current') return 'current';
+    return 'upcoming';
+  });
+  const historicalCurrentIndex = historicalTimelineStates.indexOf('current');
+  const firstHistoricalUpcomingIndex = historicalTimelineStates.indexOf('upcoming');
+  const decisionTimeline = timelineDefinitions.map((item, index) => {
+    let state: TodayTimelineState;
+    if (!isReportForToday) {
+      state = historicalTimelineStates[index];
+      if (state === 'current' && index !== historicalCurrentIndex) state = 'upcoming';
+      if (
+        historicalCurrentIndex === -1
+        && firstHistoricalUpcomingIndex === index
+        && !closingVerificationState.completed
+      ) state = 'current';
+    } else if (closingVerificationState.completed) {
+      state = 'completed';
+    } else {
+      const activeIndex = Math.max(currentTimelineIndex, 0);
+      state = index < activeIndex ? 'completed' : index === activeIndex ? 'current' : 'upcoming';
+    }
+    return { ...item, state };
+  });
   if (loading) {
     return (
       <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -544,7 +596,7 @@ function TodayReportContent() {
           <div className="ma-pixel-content ma-today-v3-hero-grid">
             <div className="ma-today-v3-hero-copy">
               <p className="ma-pixel-eyebrow"><i className="ri-focus-3-line" aria-hidden="true" />AI 今日決策中心 · {isHistoricalFallback ? `歷史資料 ${report.report_date}` : report.report_date}</p>
-              <h1>今日劇本</h1>
+              <h1>今日主軸今天能不能成立？</h1>
               <p className="ma-today-v3-scenario">{renderSafeText(primaryScenario)}</p>
               {oneLineConclusion && <p className="ma-today-v3-context">{renderSafeText(oneLineConclusion)}</p>}
               <div className="ma-today-v3-hero-metrics">
@@ -577,7 +629,7 @@ function TodayReportContent() {
             <header className="ma-today-v3-section-header"><div><p>MARKET DASHBOARD</p><h2>市場即時儀表板</h2></div><span>{hasFreshIntradayRadar ? '盤中資料已同步' : '依目前可用資料'}</span></header>
             <div className="ma-today-v3-kpi-grid">
               {marketMetrics.map((metric) => (
-                <article key={metric.label} className="ma-today-v3-kpi-card">
+                <article key={metric.label} className={`ma-today-v3-kpi-card is-${metric.priority}`}>
                   <i className={metric.icon} aria-hidden="true" />
                   <span>{metric.label}</span>
                   <strong>{metric.value}</strong>
@@ -591,6 +643,7 @@ function TodayReportContent() {
             <div className="ma-today-v3-checklist">
               {validationItems.map((item, index) => (
                 <article key={`${item.label}-${index}`} className={`is-${item.status}`}>
+                  <small>STEP {index + 1}</small>
                   <i className={item.status === 'confirmed' ? 'ri-checkbox-circle-fill' : item.status === 'failed' ? 'ri-close-circle-fill' : item.status === 'current' ? 'ri-loader-4-line' : 'ri-checkbox-blank-circle-line'} aria-hidden="true" />
                   <div><strong>{renderSafeText(item.label)}</strong>{item.detail && <p>{renderSafeText(item.detail)}</p>}</div>
                   <span>{validationStatusLabel(item.status)}</span>
@@ -607,8 +660,8 @@ function TodayReportContent() {
                 {focusStocks.map((stock) => (
                   <Link key={`${stock.symbol}-${stock.name}`} to="/opportunities" className="ma-today-v3-stock-card">
                     <div><div><span>{stock.symbol}</span><h3>{stock.name}</h3></div>{stock.roleLabel && <b>{stock.roleLabel}</b>}</div>
-                    {stock.oneLineReason && <p>{stock.oneLineReason}</p>}
-                    {stock.confirmation && <small><i className="ri-focus-3-line" aria-hidden="true" />{stock.confirmation}</small>}
+                    <p>{stock.displayHeadline}</p>
+                    <small><i className="ri-focus-3-line" aria-hidden="true" />{stock.displayObservation}</small>
                   </Link>
                 ))}
               </div>
@@ -618,13 +671,20 @@ function TodayReportContent() {
           {activeFailure && (
             <section className="ma-today-v3-correction-card">
               <header className="ma-today-v3-section-header"><div><p>SCENARIO REVISION</p><h2>劇本修正</h2></div><span className={`is-${presentation.primaryDecision.state === 'STOP' ? 'danger' : 'warning'}`}>{presentation.primaryDecision.state === 'STOP' ? '已觸發' : '監控中'}</span></header>
-              <div className="ma-today-v3-correction-grid">
-                {activeFailure.trigger && <div><span>目前失敗原因</span><strong>{renderSafeText(activeFailure.trigger)}</strong></div>}
-                {activeFailure.action && <div><span>AI 修正方向</span><strong>{renderSafeText(activeFailure.action)}</strong></div>}
-                {reduceWeight && <div><span>降低權重</span><strong>{renderSafeText(reduceWeight)}</strong></div>}
-                {increaseWeight && <div><span>提高權重</span><strong>{renderSafeText(increaseWeight)}</strong></div>}
-                <div><span>下一次確認</span><strong>{renderSafeText(nextDecisionTime)}</strong></div>
+              <div className="ma-today-v3-correction-flow">
+                <div className="is-before">
+                  <b>BEFORE</b>
+                  {activeFailure.trigger && <div><span>目前失敗原因</span><strong>{renderSafeText(activeFailure.trigger)}</strong></div>}
+                  {reduceWeight && <div><span>降低權重</span><strong>{renderSafeText(reduceWeight)}</strong></div>}
+                </div>
+                <i className="ri-arrow-right-line" aria-hidden="true" />
+                <div className="is-after">
+                  <b>AFTER</b>
+                  {activeFailure.action && <div><span>AI 修正方向</span><strong>{renderSafeText(activeFailure.action)}</strong></div>}
+                  {increaseWeight && <div><span>提高權重</span><strong>{renderSafeText(increaseWeight)}</strong></div>}
+                </div>
               </div>
+              <footer><span>下一次確認</span><strong>{renderSafeText(nextDecisionTime)}</strong></footer>
             </section>
           )}
 
@@ -641,7 +701,9 @@ function TodayReportContent() {
             <div><p>NEXT JOURNEY</p><h2>下一步</h2><span>從盤中追蹤到收盤驗證，把今天的決策走完。</span></div>
             <nav aria-label="今日決策下一步">
               <Link to="/war-room"><i className="ri-radar-line" aria-hidden="true" /><span>War Room<small>盤中追蹤</small></span><b>01</b></Link>
+              <i className="ri-arrow-right-line ma-today-v3-journey-connector" aria-hidden="true" />
               <Link to="/verification"><i className="ri-checkbox-circle-line" aria-hidden="true" /><span>收盤驗證<small>確認劇本結果</small></span><b>02</b></Link>
+              <i className="ri-arrow-right-line ma-today-v3-journey-connector" aria-hidden="true" />
               <Link to="/performance"><i className="ri-line-chart-line" aria-hidden="true" /><span>歷史績效<small>累積決策學習</small></span><b>03</b></Link>
             </nav>
           </section>

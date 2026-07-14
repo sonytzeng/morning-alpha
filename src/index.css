@@ -2358,6 +2358,49 @@ a, button, .transition-all {
     display: none;
   }
 
+  .ma-war-room-page .ma-phase2-timeline-node::before {
+    border-color: #6F7F90;
+  }
+
+  .ma-war-room-page .ma-phase2-timeline-node > span {
+    display: inline-flex;
+    margin-top: 6px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(111, 127, 144, 0.12);
+    color: #A9B6C5;
+    font-size: 11px;
+    line-height: 18px;
+  }
+
+  .ma-war-room-page .ma-phase2-timeline-node.is-completed::before {
+    border-color: #14C982;
+    background: #14C982;
+  }
+
+  .ma-war-room-page .ma-phase2-timeline-node.is-completed > span {
+    background: rgba(20, 201, 130, 0.15);
+    color: #14C982;
+  }
+
+  .ma-war-room-page .ma-phase2-timeline-node.is-current::before {
+    border-color: #F3AE2B;
+  }
+
+  .ma-war-room-page .ma-phase2-timeline-node.is-current > span {
+    background: rgba(243, 174, 43, 0.15);
+    color: #F3AE2B;
+  }
+
+  .ma-war-room-page .ma-phase2-timeline-node.is-insufficient::before {
+    border-color: #F05B67;
+  }
+
+  .ma-war-room-page .ma-phase2-timeline-node.is-insufficient > span {
+    background: rgba(240, 91, 103, 0.15);
+    color: #F05B67;
+  }
+
   .ma-pixel-page .ma-phase2-timeline-node strong {
     color: #F4F7FB;
     font-size: 14px;
@@ -2385,11 +2428,15 @@ a, button, .transition-all {
     background: #0B1A2A;
   }
 
-  .ma-war-room-page .ma-phase2-observation-card > div {
+  .ma-war-room-page .ma-phase2-observation-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
+  }
+
+  .ma-war-room-page .ma-phase2-observation-header > div {
+    min-width: 0;
   }
 
   .ma-war-room-page .ma-phase2-observation-card h3 {
@@ -2399,12 +2446,35 @@ a, button, .transition-all {
     line-height: 26px;
   }
 
-  .ma-war-room-page .ma-phase2-observation-card > div > span {
+  .ma-war-room-page .ma-phase2-observation-header p {
+    margin-top: 3px;
+    color: #6F7F90;
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .ma-war-room-page .ma-phase2-observation-header > span {
+    flex: 0 0 auto;
     padding: 4px 8px;
     border-radius: 999px;
     background: rgba(20, 201, 130, 0.15);
     color: #14C982;
     font-size: 12px;
+  }
+
+  .ma-war-room-page .ma-phase2-observation-header > span.is-partial {
+    background: rgba(243, 174, 43, 0.15);
+    color: #F3AE2B;
+  }
+
+  .ma-war-room-page .ma-phase2-observation-header > span.is-failed {
+    background: rgba(240, 91, 103, 0.15);
+    color: #F05B67;
+  }
+
+  .ma-war-room-page .ma-phase2-observation-header > span.is-insufficient {
+    background: rgba(111, 127, 144, 0.12);
+    color: #A9B6C5;
   }
 
   .ma-war-room-page .ma-phase2-observation-card dl {

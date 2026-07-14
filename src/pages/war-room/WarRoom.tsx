@@ -11,6 +11,11 @@ import { resolveIntradayTrackingState, type IntradayTrackingState, type SegmentD
 import { useState, useEffect, useMemo } from 'react';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
+import {
+  buildWarRoomClosingState,
+  buildWarRoomObservationCards,
+  buildWarRoomTimeline,
+} from './warRoomPresentationMapper';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -142,11 +147,17 @@ function WarRoomContent() {
   }, [morningState]);
   const reportAI = isRecord(report?.ai_strategy_json) ? report.ai_strategy_json as Record<string, unknown> : null;
   const rawAI = displayState?.rawAI ?? reportAI;
+  const closingVerificationV2 = isRecord(rawAI?.closing_verification_v2)
+    ? rawAI.closing_verification_v2
+    : null;
+  const publicClosingVerification = isRecord(rawAI?.closing_verification)
+    ? rawAI.closing_verification
+    : null;
   const closeVerification =
-    rawAI?.closing_verification_v2 && typeof rawAI.closing_verification_v2 === 'object'
-      ? rawAI.closing_verification_v2 as Record<string, unknown>
-      : rawAI?.closing_verification && typeof rawAI.closing_verification === 'object'
-        ? rawAI.closing_verification as Record<string, unknown>
+    closingVerificationV2
+      ? closingVerificationV2
+      : publicClosingVerification
+        ? publicClosingVerification
         : todayCloseVerification && typeof todayCloseVerification === 'object'
           ? todayCloseVerification as unknown as Record<string, unknown>
           : null;
@@ -380,6 +391,19 @@ function WarRoomContent() {
     decisionStatus.next_step || canonicalNarrative.intraday_progress.next_step,
     decisionStatus.status,
   );
+  const presentationNow = new Date();
+  const closingState = buildWarRoomClosingState({
+    closingVerificationV2,
+    publicClosingVerification,
+    todayCloseVerification,
+    now: presentationNow,
+  });
+  const phase2CurrentStatus = closingState.isPostClose
+    ? closingState.label
+    : decisionStatusLabel(decisionStatus.status);
+  const phase2NextConfirmation = closingState.isPostClose
+    ? closingState.label
+    : nextReturnTime;
   const tsmcChange = safeNumber(openingRadar?.tsmc_change);
   const taiexChange = safeNumber(openingRadar?.taiex_change);
   const txfChange = safeNumber(openingRadar?.txf_change);
@@ -439,7 +463,7 @@ function WarRoomContent() {
     { label: '最新方向', value: safeText(openingRadar?.radar_status, humanStatus(tracking.intraday.statusText)), detail: openingRadar?.summary ? compactChineseText(openingRadar.summary, '', 30) : decisionWhy, tone: 'blue' },
     { label: '資金', value: firstRecordText(capitalRotation, ['current_focus', 'summary', 'direction'], '資料待補'), detail: sectorData[0]?.sector ? `目前關注：${sectorData[0].sector}` : '', tone: 'green' },
     { label: '主線', value: safeText(sectorData[0]?.sector || canonicalNarrative.today_focus.headline, '資料待補'), detail: canonicalNarrative.today_focus.summary, tone: 'amber' },
-    { label: '目前動作', value: safeText(decisionStatus.next_step || canonicalNarrative.intraday_progress.current_step, '等待確認'), detail: nextReturnTime, tone: decisionStatus.status === 'Rejected' ? 'red' : 'green' },
+    { label: '目前動作', value: safeText(decisionStatus.next_step || canonicalNarrative.intraday_progress.current_step, '等待確認'), detail: phase2NextConfirmation, tone: decisionStatus.status === 'Rejected' ? 'red' : 'green' },
   ];
   const supportingSignals = Array.from(new Set([
     ...canonicalNarrative.intraday_progress.completed_steps,
@@ -449,23 +473,27 @@ function WarRoomContent() {
     canonicalNarrative.decision_lifecycle.failure_condition.trigger,
     ...canonicalNarrative.failure_triggers.map((item) => item.trigger),
   ].filter(Boolean))).slice(0, 3);
-  const phase2Timeline = [
-    { time: '09:00', label: '盤前確認' },
-    { time: '09:30', label: '開盤驗證' },
-    { time: '10:30', label: '主線確認' },
-    { time: '13:30', label: '午後追蹤' },
-    { time: '14:10', label: '收盤驗證' },
-  ];
-  const observationSource = [
+  const phase2Timeline = buildWarRoomTimeline({
+    intradaySyncStatus: isRecord(rawAI?.intraday_sync_status) ? rawAI.intraday_sync_status : null,
+    openingRadar: isRecord(openingRadar) ? openingRadar : null,
+    closingVerificationV2,
+    publicClosingVerification,
+    todayCloseVerification,
+    now: presentationNow,
+  });
+  const phase2Observations = buildWarRoomObservationCards({
+    sources: [
     ...(displayState?.v10ObservationWatchlist || []),
     ...(displayState?.coreBeneficiaryStocks || []),
-  ].slice(0, 3);
-  const phase2Observations = observationSource.map((item) => ({
-    name: firstRecordText(item, ['stock_name', 'name', 'symbol', 'stock_code']),
-    status: firstRecordText(item, ['role_label', 'status', 'signal_label'], '資料待補'),
-    next: firstRecordText(item, ['confirmation', 'validation_signal', 'watch_point'], nextReturnTime),
-    stop: firstRecordText(item, ['invalidation', 'invalidation_condition', 'risk_note'], canonicalNarrative.decision_lifecycle.failure_condition.trigger),
-  })).filter((item) => item.name);
+    ],
+    closingVerificationV2,
+    publicClosingVerification,
+    todayCloseVerification,
+    fallbackNext: nextReturnTime,
+    fallbackStop: canonicalNarrative.decision_lifecycle.failure_condition.trigger,
+    now: presentationNow,
+    limit: 3,
+  });
 
 
   return (
@@ -482,9 +510,9 @@ function WarRoomContent() {
               <div className="ma-pixel-cta-row"><Link to="/report/today" className="ma-pixel-primary-button">查看今日判斷<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>
             </div>
             <aside className="ma-phase2-status-card">
-              <div><span>目前狀態</span><strong>{decisionStatusLabel(decisionStatus.status)}</strong></div>
+              <div><span>目前狀態</span><strong>{phase2CurrentStatus}</strong></div>
               <div><span>最新確認</span><p>{safeText(decisionWhy)}</p></div>
-              <div><span>下一次確認</span><p>{nextReturnTime}</p></div>
+              <div><span>下一次確認</span><p>{phase2NextConfirmation}</p></div>
             </aside>
           </div>
         </section>
@@ -510,13 +538,13 @@ function WarRoomContent() {
 
           <section>
             <VisualSectionHeader icon="ri-time-line" title="盤中時間軸" />
-            <div className="ma-phase2-timeline">{phase2Timeline.map((item) => <div key={item.time} className="ma-phase2-timeline-node"><span /><strong>{item.time}</strong><p>{item.label}</p></div>)}</div>
+            <div className="ma-phase2-timeline">{phase2Timeline.map((item) => <div key={item.time} className={`ma-phase2-timeline-node is-${item.status}`}><strong>{item.time}</strong><p>{item.label}</p><span>{item.statusLabel}</span></div>)}</div>
           </section>
 
           {phase2Observations.length > 0 && (
             <section>
               <VisualSectionHeader icon="ri-eye-line" title="目前觀察" />
-              <div className="ma-phase2-observation-grid">{phase2Observations.map((item) => <article key={item.name} className="ma-phase2-observation-card"><div><h3>{safeText(item.name)}</h3><span>{safeText(item.status)}</span></div><dl><div><dt>下一確認</dt><dd>{safeText(item.next)}</dd></div><div><dt>停止條件</dt><dd>{safeText(item.stop)}</dd></div></dl></article>)}</div>
+              <div className="ma-phase2-observation-grid">{phase2Observations.map((item) => <article key={item.key} className="ma-phase2-observation-card"><header className="ma-phase2-observation-header"><div><h3>{safeText(item.name)}</h3>{item.roles.length > 0 && <p>{item.roles.join('／')}</p>}</div><span className={`is-${item.statusTone}`}>{safeText(item.status)}</span></header><dl><div><dt>{item.detailLabel}</dt><dd>{safeText(item.next)}</dd></div><div><dt>停止條件</dt><dd>{safeText(item.stop)}</dd></div></dl></article>)}</div>
             </section>
           )}
         </div>
@@ -559,7 +587,7 @@ function WarRoomContent() {
               </div>
               <div className="ma-card-compact">
                 <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">下一次確認</p>
-                <p className="text-white/80 text-sm font-medium leading-snug">{nextReturnTime}</p>
+                <p className="text-white/80 text-sm font-medium leading-snug">{phase2NextConfirmation}</p>
               </div>
             </div>
           </section>

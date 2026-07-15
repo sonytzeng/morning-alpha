@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveMarketStatus } from "../_shared/market-status.ts";
 
 type SubscriptionTier = "free" | "member" | "vip" | "admin";
 
@@ -183,6 +184,57 @@ function getMarketDate(report: ReportRow, ai: Record<string, unknown>): string |
   );
 }
 
+function toIsoTimestamp(value: unknown): string | null {
+  const raw = toStringValue(value);
+  if (!raw) return null;
+  const timestamp = Date.parse(raw);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
+}
+
+function getDataAsOf(ai: Record<string, unknown>, ctx: PayloadContext): string | null {
+  const researchMaster = asObject(ai.research_master_v2);
+  const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
+  const closingV2 = asObject(ai.closing_verification_v2);
+  const closing = asObject(ai.closing_verification);
+  const evidenceTimestamps = [
+    researchMaster.data_as_of,
+    ai.data_as_of,
+    openingRadar.captured_at,
+    ...ctx.marketDataSnapshots.map((row) => row.captured_at),
+    asObject(closingV2.actual_taiex_close).captured_at,
+    asObject(closingV2.actual_tsmc_close).captured_at,
+    asObject(closingV2.actual_txf_close).captured_at,
+    closingV2.verified_at,
+    closing.verified_at,
+  ]
+    .map(toIsoTimestamp)
+    .filter((value): value is string => value !== null)
+    .sort((a, b) => b.localeCompare(a));
+
+  return evidenceTimestamps[0] || null;
+}
+
+function getCanonicalMarketMetadata(
+  report: ReportRow,
+  ai: Record<string, unknown>,
+): { marketStatus: string; isTradingDay: boolean | null; closedReason: string | null } {
+  const reportDate = getReportDate(report);
+  if (!isValidDate(reportDate)) {
+    return {
+      marketStatus: toStringValue(ai.market_status) || "unknown",
+      isTradingDay: null,
+      closedReason: toStringValue(ai.closed_reason) || toStringValue(ai.holiday_name),
+    };
+  }
+
+  const canonical = resolveMarketStatus(reportDate);
+  return {
+    marketStatus: canonical.is_trading_day ? "OPEN" : "CLOSED",
+    isTradingDay: canonical.is_trading_day,
+    closedReason: canonical.closed_reason,
+  };
+}
+
 function getConfidenceLabel(score: number | null): string {
   if (score === null) return "資料完整度待確認";
   if (score >= 75) return "高把握度";
@@ -288,6 +340,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const ai = getAi(report);
   const confidenceScore = getConfidenceScore(report, ai);
   const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
+  const marketMetadata = getCanonicalMarketMetadata(report, ai);
   const publicSummary = asObject(ai.public_summary);
   const freeSummary = asObject(ai.free_summary);
   const dailySentence = getTodayQuote(report, ai);
@@ -297,8 +350,10 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     market_date: getMarketDate(report, ai),
     base_date: getMarketDate(report, ai),
     generated_at: getGeneratedAt(report, ai),
-    market_status: toStringValue(ai.market_status) || (ai.is_trading_day === false ? "closed" : "open"),
-    closed_reason: toStringValue(ai.closed_reason) || toStringValue(ai.holiday_name),
+    data_as_of: getDataAsOf(ai, ctx),
+    market_status: marketMetadata.marketStatus,
+    is_trading_day: marketMetadata.isTradingDay,
+    closed_reason: marketMetadata.closedReason,
     market_bias: getMarketBias(report, ai),
     confidence_score: confidenceScore,
     confidence_label: getConfidenceLabel(confidenceScore),
@@ -551,12 +606,16 @@ Deno.serve(async (req: Request) => {
   }
 
   const context = await fetchPayloadContext(serviceClient, getReportDate(report));
+  const publicMetadata = buildPublicPayload(report, context);
 
   return jsonResponse({
     tier,
     report_date: getReportDate(report),
     revision_id: toStringValue(report.id),
     generated_at: getGeneratedAt(report, getAi(report)),
+    data_as_of: publicMetadata.data_as_of,
+    market_status: publicMetadata.market_status,
+    is_trading_day: publicMetadata.is_trading_day,
     payload: buildPayload(report, tier, context),
     locked_sections: getLockedSections(tier),
     source: "server_trimmed_payload",

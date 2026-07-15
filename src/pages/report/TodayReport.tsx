@@ -13,8 +13,8 @@ import type { Report } from '@/types/report';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { buildCanonicalNarrative, type CanonicalMorningNarrative } from '@/lib/canonicalNarrative';
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
-import { getTodayOpeningRadar } from '@/services/openingRadarService';
 import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
+import { buildRuntimeDecisionTimeline } from '@/lib/runtimeDecisionTimeline';
 
 type AnyObj = Record<string, any>;
 
@@ -112,41 +112,8 @@ function normalizeRadarFromReport(report: Report | null): RadarView | null {
   return null;
 }
 
-function nextVerificationPoint(
-  minutes: number,
-  radar: RadarView | null,
-  sync: IntradaySyncView,
-  closingState: ClosingVerificationState,
-): string {
-  const is0930Ready = sync.status0930 === 'ready' || Boolean(radar);
-  const is1030Ready = sync.status1030 === 'ready';
-  const is1300Ready = sync.status1300 === 'ready';
-  if (minutes < 570) return '09:30 看 2330、TAIEX、TXF 是否同向';
-  if (minutes < 630) return is0930Ready ? '10:30 看主線是否擴散' : '09:30 開盤驗證資料同步';
-  if (minutes < 780) return is1030Ready ? '13:00 看主線是否失效' : '10:30 主線確認資料同步';
-  if (minutes < 850) return is1300Ready ? '14:10 等待收盤驗證資料同步' : '13:00 風險確認資料同步';
-  return closingState.nextStep;
-}
-
-type IntradayWindowStatus = 'ready' | 'pending' | 'missing' | 'unknown';
-
-type IntradaySyncView = {
-  status0930: IntradayWindowStatus;
-  status1030: IntradayWindowStatus;
-  status1300: IntradayWindowStatus;
-  warning: string;
-  lastCheckedAt: string;
-};
-
-type ClosingVerificationState = {
-  exists: boolean;
-  completed: boolean;
-  label: string;
-  nextStep: string;
-};
-
 type TodayValidationStatus = 'confirmed' | 'current' | 'pending' | 'failed' | 'missing';
-type TodayTimelineState = 'completed' | 'current' | 'upcoming';
+type TodayTimelineState = 'completed' | 'current' | 'upcoming' | 'insufficient';
 
 function firstPopulatedText(...values: unknown[]): string {
   for (const value of values) {
@@ -178,12 +145,21 @@ function listText(value: unknown): string {
 }
 
 function formatMarketChange(value: number | null): string {
-  if (value === null) return '資料待補';
+  if (value === null) return 'Data unavailable';
   const prefix = value > 0 ? '+' : '';
   return `${prefix}${value.toFixed(2)}%`;
 }
 
 function snapshotChange(ai: AnyObj, keys: string[]): number | null {
+  const normalizedKeys = new Set(keys.map((key) => key.toUpperCase()));
+  const snapshots = Array.isArray(ai.market_data_snapshots) ? ai.market_data_snapshots : [];
+  for (const candidate of snapshots) {
+    const row = asObj(candidate);
+    const symbol = safeText(row.symbol ?? row.ticker ?? row.name, '').toUpperCase();
+    if (!normalizedKeys.has(symbol)) continue;
+    const value = toNumber(row.change_percent ?? row.change ?? row.changePercent);
+    if (value !== null) return value;
+  }
   const snapshot = asObj(ai.market_snapshot);
   for (const key of keys) {
     const row = asObj(snapshot[key]);
@@ -197,67 +173,13 @@ function validationStatusLabel(status: TodayValidationStatus): string {
   if (status === 'confirmed') return '已確認';
   if (status === 'current') return '確認中';
   if (status === 'failed') return '未成立';
-  if (status === 'missing') return '資料待補';
+  if (status === 'missing') return '資料不足';
   return '待確認';
-}
-
-function normalizeWindowStatus(value: unknown): IntradayWindowStatus {
-  const text = safeText(value, '').toLowerCase();
-  if (!text) return 'unknown';
-  if (['ready', 'complete', 'completed', 'synced'].includes(text)) return 'ready';
-  if (['missing', 'not_updated', 'failed', 'stale'].includes(text)) return 'missing';
-  if (['pending', 'waiting', 'not_started'].includes(text)) return 'pending';
-  return 'unknown';
-}
-
-function pickWindowStatus(windows: AnyObj, ...keys: string[]): IntradayWindowStatus {
-  for (const key of keys) {
-    const status = normalizeWindowStatus(windows[key]);
-    if (status !== 'unknown') return status;
-  }
-  return 'unknown';
-}
-
-function getIntradaySyncView(ai: AnyObj): IntradaySyncView {
-  const sync = asObj(ai.intraday_sync_status);
-  const windows = asObj(sync.windows);
-
-  return {
-    status0930: pickWindowStatus(windows, '0930', '09:30', '930', 'opening', 'open'),
-    status1030: pickWindowStatus(windows, '1030', '10:30', 'mainline', 'main_line'),
-    status1300: pickWindowStatus(windows, '1300', '13:00', 'risk', 'risk_check'),
-    warning: safeText(sync.warning, ''),
-    lastCheckedAt: safeText(sync.last_checked_at || sync.updated_at, ''),
-  };
-}
-
-function getClosingVerificationState(ai: AnyObj): ClosingVerificationState {
-  const closingV2 = asObj(ai.closing_verification_v2);
-  const closingLegacy = asObj(ai.closing_verification);
-  const closing = Object.keys(closingV2).length > 0 ? closingV2 : closingLegacy;
-  const exists = Object.keys(closing).length > 0;
-  const status = safeText(closing.status || closing.data_status || closing.verification_status, '').toLowerCase();
-  const hasResult = Boolean(
-    safeText(closing.hit_or_miss || closing.result || closing.actual_direction || closing.what_was_right || closing.what_was_wrong, ''),
-  );
-  const completed = exists && (
-    ['completed', 'complete', 'ready', 'done'].some((keyword) => status.includes(keyword))
-    || status.includes('已完成')
-    || hasResult
-  );
-
-  return {
-    exists,
-    completed,
-    label: completed ? '收盤驗證已完成' : '等待收盤驗證資料同步',
-    nextStep: completed ? '查看收盤驗證結果' : '等待收盤驗證資料同步',
-  };
 }
 
 function TodayReportContent() {
   const [report, setReport] = useState<Report | null>(null);
   const [reportSnapshotRadar, setReportSnapshotRadar] = useState<RadarView | null>(null);
-  const [liveRadar, setLiveRadar] = useState<RadarView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
@@ -286,7 +208,6 @@ function TodayReportContent() {
         if (!finalReport) {
           setReport(null);
           setReportSnapshotRadar(null);
-          setLiveRadar(null);
           setDisplayState(getMorningAlphaDisplayState(resolved.rawRow as unknown as Record<string, unknown> | null));
           return;
         }
@@ -294,12 +215,10 @@ function TodayReportContent() {
         setReport(finalReport);
 
         const radarFromReport = normalizeRadarFromReport(finalReport);
-        const radarFromTable = await getTodayOpeningRadar();
         setReportSnapshotRadar(radarFromReport);
-        setLiveRadar((radarFromTable as unknown as RadarView | null) || radarFromReport);
         setDisplayState(getMorningAlphaDisplayState(
           resolved.rawRow as unknown as Record<string, unknown> | null,
-          (radarFromTable || radarFromReport) as unknown as Record<string, unknown> | null,
+          radarFromReport as unknown as Record<string, unknown> | null,
         ));
       } catch (err) {
         console.error('TodayReport load failed:', err);
@@ -318,27 +237,25 @@ function TodayReportContent() {
   const ai = asObj((report as AnyObj | null)?.ai_strategy_json);
   // V8.4: Unified display state — marketBias and confidenceScore from getMorningAlphaDisplayState
   // Same values as Home, Opportunities, WarRoom, MemberNote. No opening_radar override.
-  const intradayFreshness = useMemo(() => isFreshIntradayData(report as AnyObj | null, liveRadar as AnyObj | null), [report, liveRadar]);
+  const intradayFreshness = useMemo(() => isFreshIntradayData(report as AnyObj | null, reportSnapshotRadar as AnyObj | null), [report, reportSnapshotRadar]);
   const hasFreshIntradayRadar = intradayFreshness.fresh;
-  const activeIntradayRadar = hasFreshIntradayRadar ? liveRadar : null;
-  const taipeiNow = new Date();
-  const taipeiParts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Taipei',
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-  }).formatToParts(taipeiNow);
-  const taipeiHour = Number(taipeiParts.find((part) => part.type === 'hour')?.value || 0);
-  const taipeiMinute = Number(taipeiParts.find((part) => part.type === 'minute')?.value || 0);
-  const taipeiMinutes = taipeiHour * 60 + taipeiMinute;
-  const intradaySyncView = getIntradaySyncView(ai);
-  const closingVerificationState = getClosingVerificationState(ai);
+  const activeIntradayRadar = hasFreshIntradayRadar ? reportSnapshotRadar : null;
   const canonicalNarrative: CanonicalMorningNarrative = useMemo(() => buildCanonicalNarrative({
     displayState,
     ai,
     memberResearchNoteV2: asObj(ai.member_research_note_v2),
   }), [displayState, ai]);
-  const nextCheckpointFallback = nextVerificationPoint(taipeiMinutes, activeIntradayRadar, intradaySyncView, closingVerificationState);
+  const runtimeTimeline = buildRuntimeDecisionTimeline({
+    ai,
+    hasReport: isReportForToday,
+    reportRevisionId: report?.id,
+    reportGeneratedAt: report?.created_at,
+    isTradingDay: Boolean(displayState?.is_trading_day && displayState.market_status === 'OPEN'),
+  });
+  const nextRuntimeNode = runtimeTimeline.find((node) => node.status === 'current')
+    || runtimeTimeline.find((node) => node.status === 'pending' || node.status === 'insufficient')
+    || runtimeTimeline[runtimeTimeline.length - 1];
+  const nextCheckpointFallback = `${nextRuntimeNode.time} ${nextRuntimeNode.label}`;
   const presentation = useMemo(() => buildDecisionPresentation({
     displayState,
     narrative: canonicalNarrative,
@@ -352,15 +269,19 @@ function TodayReportContent() {
   const primaryScenario = presentation.mission.title;
   const oneLineConclusion = presentation.mission.explanation;
   const successConditions = presentation.confirmationItems;
-  const flowConditions = successConditions.length > 0 ? successConditions : ['資料待補'];
+  const flowConditions = successConditions;
   const nextDecisionTime = formatCheckpoint(presentation.nextCheckpoint);
   const confidenceScore = presentation.confidence?.score;
   const validationSteps = canonicalNarrative.decision_lifecycle.validation_plan.steps.slice(0, 5);
+  const hasCompleteDecisionInputs = canonicalNarrative.decision_evidence.marketSnapshotAvailable
+    && canonicalNarrative.decision_evidence.checklistAvailable;
   const validationItems: Array<{ label: string; detail: string; status: TodayValidationStatus }> = validationSteps.length > 0
     ? validationSteps.map((step) => ({
         label: firstPopulatedText(step.title, step.detail),
         detail: step.title && step.detail && step.title !== step.detail ? step.detail : '',
-        status: step.status === 'completed'
+        status: !hasCompleteDecisionInputs
+          ? 'missing' as const
+          : step.status === 'completed'
           ? 'confirmed' as const
           : step.status === 'current'
             ? 'current' as const
@@ -370,7 +291,7 @@ function TodayReportContent() {
       }))
     : flowConditions.map((label) => ({ label, detail: '', status: 'missing' as const }));
   const confirmedValidationCount = validationItems.filter((item) => item.status === 'confirmed').length;
-  const scriptProgress = validationItems.length > 0
+  const scriptProgress = hasCompleteDecisionInputs && validationItems.length > 0
     ? Math.round((confirmedValidationCount / validationItems.length) * 100)
     : null;
 
@@ -383,7 +304,7 @@ function TodayReportContent() {
     },
     {
       label: '台指期',
-      value: formatMarketChange(activeIntradayRadar?.txf_change ?? report?.taiex_futures_change ?? snapshotChange(ai, ['txf', 'TXF'])),
+      value: formatMarketChange(activeIntradayRadar?.txf_change ?? snapshotChange(ai, ['txf', 'TXF'])),
       icon: 'ri-funds-line',
       priority: 'primary',
     },
@@ -395,20 +316,14 @@ function TodayReportContent() {
     },
     {
       label: '費半',
-      value: formatMarketChange(activeIntradayRadar?.sox_change ?? report?.sox_change ?? snapshotChange(ai, ['sox', 'SOX'])),
+      value: formatMarketChange(activeIntradayRadar?.sox_change ?? snapshotChange(ai, ['sox', 'SOX'])),
       icon: 'ri-global-line',
       priority: 'secondary',
     },
     {
       label: '美股期貨',
-      value: formatMarketChange(toNumber(ai.us_futures_change ?? ai.nasdaq_futures_change ?? ai.nq_futures_change)),
+      value: formatMarketChange(snapshotChange(ai, ['NQ', 'NASDAQ FUTURES', 'US FUTURES'])),
       icon: 'ri-bar-chart-grouped-line',
-      priority: 'secondary',
-    },
-    {
-      label: 'AI 市場健康度',
-      value: confidenceScore == null ? '資料待補' : `${confidenceScore}/100`,
-      icon: 'ri-pulse-line',
       priority: 'secondary',
     },
   ];
@@ -431,8 +346,8 @@ function TodayReportContent() {
         .filter(Boolean);
       return {
         ...stock,
-        displayHeadline: readableTexts[0] || '等待盤中確認',
-        displayObservation: readableTexts[1] || 'AI 正觀察資金承接與價格反應。',
+        displayHeadline: readableTexts[0],
+        displayObservation: readableTexts[1],
       };
     });
 
@@ -452,44 +367,10 @@ function TodayReportContent() {
   const activeFailure = canonicalNarrative.failure_triggers[0]
     || (presentation.primaryDecision.state === 'STOP' ? canonicalNarrative.decision_lifecycle.failure_condition : null);
 
-  const timelineDefinitions = [
-    { time: '08:30', minutes: 510, label: '盤前完成' },
-    { time: '09:00', minutes: 540, label: '開盤確認' },
-    { time: '13:00', minutes: 780, label: '盤中確認' },
-    { time: '13:30', minutes: 810, label: '更新劇本' },
-    { time: '14:10', minutes: 850, label: '收盤驗證' },
-  ];
-  const currentTimelineIndex = timelineDefinitions.reduce(
-    (activeIndex, item, index) => taipeiMinutes >= item.minutes ? index : activeIndex,
-    -1,
-  );
-  const historicalTimelineStates: TodayTimelineState[] = timelineDefinitions.map((_, index) => {
-    if (closingVerificationState.completed) return 'completed';
-    const stepStatus = validationSteps[index]?.status;
-    if (stepStatus === 'completed') return 'completed';
-    if (stepStatus === 'current') return 'current';
-    return 'upcoming';
-  });
-  const historicalCurrentIndex = historicalTimelineStates.indexOf('current');
-  const firstHistoricalUpcomingIndex = historicalTimelineStates.indexOf('upcoming');
-  const decisionTimeline = timelineDefinitions.map((item, index) => {
-    let state: TodayTimelineState;
-    if (!isReportForToday) {
-      state = historicalTimelineStates[index];
-      if (state === 'current' && index !== historicalCurrentIndex) state = 'upcoming';
-      if (
-        historicalCurrentIndex === -1
-        && firstHistoricalUpcomingIndex === index
-        && !closingVerificationState.completed
-      ) state = 'current';
-    } else if (closingVerificationState.completed) {
-      state = 'completed';
-    } else {
-      const activeIndex = Math.max(currentTimelineIndex, 0);
-      state = index < activeIndex ? 'completed' : index === activeIndex ? 'current' : 'upcoming';
-    }
-    return { ...item, state };
-  });
+  const decisionTimeline = runtimeTimeline.map((item) => ({
+    ...item,
+    state: (item.status === 'pending' || item.status === 'paused' ? 'upcoming' : item.status) as TodayTimelineState,
+  }));
   if (loading) {
     return (
       <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -660,8 +541,8 @@ function TodayReportContent() {
                 {focusStocks.map((stock) => (
                   <Link key={`${stock.symbol}-${stock.name}`} to="/opportunities" className="ma-today-v3-stock-card">
                     <div><div><span>{stock.symbol}</span><h3>{stock.name}</h3></div>{stock.roleLabel && <b>{stock.roleLabel}</b>}</div>
-                    <p>{stock.displayHeadline}</p>
-                    <small><i className="ri-focus-3-line" aria-hidden="true" />{stock.displayObservation}</small>
+                    {stock.displayHeadline && <p>{stock.displayHeadline}</p>}
+                    {stock.displayObservation && <small><i className="ri-focus-3-line" aria-hidden="true" />{stock.displayObservation}</small>}
                   </Link>
                 ))}
               </div>
@@ -692,7 +573,7 @@ function TodayReportContent() {
             <header className="ma-today-v3-section-header"><div><p>DECISION TIMELINE</p><h2>今日決策節點</h2></div></header>
             <div className="ma-today-v3-timeline">
               {decisionTimeline.map((item) => (
-                <article key={item.time} className={`is-${item.state}`}><i aria-hidden="true" /><strong>{item.time}</strong><span>{item.label}</span><small>{item.state === 'completed' ? '已完成' : item.state === 'current' ? '目前節點' : '未開始'}</small></article>
+                <article key={item.time} className={`is-${item.state}`}><i aria-hidden="true" /><strong>{item.time}</strong><span>{item.label}</span><small>{item.state === 'completed' ? '已完成' : item.state === 'current' ? '目前節點' : item.state === 'insufficient' ? '資料不足' : '待 Runtime'}</small></article>
               ))}
             </div>
           </section>

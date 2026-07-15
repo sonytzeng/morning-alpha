@@ -56,6 +56,12 @@ function textValue(value: unknown): string {
   return String(value ?? '').trim();
 }
 
+function numericOrTextValue(value: unknown): string | number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  return undefined;
+}
+
 function firstText(...values: unknown[]): string {
   for (const value of values) {
     const text = textValue(value);
@@ -186,7 +192,7 @@ function normalizeLegacyBeneficiary(row: Record<string, unknown>): MemberBenefic
     confirmation: firstText(row.confirmation, row.validation_signal, row.observation, row.catalyst, row.watch_point),
     invalidation: firstText(row.invalidation, row.invalidation_condition, row.risk, row.risk_note, row.stop_condition),
     transmissionPath: firstText(row.transmission_path),
-    confidence: row.confidence ?? row.confidence_level ?? row.confidence_score,
+    confidence: numericOrTextValue(row.confidence ?? row.confidence_level ?? row.confidence_score),
     evidence,
   };
 }
@@ -207,7 +213,7 @@ function normalizeV2Beneficiary(item: NonNullable<MemberResearchNoteV2['benefici
     confirmation: firstText(row.confirmation, row.validation_signal, row.observation, row.catalyst, row.watch_point),
     invalidation: firstText(row.invalidation, row.invalidation_condition, row.risk, row.risk_note, row.stop_condition),
     transmissionPath: firstText(row.transmission_path),
-    confidence: row.confidence ?? row.confidence_level ?? row.confidence_score,
+    confidence: numericOrTextValue(row.confidence ?? row.confidence_level ?? row.confidence_score),
     evidence: Array.isArray(row.evidence) ? row.evidence.map((value) => textValue(value)).filter(Boolean) : undefined,
   };
 }
@@ -470,20 +476,6 @@ function MemberResearchNoteV2View({
             </section>
           )}
 
-          {valueHasContent(note.closing_feedback_placeholder) && !hasClosingVerification && (
-            <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-              <h3 className="text-white font-semibold text-sm mb-3">收盤後回測欄位</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {getDataLines(note.closing_feedback_placeholder, ['status', 'what_to_verify', 'expected_update']).map((item, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
-                    <p className="text-violet-300/80 text-[10px] mb-1">{labelText(item.label)}</p>
-                    <p className="text-white/55 text-xs leading-relaxed">{renderSafeText(item.value)}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
           {hasItems(note.overnight_chain) && (
             <section className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
               <h3 className="text-white font-semibold text-sm mb-3">隔夜事件鏈</h3>
@@ -660,7 +652,7 @@ function MemberNoteContent() {
         setIsHistoricalFallback(resolved.isHistoricalFallback);
         setFallbackReportDate(resolved.fallbackReportDate);
         const r = resolved.rawRow;
-        const ds = getMorningAlphaDisplayState(r as Record<string, unknown> | null);
+        const ds = getMorningAlphaDisplayState(r as unknown as Record<string, unknown> | null);
         setDsState(ds);
         setMarketClosed({ closed: ds.market_status !== 'OPEN', holidayName: ds.holidayName });
         if (!r) {
@@ -817,7 +809,7 @@ function MemberNoteContent() {
     memberNoteV2?.subscriber_value_sentence,
     strategy.premium_value_summary?.strongest_member_value_today,
     rawAI.today_quote,
-  ) || '本段資料不足，等待下一次交易日報告補齊。';
+  );
   const v2BeneficiaryCandidates = (memberNoteV2?.beneficiary_candidates || [])
     .map(normalizeV2Beneficiary)
     .filter((candidate): candidate is MemberBeneficiaryCandidate => candidate !== null);
@@ -862,11 +854,6 @@ function MemberNoteContent() {
   const sectorPerformance = asRecordArray(closingVerificationRecord.actual_sector_performance);
   const tomorrowAdjustment = asRecord(closingVerificationRecord.tomorrow_adjustment);
   const canViewMemberNoteFull = hasFeature(entitlement, 'member_note_full');
-  const canViewVipFundFlow = hasFeature(entitlement, 'vip_fund_flow');
-  const hasVipResearchFields = valueHasContent(memberNoteV2?.fund_flow_scenario)
-    || valueHasContent(memberNoteV2?.market_mispricing)
-    || valueHasContent(memberNoteV2?.institutional_behavior)
-    || valueHasContent(memberNoteV2?.tomorrow_extension_watch);
   const scoreDisplay = scoreTone(confidenceScore);
   const canonicalNarrative = buildCanonicalNarrative({
     displayState: dsState,
@@ -893,7 +880,7 @@ function MemberNoteContent() {
     researcherSummary,
     openingThesis.summary,
     rawAI.daily_sentence,
-  ], [], '今日研究結論仍在整理');
+  ], [], '');
   const todayOneLine = heroConclusion;
   const v10BeneficiaryEnabled = dsState?.v10BeneficiaryEnabled === true || rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist || dsState?.v10ObservationWatchlist, 5);
@@ -913,12 +900,12 @@ function MemberNoteContent() {
     canonicalNarrative.intraday_progress.current_step,
     canonicalNarrative.intraday_progress.next_step,
   ], [heroConclusion], 5);
-  const checklistItems = rawChecklistItems.length > 0 ? rawChecklistItems : ['今日驗證清單尚未完整，先等待下一個同步點。'];
+  const checklistItems = rawChecklistItems;
   const heroValidation = firstUniqueResearchText([
     decisionLifecycle.validation_plan.next_step,
     formatCheckpoint(decisionPresentation.nextCheckpoint),
     ...checklistItems,
-  ], [heroConclusion], '等待下一個可用確認訊號');
+  ], [heroConclusion], '');
   const rawStopSignals = uniqueResearchItems([
     decisionLifecycle.failure_condition.trigger,
     decisionLifecycle.failure_condition.meaning,
@@ -928,7 +915,7 @@ function MemberNoteContent() {
     ...recordList(memberNoteV2?.invalidation_conditions).map((item) => firstText(item.condition, item.meaning, item.action_note)),
     ...recordList(memberNoteV2?.invalidation_rules).map((item) => firstText(item.condition, item.meaning, item.action_note)),
   ], [heroConclusion, heroValidation], 5);
-  const stopSignals = rawStopSignals.length > 0 ? rawStopSignals : ['今日失效條件尚未完整，暫不放大動作。'];
+  const stopSignals = rawStopSignals;
   const whyItems = uniqueResearchItems([
     decisionLifecycle.question.why,
     canonicalNarrative.today_focus.why,
@@ -938,14 +925,14 @@ function MemberNoteContent() {
     ...checklistItems,
     researcherSummary,
   ], [heroConclusion, heroValidation, ...stopSignals], 3);
-  const supportItems = whyItems.length > 0 ? whyItems : ['尚未取得額外支持證據'];
+  const supportItems = whyItems;
   const opposeItems = uniqueResearchItems([
     decisionLifecycle.failure_condition.meaning,
     ...canonicalNarrative.failure_triggers.map((item) => item.meaning),
     ...recordList(memberNoteV2?.risk_scenarios).map((item) => firstText(item.risk, item.condition)),
     ...recordList(memberNoteV2?.invalidation_conditions).map((item) => firstText(item.meaning, item.condition)),
   ], [heroConclusion, heroValidation, ...supportItems], 3);
-  const oppositionItems = opposeItems.length > 0 ? opposeItems : ['尚未出現明確反向證據'];
+  const oppositionItems = opposeItems;
   const invalidationItems = uniqueResearchItems([
     decisionLifecycle.failure_condition.trigger,
     decisionLifecycle.failure_condition.action,
@@ -981,20 +968,20 @@ function MemberNoteContent() {
     capitalRotation.theme,
     externalPriority.theme,
     beneficiaryCandidates.map((item) => formatResearchLabel(item.sector)).filter(Boolean).join('、'),
-  ], [heroConclusion], '等待盤中訊號');
-  const summaryRisk = firstUniqueResearchText(stopSignals, [heroConclusion, heroValidation], '等待反向訊號');
+  ], [heroConclusion], '');
+  const summaryRisk = firstUniqueResearchText(stopSignals, [heroConclusion, heroValidation], '');
   const summaryNext = firstUniqueResearchText([
     decisionLifecycle.validation_plan.next_step,
     formatCheckpoint(decisionPresentation.nextCheckpoint),
     ...checklistItems,
-  ], [heroConclusion], '等待盤中訊號');
+  ], [heroConclusion], '');
   const externalEvent = firstUniqueResearchText([
     primaryCausalChain.overseas_trigger,
     primaryOvernightChain?.catalyst,
     externalPriority.event,
     externalPriority.summary,
     strategy.reasoning_chain[0]?.step,
-  ], [heroConclusion, heroValidation, summaryMainline], '目前尚缺明確外部事件證據');
+  ], [heroConclusion, heroValidation, summaryMainline], '');
   const capitalIndustryReaction = firstUniqueResearchText([
     capitalRotation.summary,
     capitalRotation.direction,
@@ -1002,29 +989,29 @@ function MemberNoteContent() {
     primaryCausalChain.first_order_impact,
     sectorTransmission,
     strategy.reasoning_chain[1]?.step,
-  ], [heroConclusion, heroValidation, externalEvent], '目前尚缺明確資金／產業反應證據');
+  ], [heroConclusion, heroValidation, externalEvent], '');
   const taiwanMapping = firstUniqueResearchText([
     primaryCausalChain.taiwan_market_bridge,
     asRecord(primaryOvernightChain).taiwan_mapping,
     strategy.reasoning_chain[2]?.step,
-  ], [heroConclusion, heroValidation, externalEvent, capitalIndustryReaction], '目前尚缺明確台股映射證據');
+  ], [heroConclusion, heroValidation, externalEvent, capitalIndustryReaction], '');
   const flowValidation = firstUniqueResearchText([
     ...checklistItems,
     decisionLifecycle.validation_plan.next_step,
-  ], [heroConclusion, heroValidation, externalEvent, capitalIndustryReaction, taiwanMapping], '目前尚缺明確成立驗證條件');
+  ], [heroConclusion, heroValidation, externalEvent, capitalIndustryReaction, taiwanMapping], '');
   const researchFlow = [
     { label: '外部事件', question: '發生了什麼？', value: externalEvent },
     { label: '資金／產業反應', question: '理論上資金會往哪裡移動？', value: capitalIndustryReaction },
     { label: '台股映射', question: '這件事如何映射到台灣市場？', value: taiwanMapping },
-    { label: '代表股票', question: '哪些股票代表這條路徑？', value: representativeStocks || '目前尚缺明確代表股票' },
+    { label: '代表股票', question: '哪些股票代表這條路徑？', value: representativeStocks },
     { label: '驗證條件', question: '什麼現象出現才算成立？', value: flowValidation },
-  ];
+  ].filter((item) => Boolean(item.value));
   const researchSummaryCards = [
-    { label: '市場', value: formatResearchLabel(marketBias) || '資料待補' },
+    { label: '市場', value: formatResearchLabel(marketBias) },
     { label: '主線', value: summaryMainline },
     { label: '風險', value: summaryRisk },
     { label: '下一確認', value: summaryNext },
-  ];
+  ].filter((item) => Boolean(item.value));
   const researchStocks = beneficiaryCandidates.slice(0, 3).map((item) => {
     const reason = firstUniqueResearchText(
       [item.reason, item.transmissionPath],
@@ -1043,35 +1030,32 @@ function MemberNoteContent() {
     );
     return {
       ...item,
-      displayRole: formatResearchLabel(item.role || item.sector) || '代表觀察',
-      displayReason: reason || '目前列為此劇本的代表觀察股。',
-      displayConfirmation: confirmation || '等待盤中價格與資金承接確認。',
-      displayInvalidation: invalidation || '若市場方向與主線不同步，則降低觀察優先級。',
-      reasonFallback: !reason,
-      confirmationFallback: !confirmation,
-      invalidationFallback: !invalidation,
+      displayRole: formatResearchLabel(item.role || item.sector),
+      displayReason: reason,
+      displayConfirmation: confirmation,
+      displayInvalidation: invalidation,
     };
-  });
+  }).filter((item) => item.displayReason || item.displayConfirmation || item.displayInvalidation);
   const researchGuidance = [
     { label: '先看什麼', value: firstUniqueResearchText([
       canonicalNarrative.intraday_progress.current_step,
       ...checklistItems,
-    ], [heroConclusion, heroValidation, summaryNext, flowValidation], '先等待開盤第一反應與主線同步訊號') },
+    ], [heroConclusion, heroValidation, summaryNext, flowValidation], '') },
     { label: '避免什麼', value: firstUniqueResearchText(
       [...dontDoItems, decisionLifecycle.failure_condition.action],
       [heroConclusion, summaryRisk, ...oppositionItems],
-      '證據不足時避免提前下注',
+      '',
     ) },
     { label: '何時回來', value: firstUniqueResearchText([
       canonicalNarrative.intraday_progress.next_step,
       formatCheckpoint(decisionPresentation.nextCheckpoint),
-    ], [heroConclusion, heroValidation, summaryNext], '依下一個盤中同步節點回來確認') },
-  ];
+    ], [heroConclusion, heroValidation, summaryNext], '') },
+  ].filter((item) => Boolean(item.value));
   const nextConfirmationDetail = firstUniqueResearchText([
     canonicalNarrative.intraday_progress.next_step,
     formatCheckpoint(decisionPresentation.nextCheckpoint),
     decisionLifecycle.validation_plan.next_step,
-  ], [heroConclusion, heroValidation, summaryNext, ...researchGuidance.map((item) => item.value)], '下一個節點到達後重新檢查劇本狀態。');
+  ], [heroConclusion, heroValidation, summaryNext, ...researchGuidance.map((item) => item.value)], '');
   return (
     <div className="ma-page ma-pixel-page ma-research-note-page flex flex-col overflow-x-hidden">
       <Navbar />
@@ -1085,7 +1069,7 @@ function MemberNoteContent() {
               <p className="ma-pixel-hero-subtitle">{renderSafeText(heroConclusion)}</p>
             </div>
             <aside className="ma-phase2-status-card ma-research-summary-card">
-              <div><span>市場方向</span><strong>{renderSafeText(formatResearchLabel(marketBias) || '資料待補')}</strong></div>
+              <div><span>市場方向</span><strong>{renderSafeText(formatResearchLabel(marketBias) || '資料不足')}</strong></div>
               <div><span>信心</span><p>{confidenceScore != null ? `${confidenceScore}/100 · ${scoreDisplay.label}` : scoreDisplay.label}</p></div>
               <div><span>今天最重要驗證</span><p>{renderSafeText(heroValidation)}</p></div>
             </aside>
@@ -1113,13 +1097,13 @@ function MemberNoteContent() {
                     {researchStocks.map((stock) => (
                       <article key={`${stock.symbol || 'stock'}-${stock.name}`} className="ma-research-stock-card min-w-0 rounded-[14px] border border-[#20364A] bg-[#0B1A2A] p-5">
                         <div className="flex items-start justify-between gap-3">
-                          <div><span className="text-xs font-bold text-[#14C982]">{stock.symbol || '代號待補'}</span><h3 className="mt-1 text-lg font-bold text-[#F4F7FB]">{renderSafeText(stock.name)}</h3></div>
-                          <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-bold text-emerald-300">{renderSafeText(stock.displayRole)}</span>
+                          <div>{stock.symbol && <span className="text-xs font-bold text-[#14C982]">{stock.symbol}</span>}<h3 className="mt-1 text-lg font-bold text-[#F4F7FB]">{renderSafeText(stock.name)}</h3></div>
+                          {stock.displayRole && <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-bold text-emerald-300">{renderSafeText(stock.displayRole)}</span>}
                         </div>
                         <div className="mt-5 space-y-4">
-                          <div><p className="text-xs text-[#6F7F90]">入選原因 {stock.reasonFallback && <em className="ml-1 not-italic text-[#8D99A7]">UI fallback</em>}</p><p className="mt-1 text-sm leading-6 text-[#B5C1CF]">{renderSafeText(stock.displayReason)}</p></div>
-                          <div className="border-t border-[#20364A] pt-4"><p className="text-xs text-[#6F7F90]">成立條件 {stock.confirmationFallback && <em className="ml-1 not-italic text-[#8D99A7]">UI fallback</em>}</p><p className="mt-1 text-sm leading-6 text-[#B5C1CF]">{renderSafeText(stock.displayConfirmation)}</p></div>
-                          <div className="border-t border-[#20364A] pt-4"><p className="text-xs text-[#6F7F90]">失效條件 {stock.invalidationFallback && <em className="ml-1 not-italic text-[#8D99A7]">UI fallback</em>}</p><p className="mt-1 text-sm leading-6 text-[#B5C1CF]">{renderSafeText(stock.displayInvalidation)}</p></div>
+                          {stock.displayReason && <div><p className="text-xs text-[#6F7F90]">入選原因</p><p className="mt-1 text-sm leading-6 text-[#B5C1CF]">{renderSafeText(stock.displayReason)}</p></div>}
+                          {stock.displayConfirmation && <div className="border-t border-[#20364A] pt-4"><p className="text-xs text-[#6F7F90]">成立條件</p><p className="mt-1 text-sm leading-6 text-[#B5C1CF]">{renderSafeText(stock.displayConfirmation)}</p></div>}
+                          {stock.displayInvalidation && <div className="border-t border-[#20364A] pt-4"><p className="text-xs text-[#6F7F90]">失效條件</p><p className="mt-1 text-sm leading-6 text-[#B5C1CF]">{renderSafeText(stock.displayInvalidation)}</p></div>}
                         </div>
                       </article>
                     ))}
@@ -1127,737 +1111,16 @@ function MemberNoteContent() {
                 </section>
               )}
 
-              <section><div className="ma-phase2-section-heading"><i className="ri-compass-3-line" aria-hidden="true" /><div><h2>今天如何使用</h2></div></div><div className="ma-research-guidance-grid">{researchGuidance.map((item) => <article key={item.label}><p>{item.label}</p><strong>{renderSafeText(item.value)}</strong></article>)}</div></section>
+              {researchGuidance.length > 0 && <section><div className="ma-phase2-section-heading"><i className="ri-compass-3-line" aria-hidden="true" /><div><h2>今天如何使用</h2></div></div><div className="ma-research-guidance-grid">{researchGuidance.map((item) => <article key={item.label}><p>{item.label}</p><strong>{renderSafeText(item.value)}</strong></article>)}</div></section>}
 
               <section className="ma-phase2-signal-grid">
-                <div className="ma-phase2-list-panel is-oppose"><div className="ma-phase2-section-heading"><i className="ri-error-warning-line" aria-hidden="true" /><div><h2>失效條件</h2><p>出現以下訊號時，停止沿用原劇本。</p></div></div>{invalidationItems.length > 0 ? invalidationItems.map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-close-line" aria-hidden="true" /><span>{renderSafeText(item)}</span></div>) : <div className="ma-phase2-signal-row"><i className="ri-information-line" aria-hidden="true" /><span>尚未取得可用失效條件</span></div>}</div>
-                <div className="ma-phase2-list-panel"><div className="ma-phase2-section-heading"><i className="ri-time-line" aria-hidden="true" /><div><h2>下一次確認</h2><p>回到下一個節點，重新檢查劇本是否成立。</p></div></div><div className="ma-phase2-signal-row"><i className="ri-arrow-right-line" aria-hidden="true" /><span>{renderSafeText(nextConfirmationDetail)}</span></div><Link to="/war-room" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-2 text-sm font-semibold text-emerald-300">查看盤中追蹤<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>
+                {invalidationItems.length > 0 && <div className="ma-phase2-list-panel is-oppose"><div className="ma-phase2-section-heading"><i className="ri-error-warning-line" aria-hidden="true" /><div><h2>失效條件</h2><p>出現以下訊號時，停止沿用原劇本。</p></div></div>{invalidationItems.map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-close-line" aria-hidden="true" /><span>{renderSafeText(item)}</span></div>)}</div>}
+                {nextConfirmationDetail && <div className="ma-phase2-list-panel"><div className="ma-phase2-section-heading"><i className="ri-time-line" aria-hidden="true" /><div><h2>下一次確認</h2><p>回到下一個節點，重新檢查劇本是否成立。</p></div></div><div className="ma-phase2-signal-row"><i className="ri-arrow-right-line" aria-hidden="true" /><span>{renderSafeText(nextConfirmationDetail)}</span></div><Link to="/war-room" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-2 text-sm font-semibold text-emerald-300">查看盤中追蹤<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>}
               </section>
             </>
           ) : (
             <PaywallCard title="升級會員查看完整盤前研究筆記" description="完整研究推導、支持與反對證據，以及今日使用方式收在會員版。" requiredTier="member" featureList={['完整研究推導', '支持與反對證據', '今日使用方式']} tone="dark" />
           )}
-        </div>
-
-        {/* HEADER */}
-        <div className="ma-phase2-legacy-detail border-b border-background-200/70 bg-background-100/80">
-          <div className="max-w-5xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-md bg-forest-500/15 flex items-center justify-center">
-                <i className="ri-book-open-line text-forest-400 text-sm"></i>
-              </div>
-              <div>
-                <h1 className="text-slate-50 font-bold text-sm md:text-base whitespace-nowrap">
-                  Daily Playbook
-                </h1>
-                <p className="text-slate-400 text-[10px] mt-0.5">每天 5 分鐘完成今天交易準備。</p>
-              </div>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/12 text-emerald-300 text-[10px] font-medium rounded-full border border-emerald-400/35 whitespace-nowrap">
-                <i className="ri-check-line text-[9px]"></i>
-                {canViewMemberNoteFull ? '會員內容' : '免費摘要'}
-              </span>
-              {isHistoricalFallback && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-500/12 text-sky-300 text-[10px] font-medium rounded-full border border-sky-400/25 whitespace-nowrap">
-                  <i className="ri-history-line text-[9px]"></i>
-                  歷史資料模式：{fallbackReportDate || reportDate}
-                </span>
-              )}
-            </div>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-forest-500/12 text-forest-300 text-[10px] font-medium rounded-full border border-forest-400/35 whitespace-nowrap">
-              <i className="ri-calendar-line"></i>
-              報告日期：{reportDate}
-            </span>
-          </div>
-        </div>
-
-        <div className="ma-phase2-legacy-detail max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 md:space-y-8">
-
-          {/* REPORT META */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <div className="p-3 rounded-xl bg-navy-900/60 border border-navy-800">
-              <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">報告日期</p>
-              <p className="text-slate-100 font-bold text-sm">{reportDate}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-navy-900/60 border border-navy-800">
-              <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
-              <p className="text-slate-100 font-bold text-sm">{marketBias}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-navy-900/60 border border-navy-800">
-              <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">判斷把握度</p>
-              <p className="text-slate-100 font-bold text-sm">{scoreDisplay.stars} {scoreDisplay.label}</p>
-              {confidenceScore != null && <p className="text-slate-500 text-[10px] mt-1">{confidenceScore}/100</p>}
-            </div>
-            <div className="p-3 rounded-xl bg-navy-900/60 border border-navy-800">
-              <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">資料基準</p>
-              <p className="text-slate-200 text-xs">{twCoreDate} 收盤 / {usGlobalDate}</p>
-            </div>
-          </div>
-
-          {/* Daily Playbook — five-minute member read */}
-          <section className="ma-card-elevated space-y-4 border-primary-400/20">
-            <div>
-              <p className="text-forest-300 text-[10px] uppercase tracking-[0.3em] font-semibold mb-2">Today&apos;s Mission</p>
-              <h2 className="text-white text-xl md:text-2xl font-bold leading-snug">{renderSafeText(decisionLifecycle.question.question)}</h2>
-              <p className="text-white/58 text-sm leading-relaxed mt-2">每天 5 分鐘完成今天交易準備。</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div className="md:col-span-2 p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">目前判斷</p>
-                <p className="text-white/82 text-sm leading-relaxed">{renderSafeText(decisionLifecycle.current_thesis.summary || todayOneLine)}</p>
-              </div>
-              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">目前狀態</p>
-                <p className="text-white/82 text-sm font-semibold leading-relaxed">{renderSafeText(decisionStatusText)}</p>
-                <p className="text-white/45 text-xs leading-relaxed mt-1">{renderSafeText(decisionLifecycle.decision_status.reason)}</p>
-              </div>
-              <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-400/20">
-                <p className="text-amber-200 text-[10px] uppercase tracking-wider mb-2">今天最容易犯的錯</p>
-                <p className="text-amber-50/85 text-sm leading-relaxed">{renderSafeText(dontDoItems[0] || decisionLifecycle.failure_condition.action)}</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="ma-card">
-            <div className="flex items-center gap-2 mb-4">
-              <i className="ri-question-answer-line text-forest-400 text-sm"></i>
-              <h2 className="text-white font-bold text-base">Why This Matters</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {whyItems.map((line, idx) => (
-                <div key={`${line}-${idx}`} className="flex gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <span className="w-6 h-6 rounded-full bg-forest-500/12 border border-forest-400/20 text-forest-200 text-xs font-semibold flex items-center justify-center shrink-0">{idx + 1}</span>
-                  <p className="text-white/68 text-sm leading-relaxed">{renderSafeText(line)}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="ma-card">
-            <div className="flex items-center gap-2 mb-4">
-              <i className="ri-checkbox-line text-sky-400 text-sm"></i>
-              <h2 className="text-white font-bold text-base">Decision Checklist</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {checklistItems.map((item, idx) => (
-                <div key={`${item}-${idx}`} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <span className="mt-0.5 w-5 h-5 rounded-md border border-sky-400/35 bg-sky-500/10 text-sky-200 text-[10px] flex items-center justify-center">□</span>
-                  <p className="text-white/70 text-sm leading-relaxed">{renderSafeText(item)}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="ma-card">
-            <div className="flex items-center gap-2 mb-4">
-              <i className="ri-stop-circle-line text-red-300 text-sm"></i>
-              <h2 className="text-white font-bold text-base">Stop Signals</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {stopSignals.map((item, idx) => (
-                <div key={`${item}-${idx}`} className="p-3 rounded-xl bg-red-500/[0.04] border border-red-400/15">
-                  <p className="text-red-200/85 text-sm leading-relaxed">{renderSafeText(item)}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="ma-card">
-            <div className="flex items-center gap-2 mb-3">
-              <i className="ri-lightbulb-flash-line text-amber-300 text-sm"></i>
-              <h2 className="text-white font-bold text-base">Today&apos;s Takeaway</h2>
-            </div>
-            <p className="text-white/78 text-lg font-semibold leading-relaxed">
-              {renderSafeText(hasCompletedClosingVerification ? todayTakeaway : firstText(todayTakeaway, `今天如果只能記住一件事：${decisionLifecycle.question.question}`))}
-            </p>
-            <p className="text-white/42 text-xs leading-relaxed mt-2">
-              {hasCompletedClosingVerification ? '收盤後更新：今天真正學到什麼。' : '盤中尚未完成前，先用 Morning Thesis 管住節奏。'}
-            </p>
-          </section>
-
-          <V11ObservationSection
-            items={v11ObservationScripts}
-            tone="dark"
-            subtitle="Watchlist 不是主角；它只回答為什麼在名單、還缺什麼條件、什麼時候移除。"
-          />
-
-          {/* Researcher Summary */}
-          <section className="bg-navy-900/60 border border-forest-500/10 rounded-2xl p-5 md:p-6">
-            <div className="flex items-center gap-2 mb-3">
-              <i className="ri-quill-pen-line text-forest-400 text-sm"></i>
-              <h2 className="text-white font-bold text-base">研究員摘要</h2>
-            </div>
-            <p className="text-white/70 text-sm leading-relaxed">{renderSafeText(researcherSummary)}</p>
-          </section>
-
-          {hasOpeningRadar && (
-            <section className="bg-navy-900/60 border border-sky-500/10 rounded-2xl p-5 md:p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <i className="ri-radar-line text-sky-400 text-sm"></i>
-                <h2 className="text-white font-bold text-base">盤中雷達狀態</h2>
-              </div>
-              {openingRadarLines.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {openingRadarLines.map((item, idx) => (
-                    <div key={`${item.label}-${idx}`} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                      <p className="text-sky-400/60 text-[10px] uppercase tracking-wider mb-1">{renderSafeText(item.label)}</p>
-                      <p className="text-white/60 text-xs leading-relaxed">{renderSafeText(item.value)}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-white/50 text-xs leading-relaxed">盤中雷達資料已存在，等待下一版格式化顯示。</p>
-              )}
-            </section>
-          )}
-
-          <section className="bg-navy-900/60 border border-violet-500/10 rounded-2xl p-5 md:p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <i className="ri-check-double-line text-violet-400 text-sm"></i>
-              <h2 className="text-white font-bold text-base">收盤驗證</h2>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-400/20">
-                {hasCompletedClosingVerification ? (isClosingVerificationDegraded ? '大盤方向已驗證' : '收盤驗證已完成') : '收盤驗證待完成'}
-              </span>
-            </div>
-
-            {hasCompletedClosingVerification ? (
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-violet-500/[0.04] border border-violet-400/20">
-                  <p className="text-violet-300 text-[10px] uppercase tracking-wider mb-2">Daily Lesson</p>
-                  <p className="text-white/80 text-sm font-semibold leading-relaxed">{renderSafeText(decisionLifecycle.daily_lesson)}</p>
-                  <p className="text-white/45 text-xs leading-relaxed mt-2">同一個問題：{renderSafeText(decisionLifecycle.closing_review.question)}</p>
-                </div>
-                {isClosingVerificationDegraded && (
-                  <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-400/20">
-                    <p className="text-amber-200 text-sm font-semibold mb-1">大盤方向已驗證，個股與類股資料仍不完整</p>
-                    <p className="text-amber-100/70 text-xs leading-relaxed">目前只完成大盤方向驗證；受惠股收盤資料或當日類股輪動尚未完整，因此不把本次驗證視為完整回測。</p>
-                  </div>
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">盤前方向</p>
-                    <p className="text-white/70 text-xs leading-relaxed">{renderSafeText(closingVerificationRecord.opening_bias || closingVerificationRecord.predicted_bias || marketBias)}</p>
-                    <p className="text-white/35 text-[10px] mt-1">判斷把握度：{renderSafeText(closingVerificationRecord.opening_confidence || closingVerificationRecord.predicted_confidence || confidenceScore || '—')}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">實際收盤</p>
-                    <p className="text-white/70 text-xs leading-relaxed">TAIEX {renderSafeText(closingTaiex.change_percent ?? closingVerificationRecord.actual_taiex_change ?? '待資料')}%</p>
-                    <p className="text-white/35 text-[10px] mt-1">2330 {renderSafeText(closingTsmc.change_percent ?? '待資料')}%</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">命中程度</p>
-                    <p className="text-white/70 text-xs leading-relaxed">{humanStatus(closingVerificationRecord.hit_or_miss || closingVerificationRecord.prediction_result || closingVerificationRecord.verdict_label || '待驗證')}</p>
-                    <p className="text-white/35 text-[10px] mt-1">資料狀態：{humanStatus(closingVerificationRecord.data_status || '—')}</p>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                  <h3 className="text-white font-semibold text-sm mb-3">第一受惠股驗證</h3>
-                  {valueHasContent(firstBeneficiaryValidation.predicted_stock) && (
-                    <p className="text-white/65 text-xs leading-relaxed mb-3">
-                      盤前第一受惠股：{renderSafeText(asRecord(firstBeneficiaryValidation.predicted_stock).symbol || '')} {renderSafeText(asRecord(firstBeneficiaryValidation.predicted_stock).name || '')}
-                    </p>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {getDataLines(firstBeneficiaryValidation, ['close_change_percent', 'taiex_relative_percent', 'matched_logic', 'note']).map((item, idx) => (
-                      <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
-                        <p className="text-violet-300/80 text-[10px] mb-1">{labelText(item.label)}</p>
-                        <p className="text-white/60 text-xs leading-relaxed">{renderSafeText(item.value)}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                  <h3 className="text-white font-semibold text-sm mb-3">受惠股名單驗證</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
-                    {['tracked_count', 'with_close_data_count', 'up_count', 'down_count', 'outperformed_taiex_count'].map((key) => (
-                      <div key={key} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
-                        <p className="text-white/35 text-[10px] mb-1">{labelText(key)}</p>
-                        <p className="text-white/75 text-sm font-semibold">{renderSafeText(beneficiaryListValidation[key] ?? '—')}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-white/45 text-xs leading-relaxed">比較方式：每檔受惠股收盤表現扣除 TAIEX 收盤漲跌幅，跑贏大盤才算相對成立；資料不足時標示資料不完整，不硬判。</p>
-                </div>
-
-                {hasItems(intradayReplayTimeWindows) && (
-                  <div className="p-4 rounded-xl bg-sky-500/[0.04] border border-sky-400/20">
-                    <h3 className="text-white font-semibold text-sm mb-3">當沖資金驗證時間窗回放</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {intradayReplayTimeWindows.map((item, idx) => (
-                        <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <p className="text-sky-300/80 text-xs font-semibold">{renderSafeText(item.time || item.title || `時間窗 ${idx + 1}`)}</p>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 border border-white/10">{humanStatus(item.status || '待驗證')}</span>
-                          </div>
-                          <p className="text-white/80 text-sm font-medium mb-2">{renderSafeText(item.title || '盤中驗證')}</p>
-                          <p className="text-white/45 text-xs leading-relaxed mb-2">預期：{renderSafeText(item.expected_signal || '—')}</p>
-                          <p className="text-white/60 text-xs leading-relaxed mb-2">實際：{renderSafeText(item.actual_signal || '待驗證')}</p>
-                          <p className="text-amber-300/70 text-xs leading-relaxed">{renderSafeText(item.note || '資料不足，不硬判。')}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {hasItems(intradayReplaySignals) && (
-                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                    <h3 className="text-white font-semibold text-sm mb-3">盤中驗證訊號回放</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      {intradayReplaySignals.map((item, idx) => (
-                        <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
-                          <p className="text-sky-300/80 text-xs font-semibold mb-1">{renderSafeText(item.time || item.label || `訊號 ${idx + 1}`)}</p>
-                          <p className="text-white/35 text-[10px] mb-1">{humanStatus(item.status || '資料不足')}</p>
-                          <p className="text-white/55 text-xs leading-relaxed">{renderSafeText(item.finding || item.summary || '—')}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {hasItems(sectorPerformance) && (
-                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                    <h3 className="text-white font-semibold text-sm mb-3">類股收盤表現</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {sectorPerformance.slice(0, 4).map((item, idx) => (
-                        <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
-                          <p className="text-white/80 text-sm font-medium">{renderSafeText(item.sector || `類股 ${idx + 1}`)}</p>
-                          <p className="text-white/45 text-xs mt-1">輪動分數：{renderSafeText(item.rotation_score ?? '—')}｜{renderSafeText(item.signal_label || item.direction || '')}</p>
-                          <p className="text-white/55 text-xs mt-2 leading-relaxed">{renderSafeText(item.summary || '')}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="p-4 rounded-xl bg-violet-500/[0.04] border border-violet-400/20">
-                  <h3 className="text-white font-semibold text-sm mb-3">明日調整</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {['keep', 'downgrade', 'watch_tomorrow'].map((key) => (
-                      <div key={key} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
-                        <p className="text-violet-300/80 text-[10px] mb-2">{labelText(key)}</p>
-                        <ul className="space-y-1">
-                          {textList(tomorrowAdjustment[key]).map((line, idx) => (
-                            <li key={idx} className="text-white/55 text-xs leading-relaxed">• {renderSafeText(line)}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
-                <p className="text-white/70 text-sm font-medium mb-1">收盤驗證將於收盤資料完成後更新</p>
-                <p className="text-white/45 text-xs leading-relaxed">目前為待驗證，尚未納入績效統計。第一受惠股與受惠股名單會在有效收盤資料完成後回測，不硬判。</p>
-              </div>
-            )}
-          </section>
-
-          {/* ═══════════════════════════════ */}
-          {/* MEMBER RESEARCH NOTE SECTIONS */}
-          {/* ═══════════════════════════════ */}
-          {canViewMemberNoteFull ? (
-            <>
-              {memberNoteV2 ? (
-                <details className="group rounded-2xl bg-navy-900/50 border border-navy-800 overflow-hidden">
-                  <summary className="cursor-pointer list-none px-5 py-4 flex items-center justify-between gap-3">
-                    <span className="text-white font-semibold text-sm">展開詳細研究資料</span>
-                    <span className="text-white/40 text-xs group-open:hidden">隔夜事件鏈、時間窗、類股輪動、原始推理鏈</span>
-                    <span className="hidden text-white/40 text-xs group-open:inline">收合詳細資料</span>
-                  </summary>
-                  <div className="px-4 pb-4 md:px-5 md:pb-5">
-                    <MemberResearchNoteV2View
-                      note={memberNoteV2}
-                      reportDate={reportDate}
-                      twCoreDate={twCoreDate}
-                      isHistoricalFallback={isHistoricalFallback}
-                      beneficiaryCandidates={beneficiaryCandidates}
-                      hasClosingVerification={hasCompletedClosingVerification}
-                    />
-                  </div>
-                </details>
-              ) : hasMemberNote && memberNoteText ? (
-              /* ═══ 純文字多段落路徑 (V8.2.1) ═══ */
-              <section>
-                <div className="ma-card-elevated overflow-hidden md:p-8">
-
-                  <div className="text-center mb-6">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/12 rounded-full border border-emerald-400/35 mb-4">
-                      <i className="ri-eye-line text-emerald-400 text-xs"></i>
-                      <span className="text-emerald-300 text-[10px] font-semibold uppercase tracking-wider">{isHistoricalFallback ? '歷史資料模式' : '完整研究筆記'}</span>
-                    </div>
-                    <h2 className="text-white font-bold text-lg md:text-xl mb-2">
-                      第二層：{isHistoricalFallback ? '歷史盤前研究筆記' : '完整盤前研究筆記'}
-                    </h2>
-                    <p className="text-slate-300 text-xs mb-3">
-                      本篇為 {reportDate} 盤前研究筆記，行情基準採用最近完整交易日 {twCoreDate}。
-                    </p>
-                  </div>
-
-                  {/* V8.2.1: 多段落渲染，每段獨立顯示，不做截斷 */}
-                  <div className="p-4 md:p-6 rounded-xl bg-white/[0.02] border border-white/5 space-y-4">
-                    {memberNoteText.split('\n').filter(Boolean).map((paragraph, i) => (
-                      <p key={i} className="text-white/70 text-sm leading-relaxed">
-                        {paragraph.trim()}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              </section>
-              ) : (
-            /* ═══ 無內容路徑 ═══ */
-            <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-6 text-center">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-navy-800/80 flex items-center justify-center">
-                <i className="ri-book-open-line text-white/15 text-2xl"></i>
-              </div>
-              <p className="text-slate-300 text-sm mb-2">完整研究筆記尚未生成</p>
-              <p className="text-slate-500 text-xs max-w-md mx-auto">目前只有公開摘要，尚不足以形成會員研究筆記。</p>
-            </section>
-              )}
-
-              {!v10BeneficiaryEnabled && !memberNoteV2 && hasItems(beneficiaryCandidates) && (
-            <section className="bg-navy-900/60 border border-amber-500/10 rounded-2xl p-5 md:p-6">
-              <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
-                <i className="ri-focus-3-line text-amber-400 text-sm"></i>
-                第一受惠股候選
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {beneficiaryCandidates.map((item, idx) => (
-                  <div key={`${item.symbol || item.name}-${idx}`} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-white/85 text-sm font-semibold">{[item.symbol, item.name].filter(Boolean).join(' ')}</p>
-                    <p className="text-white/35 text-[10px] mt-0.5">
-                      {renderSafeText(item.sector || '—')}{item.confidence !== undefined && item.confidence !== '' ? `｜判斷把握度：${item.confidence}` : ''}
-                    </p>
-                    {item.reason && <p className="text-white/55 text-xs mt-2 leading-relaxed">{renderSafeText(item.reason)}</p>}
-                    {hasItems(item.evidence) && <p className="text-forest-300/70 text-xs mt-1">證據：{item.evidence.join('；')}</p>}
-                    {item.risk && <p className="text-red-400/70 text-xs mt-1">風險：{renderSafeText(item.risk)}</p>}
-                    {item.watchPoint && <p className="text-sky-300/70 text-xs mt-1">觀察：{renderSafeText(item.watchPoint)}</p>}
-                  </div>
-                ))}
-              </div>
-            </section>
-              )}
-
-              {/* B: Reasoning Chain */}
-              {hasReasoningChain && (
-            <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
-              <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
-                <i className="ri-link text-forest-400 text-sm"></i>
-                推理鏈
-              </h2>
-              <div className="space-y-3">
-                {strategy.reasoning_chain.map((step, i) => (
-                  <div key={i} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-forest-400 text-[10px] font-bold">{i + 1}</span>
-                      <p className="text-white font-semibold text-sm">{renderSafeText(step.step)}</p>
-                    </div>
-                    {step.evidence && <p className="text-white/50 text-xs ml-5">證據：{renderSafeText(step.evidence)}</p>}
-                    {step.inference && <p className="text-white/45 text-xs ml-5 mt-0.5">推論：{renderSafeText(step.inference)}</p>}
-                  </div>
-                ))}
-              </div>
-            </section>
-              )}
-
-              {/* C: 隔夜影響鏈 */}
-              {hasOvernightChains && (
-            <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
-              <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
-                <i className="ri-global-line text-amber-400 text-sm"></i>
-                隔夜影響鏈
-              </h2>
-
-              {/* V9.0: Causal chain format (new) */}
-              {causalChains.length > 0 ? (
-                <div className="space-y-4">
-                  {causalChains.map((chain, i) => (
-                    <div key={i} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-3">
-                      {/* Overseas trigger */}
-                      {chain.overseas_trigger && (
-                        <div>
-                          <p className="text-amber-400/60 text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                            <i className="ri-flashlight-line text-[11px]"></i>海外觸發
-                          </p>
-                          <p className="text-white/80 text-sm leading-relaxed">{renderSafeText(String(chain.overseas_trigger))}</p>
-                        </div>
-                      )}
-
-                      {/* First order impact */}
-                      {chain.first_order_impact && (
-                        <div>
-                          <p className="text-sky-400/60 text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                            <i className="ri-arrow-right-circle-line text-[11px]"></i>第一層影響
-                          </p>
-                          <p className="text-sky-300/80 text-xs leading-relaxed">{renderSafeText(String(chain.first_order_impact))}</p>
-                        </div>
-                      )}
-
-                      {/* Taiwan market bridge */}
-                      {chain.taiwan_market_bridge && (
-                        <div>
-                          <p className="text-accent-400/60 text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                            <i className="ri-exchange-line text-[11px]"></i>台股傳導
-                          </p>
-                          <p className="text-accent-300/80 text-xs leading-relaxed">{renderSafeText(String(chain.taiwan_market_bridge))}</p>
-                        </div>
-                      )}
-
-                      {/* Sector transmission */}
-                      {Array.isArray(chain.sector_transmission) && (chain.sector_transmission as string[]).length > 0 && (
-                        <div>
-                          <p className="text-accent-400/60 text-[10px] uppercase tracking-wider mb-1">影響產業</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {(chain.sector_transmission as string[]).map((s, si) => (
-                              <span key={si} className="text-[9px] px-2 py-0.5 rounded-full bg-accent-100/10 text-accent-300 border border-accent-400/20">{s}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Stock selection logic */}
-                      {chain.stock_selection_logic && (
-                        <div>
-                          <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                            <i className="ri-list-check text-[11px]"></i>選股邏輯
-                          </p>
-                          <p className="text-violet-300/70 text-xs leading-relaxed">{renderSafeText(String(chain.stock_selection_logic))}</p>
-                        </div>
-                      )}
-
-                      {/* Invalidation */}
-                      {chain.invalidation_condition && (
-                        <div className="p-2.5 rounded-lg bg-red-500/[0.04] border border-red-500/12">
-                          <p className="text-red-400/60 text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                            <i className="ri-close-circle-line text-[11px]"></i>失效條件
-                          </p>
-                          <p className="text-red-400/70 text-xs leading-relaxed">{renderSafeText(String(chain.invalidation_condition))}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                /* Legacy format fallback */
-                <div className="space-y-3">
-                  {strategy.overnight_impact_chain.map((chain, i) => (
-                    <div key={i} className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                      <p className="text-white font-semibold text-sm mb-2">{renderSafeText(chain.catalyst)}</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                        {chain.taiwan_market_impact && <p className="text-amber-400/70">台股影響：{renderSafeText(chain.taiwan_market_impact)}</p>}
-                        {chain.affected_sectors.length > 0 && <p className="text-white/50">族群：{chain.affected_sectors.map((s: string) => s).join('、')}</p>}
-                        {chain.invalidation_condition && <p className="text-red-400/60 col-span-full">失效：{renderSafeText(chain.invalidation_condition)}</p>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-              )}
-
-              {/* D: Intraday Validation Plan */}
-              {hasValidationPlan && strategy.intraday_validation_plan && (
-            <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
-              <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
-                <i className="ri-timer-line text-sky-400 text-sm"></i>
-                盤中驗證計畫
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {strategy.intraday_validation_plan.open_0900_0930 && (
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-sky-400/60 text-[10px] uppercase tracking-wider mb-1">09:00-09:30</p>
-                    <p className="text-white/60 text-xs">{renderSafeText(strategy.intraday_validation_plan.open_0900_0930)}</p>
-                  </div>
-                )}
-                {strategy.intraday_validation_plan.mid_session_1000_1130 && (
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-sky-400/60 text-[10px] uppercase tracking-wider mb-1">10:00-11:30</p>
-                    <p className="text-white/60 text-xs">{renderSafeText(strategy.intraday_validation_plan.mid_session_1000_1130)}</p>
-                  </div>
-                )}
-                {strategy.intraday_validation_plan.afternoon_1300_1330 && (
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-sky-400/60 text-[10px] uppercase tracking-wider mb-1">13:00-13:30</p>
-                    <p className="text-white/60 text-xs">{renderSafeText(strategy.intraday_validation_plan.afternoon_1300_1330)}</p>
-                  </div>
-                )}
-              </div>
-            </section>
-              )}
-
-              {/* E: Invalidation Conditions */}
-              {hasInvalidation && (
-            <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
-              <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
-                <i className="ri-close-circle-line text-red-400 text-sm"></i>
-                失效條件
-              </h2>
-              <div className="space-y-3">
-                {strategy.invalidation_conditions.map((ic, i) => (
-                  <div key={i} className="p-3 rounded-xl bg-red-500/[0.03] border border-red-500/10">
-                    {ic.condition && <p className="text-white font-semibold text-sm mb-1">{renderSafeText(ic.condition)}</p>}
-                    {ic.meaning && <p className="text-white/50 text-xs">{renderSafeText(ic.meaning)}</p>}
-                    {ic.required_adjustment && <p className="text-amber-400/70 text-xs mt-1">調整：{renderSafeText(ic.required_adjustment)}</p>}
-                  </div>
-                ))}
-              </div>
-            </section>
-              )}
-
-              {/* F: Closing Feedback Plan */}
-              {!hasClosingVerification && hasClosingPlan && strategy.closing_feedback_plan && (
-            <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
-              <div className="flex items-center gap-2 mb-4 flex-wrap">
-                <h2 className="text-white font-bold text-base flex items-center gap-2">
-                  <i className="ri-check-double-line text-violet-400 text-sm"></i>
-                  收盤回饋計畫
-                </h2>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-400/20">待收盤驗證</span>
-              </div>
-              <div className="space-y-3">
-                {strategy.closing_feedback_plan.what_to_check_after_close && (
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">收盤後檢查</p>
-                    <p className="text-white/60 text-xs">{renderSafeText(strategy.closing_feedback_plan.what_to_check_after_close)}</p>
-                  </div>
-                )}
-                {strategy.closing_feedback_plan.how_to_score_today && (
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">今日評分</p>
-                    <p className="text-white/60 text-xs">{renderSafeText(strategy.closing_feedback_plan.how_to_score_today)}</p>
-                  </div>
-                )}
-                {strategy.closing_feedback_plan.what_to_adjust_tomorrow && (
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-violet-400/60 text-[10px] uppercase tracking-wider mb-1">明日修正</p>
-                    <p className="text-white/60 text-xs">{renderSafeText(strategy.closing_feedback_plan.what_to_adjust_tomorrow)}</p>
-                  </div>
-                )}
-              </div>
-            </section>
-              )}
-
-              {/* G: Renewal Value Block */}
-              {hasRenewalBlock && strategy.renewal_value_block && (
-            <section className="bg-navy-900/60 border border-amber-500/10 rounded-2xl p-5 md:p-6">
-              <h2 className="text-white font-bold text-base mb-4 flex items-center gap-2">
-                <i className="ri-bookmark-line text-amber-400 text-sm"></i>
-                持續研究價值
-              </h2>
-              <div className="space-y-3">
-                {strategy.renewal_value_block.why_member_should_read_today && (
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-amber-400/60 text-[10px] uppercase tracking-wider mb-1">今天為什麼要看</p>
-                    <p className="text-white/70 text-sm">{renderSafeText(strategy.renewal_value_block.why_member_should_read_today)}</p>
-                  </div>
-                )}
-                {strategy.renewal_value_block.what_free_news_does_not_provide && (
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-amber-400/60 text-[10px] uppercase tracking-wider mb-1">深度分析補充</p>
-                    <p className="text-white/60 text-xs">{renderSafeText(strategy.renewal_value_block.what_free_news_does_not_provide)}</p>
-                  </div>
-                )}
-                {strategy.renewal_value_block.tomorrow_followup_hook && (
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-amber-400/60 text-[10px] uppercase tracking-wider mb-1">明天為什麼要回來</p>
-                    <p className="text-white/60 text-xs">{renderSafeText(strategy.renewal_value_block.tomorrow_followup_hook)}</p>
-                  </div>
-                )}
-              </div>
-            </section>
-              )}
-
-              {/* H: Premium Value Summary */}
-              {hasPremiumSummary && strategy.premium_value_summary && (
-            <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
-              <h2 className="text-white font-bold text-base mb-4">研究內容價值摘要</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {strategy.premium_value_summary.why_member_would_pay && (
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">研究價值</p>
-                    <p className="text-white/60 text-xs">{renderSafeText(strategy.premium_value_summary.why_member_would_pay)}</p>
-                  </div>
-                )}
-                {strategy.premium_value_summary.free_vs_member_gap && (
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">分析深度差距</p>
-                    <p className="text-white/60 text-xs">{renderSafeText(strategy.premium_value_summary.free_vs_member_gap)}</p>
-                  </div>
-                )}
-              </div>
-            </section>
-              )}
-              {hasVipResearchFields && !canViewVipFundFlow && (
-                <PaywallCard
-                  title="VIP 功能即將開放"
-                  description="法人可能行為、資金流推演、市場錯價與隔日延伸觀察會收在 VIP 版，供高頻回訪與週度回測使用。"
-                  requiredTier="vip"
-                  featureList={['資金流劇本', '市場錯價觀察', '法人行為推演', '明日延伸追蹤']}
-                  tone="dark"
-                />
-              )}
-            </>
-          ) : (
-            <PaywallCard
-              title="升級會員查看完整盤前研究筆記"
-              description="免費版保留今日核心 thesis 與摘要；完整 overnight chain、第一受惠股推理、盤中驗證、失效條件與收盤回測收在會員版。"
-              requiredTier="member"
-              featureList={['完整研究筆記', '第一受惠股推理鏈', '盤中驗證與收盤回測']}
-              tone="dark"
-            />
-          )}
-
-          {/* WHY COME BACK */}
-          <section className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
-            <h2 className="text-white font-bold text-lg mb-5 text-center">
-              為什麼這會讓你每天想回來？
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-              {[
-                '不是報明牌，是每天建立市場判斷節奏。',
-                '不是追新聞，是把新聞、指數、期貨、權值股與族群變成因果判斷。',
-                '收盤後會回驗盤前方向，慢慢形成你自己的市場直覺。',
-              ].map((point, idx) => (
-                <div key={idx} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
-                  <div className="w-10 h-10 rounded-xl bg-forest-500/10 border border-forest-500/20 flex items-center justify-center mx-auto mb-3">
-                    <span className="text-forest-400 text-sm font-bold">{idx + 1}</span>
-                  </div>
-                  <p className="text-white/60 text-sm leading-relaxed">{point}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* BOTTOM NAV */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-center pt-2 pb-4">
-            <Link
-              to="/report/today"
-              onClick={() => trackEvent('click_today_report', { location: 'member_note' })}
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm rounded-xl transition-colors whitespace-nowrap"
-            >
-              <i className="ri-file-text-line"></i>
-              查看今日判斷
-            </Link>
-            <Link
-              to="/opportunities"
-              className="ma-btn-secondary whitespace-nowrap"
-            >
-              <i className="ri-focus-3-line"></i>
-              查看今日受惠股
-            </Link>
-            <Link
-              to="/"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-slate-800/70 hover:bg-slate-700/70 text-slate-200 text-sm rounded-xl transition-colors border border-slate-600/40 whitespace-nowrap"
-            >
-              <i className="ri-home-line"></i>
-              返回首頁
-            </Link>
-          </div>
-
-          <p className="text-white/20 text-[10px] text-center leading-relaxed">
-            本平台提供市場資訊整理與情緒判讀參考，不構成投資建議。Morning Alpha 由愛吉網路資訊有限公司營運。
-          </p>
         </div>
       </main>
 

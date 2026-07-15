@@ -1,5 +1,6 @@
-import type { CanonicalMorningNarrative } from '@/lib/canonicalNarrative';
+import type { CanonicalMorningNarrative } from './canonicalNarrative.ts';
 import type { MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
+import { canPresentConfirmedDecision, canPresentRejectedDecision } from './decisionEvidence.ts';
 
 export type PresentationDecisionState = 'WAIT' | 'ACT' | 'STOP' | 'CLOSED' | 'INSUFFICIENT_DATA';
 
@@ -179,8 +180,11 @@ function decisionState(input: DecisionPresentationInput): PresentationDecisionSt
   const { displayState, narrative } = input;
   if (displayState && (!displayState.is_trading_day || displayState.market_status !== 'OPEN')) return 'CLOSED';
   const status = narrative.decision_lifecycle.decision_status.status;
-  if (status === 'Rejected') return 'STOP';
-  if (status === 'Confirmed') return 'ACT';
+  if (status === 'Rejected' && canPresentRejectedDecision(narrative.decision_evidence)) return 'STOP';
+  if (status === 'Confirmed' && canPresentConfirmedDecision(narrative.decision_evidence)) return 'ACT';
+  if (!narrative.decision_evidence.marketSnapshotAvailable || !narrative.decision_evidence.checklistAvailable) {
+    return 'INSUFFICIENT_DATA';
+  }
   const hasMission = Boolean(narrative.decision_lifecycle.question.question || narrative.today_focus.summary);
   if (!displayState || !hasMission || displayState.dataStatus === 'insufficient') return 'INSUFFICIENT_DATA';
   return 'WAIT';

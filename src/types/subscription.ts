@@ -19,10 +19,11 @@ export interface UserEntitlement {
 export interface ServerReportPayloadResponse {
   tier: SubscriptionTier;
   report_date: string | null;
+  revision_id?: string | null;
+  generated_at?: string | null;
   payload: Record<string, unknown> | null;
   locked_sections: string[];
   source: 'server_trimmed_payload';
-  dev_override?: boolean;
   authenticated?: boolean;
   error?: string;
 }

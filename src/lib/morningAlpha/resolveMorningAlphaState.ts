@@ -35,11 +35,11 @@ import { resolveIntradayTrackingState, type IntradayTrackingState } from '@/serv
 import { parseAIStrategy, hasMemberResearchNote, type ParsedAIStrategy } from '@/utils/aiStrategyParser';
 import { hasUsefulContent, filterUsefulSections, hasAnyUsefulItem } from '@/lib/morningAlpha/contentGuard';
 import { normalizeMorningAlphaReport, type MorningAlphaNormalizedReport } from '@/lib/morningAlphaReportAdapter';
-import { formatTaipeiDate, isTaipeiWeekendToday, getTaipeiNow } from '@/utils/tradingDay';
-import { getTodayOpeningRadar, type OpeningRadar } from '@/services/openingRadarService';
-import { getTodayCloseMarketReview, type CloseMarketReview } from '@/services/closeMarketReviewService';
+import { formatTaipeiDate, isTaipeiWeekendToday } from '@/utils/tradingDay';
+import { getRuntimeCheckpointState } from '@/lib/decisionEvidence';
+import { mapRowToOpeningRadar, type OpeningRadar } from '@/services/openingRadarService';
+import { mapClosingVerificationToCloseMarketReview, type CloseMarketReview } from '@/services/closeMarketReviewService';
 import {
-  fetchSectorRotationScores,
   computeSectorRotationFreshness,
   type SectorRotationItem,
   type SectorRotationFreshness,
@@ -56,6 +56,8 @@ export interface MorningAlphaState {
   activeReport: MorningAlphaNormalizedReport;
   activeReportId: string;
   reportDate: string;
+  revisionId: string;
+  generatedAt: string;
   todayTaipeiDate: string;
   marketDataDate: string;
   usMarketDate: string;
@@ -220,8 +222,6 @@ export async function resolveMorningAlphaState(
   urlReportDate?: string | null,
 ): Promise<MorningAlphaState> {
   const todayStr = formatTaipeiDate();
-  const taipeiNow = getTaipeiNow();
-
   // ── Step 1: Resolve the active report ──
   const resolved = await resolveActiveMorningAlphaReport(urlReportDate);
   const normalized = resolved.report;
@@ -231,33 +231,45 @@ export async function resolveMorningAlphaState(
   // We use the aiStrategyParser for rich structured content
   const strategyRaw = (resolved.rawRow?.ai_strategy_json as Record<string, unknown>) || null;
 
-  // ── Step 3: Fetch intraday data sources in parallel (V28: each individually try/caught) ──
-  let openingRadar = null;
-  let closeReview = null;
-  let sectorResult: SectorRotationResult = { items: [], scoreDate: null };
-
-  try {
-    openingRadar = await getTodayOpeningRadar();
-  } catch (e) {
-    console.error('resolveMorningAlphaState: getTodayOpeningRadar failed:', e);
-  }
-  try {
-    closeReview = await getTodayCloseMarketReview();
-  } catch (e) {
-    console.error('resolveMorningAlphaState: getTodayCloseMarketReview failed:', e);
-  }
-  try {
-    sectorResult = await fetchSectorRotationScores();
-  } catch (e) {
-    console.error('resolveMorningAlphaState: fetchSectorRotationScores failed:', e);
-  }
+  // ── Step 3: Consume runtime sources embedded in this exact report revision ──
+  const embeddedRadar = strategyRaw?.opening_radar && typeof strategyRaw.opening_radar === 'object' && !Array.isArray(strategyRaw.opening_radar)
+    ? strategyRaw.opening_radar as Record<string, unknown>
+    : null;
+  const openingRadar = embeddedRadar ? mapRowToOpeningRadar({
+    ...embeddedRadar,
+    id: embeddedRadar.id || `report:${resolved.revision_id || normalized.reportId}`,
+    report_date: embeddedRadar.report_date || normalized.reportDate,
+  }) : null;
+  const closeReview = mapClosingVerificationToCloseMarketReview(
+    normalized.reportDate,
+    strategyRaw?.closing_verification_v2 || strategyRaw?.closing_verification,
+  );
+  const sectorItems = Array.isArray(strategyRaw?.sector_rotation_scores)
+    ? strategyRaw.sector_rotation_scores as unknown as SectorRotationItem[]
+    : [];
+  const sectorResult: SectorRotationResult = {
+    items: sectorItems,
+    scoreDate: sectorItems[0]?.score_date || null,
+    totalCount: sectorItems.length,
+    rawRowCount: sectorItems.length,
+    error: null,
+    debugInfo: 'server_payload_revision',
+    generatedAt: sectorItems.find((item) => item.generated_at)?.generated_at || null,
+  };
 
   // ── Step 4: Build intraday tracking state ──
   let intradayTracking: IntradayTrackingState | null = null;
   try {
-    const now = new Date();
-    const twNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-    const taipeiHour = twNow.getHours();
+    const sync = strategyRaw?.intraday_sync_status;
+    const taipeiHour = closeReview?.data_quality === 'verified'
+      ? 15
+      : getRuntimeCheckpointState(sync, '1300') === 'completed'
+        ? 13
+        : getRuntimeCheckpointState(sync, '1030') === 'completed'
+          ? 10
+          : getRuntimeCheckpointState(sync, '0930') === 'completed' || openingRadar
+            ? 9
+            : 7;
     const isWeekend = isTaipeiWeekendToday();
 
     intradayTracking = resolveIntradayTrackingState({
@@ -274,7 +286,7 @@ export async function resolveMorningAlphaState(
       sectorFreshness: computeSectorRotationFreshness(
         sectorResult,
         todayStr,
-        isWeekend ? 'pre_market' : (taipeiHour >= 14 ? 'after_close_verified' : 'intraday'),
+        isWeekend ? 'pre_market' : (closeReview?.data_quality === 'verified' ? 'after_close_verified' : 'intraday'),
       ),
       taipeiHour,
       isWeekend,
@@ -369,6 +381,8 @@ export async function resolveMorningAlphaState(
     activeReport: normalized,
     activeReportId: normalized.reportId,
     reportDate: normalized.reportDate,
+    revisionId: resolved.revision_id || normalized.reportId,
+    generatedAt: resolved.generated_at || normalized.reportCreatedAt,
     todayTaipeiDate: todayStr,
     marketDataDate,
     usMarketDate,

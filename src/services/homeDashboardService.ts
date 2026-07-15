@@ -1,4 +1,3 @@
-import { supabase } from '@/lib/supabase';
 import { mapRowToReport } from '@/services/reportService';
 import { type IntradayCheck } from '@/services/intradayCheckService';
 import {
@@ -8,9 +7,9 @@ import {
 } from '@/services/marketSourceHealthService';
 import type { SupabaseMarketData } from '@/services/marketDataService';
 import type { Report } from '@/types/report';
-import { getTodayOpeningRadar, type OpeningRadar } from '@/services/openingRadarService';
+import { mapRowToOpeningRadar, type OpeningRadar } from '@/services/openingRadarService';
 import { getTodayOnlyMarketData } from '@/services/marketStateEngine';
-import { getTodayCloseMarketReview, type CloseMarketReview } from '@/services/closeMarketReviewService';
+import { mapClosingVerificationToCloseMarketReview, type CloseMarketReview } from '@/services/closeMarketReviewService';
 import { normalizeMorningAlphaReport, type MorningAlphaNormalizedReport } from '@/lib/morningAlphaReportAdapter';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 
@@ -65,12 +64,6 @@ export async function loadHomeDashboardData(): Promise<HomeDashboardData> {
     // V8: Single Source of Truth — resolveActiveMorningAlphaReport
     const resolved = await resolveActiveMorningAlphaReport();
 
-    // V8: Opening radar and close verification from services (not direct queries)
-    const [openingRadarData, closeVerification] = await Promise.all([
-      getTodayOpeningRadar(),
-      getTodayCloseMarketReview(),
-    ]);
-
     // V8: Market data placeholders — data from ai_strategy_json
     result.marketData = [];
     result.marketDataTodayOnly = [];
@@ -81,23 +74,27 @@ export async function loadHomeDashboardData(): Promise<HomeDashboardData> {
       result.morningAlpha = resolved.report;
       result.isHistoricalFallback = resolved.isHistoricalFallback;
       result.fallbackReportDate = resolved.fallbackReportDate;
-
-      // V8: When using historical fallback, use service data only
-      if (resolved.isHistoricalFallback && resolved.fallbackReportDate) {
-        result.openingRadar = openingRadarData;
-        result.todayCloseVerification = closeVerification;
+      const rawRow = resolved.rawRow as unknown as Record<string, unknown>;
+      const ai = rawRow.ai_strategy_json && typeof rawRow.ai_strategy_json === 'object' && !Array.isArray(rawRow.ai_strategy_json)
+        ? rawRow.ai_strategy_json as Record<string, unknown>
+        : {};
+      const embeddedRadar = ai.opening_radar && typeof ai.opening_radar === 'object' && !Array.isArray(ai.opening_radar)
+        ? ai.opening_radar as Record<string, unknown>
+        : null;
+      if (embeddedRadar) {
+        result.openingRadar = mapRowToOpeningRadar({
+          ...embeddedRadar,
+          id: embeddedRadar.id || `report:${resolved.revision_id || resolved.rawRow.id}`,
+          report_date: embeddedRadar.report_date || resolved.rawRow.report_date,
+        });
       }
+      const closing = ai.closing_verification_v2 || ai.closing_verification;
+      result.todayCloseVerification = mapClosingVerificationToCloseMarketReview(
+        resolved.rawRow.report_date,
+        closing,
+      );
     } else {
       result.morningAlpha = resolved.report;
-    }
-
-    // V8: Use service-level radar/close data (not direct table queries)
-    if (!result.isHistoricalFallback) {
-      result.openingRadar = openingRadarData;
-    }
-
-    if (!result.isHistoricalFallback) {
-      result.todayCloseVerification = closeVerification;
     }
 
     // V8: Simplified data trust — from report data only

@@ -450,6 +450,7 @@ export default function PerformancePage() {
   const lessons = useMemo(() => validEntries.flatMap((entry) => [...entry.whatWasWrong, ...entry.tomorrowAdjustment]).filter(Boolean).slice(0, 5), [validEntries]);
   const insufficientCount = entries.filter((entry) => entry.outcome === 'insufficient').length;
   const lockedCount = Math.max(0, validEntries.length - visibleEntries.length);
+  const hasMatureSample = stats.validCount >= 20;
 
   return (
     <div className="ma-page ma-pixel-page ma-performance-page flex flex-col overflow-x-hidden">
@@ -459,14 +460,14 @@ export default function PerformancePage() {
           <div className="ma-pixel-content ma-pixel-hero-grid">
             <div className="ma-pixel-hero-copy">
               <p className="ma-pixel-eyebrow"><i className="ri-history-line" aria-hidden="true" />決策學習</p>
-              <h1>歷史績效回顧</h1>
-              <p className="ma-pixel-hero-subtitle">只看已完成驗證的結果、失敗原因與下一次改善。</p>
-              <div className="ma-pixel-cta-row"><Link to={validEntries[0] ? `/reports/${validEntries[0].marketDate}` : '/reports'} className="ma-pixel-primary-button">查看績效分析<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>
+              <h1>{hasMatureSample ? '歷史績效回顧' : '公開驗證進度'}</h1>
+              <p className="ma-pixel-hero-subtitle">{hasMatureSample ? '只看已完成驗證的結果、失敗原因與下一次改善。' : `目前已累積 ${stats.validCount} 個有效交易日，持續公開驗證中。`}</p>
+              <div className="ma-pixel-cta-row"><Link to={validEntries[0] ? `/reports/${validEntries[0].marketDate}` : '/reports'} className="ma-pixel-primary-button">{hasMatureSample ? '查看績效分析' : '查看驗證紀錄'}<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>
             </div>
             <aside className="ma-phase2-status-card">
-              <div><span>命中率</span><strong>{pct(stats.weightedSuccessRate)}</strong></div>
+              <div><span>{hasMatureSample ? '命中率' : '有效交易日'}</span><strong>{hasMatureSample ? pct(stats.weightedSuccessRate) : stats.validCount}</strong></div>
               <div><span>完成驗證</span><p>{stats.validCount} 個交易日</p></div>
-              <div><span>最近資料</span><p>{validEntries[0]?.marketDate || '資料待補'}</p></div>
+              <div><span>最近資料</span><p>{validEntries[0]?.marketDate || '資料不足'}</p></div>
             </aside>
           </div>
         </section>
@@ -485,8 +486,8 @@ export default function PerformancePage() {
                 <div className="ma-phase2-kpi-grid">
                   <article className="ma-phase2-kpi-card"><p>驗證次數</p><strong>{stats.validCount}</strong><span>有效交易日</span></article>
                   <article className="ma-phase2-kpi-card is-green"><p>完整成立</p><strong>{stats.complete}</strong><span>已完成驗證</span></article>
-                  <article className="ma-phase2-kpi-card is-amber"><p>加權命中率</p><strong>{pct(stats.weightedSuccessRate)}</strong><span>部分成立以 0.5 計</span></article>
-                  <article className="ma-phase2-kpi-card is-blue"><p>完整成立率</p><strong>{pct(stats.completeRate)}</strong><span>不含資料不足</span></article>
+                  {hasMatureSample ? <article className="ma-phase2-kpi-card is-amber"><p>加權命中率</p><strong>{pct(stats.weightedSuccessRate)}</strong><span>部分成立以 0.5 計</span></article> : <article className="ma-phase2-kpi-card is-amber"><p>樣本狀態</p><strong>累積中</strong><span>滿 20 個有效交易日後顯示比率</span></article>}
+                  {hasMatureSample ? <article className="ma-phase2-kpi-card is-blue"><p>完整成立率</p><strong>{pct(stats.completeRate)}</strong><span>不含資料不足</span></article> : <article className="ma-phase2-kpi-card is-blue"><p>公開驗證</p><strong>{stats.closingVerificationCount}</strong><span>完成收盤驗證</span></article>}
                 </div>
               </section>
 
@@ -509,208 +510,6 @@ export default function PerformancePage() {
           )}
         </div>
       </main>
-
-      <div className="ma-phase2-legacy-detail mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-10">
-
-        {loading ? (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-sm text-white/55">
-            正在讀取 Performance Center...
-          </div>
-        ) : errorMessage ? (
-          <div className="mt-6 rounded-2xl border border-amber-300/25 bg-amber-300/8 p-6">
-            <h2 className="text-lg font-semibold text-amber-100">Decision Journal 暫時無法完整顯示</h2>
-            <p className="mt-2 text-sm leading-6 text-white/60">{errorMessage}</p>
-          </div>
-        ) : stats.validCount === 0 ? (
-          <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-6 md:p-8">
-            <h2 className="text-xl font-semibold text-white">尚未累積完成驗證的交易日</h2>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-white/60">
-              歷史績效只統計同時具備盤前判斷與收盤驗證的交易日。目前資料仍在累積，不會用休市、待驗證或不完整資料填充績效。
-            </p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <MiniMetric label="已找到盤前報告" value={stats.totalReports} />
-              <MiniMetric label="已完成收盤驗證" value={stats.closingVerificationCount} />
-              <MiniMetric label="可納入績效" value={stats.validCount} />
-              <MiniMetric label="未納入" value={stats.insufficient} />
-            </div>
-          </section>
-        ) : (
-          <>
-            <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard label="完整成立" value={stats.complete} helper="已完成驗證交易日中的完整成立次數" accent="complete" />
-              <StatCard label="部分成立" value={stats.partial} helper="方向或條件僅部分確認" accent="partial" />
-              <StatCard label="失敗" value={stats.failed} helper="收盤結果明顯背離主要劇本" accent="failed" />
-              <StatCard label="有效驗證日" value={stats.validCount} helper="complete + partial + failed，不含資料不足" accent="valid" />
-            </section>
-
-            <p className="mt-4 text-xs leading-6 text-slate-500">
-              另有 {insufficientCount} 筆未納入統計：休市、待驗證或資料不完整。
-            </p>
-
-            <section className="ma-card mt-8 md:p-7">
-              <VisualSectionHeader icon="ri-bar-chart-box-line" title="績效總覽" description="加權成立率不是投資報酬率。" />
-              <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-200/75">近 30 個有效驗證日</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">加權成立率 = 完整成立 + 部分成立 0.5 權重；這不是投資報酬率。</p>
-                </div>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <MiniMetric label="完整成立率" value={pct(stats.completeRate)} />
-                  <MiniMetric label="加權成立率" value={pct(stats.weightedSuccessRate)} />
-                  <MiniMetric label="有效日數" value={stats.validCount} />
-                </div>
-              </div>
-              <div className="mt-6 h-3.5 overflow-hidden rounded-full bg-slate-700/80 ring-1 ring-white/5">
-                <div className="h-full rounded-full bg-primary-500" style={{ width: `${Math.max(4, Math.min(100, stats.weightedSuccessRate ?? 0))}%` }} />
-              </div>
-            </section>
-
-            <section className="mt-10">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h2 className="text-2xl font-semibold text-white">最近 10 個交易日結果</h2>
-                  <p className="mt-2 text-sm text-slate-500">只顯示已完成收盤驗證且資料完整的交易日。</p>
-                </div>
-                {!isSignedIn ? <p className="text-xs text-slate-500">公開版顯示最近 3 筆，登入後查看 30 日回顧。</p> : null}
-              </div>
-              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                {recentTimeline.map((entry) => (
-                  <Link key={`timeline-${entry.marketDate}`} to={`/reports/${entry.marketDate}`} className="ma-card-compact transition-colors hover:border-primary-400/30">
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="text-lg font-semibold tracking-tight text-white">{entry.marketDate}</span>
-                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${OUTCOME_CLASS[entry.outcome]}`}>{OUTCOME_LABEL[entry.outcome]}</span>
-                    </div>
-                    <div className="mt-4 space-y-3">
-                      <TimelineFact icon={Flag} label="驗證結果" value={entry.closingSummary} />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-
-            <section className="mt-10">
-              <h2 className="text-2xl font-semibold text-white">Decision Journal</h2>
-              <p className="mt-2 text-sm text-slate-500">我們如何判斷、哪些成立、哪些失敗，以及下一次怎麼修正。</p>
-              <div className="mt-5 space-y-4">
-                {visibleEntries.map((entry) => {
-                  const expanded = expandedId === entry.reportId;
-                  return (
-                    <article key={entry.reportId} className="ma-card md:p-6">
-                      <div className="grid gap-5 lg:grid-cols-[0.72fr_2fr_auto] lg:items-center">
-                        <div>
-                          <div className="text-xl font-semibold tracking-tight text-white">{entry.marketDate}</div>
-                          <span className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-medium ${OUTCOME_CLASS[entry.outcome]}`}>
-                            {OUTCOME_LABEL[entry.outcome]}
-                          </span>
-                        </div>
-                        <div className="relative pl-5">
-                          <span className="absolute left-0 top-1 h-[calc(100%-0.25rem)] w-px bg-background-300" />
-                          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/34">收盤驗證</div>
-                          <div className="mt-2 line-clamp-2 text-sm leading-6 text-white/72">{entry.closingSummary}</div>
-                          <div className="mt-2 line-clamp-1 text-xs text-slate-500">下一次修正：{entry.correctionSummary || '尚未留下修正'}</div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setExpandedId(expanded ? null : entry.reportId)}
-                          className="rounded-xl border border-cyan-300/20 px-4 py-2.5 text-sm font-medium text-cyan-100/80 transition duration-200 hover:border-cyan-300/45 hover:bg-cyan-300/8 hover:text-cyan-50"
-                        >
-                          {expanded ? '收合' : '查看紀錄'}
-                        </button>
-                      </div>
-
-                      {expanded ? (
-                        <div className="mt-6 grid gap-5 border-t border-white/10 pt-5 lg:grid-cols-3">
-                          <DetailList title="為什麼成立或失敗" items={[...entry.whatWasRight, ...entry.whatWasWrong].filter(Boolean)} emptyText="本日尚未留下結構化原因。" />
-                          <DetailList title="下一次修正" items={entry.tomorrowAdjustment} emptyText="本日尚未留下結構化修正。" />
-                          <div>
-                            <h4 className="text-sm font-semibold text-white">研究筆記</h4>
-                            <p className="mt-2 text-sm leading-6 text-white/45">{entry.statusNote}</p>
-                            <Link to={`/reports/${entry.marketDate}`} className="mt-3 inline-flex text-sm font-semibold text-primary-200 hover:text-primary-100">
-                              查看完整研究筆記 →
-                            </Link>
-                          </div>
-                        </div>
-                      ) : null}
-                    </article>
-                  );
-                })}
-
-                {!isSignedIn && lockedCount > 0 ? (
-                  <div className="rounded-[24px] border border-amber-300/20 bg-amber-300/8 p-5 text-sm leading-6 text-amber-50/78">
-                    還有 {lockedCount} 筆完整 Decision Journal 已鎖定。登入會員後可查看最近 30 個有效驗證交易日。
-                  </div>
-                ) : null}
-              </div>
-            </section>
-
-            {validEntries.length >= 3 ? (
-              <section className="mt-10 grid gap-4 lg:grid-cols-2">
-                <div className="ma-card md:p-6">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200/75">
-                    <CheckCircle2 size={15} strokeWidth={1.8} />
-                    Best Case
-                  </div>
-                  <h2 className="mt-3 text-2xl font-semibold text-white">最佳成立案例</h2>
-                  {bestCase ? (
-                    <div className="mt-4 text-sm leading-7 text-slate-300">
-                      <p className="font-semibold text-white">{bestCase.marketDate}</p>
-                      <p className="mt-2">{bestCase.whatWasRight[0] || bestCase.closingSummary}</p>
-                    </div>
-                  ) : (
-                    <p className="mt-4 text-sm text-slate-500">目前尚無完整成立案例。</p>
-                  )}
-                </div>
-                <div className="ma-card md:p-6">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-rose-200/75">
-                    <Target size={15} strokeWidth={1.8} />
-                    Correction Case
-                  </div>
-                  <h2 className="mt-3 text-2xl font-semibold text-white">需要修正案例</h2>
-                  {failedCase ? (
-                    <div className="mt-4 text-sm leading-7 text-slate-300">
-                      <p className="font-semibold text-white">{failedCase.marketDate}</p>
-                      <p className="mt-2">{failedCase.whatWasWrong[0] || failedCase.correctionSummary}</p>
-                    </div>
-                  ) : (
-                    <p className="mt-4 text-sm text-slate-500">目前沒有已完成驗證的失敗案例。</p>
-                  )}
-                </div>
-              </section>
-            ) : null}
-
-            {lessons.length > 0 ? (
-              <section className="ma-card mt-10 overflow-hidden md:p-6">
-                <div className="flex gap-4">
-                  <div className="w-1 flex-shrink-0 rounded-full bg-primary-500" />
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-2xl font-semibold text-white">本月最大的修正</h2>
-                    <ul className="mt-4 grid gap-3 md:grid-cols-2">
-                      {lessons.map((lesson, index) => (
-                        <li key={`${lesson}-${index}`} className="rounded-2xl bg-slate-950/30 p-4 text-sm leading-7 text-slate-300">
-                          {lesson}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </section>
-            ) : null}
-          </>
-        )}
-
-        <section className="ma-card mt-10 md:p-6">
-          <div className="flex items-center gap-2">
-            <ShieldCheck size={18} strokeWidth={1.8} className="text-primary-300" />
-            <h2 className="text-xl font-semibold text-white">統計規則</h2>
-          </div>
-          <ul className="mt-4 grid gap-3 md:grid-cols-2">
-            <RuleItem icon={CalendarCheck}>完成盤前報告與收盤驗證才納入統計。</RuleItem>
-            <RuleItem icon={Ban}>休市、待驗證、資料不完整不列入成功率。</RuleItem>
-            <RuleItem icon={Scale}>部分成立以 0.5 權重計入加權成立率。</RuleItem>
-            <RuleItem icon={TrendingUp}>歷史結果只反映模型判斷紀錄，不代表投資報酬。</RuleItem>
-          </ul>
-        </section>
-      </div>
       <Footer />
     </div>
   );

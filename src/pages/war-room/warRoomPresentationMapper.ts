@@ -1,3 +1,5 @@
+import { getRuntimeCheckpointState } from '@/lib/decisionEvidence';
+
 type UnknownRecord = Record<string, unknown>;
 
 export type WarRoomClosingLabel = '今日已驗證' | '部分成立' | '已失效' | '資料不足';
@@ -38,7 +40,6 @@ interface BuildWarRoomObservationCardsInput {
   todayCloseVerification?: unknown;
   fallbackNext?: string;
   fallbackStop?: string;
-  now?: Date;
   limit?: number;
 }
 
@@ -48,7 +49,6 @@ interface BuildWarRoomTimelineInput {
   closingVerificationV2?: UnknownRecord | null;
   publicClosingVerification?: UnknownRecord | null;
   todayCloseVerification?: unknown;
-  now?: Date;
 }
 
 const STATUS_KEYS = ['role_title', 'role_label', 'role', 'status', 'signal_label'] as const;
@@ -187,28 +187,17 @@ function closingRecord(input: {
   return {};
 }
 
-function closingTokens(record: UnknownRecord): string {
-  return [
-    record.status,
-    record.data_status,
-    record.result,
-    record.prediction_result,
-    record.hit_or_miss,
-    record.verdict_label,
-    record.verification_result,
-    record.verification_label,
-    record.actual_market_result,
-  ].map(text).filter(Boolean).join(' ').toLowerCase();
-}
-
 export function resolveWarRoomClosingLabel(recordValue: unknown): WarRoomClosingLabel {
   const record = asRecord(recordValue);
-  const tokens = closingTokens(record);
-  if (!tokens) return '資料不足';
-  if (/(?:\bmiss\b|rejected|failed|invalid|失效|未命中|不一致)/i.test(tokens)) return '已失效';
-  if (/(?:partial|mixed|degraded|direction_completed_data_degraded|部分)/i.test(tokens)) return '部分成立';
-  if (/(?:pending|insufficient|missing|unknown|not_available|資料不足|等待)/i.test(tokens)) return '資料不足';
-  if (/(?:\bhit\b|correct|completed|confirmed|ready|verified|方向一致|命中)/i.test(tokens)) return '今日已驗證';
+  const status = text(record.status ?? record.data_status).toLowerCase();
+  const outcome = text(record.hit_or_miss ?? record.prediction_result ?? record.result).toLowerCase();
+  if (['miss', 'wrong', 'failed', 'rejected', 'incorrect', 'invalidated'].includes(outcome)) return '已失效';
+  if (['partial', 'mixed', 'partially_confirmed'].includes(outcome)) return '部分成立';
+  if (['pending', 'pending_real_market_data', 'insufficient', 'missing', 'unknown', 'not_available'].includes(status)) return '資料不足';
+  if (['degraded', 'direction_completed_data_degraded'].includes(status)) return '部分成立';
+  const completed = ['completed', 'complete', 'ready', 'verified', 'done'].includes(status);
+  if (completed && ['hit', 'correct', 'confirmed', 'success', 'accurate'].includes(outcome)) return '今日已驗證';
+  if (completed && record.verification_result === true) return '今日已驗證';
   return '資料不足';
 }
 
@@ -260,12 +249,11 @@ export function buildWarRoomClosingState(input: {
   closingVerificationV2?: UnknownRecord | null;
   publicClosingVerification?: UnknownRecord | null;
   todayCloseVerification?: unknown;
-  now?: Date;
 }): WarRoomClosingState {
-  const now = input.now || new Date();
+  const close = closingRecord(input);
   return {
-    isPostClose: isAfterClose(now),
-    label: resolveWarRoomClosingLabel(closingRecord(input)),
+    isPostClose: Object.keys(close).length > 0,
+    label: resolveWarRoomClosingLabel(close),
   };
 }
 
@@ -274,22 +262,6 @@ function closingTone(label: WarRoomClosingLabel): WarRoomObservationTone {
   if (label === '部分成立') return 'partial';
   if (label === '已失效') return 'failed';
   return 'insufficient';
-}
-
-function taipeiMinutes(now: Date): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Taipei',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(now);
-  const hour = Number(parts.find((part) => part.type === 'hour')?.value || 0);
-  const minute = Number(parts.find((part) => part.type === 'minute')?.value || 0);
-  return hour * 60 + minute;
-}
-
-function isAfterClose(now: Date): boolean {
-  return taipeiMinutes(now) >= 14 * 60 + 10;
 }
 
 export function buildWarRoomObservationCards(
@@ -329,12 +301,11 @@ export function buildWarRoomObservationCards(
     merged.set(key, current);
   }
 
-  const now = input.now || new Date();
-  const postClose = isAfterClose(now);
   const close = closingRecord(input);
+  const postClose = Object.keys(close).length > 0;
 
   return Array.from(merged.values()).slice(0, input.limit ?? 3).map((item) => {
-    const roleStatus = item.roles[0] || '資料待補';
+    const roleStatus = item.roles[0] || '資料不足';
     const closeLabel = resolveIndividualClosingLabel(close, item);
     return {
       ...item,
@@ -349,17 +320,6 @@ export function buildWarRoomObservationCards(
   });
 }
 
-function rawTimelineStatus(value: unknown): 'completed' | 'pending' | 'insufficient' {
-  const record = asRecord(value);
-  const raw = (
-    text(value)
-    || firstText(record, ['status', 'data_status', 'result', 'state', 'sync_status'])
-  ).toLowerCase();
-  if (/(?:ready|complete|completed|confirmed|observed|synced)/.test(raw)) return 'completed';
-  if (/(?:missing|mixed|failed|stale|insufficient|best_effort)/.test(raw)) return 'insufficient';
-  return 'pending';
-}
-
 function timelineStatusLabel(status: WarRoomTimelineStatus): string {
   if (status === 'completed') return '已完成';
   if (status === 'current') return '目前';
@@ -368,43 +328,32 @@ function timelineStatusLabel(status: WarRoomTimelineStatus): string {
 }
 
 export function buildWarRoomTimeline(input: BuildWarRoomTimelineInput): WarRoomTimelineItem[] {
-  const now = input.now || new Date();
-  const minutes = taipeiMinutes(now);
-  const syncWindows = asRecord(asRecord(input.intradaySyncStatus).windows);
-  const openingReady = Object.keys(asRecord(input.openingRadar)).length > 0;
+  const sync = asRecord(input.intradaySyncStatus);
+  const opening = asRecord(input.openingRadar);
+  const openingReady = Boolean(opening.report_date || opening.captured_at || opening.updated_at)
+    && [opening.taiex_change, opening.txf_change, opening.tsmc_change]
+      .every((value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)));
   const close = closingRecord(input);
   const hasClose = Object.keys(close).length > 0;
   const closeLabel = resolveWarRoomClosingLabel(close);
 
-  const nodes: Array<WarRoomTimelineItem & { target: number }> = [
-    { time: '09:00', label: '盤前確認', status: openingReady ? 'completed' : 'pending', statusLabel: '', target: 9 * 60 },
-    { time: '09:30', label: '開盤驗證', status: rawTimelineStatus(syncWindows['0930']), statusLabel: '', target: 9 * 60 + 30 },
-    { time: '10:30', label: '主線確認', status: rawTimelineStatus(syncWindows['1030']), statusLabel: '', target: 10 * 60 + 30 },
-    { time: '13:30', label: '午後追蹤', status: rawTimelineStatus(syncWindows['1300'] ?? syncWindows['1330']), statusLabel: '', target: 13 * 60 + 30 },
+  const nodes: WarRoomTimelineItem[] = [
+    { time: '09:00', label: '盤前確認', status: openingReady ? 'completed' : 'pending', statusLabel: '' },
+    { time: '09:30', label: '開盤驗證', status: getRuntimeCheckpointState(sync, '0930') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '0930') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
+    { time: '10:30', label: '主線確認', status: getRuntimeCheckpointState(sync, '1030') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '1030') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
+    { time: '13:30', label: '午後追蹤', status: getRuntimeCheckpointState(sync, '1300') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '1300') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
     {
       time: '14:10',
       label: '收盤驗證',
       status: hasClose ? (closeLabel === '資料不足' ? 'insufficient' : 'completed') : 'pending',
       statusLabel: '',
-      target: 14 * 60 + 10,
     },
   ];
 
-  const unresolved = nodes
-    .map((node, index) => ({ node, index }))
-    .filter(({ node }) => node.status === 'pending');
-  const closeFinished = hasClose && minutes >= 14 * 60 + 10;
-  const active = closeFinished
-    ? undefined
-    : unresolved.find(({ node }) => node.target >= minutes)
-      || [...unresolved].reverse().find(({ node }) => node.target <= minutes);
+  const activeIndex = nodes.findIndex((node) => node.status === 'pending');
+  if (activeIndex >= 0) nodes[activeIndex].status = 'current';
 
-  for (const { node, index } of unresolved) {
-    if (active && index === active.index) node.status = 'current';
-    else if (node.target < minutes) node.status = 'insufficient';
-  }
-
-  return nodes.map(({ target: _target, ...node }) => ({
+  return nodes.map((node) => ({
     ...node,
     statusLabel: timelineStatusLabel(node.status),
   }));

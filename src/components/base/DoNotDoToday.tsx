@@ -11,7 +11,7 @@ function getDontRules(report: Report | null): DontRule[] {
   const bias = report?.market_bias || '震盪';
   const score = report?.confidence_score ?? 50;
   const avoidList = report?.avoid_today || [];
-  const riskWarning = report?.risk_warning || '';
+  const riskWarning = report?.ai_strategy_json?.risk_warning || report?.risk_reason || '';
 
   // Build rules from report data first
   const reportRules: DontRule[] = [];

@@ -8,6 +8,7 @@ import type {
   GlobalEvent,
   AIStrategy,
   ImportantNews,
+  TodayStrategy,
 } from '@/types/report';
 
 function safeNumber(val: unknown): number | null {
@@ -41,7 +42,7 @@ function safeJsonArray<T>(val: unknown, fallback: T[] = []): T[] | null {
   return fallback.length ? fallback : null;
 }
 
-function safeJsonObject<T extends Record<string, unknown>>(val: unknown, fallback?: T): T | null {
+function safeJsonObject<T extends object>(val: unknown, fallback?: T): T | null {
   if (val && typeof val === 'object' && !Array.isArray(val)) return val as T;
   if (val === null || val === undefined) return fallback ?? null;
   try {
@@ -129,7 +130,7 @@ export function mapRowToReport(row: Record<string, unknown>): Report {
     created_at: String(row.created_at || ''),
     // V2 新增欄位
     today_quote: safeString(row.today_quote),
-    today_strategy: safeJsonObject(row.today_strategy),
+    today_strategy: safeJsonObject<TodayStrategy>(row.today_strategy),
     watch_sectors_detailed: safeJsonArray(row.watch_sectors_detailed),
     ai_psychology: safeString(row.ai_psychology),
     ai_retail_reminder: safeString(row.ai_retail_reminder),

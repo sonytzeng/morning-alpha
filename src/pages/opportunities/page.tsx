@@ -293,7 +293,7 @@ function OpportunitiesContent() {
 
         if (!report) { setDs(null); return; }
 
-        const displayState = getMorningAlphaDisplayState(report as Record<string, unknown> | null);
+        const displayState = getMorningAlphaDisplayState(report as unknown as Record<string, unknown> | null);
         setDs(displayState);
         setIsHistoricalFallback(resolved.isHistoricalFallback);
         setFallbackReportDate(resolved.fallbackReportDate);
@@ -307,7 +307,7 @@ function OpportunitiesContent() {
 
         // V9.0/V8 preview: V8 ready wins; otherwise fall back to real V7 beneficiary fields.
         const ai = displayState.rawAI || {};
-        const legacyBeneficiaries = resolveLegacyBeneficiaries(ai, report as Record<string, unknown>);
+        const legacyBeneficiaries = resolveLegacyBeneficiaries(ai, report as unknown as Record<string, unknown>);
 
         setCoreStocks(legacyBeneficiaries.coreStocks);
         setExtendedStocks(legacyBeneficiaries.extendedStocks);

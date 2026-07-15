@@ -27,6 +27,7 @@ export interface FocusStock {
   group: string;
   direction: string;
   reason: string;
+  confidence?: number;
 }
 
 export interface TomorrowWatch {

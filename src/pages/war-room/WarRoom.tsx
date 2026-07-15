@@ -312,7 +312,7 @@ function WarRoomContent() {
               <p className="text-slate-500 text-[10px] mt-1">07:30 自動更新</p>
             </div>
             <p className="text-slate-500 text-xs leading-relaxed mb-5">
-              今日台股休市，盤中追蹤暫停。若需參考，以下僅能查看最近交易日資料。
+              今日非交易日，本節點不適用；等待下一個交易日。
             </p>
             <Link to="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
               返回首頁
@@ -476,6 +476,7 @@ function WarRoomContent() {
     closingVerificationV2,
     publicClosingVerification,
     todayCloseVerification,
+    isTradingDay: !isNonTradingDay,
   });
   const phase2Observations = buildWarRoomObservationCards({
     sources: [

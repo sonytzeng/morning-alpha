@@ -14,7 +14,7 @@ import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/li
 import { buildCanonicalNarrative, type CanonicalMorningNarrative } from '@/lib/canonicalNarrative';
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
 import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
-import { buildRuntimeDecisionTimeline } from '@/lib/runtimeDecisionTimeline';
+import { buildRuntimeDecisionTimeline, runtimeTimelineStatusLabel } from '@/lib/runtimeDecisionTimeline';
 
 type AnyObj = Record<string, any>;
 
@@ -113,7 +113,7 @@ function normalizeRadarFromReport(report: Report | null): RadarView | null {
 }
 
 type TodayValidationStatus = 'confirmed' | 'current' | 'pending' | 'failed' | 'missing';
-type TodayTimelineState = 'completed' | 'current' | 'upcoming' | 'insufficient';
+type TodayTimelineState = 'completed' | 'current' | 'upcoming' | 'insufficient' | 'not_applicable';
 
 function firstPopulatedText(...values: unknown[]): string {
   for (const value of values) {
@@ -369,7 +369,7 @@ function TodayReportContent() {
 
   const decisionTimeline = runtimeTimeline.map((item) => ({
     ...item,
-    state: (item.status === 'pending' || item.status === 'paused' ? 'upcoming' : item.status) as TodayTimelineState,
+    state: (item.status === 'pending' ? 'upcoming' : item.status) as TodayTimelineState,
   }));
   if (loading) {
     return (
@@ -437,7 +437,7 @@ function TodayReportContent() {
               <p className="text-slate-500 text-[10px] mt-1">07:30 自動更新</p>
             </div>
             <p className="text-slate-500 text-xs leading-relaxed mb-5">
-              今日不產生盤前判斷、盤中雷達、方向判斷與受惠股。所有分析將於下一個交易日自動恢復。
+              今日非交易日，本節點不適用；等待下一個交易日。
             </p>
             <Link to="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
               返回首頁
@@ -573,7 +573,7 @@ function TodayReportContent() {
             <header className="ma-today-v3-section-header"><div><p>DECISION TIMELINE</p><h2>今日決策節點</h2></div></header>
             <div className="ma-today-v3-timeline">
               {decisionTimeline.map((item) => (
-                <article key={item.time} className={`is-${item.state}`}><i aria-hidden="true" /><strong>{item.time}</strong><span>{item.label}</span><small>{item.state === 'completed' ? '已完成' : item.state === 'current' ? '目前節點' : item.state === 'insufficient' ? '資料不足' : '待 Runtime'}</small></article>
+                <article key={item.time} className={`is-${item.state}`}><i aria-hidden="true" /><strong>{item.time}</strong><span>{item.label}</span><small>{item.state === 'upcoming' ? '待 Runtime' : runtimeTimelineStatusLabel(item.state)}</small></article>
               ))}
             </div>
           </section>

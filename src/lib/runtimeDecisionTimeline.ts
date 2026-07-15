@@ -1,12 +1,20 @@
 import { getRuntimeCheckpointState } from './decisionEvidence.ts';
 
-export type RuntimeTimelineStatus = 'completed' | 'current' | 'pending' | 'insufficient' | 'paused';
+export type RuntimeTimelineStatus = 'completed' | 'current' | 'pending' | 'insufficient' | 'not_applicable';
 
 export interface RuntimeTimelineNode {
   time: string;
   label: string;
   detail: string;
   status: RuntimeTimelineStatus;
+}
+
+export function runtimeTimelineStatusLabel(status: RuntimeTimelineStatus): string {
+  if (status === 'completed') return '已完成';
+  if (status === 'current') return '目前節點';
+  if (status === 'insufficient') return '資料不足';
+  if (status === 'not_applicable') return '本節點不適用';
+  return '待 Runtime';
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -80,7 +88,7 @@ export function buildRuntimeDecisionTimeline(params: {
     },
   ];
 
-  if (!params.isTradingDay) return rawNodes.map((node) => ({ ...node, status: 'paused' }));
+  if (!params.isTradingDay) return rawNodes.map((node) => ({ ...node, status: 'not_applicable' }));
 
   const firstBlockingNode = rawNodes.findIndex((node) => node.status !== 'completed');
   return rawNodes.map((node, index) => ({

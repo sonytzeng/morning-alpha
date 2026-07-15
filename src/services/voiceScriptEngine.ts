@@ -99,7 +99,7 @@ export async function getSelectedMarketNews(): Promise<NewsSnapshot[]> {
 export async function getLatestMarketData(): Promise<MarketDataSnapshot[]> {
   try {
     const data = await fetchMarketDataBySymbols([...CORE_SYMBOLS]);
-    return (data || []).map((d: Record<string, unknown>) => ({
+    return (data || []).map((d) => ({
       symbol: String(d.symbol || ''),
       name: String(d.name || ''),
       value: Number(d.value),

@@ -1,10 +1,14 @@
 import { getRuntimeCheckpointState } from '@/lib/decisionEvidence';
+import {
+  runtimeTimelineStatusLabel,
+  type RuntimeTimelineStatus,
+} from '@/lib/runtimeDecisionTimeline';
 
 type UnknownRecord = Record<string, unknown>;
 
 export type WarRoomClosingLabel = '今日已驗證' | '部分成立' | '已失效' | '資料不足';
 export type WarRoomObservationTone = 'role' | 'completed' | 'partial' | 'failed' | 'insufficient';
-export type WarRoomTimelineStatus = 'completed' | 'current' | 'pending' | 'insufficient';
+export type WarRoomTimelineStatus = RuntimeTimelineStatus;
 
 export interface WarRoomObservationCard {
   key: string;
@@ -49,6 +53,7 @@ interface BuildWarRoomTimelineInput {
   closingVerificationV2?: UnknownRecord | null;
   publicClosingVerification?: UnknownRecord | null;
   todayCloseVerification?: unknown;
+  isTradingDay: boolean;
 }
 
 const STATUS_KEYS = ['role_title', 'role_label', 'role', 'status', 'signal_label'] as const;
@@ -320,13 +325,6 @@ export function buildWarRoomObservationCards(
   });
 }
 
-function timelineStatusLabel(status: WarRoomTimelineStatus): string {
-  if (status === 'completed') return '已完成';
-  if (status === 'current') return '目前';
-  if (status === 'insufficient') return '資料不足';
-  return '待確認';
-}
-
 export function buildWarRoomTimeline(input: BuildWarRoomTimelineInput): WarRoomTimelineItem[] {
   const sync = asRecord(input.intradaySyncStatus);
   const opening = asRecord(input.openingRadar);
@@ -350,11 +348,19 @@ export function buildWarRoomTimeline(input: BuildWarRoomTimelineInput): WarRoomT
     },
   ];
 
+  if (!input.isTradingDay) {
+    return nodes.map((node) => ({
+      ...node,
+      status: 'not_applicable',
+      statusLabel: runtimeTimelineStatusLabel('not_applicable'),
+    }));
+  }
+
   const activeIndex = nodes.findIndex((node) => node.status === 'pending');
   if (activeIndex >= 0) nodes[activeIndex].status = 'current';
 
   return nodes.map((node) => ({
     ...node,
-    statusLabel: timelineStatusLabel(node.status),
+    statusLabel: runtimeTimelineStatusLabel(node.status),
   }));
 }

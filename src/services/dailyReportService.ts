@@ -374,7 +374,7 @@ export function extractMarketSnapshotFromFullReport(
   if (!Array.isArray(snapshot)) return [];
 
   return snapshot
-    .map((item, idx) => {
+    .map((item): MarketIndex | null => {
       if (typeof item !== 'object' || item === null) return null;
       const i = item as Record<string, unknown>;
       const changePercent = Number(i.changePercent || i.change_percent || 0);
@@ -445,7 +445,7 @@ export function extractTopNewsFromFullReport(
   if (!Array.isArray(news)) return [];
 
   return news
-    .map((item, idx) => {
+    .map((item, idx): NewsItem | null => {
       if (typeof item !== 'object' || item === null) return null;
       const n = item as Record<string, unknown>;
       return {

@@ -14,7 +14,11 @@ import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { renderSafeText } from '@/utils/renderSafe';
 import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
-import { buildRuntimeDecisionTimeline, type RuntimeTimelineStatus } from '@/lib/runtimeDecisionTimeline';
+import {
+  buildRuntimeDecisionTimeline,
+  runtimeTimelineStatusLabel,
+  type RuntimeTimelineStatus,
+} from '@/lib/runtimeDecisionTimeline';
 
 export default function HomePage() {
   return (
@@ -356,7 +360,7 @@ function HomePageContent() {
                       <p className="ma-pixel-timeline-time">{node.time}</p>
                       <p className="ma-pixel-timeline-label">{node.label}</p>
                       <p className="ma-pixel-timeline-state">
-                        {node.status === 'completed' ? '已完成' : node.status === 'current' ? '目前' : node.status === 'paused' ? '暫停' : node.status === 'insufficient' ? '資料不足' : '待資料'}
+                        {runtimeTimelineStatusLabel(node.status)}
                       </p>
                     </div>
                   ))}
@@ -483,7 +487,7 @@ function HomePageContent() {
                     </div>
 
                     <p className="text-foreground-400 text-xs text-center mt-5 leading-relaxed max-w-lg mx-auto">
-                      非交易日 Morning Alpha 不產生盤前判斷、受惠股、盤中追蹤與研究筆記。所有分析將於下一個交易日自動恢復。
+                      今日非交易日，本節點不適用；等待下一個交易日。
                     </p>
                   </div>
                 </div>

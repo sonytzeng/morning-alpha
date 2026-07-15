@@ -61,7 +61,7 @@ export function getIntradayBias(taiexChange: number | null | undefined): Intrada
     return {
       stateLabel: '震盪觀察',
       mainText: '台股盤中仍在震盪區間，暫無明確多空方向。等待台積電與台指期出現一致性訊號後再判斷。',
-      statusColor: 'yellow',
+      statusColor: 'amber',
       biasLevel: 'range_bound',
     };
   }

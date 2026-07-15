@@ -4,16 +4,20 @@ import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import { getTodayIntradayCheck } from '@/services/intradayCheckService';
 import { getTodayOpeningRadar, type OpeningRadar } from '@/services/openingRadarService';
-import { getDataTimestamps, formatTimestampForDisplay } from '@/services/dataTimestampService';
+import {
+  getDataTimestamps,
+  formatTimestampForDisplay,
+  type DataTimestamps,
+} from '@/services/dataTimestampService';
 import type { Report } from '@/types/report';
 import type { IntradayCheck } from '@/services/intradayCheckService';
 import { trackPageView } from '@/utils/analytics';
-import { isTaipeiWeekendToday } from '@/utils/tradingDay';
+import { formatTaipeiDate, resolveMarketStatus } from '@/utils/tradingDay';
+import { runtimeTimelineStatusLabel } from '@/lib/runtimeDecisionTimeline';
 import { mapRowToReport } from '@/services/reportService';
 import {
   getMarketSourceHealth,
   computeDataTrustStatus,
-  formatTaipeiDateTime,
   sourceStatusToChinese,
   sourceStatusIcon,
   sourceStatusColor,
@@ -128,19 +132,15 @@ export default function VerificationPage() {
   const [intraday, setIntraday] = useState<IntradayCheck | null>(null);
   const [openingRadar, setOpeningRadar] = useState<OpeningRadar | null>(null);
   const [selectedNews, setSelectedNews] = useState<NewsItem[]>([]);
-  const [timestamps, setTimestamps] = useState<{
-    reportCreatedAt: string | null;
-    intradayCheckCreatedAt: string | null;
-    marketDataCapturedAt: string | null;
-    marketNewsPublishedAt: string | null;
-  } | null>(null);
+  const [timestamps, setTimestamps] = useState<DataTimestamps | null>(null);
   const [sourceHealth, setSourceHealth] = useState<MarketSourceHealth[]>([]);
   const [newsStats, setNewsStats] = useState<NewsFilterStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // V14: Weekend / non-trading day detection
-  const isWeekend = isTaipeiWeekendToday();
+  const todayMarketStatus = resolveMarketStatus(formatTaipeiDate());
+  const isNonTradingDay = !todayMarketStatus.is_trading_day;
+  const notApplicableLabel = runtimeTimelineStatusLabel('not_applicable');
 
   // Close market reviews
   const [closeMarketReviews, setCloseMarketReviews] = useState<CloseMarketReview[]>([]);
@@ -356,7 +356,7 @@ export default function VerificationPage() {
               {report ? (
                 <div className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
                   {/* V14: Weekend fallback indicator */}
-                  {isWeekend && report.report_date !== new Date().toISOString().slice(0, 10) && (
+                  {isNonTradingDay && report.report_date !== todayMarketStatus.market_date && (
                     <div className="mb-4 px-3 py-2 rounded-lg bg-sky-500/[0.05] border border-sky-500/10 flex items-center gap-2">
                       <i className="ri-calendar-line text-sky-400 text-xs"></i>
                       <span className="text-sky-400/80 text-xs">
@@ -412,12 +412,12 @@ export default function VerificationPage() {
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-2 h-2 rounded-full bg-white/20 animate-pulse"></div>
                     <span className="text-white/30 text-xs font-medium">
-                      {isWeekend ? '非交易日 · 等待下個交易日' : '等待報告'}
+                      {isNonTradingDay ? `今日非交易日 · ${notApplicableLabel}` : '等待報告'}
                     </span>
                   </div>
                   <p className="text-white/50 text-sm leading-relaxed">
-                    {isWeekend
-                      ? '今天非交易日，07:30 盤前劇本暫停產生；目前顯示最近交易日驗證紀錄。'
+                    {isNonTradingDay
+                      ? '今天非交易日，本節點不適用；等待下一個交易日。'
                       : '今日盤前劇本尚未產生，系統會在 07:30 前自動生成。'}
                   </p>
                 </div>
@@ -617,12 +617,12 @@ export default function VerificationPage() {
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-2 h-2 rounded-full bg-white/20 animate-pulse"></div>
                     <span className="text-white/30 text-xs font-medium px-2.5 py-1 rounded-full border border-white/10 bg-white/5">
-                      {isWeekend ? '非交易日 · 暫停更新' : '等待更新'}
+                      {isNonTradingDay ? `今日非交易日 · ${notApplicableLabel}` : '等待更新'}
                     </span>
                   </div>
                   <p className="text-white/50 text-sm leading-relaxed">
-                    {isWeekend
-                      ? '今天非交易日，09:15 開盤驗證暫停；下一個交易日開盤後恢復。'
+                    {isNonTradingDay
+                      ? '今天非交易日，本節點不適用；等待下一個交易日。'
                       : '09:15 開盤雷達尚未更新，系統會在開盤後驗證盤前劇本是否成立。'}
                   </p>
                 </div>

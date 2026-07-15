@@ -100,7 +100,7 @@ export interface MemberSection {
   risk_note?: string;
   evidence_items?: EvidenceItem[];
   chains?: OvernightChain[];
-  items?: DontDoItem[] | InvalidationItem[];
+  items?: Array<DontDoItem | InvalidationItem>;
   core_watch?: CoreWatchItem[];
   secondary_watch?: unknown[];
   risk_watch?: unknown[];
@@ -329,6 +329,8 @@ export interface ParsedAIStrategy {
 
   // Data info
   market_data_latest_date: string;
+  global_market_status_count: number;
+  important_news: Record<string, unknown>[];
 
   // Free summary
   free_summary: FreeSummary | null;
@@ -561,7 +563,7 @@ function parseV8DailySentence(raw: unknown): V8DailySentence {
 // ═══════════════════════════════════════════════════
 
 export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
-  const raw = (report as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
+  const raw = (report as unknown as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
   const ai = raw || {};
 
   // ── Version & Source ──
@@ -579,6 +581,20 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
 
   // ── Data date ──
   const marketDataLatestDate = grabStr(ai, 'market_data_latest_date', 'generated_for_date');
+  const globalMarketStatusCount = grabNum(
+    ai,
+    'global_market_status_count',
+    Array.isArray(ai.global_market_status) ? ai.global_market_status.length : 0,
+  );
+  const importantNews = grabArr<Record<string, unknown>>(ai, 'important_news');
+  const parsedImportantNews = importantNews.length > 0
+    ? importantNews
+    : (report?.important_news_json || []).map((item) => ({
+      title: item.title,
+      summary: item.summary,
+      impact: item.impact,
+      sectors: item.sectors,
+    }));
 
   // ── Free Summary ──
   const fsRaw = grabObj(ai, 'free_summary');
@@ -882,6 +898,8 @@ export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
     is_template_like: isTemplateLike,
     canShowMemberContent: hasValidMemberResearchTextValue(memberResearchNote) || hasValidMemberResearchNoteV2Value(memberResearchNoteV2),
     market_data_latest_date: marketDataLatestDate,
+    global_market_status_count: globalMarketStatusCount,
+    important_news: parsedImportantNews,
     free_summary: freeSummary,
     member_research_note: memberResearchNote,
     member_research_note_v2: memberResearchNoteV2,
@@ -1195,7 +1213,7 @@ export function shouldShowNonTradingDayWarning(): boolean {
  */
 export function hasTodayGeneratedReport(report: Report | null): boolean {
   if (!report) return false;
-  const raw = (report as Record<string, unknown>);
+  const raw = (report as unknown as Record<string, unknown>);
   const createdAt = raw.created_at as string | null;
   if (!createdAt) return false;
 

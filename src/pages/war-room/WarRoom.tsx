@@ -6,7 +6,7 @@ import ErrorBoundary from '@/components/base/ErrorBoundary';
 import { useLatestReport } from '@/hooks/useLatestReport';
 import { formatTaipeiDate, resolveMarketStatus } from '@/utils/tradingDay';
 import { buildMarketState, type MarketState } from '@/services/marketStateEngine';
-import { getTodaySectorRotation, getSignalColor, computeSectorRotationFreshness, type SectorRotationItem, type SectorRotationFreshness } from '@/services/sectorRotationService';
+import { getSignalColor, computeSectorRotationFreshness, type SectorRotationItem, type SectorRotationFreshness } from '@/services/sectorRotationService';
 import { resolveIntradayTrackingState, type IntradayTrackingState, type SegmentDisplay } from '@/services/intradayTrackingResolver';
 import { useState, useEffect, useMemo } from 'react';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
@@ -16,6 +16,7 @@ import {
   buildWarRoomObservationCards,
   buildWarRoomTimeline,
 } from './warRoomPresentationMapper';
+import { getRuntimeCheckpointState } from '@/lib/decisionEvidence';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -86,17 +87,11 @@ function compactChineseText(value: unknown, fallback: string, limit = 25): strin
 function resolveNextReturnTime(nextStep: unknown, status: unknown): string {
   const step = safeText(nextStep);
   const raw = safeText(status).toLowerCase();
-  if (raw === 'completed') return '明日 07:30';
+  if (raw === 'completed') return '查看收盤驗證';
   if (step.includes('13')) return '13:00';
   if (step.includes('10')) return '10:30';
   if (step.includes('09') || step.includes('9')) return '09:30';
-
-  const taipeiNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-  const minutes = taipeiNow.getHours() * 60 + taipeiNow.getMinutes();
-  if (minutes < 9 * 60 + 30) return '09:30';
-  if (minutes < 10 * 60 + 30) return '10:30';
-  if (minutes < 13 * 60) return '13:00';
-  return '明日 07:30';
+  return '等待 Runtime checkpoint';
 }
 
 function normalizePredictionResult(value: unknown): string {
@@ -203,11 +198,17 @@ function WarRoomContent() {
     ? { closed: displayState.market_status !== 'OPEN', holidayName: displayState.holidayName }
     : { closed: isWeekend, holidayName: isWeekend ? '週末休市' : null as string | null };
 
-  // Taipei hour for status logic
-  const taipeiHour = useMemo(() => {
-    const now = new Date();
-    return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' })).getHours();
-  }, []);
+  const runtimeSyncStatus = isRecord(rawAI?.intraday_sync_status) ? rawAI.intraday_sync_status : null;
+  const hasVerifiedClose = todayCloseVerification?.data_quality === 'verified';
+  const taipeiHour = hasVerifiedClose
+    ? 15
+    : getRuntimeCheckpointState(runtimeSyncStatus, '1300') === 'completed'
+      ? 13
+      : getRuntimeCheckpointState(runtimeSyncStatus, '1030') === 'completed'
+        ? 10
+        : getRuntimeCheckpointState(runtimeSyncStatus, '0930') === 'completed' || openingRadar
+          ? 9
+          : 7;
 
   const marketState: MarketState = buildMarketState({
     todayReport: report,
@@ -218,32 +219,30 @@ function WarRoomContent() {
   });
 
   useEffect(() => {
-    getTodaySectorRotation(todayTaipeiStr)
-      .then((result) => {
-        setSectorData(result.items);
-        setSectorScoreDate(result.scoreDate || todayTaipeiStr);
+    const result = morningState?.sectorRotationState;
+    if (!result) {
+      setSectorData([]);
+      setSectorScoreDate(null);
+      setSectorFreshness(null);
+      setSectorLoaded(true);
+      return;
+    }
+    setSectorData(result.items);
+    setSectorScoreDate(result.scoreDate || null);
 
-        const now = new Date();
-        const taipeiNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-        const hour = taipeiNow.getHours();
-        const min = taipeiNow.getMinutes();
-        const isAfterClose = hour > 13 || (hour === 13 && min >= 30);
-        const hasCloseVerif = todayCloseVerification !== null && todayCloseVerification.report_date === todayTaipeiStr;
+    const hasCloseVerif = hasVerifiedClose
+      && todayCloseVerification?.report_date === todayTaipeiStr;
+    const hasIntradayCheckpoint = ['0930', '1030', '1300']
+      .some((checkpoint) => getRuntimeCheckpointState(runtimeSyncStatus, checkpoint) === 'completed');
 
-        let phaseForFreshness = 'intraday';
-        if (isNonTradingDay) phaseForFreshness = 'pre_market';
-        else if (isAfterClose && hasCloseVerif) phaseForFreshness = 'after_close_verified';
-        else if (isAfterClose) phaseForFreshness = 'after_close_pending';
-        else if (hour < 9) phaseForFreshness = 'pre_market';
+    let phaseForFreshness = 'intraday';
+    if (isNonTradingDay) phaseForFreshness = 'pre_market';
+    else if (hasCloseVerif) phaseForFreshness = 'after_close_verified';
+    else if (!hasIntradayCheckpoint) phaseForFreshness = 'pre_market';
 
-        setSectorFreshness(computeSectorRotationFreshness(result, todayTaipeiStr, phaseForFreshness));
-        setSectorLoaded(true);
-      })
-      .catch(() => {
-        setSectorFreshness(null);
-        setSectorLoaded(true);
-      });
-  }, [todayTaipeiStr, todayCloseVerification]);
+    setSectorFreshness(computeSectorRotationFreshness(result, todayTaipeiStr, phaseForFreshness));
+    setSectorLoaded(true);
+  }, [hasVerifiedClose, isNonTradingDay, morningState?.sectorRotationState, runtimeSyncStatus, todayCloseVerification, todayTaipeiStr]);
 
   // ═══ V25: Unified intraday tracking state ═══
   const tracking = useMemo<IntradayTrackingState>(() => {
@@ -313,7 +312,7 @@ function WarRoomContent() {
               <p className="text-slate-500 text-[10px] mt-1">07:30 自動更新</p>
             </div>
             <p className="text-slate-500 text-xs leading-relaxed mb-5">
-              今日台股休市，盤中追蹤暫停。若需參考，以下僅能查看最近交易日資料。
+              今日非交易日，本節點不適用；等待下一個交易日。
             </p>
             <Link to="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
               返回首頁
@@ -391,12 +390,10 @@ function WarRoomContent() {
     decisionStatus.next_step || canonicalNarrative.intraday_progress.next_step,
     decisionStatus.status,
   );
-  const presentationNow = new Date();
   const closingState = buildWarRoomClosingState({
     closingVerificationV2,
     publicClosingVerification,
     todayCloseVerification,
-    now: presentationNow,
   });
   const phase2CurrentStatus = closingState.isPostClose
     ? closingState.label
@@ -461,8 +458,8 @@ function WarRoomContent() {
   const capitalRotation = isRecord(rawAI?.capital_rotation_path) ? rawAI.capital_rotation_path : null;
   const intradaySummaryCards = [
     { label: '最新方向', value: safeText(openingRadar?.radar_status, humanStatus(tracking.intraday.statusText)), detail: openingRadar?.summary ? compactChineseText(openingRadar.summary, '', 30) : decisionWhy, tone: 'blue' },
-    { label: '資金', value: firstRecordText(capitalRotation, ['current_focus', 'summary', 'direction'], '資料待補'), detail: sectorData[0]?.sector ? `目前關注：${sectorData[0].sector}` : '', tone: 'green' },
-    { label: '主線', value: safeText(sectorData[0]?.sector || canonicalNarrative.today_focus.headline, '資料待補'), detail: canonicalNarrative.today_focus.summary, tone: 'amber' },
+    { label: '資金', value: firstRecordText(capitalRotation, ['current_focus', 'summary', 'direction'], '資料不足'), detail: sectorData[0]?.sector ? `目前關注：${sectorData[0].sector}` : '', tone: 'green' },
+    { label: '主線', value: safeText(sectorData[0]?.sector || canonicalNarrative.today_focus.headline, '資料不足'), detail: canonicalNarrative.today_focus.summary, tone: 'amber' },
     { label: '目前動作', value: safeText(decisionStatus.next_step || canonicalNarrative.intraday_progress.current_step, '等待確認'), detail: phase2NextConfirmation, tone: decisionStatus.status === 'Rejected' ? 'red' : 'green' },
   ];
   const supportingSignals = Array.from(new Set([
@@ -479,7 +476,7 @@ function WarRoomContent() {
     closingVerificationV2,
     publicClosingVerification,
     todayCloseVerification,
-    now: presentationNow,
+    isTradingDay: !isNonTradingDay,
   });
   const phase2Observations = buildWarRoomObservationCards({
     sources: [
@@ -491,7 +488,6 @@ function WarRoomContent() {
     todayCloseVerification,
     fallbackNext: nextReturnTime,
     fallbackStop: canonicalNarrative.decision_lifecycle.failure_condition.trigger,
-    now: presentationNow,
     limit: 3,
   });
 
@@ -547,306 +543,6 @@ function WarRoomContent() {
               <div className="ma-phase2-observation-grid">{phase2Observations.map((item) => <article key={item.key} className="ma-phase2-observation-card"><header className="ma-phase2-observation-header"><div><h3>{safeText(item.name)}</h3>{item.roles.length > 0 && <p>{item.roles.join('／')}</p>}</div><span className={`is-${item.statusTone}`}>{safeText(item.status)}</span></header><dl><div><dt>{item.detailLabel}</dt><dd>{safeText(item.next)}</dd></div><div><dt>停止條件</dt><dd>{safeText(item.stop)}</dd></div></dl></article>)}</div>
             </section>
           )}
-        </div>
-
-        <div className="ma-phase2-legacy-detail max-w-5xl mx-auto px-4 md:px-6 py-5 md:py-6 space-y-3">
-
-          {/* ═══ Non-trading day banner ═══ */}
-          {isNonTradingDay && (
-            <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-500/20 flex items-start gap-3">
-              <i className="ri-calendar-line text-amber-400 text-sm mt-0.5"></i>
-              <p className="text-amber-400/80 text-sm leading-relaxed">
-                今天非交易日，以下顯示最近交易日（{fallbackReportDate || report?.report_date || ''}）資料。
-              </p>
-            </div>
-          )}
-
-          {/* V27: Not today's report warning */}
-          {!isNonTradingDay && !isReportForToday && report && (
-            <div className="p-4 rounded-xl bg-red-500/[0.06] border border-red-500/20 flex items-start gap-3">
-              <i className="ri-calendar-check-line text-red-400 text-sm mt-0.5"></i>
-              <div>
-                <p className="text-red-300 text-sm font-semibold">今日盤前報告尚未產生</p>
-                <p className="text-red-400/60 text-xs mt-1">
-                  以下顯示上一份報告（{report.report_date}），非今日 {todayTaipeiStr} 盤前報告。盤中雷達仍以 today 資料為準。
-                </p>
-              </div>
-            </div>
-          )}
-
-          <section className="ma-card-primary">
-            <VisualSectionHeader icon="ri-focus-3-line" title="目前判斷" description={decisionWhy} />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <div className="ma-card-compact">
-                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">目前狀態</p>
-                <p className="text-white font-bold text-base">{decisionStatusLabel(decisionStatus.status)}</p>
-              </div>
-              <div className="ma-card-compact">
-                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">最新驗證</p>
-                <p className="text-white/80 text-sm font-medium leading-snug">{decisionWhy}</p>
-              </div>
-              <div className="ma-card-compact">
-                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">下一次確認</p>
-                <p className="text-white/80 text-sm font-medium leading-snug">{phase2NextConfirmation}</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="ma-card">
-            <VisualSectionHeader icon="ri-scales-3-line" title="目前依據" description="四個核心證據" />
-            <div className="divide-y divide-white/8 rounded-xl border border-white/8 bg-navy-900/45 overflow-hidden">
-              {evidenceCards.map((item) => (
-                <div key={item.label} className="grid grid-cols-[72px_36px_1fr] sm:grid-cols-[90px_42px_1fr_100px] gap-2 px-3 py-2 items-center">
-                  <p className="text-white/55 text-xs font-semibold">{item.label}</p>
-                  <p className="text-sm">{evidenceStatusMark(item.status)}</p>
-                  <p className="text-white text-xs font-medium leading-snug">{item.status}</p>
-                  <p className="hidden sm:block text-white/35 text-xs text-right">{compactChineseText(item.note, '等待資料', 12)}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-white/60 text-xs leading-snug mt-3">{evidenceConclusion}</p>
-          </section>
-
-          <section className="ma-card">
-            <VisualSectionHeader icon="ri-exchange-line" title="哪些條件改變了" />
-            {changedGroups.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {changedGroups.map((group) => (
-                  <div key={group.label} className="p-3 rounded-xl bg-navy-900/60 border border-white/8">
-                    <p className="text-white/35 text-[10px] uppercase tracking-wider mb-2">{group.label}</p>
-                    <ul className="space-y-1">
-                      {group.items.slice(0, 2).map((item, idx) => (
-                        <li key={`${group.label}-${idx}`} className="text-white/75 text-sm leading-snug break-words">
-                          {compactChineseText(item, '等待資料確認。', 36)}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-white/45 text-sm">目前尚無新的條件變化。</p>
-            )}
-          </section>
-
-          <VisualSectionHeader icon="ri-radar-line" title="深入盤中資訊" description="想深讀時再往下看。" />
-
-          {/* ═══════════════════════════════════════ */}
-          {/* CARD 2 — 09:30 盤中雷達 */}
-          {/* ═══════════════════════════════════════ */}
-          <section className={`rounded-2xl border p-4 ${segmentBorder(tracking.intraday.color)} ${segmentBg(tracking.intraday.color)}`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 whitespace-nowrap">09:30</span>
-                <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">盤中雷達</h2>
-              </div>
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${segmentBadgeStyle(tracking.intraday.color)}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${tracking.intraday.color === 'green' ? 'bg-emerald-400' : tracking.intraday.color === 'red' ? 'bg-red-400' : tracking.intraday.color === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
-                {humanStatus(tracking.intraday.statusText)}
-              </span>
-            </div>
-            {tracking.intraday.showContent && openingRadar && tracking.intraday.isToday && (
-              <div className="space-y-3">
-                {/* Radar summary card */}
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className={`text-sm font-semibold ${openingRadar.radar_status?.includes('偏弱') || openingRadar.radar_status?.includes('轉弱') ? 'text-red-400' : 'text-white/80'}`}>
-                      {openingRadar.radar_status}
-                    </span>
-                  </div>
-                  {openingRadar.summary && (
-                    <p className="text-white/50 text-xs leading-relaxed">{openingRadar.summary}</p>
-                  )}
-                  {((openingRadar as unknown as Record<string, unknown>).data_status === 'degraded'
-                    || (openingRadar as unknown as Record<string, unknown>).radar_mode === 'two_core_without_txf') && (
-                    <p className="mt-2 text-amber-300/80 text-xs leading-relaxed">
-                      盤中雷達以 TAIEX / 2330 雙核心資料產生，TXF 尚未接入完整驗證。
-                    </p>
-                  )}
-                </div>
-                {/* Intraday snapshot: only openingRadar values after freshness gate passes. */}
-                {openingRadar && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {[
-                      { symbol: 'TAIEX', change: openingRadar.taiex_change },
-                      { symbol: 'TXF', change: openingRadar.txf_change },
-                      { symbol: '2330', change: openingRadar.tsmc_change },
-                    ].map((item) => {
-                      const changeNum = item.change == null ? null : Number(item.change);
-                      const isUp = changeNum !== null && changeNum > 0;
-                      const isDown = changeNum !== null && changeNum < 0;
-                      return (
-                        <div key={item.symbol} className="p-2 rounded-lg bg-white/[0.02] border border-white/5">
-                          <span className="text-white/30 text-[9px] block">{item.symbol}</span>
-                          <div className="flex items-baseline gap-1.5">
-                            {changeNum !== null && !Number.isNaN(changeNum) ? (
-                              <span className={`text-[10px] font-mono ${isUp ? 'text-red-400' : isDown ? 'text-emerald-400' : 'text-slate-400'}`}>
-                                {changeNum >= 0 ? '+' : ''}{changeNum.toFixed(2)}%
-                              </span>
-                            ) : (
-                              <span className="text-white/30 text-xs font-mono">資料待更新</span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <p className="text-white/40 text-xs leading-relaxed">
-                  資料日期：{tracking.intradayRadarDate}｜觀察節點：09:30、10:30、13:30
-                </p>
-              </div>
-            )}
-            {(!tracking.intraday.showContent || !tracking.intraday.isToday) && (
-              <div>
-                <p className="text-white/50 text-sm mb-2">{tracking.intraday.description}</p>
-                {tracking.isOpeningRadarStale && openingRadar && (
-                  <div className="mt-3 p-3 rounded-lg bg-red-500/[0.06] border border-red-500/15">
-                    <p className="text-red-300/70 text-xs">
-                      盤中雷達資料過期，以下為 {tracking.intradayRadarDate} 舊資料，不作為今日判斷。
-                    </p>
-                  </div>
-                )}
-                <p className="text-white/25 text-[10px] mt-2 leading-relaxed">
-                  觀察節點：09:30、10:30、13:30。上述時間為 Morning Alpha 系統更新時間，非交易時間。
-                </p>
-              </div>
-            )}
-          </section>
-
-          {/* ═══════════════════════════════════════ */}
-          {/* CARD 1 — 07:30 盤前方向 */}
-          {/* ═══════════════════════════════════════ */}
-          {/* ═══════════════════════════════════════ */}
-          {/* CARD 3 — 14:10 收盤驗證 */}
-          {/* ═══════════════════════════════════════ */}
-          <section className={`rounded-2xl border p-4 ${segmentBorder(tracking.closeReview.color)} ${segmentBg(tracking.closeReview.color)}`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 whitespace-nowrap">14:10</span>
-                <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">收盤驗證</h2>
-              </div>
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${segmentBadgeStyle(tracking.closeReview.color)}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${tracking.closeReview.color === 'green' ? 'bg-emerald-400' : tracking.closeReview.color === 'red' ? 'bg-red-400' : tracking.closeReview.color === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
-                {humanStatus(tracking.closeReview.statusText)}
-              </span>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl bg-white/[0.025] border border-white/5 px-3 py-2">
-              <div className="min-w-0">
-                <p className="text-white/35 text-[10px] uppercase tracking-wider">收盤驗證</p>
-                <p className="text-white/75 text-sm font-medium truncate">
-                  {closeVerificationRecord && !isCloseVerificationPending ? closeVerdictLabel : '未完成'}
-                  {closeVerificationRecord && !isCloseVerificationPending && closeResultText !== '等待收盤資料' ? `｜${closeResultText}` : ''}
-                </p>
-                {isCloseVerificationDegraded && (
-                  <p className="text-amber-200/75 text-xs mt-0.5">個股與類股資料仍不完整。</p>
-                )}
-              </div>
-              <Link to="/performance" className="shrink-0 inline-flex text-amber-300 hover:text-amber-200 text-sm font-semibold">
-                查看完整 Decision Journal →
-              </Link>
-            </div>
-          </section>
-
-          {/* ═══════════════════════════════════════ */}
-          {/* CARD 4 — 14:20 類股輪動 */}
-          {/* ═══════════════════════════════════════ */}
-          <section className={`rounded-2xl border p-4 ${segmentBorder(tracking.sectorRotation.color)} ${segmentBg(tracking.sectorRotation.color)}`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">14:20</span>
-                <h2 className="text-slate-100 text-[10px] uppercase tracking-[0.3em] font-semibold">
-                  {sectorTitle}
-                </h2>
-              </div>
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${segmentBadgeStyle(tracking.sectorRotation.color)}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${tracking.sectorRotation.color === 'green' ? 'bg-emerald-400' : tracking.sectorRotation.color === 'red' ? 'bg-red-400' : tracking.sectorRotation.color === 'amber' ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
-                {sectorBadgeText}
-              </span>
-            </div>
-
-            {showSectorCards ? (
-              <div className="space-y-3">
-                {/* Stale reference warning */}
-                {showSectorReference && (
-                  <div className="p-3 rounded-lg bg-amber-500/[0.06] border border-amber-400/30 flex items-start gap-2">
-                    <i className="ri-history-line text-amber-400 text-sm mt-0.5"></i>
-                    <p className="text-amber-300/70 text-xs leading-relaxed">
-                      此區塊為上一交易日類股輪動參考（{tracking.sectorRotationDate}），不代表今日即時輪動，也不參與今日判斷分數。
-                    </p>
-                  </div>
-                )}
-
-                {/* Sector cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {sectorData.slice(0, 6).map((item) => {
-                    const colors = getSignalColor(item.signal_label);
-                    const isFresh = showTodaySectorRotation;
-                    return (
-                      <div key={item.sector} className={`p-3 rounded-xl border ${isFresh ? `${colors.bg} ${colors.border}` : 'bg-slate-800/70 border-slate-700/70'}`}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-slate-100 font-semibold text-xs">{item.sector}</span>
-                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${isFresh ? `${colors.bg} ${colors.border} ${colors.text}` : 'bg-amber-500/10 border-amber-400/30 text-amber-300'}`}>
-                            <span className={`w-1 h-1 rounded-full ${isFresh ? colors.dot : 'bg-amber-400'}`}></span>
-                            {isFresh ? (item.signal_label || item.direction || '—') : '歷史參考'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${isFresh ? 'bg-emerald-500/60' : 'bg-cyan-400/50'}`} style={{ width: `${Math.min(item.rotation_score, 100)}%` }} />
-                          </div>
-                          <span className="text-slate-400 text-[10px] font-mono tabular-nums w-6 text-right">{item.rotation_score}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : tracking.sectorRotation.showContent && sectorData.length === 0 ? (
-              <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5 text-center">
-                <div className="w-10 h-10 rounded-xl bg-navy-800 flex items-center justify-center mx-auto mb-3">
-                  <i className="ri-pie-chart-line text-white/30 text-lg"></i>
-                </div>
-                <p className="text-white/50 text-sm">今日類股輪動尚未更新，暫不顯示排行。</p>
-                <p className="text-white/25 text-xs mt-1">請等待收盤後資料更新。</p>
-              </div>
-            ) : (
-              <p className="text-white/50 text-sm">{tracking.sectorRotation.description}</p>
-            )}
-
-            {/* Weak / Avoid sectors */}
-            {sectorLoaded && showTodaySectorRotation && sectorData.filter((s) => s.rotation_score < 20).length > 0 && (
-              <div className="mt-4 pt-4 border-t border-white/5">
-                <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] font-semibold mb-3">
-                  相對弱勢 / 避開方向
-                </h3>
-                <div className="space-y-2">
-                  {sectorData
-                    .filter((s) => s.rotation_score < 20)
-                    .slice(0, 3)
-                    .map((item) => (
-                      <div key={item.sector} className="p-2.5 rounded-lg bg-red-500/[0.03] border border-red-500/10 flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-md bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0">
-                          <i className="ri-arrow-down-line text-red-400 text-xs"></i>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-white text-xs font-semibold">{item.sector}</span>
-                            <span className="text-red-400 text-[10px] font-mono">輪動分 {item.rotation_score}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Observation note */}
-          <p className="text-white/20 text-[10px] text-center leading-relaxed">
-            觀察節點：09:30、10:30、13:30。上述時間為 Morning Alpha 系統更新時間，非交易時間。
-          </p>
-
         </div>
       </main>
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Report } from '@/types/report';
 import { getTodayReport } from '@/services/reportService';
+import { isTaipeiToday } from '@/services/marketSourceHealthService';
 
 export interface AccountDashboardData {
   // Today report
@@ -53,6 +54,7 @@ async function loadAccountDashboard(): Promise<AccountDashboardData> {
     isMarketDataToday: false,
     marketNewsLatestAt: null,
     selectedNewsCount: 0,
+    totalNewsCount: 0,
     isMarketNewsToday: false,
     intradayLatestAt: null,
     intradayCheckDate: null,

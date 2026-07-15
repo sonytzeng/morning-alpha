@@ -12,9 +12,8 @@ interface PaywallCardProps {
   tone?: 'light' | 'dark';
 }
 
-function getDefaultCtaHref(requiredTier: Exclude<SubscriptionTier, 'free' | 'admin'>): string {
-  const tier = requiredTier === 'vip' ? 'vip' : 'member';
-  return `/member-note?tier=${tier}`;
+function getDefaultCtaHref(_requiredTier: Exclude<SubscriptionTier, 'free' | 'admin'>): string {
+  return '/account';
 }
 
 export default function PaywallCard({

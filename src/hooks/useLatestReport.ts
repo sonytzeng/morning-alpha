@@ -1,8 +1,8 @@
-import { useMorningAlphaState, type MorningAlphaState } from '@/lib/morningAlpha/resolveMorningAlphaState';
+import { resolveMorningAlphaState, type MorningAlphaState } from '@/lib/morningAlpha/resolveMorningAlphaState';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { isTaipeiToday } from '@/services/marketSourceHealthService';
 import { mapRowToReport } from '@/services/reportService';
-import { getTodayOpeningRadar, getEffectiveDisplayState, mapRowToOpeningRadar, type OpeningRadar } from '@/services/openingRadarService';
+import { getEffectiveDisplayState, mapRowToOpeningRadar, type OpeningRadar } from '@/services/openingRadarService';
 import {
   getSafeMarketBias,
   getSafeStrategyLabel,
@@ -12,7 +12,7 @@ import {
 import { generateIntelligence, type IntelligenceResult } from '@/services/intelligenceEngine';
 import { generatePremiumReport, type PremiumReportResult } from '@/services/premiumReportEngine';
 import { getTodayOnlyMarketData } from '@/services/marketStateEngine';
-import { getTodayCloseMarketReview, mapClosingVerificationToCloseMarketReview, type CloseMarketReview } from '@/services/closeMarketReviewService';
+import { mapClosingVerificationToCloseMarketReview, type CloseMarketReview } from '@/services/closeMarketReviewService';
 import { formatTaipeiDate } from '@/utils/tradingDay';
 import { parseAIStrategy, getBestOneLiner, getDisplayBias, getDisplayConfidence, getDataDate, getSourceStatusText, hasRealKeyObservations, getTopItems, shouldShowNonTradingDayWarning, hasTodayGeneratedReport, getReportDisplayDate, getMarketDataBasisDate, type ParsedAIStrategy } from '@/utils/aiStrategyParser';
 import type { Report } from '@/types/report';
@@ -20,7 +20,6 @@ import type { SupabaseMarketData } from '@/services/marketDataService';
 import type { NewsItem } from '@/services/narrativeBuilder';
 import type { PremiumNewsItem } from '@/services/premiumReportEngine';
 import { normalizeMorningAlphaReport, isActualNonTradingDay, type MorningAlphaNormalizedReport } from '@/lib/morningAlphaReportAdapter';
-import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import { applyMarketBiasDowngrade } from '@/utils/marketBiasDowngrade';
 import { getMorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 
@@ -203,17 +202,11 @@ export function useLatestReport(): UseLatestReportResult {
       setIsLoading(true);
       setError(null);
 
-      // V26: Load unified state (runs resolveMorningAlphaState internally)
-      const msPromise = import('@/lib/morningAlpha/resolveMorningAlphaState').then((m) =>
-        m.resolveMorningAlphaState()
-      );
-
-      // V24: Use resolveActiveMorningAlphaReport — SINGLE SOURCE OF TRUTH
-      const resolved = await resolveActiveMorningAlphaReport();
+      // One request, one report revision: all War Room state derives from this result.
+      const resolvedMorningState = await resolveMorningAlphaState();
+      setMorningState(resolvedMorningState);
+      const resolved = resolvedMorningState.resolveResult;
       const rptRow = resolved.rawRow;
-
-      // Fetch radar
-      const radarRes = await getTodayOpeningRadar();
 
       if (!rptRow) {
         setReport(null);
@@ -222,11 +215,9 @@ export function useLatestReport(): UseLatestReportResult {
         setIsHistoricalFallback(false);
         setFallbackReportDate(null);
         setInconsistencyWarning(null);
-        setOpeningRadar(radarRes);
+        setOpeningRadar(null);
         setIntelligence(generateIntelligence(null, null, null));
         setPremiumReport(generatePremiumReport(null, null, null, null));
-        // Still resolve morningState even without report
-        msPromise.then(setMorningState).catch(() => {});
         return;
       }
 
@@ -237,17 +228,11 @@ export function useLatestReport(): UseLatestReportResult {
       setIsHistoricalFallback(resolved.isHistoricalFallback);
       setFallbackReportDate(resolved.fallbackReportDate);
 
-      let activeRadar: OpeningRadar | null = radarRes || getOpeningRadarFromServerPayload(rptRow);
+      const activeRadar: OpeningRadar | null = getOpeningRadarFromServerPayload(rptRow);
       let activeCloseVerif: CloseMarketReview | null = null;
 
-      try {
-        activeCloseVerif = await getTodayCloseMarketReview();
-      } catch {
-        activeCloseVerif = null;
-      }
-
       if (!activeCloseVerif) {
-        const rawRow = rptRow as Record<string, unknown>;
+        const rawRow = rptRow as unknown as Record<string, unknown>;
         const displayState = getMorningAlphaDisplayState(rawRow);
         const closingVerification = getClosingVerificationFromSources(
           rpt.ai_strategy_json,
@@ -279,9 +264,6 @@ export function useLatestReport(): UseLatestReportResult {
       setIntelligence(generateIntelligence(rpt, null, null));
       setPremiumReport(generatePremiumReport(rpt, null, null, generateIntelligence(rpt, null, null)));
 
-      // V26: Resolve unified state in background
-      msPromise.then(setMorningState).catch(() => {});
-
     } catch (err) {
       setError(err instanceof Error ? err.message : '資料讀取失敗');
       setReport(null);
@@ -290,7 +272,7 @@ export function useLatestReport(): UseLatestReportResult {
     } finally {
       setIsLoading(false);
     }
-  }, [todayTaipeiDate]);
+  }, []);
 
   useEffect(() => {
     load();

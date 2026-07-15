@@ -540,7 +540,7 @@ export default function StrategistPage() {
     } finally {
       setSectorLoading(false);
     }
-  }, []);
+  }, [isWeekend]);
 
   useEffect(() => {
     loadSectors();

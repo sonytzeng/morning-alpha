@@ -293,6 +293,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const dailySentence = getTodayQuote(report, ai);
   return {
     report_date: getReportDate(report),
+    revision_id: toStringValue(report.id),
     market_date: getMarketDate(report, ai),
     base_date: getMarketDate(report, ai),
     generated_at: getGeneratedAt(report, ai),
@@ -389,20 +390,12 @@ function buildVipPayload(report: ReportRow, ctx: PayloadContext): Record<string,
     fund_flow_scenario: note.fund_flow_scenario || ai.fund_flow_scenario || null,
     market_mispricing: note.market_mispricing || ai.market_mispricing || null,
     institutional_behavior: note.institutional_behavior || ai.institutional_behavior || null,
-    prediction_accuracy_logs_summary: {
-      status: "placeholder",
-      message: "P28 scaffold: weekly accuracy summary will be served after P29 entitlement-backed aggregation.",
-    },
     failure_analysis: {
       miss_reason: closing.miss_reason || null,
       failed_assumptions: Array.isArray(closing.failed_assumptions) ? closing.failed_assumptions : [],
       lessons_learned: Array.isArray(closing.lessons_learned) ? closing.lessons_learned : [],
     },
     tomorrow_extension_watch: note.tomorrow_extension_watch || closing.tomorrow_watch_points || null,
-    weekly_accuracy: {
-      status: "placeholder",
-      message: "P28 scaffold: VIP weekly accuracy will be computed server-side in a later phase.",
-    },
   };
 }
 
@@ -423,8 +416,16 @@ function getLockedSections(tier: SubscriptionTier): string[] {
   return PUBLIC_LOCKED_SECTIONS;
 }
 
+function createServiceClient(supabaseUrl: string, serviceRoleKey: string) {
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+type ServiceClient = ReturnType<typeof createServiceClient>;
+
 async function fetchPayloadContext(
-  serviceClient: ReturnType<typeof createClient>,
+  serviceClient: ServiceClient,
   reportDate: string,
 ): Promise<PayloadContext> {
   const [radarResult, sectorResult, snapshotResult] = await Promise.all([
@@ -461,9 +462,8 @@ async function fetchPayloadContext(
 
 async function resolveTierFromRequest(
   req: Request,
-  body: Record<string, unknown>,
-  serviceClient: ReturnType<typeof createClient>,
-): Promise<{ tier: SubscriptionTier; devOverride: boolean; userId: string | null }> {
+  serviceClient: ServiceClient,
+): Promise<{ tier: SubscriptionTier; userId: string | null }> {
   const authHeader = req.headers.get("Authorization") || "";
   const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length).trim() : "";
 
@@ -479,25 +479,19 @@ async function resolveTierFromRequest(
 
       if (profileError) {
         console.warn("GET_REPORT_PAYLOAD_PROFILE_LOOKUP_FAILED", profileError.message);
-        return { tier: "free", devOverride: false, userId: data.user.id };
+        return { tier: "free", userId: data.user.id };
       }
 
       return {
         tier: resolveTierFromProfile(profile as ProfileRow | null),
-        devOverride: false,
         userId: data.user.id,
       };
     }
-    return { tier: "free", devOverride: false, userId: null };
+    return { tier: "free", userId: null };
   }
 
-  // TODO P29: dev-only override for local/manual payload testing.
-  // Production entitlement must come from verified server-side profiles/subscriptions, never from client-supplied tier.
-  const devTier = body.tier || new URL(req.url).searchParams.get("tier");
-  if (devTier) {
-    return { tier: normalizeTier(devTier), devOverride: true, userId: null };
-  }
-  return { tier: "free", devOverride: false, userId: null };
+  // Anonymous requests are always free. Client URL/body values never grant entitlement.
+  return { tier: "free", userId: null };
 }
 
 Deno.serve(async (req: Request) => {
@@ -517,11 +511,9 @@ Deno.serve(async (req: Request) => {
     body = {};
   }
 
-  const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const serviceClient = createServiceClient(supabaseUrl, serviceRoleKey);
 
-  const { tier, devOverride, userId } = await resolveTierFromRequest(req, body, serviceClient);
+  const { tier, userId } = await resolveTierFromRequest(req, serviceClient);
 
   let query = serviceClient
     .from("reports")
@@ -555,7 +547,6 @@ Deno.serve(async (req: Request) => {
       payload: null,
       locked_sections: getLockedSections(tier),
       source: "server_trimmed_payload",
-      dev_override: devOverride,
     }, 404);
   }
 
@@ -564,10 +555,11 @@ Deno.serve(async (req: Request) => {
   return jsonResponse({
     tier,
     report_date: getReportDate(report),
+    revision_id: toStringValue(report.id),
+    generated_at: getGeneratedAt(report, getAi(report)),
     payload: buildPayload(report, tier, context),
     locked_sections: getLockedSections(tier),
     source: "server_trimmed_payload",
-    dev_override: devOverride,
     authenticated: Boolean(userId),
   });
 });

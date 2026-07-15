@@ -1,4 +1,5 @@
 import type { MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
+import { buildDecisionRuntimeEvidence, getRuntimeCheckpointState, type DecisionRuntimeEvidence } from './decisionEvidence.ts';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -83,6 +84,7 @@ export interface CanonicalMorningNarrative {
   failure_triggers: CanonicalFailureTrigger[];
   intraday_progress: CanonicalIntradayProgress;
   closing_outcome: CanonicalClosingOutcome;
+  decision_evidence: DecisionRuntimeEvidence;
   decision_lifecycle: CanonicalDecisionLifecycle;
 }
 
@@ -152,24 +154,16 @@ function toDecisionQuestion(title: string, summary: string): string {
 
 function compactLesson(value: string): string {
   const text = firstLine(value).replace(/\s+/g, '');
-  if (!text) return '今天先保留劇本紀律，等待下一次驗證。';
+  if (!text) return '';
   return ensureSentence(text.length > 35 ? `${text.slice(0, 34)}…` : text);
 }
 
 function normalizeStatus(value: unknown): CanonicalTodayScript['status'] {
   const text = toText(value).toLowerCase();
-  if (['ready', 'complete', 'completed', 'done'].some((token) => text.includes(token))) return 'completed';
-  if (['pending', 'waiting'].some((token) => text.includes(token))) return 'pending';
-  if (['missing', 'failed', 'stale'].some((token) => text.includes(token))) return 'missing';
-  return text ? 'ready' : 'missing';
-}
-
-function humanizeWindowStatus(value: unknown): CanonicalScriptStep['status'] {
-  const text = toText(value).toLowerCase();
-  if (['ready', 'complete', 'completed', 'synced'].includes(text)) return 'completed';
-  if (['missing', 'failed', 'stale', 'not_updated'].includes(text)) return 'missing';
-  if (['pending', 'waiting', 'not_started'].includes(text)) return 'pending';
-  return 'pending';
+  if (['ready', 'complete', 'completed', 'done'].includes(text)) return 'completed';
+  if (['pending', 'waiting'].includes(text)) return 'pending';
+  if (['missing', 'failed', 'stale'].includes(text)) return 'missing';
+  return 'missing';
 }
 
 function getV10MarketThesis(ai: UnknownRecord): UnknownRecord {
@@ -255,8 +249,6 @@ function buildTodayScript(note: UnknownRecord, ai: UnknownRecord): CanonicalToda
     ? asArray(note.intraday_time_windows)
     : asArray(note.intraday_validation);
   const sync = asRecord(ai.intraday_sync_status);
-  const syncWindows = asRecord(sync.windows);
-
   const steps = windows.slice(0, 5).map((window, index) => {
     const time = firstText(window.time, window.time_window, window.label);
     const title = firstText(window.title, window.purpose, window.what_to_watch);
@@ -268,11 +260,17 @@ function buildTodayScript(note: UnknownRecord, ai: UnknownRecord): CanonicalToda
       window.what_to_watch,
     );
     const syncKey = time.replace(/\D/g, '');
+    const runtimeStatus = getRuntimeCheckpointState(sync, syncKey);
+    const status: CanonicalScriptStep['status'] = runtimeStatus === 'completed'
+      ? 'completed'
+      : runtimeStatus === 'insufficient'
+        ? 'missing'
+        : 'pending';
     return {
       time,
       title,
       detail,
-      status: humanizeWindowStatus(syncWindows[syncKey] ?? syncWindows[time]),
+      status,
     };
   });
 
@@ -312,10 +310,8 @@ function buildIntradayProgress(ai: UnknownRecord, script: CanonicalTodayScript):
   const sync = asRecord(ai.intraday_sync_status);
   const openingRadar = asRecord(ai.opening_radar);
   const intradayTracking = asRecord(ai.intraday_tracking);
-  const syncWindows = asRecord(sync.windows);
-  const completed_steps = Object.entries(syncWindows)
-    .filter(([, value]) => humanizeWindowStatus(value) === 'completed')
-    .map(([key]) => key);
+  const completed_steps = ['0930', '1030', '1300']
+    .filter((key) => getRuntimeCheckpointState(sync, key) === 'completed');
 
   const currentFromTracking = firstText(
     intradayTracking.status,
@@ -356,23 +352,16 @@ function buildDecisionLifecycle(
   failure_triggers: CanonicalFailureTrigger[],
   intraday_progress: CanonicalIntradayProgress,
   closing_outcome: CanonicalClosingOutcome,
+  decisionEvidence: DecisionRuntimeEvidence,
 ): CanonicalDecisionLifecycle {
   const question = toDecisionQuestion(today_focus.headline, today_focus.summary || today_script.headline);
   const fallbackFailure: CanonicalFailureTrigger = {
     trigger: firstText(today_focus.risk, '資料不足'),
     meaning: firstText(today_focus.why, today_focus.summary, '目前缺少足夠條件判斷劇本是否成立。'),
-    action: firstText(today_focus.action, today_focus.risk, '先降低動作，等待下一個驗證點。'),
+    action: firstText(today_focus.action, today_focus.risk),
   };
   const failure = failure_triggers[0] || fallbackFailure;
-  const completed = closing_outcome.result || closing_outcome.summary;
-  const failedText = `${failure.trigger} ${failure.meaning}`.toLowerCase();
-  const status: CanonicalDecisionStatus = completed
-    ? 'Completed'
-    : failedText.includes('失效') || failedText.includes('跌破') || failedText.includes('不成立')
-      ? 'Rejected'
-      : intraday_progress.status === 'ready' || intraday_progress.status === 'completed'
-        ? 'Confirmed'
-        : 'Waiting';
+  const status: CanonicalDecisionStatus = decisionEvidence.status;
   const dailyLesson = compactLesson(
     closing_outcome.lessons[0]
       || closing_outcome.summary
@@ -396,7 +385,7 @@ function buildDecisionLifecycle(
     failure_condition: failure,
     decision_status: {
       status,
-      reason: firstText(intraday_progress.current_step, closing_outcome.summary, today_focus.summary, '等待資料確認。'),
+      reason: firstText(decisionEvidence.reason, intraday_progress.current_step, closing_outcome.summary, '等待資料確認。'),
       next_step: firstText(intraday_progress.next_step, failure.action, '等待下一個驗證點'),
     },
     closing_review: {
@@ -404,7 +393,7 @@ function buildDecisionLifecycle(
       prediction: firstText(today_focus.summary, today_script.headline, '資料不足'),
       reality: firstText(closing_outcome.summary, closing_outcome.result, '等待收盤驗證資料同步'),
       lesson: dailyLesson,
-      tomorrow: firstText(closing_outcome.lessons[1], closing_outcome.lessons[0], failure.action, '下一交易日延續檢查同一條主線。'),
+      tomorrow: firstText(closing_outcome.lessons[1], closing_outcome.lessons[0], failure.action),
     },
     daily_lesson: dailyLesson,
   };
@@ -418,18 +407,24 @@ export function buildCanonicalNarrative(input: BuildCanonicalNarrativeInput): Ca
   const failure_triggers = buildFailureTriggers(note);
   const intraday_progress = buildIntradayProgress(ai, today_script);
   const closing_outcome = buildClosingOutcome(ai);
+  const decision_evidence = buildDecisionRuntimeEvidence({
+    ai,
+    checklistItemCount: today_script.steps.filter((step) => Boolean(step.title || step.detail)).length,
+  });
   return {
     today_focus,
     today_script,
     failure_triggers,
     intraday_progress,
     closing_outcome,
+    decision_evidence,
     decision_lifecycle: buildDecisionLifecycle(
       today_focus,
       today_script,
       failure_triggers,
       intraday_progress,
       closing_outcome,
+      decision_evidence,
     ),
   };
 }

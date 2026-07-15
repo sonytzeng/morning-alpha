@@ -47,7 +47,7 @@ export function isTxfExpired(item: SupabaseMarketData): boolean {
 }
 
 export function isGeneralProxy(item: SupabaseMarketData): boolean {
-  return isProxyData(item.name, (item as Record<string, unknown>).source as string | undefined);
+  return isProxyData(item.name, item.source);
 }
 
 export function convertToMarketIndex(item: SupabaseMarketData): MarketIndex {

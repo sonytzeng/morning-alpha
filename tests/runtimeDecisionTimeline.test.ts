@@ -1,0 +1,105 @@
+import { buildRuntimeDecisionTimeline } from '../src/lib/runtimeDecisionTimeline.ts';
+import { resolveMarketStatus } from '../src/lib/market-status.ts';
+
+function assert(condition: boolean, message: string): void {
+  if (!condition) throw new Error(message);
+}
+
+function assertEveryNotApplicable(label: string, date: string, expectedMarketStatus: string): void {
+  const market = resolveMarketStatus(date);
+  assert(market.market_status === expectedMarketStatus, `${label}: unexpected market status`);
+  assert(!market.is_trading_day, `${label}: must be a non-trading day`);
+  const timeline = buildRuntimeDecisionTimeline({
+    ai: {},
+    hasReport: false,
+    isTradingDay: market.is_trading_day,
+  });
+  assert(
+    timeline.every((node) => node.status === 'not_applicable'),
+    `${label}: every checkpoint must be not_applicable`,
+  );
+}
+
+Deno.test('weekend checkpoints are not applicable', () => {
+  assertEveryNotApplicable('weekend', '2026-07-11', 'WEEKEND');
+});
+
+Deno.test('market holiday checkpoints are not applicable', () => {
+  assertEveryNotApplicable('market holiday', '2026-06-19', 'HOLIDAY');
+});
+
+Deno.test('typhoon closure checkpoints are not applicable', () => {
+  assertEveryNotApplicable('typhoon closure', '2026-07-10', 'TYPHOON');
+});
+
+Deno.test('trading day without checkpoint evidence remains pending/current', () => {
+  const market = resolveMarketStatus('2026-07-15');
+  assert(market.market_status === 'OPEN', 'regular trading day must resolve OPEN');
+  const timeline = buildRuntimeDecisionTimeline({
+    ai: {},
+    hasReport: false,
+    isTradingDay: market.is_trading_day,
+  });
+  assert(timeline[0]?.status === 'current', 'first missing trading checkpoint should be current');
+  assert(
+    timeline.slice(1).every((node) => node.status === 'pending'),
+    'later missing trading checkpoints should remain pending',
+  );
+  assert(
+    timeline.every((node) => node.status !== 'not_applicable'),
+    'trading checkpoints must not be marked not_applicable',
+  );
+});
+
+Deno.test('checkpoint marked complete without execution evidence is not completed', () => {
+  const timeline = buildRuntimeDecisionTimeline({
+    ai: {
+      intraday_sync_status: {
+        windows: { '0930': { status: 'completed' } },
+      },
+    },
+    hasReport: true,
+    reportRevisionId: 'revision-1',
+    isTradingDay: true,
+  });
+  assert(timeline[1]?.status === 'current', 'checkpoint without completed_at/evidence must remain current');
+});
+
+Deno.test('checkpoint completed with evidence is completed', () => {
+  const timeline = buildRuntimeDecisionTimeline({
+    ai: {
+      intraday_sync_status: {
+        windows: {
+          '0930': {
+            status: 'completed',
+            completed_at: '2026-07-15T01:31:00.000Z',
+          },
+        },
+      },
+    },
+    hasReport: true,
+    reportRevisionId: 'revision-1',
+    isTradingDay: true,
+  });
+  assert(timeline[1]?.status === 'completed', 'checkpoint with completed_at must be completed');
+});
+
+Deno.test('failed checkpoint with evidence is insufficient, never completed', () => {
+  const timeline = buildRuntimeDecisionTimeline({
+    ai: {
+      intraday_sync_status: {
+        windows: {
+          '0930': {
+            status: 'failed',
+            failed_at: '2026-07-15T01:31:00.000Z',
+            evidence: { reason: 'runtime failure' },
+          },
+        },
+      },
+    },
+    hasReport: true,
+    reportRevisionId: 'revision-1',
+    isTradingDay: true,
+  });
+  assert(timeline[1]?.status === 'insufficient', 'failed checkpoint must be insufficient');
+});

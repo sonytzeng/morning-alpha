@@ -7,7 +7,7 @@
  *
  * Resolution rules:
  * A. Priority: today's report (report_date = todayTaipeiDate)
- * B. Fallback: fetchBestReport() (prefers publish_ready, then latest)
+ * B. Fail closed when the server-trimmed payload is unavailable
  * C. URL param reportDate: only used if valid YYYY-MM-DD format, NOT literal
  *    placeholders like ":reportDate", "undefined", "null", or empty strings
  * D. Returns normalized MorningAlphaNormalizedReport
@@ -17,7 +17,6 @@
 
 import { getFrontendMarketDateState, type FrontendMarketStatus } from '@/utils/marketDate';
 import {
-  fetchBestReport,
   normalizeMorningAlphaReport,
   type ReportRow,
   type MorningAlphaNormalizedReport,
@@ -59,13 +58,15 @@ export interface ResolveResult {
   active_report: MorningAlphaNormalizedReport | null;
   active_report_date: string | null;
   market_data_date: string | null;
+  revision_id: string | null;
+  generated_at: string | null;
   is_today_report: boolean;
   is_stale_report: boolean;
   stale_reason: string | null;
   data_status: 'ready' | 'missing_today_report' | 'market_closed' | 'stale_reference_only' | 'unavailable';
   tier: SubscriptionTier;
   locked_sections: string[];
-  payload_source: 'server_trimmed_payload' | 'server_payload_unavailable' | 'direct_reports_fallback' | 'empty';
+  payload_source: 'server_trimmed_payload' | 'server_payload_unavailable' | 'empty';
 }
 
 function toReportRow(data: Record<string, unknown>): ReportRow {
@@ -131,7 +132,7 @@ function toTrimmedReportRow(response: ServerReportPayloadResponse): ReportRow | 
   const generatedAt = getPayloadGeneratedAt(payload);
   const dailySentence = getPayloadDailySentence(payload);
   return {
-    id: `server-trimmed:${response.report_date}`,
+    id: response.revision_id || `server-trimmed:${response.report_date}`,
     report_date: response.report_date,
     market_bias: typeof payload.market_bias === 'string' ? payload.market_bias : null,
     confidence_score: payload.confidence_score != null ? Number(payload.confidence_score) : null,
@@ -169,7 +170,7 @@ function buildResolveResult(params: {
     staleReason = null,
     tier = 'free',
     lockedSections = [],
-    payloadSource = rawRow ? 'direct_reports_fallback' : 'empty',
+    payloadSource = 'empty',
   } = params;
   const isTodayReport = !!rawRow && rawRow.report_date === todayDate;
   const isHistoricalFallback = !!rawRow && rawRow.report_date !== todayDate;
@@ -188,6 +189,8 @@ function buildResolveResult(params: {
     active_report: activeReport,
     active_report_date: rawRow?.report_date ?? null,
     market_data_date: getMarketDataDate(rawRow),
+    revision_id: rawRow?.id || null,
+    generated_at: rawRow?.created_at || null,
     is_today_report: isTodayReport,
     is_stale_report: dataStatus === 'stale_reference_only' || isHistoricalFallback,
     stale_reason: staleReason,
@@ -229,29 +232,15 @@ function getAllLockedSections(): string[] {
   ];
 }
 
-function buildUnavailableReportRow(todayDate: string): ReportRow {
-  return {
-    id: `server-payload-unavailable:${todayDate}`,
-    report_date: todayDate,
-    market_bias: '資料暫不可用',
-    confidence_score: null,
-    created_at: '',
-    ai_strategy_json: null,
-    summary: '資料暫時無法載入，請稍後再試',
-    watch_sectors_json: null,
-  };
-}
-
 function buildServerPayloadUnavailableResult(params: {
   todayDate: string;
   marketStatus: FrontendMarketStatus;
   closedReason: string | null;
 }): ResolveResult {
   const { todayDate, marketStatus, closedReason } = params;
-  const row = buildUnavailableReportRow(todayDate);
   return buildResolveResult({
-    report: normalizeMorningAlphaReport(row),
-    rawRow: row,
+    report: normalizeMorningAlphaReport(null),
+    rawRow: null,
     source: 'server_payload_unavailable',
     queriedDate: todayDate,
     todayDate,
@@ -263,15 +252,6 @@ function buildServerPayloadUnavailableResult(params: {
     lockedSections: getAllLockedSections(),
     payloadSource: 'server_payload_unavailable',
   });
-}
-
-function isDebugFullFallbackEnabled(): boolean {
-  if (typeof window === 'undefined') return false;
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('debug_full_fallback') !== '1') return false;
-  const hostname = window.location.hostname;
-  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-  return isLocalhost || import.meta.env.DEV === true;
 }
 
 async function resolveViaServerTrimmedPayload(params: {
@@ -307,58 +287,6 @@ async function resolveViaServerTrimmedPayload(params: {
   });
 }
 
-async function resolveActiveMorningAlphaReportFromReports(
-  urlReportDate: string | null | undefined,
-  market: ReturnType<typeof getFrontendMarketDateState>,
-): Promise<ResolveResult> {
-  void urlReportDate;
-  const todayStr = market.today_date;
-
-  // ── Market closed: latest report is reference only, never today's report ──
-  if (market.market_status === 'closed') {
-    const bestRow = await fetchBestReport();
-
-    if (bestRow) {
-      return buildResolveResult({
-        report: normalizeMorningAlphaReport(bestRow),
-        rawRow: bestRow,
-        source: 'best_fallback',
-        queriedDate: bestRow.report_date,
-        todayDate: todayStr,
-        marketStatus: market.market_status,
-        closedReason: market.closed_reason,
-        dataStatus: 'market_closed',
-        staleReason: `今日休市（${market.closed_reason || '休市'}），${bestRow.report_date} 僅供歷史參考`,
-      });
-    }
-
-    return buildResolveResult({
-      report: normalizeMorningAlphaReport(null),
-      rawRow: null,
-      source: 'empty',
-      queriedDate: todayStr,
-      todayDate: todayStr,
-      marketStatus: market.market_status,
-      closedReason: market.closed_reason,
-      dataStatus: 'market_closed',
-      staleReason: `今日休市（${market.closed_reason || '休市'}）`,
-    });
-  }
-
-  // ── Trading day: never backfill today with latest report ──
-  return buildResolveResult({
-    report: normalizeMorningAlphaReport(null),
-    rawRow: null,
-    source: 'empty',
-    queriedDate: todayStr,
-    todayDate: todayStr,
-    marketStatus: market.market_status,
-    closedReason: market.closed_reason,
-    dataStatus: 'missing_today_report',
-    staleReason: '交易日尚未產生今日盤前報告',
-  });
-}
-
 /**
  * Resolve the active Morning Alpha report.
  *
@@ -379,11 +307,7 @@ export async function resolveActiveMorningAlphaReport(
     });
     if (serverResult) return serverResult;
   } catch (error) {
-    if (isDebugFullFallbackEnabled()) {
-      // Dev-only. Never enable in production.
-      console.warn('SECURITY_DEBUG_FULL_REPORT_FALLBACK_USED', error);
-      return resolveActiveMorningAlphaReportFromReports(urlReportDate, market);
-    }
+    console.error('SERVER_TRIMMED_REPORT_PAYLOAD_UNAVAILABLE', error);
     return buildServerPayloadUnavailableResult({
       todayDate: todayStr,
       marketStatus: market.market_status,

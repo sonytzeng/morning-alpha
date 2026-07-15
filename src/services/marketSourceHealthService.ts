@@ -231,7 +231,9 @@ export function computeDataTrustStatus(
       statusBorder: style.border,
       marketDataLatestAt: mdLatestAt,
       marketNewsLatestAt: newsLatestAt,
-      selectedNewsCount: ts.selectedNewsCount ?? openai?.records_count ?? gnews?.metadata?.selected_count ?? 0,
+      selectedNewsCount: safeNumber(
+        ts.selectedNewsCount ?? openai?.records_count ?? gnews?.metadata?.selected_count,
+      ),
       todayReportExists: hasReport,
       todayReportCreatedAt: reportCreatedAt,
       todayIntradayExists: hasIntraday,

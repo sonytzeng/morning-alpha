@@ -10,7 +10,11 @@ import type { Report } from '@/types/report';
 import type { SupabaseMarketData } from '@/services/marketDataService';
 import type { IntelligenceResult } from '@/services/intelligenceEngine';
 import type { DisciplineAdvice } from '@/services/disciplineAdviceService';
-import { renderSafeText } from '@/utils/renderSafe';
+import { renderSafeText as renderSafeValue } from '@/utils/renderSafe';
+
+function renderSafeText(value: unknown, fallback = ''): string {
+  return renderSafeValue(value) || fallback;
+}
 
 // ==================== OUTPUT TYPES ====================
 
@@ -130,7 +134,7 @@ export function generateMemberNotebook(input: {
   const isDataSufficient = intelligence?.is_data_sufficient ?? false;
 
   // ═══ V7.40: Try reading from ai_strategy_json.member_research_note first ═══
-  const aiJson = (report as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
+  const aiJson = (report as unknown as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
   const mrnFromAI = aiJson?.member_research_note as Record<string, unknown> | null;
   if (mrnFromAI && typeof mrnFromAI === 'object') {
     return buildNotebookFromAI(mrnFromAI, report, now, reportDate, isNonTradingDay, isDataSufficient, fallbackDate);
@@ -383,7 +387,7 @@ function buildDefaultScenario(bias: string, report: Report): string {
 }
 
 function buildConfirmationCondition(report: Report, bias: string): string {
-  const aiJson = (report as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
+  const aiJson = (report as unknown as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
   if (aiJson?.confirmation_condition && typeof aiJson.confirmation_condition === 'string') {
     return aiJson.confirmation_condition;
   }
@@ -523,7 +527,7 @@ function buildImpactChains(
     }];
   }
 
-  const aiJson = (report as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
+  const aiJson = (report as unknown as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
   const chains = Array.isArray(aiJson?.overnight_impact_chains)
     ? (aiJson?.overnight_impact_chains as Record<string, unknown>[])
     : [];
@@ -537,7 +541,7 @@ function buildImpactChains(
     if (drivers.length > 0) {
       items.push({
         catalyst: drivers.slice(0, 2).join('、'),
-        affectedSectors: watchSectors.slice(0, 2).map((s: Record<string, unknown>) => renderSafeText(s.sector)).join('、') || '相關族群',
+        affectedSectors: watchSectors.slice(0, 2).map((sector) => renderSafeText(sector.sector)).join('、') || '相關族群',
         representativeStocks: '台積電',
         intradayWatch: '開盤後 30 分鐘觀察資金是否延續到相關族群',
         failureCondition: '若開盤後資金未擴散，代表盤前主軸未被市場確認',
@@ -562,7 +566,7 @@ function buildImpactChains(
     return {
       catalyst: renderSafeText(chain.catalyst || chain.chain_title || chain.theme || '隔夜事件'),
       affectedSectors: Array.isArray(chain.affected_sectors)
-        ? chain.affected_sectors.map(renderSafeText).join('、')
+        ? chain.affected_sectors.map((sector: unknown) => renderSafeText(sector)).join('、')
         : renderSafeText(chain.affected_sectors || '相關族群'),
       representativeStocks: Array.isArray(chain.representative_stocks)
         ? chain.representative_stocks.map((s: unknown) =>
@@ -599,7 +603,7 @@ function buildDontDoList(
   const dontDos: DontDoItem[] = [];
 
   // Try to get from report
-  const aiJson = (report as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
+  const aiJson = (report as unknown as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
   if (Array.isArray(aiJson?.avoid_today)) {
     (aiJson?.avoid_today as unknown[]).slice(0, 5).forEach((a) => {
       dontDos.push({ text: renderSafeText(a) });
@@ -662,7 +666,7 @@ function buildWatchlist(
 
   // From report watch sectors
   const watchSectors = report.watch_sectors_json || [];
-  watchSectors.slice(0, 3).forEach((ws: Record<string, unknown>) => {
+  watchSectors.slice(0, 3).forEach((ws) => {
     const name = renderSafeText(ws.sector);
     if (!items.some((i) => i.name === name)) {
       items.push({
@@ -731,7 +735,7 @@ function buildTrackingPlan(
     return [{
       time: '資料不足',
       question: '等待核心資料補齊',
-      lookFor: `缺少 ${(report as Record<string, unknown> | null)?.ai_strategy_json ? '部分盤前資料' : '核心市場資料'}，資料到位後自動更新追蹤計畫。`,
+      lookFor: `缺少 ${(report as unknown as Record<string, unknown> | null)?.ai_strategy_json ? '部分盤前資料' : '核心市場資料'}，資料到位後自動更新追蹤計畫。`,
     }];
   }
 
@@ -863,7 +867,7 @@ function buildCloseVerification(
   }
 
   // Try to get close verification from ai_strategy_json
-  const aiJson = (report as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
+  const aiJson = (report as unknown as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
   const memberReading = aiJson?.member_reading as Record<string, unknown> | null;
 
   return {

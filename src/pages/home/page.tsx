@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
@@ -14,6 +14,11 @@ import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { renderSafeText } from '@/utils/renderSafe';
 import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
+import {
+  buildRuntimeDecisionTimeline,
+  runtimeTimelineStatusLabel,
+  type RuntimeTimelineStatus,
+} from '@/lib/runtimeDecisionTimeline';
 
 export default function HomePage() {
   return (
@@ -26,10 +31,6 @@ export default function HomePage() {
   );
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
-}
-
 function firstString(...values: unknown[]): string {
   for (const value of values) {
     if (typeof value === 'string' && value.trim()) return value.trim();
@@ -37,14 +38,11 @@ function firstString(...values: unknown[]): string {
   return '';
 }
 
-type TimelineStatus = 'completed' | 'current' | 'upcoming' | 'paused';
-
 interface TimelineNode {
   time: string;
-  minute: number;
   label: string;
   detail: string;
-  status: TimelineStatus;
+  status: RuntimeTimelineStatus;
 }
 
 function strategyModeLabel(state: string): string {
@@ -52,7 +50,7 @@ function strategyModeLabel(state: string): string {
     case 'ACT': return '執行模式';
     case 'STOP': return '停止模式';
     case 'CLOSED': return '休市模式';
-    case 'INSUFFICIENT_DATA': return '資料待補';
+    case 'INSUFFICIENT_DATA': return '資料不足';
     default: return '等待模式';
   }
 }
@@ -61,19 +59,7 @@ function dataReliabilityLabel(status: string): string {
   const normalized = status.trim().toLowerCase();
   if (['complete', 'completed', 'ready', 'reliable', 'ok'].includes(normalized)) return '高可靠';
   if (['partial', 'degraded', 'limited', 'stale'].includes(normalized)) return '部分資料';
-  return '資料待補';
-}
-
-function getTaipeiMinutes(timestamp: number): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Taipei',
-    hourCycle: 'h23',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).formatToParts(new Date(timestamp));
-  const hour = Number(parts.find((part) => part.type === 'hour')?.value || 0);
-  const minute = Number(parts.find((part) => part.type === 'minute')?.value || 0);
-  return hour * 60 + minute;
+  return '資料不足';
 }
 
 function HomePageContent() {
@@ -93,30 +79,24 @@ function HomePageContent() {
   const ms = morningState;
   const hasMorningState = !!ms;
 
-  // When morningState is not yet available, use data.report as fallback.
-  // This prevents blank pages when resolveMorningAlphaState silently fails.
-  const fallbackReport = data?.report ?? null;
-  const fallbackMorningAlpha = data?.morningAlpha ?? null;
-
-  // Date display — morningState first, then data.report, then today
+  // Formal pages fail closed and never switch to an independently fetched report revision.
   const dataStatus = ms?.dataStatus ?? null;
   const displayReportDate = dataStatus === 'missing_today_report' || dataStatus === 'market_closed'
     ? todayTaipeiStr
-    : (ms?.reportDate || fallbackReport?.report_date || fallbackMorningAlpha?.reportDate || todayTaipeiStr);
-  // Status — morningState first, then fallback
-  const isTodayReport = ms?.isReportForToday ?? (fallbackReport?.report_date === todayTaipeiStr);
+    : (ms?.reportDate || todayTaipeiStr);
+  const isTodayReport = ms?.isReportForToday ?? false;
   const reportExists = dataStatus === 'missing_today_report'
     ? false
-    : (ms?.reportExists ?? (!!fallbackReport || !!fallbackMorningAlpha?.reportId));
+    : (ms?.reportExists ?? false);
   // Unified data contract: single display state for all core pages.
   // Home, TodayReport, Opportunities, WarRoom, MemberNote ALL read from the same parser.
   // No more page-level ai_strategy_json parsing. No more root column fallback inconsistency.
   const displayState: MorningAlphaDisplayState = useMemo(() => {
-    return getMorningAlphaDisplayState(ms?.resolveResult?.rawRow as Record<string, unknown> | null ?? null);
+    return getMorningAlphaDisplayState(ms?.resolveResult?.rawRow as unknown as Record<string, unknown> | null ?? null);
   }, [ms]);
 
   // These now read from the unified displayState — same values as TodayReport, Opportunities, WarRoom, MemberNote
-  const marketClosedInfo = { closed: displayState.market_status !== 'OPEN', holidayName: displayState.holidayName };
+  const marketIsClosed = displayState.market_status !== 'OPEN';
 
   const homeAI = ms?.resolveResult?.rawRow?.ai_strategy_json as Record<string, unknown> | null;
   const canonicalNarrative = useMemo(() => buildCanonicalNarrative({
@@ -127,45 +107,24 @@ function HomePageContent() {
   // V377: Simplified display mode — report exists + is for today = normal
   // V8.3: Added market-closed check from ai_strategy_json
   const displayMode = useMemo(() => {
-    if (dataStatus === 'market_closed' || marketClosedInfo.closed) return 'market-closed';
+    if (dataStatus === 'market_closed' || marketIsClosed) return 'market-closed';
     if (dataStatus === 'missing_today_report') return 'no-report';
     if (dataStatus === 'stale_reference_only') return 'not-today';
     if (!reportExists) return 'no-report';
     if (!isTodayReport) return 'not-today';
     return 'normal';
-  }, [dataStatus, reportExists, isTodayReport, marketClosedInfo]);
+  }, [dataStatus, reportExists, isTodayReport, marketIsClosed]);
 
-  const [timelineNow, setTimelineNow] = useState(() => Date.now());
-  useEffect(() => {
-    const interval = window.setInterval(() => setTimelineNow(Date.now()), 60_000);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  const closingAI = asRecord(homeAI?.closing_verification_v2) || asRecord(homeAI?.closing_verification);
-  const closingStatus = firstString(closingAI?.status).toLowerCase();
-  const hasCompletedClosing = closingStatus === 'completed' || closingStatus === 'direction_completed_data_degraded';
-  const currentTaipeiMinutes = getTaipeiMinutes(timelineNow);
-  const timelineNodes: TimelineNode[] = useMemo(() => {
-    const baseNodes = [
-      { time: '07:30', minute: 450, label: '今日劇本', detail: '讀懂今天唯一要驗證的主線。' },
-      { time: '09:30', minute: 570, label: '開盤驗證', detail: '確認開盤方向是否支持盤前假設。' },
-      { time: '13:30', minute: 810, label: '主線追蹤', detail: '檢查主線擴散、失效條件與停損訊號。' },
-      { time: '14:10', minute: 850, label: '收盤驗證', detail: '用真實收盤結果回看今天的判斷。' },
-    ];
-    if (displayMode === 'market-closed' || !displayState.is_trading_day) {
-      return baseNodes.map((node) => ({ ...node, status: 'paused' as const }));
-    }
-    return baseNodes.map((node, index) => {
-      const nextNode = baseNodes[index + 1];
-      let status: TimelineStatus = currentTaipeiMinutes < node.minute ? 'upcoming' : 'current';
-      if (nextNode && currentTaipeiMinutes >= nextNode.minute) status = 'completed';
-      if (!nextNode && hasCompletedClosing) status = 'completed';
-      return { ...node, status };
-    });
-  }, [currentTaipeiMinutes, displayMode, displayState.is_trading_day, hasCompletedClosing]);
+  const timelineNodes: TimelineNode[] = useMemo(() => buildRuntimeDecisionTimeline({
+    ai: homeAI,
+    hasReport: reportExists && isTodayReport,
+    reportRevisionId: ms?.revisionId,
+    reportGeneratedAt: ms?.generatedAt,
+    isTradingDay: displayMode !== 'market-closed' && displayState.is_trading_day,
+  }), [displayMode, displayState.is_trading_day, homeAI, isTodayReport, ms?.generatedAt, ms?.revisionId, reportExists]);
 
   const currentTimelineNode = timelineNodes.find((node) => node.status === 'current')
-    || timelineNodes.find((node) => node.status === 'upcoming')
+    || timelineNodes.find((node) => node.status === 'pending')
     || timelineNodes[timelineNodes.length - 1];
   const presentation = useMemo(() => buildDecisionPresentation({
     displayState,
@@ -183,7 +142,7 @@ function HomePageContent() {
   const marketObservationCards = [
     {
       label: '盤前把握度',
-      value: typeof presentation.confidence?.score === 'number' ? `${presentation.confidence.score}/100` : '資料待補',
+      value: typeof presentation.confidence?.score === 'number' ? `${presentation.confidence.score}/100` : '資料不足',
       detail: presentation.confidence?.explanation,
       tone: 'primary',
     },
@@ -201,7 +160,7 @@ function HomePageContent() {
     },
     {
       label: '主線狀態',
-      value: presentation.primaryDecision.headline || '資料待補',
+      value: presentation.primaryDecision.headline || '資料不足',
       detail: presentation.primaryDecision.reason,
       tone: presentation.primaryDecision.state === 'ACT'
         ? 'primary'
@@ -223,8 +182,7 @@ function HomePageContent() {
     stock.category,
   )).filter(Boolean))).slice(0, 3);
 
-  // V28: hasReportData — true when we have data from EITHER morningState or fallback
-  const hasReportData = hasMorningState || !!fallbackReport || !!fallbackMorningAlpha?.reportId;
+  const hasReportData = hasMorningState && reportExists;
 
   useEffect(() => {
     trackPageView('/');
@@ -375,7 +333,7 @@ function HomePageContent() {
                         <div><strong>{renderSafeText(item)}</strong></div>
                       </div>
                     ))}
-                  </div> : <p className="ma-pixel-empty-state">資料待補</p>}
+                  </div> : <p className="ma-pixel-empty-state">資料不足</p>}
                 </section>
 
                 <section className="ma-home-list-panel" aria-labelledby="observation-focus-title">
@@ -389,7 +347,7 @@ function HomePageContent() {
                         </div>
                       ))}
                     </div>
-                  ) : <p className="ma-pixel-empty-state">資料待補</p>}
+                  ) : <p className="ma-pixel-empty-state">資料不足</p>}
                 </section>
               </div>
 
@@ -402,7 +360,7 @@ function HomePageContent() {
                       <p className="ma-pixel-timeline-time">{node.time}</p>
                       <p className="ma-pixel-timeline-label">{node.label}</p>
                       <p className="ma-pixel-timeline-state">
-                        {node.status === 'completed' ? '已完成' : node.status === 'current' ? '目前' : node.status === 'paused' ? '暫停' : '稍後'}
+                        {runtimeTimelineStatusLabel(node.status)}
                       </p>
                     </div>
                   ))}
@@ -529,7 +487,7 @@ function HomePageContent() {
                     </div>
 
                     <p className="text-foreground-400 text-xs text-center mt-5 leading-relaxed max-w-lg mx-auto">
-                      非交易日 Morning Alpha 不產生盤前判斷、受惠股、盤中追蹤與研究筆記。所有分析將於下一個交易日自動恢復。
+                      今日非交易日，本節點不適用；等待下一個交易日。
                     </p>
                   </div>
                 </div>

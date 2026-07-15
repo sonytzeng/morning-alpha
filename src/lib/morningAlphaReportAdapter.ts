@@ -105,7 +105,7 @@ export interface MorningAlphaNormalizedReport {
   memberNoteMainThesis: string;
   memberNoteRiskNotes: string;
 
-  dashboardStatus: { level: 'success' | 'warning' | 'error'; label: string; message: string };
+  dashboardStatus: { level: 'success' | 'info' | 'warning' | 'error'; label: string; message: string };
   contentStatus: {
     baseReport: boolean; freeSummary: boolean; memberResearchNote: boolean;
     reelsScript: boolean; socialPost: boolean; lineCopy: 'ready' | 'not_connected';

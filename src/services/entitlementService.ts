@@ -20,24 +20,6 @@ const TIER_LABELS: Record<SubscriptionTier, string> = {
   admin: '管理員',
 };
 
-function normalizeTier(value: string | null): SubscriptionTier {
-  if (value === 'member' || value === 'vip' || value === 'admin') return value;
-  return 'free';
-}
-
-function getDemoTierOverride(): SubscriptionTier | null {
-  if (typeof window === 'undefined') return null;
-  const params = new URLSearchParams(window.location.search);
-  const rawQueryTier = params.get('tier');
-  if (rawQueryTier) {
-    const tier = normalizeTier(rawQueryTier);
-    window.localStorage.setItem('morning_alpha_demo_tier', tier);
-    return tier;
-  }
-  const storedTier = window.localStorage.getItem('morning_alpha_demo_tier');
-  return storedTier ? normalizeTier(storedTier) : null;
-}
-
 export function buildFeatures(tier: SubscriptionTier): Record<FeatureKey, boolean> {
   const features = Object.fromEntries(FEATURE_KEYS.map((key) => [key, false])) as Record<FeatureKey, boolean>;
 
@@ -67,15 +49,15 @@ export function buildEntitlementFromTier(tier: SubscriptionTier): UserEntitlemen
 }
 
 export async function getCurrentEntitlement(): Promise<UserEntitlement> {
-  // TODO P29: replace remaining demo-only callers with server-verified entitlement.
-  // Frontend gating is not data security.
-  const tier = getDemoTierOverride() || 'free';
-  return buildEntitlementFromTier(tier);
+  const response = await callGetReportPayload();
+  return {
+    ...buildEntitlementFromTier(response.tier),
+    isLoggedIn: response.authenticated === true,
+  };
 }
 
 export function hasFeature(entitlement: UserEntitlement | null | undefined, featureKey: FeatureKey): boolean {
   if (!entitlement) return false;
-  if (entitlement.isAdmin) return true;
   return entitlement.features[featureKey] === true;
 }
 
@@ -85,22 +67,12 @@ export function getTierLabel(tier: SubscriptionTier): string {
 
 export async function callGetReportPayload(params: {
   reportDate?: string | null;
-  tier?: SubscriptionTier | null;
 } = {}): Promise<ServerReportPayloadResponse> {
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token || '';
-  const demoTier = params.tier || getDemoTierOverride();
-
   const body: Record<string, unknown> = {
     report_date: params.reportDate || null,
   };
-
-  // Dev scaffold: this sends ?tier=member/vip/admin only for payload testing.
-  // Only the Edge Function may decide whether to honor it; replace with verified entitlement.
-  // frontend tier override after DB verified entitlement is live.
-  if (!accessToken && demoTier) {
-    body.tier = demoTier;
-  }
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',

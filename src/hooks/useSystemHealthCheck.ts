@@ -375,8 +375,15 @@ export function useSystemHealthCheck(): SystemHealthCheckResult {
           market_bias: rawRow.market_bias ? String(rawRow.market_bias) : null,
           confidence_score: rawRow.confidence_score != null ? Number(rawRow.confidence_score) : null,
           created_at: String(rawRow.created_at || ''),
+          updated_at: rawRow.updated_at ? String(rawRow.updated_at) : null,
           ai_strategy_json: (rawRow.ai_strategy_json as Record<string, unknown>) || null,
           summary: rawRow.summary ? String(rawRow.summary) : null,
+          watch_sectors_json: Array.isArray(rawRow.watch_sectors_json)
+            ? rawRow.watch_sectors_json.filter(
+                (item): item is Record<string, unknown> =>
+                  item !== null && typeof item === 'object' && !Array.isArray(item),
+              )
+            : null,
         }));
       }
 
@@ -1215,8 +1222,8 @@ export function useSystemHealthCheck(): SystemHealthCheckResult {
         rpt !== null &&
         mdCount >= 1 &&
         mnCount >= 1 &&
-        openingRadarStatus !== null &&
-        closeReviewResult !== null;
+        omrStatus !== null &&
+        cmrResult !== null;
 
       // ── Check 1: Data Completeness ──
       const mdDate = mdLatest?.slice(0, 10) || null;
@@ -1226,16 +1233,16 @@ export function useSystemHealthCheck(): SystemHealthCheckResult {
       const c1ReportsOk = rpt !== null;
       const c1MarketDataOk = mdCount >= 1;
       const c1MarketNewsOk = mnCount >= 1;
-      const c1OpeningRadarOk = openingRadarStatus !== null;
-      const c1CloseReviewOk = closeReviewResult !== null;
+      const c1OpeningRadarOk = omrStatus !== null;
+      const c1CloseReviewOk = cmrResult !== null;
 
       // Date match: all data sources must refer to the same checkDate
       const allDates: (string | null)[] = [
         reportDateCheck,
         mdDate,
         mnDate,
-        openingRadarDate,
-        closeReviewDate,
+        omrDate,
+        cmrDate,
       ].filter(Boolean);
       const allDatesMatch = allDates.length >= 2
         ? allDates.every((d) => d === checkDate)
@@ -1269,8 +1276,8 @@ export function useSystemHealthCheck(): SystemHealthCheckResult {
           { label: 'reports', ok: c1ReportsOk, detail: reportDateCheck || '缺少' },
           { label: 'market_data', ok: c1MarketDataOk, detail: mdCount > 0 ? `${mdCount} 筆（${mdDate || '—'}）` : '缺少' },
           { label: 'market_news', ok: c1MarketNewsOk, detail: mnCount > 0 ? `${mnCount} 筆（${mnDate || '—'}）` : '缺少' },
-          { label: 'opening_market_radar', ok: c1OpeningRadarOk, detail: openingRadarDate || '缺少' },
-          { label: 'close_market_reviews', ok: c1CloseReviewOk, detail: closeReviewDate || '缺少' },
+          { label: 'opening_market_radar', ok: c1OpeningRadarOk, detail: omrDate || '缺少' },
+          { label: 'close_market_reviews', ok: c1CloseReviewOk, detail: cmrDate || '缺少' },
           { label: '日期一致性', ok: allDatesMatch, detail: allDatesMatch ? `全部為 ${checkDate}` : '日期不一致' },
         ],
       };
@@ -1279,8 +1286,8 @@ export function useSystemHealthCheck(): SystemHealthCheckResult {
       // Since buildMarketState is the single source of truth,
       // consistency = all three data layers exist for the same date.
       const hasAllThreeForSameDate =
-        rpt !== null && openingRadarStatus !== null && closeReviewResult !== null &&
-        reportDateCheck === checkDate && openingRadarDate === checkDate && closeReviewDate === checkDate;
+        rpt !== null && omrStatus !== null && cmrResult !== null &&
+        reportDateCheck === checkDate && omrDate === checkDate && cmrDate === checkDate;
 
       const check2Passed = hasAllThreeForSameDate;
       const check2Detail = check2Passed
@@ -1294,8 +1301,8 @@ export function useSystemHealthCheck(): SystemHealthCheckResult {
         detail: check2Detail,
         items: [
           { label: '首頁 / 今日判斷', ok: rpt !== null, detail: rpt ? `market_bias=${rpt.market_bias || '—'}` : '缺少' },
-          { label: '盤中追蹤', ok: openingRadarStatus !== null, detail: openingRadarStatus || '缺少' },
-          { label: '收盤驗證', ok: closeReviewResult !== null, detail: closeReviewResult || '缺少' },
+          { label: '盤中追蹤', ok: omrStatus !== null, detail: omrStatus || '缺少' },
+          { label: '收盤驗證', ok: cmrResult !== null, detail: cmrResult || '缺少' },
           { label: '三層同日', ok: hasAllThreeForSameDate, detail: hasAllThreeForSameDate ? checkDate : '日期不一致' },
         ],
       };
@@ -1358,19 +1365,19 @@ export function useSystemHealthCheck(): SystemHealthCheckResult {
 
       // ── Check 4: Three-stage Consistency ──
       const stage0730Ok = rpt !== null && (rpt.market_bias || '').trim().length > 0;
-      const stage0915Ok = openingRadarStatus !== null;
-      const stage1330Ok = closeReviewResult !== null;
+      const stage0915Ok = omrStatus !== null;
+      const stage1330Ok = cmrResult !== null;
 
       // 09:15 must NOT rewrite premarket assumption
       const stage0915NotRewriting = stage0915Ok
-        ? !(openingRadarStatus || '').includes('劇本成立') &&
-          !(openingRadarStatus || '').includes('盤前劇本')
+        ? !(omrStatus || '').includes('劇本成立') &&
+          !(omrStatus || '').includes('盤前劇本')
         : true;
 
       const allThreeSameDate =
         reportDateCheck === checkDate &&
-        openingRadarDate === checkDate &&
-        closeReviewDate === checkDate;
+        omrDate === checkDate &&
+        cmrDate === checkDate;
 
       const check4Passed =
         stage0730Ok && stage0915Ok && stage1330Ok && stage0915NotRewriting && allThreeSameDate;
@@ -1392,9 +1399,9 @@ export function useSystemHealthCheck(): SystemHealthCheckResult {
         detail: check4Detail,
         items: [
           { label: '07:30 盤前劇本', ok: stage0730Ok, detail: rpt?.market_bias || '缺少' },
-          { label: '09:15 盤中追蹤', ok: stage0915Ok, detail: openingRadarStatus || '缺少' },
+          { label: '09:15 盤中追蹤', ok: stage0915Ok, detail: omrStatus || '缺少' },
           { label: '09:15 未改寫盤前', ok: stage0915NotRewriting, detail: stage0915NotRewriting ? '—' : '⚠ 可能改寫盤前假設' },
-          { label: '13:30 收盤驗證', ok: stage1330Ok, detail: closeReviewResult || '缺少' },
+          { label: '13:30 收盤驗證', ok: stage1330Ok, detail: cmrResult || '缺少' },
           { label: '三段同日', ok: allThreeSameDate, detail: allThreeSameDate ? checkDate : '日期不一致' },
         ],
       };

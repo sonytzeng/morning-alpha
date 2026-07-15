@@ -21,6 +21,9 @@ export interface ServerReportPayloadResponse {
   report_date: string | null;
   revision_id?: string | null;
   generated_at?: string | null;
+  data_as_of?: string | null;
+  market_status?: string | null;
+  is_trading_day?: boolean | null;
   payload: Record<string, unknown> | null;
   locked_sections: string[];
   source: 'server_trimmed_payload';

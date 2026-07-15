@@ -66,6 +66,8 @@ function narrativeFallback(row: Record<string, unknown>, matcher: string): strin
   return textList(row.scoring_reasons).find((item) => item.includes(matcher))?.replace(/^.*?[：:]/, '').trim() || '';
 }
 
+// This pure adapter is intentionally colocated with its single presentation consumer.
+// eslint-disable-next-line react-refresh/only-export-components
 export function mapV11ObservationItems(rows: unknown, limit = 5): V11ObservationItem[] {
   const seen = new Set<string>();
 

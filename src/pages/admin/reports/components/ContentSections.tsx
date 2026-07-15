@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- This module exports render helpers, not a refresh boundary. */
 import { renderSafeText } from '@/utils/renderSafe';
 import { getMemberNoteSectionCount } from '@/utils/aiStrategyParser';
 

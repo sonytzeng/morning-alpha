@@ -76,7 +76,7 @@ function ynBool(val: boolean | null): string {
 
 function detectReportStatus(aiJson: Record<string, unknown> | null): { status: ReportStatus; conclusionText: string; conclusionClass: string; icon: string } {
   // V7.53: Use proper content detection from ai_strategy_json
-  const strategy = parseAIStrategy({ ai_strategy_json: aiJson } as unknown as Parameters<typeof parseAIStrategy>[0]);
+  const strategy = parseAIStrategy({ ai_strategy_json: aiJson });
   const hasMn = hasMemberResearchNote(strategy);
   const hasReels = !!(strategy.reels_script?.hook_0_5_sec || strategy.reels_script?.core_5_25_sec);
   const hasSocial = !!(strategy.social_post?.title || strategy.social_post?.full_post);
@@ -256,7 +256,7 @@ export default function AdminReports() {
         let errorBodyObj: Record<string, unknown> | null = null;
 
         try {
-          const ctx = (invokeErr as Record<string, unknown>).context;
+          const ctx = Reflect.get(invokeErr, 'context');
           if (ctx && typeof ctx === 'object') {
             const ctxObj = ctx as Record<string, unknown>;
             if (typeof ctxObj.json === 'function') {
@@ -271,7 +271,7 @@ export default function AdminReports() {
         } catch { /* context parse failed */ }
 
         if (errorStatus === '—') {
-          const statusCode = (invokeErr as Record<string, unknown>).status;
+          const statusCode = Reflect.get(invokeErr, 'status');
           if (typeof statusCode === 'number') errorStatus = statusCode;
         }
 
@@ -462,7 +462,7 @@ export default function AdminReports() {
   const isMissingContent = reportStatus.status === 'needs_regeneration' || reportStatus.status === 'old_report';
 
   // V7.53: Parse ai_strategy_json with unified parser
-  const strategy = useMemo<ParsedAIStrategy>(() => parseAIStrategy(selectedReport as Parameters<typeof parseAIStrategy>[0]), [selectedReport]);
+  const strategy = useMemo<ParsedAIStrategy>(() => parseAIStrategy(selectedReport), [selectedReport]);
 
   const freeSummary = grabObj(aiJson, 'free_summary');
   const memberNote = grabObj(aiJson, 'member_research_note');
@@ -505,7 +505,7 @@ export default function AdminReports() {
 
   // ── Publish status per report in history ──
   function getPublishStatus(r: ReportRow): { label: string; cls: string } {
-    const strat = parseAIStrategy({ ai_strategy_json: r.ai_strategy_json } as unknown as Parameters<typeof parseAIStrategy>[0]);
+    const strat = parseAIStrategy({ ai_strategy_json: r.ai_strategy_json });
     const hasMn = hasMemberResearchNote(strat);
     const hasRls = !!(strat.reels_script?.hook_0_5_sec || strat.reels_script?.core_5_25_sec);
     const hasSp = !!(strat.social_post?.title || strat.social_post?.full_post);
@@ -1075,7 +1075,7 @@ export default function AdminReports() {
               <FreeRow label="今日狀態" value={
                 grab(freeSummary, 'today_status') ||
                 grab(socialPost, 'title') ||
-                (strategy.member_research_note?.main_thesis as string) ||
+                getMemberCoreThesis(strategy) ||
                 '—'
               } />
               <FreeRow label="一句話摘要" value={
@@ -1185,7 +1185,6 @@ export default function AdminReports() {
                     <span className="text-foreground-400 text-xs font-normal">來源市場：</span>
                     {chain.catalyst || `影響鏈 #${i + 1}`}
                   </p>
-                  {chain.evidence && <p className="text-foreground-600 text-xs leading-relaxed mb-1"><span className="text-foreground-400">證據：</span>{chain.evidence as unknown as string}</p>}
                   {chain.taiwan_market_impact && <p className="text-foreground-700 text-xs leading-relaxed mb-1"><span className="text-foreground-400">台股連結：</span>{chain.taiwan_market_impact}</p>}
                   {chain.affected_sectors.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 mt-2">

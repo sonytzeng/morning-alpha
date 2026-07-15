@@ -562,8 +562,16 @@ function parseV8DailySentence(raw: unknown): V8DailySentence {
 // Main Parser
 // ═══════════════════════════════════════════════════
 
-export function parseAIStrategy(report: Report | null): ParsedAIStrategy {
-  const raw = (report as unknown as Record<string, unknown> | null)?.ai_strategy_json as Record<string, unknown> | null;
+export interface AIStrategyReportInput {
+  ai_strategy_json?: Report['ai_strategy_json'] | Record<string, unknown> | null;
+  important_news_json?: Report['important_news_json'];
+}
+
+export function parseAIStrategy(report: AIStrategyReportInput | null): ParsedAIStrategy {
+  const rawValue = report?.ai_strategy_json;
+  const raw = rawValue && typeof rawValue === 'object'
+    ? rawValue as Record<string, unknown>
+    : null;
   const ai = raw || {};
 
   // ── Version & Source ──

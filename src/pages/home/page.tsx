@@ -96,7 +96,7 @@ function HomePageContent() {
   }, [ms]);
 
   // These now read from the unified displayState — same values as TodayReport, Opportunities, WarRoom, MemberNote
-  const marketClosedInfo = { closed: displayState.market_status !== 'OPEN', holidayName: displayState.holidayName };
+  const marketIsClosed = displayState.market_status !== 'OPEN';
 
   const homeAI = ms?.resolveResult?.rawRow?.ai_strategy_json as Record<string, unknown> | null;
   const canonicalNarrative = useMemo(() => buildCanonicalNarrative({
@@ -107,13 +107,13 @@ function HomePageContent() {
   // V377: Simplified display mode — report exists + is for today = normal
   // V8.3: Added market-closed check from ai_strategy_json
   const displayMode = useMemo(() => {
-    if (dataStatus === 'market_closed' || marketClosedInfo.closed) return 'market-closed';
+    if (dataStatus === 'market_closed' || marketIsClosed) return 'market-closed';
     if (dataStatus === 'missing_today_report') return 'no-report';
     if (dataStatus === 'stale_reference_only') return 'not-today';
     if (!reportExists) return 'no-report';
     if (!isTodayReport) return 'not-today';
     return 'normal';
-  }, [dataStatus, reportExists, isTodayReport, marketClosedInfo]);
+  }, [dataStatus, reportExists, isTodayReport, marketIsClosed]);
 
   const timelineNodes: TimelineNode[] = useMemo(() => buildRuntimeDecisionTimeline({
     ai: homeAI,

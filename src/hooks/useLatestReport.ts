@@ -272,7 +272,7 @@ export function useLatestReport(): UseLatestReportResult {
     } finally {
       setIsLoading(false);
     }
-  }, [todayTaipeiDate]);
+  }, []);
 
   useEffect(() => {
     load();

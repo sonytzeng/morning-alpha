@@ -6,7 +6,6 @@ import ErrorBoundary from '@/components/base/ErrorBoundary';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import { renderSafeText } from '@/utils/renderSafe';
 import { valueHasContent } from '@/utils/contentHelpers';
-import type { Report } from '@/types/report';
 import {
   hasValidMemberResearchNoteV2,
   hasValidMemberResearchText,
@@ -684,7 +683,7 @@ function MemberNoteContent() {
           : [];
         setCausalChains(cChains);
 
-        const parsed = parseAIStrategy(r as unknown as Report);
+        const parsed = parseAIStrategy(r);
         setStrategy(parsed);
       } catch (err) {
         setError(err instanceof Error ? err.message : '讀取資料失敗');

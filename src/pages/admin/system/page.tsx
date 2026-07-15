@@ -508,7 +508,7 @@ function WarningBanners({
       message: '今日報告尚未產生，前台不得顯示為今日資料。',
     });
   }
-  if (!marketDataStatus.isToday && marketDataStatus.status !== 'missing') {
+  if (!marketDataStatus.isToday) {
     warnings.push({
       type: 'yellow',
       message: '市場資料尚未更新至今日，前台資料可能過期。',

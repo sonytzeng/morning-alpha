@@ -202,7 +202,7 @@ interface Props {
   marketState?: MarketState | null;
 }
 
-export function useMarketStatus(report?: Report | null, intradayCheck?: IntradayCheck | null, skipFetch = false) {
+function useMarketStatus(report?: Report | null, intradayCheck?: IntradayCheck | null, skipFetch = false) {
   const [status, setStatus] = useState<MarketStatus>('watch');
   const [config, setConfig] = useState<StatusConfig>(STATUS_MAP.watch);
   const [resolvedReport, setResolvedReport] = useState<Report | null>(null);

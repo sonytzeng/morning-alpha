@@ -290,7 +290,7 @@ export default function Account() {
             </section>
 
             {/* Morning Reminder (LINE) */}
-            <MorningReminderCard hasTodayReport={hasTodayReport} />
+            <MorningReminderCard />
 
             {/* AI Quotes */}
             <AIQuotesCollection recentReports={data.recent30} />

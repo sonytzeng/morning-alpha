@@ -129,3 +129,26 @@ test('mobile menu and 404 provide release-safe interaction', () => {
   assert.match(notFound, /找不到這個頁面/);
   assert.doesNotMatch(notFound, /has not been generated|Tell me more|location\.pathname/i);
 });
+
+test('runtime timelines reconcile completed later checkpoints', () => {
+  const runtimeTimeline = read('src/lib/runtimeDecisionTimeline.ts');
+  const warRoomMapper = read('src/pages/war-room/warRoomPresentationMapper.ts');
+  assert.match(runtimeTimeline, /node\.status === 'pending' && index < lastCompletedIndex/);
+  assert.match(warRoomMapper, /reconcileRuntimeTimeline\(nodes\)/);
+});
+
+test('war room observation details are not line clamped', () => {
+  const css = read('src/index.css');
+  const rule = css.match(/\.ma-war-room-page \.ma-phase2-observation-card dd \{([\s\S]*?)\n  \}/)?.[1] || '';
+  assert.ok(rule, 'missing scoped observation detail rule');
+  assert.doesNotMatch(rule, /line-clamp|overflow:\s*hidden|display:\s*-webkit-box/);
+  assert.match(rule, /overflow-wrap:\s*anywhere/);
+});
+
+test('home uses canonical server payload and labels historical fallback', () => {
+  const resolver = read('src/services/resolveActiveReport.ts');
+  assert.match(resolver, /callGetReportPayload/);
+  assert.doesNotMatch(resolver, /from ['"]@\/lib\/supabase['"]/);
+  assert.match(home, /hasHistoricalReport \? 'not-today' : 'no-report'/);
+  assert.match(home, /to=\{`\/reports\/\$\{displayReportDate\}`\}/);
+});

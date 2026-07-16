@@ -249,13 +249,10 @@ function HomePageContent() {
 
   // Formal pages fail closed and never switch to an independently fetched report revision.
   const dataStatus = ms?.dataStatus ?? null;
-  const displayReportDate = dataStatus === 'missing_today_report' || dataStatus === 'market_closed'
-    ? todayTaipeiStr
-    : (ms?.reportDate || todayTaipeiStr);
+  const displayReportDate = ms?.reportDate || todayTaipeiStr;
   const isTodayReport = ms?.isReportForToday ?? false;
-  const reportExists = dataStatus === 'missing_today_report'
-    ? false
-    : (ms?.reportExists ?? false);
+  const reportExists = ms?.reportExists ?? false;
+  const hasHistoricalReport = reportExists && !isTodayReport;
   // Unified data contract: single display state for all core pages.
   // Home, TodayReport, Opportunities, WarRoom, MemberNote ALL read from the same parser.
   // No more page-level ai_strategy_json parsing. No more root column fallback inconsistency.
@@ -276,12 +273,12 @@ function HomePageContent() {
   // V8.3: Added market-closed check from ai_strategy_json
   const displayMode = useMemo(() => {
     if (dataStatus === 'market_closed' || marketIsClosed) return 'market-closed';
-    if (dataStatus === 'missing_today_report') return 'no-report';
+    if (dataStatus === 'missing_today_report') return hasHistoricalReport ? 'not-today' : 'no-report';
     if (dataStatus === 'stale_reference_only') return 'not-today';
     if (!reportExists) return 'no-report';
     if (!isTodayReport) return 'not-today';
     return 'normal';
-  }, [dataStatus, reportExists, isTodayReport, marketIsClosed]);
+  }, [dataStatus, hasHistoricalReport, reportExists, isTodayReport, marketIsClosed]);
 
   const timelineNodes: TimelineNode[] = useMemo(() => buildRuntimeDecisionTimeline({
     ai: homeAI,
@@ -1032,10 +1029,10 @@ function HomePageContent() {
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <Link
-                    to="/report/today"
+                    to={`/reports/${displayReportDate}`}
                     className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm rounded-xl transition-colors whitespace-nowrap"
                   >
-                    查看上一份報告內容
+                    查看 {displayReportDate} 公開報告
                     <i className="ri-arrow-right-line"></i>
                   </Link>
                 </div>

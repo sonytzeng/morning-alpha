@@ -103,3 +103,27 @@ Deno.test('failed checkpoint with evidence is insufficient, never completed', ()
   });
   assert(timeline[1]?.status === 'insufficient', 'failed checkpoint must be insufficient');
 });
+
+Deno.test('a completed later checkpoint closes earlier pending gaps', () => {
+  const timeline = buildRuntimeDecisionTimeline({
+    ai: {
+      closing_verification_v2: {
+        status: 'completed',
+        hit_or_miss: 'hit',
+      },
+    },
+    hasReport: true,
+    reportRevisionId: 'revision-1',
+    isTradingDay: true,
+  });
+
+  assert(
+    timeline.slice(1, 4).every((node) => node.status === 'insufficient'),
+    'earlier missing checkpoints must be insufficient after closing completes',
+  );
+  assert(
+    timeline.every((node) => node.status !== 'current' && node.status !== 'pending'),
+    'no earlier checkpoint may remain current or pending after closing completes',
+  );
+  assert(timeline[4]?.status === 'completed', 'closing checkpoint must remain completed');
+});

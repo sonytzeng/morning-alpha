@@ -2493,14 +2493,12 @@ a, button, .transition-all {
   }
 
   .ma-war-room-page .ma-phase2-observation-card dd {
-    display: -webkit-box;
     margin-top: 4px;
-    overflow: hidden;
+    overflow-wrap: anywhere;
     color: #A9B6C5;
     font-size: 14px;
     line-height: 22px;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    white-space: normal;
   }
 
   .ma-pixel-page .ma-phase2-section-heading {

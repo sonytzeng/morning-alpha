@@ -1,5 +1,6 @@
 import { getRuntimeCheckpointState } from '@/lib/decisionEvidence';
 import {
+  reconcileRuntimeTimeline,
   runtimeTimelineStatusLabel,
   type RuntimeTimelineStatus,
 } from '@/lib/runtimeDecisionTimeline';
@@ -356,10 +357,7 @@ export function buildWarRoomTimeline(input: BuildWarRoomTimelineInput): WarRoomT
     }));
   }
 
-  const activeIndex = nodes.findIndex((node) => node.status === 'pending');
-  if (activeIndex >= 0) nodes[activeIndex].status = 'current';
-
-  return nodes.map((node) => ({
+  return reconcileRuntimeTimeline(nodes).map((node) => ({
     ...node,
     statusLabel: runtimeTimelineStatusLabel(node.status),
   }));

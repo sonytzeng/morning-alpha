@@ -9,6 +9,23 @@ export interface RuntimeTimelineNode {
   status: RuntimeTimelineStatus;
 }
 
+export function reconcileRuntimeTimeline<T extends { status: RuntimeTimelineStatus }>(nodes: T[]): T[] {
+  let lastCompletedIndex = -1;
+  nodes.forEach((node, index) => {
+    if (node.status === 'completed') lastCompletedIndex = index;
+  });
+
+  const reconciled = nodes.map((node, index) => ({
+    ...node,
+    status: node.status === 'pending' && index < lastCompletedIndex
+      ? 'insufficient' as const
+      : node.status,
+  }));
+  const activeIndex = reconciled.findIndex((node) => node.status === 'pending');
+  if (activeIndex >= 0) reconciled[activeIndex].status = 'current';
+  return reconciled;
+}
+
 export function runtimeTimelineStatusLabel(status: RuntimeTimelineStatus): string {
   if (status === 'completed') return '已完成';
   if (status === 'current') return '目前節點';
@@ -90,9 +107,5 @@ export function buildRuntimeDecisionTimeline(params: {
 
   if (!params.isTradingDay) return rawNodes.map((node) => ({ ...node, status: 'not_applicable' }));
 
-  const firstBlockingNode = rawNodes.findIndex((node) => node.status !== 'completed');
-  return rawNodes.map((node, index) => ({
-    ...node,
-    status: index === firstBlockingNode && node.status === 'pending' ? 'current' : node.status,
-  }));
+  return reconcileRuntimeTimeline(rawNodes);
 }

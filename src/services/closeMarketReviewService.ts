@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { formatTaipeiDate } from '@/utils/tradingDay';
 
 export interface CloseMarketReview {
   id: string;
@@ -399,7 +400,7 @@ export function isVerificationConsistentWithRadar(
 
   if (radarUp && (cmrDown || cmrTextDown)) {
     console.warn('[Morning Alpha] 今日盤後驗證資料不一致 - 已阻擋顯示', {
-      todayDate: new Date().toISOString().slice(0, 10),
+      todayDate: formatTaipeiDate(),
       verificationDate: cmr.report_date,
       todayTaiexChange: radarTaiex,
       verificationTaiexChange: cmrTaiex,

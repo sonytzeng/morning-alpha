@@ -45,14 +45,28 @@ export default function ReportsCenter() {
           }
           setVerificationMap(labelMap);
         }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '讀取資料失敗');
+      } catch {
+        setError('歷史報告暫時無法取得，請稍後重新載入。');
       } finally {
         setLoading(false);
       }
     }
     load();
   }, []);
+
+  useEffect(() => {
+    if (!selectedReport) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelectedReport(null);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [selectedReport]);
 
   const getSentimentColor = (bias: string) => {
     if (bias.includes('偏多') || bias.includes('偏強') || bias.includes('強多')) {
@@ -280,11 +294,17 @@ export default function ReportsCenter() {
 
       {selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#07111f]/70 backdrop-blur-sm" onClick={() => setSelectedReport(null)}>
-          <div className="ma-card-elevated w-full max-w-2xl max-h-[85vh] overflow-y-auto p-0" onClick={(e) => e.stopPropagation()}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="report-preview-title"
+            className="ma-card-elevated w-full max-w-2xl max-h-[85dvh] overflow-y-auto overscroll-contain p-0"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="sticky top-0 z-10 border-b border-white/10 bg-[#07111f]/95 px-5 py-4 md:px-6 flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="text-white font-bold text-sm">{formatDate(selectedReport.report_date)}</span>
+                  <span id="report-preview-title" className="text-white font-bold text-sm">{formatDate(selectedReport.report_date)}</span>
                   <span className="text-white/35 text-xs">{selectedReport.report_date}</span>
                   {(() => {
                     const vLabel = verificationMap.get(selectedReport.report_date);
@@ -294,7 +314,7 @@ export default function ReportsCenter() {
                 </div>
                 <p className="text-white/50 text-xs">快速預覽</p>
               </div>
-              <button onClick={() => setSelectedReport(null)} className="ma-btn-ghost text-white/60 hover:bg-white/10 hover:text-white">
+              <button type="button" aria-label="關閉報告預覽" onClick={() => setSelectedReport(null)} className="ma-btn-ghost min-h-11 min-w-11 text-white/60 hover:bg-white/10 hover:text-white">
                 <i className="ri-close-line text-lg" />
               </button>
             </div>
@@ -371,7 +391,7 @@ export default function ReportsCenter() {
             </div>
 
             <div className="sticky bottom-0 border-t border-white/10 bg-[#07111f]/95 px-5 py-4 md:px-6 flex items-center justify-end gap-3">
-              <button onClick={() => setSelectedReport(null)} className="ma-btn-ghost text-white/60 hover:bg-white/10 hover:text-white">關閉</button>
+              <button type="button" onClick={() => setSelectedReport(null)} className="ma-btn-ghost min-h-11 text-white/60 hover:bg-white/10 hover:text-white">關閉</button>
               <Link to={`/reports/${selectedReport.report_date}`} onClick={() => setSelectedReport(null)} className="ma-btn-primary">查看完整報告</Link>
             </div>
           </div>

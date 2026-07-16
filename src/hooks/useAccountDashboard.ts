@@ -98,8 +98,8 @@ async function loadAccountDashboard(): Promise<AccountDashboardData> {
     result.recent7 = todayReport ? [todayReport] : [];
     result.recent30 = todayReport ? [todayReport] : [];
     result.streak = todayReport ? 1 : 0;
-  } catch (err) {
-    result.error = err instanceof Error ? err.message : '資料讀取失敗';
+  } catch {
+    result.error = '觀察中心資料暫時無法取得，請稍後重新載入。';
   }
 
   result.loading = false;

@@ -32,7 +32,7 @@ export default function ContactPage() {
                 <p><span className="text-white/30">客服專線：</span>0908586586</p>
                 <p>
                   <span className="text-white/30">客服信箱：</span>
-                  <a href="mailto:aijinetwork@gmail.com" className="text-forest-400 hover:text-forest-300 transition-colors">
+                  <a href="mailto:aijinetwork@gmail.com" className="inline-flex min-h-11 items-center text-forest-400 hover:text-forest-300 transition-colors">
                     aijinetwork@gmail.com
                   </a>
                 </p>
@@ -46,7 +46,7 @@ export default function ContactPage() {
                 <p><span className="text-white/30">服務名稱：</span>Morning Alpha</p>
                 <p>
                   <span className="text-white/30">服務網站：</span>
-                  <a href="https://morningalphatw.com" target="_blank" rel="noopener noreferrer" className="text-forest-400 hover:text-forest-300 transition-colors">
+                  <a href="https://morningalphatw.com" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-forest-400 hover:text-forest-300 transition-colors">
                     https://morningalphatw.com
                   </a>
                 </p>

@@ -103,7 +103,7 @@ export default function TermsPage() {
                 <p><span className="text-white/30">公司地址：</span>105台北市松山區南京東路五段2號3樓</p>
                 <p>
                   <span className="text-white/30">客服信箱：</span>
-                  <a href="mailto:aijinetwork@gmail.com" className="text-forest-400 hover:text-forest-300 transition-colors">
+                  <a href="mailto:aijinetwork@gmail.com" className="inline-flex min-h-11 items-center text-forest-400 hover:text-forest-300 transition-colors">
                     aijinetwork@gmail.com
                   </a>
                 </p>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { formatTaipeiDate } from '@/utils/tradingDay';
 
 const STORAGE_KEY = 'market_ai_streak_v1';
 
@@ -9,7 +10,7 @@ interface StreakData {
 }
 
 function getTodayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return formatTaipeiDate();
 }
 
 function getDaysDiff(a: string, b: string): number {

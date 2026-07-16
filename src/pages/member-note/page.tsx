@@ -685,8 +685,8 @@ function MemberNoteContent() {
 
         const parsed = parseAIStrategy(r);
         setStrategy(parsed);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '讀取資料失敗');
+      } catch {
+        setError('研究筆記暫時無法取得，請稍後重新載入。');
       } finally {
         setLoading(false);
       }
@@ -719,7 +719,7 @@ function MemberNoteContent() {
             <i className="ri-error-warning-line text-red-500 text-3xl mb-3"></i>
             <h2 className="text-white font-semibold text-base mb-2">讀取失敗</h2>
             <p className="text-white/50 text-sm mb-4">{error}</p>
-            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors whitespace-nowrap border border-white/10">
+            <button type="button" onClick={() => window.location.reload()} className="min-h-11 px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors whitespace-nowrap border border-white/10">
               重新載入
             </button>
           </div>
@@ -760,7 +760,7 @@ function MemberNoteContent() {
             <p className="text-slate-500 text-xs leading-relaxed mb-5">
               今日台股休市，Morning Alpha 不產生盤前研究筆記。請於下一個台股交易日再查看完整盤前研究內容。
             </p>
-            <Link to="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
+            <Link to="/" className="mt-2 inline-flex min-h-11 items-center justify-center px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
               返回首頁
             </Link>
           </div>
@@ -779,7 +779,7 @@ function MemberNoteContent() {
             <i className="ri-book-open-line text-white/20 text-3xl mb-3"></i>
             <h2 className="text-white font-semibold text-base mb-2">今日報告尚未產生</h2>
             <p className="text-white/50 text-sm mb-4">每天 07:30 自動生成，請稍後再回來查看。</p>
-            <Link to="/" className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors inline-block whitespace-nowrap border border-white/10">
+            <Link to="/" className="inline-flex min-h-11 items-center justify-center px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors whitespace-nowrap border border-white/10">
               返回首頁
             </Link>
           </div>

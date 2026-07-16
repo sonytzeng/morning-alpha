@@ -54,8 +54,8 @@ export default function VoicePage() {
 
         setGeneratedScript(script);
         setSourceMode('generated');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '讀取資料失敗');
+      } catch {
+        setError('語音內容暫時無法取得，請稍後重新載入。');
       } finally {
         setLoading(false);
       }

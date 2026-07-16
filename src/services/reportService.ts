@@ -153,6 +153,7 @@ export async function getTodayReport(): Promise<Report | null> {
 
   try {
     const response = await callGetReportPayload({ reportDate: today });
+    if (!response.report_date || !response.payload) return null;
     return mapRowToReport({
       id: `server-trimmed:${response.report_date}`,
       report_date: response.report_date,
@@ -171,6 +172,7 @@ export async function getTodayReport(): Promise<Report | null> {
 export async function getReportByDate(date: string): Promise<Report | null> {
   try {
     const response = await callGetReportPayload({ reportDate: date });
+    if (!response.report_date || !response.payload) return null;
     return mapRowToReport({
       id: `server-trimmed:${response.report_date}`,
       report_date: response.report_date,
@@ -189,6 +191,7 @@ export async function getReportByDate(date: string): Promise<Report | null> {
 export async function getLatestReports(limit = 7): Promise<Report[]> {
   try {
     const response = await callGetReportPayload();
+    if (!response.report_date || !response.payload) return [];
     const report = mapRowToReport({
       id: `server-trimmed:${response.report_date}`,
       report_date: response.report_date,

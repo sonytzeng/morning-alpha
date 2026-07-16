@@ -313,8 +313,8 @@ function OpportunitiesContent() {
         setExtendedStocks(legacyBeneficiaries.extendedStocks);
         setScenarioStocks(legacyBeneficiaries.scenarioStocks);
 
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '讀取資料失敗');
+      } catch {
+        setError('今日觀察名單暫時無法取得，請稍後重新載入。');
       } finally {
         setLoading(false);
       }
@@ -347,7 +347,7 @@ function OpportunitiesContent() {
             <i className="ri-error-warning-line text-red-500 text-3xl mb-3"></i>
             <h2 className="text-foreground-900 font-semibold text-base mb-2">讀取失敗</h2>
             <p className="text-foreground-500 text-sm mb-4">{error}</p>
-            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm rounded-xl transition-colors whitespace-nowrap">重新載入</button>
+            <button type="button" onClick={() => window.location.reload()} className="min-h-11 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm rounded-xl transition-colors whitespace-nowrap">重新載入</button>
           </div>
         </main>
         <Footer />
@@ -364,7 +364,7 @@ function OpportunitiesContent() {
             <i className="ri-time-line text-foreground-200 text-3xl mb-3"></i>
             <h2 className="text-foreground-900 font-semibold text-base mb-2">今日報告尚未產生</h2>
             <p className="text-foreground-500 text-sm mb-4">每天 07:30 自動生成，請稍後再回來查看。</p>
-            <Link to="/" className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm rounded-xl transition-colors inline-block whitespace-nowrap">返回首頁</Link>
+            <Link to="/" className="inline-flex min-h-11 items-center justify-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm rounded-xl transition-colors whitespace-nowrap">返回首頁</Link>
           </div>
         </main>
         <Footer />
@@ -386,7 +386,7 @@ function OpportunitiesContent() {
             <p className="text-foreground-500 text-sm mb-2">日期：{ds.currentDate}</p>
             {ds.holidayName && <p className="text-foreground-400 text-sm mb-4">休市原因：{ds.holidayName}</p>}
             <p className="text-foreground-400 text-xs leading-relaxed mb-5">今日台股休市，不產生今日受惠股。請於下一個交易日再查看最新主線地圖。</p>
-            <Link to="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-sm">返回首頁</Link>
+            <Link to="/" className="mt-2 inline-flex min-h-11 items-center justify-center px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-sm">返回首頁</Link>
           </div>
         </main>
         <Footer />
@@ -407,7 +407,7 @@ function OpportunitiesContent() {
             <p className="text-foreground-500 text-sm mb-2">今日日期：{ds.currentDate}</p>
             {fallbackReportDate && <p className="text-foreground-400 text-sm mb-4">上一份報告參考：{fallbackReportDate}</p>}
             <p className="text-foreground-400 text-xs leading-relaxed mb-5">今日受惠股需等待 07:30 盤前報告產生後才會顯示。為避免誤導，這裡不會把上一份報告的受惠股顯示成今日名單。</p>
-            <Link to="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-sm">返回首頁</Link>
+            <Link to="/" className="mt-2 inline-flex min-h-11 items-center justify-center px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-sm">返回首頁</Link>
           </div>
         </main>
         <Footer />

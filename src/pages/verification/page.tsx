@@ -211,8 +211,8 @@ export default function VerificationPage() {
           .catch(() => {
             setCmrLoading(false);
           });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '讀取資料失敗');
+      } catch {
+        setError('驗證資料暫時無法取得，請稍後重新載入。');
       } finally {
         setLoading(false);
       }
@@ -247,7 +247,7 @@ export default function VerificationPage() {
             <p className="text-white/50 text-sm mb-4">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors whitespace-nowrap border border-white/10"
+              className="min-h-11 px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors whitespace-nowrap border border-white/10"
             >
               重新載入
             </button>
@@ -549,7 +549,7 @@ export default function VerificationPage() {
                     </div>
                     <button
                       onClick={() => window.location.reload()}
-                      className="inline-flex items-center gap-1.5 text-white/30 hover:text-white/50 text-xs transition-colors"
+                      className="inline-flex min-h-11 items-center gap-1.5 text-white/30 hover:text-white/50 text-xs transition-colors"
                     >
                       <i className="ri-refresh-line text-[10px]"></i>
                       重新整理
@@ -984,7 +984,7 @@ export default function VerificationPage() {
                   <div className="flex items-start gap-2">
                     <i className="ri-information-line text-white/30 text-sm mt-0.5 flex-shrink-0"></i>
                     <p className="text-white/40 text-xs leading-relaxed">
-                      市場資料優先取自 opening_market_radar 表（09:15 開盤驗證），不足時 fallback 至 intraday_checks。與 07:30 盤前劇本進行比對，確認劇本是否成立。
+                      市場變化優先採用 09:15 開盤驗證；資料尚未到齊時，只顯示目前可確認的盤中紀錄。所有結果都會與 07:30 盤前劇本分開標示。
                     </p>
                   </div>
                 </div>
@@ -1207,7 +1207,7 @@ export default function VerificationPage() {
                     <p className="text-white/70 text-sm font-medium">
                       {timestamps ? formatTimestampForDisplay(timestamps.openingRadarCreatedAt) : '—'}
                     </p>
-                    <p className="text-white/30 text-xs mt-1">opening_market_radar 表最新資料</p>
+                    <p className="text-white/30 text-xs mt-1">09:15 開盤驗證最新更新</p>
                   </div>
 
                   <div className="p-3 md:p-4 rounded-xl bg-white/[0.02] border border-white/5">
@@ -1218,7 +1218,7 @@ export default function VerificationPage() {
                     <p className="text-white/70 text-sm font-medium">
                       {timestamps ? formatTimestampForDisplay(timestamps.marketDataCapturedAt) : '—'}
                     </p>
-                    <p className="text-white/30 text-xs mt-1">market_data 表最新資料</p>
+                    <p className="text-white/30 text-xs mt-1">盤中市場資料最新更新</p>
                   </div>
 
                   <div className="p-3 md:p-4 rounded-xl bg-white/[0.02] border border-white/5">
@@ -1229,7 +1229,7 @@ export default function VerificationPage() {
                     <p className="text-white/70 text-sm font-medium">
                       {timestamps ? formatTimestampForDisplay(timestamps.marketNewsPublishedAt) : '—'}
                     </p>
-                    <p className="text-white/30 text-xs mt-1">market_news 表最新資料</p>
+                    <p className="text-white/30 text-xs mt-1">市場新聞最新更新</p>
                   </div>
                 </div>
 
@@ -1248,7 +1248,7 @@ export default function VerificationPage() {
             <div className="flex items-center justify-center pt-4">
               <Link
                 to="/"
-                className="inline-flex items-center gap-2 text-white/40 hover:text-white/60 text-sm transition-colors"
+                className="inline-flex min-h-11 items-center gap-2 text-white/40 hover:text-white/60 text-sm transition-colors"
               >
                 <i className="ri-arrow-left-line"></i>
                 返回首頁

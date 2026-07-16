@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { trackEvent } from '@/utils/analytics';
 import { showToast } from '@/utils/toast';
 import type { Report } from '@/types/report';
+import { formatTaipeiDate } from '@/utils/tradingDay';
 
 const REPORT_TODAY_URL = 'https://morningalphatw.com/report/today';
 
@@ -27,7 +28,7 @@ export function useShareQuote({ report }: UseShareQuoteOptions) {
   const bias = report?.market_bias || '震盪';
   const score = report?.confidence_score ?? 50;
   const quote = report?.today_quote || report?.summary || '今日市場觀察中...';
-  const date = report?.report_date || new Date().toLocaleDateString('zh-TW');
+  const date = report?.report_date || formatTaipeiDate();
 
   const buildShareText = useCallback(() => {
     return `「${quote}」\n\n來源：Morning Alpha\n查看今日 AI 觀察：${REPORT_TODAY_URL}`;

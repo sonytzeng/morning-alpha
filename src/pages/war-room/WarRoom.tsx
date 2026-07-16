@@ -314,7 +314,7 @@ function WarRoomContent() {
             <p className="text-slate-500 text-xs leading-relaxed mb-5">
               今日非交易日，本節點不適用；等待下一個交易日。
             </p>
-            <Link to="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
+            <Link to="/" className="mt-2 inline-flex min-h-11 items-center px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
               返回首頁
             </Link>
           </div>
@@ -337,7 +337,7 @@ function WarRoomContent() {
             <p className="text-white/50 text-sm mb-4">
               {error ? error : '目前沒有任何盤前報告資料。請確認資料來源是否正常運作。'}
             </p>
-            <Link to="/" className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors inline-block whitespace-nowrap border border-white/10">
+            <Link to="/" className="inline-flex min-h-11 items-center px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors whitespace-nowrap border border-white/10">
               返回首頁
             </Link>
           </div>

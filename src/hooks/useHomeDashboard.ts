@@ -26,8 +26,7 @@ export function useHomeDashboard() {
       setMorningStateLoading(true);
       const ms = await resolveMorningAlphaState();
       setMorningState(ms);
-    } catch (err) {
-      console.error('useHomeDashboard: resolveMorningAlphaState failed:', err);
+    } catch {
       // V28: Do NOT leave morningStateLoading=true — set error so page can show fallback
       setMorningState(null);
     } finally {
@@ -45,8 +44,8 @@ export function useHomeDashboard() {
       setData(result);
       setError(result.error);
       setLastSyncAt(new Date().toISOString());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '讀取失敗');
+    } catch {
+      setError('首頁資料暫時無法取得，請稍後重新載入。');
     } finally {
       setRefreshing(false);
       setLoading(false);

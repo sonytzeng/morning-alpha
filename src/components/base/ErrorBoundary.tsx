@@ -42,12 +42,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               <p className="text-white/50 text-sm mb-2 leading-relaxed">
                 {this.props.fallbackMessage || '今日判斷暫時無法載入，請稍後再試。'}
               </p>
-              {this.state.errorMessage && (
-                <p className="text-white/20 text-xs mb-5 bg-white/[0.02] rounded-lg px-3 py-2 border border-white/5 max-h-20 overflow-auto">
-                  {this.state.errorMessage}
-                </p>
-              )}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-center">
+              <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-center">
                 <button
                   onClick={() => {
                     this.setState({ hasError: false, errorMessage: '' });

@@ -64,7 +64,7 @@ export default function Account() {
             <p className="text-white/30 text-sm mb-4">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors whitespace-nowrap border border-white/10"
+              className="min-h-11 px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors whitespace-nowrap border border-white/10"
             >
               重新載入
             </button>

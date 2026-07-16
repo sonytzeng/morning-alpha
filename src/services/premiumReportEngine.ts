@@ -3,6 +3,7 @@ import type { SupabaseMarketData } from '@/services/marketDataService';
 import type { IntelligenceResult } from '@/services/intelligenceEngine';
 import { normalizeStockKey, normalizeStockDisplay } from '@/utils/contentOrganizer';
 import { renderSafeText, renderStockItem } from '@/utils/renderSafe';
+import { formatTaipeiDate } from '@/utils/tradingDay';
 
 // ==================== NEWS ITEM TYPE ====================
 
@@ -129,7 +130,7 @@ export function generatePremiumReport(
   intelligence: IntelligenceResult | null,
 ): PremiumReportResult {
   const now = new Date().toISOString();
-  const reportDate = report?.report_date || new Date().toISOString().slice(0, 10);
+  const reportDate = report?.report_date || formatTaipeiDate();
   const isDataSufficient = intelligence?.is_data_sufficient ?? false;
 
   // Build each section

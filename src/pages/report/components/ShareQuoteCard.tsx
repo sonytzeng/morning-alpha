@@ -1,4 +1,5 @@
 import type { Report } from '@/types/report';
+import { formatTaipeiDate } from '@/utils/tradingDay';
 
 interface ShareQuoteCardProps {
   report: Report | null;
@@ -26,7 +27,7 @@ export default function ShareQuoteCard({
   const quote = report?.today_quote || report?.summary || '今日市場觀察中...';
   const bias = report?.market_bias || '震盪';
   const score = report?.confidence_score ?? 50;
-  const date = report?.report_date || new Date().toLocaleDateString('zh-TW');
+  const date = report?.report_date || formatTaipeiDate();
 
   return (
     <div className="relative bg-navy-900/80 border border-navy-800 rounded-2xl p-6 md:p-8 overflow-hidden">
@@ -55,7 +56,7 @@ export default function ShareQuoteCard({
         <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             onClick={onCopy}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-medium rounded-xl transition-all border border-white/10 min-h-[40px]"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-medium rounded-xl transition-all border border-white/10 min-h-11"
           >
             <i className={`${copied ? 'ri-check-line text-forest-400' : 'ri-file-copy-line'} text-xs`}></i>
             {copied ? '已複製！' : '複製這句'}
@@ -63,7 +64,7 @@ export default function ShareQuoteCard({
 
           <button
             onClick={onShareX}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-medium rounded-xl transition-all border border-white/10 min-h-[40px]"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-medium rounded-xl transition-all border border-white/10 min-h-11"
           >
             <i className="ri-twitter-x-line text-xs"></i>
             分享到 X
@@ -71,7 +72,7 @@ export default function ShareQuoteCard({
 
           <button
             onClick={onShareThreads}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-medium rounded-xl transition-all border border-white/10 min-h-[40px]"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-medium rounded-xl transition-all border border-white/10 min-h-11"
           >
             <i className="ri-hashtag text-xs"></i>
             分享到 Threads
@@ -79,7 +80,7 @@ export default function ShareQuoteCard({
 
           <button
             onClick={onGenerateImage}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-medium rounded-xl transition-all border border-white/10 min-h-[40px]"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-medium rounded-xl transition-all border border-white/10 min-h-11"
           >
             <i className={`${generatingImage ? 'ri-loader-4-line animate-spin' : 'ri-image-line'} text-xs`}></i>
             {generatingImage ? '生成中...' : '生成圖卡'}
@@ -88,7 +89,7 @@ export default function ShareQuoteCard({
           {shareImageUrl && (
             <button
               onClick={onDownloadImage}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-forest-500/10 hover:bg-forest-500/20 text-forest-400 text-xs font-medium rounded-xl transition-all border border-forest-500/20 min-h-[40px]"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-forest-500/10 hover:bg-forest-500/20 text-forest-400 text-xs font-medium rounded-xl transition-all border border-forest-500/20 min-h-11"
             >
               <i className="ri-download-line text-xs"></i>
               下載圖卡

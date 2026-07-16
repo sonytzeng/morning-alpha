@@ -220,9 +220,8 @@ function TodayReportContent() {
           resolved.rawRow as unknown as Record<string, unknown> | null,
           radarFromReport as unknown as Record<string, unknown> | null,
         ));
-      } catch (err) {
-        console.error('TodayReport load failed:', err);
-        setError(err instanceof Error ? err.message : '讀取今日判斷失敗');
+      } catch {
+        setError('最新判斷暫時無法取得，請稍後重新載入。');
       } finally {
         setLoading(false);
       }
@@ -397,7 +396,7 @@ function TodayReportContent() {
             <p className="text-slate-400 text-sm mt-2">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="mt-5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10"
+              className="mt-5 min-h-11 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10"
             >
               重新載入
             </button>
@@ -439,7 +438,7 @@ function TodayReportContent() {
             <p className="text-slate-500 text-xs leading-relaxed mb-5">
               今日非交易日，本節點不適用；等待下一個交易日。
             </p>
-            <Link to="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
+            <Link to="/" className="mt-2 inline-flex min-h-11 items-center justify-center px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
               返回首頁
             </Link>
           </div>
@@ -458,7 +457,7 @@ function TodayReportContent() {
             <i className="ri-time-line text-slate-500 text-3xl" />
             <h1 className="text-white font-bold mt-3">今日報告尚未產生</h1>
             <p className="text-slate-400 text-sm mt-2">每天 07:30 自動生成，請稍後再查看。</p>
-            <Link to="/" className="inline-block mt-5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
+            <Link to="/" className="mt-5 inline-flex min-h-11 items-center justify-center px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm border border-white/10">
               返回首頁
             </Link>
           </div>

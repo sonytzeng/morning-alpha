@@ -117,8 +117,8 @@ export default function ReportDetail() {
         if (!reportData) {
           setError(isInvalidReportDate ? '目前尚無可用報告，請稍後重新整理。' : `找不到 ${reportDate} 的報告`);
         }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '讀取資料失敗');
+      } catch {
+        setError('這份報告暫時無法取得，請返回報告列表後再試。');
       } finally { setLoading(false); }
     }
     load();

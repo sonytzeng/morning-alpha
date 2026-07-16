@@ -11,6 +11,7 @@ import type { SupabaseMarketData } from '@/services/marketDataService';
 import type { IntelligenceResult } from '@/services/intelligenceEngine';
 import type { DisciplineAdvice } from '@/services/disciplineAdviceService';
 import { renderSafeText as renderSafeValue } from '@/utils/renderSafe';
+import { formatTaipeiDate } from '@/utils/tradingDay';
 
 function renderSafeText(value: unknown, fallback = ''): string {
   return renderSafeValue(value) || fallback;
@@ -130,7 +131,7 @@ export function generateMemberNotebook(input: {
   } = input;
 
   const now = new Date().toISOString();
-  const reportDate = report?.report_date || new Date().toISOString().slice(0, 10);
+  const reportDate = report?.report_date || formatTaipeiDate();
   const isDataSufficient = intelligence?.is_data_sufficient ?? false;
 
   // ═══ V7.40: Try reading from ai_strategy_json.member_research_note first ═══

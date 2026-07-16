@@ -264,8 +264,8 @@ export function useLatestReport(): UseLatestReportResult {
       setIntelligence(generateIntelligence(rpt, null, null));
       setPremiumReport(generatePremiumReport(rpt, null, null, generateIntelligence(rpt, null, null)));
 
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '資料讀取失敗');
+    } catch {
+      setError('盤中追蹤資料暫時無法取得，請稍後重新載入。');
       setReport(null);
       setHasTodayReport(false);
       setInconsistencyWarning(null);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
@@ -45,21 +45,189 @@ interface TimelineNode {
   status: RuntimeTimelineStatus;
 }
 
-function strategyModeLabel(state: string): string {
+type UnknownRecord = Record<string, unknown>;
+
+interface ObservationCard {
+  title: string;
+  reason: string;
+  impact: string;
+}
+
+interface MistakeCard {
+  action: string;
+  reason: string;
+  result: string;
+}
+
+function asRecord(value: unknown): UnknownRecord {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as UnknownRecord
+    : {};
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function firstNumber(...values: unknown[]): number | null {
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim()) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return null;
+}
+
+const LOW_INFORMATION_TEXT = new Set([
+  '',
+  '資料不足',
+  '資料待補',
+  'unknown',
+  'n/a',
+  'no data',
+  'null',
+  'undefined',
+]);
+
+function isMeaningfulText(value: string): boolean {
+  return !LOW_INFORMATION_TEXT.has(value.trim().toLowerCase());
+}
+
+function firstMeaningfulString(...values: unknown[]): string {
+  for (const value of values) {
+    const candidate = firstString(value);
+    if (candidate && isMeaningfulText(candidate)) return candidate;
+  }
+  return '';
+}
+
+function translateKnownTerms(value: string): string {
+  return value
+    .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
+    .replace(/\bAI SERVER\b/gi, 'AI 伺服器')
+    .replace(/\bPETROCHEMICAL\b/gi, '塑化')
+    .replace(/\bSHIPPING\b/gi, '航運');
+}
+
+function uniqueStrings(values: string[], limit: number): string[] {
+  return Array.from(new Set(
+    values
+      .map((value) => value.trim())
+      .filter((value) => value && isMeaningfulText(value)),
+  )).slice(0, limit);
+}
+
+function closingResultLabel(result: string, status: string): string {
+  const normalizedResult = result.trim().toLowerCase();
+  const normalizedStatus = status.trim().toLowerCase();
+  if (normalizedResult === 'hit' && normalizedStatus.includes('degraded')) return '方向命中，資料仍不完整';
+  if (normalizedResult === 'hit') return '命中';
+  if (normalizedResult === 'partial' || normalizedResult === 'partial_hit') return '部分命中';
+  if (normalizedResult === 'miss') return '未命中';
+  if (normalizedStatus.includes('insufficient')) return '資料不足，尚無法驗證';
+  return result;
+}
+
+function decisionDayLabel(state: string): string {
   switch (state) {
-    case 'ACT': return '執行模式';
-    case 'STOP': return '停止模式';
-    case 'CLOSED': return '休市模式';
-    case 'INSUFFICIENT_DATA': return '資料不足';
-    default: return '等待模式';
+    case 'ACT': return '攻擊日';
+    case 'STOP': return '防守日';
+    case 'CLOSED': return '休市日';
+    case 'INSUFFICIENT_DATA': return '資料整理中';
+    default: return '觀望日';
   }
 }
 
-function dataReliabilityLabel(status: string): string {
+function dataCompletenessLabel(status: string): string {
   const normalized = status.trim().toLowerCase();
-  if (['complete', 'completed', 'ready', 'reliable', 'ok'].includes(normalized)) return '高可靠';
-  if (['partial', 'degraded', 'limited', 'stale'].includes(normalized)) return '部分資料';
-  return '資料不足';
+  if (['complete', 'completed', 'ready', 'reliable', 'ok', 'sufficient'].includes(normalized)) return '資料完整';
+  if (['partial', 'degraded', 'limited', 'stale'].includes(normalized)) return '部分完成';
+  return '資料整理中';
+}
+
+function exposureLabel(state: string): string {
+  switch (state) {
+    case 'ACT': return '依計畫分批';
+    case 'STOP': return '保持低曝險';
+    case 'CLOSED': return '今日不適用';
+    case 'INSUFFICIENT_DATA': return '暫不建立部位';
+    default: return '暫不增加曝險';
+  }
+}
+
+function formatTaipeiTimestamp(value: unknown): string {
+  if (typeof value !== 'string' || !value.trim()) return '今日資料整理中';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '今日資料整理中';
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
+function AnimatedNumber({ value, suffix = '' }: { value: number; suffix?: string }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayValue(Math.round(value));
+      return;
+    }
+
+    let frame = 0;
+    const startedAt = performance.now();
+    const duration = 520;
+    const animate = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(Math.round(value * eased));
+      if (progress < 1) frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+
+  return <>{displayValue}{suffix}</>;
+}
+
+function HomeSkeleton() {
+  return (
+    <div className="ma-page ma-pixel-page ma-home-page ma-home-v2-page flex min-h-screen flex-col overflow-x-hidden">
+      <Navbar />
+      <main className="flex-1" aria-busy="true" aria-label="今日決策資料載入中">
+        <section className="ma-home-v2-skeleton-hero">
+          <div className="ma-pixel-content ma-home-v2-skeleton-grid">
+            <div>
+              <div className="ma-home-v2-skeleton-line is-short" />
+              <div className="ma-home-v2-skeleton-line is-title" />
+              <div className="ma-home-v2-skeleton-line is-copy" />
+              <div className="ma-home-v2-skeleton-line is-button" />
+            </div>
+            <div className="ma-home-v2-skeleton-metrics">
+              {Array.from({ length: 4 }, (_, index) => (
+                <div key={index} className="ma-home-v2-skeleton-card" />
+              ))}
+            </div>
+          </div>
+        </section>
+        <div className="ma-pixel-content ma-home-v2-content">
+          {Array.from({ length: 4 }, (_, index) => (
+            <section key={index} className="ma-home-v2-skeleton-section">
+              <div className="ma-home-v2-skeleton-line is-short" />
+              <div className="ma-home-v2-skeleton-card is-wide" />
+            </section>
+          ))}
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
 }
 
 function HomePageContent() {
@@ -135,52 +303,222 @@ function HomePageContent() {
   const decisionContext = [
     presentation.marketBiasLabel ? `今天市場${presentation.marketBiasLabel}。` : '',
     presentation.primaryDecision.reason,
-  ].filter(Boolean).join(' ') || displayState.market_message || '市場資料尚在更新。';
+  ].filter(Boolean).join(' ') || displayState.market_message || '今日資料整理中，AI 正在等待市場資料完成。';
+  const publicSummary = asRecord(homeAI?.public_summary);
+  const openingRadar = asRecord(homeAI?.opening_radar);
+  const intradayTracking = asRecord(homeAI?.intraday_tracking);
+  const intradaySync = asRecord(homeAI?.intraday_sync_status);
+  const closingV2 = asRecord(homeAI?.closing_verification_v2);
+  const closingLegacy = asRecord(homeAI?.closing_verification);
+  const closingSummary = asRecord(homeAI?.closing);
+  const closingRecord = Object.keys(closingV2).length > 0
+    ? closingV2
+    : Object.keys(closingLegacy).length > 0
+      ? closingLegacy
+      : closingSummary;
+  const closingStatus = firstString(
+    closingRecord.status,
+    closingRecord.data_status,
+    closingRecord.verification_status,
+  );
+  const closingResultValue = firstString(
+    closingRecord.verdict_label,
+    closingRecord.prediction_result,
+    closingRecord.result,
+    closingRecord.hit_or_miss,
+  );
+  const hasRuntimeClosing = Boolean(closingResultValue || /completed|degraded|verified/.test(closingStatus.toLowerCase()));
   const nextActionTime = displayMode === 'market-closed'
     ? displayState.nextUpdateTime
-    : formatCheckpoint(presentation.nextCheckpoint);
-  const marketObservationCards = [
-    {
-      label: '盤前把握度',
-      value: typeof presentation.confidence?.score === 'number' ? `${presentation.confidence.score}/100` : '資料不足',
-      detail: presentation.confidence?.explanation,
-      tone: 'primary',
-    },
-    {
-      label: '市場可信度',
-      value: dataReliabilityLabel(displayState.dataStatus),
-      detail: displayState.dataBasisNote,
-      tone: 'primary',
-    },
-    {
-      label: '策略模式',
-      value: strategyModeLabel(presentation.primaryDecision.state),
-      detail: nextActionTime,
-      tone: 'amber',
-    },
-    {
-      label: '主線狀態',
-      value: presentation.primaryDecision.headline || '資料不足',
-      detail: presentation.primaryDecision.reason,
-      tone: presentation.primaryDecision.state === 'ACT'
-        ? 'primary'
-        : presentation.primaryDecision.state === 'STOP'
-          ? 'danger'
-          : 'amber',
-    },
-  ];
-  const riskCards = presentation.invalidationItems.slice(0, 3);
-  const observationCards = Array.from(new Set([
+    : hasRuntimeClosing ? '今日收盤驗證已完成' : formatCheckpoint(presentation.nextCheckpoint);
+  const nextActionLabel = hasRuntimeClosing
+    ? '查看收盤驗證結果'
+    : currentTimelineNode.label;
+  const researchMaster = asRecord(homeAI?.research_master_v2);
+  const researchMetadata = asRecord(researchMaster.metadata);
+  const reportRecord = asRecord(report);
+  const confidenceScore = firstNumber(
+    presentation.confidence?.score,
+    displayState.confidenceScore,
+  );
+  const riskLevel = firstString(
+    homeAI?.risk_level,
+    publicSummary.risk_level,
+    openingRadar.risk_level,
+    intradayTracking.risk_level,
+  ) || '等待資料確認';
+  const lastUpdatedAt = firstString(
+    homeAI?.data_as_of,
+    openingRadar.data_as_of,
+    openingRadar.updated_at,
+    intradayTracking.updated_at,
+    ms?.generatedAt,
+  );
+  const normalizedRiskLevel = riskLevel.toLowerCase();
+  const riskLevelDisplay = ['high', 'critical', 'severe'].includes(normalizedRiskLevel)
+    ? '高'
+    : ['medium', 'moderate'].includes(normalizedRiskLevel)
+      ? '中'
+      : ['low', 'limited'].includes(normalizedRiskLevel)
+        ? '低'
+        : riskLevel;
+  const aiVersion = firstString(
+    homeAI?.version,
+    homeAI?.engine_version,
+    researchMetadata.engine_version,
+    publicSummary.engine_version,
+  ) || '版本資訊整理中';
+  const morningBrief = translateKnownTerms(firstMeaningfulString(
+    homeAI?.morning_brief,
+    publicSummary.morning_brief,
+    canonicalNarrative.today_focus.why,
+    canonicalNarrative.today_focus.summary,
+    displayState.todayQuote,
+    decisionContext,
+  ));
+  const decisionState = presentation.primaryDecision.state;
+  const marketStatusLabel = decisionDayLabel(decisionState);
+  const decisionTone = decisionState === 'ACT'
+    ? 'success'
+    : decisionState === 'STOP'
+      ? 'danger'
+      : decisionState === 'CLOSED' || decisionState === 'INSUFFICIENT_DATA'
+        ? 'neutral'
+        : 'warning';
+
+  const riskObservation = asRecord(displayState.v10ObservationWatchlist.find((source) => {
+    const item = asRecord(source);
+    return firstString(item.role, item.role_label).toUpperCase() === 'RISK';
+  }));
+  const largestRisk = firstMeaningfulString(
+    presentation.invalidationItems[0],
+    riskObservation.observation_reason,
+    riskObservation.narrative,
+    canonicalNarrative.failure_triggers[0]?.trigger,
+    canonicalNarrative.today_focus.risk,
+  ) || '今日資料整理中，AI 正在等待風險訊號完成。';
+  const waitingFor = hasRuntimeClosing
+    ? firstMeaningfulString(
+      displayState.v10Warning,
+      intradaySync.warning,
+      '等待缺失市場資料補齊',
+    )
+    : firstMeaningfulString(
+      presentation.nextCheckpoint.label,
+      canonicalNarrative.intraday_progress.next_step,
+      currentTimelineNode.label,
+      nextAction,
+    ) || '等待下一個有效市場節點。';
+  const finalDecisionReasons = uniqueStrings([
+    presentation.primaryDecision.reason || '',
+    ...(decisionState === 'ACT'
+      ? presentation.confirmationItems
+      : presentation.invalidationItems),
+    ...canonicalNarrative.failure_triggers.map((item) => item.meaning),
+    firstString(riskObservation.observation_reason),
+  ], 4);
+
+  const observationSource = [
+    ...displayState.v10ObservationWatchlist,
     ...displayState.v10BeneficiaryStocks,
     ...displayState.coreBeneficiaryStocks,
     ...displayState.beneficiaryStocks,
-  ].map((stock) => firstString(
-    stock.industry_name,
-    stock.industryName,
-    stock.sector,
-    stock.industry,
-    stock.category,
-  )).filter(Boolean))).slice(0, 3);
+  ];
+  const observationCards = observationSource.reduce<ObservationCard[]>((items, source) => {
+    const item = asRecord(source);
+    const title = translateKnownTerms(firstMeaningfulString(
+      item.role_title,
+      item.role_label,
+      item.name,
+      item.stock_name,
+      item.industry_name,
+      item.industry,
+      item.sector,
+    ));
+    const reason = translateKnownTerms(firstMeaningfulString(
+      item.observation_reason,
+      item.narrative,
+      item.why_selected,
+      item.reason,
+      item.role_description,
+    ));
+    const impact = translateKnownTerms(firstMeaningfulString(
+      item.impact,
+      item.market_impact,
+      item.action_implication,
+      item.validation_point,
+      item.confirmation_reason,
+      item.watch_point,
+    ));
+    if (!title || (!reason && !impact)) return items;
+    const key = `${title}|${reason}|${impact}`;
+    if (items.some((existing) => `${existing.title}|${existing.reason}|${existing.impact}` === key)) return items;
+    items.push({ title, reason, impact });
+    return items;
+  }, []).slice(0, 3);
+
+  const rawAvoidItems = [
+    ...asArray(reportRecord.avoid_today),
+    ...asArray(homeAI?.avoid_today),
+    ...asArray(publicSummary.do_not_do),
+    ...(typeof publicSummary.do_not_do === 'string' ? [publicSummary.do_not_do] : []),
+  ];
+  const mistakeCards = (rawAvoidItems.length > 0
+    ? rawAvoidItems
+    : canonicalNarrative.failure_triggers
+  ).reduce<MistakeCard[]>((items, source, index) => {
+    const item = asRecord(source);
+    const failure = canonicalNarrative.failure_triggers[index];
+    const action = firstMeaningfulString(
+      item.title,
+      item.avoid,
+      item.action,
+      item.trigger,
+      typeof source === 'string' ? source : '',
+    );
+    const reason = firstMeaningfulString(
+      item.reason,
+      item.meaning,
+      item.why,
+      riskObservation.observation_reason,
+      riskObservation.narrative,
+      failure?.meaning,
+      canonicalNarrative.today_focus.risk,
+    );
+    const result = firstMeaningfulString(
+      item.result,
+      item.consequence,
+      item.action_note,
+      riskObservation.stop_condition,
+      riskObservation.stop_observing_condition,
+      failure?.action,
+      presentation.primaryDecision.instruction,
+    );
+    if (!action) return items;
+    items.push({ action, reason, result });
+    return items;
+  }, []).slice(0, 3);
+
+  const closingOutcome = canonicalNarrative.closing_outcome;
+  const closingDisplayResult = closingResultLabel(
+    firstMeaningfulString(closingOutcome.result, closingResultValue),
+    closingStatus,
+  );
+  const hasClosingOutcome = Boolean(
+    closingDisplayResult
+    || closingOutcome.summary
+    || closingOutcome.accuracy
+    || closingOutcome.lessons.length,
+  );
+  const credibilityItems = [
+    { label: 'Data Updated', value: formatTaipeiTimestamp(lastUpdatedAt) },
+    { label: 'AI Version', value: aiVersion },
+    { label: '資料完整度', value: dataCompletenessLabel(displayState.dataStatus) },
+    {
+      label: 'Confidence',
+      value: confidenceScore == null ? '等待資料確認' : `${Math.round(confidenceScore)}/100`,
+    },
+  ];
 
   const hasReportData = hasMorningState && reportExists;
 
@@ -191,37 +529,31 @@ function HomePageContent() {
 
   // ═══ Loading ═══
   if (loading && !hasReportData) {
-    return (
-      <div className="min-h-screen bg-background-50 flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mx-auto mb-3" />
-            <span className="text-foreground-500 text-sm">載入中...</span>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
+    return <HomeSkeleton />;
   }
 
   // ═══ Error ═══
   if (error && !hasReportData) {
     return (
-      <div className="min-h-screen bg-background-50 flex flex-col">
+      <div className="ma-page ma-pixel-page ma-home-page ma-home-v2-page flex min-h-screen flex-col">
         <Navbar />
-        <main className="flex-1 flex items-center justify-center px-4">
-          <div className="text-center max-w-md">
-            <i className="ri-error-warning-line text-red-500 text-3xl mb-3"></i>
-            <h2 className="text-foreground-900 font-semibold text-base mb-2">讀取資料失敗</h2>
-            <p className="text-foreground-500 text-sm mb-4">{error}</p>
+        <main className="ma-home-v2-state-shell">
+          <section className="ma-home-v2-state-card" role="status">
+            <i className="ri-radar-line" aria-hidden="true" />
+            <p className="ma-pixel-eyebrow">資料狀態</p>
+            <h1>今日資料整理中</h1>
+            <p>AI 正在等待市場資料完成。你可以稍後重新整理，不會顯示不完整的交易判斷。</p>
+            <details>
+              <summary>查看技術資訊</summary>
+              <p>{error}</p>
+            </details>
             <button
               onClick={() => refresh()}
-              className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm rounded-xl transition-colors whitespace-nowrap"
+              className="ma-pixel-primary-button"
             >
               重新載入
             </button>
-          </div>
+          </section>
         </main>
         <Footer />
       </div>
@@ -278,93 +610,281 @@ function HomePageContent() {
   })();
 
   return (
-    <div className="ma-page ma-pixel-page ma-home-page flex flex-col overflow-x-hidden">
+    <div className="ma-page ma-pixel-page ma-home-page ma-home-v2-page flex flex-col overflow-x-hidden">
       <Navbar marketState={marketState} />
 
       <main className="flex-1 overflow-x-hidden">
 
-        {/* ═══════════════════════════════════════ */}
-        {/* HERO — Action, context, next */}
-        {/* ═══════════════════════════════════════ */}
         {displayMode === 'normal' && hasReportData && (
           <>
-            <section className="ma-pixel-hero">
-              <div className="ma-pixel-content ma-pixel-hero-grid">
-                <div className="ma-pixel-hero-copy">
-                  <p className="ma-pixel-eyebrow"><i className="ri-focus-3-line" aria-hidden="true" />今日行動</p>
+            <section className={`ma-home-v2-hero is-${decisionTone}`}>
+              <div className="ma-pixel-content ma-home-v2-hero-grid">
+                <div className="ma-home-v2-hero-copy">
+                  <div className="ma-home-v2-status-row">
+                    <span className={`ma-home-v2-status-badge is-${decisionTone}`}>
+                      <span aria-hidden="true" />
+                      {marketStatusLabel}
+                    </span>
+                    <span>{displayReportDate}</span>
+                  </div>
+                  <p className="ma-pixel-eyebrow"><i className="ri-focus-3-line" aria-hidden="true" />Morning Alpha 今日判斷</p>
                   <h1>{renderSafeText(nextAction)}</h1>
-                  <p className="ma-pixel-hero-subtitle">{renderSafeText(decisionContext)}</p>
-                  <div className="ma-pixel-cta-row">
-                    <Link to="/report/today" className="ma-pixel-primary-button">查看今日判斷<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
-                    <Link to="/member-note" className="ma-pixel-text-link">查看今日劇本<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+                  <p className="ma-home-v2-hero-subtitle">{renderSafeText(decisionContext)}</p>
+                  <div className="ma-home-v2-next-line">
+                    <span>下一次確認</span>
+                    <strong>{renderSafeText(nextActionTime)}</strong>
+                    <span>{renderSafeText(nextActionLabel)}</span>
+                  </div>
+                  <div className="ma-home-v2-hero-actions">
+                    <Link to="/report/today" className="ma-pixel-primary-button">
+                      開始今天判斷
+                      <i className="ri-arrow-right-line" aria-hidden="true" />
+                    </Link>
+                    <Link to="/member-note" className="ma-pixel-text-link">
+                      查看完整研究
+                      <i className="ri-arrow-right-line" aria-hidden="true" />
+                    </Link>
                   </div>
                 </div>
-                <aside className="ma-pixel-checkpoint-card">
-                  <p>下一次確認</p>
-                  <strong>{nextActionTime}</strong>
-                  <span>{currentTimelineNode.label}</span>
-                </aside>
+                <div className="ma-home-v2-dashboard" aria-label="今日決策儀表板">
+                  <article className="ma-home-v2-metric">
+                    <p>AI Confidence</p>
+                    <strong>
+                      {confidenceScore == null
+                        ? '等待資料確認'
+                        : <AnimatedNumber value={confidenceScore} suffix="/100" />}
+                    </strong>
+                    {confidenceScore != null && (
+                      <div className="ma-home-v2-progress" aria-label={`AI 信心 ${Math.round(confidenceScore)} 分`}>
+                        <span style={{ width: `${Math.min(100, Math.max(0, confidenceScore))}%` }} />
+                      </div>
+                    )}
+                    <span>
+                      {renderSafeText(presentation.confidence?.explanation || '盤前信心，仍需 Runtime 驗證')}
+                    </span>
+                  </article>
+                  <article className="ma-home-v2-metric">
+                    <p>Risk Level</p>
+                    <strong>{renderSafeText(riskLevelDisplay)}</strong>
+                    <span>依現有報告風險欄位</span>
+                  </article>
+                  <article className="ma-home-v2-metric">
+                    <p>Suggested Exposure</p>
+                    <strong>{exposureLabel(decisionState)}</strong>
+                    <span>{renderSafeText(marketStatusLabel)}</span>
+                  </article>
+                  <article className="ma-home-v2-metric">
+                    <p>Last Update</p>
+                    <strong>{formatTaipeiTimestamp(lastUpdatedAt)}</strong>
+                    <span>Asia / Taipei</span>
+                  </article>
+                </div>
               </div>
             </section>
 
-            <div className="ma-pixel-content ma-pixel-page-sections">
-              <section aria-labelledby="market-observation-title">
-                <VisualSectionHeader icon="ri-radar-line" title="市場觀察重點" />
-                <div className="ma-home-highlight-grid">
-                  {marketObservationCards.map((card) => (
-                    <article key={card.label} className="ma-card-compact ma-highlight-card min-w-0 p-6">
-                      <p className="ma-caption">{card.label}</p>
-                      <p className={`mt-2 text-base font-bold leading-snug ${card.tone === 'danger' ? 'text-rose-200' : card.tone === 'amber' ? 'text-amber-300' : 'text-primary-300'}`}>
-                        {renderSafeText(card.value)}
-                      </p>
-                      {card.detail && <p className="mt-2 text-xs leading-relaxed text-foreground-400">{renderSafeText(card.detail)}</p>}
-                    </article>
+            <div className="ma-pixel-content ma-home-v2-content">
+              <section className="ma-home-v2-brief" aria-labelledby="morning-brief-title">
+                <div>
+                  <p className="ma-pixel-eyebrow"><i className="ri-sun-line" aria-hidden="true" />Morning Brief</p>
+                  <h2 id="morning-brief-title">{renderSafeText(morningBrief)}</h2>
+                </div>
+                <dl className="ma-home-v2-credibility">
+                  {credibilityItems.map((item) => (
+                    <div key={item.label}>
+                      <dt>{item.label}</dt>
+                      <dd>{renderSafeText(item.value)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+
+              <section aria-labelledby="three-answers-title">
+                <VisualSectionHeader
+                  icon="ri-question-answer-line"
+                  title="今天只回答三件事"
+                  description="先完成交易決定，再閱讀完整研究。"
+                />
+                <div className="ma-home-v2-answer-grid">
+                  <article className={`ma-home-v2-answer-card is-${decisionTone}`}>
+                    <p>今天適合交易嗎？</p>
+                    <strong>{decisionState === 'ACT' ? 'YES' : 'NO'}</strong>
+                    <span>{renderSafeText(marketStatusLabel)}</span>
+                  </article>
+                  <article className="ma-home-v2-answer-card is-danger">
+                    <p>今天最大風險？</p>
+                    <strong>{renderSafeText(largestRisk)}</strong>
+                  </article>
+                  <article className="ma-home-v2-answer-card is-warning">
+                    <p>今天等待什麼？</p>
+                    <strong>{renderSafeText(waitingFor)}</strong>
+                    <span>{renderSafeText(nextActionTime)}</span>
+                  </article>
+                </div>
+              </section>
+
+              <section aria-labelledby="final-decision-title">
+                <VisualSectionHeader
+                  icon="ri-brain-line"
+                  title="AI Final Decision"
+                  description="只呈現目前證據支持的結論，不用市場形容詞替代驗證。"
+                />
+                <article className={`ma-home-v2-decision-card is-${decisionTone}`}>
+                  <div className="ma-home-v2-decision-lead">
+                    <p>目前決策</p>
+                    <h2 id="final-decision-title">{renderSafeText(presentation.primaryDecision.headline)}</h2>
+                    <strong>{renderSafeText(nextAction)}</strong>
+                    <span>{renderSafeText(presentation.primaryDecision.reason || decisionContext)}</span>
+                  </div>
+                  <div className="ma-home-v2-decision-evidence">
+                    <p>判定依據</p>
+                    {finalDecisionReasons.length > 0 ? (
+                      <ul>
+                        {finalDecisionReasons.map((reason) => (
+                          <li key={reason}>
+                            <i className="ri-check-line" aria-hidden="true" />
+                            <span>{renderSafeText(reason)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="ma-home-v2-empty">
+                        <strong>今日資料整理中</strong>
+                        <span>AI 正在等待市場資料完成。</span>
+                      </div>
+                    )}
+                    <div className="ma-home-v2-verdict">
+                      <span>Morning Alpha 判定</span>
+                      <strong>{renderSafeText(presentation.primaryDecision.instruction)}</strong>
+                    </div>
+                  </div>
+                </article>
+                <div className="ma-home-v2-runtime" role="list" aria-label="今日驗證節點">
+                  {timelineNodes.map((node) => (
+                    <div key={node.time} className={`is-${node.status}`} role="listitem">
+                      <span aria-hidden="true" />
+                      <p>{node.time}</p>
+                      <strong>{renderSafeText(node.label)}</strong>
+                      <small>{runtimeTimelineStatusLabel(node.status)}</small>
+                    </div>
                   ))}
                 </div>
               </section>
 
-              <div className="ma-home-panel-grid">
-                <section className="ma-home-list-panel" aria-labelledby="risk-focus-title">
-                  <VisualSectionHeader icon="ri-error-warning-line" title="今天不要做" />
-                  {riskCards.length > 0 ? <div className="ma-home-compact-list">
-                    {riskCards.map((item) => (
-                      <div key={item} className="ma-home-compact-row is-danger">
-                        <i className="ri-forbid-line" aria-hidden="true" />
-                        <div><strong>{renderSafeText(item)}</strong></div>
-                      </div>
-                    ))}
-                  </div> : <p className="ma-pixel-empty-state">資料不足</p>}
-                </section>
-
-                <section className="ma-home-list-panel" aria-labelledby="observation-focus-title">
-                  <VisualSectionHeader icon="ri-eye-line" title="今天要觀察" />
-                  {observationCards.length > 0 ? (
-                    <div className="ma-home-compact-list">
-                      {observationCards.map((item) => (
-                        <div key={item} className="ma-home-compact-row is-success">
-                          <i className="ri-focus-2-line" aria-hidden="true" />
-                          <div><strong>{renderSafeText(item)}</strong></div>
+              <section aria-labelledby="observations-title">
+                <VisualSectionHeader
+                  icon="ri-radar-line"
+                  title="今日觀察"
+                  description="每一項都連回現有報告的原因與影響，不使用固定模板。"
+                />
+                {observationCards.length > 0 ? (
+                  <div className="ma-home-v2-observation-grid">
+                    {observationCards.map((item) => (
+                      <article key={`${item.title}-${item.reason}`} className="ma-home-v2-observation-card">
+                        <div>
+                          <p>Observation</p>
+                          <h3>{renderSafeText(item.title)}</h3>
                         </div>
-                      ))}
-                    </div>
-                  ) : <p className="ma-pixel-empty-state">資料不足</p>}
-                </section>
-              </div>
+                        <div>
+                          <p>Reason</p>
+                          <strong>{renderSafeText(item.reason || '今日資料整理中')}</strong>
+                        </div>
+                        <div>
+                          <p>Impact</p>
+                          <strong>{renderSafeText(item.impact || 'AI 正在等待市場資料完成。')}</strong>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="ma-home-v2-empty is-section">
+                    <strong>今日資料整理中</strong>
+                    <span>AI 正在等待市場資料完成，不會用固定觀察句填補。</span>
+                  </div>
+                )}
+              </section>
 
-              <section aria-labelledby="launch-timeline-title">
-                <VisualSectionHeader icon="ri-time-line" title="今日關注時間軸" />
-                <div className="ma-pixel-timeline" role="list">
-                  {timelineNodes.map((node) => (
-                    <div key={node.time} className={`ma-pixel-timeline-node is-${node.status}`} role="listitem">
-                      <span className="ma-pixel-timeline-dot" aria-hidden="true" />
-                      <p className="ma-pixel-timeline-time">{node.time}</p>
-                      <p className="ma-pixel-timeline-label">{node.label}</p>
-                      <p className="ma-pixel-timeline-state">
-                        {runtimeTimelineStatusLabel(node.status)}
-                      </p>
-                    </div>
-                  ))}
+              <section aria-labelledby="mistakes-title">
+                <VisualSectionHeader
+                  icon="ri-error-warning-line"
+                  title="今天最容易犯的錯"
+                  description="把不要做、原因與可能結果放在同一條決策鏈。"
+                />
+                {mistakeCards.length > 0 ? (
+                  <div className="ma-home-v2-mistake-grid">
+                    {mistakeCards.map((item) => (
+                      <article key={`${item.action}-${item.reason}`} className="ma-home-v2-mistake-card">
+                        <div>
+                          <span>不要做什麼</span>
+                          <h3>{renderSafeText(item.action)}</h3>
+                        </div>
+                        <div>
+                          <span>原因</span>
+                          <p>{renderSafeText(item.reason || '今日資料整理中')}</p>
+                        </div>
+                        <div>
+                          <span>容易造成什麼結果</span>
+                          <p>{renderSafeText(item.result || 'AI 正在等待市場資料完成。')}</p>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="ma-home-v2-empty is-section">
+                    <strong>今日資料整理中</strong>
+                    <span>AI 正在等待風險條件完成，不會顯示空泛提醒。</span>
+                  </div>
+                )}
+              </section>
+
+              <section className="ma-home-v2-analysis-cta" aria-labelledby="analysis-cta-title">
+                <div>
+                  <p className="ma-pixel-eyebrow"><i className="ri-node-tree" aria-hidden="true" />完整決策鏈</p>
+                  <h2 id="analysis-cta-title">查看完整 AI 推理</h2>
+                  <p>了解今天判斷如何形成。</p>
                 </div>
+                <Link to="/member-note" className="ma-pixel-primary-button">
+                  查看完整 AI 推理
+                  <i className="ri-arrow-right-line" aria-hidden="true" />
+                </Link>
+              </section>
+
+              <section aria-labelledby="history-title">
+                <VisualSectionHeader
+                  icon="ri-line-chart-line"
+                  title="歷史績效"
+                  description="用最近一次真實收盤驗證，連回長期公開紀錄。"
+                />
+                <article className="ma-home-v2-history-card">
+                  {hasClosingOutcome ? (
+                    <div>
+                      <p>最近一次收盤驗證</p>
+                      <h2 id="history-title">{renderSafeText(closingDisplayResult)}</h2>
+                      {closingOutcome.summary && <strong>{renderSafeText(closingOutcome.summary)}</strong>}
+                      {closingOutcome.accuracy && <span>{renderSafeText(closingOutcome.accuracy)}</span>}
+                    </div>
+                  ) : (
+                    <div className="ma-home-v2-empty">
+                      <strong>驗證資料累積中</strong>
+                      <span>完成收盤驗證後，這裡會呈現真實判斷結果。</span>
+                    </div>
+                  )}
+                  <Link to="/performance" className="ma-pixel-text-link">
+                    查看完整歷史績效
+                    <i className="ri-arrow-right-line" aria-hidden="true" />
+                  </Link>
+                </article>
+              </section>
+
+              <section className="ma-home-v2-footer-cta">
+                <div>
+                  <p>下一個決策節點</p>
+                  <h2>{renderSafeText(nextActionTime)}</h2>
+                  <span>{renderSafeText(waitingFor)}</span>
+                </div>
+                <Link to="/report/today" className="ma-pixel-primary-button">
+                  回到今日判斷
+                  <i className="ri-arrow-right-line" aria-hidden="true" />
+                </Link>
               </section>
             </div>
           </>

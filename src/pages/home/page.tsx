@@ -543,10 +543,6 @@ function HomePageContent() {
             <p className="ma-pixel-eyebrow">資料狀態</p>
             <h1>今日資料整理中</h1>
             <p>AI 正在等待市場資料完成。你可以稍後重新整理，不會顯示不完整的交易判斷。</p>
-            <details>
-              <summary>查看技術資訊</summary>
-              <p>{error}</p>
-            </details>
             <button
               onClick={() => refresh()}
               className="ma-pixel-primary-button"
@@ -1031,7 +1027,7 @@ function HomePageContent() {
                 </p>
                 <div className="bg-amber-500/[0.04] border border-amber-400/20 rounded-xl p-4 mb-5">
                   <p className="text-amber-700 text-xs leading-relaxed">
-                    盤前報告每天 07:30 自動產生。若時間已過仍未看到今日報告，請確認盤前報告排程是否正常執行。
+                    盤前報告每天 07:30 更新；今日內容尚未完成前，歷史日期會清楚標示，不會當成今日判斷。
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -1041,13 +1037,6 @@ function HomePageContent() {
                   >
                     查看上一份報告內容
                     <i className="ri-arrow-right-line"></i>
-                  </Link>
-                  <Link
-                    to="/admin/data-truth"
-                    className="ma-btn-secondary whitespace-nowrap"
-                  >
-                    <i className="ri-radar-line"></i>
-                    前往資料真相檢查
                   </Link>
                 </div>
               </div>
@@ -1067,15 +1056,16 @@ function HomePageContent() {
                   每天 07:30 自動更新
                 </h2>
                 <p className="text-foreground-500 text-sm leading-relaxed max-w-md mx-auto mb-6">
-                  Morning Alpha 每天早上自動產生盤前報告。若目前時間已過 07:30 仍未看到報告，請檢查後台資料真相檢查頁。
+                  今日盤前內容尚未就緒。完成後會自動出現在首頁；目前不顯示不完整判斷，也不以舊資料冒充今日內容。
                 </p>
-                <Link
-                  to="/admin/data-truth"
+                <button
+                  type="button"
+                  onClick={() => refresh()}
                   className="ma-btn-secondary whitespace-nowrap"
                 >
-                  <i className="ri-radar-line"></i>
-                  前往資料真相檢查
-                </Link>
+                  <i className="ri-refresh-line"></i>
+                  重新檢查最新內容
+                </button>
               </div>
             </div>
           </section>

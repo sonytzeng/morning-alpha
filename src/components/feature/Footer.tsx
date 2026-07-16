@@ -26,13 +26,25 @@ export default function Footer() {
 
           {/* Links */}
           <div className="flex items-center gap-4 md:gap-6 flex-wrap">
-            <Link to="/report/today" className="text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+            <Link to="/report/today" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               今日判斷
             </Link>
-            <Link to="/war-room" className="text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+            <Link to="/war-room" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               盤中追蹤
             </Link>
-            <a href="mailto:aijinetwork@gmail.com" className="text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+            <Link to="/faq" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+              常見問題
+            </Link>
+            <Link to="/contact" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+              聯絡我們
+            </Link>
+            <Link to="/terms" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+              使用條款
+            </Link>
+            <Link to="/privacy" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+              隱私權
+            </Link>
+            <a href="mailto:aijinetwork@gmail.com" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               客服信箱
             </a>
           </div>

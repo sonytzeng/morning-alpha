@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import MarketStatusLight from '@/components/base/MarketStatusLight';
 import { BRAND_ICON_URL, BRAND_NAME } from '@/config/brand';
@@ -11,6 +11,19 @@ interface NavbarProps {
 export default function Navbar({ marketState }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [mobileOpen]);
 
   const navLinks = [
     { to: '/', label: '首頁' },
@@ -28,7 +41,7 @@ export default function Navbar({ marketState }: NavbarProps) {
       <div className="mx-auto w-full max-w-5xl px-4 md:px-6">
         <div className="flex h-14 items-center justify-between md:h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+          <Link to="/" className="flex min-h-11 items-center gap-2 flex-shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/40">
             <img
               src={BRAND_ICON_URL}
               alt={BRAND_NAME}
@@ -66,9 +79,12 @@ export default function Navbar({ marketState }: NavbarProps) {
 
           {/* Mobile hamburger — bigger tap target */}
           <button
-            className="md:hidden w-10 h-10 flex items-center justify-center text-white -mr-2"
+            type="button"
+            className="md:hidden w-11 h-11 flex items-center justify-center text-white -mr-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/40"
             onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="選單"
+            aria-label={mobileOpen ? '關閉選單' : '開啟選單'}
+            aria-expanded={mobileOpen}
+            aria-controls="morning-alpha-mobile-menu"
           >
             <i className={`ri-${mobileOpen ? 'close' : 'menu'}-line text-2xl`}></i>
           </button>
@@ -77,7 +93,7 @@ export default function Navbar({ marketState }: NavbarProps) {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="border-t border-background-200/70 bg-background-50 md:hidden">
+        <div id="morning-alpha-mobile-menu" className="border-t border-background-200/70 bg-background-50 md:hidden">
           <div className="px-4 py-3 space-y-1">
             <div className="px-3 py-2.5">
               <MarketStatusLight compact marketState={marketState} />

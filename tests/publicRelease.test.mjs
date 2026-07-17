@@ -18,6 +18,7 @@ const pricing = read('src/pages/pricing/Pricing.tsx');
 const earlyAccessForm = read('src/components/feature/EarlyAccessForm.tsx');
 const memberNote = read('src/pages/member-note/page.tsx');
 const performance = read('src/pages/performance/page.tsx');
+const openingMarketRadar = read('supabase/functions/opening-market-radar/index.ts');
 
 const publicSourceFiles = [
   'src/pages/home/page.tsx',
@@ -148,6 +149,14 @@ test('runtime timelines reconcile completed later checkpoints', () => {
   assert.match(warRoomMapper, /reconcileRuntimeTimeline\(nodes\)/);
   assert.match(runtimeTimeline, /scheduledMinutes <= taipeiMinutes/);
   assert.doesNotMatch(runtimeTimeline, /待 Runtime|Runtime checkpoint/);
+});
+
+test('opening radar degrades safely when only TXF is unavailable', () => {
+  assert.match(openingMarketRadar, /txfOnlyMissing/);
+  assert.match(openingMarketRadar, /hasTaiex\s*&&\s*hasTsmc/);
+  assert.match(openingMarketRadar, /checkpoint_cash_core_degraded/);
+  assert.match(openingMarketRadar, /const checkpointUsable = checkpointEvaluation\.ready \|\| degradedCheckpointUsable/);
+  assert.match(openingMarketRadar, /if \(!checkpointUsable\)/);
 });
 
 test('home public decision copy is user-facing and internally consistent', () => {

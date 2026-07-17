@@ -599,17 +599,31 @@ Deno.serve(async (req) => {
     const marketData = mapMarketDataRows(checkpointEvaluation.acceptedRows as unknown as Record<string, unknown>[]);
     const marketDataSource = 'market_data_snapshots';
     const latestCapturedAt = getLatestCapturedAt(marketData);
-    const dataStatus = checkpointEvaluation.status;
     const missingCoreSymbols = checkpointEvaluation.missingSymbols;
-    const radarMode = checkpointEvaluation.ready ? 'checkpoint_full_core' : 'checkpoint_insufficient';
+    // TAIEX + 2330 are sufficient for a conservative degraded radar. TXF remains
+    // valuable confirmation evidence, but a missing futures entitlement must not
+    // suppress otherwise valid same-day cash-market observations.
+    const hasTaiex = marketData.some((row) => ['TAIEX', 'TWII', '^TWII'].includes(row.symbol.toUpperCase()));
+    const hasTsmc = marketData.some((row) => ['2330', '2330.TW', 'TSMC_TW'].includes(row.symbol.toUpperCase()));
+    const txfOnlyMissing = missingCoreSymbols.length === 1 && missingCoreSymbols[0] === 'TXF';
+    const degradedCheckpointUsable = !checkpointEvaluation.ready && txfOnlyMissing && hasTaiex && hasTsmc;
+    const checkpointUsable = checkpointEvaluation.ready || degradedCheckpointUsable;
+    const dataStatus = checkpointEvaluation.ready ? 'ready' : degradedCheckpointUsable ? 'degraded' : 'insufficient';
+    const radarMode = checkpointEvaluation.ready
+      ? 'checkpoint_full_core'
+      : degradedCheckpointUsable
+        ? 'checkpoint_cash_core_degraded'
+        : 'checkpoint_insufficient';
     const txfStatus = missingCoreSymbols.includes('TXF') ? 'missing_for_checkpoint' : 'available';
     const checkpointReason = checkpointEvaluation.ready
       ? `checkpoint ${checkpoint} accepted complete same-day intraday snapshot set`
+      : degradedCheckpointUsable
+        ? `checkpoint ${checkpoint} accepted degraded same-day TAIEX + 2330 snapshot set; TXF unavailable`
       : `checkpoint ${checkpoint} missing complete in-window snapshot set: ${missingCoreSymbols.join(', ') || 'out_of_window'}`;
 
     log(`Checkpoint rows: accepted=${marketData.length}, rejected=${checkpointEvaluation.rejectedRows.length}, source=${marketDataSource}, checkpoint=${checkpoint}, latest_captured_at=${latestCapturedAt || 'none'}, missing=${missingCoreSymbols.join(',') || 'none'}`);
 
-    if (!checkpointEvaluation.ready) {
+    if (!checkpointUsable) {
       const reportRefresh = await patchReportAfterRadar(supabase, today, null, checkpoint, 'insufficient', latestCapturedAt, marketDataSource, checkpointReason, log);
       log(`INSUFFICIENT_CHECKPOINT_DATA: ${checkpointReason}`);
       return new Response(JSON.stringify({

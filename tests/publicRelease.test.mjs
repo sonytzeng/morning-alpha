@@ -23,6 +23,8 @@ const reportsCenter = read('src/pages/reports/ReportsCenter.tsx');
 const reportDetail = read('src/pages/reports/ReportDetail.tsx');
 const observationSection = read('src/components/v11/V11ObservationSection.tsx');
 const openingMarketRadar = read('supabase/functions/opening-market-radar/index.ts');
+const runtimeDeployWorkflow = read('.github/workflows/deploy-morning-alpha-runtime.yml');
+const runtimeCheckpointWorkflow = read('.github/workflows/morning-alpha-runtime-checkpoints.yml');
 
 const publicSourceFiles = [
   'src/pages/home/page.tsx',
@@ -161,6 +163,20 @@ test('opening radar degrades safely when only TXF is unavailable', () => {
   assert.match(openingMarketRadar, /checkpoint_cash_core_degraded/);
   assert.match(openingMarketRadar, /const checkpointUsable = checkpointEvaluation\.ready \|\| degradedCheckpointUsable/);
   assert.match(openingMarketRadar, /if \(!checkpointUsable\)/);
+});
+
+test('runtime deployment and missing checkpoint schedules are reproducible', () => {
+  for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'ma-ops-health-check']) {
+    assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
+  }
+  for (const schedule of ["30 2 * * 1-5", "0 5 * * 1-5", "20 6 * * 1-5"]) {
+    assert.match(runtimeCheckpointWorkflow, new RegExp(schedule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing runtime schedule: ${schedule}`);
+  }
+  assert.match(runtimeCheckpointWorkflow, /\{"phase":"intraday"\}/);
+  assert.match(runtimeCheckpointWorkflow, /\{\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
+  assert.match(runtimeCheckpointWorkflow, /snapshot_upserted_count >= 2/);
+  assert.match(runtimeCheckpointWorkflow, /written_and_synced/);
+  assert.match(runtimeCheckpointWorkflow, /secrets\.CRON_SECRET/);
 });
 
 test('TXF discovery and quote URLs follow the Fugle futopt contract', () => {

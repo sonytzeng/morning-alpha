@@ -393,12 +393,14 @@ async function fetchFugleQuoteFromPath(
   logPrefix: string,
   providerLabel: string,
   failureDetails?: ProviderFailureDetail[],
+  query?: Record<string, string>,
 ): Promise<MarketQuote | null> {
   if (!apiKey) return null;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 4_000);
   try {
-    const response = await fetch(`https://api.fugle.tw/marketdata/v1.0/${path}/${encodeURIComponent(symbol)}`, {
+    const search = query ? `?${new URLSearchParams(query).toString()}` : "";
+    const response = await fetch(`https://api.fugle.tw/marketdata/v1.0/${path}/${encodeURIComponent(symbol)}${search}`, {
       headers: {
         "Accept": "application/json",
         "X-API-KEY": apiKey,
@@ -531,15 +533,15 @@ function selectNearestTxfContract(rows: Record<string, unknown>[]): string | nul
 async function getActiveTxfContractSymbol(
   apiKey: string,
   logPrefix: string,
+  preferredSession: "REGULAR" | "AFTERHOURS",
   failureDetails?: ProviderFailureDetail[],
 ): Promise<string | null> {
-  const endpoints = [
-    "futopt/intraday/tickers?type=FUTURE",
-    "futopt/intraday/tickers?type=FUTURES",
-    "futopt/intraday/tickers",
-    "futopt/products?type=FUTURE",
-    "futopt/products",
-  ];
+  const sessions = preferredSession === "REGULAR"
+    ? ["REGULAR", "AFTERHOURS"]
+    : ["AFTERHOURS", "REGULAR"];
+  const endpoints = sessions.map((session) =>
+    `futopt/intraday/tickers?type=FUTURE&exchange=TAIFEX&session=${session}&product=TXF`
+  );
   for (const endpoint of endpoints) {
     const json = await fetchFugleJson(endpoint, apiKey, logPrefix, failureDetails);
     const rows = flattenTickerRows(json);
@@ -560,8 +562,15 @@ async function fetchFugleFutOptQuote(
   session: "regular" | "afterhours",
   failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
-  const query = session === "afterhours" ? "?session=afterhours" : "";
-  const quote = await fetchFugleQuoteFromPath(`futopt/intraday/quote${query}`, symbol, apiKey, logPrefix, "fugle_futopt", failureDetails);
+  const quote = await fetchFugleQuoteFromPath(
+    "futopt/intraday/quote",
+    symbol,
+    apiKey,
+    logPrefix,
+    "fugle_futopt",
+    failureDetails,
+    { session: session === "afterhours" ? "AFTERHOURS" : "REGULAR" },
+  );
   return quote ? { ...quote, raw: { ...quote.raw, product: "TXF", session } } : null;
 }
 
@@ -650,12 +659,17 @@ async function fetchTaiwanCoreQuote(
   }
 
   if (config.displaySymbol === "TXF") {
-    const contractSymbol = await getActiveTxfContractSymbol(fugleApiKey, logPrefix, failureDetails);
+    const preferredSession: "regular" | "afterhours" = phase === "premarket" || phase === "manual_backfill" ? "afterhours" : "regular";
+    const contractSymbol = await getActiveTxfContractSymbol(
+      fugleApiKey,
+      logPrefix,
+      preferredSession === "afterhours" ? "AFTERHOURS" : "REGULAR",
+      failureDetails,
+    );
     if (!contractSymbol) {
       failureDetails?.push({ provider: "fugle_futopt", symbol: "TXF", endpoint: "contract_resolution", error: "cannot_resolve_active_txf_contract" });
       return null;
     }
-    const preferredSession: "regular" | "afterhours" = phase === "premarket" || phase === "manual_backfill" ? "afterhours" : "regular";
     const fallbackSession: "regular" | "afterhours" = preferredSession === "afterhours" ? "regular" : "afterhours";
     const quote = await fetchFugleFutOptQuote(contractSymbol, fugleApiKey, logPrefix, preferredSession, failureDetails);
     if (quote) return { ...quote, sourceSymbol: contractSymbol, raw: { ...quote.raw, fallback_used: false } };

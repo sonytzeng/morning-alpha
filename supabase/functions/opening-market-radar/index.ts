@@ -174,7 +174,25 @@ async function patchReportAfterRadar(
       input_source: marketDataSource,
       updated_at: new Date().toISOString(),
     };
+    const observationRoles = Array.isArray(ai.v10_observation_watchlist)
+      ? ai.v10_observation_watchlist.filter((item) =>
+        item && typeof item === "object" && !Array.isArray(item)
+      ) as Record<string, unknown>[]
+      : [];
+    const role = (name: string) =>
+      observationRoles.find((item) => String(item.role || "") === name) || {};
+    const mainThesis = role("MAIN_THESIS");
+    const confirmation = role("CONFIRMATION");
+    const risk = role("RISK");
+    const capitalNext = role("CAPITAL_NEXT");
+    const external = role("EXTERNAL");
+    const previousWarRoom = ai.war_room && typeof ai.war_room === "object" &&
+        !Array.isArray(ai.war_room)
+      ? ai.war_room as Record<string, unknown>
+      : {};
+
     patchedAi.war_room = {
+      ...previousWarRoom,
       source: "opening_market_radar",
       checkpoint,
       status: radarStatus,
@@ -184,6 +202,15 @@ async function patchReportAfterRadar(
       captured_at: latestCapturedAt,
       input_source: marketDataSource,
       updated_at: new Date().toISOString(),
+      decision_step: mainThesis.decision_step ?? 1,
+      next_role: mainThesis.next_role ?? "CONFIRMATION",
+      confirmation_checklist: confirmation.confirmation_checklist ?? [],
+      risk_checklist: risk.risk_checklist ?? [],
+      capital_rotation_path: capitalNext.capital_rotation_path ?? [],
+      external_priority: external.external_priority ?? [],
+      decision_confidence: mainThesis.decision_confidence ??
+        openingRadar.confidence_score,
+      observation_roles: observationRoles,
     };
   }
 

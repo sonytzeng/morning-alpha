@@ -39,8 +39,25 @@ function asRecordArray(value: unknown): Record<string, unknown>[] {
     : [];
 }
 
+function publicObservationText(value: unknown): string {
+  return String(value ?? '')
+    .trim()
+    .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
+    .replace(/\bMEMORY\b/gi, '記憶體')
+    .replace(/\bELECTRONICS\b/gi, '電子')
+    .replace(/\bFINANCIAL\b/gi, '金融')
+    .replace(/\bDEFENSIVE\b/gi, '防禦型族群')
+    .replace(/\bAI[ _-]?SERVER\b/gi, 'AI 伺服器')
+    .replace(/\bTAIEX\b/gi, '加權指數')
+    .replace(/\bTXF\b/gi, '台指期')
+    .replace(/\bADR\b/gi, '海外存託憑證')
+    .replace(/\bunknown\b/gi, '尚未取得')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function text(value: unknown): string {
-  return String(value ?? '').trim();
+  return publicObservationText(value);
 }
 
 function textList(value: unknown): string[] {
@@ -136,7 +153,7 @@ function roleStepLabel(item: V11ObservationItem): string {
     EXTERNAL: 5,
   };
   const step = item.decisionStep ?? fallback[item.role];
-  return step ? `STEP ${step}` : 'STEP';
+  return step ? `步驟 ${step}` : '觀察步驟';
 }
 
 function checklistFor(item: V11ObservationItem): string[] {
@@ -278,7 +295,7 @@ export default function V11ObservationSection({
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-5">
         <div>
           <p className={`text-[10px] uppercase tracking-[0.3em] font-semibold mb-2 ${isDark ? 'text-amber-200/80' : 'text-amber-700'}`}>
-            Morning Brief
+            盤前觀察
           </p>
           <h2 className={`text-lg md:text-xl font-bold ${titleClass}`}>{title}</h2>
           <p className={`text-xs md:text-sm leading-relaxed mt-1 ${subtitleClass}`}>{subtitle}</p>

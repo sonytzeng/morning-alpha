@@ -12,9 +12,24 @@ import {
 import type { Report } from '@/types/report';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 
+const publicReportText = (value: unknown) => String(value ?? '')
+  .trim()
+  .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
+  .replace(/\bMEMORY\b/gi, '記憶體')
+  .replace(/\bELECTRONICS\b/gi, '電子')
+  .replace(/\bFINANCIAL\b/gi, '金融')
+  .replace(/\bDEFENSIVE\b/gi, '防禦型族群')
+  .replace(/\bAI[ _-]?SERVER\b/gi, 'AI 伺服器')
+  .replace(/\bTAIEX\b/gi, '加權指數')
+  .replace(/\bTXF\b/gi, '台指期')
+  .replace(/\bADR\b/gi, '海外存託憑證')
+  .replace(/\bunknown\b/gi, '尚未取得')
+  .replace(/\s+/g, ' ')
+  .trim();
+
 const previewText = (report: Report) => {
   const text = report.summary || report.today_summary || report.today_quote || '';
-  return text.trim();
+  return publicReportText(text);
 };
 
 export default function ReportsCenter() {
@@ -133,7 +148,7 @@ export default function ReportsCenter() {
 
             <div className="grid gap-3 md:grid-cols-[112px_minmax(0,1fr)] md:items-start">
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-center md:text-left">
-                <p className="text-white/35 text-[10px] uppercase tracking-[0.22em] mb-1">Report</p>
+                <p className="text-white/35 text-[10px] tracking-[0.22em] mb-1">報告</p>
                 <p className="text-white text-lg font-bold leading-tight">{r.report_date}</p>
                 <p className={`mt-2 text-sm font-semibold ${scoreInfo.color}`}>{r.confidence_score ?? '—'}<span className="text-white/30 text-xs ml-1">/100</span></p>
                 <p className="text-white/40 text-xs mt-1">{scoreInfo.label}</p>
@@ -207,7 +222,7 @@ export default function ReportsCenter() {
           <div className="absolute inset-0 bg-gradient-to-b from-[#07111f] via-[#0b1628] to-background-50" />
           <div className="relative mx-auto grid w-full max-w-5xl gap-5 md:grid-cols-[minmax(0,1fr)_260px] md:items-end">
             <div>
-              <p className="text-white/35 text-[10px] uppercase tracking-[0.3em] font-semibold mb-4">REPORTS CENTER</p>
+              <p className="text-white/35 text-[10px] tracking-[0.3em] font-semibold mb-4">報告中心</p>
               <h1 className="text-white font-bold text-3xl md:text-5xl leading-tight mb-4">歷史研究報告</h1>
               <p className="text-white/78 text-base md:text-lg leading-relaxed max-w-2xl">
                 回看 Morning Alpha 每個交易日的盤前判斷、關鍵劇本與驗證脈絡。
@@ -216,7 +231,7 @@ export default function ReportsCenter() {
             </div>
 
             <div className="ma-card-glass">
-              <p className="text-amber-200 text-[10px] uppercase tracking-[0.22em] font-semibold mb-2">Archive</p>
+              <p className="text-amber-200 text-[10px] tracking-[0.22em] font-semibold mb-2">累積報告</p>
               <p className="text-white text-4xl font-bold leading-none">{allReports.length}</p>
               <p className="text-white/60 text-sm mt-2">已載入研究報告</p>
               {latestReportDate && <p className="text-white/35 text-xs mt-4">最近更新：{latestReportDate}</p>}
@@ -228,7 +243,7 @@ export default function ReportsCenter() {
           <div className="ma-section-inner space-y-8 md:space-y-10">
             <div className="ma-card flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="ma-eyebrow mb-1">FILTER</p>
+                <p className="ma-eyebrow mb-1">顯示範圍</p>
                 <h2 className="ma-card-title">目前顯示最近 30 份報告</h2>
                 <p className="ma-body mt-1">保留既有資料排序與讀取邏輯；本頁未新增篩選條件。</p>
               </div>
@@ -240,7 +255,7 @@ export default function ReportsCenter() {
 
             <section>
               <div className="mb-4 md:mb-5">
-                <p className="ma-eyebrow mb-1">LATEST RESEARCH</p>
+                <p className="ma-eyebrow mb-1">最近報告</p>
                 <h2 className="ma-section-title">最近 7 天報告</h2>
               </div>
               {reports7.length > 0 ? (
@@ -257,7 +272,7 @@ export default function ReportsCenter() {
 
             <section>
               <div className="mb-4 md:mb-5">
-                <p className="ma-eyebrow mb-1">ARCHIVE</p>
+                <p className="ma-eyebrow mb-1">歷史紀錄</p>
                 <h2 className="ma-section-title">更多歷史報告</h2>
               </div>
               {reports30.length > 0 ? (
@@ -337,7 +352,7 @@ export default function ReportsCenter() {
                     <i className="ri-sword-line text-amber-300 text-sm" />
                     <span className="text-amber-200 text-xs font-semibold">AI 軍師解讀</span>
                   </div>
-                  <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{selectedReport.summary || selectedReport.ai_confidence_reason}</p>
+                  <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{publicReportText(selectedReport.summary || selectedReport.ai_confidence_reason)}</p>
                 </div>
               )}
 
@@ -346,13 +361,13 @@ export default function ReportsCenter() {
                   {(selectedReport.today_strategy.do || []).length > 0 && (
                     <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4">
                       <h4 className="text-emerald-200 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="ri-check-line" />該做</h4>
-                      <div className="space-y-1.5">{(selectedReport.today_strategy.do || []).map((item, idx) => <p key={idx} className="text-white/65 text-sm">{item}</p>)}</div>
+                      <div className="space-y-1.5">{(selectedReport.today_strategy.do || []).map((item, idx) => <p key={idx} className="text-white/65 text-sm">{publicReportText(item)}</p>)}</div>
                     </div>
                   )}
                   {(selectedReport.today_strategy.avoid || []).length > 0 && (
                     <div className="rounded-xl border border-rose-400/20 bg-rose-500/10 p-4">
                       <h4 className="text-rose-200 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="ri-close-line" />不該做</h4>
-                      <div className="space-y-1.5">{(selectedReport.today_strategy.avoid || []).map((item, idx) => <p key={idx} className="text-white/65 text-sm">{item}</p>)}</div>
+                      <div className="space-y-1.5">{(selectedReport.today_strategy.avoid || []).map((item, idx) => <p key={idx} className="text-white/65 text-sm">{publicReportText(item)}</p>)}</div>
                     </div>
                   )}
                 </div>
@@ -361,7 +376,7 @@ export default function ReportsCenter() {
               {(selectedReport.watch_sectors_json || []).length > 0 && (
                 <div>
                   <h4 className="text-white/45 text-xs font-semibold uppercase tracking-wider mb-2">今日主線</h4>
-                  <div className="space-y-2">{(selectedReport.watch_sectors_json || []).map((s, idx) => <div key={idx} className="flex items-center gap-2 text-sm text-white/70"><span className="text-white/35 text-xs">{idx + 1}.</span><span>{s.sector}</span>{s.direction && <span className="text-white/40 text-xs">({s.direction})</span>}</div>)}</div>
+                  <div className="space-y-2">{(selectedReport.watch_sectors_json || []).map((s, idx) => <div key={idx} className="flex items-center gap-2 text-sm text-white/70"><span className="text-white/35 text-xs">{idx + 1}.</span><span>{publicReportText(s.sector)}</span>{s.direction && <span className="text-white/40 text-xs">({publicReportText(s.direction)})</span>}</div>)}</div>
                 </div>
               )}
 
@@ -372,20 +387,20 @@ export default function ReportsCenter() {
               {!selectedV10Enabled && (selectedReport.focus_stock_json || []).length > 0 && (
                 <div>
                   <h4 className="text-white/45 text-xs font-semibold uppercase tracking-wider mb-2">資金觀察方向</h4>
-                  <div className="flex flex-wrap gap-2">{(selectedReport.focus_stock_json || []).map((s, idx) => <span key={idx} className="ma-badge ma-badge-neutral">{s.group}{s.direction && <span className="text-white/40">· {s.direction}</span>}</span>)}</div>
+                  <div className="flex flex-wrap gap-2">{(selectedReport.focus_stock_json || []).map((s, idx) => <span key={idx} className="ma-badge ma-badge-neutral">{publicReportText(s.group)}{s.direction && <span className="text-white/40">· {publicReportText(s.direction)}</span>}</span>)}</div>
                 </div>
               )}
 
               {(selectedReport.risk_factors_json || []).length > 0 && (
                 <div>
                   <h4 className="text-white/45 text-xs font-semibold uppercase tracking-wider mb-2">風險因素</h4>
-                  <div className="space-y-2">{(selectedReport.risk_factors_json || []).map((r, idx) => <div key={idx} className="flex items-center gap-2 text-sm"><span className={`text-xs font-medium ${r.level === 'high' ? 'text-rose-300' : r.level === 'medium' ? 'text-amber-300' : 'text-white/45'}`}>{r.level === 'high' ? '高' : r.level === 'medium' ? '中' : '低'}</span><span className="text-white/65">{r.title}</span></div>)}</div>
+                  <div className="space-y-2">{(selectedReport.risk_factors_json || []).map((r, idx) => <div key={idx} className="flex items-center gap-2 text-sm"><span className={`text-xs font-medium ${r.level === 'high' ? 'text-rose-300' : r.level === 'medium' ? 'text-amber-300' : 'text-white/45'}`}>{r.level === 'high' ? '高' : r.level === 'medium' ? '中' : '低'}</span><span className="text-white/65">{publicReportText(r.title)}</span></div>)}</div>
                 </div>
               )}
 
               {selectedReport.today_quote && (
                 <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                  <div className="flex items-start gap-2"><i className="ri-double-quotes-l text-amber-300/50 text-lg flex-shrink-0 mt-0.5" /><p className="text-amber-100/75 text-sm italic leading-relaxed">{selectedReport.today_quote}</p></div>
+                  <div className="flex items-start gap-2"><i className="ri-double-quotes-l text-amber-300/50 text-lg flex-shrink-0 mt-0.5" /><p className="text-amber-100/75 text-sm italic leading-relaxed">{publicReportText(selectedReport.today_quote)}</p></div>
                 </div>
               )}
             </div>

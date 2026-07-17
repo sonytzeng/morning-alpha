@@ -101,6 +101,16 @@ function firstText(...values: unknown[]): string {
   return '';
 }
 
+function publicPerformanceText(value: unknown): string {
+  return text(value)
+    .replace(/\bTAIEX\b/gi, '加權指數')
+    .replace(/\bTXF\b/gi, '台指期')
+    .replace(/\b2330\b(?!\s*[／/])/g, '2330／台積電')
+    .replace(/\bunknown\b/gi, '尚未取得')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function numberOrNull(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
@@ -219,8 +229,15 @@ function isCompleteClosingData(closing: Record<string, unknown> | null): boolean
   if (!closing || isPendingVerification(closing)) return false;
   const status = text(closing.status).toLowerCase();
   const dataStatus = text(closing.data_status).toLowerCase();
-  const hasActualClose = Boolean(asRecord(closing.actual_taiex_close)) || text(closing.actual_direction) !== '';
-  if (!hasActualClose) return false;
+  const actualTaiexClose = asRecord(closing.actual_taiex_close);
+  const actualDirection = text(closing.actual_direction).toLowerCase();
+  const hasNamedDirection = Boolean(actualDirection)
+    && !['unknown', 'pending', 'unavailable', 'n/a', '尚未取得', '待資料'].includes(actualDirection);
+  const hasVerifiableDirection = hasNamedDirection
+    || numberOrNull(closing.actual_taiex_change) !== null
+    || numberOrNull(actualTaiexClose?.change_percent) !== null
+    || numberOrNull(actualTaiexClose?.change) !== null;
+  if (!hasVerifiableDirection) return false;
   if (status === 'direction_completed_data_degraded' || dataStatus === 'degraded') return false;
   return ['completed', 'complete', 'ready'].includes(status) || dataStatus === 'complete';
 }
@@ -269,9 +286,9 @@ function buildEntry(row: ReportRecord): DecisionJournalEntry {
   const outcome: JournalOutcome = !futureReport && tradingDay && hasMorningReport && hasCompleteVerification ? rawOutcome : 'insufficient';
   const actualTaiex = asRecord(closing?.actual_taiex_close);
   const taiexChange = numberOrNull(closing?.actual_taiex_change) ?? numberOrNull(actualTaiex?.change_percent) ?? numberOrNull(actualTaiex?.change);
-  const right = listFromUnknown(closing?.what_was_right);
-  const wrong = listFromUnknown(closing?.what_was_wrong);
-  const adjustment = listFromAdjustment(closing?.tomorrow_adjustment);
+  const right = listFromUnknown(closing?.what_was_right).map(publicPerformanceText).filter(Boolean);
+  const wrong = listFromUnknown(closing?.what_was_wrong).map(publicPerformanceText).filter(Boolean);
+  const adjustment = listFromAdjustment(closing?.tomorrow_adjustment).map(publicPerformanceText).filter(Boolean);
   const statusNote = futureReport
     ? '未來日期報告，不納入績效'
     : !tradingDay
@@ -290,9 +307,9 @@ function buildEntry(row: ReportRecord): DecisionJournalEntry {
     hasMorningReport,
     hasClosingVerification,
     hasCompleteVerification,
-    marketBias: firstText(row.market_bias, ai.market_bias, closing?.opening_bias, '尚未結構化'),
-    closingSummary: firstText(closing?.actual_direction, closing?.verdict_label, directionFromChange(taiexChange)),
-    correctionSummary: firstText(wrong[0], adjustment[0], '本日尚未留下結構化修正'),
+    marketBias: publicPerformanceText(firstText(row.market_bias, ai.market_bias, closing?.opening_bias, '尚未結構化')),
+    closingSummary: publicPerformanceText(firstText(closing?.actual_direction, closing?.verdict_label, directionFromChange(taiexChange))),
+    correctionSummary: publicPerformanceText(firstText(wrong[0], adjustment[0], '本日尚未留下結構化修正')),
     confidence: numberOrNull(row.confidence_score) ?? numberOrNull(ai.confidence_score) ?? numberOrNull(closing?.opening_confidence),
     statusNote,
     whatWasRight: right,

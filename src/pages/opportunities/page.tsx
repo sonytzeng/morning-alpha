@@ -443,6 +443,7 @@ function OpportunitiesContent() {
     invalidation: publicOpportunityText(stock.invalidation),
   }));
   const completeEnoughStocks = safePresentedStocks.filter(({ reason, confirmation, invalidation }) => Boolean(reason || confirmation || invalidation));
+  const hasStrongBeneficiaryEvidence = strongOpportunityStocks.length > 0;
   const canonicalNarrative = buildCanonicalNarrative({ displayState: ds, ai: rawAI });
   const opportunityPresentation = buildDecisionPresentation({
     displayState: ds,
@@ -455,7 +456,9 @@ function OpportunitiesContent() {
     isTradingDay: ds.is_trading_day,
   });
   const nextRuntimeNode = selectNextRuntimeTimelineNode(runtimeTimeline);
-  const thesisTitle = publicOpportunityText(opportunityPresentation.mission.title) || '等待今日主線確認';
+  const thesisTitle = hasStrongBeneficiaryEvidence
+    ? publicOpportunityText(opportunityPresentation.mission.title) || '等待今日主線確認'
+    : '目前沒有足夠正向證據支持強受惠股';
   const thesisExplanation = publicOpportunityText(opportunityPresentation.mission.explanation);
   const checkpointLabel = nextRuntimeNode
     ? `${nextRuntimeNode.time}｜${nextRuntimeNode.label}`
@@ -463,9 +466,15 @@ function OpportunitiesContent() {
         opportunityPresentation.nextCheckpoint.time,
         publicOpportunityText(opportunityPresentation.nextCheckpoint.label),
       ].filter(Boolean).join('｜') || '等待下一個有效市場節點';
-  const opportunityHeroTitle = completeEnoughStocks.length > 0
-    ? `今天先追蹤 ${completeEnoughStocks.length} 檔，不急著買`
-    : '今天尚無足夠條件列入候選';
+  const opportunityHeroTitle = hasStrongBeneficiaryEvidence
+    ? `今天有 ${strongOpportunityStocks.length} 檔通過強受惠篩選`
+    : completeEnoughStocks.length > 0
+      ? `今天沒有強受惠股，先觀察 ${completeEnoughStocks.length} 檔`
+      : '今天沒有強受惠股，也沒有足夠條件列入觀察';
+  const opportunityListTitle = hasStrongBeneficiaryEvidence ? '受惠候選比較' : '觀察股比較';
+  const opportunityListDescription = hasStrongBeneficiaryEvidence
+    ? '依序比較入選理由、成立條件與取消條件；通過篩選仍不等於買進訊號。'
+    : '以下僅是等待確認的觀察股，不算今日受惠股，也不等於買進名單。';
 
   return (
     <div className="ma-page ma-pixel-page ma-opportunities-page flex flex-col overflow-x-hidden">
@@ -478,7 +487,9 @@ function OpportunitiesContent() {
               <div>
                 <p className="ma-pixel-eyebrow"><i className="ri-compass-3-line" aria-hidden="true" />今日機會篩選台 · {ds.reportDate}</p>
                 <h1>{opportunityHeroTitle}</h1>
-                <p>這裡是候選清單，不是買進名單。只有主線、個股與風險條件同時通過，才進入下一步。</p>
+                <p>{hasStrongBeneficiaryEvidence
+                  ? '這裡是通過證據門檻的受惠候選，仍不是買進名單。'
+                  : '正向證據尚未通過門檻；目前名單只用來等待確認，不把觀察股包裝成受惠股。'}</p>
               </div>
               <aside>
                 <span>當前確認節點</span>
@@ -509,22 +520,24 @@ function OpportunitiesContent() {
           </section>
 
           <section className="space-y-3">
-            <VisualSectionHeader icon="ri-stock-line" title="候選股比較" description="依序比較入選理由、成立條件與取消條件，不以題材名稱直接當成買進理由。" />
+            <VisualSectionHeader icon="ri-stock-line" title={opportunityListTitle} description={opportunityListDescription} />
 
             {completeEnoughStocks.length > 0 ? (
               <div className="ma-opportunity-grid">
                 {completeEnoughStocks.map(({ stock, reason, confirmation, invalidation }, index) => {
-                  const badge = opportunityBadge(stock.roleLabel);
+                  const badge = hasStrongBeneficiaryEvidence
+                    ? opportunityBadge(stock.roleLabel)
+                    : { label: '待確認', className: 'ma-badge-warning' };
                   return (
                   <article key={`${stock.symbol}-${stock.name}`} className="ma-opportunity-card">
                     <header>
-                      <div><span>候選 {String(index + 1).padStart(2, '0')}</span><small>{publicOpportunityText(stock.roleLabel) || '觀察候選'}</small></div>
+                      <div><span>{hasStrongBeneficiaryEvidence ? '候選' : '觀察'} {String(index + 1).padStart(2, '0')}</span><small>{hasStrongBeneficiaryEvidence ? publicOpportunityText(stock.roleLabel) || '受惠候選' : '尚未通過受惠門檻'}</small></div>
                       <span className={`ma-badge ${badge.className}`}>{badge.label}</span>
                     </header>
                     <h3><span>{stock.symbol}</span>{stock.name}</h3>
                     <p className="ma-opportunity-card-state"><i className="ri-time-line" aria-hidden="true" />目前維持觀察，等待 {checkpointLabel}</p>
                     <dl className="ma-opportunity-details">
-                      <div><dt>為什麼列入候選</dt><dd>{reason || '入選理由資料尚未完整。'}</dd></div>
+                      <div><dt>{hasStrongBeneficiaryEvidence ? '為什麼列入候選' : '為什麼先觀察'}</dt><dd>{reason || '觀察理由資料尚未完整。'}</dd></div>
                       <div><dt>成立前要看到</dt><dd>{confirmation || '等待下一個有效市場節點補齊確認條件。'}</dd></div>
                       <div><dt>什麼情況取消</dt><dd>{invalidation || '取消條件資料尚未完整，暫不升級判斷。'}</dd></div>
                     </dl>

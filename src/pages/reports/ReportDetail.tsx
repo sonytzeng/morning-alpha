@@ -31,12 +31,61 @@ function safeArray(val: unknown): string[] {
   if (!Array.isArray(val)) return [];
   return val.map(String).filter(Boolean);
 }
+
+function publicReportText(value: unknown): string {
+  return String(value ?? '')
+    .trim()
+    .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
+    .replace(/\bMEMORY\b/gi, '記憶體')
+    .replace(/\bELECTRONICS\b/gi, '電子')
+    .replace(/\bFINANCIAL\b/gi, '金融')
+    .replace(/\bDEFENSIVE\b/gi, '防禦型族群')
+    .replace(/\bAI[ _-]?SERVER\b/gi, 'AI 伺服器')
+    .replace(/\bTAIEX\b/gi, '加權指數')
+    .replace(/\bTXF\b/gi, '台指期')
+    .replace(/\bADR\b/gi, '海外存託憑證')
+    .replace(/\bunknown\b/gi, '尚未取得')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function hasVerifiableClosingData(raw: Record<string, unknown> | null | undefined): boolean {
+  const ai = raw || {};
+  const v2 = asRecord(ai.closing_verification_v2);
+  const closing = Object.keys(v2).length > 0 ? v2 : asRecord(ai.closing_verification);
+  const taiex = asRecord(closing.actual_taiex_close);
+  const status = String(closing.status ?? closing.verification_status ?? '').trim().toLowerCase();
+  const dataStatus = String(closing.data_status ?? '').trim().toLowerCase();
+  const direction = String(closing.actual_direction ?? '').trim().toLowerCase();
+  const hasNamedDirection = Boolean(direction)
+    && !['unknown', 'pending', 'unavailable', 'n/a', '尚未取得', '待資料'].includes(direction);
+  const change = numberOrNull(closing.actual_taiex_change)
+    ?? numberOrNull(taiex.change_percent)
+    ?? numberOrNull(taiex.change);
+
+  return ['completed', 'complete', 'ready', 'done'].includes(status)
+    && !['degraded', 'insufficient', 'pending'].includes(dataStatus)
+    && (hasNamedDirection || change !== null);
+}
+
 function translateSector(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
   const skipList = ['market', 'general', 'unknown', 'null', 'undefined'];
   if (skipList.includes(trimmed.toLowerCase())) return null;
-  return SECTOR_NAME_MAP[trimmed] || trimmed;
+  return SECTOR_NAME_MAP[trimmed] || publicReportText(trimmed);
 }
 function hasValidSectors(list: string[]): boolean {
   return list.map(translateSector).filter(Boolean).length > 0;
@@ -46,20 +95,20 @@ function deriveCheckpoints(report: Report): { check0915: string; check1030: stri
   const bias = report.market_bias || '';
   if (bias.includes('偏多')) {
     return {
-      check0915: '確認 TAIEX、2330、TXF 開盤方向是否與盤前偏多假設一致。若開盤漲幅超過 0.5%，劇本初步成立。',
+      check0915: '確認加權指數、台積電與台指期開盤方向是否與盤前偏多假設一致。若開盤漲幅超過 0.5%，劇本初步成立。',
       check1030: '觀察半導體、AI、金融等主流族群是否延續強勢。若主流族群轉弱，偏多判斷需下修。',
       check1300: '確認今日漲勢是否由量能支撐，避免只有開高後轉弱。若指數回到開盤價以下，改為中性觀察。',
     };
   }
   if (bias.includes('偏空')) {
     return {
-      check0915: '確認 TAIEX、2330、TXF 開盤是否與盤前偏空方向一致。若開盤跌幅超過 0.5%，劇本初步成立。',
+      check0915: '確認加權指數、台積電與台指期開盤是否與盤前偏空方向一致。若開盤跌幅超過 0.5%，劇本初步成立。',
       check1030: '觀察是否有族群逆勢轉強。若有族群帶量上攻，偏空判斷需重新評估。',
       check1300: '確認今日跌勢是否有實質賣壓，還是僅為短線獲利了結。若有明顯拉回，改為中性觀察。',
     };
   }
   return {
-    check0915: '確認 TAIEX、2330、TXF 開盤方向是否明確。若開盤後方向混沌，今日宜觀望。',
+    check0915: '確認加權指數、台積電與台指期開盤方向是否明確。若開盤後方向混沌，今日宜觀望。',
     check1030: '觀察半導體、AI、金融等主流族群是否有明確方向。若無明確主流帶動，維持保守判斷。',
     check1300: '觀察尾盤是否有方向性變化。若維持震盪，今日中性判斷成立。',
   };
@@ -76,9 +125,9 @@ export default function ReportDetail() {
   const effectiveReportDate = report?.report_date || reportDate;
   const isToday = effectiveReportDate === taipeiToday || (!reportDate || reportDate === ':reportDate' || reportDate === 'undefined' || reportDate === 'null') && report?.report_date === taipeiToday;
 
-  // V8: Close verification from ai_strategy_json only
+  // A closing field can be a plan or placeholder; only a real market outcome is complete.
   const strategy: ParsedAIStrategy = parseAIStrategy(report);
-  const hasClosingData = !!strategy.closing_feedback_plan || !!strategy.raw?.['closing_validation'];
+  const hasClosingData = hasVerifiableClosingData(strategy.raw);
 
   const now = getTaipeiNow();
   const hour = now.getHours();
@@ -163,7 +212,7 @@ export default function ReportDetail() {
   const displayBias = getMarketBiasLabel(report.market_bias, report.confidence_score ?? 0);
   const canWatchRaw = safeArray(report.can_watch);
   const avoidRaw = safeArray(report.avoid_today);
-  const keyDrivers = safeArray(report.key_drivers);
+  const keyDrivers = safeArray(report.key_drivers).map(publicReportText);
   const checkpoints = deriveCheckpoints(report);
   const rawAI = (strategy.raw || {}) as Record<string, unknown>;
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
@@ -174,7 +223,7 @@ export default function ReportDetail() {
   const avoidSectors = avoidRaw.map(translateSector).filter(Boolean) as string[];
 
   // Script reasons
-  const scriptWhy = report.ai_confidence_reason || report.summary || '盤前訊號來自多個數據源的一致性分析。';
+  const scriptWhy = publicReportText(report.ai_confidence_reason || report.summary || '盤前訊號來自多個數據源的一致性分析。');
   const scriptValidate = [
     keyDrivers.length > 0 ? `盤前主線 ${keyDrivers.slice(0, 3).join('、')} 開盤後是否延續` : null,
     watchSectors.length > 0 ? `受惠族群 ${watchSectors.slice(0, 2).join('、')} 是否有資金流入` : null,
@@ -357,7 +406,7 @@ export default function ReportDetail() {
               {(report.summary || report.today_summary) && (
                 <div className="bg-amber-500/[0.04] border border-amber-500/15 rounded-xl p-4 mb-3">
                   <p className="text-amber-300/70 text-xs font-medium mb-2 flex items-center gap-1.5"><i className="ri-file-text-line" /> 今日摘要</p>
-                  <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{report.today_summary || report.summary}</p>
+                  <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{publicReportText(report.today_summary || report.summary)}</p>
                 </div>
               )}
 
@@ -408,7 +457,7 @@ export default function ReportDetail() {
                   </div>
                 ) : (
                   <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-white/65 text-sm leading-relaxed">目前沒有額外失效條件，主要觀察 TAIEX、2330、TXF 是否同步轉弱。</p>
+                    <p className="text-white/65 text-sm leading-relaxed">目前沒有額外失效條件，主要觀察加權指數、台積電與台指期是否同步轉弱。</p>
                   </div>
                 )}
               </div>
@@ -442,7 +491,7 @@ export default function ReportDetail() {
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {keyDrivers.map((d, idx) => (
                     <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-white/[0.04] border border-white/10 rounded-lg text-white/65 text-[10px]">
-                      <i className="ri-flashlight-line text-amber-400/60" />{d}
+                      <i className="ri-flashlight-line text-amber-400/60" />{publicReportText(d)}
                     </span>
                   ))}
                 </div>
@@ -508,7 +557,7 @@ export default function ReportDetail() {
                 <div className="space-y-3">
                   {strategy.important_news.slice(0, 5).map((n: Record<string, unknown>, idx: number) => (
                     <div key={idx} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                      <p className="text-white/75 text-sm font-medium leading-relaxed">{String(n.title || n.headline || '')}</p>
+                      <p className="text-white/75 text-sm font-medium leading-relaxed">{publicReportText(n.title || n.headline || '')}</p>
                       <div className="flex items-center gap-3 flex-wrap text-[10px] mt-1.5">
                         {n.source && <span className="text-white/35">{String(n.source)}</span>}
                       </div>
@@ -532,7 +581,7 @@ export default function ReportDetail() {
                   <div className="mb-3">
                     <h3 className="text-white/50 text-xs font-medium mb-2 flex items-center gap-1.5"><i className="ri-brain-line text-emerald-400/60" /> 心理狀態</h3>
                     <div className="bg-emerald-500/[0.04] border border-emerald-500/15 rounded-xl p-4">
-                      <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{report.ai_psychology}</p>
+                      <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{publicReportText(report.ai_psychology)}</p>
                     </div>
                   </div>
                 )}
@@ -540,7 +589,7 @@ export default function ReportDetail() {
                   <div>
                     <h3 className="text-white/50 text-xs font-medium mb-2 flex items-center gap-1.5"><i className="ri-user-heart-line text-amber-400/60" /> 散戶提醒</h3>
                     <div className="bg-amber-500/[0.04] border border-amber-500/15 rounded-xl p-4">
-                      <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{report.ai_retail_reminder}</p>
+                      <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{publicReportText(report.ai_retail_reminder)}</p>
                     </div>
                   </div>
                 )}
@@ -592,7 +641,7 @@ export default function ReportDetail() {
                 <div className="mb-4">
                   <h3 className="text-rose-300 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="ri-alert-line" /> 風險提醒</h3>
                   <div className="bg-red-500/[0.04] border border-red-500/15 rounded-xl p-4">
-                    <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{report.risk_reason}</p>
+                    <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{publicReportText(report.risk_reason)}</p>
                   </div>
                 </div>
               )}

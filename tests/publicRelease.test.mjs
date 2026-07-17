@@ -18,6 +18,10 @@ const pricing = read('src/pages/pricing/Pricing.tsx');
 const earlyAccessForm = read('src/components/feature/EarlyAccessForm.tsx');
 const memberNote = read('src/pages/member-note/page.tsx');
 const performance = read('src/pages/performance/page.tsx');
+const verification = read('src/pages/verification/page.tsx');
+const reportsCenter = read('src/pages/reports/ReportsCenter.tsx');
+const reportDetail = read('src/pages/reports/ReportDetail.tsx');
+const observationSection = read('src/components/v11/V11ObservationSection.tsx');
 const openingMarketRadar = read('supabase/functions/opening-market-radar/index.ts');
 
 const publicSourceFiles = [
@@ -215,13 +219,16 @@ test('today report cards show complete text and adapt to the actual item count',
 });
 
 test('opportunities is a candidate screening flow with complete public copy', () => {
-  for (const label of ['今日機會篩選台', '這裡是候選清單，不是買進名單', '主線先成立', '個股要承接', '風險不能破', '候選股比較', '為什麼列入候選', '成立前要看到', '什麼情況取消']) {
+  for (const label of ['今日機會篩選台', '不把觀察股包裝成受惠股', '主線先成立', '個股要承接', '風險不能破', '觀察股比較', '為什麼先觀察', '成立前要看到', '什麼情況取消']) {
     assert.match(opportunities, new RegExp(label), `opportunities is missing screening copy: ${label}`);
   }
   assert.doesNotMatch(opportunities, />09:30 確認</);
   assert.match(opportunities, /selectNextRuntimeTimelineNode\(runtimeTimeline\)/);
   assert.match(opportunities, /replace\(\/\\bTAIEX\\b\/gi, '加權指數'\)/);
   assert.match(opportunities, /replace\(\/\\bTXF\\b\/gi, '台指期'\)/);
+  assert.match(opportunities, /hasStrongBeneficiaryEvidence/);
+  assert.match(opportunities, /今天沒有強受惠股，先觀察/);
+  assert.match(opportunities, /不把觀察股包裝成受惠股/);
   const css = read('src/index.css');
   const cardRule = css.match(/\.ma-opportunities-page \.ma-opportunity-card \{([^}]*)\}/)?.[1] || '';
   const detailRule = css.match(/\.ma-opportunities-page \.ma-opportunity-details > div > dd \{([^}]*)\}/)?.[1] || '';
@@ -298,6 +305,43 @@ test('core product pages have distinct jobs instead of repeated dashboard surfac
   assert.match(today, /ma-today-v4-workbench/);
   assert.match(opportunities, /ma-opportunities-v2/);
   assert.match(warRoom, /ma-war-room-v3/);
+});
+
+test('member note translates research enums and checkpoint diagnostics for readers', () => {
+  assert.match(memberNote, /replace\(\/\\bSEMICONDUCTOR\\b\/gi, '半導體'\)/);
+  assert.match(memberNote, /開盤資料不完整：加權指數、台指期與台積電快照尚未在同一有效時間內到齊/);
+});
+
+test('performance excludes outcomes that have no verifiable closing direction', () => {
+  assert.match(performance, /const hasVerifiableDirection/);
+  assert.match(performance, /const hasNamedDirection/);
+  assert.match(performance, /numberOrNull\(actualTaiexClose\?\.change_percent\)/);
+  assert.match(performance, /if \(!hasVerifiableDirection\) return false/);
+  assert.match(performance, /publicPerformanceText/);
+});
+
+test('verification is a public fail-closed audit instead of an internal diagnostics page', () => {
+  for (const label of ['今日驗證', '盤前假設', '盤中進度', '收盤結果', '驗證規則', '資料未完整前不判定命中', '必須取得真實收盤方向或漲跌幅']) {
+    assert.match(verification, new RegExp(label), `verification is missing public audit copy: ${label}`);
+  }
+  for (const internalName of ['FINNHUB', 'SUPABASE_REPORTS', 'close-market-review', 'DATA SOURCE CHECK', 'SCRIPT VERIFICATION', 'OPENAI']) {
+    assert.doesNotMatch(verification, new RegExp(internalName, 'i'), `verification exposes an internal name: ${internalName}`);
+  }
+  assert.match(verification, /hasActualOutcome/);
+  assert.match(verification, /\['completed', 'complete', 'ready', 'done'\]\.includes\(status\)/);
+});
+
+test('report pages translate public market labels and require a real closing outcome', () => {
+  for (const label of ['>REPORTS CENTER<', '>Report<', '>FILTER<', '>LATEST RESEARCH<', '>ARCHIVE<']) {
+    assert.doesNotMatch(reportsCenter, new RegExp(label, 'i'), `reports center renders an untranslated label: ${label}`);
+  }
+  assert.match(reportsCenter, /publicReportText/);
+  assert.match(reportDetail, /hasVerifiableClosingData/);
+  assert.match(reportDetail, /hasNamedDirection \|\| change !== null/);
+  assert.doesNotMatch(reportDetail, /!!strategy\.closing_feedback_plan/);
+  assert.match(observationSection, /步驟 \$\{step\}/);
+  assert.match(observationSection, /盤前觀察/);
+  assert.match(observationSection, /publicObservationText/);
 });
 
 test('home uses canonical server payload and labels historical fallback', () => {

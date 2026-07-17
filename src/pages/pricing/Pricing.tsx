@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import EarlyAccessForm from '@/components/feature/EarlyAccessForm';
 import Footer from '@/components/feature/Footer';
 import Navbar from '@/components/feature/Navbar';
@@ -21,9 +21,20 @@ const memberFeatures = [
 ];
 
 export default function Pricing() {
+  const location = useLocation();
+
   useEffect(() => {
     trackPageView('/pricing');
   }, []);
+
+  useEffect(() => {
+    if (!location.hash) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(location.hash.slice(1));
+      target?.scrollIntoView({ block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.hash]);
 
   return (
     <div className="ma-page ma-pricing-v2 flex min-h-screen flex-col overflow-x-hidden">

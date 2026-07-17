@@ -1,5 +1,6 @@
 import type { SubscriptionTier } from '@/types/subscription';
 import { getTierLabel } from '@/services/entitlementService';
+import { Link } from 'react-router-dom';
 
 interface PaywallCardProps {
   title: string;
@@ -28,13 +29,7 @@ export default function PaywallCard({
 }: PaywallCardProps) {
   const isDark = tone === 'dark';
   const targetHref = ctaHref || getDefaultCtaHref(requiredTier);
-  const handleCtaClick = () => {
-    if (onCtaClick) {
-      onCtaClick();
-      return;
-    }
-    window.location.href = targetHref;
-  };
+  const ctaClassName = `mt-5 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isDark ? 'bg-amber-400 text-slate-950 hover:bg-amber-300' : 'bg-foreground-900 text-white hover:bg-foreground-800'}`;
 
   return (
     <div className={`rounded-2xl border p-5 md:p-6 ${isDark ? 'bg-slate-900/80 border-amber-400/20' : 'bg-amber-50 border-amber-200'}`}>
@@ -60,14 +55,17 @@ export default function PaywallCard({
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={handleCtaClick}
-            className={`mt-5 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isDark ? 'bg-amber-400 text-slate-950 hover:bg-amber-300' : 'bg-foreground-900 text-white hover:bg-foreground-800'}`}
-          >
-            {ctaText}
-            <i className="ri-arrow-right-line"></i>
-          </button>
+          {onCtaClick ? (
+            <button type="button" onClick={onCtaClick} className={ctaClassName}>
+              {ctaText}
+              <i className="ri-arrow-right-line" aria-hidden="true" />
+            </button>
+          ) : (
+            <Link to={targetHref} className={ctaClassName}>
+              {ctaText}
+              <i className="ri-arrow-right-line" aria-hidden="true" />
+            </Link>
+          )}
         </div>
       </div>
     </div>

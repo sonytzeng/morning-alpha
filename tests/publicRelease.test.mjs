@@ -253,7 +253,11 @@ test('membership conversion route is public, honest, and records a real submissi
   assert.doesNotMatch(pricing, /台中 · 上班族投資人|台北 · 三年股齡|高雄 · 新手投資人|新竹 · 科技業/);
   assert.doesNotMatch(pricing, /data-readdy-form|readdy\.ai\/api\/form/);
   assert.doesNotMatch(earlyAccessForm, /data-readdy-form|readdy\.ai\/api\/form/);
-  assert.match(read('src/components/paywall/PaywallCard.tsx'), /\/pricing#early-access/);
+  const paywallCard = read('src/components/paywall/PaywallCard.tsx');
+  assert.match(paywallCard, /\/pricing#early-access/);
+  assert.match(paywallCard, /<Link to=\{targetHref\}/);
+  assert.doesNotMatch(paywallCard, /window\.location|window\.open|target=["']_blank/);
+  assert.match(pricing, /document\.getElementById\(location\.hash\.slice\(1\)\)/);
 });
 
 test('core product pages have distinct jobs instead of repeated dashboard surfaces', () => {

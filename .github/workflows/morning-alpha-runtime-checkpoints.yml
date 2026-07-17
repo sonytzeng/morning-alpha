@@ -1,0 +1,117 @@
+name: Morning Alpha runtime checkpoints
+
+on:
+  schedule:
+    # GitHub cron uses UTC. These are 10:30, 13:00 and 14:20 Asia/Taipei.
+    - cron: '30 2 * * 1-5'
+    - cron: '0 5 * * 1-5'
+    - cron: '20 6 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      checkpoint:
+        description: Runtime checkpoint to execute
+        required: true
+        type: choice
+        options:
+          - '1030'
+          - '1300'
+          - closing
+
+permissions:
+  contents: read
+
+concurrency:
+  group: morning-alpha-runtime-${{ github.event.schedule || inputs.checkpoint || github.run_id }}
+  cancel-in-progress: false
+
+env:
+  FUNCTIONS_BASE_URL: https://cttfzgvhiewfckydcrci.supabase.co/functions/v1
+
+jobs:
+  resolve-checkpoint:
+    runs-on: ubuntu-latest
+    outputs:
+      checkpoint: ${{ steps.resolve.outputs.checkpoint }}
+    steps:
+      - name: Resolve requested checkpoint
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          MANUAL_CHECKPOINT: ${{ inputs.checkpoint }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            checkpoint="$MANUAL_CHECKPOINT"
+          elif [ "$EVENT_SCHEDULE" = "30 2 * * 1-5" ]; then
+            checkpoint="1030"
+          elif [ "$EVENT_SCHEDULE" = "0 5 * * 1-5" ]; then
+            checkpoint="1300"
+          elif [ "$EVENT_SCHEDULE" = "20 6 * * 1-5" ]; then
+            checkpoint="closing"
+          else
+            echo "Unsupported schedule: $EVENT_SCHEDULE" >&2
+            exit 1
+          fi
+          echo "checkpoint=$checkpoint" >> "$GITHUB_OUTPUT"
+
+  intraday:
+    needs: resolve-checkpoint
+    if: needs.resolve-checkpoint.outputs.checkpoint == '1030' || needs.resolve-checkpoint.outputs.checkpoint == '1300'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require runtime secret
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: test -n "$CRON_SECRET"
+
+      - name: Fetch fresh intraday snapshots
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/fetch-market-data.json"
+          curl --silent --show-error --fail-with-body \
+            --request POST "$FUNCTIONS_BASE_URL/fetch-market-data-v10" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{"phase":"intraday"}' \
+            --output "$response_file"
+          jq -e '.success == true and .phase == "intraday" and .snapshot_upserted_count >= 2' "$response_file" >/dev/null
+
+      - name: Evaluate checkpoint with the fresh snapshot
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          CHECKPOINT: ${{ needs.resolve-checkpoint.outputs.checkpoint }}
+        run: |
+          response_file="$RUNNER_TEMP/opening-market-radar.json"
+          curl --silent --show-error --fail-with-body \
+            --request POST "$FUNCTIONS_BASE_URL/opening-market-radar" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data "{\"checkpoint\":\"$CHECKPOINT\"}" \
+            --output "$response_file"
+          jq -e '.success == true and .checkpoint == env.CHECKPOINT' "$response_file" >/dev/null
+
+  closing:
+    needs: resolve-checkpoint
+    if: needs.resolve-checkpoint.outputs.checkpoint == 'closing'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Require runtime secret
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: test -n "$CRON_SECRET"
+
+      - name: Build closing verification from the 14:15 snapshot
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/close-market-review.json"
+          curl --silent --show-error --fail-with-body \
+            --request POST "$FUNCTIONS_BASE_URL/close-market-review" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{}' \
+            --output "$response_file"
+          jq -e '.success == true and (.action == "written_and_synced" or .action == "skipped_idempotent" or .pending == true or .skipped == true)' "$response_file" >/dev/null

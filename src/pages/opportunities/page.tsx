@@ -6,7 +6,9 @@ import ErrorBoundary from '@/components/base/ErrorBoundary';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { trackPageView } from '@/utils/analytics';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
-import { dedupePresentedOpportunities } from '@/lib/decisionPresentation';
+import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
+import { buildDecisionPresentation, dedupePresentedOpportunities } from '@/lib/decisionPresentation';
+import { buildRuntimeDecisionTimeline, selectNextRuntimeTimelineNode } from '@/lib/runtimeDecisionTimeline';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 
 // ═══════════════════════════════════════════════════
@@ -71,19 +73,24 @@ function compactText(value: unknown): string {
 
 const UNSAFE_OPPORTUNITY_TEXT = /event[\s_-]*score|market[\s_-]*score|ai[\s_-]*chain|undefined|null|確認訊號.{0,2}提供|取消條件.{0,2}提供|\b[a-z][a-z0-9]*_[a-z0-9_]+\b/i;
 
-function firstSentence(value: string | undefined): string | undefined {
+function publicOpportunityText(value: string | undefined): string | undefined {
   const text = value?.trim() || '';
   if (!text || UNSAFE_OPPORTUNITY_TEXT.test(text)) return undefined;
-  const sentence = text.match(/^.*?[。！？!?](?:\s|$)/)?.[0]?.trim() || text;
-  return sentence.length > 76 ? `${sentence.slice(0, 75).trim()}…` : sentence;
+  return text
+    .replace(/\bTAIEX\b/gi, '加權指數')
+    .replace(/\bTXF\b/gi, '台指期')
+    .replace(/\bAI[ _-]?SERVER\b/gi, 'AI 伺服器')
+    .replace(/\b2330\b(?!\s*[／/])/g, '2330／台積電')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function opportunityBadge(roleLabel: string | undefined) {
   const role = roleLabel?.trim() || '';
-  if (/停止|排除|風險|失效/.test(role)) return { label: '停止', className: 'ma-badge-danger' };
-  if (/確認|成立/.test(role)) return { label: '確認', className: 'ma-badge-success' };
-  if (/觀察|候選|等待/.test(role)) return { label: '觀察', className: 'ma-badge-warning' };
-  return { label: '資料待補', className: 'ma-badge-neutral' };
+  if (/停止|排除|風險|失效/.test(role)) return { label: '停止觀察', className: 'ma-badge-danger' };
+  if (/確認|成立/.test(role)) return { label: '條件成立', className: 'ma-badge-success' };
+  if (/觀察|候選|等待|今日主線|次要主線|資金輪動|代表股/.test(role)) return { label: '觀察中', className: 'ma-badge-warning' };
+  return { label: '待補資料', className: 'ma-badge-neutral' };
 }
 
 
@@ -431,51 +438,96 @@ function OpportunitiesContent() {
   );
   const safePresentedStocks = presentedStocks.map((stock) => ({
     stock,
-    reason: firstSentence(stock.oneLineReason),
-    confirmation: firstSentence(stock.confirmation),
-    invalidation: firstSentence(stock.invalidation),
+    reason: publicOpportunityText(stock.oneLineReason),
+    confirmation: publicOpportunityText(stock.confirmation),
+    invalidation: publicOpportunityText(stock.invalidation),
   }));
   const completeEnoughStocks = safePresentedStocks.filter(({ reason, confirmation, invalidation }) => Boolean(reason || confirmation || invalidation));
+  const canonicalNarrative = buildCanonicalNarrative({ displayState: ds, ai: rawAI });
+  const opportunityPresentation = buildDecisionPresentation({
+    displayState: ds,
+    narrative: canonicalNarrative,
+  });
+  const runtimeTimeline = buildRuntimeDecisionTimeline({
+    ai: rawAI,
+    hasReport: true,
+    reportGeneratedAt: ds.reportDate,
+    isTradingDay: ds.is_trading_day,
+  });
+  const nextRuntimeNode = selectNextRuntimeTimelineNode(runtimeTimeline);
+  const thesisTitle = publicOpportunityText(opportunityPresentation.mission.title) || '等待今日主線確認';
+  const thesisExplanation = publicOpportunityText(opportunityPresentation.mission.explanation);
+  const checkpointLabel = nextRuntimeNode
+    ? `${nextRuntimeNode.time}｜${nextRuntimeNode.label}`
+    : [
+        opportunityPresentation.nextCheckpoint.time,
+        publicOpportunityText(opportunityPresentation.nextCheckpoint.label),
+      ].filter(Boolean).join('｜') || '等待下一個有效市場節點';
+  const opportunityHeroTitle = completeEnoughStocks.length > 0
+    ? `今天先追蹤 ${completeEnoughStocks.length} 檔，不急著買`
+    : '今天尚無足夠條件列入候選';
 
   return (
     <div className="ma-page ma-pixel-page ma-opportunities-page flex flex-col overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1 overflow-x-hidden">
-        <section className="ma-pixel-hero">
-          <div className="ma-pixel-content ma-pixel-hero-grid">
-            <div className="ma-pixel-hero-copy">
-              <p className="ma-pixel-eyebrow"><i className="ri-compass-3-line" aria-hidden="true" />今日機會 · {ds.reportDate}</p>
-              <h1>精選機會清單</h1>
-              <p className="ma-pixel-hero-subtitle">理由、確認時機與放棄條件。</p>
+        <section className="ma-opportunities-v2-hero">
+          <div className="ma-pixel-content">
+            <div className="ma-opportunities-v2-hero-grid">
+              <div>
+                <p className="ma-pixel-eyebrow"><i className="ri-compass-3-line" aria-hidden="true" />今日機會篩選台 · {ds.reportDate}</p>
+                <h1>{opportunityHeroTitle}</h1>
+                <p>這裡是候選清單，不是買進名單。只有主線、個股與風險條件同時通過，才進入下一步。</p>
+              </div>
+              <aside>
+                <span>當前確認節點</span>
+                <strong>{checkpointLabel}</strong>
+                <p>節點完成前，所有股票維持觀察。</p>
+              </aside>
             </div>
-            <aside className="ma-pixel-checkpoint-card">
-              <p>今日精選</p>
-              <strong>{completeEnoughStocks.length} 檔</strong>
-              <Link to="/member-note" className="ma-pixel-text-link">查看完整研究筆記<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
-            </aside>
+            <ol className="ma-opportunities-v2-funnel" aria-label="今日受惠股篩選流程">
+              <li><span>01</span><strong>主線先成立</strong><small>先確認市場方向</small></li>
+              <li><span>02</span><strong>個股要承接</strong><small>再看量價與代表股</small></li>
+              <li><span>03</span><strong>風險不能破</strong><small>失效就取消觀察</small></li>
+            </ol>
           </div>
         </section>
 
-        <div className="ma-pixel-content ma-pixel-page-sections">
+        <div className="ma-pixel-content ma-pixel-page-sections ma-opportunities-v2-sections">
+          <section className="ma-opportunities-v2-thesis" aria-labelledby="opportunity-thesis-title">
+            <div>
+              <p className="ma-pixel-eyebrow">今日主線</p>
+              <h2 id="opportunity-thesis-title">{thesisTitle}</h2>
+              {thesisExplanation && <p>{thesisExplanation}</p>}
+            </div>
+            <dl>
+              <div><dt>目前策略</dt><dd>只觀察，不追價</dd></div>
+              <div><dt>入選門檻</dt><dd>主線與個股訊號同向</dd></div>
+              <div><dt>重新判斷</dt><dd>{checkpointLabel}</dd></div>
+            </dl>
+          </section>
+
           <section className="space-y-3">
-            <VisualSectionHeader icon="ri-stock-line" title="今天要確認的股票" description="理由、確認與取消條件使用同一個閱讀順序。" />
+            <VisualSectionHeader icon="ri-stock-line" title="候選股比較" description="依序比較入選理由、成立條件與取消條件，不以題材名稱直接當成買進理由。" />
 
             {completeEnoughStocks.length > 0 ? (
               <div className="ma-opportunity-grid">
-                {completeEnoughStocks.map(({ stock, reason, confirmation, invalidation }) => {
+                {completeEnoughStocks.map(({ stock, reason, confirmation, invalidation }, index) => {
                   const badge = opportunityBadge(stock.roleLabel);
                   return (
                   <article key={`${stock.symbol}-${stock.name}`} className="ma-opportunity-card">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-base font-bold text-foreground-900">{stock.symbol} {stock.name}</h3>
+                    <header>
+                      <div><span>候選 {String(index + 1).padStart(2, '0')}</span><small>{publicOpportunityText(stock.roleLabel) || '觀察候選'}</small></div>
                       <span className={`ma-badge ${badge.className}`}>{badge.label}</span>
-                    </div>
-                    <div className="ma-opportunity-details">
-                      {reason && <div className="pb-3"><p className="font-semibold text-foreground-400">今天值得看的原因</p><p className="mt-1.5 text-foreground-700">{reason}</p></div>}
-                      {confirmation && <div className="py-3"><p className="font-semibold text-foreground-400">09:30 確認</p><p className="mt-1.5 text-foreground-700">{confirmation}</p></div>}
-                      {invalidation && <div className="pt-3"><p className="font-semibold text-rose-200/80">今天放棄條件</p><p className="mt-1.5 text-foreground-700">{invalidation}</p></div>}
-                    </div>
+                    </header>
+                    <h3><span>{stock.symbol}</span>{stock.name}</h3>
+                    <p className="ma-opportunity-card-state"><i className="ri-time-line" aria-hidden="true" />目前維持觀察，等待 {checkpointLabel}</p>
+                    <dl className="ma-opportunity-details">
+                      <div><dt>為什麼列入候選</dt><dd>{reason || '入選理由資料尚未完整。'}</dd></div>
+                      <div><dt>成立前要看到</dt><dd>{confirmation || '等待下一個有效市場節點補齊確認條件。'}</dd></div>
+                      <div><dt>什麼情況取消</dt><dd>{invalidation || '取消條件資料尚未完整，暫不升級判斷。'}</dd></div>
+                    </dl>
                   </article>
                   );
                 })}
@@ -487,9 +539,14 @@ function OpportunitiesContent() {
             )}
           </section>
 
-          <p className="text-foreground-300 text-[10px] text-center leading-relaxed">
-            本平台提供市場資訊整理與情緒判讀參考，不構成投資建議。所有內容由 Morning Alpha 產生。
-          </p>
+          <nav className="ma-opportunities-v2-next" aria-label="今日受惠股後續頁面">
+            <div><strong>接著怎麼看</strong><span>先回到判斷，再追蹤盤中證據。</span></div>
+            <div>
+              <Link to="/report/today">今日判斷<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+              <Link to="/war-room">盤中追蹤<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+              <Link to="/member-note">完整研究<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+            </div>
+          </nav>
         </div>
       </main>
 

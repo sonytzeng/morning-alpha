@@ -12,6 +12,7 @@ const navbar = read('src/components/feature/Navbar.tsx');
 const footer = read('src/components/feature/Footer.tsx');
 const home = read('src/pages/home/page.tsx');
 const today = read('src/pages/report/TodayReport.tsx');
+const opportunities = read('src/pages/opportunities/page.tsx');
 
 const publicSourceFiles = [
   'src/pages/home/page.tsx',
@@ -181,6 +182,22 @@ test('today report cards show complete text and adapt to the actual item count',
   assert.doesNotMatch(stockRule, /line-clamp|overflow:\s*hidden|display:\s*-webkit-box/);
   assert.match(css, /\.ma-today-page \.ma-today-v3-checklist\.is-single/);
   assert.match(css, /\.ma-today-page \.ma-today-v3-stock-grid\.is-count-2/);
+});
+
+test('opportunities is a candidate screening flow with complete public copy', () => {
+  for (const label of ['今日機會篩選台', '這裡是候選清單，不是買進名單', '主線先成立', '個股要承接', '風險不能破', '候選股比較', '為什麼列入候選', '成立前要看到', '什麼情況取消']) {
+    assert.match(opportunities, new RegExp(label), `opportunities is missing screening copy: ${label}`);
+  }
+  assert.doesNotMatch(opportunities, />09:30 確認</);
+  assert.match(opportunities, /selectNextRuntimeTimelineNode\(runtimeTimeline\)/);
+  assert.match(opportunities, /replace\(\/\\bTAIEX\\b\/gi, '加權指數'\)/);
+  assert.match(opportunities, /replace\(\/\\bTXF\\b\/gi, '台指期'\)/);
+  const css = read('src/index.css');
+  const cardRule = css.match(/\.ma-opportunities-page \.ma-opportunity-card \{([^}]*)\}/)?.[1] || '';
+  const detailRule = css.match(/\.ma-opportunities-page \.ma-opportunity-details > div > dd \{([^}]*)\}/)?.[1] || '';
+  assert.doesNotMatch(cardRule, /max-height:\s*360px|overflow:\s*hidden/);
+  assert.doesNotMatch(detailRule, /line-clamp|overflow:\s*hidden/);
+  assert.match(detailRule, /white-space:\s*normal/);
 });
 
 test('war room observation details are not line clamped', () => {

@@ -56,6 +56,13 @@ export function runtimeTimelineStatusLabel(status: RuntimeTimelineStatus): strin
   return '等待驗證';
 }
 
+export function selectNextRuntimeTimelineNode<T extends { status: RuntimeTimelineStatus }>(nodes: T[]): T | undefined {
+  return nodes.find((node) => node.status === 'current')
+    || nodes.find((node) => node.status === 'pending')
+    || [...nodes].reverse().find((node) => node.status === 'insufficient')
+    || nodes[nodes.length - 1];
+}
+
 type UnknownRecord = Record<string, unknown>;
 
 function record(value: unknown): UnknownRecord {

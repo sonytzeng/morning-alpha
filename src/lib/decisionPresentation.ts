@@ -116,11 +116,16 @@ function splitCheckpoint(value: string): { label: string; time?: string } {
 
 function roleLabel(row: UnknownRecord): string {
   const raw = firstText(row.role_label, row.role, row.tier, row.category, row.netEvidenceDirection, row.net_evidence_direction).toLowerCase();
+  if (raw === 'main_thesis') return '今日主線';
+  if (raw === 'capital_next') return '資金輪動';
+  if (raw === 'secondary_thesis') return '次要主線';
+  if (raw === 'risk_watch') return '風險觀察';
   if (raw === 'positive') return '主線候選';
   if (raw === 'neutral') return '先觀察';
   if (/strong|core|beneficiar|主線|強受惠/.test(raw)) return '主線候選';
   if (/representative|代表/.test(raw)) return '代表股';
   if (/risk|exclude|排除/.test(raw)) return '風險觀察';
+  if (/^[a-z0-9_-]+$/.test(raw)) return '觀察股';
   return raw ? compact(raw, 18) : '觀察股';
 }
 
@@ -143,14 +148,14 @@ function mapOpportunity(value: unknown): PresentedOpportunity | null {
   const benefitChain = Array.isArray(row.benefitChain) ? row.benefitChain : Array.isArray(row.benefit_chain) ? row.benefit_chain : [];
   const scoringReasons = Array.isArray(row.scoringReasons) ? row.scoringReasons : Array.isArray(row.scoring_reasons) ? row.scoring_reasons : [];
   const rawReason = firstText(row.reason, row.rationale, row.investment_reason, row.benefit_source, row.relationship_to_thesis, row.observationReason, row.observation_reason, scoringReasons[0], benefitChain[0]);
-  const translatedReason = compact(rawReason, 72);
+  const translatedReason = compact(rawReason, 240);
   return {
     symbol,
     name,
     roleLabel: roleLabel(row),
     oneLineReason: translatedReason || undefined,
-    confirmation: compact(firstText(row.confirmation, row.confirmation_needed, row.validation_signal, row.watch_point, row.what_to_watch, row.confirmationPendingReason, row.confirmation_pending_reason), 68) || undefined,
-    invalidation: compact(firstText(row.invalidation, row.invalidation_condition, row.stop_condition, row.risk_note, row.risk, row.stopObservingCondition, row.stop_observing_condition), 68) || undefined,
+    confirmation: compact(firstText(row.confirmation, row.confirmation_needed, row.validation_signal, row.watch_point, row.what_to_watch, row.confirmationPendingReason, row.confirmation_pending_reason), 240) || undefined,
+    invalidation: compact(firstText(row.invalidation, row.invalidation_condition, row.stop_condition, row.risk_note, row.risk, row.stopObservingCondition, row.stop_observing_condition), 240) || undefined,
     priority: typeof row.priority === 'string' || typeof row.priority === 'number'
       ? row.priority
       : typeof row.rank === 'string' || typeof row.rank === 'number' ? row.rank : undefined,

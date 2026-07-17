@@ -11,6 +11,7 @@ const routeConfig = read('src/router/config.tsx');
 const navbar = read('src/components/feature/Navbar.tsx');
 const footer = read('src/components/feature/Footer.tsx');
 const home = read('src/pages/home/page.tsx');
+const today = read('src/pages/report/TodayReport.tsx');
 
 const publicSourceFiles = [
   'src/pages/home/page.tsx',
@@ -147,6 +148,28 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /等待開盤驗證/);
   assert.doesNotMatch(home, /暫不建立交易判斷/);
   assert.match(home, /mistakeCards\.length === 1 \? ' is-single'/);
+});
+
+test('today report keeps runtime state and technical copy out of the public UI', () => {
+  for (const label of ['Data unavailable', 'SCENARIO VALIDATION', 'FOCUS STOCKS', 'DECISION TIMELINE', 'NEXT JOURNEY', 'War Room', '待 Runtime']) {
+    assert.doesNotMatch(today, new RegExp(label, 'i'), `today report renders untranslated label: ${label}`);
+  }
+  assert.doesNotMatch(today, /劇本驗證 Checklist/);
+  assert.match(today, /selectNextRuntimeTimelineNode\(runtimeTimeline\)/);
+  assert.match(today, /publicTodayText/);
+  assert.match(today, /marketStatusLabel=\{decisionCopy\.headline\}/);
+});
+
+test('today report cards show complete text and adapt to the actual item count', () => {
+  const css = read('src/index.css');
+  const checklistRule = css.match(/\.ma-today-page \.ma-today-v3-checklist p \{([\s\S]*?)\n  \}/)?.[1] || '';
+  const stockRule = css.match(/\.ma-today-page \.ma-today-v3-stock-card > p \{([\s\S]*?)\n  \}/)?.[1] || '';
+  assert.ok(checklistRule, 'missing scoped today validation detail rule');
+  assert.ok(stockRule, 'missing scoped today stock reason rule');
+  assert.doesNotMatch(checklistRule, /line-clamp|overflow:\s*hidden|display:\s*-webkit-box/);
+  assert.doesNotMatch(stockRule, /line-clamp|overflow:\s*hidden|display:\s*-webkit-box/);
+  assert.match(css, /\.ma-today-page \.ma-today-v3-checklist\.is-single/);
+  assert.match(css, /\.ma-today-page \.ma-today-v3-stock-grid\.is-count-2/);
 });
 
 test('war room observation details are not line clamped', () => {

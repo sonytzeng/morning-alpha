@@ -1,4 +1,4 @@
-import { buildRuntimeDecisionTimeline } from '../src/lib/runtimeDecisionTimeline.ts';
+import { buildRuntimeDecisionTimeline, selectNextRuntimeTimelineNode } from '../src/lib/runtimeDecisionTimeline.ts';
 import { resolveMarketStatus } from '../src/lib/market-status.ts';
 
 function assert(condition: boolean, message: string): void {
@@ -119,6 +119,29 @@ Deno.test('failed checkpoint with evidence is insufficient, never completed', ()
     isTradingDay: true,
   });
   assert(timeline[1]?.status === 'insufficient', 'failed checkpoint must be insufficient');
+});
+
+Deno.test('next checkpoint skips an insufficient past node for the next pending node', () => {
+  const timeline = buildRuntimeDecisionTimeline({
+    ai: {
+      intraday_sync_status: {
+        windows: {
+          '0930': {
+            status: 'failed',
+            failed_at: '2026-07-17T01:31:00.000Z',
+            evidence: { reason: 'missing source' },
+          },
+        },
+      },
+    },
+    hasReport: true,
+    reportRevisionId: 'revision-1',
+    isTradingDay: true,
+    taipeiMinutes: 9 * 60 + 54,
+  });
+  const next = selectNextRuntimeTimelineNode(timeline);
+  assert(timeline[1]?.status === 'insufficient', '09:30 must remain an insufficient historical node');
+  assert(next?.time === '10:30', '10:30 must be selected as the next pending checkpoint');
 });
 
 Deno.test('a completed later checkpoint closes earlier pending gaps', () => {

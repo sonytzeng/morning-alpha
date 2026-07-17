@@ -6,9 +6,10 @@ import type { MarketState } from '@/services/marketStateEngine';
 
 interface NavbarProps {
   marketState?: MarketState | null;
+  marketStatusLabel?: string;
 }
 
-export default function Navbar({ marketState }: NavbarProps) {
+export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
 
@@ -59,7 +60,7 @@ export default function Navbar({ marketState }: NavbarProps) {
           <div className="hidden md:flex items-center gap-1">
             {/* Market Status Light in navbar — V25: powered by marketState */}
             <div className="mr-2 hidden lg:block">
-              <MarketStatusLight compact marketState={marketState} />
+              <MarketStatusLight compact marketState={marketState} displayLabelOverride={marketStatusLabel} />
             </div>
 
             {navLinks.map((link) => (
@@ -96,7 +97,7 @@ export default function Navbar({ marketState }: NavbarProps) {
         <div id="morning-alpha-mobile-menu" className="border-t border-background-200/70 bg-background-50 md:hidden">
           <div className="px-4 py-3 space-y-1">
             <div className="px-3 py-2.5">
-              <MarketStatusLight compact marketState={marketState} />
+              <MarketStatusLight compact marketState={marketState} displayLabelOverride={marketStatusLabel} />
             </div>
             {navLinks.map((link) => (
               <Link

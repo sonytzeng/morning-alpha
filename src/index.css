@@ -1350,6 +1350,10 @@ a, button, .transition-all {
     gap: 12px;
   }
 
+  .ma-today-page .ma-today-v3-checklist.is-single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .ma-today-page .ma-today-v3-checklist > article {
     display: grid;
     min-height: 78px;
@@ -1389,20 +1393,19 @@ a, button, .transition-all {
 
   .ma-today-page .ma-today-v3-checklist strong {
     display: block;
+    overflow-wrap: anywhere;
     color: #F4F7FB;
     font-size: 15px;
     line-height: 22px;
   }
 
   .ma-today-page .ma-today-v3-checklist p {
-    display: -webkit-box;
     margin-top: 3px;
-    overflow: hidden;
+    overflow-wrap: anywhere;
     color: #6F7F90;
     font-size: 12px;
     line-height: 18px;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
+    white-space: normal;
   }
 
   .ma-today-page .ma-today-v3-checklist > article > span {
@@ -1444,9 +1447,17 @@ a, button, .transition-all {
     gap: 16px;
   }
 
+  .ma-today-page .ma-today-v3-stock-grid.is-count-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ma-today-page .ma-today-v3-stock-grid.is-count-1 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .ma-today-page .ma-today-v3-stock-card {
     min-width: 0;
-    min-height: 190px;
+    min-height: 0;
     padding: 22px;
     border: 1px solid #20364A;
     border-radius: 16px;
@@ -1491,14 +1502,12 @@ a, button, .transition-all {
   }
 
   .ma-today-page .ma-today-v3-stock-card > p {
-    display: -webkit-box;
     margin-top: 22px;
-    overflow: hidden;
+    overflow-wrap: anywhere;
     color: #A9B6C5;
     font-size: 14px;
     line-height: 22px;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    white-space: normal;
   }
 
   .ma-today-page .ma-today-v3-stock-card > small {
@@ -1511,6 +1520,7 @@ a, button, .transition-all {
     color: #6F7F90;
     font-size: 12px;
     line-height: 18px;
+    overflow-wrap: anywhere;
   }
 
   .ma-today-page .ma-today-v3-stock-card > small i {
@@ -1999,6 +2009,8 @@ a, button, .transition-all {
     .ma-today-page .ma-today-v3-kpi-grid,
     .ma-today-page .ma-today-v3-checklist,
     .ma-today-page .ma-today-v3-stock-grid,
+    .ma-today-page .ma-today-v3-stock-grid.is-count-2,
+    .ma-today-page .ma-today-v3-stock-grid.is-count-1,
     .ma-today-page .ma-today-v3-correction-flow {
       grid-template-columns: minmax(0, 1fr);
     }

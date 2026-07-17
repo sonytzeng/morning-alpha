@@ -200,6 +200,7 @@ interface Props {
   report?: Report | null;
   intradayCheck?: IntradayCheck | null;
   marketState?: MarketState | null;
+  displayLabelOverride?: string;
 }
 
 function useMarketStatus(report?: Report | null, intradayCheck?: IntradayCheck | null, skipFetch = false) {
@@ -236,15 +237,16 @@ function useMarketStatus(report?: Report | null, intradayCheck?: IntradayCheck |
   return { status, config, resolvedReport };
 }
 
-export default function MarketStatusLight({ compact = false, report, intradayCheck, marketState }: Props) {
+export default function MarketStatusLight({ compact = false, report, intradayCheck, marketState, displayLabelOverride }: Props) {
   // V28: when marketState is provided, skip internal fetch — marketState is the single source of truth
-  const skipInternalFetch = !!marketState;
+  const skipInternalFetch = Boolean(marketState || displayLabelOverride);
   const { status, config, resolvedReport } = useMarketStatus(report, intradayCheck, skipInternalFetch);
   const currentTime = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
 
   // V11: Always prefer report.market_bias as display label — it is the SINGLE SOURCE OF TRUTH
   // Engine-derived labels like 「偏強觀察」 are forbidden when report has a real market_bias value
   const displayLabel = (() => {
+    if (displayLabelOverride?.trim()) return displayLabelOverride.trim();
     const realBias = resolvedReport?.market_bias || report?.market_bias;
     if (realBias && realBias !== '震盪' && realBias !== '觀察中' && realBias !== '—' && realBias.trim().length > 0) {
       return realBias;

@@ -157,7 +157,16 @@ test('today report keeps runtime state and technical copy out of the public UI',
   assert.doesNotMatch(today, /劇本驗證 Checklist/);
   assert.match(today, /selectNextRuntimeTimelineNode\(runtimeTimeline\)/);
   assert.match(today, /publicTodayText/);
-  assert.match(today, /marketStatusLabel=\{decisionCopy\.headline\}/);
+  assert.match(today, /marketStatusLabel=\{nextDecisionTime\}/);
+});
+
+test('today report is a drill-down workbench rather than a duplicate home dashboard', () => {
+  for (const label of ['今日判斷工作台', '現在怎麼做', '為什麼', '何時再看', '下一步要補齊的證據', '只看上一個結果與下一個動作']) {
+    assert.match(today, new RegExp(label), `today report is missing workbench copy: ${label}`);
+  }
+  assert.doesNotMatch(today, /ma-today-v3-advice-card/);
+  assert.doesNotMatch(today, />判斷信心</);
+  assert.match(today, /09:30 開盤資料不完整：缺少同一時間範圍的加權指數、台指期與台積電快照/);
 });
 
 test('today report cards show complete text and adapt to the actual item count', () => {

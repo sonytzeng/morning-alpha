@@ -10,6 +10,7 @@ import MarketTimeline from './components/MarketTimeline';
 import { useAccountDashboard } from '@/hooks/useAccountDashboard';
 import VisualPageHero from '@/components/feature/VisualPageHero';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
+import EarlyAccessForm from '@/components/feature/EarlyAccessForm';
 
 function isTaipeiWeekend(): boolean {
   const now = new Date();
@@ -197,37 +198,7 @@ export default function Account() {
                 <p className="text-white/45 text-xs leading-relaxed mb-4">
                   訂閱 Morning Alpha 早鳥通知，第一時間收到每日盤前報告更新提醒。
                 </p>
-                <form
-                  data-readdy-form
-                  action="https://readdy.ai/api/form/d8ocrlu7ga8frnon0lfg"
-                  method="POST"
-                  encType="application/x-www-form-urlencoded"
-                  className="flex flex-col sm:flex-row gap-3"
-                  onSubmit={(e) => {
-                    const btn = e.currentTarget.querySelector('button');
-                    if (btn) {
-                      btn.textContent = '已送出';
-                      btn.setAttribute('disabled', 'true');
-                    }
-                  }}
-                >
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    placeholder="你的 Email"
-                    className="flex-1 px-4 py-3 bg-navy-800 border border-navy-700 rounded-xl text-white placeholder:text-white/25 text-sm outline-none focus:border-emerald-500/50 transition-colors"
-                  />
-                  <button
-                    type="submit"
-                  className="ma-btn-primary whitespace-nowrap"
-                  >
-                    加入早鳥名單
-                  </button>
-                </form>
-                <p className="text-white/20 text-[10px] mt-3 leading-relaxed">
-                  我們不會發送垃圾郵件，僅用於 Morning Alpha 更新通知。隨時可取消訂閱。
-                </p>
+                <EarlyAccessForm sourcePage="/account" />
               </div>
             </section>
 

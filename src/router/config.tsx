@@ -20,6 +20,7 @@ import FaqPage from "../pages/faq/page";
 import TermsPage from "../pages/terms/page";
 import PrivacyPage from "../pages/privacy/page";
 import ContactPage from "../pages/contact/page";
+import Pricing from "../pages/pricing/Pricing";
 import { Navigate } from "react-router-dom";
 import Verification from "../pages/verification/page";
 
@@ -75,6 +76,10 @@ const routes: RouteObject[] = [
   {
     path: "/contact",
     element: <ContactPage />,
+  },
+  {
+    path: "/pricing",
+    element: <Pricing />,
   },
   {
     path: "/account",

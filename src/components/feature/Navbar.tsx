@@ -33,6 +33,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
     { to: '/war-room', label: '盤中追蹤' },
     { to: '/member-note', label: '完整研究筆記' },
     { to: '/performance', label: '歷史績效' },
+    { to: '/pricing', label: '會員方案' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

@@ -83,6 +83,14 @@ const researchLabelMap: Record<string, string> = {
 
 function normalizeResearchText(value: unknown): string {
   return textValue(value)
+    .replace(/\bTAIEX\b/gi, '加權指數')
+    .replace(/\bTXF\b/gi, '台指期')
+    .replace(/\bAI[ _-]?SERVER\b/gi, 'AI 伺服器')
+    .replace(/\bADR\b/gi, '海外存託憑證')
+    .replace(/\bunknown\b/gi, '尚未取得')
+    .replace(/checkpoint\s*(\d{2})(\d{2})/gi, (_match, hours: string, minutes: string) => `${hours}:${minutes} 驗證`)
+    .replace(/freshness window/gi, '有效時間範圍')
+    .replace(/\bphase\b/gi, '資料階段')
     .replace(/\s+/g, ' ')
     .replace(/[，﹐]/g, '，')
     .replace(/[。｡]/g, '。')
@@ -332,7 +340,7 @@ function labelText(label: string): string {
     downgrade: '降權',
     watch_tomorrow: '明日觀察',
     close_change_percent: '收盤漲跌',
-    taiex_relative_percent: '相對 TAIEX',
+    taiex_relative_percent: '相對加權指數',
     matched_logic: '是否符合邏輯',
     note: '驗證說明',
   };
@@ -1056,73 +1064,77 @@ function MemberNoteContent() {
     decisionLifecycle.validation_plan.next_step,
   ], [heroConclusion, heroValidation, summaryNext, ...researchGuidance.map((item) => item.value)], '');
   return (
-    <div className="ma-page ma-pixel-page ma-research-note-page flex flex-col overflow-x-hidden">
+    <div className="ma-page ma-research-note-page ma-research-note-v3 flex flex-col overflow-x-hidden">
       <Navbar />
-
       <main className="flex-1 overflow-x-hidden">
-        <section className="ma-pixel-hero">
-          <div className="ma-pixel-content ma-pixel-hero-grid">
-            <div className="ma-pixel-hero-copy">
-              <p className="ma-pixel-eyebrow"><i className="ri-book-open-line" aria-hidden="true" />完整研究邏輯 · {reportDate}</p>
-              <h1>完整研究筆記</h1>
-              <p className="ma-pixel-hero-subtitle">{renderSafeText(heroConclusion)}</p>
-            </div>
-            <aside className="ma-phase2-status-card ma-research-summary-card">
-              <div><span>市場方向</span><strong>{renderSafeText(formatResearchLabel(marketBias) || '資料不足')}</strong></div>
-              <div><span>信心</span><p>{confidenceScore != null ? `${confidenceScore}/100 · ${scoreDisplay.label}` : scoreDisplay.label}</p></div>
-              <div><span>今天最重要驗證</span><p>{renderSafeText(heroValidation)}</p></div>
-            </aside>
+        <header className="ma-research-note-v3-masthead">
+          <div className="ma-research-note-v3-shell">
+            <div className="ma-research-note-v3-kicker"><span>完整研究筆記</span><time dateTime={reportDate}>{reportDate}</time></div>
+            <h1>{renderSafeText(heroConclusion)}</h1>
+            <p>把今天的結論拆回事件、傳導路徑、支持證據與失效條件。</p>
+            <dl>
+              <div><dt>市場方向</dt><dd>{renderSafeText(formatResearchLabel(marketBias) || '資料不足')}</dd></div>
+              <div><dt>判斷信心</dt><dd>{confidenceScore != null ? `${confidenceScore}/100 · ${scoreDisplay.label}` : scoreDisplay.label}</dd></div>
+              <div><dt>最重要驗證</dt><dd>{renderSafeText(heroValidation)}</dd></div>
+            </dl>
           </div>
-        </section>
+        </header>
 
-        <div className="ma-pixel-content ma-pixel-page-sections">
-          <section>
-            <div className="ma-phase2-kpi-grid">{researchSummaryCards.map((item) => <article key={item.label} className="ma-phase2-kpi-card"><p>{item.label}</p><strong>{renderSafeText(item.value)}</strong></article>)}</div>
+        <article className="ma-research-note-v3-shell ma-research-note-v3-article">
+          <section className="ma-research-note-v3-chapter">
+            <header><span>01</span><div><p>研究摘要</p><h2>先把今天的研究濃縮成四個答案</h2></div></header>
+            <dl className="ma-research-note-v3-summary">
+              {researchSummaryCards.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{renderSafeText(item.value)}</dd></div>)}
+            </dl>
           </section>
 
           {canViewMemberNoteFull ? (
             <>
-              <section><div className="ma-phase2-section-heading"><i className="ri-links-line" aria-hidden="true" /><div><h2>傳導路徑</h2><p>從外部事件一路驗證到代表股票。</p></div></div><div className="ma-research-flow">{researchFlow.map((item, index) => <article key={item.label} className="ma-research-flow-node"><span>{index + 1}</span><div><p>{item.label} · {item.question}</p><strong>{renderSafeText(item.value)}</strong></div></article>)}</div></section>
+              <section className="ma-research-note-v3-chapter">
+                <header><span>02</span><div><p>因果鏈</p><h2>事件如何一路傳導到代表股票</h2></div></header>
+                <ol className="ma-research-note-v3-flow">{researchFlow.map((item, index) => <li key={item.label}><span>{index + 1}</span><div><small>{item.label} · {item.question}</small><strong>{renderSafeText(item.value)}</strong></div></li>)}</ol>
+              </section>
 
-              <section className="ma-phase2-signal-grid">
-                <div className="ma-phase2-list-panel is-support"><div className="ma-phase2-section-heading"><i className="ri-check-line" aria-hidden="true" /><div><h2>支持證據</h2></div></div>{supportItems.map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-check-line" aria-hidden="true" /><span>{renderSafeText(item)}</span></div>)}</div>
-                <div className="ma-phase2-list-panel is-oppose"><div className="ma-phase2-section-heading"><i className="ri-close-line" aria-hidden="true" /><div><h2>反對證據</h2></div></div>{oppositionItems.map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-close-line" aria-hidden="true" /><span>{renderSafeText(item)}</span></div>)}</div>
+              <section className="ma-research-note-v3-chapter">
+                <header><span>03</span><div><p>雙向證據</p><h2>哪些事支持它，哪些事會推翻它</h2></div></header>
+                <div className="ma-research-note-v3-evidence">
+                  <div className="is-support"><h3>支持證據</h3>{supportItems.length > 0 ? supportItems.map((item) => <p key={item}>{renderSafeText(item)}</p>) : <p>目前沒有新增支持證據。</p>}</div>
+                  <div className="is-oppose"><h3>反對證據</h3>{oppositionItems.length > 0 ? oppositionItems.map((item) => <p key={item}>{renderSafeText(item)}</p>) : <p>目前沒有新增反對證據。</p>}</div>
+                </div>
               </section>
 
               {researchStocks.length > 0 && (
-                <section>
-                  <div className="ma-phase2-section-heading"><i className="ri-stock-line" aria-hidden="true" /><div><h2>代表股票</h2><p>每檔股票只呈現既有劇本角色與可驗證條件。</p></div></div>
-                  <div className="ma-research-stock-grid grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <section className="ma-research-note-v3-chapter">
+                  <header><span>04</span><div><p>個股檔案</p><h2>代表股票的角色與驗證條件</h2></div></header>
+                  <div className="ma-research-note-v3-stock-files">
                     {researchStocks.map((stock) => (
-                      <article key={`${stock.symbol || 'stock'}-${stock.name}`} className="ma-research-stock-card min-w-0 rounded-[14px] border border-[#20364A] bg-[#0B1A2A] p-5">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>{stock.symbol && <span className="text-xs font-bold text-[#14C982]">{stock.symbol}</span>}<h3 className="mt-1 text-lg font-bold text-[#F4F7FB]">{renderSafeText(stock.name)}</h3></div>
-                          {stock.displayRole && <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-bold text-emerald-300">{renderSafeText(stock.displayRole)}</span>}
-                        </div>
-                        <div className="mt-5 space-y-4">
-                          {stock.displayReason && <div><p className="text-xs text-[#6F7F90]">入選原因</p><p className="mt-1 text-sm leading-6 text-[#B5C1CF]">{renderSafeText(stock.displayReason)}</p></div>}
-                          {stock.displayConfirmation && <div className="border-t border-[#20364A] pt-4"><p className="text-xs text-[#6F7F90]">成立條件</p><p className="mt-1 text-sm leading-6 text-[#B5C1CF]">{renderSafeText(stock.displayConfirmation)}</p></div>}
-                          {stock.displayInvalidation && <div className="border-t border-[#20364A] pt-4"><p className="text-xs text-[#6F7F90]">失效條件</p><p className="mt-1 text-sm leading-6 text-[#B5C1CF]">{renderSafeText(stock.displayInvalidation)}</p></div>}
-                        </div>
+                      <article key={`${stock.symbol || 'stock'}-${stock.name}`}>
+                        <header><div>{stock.symbol && <span>{stock.symbol}</span>}<h3>{renderSafeText(stock.name)}</h3></div>{stock.displayRole && <em>{renderSafeText(stock.displayRole)}</em>}</header>
+                        <dl>
+                          {stock.displayReason && <div><dt>入選原因</dt><dd>{renderSafeText(stock.displayReason)}</dd></div>}
+                          {stock.displayConfirmation && <div><dt>成立條件</dt><dd>{renderSafeText(stock.displayConfirmation)}</dd></div>}
+                          {stock.displayInvalidation && <div><dt>失效條件</dt><dd>{renderSafeText(stock.displayInvalidation)}</dd></div>}
+                        </dl>
                       </article>
                     ))}
                   </div>
                 </section>
               )}
 
-              {researchGuidance.length > 0 && <section><div className="ma-phase2-section-heading"><i className="ri-compass-3-line" aria-hidden="true" /><div><h2>今天如何使用</h2></div></div><div className="ma-research-guidance-grid">{researchGuidance.map((item) => <article key={item.label}><p>{item.label}</p><strong>{renderSafeText(item.value)}</strong></article>)}</div></section>}
-
-              <section className="ma-phase2-signal-grid">
-                {invalidationItems.length > 0 && <div className="ma-phase2-list-panel is-oppose"><div className="ma-phase2-section-heading"><i className="ri-error-warning-line" aria-hidden="true" /><div><h2>失效條件</h2><p>出現以下訊號時，停止沿用原劇本。</p></div></div>{invalidationItems.map((item) => <div key={item} className="ma-phase2-signal-row"><i className="ri-close-line" aria-hidden="true" /><span>{renderSafeText(item)}</span></div>)}</div>}
-                {nextConfirmationDetail && <div className="ma-phase2-list-panel"><div className="ma-phase2-section-heading"><i className="ri-time-line" aria-hidden="true" /><div><h2>下一次確認</h2><p>回到下一個節點，重新檢查劇本是否成立。</p></div></div><div className="ma-phase2-signal-row"><i className="ri-arrow-right-line" aria-hidden="true" /><span>{renderSafeText(nextConfirmationDetail)}</span></div><Link to="/war-room" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-2 text-sm font-semibold text-emerald-300">查看盤中追蹤<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>}
+              <section className="ma-research-note-v3-chapter">
+                <header><span>05</span><div><p>使用方式</p><h2>今天怎麼用，以及何時停止沿用</h2></div></header>
+                {researchGuidance.length > 0 && <dl className="ma-research-note-v3-guidance">{researchGuidance.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{renderSafeText(item.value)}</dd></div>)}</dl>}
+                <div className="ma-research-note-v3-stop">
+                  <div><h3>失效條件</h3>{invalidationItems.length > 0 ? invalidationItems.map((item) => <p key={item}>{renderSafeText(item)}</p>) : <p>目前沒有可用的失效條件。</p>}</div>
+                  {nextConfirmationDetail && <div><h3>下一次確認</h3><p>{renderSafeText(nextConfirmationDetail)}</p><Link to="/war-room">前往盤中監控<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>}
+                </div>
               </section>
             </>
           ) : (
             <PaywallCard title="升級會員查看完整盤前研究筆記" description="完整研究推導、支持與反對證據，以及今日使用方式收在會員版。" requiredTier="member" featureList={['完整研究推導', '支持與反對證據', '今日使用方式']} tone="dark" />
           )}
-        </div>
+        </article>
       </main>
-
       <Footer />
     </div>
   );

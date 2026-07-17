@@ -1,4 +1,8 @@
-import { buildRuntimeDecisionTimeline, selectNextRuntimeTimelineNode } from '../src/lib/runtimeDecisionTimeline.ts';
+import {
+  buildRuntimeDecisionTimeline,
+  reconcileRuntimeTimeline,
+  selectNextRuntimeTimelineNode,
+} from '../src/lib/runtimeDecisionTimeline.ts';
 import { resolveMarketStatus } from '../src/lib/market-status.ts';
 
 function assert(condition: boolean, message: string): void {
@@ -166,4 +170,18 @@ Deno.test('a completed later checkpoint closes earlier pending gaps', () => {
     'no earlier checkpoint may remain current or pending after closing completes',
   );
   assert(timeline[4]?.status === 'completed', 'closing checkpoint must remain completed');
+});
+
+Deno.test('an insufficient later checkpoint closes earlier pending gaps', () => {
+  const timeline = reconcileRuntimeTimeline([
+    { time: '09:00', status: 'pending' as const },
+    { time: '09:30', status: 'insufficient' as const },
+    { time: '10:30', status: 'pending' as const },
+    { time: '13:30', status: 'pending' as const },
+  ], 11 * 60 + 12);
+
+  assert(timeline[0]?.status === 'insufficient', '09:00 must not remain current behind a resolved 09:30 checkpoint');
+  assert(timeline[1]?.status === 'insufficient', '09:30 must retain its insufficient result');
+  assert(timeline[2]?.status === 'current', '10:30 must become the active checkpoint');
+  assert(timeline[3]?.status === 'pending', 'future checkpoints must remain pending');
 });

@@ -29,14 +29,14 @@ export function reconcileRuntimeTimeline<T extends { status: RuntimeTimelineStat
   nodes: T[],
   taipeiMinutes = currentTaipeiMinutes(),
 ): T[] {
-  let lastCompletedIndex = -1;
+  let lastResolvedIndex = -1;
   nodes.forEach((node, index) => {
-    if (node.status === 'completed') lastCompletedIndex = index;
+    if (node.status === 'completed' || node.status === 'insufficient') lastResolvedIndex = index;
   });
 
   const reconciled = nodes.map((node, index) => ({
     ...node,
-    status: node.status === 'pending' && index < lastCompletedIndex
+    status: node.status === 'pending' && index < lastResolvedIndex
       ? 'insufficient' as const
       : node.status,
   }));

@@ -13,6 +13,11 @@ const footer = read('src/components/feature/Footer.tsx');
 const home = read('src/pages/home/page.tsx');
 const today = read('src/pages/report/TodayReport.tsx');
 const opportunities = read('src/pages/opportunities/page.tsx');
+const warRoom = read('src/pages/war-room/WarRoom.tsx');
+const pricing = read('src/pages/pricing/Pricing.tsx');
+const earlyAccessForm = read('src/components/feature/EarlyAccessForm.tsx');
+const memberNote = read('src/pages/member-note/page.tsx');
+const performance = read('src/pages/performance/page.tsx');
 
 const publicSourceFiles = [
   'src/pages/home/page.tsx',
@@ -29,7 +34,9 @@ const publicSourceFiles = [
   'src/pages/terms/page.tsx',
   'src/pages/privacy/page.tsx',
   'src/pages/contact/page.tsx',
+  'src/pages/pricing/Pricing.tsx',
   'src/pages/NotFound.tsx',
+  'src/components/feature/EarlyAccessForm.tsx',
   'src/components/feature/Navbar.tsx',
   'src/components/feature/Footer.tsx',
 ];
@@ -51,6 +58,7 @@ const expectedRoutes = [
   '/terms',
   '/privacy',
   '/contact',
+  '/pricing',
 ];
 
 test('public route inventory is registered', () => {
@@ -135,7 +143,8 @@ test('mobile menu and 404 provide release-safe interaction', () => {
 test('runtime timelines reconcile completed later checkpoints', () => {
   const runtimeTimeline = read('src/lib/runtimeDecisionTimeline.ts');
   const warRoomMapper = read('src/pages/war-room/warRoomPresentationMapper.ts');
-  assert.match(runtimeTimeline, /node\.status === 'pending' && index < lastCompletedIndex/);
+  assert.match(runtimeTimeline, /node\.status === 'completed' \|\| node\.status === 'insufficient'/);
+  assert.match(runtimeTimeline, /node\.status === 'pending' && index < lastResolvedIndex/);
   assert.match(warRoomMapper, /reconcileRuntimeTimeline\(nodes\)/);
   assert.match(runtimeTimeline, /scheduledMinutes <= taipeiMinutes/);
   assert.doesNotMatch(runtimeTimeline, /待 Runtime|Runtime checkpoint/);
@@ -200,12 +209,59 @@ test('opportunities is a candidate screening flow with complete public copy', ()
   assert.match(detailRule, /white-space:\s*normal/);
 });
 
-test('war room observation details are not line clamped', () => {
+test('war room is a live monitor rather than another dashboard page', () => {
+  for (const label of ['盤中監控中', '最新異動', '證據矩陣', '與盤前相比', '監控清單', '現在怎麼做']) {
+    assert.match(warRoom, new RegExp(label), `war room is missing monitor copy: ${label}`);
+  }
+  for (const legacySurface of ['ma-pixel-hero', 'ma-phase2-kpi-grid', 'ma-phase2-timeline', 'ma-phase2-observation-grid']) {
+    assert.doesNotMatch(warRoom, new RegExp(legacySurface), `war room still uses repeated surface: ${legacySurface}`);
+  }
+  assert.match(warRoom, /publicWarRoomText/);
+  assert.match(warRoom, /replace\(\/\\bunknown\\b\/gi, '尚未取得'\)/);
+  assert.match(warRoom, /replace\(\/\\bTAIEX\\b\/gi, '加權指數'\)/);
+  assert.match(warRoom, /replace\(\/\\bTXF\\b\/gi, '台指期'\)/);
+  assert.match(warRoom, /replace\(\/\\bADR\\b\/gi, '海外存託憑證'\)/);
+});
+
+test('war room rows show complete text and use a distinct responsive surface', () => {
   const css = read('src/index.css');
-  const rule = css.match(/\.ma-war-room-page \.ma-phase2-observation-card dd \{([\s\S]*?)\n  \}/)?.[1] || '';
-  assert.ok(rule, 'missing scoped observation detail rule');
-  assert.doesNotMatch(rule, /line-clamp|overflow:\s*hidden|display:\s*-webkit-box/);
-  assert.match(rule, /overflow-wrap:\s*anywhere/);
+  const watchRule = css.match(/\.ma-war-room-page \.ma-war-room-v3-watch-table article strong,\n  \.ma-war-room-page \.ma-war-room-v3-watch-table article p \{([\s\S]*?)\n  \}/)?.[1] || '';
+  assert.ok(watchRule, 'missing scoped monitor watch row rule');
+  assert.doesNotMatch(watchRule, /line-clamp|overflow:\s*hidden|display:\s*-webkit-box/);
+  assert.match(watchRule, /overflow-wrap:\s*anywhere/);
+  assert.match(css, /\.ma-war-room-page \.ma-war-room-v3-layout/);
+  assert.match(css, /@media \(max-width: 767px\)[\s\S]*?\.ma-war-room-page \.ma-war-room-v3-layout/);
+});
+
+test('membership conversion route is public, honest, and records a real submission result', () => {
+  for (const label of ['Morning Alpha 會員計畫', '公開測試', '創始會員', '加入早鳥名單', '登記不等於購買']) {
+    assert.match(pricing, new RegExp(label), `pricing is missing honest conversion copy: ${label}`);
+  }
+  assert.match(earlyAccessForm, /await submitEarlyAccess/);
+  assert.match(earlyAccessForm, /if \(!result\.success\)/);
+  assert.doesNotMatch(pricing, /台中 · 上班族投資人|台北 · 三年股齡|高雄 · 新手投資人|新竹 · 科技業/);
+  assert.doesNotMatch(pricing, /data-readdy-form|readdy\.ai\/api\/form/);
+  assert.doesNotMatch(earlyAccessForm, /data-readdy-form|readdy\.ai\/api\/form/);
+  assert.match(read('src/components/paywall/PaywallCard.tsx'), /\/pricing#early-access/);
+});
+
+test('core product pages have distinct jobs instead of repeated dashboard surfaces', () => {
+  for (const label of ['研究摘要', '因果鏈', '雙向證據', '個股檔案', '使用方式']) {
+    assert.match(memberNote, new RegExp(label), `member note is missing editorial chapter: ${label}`);
+  }
+  assert.match(memberNote, /ma-research-note-v3-masthead/);
+  assert.doesNotMatch(memberNote, /ma-pixel-hero|ma-phase2-kpi-grid|ma-phase2-status-card/);
+
+  for (const label of ['公開決策帳本', '驗證帳本', '統計方法', '哪些資料會被計入']) {
+    assert.match(performance, new RegExp(label), `performance is missing audit ledger copy: ${label}`);
+  }
+  assert.match(performance, /ma-performance-v3-ledger/);
+  assert.doesNotMatch(performance, /ma-pixel-hero|ma-phase2-kpi-grid|ma-phase2-status-card/);
+
+  assert.match(home, /ma-home-v2/);
+  assert.match(today, /ma-today-v4-workbench/);
+  assert.match(opportunities, /ma-opportunities-v2/);
+  assert.match(warRoom, /ma-war-room-v3/);
 });
 
 test('home uses canonical server payload and labels historical fallback', () => {

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Ban, CalendarCheck, CheckCircle2, Flag, Scale, ShieldCheck, Target, TrendingUp } from 'lucide-react';
 import Navbar from '@/components/feature/Navbar';
-import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 import Footer from '@/components/feature/Footer';
 import { supabase } from '@/lib/supabase';
 
@@ -253,15 +251,15 @@ function shouldPreferReport(candidate: ReportRecord, current: ReportRecord): boo
 
 function directionFromChange(change: number | null): string {
   if (change === null) return '尚未取得收盤方向';
-  if (change >= 0.3) return `TAIEX 收盤上漲 ${change.toFixed(2)}%`;
-  if (change <= -0.3) return `TAIEX 收盤下跌 ${change.toFixed(2)}%`;
-  return `TAIEX 收盤震盪 ${change.toFixed(2)}%`;
+  if (change >= 0.3) return `加權指數收盤上漲 ${change.toFixed(2)}%`;
+  if (change <= -0.3) return `加權指數收盤下跌 ${change.toFixed(2)}%`;
+  return `加權指數收盤震盪 ${change.toFixed(2)}%`;
 }
 
 function buildEntry(row: ReportRecord): DecisionJournalEntry {
   const ai = row.ai_strategy_json || {};
   const closing = asRecord(ai.closing_verification_v2);
-  const dataStatus = text(closing?.data_status || ai.data_status || ai.data_quality, 'unknown');
+  const dataStatus = text(closing?.data_status || ai.data_status || ai.data_quality, '資料不足');
   const tradingDay = isTradingDay(ai, row);
   const hasMorningReport = Boolean(row.id && row.report_date);
   const hasClosingVerification = Boolean(closing);
@@ -327,68 +325,6 @@ function pct(value: number | null): string {
   return value === null ? '—' : `${Math.round(value)}%`;
 }
 
-function StatCard({ label, value, helper }: { label: string; value: string | number; helper: string; accent: string }) {
-  return (
-    <div className="ma-card-compact">
-      <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/42">{label}</div>
-      <div className="mt-3 text-4xl font-semibold tracking-tight text-white md:text-5xl">{value}</div>
-      <div className="mt-3 text-xs leading-5 text-white/36">{helper}</div>
-    </div>
-  );
-}
-
-function DetailList({ title, items, emptyText }: { title: string; items: string[]; emptyText: string }) {
-  return (
-    <div>
-      <h4 className="text-sm font-semibold text-white">{title}</h4>
-      {items.length > 0 ? (
-        <ul className="mt-2 space-y-2 text-sm text-white/65">
-          {items.map((item, index) => (
-            <li key={`${title}-${index}`} className="flex gap-2">
-              <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary-300/70" />
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-2 text-sm text-white/40">{emptyText}</p>
-      )}
-    </div>
-  );
-}
-
-function MiniMetric({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3">
-      <div className="text-[11px] font-medium text-white/38">{label}</div>
-      <div className="mt-1 text-lg font-semibold text-white/90">{value}</div>
-    </div>
-  );
-}
-
-function RuleItem({ icon: Icon, children }: { icon: typeof CheckCircle2; children: string }) {
-  return (
-    <li className="flex gap-3 rounded-2xl border border-white/8 bg-slate-950/30 p-4">
-      <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/8 text-cyan-200">
-        <Icon size={16} strokeWidth={1.8} />
-      </span>
-      <span className="text-sm leading-6 text-white/58">{children}</span>
-    </li>
-  );
-}
-
-function TimelineFact({ icon: Icon, label, value }: { icon: typeof Flag; label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/8 bg-slate-950/25 p-3">
-      <div className="flex items-center gap-2 text-[11px] font-medium text-white/35">
-        <Icon size={14} strokeWidth={1.8} />
-        {label}
-      </div>
-      <p className="mt-2 line-clamp-2 text-sm leading-5 text-white/72">{value}</p>
-    </div>
-  );
-}
-
 export default function PerformancePage() {
   const [entries, setEntries] = useState<DecisionJournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -417,8 +353,8 @@ export default function PerformancePage() {
         setEntries([]);
         setErrorMessage(
           isRlsBlocked
-            ? '目前無法讀取公開績效資料。請登入會員後查看完整 Decision Journal。'
-            : 'Decision Journal 暫時無法載入，請稍後再試。',
+            ? '目前無法讀取公開績效資料。請登入會員後查看完整決策帳本。'
+            : '決策帳本暫時無法載入，請稍後再試。',
         );
         setLoading(false);
         return;
@@ -443,69 +379,75 @@ export default function PerformancePage() {
 
   const validEntries = useMemo(() => entries.filter((entry) => entry.outcome !== 'insufficient').slice(0, 30), [entries]);
   const visibleEntries = useMemo(() => (isSignedIn ? validEntries : validEntries.slice(0, 3)), [isSignedIn, validEntries]);
-  const recentTimeline = useMemo(() => validEntries.slice(0, 10), [validEntries]);
   const stats = useMemo(() => calculateStats(entries.filter((entry) => validEntries.includes(entry) || entry.outcome === 'insufficient')), [entries, validEntries]);
-  const bestCase = useMemo(() => validEntries.filter((entry) => entry.outcome === 'complete').sort((a, b) => b.completenessScore - a.completenessScore || (b.confidence ?? 0) - (a.confidence ?? 0))[0] || null, [validEntries]);
-  const failedCase = useMemo(() => validEntries.find((entry) => entry.outcome === 'failed') || null, [validEntries]);
   const lessons = useMemo(() => validEntries.flatMap((entry) => [...entry.whatWasWrong, ...entry.tomorrowAdjustment]).filter(Boolean).slice(0, 5), [validEntries]);
   const insufficientCount = entries.filter((entry) => entry.outcome === 'insufficient').length;
   const lockedCount = Math.max(0, validEntries.length - visibleEntries.length);
   const hasMatureSample = stats.validCount >= 20;
 
   return (
-    <div className="ma-page ma-pixel-page ma-performance-page flex flex-col overflow-x-hidden">
+    <div className="ma-page ma-performance-page ma-performance-v3 flex flex-col overflow-x-hidden">
       <Navbar />
       <main className="flex-1 overflow-x-hidden">
-        <section className="ma-pixel-hero">
-          <div className="ma-pixel-content ma-pixel-hero-grid">
-            <div className="ma-pixel-hero-copy">
-              <p className="ma-pixel-eyebrow"><i className="ri-history-line" aria-hidden="true" />決策學習</p>
-              <h1>{hasMatureSample ? '歷史績效回顧' : '公開驗證進度'}</h1>
-              <p className="ma-pixel-hero-subtitle">{hasMatureSample ? '只看已完成驗證的結果、失敗原因與下一次改善。' : `目前已累積 ${stats.validCount} 個有效交易日，持續公開驗證中。`}</p>
-              <div className="ma-pixel-cta-row"><Link to={validEntries[0] ? `/reports/${validEntries[0].marketDate}` : '/reports'} className="ma-pixel-primary-button">{hasMatureSample ? '查看績效分析' : '查看驗證紀錄'}<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>
-            </div>
-            <aside className="ma-phase2-status-card">
-              <div><span>{hasMatureSample ? '命中率' : '有效交易日'}</span><strong>{hasMatureSample ? pct(stats.weightedSuccessRate) : stats.validCount}</strong></div>
-              <div><span>完成驗證</span><p>{stats.validCount} 個交易日</p></div>
-              <div><span>最近資料</span><p>{validEntries[0]?.marketDate || '資料不足'}</p></div>
-            </aside>
+        <header className="ma-performance-v3-header">
+          <div className="ma-performance-v3-shell">
+            <span>公開決策帳本</span>
+            <h1>績效不是宣傳數字，<br />是每一天可回看的驗證紀錄</h1>
+            <p>{hasMatureSample ? '只計入完成收盤驗證的交易日，並保留成功、失敗與下一次改善。' : `目前累積 ${stats.validCount} 個有效交易日；樣本未滿 20 日前，不用小樣本包裝命中率。`}</p>
           </div>
-        </section>
+        </header>
 
-        <div className="ma-pixel-content ma-pixel-page-sections">
+        <div className="ma-performance-v3-shell ma-performance-v3-content">
           {loading ? (
-            <div className="ma-phase2-state-card">正在讀取歷史績效...</div>
+            <div className="ma-performance-v3-state" aria-live="polite">正在讀取公開驗證紀錄...</div>
           ) : errorMessage ? (
-            <div className="ma-phase2-state-card is-warning"><strong>歷史績效暫時無法完整顯示</strong><p>{errorMessage}</p></div>
+            <div className="ma-performance-v3-state is-warning"><strong>歷史績效暫時無法完整顯示</strong><p>{errorMessage}</p></div>
           ) : stats.validCount === 0 ? (
-            <div className="ma-phase2-state-card"><strong>尚未累積完成驗證的交易日</strong><p>資料仍在累積，不以休市或不完整資料填充績效。</p></div>
+            <div className="ma-performance-v3-state"><strong>尚未累積完成驗證的交易日</strong><p>資料仍在累積，不以休市或不完整資料填充績效。</p></div>
           ) : (
             <>
-              <section>
-                <VisualSectionHeader icon="ri-bar-chart-box-line" title="績效概覽" />
-                <div className="ma-phase2-kpi-grid">
-                  <article className="ma-phase2-kpi-card"><p>驗證次數</p><strong>{stats.validCount}</strong><span>有效交易日</span></article>
-                  <article className="ma-phase2-kpi-card is-green"><p>完整成立</p><strong>{stats.complete}</strong><span>已完成驗證</span></article>
-                  {hasMatureSample ? <article className="ma-phase2-kpi-card is-amber"><p>加權命中率</p><strong>{pct(stats.weightedSuccessRate)}</strong><span>部分成立以 0.5 計</span></article> : <article className="ma-phase2-kpi-card is-amber"><p>樣本狀態</p><strong>累積中</strong><span>滿 20 個有效交易日後顯示比率</span></article>}
-                  {hasMatureSample ? <article className="ma-phase2-kpi-card is-blue"><p>完整成立率</p><strong>{pct(stats.completeRate)}</strong><span>不含資料不足</span></article> : <article className="ma-phase2-kpi-card is-blue"><p>公開驗證</p><strong>{stats.closingVerificationCount}</strong><span>完成收盤驗證</span></article>}
-                </div>
+              <section className="ma-performance-v3-summary" aria-label="驗證摘要">
+                <div><span>有效交易日</span><strong>{stats.validCount}</strong><p>完成條件後才計入</p></div>
+                <div><span>完整成立</span><strong>{stats.complete}</strong><p>有收盤資料可回看</p></div>
+                <div><span>{hasMatureSample ? '加權命中率' : '樣本狀態'}</span><strong>{hasMatureSample ? pct(stats.weightedSuccessRate) : `${stats.validCount}/20`}</strong><p>{hasMatureSample ? '部分成立以 0.5 計' : '滿 20 日後再顯示比率'}</p></div>
+                <div><span>排除資料</span><strong>{insufficientCount}</strong><p>休市、待驗證或不完整</p></div>
               </section>
 
-              <section>
-                <VisualSectionHeader icon="ri-journal-line" title="Decision Journal" description="每列只保留結果、成功、失敗與改善。" />
-                <div className="ma-performance-journal">{visibleEntries.map((entry) => <article key={entry.reportId} className="ma-performance-journal-row"><header><div><strong>{entry.marketDate}</strong><span>{entry.marketBias}</span></div><span className={`ma-phase2-outcome is-${entry.outcome}`}>{OUTCOME_LABEL[entry.outcome]}</span></header><div className="ma-performance-journal-facts"><div><span>結果</span><p>{entry.closingSummary}</p></div>{entry.whatWasRight[0] && <div><span>一句成功</span><p>{entry.whatWasRight[0]}</p></div>}{entry.whatWasWrong[0] && <div><span>一句失敗</span><p>{entry.whatWasWrong[0]}</p></div>}{entry.tomorrowAdjustment[0] && <div><span>一句改善</span><p>{entry.tomorrowAdjustment[0]}</p></div>}</div></article>)}</div>
+              <section className="ma-performance-v3-ledger" aria-labelledby="performance-ledger-title">
+                <header><div><span>逐日紀錄</span><h2 id="performance-ledger-title">驗證帳本</h2></div><p>點開任一日期，查看當天成功、失敗與改善。</p></header>
+                <div className="ma-performance-v3-ledger-head" aria-hidden="true"><span>日期</span><span>盤前方向</span><span>收盤結果</span><span>判定</span></div>
+                {visibleEntries.map((entry) => {
+                  const expanded = expandedId === entry.reportId;
+                  return (
+                    <article key={entry.reportId} className={`is-${entry.outcome}`}>
+                      <button type="button" onClick={() => setExpandedId(expanded ? null : entry.reportId)} aria-expanded={expanded}>
+                        <time>{entry.marketDate}</time><span>{entry.marketBias}</span><span>{entry.closingSummary}</span><em>{OUTCOME_LABEL[entry.outcome]}<i className={`ri-arrow-${expanded ? 'up' : 'down'}-s-line`} aria-hidden="true" /></em>
+                      </button>
+                      {expanded && (
+                        <div className="ma-performance-v3-ledger-detail">
+                          <div><strong>做對了什麼</strong><p>{entry.whatWasRight[0] || '本日尚未留下結構化成功原因。'}</p></div>
+                          <div><strong>做錯了什麼</strong><p>{entry.whatWasWrong[0] || '本日尚未留下結構化失敗原因。'}</p></div>
+                          <div><strong>下一次改善</strong><p>{entry.tomorrowAdjustment[0] || entry.correctionSummary}</p></div>
+                          <Link to={`/reports/${entry.marketDate}`}>查看當日報告<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
               </section>
 
-              <section>
-                <VisualSectionHeader icon="ri-shield-check-line" title="Quality" />
-                <div className="ma-performance-quality-grid">
-                  <article><p>已找到報告</p><strong>{stats.totalReports}</strong><span>公開資料樣本</span></article>
-                  <article><p>完成收盤驗證</p><strong>{stats.closingVerificationCount}</strong><span>具備驗證紀錄</span></article>
-                  <article><p>未納入統計</p><strong>{stats.insufficient}</strong><span>休市、待驗證或資料不足</span></article>
-                </div>
-              </section>
+              {lockedCount > 0 && (
+                <section className="ma-performance-v3-locked">
+                  <div><span>尚有 {lockedCount} 筆驗證紀錄</span><p>登入後可回看完整逐日帳本；會員方案開放前可先登記通知。</p></div>
+                  <Link to="/pricing#early-access">查看會員計畫<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+                </section>
+              )}
 
-              {lessons[0] && <section><VisualSectionHeader icon="ri-refresh-line" title="最近改善" /><article className="ma-performance-improvement"><i className="ri-lightbulb-line" aria-hidden="true" /><p>{lessons[0]}</p></article></section>}
+              <section className="ma-performance-v3-method" aria-labelledby="performance-method-title">
+                <header><span>統計方法</span><h2 id="performance-method-title">哪些資料會被計入？</h2></header>
+                <ol><li><span>01</span><p>只計入正常交易日。</p></li><li><span>02</span><p>必須存在完整收盤驗證。</p></li><li><span>03</span><p>資料不足與休市樣本明確排除。</p></li></ol>
+                {lessons[0] && <blockquote><span>最近改善</span><p>{lessons[0]}</p></blockquote>}
+              </section>
             </>
           )}
         </div>

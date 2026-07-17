@@ -13,7 +13,7 @@ interface PaywallCardProps {
 }
 
 function getDefaultCtaHref(_requiredTier: Exclude<SubscriptionTier, 'free' | 'admin'>): string {
-  return '/account';
+  return '/pricing#early-access';
 }
 
 export default function PaywallCard({

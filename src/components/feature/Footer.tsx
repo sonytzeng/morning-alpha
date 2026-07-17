@@ -38,6 +38,9 @@ export default function Footer() {
             <Link to="/contact" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               聯絡我們
             </Link>
+            <Link to="/pricing" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+              會員方案
+            </Link>
             <Link to="/terms" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               使用條款
             </Link>

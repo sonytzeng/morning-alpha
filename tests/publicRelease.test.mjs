@@ -145,7 +145,9 @@ test('home public decision copy is user-facing and internally consistent', () =>
     assert.doesNotMatch(home, new RegExp(`>${label}<`, 'i'), `home renders untranslated label: ${label}`);
   }
   assert.match(home, /盤前暫不建立部位/);
-  assert.match(home, /等待開盤驗證/);
+  assert.match(home, /runtimePhaseLabel\(currentNode\)/);
+  assert.match(home, /homeDecisionCopy\(decisionState, currentTimelineNode\)/);
+  assert.match(home, /decisionDayLabel\(decisionState, reportExists && isTodayReport, currentTimelineNode\)/);
   assert.doesNotMatch(home, /暫不建立交易判斷/);
   assert.match(home, /mistakeCards\.length === 1 \? ' is-single'/);
 });

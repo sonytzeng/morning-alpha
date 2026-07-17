@@ -134,12 +134,23 @@ function closingResultLabel(result: string, status: string): string {
   return result;
 }
 
-function decisionDayLabel(state: string, hasTodayReport: boolean): string {
+function runtimePhaseLabel(node?: TimelineNode): string {
+  if (!node) return '等待下一個驗證';
+  switch (node.status) {
+    case 'current': return `${node.label}中`;
+    case 'completed': return `${node.label}已完成`;
+    case 'insufficient': return `${node.label}資料不足`;
+    case 'not_applicable': return `${node.label}不適用`;
+    default: return `等待${node.label}`;
+  }
+}
+
+function decisionDayLabel(state: string, hasTodayReport: boolean, currentNode?: TimelineNode): string {
   switch (state) {
     case 'ACT': return '攻擊日';
     case 'STOP': return '防守日';
     case 'CLOSED': return '休市日';
-    case 'INSUFFICIENT_DATA': return hasTodayReport ? '等待開盤驗證' : '資料整理中';
+    case 'INSUFFICIENT_DATA': return hasTodayReport ? runtimePhaseLabel(currentNode) : '資料整理中';
     default: return '觀望日';
   }
 }
@@ -161,12 +172,17 @@ function exposureLabel(state: string): string {
   }
 }
 
-function homeDecisionCopy(state: string): { headline: string; instruction: string } {
+function homeDecisionCopy(state: string, currentNode?: TimelineNode): { headline: string; instruction: string } {
   switch (state) {
     case 'ACT': return { headline: '今日條件成立', instruction: '依計畫分批執行' };
     case 'STOP': return { headline: '今日條件已失效', instruction: '停止原定計畫' };
     case 'CLOSED': return { headline: '今日休市', instruction: '今天不執行盤中流程' };
-    case 'INSUFFICIENT_DATA': return { headline: '等待開盤驗證', instruction: '盤前暫不建立部位' };
+    case 'INSUFFICIENT_DATA': return {
+      headline: runtimePhaseLabel(currentNode),
+      instruction: currentNode?.label === '開盤驗證' && currentNode.status === 'pending'
+        ? '盤前暫不建立部位'
+        : '暫不建立部位',
+    };
     default: return { headline: '等待關鍵條件確認', instruction: '暫不追價，等待驗證' };
   }
 }
@@ -311,7 +327,7 @@ function HomePageContent() {
     nextCheckpointFallback: `${currentTimelineNode.time} ${currentTimelineNode.label}`,
   }), [canonicalNarrative, currentTimelineNode.label, currentTimelineNode.time, displayState]);
   const decisionState = presentation.primaryDecision.state;
-  const homeDecision = homeDecisionCopy(decisionState);
+  const homeDecision = homeDecisionCopy(decisionState, currentTimelineNode);
   const nextAction = homeDecision.instruction;
   const decisionContext = translateKnownTerms([
     presentation.marketBiasLabel ? `今天市場${presentation.marketBiasLabel}。` : '',
@@ -389,7 +405,7 @@ function HomePageContent() {
     displayState.todayQuote,
     decisionContext,
   ));
-  const marketStatusLabel = decisionDayLabel(decisionState, reportExists && isTodayReport);
+  const marketStatusLabel = decisionDayLabel(decisionState, reportExists && isTodayReport, currentTimelineNode);
   const decisionTone = decisionState === 'ACT'
     ? 'success'
     : decisionState === 'STOP'

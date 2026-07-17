@@ -166,7 +166,7 @@ test('opening radar degrades safely when only TXF is unavailable', () => {
 });
 
 test('runtime deployment and missing checkpoint schedules are reproducible', () => {
-  for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'ma-ops-health-check']) {
+  for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
   }
   for (const schedule of ["30 2 * * 1-5", "0 5 * * 1-5", "20 6 * * 1-5"]) {
@@ -176,7 +176,17 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeCheckpointWorkflow, /\{\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
   assert.match(runtimeCheckpointWorkflow, /snapshot_upserted_count >= 2/);
   assert.match(runtimeCheckpointWorkflow, /written_and_synced/);
+  assert.match(runtimeCheckpointWorkflow, /closing-verification-engine/);
+  assert.match(runtimeCheckpointWorkflow, /closing_verification_status/);
   assert.match(runtimeCheckpointWorkflow, /secrets\.CRON_SECRET/);
+});
+
+test('opening radar preserves the complete War Room decision contract', () => {
+  for (const field of ['decision_step', 'next_role', 'confirmation_checklist', 'risk_checklist', 'capital_rotation_path', 'external_priority', 'decision_confidence']) {
+    assert.match(openingMarketRadar, new RegExp(`${field}:`), `opening radar omits War Room field ${field}`);
+  }
+  assert.match(openingMarketRadar, /v10_observation_watchlist/);
+  assert.match(openingMarketRadar, /observation_roles: observationRoles/);
 });
 
 test('TXF discovery and quote URLs follow the Fugle futopt contract', () => {

@@ -83,8 +83,18 @@ const researchLabelMap: Record<string, string> = {
 
 function normalizeResearchText(value: unknown): string {
   return textValue(value)
+    .replace(
+      /checkpoint\s*(\d{2})(\d{2})\s*缺少同日、同\s*phase\s*且在\s*freshness window\s*內的完整\s*TAIEX\s*\/\s*TXF\s*\/\s*2330\s*快照[。.]?/gi,
+      (_match, hours: string, minutes: string) => `${hours}:${minutes} 開盤資料不完整：加權指數、台指期與台積電快照尚未在同一有效時間內到齊。`,
+    )
+    .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
+    .replace(/\bMEMORY\b/gi, '記憶體')
+    .replace(/\bELECTRONICS\b/gi, '電子權值')
+    .replace(/\bFINANCIAL\b/gi, '金融')
+    .replace(/\bDEFENSIVE\b/gi, '防禦型資金')
     .replace(/\bTAIEX\b/gi, '加權指數')
     .replace(/\bTXF\b/gi, '台指期')
+    .replace(/\b2330\b(?!\s*[／/])/g, '2330／台積電')
     .replace(/\bAI[ _-]?SERVER\b/gi, 'AI 伺服器')
     .replace(/\bADR\b/gi, '海外存託憑證')
     .replace(/\bunknown\b/gi, '尚未取得')

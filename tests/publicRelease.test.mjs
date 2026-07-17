@@ -159,6 +159,18 @@ test('opening radar degrades safely when only TXF is unavailable', () => {
   assert.match(openingMarketRadar, /if \(!checkpointUsable\)/);
 });
 
+test('TXF discovery and quote URLs follow the Fugle futopt contract', () => {
+  const source = read('supabase/functions/fetch-market-data-v10/index.ts');
+  assert.match(
+    source,
+    /futopt\/intraday\/tickers\?type=FUTURE&exchange=TAIFEX&session=\$\{session\}&product=TXF/,
+  );
+  assert.match(source, /"futopt\/intraday\/quote"/);
+  assert.match(source, /\{ session: session === "afterhours" \? "AFTERHOURS" : "REGULAR" \}/);
+  assert.doesNotMatch(source, /futopt\/intraday\/quote\?session=/);
+  assert.doesNotMatch(source, /futopt\/products/);
+});
+
 test('home public decision copy is user-facing and internally consistent', () => {
   for (const label of ['AI Confidence', 'Risk Level', 'Suggested Exposure', 'Last Update', 'Morning Brief', 'AI Final Decision', 'Observation', 'Reason', 'Impact']) {
     assert.doesNotMatch(home, new RegExp(`>${label}<`, 'i'), `home renders untranslated label: ${label}`);

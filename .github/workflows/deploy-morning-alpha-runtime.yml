@@ -2,6 +2,16 @@ name: Deploy Morning Alpha runtime
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/functions/fetch-market-data-v10/**'
+      - 'supabase/functions/opening-market-radar/**'
+      - 'supabase/functions/close-market-review/**'
+      - 'supabase/functions/closing-verification-engine/**'
+      - 'supabase/functions/ma-ops-health-check/**'
+      - '.github/workflows/deploy-morning-alpha-runtime.yml'
 
 permissions:
   contents: read

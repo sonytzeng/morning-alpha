@@ -1,4 +1,5 @@
 import { getRuntimeCheckpointState } from './decisionEvidence.ts';
+import { getTaipeiNow } from '../utils/tradingDay.ts';
 
 export type RuntimeTimelineStatus = 'completed' | 'current' | 'pending' | 'insufficient' | 'not_applicable';
 
@@ -9,7 +10,25 @@ export interface RuntimeTimelineNode {
   status: RuntimeTimelineStatus;
 }
 
-export function reconcileRuntimeTimeline<T extends { status: RuntimeTimelineStatus }>(nodes: T[]): T[] {
+function checkpointMinutes(value: string | undefined): number | null {
+  const match = value?.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59
+    ? hours * 60 + minutes
+    : null;
+}
+
+function currentTaipeiMinutes(): number {
+  const now = getTaipeiNow();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+export function reconcileRuntimeTimeline<T extends { status: RuntimeTimelineStatus; time?: string }>(
+  nodes: T[],
+  taipeiMinutes = currentTaipeiMinutes(),
+): T[] {
   let lastCompletedIndex = -1;
   nodes.forEach((node, index) => {
     if (node.status === 'completed') lastCompletedIndex = index;
@@ -21,7 +40,10 @@ export function reconcileRuntimeTimeline<T extends { status: RuntimeTimelineStat
       ? 'insufficient' as const
       : node.status,
   }));
-  const activeIndex = reconciled.findIndex((node) => node.status === 'pending');
+  const activeIndex = reconciled.findIndex((node) => {
+    const scheduledMinutes = checkpointMinutes(node.time);
+    return node.status === 'pending' && scheduledMinutes !== null && scheduledMinutes <= taipeiMinutes;
+  });
   if (activeIndex >= 0) reconciled[activeIndex].status = 'current';
   return reconciled;
 }
@@ -31,7 +53,7 @@ export function runtimeTimelineStatusLabel(status: RuntimeTimelineStatus): strin
   if (status === 'current') return '目前節點';
   if (status === 'insufficient') return '資料不足';
   if (status === 'not_applicable') return '本節點不適用';
-  return '待 Runtime';
+  return '等待驗證';
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -67,6 +89,7 @@ export function buildRuntimeDecisionTimeline(params: {
   reportRevisionId?: string | null;
   reportGeneratedAt?: string | null;
   isTradingDay: boolean;
+  taipeiMinutes?: number;
 }): RuntimeTimelineNode[] {
   const ai = record(params.ai);
   const sync = record(ai.intraday_sync_status);
@@ -80,7 +103,7 @@ export function buildRuntimeDecisionTimeline(params: {
     {
       time: '09:30',
       label: '開盤驗證',
-      detail: '第一個 Runtime checkpoint',
+      detail: '第一個盤中驗證節點',
       status: openingCompleted(ai)
         ? 'completed'
         : timelineStatus(getRuntimeCheckpointState(sync, '0930')),
@@ -94,7 +117,7 @@ export function buildRuntimeDecisionTimeline(params: {
     {
       time: '13:30',
       label: '盤中追蹤',
-      detail: '讀取午後 Runtime checkpoint',
+      detail: '讀取午後盤中資料',
       status: timelineStatus(getRuntimeCheckpointState(sync, '1300')),
     },
     {
@@ -107,5 +130,5 @@ export function buildRuntimeDecisionTimeline(params: {
 
   if (!params.isTradingDay) return rawNodes.map((node) => ({ ...node, status: 'not_applicable' }));
 
-  return reconcileRuntimeTimeline(rawNodes);
+  return reconcileRuntimeTimeline(rawNodes, params.taipeiMinutes);
 }

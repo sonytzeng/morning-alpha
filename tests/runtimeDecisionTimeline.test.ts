@@ -13,6 +13,7 @@ function assertEveryNotApplicable(label: string, date: string, expectedMarketSta
     ai: {},
     hasReport: false,
     isTradingDay: market.is_trading_day,
+    taipeiMinutes: 8 * 60,
   });
   assert(
     timeline.every((node) => node.status === 'not_applicable'),
@@ -39,6 +40,7 @@ Deno.test('trading day without checkpoint evidence remains pending/current', () 
     ai: {},
     hasReport: false,
     isTradingDay: market.is_trading_day,
+    taipeiMinutes: 8 * 60,
   });
   assert(timeline[0]?.status === 'current', 'first missing trading checkpoint should be current');
   assert(
@@ -61,8 +63,23 @@ Deno.test('checkpoint marked complete without execution evidence is not complete
     hasReport: true,
     reportRevisionId: 'revision-1',
     isTradingDay: true,
+    taipeiMinutes: 10 * 60,
   });
   assert(timeline[1]?.status === 'current', 'checkpoint without completed_at/evidence must remain current');
+});
+
+Deno.test('a future checkpoint is waiting, not current', () => {
+  const timeline = buildRuntimeDecisionTimeline({
+    ai: {},
+    hasReport: true,
+    reportRevisionId: 'revision-1',
+    isTradingDay: true,
+    taipeiMinutes: 8 * 60 + 40,
+  });
+
+  assert(timeline[0]?.status === 'completed', 'premarket report must remain completed');
+  assert(timeline[1]?.status === 'pending', '09:30 must still be waiting at 08:40');
+  assert(timeline.every((node) => node.status !== 'current'), 'future checkpoints must not be marked current');
 });
 
 Deno.test('checkpoint completed with evidence is completed', () => {

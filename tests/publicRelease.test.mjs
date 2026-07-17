@@ -135,6 +135,18 @@ test('runtime timelines reconcile completed later checkpoints', () => {
   const warRoomMapper = read('src/pages/war-room/warRoomPresentationMapper.ts');
   assert.match(runtimeTimeline, /node\.status === 'pending' && index < lastCompletedIndex/);
   assert.match(warRoomMapper, /reconcileRuntimeTimeline\(nodes\)/);
+  assert.match(runtimeTimeline, /scheduledMinutes <= taipeiMinutes/);
+  assert.doesNotMatch(runtimeTimeline, /待 Runtime|Runtime checkpoint/);
+});
+
+test('home public decision copy is user-facing and internally consistent', () => {
+  for (const label of ['AI Confidence', 'Risk Level', 'Suggested Exposure', 'Last Update', 'Morning Brief', 'AI Final Decision', 'Observation', 'Reason', 'Impact']) {
+    assert.doesNotMatch(home, new RegExp(`>${label}<`, 'i'), `home renders untranslated label: ${label}`);
+  }
+  assert.match(home, /盤前暫不建立部位/);
+  assert.match(home, /等待開盤驗證/);
+  assert.doesNotMatch(home, /暫不建立交易判斷/);
+  assert.match(home, /mistakeCards\.length === 1 \? ' is-single'/);
 });
 
 test('war room observation details are not line clamped', () => {

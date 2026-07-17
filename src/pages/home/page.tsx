@@ -12,7 +12,7 @@ import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/li
 import { buildMarketState, type MarketState } from '@/services/marketStateEngine';
 import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { renderSafeText } from '@/utils/renderSafe';
-import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
+import { buildDecisionPresentation } from '@/lib/decisionPresentation';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 import {
   buildRuntimeDecisionTimeline,
@@ -106,9 +106,13 @@ function firstMeaningfulString(...values: unknown[]): string {
 function translateKnownTerms(value: string): string {
   return value
     .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
-    .replace(/\bAI SERVER\b/gi, 'AI 伺服器')
+    .replace(/\bAI SERVER\b/gi, 'AI 伺服器族群')
     .replace(/\bPETROCHEMICAL\b/gi, '塑化')
-    .replace(/\bSHIPPING\b/gi, '航運');
+    .replace(/\bSHIPPING\b/gi, '航運')
+    .replace(/\bTAIEX\b/gi, '加權指數')
+    .replace(/\bTXF\b/gi, '台指期')
+    .replace(/\bRuntime\b/gi, '盤中資料')
+    .replace(/\b2330\b(?!\s*[／/])/g, '2330／台積電');
 }
 
 function uniqueStrings(values: string[], limit: number): string[] {
@@ -130,21 +134,21 @@ function closingResultLabel(result: string, status: string): string {
   return result;
 }
 
-function decisionDayLabel(state: string): string {
+function decisionDayLabel(state: string, hasTodayReport: boolean): string {
   switch (state) {
     case 'ACT': return '攻擊日';
     case 'STOP': return '防守日';
     case 'CLOSED': return '休市日';
-    case 'INSUFFICIENT_DATA': return '資料整理中';
+    case 'INSUFFICIENT_DATA': return hasTodayReport ? '等待開盤驗證' : '資料整理中';
     default: return '觀望日';
   }
 }
 
-function dataCompletenessLabel(status: string): string {
+function dataCompletenessLabel(status: string, hasReport: boolean): string {
   const normalized = status.trim().toLowerCase();
   if (['complete', 'completed', 'ready', 'reliable', 'ok', 'sufficient'].includes(normalized)) return '資料完整';
   if (['partial', 'degraded', 'limited', 'stale'].includes(normalized)) return '部分完成';
-  return '資料整理中';
+  return hasReport ? '盤前報告已載入' : '尚未取得報告';
 }
 
 function exposureLabel(state: string): string {
@@ -157,10 +161,20 @@ function exposureLabel(state: string): string {
   }
 }
 
+function homeDecisionCopy(state: string): { headline: string; instruction: string } {
+  switch (state) {
+    case 'ACT': return { headline: '今日條件成立', instruction: '依計畫分批執行' };
+    case 'STOP': return { headline: '今日條件已失效', instruction: '停止原定計畫' };
+    case 'CLOSED': return { headline: '今日休市', instruction: '今天不執行盤中流程' };
+    case 'INSUFFICIENT_DATA': return { headline: '等待開盤驗證', instruction: '盤前暫不建立部位' };
+    default: return { headline: '等待關鍵條件確認', instruction: '暫不追價，等待驗證' };
+  }
+}
+
 function formatTaipeiTimestamp(value: unknown): string {
-  if (typeof value !== 'string' || !value.trim()) return '今日資料整理中';
+  if (typeof value !== 'string' || !value.trim()) return '未提供更新時間';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '今日資料整理中';
+  if (Number.isNaN(date.getTime())) return '未提供更新時間';
   return new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei',
     month: '2-digit',
@@ -280,13 +294,13 @@ function HomePageContent() {
     return 'normal';
   }, [dataStatus, hasHistoricalReport, reportExists, isTodayReport, marketIsClosed]);
 
-  const timelineNodes: TimelineNode[] = useMemo(() => buildRuntimeDecisionTimeline({
+  const timelineNodes: TimelineNode[] = buildRuntimeDecisionTimeline({
     ai: homeAI,
     hasReport: reportExists && isTodayReport,
     reportRevisionId: ms?.revisionId,
     reportGeneratedAt: ms?.generatedAt,
     isTradingDay: displayMode !== 'market-closed' && displayState.is_trading_day,
-  }), [displayMode, displayState.is_trading_day, homeAI, isTodayReport, ms?.generatedAt, ms?.revisionId, reportExists]);
+  });
 
   const currentTimelineNode = timelineNodes.find((node) => node.status === 'current')
     || timelineNodes.find((node) => node.status === 'pending')
@@ -296,11 +310,13 @@ function HomePageContent() {
     narrative: canonicalNarrative,
     nextCheckpointFallback: `${currentTimelineNode.time} ${currentTimelineNode.label}`,
   }), [canonicalNarrative, currentTimelineNode.label, currentTimelineNode.time, displayState]);
-  const nextAction = presentation.primaryDecision.instruction;
-  const decisionContext = [
+  const decisionState = presentation.primaryDecision.state;
+  const homeDecision = homeDecisionCopy(decisionState);
+  const nextAction = homeDecision.instruction;
+  const decisionContext = translateKnownTerms([
     presentation.marketBiasLabel ? `今天市場${presentation.marketBiasLabel}。` : '',
     presentation.primaryDecision.reason,
-  ].filter(Boolean).join(' ') || displayState.market_message || '今日資料整理中，AI 正在等待市場資料完成。';
+  ].filter(Boolean).join(' ') || displayState.market_message || '今日資料整理中，正在等待市場資料完成。');
   const publicSummary = asRecord(homeAI?.public_summary);
   const openingRadar = asRecord(homeAI?.opening_radar);
   const intradayTracking = asRecord(homeAI?.intraday_tracking);
@@ -327,10 +343,10 @@ function HomePageContent() {
   const hasRuntimeClosing = Boolean(closingResultValue || /completed|degraded|verified/.test(closingStatus.toLowerCase()));
   const nextActionTime = displayMode === 'market-closed'
     ? displayState.nextUpdateTime
-    : hasRuntimeClosing ? '今日收盤驗證已完成' : formatCheckpoint(presentation.nextCheckpoint);
+    : hasRuntimeClosing ? '今日收盤驗證已完成' : (presentation.nextCheckpoint.time || currentTimelineNode.time);
   const nextActionLabel = hasRuntimeClosing
     ? '查看收盤驗證結果'
-    : currentTimelineNode.label;
+    : translateKnownTerms(presentation.nextCheckpoint.label || currentTimelineNode.label);
   const researchMaster = asRecord(homeAI?.research_master_v2);
   const researchMetadata = asRecord(researchMaster.metadata);
   const reportRecord = asRecord(report);
@@ -343,7 +359,7 @@ function HomePageContent() {
     publicSummary.risk_level,
     openingRadar.risk_level,
     intradayTracking.risk_level,
-  ) || '等待資料確認';
+  ) || '尚未定級';
   const lastUpdatedAt = firstString(
     homeAI?.data_as_of,
     openingRadar.data_as_of,
@@ -364,7 +380,7 @@ function HomePageContent() {
     homeAI?.engine_version,
     researchMetadata.engine_version,
     publicSummary.engine_version,
-  ) || '版本資訊整理中';
+  ) || '未提供版本資訊';
   const morningBrief = translateKnownTerms(firstMeaningfulString(
     homeAI?.morning_brief,
     publicSummary.morning_brief,
@@ -373,8 +389,7 @@ function HomePageContent() {
     displayState.todayQuote,
     decisionContext,
   ));
-  const decisionState = presentation.primaryDecision.state;
-  const marketStatusLabel = decisionDayLabel(decisionState);
+  const marketStatusLabel = decisionDayLabel(decisionState, reportExists && isTodayReport);
   const decisionTone = decisionState === 'ACT'
     ? 'success'
     : decisionState === 'STOP'
@@ -387,14 +402,14 @@ function HomePageContent() {
     const item = asRecord(source);
     return firstString(item.role, item.role_label).toUpperCase() === 'RISK';
   }));
-  const largestRisk = firstMeaningfulString(
+  const largestRisk = translateKnownTerms(firstMeaningfulString(
     presentation.invalidationItems[0],
     riskObservation.observation_reason,
     riskObservation.narrative,
     canonicalNarrative.failure_triggers[0]?.trigger,
     canonicalNarrative.today_focus.risk,
-  ) || '今日資料整理中，AI 正在等待風險訊號完成。';
-  const waitingFor = hasRuntimeClosing
+  ) || '今日資料整理中，正在等待風險訊號完成。');
+  const waitingFor = translateKnownTerms(hasRuntimeClosing
     ? firstMeaningfulString(
       displayState.v10Warning,
       intradaySync.warning,
@@ -405,7 +420,7 @@ function HomePageContent() {
       canonicalNarrative.intraday_progress.next_step,
       currentTimelineNode.label,
       nextAction,
-    ) || '等待下一個有效市場節點。';
+    ) || '等待下一個有效市場節點。');
   const finalDecisionReasons = uniqueStrings([
     presentation.primaryDecision.reason || '',
     ...(decisionState === 'ACT'
@@ -492,7 +507,11 @@ function HomePageContent() {
       presentation.primaryDecision.instruction,
     );
     if (!action) return items;
-    items.push({ action, reason, result });
+    items.push({
+      action: translateKnownTerms(action),
+      reason: translateKnownTerms(reason),
+      result: translateKnownTerms(result),
+    });
     return items;
   }, []).slice(0, 3);
 
@@ -508,11 +527,11 @@ function HomePageContent() {
     || closingOutcome.lessons.length,
   );
   const credibilityItems = [
-    { label: 'Data Updated', value: formatTaipeiTimestamp(lastUpdatedAt) },
-    { label: 'AI Version', value: aiVersion },
-    { label: '資料完整度', value: dataCompletenessLabel(displayState.dataStatus) },
+    { label: '資料更新時間', value: formatTaipeiTimestamp(lastUpdatedAt) },
+    { label: '分析版本', value: aiVersion },
+    { label: '資料狀態', value: dataCompletenessLabel(displayState.dataStatus, reportExists) },
     {
-      label: 'Confidence',
+      label: '判斷信心',
       value: confidenceScore == null ? '等待資料確認' : `${Math.round(confidenceScore)}/100`,
     },
   ];
@@ -621,7 +640,7 @@ function HomePageContent() {
                     <span>{displayReportDate}</span>
                   </div>
                   <p className="ma-pixel-eyebrow"><i className="ri-focus-3-line" aria-hidden="true" />Morning Alpha 今日判斷</p>
-                  <h1>{renderSafeText(nextAction)}</h1>
+                  <h1>{renderSafeText(homeDecision.instruction)}</h1>
                   <p className="ma-home-v2-hero-subtitle">{renderSafeText(decisionContext)}</p>
                   <div className="ma-home-v2-next-line">
                     <span>下一次確認</span>
@@ -630,7 +649,7 @@ function HomePageContent() {
                   </div>
                   <div className="ma-home-v2-hero-actions">
                     <Link to="/report/today" className="ma-pixel-primary-button">
-                      開始今天判斷
+                      查看今日完整判斷
                       <i className="ri-arrow-right-line" aria-hidden="true" />
                     </Link>
                     <Link to="/member-note" className="ma-pixel-text-link">
@@ -641,7 +660,7 @@ function HomePageContent() {
                 </div>
                 <div className="ma-home-v2-dashboard" aria-label="今日決策儀表板">
                   <article className="ma-home-v2-metric">
-                    <p>AI Confidence</p>
+                    <p>判斷信心</p>
                     <strong>
                       {confidenceScore == null
                         ? '等待資料確認'
@@ -653,23 +672,23 @@ function HomePageContent() {
                       </div>
                     )}
                     <span>
-                      {renderSafeText(presentation.confidence?.explanation || '盤前信心，仍需 Runtime 驗證')}
+                      {renderSafeText(translateKnownTerms(presentation.confidence?.explanation || '盤前信心，仍需盤中資料驗證'))}
                     </span>
                   </article>
                   <article className="ma-home-v2-metric">
-                    <p>Risk Level</p>
+                    <p>風險等級</p>
                     <strong>{renderSafeText(riskLevelDisplay)}</strong>
                     <span>依現有報告風險欄位</span>
                   </article>
                   <article className="ma-home-v2-metric">
-                    <p>Suggested Exposure</p>
+                    <p>建議部位</p>
                     <strong>{exposureLabel(decisionState)}</strong>
                     <span>{renderSafeText(marketStatusLabel)}</span>
                   </article>
                   <article className="ma-home-v2-metric">
-                    <p>Last Update</p>
+                    <p>資料更新</p>
                     <strong>{formatTaipeiTimestamp(lastUpdatedAt)}</strong>
-                    <span>Asia / Taipei</span>
+                    <span>台北時間</span>
                   </article>
                 </div>
               </div>
@@ -678,7 +697,7 @@ function HomePageContent() {
             <div className="ma-pixel-content ma-home-v2-content">
               <section className="ma-home-v2-brief" aria-labelledby="morning-brief-title">
                 <div>
-                  <p className="ma-pixel-eyebrow"><i className="ri-sun-line" aria-hidden="true" />Morning Brief</p>
+                  <p className="ma-pixel-eyebrow"><i className="ri-sun-line" aria-hidden="true" />盤前摘要</p>
                   <h2 id="morning-brief-title">{renderSafeText(morningBrief)}</h2>
                 </div>
                 <dl className="ma-home-v2-credibility">
@@ -695,12 +714,12 @@ function HomePageContent() {
                 <VisualSectionHeader
                   icon="ri-question-answer-line"
                   title="今天只回答三件事"
-                  description="先完成交易決定，再閱讀完整研究。"
+                  description="先看今日結論，再閱讀完整研究。"
                 />
                 <div className="ma-home-v2-answer-grid">
                   <article className={`ma-home-v2-answer-card is-${decisionTone}`}>
                     <p>今天適合交易嗎？</p>
-                    <strong>{decisionState === 'ACT' ? 'YES' : 'NO'}</strong>
+                    <strong>{decisionState === 'ACT' ? '可以' : '先不要'}</strong>
                     <span>{renderSafeText(marketStatusLabel)}</span>
                   </article>
                   <article className="ma-home-v2-answer-card is-danger">
@@ -718,14 +737,14 @@ function HomePageContent() {
               <section aria-labelledby="final-decision-title">
                 <VisualSectionHeader
                   icon="ri-brain-line"
-                  title="AI Final Decision"
+                  title="今日最終判斷"
                   description="只呈現目前證據支持的結論，不用市場形容詞替代驗證。"
                 />
                 <article className={`ma-home-v2-decision-card is-${decisionTone}`}>
                   <div className="ma-home-v2-decision-lead">
                     <p>目前決策</p>
-                    <h2 id="final-decision-title">{renderSafeText(presentation.primaryDecision.headline)}</h2>
-                    <strong>{renderSafeText(nextAction)}</strong>
+                    <h2 id="final-decision-title">{renderSafeText(homeDecision.headline)}</h2>
+                    <strong>{renderSafeText(homeDecision.instruction)}</strong>
                     <span>{renderSafeText(presentation.primaryDecision.reason || decisionContext)}</span>
                   </div>
                   <div className="ma-home-v2-decision-evidence">
@@ -735,7 +754,7 @@ function HomePageContent() {
                         {finalDecisionReasons.map((reason) => (
                           <li key={reason}>
                             <i className="ri-check-line" aria-hidden="true" />
-                            <span>{renderSafeText(reason)}</span>
+                            <span>{renderSafeText(translateKnownTerms(reason))}</span>
                           </li>
                         ))}
                       </ul>
@@ -747,7 +766,7 @@ function HomePageContent() {
                     )}
                     <div className="ma-home-v2-verdict">
                       <span>Morning Alpha 判定</span>
-                      <strong>{renderSafeText(presentation.primaryDecision.instruction)}</strong>
+                      <strong>{renderSafeText(homeDecision.instruction)}</strong>
                     </div>
                   </div>
                 </article>
@@ -774,15 +793,15 @@ function HomePageContent() {
                     {observationCards.map((item) => (
                       <article key={`${item.title}-${item.reason}`} className="ma-home-v2-observation-card">
                         <div>
-                          <p>Observation</p>
+                          <p>觀察項目</p>
                           <h3>{renderSafeText(item.title)}</h3>
                         </div>
                         <div>
-                          <p>Reason</p>
+                          <p>原因</p>
                           <strong>{renderSafeText(item.reason || '今日資料整理中')}</strong>
                         </div>
                         <div>
-                          <p>Impact</p>
+                          <p>影響</p>
                           <strong>{renderSafeText(item.impact || 'AI 正在等待市場資料完成。')}</strong>
                         </div>
                       </article>
@@ -803,7 +822,7 @@ function HomePageContent() {
                   description="把不要做、原因與可能結果放在同一條決策鏈。"
                 />
                 {mistakeCards.length > 0 ? (
-                  <div className="ma-home-v2-mistake-grid">
+                  <div className={`ma-home-v2-mistake-grid${mistakeCards.length === 1 ? ' is-single' : ''}`}>
                     {mistakeCards.map((item) => (
                       <article key={`${item.action}-${item.reason}`} className="ma-home-v2-mistake-card">
                         <div>

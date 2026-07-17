@@ -3195,15 +3195,12 @@ a, button, .transition-all {
   }
 
   .ma-home-v2-brief h2 {
-    display: -webkit-box;
     margin-top: 12px;
-    overflow: hidden;
+    overflow-wrap: anywhere;
     color: #F4F7FB;
     font-size: 25px;
     font-weight: 700;
     line-height: 38px;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
   }
 
   .ma-home-v2-credibility {
@@ -3511,6 +3508,24 @@ a, button, .transition-all {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
+  }
+
+  .ma-home-v2-mistake-grid.is-single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ma-home-v2-mistake-grid.is-single .ma-home-v2-mistake-card {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+  }
+
+  .ma-home-v2-mistake-grid.is-single .ma-home-v2-mistake-card > div + div {
+    margin-top: 0;
+    padding-top: 0;
+    padding-left: 22px;
+    border-top: 0;
+    border-left: 1px solid #172A3B;
   }
 
   .ma-home-v2-observation-card,
@@ -3900,6 +3915,18 @@ a, button, .transition-all {
     .ma-home-v2-mistake-grid,
     .ma-home-v2-decision-card {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ma-home-v2-mistake-grid.is-single .ma-home-v2-mistake-card {
+      display: block;
+    }
+
+    .ma-home-v2-mistake-grid.is-single .ma-home-v2-mistake-card > div + div {
+      margin-top: 16px;
+      padding-top: 16px;
+      padding-left: 0;
+      border-top: 1px solid #172A3B;
+      border-left: 0;
     }
 
     .ma-home-v2-answer-card {

@@ -103,7 +103,7 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: test -n "$CRON_SECRET"
 
-      - name: Build closing verification from the 14:15 snapshot
+      - name: Build closing review from the 14:15 snapshot
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
@@ -115,3 +115,16 @@ jobs:
             --data '{}' \
             --output "$response_file"
           jq -e '.success == true and (.action == "written_and_synced" or .action == "skipped_idempotent" or .pending == true or .skipped == true)' "$response_file" >/dev/null
+
+      - name: Write closing verification v2
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/closing-verification-v2.json"
+          curl --silent --show-error --fail-with-body \
+            --request POST "$FUNCTIONS_BASE_URL/closing-verification-engine" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{}' \
+            --output "$response_file"
+          jq -e '.success == true and (.closing_verification_status == "completed" or .closing_verification_status == "direction_completed_data_degraded")' "$response_file" >/dev/null

@@ -12,12 +12,10 @@ import { buildMarketState, type MarketState } from '@/services/marketStateEngine
 import {
   computeSectorRotationFreshness,
   type SectorRotationFreshness,
-  type SectorRotationItem,
 } from '@/services/sectorRotationService';
 import { formatTaipeiDate, resolveMarketStatus } from '@/utils/tradingDay';
 import {
   buildWarRoomClosingState,
-  buildWarRoomObservationCards,
   buildWarRoomTimeline,
   type WarRoomTimelineStatus,
 } from './warRoomPresentationMapper';
@@ -57,17 +55,6 @@ function publicWarRoomText(value: unknown, fallback = '尚未取得'): string {
   return text || fallback;
 }
 
-function safeNumber(value: unknown): number | null {
-  if (value === null || value === undefined || value === '') return null;
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-}
-
-function formatPercent(value: number | null): string {
-  if (value === null) return '尚未取得';
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-}
-
 function timelineDetail(status: WarRoomTimelineStatus): string {
   if (status === 'completed') return '本節點資料已到位';
   if (status === 'insufficient') return '資料不完整，本節點未升級判斷';
@@ -98,7 +85,6 @@ function WarRoomContent() {
     todayCloseVerification,
     morningState,
   } = useLatestReport();
-  const [sectorData, setSectorData] = useState<SectorRotationItem[]>([]);
   const [sectorFreshness, setSectorFreshness] = useState<SectorRotationFreshness | null>(null);
 
   const todayTaipeiStr = formatTaipeiDate();
@@ -140,11 +126,9 @@ function WarRoomContent() {
   useEffect(() => {
     const result = morningState?.sectorRotationState;
     if (!result) {
-      setSectorData([]);
       setSectorFreshness(null);
       return;
     }
-    setSectorData(result.items);
     const hasCloseVerification = hasVerifiedClose
       && todayCloseVerification?.report_date === todayTaipeiStr;
     const hasIntradayCheckpoint = ['0930', '1030', '1300']
@@ -252,56 +236,41 @@ function WarRoomContent() {
   const nextCheckpoint = currentNode
     ? `${currentNode.time}｜${currentNode.label}`
     : '等待下一次驗證';
+  const hasNewIntradayEvidence = closingState.isPostClose
+    || getRuntimeCheckpointState(runtimeSyncStatus, '1030') === 'completed'
+    || getRuntimeCheckpointState(runtimeSyncStatus, '1300') === 'completed';
+  const feedTimeline = [
+    ...timeline.filter((item) => item.status === 'current'),
+    ...timeline.filter((item) => !['current', 'pending'].includes(item.status)).reverse(),
+    ...timeline.filter((item) => item.status === 'pending'),
+  ];
   const action = decisionState === 'rejected'
     ? '停止沿用早上的判斷'
     : decisionState === 'confirmed' || decisionState === 'completed'
       ? '維持原計畫，不追價'
-      : '暫不升級決策';
+      : '先不改變早上的判斷';
   const headline = decisionState === 'rejected'
     ? '盤中證據已推翻早上的判斷'
     : decisionState === 'confirmed' || decisionState === 'completed'
       ? '盤中證據仍支持早上的判斷'
-      : '目前沒有足夠新證據改變早上判斷';
+      : '目前沒有新資料足以改變早上的判斷';
   const statusLabel = closingState.isPostClose
     ? closingState.label
     : currentNode?.status === 'current'
       ? '監控中'
       : currentNode?.statusLabel || '等待驗證';
 
-  const tsmcChange = safeNumber(openingRadar?.tsmc_change);
-  const taiexChange = safeNumber(openingRadar?.taiex_change);
-  const txfChange = safeNumber(openingRadar?.txf_change);
-  const evidenceRows = [
-    { label: '台積電', value: formatPercent(tsmcChange), state: tsmcChange === null ? 'missing' : 'ready' },
-    { label: '加權指數', value: formatPercent(taiexChange), state: taiexChange === null ? 'missing' : 'ready' },
-    { label: '台指期', value: formatPercent(txfChange), state: txfChange === null ? 'missing' : 'ready' },
-    {
-      label: '主線族群',
-      value: publicWarRoomText(sectorData[0]?.sector, '尚未確認'),
-      state: sectorFreshness?.canUseAsTodayStrategy ? 'ready' : 'missing',
-    },
-  ];
-
-  const supportingSignals = Array.from(new Set([
-    ...canonicalNarrative.intraday_progress.completed_steps,
-    ...evidenceRows.filter((item) => item.state === 'ready').map((item) => `${item.label} ${item.value}`),
-  ].map((item) => publicWarRoomText(item, '')).filter(Boolean))).slice(0, 3);
-  const opposingSignals = Array.from(new Set([
-    canonicalNarrative.decision_lifecycle.failure_condition.trigger,
-    ...canonicalNarrative.failure_triggers.map((item) => item.trigger),
-  ].map((item) => publicWarRoomText(item, '')).filter(Boolean))).slice(0, 3);
-  const observations = buildWarRoomObservationCards({
-    sources: [
-      ...(displayState?.v10ObservationWatchlist || []),
-      ...(displayState?.coreBeneficiaryStocks || []),
-    ],
-    closingVerificationV2,
-    publicClosingVerification,
-    todayCloseVerification,
-    fallbackNext: nextCheckpoint,
-    fallbackStop: canonicalNarrative.decision_lifecycle.failure_condition.trigger,
-    limit: 4,
-  });
+  const completedIntradaySteps = hasNewIntradayEvidence
+    ? Array.from(new Set(canonicalNarrative.intraday_progress.completed_steps
+      .map((item) => publicWarRoomText(item, ''))
+      .filter(Boolean))).slice(0, 3)
+    : [];
+  const changeCondition = hasNewIntradayEvidence
+    ? publicWarRoomText(
+      canonicalNarrative.decision_lifecycle.failure_condition.trigger,
+      '出現足以推翻早上判斷的新訊號',
+    )
+    : `等 ${nextCheckpoint} 取得完整資料後再判斷`;
 
   return (
     <div className="ma-page ma-war-room-page ma-war-room-v3 flex flex-col overflow-x-hidden">
@@ -323,11 +292,11 @@ function WarRoomContent() {
           <div className="ma-war-room-v3-main">
             <section className="ma-war-room-v3-section" aria-labelledby="war-room-updates-title">
               <div className="ma-war-room-v3-section-heading">
-                <div><span>即時紀錄</span><h2 id="war-room-updates-title">最新異動</h2></div>
-                <p>只記錄會改變決策的節點，不重複整份盤前報告。</p>
+                <div><span>即時紀錄</span><h2 id="war-room-updates-title">盤中更新</h2></div>
+                <p>先看現在，再回看已發生；未到時間的節點排在後面。</p>
               </div>
               <ol className="ma-war-room-v3-feed">
-                {[...timeline].reverse().map((item) => (
+                {feedTimeline.map((item) => (
                   <li key={item.time} className={`is-${item.status}`}>
                     <time>{item.time}</time>
                     <div>
@@ -340,64 +309,35 @@ function WarRoomContent() {
               </ol>
             </section>
 
-            <section className="ma-war-room-v3-section" aria-labelledby="war-room-evidence-title">
-              <div className="ma-war-room-v3-section-heading">
-                <div><span>同步狀態</span><h2 id="war-room-evidence-title">證據矩陣</h2></div>
-                <p>缺少的來源直接標示，不拿不完整資料補結論。</p>
-              </div>
-              <div className="ma-war-room-v3-evidence-table" role="table" aria-label="盤中證據狀態">
-                {evidenceRows.map((item) => (
-                  <div key={item.label} role="row">
-                    <span role="cell">{item.label}</span>
-                    <strong role="cell">{item.value}</strong>
-                    <em role="cell" className={`is-${item.state}`}>{item.state === 'ready' ? '已取得' : '待補資料'}</em>
+            {!hasNewIntradayEvidence ? (
+              <section className="ma-war-room-v3-section" aria-labelledby="war-room-waiting-title">
+                <div className="ma-war-room-v3-no-update">
+                  <i className="ri-time-line" aria-hidden="true" />
+                  <div>
+                    <span>目前狀態</span>
+                    <h2 id="war-room-waiting-title">還沒有新的盤中更新</h2>
+                    <p>正在等待 {nextCheckpoint} 的資料。資料到齊前，不重複顯示盤前內容，也不改變原判斷。</p>
                   </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="ma-war-room-v3-section" aria-labelledby="war-room-delta-title">
-              <div className="ma-war-room-v3-section-heading">
-                <div><span>決策差異</span><h2 id="war-room-delta-title">與盤前相比</h2></div>
-                <p>只看新增支持與新增風險，避免把原報告再讀一次。</p>
-              </div>
-              <div className="ma-war-room-v3-delta-grid">
-                <article className="is-support">
-                  <h3><i className="ri-add-circle-line" aria-hidden="true" />新增支持</h3>
-                  {supportingSignals.length > 0
-                    ? supportingSignals.map((item) => <p key={item}>{item}</p>)
-                    : <p className="is-empty">目前沒有新增支持證據。</p>}
-                </article>
-                <article className="is-risk">
-                  <h3><i className="ri-error-warning-line" aria-hidden="true" />新增風險</h3>
-                  {opposingSignals.length > 0
-                    ? opposingSignals.map((item) => <p key={item}>{item}</p>)
-                    : <p className="is-empty">目前沒有新增風險訊號。</p>}
-                </article>
-              </div>
-            </section>
-
-            {observations.length > 0 && (
-              <section className="ma-war-room-v3-section" aria-labelledby="war-room-watchlist-title">
-                <div className="ma-war-room-v3-section-heading">
-                  <div><span>逐檔監控</span><h2 id="war-room-watchlist-title">監控清單</h2></div>
-                  <p>每檔只保留角色、下一確認與停止條件。</p>
                 </div>
-                <div className="ma-war-room-v3-watch-table">
-                  <div className="ma-war-room-v3-watch-head" aria-hidden="true">
-                    <span>股票／角色</span><span>下一確認</span><span>停止條件</span><span>狀態</span>
-                  </div>
-                  {observations.map((item) => (
-                    <article key={item.key}>
-                      <div>
-                        <strong>{publicWarRoomText(item.name || item.symbol)}</strong>
-                        <span>{item.roles.map((role) => publicWarRoomText(role)).join('／') || '待確認角色'}</span>
-                      </div>
-                      <p><small>{item.detailLabel}</small>{publicWarRoomText(item.next)}</p>
-                      <p><small>停止條件</small>{publicWarRoomText(item.stop)}</p>
-                      <em className={`is-${item.statusTone}`}>{publicWarRoomText(item.status)}</em>
-                    </article>
-                  ))}
+              </section>
+            ) : (
+              <section className="ma-war-room-v3-section" aria-labelledby="war-room-delta-title">
+                <div className="ma-war-room-v3-section-heading">
+                  <div><span>盤中變化</span><h2 id="war-room-delta-title">跟早上相比，哪裡變了？</h2></div>
+                  <p>只呈現盤中新增的結果，不重播盤前報告與候選名單。</p>
+                </div>
+                <div className="ma-war-room-v3-delta-grid">
+                  <article className="is-support">
+                    <h3><i className="ri-pulse-line" aria-hidden="true" />這次多了什麼</h3>
+                    {completedIntradaySteps.length > 0
+                      ? completedIntradaySteps.map((item) => <p key={item}>{item}</p>)
+                      : <p className="is-empty">本次更新沒有增加可用證據。</p>}
+                  </article>
+                  <article className="is-risk">
+                    <h3><i className="ri-compass-3-line" aria-hidden="true" />判斷有沒有改變</h3>
+                    <p>{action}</p>
+                    <p>{decisionReason}</p>
+                  </article>
                 </div>
               </section>
             )}
@@ -409,7 +349,7 @@ function WarRoomContent() {
             <dl>
               <div><dt>目前節點</dt><dd>{nextCheckpoint}</dd></div>
               <div><dt>判斷理由</dt><dd>{decisionReason}</dd></div>
-              <div><dt>何時改變</dt><dd>{publicWarRoomText(canonicalNarrative.decision_lifecycle.failure_condition.trigger, '等新證據足以改變原判斷')}</dd></div>
+              <div><dt>何時改變</dt><dd>{changeCondition}</dd></div>
             </dl>
             <Link to="/report/today">回看今日判斷<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
           </aside>

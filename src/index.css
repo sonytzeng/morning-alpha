@@ -3342,6 +3342,7 @@ a, button, .transition-all {
     color: #6F7F90;
     font-size: 13px;
     line-height: 21px;
+    overflow-wrap: anywhere;
   }
 
   .ma-war-room-page .ma-war-room-v3-feed span {
@@ -3367,6 +3368,51 @@ a, button, .transition-all {
   .ma-war-room-page .ma-war-room-v3-feed > li.is-insufficient time,
   .ma-war-room-page .ma-war-room-v3-feed > li.is-insufficient span {
     color: #F27C86;
+  }
+
+  .ma-war-room-page .ma-war-room-v3-no-update {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    padding: 22px;
+    border: 1px solid rgba(243, 174, 43, 0.28);
+    border-radius: 14px;
+    background: rgba(243, 174, 43, 0.05);
+  }
+
+  .ma-war-room-page .ma-war-room-v3-no-update > i {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 12px;
+    background: rgba(243, 174, 43, 0.1);
+    color: #F3AE2B;
+    font-size: 20px;
+  }
+
+  .ma-war-room-page .ma-war-room-v3-no-update span {
+    color: #F3AE2B;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    line-height: 18px;
+  }
+
+  .ma-war-room-page .ma-war-room-v3-no-update h2 {
+    margin-top: 3px;
+    color: #F4F7FB;
+    font-size: 21px;
+    line-height: 30px;
+  }
+
+  .ma-war-room-page .ma-war-room-v3-no-update p {
+    margin-top: 6px;
+    color: #A9B6C5;
+    font-size: 13px;
+    line-height: 22px;
+    overflow-wrap: anywhere;
   }
 
   .ma-war-room-page .ma-war-room-v3-evidence-table {

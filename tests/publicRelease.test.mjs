@@ -210,9 +210,16 @@ test('opportunities is a candidate screening flow with complete public copy', ()
 });
 
 test('war room is a live monitor rather than another dashboard page', () => {
-  for (const label of ['盤中監控中', '最新異動', '證據矩陣', '與盤前相比', '監控清單', '現在怎麼做']) {
+  for (const label of ['盤中監控中', '盤中更新', '還沒有新的盤中更新', '跟早上相比，哪裡變了？', '現在怎麼做']) {
     assert.match(warRoom, new RegExp(label), `war room is missing monitor copy: ${label}`);
   }
+  for (const repeatedSurface of ['證據矩陣', '監控清單', 'ma-war-room-v3-evidence-table', 'ma-war-room-v3-watch-table']) {
+    assert.doesNotMatch(warRoom, new RegExp(repeatedSurface), `war room still repeats a morning surface: ${repeatedSurface}`);
+  }
+  assert.match(warRoom, /hasNewIntradayEvidence/);
+  assert.match(warRoom, /getRuntimeCheckpointState\(runtimeSyncStatus, '1030'\) === 'completed'/);
+  assert.match(warRoom, /getRuntimeCheckpointState\(runtimeSyncStatus, '1300'\) === 'completed'/);
+  assert.match(warRoom, /feedTimeline/);
   for (const legacySurface of ['ma-pixel-hero', 'ma-phase2-kpi-grid', 'ma-phase2-timeline', 'ma-phase2-observation-grid']) {
     assert.doesNotMatch(warRoom, new RegExp(legacySurface), `war room still uses repeated surface: ${legacySurface}`);
   }
@@ -225,10 +232,14 @@ test('war room is a live monitor rather than another dashboard page', () => {
 
 test('war room rows show complete text and use a distinct responsive surface', () => {
   const css = read('src/index.css');
-  const watchRule = css.match(/\.ma-war-room-page \.ma-war-room-v3-watch-table article strong,\n  \.ma-war-room-page \.ma-war-room-v3-watch-table article p \{([\s\S]*?)\n  \}/)?.[1] || '';
-  assert.ok(watchRule, 'missing scoped monitor watch row rule');
-  assert.doesNotMatch(watchRule, /line-clamp|overflow:\s*hidden|display:\s*-webkit-box/);
-  assert.match(watchRule, /overflow-wrap:\s*anywhere/);
+  const feedRule = css.match(/\.ma-war-room-page \.ma-war-room-v3-feed p \{([\s\S]*?)\n  \}/)?.[1] || '';
+  const noUpdateRule = css.match(/\.ma-war-room-page \.ma-war-room-v3-no-update p \{([\s\S]*?)\n  \}/)?.[1] || '';
+  assert.ok(feedRule, 'missing scoped monitor feed rule');
+  assert.ok(noUpdateRule, 'missing scoped monitor empty-state rule');
+  assert.doesNotMatch(feedRule, /line-clamp|overflow:\s*hidden|display:\s*-webkit-box/);
+  assert.doesNotMatch(noUpdateRule, /line-clamp|overflow:\s*hidden|display:\s*-webkit-box/);
+  assert.match(feedRule, /overflow-wrap:\s*anywhere/);
+  assert.match(noUpdateRule, /overflow-wrap:\s*anywhere/);
   assert.match(css, /\.ma-war-room-page \.ma-war-room-v3-layout/);
   assert.match(css, /@media \(max-width: 767px\)[\s\S]*?\.ma-war-room-page \.ma-war-room-v3-layout/);
 });

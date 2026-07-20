@@ -1141,7 +1141,7 @@ function MemberNoteContent() {
               </section>
             </>
           ) : (
-            <PaywallCard title="升級會員查看完整盤前研究筆記" description="完整研究推導、支持與反對證據，以及今日使用方式收在會員版。" requiredTier="member" featureList={['完整研究推導', '支持與反對證據', '今日使用方式']} tone="dark" />
+            <PaywallCard title="用 14 天完整看懂一套判斷如何走到收盤" description="會員版不只多一篇文章，而是補齊海外事件到台股代表股的因果鏈、盤中成立與取消條件，以及收盤後的命中與失誤紀錄。正式方案預定 NT$199/月，公開測試登記不扣款。" requiredTier="member" featureList={['完整事件與產業傳導鏈', '支持、反對與失效證據', '09:30／10:30／13:00 盤中驗證', '14:20 收盤回顧與明日調整']} tone="dark" />
           )}
         </article>
       </main>

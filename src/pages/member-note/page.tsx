@@ -109,6 +109,17 @@ function normalizeResearchText(value: unknown): string {
     .trim();
 }
 
+function naturalizeResearchHeadline(value: unknown): string {
+  const text = normalizeResearchText(value);
+  const syntheticQuestion = text.match(/^今天要驗證的是\s*(.+?)\s*能否從.+?傳導到台股代表(?:個)?股[。.]?$/);
+  if (syntheticQuestion?.[1]) {
+    return `${syntheticQuestion[1].trim()}是今天的主要觀察方向，先等市場承接確認。`;
+  }
+  return text
+    .replace(/^今天要驗證的是\s*/i, '今天先確認：')
+    .replace(/\s*能否\s*/g, '是否');
+}
+
 function researchComparisonKey(value: unknown): string {
   return normalizeResearchText(value)
     .toLocaleLowerCase('zh-TW')
@@ -889,7 +900,7 @@ function MemberNoteContent() {
   });
   const readableMarketDirection = formatResearchLabel(marketBias);
   const readableThesis = formatResearchLabel(decisionLifecycle.current_thesis.summary);
-  const heroConclusion = firstUniqueResearchText([
+  const heroConclusion = naturalizeResearchHeadline(firstUniqueResearchText([
     canonicalNarrative.today_focus.summary,
     decisionPresentation.primaryDecision.headline,
     readableMarketDirection && readableThesis ? `${readableMarketDirection}：${readableThesis}` : '',
@@ -897,7 +908,7 @@ function MemberNoteContent() {
     researcherSummary,
     openingThesis.summary,
     rawAI.daily_sentence,
-  ], [], '');
+  ], [], ''));
   const todayOneLine = heroConclusion;
   const v10BeneficiaryEnabled = dsState?.v10BeneficiaryEnabled === true || rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist || dsState?.v10ObservationWatchlist, 5);

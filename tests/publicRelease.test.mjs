@@ -238,6 +238,11 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /取消條件/);
   assert.doesNotMatch(home, /81%|勝率保證|保證獲利/);
   assert.match(home, /isSyntheticResearchSentence/);
+  assert.match(home, /get_public_performance_journal/);
+  assert.match(home, /latestPublicClosing/);
+  assert.match(home, /最近一次收盤驗證 ·/);
+  assert.match(home, /dataStatus === 'complete'/);
+  assert.match(home, /hasDirection/);
 });
 
 test('today report keeps runtime state and technical copy out of the public UI', () => {

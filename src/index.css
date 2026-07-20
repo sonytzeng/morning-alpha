@@ -4090,6 +4090,54 @@ a, button, .transition-all {
     overflow: hidden;
   }
 
+  .ma-pricing-v2 .ma-pricing-v2-flow ol.is-daily-delivery {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .ma-pricing-v2 .ma-pricing-v2-flow ol.is-daily-delivery li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ma-pricing-v2 .ma-pricing-v2-comparison-table {
+    margin-top: 26px;
+    overflow: hidden;
+    border: 1px solid #20364A;
+    border-radius: 15px;
+    background: #0B1A2A;
+  }
+
+  .ma-pricing-v2 .ma-pricing-v2-comparison-table > div {
+    display: grid;
+    grid-template-columns: minmax(130px, 0.65fr) repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    padding: 18px 22px;
+    border-bottom: 1px solid #20364A;
+  }
+
+  .ma-pricing-v2 .ma-pricing-v2-comparison-table > div:last-child { border-bottom: 0; }
+  .ma-pricing-v2 .ma-pricing-v2-comparison-table .is-heading { background: #102236; }
+  .ma-pricing-v2 .ma-pricing-v2-comparison-table strong { color: #F4F7FB; font-size: 13px; line-height: 21px; }
+  .ma-pricing-v2 .ma-pricing-v2-comparison-table span { color: #8FA0B2; font-size: 13px; line-height: 21px; }
+  .ma-pricing-v2 .ma-pricing-v2-comparison-table > div > :last-child { color: #BDEFD9; }
+
+  .ma-pricing-v2 .ma-pricing-v2-trial > ol {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 26px;
+  }
+
+  .ma-pricing-v2 .ma-pricing-v2-trial li {
+    padding: 22px;
+    border: 1px solid #20364A;
+    border-radius: 14px;
+    background: #0B1A2A;
+  }
+
+  .ma-pricing-v2 .ma-pricing-v2-trial li > span { color: #14C982; font-size: 11px; font-weight: 800; }
+  .ma-pricing-v2 .ma-pricing-v2-trial li > strong { display: block; margin-top: 10px; color: #F4F7FB; font-size: 15px; line-height: 23px; }
+  .ma-pricing-v2 .ma-pricing-v2-trial li > p { margin-top: 7px; color: #7E8C9D; font-size: 13px; line-height: 21px; }
+
   .ma-pricing-v2 .ma-pricing-v2-flow li {
     display: grid;
     grid-template-columns: 38px minmax(0, 1fr);
@@ -4214,9 +4262,29 @@ a, button, .transition-all {
 
     .ma-pricing-v2 .ma-pricing-v2-plans,
     .ma-pricing-v2 .ma-pricing-v2-flow ol,
+    .ma-pricing-v2 .ma-pricing-v2-flow ol.is-daily-delivery,
+    .ma-pricing-v2 .ma-pricing-v2-trial > ol,
     .ma-pricing-v2 .ma-pricing-v2-conversion {
       grid-template-columns: minmax(0, 1fr);
     }
+
+    .ma-pricing-v2 .ma-pricing-v2-comparison-table > div {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 7px;
+    }
+
+    .ma-pricing-v2 .ma-pricing-v2-comparison-table .is-heading { display: none; }
+
+    .ma-pricing-v2 .ma-pricing-v2-comparison-table > div > span::before {
+      display: block;
+      margin-bottom: 2px;
+      color: #6F7F90;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .ma-pricing-v2 .ma-pricing-v2-comparison-table > div > span:nth-child(2)::before { content: "公開測試"; }
+    .ma-pricing-v2 .ma-pricing-v2-comparison-table > div > span:nth-child(3)::before { content: "創始會員"; }
 
     .ma-pricing-v2 .ma-pricing-v2-plans > article {
       min-height: 0;

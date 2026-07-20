@@ -1068,6 +1068,40 @@ function MemberNoteContent() {
       formatCheckpoint(decisionPresentation.nextCheckpoint),
     ], [heroConclusion, heroValidation, summaryNext], '') },
   ].filter((item) => Boolean(item.value));
+  const closingReview = [
+    {
+      label: '收盤結果',
+      value: hasCompletedClosingVerification
+        ? humanStatus(firstText(
+            closingVerificationRecord.hit_or_miss,
+            closingVerificationRecord.prediction_result,
+            closingVerificationRecord.verdict_label,
+            closingVerificationRecord.status,
+          ))
+        : '等待 14:20 收盤驗證',
+    },
+    {
+      label: '實際發生',
+      value: hasCompletedClosingVerification
+        ? firstUniqueResearchText([
+            closingVerificationRecord.actual_direction,
+            closingVerificationRecord.summary,
+            canonicalNarrative.closing_outcome.summary,
+          ], [heroConclusion], '已完成驗證，詳細市場結果整理中。')
+        : '收盤資料未完整前，不先判定命中或失準。',
+    },
+    {
+      label: '留下什麼',
+      value: hasCompletedClosingVerification
+        ? firstUniqueResearchText([
+            decisionLifecycle.daily_lesson,
+            ...canonicalNarrative.closing_outcome.lessons,
+            tomorrowAdjustment.summary,
+            tomorrowAdjustment.action,
+          ], [heroConclusion], '本次驗證已留存，等待下一交易日重新判斷。')
+        : '收盤後會補上失準原因、保留規則與明日調整。',
+    },
+  ];
   const nextConfirmationDetail = firstUniqueResearchText([
     canonicalNarrative.intraday_progress.next_step,
     formatCheckpoint(decisionPresentation.nextCheckpoint),
@@ -1138,6 +1172,14 @@ function MemberNoteContent() {
                   <div><h3>失效條件</h3>{invalidationItems.length > 0 ? invalidationItems.map((item) => <p key={item}>{renderSafeText(item)}</p>) : <p>目前沒有可用的失效條件。</p>}</div>
                   {nextConfirmationDetail && <div><h3>下一次確認</h3><p>{renderSafeText(nextConfirmationDetail)}</p><Link to="/war-room">前往盤中監控<i className="ri-arrow-right-line" aria-hidden="true" /></Link></div>}
                 </div>
+              </section>
+
+              <section className="ma-research-note-v3-chapter">
+                <header><span>06</span><div><p>收盤驗證</p><h2>早上的判斷，收盤後必須接受核對</h2></div></header>
+                <dl className="ma-research-note-v3-guidance">
+                  {closingReview.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{renderSafeText(item.value)}</dd></div>)}
+                </dl>
+                {isClosingVerificationDegraded && <p className="ma-research-note-v3-closing-note">本次收盤資料仍不完整，因此只保留已能查證的部分，不計入完整命中判定。</p>}
               </section>
             </>
           ) : (

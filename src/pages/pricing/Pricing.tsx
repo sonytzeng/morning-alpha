@@ -21,6 +21,21 @@ const memberFeatures = [
   'LINE 每日提醒與重要節點通知',
 ];
 
+const dailyDeliveries = [
+  { time: '07:30', title: '盤前決策', detail: '四個答案、三個優先觀察，以及今天最該避免的錯。' },
+  { time: '09:30', title: '開盤確認', detail: '主線是否成立；資料不足時明確保留判斷。' },
+  { time: '10:30／13:00', title: '盤中只報變化', detail: '只更新新增證據、失效訊號與觀察順位。' },
+  { time: '14:20', title: '收盤驗證', detail: '核對早盤假設、記錄失準原因並留下明日調整。' },
+];
+
+const planComparison = [
+  { label: '今日能不能做', publicValue: '結論與下一次確認', memberValue: '完整理由、支持與反對證據' },
+  { label: '優先觀察', publicValue: '最多三項摘要', memberValue: '因果鏈、成立與取消條件' },
+  { label: '盤中更新', publicValue: '目前狀態', memberValue: '09:30、10:30、13:00 新增變化' },
+  { label: '收盤後', publicValue: '公開結果', memberValue: '失準原因、可保留規則與明日調整' },
+  { label: '通知', publicValue: '自行回站查看', memberValue: 'LINE 關鍵節點提醒' },
+];
+
 export default function Pricing() {
   const location = useLocation();
 
@@ -81,10 +96,36 @@ export default function Pricing() {
               <span>每天的付費價值</span>
               <h2 id="pricing-flow-title">不是更多資訊，是一條走得完的決策鏈</h2>
             </div>
+            <ol className="is-daily-delivery">
+              {dailyDeliveries.map((item) => (
+                <li key={item.time}><span>{item.time}</span><div><strong>{item.title}</strong><p>{item.detail}</p></div></li>
+              ))}
+            </ol>
+          </section>
+
+          <section className="ma-pricing-v2-comparison" aria-labelledby="pricing-comparison-title">
+            <div className="ma-pricing-v2-heading">
+              <span>免費與會員差在哪裡</span>
+              <h2 id="pricing-comparison-title">免費版給答案，會員版交代為什麼與何時改變</h2>
+              <p>會員不是多看幾張卡，而是取得從盤前假設、盤中更新到收盤檢討的完整紀錄。</p>
+            </div>
+            <div className="ma-pricing-v2-comparison-table" role="table" aria-label="公開測試與創始會員比較">
+              <div className="is-heading" role="row"><strong role="columnheader">每日需求</strong><strong role="columnheader">公開測試</strong><strong role="columnheader">創始會員</strong></div>
+              {planComparison.map((item) => (
+                <div key={item.label} role="row"><strong role="rowheader">{item.label}</strong><span role="cell">{item.publicValue}</span><span role="cell">{item.memberValue}</span></div>
+              ))}
+            </div>
+          </section>
+
+          <section className="ma-pricing-v2-trial" aria-labelledby="pricing-trial-title">
+            <div className="ma-pricing-v2-heading">
+              <span>14 天怎麼判斷值不值得</span>
+              <h2 id="pricing-trial-title">不是試看兩篇文章，而是跑完兩週真實決策循環</h2>
+            </div>
             <ol>
-              <li><span>01</span><div><strong>盤前先定界線</strong><p>知道今天先不要做什麼，以及什麼證據出現才改變。</p></div></li>
-              <li><span>02</span><div><strong>盤中只看變化</strong><p>事件流只記錄新增證據，不把早上的內容重複一次。</p></div></li>
-              <li><span>03</span><div><strong>收盤留下紀錄</strong><p>把成立、失敗與下一次改善留下來，而不是只記得結果。</p></div></li>
+              <li><span>第 1–3 天</span><strong>建立每天三分鐘的固定閱讀順序</strong><p>先看四個答案，再決定今天是否需要繼續追蹤。</p></li>
+              <li><span>第 4–10 天</span><strong>觀察它是否真的減少追高與焦慮</strong><p>用盤中更新確認自己有沒有少被短線雜訊帶走。</p></li>
+              <li><span>第 11–14 天</span><strong>用收盤紀錄決定要不要留下</strong><p>檢查判斷是否誠實、失準是否有說明，再決定是否續用。</p></li>
             </ol>
           </section>
 

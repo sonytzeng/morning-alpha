@@ -122,13 +122,13 @@ export function buildRuntimeDecisionTimeline(params: {
       status: timelineStatus(getRuntimeCheckpointState(sync, '1030')),
     },
     {
-      time: '13:30',
+      time: '13:00',
       label: '盤中追蹤',
       detail: '讀取午後盤中資料',
       status: timelineStatus(getRuntimeCheckpointState(sync, '1300')),
     },
     {
-      time: '14:10',
+      time: '14:20',
       label: '收盤驗證',
       detail: '讀取結構化收盤驗證',
       status: closingCompleted(ai) ? 'completed' : 'pending',

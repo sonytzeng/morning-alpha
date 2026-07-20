@@ -148,7 +148,7 @@ function humanizeV10MarketSentence(
   risk: Record<string, unknown>[],
 ): string {
   if (!v10Enabled) return sentence;
-  const looksLikeRawAxis = /今天要驗證的是\s+[A-Z_]+\s+能否/.test(sentence) || /SEMICONDUCTOR|AI_SERVER|ELECTRONIC_BLUE_CHIP/.test(sentence);
+  const looksLikeRawAxis = /今天要驗證的是\s+.+?\s+能否從.+?傳導到台股代表(?:個)?股/.test(sentence) || /SEMICONDUCTOR|AI_SERVER|ELECTRONIC_BLUE_CHIP/.test(sentence);
   if (!looksLikeRawAxis) return sentence;
 
   const firstIndustry = (rows: Record<string, unknown>[]) => {

@@ -104,6 +104,10 @@ function firstMeaningfulString(...values: unknown[]): string {
   return '';
 }
 
+function isSyntheticResearchSentence(value: string): boolean {
+  return /^今天要驗證的是\s*.+?\s*能否從.+?傳導到台股代表(?:個)?股[。.]?$/.test(value.trim());
+}
+
 function translateKnownTerms(value: string): string {
   return value
     .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
@@ -398,14 +402,19 @@ function HomePageContent() {
     researchMetadata.engine_version,
     publicSummary.engine_version,
   ) || '未提供版本資訊';
-  const morningBrief = translateKnownTerms(firstMeaningfulString(
+  const morningBriefCandidate = firstMeaningfulString(
     homeAI?.morning_brief,
     publicSummary.morning_brief,
     canonicalNarrative.today_focus.why,
     canonicalNarrative.today_focus.summary,
     displayState.todayQuote,
     decisionContext,
-  ));
+  );
+  const morningBrief = translateKnownTerms(
+    isSyntheticResearchSentence(morningBriefCandidate)
+      ? decisionContext
+      : morningBriefCandidate,
+  );
   const marketStatusLabel = decisionDayLabel(decisionState, reportExists && isTodayReport, currentTimelineNode);
   const decisionTone = decisionState === 'ACT'
     ? 'success'

@@ -50,7 +50,8 @@ type UnknownRecord = Record<string, unknown>;
 interface ObservationCard {
   title: string;
   reason: string;
-  impact: string;
+  confirmation: string;
+  invalidation: string;
 }
 
 interface MistakeCard {
@@ -447,10 +448,10 @@ function HomePageContent() {
   ], 4);
 
   const observationSource = [
-    ...displayState.v10ObservationWatchlist,
     ...displayState.v10BeneficiaryStocks,
     ...displayState.coreBeneficiaryStocks,
     ...displayState.beneficiaryStocks,
+    ...displayState.v10ObservationWatchlist,
   ];
   const observationCards = observationSource.reduce<ObservationCard[]>((items, source) => {
     const item = asRecord(source);
@@ -470,18 +471,24 @@ function HomePageContent() {
       item.reason,
       item.role_description,
     ));
-    const impact = translateKnownTerms(firstMeaningfulString(
-      item.impact,
-      item.market_impact,
-      item.action_implication,
+    const confirmation = translateKnownTerms(firstMeaningfulString(
       item.validation_point,
       item.confirmation_reason,
+      item.confirmation_needed,
       item.watch_point,
+      item.action_implication,
     ));
-    if (!title || (!reason && !impact)) return items;
-    const key = `${title}|${reason}|${impact}`;
-    if (items.some((existing) => `${existing.title}|${existing.reason}|${existing.impact}` === key)) return items;
-    items.push({ title, reason, impact });
+    const invalidation = translateKnownTerms(firstMeaningfulString(
+      item.stop_observing_condition,
+      item.stop_condition,
+      item.invalidation_condition,
+      item.failure_condition,
+      item.risk_note,
+    ));
+    if (!title || (!reason && !confirmation && !invalidation)) return items;
+    const key = `${title}|${reason}|${confirmation}|${invalidation}`;
+    if (items.some((existing) => `${existing.title}|${existing.reason}|${existing.confirmation}|${existing.invalidation}` === key)) return items;
+    items.push({ title, reason, confirmation, invalidation });
     return items;
   }, []).slice(0, 3);
 
@@ -530,6 +537,26 @@ function HomePageContent() {
     });
     return items;
   }, []).slice(0, 3);
+
+  const tradeReadiness = decisionState === 'ACT'
+    ? '條件成立才做'
+    : decisionState === 'STOP'
+      ? '今天不做'
+      : '先等待';
+  const todayStrategy = translateKnownTerms(firstMeaningfulString(
+    homeAI?.today_strategy,
+    homeAI?.recommended_strategy,
+    publicSummary.today_strategy,
+    publicSummary.strategy,
+    openingRadar.today_strategy,
+    openingRadar.strategy,
+    canonicalNarrative.today_focus.action,
+    presentation.primaryDecision.instruction,
+  ) || (decisionState === 'ACT' ? '只做已確認的主線' : '保留現金，等待確認'));
+  const priorityFocus = observationCards.length > 0
+    ? observationCards.map((item) => item.title).join('、')
+    : waitingFor;
+  const mostLikelyMistake = mistakeCards[0]?.action || largestRisk;
 
   const closingOutcome = canonicalNarrative.closing_outcome;
   const closingDisplayResult = closingResultLabel(
@@ -726,26 +753,32 @@ function HomePageContent() {
                 </dl>
               </section>
 
-              <section aria-labelledby="three-answers-title">
+              <section aria-labelledby="four-answers-title">
                 <VisualSectionHeader
                   icon="ri-question-answer-line"
-                  title="今天只回答三件事"
-                  description="先看今日結論，再閱讀完整研究。"
+                  title="今天先回答四件事"
+                  description="三分鐘看完能不能做、怎麼做、先看什麼，以及最該避開的錯。"
                 />
                 <div className="ma-home-v2-answer-grid">
                   <article className={`ma-home-v2-answer-card is-${decisionTone}`}>
-                    <p>今天適合交易嗎？</p>
-                    <strong>{decisionState === 'ACT' ? '可以' : '先不要'}</strong>
+                    <p>今天值得交易嗎？</p>
+                    <strong>{tradeReadiness}</strong>
                     <span>{renderSafeText(marketStatusLabel)}</span>
                   </article>
-                  <article className="ma-home-v2-answer-card is-danger">
-                    <p>今天最大風險？</p>
-                    <strong>{renderSafeText(largestRisk)}</strong>
-                  </article>
                   <article className="ma-home-v2-answer-card is-warning">
-                    <p>今天等待什麼？</p>
-                    <strong>{renderSafeText(waitingFor)}</strong>
-                    <span>{renderSafeText(nextActionTime)}</span>
+                    <p>今天適合哪種策略？</p>
+                    <strong>{renderSafeText(todayStrategy)}</strong>
+                    <span>只採用目前證據支持的做法</span>
+                  </article>
+                  <article className="ma-home-v2-answer-card is-neutral">
+                    <p>今天優先看什麼？</p>
+                    <strong>{renderSafeText(priorityFocus)}</strong>
+                    <span>最多三項，往下查看成立與取消條件</span>
+                  </article>
+                  <article className="ma-home-v2-answer-card is-danger">
+                    <p>今天最容易犯的錯？</p>
+                    <strong>{renderSafeText(mostLikelyMistake)}</strong>
+                    <span>{renderSafeText(largestRisk)}</span>
                   </article>
                 </div>
               </section>
@@ -801,15 +834,15 @@ function HomePageContent() {
               <section aria-labelledby="observations-title">
                 <VisualSectionHeader
                   icon="ri-radar-line"
-                  title="今日觀察"
-                  description="每一項都連回現有報告的原因與影響，不使用固定模板。"
+                  title="今日優先觀察"
+                  description="最多三項；先看為什麼入選，再看何時成立、何時取消。"
                 />
                 {observationCards.length > 0 ? (
                   <div className="ma-home-v2-observation-grid">
                     {observationCards.map((item) => (
                       <article key={`${item.title}-${item.reason}`} className="ma-home-v2-observation-card">
                         <div>
-                          <p>觀察項目</p>
+                          <p>優先觀察</p>
                           <h3>{renderSafeText(item.title)}</h3>
                         </div>
                         <div>
@@ -817,8 +850,12 @@ function HomePageContent() {
                           <strong>{renderSafeText(item.reason || '今日資料整理中')}</strong>
                         </div>
                         <div>
-                          <p>影響</p>
-                          <strong>{renderSafeText(item.impact || 'AI 正在等待市場資料完成。')}</strong>
+                          <p>確認條件</p>
+                          <strong>{renderSafeText(item.confirmation || '等待下一個有效市場節點確認。')}</strong>
+                        </div>
+                        <div>
+                          <p>取消條件</p>
+                          <strong>{renderSafeText(item.invalidation || '目前報告尚未提供取消條件，暫不升級判斷。')}</strong>
                         </div>
                       </article>
                     ))}

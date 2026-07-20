@@ -5744,7 +5744,7 @@ a, button, .transition-all {
 
   .ma-home-v2-answer-grid {
     display: grid;
-    grid-template-columns: 0.7fr 1.15fr 1.15fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
   }
 
@@ -5797,8 +5797,8 @@ a, button, .transition-all {
 
   .ma-home-v2-answer-card:first-child > strong {
     color: #14C982;
-    font-size: 42px;
-    line-height: 48px;
+    font-size: 30px;
+    line-height: 39px;
     letter-spacing: -0.03em;
   }
 

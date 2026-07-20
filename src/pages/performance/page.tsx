@@ -420,7 +420,7 @@ export default function PerformancePage() {
           ) : errorMessage ? (
             <div className="ma-performance-v3-state is-warning"><strong>歷史績效暫時無法完整顯示</strong><p>{errorMessage}</p></div>
           ) : stats.validCount === 0 ? (
-            <div className="ma-performance-v3-state"><strong>尚未累積完成驗證的交易日</strong><p>資料仍在累積，不以休市或不完整資料填充績效。</p></div>
+            <div className="ma-performance-v3-state"><strong>目前沒有可計入績效的完整收盤紀錄</strong><p>只有同一交易日、具真實收盤方向且資料狀態完整的驗證才會列入；資料不足與部分完成紀錄不會拿來填充績效。</p></div>
           ) : (
             <>
               <section className="ma-performance-v3-summary" aria-label="驗證摘要">

@@ -994,8 +994,15 @@ function buildV8ContractFromMemberNoteV2(memberNoteV2:unknown,fallbackStocks:Rec
 
   const overnight={status:chains.length>0?'ready':'insufficient',chains};
   const beneficiary={status:beneficiaries.length>0?'ready':'insufficient',source_signals:sourceSignals,beneficiaries};
-  const firstChain=chains[0];const firstBeneficiary=beneficiaries[0];
-  const daily=chains.length>0||beneficiaries.length>0?{status:'ready',sentence:'今天要驗證的是 '+String(firstChain?.theme||firstBeneficiary?.sector||'盤前主線')+' 能否從前夜事件傳導到台股代表個股。',logic_source:['member_research_note_v2.overnight_chain','member_research_note_v2.beneficiary_candidates'],tone:'clear, sharp, human-readable'}:{status:'insufficient',sentence:'',logic_source:[],tone:'clear, sharp, human-readable'};
+  const firstChain=chains[0];
+  const firstBeneficiary=beneficiaries[0];
+  const dailyTheme=String(firstChain?.theme||firstBeneficiary?.sector||'').trim();
+  const dailyEvent=String(firstChain?.event||'').trim();
+  const dailyWatchPoint=(Array.isArray(firstChain?.watch_points)?firstChain.watch_points:[]).map(String).map(function(value){return value.trim();}).find(Boolean)||'';
+  const hasAnalyzedDailySentence=Boolean(dailyTheme&&dailyEvent&&dailyWatchPoint&&!['盤前主線','主要族群','相關台股族群'].includes(dailyTheme));
+  const daily=hasAnalyzedDailySentence
+    ?{status:'ready',sentence:dailyTheme+' 是今天的主要觀察方向，原因是「'+dailyEvent+'」；盤中先用「'+dailyWatchPoint+'」確認，未出現前不升級判斷。',logic_source:['member_research_note_v2.overnight_chain.event','member_research_note_v2.overnight_chain.theme','member_research_note_v2.intraday_validation.what_to_watch'],tone:'clear, evidence-first, human-readable'}
+    :{status:'insufficient',sentence:'',logic_source:[],tone:'clear, evidence-first, human-readable'};
   return{v8_beneficiary_chain:beneficiary,v8_overnight_causal_chain:overnight,v8_daily_sentence:daily};
 }
 function findMarketIndicator(md:MarketIndicator[],syms:string[]):MarketIndicator|null{for(const sy of syms){const x=md.find(function(m){return m.symbol.toUpperCase()===sy.toUpperCase()});if(x)return x}return null;}

@@ -215,6 +215,26 @@ function WarRoomContent() {
     );
   }
 
+  if (report.report_date !== todayTaipeiStr) {
+    return (
+      <div className="min-h-screen bg-navy-950 flex flex-col">
+        <Navbar marketStatusLabel="等待今日盤中資料" />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="max-w-md text-center bg-navy-900/70 border border-amber-400/20 rounded-2xl p-6">
+            <i className="ri-time-line text-amber-300 text-3xl" aria-hidden="true" />
+            <h1 className="text-white font-bold text-xl mt-3">今天尚未建立盤中追蹤</h1>
+            <p className="text-slate-400 text-sm mt-2">目前最新報告是 {report.report_date}，不會把歷史時間軸冒充成今天進度。</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <Link to="/report/today" className="inline-flex min-h-11 items-center px-4 py-2 rounded-xl bg-emerald-500 text-navy-950 text-sm font-semibold">返回今日判斷</Link>
+              <Link to={`/reports/${report.report_date}`} className="inline-flex min-h-11 items-center px-4 py-2 rounded-xl border border-white/10 text-white text-sm">查看 {report.report_date} 歷史報告</Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   const canonicalNarrative = buildCanonicalNarrative({ displayState, ai: rawAI });
   const decisionStatus = canonicalNarrative.decision_lifecycle.decision_status;
   const decisionState = safeText(decisionStatus.status).toLowerCase();

@@ -10,6 +10,7 @@ import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport'
 import { getTaipeiNow, formatTaipeiDate } from '@/utils/tradingDay';
 import { parseAIStrategy, type ParsedAIStrategy } from '@/utils/aiStrategyParser';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
+import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
 
 // ═══ Constants ═══
 const SECTOR_NAME_MAP: Record<string, string> = {
@@ -33,7 +34,7 @@ function safeArray(val: unknown): string[] {
 }
 
 function publicReportText(value: unknown): string {
-  return String(value ?? '')
+  return naturalizeSyntheticResearchSentence(String(value ?? '')
     .trim()
     .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
     .replace(/\bMEMORY\b/gi, '記憶體')
@@ -46,7 +47,7 @@ function publicReportText(value: unknown): string {
     .replace(/\bADR\b/gi, '海外存託憑證')
     .replace(/\bunknown\b/gi, '尚未取得')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim());
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

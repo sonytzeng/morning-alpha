@@ -19,6 +19,7 @@ import {
   buildWarRoomTimeline,
   type WarRoomTimelineStatus,
 } from './warRoomPresentationMapper';
+import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -31,7 +32,7 @@ function safeText(value: unknown, fallback = ''): string {
 }
 
 function publicWarRoomText(value: unknown, fallback = '尚未取得'): string {
-  const text = safeText(value, fallback)
+  const text = naturalizeSyntheticResearchSentence(safeText(value, fallback)
     .replace(/checkpoint\s*0?9:?30/gi, '09:30 驗證')
     .replace(/checkpoint\s*10:?30/gi, '10:30 驗證')
     .replace(/checkpoint\s*13:?00/gi, '13:30 驗證')
@@ -51,7 +52,7 @@ function publicWarRoomText(value: unknown, fallback = '尚未取得'): string {
     .replace(/RISK/gi, '風險觀察')
     .replace(/[_]+/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim());
   return text || fallback;
 }
 

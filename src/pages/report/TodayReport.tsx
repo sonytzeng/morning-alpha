@@ -561,6 +561,26 @@ function TodayReportContent() {
     );
   }
 
+  if (!isReportForToday) {
+    return (
+      <div className="min-h-screen bg-navy-950 flex flex-col">
+        <Navbar marketStatusLabel="等待今日報告" />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="max-w-md text-center bg-navy-900/70 border border-amber-400/20 rounded-2xl p-6">
+            <i className="ri-calendar-event-line text-amber-300 text-3xl" aria-hidden="true" />
+            <h1 className="text-white font-bold text-xl mt-3">今天的判斷尚未產生</h1>
+            <p className="text-slate-400 text-sm mt-2">目前最新報告是 {report.report_date}。為避免誤導，歷史行情、股票與收盤結果不會出現在今日工作台。</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <Link to="/" className="inline-flex min-h-11 items-center px-4 py-2 rounded-xl bg-emerald-500 text-navy-950 text-sm font-semibold">返回首頁</Link>
+              <Link to={`/reports/${report.report_date}`} className="inline-flex min-h-11 items-center px-4 py-2 rounded-xl border border-white/10 text-white text-sm">查看 {report.report_date} 歷史報告</Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="ma-page ma-pixel-page ma-today-page flex flex-col overflow-x-hidden">
       <Navbar marketStatusLabel={nextDecisionTime} />

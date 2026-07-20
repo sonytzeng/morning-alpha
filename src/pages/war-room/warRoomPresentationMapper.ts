@@ -340,9 +340,9 @@ export function buildWarRoomTimeline(input: BuildWarRoomTimelineInput): WarRoomT
     { time: '09:00', label: '盤前確認', status: openingReady ? 'completed' : 'pending', statusLabel: '' },
     { time: '09:30', label: '開盤驗證', status: getRuntimeCheckpointState(sync, '0930') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '0930') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
     { time: '10:30', label: '主線確認', status: getRuntimeCheckpointState(sync, '1030') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '1030') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
-    { time: '13:30', label: '午後追蹤', status: getRuntimeCheckpointState(sync, '1300') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '1300') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
+    { time: '13:00', label: '午後追蹤', status: getRuntimeCheckpointState(sync, '1300') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '1300') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
     {
-      time: '14:10',
+      time: '14:20',
       label: '收盤驗證',
       status: hasClose ? (closeLabel === '資料不足' ? 'insufficient' : 'completed') : 'pending',
       statusLabel: '',

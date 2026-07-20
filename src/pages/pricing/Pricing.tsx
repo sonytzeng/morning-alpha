@@ -15,6 +15,7 @@ const publicFeatures = [
 
 const memberFeatures = [
   '海外事件 → 台股族群 → 代表股完整因果鏈',
+  '今日是否適合當沖、成立條件與放棄條件',
   '09:30、10:30、13:00 盤中變化與判斷更新',
   '每檔候選股的成立條件、取消條件與反向證據',
   '14:20 收盤驗證、失誤原因與明日調整',
@@ -23,14 +24,15 @@ const memberFeatures = [
 
 const dailyDeliveries = [
   { time: '07:30', title: '盤前決策', detail: '四個答案、三個優先觀察，以及今天最該避免的錯。' },
-  { time: '09:30', title: '開盤確認', detail: '主線是否成立；資料不足時明確保留判斷。' },
-  { time: '10:30／13:00', title: '盤中只報變化', detail: '只更新新增證據、失效訊號與觀察順位。' },
+  { time: '09:30', title: '開盤與當沖確認', detail: '判斷今天是否適合當沖；資料不足就不建立劇本。' },
+  { time: '10:30／13:00', title: '盤中只報變化', detail: '更新成立條件、放棄條件與優先觀察順位。' },
   { time: '14:20', title: '收盤驗證', detail: '核對早盤假設、記錄失準原因並留下明日調整。' },
 ];
 
 const planComparison = [
   { label: '今日能不能做', publicValue: '結論與下一次確認', memberValue: '完整理由、支持與反對證據' },
   { label: '優先觀察', publicValue: '最多三項摘要', memberValue: '因果鏈、成立與取消條件' },
+  { label: '當沖決策', publicValue: '目前狀態', memberValue: '是否適合、成立條件與放棄條件' },
   { label: '盤中更新', publicValue: '目前狀態', memberValue: '09:30、10:30、13:00 新增變化' },
   { label: '收盤後', publicValue: '公開結果', memberValue: '失準原因、可保留規則與明日調整' },
   { label: '通知', publicValue: '自行回站查看', memberValue: 'LINE 關鍵節點提醒' },

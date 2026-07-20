@@ -1079,6 +1079,49 @@ function MemberNoteContent() {
       formatCheckpoint(decisionPresentation.nextCheckpoint),
     ], [heroConclusion, heroValidation, summaryNext], '') },
   ].filter((item) => Boolean(item.value));
+  const intradayWindows = recordList(memberNoteV2?.intraday_time_windows);
+  const intradayValidations = memberNoteV2?.intraday_validation || [];
+  const dayTradingSetup = firstUniqueResearchText([
+    ...intradayWindows.flatMap((item) => [item.purpose, ...textList(item.signals_to_watch)]),
+    ...intradayValidations.map((item) => item.what_to_watch),
+  ], [heroConclusion, heroValidation], '');
+  const dayTradingConfirmation = firstUniqueResearchText([
+    ...intradayWindows.map((item) => item.bullish_confirmation),
+    ...intradayValidations.map((item) => item.bullish_confirm),
+    ...beneficiaryCandidates.map((item) => item.confirmation),
+  ], [heroConclusion, dayTradingSetup], '');
+  const dayTradingInvalidation = firstUniqueResearchText([
+    ...intradayWindows.map((item) => item.bearish_warning),
+    ...intradayValidations.map((item) => item.bearish_fail),
+    ...beneficiaryCandidates.map((item) => item.invalidation),
+    decisionLifecycle.failure_condition.trigger,
+  ], [heroConclusion, dayTradingSetup, dayTradingConfirmation], '');
+  const dayTradingNextTime = firstUniqueResearchText([
+    ...intradayWindows.map((item) => firstText(item.time, item.title)),
+    ...intradayValidations.map((item) => item.time_window),
+    formatCheckpoint(decisionPresentation.nextCheckpoint),
+  ], [heroConclusion], '');
+  const dayTradingTargets = beneficiaryCandidates
+    .slice(0, 3)
+    .map((item) => `${item.symbol ? `${item.symbol} ` : ''}${item.name}`)
+    .filter(Boolean);
+  const hasCompleteDayTradingEvidence = Boolean(dayTradingSetup && dayTradingConfirmation && dayTradingInvalidation);
+  const dayTradingSuitability = !hasCompleteDayTradingEvidence
+    ? '資料不足，今天不建立當沖劇本'
+    : decisionPresentation.primaryDecision.state === 'ACT'
+      ? '符合成立條件才參與'
+      : decisionPresentation.primaryDecision.state === 'STOP'
+        ? '今天不適合當沖'
+        : '先不做，等待成立條件';
+  const dayTradingDecisionRows = hasCompleteDayTradingEvidence
+    ? [
+        { label: '只看這個型態', value: dayTradingSetup },
+        { label: '成立條件', value: dayTradingConfirmation },
+        { label: '放棄條件', value: dayTradingInvalidation },
+        ...(dayTradingTargets.length > 0 ? [{ label: '優先觀察', value: dayTradingTargets.join('、') }] : []),
+        ...(dayTradingNextTime ? [{ label: '下一確認時間', value: dayTradingNextTime }] : []),
+      ]
+    : [];
   const closingReview = [
     {
       label: '收盤結果',
@@ -1146,12 +1189,20 @@ function MemberNoteContent() {
           {canViewMemberNoteFull ? (
             <>
               <section className="ma-research-note-v3-chapter">
-                <header><span>02</span><div><p>因果鏈</p><h2>事件如何一路傳導到代表股票</h2></div></header>
+                <header><span>02</span><div><p>今日當沖決策</p><h2>先決定今天值不值得做，再看要等什麼</h2></div></header>
+                <div className={`ma-research-note-v3-daytrade${hasCompleteDayTradingEvidence ? '' : ' is-closed'}`}>
+                  <div><small>今天是否適合當沖</small><strong>{dayTradingSuitability}</strong><p>{hasCompleteDayTradingEvidence ? '這不是買進名單；只有成立條件與放棄條件都可查證時，才保留盤中參與資格。' : '目前缺少可同時查證的型態、成立條件或放棄條件，因此不提供方向與標的暗示。'}</p></div>
+                  {dayTradingDecisionRows.length > 0 && <dl>{dayTradingDecisionRows.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{renderSafeText(item.value)}</dd></div>)}</dl>}
+                </div>
+              </section>
+
+              <section className="ma-research-note-v3-chapter">
+                <header><span>03</span><div><p>因果鏈</p><h2>事件如何一路傳導到代表股票</h2></div></header>
                 <ol className="ma-research-note-v3-flow">{researchFlow.map((item, index) => <li key={item.label}><span>{index + 1}</span><div><small>{item.label} · {item.question}</small><strong>{renderSafeText(item.value)}</strong></div></li>)}</ol>
               </section>
 
               <section className="ma-research-note-v3-chapter">
-                <header><span>03</span><div><p>雙向證據</p><h2>哪些事支持它，哪些事會推翻它</h2></div></header>
+                <header><span>04</span><div><p>雙向證據</p><h2>哪些事支持它，哪些事會推翻它</h2></div></header>
                 <div className="ma-research-note-v3-evidence">
                   <div className="is-support"><h3>支持證據</h3>{supportItems.length > 0 ? supportItems.map((item) => <p key={item}>{renderSafeText(item)}</p>) : <p>目前沒有新增支持證據。</p>}</div>
                   <div className="is-oppose"><h3>反對證據</h3>{oppositionItems.length > 0 ? oppositionItems.map((item) => <p key={item}>{renderSafeText(item)}</p>) : <p>目前沒有新增反對證據。</p>}</div>
@@ -1160,7 +1211,7 @@ function MemberNoteContent() {
 
               {researchStocks.length > 0 && (
                 <section className="ma-research-note-v3-chapter">
-                  <header><span>04</span><div><p>個股檔案</p><h2>代表股票的角色與驗證條件</h2></div></header>
+                  <header><span>05</span><div><p>個股檔案</p><h2>代表股票的角色與驗證條件</h2></div></header>
                   <div className="ma-research-note-v3-stock-files">
                     {researchStocks.map((stock) => (
                       <article key={`${stock.symbol || 'stock'}-${stock.name}`}>
@@ -1177,7 +1228,7 @@ function MemberNoteContent() {
               )}
 
               <section className="ma-research-note-v3-chapter">
-                <header><span>05</span><div><p>使用方式</p><h2>今天怎麼用，以及何時停止沿用</h2></div></header>
+                <header><span>06</span><div><p>使用方式</p><h2>今天怎麼用，以及何時停止沿用</h2></div></header>
                 {researchGuidance.length > 0 && <dl className="ma-research-note-v3-guidance">{researchGuidance.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{renderSafeText(item.value)}</dd></div>)}</dl>}
                 <div className="ma-research-note-v3-stop">
                   <div><h3>失效條件</h3>{invalidationItems.length > 0 ? invalidationItems.map((item) => <p key={item}>{renderSafeText(item)}</p>) : <p>目前沒有可用的失效條件。</p>}</div>
@@ -1186,7 +1237,7 @@ function MemberNoteContent() {
               </section>
 
               <section className="ma-research-note-v3-chapter">
-                <header><span>06</span><div><p>收盤驗證</p><h2>早上的判斷，收盤後必須接受核對</h2></div></header>
+                <header><span>07</span><div><p>收盤驗證</p><h2>早上的判斷，收盤後必須接受核對</h2></div></header>
                 <dl className="ma-research-note-v3-guidance">
                   {closingReview.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{renderSafeText(item.value)}</dd></div>)}
                 </dl>
@@ -1194,7 +1245,7 @@ function MemberNoteContent() {
               </section>
             </>
           ) : (
-            <PaywallCard title="用 14 天完整看懂一套判斷如何走到收盤" description="會員版不只多一篇文章，而是補齊海外事件到台股代表股的因果鏈、盤中成立與取消條件，以及收盤後的命中與失誤紀錄。正式方案預定 NT$199/月，公開測試登記不扣款。" requiredTier="member" featureList={['完整事件與產業傳導鏈', '支持、反對與失效證據', '09:30／10:30／13:00 盤中驗證', '14:20 收盤回顧與明日調整']} tone="dark" />
+            <PaywallCard title="用 14 天完整看懂一套判斷如何走到收盤" description="會員版不只多一篇文章，而是補齊今日是否適合當沖、成立與放棄條件、海外事件到台股代表股的因果鏈，以及收盤後的命中與失誤紀錄。正式方案預定 NT$199/月，公開測試登記不扣款。" requiredTier="member" featureList={['今日當沖決策與放棄條件', '完整事件與產業傳導鏈', '09:30／10:30／13:00 盤中驗證', '14:20 收盤回顧與明日調整']} tone="dark" />
           )}
         </article>
       </main>

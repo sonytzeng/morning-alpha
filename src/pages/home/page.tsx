@@ -19,6 +19,7 @@ import {
   runtimeTimelineStatusLabel,
   type RuntimeTimelineStatus,
 } from '@/lib/runtimeDecisionTimeline';
+import { supabase } from '@/lib/supabase';
 
 export default function HomePage() {
   return (
@@ -59,6 +60,12 @@ interface MistakeCard {
   reason: string;
   result: string;
 }
+
+type PublicClosingOutcome = {
+  reportDate: string;
+  result: string;
+  summary: string;
+};
 
 function asRecord(value: unknown): UnknownRecord {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -267,6 +274,48 @@ function HomeSkeleton() {
 
 function HomePageContent() {
   const { data, loading, error, refresh, morningState } = useHomeDashboard();
+  const [latestPublicClosing, setLatestPublicClosing] = useState<PublicClosingOutcome | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadLatestPublicClosing() {
+      const { data: rows, error: historyError } = await supabase.rpc('get_public_performance_journal', { p_limit: 30 });
+      if (!mounted || historyError || !Array.isArray(rows)) return;
+
+      const latest = rows.find((value) => {
+        const row = asRecord(value);
+        const reportDate = firstString(row.report_date);
+        const status = firstString(row.verification_status).toLowerCase();
+        const dataStatus = firstString(row.verification_data_status).toLowerCase();
+        const direction = firstString(row.actual_direction).toLowerCase();
+        const result = firstString(row.hit_or_miss, row.prediction_result).toLowerCase();
+        const hasDirection = Boolean(direction)
+          && !['unknown', 'pending', 'unavailable', 'n/a', '尚未取得', '待資料'].includes(direction);
+        return Boolean(reportDate)
+          && reportDate <= formatTaipeiDate()
+          && ['completed', 'complete', 'ready'].includes(status)
+          && dataStatus === 'complete'
+          && hasDirection
+          && ['hit', 'correct', 'confirmed', 'partial', 'mixed', 'partial_hit', 'miss', 'wrong', 'failed'].includes(result);
+      });
+
+      if (!latest) return;
+      const row = asRecord(latest);
+      const result = closingResultLabel(
+        firstString(row.hit_or_miss, row.prediction_result),
+        firstString(row.verification_status),
+      );
+      setLatestPublicClosing({
+        reportDate: firstString(row.report_date),
+        result,
+        summary: firstMeaningfulString(row.what_was_right, row.what_was_wrong),
+      });
+    }
+
+    loadLatestPublicClosing();
+    return () => { mounted = false; };
+  }, []);
 
   const report: Report | null = data?.report ?? null;
   const todayTaipeiStr = formatTaipeiDate();
@@ -578,6 +627,10 @@ function HomePageContent() {
     || closingOutcome.accuracy
     || closingOutcome.lessons.length,
   );
+  const historyResult = hasClosingOutcome ? closingDisplayResult : latestPublicClosing?.result || '';
+  const historyDate = hasClosingOutcome ? displayReportDate : latestPublicClosing?.reportDate || '';
+  const historySummary = hasClosingOutcome ? closingOutcome.summary : latestPublicClosing?.summary || '';
+  const hasHistoricalClosingOutcome = Boolean(historyResult && historyDate);
   const credibilityItems = [
     { label: '資料更新時間', value: formatTaipeiTimestamp(lastUpdatedAt) },
     { label: '分析版本', value: aiVersion },
@@ -929,12 +982,12 @@ function HomePageContent() {
                   description="用最近一次真實收盤驗證，連回長期公開紀錄。"
                 />
                 <article className="ma-home-v2-history-card">
-                  {hasClosingOutcome ? (
+                  {hasHistoricalClosingOutcome ? (
                     <div>
-                      <p>最近一次收盤驗證</p>
-                      <h2 id="history-title">{renderSafeText(closingDisplayResult)}</h2>
-                      {closingOutcome.summary && <strong>{renderSafeText(closingOutcome.summary)}</strong>}
-                      {closingOutcome.accuracy && <span>{renderSafeText(closingOutcome.accuracy)}</span>}
+                      <p>最近一次收盤驗證 · {renderSafeText(historyDate)}</p>
+                      <h2 id="history-title">{renderSafeText(historyResult)}</h2>
+                      {historySummary && <strong>{renderSafeText(historySummary)}</strong>}
+                      {hasClosingOutcome && closingOutcome.accuracy && <span>{renderSafeText(closingOutcome.accuracy)}</span>}
                     </div>
                   ) : (
                     <div className="ma-home-v2-empty">

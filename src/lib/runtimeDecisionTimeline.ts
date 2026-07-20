@@ -40,10 +40,13 @@ export function reconcileRuntimeTimeline<T extends { status: RuntimeTimelineStat
       ? 'insufficient' as const
       : node.status,
   }));
-  const activeIndex = reconciled.findIndex((node) => {
+  const elapsedPendingIndexes = reconciled.reduce<number[]>((indexes, node, index) => {
     const scheduledMinutes = checkpointMinutes(node.time);
-    return node.status === 'pending' && scheduledMinutes !== null && scheduledMinutes <= taipeiMinutes;
-  });
+    if (node.status === 'pending' && scheduledMinutes !== null && scheduledMinutes <= taipeiMinutes) indexes.push(index);
+    return indexes;
+  }, []);
+  const activeIndex = elapsedPendingIndexes[elapsedPendingIndexes.length - 1] ?? -1;
+  elapsedPendingIndexes.slice(0, -1).forEach((index) => { reconciled[index].status = 'insufficient'; });
   if (activeIndex >= 0) reconciled[activeIndex].status = 'current';
   return reconciled;
 }

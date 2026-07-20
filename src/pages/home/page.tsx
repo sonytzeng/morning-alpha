@@ -20,6 +20,7 @@ import {
   type RuntimeTimelineStatus,
 } from '@/lib/runtimeDecisionTimeline';
 import { supabase } from '@/lib/supabase';
+import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
 
 export default function HomePage() {
   return (
@@ -116,7 +117,7 @@ function isSyntheticResearchSentence(value: string): boolean {
 }
 
 function translateKnownTerms(value: string): string {
-  return value
+  return naturalizeSyntheticResearchSentence(value
     .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
     .replace(/\bAI SERVER\b/gi, 'AI 伺服器族群')
     .replace(/\bPETROCHEMICAL\b/gi, '塑化')
@@ -124,7 +125,7 @@ function translateKnownTerms(value: string): string {
     .replace(/\bTAIEX\b/gi, '加權指數')
     .replace(/\bTXF\b/gi, '台指期')
     .replace(/\bRuntime\b/gi, '盤中資料')
-    .replace(/\b2330\b(?!\s*[／/])/g, '2330／台積電');
+    .replace(/\b2330\b(?!\s*[／/])/g, '2330／台積電'));
 }
 
 function uniqueStrings(values: string[], limit: number): string[] {
@@ -413,10 +414,10 @@ function HomePageContent() {
   const hasRuntimeClosing = Boolean(closingResultValue || /completed|degraded|verified/.test(closingStatus.toLowerCase()));
   const nextActionTime = displayMode === 'market-closed'
     ? displayState.nextUpdateTime
-    : hasRuntimeClosing ? '今日收盤驗證已完成' : (presentation.nextCheckpoint.time || currentTimelineNode.time);
+    : hasRuntimeClosing ? '今日收盤驗證已完成' : (currentTimelineNode.time || presentation.nextCheckpoint.time);
   const nextActionLabel = hasRuntimeClosing
     ? '查看收盤驗證結果'
-    : translateKnownTerms(presentation.nextCheckpoint.label || currentTimelineNode.label);
+    : translateKnownTerms(currentTimelineNode.label || presentation.nextCheckpoint.label);
   const researchMaster = asRecord(homeAI?.research_master_v2);
   const researchMetadata = asRecord(researchMaster.metadata);
   const reportRecord = asRecord(report);
@@ -491,9 +492,10 @@ function HomePageContent() {
       '等待缺失市場資料補齊',
     )
     : firstMeaningfulString(
+      `${currentTimelineNode.time} ${currentTimelineNode.label}`,
+      currentTimelineNode.detail,
       presentation.nextCheckpoint.label,
       canonicalNarrative.intraday_progress.next_step,
-      currentTimelineNode.label,
       nextAction,
     ) || '等待下一個有效市場節點。');
   const finalDecisionReasons = uniqueStrings([

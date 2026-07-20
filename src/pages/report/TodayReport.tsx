@@ -346,21 +346,28 @@ function TodayReportContent() {
   const validationSteps = canonicalNarrative.decision_lifecycle.validation_plan.steps.slice(0, 5);
   const hasCompleteDecisionInputs = canonicalNarrative.decision_evidence.marketSnapshotAvailable
     && canonicalNarrative.decision_evidence.checklistAvailable;
-  const validationItems: Array<{ label: string; detail: string; status: TodayValidationStatus }> = validationSteps.length > 0
-    ? validationSteps.map((step) => ({
-        label: humanizeValidationText(firstPopulatedText(step.title, step.detail)),
-        detail: step.title && step.detail && step.title !== step.detail ? humanizeValidationText(step.detail) : '',
-        status: !hasCompleteDecisionInputs
-          ? 'missing' as const
-          : step.status === 'completed'
-          ? 'confirmed' as const
-          : step.status === 'current'
-            ? 'current' as const
-            : step.status === 'missing'
-              ? 'missing' as const
-              : 'pending' as const,
-      }))
-    : flowConditions.map((label) => ({ label: humanizeValidationText(label), detail: '', status: 'missing' as const }));
+  const matchingValidationStep = validationSteps.find((step) =>
+    [step.time, step.title, step.detail].some((value) => String(value ?? '').includes(nextRuntimeNode.time)),
+  );
+  const runtimeValidationStatus: TodayValidationStatus = nextRuntimeNode.status === 'completed'
+    ? 'confirmed'
+    : nextRuntimeNode.status === 'current'
+      ? 'current'
+      : nextRuntimeNode.status === 'insufficient'
+        ? 'missing'
+        : 'pending';
+  const runtimeValidationDetail = nextRuntimeNode.status === 'current' || nextRuntimeNode.status === 'insufficient'
+    ? '節點時間已到，但完整市場資料尚未到齊；資料補齊前不更新判斷。'
+    : humanizeValidationText(firstPopulatedText(
+        matchingValidationStep?.detail,
+        matchingValidationStep?.title,
+        nextRuntimeNode.detail,
+      ));
+  const validationItems: Array<{ label: string; detail: string; status: TodayValidationStatus }> = [{
+    label: `${nextRuntimeNode.time} ${nextRuntimeNode.label}`,
+    detail: runtimeValidationDetail,
+    status: runtimeValidationStatus,
+  }];
   const confirmedValidationCount = validationItems.filter((item) => item.status === 'confirmed').length;
   const scriptProgress = hasCompleteDecisionInputs && validationItems.length > 0
     ? Math.round((confirmedValidationCount / validationItems.length) * 100)

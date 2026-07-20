@@ -4458,6 +4458,57 @@ a, button, .transition-all {
     counter-reset: research-flow;
   }
 
+  .ma-research-note-page .ma-research-note-v3-daytrade {
+    display: grid;
+    grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.4fr);
+    gap: 34px;
+    padding: 26px;
+    border: 1px solid #B98A2E;
+    background: #0B1928;
+  }
+
+  .ma-research-note-page .ma-research-note-v3-daytrade.is-closed {
+    grid-template-columns: minmax(0, 1fr);
+    border-color: #F05B67;
+  }
+
+  .ma-research-note-page .ma-research-note-v3-daytrade small,
+  .ma-research-note-page .ma-research-note-v3-daytrade dt {
+    color: #91A0B0;
+    font-size: 11px;
+  }
+
+  .ma-research-note-page .ma-research-note-v3-daytrade strong {
+    display: block;
+    margin-top: 7px;
+    color: #F4F7FB;
+    font-family: Georgia, 'Noto Serif TC', serif;
+    font-size: 26px;
+    line-height: 36px;
+  }
+
+  .ma-research-note-page .ma-research-note-v3-daytrade > div > p {
+    margin-top: 12px;
+    color: #91A0B0;
+    font-size: 13px;
+    line-height: 22px;
+  }
+
+  .ma-research-note-page .ma-research-note-v3-daytrade dl > div {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid #253447;
+  }
+
+  .ma-research-note-page .ma-research-note-v3-daytrade dd {
+    color: #D5DEE7;
+    font-size: 13px;
+    line-height: 22px;
+    overflow-wrap: anywhere;
+  }
+
   .ma-research-note-page .ma-research-note-v3-flow li {
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr);
@@ -4647,6 +4698,8 @@ a, button, .transition-all {
 
     .ma-research-note-page .ma-research-note-v3-summary > div,
     .ma-research-note-page .ma-research-note-v3-guidance > div,
+    .ma-research-note-page .ma-research-note-v3-daytrade,
+    .ma-research-note-page .ma-research-note-v3-daytrade dl > div,
     .ma-research-note-page .ma-research-note-v3-stock-files > article,
     .ma-research-note-page .ma-research-note-v3-stock-files dl > div,
     .ma-research-note-page .ma-research-note-v3-evidence,

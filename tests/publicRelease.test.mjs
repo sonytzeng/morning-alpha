@@ -190,6 +190,9 @@ test('trading-day reports and public timelines fail closed with correct times', 
   const runtimeTimeline = read('src/lib/runtimeDecisionTimeline.ts');
   assert.doesNotMatch(reportGenerator, /if\(dow===1\)return REPORT_MODE_WEEKEND/);
   assert.match(reportGenerator, /30000,'openai_chat_completions'/);
+  assert.doesNotMatch(reportGenerator, /sentence:'今天要驗證的是 '/);
+  assert.match(reportGenerator, /hasAnalyzedDailySentence/);
+  assert.match(reportGenerator, /未出現前不升級判斷/);
   assert.match(runtimeTimeline, /time: '13:00'/);
   assert.match(runtimeTimeline, /time: '14:20'/);
   assert.doesNotMatch(runtimeTimeline, /time: '13:30'|time: '14:10'/);
@@ -228,6 +231,13 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /decisionDayLabel\(decisionState, reportExists && isTodayReport, currentTimelineNode\)/);
   assert.doesNotMatch(home, /暫不建立交易判斷/);
   assert.match(home, /mistakeCards\.length === 1 \? ' is-single'/);
+  assert.match(home, /今天先回答四件事/);
+  assert.match(home, /今天適合哪種策略/);
+  assert.match(home, /今天優先看什麼/);
+  assert.match(home, /確認條件/);
+  assert.match(home, /取消條件/);
+  assert.doesNotMatch(home, /81%|勝率保證|保證獲利/);
+  assert.match(home, /isSyntheticResearchSentence/);
 });
 
 test('today report keeps runtime state and technical copy out of the public UI', () => {
@@ -301,6 +311,19 @@ test('war room is a live monitor rather than another dashboard page', () => {
   assert.match(warRoom, /replace\(\/\\bADR\\b\/gi, '海外存託憑證'\)/);
 });
 
+test('member note turns actual intraday evidence into a fail-closed day-trading decision', () => {
+  for (const label of ['今日當沖決策', '今天是否適合當沖', '只看這個型態', '成立條件', '放棄條件', '優先觀察', '下一確認時間']) {
+    assert.match(memberNote, new RegExp(label), `member note is missing day-trading decision copy: ${label}`);
+  }
+  assert.match(memberNote, /hasCompleteDayTradingEvidence/);
+  assert.match(memberNote, /資料不足，今天不建立當沖劇本/);
+  assert.match(memberNote, /intraday_time_windows/);
+  assert.match(memberNote, /intraday_validation/);
+  assert.doesNotMatch(memberNote, /保證獲利|必買|穩賺/);
+  assert.match(pricing, /今日是否適合當沖、成立條件與放棄條件/);
+  assert.match(pricing, /資料不足就不建立劇本/);
+});
+
 test('war room rows show complete text and use a distinct responsive surface', () => {
   const css = read('src/index.css');
   const feedRule = css.match(/\.ma-war-room-page \.ma-war-room-v3-feed p \{([\s\S]*?)\n  \}/)?.[1] || '';
@@ -329,10 +352,13 @@ test('membership conversion route is public, honest, and records a real submissi
   assert.match(paywallCard, /<Link to=\{targetHref\}/);
   assert.doesNotMatch(paywallCard, /window\.location|window\.open|target=["']_blank/);
   assert.match(pricing, /document\.getElementById\(location\.hash\.slice\(1\)\)/);
+  for (const label of ['免費與會員差在哪裡', '14 天怎麼判斷值不值得', '盤前決策', '收盤驗證']) {
+    assert.match(pricing, new RegExp(label), `pricing is missing concrete member value: ${label}`);
+  }
 });
 
 test('core product pages have distinct jobs instead of repeated dashboard surfaces', () => {
-  for (const label of ['研究摘要', '因果鏈', '雙向證據', '個股檔案', '使用方式']) {
+  for (const label of ['研究摘要', '因果鏈', '雙向證據', '個股檔案', '使用方式', '收盤驗證']) {
     assert.match(memberNote, new RegExp(label), `member note is missing editorial chapter: ${label}`);
   }
   assert.match(memberNote, /ma-research-note-v3-masthead/);
@@ -353,6 +379,8 @@ test('core product pages have distinct jobs instead of repeated dashboard surfac
 test('member note translates research enums and checkpoint diagnostics for readers', () => {
   assert.match(memberNote, /replace\(\/\\bSEMICONDUCTOR\\b\/gi, '半導體'\)/);
   assert.match(memberNote, /開盤資料不完整：加權指數、台指期與台積電快照尚未在同一有效時間內到齊/);
+  assert.match(memberNote, /naturalizeResearchHeadline/);
+  assert.match(memberNote, /是今天的主要觀察方向，先等市場承接確認/);
 });
 
 test('performance excludes outcomes that have no verifiable closing direction', () => {

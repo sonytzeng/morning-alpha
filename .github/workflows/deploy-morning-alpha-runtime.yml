@@ -11,6 +11,8 @@ on:
       - 'supabase/functions/close-market-review/**'
       - 'supabase/functions/closing-verification-engine/**'
       - 'supabase/functions/ma-ops-health-check/**'
+      - 'supabase/functions/generate-daily-report-v7/**'
+      - 'supabase/functions/generate-sector-rotation/**'
       - '.github/workflows/deploy-morning-alpha-runtime.yml'
 
 permissions:
@@ -75,5 +77,21 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: >-
           supabase functions deploy ma-ops-health-check
+          --project-ref cttfzgvhiewfckydcrci
+          --no-verify-jwt
+
+      - name: Deploy daily report generator
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: >-
+          supabase functions deploy generate-daily-report-v7
+          --project-ref cttfzgvhiewfckydcrci
+          --no-verify-jwt
+
+      - name: Deploy sector rotation generator
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: >-
+          supabase functions deploy generate-sector-rotation
           --project-ref cttfzgvhiewfckydcrci
           --no-verify-jwt

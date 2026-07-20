@@ -166,19 +166,36 @@ test('opening radar degrades safely when only TXF is unavailable', () => {
 });
 
 test('runtime deployment and missing checkpoint schedules are reproducible', () => {
-  for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check']) {
+  for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
   }
-  for (const schedule of ["30 2 * * 1-5", "0 5 * * 1-5", "20 6 * * 1-5"]) {
+  for (const schedule of ["15 23 * * 0-4", "25 1 * * 1-5", "25 2 * * 1-5", "55 4 * * 1-5", "20 6 * * 1-5"]) {
     assert.match(runtimeCheckpointWorkflow, new RegExp(schedule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing runtime schedule: ${schedule}`);
   }
   assert.match(runtimeCheckpointWorkflow, /\{"phase":"intraday"\}/);
+  assert.match(runtimeCheckpointWorkflow, /\{"phase":"premarket"\}/);
+  assert.match(runtimeCheckpointWorkflow, /\{"phase":"close"\}/);
+  assert.match(runtimeCheckpointWorkflow, /generate-daily-report-v7/);
   assert.match(runtimeCheckpointWorkflow, /\{\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
   assert.match(runtimeCheckpointWorkflow, /snapshot_upserted_count >= 2/);
   assert.match(runtimeCheckpointWorkflow, /written_and_synced/);
   assert.match(runtimeCheckpointWorkflow, /closing-verification-engine/);
   assert.match(runtimeCheckpointWorkflow, /closing_verification_status/);
+  assert.match(runtimeCheckpointWorkflow, /generate-sector-rotation/);
   assert.match(runtimeCheckpointWorkflow, /secrets\.CRON_SECRET/);
+});
+
+test('trading-day reports and public timelines fail closed with correct times', () => {
+  const reportGenerator = read('supabase/functions/generate-daily-report-v7/index.ts');
+  const runtimeTimeline = read('src/lib/runtimeDecisionTimeline.ts');
+  assert.doesNotMatch(reportGenerator, /if\(dow===1\)return REPORT_MODE_WEEKEND/);
+  assert.match(reportGenerator, /30000,'openai_chat_completions'/);
+  assert.match(runtimeTimeline, /time: '13:00'/);
+  assert.match(runtimeTimeline, /time: '14:20'/);
+  assert.doesNotMatch(runtimeTimeline, /time: '13:30'|time: '14:10'/);
+  assert.match(today, /if \(!isReportForToday\)/);
+  assert.match(warRoom, /report\.report_date !== todayTaipeiStr/);
+  assert.match(warRoom, /不會把歷史時間軸冒充成今天進度/);
 });
 
 test('opening radar preserves the complete War Room decision contract', () => {

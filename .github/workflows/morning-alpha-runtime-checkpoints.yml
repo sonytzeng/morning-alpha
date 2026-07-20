@@ -2,9 +2,11 @@ name: Morning Alpha runtime checkpoints
 
 on:
   schedule:
-    # GitHub cron uses UTC. These are 10:30, 13:00 and 14:20 Asia/Taipei.
-    - cron: '30 2 * * 1-5'
-    - cron: '0 5 * * 1-5'
+    # GitHub cron uses UTC. Start before each published Taipei checkpoint to absorb queue latency.
+    - cron: '15 23 * * 0-4'
+    - cron: '25 1 * * 1-5'
+    - cron: '25 2 * * 1-5'
+    - cron: '55 4 * * 1-5'
     - cron: '20 6 * * 1-5'
   workflow_dispatch:
     inputs:
@@ -13,6 +15,8 @@ on:
         required: true
         type: choice
         options:
+          - premarket
+          - '0930'
           - '1030'
           - '1300'
           - closing
@@ -42,9 +46,13 @@ jobs:
         run: |
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             checkpoint="$MANUAL_CHECKPOINT"
-          elif [ "$EVENT_SCHEDULE" = "30 2 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "15 23 * * 0-4" ]; then
+            checkpoint="premarket"
+          elif [ "$EVENT_SCHEDULE" = "25 1 * * 1-5" ]; then
+            checkpoint="0930"
+          elif [ "$EVENT_SCHEDULE" = "25 2 * * 1-5" ]; then
             checkpoint="1030"
-          elif [ "$EVENT_SCHEDULE" = "0 5 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "55 4 * * 1-5" ]; then
             checkpoint="1300"
           elif [ "$EVENT_SCHEDULE" = "20 6 * * 1-5" ]; then
             checkpoint="closing"
@@ -54,9 +62,47 @@ jobs:
           fi
           echo "checkpoint=$checkpoint" >> "$GITHUB_OUTPUT"
 
+  premarket:
+    needs: resolve-checkpoint
+    if: needs.resolve-checkpoint.outputs.checkpoint == 'premarket'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Require runtime secret
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: test -n "$CRON_SECRET"
+
+      - name: Fetch premarket reference snapshots
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/fetch-premarket-data.json"
+          curl --silent --show-error --fail-with-body \
+            --request POST "$FUNCTIONS_BASE_URL/fetch-market-data-v10" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{"phase":"premarket"}' \
+            --output "$response_file"
+          jq -e '.success == true and .phase == "premarket" and .snapshot_upserted_count >= 1' "$response_file" >/dev/null
+
+      - name: Generate and verify today's report
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/generate-daily-report.json"
+          curl --silent --show-error --fail-with-body \
+            --max-time 720 \
+            --request POST "$FUNCTIONS_BASE_URL/generate-daily-report-v7" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{}' \
+            --output "$response_file"
+          jq -e '.success == true and (.report_id | type == "string") and (.report_date | type == "string")' "$response_file" >/dev/null
+
   intraday:
     needs: resolve-checkpoint
-    if: needs.resolve-checkpoint.outputs.checkpoint == '1030' || needs.resolve-checkpoint.outputs.checkpoint == '1300'
+    if: needs.resolve-checkpoint.outputs.checkpoint == '0930' || needs.resolve-checkpoint.outputs.checkpoint == '1030' || needs.resolve-checkpoint.outputs.checkpoint == '1300'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -103,7 +149,20 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: test -n "$CRON_SECRET"
 
-      - name: Build closing review from the 14:15 snapshot
+      - name: Fetch fresh close snapshots
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/fetch-close-data.json"
+          curl --silent --show-error --fail-with-body \
+            --request POST "$FUNCTIONS_BASE_URL/fetch-market-data-v10" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{"phase":"close"}' \
+            --output "$response_file"
+          jq -e '.success == true and .phase == "close" and .snapshot_upserted_count >= 2' "$response_file" >/dev/null
+
+      - name: Build closing review from the fresh close snapshot
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
@@ -128,3 +187,16 @@ jobs:
             --data '{}' \
             --output "$response_file"
           jq -e '.success == true and (.closing_verification_status == "completed" or .closing_verification_status == "direction_completed_data_degraded")' "$response_file" >/dev/null
+
+      - name: Build sector rotation evidence for the next trading day
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/generate-sector-rotation.json"
+          curl --silent --show-error --fail-with-body \
+            --request POST "$FUNCTIONS_BASE_URL/generate-sector-rotation" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{}' \
+            --output "$response_file"
+          jq -e '.success == true and (.score_date | type == "string")' "$response_file" >/dev/null

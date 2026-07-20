@@ -16,6 +16,7 @@ import {
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPresentation';
+import { buildRuntimeDecisionTimeline, selectNextRuntimeTimelineNode } from '@/lib/runtimeDecisionTimeline';
 import { trackPageView, trackEvent } from '@/utils/analytics';
 import PaywallCard from '@/components/paywall/PaywallCard';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
@@ -898,6 +899,18 @@ function MemberNoteContent() {
       : asRecordArray(rawAI.beneficiary_stocks),
     nextCheckpointFallback: decisionLifecycle.validation_plan.next_step,
   });
+  const memberRuntimeTimeline = buildRuntimeDecisionTimeline({
+    ai: rawAI,
+    hasReport: true,
+    reportRevisionId: reportDate,
+    reportGeneratedAt: firstText(rawAI.data_as_of, rawAI.generated_at, reportDate),
+    isTradingDay: Boolean(dsState?.is_trading_day && dsState.market_status === 'OPEN'),
+  });
+  const memberRuntimeNode = selectNextRuntimeTimelineNode(memberRuntimeTimeline)
+    || memberRuntimeTimeline[memberRuntimeTimeline.length - 1];
+  const memberRuntimeCheckpoint = memberRuntimeNode
+    ? `${memberRuntimeNode.time} ${memberRuntimeNode.label}`
+    : '';
   const readableMarketDirection = formatResearchLabel(marketBias);
   const readableThesis = formatResearchLabel(decisionLifecycle.current_thesis.summary);
   const heroConclusion = naturalizeResearchHeadline(firstUniqueResearchText([
@@ -930,6 +943,7 @@ function MemberNoteContent() {
   ], [heroConclusion], 5);
   const checklistItems = rawChecklistItems;
   const heroValidation = firstUniqueResearchText([
+    memberRuntimeCheckpoint,
     decisionLifecycle.validation_plan.next_step,
     formatCheckpoint(decisionPresentation.nextCheckpoint),
     ...checklistItems,
@@ -999,6 +1013,7 @@ function MemberNoteContent() {
   ], [heroConclusion], '');
   const summaryRisk = firstUniqueResearchText(stopSignals, [heroConclusion, heroValidation], '');
   const summaryNext = firstUniqueResearchText([
+    memberRuntimeCheckpoint,
     decisionLifecycle.validation_plan.next_step,
     formatCheckpoint(decisionPresentation.nextCheckpoint),
     ...checklistItems,
@@ -1097,6 +1112,7 @@ function MemberNoteContent() {
     decisionLifecycle.failure_condition.trigger,
   ], [heroConclusion, dayTradingSetup, dayTradingConfirmation], '');
   const dayTradingNextTime = firstUniqueResearchText([
+    memberRuntimeCheckpoint,
     ...intradayWindows.map((item) => firstText(item.time, item.title)),
     ...intradayValidations.map((item) => item.time_window),
     formatCheckpoint(decisionPresentation.nextCheckpoint),
@@ -1157,6 +1173,7 @@ function MemberNoteContent() {
     },
   ];
   const nextConfirmationDetail = firstUniqueResearchText([
+    memberRuntimeCheckpoint,
     canonicalNarrative.intraday_progress.next_step,
     formatCheckpoint(decisionPresentation.nextCheckpoint),
     decisionLifecycle.validation_plan.next_step,

@@ -10,6 +10,7 @@ import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { buildDecisionPresentation, dedupePresentedOpportunities } from '@/lib/decisionPresentation';
 import { buildRuntimeDecisionTimeline, selectNextRuntimeTimelineNode } from '@/lib/runtimeDecisionTimeline';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
+import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
 
 // ═══════════════════════════════════════════════════
 // V9.0: Three-tier beneficiary stock types
@@ -76,13 +77,13 @@ const UNSAFE_OPPORTUNITY_TEXT = /event[\s_-]*score|market[\s_-]*score|ai[\s_-]*c
 function publicOpportunityText(value: string | undefined): string | undefined {
   const text = value?.trim() || '';
   if (!text || UNSAFE_OPPORTUNITY_TEXT.test(text)) return undefined;
-  return text
+  return naturalizeSyntheticResearchSentence(text
     .replace(/\bTAIEX\b/gi, '加權指數')
     .replace(/\bTXF\b/gi, '台指期')
     .replace(/\bAI[ _-]?SERVER\b/gi, 'AI 伺服器')
     .replace(/\b2330\b(?!\s*[／/])/g, '2330／台積電')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim());
 }
 
 function opportunityBadge(roleLabel: string | undefined) {

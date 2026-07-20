@@ -13,6 +13,7 @@ import {
 } from '@/lib/runtimeDecisionTimeline';
 import { renderSafeText } from '@/utils/renderSafe';
 import { trackPageView } from '@/utils/analytics';
+import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -48,7 +49,7 @@ function numberOrNull(value: unknown): number | null {
 }
 
 function publicVerificationText(value: unknown): string {
-  return firstText(value)
+  return naturalizeSyntheticResearchSentence(firstText(value)
     .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
     .replace(/\bAI[ _-]?SERVER\b/gi, 'AI 伺服器')
     .replace(/\bTAIEX\b/gi, '加權指數')
@@ -61,7 +62,7 @@ function publicVerificationText(value: unknown): string {
     .replace(/freshness window/gi, '有效時間範圍')
     .replace(/\bphase\b/gi, '資料階段')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim());
 }
 
 function valueSummary(value: unknown): string {

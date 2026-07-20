@@ -11,8 +11,9 @@ import {
 } from '@/services/closeMarketReviewService';
 import type { Report } from '@/types/report';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
+import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
 
-const publicReportText = (value: unknown) => String(value ?? '')
+const publicReportText = (value: unknown) => naturalizeSyntheticResearchSentence(String(value ?? '')
   .trim()
   .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
   .replace(/\bMEMORY\b/gi, '記憶體')
@@ -25,7 +26,7 @@ const publicReportText = (value: unknown) => String(value ?? '')
   .replace(/\bADR\b/gi, '海外存託憑證')
   .replace(/\bunknown\b/gi, '尚未取得')
   .replace(/\s+/g, ' ')
-  .trim();
+  .trim());
 
 const previewText = (report: Report) => {
   const text = report.summary || report.today_summary || report.today_quote || '';

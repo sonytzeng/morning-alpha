@@ -25,6 +25,7 @@ const observationSection = read('src/components/v11/V11ObservationSection.tsx');
 const openingMarketRadar = read('supabase/functions/opening-market-radar/index.ts');
 const runtimeDeployWorkflow = read('.github/workflows/deploy-morning-alpha-runtime.yml');
 const runtimeCheckpointWorkflow = read('.github/workflows/morning-alpha-runtime-checkpoints.yml');
+const publicResearchText = read('src/utils/publicResearchText.ts');
 
 const publicSourceFiles = [
   'src/pages/home/page.tsx',
@@ -154,7 +155,18 @@ test('runtime timelines reconcile completed later checkpoints', () => {
   assert.match(runtimeTimeline, /node\.status === 'pending' && index < lastResolvedIndex/);
   assert.match(warRoomMapper, /reconcileRuntimeTimeline\(nodes\)/);
   assert.match(runtimeTimeline, /scheduledMinutes <= taipeiMinutes/);
+  assert.match(runtimeTimeline, /elapsedPendingIndexes\[elapsedPendingIndexes\.length - 1\]/);
+  assert.match(runtimeTimeline, /elapsedPendingIndexes\.slice\(0, -1\)/);
   assert.doesNotMatch(runtimeTimeline, /待 Runtime|Runtime checkpoint/);
+});
+
+test('synthetic research sentences are naturalized across every public report surface', () => {
+  assert.match(publicResearchText, /naturalizeSyntheticResearchSentence/);
+  assert.match(publicResearchText, /是今天的主要觀察方向，先等市場承接確認/);
+  for (const source of [home, today, opportunities, warRoom, verification, reportsCenter, reportDetail]) {
+    assert.match(source, /naturalizeSyntheticResearchSentence/);
+  }
+  assert.match(performance, /目前沒有可計入績效的完整收盤紀錄/);
 });
 
 test('opening radar degrades safely when only TXF is unavailable', () => {

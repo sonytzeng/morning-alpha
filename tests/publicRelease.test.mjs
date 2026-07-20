@@ -262,6 +262,10 @@ test('today report is a drill-down workbench rather than a duplicate home dashbo
   assert.doesNotMatch(today, /ma-today-v3-advice-card/);
   assert.doesNotMatch(today, />判斷信心</);
   assert.match(today, /09:30 開盤資料不完整：缺少同一時間範圍的加權指數、台指期與台積電快照/);
+  assert.match(today, /matchingValidationStep/);
+  assert.match(today, /nextRuntimeNode\.status === 'current' \|\| nextRuntimeNode\.status === 'insufficient'/);
+  assert.match(today, /節點時間已到，但完整市場資料尚未到齊；資料補齊前不更新判斷/);
+  assert.match(today, /label: `\$\{nextRuntimeNode\.time\} \$\{nextRuntimeNode\.label\}`/);
 });
 
 test('today report cards show complete text and adapt to the actual item count', () => {

@@ -967,12 +967,12 @@ function HomePageContent() {
 
               <section className="ma-home-v2-analysis-cta" aria-labelledby="analysis-cta-title">
                 <div>
-                  <p className="ma-pixel-eyebrow"><i className="ri-node-tree" aria-hidden="true" />完整決策鏈</p>
-                  <h2 id="analysis-cta-title">查看完整 AI 推理</h2>
-                  <p>了解今天判斷如何形成。</p>
+                  <p className="ma-pixel-eyebrow"><i className="ri-node-tree" aria-hidden="true" />會員完整決策鏈</p>
+                  <h2 id="analysis-cta-title">查看完整研究與當沖條件</h2>
+                  <p>一次看懂今天是否適合短線交易、成立條件、放棄條件與下一次確認時間。</p>
                 </div>
                 <Link to="/member-note" className="ma-pixel-primary-button">
-                  查看完整 AI 推理
+                  查看會員研究
                   <i className="ri-arrow-right-line" aria-hidden="true" />
                 </Link>
               </section>

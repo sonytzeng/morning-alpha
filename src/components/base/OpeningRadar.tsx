@@ -10,6 +10,7 @@ interface Props {
 function statusLabel(status: string | null): string {
   if (!status) return '資料更新中';
   switch (status) {
+    case '偏強確認':
     case '劇本成立':
       return '開盤驗證通過';
     case '明顯偏弱':
@@ -36,7 +37,7 @@ function statusStyle(status: string | null) {
       bg: 'bg-navy-900/60',
     };
   }
-  if (status === '劇本成立' || status === '劇本初步成立') {
+  if (status === '偏強確認' || status === '劇本成立' || status === '劇本初步成立') {
     return {
       badge: 'bg-forest-500/15 border-forest-500/30 text-forest-400',
       dot: 'bg-forest-400',
@@ -136,6 +137,7 @@ function compactView(check: OpeningRadarData) {
   const statusText = check.radar_status || '觀察中';
   const isUnknown = check.radar_status === '資料不足';
   const isWeak = check.radar_status === '明顯偏弱' || check.radar_status === '盤中轉弱';
+  const isConfirmed = check.radar_status === '劇本成立' || check.radar_status === '偏強確認';
 
   // Format time from updated_at (preferred) or created_at
   const displayTime = check.updated_at
@@ -153,8 +155,8 @@ function compactView(check: OpeningRadarData) {
             {statusText}
           </span>
         </div>
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isWeak ? 'bg-red-500/10 text-red-400' : isUnknown ? 'bg-white/5 text-white/40' : 'bg-forest-500/10 text-forest-400'}`}>
-          {isWeak ? '盤前劇本失準' : '開盤驗證通過'}
+        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isWeak ? 'bg-red-500/10 text-red-400' : isConfirmed ? 'bg-forest-500/10 text-forest-400' : 'bg-white/5 text-white/40'}`}>
+          {isWeak ? '盤前劇本失準' : isConfirmed ? '開盤驗證通過' : '等待市場確認'}
         </span>
       </div>
 
@@ -219,7 +221,7 @@ function fullView(check: OpeningRadarData) {
   const statusText = check.radar_status || '觀察中';
   const isUnknown = check.radar_status === '資料不足';
   const isWeak = check.radar_status === '明顯偏弱' || check.radar_status === '盤中轉弱';
-  const isConfirmed = check.radar_status === '劇本成立';
+  const isConfirmed = check.radar_status === '劇本成立' || check.radar_status === '偏強確認';
 
   // Format time from updated_at (preferred) or created_at
   const displayTime = check.updated_at

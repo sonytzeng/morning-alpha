@@ -177,6 +177,18 @@ test('opening radar degrades safely when only TXF is unavailable', () => {
   assert.match(openingMarketRadar, /if \(!checkpointUsable\)/);
 });
 
+test('legacy opening radar UI fails closed without real core evidence', () => {
+  const openingRadarService = read('src/services/openingRadarService.ts');
+  const openingRadarComponent = read('src/components/base/OpeningRadar.tsx');
+  assert.match(openingRadarService, /hasSufficientOpeningRadarEvidence/);
+  assert.match(openingRadarService, /coreEvidenceCount >= 2/);
+  assert.match(openingRadarService, /Boolean\(radar\.captured_at\)/);
+  assert.match(openingRadarService, /CONFIRMED_RADAR_STATUSES\.has\(radar\.radar_status\)/);
+  assert.match(openingRadarService, /radar_status: '資料不足'/);
+  assert.doesNotMatch(openingRadarService, /Morning Alpha Radar Freshness/);
+  assert.match(openingRadarComponent, /isConfirmed \? '開盤驗證通過' : '等待市場確認'/);
+});
+
 test('runtime deployment and missing checkpoint schedules are reproducible', () => {
   for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
@@ -190,6 +202,11 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeCheckpointWorkflow, /generate-daily-report-v7/);
   assert.match(runtimeCheckpointWorkflow, /\{\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
   assert.match(runtimeCheckpointWorkflow, /snapshot_upserted_count >= 2/);
+  assert.match(runtimeCheckpointWorkflow, /tw_core_symbols_success \| index\("TAIEX"\) != null/);
+  assert.match(runtimeCheckpointWorkflow, /tw_core_status\.taiex == "ok"/);
+  assert.match(runtimeCheckpointWorkflow, /for attempt in 1 2 3/);
+  assert.match(runtimeCheckpointWorkflow, /Missing TAIEX close evidence/);
+  assert.match(runtimeCheckpointWorkflow, /Closing verification incomplete/);
   assert.match(runtimeCheckpointWorkflow, /written_and_synced/);
   assert.match(runtimeCheckpointWorkflow, /closing-verification-engine/);
   assert.match(runtimeCheckpointWorkflow, /closing_verification_status/);
@@ -252,6 +269,8 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /isSyntheticResearchSentence/);
   assert.match(home, /get_public_performance_journal/);
   assert.match(home, /latestPublicClosing/);
+  assert.match(home, /查看完整研究與當沖條件/);
+  assert.doesNotMatch(home, /查看完整 AI 推理/);
   assert.match(home, /最近一次收盤驗證 ·/);
   assert.match(home, /dataStatus === 'complete'/);
   assert.match(home, /hasDirection/);

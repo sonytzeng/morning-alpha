@@ -154,13 +154,37 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           response_file="$RUNNER_TEMP/fetch-close-data.json"
-          curl --silent --show-error --fail-with-body \
-            --request POST "$FUNCTIONS_BASE_URL/fetch-market-data-v10" \
-            --header "Content-Type: application/json" \
-            --header "x-cron-secret: $CRON_SECRET" \
-            --data '{"phase":"close"}' \
-            --output "$response_file"
-          jq -e '.success == true and .phase == "close" and .snapshot_upserted_count >= 2' "$response_file" >/dev/null
+          for attempt in 1 2 3; do
+            curl --silent --show-error --fail-with-body \
+              --request POST "$FUNCTIONS_BASE_URL/fetch-market-data-v10" \
+              --header "Content-Type: application/json" \
+              --header "x-cron-secret: $CRON_SECRET" \
+              --data '{"phase":"close"}' \
+              --output "$response_file"
+            if jq -e '
+              .success == true
+              and .phase == "close"
+              and .snapshot_upserted_count >= 2
+              and (.tw_core_symbols_success | index("TAIEX") != null)
+              and .tw_core_status.taiex == "ok"
+            ' "$response_file" >/dev/null; then
+              exit 0
+            fi
+            jq -c '{
+              success,
+              phase,
+              trading_date,
+              snapshot_upserted_count,
+              tw_core_status,
+              tw_core_symbols_success,
+              tw_core_symbols_failed,
+              failed,
+              timed_out
+            }' "$response_file" >&2
+            if [ "$attempt" -lt 3 ]; then sleep 20; fi
+          done
+          echo "::error title=Missing TAIEX close evidence::Close verification stopped because a fresh TAIEX close snapshot was not available after 3 attempts." >&2
+          exit 1
 
       - name: Build closing review from the fresh close snapshot
         env:
@@ -186,7 +210,22 @@ jobs:
             --header "x-cron-secret: $CRON_SECRET" \
             --data '{}' \
             --output "$response_file"
-          jq -e '.success == true and (.closing_verification_status == "completed" or .closing_verification_status == "direction_completed_data_degraded")' "$response_file" >/dev/null
+          if ! jq -e '.success == true and (.closing_verification_status == "completed" or .closing_verification_status == "direction_completed_data_degraded")' "$response_file" >/dev/null; then
+            jq -c '{
+              success,
+              code,
+              error,
+              status,
+              closing_verification_status,
+              verification_date,
+              close_window_start,
+              close_window_end,
+              report_updated,
+              no_fake_data
+            }' "$response_file" >&2
+            echo "::error title=Closing verification incomplete::The verification engine did not return a completed evidence state." >&2
+            exit 1
+          fi
 
       - name: Build sector rotation evidence for the next trading day
         env:

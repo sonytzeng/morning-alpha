@@ -33,6 +33,9 @@ export interface OpeningRadar {
   updated_at: string;
 }
 
+const CONFIRMED_RADAR_STATUSES = new Set(['偏強確認', '劇本成立']);
+const INSUFFICIENT_DATA_STATUSES = new Set(['insufficient', 'missing', 'stale', 'not_generated']);
+
 function safeString(val: unknown): string | null {
   if (val === null || val === undefined) return null;
   return String(val);
@@ -59,8 +62,24 @@ function safeStringArray(val: unknown): string[] {
     .filter(Boolean);
 }
 
+function hasNumericValue(value: number | null): boolean {
+  return value !== null && Number.isFinite(value);
+}
+
+export function hasSufficientOpeningRadarEvidence(radar: Pick<
+  OpeningRadar,
+  'taiex_change' | 'txf_change' | 'tsmc_change' | 'captured_at' | 'data_status'
+>): boolean {
+  const coreEvidenceCount = [radar.taiex_change, radar.txf_change, radar.tsmc_change]
+    .filter(hasNumericValue).length;
+  const dataStatus = (radar.data_status || '').trim().toLowerCase();
+  return coreEvidenceCount >= 2
+    && Boolean(radar.captured_at)
+    && !INSUFFICIENT_DATA_STATUSES.has(dataStatus);
+}
+
 export function mapRowToOpeningRadar(row: Record<string, unknown>): OpeningRadar {
-  return {
+  const radar: OpeningRadar = {
     id: String(row.id || ''),
     report_date: String(row.report_date || ''),
     radar_status: String(row.radar_status || 'unknown'),
@@ -92,6 +111,16 @@ export function mapRowToOpeningRadar(row: Record<string, unknown>): OpeningRadar
     created_at: String(row.created_at || ''),
     updated_at: String(row.updated_at || ''),
   };
+  if (CONFIRMED_RADAR_STATUSES.has(radar.radar_status) && !hasSufficientOpeningRadarEvidence(radar)) {
+    return {
+      ...radar,
+      radar_status: '資料不足',
+      confidence_score: Math.min(radar.confidence_score ?? 0, 60),
+      is_premarket_overridden: false,
+      summary: '台股核心市場快照不足，原始狀態不採信，暫不判定劇本成立。',
+    };
+  }
+  return radar;
 }
 
 export async function getTodayOpeningRadar(): Promise<OpeningRadar | null> {
@@ -109,25 +138,6 @@ export async function getTodayOpeningRadar(): Promise<OpeningRadar | null> {
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-
-  // Debug log — 確認前端真的讀到今日資料
-  if (data) {
-    const rd = data as Record<string, unknown>;
-    console.log(
-      '[Morning Alpha Radar Freshness] getTodayOpeningRadar',
-      `\n  report_date=${rd.report_date}`,
-      `\n  captured_at=${rd.captured_at}`,
-      `\n  source_kind=${rd.source_kind}`,
-      `\n  data_source=${rd.data_source}`,
-      `\n  market_data_date=${rd.market_data_date}`,
-      `\n  updated_at=${rd.updated_at}`,
-      `\n  created_at=${rd.created_at}`,
-      `\n  radar_status=${rd.radar_status}`,
-      `\n  isToday=${rd.report_date === today}`,
-    );
-  } else {
-    console.log('[Morning Alpha Radar Freshness] getTodayOpeningRadar: no data for today=', today);
-  }
 
   if (error) {
     console.error('getTodayOpeningRadar error:', error.message);
@@ -172,7 +182,11 @@ export function getEffectiveDisplayState(
     };
   }
 
-  const status = openingRadar.radar_status;
+  const hasSufficientEvidence = hasSufficientOpeningRadarEvidence(openingRadar);
+  const claimedConfirmed = CONFIRMED_RADAR_STATUSES.has(openingRadar.radar_status);
+  const status = claimedConfirmed && !hasSufficientEvidence
+    ? '資料不足'
+    : openingRadar.radar_status;
 
   // 明顯偏弱
   if (status === '明顯偏弱') {
@@ -235,7 +249,7 @@ export function getEffectiveDisplayState(
   }
 
   // ═══ 偏強確認（V3.1 新值）or 劇本成立（V3.0 舊值向後相容） ═══
-  const isConfirmed = status === '偏強確認' || status === '劇本成立';
+  const isConfirmed = (status === '偏強確認' || status === '劇本成立') && hasSufficientEvidence;
   return {
     effectiveBias: openingRadar.market_bias || reportMarketBias || '觀察中',
     effectiveConfidence: openingRadar.confidence_score ?? reportConfidence ?? 0,

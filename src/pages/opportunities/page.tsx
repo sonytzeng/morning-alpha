@@ -427,12 +427,13 @@ function OpportunitiesContent() {
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true' || ds.v10BeneficiaryEnabled === true;
   const v10BeneficiaryStocks = mapV10OpportunityStocks(rawAI.today_beneficiary_stocks_v10 || ds.v10BeneficiaryStocks);
   const v10ObservationWatchlist = mapV10OpportunityStocks(rawAI.v10_observation_watchlist || ds.v10ObservationWatchlist);
-  const strongOpportunityStocks = v10BeneficiaryEnabled
-    ? v10BeneficiaryStocks
-    : coreStocks.map((stock, index) => legacyToV10(stock, index, 'beneficiary'));
-  const observationOpportunityStocks = v10BeneficiaryEnabled
-    ? v10ObservationWatchlist
-    : [...extendedStocks, ...scenarioStocks].map((stock, index) => legacyToV10(stock, index, 'observation'));
+  const hasCurrentEvidence = v10BeneficiaryEnabled
+    && ds.dataStatus !== 'insufficient'
+    && !/insufficient|missing|failed|unavailable/i.test(ds.v10DataQualityStatus);
+  // Public stock cards are V10-only. Legacy beneficiary fields are retained for
+  // historical/admin inspection, but must never become today's public shortlist.
+  const strongOpportunityStocks = hasCurrentEvidence ? v10BeneficiaryStocks : [];
+  const observationOpportunityStocks = hasCurrentEvidence ? v10ObservationWatchlist : [];
   const presentedStocks = dedupePresentedOpportunities(
     [...strongOpportunityStocks, ...observationOpportunityStocks] as unknown as Record<string, unknown>[],
     12,
@@ -443,7 +444,9 @@ function OpportunitiesContent() {
     confirmation: publicOpportunityText(stock.confirmation),
     invalidation: publicOpportunityText(stock.invalidation),
   }));
-  const completeEnoughStocks = safePresentedStocks.filter(({ reason, confirmation, invalidation }) => Boolean(reason || confirmation || invalidation));
+  const completeEnoughStocks = safePresentedStocks.filter(({ reason, confirmation, invalidation }) => (
+    Boolean(reason && confirmation && invalidation)
+  ));
   const hasStrongBeneficiaryEvidence = strongOpportunityStocks.length > 0;
   const canonicalNarrative = buildCanonicalNarrative({ displayState: ds, ai: rawAI });
   const opportunityPresentation = buildDecisionPresentation({
@@ -471,11 +474,11 @@ function OpportunitiesContent() {
     ? `今天有 ${strongOpportunityStocks.length} 檔通過強受惠篩選`
     : completeEnoughStocks.length > 0
       ? `今天沒有強受惠股，先觀察 ${completeEnoughStocks.length} 檔`
-      : '今天沒有強受惠股，也沒有足夠條件列入觀察';
+      : '今天不公布個股名單';
   const opportunityListTitle = hasStrongBeneficiaryEvidence ? '受惠候選比較' : '觀察股比較';
   const opportunityListDescription = hasStrongBeneficiaryEvidence
     ? '依序比較入選理由、成立條件與取消條件；通過篩選仍不等於買進訊號。'
-    : '以下僅是等待確認的觀察股，不算今日受惠股，也不等於買進名單。';
+    : '只有理由、成立條件、取消條件與當日證據都完整，股票才會出現在這裡。';
 
   return (
     <div className="ma-page ma-pixel-page ma-opportunities-page flex flex-col overflow-x-hidden">
@@ -490,7 +493,7 @@ function OpportunitiesContent() {
                 <h1>{opportunityHeroTitle}</h1>
                 <p>{hasStrongBeneficiaryEvidence
                   ? '這裡是通過證據門檻的受惠候選，仍不是買進名單。'
-                  : '正向證據尚未通過門檻；目前名單只用來等待確認，不把觀察股包裝成受惠股。'}</p>
+                  : '當日證據尚未通過門檻；不沿用昨天名單、不拿固定股票填版面，也不把觀察股包裝成受惠股。'}</p>
               </div>
               <aside>
                 <span>當前確認節點</span>
@@ -548,7 +551,8 @@ function OpportunitiesContent() {
               </div>
             ) : (
               <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.06] p-5 text-sm leading-relaxed text-amber-200">
-                今日尚無可顯示的股票理由。
+                <strong className="mb-1 block text-amber-100">今日不公布個股名單</strong>
+                當日主線、個股承接、成立條件與取消條件尚未同時通過資料門檻。資料完整前維持空白，不沿用舊名單。
               </div>
             )}
           </section>
@@ -556,7 +560,7 @@ function OpportunitiesContent() {
           <nav className="ma-opportunities-v2-next" aria-label="今日受惠股後續頁面">
             <div><strong>接著怎麼看</strong><span>先回到判斷，再追蹤盤中證據。</span></div>
             <div>
-              <Link to="/report/today">今日判斷<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+              <Link to="/">今日判斷<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
               <Link to="/war-room">盤中追蹤<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
               <Link to="/member-note">完整研究<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
             </div>

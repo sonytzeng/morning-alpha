@@ -1,7 +1,6 @@
 import type { RouteObject } from "react-router-dom";
 import NotFound from "../pages/NotFound";
 import Home from "../pages/home/page";
-import TodayReport from "../pages/report/TodayReport";
 import Account from "../pages/account/Account";
 import AdminLayout from "../pages/admin/Admin";
 import AdminTodayContent from "../pages/admin/today-content/page";
@@ -31,7 +30,7 @@ const routes: RouteObject[] = [
   },
   {
     path: "/report/today",
-    element: <TodayReport />,
+    element: <Navigate to="/" replace />,
   },
   {
     path: "/opportunities",

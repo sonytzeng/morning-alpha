@@ -421,10 +421,15 @@ function HomePageContent() {
   const researchMaster = asRecord(homeAI?.research_master_v2);
   const researchMetadata = asRecord(researchMaster.metadata);
   const reportRecord = asRecord(report);
-  const confidenceScore = firstNumber(
-    presentation.confidence?.score,
-    displayState.confidenceScore,
-  );
+  const evidenceIsInsufficient = decisionState === 'INSUFFICIENT_DATA'
+    || displayState.dataStatus === 'insufficient'
+    || /insufficient|missing|failed|unavailable/i.test(displayState.v10DataQualityStatus);
+  const confidenceScore = evidenceIsInsufficient
+    ? null
+    : firstNumber(
+      presentation.confidence?.score,
+      displayState.confidenceScore,
+    );
   const riskLevel = firstString(
     homeAI?.risk_level,
     publicSummary.risk_level,
@@ -460,7 +465,9 @@ function HomePageContent() {
     displayState.todayQuote,
     decisionContext,
   );
-  const morningBrief = translateKnownTerms(
+  const morningBrief = evidenceIsInsufficient
+    ? '市場資料尚未完整，今天不產生主線敘事與個股名單。'
+    : translateKnownTerms(
     isSyntheticResearchSentence(morningBriefCandidate)
       ? decisionContext
       : morningBriefCandidate,
@@ -755,8 +762,8 @@ function HomePageContent() {
                     <span>{renderSafeText(nextActionLabel)}</span>
                   </div>
                   <div className="ma-home-v2-hero-actions">
-                    <Link to="/report/today" className="ma-pixel-primary-button">
-                      查看今日完整判斷
+                    <Link to="/opportunities" className="ma-pixel-primary-button">
+                      查看短線資金雷達
                       <i className="ri-arrow-right-line" aria-hidden="true" />
                     </Link>
                     <Link to="/member-note" className="ma-pixel-text-link">

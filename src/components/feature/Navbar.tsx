@@ -28,10 +28,8 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
 
   const navLinks = [
     { to: '/', label: '首頁' },
-    { to: '/report/today', label: '盤前情報' },
     { to: '/opportunities', label: '短線資金雷達' },
     { to: '/war-room', label: '盤中追蹤' },
-    { to: '/member-note', label: '會員研究' },
     { to: '/performance', label: '歷史績效' },
     { to: '/pricing', label: '會員方案' },
   ];

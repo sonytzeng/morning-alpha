@@ -430,10 +430,20 @@ function OpportunitiesContent() {
   const hasCurrentEvidence = v10BeneficiaryEnabled
     && ds.dataStatus !== 'insufficient'
     && !/insufficient|missing|failed|unavailable/i.test(ds.v10DataQualityStatus);
-  // Public stock cards are V10-only. Legacy beneficiary fields are retained for
-  // historical/admin inspection, but must never become today's public shortlist.
+  const hasUsableLegacyEvidence = ds.dataStatus !== 'insufficient'
+    && !/missing|failed|unavailable/i.test(ds.v10DataQualityStatus);
+  const legacyObservationStocks = [...coreStocks, ...extendedStocks, ...scenarioStocks]
+    .map((stock, index) => legacyToV10(stock, index, 'observation'));
+
+  // V10 remains the only path to a strong-beneficiary label. Until that engine is
+  // enabled, complete legacy evidence is shown honestly as an observation list
+  // instead of hiding every real candidate.
   const strongOpportunityStocks = hasCurrentEvidence ? v10BeneficiaryStocks : [];
-  const observationOpportunityStocks = hasCurrentEvidence ? v10ObservationWatchlist : [];
+  const observationOpportunityStocks = hasCurrentEvidence
+    ? v10ObservationWatchlist
+    : hasUsableLegacyEvidence
+      ? legacyObservationStocks
+      : [];
   const presentedStocks = dedupePresentedOpportunities(
     [...strongOpportunityStocks, ...observationOpportunityStocks] as unknown as Record<string, unknown>[],
     12,

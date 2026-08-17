@@ -491,3 +491,15 @@ test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempo
   assert.match(lineDailyPush, /customAggregationUnits/);
   assert.doesNotMatch(lineDailyPush, /sent:\s*true,\s*report_date: reportDate,\s*total_subscribers: 0/);
 });
+
+
+test('closing verification accepts delayed same-day close snapshots without weakening provenance', () => {
+  const contract = read('supabase/functions/_shared/intraday-runtime-contract.ts');
+  const engine = read('supabase/functions/closing-verification-engine/index.ts');
+  assert.match(contract, /row\.phase !== "close"/);
+  assert.match(contract, /row\.trading_date !== tradingDate/);
+  assert.match(contract, /taipeiDateFromIso\(row\.captured_at\) !== tradingDate/);
+  assert.match(contract, /capturedMinutes <= 18 \* 60/);
+  assert.match(engine, /T10:00:00\.000Z/);
+  assert.match(engine, /13:30-18:00 台北收盤驗證窗口內/);
+});

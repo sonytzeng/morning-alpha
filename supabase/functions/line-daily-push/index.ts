@@ -5,6 +5,16 @@ import { resolveMarketStatus } from '../_shared/market-status.ts';
 // V3 升級：加入台股交易日 Gate，休市日不推播盤前報告
 // V2 升級：加入 sentiment_score/sentiment_label + sentiment_reason 推播
 
+type LineSubscriber = {
+  id: string;
+  line_user_id: string | null;
+  display_name: string | null;
+};
+
+const SUBSCRIBER_PAGE_SIZE = 1000;
+const LINE_MULTICAST_BATCH_SIZE = 500;
+const DATABASE_BATCH_SIZE = 200;
+
 Deno.serve(async (req) => {
   // CORS preflight
   if (req.method === 'OPTIONS') {
@@ -218,26 +228,61 @@ Deno.serve(async (req) => {
 
   const reportDate = taipeiToday;
 
-  // 3. 取得所有 active subscribers
-  const { data: subscribers, error: subError } = await supabase
-    .from('line_subscribers')
-    .select('id, line_user_id, display_name')
-    .eq('is_active', true);
-
-  if (subError) {
+  // 3. 取得所有 active subscribers；分頁避免 Supabase 預設 1,000 筆上限
+  let subscribers: LineSubscriber[] = [];
+  try {
+    subscribers = await fetchActiveSubscribers(supabase);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
     return new Response(
-      JSON.stringify({ error: 'Failed to fetch subscribers', detail: subError.message }),
+      JSON.stringify({ success: false, sent: false, reason: 'SUBSCRIBER_FETCH_ERROR', detail }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
 
-  if (!subscribers || subscribers.length === 0) {
+  if (subscribers.length === 0) {
     return new Response(
       JSON.stringify({
         success: true,
-        sent: true,
+        sent: false,
+        reason: 'NO_ACTIVE_SUBSCRIBERS',
         report_date: reportDate,
         total_subscribers: 0,
+        eligible_count: 0,
+        already_sent_count: 0,
+        sent_count: 0,
+        failed_count: 0,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  let alreadySentIds: Set<string>;
+  try {
+    alreadySentIds = await fetchAlreadySentIds(supabase, reportDate, 'daily_report');
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return new Response(
+      JSON.stringify({ success: false, sent: false, reason: 'IDEMPOTENCY_CHECK_ERROR', detail }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const eligibleSubscribers = subscribers.filter((subscriber) => {
+    const userId = subscriber.line_user_id;
+    return Boolean(userId) && !alreadySentIds.has(String(userId));
+  });
+
+  if (eligibleSubscribers.length === 0) {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        sent: false,
+        reason: 'ALREADY_SENT',
+        report_date: reportDate,
+        total_subscribers: subscribers.length,
+        eligible_count: 0,
+        already_sent_count: alreadySentIds.size,
         sent_count: 0,
         failed_count: 0,
       }),
@@ -249,84 +294,199 @@ Deno.serve(async (req) => {
   const message = buildLineMessage(report, siteUrl);
   const messagePreview = message.text.slice(0, 200);
 
-  // 5. 逐一推播（單一失敗不中斷全部）
-  let sentCount = 0;
-  let failedCount = 0;
-  const now = new Date().toISOString();
-
-  for (const sub of subscribers) {
-    const userId = sub.line_user_id;
-    if (!userId) continue;
-
-    try {
-      const pushRes = await fetch('https://api.line.me/v2/bot/message/push', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${channelAccessToken}`,
-        },
-        body: JSON.stringify({
-          to: userId,
-          messages: [message],
-        }),
-      });
-
-      if (pushRes.ok) {
-        sentCount++;
-        // 記錄成功
-        await supabase.from('line_push_logs').insert({
-          line_user_id: userId,
-          push_type: 'daily_report',
-          report_date: reportDate,
-          status: 'success',
-          message_preview: messagePreview,
-        });
-        // 更新 last_pushed_at
-        await supabase
-          .from('line_subscribers')
-          .update({ last_pushed_at: now, updated_at: now })
-          .eq('line_user_id', userId);
-      } else {
-        const errText = await pushRes.text();
-        failedCount++;
-        console.error(`Push failed for ${userId}:`, errText);
-        await supabase.from('line_push_logs').insert({
-          line_user_id: userId,
-          push_type: 'daily_report',
-          report_date: reportDate,
-          status: 'failed',
-          message_preview: messagePreview,
-          error_message: errText.slice(0, 500),
-        });
-      }
-    } catch (e) {
-      failedCount++;
-      const errMsg = e instanceof Error ? e.message : String(e);
-      console.error(`Push exception for ${userId}:`, errMsg);
-      await supabase.from('line_push_logs').insert({
-        line_user_id: userId,
-        push_type: 'daily_report',
+  // 5. 每批最多 500 人；穩定 Retry Key 避免排程重試造成重複推播
+  let delivery: { sentCount: number; failedCount: number };
+  try {
+    delivery = await sendMulticastBatches({
+      supabase,
+      channelAccessToken,
+      subscribers: eligibleSubscribers,
+      message,
+      messagePreview,
+      reportDate,
+      pushType: 'daily_report',
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        sent: false,
+        reason: 'LINE_DELIVERY_ERROR',
         report_date: reportDate,
-        status: 'failed',
-        message_preview: messagePreview,
-        error_message: errMsg.slice(0, 500),
-      });
-    }
+        total_subscribers: subscribers.length,
+        eligible_count: eligibleSubscribers.length,
+        already_sent_count: alreadySentIds.size,
+        detail,
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 
   return new Response(
     JSON.stringify({
       success: true,
-      sent: true,
-      reason: 'TRADING_DAY_PUSH',
+      sent: delivery.sentCount > 0,
+      reason: delivery.failedCount === 0 ? 'TRADING_DAY_PUSH' : 'PARTIAL_DELIVERY_FAILURE',
       report_date: reportDate,
       total_subscribers: subscribers.length,
-      sent_count: sentCount,
-      failed_count: failedCount,
+      eligible_count: eligibleSubscribers.length,
+      already_sent_count: alreadySentIds.size,
+      sent_count: delivery.sentCount,
+      failed_count: delivery.failedCount,
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } },
   );
 });
+
+type SupabaseClient = ReturnType<typeof createClient>;
+
+async function fetchActiveSubscribers(supabase: SupabaseClient): Promise<LineSubscriber[]> {
+  const subscribers: LineSubscriber[] = [];
+  for (let from = 0; ; from += SUBSCRIBER_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('line_subscribers')
+      .select('id, line_user_id, display_name')
+      .eq('is_active', true)
+      .order('id', { ascending: true })
+      .range(from, from + SUBSCRIBER_PAGE_SIZE - 1);
+    if (error) throw new Error(`Failed to fetch subscribers: ${error.message}`);
+    const page = (data || []) as LineSubscriber[];
+    subscribers.push(...page);
+    if (page.length < SUBSCRIBER_PAGE_SIZE) break;
+  }
+  return subscribers;
+}
+
+async function fetchAlreadySentIds(
+  supabase: SupabaseClient,
+  reportDate: string,
+  pushType: string,
+): Promise<Set<string>> {
+  const sentIds = new Set<string>();
+  for (let from = 0; ; from += SUBSCRIBER_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('line_push_logs')
+      .select('line_user_id')
+      .eq('report_date', reportDate)
+      .eq('push_type', pushType)
+      .eq('status', 'success')
+      .range(from, from + SUBSCRIBER_PAGE_SIZE - 1);
+    if (error) throw new Error(`Failed to verify prior LINE pushes: ${error.message}`);
+    const page = (data || []) as Array<{ line_user_id: string | null }>;
+    for (const row of page) if (row.line_user_id) sentIds.add(row.line_user_id);
+    if (page.length < SUBSCRIBER_PAGE_SIZE) break;
+  }
+  return sentIds;
+}
+
+async function createRetryKey(seed: string): Promise<string> {
+  const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed)));
+  const hex = Array.from(bytes).map((value) => value.toString(16).padStart(2, '0')).join('');
+  const variant = ((Number.parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+async function insertPushLogs(
+  supabase: SupabaseClient,
+  rows: Array<Record<string, unknown>>,
+): Promise<void> {
+  for (let from = 0; from < rows.length; from += DATABASE_BATCH_SIZE) {
+    const { error } = await supabase.from('line_push_logs').insert(rows.slice(from, from + DATABASE_BATCH_SIZE));
+    if (error) throw new Error(`Failed to persist LINE push logs: ${error.message}`);
+  }
+}
+
+async function markSubscribersPushed(
+  supabase: SupabaseClient,
+  userIds: string[],
+  now: string,
+): Promise<void> {
+  for (let from = 0; from < userIds.length; from += DATABASE_BATCH_SIZE) {
+    const { error } = await supabase
+      .from('line_subscribers')
+      .update({ last_pushed_at: now, updated_at: now })
+      .in('line_user_id', userIds.slice(from, from + DATABASE_BATCH_SIZE));
+    if (error) throw new Error(`Failed to update subscriber push timestamps: ${error.message}`);
+  }
+}
+
+async function sendMulticastBatches(args: {
+  supabase: SupabaseClient;
+  channelAccessToken: string;
+  subscribers: LineSubscriber[];
+  message: Record<string, unknown>;
+  messagePreview: string;
+  reportDate: string;
+  pushType: string;
+}): Promise<{ sentCount: number; failedCount: number }> {
+  let sentCount = 0;
+  let failedCount = 0;
+  const now = new Date().toISOString();
+
+  for (let from = 0; from < args.subscribers.length; from += LINE_MULTICAST_BATCH_SIZE) {
+    const batch = args.subscribers.slice(from, from + LINE_MULTICAST_BATCH_SIZE);
+    const userIds = batch.map((subscriber) => String(subscriber.line_user_id)).filter(Boolean);
+    const retryKey = await createRetryKey(
+      [args.reportDate, args.pushType, String(from / LINE_MULTICAST_BATCH_SIZE), ...userIds].join('|'),
+    );
+
+    let response: Response;
+    try {
+      response = await fetch('https://api.line.me/v2/bot/message/multicast', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${args.channelAccessToken}`,
+          'X-Line-Retry-Key': retryKey,
+        },
+        body: JSON.stringify({
+          to: userIds,
+          messages: [args.message],
+          customAggregationUnits: [`ma_daily_${args.reportDate.replaceAll('-', '')}`],
+        }),
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      failedCount += userIds.length;
+      await insertPushLogs(args.supabase, userIds.map((lineUserId) => ({
+        line_user_id: lineUserId,
+        push_type: args.pushType,
+        report_date: args.reportDate,
+        status: 'failed',
+        message_preview: args.messagePreview,
+        error_message: detail.slice(0, 500),
+      })));
+      continue;
+    }
+
+    if (!response.ok) {
+      const detail = (await response.text()).slice(0, 500);
+      failedCount += userIds.length;
+      await insertPushLogs(args.supabase, userIds.map((lineUserId) => ({
+        line_user_id: lineUserId,
+        push_type: args.pushType,
+        report_date: args.reportDate,
+        status: 'failed',
+        message_preview: args.messagePreview,
+        error_message: detail,
+      })));
+      continue;
+    }
+
+    await insertPushLogs(args.supabase, userIds.map((lineUserId) => ({
+      line_user_id: lineUserId,
+      push_type: args.pushType,
+      report_date: args.reportDate,
+      status: 'success',
+      message_preview: args.messagePreview,
+    })));
+    await markSubscribersPushed(args.supabase, userIds, now);
+    sentCount += userIds.length;
+  }
+
+  return { sentCount, failedCount };
+}
 
 // ─── V3: 取得台北今日日期 (YYYY-MM-DD) ───
 function getTaipeiToday(): string {

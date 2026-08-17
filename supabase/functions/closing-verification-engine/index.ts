@@ -278,7 +278,7 @@ function isValidDateString(value: unknown): value is string {
 function getCloseWindowRange(taipeiDate: string): { start: string; end: string } {
   return {
     start: `${taipeiDate}T05:30:00.000Z`,
-    end: `${taipeiDate}T07:30:00.000Z`,
+    end: `${taipeiDate}T10:00:00.000Z`,
   };
 }
 
@@ -966,7 +966,7 @@ Deno.serve(async (req: Request) => {
       actual_direction: "unknown",
       verdict_label: "等待有效收盤資料",
       verification_note:
-        "收盤驗證已執行，但尚未取得 13:30-15:30 台北收盤窗口內的 TAIEX 資料；系統未使用假資料。",
+        "收盤驗證已執行，但尚未取得 13:30-18:00 台北收盤驗證窗口內的 TAIEX 資料；系統未使用假資料。",
       miss_reason: null,
       failed_assumptions: [],
       tomorrow_watch_points: buildTomorrowWatchPoints("pending", "unknown"),

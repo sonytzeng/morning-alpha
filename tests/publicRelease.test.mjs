@@ -190,7 +190,7 @@ test('legacy opening radar UI fails closed without real core evidence', () => {
 });
 
 test('runtime deployment and missing checkpoint schedules are reproducible', () => {
-  for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation']) {
+  for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
   }
   for (const schedule of ["15 23 * * 0-4", "25 1 * * 1-5", "25 2 * * 1-5", "55 4 * * 1-5", "20 6 * * 1-5"]) {
@@ -212,6 +212,9 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeCheckpointWorkflow, /closing_verification_status/);
   assert.match(runtimeCheckpointWorkflow, /generate-sector-rotation/);
   assert.match(runtimeCheckpointWorkflow, /secrets\.CRON_SECRET/);
+  assert.match(runtimeCheckpointWorkflow, /line-daily-push/);
+  assert.match(runtimeCheckpointWorkflow, /ALREADY_SENT/);
+  assert.match(runtimeCheckpointWorkflow, /failed_count == 0/);
 });
 
 test('trading-day reports and public timelines fail closed with correct times', () => {
@@ -322,6 +325,8 @@ test('opportunities is a candidate screening flow with complete public copy', ()
   assert.match(opportunities, /hasStrongBeneficiaryEvidence/);
   assert.match(opportunities, /今天沒有強受惠股，先觀察/);
   assert.match(opportunities, /不把觀察股包裝成受惠股/);
+  assert.match(opportunities, /legacyObservationStocks/);
+  assert.match(opportunities, /hasUsableLegacyEvidence/);
   const css = read('src/index.css');
   const cardRule = css.match(/\.ma-opportunities-page \.ma-opportunity-card \{([^}]*)\}/)?.[1] || '';
   const detailRule = css.match(/\.ma-opportunities-page \.ma-opportunity-details > div > dd \{([^}]*)\}/)?.[1] || '';
@@ -461,4 +466,28 @@ test('home uses canonical server payload and labels historical fallback', () => 
   assert.doesNotMatch(resolver, /from ['"]@\/lib\/supabase['"]/);
   assert.match(home, /hasHistoricalReport \? 'not-today' : 'no-report'/);
   assert.match(home, /to=\{`\/reports\/\$\{displayReportDate\}`\}/);
+});
+
+
+test('daily report freshness follows expected trading sessions and never writes the confidence/date template', () => {
+  const reportGenerator = read('supabase/functions/generate-daily-report-v7/index.ts');
+  assert.match(reportGenerator, /marketIndicatorTradingDate/);
+  assert.match(reportGenerator, /America\/New_York/);
+  assert.match(reportGenerator, /detectStaleCoreMarketData\(marketData,dates\)/);
+  assert.match(reportGenerator, /applyBiasGuardrails\(marketData,dScore\.baseScore,dates\)/);
+  assert.match(reportGenerator, /resolveEvidenceBackedDailySentence/);
+  assert.match(reportGenerator, /isSyntheticDailySentence/);
+  assert.doesNotMatch(reportGenerator, /marketBias\+'，信心 '\+confScore\+'\/100，基準日期 '/);
+});
+
+test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempotent', () => {
+  const lineDailyPush = read('supabase/functions/line-daily-push/index.ts');
+  assert.match(lineDailyPush, /SUBSCRIBER_PAGE_SIZE = 1000/);
+  assert.match(lineDailyPush, /LINE_MULTICAST_BATCH_SIZE = 500/);
+  assert.match(lineDailyPush, /fetchAlreadySentIds/);
+  assert.match(lineDailyPush, /reason: 'ALREADY_SENT'/);
+  assert.match(lineDailyPush, /message\/multicast/);
+  assert.match(lineDailyPush, /X-Line-Retry-Key/);
+  assert.match(lineDailyPush, /customAggregationUnits/);
+  assert.doesNotMatch(lineDailyPush, /sent:\s*true,\s*report_date: reportDate,\s*total_subscribers: 0/);
 });

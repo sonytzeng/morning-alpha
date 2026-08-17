@@ -202,8 +202,12 @@ export function isSnapshotInCloseWindow(
   ) return false;
   if (taipeiDateFromIso(row.captured_at) !== tradingDate) return false;
   const capturedMinutes = taipeiMinutesFromIso(row.captured_at);
+  // GitHub scheduled jobs may start late. A row remains valid when it is an
+  // explicit close-phase snapshot for the same trading date and is captured
+  // before the operational cutoff, because the upstream quote is already the
+  // official post-close value.
   return capturedMinutes !== null && capturedMinutes >= 13 * 60 + 30 &&
-    capturedMinutes <= 15 * 60 + 30;
+    capturedMinutes <= 18 * 60;
 }
 
 export function evaluateCloseSnapshotRows(

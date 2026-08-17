@@ -100,6 +100,38 @@ jobs:
             --output "$response_file"
           jq -e '.success == true and (.report_id | type == "string") and (.report_date | type == "string")' "$response_file" >/dev/null
 
+      - name: Push today's LINE premarket brief
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/line-daily-push.json"
+          for attempt in 1 2 3; do
+            if curl --silent --show-error --fail-with-body \
+              --request POST "$FUNCTIONS_BASE_URL/line-daily-push" \
+              --header "Content-Type: application/json" \
+              --header "x-cron-secret: $CRON_SECRET" \
+              --data '{}' \
+              --output "$response_file"; then
+              if jq -e '
+                .success == true
+                and (
+                  (.sent == true and .failed_count == 0)
+                  or (.sent == false and (
+                    .reason == "ALREADY_SENT"
+                    or .reason == "NO_ACTIVE_SUBSCRIBERS"
+                    or .reason == "MARKET_STATUS_NOT_OPEN"
+                  ))
+                )
+              ' "$response_file" >/dev/null; then
+                exit 0
+              fi
+            fi
+            jq -c '{success, sent, reason, report_date, total_subscribers, eligible_count, already_sent_count, sent_count, failed_count}' "$response_file" >&2 || true
+            if [ "$attempt" -lt 3 ]; then sleep $((attempt * 10)); fi
+          done
+          echo "::error title=LINE premarket push failed::The LINE push did not complete after 3 idempotent attempts." >&2
+          exit 1
+
   intraday:
     needs: resolve-checkpoint
     if: needs.resolve-checkpoint.outputs.checkpoint == '0930' || needs.resolve-checkpoint.outputs.checkpoint == '1030' || needs.resolve-checkpoint.outputs.checkpoint == '1300'

@@ -218,6 +218,33 @@ export default function ReportDetail() {
   const rawAI = (strategy.raw || {}) as Record<string, unknown>;
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist, 5);
+  const contentPublishGate = asRecord(rawAI.content_publish_gate);
+  const hasContentPublishGate = Object.keys(contentPublishGate).length > 0;
+  const publishGateStatus = String(contentPublishGate.overall_status ?? '').trim();
+  const blockingIssues = safeArray(contentPublishGate.blocking_issues);
+  const memberValueScore = numberOrNull(rawAI.member_value_score);
+  const reportDataQuality = String(rawAI.data_quality ?? '').trim().toLowerCase();
+  const v10DataQualityStatus = String(rawAI.v10_data_quality_status ?? '').trim().toLowerCase();
+  const performanceTiming = asRecord(rawAI.performance_timing);
+  const missingSources = safeArray(performanceTiming.missing_sources);
+  const v10AnalysisDebug = asRecord(rawAI.v10_analysis_debug);
+  const normalizedEvidence = asRecord(v10AnalysisDebug.normalized_evidence);
+  const normalizedMarketSnapshot = Array.isArray(normalizedEvidence.normalized_market_snapshot)
+    ? normalizedEvidence.normalized_market_snapshot
+    : [];
+  const marketEvidenceCount = Math.max(strategy.global_market_status_count ?? 0, normalizedMarketSnapshot.length);
+  const hasFreshNewsEvidence = Boolean(strategy.important_news?.length);
+  const memberResearchDegraded = hasContentPublishGate && (
+    publishGateStatus.includes('降級')
+    || blockingIssues.length > 0
+    || (memberValueScore !== null && memberValueScore < 90)
+    || reportDataQuality === 'degraded'
+    || v10DataQualityStatus !== 'sufficient'
+    || !hasFreshNewsEvidence
+  );
+  const showV11Observations = v10BeneficiaryEnabled
+    && v11ObservationScripts.length > 0
+    && !memberResearchDegraded;
 
   // Translated watch/avoid directions
   const watchSectors = canWatchRaw.map(translateSector).filter(Boolean) as string[];
@@ -391,15 +418,15 @@ export default function ReportDetail() {
               <div className="p-3 rounded-xl bg-sky-500/[0.06] border border-sky-500/15 mb-4">
                 <div className="flex items-center gap-4 flex-wrap text-xs">
                   <div>
-                    <span className="text-sky-400/70 text-[10px] uppercase tracking-wider">台股盤前基準</span>
-                    <span className="text-sky-200 font-semibold ml-2">{strategy.market_data_latest_date || report.report_date} 收盤</span>
+                    <span className="text-sky-400/70 text-[10px] uppercase tracking-wider">資料所屬交易日</span>
+                    <span className="text-sky-200 font-semibold ml-2">{strategy.market_data_latest_date || report.report_date}</span>
                   </div>
                   {(strategy.market_data_latest_date && strategy.market_data_latest_date !== report.report_date) && (
                     <span className="text-sky-400/50 text-[10px]">前一個完整交易日，正常</span>
                   )}
                   <div className="ml-auto">
-                    <span className="text-sky-400/70 text-[10px] uppercase tracking-wider">盤中資料</span>
-                    <span className="text-amber-400/80 font-semibold ml-2">等待 09:30 開盤雷達</span>
+                    <span className="text-sky-400/70 text-[10px] uppercase tracking-wider">追蹤狀態</span>
+                    <span className="text-amber-400/80 font-semibold ml-2">{displayStatus.label}</span>
                   </div>
                 </div>
               </div>
@@ -464,12 +491,39 @@ export default function ReportDetail() {
               </div>
             </section>
 
-            {v10BeneficiaryEnabled && (
+            {showV11Observations && (
               <V11ObservationSection
                 items={v11ObservationScripts}
                 tone="dark"
                 subtitle="回看當天市場真正等哪幾個確認訊號。"
               />
+            )}
+
+            {v10BeneficiaryEnabled && memberResearchDegraded && (
+              <section className="ma-card-elevated border border-amber-500/20">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-6 h-6 rounded-md bg-amber-500/15 flex items-center justify-center"><i className="ri-shield-check-line text-amber-300 text-xs" /></div>
+                  <p className="ma-eyebrow text-amber-300/75">會員研究品質閘門</p>
+                </div>
+                <h2 className="ma-section-title text-white mb-3">今日研究資料尚未達付費發布標準</h2>
+                <p className="text-white/65 text-sm leading-relaxed mb-4">
+                  系統不會把資料不足包裝成高信心受惠股。今天保留市場方向、風險與盤中驗證條件，但暫不發布個股主線、資金下一站或高信心排序。
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                    <p className="text-white/35 text-[10px] mb-1">會員價值分數</p>
+                    <p className="text-white/75 text-sm font-semibold">{memberValueScore ?? '尚未評分'}{memberValueScore !== null ? ' / 100' : ''}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                    <p className="text-white/35 text-[10px] mb-1">可核對新鮮新聞</p>
+                    <p className="text-white/75 text-sm font-semibold">{hasFreshNewsEvidence ? `${strategy.important_news.length} 則` : '0 則'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                    <p className="text-white/35 text-[10px] mb-1">缺少資料</p>
+                    <p className="text-white/75 text-sm font-semibold">{missingSources.length > 0 ? missingSources.slice(0, 3).join('、') : '內容完整度未過門檻'}</p>
+                  </div>
+                </div>
+              </section>
             )}
 
             {/* ── 3. 資金觀察方向 ── */}
@@ -533,12 +587,12 @@ export default function ReportDetail() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                 <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3 md:p-4">
-                  <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">台股盤前基準</p>
-                  <p className="text-white/70 text-sm font-medium">{strategy.market_data_latest_date || report.report_date} 收盤</p>
+                  <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">資料所屬交易日</p>
+                  <p className="text-white/70 text-sm font-medium">{strategy.market_data_latest_date || report.report_date}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3 md:p-4">
                   <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">市場數據記錄</p>
-                  <p className="text-white/70 text-sm font-medium">{strategy.global_market_status_count ?? 0} 項</p>
+                  <p className="text-white/70 text-sm font-medium">{marketEvidenceCount} 項</p>
                 </div>
               </div>
 
@@ -566,7 +620,7 @@ export default function ReportDetail() {
                   ))}
                 </div>
               ) : (
-                <p className="text-white/55 text-sm">新聞資料正在整理中，請查看盤前報告取得最新新聞分析。</p>
+                <p className="text-white/55 text-sm">本報告沒有可核對的 48 小時內新聞來源，因此不使用新聞題材建立受惠股結論。</p>
               )}
             </section>
 

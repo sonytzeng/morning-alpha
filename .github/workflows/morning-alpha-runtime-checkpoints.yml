@@ -81,6 +81,30 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: test -n "$CRON_SECRET"
 
+      - name: Refresh verifiable global market news
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/fetch-global-market-news.json"
+          for attempt in 1 2 3; do
+            if curl --silent --show-error --fail-with-body \
+              --max-time 180 \
+              --request POST "$FUNCTIONS_BASE_URL/fetch-global-market-news" \
+              --header "Content-Type: application/json" \
+              --header "x-cron-secret: $CRON_SECRET" \
+              --data '{}' \
+              --output "$response_file"; then
+              if jq -e '.success == true and .total_upserted >= 1' "$response_file" >/dev/null; then
+                exit 0
+              fi
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 10))
+            fi
+          done
+          jq . "$response_file" >&2 || true
+          exit 1
+
       - name: Fetch premarket reference snapshots
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}

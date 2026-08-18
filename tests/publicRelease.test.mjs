@@ -23,6 +23,7 @@ const reportsCenter = read('src/pages/reports/ReportsCenter.tsx');
 const reportDetail = read('src/pages/reports/ReportDetail.tsx');
 const observationSection = read('src/components/v11/V11ObservationSection.tsx');
 const openingMarketRadar = read('supabase/functions/opening-market-radar/index.ts');
+const dailyReportGenerator = read('supabase/functions/generate-daily-report-v7/index.ts');
 const runtimeDeployWorkflow = read('.github/workflows/deploy-morning-alpha-runtime.yml');
 const runtimeCheckpointWorkflow = read('.github/workflows/morning-alpha-runtime-checkpoints.yml');
 const publicResearchText = read('src/utils/publicResearchText.ts');
@@ -175,6 +176,45 @@ test('opening radar degrades safely when only TXF is unavailable', () => {
   assert.match(openingMarketRadar, /checkpoint_cash_core_degraded/);
   assert.match(openingMarketRadar, /const checkpointUsable = checkpointEvaluation\.ready \|\| degradedCheckpointUsable/);
   assert.match(openingMarketRadar, /if \(!checkpointUsable\)/);
+});
+
+test('premarket workflow refreshes verifiable news before report generation and LINE', () => {
+  const newsStep = runtimeCheckpointWorkflow.indexOf('fetch-global-market-news');
+  const reportStep = runtimeCheckpointWorkflow.indexOf('generate-daily-report-v7');
+  const lineStep = runtimeCheckpointWorkflow.indexOf('line-daily-push');
+  assert.ok(newsStep >= 0, 'premarket workflow must refresh global market news');
+  assert.ok(newsStep < reportStep, 'news refresh must run before report generation');
+  assert.ok(reportStep < lineStep, 'report generation must run before LINE push');
+  assert.match(runtimeCheckpointWorkflow, /\.success == true and \.total_upserted >= 1/);
+});
+
+test('paid report fails closed when evidence does not meet the member threshold', () => {
+  assert.match(reportDetail, /memberResearchDegraded/);
+  assert.match(reportDetail, /memberValueScore < 90/);
+  assert.match(reportDetail, /v10DataQualityStatus !== 'sufficient'/);
+  assert.match(reportDetail, /!hasFreshNewsEvidence/);
+  assert.match(reportDetail, /今日研究資料尚未達付費發布標準/);
+  assert.match(reportDetail, /不會把資料不足包裝成高信心受惠股/);
+  assert.match(reportDetail, /本報告沒有可核對的 48 小時內新聞來源/);
+  assert.doesNotMatch(reportDetail, /等待 09:30 開盤雷達/);
+  assert.doesNotMatch(reportDetail, /market_data_latest_date \|\| report\.report_date\} 收盤/);
+  assert.match(memberNote, /memberResearchPublishable/);
+  assert.match(memberNote, /今日資料不足，不發布付費個股研究/);
+  assert.match(memberNote, /memberValueScore >= 90/);
+  assert.match(opportunities, /premiumResearchPublishable/);
+  assert.match(opportunities, /ds\.v10DataQualityStatus === 'sufficient'/);
+  assert.match(reportsCenter, /selectedResearchPublishable/);
+  assert.match(reportsCenter, /這天的個股研究已降級/);
+});
+
+test('V11 observation roles require fresh evidence and cap confidence', () => {
+  assert.match(dailyReportGenerator, /V11_OBSERVATION_ROLE_BUILDER_SKIPPED/);
+  assert.match(dailyReportGenerator, /input\.dataQualityStatus!=='sufficient'/);
+  assert.match(dailyReportGenerator, /!freshNews\|\|!externalEvidence\|\|!capital/);
+  assert.match(dailyReportGenerator, /const dataCap=data==='sufficient'\?85:data==='partial'\?65:50/);
+  assert.match(dailyReportGenerator, /item\.evidence_type==='market_news'/);
+  assert.match(dailyReportGenerator, /TAIEX\|TWII\|TXF\|MTX\|2330/);
+  assert.match(dailyReportGenerator, /不是無條件推薦/);
 });
 
 test('legacy opening radar UI fails closed without real core evidence', () => {

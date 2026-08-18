@@ -427,10 +427,28 @@ function OpportunitiesContent() {
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true' || ds.v10BeneficiaryEnabled === true;
   const v10BeneficiaryStocks = mapV10OpportunityStocks(rawAI.today_beneficiary_stocks_v10 || ds.v10BeneficiaryStocks);
   const v10ObservationWatchlist = mapV10OpportunityStocks(rawAI.v10_observation_watchlist || ds.v10ObservationWatchlist);
+  const contentPublishGate = rawAI.content_publish_gate && typeof rawAI.content_publish_gate === 'object' && !Array.isArray(rawAI.content_publish_gate)
+    ? rawAI.content_publish_gate as Record<string, unknown>
+    : null;
+  const publishBlockingIssues = Array.isArray(contentPublishGate?.blocking_issues)
+    ? contentPublishGate.blocking_issues.map(String).filter(Boolean)
+    : [];
+  const memberValueScore = Number(rawAI.member_value_score);
+  const hasFreshNewsEvidence = Array.isArray(rawAI.important_news) && rawAI.important_news.length > 0;
+  const premiumResearchPublishable = !contentPublishGate || (
+    !String(contentPublishGate.overall_status ?? '').includes('降級')
+    && publishBlockingIssues.length === 0
+    && Number.isFinite(memberValueScore)
+    && memberValueScore >= 90
+    && hasFreshNewsEvidence
+    && ds.v10DataQualityStatus === 'sufficient'
+  );
   const hasCurrentEvidence = v10BeneficiaryEnabled
+    && premiumResearchPublishable
     && ds.dataStatus !== 'insufficient'
-    && !/insufficient|missing|failed|unavailable/i.test(ds.v10DataQualityStatus);
-  const hasUsableLegacyEvidence = ds.dataStatus !== 'insufficient'
+    && ds.v10DataQualityStatus === 'sufficient';
+  const hasUsableLegacyEvidence = !v10BeneficiaryEnabled
+    && ds.dataStatus !== 'insufficient'
     && !/missing|failed|unavailable/i.test(ds.v10DataQualityStatus);
   const legacyObservationStocks = [...coreStocks, ...extendedStocks, ...scenarioStocks]
     .map((stock, index) => legacyToV10(stock, index, 'observation'));

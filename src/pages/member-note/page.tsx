@@ -19,7 +19,6 @@ import { buildDecisionPresentation, formatCheckpoint } from '@/lib/decisionPrese
 import { buildRuntimeDecisionTimeline, selectNextRuntimeTimelineNode } from '@/lib/runtimeDecisionTimeline';
 import { trackPageView, trackEvent } from '@/utils/analytics';
 import PaywallCard from '@/components/paywall/PaywallCard';
-import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
 import type { UserEntitlement } from '@/types/subscription';
 
@@ -923,8 +922,23 @@ function MemberNoteContent() {
     rawAI.daily_sentence,
   ], [], ''));
   const todayOneLine = heroConclusion;
-  const v10BeneficiaryEnabled = dsState?.v10BeneficiaryEnabled === true || rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
-  const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist || dsState?.v10ObservationWatchlist, 5);
+  const memberContentGate = asRecord(rawAI.content_publish_gate);
+  const memberBlockingIssues = textList(memberContentGate.blocking_issues);
+  const memberValueScore = Number(rawAI.member_value_score);
+  const v10AnalysisDebug = asRecord(rawAI.v10_analysis_debug);
+  const normalizedEvidence = asRecord(v10AnalysisDebug.normalized_evidence);
+  const normalizedNews = recordList(normalizedEvidence.normalized_news);
+  const hasFreshNewsEvidence = (Array.isArray(rawAI.important_news) && rawAI.important_news.length > 0)
+    || normalizedNews.length > 0;
+  const hasMemberContentGate = Object.keys(memberContentGate).length > 0;
+  const memberResearchPublishable = !hasMemberContentGate || (
+    !firstText(memberContentGate.overall_status).includes('降級')
+    && memberBlockingIssues.length === 0
+    && Number.isFinite(memberValueScore)
+    && memberValueScore >= 90
+    && firstText(rawAI.v10_data_quality_status) === 'sufficient'
+    && hasFreshNewsEvidence
+  );
   const dontDoItems = uniqueResearchItems([
     canonicalNarrative.today_focus.risk,
     canonicalNarrative.failure_triggers[0]?.action,
@@ -1203,7 +1217,7 @@ function MemberNoteContent() {
             </dl>
           </section>
 
-          {canViewMemberNoteFull ? (
+          {canViewMemberNoteFull && memberResearchPublishable ? (
             <>
               <section className="ma-research-note-v3-chapter">
                 <header><span>02</span><div><p>今日當沖決策</p><h2>先決定今天值不值得做，再看要等什麼</h2></div></header>
@@ -1261,6 +1275,22 @@ function MemberNoteContent() {
                 {isClosingVerificationDegraded && <p className="ma-research-note-v3-closing-note">本次收盤資料仍不完整，因此只保留已能查證的部分，不計入完整命中判定。</p>}
               </section>
             </>
+          ) : canViewMemberNoteFull ? (
+            <section className="ma-research-note-v3-chapter">
+              <header><span>02</span><div><p>品質閘門</p><h2>今日資料不足，不發布付費個股研究</h2></div></header>
+              <div className="ma-research-note-v3-daytrade is-closed">
+                <div>
+                  <small>今日研究狀態</small>
+                  <strong>降級觀察</strong>
+                  <p>新鮮新聞、資料完整度或會員價值分數未達標準。今天只保留上方市場摘要，不提供個股主線、當沖劇本或資金輪動暗示。</p>
+                </div>
+                <dl>
+                  <div><dt>會員價值分數</dt><dd>{Number.isFinite(memberValueScore) ? `${memberValueScore} / 100` : '尚未評分'}</dd></div>
+                  <div><dt>可核對新聞</dt><dd>{hasFreshNewsEvidence ? '已取得，但其他條件未過門檻' : '未取得 48 小時內可核對來源'}</dd></div>
+                  <div><dt>恢復條件</dt><dd>新聞來源、台灣傳導、成立條件與失效條件必須同時完整。</dd></div>
+                </dl>
+              </div>
+            </section>
           ) : (
             <PaywallCard title="用 14 天完整看懂一套判斷如何走到收盤" description="會員版不只多一篇文章，而是補齊今日是否適合當沖、成立與放棄條件、海外事件到台股代表股的因果鏈，以及收盤後的命中與失誤紀錄。正式方案預定 NT$199/月，公開測試登記不扣款。" requiredTier="member" featureList={['今日當沖決策與放棄條件', '完整事件與產業傳導鏈', '09:30／10:30／13:00 盤中驗證', '14:20 收盤回顧與明日調整']} tone="dark" />
           )}

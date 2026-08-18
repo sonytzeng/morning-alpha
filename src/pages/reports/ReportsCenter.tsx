@@ -116,6 +116,22 @@ export default function ReportsCenter() {
     : {};
   const selectedV10Enabled = selectedAI.v10_beneficiary_enabled === true || selectedAI.v10_beneficiary_enabled === 'true';
   const selectedV11ObservationScripts = mapV11ObservationItems(selectedAI.v10_observation_watchlist, 5);
+  const selectedContentGate = selectedAI.content_publish_gate && typeof selectedAI.content_publish_gate === 'object' && !Array.isArray(selectedAI.content_publish_gate)
+    ? selectedAI.content_publish_gate as Record<string, unknown>
+    : null;
+  const selectedBlockingIssues = Array.isArray(selectedContentGate?.blocking_issues)
+    ? selectedContentGate.blocking_issues.map(String).filter(Boolean)
+    : [];
+  const selectedMemberValueScore = Number(selectedAI.member_value_score);
+  const selectedResearchPublishable = !selectedContentGate || (
+    !String(selectedContentGate.overall_status ?? '').includes('降級')
+    && selectedBlockingIssues.length === 0
+    && Number.isFinite(selectedMemberValueScore)
+    && selectedMemberValueScore >= 90
+    && selectedAI.v10_data_quality_status === 'sufficient'
+    && Array.isArray(selectedAI.important_news)
+    && selectedAI.important_news.length > 0
+  );
   const allReports = [...reports7, ...reports30];
   const latestReportDate = allReports[0]?.report_date || '';
 
@@ -381,8 +397,15 @@ export default function ReportsCenter() {
                 </div>
               )}
 
-              {selectedV10Enabled && (
+              {selectedV10Enabled && selectedResearchPublishable && (
                 <V11ObservationSection items={selectedV11ObservationScripts} tone="dark" className="bg-transparent border-white/10" subtitle="用同一套 brief 回看：當天到底在等什麼。" />
+              )}
+
+              {selectedV10Enabled && !selectedResearchPublishable && (
+                <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.06] p-4">
+                  <h4 className="text-amber-200 text-sm font-semibold mb-2">這天的個股研究已降級</h4>
+                  <p className="text-white/60 text-sm leading-relaxed">新聞來源、資料完整度或會員價值分數未達發布門檻，因此不顯示高信心個股、資金輪動與外部變數卡片。</p>
+                </div>
               )}
 
               {!selectedV10Enabled && (selectedReport.focus_stock_json || []).length > 0 && (

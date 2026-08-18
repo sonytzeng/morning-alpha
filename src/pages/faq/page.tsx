@@ -103,7 +103,7 @@ export default function FaqPage() {
             <div className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
               <h3 className="text-white font-semibold text-sm md:text-base mb-2">LINE 每日提醒是否已開放？</h3>
               <p className="text-white/50 text-sm leading-relaxed">
-                目前 LINE 每日提醒暫緩開放。若未來開放，網站會明確說明訂閱方式、提醒內容與資料使用方式。
+                LINE 每日盤前提醒目前處於公開測試階段，已加入測試名單的使用者會收到每日提醒；正式付費方案尚未開放。推播會連結當日完整報告，且同一交易日只發送一次。
               </p>
             </div>
           </div>

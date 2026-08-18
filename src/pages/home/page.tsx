@@ -436,11 +436,16 @@ function HomePageContent() {
     openingRadar.risk_level,
     intradayTracking.risk_level,
   ) || '尚未定級';
-  const lastUpdatedAt = firstString(
+  const dataAsOf = firstString(
     homeAI?.data_as_of,
+    researchMetadata.data_as_of,
     openingRadar.data_as_of,
-    openingRadar.updated_at,
-    intradayTracking.updated_at,
+  );
+  const reportGeneratedAt = firstString(
+    homeAI?.generated_at,
+    researchMetadata.generated_at,
+    reportRecord.updated_at,
+    reportRecord.created_at,
     ms?.generatedAt,
   );
   const normalizedRiskLevel = riskLevel.toLowerCase();
@@ -466,7 +471,7 @@ function HomePageContent() {
     decisionContext,
   );
   const morningBrief = evidenceIsInsufficient
-    ? '市場資料尚未完整，今天不產生主線敘事與個股名單。'
+    ? '市場資料尚未完整，今天不建立交易主線；頁面僅保留待驗證觀察，不列為受惠股推薦。'
     : translateKnownTerms(
     isSyntheticResearchSentence(morningBriefCandidate)
       ? decisionContext
@@ -641,13 +646,10 @@ function HomePageContent() {
   const historySummary = hasClosingOutcome ? closingOutcome.summary : latestPublicClosing?.summary || '';
   const hasHistoricalClosingOutcome = Boolean(historyResult && historyDate);
   const credibilityItems = [
-    { label: '資料更新時間', value: formatTaipeiTimestamp(lastUpdatedAt) },
+    { label: '市場資料基準', value: formatTaipeiTimestamp(dataAsOf) },
+    { label: '報告產生時間', value: formatTaipeiTimestamp(reportGeneratedAt) },
     { label: '分析版本', value: aiVersion },
     { label: '資料狀態', value: dataCompletenessLabel(displayState.dataStatus, reportExists) },
-    {
-      label: '判斷信心',
-      value: confidenceScore == null ? '等待資料確認' : `${Math.round(confidenceScore)}/100`,
-    },
   ];
 
   const hasReportData = hasMorningState && reportExists;
@@ -800,9 +802,9 @@ function HomePageContent() {
                     <span>{renderSafeText(marketStatusLabel)}</span>
                   </article>
                   <article className="ma-home-v2-metric">
-                    <p>資料更新</p>
-                    <strong>{formatTaipeiTimestamp(lastUpdatedAt)}</strong>
-                    <span>台北時間</span>
+                    <p>報告產生</p>
+                    <strong>{formatTaipeiTimestamp(reportGeneratedAt)}</strong>
+                    <span>市場資料基準 {formatTaipeiTimestamp(dataAsOf)}</span>
                   </article>
                 </div>
               </div>

@@ -49,7 +49,7 @@ export default function PrivacyPage() {
             <div className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
               <h3 className="text-white font-semibold text-sm md:text-base mb-2">會員、LINE 與訂閱資料</h3>
               <p className="text-white/50 text-sm leading-relaxed">
-                目前 Morning Alpha 尚未正式開放付費訂閱、會員功能或 LINE 每日提醒。若未來開放相關功能，本站會在使用者主動填寫或授權前，清楚說明會蒐集哪些資料、用途與保存方式。
+                Morning Alpha 尚未正式開放付費訂閱；LINE 每日提醒目前處於公開測試階段。使用者主動加入測試後，本站會處理提供推播所需的 LINE 識別資訊、訂閱狀態與最近推播時間，用於每日提醒、避免重複發送及服務維運。
               </p>
             </div>
 
@@ -104,7 +104,7 @@ export default function PrivacyPage() {
             <div className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
               <h3 className="text-white font-semibold text-sm md:text-base mb-2">使用者權利</h3>
               <p className="text-white/50 text-sm leading-relaxed">
-                若未來本站開放會員、LINE 或訂閱功能，使用者可依實際功能申請查詢、更正或刪除相關資料。
+                使用者可依實際功能申請查詢、更正或刪除 LINE 與會員相關資料；正式付費訂閱開放後，相關權利與處理方式也會同步更新。
               </p>
             </div>
 

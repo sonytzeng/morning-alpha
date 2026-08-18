@@ -193,7 +193,7 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
   }
-  for (const schedule of ["15 23 * * 0-4", "25 1 * * 1-5", "25 2 * * 1-5", "55 4 * * 1-5", "20 6 * * 1-5"]) {
+  for (const schedule of ["45 22 * * 0-4", "5 1 * * 1-5", "5 2 * * 1-5", "35 4 * * 1-5", "35 5 * * 1-5"]) {
     assert.match(runtimeCheckpointWorkflow, new RegExp(schedule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing runtime schedule: ${schedule}`);
   }
   assert.match(runtimeCheckpointWorkflow, /\{"phase":"intraday"\}/);
@@ -213,6 +213,8 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeCheckpointWorkflow, /generate-sector-rotation/);
   assert.match(runtimeCheckpointWorkflow, /secrets\.CRON_SECRET/);
   assert.match(runtimeCheckpointWorkflow, /line-daily-push/);
+  assert.match(runtimeCheckpointWorkflow, /Wait until the checkpoint snapshot window/);
+  assert.match(runtimeCheckpointWorkflow, /TZ=Asia\/Taipei/);
   assert.match(runtimeCheckpointWorkflow, /ALREADY_SENT/);
   assert.match(runtimeCheckpointWorkflow, /failed_count == 0/);
 });
@@ -471,13 +473,28 @@ test('home uses canonical server payload and labels historical fallback', () => 
 
 test('daily report freshness follows expected trading sessions and never writes the confidence/date template', () => {
   const reportGenerator = read('supabase/functions/generate-daily-report-v7/index.ts');
-  assert.match(reportGenerator, /marketIndicatorTradingDate/);
-  assert.match(reportGenerator, /America\/New_York/);
+  const marketFreshness = read('supabase/functions/generate-daily-report-v7/market-freshness.ts');
+  assert.match(reportGenerator, /computeMarketFreshnessDates/);
+  assert.match(marketFreshness, /America\/New_York/);
+  assert.match(marketFreshness, /filterRecentNewsRows/);
   assert.match(reportGenerator, /detectStaleCoreMarketData\(marketData,dates\)/);
   assert.match(reportGenerator, /applyBiasGuardrails\(marketData,dScore\.baseScore,dates\)/);
   assert.match(reportGenerator, /resolveEvidenceBackedDailySentence/);
   assert.match(reportGenerator, /isSyntheticDailySentence/);
   assert.doesNotMatch(reportGenerator, /marketBias\+'，信心 '\+confScore\+'\/100，基準日期 '/);
+});
+
+test('paid research enforces fresh evidence and complete beneficiary reasoning', () => {
+  const reportGenerator = read('supabase/functions/generate-daily-report-v7/index.ts');
+  assert.match(reportGenerator, /OPENAI_EVIDENCE_GUARDRAILS/);
+  assert.match(reportGenerator, /發布時間在 48 小時內/);
+  assert.match(reportGenerator, /enforceMemberResearchIntegrity/);
+  assert.match(reportGenerator, /note\.data_status='partial'/);
+  assert.match(reportGenerator, /note\.beneficiary_reasoning=orderedReasoning\.slice\(0,10\)/);
+  assert.match(reportGenerator, /validation_signal:validation/);
+  assert.match(reportGenerator, /invalidation_condition:invalidation/);
+  assert.match(reportGenerator, /calculateMemberValueScore/);
+  assert.match(reportGenerator, /member_value_score_below_90/);
 });
 
 test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempotent', () => {
@@ -489,6 +506,10 @@ test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempo
   assert.match(lineDailyPush, /message\/multicast/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);
   assert.match(lineDailyPush, /customAggregationUnits/);
+  assert.match(lineDailyPush, /dailySentence\.sentence/);
+  assert.ok(lineDailyPush.indexOf('report.today_quote') < lineDailyPush.indexOf('copy.one_sentence'));
+  assert.match(lineDailyPush, /確認：/);
+  assert.match(lineDailyPush, /避免：/);
   assert.doesNotMatch(lineDailyPush, /sent:\s*true,\s*report_date: reportDate,\s*total_subscribers: 0/);
 });
 

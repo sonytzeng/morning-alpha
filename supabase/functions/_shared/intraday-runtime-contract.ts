@@ -27,17 +27,17 @@ export const INTRADAY_CHECKPOINTS: Record<
   "0930": {
     targetMinutes: 9 * 60 + 30,
     earliestMinutes: 9 * 60 + 25,
-    latestMinutes: 9 * 60 + 31,
+    latestMinutes: 10 * 60 + 15,
   },
   "1030": {
     targetMinutes: 10 * 60 + 30,
     earliestMinutes: 10 * 60 + 25,
-    latestMinutes: 10 * 60 + 31,
+    latestMinutes: 11 * 60 + 15,
   },
   "1300": {
     targetMinutes: 13 * 60,
     earliestMinutes: 12 * 60 + 55,
-    latestMinutes: 13 * 60 + 1,
+    latestMinutes: 13 * 60 + 30,
   },
 };
 

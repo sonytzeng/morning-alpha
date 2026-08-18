@@ -153,15 +153,18 @@ export default function Account() {
                   <p className="text-white/30 text-[10px]">30 秒摘要</p>
                 </div>
               </Link>
-              <span className="ma-card-compact group flex items-center gap-3 opacity-60 cursor-not-allowed">
+              <Link
+                to="/faq"
+                className="ma-card-compact group flex items-center gap-3 transition-colors hover:border-green-400/40"
+              >
                 <div className="w-9 h-9 bg-green-500/15 rounded-lg flex items-center justify-center border border-green-500/20">
                   <i className="ri-line-line text-green-400 text-sm"></i>
                 </div>
                 <div>
-                  <p className="text-white/50 text-sm font-medium">LINE 推播</p>
-                  <p className="text-white/20 text-[10px]">暫緩開放</p>
+                  <p className="text-white text-sm font-medium group-hover:text-green-300 transition-colors">LINE 推播</p>
+                  <p className="text-white/30 text-[10px]">公開測試中</p>
                 </div>
-              </span>
+              </Link>
             </div>
 
             {/* Today Info Cards */}

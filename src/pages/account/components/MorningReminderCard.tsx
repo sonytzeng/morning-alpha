@@ -3,9 +3,9 @@ export default function MorningReminderCard() {
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-8">
       <div className="flex items-start justify-between gap-4 mb-4 md:mb-5">
         <div>
-          <h2 className="text-white font-bold text-base md:text-lg mb-1">LINE 每日提醒｜暫緩開放</h2>
+          <h2 className="text-white font-bold text-base md:text-lg mb-1">LINE 每日提醒｜公開測試中</h2>
           <p className="text-white/40 text-xs md:text-sm leading-relaxed">
-            Morning Alpha 目前優先補強資料源、盤前判讀與盤後驗證。LINE 每日提醒會在網站本體與資料品質穩定後再開放。
+            已加入測試名單的使用者會在交易日收到盤前重點與當日完整報告連結；正式付費方案尚未開放。
           </p>
         </div>
         <div className="flex-shrink-0 pt-1">
@@ -21,17 +21,17 @@ export default function MorningReminderCard() {
           <span className="text-white/40 text-xs font-medium">目前狀態</span>
         </div>
         <p className="text-white/30 text-xs leading-relaxed">
-          現階段 Morning Alpha 以網站本體穩定、資料可信度與判讀品質優化為主，LINE 每日提醒將在這些基礎完成後再行規劃。
+          公開測試會持續驗證 07:30 盤前送達、同日冪等與內容品質。若當日資料不完整，提醒會明確降級，不以固定模板假裝完成分析。
         </p>
       </div>
 
       <span className="inline-flex items-center gap-2 px-5 py-3 bg-white/5 text-white/30 text-sm font-medium rounded-xl whitespace-nowrap w-full justify-center border border-white/10 opacity-50 cursor-not-allowed">
         <i className="ri-line-line"></i>
-        暫緩開放
+        公開測試中
       </span>
 
       <p className="text-white/15 text-xs text-center mt-3">
-        開放時間將於網站公告
+        正式訂閱開放時間將於網站公告
       </p>
     </div>
   );

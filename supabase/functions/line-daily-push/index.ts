@@ -613,11 +613,14 @@ function buildMarketClosedLineMessage(siteUrl: string) {
 function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
   const ai = parseAiStrategy(report.ai_strategy_json);
   const copy = parseRecord(ai.line_push_copy);
+  const dailySentence = parseRecord(ai.v8_daily_sentence);
   const bias = String(copy.market_bias || report.market_bias || '中性觀察');
   const confidence = String(copy.confidence || report.confidence_score || '待驗證');
   const todayLine = firstText(
-    copy.one_sentence,
+    report.today_quote,
+    dailySentence.sentence,
     ai.today_quote,
+    copy.one_sentence,
     parseRecord(ai.free_summary).one_sentence,
     report.summary,
     '資料不足，今日降級觀察，開盤後再確認方向。',
@@ -628,13 +631,6 @@ function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
     inferOpportunity(report, ai),
     '等待開盤後族群同步性確認',
   );
-  const risk = firstText(
-    copy.risk,
-    firstArrayText(parseRecord(ai.bias_guardrails).risk_signals),
-    report.risk_reason,
-    inferRisk(report, ai),
-    '資料不足，今日降級觀察',
-  );
   const avoid = firstText(
     copy.do_not_do,
     parseRecord(ai.free_summary).do_not_do,
@@ -642,15 +638,12 @@ function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
     bias.includes('多') ? '避免把盤前偏多當成追價理由，先等量價確認。' : '避免急著撿便宜，先等賣壓與量能訊號。',
   );
 
-  let text = '';
-  text += 'Morning Alpha｜今日盤前提醒\n\n';
-  text += `今日一句：\n${clipLine(todayLine, 70)}\n\n`;
-  text += `最大機會：\n${clipLine(opportunity, 60)}\n\n`;
-  text += `最大風險：\n${clipLine(risk, 70)}\n\n`;
-  text += `今天避免：\n${clipLine(avoid, 60)}\n\n`;
-  text += `完整策略：\n${siteUrl}/report/today\n\n`;
-  text += `盤前方向：${bias}｜把握度：${confidence}/100\n`;
-  text += '提醒：本內容為 AI 市場情緒整理，不構成投資建議。';
+  let text = 'Morning Alpha｜盤前\n';
+  text += `今日：${clipLine(todayLine, 52)}\n`;
+  text += `確認：${clipLine(opportunity, 28)}\n`;
+  text += `避免：${clipLine(avoid, 26)}\n`;
+  text += `${bias}｜${confidence}/100\n`;
+  text += `${siteUrl}/report/today`;
 
   return { type: 'text', text };
 }
@@ -688,25 +681,6 @@ function clipLine(text: string, max: number): string {
 function numeric(report: Record<string, unknown>, key: string): number | null {
   const n = Number(report[key]);
   return Number.isFinite(n) ? n : null;
-}
-
-function fmtPct(value: number): string {
-  return value >= 0 ? `+${value.toFixed(2)}%` : `${value.toFixed(2)}%`;
-}
-
-function inferRisk(report: Record<string, unknown>, ai: Record<string, unknown>): string {
-  const tsm = numeric(report, 'tsm_adr_change');
-  const nvda = numeric(report, 'nvda_change');
-  const sox = numeric(report, 'sox_change');
-  const nasdaq = numeric(report, 'nasdaq_change');
-  const guard = parseRecord(ai.bias_guardrails);
-  const stale = firstArrayText(guard.stale_signals);
-  if (stale) return stale;
-  if (tsm !== null && tsm <= -2) return `TSM ADR ${fmtPct(tsm)}，台股電子權值風險升級`;
-  if (sox !== null && sox <= -3) return `SOX ${fmtPct(sox)}，半導體風險升級`;
-  if (nasdaq !== null && nasdaq <= -1.5) return `NASDAQ ${fmtPct(nasdaq)}，成長股風險扣分`;
-  if (nvda !== null && nvda <= -2) return `NVDA ${fmtPct(nvda)}，AI 主線風險扣分`;
-  return '';
 }
 
 function inferOpportunity(report: Record<string, unknown>, ai: Record<string, unknown>): string {

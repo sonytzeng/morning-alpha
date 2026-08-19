@@ -1,4 +1,4 @@
-import { callGetReportPayload } from '@/services/entitlementService';
+import { callGetReportHistory, callGetReportPayload } from '@/services/entitlementService';
 import type {
   Report,
   RiskFactor,
@@ -190,18 +190,18 @@ export async function getReportByDate(date: string): Promise<Report | null> {
 
 export async function getLatestReports(limit = 7): Promise<Report[]> {
   try {
-    const response = await callGetReportPayload();
-    if (!response.report_date || !response.payload) return [];
-    const report = mapRowToReport({
-      id: `server-trimmed:${response.report_date}`,
-      report_date: response.report_date,
-      market_bias: response.payload?.market_bias,
-      confidence_score: response.payload?.confidence_score,
-      summary: getPayloadSummary(response.payload),
-      ai_strategy_json: response.payload,
-      created_at: getPayloadGeneratedAt(response.payload),
-    });
-    return limit > 0 ? [report] : [];
+    if (limit <= 0) return [];
+    const response = await callGetReportHistory(limit);
+    return response.reports.map((summary) => mapRowToReport({
+      id: summary.revision_id || `server-trimmed:${summary.report_date}`,
+      report_date: summary.report_date,
+      market_bias: summary.market_bias,
+      confidence_score: summary.confidence_score,
+      confidence_label: summary.confidence_label,
+      summary: summary.summary,
+      today_quote: summary.today_quote,
+      created_at: summary.generated_at,
+    }));
   } catch (error) {
     console.error('getLatestReports error:', error instanceof Error ? error.message : error);
     return [];

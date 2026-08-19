@@ -11,6 +11,7 @@ import { buildDecisionPresentation, dedupePresentedOpportunities } from '@/lib/d
 import { buildRuntimeDecisionTimeline, selectNextRuntimeTimelineNode } from '@/lib/runtimeDecisionTimeline';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
+import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 
 // ═══════════════════════════════════════════════════
 // V9.0: Three-tier beneficiary stock types
@@ -56,6 +57,10 @@ interface V10OpportunityStock {
   confirmationPendingReason: string;
   stopObservingCondition: string;
   observationChain: string[];
+  triggerEvent: string;
+  evidenceSource: string;
+  transmissionLogic: string;
+  taiwanSupplyChainLink: string;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -183,7 +188,18 @@ function stringArray(value: unknown): string[] {
 }
 
 function mapV10OpportunityStocks(rows: unknown): V10OpportunityStock[] {
-  return asRecordArray(rows).map((row, index) => ({
+  return asRecordArray(rows).map((row, index) => {
+    const triggerEvent = compactText(row.trigger_event || row.event_source);
+    const evidenceSource = compactText(row.data_basis || row.evidence_source || row.source_reference);
+    const transmissionLogic = compactText(row.transmission_logic || row.reason_chain || row.causal_chain);
+    const taiwanSupplyChainLink = compactText(row.taiwan_supply_chain_link || row.supply_chain_relationship || row.company_relationship);
+    const completeReason = [
+      triggerEvent && `事件來源：${triggerEvent}`,
+      transmissionLogic && `傳導路徑：${transmissionLogic}`,
+      taiwanSupplyChainLink && `台灣供應鏈：${taiwanSupplyChainLink}`,
+      evidenceSource && `資料依據：${evidenceSource}`,
+    ].filter(Boolean).join('；');
+    return ({
     symbol: compactText(row.symbol || row.stock_id || row.stock_code),
     name: compactText(row.name || row.stock_name || row.company_name),
     industryCode: compactText(row.industry_code),
@@ -197,11 +213,16 @@ function mapV10OpportunityStocks(rows: unknown): V10OpportunityStock[] {
     riskFlags: stringArray(row.risk_flags),
     scoringReasons: stringArray(row.scoring_reasons),
     benefitChain: stringArray(row.benefit_chain),
-    observationReason: compactText(row.observation_reason),
-    confirmationPendingReason: compactText(row.confirmation_pending_reason),
-    stopObservingCondition: compactText(row.stop_observing_condition),
+    observationReason: compactText(row.observation_reason) || completeReason,
+    confirmationPendingReason: compactText(row.confirmation_pending_reason || row.intraday_validation || row.validation_signal),
+    stopObservingCondition: compactText(row.stop_observing_condition || row.invalidation_condition || row.risk_note),
     observationChain: stringArray(row.observation_chain),
-  })).filter((stock) => Boolean(stock.symbol || stock.name));
+    triggerEvent,
+    evidenceSource,
+    transmissionLogic,
+    taiwanSupplyChainLink,
+  });
+  }).filter((stock) => Boolean(stock.symbol || stock.name));
 }
 
 function legacyToV10(stock: TierStock, index: number, tone: 'beneficiary' | 'observation' | 'risk'): V10OpportunityStock {
@@ -223,6 +244,10 @@ function legacyToV10(stock: TierStock, index: number, tone: 'beneficiary' | 'obs
     confirmationPendingReason: stock.validation_signal || stock.watch_point,
     stopObservingCondition: stock.risk_note,
     observationChain: [stock.trigger_event, stock.sector, stock.stock_id].filter(Boolean),
+    triggerEvent: stock.trigger_event,
+    evidenceSource: stock.data_basis,
+    transmissionLogic: stock.reason,
+    taiwanSupplyChainLink: stock.sector,
   };
 }
 
@@ -427,22 +452,8 @@ function OpportunitiesContent() {
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true' || ds.v10BeneficiaryEnabled === true;
   const v10BeneficiaryStocks = mapV10OpportunityStocks(rawAI.today_beneficiary_stocks_v10 || ds.v10BeneficiaryStocks);
   const v10ObservationWatchlist = mapV10OpportunityStocks(rawAI.v10_observation_watchlist || ds.v10ObservationWatchlist);
-  const contentPublishGate = rawAI.content_publish_gate && typeof rawAI.content_publish_gate === 'object' && !Array.isArray(rawAI.content_publish_gate)
-    ? rawAI.content_publish_gate as Record<string, unknown>
-    : null;
-  const publishBlockingIssues = Array.isArray(contentPublishGate?.blocking_issues)
-    ? contentPublishGate.blocking_issues.map(String).filter(Boolean)
-    : [];
-  const memberValueScore = Number(rawAI.member_value_score);
-  const hasFreshNewsEvidence = Array.isArray(rawAI.important_news) && rawAI.important_news.length > 0;
-  const premiumResearchPublishable = !contentPublishGate || (
-    !String(contentPublishGate.overall_status ?? '').includes('降級')
-    && publishBlockingIssues.length === 0
-    && Number.isFinite(memberValueScore)
-    && memberValueScore >= 90
-    && hasFreshNewsEvidence
-    && ds.v10DataQualityStatus === 'sufficient'
-  );
+  const premiumAvailability = resolvePremiumContentAvailability(rawAI);
+  const premiumResearchPublishable = premiumAvailability.eligible;
   const hasCurrentEvidence = v10BeneficiaryEnabled
     && premiumResearchPublishable
     && ds.dataStatus !== 'insufficient'

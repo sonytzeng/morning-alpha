@@ -11,6 +11,7 @@ import { getTaipeiNow, formatTaipeiDate } from '@/utils/tradingDay';
 import { parseAIStrategy, type ParsedAIStrategy } from '@/utils/aiStrategyParser';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
+import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 
 // ═══ Constants ═══
 const SECTOR_NAME_MAP: Record<string, string> = {
@@ -218,13 +219,8 @@ export default function ReportDetail() {
   const rawAI = (strategy.raw || {}) as Record<string, unknown>;
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist, 5);
-  const contentPublishGate = asRecord(rawAI.content_publish_gate);
-  const hasContentPublishGate = Object.keys(contentPublishGate).length > 0;
-  const publishGateStatus = String(contentPublishGate.overall_status ?? '').trim();
-  const blockingIssues = safeArray(contentPublishGate.blocking_issues);
-  const memberValueScore = numberOrNull(rawAI.member_value_score);
-  const reportDataQuality = String(rawAI.data_quality ?? '').trim().toLowerCase();
-  const v10DataQualityStatus = String(rawAI.v10_data_quality_status ?? '').trim().toLowerCase();
+  const premiumAvailability = resolvePremiumContentAvailability(rawAI);
+  const memberValueScore = premiumAvailability.memberValueScore;
   const performanceTiming = asRecord(rawAI.performance_timing);
   const missingSources = safeArray(performanceTiming.missing_sources);
   const v10AnalysisDebug = asRecord(rawAI.v10_analysis_debug);
@@ -233,15 +229,8 @@ export default function ReportDetail() {
     ? normalizedEvidence.normalized_market_snapshot
     : [];
   const marketEvidenceCount = Math.max(strategy.global_market_status_count ?? 0, normalizedMarketSnapshot.length);
-  const hasFreshNewsEvidence = Boolean(strategy.important_news?.length);
-  const memberResearchDegraded = hasContentPublishGate && (
-    publishGateStatus.includes('降級')
-    || blockingIssues.length > 0
-    || (memberValueScore !== null && memberValueScore < 90)
-    || reportDataQuality === 'degraded'
-    || v10DataQualityStatus !== 'sufficient'
-    || !hasFreshNewsEvidence
-  );
+  const hasFreshNewsEvidence = premiumAvailability.freshNewsCount > 0;
+  const memberResearchDegraded = !premiumAvailability.eligible;
   const showV11Observations = v10BeneficiaryEnabled
     && v11ObservationScripts.length > 0
     && !memberResearchDegraded;
@@ -499,7 +488,7 @@ export default function ReportDetail() {
               />
             )}
 
-            {v10BeneficiaryEnabled && memberResearchDegraded && (
+            {memberResearchDegraded && (
               <section className="ma-card-elevated border border-amber-500/20">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-6 h-6 rounded-md bg-amber-500/15 flex items-center justify-center"><i className="ri-shield-check-line text-amber-300 text-xs" /></div>
@@ -516,7 +505,7 @@ export default function ReportDetail() {
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     <p className="text-white/35 text-[10px] mb-1">可核對新鮮新聞</p>
-                    <p className="text-white/75 text-sm font-semibold">{hasFreshNewsEvidence ? `${strategy.important_news.length} 則` : '0 則'}</p>
+                    <p className="text-white/75 text-sm font-semibold">{hasFreshNewsEvidence ? `${premiumAvailability.freshNewsCount} 則` : '0 則'}</p>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     <p className="text-white/35 text-[10px] mb-1">缺少資料</p>

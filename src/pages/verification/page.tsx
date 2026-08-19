@@ -137,6 +137,8 @@ function buildClosingView(ai: UnknownRecord): ClosingView {
 
 function VerificationContent() {
   const [displayState, setDisplayState] = useState<MorningAlphaDisplayState | null>(null);
+  const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
+  const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -149,6 +151,8 @@ function VerificationContent() {
         const resolved = await resolveActiveMorningAlphaReport();
         if (!mounted) return;
         setDisplayState(getMorningAlphaDisplayState(resolved.rawRow as unknown as UnknownRecord | null));
+        setIsHistoricalFallback(resolved.isHistoricalFallback);
+        setFallbackReportDate(resolved.fallbackReportDate);
       } catch {
         if (mounted) setError('今日驗證資料暫時無法取得，請稍後再試。');
       } finally {
@@ -183,6 +187,25 @@ function VerificationContent() {
             <h1 className="text-xl font-bold text-white">今日驗證尚未可用</h1>
             <p className="mt-2 text-sm leading-relaxed text-white/60">{error || '今日報告尚未產生，請稍後再回來查看。'}</p>
             <Link to="/report/today" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-semibold text-slate-950">返回今日判斷</Link>
+          </section>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (isHistoricalFallback) {
+    return (
+      <div className="ma-page flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex-1 grid place-items-center px-4">
+          <section className="w-full max-w-lg rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-6 text-center">
+            <h1 className="text-xl font-bold text-white">今日驗證尚未建立</h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/60">今日盤前報告尚未產生，因此不會把 {fallbackReportDate || '上一交易日'} 的進度誤標為今天。</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <Link to="/report/today" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-semibold text-slate-950">返回今日判斷</Link>
+              {fallbackReportDate && <Link to={`/reports/${fallbackReportDate}`} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-5 text-sm font-semibold text-white">查看 {fallbackReportDate} 歷史報告</Link>}
+            </div>
           </section>
         </main>
         <Footer />

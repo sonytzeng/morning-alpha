@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
+import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 
 // LINE Daily Push V3 — 每天 07:33 推送 AI 盤前提醒
 // V3 升級：加入台股交易日 Gate，休市日不推播盤前報告
@@ -613,6 +614,7 @@ function buildMarketClosedLineMessage(siteUrl: string) {
 function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
   const ai = parseAiStrategy(report.ai_strategy_json);
   const copy = parseRecord(ai.line_push_copy);
+  const freeSummary = parseRecord(ai.free_summary);
   const dailySentence = parseRecord(ai.v8_daily_sentence);
   const bias = String(copy.market_bias || report.market_bias || '中性觀察');
   const confidence = String(copy.confidence || report.confidence_score || '待驗證');
@@ -621,7 +623,7 @@ function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
     dailySentence.sentence,
     ai.today_quote,
     copy.one_sentence,
-    parseRecord(ai.free_summary).one_sentence,
+    freeSummary.one_sentence,
     report.summary,
     '資料不足，今日降級觀察，開盤後再確認方向。',
   );
@@ -633,19 +635,63 @@ function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
   );
   const avoid = firstText(
     copy.do_not_do,
-    parseRecord(ai.free_summary).do_not_do,
+    freeSummary.do_not_do,
     firstArrayText(report.avoid_today),
     bias.includes('多') ? '避免把盤前偏多當成追價理由，先等量價確認。' : '避免急著撿便宜，先等賣壓與量能訊號。',
   );
+  const risk = firstText(
+    copy.risk,
+    copy.max_risk,
+    freeSummary.risk,
+    ai.primary_risk,
+    avoid,
+  );
+  const importantNewsCount = Array.isArray(ai.important_news)
+    ? ai.important_news.length
+    : Array.isArray(report.important_news_json)
+      ? report.important_news_json.length
+      : Number(ai.fresh_news_count) || 0;
+  const premiumGate = evaluatePremiumContentGate(ai, importantNewsCount);
+  const analysisTime = formatTaipeiTime(firstText(report.created_at, report.updated_at, ai.generated_at));
+  const researchMetadata = parseRecord(parseRecord(ai.research_master_v2).metadata);
+  const dataCutoffTime = formatTaipeiTime(firstText(
+    ai.data_as_of,
+    researchMetadata.data_as_of,
+    report.market_data_latest_at,
+    report.updated_at,
+  ));
+  const timeLine = [
+    analysisTime ? `分析產生 ${analysisTime}` : '',
+    dataCutoffTime ? `資料截止 ${dataCutoffTime}` : '',
+  ].filter(Boolean).join('｜');
 
-  let text = 'Morning Alpha｜盤前\n';
-  text += `今日：${clipLine(todayLine, 52)}\n`;
-  text += `確認：${clipLine(opportunity, 28)}\n`;
-  text += `避免：${clipLine(avoid, 26)}\n`;
+  let text = 'Morning Alpha｜07:30 盤前\n';
+  text += `今日一句：${clipLine(todayLine, 52)}\n`;
+  text += `最大機會：${clipLine(opportunity, 30)}\n`;
+  text += `最大風險：${clipLine(risk, 30)}\n`;
+  text += `當沖：${premiumGate.eligible ? '只在成立條件出現後觀察' : '資料未達標，不建立個股劇本'}\n`;
+  text += `避免：${clipLine(avoid, 28)}\n`;
   text += `${bias}｜${confidence}/100\n`;
+  text += '下一確認：09:30 開盤證據\n';
+  if (timeLine) text += `${timeLine}\n`;
   text += `${siteUrl}/report/today`;
 
   return { type: 'text', text };
+}
+
+function formatTaipeiTime(value: string): string {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    const timeMatch = value.match(/(?:T|\s)(\d{2}:\d{2})/);
+    return timeMatch?.[1] || '';
+  }
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(parsed);
 }
 
 function parseAiStrategy(value: unknown): Record<string, unknown> {

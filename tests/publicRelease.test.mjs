@@ -27,6 +27,10 @@ const dailyReportGenerator = read('supabase/functions/generate-daily-report-v7/i
 const runtimeDeployWorkflow = read('.github/workflows/deploy-morning-alpha-runtime.yml');
 const runtimeCheckpointWorkflow = read('.github/workflows/morning-alpha-runtime-checkpoints.yml');
 const publicResearchText = read('src/utils/publicResearchText.ts');
+const reportPayloadFunction = read('supabase/functions/get-report-payload/index.ts');
+const premiumAvailability = read('src/lib/premiumContentAvailability.ts');
+const premiumGate = read('supabase/functions/_shared/premium-content-gate.ts');
+const lineDailyPush = read('supabase/functions/line-daily-push/index.ts');
 
 const publicSourceFiles = [
   'src/pages/home/page.tsx',
@@ -137,7 +141,11 @@ test('public date fallbacks use Asia/Taipei helpers', () => {
 test('empty report payload cannot create a blank report destination', () => {
   const reportService = read('src/services/reportService.ts');
   assert.match(reportService, /if \(!response\.report_date \|\| !response\.payload\) return null;/);
-  assert.match(reportService, /if \(!response\.report_date \|\| !response\.payload\) return \[\];/);
+  assert.match(reportService, /if \(limit <= 0\) return \[\];/);
+  assert.match(reportService, /callGetReportHistory\(limit\)/);
+  assert.match(reportPayloadFunction, /history_limit/);
+  assert.match(reportPayloadFunction, /Math\.min\(30, Math\.max\(1, requestedLimit\)\)/);
+  assert.match(reportPayloadFunction, /buildHistorySummary/);
 });
 
 test('mobile menu and 404 provide release-safe interaction', () => {
@@ -190,9 +198,7 @@ test('premarket workflow refreshes verifiable news before report generation and 
 
 test('paid report fails closed when evidence does not meet the member threshold', () => {
   assert.match(reportDetail, /memberResearchDegraded/);
-  assert.match(reportDetail, /memberValueScore < 90/);
-  assert.match(reportDetail, /v10DataQualityStatus !== 'sufficient'/);
-  assert.match(reportDetail, /!hasFreshNewsEvidence/);
+  assert.match(reportDetail, /resolvePremiumContentAvailability/);
   assert.match(reportDetail, /今日研究資料尚未達付費發布標準/);
   assert.match(reportDetail, /不會把資料不足包裝成高信心受惠股/);
   assert.match(reportDetail, /本報告沒有可核對的 48 小時內新聞來源/);
@@ -200,11 +206,19 @@ test('paid report fails closed when evidence does not meet the member threshold'
   assert.doesNotMatch(reportDetail, /market_data_latest_date \|\| report\.report_date\} 收盤/);
   assert.match(memberNote, /memberResearchPublishable/);
   assert.match(memberNote, /今日資料不足，不發布付費個股研究/);
-  assert.match(memberNote, /memberValueScore >= 90/);
+  assert.match(memberNote, /resolvePremiumContentAvailability/);
   assert.match(opportunities, /premiumResearchPublishable/);
-  assert.match(opportunities, /ds\.v10DataQualityStatus === 'sufficient'/);
+  assert.match(opportunities, /resolvePremiumContentAvailability/);
   assert.match(reportsCenter, /selectedResearchPublishable/);
   assert.match(reportsCenter, /這天的個股研究已降級/);
+  assert.match(premiumAvailability, /Object\.keys\(gate\)\.length > 0/);
+  assert.match(premiumAvailability, /memberValueScore >= 90/);
+  assert.match(premiumAvailability, /freshNewsCount > 0/);
+  assert.match(premiumGate, /recommendation_reasoning_incomplete/);
+  assert.match(reportPayloadFunction, /evaluatePremiumContentGate/);
+  assert.match(reportPayloadFunction, /if \(!premiumGate\.eligible\)/);
+  assert.match(reportPayloadFunction, /one_teaser_stock: premiumGate\.eligible \? buildTeaserStock\(ai\) : null/);
+  assert.match(reportPayloadFunction, /premium_content_unavailable_reason: "EVIDENCE_GATE_NOT_MET"/);
 });
 
 test('V11 observation roles require fresh evidence and cap confidence', () => {
@@ -230,10 +244,10 @@ test('legacy opening radar UI fails closed without real core evidence', () => {
 });
 
 test('runtime deployment and missing checkpoint schedules are reproducible', () => {
-  for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push']) {
+  for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push', 'get-report-payload']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
   }
-  for (const schedule of ["45 22 * * 0-4", "5 1 * * 1-5", "5 2 * * 1-5", "35 4 * * 1-5", "35 5 * * 1-5"]) {
+  for (const schedule of ["15 23 * * 0-4", "40 23 * * 0-4", "5 1 * * 1-5", "5 2 * * 1-5", "35 4 * * 1-5", "20 6 * * 1-5"]) {
     assert.match(runtimeCheckpointWorkflow, new RegExp(schedule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing runtime schedule: ${schedule}`);
   }
   assert.match(runtimeCheckpointWorkflow, /\{"phase":"intraday"\}/);
@@ -257,6 +271,20 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeCheckpointWorkflow, /TZ=Asia\/Taipei/);
   assert.match(runtimeCheckpointWorkflow, /ALREADY_SENT/);
   assert.match(runtimeCheckpointWorkflow, /failed_count == 0/);
+  assert.match(runtimeCheckpointWorkflow, /daily-report-exists/);
+  assert.match(runtimeCheckpointWorkflow, /steps\.premarket-state\.outputs\.report_exists != 'true'/);
+  assert.match(runtimeCheckpointWorkflow, /7 \* 60 \+ 20/);
+  assert.match(runtimeCheckpointWorkflow, /&& 'premarket'/);
+});
+
+test('LINE brief identifies analysis and market-data times and refuses weak day-trading scripts', () => {
+  for (const label of ['07:30 盤前', '今日一句', '最大機會', '最大風險', '下一確認', '分析產生', '資料截止']) {
+    assert.match(lineDailyPush, new RegExp(label), `LINE brief is missing ${label}`);
+  }
+  assert.match(lineDailyPush, /evaluatePremiumContentGate/);
+  assert.match(lineDailyPush, /資料未達標，不建立個股劇本/);
+  assert.match(lineDailyPush, /ALREADY_SENT/);
+  assert.match(lineDailyPush, /X-Line-Retry-Key/);
 });
 
 test('trading-day reports and public timelines fail closed with correct times', () => {
@@ -487,6 +515,8 @@ test('verification is a public fail-closed audit instead of an internal diagnost
   }
   assert.match(verification, /hasActualOutcome/);
   assert.match(verification, /\['completed', 'complete', 'ready', 'done'\]\.includes\(status\)/);
+  assert.match(verification, /if \(isHistoricalFallback\)/);
+  assert.match(verification, /不會把 .* 的進度誤標為今天/);
 });
 
 test('report pages translate public market labels and require a real closing outcome', () => {

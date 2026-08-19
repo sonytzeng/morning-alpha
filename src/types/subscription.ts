@@ -30,3 +30,14 @@ export interface ServerReportPayloadResponse {
   authenticated?: boolean;
   error?: string;
 }
+
+export interface ServerReportHistoryResponse {
+  tier: SubscriptionTier;
+  report_date: null;
+  payload: null;
+  reports: Record<string, unknown>[];
+  locked_sections: string[];
+  source: 'server_trimmed_payload';
+  authenticated?: boolean;
+  error?: string;
+}

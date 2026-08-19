@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveMarketStatus } from "../_shared/market-status.ts";
+import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
 
 type SubscriptionTier = "free" | "member" | "vip" | "admin";
 
@@ -127,6 +128,35 @@ function isValidDate(value: unknown): value is string {
 
 function getAi(report: ReportRow): Record<string, unknown> {
   return parseAi(report.ai_strategy_json);
+}
+
+function getImportantNews(report: ReportRow, ai: Record<string, unknown>): Record<string, unknown>[] {
+  const reportNews = asArray(report.important_news_json);
+  return reportNews.length > 0 ? reportNews : asArray(ai.important_news);
+}
+
+function buildPublicNews(newsRows: Record<string, unknown>[]): Record<string, unknown>[] {
+  return newsRows.slice(0, 3).map((news) => ({
+    title: toStringValue(news.title) || "",
+    source: toStringValue(news.source) || "",
+    url: toStringValue(news.url),
+    published_at: toStringValue(news.published_at) || toStringValue(news.created_at),
+    related_sectors: Array.isArray(news.related_sectors) ? news.related_sectors.slice(0, 4) : [],
+    taiwan_impact_summary: toStringValue(news.taiwan_impact_summary) || "",
+  }));
+}
+
+function buildPublicOpeningRadar(value: unknown): Record<string, unknown> {
+  const radar = asObject(value);
+  return {
+    report_date: toStringValue(radar.report_date),
+    checkpoint: toStringValue(radar.checkpoint),
+    radar_status: toStringValue(radar.radar_status) || toStringValue(radar.status),
+    data_status: toStringValue(radar.data_status),
+    captured_at: toStringValue(radar.captured_at),
+    updated_at: toStringValue(radar.updated_at),
+    next_check_time: toStringValue(radar.next_check_time),
+  };
 }
 
 function getReportDate(report: ReportRow): string {
@@ -338,6 +368,8 @@ function buildInvalidationConditions(ai: Record<string, unknown>): unknown[] {
 
 function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
   const ai = getAi(report);
+  const importantNews = getImportantNews(report, ai);
+  const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
   const confidenceScore = getConfidenceScore(report, ai);
   const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
   const marketMetadata = getCanonicalMarketMetadata(report, ai);
@@ -363,16 +395,24 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     v8_daily_sentence: asObject(ai.v8_daily_sentence),
     public_summary: Object.keys(publicSummary).length > 0 ? publicSummary : freeSummary,
     beneficiary_count: getBeneficiaryCount(ai),
-    one_teaser_stock: buildTeaserStock(ai),
+    one_teaser_stock: premiumGate.eligible ? buildTeaserStock(ai) : null,
     v10_beneficiary_enabled: isV10BeneficiaryEnabled(ai),
-    today_beneficiary_stocks_v10: asArray(ai.today_beneficiary_stocks_v10),
-    v10_observation_watchlist: asArray(ai.v10_observation_watchlist),
-    v10_risk_watchlist: asArray(ai.v10_risk_watchlist),
     v10_data_quality_status: toStringValue(ai.v10_data_quality_status),
     v10_warning: toStringValue(ai.v10_warning),
     v10_candidate_count: toNumberValue(ai.v10_candidate_count),
+    premium_content_status: premiumGate.status,
+    premium_content_reason_codes: premiumGate.reason_codes,
+    recommendation_count: premiumGate.recommendation_count,
+    complete_recommendation_count: premiumGate.complete_recommendation_count,
+    member_value_score: toNumberValue(ai.member_value_score),
+    content_publish_gate: {
+      overall_status: premiumGate.status,
+      blocking_issues: premiumGate.reason_codes,
+    },
+    important_news: buildPublicNews(importantNews),
+    fresh_news_count: importantNews.length,
     opening_radar_status: toStringValue(openingRadar.radar_status) || toStringValue(openingRadar.status),
-    opening_radar: openingRadar,
+    opening_radar: buildPublicOpeningRadar(openingRadar),
     intraday_sync_status: asObject(ai.intraday_sync_status),
     input_source: toStringValue(openingRadar.input_source) || null,
     degraded_metadata: {
@@ -382,9 +422,14 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
       txf_status: toStringValue(openingRadar.txf_status),
       input_source: toStringValue(openingRadar.input_source),
     },
-    sector_rotation_scores: ctx.sectorRotationRows,
+    sector_rotation_scores: ctx.sectorRotationRows.slice(0, 3).map((row) => ({
+      score_date: row.score_date,
+      sector: row.sector,
+      direction: row.direction,
+      signal_label: row.signal_label,
+    })),
     sector_rotation_status: asObject(ai.sector_rotation_status),
-    market_data_snapshots: ctx.marketDataSnapshots,
+    market_data_snapshots: ctx.marketDataSnapshots.slice(0, 16),
     closing_verification: buildClosingVerdict(ai),
     data_quality: toStringValue(ai.data_quality) || toStringValue(ai.data_status) || toStringValue(asObject(ai.member_research_note_v2).data_status) || "unknown",
   };
@@ -392,11 +437,21 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
 
 function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
   const ai = getAi(report);
+  const importantNews = getImportantNews(report, ai);
+  const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
   const note = asObject(ai.member_research_note_v2);
   const v8BeneficiaryChain = asObject(ai.v8_beneficiary_chain);
   const v8OvernightCausalChain = asObject(ai.v8_overnight_causal_chain);
   const publicPayload = buildPublicPayload(report, ctx);
   const publicDegradedMetadata = asObject(publicPayload.degraded_metadata);
+  if (!premiumGate.eligible) {
+    return {
+      ...publicPayload,
+      premium_content_status: premiumGate.status,
+      premium_content_reason_codes: premiumGate.reason_codes,
+      premium_content_unavailable_reason: "EVIDENCE_GATE_NOT_MET",
+    };
+  }
   return {
     ...publicPayload,
     confidence_score: getConfidenceScore(report, ai),
@@ -440,8 +495,10 @@ function buildVipPayload(report: ReportRow, ctx: PayloadContext): Record<string,
   const ai = getAi(report);
   const note = asObject(ai.member_research_note_v2);
   const closing = asObject(ai.closing_verification);
+  const memberPayload = buildMemberPayload(report, ctx);
+  if (memberPayload.premium_content_status !== "eligible") return memberPayload;
   return {
-    ...buildMemberPayload(report, ctx),
+    ...memberPayload,
     fund_flow_scenario: note.fund_flow_scenario || ai.fund_flow_scenario || null,
     market_mispricing: note.market_mispricing || ai.market_mispricing || null,
     institutional_behavior: note.institutional_behavior || ai.institutional_behavior || null,
@@ -463,6 +520,22 @@ function buildPayload(report: ReportRow, tier: SubscriptionTier, ctx: PayloadCon
   if (tier === "vip") return buildVipPayload(report, ctx);
   if (tier === "member") return buildMemberPayload(report, ctx);
   return buildPublicPayload(report, ctx);
+}
+
+function buildHistorySummary(report: ReportRow): Record<string, unknown> {
+  const ai = getAi(report);
+  const confidenceScore = getConfidenceScore(report, ai);
+  const dailySentence = getTodayQuote(report, ai);
+  return {
+    report_date: getReportDate(report),
+    revision_id: toStringValue(report.id),
+    generated_at: getGeneratedAt(report, ai),
+    market_bias: getMarketBias(report, ai),
+    confidence_score: confidenceScore,
+    confidence_label: getConfidenceLabel(confidenceScore),
+    summary: dailySentence,
+    today_quote: dailySentence,
+  };
 }
 
 function getLockedSections(tier: SubscriptionTier): string[] {
@@ -569,6 +642,30 @@ Deno.serve(async (req: Request) => {
   const serviceClient = createServiceClient(supabaseUrl, serviceRoleKey);
 
   const { tier, userId } = await resolveTierFromRequest(req, serviceClient);
+
+  if (body.history_limit !== undefined) {
+    const requestedLimit = Math.trunc(Number(body.history_limit));
+    const historyLimit = Number.isFinite(requestedLimit) ? Math.min(30, Math.max(1, requestedLimit)) : 7;
+    const { data: historyRows, error: historyError } = await serviceClient
+      .from("reports")
+      .select("id,report_date,market_bias,confidence_score,summary,created_at,updated_at,ai_strategy_json")
+      .order("report_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(historyLimit);
+    if (historyError) {
+      console.error("GET_REPORT_PAYLOAD_HISTORY_QUERY_FAILED", historyError.message);
+      return jsonResponse({ success: false, error: "REPORT_HISTORY_QUERY_FAILED" }, 500);
+    }
+    return jsonResponse({
+      tier,
+      report_date: null,
+      payload: null,
+      reports: Array.isArray(historyRows) ? historyRows.map((row) => buildHistorySummary(row as ReportRow)) : [],
+      locked_sections: getLockedSections(tier),
+      source: "server_trimmed_payload",
+      authenticated: Boolean(userId),
+    });
+  }
 
   let query = serviceClient
     .from("reports")

@@ -2,12 +2,13 @@ name: Morning Alpha runtime checkpoints
 
 on:
   schedule:
-    # GitHub cron uses UTC. Queue early, then wait inside the job for the market window.
-    - cron: '45 22 * * 0-4'
+    # GitHub cron uses UTC. Publish near 07:30 Asia/Taipei, then run one idempotent watchdog.
+    - cron: '15 23 * * 0-4'
+    - cron: '40 23 * * 0-4'
     - cron: '5 1 * * 1-5'
     - cron: '5 2 * * 1-5'
     - cron: '35 4 * * 1-5'
-    - cron: '35 5 * * 1-5'
+    - cron: '20 6 * * 1-5'
   workflow_dispatch:
     inputs:
       checkpoint:
@@ -25,7 +26,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: morning-alpha-runtime-${{ github.event.schedule || inputs.checkpoint || github.run_id }}
+  group: morning-alpha-runtime-${{ (github.event.schedule == '15 23 * * 0-4' || github.event.schedule == '40 23 * * 0-4') && 'premarket' || github.event.schedule || inputs.checkpoint || github.run_id }}
   cancel-in-progress: false
 
 env:
@@ -46,7 +47,7 @@ jobs:
         run: |
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             checkpoint="$MANUAL_CHECKPOINT"
-          elif [ "$EVENT_SCHEDULE" = "45 22 * * 0-4" ]; then
+          elif [ "$EVENT_SCHEDULE" = "15 23 * * 0-4" ] || [ "$EVENT_SCHEDULE" = "40 23 * * 0-4" ]; then
             checkpoint="premarket"
           elif [ "$EVENT_SCHEDULE" = "5 1 * * 1-5" ]; then
             checkpoint="0930"
@@ -54,7 +55,7 @@ jobs:
             checkpoint="1030"
           elif [ "$EVENT_SCHEDULE" = "35 4 * * 1-5" ]; then
             checkpoint="1300"
-          elif [ "$EVENT_SCHEDULE" = "35 5 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "20 6 * * 1-5" ]; then
             checkpoint="closing"
           else
             echo "Unsupported schedule: $EVENT_SCHEDULE" >&2
@@ -68,10 +69,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Wait until the 07:05 Taipei publication window
+      - name: Wait until the 07:20 Taipei analysis window
         run: |
           now_minutes=$((10#$(TZ=Asia/Taipei date +%H) * 60 + 10#$(TZ=Asia/Taipei date +%M)))
-          target_minutes=$((7 * 60 + 5))
+          target_minutes=$((7 * 60 + 20))
           if [ "$now_minutes" -lt "$target_minutes" ]; then
             sleep $(((target_minutes - now_minutes) * 60))
           fi
@@ -81,7 +82,27 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: test -n "$CRON_SECRET"
 
+      - name: Check whether today's report already exists
+        id: premarket-state
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/premarket-state.json"
+          curl --silent --show-error --fail-with-body \
+            --max-time 45 \
+            --request POST "$FUNCTIONS_BASE_URL/ma-ops-health-check" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{"environment":"production","check_type":"report","dry_run":true,"components":["daily-report-exists"]}' \
+            --output "$response_file"
+          if jq -e '.checks[] | select(.check_name == "daily-report-exists" and .status == "passed")' "$response_file" >/dev/null; then
+            echo "report_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "report_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Refresh verifiable global market news
+        if: steps.premarket-state.outputs.report_exists != 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
@@ -106,31 +127,50 @@ jobs:
           exit 1
 
       - name: Fetch premarket reference snapshots
+        if: steps.premarket-state.outputs.report_exists != 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           response_file="$RUNNER_TEMP/fetch-premarket-data.json"
-          curl --silent --show-error --fail-with-body \
-            --request POST "$FUNCTIONS_BASE_URL/fetch-market-data-v10" \
-            --header "Content-Type: application/json" \
-            --header "x-cron-secret: $CRON_SECRET" \
-            --data '{"phase":"premarket"}' \
-            --output "$response_file"
-          jq -e '.success == true and .phase == "premarket" and .snapshot_upserted_count >= 1' "$response_file" >/dev/null
+          for attempt in 1 2 3; do
+            if curl --silent --show-error --fail-with-body \
+              --max-time 180 \
+              --request POST "$FUNCTIONS_BASE_URL/fetch-market-data-v10" \
+              --header "Content-Type: application/json" \
+              --header "x-cron-secret: $CRON_SECRET" \
+              --data '{"phase":"premarket"}' \
+              --output "$response_file"; then
+              if jq -e '.success == true and .phase == "premarket" and .snapshot_upserted_count >= 1' "$response_file" >/dev/null; then
+                exit 0
+              fi
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep $((attempt * 10)); fi
+          done
+          jq . "$response_file" >&2 || true
+          exit 1
 
       - name: Generate and verify today's report
+        if: steps.premarket-state.outputs.report_exists != 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           response_file="$RUNNER_TEMP/generate-daily-report.json"
-          curl --silent --show-error --fail-with-body \
-            --max-time 720 \
-            --request POST "$FUNCTIONS_BASE_URL/generate-daily-report-v7" \
-            --header "Content-Type: application/json" \
-            --header "x-cron-secret: $CRON_SECRET" \
-            --data '{}' \
-            --output "$response_file"
-          jq -e '.success == true and (.report_id | type == "string") and (.report_date | type == "string")' "$response_file" >/dev/null
+          for attempt in 1 2; do
+            if curl --silent --show-error --fail-with-body \
+              --max-time 720 \
+              --request POST "$FUNCTIONS_BASE_URL/generate-daily-report-v7" \
+              --header "Content-Type: application/json" \
+              --header "x-cron-secret: $CRON_SECRET" \
+              --data '{}' \
+              --output "$response_file"; then
+              if jq -e '.success == true and (.report_id | type == "string") and (.report_date | type == "string")' "$response_file" >/dev/null; then
+                exit 0
+              fi
+            fi
+            if [ "$attempt" -lt 2 ]; then sleep 20; fi
+          done
+          jq . "$response_file" >&2 || true
+          exit 1
 
       - name: Push today's LINE premarket brief
         env:

@@ -1,27 +1,30 @@
 import type { RouteObject } from "react-router-dom";
-import NotFound from "../pages/NotFound";
+import { lazy } from "react";
 import Home from "../pages/home/page";
-import Account from "../pages/account/Account";
-import AdminLayout from "../pages/admin/Admin";
-import AdminTodayContent from "../pages/admin/today-content/page";
-import AdminPublish from "../pages/admin/scripts/page";
-import AdminSystemStatus from "../pages/admin/system-check/page";
-import AdminSystemHealth from "../pages/admin/system-health/page";
-import AdminDataHealth from "../pages/admin/data-truth/page";
-import ReportsCenter from "../pages/reports/ReportsCenter";
-import ReportDetail from "../pages/reports/ReportDetail";
-import WarRoom from "../pages/war-room/WarRoom";
-import Opportunities from "../pages/opportunities/page";
-import MemberNote from "../pages/member-note/page";
-import Performance from "../pages/performance/page";
-import VoicePage from "../pages/voice/VoicePage";
-import FaqPage from "../pages/faq/page";
-import TermsPage from "../pages/terms/page";
-import PrivacyPage from "../pages/privacy/page";
-import ContactPage from "../pages/contact/page";
-import Pricing from "../pages/pricing/Pricing";
 import { Navigate } from "react-router-dom";
-import Verification from "../pages/verification/page";
+import DeferredRoute from "./DeferredRoute";
+
+const NotFound = lazy(() => import("../pages/NotFound"));
+const Account = lazy(() => import("../pages/account/Account"));
+const AdminLayout = lazy(() => import("../pages/admin/Admin"));
+const AdminTodayContent = lazy(() => import("../pages/admin/today-content/page"));
+const AdminPublish = lazy(() => import("../pages/admin/scripts/page"));
+const AdminSystemStatus = lazy(() => import("../pages/admin/system-check/page"));
+const AdminSystemHealth = lazy(() => import("../pages/admin/system-health/page"));
+const AdminDataHealth = lazy(() => import("../pages/admin/data-truth/page"));
+const ReportsCenter = lazy(() => import("../pages/reports/ReportsCenter"));
+const ReportDetail = lazy(() => import("../pages/reports/ReportDetail"));
+const WarRoom = lazy(() => import("../pages/war-room/WarRoom"));
+const Opportunities = lazy(() => import("../pages/opportunities/page"));
+const MemberNote = lazy(() => import("../pages/member-note/page"));
+const Performance = lazy(() => import("../pages/performance/page"));
+const VoicePage = lazy(() => import("../pages/voice/VoicePage"));
+const FaqPage = lazy(() => import("../pages/faq/page"));
+const TermsPage = lazy(() => import("../pages/terms/page"));
+const PrivacyPage = lazy(() => import("../pages/privacy/page"));
+const ContactPage = lazy(() => import("../pages/contact/page"));
+const Pricing = lazy(() => import("../pages/pricing/Pricing"));
+const Verification = lazy(() => import("../pages/verification/page"));
 
 const routes: RouteObject[] = [
   {
@@ -34,55 +37,55 @@ const routes: RouteObject[] = [
   },
   {
     path: "/opportunities",
-    element: <Opportunities />,
+    element: <DeferredRoute><Opportunities /></DeferredRoute>,
   },
   {
     path: "/member-note",
-    element: <MemberNote />,
+    element: <DeferredRoute><MemberNote /></DeferredRoute>,
   },
   {
     path: "/performance",
-    element: <Performance />,
+    element: <DeferredRoute><Performance /></DeferredRoute>,
   },
   {
     path: "/reports",
-    element: <ReportsCenter />,
+    element: <DeferredRoute><ReportsCenter /></DeferredRoute>,
   },
   {
     path: "/reports/:reportDate",
-    element: <ReportDetail />,
+    element: <DeferredRoute><ReportDetail /></DeferredRoute>,
   },
   {
     path: "/war-room",
-    element: <WarRoom />,
+    element: <DeferredRoute><WarRoom /></DeferredRoute>,
   },
   {
     path: "/voice",
-    element: <VoicePage />,
+    element: <DeferredRoute><VoicePage /></DeferredRoute>,
   },
   {
     path: "/faq",
-    element: <FaqPage />,
+    element: <DeferredRoute><FaqPage /></DeferredRoute>,
   },
   {
     path: "/terms",
-    element: <TermsPage />,
+    element: <DeferredRoute><TermsPage /></DeferredRoute>,
   },
   {
     path: "/privacy",
-    element: <PrivacyPage />,
+    element: <DeferredRoute><PrivacyPage /></DeferredRoute>,
   },
   {
     path: "/contact",
-    element: <ContactPage />,
+    element: <DeferredRoute><ContactPage /></DeferredRoute>,
   },
   {
     path: "/pricing",
-    element: <Pricing />,
+    element: <DeferredRoute><Pricing /></DeferredRoute>,
   },
   {
     path: "/account",
-    element: <Account />,
+    element: <DeferredRoute><Account /></DeferredRoute>,
   },
   // V377: Redirect legacy routes
   {
@@ -95,20 +98,20 @@ const routes: RouteObject[] = [
   },
   {
     path: "/admin",
-    element: <AdminLayout />,
+    element: <DeferredRoute><AdminLayout /></DeferredRoute>,
     children: [
       { index: true, element: <Navigate to="/admin/today-content" replace /> },
-      { path: "today-content", element: <AdminTodayContent /> },
-      { path: "publish", element: <AdminPublish /> },
-      { path: "system-status", element: <AdminSystemStatus /> },
-      { path: "system-health", element: <AdminSystemHealth /> },
-      { path: "data-health", element: <AdminDataHealth /> },
+      { path: "today-content", element: <DeferredRoute><AdminTodayContent /></DeferredRoute> },
+      { path: "publish", element: <DeferredRoute><AdminPublish /></DeferredRoute> },
+      { path: "system-status", element: <DeferredRoute><AdminSystemStatus /></DeferredRoute> },
+      { path: "system-health", element: <DeferredRoute><AdminSystemHealth /></DeferredRoute> },
+      { path: "data-health", element: <DeferredRoute><AdminDataHealth /></DeferredRoute> },
       // V377: Legacy redirects
       { path: "dashboard", element: <Navigate to="/admin/today-content" replace /> },
       { path: "reports", element: <Navigate to="/admin/today-content" replace /> },
       { path: "scripts", element: <Navigate to="/admin/publish" replace /> },
       { path: "system-check", element: <Navigate to="/admin/system-status" replace /> },
-      { path: "data-truth", element: <AdminDataHealth /> },
+      { path: "data-truth", element: <DeferredRoute><AdminDataHealth /></DeferredRoute> },
       { path: "system", element: <Navigate to="/admin/system-status" replace /> },
       { path: "growth", element: <Navigate to="/admin/today-content" replace /> },
       { path: "settings", element: <Navigate to="/admin/system-status" replace /> },
@@ -117,11 +120,11 @@ const routes: RouteObject[] = [
   // V377: Keep verification page accessible but not in navbar
   {
     path: "/verification",
-    element: <Verification />,
+    element: <DeferredRoute><Verification /></DeferredRoute>,
   },
   {
     path: "*",
-    element: <NotFound />,
+    element: <DeferredRoute><NotFound /></DeferredRoute>,
   },
 ];
 

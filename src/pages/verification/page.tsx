@@ -19,6 +19,7 @@ type UnknownRecord = Record<string, unknown>;
 
 type ClosingView = {
   complete: boolean;
+  fullData: boolean;
   outcome: 'complete' | 'partial' | 'failed' | 'waiting';
   outcomeLabel: string;
   actualSummary: string;
@@ -102,17 +103,21 @@ function buildClosingView(ai: UnknownRecord): ClosingView {
   const hasNamedDirection = Boolean(actualDirection)
     && !['unknown', 'pending', 'unavailable', 'n/a', '尚未取得', '待資料'].includes(actualDirection);
   const hasActualOutcome = hasNamedDirection || actualChange !== null;
-  const complete = ['completed', 'complete', 'ready', 'done'].includes(status)
-    && !['degraded', 'insufficient', 'pending'].includes(dataStatus)
+  const directionVerified = (['completed', 'complete', 'ready', 'done'].includes(status)
+    || status.includes('direction_completed')
+    || status.includes('verified'))
     && hasActualOutcome;
+  const fullData = directionVerified
+    && !status.includes('degraded')
+    && !['degraded', 'insufficient'].includes(dataStatus);
 
   let outcome: ClosingView['outcome'] = 'waiting';
-  if (complete && ['hit', 'correct', 'confirmed', 'success'].includes(rawOutcome)) outcome = 'complete';
-  else if (complete && ['partial', 'mixed', 'partial_hit'].includes(rawOutcome)) outcome = 'partial';
-  else if (complete && ['miss', 'wrong', 'failed', 'rejected', 'incorrect'].includes(rawOutcome)) outcome = 'failed';
+  if (directionVerified && ['hit', 'correct', 'confirmed', 'success'].includes(rawOutcome)) outcome = 'complete';
+  else if (directionVerified && ['partial', 'mixed', 'partial_hit'].includes(rawOutcome)) outcome = 'partial';
+  else if (directionVerified && ['miss', 'wrong', 'failed', 'rejected', 'incorrect'].includes(rawOutcome)) outcome = 'failed';
 
   const outcomeLabel = outcome === 'complete'
-    ? '完整成立'
+    ? fullData ? '完整成立' : '方向成立（部分資料不足）'
     : outcome === 'partial'
       ? '部分成立'
       : outcome === 'failed'
@@ -120,23 +125,28 @@ function buildClosingView(ai: UnknownRecord): ClosingView {
         : '等待完整收盤資料';
 
   return {
-    complete,
+    complete: directionVerified,
+    fullData,
     outcome,
     outcomeLabel,
-    actualSummary: complete
-      ? publicVerificationText(firstText(closing.actual_direction, closing.verdict_label, directionFromChange(actualChange)))
+    actualSummary: directionVerified
+      ? publicVerificationText(firstText(directionFromChange(actualChange), closing.actual_direction, closing.verdict_label))
       : '收盤方向與完整驗證資料尚未同時到齊。',
-    whatWasRight: complete ? valueSummary(closing.what_was_right) : '',
-    whatWasWrong: complete ? valueSummary(closing.what_was_wrong) : '',
-    nextAdjustment: complete ? valueSummary(closing.tomorrow_adjustment) : '',
-    statusNote: complete
-      ? '已取得可核對的收盤方向，這筆紀錄可進入歷史績效。'
+    whatWasRight: directionVerified ? valueSummary(closing.what_was_right) : '',
+    whatWasWrong: directionVerified ? valueSummary(closing.what_was_wrong) : '',
+    nextAdjustment: directionVerified ? valueSummary(closing.tomorrow_adjustment) : '',
+    statusNote: fullData
+      ? '已取得可核對的收盤方向與完整資料，這筆紀錄可進入歷史績效。'
+      : directionVerified
+        ? '收盤方向已完成驗證；部分個股或期貨欄位不足，因此顯示結果但不納入完整資料績效。'
       : '資料未完整前不判定命中，也不納入歷史績效。',
   };
 }
 
 function VerificationContent() {
   const [displayState, setDisplayState] = useState<MorningAlphaDisplayState | null>(null);
+  const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
+  const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -149,6 +159,8 @@ function VerificationContent() {
         const resolved = await resolveActiveMorningAlphaReport();
         if (!mounted) return;
         setDisplayState(getMorningAlphaDisplayState(resolved.rawRow as unknown as UnknownRecord | null));
+        setIsHistoricalFallback(resolved.isHistoricalFallback);
+        setFallbackReportDate(resolved.fallbackReportDate);
       } catch {
         if (mounted) setError('今日驗證資料暫時無法取得，請稍後再試。');
       } finally {
@@ -183,6 +195,25 @@ function VerificationContent() {
             <h1 className="text-xl font-bold text-white">今日驗證尚未可用</h1>
             <p className="mt-2 text-sm leading-relaxed text-white/60">{error || '今日報告尚未產生，請稍後再回來查看。'}</p>
             <Link to="/report/today" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-semibold text-slate-950">返回今日判斷</Link>
+          </section>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (isHistoricalFallback) {
+    return (
+      <div className="ma-page flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex-1 grid place-items-center px-4">
+          <section className="w-full max-w-lg rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-6 text-center">
+            <h1 className="text-xl font-bold text-white">今日驗證尚未建立</h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/60">今日盤前報告尚未產生，因此不會把 {fallbackReportDate || '上一交易日'} 的進度誤標為今天。</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <Link to="/report/today" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-semibold text-slate-950">返回今日判斷</Link>
+              {fallbackReportDate && <Link to={`/reports/${fallbackReportDate}`} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-5 text-sm font-semibold text-white">查看 {fallbackReportDate} 歷史報告</Link>}
+            </div>
           </section>
         </main>
         <Footer />

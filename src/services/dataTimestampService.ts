@@ -33,9 +33,9 @@ export async function getDataTimestamps(): Promise<DataTimestamps> {
       payload.generated_at ||
       payload.generatedAt ||
       payload.report_generated_at ||
-      payload.created_at ||
+      nestedAI?.generated_at ||
       payload.updated_at ||
-      nestedAI?.generated_at;
+      payload.created_at;
     if (typeof generatedAt === 'string' && generatedAt.trim()) {
       results.reportCreatedAt = generatedAt.trim();
     }

@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { FeatureKey, ServerReportPayloadResponse, SubscriptionTier, UserEntitlement } from '@/types/subscription';
+import type { FeatureKey, ServerReportHistoryResponse, ServerReportPayloadResponse, SubscriptionTier, UserEntitlement } from '@/types/subscription';
 
 const GET_REPORT_PAYLOAD_URL = 'https://cttfzgvhiewfckydcrci.supabase.co/functions/v1/get-report-payload';
 
@@ -90,6 +90,24 @@ export async function callGetReportPayload(params: {
   const json = await response.json().catch(() => null) as ServerReportPayloadResponse | null;
   if (!response.ok || !json) {
     throw new Error(json?.error || `get-report-payload failed: ${response.status}`);
+  }
+  return json;
+}
+
+export async function callGetReportHistory(limit = 30): Promise<ServerReportHistoryResponse> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token || '';
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  const response = await fetch(GET_REPORT_PAYLOAD_URL, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ history_limit: Math.min(30, Math.max(1, Math.trunc(limit) || 30)) }),
+  });
+  const json = await response.json().catch(() => null) as ServerReportHistoryResponse | null;
+  if (!response.ok || !json) {
+    throw new Error(json?.error || `get-report-history failed: ${response.status}`);
   }
   return json;
 }

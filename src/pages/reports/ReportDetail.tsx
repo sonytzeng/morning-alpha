@@ -11,6 +11,7 @@ import { getTaipeiNow, formatTaipeiDate } from '@/utils/tradingDay';
 import { parseAIStrategy, type ParsedAIStrategy } from '@/utils/aiStrategyParser';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
+import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 
 // ═══ Constants ═══
 const SECTOR_NAME_MAP: Record<string, string> = {
@@ -31,6 +32,21 @@ const SECTOR_NAME_MAP: Record<string, string> = {
 function safeArray(val: unknown): string[] {
   if (!Array.isArray(val)) return [];
   return val.map(String).filter(Boolean);
+}
+
+function closingTextItems(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(publicReportText).filter(Boolean);
+  if (typeof value === 'string' || typeof value === 'number') {
+    const item = publicReportText(value);
+    return item ? [item] : [];
+  }
+  const record = asRecord(value);
+  return [
+    ...safeArray(record.keep),
+    ...safeArray(record.downgrade),
+    ...safeArray(record.watch_tomorrow),
+    ...safeArray(record.items),
+  ].map(publicReportText).filter(Boolean);
 }
 
 function publicReportText(value: unknown): string {
@@ -62,7 +78,13 @@ function numberOrNull(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function hasVerifiableClosingData(raw: Record<string, unknown> | null | undefined): boolean {
+type ClosingVerificationState = 'complete' | 'degraded' | 'pending';
+
+function resolveClosingVerification(raw: Record<string, unknown> | null | undefined): {
+  state: ClosingVerificationState;
+  closing: Record<string, unknown>;
+  taiexChange: number | null;
+} {
   const ai = raw || {};
   const v2 = asRecord(ai.closing_verification_v2);
   const closing = Object.keys(v2).length > 0 ? v2 : asRecord(ai.closing_verification);
@@ -75,10 +97,32 @@ function hasVerifiableClosingData(raw: Record<string, unknown> | null | undefine
   const change = numberOrNull(closing.actual_taiex_change)
     ?? numberOrNull(taiex.change_percent)
     ?? numberOrNull(taiex.change);
+  const hasOutcome = hasNamedDirection || change !== null;
+  const completed = ['completed', 'complete', 'ready', 'done'].includes(status)
+    || status.includes('direction_completed')
+    || status.includes('verified');
+  if (!completed || !hasOutcome) return { state: 'pending', closing, taiexChange: change };
+  const degraded = status.includes('degraded') || ['degraded', 'insufficient'].includes(dataStatus);
+  return { state: degraded ? 'degraded' : 'complete', closing, taiexChange: change };
+}
 
-  return ['completed', 'complete', 'ready', 'done'].includes(status)
-    && !['degraded', 'insufficient', 'pending'].includes(dataStatus)
-    && (hasNamedDirection || change !== null);
+function closingOutcomeLabel(value: unknown): string {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (['hit', 'correct', 'confirmed', 'success'].includes(normalized)) return '方向符合';
+  if (['partial', 'mixed', 'partial_hit'].includes(normalized)) return '部分符合';
+  if (['miss', 'wrong', 'failed', 'rejected', 'incorrect'].includes(normalized)) return '方向不符';
+  return '尚未評分';
+}
+
+function closingDirectionLabel(value: unknown, change: number | null): string {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (['bullish', 'up', 'positive'].includes(normalized)) return '收盤偏多';
+  if (['bearish', 'down', 'negative'].includes(normalized)) return '收盤偏空';
+  if (['neutral', 'flat', 'sideways'].includes(normalized)) return '收盤震盪';
+  if (change === null) return '尚未取得收盤方向';
+  if (change >= 0.3) return '收盤偏多';
+  if (change <= -0.3) return '收盤偏空';
+  return '收盤震盪';
 }
 
 function translateSector(raw: string): string | null {
@@ -126,16 +170,23 @@ export default function ReportDetail() {
   const effectiveReportDate = report?.report_date || reportDate;
   const isToday = effectiveReportDate === taipeiToday || (!reportDate || reportDate === ':reportDate' || reportDate === 'undefined' || reportDate === 'null') && report?.report_date === taipeiToday;
 
-  // A closing field can be a plan or placeholder; only a real market outcome is complete.
+  // A closing field can be a plan or placeholder; require a real outcome, while keeping
+  // a completed direction visible when secondary market fields are degraded.
   const strategy: ParsedAIStrategy = parseAIStrategy(report);
-  const hasClosingData = hasVerifiableClosingData(strategy.raw);
+  const closingVerification = resolveClosingVerification(strategy.raw);
+  const closing = closingVerification.closing;
+  const closingOutcome = closingOutcomeLabel(closing.hit_or_miss ?? closing.prediction_result ?? closing.result);
+  const closingDirection = closingDirectionLabel(closing.actual_direction, closingVerification.taiexChange);
+  const closingVerifiedAt = String(closing.verified_at ?? '').trim();
 
   const now = getTaipeiNow();
   const hour = now.getHours();
   const minute = now.getMinutes();
   const displayStatus = (() => {
     if (!report) return { label: '今日報告尚未產生', chip: 'slate', icon: 'ri-time-line' };
-    if (hasClosingData) return { label: '收盤驗證完成', chip: 'emerald', icon: 'ri-check-double-line' };
+    if (closingVerification.state === 'complete') return { label: '收盤驗證完成', chip: 'emerald', icon: 'ri-check-double-line' };
+    if (closingVerification.state === 'degraded') return { label: '收盤方向已驗證（部分資料不足）', chip: 'amber', icon: 'ri-check-double-line' };
+    if (!isToday) return { label: '歷史收盤驗證資料不足', chip: 'slate', icon: 'ri-information-line' };
     if (hour >= 9 && hour < 13 || (hour === 13 && minute < 30)) return { label: '盤中追蹤中', chip: 'amber', icon: 'ri-radar-line' };
     if (hour >= 14 || (hour === 13 && minute >= 30) || (hour === 14 && minute >= 10)) return { label: '等待收盤驗證更新', chip: 'amber', icon: 'ri-hourglass-line' };
     return { label: '收盤待驗證', chip: 'amber', icon: 'ri-time-line' };
@@ -143,7 +194,9 @@ export default function ReportDetail() {
 
   const statusBanner = (() => {
     if (!report) return { title: '今日報告尚未產生', body: '請等待系統產生今日報告。', chip: 'slate' };
-    if (hasClosingData) return { title: '今日收盤驗證已完成', body: '系統已將盤前假設與收盤結果比對，請查看下方收盤驗證與明日修正方向。', chip: 'emerald' };
+    if (closingVerification.state === 'complete') return { title: `${isToday ? '今日' : '本日'}收盤驗證已完成`, body: '系統已將盤前假設與收盤結果比對，請查看下方收盤驗證與明日修正方向。', chip: 'emerald' };
+    if (closingVerification.state === 'degraded') return { title: `${isToday ? '今日' : '本日'}收盤方向已驗證`, body: '加權指數方向已有真實收盤資料，但部分個股或期貨資料不足；方向結果會顯示，缺漏部分不納入完整績效。', chip: 'amber' };
+    if (!isToday) return { title: '歷史收盤驗證資料不足', body: '這份歷史報告沒有足夠的真實收盤資料可完成驗證，系統不會事後補造結果。', chip: 'slate' };
     return { title: '今日仍在追蹤中', body: '今日盤前劇本尚未完成收盤驗證，請搭配盤中追蹤觀察。', chip: 'amber' };
   })();
 
@@ -218,13 +271,8 @@ export default function ReportDetail() {
   const rawAI = (strategy.raw || {}) as Record<string, unknown>;
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist, 5);
-  const contentPublishGate = asRecord(rawAI.content_publish_gate);
-  const hasContentPublishGate = Object.keys(contentPublishGate).length > 0;
-  const publishGateStatus = String(contentPublishGate.overall_status ?? '').trim();
-  const blockingIssues = safeArray(contentPublishGate.blocking_issues);
-  const memberValueScore = numberOrNull(rawAI.member_value_score);
-  const reportDataQuality = String(rawAI.data_quality ?? '').trim().toLowerCase();
-  const v10DataQualityStatus = String(rawAI.v10_data_quality_status ?? '').trim().toLowerCase();
+  const premiumAvailability = resolvePremiumContentAvailability(rawAI);
+  const memberValueScore = premiumAvailability.memberValueScore;
   const performanceTiming = asRecord(rawAI.performance_timing);
   const missingSources = safeArray(performanceTiming.missing_sources);
   const v10AnalysisDebug = asRecord(rawAI.v10_analysis_debug);
@@ -233,15 +281,8 @@ export default function ReportDetail() {
     ? normalizedEvidence.normalized_market_snapshot
     : [];
   const marketEvidenceCount = Math.max(strategy.global_market_status_count ?? 0, normalizedMarketSnapshot.length);
-  const hasFreshNewsEvidence = Boolean(strategy.important_news?.length);
-  const memberResearchDegraded = hasContentPublishGate && (
-    publishGateStatus.includes('降級')
-    || blockingIssues.length > 0
-    || (memberValueScore !== null && memberValueScore < 90)
-    || reportDataQuality === 'degraded'
-    || v10DataQualityStatus !== 'sufficient'
-    || !hasFreshNewsEvidence
-  );
+  const hasFreshNewsEvidence = premiumAvailability.freshNewsCount > 0;
+  const memberResearchDegraded = !premiumAvailability.eligible;
   const showV11Observations = v10BeneficiaryEnabled
     && v11ObservationScripts.length > 0
     && !memberResearchDegraded;
@@ -263,6 +304,9 @@ export default function ReportDetail() {
     '若開盤後 30 分鐘內加權指數反向波動超過 1%，劇本下修',
     '若國際盤中出現重大利空，今日觀察轉為保守',
   ].filter(Boolean) as string[];
+  const closingRight = closingTextItems(closing.what_was_right);
+  const closingWrong = closingTextItems(closing.what_was_wrong);
+  const closingAdjustments = closingTextItems(closing.tomorrow_adjustment);
 
   // Chip color helper
   const chipColors: Record<string, string> = {
@@ -499,7 +543,7 @@ export default function ReportDetail() {
               />
             )}
 
-            {v10BeneficiaryEnabled && memberResearchDegraded && (
+            {memberResearchDegraded && (
               <section className="ma-card-elevated border border-amber-500/20">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-6 h-6 rounded-md bg-amber-500/15 flex items-center justify-center"><i className="ri-shield-check-line text-amber-300 text-xs" /></div>
@@ -516,7 +560,7 @@ export default function ReportDetail() {
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     <p className="text-white/35 text-[10px] mb-1">可核對新鮮新聞</p>
-                    <p className="text-white/75 text-sm font-semibold">{hasFreshNewsEvidence ? `${strategy.important_news.length} 則` : '0 則'}</p>
+                    <p className="text-white/75 text-sm font-semibold">{hasFreshNewsEvidence ? `${premiumAvailability.freshNewsCount} 則` : '0 則'}</p>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     <p className="text-white/35 text-[10px] mb-1">缺少資料</p>
@@ -692,6 +736,66 @@ export default function ReportDetail() {
               </div>
               <h2 className="ma-section-title text-white mb-4">收盤驗證與修正</h2>
 
+              {closingVerification.state !== 'pending' ? (
+                <div className="mb-5 space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+                      <p className="text-white/40 text-[10px] font-semibold tracking-wider mb-1">實際方向</p>
+                      <p className="text-white font-semibold">{closingDirection}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+                      <p className="text-white/40 text-[10px] font-semibold tracking-wider mb-1">加權指數</p>
+                      <p className="text-white font-semibold">
+                        {closingVerification.taiexChange === null
+                          ? '尚未取得'
+                          : `${closingVerification.taiexChange >= 0 ? '+' : ''}${closingVerification.taiexChange.toFixed(2)}%`}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+                      <p className="text-white/40 text-[10px] font-semibold tracking-wider mb-1">盤前判斷驗證</p>
+                      <p className="text-white font-semibold">{closingOutcome}</p>
+                    </div>
+                  </div>
+
+                  {closingVerifiedAt && (
+                    <p className="text-white/35 text-xs">驗證時間：{formatTaipeiDateTime(closingVerifiedAt)}</p>
+                  )}
+
+                  {closingVerification.state === 'degraded' && (
+                    <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.05] p-4">
+                      <p className="text-amber-200 text-sm leading-relaxed">
+                        已取得真實加權指數收盤結果；部分個股、台積電或台指期收盤欄位不足，因此只驗證市場方向，不把這筆列為完整資料績效。
+                      </p>
+                    </div>
+                  )}
+
+                  {(closingRight.length > 0 || closingWrong.length > 0) && (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="rounded-xl border border-emerald-400/15 bg-emerald-500/[0.04] p-4">
+                        <h3 className="text-emerald-300 text-xs font-semibold mb-2">判斷成立處</h3>
+                        <ul className="space-y-2 text-white/70 text-sm leading-relaxed">
+                          {(closingRight.length > 0 ? closingRight : ['沒有足夠資料可確認成立處。']).map((item) => <li key={item}>• {item}</li>)}
+                        </ul>
+                      </div>
+                      <div className="rounded-xl border border-rose-400/15 bg-rose-500/[0.04] p-4">
+                        <h3 className="text-rose-300 text-xs font-semibold mb-2">需要修正處</h3>
+                        <ul className="space-y-2 text-white/70 text-sm leading-relaxed">
+                          {(closingWrong.length > 0 ? closingWrong : ['本次沒有額外記錄錯誤假設。']).map((item) => <li key={item}>• {item}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="mb-5 rounded-xl border border-white/10 bg-white/[0.025] p-4">
+                  <p className="text-white/65 text-sm leading-relaxed">
+                    {isToday
+                      ? '尚未取得有效收盤資料，系統不會用盤中或舊資料假裝收盤結果。'
+                      : '這份歷史報告沒有足夠的真實收盤資料，故不判定命中或失敗。'}
+                  </p>
+                </div>
+              )}
+
               {report.risk_reason && (
                 <div className="mb-4">
                   <h3 className="text-rose-300 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="ri-alert-line" /> 風險提醒</h3>
@@ -704,11 +808,17 @@ export default function ReportDetail() {
               <div>
                 <h3 className="text-amber-300 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="ri-loop-left-line" /> 明日修正方向</h3>
                 <div className="bg-amber-500/[0.04] border border-amber-500/15 rounded-xl p-4">
-                  <p className="text-white/75 text-sm leading-relaxed">
-                    若開盤後主流族群無法延續，今日劇本需下修為觀望。
-                    {report.market_bias?.includes('偏多') ? ' 若加權指數開高走低或台積電轉弱，偏多判斷需重新評估，改以震盪視角觀察今日盤勢。' : ''}
-                    {report.market_bias?.includes('偏空') ? ' 若加權指數開低走高或權值股逆勢轉強，偏空判斷需調整為中性震盪。' : ''}
-                  </p>
+                  {closingAdjustments.length > 0 ? (
+                    <ul className="space-y-2 text-white/75 text-sm leading-relaxed">
+                      {closingAdjustments.slice(0, 6).map((item) => <li key={item}>• {item}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="text-white/75 text-sm leading-relaxed">
+                      若開盤後主流族群無法延續，今日劇本需下修為觀望。
+                      {report.market_bias?.includes('偏多') ? ' 若加權指數開高走低或台積電轉弱，偏多判斷需重新評估，改以震盪視角觀察今日盤勢。' : ''}
+                      {report.market_bias?.includes('偏空') ? ' 若加權指數開低走高或權值股逆勢轉強，偏空判斷需調整為中性震盪。' : ''}
+                    </p>
+                  )}
                 </div>
               </div>
             </section>

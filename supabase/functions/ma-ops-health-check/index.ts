@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient as SupabaseClientType } from "https://esm.sh/@supabase/supabase-js@2";
+import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
 
-const VERSION = "MA_OPS_P1_V1";
+const VERSION = "MA_OPS_CONTENT_GATE_V2";
 const QUERY_TIMEOUT_MS = 3000;
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -140,6 +141,18 @@ function nonEmptyString(value: unknown): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function isActionableResearchSentence(value: unknown): boolean {
+  if (!nonEmptyString(value)) return false;
+  const text = String(value).trim();
+  if (text.length < 20) return false;
+  if (/市場仍有不確定性|後續(?:仍需)?觀察|投資人應(?:密切)?(?:留意|關注|觀察)|市場(?:動向|動態|情況)(?:將取決於|顯示)/.test(text)) return false;
+  return /09:30|10:30|13:00|開盤|量能|族群|確認|成立|失效|若|先看/.test(text);
+}
+
 async function constantTimeSecretMatch(presented: string | null, expected: string | null): Promise<boolean> {
   const encoder = new TextEncoder();
   const presentedBytes = encoder.encode(presented ?? "");
@@ -269,7 +282,7 @@ function skipped(checkName: CheckName, component: string, reason: string): Check
 async function fetchReport(supabase: SupabaseClient, targetDate: string): Promise<JsonObject | null> {
   const result = await withTimeout(supabase
     .from("reports")
-    .select("id,report_date,market_bias,confidence_score,report_mode,ai_strategy_json,created_at,updated_at")
+    .select("id,report_date,market_bias,confidence_score,report_mode,today_quote,important_news_json,ai_strategy_json,created_at,updated_at")
     .eq("report_date", targetDate)
     .order("updated_at", { ascending: false })
     .limit(1)
@@ -331,6 +344,15 @@ const handlers: Record<CheckName, CheckHandler> = {
     const report = await fetchReport(supabase, targetDate);
     if (!report) return makeCheck("daily-report-contract", "daily-report", "skipped", "info", {}, {}, started, "REPORT_MISSING", "Contract cannot be checked without a report");
     const ai = asObject(report.ai_strategy_json);
+    const note = asObject(ai.member_research_note_v2);
+    const marketStatus = String(ai.market_status || "").toUpperCase();
+    const isTradingDay = ai.is_trading_day === true && marketStatus === "OPEN";
+    const importantNews = asArray(report.important_news_json).length > 0
+      ? asArray(report.important_news_json)
+      : asArray(ai.important_news);
+    const v8DailySentence = asObject(ai.v8_daily_sentence);
+    const dailySentence = report.today_quote || ai.today_quote || v8DailySentence.sentence;
+    const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
     const missing = [
       !nonEmptyString(report.market_bias) ? "market_bias" : null,
       report.confidence_score === null || report.confidence_score === undefined || !Number.isFinite(Number(report.confidence_score)) ? "confidence_score" : null,
@@ -338,11 +360,30 @@ const handlers: Record<CheckName, CheckHandler> = {
       !nonEmptyString(report.report_mode) && !nonEmptyString(ai.report_mode) ? "report_mode" : null,
       typeof ai.is_trading_day !== "boolean" ? "ai_strategy_json.is_trading_day" : null,
       !nonEmptyString(ai.market_status) ? "ai_strategy_json.market_status" : null,
+      isTradingDay && !isActionableResearchSentence(dailySentence) ? "today_quote.actionable" : null,
+      isTradingDay && importantNews.length < 1 ? "important_news_json" : null,
+      isTradingDay && asArray(note.overnight_chain).length < 1 ? "member_research_note_v2.overnight_chain" : null,
+      isTradingDay && asArray(note.intraday_validation).length < 3 ? "member_research_note_v2.intraday_validation" : null,
+      isTradingDay && asArray(note.invalidation_rules).length < 2 ? "member_research_note_v2.invalidation_rules" : null,
+      isTradingDay && !isActionableResearchSentence(note.subscriber_value_sentence) ? "member_research_note_v2.subscriber_value_sentence" : null,
+      isTradingDay && !premiumGate.eligible ? "premium_content_gate" : null,
     ].filter((item): item is string => item !== null);
     return makeCheck(
       "daily-report-contract", "daily-report", missing.length === 0 ? "passed" : "failed", missing.length === 0 ? "info" : "critical",
-      { required_fields: ["market_bias", "confidence_score", "ai_strategy_json", "report_mode", "is_trading_day", "market_status"] },
-      { missing_fields: missing, report_mode: report.report_mode || ai.report_mode || null, is_trading_day: ai.is_trading_day ?? null, market_status: ai.market_status || null },
+      { required_fields: ["market_bias", "confidence_score", "ai_strategy_json", "report_mode", "is_trading_day", "market_status", "actionable_daily_sentence", "fresh_news", "member_research_structure", "premium_content_gate"] },
+      {
+        missing_fields: missing,
+        report_mode: report.report_mode || ai.report_mode || null,
+        is_trading_day: ai.is_trading_day ?? null,
+        market_status: ai.market_status || null,
+        fresh_news_count: importantNews.length,
+        overnight_step_count: asArray(note.overnight_chain).length,
+        intraday_step_count: asArray(note.intraday_validation).length,
+        invalidation_rule_count: asArray(note.invalidation_rules).length,
+        premium_content_status: premiumGate.status,
+        premium_decision_mode: premiumGate.decision_mode,
+        premium_reason_codes: premiumGate.reason_codes,
+      },
       started, missing.length === 0 ? null : "REPORT_CONTRACT_INVALID", missing.length === 0 ? null : "Daily report contract is incomplete",
     );
   },

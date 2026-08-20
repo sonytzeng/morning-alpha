@@ -21,6 +21,7 @@ import { trackPageView, trackEvent } from '@/utils/analytics';
 import PaywallCard from '@/components/paywall/PaywallCard';
 import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementService';
 import type { UserEntitlement } from '@/types/subscription';
+import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 
 function hasItems<T>(items: T[] | undefined): items is T[] {
   return Array.isArray(items) && items.length > 0;
@@ -39,6 +40,9 @@ type MemberBeneficiaryCandidate = {
   transmissionPath?: string;
   confidence?: string | number;
   evidence?: string[];
+  eventSource?: string;
+  evidenceSource?: string;
+  taiwanRelationship?: string;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -833,6 +837,7 @@ function MemberNoteContent() {
   const hasRenewalBlock = !!strategy.renewal_value_block;
   const hasPremiumSummary = !!strategy.premium_value_summary;
   const rawAI = asRecord(strategy.raw);
+  const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || String(rawAI.v10_beneficiary_enabled).toLowerCase() === 'true';
   const researcherSummary = firstText(
     memberNoteV2?.subscriber_value_sentence,
     strategy.premium_value_summary?.strongest_member_value_today,
@@ -844,7 +849,34 @@ function MemberNoteContent() {
   const legacyBeneficiaryCandidates = asRecordArray(rawAI.beneficiary_stocks)
     .map(normalizeLegacyBeneficiary)
     .filter((candidate): candidate is MemberBeneficiaryCandidate => candidate !== null);
-  const beneficiaryCandidates = hasItems(v2BeneficiaryCandidates) ? v2BeneficiaryCandidates : legacyBeneficiaryCandidates;
+  const v10BeneficiaryCandidates = asRecordArray(rawAI.today_beneficiary_stocks_v10)
+    .map((row): MemberBeneficiaryCandidate | null => {
+      const name = firstText(row.name, row.stock_name);
+      if (!name) return null;
+      const evidenceSource = firstText(row.data_basis, row.evidence_source, row.source_reference);
+      return {
+        symbol: firstText(row.symbol, row.stock_code, row.stock_id),
+        name,
+        sector: firstText(row.industry_name, row.industry, row.sector),
+        role: '受惠候選',
+        reason: firstText(row.transmission_logic, row.reason_chain, row.causal_chain),
+        risk: firstText(row.invalidation_condition, row.risk_note, row.risk),
+        watchPoint: firstText(row.intraday_validation, row.validation_signal, row.watch_point),
+        confirmation: firstText(row.intraday_validation, row.validation_signal, row.watch_point),
+        invalidation: firstText(row.invalidation_condition, row.risk_note, row.risk),
+        transmissionPath: firstText(row.transmission_logic, row.reason_chain, row.causal_chain),
+        eventSource: firstText(row.trigger_event, row.event_source, row.catalyst),
+        evidenceSource,
+        taiwanRelationship: firstText(row.taiwan_supply_chain_link, row.supply_chain_relationship, row.company_relationship),
+        evidence: evidenceSource ? [evidenceSource] : undefined,
+      };
+    })
+    .filter((candidate): candidate is MemberBeneficiaryCandidate => candidate !== null);
+  const beneficiaryCandidates: MemberBeneficiaryCandidate[] = v10BeneficiaryEnabled
+    ? v10BeneficiaryCandidates
+    : hasItems(v2BeneficiaryCandidates)
+      ? v2BeneficiaryCandidates
+      : legacyBeneficiaryCandidates;
   const openingRadar = rawAI.opening_radar;
   const closingVerificationV2 = asRecord(rawAI.closing_verification_v2);
   const closingVerification = valueHasContent(closingVerificationV2) ? closingVerificationV2 : rawAI.closing_verification;
@@ -922,23 +954,10 @@ function MemberNoteContent() {
     rawAI.daily_sentence,
   ], [], ''));
   const todayOneLine = heroConclusion;
-  const memberContentGate = asRecord(rawAI.content_publish_gate);
-  const memberBlockingIssues = textList(memberContentGate.blocking_issues);
-  const memberValueScore = Number(rawAI.member_value_score);
-  const v10AnalysisDebug = asRecord(rawAI.v10_analysis_debug);
-  const normalizedEvidence = asRecord(v10AnalysisDebug.normalized_evidence);
-  const normalizedNews = recordList(normalizedEvidence.normalized_news);
-  const hasFreshNewsEvidence = (Array.isArray(rawAI.important_news) && rawAI.important_news.length > 0)
-    || normalizedNews.length > 0;
-  const hasMemberContentGate = Object.keys(memberContentGate).length > 0;
-  const memberResearchPublishable = !hasMemberContentGate || (
-    !firstText(memberContentGate.overall_status).includes('降級')
-    && memberBlockingIssues.length === 0
-    && Number.isFinite(memberValueScore)
-    && memberValueScore >= 90
-    && firstText(rawAI.v10_data_quality_status) === 'sufficient'
-    && hasFreshNewsEvidence
-  );
+  const premiumAvailability = resolvePremiumContentAvailability(rawAI);
+  const memberValueScore = premiumAvailability.memberValueScore;
+  const hasFreshNewsEvidence = premiumAvailability.freshNewsCount > 0;
+  const memberResearchPublishable = premiumAvailability.eligible;
   const dontDoItems = uniqueResearchItems([
     canonicalNarrative.today_focus.risk,
     canonicalNarrative.failure_triggers[0]?.action,
@@ -1091,6 +1110,9 @@ function MemberNoteContent() {
       displayReason: reason,
       displayConfirmation: confirmation,
       displayInvalidation: invalidation,
+      displayEventSource: firstUniqueResearchText([item.eventSource], [reason, confirmation, invalidation], ''),
+      displayEvidenceSource: firstUniqueResearchText([item.evidenceSource, ...(item.evidence || [])], [reason, confirmation, invalidation], ''),
+      displayTaiwanRelationship: firstUniqueResearchText([item.taiwanRelationship], [reason, confirmation, invalidation], ''),
     };
   }).filter((item) => item.displayReason || item.displayConfirmation || item.displayInvalidation);
   const researchGuidance = [
@@ -1198,9 +1220,9 @@ function MemberNoteContent() {
       <main className="flex-1 overflow-x-hidden">
         <header className="ma-research-note-v3-masthead">
           <div className="ma-research-note-v3-shell">
-            <div className="ma-research-note-v3-kicker"><span>完整研究筆記</span><time dateTime={reportDate}>{reportDate}</time></div>
+            <div className="ma-research-note-v3-kicker"><span>{isHistoricalFallback ? '歷史研究筆記' : '完整研究筆記'}</span><time dateTime={reportDate}>{reportDate}</time></div>
             <h1>{renderSafeText(heroConclusion)}</h1>
-            <p>把今天的結論拆回事件、傳導路徑、支持證據與失效條件。</p>
+            <p>{isHistoricalFallback ? '把當天結論拆回事件、傳導路徑、支持證據與失效條件；這不是今日建議。' : '把今天的結論拆回事件、傳導路徑、支持證據與失效條件。'}</p>
             <dl>
               <div><dt>市場方向</dt><dd>{renderSafeText(formatResearchLabel(marketBias) || '資料不足')}</dd></div>
               <div><dt>判斷信心</dt><dd>{confidenceScore != null ? `${confidenceScore}/100 · ${scoreDisplay.label}` : scoreDisplay.label}</dd></div>
@@ -1211,7 +1233,7 @@ function MemberNoteContent() {
 
         <article className="ma-research-note-v3-shell ma-research-note-v3-article">
           <section className="ma-research-note-v3-chapter">
-            <header><span>01</span><div><p>研究摘要</p><h2>先把今天的研究濃縮成四個答案</h2></div></header>
+            <header><span>01</span><div><p>研究摘要</p><h2>先把{isHistoricalFallback ? '當天' : '今天'}的研究濃縮成四個答案</h2></div></header>
             <dl className="ma-research-note-v3-summary">
               {researchSummaryCards.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{renderSafeText(item.value)}</dd></div>)}
             </dl>
@@ -1220,9 +1242,9 @@ function MemberNoteContent() {
           {canViewMemberNoteFull && memberResearchPublishable ? (
             <>
               <section className="ma-research-note-v3-chapter">
-                <header><span>02</span><div><p>今日當沖決策</p><h2>先決定今天值不值得做，再看要等什麼</h2></div></header>
+                <header><span>02</span><div><p>{isHistoricalFallback ? '當日當沖決策' : '今日當沖決策'}</p><h2>先決定{isHistoricalFallback ? '當天' : '今天'}值不值得做，再看要等什麼</h2></div></header>
                 <div className={`ma-research-note-v3-daytrade${hasCompleteDayTradingEvidence ? '' : ' is-closed'}`}>
-                  <div><small>今天是否適合當沖</small><strong>{dayTradingSuitability}</strong><p>{hasCompleteDayTradingEvidence ? '這不是買進名單；只有成立條件與放棄條件都可查證時，才保留盤中參與資格。' : '目前缺少可同時查證的型態、成立條件或放棄條件，因此不提供方向與標的暗示。'}</p></div>
+                  <div><small>{isHistoricalFallback ? '當天是否適合當沖' : '今天是否適合當沖'}</small><strong>{dayTradingSuitability}</strong><p>{hasCompleteDayTradingEvidence ? '這不是買進名單；只有成立條件與放棄條件都可查證時，才保留盤中參與資格。' : '目前缺少可同時查證的型態、成立條件或放棄條件，因此不提供方向與標的暗示。'}</p></div>
                   {dayTradingDecisionRows.length > 0 && <dl>{dayTradingDecisionRows.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{renderSafeText(item.value)}</dd></div>)}</dl>}
                 </div>
               </section>
@@ -1248,7 +1270,10 @@ function MemberNoteContent() {
                       <article key={`${stock.symbol || 'stock'}-${stock.name}`}>
                         <header><div>{stock.symbol && <span>{stock.symbol}</span>}<h3>{renderSafeText(stock.name)}</h3></div>{stock.displayRole && <em>{renderSafeText(stock.displayRole)}</em>}</header>
                         <dl>
-                          {stock.displayReason && <div><dt>入選原因</dt><dd>{renderSafeText(stock.displayReason)}</dd></div>}
+                          {stock.displayEventSource && <div><dt>事件來源</dt><dd>{renderSafeText(stock.displayEventSource)}</dd></div>}
+                          {stock.displayEvidenceSource && <div><dt>資料依據</dt><dd>{renderSafeText(stock.displayEvidenceSource)}</dd></div>}
+                          {stock.displayReason && <div><dt>傳導路徑</dt><dd>{renderSafeText(stock.displayReason)}</dd></div>}
+                          {stock.displayTaiwanRelationship && <div><dt>台灣供應鏈關係</dt><dd>{renderSafeText(stock.displayTaiwanRelationship)}</dd></div>}
                           {stock.displayConfirmation && <div><dt>成立條件</dt><dd>{renderSafeText(stock.displayConfirmation)}</dd></div>}
                           {stock.displayInvalidation && <div><dt>失效條件</dt><dd>{renderSafeText(stock.displayInvalidation)}</dd></div>}
                         </dl>
@@ -1259,7 +1284,7 @@ function MemberNoteContent() {
               )}
 
               <section className="ma-research-note-v3-chapter">
-                <header><span>06</span><div><p>使用方式</p><h2>今天怎麼用，以及何時停止沿用</h2></div></header>
+                <header><span>06</span><div><p>使用方式</p><h2>{isHistoricalFallback ? '當天如何使用，以及何時停止沿用' : '今天怎麼用，以及何時停止沿用'}</h2></div></header>
                 {researchGuidance.length > 0 && <dl className="ma-research-note-v3-guidance">{researchGuidance.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{renderSafeText(item.value)}</dd></div>)}</dl>}
                 <div className="ma-research-note-v3-stop">
                   <div><h3>失效條件</h3>{invalidationItems.length > 0 ? invalidationItems.map((item) => <p key={item}>{renderSafeText(item)}</p>) : <p>目前沒有可用的失效條件。</p>}</div>
@@ -1277,12 +1302,12 @@ function MemberNoteContent() {
             </>
           ) : canViewMemberNoteFull ? (
             <section className="ma-research-note-v3-chapter">
-              <header><span>02</span><div><p>品質閘門</p><h2>今日資料不足，不發布付費個股研究</h2></div></header>
+              <header><span>02</span><div><p>品質閘門</p><h2>{isHistoricalFallback ? '當日資料未達標，不顯示付費個股研究' : '今日資料不足，不發布付費個股研究'}</h2></div></header>
               <div className="ma-research-note-v3-daytrade is-closed">
                 <div>
-                  <small>今日研究狀態</small>
+                  <small>{isHistoricalFallback ? '當日研究狀態' : '今日研究狀態'}</small>
                   <strong>降級觀察</strong>
-                  <p>新鮮新聞、資料完整度或會員價值分數未達標準。今天只保留上方市場摘要，不提供個股主線、當沖劇本或資金輪動暗示。</p>
+                  <p>新鮮新聞、資料完整度或會員價值分數未達標準。{isHistoricalFallback ? '當天' : '今天'}只保留上方市場摘要，不提供個股主線、當沖劇本或資金輪動暗示。</p>
                 </div>
                 <dl>
                   <div><dt>會員價值分數</dt><dd>{Number.isFinite(memberValueScore) ? `${memberValueScore} / 100` : '尚未評分'}</dd></div>

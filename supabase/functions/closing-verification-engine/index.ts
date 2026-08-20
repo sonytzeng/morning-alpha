@@ -305,9 +305,20 @@ function readNameFromStock(row: unknown): string {
   return String(obj.name || obj.stock_name || obj.company_name || "").trim();
 }
 
+type BeneficiaryDecisionMode = "recommendations" | "no_trade" | "blocked";
+
+function isV10BeneficiaryEnabled(ai: Record<string, unknown>): boolean {
+  return ai.v10_beneficiary_enabled === true || String(ai.v10_beneficiary_enabled || "").toLowerCase() === "true";
+}
+
 function extractPredictedBeneficiaryStocks(ai: Record<string, unknown>): Record<string, unknown>[] {
-  const primary = Array.isArray(ai.today_beneficiary_stocks) ? ai.today_beneficiary_stocks : [];
-  const secondary = Array.isArray(ai.beneficiary_stocks) ? ai.beneficiary_stocks : [];
+  const v10Enabled = isV10BeneficiaryEnabled(ai);
+  const primary = v10Enabled
+    ? (Array.isArray(ai.today_beneficiary_stocks_v10) ? ai.today_beneficiary_stocks_v10 : [])
+    : (Array.isArray(ai.today_beneficiary_stocks) ? ai.today_beneficiary_stocks : []);
+  const secondary = v10Enabled
+    ? []
+    : (Array.isArray(ai.beneficiary_stocks) ? ai.beneficiary_stocks : []);
   const seen = new Set<string>();
   const out: Record<string, unknown>[] = [];
   for (const item of [...primary, ...secondary]) {
@@ -318,6 +329,19 @@ function extractPredictedBeneficiaryStocks(ai: Record<string, unknown>): Record<
     out.push(obj);
   }
   return out.slice(0, 12);
+}
+
+function resolveBeneficiaryDecisionMode(
+  ai: Record<string, unknown>,
+  predictedStocks: Record<string, unknown>[],
+): BeneficiaryDecisionMode {
+  if (!isV10BeneficiaryEnabled(ai)) {
+    return predictedStocks.length > 0 ? "recommendations" : "blocked";
+  }
+  if (predictedStocks.length > 0) return "recommendations";
+  return String(ai.v10_data_quality_status || "").trim().toLowerCase() === "insufficient_positive_evidence"
+    ? "no_trade"
+    : "blocked";
 }
 
 function closeRowFromSnapshot(
@@ -452,6 +476,7 @@ function compareBeneficiaryStocks(
   predictedStocks: Record<string, unknown>[],
   closeRows: CloseMarketRow[],
   taiexChange: number | null,
+  decisionMode: BeneficiaryDecisionMode,
 ): Record<string, unknown> {
   const items = predictedStocks.map((stock) => {
     const symbol = normalizeSymbol(readSymbolFromStock(stock));
@@ -475,7 +500,12 @@ function compareBeneficiaryStocks(
     down_count: withData.filter((item) => Number(item.close_change_percent) < 0).length,
     outperformed_taiex_count: withData.filter((item) => item.outperformed_taiex === true).length,
     underperformed_taiex_count: withData.filter((item) => item.outperformed_taiex === false).length,
-    data_status: predictedStocks.length === 0 || withData.length < Math.max(1, Math.ceil(predictedStocks.length * 0.5)) ? "degraded" : "complete",
+    decision_mode: decisionMode,
+    data_status: decisionMode === "no_trade"
+      ? "not_applicable_no_recommendations"
+      : predictedStocks.length === 0 || withData.length < Math.max(1, Math.ceil(predictedStocks.length * 0.5))
+        ? "degraded"
+        : "complete",
     items,
   };
 }
@@ -676,6 +706,7 @@ function buildClosingVerificationV2(params: {
   tsmcClose: CloseMarketRow | null;
   txfClose: CloseMarketRow | null;
   predictedStocks: Record<string, unknown>[];
+  beneficiaryDecisionMode: BeneficiaryDecisionMode;
   beneficiaryValidation: Record<string, unknown>;
   sectorPerformance: Record<string, unknown>[];
   intradayReplay: Record<string, unknown>[];
@@ -688,7 +719,9 @@ function buildClosingVerificationV2(params: {
   const allItems = Array.isArray(params.beneficiaryValidation.items) ? params.beneficiaryValidation.items as Record<string, unknown>[] : [];
   const firstItem = allItems.find((item) => normalizeSymbol(item.symbol) === normalizeSymbol(firstSymbol));
   const firstOutperformed = typeof firstItem?.taiex_relative_percent === "number" ? Number(firstItem.taiex_relative_percent) >= 0 : null;
-  const dataStatus = params.taiexClose && params.tsmcClose && params.txfClose && params.beneficiaryValidation.data_status === "complete" ? "complete" : "degraded";
+  const beneficiaryValidationComplete = params.beneficiaryValidation.data_status === "complete"
+    || params.beneficiaryValidation.data_status === "not_applicable_no_recommendations";
+  const dataStatus = params.taiexClose && params.tsmcClose && params.txfClose && beneficiaryValidationComplete ? "complete" : "degraded";
   const verificationStatus = params.taiexClose
     ? dataStatus === "complete"
       ? "completed"
@@ -702,6 +735,7 @@ function buildClosingVerificationV2(params: {
     report_date: params.reportDate,
     opening_bias: params.predictedBias || null,
     opening_confidence: params.confidence,
+    beneficiary_decision_mode: params.beneficiaryDecisionMode,
     predicted_beneficiary_stocks: params.predictedStocks.map((stock) => ({
       symbol: readSymbolFromStock(stock),
       name: readNameFromStock(stock),
@@ -755,7 +789,9 @@ function buildClosingVerificationV2(params: {
           : firstOutperformed
             ? "第一受惠股收盤表現跑贏或不弱於 TAIEX，受惠邏輯獲得相對確認。"
             : "第一受惠股未跑贏 TAIEX，代表盤前傳導鏈需要降權。"
-        : "盤前未產生第一受惠股，無法驗證。",
+        : params.beneficiaryDecisionMode === "no_trade"
+          ? "盤前結論為沒有足夠正向證據，不勉強推薦個股；個股命中驗證不適用。"
+          : "盤前未產生第一受惠股，無法驗證。",
     },
     beneficiary_list_validation: params.beneficiaryValidation,
     tomorrow_adjustment: {
@@ -881,6 +917,10 @@ Deno.serve(async (req: Request) => {
     : Math.max(0, Math.min(100, Math.round(Number(confidenceRaw))));
 
   const predictedBeneficiaryStocks = extractPredictedBeneficiaryStocks(ai);
+  const beneficiaryDecisionMode = resolveBeneficiaryDecisionMode(
+    ai,
+    predictedBeneficiaryStocks,
+  );
   const beneficiarySymbols = predictedBeneficiaryStocks.map(readSymbolFromStock)
     .filter(Boolean);
   const symbolsToFetch = [...CORE_SYMBOL_QUERY_ALIASES, ...beneficiarySymbols];
@@ -922,6 +962,7 @@ Deno.serve(async (req: Request) => {
     predictedBeneficiaryStocks,
     closeMarket.rows,
     taiexChange,
+    beneficiaryDecisionMode,
   );
   const intradayReplay = buildIntradayReplay(
     verificationDate,
@@ -946,6 +987,7 @@ Deno.serve(async (req: Request) => {
       tsmcClose: tsmcCloseRow,
       txfClose: txfCloseRow,
       predictedStocks: predictedBeneficiaryStocks,
+      beneficiaryDecisionMode,
       beneficiaryValidation,
       sectorPerformance,
       intradayReplay,
@@ -1127,6 +1169,7 @@ Deno.serve(async (req: Request) => {
     tsmcClose: tsmcCloseRow,
     txfClose: txfCloseRow,
     predictedStocks: predictedBeneficiaryStocks,
+    beneficiaryDecisionMode,
     beneficiaryValidation,
     sectorPerformance,
     intradayReplay,
@@ -1231,6 +1274,7 @@ Deno.serve(async (req: Request) => {
         : "completed",
     closing_verification_v2_status: closingVerificationV2.status,
     beneficiary_validation_status: beneficiaryValidation.data_status,
+    beneficiary_decision_mode: beneficiaryDecisionMode,
     no_fake_data: true,
   });
 });

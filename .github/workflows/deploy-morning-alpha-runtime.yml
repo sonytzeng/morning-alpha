@@ -13,6 +13,8 @@ on:
       - 'supabase/functions/ma-ops-health-check/**'
       - 'supabase/functions/generate-daily-report-v7/**'
       - 'supabase/functions/line-daily-push/**'
+      - 'supabase/functions/get-report-payload/**'
+      - 'supabase/functions/_shared/**'
       - 'supabase/functions/generate-sector-rotation/**'
       - '.github/workflows/deploy-morning-alpha-runtime.yml'
 
@@ -54,6 +56,14 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: >-
           supabase functions deploy line-daily-push
+          --project-ref cttfzgvhiewfckydcrci
+          --no-verify-jwt
+
+      - name: Deploy tier-safe report payload
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: >-
+          supabase functions deploy get-report-payload
           --project-ref cttfzgvhiewfckydcrci
           --no-verify-jwt
 
@@ -104,4 +114,3 @@ jobs:
           supabase functions deploy ma-ops-health-check
           --project-ref cttfzgvhiewfckydcrci
           --no-verify-jwt
-

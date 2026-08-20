@@ -4,3 +4,6 @@ supabase/.temp/
 .DS_Store
 dist/
 build/
+.env
+.env.*
+!.env.example

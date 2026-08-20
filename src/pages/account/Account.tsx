@@ -80,7 +80,6 @@ export default function Account() {
 
   // Compute growth stats
   const totalReportsRead = data.recent30.length;
-  const totalVerifications = 0; // would need intraday_checks join
   const monthlyObservations = data.recent30.filter((r) => {
     const rd = new Date(r.report_date);
     const now = new Date();
@@ -223,42 +222,6 @@ export default function Account() {
                 <div className="ma-card-compact text-center">
                   <p className="text-white/25 text-[10px] uppercase tracking-wider mb-1">本月市場觀察</p>
                   <p className="text-white font-bold text-xl">{monthlyObservations}<span className="text-white/30 text-sm ml-1">次</span></p>
-                </div>
-              </div>
-            </section>
-
-            {/* Morning Alpha 資料累積 */}
-            <section>
-              <VisualSectionHeader icon="ri-seedling-line" title="Morning Alpha 資料累積" description="報告與市場驗證累積。" />
-              <div className="ma-card md:p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <div className="w-10 h-10 bg-forest-500/10 rounded-lg flex items-center justify-center flex-shrink-0 border border-forest-500/20">
-                      <i className="ri-calendar-check-line text-forest-400 text-sm" />
-                    </div>
-                    <div>
-                      <p className="text-white font-bold text-lg">{totalReportsRead}<span className="text-white/30 text-sm"> 天</span></p>
-                      <p className="text-white/30 text-xs">已累積觀察</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0 border border-amber-500/20">
-                      <i className="ri-file-list-3-line text-amber-400 text-sm" />
-                    </div>
-                    <div>
-                      <p className="text-white font-bold text-lg">{totalReportsRead}<span className="text-white/30 text-sm"> 份</span></p>
-                      <p className="text-white/30 text-xs">已產生盤前報告</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <div className="w-10 h-10 bg-primary-500/10 rounded-lg flex items-center justify-center flex-shrink-0 border border-primary-500/20">
-                      <i className="ri-shield-check-line text-primary-400 text-sm" />
-                    </div>
-                    <div>
-                      <p className="text-white font-bold text-lg">{totalVerifications}<span className="text-white/30 text-sm"> 次</span></p>
-                      <p className="text-white/30 text-xs">已完成市場驗證</p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </section>

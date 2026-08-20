@@ -30,8 +30,13 @@ const publicResearchText = read('src/utils/publicResearchText.ts');
 const reportPayloadFunction = read('supabase/functions/get-report-payload/index.ts');
 const premiumAvailability = read('src/lib/premiumContentAvailability.ts');
 const premiumGate = read('supabase/functions/_shared/premium-content-gate.ts');
+const contentIntelligence = read('supabase/functions/_shared/content-intelligence.ts');
 const lineDailyPush = read('supabase/functions/line-daily-push/index.ts');
+const closingVerification = read('supabase/functions/closing-verification-engine/index.ts');
 const opsHealthCheck = read('supabase/functions/ma-ops-health-check/index.ts');
+const contentIntelligenceMigration = read('supabase/migrations/202608200001_content_intelligence_v2_foundation.sql');
+const accountDashboard = read('src/hooks/useAccountDashboard.ts');
+const accountInfoCards = read('src/pages/account/components/TodayInfoCards.tsx');
 
 const publicSourceFiles = [
   'src/pages/home/page.tsx',
@@ -563,6 +568,18 @@ test('home uses canonical server payload and labels historical fallback', () => 
   assert.match(home, /to=\{`\/reports\/\$\{displayReportDate\}`\}/);
 });
 
+test('account health cards use the server-trimmed report contract instead of hard-coded missing data', () => {
+  assert.match(accountDashboard, /getLatestReports\(30\)/);
+  assert.match(accountDashboard, /payload\.market_data_snapshots/);
+  assert.match(accountDashboard, /payload\.important_news/);
+  assert.match(accountDashboard, /payload\.opening_radar/);
+  assert.doesNotMatch(accountDashboard, /V8: Simplified — no direct market_data/);
+  assert.match(accountInfoCards, /09:30 開盤校正/);
+  assert.doesNotMatch(accountInfoCards, /09:15 開盤校正/);
+  assert.match(accountInfoCards, /此份報告未納入可核對的新鮮新聞/);
+  assert.match(reportDetail, /serverMarketSnapshots\.length/);
+});
+
 
 test('daily report freshness follows expected trading sessions and never writes the confidence/date template', () => {
   const reportGenerator = read('supabase/functions/generate-daily-report-v7/index.ts');
@@ -592,6 +609,61 @@ test('paid research enforces fresh evidence and complete beneficiary reasoning',
   assert.match(reportGenerator, /calculateMemberValueScore/);
   assert.match(reportGenerator, /evidenceBackedNoTrade/);
   assert.match(reportGenerator, /member_value_score_below_90/);
+});
+
+test('content intelligence applies the approved 100-point editorial score and rejects generic copy', () => {
+  for (const dimension of [
+    'evidence',
+    'freshness',
+    'taiwan_relevance',
+    'specificity',
+    'actionability',
+    'risk',
+    'originality',
+    'readability',
+  ]) {
+    assert.match(contentIntelligence, new RegExp(`\\b${dimension}\\b`));
+  }
+  assert.match(contentIntelligence, /score >= 90/);
+  assert.match(contentIntelligence, /score >= 80/);
+  assert.match(contentIntelligence, /score >= 70/);
+  assert.match(contentIntelligence, /generic_content_detected/);
+  assert.match(premiumGate, /evaluateContentIntelligence/);
+  assert.match(premiumGate, /content_score_breakdown/);
+  assert.match(dailyReportGenerator, /內容評分 \$\{contentReview\.score\}\/100/);
+  assert.doesNotMatch(dailyReportGenerator, /未達 80 分發布門檻/);
+});
+
+test('report, site payload, and LINE converge on the same immutable decision snapshot', () => {
+  assert.match(dailyReportGenerator, /publish_decision_snapshot_v2/);
+  assert.match(dailyReportGenerator, /buildCanonicalDecisionPayload/);
+  assert.match(reportPayloadFunction, /\.from\("decision_snapshots"\)/);
+  assert.match(reportPayloadFunction, /canonical_decision/);
+  assert.match(lineDailyPush, /\.from\('decision_snapshots'\)/);
+  assert.match(lineDailyPush, /decisionSnapshot\?\.generated_text/);
+  assert.match(closingVerification, /opening_decision_snapshot_id/);
+  assert.match(closingVerification, /p_session_type:\s*"CLOSE"/);
+  assert.match(closingVerification, /closing_decision_snapshot_id/);
+  assert.match(contentIntelligenceMigration, /pg_advisory_xact_lock/);
+  assert.match(contentIntelligenceMigration, /snapshot_fingerprint/);
+  assert.match(contentIntelligenceMigration, /editorial_reviews/);
+  assert.match(contentIntelligenceMigration, /content_feedback/);
+  assert.match(contentIntelligenceMigration, /research_sessions/);
+  assert.match(contentIntelligenceMigration, /research_facts/);
+  assert.match(contentIntelligenceMigration, /research_catalysts/);
+  assert.match(contentIntelligenceMigration, /catalyst_tw_mappings/);
+});
+
+test('production recovery migration closes public write and raw snapshot exposure', () => {
+  assert.match(contentIntelligenceMigration, /alter table public\.intraday_checks enable row level security/);
+  assert.match(contentIntelligenceMigration, /alter table public\.market_data_snapshots enable row level security/);
+  assert.match(contentIntelligenceMigration, /revoke all on table public\.market_data_snapshots from anon, authenticated/);
+  assert.match(contentIntelligenceMigration, /revoke insert, update, delete, truncate, references, trigger[\s\S]*public\.reports from anon, authenticated/);
+  assert.match(contentIntelligenceMigration, /drop policy if exists reports_authenticated_read_temporary on public\.reports/);
+  assert.match(contentIntelligenceMigration, /create policy reports_admin_read/);
+  assert.match(contentIntelligenceMigration, /profiles\.id = \(select auth\.uid\(\)\)/);
+  assert.match(contentIntelligenceMigration, /revoke select on table public\.reports from anon, authenticated/);
+  assert.match(contentIntelligenceMigration, /security_invoker = true/);
 });
 
 test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempotent', () => {

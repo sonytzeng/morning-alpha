@@ -280,7 +280,12 @@ export default function ReportDetail() {
   const normalizedMarketSnapshot = Array.isArray(normalizedEvidence.normalized_market_snapshot)
     ? normalizedEvidence.normalized_market_snapshot
     : [];
-  const marketEvidenceCount = Math.max(strategy.global_market_status_count ?? 0, normalizedMarketSnapshot.length);
+  const serverMarketSnapshots = safeArray(rawAI.market_data_snapshots);
+  const marketEvidenceCount = Math.max(
+    strategy.global_market_status_count ?? 0,
+    normalizedMarketSnapshot.length,
+    serverMarketSnapshots.length,
+  );
   const hasFreshNewsEvidence = premiumAvailability.freshNewsCount > 0;
   const memberResearchDegraded = !premiumAvailability.eligible;
   const showV11Observations = v10BeneficiaryEnabled

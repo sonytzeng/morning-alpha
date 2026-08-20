@@ -189,7 +189,9 @@ export default function TodayInfoCards({
               )}
             </div>
           ) : (
-            <p className="text-white/30 text-xs">尚無資料</p>
+            <p className="text-white/30 text-xs">
+              {hasTodayReport ? '此份報告未提供可核對的市場快照' : '尚無資料'}
+            </p>
           )}
         </div>
 
@@ -232,7 +234,9 @@ export default function TodayInfoCards({
               )}
             </div>
           ) : (
-            <p className="text-white/30 text-xs">尚無資料</p>
+            <p className="text-white/30 text-xs">
+              {hasTodayReport ? '此份報告未納入可核對的新鮮新聞' : '尚無資料'}
+            </p>
           )}
         </div>
 
@@ -244,7 +248,7 @@ export default function TodayInfoCards({
             </div>
             <div>
               <p className="text-white text-sm font-semibold">開盤雷達</p>
-              <p className="text-white/30 text-[10px]">09:15 開盤校正</p>
+              <p className="text-white/30 text-[10px]">09:30 開盤校正</p>
             </div>
             {isIntradayToday ? (
               <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 bg-forest-500/10 border border-forest-500/20 rounded-full text-forest-400 text-[10px] font-medium">

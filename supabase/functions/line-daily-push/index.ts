@@ -228,6 +228,18 @@ Deno.serve(async (req) => {
   console.log(`[LINE-PUSH-V3] Trading day confirmed for ${taipeiToday} — proceeding to push`);
 
   const reportDate = taipeiToday;
+  const { data: decisionSnapshot, error: decisionError } = await supabase
+    .from('decision_snapshots')
+    .select('*')
+    .eq('report_date', reportDate)
+    .eq('session_type', 'PREMARKET')
+    .eq('is_current', true)
+    .order('version', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (decisionError) {
+    console.warn('[LINE-PUSH-V3] Canonical decision unavailable; using guarded report payload:', decisionError.message);
+  }
 
   // 3. 取得所有 active subscribers；分頁避免 Supabase 預設 1,000 筆上限
   let subscribers: LineSubscriber[] = [];
@@ -292,7 +304,11 @@ Deno.serve(async (req) => {
   }
 
   // 4. 組成 LINE push message
-  const message = buildLineMessage(report, siteUrl);
+  const message = buildLineMessage(
+    report,
+    siteUrl,
+    decisionSnapshot && typeof decisionSnapshot === 'object' ? decisionSnapshot as Record<string, unknown> : null,
+  );
   const messagePreview = message.text.slice(0, 200);
 
   // 5. 每批最多 500 人；穩定 Retry Key 避免排程重試造成重複推播
@@ -611,14 +627,24 @@ function buildMarketClosedLineMessage(siteUrl: string) {
 }
 
 // ─── 推播訊息建構：短版、低重複、以報告 guardrail copy 為準 ───
-function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
+function buildLineMessage(
+  report: Record<string, unknown>,
+  siteUrl: string,
+  decisionSnapshot: Record<string, unknown> | null = null,
+) {
   const ai = parseAiStrategy(report.ai_strategy_json);
   const copy = parseRecord(ai.line_push_copy);
   const freeSummary = parseRecord(ai.free_summary);
   const dailySentence = parseRecord(ai.v8_daily_sentence);
-  const bias = String(copy.market_bias || report.market_bias || '中性觀察');
-  const confidence = String(copy.confidence || report.confidence_score || '待驗證');
+  const canonicalText = parseRecord(decisionSnapshot?.generated_text);
+  const canonicalReasons = Array.isArray(canonicalText.reasons) ? canonicalText.reasons : [];
+  const canonicalSectors = Array.isArray(canonicalText.preferred_sectors) ? canonicalText.preferred_sectors : [];
+  const canonicalInvalidations = Array.isArray(canonicalText.invalidation_conditions) ? canonicalText.invalidation_conditions : [];
+  const firstCanonicalInvalidation = parseRecord(canonicalInvalidations[0]);
+  const bias = String(canonicalText.market_bias || decisionSnapshot?.market_regime || copy.market_bias || report.market_bias || '中性觀察');
+  const confidence = String(canonicalText.confidence_score || decisionSnapshot?.confidence_score || copy.confidence || report.confidence_score || '待驗證');
   const todayLine = firstText(
+    canonicalText.daily_sentence,
     report.today_quote,
     dailySentence.sentence,
     ai.today_quote,
@@ -628,18 +654,25 @@ function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
     '資料不足，今日降級觀察，開盤後再確認方向。',
   );
   const opportunity = firstText(
+    canonicalSectors[0],
+    canonicalReasons[0],
     copy.opportunity,
     copy.watch_point,
     inferOpportunity(report, ai),
     '等待開盤後族群同步性確認',
   );
   const avoid = firstText(
+    canonicalText.do_not_do,
     copy.do_not_do,
     freeSummary.do_not_do,
     firstArrayText(report.avoid_today),
     bias.includes('多') ? '避免把盤前偏多當成追價理由，先等量價確認。' : '避免急著撿便宜，先等賣壓與量能訊號。',
   );
   const risk = firstText(
+    firstCanonicalInvalidation.condition,
+    firstCanonicalInvalidation.trigger,
+    firstCanonicalInvalidation.invalidation_condition,
+    canonicalInvalidations[0],
     copy.risk,
     copy.max_risk,
     freeSummary.risk,
@@ -652,7 +685,7 @@ function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
       ? report.important_news_json.length
       : Number(ai.fresh_news_count) || 0;
   const premiumGate = evaluatePremiumContentGate(ai, importantNewsCount);
-  const analysisTime = formatTaipeiTime(firstText(ai.generated_at, report.updated_at, report.created_at));
+  const analysisTime = formatTaipeiTime(firstText(decisionSnapshot?.valid_from, ai.generated_at, report.updated_at, report.created_at));
   const researchMetadata = parseRecord(parseRecord(ai.research_master_v2).metadata);
   const dataCutoffTime = formatTaipeiTime(firstText(
     ai.data_as_of,
@@ -668,9 +701,10 @@ function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
   text += `今日一句：${clipLine(todayLine, 52)}\n`;
   text += `最大機會：${clipLine(opportunity, 30)}\n`;
   text += `最大風險：${clipLine(risk, 30)}\n`;
-  text += `當沖：${premiumGate.decision_mode === 'recommendations'
+  const canonicalDecisionMode = firstText(decisionSnapshot?.decision_mode, premiumGate.decision_mode);
+  text += `當沖：${canonicalDecisionMode === 'recommendations'
     ? '只在成立條件出現後觀察'
-    : premiumGate.decision_mode === 'no_trade'
+    : canonicalDecisionMode === 'no_trade'
       ? '無強受惠股，先驗證觀察名單、不勉強出手'
       : '資料未達標，不建立個股劇本'}\n`;
   text += `避免：${clipLine(avoid, 28)}\n`;

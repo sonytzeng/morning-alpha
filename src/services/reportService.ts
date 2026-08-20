@@ -74,9 +74,9 @@ function getPayloadGeneratedAt(payload: Record<string, unknown> | undefined): st
     payload.generated_at,
     payload.generatedAt,
     payload.report_generated_at,
-    payload.created_at,
-    payload.updated_at,
     nestedAI?.generated_at,
+    payload.updated_at,
+    payload.created_at,
   );
 }
 
@@ -164,7 +164,9 @@ export async function getTodayReport(): Promise<Report | null> {
       created_at: getPayloadGeneratedAt(response.payload),
     });
   } catch (error) {
-    console.error('getTodayReport error:', error instanceof Error ? error.message : error);
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === 'REPORT_NOT_FOUND') console.info('Today report is not available yet.');
+    else console.error('getTodayReport error:', message);
     return null;
   }
 }

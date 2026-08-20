@@ -454,10 +454,16 @@ function OpportunitiesContent() {
   const v10ObservationWatchlist = mapV10OpportunityStocks(rawAI.v10_observation_watchlist || ds.v10ObservationWatchlist);
   const premiumAvailability = resolvePremiumContentAvailability(rawAI);
   const premiumResearchPublishable = premiumAvailability.eligible;
-  const hasCurrentEvidence = v10BeneficiaryEnabled
+  const hasRecommendationEvidence = v10BeneficiaryEnabled
     && premiumResearchPublishable
     && ds.dataStatus !== 'insufficient'
-    && ds.v10DataQualityStatus === 'sufficient';
+    && ['sufficient', 'partial'].includes(ds.v10DataQualityStatus)
+    && v10BeneficiaryStocks.length > 0;
+  const hasNoTradeEvidence = v10BeneficiaryEnabled
+    && premiumResearchPublishable
+    && premiumAvailability.decisionMode === 'no_trade'
+    && ds.v10DataQualityStatus === 'insufficient_positive_evidence'
+    && v10ObservationWatchlist.length > 0;
   const hasUsableLegacyEvidence = !v10BeneficiaryEnabled
     && ds.dataStatus !== 'insufficient'
     && !/missing|failed|unavailable/i.test(ds.v10DataQualityStatus);
@@ -467,8 +473,8 @@ function OpportunitiesContent() {
   // V10 remains the only path to a strong-beneficiary label. Until that engine is
   // enabled, complete legacy evidence is shown honestly as an observation list
   // instead of hiding every real candidate.
-  const strongOpportunityStocks = hasCurrentEvidence ? v10BeneficiaryStocks : [];
-  const observationOpportunityStocks = hasCurrentEvidence
+  const strongOpportunityStocks = hasRecommendationEvidence ? v10BeneficiaryStocks : [];
+  const observationOpportunityStocks = hasRecommendationEvidence || hasNoTradeEvidence
     ? v10ObservationWatchlist
     : hasUsableLegacyEvidence
       ? legacyObservationStocks

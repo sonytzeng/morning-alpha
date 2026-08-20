@@ -837,6 +837,7 @@ function MemberNoteContent() {
   const hasRenewalBlock = !!strategy.renewal_value_block;
   const hasPremiumSummary = !!strategy.premium_value_summary;
   const rawAI = asRecord(strategy.raw);
+  const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || String(rawAI.v10_beneficiary_enabled).toLowerCase() === 'true';
   const researcherSummary = firstText(
     memberNoteV2?.subscriber_value_sentence,
     strategy.premium_value_summary?.strongest_member_value_today,
@@ -871,7 +872,7 @@ function MemberNoteContent() {
       };
     })
     .filter((candidate): candidate is MemberBeneficiaryCandidate => candidate !== null);
-  const beneficiaryCandidates = hasItems(v10BeneficiaryCandidates)
+  const beneficiaryCandidates: MemberBeneficiaryCandidate[] = v10BeneficiaryEnabled
     ? v10BeneficiaryCandidates
     : hasItems(v2BeneficiaryCandidates)
       ? v2BeneficiaryCandidates

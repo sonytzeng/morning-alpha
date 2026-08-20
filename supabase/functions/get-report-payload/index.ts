@@ -182,6 +182,7 @@ function getTodayQuote(report: ReportRow, ai: Record<string, unknown>): string {
   const v8Sentence = asObject(ai.v8_daily_sentence);
   const freeSummary = asObject(ai.free_summary);
   return (
+    toStringValue(report.today_quote) ||
     toStringValue(v8Sentence.sentence) ||
     toStringValue(ai.daily_sentence) ||
     toStringValue(ai.today_quote) ||
@@ -198,8 +199,8 @@ function getTodayQuote(report: ReportRow, ai: Record<string, unknown>): string {
 function getGeneratedAt(report: ReportRow, ai: Record<string, unknown>): string | null {
   return (
     toStringValue(ai.generated_at) ||
-    toStringValue(report.created_at) ||
     toStringValue(report.updated_at) ||
+    toStringValue(report.created_at) ||
     null
   );
 }
@@ -401,6 +402,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     v10_warning: toStringValue(ai.v10_warning),
     v10_candidate_count: toNumberValue(ai.v10_candidate_count),
     premium_content_status: premiumGate.status,
+    premium_decision_mode: premiumGate.decision_mode,
     premium_content_reason_codes: premiumGate.reason_codes,
     recommendation_count: premiumGate.recommendation_count,
     complete_recommendation_count: premiumGate.complete_recommendation_count,
@@ -455,11 +457,11 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   return {
     ...publicPayload,
     confidence_score: getConfidenceScore(report, ai),
-    today_beneficiary_stocks: asArray(ai.today_beneficiary_stocks),
-    beneficiary_stocks: asArray(ai.beneficiary_stocks),
-    core_beneficiary_stocks: asArray(ai.core_beneficiary_stocks),
-    extended_watchlist: asArray(ai.extended_watchlist),
-    scenario_watchlist: asArray(ai.scenario_watchlist),
+    today_beneficiary_stocks: isV10BeneficiaryEnabled(ai) ? asArray(ai.today_beneficiary_stocks_v10) : asArray(ai.today_beneficiary_stocks),
+    beneficiary_stocks: isV10BeneficiaryEnabled(ai) ? asArray(ai.today_beneficiary_stocks_v10) : asArray(ai.beneficiary_stocks),
+    core_beneficiary_stocks: isV10BeneficiaryEnabled(ai) ? asArray(ai.today_beneficiary_stocks_v10) : asArray(ai.core_beneficiary_stocks),
+    extended_watchlist: isV10BeneficiaryEnabled(ai) ? asArray(ai.v10_observation_watchlist) : asArray(ai.extended_watchlist),
+    scenario_watchlist: isV10BeneficiaryEnabled(ai) ? asArray(ai.v10_risk_watchlist) : asArray(ai.scenario_watchlist),
     today_beneficiary_stocks_v10: asArray(ai.today_beneficiary_stocks_v10),
     v10_observation_watchlist: asArray(ai.v10_observation_watchlist),
     v10_risk_watchlist: asArray(ai.v10_risk_watchlist),
@@ -648,7 +650,7 @@ Deno.serve(async (req: Request) => {
     const historyLimit = Number.isFinite(requestedLimit) ? Math.min(30, Math.max(1, requestedLimit)) : 7;
     const { data: historyRows, error: historyError } = await serviceClient
       .from("reports")
-      .select("id,report_date,market_bias,confidence_score,summary,created_at,updated_at,ai_strategy_json")
+      .select("id,report_date,market_bias,confidence_score,summary,today_quote,created_at,updated_at,ai_strategy_json")
       .order("report_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(historyLimit);

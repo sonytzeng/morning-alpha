@@ -14,6 +14,7 @@ const AdminSystemHealth = lazy(() => import("../pages/admin/system-health/page")
 const AdminDataHealth = lazy(() => import("../pages/admin/data-truth/page"));
 const ReportsCenter = lazy(() => import("../pages/reports/ReportsCenter"));
 const ReportDetail = lazy(() => import("../pages/reports/ReportDetail"));
+const TodayReport = lazy(() => import("../pages/report/TodayReport"));
 const WarRoom = lazy(() => import("../pages/war-room/WarRoom"));
 const Opportunities = lazy(() => import("../pages/opportunities/page"));
 const MemberNote = lazy(() => import("../pages/member-note/page"));
@@ -33,7 +34,7 @@ const routes: RouteObject[] = [
   },
   {
     path: "/report/today",
-    element: <Navigate to="/" replace />,
+    element: <DeferredRoute><TodayReport /></DeferredRoute>,
   },
   {
     path: "/opportunities",

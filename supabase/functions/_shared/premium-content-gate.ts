@@ -1,8 +1,10 @@
 export type PremiumContentStatus = 'eligible' | 'degraded' | 'blocked';
+export type PremiumDecisionMode = 'recommendations' | 'no_trade' | 'blocked';
 
 export interface PremiumContentGateResult {
   status: PremiumContentStatus;
   eligible: boolean;
+  decision_mode: PremiumDecisionMode;
   reason_codes: string[];
   recommendation_count: number;
   complete_recommendation_count: number;
@@ -35,6 +37,9 @@ function unique(values: string[]): string[] {
 
 function recommendationRows(ai: JsonRecord): JsonRecord[] {
   const v10 = asRecords(ai.today_beneficiary_stocks_v10);
+  if (ai.v10_beneficiary_enabled === true || String(ai.v10_beneficiary_enabled).toLowerCase() === 'true') {
+    return v10;
+  }
   if (v10.length > 0) return v10;
   const today = asRecords(ai.today_beneficiary_stocks);
   if (today.length > 0) return today;
@@ -102,9 +107,15 @@ export function evaluatePremiumContentGate(
     ? gate.blocking_issues.map(String).filter(Boolean)
     : [];
   const memberValueScore = Number(ai.member_value_score);
+  const sourceDataQuality = firstText(ai.data_quality).toLowerCase();
   const dataQualityStatus = firstText(ai.v10_data_quality_status).toLowerCase();
   const rows = recommendationRows(ai);
   const completeRows = rows.filter(hasCompleteRecommendation);
+  const observationRows = asRecords(ai.v10_observation_watchlist);
+  const recommendationMode = rows.length > 0;
+  const noTradeMode = rows.length === 0
+    && dataQualityStatus === 'insufficient_positive_evidence'
+    && observationRows.length >= 3;
 
   if (Object.keys(gate).length === 0) reasons.push('content_publish_gate_missing');
   if (!['可公開', 'ready', 'publishable', 'eligible'].some((status) => overallStatus.includes(status))) {
@@ -112,7 +123,11 @@ export function evaluatePremiumContentGate(
   }
   if (blockingIssues.length > 0) reasons.push('content_publish_gate_blocked');
   if (!Number.isFinite(memberValueScore) || memberValueScore < 90) reasons.push('member_value_below_90');
-  if (dataQualityStatus !== 'sufficient') reasons.push('positive_evidence_insufficient');
+  if (sourceDataQuality !== 'complete') reasons.push('source_data_incomplete');
+  if (recommendationMode && !['sufficient', 'partial'].includes(dataQualityStatus)) {
+    reasons.push('positive_evidence_insufficient');
+  }
+  if (!recommendationMode && !noTradeMode) reasons.push('no_trade_decision_incomplete');
   if (importantNewsCount < 1) reasons.push('fresh_news_evidence_missing');
   if (rows.length > 0 && completeRows.length !== rows.length) reasons.push('recommendation_reasoning_incomplete');
 
@@ -120,6 +135,9 @@ export function evaluatePremiumContentGate(
   return {
     status: reasonCodes.length === 0 ? 'eligible' : overallStatus.includes('降級') ? 'degraded' : 'blocked',
     eligible: reasonCodes.length === 0,
+    decision_mode: reasonCodes.length === 0
+      ? recommendationMode ? 'recommendations' : 'no_trade'
+      : 'blocked',
     reason_codes: reasonCodes,
     recommendation_count: rows.length,
     complete_recommendation_count: completeRows.length,

@@ -51,7 +51,7 @@
 - `market-data-freshness`
 - `daily-report-exists`
 - `daily-report-date-consistency`
-- `daily-report-contract`
+- `daily-report-contract`：交易日除了基本欄位，還要求可操作的每日一句、至少一則新鮮事件、完整會員研究結構（隔夜鏈、三段盤中驗證、兩個失效條件）、90 分以上會員價值，以及通過共同 premium content gate。合法結果可為完整推薦股，或有至少三檔觀察名單支撐的「今日不交易」決策；休市日只驗證基本契約。
 - `opening-radar-exists`
 - `opening-radar-freshness`
 - `war-room-contract`
@@ -102,7 +102,7 @@ Read-only checks 使用 3 秒 client-side timeout；底層 read 若稍後完成�
 
 ## P1 限制與未實作
 
-- 不執行 Migration、Deploy、Cron 或 recovery。
+- Function 本身不執行 Migration、Deploy、Cron 或 recovery；premarket workflow 只把本檢查當成唯讀發布閘門，未通過時才冪等重建報告，而且重驗通過前不會呼叫 LINE。
 - 不呼叫其他 Edge Function、正式 API 或 public site。
 - 不做自動 retry、報告重建、Radar 重跑、LINE 重送或 cache purge。
 - 不 seed registry，未驗證 production metadata、正式資料或正式 RLS。

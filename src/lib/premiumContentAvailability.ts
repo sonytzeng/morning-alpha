@@ -1,6 +1,7 @@
 export interface PremiumContentAvailability {
   status: 'eligible' | 'degraded' | 'blocked';
   eligible: boolean;
+  decisionMode: 'recommendations' | 'no_trade' | 'blocked';
   reasonCodes: string[];
   memberValueScore: number | null;
   freshNewsCount: number;
@@ -20,6 +21,7 @@ function asStrings(value: unknown): string[] {
 export function resolvePremiumContentAvailability(value: unknown): PremiumContentAvailability {
   const ai = asRecord(value);
   const explicitStatus = String(ai.premium_content_status ?? '').trim().toLowerCase();
+  const explicitDecisionMode = String(ai.premium_decision_mode ?? '').trim().toLowerCase();
   const gate = asRecord(ai.content_publish_gate);
   const gateStatus = String(gate.overall_status ?? '').trim().toLowerCase();
   const reasonCodes = Array.from(new Set([
@@ -32,14 +34,29 @@ export function resolvePremiumContentAvailability(value: unknown): PremiumConten
   const explicitNewsCount = Number(ai.fresh_news_count);
   const freshNewsCount = Number.isFinite(explicitNewsCount) ? explicitNewsCount : importantNews;
   const dataQuality = String(ai.v10_data_quality_status ?? '').trim().toLowerCase();
+  const sourceDataQuality = String(ai.data_quality ?? '').trim().toLowerCase();
+  const v10Enabled = ai.v10_beneficiary_enabled === true || String(ai.v10_beneficiary_enabled).toLowerCase() === 'true';
+  const recommendationCount = v10Enabled
+    ? (Array.isArray(ai.today_beneficiary_stocks_v10) ? ai.today_beneficiary_stocks_v10.length : 0)
+    : (Array.isArray(ai.today_beneficiary_stocks) ? ai.today_beneficiary_stocks.length : 0);
+  const observationCount = Array.isArray(ai.v10_observation_watchlist) ? ai.v10_observation_watchlist.length : 0;
+  const inferredDecisionMode = recommendationCount > 0
+    ? 'recommendations'
+    : dataQuality === 'insufficient_positive_evidence' && observationCount >= 3
+      ? 'no_trade'
+      : 'blocked';
+  const decisionMode = explicitDecisionMode === 'recommendations' || explicitDecisionMode === 'no_trade'
+    ? explicitDecisionMode
+    : inferredDecisionMode;
 
   if (explicitStatus === 'eligible') {
-    return { status: 'eligible', eligible: true, reasonCodes, memberValueScore, freshNewsCount };
+    return { status: 'eligible', eligible: true, decisionMode, reasonCodes, memberValueScore, freshNewsCount };
   }
   if (explicitStatus === 'blocked' || explicitStatus === 'degraded') {
     return {
       status: explicitStatus,
       eligible: false,
+      decisionMode: 'blocked',
       reasonCodes,
       memberValueScore,
       freshNewsCount,
@@ -51,12 +68,17 @@ export function resolvePremiumContentAvailability(value: unknown): PremiumConten
     && reasonCodes.length === 0
     && memberValueScore !== null
     && memberValueScore >= 90
-    && dataQuality === 'sufficient'
+    && sourceDataQuality === 'complete'
+    && (
+      (recommendationCount > 0 && ['sufficient', 'partial'].includes(dataQuality))
+      || (recommendationCount === 0 && dataQuality === 'insufficient_positive_evidence' && observationCount >= 3)
+    )
     && freshNewsCount > 0;
 
   return {
     status: strictEligible ? 'eligible' : gateStatus.includes('降級') ? 'degraded' : 'blocked',
     eligible: strictEligible,
+    decisionMode: strictEligible ? decisionMode : 'blocked',
     reasonCodes,
     memberValueScore,
     freshNewsCount,

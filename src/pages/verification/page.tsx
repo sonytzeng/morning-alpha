@@ -19,6 +19,7 @@ type UnknownRecord = Record<string, unknown>;
 
 type ClosingView = {
   complete: boolean;
+  fullData: boolean;
   outcome: 'complete' | 'partial' | 'failed' | 'waiting';
   outcomeLabel: string;
   actualSummary: string;
@@ -102,17 +103,21 @@ function buildClosingView(ai: UnknownRecord): ClosingView {
   const hasNamedDirection = Boolean(actualDirection)
     && !['unknown', 'pending', 'unavailable', 'n/a', '尚未取得', '待資料'].includes(actualDirection);
   const hasActualOutcome = hasNamedDirection || actualChange !== null;
-  const complete = ['completed', 'complete', 'ready', 'done'].includes(status)
-    && !['degraded', 'insufficient', 'pending'].includes(dataStatus)
+  const directionVerified = (['completed', 'complete', 'ready', 'done'].includes(status)
+    || status.includes('direction_completed')
+    || status.includes('verified'))
     && hasActualOutcome;
+  const fullData = directionVerified
+    && !status.includes('degraded')
+    && !['degraded', 'insufficient'].includes(dataStatus);
 
   let outcome: ClosingView['outcome'] = 'waiting';
-  if (complete && ['hit', 'correct', 'confirmed', 'success'].includes(rawOutcome)) outcome = 'complete';
-  else if (complete && ['partial', 'mixed', 'partial_hit'].includes(rawOutcome)) outcome = 'partial';
-  else if (complete && ['miss', 'wrong', 'failed', 'rejected', 'incorrect'].includes(rawOutcome)) outcome = 'failed';
+  if (directionVerified && ['hit', 'correct', 'confirmed', 'success'].includes(rawOutcome)) outcome = 'complete';
+  else if (directionVerified && ['partial', 'mixed', 'partial_hit'].includes(rawOutcome)) outcome = 'partial';
+  else if (directionVerified && ['miss', 'wrong', 'failed', 'rejected', 'incorrect'].includes(rawOutcome)) outcome = 'failed';
 
   const outcomeLabel = outcome === 'complete'
-    ? '完整成立'
+    ? fullData ? '完整成立' : '方向成立（部分資料不足）'
     : outcome === 'partial'
       ? '部分成立'
       : outcome === 'failed'
@@ -120,17 +125,20 @@ function buildClosingView(ai: UnknownRecord): ClosingView {
         : '等待完整收盤資料';
 
   return {
-    complete,
+    complete: directionVerified,
+    fullData,
     outcome,
     outcomeLabel,
-    actualSummary: complete
-      ? publicVerificationText(firstText(closing.actual_direction, closing.verdict_label, directionFromChange(actualChange)))
+    actualSummary: directionVerified
+      ? publicVerificationText(firstText(directionFromChange(actualChange), closing.actual_direction, closing.verdict_label))
       : '收盤方向與完整驗證資料尚未同時到齊。',
-    whatWasRight: complete ? valueSummary(closing.what_was_right) : '',
-    whatWasWrong: complete ? valueSummary(closing.what_was_wrong) : '',
-    nextAdjustment: complete ? valueSummary(closing.tomorrow_adjustment) : '',
-    statusNote: complete
-      ? '已取得可核對的收盤方向，這筆紀錄可進入歷史績效。'
+    whatWasRight: directionVerified ? valueSummary(closing.what_was_right) : '',
+    whatWasWrong: directionVerified ? valueSummary(closing.what_was_wrong) : '',
+    nextAdjustment: directionVerified ? valueSummary(closing.tomorrow_adjustment) : '',
+    statusNote: fullData
+      ? '已取得可核對的收盤方向與完整資料，這筆紀錄可進入歷史績效。'
+      : directionVerified
+        ? '收盤方向已完成驗證；部分個股或期貨欄位不足，因此顯示結果但不納入完整資料績效。'
       : '資料未完整前不判定命中，也不納入歷史績效。',
   };
 }

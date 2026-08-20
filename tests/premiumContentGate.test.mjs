@@ -6,7 +6,9 @@ function validAi() {
   return {
     content_publish_gate: { overall_status: '可公開', blocking_issues: [] },
     member_value_score: 96,
+    data_quality: 'complete',
     v10_data_quality_status: 'sufficient',
+    v10_beneficiary_enabled: true,
     today_beneficiary_stocks_v10: [{
       symbol: '2330',
       name: '台積電',
@@ -38,4 +40,33 @@ test('every recommended stock must include source, transmission, Taiwan relation
   const result = evaluatePremiumContentGate(ai, 2);
   assert.equal(result.eligible, false);
   assert.ok(result.reason_codes.includes('recommendation_reasoning_incomplete'));
+});
+
+test('an evidence-backed no-trade decision remains valuable premium research', () => {
+  const ai = validAi();
+  ai.today_beneficiary_stocks_v10 = [];
+  ai.v10_data_quality_status = 'insufficient_positive_evidence';
+  ai.v10_observation_watchlist = [{ symbol: '2330' }, { symbol: '2308' }, { symbol: '2882' }];
+  const result = evaluatePremiumContentGate(ai, 3);
+  assert.equal(result.eligible, true);
+  assert.equal(result.decision_mode, 'no_trade');
+  assert.equal(result.recommendation_count, 0);
+});
+
+test('no-trade content fails closed when it lacks a useful observation set', () => {
+  const ai = validAi();
+  ai.today_beneficiary_stocks_v10 = [];
+  ai.v10_data_quality_status = 'insufficient_positive_evidence';
+  ai.v10_observation_watchlist = [{ symbol: '2330' }];
+  const result = evaluatePremiumContentGate(ai, 3);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('no_trade_decision_incomplete'));
+});
+
+test('a short list of fully reasoned recommendations is not forced to reach five stocks', () => {
+  const ai = validAi();
+  ai.v10_data_quality_status = 'partial';
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.eligible, true);
+  assert.equal(result.decision_mode, 'recommendations');
 });

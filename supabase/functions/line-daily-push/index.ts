@@ -652,13 +652,12 @@ function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
       ? report.important_news_json.length
       : Number(ai.fresh_news_count) || 0;
   const premiumGate = evaluatePremiumContentGate(ai, importantNewsCount);
-  const analysisTime = formatTaipeiTime(firstText(report.created_at, report.updated_at, ai.generated_at));
+  const analysisTime = formatTaipeiTime(firstText(ai.generated_at, report.updated_at, report.created_at));
   const researchMetadata = parseRecord(parseRecord(ai.research_master_v2).metadata);
   const dataCutoffTime = formatTaipeiTime(firstText(
     ai.data_as_of,
     researchMetadata.data_as_of,
     report.market_data_latest_at,
-    report.updated_at,
   ));
   const timeLine = [
     analysisTime ? `分析產生 ${analysisTime}` : '',
@@ -669,7 +668,11 @@ function buildLineMessage(report: Record<string, unknown>, siteUrl: string) {
   text += `今日一句：${clipLine(todayLine, 52)}\n`;
   text += `最大機會：${clipLine(opportunity, 30)}\n`;
   text += `最大風險：${clipLine(risk, 30)}\n`;
-  text += `當沖：${premiumGate.eligible ? '只在成立條件出現後觀察' : '資料未達標，不建立個股劇本'}\n`;
+  text += `當沖：${premiumGate.decision_mode === 'recommendations'
+    ? '只在成立條件出現後觀察'
+    : premiumGate.decision_mode === 'no_trade'
+      ? '無強受惠股，先驗證觀察名單、不勉強出手'
+      : '資料未達標，不建立個股劇本'}\n`;
   text += `避免：${clipLine(avoid, 28)}\n`;
   text += `${bias}｜${confidence}/100\n`;
   text += '下一確認：09:30 開盤證據\n';
@@ -737,11 +740,4 @@ function inferOpportunity(report: Record<string, unknown>, ai: Record<string, un
   if (tsm !== null && tsm < 0) return '台積電與電子權值能否抗住 ADR 壓力';
   if (sox !== null && sox > 0) return '半導體與 AI 供應鏈是否同步擴散';
   return '開盤後資金最先集中的族群';
-}
-
-function safeStringArray(val: unknown): string[] {
-  if (!val) return [];
-  if (Array.isArray(val)) return val.map(String).filter(Boolean);
-  if (typeof val === 'string') return val.split(/[,，、;；\n]/).map((s) => s.trim()).filter(Boolean);
-  return [];
 }

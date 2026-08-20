@@ -105,9 +105,9 @@ function getPayloadGeneratedAt(payload: Record<string, unknown>): string {
     payload.generated_at,
     payload.generatedAt,
     payload.report_generated_at,
-    payload.created_at,
-    payload.updated_at,
     nestedAI?.generated_at,
+    payload.updated_at,
+    payload.created_at,
   );
 }
 

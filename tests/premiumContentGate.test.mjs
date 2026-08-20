@@ -9,6 +9,14 @@ function validAi() {
     data_quality: 'complete',
     v10_data_quality_status: 'sufficient',
     v10_beneficiary_enabled: true,
+    today_quote: '費半上漲 2.1% 且 NVIDIA 財測上修，台股先看台積電與 AI 供應鏈開盤後是否量價同步。',
+    free_summary: {
+      one_sentence: '費半上漲 2.1% 且 NVIDIA 財測上修，台股先看台積電與 AI 供應鏈開盤後是否量價同步。',
+      do_not_do: '若 09:30 台積電弱於大盤且半導體未擴散，不追價。',
+    },
+    key_drivers: ['NVIDIA 財測上修', '費半收高 2.1%', '台積電 ADR 相對強勢'],
+    preferred_sectors: ['半導體', 'AI 伺服器'],
+    taiwan_transmission: '美國 AI 資本支出先傳導到先進製程與先進封裝，再影響台灣半導體供應鏈。',
     today_beneficiary_stocks_v10: [{
       symbol: '2330',
       name: '台積電',
@@ -28,10 +36,18 @@ test('premium content is eligible only with fresh news and complete stock reason
   assert.equal(result.status, 'eligible');
   assert.equal(result.complete_recommendation_count, 1);
 });
-test('premium content fails closed when news is missing', () => {
-  const result = evaluatePremiumContentGate(validAi(), 0);
+test('premium content fails closed when both news and traceable market catalysts are missing', () => {
+  const ai = validAi();
+  ai.today_beneficiary_stocks_v10[0].data_basis = '';
+  const result = evaluatePremiumContentGate(ai, 0);
   assert.equal(result.eligible, false);
-  assert.ok(result.reason_codes.includes('fresh_news_evidence_missing'));
+  assert.ok(result.reason_codes.includes('fresh_catalyst_evidence_missing'));
+});
+
+test('fresh market and index evidence can qualify without forcing a news article', () => {
+  const result = evaluatePremiumContentGate(validAi(), 0);
+  assert.equal(result.eligible, true);
+  assert.equal(result.content_score >= 80, true);
 });
 
 test('every recommended stock must include source, transmission, Taiwan relationship and conditions', () => {
@@ -46,7 +62,13 @@ test('an evidence-backed no-trade decision remains valuable premium research', (
   const ai = validAi();
   ai.today_beneficiary_stocks_v10 = [];
   ai.v10_data_quality_status = 'insufficient_positive_evidence';
-  ai.v10_observation_watchlist = [{ symbol: '2330' }, { symbol: '2308' }, { symbol: '2882' }];
+  ai.today_quote = '費半上漲 2.1%，但台積電 ADR 與台指期訊號分歧，今日先驗證 09:30 量價，不建立受惠股部位。';
+  ai.free_summary.one_sentence = ai.today_quote;
+  ai.v10_observation_watchlist = [
+    { symbol: '2330', data_basis: 'market_data.TSM；market_data.TAIEX' },
+    { symbol: '2308', data_basis: 'market_data.NVDA；sector_rotation_scores.AI伺服器' },
+    { symbol: '2882', data_basis: 'market_data.US10Y；sector_rotation_scores.金融' },
+  ];
   const result = evaluatePremiumContentGate(ai, 3);
   assert.equal(result.eligible, true);
   assert.equal(result.decision_mode, 'no_trade');

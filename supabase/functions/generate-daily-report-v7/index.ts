@@ -13,6 +13,8 @@ import {
   type MarketFreshnessDates,
 } from './market-freshness.ts';
 import { sanitizeUnsupportedAbsolutePriceLevels } from './content-integrity.ts';
+import { evaluateContentIntelligence } from '../_shared/content-intelligence.ts';
+import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 
 const VERSION='V9.2_PRICE_AND_NEWS_EVIDENCE_GATE';
 const OPENAI_EVIDENCE_GUARDRAILS='market_news 只可使用發布時間在 48 小時內的資料。若 TXF 或其他資料源缺失，不可把缺失資料寫成方向、價位或驗證條件。禁止自行編造輸入資料未提供的個股絕對價位。每一檔最終受惠股都必須有事件來源、事件到產業與供應鏈再到公司的傳導路徑、台灣供應鏈關係、盤中成立條件與失效條件；沒有足夠證據就不要輸出該股票。';
@@ -431,10 +433,18 @@ function buildV11ObservationNarrativeRoles(input:{legacyObservation:Record<strin
       v11RoleBaseRecord('CAPITAL_NEXT',4,capital,{narrative:`若主線成立且事件證據持續，才觀察資金是否轉向 ${capitalIndustry.name}；它是待驗證的輪動路徑，不是無條件推薦。`,validation_point:`看 ${capitalIndustry.name} 是否在主線確認後出現量能擴散，且代表股同步強於大盤。`,stop_condition:`若 ${capitalIndustry.name} 沒有成交量、代表股不跟或事件來源失效，資金輪動假設取消。`,capital_rotation_path:rotationPath,observation_chain:[externalTitle,mainIndustry.name,'資金擴散',capitalIndustry.name,capitalTarget],decision_confidence:v11RoleDecisionConfidence(capital,input.evidenceIndex,'CAPITAL_NEXT')}),
       v11RoleBaseRecord('EXTERNAL',5,main,{narrative:`外部變數 ${externalSymbol} 會決定今天台股劇本是延續、降級，還是轉為防守。`,validation_point:'持續對照美股、ADR、美元或利率訊號，確認是否支持台股主線。',stop_condition:'若外部變數與台股主線背離，今天不追認盤中表態。',representative_symbols:[],representative_names:[],industry_code:'EXTERNAL',industry_name:'外部變數',external_priority:externalPriority,observation_chain:[externalSymbol,'台股主線','盤中驗證'],decision_confidence:v11RoleDecisionConfidence(main,input.evidenceIndex,'EXTERNAL')})
     ];
-    const validation=validateV11ObservationNarrativeRoles(records);
+    const observationSourceRefs=input.evidenceIndex.slice(0,4)
+      .map((item)=>String(item.raw_reference||item.title||item.evidence_id||'').trim())
+      .filter(Boolean);
+    const evidenceLinkedRecords=records.map((record)=>({
+      ...record,
+      source_refs:observationSourceRefs,
+      data_basis:observationSourceRefs.join('；'),
+    }));
+    const validation=validateV11ObservationNarrativeRoles(evidenceLinkedRecords);
     if(!validation.is_valid){input.log?.('V11_OBSERVATION_ROLE_BUILDER_INVALID '+JSON.stringify(validation));return null;}
     if(validation.warnings.length>0)input.log?.('V11_OBSERVATION_ROLE_BUILDER_WARN '+JSON.stringify(validation.warnings));
-    return records;
+    return evidenceLinkedRecords;
   }catch(e){
     input.log?.('V11_OBSERVATION_ROLE_BUILDER_ERROR '+(e instanceof Error?e.message:String(e)));
     return null;
@@ -1614,16 +1624,174 @@ function applyFreshNewsEvidenceGate(ai:Record<string,unknown>,importantNews:Reco
   const next={...ai};
   const gate=(next.content_publish_gate&&typeof next.content_publish_gate==='object'&&!Array.isArray(next.content_publish_gate)?{...(next.content_publish_gate as Record<string,unknown>)}:{});
   const blocking=(Array.isArray(gate.blocking_issues)?gate.blocking_issues.map(String):[]).filter(function(issue){return issue!=='fresh_news_evidence_missing';});
-  if(importantNews.length===0)blocking.push('fresh_news_evidence_missing');
   gate.blocking_issues=Array.from(new Set(blocking));
-  if(importantNews.length===0)gate.overall_status='內容降級';
+  gate.fresh_news_status=importantNews.length>0?'available':'absent_market_evidence_required';
   next.content_publish_gate=gate;
   next.important_news=importantNews;
   next.fresh_news_count=importantNews.length;
   return next;
 }
 
-async function writeReport(supabase:ReturnType<typeof createClient>,todayDate:string,aiStrategyJson:Record<string,unknown>,marketBias:string,rawConfidenceScore:number|null,reportMode:string,md:MarketIndicator[],newsData:MarketNewsItem[],log:(m:string)=>void,tdInfo?:TradingDayInfo,dates?:MarketFreshnessDates,previousDailySentence:string=''):Promise<{reportId:string}|null>{
+function canonicalRecords(value:unknown):Record<string,unknown>[] {
+  return Array.isArray(value)
+    ? value.filter(function(item){return Boolean(item)&&typeof item==='object'&&!Array.isArray(item);}) as Record<string,unknown>[]
+    : [];
+}
+
+function canonicalRecord(value:unknown):Record<string,unknown> {
+  return value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:{};
+}
+
+function canonicalText(...values:unknown[]):string {
+  for(const value of values){
+    if(typeof value==='string'&&value.trim())return value.trim();
+    if(typeof value==='number'&&Number.isFinite(value))return String(value);
+  }
+  return '';
+}
+
+function buildCanonicalDecisionPayload(
+  ai:Record<string,unknown>,
+  importantNews:Record<string,unknown>[],
+  reportMode:string,
+  marketBias:string,
+  confidenceScore:number|null,
+  tradingDayInfo:TradingDayInfo,
+):Record<string,unknown>{
+  const note=canonicalRecord(ai.member_research_note_v2);
+  const freeSummary=canonicalRecord(ai.free_summary);
+  const dailySentence=canonicalRecord(ai.v8_daily_sentence);
+  const researchMaster=canonicalRecord(ai.research_master_v2);
+  const researchMetadata=canonicalRecord(researchMaster.metadata);
+  const v10Enabled=ai.v10_beneficiary_enabled===true||String(ai.v10_beneficiary_enabled).toLowerCase()==='true';
+  const recommendations=(v10Enabled?canonicalRecords(ai.today_beneficiary_stocks_v10):canonicalRecords(ai.today_beneficiary_stocks)).map(function(stock){
+    const stockSourceRefs=[
+      canonicalText(stock.data_basis,stock.evidence_source,stock.source_reference,stock.source),
+      ...[stock.data_basis,stock.source_refs,stock.source_signals,stock.evidence]
+        .flatMap(function(value){return Array.isArray(value)?value:[];})
+        .map(String),
+    ].filter(Boolean);
+    return{
+      symbol:canonicalText(stock.symbol,stock.stock_id,stock.stock_code),
+      name:canonicalText(stock.name,stock.stock_name),
+      sector:canonicalText(stock.sector,stock.industry_name,stock.group),
+      event_source:canonicalText(stock.trigger_event,stock.catalyst,stock.event_source),
+      transmission_path:canonicalText(stock.transmission_logic,stock.reason_chain,stock.causal_chain,stock.reason,stock.why_this_stock),
+      taiwan_supply_chain_relation:canonicalText(stock.taiwan_supply_chain_link,stock.supply_chain_relationship,stock.company_relationship,stock.why_this_stock),
+      confirmation_condition:canonicalText(stock.intraday_validation,stock.validation_signal,stock.confirmation_signal,stock.watch_point),
+      invalidation_condition:canonicalText(stock.invalidation_condition,stock.not_buy_signal,stock.risk_note,stock.risk),
+      source_refs:Array.from(new Set(stockSourceRefs)),
+    };
+  }).filter(function(stock){return Boolean(stock.symbol);});
+  const reasons=(Array.isArray(ai.key_drivers)?ai.key_drivers:Array.isArray(ai.reasoning_chain)?ai.reasoning_chain:[])
+    .map(function(reason){
+      const record=canonicalRecord(reason);
+      return canonicalText(reason,record.reason,record.inference,record.evidence,record.summary,record.title);
+    })
+    .filter(Boolean)
+    .slice(0,3);
+  const preferredSectors=(Array.isArray(ai.preferred_sectors)?ai.preferred_sectors:Array.isArray(ai.watch_sectors_detailed)?ai.watch_sectors_detailed:[])
+    .map(function(sector){
+      const record=canonicalRecord(sector);
+      return canonicalText(sector,record.sector,record.name,record.industry_name);
+    })
+    .filter(Boolean)
+    .slice(0,3);
+  const invalidationRules=[
+    ...canonicalRecords(note.invalidation_conditions),
+    ...canonicalRecords(note.invalidation_rules),
+    ...canonicalRecords(ai.invalidation_conditions),
+  ].slice(0,8);
+  const sourceRefs=importantNews.slice(0,10).map(function(news){return{
+    source:canonicalText(news.source),
+    title:canonicalText(news.title),
+    url:canonicalText(news.url),
+    published_at:canonicalText(news.published_at,news.created_at),
+  };}).filter(function(source){return Boolean(source.source||source.url||source.title);});
+  const contentReview=evaluateContentIntelligence(ai,importantNews.length);
+  const premiumGate=evaluatePremiumContentGate(ai,importantNews.length);
+  const publishable=premiumGate.eligible;
+  const evidenceDecisionMode=recommendations.length>0?'recommendations':String(ai.v10_data_quality_status)==='insufficient_positive_evidence'?'no_trade':'blocked';
+  const decisionMode=publishable?evidenceDecisionMode:'blocked';
+  const publishedRecommendations=publishable?recommendations:[];
+  const publishedReasons=publishable?reasons:[
+    importantNews.length===0?'盤前沒有通過時效檢查的重大新聞來源。':'可驗證新聞已有，但整體內容仍未通過發布門檻。',
+    String(ai.data_quality).toLowerCase()==='complete'?'市場資料完整，但推論鏈仍不足。':'核心市場資料尚未完整。',
+    '09:30 只確認 TAIEX、2330 與主要族群是否同向，不把觀察名單當成推薦。',
+  ];
+  const publishedSectors=publishable?preferredSectors:[];
+  const blockedDailySentence=`今日新鮮新聞證據 ${importantNews.length} 則、資料狀態${String(ai.data_quality).toLowerCase()==='complete'?'完整':'未完整'}、內容評分 ${contentReview.score}/100，尚未通過完整證據發布門檻；不建立受惠股，09:30 只確認 TAIEX 與 2330 是否同向。`;
+  return{
+    report_mode:reportMode,
+    market_status:tradingDayInfo.is_trading_day?'OPEN':'CLOSED',
+    is_trading_day:tradingDayInfo.is_trading_day,
+    data_as_of:canonicalText(ai.data_as_of,researchMetadata.data_as_of),
+    generated_at:canonicalText(ai.generated_at),
+    engine_version:canonicalText(ai.version,VERSION),
+    market_score:Number.isFinite(Number(ai.market_bias_score))?Number(ai.market_bias_score):null,
+    confidence_score:confidenceScore,
+    coverage_score:Number.isFinite(Number(researchMaster.coverage_score))?Number(researchMaster.coverage_score):null,
+    action:decisionMode==='recommendations'?'ACTIONABLE':decisionMode==='no_trade'?'NO_TRADE':'WATCH',
+    decision_mode:decisionMode,
+    market_regime:canonicalText(ai.market_regime,marketBias),
+    preferred_sectors:publishedSectors,
+    watch_sectors:canonicalRecords(ai.v10_observation_watchlist).slice(0,3),
+    blocked_sectors:Array.isArray(ai.blocked_sectors)?ai.blocked_sectors.slice(0,3):[],
+    reasons:publishedReasons,
+    risk_flags:Array.isArray(ai.risk_flags)?ai.risk_flags:[],
+    invalidation_rules:invalidationRules,
+    factor_scores:canonicalRecord(ai.confidence_breakdown),
+    source_freshness:{data_quality:canonicalText(ai.data_quality),missing_sources:Array.isArray(ai.missing_sources)?ai.missing_sources:[]},
+    source_refs:sourceRefs,
+    generated_text:{
+      daily_sentence:publishable?canonicalText(ai.today_quote,dailySentence.sentence,freeSummary.one_sentence):blockedDailySentence,
+      market_bias:marketBias,
+      confidence_score:confidenceScore,
+      reasons:publishedReasons,
+      preferred_sectors:publishedSectors,
+      recommendations:publishedRecommendations,
+      do_not_do:publishable?canonicalText(freeSummary.do_not_do,ai.today_action,note.action):'不要把未達證據標準的觀察名單當成推薦或追價理由。',
+      invalidation_conditions:publishable?invalidationRules:[],
+      next_checkpoint:'09:30',
+    },
+    input_coverage:canonicalRecord(researchMaster.coverage),
+    missing_sources:Array.isArray(ai.missing_sources)?ai.missing_sources:[],
+    content_score:contentReview.score,
+    content_grade:contentReview.grade,
+    content_score_breakdown:contentReview.breakdown,
+    reason_codes:Array.from(new Set([...contentReview.reason_codes,...premiumGate.reason_codes])),
+    generic_content_flags:contentReview.generic_flags,
+  };
+}
+
+async function publishCanonicalDecisionSnapshot(
+  supabase:ReturnType<typeof createClient>,
+  reportDate:string,
+  reportId:string,
+  payload:Record<string,unknown>,
+  log:(message:string)=>void,
+):Promise<string|null>{
+  try{
+    const result=await supabase.rpc('publish_decision_snapshot_v2',{
+      p_report_date:reportDate,
+      p_session_type:'PREMARKET',
+      p_report_id:reportId,
+      p_payload:payload,
+    });
+    const{data,error}=safeUnwrap<string>(result,log,'publishDecisionSnapshot');
+    if(error||!data){
+      log('publishDecisionSnapshot unavailable: '+(error||'no snapshot id'));
+      return null;
+    }
+    log('publishDecisionSnapshot OK: '+data);
+    return String(data);
+  }catch(error){
+    log('publishDecisionSnapshot exception: '+(error instanceof Error?error.message:String(error)));
+    return null;
+  }
+}
+
+async function writeReport(supabase:ReturnType<typeof createClient>,todayDate:string,aiStrategyJson:Record<string,unknown>,marketBias:string,rawConfidenceScore:number|null,reportMode:string,md:MarketIndicator[],newsData:MarketNewsItem[],log:(m:string)=>void,tdInfo?:TradingDayInfo,dates?:MarketFreshnessDates,previousDailySentence:string=''):Promise<{reportId:string;snapshotId:string|null}|null>{
   try{
     const tradingDayInfo=tdInfo||getTaiwanTradingDayInfo(todayDate);
     aiStrategyJson={...aiStrategyJson,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,trading_day_reason:tradingDayInfo.reason,market_status:tradingDayInfo.is_trading_day?'OPEN':tradingDayInfo.reason,session_type:tradingDayInfo.session_type||'FULL_DAY',market_message:tradingDayInfo.market_message||(tradingDayInfo.is_trading_day?'今天正常交易。':'今日沒有台股交易，Morning Alpha 已切換休市模式。'),next_trading_day:tradingDayInfo.next_trading_day||todayDate};
@@ -1662,12 +1830,32 @@ async function writeReport(supabase:ReturnType<typeof createClient>,todayDate:st
     const sentimentReason=mrnIsString?(confScore===null?marketBias+'方向，休市不評分。':marketBias+'方向，信心分數 '+confScore+'/100。'):String(mrn?.executive_view||'');
     const aiConfidenceReason=mrnIsString?'根據 '+todayDate+' 市場數據，盤前方向為 '+marketBias+'。':String(mrn?.main_thesis||'');
 
+    const contentReview=evaluateContentIntelligence(aiStrategyJson,importantNews.length);
+    aiStrategyJson.content_score=contentReview.score;
+    aiStrategyJson.content_grade=contentReview.grade;
+    aiStrategyJson.content_score_breakdown=contentReview.breakdown;
+    aiStrategyJson.content_reason_codes=contentReview.reason_codes;
+    aiStrategyJson.generic_content_flags=contentReview.generic_flags;
+    const contentPublishGate=canonicalRecord(aiStrategyJson.content_publish_gate);
+    const existingBlockingIssues=Array.isArray(contentPublishGate.blocking_issues)?contentPublishGate.blocking_issues.map(String):[];
+    const hardContentIssues=contentReview.reason_codes.filter(function(reason){return[
+      'content_score_below_80',
+      'recommendation_reasoning_incomplete',
+      'decision_mode_incomplete',
+      'generic_content_detected',
+    ].includes(reason);});
+    contentPublishGate.overall_status=contentReview.score>=80?'可公開':contentReview.score>=70?'內容降級':'拒絕發布';
+    contentPublishGate.blocking_issues=Array.from(new Set([...existingBlockingIssues,...hardContentIssues]));
+    contentPublishGate.content_score=contentReview.score;
+    contentPublishGate.content_grade=contentReview.grade;
+    aiStrategyJson.content_publish_gate=contentPublishGate;
+
     const insertPayload:Record<string,unknown>={
       report_date:todayDate,market_bias:marketBias,confidence_score:confScore,
       confidence_label:confScore===null?'休市不評分':confScore>=75?'高':confScore>=55?'中':'低',
       sentiment_score:sentimentScore,sentiment_label:sentimentScore>=75?'高':sentimentScore>=55?'中':'低',
       fear_greed:fearGreed,ai_strategy_json:aiStrategyJson,raw_ai_json:aiStrategyJson,
-      summary:String(fs.one_sentence||''),today_summary:String(fs.one_sentence||''),
+      summary:todayQuote,today_summary:todayQuote,
       today_quote:todayQuote,report_mode:reportMode,data_time_basis:'captured_at',
       important_news_json:importantNews,
       risk_reason:riskReason,sentiment_reason:sentimentReason,ai_confidence_reason:aiConfidenceReason,
@@ -1677,7 +1865,10 @@ async function writeReport(supabase:ReturnType<typeof createClient>,todayDate:st
     const r=await supabase.from('reports').upsert(insertPayload,{onConflict:'report_date'}).select('id').single();
     const{data,error}=safeUnwrap<{id:string}>(r,log,'writeReport');
     if(error||!data?.id){log('writeReport FAIL: '+(error||'no id'));return null}
-    log('writeReport OK: '+data.id);return{reportId:data.id};
+    const decisionPayload=buildCanonicalDecisionPayload(aiStrategyJson,importantNews,reportMode,marketBias,confScore,tradingDayInfo);
+    const snapshotId=await publishCanonicalDecisionSnapshot(supabase,todayDate,data.id,decisionPayload,log);
+    log('writeReport OK: '+data.id+' snapshot_id='+(snapshotId||'pending_migration'));
+    return{reportId:data.id,snapshotId};
   }catch(e){log('writeReport exc: '+(e instanceof Error?e.message:String(e)));return null}
 }
 

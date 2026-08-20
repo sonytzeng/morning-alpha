@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
 import type { Report } from '@/types/report';
-import { getTodayReport } from '@/services/reportService';
-import { isTaipeiToday } from '@/services/marketSourceHealthService';
+import { getLatestReports, getTodayReport } from '@/services/reportService';
+import { isDateTaipeiToday, isTaipeiToday } from '@/services/marketSourceHealthService';
 
 export interface AccountDashboardData {
   // Today report
@@ -46,6 +45,40 @@ export interface AccountDashboardData {
   refreshedAt: string | null;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function asRecords(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value)
+    ? value.filter((item) => item && typeof item === 'object' && !Array.isArray(item)) as Record<string, unknown>[]
+    : [];
+}
+
+function firstText(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function latestTimestamp(rows: Record<string, unknown>[], keys: string[]): string | null {
+  let latest: string | null = null;
+  let latestMs = Number.NEGATIVE_INFINITY;
+  for (const row of rows) {
+    const candidate = firstText(...keys.map((key) => row[key]));
+    if (!candidate) continue;
+    const timestamp = Date.parse(candidate);
+    if (Number.isFinite(timestamp) && timestamp > latestMs) {
+      latest = candidate;
+      latestMs = timestamp;
+    }
+  }
+  return latest;
+}
+
 async function loadAccountDashboard(): Promise<AccountDashboardData> {
   const result: AccountDashboardData = {
     todayReport: null,
@@ -73,31 +106,51 @@ async function loadAccountDashboard(): Promise<AccountDashboardData> {
   };
 
   try {
-    const todayReport = await getTodayReport();
+    const [todayReport, history] = await Promise.all([
+      getTodayReport(),
+      getLatestReports(30),
+    ]);
     if (todayReport) {
       result.todayReport = todayReport;
       result.hasTodayReport = true;
     }
 
-    // V8: Simplified — no direct market_data/market_news/opening_market_radar queries
-    result.marketDataLatestAt = null;
-    result.isMarketDataToday = false;
-    result.marketNewsLatestAt = null;
-    result.selectedNewsCount = 0;
-    result.totalNewsCount = 0;
-    result.isMarketNewsToday = false;
-    result.intradayLatestAt = null;
-    result.intradayCheckDate = null;
-    result.hasIntradayData = false;
-    result.isIntradayToday = false;
-    result.intradayRadarStatus = null;
-    result.intradayRadarBias = null;
-    result.intradayRadarSummary = null;
-    result.isTXFAvailable = false;
+    // Use the same server-trimmed payload as the rest of the public product.
+    // This avoids opening direct browser access to raw reports or provider data.
+    const payload = asRecord(todayReport?.ai_strategy_json);
+    const marketSnapshots = asRecords(payload.market_data_snapshots);
+    const importantNews = asRecords(payload.important_news);
+    const openingRadar = asRecord(payload.opening_radar);
 
-    result.recent7 = todayReport ? [todayReport] : [];
-    result.recent30 = todayReport ? [todayReport] : [];
-    result.streak = todayReport ? 1 : 0;
+    result.marketDataLatestAt = latestTimestamp(marketSnapshots, ['captured_at', 'created_at', 'updated_at'])
+      || firstText(payload.data_as_of);
+    result.isMarketDataToday = isDateTaipeiToday(result.marketDataLatestAt);
+
+    result.marketNewsLatestAt = latestTimestamp(importantNews, ['published_at', 'created_at']);
+    const freshNewsCount = Number(payload.fresh_news_count);
+    result.selectedNewsCount = Number.isFinite(freshNewsCount)
+      ? Math.max(0, Math.trunc(freshNewsCount))
+      : importantNews.length;
+    result.totalNewsCount = result.selectedNewsCount;
+    result.isMarketNewsToday = isDateTaipeiToday(result.marketNewsLatestAt);
+
+    result.intradayLatestAt = firstText(openingRadar.captured_at, openingRadar.updated_at);
+    result.intradayCheckDate = firstText(openingRadar.report_date);
+    result.intradayRadarStatus = firstText(openingRadar.radar_status, payload.opening_radar_status);
+    result.hasIntradayData = Boolean(
+      result.intradayCheckDate || result.intradayLatestAt || result.intradayRadarStatus,
+    );
+    result.isIntradayToday = result.intradayCheckDate === isTaipeiToday()
+      || isDateTaipeiToday(result.intradayLatestAt);
+    result.intradayRadarBias = result.hasIntradayData ? todayReport?.market_bias || null : null;
+    result.intradayRadarSummary = firstText(openingRadar.data_status);
+    result.isTXFAvailable = marketSnapshots.some((snapshot) =>
+      /^(TXF|MTX|TAIEX_FUTURES)$/i.test(String(snapshot.symbol || snapshot.code || '')),
+    );
+
+    result.recent30 = history.length > 0 ? history : todayReport ? [todayReport] : [];
+    result.recent7 = result.recent30.slice(0, 7);
+    result.streak = computeStreakFromReports(result.recent30);
   } catch {
     result.error = '觀察中心資料暫時無法取得，請稍後重新載入。';
   }
@@ -126,7 +179,9 @@ function computeStreakFromReports(reports: Report[]): number {
     const prev = new Date(dates[i - 1] + 'T00:00:00');
     const curr = new Date(dates[i] + 'T00:00:00');
     const diffDays = (prev.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24);
-    if (diffDays === 1) {
+    // Friday-to-Monday and ordinary exchange closures can span multiple
+    // calendar days while still being consecutive report days.
+    if (diffDays >= 1 && diffDays <= 3) {
       streak++;
     } else {
       break;

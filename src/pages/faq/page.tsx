@@ -63,7 +63,7 @@ export default function FaqPage() {
             <div className="bg-navy-900/60 border border-navy-800 rounded-2xl p-5 md:p-6">
               <h3 className="text-white font-semibold text-sm md:text-base mb-2">如果資料不足，系統還會判斷嗎？</h3>
               <p className="text-white/50 text-sm leading-relaxed">
-                會，但會降低判斷把握度，並標示資料缺口。若資料明顯不足，系統應顯示「資料不足」或「等待更新」，而不是強行給出高把握度結論。
+                不會強行給出方向、受惠股或當沖劇本。系統只會標示缺少的資料、目前可確認的事實與下一個驗證時間；證據補齊並通過內容門檻後，才會升級判斷。
               </p>
             </div>
 

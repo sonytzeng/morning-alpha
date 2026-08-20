@@ -698,6 +698,7 @@ function buildIntradayReplayTimeWindows(
 
 function buildClosingVerificationV2(params: {
   ai: Record<string, unknown>;
+  decisionSnapshot: Record<string, unknown> | null;
   reportDate: string;
   predictedBias: string;
   confidence: number | null;
@@ -733,6 +734,10 @@ function buildClosingVerificationV2(params: {
     data_status: params.taiexClose ? dataStatus : "pending",
     verified_at: new Date().toISOString(),
     report_date: params.reportDate,
+    opening_decision_snapshot_id: params.decisionSnapshot?.id || null,
+    opening_decision_snapshot_version: params.decisionSnapshot?.version || null,
+    research_session_id: params.decisionSnapshot?.research_session_id || null,
+    opening_decision_valid_from: params.decisionSnapshot?.valid_from || null,
     opening_bias: params.predictedBias || null,
     opening_confidence: params.confidence,
     beneficiary_decision_mode: params.beneficiaryDecisionMode,
@@ -909,18 +914,41 @@ Deno.serve(async (req: Request) => {
 
   const reportRow = report as Record<string, unknown>;
   const ai = parseJsonObject(reportRow.ai_strategy_json);
-  const predictedBias = String(reportRow.market_bias || ai.market_bias || "");
-  const confidenceRaw = reportRow.confidence_score ?? ai.confidence_score;
+  const { data: morningDecision, error: morningDecisionError } = await supabase
+    .from("decision_snapshots")
+    .select("*")
+    .eq("report_date", verificationDate)
+    .eq("session_type", "PREMARKET")
+    .eq("is_current", true)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (morningDecisionError) {
+    console.warn("CLOSING_VERIFICATION_MORNING_DECISION_QUERY_FAILED", morningDecisionError.message);
+  }
+  const morningDecisionRow = morningDecision && typeof morningDecision === "object"
+    ? morningDecision as Record<string, unknown>
+    : null;
+  const morningGeneratedText = parseJsonObject(morningDecisionRow?.generated_text);
+  const predictedBias = String(
+    morningGeneratedText.market_bias || morningDecisionRow?.market_regime || reportRow.market_bias || ai.market_bias || "",
+  );
+  const confidenceRaw = morningGeneratedText.confidence_score ?? morningDecisionRow?.confidence_score ?? reportRow.confidence_score ?? ai.confidence_score;
   const confidence = confidenceRaw === null || confidenceRaw === undefined ||
       Number.isNaN(Number(confidenceRaw))
     ? null
     : Math.max(0, Math.min(100, Math.round(Number(confidenceRaw))));
 
-  const predictedBeneficiaryStocks = extractPredictedBeneficiaryStocks(ai);
-  const beneficiaryDecisionMode = resolveBeneficiaryDecisionMode(
-    ai,
-    predictedBeneficiaryStocks,
-  );
+  const snapshotRecommendations = Array.isArray(morningGeneratedText.recommendations)
+    ? morningGeneratedText.recommendations.filter((item) => item && typeof item === "object" && !Array.isArray(item)) as Record<string, unknown>[]
+    : [];
+  const snapshotDecisionMode = String(morningDecisionRow?.decision_mode || "");
+  const predictedBeneficiaryStocks = morningDecisionRow
+    ? snapshotDecisionMode === "recommendations" ? snapshotRecommendations : []
+    : extractPredictedBeneficiaryStocks(ai);
+  const beneficiaryDecisionMode = snapshotDecisionMode === "recommendations" || snapshotDecisionMode === "no_trade" || snapshotDecisionMode === "blocked"
+    ? snapshotDecisionMode as BeneficiaryDecisionMode
+    : resolveBeneficiaryDecisionMode(ai, predictedBeneficiaryStocks);
   const beneficiarySymbols = predictedBeneficiaryStocks.map(readSymbolFromStock)
     .filter(Boolean);
   const symbolsToFetch = [...CORE_SYMBOL_QUERY_ALIASES, ...beneficiarySymbols];
@@ -979,6 +1007,7 @@ Deno.serve(async (req: Request) => {
   if (taiexChange === null) {
     const pendingClosingVerificationV2 = buildClosingVerificationV2({
       ai,
+      decisionSnapshot: morningDecisionRow,
       reportDate: verificationDate,
       predictedBias,
       confidence,
@@ -1001,6 +1030,9 @@ Deno.serve(async (req: Request) => {
       status: "pending_real_market_data",
       verified_at: new Date().toISOString(),
       report_date: verificationDate,
+      opening_decision_snapshot_id: morningDecisionRow?.id || null,
+      opening_decision_snapshot_version: morningDecisionRow?.version || null,
+      research_session_id: morningDecisionRow?.research_session_id || null,
       predicted_bias: predictedBias || null,
       predicted_confidence: confidence,
       confidence_score: confidence,
@@ -1161,6 +1193,7 @@ Deno.serve(async (req: Request) => {
   );
   const closingVerificationV2 = buildClosingVerificationV2({
     ai,
+    decisionSnapshot: morningDecisionRow,
     reportDate: verificationDate,
     predictedBias,
     confidence,
@@ -1184,6 +1217,9 @@ Deno.serve(async (req: Request) => {
       : "completed",
     verified_at: new Date().toISOString(),
     report_date: verificationDate,
+    opening_decision_snapshot_id: morningDecisionRow?.id || null,
+    opening_decision_snapshot_version: morningDecisionRow?.version || null,
+    research_session_id: morningDecisionRow?.research_session_id || null,
     predicted_bias: predictedBias || null,
     predicted_confidence: confidence,
     confidence_score: confidence,
@@ -1255,6 +1291,88 @@ Deno.serve(async (req: Request) => {
     }, 500);
   }
 
+  let closingDecisionSnapshotId: string | null = null;
+  const closingDataStatus = String(closingVerificationV2.data_status || "degraded");
+  const closingReasonCodes = closingDataStatus === "complete"
+    ? []
+    : ["closing_coverage_degraded"];
+  const closingSnapshotPayload = {
+    report_mode: ai.report_mode || null,
+    market_status: "CLOSED",
+    is_trading_day: true,
+    data_as_of: taiexCloseRow?.capturedAt || null,
+    generated_at: closingVerificationV2.verified_at,
+    engine_version: "closing-verification-engine",
+    confidence_score: confidence,
+    coverage_score: closingDataStatus === "complete" ? 100 : 70,
+    action: "VERIFY",
+    decision_mode: "closing_verification",
+    market_regime: predictedBias,
+    preferred_sectors: morningDecisionRow?.preferred_sectors || [],
+    watch_sectors: morningDecisionRow?.watch_sectors || [],
+    blocked_sectors: morningDecisionRow?.blocked_sectors || [],
+    reasons: [closingVerification.verification_note].filter(Boolean),
+    risk_flags: closingReasonCodes,
+    invalidation_rules: morningDecisionRow?.invalidation_rules || [],
+    factor_scores: {
+      prediction_result: structuredPredictionResult,
+      accuracy_score: structuredAccuracyScore,
+      data_status: closingDataStatus,
+    },
+    source_freshness: {
+      status: closingDataStatus,
+      captured_at: taiexCloseRow?.capturedAt || null,
+    },
+    source_refs: [{
+      source: taiexCloseRow?.source || closeMarket.source,
+      symbol: taiexCloseRow?.symbol || "TAIEX",
+      captured_at: taiexCloseRow?.capturedAt || null,
+    }],
+    generated_text: {
+      opening_decision_snapshot_id: morningDecisionRow?.id || null,
+      opening_decision_snapshot_version: morningDecisionRow?.version || null,
+      verdict_label: closingVerification.verdict_label,
+      prediction_result: structuredPredictionResult,
+      actual_direction: closingVerification.actual_direction,
+      actual_taiex_change: taiexChange,
+      verification_note: closingVerification.verification_note,
+      lessons_learned: lessonsLearned,
+    },
+    input_coverage: {
+      taiex_close: Boolean(taiexCloseRow),
+      tsmc_close: Boolean(tsmcCloseRow),
+      txf_close: Boolean(txfCloseRow),
+      beneficiary_validation: beneficiaryValidation.data_status,
+    },
+    missing_sources: closingDataStatus === "complete" ? [] : ["closing_optional_sources"],
+    content_score: Number(morningDecisionRow?.content_score ?? ai.content_score ?? 0),
+    content_grade: morningDecisionRow?.content_grade || ai.content_grade || "reject",
+    content_score_breakdown: morningDecisionRow?.content_score_breakdown || ai.content_score_breakdown || {},
+    reason_codes: closingReasonCodes,
+    generic_content_flags: morningDecisionRow?.generic_content_flags || ai.generic_content_flags || [],
+  };
+  try {
+    const { data: closingSnapshotId, error: closingSnapshotError } = await supabase.rpc(
+      "publish_decision_snapshot_v2",
+      {
+        p_report_date: verificationDate,
+        p_session_type: "CLOSE",
+        p_report_id: reportRow.id,
+        p_payload: closingSnapshotPayload,
+      },
+    );
+    if (closingSnapshotError) {
+      console.warn("CLOSING_VERIFICATION_SNAPSHOT_PUBLISH_FAILED", closingSnapshotError.message);
+    } else if (closingSnapshotId) {
+      closingDecisionSnapshotId = String(closingSnapshotId);
+    }
+  } catch (error) {
+    console.warn(
+      "CLOSING_VERIFICATION_SNAPSHOT_PUBLISH_EXCEPTION",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+
   return jsonResponse({
     success: true,
     verification_date: verificationDate,
@@ -1266,6 +1384,8 @@ Deno.serve(async (req: Request) => {
     accuracy_score: structuredAccuracyScore,
     actual_taiex_change: taiexChange,
     report_updated: true,
+    opening_decision_snapshot_id: morningDecisionRow?.id || null,
+    closing_decision_snapshot_id: closingDecisionSnapshotId,
     log_inserted: logInserted,
     log_reused: !logInserted,
     closing_verification_status:

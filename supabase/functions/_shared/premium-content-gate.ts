@@ -1,3 +1,5 @@
+import { evaluateContentIntelligence, type ContentScoreBreakdown } from './content-intelligence.ts';
+
 export type PremiumContentStatus = 'eligible' | 'degraded' | 'blocked';
 export type PremiumDecisionMode = 'recommendations' | 'no_trade' | 'blocked';
 
@@ -8,6 +10,10 @@ export interface PremiumContentGateResult {
   reason_codes: string[];
   recommendation_count: number;
   complete_recommendation_count: number;
+  content_score: number;
+  content_grade: 'reject' | 'degraded' | 'publish' | 'high_quality';
+  content_score_breakdown: ContentScoreBreakdown;
+  generic_content_flags: string[];
 }
 type JsonRecord = Record<string, unknown>;
 
@@ -47,13 +53,20 @@ function recommendationRows(ai: JsonRecord): JsonRecord[] {
 }
 
 function hasSpecificSource(stock: JsonRecord): boolean {
+  const arraySources = [
+    stock.data_basis,
+    stock.source_refs,
+    stock.source_signals,
+    stock.evidence,
+    stock.evidence_inputs,
+    stock.supporting_evidence,
+  ].flatMap((value) => Array.isArray(value) ? value : []);
   const basis = firstText(
     stock.data_basis,
     stock.evidence_source,
     stock.source_reference,
     stock.source,
-    ...(Array.isArray(stock.evidence_inputs) ? stock.evidence_inputs : []),
-    ...(Array.isArray(stock.supporting_evidence) ? stock.supporting_evidence : []),
+    ...arraySources,
   );
   if (basis.length < 8) return false;
   return !/市場數據綜合判斷|情境觸發|綜合研判|未提供|unknown/i.test(basis);
@@ -112,10 +125,12 @@ export function evaluatePremiumContentGate(
   const rows = recommendationRows(ai);
   const completeRows = rows.filter(hasCompleteRecommendation);
   const observationRows = asRecords(ai.v10_observation_watchlist);
+  const sourcedObservationRows = observationRows.filter(hasSpecificSource);
   const recommendationMode = rows.length > 0;
   const noTradeMode = rows.length === 0
     && dataQualityStatus === 'insufficient_positive_evidence'
     && observationRows.length >= 3;
+  const contentReview = evaluateContentIntelligence(ai, importantNewsCount);
 
   if (Object.keys(gate).length === 0) reasons.push('content_publish_gate_missing');
   if (!['可公開', 'ready', 'publishable', 'eligible'].some((status) => overallStatus.includes(status))) {
@@ -128,12 +143,26 @@ export function evaluatePremiumContentGate(
     reasons.push('positive_evidence_insufficient');
   }
   if (!recommendationMode && !noTradeMode) reasons.push('no_trade_decision_incomplete');
-  if (importantNewsCount < 1) reasons.push('fresh_news_evidence_missing');
+  const hasFreshCatalystEvidence = importantNewsCount > 0
+    || (sourceDataQuality === 'complete' && rows.length > 0 && completeRows.length === rows.length)
+    || (sourceDataQuality === 'complete' && noTradeMode && sourcedObservationRows.length === observationRows.length);
+  if (!hasFreshCatalystEvidence) reasons.push('fresh_catalyst_evidence_missing');
   if (rows.length > 0 && completeRows.length !== rows.length) reasons.push('recommendation_reasoning_incomplete');
+  const hardContentReasons = contentReview.reason_codes.filter((reason) => [
+    'content_score_below_80',
+    'recommendation_reasoning_incomplete',
+    'decision_mode_incomplete',
+    'generic_content_detected',
+  ].includes(reason));
+  reasons.push(...hardContentReasons);
 
   const reasonCodes = unique(reasons);
   return {
-    status: reasonCodes.length === 0 ? 'eligible' : overallStatus.includes('降級') ? 'degraded' : 'blocked',
+    status: reasonCodes.length === 0
+      ? 'eligible'
+      : contentReview.grade === 'degraded' || overallStatus.includes('降級')
+        ? 'degraded'
+        : 'blocked',
     eligible: reasonCodes.length === 0,
     decision_mode: reasonCodes.length === 0
       ? recommendationMode ? 'recommendations' : 'no_trade'
@@ -141,5 +170,9 @@ export function evaluatePremiumContentGate(
     reason_codes: reasonCodes,
     recommendation_count: rows.length,
     complete_recommendation_count: completeRows.length,
+    content_score: contentReview.score,
+    content_grade: contentReview.grade,
+    content_score_breakdown: contentReview.breakdown,
+    generic_content_flags: contentReview.generic_flags,
   };
 }

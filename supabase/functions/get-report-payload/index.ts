@@ -26,6 +26,7 @@ type PayloadContext = {
   openingRadar: Record<string, unknown> | null;
   sectorRotationRows: Record<string, unknown>[];
   marketDataSnapshots: Record<string, unknown>[];
+  decisionSnapshot: Record<string, unknown> | null;
 };
 
 const CORS_HEADERS = {
@@ -367,6 +368,45 @@ function buildInvalidationConditions(ai: Record<string, unknown>): unknown[] {
   ].filter(Boolean);
 }
 
+function buildCanonicalDecision(
+  ctx: PayloadContext,
+  includePremiumFields: boolean,
+): Record<string, unknown> | null {
+  const snapshot = ctx.decisionSnapshot;
+  if (!snapshot) return null;
+  const generatedText = asObject(snapshot.generated_text);
+  const base = {
+    id: toStringValue(snapshot.id),
+    version: toNumberValue(snapshot.version),
+    session_type: toStringValue(snapshot.session_type),
+    status: toStringValue(snapshot.status),
+    action: toStringValue(snapshot.action),
+    decision_mode: toStringValue(snapshot.decision_mode),
+    market_regime: toStringValue(snapshot.market_regime),
+    confidence_score: toNumberValue(snapshot.confidence_score),
+    coverage_score: toNumberValue(snapshot.coverage_score),
+    content_score: toNumberValue(snapshot.content_score),
+    content_grade: toStringValue(snapshot.content_grade),
+    daily_sentence: toStringValue(generatedText.daily_sentence),
+    reasons: Array.isArray(generatedText.reasons) ? generatedText.reasons.slice(0, 3) : [],
+    preferred_sectors: Array.isArray(generatedText.preferred_sectors) ? generatedText.preferred_sectors.slice(0, 3) : [],
+    do_not_do: toStringValue(generatedText.do_not_do),
+    next_checkpoint: toStringValue(generatedText.next_checkpoint),
+    valid_from: toStringValue(snapshot.valid_from),
+  };
+  if (!includePremiumFields) return base;
+  return {
+    ...base,
+    recommendations: asArray(generatedText.recommendations),
+    invalidation_conditions: Array.isArray(generatedText.invalidation_conditions)
+      ? generatedText.invalidation_conditions
+      : [],
+    source_refs: Array.isArray(snapshot.source_refs) ? snapshot.source_refs : [],
+    content_score_breakdown: asObject(snapshot.content_score_breakdown),
+    reason_codes: Array.isArray(snapshot.reason_codes) ? snapshot.reason_codes : [],
+  };
+}
+
 function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
   const ai = getAi(report);
   const importantNews = getImportantNews(report, ai);
@@ -376,10 +416,11 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const marketMetadata = getCanonicalMarketMetadata(report, ai);
   const publicSummary = asObject(ai.public_summary);
   const freeSummary = asObject(ai.free_summary);
-  const dailySentence = getTodayQuote(report, ai);
+  const canonicalDecision = buildCanonicalDecision(ctx, false);
+  const dailySentence = toStringValue(canonicalDecision?.daily_sentence) || getTodayQuote(report, ai);
   return {
     report_date: getReportDate(report),
-    revision_id: toStringValue(report.id),
+    revision_id: toStringValue(canonicalDecision?.id) || toStringValue(report.id),
     market_date: getMarketDate(report, ai),
     base_date: getMarketDate(report, ai),
     generated_at: getGeneratedAt(report, ai),
@@ -407,6 +448,10 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     recommendation_count: premiumGate.recommendation_count,
     complete_recommendation_count: premiumGate.complete_recommendation_count,
     member_value_score: toNumberValue(ai.member_value_score),
+    content_score: toNumberValue(canonicalDecision?.content_score) ?? premiumGate.content_score,
+    content_grade: toStringValue(canonicalDecision?.content_grade) || premiumGate.content_grade,
+    content_score_breakdown: premiumGate.content_score_breakdown,
+    canonical_decision: canonicalDecision,
     content_publish_gate: {
       overall_status: premiumGate.status,
       blocking_issues: premiumGate.reason_codes,
@@ -456,6 +501,7 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   }
   return {
     ...publicPayload,
+    canonical_decision: buildCanonicalDecision(ctx, true),
     confidence_score: getConfidenceScore(report, ai),
     today_beneficiary_stocks: isV10BeneficiaryEnabled(ai) ? asArray(ai.today_beneficiary_stocks_v10) : asArray(ai.today_beneficiary_stocks),
     beneficiary_stocks: isV10BeneficiaryEnabled(ai) ? asArray(ai.today_beneficiary_stocks_v10) : asArray(ai.beneficiary_stocks),
@@ -558,7 +604,7 @@ async function fetchPayloadContext(
   serviceClient: ServiceClient,
   reportDate: string,
 ): Promise<PayloadContext> {
-  const [radarResult, sectorResult, snapshotResult] = await Promise.all([
+  const [radarResult, sectorResult, snapshotResult, decisionResult] = await Promise.all([
     serviceClient
       .from("opening_market_radar")
       .select("*")
@@ -577,16 +623,27 @@ async function fetchPayloadContext(
       .eq("trading_date", reportDate)
       .order("captured_at", { ascending: false })
       .limit(50),
+    serviceClient
+      .from("decision_snapshots")
+      .select("*")
+      .eq("report_date", reportDate)
+      .eq("session_type", "PREMARKET")
+      .eq("is_current", true)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (radarResult.error) console.error("GET_REPORT_PAYLOAD_RADAR_QUERY_FAILED", radarResult.error.message);
   if (sectorResult.error) console.error("GET_REPORT_PAYLOAD_SECTOR_QUERY_FAILED", sectorResult.error.message);
   if (snapshotResult.error) console.error("GET_REPORT_PAYLOAD_SNAPSHOT_QUERY_FAILED", snapshotResult.error.message);
+  if (decisionResult.error) console.error("GET_REPORT_PAYLOAD_DECISION_QUERY_FAILED", decisionResult.error.message);
 
   return {
     openingRadar: radarResult.data ? radarResult.data as Record<string, unknown> : null,
     sectorRotationRows: Array.isArray(sectorResult.data) ? sectorResult.data as Record<string, unknown>[] : [],
     marketDataSnapshots: Array.isArray(snapshotResult.data) ? snapshotResult.data as Record<string, unknown>[] : [],
+    decisionSnapshot: decisionResult.data ? decisionResult.data as Record<string, unknown> : null,
   };
 }
 
@@ -706,11 +763,12 @@ Deno.serve(async (req: Request) => {
 
   const context = await fetchPayloadContext(serviceClient, getReportDate(report));
   const publicMetadata = buildPublicPayload(report, context);
+  const canonicalDecision = asObject(publicMetadata.canonical_decision);
 
   return jsonResponse({
     tier,
     report_date: getReportDate(report),
-    revision_id: toStringValue(report.id),
+    revision_id: toStringValue(canonicalDecision.id) || toStringValue(report.id),
     generated_at: getGeneratedAt(report, getAi(report)),
     data_as_of: publicMetadata.data_as_of,
     market_status: publicMetadata.market_status,

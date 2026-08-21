@@ -13,9 +13,11 @@ on:
       - 'supabase/functions/ma-ops-health-check/**'
       - 'supabase/functions/generate-daily-report-v7/**'
       - 'supabase/functions/line-daily-push/**'
+      - 'supabase/functions/daily-delivery-orchestrator/**'
       - 'supabase/functions/get-report-payload/**'
       - 'supabase/functions/_shared/**'
       - 'supabase/functions/generate-sector-rotation/**'
+      - 'supabase/migrations/**'
       - '.github/workflows/deploy-morning-alpha-runtime.yml'
 
 permissions:
@@ -28,7 +30,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -38,10 +40,24 @@ jobs:
         with:
           version: latest
 
-      - name: Require deployment token
+      - name: Require deployment credentials
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: test -n "$SUPABASE_ACCESS_TOKEN"
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: test -n "$SUPABASE_ACCESS_TOKEN" && test -n "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply database migrations before runtime cutover
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase link \
+            --project-ref cttfzgvhiewfckydcrci \
+            --password "$SUPABASE_DB_PASSWORD"
+          # The monitoring foundation predates the remote migration ledger.
+          # --include-all safely records/applies that older idempotent migration
+          # before the current delivery cutover.
+          supabase db push --linked --include-all
 
       - name: Deploy daily report generator
         env:
@@ -56,6 +72,14 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: >-
           supabase functions deploy line-daily-push
+          --project-ref cttfzgvhiewfckydcrci
+          --no-verify-jwt
+
+      - name: Deploy daily delivery orchestrator
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: >-
+          supabase functions deploy daily-delivery-orchestrator
           --project-ref cttfzgvhiewfckydcrci
           --no-verify-jwt
 

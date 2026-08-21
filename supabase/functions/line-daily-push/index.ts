@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 
-// LINE Daily Push V3 — 每天 07:33 推送 AI 盤前提醒
+// LINE Daily Push V4 — 90 分硬閘門、事故通知、Transactional Outbox 重送
 // V3 升級：加入台股交易日 Gate，休市日不推播盤前報告
 // V2 升級：加入 sentiment_score/sentiment_label + sentiment_reason 推播
 
@@ -10,6 +10,20 @@ type LineSubscriber = {
   id: string;
   line_user_id: string | null;
   display_name: string | null;
+};
+
+type DeliveryTarget = LineSubscriber & {
+  outbox_id: string;
+  idempotency_key: string;
+};
+
+type DeliverySummary = {
+  totalSubscribers: number;
+  eligibleCount: number;
+  alreadySentCount: number;
+  sentCount: number;
+  failedCount: number;
+  pendingCount: number;
 };
 
 const SUBSCRIBER_PAGE_SIZE = 1000;
@@ -59,6 +73,15 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_URL') || '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
   );
+
+  let requestBody: Record<string, unknown> = {};
+  try {
+    const parsed = await req.json();
+    requestBody = parseRecord(parsed);
+  } catch {
+    requestBody = {};
+  }
+  const deliveryMode = requestBody.delivery_mode === 'incident' ? 'incident' : 'premium';
 
   const siteUrl = Deno.env.get('SITE_URL') || 'https://morningalphatw.com';
 
@@ -170,6 +193,59 @@ Deno.serve(async (req) => {
     );
   }
 
+  if (deliveryMode === 'incident') {
+    const taipeiMinutes = getTaipeiMinutesNow();
+    if (taipeiMinutes < 7 * 60 + 30) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          sent: false,
+          reason: 'DELIVERY_DEADLINE_NOT_REACHED',
+          date: taipeiToday,
+          deadline: '07:30 Asia/Taipei',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const incidentMessage = buildDeliveryIncidentLineMessage(siteUrl);
+    try {
+      const summary = await deliverOutboxMessage({
+        supabase,
+        channelAccessToken,
+        reportDate: taipeiToday,
+        decisionSnapshotId: null,
+        pushType: 'data_incident',
+        message: incidentMessage,
+      });
+      return new Response(
+        JSON.stringify({
+          success: summary.failedCount === 0 && summary.pendingCount === 0,
+          sent: summary.sentCount > 0,
+          reason: summary.totalSubscribers === 0
+            ? 'NO_ACTIVE_SUBSCRIBERS'
+            : summary.eligibleCount === 0
+              ? 'ALREADY_SENT'
+              : 'DELIVERY_INCIDENT_NOTICE',
+          report_date: taipeiToday,
+          total_subscribers: summary.totalSubscribers,
+          eligible_count: summary.eligibleCount,
+          already_sent_count: summary.alreadySentCount,
+          sent_count: summary.sentCount,
+          failed_count: summary.failedCount,
+          pending_count: summary.pendingCount,
+        }),
+        { status: summary.failedCount === 0 && summary.pendingCount === 0 ? 200 : 503, headers: { 'Content-Type': 'application/json' } },
+      );
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return new Response(
+        JSON.stringify({ success: false, sent: false, reason: 'INCIDENT_DELIVERY_ERROR', detail }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+  }
+
   // 2. V3: 只查今天的報告，不查最新一筆（避免推到昨天的報告）
   const { data: report, error: reportError } = await supabase
     .from('reports')
@@ -238,68 +314,55 @@ Deno.serve(async (req) => {
     .limit(1)
     .maybeSingle();
   if (decisionError) {
-    console.warn('[LINE-PUSH-V3] Canonical decision unavailable; using guarded report payload:', decisionError.message);
-  }
-
-  // 3. 取得所有 active subscribers；分頁避免 Supabase 預設 1,000 筆上限
-  let subscribers: LineSubscriber[] = [];
-  try {
-    subscribers = await fetchActiveSubscribers(supabase);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
     return new Response(
-      JSON.stringify({ success: false, sent: false, reason: 'SUBSCRIBER_FETCH_ERROR', detail }),
+      JSON.stringify({
+        success: false,
+        sent: false,
+        reason: 'DECISION_SNAPSHOT_FETCH_ERROR',
+        report_date: reportDate,
+        detail: decisionError.message,
+      }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
 
-  if (subscribers.length === 0) {
+  const ai = parseAiStrategy(report.ai_strategy_json);
+  const importantNewsCount = Array.isArray(report.important_news_json)
+    ? report.important_news_json.length
+    : Array.isArray(ai.important_news)
+      ? ai.important_news.length
+      : Number(ai.fresh_news_count) || 0;
+  const premiumGate = evaluatePremiumContentGate(ai, importantNewsCount);
+  const snapshotStatus = String(decisionSnapshot?.status || '');
+  const snapshotScore = Number(decisionSnapshot?.content_score);
+  const snapshotMode = String(decisionSnapshot?.decision_mode || '');
+  const snapshotEligible = Boolean(decisionSnapshot)
+    && snapshotStatus === 'READY'
+    && Number.isFinite(snapshotScore)
+    && snapshotScore >= 90
+    && ['recommendations', 'no_trade'].includes(snapshotMode);
+
+  if (!premiumGate.eligible || !snapshotEligible) {
+    const reasonCodes = Array.from(new Set([
+      ...premiumGate.reason_codes,
+      ...(!decisionSnapshot ? ['decision_snapshot_missing'] : []),
+      ...(decisionSnapshot && snapshotStatus !== 'READY' ? ['decision_snapshot_not_ready'] : []),
+      ...(decisionSnapshot && (!Number.isFinite(snapshotScore) || snapshotScore < 90) ? ['decision_snapshot_score_below_90'] : []),
+      ...(decisionSnapshot && !['recommendations', 'no_trade'].includes(snapshotMode) ? ['decision_snapshot_mode_blocked'] : []),
+    ]));
+    console.warn('[LINE-PUSH-V4] Premium content hard gate blocked delivery:', reasonCodes);
     return new Response(
       JSON.stringify({
-        success: true,
+        success: false,
         sent: false,
-        reason: 'NO_ACTIVE_SUBSCRIBERS',
+        reason: 'PREMIUM_CONTENT_NOT_ELIGIBLE',
         report_date: reportDate,
-        total_subscribers: 0,
-        eligible_count: 0,
-        already_sent_count: 0,
-        sent_count: 0,
-        failed_count: 0,
+        content_score: premiumGate.content_score,
+        decision_snapshot_score: Number.isFinite(snapshotScore) ? snapshotScore : null,
+        decision_mode: snapshotMode || premiumGate.decision_mode,
+        reason_codes: reasonCodes,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-
-  let alreadySentIds: Set<string>;
-  try {
-    alreadySentIds = await fetchAlreadySentIds(supabase, reportDate, 'daily_report');
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return new Response(
-      JSON.stringify({ success: false, sent: false, reason: 'IDEMPOTENCY_CHECK_ERROR', detail }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-
-  const eligibleSubscribers = subscribers.filter((subscriber) => {
-    const userId = subscriber.line_user_id;
-    return Boolean(userId) && !alreadySentIds.has(String(userId));
-  });
-
-  if (eligibleSubscribers.length === 0) {
-    return new Response(
-      JSON.stringify({
-        success: true,
-        sent: false,
-        reason: 'ALREADY_SENT',
-        report_date: reportDate,
-        total_subscribers: subscribers.length,
-        eligible_count: 0,
-        already_sent_count: alreadySentIds.size,
-        sent_count: 0,
-        failed_count: 0,
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
+      { status: 409, headers: { 'Content-Type': 'application/json' } },
     );
   }
 
@@ -309,19 +372,15 @@ Deno.serve(async (req) => {
     siteUrl,
     decisionSnapshot && typeof decisionSnapshot === 'object' ? decisionSnapshot as Record<string, unknown> : null,
   );
-  const messagePreview = message.text.slice(0, 200);
-
-  // 5. 每批最多 500 人；穩定 Retry Key 避免排程重試造成重複推播
-  let delivery: { sentCount: number; failedCount: number };
+  let delivery: DeliverySummary;
   try {
-    delivery = await sendMulticastBatches({
+    delivery = await deliverOutboxMessage({
       supabase,
       channelAccessToken,
-      subscribers: eligibleSubscribers,
-      message,
-      messagePreview,
       reportDate,
+      decisionSnapshotId: String(decisionSnapshot.id),
       pushType: 'daily_report',
+      message,
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -331,9 +390,6 @@ Deno.serve(async (req) => {
         sent: false,
         reason: 'LINE_DELIVERY_ERROR',
         report_date: reportDate,
-        total_subscribers: subscribers.length,
-        eligible_count: eligibleSubscribers.length,
-        already_sent_count: alreadySentIds.size,
         detail,
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
@@ -342,21 +398,234 @@ Deno.serve(async (req) => {
 
   return new Response(
     JSON.stringify({
-      success: true,
+      success: delivery.failedCount === 0 && delivery.pendingCount === 0,
       sent: delivery.sentCount > 0,
-      reason: delivery.failedCount === 0 ? 'TRADING_DAY_PUSH' : 'PARTIAL_DELIVERY_FAILURE',
+      reason: delivery.totalSubscribers === 0
+        ? 'NO_ACTIVE_SUBSCRIBERS'
+        : delivery.eligibleCount === 0
+          ? 'ALREADY_SENT'
+        : delivery.failedCount === 0 && delivery.pendingCount === 0
+          ? 'TRADING_DAY_PUSH'
+          : 'PARTIAL_DELIVERY_FAILURE',
       report_date: reportDate,
-      total_subscribers: subscribers.length,
-      eligible_count: eligibleSubscribers.length,
-      already_sent_count: alreadySentIds.size,
+      total_subscribers: delivery.totalSubscribers,
+      eligible_count: delivery.eligibleCount,
+      already_sent_count: delivery.alreadySentCount,
       sent_count: delivery.sentCount,
       failed_count: delivery.failedCount,
+      pending_count: delivery.pendingCount,
     }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } },
+    { status: delivery.failedCount === 0 && delivery.pendingCount === 0 ? 200 : 503, headers: { 'Content-Type': 'application/json' } },
   );
 });
 
 type SupabaseClient = ReturnType<typeof createClient>;
+
+async function deliverOutboxMessage(args: {
+  supabase: SupabaseClient;
+  channelAccessToken: string;
+  reportDate: string;
+  decisionSnapshotId: string | null;
+  pushType: 'daily_report' | 'data_incident';
+  message: Record<string, unknown>;
+}): Promise<DeliverySummary> {
+  const subscribers = await fetchActiveSubscribers(args.supabase);
+  if (subscribers.length === 0) {
+    return {
+      totalSubscribers: 0,
+      eligibleCount: 0,
+      alreadySentCount: 0,
+      sentCount: 0,
+      failedCount: 0,
+      pendingCount: 0,
+    };
+  }
+
+  const alreadySentIds = await fetchAlreadySentIds(args.supabase, args.reportDate, args.pushType);
+  await reconcileAlreadySentOutbox(args.supabase, args.reportDate, args.pushType, alreadySentIds);
+  const eligibleSubscribers = subscribers.filter((subscriber) => {
+    const userId = subscriber.line_user_id;
+    return Boolean(userId) && !alreadySentIds.has(String(userId));
+  });
+  if (eligibleSubscribers.length === 0) {
+    return {
+      totalSubscribers: subscribers.length,
+      eligibleCount: 0,
+      alreadySentCount: subscribers.filter((subscriber) => (
+        subscriber.line_user_id && alreadySentIds.has(subscriber.line_user_id)
+      )).length,
+      sentCount: 0,
+      failedCount: 0,
+      pendingCount: 0,
+    };
+  }
+
+  const messagePreview = String(args.message.text || '').slice(0, 200);
+  await enqueueDeliveryOutbox({
+    supabase: args.supabase,
+    subscribers: eligibleSubscribers,
+    reportDate: args.reportDate,
+    decisionSnapshotId: args.decisionSnapshotId,
+    pushType: args.pushType,
+    message: args.message,
+    messagePreview,
+  });
+
+  let sentCount = 0;
+  let failedCount = 0;
+  let pendingCount = 0;
+  const maxDrainPasses = 10;
+  for (let pass = 0; pass < maxDrainPasses; pass++) {
+    const targets = await claimDeliveryOutbox(
+      args.supabase,
+      args.reportDate,
+      args.decisionSnapshotId,
+      args.pushType,
+    );
+    if (targets.length === 0) break;
+    const delivery = await sendMulticastBatches({
+      supabase: args.supabase,
+      channelAccessToken: args.channelAccessToken,
+      subscribers: targets,
+      message: args.message,
+      messagePreview,
+      reportDate: args.reportDate,
+      pushType: args.pushType,
+    });
+    sentCount += delivery.sentCount;
+    failedCount += delivery.failedCount;
+    pendingCount += delivery.pendingCount;
+    if (delivery.failedCount > 0) break;
+  }
+
+  const unprocessedCount = Math.max(0, eligibleSubscribers.length - sentCount - failedCount);
+  return {
+    totalSubscribers: subscribers.length,
+    eligibleCount: eligibleSubscribers.length,
+    alreadySentCount: subscribers.length - eligibleSubscribers.length,
+    sentCount,
+    failedCount,
+    pendingCount: pendingCount + unprocessedCount,
+  };
+}
+
+async function reconcileAlreadySentOutbox(
+  supabase: SupabaseClient,
+  reportDate: string,
+  pushType: string,
+  alreadySentIds: Set<string>,
+): Promise<void> {
+  const userIds = Array.from(alreadySentIds);
+  const now = new Date().toISOString();
+  for (let from = 0; from < userIds.length; from += DATABASE_BATCH_SIZE) {
+    const { error } = await supabase
+      .from('line_delivery_outbox')
+      .update({
+        status: 'SENT',
+        sent_at: now,
+        lease_expires_at: null,
+        last_error: null,
+        updated_at: now,
+      })
+      .eq('report_date', reportDate)
+      .eq('push_type', pushType)
+      .in('line_user_id', userIds.slice(from, from + DATABASE_BATCH_SIZE))
+      .neq('status', 'SENT');
+    if (error) throw new Error(`Failed to reconcile prior LINE delivery: ${error.message}`);
+  }
+}
+
+async function enqueueDeliveryOutbox(args: {
+  supabase: SupabaseClient;
+  subscribers: LineSubscriber[];
+  reportDate: string;
+  decisionSnapshotId: string | null;
+  pushType: string;
+  message: Record<string, unknown>;
+  messagePreview: string;
+}): Promise<void> {
+  const rows = args.subscribers.flatMap((subscriber) => {
+    if (!subscriber.line_user_id) return [];
+    return [{
+      report_date: args.reportDate,
+      decision_snapshot_id: args.decisionSnapshotId,
+      line_subscriber_id: subscriber.id,
+      line_user_id: subscriber.line_user_id,
+      push_type: args.pushType,
+      idempotency_key: [
+        args.reportDate,
+        args.pushType,
+        subscriber.id,
+      ].join(':'),
+      payload: { message: args.message, message_preview: args.messagePreview },
+    }];
+  });
+
+  for (let from = 0; from < rows.length; from += DATABASE_BATCH_SIZE) {
+    const { error } = await args.supabase
+      .from('line_delivery_outbox')
+      .upsert(rows.slice(from, from + DATABASE_BATCH_SIZE), {
+        onConflict: 'idempotency_key',
+        ignoreDuplicates: true,
+      });
+    if (error) throw new Error(`Failed to enqueue LINE delivery: ${error.message}`);
+
+    const subscriberIds = rows
+      .slice(from, from + DATABASE_BATCH_SIZE)
+      .map((row) => String(row.line_subscriber_id));
+    const { error: refreshError } = await args.supabase
+      .from('line_delivery_outbox')
+      .update({
+        decision_snapshot_id: args.decisionSnapshotId,
+        payload: { message: args.message, message_preview: args.messagePreview },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('report_date', args.reportDate)
+      .eq('push_type', args.pushType)
+      .eq('status', 'PENDING')
+      .in('line_subscriber_id', subscriberIds);
+    if (refreshError) throw new Error(`Failed to refresh pending LINE delivery: ${refreshError.message}`);
+  }
+}
+
+async function claimDeliveryOutbox(
+  supabase: SupabaseClient,
+  reportDate: string,
+  decisionSnapshotId: string | null,
+  pushType: string,
+): Promise<DeliveryTarget[]> {
+  const { data, error } = await supabase.rpc('claim_line_delivery_outbox_v1', {
+    p_report_date: reportDate,
+    p_decision_snapshot_id: decisionSnapshotId,
+    p_push_type: pushType,
+    p_limit: 1000,
+    p_lease_seconds: 180,
+  });
+  if (error) throw new Error(`Failed to claim LINE delivery outbox: ${error.message}`);
+  return ((data || []) as Array<Record<string, unknown>>).map((row) => ({
+    id: String(row.line_subscriber_id || ''),
+    line_user_id: String(row.line_user_id || ''),
+    display_name: null,
+    outbox_id: String(row.id || ''),
+    idempotency_key: String(row.idempotency_key || ''),
+  })).filter((row) => row.id && row.line_user_id && row.outbox_id && row.idempotency_key);
+}
+
+async function markDeliveryOutbox(
+  supabase: SupabaseClient,
+  outboxIds: string[],
+  status: 'SENT' | 'RETRY' | 'FAILED',
+  errorDetail: string | null,
+): Promise<void> {
+  if (outboxIds.length === 0) return;
+  const { error } = await supabase.rpc('mark_line_delivery_outbox_v1', {
+    p_ids: outboxIds,
+    p_status: status,
+    p_error: errorDetail,
+    p_retry_delay_seconds: 60,
+  });
+  if (error) throw new Error(`Failed to update LINE delivery outbox: ${error.message}`);
+}
 
 async function fetchActiveSubscribers(supabase: SupabaseClient): Promise<LineSubscriber[]> {
   const subscribers: LineSubscriber[] = [];
@@ -431,21 +700,23 @@ async function markSubscribersPushed(
 async function sendMulticastBatches(args: {
   supabase: SupabaseClient;
   channelAccessToken: string;
-  subscribers: LineSubscriber[];
+  subscribers: DeliveryTarget[];
   message: Record<string, unknown>;
   messagePreview: string;
   reportDate: string;
   pushType: string;
-}): Promise<{ sentCount: number; failedCount: number }> {
+}): Promise<{ sentCount: number; failedCount: number; pendingCount: number }> {
   let sentCount = 0;
   let failedCount = 0;
+  let pendingCount = 0;
   const now = new Date().toISOString();
 
   for (let from = 0; from < args.subscribers.length; from += LINE_MULTICAST_BATCH_SIZE) {
     const batch = args.subscribers.slice(from, from + LINE_MULTICAST_BATCH_SIZE);
     const userIds = batch.map((subscriber) => String(subscriber.line_user_id)).filter(Boolean);
+    const outboxIds = batch.map((subscriber) => subscriber.outbox_id);
     const retryKey = await createRetryKey(
-      [args.reportDate, args.pushType, String(from / LINE_MULTICAST_BATCH_SIZE), ...userIds].join('|'),
+      batch.map((subscriber) => subscriber.idempotency_key).sort().join('|'),
     );
 
     let response: Response;
@@ -466,6 +737,8 @@ async function sendMulticastBatches(args: {
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       failedCount += userIds.length;
+      pendingCount += userIds.length;
+      await markDeliveryOutbox(args.supabase, outboxIds, 'RETRY', detail.slice(0, 500));
       await insertPushLogs(args.supabase, userIds.map((lineUserId) => ({
         line_user_id: lineUserId,
         push_type: args.pushType,
@@ -480,6 +753,9 @@ async function sendMulticastBatches(args: {
     if (!response.ok) {
       const detail = (await response.text()).slice(0, 500);
       failedCount += userIds.length;
+      const retryable = response.status === 429 || response.status >= 500;
+      if (retryable) pendingCount += userIds.length;
+      await markDeliveryOutbox(args.supabase, outboxIds, retryable ? 'RETRY' : 'FAILED', detail);
       await insertPushLogs(args.supabase, userIds.map((lineUserId) => ({
         line_user_id: lineUserId,
         push_type: args.pushType,
@@ -491,6 +767,7 @@ async function sendMulticastBatches(args: {
       continue;
     }
 
+    await markDeliveryOutbox(args.supabase, outboxIds, 'SENT', null);
     await insertPushLogs(args.supabase, userIds.map((lineUserId) => ({
       line_user_id: lineUserId,
       push_type: args.pushType,
@@ -502,7 +779,7 @@ async function sendMulticastBatches(args: {
     sentCount += userIds.length;
   }
 
-  return { sentCount, failedCount };
+  return { sentCount, failedCount, pendingCount };
 }
 
 // ─── V3: 取得台北今日日期 (YYYY-MM-DD) ───
@@ -515,6 +792,12 @@ function getTaipeiToday(): string {
   const m = String(taipeiTime.getUTCMonth() + 1).padStart(2, '0');
   const d = String(taipeiTime.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+function getTaipeiMinutesNow(): number {
+  const now = new Date();
+  const taipeiTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  return taipeiTime.getUTCHours() * 60 + taipeiTime.getUTCMinutes();
 }
 
 // ─── V3: 交易日 Gate 檢查 ───
@@ -622,6 +905,21 @@ function buildMarketClosedLineMessage(siteUrl: string) {
       '下一交易日重點。',
       '',
       siteUrl,
+    ].join('\n'),
+  };
+}
+
+function buildDeliveryIncidentLineMessage(siteUrl: string) {
+  return {
+    type: 'text',
+    text: [
+      'Morning Alpha｜盤前資料延遲',
+      '',
+      '今日盤前內容尚未通過資料完整性與 90 分品質標準。',
+      '系統正在自動補抓資料並重新產生報告；未達標內容不會冒充正式分析推送。',
+      '',
+      '完成後會另行補送正式盤前內容。',
+      `${siteUrl}/report/today`,
     ].join('\n'),
   };
 }

@@ -118,7 +118,8 @@ function sourceText(row: JsonRecord): string {
 function hasSpecificSource(row: JsonRecord): boolean {
   const source = sourceText(row);
   return source.length >= 8
-    && !/市場數據綜合判斷|情境觸發|綜合研判|未提供|unknown|existing_beneficiary_stock/i.test(source);
+    && !/市場數據綜合判斷|情境觸發|綜合研判|未提供|unknown|existing_beneficiary_stock/i.test(source)
+    && /https?:\/\/|\b(?:MD|NEWS|SEC|VAL)\d{3}\b|market_data[:.]|sector_rotation_scores[:.]|reports:/i.test(source);
 }
 
 function recommendationFieldCoverage(rows: JsonRecord[], keys: string[], minimumLength: number): boolean {
@@ -180,7 +181,7 @@ function gradeForScore(score: number): ContentQualityGrade {
 
 export function evaluateContentIntelligence(
   aiValue: unknown,
-  importantNewsCount: number,
+  _importantNewsCount: number,
 ): ContentIntelligenceResult {
   const ai = asRecord(aiValue);
   const note = asRecord(ai.member_research_note_v2);
@@ -197,6 +198,17 @@ export function evaluateContentIntelligence(
   const reasons = getReasons(ai);
   const sectors = getSectors(ai);
   const genericFlags = detectGenericContent(ai);
+  const evidenceQuality = asRecord(ai.content_evidence_quality);
+  const hasEvidenceContract = asText(evidenceQuality.contract_version) === 'PREMIUM_EVIDENCE_V1';
+  const verifiedNewsCount = hasEvidenceContract
+    ? Math.max(0, Number(evidenceQuality.verified_news_count) || 0)
+    : 0;
+  const verifiedMarketCount = hasEvidenceContract
+    ? Math.max(0, Number(evidenceQuality.verified_market_count) || 0)
+    : 0;
+  const verifiedCatalystCount = verifiedNewsCount + verifiedMarketCount;
+  const allNewsTraceable = evidenceQuality.all_news_traceable === true;
+  const blankMarketChangeCount = Math.max(0, Number(evidenceQuality.blank_market_change_count) || 0);
   const allSourcesSpecific = recommendations.length > 0
     ? recommendations.every(hasSpecificSource)
     : noTradeMode && observations.every((row) => hasSpecificSource(row));
@@ -227,12 +239,12 @@ export function evaluateContentIntelligence(
   );
 
   const evidence = Math.min(20,
-    (importantNewsCount > 0 ? 8 : 0)
+    (verifiedCatalystCount > 0 ? 8 : 0)
     + (allSourcesSpecific ? 8 : 0)
     + (recommendations.length > 0 || noTradeMode ? 4 : 0));
   const freshness = Math.min(15,
     (decisionSourceCoverage ? 10 : 0)
-    + (importantNewsCount > 0 ? 5 : 0));
+    + (verifiedCatalystCount > 0 && (verifiedNewsCount === 0 || allNewsTraceable) ? 5 : 0));
   const taiwanRelevance = Math.min(15,
     (taiwanCoverage || noTradeMode ? 10 : 0)
     + (firstText(ai.taiwan_transmission, note.taiwan_transmission).length >= 12 || taiwanCoverage ? 5 : 0));
@@ -273,13 +285,26 @@ export function evaluateContentIntelligence(
   }
   if (!recommendations.length && !noTradeMode) reasonCodes.push('decision_mode_incomplete');
   if (genericFlags.length > 0) reasonCodes.push('generic_content_detected');
-  if (score < 80) reasonCodes.push('content_score_below_80');
+  if (!hasEvidenceContract) reasonCodes.push('evidence_quality_contract_missing');
+  if (verifiedCatalystCount < 1) reasonCodes.push('verified_catalyst_evidence_missing');
+  if (verifiedNewsCount > 0 && !allNewsTraceable) reasonCodes.push('news_traceability_incomplete');
+  if (blankMarketChangeCount > 0) reasonCodes.push('blank_market_change_detected');
+  if (score < 90) reasonCodes.push('content_score_below_90');
 
   const grade = gradeForScore(score);
+  const hardFailure = reasonCodes.some((reason) => [
+    'recommendation_reasoning_incomplete',
+    'decision_mode_incomplete',
+    'generic_content_detected',
+    'evidence_quality_contract_missing',
+    'verified_catalyst_evidence_missing',
+    'news_traceability_incomplete',
+    'blank_market_change_detected',
+  ].includes(reason));
   return {
     score,
     grade,
-    publishable: score >= 80,
+    publishable: score >= 90 && !hardFailure,
     reason_codes: unique(reasonCodes),
     generic_flags: genericFlags,
     breakdown,

@@ -127,6 +127,11 @@ export function evaluatePremiumContentGate(
   const dataQualityStatus = firstText(ai.v10_data_quality_status).toLowerCase();
   const rows = recommendationRows(ai);
   const completeRows = rows.filter(hasCompleteRecommendation);
+  const memberNote = asRecord(ai.member_research_note_v2);
+  const overnightSteps = asRecords(memberNote.overnight_chain);
+  const intradaySteps = asRecords(memberNote.intraday_validation);
+  const invalidationRules = asRecords(memberNote.invalidation_rules);
+  const subscriberSentence = firstText(memberNote.subscriber_value_sentence);
   const observationRows = asRecords(ai.v10_observation_watchlist);
   const sourcedObservationRows = observationRows.filter(hasSpecificSource);
   const recommendationMode = rows.length > 0;
@@ -138,6 +143,9 @@ export function evaluatePremiumContentGate(
     noTradeMode ? 'no_trade' : 'recommendations',
   );
   const contentReview = evaluateContentIntelligence(ai, importantNewsCount);
+  const evidenceQuality = asRecord(ai.content_evidence_quality);
+  const verifiedNewsCount = Math.max(0, Number(evidenceQuality.verified_news_count) || 0);
+  const verifiedMarketCount = Math.max(0, Number(evidenceQuality.verified_market_count) || 0);
 
   if (Object.keys(gate).length === 0) reasons.push('content_publish_gate_missing');
   if (!['可公開', 'ready', 'publishable', 'eligible'].some((status) => overallStatus.includes(status))) {
@@ -145,21 +153,30 @@ export function evaluatePremiumContentGate(
   }
   if (blockingIssues.length > 0) reasons.push('content_publish_gate_blocked');
   if (!Number.isFinite(memberValueScore) || memberValueScore < 90) reasons.push('member_value_below_90');
+  if (overnightSteps.length < 5 || intradaySteps.length < 3 || invalidationRules.length < 2 || subscriberSentence.length < 24) {
+    reasons.push('member_research_structure_incomplete');
+  }
   if (!decisionSourceCoverage) reasons.push('source_data_incomplete');
   if (recommendationMode && !['sufficient', 'partial'].includes(dataQualityStatus)) {
     reasons.push('positive_evidence_insufficient');
   }
   if (!recommendationMode && !noTradeMode) reasons.push('no_trade_decision_incomplete');
-  const hasFreshCatalystEvidence = importantNewsCount > 0
-    || (decisionSourceCoverage && rows.length > 0 && completeRows.length === rows.length)
-    || (decisionSourceCoverage && noTradeMode && sourcedObservationRows.length === observationRows.length);
+  const hasFreshCatalystEvidence = verifiedNewsCount + verifiedMarketCount > 0
+    && (
+      (decisionSourceCoverage && rows.length > 0 && completeRows.length === rows.length)
+      || (decisionSourceCoverage && noTradeMode && sourcedObservationRows.length === observationRows.length)
+    );
   if (!hasFreshCatalystEvidence) reasons.push('fresh_catalyst_evidence_missing');
   if (rows.length > 0 && completeRows.length !== rows.length) reasons.push('recommendation_reasoning_incomplete');
   const hardContentReasons = contentReview.reason_codes.filter((reason) => [
-    'content_score_below_80',
+    'content_score_below_90',
     'recommendation_reasoning_incomplete',
     'decision_mode_incomplete',
     'generic_content_detected',
+    'evidence_quality_contract_missing',
+    'verified_catalyst_evidence_missing',
+    'news_traceability_incomplete',
+    'blank_market_change_detected',
   ].includes(reason));
   reasons.push(...hardContentReasons);
 

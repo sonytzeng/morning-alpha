@@ -33,9 +33,11 @@ const premiumAvailability = read('src/lib/premiumContentAvailability.ts');
 const premiumGate = read('supabase/functions/_shared/premium-content-gate.ts');
 const contentIntelligence = read('supabase/functions/_shared/content-intelligence.ts');
 const lineDailyPush = read('supabase/functions/line-daily-push/index.ts');
+const dailyDeliveryOrchestrator = read('supabase/functions/daily-delivery-orchestrator/index.ts');
 const closingVerification = read('supabase/functions/closing-verification-engine/index.ts');
 const opsHealthCheck = read('supabase/functions/ma-ops-health-check/index.ts');
-const contentIntelligenceMigration = read('supabase/migrations/202608200001_content_intelligence_v2_foundation.sql');
+const contentIntelligenceMigration = read('supabase/migrations/20260820131721_content_intelligence_v2_foundation.sql');
+const deliveryGuaranteeMigration = read('supabase/migrations/20260821072817_daily_delivery_guarantee.sql');
 const accountDashboard = read('src/hooks/useAccountDashboard.ts');
 const accountInfoCards = read('src/pages/account/components/TodayInfoCards.tsx');
 
@@ -201,14 +203,36 @@ test('opening radar degrades safely when only TXF is unavailable', () => {
   assert.match(openingMarketRadar, /if \(!checkpointUsable\)/);
 });
 
-test('premarket workflow refreshes verifiable news before report generation and LINE', () => {
-  const newsStep = runtimeCheckpointWorkflow.indexOf('fetch-global-market-news');
-  const reportStep = runtimeCheckpointWorkflow.indexOf('generate-daily-report-v7');
-  const lineStep = runtimeCheckpointWorkflow.indexOf('line-daily-push');
-  assert.ok(newsStep >= 0, 'premarket workflow must refresh global market news');
-  assert.ok(newsStep < reportStep, 'news refresh must run before report generation');
-  assert.ok(reportStep < lineStep, 'report generation must run before LINE push');
-  assert.match(runtimeCheckpointWorkflow, /\.success == true and \.total_upserted >= 1/);
+test('premarket workflow delegates to the durable recovery state machine', () => {
+  assert.match(runtimeDeployWorkflow, /supabase db push --linked --include-all/);
+  assert.match(runtimeCheckpointWorkflow, /cron: '10 23 \* \* 0-4'/);
+  assert.match(runtimeCheckpointWorkflow, /cron: '35 23 \* \* 0-4'/);
+  assert.match(runtimeCheckpointWorkflow, /daily-delivery-orchestrator/);
+  const newsAction = dailyDeliveryOrchestrator.indexOf("'fetch-global-market-news'");
+  const reportAction = dailyDeliveryOrchestrator.indexOf("'generate-daily-report-v7'");
+  const lineAction = dailyDeliveryOrchestrator.lastIndexOf("'line-daily-push'");
+  assert.ok(newsAction >= 0, 'recovery router must refresh global market news');
+  assert.ok(newsAction < reportAction, 'evidence refresh must precede report regeneration');
+  assert.ok(reportAction < lineAction, 'report regeneration must precede premium delivery');
+  assert.match(dailyDeliveryOrchestrator, /clock\.minutes >= 7 \* 60 \+ 30/);
+});
+
+test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
+  const hardGate = lineDailyPush.indexOf("reason: 'PREMIUM_CONTENT_NOT_ELIGIBLE'");
+  const subscriberDelivery = lineDailyPush.indexOf('deliverOutboxMessage({', hardGate);
+  assert.ok(hardGate >= 0, 'LINE must expose a hard premium content gate');
+  assert.ok(subscriberDelivery > hardGate, 'subscriber delivery must happen only after the hard gate');
+  assert.match(lineDailyPush, /snapshotStatus === 'READY'/);
+  assert.match(lineDailyPush, /snapshotScore >= 90/);
+  assert.match(lineDailyPush, /claim_line_delivery_outbox_v1/);
+  assert.match(lineDailyPush, /mark_line_delivery_outbox_v1/);
+  assert.match(lineDailyPush, /delivery_mode === 'incident'/);
+  assert.match(deliveryGuaranteeMigration, /create table if not exists public\.line_delivery_outbox/);
+  assert.match(deliveryGuaranteeMigration, /for update skip locked/);
+  assert.match(deliveryGuaranteeMigration, /0-40\/5 23 \* \* 0-4/);
+  assert.match(deliveryGuaranteeMigration, /decision_snapshots_premium_90_gate/);
+  assert.match(deliveryGuaranteeMigration, /new\.content_score is null or new\.content_score < 90/);
+  assert.match(opsHealthCheck, /ready_90_point_decision_snapshot/);
 });
 
 test('paid report fails closed when evidence does not meet the member threshold', () => {
@@ -259,16 +283,15 @@ test('legacy opening radar UI fails closed without real core evidence', () => {
 });
 
 test('runtime deployment and missing checkpoint schedules are reproducible', () => {
-  for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push', 'get-report-payload']) {
+  for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push', 'daily-delivery-orchestrator', 'get-report-payload']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
   }
-  for (const schedule of ["15 23 * * 0-4", "40 23 * * 0-4", "5 1 * * 1-5", "20 1 * * 1-5", "5 2 * * 1-5", "20 2 * * 1-5", "35 4 * * 1-5", "50 4 * * 1-5", "20 6 * * 1-5", "35 6 * * 1-5"]) {
+  for (const schedule of ["10 23 * * 0-4", "35 23 * * 0-4", "5 1 * * 1-5", "20 1 * * 1-5", "5 2 * * 1-5", "20 2 * * 1-5", "35 4 * * 1-5", "50 4 * * 1-5", "20 6 * * 1-5", "35 6 * * 1-5"]) {
     assert.match(runtimeCheckpointWorkflow, new RegExp(schedule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing runtime schedule: ${schedule}`);
   }
   assert.match(runtimeCheckpointWorkflow, /\{"phase":"intraday"\}/);
-  assert.match(runtimeCheckpointWorkflow, /\{"phase":"premarket"\}/);
   assert.match(runtimeCheckpointWorkflow, /\{"phase":"close"\}/);
-  assert.match(runtimeCheckpointWorkflow, /generate-daily-report-v7/);
+  assert.match(runtimeCheckpointWorkflow, /daily-delivery-orchestrator/);
   assert.match(runtimeCheckpointWorkflow, /\{\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
   assert.match(runtimeCheckpointWorkflow, /snapshot_upserted_count >= 2/);
   assert.match(runtimeCheckpointWorkflow, /tw_core_symbols_success \| index\("TAIEX"\) != null/);
@@ -288,14 +311,8 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeCheckpointWorkflow, /closing_verification_status/);
   assert.match(runtimeCheckpointWorkflow, /generate-sector-rotation/);
   assert.match(runtimeCheckpointWorkflow, /secrets\.CRON_SECRET/);
-  assert.match(runtimeCheckpointWorkflow, /line-daily-push/);
   assert.match(runtimeCheckpointWorkflow, /Wait until the checkpoint snapshot window/);
   assert.match(runtimeCheckpointWorkflow, /TZ=Asia\/Taipei/);
-  assert.match(runtimeCheckpointWorkflow, /ALREADY_SENT/);
-  assert.match(runtimeCheckpointWorkflow, /failed_count == 0/);
-  assert.match(runtimeCheckpointWorkflow, /daily-report-exists/);
-  assert.match(runtimeCheckpointWorkflow, /daily-report-contract/);
-  assert.match(runtimeCheckpointWorkflow, /steps\.premarket-state\.outputs\.report_ready != 'true'/);
   assert.match(runtimeCheckpointWorkflow, /id: checkpoint-state/);
   assert.match(runtimeCheckpointWorkflow, /get-report-payload/);
   assert.match(runtimeCheckpointWorkflow, /already_complete=true/);
@@ -303,12 +320,13 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeCheckpointWorkflow, /id: sector-state/);
   assert.match(runtimeCheckpointWorkflow, /sector_rotation_scores/);
   assert.match(runtimeCheckpointWorkflow, /closing-verification-status/);
-  assert.match(runtimeCheckpointWorkflow, /Require publishable report content before LINE/);
+  assert.match(runtimeDeployWorkflow, /db push --linked/);
+  assert.ok(runtimeDeployWorkflow.indexOf('db push --linked') < runtimeDeployWorkflow.indexOf('functions deploy daily-delivery-orchestrator'));
   assert.match(opsHealthCheck, /evaluatePremiumContentGate/);
   assert.match(opsHealthCheck, /intraday_validation\)\.length < 3/);
   assert.match(opsHealthCheck, /invalidation_rules\)\.length < 2/);
-  assert.match(opsHealthCheck, /importantNews\.length < 1/);
-  assert.match(runtimeCheckpointWorkflow, /7 \* 60 \+ 20/);
+  assert.match(opsHealthCheck, /verifiedCatalystCount < 1/);
+  assert.match(opsHealthCheck, /verified_market_count/);
   assert.match(runtimeCheckpointWorkflow, /&& 'premarket'/);
 });
 
@@ -682,7 +700,7 @@ test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempo
   assert.match(lineDailyPush, /SUBSCRIBER_PAGE_SIZE = 1000/);
   assert.match(lineDailyPush, /LINE_MULTICAST_BATCH_SIZE = 500/);
   assert.match(lineDailyPush, /fetchAlreadySentIds/);
-  assert.match(lineDailyPush, /reason: 'ALREADY_SENT'/);
+  assert.match(lineDailyPush, /'ALREADY_SENT'/);
   assert.match(lineDailyPush, /message\/multicast/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);
   assert.match(lineDailyPush, /customAggregationUnits/);

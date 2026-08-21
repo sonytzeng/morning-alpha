@@ -7,6 +7,13 @@ function validAi() {
     content_publish_gate: { overall_status: '可公開', blocking_issues: [] },
     member_value_score: 96,
     data_quality: 'complete',
+    content_evidence_quality: {
+      contract_version: 'PREMIUM_EVIDENCE_V1',
+      verified_news_count: 1,
+      verified_market_count: 3,
+      all_news_traceable: true,
+      blank_market_change_count: 0,
+    },
     v10_data_quality_status: 'sufficient',
     v10_beneficiary_enabled: true,
     today_quote: '費半上漲 2.1% 且 NVIDIA 財測上修，台股先看台積電與 AI 供應鏈開盤後是否量價同步。',
@@ -17,6 +24,22 @@ function validAi() {
     key_drivers: ['NVIDIA 財測上修', '費半收高 2.1%', '台積電 ADR 相對強勢'],
     preferred_sectors: ['半導體', 'AI 伺服器'],
     taiwan_transmission: '美國 AI 資本支出先傳導到先進製程與先進封裝，再影響台灣半導體供應鏈。',
+    member_research_note_v2: {
+      overnight_chain: Array.from({ length: 5 }, (_, index) => ({
+        event: `海外事件與資金傳導第 ${index + 1} 層`,
+        impact_logic: '由市場事件逐層傳到台灣產業與代表股。',
+      })),
+      intraday_validation: [
+        { time_window: '09:30', what_to_watch: '2330 與 TAIEX 是否同向' },
+        { time_window: '10:30', what_to_watch: '半導體成交比重是否擴大' },
+        { time_window: '13:00', what_to_watch: '主線是否守住早盤低點' },
+      ],
+      invalidation_rules: [
+        { condition: '2330 弱於大盤', action_note: '撤回半導體主線' },
+        { condition: '族群未同步', action_note: '不追價' },
+      ],
+      subscriber_value_sentence: '先用 09:30 權值股、指數與族群同步性驗證主線，任一條件失效就撤回判斷。',
+    },
     today_beneficiary_stocks_v10: [{
       symbol: '2330',
       name: '台積電',
@@ -25,7 +48,7 @@ function validAi() {
       taiwan_supply_chain_link: '台積電提供 NVIDIA GPU 所需先進製程與 CoWoS 先進封裝產能。',
       validation_signal: '09:30 觀察台積電是否相對加權指數強勢，且半導體成交比重同步上升。',
       invalidation_condition: '台積電轉弱且半導體族群未同步，或事件來源遭公司更新否定。',
-      data_basis: 'market_news.NVIDIA guidance；market_data.NVDA.change_percent；market_data.TSM.change_percent',
+      data_basis: 'https://investor.nvidia.com/；market_data:NVDA@2026-08-21T06:00:00Z；market_data:TSM@2026-08-21T06:00:00Z',
     }],
   };
 }
@@ -45,9 +68,12 @@ test('premium content fails closed when both news and traceable market catalysts
 });
 
 test('fresh market and index evidence can qualify without forcing a news article', () => {
-  const result = evaluatePremiumContentGate(validAi(), 0);
+  const ai = validAi();
+  ai.content_evidence_quality.verified_news_count = 0;
+  ai.today_beneficiary_stocks_v10[0].data_basis = 'market_data:NVDA@2026-08-21T06:00:00Z；market_data:SOX@2026-08-21T06:00:00Z；market_data:TSM@2026-08-21T06:00:00Z';
+  const result = evaluatePremiumContentGate(ai, 0);
   assert.equal(result.eligible, true);
-  assert.equal(result.content_score >= 80, true);
+  assert.equal(result.content_score >= 90, true);
 });
 
 test('every recommended stock must include source, transmission, Taiwan relationship and conditions', () => {
@@ -91,7 +117,7 @@ test('no-trade may publish with the declared optional TXF entitlement gap', () =
   const result = evaluatePremiumContentGate(ai, 3);
   assert.equal(result.eligible, true);
   assert.equal(result.decision_mode, 'no_trade');
-  assert.equal(result.content_score >= 80, true);
+  assert.equal(result.content_score >= 90, true);
 });
 
 test('no-trade still blocks when any non-optional decision source is missing', () => {

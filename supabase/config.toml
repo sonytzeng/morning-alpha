@@ -13,3 +13,12 @@ verify_jwt = false
 
 [functions.generate-sector-rotation]
 verify_jwt = false
+
+[functions.line-daily-push]
+verify_jwt = false
+
+[functions.ma-ops-health-check]
+verify_jwt = false
+
+[functions.daily-delivery-orchestrator]
+verify_jwt = false

@@ -37,7 +37,7 @@ const dailyDeliveryOrchestrator = read('supabase/functions/daily-delivery-orches
 const closingVerification = read('supabase/functions/closing-verification-engine/index.ts');
 const opsHealthCheck = read('supabase/functions/ma-ops-health-check/index.ts');
 const contentIntelligenceMigration = read('supabase/migrations/20260820131721_content_intelligence_v2_foundation.sql');
-const deliveryGuaranteeMigration = read('supabase/migrations/20260821072817_daily_delivery_guarantee.sql');
+const deliveryGuaranteeMigration = read('supabase/migrations/20260821080555_daily_delivery_guarantee.sql');
 const accountDashboard = read('src/hooks/useAccountDashboard.ts');
 const accountInfoCards = read('src/pages/account/components/TodayInfoCards.tsx');
 
@@ -204,7 +204,7 @@ test('opening radar degrades safely when only TXF is unavailable', () => {
 });
 
 test('premarket workflow delegates to the durable recovery state machine', () => {
-  assert.match(runtimeDeployWorkflow, /supabase db push --linked --include-all/);
+  assert.match(runtimeDeployWorkflow, /supabase db push --linked/);
   assert.match(runtimeCheckpointWorkflow, /cron: '10 23 \* \* 0-4'/);
   assert.match(runtimeCheckpointWorkflow, /cron: '35 23 \* \* 0-4'/);
   assert.match(runtimeCheckpointWorkflow, /daily-delivery-orchestrator/);

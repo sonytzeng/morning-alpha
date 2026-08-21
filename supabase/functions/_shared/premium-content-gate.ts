@@ -1,4 +1,8 @@
-import { evaluateContentIntelligence, type ContentScoreBreakdown } from './content-intelligence.ts';
+import {
+  evaluateContentIntelligence,
+  hasDecisionGradeSourceCoverage,
+  type ContentScoreBreakdown,
+} from './content-intelligence.ts';
 
 export type PremiumContentStatus = 'eligible' | 'degraded' | 'blocked';
 export type PremiumDecisionMode = 'recommendations' | 'no_trade' | 'blocked';
@@ -120,7 +124,6 @@ export function evaluatePremiumContentGate(
     ? gate.blocking_issues.map(String).filter(Boolean)
     : [];
   const memberValueScore = Number(ai.member_value_score);
-  const sourceDataQuality = firstText(ai.data_quality).toLowerCase();
   const dataQualityStatus = firstText(ai.v10_data_quality_status).toLowerCase();
   const rows = recommendationRows(ai);
   const completeRows = rows.filter(hasCompleteRecommendation);
@@ -130,6 +133,10 @@ export function evaluatePremiumContentGate(
   const noTradeMode = rows.length === 0
     && dataQualityStatus === 'insufficient_positive_evidence'
     && observationRows.length >= 3;
+  const decisionSourceCoverage = hasDecisionGradeSourceCoverage(
+    ai,
+    noTradeMode ? 'no_trade' : 'recommendations',
+  );
   const contentReview = evaluateContentIntelligence(ai, importantNewsCount);
 
   if (Object.keys(gate).length === 0) reasons.push('content_publish_gate_missing');
@@ -138,14 +145,14 @@ export function evaluatePremiumContentGate(
   }
   if (blockingIssues.length > 0) reasons.push('content_publish_gate_blocked');
   if (!Number.isFinite(memberValueScore) || memberValueScore < 90) reasons.push('member_value_below_90');
-  if (sourceDataQuality !== 'complete') reasons.push('source_data_incomplete');
+  if (!decisionSourceCoverage) reasons.push('source_data_incomplete');
   if (recommendationMode && !['sufficient', 'partial'].includes(dataQualityStatus)) {
     reasons.push('positive_evidence_insufficient');
   }
   if (!recommendationMode && !noTradeMode) reasons.push('no_trade_decision_incomplete');
   const hasFreshCatalystEvidence = importantNewsCount > 0
-    || (sourceDataQuality === 'complete' && rows.length > 0 && completeRows.length === rows.length)
-    || (sourceDataQuality === 'complete' && noTradeMode && sourcedObservationRows.length === observationRows.length);
+    || (decisionSourceCoverage && rows.length > 0 && completeRows.length === rows.length)
+    || (decisionSourceCoverage && noTradeMode && sourcedObservationRows.length === observationRows.length);
   if (!hasFreshCatalystEvidence) reasons.push('fresh_catalyst_evidence_missing');
   if (rows.length > 0 && completeRows.length !== rows.length) reasons.push('recommendation_reasoning_incomplete');
   const hardContentReasons = contentReview.reason_codes.filter((reason) => [

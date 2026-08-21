@@ -6,9 +6,13 @@ on:
     - cron: '15 23 * * 0-4'
     - cron: '40 23 * * 0-4'
     - cron: '5 1 * * 1-5'
+    - cron: '20 1 * * 1-5'
     - cron: '5 2 * * 1-5'
+    - cron: '20 2 * * 1-5'
     - cron: '35 4 * * 1-5'
+    - cron: '50 4 * * 1-5'
     - cron: '20 6 * * 1-5'
+    - cron: '35 6 * * 1-5'
   workflow_dispatch:
     inputs:
       checkpoint:
@@ -26,7 +30,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: morning-alpha-runtime-${{ (github.event.schedule == '15 23 * * 0-4' || github.event.schedule == '40 23 * * 0-4') && 'premarket' || github.event.schedule || inputs.checkpoint || github.run_id }}
+  group: morning-alpha-runtime-${{ (github.event.schedule == '15 23 * * 0-4' || github.event.schedule == '40 23 * * 0-4') && 'premarket' || (github.event.schedule == '5 1 * * 1-5' || github.event.schedule == '20 1 * * 1-5') && '0930' || (github.event.schedule == '5 2 * * 1-5' || github.event.schedule == '20 2 * * 1-5') && '1030' || (github.event.schedule == '35 4 * * 1-5' || github.event.schedule == '50 4 * * 1-5') && '1300' || (github.event.schedule == '20 6 * * 1-5' || github.event.schedule == '35 6 * * 1-5') && 'closing' || inputs.checkpoint || github.run_id }}
   cancel-in-progress: false
 
 env:
@@ -49,13 +53,13 @@ jobs:
             checkpoint="$MANUAL_CHECKPOINT"
           elif [ "$EVENT_SCHEDULE" = "15 23 * * 0-4" ] || [ "$EVENT_SCHEDULE" = "40 23 * * 0-4" ]; then
             checkpoint="premarket"
-          elif [ "$EVENT_SCHEDULE" = "5 1 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "5 1 * * 1-5" ] || [ "$EVENT_SCHEDULE" = "20 1 * * 1-5" ]; then
             checkpoint="0930"
-          elif [ "$EVENT_SCHEDULE" = "5 2 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "5 2 * * 1-5" ] || [ "$EVENT_SCHEDULE" = "20 2 * * 1-5" ]; then
             checkpoint="1030"
-          elif [ "$EVENT_SCHEDULE" = "35 4 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "35 4 * * 1-5" ] || [ "$EVENT_SCHEDULE" = "50 4 * * 1-5" ]; then
             checkpoint="1300"
-          elif [ "$EVENT_SCHEDULE" = "20 6 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "20 6 * * 1-5" ] || [ "$EVENT_SCHEDULE" = "35 6 * * 1-5" ]; then
             checkpoint="closing"
           else
             echo "Unsupported schedule: $EVENT_SCHEDULE" >&2
@@ -256,7 +260,31 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: test -n "$CRON_SECRET"
 
+      - name: Check whether the intraday checkpoint is already complete
+        id: checkpoint-state
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          CHECKPOINT: ${{ needs.resolve-checkpoint.outputs.checkpoint }}
+        run: |
+          response_file="$RUNNER_TEMP/intraday-checkpoint-state.json"
+          report_date=$(TZ=Asia/Taipei date +%F)
+          if curl --silent --show-error --fail-with-body \
+            --max-time 45 \
+            --request POST "$FUNCTIONS_BASE_URL/get-report-payload" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data "{\"report_date\":\"$report_date\"}" \
+            --output "$response_file" \
+            && jq -e --arg checkpoint "$CHECKPOINT" --arg report_date "$report_date" \
+              '.report_date == $report_date and .payload.intraday_sync_status.windows[$checkpoint] == "ready"' \
+              "$response_file" >/dev/null; then
+            echo "already_complete=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already_complete=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Fetch fresh intraday snapshots
+        if: steps.checkpoint-state.outputs.already_complete != 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
@@ -280,6 +308,7 @@ jobs:
           exit 1
 
       - name: Evaluate checkpoint with the fresh snapshot
+        if: steps.checkpoint-state.outputs.already_complete != 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           CHECKPOINT: ${{ needs.resolve-checkpoint.outputs.checkpoint }}
@@ -314,7 +343,49 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: test -n "$CRON_SECRET"
 
+      - name: Check whether closing verification is already complete
+        id: closing-state
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/closing-state.json"
+          if curl --silent --show-error --fail-with-body \
+            --max-time 45 \
+            --request POST "$FUNCTIONS_BASE_URL/ma-ops-health-check" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{"environment":"production","check_type":"closing","dry_run":true,"components":["closing-verification-status"]}' \
+            --output "$response_file" \
+            && jq -e '([.checks[] | select(.check_name == "closing-verification-status" and .status == "passed")] | length) == 1' "$response_file" >/dev/null; then
+            echo "already_complete=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already_complete=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check whether today's sector rotation evidence is already complete
+        id: sector-state
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/sector-state.json"
+          report_date=$(TZ=Asia/Taipei date +%F)
+          if curl --silent --show-error --fail-with-body \
+            --max-time 45 \
+            --request POST "$FUNCTIONS_BASE_URL/get-report-payload" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data "{\"report_date\":\"$report_date\"}" \
+            --output "$response_file" \
+            && jq -e --arg report_date "$report_date" \
+              '.report_date == $report_date and (.payload.sector_rotation_scores | length) > 0 and all(.payload.sector_rotation_scores[]; .score_date == $report_date)' \
+              "$response_file" >/dev/null; then
+            echo "already_complete=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already_complete=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Fetch fresh close snapshots
+        if: steps.closing-state.outputs.already_complete != 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
@@ -354,6 +425,7 @@ jobs:
           exit 1
 
       - name: Build closing review from the fresh close snapshot
+        if: steps.closing-state.outputs.already_complete != 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
@@ -377,6 +449,7 @@ jobs:
           exit 1
 
       - name: Write closing verification v2
+        if: steps.closing-state.outputs.already_complete != 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
@@ -411,6 +484,7 @@ jobs:
           exit 1
 
       - name: Build sector rotation evidence for the next trading day
+        if: steps.sector-state.outputs.already_complete != 'true'
         id: sector-rotation
         continue-on-error: true
         env:

@@ -262,7 +262,7 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push', 'get-report-payload']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
   }
-  for (const schedule of ["15 23 * * 0-4", "40 23 * * 0-4", "5 1 * * 1-5", "5 2 * * 1-5", "35 4 * * 1-5", "20 6 * * 1-5"]) {
+  for (const schedule of ["15 23 * * 0-4", "40 23 * * 0-4", "5 1 * * 1-5", "20 1 * * 1-5", "5 2 * * 1-5", "20 2 * * 1-5", "35 4 * * 1-5", "50 4 * * 1-5", "20 6 * * 1-5", "35 6 * * 1-5"]) {
     assert.match(runtimeCheckpointWorkflow, new RegExp(schedule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing runtime schedule: ${schedule}`);
   }
   assert.match(runtimeCheckpointWorkflow, /\{"phase":"intraday"\}/);
@@ -296,6 +296,13 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeCheckpointWorkflow, /daily-report-exists/);
   assert.match(runtimeCheckpointWorkflow, /daily-report-contract/);
   assert.match(runtimeCheckpointWorkflow, /steps\.premarket-state\.outputs\.report_ready != 'true'/);
+  assert.match(runtimeCheckpointWorkflow, /id: checkpoint-state/);
+  assert.match(runtimeCheckpointWorkflow, /get-report-payload/);
+  assert.match(runtimeCheckpointWorkflow, /already_complete=true/);
+  assert.match(runtimeCheckpointWorkflow, /id: closing-state/);
+  assert.match(runtimeCheckpointWorkflow, /id: sector-state/);
+  assert.match(runtimeCheckpointWorkflow, /sector_rotation_scores/);
+  assert.match(runtimeCheckpointWorkflow, /closing-verification-status/);
   assert.match(runtimeCheckpointWorkflow, /Require publishable report content before LINE/);
   assert.match(opsHealthCheck, /evaluatePremiumContentGate/);
   assert.match(opsHealthCheck, /intraday_validation\)\.length < 3/);
@@ -610,6 +617,9 @@ test('paid research enforces fresh evidence and complete beneficiary reasoning',
   assert.match(reportGenerator, /calculateMemberValueScore/);
   assert.match(reportGenerator, /evidenceBackedNoTrade/);
   assert.match(reportGenerator, /member_value_score_below_90/);
+  assert.match(reportGenerator, /source_refs:record\.source_refs/);
+  assert.match(reportGenerator, /applyV10EvidenceBackedNarrative/);
+  assert.match(reportGenerator, /premium_content_gate/);
 });
 
 test('content intelligence applies the approved 100-point editorial score and rejects generic copy', () => {

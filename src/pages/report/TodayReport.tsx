@@ -20,7 +20,7 @@ import {
   selectNextRuntimeTimelineNode,
   type RuntimeTimelineNode,
 } from '@/lib/runtimeDecisionTimeline';
-import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
+import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 
 type AnyObj = Record<string, any>;
 
@@ -148,16 +148,7 @@ function safeStockDisplayText(value: unknown): string {
 function publicTodayText(value: unknown): string {
   const text = safeText(value, '');
   if (!text) return '';
-  return naturalizeSyntheticResearchSentence(text
-    .replace(/checkpoint\s*(\d{2})(\d{2})/gi, (_match, hours: string, minutes: string) => `${hours}:${minutes} 驗證節點`)
-    .replace(/freshness window/gi, '有效時間範圍')
-    .replace(/同\s*phase/gi, '同一資料階段')
-    .replace(/\bTAIEX\b/gi, '加權指數')
-    .replace(/\bTXF\b/gi, '台指期')
-    .replace(/\bRuntime\b/gi, '盤中資料')
-    .replace(/\bAI Server\b/gi, 'AI 伺服器族群')
-    .replace(/\s+/g, ' ')
-    .trim());
+  return humanizePublicRuntimeText(text);
 }
 
 function humanizeValidationText(value: unknown): string {

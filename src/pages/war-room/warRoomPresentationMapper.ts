@@ -1,4 +1,5 @@
 import { getRuntimeCheckpointState } from '@/lib/decisionEvidence';
+import { resolveClosingVerificationState } from '@/lib/closingVerificationState';
 import {
   reconcileRuntimeTimeline,
   runtimeTimelineStatusLabel,
@@ -195,16 +196,25 @@ function closingRecord(input: {
 
 export function resolveWarRoomClosingLabel(recordValue: unknown): WarRoomClosingLabel {
   const record = asRecord(recordValue);
+  const resolved = resolveClosingVerificationState(record);
   const status = text(record.status ?? record.data_status).toLowerCase();
-  const outcome = text(record.hit_or_miss ?? record.prediction_result ?? record.result).toLowerCase();
+  const outcome = text(
+    record.hit_or_miss
+    ?? record.prediction_result
+    ?? record.result
+    ?? record.verification_result,
+  ).toLowerCase();
+  if (resolved.state === 'pending') return '資料不足';
   if (['miss', 'wrong', 'failed', 'rejected', 'incorrect', 'invalidated'].includes(outcome)) return '已失效';
+  if (/未命中|方向不符|失效|錯誤/.test(outcome)) return '已失效';
   if (['partial', 'mixed', 'partially_confirmed'].includes(outcome)) return '部分成立';
-  if (['pending', 'pending_real_market_data', 'insufficient', 'missing', 'unknown', 'not_available'].includes(status)) return '資料不足';
-  if (['degraded', 'direction_completed_data_degraded'].includes(status)) return '部分成立';
+  if (/部分/.test(outcome)) return '部分成立';
+  if (resolved.state === 'degraded') return '部分成立';
   const completed = ['completed', 'complete', 'ready', 'verified', 'done'].includes(status);
   if (completed && ['hit', 'correct', 'confirmed', 'success', 'accurate'].includes(outcome)) return '今日已驗證';
+  if (/命中|方向一致|符合|成立/.test(outcome)) return '今日已驗證';
   if (completed && record.verification_result === true) return '今日已驗證';
-  return '資料不足';
+  return resolved.state === 'complete' ? '今日已驗證' : '資料不足';
 }
 
 function individualClosingRows(close: UnknownRecord): UnknownRecord[] {
@@ -257,8 +267,9 @@ export function buildWarRoomClosingState(input: {
   todayCloseVerification?: unknown;
 }): WarRoomClosingState {
   const close = closingRecord(input);
+  const resolved = resolveClosingVerificationState(close);
   return {
-    isPostClose: Object.keys(close).length > 0,
+    isPostClose: resolved.state !== 'pending',
     label: resolveWarRoomClosingLabel(close),
   };
 }
@@ -333,7 +344,7 @@ export function buildWarRoomTimeline(input: BuildWarRoomTimelineInput): WarRoomT
     && [opening.taiex_change, opening.txf_change, opening.tsmc_change]
       .every((value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)));
   const close = closingRecord(input);
-  const hasClose = Object.keys(close).length > 0;
+  const closeState = resolveClosingVerificationState(close);
   const closeLabel = resolveWarRoomClosingLabel(close);
 
   const nodes: WarRoomTimelineItem[] = [
@@ -344,7 +355,9 @@ export function buildWarRoomTimeline(input: BuildWarRoomTimelineInput): WarRoomT
     {
       time: '14:20',
       label: '收盤驗證',
-      status: hasClose ? (closeLabel === '資料不足' ? 'insufficient' : 'completed') : 'pending',
+      status: closeState.state === 'pending'
+        ? 'pending'
+        : closeLabel === '資料不足' ? 'insufficient' : 'completed',
       statusLabel: '',
     },
   ];

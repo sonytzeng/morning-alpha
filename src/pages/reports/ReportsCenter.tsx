@@ -11,23 +11,10 @@ import {
 } from '@/services/closeMarketReviewService';
 import type { Report } from '@/types/report';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
-import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
+import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 
-const publicReportText = (value: unknown) => naturalizeSyntheticResearchSentence(String(value ?? '')
-  .trim()
-  .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
-  .replace(/\bMEMORY\b/gi, '記憶體')
-  .replace(/\bELECTRONICS\b/gi, '電子')
-  .replace(/\bFINANCIAL\b/gi, '金融')
-  .replace(/\bDEFENSIVE\b/gi, '防禦型族群')
-  .replace(/\bAI[ _-]?SERVER\b/gi, 'AI 伺服器')
-  .replace(/\bTAIEX\b/gi, '加權指數')
-  .replace(/\bTXF\b/gi, '台指期')
-  .replace(/\bADR\b/gi, '海外存託憑證')
-  .replace(/\bunknown\b/gi, '尚未取得')
-  .replace(/\s+/g, ' ')
-  .trim());
+const publicReportText = (value: unknown) => humanizePublicRuntimeText(value);
 
 const previewText = (report: Report) => {
   const text = report.summary || report.today_summary || report.today_quote || '';

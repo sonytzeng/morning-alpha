@@ -13,7 +13,8 @@ import {
 } from '@/lib/runtimeDecisionTimeline';
 import { renderSafeText } from '@/utils/renderSafe';
 import { trackPageView } from '@/utils/analytics';
-import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
+import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
+import { resolveClosingVerificationState } from '@/lib/closingVerificationState';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -43,27 +44,8 @@ function firstText(...values: unknown[]): string {
   return '';
 }
 
-function numberOrNull(value: unknown): number | null {
-  if (value === null || value === undefined || value === '') return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function publicVerificationText(value: unknown): string {
-  return naturalizeSyntheticResearchSentence(firstText(value)
-    .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
-    .replace(/\bAI[ _-]?SERVER\b/gi, 'AI 伺服器')
-    .replace(/\bTAIEX\b/gi, '加權指數')
-    .replace(/\bTXF\b/gi, '台指期')
-    .replace(/\b2330\b(?!\s*[／/])/g, '2330／台積電')
-    .replace(/\bADR\b/gi, '海外存託憑證')
-    .replace(/\bunknown\b/gi, '尚未取得')
-    .replace(/Runtime checkpoint/gi, '盤中驗證節點')
-    .replace(/checkpoint\s*(\d{2})(\d{2})/gi, (_match, hours: string, minutes: string) => `${hours}:${minutes} 驗證`)
-    .replace(/freshness window/gi, '有效時間範圍')
-    .replace(/\bphase\b/gi, '資料階段')
-    .replace(/\s+/g, ' ')
-    .trim());
+  return humanizePublicRuntimeText(firstText(value));
 }
 
 function valueSummary(value: unknown): string {
@@ -90,23 +72,17 @@ function directionFromChange(change: number | null): string {
 }
 
 function buildClosingView(ai: UnknownRecord): ClosingView {
-  const v2 = asRecord(ai.closing_verification_v2);
-  const closing = Object.keys(v2).length > 0 ? v2 : asRecord(ai.closing_verification);
-  const taiex = asRecord(closing.actual_taiex_close);
+  const resolvedClosing = resolveClosingVerificationState(ai);
+  const closing = resolvedClosing.record;
   const status = firstText(closing.status, closing.verification_status).toLowerCase();
   const dataStatus = firstText(closing.data_status).toLowerCase();
   const rawOutcome = firstText(closing.hit_or_miss, closing.prediction_result, closing.result).toLowerCase();
   const actualDirection = firstText(closing.actual_direction).toLowerCase();
-  const actualChange = numberOrNull(closing.actual_taiex_change)
-    ?? numberOrNull(taiex.change_percent)
-    ?? numberOrNull(taiex.change);
+  const actualChange = resolvedClosing.taiexChange;
   const hasNamedDirection = Boolean(actualDirection)
     && !['unknown', 'pending', 'unavailable', 'n/a', '尚未取得', '待資料'].includes(actualDirection);
   const hasActualOutcome = hasNamedDirection || actualChange !== null;
-  const directionVerified = (['completed', 'complete', 'ready', 'done'].includes(status)
-    || status.includes('direction_completed')
-    || status.includes('verified'))
-    && hasActualOutcome;
+  const directionVerified = resolvedClosing.state !== 'pending' && hasActualOutcome;
   const fullData = directionVerified
     && !status.includes('degraded')
     && !['degraded', 'insufficient'].includes(dataStatus);

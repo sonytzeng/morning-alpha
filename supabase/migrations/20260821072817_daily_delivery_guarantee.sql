@@ -232,7 +232,9 @@ language plpgsql
 set search_path = ''
 as $$
 begin
-  if new.review_status = 'APPROVED' and new.content_score < 90 then
+  if new.review_status = 'APPROVED'
+    and (new.content_score is null or new.content_score < 90)
+  then
     new.review_status := case when new.content_score >= 70 then 'DEGRADED' else 'REJECTED' end;
   end if;
   return new;

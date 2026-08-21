@@ -54,7 +54,10 @@ jobs:
           supabase link \
             --project-ref cttfzgvhiewfckydcrci \
             --password "$SUPABASE_DB_PASSWORD"
-          supabase db push --linked
+          # The monitoring foundation predates the remote migration ledger.
+          # --include-all safely records/applies that older idempotent migration
+          # before the current delivery cutover.
+          supabase db push --linked --include-all
 
       - name: Deploy daily report generator
         env:

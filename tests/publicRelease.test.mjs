@@ -36,7 +36,7 @@ const lineDailyPush = read('supabase/functions/line-daily-push/index.ts');
 const dailyDeliveryOrchestrator = read('supabase/functions/daily-delivery-orchestrator/index.ts');
 const closingVerification = read('supabase/functions/closing-verification-engine/index.ts');
 const opsHealthCheck = read('supabase/functions/ma-ops-health-check/index.ts');
-const contentIntelligenceMigration = read('supabase/migrations/202608200001_content_intelligence_v2_foundation.sql');
+const contentIntelligenceMigration = read('supabase/migrations/20260820131721_content_intelligence_v2_foundation.sql');
 const deliveryGuaranteeMigration = read('supabase/migrations/20260821072817_daily_delivery_guarantee.sql');
 const accountDashboard = read('src/hooks/useAccountDashboard.ts');
 const accountInfoCards = read('src/pages/account/components/TodayInfoCards.tsx');
@@ -204,6 +204,7 @@ test('opening radar degrades safely when only TXF is unavailable', () => {
 });
 
 test('premarket workflow delegates to the durable recovery state machine', () => {
+  assert.match(runtimeDeployWorkflow, /supabase db push --linked --include-all/);
   assert.match(runtimeCheckpointWorkflow, /cron: '10 23 \* \* 0-4'/);
   assert.match(runtimeCheckpointWorkflow, /cron: '35 23 \* \* 0-4'/);
   assert.match(runtimeCheckpointWorkflow, /daily-delivery-orchestrator/);
@@ -230,6 +231,7 @@ test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
   assert.match(deliveryGuaranteeMigration, /for update skip locked/);
   assert.match(deliveryGuaranteeMigration, /0-40\/5 23 \* \* 0-4/);
   assert.match(deliveryGuaranteeMigration, /decision_snapshots_premium_90_gate/);
+  assert.match(deliveryGuaranteeMigration, /new\.content_score is null or new\.content_score < 90/);
   assert.match(opsHealthCheck, /ready_90_point_decision_snapshot/);
 });
 

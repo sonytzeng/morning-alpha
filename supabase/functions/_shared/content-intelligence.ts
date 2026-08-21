@@ -60,6 +60,33 @@ function unique(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
+const OPTIONAL_NO_TRADE_SOURCE_GAP = /^(?:unavailable_market_data:)?TXF:no_authorized_source_or_contract_mapping$/i;
+
+function declaredMissingSources(ai: JsonRecord): string[] {
+  const detail = asRecord(ai.data_quality_detail);
+  return unique([
+    ai.missing_sources,
+    detail.missing_sources,
+  ].flatMap((value) => Array.isArray(value) ? value.map((item) => asText(item)) : []));
+}
+
+/**
+ * Recommendation mode always requires complete source coverage. In strict no-trade
+ * mode, the declared TXF entitlement gap may remain visible without forcing a
+ * generic fallback when all decision evidence is otherwise present.
+ */
+export function hasDecisionGradeSourceCoverage(
+  aiValue: unknown,
+  mode: 'recommendations' | 'no_trade',
+): boolean {
+  const ai = asRecord(aiValue);
+  if (asText(ai.data_quality).toLowerCase() === 'complete') return true;
+  if (mode !== 'no_trade') return false;
+  const missingSources = declaredMissingSources(ai);
+  return missingSources.length > 0
+    && missingSources.every((source) => OPTIONAL_NO_TRADE_SOURCE_GAP.test(source));
+}
+
 function recommendationRows(ai: JsonRecord): JsonRecord[] {
   const v10 = asRecords(ai.today_beneficiary_stocks_v10);
   if (ai.v10_beneficiary_enabled === true || String(ai.v10_beneficiary_enabled).toLowerCase() === 'true') {
@@ -162,6 +189,10 @@ export function evaluateContentIntelligence(
   const noTradeMode = recommendations.length === 0
     && String(ai.v10_data_quality_status).toLowerCase() === 'insufficient_positive_evidence'
     && observations.length >= 3;
+  const decisionSourceCoverage = hasDecisionGradeSourceCoverage(
+    ai,
+    noTradeMode ? 'no_trade' : 'recommendations',
+  );
   const dailySentence = getDailySentence(ai);
   const reasons = getReasons(ai);
   const sectors = getSectors(ai);
@@ -200,7 +231,7 @@ export function evaluateContentIntelligence(
     + (allSourcesSpecific ? 8 : 0)
     + (recommendations.length > 0 || noTradeMode ? 4 : 0));
   const freshness = Math.min(15,
-    (String(ai.data_quality).toLowerCase() === 'complete' ? 10 : 0)
+    (decisionSourceCoverage ? 10 : 0)
     + (importantNewsCount > 0 ? 5 : 0));
   const taiwanRelevance = Math.min(15,
     (taiwanCoverage || noTradeMode ? 10 : 0)

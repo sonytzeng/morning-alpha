@@ -75,6 +75,50 @@ test('an evidence-backed no-trade decision remains valuable premium research', (
   assert.equal(result.recommendation_count, 0);
 });
 
+test('no-trade may publish with the declared optional TXF entitlement gap', () => {
+  const ai = validAi();
+  ai.data_quality = 'degraded';
+  ai.missing_sources = ['unavailable_market_data:TXF:no_authorized_source_or_contract_mapping'];
+  ai.today_beneficiary_stocks_v10 = [];
+  ai.v10_data_quality_status = 'insufficient_positive_evidence';
+  ai.today_quote = '費半與台積電 ADR 訊號分歧，09:30 先看 2330 與半導體族群是否同步止跌，未確認前不建立受惠股。';
+  ai.free_summary.one_sentence = ai.today_quote;
+  ai.v10_observation_watchlist = [
+    { symbol: '2330', data_basis: 'MD001｜market_data.TSM｜TSM ADR +0.8%' },
+    { symbol: '2308', data_basis: 'MD002｜market_data.NVDA｜NVDA -0.4%' },
+    { symbol: '2882', data_basis: 'MD003｜market_data.US10Y｜US10Y UP' },
+  ];
+  const result = evaluatePremiumContentGate(ai, 3);
+  assert.equal(result.eligible, true);
+  assert.equal(result.decision_mode, 'no_trade');
+  assert.equal(result.content_score >= 80, true);
+});
+
+test('no-trade still blocks when any non-optional decision source is missing', () => {
+  const ai = validAi();
+  ai.data_quality = 'degraded';
+  ai.missing_sources = ['stale_market_data:SPX'];
+  ai.today_beneficiary_stocks_v10 = [];
+  ai.v10_data_quality_status = 'insufficient_positive_evidence';
+  ai.v10_observation_watchlist = [
+    { symbol: '2330', data_basis: 'market_data.TSM；market_data.TAIEX' },
+    { symbol: '2308', data_basis: 'market_data.NVDA；sector_rotation_scores.AI伺服器' },
+    { symbol: '2882', data_basis: 'market_data.US10Y；sector_rotation_scores.金融' },
+  ];
+  const result = evaluatePremiumContentGate(ai, 3);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('source_data_incomplete'));
+});
+
+test('recommendations require complete sources even when TXF is the only gap', () => {
+  const ai = validAi();
+  ai.data_quality = 'degraded';
+  ai.missing_sources = ['unavailable_market_data:TXF:no_authorized_source_or_contract_mapping'];
+  const result = evaluatePremiumContentGate(ai, 3);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('source_data_incomplete'));
+});
+
 test('no-trade content fails closed when it lacks a useful observation set', () => {
   const ai = validAi();
   ai.today_beneficiary_stocks_v10 = [];

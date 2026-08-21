@@ -1,4 +1,5 @@
 import { getRuntimeCheckpointState } from './decisionEvidence.ts';
+import { isClosingVerificationComplete } from './closingVerificationState.ts';
 import { getTaipeiNow } from '../utils/tradingDay.ts';
 
 export type RuntimeTimelineStatus = 'completed' | 'current' | 'pending' | 'insufficient' | 'not_applicable';
@@ -62,6 +63,7 @@ export function runtimeTimelineStatusLabel(status: RuntimeTimelineStatus): strin
 export function selectNextRuntimeTimelineNode<T extends { status: RuntimeTimelineStatus }>(nodes: T[]): T | undefined {
   return nodes.find((node) => node.status === 'current')
     || nodes.find((node) => node.status === 'pending')
+    || [...nodes].reverse().find((node) => node.status === 'completed')
     || [...nodes].reverse().find((node) => node.status === 'insufficient')
     || nodes[nodes.length - 1];
 }
@@ -76,14 +78,6 @@ function timelineStatus(value: ReturnType<typeof getRuntimeCheckpointState>): 'c
   if (value === 'completed') return 'completed';
   if (value === 'failed' || value === 'insufficient') return 'insufficient';
   return 'pending';
-}
-
-function closingCompleted(ai: UnknownRecord): boolean {
-  const v2 = record(ai.closing_verification_v2);
-  const closing = Object.keys(v2).length > 0 ? v2 : record(ai.closing_verification);
-  const status = String(closing.status ?? closing.data_status ?? '').trim().toLowerCase();
-  const hasResult = Boolean(closing.hit_or_miss || closing.prediction_result || closing.actual_direction || closing.verification_note);
-  return ['completed', 'complete', 'ready', 'done'].includes(status) && hasResult;
 }
 
 function openingCompleted(ai: UnknownRecord): boolean {
@@ -134,7 +128,7 @@ export function buildRuntimeDecisionTimeline(params: {
       time: '14:20',
       label: '收盤驗證',
       detail: '讀取結構化收盤驗證',
-      status: closingCompleted(ai) ? 'completed' : 'pending',
+      status: isClosingVerificationComplete(ai) ? 'completed' : 'pending',
     },
   ];
 

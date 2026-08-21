@@ -19,7 +19,7 @@ import {
   buildWarRoomTimeline,
   type WarRoomTimelineStatus,
 } from './warRoomPresentationMapper';
-import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
+import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -32,19 +32,7 @@ function safeText(value: unknown, fallback = ''): string {
 }
 
 function publicWarRoomText(value: unknown, fallback = '尚未取得'): string {
-  const text = naturalizeSyntheticResearchSentence(safeText(value, fallback)
-    .replace(/checkpoint\s*0?9:?30/gi, '09:30 驗證')
-    .replace(/checkpoint\s*10:?30/gi, '10:30 驗證')
-    .replace(/checkpoint\s*13:?00/gi, '13:30 驗證')
-    .replace(/freshness window/gi, '有效時間範圍')
-    .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
-    .replace(/\bTAIEX\b/gi, '加權指數')
-    .replace(/\bTXF\b/gi, '台指期')
-    .replace(/\bAI[ _-]?SERVER\b/gi, 'AI 伺服器')
-    .replace(/\bADR\b/gi, '海外存託憑證')
-    .replace(/\bphase\b/gi, '資料階段')
-    .replace(/\bunknown\b/gi, '尚未取得')
-    .replace(/\bpending\b/gi, '等待驗證')
+  const text = humanizePublicRuntimeText(safeText(value, fallback))
     .replace(/MAIN_THESIS/gi, '今日主線')
     .replace(/CAPITAL_NEXT/gi, '資金下一站')
     .replace(/CONFIRMATION/gi, '確認條件')
@@ -52,7 +40,7 @@ function publicWarRoomText(value: unknown, fallback = '尚未取得'): string {
     .replace(/RISK/gi, '風險觀察')
     .replace(/[_]+/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim());
+    .trim();
   return text || fallback;
 }
 

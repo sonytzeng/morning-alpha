@@ -1,3 +1,5 @@
+import { resolveClosingVerificationState } from './closingVerificationState.ts';
+
 export type RuntimeDecisionStatus = 'Waiting' | 'Confirmed' | 'Rejected' | 'Completed';
 
 export interface DecisionRuntimeEvidence {
@@ -90,12 +92,9 @@ function hasMarketSnapshot(ai: UnknownRecord): boolean {
 }
 
 function closingResult(ai: UnknownRecord): { verified: boolean; rejected: boolean } {
-  const v2 = record(ai.closing_verification_v2);
-  const closing = Object.keys(v2).length > 0 ? v2 : record(ai.closing_verification);
-  const status = exactStatus(closing.status ?? closing.data_status ?? closing.verification_status);
-  const outcome = exactStatus(closing.hit_or_miss ?? closing.prediction_result ?? closing.result);
-  const verified = ['completed', 'complete', 'ready', 'done'].includes(status)
-    && Boolean(outcome || closing.actual_direction || closing.verification_note);
+  const closing = resolveClosingVerificationState(ai);
+  const outcome = closing.outcome;
+  const verified = closing.state !== 'pending';
   const rejected = ['miss', 'failed', 'rejected', 'wrong', 'incorrect'].includes(outcome);
   return { verified, rejected };
 }

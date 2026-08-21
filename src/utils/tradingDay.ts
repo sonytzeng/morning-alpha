@@ -1,5 +1,5 @@
-import { resolveMarketStatus as resolveCanonicalMarketStatus } from '../lib/market-status';
-import type { MarketStatusCode, SessionType } from '../lib/market-status';
+import { resolveMarketStatus as resolveCanonicalMarketStatus } from '../lib/market-status.ts';
+import type { MarketStatusCode, SessionType } from '../lib/market-status.ts';
 /**
  * Morning Alpha — Shared Trading Day & Data Freshness Utilities
  *

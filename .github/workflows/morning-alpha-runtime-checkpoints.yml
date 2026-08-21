@@ -204,6 +204,7 @@ jobs:
           response_file="$RUNNER_TEMP/line-daily-push.json"
           for attempt in 1 2 3; do
             if curl --silent --show-error --fail-with-body \
+              --max-time 90 \
               --request POST "$FUNCTIONS_BASE_URL/line-daily-push" \
               --header "Content-Type: application/json" \
               --header "x-cron-secret: $CRON_SECRET" \
@@ -410,11 +411,13 @@ jobs:
           exit 1
 
       - name: Build sector rotation evidence for the next trading day
+        id: sector-rotation
+        continue-on-error: true
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           response_file="$RUNNER_TEMP/generate-sector-rotation.json"
-          for attempt in 1 2; do
+          for attempt in 1 2 3; do
             if curl --silent --show-error --fail-with-body \
               --max-time 300 \
               --request POST "$FUNCTIONS_BASE_URL/generate-sector-rotation" \
@@ -427,7 +430,12 @@ jobs:
               fi
             fi
             jq -c '{success, score_date, skipped, error}' "$response_file" >&2 2>/dev/null || true
-            if [ "$attempt" -lt 2 ]; then sleep 20; fi
+            if [ "$attempt" -lt 3 ]; then sleep $((attempt * 20)); fi
           done
-          echo "::error title=Sector rotation failed::Next-day sector evidence was not generated after 2 attempts." >&2
+          echo "::warning title=Sector rotation deferred::Closing verification completed, but next-day sector evidence was not generated after 3 attempts. The next premarket run will remain fail-closed and will not use stale sector evidence." >&2
           exit 1
+
+      - name: Record non-blocking sector evidence degradation
+        if: steps.sector-rotation.outcome == 'failure'
+        run: |
+          echo "Closing verification is complete. Sector rotation is auxiliary next-day evidence and was safely degraded; no stale evidence was promoted."

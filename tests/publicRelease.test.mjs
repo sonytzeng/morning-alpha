@@ -27,6 +27,7 @@ const dailyReportGenerator = read('supabase/functions/generate-daily-report-v7/i
 const runtimeDeployWorkflow = read('.github/workflows/deploy-morning-alpha-runtime.yml');
 const runtimeCheckpointWorkflow = read('.github/workflows/morning-alpha-runtime-checkpoints.yml');
 const publicResearchText = read('src/utils/publicResearchText.ts');
+const publicRuntimeCopy = read('src/utils/publicRuntimeCopy.ts');
 const reportPayloadFunction = read('supabase/functions/get-report-payload/index.ts');
 const premiumAvailability = read('src/lib/premiumContentAvailability.ts');
 const premiumGate = read('supabase/functions/_shared/premium-content-gate.ts');
@@ -185,8 +186,10 @@ test('synthetic research sentences are naturalized across every public report su
   assert.match(publicResearchText, /naturalizeSyntheticResearchSentence/);
   assert.match(publicResearchText, /是今天的主要觀察方向，先等市場承接確認/);
   for (const source of [home, today, opportunities, warRoom, verification, reportsCenter, reportDetail]) {
-    assert.match(source, /naturalizeSyntheticResearchSentence/);
+    assert.match(source, /humanizePublicRuntimeText/);
   }
+  assert.match(publicRuntimeCopy, /naturalizeSyntheticResearchSentence/);
+  assert.match(publicRuntimeCopy, /資料補齊前不更新判斷/);
   assert.match(performance, /目前沒有可計入績效的完整收盤紀錄/);
 });
 
@@ -275,7 +278,9 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeCheckpointWorkflow, /--max-time 180/);
   assert.match(runtimeCheckpointWorkflow, /Intraday snapshots unavailable/);
   assert.match(runtimeCheckpointWorkflow, /Closing review failed/);
-  assert.match(runtimeCheckpointWorkflow, /Sector rotation failed/);
+  assert.match(runtimeCheckpointWorkflow, /Sector rotation deferred/);
+  assert.match(runtimeCheckpointWorkflow, /continue-on-error: true/);
+  assert.match(runtimeCheckpointWorkflow, /steps\.sector-rotation\.outcome == 'failure'/);
   assert.match(runtimeCheckpointWorkflow, /Missing TAIEX close evidence/);
   assert.match(runtimeCheckpointWorkflow, /Closing verification incomplete/);
   assert.match(runtimeCheckpointWorkflow, /written_and_synced/);
@@ -370,6 +375,8 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /最近一次收盤驗證 ·/);
   assert.match(home, /dataStatus === 'complete'/);
   assert.match(home, /hasDirection/);
+  assert.match(home, /資料不足，已安全降級/);
+  assert.match(home, /selectNextRuntimeTimelineNode\(timelineNodes\)/);
 });
 
 test('today report keeps runtime state and technical copy out of the public UI', () => {
@@ -388,7 +395,7 @@ test('today report is a drill-down workbench rather than a duplicate home dashbo
   }
   assert.doesNotMatch(today, /ma-today-v3-advice-card/);
   assert.doesNotMatch(today, />判斷信心</);
-  assert.match(today, /09:30 開盤資料不完整：缺少同一時間範圍的加權指數、台指期與台積電快照/);
+  assert.match(today, /humanizePublicRuntimeText/);
   assert.match(today, /matchingValidationStep/);
   assert.match(today, /nextRuntimeNode\.status === 'current' \|\| nextRuntimeNode\.status === 'insufficient'/);
   assert.match(today, /節點時間已到，但完整市場資料尚未到齊；資料補齊前不更新判斷/);
@@ -413,8 +420,7 @@ test('opportunities is a candidate screening flow with complete public copy', ()
   }
   assert.doesNotMatch(opportunities, />09:30 確認</);
   assert.match(opportunities, /selectNextRuntimeTimelineNode\(runtimeTimeline\)/);
-  assert.match(opportunities, /replace\(\/\\bTAIEX\\b\/gi, '加權指數'\)/);
-  assert.match(opportunities, /replace\(\/\\bTXF\\b\/gi, '台指期'\)/);
+  assert.match(opportunities, /humanizePublicRuntimeText/);
   assert.match(opportunities, /hasStrongBeneficiaryEvidence/);
   assert.match(opportunities, /今天沒有強受惠股，先觀察/);
   assert.match(opportunities, /不把觀察股包裝成受惠股/);
@@ -443,10 +449,7 @@ test('war room is a live monitor rather than another dashboard page', () => {
     assert.doesNotMatch(warRoom, new RegExp(legacySurface), `war room still uses repeated surface: ${legacySurface}`);
   }
   assert.match(warRoom, /publicWarRoomText/);
-  assert.match(warRoom, /replace\(\/\\bunknown\\b\/gi, '尚未取得'\)/);
-  assert.match(warRoom, /replace\(\/\\bTAIEX\\b\/gi, '加權指數'\)/);
-  assert.match(warRoom, /replace\(\/\\bTXF\\b\/gi, '台指期'\)/);
-  assert.match(warRoom, /replace\(\/\\bADR\\b\/gi, '海外存託憑證'\)/);
+  assert.match(warRoom, /humanizePublicRuntimeText/);
 });
 
 test('member note turns actual intraday evidence into a fail-closed day-trading decision', () => {
@@ -516,7 +519,7 @@ test('core product pages have distinct jobs instead of repeated dashboard surfac
 
 test('member note translates research enums and checkpoint diagnostics for readers', () => {
   assert.match(memberNote, /replace\(\/\\bSEMICONDUCTOR\\b\/gi, '半導體'\)/);
-  assert.match(memberNote, /開盤資料不完整：加權指數、台指期與台積電快照尚未在同一有效時間內到齊/);
+  assert.match(memberNote, /humanizePublicRuntimeText/);
   assert.match(memberNote, /naturalizeResearchHeadline/);
   assert.match(memberNote, /是今天的主要觀察方向，先等市場承接確認/);
 });
@@ -537,8 +540,7 @@ test('verification is a public fail-closed audit instead of an internal diagnost
     assert.doesNotMatch(verification, new RegExp(internalName, 'i'), `verification exposes an internal name: ${internalName}`);
   }
   assert.match(verification, /hasActualOutcome/);
-  assert.match(verification, /\['completed', 'complete', 'ready', 'done'\]\.includes\(status\)/);
-  assert.match(verification, /status\.includes\('direction_completed'\)/);
+  assert.match(verification, /resolveClosingVerificationState/);
   assert.match(verification, /部分個股或期貨欄位不足/);
   assert.match(verification, /if \(isHistoricalFallback\)/);
   assert.match(verification, /不會把 .* 的進度誤標為今天/);
@@ -549,8 +551,7 @@ test('report pages translate public market labels and require a real closing out
     assert.doesNotMatch(reportsCenter, new RegExp(label, 'i'), `reports center renders an untranslated label: ${label}`);
   }
   assert.match(reportsCenter, /publicReportText/);
-  assert.match(reportDetail, /resolveClosingVerification/);
-  assert.match(reportDetail, /status\.includes\('direction_completed'\)/);
+  assert.match(reportDetail, /resolveClosingVerificationState/);
   assert.match(reportDetail, /收盤方向已驗證（部分資料不足）/);
   assert.match(reportDetail, /歷史收盤驗證資料不足/);
   assert.match(reportDetail, /closingVerification\.taiexChange\.toFixed\(2\)/);

@@ -17,10 +17,11 @@ import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 import {
   buildRuntimeDecisionTimeline,
   runtimeTimelineStatusLabel,
+  selectNextRuntimeTimelineNode,
   type RuntimeTimelineStatus,
 } from '@/lib/runtimeDecisionTimeline';
 import { supabase } from '@/lib/supabase';
-import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
+import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 
 export default function HomePage() {
   return (
@@ -117,15 +118,7 @@ function isSyntheticResearchSentence(value: string): boolean {
 }
 
 function translateKnownTerms(value: string): string {
-  return naturalizeSyntheticResearchSentence(value
-    .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
-    .replace(/\bAI SERVER\b/gi, 'AI 伺服器族群')
-    .replace(/\bPETROCHEMICAL\b/gi, '塑化')
-    .replace(/\bSHIPPING\b/gi, '航運')
-    .replace(/\bTAIEX\b/gi, '加權指數')
-    .replace(/\bTXF\b/gi, '台指期')
-    .replace(/\bRuntime\b/gi, '盤中資料')
-    .replace(/\b2330\b(?!\s*[／/])/g, '2330／台積電'));
+  return humanizePublicRuntimeText(value);
 }
 
 function uniqueStrings(values: string[], limit: number): string[] {
@@ -168,7 +161,8 @@ function decisionDayLabel(state: string, hasTodayReport: boolean, currentNode?: 
   }
 }
 
-function dataCompletenessLabel(status: string, hasReport: boolean): string {
+function dataCompletenessLabel(status: string, hasReport: boolean, evidenceIsInsufficient: boolean): string {
+  if (evidenceIsInsufficient) return hasReport ? '資料不足，已安全降級' : '尚未取得報告';
   const normalized = status.trim().toLowerCase();
   if (['complete', 'completed', 'ready', 'reliable', 'ok', 'sufficient'].includes(normalized)) return '資料完整';
   if (['partial', 'degraded', 'limited', 'stale'].includes(normalized)) return '部分完成';
@@ -373,8 +367,7 @@ function HomePageContent() {
     isTradingDay: displayMode !== 'market-closed' && displayState.is_trading_day,
   });
 
-  const currentTimelineNode = timelineNodes.find((node) => node.status === 'current')
-    || timelineNodes.find((node) => node.status === 'pending')
+  const currentTimelineNode = selectNextRuntimeTimelineNode(timelineNodes)
     || timelineNodes[timelineNodes.length - 1];
   const presentation = useMemo(() => buildDecisionPresentation({
     displayState,
@@ -649,7 +642,7 @@ function HomePageContent() {
     { label: '市場資料基準', value: formatTaipeiTimestamp(dataAsOf) },
     { label: '報告產生時間', value: formatTaipeiTimestamp(reportGeneratedAt) },
     { label: '分析版本', value: aiVersion },
-    { label: '資料狀態', value: dataCompletenessLabel(displayState.dataStatus, reportExists) },
+    { label: '資料狀態', value: dataCompletenessLabel(displayState.dataStatus, reportExists, evidenceIsInsufficient) },
   ];
 
   const hasReportData = hasMorningState && reportExists;

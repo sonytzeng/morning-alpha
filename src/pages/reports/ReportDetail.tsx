@@ -10,8 +10,9 @@ import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport'
 import { getTaipeiNow, formatTaipeiDate } from '@/utils/tradingDay';
 import { parseAIStrategy, type ParsedAIStrategy } from '@/utils/aiStrategyParser';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
-import { naturalizeSyntheticResearchSentence } from '@/utils/publicResearchText';
 import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
+import { resolveClosingVerificationState } from '@/lib/closingVerificationState';
+import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 
 // ═══ Constants ═══
 const SECTOR_NAME_MAP: Record<string, string> = {
@@ -50,60 +51,13 @@ function closingTextItems(value: unknown): string[] {
 }
 
 function publicReportText(value: unknown): string {
-  return naturalizeSyntheticResearchSentence(String(value ?? '')
-    .trim()
-    .replace(/\bSEMICONDUCTOR\b/gi, '半導體')
-    .replace(/\bMEMORY\b/gi, '記憶體')
-    .replace(/\bELECTRONICS\b/gi, '電子')
-    .replace(/\bFINANCIAL\b/gi, '金融')
-    .replace(/\bDEFENSIVE\b/gi, '防禦型族群')
-    .replace(/\bAI[ _-]?SERVER\b/gi, 'AI 伺服器')
-    .replace(/\bTAIEX\b/gi, '加權指數')
-    .replace(/\bTXF\b/gi, '台指期')
-    .replace(/\bADR\b/gi, '海外存託憑證')
-    .replace(/\bunknown\b/gi, '尚未取得')
-    .replace(/\s+/g, ' ')
-    .trim());
+  return humanizePublicRuntimeText(value);
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
-}
-
-function numberOrNull(value: unknown): number | null {
-  if (value === null || value === undefined || value === '') return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-type ClosingVerificationState = 'complete' | 'degraded' | 'pending';
-
-function resolveClosingVerification(raw: Record<string, unknown> | null | undefined): {
-  state: ClosingVerificationState;
-  closing: Record<string, unknown>;
-  taiexChange: number | null;
-} {
-  const ai = raw || {};
-  const v2 = asRecord(ai.closing_verification_v2);
-  const closing = Object.keys(v2).length > 0 ? v2 : asRecord(ai.closing_verification);
-  const taiex = asRecord(closing.actual_taiex_close);
-  const status = String(closing.status ?? closing.verification_status ?? '').trim().toLowerCase();
-  const dataStatus = String(closing.data_status ?? '').trim().toLowerCase();
-  const direction = String(closing.actual_direction ?? '').trim().toLowerCase();
-  const hasNamedDirection = Boolean(direction)
-    && !['unknown', 'pending', 'unavailable', 'n/a', '尚未取得', '待資料'].includes(direction);
-  const change = numberOrNull(closing.actual_taiex_change)
-    ?? numberOrNull(taiex.change_percent)
-    ?? numberOrNull(taiex.change);
-  const hasOutcome = hasNamedDirection || change !== null;
-  const completed = ['completed', 'complete', 'ready', 'done'].includes(status)
-    || status.includes('direction_completed')
-    || status.includes('verified');
-  if (!completed || !hasOutcome) return { state: 'pending', closing, taiexChange: change };
-  const degraded = status.includes('degraded') || ['degraded', 'insufficient'].includes(dataStatus);
-  return { state: degraded ? 'degraded' : 'complete', closing, taiexChange: change };
 }
 
 function closingOutcomeLabel(value: unknown): string {
@@ -173,8 +127,8 @@ export default function ReportDetail() {
   // A closing field can be a plan or placeholder; require a real outcome, while keeping
   // a completed direction visible when secondary market fields are degraded.
   const strategy: ParsedAIStrategy = parseAIStrategy(report);
-  const closingVerification = resolveClosingVerification(strategy.raw);
-  const closing = closingVerification.closing;
+  const closingVerification = resolveClosingVerificationState(strategy.raw);
+  const closing = closingVerification.record;
   const closingOutcome = closingOutcomeLabel(closing.hit_or_miss ?? closing.prediction_result ?? closing.result);
   const closingDirection = closingDirectionLabel(closing.actual_direction, closingVerification.taiexChange);
   const closingVerifiedAt = String(closing.verified_at ?? '').trim();

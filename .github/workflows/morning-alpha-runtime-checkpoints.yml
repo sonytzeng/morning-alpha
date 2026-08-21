@@ -180,6 +180,52 @@ jobs:
           jq . "$response_file" >&2 || true
           exit 1
 
+      - name: Repair evidence and regenerate once when premium content is below standard
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          health_file="$RUNNER_TEMP/premarket-content-before-repair.json"
+          curl --silent --show-error --fail-with-body \
+            --max-time 45 \
+            --request POST "$FUNCTIONS_BASE_URL/ma-ops-health-check" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{"environment":"production","check_type":"report","dry_run":true,"components":["daily-report-exists","daily-report-contract"]}' \
+            --output "$health_file"
+          if jq -e '
+            ([.checks[] | select(.check_name == "daily-report-exists" and .status == "passed")] | length) == 1
+            and ([.checks[] | select(.check_name == "daily-report-contract" and .status == "passed")] | length) == 1
+          ' "$health_file" >/dev/null; then
+            exit 0
+          fi
+
+          echo "::notice title=Premium content repair::The first draft was below the 90-point paid-content contract. Refreshing evidence and regenerating once."
+          news_file="$RUNNER_TEMP/fetch-global-market-news-repair.json"
+          market_file="$RUNNER_TEMP/fetch-premarket-data-repair.json"
+          report_file="$RUNNER_TEMP/generate-daily-report-repair.json"
+          curl --silent --show-error --fail-with-body \
+            --max-time 180 \
+            --request POST "$FUNCTIONS_BASE_URL/fetch-global-market-news" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{}' \
+            --output "$news_file"
+          curl --silent --show-error --fail-with-body \
+            --max-time 180 \
+            --request POST "$FUNCTIONS_BASE_URL/fetch-market-data-v10" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{"phase":"premarket"}' \
+            --output "$market_file"
+          curl --silent --show-error --fail-with-body \
+            --max-time 720 \
+            --request POST "$FUNCTIONS_BASE_URL/generate-daily-report-v7" \
+            --header "Content-Type: application/json" \
+            --header "x-cron-secret: $CRON_SECRET" \
+            --data '{"quality_retry":true}' \
+            --output "$report_file"
+          jq -e '.success == true and (.report_id | type == "string") and (.report_date | type == "string")' "$report_file" >/dev/null
+
       - name: Require publishable report content before LINE
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}

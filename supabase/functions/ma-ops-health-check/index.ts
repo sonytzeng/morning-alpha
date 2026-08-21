@@ -350,6 +350,10 @@ const handlers: Record<CheckName, CheckHandler> = {
     const importantNews = asArray(report.important_news_json).length > 0
       ? asArray(report.important_news_json)
       : asArray(ai.important_news);
+    const evidenceQuality = asObject(ai.content_evidence_quality);
+    const verifiedNewsCount = Math.max(0, Number(evidenceQuality.verified_news_count) || 0);
+    const verifiedMarketCount = Math.max(0, Number(evidenceQuality.verified_market_count) || 0);
+    const verifiedCatalystCount = verifiedNewsCount + verifiedMarketCount;
     const v8DailySentence = asObject(ai.v8_daily_sentence);
     const dailySentence = report.today_quote || ai.today_quote || v8DailySentence.sentence;
     const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
@@ -361,7 +365,7 @@ const handlers: Record<CheckName, CheckHandler> = {
       typeof ai.is_trading_day !== "boolean" ? "ai_strategy_json.is_trading_day" : null,
       !nonEmptyString(ai.market_status) ? "ai_strategy_json.market_status" : null,
       isTradingDay && !isActionableResearchSentence(dailySentence) ? "today_quote.actionable" : null,
-      isTradingDay && importantNews.length < 1 ? "important_news_json" : null,
+      isTradingDay && verifiedCatalystCount < 1 ? "verified_catalyst_evidence" : null,
       isTradingDay && asArray(note.overnight_chain).length < 1 ? "member_research_note_v2.overnight_chain" : null,
       isTradingDay && asArray(note.intraday_validation).length < 3 ? "member_research_note_v2.intraday_validation" : null,
       isTradingDay && asArray(note.invalidation_rules).length < 2 ? "member_research_note_v2.invalidation_rules" : null,
@@ -370,13 +374,16 @@ const handlers: Record<CheckName, CheckHandler> = {
     ].filter((item): item is string => item !== null);
     return makeCheck(
       "daily-report-contract", "daily-report", missing.length === 0 ? "passed" : "failed", missing.length === 0 ? "info" : "critical",
-      { required_fields: ["market_bias", "confidence_score", "ai_strategy_json", "report_mode", "is_trading_day", "market_status", "actionable_daily_sentence", "fresh_news", "member_research_structure", "premium_content_gate"] },
+      { required_fields: ["market_bias", "confidence_score", "ai_strategy_json", "report_mode", "is_trading_day", "market_status", "actionable_daily_sentence", "verified_catalyst_evidence", "member_research_structure", "premium_content_gate"] },
       {
         missing_fields: missing,
         report_mode: report.report_mode || ai.report_mode || null,
         is_trading_day: ai.is_trading_day ?? null,
         market_status: ai.market_status || null,
         fresh_news_count: importantNews.length,
+        verified_news_count: verifiedNewsCount,
+        verified_market_count: verifiedMarketCount,
+        verified_catalyst_count: verifiedCatalystCount,
         overnight_step_count: asArray(note.overnight_chain).length,
         intraday_step_count: asArray(note.intraday_validation).length,
         invalidation_rule_count: asArray(note.invalidation_rules).length,

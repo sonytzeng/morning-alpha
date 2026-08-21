@@ -8,6 +8,13 @@ import {
 function strongResearch() {
   return {
     data_quality: 'complete',
+    content_evidence_quality: {
+      contract_version: 'PREMIUM_EVIDENCE_V1',
+      verified_news_count: 1,
+      verified_market_count: 3,
+      all_news_traceable: true,
+      blank_market_change_count: 0,
+    },
     v10_data_quality_status: 'sufficient',
     v10_beneficiary_enabled: true,
     today_quote: '費半上漲 2.1% 且 NVIDIA 財測上修，台股先看台積電與 AI 供應鏈開盤後是否量價同步。',
@@ -30,14 +37,14 @@ function strongResearch() {
       taiwan_supply_chain_link: '台積電提供 NVIDIA GPU 所需先進製程與 CoWoS 先進封裝產能。',
       validation_signal: '09:30 觀察台積電是否相對加權指數強勢，且半導體成交比重同步上升。',
       invalidation_condition: '台積電轉弱且半導體族群未同步，或事件來源遭公司更新否定。',
-      data_basis: 'NVIDIA investor relations guidance；market_data.NVDA；market_data.TSM',
+      data_basis: 'https://investor.nvidia.com/；market_data:NVDA@2026-08-21T06:00:00Z；market_data:TSM@2026-08-21T06:00:00Z',
     }],
   };
 }
 
 test('high-value research reaches the publish threshold with an auditable breakdown', () => {
   const result = evaluateContentIntelligence(strongResearch(), 3);
-  assert.ok(result.score >= 80, `expected publishable score, received ${result.score}`);
+  assert.ok(result.score >= 90, `expected high-quality score, received ${result.score}`);
   assert.equal(result.publishable, true);
   assert.ok(['publish', 'high_quality'].includes(result.grade));
   assert.equal(result.breakdown.evidence, 20);
@@ -67,4 +74,12 @@ test('a recommendation without a traceable source and invalidation is not publis
 
 test('detector accepts a concrete evidence-linked daily sentence', () => {
   assert.deepEqual(detectGenericContent(strongResearch()), []);
+});
+
+test('paid content fails closed without the verified evidence contract', () => {
+  const ai = strongResearch();
+  delete ai.content_evidence_quality;
+  const result = evaluateContentIntelligence(ai, 3);
+  assert.equal(result.publishable, false);
+  assert.ok(result.reason_codes.includes('evidence_quality_contract_missing'));
 });

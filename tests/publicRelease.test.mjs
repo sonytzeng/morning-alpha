@@ -307,7 +307,8 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(opsHealthCheck, /evaluatePremiumContentGate/);
   assert.match(opsHealthCheck, /intraday_validation\)\.length < 3/);
   assert.match(opsHealthCheck, /invalidation_rules\)\.length < 2/);
-  assert.match(opsHealthCheck, /importantNews\.length < 1/);
+  assert.match(opsHealthCheck, /verifiedCatalystCount < 1/);
+  assert.match(opsHealthCheck, /verified_market_count/);
   assert.match(runtimeCheckpointWorkflow, /7 \* 60 \+ 20/);
   assert.match(runtimeCheckpointWorkflow, /&& 'premarket'/);
 });

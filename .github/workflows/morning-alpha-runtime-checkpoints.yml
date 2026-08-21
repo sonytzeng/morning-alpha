@@ -2,9 +2,9 @@ name: Morning Alpha runtime checkpoints
 
 on:
   schedule:
-    # GitHub cron uses UTC. Publish near 07:30 Asia/Taipei, then run one idempotent watchdog.
-    - cron: '15 23 * * 0-4'
-    - cron: '40 23 * * 0-4'
+    # GitHub cron uses UTC. Supabase Cron is primary; these are independent watchdogs at 07:10/07:35 Taipei.
+    - cron: '10 23 * * 0-4'
+    - cron: '35 23 * * 0-4'
     - cron: '5 1 * * 1-5'
     - cron: '20 1 * * 1-5'
     - cron: '5 2 * * 1-5'
@@ -30,7 +30,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: morning-alpha-runtime-${{ (github.event.schedule == '15 23 * * 0-4' || github.event.schedule == '40 23 * * 0-4') && 'premarket' || (github.event.schedule == '5 1 * * 1-5' || github.event.schedule == '20 1 * * 1-5') && '0930' || (github.event.schedule == '5 2 * * 1-5' || github.event.schedule == '20 2 * * 1-5') && '1030' || (github.event.schedule == '35 4 * * 1-5' || github.event.schedule == '50 4 * * 1-5') && '1300' || (github.event.schedule == '20 6 * * 1-5' || github.event.schedule == '35 6 * * 1-5') && 'closing' || inputs.checkpoint || github.run_id }}
+  group: morning-alpha-runtime-${{ (github.event.schedule == '10 23 * * 0-4' || github.event.schedule == '35 23 * * 0-4') && 'premarket' || (github.event.schedule == '5 1 * * 1-5' || github.event.schedule == '20 1 * * 1-5') && '0930' || (github.event.schedule == '5 2 * * 1-5' || github.event.schedule == '20 2 * * 1-5') && '1030' || (github.event.schedule == '35 4 * * 1-5' || github.event.schedule == '50 4 * * 1-5') && '1300' || (github.event.schedule == '20 6 * * 1-5' || github.event.schedule == '35 6 * * 1-5') && 'closing' || inputs.checkpoint || github.run_id }}
   cancel-in-progress: false
 
 env:
@@ -51,7 +51,7 @@ jobs:
         run: |
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             checkpoint="$MANUAL_CHECKPOINT"
-          elif [ "$EVENT_SCHEDULE" = "15 23 * * 0-4" ] || [ "$EVENT_SCHEDULE" = "40 23 * * 0-4" ]; then
+          elif [ "$EVENT_SCHEDULE" = "10 23 * * 0-4" ] || [ "$EVENT_SCHEDULE" = "35 23 * * 0-4" ]; then
             checkpoint="premarket"
           elif [ "$EVENT_SCHEDULE" = "5 1 * * 1-5" ] || [ "$EVENT_SCHEDULE" = "20 1 * * 1-5" ]; then
             checkpoint="0930"
@@ -71,213 +71,34 @@ jobs:
     needs: resolve-checkpoint
     if: needs.resolve-checkpoint.outputs.checkpoint == 'premarket'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 15
     steps:
-      - name: Wait until the 07:20 Taipei analysis window
-        run: |
-          now_minutes=$((10#$(TZ=Asia/Taipei date +%H) * 60 + 10#$(TZ=Asia/Taipei date +%M)))
-          target_minutes=$((7 * 60 + 20))
-          if [ "$now_minutes" -lt "$target_minutes" ]; then
-            sleep $(((target_minutes - now_minutes) * 60))
-          fi
-
       - name: Require runtime secret
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: test -n "$CRON_SECRET"
 
-      - name: Check whether today's report is ready for LINE
-        id: premarket-state
+      - name: Run the durable delivery watchdog
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          response_file="$RUNNER_TEMP/premarket-state.json"
-          curl --silent --show-error --fail-with-body \
-            --max-time 45 \
-            --request POST "$FUNCTIONS_BASE_URL/ma-ops-health-check" \
-            --header "Content-Type: application/json" \
-            --header "x-cron-secret: $CRON_SECRET" \
-            --data '{"environment":"production","check_type":"report","dry_run":true,"components":["daily-report-exists","daily-report-contract"]}' \
-            --output "$response_file"
-          if jq -e '
-            ([.checks[] | select(.check_name == "daily-report-exists" and .status == "passed")] | length) == 1
-            and ([.checks[] | select(.check_name == "daily-report-contract" and .status == "passed")] | length) == 1
-          ' "$response_file" >/dev/null; then
-            echo "report_ready=true" >> "$GITHUB_OUTPUT"
-          else
-            jq -c '{status, checks: [.checks[] | {check_name, status, error_code, actual_state}]}' "$response_file" >&2 || true
-            echo "report_ready=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Refresh verifiable global market news
-        if: steps.premarket-state.outputs.report_ready != 'true'
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          response_file="$RUNNER_TEMP/fetch-global-market-news.json"
+          response_file="$RUNNER_TEMP/daily-delivery-orchestrator.json"
           for attempt in 1 2 3; do
             if curl --silent --show-error --fail-with-body \
-              --max-time 180 \
-              --request POST "$FUNCTIONS_BASE_URL/fetch-global-market-news" \
+              --max-time 600 \
+              --request POST "$FUNCTIONS_BASE_URL/daily-delivery-orchestrator" \
               --header "Content-Type: application/json" \
               --header "x-cron-secret: $CRON_SECRET" \
               --data '{}' \
               --output "$response_file"; then
-              if jq -e '.success == true and .total_upserted >= 1' "$response_file" >/dev/null; then
+              if jq -e '.success == true and (.status == "SUCCEEDED" or .status == "DEGRADED" or .status == "SKIPPED")' "$response_file" >/dev/null; then
                 exit 0
               fi
             fi
-            if [ "$attempt" -lt 3 ]; then
-              sleep $((attempt * 10))
-            fi
-          done
-          jq . "$response_file" >&2 || true
-          exit 1
-
-      - name: Fetch premarket reference snapshots
-        if: steps.premarket-state.outputs.report_ready != 'true'
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          response_file="$RUNNER_TEMP/fetch-premarket-data.json"
-          for attempt in 1 2 3; do
-            if curl --silent --show-error --fail-with-body \
-              --max-time 180 \
-              --request POST "$FUNCTIONS_BASE_URL/fetch-market-data-v10" \
-              --header "Content-Type: application/json" \
-              --header "x-cron-secret: $CRON_SECRET" \
-              --data '{"phase":"premarket"}' \
-              --output "$response_file"; then
-              if jq -e '.success == true and .phase == "premarket" and .snapshot_upserted_count >= 1' "$response_file" >/dev/null; then
-                exit 0
-              fi
-            fi
+            jq -c '{success, status, phase, actions, premium_eligible, delivered, reason_codes, retry_after_seconds, error}' "$response_file" >&2 || true
             if [ "$attempt" -lt 3 ]; then sleep $((attempt * 10)); fi
           done
-          jq . "$response_file" >&2 || true
-          exit 1
-
-      - name: Generate and verify today's report
-        if: steps.premarket-state.outputs.report_ready != 'true'
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          response_file="$RUNNER_TEMP/generate-daily-report.json"
-          for attempt in 1 2; do
-            if curl --silent --show-error --fail-with-body \
-              --max-time 720 \
-              --request POST "$FUNCTIONS_BASE_URL/generate-daily-report-v7" \
-              --header "Content-Type: application/json" \
-              --header "x-cron-secret: $CRON_SECRET" \
-              --data '{}' \
-              --output "$response_file"; then
-              if jq -e '.success == true and (.report_id | type == "string") and (.report_date | type == "string")' "$response_file" >/dev/null; then
-                exit 0
-              fi
-            fi
-            if [ "$attempt" -lt 2 ]; then sleep 20; fi
-          done
-          jq . "$response_file" >&2 || true
-          exit 1
-
-      - name: Repair evidence and regenerate once when premium content is below standard
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          health_file="$RUNNER_TEMP/premarket-content-before-repair.json"
-          curl --silent --show-error --fail-with-body \
-            --max-time 45 \
-            --request POST "$FUNCTIONS_BASE_URL/ma-ops-health-check" \
-            --header "Content-Type: application/json" \
-            --header "x-cron-secret: $CRON_SECRET" \
-            --data '{"environment":"production","check_type":"report","dry_run":true,"components":["daily-report-exists","daily-report-contract"]}' \
-            --output "$health_file"
-          if jq -e '
-            ([.checks[] | select(.check_name == "daily-report-exists" and .status == "passed")] | length) == 1
-            and ([.checks[] | select(.check_name == "daily-report-contract" and .status == "passed")] | length) == 1
-          ' "$health_file" >/dev/null; then
-            exit 0
-          fi
-
-          echo "::notice title=Premium content repair::The first draft was below the 90-point paid-content contract. Refreshing evidence and regenerating once."
-          news_file="$RUNNER_TEMP/fetch-global-market-news-repair.json"
-          market_file="$RUNNER_TEMP/fetch-premarket-data-repair.json"
-          report_file="$RUNNER_TEMP/generate-daily-report-repair.json"
-          curl --silent --show-error --fail-with-body \
-            --max-time 180 \
-            --request POST "$FUNCTIONS_BASE_URL/fetch-global-market-news" \
-            --header "Content-Type: application/json" \
-            --header "x-cron-secret: $CRON_SECRET" \
-            --data '{}' \
-            --output "$news_file"
-          curl --silent --show-error --fail-with-body \
-            --max-time 180 \
-            --request POST "$FUNCTIONS_BASE_URL/fetch-market-data-v10" \
-            --header "Content-Type: application/json" \
-            --header "x-cron-secret: $CRON_SECRET" \
-            --data '{"phase":"premarket"}' \
-            --output "$market_file"
-          curl --silent --show-error --fail-with-body \
-            --max-time 720 \
-            --request POST "$FUNCTIONS_BASE_URL/generate-daily-report-v7" \
-            --header "Content-Type: application/json" \
-            --header "x-cron-secret: $CRON_SECRET" \
-            --data '{"quality_retry":true}' \
-            --output "$report_file"
-          jq -e '.success == true and (.report_id | type == "string") and (.report_date | type == "string")' "$report_file" >/dev/null
-
-      - name: Require publishable report content before LINE
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          response_file="$RUNNER_TEMP/premarket-content-contract.json"
-          curl --silent --show-error --fail-with-body \
-            --max-time 45 \
-            --request POST "$FUNCTIONS_BASE_URL/ma-ops-health-check" \
-            --header "Content-Type: application/json" \
-            --header "x-cron-secret: $CRON_SECRET" \
-            --data '{"environment":"production","check_type":"report","dry_run":true,"components":["daily-report-exists","daily-report-contract"]}' \
-            --output "$response_file"
-          if ! jq -e '
-            ([.checks[] | select(.check_name == "daily-report-exists" and .status == "passed")] | length) == 1
-            and ([.checks[] | select(.check_name == "daily-report-contract" and .status == "passed")] | length) == 1
-          ' "$response_file" >/dev/null; then
-            jq -c '{status, checks: [.checks[] | {check_name, status, error_code, actual_state}]}' "$response_file" >&2 || true
-            echo "::error title=Daily report content gate failed::LINE was not sent because today's report did not meet the publishable content contract." >&2
-            exit 1
-          fi
-
-      - name: Push today's LINE premarket brief
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          response_file="$RUNNER_TEMP/line-daily-push.json"
-          for attempt in 1 2 3; do
-            if curl --silent --show-error --fail-with-body \
-              --max-time 90 \
-              --request POST "$FUNCTIONS_BASE_URL/line-daily-push" \
-              --header "Content-Type: application/json" \
-              --header "x-cron-secret: $CRON_SECRET" \
-              --data '{}' \
-              --output "$response_file"; then
-              if jq -e '
-                .success == true
-                and (
-                  (.sent == true and .failed_count == 0)
-                  or (.sent == false and (
-                    .reason == "ALREADY_SENT"
-                    or .reason == "NO_ACTIVE_SUBSCRIBERS"
-                    or .reason == "MARKET_STATUS_NOT_OPEN"
-                  ))
-                )
-              ' "$response_file" >/dev/null; then
-                exit 0
-              fi
-            fi
-            jq -c '{success, sent, reason, report_date, total_subscribers, eligible_count, already_sent_count, sent_count, failed_count}' "$response_file" >&2 || true
-            if [ "$attempt" -lt 3 ]; then sleep $((attempt * 10)); fi
-          done
-          echo "::error title=LINE premarket push failed::The LINE push did not complete after 3 idempotent attempts." >&2
+          echo "::error title=Daily delivery watchdog failed::The durable recovery router did not acknowledge the checkpoint after 3 attempts." >&2
           exit 1
 
   intraday:

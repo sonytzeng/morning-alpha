@@ -2047,7 +2047,10 @@ Deno.serve(async (req:Request)=>{
     let body:Record<string,unknown>={};try{body=await req.json()}catch{log('BODY_PARSE_FAILED')}
     const skipOpenAI=body?.skip_openai===true||body?.fast_mode===true;
     const runV10DebugAgents=body?.run_v10_debug_agents===true||body?.debug_agents===true;
-    log('START V9.3 skip_openai='+skipOpenAI+' run_v10_debug_agents='+runV10DebugAgents);
+    const qualityRetry=body?.quality_retry===true;
+    const recoveryAttempt=Math.max(0,Math.trunc(Number(body?.recovery_attempt)||0));
+    const recoveryReasonCodes=Array.isArray(body?.recovery_reason_codes)?body.recovery_reason_codes.map(String).filter(Boolean):[];
+    log('START V9.3 skip_openai='+skipOpenAI+' run_v10_debug_agents='+runV10DebugAgents+' quality_retry='+qualityRetry+' recovery_attempt='+recoveryAttempt);
     timer.mark('START');
 
     const supabaseUrl=Deno.env.get('SUPABASE_URL')||'';const serviceRoleKey=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
@@ -2180,6 +2183,7 @@ Deno.serve(async (req:Request)=>{
     aiStrategyJson=limitBeneficiaryStockCounts(aiStrategyJson);
     aiStrategyJson=applyFinalBiasGuardrails(aiStrategyJson,todayDate,marketData,dScore,confidenceResult,dates);
     aiStrategyJson.version=VERSION;aiStrategyJson.generated_at=new Date().toISOString();
+    aiStrategyJson.delivery_recovery={quality_retry:qualityRetry,attempt:recoveryAttempt,reason_codes:recoveryReasonCodes,requested_at:new Date().toISOString()};
     aiStrategyJson.tw_stock_filter_applied=true;aiStrategyJson.research_card_format=true;
     aiStrategyJson.fields_complete_guaranteed=true;aiStrategyJson.write_time_guarantee=true;aiStrategyJson.member_note_format='plain_text_and_v2';
     aiStrategyJson.sector_rotation_reference_date=sectorRotationReferenceDate;
@@ -2217,7 +2221,8 @@ Deno.serve(async (req:Request)=>{
     timer.mark('REPORT_VERIFIED');
     if(!verified?.reportId){log('VERIFY_FAILED');return corsResponse({success:false,error:'Report written but verification failed',report_date:todayDate,report_id:writeResult.reportId,version:VERSION,logs},500);}
 
-    const durationMs=Date.now()-reqStart;log('DONE report_id='+verified.reportId+' duration='+durationMs+'ms');
-    return corsResponse({success:true,message:'Report generated (V9.3)',report_date:todayDate,report_id:verified.reportId,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,tw_core_date:dates.twCoreDate,us_global_date:dates.usGlobalDate,source:String(aiStrategyJson.build_method||'deterministic'),market_bias:marketBias,confidence_score:safeInteger(rawConfidenceScore,50),report_mode:reportMode,duration_ms:durationMs,version:VERSION,logs},200);
+    const verifiedGate=evaluatePremiumContentGate(verified.aiJson||{},newsData.length);
+    const durationMs=Date.now()-reqStart;log('DONE report_id='+verified.reportId+' premium_eligible='+verifiedGate.eligible+' duration='+durationMs+'ms');
+    return corsResponse({success:true,message:'Report generated (V9.3)',report_date:todayDate,report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,premium_eligible:verifiedGate.eligible,premium_content_score:verifiedGate.content_score,premium_decision_mode:verifiedGate.decision_mode,premium_reason_codes:verifiedGate.reason_codes,recovery_attempt:recoveryAttempt,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,tw_core_date:dates.twCoreDate,us_global_date:dates.usGlobalDate,source:String(aiStrategyJson.build_method||'deterministic'),market_bias:marketBias,confidence_score:safeInteger(rawConfidenceScore,50),report_mode:reportMode,duration_ms:durationMs,version:VERSION,logs},200);
   }catch(err){const msg=err instanceof Error?err.message:String(err);log('FATAL: '+msg);return corsResponse({success:false,error:msg,version:VERSION,logs},500)}
 });

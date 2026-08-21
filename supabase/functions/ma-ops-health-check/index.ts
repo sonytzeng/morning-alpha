@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient as SupabaseClientType } from "https://esm.sh/@supabase/supabase-js@2";
 import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
 
-const VERSION = "MA_OPS_CONTENT_GATE_V2";
+const VERSION = "MA_OPS_DELIVERY_GUARANTEE_V3";
 const QUERY_TIMEOUT_MS = 3000;
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -55,6 +55,8 @@ interface Database {
       reports: GenericTable;
       market_data_snapshots: GenericTable;
       opening_market_radar: GenericTable;
+      decision_snapshots: GenericTable;
+      line_delivery_outbox: GenericTable;
       ma_ops_runs: GenericTable;
       ma_ops_checks: GenericTable;
     };
@@ -343,6 +345,17 @@ const handlers: Record<CheckName, CheckHandler> = {
     const started = Date.now();
     const report = await fetchReport(supabase, targetDate);
     if (!report) return makeCheck("daily-report-contract", "daily-report", "skipped", "info", {}, {}, started, "REPORT_MISSING", "Contract cannot be checked without a report");
+    const snapshotResult = await withTimeout(supabase
+      .from("decision_snapshots")
+      .select("id,status,decision_mode,content_score,is_current,version")
+      .eq("report_date", targetDate)
+      .eq("session_type", "PREMARKET")
+      .eq("is_current", true)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle());
+    if (snapshotResult.error) throw new Error("DATABASE_QUERY_FAILED");
+    const snapshot = snapshotResult.data ? snapshotResult.data as JsonObject : null;
     const ai = asObject(report.ai_strategy_json);
     const note = asObject(ai.member_research_note_v2);
     const marketStatus = String(ai.market_status || "").toUpperCase();
@@ -371,10 +384,14 @@ const handlers: Record<CheckName, CheckHandler> = {
       isTradingDay && asArray(note.invalidation_rules).length < 2 ? "member_research_note_v2.invalidation_rules" : null,
       isTradingDay && !isActionableResearchSentence(note.subscriber_value_sentence) ? "member_research_note_v2.subscriber_value_sentence" : null,
       isTradingDay && !premiumGate.eligible ? "premium_content_gate" : null,
+      isTradingDay && !snapshot ? "decision_snapshot" : null,
+      isTradingDay && snapshot && String(snapshot.status || "") !== "READY" ? "decision_snapshot.status" : null,
+      isTradingDay && snapshot && (!Number.isFinite(Number(snapshot.content_score)) || Number(snapshot.content_score) < 90) ? "decision_snapshot.content_score" : null,
+      isTradingDay && snapshot && !["recommendations", "no_trade"].includes(String(snapshot.decision_mode || "")) ? "decision_snapshot.decision_mode" : null,
     ].filter((item): item is string => item !== null);
     return makeCheck(
       "daily-report-contract", "daily-report", missing.length === 0 ? "passed" : "failed", missing.length === 0 ? "info" : "critical",
-      { required_fields: ["market_bias", "confidence_score", "ai_strategy_json", "report_mode", "is_trading_day", "market_status", "actionable_daily_sentence", "verified_catalyst_evidence", "member_research_structure", "premium_content_gate"] },
+      { required_fields: ["market_bias", "confidence_score", "ai_strategy_json", "report_mode", "is_trading_day", "market_status", "actionable_daily_sentence", "verified_catalyst_evidence", "member_research_structure", "premium_content_gate", "ready_90_point_decision_snapshot"] },
       {
         missing_fields: missing,
         report_mode: report.report_mode || ai.report_mode || null,
@@ -388,8 +405,13 @@ const handlers: Record<CheckName, CheckHandler> = {
         intraday_step_count: asArray(note.intraday_validation).length,
         invalidation_rule_count: asArray(note.invalidation_rules).length,
         premium_content_status: premiumGate.status,
+        premium_content_score: premiumGate.content_score,
         premium_decision_mode: premiumGate.decision_mode,
         premium_reason_codes: premiumGate.reason_codes,
+        decision_snapshot_id: snapshot?.id || null,
+        decision_snapshot_status: snapshot?.status || null,
+        decision_snapshot_score: snapshot?.content_score ?? null,
+        decision_snapshot_mode: snapshot?.decision_mode || null,
       },
       started, missing.length === 0 ? null : "REPORT_CONTRACT_INVALID", missing.length === 0 ? null : "Daily report contract is incomplete",
     );
@@ -483,11 +505,39 @@ const handlers: Record<CheckName, CheckHandler> = {
     );
   },
 
-  "line-push-delivery": async () => skipped(
-    "line-push-delivery",
-    "line-push",
-    "P1 does not have a verified audience baseline or delivery natural key; no delivery success is inferred",
-  ),
+  "line-push-delivery": async ({ supabase, targetDate }) => {
+    const started = Date.now();
+    const statuses = ["PENDING", "PROCESSING", "SENT", "FAILED"] as const;
+    const statusResults = await withTimeout(Promise.all(statuses.map((status) => supabase
+      .from("line_delivery_outbox")
+      .select("id", { count: "exact", head: true })
+      .eq("report_date", targetDate)
+      .eq("status", status))));
+    if (statusResults.some((result) => result.error)) throw new Error("DATABASE_QUERY_FAILED");
+    const counts = Object.fromEntries(statuses.map((status, index) => [status, statusResults[index].count || 0]));
+    const [premiumResult, incidentResult] = await withTimeout(Promise.all([
+      supabase.from("line_delivery_outbox").select("id", { count: "exact", head: true }).eq("report_date", targetDate).eq("status", "SENT").eq("push_type", "daily_report"),
+      supabase.from("line_delivery_outbox").select("id", { count: "exact", head: true }).eq("report_date", targetDate).eq("status", "SENT").eq("push_type", "data_incident"),
+    ]));
+    if (premiumResult.error || incidentResult.error) throw new Error("DATABASE_QUERY_FAILED");
+    const sentPremium = premiumResult.count || 0;
+    const sentIncident = incidentResult.count || 0;
+    const rowCount = Object.values(counts).reduce((total, count) => total + count, 0);
+    const failed = counts.FAILED || 0;
+    const pending = (counts.PENDING || 0) + (counts.PROCESSING || 0);
+    const status: CheckStatus = failed > 0 ? "failed" : pending > 0 || rowCount === 0 ? "warning" : "passed";
+    return makeCheck(
+      "line-push-delivery",
+      "line-push",
+      status,
+      failed > 0 ? "critical" : status === "warning" ? "warning" : "info",
+      { durable_outbox: true, failed_count: 0, pending_count: 0 },
+      { row_count: rowCount, status_counts: counts, sent_premium_count: sentPremium, sent_incident_count: sentIncident },
+      started,
+      failed > 0 ? "LINE_DELIVERY_FAILED" : pending > 0 ? "LINE_DELIVERY_PENDING" : rowCount === 0 ? "LINE_DELIVERY_NOT_STARTED" : null,
+      failed > 0 ? "One or more LINE deliveries exhausted their retry budget" : pending > 0 ? "LINE delivery retry is pending" : rowCount === 0 ? "No LINE delivery has been enqueued for target_date" : null,
+    );
+  },
 };
 
 async function runCheck(name: CheckName, context: CheckContext): Promise<CheckResult> {

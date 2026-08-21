@@ -89,7 +89,7 @@ Key 格式：`maops:v1:<env>:<org>:<action-or-check>:<component>:<target-date>:<
 
 P1 依核准範圍落地 Level 0 骨架，尚未啟用：
 
-- Migration：`supabase/migrations/202607110001_create_ma_ops_monitoring.sql`
+- Migration：`supabase/migrations/20260821080544_create_ma_ops_monitoring.sql`
 - Function：`supabase/functions/ma-ops-health-check/index.ts`
 - 說明：`supabase/functions/ma-ops-health-check/README.md`
 - Tables：`ma_ops_runs`、`ma_ops_checks`、`ma_ops_recovery_actions`、`ma_ops_component_registry`

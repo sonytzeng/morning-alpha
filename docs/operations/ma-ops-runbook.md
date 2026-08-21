@@ -84,7 +84,7 @@ Cron 修改、Deploy、Migration、RLS、secret、任意 SQL、正式資料刪�
 
 ## 9. P1 操作方式（骨架未啟用）
 
-P1 新增 `ma-ops-health-check` 程式碼與 `202607110001_create_ma_ops_monitoring.sql`，但尚未執行 Migration、Deploy 或建立排程。Auth 沿用 Repo 既有內部 Cron 模式 `x-cron-secret`；secret 只存在 runtime。完整 request/response 與 error codes 見 Function README。
+P1 新增 `ma-ops-health-check` 程式碼與 `20260821080544_create_ma_ops_monitoring.sql`。Migration 已於 2026-08-21 正式套用；Auth 沿用 Repo 既有內部 Cron 模式 `x-cron-secret`，secret 只存在 runtime。完整 request/response 與 error codes 見 Function README。
 
 首次受控驗證順序：先在隔離環境 review/執行 migration，再 deploy Function，使用 `environment=staging`、`dry_run=true` 與固定 `request_id` 驗證；Migration 與 Deploy 必須分別取得核准。P1 不可接 Cron，不可呼叫 recovery。
 

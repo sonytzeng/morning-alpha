@@ -28,6 +28,7 @@ export interface ServerReportPayloadResponse {
   locked_sections: string[];
   source: 'server_trimmed_payload';
   authenticated?: boolean;
+  membership?: import('./membership').MembershipAccess | null;
   error?: string;
 }
 
@@ -39,5 +40,6 @@ export interface ServerReportHistoryResponse {
   locked_sections: string[];
   source: 'server_trimmed_payload';
   authenticated?: boolean;
+  membership?: import('./membership').MembershipAccess | null;
   error?: string;
 }

@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import MarketStatusLight from '@/components/base/MarketStatusLight';
 import { BRAND_ICON_URL, BRAND_NAME } from '@/config/brand';
 import type { MarketState } from '@/services/marketStateEngine';
+import { supabase } from '@/lib/supabase';
 
 interface NavbarProps {
   marketState?: MarketState | null;
@@ -11,11 +12,26 @@ interface NavbarProps {
 
 export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (active) setIsLoggedIn(Boolean(data.session));
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(Boolean(session));
+    });
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -32,6 +48,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
     { to: '/war-room', label: '盤中追蹤' },
     { to: '/performance', label: '歷史績效' },
     { to: '/pricing', label: '會員方案' },
+    { to: isLoggedIn ? '/account' : '/login', label: isLoggedIn ? '會員中心' : '登入' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

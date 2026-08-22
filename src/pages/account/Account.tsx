@@ -11,6 +11,7 @@ import { useAccountDashboard } from '@/hooks/useAccountDashboard';
 import VisualPageHero from '@/components/feature/VisualPageHero';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 import EarlyAccessForm from '@/components/feature/EarlyAccessForm';
+import MembershipStatusCard from '@/components/membership/MembershipStatusCard';
 
 function isTaipeiWeekend(): boolean {
   const now = new Date();
@@ -105,6 +106,7 @@ export default function Account() {
         />
         <div className="w-full px-4 md:px-6 py-6 md:py-10">
           <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
+            <MembershipStatusCard />
             {/* Hero: 觀察中心 */}
             <MorningHeroCard
               todayReport={todayReport}

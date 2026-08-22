@@ -20,6 +20,12 @@ verify_jwt = false
 [functions.ma-ops-health-check]
 verify_jwt = false
 
+[functions.ma-ops-safe-recovery]
+verify_jwt = false
+
+[functions.strategy-replay-engine]
+verify_jwt = false
+
 [functions.daily-delivery-orchestrator]
 verify_jwt = false
 

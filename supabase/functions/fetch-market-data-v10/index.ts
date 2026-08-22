@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { resolveMarketStatus } from '../_shared/market-status.ts';
+import { normalizeProviderQuote, summarizeProviderHealth } from '../_shared/market-provider-adapter.mjs';
 
 // ═══════════════════════════════════════════════════════════
 // fetch-market-data-v10 V10.8 — PROVIDER FALLBACK + FRESHNESS METADATA
@@ -18,6 +19,7 @@ const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
 const OVERALL_TIMEOUT_MS = 28_000;
+const VERSION = "V10.9_CANONICAL_PROVIDER_ADAPTER";
 
 interface FinnhubQuote {
   c: number;
@@ -63,6 +65,7 @@ interface RequestBody {
   include_beneficiary_close?: boolean;
   beneficiary_close?: boolean;
   beneficiary_close_only?: boolean;
+  force_run?: boolean;
 }
 
 const SYMBOLS: SymbolConfig[] = [
@@ -691,7 +694,11 @@ async function fetchTaiwanCoreQuote(
 // MAIN
 // ═══════════════════════════════════════════════════════════
 Deno.serve(async (req) => {
-  const requestId = crypto.randomUUID().slice(0, 8);
+  const requestedCorrelationId = req.headers.get("x-correlation-id") || "";
+  const correlationId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedCorrelationId)
+    ? requestedCorrelationId
+    : crypto.randomUUID();
+  const requestId = correlationId.slice(0, 8);
   const startedAt = new Date().toISOString();
   const batchTag = `V10.7:${requestId}`;
   const startedMs = Date.now();
@@ -780,11 +787,14 @@ Deno.serve(async (req) => {
     const failed: string[] = [];
     const snapshotErrors: Array<{ symbol: string; error: string }> = [];
     const dbWriteErrors: Array<{ symbol: string; error: string }> = [];
+    const canonicalWriteErrors: Array<{ symbol: string; error: string }> = [];
+    const providerHealthWriteErrors: string[] = [];
     const providerUsedBySymbol: Record<string, string> = {};
     const providerFailureDetails: ProviderFailureDetail[] = [];
     const twCoreSymbolsSuccess: string[] = [];
     const twCoreSymbolsFailed: Array<{ symbol: string; reason: string }> = [];
     let snapshotUpsertedCount = 0;
+    let canonicalUpsertedCount = 0;
     const allSymbols = symbolConfigs.map((s) => s.displaySymbol);
 
     console.log(`[${batchTag}] phase=${phase} trading_date=${tradingDate} taipei=${taipei.hour}:${String(taipei.minute).padStart(2, "0")} close_core_only=${phase === "close" && !includeBeneficiaryClose} beneficiary_close_only=${beneficiaryCloseOnly} beneficiary_symbols=${beneficiarySymbolConfigs.map((s) => s.displaySymbol).join(",") || "none"}`);
@@ -904,6 +914,69 @@ Deno.serve(async (req) => {
           snapshotUpsertedCount++;
         }
 
+        const canonicalQuote = normalizeProviderQuote({
+          provider: quote.provider,
+          symbol: config.displaySymbol,
+          source_symbol: quote.sourceSymbol,
+          name: config.name,
+          market: config.market,
+          trading_date: tradingDate,
+          phase,
+          value,
+          change,
+          change_percent: changePercent,
+          captured_at: capturedAt,
+          freshness_status: "provider_returned",
+          correlation_id: correlationId,
+          raw_payload: snapshotPayload.raw,
+        });
+
+        if (!canonicalQuote.valid) {
+          canonicalWriteErrors.push({ symbol: config.displaySymbol, error: canonicalQuote.errors.join(",") });
+        } else {
+          const canonicalPayload = {
+            ...canonicalQuote.record,
+            asset_type: canonicalQuote.asset_type,
+            quality_status: "verified",
+          };
+          const { data: canonicalRow, error: canonicalErr } = await supabase
+            .from("market_quotes")
+            .upsert(canonicalPayload, { onConflict: "provider,symbol,captured_at,phase" })
+            .select("id")
+            .maybeSingle();
+
+          if (canonicalErr) {
+            canonicalWriteErrors.push({ symbol: config.displaySymbol, error: canonicalErr.message });
+          } else {
+            canonicalUpsertedCount++;
+            const specializedPayload = {
+              market_quote_id: canonicalRow?.id || null,
+              provider: quote.provider,
+              symbol: config.displaySymbol,
+              market: config.market,
+              trading_date: tradingDate,
+              phase,
+              value,
+              change_percent: changePercent,
+              captured_at: capturedAt,
+              correlation_id: correlationId,
+            };
+            const specializedTable = canonicalQuote.asset_type === "future"
+              ? "futures_snapshots"
+              : canonicalQuote.asset_type === "index"
+              ? "market_indices"
+              : null;
+            if (specializedTable) {
+              const { error: specializedErr } = await supabase
+                .from(specializedTable)
+                .upsert(specializedPayload, { onConflict: "provider,symbol,captured_at,phase" });
+              if (specializedErr) {
+                canonicalWriteErrors.push({ symbol: config.displaySymbol, error: `${specializedTable}:${specializedErr.message}` });
+              }
+            }
+          }
+        }
+
         inserted.push({
           symbol: config.displaySymbol,
           name: config.name,
@@ -930,13 +1003,40 @@ Deno.serve(async (req) => {
 
     const elapsed = ((Date.now() - startedMs) / 1000).toFixed(1);
 
+    const overallHealth = summarizeProviderHealth({
+      requested_count: symbolConfigs.length,
+      succeeded_count: inserted.length,
+      failed_count: failed.length,
+      timed_out: timedOut,
+    });
+    const providerHealthPayloads = [{
+      provider: "market_fetch_v10",
+      service_date: tradingDate,
+      phase,
+      ...overallHealth,
+      latency_ms: Date.now() - startedMs,
+      last_error_code: timedOut ? "OVERALL_TIMEOUT" : failed.length > 0 ? "PARTIAL_PROVIDER_FAILURE" : null,
+      correlation_id: correlationId,
+      details: {
+        providers_by_symbol: providerUsedBySymbol,
+        provider_failures: providerFailureDetails,
+        canonical_write_errors: canonicalWriteErrors,
+      },
+      checked_at: new Date().toISOString(),
+    }];
+    const { error: providerHealthError } = await supabase
+      .from("data_provider_health")
+      .upsert(providerHealthPayloads, { onConflict: "provider,service_date,phase" });
+    if (providerHealthError) providerHealthWriteErrors.push(providerHealthError.message);
+
     console.log(`[${batchTag}] DONE in ${elapsed}s | inserted=${inserted.length} failed=${failed.length} healthy=${healthy}${timedOut ? " (timed out)" : ""}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        version: "V10.8_PROVIDER_FALLBACK_FRESHNESS",
+        version: VERSION,
         request_id: requestId,
+        correlation_id: correlationId,
         phase,
         trading_date: tradingDate,
         started_at: startedAt,
@@ -953,6 +1053,10 @@ Deno.serve(async (req) => {
         tw_core_symbols_failed: twCoreSymbolsFailed,
         provider_used_by_symbol: providerUsedBySymbol,
         db_write_errors: dbWriteErrors,
+        canonical_upserted_count: canonicalUpsertedCount,
+        canonical_write_errors: canonicalWriteErrors,
+        provider_health: overallHealth,
+        provider_health_write_errors: providerHealthWriteErrors,
         txf_status: twCoreStatus.txf,
         txf_candidate_errors: providerFailureDetails.filter((f) => f.provider === "fugle_futopt"),
         provider_failures: providerFailureDetails,
@@ -970,7 +1074,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        version: "V10.8",
+        version: VERSION,
+        correlation_id: correlationId,
         error: "INTERNAL_ERROR",
         reason: msg,
         inserted: [],

@@ -3,6 +3,7 @@ import {
   hasDecisionGradeSourceCoverage,
   type ContentScoreBreakdown,
 } from './content-intelligence.ts';
+import { RUNTIME_QUALITY_POLICY } from './production-architecture-core.mjs';
 
 export type PremiumContentStatus = 'eligible' | 'degraded' | 'blocked';
 export type PremiumDecisionMode = 'recommendations' | 'no_trade' | 'blocked';
@@ -152,7 +153,7 @@ export function evaluatePremiumContentGate(
     reasons.push('content_publish_gate_not_ready');
   }
   if (blockingIssues.length > 0) reasons.push('content_publish_gate_blocked');
-  if (!Number.isFinite(memberValueScore) || memberValueScore < 90) reasons.push('member_value_below_90');
+  if (!Number.isFinite(memberValueScore) || memberValueScore < RUNTIME_QUALITY_POLICY.member_value_min) reasons.push('member_value_below_90');
   if (overnightSteps.length < 5 || intradaySteps.length < 3 || invalidationRules.length < 2 || subscriberSentence.length < 24) {
     reasons.push('member_research_structure_incomplete');
   }

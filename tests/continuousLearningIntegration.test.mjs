@@ -8,14 +8,16 @@ const apiPath = new URL('../supabase/functions/get-learning-center/index.ts', im
 const reportGeneratorPath = new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url);
 const runtimeWorkflowPath = new URL('../.github/workflows/morning-alpha-runtime-checkpoints.yml', import.meta.url);
 const deployWorkflowPath = new URL('../.github/workflows/deploy-morning-alpha-runtime.yml', import.meta.url);
+const learningCenterPath = new URL('../src/pages/admin/learning/page.tsx', import.meta.url);
 
-const [migration, engine, api, reportGenerator, runtimeWorkflow, deployWorkflow] = await Promise.all([
+const [migration, engine, api, reportGenerator, runtimeWorkflow, deployWorkflow, learningCenter] = await Promise.all([
   readFile(migrationPath, 'utf8'),
   readFile(enginePath, 'utf8'),
   readFile(apiPath, 'utf8'),
   readFile(reportGeneratorPath, 'utf8'),
   readFile(runtimeWorkflowPath, 'utf8'),
   readFile(deployWorkflowPath, 'utf8'),
+  readFile(learningCenterPath, 'utf8'),
 ]);
 
 test('CLE migration contains the complete internal memory lifecycle', () => {
@@ -87,6 +89,15 @@ test('Learning Center verifies user JWT and profiles.role server-side', () => {
   assert.match(api, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(api, /rpc\('promote_learning_rule_v1'/);
   assert.match(api, /p_admin_id: userData\.user\.id/);
+});
+
+test('Learning Center can restore a verified localhost redirect without persisting its URL', () => {
+  assert.match(learningCenter, /new Set\(\['http:\/\/localhost:3000', 'https:\/\/morningalphatw\.com'\]\)/);
+  assert.match(learningCenter, /fragment\.get\('access_token'\)/);
+  assert.match(learningCenter, /fragment\.get\('refresh_token'\)/);
+  assert.match(learningCenter, /supabase\.auth\.setSession/);
+  assert.match(learningCenter, /setSessionRedirectUrl\(''\)/);
+  assert.doesNotMatch(learningCenter, /localStorage\.setItem|sessionStorage\.setItem|console\.log\(.*Token/);
 });
 
 test('next-decision learning is fail-open and reads production rules only', () => {

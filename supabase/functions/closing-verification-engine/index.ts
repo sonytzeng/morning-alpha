@@ -95,6 +95,7 @@ type CloseMarketRow = {
   table: string;
   tradingDate: string | null;
   phase: string | null;
+  checkpoint: string | null;
 };
 
 type PredictedDirection = "bullish" | "bearish" | "neutral";
@@ -362,6 +363,7 @@ function closeRowFromSnapshot(
     table: "market_data_snapshots",
     tradingDate: row.trading_date ? String(row.trading_date) : null,
     phase: row.phase ? String(row.phase) : null,
+    checkpoint: row.checkpoint ? String(row.checkpoint) : null,
   };
 }
 
@@ -388,7 +390,7 @@ async function fetchCloseRowsForDate(
   const snapshotResult = await supabase
     .from("market_data_snapshots")
     .select(
-      "symbol,name,value,change_percent,captured_at,source,trading_date,phase",
+      "symbol,name,value,change_percent,captured_at,source,trading_date,phase,checkpoint",
     )
     .eq("trading_date", targetDate)
     .eq("phase", "close")
@@ -435,7 +437,7 @@ async function fetchIntradayRowsForDate(
   const result = await supabase
     .from("market_data_snapshots")
     .select(
-      "symbol,name,value,change_percent,captured_at,source,trading_date,phase",
+      "symbol,name,value,change_percent,captured_at,source,trading_date,phase,checkpoint",
     )
     .eq("trading_date", targetDate)
     .eq("phase", "intraday")
@@ -516,6 +518,7 @@ function toRuntimeSnapshot(row: CloseMarketRow): RuntimeSnapshotRow {
     captured_at: row.capturedAt || "",
     trading_date: row.tradingDate,
     phase: row.phase,
+    checkpoint: row.checkpoint,
     value: row.value,
     change_percent: row.change,
   };
@@ -1373,6 +1376,24 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  const { error: tradingDayStateError } = await supabase.rpc(
+    "advance_trading_day_state_v1",
+    {
+      p_trading_date: verificationDate,
+      p_state: "CLOSING_VERIFIED",
+      p_checkpoint: "closing_verification",
+      p_status: closingVerificationV2.status === "direction_completed_data_degraded"
+        ? "DEGRADED"
+        : "SUCCEEDED",
+      p_correlation_id: crypto.randomUUID(),
+      p_metadata: {
+        closing_verification_status: closingVerificationV2.status,
+        closing_decision_snapshot_id: closingDecisionSnapshotId,
+        report_id: reportRow.id,
+      },
+    },
+  );
+
   return jsonResponse({
     success: true,
     verification_date: verificationDate,
@@ -1396,5 +1417,6 @@ Deno.serve(async (req: Request) => {
     beneficiary_validation_status: beneficiaryValidation.data_status,
     beneficiary_decision_mode: beneficiaryDecisionMode,
     no_fake_data: true,
+    trading_day_state_error: tradingDayStateError?.message || null,
   });
 });

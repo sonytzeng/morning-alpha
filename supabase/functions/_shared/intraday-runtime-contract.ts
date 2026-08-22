@@ -5,6 +5,7 @@ export type RuntimeSnapshotRow = {
   captured_at: string;
   trading_date?: string | null;
   phase?: string | null;
+  checkpoint?: string | null;
   source?: unknown;
   value?: unknown;
   change_percent?: unknown;
@@ -146,6 +147,7 @@ export function isSnapshotInCheckpointWindow(
     row.phase !== "intraday" || row.trading_date !== tradingDate ||
     !isCompleteRow(row)
   ) return false;
+  if (row.checkpoint && row.checkpoint !== checkpoint) return false;
   if (taipeiDateFromIso(row.captured_at) !== tradingDate) return false;
   const capturedMinutes = taipeiMinutesFromIso(row.captured_at);
   const spec = INTRADAY_CHECKPOINTS[checkpoint];

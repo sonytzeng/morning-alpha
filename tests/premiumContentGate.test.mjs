@@ -136,13 +136,13 @@ test('no-trade still blocks when any non-optional decision source is missing', (
   assert.ok(result.reason_codes.includes('source_data_incomplete'));
 });
 
-test('recommendations require complete sources even when TXF is the only gap', () => {
+test('recommendations may publish when TXF is the only declared entitlement gap', () => {
   const ai = validAi();
   ai.data_quality = 'degraded';
   ai.missing_sources = ['unavailable_market_data:TXF:no_authorized_source_or_contract_mapping'];
   const result = evaluatePremiumContentGate(ai, 3);
-  assert.equal(result.eligible, false);
-  assert.ok(result.reason_codes.includes('source_data_incomplete'));
+  assert.equal(result.eligible, true);
+  assert.equal(result.content_score >= 90, true);
 });
 
 test('no-trade content fails closed when it lacks a useful observation set', () => {

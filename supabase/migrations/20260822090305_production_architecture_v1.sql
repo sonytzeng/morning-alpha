@@ -1,4 +1,4 @@
--- Morning Alpha Production Architecture v1.
+-- Morning Alpha Production Architecture v1 (production ledger version 20260822090305).
 -- Additive modular-monolith foundation for 10,000 paid subscribers.
 -- Existing report, delivery, monitoring, and continuous-learning contracts remain intact.
 

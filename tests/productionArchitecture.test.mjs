@@ -10,6 +10,8 @@ import {
   gradeContentScore,
   resolveAbstentionDecision,
   resolveCostGuardrail,
+  simulateFullTradingDay,
+  simulateHistoricalFailureMatrix,
 } from '../supabase/functions/_shared/production-architecture-core.mjs';
 import {
   classifyCanonicalAsset,
@@ -17,7 +19,7 @@ import {
   summarizeProviderHealth,
 } from '../supabase/functions/_shared/market-provider-adapter.mjs';
 
-const migrationPath = new URL('../supabase/migrations/20260822173000_production_architecture_v1.sql', import.meta.url);
+const migrationPath = new URL('../supabase/migrations/20260822090305_production_architecture_v1.sql', import.meta.url);
 const generatorPath = new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url);
 const collectorPath = new URL('../supabase/functions/fetch-market-data-v10/index.ts', import.meta.url);
 const recoveryPath = new URL('../supabase/functions/ma-ops-safe-recovery/index.ts', import.meta.url);
@@ -26,8 +28,12 @@ const entitlementPath = new URL('../src/services/entitlementService.ts', import.
 const dashboardPath = new URL('../src/hooks/useHomeDashboard.ts', import.meta.url);
 const deployPath = new URL('../.github/workflows/deploy-morning-alpha-runtime.yml', import.meta.url);
 const replayWorkflowPath = new URL('../.github/workflows/weekly-strategy-replay.yml', import.meta.url);
+const checkpointMigrationPath = new URL('../supabase/migrations/20260822230000_preserve_checkpoint_snapshots.sql', import.meta.url);
+const runtimeCheckpointWorkflowPath = new URL('../.github/workflows/morning-alpha-runtime-checkpoints.yml', import.meta.url);
+const openingRadarPath = new URL('../supabase/functions/opening-market-radar/index.ts', import.meta.url);
+const closingVerificationPath = new URL('../supabase/functions/closing-verification-engine/index.ts', import.meta.url);
 
-const [migration, generator, collector, recovery, replay, entitlement, dashboard, deploy, replayWorkflow] = await Promise.all([
+const [migration, generator, collector, recovery, replay, entitlement, dashboard, deploy, replayWorkflow, checkpointMigration, runtimeCheckpointWorkflow, openingRadar, closingVerification] = await Promise.all([
   migrationPath,
   generatorPath,
   collectorPath,
@@ -37,6 +43,10 @@ const [migration, generator, collector, recovery, replay, entitlement, dashboard
   dashboardPath,
   deployPath,
   replayWorkflowPath,
+  checkpointMigrationPath,
+  runtimeCheckpointWorkflowPath,
+  openingRadarPath,
+  closingVerificationPath,
 ].map((path) => readFile(path, 'utf8')));
 
 test('central production policy preserves the strict premium threshold', () => {
@@ -88,6 +98,33 @@ test('market regime, debate, similarity, cost, and retry contracts are determini
   assert.equal(resolveCostGuardrail({ calls: 20, tokens: 1 }).allowed, false);
   assert.equal(buildRetryDecision({ attempt: 1, retryable: true }).retry_after_seconds, 30);
   assert.equal(buildRetryDecision({ attempt: 4, retryable: true }).dead_letter, true);
+});
+
+test('synthetic Monday dry-run exercises the full lifecycle without writes or notifications', () => {
+  const simulation = simulateFullTradingDay({
+    trading_date: '2026-08-24',
+    source_status: { TXF: 'unavailable_entitlement' },
+    content_scores: [77, 92],
+  });
+  assert.equal(simulation.result, 'GO');
+  assert.equal(simulation.timezone, 'Asia/Taipei');
+  assert.equal(simulation.checkpoints.length, 6);
+  assert.deepEqual(simulation.checkpoints.map((item) => item.checkpoint), ['0900', '0930', '1030', '1300', '1410', '1430']);
+  assert.equal(simulation.premarket.repair_attempts[1].action, 'repair_failed_sections_only');
+  assert.equal(simulation.source_gate.txf_blocks_publication, false);
+  assert.equal(simulation.writes_performed, 0);
+  assert.equal(simulation.notifications_sent, 0);
+});
+
+test('historical failure matrix covers normal, incomplete-data, and API-failure days', () => {
+  const matrix = simulateHistoricalFailureMatrix();
+  assert.equal(matrix.result, 'PASS');
+  assert.equal(matrix.normal_day_count, 3);
+  assert.equal(matrix.incomplete_day_count, 1);
+  assert.equal(matrix.api_failure_count, 1);
+  assert.equal(matrix.scenarios.every((scenario) => scenario.no_duplicate_snapshot), true);
+  assert.equal(matrix.scenarios.every((scenario) => scenario.no_duplicate_notification), true);
+  assert.equal(matrix.scenarios.every((scenario) => scenario.no_production_write), true);
 });
 
 test('provider adapter normalizes canonical quotes and reports degraded health', () => {
@@ -142,6 +179,21 @@ test('runtime dual-writes canonical data and emits traceable decisions', () => {
   assert.match(generator, /check_runtime_cost_budget_v1/);
   assert.match(generator, /record_runtime_cost_usage_v1/);
   assert.match(generator, /publish_decision_snapshot_v3/);
+});
+
+test('checkpoint snapshots are immutable across the six Taipei market checkpoints', () => {
+  assert.match(checkpointMigration, /add column if not exists checkpoint text/);
+  assert.match(checkpointMigration, /symbol, trading_date, phase, checkpoint/);
+  assert.match(checkpointMigration, /create table if not exists public\.trading_day_state/);
+  assert.match(checkpointMigration, /advance_trading_day_state_v1/);
+  assert.match(checkpointMigration, /greatest\(trading_day_state\.state_rank, excluded\.state_rank\)/);
+  assert.match(collector, /onConflict: "symbol,trading_date,phase,checkpoint"/);
+  assert.match(collector, /advance_trading_day_state_v1/);
+  assert.match(openingRadar, /\.eq\('checkpoint', checkpoint\)/);
+  assert.match(closingVerification, /phase,checkpoint/);
+  for (const checkpoint of ['0900', '0930', '1030', '1300', '1410', '1430']) {
+    assert.match(runtimeCheckpointWorkflow, new RegExp(`'${checkpoint}'|"${checkpoint}"`));
+  }
 });
 
 test('safe recovery is allowlisted and replay is shadow-only by default', () => {

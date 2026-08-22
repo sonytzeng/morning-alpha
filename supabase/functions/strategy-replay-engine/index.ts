@@ -1,5 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
-import { computeHistoricalSimilarity } from '../_shared/production-architecture-core.mjs';
+import {
+  computeHistoricalSimilarity,
+  simulateFullTradingDay,
+  simulateHistoricalFailureMatrix,
+} from '../_shared/production-architecture-core.mjs';
+import { evaluateContentIntelligence } from '../_shared/content-intelligence.ts';
 
 const VERSION = 'MA_STRATEGY_REPLAY_V1';
 const CORS_HEADERS = {
@@ -44,13 +49,91 @@ Deno.serve(async (req: Request) => {
   if (!supabaseUrl || !serviceRoleKey) return jsonResponse({ success: false, error: 'SUPABASE_CREDENTIALS_MISSING' }, 500);
   const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
   const body = asRecord(await req.json().catch(() => ({})));
+  const rawCorrelation = req.headers.get('x-correlation-id') || String(body.correlation_id || '');
+  const correlationId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawCorrelation) ? rawCorrelation : crypto.randomUUID();
+  if (body.simulation_mode === 'full_day') {
+    if (body.dry_run === false) {
+      return jsonResponse({ success: false, error: 'FULL_DAY_SIMULATION_MUST_BE_DRY_RUN', correlation_id: correlationId }, 400);
+    }
+    const simulation = simulateFullTradingDay({
+      trading_date: dateString(body.simulation_date, '2026-08-24'),
+      source_status: asRecord(body.source_status),
+      content_scores: Array.isArray(body.content_scores) ? body.content_scores : undefined,
+      max_repair_attempts: body.max_repair_attempts,
+    });
+    return jsonResponse({
+      success: simulation.result === 'GO',
+      simulation_mode: 'full_day',
+      version: VERSION,
+      correlation_id: correlationId,
+      simulation,
+    }, simulation.result === 'GO' ? 200 : 422);
+  }
+  if (body.simulation_mode === 'historical_scenarios') {
+    if (body.dry_run === false) {
+      return jsonResponse({ success: false, error: 'HISTORICAL_SCENARIOS_MUST_BE_DRY_RUN', correlation_id: correlationId }, 400);
+    }
+    const matrix = simulateHistoricalFailureMatrix();
+    return jsonResponse({
+      success: matrix.result === 'PASS',
+      dry_run: true,
+      simulation_mode: 'historical_scenarios',
+      version: VERSION,
+      correlation_id: correlationId,
+      matrix,
+    }, matrix.result === 'PASS' ? 200 : 422);
+  }
+  if (body.simulation_mode === 'content_quality') {
+    if (body.dry_run === false) {
+      return jsonResponse({ success: false, error: 'CONTENT_QUALITY_REPLAY_MUST_BE_DRY_RUN', correlation_id: correlationId }, 400);
+    }
+    const requestedLimit = Math.max(5, Math.min(20, Math.trunc(Number(body.limit) || 5)));
+    const { data: reports, error: reportsError } = await supabase
+      .from('reports')
+      .select('report_date,ai_strategy_json,important_news_json')
+      .order('report_date', { ascending: false })
+      .limit(requestedLimit);
+    if (reportsError) {
+      return jsonResponse({ success: false, error: 'CONTENT_QUALITY_REPORT_QUERY_FAILED', details: reportsError.message, correlation_id: correlationId }, 500);
+    }
+    const scoreRows = (reports || []).map((report) => {
+      const importantNewsCount = Array.isArray(report.important_news_json) ? report.important_news_json.length : 0;
+      const evaluation = evaluateContentIntelligence(asRecord(report.ai_strategy_json), importantNewsCount);
+      return {
+        report_date: report.report_date,
+        score: evaluation.score,
+        grade: evaluation.grade,
+        reason_codes: evaluation.reason_codes,
+        breakdown: evaluation.breakdown,
+      };
+    });
+    const dimensionMaximums: JsonRecord = { evidence: 20, freshness: 15, taiwan_relevance: 15, specificity: 10, actionability: 15, risk: 10, originality: 5, readability: 10 };
+    const dimensionLosses = Object.keys(dimensionMaximums).map((dimension) => ({
+      dimension,
+      total_points_lost: scoreRows.reduce((sum, row) => sum + Math.max(0, Number(dimensionMaximums[dimension]) - Number(row.breakdown[dimension as keyof typeof row.breakdown] || 0)), 0),
+    })).sort((left, right) => right.total_points_lost - left.total_points_lost);
+    const average = scoreRows.length === 0 ? null : Math.round(scoreRows.reduce((sum, row) => sum + row.score, 0) / scoreRows.length * 100) / 100;
+    const minimum = scoreRows.length === 0 ? null : Math.min(...scoreRows.map((row) => row.score));
+    return jsonResponse({
+      success: scoreRows.length >= 5,
+      dry_run: true,
+      simulation_mode: 'content_quality',
+      version: VERSION,
+      correlation_id: correlationId,
+      report_count: scoreRows.length,
+      average_score: average,
+      minimum_score: minimum,
+      most_common_loss_dimensions: dimensionLosses.slice(0, 3),
+      reports: scoreRows,
+      writes_performed: 0,
+      notifications_sent: 0,
+    }, scoreRows.length >= 5 ? 200 : 422);
+  }
   const today = new Date().toISOString().slice(0, 10);
   const toDate = dateString(body.to_date, today);
   const fromDate = dateString(body.from_date, shiftDate(toDate, -90));
   if (toDate < fromDate) return jsonResponse({ success: false, error: 'INVALID_DATE_RANGE' }, 400);
   const dryRun = body.dry_run !== false;
-  const rawCorrelation = req.headers.get('x-correlation-id') || String(body.correlation_id || '');
-  const correlationId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawCorrelation) ? rawCorrelation : crypto.randomUUID();
 
   const strategyQuery = body.strategy_id
     ? supabase.from('strategy_registry').select('*').eq('id', String(body.strategy_id)).maybeSingle()

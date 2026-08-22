@@ -28,7 +28,7 @@ test('degraded closing verification is complete across the shared timeline', () 
     taipeiMinutes: 15 * 60,
   });
   assert.equal(timeline.at(-1)?.status, 'completed');
-  assert.equal(selectNextRuntimeTimelineNode(timeline)?.time, '14:20');
+  assert.equal(selectNextRuntimeTimelineNode(timeline)?.time, '14:30');
   assert.equal(timeline.some((node) => node.status === 'current' || node.status === 'pending'), false);
 });
 
@@ -37,6 +37,18 @@ test('a closing placeholder never masquerades as completed', () => {
     closing_verification_v2: {
       status: 'pending_real_market_data',
       prediction_result: 'PENDING_REAL_MARKET_DATA',
+    },
+  });
+  assert.equal(closing.state, 'pending');
+});
+
+test('a hit label without an actual market direction remains pending', () => {
+  const closing = resolveClosingVerificationState({
+    closing_verification_v2: {
+      status: 'direction_completed_data_degraded',
+      hit_or_miss: 'hit',
+      actual_direction: 'unknown',
+      actual_taiex_change: null,
     },
   });
   assert.equal(closing.state, 'pending');

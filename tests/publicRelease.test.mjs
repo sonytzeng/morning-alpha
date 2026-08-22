@@ -286,7 +286,7 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push', 'daily-delivery-orchestrator', 'get-report-payload']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
   }
-  for (const schedule of ["10 23 * * 0-4", "35 23 * * 0-4", "0 1 * * 1-5", "30 1 * * 1-5", "30 2 * * 1-5", "0 5 * * 1-5", "10 6 * * 1-5", "30 6 * * 1-5"]) {
+  for (const schedule of ["10 23 * * 0-4", "35 23 * * 0-4", "0 1 * * 1-5", "5 1 * * 1-5", "30 1 * * 1-5", "35 1 * * 1-5", "30 2 * * 1-5", "35 2 * * 1-5", "0 5 * * 1-5", "5 5 * * 1-5", "10 6 * * 1-5", "15 6 * * 1-5", "30 6 * * 1-5", "35 6 * * 1-5"]) {
     assert.match(runtimeCheckpointWorkflow, new RegExp(schedule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing runtime schedule: ${schedule}`);
   }
   assert.match(runtimeCheckpointWorkflow, /\{\\"phase\\":\\"intraday\\",\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
@@ -349,8 +349,8 @@ test('trading-day reports and public timelines fail closed with correct times', 
   assert.match(reportGenerator, /hasAnalyzedDailySentence/);
   assert.match(reportGenerator, /未出現前不升級判斷/);
   assert.match(runtimeTimeline, /time: '13:00'/);
-  assert.match(runtimeTimeline, /time: '14:20'/);
-  assert.doesNotMatch(runtimeTimeline, /time: '13:30'|time: '14:10'/);
+  assert.match(runtimeTimeline, /time: '14:30'/);
+  assert.doesNotMatch(runtimeTimeline, /time: '13:30'/);
   assert.match(today, /if \(!isReportForToday\)/);
   assert.match(warRoom, /report\.report_date !== todayTaipeiStr/);
   assert.match(warRoom, /不會把歷史時間軸冒充成今天進度/);

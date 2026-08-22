@@ -1105,7 +1105,7 @@ export function useSystemHealthCheck(): SystemHealthCheckResult {
           status: 'normal',
           result: `${dateLabel}：已更新（${secDate}）`,
           dataSource: 'public.sector_rotation_scores',
-          latestTime: formatTaipeiTime(secDate ? `${secDate}T14:20:00+08:00` : null),
+          latestTime: formatTaipeiTime(secDate ? `${secDate}T14:30:00+08:00` : null),
           suggestion: '—',
         });
       } else if (isActualWeekend) {

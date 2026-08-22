@@ -17,6 +17,7 @@ jobs:
     env:
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
       REPLAY_URL: https://cttfzgvhiewfckydcrci.supabase.co/functions/v1/strategy-replay-engine
+      READINESS_REPORT_DATE: '2026-08-24'
     steps:
       - name: Require runtime secret
         run: test -n "$CRON_SECRET"
@@ -33,12 +34,15 @@ jobs:
             --output "$response_file"
           jq -e '
             .success == true and
+            .version == "MA_STRATEGY_REPLAY_V2" and
+            .runtime_schema.ready == true and
+            ([.runtime_schema.checks[] | select(.ready == true)] | length) == 3 and
             .simulation.result == "GO" and
             .simulation.writes_performed == 0 and
             .simulation.notifications_sent == 0 and
             ([.simulation.checkpoints[].checkpoint] == ["0900","0930","1030","1300","1410","1430"])
           ' "$response_file" >/dev/null
-          jq '{success, simulation_mode, correlation_id, result: .simulation.result, checkpoints: [.simulation.checkpoints[].checkpoint], writes_performed: .simulation.writes_performed, notifications_sent: .simulation.notifications_sent}' "$response_file"
+          jq '{success, version, simulation_mode, correlation_id, runtime_schema, result: .simulation.result, checkpoints: [.simulation.checkpoints[].checkpoint], writes_performed: .simulation.writes_performed, notifications_sent: .simulation.notifications_sent}' "$response_file"
 
       - name: Replay historical failure scenarios
         run: |
@@ -71,12 +75,19 @@ jobs:
             --header "Content-Type: application/json" \
             --header "x-cron-secret: $CRON_SECRET" \
             --header "x-correlation-id: $(cat /proc/sys/kernel/random/uuid)" \
-            --data '{"simulation_mode":"content_quality","dry_run":true,"limit":5}' \
+            --data "{\"simulation_mode\":\"content_quality\",\"dry_run\":true,\"target_date\":\"$READINESS_REPORT_DATE\",\"minimum_score\":90}" \
             --output "$response_file"
           jq -e '
             .success == true and
-            .report_count >= 5 and
+            .version == "MA_STRATEGY_REPLAY_V2" and
+            .target_date == "2026-08-24" and
+            .quality_gate_passed == true and
+            .required_minimum_score == 90 and
+            .report_count == 1 and
+            .eligible_report_count == 1 and
+            .blocked_report_count == 0 and
+            .minimum_score >= 90 and
             .writes_performed == 0 and
             .notifications_sent == 0
           ' "$response_file" >/dev/null
-          jq '{success, simulation_mode, correlation_id, report_count, average_score, minimum_score, most_common_loss_dimensions, writes_performed, notifications_sent}' "$response_file"
+          jq '{success, version, simulation_mode, correlation_id, target_date, quality_gate_passed, required_minimum_score, report_count, eligible_report_count, blocked_report_count, average_score, minimum_score, most_common_loss_dimensions, writes_performed, notifications_sent}' "$response_file"

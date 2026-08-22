@@ -5,7 +5,7 @@
  *   1. 07:30 盤前假設 (reports)
  *   2. 09:30 盤中雷達 (opening_market_radar + market_data)
  *   3. 14:10 收盤驗證 (close_market_reviews)
- *   4. 14:20 類股輪動 (sector_rotation_scores)
+ *   4. 14:30 類股輪動 (sector_rotation_scores)
  *
  * RULES:
  * - If a data source has no TODAY data, NEVER show yesterday's data as today's
@@ -324,7 +324,7 @@ export function resolveIntradayTrackingState(input: IntradayTrackingInput): Intr
     };
   }
 
-  // ═══ 4. Sector Rotation (14:20) ═══
+  // ═══ 4. Sector Rotation (14:30) ═══
   const sectorIsToday = isDateToday(sectorScoreDate, todayDate);
   const canUseAsToday = sectorFreshness?.canUseAsTodayStrategy ?? false;
 

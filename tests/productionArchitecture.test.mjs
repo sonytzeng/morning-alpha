@@ -213,13 +213,20 @@ test('production verification stays dry-run and proves idempotent scenarios', ()
   assert.match(productionVerificationWorkflow, /workflow_dispatch/);
   assert.match(productionVerificationWorkflow, /"simulation_mode":"full_day"/);
   assert.match(productionVerificationWorkflow, /"simulation_mode":"historical_scenarios"/);
-  assert.match(productionVerificationWorkflow, /"simulation_mode":"content_quality"/);
+  assert.match(productionVerificationWorkflow, /simulation_mode\\":\\"content_quality/);
   assert.match(productionVerificationWorkflow, /"dry_run":true/g);
   assert.match(productionVerificationWorkflow, /no_duplicate_snapshot == true/);
   assert.match(productionVerificationWorkflow, /no_duplicate_notification == true/);
   assert.match(productionVerificationWorkflow, /no_production_write == true/);
   assert.match(productionVerificationWorkflow, /writes_performed == 0/);
   assert.match(productionVerificationWorkflow, /notifications_sent == 0/);
+  assert.match(productionVerificationWorkflow, /MA_STRATEGY_REPLAY_V2/);
+  assert.match(productionVerificationWorkflow, /runtime_schema\.ready == true/);
+  assert.match(productionVerificationWorkflow, /target_date/);
+  assert.match(productionVerificationWorkflow, /quality_gate_passed == true/);
+  assert.match(productionVerificationWorkflow, /minimum_score >= 90/);
+  assert.match(replay, /inspectRuntimeSchema/);
+  assert.match(replay, /blocked_report_count/);
 });
 
 test('safe recovery is allowlisted and replay is shadow-only by default', () => {
@@ -240,7 +247,7 @@ test('frontend traffic is deduplicated and uses adaptive polling with Realtime',
   assert.match(entitlement, /inflightRequests/);
   assert.match(entitlement, /PUBLIC_CACHE_TTL_MS = 30_000/);
   assert.match(entitlement, /AUTHENTICATED_CACHE_TTL_MS = 10_000/);
-  assert.match(dashboard, /ACTIVE_MARKET_POLL_MS = 120_000/);
+  assert.match(dashboard, /ACTIVE_MARKET_POLL_MS = 300_000/);
   assert.match(dashboard, /OFF_HOURS_POLL_MS = 900_000/);
   assert.match(dashboard, /visibilitychange/);
   assert.doesNotMatch(dashboard, /setInterval\(refresh,\s*30000\)/);

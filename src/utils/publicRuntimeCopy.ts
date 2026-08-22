@@ -4,7 +4,7 @@ const CHECKPOINT_LABELS: Record<string, string> = {
   '0930': '09:30 開盤驗證',
   '1030': '10:30 主線確認',
   '1300': '13:00 盤中追蹤',
-  '1420': '14:20 收盤驗證',
+  '1420': '14:30 收盤驗證',
 };
 
 function checkpointLabel(hours: string, minutes: string): string {

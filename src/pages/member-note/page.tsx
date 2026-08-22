@@ -1172,7 +1172,7 @@ function MemberNoteContent() {
             closingVerificationRecord.verdict_label,
             closingVerificationRecord.status,
           ))
-        : '等待 14:20 收盤驗證',
+        : '等待 14:30 收盤完整驗證',
     },
     {
       label: '實際發生',
@@ -1305,7 +1305,7 @@ function MemberNoteContent() {
               </div>
             </section>
           ) : (
-            <PaywallCard title="用 14 天完整看懂一套判斷如何走到收盤" description="會員版不只多一篇文章，而是補齊今日是否適合當沖、成立與放棄條件、海外事件到台股代表股的因果鏈，以及收盤後的命中與失誤紀錄。正式方案預定 NT$199/月，公開測試登記不扣款。" requiredTier="member" featureList={['今日當沖決策與放棄條件', '完整事件與產業傳導鏈', '09:30／10:30／13:00 盤中驗證', '14:20 收盤回顧與明日調整']} tone="dark" />
+            <PaywallCard title="用 14 天完整看懂一套判斷如何走到收盤" description="會員版不只多一篇文章，而是補齊今日是否適合當沖、成立與放棄條件、海外事件到台股代表股的因果鏈，以及收盤後的命中與失誤紀錄。正式方案預定 NT$199/月，公開測試登記不扣款。" requiredTier="member" featureList={['今日當沖決策與放棄條件', '完整事件與產業傳導鏈', '09:30／10:30／13:00 盤中驗證', '14:10／14:30 收盤驗證與明日調整']} tone="dark" />
           )}
         </article>
       </main>

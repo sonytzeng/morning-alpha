@@ -475,7 +475,7 @@ export default function DataTruthPage() {
     problems.push('14:10 收盤驗證沒有產生（檢查 close-market-review Edge Function）。');
   }
   if (!hasTodaySector && hasOldSector) {
-    problems.push('14:20 類股輪動沒有更新或資料日期未寫入（檢查 generate-sector-rotation Edge Function）。');
+    problems.push('14:30 類股輪動沒有更新或資料日期未寫入（檢查 generate-sector-rotation Edge Function）。');
   }
   if (reportDateIsToday && marketDataDate !== todayStr && marketDataDateIsYesterday) {
     // This is normal — don't flag as error
@@ -1085,7 +1085,7 @@ export default function DataTruthPage() {
       <div className="bg-white rounded-lg border border-background-200 p-5">
         <h3 className="text-sm font-semibold text-foreground-900 mb-3 flex items-center gap-2">
           <i className="ri-pie-chart-line text-base"></i>
-          14:20 類股輪動（sector_rotation_scores）
+          14:30 類股輪動（sector_rotation_scores）
         </h3>
         {data.sectorScores.length === 0 ? (
           <div className="text-center py-4">

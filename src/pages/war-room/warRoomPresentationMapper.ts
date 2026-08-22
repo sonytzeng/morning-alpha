@@ -353,7 +353,7 @@ export function buildWarRoomTimeline(input: BuildWarRoomTimelineInput): WarRoomT
     { time: '10:30', label: '主線確認', status: getRuntimeCheckpointState(sync, '1030') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '1030') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
     { time: '13:00', label: '午後追蹤', status: getRuntimeCheckpointState(sync, '1300') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '1300') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
     {
-      time: '14:20',
+      time: '14:30',
       label: '收盤驗證',
       status: closeState.state === 'pending'
         ? 'pending'

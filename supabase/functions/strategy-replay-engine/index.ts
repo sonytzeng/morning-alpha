@@ -1,12 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 import {
+  RUNTIME_QUALITY_POLICY,
   computeHistoricalSimilarity,
   simulateFullTradingDay,
   simulateHistoricalFailureMatrix,
 } from '../_shared/production-architecture-core.mjs';
 import { evaluateContentIntelligence } from '../_shared/content-intelligence.ts';
 
-const VERSION = 'MA_STRATEGY_REPLAY_V1';
+const VERSION = 'MA_STRATEGY_REPLAY_V2';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -37,6 +38,26 @@ function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
 }
 
+async function inspectRuntimeSchema(supabase: ReturnType<typeof createClient>): Promise<JsonRecord> {
+  const checks = await Promise.all([
+    supabase.from('market_data_snapshots').select('checkpoint').limit(1),
+    supabase.from('data_provider_health').select('checkpoint').limit(1),
+    supabase.from('trading_day_state').select('trading_date,current_state,state_rank,checkpoint_status').limit(1),
+  ]);
+  const names = ['immutable_checkpoint_snapshots', 'provider_checkpoint_health', 'trading_day_state'];
+  const results = checks.map((result, index) => ({
+    check: names[index],
+    ready: !result.error,
+    error_code: result.error?.code || null,
+    error: result.error?.message || null,
+  }));
+  return {
+    contract_version: 'MA_RUNTIME_SCHEMA_V1',
+    ready: results.every((result) => result.ready),
+    checks: results,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== 'POST') return jsonResponse({ success: false, error: 'METHOD_NOT_ALLOWED' }, 405);
@@ -61,13 +82,16 @@ Deno.serve(async (req: Request) => {
       content_scores: Array.isArray(body.content_scores) ? body.content_scores : undefined,
       max_repair_attempts: body.max_repair_attempts,
     });
+    const runtimeSchema = await inspectRuntimeSchema(supabase);
+    const ready = simulation.result === 'GO' && runtimeSchema.ready === true;
     return jsonResponse({
-      success: simulation.result === 'GO',
+      success: ready,
       simulation_mode: 'full_day',
       version: VERSION,
       correlation_id: correlationId,
+      runtime_schema: runtimeSchema,
       simulation,
-    }, simulation.result === 'GO' ? 200 : 422);
+    }, ready ? 200 : 422);
   }
   if (body.simulation_mode === 'historical_scenarios') {
     if (body.dry_run === false) {
@@ -87,12 +111,20 @@ Deno.serve(async (req: Request) => {
     if (body.dry_run === false) {
       return jsonResponse({ success: false, error: 'CONTENT_QUALITY_REPLAY_MUST_BE_DRY_RUN', correlation_id: correlationId }, 400);
     }
+    const targetDate = dateString(body.target_date, '');
     const requestedLimit = Math.max(5, Math.min(20, Math.trunc(Number(body.limit) || 5)));
-    const { data: reports, error: reportsError } = await supabase
+    const requiredMinimumScore = Math.max(
+      RUNTIME_QUALITY_POLICY.premium_publish_min,
+      Math.min(100, Math.trunc(Number(body.minimum_score) || RUNTIME_QUALITY_POLICY.premium_publish_min)),
+    );
+    let reportsQuery = supabase
       .from('reports')
       .select('report_date,ai_strategy_json,important_news_json')
-      .order('report_date', { ascending: false })
-      .limit(requestedLimit);
+      .order('report_date', { ascending: false });
+    reportsQuery = targetDate
+      ? reportsQuery.eq('report_date', targetDate).limit(1)
+      : reportsQuery.limit(requestedLimit);
+    const { data: reports, error: reportsError } = await reportsQuery;
     if (reportsError) {
       return jsonResponse({ success: false, error: 'CONTENT_QUALITY_REPORT_QUERY_FAILED', details: reportsError.message, correlation_id: correlationId }, 500);
     }
@@ -114,20 +146,29 @@ Deno.serve(async (req: Request) => {
     })).sort((left, right) => right.total_points_lost - left.total_points_lost);
     const average = scoreRows.length === 0 ? null : Math.round(scoreRows.reduce((sum, row) => sum + row.score, 0) / scoreRows.length * 100) / 100;
     const minimum = scoreRows.length === 0 ? null : Math.min(...scoreRows.map((row) => row.score));
+    const requiredReportCount = targetDate ? 1 : 5;
+    const eligibleReportCount = scoreRows.filter((row) => row.score >= requiredMinimumScore).length;
+    const blockedReportCount = scoreRows.length - eligibleReportCount;
+    const qualityGatePassed = scoreRows.length >= requiredReportCount && blockedReportCount === 0;
     return jsonResponse({
-      success: scoreRows.length >= 5,
+      success: qualityGatePassed,
       dry_run: true,
       simulation_mode: 'content_quality',
       version: VERSION,
       correlation_id: correlationId,
+      target_date: targetDate || null,
+      required_minimum_score: requiredMinimumScore,
+      quality_gate_passed: qualityGatePassed,
       report_count: scoreRows.length,
+      eligible_report_count: eligibleReportCount,
+      blocked_report_count: blockedReportCount,
       average_score: average,
       minimum_score: minimum,
       most_common_loss_dimensions: dimensionLosses.slice(0, 3),
       reports: scoreRows,
       writes_performed: 0,
       notifications_sent: 0,
-    }, scoreRows.length >= 5 ? 200 : 422);
+    }, qualityGatePassed ? 200 : 422);
   }
   const today = new Date().toISOString().slice(0, 10);
   const toDate = dateString(body.to_date, today);

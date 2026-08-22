@@ -77,14 +77,16 @@ export function resolveClosingVerificationState(...sources: unknown[]): Resolved
     record.result,
     record.verification_result,
   );
-  const hasOutcome = hasNamedDirection(record.actual_direction)
-    || taiexChange !== null
-    || ['hit', 'correct', 'confirmed', 'success', 'partial', 'mixed', 'partial_hit', 'miss', 'wrong', 'failed', 'rejected', 'incorrect'].includes(outcome);
+  // A hit/miss label is only an evaluation claim. It cannot prove what the
+  // market actually did. Public verification therefore requires a real
+  // direction or TAIEX change before a completed status is trusted.
+  const hasActualMarketDirection = hasNamedDirection(record.actual_direction)
+    || taiexChange !== null;
   const completed = ['completed', 'complete', 'ready', 'done', 'verified'].includes(status)
     || status.includes('direction_completed')
     || status.includes('verified');
 
-  if (!completed || !hasOutcome) {
+  if (!completed || !hasActualMarketDirection) {
     return { state: 'pending', record, taiexChange, outcome };
   }
 

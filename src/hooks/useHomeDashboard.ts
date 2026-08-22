@@ -9,7 +9,9 @@ import {
   type MorningAlphaState,
 } from '@/lib/morningAlpha/resolveMorningAlphaState';
 
-const ACTIVE_MARKET_POLL_MS = 120_000;
+// Realtime is the primary update path. A five-minute reconciliation poll keeps
+// the dashboard self-healing without multiplying Edge Function traffic at scale.
+const ACTIVE_MARKET_POLL_MS = 300_000;
 const OFF_HOURS_POLL_MS = 900_000;
 
 export function getAdaptiveDashboardPollMs(now = new Date(), hidden = false): number {

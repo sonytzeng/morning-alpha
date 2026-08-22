@@ -682,7 +682,7 @@ export function computeSectorRotationFreshness(
   } else if (isPremature) {
     // Today's data exists but was generated before 14:15 — not final
     displayTitle = '今日類股輪動需待收盤後驗證';
-    warning = '今日類股輪動資料於 14:15 前產生，可能非最終收盤後驗證結果。系統將在 14:20 後重新產生正式收盤驗證資料，請稍後再查看。';
+    warning = '今日類股輪動資料於 14:15 前產生，可能非最終收盤後驗證結果。系統將在 14:30 完整驗證後重新產生正式資料，請稍後再查看。';
   } else if (canUseAsTodayStrategy) {
     displayTitle = '今日收盤後類股輪動';
     warning = '';

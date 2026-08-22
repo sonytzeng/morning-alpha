@@ -5,13 +5,21 @@ on:
     # GitHub cron uses UTC. Supabase Cron is primary; these are independent watchdogs at 07:10/07:35 Taipei.
     - cron: '10 23 * * 0-4'
     - cron: '35 23 * * 0-4'
-    # Six immutable Asia/Taipei market snapshots: 09:00, 09:30, 10:30, 13:00, 14:10, 14:30.
+    # Six immutable Asia/Taipei market snapshots. Each checkpoint has a second
+    # idempotent watchdog five minutes later so a missed GitHub trigger does not
+    # silently break the trading-day chain.
     - cron: '0 1 * * 1-5'
+    - cron: '5 1 * * 1-5'
     - cron: '30 1 * * 1-5'
+    - cron: '35 1 * * 1-5'
     - cron: '30 2 * * 1-5'
+    - cron: '35 2 * * 1-5'
     - cron: '0 5 * * 1-5'
+    - cron: '5 5 * * 1-5'
     - cron: '10 6 * * 1-5'
+    - cron: '15 6 * * 1-5'
     - cron: '30 6 * * 1-5'
+    - cron: '35 6 * * 1-5'
   workflow_dispatch:
     inputs:
       checkpoint:
@@ -31,7 +39,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: morning-alpha-runtime-${{ (github.event.schedule == '10 23 * * 0-4' || github.event.schedule == '35 23 * * 0-4') && 'premarket' || github.event.schedule == '0 1 * * 1-5' && '0900' || github.event.schedule == '30 1 * * 1-5' && '0930' || github.event.schedule == '30 2 * * 1-5' && '1030' || github.event.schedule == '0 5 * * 1-5' && '1300' || github.event.schedule == '10 6 * * 1-5' && '1410' || github.event.schedule == '30 6 * * 1-5' && '1430' || inputs.checkpoint || github.run_id }}
+  group: morning-alpha-runtime-${{ (github.event.schedule == '10 23 * * 0-4' || github.event.schedule == '35 23 * * 0-4') && 'premarket' || (github.event.schedule == '0 1 * * 1-5' || github.event.schedule == '5 1 * * 1-5') && '0900' || (github.event.schedule == '30 1 * * 1-5' || github.event.schedule == '35 1 * * 1-5') && '0930' || (github.event.schedule == '30 2 * * 1-5' || github.event.schedule == '35 2 * * 1-5') && '1030' || (github.event.schedule == '0 5 * * 1-5' || github.event.schedule == '5 5 * * 1-5') && '1300' || (github.event.schedule == '10 6 * * 1-5' || github.event.schedule == '15 6 * * 1-5') && '1410' || (github.event.schedule == '30 6 * * 1-5' || github.event.schedule == '35 6 * * 1-5') && '1430' || inputs.checkpoint || github.run_id }}
   cancel-in-progress: false
 
 env:
@@ -54,17 +62,17 @@ jobs:
             checkpoint="$MANUAL_CHECKPOINT"
           elif [ "$EVENT_SCHEDULE" = "10 23 * * 0-4" ] || [ "$EVENT_SCHEDULE" = "35 23 * * 0-4" ]; then
             checkpoint="premarket"
-          elif [ "$EVENT_SCHEDULE" = "0 1 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "0 1 * * 1-5" ] || [ "$EVENT_SCHEDULE" = "5 1 * * 1-5" ]; then
             checkpoint="0900"
-          elif [ "$EVENT_SCHEDULE" = "30 1 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "30 1 * * 1-5" ] || [ "$EVENT_SCHEDULE" = "35 1 * * 1-5" ]; then
             checkpoint="0930"
-          elif [ "$EVENT_SCHEDULE" = "30 2 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "30 2 * * 1-5" ] || [ "$EVENT_SCHEDULE" = "35 2 * * 1-5" ]; then
             checkpoint="1030"
-          elif [ "$EVENT_SCHEDULE" = "0 5 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "0 5 * * 1-5" ] || [ "$EVENT_SCHEDULE" = "5 5 * * 1-5" ]; then
             checkpoint="1300"
-          elif [ "$EVENT_SCHEDULE" = "10 6 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "10 6 * * 1-5" ] || [ "$EVENT_SCHEDULE" = "15 6 * * 1-5" ]; then
             checkpoint="1410"
-          elif [ "$EVENT_SCHEDULE" = "30 6 * * 1-5" ]; then
+          elif [ "$EVENT_SCHEDULE" = "30 6 * * 1-5" ] || [ "$EVENT_SCHEDULE" = "35 6 * * 1-5" ]; then
             checkpoint="1430"
           else
             echo "Unsupported schedule: $EVENT_SCHEDULE" >&2

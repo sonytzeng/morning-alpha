@@ -1,3 +1,8 @@
+import {
+  RUNTIME_QUALITY_POLICY,
+  gradeContentScore,
+} from './production-architecture-core.mjs';
+
 export type ContentQualityGrade = 'reject' | 'degraded' | 'publish' | 'high_quality';
 
 export interface ContentScoreBreakdown {
@@ -173,10 +178,7 @@ export function detectGenericContent(aiValue: unknown): string[] {
 }
 
 function gradeForScore(score: number): ContentQualityGrade {
-  if (score >= 90) return 'high_quality';
-  if (score >= 80) return 'publish';
-  if (score >= 70) return 'degraded';
-  return 'reject';
+  return gradeContentScore(score, RUNTIME_QUALITY_POLICY) as ContentQualityGrade;
 }
 
 export function evaluateContentIntelligence(
@@ -289,7 +291,7 @@ export function evaluateContentIntelligence(
   if (verifiedCatalystCount < 1) reasonCodes.push('verified_catalyst_evidence_missing');
   if (verifiedNewsCount > 0 && !allNewsTraceable) reasonCodes.push('news_traceability_incomplete');
   if (blankMarketChangeCount > 0) reasonCodes.push('blank_market_change_detected');
-  if (score < 90) reasonCodes.push('content_score_below_90');
+  if (score < RUNTIME_QUALITY_POLICY.premium_publish_min) reasonCodes.push('content_score_below_90');
 
   const grade = gradeForScore(score);
   const hardFailure = reasonCodes.some((reason) => [
@@ -304,7 +306,7 @@ export function evaluateContentIntelligence(
   return {
     score,
     grade,
-    publishable: score >= 90 && !hardFailure,
+    publishable: score >= RUNTIME_QUALITY_POLICY.premium_publish_min && !hardFailure,
     reason_codes: unique(reasonCodes),
     generic_flags: genericFlags,
     breakdown,

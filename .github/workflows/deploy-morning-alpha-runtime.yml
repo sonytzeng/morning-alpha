@@ -160,3 +160,19 @@ jobs:
           supabase functions deploy ma-ops-health-check
           --project-ref cttfzgvhiewfckydcrci
           --no-verify-jwt
+
+      - name: Deploy allowlisted safe recovery executor
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: >-
+          supabase functions deploy ma-ops-safe-recovery
+          --project-ref cttfzgvhiewfckydcrci
+          --no-verify-jwt
+
+      - name: Deploy strategy replay engine
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: >-
+          supabase functions deploy strategy-replay-engine
+          --project-ref cttfzgvhiewfckydcrci
+          --no-verify-jwt

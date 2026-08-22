@@ -1,3 +1,5 @@
+import { RUNTIME_QUALITY_POLICY } from './production-architecture-core.mjs';
+
 export type DailyDeliveryAction =
   | 'refresh_news'
   | 'refresh_market'
@@ -120,6 +122,6 @@ export function buildDailyDeliveryRecoveryPlan(
     reason_codes: reasonCodes.length > 0 ? reasonCodes : ['daily_report_not_publishable'],
     attempt,
     deadline_reached: deadlineReached,
-    retry_after_seconds: attempt >= 4 ? 300 : Math.min(180, 30 * attempt),
+    retry_after_seconds: attempt >= RUNTIME_QUALITY_POLICY.max_recovery_attempts ? 300 : Math.min(180, 30 * attempt),
   };
 }

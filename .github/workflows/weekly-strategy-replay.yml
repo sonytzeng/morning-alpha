@@ -1,0 +1,48 @@
+name: Weekly production strategy replay
+
+on:
+  schedule:
+    # Saturday 10:15 Asia/Taipei. Replay is isolated from trading-day delivery.
+    - cron: '15 2 * * 6'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-production-strategy-replay
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require runtime secret
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: test -n "$CRON_SECRET"
+
+      - name: Replay the active production strategy
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          REPLAY_URL: https://cttfzgvhiewfckydcrci.supabase.co/functions/v1/strategy-replay-engine
+        run: |
+          response_file="$RUNNER_TEMP/strategy-replay.json"
+          for attempt in 1 2 3; do
+            correlation_id="$(cat /proc/sys/kernel/random/uuid)"
+            if curl --fail-with-body --silent --show-error \
+              --request POST "$REPLAY_URL" \
+              --header "Content-Type: application/json" \
+              --header "x-cron-secret: $CRON_SECRET" \
+              --header "x-correlation-id: $correlation_id" \
+              --data '{"dry_run":false}' \
+              --output "$response_file" \
+              && jq -e '.success == true and .dry_run == false' "$response_file" >/dev/null; then
+              jq '{success, replay_run_id, evaluated_cases, accuracy, brier_score, similarity_pairs, correlation_id}' "$response_file"
+              exit 0
+            fi
+            sleep $((attempt * 10))
+          done
+          jq . "$response_file" 2>/dev/null || true
+          exit 1

@@ -653,9 +653,9 @@ test('content intelligence applies the approved 100-point editorial score and re
   ]) {
     assert.match(contentIntelligence, new RegExp(`\\b${dimension}\\b`));
   }
-  assert.match(contentIntelligence, /score >= 90/);
-  assert.match(contentIntelligence, /score >= 80/);
-  assert.match(contentIntelligence, /score >= 70/);
+  assert.match(contentIntelligence, /RUNTIME_QUALITY_POLICY/);
+  assert.match(contentIntelligence, /gradeContentScore/);
+  assert.match(contentIntelligence, /premium_publish_min/);
   assert.match(contentIntelligence, /generic_content_detected/);
   assert.match(premiumGate, /evaluateContentIntelligence/);
   assert.match(premiumGate, /content_score_breakdown/);
@@ -664,7 +664,7 @@ test('content intelligence applies the approved 100-point editorial score and re
 });
 
 test('report, site payload, and LINE converge on the same immutable decision snapshot', () => {
-  assert.match(dailyReportGenerator, /publish_decision_snapshot_v2/);
+  assert.match(dailyReportGenerator, /publish_decision_snapshot_v3/);
   assert.match(dailyReportGenerator, /buildCanonicalDecisionPayload/);
   assert.match(reportPayloadFunction, /\.from\("decision_snapshots"\)/);
   assert.match(reportPayloadFunction, /canonical_decision/);

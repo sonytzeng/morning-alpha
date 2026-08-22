@@ -9,6 +9,24 @@ import {
   type MorningAlphaState,
 } from '@/lib/morningAlpha/resolveMorningAlphaState';
 
+const ACTIVE_MARKET_POLL_MS = 120_000;
+const OFF_HOURS_POLL_MS = 900_000;
+
+export function getAdaptiveDashboardPollMs(now = new Date(), hidden = false): number {
+  if (hidden) return OFF_HOURS_POLL_MS;
+  const taipeiParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+  const read = (type: string) => Number(taipeiParts.find((part) => part.type === type)?.value || 0);
+  const taipeiMinutes = read('hour') * 60 + read('minute');
+  return taipeiMinutes >= 5 * 60 + 30 && taipeiMinutes <= 14 * 60 + 30
+    ? ACTIVE_MARKET_POLL_MS
+    : OFF_HOURS_POLL_MS;
+}
+
 export function useHomeDashboard() {
   const [data, setData] = useState<HomeDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,8 +78,22 @@ export function useHomeDashboard() {
     // Secondary: load dashboard data in parallel
     refresh();
 
-    // 30 秒 polling (dashboard data only, morningState only on explicit refresh)
-    const interval = setInterval(refresh, 30000);
+    // Realtime is primary; adaptive polling is a low-traffic recovery path.
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    let disposed = false;
+    const schedulePoll = () => {
+      if (disposed) return;
+      pollTimer = setTimeout(async () => {
+        if (document.visibilityState === 'visible') await refresh();
+        if (!disposed) schedulePoll();
+      }, getAdaptiveDashboardPollMs(new Date(), document.visibilityState !== 'visible'));
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    schedulePoll();
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    window.addEventListener('focus', refreshWhenVisible);
 
     // Supabase Realtime 訂閱
     const channel = supabase
@@ -107,7 +139,10 @@ export function useHomeDashboard() {
       .subscribe();
 
     return () => {
-      clearInterval(interval);
+      disposed = true;
+      if (pollTimer) clearTimeout(pollTimer);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('focus', refreshWhenVisible);
       supabase.removeChannel(channel);
     };
   }, [refresh, loadMorningState]);

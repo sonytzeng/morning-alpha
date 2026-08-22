@@ -15,6 +15,8 @@ on:
       - 'supabase/functions/line-daily-push/**'
       - 'supabase/functions/daily-delivery-orchestrator/**'
       - 'supabase/functions/get-report-payload/**'
+      - 'supabase/functions/continuous-learning-engine/**'
+      - 'supabase/functions/get-learning-center/**'
       - 'supabase/functions/_shared/**'
       - 'supabase/functions/generate-sector-rotation/**'
       - 'supabase/migrations/**'
@@ -127,6 +129,21 @@ jobs:
           supabase functions deploy closing-verification-engine
           --project-ref cttfzgvhiewfckydcrci
           --no-verify-jwt
+
+      - name: Deploy continuous learning engine
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: >-
+          supabase functions deploy continuous-learning-engine
+          --project-ref cttfzgvhiewfckydcrci
+          --no-verify-jwt
+
+      - name: Deploy admin learning center API
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: >-
+          supabase functions deploy get-learning-center
+          --project-ref cttfzgvhiewfckydcrci
 
       - name: Deploy read-only operations health check
         env:

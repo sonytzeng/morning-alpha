@@ -20,6 +20,11 @@ import {
   normalizePremiumMarketEvidence,
   reviewPremiumNewsEvidence,
 } from '../_shared/premium-evidence.ts';
+import {
+  applyProductionLearningConfidence,
+  buildPatternDimensions,
+  confidenceBucket,
+} from '../_shared/continuous-learning-core.mjs';
 
 const VERSION='V9.3_PREMIUM_EVIDENCE_SELF_REPAIR';
 const OPENAI_EVIDENCE_GUARDRAILS='market_news 只可使用發布時間在 48 小時內的資料。若 TXF 或其他資料源缺失，不可把缺失資料寫成方向、價位或驗證條件。禁止自行編造輸入資料未提供的個股絕對價位。每一檔最終受惠股都必須有事件來源、事件到產業與供應鏈再到公司的傳導路徑、台灣供應鏈關係、盤中成立條件與失效條件；沒有足夠證據就不要輸出該股票。';
@@ -31,6 +36,17 @@ const TAIWAN_HOLIDAYS_2026:Record<string,string>={
 };
 
 type TradingDayInfo={is_trading_day:boolean;market_closed:boolean;holiday_name:string|null;reason:string;session_type?:string;market_message?:string;next_trading_day?:string};
+type ProductionLearningConfidence={
+  model_confidence:number|null;
+  calibrated_confidence:number|null;
+  final_confidence:number|null;
+  calibration_adjustment:number;
+  production_rule_adjustment:number;
+  calibration_applied:boolean;
+  applied_rule_ids:string[];
+  evaluation_key:string|null;
+  confidence_bucket:string;
+};
 
 function getTaiwanTradingDayInfo(dateString:string):TradingDayInfo{
   try{
@@ -1780,6 +1796,7 @@ function buildCanonicalDecisionPayload(
   marketBias:string,
   confidenceScore:number|null,
   tradingDayInfo:TradingDayInfo,
+  learningConfidence:ProductionLearningConfidence|null=null,
 ):Record<string,unknown>{
   const note=canonicalRecord(ai.member_research_note_v2);
   const freeSummary=canonicalRecord(ai.free_summary);
@@ -1863,7 +1880,22 @@ function buildCanonicalDecisionPayload(
     reasons:publishedReasons,
     risk_flags:Array.isArray(ai.risk_flags)?ai.risk_flags:[],
     invalidation_rules:invalidationRules,
-    factor_scores:canonicalRecord(ai.confidence_breakdown),
+    factor_scores:{
+      ...canonicalRecord(ai.confidence_breakdown),
+      ...(learningConfidence?{
+        learning_confidence:{
+          model_confidence:learningConfidence.model_confidence,
+          calibrated_confidence:learningConfidence.calibrated_confidence,
+          final_confidence:learningConfidence.final_confidence,
+          calibration_adjustment:learningConfidence.calibration_adjustment,
+          production_rule_adjustment:learningConfidence.production_rule_adjustment,
+          calibration_applied:learningConfidence.calibration_applied,
+          applied_rule_ids:learningConfidence.applied_rule_ids,
+          evaluation_key:learningConfidence.evaluation_key,
+          confidence_bucket:learningConfidence.confidence_bucket,
+        },
+      }:{}),
+    },
     source_freshness:{data_quality:canonicalText(ai.data_quality),missing_sources:Array.isArray(ai.missing_sources)?ai.missing_sources:[]},
     source_refs:sourceRefs,
     generated_text:{
@@ -1914,7 +1946,7 @@ async function publishCanonicalDecisionSnapshot(
   }
 }
 
-async function writeReport(supabase:ReturnType<typeof createClient>,todayDate:string,aiStrategyJson:Record<string,unknown>,marketBias:string,rawConfidenceScore:number|null,reportMode:string,md:MarketIndicator[],newsData:MarketNewsItem[],log:(m:string)=>void,tdInfo?:TradingDayInfo,dates?:MarketFreshnessDates,previousDailySentence:string=''):Promise<{reportId:string;snapshotId:string|null}|null>{
+async function writeReport(supabase:ReturnType<typeof createClient>,todayDate:string,aiStrategyJson:Record<string,unknown>,marketBias:string,rawConfidenceScore:number|null,reportMode:string,md:MarketIndicator[],newsData:MarketNewsItem[],log:(m:string)=>void,tdInfo?:TradingDayInfo,dates?:MarketFreshnessDates,previousDailySentence:string='',learningConfidence:ProductionLearningConfidence|null=null):Promise<{reportId:string;snapshotId:string|null}|null>{
   try{
     const tradingDayInfo=tdInfo||getTaiwanTradingDayInfo(todayDate);
     aiStrategyJson={...aiStrategyJson,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,trading_day_reason:tradingDayInfo.reason,market_status:tradingDayInfo.is_trading_day?'OPEN':tradingDayInfo.reason,session_type:tradingDayInfo.session_type||'FULL_DAY',market_message:tradingDayInfo.market_message||(tradingDayInfo.is_trading_day?'今天正常交易。':'今日沒有台股交易，Morning Alpha 已切換休市模式。'),next_trading_day:tradingDayInfo.next_trading_day||todayDate};
@@ -2008,7 +2040,7 @@ async function writeReport(supabase:ReturnType<typeof createClient>,todayDate:st
     const r=await supabase.from('reports').upsert(insertPayload,{onConflict:'report_date'}).select('id').single();
     const{data,error}=safeUnwrap<{id:string}>(r,log,'writeReport');
     if(error||!data?.id){log('writeReport FAIL: '+(error||'no id'));return null}
-    const decisionPayload=buildCanonicalDecisionPayload(aiStrategyJson,importantNews,reportMode,marketBias,confScore,tradingDayInfo);
+    const decisionPayload=buildCanonicalDecisionPayload(aiStrategyJson,importantNews,reportMode,marketBias,confScore,tradingDayInfo,learningConfidence);
     const snapshotId=await publishCanonicalDecisionSnapshot(supabase,todayDate,data.id,decisionPayload,log);
     log('writeReport OK: '+data.id+' snapshot_id='+(snapshotId||'pending_migration'));
     return{reportId:data.id,snapshotId};
@@ -2031,6 +2063,54 @@ function buildIntradaySyncStatus(todayDate:string):Record<string,unknown>{
   const minutes=getTaipeiMinutesNow();
   const windowStatus=(target:number)=>minutes<target?'pending':'missing';
   return{report_date:todayDate,last_checked_at:new Date().toISOString(),windows:{'0930':windowStatus(570),'1030':windowStatus(630),'1300':windowStatus(780)},warning:minutes<570?'等待 09:30 第一段盤中資料':minutes<630?'09:30 盤中資料尚未同步':minutes<780?'10:30 資料尚未同步；13:00 尚未到時間窗':'13:00 盤中資料尚未同步，等待收盤資料或盤中同步補齊。'};
+}
+
+async function resolveProductionLearningConfidence(
+  supabase:ReturnType<typeof createClient>,
+  modelVersion:string,
+  modelConfidence:number,
+  dimensions:Record<string,unknown>,
+  log:(message:string)=>void,
+):Promise<ProductionLearningConfidence>{
+  const bucket=confidenceBucket(modelConfidence);
+  const fallback=applyProductionLearningConfidence(modelConfidence,null,[],dimensions);
+  try{
+    const [evaluationResult,rulesResult]=await Promise.all([
+      supabase.from('model_evaluations')
+        .select('evaluation_key,sample_size,accuracy,period_end,evaluated_at')
+        .eq('model_version',modelVersion)
+        .eq('window_days',90)
+        .eq('confidence_bucket',bucket)
+        .gte('sample_size',20)
+        .order('period_end',{ascending:false})
+        .order('evaluated_at',{ascending:false})
+        .limit(1)
+        .abortSignal(AbortSignal.timeout(2000))
+        .maybeSingle(),
+      supabase.from('learning_rules')
+        .select('id,rule_key,status,condition_json,action_json')
+        .eq('status','production')
+        .limit(100)
+        .abortSignal(AbortSignal.timeout(2000)),
+    ]);
+    if(evaluationResult.error)throw evaluationResult.error;
+    if(rulesResult.error)throw rulesResult.error;
+    const resolved=applyProductionLearningConfidence(
+      modelConfidence,
+      evaluationResult.data,
+      rulesResult.data||[],
+      dimensions,
+    );
+    log('LEARNING_CONFIDENCE bucket='+bucket+' calibration='+resolved.calibration_adjustment+' production_rule_adjustment='+resolved.production_rule_adjustment+' rules='+resolved.applied_rule_ids.length);
+    return{
+      ...resolved,
+      evaluation_key:String(evaluationResult.data?.evaluation_key||'')||null,
+      confidence_bucket:bucket,
+    };
+  }catch(error){
+    log('LEARNING_CONFIDENCE_DEGRADED '+(error instanceof Error?error.message:String(error)));
+    return{...fallback,evaluation_key:null,confidence_bucket:bucket};
+  }
 }
 
 Deno.serve(async (req:Request)=>{
@@ -2209,11 +2289,31 @@ Deno.serve(async (req:Request)=>{
 
     const marketBias=String(aiStrategyJson.market_bias||classifyMarketBias(dScore.baseScore));
     const confidenceRaw=Number(aiStrategyJson.confidence_score);
-    const rawConfidenceScore=Number.isNaN(confidenceRaw)?confidenceResult.score:confidenceRaw;
+    const modelConfidenceScore=Number.isNaN(confidenceRaw)?confidenceResult.score:confidenceRaw;
+    const learningDimensions=buildPatternDimensions({
+      prediction_scope:'market',
+      market_regime:String(aiStrategyJson.market_regime||marketBias),
+      direction:marketBias,
+      model_confidence:modelConfidenceScore,
+      catalyst_score:aiStrategyJson.catalyst_score,
+      surprise_score:aiStrategyJson.surprise_score,
+      price_in_score:aiStrategyJson.price_in_score,
+      taiwan_mapping_score:aiStrategyJson.taiwan_mapping_score,
+      data_quality_status:dataQuality,
+    });
+    const learningConfidence=await resolveProductionLearningConfidence(
+      supabase,
+      String(aiStrategyJson.version||VERSION),
+      modelConfidenceScore,
+      learningDimensions,
+      log,
+    );
+    const rawConfidenceScore=learningConfidence.final_confidence??modelConfidenceScore;
+    aiStrategyJson.confidence_score=rawConfidenceScore;
     const previousAI=(previousReport?.ai_strategy_json&&typeof previousReport.ai_strategy_json==='object'&&!Array.isArray(previousReport.ai_strategy_json)?previousReport.ai_strategy_json:{} ) as Record<string,unknown>;
     const previousV8=(previousAI.v8_daily_sentence&&typeof previousAI.v8_daily_sentence==='object'&&!Array.isArray(previousAI.v8_daily_sentence)?previousAI.v8_daily_sentence:{} ) as Record<string,unknown>;
     const previousDailySentence=String(previousAI.today_quote||previousV8.sentence||'');
-    const writeResult=await writeReport(supabase,todayDate,aiStrategyJson,marketBias,rawConfidenceScore,reportMode,marketData,newsData,log,tradingDayInfo,dates,previousDailySentence);
+    const writeResult=await writeReport(supabase,todayDate,aiStrategyJson,marketBias,rawConfidenceScore,reportMode,marketData,newsData,log,tradingDayInfo,dates,previousDailySentence,learningConfidence);
     timer.mark('REPORT_WRITTEN');
     if(!writeResult?.reportId){log('WRITE_FAILED');return corsResponse({success:false,error:'Failed to write report',report_date:todayDate,version:VERSION,logs},500);}
 

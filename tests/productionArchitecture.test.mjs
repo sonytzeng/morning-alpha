@@ -32,8 +32,10 @@ const checkpointMigrationPath = new URL('../supabase/migrations/20260822230000_p
 const runtimeCheckpointWorkflowPath = new URL('../.github/workflows/morning-alpha-runtime-checkpoints.yml', import.meta.url);
 const openingRadarPath = new URL('../supabase/functions/opening-market-radar/index.ts', import.meta.url);
 const closingVerificationPath = new URL('../supabase/functions/closing-verification-engine/index.ts', import.meta.url);
+const securityHardeningMigrationPath = new URL('../supabase/migrations/20260822233000_harden_runtime_permissions.sql', import.meta.url);
+const productionVerificationWorkflowPath = new URL('../.github/workflows/production-readiness-verification.yml', import.meta.url);
 
-const [migration, generator, collector, recovery, replay, entitlement, dashboard, deploy, replayWorkflow, checkpointMigration, runtimeCheckpointWorkflow, openingRadar, closingVerification] = await Promise.all([
+const [migration, generator, collector, recovery, replay, entitlement, dashboard, deploy, replayWorkflow, checkpointMigration, runtimeCheckpointWorkflow, openingRadar, closingVerification, securityHardeningMigration, productionVerificationWorkflow] = await Promise.all([
   migrationPath,
   generatorPath,
   collectorPath,
@@ -47,6 +49,8 @@ const [migration, generator, collector, recovery, replay, entitlement, dashboard
   runtimeCheckpointWorkflowPath,
   openingRadarPath,
   closingVerificationPath,
+  securityHardeningMigrationPath,
+  productionVerificationWorkflowPath,
 ].map((path) => readFile(path, 'utf8')));
 
 test('central production policy preserves the strict premium threshold', () => {
@@ -194,6 +198,28 @@ test('checkpoint snapshots are immutable across the six Taipei market checkpoint
   for (const checkpoint of ['0900', '0930', '1030', '1300', '1410', '1430']) {
     assert.match(runtimeCheckpointWorkflow, new RegExp(`'${checkpoint}'|"${checkpoint}"`));
   }
+});
+
+test('legacy radar writes and trigger-only functions are least privilege', () => {
+  assert.match(securityHardeningMigration, /alter policy "Service role write"[\s\S]*to service_role/);
+  assert.match(securityHardeningMigration, /revoke insert, update, delete, truncate, references, trigger[\s\S]*from anon, authenticated/);
+  assert.match(securityHardeningMigration, /using \(\(select auth\.uid\(\)\) = id\)/);
+  assert.match(securityHardeningMigration, /revoke execute on function public\.handle_new_user\(\) from public, anon, authenticated/);
+  assert.match(securityHardeningMigration, /revoke execute on function public\.handle_user_email_update\(\) from public, anon, authenticated/);
+  assert.doesNotMatch(securityHardeningMigration, /revoke select[\s\S]*opening_market_radar/i);
+});
+
+test('production verification stays dry-run and proves idempotent scenarios', () => {
+  assert.match(productionVerificationWorkflow, /workflow_dispatch/);
+  assert.match(productionVerificationWorkflow, /"simulation_mode":"full_day"/);
+  assert.match(productionVerificationWorkflow, /"simulation_mode":"historical_scenarios"/);
+  assert.match(productionVerificationWorkflow, /"simulation_mode":"content_quality"/);
+  assert.match(productionVerificationWorkflow, /"dry_run":true/g);
+  assert.match(productionVerificationWorkflow, /no_duplicate_snapshot == true/);
+  assert.match(productionVerificationWorkflow, /no_duplicate_notification == true/);
+  assert.match(productionVerificationWorkflow, /no_production_write == true/);
+  assert.match(productionVerificationWorkflow, /writes_performed == 0/);
+  assert.match(productionVerificationWorkflow, /notifications_sent == 0/);
 });
 
 test('safe recovery is allowlisted and replay is shadow-only by default', () => {

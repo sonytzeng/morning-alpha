@@ -22,3 +22,9 @@ verify_jwt = false
 
 [functions.daily-delivery-orchestrator]
 verify_jwt = false
+
+[functions.continuous-learning-engine]
+verify_jwt = false
+
+[functions.get-learning-center]
+verify_jwt = true

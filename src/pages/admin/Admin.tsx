@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { path: '/admin/system-status', label: '系統狀態', icon: 'ri-shield-check-line' },
   { path: '/admin/system-health', label: 'P4 健康儀表板', icon: 'ri-pulse-line' },
   { path: '/admin/data-health', label: '資料健康檢查', icon: 'ri-search-eye-line' },
+  { path: '/admin/learning', label: '學習中心', icon: 'ri-brain-line' },
 ];
 
 function getPageLabel(pathname: string): string {

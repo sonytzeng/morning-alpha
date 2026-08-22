@@ -125,6 +125,9 @@ export default function AdminLearningCenter() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [authRequired, setAuthRequired] = useState(false);
+  const [sessionRedirectUrl, setSessionRedirectUrl] = useState('');
+  const [sessionRestoreMessage, setSessionRestoreMessage] = useState('');
+  const [restoringSession, setRestoringSession] = useState(false);
   const [promotionRuleId, setPromotionRuleId] = useState('');
   const [promotionReason, setPromotionReason] = useState('');
   const [promotionMessage, setPromotionMessage] = useState('');
@@ -157,6 +160,63 @@ export default function AdminLearningCenter() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const restoreSessionFromRedirectUrl = async (redirectUrl = sessionRedirectUrl) => {
+    setSessionRestoreMessage('');
+    const rawUrl = redirectUrl.trim();
+    if (!rawUrl) {
+      setSessionRestoreMessage('請先貼上瀏覽器目前顯示的完整 localhost 網址。');
+      return;
+    }
+
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(rawUrl);
+    } catch {
+      setSessionRestoreMessage('這不是有效的登入網址，請重新複製完整網址。');
+      return;
+    }
+
+    const allowedOrigins = new Set(['http://localhost:3000', 'https://morningalphatw.com']);
+    if (!allowedOrigins.has(parsedUrl.origin)) {
+      setSessionRestoreMessage('基於安全考量，只接受 Morning Alpha 或 localhost 的登入回傳網址。');
+      return;
+    }
+
+    const fragment = new URLSearchParams(parsedUrl.hash.replace(/^#/, ''));
+    const accessToken = fragment.get('access_token');
+    const refreshToken = fragment.get('refresh_token');
+    if (!accessToken || !refreshToken) {
+      setSessionRestoreMessage('網址中沒有完整登入憑證；請先點最新登入信，再複製 localhost 頁面的完整網址。');
+      return;
+    }
+
+    setRestoringSession(true);
+    setSessionRedirectUrl('');
+    const { data, error: sessionError } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (sessionError || !data.session) {
+      setSessionRestoreMessage('登入連結已失效，請使用最新收到的登入信再試一次。');
+      setRestoringSession(false);
+      return;
+    }
+
+    setSessionRestoreMessage('登入成功，正在載入 Learning Center。');
+    setRestoringSession(false);
+    await load();
+  };
+
+  const restoreSessionFromClipboard = async () => {
+    try {
+      const clipboardUrl = await navigator.clipboard.readText();
+      setSessionRedirectUrl(clipboardUrl);
+      await restoreSessionFromRedirectUrl(clipboardUrl);
+    } catch {
+      setSessionRestoreMessage('瀏覽器未允許讀取剪貼簿，請改用下方欄位貼上完整網址。');
+    }
+  };
 
   const promoteRule = async () => {
     if (!promotionRuleId || promotionReason.trim().length < 20) {
@@ -194,6 +254,56 @@ export default function AdminLearningCenter() {
         <p className="mt-3 text-sm leading-6 text-amber-900/80">
           這裡包含 Prediction、Error Case、Rule Candidate、Backtest 與內部校準資料。請先建立有效的 Supabase Auth 管理員 Session，且 profiles.role 必須是 admin。
         </p>
+
+        <div className="mt-6 rounded-xl border border-amber-300 bg-white/70 p-4">
+          <h2 className="text-base font-bold">登入信開到 localhost 時</h2>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm leading-6 text-amber-900/80">
+            <li>在 localhost 錯誤頁按 ⌘L，再按 ⌘C 複製完整網址。</li>
+            <li>回到這一頁，按下方按鈕即可完成登入。</li>
+          </ol>
+          <button
+            type="button"
+            onClick={() => void restoreSessionFromClipboard()}
+            disabled={restoringSession}
+            className="mt-4 w-full rounded-lg bg-amber-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-800 disabled:cursor-wait disabled:opacity-60"
+          >
+            {restoringSession ? '正在驗證登入連結…' : '從剪貼簿完成登入'}
+          </button>
+
+          <details className="mt-4">
+            <summary className="cursor-pointer text-sm font-semibold text-amber-900">無法讀取剪貼簿時，改為手動貼上</summary>
+            <label className="mt-3 block text-xs font-semibold text-amber-800" htmlFor="session-redirect-url">
+              完整 localhost 網址
+            </label>
+            <input
+              id="session-redirect-url"
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              value={sessionRedirectUrl}
+              onChange={(event) => setSessionRedirectUrl(event.target.value)}
+              placeholder="http://localhost:3000/#access_token=…"
+              className="mt-1 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm outline-none focus:border-amber-600"
+            />
+            <button
+              type="button"
+              onClick={() => void restoreSessionFromRedirectUrl()}
+              disabled={restoringSession}
+              className="mt-3 rounded-lg border border-amber-800 px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100 disabled:cursor-wait disabled:opacity-60"
+            >
+              使用這個連結登入
+            </button>
+          </details>
+
+          {sessionRestoreMessage && (
+            <p className="mt-3 text-sm font-semibold" role="status" aria-live="polite">
+              {sessionRestoreMessage}
+            </p>
+          )}
+          <p className="mt-3 text-xs leading-5 text-amber-800/70">
+            登入網址只在此瀏覽器內用來建立 Session，不會寫入 Morning Alpha 資料庫或操作紀錄。
+          </p>
+        </div>
       </section>
     );
   }

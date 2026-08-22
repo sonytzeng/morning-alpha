@@ -71,7 +71,8 @@ Migration：`supabase/migrations/20260822090000_continuous_learning_engine_v1.sq
 - 沒有新增互相競爭的 database cron。
 - 既有 `morning-alpha-runtime-checkpoints.yml` 在 closing verification 成功後呼叫 CLE。
 - CLE step 設為 `continue-on-error: true`，最多嘗試兩次；失敗只留下 degradation 訊息，不能阻止 closing/report/LINE 等正式服務。
-- Deploy workflow 已加入兩個 Edge Functions：`continuous-learning-engine` 與 `get-learning-center`。
+- Release workflow 僅允許手動觸發，並以互斥的 `migration`／`deploy` input 分隔 Production database migration 與 Edge Functions deployment。
+- `deploy` 階段已加入兩個 Edge Functions：`continuous-learning-engine` 與 `get-learning-center`，且不會執行 `supabase db push`。
 - Backfill 必須顯式傳 `backfill=true` + 單一 `target_date`；不提供不受控的 bulk mutation。
 - 非交易日、缺 canonical report 或缺 current PREMARKET decision snapshot 的日期會 skip／degrade，不能為了補歷史而從不可信舊內容反推 prediction。
 

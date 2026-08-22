@@ -1,0 +1,103 @@
+name: One-time fix Supabase auth redirect
+
+on:
+  push:
+    branches:
+      - ops/fix-supabase-auth-redirect-20260822
+
+permissions:
+  contents: read
+
+concurrency:
+  group: one-time-supabase-auth-redirect
+  cancel-in-progress: false
+
+jobs:
+  update-auth-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Update and verify production redirect configuration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: cttfzgvhiewfckydcrci
+          PRODUCTION_SITE_URL: https://morningalphatw.com
+          PRODUCTION_REDIRECT: https://morningalphatw.com/admin/learning
+        run: |
+          set -euo pipefail
+
+          test -n "${SUPABASE_ACCESS_TOKEN:-}"
+
+          auth_config_url="https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth"
+          auth_header="Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}"
+
+          before_file="$(mktemp)"
+          after_file="$(mktemp)"
+
+          curl --silent --show-error --fail-with-body \
+            --header "$auth_header" \
+            "$auth_config_url" \
+            --output "$before_file"
+
+          before_site_url="$(jq -r '.site_url // ""' "$before_file")"
+          before_allow_list="$(jq -r '.uri_allow_list // ""' "$before_file")"
+
+          merged_allow_list="$(
+            jq -rn \
+              --arg current "$before_allow_list" \
+              --arg production "$PRODUCTION_REDIRECT" \
+              '($current | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0)))
+               + [$production]
+               | unique
+               | join(",")'
+          )"
+
+          payload="$(
+            jq -n \
+              --arg site_url "$PRODUCTION_SITE_URL" \
+              --arg uri_allow_list "$merged_allow_list" \
+              '{site_url: $site_url, uri_allow_list: $uri_allow_list}'
+          )"
+
+          rollback() {
+            rollback_payload="$(
+              jq -n \
+                --arg site_url "$before_site_url" \
+                --arg uri_allow_list "$before_allow_list" \
+                '{site_url: $site_url, uri_allow_list: $uri_allow_list}'
+            )"
+            curl --silent --show-error --fail-with-body \
+              --request PATCH \
+              --header "$auth_header" \
+              --header "Content-Type: application/json" \
+              --data "$rollback_payload" \
+              "$auth_config_url" \
+              >/dev/null || true
+          }
+
+          trap rollback ERR
+
+          curl --silent --show-error --fail-with-body \
+            --request PATCH \
+            --header "$auth_header" \
+            --header "Content-Type: application/json" \
+            --data "$payload" \
+            "$auth_config_url" \
+            >/dev/null
+
+          curl --silent --show-error --fail-with-body \
+            --header "$auth_header" \
+            "$auth_config_url" \
+            --output "$after_file"
+
+          jq -e \
+            --arg site_url "$PRODUCTION_SITE_URL" \
+            --arg redirect "$PRODUCTION_REDIRECT" \
+            '.site_url == $site_url
+             and ((.uri_allow_list // "") | split(",") | index($redirect) != null)' \
+            "$after_file" \
+            >/dev/null
+
+          trap - ERR
+
+          jq '{site_url, uri_allow_list}' "$after_file"

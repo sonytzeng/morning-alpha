@@ -1,8 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveMarketStatus } from "../_shared/market-status.ts";
 import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
-
-type SubscriptionTier = "free" | "member" | "vip" | "admin";
+import {
+  resolveEffectiveMemberAccess,
+  type EffectiveMemberAccess,
+  type MemberEntitlementRow,
+  type ProfileAccessRow,
+  type SubscriptionTier,
+} from "../_shared/member-entitlement.ts";
 
 type ReportRow = Record<string, unknown> & {
   id?: string;
@@ -13,13 +18,6 @@ type ReportRow = Record<string, unknown> & {
   created_at?: string | null;
   updated_at?: string | null;
   ai_strategy_json?: unknown;
-};
-
-type ProfileRow = {
-  role?: string | null;
-  subscription_status?: string | null;
-  membership_tier?: string | null;
-  paid_until?: string | null;
 };
 
 type PayloadContext = {
@@ -91,36 +89,6 @@ function toNumberValue(value: unknown): number | null {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
-}
-
-function normalizeTier(value: unknown): SubscriptionTier {
-  if (value === "member" || value === "vip" || value === "admin") return value;
-  return "free";
-}
-
-function isPaidUntilValid(value: unknown): boolean {
-  const raw = toStringValue(value);
-  if (!raw) return true;
-  const paidUntil = Date.parse(raw);
-  if (!Number.isFinite(paidUntil)) return false;
-  return paidUntil > Date.now();
-}
-
-function resolveTierFromProfile(profile: ProfileRow | null): SubscriptionTier {
-  if (!profile) return "free";
-
-  const roleTier = normalizeTier(toStringValue(profile.role)?.toLowerCase());
-  if (roleTier === "admin") return "admin";
-
-  const subscriptionStatus = toStringValue(profile.subscription_status)?.toLowerCase() || "";
-  if (subscriptionStatus !== "active") return "free";
-  if (!isPaidUntilValid(profile.paid_until)) return "free";
-
-  if (roleTier === "vip" || roleTier === "member") return roleTier;
-
-  const membershipTier = normalizeTier(toStringValue(profile.membership_tier)?.toLowerCase());
-  if (membershipTier === "vip" || membershipTier === "member") return membershipTier;
-  return "free";
 }
 
 function isValidDate(value: unknown): value is string {
@@ -650,7 +618,7 @@ async function fetchPayloadContext(
 async function resolveTierFromRequest(
   req: Request,
   serviceClient: ServiceClient,
-): Promise<{ tier: SubscriptionTier; userId: string | null }> {
+): Promise<{ tier: SubscriptionTier; userId: string | null; access: EffectiveMemberAccess | null }> {
   const authHeader = req.headers.get("Authorization") || "";
   const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length).trim() : "";
 
@@ -658,27 +626,46 @@ async function resolveTierFromRequest(
     const { data, error } = await serviceClient.auth.getUser(bearer);
     if (!error && data.user) {
       // Do not trust client-supplied tier when Authorization is present.
-      const { data: profile, error: profileError } = await serviceClient
-        .from("profiles")
-        .select("role,subscription_status,membership_tier,paid_until")
-        .eq("id", data.user.id)
-        .maybeSingle();
+      const [profileResult, entitlementResult] = await Promise.all([
+        serviceClient
+          .from("profiles")
+          .select("role,subscription_status,membership_tier,paid_until")
+          .eq("id", data.user.id)
+          .maybeSingle(),
+        serviceClient.rpc("ensure_member_entitlement_v1", { p_user_id: data.user.id }),
+      ]);
 
-      if (profileError) {
-        console.warn("GET_REPORT_PAYLOAD_PROFILE_LOOKUP_FAILED", profileError.message);
-        return { tier: "free", userId: data.user.id };
+      if (profileResult.error) {
+        console.warn("GET_REPORT_PAYLOAD_PROFILE_LOOKUP_FAILED", profileResult.error.message);
+        return { tier: "free", userId: data.user.id, access: null };
       }
 
+      let entitlement = entitlementResult.data as MemberEntitlementRow | null;
+      if (entitlementResult.error) {
+        console.warn("GET_REPORT_PAYLOAD_ENTITLEMENT_ENSURE_FAILED", entitlementResult.error.message);
+        const fallbackResult = await serviceClient
+          .from("member_entitlements")
+          .select("state,tier,source,access_started_at,access_ends_at,trial_started_at,trial_ends_at,current_period_end,cancel_at_period_end")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+        entitlement = fallbackResult.data as MemberEntitlementRow | null;
+      }
+
+      const access = resolveEffectiveMemberAccess(
+        profileResult.data as ProfileAccessRow | null,
+        entitlement,
+      );
       return {
-        tier: resolveTierFromProfile(profile as ProfileRow | null),
+        tier: access.tier,
         userId: data.user.id,
+        access,
       };
     }
-    return { tier: "free", userId: null };
+    return { tier: "free", userId: null, access: null };
   }
 
   // Anonymous requests are always free. Client URL/body values never grant entitlement.
-  return { tier: "free", userId: null };
+  return { tier: "free", userId: null, access: null };
 }
 
 Deno.serve(async (req: Request) => {
@@ -700,7 +687,7 @@ Deno.serve(async (req: Request) => {
 
   const serviceClient = createServiceClient(supabaseUrl, serviceRoleKey);
 
-  const { tier, userId } = await resolveTierFromRequest(req, serviceClient);
+  const { tier, userId, access } = await resolveTierFromRequest(req, serviceClient);
 
   if (body.history_limit !== undefined) {
     const requestedLimit = Math.trunc(Number(body.history_limit));
@@ -723,6 +710,7 @@ Deno.serve(async (req: Request) => {
       locked_sections: getLockedSections(tier),
       source: "server_trimmed_payload",
       authenticated: Boolean(userId),
+      membership: access,
     });
   }
 
@@ -758,6 +746,7 @@ Deno.serve(async (req: Request) => {
       payload: null,
       locked_sections: getLockedSections(tier),
       source: "server_trimmed_payload",
+      membership: access,
     }, 404);
   }
 
@@ -777,5 +766,6 @@ Deno.serve(async (req: Request) => {
     locked_sections: getLockedSections(tier),
     source: "server_trimmed_payload",
     authenticated: Boolean(userId),
+    membership: access,
   });
 });

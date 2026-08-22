@@ -27,6 +27,8 @@ const PrivacyPage = lazy(() => import("../pages/privacy/page"));
 const ContactPage = lazy(() => import("../pages/contact/page"));
 const Pricing = lazy(() => import("../pages/pricing/Pricing"));
 const Verification = lazy(() => import("../pages/verification/page"));
+const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
+const AuthCallbackPage = lazy(() => import("../pages/auth/AuthCallbackPage"));
 
 const routes: RouteObject[] = [
   {
@@ -84,6 +86,14 @@ const routes: RouteObject[] = [
   {
     path: "/pricing",
     element: <DeferredRoute><Pricing /></DeferredRoute>,
+  },
+  {
+    path: "/login",
+    element: <DeferredRoute><LoginPage /></DeferredRoute>,
+  },
+  {
+    path: "/auth/callback",
+    element: <AuthCallbackPage />,
   },
   {
     path: "/account",

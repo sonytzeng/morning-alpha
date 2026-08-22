@@ -14,7 +14,7 @@ interface PaywallCardProps {
 }
 
 function getDefaultCtaHref(_requiredTier: Exclude<SubscriptionTier, 'free' | 'admin'>): string {
-  return '/pricing#early-access';
+  return '/login?next=/member-note';
 }
 
 export default function PaywallCard({
@@ -22,7 +22,7 @@ export default function PaywallCard({
   description,
   requiredTier,
   featureList = [],
-  ctaText = '查看會員方案',
+  ctaText = '登入並開始完整體驗',
   onCtaClick,
   ctaHref,
   tone = 'dark',

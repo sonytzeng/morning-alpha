@@ -16,6 +16,8 @@ const opportunities = read('src/pages/opportunities/page.tsx');
 const warRoom = read('src/pages/war-room/WarRoom.tsx');
 const pricing = read('src/pages/pricing/Pricing.tsx');
 const earlyAccessForm = read('src/components/feature/EarlyAccessForm.tsx');
+const loginPage = read('src/pages/auth/LoginPage.tsx');
+const membershipService = read('src/services/membershipService.ts');
 const memberNote = read('src/pages/member-note/page.tsx');
 const performance = read('src/pages/performance/page.tsx');
 const verification = read('src/pages/verification/page.tsx');
@@ -514,9 +516,14 @@ test('membership conversion route is public, honest, and records a real submissi
   assert.doesNotMatch(pricing, /data-readdy-form|readdy\.ai\/api\/form/);
   assert.doesNotMatch(earlyAccessForm, /data-readdy-form|readdy\.ai\/api\/form/);
   const paywallCard = read('src/components/paywall/PaywallCard.tsx');
-  assert.match(paywallCard, /\/pricing#early-access/);
+  assert.match(paywallCard, /\/login\?next=\/member-note/);
   assert.match(paywallCard, /<Link to=\{targetHref\}/);
   assert.doesNotMatch(paywallCard, /window\.location|window\.open|target=["']_blank/);
+  assert.match(routeConfig, /path: "\/login"/);
+  assert.match(routeConfig, /path: "\/auth\/callback"/);
+  assert.match(loginPage, /創始測試期間不扣款/);
+  assert.match(membershipService, /signInWithOtp/);
+  assert.match(membershipService, /shouldCreateUser: true/);
   assert.match(pricing, /document\.getElementById\(location\.hash\.slice\(1\)\)/);
   for (const label of ['免費與會員差在哪裡', '14 天怎麼判斷值不值得', '盤前決策', '收盤驗證']) {
     assert.match(pricing, new RegExp(label), `pricing is missing concrete member value: ${label}`);

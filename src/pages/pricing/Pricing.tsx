@@ -16,7 +16,7 @@ const publicFeatures = [
 const memberFeatures = [
   '海外事件 → 台股族群 → 代表股完整因果鏈',
   '今日是否適合當沖、成立條件與放棄條件',
-  '09:30、10:30、13:00 盤中變化與判斷更新',
+  '09:00、09:30、10:30、13:00 盤中變化與判斷更新',
   '每檔候選股的成立條件、取消條件與反向證據',
   '14:10 收盤初驗、14:30 完整確認與明日調整',
   'LINE 每日提醒與重要節點通知',
@@ -24,7 +24,7 @@ const memberFeatures = [
 
 const dailyDeliveries = [
   { time: '07:30', title: '盤前決策', detail: '四個答案、三個優先觀察，以及今天最該避免的錯。' },
-  { time: '09:30', title: '開盤與當沖確認', detail: '判斷今天是否適合當沖；資料不足就不建立劇本。' },
+  { time: '09:00／09:30', title: '開盤與當沖確認', detail: '判斷今天是否適合當沖；資料不足就不建立劇本。' },
   { time: '10:30／13:00', title: '盤中只報變化', detail: '更新成立條件、放棄條件與優先觀察順位。' },
   { time: '14:10／14:30', title: '收盤驗證', detail: '先取得真實收盤證據，再核對早盤假設、記錄失準原因並留下明日調整。' },
 ];
@@ -33,7 +33,7 @@ const planComparison = [
   { label: '今日能不能做', publicValue: '結論與下一次確認', memberValue: '完整理由、支持與反對證據' },
   { label: '優先觀察', publicValue: '最多三項摘要', memberValue: '因果鏈、成立與取消條件' },
   { label: '當沖決策', publicValue: '目前狀態', memberValue: '是否適合、成立條件與放棄條件' },
-  { label: '盤中更新', publicValue: '目前狀態', memberValue: '09:30、10:30、13:00 新增變化' },
+  { label: '盤中更新', publicValue: '目前狀態', memberValue: '09:00、09:30、10:30、13:00 新增變化' },
   { label: '收盤後', publicValue: '公開結果', memberValue: '失準原因、可保留規則與明日調整' },
   { label: '通知', publicValue: '自行回站查看', memberValue: 'LINE 關鍵節點提醒' },
 ];
@@ -64,7 +64,7 @@ export default function Pricing() {
             <h1>每天不用猜方向，<br />先知道什麼證據值得等</h1>
             <p>Morning Alpha 專為沒有時間盯盤的上班族整理：盤前先定判斷、盤中只更新變化、收盤公開驗證。不是報明牌，而是幫你少做一次情緒決策。</p>
             <div className="ma-pricing-v2-hero-actions">
-              <a href="#early-access">加入早鳥名單<i className="ri-arrow-down-line" aria-hidden="true" /></a>
+              <Link to="/login?next=/member-note">立即開始完整體驗<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
               <Link to="/report/today">先看今天怎麼判斷</Link>
             </div>
           </div>
@@ -75,20 +75,20 @@ export default function Pricing() {
             <div className="ma-pricing-v2-heading">
               <span>方案現況</span>
               <h2 id="pricing-plan-title">先完整試用 14 天，再決定值不值得留下</h2>
-              <p>目前仍是公開測試，登記不會扣款。正式開放時預定提供 14 天完整會員體驗，之後才由你決定是否以每月 NT$199 繼續。</p>
+              <p>創始測試期間登入即可完整查看所有已通過品質閘門的會員內容，而且不扣款。支付系統正式啟用後，才開始計算完整 14 天試用，之後由你決定是否以每月 NT$199 繼續。</p>
             </div>
             <div className="ma-pricing-v2-plans">
               <article>
                 <header><div><span>目前開放</span><h3>公開測試</h3></div><strong>NT$0</strong></header>
                 <p>先確認這套流程是否真的能幫你減少衝動決策。</p>
                 <ul>{publicFeatures.map((feature) => <li key={feature}><i className="ri-check-line" aria-hidden="true" />{feature}</li>)}</ul>
-                <Link to="/">開始使用</Link>
+                <Link to="/">查看免費摘要</Link>
               </article>
               <article className="is-member">
                 <header><div><span>預定正式方案</span><h3>創始會員</h3></div><strong>NT$199<small>/月</small></strong></header>
                 <p>前 14 天完整試用。適合想減少資訊焦慮、又需要每天有一套固定判斷流程的上班族。</p>
                 <ul>{memberFeatures.map((feature) => <li key={feature}><i className="ri-check-line" aria-hidden="true" />{feature}</li>)}</ul>
-                <a href="#early-access">取得開放通知</a>
+                <Link to="/login?next=/member-note">開始完整體驗</Link>
               </article>
             </div>
           </section>
@@ -147,8 +147,8 @@ export default function Pricing() {
           <section id="early-access" className="ma-pricing-v2-conversion" aria-labelledby="early-access-title">
             <div>
               <span>早鳥通知</span>
-              <h2 id="early-access-title">先取得 14 天完整試用通知</h2>
-              <p>早鳥登記不等於購買，也不會扣款。正式開放時，你會先收到 14 天試用方式、NT$199 方案內容與取消規則。</p>
+              <h2 id="early-access-title">不登入也可以先加入早鳥名單</h2>
+              <p>早鳥登記不等於購買，也不會扣款。想立即查看完整內容，請使用上方 Email 登入；支付系統上線時會再通知 14 天正式試用、NT$199 方案與取消規則。</p>
             </div>
             <EarlyAccessForm sourcePage="/pricing" />
           </section>

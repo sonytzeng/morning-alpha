@@ -1,6 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { normalizeProviderQuote, summarizeProviderHealth } from '../_shared/market-provider-adapter.mjs';
+import {
+  resolveSnapshotCheckpoint,
+  stateForSnapshotCheckpoint,
+} from '../_shared/runtime-checkpoint-core.mjs';
 
 // ═══════════════════════════════════════════════════════════
 // fetch-market-data-v10 V10.8 — PROVIDER FALLBACK + FRESHNESS METADATA
@@ -62,6 +66,7 @@ type MarketDataPhase = "premarket" | "intraday" | "close" | "manual_backfill";
 
 interface RequestBody {
   phase?: MarketDataPhase;
+  checkpoint?: string;
   include_beneficiary_close?: boolean;
   beneficiary_close?: boolean;
   beneficiary_close_only?: boolean;
@@ -752,6 +757,23 @@ Deno.serve(async (req) => {
     const requestBody = await readRequestBody(req);
     const taipei = getTaipeiParts();
     const phase = isMarketDataPhase(requestBody.phase) ? requestBody.phase : resolveDefaultPhase(taipei.hour, taipei.minute);
+    const checkpoint = resolveSnapshotCheckpoint({
+      phase,
+      checkpoint: requestBody.checkpoint,
+      hour: taipei.hour,
+      minute: taipei.minute,
+    });
+    if (!checkpoint) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "INVALID_CHECKPOINT_FOR_PHASE",
+          phase,
+          checkpoint: requestBody.checkpoint || null,
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+      );
+    }
     const tradingDate = taipei.date;
     const marketStatus = resolveMarketStatus(tradingDate);
     if (!marketStatus.is_trading_day && requestBody.force_run !== true) {
@@ -761,6 +783,7 @@ Deno.serve(async (req) => {
         skipped: true,
         reason: "MARKET_STATUS_NOT_OPEN",
         phase,
+        checkpoint,
         trading_date: tradingDate,
         market_status: marketStatus.market_status,
         session_type: marketStatus.session_type,
@@ -884,6 +907,7 @@ Deno.serve(async (req) => {
           captured_at: capturedAt,
           source: quote.provider,
           phase,
+          checkpoint,
           trading_date: tradingDate,
           raw: {
             provider: quote.provider,
@@ -900,12 +924,13 @@ Deno.serve(async (req) => {
               change_percent: changePercent,
             },
             request_id: requestId,
+            checkpoint,
           },
         };
 
         const { error: snapshotErr } = await supabase
           .from("market_data_snapshots")
-          .upsert(snapshotPayload, { onConflict: "symbol,trading_date,phase" });
+          .upsert(snapshotPayload, { onConflict: "symbol,trading_date,phase,checkpoint" });
 
         if (snapshotErr) {
           console.error(`[${batchTag}] ${config.displaySymbol} snapshot DB error: ${snapshotErr.message}`);
@@ -1013,6 +1038,7 @@ Deno.serve(async (req) => {
       provider: "market_fetch_v10",
       service_date: tradingDate,
       phase,
+      checkpoint,
       ...overallHealth,
       latency_ms: Date.now() - startedMs,
       last_error_code: timedOut ? "OVERALL_TIMEOUT" : failed.length > 0 ? "PARTIAL_PROVIDER_FAILURE" : null,
@@ -1026,8 +1052,28 @@ Deno.serve(async (req) => {
     }];
     const { error: providerHealthError } = await supabase
       .from("data_provider_health")
-      .upsert(providerHealthPayloads, { onConflict: "provider,service_date,phase" });
+      .upsert(providerHealthPayloads, { onConflict: "provider,service_date,phase,checkpoint" });
     if (providerHealthError) providerHealthWriteErrors.push(providerHealthError.message);
+
+    const state = stateForSnapshotCheckpoint(checkpoint);
+    const checkpointStatus = snapshotUpsertedCount >= 2 && snapshotErrors.length === 0
+      ? "SUCCEEDED"
+      : "DEGRADED";
+    const { error: tradingDayStateError } = state
+      ? await supabase.rpc("advance_trading_day_state_v1", {
+        p_trading_date: tradingDate,
+        p_state: state,
+        p_checkpoint: checkpoint,
+        p_status: checkpointStatus,
+        p_correlation_id: correlationId,
+        p_metadata: {
+          phase,
+          requested_count: symbolConfigs.length,
+          snapshot_upserted_count: snapshotUpsertedCount,
+          failed_symbols: failed,
+        },
+      })
+      : { error: { message: "checkpoint_state_mapping_missing" } };
 
     console.log(`[${batchTag}] DONE in ${elapsed}s | inserted=${inserted.length} failed=${failed.length} healthy=${healthy}${timedOut ? " (timed out)" : ""}`);
 
@@ -1038,6 +1084,7 @@ Deno.serve(async (req) => {
         request_id: requestId,
         correlation_id: correlationId,
         phase,
+        checkpoint,
         trading_date: tradingDate,
         started_at: startedAt,
         completed_at: new Date().toISOString(),
@@ -1057,6 +1104,8 @@ Deno.serve(async (req) => {
         canonical_write_errors: canonicalWriteErrors,
         provider_health: overallHealth,
         provider_health_write_errors: providerHealthWriteErrors,
+        trading_day_state_status: checkpointStatus,
+        trading_day_state_error: tradingDayStateError?.message || null,
         txf_status: twCoreStatus.txf,
         txf_candidate_errors: providerFailureDetails.filter((f) => f.provider === "fugle_futopt"),
         provider_failures: providerFailureDetails,

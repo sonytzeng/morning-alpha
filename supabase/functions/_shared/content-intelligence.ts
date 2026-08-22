@@ -65,7 +65,7 @@ function unique(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
-const OPTIONAL_NO_TRADE_SOURCE_GAP = /^(?:unavailable_market_data:)?TXF:no_authorized_source_or_contract_mapping$/i;
+const OPTIONAL_DECISION_SOURCE_GAP = /^(?:unavailable_market_data:)?TXF:no_authorized_source_or_contract_mapping$/i;
 
 function declaredMissingSources(ai: JsonRecord): string[] {
   const detail = asRecord(ai.data_quality_detail);
@@ -76,20 +76,20 @@ function declaredMissingSources(ai: JsonRecord): string[] {
 }
 
 /**
- * Recommendation mode always requires complete source coverage. In strict no-trade
- * mode, the declared TXF entitlement gap may remain visible without forcing a
- * generic fallback when all decision evidence is otherwise present.
+ * TXF is an important confirmation source, not a critical cash-market dependency.
+ * A declared entitlement gap may stay visible in either decision mode when every
+ * other missing-source entry is absent. Recommendation evidence still has to pass
+ * the per-stock traceability, transmission and invalidation gates.
  */
 export function hasDecisionGradeSourceCoverage(
   aiValue: unknown,
-  mode: 'recommendations' | 'no_trade',
+  _mode: 'recommendations' | 'no_trade',
 ): boolean {
   const ai = asRecord(aiValue);
   if (asText(ai.data_quality).toLowerCase() === 'complete') return true;
-  if (mode !== 'no_trade') return false;
   const missingSources = declaredMissingSources(ai);
   return missingSources.length > 0
-    && missingSources.every((source) => OPTIONAL_NO_TRADE_SOURCE_GAP.test(source));
+    && missingSources.every((source) => OPTIONAL_DECISION_SOURCE_GAP.test(source));
 }
 
 function recommendationRows(ai: JsonRecord): JsonRecord[] {

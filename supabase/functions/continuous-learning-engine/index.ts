@@ -1378,12 +1378,25 @@ Deno.serve(async (req: Request) => {
     }).eq('id', runId);
     if (completeError) throw completeError;
 
+    const { error: tradingDayStateError } = await client.rpc(
+      'advance_trading_day_state_v1',
+      {
+        p_trading_date: targetDate,
+        p_state: 'LEARNING_COMPLETED',
+        p_checkpoint: 'continuous_learning',
+        p_status: 'SUCCEEDED',
+        p_correlation_id: crypto.randomUUID(),
+        p_metadata: { run_id: runId, engine_version: CLE_ENGINE_VERSION, ...counters },
+      },
+    );
+
     return jsonResponse({
       success: true,
       run_id: runId,
       target_date: targetDate,
       engine_version: CLE_ENGINE_VERSION,
       production_rule_mutated: false,
+      trading_day_state_error: tradingDayStateError?.message || null,
       ...counters,
     });
   } catch (error) {

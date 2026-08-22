@@ -286,18 +286,18 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push', 'daily-delivery-orchestrator', 'get-report-payload']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
   }
-  for (const schedule of ["10 23 * * 0-4", "35 23 * * 0-4", "5 1 * * 1-5", "20 1 * * 1-5", "5 2 * * 1-5", "20 2 * * 1-5", "35 4 * * 1-5", "50 4 * * 1-5", "20 6 * * 1-5", "35 6 * * 1-5"]) {
+  for (const schedule of ["10 23 * * 0-4", "35 23 * * 0-4", "0 1 * * 1-5", "30 1 * * 1-5", "30 2 * * 1-5", "0 5 * * 1-5", "10 6 * * 1-5", "30 6 * * 1-5"]) {
     assert.match(runtimeCheckpointWorkflow, new RegExp(schedule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing runtime schedule: ${schedule}`);
   }
-  assert.match(runtimeCheckpointWorkflow, /\{"phase":"intraday"\}/);
-  assert.match(runtimeCheckpointWorkflow, /\{"phase":"close"\}/);
+  assert.match(runtimeCheckpointWorkflow, /\{\\"phase\\":\\"intraday\\",\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
+  assert.match(runtimeCheckpointWorkflow, /\{\\"phase\\":\\"close\\",\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
   assert.match(runtimeCheckpointWorkflow, /daily-delivery-orchestrator/);
   assert.match(runtimeCheckpointWorkflow, /\{\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
   assert.match(runtimeCheckpointWorkflow, /snapshot_upserted_count >= 2/);
   assert.match(runtimeCheckpointWorkflow, /tw_core_symbols_success \| index\("TAIEX"\) != null/);
   assert.match(runtimeCheckpointWorkflow, /tw_core_status\.taiex == "ok"/);
   assert.match(runtimeCheckpointWorkflow, /for attempt in 1 2 3/);
-  assert.match(runtimeCheckpointWorkflow, /timeout-minutes: 20/);
+  assert.match(runtimeCheckpointWorkflow, /timeout-minutes: 45/);
   assert.match(runtimeCheckpointWorkflow, /--max-time 180/);
   assert.match(runtimeCheckpointWorkflow, /Intraday snapshots unavailable/);
   assert.match(runtimeCheckpointWorkflow, /Closing review failed/);

@@ -15,6 +15,139 @@ export const RUNTIME_QUALITY_POLICY = Object.freeze({
   max_recovery_attempts: 4,
 });
 
+export const PRODUCTION_DAY_CHECKPOINTS = Object.freeze([
+  '0900',
+  '0930',
+  '1030',
+  '1300',
+  '1410',
+  '1430',
+]);
+
+const CRITICAL_PRODUCTION_SOURCES = Object.freeze([
+  'SPX',
+  'SOX',
+  'NVDA',
+  'TSM',
+  'TAIEX',
+  '2330',
+]);
+
+export function simulateFullTradingDay(input = {}, policy = RUNTIME_QUALITY_POLICY) {
+  const tradingDate = String(input.trading_date || '');
+  const sourceStatus = input.source_status && typeof input.source_status === 'object'
+    ? input.source_status
+    : {};
+  const missingCriticalSources = CRITICAL_PRODUCTION_SOURCES.filter(
+    (source) => String(sourceStatus[source] ?? 'ready').toLowerCase() !== 'ready',
+  );
+  const txfStatus = String(sourceStatus.TXF ?? 'unavailable_entitlement');
+  const contentScores = Array.isArray(input.content_scores) && input.content_scores.length > 0
+    ? input.content_scores.map((value) => clamp(value, 0, 100))
+    : [76, 92];
+  const maxAttempts = Math.max(1, Math.trunc(finiteNumber(input.max_repair_attempts, policy.max_recovery_attempts)));
+  const repairAttempts = [];
+  let finalContentScore = 0;
+  for (let index = 0; index < Math.min(contentScores.length, maxAttempts); index += 1) {
+    finalContentScore = contentScores[index];
+    repairAttempts.push({
+      attempt: index + 1,
+      content_score: finalContentScore,
+      action: index === 0 ? 'evaluate_all_sections' : 'repair_failed_sections_only',
+      eligible: finalContentScore >= policy.premium_publish_min,
+    });
+    if (finalContentScore >= policy.premium_publish_min) break;
+  }
+  const contentEligible = finalContentScore >= policy.premium_publish_min;
+  const checkpoints = PRODUCTION_DAY_CHECKPOINTS.map((checkpoint, index) => ({
+    checkpoint,
+    state_rank: (index + 2) * 10,
+    status: missingCriticalSources.length === 0 ? 'SUCCEEDED' : 'DEGRADED',
+    immutable_snapshot_key: `${tradingDate}:intraday_or_close:${checkpoint}`,
+  }));
+  const reasonCodes = [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(tradingDate)) reasonCodes.push('invalid_simulation_date');
+  if (missingCriticalSources.length > 0) reasonCodes.push('critical_source_missing');
+  if (!contentEligible) reasonCodes.push('content_score_below_90');
+  const go = reasonCodes.length === 0;
+  return {
+    contract_version: 'PRODUCTION_DAY_SIMULATION_V1',
+    dry_run: true,
+    trading_date: tradingDate,
+    timezone: 'Asia/Taipei',
+    result: go ? 'GO' : 'NO_GO',
+    source_gate: {
+      critical_sources: CRITICAL_PRODUCTION_SOURCES,
+      missing_critical_sources: missingCriticalSources,
+      important_sources: ['TXF'],
+      txf_status: txfStatus,
+      txf_blocks_publication: false,
+    },
+    premarket: {
+      status: missingCriticalSources.length === 0 ? 'SUCCEEDED' : 'BLOCKED',
+      decision_mode: missingCriticalSources.length === 0 ? 'recommendations_or_no_trade' : 'blocked',
+      content_score: finalContentScore,
+      premium_eligible: contentEligible && missingCriticalSources.length === 0,
+      repair_attempts: repairAttempts,
+    },
+    checkpoints,
+    delivery: {
+      status: go ? 'SIMULATED_ELIGIBLE' : 'SIMULATED_BLOCKED',
+      line_messages_sent: 0,
+    },
+    closing: {
+      status: go ? 'SIMULATED_VERIFIED' : 'SIMULATED_DEGRADED',
+      replayed_checkpoints: checkpoints.map((item) => item.checkpoint),
+    },
+    learning: {
+      status: 'SIMULATED_ISOLATED',
+      production_rules_mutated: false,
+    },
+    writes_performed: 0,
+    notifications_sent: 0,
+    reason_codes: reasonCodes,
+  };
+}
+
+export function simulateHistoricalFailureMatrix(policy = RUNTIME_QUALITY_POLICY) {
+  const definitions = [
+    { name: 'normal_2026_08_17', trading_date: '2026-08-17', expected: 'GO', input: { content_scores: [93] } },
+    { name: 'normal_2026_08_18', trading_date: '2026-08-18', expected: 'GO', input: { content_scores: [91] } },
+    { name: 'normal_2026_08_19', trading_date: '2026-08-19', expected: 'GO', input: { content_scores: [78, 94] } },
+    { name: 'incomplete_data_2026_08_20', trading_date: '2026-08-20', expected: 'NO_GO', input: { source_status: { TAIEX: 'missing' }, content_scores: [92] } },
+    { name: 'api_failure_2026_08_21', trading_date: '2026-08-21', expected: 'NO_GO', input: { source_status: { SPX: 'api_error' }, content_scores: [92] } },
+  ];
+  const scenarios = definitions.map((definition) => {
+    const simulation = simulateFullTradingDay({
+      trading_date: definition.trading_date,
+      ...definition.input,
+    }, policy);
+    const snapshotKeys = simulation.checkpoints.map((item) => item.immutable_snapshot_key);
+    return {
+      name: definition.name,
+      trading_date: definition.trading_date,
+      expected: definition.expected,
+      actual: simulation.result,
+      passed: simulation.result === definition.expected
+        && new Set(snapshotKeys).size === PRODUCTION_DAY_CHECKPOINTS.length
+        && simulation.notifications_sent === 0
+        && simulation.writes_performed === 0,
+      no_duplicate_snapshot: new Set(snapshotKeys).size === PRODUCTION_DAY_CHECKPOINTS.length,
+      no_duplicate_notification: simulation.notifications_sent === 0,
+      no_production_write: simulation.writes_performed === 0,
+      reason_codes: simulation.reason_codes,
+    };
+  });
+  return {
+    contract_version: 'HISTORICAL_FAILURE_MATRIX_V1',
+    result: scenarios.every((scenario) => scenario.passed) ? 'PASS' : 'FAIL',
+    normal_day_count: scenarios.filter((scenario) => scenario.name.startsWith('normal_')).length,
+    incomplete_day_count: scenarios.filter((scenario) => scenario.name.startsWith('incomplete_')).length,
+    api_failure_count: scenarios.filter((scenario) => scenario.name.startsWith('api_failure_')).length,
+    scenarios,
+  };
+}
+
 function finiteNumber(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -156,4 +289,3 @@ export function buildRetryDecision(input, policy = RUNTIME_QUALITY_POLICY) {
     reason_code: deadLetter ? 'retry_budget_exhausted' : 'retry_scheduled',
   };
 }
-

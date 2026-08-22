@@ -237,6 +237,7 @@ interface MarketDataRow {
   source?: string;
   trading_date: string;
   phase: string;
+  checkpoint: string;
 }
 
 interface OpeningRadarResult {
@@ -289,6 +290,7 @@ function mapMarketDataRows(
     source: r.source ? String(r.source) : undefined,
     trading_date: String(r.trading_date || ""),
     phase: String(r.phase || ""),
+    checkpoint: String(r.checkpoint || ""),
   })).filter((r) => r.symbol && r.captured_at);
 }
 
@@ -606,9 +608,10 @@ Deno.serve(async (req) => {
 
     const { data: snapshotRows, error: snapshotErr } = await supabase
       .from('market_data_snapshots')
-      .select('symbol, name, value, change_percent, captured_at, source, trading_date, phase')
+      .select('symbol, name, value, change_percent, captured_at, source, trading_date, phase, checkpoint')
       .eq('trading_date', today)
       .eq('phase', 'intraday')
+      .eq('checkpoint', checkpoint)
       .in('symbol', CORE_SYMBOL_QUERY_ALIASES)
       .order('captured_at', { ascending: false })
       .limit(50);

@@ -1,4 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  contentLengthExceedsLimit,
+  readBoundedText,
+  RequestBodyTooLargeError,
+} from "../_shared/bounded-json.ts";
 import { resolveMarketStatus } from "../_shared/market-status.ts";
 import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
 import {
@@ -12,6 +17,7 @@ import {
 type ReportRow = Record<string, unknown> & {
   id?: string;
   report_date?: string;
+  report_mode?: string | null;
   market_bias?: string | null;
   confidence_score?: number | string | null;
   summary?: string | null;
@@ -25,7 +31,13 @@ type PayloadContext = {
   sectorRotationRows: Record<string, unknown>[];
   marketDataSnapshots: Record<string, unknown>[];
   decisionSnapshot: Record<string, unknown> | null;
+  componentQueryFailures: Array<{
+    source: "opening_market_radar" | "sector_rotation_scores" | "market_data_snapshots" | "decision_snapshots";
+    error_type: "QUERY_FAILED";
+  }>;
 };
+
+const MAX_BODY_BYTES = 32_768;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -53,6 +65,17 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
     status,
     headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
+}
+
+async function readRequestBody(req: Request): Promise<Record<string, unknown>> {
+  if (contentLengthExceedsLimit(req.headers.get("content-length"), MAX_BODY_BYTES)) {
+    throw new RequestBodyTooLargeError();
+  }
+  const text = await readBoundedText(req.body, MAX_BODY_BYTES);
+  if (!text.trim()) return {};
+  const parsed = JSON.parse(text) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("INVALID_JSON_BODY");
+  return parsed as Record<string, unknown>;
 }
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -235,6 +258,13 @@ function getCanonicalMarketMetadata(
   };
 }
 
+function getReportMode(
+  report: ReportRow,
+  ai: Record<string, unknown>,
+): string | null {
+  return toStringValue(report.report_mode) || toStringValue(ai.report_mode);
+}
+
 function getConfidenceLabel(score: number | null): string {
   if (score === null) return "資料完整度待確認";
   if (score >= 75) return "高把握度";
@@ -287,8 +317,11 @@ function buildClosingVerdict(ai: Record<string, unknown>): Record<string, unknow
   if (Object.keys(closing).length === 0) return null;
   return {
     status: toStringValue(closing.status),
+    data_status: toStringValue(closing.data_status),
     verdict_label: toStringValue(closing.verdict_label) || toStringValue(closing.hit_or_miss),
     prediction_result: toStringValue(closing.prediction_result) || toStringValue(closing.hit_or_miss),
+    accuracy_score: toNumberValue(closing.accuracy_score),
+    verified_at: toStringValue(closing.verified_at),
   };
 }
 
@@ -386,8 +419,11 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const freeSummary = asObject(ai.free_summary);
   const canonicalDecision = buildCanonicalDecision(ctx, false);
   const dailySentence = toStringValue(canonicalDecision?.daily_sentence) || getTodayQuote(report, ai);
+  const componentFailureSources = ctx.componentQueryFailures.map((failure) => failure.source);
+  const radarMissingSources = Array.isArray(openingRadar.missing_sources) ? openingRadar.missing_sources.map(String) : [];
   return {
     report_date: getReportDate(report),
+    report_mode: getReportMode(report, ai),
     revision_id: toStringValue(canonicalDecision?.id) || toStringValue(report.id),
     market_date: getMarketDate(report, ai),
     base_date: getMarketDate(report, ai),
@@ -432,10 +468,16 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     input_source: toStringValue(openingRadar.input_source) || null,
     degraded_metadata: {
       data_status: toStringValue(openingRadar.data_status),
-      missing_sources: Array.isArray(openingRadar.missing_sources) ? openingRadar.missing_sources : [],
+      missing_sources: Array.from(new Set([
+        ...radarMissingSources,
+        ...componentFailureSources.map((source) => `component_query:${source}`),
+      ])),
       radar_mode: toStringValue(openingRadar.radar_mode),
       txf_status: toStringValue(openingRadar.txf_status),
       input_source: toStringValue(openingRadar.input_source),
+      component_query_status: componentFailureSources.length > 0 ? "degraded" : "complete",
+      component_query_failures: ctx.componentQueryFailures,
+      bridge_verification_status: componentFailureSources.length > 0 ? "TOOL_DEGRADED" : "VERIFIED",
     },
     sector_rotation_scores: ctx.sectorRotationRows.slice(0, 3).map((row) => ({
       score_date: row.score_date,
@@ -459,6 +501,8 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const v8OvernightCausalChain = asObject(ai.v8_overnight_causal_chain);
   const publicPayload = buildPublicPayload(report, ctx);
   const publicDegradedMetadata = asObject(publicPayload.degraded_metadata);
+  const publicMissingSources = Array.isArray(publicDegradedMetadata.missing_sources) ? publicDegradedMetadata.missing_sources.map(String) : [];
+  const reportMissingSources = Array.isArray(ai.missing_sources) ? ai.missing_sources.map(String) : [];
   if (!premiumGate.eligible) {
     return {
       ...publicPayload,
@@ -493,7 +537,7 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     degraded_metadata: {
       ...publicDegradedMetadata,
       report_data_quality: toStringValue(ai.data_quality) || toStringValue(ai.data_status),
-      missing_sources: Array.isArray(ai.missing_sources) ? ai.missing_sources : publicDegradedMetadata.missing_sources,
+      missing_sources: Array.from(new Set([...publicMissingSources, ...reportMissingSources])),
     },
     member_research_note_v2: note,
     intraday_tracking: asObject(ai.intraday_tracking),
@@ -607,11 +651,18 @@ async function fetchPayloadContext(
   if (snapshotResult.error) console.error("GET_REPORT_PAYLOAD_SNAPSHOT_QUERY_FAILED", snapshotResult.error.message);
   if (decisionResult.error) console.error("GET_REPORT_PAYLOAD_DECISION_QUERY_FAILED", decisionResult.error.message);
 
+  const componentQueryFailures: PayloadContext["componentQueryFailures"] = [];
+  if (radarResult.error) componentQueryFailures.push({ source: "opening_market_radar", error_type: "QUERY_FAILED" });
+  if (sectorResult.error) componentQueryFailures.push({ source: "sector_rotation_scores", error_type: "QUERY_FAILED" });
+  if (snapshotResult.error) componentQueryFailures.push({ source: "market_data_snapshots", error_type: "QUERY_FAILED" });
+  if (decisionResult.error) componentQueryFailures.push({ source: "decision_snapshots", error_type: "QUERY_FAILED" });
+
   return {
     openingRadar: radarResult.data ? radarResult.data as Record<string, unknown> : null,
     sectorRotationRows: Array.isArray(sectorResult.data) ? sectorResult.data as Record<string, unknown>[] : [],
     marketDataSnapshots: Array.isArray(snapshotResult.data) ? snapshotResult.data as Record<string, unknown>[] : [],
     decisionSnapshot: decisionResult.data ? decisionResult.data as Record<string, unknown> : null,
+    componentQueryFailures,
   };
 }
 
@@ -680,9 +731,13 @@ Deno.serve(async (req: Request) => {
 
   let body: Record<string, unknown> = {};
   try {
-    body = asObject(await req.json());
-  } catch {
-    body = {};
+    body = await readRequestBody(req);
+  } catch (error) {
+    const tooLarge = error instanceof RequestBodyTooLargeError || (error instanceof Error && error.message === "REQUEST_TOO_LARGE");
+    return jsonResponse({
+      success: false,
+      error: tooLarge ? "REQUEST_TOO_LARGE" : "INVALID_JSON_BODY",
+    }, tooLarge ? 413 : 400);
   }
 
   const serviceClient = createServiceClient(supabaseUrl, serviceRoleKey);

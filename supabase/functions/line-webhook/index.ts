@@ -1,4 +1,28 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  contentLengthExceedsLimit,
+  decodeUtf8,
+  readBoundedBytes,
+  RequestBodyTooLargeError,
+} from '../_shared/bounded-json.ts';
+
+const MAX_BODY_BYTES = 262_144;
+
+type LineWebhookEvent = {
+  source?: { userId?: string };
+  type?: string;
+  message?: { type?: string; text?: string };
+  replyToken?: string;
+};
+
+function constantTimeEqual(left: string, right: string): boolean {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return difference === 0;
+}
 
 // LINE Webhook Handler v2 — 處理 follow/unfollow/message，寫入 line_subscribers
 Deno.serve(async (req) => {
@@ -34,7 +58,25 @@ Deno.serve(async (req) => {
 
   // 1. 驗證 Webhook 簽名
   const signature = req.headers.get('x-line-signature') || '';
-  const body = await req.text();
+  if (contentLengthExceedsLimit(req.headers.get('content-length'), MAX_BODY_BYTES)) {
+    return new Response(JSON.stringify({ error: 'REQUEST_TOO_LARGE' }), {
+      status: 413,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  let bodyBytes: Uint8Array;
+  let body: string;
+  try {
+    bodyBytes = await readBoundedBytes(req.body, MAX_BODY_BYTES);
+    body = decodeUtf8(bodyBytes);
+  } catch (error) {
+    const tooLarge = error instanceof RequestBodyTooLargeError || (error instanceof Error && error.message === 'REQUEST_TOO_LARGE');
+    return new Response(JSON.stringify({ error: tooLarge ? 'REQUEST_TOO_LARGE' : 'INVALID_BODY_ENCODING' }), {
+      status: tooLarge ? 413 : 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -44,10 +86,10 @@ Deno.serve(async (req) => {
     false,
     ['sign'],
   );
-  const computed = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+  const computed = await crypto.subtle.sign('HMAC', key, bodyBytes);
   const computedBase64 = btoa(String.fromCharCode(...new Uint8Array(computed)));
 
-  if (computedBase64 !== signature) {
+  if (!constantTimeEqual(computedBase64, signature)) {
     console.error('Invalid LINE signature');
     return new Response(JSON.stringify({ error: 'Invalid signature' }), {
       status: 401,
@@ -55,7 +97,21 @@ Deno.serve(async (req) => {
     });
   }
 
-  const events = JSON.parse(body).events || [];
+  let parsedBody: unknown;
+  try {
+    parsedBody = JSON.parse(body) as unknown;
+  } catch {
+    return new Response(JSON.stringify({ error: 'INVALID_JSON_BODY' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  const parsedObject = parsedBody && typeof parsedBody === 'object' && !Array.isArray(parsedBody)
+    ? parsedBody as Record<string, unknown>
+    : {};
+  const events = Array.isArray(parsedObject.events)
+    ? parsedObject.events.filter((event) => event && typeof event === 'object' && !Array.isArray(event)) as LineWebhookEvent[]
+    : [];
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') || '',
@@ -113,8 +169,9 @@ Deno.serve(async (req) => {
         console.error('LINE unfollow update error:', error);
       }
     } else if (event.type === 'message' && event.message?.type === 'text') {
-      const text = event.message.text;
+      const text = event.message.text || '';
       const replyToken = event.replyToken;
+      if (!replyToken) continue;
 
       if (text.includes('訂閱') || text.includes('推播') || text.includes('開始') || text.includes('hello') || text.includes('你好')) {
         await sendReplyMessage(replyToken, '早安，這裡是 Morning Alpha。每天 07:30 我會提醒你今日市場情緒與今天最不該犯的錯。');

@@ -12,6 +12,10 @@ import {
   isMarketIndicatorStale,
   type MarketFreshnessDates,
 } from './market-freshness.ts';
+import {
+  normalizeMarketDataRows,
+  type NormalizedMarketIndicator,
+} from './market-data-evidence.ts';
 import { sanitizeUnsupportedAbsolutePriceLevels } from './content-integrity.ts';
 import { evaluateContentIntelligence } from '../_shared/content-intelligence.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
@@ -147,7 +151,7 @@ async function fetchWithTimeout(url:string,options:RequestInit={},timeoutMs:numb
   finally{clearTimeout(timer);}
 }
 
-type MarketIndicator={symbol:string;name:string;market:string;value:number;change:number;changePercent:number;updatedAt:string;status:string;taiwanImpact:string;hasChangePercent?:boolean;hasValue?:boolean};
+type MarketIndicator=NormalizedMarketIndicator;
 type MarketNewsItem={id:string;title:string;source:string;url:string;published_at:string|null;created_at:string;related_sectors:string[]|null;taiwan_impact_summary:string|null;raw_payload:Record<string,unknown>|null};
 type FetchNewsResult={newsData:MarketNewsItem[];latestNewsTime:Date|null;isStale:boolean;newsCount:number};
 type MarketDataScore={baseScore:number;reasons:string[];riskReasons:string[];details:Record<string,number>};
@@ -190,7 +194,8 @@ type V10DecisionContract={contract_version:'V10';market_thesis:V10MarketThesisCo
 type V10ContractValidationResult={is_valid:boolean;errors:string[];warnings:string[]};
 
 type BiasGuardrailResult={adjustedScore:number;riskSignals:string[];staleSignals:string[];unavailableSignals:string[];negativeCoreCount:number;maxBias:string;shouldDowngrade:boolean};
-function findIndicator(md:MarketIndicator[],syms:string[]):MarketIndicator|null{for(const sy of syms){const x=md.find(function(m){return m.symbol.toUpperCase()===sy.toUpperCase()});if(x)return x}return null;}
+function hasUsableMarketEvidence(m:MarketIndicator):boolean{return m.hasValue!==false&&m.hasChangePercent!==false&&Number.isFinite(m.value)&&Number.isFinite(m.changePercent);}
+function findIndicator(md:MarketIndicator[],syms:string[]):MarketIndicator|null{for(const sy of syms){const x=md.find(function(m){return m.symbol.toUpperCase()===sy.toUpperCase()&&hasUsableMarketEvidence(m)});if(x)return x}return null;}
 function fmtSignedPct(v:number):string{return v>=0?'+'+v.toFixed(2)+'%':v.toFixed(2)+'%'}
 function isCoreMarketDataStale(m:MarketIndicator,dates?:MarketFreshnessDates):boolean{return isMarketIndicatorStale(m.updatedAt,m.symbol,dates);}
 function isTXFSymbol(symbol:string):boolean{return ['TXF','TX','MTX','TXF1'].includes(symbol.toUpperCase());}
@@ -1230,7 +1235,7 @@ function buildV8ContractFromMemberNoteV2(memberNoteV2:unknown,fallbackStocks:Rec
     :{status:'insufficient',sentence:'',logic_source:[],tone:'clear, evidence-first, human-readable'};
   return{v8_beneficiary_chain:beneficiary,v8_overnight_causal_chain:overnight,v8_daily_sentence:daily};
 }
-function findMarketIndicator(md:MarketIndicator[],syms:string[]):MarketIndicator|null{for(const sy of syms){const x=md.find(function(m){return m.symbol.toUpperCase()===sy.toUpperCase()});if(x)return x}return null;}
+function findMarketIndicator(md:MarketIndicator[],syms:string[]):MarketIndicator|null{return findIndicator(md,syms);}
 function fmtV8Pct(v:number):string{return v>=0?'+'+v.toFixed(2)+'%':v.toFixed(2)+'%';}
 function buildV8SourceSignals(md:MarketIndicator[],sectorData:SectorRotationRow[],newsData:MarketNewsItem[]):Record<string,unknown>[]{
   const signals:Record<string,unknown>[]=[];
@@ -1534,12 +1539,55 @@ function preFilterOpenaiTWStocks(stocks:Record<string,unknown>[]|undefined,log:(
   log('[preFilterOpenaiTWStocks] TW: '+filtered.length+' (raw: '+stocks.length+')');return filtered;
 }
 
-function checkMVPStatus(md:MarketIndicator[],_log:(m:string)=>void):MVPStatus{const s=md.map(function(m){return m.symbol.toUpperCase()});const n=s.includes('NVDA'),t=s.includes('TSM'),p=s.includes('SPX');const c=[n,t,p].filter(Boolean).length;return{nvdaPresent:n,tsmPresent:t,spxPresent:p,mvpCount:c,mvpInsufficient:c<2}}
-function checkTWCoreStatus(md:MarketIndicator[],_log:(m:string)=>void):TWCoreStatus{const s=md.map(function(m){return m.symbol.toUpperCase()});const taiex=s.some(function(x){return x==='TAIEX'||x==='TWII'||x==='^TWII'});const txf=s.some(function(x){return x==='TXF'||x==='TX'||x==='MTX'});const ts=s.some(function(x){return x==='2330'||x==='2330.TW'});const mm=[taiex,txf,ts].filter(function(v){return !v}).length;return{taiexPresent:taiex,txfPresent:txf,ts2330Present:ts,missingCount:mm,dataInsufficient:mm>=2}}
+function checkMVPStatus(md:MarketIndicator[],_log:(m:string)=>void):MVPStatus{const n=Boolean(findIndicator(md,['NVDA'])),t=Boolean(findIndicator(md,['TSM'])),p=Boolean(findIndicator(md,['SPX']));const c=[n,t,p].filter(Boolean).length;return{nvdaPresent:n,tsmPresent:t,spxPresent:p,mvpCount:c,mvpInsufficient:c<2}}
+function checkTWCoreStatus(md:MarketIndicator[],_log:(m:string)=>void):TWCoreStatus{const taiex=Boolean(findIndicator(md,['TAIEX','TWII','^TWII']));const txf=Boolean(findIndicator(md,['TXF','TX','MTX']));const ts=Boolean(findIndicator(md,['2330','2330.TW']));const mm=[taiex,txf,ts].filter(function(v){return !v}).length;return{taiexPresent:taiex,txfPresent:txf,ts2330Present:ts,missingCount:mm,dataInsufficient:mm>=2}}
+
+function failClosedForMissingRequiredEvidence(
+  ai:Record<string,unknown>,
+  missingSources:string[],
+  log:(m:string)=>void,
+):Record<string,unknown>{
+  const warning='核心市場證據不足，本日僅保存降級報告，不提供方向或個股建議。';
+  const note=(ai.member_research_note_v2&&typeof ai.member_research_note_v2==='object'&&!Array.isArray(ai.member_research_note_v2)?{...(ai.member_research_note_v2 as Record<string,unknown>)}:{});
+  const v8Daily=(ai.v8_daily_sentence&&typeof ai.v8_daily_sentence==='object'&&!Array.isArray(ai.v8_daily_sentence)?{...(ai.v8_daily_sentence as Record<string,unknown>)}:{});
+  const freeSummary=(ai.free_summary&&typeof ai.free_summary==='object'&&!Array.isArray(ai.free_summary)?{...(ai.free_summary as Record<string,unknown>)}:{});
+  const lineCopy=(ai.line_push_copy&&typeof ai.line_push_copy==='object'&&!Array.isArray(ai.line_push_copy)?{...(ai.line_push_copy as Record<string,unknown>)}:{});
+  const publishGate=(ai.content_publish_gate&&typeof ai.content_publish_gate==='object'&&!Array.isArray(ai.content_publish_gate)?{...(ai.content_publish_gate as Record<string,unknown>)}:{});
+  const blockingIssues=Array.isArray(publishGate.blocking_issues)?publishGate.blocking_issues.map(String):[];
+  log('REQUIRED_MARKET_EVIDENCE_INSUFFICIENT missing_sources='+missingSources.join(','));
+  return{
+    ...ai,
+    market_bias:'資料不足',
+    data_status:'insufficient',
+    data_quality:'degraded',
+    required_market_evidence_status:'insufficient',
+    required_market_evidence_missing:missingSources,
+    publish_ready:false,
+    today_quote:warning,
+    today_beneficiary_stocks:[],
+    beneficiary_stocks:[],
+    core_beneficiary_stocks:[],
+    extended_watchlist:[],
+    scenario_watchlist:[],
+    today_beneficiary_stocks_v10:[],
+    v10_observation_watchlist:[],
+    v10_risk_watchlist:[],
+    v10_beneficiary_enabled:false,
+    v10_candidate_count:0,
+    v10_data_quality_status:'insufficient_market_evidence',
+    v10_warning:warning,
+    premium_content_eligible:false,
+    member_research_note_v2:{...note,beneficiary_candidates:[],intraday_validation:[],data_status:'insufficient',subscriber_value_sentence:warning,today_core_thesis:warning},
+    v8_daily_sentence:{...v8Daily,status:'insufficient',sentence:warning,logic_source:[],decision_mode:'blocked'},
+    free_summary:{...freeSummary,one_sentence:warning,market_bias:'資料不足'},
+    line_push_copy:{...lineCopy,one_sentence:warning,market_bias:'資料不足'},
+    content_publish_gate:{...publishGate,overall_status:'拒絕發布',blocking_issues:Array.from(new Set([...blockingIssues,'required_market_evidence_missing']))},
+  };
+}
 
 function calculateMarketDataScore(md:MarketIndicator[]):MarketDataScore{
   let s=50;const rs:string[]=[],rr:string[]=[],dt:Record<string,number>={};
-  const f=(syms:string[])=>{for(const sy of syms){const x=md.find(function(m){return m.symbol.toUpperCase()===sy.toUpperCase()});if(x)return x}return null};
+  const f=(syms:string[])=>findIndicator(md,syms);
   const t=f(['TAIEX','TWII']),ts=f(['2330','2330.TW']),ix=f(['IXIC','NASDAQ']),sx=f(['SOX','PHLX']),tm=f(['TSM','TSMC']),vi=f(['VIX','VIXINDEX']),dx=f(['DXY','USDINDEX']),uy=f(['US10Y','TNX','T10Y']),nv=f(['NVDA']),am=f(['AMD']),sp=f(['SPX','SP500','GSPC']);
   if(t){const c=t.changePercent;if(c>=1.5){s+=25;rs.push('台股強漲');dt.taiex=25}else if(c>=0.8){s+=20;rs.push('台股上漲');dt.taiex=20}else if(c>=0.3){s+=10;dt.taiex=10}else if(c<=-1.5){s-=25;rr.push('台股重挫');dt.taiex=-25}else if(c<=-0.8){s-=20;rr.push('台股下跌');dt.taiex=-20}else if(c<=-0.3){s-=10;dt.taiex=-10}}
   if(ts&&ts.changePercent>=2){s+=20;rs.push('台積電領漲');dt.tsmc2330=20}else if(ts&&ts.changePercent>=1){s+=15;dt.tsmc2330=15}else if(ts&&ts.changePercent>=0.3){s+=8;dt.tsmc2330=8}else if(ts&&ts.changePercent<=-2){s-=20;rr.push('台積電重挫');dt.tsmc2330=-20}else if(ts&&ts.changePercent<=-1){s-=15;dt.tsmc2330=-15}else if(ts&&ts.changePercent<=-0.3){s-=8;dt.tsmc2330=-8}
@@ -1555,7 +1603,7 @@ function calculateMarketDataScore(md:MarketIndicator[]):MarketDataScore{
   return{baseScore:Math.max(0,Math.min(100,s)),reasons:rs.length?rs:['市場訊號中性'],riskReasons:rr.length?rr:['暫無明顯風險訊號'],details:dt};
 }
 
-function hasAnySymbol(md:MarketIndicator[],syms:string[]):boolean{return md.some(function(m){return syms.includes(m.symbol.toUpperCase())});}
+function hasAnySymbol(md:MarketIndicator[],syms:string[]):boolean{return Boolean(findIndicator(md,syms));}
 function calculateReportConfidenceScore(params:{marketData:MarketIndicator[];newsData:MarketNewsItem[];sectorData:SectorRotationRow[];dates:{twCoreDate:string;usGlobalDate:string};dataQuality:string;missingSources:string[];openAIUsed:boolean}):ReportConfidenceScore{
   const md=Array.isArray(params.marketData)?params.marketData:[];const news=Array.isArray(params.newsData)?params.newsData:[];const sectors=Array.isArray(params.sectorData)?params.sectorData:[];const missing=Array.isArray(params.missingSources)?params.missingSources:[];
   const marketDataPoints=md.length>0?25:0;
@@ -1574,20 +1622,30 @@ function calculateReportConfidenceScore(params:{marketData:MarketIndicator[];new
 }
 
 function extractMarketNumericPayload(md:MarketIndicator[]):Record<string,unknown>{
-  const f=(syms:string[])=>{for(const sy of syms){const x=md.find(function(m){return m.symbol.toUpperCase()===sy.toUpperCase()});if(x)return x}return null};const p:Record<string,unknown>={};
-  const vix=f(['VIX','VIXINDEX']);if(vix&&!Number.isNaN(vix.value))p.vix=vix.value;
-  const sp=f(['SPX','SP500','GSPC']);if(sp&&!Number.isNaN(sp.changePercent))p.sp500_change=sp.changePercent;
-  const sox=f(['SOX','PHLX']);if(sox&&!Number.isNaN(sox.changePercent))p.sox_change=sox.changePercent;
-  const ndq=f(['IXIC','NASDAQ']);if(ndq&&!Number.isNaN(ndq.changePercent))p.nasdaq_change=ndq.changePercent;
-  const dji=f(['DJI','DOW','DJIA']);if(dji&&!Number.isNaN(dji.changePercent))p.dow_change=dji.changePercent;
-  const dx=f(['DXY','USDINDEX']);if(dx&&!Number.isNaN(dx.value))p.dxy=dx.value;
-  const uy=f(['US10Y','TNX','T10Y']);if(uy&&!Number.isNaN(uy.value))p.us10y_yield=uy.value;
-  const tm=f(['TSM','TSMC']);if(tm&&!Number.isNaN(tm.changePercent))p.tsm_adr_change=tm.changePercent;
-  const txf=f(['TXF','TX','MTX']);if(txf&&!Number.isNaN(txf.changePercent))p.taiwan_futures_change=txf.changePercent;
+  const f=(syms:string[])=>findIndicator(md,syms);const p:Record<string,unknown>={};
+  const vix=f(['VIX','VIXINDEX']);if(vix&&Number.isFinite(vix.value))p.vix=vix.value;
+  const sp=f(['SPX','SP500','GSPC']);if(sp&&Number.isFinite(sp.changePercent))p.sp500_change=sp.changePercent;
+  const sox=f(['SOX','PHLX']);if(sox&&Number.isFinite(sox.changePercent))p.sox_change=sox.changePercent;
+  const ndq=f(['IXIC','NASDAQ']);if(ndq&&Number.isFinite(ndq.changePercent))p.nasdaq_change=ndq.changePercent;
+  const dji=f(['DJI','DOW','DJIA']);if(dji&&Number.isFinite(dji.changePercent))p.dow_change=dji.changePercent;
+  const dx=f(['DXY','USDINDEX']);if(dx&&Number.isFinite(dx.value))p.dxy=dx.value;
+  const uy=f(['US10Y','TNX','T10Y']);if(uy&&Number.isFinite(uy.value))p.us10y_yield=uy.value;
+  const tm=f(['TSM','TSMC']);if(tm&&Number.isFinite(tm.changePercent))p.tsm_adr_change=tm.changePercent;
+  const txf=f(['TXF','TX','MTX']);if(txf&&Number.isFinite(txf.changePercent))p.taiwan_futures_change=txf.changePercent;
   return p;
 }
 
-async function fetchMarketData(supabase:ReturnType<typeof createClient>,log:(msg:string)=>void){try{const r=await supabase.from('market_data').select('*').order('captured_at',{ascending:false}).limit(30);const{data,error}=safeUnwrap<Record<string,unknown>[]>(r,log,'market_data');if(error||!data?.length){log('fmData:empty');return{marketData:[],latestDataTime:null,isStale:true,dataCount:0}}let latest:Date|null=null;for(const d of data){const t=d.captured_at||d.created_at||d.updated_at;if(t){const dt=new Date(t as string);if(!latest||dt>latest)latest=dt}}return{marketData:data.map(function(r:Record<string,unknown>){const rawValue=r.value;const rawChangePercent=r.change_percent;const hasValue=rawValue!==null&&rawValue!==undefined&&String(rawValue).trim()!==''&&Number.isFinite(Number(rawValue));const hasChangePercent=rawChangePercent!==null&&rawChangePercent!==undefined&&String(rawChangePercent).trim()!==''&&Number.isFinite(Number(rawChangePercent));const v=hasValue?Number(rawValue):0;const cp=hasChangePercent?Number(rawChangePercent):0;let ch=Number(r.change)||0;if(!ch&&v&&cp)ch=v*cp/100;return{symbol:String(r.symbol||''),name:String(r.name||''),market:String(r.market||''),value:v,change:ch,changePercent:cp,updatedAt:String(r.captured_at||r.created_at||r.updated_at||''),status:String(r.status||'flat'),taiwanImpact:String(r.taiwan_impact||''),hasValue,hasChangePercent}}),latestDataTime:latest,isStale:!latest||Date.now()-latest.getTime()>HOURS_24,dataCount:data.length}}catch(e){log('fmData exc:'+(e instanceof Error?e.message:String(e)));return{marketData:[],latestDataTime:null as Date|null,isStale:true,dataCount:0}}}
+async function fetchMarketData(supabase:ReturnType<typeof createClient>,log:(msg:string)=>void){
+  const empty={marketData:[] as MarketIndicator[],latestDataTime:null as Date|null,isStale:true,dataCount:0,rawDataCount:0,invalidNumericSources:[] as string[]};
+  try{
+    const r=await supabase.from('market_data').select('*').order('captured_at',{ascending:false}).limit(30);
+    const{data,error}=safeUnwrap<Record<string,unknown>[]>(r,log,'market_data');
+    if(error||!data?.length){log('fmData:empty');return empty;}
+    const normalized=normalizeMarketDataRows(data,Date.now(),HOURS_24);
+    if(normalized.invalidNumericSources.length>0)log('MARKET_DATA_INVALID_NUMERIC '+normalized.invalidNumericSources.join(','));
+    return normalized;
+  }catch(e){log('fmData exc:'+(e instanceof Error?e.message:String(e)));return empty;}
+}
 
 async function fetchMarketNews(supabase:ReturnType<typeof createClient>,log:(msg:string)=>void):Promise<FetchNewsResult>{try{const r=await supabase.from('market_news').select('id,title,source,url,published_at,created_at,related_sectors,taiwan_impact_summary,raw_payload').order('created_at',{ascending:false}).limit(100);const{data,error}=safeUnwrap<Record<string,unknown>[]>(r,log,'market_news');if(error||!data?.length){log('fmNews:empty');return{newsData:[],latestNewsTime:null,isStale:true,newsCount:0}}const recent=filterRecentNewsRows(data,Date.now(),48).slice(0,30);if(recent.length===0){log('fmNews:no rows published within 48h');return{newsData:[],latestNewsTime:null,isStale:true,newsCount:0}}let latest:Date|null=null;for(const d of recent){const t=d.published_at||d.created_at;if(t){const dt=new Date(t as string);if(!latest||dt>latest)latest=dt}}return{newsData:recent.map(function(r:Record<string,unknown>){return{id:String(r.id||''),title:String(r.title||''),source:String(r.source||''),url:String(r.url||''),published_at:r.published_at?String(r.published_at):null,created_at:String(r.created_at||''),related_sectors:Array.isArray(r.related_sectors)?r.related_sectors:null,taiwan_impact_summary:r.taiwan_impact_summary?String(r.taiwan_impact_summary):null,raw_payload:r.raw_payload&&typeof r.raw_payload==='object'?r.raw_payload as Record<string,unknown>:null}}),latestNewsTime:latest,isStale:!latest||Date.now()-latest.getTime()>HOURS_24,newsCount:recent.length}}catch(e){log('fmNews exc:'+(e instanceof Error?e.message:String(e)));return{newsData:[],latestNewsTime:null as Date|null,isStale:true,newsCount:0}}}
 
@@ -2278,16 +2336,16 @@ Deno.serve(async (req:Request)=>{
       }
     }
     const sectorRotationReferenceDate=getPreviousTaiwanTradingDay(todayDate);log('SECTOR_ROTATION reference_date='+sectorRotationReferenceDate+' basis=previous_trading_day');
-    const rawDatesFetch=(async function(){try{const rr=await supabase.from('market_data').select('symbol,captured_at').order('captured_at',{ascending:false}).limit(30);const{data}=safeUnwrap<Record<string,unknown>[]>(rr,log,'rawForDates');return data||[];}catch{log('rawForDates fetch failed');return [] as Record<string,unknown>[];}})();
+    const rawDatesFetch=(async function(){try{const rr=await supabase.from('market_data').select('symbol,captured_at,value,change_percent').order('captured_at',{ascending:false}).limit(30);const{data}=safeUnwrap<Record<string,unknown>[]>(rr,log,'rawForDates');return normalizeMarketDataRows(data||[]).marketData.map(function(row){return{symbol:row.symbol,captured_at:row.updatedAt};});}catch{log('rawForDates fetch failed');return [] as Record<string,unknown>[];}})();
     const [marketSettled,newsSettled,sectorSettled,rawDatesSettled,previousReportSettled,recentReportsSettled]=await Promise.allSettled([
-      withTimeout(fetchMarketData(supabase,log),5000,'market_data_query',log,{marketData:[],latestDataTime:null as Date|null,isStale:true,dataCount:0}),
+      withTimeout(fetchMarketData(supabase,log),5000,'market_data_query',log,{marketData:[] as MarketIndicator[],latestDataTime:null as Date|null,isStale:true,dataCount:0,rawDataCount:0,invalidNumericSources:[] as string[]}),
       withTimeout(fetchMarketNews(supabase,log),3000,'market_news_query',log,{newsData:[],latestNewsTime:null,isStale:true,newsCount:0}),
       withTimeout(fetchSectorRotationForDate(supabase,sectorRotationReferenceDate,log),3000,'sector_rotation_query',log,[] as SectorRotationRow[]),
       withTimeout(rawDatesFetch,3000,'market_data_dates_query',log,[] as Record<string,unknown>[]),
       withTimeout(fetchPreviousReportForDate(supabase,sectorRotationReferenceDate,log),2500,'previous_report_query',log,null as Record<string,unknown>|null),
       withTimeout(fetchRecentReportsForV10Universe(supabase,todayDate,log),2500,'recent_reports_universe_query',log,[] as Record<string,unknown>[]),
     ]);
-    const marketFetch=marketSettled.status==='fulfilled'?marketSettled.value:{marketData:[],latestDataTime:null as Date|null,isStale:true,dataCount:0};
+    const marketFetch=marketSettled.status==='fulfilled'?marketSettled.value:{marketData:[] as MarketIndicator[],latestDataTime:null as Date|null,isStale:true,dataCount:0,rawDataCount:0,invalidNumericSources:[] as string[]};
     const newsFetch=newsSettled.status==='fulfilled'?newsSettled.value:{newsData:[],latestNewsTime:null,isStale:true,newsCount:0};
     const sectorData=sectorSettled.status==='fulfilled'?sectorSettled.value:[];
     const rawDataForDates=rawDatesSettled.status==='fulfilled'?rawDatesSettled.value:[];const previousReport=previousReportSettled.status==='fulfilled'?previousReportSettled.value:null;const recentReportsForUniverse=recentReportsSettled.status==='fulfilled'?recentReportsSettled.value:[];
@@ -2295,15 +2353,18 @@ Deno.serve(async (req:Request)=>{
     if(newsReview.rejected.length>0){const rejectedReasons=Array.from(new Set(newsReview.rejected.flatMap((entry)=>entry.reason_codes)));log('NEWS_EVIDENCE_REJECTED count='+newsReview.rejected.length+' reasons='+rejectedReasons.join('|'));}
     const dates=computeDatesFromMarketData(rawDataForDates);log('DATES tw_core='+dates.twCoreDate+' us_global='+dates.usGlobalDate);
     const staleCoreSources=detectStaleCoreMarketData(marketData,dates);const unavailableSources=detectUnavailableMarketData(marketData,dates);
-    const missingSources:string[]=[];if(dataCount===0)missingSources.push('market_data');if(newsData.length===0)missingSources.push(newsFetch.newsData.length>0?'market_news:no_verified_relevant_items':'market_news');if(sectorData.length===0)missingSources.push('sector_rotation_scores:'+sectorRotationReferenceDate);if(rawDataForDates.length===0)missingSources.push('market_data_dates');for(const stale of staleCoreSources)missingSources.push('stale_market_data:'+stale);for(const unavailable of unavailableSources)missingSources.push('unavailable_market_data:'+unavailable);
+    const twStatus=checkTWCoreStatus(marketData,log);const mvpStatus=checkMVPStatus(marketData,log);
+    const requiredEvidenceAvailable=!twStatus.dataInsufficient&&!mvpStatus.mvpInsufficient;
+    const missingSources:string[]=[];if(dataCount===0)missingSources.push('market_data');if(newsData.length===0)missingSources.push(newsFetch.newsData.length>0?'market_news:no_verified_relevant_items':'market_news');if(sectorData.length===0)missingSources.push('sector_rotation_scores:'+sectorRotationReferenceDate);if(rawDataForDates.length===0)missingSources.push('market_data_dates');for(const invalid of marketFetch.invalidNumericSources)missingSources.push('invalid_numeric_market_data:'+invalid);if(twStatus.dataInsufficient)missingSources.push('required_tw_market_evidence');if(mvpStatus.mvpInsufficient)missingSources.push('required_us_market_evidence');for(const stale of staleCoreSources)missingSources.push('stale_market_data:'+stale);for(const unavailable of unavailableSources)missingSources.push('unavailable_market_data:'+unavailable);
+    const uniqueMissingSources=Array.from(new Set(missingSources));missingSources.splice(0,missingSources.length,...uniqueMissingSources);
     const dataQuality=missingSources.length===0?'complete':'degraded';
-    log('MARKET_DATA count='+dataCount);log('NEWS raw='+newsFetch.newsData.length+' verified='+newsData.length+' rejected='+newsReview.rejected.length);log('SECTOR_ROTATION rows='+sectorData.length);log('DATA_QUALITY '+dataQuality+' missing_sources='+(missingSources.join(',')||'none'));
+    log('MARKET_DATA valid='+dataCount+' raw='+marketFetch.rawDataCount+' invalid_numeric='+marketFetch.invalidNumericSources.length);log('NEWS raw='+newsFetch.newsData.length+' verified='+newsData.length+' rejected='+newsReview.rejected.length);log('SECTOR_ROTATION rows='+sectorData.length);log('DATA_QUALITY '+dataQuality+' missing_sources='+(missingSources.join(',')||'none'));
     timer.mark('PARALLEL_DATA_FETCH_DONE','data_quality='+dataQuality);
     const hasMarketData=dataCount>0;const reportMode=determineReportMode(dow,hasMarketData,dataCount);
     if(sectorData.length===0)log('SECTOR_ROTATION_MISSING reference_date='+sectorRotationReferenceDate+'; continuing without fallback to today');
 
 
-    let dScore=calculateMarketDataScore(marketData);const guardrailPreview=applyBiasGuardrails(marketData,dScore.baseScore,dates);if(guardrailPreview.shouldDowngrade){log('BIAS_GUARDRAIL adjusted_score='+guardrailPreview.adjustedScore+' risk='+(guardrailPreview.riskSignals.join('|')||'none')+' stale='+(guardrailPreview.staleSignals.join('|')||'none'));dScore={...dScore,baseScore:guardrailPreview.adjustedScore,riskReasons:Array.from(new Set([...dScore.riskReasons,...guardrailPreview.riskSignals,...guardrailPreview.staleSignals])),details:{...dScore.details,bias_guardrail_original_score:dScore.baseScore,bias_guardrail_adjusted_score:guardrailPreview.adjustedScore}};}const twStatus=checkTWCoreStatus(marketData,log);const mvpStatus=checkMVPStatus(marketData,log);
+    let dScore=calculateMarketDataScore(marketData);const guardrailPreview=applyBiasGuardrails(marketData,dScore.baseScore,dates);if(guardrailPreview.shouldDowngrade){log('BIAS_GUARDRAIL adjusted_score='+guardrailPreview.adjustedScore+' risk='+(guardrailPreview.riskSignals.join('|')||'none')+' stale='+(guardrailPreview.staleSignals.join('|')||'none'));dScore={...dScore,baseScore:guardrailPreview.adjustedScore,riskReasons:Array.from(new Set([...dScore.riskReasons,...guardrailPreview.riskSignals,...guardrailPreview.staleSignals])),details:{...dScore.details,bias_guardrail_original_score:dScore.baseScore,bias_guardrail_adjusted_score:guardrailPreview.adjustedScore}};}
     log('SCORE='+dScore.baseScore+' BIAS='+classifyMarketBias(dScore.baseScore));
     timer.mark('MARKET_SCORING_DONE');
     let confidenceResult=calculateReportConfidenceScore({marketData,newsData,sectorData,dates,dataQuality,missingSources,openAIUsed:false});
@@ -2406,6 +2467,7 @@ Deno.serve(async (req:Request)=>{
     aiStrategyJson=enforceMemberResearchIntegrity(aiStrategyJson,dataQuality,marketData,log,newsData.length);
     aiStrategyJson=applyMemberResearchNoteV2Aliases(aiStrategyJson);
     aiStrategyJson=limitBeneficiaryStockCounts(aiStrategyJson);
+    if(!requiredEvidenceAvailable)aiStrategyJson=failClosedForMissingRequiredEvidence(aiStrategyJson,missingSources,log);
     timer.mark('FINAL_GUARDS_DONE');
 
     const marketBias=String(aiStrategyJson.market_bias||classifyMarketBias(dScore.baseScore));

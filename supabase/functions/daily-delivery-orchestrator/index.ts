@@ -3,12 +3,13 @@ import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import {
   buildDailyDeliveryRecoveryPlan,
+  hasFailedEvidenceDependency,
   resolveDailyDeliveryPhase,
   type DailyDeliveryAction,
   type DailyDeliveryPhase,
 } from '../_shared/daily-delivery-recovery.ts';
 
-const VERSION = 'DAILY_DELIVERY_V1';
+const VERSION = 'DAILY_DELIVERY_V1.1_PROVIDER_RESULT_GATE';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -17,7 +18,7 @@ const CORS_HEADERS = {
 };
 
 type JsonRecord = Record<string, unknown>;
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = ReturnType<typeof createClient<any>>;
 
 interface DeliveryState {
   report: JsonRecord | null;
@@ -30,6 +31,7 @@ interface FunctionResult {
   ok: boolean;
   status: number;
   payload: JsonRecord;
+  attempts?: number;
 }
 
 function jsonResponse(payload: JsonRecord, status = 200): Response {
@@ -116,7 +118,7 @@ async function invokeFunction(
     } catch {
       payload = { error: `Non-JSON response from ${slug}` };
     }
-    return { ok: response.ok, status: response.status, payload };
+    return { ok: response.ok && payload.success !== false, status: response.status, payload };
   } catch (error) {
     return {
       ok: false,
@@ -126,6 +128,25 @@ async function invokeFunction(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function invokeFunctionWithRetry(
+  baseUrl: string,
+  slug: string,
+  cronSecret: string,
+  body: JsonRecord,
+  timeoutMs: number,
+  maxAttempts = 3,
+): Promise<FunctionResult> {
+  let lastResult: FunctionResult = { ok: false, status: 599, payload: { error: 'FUNCTION_NOT_ATTEMPTED' }, attempts: 0 };
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    lastResult = await invokeFunction(baseUrl, slug, cronSecret, { ...body, provider_retry_attempt: attempt }, timeoutMs);
+    if (lastResult.ok) return { ...lastResult, attempts: attempt };
+    if (attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, attempt * 5_000));
+    }
+  }
+  return { ...lastResult, attempts: maxAttempts };
 }
 
 async function loadDeliveryState(
@@ -194,7 +215,13 @@ async function claimPipelineSlot(
   phase: DailyDeliveryPhase,
   slot: number,
   attempt: number,
-): Promise<{ acquired: boolean; id: string | null }> {
+): Promise<{
+  acquired: boolean;
+  id: string | null;
+  existingStatus: string | null;
+  existingReasonCodes: string[];
+  existingErrorCode: string | null;
+}> {
   const idempotencyKey = `${reportDate}:PREMARKET:${phase}:${slot}`;
   const { data, error } = await supabase
     .from('pipeline_runs')
@@ -211,9 +238,31 @@ async function claimPipelineSlot(
     })
     .select('id')
     .maybeSingle();
-  if (error?.code === '23505') return { acquired: false, id: null };
+  if (error?.code === '23505') {
+    const { data: existing, error: existingError } = await supabase
+      .from('pipeline_runs')
+      .select('id,status,reason_codes,error_code')
+      .eq('idempotency_key', idempotencyKey)
+      .maybeSingle();
+    if (existingError || !existing) {
+      throw new Error(`PIPELINE_SLOT_STATUS_FAILED:${existingError?.message || 'existing run missing'}`);
+    }
+    return {
+      acquired: false,
+      id: typeof existing.id === 'string' ? existing.id : null,
+      existingStatus: String(existing.status || 'RUNNING'),
+      existingReasonCodes: asStringArray(existing.reason_codes),
+      existingErrorCode: typeof existing.error_code === 'string' ? existing.error_code : null,
+    };
+  }
   if (error || !data?.id) throw new Error(`PIPELINE_SLOT_CLAIM_FAILED:${error?.message || 'no id'}`);
-  return { acquired: true, id: String(data.id) };
+  return {
+    acquired: true,
+    id: String(data.id),
+    existingStatus: null,
+    existingReasonCodes: [],
+    existingErrorCode: null,
+  };
 }
 
 async function finishPipelineRun(
@@ -269,12 +318,12 @@ async function executeRecoveryActions(args: {
   }
 
   if (args.actions.includes('refresh_news')) {
-    refreshes.push(invokeFunction(args.baseUrl, 'fetch-global-market-news', args.cronSecret, {
+    refreshes.push(invokeFunctionWithRetry(args.baseUrl, 'fetch-global-market-news', args.cronSecret, {
       recovery_attempt: args.attempt,
     }, 180_000).then((result) => { results.refresh_news = result; }));
   }
   if (args.actions.includes('refresh_market')) {
-    refreshes.push(invokeFunction(args.baseUrl, 'fetch-market-data-v10', args.cronSecret, {
+    refreshes.push(invokeFunctionWithRetry(args.baseUrl, 'fetch-market-data-v10', args.cronSecret, {
       phase: 'premarket',
       recovery_attempt: args.attempt,
     }, 180_000).then((result) => { results.refresh_market = result; }));
@@ -282,17 +331,24 @@ async function executeRecoveryActions(args: {
   await Promise.all(refreshes);
 
   if (args.actions.includes('regenerate_report')) {
-    results.regenerate_report = await invokeFunction(
-      args.baseUrl,
-      'generate-daily-report-v7',
-      args.cronSecret,
-      {
-        quality_retry: true,
-        recovery_attempt: args.attempt,
-        recovery_reason_codes: args.reasonCodes,
-      },
-      540_000,
-    );
+    const evidenceRefreshFailed = hasFailedEvidenceDependency(results);
+    results.regenerate_report = evidenceRefreshFailed
+      ? {
+        ok: false,
+        status: 424,
+        payload: { success: false, error: 'EVIDENCE_REFRESH_DEPENDENCY_FAILED' },
+      }
+      : await invokeFunction(
+        args.baseUrl,
+        'generate-daily-report-v7',
+        args.cronSecret,
+        {
+          quality_retry: true,
+          recovery_attempt: args.attempt,
+          recovery_reason_codes: args.reasonCodes,
+        },
+        540_000,
+      );
   }
 
   return results;
@@ -345,16 +401,20 @@ Deno.serve(async (req: Request) => {
   try {
     const claim = await claimPipelineSlot(supabase, clock.date, phase, clock.slot, attempt);
     if (!claim.acquired) {
+      const existingSucceeded = claim.existingStatus === 'SUCCEEDED' || claim.existingStatus === 'SKIPPED';
       return jsonResponse({
-        success: true,
-        status: 'SKIPPED',
+        success: existingSucceeded,
+        status: claim.existingStatus || 'RUNNING',
         reason: 'PIPELINE_SLOT_ALREADY_CLAIMED',
         report_date: clock.date,
         phase,
+        reason_codes: claim.existingReasonCodes,
+        error_code: claim.existingErrorCode,
         version: VERSION,
       });
     }
-    runId = claim.id;
+    const activeRunId = String(claim.id);
+    runId = activeRunId;
 
     let state = await loadDeliveryState(supabase, clock.date);
     let plan = buildDailyDeliveryRecoveryPlan({
@@ -390,7 +450,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (state.premium_eligible && clock.minutes >= 7 * 60 + 20) {
+    const deliveryBlockedByEvidenceFailure = hasFailedEvidenceDependency(actionResults);
+    if (state.premium_eligible && clock.minutes >= 7 * 60 + 20 && !deliveryBlockedByEvidenceFailure) {
       actionResults.deliver_premium = await invokeFunction(
         `${supabaseUrl}/functions/v1`,
         'line-daily-push',
@@ -411,17 +472,29 @@ Deno.serve(async (req: Request) => {
         premiumDeliveryPayload.sent === true
         || ['ALREADY_SENT', 'NO_ACTIVE_SUBSCRIBERS'].includes(String(premiumDeliveryPayload.reason || ''))
       );
-    const completed = state.premium_eligible && (clock.minutes < 7 * 60 + 20 || delivered || Object.keys(premiumDelivery).length === 0);
+    const actionFailures = Object.entries(actionResults)
+      .filter(([, result]) => asRecord(result).ok !== true)
+      .map(([action, result]) => ({
+        action,
+        status: Number(asRecord(result).status || 0),
+        error: String(asRecord(asRecord(result).payload).error || 'ACTION_RETURNED_UNSUCCESSFUL').slice(0, 300),
+      }));
+    const actionFailureCodes = actionFailures.map((failure) => `action_failed:${failure.action}`);
+    const completed = actionFailures.length === 0 && state.premium_eligible &&
+      (clock.minutes < 7 * 60 + 20 || delivered || Object.keys(premiumDelivery).length === 0);
     const status = completed ? 'SUCCEEDED' : 'DEGRADED';
+    const finalReasonCodes = Array.from(new Set([...state.reason_codes, ...actionFailureCodes]));
     await finishPipelineRun(
       supabase,
-      runId,
+      activeRunId,
       status,
       {
         orchestrator_version: VERSION,
         phase,
         actions,
         action_results: actionResults,
+        action_failures: actionFailures,
+        delivery_blocked_by_evidence_failure: deliveryBlockedByEvidenceFailure,
         premium_eligible: state.premium_eligible,
         delivered,
         decision_snapshot_id: typeof state.snapshot?.id === 'string' ? state.snapshot.id : null,
@@ -434,19 +507,21 @@ Deno.serve(async (req: Request) => {
               : 'PENDING',
         recovery_plan: plan,
       },
-      state.reason_codes,
+      finalReasonCodes,
       completed ? null : plan.retry_after_seconds,
     );
 
     return jsonResponse({
-      success: true,
+      success: completed,
       status,
       report_date: clock.date,
       phase,
       actions,
       premium_eligible: state.premium_eligible,
       delivered,
-      reason_codes: state.reason_codes,
+      action_failures: actionFailures,
+      delivery_blocked_by_evidence_failure: deliveryBlockedByEvidenceFailure,
+      reason_codes: finalReasonCodes,
       retry_after_seconds: completed ? null : plan.retry_after_seconds,
       version: VERSION,
     });

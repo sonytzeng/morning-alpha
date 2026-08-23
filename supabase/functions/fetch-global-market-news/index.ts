@@ -1,8 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { classifyProviderFailures, sanitizeProviderError } from "../_shared/market-runtime-stability.mjs";
 
-// ===== fetch-global-market-news V8.2 =====
-// V8.2: Relax scoring threshold from 70 to 60, increase taiwan weight to 0.5,
-//       add AI core bonus (+8) and floor scores for semiconductor/AI/Nvidia/TSMC news
+// ===== fetch-global-market-news V8.3 =====
+// V8.3: Canonical news_events dual-write and structured provider failure evidence.
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +10,65 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers":
     "Content-Type, Authorization, apikey, x-client-info, x-cron-secret",
 };
+const PROVIDER_FETCH_TIMEOUT_MS = 8_000;
+const MAX_FUTURE_CLOCK_SKEW_MS = 10 * 60 * 1_000;
+
+type JsonRecord = Record<string, unknown>;
+
+interface ProviderFailureDetail {
+  provider: string;
+  symbol: string;
+  endpoint: string;
+  status?: number;
+  error?: string;
+}
+
+interface RawNewsItem {
+  title: string;
+  summary: string;
+  url: string;
+  publishedAt: string;
+  source: string;
+  provider: string;
+  externalId: string;
+  category: string;
+}
+
+interface NewsScore {
+  relevanceScore: number;
+  taiwanRelevanceScore: number;
+  impactScore: number;
+  finalScore: number;
+  isBlacklisted: boolean;
+  rejectionReason: string | null;
+  category: string;
+  relatedSectors: string[];
+  relatedTwSymbols: string[];
+  relatedTwNames: string[];
+  taiwanImpactSummary: string;
+  isSelected: boolean;
+  normalizedTitle: string;
+  duplicateGroupKey: string;
+}
+
+type ScoredNewsItem = RawNewsItem & NewsScore;
+
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function resolveNewsFreshness(publishedAt: string, fetchedAt: string): string {
+  const publishedMs = Date.parse(String(publishedAt || ""));
+  const fetchedMs = Date.parse(String(fetchedAt || ""));
+  if (!Number.isFinite(publishedMs) || !Number.isFinite(fetchedMs)) return "unknown";
+  const ageHours = Math.max(0, fetchedMs - publishedMs) / 3_600_000;
+  if (ageHours <= 24) return "fresh";
+  if (ageHours <= 48) return "recent";
+  return "stale";
+}
 
 // ============================================================
 // SECTION 1: BLACKLIST
@@ -320,7 +379,7 @@ const CATEGORY_MAP = {
 // ============================================================
 // SECTION 7: HELPERS
 // ============================================================
-function normalizeTitle(title) {
+function normalizeTitle(title: string): string {
   return title
     .toLowerCase()
     .replace(/[.,;:!?"'()\[\]\-–—]/g, " ")
@@ -329,17 +388,17 @@ function normalizeTitle(title) {
     .replace(/\s+(?:bloomberg|reuters|cnbc|wsj|ft|marketwatch|seeking alpha|yahoo finance|investing\.com|barron'?s|the street|zacks|benzinga|morningstar|simply wall st|fool\.com)$/i, "");
 }
 
-function detectRejectionReason(title, summary) {
+function detectRejectionReason(title: string, summary: string): string | null {
   const combined = `${title} ${summary}`.toLowerCase();
   const matched = BLACKLIST_KEYWORDS.filter((kw) => combined.includes(kw.toLowerCase()));
   if (matched.length === 0) return null;
   return `包含排除關鍵字: ${matched.slice(0, 3).join(", ")}`;
 }
 
-function detectTaiwanMapping(title, summary) {
+function detectTaiwanMapping(title: string, summary: string): { symbols: string[]; names: string[] } {
   const combined = `${title} ${summary}`.toLowerCase();
-  const allSymbols = new Set();
-  const allNames = new Set();
+  const allSymbols = new Set<string>();
+  const allNames = new Set<string>();
 
   for (const [keyword, mapping] of Object.entries(TAIWAN_SUPPLY_CHAIN_MAP)) {
     if (combined.includes(keyword.toLowerCase())) {
@@ -357,7 +416,7 @@ function detectTaiwanMapping(title, summary) {
 // ============================================================
 // SECTION 8: SCORING ENGINE
 // ============================================================
-function scoreNewsItem(title, summary) {
+function scoreNewsItem(title: string, summary: string): NewsScore {
   const titleLower = (title || "").toLowerCase();
   const summaryLower = (summary || "").toLowerCase();
   const combined = `${titleLower} ${summaryLower}`;
@@ -473,7 +532,7 @@ function scoreNewsItem(title, summary) {
   }
 
   // Step 6: related sectors
-  const relatedSectors = [];
+  const relatedSectors: string[] = [];
   const sectorMap = {
     "半導體": ["semiconductor", "chip", "wafer", "foundry", "sox", "tsmc", "asml", "lam research", "applied materials", "kla", "sk hynix", "micron", "intel", "amd"],
     "AI": ["artificial intelligence", "ai chip", "ai server", "ai model", "llm", "openai", "anthropic", "ai demand", "ai infrastructure", "generative ai", "nvidia", "nvda", "blackwell", "gb200", "gb300"],
@@ -581,7 +640,7 @@ function scoreNewsItem(title, summary) {
 // ============================================================
 // SECTION 9: NEWS SOURCES
 // ============================================================
-async function fetchGNews(apiKey, logs) {
+async function fetchGNews(apiKey: string, logs: string[], providerFailures: ProviderFailureDetail[]): Promise<RawNewsItem[]> {
   const queries = [
     "TSMC semiconductor",
     "Nvidia AMD AI chip",
@@ -590,16 +649,19 @@ async function fetchGNews(apiKey, logs) {
     "Nasdaq S&P 500 earnings",
   ];
 
-  const allItems = [];
+  const allItems: RawNewsItem[] = [];
   const seenUrls = new Set();
 
   for (const q of queries) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), PROVIDER_FETCH_TIMEOUT_MS);
     try {
       const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(q)}&lang=en&country=any&max=10&apikey=${apiKey}`;
-      const resp = await fetch(url, { headers: { "Accept": "application/json" } });
+      const resp = await fetch(url, { headers: { "Accept": "application/json" }, signal: controller.signal });
 
       if (!resp.ok) {
         logs.push(`GNews query "${q}" HTTP ${resp.status}`);
+        providerFailures.push({ provider: "gnews", symbol: "GENERAL_NEWS", endpoint: "search", status: resp.status });
         continue;
       }
 
@@ -619,23 +681,28 @@ async function fetchGNews(apiKey, logs) {
           title: article.title || "",
           summary: article.description || "",
           url: articleUrl,
-          publishedAt: article.publishedAt || new Date().toISOString(),
+          publishedAt: String(article.publishedAt || ""),
           source: article.source?.name || "GNews",
+          provider: "gnews",
+          externalId: articleUrl,
           category: "market",
         });
       }
 
       logs.push(`GNews query "${q}" fetched ${data.articles.length} articles`);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = sanitizeProviderError(err instanceof Error ? err.message : String(err));
       logs.push(`GNews query "${q}" exception: ${msg}`);
+      providerFailures.push({ provider: "gnews", symbol: "GENERAL_NEWS", endpoint: "search", error: msg });
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
   return allItems;
 }
 
-async function fetchNewsAPI(apiKey, logs) {
+async function fetchNewsAPI(apiKey: string, logs: string[], providerFailures: ProviderFailureDetail[]): Promise<RawNewsItem[]> {
   const queries = [
     "TSMC OR semiconductor OR Taiwan stock",
     "Nvidia OR AMD OR AI chip OR AI server",
@@ -643,16 +710,19 @@ async function fetchNewsAPI(apiKey, logs) {
     "Nasdaq OR S&P 500 OR SOX index",
   ];
 
-  const allItems = [];
+  const allItems: RawNewsItem[] = [];
   const seenUrls = new Set();
 
   for (const q of queries) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), PROVIDER_FETCH_TIMEOUT_MS);
     try {
       const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=15&apiKey=${apiKey}`;
-      const resp = await fetch(url, { headers: { "Accept": "application/json" } });
+      const resp = await fetch(url, { headers: { "Accept": "application/json" }, signal: controller.signal });
 
       if (!resp.ok) {
         logs.push(`NewsAPI query "${q}" HTTP ${resp.status}`);
+        providerFailures.push({ provider: "newsapi", symbol: "GENERAL_NEWS", endpoint: "everything", status: resp.status });
         continue;
       }
 
@@ -678,34 +748,42 @@ async function fetchNewsAPI(apiKey, logs) {
           title: article.title || "",
           summary: article.description || "",
           url: articleUrl,
-          publishedAt: article.publishedAt || new Date().toISOString(),
+          publishedAt: String(article.publishedAt || ""),
           source: article.source?.name || "NewsAPI",
+          provider: "newsapi",
+          externalId: articleUrl,
           category: "market",
         });
       }
 
       logs.push(`NewsAPI query "${q}" fetched ${data.articles.length} articles`);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = sanitizeProviderError(err instanceof Error ? err.message : String(err));
       logs.push(`NewsAPI query "${q}" exception: ${msg}`);
+      providerFailures.push({ provider: "newsapi", symbol: "GENERAL_NEWS", endpoint: "everything", error: msg });
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
   return allItems;
 }
 
-async function fetchFinnhubNews(apiKey, logs) {
+async function fetchFinnhubNews(apiKey: string, logs: string[], providerFailures: ProviderFailureDetail[]): Promise<RawNewsItem[]> {
   const categories = ["general", "merger", "ipo"];
-  const allItems = [];
+  const allItems: RawNewsItem[] = [];
   const seenIds = new Set();
 
   for (const category of categories) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), PROVIDER_FETCH_TIMEOUT_MS);
     try {
       const url = `https://finnhub.io/api/v1/news?category=${category}&minId=0&token=${apiKey}`;
-      const resp = await fetch(url, { headers: { "Accept": "application/json" } });
+      const resp = await fetch(url, { headers: { "Accept": "application/json" }, signal: controller.signal });
 
       if (!resp.ok) {
         logs.push(`Finnhub news category "${category}" HTTP ${resp.status}`);
+        providerFailures.push({ provider: "finnhub", symbol: "GENERAL_NEWS", endpoint: `news:${category}`, status: resp.status });
         continue;
       }
 
@@ -720,9 +798,10 @@ async function fetchFinnhubNews(apiKey, logs) {
         if (!item.id || seenIds.has(item.id)) continue;
         seenIds.add(item.id);
 
-        const publishedAt = item.datetime
-          ? new Date(item.datetime * 1000).toISOString()
-          : new Date().toISOString();
+        const publishedDate = Number(item.datetime) > 0 ? new Date(Number(item.datetime) * 1000) : null;
+        const publishedAt = publishedDate && Number.isFinite(publishedDate.getTime())
+          ? publishedDate.toISOString()
+          : "";
 
         allItems.push({
           title: item.headline || "",
@@ -730,23 +809,28 @@ async function fetchFinnhubNews(apiKey, logs) {
           url: item.url || "",
           publishedAt,
           source: item.source || "Finnhub",
+          provider: "finnhub",
+          externalId: String(item.id),
           category: item.category || "market",
         });
       }
 
       logs.push(`Finnhub category "${category}" fetched ${data.length} items`);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = sanitizeProviderError(err instanceof Error ? err.message : String(err));
       logs.push(`Finnhub category "${category}" exception: ${msg}`);
+      providerFailures.push({ provider: "finnhub", symbol: "GENERAL_NEWS", endpoint: `news:${category}`, error: msg });
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
   return allItems;
 }
 
-function detectRelatedMarkets(title, summary) {
+function detectRelatedMarkets(title: string, summary: string): string[] {
   const combined = `${title} ${summary}`.toLowerCase();
-  const markets = [];
+  const markets: string[] = [];
   if (combined.includes("taiwan") || combined.includes("taiex") || combined.includes("tsmc")) {
     markets.push("TW");
   }
@@ -772,7 +856,7 @@ function detectRelatedMarkets(title, summary) {
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID().slice(0, 8);
   const now = new Date().toISOString();
-  const logs = [];
+  const logs: string[] = [];
 
   console.log(`[NEWS:${requestId}] start - ${now}`);
 
@@ -781,24 +865,20 @@ Deno.serve(async (req) => {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    // Auth: allow x-cron-secret (cron jobs) OR Supabase Auth token (manual/admin)
+    // Auth: this service-role writer is cron-only. Manual callers must use an allowlisted recovery function.
     const incomingCronSecret = req.headers.get("x-cron-secret") || "";
     const envCronSecret = Deno.env.get("CRON_SECRET") || "";
-    const authorization = req.headers.get("Authorization") || "";
-
-    if (envCronSecret && incomingCronSecret !== envCronSecret) {
-      // Fallback: allow Supabase Auth Bearer token for manual/admin triggers
-      if (!authorization.includes("Bearer")) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: "Unauthorized",
-            reason: "Invalid x-cron-secret and no Authorization Bearer token",
-          }),
-          { status: 401, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
-        );
-      }
-      // If Bearer token is present, proceed (Supabase auth verified by Deno.serve)
+    if (!envCronSecret) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Server configuration error", reason: "CRON_SECRET is not configured" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+      );
+    }
+    if (incomingCronSecret !== envCronSecret) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+      );
     }
 
     // Supabase client
@@ -822,31 +902,44 @@ Deno.serve(async (req) => {
     logs.push(`API keys: GNews=${Boolean(gnewsApiKey)}, NewsAPI=${Boolean(newsApiKey)}, Finnhub=${Boolean(finnhubApiKey)}`);
 
     // Fetch from all sources
-    const rawItems = [];
+    const rawItems: RawNewsItem[] = [];
+    const providerFailureDetails: ProviderFailureDetail[] = [];
 
+    const providerFetches: Array<Promise<{ provider: string; items: RawNewsItem[] }>> = [];
     if (gnewsApiKey) {
-      const gnewsItems = await fetchGNews(gnewsApiKey, logs);
-      rawItems.push(...gnewsItems);
-      logs.push(`GNews total: ${gnewsItems.length} items`);
+      providerFetches.push(fetchGNews(gnewsApiKey, logs, providerFailureDetails)
+        .then((items) => ({ provider: "GNews", items })));
     }
     if (newsApiKey) {
-      const newsApiItems = await fetchNewsAPI(newsApiKey, logs);
-      rawItems.push(...newsApiItems);
-      logs.push(`NewsAPI total: ${newsApiItems.length} items`);
+      providerFetches.push(fetchNewsAPI(newsApiKey, logs, providerFailureDetails)
+        .then((items) => ({ provider: "NewsAPI", items })));
     }
     if (finnhubApiKey) {
-      const finnhubItems = await fetchFinnhubNews(finnhubApiKey, logs);
-      rawItems.push(...finnhubItems);
-      logs.push(`Finnhub total: ${finnhubItems.length} items`);
+      providerFetches.push(fetchFinnhubNews(finnhubApiKey, logs, providerFailureDetails)
+        .then((items) => ({ provider: "Finnhub", items })));
+    } else {
+      providerFailureDetails.push({ provider: "finnhub", symbol: "GENERAL_NEWS", endpoint: "news", error: "missing_api_key" });
+    }
+    const providerResults = await Promise.all(providerFetches);
+    for (const result of providerResults) {
+      rawItems.push(...result.items);
+      logs.push(`${result.provider} total: ${result.items.length} items`);
     }
 
     logs.push(`Total raw items before dedup: ${rawItems.length}`);
 
     // Deduplicate by normalized_title + source
     const seenKeys = new Set();
-    const deduped = [];
+    const deduped: RawNewsItem[] = [];
+    let invalidPublishedAtCount = 0;
+    const fetchedAtMs = Date.parse(now);
     for (const item of rawItems) {
       if (!item.url || !item.title || item.title.trim().length < 10) continue;
+      const publishedAtMs = Date.parse(item.publishedAt);
+      if (!Number.isFinite(publishedAtMs) || publishedAtMs > fetchedAtMs + MAX_FUTURE_CLOCK_SKEW_MS) {
+        invalidPublishedAtCount++;
+        continue;
+      }
       const normalized = normalizeTitle(item.title);
       const key = `${normalized}|${item.source}`;
       if (seenKeys.has(key)) continue;
@@ -854,14 +947,16 @@ Deno.serve(async (req) => {
       deduped.push(item);
     }
 
-    logs.push(`After dedup (normalized_title+source): ${deduped.length} items`);
+    logs.push(`After timestamp validation and dedup: ${deduped.length} items; invalid_published_at=${invalidPublishedAtCount}`);
 
     if (deduped.length === 0) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "NO_NEWS_FETCHED",
-          reason: "No news items fetched from any source.",
+          error: "NO_VALID_NEWS_FETCHED",
+          reason: "No source-timestamped news items were available.",
+          invalid_published_at_count: invalidPublishedAtCount,
+          provider_failures: classifyProviderFailures(providerFailureDetails),
           logs,
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
@@ -869,7 +964,7 @@ Deno.serve(async (req) => {
     }
 
     // Score each item
-    const scored = [];
+    const scored: ScoredNewsItem[] = [];
     let blacklistedCount = 0;
 
     for (const item of deduped) {
@@ -918,6 +1013,10 @@ Deno.serve(async (req) => {
           total_raw: rawItems.length,
           blacklisted: blacklistedCount,
           selected: 0,
+          canonical_requested_count: 0,
+          canonical_upserted_count: 0,
+          canonical_complete: true,
+          provider_failures: classifyProviderFailures(providerFailureDetails),
           logs,
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
@@ -958,10 +1057,53 @@ Deno.serve(async (req) => {
       created_at: now,
     }));
 
+    const canonicalCandidates = toUpsert.filter((item) => item.isSelected);
+    const canonicalWriteErrors: Array<{ title?: string; error: string }> = [];
+    const canonicalRecords: JsonRecord[] = [];
+    for (const item of canonicalCandidates) {
+      const publishedAt = String(item.publishedAt || "");
+      if (!publishedAt || Number.isNaN(Date.parse(publishedAt))) {
+        canonicalWriteErrors.push({ title: String(item.title || "").slice(0, 120), error: "published_at_invalid" });
+        continue;
+      }
+      if (!item.url || !item.source) {
+        canonicalWriteErrors.push({ title: String(item.title || "").slice(0, 120), error: "source_contract_invalid" });
+        continue;
+      }
+      canonicalRecords.push({
+        provider: String(item.provider || "unknown").toLowerCase(),
+        external_id: String(item.externalId || item.url),
+        title: item.title,
+        summary: item.summary || null,
+        source_name: item.source,
+        source_url: item.url,
+        published_at: publishedAt,
+        event_type: item.category || "market",
+        symbols: item.relatedTwSymbols || [],
+        sectors: item.relatedSectors || [],
+        freshness_status: resolveNewsFreshness(publishedAt, now),
+        surprise_score: null,
+        taiwan_relevance_score: item.taiwanRelevanceScore,
+        fingerprint: await sha256Hex(`${item.normalizedTitle}|${item.url}`),
+        raw_payload: {
+          provider: item.provider || "unknown",
+          source_name: item.source,
+          category: item.category || "market",
+          relevance_score: item.relevanceScore,
+          impact_score: item.impactScore,
+          final_score: item.finalScore,
+          is_selected: item.isSelected,
+          related_tw_names: item.relatedTwNames || [],
+          related_markets: detectRelatedMarkets(item.title, item.summary || ""),
+          request_id: requestId,
+        },
+      });
+    }
+
     // Batch upsert - V8.2.1: remove ignoreDuplicates to update existing scores
     const BATCH_SIZE = 50;
     let totalUpserted = 0;
-    let upsertErrors = [];
+    const upsertErrors: string[] = [];
 
     for (let i = 0; i < upsertRecords.length; i += BATCH_SIZE) {
       const batch = upsertRecords.slice(i, i + BATCH_SIZE);
@@ -985,26 +1127,48 @@ Deno.serve(async (req) => {
       }
     }
 
+    let canonicalUpsertedCount = 0;
+    if (canonicalRecords.length > 0) {
+      const { error: canonicalError } = await supabase
+        .from("news_events")
+        .upsert(canonicalRecords, { onConflict: "fingerprint" });
+      if (canonicalError) {
+        canonicalWriteErrors.push({ error: canonicalError.message });
+        logs.push(`[CANONICAL UPSERT ERROR] ${canonicalError.message}`);
+      } else {
+        canonicalUpsertedCount = canonicalRecords.length;
+        logs.push(`Canonical news_events upserted: ${canonicalUpsertedCount} items`);
+      }
+    }
+    const canonicalComplete = canonicalUpsertedCount === canonicalCandidates.length && canonicalWriteErrors.length === 0;
+    const classifiedProviderFailures = classifyProviderFailures(providerFailureDetails);
+
     const highImpactCount = toUpsert.filter((item) => item.impactScore >= 70).length;
 
-    logs.push(`Summary: raw=${rawItems.length}, deduped=${deduped.length}, blacklisted=${blacklistedCount}, upserted=${totalUpserted}, selected=${selectedCount}, high_impact=${highImpactCount}`);
+    logs.push(`Summary: raw=${rawItems.length}, deduped=${deduped.length}, blacklisted=${blacklistedCount}, upserted=${totalUpserted}, canonical=${canonicalUpsertedCount}/${canonicalCandidates.length}, selected=${selectedCount}, high_impact=${highImpactCount}`);
 
     console.log(`[NEWS:${requestId}] done - ${totalUpserted} upserted, ${selectedCount} selected, ${blacklistedCount} blacklisted`);
 
     return new Response(
       JSON.stringify({
-        success: upsertErrors.length === 0,
-        version: "V8.2.1",
+        success: upsertErrors.length === 0 && canonicalComplete,
+        version: "V8.3_CANONICAL_NEWS_EVENTS",
         request_id: requestId,
         fetched_at: now,
         total_raw: rawItems.length,
         after_dedup: deduped.length,
+        invalid_published_at_count: invalidPublishedAtCount,
         blacklisted: blacklistedCount,
         to_upsert: toUpsert.length,
         total_upserted: totalUpserted,
+        canonical_requested_count: canonicalCandidates.length,
+        canonical_upserted_count: canonicalUpsertedCount,
+        canonical_complete: canonicalComplete,
+        canonical_write_errors: canonicalWriteErrors.length > 0 ? canonicalWriteErrors : undefined,
         selected_count: selectedCount,
         high_impact_count: highImpactCount,
         upsert_errors: upsertErrors.length > 0 ? upsertErrors : undefined,
+        provider_failures: classifiedProviderFailures,
         filter_stats: {
           relevance_ge70: toUpsert.filter((i) => i.relevanceScore >= 70).length,
           taiwan_relevance_ge50: toUpsert.filter((i) => i.taiwanRelevanceScore >= 50).length,
@@ -1037,7 +1201,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
     );
   } catch (fatalErr) {
-    const msg = fatalErr instanceof Error ? fatalErr.message : String(fatalErr);
+    const msg = sanitizeProviderError(fatalErr instanceof Error ? fatalErr.message : String(fatalErr));
     console.error(`[NEWS:${requestId}] FATAL: ${msg}`);
 
     return new Response(

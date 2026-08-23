@@ -36,6 +36,7 @@ const premiumGate = read('supabase/functions/_shared/premium-content-gate.ts');
 const contentIntelligence = read('supabase/functions/_shared/content-intelligence.ts');
 const lineDailyPush = read('supabase/functions/line-daily-push/index.ts');
 const dailyDeliveryOrchestrator = read('supabase/functions/daily-delivery-orchestrator/index.ts');
+const globalMarketNews = read('supabase/functions/fetch-global-market-news/index.ts');
 const closingVerification = read('supabase/functions/closing-verification-engine/index.ts');
 const opsHealthCheck = read('supabase/functions/ma-ops-health-check/index.ts');
 const contentIntelligenceMigration = read('supabase/migrations/20260820131721_content_intelligence_v2_foundation.sql');
@@ -217,6 +218,30 @@ test('premarket workflow delegates to the durable recovery state machine', () =>
   assert.ok(newsAction < reportAction, 'evidence refresh must precede report regeneration');
   assert.ok(reportAction < lineAction, 'report regeneration must precede premium delivery');
   assert.match(dailyDeliveryOrchestrator, /clock\.minutes >= 7 \* 60 \+ 30/);
+  assert.match(dailyDeliveryOrchestrator, /payload\.success !== false/);
+  assert.match(dailyDeliveryOrchestrator, /invokeFunctionWithRetry/);
+  assert.match(dailyDeliveryOrchestrator, /actionFailures\.length === 0/);
+  assert.match(dailyDeliveryOrchestrator, /success: completed/);
+  assert.match(dailyDeliveryOrchestrator, /EVIDENCE_REFRESH_DEPENDENCY_FAILED/);
+  assert.match(dailyDeliveryOrchestrator, /deliveryBlockedByEvidenceFailure/);
+  const premarketJob = runtimeCheckpointWorkflow.slice(
+    runtimeCheckpointWorkflow.indexOf('  premarket:'),
+    runtimeCheckpointWorkflow.indexOf('  intraday:'),
+  );
+  assert.match(premarketJob, /\.status == "SUCCEEDED" or \(\.status == "SKIPPED" and \.reason == "MARKET_STATUS_NOT_OPEN"\)/);
+  assert.doesNotMatch(premarketJob, /\.status == "DEGRADED"/);
+  assert.match(premarketJob, /action_failures/);
+  assert.match(dailyDeliveryOrchestrator, /PIPELINE_SLOT_ALREADY_CLAIMED/);
+  assert.match(dailyDeliveryOrchestrator, /existingStatus/);
+  assert.match(globalMarketNews, /from\("news_events"\)/);
+  assert.match(globalMarketNews, /canonical_complete: canonicalComplete/);
+  assert.match(globalMarketNews, /classifyProviderFailures/);
+  assert.match(globalMarketNews, /incomingCronSecret !== envCronSecret/);
+  assert.doesNotMatch(globalMarketNews, /authorization\.includes\("Bearer"\)/);
+  assert.match(globalMarketNews, /PROVIDER_FETCH_TIMEOUT_MS/);
+  assert.match(globalMarketNews, /Promise\.all\(providerFetches\)/);
+  assert.match(globalMarketNews, /NO_VALID_NEWS_FETCHED/);
+  assert.match(globalMarketNews, /invalid_published_at_count/);
 });
 
 test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
@@ -285,7 +310,7 @@ test('legacy opening radar UI fails closed without real core evidence', () => {
 });
 
 test('runtime deployment and missing checkpoint schedules are reproducible', () => {
-  for (const functionName of ['fetch-market-data-v10', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push', 'daily-delivery-orchestrator', 'get-report-payload']) {
+  for (const functionName of ['fetch-market-data-v10', 'fetch-global-market-news', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push', 'daily-delivery-orchestrator', 'get-report-payload']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
   }
   for (const schedule of ["10 23 * * 0-4", "35 23 * * 0-4", "0 1 * * 1-5", "5 1 * * 1-5", "30 1 * * 1-5", "35 1 * * 1-5", "30 2 * * 1-5", "35 2 * * 1-5", "0 5 * * 1-5", "5 5 * * 1-5", "10 6 * * 1-5", "15 6 * * 1-5", "30 6 * * 1-5", "35 6 * * 1-5"]) {
@@ -293,11 +318,19 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   }
   assert.match(runtimeCheckpointWorkflow, /\{\\"phase\\":\\"intraday\\",\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
   assert.match(runtimeCheckpointWorkflow, /\{\\"phase\\":\\"close\\",\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
+  assert.match(runtimeCheckpointWorkflow, /beneficiary_close_only\\":true/);
+  assert.match(runtimeCheckpointWorkflow, /beneficiary_close_status\.complete == true/);
+  assert.match(runtimeCheckpointWorkflow, /canonical_complete == true/);
+  assert.match(runtimeCheckpointWorkflow, /core_batch_complete == true/);
+  assert.match(runtimeCheckpointWorkflow, /required_core_complete == true/);
+  assert.match(runtimeCheckpointWorkflow, /provider_health_write_errors \| length/);
+  assert.match(runtimeCheckpointWorkflow, /checkpoint_complete == true/);
   assert.match(runtimeCheckpointWorkflow, /daily-delivery-orchestrator/);
   assert.match(runtimeCheckpointWorkflow, /\{\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
   assert.match(runtimeCheckpointWorkflow, /snapshot_upserted_count >= 2/);
   assert.match(runtimeCheckpointWorkflow, /tw_core_symbols_success \| index\("TAIEX"\) != null/);
   assert.match(runtimeCheckpointWorkflow, /tw_core_status\.taiex == "ok"/);
+  assert.match(runtimeCheckpointWorkflow, /tw_core_status\.stock_2330 == "ok"/);
   assert.match(runtimeCheckpointWorkflow, /for attempt in 1 2 3/);
   assert.match(runtimeCheckpointWorkflow, /timeout-minutes: 45/);
   assert.match(runtimeCheckpointWorkflow, /--max-time 180/);
@@ -307,6 +340,7 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeCheckpointWorkflow, /continue-on-error: true/);
   assert.match(runtimeCheckpointWorkflow, /steps\.sector-rotation\.outcome == 'failure'/);
   assert.match(runtimeCheckpointWorkflow, /Missing TAIEX close evidence/);
+  assert.match(runtimeCheckpointWorkflow, /Beneficiary close evidence incomplete/);
   assert.match(runtimeCheckpointWorkflow, /Closing verification incomplete/);
   assert.match(runtimeCheckpointWorkflow, /written_and_synced/);
   assert.match(runtimeCheckpointWorkflow, /closing-verification-engine/);
@@ -368,6 +402,7 @@ test('opening radar preserves the complete War Room decision contract', () => {
 
 test('TXF discovery and quote URLs follow the Fugle futopt contract', () => {
   const source = read('supabase/functions/fetch-market-data-v10/index.ts');
+  assert.match(source, /continuousAlias = "TXF1!"/);
   assert.match(
     source,
     /futopt\/intraday\/tickers\?type=FUTURE&exchange=TAIFEX&session=\$\{session\}&product=TXF/,
@@ -376,6 +411,9 @@ test('TXF discovery and quote URLs follow the Fugle futopt contract', () => {
   assert.match(source, /\{ session: session === "afterhours" \? "AFTERHOURS" : "REGULAR" \}/);
   assert.doesNotMatch(source, /futopt\/intraday\/quote\?session=/);
   assert.doesNotMatch(source, /futopt\/products/);
+  assert.match(source, /`tse_\$\{symbol\}\.tw`/);
+  assert.match(source, /`otc_\$\{symbol\}\.tw`/);
+  assert.match(source, /provider: "twse_mis"/);
 });
 
 test('home public decision copy is user-facing and internally consistent', () => {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildDailyDeliveryRecoveryPlan,
+  hasFailedEvidenceDependency,
   resolveDailyDeliveryPhase,
 } from '../supabase/functions/_shared/daily-delivery-recovery.ts';
 
@@ -83,4 +84,11 @@ test('a missing report triggers complete source recovery without fabricating a f
   });
   assert.deepEqual(plan.actions, ['refresh_news', 'refresh_market', 'regenerate_report']);
   assert.ok(plan.reason_codes.includes('daily_report_not_publishable'));
+});
+
+test('failed evidence dependencies block regeneration and premium delivery', () => {
+  assert.equal(hasFailedEvidenceDependency({ refresh_news: { ok: true }, refresh_market: { ok: true } }), false);
+  assert.equal(hasFailedEvidenceDependency({ refresh_news: { ok: false }, refresh_market: { ok: true } }), true);
+  assert.equal(hasFailedEvidenceDependency({ regenerate_report: { ok: false } }), true);
+  assert.equal(hasFailedEvidenceDependency({ deliver_incident: { ok: false } }), false);
 });

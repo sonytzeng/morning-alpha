@@ -56,6 +56,7 @@ const CONTENT_REASONS = new Set([
   'decision_mode_incomplete',
   'evidence_quality_contract_missing',
 ]);
+const EVIDENCE_DEPENDENCY_ACTIONS = ['refresh_news', 'refresh_market', 'regenerate_report'] as const;
 
 function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
@@ -63,6 +64,15 @@ function unique<T>(values: T[]): T[] {
 
 function includesReason(reasonCodes: string[], expected: Set<string>, prefix = ''): boolean {
   return reasonCodes.some((reason) => expected.has(reason) || (prefix && reason.startsWith(prefix)));
+}
+
+export function hasFailedEvidenceDependency(actionResults: Record<string, unknown>): boolean {
+  return EVIDENCE_DEPENDENCY_ACTIONS.some((action) => {
+    if (!Object.prototype.hasOwnProperty.call(actionResults, action)) return false;
+    const result = actionResults[action];
+    return !result || typeof result !== 'object' || Array.isArray(result) ||
+      (result as Record<string, unknown>).ok !== true;
+  });
 }
 
 export function resolveDailyDeliveryPhase(taipeiMinutes: number): DailyDeliveryPhase {

@@ -178,6 +178,18 @@ test('runtime dual-writes canonical data and emits traceable decisions', () => {
   assert.match(collector, /from\("market_quotes"\)/);
   assert.match(collector, /from\("data_provider_health"\)/);
   assert.match(collector, /correlation_id: correlationId/);
+  assert.match(collector, /canonical_complete: canonicalComplete/);
+  assert.match(collector, /beneficiary_close_status: beneficiaryCloseStatus/);
+  assert.match(collector, /classifyProviderFailures/);
+  assert.match(collector, /from\("decision_snapshots"\)/);
+  assert.match(collector, /\.eq\("session_type", "PREMARKET"\)/);
+  assert.match(collector, /generatedText\.recommendations/);
+  assert.match(collector, /TAIWAN_DECISION_REQUIRED = \["TAIEX", "2330"\]/);
+  assert.match(collector, /prioritizeCoreSymbols/);
+  assert.match(collector, /required_core_complete: requiredCoreComplete/);
+  assert.match(collector, /evaluateCheckpointFreshness/);
+  assert.match(collector, /success: operationSucceeded/);
+  assert.doesNotMatch(collector, /normalizeTimestamp\(data\.t \|\| Date\.now\(\)\)/);
   assert.match(generator, /resolveAbstentionDecision/);
   assert.match(generator, /buildBullBearDebate/);
   assert.match(generator, /check_runtime_cost_budget_v1/);
@@ -198,6 +210,10 @@ test('checkpoint snapshots are immutable across the six Taipei market checkpoint
   for (const checkpoint of ['0900', '0930', '1030', '1300', '1410', '1430']) {
     assert.match(runtimeCheckpointWorkflow, new RegExp(`'${checkpoint}'|"${checkpoint}"`));
   }
+  assert.match(runtimeCheckpointWorkflow, /beneficiary_close_only\\":true/);
+  assert.match(runtimeCheckpointWorkflow, /beneficiary_close_status\.complete == true/);
+  assert.match(runtimeCheckpointWorkflow, /canonical_complete == true/);
+  assert.match(runtimeCheckpointWorkflow, /core_batch_complete == true/);
 });
 
 test('legacy radar writes and trigger-only functions are least privilege', () => {

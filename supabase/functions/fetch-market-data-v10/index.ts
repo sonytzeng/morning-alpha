@@ -5,9 +5,16 @@ import {
   resolveSnapshotCheckpoint,
   stateForSnapshotCheckpoint,
 } from '../_shared/runtime-checkpoint-core.mjs';
+import {
+  buildBeneficiaryBatchContract,
+  buildBeneficiaryCloseStatus,
+  classifyProviderFailures,
+  evaluateCheckpointFreshness,
+  sanitizeProviderError,
+} from '../_shared/market-runtime-stability.mjs';
 
 // ═══════════════════════════════════════════════════════════
-// fetch-market-data-v10 V10.8 — PROVIDER FALLBACK + FRESHNESS METADATA
+// fetch-market-data-v10 V10.10 — RUNTIME STABILITY + CANONICAL CLOSE COVERAGE
 // Uses Finnhub for US equities/ETF proxies, Fugle/TWSE for Taiwan core, best-effort Fugle futopt for TXF.
 // Each symbol: 6s timeout, max 1 retry.
 // Overall: 28s hard cap → always returns within 30s for cron.
@@ -23,7 +30,7 @@ const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
 const OVERALL_TIMEOUT_MS = 28_000;
-const VERSION = "V10.9_CANONICAL_PROVIDER_ADAPTER";
+const VERSION = "V10.10_RUNTIME_STABILITY";
 
 interface FinnhubQuote {
   c: number;
@@ -62,6 +69,20 @@ interface SymbolConfig {
   taiwanImpact: string;
 }
 
+interface BeneficiaryLookupResult {
+  configs: SymbolConfig[];
+  lookupStatus: "not_requested" | "loaded" | "report_not_found" | "query_failed";
+  decisionMode: "recommendations" | "no_trade" | "blocked";
+  contractValid: boolean;
+  sourceField: string;
+  v10Enabled: boolean;
+  sourceRowCount: number;
+  invalidRowCount: number;
+  error: string | null;
+}
+
+type RuntimeSupabaseClient = ReturnType<typeof createClient<any>>;
+
 type MarketDataPhase = "premarket" | "intraday" | "close" | "manual_backfill";
 
 interface RequestBody {
@@ -91,54 +112,98 @@ const CLOSE_CORE_SYMBOLS = new Set(["TAIEX", "2330", "TXF", "SPX", "IXIC", "SOX"
 
 // MVP required symbols for safe bias to work
 const MVP_REQUIRED = ["NVDA", "TSM", "SPX"];
+const TAIWAN_DECISION_REQUIRED = ["TAIEX", "2330"];
+const TAIWAN_FIRST_ORDER = ["TAIEX", "2330", "TXF", "SPX", "IXIC", "SOX", "NVDA", "TSM", "VIX", "DXY", "US10Y"];
+
+function prioritizeCoreSymbols(configs: SymbolConfig[], phase: MarketDataPhase): SymbolConfig[] {
+  if (phase === "premarket" || phase === "manual_backfill") return configs;
+  const priority = new Map(TAIWAN_FIRST_ORDER.map((symbol, index) => [symbol, index]));
+  return [...configs].sort((left, right) =>
+    (priority.get(left.displaySymbol) ?? Number.MAX_SAFE_INTEGER) -
+    (priority.get(right.displaySymbol) ?? Number.MAX_SAFE_INTEGER)
+  );
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
-function readStockSymbol(value: unknown): string {
-  const row = asRecord(value);
-  return String(row.symbol || row.ticker || row.stock_code || row.stock_id || "").trim().toUpperCase();
-}
-
-function readStockName(value: unknown): string {
-  const row = asRecord(value);
-  return String(row.name || row.stock_name || row.company_name || "").trim();
 }
 
 function isTaiwanStockSymbol(symbol: string): boolean {
   return /^\d{4,6}$/.test(symbol);
 }
 
-function buildBeneficiarySymbolConfigs(ai: Record<string, unknown>): SymbolConfig[] {
-  const primary = Array.isArray(ai.today_beneficiary_stocks) ? ai.today_beneficiary_stocks : [];
-  const secondary = Array.isArray(ai.beneficiary_stocks) ? ai.beneficiary_stocks : [];
-  const existing = new Set(SYMBOLS.map((item) => item.displaySymbol.toUpperCase()));
-  const seen = new Set<string>();
-  const configs: SymbolConfig[] = [];
-
-  for (const item of [...primary, ...secondary]) {
-    const symbol = readStockSymbol(item);
-    if (!symbol || !isTaiwanStockSymbol(symbol) || existing.has(symbol) || seen.has(symbol)) continue;
-    seen.add(symbol);
-    configs.push({
-      finnhubSymbol: symbol,
-      displaySymbol: symbol,
-      name: readStockName(item) || symbol,
-      market: "TW",
-      taiwanImpact: "今日受惠股收盤驗證資料",
-    });
-    if (configs.length >= 12) break;
-  }
-
-  return configs;
-}
-
 async function fetchBeneficiarySymbolConfigsForDate(
-  supabase: ReturnType<typeof createClient>,
+  supabase: RuntimeSupabaseClient,
   reportDate: string,
   logPrefix: string,
-): Promise<SymbolConfig[]> {
+): Promise<BeneficiaryLookupResult> {
+  const decisionResult = await supabase
+    .from("decision_snapshots")
+    .select("decision_mode,generated_text")
+    .eq("report_date", reportDate)
+    .eq("session_type", "PREMARKET")
+    .eq("is_current", true)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (decisionResult.error) {
+    console.warn(`[${logPrefix}] beneficiary decision lookup failed: ${decisionResult.error.message}`);
+    return {
+      configs: [],
+      lookupStatus: "query_failed",
+      decisionMode: "blocked",
+      contractValid: false,
+      sourceField: "decision_snapshots",
+      v10Enabled: true,
+      sourceRowCount: 0,
+      invalidRowCount: 0,
+      error: decisionResult.error.message,
+    };
+  }
+
+  if (decisionResult.data) {
+    const decision = asRecord(decisionResult.data);
+    const generatedText = asRecord(decision.generated_text);
+    const recommendations = Array.isArray(generatedText.recommendations) ? generatedText.recommendations : [];
+    const decisionMode = String(decision.decision_mode || "").trim().toLowerCase();
+    if (decisionMode === "no_trade" || decisionMode === "blocked") {
+      const contractValid = recommendations.length === 0;
+      return {
+        configs: [],
+        lookupStatus: "loaded",
+        decisionMode: contractValid ? decisionMode : "blocked",
+        contractValid,
+        sourceField: "decision_snapshots.generated_text.recommendations",
+        v10Enabled: true,
+        sourceRowCount: recommendations.length,
+        invalidRowCount: contractValid ? 0 : recommendations.length,
+        error: contractValid ? null : "non_recommendation_decision_contains_recommendations",
+      };
+    }
+
+    const contract = buildBeneficiaryBatchContract({
+      v10_beneficiary_enabled: true,
+      today_beneficiary_stocks_v10: recommendations,
+    }, {
+      existingSymbols: [],
+      maxSymbols: 12,
+    });
+    const contractValid = decisionMode === "recommendations" && contract.contract_valid === true &&
+      contract.invalid_row_count === 0 && contract.configs.length > 0;
+    return {
+      configs: contractValid ? contract.configs as SymbolConfig[] : [],
+      lookupStatus: "loaded",
+      decisionMode: contractValid ? "recommendations" : "blocked",
+      contractValid,
+      sourceField: "decision_snapshots.generated_text.recommendations",
+      v10Enabled: true,
+      sourceRowCount: contract.source_row_count,
+      invalidRowCount: contract.invalid_row_count,
+      error: contractValid ? null : "invalid_canonical_beneficiary_contract",
+    };
+  }
+
   const { data, error } = await supabase
     .from("reports")
     .select("ai_strategy_json")
@@ -149,11 +214,55 @@ async function fetchBeneficiarySymbolConfigsForDate(
 
   if (error) {
     console.warn(`[${logPrefix}] beneficiary symbol lookup skipped: ${error.message}`);
-    return [];
+    return {
+      configs: [],
+      lookupStatus: "query_failed",
+      decisionMode: "blocked",
+      contractValid: false,
+      sourceField: "unknown",
+      v10Enabled: false,
+      sourceRowCount: 0,
+      invalidRowCount: 0,
+      error: error.message,
+    };
+  }
+
+  if (!data) {
+    console.warn(`[${logPrefix}] beneficiary symbol lookup failed: report_not_found`);
+    return {
+      configs: [],
+      lookupStatus: "report_not_found",
+      decisionMode: "blocked",
+      contractValid: false,
+      sourceField: "unknown",
+      v10Enabled: false,
+      sourceRowCount: 0,
+      invalidRowCount: 0,
+      error: "report_not_found",
+    };
   }
 
   const ai = asRecord((data as Record<string, unknown> | null)?.ai_strategy_json);
-  return buildBeneficiarySymbolConfigs(ai);
+  const contract = buildBeneficiaryBatchContract(ai, {
+    existingSymbols: [],
+    maxSymbols: 12,
+  });
+  const decisionMode: BeneficiaryLookupResult["decisionMode"] =
+    contract.decision_mode === "recommendations" || contract.decision_mode === "no_trade"
+      ? contract.decision_mode
+      : "blocked";
+  const contractValid = contract.contract_valid === true && contract.invalid_row_count === 0;
+  return {
+    configs: contractValid ? contract.configs as SymbolConfig[] : [],
+    lookupStatus: "loaded",
+    decisionMode: contractValid ? decisionMode : "blocked",
+    contractValid,
+    sourceField: contract.source_field,
+    v10Enabled: contract.v10_enabled,
+    sourceRowCount: contract.source_row_count,
+    invalidRowCount: contract.invalid_row_count,
+    error: contractValid ? null : "invalid_report_beneficiary_contract",
+  };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -223,10 +332,14 @@ async function fetchFinnhubQuote(
       clearTimeout(timeoutId);
 
       if (response.status === 429) {
-        const waitMs = 10000 * (attempt + 1);
-        console.log(`[${logPrefix}] 429 rate-limited, waiting ${waitMs / 1000}s before retry ${attempt + 1}/${MAX_RETRIES}`);
-        await sleep(waitMs);
-        continue;
+        if (attempt < MAX_RETRIES) {
+          const waitMs = 10000 * (attempt + 1);
+          console.log(`[${logPrefix}] 429 rate-limited, waiting ${waitMs / 1000}s before retry ${attempt + 1}/${MAX_RETRIES}`);
+          await sleep(waitMs);
+          continue;
+        }
+        failureDetails?.push({ provider: "finnhub", symbol: finnhubSymbol, endpoint: "quote", status: response.status });
+        return null;
       }
 
       if (response.status === 503) {
@@ -235,11 +348,13 @@ async function fetchFinnhubQuote(
           await sleep(3000);
           continue;
         }
+        failureDetails?.push({ provider: "finnhub", symbol: finnhubSymbol, endpoint: "quote", status: response.status });
         return null;
       }
 
       if (!response.ok) {
         console.error(`[${logPrefix}] HTTP ${response.status}, aborting`);
+        failureDetails?.push({ provider: "finnhub", symbol: finnhubSymbol, endpoint: "quote", status: response.status });
         return null;
       }
 
@@ -248,6 +363,7 @@ async function fetchFinnhubQuote(
       // Finnhub returns all zeros for invalid/missing symbols
       if (data.c === 0 && data.h === 0 && data.l === 0 && data.o === 0 && data.pc === 0) {
         console.error(`[${logPrefix}] Finnhub returned all-zero quote — symbol may be invalid or unsupported`);
+        failureDetails?.push({ provider: "finnhub", symbol: finnhubSymbol, endpoint: "quote", error: "all_zero_quote" });
         return null;
       }
 
@@ -255,7 +371,7 @@ async function fetchFinnhubQuote(
         value: data.c,
         change: data.d,
         changePercent: data.dp,
-        capturedAt: normalizeTimestamp(data.t || Date.now()),
+        capturedAt: normalizeTimestamp(data.t),
         provider: "finnhub",
         sourceSymbol: finnhubSymbol,
         raw: {
@@ -270,22 +386,29 @@ async function fetchFinnhubQuote(
             open: data.o,
             previous_close: data.pc,
             timestamp: data.t,
-            captured_at: normalizeTimestamp(data.t || Date.now()),
+            captured_at: normalizeTimestamp(data.t),
           },
         },
       };
     } catch (err) {
       clearTimeout(timeoutId);
       const isTimeout = err instanceof DOMException && err.name === "AbortError";
+      const message = sanitizeProviderError(err instanceof Error ? err.message : String(err));
       if (isTimeout) {
         console.error(`[${logPrefix}] TIMEOUT after ${FETCH_TIMEOUT_MS / 1000}s (attempt ${attempt + 1}/${MAX_RETRIES + 1})`);
       } else {
-        console.error(`[${logPrefix}] Fetch error: ${err instanceof Error ? err.message : String(err)}`);
+        console.error(`[${logPrefix}] Fetch error: ${message}`);
       }
       if (attempt < MAX_RETRIES) {
         await sleep(3000);
         continue;
       }
+      failureDetails?.push({
+        provider: "finnhub",
+        symbol: finnhubSymbol,
+        endpoint: "quote",
+        error: isTimeout ? "timeout" : message,
+      });
       return null;
     }
   }
@@ -318,7 +441,7 @@ function taipeiDateTimeToIso(dateValue: unknown, timeValue: unknown): string {
     const parsed = new Date(`${yyyy}-${mm}-${dd}T${normalizedTime}+08:00`);
     if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
   }
-  return new Date().toISOString();
+  return "";
 }
 
 function normalizeTimestamp(value: unknown): string {
@@ -352,7 +475,7 @@ function normalizeTimestamp(value: unknown): string {
     }
   }
 
-  return new Date().toISOString();
+  return "";
 }
 
 function normalizeFugleQuote(data: Record<string, unknown>, sourceSymbol: string): MarketQuote | null {
@@ -403,7 +526,10 @@ async function fetchFugleQuoteFromPath(
   failureDetails?: ProviderFailureDetail[],
   query?: Record<string, string>,
 ): Promise<MarketQuote | null> {
-  if (!apiKey) return null;
+  if (!apiKey) {
+    failureDetails?.push({ provider: providerLabel, symbol, endpoint: path, error: "missing_api_key" });
+    return null;
+  }
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 4_000);
   try {
@@ -417,8 +543,10 @@ async function fetchFugleQuoteFromPath(
     });
     clearTimeout(timeoutId);
     if (!response.ok) {
-      console.warn(`[${logPrefix}] Fugle ${providerLabel} ${symbol} HTTP ${response.status}`);
-      failureDetails?.push({ provider: providerLabel, symbol, endpoint: path, status: response.status });
+      let errorBody = "";
+      try { errorBody = sanitizeProviderError((await response.text()).slice(0, 240)); } catch { errorBody = ""; }
+      console.warn(`[${logPrefix}] Fugle ${providerLabel} ${symbol} HTTP ${response.status}${errorBody ? ` ${errorBody}` : ""}`);
+      failureDetails?.push({ provider: providerLabel, symbol, endpoint: path, status: response.status, error: errorBody || undefined });
       return null;
     }
     const data = await response.json();
@@ -426,7 +554,7 @@ async function fetchFugleQuoteFromPath(
     return quote ? { ...quote, provider: providerLabel, raw: { ...quote.raw, provider: providerLabel } } : null;
   } catch (err) {
     clearTimeout(timeoutId);
-    const message = err instanceof Error ? err.message : String(err);
+    const message = sanitizeProviderError(err instanceof Error ? err.message : String(err));
     console.warn(`[${logPrefix}] Fugle ${providerLabel} ${symbol} failed: ${message}`);
     failureDetails?.push({ provider: providerLabel, symbol, endpoint: path, error: message });
     return null;
@@ -443,7 +571,10 @@ async function fetchFugleJson(
   logPrefix: string,
   failureDetails?: ProviderFailureDetail[],
 ): Promise<unknown | null> {
-  if (!apiKey) return null;
+  if (!apiKey) {
+    failureDetails?.push({ provider: "fugle_futopt", symbol: "TXF", endpoint: pathWithQuery, error: "missing_api_key" });
+    return null;
+  }
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 4_000);
   try {
@@ -454,7 +585,7 @@ async function fetchFugleJson(
     clearTimeout(timeoutId);
     if (!response.ok) {
       let body = "";
-      try { body = (await response.text()).slice(0, 240); } catch { body = ""; }
+      try { body = sanitizeProviderError((await response.text()).slice(0, 240)); } catch { body = ""; }
       console.warn(`[${logPrefix}] Fugle futopt discovery ${pathWithQuery} HTTP ${response.status} ${body}`);
       failureDetails?.push({ provider: "fugle_futopt", symbol: "TXF", endpoint: pathWithQuery, status: response.status, error: body || undefined });
       return null;
@@ -462,7 +593,7 @@ async function fetchFugleJson(
     return await response.json();
   } catch (err) {
     clearTimeout(timeoutId);
-    const message = err instanceof Error ? err.message : String(err);
+    const message = sanitizeProviderError(err instanceof Error ? err.message : String(err));
     console.warn(`[${logPrefix}] Fugle futopt discovery ${pathWithQuery} failed: ${message}`);
     failureDetails?.push({ provider: "fugle_futopt", symbol: "TXF", endpoint: pathWithQuery, error: message });
     return null;
@@ -618,6 +749,7 @@ async function fetchTwseQuote(
   exCh: string,
   sourceSymbol: string,
   logPrefix: string,
+  failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 4_000);
@@ -633,13 +765,16 @@ async function fetchTwseQuote(
     clearTimeout(timeoutId);
     if (!response.ok) {
       console.warn(`[${logPrefix}] TWSE ${sourceSymbol} HTTP ${response.status}`);
+      failureDetails?.push({ provider: "twse_mis", symbol: sourceSymbol, endpoint: exCh, status: response.status });
       return null;
     }
     const data = await response.json();
     return normalizeTwseQuote(data && typeof data === "object" && !Array.isArray(data) ? data as Record<string, unknown> : {}, sourceSymbol);
   } catch (err) {
     clearTimeout(timeoutId);
-    console.warn(`[${logPrefix}] TWSE ${sourceSymbol} failed: ${err instanceof Error ? err.message : String(err)}`);
+    const message = sanitizeProviderError(err instanceof Error ? err.message : String(err));
+    console.warn(`[${logPrefix}] TWSE ${sourceSymbol} failed: ${message}`);
+    failureDetails?.push({ provider: "twse_mis", symbol: sourceSymbol, endpoint: exCh, error: message });
     return null;
   }
 }
@@ -653,7 +788,7 @@ async function fetchTaiwanCoreQuote(
 ): Promise<MarketQuote | null> {
   if (config.displaySymbol === "2330") {
     return await fetchFugleStockQuote("2330", fugleApiKey, logPrefix, failureDetails) ??
-      await fetchTwseQuote("tse_2330.tw", "2330", logPrefix) ??
+      await fetchTwseQuote("tse_2330.tw", "2330", logPrefix, failureDetails) ??
       null;
   }
 
@@ -663,11 +798,30 @@ async function fetchTaiwanCoreQuote(
       const quote = await fetchFugleStockQuote(candidate, fugleApiKey, logPrefix, failureDetails);
       if (quote) return { ...quote, sourceSymbol: candidate };
     }
-    return await fetchTwseQuote("tse_t00.tw", "TAIEX", logPrefix);
+    return await fetchTwseQuote("tse_t00.tw", "TAIEX", logPrefix, failureDetails);
   }
 
   if (config.displaySymbol === "TXF") {
     const preferredSession: "regular" | "afterhours" = phase === "premarket" || phase === "manual_backfill" ? "afterhours" : "regular";
+    const fallbackSession: "regular" | "afterhours" = preferredSession === "afterhours" ? "regular" : "afterhours";
+    const aliasFailureStart = failureDetails?.length || 0;
+    const continuousAlias = "TXF1!";
+    const aliasQuote = await fetchFugleFutOptQuote(continuousAlias, fugleApiKey, logPrefix, preferredSession, failureDetails);
+    if (aliasQuote) {
+      return { ...aliasQuote, sourceSymbol: continuousAlias, raw: { ...aliasQuote.raw, contract_resolution: "continuous_alias", fallback_used: false } };
+    }
+    const aliasAccessBlocked = (failureDetails || []).slice(aliasFailureStart)
+      .some((detail) => [401, 402, 403].includes(Number(detail.status)));
+    if (aliasAccessBlocked) return null;
+
+    const aliasFallbackQuote = await fetchFugleFutOptQuote(continuousAlias, fugleApiKey, logPrefix, fallbackSession, failureDetails);
+    if (aliasFallbackQuote) {
+      return {
+        ...aliasFallbackQuote,
+        sourceSymbol: continuousAlias,
+        raw: { ...aliasFallbackQuote.raw, contract_resolution: "continuous_alias", fallback_used: true, fallback_from_session: preferredSession },
+      };
+    }
     const contractSymbol = await getActiveTxfContractSymbol(
       fugleApiKey,
       logPrefix,
@@ -678,17 +832,17 @@ async function fetchTaiwanCoreQuote(
       failureDetails?.push({ provider: "fugle_futopt", symbol: "TXF", endpoint: "contract_resolution", error: "cannot_resolve_active_txf_contract" });
       return null;
     }
-    const fallbackSession: "regular" | "afterhours" = preferredSession === "afterhours" ? "regular" : "afterhours";
     const quote = await fetchFugleFutOptQuote(contractSymbol, fugleApiKey, logPrefix, preferredSession, failureDetails);
-    if (quote) return { ...quote, sourceSymbol: contractSymbol, raw: { ...quote.raw, fallback_used: false } };
+    if (quote) return { ...quote, sourceSymbol: contractSymbol, raw: { ...quote.raw, contract_resolution: "ticker_discovery", fallback_used: false } };
     const fallbackQuote = await fetchFugleFutOptQuote(contractSymbol, fugleApiKey, logPrefix, fallbackSession, failureDetails);
-    if (fallbackQuote) return { ...fallbackQuote, sourceSymbol: contractSymbol, raw: { ...fallbackQuote.raw, fallback_used: true, fallback_from_session: preferredSession } };
+    if (fallbackQuote) return { ...fallbackQuote, sourceSymbol: contractSymbol, raw: { ...fallbackQuote.raw, contract_resolution: "ticker_discovery", fallback_used: true, fallback_from_session: preferredSession } };
   }
 
   if (isTaiwanStockSymbol(config.displaySymbol)) {
     const symbol = config.displaySymbol;
     return await fetchFugleStockQuote(symbol, fugleApiKey, logPrefix, failureDetails) ??
-      await fetchTwseQuote(`tse_${symbol}.tw`, symbol, logPrefix) ??
+      await fetchTwseQuote(`tse_${symbol}.tw`, symbol, logPrefix, failureDetails) ??
+      await fetchTwseQuote(`otc_${symbol}.tw`, symbol, logPrefix, failureDetails) ??
       null;
   }
 
@@ -705,7 +859,7 @@ Deno.serve(async (req) => {
     : crypto.randomUUID();
   const requestId = correlationId.slice(0, 8);
   const startedAt = new Date().toISOString();
-  const batchTag = `V10.7:${requestId}`;
+  const batchTag = `V10.10:${requestId}`;
   const startedMs = Date.now();
 
   console.log(`[${batchTag}] ======== START ${startedAt} ========`);
@@ -796,14 +950,26 @@ Deno.serve(async (req) => {
     const beneficiaryCloseOnly = phase === "close" && requestBody.beneficiary_close_only === true;
     const includeBeneficiaryClose = phase === "close" && (beneficiaryCloseOnly || requestBody.include_beneficiary_close === true || requestBody.beneficiary_close === true);
 
-    const beneficiarySymbolConfigs = includeBeneficiaryClose
+    const beneficiaryLookup: BeneficiaryLookupResult = includeBeneficiaryClose
       ? await fetchBeneficiarySymbolConfigsForDate(supabase, tradingDate, batchTag)
-      : [];
-    const coreSymbolConfigs = beneficiaryCloseOnly
+      : {
+        configs: [],
+        lookupStatus: "not_requested",
+        decisionMode: "blocked",
+        contractValid: false,
+        sourceField: "not_requested",
+        v10Enabled: false,
+        sourceRowCount: 0,
+        invalidRowCount: 0,
+        error: null,
+      };
+    const beneficiarySymbolConfigs = beneficiaryLookup.configs;
+    const baseCoreSymbolConfigs = beneficiaryCloseOnly
       ? []
       : phase === "close"
       ? SYMBOLS.filter((item) => CLOSE_CORE_SYMBOLS.has(item.displaySymbol))
       : SYMBOLS;
+    const coreSymbolConfigs = prioritizeCoreSymbols(baseCoreSymbolConfigs, phase);
     const symbolConfigs = [...coreSymbolConfigs, ...beneficiarySymbolConfigs];
 
     const inserted: Array<{ symbol: string; name: string; value: number; change_percent: number }> = [];
@@ -816,6 +982,8 @@ Deno.serve(async (req) => {
     const providerFailureDetails: ProviderFailureDetail[] = [];
     const twCoreSymbolsSuccess: string[] = [];
     const twCoreSymbolsFailed: Array<{ symbol: string; reason: string }> = [];
+    const snapshotSymbolsSuccess: string[] = [];
+    const canonicalSymbolsSuccess: string[] = [];
     let snapshotUpsertedCount = 0;
     let canonicalUpsertedCount = 0;
     const allSymbols = symbolConfigs.map((s) => s.displaySymbol);
@@ -851,7 +1019,7 @@ Deno.serve(async (req) => {
       try {
         const quote = config.market === "TW"
           ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, providerFailureDetails)
-          : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`);
+          : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`, providerFailureDetails);
 
         if (!quote) {
           console.error(`[${batchTag}] [${i + 1}/${symbolConfigs.length}] ${config.displaySymbol} fetch returned null`);
@@ -863,8 +1031,34 @@ Deno.serve(async (req) => {
                 ? "FUGLE_STOCK_AND_TWSE_FALLBACK_FAILED"
                 : config.displaySymbol === "TXF"
                   ? "FUGLE_FUTOPT_FALLBACK_FAILED"
-                  : "FUGLE_INDEX_AND_TWSE_FALLBACK_FAILED",
+                  : config.displaySymbol === "TAIEX"
+                    ? "FUGLE_INDEX_AND_TWSE_FALLBACK_FAILED"
+                    : "FUGLE_STOCK_AND_TWSE_FALLBACK_FAILED",
             });
+          }
+          continue;
+        }
+
+        const freshness = evaluateCheckpointFreshness({
+          captured_at: quote.capturedAt,
+          evaluated_at: new Date().toISOString(),
+          trading_date: tradingDate,
+          market: config.market,
+          phase,
+          symbol: config.displaySymbol,
+        });
+        if (freshness.valid !== true) {
+          const freshnessError = `provider_timestamp:${String(freshness.status || "invalid")}`;
+          console.error(`[${batchTag}] ${config.displaySymbol} rejected: ${freshnessError}`);
+          failed.push(config.displaySymbol);
+          providerFailureDetails.push({
+            provider: quote.provider,
+            symbol: config.displaySymbol,
+            endpoint: "normalized_quote",
+            error: freshnessError,
+          });
+          if (config.market === "TW") {
+            twCoreSymbolsFailed.push({ symbol: config.displaySymbol, reason: "STALE_OR_INVALID_PROVIDER_TIMESTAMP" });
           }
           continue;
         }
@@ -872,7 +1066,7 @@ Deno.serve(async (req) => {
         const value = quote.value;
         const change = quote.change;
         const changePercent = quote.changePercent;
-        const capturedAt = quote.capturedAt || new Date().toISOString();
+        const capturedAt = quote.capturedAt;
         providerUsedBySymbol[config.displaySymbol] = quote.provider;
         if (config.market === "TW") twCoreSymbolsSuccess.push(config.displaySymbol);
 
@@ -915,7 +1109,9 @@ Deno.serve(async (req) => {
             display_symbol: config.displaySymbol,
             requested_at: startedAt,
             returned_date: quote.capturedAt,
-            freshness_status: "provider_returned",
+            freshness_status: freshness.status,
+            freshness_age_minutes: freshness.age_minutes,
+            captured_session_date: freshness.captured_session_date,
             fallback_used: quote.sourceSymbol !== config.finnhubSymbol,
             source_raw: quote.raw,
             quote: {
@@ -937,6 +1133,7 @@ Deno.serve(async (req) => {
           snapshotErrors.push({ symbol: config.displaySymbol, error: snapshotErr.message });
         } else {
           snapshotUpsertedCount++;
+          snapshotSymbolsSuccess.push(config.displaySymbol);
         }
 
         const canonicalQuote = normalizeProviderQuote({
@@ -951,7 +1148,7 @@ Deno.serve(async (req) => {
           change,
           change_percent: changePercent,
           captured_at: capturedAt,
-          freshness_status: "provider_returned",
+          freshness_status: freshness.status,
           correlation_id: correlationId,
           raw_payload: snapshotPayload.raw,
         });
@@ -974,6 +1171,7 @@ Deno.serve(async (req) => {
             canonicalWriteErrors.push({ symbol: config.displaySymbol, error: canonicalErr.message });
           } else {
             canonicalUpsertedCount++;
+            let specializedWriteSucceeded = true;
             const specializedPayload = {
               market_quote_id: canonicalRow?.id || null,
               provider: quote.provider,
@@ -996,9 +1194,11 @@ Deno.serve(async (req) => {
                 .from(specializedTable)
                 .upsert(specializedPayload, { onConflict: "provider,symbol,captured_at,phase" });
               if (specializedErr) {
+                specializedWriteSucceeded = false;
                 canonicalWriteErrors.push({ symbol: config.displaySymbol, error: `${specializedTable}:${specializedErr.message}` });
               }
             }
+            if (specializedWriteSucceeded) canonicalSymbolsSuccess.push(config.displaySymbol);
           }
         }
 
@@ -1011,7 +1211,7 @@ Deno.serve(async (req) => {
 
         console.log(`[${batchTag}] ${config.displaySymbol} saved to market_data`);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = sanitizeProviderError(err instanceof Error ? err.message : String(err));
         console.error(`[${batchTag}] ${config.displaySymbol} exception: ${msg}`);
         failed.push(config.displaySymbol);
       }
@@ -1028,25 +1228,87 @@ Deno.serve(async (req) => {
 
     const elapsed = ((Date.now() - startedMs) / 1000).toFixed(1);
 
-    const overallHealth = summarizeProviderHealth({
+    const summarizedProviderHealth = summarizeProviderHealth({
       requested_count: symbolConfigs.length,
       succeeded_count: inserted.length,
       failed_count: failed.length,
       timed_out: timedOut,
     });
+    const overallHealth = beneficiaryCloseOnly && beneficiaryLookup.lookupStatus === "loaded" && beneficiaryLookup.contractValid &&
+        (beneficiaryLookup.decisionMode === "no_trade" || beneficiaryLookup.decisionMode === "blocked")
+      ? {
+        status: "healthy",
+        success_rate: 100,
+        requested_count: 0,
+        succeeded_count: 0,
+        failed_count: 0,
+        timed_out: false,
+      }
+      : summarizedProviderHealth;
+    const classifiedProviderFailures = classifyProviderFailures(providerFailureDetails);
+    const canonicalComplete = canonicalUpsertedCount === inserted.length && canonicalWriteErrors.length === 0;
+    const snapshotComplete = snapshotUpsertedCount === inserted.length && snapshotErrors.length === 0;
+    const requiredCoreSymbols = phase === "premarket" || phase === "manual_backfill"
+      ? MVP_REQUIRED
+      : TAIWAN_DECISION_REQUIRED;
+    const requiredCoreComplete = requiredCoreSymbols.every((symbol) =>
+      inserted.some((item) => item.symbol === symbol) &&
+      snapshotSymbolsSuccess.includes(symbol) &&
+      canonicalSymbolsSuccess.includes(symbol)
+    );
+    const coreBatchComplete = !beneficiaryCloseOnly && requiredCoreComplete &&
+      snapshotErrors.length === 0 && canonicalComplete;
+    const beneficiaryCloseStatus = buildBeneficiaryCloseStatus({
+      lookup_status: beneficiaryLookup.lookupStatus,
+      decision_mode: beneficiaryLookup.decisionMode,
+      contract_valid: beneficiaryLookup.contractValid,
+      requested_symbols: beneficiarySymbolConfigs.map((item) => item.displaySymbol),
+      inserted_symbols: inserted.map((item) => item.symbol),
+      snapshot_symbols: snapshotSymbolsSuccess,
+      canonical_symbols: canonicalSymbolsSuccess,
+    });
+    const providerDegradationCodes = new Set([
+      "AUTHENTICATION_FAILED",
+      "BLOCKED_BY_SUBSCRIPTION",
+      "CONFIGURATION_MISSING",
+      "RATE_LIMITED",
+      "PROVIDER_UNAVAILABLE",
+      "TIMEOUT",
+      "STALE_PROVIDER_DATA",
+    ]);
+    const hasProviderDegradation = classifiedProviderFailures.some((failure: Record<string, unknown>) =>
+      providerDegradationCodes.has(String(failure.failure_code || ""))
+    );
+    const healthProvider = beneficiaryCloseOnly
+      ? "market_fetch_v10_beneficiary_close"
+      : "market_fetch_v10";
     const providerHealthPayloads = [{
-      provider: "market_fetch_v10",
+      provider: healthProvider,
       service_date: tradingDate,
       phase,
       checkpoint,
       ...overallHealth,
       latency_ms: Date.now() - startedMs,
-      last_error_code: timedOut ? "OVERALL_TIMEOUT" : failed.length > 0 ? "PARTIAL_PROVIDER_FAILURE" : null,
+      last_error_code: timedOut
+        ? "OVERALL_TIMEOUT"
+        : !canonicalComplete
+          ? "CANONICAL_WRITE_FAILED"
+          : beneficiaryCloseOnly && beneficiaryCloseStatus.complete !== true
+            ? String(beneficiaryCloseStatus.status || "BENEFICIARY_CLOSE_INCOMPLETE")
+            : classifiedProviderFailures[0]?.failure_code || (failed.length > 0 ? "PARTIAL_PROVIDER_FAILURE" : null),
       correlation_id: correlationId,
       details: {
         providers_by_symbol: providerUsedBySymbol,
-        provider_failures: providerFailureDetails,
+        provider_failures: classifiedProviderFailures,
         canonical_write_errors: canonicalWriteErrors,
+        beneficiary_lookup: beneficiaryLookup,
+        beneficiary_close_status: beneficiaryCloseStatus,
+        core_batch_complete: coreBatchComplete,
+        required_core_symbols: requiredCoreSymbols,
+        required_core_complete: requiredCoreComplete,
+        canonical_complete: canonicalComplete,
+        snapshot_complete: snapshotComplete,
+        has_provider_degradation: hasProviderDegradation,
       },
       checked_at: new Date().toISOString(),
     }];
@@ -1055,8 +1317,50 @@ Deno.serve(async (req) => {
       .upsert(providerHealthPayloads, { onConflict: "provider,service_date,phase,checkpoint" });
     if (providerHealthError) providerHealthWriteErrors.push(providerHealthError.message);
 
+    let relatedCoreHealth = {
+      status: beneficiaryCloseOnly ? "missing" : String(overallHealth.status || "unknown"),
+      evidence_complete: beneficiaryCloseOnly ? false : coreBatchComplete,
+      healthy: beneficiaryCloseOnly
+        ? false
+        : overallHealth.status === "healthy" && !hasProviderDegradation && providerHealthWriteErrors.length === 0,
+      error: null as string | null,
+    };
+    if (beneficiaryCloseOnly) {
+      const { data: coreHealthRow, error: coreHealthError } = await supabase
+        .from("data_provider_health")
+        .select("status,details")
+        .eq("provider", "market_fetch_v10")
+        .eq("service_date", tradingDate)
+        .eq("phase", phase)
+        .eq("checkpoint", checkpoint)
+        .maybeSingle();
+      if (coreHealthError) {
+        relatedCoreHealth = {
+          status: "lookup_failed",
+          evidence_complete: false,
+          healthy: false,
+          error: coreHealthError.message,
+        };
+      } else {
+        const coreDetails = asRecord((coreHealthRow as Record<string, unknown> | null)?.details);
+        const coreStatus = String((coreHealthRow as Record<string, unknown> | null)?.status || "missing");
+        relatedCoreHealth = {
+          status: coreStatus,
+          evidence_complete: coreDetails.core_batch_complete === true,
+          healthy: coreStatus === "healthy" && coreDetails.has_provider_degradation !== true,
+          error: coreHealthRow ? null : "core_health_missing",
+        };
+      }
+    }
+
     const state = stateForSnapshotCheckpoint(checkpoint);
-    const checkpointStatus = snapshotUpsertedCount >= 2 && snapshotErrors.length === 0
+    const closeBeneficiaryCoverageComplete = phase !== "close" ||
+      (includeBeneficiaryClose && beneficiaryCloseStatus.complete === true);
+    const checkpointEvidenceComplete = beneficiaryCloseOnly
+      ? beneficiaryCloseStatus.complete === true && canonicalComplete && snapshotComplete && relatedCoreHealth.evidence_complete
+      : coreBatchComplete && closeBeneficiaryCoverageComplete;
+    const checkpointStatus = checkpointEvidenceComplete && failed.length === 0 && !timedOut && !hasProviderDegradation &&
+        providerHealthWriteErrors.length === 0 && relatedCoreHealth.healthy
       ? "SUCCEEDED"
       : "DEGRADED";
     const { error: tradingDayStateError } = state
@@ -1070,16 +1374,26 @@ Deno.serve(async (req) => {
           phase,
           requested_count: symbolConfigs.length,
           snapshot_upserted_count: snapshotUpsertedCount,
+          canonical_upserted_count: canonicalUpsertedCount,
+          canonical_complete: canonicalComplete,
           failed_symbols: failed,
+          beneficiary_close_status: beneficiaryCloseStatus,
+          core_batch_complete: coreBatchComplete,
+          required_core_symbols: requiredCoreSymbols,
+          required_core_complete: requiredCoreComplete,
+          related_core_health: relatedCoreHealth,
+          provider_failure_codes: classifiedProviderFailures.map((failure: Record<string, unknown>) => failure.failure_code),
         },
       })
       : { error: { message: "checkpoint_state_mapping_missing" } };
+    const operationSucceeded = !timedOut && providerHealthWriteErrors.length === 0 && !tradingDayStateError &&
+      (beneficiaryCloseOnly ? checkpointEvidenceComplete : coreBatchComplete);
 
     console.log(`[${batchTag}] DONE in ${elapsed}s | inserted=${inserted.length} failed=${failed.length} healthy=${healthy}${timedOut ? " (timed out)" : ""}`);
 
     return new Response(
       JSON.stringify({
-        success: true,
+        success: operationSucceeded,
         version: VERSION,
         request_id: requestId,
         correlation_id: correlationId,
@@ -1092,6 +1406,17 @@ Deno.serve(async (req) => {
         inserted: inserted,
         failed: failed,
         beneficiary_symbols_requested: beneficiarySymbolConfigs.map((s) => s.displaySymbol),
+        beneficiary_lookup: {
+          status: beneficiaryLookup.lookupStatus,
+          decision_mode: beneficiaryLookup.decisionMode,
+          contract_valid: beneficiaryLookup.contractValid,
+          source_field: beneficiaryLookup.sourceField,
+          v10_enabled: beneficiaryLookup.v10Enabled,
+          source_row_count: beneficiaryLookup.sourceRowCount,
+          invalid_row_count: beneficiaryLookup.invalidRowCount,
+          error: beneficiaryLookup.error,
+        },
+        beneficiary_close_status: beneficiaryCloseStatus,
         close_core_only: phase === "close" && !includeBeneficiaryClose,
         beneficiary_close_only: beneficiaryCloseOnly,
         beneficiary_close_deferred: phase === "close" && !includeBeneficiaryClose,
@@ -1102,13 +1427,21 @@ Deno.serve(async (req) => {
         db_write_errors: dbWriteErrors,
         canonical_upserted_count: canonicalUpsertedCount,
         canonical_write_errors: canonicalWriteErrors,
+        canonical_complete: canonicalComplete,
+        snapshot_complete: snapshotComplete,
+        core_batch_complete: coreBatchComplete,
+        required_core_symbols: requiredCoreSymbols,
+        required_core_complete: requiredCoreComplete,
+        related_core_health: relatedCoreHealth,
         provider_health: overallHealth,
         provider_health_write_errors: providerHealthWriteErrors,
         trading_day_state_status: checkpointStatus,
         trading_day_state_error: tradingDayStateError?.message || null,
+        checkpoint_complete: checkpointEvidenceComplete && !tradingDayStateError,
+        operation_succeeded: operationSucceeded,
         txf_status: twCoreStatus.txf,
-        txf_candidate_errors: providerFailureDetails.filter((f) => f.provider === "fugle_futopt"),
-        provider_failures: providerFailureDetails,
+        txf_candidate_errors: classifiedProviderFailures.filter((f: Record<string, unknown>) => f.provider === "fugle_futopt"),
+        provider_failures: classifiedProviderFailures,
         snapshot_upserted_count: snapshotUpsertedCount,
         snapshot_errors: snapshotErrors,
         symbols: allSymbols,
@@ -1118,7 +1451,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
     );
   } catch (fatalErr) {
-    const msg = fatalErr instanceof Error ? fatalErr.message : String(fatalErr);
+    const msg = sanitizeProviderError(fatalErr instanceof Error ? fatalErr.message : String(fatalErr));
     console.error(`[${batchTag}] FATAL: ${msg}`);
     return new Response(
       JSON.stringify({

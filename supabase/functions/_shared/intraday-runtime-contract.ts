@@ -28,12 +28,12 @@ export const INTRADAY_CHECKPOINTS: Record<
   "0930": {
     targetMinutes: 9 * 60 + 30,
     earliestMinutes: 9 * 60 + 25,
-    latestMinutes: 10 * 60 + 15,
+    latestMinutes: 10 * 60 + 24,
   },
   "1030": {
     targetMinutes: 10 * 60 + 30,
     earliestMinutes: 10 * 60 + 25,
-    latestMinutes: 11 * 60 + 15,
+    latestMinutes: 12 * 60 + 54,
   },
   "1300": {
     targetMinutes: 13 * 60,
@@ -151,6 +151,10 @@ export function isSnapshotInCheckpointWindow(
   if (taipeiDateFromIso(row.captured_at) !== tradingDate) return false;
   const capturedMinutes = taipeiMinutesFromIso(row.captured_at);
   const spec = INTRADAY_CHECKPOINTS[checkpoint];
+  // Scheduled runners can start late. An explicit same-day checkpoint remains
+  // valid until the next checkpoint window begins; captured_at is preserved so
+  // downstream copy can disclose the real observation time without pretending
+  // it was captured at the nominal schedule.
   return capturedMinutes !== null && capturedMinutes >= spec.earliestMinutes &&
     capturedMinutes <= spec.latestMinutes;
 }

@@ -14,6 +14,9 @@ import { applySystemicCatalystFloors } from '../supabase/functions/_shared/news-
 const marketSource = await readFile(new URL('../supabase/functions/fetch-market-data-v10/index.ts', import.meta.url), 'utf8');
 const newsSource = await readFile(new URL('../supabase/functions/fetch-global-market-news/index.ts', import.meta.url), 'utf8');
 const reportSource = await readFile(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
+const deliveryOrchestratorSource = await readFile(new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url), 'utf8');
+const runtimeCronMigration = await readFile(new URL('../supabase/migrations/20260824110000_runtime_checkpoint_cron_backup.sql', import.meta.url), 'utf8');
+const intradayContractSource = await readFile(new URL('../supabase/functions/_shared/intraday-runtime-contract.ts', import.meta.url), 'utf8');
 
 test('decision modes always map to the production decision_snapshots action contract', () => {
   assert.equal(canonicalDecisionAction('recommendations'), 'SELECTIVE');
@@ -37,9 +40,38 @@ test('Fugle epoch timestamps normalize seconds, milliseconds, microseconds, and 
 });
 
 test('Taiwan adapters follow the Fugle v1 symbol and session contract', () => {
-  assert.match(marketSource, /fugleIndexCandidates = \["IR0001", "IX0001", "TAIEX"\]/);
+  assert.match(marketSource, /fugleIndexCandidates = \["IX0001", "TAIEX"\]/);
+  assert.doesNotMatch(marketSource, /fugleIndexCandidates = \[[^\]]*"IR0001"/);
   assert.match(marketSource, /session === "afterhours" \? \{ session: "afterhours" \} : undefined/);
   assert.match(marketSource, /lastTrade\.time \|\| total\.time \|\|/);
+});
+
+test('daily sentence rejects stale report dates and delivery fails closed', async () => {
+  const linePushSource = await readFile(new URL('../supabase/functions/line-daily-push/index.ts', import.meta.url), 'utf8');
+  assert.match(reportSource, /daily_sentence_date_mismatch|\^\\d\{4\}-\\d\{2\}-\\d\{2\}/);
+  assert.match(reportSource, /v10NarrativeSourceDetail/);
+  assert.match(linePushSource, /daily_sentence_date_mismatch/);
+  assert.match(linePushSource, /leadingDate === reportDate/);
+});
+
+test('observation watchlist cannot use a previous report as current evidence', () => {
+  assert.match(reportSource, /applyV11CurrentObservationEvidence/);
+  assert.match(reportSource, /item\.evidence_type==='previous_validation'/);
+  assert.match(reportSource, /current_observation_evidence_missing/);
+  assert.match(reportSource, /reports:\\d\{4\}-\\d\{2\}-\\d\{2\}/);
+  assert.match(reportSource, /\^\(TAIEX\|TXF\|2330\)\$/);
+});
+
+test('Supabase Cron independently backs every production runtime checkpoint', () => {
+  for (const checkpoint of ['0900', '0930', '1030', '1300', '1410', '1430']) {
+    assert.match(deliveryOrchestratorSource, new RegExp(`'${checkpoint}'`));
+    assert.match(runtimeCronMigration, new RegExp(`morning-alpha-runtime-${checkpoint}-backup`));
+  }
+  assert.match(deliveryOrchestratorSource, /mode === 'runtime_checkpoint'/);
+  assert.match(deliveryOrchestratorSource, /required_core_complete === true/);
+  assert.match(deliveryOrchestratorSource, /String\(payload\.radar_status \|\| ''\)\.length > 0/);
+  assert.match(runtimeCronMigration, /x-daily-delivery-token/);
+  assert.match(intradayContractSource, /latestMinutes: 12 \* 60 \+ 54/);
 });
 
 test('DXY and US10Y unsupported Finnhub symbols are replaced by explicit liquid proxies', () => {

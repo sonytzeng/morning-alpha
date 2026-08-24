@@ -778,7 +778,10 @@ async function fetchTaiwanCoreQuote(
   }
 
   if (config.displaySymbol === "TAIEX") {
-    const fugleIndexCandidates = ["IR0001", "IX0001", "TAIEX"];
+    // IX0001 is the TWSE price index. IR0001 is the total-return index and is
+    // not semantically interchangeable with TAIEX; accepting it silently
+    // produces a plausible but materially wrong six-digit market level.
+    const fugleIndexCandidates = ["IX0001", "TAIEX"];
     for (const candidate of fugleIndexCandidates) {
       const quote = await fetchFugleStockQuote(candidate, fugleApiKey, logPrefix, failureDetails);
       if (quote) return { ...quote, sourceSymbol: candidate };

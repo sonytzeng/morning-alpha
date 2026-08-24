@@ -21,6 +21,51 @@ export type NormalizedMarketData = {
   invalidNumericSources: string[];
 };
 
+function marketRowTimestamp(row: Record<string, unknown>): number {
+  const parsed = Date.parse(String(row.captured_at ?? row.created_at ?? row.updated_at ?? ''));
+  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+}
+
+function canonicalMarketRow(row: Record<string, unknown>): Record<string, unknown> {
+  const changePercent = finiteNumericValue(row.change_percent);
+  return {
+    ...row,
+    change: row.change_value ?? row.change,
+    status: changePercent === null ? row.status : changePercent > 0 ? 'up' : changePercent < 0 ? 'down' : 'flat',
+    canonical_source: 'market_quotes',
+  };
+}
+
+/**
+ * Canonical quotes are the production source of truth. Legacy market_data rows
+ * remain a compatibility fallback only for symbols that do not yet have a
+ * newer canonical observation.
+ */
+export function mergeCanonicalAndLegacyMarketRows(
+  canonicalRows: Record<string, unknown>[],
+  legacyRows: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  const bySymbol = new Map<string, { row: Record<string, unknown>; timestamp: number; canonical: boolean }>();
+  const candidates = [
+    ...canonicalRows.map((row) => ({ row: canonicalMarketRow(row), canonical: true })),
+    ...legacyRows.map((row) => ({ row, canonical: false })),
+  ];
+
+  for (const candidate of candidates) {
+    const symbol = String(candidate.row.symbol ?? '').trim().toUpperCase();
+    if (!symbol) continue;
+    const timestamp = marketRowTimestamp(candidate.row);
+    const current = bySymbol.get(symbol);
+    if (!current || timestamp > current.timestamp || (timestamp === current.timestamp && candidate.canonical && !current.canonical)) {
+      bySymbol.set(symbol, { ...candidate, timestamp });
+    }
+  }
+
+  return Array.from(bySymbol.values())
+    .sort((left, right) => right.timestamp - left.timestamp)
+    .map(({ row }) => row);
+}
+
 function finiteNumericValue(value: unknown): number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (typeof value !== 'string' || !value.trim()) return null;

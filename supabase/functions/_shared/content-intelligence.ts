@@ -214,11 +214,11 @@ export function evaluateContentIntelligence(
   const allSourcesSpecific = recommendations.length > 0
     ? recommendations.every(hasSpecificSource)
     : noTradeMode && observations.every((row) => hasSpecificSource(row));
-  const eventCoverage = recommendationFieldCoverage(
-    recommendations,
-    ['trigger_event', 'catalyst', 'event_source'],
-    10,
-  );
+  const eventCoverage = recommendations.length > 0 && recommendations.every((row) => {
+    const eventLabel = firstText(row.trigger_event, row.catalyst, row.event_source);
+    const traceableSource = sourceText(row);
+    return `${eventLabel} | ${traceableSource}`.trim().length >= 10 && hasSpecificSource(row);
+  });
   const transmissionCoverage = recommendationFieldCoverage(
     recommendations,
     ['transmission_logic', 'reason_chain', 'causal_chain', 'reason', 'why_this_stock'],

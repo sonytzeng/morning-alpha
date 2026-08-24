@@ -54,6 +54,14 @@ test('daily sentence rejects stale report dates and delivery fails closed', asyn
   assert.match(linePushSource, /leadingDate === reportDate/);
 });
 
+test('observation watchlist cannot use a previous report as current evidence', () => {
+  assert.match(reportSource, /applyV11CurrentObservationEvidence/);
+  assert.match(reportSource, /item\.evidence_type==='previous_validation'/);
+  assert.match(reportSource, /current_observation_evidence_missing/);
+  assert.match(reportSource, /reports:\\d\{4\}-\\d\{2\}-\\d\{2\}/);
+  assert.match(reportSource, /\^\(TAIEX\|TXF\|2330\)\$/);
+});
+
 test('Supabase Cron independently backs every production runtime checkpoint', () => {
   for (const checkpoint of ['0900', '0930', '1030', '1300', '1410', '1430']) {
     assert.match(deliveryOrchestratorSource, new RegExp(`'${checkpoint}'`));

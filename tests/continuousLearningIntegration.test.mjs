@@ -12,6 +12,7 @@ const learningCenterPath = new URL('../src/pages/admin/learning/page.tsx', impor
 const closingVerificationPath = new URL('../supabase/functions/closing-verification-engine/index.ts', import.meta.url);
 const deliveryOrchestratorPath = new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url);
 const cronBackupPath = new URL('../supabase/migrations/20260824165454_continuous_learning_cron_backup.sql', import.meta.url);
+const sessionContractPath = new URL('../supabase/migrations/20260824180744_align_decision_snapshot_session_contract.sql', import.meta.url);
 
 const [
   migration,
@@ -24,6 +25,7 @@ const [
   closingVerification,
   deliveryOrchestrator,
   cronBackup,
+  sessionContract,
 ] = await Promise.all([
   readFile(migrationPath, 'utf8'),
   readFile(enginePath, 'utf8'),
@@ -35,6 +37,7 @@ const [
   readFile(closingVerificationPath, 'utf8'),
   readFile(deliveryOrchestratorPath, 'utf8'),
   readFile(cronBackupPath, 'utf8'),
+  readFile(sessionContractPath, 'utf8'),
 ]);
 
 test('CLE migration contains the complete internal memory lifecycle', () => {
@@ -149,6 +152,14 @@ test('closing snapshot uses the production decision snapshot contract', () => {
   assert.match(closingVerification, /p_session_type: "CLOSING"/);
   assert.doesNotMatch(closingVerification, /action: "VERIFY"/);
   assert.doesNotMatch(closingVerification, /p_session_type: "CLOSE"/);
+});
+
+test('snapshot publisher normalizes legacy session names to canonical database values', () => {
+  assert.match(sessionContract, /when p_session_type = 'CLOSE' then 'CLOSING'/);
+  assert.match(sessionContract, /when p_session_type = 'OPEN' then 'OPENING'/);
+  assert.match(sessionContract, /when p_session_type = 'MID_MORNING' then 'INTRADAY'/);
+  assert.match(sessionContract, /when v_snapshot_session_type = 'CLOSING' then 'FINAL'/);
+  assert.match(sessionContract, /research_sessions_session_type_check/);
 });
 
 test('Supabase Cron invokes same-day learning through the existing private token route', () => {

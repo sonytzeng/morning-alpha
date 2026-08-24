@@ -9,6 +9,7 @@ import {
   normalizeConfiguredProxyQuote,
   normalizeProviderTimestamp,
 } from '../supabase/functions/_shared/provider-normalization.mjs';
+import { applySystemicCatalystFloors } from '../supabase/functions/_shared/news-catalyst-scoring.mjs';
 
 const marketSource = await readFile(new URL('../supabase/functions/fetch-market-data-v10/index.ts', import.meta.url), 'utf8');
 const newsSource = await readFile(new URL('../supabase/functions/fetch-global-market-news/index.ts', import.meta.url), 'utf8');
@@ -65,4 +66,34 @@ test('news flows through fresh canonical events and catalyst tags before the dec
   assert.match(reportSource, /canonical_news_events/);
   assert.match(reportSource, /catalyst_tagged/);
   assert.doesNotMatch(reportSource, /from\('market_news'\)\.select\('id,title,source,url/);
+});
+
+test('systemic macro catalyst requires impact evidence and a Taiwan transmission mapping', () => {
+  const eligible = applySystemicCatalystFloors({
+    text: 'Oil falls ahead of new Iran sanctions',
+    relevanceScore: 25,
+    taiwanRelevanceScore: 20,
+    impactScore: 35,
+    hasMappedTransmission: true,
+    hasImpactEvidence: true,
+    category: 'Commodity',
+  });
+  assert.deepEqual(eligible, {
+    relevanceScore: 60,
+    taiwanRelevanceScore: 60,
+    impactScore: 60,
+    applied: true,
+  });
+
+  const editorial = applySystemicCatalystFloors({
+    text: 'Oil market weekly outlook',
+    relevanceScore: 25,
+    taiwanRelevanceScore: 20,
+    impactScore: 0,
+    hasMappedTransmission: true,
+    hasImpactEvidence: false,
+    category: 'Commodity',
+  });
+  assert.equal(editorial.applied, false);
+  assert.equal(editorial.impactScore, 0);
 });

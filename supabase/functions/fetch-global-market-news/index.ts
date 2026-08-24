@@ -1,8 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { classifyProviderFailures, sanitizeProviderError } from "../_shared/market-runtime-stability.mjs";
+import { applySystemicCatalystFloors } from "../_shared/news-catalyst-scoring.mjs";
 
-// ===== fetch-global-market-news V8.4 =====
-// V8.4: Fresh canonical news_events + catalyst tags and structured provider failure evidence.
+// ===== fetch-global-market-news V8.5 =====
+// V8.5: Fresh canonical news/events plus evidence-backed systemic macro catalyst mapping.
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -614,6 +615,19 @@ function scoreNewsItem(title: string, summary: string): NewsScore {
     if (taiwanRelevanceScore < 30) taiwanRelevanceScore = 30;
   }
 
+  const systemicCatalyst = applySystemicCatalystFloors({
+    text: combined,
+    relevanceScore,
+    taiwanRelevanceScore,
+    impactScore,
+    hasMappedTransmission: twMapping.symbols.length > 0 || twMapping.names.length > 0,
+    hasImpactEvidence: impactHits > 0 || hasEarnings || hasMA,
+    category,
+  });
+  relevanceScore = systemicCatalyst.relevanceScore;
+  taiwanRelevanceScore = systemicCatalyst.taiwanRelevanceScore;
+  impactScore = systemicCatalyst.impactScore;
+
   let finalScore = Math.round(
     relevanceScore * 0.3 + taiwanRelevanceScore * 0.5 + impactScore * 0.2
   );
@@ -1214,7 +1228,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: upsertErrors.length === 0 && canonicalComplete,
-        version: "V8.4_CANONICAL_NEWS_CATALYSTS",
+        version: "V8.5_SYSTEMIC_CATALYST_MAPPING",
         request_id: requestId,
         fetched_at: now,
         total_raw: rawItems.length,

@@ -59,6 +59,24 @@ test('premium content is eligible only with fresh news and complete stock reason
   assert.equal(result.status, 'eligible');
   assert.equal(result.complete_recommendation_count, 1);
 });
+
+test('short event label remains complete when it carries a traceable canonical source', () => {
+  const ai = validAi();
+  ai.today_beneficiary_stocks_v10[0].trigger_event = 'OIL';
+  ai.today_beneficiary_stocks_v10[0].data_basis = 'Reuters｜https://example.com/fresh-oil-catalyst｜2026-08-24T01:00:00Z';
+  const result = evaluatePremiumContentGate(ai, 1);
+  assert.equal(result.eligible, true);
+  assert.equal(result.complete_recommendation_count, 1);
+});
+
+test('short event label without a specific source still fails closed', () => {
+  const ai = validAi();
+  ai.today_beneficiary_stocks_v10[0].trigger_event = 'OIL';
+  ai.today_beneficiary_stocks_v10[0].data_basis = '市場數據綜合判斷';
+  const result = evaluatePremiumContentGate(ai, 1);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('recommendation_reasoning_incomplete'));
+});
 test('premium content fails closed when both news and traceable market catalysts are missing', () => {
   const ai = validAi();
   ai.today_beneficiary_stocks_v10[0].data_basis = '';

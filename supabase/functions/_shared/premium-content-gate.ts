@@ -78,7 +78,18 @@ function hasSpecificSource(stock: JsonRecord): boolean {
 }
 
 function hasCompleteRecommendation(stock: JsonRecord): boolean {
-  const eventSource = firstText(stock.trigger_event, stock.catalyst, stock.event_source);
+  const sourceValues = [
+    stock.data_basis,
+    stock.source_refs,
+    stock.source_signals,
+    stock.evidence,
+    stock.evidence_inputs,
+    stock.supporting_evidence,
+  ].flatMap((value) => Array.isArray(value) ? value : []);
+  const eventSource = [
+    firstText(stock.trigger_event, stock.catalyst, stock.event_source),
+    firstText(stock.data_basis, stock.evidence_source, stock.source_reference, stock.source, ...sourceValues),
+  ].filter(Boolean).join(' | ');
   const transmission = firstText(
     stock.transmission_logic,
     stock.reason_chain,

@@ -6,7 +6,10 @@ import {
   readBoundedBytes,
   readBoundedText,
 } from '../supabase/functions/_shared/bounded-json.ts';
-import { normalizeMarketDataRows } from '../supabase/functions/generate-daily-report-v7/market-data-evidence.ts';
+import {
+  mergeCanonicalAndLegacyMarketRows,
+  normalizeMarketDataRows,
+} from '../supabase/functions/generate-daily-report-v7/market-data-evidence.ts';
 
 const generatorSource = await readFile(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
 const reportPayloadSource = await readFile(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');
@@ -42,6 +45,21 @@ test('invalid numeric rows cannot advance market freshness', () => {
   assert.equal(normalized.isStale, true);
 });
 
+test('canonical market quotes replace stale legacy rows symbol by symbol', () => {
+  const merged = mergeCanonicalAndLegacyMarketRows([
+    { symbol: 'TXF', value: 45223, change_value: 85, change_percent: 0.19, captured_at: '2026-08-24T01:40:58.829Z' },
+    { symbol: 'TAIEX', value: 104506.6, change_percent: 0.12, captured_at: '2026-08-24T01:40:50.000Z' },
+  ], [
+    { symbol: 'TXF', value: 45074, change_percent: -0.15, captured_at: '2026-08-21T20:59:55.339Z' },
+    { symbol: 'SPX', value: 6500, change_percent: 0.3, captured_at: '2026-08-21T20:00:00.000Z' },
+  ]);
+
+  assert.equal(merged.filter((row) => row.symbol === 'TXF').length, 1);
+  assert.equal(merged.find((row) => row.symbol === 'TXF')?.value, 45223);
+  assert.equal(merged.find((row) => row.symbol === 'TXF')?.status, 'up');
+  assert.equal(merged.find((row) => row.symbol === 'SPX')?.value, 6500);
+});
+
 test('bounded body reader accepts exact limit and cancels oversized streams', async () => {
   const encoder = new TextEncoder();
   assert.equal(await readBoundedText(new Response('12345').body, 5), '12345');
@@ -54,7 +72,8 @@ test('bounded body reader accepts exact limit and cancels oversized streams', as
 });
 
 test('daily report fails closed instead of coercing missing market numerics to zero', () => {
-  assert.match(generatorSource, /normalizeMarketDataRows\(data,Date\.now\(\),HOURS_24\)/);
+  assert.match(generatorSource, /mergeCanonicalAndLegacyMarketRows\(canonical\.data\|\|\[\],legacy\.data\|\|\[\]\)/);
+  assert.match(generatorSource, /normalizeMarketDataRows\(rows,Date\.now\(\),HOURS_24\)/);
   assert.match(generatorSource, /invalid_numeric_market_data:/);
   assert.match(generatorSource, /required_market_evidence_status:'insufficient'/);
   assert.match(generatorSource, /publish_ready:false/);

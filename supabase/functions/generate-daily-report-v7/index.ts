@@ -18,7 +18,10 @@ import {
   type NormalizedMarketIndicator,
 } from './market-data-evidence.ts';
 import { sanitizeUnsupportedAbsolutePriceLevels } from './content-integrity.ts';
-import { evaluateContentIntelligence } from '../_shared/content-intelligence.ts';
+import {
+  deriveEvidenceBackedTaiwanTransmission,
+  evaluateContentIntelligence,
+} from '../_shared/content-intelligence.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import {
   filterPremiumNewsEvidence,
@@ -2146,6 +2149,13 @@ async function writeReport(supabase:ReturnType<typeof createClient>,todayDate:st
     const finalFreeSummary=(aiStrategyJson.free_summary&&typeof aiStrategyJson.free_summary==='object'&&!Array.isArray(aiStrategyJson.free_summary)?{...(aiStrategyJson.free_summary as Record<string,unknown>)}:{});
     finalFreeSummary.one_sentence=todayQuote;
     aiStrategyJson.free_summary=finalFreeSummary;
+    const evidenceBackedTaiwanTransmission=deriveEvidenceBackedTaiwanTransmission(aiStrategyJson,importantNews);
+    if(evidenceBackedTaiwanTransmission){
+      aiStrategyJson.taiwan_transmission=evidenceBackedTaiwanTransmission;
+      const finalMemberNoteV2=(aiStrategyJson.member_research_note_v2&&typeof aiStrategyJson.member_research_note_v2==='object'&&!Array.isArray(aiStrategyJson.member_research_note_v2)?{...(aiStrategyJson.member_research_note_v2 as Record<string,unknown>)}:{});
+      finalMemberNoteV2.taiwan_transmission=evidenceBackedTaiwanTransmission;
+      aiStrategyJson.member_research_note_v2=finalMemberNoteV2;
+    }
     const riskReason=mrnIsString?String(fs.one_sentence||''):String(mrn?.risk_notes||'');
     const sentimentReason=mrnIsString?(confScore===null?marketBias+'方向，休市不評分。':marketBias+'方向，信心分數 '+confScore+'/100。'):String(mrn?.executive_view||'');
     const aiConfidenceReason=mrnIsString?'根據 '+todayDate+' 市場數據，盤前方向為 '+marketBias+'。':String(mrn?.main_thesis||'');

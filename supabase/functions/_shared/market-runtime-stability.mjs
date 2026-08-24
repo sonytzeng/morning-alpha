@@ -92,9 +92,9 @@ export function evaluateCheckpointFreshness(input = {}) {
         const capturedMinutes = taipeiMinutesFromMillis(capturedMs);
         const officialCloseFloor = symbol === 'TXF' ? 13 * 60 + 40 : 13 * 60 + 25;
         if (capturedMinutes < officialCloseFloor) {
-          return { valid: false, status: 'pre_close_timestamp', age_minutes: ageMinutes, captured_session_date: capturedSessionDate };
+          return { valid: false, status: 'stale', age_minutes: ageMinutes, captured_session_date: capturedSessionDate };
         }
-        return { valid: true, status: 'official_close', age_minutes: ageMinutes, captured_session_date: capturedSessionDate };
+        return { valid: true, status: 'fresh', age_minutes: ageMinutes, captured_session_date: capturedSessionDate };
       }
       if (ageMinutes > 30) {
         return { valid: false, status: 'checkpoint_stale', age_minutes: ageMinutes, captured_session_date: capturedSessionDate };

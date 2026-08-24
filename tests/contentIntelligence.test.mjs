@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  deriveEvidenceBackedTaiwanTransmission,
   detectGenericContent,
   evaluateContentIntelligence,
 } from '../supabase/functions/_shared/content-intelligence.ts';
@@ -82,4 +83,23 @@ test('paid content fails closed without the verified evidence contract', () => {
   const result = evaluateContentIntelligence(ai, 3);
   assert.equal(result.publishable, false);
   assert.ok(result.reason_codes.includes('evidence_quality_contract_missing'));
+});
+
+test('traceable normalized news fills a missing Taiwan transmission without inventing a thesis', () => {
+  const result = deriveEvidenceBackedTaiwanTransmission({ member_research_note_v2: {} }, [{
+    source: 'Reuters',
+    url: 'https://example.com/verified-event',
+    published_at: '2026-08-24T00:49:00Z',
+    taiwan_impact_summary: '直接影響台積電、鴻海、廣達與緯創等台灣供應鏈公司',
+  }]);
+  assert.equal(result, '直接影響台積電、鴻海、廣達與緯創等台灣供應鏈公司；盤中以 TAIEX、2330 與相關族群量價同步驗證。');
+});
+
+test('untraceable news cannot fill a missing Taiwan transmission', () => {
+  const result = deriveEvidenceBackedTaiwanTransmission({}, [{
+    source: 'Reuters',
+    published_at: '2026-08-24T00:49:00Z',
+    taiwan_impact_summary: '直接影響台積電、鴻海、廣達與緯創等台灣供應鏈公司',
+  }]);
+  assert.equal(result, '');
 });

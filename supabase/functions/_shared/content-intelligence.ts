@@ -65,6 +65,36 @@ function unique(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
+function isTraceableNewsEvidence(row: JsonRecord): boolean {
+  return /^https?:\/\//i.test(asText(row.url))
+    && asText(row.source).length >= 2
+    && Boolean(Date.parse(asText(row.published_at)));
+}
+
+/**
+ * Preserve an explicit Taiwan transmission in the canonical report contract.
+ * When the model omits it, only promote a traceable, already-normalized Taiwan
+ * impact statement from fresh news evidence. This does not infer a new thesis.
+ */
+export function deriveEvidenceBackedTaiwanTransmission(
+  aiValue: unknown,
+  importantNewsValue: unknown,
+): string {
+  const ai = asRecord(aiValue);
+  const note = asRecord(ai.member_research_note_v2);
+  const existing = firstText(ai.taiwan_transmission, note.taiwan_transmission);
+  if (existing.length >= 12) return existing;
+
+  const evidence = asRecords(importantNewsValue).find((row) => {
+    const impact = firstText(row.taiwan_impact_summary);
+    return impact.length >= 12 && isTraceableNewsEvidence(row);
+  });
+  if (!evidence) return '';
+
+  const impact = firstText(evidence.taiwan_impact_summary).replace(/\s+/g, ' ').trim();
+  return `${impact}；盤中以 TAIEX、2330 與相關族群量價同步驗證。`;
+}
+
 const OPTIONAL_DECISION_SOURCE_GAP = /^(?:unavailable_market_data:)?TXF:no_authorized_source_or_contract_mapping$/i;
 
 function declaredMissingSources(ai: JsonRecord): string[] {

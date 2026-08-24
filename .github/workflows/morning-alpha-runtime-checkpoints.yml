@@ -290,6 +290,7 @@ jobs:
           fi
 
       - name: Fetch fresh close snapshots
+        if: steps.closing-state.outputs.already_complete != 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           CHECKPOINT: ${{ needs.resolve-checkpoint.outputs.checkpoint }}
@@ -344,6 +345,7 @@ jobs:
           exit 1
 
       - name: Fetch beneficiary close snapshots
+        if: steps.closing-state.outputs.already_complete != 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           CHECKPOINT: ${{ needs.resolve-checkpoint.outputs.checkpoint }}
@@ -451,35 +453,6 @@ jobs:
           echo "::error title=Closing verification incomplete::The verification engine did not return a completed evidence state after 3 attempts." >&2
           exit 1
 
-      - name: Run failure-isolated continuous learning review
-        id: continuous-learning
-        continue-on-error: true
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          response_file="$RUNNER_TEMP/continuous-learning-engine.json"
-          for attempt in 1 2; do
-            if curl --silent --show-error --fail-with-body \
-              --max-time 300 \
-              --request POST "$FUNCTIONS_BASE_URL/continuous-learning-engine" \
-              --header "Content-Type: application/json" \
-              --header "x-cron-secret: $CRON_SECRET" \
-              --data '{}' \
-              --output "$response_file"; then
-              if jq -e '.success == true and (.run_id != null or .skipped == true or .reused == true)' "$response_file" >/dev/null; then
-                exit 0
-              fi
-            fi
-            jq -c '{success, run_id, target_date, degraded, skipped, reused, error, failure_isolated}' "$response_file" >&2 2>/dev/null || true
-            if [ "$attempt" -lt 2 ]; then sleep 20; fi
-          done
-          echo "::warning title=Learning engine isolated::Closing verification remains valid. The learning review failed separately and is recorded in learning_runs." >&2
-          exit 1
-
-      - name: Record non-blocking learning degradation
-        if: steps.continuous-learning.outcome == 'failure'
-        run: echo "Continuous learning is auxiliary and did not block the production report, LINE delivery, or closing verification."
-
       - name: Build sector rotation evidence for the next trading day
         if: steps.sector-state.outputs.already_complete != 'true'
         id: sector-rotation
@@ -510,3 +483,45 @@ jobs:
         if: steps.sector-rotation.outcome == 'failure'
         run: |
           echo "Closing verification is complete. Sector rotation is auxiliary next-day evidence and was safely degraded; no stale evidence was promoted."
+
+  continuous-learning:
+    needs:
+      - resolve-checkpoint
+      - closing
+    if: ${{ always() && (needs.resolve-checkpoint.outputs.checkpoint == '1410' || needs.resolve-checkpoint.outputs.checkpoint == '1430') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Require runtime secret
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: test -n "$CRON_SECRET"
+
+      - name: Run failure-isolated continuous learning review
+        id: continuous-learning
+        continue-on-error: true
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response_file="$RUNNER_TEMP/continuous-learning-engine.json"
+          for attempt in 1 2; do
+            if curl --silent --show-error --fail-with-body \
+              --max-time 300 \
+              --request POST "$FUNCTIONS_BASE_URL/continuous-learning-engine" \
+              --header "Content-Type: application/json" \
+              --header "x-cron-secret: $CRON_SECRET" \
+              --data '{}' \
+              --output "$response_file"; then
+              if jq -e '.success == true and (.run_id != null or .skipped == true or .reused == true)' "$response_file" >/dev/null; then
+                exit 0
+              fi
+            fi
+            jq -c '{success, run_id, target_date, degraded, skipped, reused, reason, error, failure_isolated}' "$response_file" >&2 2>/dev/null || true
+            if [ "$attempt" -lt 2 ]; then sleep 20; fi
+          done
+          echo "::warning title=Learning engine isolated::Continuous learning failed separately; closing verification and production delivery remain valid." >&2
+          exit 1
+
+      - name: Record non-blocking learning degradation
+        if: steps.continuous-learning.outcome == 'failure'
+        run: echo "Continuous learning is auxiliary and did not block the production report, LINE delivery, or closing verification."

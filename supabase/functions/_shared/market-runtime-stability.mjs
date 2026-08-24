@@ -39,6 +39,17 @@ function taipeiDateFromMillis(value) {
   return `${read('year')}-${read('month')}-${read('day')}`;
 }
 
+function taipeiMinutesFromMillis(value) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(value));
+  const read = (type) => parts.find((part) => part.type === type)?.value || '';
+  return Number(read('hour')) * 60 + Number(read('minute'));
+}
+
 export function sanitizeProviderError(value) {
   return String(value || '')
     .replace(/([?&](?:token|api[-_]?key|apiToken|access[-_]?token|key)=)[^&\s"']+/gi, '$1[REDACTED]')
@@ -77,8 +88,15 @@ export function evaluateCheckpointFreshness(input = {}) {
       return { valid: false, status: 'cross_session_stale', age_minutes: ageMinutes, captured_session_date: capturedSessionDate };
     }
     if (['TAIEX', '2330', 'TXF'].includes(symbol)) {
-      const maxAgeMinutes = phase === 'intraday' ? 30 : 100;
-      if (ageMinutes > maxAgeMinutes) {
+      if (phase === 'close') {
+        const capturedMinutes = taipeiMinutesFromMillis(capturedMs);
+        const officialCloseFloor = symbol === 'TXF' ? 13 * 60 + 40 : 13 * 60 + 25;
+        if (capturedMinutes < officialCloseFloor) {
+          return { valid: false, status: 'pre_close_timestamp', age_minutes: ageMinutes, captured_session_date: capturedSessionDate };
+        }
+        return { valid: true, status: 'official_close', age_minutes: ageMinutes, captured_session_date: capturedSessionDate };
+      }
+      if (ageMinutes > 30) {
         return { valid: false, status: 'checkpoint_stale', age_minutes: ageMinutes, captured_session_date: capturedSessionDate };
       }
     }

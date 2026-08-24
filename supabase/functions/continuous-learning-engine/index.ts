@@ -1190,6 +1190,38 @@ Deno.serve(async (req: Request) => {
   });
   const runType = backfill ? 'backfill' : 'daily';
   const runKey = `${targetDate}:${runType}:${CLE_ENGINE_VERSION}`;
+
+  if (!backfill) {
+    const { data: tradingDayState, error: tradingDayStateError } = await client
+      .from('trading_day_state')
+      .select('current_state,state_rank,checkpoint_status')
+      .eq('trading_date', targetDate)
+      .maybeSingle();
+    if (tradingDayStateError) {
+      return jsonResponse({
+        success: false,
+        error: 'TRADING_DAY_STATE_LOOKUP_FAILED',
+        detail: tradingDayStateError.message,
+        target_date: targetDate,
+        engine_version: CLE_ENGINE_VERSION,
+        failure_isolated: true,
+      }, 500);
+    }
+    const closingStatus = asObject(asObject(tradingDayState?.checkpoint_status).closing_verification);
+    const closingComplete = Number(tradingDayState?.state_rank || 0) >= 80
+      && ['SUCCEEDED', 'DEGRADED'].includes(String(closingStatus.status || ''));
+    if (!closingComplete) {
+      return jsonResponse({
+        success: true,
+        skipped: true,
+        reason: 'CLOSING_VERIFICATION_INCOMPLETE',
+        target_date: targetDate,
+        engine_version: CLE_ENGINE_VERSION,
+        closing_state: tradingDayState?.current_state || null,
+      });
+    }
+  }
+
   let runId: string | null = null;
   const counters = {
     predictions_processed: 0,

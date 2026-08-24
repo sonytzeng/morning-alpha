@@ -5,7 +5,7 @@
 ## 1. Current Architecture Audit
 
 - `generate-daily-report-v7` 已負責盤前資料擷取、Scoring、OpenAI／deterministic fallback、Editorial／Premium Gate、`reports` 寫入與 `publish_decision_snapshot_v2`。
-- `decision_snapshots` 已是 PREMARKET／CLOSE 的 canonical immutable-versioned decision contract；CLE 沿用它，不另建重複的報表快照系統。
+- `decision_snapshots` 已是 PREMARKET／CLOSING 的 canonical immutable-versioned decision contract；CLE 沿用它，不另建重複的報表快照系統。
 - 收盤流程由 GitHub Actions 依序呼叫 `close-market-review` 與 `closing-verification-engine`。既有 closing verification 已計算 TAIEX 方向、受惠股相對績效與結構化驗證。
 - `prediction_accuracy_logs` 與 `close_market_reviews` 已保存局部驗證成果，但沒有逐筆 immutable prediction、跨時距 outcome、case/pattern、calibration、backtest 與 rule lifecycle。
 - Production 盤查時 `decision_snapshots`、`editorial_reviews`、`pipeline_runs`、`content_feedback` 尚無資料；`prediction_accuracy_logs` 26 筆、`close_market_reviews` 27 筆。這些資料未被改寫。
@@ -68,8 +68,9 @@ Migration：`supabase/migrations/20260822090000_continuous_learning_engine_v1.sq
 
 ## 6. Cron / Scheduling
 
-- 沒有新增互相競爭的 database cron。
-- 既有 `morning-alpha-runtime-checkpoints.yml` 在 closing verification 成功後呼叫 CLE。
+- `morning-alpha-runtime-checkpoints.yml` 將 CLE 放在獨立 job，使用 `always()` 與資料庫 `CLOSING_VERIFIED` gate；收盤抓取 job 失敗不會再讓 CLE 直接 skipped。
+- Closing watchdog 若已確認完成，會跳過重複的核心與受惠股收盤抓取，改用已保存的正式收盤證據。
+- Supabase Cron 在台北時間 14:40、14:50 透過既有私有 token route 執行同日 CLE 備援；兩次觸發使用相同 run key，第二次必須重用第一筆結果。
 - CLE step 設為 `continue-on-error: true`，最多嘗試兩次；失敗只留下 degradation 訊息，不能阻止 closing/report/LINE 等正式服務。
 - Release workflow 僅允許手動觸發，並以互斥的 `migration`／`deploy` input 分隔 Production database migration 與 Edge Functions deployment。
 - `deploy` 階段已加入兩個 Edge Functions：`continuous-learning-engine` 與 `get-learning-center`，且不會執行 `supabase db push`。
@@ -97,11 +98,11 @@ Migration：`supabase/migrations/20260822090000_continuous_learning_engine_v1.sq
 
 ## 9. Test Results
 
-- `node --test tests/*.test.mjs`：98/98 passed。
+- `node --test tests/*.test.mjs`：168/168 passed。
 - CLE unit／integration：15/15 passed（包含 data-failure exclusion、revision/idempotency、production-only rule、shadow/OOS/promotion guard、RLS/API、cron isolation）。
 - `npm run type-check`：passed。
 - `npm run lint`：passed，0 warnings。
-- `vite build`：passed，191 modules transformed。只有既有 `vite.config.ts` 的未來 native loader `__dirname` warning，非本次 regression。
+- `vite build`：passed，195 modules transformed。
 - 三個受影響 Edge Functions TypeScript transpile：passed。
 - 兩個受影響 GitHub Actions YAML parse：passed。
 - `git diff --check`：passed。

@@ -140,6 +140,32 @@ test('Taiwan checkpoint freshness rejects fabricated, cross-session, and stale c
     evaluated_at: '2026-08-24T14:30:00+08:00',
     captured_at: '2026-08-24T13:30:00+08:00',
   }).valid, true);
+  assert.equal(evaluateCheckpointFreshness({
+    ...base,
+    phase: 'close',
+    evaluated_at: '2026-08-24T15:45:00+08:00',
+    captured_at: '2026-08-24T13:30:00+08:00',
+  }).status, 'official_close');
+  assert.equal(evaluateCheckpointFreshness({
+    ...base,
+    phase: 'close',
+    evaluated_at: '2026-08-24T15:45:00+08:00',
+    captured_at: '2026-08-24T12:59:00+08:00',
+  }).status, 'pre_close_timestamp');
+  assert.equal(evaluateCheckpointFreshness({
+    ...base,
+    phase: 'close',
+    symbol: 'TXF',
+    evaluated_at: '2026-08-24T15:45:00+08:00',
+    captured_at: '2026-08-24T13:30:00+08:00',
+  }).status, 'pre_close_timestamp');
+  assert.equal(evaluateCheckpointFreshness({
+    ...base,
+    phase: 'close',
+    symbol: 'TXF',
+    evaluated_at: '2026-08-24T15:45:00+08:00',
+    captured_at: '2026-08-24T13:45:00+08:00',
+  }).status, 'official_close');
 });
 
 test('provider diagnostics redact query and header credentials', () => {

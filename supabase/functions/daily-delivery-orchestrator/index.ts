@@ -9,7 +9,7 @@ import {
   type DailyDeliveryPhase,
 } from '../_shared/daily-delivery-recovery.ts';
 
-const VERSION = 'DAILY_DELIVERY_V1.2_RUNTIME_CHECKPOINT_BACKUP';
+const VERSION = 'DAILY_DELIVERY_V1.3_CONTINUOUS_LEARNING_BACKUP';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -508,6 +508,25 @@ Deno.serve(async (req: Request) => {
       results: execution.results,
       version: VERSION,
     }, execution.success ? 200 : 409);
+  }
+  if (body.mode === 'continuous_learning') {
+    const result = await invokeFunction(
+      `${supabaseUrl}/functions/v1`,
+      'continuous-learning-engine',
+      cronSecret,
+      {},
+      300_000,
+    );
+    const accepted = result.ok
+      && result.payload.success === true
+      && (result.payload.run_id != null || result.payload.skipped === true || result.payload.reused === true);
+    return jsonResponse({
+      success: accepted,
+      status: accepted ? 'SUCCEEDED' : 'DEGRADED',
+      report_date: clock.date,
+      continuous_learning: result.payload,
+      version: VERSION,
+    }, accepted ? 200 : 409);
   }
   const requestedPhase = String(body.phase || '');
   const phase = ['refresh', 'generate', 'repair', 'deliver', 'watchdog'].includes(requestedPhase)

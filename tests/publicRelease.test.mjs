@@ -726,7 +726,7 @@ test('report, site payload, and LINE converge on the same immutable decision sna
   assert.match(lineDailyPush, /\.from\('decision_snapshots'\)/);
   assert.match(lineDailyPush, /decisionSnapshot\?\.generated_text/);
   assert.match(closingVerification, /opening_decision_snapshot_id/);
-  assert.match(closingVerification, /p_session_type:\s*"CLOSE"/);
+  assert.match(closingVerification, /p_session_type:\s*"CLOSING"/);
   assert.match(closingVerification, /closing_decision_snapshot_id/);
   assert.match(contentIntelligenceMigration, /pg_advisory_xact_lock/);
   assert.match(contentIntelligenceMigration, /snapshot_fingerprint/);

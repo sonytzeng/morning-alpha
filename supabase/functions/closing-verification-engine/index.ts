@@ -1308,7 +1308,7 @@ Deno.serve(async (req: Request) => {
     engine_version: "closing-verification-engine",
     confidence_score: confidence,
     coverage_score: closingDataStatus === "complete" ? 100 : 70,
-    action: "VERIFY",
+    action: "CLOSED",
     decision_mode: "closing_verification",
     market_regime: predictedBias,
     preferred_sectors: morningDecisionRow?.preferred_sectors || [],
@@ -1359,7 +1359,7 @@ Deno.serve(async (req: Request) => {
       "publish_decision_snapshot_v2",
       {
         p_report_date: verificationDate,
-        p_session_type: "CLOSE",
+        p_session_type: "CLOSING",
         p_report_id: reportRow.id,
         p_payload: closingSnapshotPayload,
       },

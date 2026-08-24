@@ -9,8 +9,22 @@ const reportGeneratorPath = new URL('../supabase/functions/generate-daily-report
 const runtimeWorkflowPath = new URL('../.github/workflows/morning-alpha-runtime-checkpoints.yml', import.meta.url);
 const deployWorkflowPath = new URL('../.github/workflows/deploy-morning-alpha-runtime.yml', import.meta.url);
 const learningCenterPath = new URL('../src/pages/admin/learning/page.tsx', import.meta.url);
+const closingVerificationPath = new URL('../supabase/functions/closing-verification-engine/index.ts', import.meta.url);
+const deliveryOrchestratorPath = new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url);
+const cronBackupPath = new URL('../supabase/migrations/20260824165454_continuous_learning_cron_backup.sql', import.meta.url);
 
-const [migration, engine, api, reportGenerator, runtimeWorkflow, deployWorkflow, learningCenter] = await Promise.all([
+const [
+  migration,
+  engine,
+  api,
+  reportGenerator,
+  runtimeWorkflow,
+  deployWorkflow,
+  learningCenter,
+  closingVerification,
+  deliveryOrchestrator,
+  cronBackup,
+] = await Promise.all([
   readFile(migrationPath, 'utf8'),
   readFile(enginePath, 'utf8'),
   readFile(apiPath, 'utf8'),
@@ -18,6 +32,9 @@ const [migration, engine, api, reportGenerator, runtimeWorkflow, deployWorkflow,
   readFile(runtimeWorkflowPath, 'utf8'),
   readFile(deployWorkflowPath, 'utf8'),
   readFile(learningCenterPath, 'utf8'),
+  readFile(closingVerificationPath, 'utf8'),
+  readFile(deliveryOrchestratorPath, 'utf8'),
+  readFile(cronBackupPath, 'utf8'),
 ]);
 
 test('CLE migration contains the complete internal memory lifecycle', () => {
@@ -108,12 +125,38 @@ test('next-decision learning is fail-open and reads production rules only', () =
   assert.doesNotMatch(reportGenerator, /\.eq\('status','candidate'\).*confidence/s);
 });
 
-test('learning executes after closing verification and cannot block production', () => {
-  const verificationPosition = runtimeWorkflow.indexOf('Write closing verification v2');
-  const learningPosition = runtimeWorkflow.indexOf('Run failure-isolated continuous learning review');
-  assert.ok(verificationPosition >= 0 && learningPosition > verificationPosition);
+test('learning executes in an isolated job even when the closing job fails', () => {
+  assert.match(runtimeWorkflow, /continuous-learning:\n\s+needs:\n\s+- resolve-checkpoint\n\s+- closing/);
+  assert.match(runtimeWorkflow, /if: \$\{\{ always\(\) && \(needs\.resolve-checkpoint\.outputs\.checkpoint == '1410'/);
   assert.match(runtimeWorkflow, /id: continuous-learning\n\s+continue-on-error: true/);
   assert.match(runtimeWorkflow, /continuous-learning-engine/);
+  assert.match(runtimeWorkflow, /Fetch fresh close snapshots\n\s+if: steps\.closing-state\.outputs\.already_complete != 'true'/);
+  assert.match(runtimeWorkflow, /Fetch beneficiary close snapshots\n\s+if: steps\.closing-state\.outputs\.already_complete != 'true'/);
   assert.match(deployWorkflow, /supabase functions deploy continuous-learning-engine/);
   assert.match(deployWorkflow, /supabase functions deploy get-learning-center/);
+});
+
+test('daily learning waits for verified closing state without weakening explicit backfill', () => {
+  assert.match(engine, /if \(!backfill\) \{/);
+  assert.match(engine, /\.from\('trading_day_state'\)/);
+  assert.match(engine, /Number\(tradingDayState\?\.state_rank \|\| 0\) >= 80/);
+  assert.match(engine, /CLOSING_VERIFICATION_INCOMPLETE/);
+  assert.match(engine, /production_rule_mutated: false/);
+});
+
+test('closing snapshot uses the production decision snapshot contract', () => {
+  assert.match(closingVerification, /action: "CLOSED"/);
+  assert.match(closingVerification, /p_session_type: "CLOSING"/);
+  assert.doesNotMatch(closingVerification, /action: "VERIFY"/);
+  assert.doesNotMatch(closingVerification, /p_session_type: "CLOSE"/);
+});
+
+test('Supabase Cron invokes same-day learning through the existing private token route', () => {
+  assert.match(deliveryOrchestrator, /body\.mode === 'continuous_learning'/);
+  assert.match(deliveryOrchestrator, /'continuous-learning-engine'/);
+  assert.match(cronBackup, /morning_alpha_daily_delivery_token/);
+  assert.match(cronBackup, /'mode', 'continuous_learning'/);
+  assert.match(cronBackup, /'40,50 6 \* \* 1-5'/);
+  assert.match(cronBackup, /revoke all on function public\.invoke_continuous_learning_tick_v1\(\) from public, anon, authenticated/);
+  assert.doesNotMatch(cronBackup, /target_date|backfill/);
 });

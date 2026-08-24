@@ -9,7 +9,7 @@ import {
   type DailyDeliveryPhase,
 } from '../_shared/daily-delivery-recovery.ts';
 
-const VERSION = 'DAILY_DELIVERY_V1.1_PROVIDER_RESULT_GATE';
+const VERSION = 'DAILY_DELIVERY_V1.2_RUNTIME_CHECKPOINT_BACKUP';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -147,6 +147,108 @@ async function invokeFunctionWithRetry(
     }
   }
   return { ...lastResult, attempts: maxAttempts };
+}
+
+const RUNTIME_CHECKPOINTS = new Set(['0900', '0930', '1030', '1300', '1410', '1430']);
+
+function checkpointResultOk(slug: string, checkpoint: string, result: FunctionResult): boolean {
+  if (!result.ok) return false;
+  const payload = result.payload;
+  if (slug === 'fetch-market-data-v10') {
+    return payload.success === true
+      && String(payload.checkpoint || '') === checkpoint
+      && payload.canonical_complete === true
+      && payload.required_core_complete === true
+      && Array.isArray(payload.provider_health_write_errors)
+      && payload.provider_health_write_errors.length === 0
+      && payload.trading_day_state_error == null;
+  }
+  if (slug === 'opening-market-radar') {
+    return payload.success === true
+      && String(payload.checkpoint || '') === checkpoint
+      && ['ready', 'degraded'].includes(String(payload.data_status || ''))
+      && String(payload.radar_status || '').length > 0;
+  }
+  if (slug === 'close-market-review') {
+    return payload.success === true && (
+      ['written_and_synced', 'skipped_idempotent'].includes(String(payload.action || ''))
+      || payload.pending === true
+      || payload.skipped === true
+    );
+  }
+  if (slug === 'closing-verification-engine') {
+    return payload.success === true && [
+      'completed',
+      'direction_completed_data_degraded',
+    ].includes(String(payload.closing_verification_status || ''));
+  }
+  return result.ok;
+}
+
+async function executeRuntimeCheckpoint(
+  baseUrl: string,
+  cronSecret: string,
+  checkpoint: string,
+): Promise<{ success: boolean; results: JsonRecord; failures: string[] }> {
+  const results: JsonRecord = {};
+  const failures: string[] = [];
+  const phase = ['1410', '1430'].includes(checkpoint) ? 'close' : 'intraday';
+  const market = await invokeFunctionWithRetry(baseUrl, 'fetch-market-data-v10', cronSecret, {
+    phase,
+    checkpoint,
+    source: 'supabase_cron_backup',
+  }, 180_000, 3);
+  results.market = market;
+  if (!checkpointResultOk('fetch-market-data-v10', checkpoint, market)) {
+    failures.push('market_checkpoint_incomplete');
+    return { success: false, results, failures };
+  }
+
+  if (phase === 'intraday') {
+    if (checkpoint !== '0900') {
+      const radar = await invokeFunctionWithRetry(baseUrl, 'opening-market-radar', cronSecret, {
+        checkpoint,
+        source: 'supabase_cron_backup',
+      }, 180_000, 3);
+      results.radar = radar;
+      if (!checkpointResultOk('opening-market-radar', checkpoint, radar)) failures.push('radar_checkpoint_incomplete');
+    }
+    return { success: failures.length === 0, results, failures };
+  }
+
+  const beneficiaryClose = await invokeFunctionWithRetry(baseUrl, 'fetch-market-data-v10', cronSecret, {
+    phase: 'close',
+    checkpoint,
+    beneficiary_close_only: true,
+    source: 'supabase_cron_backup',
+  }, 180_000, 3);
+  results.beneficiary_close = beneficiaryClose;
+  const beneficiaryPayload = beneficiaryClose.payload;
+  if (!beneficiaryClose.ok
+    || beneficiaryPayload.beneficiary_close_only !== true
+    || beneficiaryPayload.beneficiary_close_deferred === true
+    || asRecord(beneficiaryPayload.beneficiary_close_status).complete !== true
+    || beneficiaryPayload.canonical_complete !== true
+    || beneficiaryPayload.checkpoint_complete !== true) {
+    failures.push('beneficiary_close_incomplete');
+    return { success: false, results, failures };
+  }
+
+  const review = await invokeFunctionWithRetry(baseUrl, 'close-market-review', cronSecret, {
+    source: 'supabase_cron_backup',
+  }, 180_000, 3);
+  results.review = review;
+  if (!checkpointResultOk('close-market-review', checkpoint, review)) {
+    failures.push('closing_review_incomplete');
+    return { success: false, results, failures };
+  }
+
+  const verification = await invokeFunctionWithRetry(baseUrl, 'closing-verification-engine', cronSecret, {
+    source: 'supabase_cron_backup',
+  }, 180_000, 3);
+  results.verification = verification;
+  if (!checkpointResultOk('closing-verification-engine', checkpoint, verification)) failures.push('closing_verification_incomplete');
+  return { success: failures.length === 0, results, failures };
 }
 
 async function loadDeliveryState(
@@ -390,6 +492,22 @@ Deno.serve(async (req: Request) => {
       next_trading_day: marketStatus.next_trading_day,
       version: VERSION,
     });
+  }
+  if (body.mode === 'runtime_checkpoint') {
+    const checkpoint = String(body.checkpoint || '');
+    if (!RUNTIME_CHECKPOINTS.has(checkpoint)) {
+      return jsonResponse({ success: false, error: 'UNSUPPORTED_RUNTIME_CHECKPOINT', checkpoint, version: VERSION }, 400);
+    }
+    const execution = await executeRuntimeCheckpoint(`${supabaseUrl}/functions/v1`, cronSecret, checkpoint);
+    return jsonResponse({
+      success: execution.success,
+      status: execution.success ? 'SUCCEEDED' : 'DEGRADED',
+      report_date: clock.date,
+      checkpoint,
+      failures: execution.failures,
+      results: execution.results,
+      version: VERSION,
+    }, execution.success ? 200 : 409);
   }
   const requestedPhase = String(body.phase || '');
   const phase = ['refresh', 'generate', 'repair', 'deliver', 'watchdog'].includes(requestedPhase)

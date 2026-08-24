@@ -341,14 +341,24 @@ Deno.serve(async (req) => {
     && Number.isFinite(snapshotScore)
     && snapshotScore >= 90
     && ['recommendations', 'no_trade'].includes(snapshotMode);
+  const canonicalText = parseRecord(decisionSnapshot?.generated_text);
+  const deliverySentence = firstText(
+    canonicalText.daily_sentence,
+    report.today_quote,
+    parseRecord(ai.v8_daily_sentence).sentence,
+    ai.today_quote,
+  );
+  const leadingDate = deliverySentence.match(/^(\d{4}-\d{2}-\d{2})(?:未|[，,。；;：:\s])/i)?.[1] || '';
+  const sentenceDateEligible = !leadingDate || leadingDate === reportDate;
 
-  if (!premiumGate.eligible || !snapshotEligible) {
+  if (!premiumGate.eligible || !snapshotEligible || !sentenceDateEligible) {
     const reasonCodes = Array.from(new Set([
       ...premiumGate.reason_codes,
       ...(!decisionSnapshot ? ['decision_snapshot_missing'] : []),
       ...(decisionSnapshot && snapshotStatus !== 'READY' ? ['decision_snapshot_not_ready'] : []),
       ...(decisionSnapshot && (!Number.isFinite(snapshotScore) || snapshotScore < 90) ? ['decision_snapshot_score_below_90'] : []),
       ...(decisionSnapshot && !['recommendations', 'no_trade'].includes(snapshotMode) ? ['decision_snapshot_mode_blocked'] : []),
+      ...(!sentenceDateEligible ? ['daily_sentence_date_mismatch'] : []),
     ]));
     console.warn('[LINE-PUSH-V4] Premium content hard gate blocked delivery:', reasonCodes);
     return new Response(

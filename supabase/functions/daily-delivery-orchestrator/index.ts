@@ -395,6 +395,7 @@ Deno.serve(async (req: Request) => {
   const phase = ['refresh', 'generate', 'repair', 'deliver', 'watchdog'].includes(requestedPhase)
     ? requestedPhase as DailyDeliveryPhase
     : resolveDailyDeliveryPhase(clock.minutes);
+  const forceRegenerate = body.force_regenerate === true;
   const attempt = Math.max(1, Math.trunc(Number(body.attempt) || Math.max(1, clock.slot - Math.floor((7 * 60) / 5) + 1)));
   let runId: string | null = null;
 
@@ -426,9 +427,10 @@ Deno.serve(async (req: Request) => {
     });
 
     let actions = plan.actions;
-    if (phase === 'refresh') actions = actions.filter((action) => action === 'refresh_news' || action === 'refresh_market');
-    if (phase === 'generate') actions = state.premium_eligible ? [] : ['regenerate_report'];
-    if (phase === 'deliver' && state.premium_eligible) actions = ['deliver_premium'];
+    if (forceRegenerate) actions = ['regenerate_report'];
+    else if (phase === 'refresh') actions = actions.filter((action) => action === 'refresh_news' || action === 'refresh_market');
+    else if (phase === 'generate') actions = state.premium_eligible ? [] : ['regenerate_report'];
+    else if (phase === 'deliver' && state.premium_eligible) actions = ['deliver_premium'];
 
     const actionResults = await executeRecoveryActions({
       actions,

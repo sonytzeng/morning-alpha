@@ -244,6 +244,16 @@ test('premarket workflow delegates to the durable recovery state machine', () =>
   assert.match(globalMarketNews, /invalid_published_at_count/);
 });
 
+test('authenticated recovery can force report regeneration after a code-only fix', () => {
+  assert.match(dailyDeliveryOrchestrator, /const forceRegenerate = body\.force_regenerate === true/);
+  assert.match(dailyDeliveryOrchestrator, /if \(forceRegenerate\) actions = \['regenerate_report'\]/);
+  assert.ok(
+    dailyDeliveryOrchestrator.indexOf('authorizeRequest(req, supabase, cronSecret)')
+      < dailyDeliveryOrchestrator.indexOf('const forceRegenerate = body.force_regenerate === true'),
+    'force regeneration must only be parsed after internal authentication',
+  );
+});
+
 test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
   const hardGate = lineDailyPush.indexOf("reason: 'PREMIUM_CONTENT_NOT_ELIGIBLE'");
   const subscriberDelivery = lineDailyPush.indexOf('deliverOutboxMessage({', hardGate);

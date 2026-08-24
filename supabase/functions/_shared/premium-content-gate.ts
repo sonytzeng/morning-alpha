@@ -141,6 +141,12 @@ export function evaluatePremiumContentGate(
   const completeRows = rows.filter(hasCompleteRecommendation);
   const memberNote = asRecord(ai.member_research_note_v2);
   const overnightSteps = asRecords(memberNote.overnight_chain);
+  const overnightCausalChains = asRecords(asRecord(ai.v8_overnight_causal_chain).chains);
+  const hasFiveLayerOvernightChain = overnightSteps.length >= 5
+    || overnightCausalChains.some((chain) => (
+      Array.isArray(chain.causal_steps)
+      && chain.causal_steps.map(String).filter(Boolean).length >= 5
+    ));
   const intradaySteps = asRecords(memberNote.intraday_validation);
   const invalidationRules = asRecords(memberNote.invalidation_rules);
   const subscriberSentence = firstText(memberNote.subscriber_value_sentence);
@@ -165,7 +171,7 @@ export function evaluatePremiumContentGate(
   }
   if (blockingIssues.length > 0) reasons.push('content_publish_gate_blocked');
   if (!Number.isFinite(memberValueScore) || memberValueScore < RUNTIME_QUALITY_POLICY.member_value_min) reasons.push('member_value_below_90');
-  if (overnightSteps.length < 5 || intradaySteps.length < 3 || invalidationRules.length < 2 || subscriberSentence.length < 24) {
+  if (!hasFiveLayerOvernightChain || intradaySteps.length < 3 || invalidationRules.length < 2 || subscriberSentence.length < 24) {
     reasons.push('member_research_structure_incomplete');
   }
   if (!decisionSourceCoverage) reasons.push('source_data_incomplete');

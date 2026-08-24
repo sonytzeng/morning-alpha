@@ -119,6 +119,37 @@ test('an evidence-backed no-trade decision remains valuable premium research', (
   assert.equal(result.recommendation_count, 0);
 });
 
+test('premium gate measures five-layer causal depth instead of requiring five unrelated events', () => {
+  const ai = validAi();
+  ai.member_research_note_v2.overnight_chain = ai.member_research_note_v2.overnight_chain.slice(0, 3);
+  ai.v8_overnight_causal_chain = {
+    status: 'ready',
+    chains: [{
+      causal_steps: [
+        '海外事件',
+        '資金流向改變',
+        '美股族群反應',
+        '台灣供應鏈傳導',
+        '代表個股盤中驗證',
+      ],
+    }],
+  };
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.eligible, true);
+});
+
+test('premium gate still fails closed when overnight causal depth is below five layers', () => {
+  const ai = validAi();
+  ai.member_research_note_v2.overnight_chain = ai.member_research_note_v2.overnight_chain.slice(0, 3);
+  ai.v8_overnight_causal_chain = {
+    status: 'ready',
+    chains: [{ causal_steps: ['海外事件', '資金流向', '美股族群', '台灣供應鏈'] }],
+  };
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('member_research_structure_incomplete'));
+});
+
 test('no-trade may publish with the declared optional TXF entitlement gap', () => {
   const ai = validAi();
   ai.data_quality = 'degraded';

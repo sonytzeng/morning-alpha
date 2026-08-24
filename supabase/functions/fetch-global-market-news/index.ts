@@ -1,8 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { classifyProviderFailures, sanitizeProviderError } from "../_shared/market-runtime-stability.mjs";
 
-// ===== fetch-global-market-news V8.3 =====
-// V8.3: Canonical news_events dual-write and structured provider failure evidence.
+// ===== fetch-global-market-news V8.4 =====
+// V8.4: Fresh canonical news_events + catalyst tags and structured provider failure evidence.
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -68,6 +68,19 @@ function resolveNewsFreshness(publishedAt: string, fetchedAt: string): string {
   if (ageHours <= 24) return "fresh";
   if (ageHours <= 48) return "recent";
   return "stale";
+}
+
+function detectNewsImpactDirection(title: string, summary: string): "positive" | "negative" | "neutral" {
+  const text = `${title} ${summary}`.toLowerCase();
+  if (/surge|rally|rise|gain|beat|strong|upgrade|record|上修|優於|成長|強勁|利多/.test(text)) return "positive";
+  if (/drop|fall|decline|miss|weak|downgrade|risk|tariff|war|cut|下修|低於|衰退|利空|風險/.test(text)) return "negative";
+  return "neutral";
+}
+
+function detectRelatedGlobalSymbols(title: string, summary: string): string[] {
+  const text = `${title} ${summary}`.toUpperCase();
+  return ["NVDA", "TSM", "AMD", "AAPL", "MSFT", "META", "AMZN", "SOX", "SPX", "NASDAQ", "VIX", "DXY", "US10Y"]
+    .filter((symbol) => text.includes(symbol));
 }
 
 // ============================================================
@@ -976,6 +989,15 @@ Deno.serve(async (req) => {
       scored.push({ ...item, ...scoreResult });
     }
 
+    // Sort by final_score desc. Stale headlines remain available as raw audit rows,
+    // but must never be selected as a current catalyst or dual-written as canonical.
+    for (const item of scored) {
+      if (resolveNewsFreshness(item.publishedAt, now) === "stale") {
+        item.isSelected = false;
+        item.rejectionReason = item.rejectionReason || "stale_published_at_over_48h";
+      }
+    }
+
     // Sort by final_score desc
     scored.sort((a, b) => b.finalScore - a.finalScore);
 
@@ -1057,7 +1079,7 @@ Deno.serve(async (req) => {
       created_at: now,
     }));
 
-    const canonicalCandidates = toUpsert.filter((item) => item.isSelected);
+    const canonicalCandidates = toUpsert.filter((item) => item.isSelected && resolveNewsFreshness(item.publishedAt, now) !== "stale");
     const canonicalWriteErrors: Array<{ title?: string; error: string }> = [];
     const canonicalRecords: JsonRecord[] = [];
     for (const item of canonicalCandidates) {
@@ -1070,6 +1092,7 @@ Deno.serve(async (req) => {
         canonicalWriteErrors.push({ title: String(item.title || "").slice(0, 120), error: "source_contract_invalid" });
         continue;
       }
+      const fingerprint = await sha256Hex(`${item.normalizedTitle}|${item.url}`);
       canonicalRecords.push({
         provider: String(item.provider || "unknown").toLowerCase(),
         external_id: String(item.externalId || item.url),
@@ -1084,7 +1107,7 @@ Deno.serve(async (req) => {
         freshness_status: resolveNewsFreshness(publishedAt, now),
         surprise_score: null,
         taiwan_relevance_score: item.taiwanRelevanceScore,
-        fingerprint: await sha256Hex(`${item.normalizedTitle}|${item.url}`),
+        fingerprint,
         raw_payload: {
           provider: item.provider || "unknown",
           source_name: item.source,
@@ -1095,6 +1118,8 @@ Deno.serve(async (req) => {
           is_selected: item.isSelected,
           related_tw_names: item.relatedTwNames || [],
           related_markets: detectRelatedMarkets(item.title, item.summary || ""),
+          related_global_symbols: detectRelatedGlobalSymbols(item.title, item.summary || ""),
+          taiwan_impact_summary: item.taiwanImpactSummary,
           request_id: requestId,
         },
       });
@@ -1128,6 +1153,7 @@ Deno.serve(async (req) => {
     }
 
     let canonicalUpsertedCount = 0;
+    let catalystTagUpsertedCount = 0;
     if (canonicalRecords.length > 0) {
       const { error: canonicalError } = await supabase
         .from("news_events")
@@ -1138,9 +1164,45 @@ Deno.serve(async (req) => {
       } else {
         canonicalUpsertedCount = canonicalRecords.length;
         logs.push(`Canonical news_events upserted: ${canonicalUpsertedCount} items`);
+
+        const canonicalByFingerprint = new Map(canonicalRecords.map((record) => [String(record.fingerprint), record]));
+        const catalystTagRecords = canonicalCandidates.map((item) => {
+          const fingerprint = Array.from(canonicalByFingerprint.entries())
+            .find(([, record]) => record.source_url === item.url && record.title === item.title)?.[0] || "";
+          return {
+            news_key: fingerprint,
+            news_title: item.title,
+            news_source: item.source,
+            published_at: item.publishedAt,
+            event_type: item.category || "market",
+            related_sectors: item.relatedSectors || [],
+            related_symbols: item.relatedTwSymbols || [],
+            related_global_symbols: detectRelatedGlobalSymbols(item.title, item.summary || ""),
+            impact_direction: detectNewsImpactDirection(item.title, item.summary || ""),
+            impact_strength: Math.max(0, Math.min(100, Math.round(Math.max(item.finalScore, item.impactScore)))),
+            confidence_score: Math.max(0, Math.min(100, Math.round((item.relevanceScore + item.impactScore + item.taiwanRelevanceScore) / 3))),
+            reasoning: `canonical fresh event; final_score=${item.finalScore}; taiwan_relevance=${item.taiwanRelevanceScore}`,
+            tagged_by: "fetch-global-market-news:v8.4",
+            tagged_at: now,
+            created_at: now,
+          };
+        }).filter((record) => Boolean(record.news_key));
+        if (catalystTagRecords.length > 0) {
+          const { error: catalystTagError } = await supabase
+            .from("news_event_tags")
+            .upsert(catalystTagRecords, { onConflict: "news_key" });
+          if (catalystTagError) {
+            canonicalWriteErrors.push({ error: `catalyst_tag:${catalystTagError.message}` });
+            logs.push(`[CATALYST TAG UPSERT ERROR] ${catalystTagError.message}`);
+          } else {
+            catalystTagUpsertedCount = catalystTagRecords.length;
+            logs.push(`Canonical news_event_tags upserted: ${catalystTagUpsertedCount} items`);
+          }
+        }
       }
     }
-    const canonicalComplete = canonicalUpsertedCount === canonicalCandidates.length && canonicalWriteErrors.length === 0;
+    const canonicalComplete = canonicalUpsertedCount === canonicalCandidates.length &&
+      catalystTagUpsertedCount === canonicalCandidates.length && canonicalWriteErrors.length === 0;
     const classifiedProviderFailures = classifyProviderFailures(providerFailureDetails);
 
     const highImpactCount = toUpsert.filter((item) => item.impactScore >= 70).length;
@@ -1152,7 +1214,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: upsertErrors.length === 0 && canonicalComplete,
-        version: "V8.3_CANONICAL_NEWS_EVENTS",
+        version: "V8.4_CANONICAL_NEWS_CATALYSTS",
         request_id: requestId,
         fetched_at: now,
         total_raw: rawItems.length,
@@ -1163,6 +1225,7 @@ Deno.serve(async (req) => {
         total_upserted: totalUpserted,
         canonical_requested_count: canonicalCandidates.length,
         canonical_upserted_count: canonicalUpsertedCount,
+        catalyst_tag_upserted_count: catalystTagUpsertedCount,
         canonical_complete: canonicalComplete,
         canonical_write_errors: canonicalWriteErrors.length > 0 ? canonicalWriteErrors : undefined,
         selected_count: selectedCount,

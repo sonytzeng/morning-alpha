@@ -408,7 +408,7 @@ test('TXF discovery and quote URLs follow the Fugle futopt contract', () => {
     /futopt\/intraday\/tickers\?type=FUTURE&exchange=TAIFEX&session=\$\{session\}&product=TXF/,
   );
   assert.match(source, /"futopt\/intraday\/quote"/);
-  assert.match(source, /\{ session: session === "afterhours" \? "AFTERHOURS" : "REGULAR" \}/);
+  assert.match(source, /session === "afterhours" \? \{ session: "afterhours" \} : undefined/);
   assert.doesNotMatch(source, /futopt\/intraday\/quote\?session=/);
   assert.doesNotMatch(source, /futopt\/products/);
   assert.match(source, /`tse_\$\{symbol\}\.tw`/);

@@ -35,8 +35,9 @@ import {
   classifyMarketRegime,
   resolveAbstentionDecision,
 } from '../_shared/production-architecture-core.mjs';
+import { canonicalDecisionAction } from '../_shared/canonical-decision-contract.mjs';
 
-const VERSION='V9.3_PREMIUM_EVIDENCE_SELF_REPAIR';
+const VERSION='V9.4_CANONICAL_CATALYST_DECISION_REPAIR';
 const OPENAI_EVIDENCE_GUARDRAILS='market_news 只可使用發布時間在 48 小時內的資料。若 TXF 或其他資料源缺失，不可把缺失資料寫成方向、價位或驗證條件。禁止自行編造輸入資料未提供的個股絕對價位。每一檔最終受惠股都必須有事件來源、事件到產業與供應鏈再到公司的傳導路徑、台灣供應鏈關係、盤中成立條件與失效條件；沒有足夠證據就不要輸出該股票。';
 const REPORT_MODE_NORMAL='normal_overnight',REPORT_MODE_WEEKEND='weekend_digest',REPORT_MODE_NON_TRADING='non_trading_day';
 const CORS_HEADERS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, apikey, x-client-info, x-cron-secret'};
@@ -152,7 +153,7 @@ async function fetchWithTimeout(url:string,options:RequestInit={},timeoutMs:numb
 }
 
 type MarketIndicator=NormalizedMarketIndicator;
-type MarketNewsItem={id:string;title:string;source:string;url:string;published_at:string|null;created_at:string;related_sectors:string[]|null;taiwan_impact_summary:string|null;raw_payload:Record<string,unknown>|null};
+type MarketNewsItem={id:string;title:string;source:string;url:string;published_at:string|null;created_at:string;related_sectors:string[]|null;related_symbols:string[]|null;event_type:string|null;taiwan_impact_summary:string|null;raw_payload:Record<string,unknown>|null};
 type FetchNewsResult={newsData:MarketNewsItem[];latestNewsTime:Date|null;isStale:boolean;newsCount:number};
 type MarketDataScore={baseScore:number;reasons:string[];riskReasons:string[];details:Record<string,number>};
 type ReportConfidenceScore={score:number;breakdown:Record<string,unknown>};
@@ -1647,7 +1648,43 @@ async function fetchMarketData(supabase:ReturnType<typeof createClient>,log:(msg
   }catch(e){log('fmData exc:'+(e instanceof Error?e.message:String(e)));return empty;}
 }
 
-async function fetchMarketNews(supabase:ReturnType<typeof createClient>,log:(msg:string)=>void):Promise<FetchNewsResult>{try{const r=await supabase.from('market_news').select('id,title,source,url,published_at,created_at,related_sectors,taiwan_impact_summary,raw_payload').order('created_at',{ascending:false}).limit(100);const{data,error}=safeUnwrap<Record<string,unknown>[]>(r,log,'market_news');if(error||!data?.length){log('fmNews:empty');return{newsData:[],latestNewsTime:null,isStale:true,newsCount:0}}const recent=filterRecentNewsRows(data,Date.now(),48).slice(0,30);if(recent.length===0){log('fmNews:no rows published within 48h');return{newsData:[],latestNewsTime:null,isStale:true,newsCount:0}}let latest:Date|null=null;for(const d of recent){const t=d.published_at||d.created_at;if(t){const dt=new Date(t as string);if(!latest||dt>latest)latest=dt}}return{newsData:recent.map(function(r:Record<string,unknown>){return{id:String(r.id||''),title:String(r.title||''),source:String(r.source||''),url:String(r.url||''),published_at:r.published_at?String(r.published_at):null,created_at:String(r.created_at||''),related_sectors:Array.isArray(r.related_sectors)?r.related_sectors:null,taiwan_impact_summary:r.taiwan_impact_summary?String(r.taiwan_impact_summary):null,raw_payload:r.raw_payload&&typeof r.raw_payload==='object'?r.raw_payload as Record<string,unknown>:null}}),latestNewsTime:latest,isStale:!latest||Date.now()-latest.getTime()>HOURS_24,newsCount:recent.length}}catch(e){log('fmNews exc:'+(e instanceof Error?e.message:String(e)));return{newsData:[],latestNewsTime:null as Date|null,isStale:true,newsCount:0}}}
+async function fetchMarketNews(supabase:ReturnType<typeof createClient>,log:(msg:string)=>void):Promise<FetchNewsResult>{
+  try{
+    const eventResult=await supabase.from('news_events')
+      .select('id,title,summary,source_name,source_url,published_at,created_at,event_type,symbols,sectors,freshness_status,fingerprint,raw_payload')
+      .in('freshness_status',['fresh','recent'])
+      .order('published_at',{ascending:false})
+      .limit(100);
+    const{data,error}=safeUnwrap<Record<string,unknown>[]>(eventResult,log,'news_events');
+    if(error||!data?.length){log('canonicalNews:empty');return{newsData:[],latestNewsTime:null,isStale:true,newsCount:0}}
+    const recent=filterRecentNewsRows(data,Date.now(),48).slice(0,30);
+    if(recent.length===0){log('canonicalNews:no rows published within 48h');return{newsData:[],latestNewsTime:null,isStale:true,newsCount:0}}
+    const fingerprints=recent.map(function(row){return String(row.fingerprint||'');}).filter(Boolean);
+    const tagResult=fingerprints.length>0
+      ? await supabase.from('news_event_tags').select('news_key,event_type,related_sectors,related_symbols,related_global_symbols,impact_direction,impact_strength,confidence_score,reasoning,tagged_at').in('news_key',fingerprints)
+      : {data:[],error:null};
+    const tagsByKey=new Map<string,Record<string,unknown>>();
+    if(tagResult.error){log('canonicalNews:tag query failed '+tagResult.error.message);return{newsData:[],latestNewsTime:null,isStale:true,newsCount:0}}
+    for(const tag of tagResult.data||[])tagsByKey.set(String(tag.news_key||''),tag as Record<string,unknown>);
+    const tagged=recent.filter(function(row){return tagsByKey.has(String(row.fingerprint||''));});
+    if(tagged.length===0){log('canonicalNews:no catalyst-tagged events');return{newsData:[],latestNewsTime:null,isStale:true,newsCount:0}}
+    let latest:Date|null=null;
+    for(const row of tagged){const dt=new Date(String(row.published_at||''));if(!Number.isNaN(dt.getTime())&&(!latest||dt>latest))latest=dt}
+    return{newsData:tagged.map(function(row){
+      const tag=tagsByKey.get(String(row.fingerprint||''))||{};
+      const rawPayload=canonicalRecord(row.raw_payload);
+      return{
+        id:String(row.id||''),title:String(row.title||''),source:String(row.source_name||''),url:String(row.source_url||''),
+        published_at:row.published_at?String(row.published_at):null,created_at:String(row.created_at||''),
+        related_sectors:Array.isArray(tag.related_sectors)?tag.related_sectors.map(String):Array.isArray(row.sectors)?row.sectors.map(String):null,
+        related_symbols:Array.isArray(tag.related_symbols)?tag.related_symbols.map(String):Array.isArray(row.symbols)?row.symbols.map(String):null,
+        event_type:canonicalText(tag.event_type,row.event_type)||null,
+        taiwan_impact_summary:canonicalText(rawPayload.taiwan_impact_summary,row.summary)||null,
+        raw_payload:{...rawPayload,canonical_event_id:row.id,canonical_fingerprint:row.fingerprint,catalyst_tag:tag},
+      };
+    }),latestNewsTime:latest,isStale:!latest||Date.now()-latest.getTime()>HOURS_24,newsCount:tagged.length};
+  }catch(e){log('canonicalNews exc:'+(e instanceof Error?e.message:String(e)));return{newsData:[],latestNewsTime:null as Date|null,isStale:true,newsCount:0}}
+}
 
 async function fetchPreviousReportForDate(supabase:ReturnType<typeof createClient>,reportDate:string,log:(msg:string)=>void):Promise<Record<string,unknown>|null>{try{const result=await supabase.from('reports').select('report_date,market_bias,confidence_score,ai_strategy_json,created_at,updated_at').eq('report_date',reportDate).order('created_at',{ascending:false}).limit(1).maybeSingle();const {data,error}=safeUnwrap<Record<string,unknown>>(result,log,'previous_report');if(error||!data){log(`previous_report:empty ${reportDate}`);return null;}return data;}catch(e){log(`previous_report_exception:${e instanceof Error?e.message:String(e)}`);return null;}}
 
@@ -1844,7 +1881,11 @@ function buildImportantNewsPayload(newsData:MarketNewsItem[]):Record<string,unkn
       source:news.source,
       url:news.url,
       published_at:news.published_at||news.created_at,
+      canonical_event_id:news.id,
+      event_type:news.event_type,
       related_sectors:news.related_sectors||[],
+      related_symbols:news.related_symbols||[],
+      catalyst_tag:canonicalRecord(news.raw_payload?.catalyst_tag),
       taiwan_impact_summary:news.taiwan_impact_summary||'',
     };
   });
@@ -1964,7 +2005,7 @@ function buildCanonicalDecisionPayload(
     market_score:Number.isFinite(Number(ai.market_bias_score))?Number(ai.market_bias_score):null,
     confidence_score:confidenceScore,
     coverage_score:Number.isFinite(Number(researchMaster.coverage_score))?Number(researchMaster.coverage_score):null,
-    action:decisionMode==='recommendations'?'ACTIONABLE':decisionMode==='no_trade'?'NO_TRADE':'WATCH',
+    action:canonicalDecisionAction(decisionMode),
     decision_mode:decisionMode,
     market_regime:canonicalText(ai.market_regime,marketBias),
     preferred_sectors:publishedSectors,
@@ -1989,7 +2030,16 @@ function buildCanonicalDecisionPayload(
         },
       }:{}),
     },
-    source_freshness:{data_quality:canonicalText(ai.data_quality),missing_sources:Array.isArray(ai.missing_sources)?ai.missing_sources:[]},
+    source_freshness:{
+      data_quality:canonicalText(ai.data_quality),
+      missing_sources:Array.isArray(ai.missing_sources)?ai.missing_sources:[],
+      canonical_news_events:importantNews.map(function(news){return{
+        id:news.canonical_event_id,
+        published_at:news.published_at,
+        event_type:news.event_type,
+        catalyst_tagged:Boolean(canonicalRecord(news.catalyst_tag).event_type),
+      };}),
+    },
     source_refs:sourceRefs,
     generated_text:{
       daily_sentence:publishable?canonicalText(ai.today_quote,dailySentence.sentence,freeSummary.one_sentence):blockedDailySentence,
@@ -2255,7 +2305,7 @@ async function resolveProductionLearningConfidence(
 }
 
 Deno.serve(async (req:Request)=>{
-  const reqStart=Date.now();const reqStartedAt=new Date(reqStart).toISOString();const requestedCorrelationId=req.headers.get('x-correlation-id')||'';const correlationId=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedCorrelationId)?requestedCorrelationId:crypto.randomUUID();const logs:string[]=[];const log=function(m:string){const ts=new Date().toISOString().slice(11,19);logs.push('['+ts+'] '+m);console.log('[V9.3:'+ts+'] ['+correlationId.slice(0,8)+'] '+m)};
+  const reqStart=Date.now();const reqStartedAt=new Date(reqStart).toISOString();const requestedCorrelationId=req.headers.get('x-correlation-id')||'';const correlationId=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedCorrelationId)?requestedCorrelationId:crypto.randomUUID();const logs:string[]=[];const log=function(m:string){const ts=new Date().toISOString().slice(11,19);logs.push('['+ts+'] '+m);console.log('[V9.4:'+ts+'] ['+correlationId.slice(0,8)+'] '+m)};
   const timer=createStepTimer(log);
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:CORS_HEADERS});
   if(req.method!=='POST')return corsResponse({success:false,error:'Only POST allowed',version:VERSION},405);
@@ -2276,7 +2326,7 @@ Deno.serve(async (req:Request)=>{
     let runtimeCostUsageId:string|null=null;
     let costGuard:Record<string,unknown>={policy_version:RUNTIME_QUALITY_POLICY.version,allowed:true,reason_codes:[]};
     let runtimePolicyIntegrity:Record<string,unknown>={policy_version:RUNTIME_QUALITY_POLICY.version,aligned:false};
-    log('START V9.3 skip_openai='+skipOpenAI+' run_v10_debug_agents='+runV10DebugAgents+' quality_retry='+qualityRetry+' recovery_attempt='+recoveryAttempt);
+    log('START V9.4 skip_openai='+skipOpenAI+' run_v10_debug_agents='+runV10DebugAgents+' quality_retry='+qualityRetry+' recovery_attempt='+recoveryAttempt);
     timer.mark('START');
 
     const supabaseUrl=Deno.env.get('SUPABASE_URL')||'';const serviceRoleKey=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
@@ -2312,7 +2362,7 @@ Deno.serve(async (req:Request)=>{
       marketClosedReport.runtime_policy_integrity=runtimePolicyIntegrity;
       attachResearchMasterV2Shadow(marketClosedReport,{reportDate:todayDate,todayDate,dataAsOf:null,engineVersion:VERSION,promptVersion:null,generatedAt:String(marketClosedReport.generated_at||''),reportMode:REPORT_MODE_NON_TRADING,marketStatus:'CLOSED',isTradingDay:false,legacy:marketClosedReport,evidencePack:{},normalizedEvidence:{},evidenceIndex:[],candidateUniverse:{},marketThesis:null},log);
       timer.mark('MARKET_CLOSED_REPORT_BUILT');
-      const writeResult=await writeReport(supabase,todayDate,marketClosedReport,'休市',null,REPORT_MODE_NON_TRADING,[],log,tradingDayInfo,undefined,'',null,correlationId,Math.max(1,recoveryAttempt),reqStartedAt);
+      const writeResult=await writeReport(supabase,todayDate,marketClosedReport,'休市',null,REPORT_MODE_NON_TRADING,[],[],log,tradingDayInfo,undefined,'',null,correlationId,Math.max(1,recoveryAttempt),reqStartedAt);
       timer.mark('MARKET_CLOSED_REPORT_WRITTEN');
       if(!writeResult?.reportId){log('WRITE_FAILED_MARKET_CLOSED');return corsResponse({success:false,error:'Failed to write market closed report',report_date:todayDate,version:VERSION,logs},500);}
       const verified=await verifyReportExists(supabase,todayDate,log);
@@ -2520,6 +2570,6 @@ Deno.serve(async (req:Request)=>{
     const durationMs=Date.now()-reqStart;log('DONE report_id='+verified.reportId+' premium_eligible='+verifiedGate.eligible+' duration='+durationMs+'ms');
     const sloResult=await supabase.from('runtime_slo_measurements').insert({slo_key:'report_generation_latency',measured_at:new Date().toISOString(),report_date:todayDate,correlation_id:correlationId,success:durationMs<=120000,value:durationMs,latency_ms:durationMs,reason_codes:durationMs<=120000?[]:['report_generation_latency_exceeded'],metadata:{premium_eligible:verifiedGate.eligible,engine_version:VERSION}});
     if(sloResult.error)log('REPORT_SLO_MEASUREMENT_DEGRADED '+sloResult.error.message);
-    return corsResponse({success:true,message:'Report generated (V9.3)',report_date:todayDate,report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,correlation_id:correlationId,premium_eligible:verifiedGate.eligible,premium_content_score:verifiedGate.content_score,premium_decision_mode:verifiedGate.decision_mode,premium_reason_codes:verifiedGate.reason_codes,recovery_attempt:recoveryAttempt,cost_guard:costGuard,cost_usage_id:runtimeCostUsageId,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,tw_core_date:dates.twCoreDate,us_global_date:dates.usGlobalDate,source:String(aiStrategyJson.build_method||'deterministic'),market_bias:marketBias,confidence_score:safeInteger(rawConfidenceScore,50),report_mode:reportMode,duration_ms:durationMs,version:VERSION,logs},200);
+    return corsResponse({success:true,message:'Report generated (V9.4)',report_date:todayDate,report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,correlation_id:correlationId,premium_eligible:verifiedGate.eligible,premium_content_score:verifiedGate.content_score,premium_decision_mode:verifiedGate.decision_mode,premium_reason_codes:verifiedGate.reason_codes,recovery_attempt:recoveryAttempt,cost_guard:costGuard,cost_usage_id:runtimeCostUsageId,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,tw_core_date:dates.twCoreDate,us_global_date:dates.usGlobalDate,source:String(aiStrategyJson.build_method||'deterministic'),market_bias:marketBias,confidence_score:safeInteger(rawConfidenceScore,50),report_mode:reportMode,duration_ms:durationMs,version:VERSION,logs},200);
   }catch(err){const msg=err instanceof Error?err.message:String(err);log('FATAL: '+msg);return corsResponse({success:false,error:msg,correlation_id:correlationId,version:VERSION,logs},500)}
 });

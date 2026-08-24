@@ -12,9 +12,13 @@ import {
   evaluateCheckpointFreshness,
   sanitizeProviderError,
 } from '../_shared/market-runtime-stability.mjs';
+import {
+  normalizeConfiguredProxyQuote,
+  normalizeProviderTimestamp,
+} from '../_shared/provider-normalization.mjs';
 
 // ═══════════════════════════════════════════════════════════
-// fetch-market-data-v10 V10.10 — RUNTIME STABILITY + CANONICAL CLOSE COVERAGE
+// fetch-market-data-v10 V10.11 — LIVE PROVIDER CONTRACT REPAIR
 // Uses Finnhub for US equities/ETF proxies, Fugle/TWSE for Taiwan core, best-effort Fugle futopt for TXF.
 // Each symbol: 6s timeout, max 1 retry.
 // Overall: 28s hard cap → always returns within 30s for cron.
@@ -30,7 +34,7 @@ const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
 const OVERALL_TIMEOUT_MS = 28_000;
-const VERSION = "V10.10_RUNTIME_STABILITY";
+const VERSION = "V10.11_LIVE_PROVIDER_CONTRACT_REPAIR";
 
 interface FinnhubQuote {
   c: number;
@@ -67,6 +71,8 @@ interface SymbolConfig {
   name: string;
   market: string;
   taiwanImpact: string;
+  directionMultiplier?: 1 | -1;
+  proxySemantics?: string;
 }
 
 interface BeneficiaryLookupResult {
@@ -101,8 +107,8 @@ const SYMBOLS: SymbolConfig[] = [
   { finnhubSymbol: "NVDA", displaySymbol: "NVDA", name: "Nvidia", market: "US", taiwanImpact: "AI 龍頭，直接牽動台灣 AI 供應鏈" },
   { finnhubSymbol: "TSM", displaySymbol: "TSM", name: "TSMC ADR", market: "US", taiwanImpact: "台積電 ADR 連動台股價格" },
   { finnhubSymbol: "VXX", displaySymbol: "VIX", name: "恐慌指數（proxy: VXX ETN proxy）", market: "US", taiwanImpact: "市場恐慌情緒" },
-  { finnhubSymbol: "DXY", displaySymbol: "DXY", name: "美元指數", market: "US", taiwanImpact: "影響外資流向與台幣匯率" },
-  { finnhubSymbol: "US10Y", displaySymbol: "US10Y", name: "美國10年債殖利率", market: "US", taiwanImpact: "影響資金成本與科技股估值" },
+  { finnhubSymbol: "UUP", displaySymbol: "DXY", name: "美元指數方向（proxy: UUP ETF）", market: "US", taiwanImpact: "影響外資流向與台幣匯率", proxySemantics: "same_direction_us_dollar_proxy" },
+  { finnhubSymbol: "IEF", displaySymbol: "US10Y", name: "美國10年債殖利率方向（proxy: inverse IEF ETF）", market: "US", taiwanImpact: "影響資金成本與科技股估值", directionMultiplier: -1, proxySemantics: "inverse_7_10y_treasury_price_proxy" },
   { finnhubSymbol: "TAIEX", displaySymbol: "TAIEX", name: "台股加權指數", market: "TW", taiwanImpact: "台股大盤整體風向指標" },
   { finnhubSymbol: "2330", displaySymbol: "2330", name: "台積電", market: "TW", taiwanImpact: "台股權值股龍頭" },
   { finnhubSymbol: "TXF", displaySymbol: "TXF", name: "台指期", market: "TW", taiwanImpact: "台指期提供期貨領先訊號" },
@@ -445,37 +451,7 @@ function taipeiDateTimeToIso(dateValue: unknown, timeValue: unknown): string {
 }
 
 function normalizeTimestamp(value: unknown): string {
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-    // Providers may return seconds, milliseconds, microseconds, or nanoseconds.
-    const millis = value > 1_000_000_000_000_000
-      ? Math.floor(value / 1_000_000)
-      : value > 100_000_000_000_000
-        ? Math.floor(value / 1_000)
-        : value > 1_000_000_000_000
-          ? value
-          : value * 1000;
-    const parsed = new Date(millis);
-    if (!Number.isNaN(parsed.getTime())) {
-      const year = parsed.getUTCFullYear();
-      if (year >= 2000 && year <= 2100) return parsed.toISOString();
-    }
-  }
-
-  if (typeof value === "string" && value.trim()) {
-    const trimmed = value.trim();
-    if (/^\d+$/.test(trimmed)) {
-      const numeric = Number(trimmed);
-      if (Number.isFinite(numeric) && numeric > 0) return normalizeTimestamp(numeric);
-    }
-
-    const parsed = new Date(trimmed);
-    if (!Number.isNaN(parsed.getTime())) {
-      const year = parsed.getUTCFullYear();
-      if (year >= 2000 && year <= 2100) return parsed.toISOString();
-    }
-  }
-
-  return "";
+  return normalizeProviderTimestamp(value);
 }
 
 function normalizeFugleQuote(data: Record<string, unknown>, sourceSymbol: string): MarketQuote | null {
@@ -494,7 +470,16 @@ function normalizeFugleQuote(data: Record<string, unknown>, sourceSymbol: string
     changePercent = previousClose && previousClose > 0 ? (computedChange / previousClose) * 100 : 0;
   }
 
-  const capturedAt = normalizeTimestamp(data.lastUpdated || data.last_updated || data.updatedAt || trade.at || data.time || data.date);
+  const lastTrade = data.lastTrade && typeof data.lastTrade === "object" && !Array.isArray(data.lastTrade)
+    ? data.lastTrade as Record<string, unknown>
+    : {};
+  const total = data.total && typeof data.total === "object" && !Array.isArray(data.total)
+    ? data.total as Record<string, unknown>
+    : {};
+  const capturedAt = normalizeTimestamp(
+    data.lastUpdated || data.last_updated || data.updatedAt || lastTrade.time || total.time ||
+      data.closeTime || trade.at || data.time || data.date,
+  );
   return {
     value: price,
     change: computedChange,
@@ -708,7 +693,7 @@ async function fetchFugleFutOptQuote(
     logPrefix,
     "fugle_futopt",
     failureDetails,
-    { session: session === "afterhours" ? "AFTERHOURS" : "REGULAR" },
+    session === "afterhours" ? { session: "afterhours" } : undefined,
   );
   return quote ? { ...quote, raw: { ...quote.raw, product: "TXF", session } } : null;
 }
@@ -793,7 +778,7 @@ async function fetchTaiwanCoreQuote(
   }
 
   if (config.displaySymbol === "TAIEX") {
-    const fugleIndexCandidates = ["IX0001", "TAIEX"];
+    const fugleIndexCandidates = ["IR0001", "IX0001", "TAIEX"];
     for (const candidate of fugleIndexCandidates) {
       const quote = await fetchFugleStockQuote(candidate, fugleApiKey, logPrefix, failureDetails);
       if (quote) return { ...quote, sourceSymbol: candidate };
@@ -859,7 +844,7 @@ Deno.serve(async (req) => {
     : crypto.randomUUID();
   const requestId = correlationId.slice(0, 8);
   const startedAt = new Date().toISOString();
-  const batchTag = `V10.10:${requestId}`;
+  const batchTag = `V10.11:${requestId}`;
   const startedMs = Date.now();
 
   console.log(`[${batchTag}] ======== START ${startedAt} ========`);
@@ -1017,9 +1002,10 @@ Deno.serve(async (req) => {
       console.log(`[${batchTag}] [${i + 1}/${symbolConfigs.length}] Fetching ${config.displaySymbol}...`);
 
       try {
-        const quote = config.market === "TW"
+        const fetchedQuote = config.market === "TW"
           ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, providerFailureDetails)
           : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`, providerFailureDetails);
+        const quote = normalizeConfiguredProxyQuote(fetchedQuote, config) as MarketQuote | null;
 
         if (!quote) {
           console.error(`[${batchTag}] [${i + 1}/${symbolConfigs.length}] ${config.displaySymbol} fetch returned null`);

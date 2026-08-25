@@ -22,6 +22,7 @@ import {
   deriveEvidenceBackedTaiwanTransmission,
   evaluateContentIntelligence,
   isDecisionCriticalMissingSource,
+  normalizeEvidenceLeadForChineseSentence,
 } from '../_shared/content-intelligence.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import {
@@ -603,7 +604,7 @@ function applyV10EvidenceBackedNarrative(ai:Record<string,unknown>,phase:V10Bene
     const industry=v10NarrativeText(observation.industry_name||observation.industry_code,18);
     const stop=v10NarrativeText(observation.stop_observing_condition||observation.stop_condition,42);
     logicSource=Array.isArray(observation.source_refs)?observation.source_refs.map(String):[String(observation.data_basis||'')].filter(Boolean);
-    const sourceDetail=v10NarrativeSourceDetail(logicSource);
+    const sourceDetail=normalizeEvidenceLeadForChineseSentence(v10NarrativeSourceDetail(logicSource));
     sentence=`${sourceDetail}未形成正向主線；09:30 看${name}與${industry}是否同步止跌，若${stop}，今天不建立受惠股。`;
     subscriberSentence=`今天不硬猜強勢股：先用${name}與${industry}的 09:30 同步性驗證；若${stop}，整日維持不建立受惠股。`;
     decisionMode='no_trade';

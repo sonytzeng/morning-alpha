@@ -33,6 +33,7 @@ const GENERIC_PATTERNS: Array<{ code: string; pattern: RegExp }> = [
   { code: 'generic_wait_and_see', pattern: /(?:持續|密切)?觀察市場(?:後續)?變化/ },
   { code: 'generic_invest_carefully', pattern: /投資(?:人)?(?:仍需|應)?謹慎/ },
   { code: 'generic_data_pending', pattern: /等待資料(?:確認|更新)|資料不足.*觀察/ },
+  { code: 'broken_english_chinese_join', pattern: /(?:\b[A-Za-z][A-Za-z'-]*[ \t]+){3,}\b[A-Za-z][A-Za-z'-]*(?=[\u3400-\u9fff])/ },
 ];
 
 function asRecord(value: unknown): JsonRecord {
@@ -51,6 +52,21 @@ function asText(value: unknown): string {
   if (typeof value === 'string') return value.trim();
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   return '';
+}
+
+/**
+ * Do not splice a truncated English headline directly into a Chinese product
+ * sentence. The source reference remains available in the evidence contract;
+ * this helper only replaces an unsafe display lead with a factual category
+ * label and does not translate or invent the headline's meaning.
+ */
+export function normalizeEvidenceLeadForChineseSentence(value: unknown): string {
+  const text = asText(value).replace(/\s+/g, ' ').replace(/[。；;，,!?！？]+$/g, '').trim();
+  if (!text) return '隔夜市場消息與台股現貨訊號';
+  const latinWords = text.match(/\b[A-Za-z][A-Za-z'-]*\b/g) || [];
+  const hasChinese = /[\u3400-\u9fff]/.test(text);
+  if (!hasChinese && latinWords.length >= 3) return '隔夜市場消息與台股現貨訊號';
+  return text.slice(0, 28);
 }
 
 function firstText(...values: unknown[]): string {

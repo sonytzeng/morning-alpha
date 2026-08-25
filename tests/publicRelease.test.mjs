@@ -448,7 +448,7 @@ test('home public decision copy is user-facing and internally consistent', () =>
   }
   assert.match(home, /盤前暫不建立部位/);
   assert.match(home, /runtimePhaseLabel\(currentNode\)/);
-  assert.match(home, /homeDecisionCopy\(decisionState, currentTimelineNode\)/);
+  assert.match(home, /homeDecisionCopy\([\s\S]*decisionState,[\s\S]*currentTimelineNode,[\s\S]*runtimeLifecycleComplete/);
   assert.match(home, /heroDecisionSentence/);
   assert.match(home, /renderSafeText\(heroDecisionSentence\)/);
   assert.doesNotMatch(home, /<h1>\{renderSafeText\(homeDecision\.instruction\)\}<\/h1>/);
@@ -471,6 +471,10 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /hasDirection/);
   assert.match(home, /資料不足，已安全降級/);
   assert.match(home, /selectNextRuntimeTimelineNode\(timelineNodes\)/);
+  assert.match(home, /runtimeLifecycleComplete/);
+  assert.match(home, /收盤驗證已完成，今日不追價/);
+  assert.match(home, /今日沒有強受惠股/);
+  assert.match(home, /今日風險檢查已完成/);
 });
 
 test('today report keeps runtime state and technical copy out of the public UI', () => {

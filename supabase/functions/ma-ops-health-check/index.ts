@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient as SupabaseClientType } from "https://esm.sh/@supabase/supabase-js@2";
 import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
+import { emitEmmaSystemHealth, type EmmaHealthSignal } from "../_shared/emma-system-health.ts";
 
 const VERSION = "MA_OPS_DELIVERY_GUARANTEE_V3";
 const QUERY_TIMEOUT_MS = 3000;
@@ -566,6 +567,72 @@ function deriveRunState(checks: CheckResult[]): { status: "passed" | "warning" |
   return { status: "passed", severity: "info" };
 }
 
+function emmaHealthSignals(request: HealthRequest, runId: string, checks: CheckResult[]): EmmaHealthSignal[] {
+  const byName = new Map(checks.map((check) => [check.check_name, check]));
+  const signals: EmmaHealthSignal[] = [{
+    checkKey: "cron.daily_report",
+    status: "PASS",
+    source: "morning_alpha.ma_ops_health_check",
+    details: { run_id: runId, check_type: request.check_type, target_date: request.target_date },
+  }];
+  const reportChecks = [
+    byName.get("daily-report-exists"),
+    byName.get("daily-report-date-consistency"),
+    byName.get("daily-report-contract"),
+  ].filter((check): check is CheckResult => Boolean(check));
+  if (reportChecks.length > 0) {
+    const failed = reportChecks.find((check) => check.status === "failed");
+    const degraded = reportChecks.find((check) => check.status === "warning" || check.status === "skipped");
+    signals.push({
+      checkKey: "report.today",
+      status: failed ? "FAILED" : degraded ? "DEGRADED" : "PASS",
+      errorCode: failed?.error_code ?? degraded?.error_code ?? null,
+      source: "morning_alpha.ma_ops_health_check",
+      details: {
+        run_id: runId,
+        target_date: request.target_date,
+        checks: reportChecks.map((check) => ({
+          check_name: check.check_name,
+          status: check.status,
+          severity: check.severity,
+          error_code: check.error_code,
+        })),
+      },
+    });
+  }
+  const closing = byName.get("closing-verification-status");
+  if (closing) {
+    signals.push({
+      checkKey: "closing.verification",
+      status: closing.status === "failed" ? "FAILED" : closing.status === "passed" ? "PASS" : "DEGRADED",
+      errorCode: closing.error_code,
+      source: "morning_alpha.ma_ops_health_check",
+      details: {
+        run_id: runId,
+        target_date: request.target_date,
+        check: {
+          check_name: closing.check_name,
+          status: closing.status,
+          severity: closing.severity,
+          error_code: closing.error_code,
+        },
+      },
+    });
+  }
+  return signals;
+}
+
+async function reportHealthToEmma(request: HealthRequest, runId: string, checks: CheckResult[]): Promise<void> {
+  const results = await Promise.all(emmaHealthSignals(request, runId, checks).map(emitEmmaSystemHealth));
+  console.log(JSON.stringify({
+    runtime: "ma-ops-health-check",
+    event: "emma_health_delivery",
+    run_id: runId,
+    delivered: results.filter((result) => result.delivered).length,
+    failed: results.filter((result) => !result.delivered).map((result) => result.error),
+  }));
+}
+
 function responseBody(request: HealthRequest, runId: string | null, checks: CheckResult[], generatedAt: string): JsonObject {
   const state = deriveRunState(checks);
   return {
@@ -773,6 +840,7 @@ Deno.serve(async (req: Request) => {
       const response = responseBody(request, runId, checks, generatedAt);
       persistenceStarted = true;
       await persistAuditResult(supabase, runId, checks, response, state);
+      await reportHealthToEmma(request, runId, checks);
       return jsonResponse(response);
     } catch (error) {
       if (!persistenceStarted) {

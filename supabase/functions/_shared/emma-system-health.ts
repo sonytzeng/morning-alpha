@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+
 type HealthStatus = "PASS" | "FAILED" | "DEGRADED";
 
 export type EmmaHealthSignal = {
@@ -40,12 +42,27 @@ async function signature(secret: string, message: string): Promise<string> {
   return `sha256=${hex(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message)))}`;
 }
 
+let cachedVaultSecret = "";
+
+async function loadSecret(): Promise<string> {
+  const environmentSecret = Deno.env.get("EMMA_SYSTEM_HEALTH_WEBHOOK_SECRET")?.trim() || "";
+  if (environmentSecret.length >= 32) return environmentSecret;
+  if (cachedVaultSecret.length >= 32) return cachedVaultSecret;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim() || "";
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() || "";
+  if (!supabaseUrl || !serviceRoleKey) return "";
+  const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+  const { data, error } = await admin.rpc("get_emma_health_shared_secret");
+  if (!error && typeof data === "string" && data.trim().length >= 32) cachedVaultSecret = data.trim();
+  return cachedVaultSecret;
+}
+
 export async function emitEmmaSystemHealth(signal: EmmaHealthSignal): Promise<{
   delivered: boolean;
   error?: string;
 }> {
   const url = endpoint();
-  const secret = Deno.env.get("EMMA_SYSTEM_HEALTH_WEBHOOK_SECRET")?.trim() || "";
+  const secret = await loadSecret();
   const ownerId = Deno.env.get("EMMA_OWNER_ID")?.trim() || DEFAULT_OWNER_ID;
   if (!url || secret.length < 32 || ownerId !== DEFAULT_OWNER_ID) {
     return { delivered: false, error: "EMMA_HEALTH_CONFIGURATION_MISSING" };

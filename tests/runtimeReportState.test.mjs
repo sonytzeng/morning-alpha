@@ -189,6 +189,8 @@ test('complete runtime evidence never exposes a generic data-insufficient change
   });
 
   assert.equal(narrative.decision_evidence.status, 'Confirmed');
+  assert.doesNotMatch(narrative.decision_evidence.reason, /Runtime checkpoint/i);
+  assert.match(narrative.decision_evidence.reason, /盤中驗證節點/);
   assert.equal(
     narrative.decision_lifecycle.failure_condition.trigger,
     '盤中出現足以推翻早上判斷的新訊號',

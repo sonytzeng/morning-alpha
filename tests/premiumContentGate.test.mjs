@@ -185,6 +185,34 @@ test('no-trade still blocks when any non-optional decision source is missing', (
   assert.ok(result.reason_codes.includes('source_data_incomplete'));
 });
 
+test('evidence-backed no-trade may publish when only prior sector context is unavailable', () => {
+  const ai = validAi();
+  ai.data_quality = 'degraded';
+  ai.missing_sources = ['sector_rotation_scores:2026-08-24'];
+  ai.today_beneficiary_stocks_v10 = [];
+  ai.v10_data_quality_status = 'insufficient_positive_evidence';
+  ai.today_quote = '費半與台積電 ADR 訊號分歧，09:30 先看 2330 與半導體族群是否同步止跌，未確認前不建立受惠股。';
+  ai.free_summary.one_sentence = ai.today_quote;
+  ai.v10_observation_watchlist = [
+    { symbol: '2330', data_basis: 'MD001｜market_data.TSM｜TSM ADR +0.8%' },
+    { symbol: '2308', data_basis: 'NEWS001｜https://example.com/nvda-catalyst' },
+    { symbol: '2882', data_basis: 'MD003｜market_data.US10Y｜US10Y UP' },
+  ];
+  const result = evaluatePremiumContentGate(ai, 3);
+  assert.equal(result.eligible, true);
+  assert.equal(result.decision_mode, 'no_trade');
+  assert.equal(result.content_score >= 90, true);
+});
+
+test('recommendations still fail closed when sector rotation context is unavailable', () => {
+  const ai = validAi();
+  ai.data_quality = 'degraded';
+  ai.missing_sources = ['sector_rotation_scores:2026-08-24'];
+  const result = evaluatePremiumContentGate(ai, 3);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('source_data_incomplete'));
+});
+
 test('recommendations may publish when TXF is the only declared entitlement gap', () => {
   const ai = validAi();
   ai.data_quality = 'degraded';

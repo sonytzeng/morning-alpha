@@ -74,6 +74,8 @@ test('Supabase Cron independently backs every production runtime checkpoint', ()
   assert.match(intradayContractSource, /latestMinutes: 12 \* 60 \+ 54/);
   assert.match(marketSource, /trading_day_state_transition_skipped: beneficiaryCloseOnly/);
   assert.match(marketSource, /beneficiary-only close pass/);
+  assert.match(marketSource, /checkpointEvidenceComplete = beneficiaryCloseOnly[\s\S]*: coreBatchComplete;/);
+  assert.doesNotMatch(marketSource, /coreBatchComplete && closeBeneficiaryCoverageComplete/);
 });
 
 test('DXY and US10Y unsupported Finnhub symbols are replaced by explicit liquid proxies', () => {

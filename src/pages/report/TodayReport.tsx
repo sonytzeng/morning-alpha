@@ -169,10 +169,17 @@ function humanizeValidationText(value: unknown): string {
 function todayDecisionCopy(
   state: PresentationDecisionState,
   timeline: RuntimeTimelineNode[],
+  lifecycleComplete = false,
 ): { headline: string; instruction: string } {
   if (state === 'ACT') return { headline: '驗證條件已成立', instruction: '條件成立，依計畫分批執行' };
   if (state === 'STOP') return { headline: '原定條件已失效', instruction: '停止原定計畫，先控制風險' };
   if (state === 'CLOSED') return { headline: '今日休市', instruction: '今天不執行盤中流程' };
+  if (lifecycleComplete) {
+    return {
+      headline: '今日進場條件未成立',
+      instruction: '今日不追價，等待下一個交易日',
+    };
+  }
   const latestInsufficient = [...timeline].reverse().find((node) => node.status === 'insufficient');
   if (state === 'INSUFFICIENT_DATA' && latestInsufficient) {
     return {
@@ -192,7 +199,17 @@ function todayDecisionCopy(
   };
 }
 
-function workbenchTitle(state: PresentationDecisionState, nextNode: RuntimeTimelineNode): string {
+function workbenchTitle(
+  state: PresentationDecisionState,
+  nextNode: RuntimeTimelineNode,
+  lifecycleComplete = false,
+): string {
+  if (lifecycleComplete) {
+    if (state === 'ACT') return '今日條件成立，收盤驗證已完成';
+    if (state === 'STOP') return '今日條件失效，收盤驗證已完成';
+    if (state === 'CLOSED') return '今日休市，流程已結束';
+    return '今日條件未成立，收盤驗證已完成';
+  }
   if (state === 'ACT') return '條件成立，接下來只做計畫內的事';
   if (state === 'STOP') return '原定條件失效，先停止再重新判斷';
   if (state === 'CLOSED') return '今日流程已結束';
@@ -429,13 +446,19 @@ function TodayReportContent() {
   const activeFailure = canonicalNarrative.failure_triggers[0]
     || (presentation.primaryDecision.state === 'STOP' ? canonicalNarrative.decision_lifecycle.failure_condition : null);
 
-  const decisionCopy = todayDecisionCopy(presentation.primaryDecision.state, runtimeTimeline);
   const nextRuntimeIndex = runtimeTimeline.findIndex((node) => node.time === nextRuntimeNode.time);
   const previousRuntimeNode = [...runtimeTimeline.slice(0, Math.max(0, nextRuntimeIndex))]
     .reverse()
     .find((node) => node.status === 'completed' || node.status === 'insufficient')
     || runtimeTimeline[0];
   const closingRuntimeNode = runtimeTimeline[runtimeTimeline.length - 1];
+  const runtimeLifecycleComplete = runtimeTimeline.every((node) =>
+    node.status === 'completed' || node.status === 'not_applicable');
+  const decisionCopy = todayDecisionCopy(
+    presentation.primaryDecision.state,
+    runtimeTimeline,
+    runtimeLifecycleComplete,
+  );
   const milestoneCandidates = [
     { ...previousRuntimeNode, kicker: '最近結果' },
     { ...nextRuntimeNode, kicker: '下一個判斷' },
@@ -450,13 +473,21 @@ function TodayReportContent() {
   const validationProgressLabel = scriptProgress == null
     ? runtimeTimeline.some((node) => node.status === 'insufficient') ? '待補資料' : '等待驗證'
     : `${scriptProgress}%`;
-  const todayWorkbenchTitle = workbenchTitle(presentation.primaryDecision.state, nextRuntimeNode);
-  const validationState = runtimeTimeline.some((node) => node.status === 'insufficient')
+  const todayWorkbenchTitle = workbenchTitle(
+    presentation.primaryDecision.state,
+    nextRuntimeNode,
+    runtimeLifecycleComplete,
+  );
+  const validationState = runtimeLifecycleComplete
+    ? 'confirmed'
+    : runtimeTimeline.some((node) => node.status === 'insufficient')
     ? 'insufficient'
     : presentation.primaryDecision.state === 'ACT'
       ? 'confirmed'
       : 'pending';
-  const workbenchStateLabel = validationState === 'insufficient'
+  const workbenchStateLabel = runtimeLifecycleComplete
+    ? '收盤完成'
+    : validationState === 'insufficient'
     ? '待補資料'
     : presentation.primaryDecision.state === 'ACT'
       ? '條件成立'
@@ -597,7 +628,7 @@ function TodayReportContent() {
               <dl className="ma-today-v4-status-grid">
                 <div><dt>現在怎麼做</dt><dd>{renderSafeText(decisionCopy.instruction)}</dd></div>
                 <div><dt>為什麼</dt><dd>{renderSafeText(decisionCopy.headline)}</dd></div>
-                <div><dt>{nextRuntimeNode.status === 'current' ? '目前節點' : '何時再看'}</dt><dd>{renderSafeText(nextDecisionTime)}</dd></div>
+                <div><dt>{runtimeLifecycleComplete ? '最後完成' : nextRuntimeNode.status === 'current' ? '目前節點' : '何時再看'}</dt><dd>{renderSafeText(nextDecisionTime)}</dd></div>
               </dl>
               {avoidAction && <p className="ma-today-v4-caution"><span>今天先不要</span>{renderSafeText(publicTodayText(avoidAction))}</p>}
             </article>
@@ -609,7 +640,7 @@ function TodayReportContent() {
 
         <div className="ma-pixel-content ma-today-v3-sections">
           <section className={`ma-today-v3-validation-card is-${validationState}`}>
-            <header className="ma-today-v3-section-header"><div><p>目前卡住的原因</p><h2>下一步要補齊的證據</h2></div><strong>{validationProgressLabel}</strong></header>
+            <header className="ma-today-v3-section-header"><div><p>{runtimeLifecycleComplete ? '今日驗證結果' : '目前卡住的原因'}</p><h2>{runtimeLifecycleComplete ? '六個交易節點均已完成' : '下一步要補齊的證據'}</h2></div><strong>{validationProgressLabel}</strong></header>
             <div className={`ma-today-v3-checklist${validationItems.length === 1 ? ' is-single' : ''}`}>
               {validationItems.map((item, index) => (
                 <article key={`${item.label}-${index}`} className={`is-${item.status}`}>

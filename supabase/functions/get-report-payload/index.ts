@@ -428,6 +428,9 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const publicV10DataQualityStatus = premiumGate.eligible && premiumGate.decision_mode === "no_trade"
     ? "no_trade_evidence_complete"
     : toStringValue(ai.v10_data_quality_status);
+  const publicDataQuality = premiumGate.eligible && premiumGate.decision_mode === "no_trade"
+    ? "partial"
+    : toStringValue(ai.data_quality) || toStringValue(ai.data_status) || toStringValue(asObject(ai.member_research_note_v2).data_status) || "unknown";
   const confidenceScore = getConfidenceScore(report, ai);
   const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
   const marketMetadata = getCanonicalMarketMetadata(report, ai);
@@ -505,7 +508,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     sector_rotation_status: asObject(ai.sector_rotation_status),
     market_data_snapshots: ctx.marketDataSnapshots.slice(0, 16),
     closing_verification: buildClosingVerdict(ai),
-    data_quality: toStringValue(ai.data_quality) || toStringValue(ai.data_status) || toStringValue(asObject(ai.member_research_note_v2).data_status) || "unknown",
+    data_quality: publicDataQuality,
   };
 }
 

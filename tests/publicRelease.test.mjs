@@ -410,6 +410,7 @@ test('member research note labels same-day Taiwan recovery data as intraday, not
 
 test('public payload distinguishes an evidence-backed no-trade day from missing data', () => {
   assert.match(reportPayloadFunction, /no_trade_evidence_complete/);
+  assert.match(reportPayloadFunction, /const publicDataQuality = premiumGate\.eligible && premiumGate\.decision_mode === "no_trade"/);
   assert.match(reportPayloadFunction, /taiex_change: toNumberValue\(radar\.taiex_change\)/);
   assert.match(reportPayloadFunction, /txf_change: toNumberValue\(radar\.txf_change\)/);
   assert.match(reportPayloadFunction, /tsmc_change: toNumberValue\(radar\.tsmc_change\)/);

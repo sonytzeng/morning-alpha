@@ -6,6 +6,7 @@ import {
   preserveRuntimeReportOverlay,
 } from '../supabase/functions/_shared/runtime-report-state.ts';
 import { buildDecisionPresentation } from '../src/lib/decisionPresentation.ts';
+import { buildCanonicalNarrative } from '../src/lib/canonicalNarrative.ts';
 
 const generatorSource = readFileSync(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
 const payloadSource = readFileSync(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');
@@ -154,4 +155,42 @@ test('completed runtime evidence may confirm a canonical selective recommendatio
     narrative: confirmedNarrative(),
   });
   assert.equal(presentation.primaryDecision.state, 'ACT');
+});
+
+test('complete runtime evidence never exposes a generic data-insufficient change trigger', () => {
+  const narrative = buildCanonicalNarrative({
+    displayState: null,
+    ai: {
+      primary_driver: '金融止跌確認',
+      market_story: '盤中維持原本不追價判斷。',
+      taiwan_transmission: '金融未形成相對強勢。',
+      action_guidance: '維持觀察，不新增部位。',
+      member_research_note_v2: {
+        opening_thesis: { risk: '資料不足' },
+        intraday_time_windows: [
+          { time: '09:30', title: '開盤驗證', what_to_watch: '金融能否相對大盤止跌' },
+        ],
+      },
+      intraday_sync_status: {
+        windows: {
+          '0930': {
+            status: 'completed',
+            completed_at: '2026-08-25T01:35:12.422Z',
+            evidence: { source: 'trading_day_state' },
+          },
+        },
+      },
+      market_data_snapshots: [
+        { symbol: 'TAIEX', value: 24000, change_percent: -0.9 },
+        { symbol: 'TXF', value: 23950, change_percent: -0.8 },
+        { symbol: '2330', value: 1190, change_percent: -0.6 },
+      ],
+    },
+  });
+
+  assert.equal(narrative.decision_evidence.status, 'Confirmed');
+  assert.equal(
+    narrative.decision_lifecycle.failure_condition.trigger,
+    '盤中出現足以推翻早上判斷的新訊號',
+  );
 });

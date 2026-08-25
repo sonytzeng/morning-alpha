@@ -355,8 +355,16 @@ function buildDecisionLifecycle(
   decisionEvidence: DecisionRuntimeEvidence,
 ): CanonicalDecisionLifecycle {
   const question = toDecisionQuestion(today_focus.headline, today_focus.summary || today_script.headline);
+  const hasUsableRuntimeEvidence = decisionEvidence.marketSnapshotAvailable
+    && decisionEvidence.checklistAvailable;
+  const fallbackTrigger = hasUsableRuntimeEvidence
+    ? firstText(
+      !/^資料(?:尚未完整|不足|缺漏)/.test(today_focus.risk) ? today_focus.risk : '',
+      '盤中出現足以推翻早上判斷的新訊號',
+    )
+    : firstText(today_focus.risk, '資料不足');
   const fallbackFailure: CanonicalFailureTrigger = {
-    trigger: firstText(today_focus.risk, '資料不足'),
+    trigger: fallbackTrigger,
     meaning: firstText(today_focus.why, today_focus.summary, '目前缺少足夠條件判斷劇本是否成立。'),
     action: firstText(today_focus.action, today_focus.risk),
   };

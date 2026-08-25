@@ -32,9 +32,12 @@ type PayloadContext = {
   sectorRotationRows: Record<string, unknown>[];
   marketDataSnapshots: Record<string, unknown>[];
   decisionSnapshot: Record<string, unknown> | null;
+  closingDecisionSnapshot: Record<string, unknown> | null;
+  closeMarketReview: Record<string, unknown> | null;
+  learningRun: Record<string, unknown> | null;
   tradingDayState: Record<string, unknown> | null;
   componentQueryFailures: Array<{
-    source: "opening_market_radar" | "sector_rotation_scores" | "market_data_snapshots" | "decision_snapshots" | "trading_day_state";
+    source: "opening_market_radar" | "sector_rotation_scores" | "market_data_snapshots" | "decision_snapshots" | "closing_decision_snapshot" | "close_market_reviews" | "learning_runs" | "trading_day_state";
     error_type: "QUERY_FAILED";
   }>;
 };
@@ -124,8 +127,75 @@ function getAi(report: ReportRow): Record<string, unknown> {
   return parseAi(report.ai_strategy_json);
 }
 
+function normalizeClosingOutcome(value: unknown): "hit" | "partial" | "miss" | "pending" {
+  const normalized = (toStringValue(value) || "").toLowerCase();
+  if (["hit", "correct", "confirmed", "success", "accurate", "方向一致", "大致一致", "命中"].includes(normalized)) return "hit";
+  if (["partial", "mixed", "partially_confirmed"].includes(normalized) || normalized.includes("部分")) return "partial";
+  if (["miss", "wrong", "failed", "rejected", "incorrect", "inaccurate", "未命中"].includes(normalized)) return "miss";
+  return "pending";
+}
+
+function buildAuthoritativeClosingVerification(
+  ai: Record<string, unknown>,
+  ctx: PayloadContext,
+): Record<string, unknown> | null {
+  const existingV2 = asObject(ai.closing_verification_v2);
+  const existingLegacy = asObject(ai.closing_verification);
+  const generatedText = asObject(ctx.closingDecisionSnapshot?.generated_text);
+  const review = ctx.closeMarketReview;
+  const base = {
+    ...existingLegacy,
+    ...existingV2,
+    ...generatedText,
+  };
+  if (!review) return Object.keys(base).length > 0 ? base : null;
+
+  const missingData = Array.isArray(review.missing_data) ? review.missing_data.map(String) : [];
+  const taiexChange = toNumberValue(review.taiex_change);
+  const tsmcChange = toNumberValue(review.tsmc_change);
+  const txfChange = toNumberValue(review.txf_change);
+  const outcome = normalizeClosingOutcome(review.verification_result || review.verification_label);
+  const dataQuality = toStringValue(review.data_quality) || "unknown";
+  const complete = taiexChange !== null
+    && missingData.length === 0
+    && ["高可信", "verified", "complete", "high_confidence"].includes(dataQuality.toLowerCase())
+    && outcome !== "pending";
+
+  return {
+    ...base,
+    status: complete ? "completed" : taiexChange !== null ? "direction_completed_data_degraded" : "pending_real_market_data",
+    data_status: complete ? "complete" : taiexChange !== null ? "degraded" : "pending",
+    report_date: toStringValue(review.report_date),
+    verified_at: toStringValue(review.updated_at) || toStringValue(review.created_at),
+    hit_or_miss: outcome,
+    prediction_result: outcome,
+    verdict_label: toStringValue(review.verification_label) || toStringValue(review.verification_result),
+    verification_note: toStringValue(review.verification_note),
+    actual_direction: toStringValue(review.actual_market_result),
+    actual_taiex_change: taiexChange,
+    actual_taiex_close: {
+      ...asObject(base.actual_taiex_close),
+      change_percent: taiexChange,
+    },
+    actual_2330_close: {
+      ...asObject(base.actual_2330_close),
+      change_percent: tsmcChange,
+    },
+    actual_txf_close: {
+      ...asObject(base.actual_txf_close),
+      change_percent: txfChange,
+    },
+    data_quality: dataQuality,
+    missing_data: missingData,
+    close_market_review_id: toStringValue(review.id),
+    source_priority: "close_market_review",
+    no_fake_data: true,
+  };
+}
+
 function getEffectiveAi(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
   const ai = getAi(report);
+  const closingVerification = buildAuthoritativeClosingVerification(ai, ctx);
   return {
     ...ai,
     ...(ctx.openingRadar ? {
@@ -135,7 +205,26 @@ function getEffectiveAi(report: ReportRow, ctx: PayloadContext): Record<string, 
     intraday_sync_status: buildCanonicalIntradaySyncStatus(
       ai.intraday_sync_status,
       ctx.tradingDayState,
+      {
+        closeMarketReview: ctx.closeMarketReview,
+        closingDecisionSnapshot: ctx.closingDecisionSnapshot,
+        learningRun: ctx.learningRun,
+      },
     ),
+    ...(closingVerification ? {
+      closing_verification: closingVerification,
+      closing_verification_v2: closingVerification,
+    } : {}),
+    continuous_learning: ctx.learningRun ? {
+      status: toStringValue(ctx.learningRun.status),
+      run_id: toStringValue(ctx.learningRun.id),
+      completed_at: toStringValue(ctx.learningRun.completed_at),
+      predictions_processed: toNumberValue(ctx.learningRun.predictions_processed),
+      outcomes_updated: toNumberValue(ctx.learningRun.outcomes_updated),
+      reviews_created: toNumberValue(ctx.learningRun.reviews_created),
+      cases_created: toNumberValue(ctx.learningRun.cases_created),
+      patterns_updated: toNumberValue(ctx.learningRun.patterns_updated),
+    } : null,
   };
 }
 
@@ -259,6 +348,9 @@ function getDataAsOf(ai: Record<string, unknown>, ctx: PayloadContext): string |
     asObject(closingV2.actual_txf_close).captured_at,
     closingV2.verified_at,
     closing.verified_at,
+    ctx.closeMarketReview?.updated_at,
+    ctx.closingDecisionSnapshot?.valid_from,
+    ctx.learningRun?.completed_at,
   ]
     .map(toIsoTimestamp)
     .filter((value): value is string => value !== null)
@@ -352,6 +444,12 @@ function buildClosingVerdict(ai: Record<string, unknown>): Record<string, unknow
     prediction_result: toStringValue(closing.prediction_result) || toStringValue(closing.hit_or_miss),
     accuracy_score: toNumberValue(closing.accuracy_score),
     verified_at: toStringValue(closing.verified_at),
+    actual_direction: toStringValue(closing.actual_direction),
+    actual_taiex_change: toNumberValue(closing.actual_taiex_change) ?? toNumberValue(asObject(closing.actual_taiex_close).change_percent),
+    actual_taiex_close: asObject(closing.actual_taiex_close),
+    data_quality: toStringValue(closing.data_quality),
+    missing_data: Array.isArray(closing.missing_data) ? closing.missing_data : [],
+    no_fake_data: closing.no_fake_data === true,
   };
 }
 
@@ -525,6 +623,8 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     sector_rotation_status: asObject(ai.sector_rotation_status),
     market_data_snapshots: ctx.marketDataSnapshots.slice(0, 16),
     closing_verification: buildClosingVerdict(ai),
+    continuous_learning: asObject(ai.continuous_learning),
+    runtime_lifecycle_complete: asObject(ai.intraday_sync_status).lifecycle_complete === true,
     data_quality: publicDataQuality,
   };
 }
@@ -589,7 +689,7 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
 }
 
 function buildVipPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
-  const ai = getAi(report);
+  const ai = getEffectiveAi(report, ctx);
   const note = asObject(ai.member_research_note_v2);
   const closing = asObject(ai.closing_verification);
   const memberPayload = buildMemberPayload(report, ctx);
@@ -653,7 +753,16 @@ async function fetchPayloadContext(
   serviceClient: ServiceClient,
   reportDate: string,
 ): Promise<PayloadContext> {
-  const [radarResult, sectorResult, snapshotResult, decisionResult, tradingDayStateResult] = await Promise.all([
+  const [
+    radarResult,
+    sectorResult,
+    snapshotResult,
+    decisionResult,
+    tradingDayStateResult,
+    closingDecisionResult,
+    closeReviewResult,
+    learningRunResult,
+  ] = await Promise.all([
     serviceClient
       .from("opening_market_radar")
       .select("*")
@@ -686,6 +795,29 @@ async function fetchPayloadContext(
       .select("trading_date,current_state,state_rank,checkpoint_status,updated_at")
       .eq("trading_date", reportDate)
       .maybeSingle(),
+    serviceClient
+      .from("decision_snapshots")
+      .select("*")
+      .eq("report_date", reportDate)
+      .eq("session_type", "CLOSING")
+      .eq("is_current", true)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    serviceClient
+      .from("close_market_reviews")
+      .select("*")
+      .eq("report_date", reportDate)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    serviceClient
+      .from("learning_runs")
+      .select("id,run_date,status,completed_at,predictions_processed,outcomes_updated,reviews_created,cases_created,patterns_updated,errors,metadata")
+      .eq("run_date", reportDate)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (radarResult.error) console.error("GET_REPORT_PAYLOAD_RADAR_QUERY_FAILED", radarResult.error.message);
@@ -693,6 +825,9 @@ async function fetchPayloadContext(
   if (snapshotResult.error) console.error("GET_REPORT_PAYLOAD_SNAPSHOT_QUERY_FAILED", snapshotResult.error.message);
   if (decisionResult.error) console.error("GET_REPORT_PAYLOAD_DECISION_QUERY_FAILED", decisionResult.error.message);
   if (tradingDayStateResult.error) console.error("GET_REPORT_PAYLOAD_TRADING_DAY_STATE_QUERY_FAILED", tradingDayStateResult.error.message);
+  if (closingDecisionResult.error) console.error("GET_REPORT_PAYLOAD_CLOSING_DECISION_QUERY_FAILED", closingDecisionResult.error.message);
+  if (closeReviewResult.error) console.error("GET_REPORT_PAYLOAD_CLOSE_REVIEW_QUERY_FAILED", closeReviewResult.error.message);
+  if (learningRunResult.error) console.error("GET_REPORT_PAYLOAD_LEARNING_RUN_QUERY_FAILED", learningRunResult.error.message);
 
   const componentQueryFailures: PayloadContext["componentQueryFailures"] = [];
   if (radarResult.error) componentQueryFailures.push({ source: "opening_market_radar", error_type: "QUERY_FAILED" });
@@ -700,12 +835,18 @@ async function fetchPayloadContext(
   if (snapshotResult.error) componentQueryFailures.push({ source: "market_data_snapshots", error_type: "QUERY_FAILED" });
   if (decisionResult.error) componentQueryFailures.push({ source: "decision_snapshots", error_type: "QUERY_FAILED" });
   if (tradingDayStateResult.error) componentQueryFailures.push({ source: "trading_day_state", error_type: "QUERY_FAILED" });
+  if (closingDecisionResult.error) componentQueryFailures.push({ source: "closing_decision_snapshot", error_type: "QUERY_FAILED" });
+  if (closeReviewResult.error) componentQueryFailures.push({ source: "close_market_reviews", error_type: "QUERY_FAILED" });
+  if (learningRunResult.error) componentQueryFailures.push({ source: "learning_runs", error_type: "QUERY_FAILED" });
 
   return {
     openingRadar: radarResult.data ? radarResult.data as Record<string, unknown> : null,
     sectorRotationRows: Array.isArray(sectorResult.data) ? sectorResult.data as Record<string, unknown>[] : [],
     marketDataSnapshots: Array.isArray(snapshotResult.data) ? snapshotResult.data as Record<string, unknown>[] : [],
     decisionSnapshot: decisionResult.data ? decisionResult.data as Record<string, unknown> : null,
+    closingDecisionSnapshot: closingDecisionResult.data ? closingDecisionResult.data as Record<string, unknown> : null,
+    closeMarketReview: closeReviewResult.data ? closeReviewResult.data as Record<string, unknown> : null,
+    learningRun: learningRunResult.data ? learningRunResult.data as Record<string, unknown> : null,
     tradingDayState: tradingDayStateResult.data ? tradingDayStateResult.data as Record<string, unknown> : null,
     componentQueryFailures,
   };

@@ -96,6 +96,56 @@ test('unresolved future ledger checkpoints remain pending', () => {
   assert.equal(sync.windows['1300'], 'pending');
 });
 
+test('canonical runtime state reconciles all six checkpoints and close learning lifecycle', () => {
+  const checkpoint_status = Object.fromEntries(
+    ['0900', '0930', '1030', '1300', '1410', '1430'].map((checkpoint) => [checkpoint, {
+      status: 'SUCCEEDED',
+      updated_at: `2026-08-25T06:${checkpoint.slice(2)}:00.000Z`,
+      metadata: { required_core_complete: true, canonical_complete: true, snapshot_upserted_count: 3 },
+    }]),
+  );
+  const sync = buildCanonicalIntradaySyncStatus({}, {
+    trading_date: '2026-08-25',
+    current_state: 'LEARNING_COMPLETED',
+    checkpoint_status,
+  }, {
+    closeMarketReview: {
+      report_date: '2026-08-25',
+      verification_result: '未命中',
+      actual_market_result: '小漲',
+      taiex_change: 0.91,
+      tsmc_change: 1.05,
+      txf_change: 0.64,
+      data_quality: '高可信',
+      missing_data: [],
+      updated_at: '2026-08-25T06:35:00.000Z',
+    },
+    closingDecisionSnapshot: { status: 'FINAL' },
+    learningRun: { status: 'succeeded' },
+  });
+
+  assert.deepEqual(Object.keys(sync.windows).sort(), ['0900', '0930', '1030', '1300', '1410', '1430']);
+  assert.equal(sync.windows['1430'].evidence.source, 'close_market_review');
+  assert.equal(sync.closing_verification_status, 'completed');
+  assert.equal(sync.continuous_learning_status, 'completed');
+  assert.equal(sync.lifecycle_complete, true);
+});
+
+test('false core completeness cannot masquerade as a successful close checkpoint', () => {
+  const sync = buildCanonicalIntradaySyncStatus({ windows: { '1410': 'pending' } }, {
+    trading_date: '2026-08-25',
+    checkpoint_status: {
+      '1410': {
+        status: 'SUCCEEDED',
+        metadata: { required_core_complete: false, canonical_complete: false, snapshot_upserted_count: 0 },
+      },
+    },
+  });
+  assert.equal(sync.windows['1410'].status, 'insufficient');
+  assert.equal(sync.windows['1410'].evidence.reason, 'required_core_incomplete');
+  assert.equal(sync.lifecycle_complete, false);
+});
+
 function confirmedNarrative() {
   return {
     decision_evidence: {

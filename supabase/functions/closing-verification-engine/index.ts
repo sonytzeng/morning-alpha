@@ -758,6 +758,14 @@ function buildClosingVerificationV2(params: {
       captured_at: params.taiexClose.capturedAt,
       source: params.taiexClose.source,
     } : null,
+    actual_taiex_change: params.taiexClose?.change ?? null,
+    actual_direction: params.taiexClose
+      ? (params.taiexClose.change ?? 0) >= 0.3
+        ? "up"
+        : (params.taiexClose.change ?? 0) <= -0.3
+          ? "down"
+          : "flat"
+      : "unknown",
     actual_2330_close: params.tsmcClose ? {
       symbol: params.tsmcClose.symbol,
       value: params.tsmcClose.value,

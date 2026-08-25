@@ -41,6 +41,7 @@ const closingVerification = read('supabase/functions/closing-verification-engine
 const opsHealthCheck = read('supabase/functions/ma-ops-health-check/index.ts');
 const contentIntelligenceMigration = read('supabase/migrations/20260820131721_content_intelligence_v2_foundation.sql');
 const deliveryGuaranteeMigration = read('supabase/migrations/20260821080555_daily_delivery_guarantee.sql');
+const publicCloseReconciliationMigration = read('supabase/migrations/20260825160000_public_close_reconciliation.sql');
 const accountDashboard = read('src/hooks/useAccountDashboard.ts');
 const accountInfoCards = read('src/pages/account/components/TodayInfoCards.tsx');
 
@@ -628,6 +629,11 @@ test('performance excludes outcomes that have no verifiable closing direction', 
   assert.match(performance, /numberOrNull\(actualTaiexClose\?\.change_percent\)/);
   assert.match(performance, /if \(!hasVerifiableDirection\) return false/);
   assert.match(performance, /publicPerformanceText/);
+  assert.match(closingVerification, /actual_taiex_change: params\.taiexClose\?\.change \?\? null/);
+  assert.match(closingVerification, /actual_direction: params\.taiexClose/);
+  assert.match(publicCloseReconciliationMigration, /left join latest_close_reviews/);
+  assert.match(publicCloseReconciliationMigration, /'source_priority', 'close_market_review'/);
+  assert.match(publicCloseReconciliationMigration, /cardinality\(cmr\.missing_data\) = 0/);
 });
 
 test('verification is a public fail-closed audit instead of an internal diagnostics page', () => {

@@ -494,6 +494,10 @@ test('today report is a drill-down workbench rather than a duplicate home dashbo
   assert.match(today, /nextRuntimeNode\.status === 'current' \|\| nextRuntimeNode\.status === 'insufficient'/);
   assert.match(today, /節點時間已到，但完整市場資料尚未到齊；資料補齊前不更新判斷/);
   assert.match(today, /label: `\$\{nextRuntimeNode\.time\} \$\{nextRuntimeNode\.label\}`/);
+  assert.match(today, /runtimeLifecycleComplete/);
+  assert.match(today, /今日條件未成立，收盤驗證已完成/);
+  assert.match(today, /今日進場條件未成立/);
+  assert.match(today, /六個交易節點均已完成/);
 });
 
 test('today report cards show complete text and adapt to the actual item count', () => {

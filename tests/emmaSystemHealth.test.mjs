@@ -19,6 +19,9 @@ test('Morning Alpha sends bounded signed health evidence to the exact Emma endpo
 
 test('MA-Ops maps scheduler, report and closing evidence without claiming repair', () => {
   const health = read('supabase/functions/ma-ops-health-check/index.ts');
+  assert.match(health, /get_ma_ops_health_cron_secret/);
+  assert.match(health, /environmentMatches/);
+  assert.match(health, /vaultMatches/);
   assert.match(health, /cron\.daily_report/);
   assert.match(health, /report\.today/);
   assert.match(health, /closing\.verification/);

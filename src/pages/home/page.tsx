@@ -179,7 +179,14 @@ function exposureLabel(state: string): string {
   }
 }
 
-function homeDecisionCopy(state: string, currentNode?: TimelineNode): { headline: string; instruction: string } {
+function homeDecisionCopy(
+  state: string,
+  currentNode?: TimelineNode,
+  lifecycleComplete = false,
+): { headline: string; instruction: string } {
+  if (lifecycleComplete && !['ACT', 'STOP', 'CLOSED', 'INSUFFICIENT_DATA'].includes(state)) {
+    return { headline: '今日條件未成立', instruction: '收盤驗證已完成，今日不追價' };
+  }
   switch (state) {
     case 'ACT': return { headline: '今日條件成立', instruction: '依計畫分批執行' };
     case 'STOP': return { headline: '今日條件已失效', instruction: '停止原定計畫' };
@@ -369,13 +376,19 @@ function HomePageContent() {
 
   const currentTimelineNode = selectNextRuntimeTimelineNode(timelineNodes)
     || timelineNodes[timelineNodes.length - 1];
+  const runtimeLifecycleComplete = timelineNodes.every((node) =>
+    node.status === 'completed' || node.status === 'not_applicable');
   const presentation = useMemo(() => buildDecisionPresentation({
     displayState,
     narrative: canonicalNarrative,
     nextCheckpointFallback: `${currentTimelineNode.time} ${currentTimelineNode.label}`,
   }), [canonicalNarrative, currentTimelineNode.label, currentTimelineNode.time, displayState]);
   const decisionState = presentation.primaryDecision.state;
-  const homeDecision = homeDecisionCopy(decisionState, currentTimelineNode);
+  const homeDecision = homeDecisionCopy(
+    decisionState,
+    currentTimelineNode,
+    runtimeLifecycleComplete,
+  );
   const nextAction = homeDecision.instruction;
   const reportDecisionSentence = translateKnownTerms(firstMeaningfulString(displayState.todayQuote));
   const heroDecisionSentence = reportDecisionSentence.length >= 24
@@ -918,7 +931,7 @@ function HomePageContent() {
                         </div>
                         <div>
                           <p>原因</p>
-                          <strong>{renderSafeText(item.reason || '今日資料整理中')}</strong>
+                          <strong>{renderSafeText(item.reason || (runtimeLifecycleComplete ? decisionContext : '今日資料整理中'))}</strong>
                         </div>
                         <div>
                           <p>確認條件</p>
@@ -933,8 +946,8 @@ function HomePageContent() {
                   </div>
                 ) : (
                   <div className="ma-home-v2-empty is-section">
-                    <strong>今日資料整理中</strong>
-                    <span>AI 正在等待市場資料完成，不會用固定觀察句填補。</span>
+                    <strong>{runtimeLifecycleComplete ? '今日沒有強受惠股' : '今日資料整理中'}</strong>
+                    <span>{runtimeLifecycleComplete ? '今日條件未成立，不用空泛觀察名單填補。' : 'AI 正在等待市場資料完成，不會用固定觀察句填補。'}</span>
                   </div>
                 )}
               </section>
@@ -955,19 +968,19 @@ function HomePageContent() {
                         </div>
                         <div>
                           <span>原因</span>
-                          <p>{renderSafeText(item.reason || '今日資料整理中')}</p>
+                          <p>{renderSafeText(item.reason || (runtimeLifecycleComplete ? decisionContext : '今日資料整理中'))}</p>
                         </div>
                         <div>
                           <span>容易造成什麼結果</span>
-                          <p>{renderSafeText(item.result || 'AI 正在等待市場資料完成。')}</p>
+                          <p>{renderSafeText(item.result || (runtimeLifecycleComplete ? homeDecision.instruction : 'AI 正在等待市場資料完成。'))}</p>
                         </div>
                       </article>
                     ))}
                   </div>
                 ) : (
                   <div className="ma-home-v2-empty is-section">
-                    <strong>今日資料整理中</strong>
-                    <span>AI 正在等待風險條件完成，不會顯示空泛提醒。</span>
+                    <strong>{runtimeLifecycleComplete ? '今日風險檢查已完成' : '今日資料整理中'}</strong>
+                    <span>{runtimeLifecycleComplete ? '維持今日不追價結論，等待下一個交易日重新評估。' : 'AI 正在等待風險條件完成，不會顯示空泛提醒。'}</span>
                   </div>
                 )}
               </section>

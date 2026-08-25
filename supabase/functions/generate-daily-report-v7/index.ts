@@ -1096,11 +1096,12 @@ function buildMemberResearchNoteText(md:MarketIndicator[],todayDate:string,dates
   const fmtPct=function(v:number){return v>=0?'+'+v.toFixed(2)+'%':v.toFixed(2)+'%'};
   const taiex=f(['TAIEX','TWII']),txf=f(['TXF','TX']),ts2330=f(['2330','2330.TW']),spx=f(['SPX','SP500']),sox=f(['SOX','PHLX']),nv=f(['NVDA']),vix=f(['VIX','VIXINDEX']),tsm=f(['TSM','TSMC']),dxy=f(['DXY','USDINDEX']),us10y=f(['US10Y','TNX']);
   const parts:string[]=[];
+  const isIntradayTaiwanBasis=dates.twCoreDate===todayDate;
   parts.push('【盤前核心結論】');
-  const cLines=['本日盤前基準日期：台股 '+dates.twCoreDate+' 收盤，海外 '+dates.usGlobalDate+' 收盤。','綜合市場數據評分後，今日盤前方向為 '+marketBias+'，信心分數 '+confidenceScore+'/100。'];
+  const cLines=['本日研究基準日期：台股 '+dates.twCoreDate+(isIntradayTaiwanBasis?' 盤中最新資料':' 最近完整收盤')+'，海外 '+dates.usGlobalDate+' 最近完整收盤。','綜合市場數據評分後，今日盤前方向為 '+marketBias+'，信心分數 '+confidenceScore+'/100。'];
   if(dScore.reasons.length>0)cLines.push('正向因子：'+dScore.reasons.join('、')+'。');
   if(dScore.riskReasons.length>0&&dScore.riskReasons[0]!=='暫無明顯風險訊號')cLines.push('風險因子：'+dScore.riskReasons.join('、')+'。');
-  cLines.push('今日 '+todayDate+' 開盤後需觀察台股是否延續此前方向。');
+  cLines.push('今日 '+todayDate+(isIntradayTaiwanBasis?' 盤中後續':' 開盤後')+'需觀察台股是否延續此前方向。');
   parts.push(cLines.join('\n'));
   parts.push('\n【台股三核心判讀：TAIEX、TXF、2330】');
   const twL:string[]=[];

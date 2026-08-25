@@ -402,6 +402,12 @@ test('trading-day reports and public timelines fail closed with correct times', 
   assert.match(warRoom, /不會把歷史時間軸冒充成今天進度/);
 });
 
+test('member research note labels same-day Taiwan recovery data as intraday, not a completed close', () => {
+  assert.match(dailyReportGenerator, /const isIntradayTaiwanBasis=dates\.twCoreDate===todayDate/);
+  assert.match(dailyReportGenerator, /isIntradayTaiwanBasis\?' 盤中最新資料':' 最近完整收盤'/);
+  assert.doesNotMatch(dailyReportGenerator, /本日盤前基準日期：台股 '\+dates\.twCoreDate\+' 收盤/);
+});
+
 test('opening radar preserves the complete War Room decision contract', () => {
   for (const field of ['decision_step', 'next_role', 'confirmation_checklist', 'risk_checklist', 'capital_rotation_path', 'external_priority', 'decision_confidence']) {
     assert.match(openingMarketRadar, new RegExp(`${field}:`), `opening radar omits War Room field ${field}`);

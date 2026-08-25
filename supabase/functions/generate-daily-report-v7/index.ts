@@ -21,6 +21,7 @@ import { sanitizeUnsupportedAbsolutePriceLevels } from './content-integrity.ts';
 import {
   deriveEvidenceBackedTaiwanTransmission,
   evaluateContentIntelligence,
+  isDecisionCriticalMissingSource,
 } from '../_shared/content-intelligence.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import {
@@ -2243,7 +2244,8 @@ async function writeReport(supabase:ReturnType<typeof createClient>,todayDate:st
     aiStrategyJson.premium_content_eligible=premiumGate.eligible;
 
     const declaredMissingSources=(Array.isArray(aiStrategyJson.missing_sources)?aiStrategyJson.missing_sources:[]).map(String).filter(Boolean);
-    const criticalMissingSources=declaredMissingSources.filter(function(source){return !/TXF:no_authorized_source_or_contract_mapping/i.test(source);});
+    const sourceCoverageMode=premiumGate.decision_mode==='no_trade'?'no_trade':'recommendations';
+    const criticalMissingSources=declaredMissingSources.filter(function(source){return isDecisionCriticalMissingSource(source,sourceCoverageMode);});
     const coverageScore=md.length===0?0:Math.min(100,Math.round((verifiedMarketEvidence.length/Math.max(3,md.length))*100));
     const confidenceForPolicy=confScore===null?0:confScore;
     const abstentionDecision=resolveAbstentionDecision({

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { evaluatePremiumContentGate } from '../supabase/functions/_shared/premium-content-gate.ts';
+import { isDecisionCriticalMissingSource } from '../supabase/functions/_shared/content-intelligence.ts';
 
 function validAi() {
   return {
@@ -211,6 +212,12 @@ test('recommendations still fail closed when sector rotation context is unavaila
   const result = evaluatePremiumContentGate(ai, 3);
   assert.equal(result.eligible, false);
   assert.ok(result.reason_codes.includes('source_data_incomplete'));
+});
+
+test('safe-mode source classification stays aligned with premium decision mode', () => {
+  assert.equal(isDecisionCriticalMissingSource('sector_rotation_scores:2026-08-24', 'no_trade'), false);
+  assert.equal(isDecisionCriticalMissingSource('sector_rotation_scores:2026-08-24', 'recommendations'), true);
+  assert.equal(isDecisionCriticalMissingSource('stale_market_data:TAIEX:2026-08-24T05:30:00+00:00', 'no_trade'), true);
 });
 
 test('recommendations may publish when TXF is the only declared entitlement gap', () => {

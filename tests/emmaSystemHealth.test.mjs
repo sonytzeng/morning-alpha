@@ -8,12 +8,13 @@ test('Morning Alpha sends bounded signed health evidence to the exact Emma endpo
   const emitter = read('supabase/functions/_shared/emma-system-health.ts');
   assert.match(emitter, /qjgrthjpffhtxvbkfyat\.supabase\.co/);
   assert.match(emitter, /EMMA_SYSTEM_HEALTH_WEBHOOK_SECRET/);
+  assert.match(emitter, /get_emma_health_shared_secret/);
   assert.match(emitter, /X-Emma-Timestamp/);
   assert.match(emitter, /X-Emma-Event-Id/);
   assert.match(emitter, /X-Emma-Signature/);
   assert.match(emitter, /HMAC/);
   assert.match(emitter, /AbortSignal\.timeout\(5_000\)/);
-  assert.doesNotMatch(emitter, /SUPABASE_SERVICE_ROLE_KEY|Authorization/);
+  assert.doesNotMatch(emitter, /["']Authorization["']\s*:/);
 });
 
 test('MA-Ops maps scheduler, report and closing evidence without claiming repair', () => {

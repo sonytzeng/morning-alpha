@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 102997)
-Total output lines: 2646
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import {
@@ -884,7 +881,64 @@ function finalSanitizeTWStocks(stocks:Record<string,unknown>[],_fallback:Record<
   return result.slice(0,10);
 }
 
-async function fetchSectorRotationForDate(supabase:ReturnType<typeof createClient>,scoreDate:string,log:(m:string)=>voi…2997 tokens truncated…sm.changePercent>0?'溢價提供支撐':'需觀察'):'台股權值龍頭','台積電為台股最大權值股，其方向決定大盤格局。無論市場偏多偏空，2330 都是判斷基準。','若大盤開低且台積電無法站穩平盤則整體偏弱','high','台股收盤資料');
+async function fetchSectorRotationForDate(supabase:ReturnType<typeof createClient>,scoreDate:string,log:(m:string)=>void):Promise<SectorRotationRow[]>{
+  try{const r=await supabase.from('sector_rotation_scores').select('sector,sub_sector,rotation_score,direction,signal_label,leading_symbols,lagging_symbols,summary').eq('score_date',scoreDate).order('rotation_score',{ascending:false}).limit(10);const{data,error}=safeUnwrap<Record<string,unknown>[]>(r,log,'sector_rotation');if(error||!data?.length){log('[fetchSectorRotationForDate] no data for '+scoreDate);return [];}const rows:SectorRotationRow[]=data.map(function(row){return{sector:String(row.sector||''),sub_sector:String(row.sub_sector||''),rotation_score:Number(row.rotation_score)||0,direction:String(row.direction||''),signal_label:String(row.signal_label||''),leading_symbols:Array.isArray(row.leading_symbols)?row.leading_symbols.map(String):[],lagging_symbols:Array.isArray(row.lagging_symbols)?row.lagging_symbols.map(String):[],summary:row.summary?String(row.summary):undefined}});log('[fetchSectorRotationForDate] got '+rows.length+' sectors for '+scoreDate);return rows;}catch(e){log('[fetchSectorRotationForDate] exception: '+(e instanceof Error?e.message:String(e)));return [];}
+}
+
+// ═══ V9.0 THREE-TIER BENEFICIARY ═══
+const STOCK_NAMES:Record<string,string>={'2330':'台積電','2454':'聯發科','2303':'聯電','3711':'日月光投控','3034':'聯詠','2408':'南亞科','2344':'華邦電','2337':'旺宏','8299':'群聯','2317':'鴻海','2382':'廣達','6669':'緯穎','3231':'緯創','2356':'英業達','2376':'技嘉','2308':'台達電','3017':'奇鋐','3324':'雙鴻','3443':'創意','3661':'世芯-KY','3037':'欣興','8046':'南電','6239':'力成','2881':'富邦金','2882':'國泰金','2891':'中信金','2603':'長榮','2615':'萬海','2610':'華航','1301':'台塑','1303':'南亞','1326':'台化','2412':'中華電','3045':'台灣大','4904':'遠傳','3081':'聯亞','2345':'智邦','4906':'正文','2049':'上銀','1590':'亞德客-KY','2634':'漢翔','8033':'雷虎','2357':'華碩','1519':'華城','1513':'中興電','1504':'東元'};
+
+const SCENARIO_TRIGGERS:Record<string,{trigger_label:string;trigger_description:string;activation_check:(md:MarketIndicator[],dScore:MarketDataScore)=>boolean;stocks:{symbol:string;reason:string;risk_note:string;confidence_level:'high'|'medium'|'low'}[]}>={
+  TWD_STRONG:{trigger_label:'台幣升值情境',trigger_description:'若新台幣兌美元明顯升值，資金可能流入資產股與內需股',activation_check:function(md,dScore){const dxy=md.find(function(m){return m.symbol.toUpperCase()==='DXY'||m.symbol.toUpperCase()==='USDINDEX'});return dxy?dxy.changePercent<-0.3:false;},stocks:[{symbol:'2881',reason:'台幣升值有利壽險金控海外資產評價回升，金融權值股具資金吸引力',risk_note:'若升值僅為短期波動且外資持續賣超金融股則失效',confidence_level:'medium'},{symbol:'2882',reason:'壽險為主金控對匯率敏感度最高，台幣升值直接改善海外投資部位',risk_note:'若升值幅度有限且金融指數未同步轉強則失效',confidence_level:'low'},]},
+  AI_MOMENTUM:{trigger_label:'AI 主線續強情境',trigger_description:'若NVDA/SOX延續強勢，AI供應鏈二線股可能補漲',activation_check:function(md,dScore){const nv=md.find(function(m){return m.symbol.toUpperCase()==='NVDA'});const sox=md.find(function(m){return m.symbol.toUpperCase()==='SOX'||m.symbol.toUpperCase()==='PHLX'});return (nv&&nv.changePercent>1.5)||(sox&&sox.changePercent>0.8);},stocks:[{symbol:'2357',reason:'AI伺服器機殼需求隨NVDA強勢擴張，二線代工廠具補漲空間',risk_note:'若AI族群主力股（2382/3231）開高走低則二線股不宜追',confidence_level:'low'},{symbol:'6669',reason:'AI伺服器高階組裝需求提升，緯穎為白牌伺服器龍頭',risk_note:'若NVDA漲勢僅為短線反彈且無基本面支撐則失效',confidence_level:'medium'},{symbol:'3324',reason:'AI伺服器功耗持續提升，高階散熱模組需求結構性成長',risk_note:'散熱族群若無法與AI伺服器同步放量則動能不足',confidence_level:'low'},{symbol:'3661',reason:'AI ASIC需求與先進製程綁定，世芯為台股ASIC設計服務代表',risk_note:'若半導體整體轉弱則ASIC題材不具獨立支撐',confidence_level:'low'},]},
+  BOND_YIELD_DROP:{trigger_label:'美債殖利率下跌情境',trigger_description:'若美10年期公債殖利率明顯下滑，高殖利率防禦股可能受資金青睞',activation_check:function(md,dScore){const uy=md.find(function(m){return m.symbol.toUpperCase()==='US10Y'||m.symbol.toUpperCase()==='TNX'});return uy?uy.changePercent<-0.5:false;},stocks:[{symbol:'2412',reason:'美債殖利率下滑提升高股息標的吸引力，中華電為台股高殖利率代表',risk_note:'若僅為避險情緒短暫推升，資金可能快速回流成長股',confidence_level:'medium'},{symbol:'3045',reason:'電信股具穩定現金流與高殖利率特性，殖利率下滑時相對吸引力上升',risk_note:'若大盤轉強則防禦型標的資金可能被排擠',confidence_level:'low'},{symbol:'4904',reason:'網通設備需求受惠企業IT支出穩定，防禦型配置中具成長性',risk_note:'若電信三雄集體轉弱則族群性失效',confidence_level:'low'},]},
+  OIL_MOVE:{trigger_label:'油價波動情境',trigger_description:'若油價單日變動超過2%，塑化與航運股可能出現方向性反應',activation_check:function(md,dScore){const oil=md.find(function(m){return m.symbol.toUpperCase()==='WTI'||m.symbol.toUpperCase()==='CL'||m.symbol.toUpperCase()==='OIL'});if(!oil)return false;return Math.abs(oil.changePercent)>2;},stocks:[{symbol:'1301',reason:'油價波動直接影響塑化原料成本，台塑為產業龍頭最先反應',risk_note:'若油價波動為短期事件且無供需基本面改變則效應有限',confidence_level:'low'},{symbol:'2603',reason:'油價為航運成本核心變數，油價下跌有利貨櫃航運利潤率',risk_note:'運價指數才是航運股主要驅動，油價僅為輔助因子',confidence_level:'low'},]},
+  SEMI_EQUIPMENT:{trigger_label:'半導體設備轉強情境',trigger_description:'若全球半導體資本支出展望上修，設備族群可能領先反應',activation_check:function(md,dScore){const sox=md.find(function(m){return m.symbol.toUpperCase()==='SOX'||m.symbol.toUpperCase()==='PHLX'});const amat=md.find(function(m){return m.symbol.toUpperCase()==='AMAT'});const lrcx=md.find(function(m){return m.symbol.toUpperCase()==='LRCX'});return (sox&&sox.changePercent>1.0)&&(amat&&amat.changePercent>0||lrcx&&lrcx.changePercent>0);},stocks:[{symbol:'3037',reason:'半導體設備支出升溫帶動IC載板需求，欣興為台股載板龍頭',risk_note:'若資本支出上修僅為單一公司而非產業趨勢則效應有限',confidence_level:'low'},{symbol:'8046',reason:'ABF載板受惠先進封裝與HPC需求，南電為台灣主要供應商',risk_note:'載板族群若無法與半導體設備股同步走強則動能不足',confidence_level:'low'},]},
+};
+
+function buildStockEntry(symbol:string,name:string,sector:string,level:'core'|'extended'|'scenario',triggerEvent:string,reason:string,riskNote:string,confidenceLevel:'high'|'medium'|'low',dataBasis:string,extraFields:Record<string,unknown>={}):Record<string,unknown>{
+  const cat=catalystTypeForStock(symbol);
+  const profile=stockResearchProfile(symbol,sector);
+  const sourceSignals=sourceSignalsFromBasis(dataBasis,triggerEvent,sector);
+  return{
+    stock_id:symbol,stock_name:name,sector,beneficiary_level:level,trigger_event:triggerEvent,reason,risk_note:riskNote,confidence_level:confidenceLevel,data_basis:dataBasis,
+    ticker:symbol,category:sector,first_order_impact:profile.first_order_impact,second_order_impact:profile.second_order_impact,taiwan_supply_chain_link:profile.taiwan_supply_chain_link,why_this_stock:profile.why_this_stock,validation_signal:profile.validation_signal,invalidation_condition:riskNote,risk_level:riskLevelFromConfidenceLevel(confidenceLevel),confidence:numericConfidenceFromLevel(confidenceLevel),source_signals:sourceSignals,
+    symbol,name,group:sector,direction:level==='core'?'受惠':'觀察',conviction_level:confidenceLevel==='high'?'★★★★★':confidenceLevel==='medium'?'★★★★☆':'★★★☆☆',catalyst_type:cat,watch_point:profile.validation_signal,not_buy_signal:true,source_type:level+'_beneficiary',...extraFields,
+  };
+}
+
+function buildThreeTierBeneficiaryStocks(md:MarketIndicator[],sectorData:SectorRotationRow[],dScore:MarketDataScore,log:(m:string)=>void):{core_beneficiary_stocks:Record<string,unknown>[];extended_watchlist:Record<string,unknown>[];scenario_watchlist:Record<string,unknown>[];data_status:string;data_basis_note:string;todayStocks:Record<string,unknown>[];fullStocks:Record<string,unknown>[]}{
+  const f=(syms:string[])=>{for(const sy of syms){const x=md.find(function(m){return m.symbol.toUpperCase()===sy.toUpperCase()});if(x)return x}return null};
+  const nv=f(['NVDA']),sox=f(['SOX','PHLX']),spx=f(['SPX','SP500']),vix=f(['VIX','VIXINDEX']),dxy=f(['DXY','USDINDEX']),tsm=f(['TSM','TSMC']),taiex=f(['TAIEX','TWII']);
+  const fmtPct=function(v:number){return v>=0?'+'+v.toFixed(2)+'%':v.toFixed(2)+'%'};
+  const bias=dScore.baseScore>=55?'偏多':dScore.baseScore<=40?'偏空':'中性';
+  const hasMinData=!!(nv||sox||spx)&&!!taiex;
+  const hasSectorData=sectorData.length>0;
+
+  if(!hasMinData){
+    log('[buildThreeTier] INSUFFICIENT DATA');
+    const insufficientStocks:Record<string,unknown>[]=[];
+    if(taiex&&!Number.isNaN(taiex.changePercent)){insufficientStocks.push(buildStockEntry('2330','台積電','半導體','core','台股權值龍頭觀察','今日海外市場資料不足，以台股權值龍頭作為核心觀察標的，待資料補齊後擴充名單。','若大盤開盤方向與台積電背離則觀察失效','low','台股收盤資料（海外資料不足）'));}
+    return{core_beneficiary_stocks:insufficientStocks.slice(0,3),extended_watchlist:[],scenario_watchlist:[],data_status:'insufficient',data_basis_note:'今日海外市場資料不足（缺少 NVDA/SOX/SPX 等關鍵指標），僅提供核心觀察股，不擴充延伸名單。',todayStocks:insufficientStocks.slice(0,5),fullStocks:insufficientStocks.slice(0,8)};
+  }
+
+  const strongSectors=sectorData.filter(isStrongSectorRotation).slice(0,3);
+
+  // TIER 1: CORE (3)
+  const coreStocks:Record<string,unknown>[]=[];const coreSeen=new Set<string>();
+  const addCore=function(symbol:string,triggerEvent:string,reason:string,riskNote:string,confidenceLevel:'high'|'medium'|'low',dataBasis:string){
+    if(coreSeen.has(symbol)||coreStocks.length>=3)return;coreSeen.add(symbol);
+    const name=STOCK_NAMES[symbol]||symbol;
+    const sectorName=strongSectors.find(function(s){return s.leading_symbols.includes(symbol)})?.sector||catalystTypeForStock(symbol);
+    coreStocks.push(buildStockEntry(symbol,name,SECTOR_LABEL_MAP[sectorName]||sectorName,'core',triggerEvent,reason,riskNote,confidenceLevel,dataBasis));
+  };
+
+  if(nv&&!Number.isNaN(nv.changePercent)&&nv.changePercent>0.5){
+    addCore('2330','NVDA '+fmtPct(nv.changePercent)+' 上漲驅動 AI 晶片需求','台積電為全球 AI 晶片製造核心，NVDA 強勢直接帶動先進製程需求與市場信心。若 ADR 溢價同步擴大則支撐更強。','NVDA 盤後轉弱或 SOX 指數翻黑視為傳導鏈失效','high','NVDA '+fmtPct(nv.changePercent)+' / SOX '+(sox&&!Number.isNaN(sox.changePercent)?fmtPct(sox.changePercent):'—'));
+  }else if(nv&&!Number.isNaN(nv.changePercent)&&nv.changePercent<-1){
+    addCore('2330','NVDA '+fmtPct(nv.changePercent)+' 下跌壓抑 AI 半導體情緒','台積電雖為權值龍頭，但 NVDA 重挫可能引發半導體族群賣壓。以觀察支撐為主，不追空。','若台積電開盤抗跌且外資未大賣則利空有限','medium','NVDA '+fmtPct(nv.changePercent)+' 下跌');
+  }else{
+    addCore('2330',tsm&&!Number.isNaN(tsm.changePercent)?'TSM ADR '+fmtPct(tsm.changePercent)+(tsm.changePercent>0?'溢價提供支撐':'需觀察'):'台股權值龍頭','台積電為台股最大權值股，其方向決定大盤格局。無論市場偏多偏空，2330 都是判斷基準。','若大盤開低且台積電無法站穩平盤則整體偏弱','high','台股收盤資料');
   }
 
   if(strongSectors.length>0&&coreStocks.length<3){

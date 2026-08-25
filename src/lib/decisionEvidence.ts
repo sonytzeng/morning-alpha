@@ -132,7 +132,7 @@ export function buildDecisionRuntimeEvidence(params: {
   if (runtimeFailure && marketSnapshotAvailable) {
     return {
       status: 'Rejected',
-      reason: 'Runtime checkpoint 已回傳明確失敗證據。',
+      reason: '盤中驗證節點已回傳明確失敗證據。',
       completedCheckpoints,
       totalCheckpoints: checkpointStates.length,
       checklistAvailable,
@@ -145,7 +145,7 @@ export function buildDecisionRuntimeEvidence(params: {
   if (completedCheckpoints > 0 && checklistAvailable && marketSnapshotAvailable) {
     return {
       status: 'Confirmed',
-      reason: 'Runtime checkpoint、驗證清單與市場快照均已到位。',
+      reason: '盤中驗證節點、驗證清單與市場快照均已到位。',
       completedCheckpoints,
       totalCheckpoints: checkpointStates.length,
       checklistAvailable,
@@ -161,7 +161,7 @@ export function buildDecisionRuntimeEvidence(params: {
       ? '市場快照不足，暫不升級決策。'
       : !checklistAvailable
         ? '驗證清單不足，暫不升級決策。'
-        : '尚無完成的 Runtime checkpoint。',
+        : '尚無完成的盤中驗證節點。',
     completedCheckpoints,
     totalCheckpoints: checkpointStates.length,
     checklistAvailable,

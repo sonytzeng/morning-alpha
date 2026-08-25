@@ -63,6 +63,10 @@ interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      get_ma_ops_health_cron_secret: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
       get_public_performance_journal: {
         Args: { p_limit: number };
         Returns: JsonObject[];
@@ -769,9 +773,20 @@ Deno.serve(async (req: Request) => {
 
   let requestId: string | null = null;
   try {
-    const expectedSecret = Deno.env.get("CRON_SECRET") ?? null;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    if (!supabaseUrl || !serviceRoleKey) throw new Error("INTERNAL_ERROR");
+    const supabase = createClient<Database>(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+
+    const environmentSecret = Deno.env.get("CRON_SECRET")?.trim() || null;
+    const { data: vaultSecretData, error: vaultSecretError } = await supabase.rpc("get_ma_ops_health_cron_secret");
+    const vaultSecret = !vaultSecretError && typeof vaultSecretData === "string" && vaultSecretData.trim().length >= 32
+      ? vaultSecretData.trim()
+      : null;
     const presentedSecret = req.headers.get("x-cron-secret");
-    if (!await constantTimeSecretMatch(presentedSecret, expectedSecret)) {
+    const environmentMatches = await constantTimeSecretMatch(presentedSecret, environmentSecret);
+    const vaultMatches = await constantTimeSecretMatch(presentedSecret, vaultSecret);
+    if (!environmentMatches && !vaultMatches) {
       return jsonResponse({ ok: false, error_code: "UNAUTHORIZED", message: "Unauthorized", request_id: null }, 401);
     }
 
@@ -785,11 +800,6 @@ Deno.serve(async (req: Request) => {
     }
     const request = parseRequest(parsedBody);
     requestId = request.request_id;
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    if (!supabaseUrl || !serviceRoleKey) throw new Error("INTERNAL_ERROR");
-    const supabase = createClient<Database>(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
     const idempotencyKey = request.request_id
       ? `maops:p1:${request.environment}:${request.check_type}:${request.target_date}:${request.request_id}`

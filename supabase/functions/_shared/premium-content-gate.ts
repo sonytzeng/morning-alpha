@@ -1,4 +1,5 @@
 import {
+  evaluateDecisionSentenceValue,
   evaluateContentIntelligence,
   hasDecisionGradeSourceCoverage,
   type ContentScoreBreakdown,
@@ -150,6 +151,18 @@ export function evaluatePremiumContentGate(
   const intradaySteps = asRecords(memberNote.intraday_validation);
   const invalidationRules = asRecords(memberNote.invalidation_rules);
   const subscriberSentence = firstText(memberNote.subscriber_value_sentence);
+  const subscriberSentenceValue = evaluateDecisionSentenceValue(
+    subscriberSentence,
+    { require_checkpoint: false },
+  );
+  const intradayPlanComplete = intradaySteps.length >= 3 && intradaySteps.every((step) => (
+    firstText(step.time_window, step.checkpoint, step.time).length >= 4
+    && firstText(step.what_to_watch, step.validation_signal, step.watch_point).length >= 8
+  ));
+  const invalidationPlanComplete = invalidationRules.length >= 2 && invalidationRules.every((rule) => (
+    firstText(rule.condition, rule.trigger, rule.invalidation_condition).length >= 5
+    && firstText(rule.action_note, rule.action, rule.meaning).length >= 3
+  ));
   const observationRows = asRecords(ai.v10_observation_watchlist);
   const sourcedObservationRows = observationRows.filter(hasSpecificSource);
   const recommendationMode = rows.length > 0;
@@ -171,9 +184,10 @@ export function evaluatePremiumContentGate(
   }
   if (blockingIssues.length > 0) reasons.push('content_publish_gate_blocked');
   if (!Number.isFinite(memberValueScore) || memberValueScore < RUNTIME_QUALITY_POLICY.member_value_min) reasons.push('member_value_below_90');
-  if (!hasFiveLayerOvernightChain || intradaySteps.length < 3 || invalidationRules.length < 2 || subscriberSentence.length < 24) {
+  if (!hasFiveLayerOvernightChain || !intradayPlanComplete || !invalidationPlanComplete || subscriberSentence.length < 36) {
     reasons.push('member_research_structure_incomplete');
   }
+  if (!subscriberSentenceValue.eligible) reasons.push('member_research_value_sentence_low_quality');
   if (!decisionSourceCoverage) reasons.push('source_data_incomplete');
   if (recommendationMode && !['sufficient', 'partial'].includes(dataQualityStatus)) {
     reasons.push('positive_evidence_insufficient');
@@ -195,6 +209,7 @@ export function evaluatePremiumContentGate(
     'verified_catalyst_evidence_missing',
     'news_traceability_incomplete',
     'blank_market_change_detected',
+    'member_research_value_sentence_low_quality',
   ].includes(reason));
   reasons.push(...hardContentReasons);
 

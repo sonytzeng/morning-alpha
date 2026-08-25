@@ -18,9 +18,9 @@ function strongResearch() {
     },
     v10_data_quality_status: 'sufficient',
     v10_beneficiary_enabled: true,
-    today_quote: '費半上漲 2.1% 且 NVIDIA 財測上修，台股先看台積電與 AI 供應鏈開盤後是否量價同步。',
+    today_quote: '費半上漲 2.1% 且 NVIDIA 財測上修；09:30 看台積電與 AI 供應鏈是否量價同步，若新聞催化未傳導到族群，今日不追價。',
     free_summary: {
-      one_sentence: '費半上漲 2.1% 且 NVIDIA 財測上修，台股先看台積電與 AI 供應鏈開盤後是否量價同步。',
+      one_sentence: '費半上漲 2.1% 且 NVIDIA 財測上修；09:30 看台積電與 AI 供應鏈是否量價同步，若新聞催化未傳導到族群，今日不追價。',
       do_not_do: '若 09:30 台積電弱於大盤且半導體未擴散，不追價。',
     },
     key_drivers: [
@@ -75,6 +75,25 @@ test('a recommendation without a traceable source and invalidation is not publis
 
 test('detector accepts a concrete evidence-linked daily sentence', () => {
   assert.deepEqual(detectGenericContent(strongResearch()), []);
+});
+
+test('a status-only wait sentence cannot pass as acquisition-grade content', () => {
+  const ai = strongResearch();
+  ai.today_quote = '暫不追價，等待驗證。';
+  ai.free_summary.one_sentence = ai.today_quote;
+  const result = evaluateContentIntelligence(ai, 3);
+  assert.equal(result.publishable, false);
+  assert.ok(result.generic_flags.includes('generic_wait_only'));
+  assert.ok(result.reason_codes.includes('generic_content_detected'));
+});
+
+test('an evidence-backed no-trade sentence remains publishable when it states action, checkpoint and change condition', () => {
+  const ai = strongResearch();
+  ai.today_quote = '金融指數未止跌，台積電與台指期同步偏弱；13:00 前不追價，若金融相對大盤轉強且量能回升，才重新評估候選股。';
+  ai.free_summary.one_sentence = ai.today_quote;
+  const result = evaluateContentIntelligence(ai, 3);
+  assert.equal(result.publishable, true);
+  assert.deepEqual(result.generic_flags, []);
 });
 
 test('paid content fails closed without the verified evidence contract', () => {

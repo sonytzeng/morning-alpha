@@ -20,9 +20,9 @@ function validAi() {
     },
     v10_data_quality_status: 'sufficient',
     v10_beneficiary_enabled: true,
-    today_quote: '費半上漲 2.1% 且 NVIDIA 財測上修，台股先看台積電與 AI 供應鏈開盤後是否量價同步。',
+    today_quote: '費半上漲 2.1% 且 NVIDIA 財測上修；09:30 看台積電與 AI 供應鏈是否量價同步，若催化未傳導到族群，今日不追價。',
     free_summary: {
-      one_sentence: '費半上漲 2.1% 且 NVIDIA 財測上修，台股先看台積電與 AI 供應鏈開盤後是否量價同步。',
+      one_sentence: '費半上漲 2.1% 且 NVIDIA 財測上修；09:30 看台積電與 AI 供應鏈是否量價同步，若催化未傳導到族群，今日不追價。',
       do_not_do: '若 09:30 台積電弱於大盤且半導體未擴散，不追價。',
     },
     key_drivers: ['NVIDIA 財測上修', '費半收高 2.1%', '台積電 ADR 相對強勢'],
@@ -42,7 +42,7 @@ function validAi() {
         { condition: '2330 弱於大盤', action_note: '撤回半導體主線' },
         { condition: '族群未同步', action_note: '不追價' },
       ],
-      subscriber_value_sentence: '先用 09:30 權值股、指數與族群同步性驗證主線，任一條件失效就撤回判斷。',
+      subscriber_value_sentence: '先用 09:30 台積電、加權指數與半導體族群同步性驗證主線，任一條件失效就撤回判斷。',
     },
     today_beneficiary_stocks_v10: [{
       symbol: '2330',
@@ -59,7 +59,7 @@ function validAi() {
 
 test('premium content is eligible only with fresh news and complete stock reasoning', () => {
   const result = evaluatePremiumContentGate(validAi(), 2);
-  assert.equal(result.eligible, true);
+  assert.equal(result.eligible, true, JSON.stringify(result));
   assert.equal(result.status, 'eligible');
   assert.equal(result.complete_recommendation_count, 1);
 });
@@ -130,7 +130,7 @@ test('an evidence-backed no-trade decision remains valuable premium research', (
   const ai = validAi();
   ai.today_beneficiary_stocks_v10 = [];
   ai.v10_data_quality_status = 'insufficient_positive_evidence';
-  ai.today_quote = '費半上漲 2.1%，但台積電 ADR 與台指期訊號分歧，今日先驗證 09:30 量價，不建立受惠股部位。';
+  ai.today_quote = '費半上漲 2.1%，但台積電 ADR 與台指期訊號分歧；09:30 驗證量價，若權值與族群未同步，今日不建立受惠股部位。';
   ai.free_summary.one_sentence = ai.today_quote;
   ai.v10_observation_watchlist = [
     { symbol: '2330', data_basis: 'market_data.TSM；market_data.TAIEX' },

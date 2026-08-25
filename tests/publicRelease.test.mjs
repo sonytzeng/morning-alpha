@@ -448,6 +448,9 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /盤前暫不建立部位/);
   assert.match(home, /runtimePhaseLabel\(currentNode\)/);
   assert.match(home, /homeDecisionCopy\(decisionState, currentTimelineNode\)/);
+  assert.match(home, /heroDecisionSentence/);
+  assert.match(home, /renderSafeText\(heroDecisionSentence\)/);
+  assert.doesNotMatch(home, /<h1>\{renderSafeText\(homeDecision\.instruction\)\}<\/h1>/);
   assert.match(home, /decisionDayLabel\(decisionState, reportExists && isTodayReport, currentTimelineNode\)/);
   assert.doesNotMatch(home, /暫不建立交易判斷/);
   assert.match(home, /mistakeCards\.length === 1 \? ' is-single'/);
@@ -727,6 +730,8 @@ test('content intelligence applies the approved 100-point editorial score and re
   assert.match(contentIntelligence, /gradeContentScore/);
   assert.match(contentIntelligence, /premium_publish_min/);
   assert.match(contentIntelligence, /generic_content_detected/);
+  assert.match(contentIntelligence, /evaluateDecisionSentenceValue/);
+  assert.match(contentIntelligence, /daily_sentence_change_condition_missing/);
   assert.match(premiumGate, /evaluateContentIntelligence/);
   assert.match(premiumGate, /content_score_breakdown/);
   assert.match(dailyReportGenerator, /內容評分 \$\{contentReview\.score\}\/100/);

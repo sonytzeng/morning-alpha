@@ -25,6 +25,15 @@ export interface ContentIntelligenceResult {
   breakdown: ContentScoreBreakdown;
 }
 
+export interface DecisionSentenceValueResult {
+  eligible: boolean;
+  flags: string[];
+  concrete_marker_count: number;
+  has_action: boolean;
+  has_checkpoint: boolean;
+  has_change_condition: boolean;
+}
+
 type JsonRecord = Record<string, unknown>;
 
 const GENERIC_PATTERNS: Array<{ code: string; pattern: RegExp }> = [
@@ -213,6 +222,53 @@ function hasConcreteMarker(text: string): boolean {
   return /(?:\d{2,4}(?:\.\d+)?%?|09:30|10:30|13:00|台指期|台積電|費半|SOX|NASDAQ|S&P|NVIDIA|NVDA|TSM|美債|美元|半導體|金融|航運|AI)/i.test(text);
 }
 
+const CONCRETE_MARKER_PATTERNS = [
+  /\d{1,2}:\d{2}/,
+  /[+-]?\d+(?:\.\d+)?%/,
+  /(?:加權指數|TAIEX)/i,
+  /(?:台指期|TXF)/i,
+  /(?:台積電|2330|TSM(?:C)?)/i,
+  /(?:費半|SOX|NASDAQ|S&P|NVIDIA|NVDA)/i,
+  /(?:金融|半導體|航運|AI\s*伺服器|電子權值|成交量|量價)/i,
+  /(?:美元|美債|殖利率|原油|VIX)/i,
+];
+
+/**
+ * A conversion-grade daily sentence is a compact decision contract, not a
+ * status label. It must tell a reader what the evidence is, what to do now,
+ * when to re-check, and what observable condition changes the decision.
+ */
+export function evaluateDecisionSentenceValue(
+  value: unknown,
+  options: { require_checkpoint?: boolean } = {},
+): DecisionSentenceValueResult {
+  const sentence = asText(value).replace(/\s+/g, ' ').trim();
+  const requireCheckpoint = options.require_checkpoint !== false;
+  const concreteMarkerCount = CONCRETE_MARKER_PATTERNS
+    .filter((pattern) => pattern.test(sentence))
+    .length;
+  const hasAction = /(?:不追價|不建立|不進場|不擴大|撤回|停止|降低曝險|保留現金|依(?:原定)?計畫執行|只做|確認後才|成立後才)/.test(sentence);
+  const hasCheckpoint = /\b(?:09:00|09:30|10:30|13:00|14:10|14:30)\b/.test(sentence);
+  const hasChangeCondition = /(?:若|如果|只有|除非|一旦|未.{0,18}前|確認後才|成立後才|失效就|否則)/.test(sentence);
+  const genericWaitOnly = /^(?:今日)?(?:暫不|先不|現在不要)?追價[，,\s]*(?:等待|持續等待)(?:關鍵條件)?驗證[。.]?$/.test(sentence)
+    || /^(?:等待|持續等待)(?:關鍵條件)?確認[。.]?$/.test(sentence);
+  const flags: string[] = [];
+  if (sentence.length < 36) flags.push('daily_sentence_too_thin');
+  if (genericWaitOnly) flags.push('generic_wait_only');
+  if (concreteMarkerCount < 2) flags.push('daily_sentence_evidence_density_low');
+  if (!hasAction) flags.push('daily_sentence_action_missing');
+  if (requireCheckpoint && !hasCheckpoint) flags.push('daily_sentence_checkpoint_missing');
+  if (!hasChangeCondition) flags.push('daily_sentence_change_condition_missing');
+  return {
+    eligible: flags.length === 0,
+    flags: unique(flags),
+    concrete_marker_count: concreteMarkerCount,
+    has_action: hasAction,
+    has_checkpoint: hasCheckpoint,
+    has_change_condition: hasChangeCondition,
+  };
+}
+
 export function detectGenericContent(aiValue: unknown): string[] {
   const ai = asRecord(aiValue);
   const note = asRecord(ai.member_research_note_v2);
@@ -252,9 +308,13 @@ export function evaluateContentIntelligence(
     noTradeMode ? 'no_trade' : 'recommendations',
   );
   const dailySentence = getDailySentence(ai);
+  const dailySentenceValue = evaluateDecisionSentenceValue(dailySentence);
   const reasons = getReasons(ai);
   const sectors = getSectors(ai);
-  const genericFlags = detectGenericContent(ai);
+  const genericFlags = unique([
+    ...detectGenericContent(ai),
+    ...dailySentenceValue.flags,
+  ]);
   const evidenceQuality = asRecord(ai.content_evidence_quality);
   const hasEvidenceContract = asText(evidenceQuality.contract_version) === 'PREMIUM_EVIDENCE_V1';
   const verifiedNewsCount = hasEvidenceContract
@@ -306,13 +366,13 @@ export function evaluateContentIntelligence(
     (taiwanCoverage || noTradeMode ? 10 : 0)
     + (firstText(ai.taiwan_transmission, note.taiwan_transmission).length >= 12 || taiwanCoverage ? 5 : 0));
   const specificity = Math.min(10,
-    (dailySentence && hasConcreteMarker(dailySentence) ? 6 : 0)
+    (dailySentenceValue.concrete_marker_count >= 2 ? 6 : 0)
     + (eventCoverage || noTradeMode ? 4 : 0));
   const actionability = Math.min(15,
-    (firstText(asRecord(ai.free_summary).do_not_do, ai.today_action, note.action).length >= 8 ? 4 : 0)
-    + (confirmationCoverage || noTradeMode ? 6 : 0)
-    + (invalidationCoverage || noTradeMode ? 5 : 0));
-  const risk = invalidationCoverage || noTradeMode ? 10 : 0;
+    (dailySentenceValue.has_action ? 4 : 0)
+    + (confirmationCoverage || (noTradeMode && dailySentenceValue.has_checkpoint) ? 6 : 0)
+    + (invalidationCoverage || (noTradeMode && dailySentenceValue.has_change_condition) ? 5 : 0));
+  const risk = invalidationCoverage || (noTradeMode && dailySentenceValue.has_change_condition) ? 10 : 0;
   const originality = genericFlags.length === 0 ? 5 : Math.max(0, 5 - genericFlags.length * 2);
   const readability = Math.min(10,
     (dailySentence.length >= 20 && dailySentence.length <= 100 ? 4 : 0)

@@ -377,6 +377,11 @@ function HomePageContent() {
   const decisionState = presentation.primaryDecision.state;
   const homeDecision = homeDecisionCopy(decisionState, currentTimelineNode);
   const nextAction = homeDecision.instruction;
+  const reportDecisionSentence = translateKnownTerms(firstMeaningfulString(displayState.todayQuote));
+  const heroDecisionSentence = reportDecisionSentence.length >= 24
+    && !isSyntheticResearchSentence(reportDecisionSentence)
+    ? reportDecisionSentence
+    : homeDecision.instruction;
   const decisionContext = translateKnownTerms([
     presentation.marketBiasLabel ? `今天市場${presentation.marketBiasLabel}。` : '',
     presentation.primaryDecision.reason,
@@ -749,7 +754,7 @@ function HomePageContent() {
                     <span>{displayReportDate}</span>
                   </div>
                   <p className="ma-pixel-eyebrow"><i className="ri-focus-3-line" aria-hidden="true" />Morning Alpha 今日判斷</p>
-                  <h1>{renderSafeText(homeDecision.instruction)}</h1>
+                  <h1>{renderSafeText(heroDecisionSentence)}</h1>
                   <p className="ma-home-v2-hero-subtitle">{renderSafeText(decisionContext)}</p>
                   <div className="ma-home-v2-next-line">
                     <span>下一次確認</span>

@@ -98,6 +98,14 @@ export function deriveEvidenceBackedTaiwanTransmission(
 const OPTIONAL_DECISION_SOURCE_GAP = /^(?:unavailable_market_data:)?TXF:no_authorized_source_or_contract_mapping$/i;
 const OPTIONAL_NO_TRADE_CONTEXT_GAP = /^sector_rotation_scores:\d{4}-\d{2}-\d{2}$/i;
 
+export function isDecisionCriticalMissingSource(
+  source: string,
+  mode: 'recommendations' | 'no_trade',
+): boolean {
+  return !OPTIONAL_DECISION_SOURCE_GAP.test(source)
+    && !(mode === 'no_trade' && OPTIONAL_NO_TRADE_CONTEXT_GAP.test(source));
+}
+
 function declaredMissingSources(ai: JsonRecord): string[] {
   const detail = asRecord(ai.data_quality_detail);
   return unique([
@@ -120,8 +128,7 @@ export function hasDecisionGradeSourceCoverage(
   if (asText(ai.data_quality).toLowerCase() === 'complete') return true;
   const missingSources = declaredMissingSources(ai);
   return missingSources.length > 0
-    && missingSources.every((source) => OPTIONAL_DECISION_SOURCE_GAP.test(source)
-      || (mode === 'no_trade' && OPTIONAL_NO_TRADE_CONTEXT_GAP.test(source)));
+    && missingSources.every((source) => !isDecisionCriticalMissingSource(source, mode));
 }
 
 function recommendationRows(ai: JsonRecord): JsonRecord[] {

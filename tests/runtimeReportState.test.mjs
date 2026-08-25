@@ -5,6 +5,7 @@ import {
   buildCanonicalIntradaySyncStatus,
   preserveRuntimeReportOverlay,
 } from '../supabase/functions/_shared/runtime-report-state.ts';
+import { buildDecisionPresentation } from '../src/lib/decisionPresentation.ts';
 
 const generatorSource = readFileSync(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
 const payloadSource = readFileSync(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');
@@ -92,4 +93,65 @@ test('unresolved future ledger checkpoints remain pending', () => {
   assert.equal(sync.windows['0930'], 'pending');
   assert.equal(sync.windows['1030'], 'pending');
   assert.equal(sync.windows['1300'], 'pending');
+});
+
+function confirmedNarrative() {
+  return {
+    decision_evidence: {
+      status: 'Confirmed',
+      reason: '盤中驗證節點、驗證清單與市場快照均已到位。',
+      completedCheckpoints: 1,
+      totalCheckpoints: 3,
+      checklistAvailable: true,
+      marketSnapshotAvailable: true,
+      runtimeFailure: false,
+      closingVerified: false,
+    },
+    decision_lifecycle: {
+      question: { question: '今日劇本是否成立？' },
+      current_thesis: { title: '今日劇本', summary: '等待驗證' },
+      decision_status: { status: 'Confirmed', reason: '盤中證據已到位', next_step: '10:30 主線確認' },
+      validation_plan: { next_step: '10:30 主線確認', steps: [] },
+      failure_condition: { trigger: '', meaning: '', action: '' },
+    },
+    today_focus: { headline: '今日劇本', summary: '等待驗證', why: '', action: '' },
+    intraday_progress: { current_step: '', next_step: '' },
+    today_script: { current_step: '' },
+    failure_triggers: [],
+  };
+}
+
+function displayStateWithCanonicalDecision(action, decisionMode) {
+  return {
+    is_trading_day: true,
+    market_status: 'OPEN',
+    dataStatus: 'partial',
+    reportDate: '2026-08-25',
+    currentDate: '2026-08-25',
+    market_message: '今天正常交易。',
+    rawAI: {
+      canonical_decision: {
+        status: 'READY',
+        action,
+        decision_mode: decisionMode,
+      },
+    },
+  };
+}
+
+test('completed runtime evidence cannot promote canonical no-trade WAIT into ACT', () => {
+  const presentation = buildDecisionPresentation({
+    displayState: displayStateWithCanonicalDecision('WAIT', 'no_trade'),
+    narrative: confirmedNarrative(),
+  });
+  assert.equal(presentation.primaryDecision.state, 'WAIT');
+  assert.equal(presentation.primaryDecision.instruction, '現在不要追價');
+});
+
+test('completed runtime evidence may confirm a canonical selective recommendation', () => {
+  const presentation = buildDecisionPresentation({
+    displayState: displayStateWithCanonicalDecision('SELECTIVE', 'recommendations'),
+    narrative: confirmedNarrative(),
+  });
+  assert.equal(presentation.primaryDecision.state, 'ACT');
 });

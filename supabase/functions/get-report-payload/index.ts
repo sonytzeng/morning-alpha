@@ -148,6 +148,19 @@ function buildPublicOpeningRadar(value: unknown): Record<string, unknown> {
     captured_at: toStringValue(radar.captured_at),
     updated_at: toStringValue(radar.updated_at),
     next_check_time: toStringValue(radar.next_check_time),
+    taiex_change: toNumberValue(radar.taiex_change),
+    txf_change: toNumberValue(radar.txf_change),
+    tsmc_change: toNumberValue(radar.tsmc_change),
+  };
+}
+
+function buildPublicValidationSkeleton(): Record<string, unknown> {
+  return {
+    intraday_validation: [
+      { time_window: "09:30", what_to_watch: "開盤驗證" },
+      { time_window: "10:30", what_to_watch: "主線確認" },
+      { time_window: "13:00", what_to_watch: "盤中追蹤" },
+    ],
   };
 }
 
@@ -412,6 +425,9 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const ai = getAi(report);
   const importantNews = getImportantNews(report, ai);
   const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
+  const publicV10DataQualityStatus = premiumGate.eligible && premiumGate.decision_mode === "no_trade"
+    ? "no_trade_evidence_complete"
+    : toStringValue(ai.v10_data_quality_status);
   const confidenceScore = getConfidenceScore(report, ai);
   const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
   const marketMetadata = getCanonicalMarketMetadata(report, ai);
@@ -443,7 +459,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     beneficiary_count: getBeneficiaryCount(ai),
     one_teaser_stock: premiumGate.eligible ? buildTeaserStock(ai) : null,
     v10_beneficiary_enabled: isV10BeneficiaryEnabled(ai),
-    v10_data_quality_status: toStringValue(ai.v10_data_quality_status),
+    v10_data_quality_status: publicV10DataQualityStatus,
     v10_warning: toStringValue(ai.v10_warning),
     v10_candidate_count: toNumberValue(ai.v10_candidate_count),
     premium_content_status: premiumGate.status,
@@ -464,6 +480,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     fresh_news_count: importantNews.length,
     opening_radar_status: toStringValue(openingRadar.radar_status) || toStringValue(openingRadar.status),
     opening_radar: buildPublicOpeningRadar(openingRadar),
+    member_research_note_v2: buildPublicValidationSkeleton(),
     intraday_sync_status: asObject(ai.intraday_sync_status),
     input_source: toStringValue(openingRadar.input_source) || null,
     degraded_metadata: {

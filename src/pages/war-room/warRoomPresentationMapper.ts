@@ -348,15 +348,16 @@ export function buildWarRoomTimeline(input: BuildWarRoomTimelineInput): WarRoomT
   const closeLabel = resolveWarRoomClosingLabel(close);
 
   const nodes: WarRoomTimelineItem[] = [
-    { time: '09:00', label: '盤前確認', status: openingReady ? 'completed' : 'pending', statusLabel: '' },
+    { time: '09:00', label: '開盤資料', status: openingReady || getRuntimeCheckpointState(sync, '0900') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '0900') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
     { time: '09:30', label: '開盤驗證', status: getRuntimeCheckpointState(sync, '0930') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '0930') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
     { time: '10:30', label: '主線確認', status: getRuntimeCheckpointState(sync, '1030') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '1030') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
     { time: '13:00', label: '午後追蹤', status: getRuntimeCheckpointState(sync, '1300') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '1300') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
+    { time: '14:10', label: '收盤資料', status: getRuntimeCheckpointState(sync, '1410') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '1410') === 'pending' ? 'pending' : 'insufficient', statusLabel: '' },
     {
       time: '14:30',
       label: '收盤驗證',
       status: closeState.state === 'pending'
-        ? 'pending'
+        ? getRuntimeCheckpointState(sync, '1430') === 'completed' ? 'completed' : getRuntimeCheckpointState(sync, '1430') === 'pending' ? 'pending' : 'insufficient'
         : closeLabel === '資料不足' ? 'insufficient' : 'completed',
       statusLabel: '',
     },

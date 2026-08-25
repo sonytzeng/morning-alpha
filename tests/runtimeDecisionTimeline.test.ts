@@ -69,7 +69,7 @@ Deno.test('checkpoint marked complete without execution evidence is not complete
     isTradingDay: true,
     taipeiMinutes: 10 * 60,
   });
-  assert(timeline[1]?.status === 'current', 'checkpoint without completed_at/evidence must remain current');
+  assert(timeline[2]?.status === 'current', 'checkpoint without completed_at/evidence must remain current');
 });
 
 Deno.test('a future checkpoint is waiting, not current', () => {
@@ -82,7 +82,8 @@ Deno.test('a future checkpoint is waiting, not current', () => {
   });
 
   assert(timeline[0]?.status === 'completed', 'premarket report must remain completed');
-  assert(timeline[1]?.status === 'pending', '09:30 must still be waiting at 08:40');
+  assert(timeline[1]?.status === 'pending', '09:00 must still be waiting at 08:40');
+  assert(timeline[2]?.status === 'pending', '09:30 must still be waiting at 08:40');
   assert(timeline.every((node) => node.status !== 'current'), 'future checkpoints must not be marked current');
 });
 
@@ -102,7 +103,7 @@ Deno.test('checkpoint completed with evidence is completed', () => {
     reportRevisionId: 'revision-1',
     isTradingDay: true,
   });
-  assert(timeline[1]?.status === 'completed', 'checkpoint with completed_at must be completed');
+  assert(timeline[2]?.status === 'completed', 'checkpoint with completed_at must be completed');
 });
 
 Deno.test('failed checkpoint with evidence is insufficient, never completed', () => {
@@ -122,7 +123,7 @@ Deno.test('failed checkpoint with evidence is insufficient, never completed', ()
     reportRevisionId: 'revision-1',
     isTradingDay: true,
   });
-  assert(timeline[1]?.status === 'insufficient', 'failed checkpoint must be insufficient');
+  assert(timeline[2]?.status === 'insufficient', 'failed checkpoint must be insufficient');
 });
 
 Deno.test('next checkpoint skips an insufficient past node for the next pending node', () => {
@@ -144,7 +145,7 @@ Deno.test('next checkpoint skips an insufficient past node for the next pending 
     taipeiMinutes: 9 * 60 + 54,
   });
   const next = selectNextRuntimeTimelineNode(timeline);
-  assert(timeline[1]?.status === 'insufficient', '09:30 must remain an insufficient historical node');
+  assert(timeline[2]?.status === 'insufficient', '09:30 must remain an insufficient historical node');
   assert(next?.time === '10:30', '10:30 must be selected as the next pending checkpoint');
 });
 
@@ -162,14 +163,14 @@ Deno.test('a completed later checkpoint closes earlier pending gaps', () => {
   });
 
   assert(
-    timeline.slice(1, 4).every((node) => node.status === 'insufficient'),
+    timeline.slice(1, 6).every((node) => node.status === 'insufficient'),
     'earlier missing checkpoints must be insufficient after closing completes',
   );
   assert(
     timeline.every((node) => node.status !== 'current' && node.status !== 'pending'),
     'no earlier checkpoint may remain current or pending after closing completes',
   );
-  assert(timeline[4]?.status === 'completed', 'closing checkpoint must remain completed');
+  assert(timeline[6]?.status === 'completed', 'closing checkpoint must remain completed');
 });
 
 Deno.test('an insufficient later checkpoint closes earlier pending gaps', () => {

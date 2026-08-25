@@ -18,7 +18,7 @@ import {
 } from '../_shared/provider-normalization.mjs';
 
 // ═══════════════════════════════════════════════════════════
-// fetch-market-data-v10 V10.11 — LIVE PROVIDER CONTRACT REPAIR
+// fetch-market-data-v10 V10.12 — CLOSE CHECKPOINT OWNERSHIP REPAIR
 // Uses Finnhub for US equities/ETF proxies, Fugle/TWSE for Taiwan core, best-effort Fugle futopt for TXF.
 // Each symbol: 6s timeout, max 1 retry.
 // Overall: 28s hard cap → always returns within 30s for cron.
@@ -34,7 +34,7 @@ const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
 const OVERALL_TIMEOUT_MS = 28_000;
-const VERSION = "V10.11_LIVE_PROVIDER_CONTRACT_REPAIR";
+const VERSION = "V10.12_CLOSE_CHECKPOINT_OWNERSHIP_REPAIR";
 
 interface FinnhubQuote {
   c: number;
@@ -847,7 +847,7 @@ Deno.serve(async (req) => {
     : crypto.randomUUID();
   const requestId = correlationId.slice(0, 8);
   const startedAt = new Date().toISOString();
-  const batchTag = `V10.11:${requestId}`;
+  const batchTag = `V10.12:${requestId}`;
   const startedMs = Date.now();
 
   console.log(`[${batchTag}] ======== START ${startedAt} ========`);
@@ -1352,7 +1352,12 @@ Deno.serve(async (req) => {
         providerHealthWriteErrors.length === 0 && relatedCoreHealth.healthy
       ? "SUCCEEDED"
       : "DEGRADED";
-    const { error: tradingDayStateError } = state
+    // A beneficiary-only close pass validates premium recommendations after the
+    // core close pass. It must never overwrite the checkpoint's authoritative
+    // TAIEX/2330/TXF completeness metadata with an empty core batch.
+    const tradingDayStateResult = beneficiaryCloseOnly
+      ? { error: null }
+      : state
       ? await supabase.rpc("advance_trading_day_state_v1", {
         p_trading_date: tradingDate,
         p_state: state,
@@ -1375,6 +1380,7 @@ Deno.serve(async (req) => {
         },
       })
       : { error: { message: "checkpoint_state_mapping_missing" } };
+    const tradingDayStateError = tradingDayStateResult.error;
     const operationSucceeded = !timedOut && providerHealthWriteErrors.length === 0 && !tradingDayStateError &&
       (beneficiaryCloseOnly ? checkpointEvidenceComplete : coreBatchComplete);
 
@@ -1426,6 +1432,7 @@ Deno.serve(async (req) => {
         provider_health_write_errors: providerHealthWriteErrors,
         trading_day_state_status: checkpointStatus,
         trading_day_state_error: tradingDayStateError?.message || null,
+        trading_day_state_transition_skipped: beneficiaryCloseOnly,
         checkpoint_complete: checkpointEvidenceComplete && !tradingDayStateError,
         operation_succeeded: operationSucceeded,
         txf_status: twCoreStatus.txf,

@@ -105,12 +105,18 @@ export function buildRuntimeDecisionTimeline(params: {
       status: params.hasReport && Boolean(params.reportRevisionId || params.reportGeneratedAt) ? 'completed' : 'pending',
     },
     {
-      time: '09:30',
-      label: '開盤驗證',
-      detail: '第一個盤中驗證節點',
+      time: '09:00',
+      label: '開盤資料',
+      detail: '第一筆台股核心資料',
       status: openingCompleted(ai)
         ? 'completed'
-        : timelineStatus(getRuntimeCheckpointState(sync, '0930')),
+        : timelineStatus(getRuntimeCheckpointState(sync, '0900')),
+    },
+    {
+      time: '09:30',
+      label: '開盤驗證',
+      detail: '確認開盤方向與盤前劇本',
+      status: timelineStatus(getRuntimeCheckpointState(sync, '0930')),
     },
     {
       time: '10:30',
@@ -125,10 +131,18 @@ export function buildRuntimeDecisionTimeline(params: {
       status: timelineStatus(getRuntimeCheckpointState(sync, '1300')),
     },
     {
+      time: '14:10',
+      label: '收盤資料',
+      detail: '確認現貨與期貨正式終值',
+      status: timelineStatus(getRuntimeCheckpointState(sync, '1410')),
+    },
+    {
       time: '14:30',
       label: '收盤驗證',
       detail: '讀取結構化收盤驗證',
-      status: isClosingVerificationComplete(ai) ? 'completed' : 'pending',
+      status: isClosingVerificationComplete(ai)
+        ? 'completed'
+        : timelineStatus(getRuntimeCheckpointState(sync, '1430')),
     },
   ];
 

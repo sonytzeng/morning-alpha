@@ -26,6 +26,10 @@ import {
 } from '../_shared/content-intelligence.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import {
+  buildCanonicalIntradaySyncStatus,
+  preserveRuntimeReportOverlay,
+} from '../_shared/runtime-report-state.ts';
+import {
   filterPremiumNewsEvidence,
   normalizePremiumMarketEvidence,
   reviewPremiumNewsEvidence,
@@ -2284,6 +2288,20 @@ async function writeReport(supabase:ReturnType<typeof createClient>,todayDate:st
     aiStrategyJson.safe_mode=safeMode;
     aiStrategyJson.correlation_id=correlationId;
 
+    const [existingReportResult,tradingDayStateResult]=await Promise.all([
+      supabase.from('reports').select('ai_strategy_json').eq('report_date',todayDate).maybeSingle(),
+      supabase.from('trading_day_state').select('trading_date,current_state,state_rank,checkpoint_status,updated_at').eq('trading_date',todayDate).maybeSingle(),
+    ]);
+    if(existingReportResult.error){log('runtime_overlay_lookup_degraded: '+existingReportResult.error.message);}
+    else if(existingReportResult.data){
+      aiStrategyJson=preserveRuntimeReportOverlay(aiStrategyJson,(existingReportResult.data as Record<string,unknown>).ai_strategy_json);
+      log('runtime_overlay_preserved_for_regeneration');
+    }
+    if(tradingDayStateResult.error){log('trading_day_state_overlay_degraded: '+tradingDayStateResult.error.message);}
+    else if(tradingDayStateResult.data){
+      aiStrategyJson.intraday_sync_status=buildCanonicalIntradaySyncStatus(aiStrategyJson.intraday_sync_status,tradingDayStateResult.data);
+      log('trading_day_state_overlay_applied');
+    }
     const insertPayload:Record<string,unknown>={
       report_date:todayDate,market_bias:marketBias,confidence_score:confScore,
       confidence_label:confScore===null?'休市不評分':confScore>=75?'高':confScore>=55?'中':'低',

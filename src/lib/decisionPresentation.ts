@@ -184,9 +184,24 @@ export function dedupePresentedOpportunities(source: UnknownRecord[], limit = 8)
 function decisionState(input: DecisionPresentationInput): PresentationDecisionState {
   const { displayState, narrative } = input;
   if (displayState && (!displayState.is_trading_day || displayState.market_status !== 'OPEN')) return 'CLOSED';
+  const canonicalDecision = record(displayState?.rawAI?.canonical_decision);
+  const canonicalAction = text(canonicalDecision.action).toUpperCase();
+  const canonicalMode = text(canonicalDecision.decision_mode).toLowerCase();
+  const canonicalStatus = text(canonicalDecision.status).toUpperCase();
+
+  // Runtime completion only means that the market checkpoint was observed. It
+  // must never promote an evidence-backed no-trade decision into an ACT state.
+  if (canonicalAction === 'CLOSED') return 'CLOSED';
+  if (canonicalAction === 'WAIT' || canonicalMode === 'no_trade') return 'WAIT';
+  if (['STOP', 'REDUCE'].includes(canonicalAction) || canonicalMode === 'blocked') return 'STOP';
+  if (canonicalStatus && canonicalStatus !== 'READY') return 'INSUFFICIENT_DATA';
+
   const status = narrative.decision_lifecycle.decision_status.status;
   if (status === 'Rejected' && canPresentRejectedDecision(narrative.decision_evidence)) return 'STOP';
-  if (status === 'Confirmed' && canPresentConfirmedDecision(narrative.decision_evidence)) return 'ACT';
+  const canonicalAllowsAction = !canonicalAction
+    || ['TRADE', 'SELECTIVE'].includes(canonicalAction)
+    || canonicalMode === 'recommendations';
+  if (status === 'Confirmed' && canonicalAllowsAction && canPresentConfirmedDecision(narrative.decision_evidence)) return 'ACT';
   if (!narrative.decision_evidence.marketSnapshotAvailable || !narrative.decision_evidence.checklistAvailable) {
     return 'INSUFFICIENT_DATA';
   }

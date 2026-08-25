@@ -13,6 +13,7 @@ import {
   type ProfileAccessRow,
   type SubscriptionTier,
 } from "../_shared/member-entitlement.ts";
+import { buildCanonicalIntradaySyncStatus } from "../_shared/runtime-report-state.ts";
 
 type ReportRow = Record<string, unknown> & {
   id?: string;
@@ -31,8 +32,9 @@ type PayloadContext = {
   sectorRotationRows: Record<string, unknown>[];
   marketDataSnapshots: Record<string, unknown>[];
   decisionSnapshot: Record<string, unknown> | null;
+  tradingDayState: Record<string, unknown> | null;
   componentQueryFailures: Array<{
-    source: "opening_market_radar" | "sector_rotation_scores" | "market_data_snapshots" | "decision_snapshots";
+    source: "opening_market_radar" | "sector_rotation_scores" | "market_data_snapshots" | "decision_snapshots" | "trading_day_state";
     error_type: "QUERY_FAILED";
   }>;
 };
@@ -120,6 +122,21 @@ function isValidDate(value: unknown): value is string {
 
 function getAi(report: ReportRow): Record<string, unknown> {
   return parseAi(report.ai_strategy_json);
+}
+
+function getEffectiveAi(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
+  const ai = getAi(report);
+  return {
+    ...ai,
+    ...(ctx.openingRadar ? {
+      opening_radar: ctx.openingRadar,
+      opening_radar_status: toStringValue(ctx.openingRadar.radar_status) || toStringValue(ctx.openingRadar.status),
+    } : {}),
+    intraday_sync_status: buildCanonicalIntradaySyncStatus(
+      ai.intraday_sync_status,
+      ctx.tradingDayState,
+    ),
+  };
 }
 
 function getImportantNews(report: ReportRow, ai: Record<string, unknown>): Record<string, unknown>[] {
@@ -422,7 +439,7 @@ function buildCanonicalDecision(
 }
 
 function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
-  const ai = getAi(report);
+  const ai = getEffectiveAi(report, ctx);
   const importantNews = getImportantNews(report, ai);
   const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
   const publicV10DataQualityStatus = premiumGate.eligible && premiumGate.decision_mode === "no_trade"
@@ -513,7 +530,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
 }
 
 function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
-  const ai = getAi(report);
+  const ai = getEffectiveAi(report, ctx);
   const importantNews = getImportantNews(report, ai);
   const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
   const note = asObject(ai.member_research_note_v2);
@@ -591,12 +608,12 @@ function buildVipPayload(report: ReportRow, ctx: PayloadContext): Record<string,
   };
 }
 
-function buildAdminPayload(report: ReportRow): Record<string, unknown> {
-  return report;
+function buildAdminPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
+  return { ...report, ai_strategy_json: getEffectiveAi(report, ctx) };
 }
 
 function buildPayload(report: ReportRow, tier: SubscriptionTier, ctx: PayloadContext): Record<string, unknown> {
-  if (tier === "admin") return buildAdminPayload(report);
+  if (tier === "admin") return buildAdminPayload(report, ctx);
   if (tier === "vip") return buildVipPayload(report, ctx);
   if (tier === "member") return buildMemberPayload(report, ctx);
   return buildPublicPayload(report, ctx);
@@ -636,7 +653,7 @@ async function fetchPayloadContext(
   serviceClient: ServiceClient,
   reportDate: string,
 ): Promise<PayloadContext> {
-  const [radarResult, sectorResult, snapshotResult, decisionResult] = await Promise.all([
+  const [radarResult, sectorResult, snapshotResult, decisionResult, tradingDayStateResult] = await Promise.all([
     serviceClient
       .from("opening_market_radar")
       .select("*")
@@ -664,24 +681,32 @@ async function fetchPayloadContext(
       .order("version", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    serviceClient
+      .from("trading_day_state")
+      .select("trading_date,current_state,state_rank,checkpoint_status,updated_at")
+      .eq("trading_date", reportDate)
+      .maybeSingle(),
   ]);
 
   if (radarResult.error) console.error("GET_REPORT_PAYLOAD_RADAR_QUERY_FAILED", radarResult.error.message);
   if (sectorResult.error) console.error("GET_REPORT_PAYLOAD_SECTOR_QUERY_FAILED", sectorResult.error.message);
   if (snapshotResult.error) console.error("GET_REPORT_PAYLOAD_SNAPSHOT_QUERY_FAILED", snapshotResult.error.message);
   if (decisionResult.error) console.error("GET_REPORT_PAYLOAD_DECISION_QUERY_FAILED", decisionResult.error.message);
+  if (tradingDayStateResult.error) console.error("GET_REPORT_PAYLOAD_TRADING_DAY_STATE_QUERY_FAILED", tradingDayStateResult.error.message);
 
   const componentQueryFailures: PayloadContext["componentQueryFailures"] = [];
   if (radarResult.error) componentQueryFailures.push({ source: "opening_market_radar", error_type: "QUERY_FAILED" });
   if (sectorResult.error) componentQueryFailures.push({ source: "sector_rotation_scores", error_type: "QUERY_FAILED" });
   if (snapshotResult.error) componentQueryFailures.push({ source: "market_data_snapshots", error_type: "QUERY_FAILED" });
   if (decisionResult.error) componentQueryFailures.push({ source: "decision_snapshots", error_type: "QUERY_FAILED" });
+  if (tradingDayStateResult.error) componentQueryFailures.push({ source: "trading_day_state", error_type: "QUERY_FAILED" });
 
   return {
     openingRadar: radarResult.data ? radarResult.data as Record<string, unknown> : null,
     sectorRotationRows: Array.isArray(sectorResult.data) ? sectorResult.data as Record<string, unknown>[] : [],
     marketDataSnapshots: Array.isArray(snapshotResult.data) ? snapshotResult.data as Record<string, unknown>[] : [],
     decisionSnapshot: decisionResult.data ? decisionResult.data as Record<string, unknown> : null,
+    tradingDayState: tradingDayStateResult.data ? tradingDayStateResult.data as Record<string, unknown> : null,
     componentQueryFailures,
   };
 }

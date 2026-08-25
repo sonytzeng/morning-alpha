@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { evaluatePremiumContentGate } from '../supabase/functions/_shared/premium-content-gate.ts';
-import { isDecisionCriticalMissingSource } from '../supabase/functions/_shared/content-intelligence.ts';
+import {
+  isDecisionCriticalMissingSource,
+  normalizeEvidenceLeadForChineseSentence,
+} from '../supabase/functions/_shared/content-intelligence.ts';
 
 function validAi() {
   return {
@@ -59,6 +62,26 @@ test('premium content is eligible only with fresh news and complete stock reason
   assert.equal(result.eligible, true);
   assert.equal(result.status, 'eligible');
   assert.equal(result.complete_recommendation_count, 1);
+});
+
+test('English evidence headlines are normalized before joining Chinese product copy', () => {
+  assert.equal(
+    normalizeEvidenceLeadForChineseSentence('Shares flat in Asia before inflation data'),
+    '隔夜市場消息與台股現貨訊號',
+  );
+  assert.equal(
+    normalizeEvidenceLeadForChineseSentence('費半回穩但權值股分歧'),
+    '費半回穩但權值股分歧',
+  );
+});
+
+test('premium gate rejects a truncated English headline joined directly to Chinese', () => {
+  const ai = validAi();
+  ai.today_quote = 'Shares flat in Asia before I未形成正向主線；09:30 看台積電與半導體是否同步止跌。';
+  ai.free_summary.one_sentence = ai.today_quote;
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('generic_content_detected'));
 });
 
 test('short event label remains complete when it carries a traceable canonical source', () => {

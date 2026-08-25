@@ -1343,11 +1343,13 @@ Deno.serve(async (req) => {
     }
 
     const state = stateForSnapshotCheckpoint(checkpoint);
-    const closeBeneficiaryCoverageComplete = phase !== "close" ||
-      (includeBeneficiaryClose && beneficiaryCloseStatus.complete === true);
+    // The authoritative close-core pass owns the checkpoint transition. Premium
+    // beneficiary coverage is a separate idempotent pass and must not make a
+    // healthy TAIEX/2330/TXF batch look degraded while that second pass is
+    // intentionally deferred.
     const checkpointEvidenceComplete = beneficiaryCloseOnly
       ? beneficiaryCloseStatus.complete === true && canonicalComplete && snapshotComplete && relatedCoreHealth.evidence_complete
-      : coreBatchComplete && closeBeneficiaryCoverageComplete;
+      : coreBatchComplete;
     const checkpointStatus = checkpointEvidenceComplete && failed.length === 0 && !timedOut && !hasProviderDegradation &&
         providerHealthWriteErrors.length === 0 && relatedCoreHealth.healthy
       ? "SUCCEEDED"

@@ -23,6 +23,34 @@ test('fresh US close is not marked stale because Taipei is on the next date', ()
   assert.equal(isMarketIndicatorStale('2026-08-17T20:00:00.000Z', 'SPX', dates, now), false);
 });
 
+test('premarket futures do not make the previous Taiwan cash close stale', () => {
+  const rows = [
+    { symbol: 'TAIEX', captured_at: '2026-08-24T05:30:00.000Z' },
+    { symbol: '2330', captured_at: '2026-08-24T05:30:00.000Z' },
+    { symbol: 'TXF', captured_at: '2026-08-24T21:00:00.000Z' },
+    { symbol: 'SPX', captured_at: '2026-08-24T20:00:00.000Z' },
+  ];
+  const dates = computeMarketFreshnessDates(rows, '2026-08-25');
+  assert.deepEqual(dates, {
+    twCoreDate: '2026-08-24',
+    usGlobalDate: '2026-08-24',
+  });
+  assert.equal(isMarketIndicatorStale('2026-08-24T05:30:00.000Z', 'TAIEX', dates), false);
+  assert.equal(isMarketIndicatorStale('2026-08-24T21:00:00.000Z', 'TXF', dates), false);
+});
+
+test('Taiwan cash freshness advances once the current session opens', () => {
+  const rows = [
+    { symbol: 'TAIEX', captured_at: '2026-08-25T01:00:20.000Z' },
+    { symbol: '2330', captured_at: '2026-08-25T01:00:21.000Z' },
+    { symbol: 'TXF', captured_at: '2026-08-24T21:00:00.000Z' },
+  ];
+  const dates = computeMarketFreshnessDates(rows, '2026-08-25');
+  assert.equal(dates.twCoreDate, '2026-08-25');
+  assert.equal(isMarketIndicatorStale('2026-08-24T05:30:00.000Z', 'TAIEX', dates), true);
+  assert.equal(isMarketIndicatorStale('2026-08-25T01:00:20.000Z', 'TAIEX', dates), false);
+});
+
 test('news older than 48 hours is excluded before report generation', () => {
   const now = Date.parse('2026-08-18T00:00:00.000Z');
   const rows = [

@@ -3,7 +3,9 @@ export type MarketFreshnessDates = {
   usGlobalDate: string;
 };
 
-const TAIWAN_SYMBOLS = new Set(['TAIEX', 'TWII', '^TWII', '2330', '2330.TW', 'TXF', 'TX', 'MTX', 'TXF1']);
+const TAIWAN_CASH_SYMBOLS = new Set(['TAIEX', 'TWII', '^TWII', '2330', '2330.TW']);
+const TAIWAN_DERIVATIVE_SYMBOLS = new Set(['TXF', 'TX', 'MTX', 'TXF1']);
+const TAIWAN_SYMBOLS = new Set([...TAIWAN_CASH_SYMBOLS, ...TAIWAN_DERIVATIVE_SYMBOLS]);
 const US_SYMBOLS = new Set(['NVDA', 'TSM', 'TSMC', 'SPX', 'SP500', 'GSPC', 'SOX', 'PHLX', 'IXIC', 'NASDAQ', 'VIX', 'VIXINDEX', 'DXY', 'USDINDEX', 'US10Y', 'TNX', 'T10Y']);
 
 export function dateInTimeZone(iso: string, timeZone: string): string {
@@ -25,17 +27,23 @@ export function computeMarketFreshnessDates(
   rows: Record<string, unknown>[],
   fallbackTaipeiDate: string,
 ): MarketFreshnessDates {
-  let latestTaiwan = '';
+  let latestTaiwanCash = '';
+  let latestTaiwanDerivative = '';
   let latestUnitedStates = '';
   for (const row of rows) {
     const symbol = String(row.symbol || '').toUpperCase();
     const capturedAt = String(row.captured_at || '');
     if (!capturedAt) continue;
-    if (TAIWAN_SYMBOLS.has(symbol) && (!latestTaiwan || capturedAt > latestTaiwan)) latestTaiwan = capturedAt;
+    if (TAIWAN_CASH_SYMBOLS.has(symbol) && (!latestTaiwanCash || capturedAt > latestTaiwanCash)) latestTaiwanCash = capturedAt;
+    if (TAIWAN_DERIVATIVE_SYMBOLS.has(symbol) && (!latestTaiwanDerivative || capturedAt > latestTaiwanDerivative)) latestTaiwanDerivative = capturedAt;
     if (US_SYMBOLS.has(symbol) && (!latestUnitedStates || capturedAt > latestUnitedStates)) latestUnitedStates = capturedAt;
   }
+  // During premarket, the futures session may already carry today's Taipei date
+  // while TAIEX and 2330 correctly remain at the previous official cash close.
+  // Do not let the derivative session make valid cash-close evidence look stale.
+  const taiwanReference = latestTaiwanCash || latestTaiwanDerivative;
   return {
-    twCoreDate: latestTaiwan ? dateInTimeZone(latestTaiwan, 'Asia/Taipei') : fallbackTaipeiDate,
+    twCoreDate: taiwanReference ? dateInTimeZone(taiwanReference, 'Asia/Taipei') : fallbackTaipeiDate,
     // A 16:00 New York close is 04:00 in Taipei during daylight saving time.
     // Its session date must remain the New York trading date, not the next Taipei calendar date.
     usGlobalDate: latestUnitedStates ? dateInTimeZone(latestUnitedStates, 'America/New_York') : fallbackTaipeiDate,

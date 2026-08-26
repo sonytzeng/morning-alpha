@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
+import { buildInternalFunctionHeaders } from '../_shared/internal-function-auth.mjs';
 import {
   buildDailyDeliveryRecoveryPlan,
   hasFailedEvidenceDependency,
@@ -105,10 +106,11 @@ async function invokeFunction(
   try {
     const response = await fetch(`${baseUrl}/${slug}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-cron-secret': cronSecret,
-      },
+      headers: buildInternalFunctionHeaders({
+        cronSecret,
+        serviceRoleKey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
+        source: 'daily-delivery-orchestrator',
+      }),
       body: JSON.stringify(body),
       signal: controller.signal,
     });

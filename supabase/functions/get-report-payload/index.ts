@@ -14,6 +14,7 @@ import {
   type SubscriptionTier,
 } from "../_shared/member-entitlement.ts";
 import { buildCanonicalIntradaySyncStatus } from "../_shared/runtime-report-state.ts";
+import { resolveCanonicalRuntimeMarketStatus } from "../_shared/canonical-runtime-market-status.mjs";
 
 type ReportRow = Record<string, unknown> & {
   id?: string;
@@ -362,6 +363,7 @@ function getDataAsOf(ai: Record<string, unknown>, ctx: PayloadContext): string |
 function getCanonicalMarketMetadata(
   report: ReportRow,
   ai: Record<string, unknown>,
+  ctx: PayloadContext,
 ): { marketStatus: string; isTradingDay: boolean | null; closedReason: string | null } {
   const reportDate = getReportDate(report);
   if (!isValidDate(reportDate)) {
@@ -374,7 +376,13 @@ function getCanonicalMarketMetadata(
 
   const canonical = resolveMarketStatus(reportDate);
   return {
-    marketStatus: canonical.is_trading_day ? "OPEN" : "CLOSED",
+    marketStatus: resolveCanonicalRuntimeMarketStatus({
+      isTradingDay: canonical.is_trading_day,
+      tradingDayState: ctx.tradingDayState,
+      closeMarketReview: ctx.closeMarketReview,
+      closingDecisionSnapshot: ctx.closingDecisionSnapshot,
+      learningRun: ctx.learningRun,
+    }),
     isTradingDay: canonical.is_trading_day,
     closedReason: canonical.closed_reason,
   };
@@ -548,7 +556,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     : toStringValue(ai.data_quality) || toStringValue(ai.data_status) || toStringValue(asObject(ai.member_research_note_v2).data_status) || "unknown";
   const confidenceScore = getConfidenceScore(report, ai);
   const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
-  const marketMetadata = getCanonicalMarketMetadata(report, ai);
+  const marketMetadata = getCanonicalMarketMetadata(report, ai, ctx);
   const publicSummary = asObject(ai.public_summary);
   const freeSummary = asObject(ai.free_summary);
   const canonicalDecision = buildCanonicalDecision(ctx, false);

@@ -750,7 +750,7 @@ function HomePageContent() {
 
   return (
     <div className="ma-page ma-pixel-page ma-home-page ma-home-v2-page flex flex-col overflow-x-hidden">
-      <Navbar marketState={marketState} />
+      <Navbar marketState={marketState} marketStatusLabel={marketStatusLabel} />
 
       <main className="flex-1 overflow-x-hidden">
 
@@ -946,8 +946,16 @@ function HomePageContent() {
                   </div>
                 ) : (
                   <div className="ma-home-v2-empty is-section">
-                    <strong>{runtimeLifecycleComplete ? '今日沒有強受惠股' : '今日資料整理中'}</strong>
-                    <span>{runtimeLifecycleComplete ? '今日條件未成立，不用空泛觀察名單填補。' : 'AI 正在等待市場資料完成，不會用固定觀察句填補。'}</span>
+                    <strong>{evidenceIsInsufficient
+                      ? '今日資料尚未完整'
+                      : runtimeLifecycleComplete
+                        ? '今日沒有強受惠股'
+                        : '今日觀察名單已完成'}</strong>
+                    <span>{evidenceIsInsufficient
+                      ? '核心資料未達新鮮度標準，暫不建立觀察名單。'
+                      : runtimeLifecycleComplete
+                        ? '今日條件未成立，不用空泛觀察名單填補。'
+                        : '公開版保留每日一句與驗證節點；完整代表股、原因與取消條件請查看會員研究。'}</span>
                   </div>
                 )}
               </section>
@@ -979,8 +987,12 @@ function HomePageContent() {
                   </div>
                 ) : (
                   <div className="ma-home-v2-empty is-section">
-                    <strong>{runtimeLifecycleComplete ? '今日風險檢查已完成' : '今日資料整理中'}</strong>
-                    <span>{runtimeLifecycleComplete ? '維持今日不追價結論，等待下一個交易日重新評估。' : 'AI 正在等待風險條件完成，不會顯示空泛提醒。'}</span>
+                    <strong>{evidenceIsInsufficient ? '今日風險資料尚未完整' : '今日風險條件已完成'}</strong>
+                    <span>{evidenceIsInsufficient
+                      ? '風險資料未達驗收標準，系統維持安全降級。'
+                      : runtimeLifecycleComplete
+                        ? '維持今日不追價結論，等待下一個交易日重新評估。'
+                        : '公開版顯示核心風險結論；完整失效條件與因果鏈請查看會員研究。'}</span>
                   </div>
                 )}
               </section>

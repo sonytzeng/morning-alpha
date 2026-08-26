@@ -474,7 +474,12 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /runtimeLifecycleComplete/);
   assert.match(home, /收盤驗證已完成，今日不追價/);
   assert.match(home, /今日沒有強受惠股/);
-  assert.match(home, /今日風險檢查已完成/);
+  assert.match(home, /marketStatusLabel=\{marketStatusLabel\}/);
+  assert.match(home, /今日觀察名單已完成/);
+  assert.match(home, /完整代表股、原因與取消條件請查看會員研究/);
+  assert.match(home, /今日風險條件已完成/);
+  assert.match(home, /完整失效條件與因果鏈請查看會員研究/);
+  assert.match(home, /核心資料未達新鮮度標準，暫不建立觀察名單/);
 });
 
 test('today report keeps runtime state and technical copy out of the public UI', () => {

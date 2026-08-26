@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   buildDailyDeliveryRecoveryPlan,
   hasFailedEvidenceDependency,
+  isContentOnlyDeliveryFailure,
   resolveDailyDeliveryPhase,
 } from '../supabase/functions/_shared/daily-delivery-recovery.ts';
 
@@ -91,4 +92,31 @@ test('failed evidence dependencies block regeneration and premium delivery', () 
   assert.equal(hasFailedEvidenceDependency({ refresh_news: { ok: false }, refresh_market: { ok: true } }), true);
   assert.equal(hasFailedEvidenceDependency({ regenerate_report: { ok: false } }), true);
   assert.equal(hasFailedEvidenceDependency({ deliver_incident: { ok: false } }), false);
+});
+
+test('content-only failures use a bounded repair budget instead of repeating the same generation indefinitely', () => {
+  const reasons = [
+    'member_research_value_sentence_low_quality',
+    'decision_snapshot_not_publishable',
+  ];
+  assert.equal(isContentOnlyDeliveryFailure(reasons), true);
+
+  const secondAttempt = buildDailyDeliveryRecoveryPlan({
+    has_report: true,
+    premium_eligible: false,
+    reason_codes: reasons,
+    attempt: 2,
+    taipei_minutes: 7 * 60 + 18,
+  });
+  assert.deepEqual(secondAttempt.actions, ['regenerate_report']);
+
+  const exhausted = buildDailyDeliveryRecoveryPlan({
+    has_report: true,
+    premium_eligible: false,
+    reason_codes: reasons,
+    attempt: 3,
+    taipei_minutes: 7 * 60 + 31,
+  });
+  assert.deepEqual(exhausted.actions, ['deliver_incident']);
+  assert.equal(exhausted.retry_after_seconds, null);
 });

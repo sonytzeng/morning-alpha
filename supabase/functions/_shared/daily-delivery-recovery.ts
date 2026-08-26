@@ -55,7 +55,10 @@ const CONTENT_REASONS = new Set([
   'generic_content_detected',
   'decision_mode_incomplete',
   'evidence_quality_contract_missing',
+  'member_research_value_sentence_low_quality',
+  'decision_snapshot_not_publishable',
 ]);
+const CONTENT_REPAIR_MAX_ATTEMPTS = 3;
 const EVIDENCE_DEPENDENCY_ACTIONS = ['refresh_news', 'refresh_market', 'regenerate_report'] as const;
 
 function unique<T>(values: T[]): T[] {
@@ -64,6 +67,12 @@ function unique<T>(values: T[]): T[] {
 
 function includesReason(reasonCodes: string[], expected: Set<string>, prefix = ''): boolean {
   return reasonCodes.some((reason) => expected.has(reason) || (prefix && reason.startsWith(prefix)));
+}
+
+export function isContentOnlyDeliveryFailure(reasonCodes: string[]): boolean {
+  const reasons = unique((reasonCodes || []).filter(Boolean));
+  return reasons.length > 0
+    && reasons.every((reason) => CONTENT_REASONS.has(reason));
 }
 
 export function hasFailedEvidenceDependency(actionResults: Record<string, unknown>): boolean {
@@ -91,6 +100,8 @@ export function buildDailyDeliveryRecoveryPlan(
   const deadlineReached = input.taipei_minutes >= deadlineMinutes;
   const phase = resolveDailyDeliveryPhase(input.taipei_minutes);
   const reasonCodes = unique((input.reason_codes || []).filter(Boolean));
+  const contentRepairBudgetExhausted = isContentOnlyDeliveryFailure(reasonCodes)
+    && attempt >= CONTENT_REPAIR_MAX_ATTEMPTS;
 
   if (input.premium_eligible) {
     return {
@@ -115,14 +126,14 @@ export function buildDailyDeliveryRecoveryPlan(
       || includesReason(reasonCodes, MARKET_REASONS, 'unavailable_market_data:')) {
       actions.push('refresh_market');
     }
-    if (includesReason(reasonCodes, CONTENT_REASONS)
+    if (!contentRepairBudgetExhausted && (includesReason(reasonCodes, CONTENT_REASONS)
       || actions.includes('refresh_news')
-      || actions.includes('refresh_market')) {
+      || actions.includes('refresh_market'))) {
       actions.push('regenerate_report');
     }
   }
 
-  if (actions.length === 0 && !deadlineReached) actions.push('regenerate_report');
+  if (actions.length === 0 && !deadlineReached && !contentRepairBudgetExhausted) actions.push('regenerate_report');
   if (deadlineReached) actions.unshift('deliver_incident');
 
   return {
@@ -132,6 +143,8 @@ export function buildDailyDeliveryRecoveryPlan(
     reason_codes: reasonCodes.length > 0 ? reasonCodes : ['daily_report_not_publishable'],
     attempt,
     deadline_reached: deadlineReached,
-    retry_after_seconds: attempt >= RUNTIME_QUALITY_POLICY.max_recovery_attempts ? 300 : Math.min(180, 30 * attempt),
+    retry_after_seconds: contentRepairBudgetExhausted
+      ? null
+      : attempt >= RUNTIME_QUALITY_POLICY.max_recovery_attempts ? 300 : Math.min(180, 30 * attempt),
   };
 }

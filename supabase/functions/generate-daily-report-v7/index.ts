@@ -46,6 +46,10 @@ import {
   resolveAbstentionDecision,
 } from '../_shared/production-architecture-core.mjs';
 import { canonicalDecisionAction } from '../_shared/canonical-decision-contract.mjs';
+import {
+  buildNoTradeDecisionCopy,
+  buildRecommendationDecisionCopy,
+} from '../_shared/decision-sentence-builder.ts';
 
 const VERSION='V9.5_CANONICAL_MARKET_REPORT_CONTRACT';
 const OPENAI_EVIDENCE_GUARDRAILS='market_news 只可使用發布時間在 48 小時內的資料。若 TXF 或其他資料源缺失，不可把缺失資料寫成方向、價位或驗證條件。禁止自行編造輸入資料未提供的個股絕對價位。每一檔最終受惠股都必須有事件來源、事件到產業與供應鏈再到公司的傳導路徑、台灣供應鏈關係、盤中成立條件與失效條件；沒有足夠證據就不要輸出該股票。';
@@ -598,19 +602,19 @@ function applyV10EvidenceBackedNarrative(ai:Record<string,unknown>,phase:V10Bene
     const name=v10NarrativeText(recommendation.name||recommendation.symbol,16);
     const industry=v10NarrativeText(recommendation.industry_name||recommendation.sector,18);
     const trigger=v10NarrativeText(recommendation.trigger_event||recommendation.evidence_source,28);
-    const invalidation=v10NarrativeText(recommendation.invalidation_condition,44);
+    const decisionCopy=buildRecommendationDecisionCopy({trigger,industry,name,invalidation:recommendation.invalidation_condition});
     logicSource=Array.isArray(recommendation.source_refs)?recommendation.source_refs.map(String):[String(recommendation.data_basis||'')].filter(Boolean);
-    sentence=`${trigger}先傳導至${industry}；09:30 看${name}是否相對大盤轉強，若${invalidation}，受惠假設撤回。`;
-    subscriberSentence=`今天不是看到題材就追：${trigger}必須先讓${industry}與${name}同步轉強；若${invalidation}，就不把它列為有效主線。`;
+    sentence=decisionCopy.sentence;
+    subscriberSentence=decisionCopy.subscriber_sentence;
     decisionMode='recommendations';
   }else if(phase.data_quality_status==='insufficient_positive_evidence'&&observation){
     const name=v10NarrativeText(observation.name||observation.symbol,16);
     const industry=v10NarrativeText(observation.industry_name||observation.industry_code,18);
-    const stop=v10NarrativeText(observation.stop_observing_condition||observation.stop_condition,42);
     logicSource=Array.isArray(observation.source_refs)?observation.source_refs.map(String):[String(observation.data_basis||'')].filter(Boolean);
     const sourceDetail=normalizeEvidenceLeadForChineseSentence(v10NarrativeSourceDetail(logicSource));
-    sentence=`${sourceDetail}未形成正向主線；09:30 看${name}與${industry}是否同步止跌，若${stop}，今天不建立受惠股。`;
-    subscriberSentence=`今天不硬猜強勢股：先用${name}與${industry}的 09:30 同步性驗證；若${stop}，整日維持不建立受惠股。`;
+    const decisionCopy=buildNoTradeDecisionCopy({sourceDetail,industry,name,stopCondition:observation.stop_observing_condition||observation.stop_condition});
+    sentence=decisionCopy.sentence;
+    subscriberSentence=decisionCopy.subscriber_sentence;
     decisionMode='no_trade';
   }
   if(!sentence||!subscriberSentence)return ai;

@@ -64,6 +64,22 @@ test('premium content is eligible only with fresh news and complete stock reason
   assert.equal(result.complete_recommendation_count, 1);
 });
 
+test('premium gate recognizes a structured subscriber action without depending on one fixed phrase', () => {
+  const ai = validAi();
+  ai.member_research_note_v2.subscriber_value_sentence = '先用台積電、TAIEX 與半導體同步性驗證主線；若族群沒有量價擴散，就不把它列為有效主線。';
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.eligible, true, JSON.stringify(result));
+});
+
+test('premium gate rejects duplicated conditional words and truncated Chinese clauses', () => {
+  const ai = validAi();
+  ai.today_quote = 'NVDA先傳導至AI Server；09:30 看英業達是否轉強，若若 2356 弱於 TAIEX 或事件來源不再支，受惠假設撤回。';
+  ai.free_summary.one_sentence = ai.today_quote;
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.eligible, false);
+  assert.ok(result.generic_content_flags.includes('daily_sentence_language_malformed'));
+});
+
 test('English evidence headlines are normalized before joining Chinese product copy', () => {
   assert.equal(
     normalizeEvidenceLeadForChineseSentence('Shares flat in Asia before inflation data'),

@@ -26,11 +26,14 @@ export default function Footer() {
 
           {/* Links */}
           <div className="flex items-center gap-4 md:gap-6 flex-wrap">
-            <Link to="/" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+            <Link to="/report/today" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               今日判斷
             </Link>
             <Link to="/war-room" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               盤中追蹤
+            </Link>
+            <Link to="/verification" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+              收盤驗證
             </Link>
             <Link to="/faq" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               常見問題

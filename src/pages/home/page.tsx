@@ -429,6 +429,8 @@ function HomePageContent() {
   const nextActionLabel = hasRuntimeClosing
     ? '查看收盤驗證結果'
     : translateKnownTerms(currentTimelineNode.label || presentation.nextCheckpoint.label);
+  const nextActionTo = hasRuntimeClosing ? '/verification' : '/war-room';
+  const nextActionCtaLabel = hasRuntimeClosing ? '查看收盤驗證結果' : '前往盤中追蹤';
   const researchMaster = asRecord(homeAI?.research_master_v2);
   const researchMetadata = asRecord(researchMaster.metadata);
   const reportRecord = asRecord(report);
@@ -786,8 +788,8 @@ function HomePageContent() {
                     <span>{renderSafeText(nextActionLabel)}</span>
                   </div>
                   <div className="ma-home-v2-hero-actions">
-                    <Link to="/opportunities" className="ma-pixel-primary-button">
-                      查看短線資金雷達
+                    <Link to="/report/today" className="ma-pixel-primary-button">
+                      查看完整今日判斷
                       <i className="ri-arrow-right-line" aria-hidden="true" />
                     </Link>
                     <Link to="/member-note" className="ma-pixel-text-link">
@@ -852,7 +854,7 @@ function HomePageContent() {
                 <VisualSectionHeader
                   icon="ri-question-answer-line"
                   title="今天先回答四件事"
-                  description="三分鐘看完能不能做、怎麼做、先看什麼，以及最該避開的錯。"
+                  description="30 秒看完能不能做、怎麼做、先看什麼，以及最該避開的錯。"
                 />
                 <div className="ma-home-v2-answer-grid">
                   <article className={`ma-home-v2-answer-card is-${decisionTone}`}>
@@ -868,7 +870,7 @@ function HomePageContent() {
                   <article className="ma-home-v2-answer-card is-neutral">
                     <p>今天優先看什麼？</p>
                     <strong>{renderSafeText(priorityFocus)}</strong>
-                    <span>最多三項，往下查看成立與取消條件</span>
+                    <span>需要更多證據時，再展開成立與取消條件</span>
                   </article>
                   <article className="ma-home-v2-answer-card is-danger">
                     <p>今天最容易犯的錯？</p>
@@ -878,6 +880,16 @@ function HomePageContent() {
                 </div>
               </section>
 
+              <details className="group rounded-2xl border border-white/10 bg-white/[0.025] p-4 md:p-6">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold text-white marker:content-none">
+                  <span className="flex items-center gap-2">
+                    <i className="ri-file-search-line text-primary-300" aria-hidden="true" />
+                    展開公開判斷依據
+                  </span>
+                  <span className="text-xs font-medium text-white/40 group-open:hidden">最終判斷、觀察與風險</span>
+                  <span className="hidden text-xs font-medium text-white/40 group-open:inline">收合內容</span>
+                </summary>
+                <div className="space-y-8 pt-5 md:space-y-10">
               <section aria-labelledby="final-decision-title">
                 <VisualSectionHeader
                   icon="ri-brain-line"
@@ -1007,6 +1019,8 @@ function HomePageContent() {
                   </div>
                 )}
               </section>
+                </div>
+              </details>
 
               <section className="ma-home-v2-analysis-cta" aria-labelledby="analysis-cta-title">
                 <div>
@@ -1053,8 +1067,8 @@ function HomePageContent() {
                   <h2>{renderSafeText(nextActionTime)}</h2>
                   <span>{renderSafeText(waitingFor)}</span>
                 </div>
-                <Link to="/report/today" className="ma-pixel-primary-button">
-                  回到今日判斷
+                <Link to={nextActionTo} className="ma-pixel-primary-button">
+                  {nextActionCtaLabel}
                   <i className="ri-arrow-right-line" aria-hidden="true" />
                 </Link>
               </section>

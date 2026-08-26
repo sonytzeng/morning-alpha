@@ -23,6 +23,7 @@ const performance = read('src/pages/performance/page.tsx');
 const verification = read('src/pages/verification/page.tsx');
 const reportsCenter = read('src/pages/reports/ReportsCenter.tsx');
 const reportDetail = read('src/pages/reports/ReportDetail.tsx');
+const account = read('src/pages/account/Account.tsx');
 const observationSection = read('src/components/v11/V11ObservationSection.tsx');
 const openingMarketRadar = read('supabase/functions/opening-market-radar/index.ts');
 const dailyReportGenerator = read('supabase/functions/generate-daily-report-v7/index.ts');
@@ -108,6 +109,25 @@ test('public navigation destinations exist', () => {
   for (const destination of destinations) {
     assert.ok(registered.has(destination), `navigation destination is not registered: ${destination}`);
   }
+});
+
+test('primary navigation follows the subscriber decision journey', () => {
+  for (const destination of ['/report/today', '/war-room', '/verification', '/performance']) {
+    assert.match(navbar, new RegExp(`to:\\s*['"]${destination.replaceAll('/', '\\/')}['"]`), `missing primary journey destination: ${destination}`);
+  }
+  assert.doesNotMatch(navbar, /to:\s*['"]\/opportunities['"]/, 'candidate radar must remain a secondary drill-down');
+  assert.match(navbar, /14 天完整試用/);
+  assert.match(footer, /to="\/verification"/);
+});
+
+test('home and member center prioritize one daily journey', () => {
+  assert.match(home, /查看完整今日判斷/);
+  assert.match(home, /展開公開判斷依據/);
+  assert.match(home, /30 秒看完能不能做/);
+  for (const label of ['每日使用路徑', '今日判斷', '會員決策簡報', '盤中追蹤', '收盤驗證']) {
+    assert.match(account, new RegExp(label), `member center is missing daily journey copy: ${label}`);
+  }
+  assert.doesNotMatch(account, /加入早鳥名單|Morning Alpha 資料累積|AIQuotesCollection|MarketTimeline/);
 });
 
 test('public source has no internal diagnostics destination', () => {

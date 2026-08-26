@@ -247,14 +247,16 @@ export function evaluateDecisionSentenceValue(
   const concreteMarkerCount = CONCRETE_MARKER_PATTERNS
     .filter((pattern) => pattern.test(sentence))
     .length;
-  const hasAction = /(?:不追價|不建立|不進場|不擴大|撤回|停止|降低曝險|保留現金|依(?:原定)?計畫執行|只做|確認後才|成立後才)/.test(sentence);
+  const hasAction = /(?:不追價|不建立|不進場|不擴大|不把.{0,12}列為|撤回|停止|降低曝險|保留現金|依(?:原定)?計畫執行|只做|確認後才|成立後才)/.test(sentence);
   const hasCheckpoint = /\b(?:09:00|09:30|10:30|13:00|14:10|14:30)\b/.test(sentence);
   const hasChangeCondition = /(?:若|如果|只有|除非|一旦|未.{0,18}前|確認後才|成立後才|失效就|否則)/.test(sentence);
   const genericWaitOnly = /^(?:今日)?(?:暫不|先不|現在不要)?追價[，,\s]*(?:等待|持續等待)(?:關鍵條件)?驗證[。.]?$/.test(sentence)
     || /^(?:等待|持續等待)(?:關鍵條件)?確認[。.]?$/.test(sentence);
+  const malformedLanguage = /(?:若\s*){2,}|(?:如果\s*){2,}|不再支(?=[，,。；;])/u.test(sentence);
   const flags: string[] = [];
   if (sentence.length < 36) flags.push('daily_sentence_too_thin');
   if (genericWaitOnly) flags.push('generic_wait_only');
+  if (malformedLanguage) flags.push('daily_sentence_language_malformed');
   if (concreteMarkerCount < 2) flags.push('daily_sentence_evidence_density_low');
   if (!hasAction) flags.push('daily_sentence_action_missing');
   if (requireCheckpoint && !hasCheckpoint) flags.push('daily_sentence_checkpoint_missing');

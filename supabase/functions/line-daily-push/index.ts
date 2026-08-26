@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
+import { buildDeliveryIncidentLineMessage } from '../_shared/line-incident-message.ts';
 
 // LINE Daily Push V4 — 90 分硬閘門、事故通知、Transactional Outbox 重送
 // V3 升級：加入台股交易日 Gate，休市日不推播盤前報告
@@ -82,6 +83,9 @@ Deno.serve(async (req) => {
     requestBody = {};
   }
   const deliveryMode = requestBody.delivery_mode === 'incident' ? 'incident' : 'premium';
+  const incidentReasonCodes = Array.isArray(requestBody.incident_reason_codes)
+    ? requestBody.incident_reason_codes.map(String).filter(Boolean)
+    : [];
 
   const siteUrl = Deno.env.get('SITE_URL') || 'https://morningalphatw.com';
 
@@ -208,7 +212,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const incidentMessage = buildDeliveryIncidentLineMessage(siteUrl);
+    const incidentMessage = buildDeliveryIncidentLineMessage(siteUrl, incidentReasonCodes);
     try {
       const summary = await deliverOutboxMessage({
         supabase,
@@ -915,21 +919,6 @@ function buildMarketClosedLineMessage(siteUrl: string) {
       '下一交易日重點。',
       '',
       siteUrl,
-    ].join('\n'),
-  };
-}
-
-function buildDeliveryIncidentLineMessage(siteUrl: string) {
-  return {
-    type: 'text',
-    text: [
-      'Morning Alpha｜盤前資料延遲',
-      '',
-      '今日盤前內容尚未通過資料完整性與 90 分品質標準。',
-      '系統正在自動補抓資料並重新產生報告；未達標內容不會冒充正式分析推送。',
-      '',
-      '完成後會另行補送正式盤前內容。',
-      `${siteUrl}/report/today`,
     ].join('\n'),
   };
 }

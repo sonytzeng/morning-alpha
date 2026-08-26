@@ -414,7 +414,7 @@ async function executeRecoveryActions(args: {
       args.baseUrl,
       'line-daily-push',
       args.cronSecret,
-      { delivery_mode: 'incident' },
+      { delivery_mode: 'incident', incident_reason_codes: args.reasonCodes },
       120_000,
     );
   }

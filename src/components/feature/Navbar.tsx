@@ -43,11 +43,10 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
   }, [mobileOpen]);
 
   const navLinks = [
-    { to: '/', label: '首頁' },
-    { to: '/opportunities', label: '短線資金雷達' },
+    { to: '/report/today', label: '今日判斷' },
     { to: '/war-room', label: '盤中追蹤' },
+    { to: '/verification', label: '收盤驗證' },
     { to: '/performance', label: '歷史績效' },
-    { to: '/pricing', label: '會員方案' },
     { to: isLoggedIn ? '/account' : '/login', label: isLoggedIn ? '會員中心' : '登入' },
   ];
 
@@ -92,6 +91,14 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
                 {link.label}
               </Link>
             ))}
+            {!isLoggedIn && (
+              <Link
+                to="/pricing"
+                className="ml-1 inline-flex min-h-10 items-center rounded-lg bg-primary-500 px-3 text-xs font-bold text-background-50 transition-colors hover:bg-primary-400"
+              >
+                14 天完整試用
+              </Link>
+            )}
           </div>
 
           {/* Mobile hamburger — bigger tap target */}
@@ -129,6 +136,15 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
                 {link.label}
               </Link>
             ))}
+            {!isLoggedIn && (
+              <Link
+                to="/pricing"
+                onClick={() => setMobileOpen(false)}
+                className="mt-2 flex min-h-11 items-center justify-center rounded-lg bg-primary-500 px-4 text-sm font-bold text-background-50"
+              >
+                14 天完整試用
+              </Link>
+            )}
             <div className="mt-3 border-t border-background-200/70 pt-3">
               <p className="text-white/15 text-[10px] text-center leading-relaxed">
                 愛吉網路資訊有限公司｜統編 60374105

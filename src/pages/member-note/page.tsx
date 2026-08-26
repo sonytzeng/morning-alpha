@@ -1208,9 +1208,9 @@ function MemberNoteContent() {
       <main className="flex-1 overflow-x-hidden">
         <header className="ma-research-note-v3-masthead">
           <div className="ma-research-note-v3-shell">
-            <div className="ma-research-note-v3-kicker"><span>{isHistoricalFallback ? '歷史研究筆記' : '完整研究筆記'}</span><time dateTime={reportDate}>{reportDate}</time></div>
+            <div className="ma-research-note-v3-kicker"><span>{isHistoricalFallback ? '歷史會員決策簡報' : '會員決策簡報'}</span><time dateTime={reportDate}>{reportDate}</time></div>
             <h1>{renderSafeText(heroConclusion)}</h1>
-            <p>{isHistoricalFallback ? '把當天結論拆回事件、傳導路徑、支持證據與失效條件；這不是今日建議。' : '把今天的結論拆回事件、傳導路徑、支持證據與失效條件。'}</p>
+            <p>{isHistoricalFallback ? '先看當天怎麼做，再核對事件、傳導路徑、支持證據與失效條件；這不是今日建議。' : '先看今天怎麼做，再按需要核對事件、傳導路徑、支持證據與失效條件。'}</p>
             <dl>
               <div><dt>市場方向</dt><dd>{renderSafeText(formatResearchLabel(marketBias) || '資料不足')}</dd></div>
               <div><dt>判斷信心</dt><dd>{confidenceScore != null ? `${confidenceScore}/100 · ${scoreDisplay.label}` : scoreDisplay.label}</dd></div>
@@ -1221,7 +1221,7 @@ function MemberNoteContent() {
 
         <article className="ma-research-note-v3-shell ma-research-note-v3-article">
           <section className="ma-research-note-v3-chapter">
-            <header><span>01</span><div><p>研究摘要</p><h2>先把{isHistoricalFallback ? '當天' : '今天'}的研究濃縮成四個答案</h2></div></header>
+            <header><span>01</span><div><p>研究摘要 · 30 秒決策</p><h2>先把{isHistoricalFallback ? '當天' : '今天'}的研究濃縮成四個可執行答案</h2></div></header>
             <dl className="ma-research-note-v3-summary">
               {researchSummaryCards.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{renderSafeText(item.value)}</dd></div>)}
             </dl>

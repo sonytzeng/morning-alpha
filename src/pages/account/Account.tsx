@@ -3,14 +3,9 @@ import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import MorningHeroCard from './components/MorningHeroCard';
 import TodayInfoCards from './components/TodayInfoCards';
-import MarketRhythmCard from './components/MarketRhythmCard';
 import MorningReminderCard from './components/MorningReminderCard';
-import AIQuotesCollection from './components/AIQuotesCollection';
-import MarketTimeline from './components/MarketTimeline';
 import { useAccountDashboard } from '@/hooks/useAccountDashboard';
 import VisualPageHero from '@/components/feature/VisualPageHero';
-import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
-import EarlyAccessForm from '@/components/feature/EarlyAccessForm';
 import MembershipStatusCard from '@/components/membership/MembershipStatusCard';
 
 function isTaipeiWeekend(): boolean {
@@ -79,14 +74,6 @@ export default function Account() {
 
   const { todayReport, hasTodayReport } = data;
 
-  // Compute growth stats
-  const totalReportsRead = data.recent30.length;
-  const monthlyObservations = data.recent30.filter((r) => {
-    const rd = new Date(r.report_date);
-    const now = new Date();
-    return rd.getMonth() === now.getMonth() && rd.getFullYear() === now.getFullYear();
-  }).length;
-
   const reportLinkText = isWeekend ? '查看最近交易日盤前簡報' : '查看今日盤前簡報';
 
   return (
@@ -95,10 +82,10 @@ export default function Account() {
 
       <main className="flex-1">
         <VisualPageHero
-          eyebrow="觀察中心"
-          icon="ri-eye-line"
-          title="Morning Alpha 觀察中心"
-          subtitle="集中查看最近交易日的盤前劇本、資料狀態、盤中驗證與歷史觀察。"
+          eyebrow="會員中心"
+          icon="ri-user-star-line"
+          title="你的 Morning Alpha"
+          subtitle="先確認會員權限，再沿著今日判斷、盤中追蹤與收盤驗證完成一天。"
           decisionLabel="今日入口"
           decision={reportLinkText}
           ctaLabel={reportLinkText}
@@ -107,16 +94,13 @@ export default function Account() {
         <div className="w-full px-4 md:px-6 py-6 md:py-10">
           <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
             <MembershipStatusCard />
-            {/* Hero: 觀察中心 */}
-            <MorningHeroCard
-              todayReport={todayReport}
-              hasTodayReport={hasTodayReport}
-              streak={data.streak}
-              isWeekend={isWeekend}
-              hasAnyReport={hasAnyReport}
-            />
 
-            {/* Quick Access */}
+            <section aria-labelledby="member-daily-path-title">
+              <div className="mb-4">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary-300">每日使用路徑</p>
+                <h2 id="member-daily-path-title" className="mt-2 text-xl font-bold text-white">從盤前判斷一路走到收盤驗證</h2>
+                <p className="mt-1 text-sm leading-6 text-white/45">每個入口只處理一件事，不需要在不同頁面重複找答案。</p>
+              </div>
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <Link
                 to="/report/today"
@@ -126,47 +110,56 @@ export default function Account() {
                   <i className="ri-file-list-3-line text-forest-400 text-sm"></i>
                 </div>
                 <div>
-                  <p className="text-white text-sm font-medium group-hover:text-forest-300 transition-colors">盤前簡報</p>
-                  <p className="text-white/30 text-[10px]">AI 每日分析</p>
+                  <p className="text-white text-sm font-medium group-hover:text-forest-300 transition-colors">今日判斷</p>
+                  <p className="text-white/30 text-[10px]">先看今日怎麼做</p>
+                </div>
+              </Link>
+              <Link
+                to="/member-note"
+                className="ma-card-compact group flex items-center gap-3 transition-colors hover:border-primary-400/40"
+              >
+                <div className="w-9 h-9 bg-primary-500/15 rounded-lg flex items-center justify-center border border-primary-500/20">
+                  <i className="ri-file-shield-2-line text-primary-400 text-sm"></i>
+                </div>
+                <div>
+                  <p className="text-white text-sm font-medium group-hover:text-primary-300 transition-colors">會員決策簡報</p>
+                  <p className="text-white/30 text-[10px]">完整因果與條件</p>
                 </div>
               </Link>
               <Link
                 to="/war-room"
                 className="ma-card-compact group flex items-center gap-3 transition-colors hover:border-primary-400/40"
               >
-                <div className="w-9 h-9 bg-primary-500/15 rounded-lg flex items-center justify-center border border-primary-500/20">
-                  <i className="ri-shield-check-line text-primary-400 text-sm"></i>
-                </div>
-                <div>
-                  <p className="text-white text-sm font-medium group-hover:text-primary-300 transition-colors">資料完整度</p>
-                  <p className="text-white/30 text-[10px]">來源新鮮度</p>
-                </div>
-              </Link>
-              <Link
-                to="/"
-                className="ma-card-compact group flex items-center gap-3 transition-colors hover:border-primary-400/40"
-              >
                 <div className="w-9 h-9 bg-forest-500/15 rounded-lg flex items-center justify-center border border-forest-500/20">
-                  <i className="ri-home-4-line text-forest-400 text-sm"></i>
+                  <i className="ri-radar-line text-forest-400 text-sm"></i>
                 </div>
                 <div>
-                  <p className="text-white text-sm font-medium group-hover:text-forest-300 transition-colors">首頁</p>
-                  <p className="text-white/30 text-[10px]">30 秒摘要</p>
+                  <p className="text-white text-sm font-medium group-hover:text-forest-300 transition-colors">盤中追蹤</p>
+                  <p className="text-white/30 text-[10px]">只看市場變化</p>
                 </div>
               </Link>
               <Link
-                to="/faq"
-                className="ma-card-compact group flex items-center gap-3 transition-colors hover:border-green-400/40"
+                to="/verification"
+                className="ma-card-compact group flex items-center gap-3 transition-colors hover:border-amber-400/40"
               >
-                <div className="w-9 h-9 bg-green-500/15 rounded-lg flex items-center justify-center border border-green-500/20">
-                  <i className="ri-line-line text-green-400 text-sm"></i>
+                <div className="w-9 h-9 bg-amber-500/15 rounded-lg flex items-center justify-center border border-amber-500/20">
+                  <i className="ri-checkbox-circle-line text-amber-300 text-sm"></i>
                 </div>
                 <div>
-                  <p className="text-white text-sm font-medium group-hover:text-green-300 transition-colors">LINE 推播</p>
-                  <p className="text-white/30 text-[10px]">公開測試中</p>
+                  <p className="text-white text-sm font-medium group-hover:text-amber-300 transition-colors">收盤驗證</p>
+                  <p className="text-white/30 text-[10px]">核對早盤判斷</p>
                 </div>
               </Link>
             </div>
+            </section>
+
+            <MorningHeroCard
+              todayReport={todayReport}
+              hasTodayReport={hasTodayReport}
+              streak={data.streak}
+              isWeekend={isWeekend}
+              hasAnyReport={hasAnyReport}
+            />
 
             {/* Today Info Cards */}
             <TodayInfoCards
@@ -190,87 +183,8 @@ export default function Account() {
               isTXFAvailable={data.isTXFAvailable}
             />
 
-            {/* V377: 早鳥名單表單 */}
-            <section>
-              <div className="ma-card md:p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-5 h-5 rounded bg-emerald-500/15 flex items-center justify-center">
-                    <i className="ri-mail-send-line text-emerald-400 text-[10px]" />
-                  </div>
-                  <h2 className="text-white/80 font-semibold text-sm uppercase tracking-wider">加入早鳥名單</h2>
-                </div>
-                <p className="text-white/45 text-xs leading-relaxed mb-4">
-                  訂閱 Morning Alpha 早鳥通知，第一時間收到每日盤前報告更新提醒。
-                </p>
-                <EarlyAccessForm sourcePage="/account" />
-              </div>
-            </section>
-
-            {/* Market Rhythm */}
-            <MarketRhythmCard reports={data.recent7} />
-
-            {/* 資料累積統計 */}
-            <section>
-              <VisualSectionHeader icon="ri-award-line" title="Morning Alpha 資料累積" description="已累積的觀察與資料日。" />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="ma-card-compact text-center">
-                  <p className="text-white/25 text-[10px] uppercase tracking-wider mb-1">已累積觀察日</p>
-                  <p className="text-white font-bold text-xl">{totalReportsRead}<span className="text-white/30 text-sm ml-1">天</span></p>
-                </div>
-                <div className="ma-card-compact text-center">
-                  <p className="text-white/25 text-[10px] uppercase tracking-wider mb-1">連續資料日</p>
-                  <p className="text-white font-bold text-xl">{data.streak}<span className="text-white/30 text-sm ml-1">天</span></p>
-                </div>
-                <div className="ma-card-compact text-center">
-                  <p className="text-white/25 text-[10px] uppercase tracking-wider mb-1">本月市場觀察</p>
-                  <p className="text-white font-bold text-xl">{monthlyObservations}<span className="text-white/30 text-sm ml-1">次</span></p>
-                </div>
-              </div>
-            </section>
-
             {/* Morning Reminder (LINE) */}
             <MorningReminderCard />
-
-            {/* AI Quotes */}
-            <AIQuotesCollection recentReports={data.recent30} />
-
-            {/* Market Timeline */}
-            <MarketTimeline reports={data.recent30} />
-
-            {/* Bottom CTA */}
-            <div className="ma-card-primary p-5 text-center md:p-8">
-              <div className="max-w-lg mx-auto">
-                <div className="w-10 h-10 bg-forest-500/15 rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4">
-                  <i className="ri-sun-line text-forest-400 text-lg"></i>
-                </div>
-                <h3 className="text-white font-bold text-base md:text-lg mb-2">
-                  下一個交易日早上，Morning Alpha 會再幫你看一次市場
-                </h3>
-                <p className="text-white/40 text-xs md:text-sm mb-4 md:mb-5 leading-relaxed">
-                  每天早上 07:30，Morning Alpha 會整理市場氛圍、熱門方向與風險提醒，
-                  幫你用更冷靜的方式開始看市場。
-                </p>
-                <div className="flex flex-col gap-3 w-full sm:flex-row sm:justify-center">
-                  <Link
-                    to="/report/today"
-                    className="ma-btn-primary w-full whitespace-nowrap sm:w-auto"
-                  >
-                    <i className="ri-file-list-3-line"></i>
-                    {reportLinkText}
-                  </Link>
-                  <Link
-                    to="/reports"
-                    className="ma-btn-secondary w-full whitespace-nowrap sm:w-auto"
-                  >
-                    歷史報告
-                    <i className="ri-arrow-right-line"></i>
-                  </Link>
-                </div>
-                <p className="text-white/20 text-[11px] mt-3 md:mt-4">
-                  免費封測中 · 不構成投資建議
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </main>

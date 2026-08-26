@@ -106,6 +106,7 @@ test('content-only failures use a bounded repair budget instead of repeating the
     premium_eligible: false,
     reason_codes: reasons,
     attempt: 2,
+    content_repair_attempts: 2,
     taipei_minutes: 7 * 60 + 18,
   });
   assert.deepEqual(secondAttempt.actions, ['regenerate_report']);
@@ -114,7 +115,8 @@ test('content-only failures use a bounded repair budget instead of repeating the
     has_report: true,
     premium_eligible: false,
     reason_codes: reasons,
-    attempt: 3,
+    attempt: 7,
+    content_repair_attempts: 3,
     taipei_minutes: 7 * 60 + 31,
   });
   assert.deepEqual(exhausted.actions, ['deliver_incident']);

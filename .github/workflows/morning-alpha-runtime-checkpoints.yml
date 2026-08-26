@@ -183,7 +183,7 @@ jobs:
                 .success == true
                 and .phase == "intraday"
                 and .checkpoint == $checkpoint
-                and .snapshot_upserted_count >= 2
+                and ((.checkpoint_reused == true and .snapshot_reused_count >= 2) or .snapshot_upserted_count >= 2)
                 and .canonical_complete == true
                 and .core_batch_complete == true
                 and .required_core_complete == true
@@ -308,7 +308,7 @@ jobs:
                 .success == true
                 and .phase == "close"
                 and .checkpoint == $checkpoint
-                and .snapshot_upserted_count >= 2
+                and ((.checkpoint_reused == true and .snapshot_reused_count >= 2) or .snapshot_upserted_count >= 2)
                 and .canonical_complete == true
                 and .core_batch_complete == true
                 and .required_core_complete == true

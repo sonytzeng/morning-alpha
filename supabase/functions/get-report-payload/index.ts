@@ -540,11 +540,11 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const ai = getEffectiveAi(report, ctx);
   const importantNews = getImportantNews(report, ai);
   const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
-  const publicV10DataQualityStatus = premiumGate.eligible && premiumGate.decision_mode === "no_trade"
-    ? "no_trade_evidence_complete"
+  const publicV10DataQualityStatus = premiumGate.eligible
+    ? premiumGate.decision_mode === "no_trade" ? "no_trade_evidence_complete" : "complete"
     : toStringValue(ai.v10_data_quality_status);
-  const publicDataQuality = premiumGate.eligible && premiumGate.decision_mode === "no_trade"
-    ? "partial"
+  const publicDataQuality = premiumGate.eligible
+    ? "complete"
     : toStringValue(ai.data_quality) || toStringValue(ai.data_status) || toStringValue(asObject(ai.member_research_note_v2).data_status) || "unknown";
   const confidenceScore = getConfidenceScore(report, ai);
   const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
@@ -621,7 +621,11 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
       signal_label: row.signal_label,
     })),
     sector_rotation_status: asObject(ai.sector_rotation_status),
-    market_data_snapshots: ctx.marketDataSnapshots.slice(0, 16),
+    market_data_snapshots: Array.from(ctx.marketDataSnapshots.reduce((latestBySymbol, row) => {
+      const symbol = toStringValue(row.symbol).toUpperCase();
+      if (symbol && !latestBySymbol.has(symbol)) latestBySymbol.set(symbol, row);
+      return latestBySymbol;
+    }, new Map<string, Record<string, unknown>>()).values()).slice(0, 16),
     closing_verification: buildClosingVerdict(ai),
     continuous_learning: asObject(ai.continuous_learning),
     runtime_lifecycle_complete: asObject(ai.intraday_sync_status).lifecycle_complete === true,

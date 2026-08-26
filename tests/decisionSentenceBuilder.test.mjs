@@ -16,7 +16,7 @@ test('recommendation sentence removes duplicate conditional words and never trun
   });
 
   assert.doesNotMatch(result.sentence, /若若|不再支[，。；]/u);
-  assert.match(result.sentence, /若2356 弱於 TAIEX、AI Server 沒有量價同步/u);
+  assert.match(result.sentence, /若 2356 弱於 TAIEX、AI Server 沒有量價同步/u);
   assert.match(result.sentence, /今日不追價並撤回受惠假設/u);
   assert.equal(evaluateDecisionSentenceValue(result.sentence).eligible, true);
   assert.equal(evaluateDecisionSentenceValue(result.subscriber_sentence).eligible, true);

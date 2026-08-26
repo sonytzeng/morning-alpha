@@ -8,5 +8,4 @@ export const BRAND_ICON_URL =
 export const BRAND_NAME = 'Morning Alpha';
 
 // LINE Official Account — add friend URL
-// TODO: Replace with your actual LINE Official Account add-friend URL
 export const LINE_ADD_FRIEND_URL = 'https://lin.ee/wUaKDJj';

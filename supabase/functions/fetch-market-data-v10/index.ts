@@ -34,7 +34,7 @@ const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
 const OVERALL_TIMEOUT_MS = 28_000;
-const VERSION = "V10.12_CLOSE_CHECKPOINT_OWNERSHIP_REPAIR";
+const VERSION = "V10.13_TERMINAL_CHECKPOINT_REUSE";
 
 interface FinnhubQuote {
   c: number;
@@ -847,7 +847,7 @@ Deno.serve(async (req) => {
     : crypto.randomUUID();
   const requestId = correlationId.slice(0, 8);
   const startedAt = new Date().toISOString();
-  const batchTag = `V10.12:${requestId}`;
+  const batchTag = `${VERSION}:${requestId}`;
   const startedMs = Date.now();
 
   console.log(`[${batchTag}] ======== START ${startedAt} ========`);
@@ -937,6 +937,86 @@ Deno.serve(async (req) => {
     }
     const beneficiaryCloseOnly = phase === "close" && requestBody.beneficiary_close_only === true;
     const includeBeneficiaryClose = phase === "close" && (beneficiaryCloseOnly || requestBody.include_beneficiary_close === true || requestBody.beneficiary_close === true);
+
+    // A completed checkpoint is an immutable point-in-time observation. Backup
+    // Cron or an operator replay may safely reuse it, but must never replace the
+    // 09:00 snapshot with a later quote just because the same checkpoint label
+    // was sent again.
+    if (!beneficiaryCloseOnly) {
+      const requiredSymbols = phase === "premarket" || phase === "manual_backfill"
+        ? MVP_REQUIRED
+        : TAIWAN_DECISION_REQUIRED;
+      const { data: existingDayState, error: existingDayStateError } = await supabase
+        .from("trading_day_state")
+        .select("checkpoint_status")
+        .eq("trading_date", tradingDate)
+        .maybeSingle();
+      if (existingDayStateError) {
+        console.warn(`[${batchTag}] CHECKPOINT_REUSE_STATE_LOOKUP_FAILED ${existingDayStateError.message}`);
+      } else {
+        const checkpointRecord = asRecord(asRecord(existingDayState?.checkpoint_status)[checkpoint]);
+        const checkpointMetadata = asRecord(checkpointRecord.metadata);
+        const terminalCheckpoint = String(checkpointRecord.status || "") === "SUCCEEDED"
+          && checkpointMetadata.required_core_complete === true
+          && checkpointMetadata.canonical_complete === true;
+        if (terminalCheckpoint) {
+          const { data: existingSnapshots, error: existingSnapshotsError } = await supabase
+            .from("market_data_snapshots")
+            .select("symbol,name,value,change_percent,captured_at,source")
+            .eq("trading_date", tradingDate)
+            .eq("phase", phase)
+            .eq("checkpoint", checkpoint)
+            .in("symbol", requiredSymbols);
+          const snapshotRows = Array.isArray(existingSnapshots) ? existingSnapshots : [];
+          const existingSymbols = new Set(snapshotRows.map((row) => String(row.symbol || "")));
+          const snapshotContractComplete = !existingSnapshotsError
+            && requiredSymbols.every((symbol) => existingSymbols.has(symbol));
+          if (snapshotContractComplete) {
+            console.log(`[${batchTag}] CHECKPOINT_REUSED checkpoint=${checkpoint} symbols=${requiredSymbols.join(",")}`);
+            return new Response(JSON.stringify({
+              success: true,
+              version: VERSION,
+              request_id: requestId,
+              correlation_id: correlationId,
+              phase,
+              checkpoint,
+              trading_date: tradingDate,
+              started_at: startedAt,
+              completed_at: new Date().toISOString(),
+              inserted: snapshotRows,
+              failed: [],
+              canonical_complete: true,
+              snapshot_complete: true,
+              core_batch_complete: true,
+              required_core_symbols: requiredSymbols,
+              required_core_complete: true,
+              provider_health: { status: "reused_terminal_checkpoint", healthy: true },
+              provider_health_write_errors: [],
+              trading_day_state_status: "SUCCEEDED",
+              trading_day_state_error: null,
+              trading_day_state_transition_skipped: true,
+              tw_core_status: {
+                taiex: existingSymbols.has("TAIEX") ? "ok" : "missing",
+                stock_2330: existingSymbols.has("2330") ? "ok" : "missing",
+                txf: existingSymbols.has("TXF") ? "ok" : "missing",
+              },
+              tw_core_symbols_success: requiredSymbols.filter((symbol) => existingSymbols.has(symbol)),
+              tw_core_symbols_failed: requiredSymbols.filter((symbol) => !existingSymbols.has(symbol)),
+              checkpoint_complete: true,
+              checkpoint_reused: true,
+              operation_succeeded: true,
+              snapshot_upserted_count: 0,
+              snapshot_reused_count: snapshotRows.length,
+              snapshot_errors: [],
+              symbols: requiredSymbols,
+              healthy: true,
+              timed_out: false,
+            }), { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+          }
+          console.warn(`[${batchTag}] CHECKPOINT_REUSE_CONTRACT_INCOMPLETE checkpoint=${checkpoint} error=${existingSnapshotsError?.message || "required snapshots missing"}`);
+        }
+      }
+    }
 
     const beneficiaryLookup: BeneficiaryLookupResult = includeBeneficiaryClose
       ? await fetchBeneficiarySymbolConfigsForDate(supabase, tradingDate, batchTag)

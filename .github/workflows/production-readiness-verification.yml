@@ -2,6 +2,11 @@ name: Verify production readiness
 
 on:
   workflow_dispatch:
+    inputs:
+      report_date:
+        description: 'Report date to verify (YYYY-MM-DD). Defaults to today in Asia/Taipei.'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -17,10 +22,21 @@ jobs:
     env:
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
       REPLAY_URL: https://cttfzgvhiewfckydcrci.supabase.co/functions/v1/strategy-replay-engine
-      READINESS_REPORT_DATE: '2026-08-24'
     steps:
       - name: Require runtime secret
         run: test -n "$CRON_SECRET"
+
+      - name: Resolve readiness report date
+        id: readiness-date
+        env:
+          INPUT_REPORT_DATE: ${{ inputs.report_date }}
+        run: |
+          report_date="${INPUT_REPORT_DATE:-$(TZ=Asia/Taipei date +%F)}"
+          if ! [[ "$report_date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            echo "Invalid report_date: $report_date" >&2
+            exit 1
+          fi
+          echo "report_date=$report_date" >> "$GITHUB_OUTPUT"
 
       - name: Simulate the complete Monday lifecycle
         run: |
@@ -68,6 +84,8 @@ jobs:
           jq '{success, simulation_mode, correlation_id, result: .matrix.result, normal_day_count: .matrix.normal_day_count, incomplete_day_count: .matrix.incomplete_day_count, api_failure_count: .matrix.api_failure_count}' "$response_file"
 
       - name: Replay recent content quality
+        env:
+          READINESS_REPORT_DATE: ${{ steps.readiness-date.outputs.report_date }}
         run: |
           response_file="$RUNNER_TEMP/content-quality.json"
           curl --fail-with-body --silent --show-error \
@@ -77,10 +95,10 @@ jobs:
             --header "x-correlation-id: $(cat /proc/sys/kernel/random/uuid)" \
             --data "{\"simulation_mode\":\"content_quality\",\"dry_run\":true,\"target_date\":\"$READINESS_REPORT_DATE\",\"minimum_score\":90}" \
             --output "$response_file"
-          jq -e '
+          jq -e --arg target_date "$READINESS_REPORT_DATE" '
             .success == true and
             .version == "MA_STRATEGY_REPLAY_V2" and
-            .target_date == "2026-08-24" and
+            .target_date == $target_date and
             .quality_gate_passed == true and
             .required_minimum_score == 90 and
             .report_count == 1 and

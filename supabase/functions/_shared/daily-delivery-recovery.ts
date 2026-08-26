@@ -14,6 +14,7 @@ export interface DailyDeliveryRecoveryInput {
   premium_eligible: boolean;
   reason_codes: string[];
   attempt: number;
+  content_repair_attempts?: number;
   taipei_minutes: number;
   delivery_deadline_minutes?: number;
 }
@@ -100,8 +101,9 @@ export function buildDailyDeliveryRecoveryPlan(
   const deadlineReached = input.taipei_minutes >= deadlineMinutes;
   const phase = resolveDailyDeliveryPhase(input.taipei_minutes);
   const reasonCodes = unique((input.reason_codes || []).filter(Boolean));
+  const contentRepairAttempts = Math.max(0, Math.trunc(input.content_repair_attempts || 0));
   const contentRepairBudgetExhausted = isContentOnlyDeliveryFailure(reasonCodes)
-    && attempt >= CONTENT_REPAIR_MAX_ATTEMPTS;
+    && contentRepairAttempts >= CONTENT_REPAIR_MAX_ATTEMPTS;
 
   if (input.premium_eligible) {
     return {

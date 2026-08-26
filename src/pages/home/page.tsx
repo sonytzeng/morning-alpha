@@ -640,6 +640,17 @@ function HomePageContent() {
     ? observationCards.map((item) => item.title).join('、')
     : waitingFor;
   const mostLikelyMistake = mistakeCards[0]?.action || largestRisk;
+  const rawMistakeContext = firstMeaningfulString(
+    mistakeCards[0]?.reason,
+    mistakeCards[0]?.result,
+    largestRisk,
+  );
+  const mostLikelyMistakeContext = rawMistakeContext === mostLikelyMistake
+    ? firstMeaningfulString(
+      mistakeCards[0]?.result,
+      '若驗證條件失效，追價會把可控風險變成被動停損。',
+    )
+    : rawMistakeContext;
 
   const closingOutcome = canonicalNarrative.closing_outcome;
   const closingDisplayResult = closingResultLabel(
@@ -862,7 +873,7 @@ function HomePageContent() {
                   <article className="ma-home-v2-answer-card is-danger">
                     <p>今天最容易犯的錯？</p>
                     <strong>{renderSafeText(mostLikelyMistake)}</strong>
-                    <span>{renderSafeText(largestRisk)}</span>
+                    <span>{renderSafeText(mostLikelyMistakeContext)}</span>
                   </article>
                 </div>
               </section>

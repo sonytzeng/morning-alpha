@@ -9,7 +9,7 @@ import {
   type DailyDeliveryPhase,
 } from '../_shared/daily-delivery-recovery.ts';
 
-const VERSION = 'DAILY_DELIVERY_V1.3_CONTINUOUS_LEARNING_BACKUP';
+const VERSION = 'DAILY_DELIVERY_V1.4_CONTENT_REPAIR_VERSION_BUDGET';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -560,13 +560,16 @@ Deno.serve(async (req: Request) => {
       premium_eligible: state.premium_eligible,
       reason_codes: state.reason_codes,
       attempt,
+      content_repair_attempts: Number(state.snapshot?.version || 0),
       taipei_minutes: clock.minutes,
     });
 
     let actions = plan.actions;
     if (forceRegenerate) actions = ['regenerate_report'];
     else if (phase === 'refresh') actions = actions.filter((action) => action === 'refresh_news' || action === 'refresh_market');
-    else if (phase === 'generate') actions = state.premium_eligible ? [] : ['regenerate_report'];
+    else if (phase === 'generate') actions = state.premium_eligible
+      ? []
+      : actions.filter((action) => action === 'regenerate_report');
     else if (phase === 'deliver' && state.premium_eligible) actions = ['deliver_premium'];
 
     const actionResults = await executeRecoveryActions({
@@ -585,6 +588,7 @@ Deno.serve(async (req: Request) => {
         premium_eligible: state.premium_eligible,
         reason_codes: state.reason_codes,
         attempt,
+        content_repair_attempts: Number(state.snapshot?.version || 0),
         taipei_minutes: clock.minutes,
       });
     }

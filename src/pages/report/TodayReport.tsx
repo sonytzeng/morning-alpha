@@ -353,8 +353,6 @@ function TodayReportContent() {
   const flowConditions = successConditions;
   const nextDecisionTime = `${nextRuntimeNode.time}｜${nextRuntimeNode.label}`;
   const validationSteps = canonicalNarrative.decision_lifecycle.validation_plan.steps.slice(0, 5);
-  const hasCompleteDecisionInputs = canonicalNarrative.decision_evidence.marketSnapshotAvailable
-    && canonicalNarrative.decision_evidence.checklistAvailable;
   const matchingValidationStep = validationSteps.find((step) =>
     [step.time, step.title, step.detail].some((value) => String(value ?? '').includes(nextRuntimeNode.time)),
   );
@@ -377,9 +375,10 @@ function TodayReportContent() {
     detail: runtimeValidationDetail,
     status: runtimeValidationStatus,
   }];
-  const confirmedValidationCount = validationItems.filter((item) => item.status === 'confirmed').length;
-  const scriptProgress = hasCompleteDecisionInputs && validationItems.length > 0
-    ? Math.round((confirmedValidationCount / validationItems.length) * 100)
+  const applicableRuntimeNodes = runtimeTimeline.filter((node) => node.status !== 'not_applicable');
+  const completedRuntimeNodes = applicableRuntimeNodes.filter((node) => node.status === 'completed').length;
+  const scriptProgress = applicableRuntimeNodes.length > 0
+    ? Math.round((completedRuntimeNodes / applicableRuntimeNodes.length) * 100)
     : null;
 
   const marketMetrics = [
@@ -470,9 +469,10 @@ function TodayReportContent() {
       ...item,
       state: (item.status === 'pending' ? 'upcoming' : item.status) as TodayTimelineState,
     }));
-  const validationProgressLabel = scriptProgress == null
-    ? runtimeTimeline.some((node) => node.status === 'insufficient') ? '待補資料' : '等待驗證'
-    : `${scriptProgress}%`;
+  const hasInsufficientRuntimeNode = runtimeTimeline.some((node) => node.status === 'insufficient');
+  const validationProgressLabel = hasInsufficientRuntimeNode
+    ? '待補資料'
+    : `${completedRuntimeNodes}/${applicableRuntimeNodes.length} 已完成`;
   const todayWorkbenchTitle = workbenchTitle(
     presentation.primaryDecision.state,
     nextRuntimeNode,
@@ -480,7 +480,7 @@ function TodayReportContent() {
   );
   const validationState = runtimeLifecycleComplete
     ? 'confirmed'
-    : runtimeTimeline.some((node) => node.status === 'insufficient')
+    : hasInsufficientRuntimeNode
     ? 'insufficient'
     : presentation.primaryDecision.state === 'ACT'
       ? 'confirmed'
@@ -494,6 +494,16 @@ function TodayReportContent() {
       : presentation.primaryDecision.state === 'STOP'
         ? '已停止'
         : '驗證中';
+  const validationHeaderKicker = runtimeLifecycleComplete
+    ? '今日驗證結果'
+    : hasInsufficientRuntimeNode
+      ? '目前卡住的原因'
+      : '下一個驗證節點';
+  const validationHeaderTitle = runtimeLifecycleComplete
+    ? '六個交易節點均已完成'
+    : hasInsufficientRuntimeNode
+      ? '下一步要補齊的證據'
+      : `${nextRuntimeNode.time} ${nextRuntimeNode.label}`;
   if (loading) {
     return (
       <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -640,7 +650,7 @@ function TodayReportContent() {
 
         <div className="ma-pixel-content ma-today-v3-sections">
           <section className={`ma-today-v3-validation-card is-${validationState}`}>
-            <header className="ma-today-v3-section-header"><div><p>{runtimeLifecycleComplete ? '今日驗證結果' : '目前卡住的原因'}</p><h2>{runtimeLifecycleComplete ? '六個交易節點均已完成' : '下一步要補齊的證據'}</h2></div><strong>{validationProgressLabel}</strong></header>
+            <header className="ma-today-v3-section-header"><div><p>{validationHeaderKicker}</p><h2>{validationHeaderTitle}</h2></div><strong>{validationProgressLabel}</strong></header>
             <div className={`ma-today-v3-checklist${validationItems.length === 1 ? ' is-single' : ''}`}>
               {validationItems.map((item, index) => (
                 <article key={`${item.label}-${index}`} className={`is-${item.status}`}>

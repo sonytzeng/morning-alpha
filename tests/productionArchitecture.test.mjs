@@ -29,13 +29,15 @@ const dashboardPath = new URL('../src/hooks/useHomeDashboard.ts', import.meta.ur
 const deployPath = new URL('../.github/workflows/deploy-morning-alpha-runtime.yml', import.meta.url);
 const replayWorkflowPath = new URL('../.github/workflows/weekly-strategy-replay.yml', import.meta.url);
 const checkpointMigrationPath = new URL('../supabase/migrations/20260822230000_preserve_checkpoint_snapshots.sql', import.meta.url);
+const terminalCheckpointMigrationPath = new URL('../supabase/migrations/20260826105000_preserve_terminal_checkpoint_evidence.sql', import.meta.url);
+const foreignKeyIndexMigrationPath = new URL('../supabase/migrations/20260826105500_cover_foreign_key_paths.sql', import.meta.url);
 const runtimeCheckpointWorkflowPath = new URL('../.github/workflows/morning-alpha-runtime-checkpoints.yml', import.meta.url);
 const openingRadarPath = new URL('../supabase/functions/opening-market-radar/index.ts', import.meta.url);
 const closingVerificationPath = new URL('../supabase/functions/closing-verification-engine/index.ts', import.meta.url);
 const securityHardeningMigrationPath = new URL('../supabase/migrations/20260822233000_harden_runtime_permissions.sql', import.meta.url);
 const productionVerificationWorkflowPath = new URL('../.github/workflows/production-readiness-verification.yml', import.meta.url);
 
-const [migration, generator, collector, recovery, replay, entitlement, dashboard, deploy, replayWorkflow, checkpointMigration, runtimeCheckpointWorkflow, openingRadar, closingVerification, securityHardeningMigration, productionVerificationWorkflow] = await Promise.all([
+const [migration, generator, collector, recovery, replay, entitlement, dashboard, deploy, replayWorkflow, checkpointMigration, terminalCheckpointMigration, foreignKeyIndexMigration, runtimeCheckpointWorkflow, openingRadar, closingVerification, securityHardeningMigration, productionVerificationWorkflow] = await Promise.all([
   migrationPath,
   generatorPath,
   collectorPath,
@@ -46,6 +48,8 @@ const [migration, generator, collector, recovery, replay, entitlement, dashboard
   deployPath,
   replayWorkflowPath,
   checkpointMigrationPath,
+  terminalCheckpointMigrationPath,
+  foreignKeyIndexMigrationPath,
   runtimeCheckpointWorkflowPath,
   openingRadarPath,
   closingVerificationPath,
@@ -205,6 +209,15 @@ test('checkpoint snapshots are immutable across the six Taipei market checkpoint
   assert.match(checkpointMigration, /greatest\(trading_day_state\.state_rank, excluded\.state_rank\)/);
   assert.match(collector, /onConflict: "symbol,trading_date,phase,checkpoint"/);
   assert.match(collector, /advance_trading_day_state_v1/);
+  assert.match(collector, /CHECKPOINT_REUSED/);
+  assert.match(collector, /checkpoint_reused: true/);
+  assert.match(collector, /trading_day_state_transition_skipped: true/);
+  assert.match(runtimeCheckpointWorkflow, /checkpoint_reused == true and \.snapshot_reused_count >= 2/);
+  assert.match(terminalCheckpointMigration, /v_status_rank > coalesce\(v_existing_status_rank, -1\)/);
+  assert.match(terminalCheckpointMigration, /pg_advisory_xact_lock/);
+  assert.doesNotMatch(terminalCheckpointMigration, /v_status_rank >= coalesce\(v_existing_status_rank, -1\)/);
+  assert.match(terminalCheckpointMigration, /set search_path = ''/);
+  assert.match(terminalCheckpointMigration, /else trading_day_state\.updated_at/);
   assert.match(openingRadar, /\.eq\('checkpoint', checkpoint\)/);
   assert.match(closingVerification, /phase,checkpoint/);
   for (const checkpoint of ['0900', '0930', '1030', '1300', '1410', '1430']) {
@@ -214,6 +227,13 @@ test('checkpoint snapshots are immutable across the six Taipei market checkpoint
   assert.match(runtimeCheckpointWorkflow, /beneficiary_close_status\.complete == true/);
   assert.match(runtimeCheckpointWorkflow, /canonical_complete == true/);
   assert.match(runtimeCheckpointWorkflow, /core_batch_complete == true/);
+});
+
+test('production foreign-key paths have additive index coverage for subscriber scale', () => {
+  assert.match(foreignKeyIndexMigration, /editorial_reviews_decision_snapshot_id_idx/);
+  assert.match(foreignKeyIndexMigration, /push_logs_subscriber_id_idx/);
+  assert.match(foreignKeyIndexMigration, /strategy_registry_audit_actor_id_idx/);
+  assert.doesNotMatch(foreignKeyIndexMigration, /drop\s+index/i);
 });
 
 test('legacy radar writes and trigger-only functions are least privilege', () => {
@@ -239,6 +259,8 @@ test('production verification stays dry-run and proves idempotent scenarios', ()
   assert.match(productionVerificationWorkflow, /MA_STRATEGY_REPLAY_V2/);
   assert.match(productionVerificationWorkflow, /runtime_schema\.ready == true/);
   assert.match(productionVerificationWorkflow, /target_date/);
+  assert.match(productionVerificationWorkflow, /TZ=Asia\/Taipei date \+%F/);
+  assert.doesNotMatch(productionVerificationWorkflow, /READINESS_REPORT_DATE: '2026-08-24'/);
   assert.match(productionVerificationWorkflow, /quality_gate_passed == true/);
   assert.match(productionVerificationWorkflow, /minimum_score >= 90/);
   assert.match(replay, /inspectRuntimeSchema/);

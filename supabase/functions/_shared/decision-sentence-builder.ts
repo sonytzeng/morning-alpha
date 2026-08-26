@@ -55,8 +55,8 @@ export function buildRecommendationDecisionCopy(
   );
 
   return {
-    sentence: `${trigger}先傳導至${industry}；09:30 看${name}是否相對大盤轉強；若${condition}，今日不追價並撤回受惠假設。`,
-    subscriber_sentence: `今天不是看到題材就追；09:30 先確認${industry}與${name}同步轉強；若${condition}，今日不追價並撤回主線。`,
+    sentence: `${trigger}先傳導至${industry}；09:30 看${name}是否相對大盤轉強；若 ${condition}，今日不追價並撤回受惠假設。`,
+    subscriber_sentence: `今天不是看到題材就追；09:30 先確認${industry}與${name}同步轉強；若 ${condition}，今日不追價並撤回主線。`,
   };
 }
 
@@ -72,7 +72,7 @@ export function buildNoTradeDecisionCopy(
   );
 
   return {
-    sentence: `${sourceDetail}未形成正向主線；09:30 看${name}與${industry}是否同步止跌；若${condition}，今日不建立受惠股。`,
-    subscriber_sentence: `今天不硬猜強勢股；09:30 先用${name}與${industry}同步性驗證；若${condition}，整日不建立受惠股。`,
+    sentence: `${sourceDetail}未形成正向主線；09:30 看${name}與${industry}是否同步止跌；若 ${condition}，今日不建立受惠股。`,
+    subscriber_sentence: `今天不硬猜強勢股；09:30 先用${name}與${industry}同步性驗證；若 ${condition}，整日不建立受惠股。`,
   };
 }

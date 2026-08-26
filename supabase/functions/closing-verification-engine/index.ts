@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { resolveMarketStatus } from "../_shared/market-status.ts";
+import { hasValidInternalCredentials } from "../_shared/internal-function-auth.mjs";
 import {
   CORE_SYMBOL_ALIASES,
   CORE_SYMBOL_QUERY_ALIASES,
@@ -15,7 +16,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, apikey, x-client-info, x-cron-secret",
+    "Content-Type, Authorization, apikey, x-client-info, x-cron-secret, x-internal-call-source",
 };
 
 function createRuntimeClient(url: string, key: string) {
@@ -833,20 +834,19 @@ Deno.serve(async (req: Request) => {
   }
 
   const expectedSecret = Deno.env.get("CRON_SECRET");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   if (!expectedSecret) {
     return jsonResponse({ success: false, error: "CRON_SECRET not set" }, 500);
   }
-  if (req.headers.get("x-cron-secret") !== expectedSecret) {
-    return jsonResponse({ success: false, error: "Unauthorized" }, 401);
-  }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   if (!supabaseUrl || !serviceRoleKey) {
     return jsonResponse({
       success: false,
       error: "Supabase credentials missing",
     }, 500);
+  }
+  if (!hasValidInternalCredentials(req.headers, { cronSecret: expectedSecret, serviceRoleKey })) {
+    return jsonResponse({ success: false, error: "Unauthorized" }, 401);
   }
 
   const requestBody = await parseRequestBody(req);

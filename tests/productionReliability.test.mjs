@@ -3,11 +3,16 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   DAILY_LIFECYCLE_RANKS,
+  buildCanonicalDecisionContract,
+  buildCanonicalMemberResearchRevision,
   buildRuntimeIdempotencyKey,
+  classifyRuntimeFailure,
   classifyMutationCounters,
+  evaluateCanonicalSemanticCoherenceGate,
   evaluatePublicPremiumLeakageGate,
   evaluateSemanticCoherenceGate,
   reconcileHttpReceipt,
+  resolveCanonicalDataQuality,
   resolveLifecycleTransition,
   resolvePendingHorizon,
   resolvePrimaryBackupDecision,
@@ -18,6 +23,7 @@ import {
   INTERNAL_AUTH_ERROR_CODES,
   authorizeInternalRequest,
   buildInternalFunctionHeaders,
+  parseBearerAuthorizationHeader,
 } from '../supabase/functions/_shared/internal-function-auth.mjs';
 
 const headers = (values = {}) => ({ get: (name) => values[name.toLowerCase()] || null });
@@ -35,6 +41,20 @@ test('internal auth returns stable missing/invalid/version/expired codes and sup
   assert.equal((await authorizeInternalRequest(headers({ 'x-cron-secret': 'current-secret' }), credentials)).ok, true);
   assert.equal((await authorizeInternalRequest(headers({ 'x-cron-secret': 'previous-secret' }), credentials, new Date('2026-08-27T00:00:00Z'))).ok, true);
   assert.equal((await authorizeInternalRequest(headers({ 'x-cron-secret': 'previous-secret' }), credentials, new Date('2026-08-29T00:00:00Z'))).error_code, INTERNAL_AUTH_ERROR_CODES.EXPIRED);
+  assert.equal((await authorizeInternalRequest(headers({ authorization: 'Bearer current-secret' }), credentials)).ok, true);
+  assert.equal((await authorizeInternalRequest(headers({ authorization: 'Basic current-secret' }), credentials)).error_code, INTERNAL_AUTH_ERROR_CODES.INVALID);
+  assert.equal((await authorizeInternalRequest(headers({ authorization: 'Bearer   ' }), credentials)).error_code, INTERNAL_AUTH_ERROR_CODES.INVALID);
+});
+
+test('Bearer parser rejects missing, wrong-scheme, empty, and malformed credentials without echoing tokens', () => {
+  assert.equal(parseBearerAuthorizationHeader('').error_code, INTERNAL_AUTH_ERROR_CODES.MISSING);
+  for (const invalid of ['Basic abc', 'Bearer', 'Bearer   ', 'Bearer one two']) {
+    const result = parseBearerAuthorizationHeader(invalid);
+    assert.equal(result.ok, false);
+    assert.equal(result.error_code, INTERNAL_AUTH_ERROR_CODES.INVALID);
+    assert.equal(JSON.stringify(result).includes('abc'), false);
+  }
+  assert.deepEqual(parseBearerAuthorizationHeader('  Bearer token-value  '), { ok: true, token: 'token-value', error_code: null });
 });
 
 test('internal outbound headers follow the active auth version without using bearer service credentials', () => {
@@ -73,6 +93,17 @@ test('HTTP receipts distinguish queueing from business success and bound retries
   assert.equal(reconcileHttpReceipt({ timed_out: true }).status, 'TIMED_OUT');
 });
 
+test('runtime failure classifier separates auth, quality, transient, permanent, and duplicate outcomes', () => {
+  assert.deepEqual(classifyRuntimeFailure({ http_status: 401 }), { error_class: 'AUTH', retryable: false, dead_letter: true });
+  assert.deepEqual(classifyRuntimeFailure({ http_status: 409 }), { error_class: 'QUALITY_BLOCK', retryable: false, dead_letter: false });
+  assert.equal(classifyRuntimeFailure({ http_status: 409, input_revision_changed: true }).retryable, true);
+  assert.equal(classifyRuntimeFailure({ http_status: 429 }).error_class, 'TRANSIENT');
+  assert.equal(classifyRuntimeFailure({ http_status: 503 }).error_class, 'TRANSIENT');
+  assert.equal(classifyRuntimeFailure({ timed_out: true }).error_class, 'TRANSIENT');
+  assert.equal(classifyRuntimeFailure({ http_status: 422 }).error_class, 'PERMANENT');
+  assert.equal(classifyRuntimeFailure({ idempotent_replay: true }).error_class, 'DUPLICATE');
+});
+
 test('runtime orchestration fails closed for pending close evidence and incomplete learning', () => {
   const orchestrator = readFileSync(new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url), 'utf8');
   const learning = readFileSync(new URL('../supabase/functions/continuous-learning-engine/index.ts', import.meta.url), 'utf8');
@@ -101,6 +132,76 @@ test('public projection blocks premium symbols, reasoning fields, and excessive 
   assert.equal(evaluatePublicPremiumLeakageGate({ public_symbols: ['2330'], premium_only_symbols: ['2330'] }).eligible, false);
   assert.equal(evaluatePublicPremiumLeakageGate({ public_fields: ['confirmation'] }).eligible, false);
   assert.equal(evaluatePublicPremiumLeakageGate({ public_entities: ['油價','航運'], premium_entities: ['油價','航運'], max_entity_overlap: 0.5 }).eligible, false);
+});
+
+test('canonical quality is monotonic and never upgrades partial to complete', () => {
+  assert.equal(resolveCanonicalDataQuality(['complete', 'partial', 'sufficient']), 'partial');
+  assert.equal(resolveCanonicalDataQuality(['complete', 'degraded']), 'degraded');
+  assert.equal(resolveCanonicalDataQuality([]), 'insufficient');
+});
+
+test('canonical decision contract keeps only the primary recommendation theme', () => {
+  const snapshot = {
+    id: 'snapshot-1', report_date: '2026-08-27', version: 3, action: 'SELECTIVE',
+    generated_text: {
+      daily_sentence: 'oil 先傳導至航運，09:30 驗證陽明。', next_checkpoint: '09:30',
+      recommendations: [
+        { symbol: '2609', sector: '航運', event_source: 'oil', transmission_path: 'oil → 航運 → 2609', confirmation_condition: '09:30 航運同步', invalidation_condition: '航運未同步', source_refs: ['NEWS002'] },
+        { symbol: '2615', sector: '航運', event_source: 'oil', transmission_path: 'oil → 航運 → 2615', confirmation_condition: '09:30 航運同步', invalidation_condition: '航運未同步', source_refs: ['NEWS002'] },
+        { symbol: '2882', sector: '金融', event_source: 'US10Y', transmission_path: 'US10Y → 金融 → 2882', confirmation_condition: '金融抗跌', invalidation_condition: '金融轉弱', source_refs: ['NEWS001'] },
+      ],
+    },
+  };
+  const contract = buildCanonicalDecisionContract({ report_date: '2026-08-27', snapshot, ai: { data_quality: 'complete', v10_data_quality_status: 'partial', member_research_note_v2: { data_status: 'partial' } } });
+  assert.deepEqual(contract.primary_symbols, ['2609', '2615']);
+  assert.equal(contract.primary_event, 'oil');
+  assert.equal(contract.primary_taiwan_theme, '航運');
+  assert.equal(contract.data_quality_status, 'partial');
+});
+
+test('canonical member revision removes unrelated primary themes without inventing evidence', () => {
+  const snapshot = {
+    id: 'snapshot-1', report_date: '2026-08-27', version: 3, action: 'SELECTIVE',
+    generated_text: {
+      daily_sentence: 'oil 先傳導至航運，09:30 驗證陽明。', next_checkpoint: '09:30',
+      recommendations: [
+        { symbol: '2609', sector: '航運', event_source: 'oil', transmission_path: 'oil → 航運 → 2609', confirmation_condition: '09:30 航運同步', invalidation_condition: '航運未同步', source_refs: ['NEWS002'] },
+        { symbol: '2882', sector: '金融', event_source: 'US10Y', transmission_path: 'US10Y → 金融 → 2882', confirmation_condition: '金融抗跌', invalidation_condition: '金融轉弱', source_refs: ['NEWS001'] },
+      ],
+    },
+  };
+  const contract = buildCanonicalDecisionContract({ report_date: '2026-08-27', snapshot, ai: { data_quality: 'partial' } });
+  const member = buildCanonicalMemberResearchRevision({ canonical_contract: contract, snapshot, ai: { member_research_note_v2: { today_core_thesis: 'NVIDIA → 半導體' } } });
+  assert.equal(member.today_core_thesis, snapshot.generated_text.daily_sentence);
+  assert.deepEqual(member.beneficiary_candidates.map((item) => item.symbol), ['2609']);
+  assert.doesNotMatch(JSON.stringify(member), /NVIDIA|半導體|2882/);
+});
+
+test('canonical semantic gate blocks mixed shipping, semiconductor, and finance themes', () => {
+  const contract = {
+    report_date: '2026-08-27', snapshot_id: 'snapshot-1', snapshot_version: 2,
+    primary_event: 'oil', primary_causal_chain: ['oil', '航運', '2609'], primary_taiwan_theme: '航運',
+    primary_symbols: ['2609'], validation_checkpoint: '09:30', validation_signals: ['航運同步'],
+    invalidation_conditions: ['航運未同步'], action: 'SELECTIVE', data_quality_status: 'partial', evidence_refs: ['NEWS002'],
+  };
+  const blocked = evaluateCanonicalSemanticCoherenceGate({
+    canonical_contract: contract,
+    sections: { public_thesis: 'oil 航運 2609', member_thesis: 'NVIDIA 半導體 台積電', taiwan_transmission: '利率 金融 富邦金' },
+    recommendations: [{ symbol: '2330', sector: '半導體' }],
+    quality_inputs: ['partial', 'complete'],
+    quality_counters: {}, evidence_coverage: 100, content_score: 100, checked_at: '2026-08-27T00:00:00Z',
+  });
+  assert.equal(blocked.status, 'BLOCKED');
+  assert.ok(blocked.reason_codes.includes('PRIMARY_THESIS_DIVERGENCE'));
+  assert.ok(blocked.reason_codes.includes('RECOMMENDATION_OUTSIDE_CANONICAL_THESIS'));
+  const passed = evaluateCanonicalSemanticCoherenceGate({
+    canonical_contract: contract,
+    sections: { public_thesis: 'oil 航運 2609', member_thesis: 'oil 航運 2609', taiwan_transmission: 'oil 航運 2609' },
+    recommendations: [{ symbol: '2609', sector: '航運' }],
+    quality_inputs: ['partial'],
+    quality_counters: {}, evidence_coverage: 100, content_score: 100, checked_at: '2026-08-27T00:00:00Z',
+  });
+  assert.equal(passed.status, 'PASSED');
 });
 
 test('CLE counters count real inserts, updates, and unchanged entities', () => {
@@ -158,4 +259,47 @@ test('migration enforces receipts, RLS, idempotency, state monotonicity and isol
     "v_success and v_row.job_name='closing_health'", "'HEALTH_AUDITED'", "'DAY_COMPLETED'",
   ]) assert.match(sql, new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
   assert.doesNotMatch(sql, /service_role_key|cron_secret\s*[:=]\s*['"][^'"]+/i);
+});
+
+test('semantic reliability migration is append-only, fail-closed, and service-role isolated', () => {
+  const sql = readFileSync(new URL('../supabase/migrations/20260827153000_semantic_content_reliability.sql', import.meta.url), 'utf8');
+  for (const fragment of [
+    'member_content_revisions', 'semantic_coherence_reviews', 'content_os_sync_incidents',
+    'learning_metric_corrections', 'production_acceptance_results', 'force row level security',
+    'publish_member_content_revision_v1', 'record_content_os_incident_v1',
+    'record_learning_metric_correction_v1', 'capture_morning_alpha_acceptance_v1',
+    'pg_advisory_xact_lock', 'on conflict (idempotency_key) do nothing',
+    'morning-alpha-acceptance-primary', 'morning-alpha-acceptance-watchdog',
+  ]) assert.match(sql, new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
+  assert.match(sql, /revoke all on public\.member_content_revisions[\s\S]+from public, anon, authenticated/i);
+  assert.match(sql, /grant execute on function[\s\S]+to service_role/i);
+  assert.doesNotMatch(sql, /update\s+public\.member_content_revisions|delete\s+from\s+public\.member_content_revisions/i);
+  assert.doesNotMatch(sql, /service_role_key|cron_secret\s*[:=]\s*['"][^'"]+/i);
+});
+
+test('delivery, payload, and Content OS all require the same semantic member revision', () => {
+  const orchestrator = readFileSync(new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url), 'utf8');
+  const payload = readFileSync(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');
+  const contentOs = readFileSync(new URL('../supabase/functions/content-os-morning-alpha-source/index.ts', import.meta.url), 'utf8');
+  for (const source of [orchestrator, payload, contentOs]) assert.match(source, /current_member_content_revisions_v1/);
+  assert.match(orchestrator, /semantic_member_revision_not_publishable/);
+  assert.match(payload, /resolveCanonicalDataQuality/);
+  assert.doesNotMatch(payload, /premiumGate\.eligible\s*\?\s*[\s\S]{0,80}["']complete["']/);
+  assert.match(contentOs, /evaluateCanonicalSemanticCoherenceGate/);
+  assert.match(contentOs, /record_content_os_incident_v1/);
+  assert.match(contentOs, /resolve_content_os_incident_v1/);
+});
+
+test('safe recovery exposes only scoped member revision and metric correction actions', () => {
+  const recovery = readFileSync(new URL('../supabase/functions/ma-ops-safe-recovery/index.ts', import.meta.url), 'utf8');
+  const generator = readFileSync(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
+  const learning = readFileSync(new URL('../supabase/functions/continuous-learning-engine/index.ts', import.meta.url), 'utf8');
+  assert.match(recovery, /rebuild_member_content_revision/);
+  assert.match(recovery, /reconcile_learning_metrics/);
+  assert.match(recovery, /RECOVERY_APPROVAL_EVIDENCE_REQUIRED/);
+  assert.match(generator, /canonical_member_recovery/);
+  assert.match(generator, /notifications_sent:0/);
+  assert.match(learning, /record_learning_metric_correction_v1/);
+  assert.match(learning, /business_rows_mutated:\s*0/);
+  assert.match(learning, /notifications_sent:\s*0/);
 });

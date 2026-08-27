@@ -322,13 +322,20 @@ test('paid report fails closed when evidence does not meet the member threshold'
   assert.match(researchQualityGate, /research_unsupported_claims_present/);
   assert.match(contentOsMorningAlphaSource, /evaluateResearchQualityGate/);
   assert.match(contentOsMorningAlphaSource, /RESEARCH_QUALITY_GATE_BLOCKED/);
-  assert.ok(contentOsMorningAlphaSource.indexOf('ai.today_beneficiary_stocks_v10') < contentOsMorningAlphaSource.indexOf('generated.recommendations'));
+  const memberRevisionRead = contentOsMorningAlphaSource.indexOf('current_member_content_revisions_v1');
+  const canonicalRecommendationsRead = contentOsMorningAlphaSource.indexOf('memberContent.representative_stocks');
+  const publicTopicProjection = contentOsMorningAlphaSource.indexOf('const publicTopicSource');
+  assert.ok(memberRevisionRead >= 0, 'Content OS must read the immutable canonical member revision');
+  assert.ok(canonicalRecommendationsRead > memberRevisionRead, 'Content OS recommendations must come from the canonical member revision');
+  assert.ok(publicTopicProjection > canonicalRecommendationsRead, 'public topic projection must happen after canonical recommendations are resolved');
+  assert.doesNotMatch(contentOsMorningAlphaSource, /firstArray\(\s*ai\.today_beneficiary_stocks_v10/);
   assert.match(contentOsMorningAlphaSource, /publicTopicSource\.why_this_stock/);
   assert.match(contentOsMorningAlphaSource, /report\.updated_at \?\? report\.created_at/);
   assert.match(contentOsMorningAlphaSource, /PUBLIC_TOPIC_INCOMPLETE/);
   assert.match(reportPayloadFunction, /evaluatePremiumContentGate/);
-  assert.match(reportPayloadFunction, /if \(!premiumGate\.eligible\)/);
-  assert.match(reportPayloadFunction, /one_teaser_stock: premiumGate\.eligible \? buildTeaserStock\(ai\) : null/);
+  assert.match(reportPayloadFunction, /if \(!premiumGate\.eligible \|\| !revisionEligible\)/);
+  assert.match(reportPayloadFunction, /const premiumEligible = premiumGate\.eligible && semanticEligible/);
+  assert.match(reportPayloadFunction, /one_teaser_stock: premiumEligible \? buildCanonicalTeaserStock/);
   assert.match(reportPayloadFunction, /premium_content_unavailable_reason: "EVIDENCE_GATE_NOT_MET"/);
 });
 
@@ -445,8 +452,11 @@ test('member research note labels same-day Taiwan recovery data as intraday, not
 });
 
 test('public payload distinguishes an evidence-backed no-trade day from missing data', () => {
-  assert.match(reportPayloadFunction, /no_trade_evidence_complete/);
-  assert.match(reportPayloadFunction, /const publicDataQuality = premiumGate\.eligible\s*\? "complete"/);
+  assert.match(reportPayloadFunction, /resolveCanonicalDataQuality/);
+  assert.match(reportPayloadFunction, /const canonicalQuality = getCanonicalPayloadQuality/);
+  assert.doesNotMatch(reportPayloadFunction, /premiumGate\.eligible\s*\?\s*"complete"/);
+  assert.match(reportPayloadFunction, /v10_data_quality_status: canonicalQuality/);
+  assert.match(reportPayloadFunction, /data_quality: canonicalQuality/);
   assert.match(reportPayloadFunction, /taiex_change: toNumberValue\(radar\.taiex_change\)/);
   assert.match(reportPayloadFunction, /txf_change: toNumberValue\(radar\.txf_change\)/);
   assert.match(reportPayloadFunction, /tsmc_change: toNumberValue\(radar\.tsmc_change\)/);

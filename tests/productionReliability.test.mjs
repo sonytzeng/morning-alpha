@@ -297,6 +297,10 @@ test('safe recovery exposes only scoped member revision and metric correction ac
   assert.match(recovery, /rebuild_member_content_revision/);
   assert.match(recovery, /reconcile_learning_metrics/);
   assert.match(recovery, /RECOVERY_APPROVAL_EVIDENCE_REQUIRED/);
+  assert.match(recovery, /get_ma_ops_health_cron_secret/);
+  assert.match(recovery, /presentedCronToken/);
+  assert.match(recovery, /currentToken: schedulerToken/);
+  assert.doesNotMatch(recovery, /x-internal-service-key/);
   assert.match(generator, /canonical_member_recovery/);
   assert.match(generator, /notifications_sent:0/);
   assert.match(learning, /record_learning_metric_correction_v1/);

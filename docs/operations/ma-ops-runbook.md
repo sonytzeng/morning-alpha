@@ -142,6 +142,8 @@ Auth 使用 SHA-256 digest 後的固定長度 XOR constant-time comparison；禁
 
 內部呼叫以 versioned `x-cron-secret` 為主要契約；嚴格 Bearer parser 可接受 `Authorization: Bearer <token>`，但不得把 Supabase opaque/service-role key 放入 Bearer。輪替時先設定 current + previous + previous expiry，確認新 token 成功，再更新 scheduler，重測 401/403，最後等 overlap 到期並移除 previous。回滾時只回復 server-side secret reference；不得在 log、PR 或命令輸出顯示 token。
 
+`ma-ops-safe-recovery` 在全域 `CRON_SECRET` 與 DB scheduler token 發生短暫漂移時，只會以 service-role RPC 讀取既有 Vault reference `ma_ops_health_cron_v1`，並在 Function 記憶體內重新做 constant-time 驗證。此 fallback 不接受 client tier、anon token、`apikey` 或任意 secret 名稱；不得把 Vault token 回傳或寫入 audit。若兩個 server-side reference 都拒絕，保持 HTTP 401 並停止 recovery。
+
 ### Migration rollback / forward-fix
 
 新表為 append-only 且被部署後 Function 依賴，不做破壞式 down migration。回滾順序是先重新部署上一版 Functions，使其停止讀寫新 contract，再停用新增 acceptance cron；保留所有 audit tables。Schema 缺陷以新的 forward migration 修正，不 DROP audit history、不改舊 revision。

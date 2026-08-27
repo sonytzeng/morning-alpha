@@ -5,6 +5,10 @@ import {
   type ContentScoreBreakdown,
 } from './content-intelligence.ts';
 import { RUNTIME_QUALITY_POLICY } from './production-architecture-core.mjs';
+import {
+  evaluateResearchQualityGate,
+  type ResearchQualityGateResult,
+} from './research-quality-gate.ts';
 
 export type PremiumContentStatus = 'eligible' | 'degraded' | 'blocked';
 export type PremiumDecisionMode = 'recommendations' | 'no_trade' | 'blocked';
@@ -20,6 +24,7 @@ export interface PremiumContentGateResult {
   content_grade: 'reject' | 'degraded' | 'publish' | 'high_quality';
   content_score_breakdown: ContentScoreBreakdown;
   generic_content_flags: string[];
+  research_quality: ResearchQualityGateResult | null;
 }
 type JsonRecord = Record<string, unknown>;
 
@@ -177,6 +182,13 @@ export function evaluatePremiumContentGate(
   const evidenceQuality = asRecord(ai.content_evidence_quality);
   const verifiedNewsCount = Math.max(0, Number(evidenceQuality.verified_news_count) || 0);
   const verifiedMarketCount = Math.max(0, Number(evidenceQuality.verified_market_count) || 0);
+  const researchMaster = asRecord(ai.research_master_v2);
+  const researchQuality = Object.keys(researchMaster).length > 0
+    ? evaluateResearchQualityGate(
+      researchMaster,
+      RUNTIME_QUALITY_POLICY.premium_publish_min,
+    )
+    : null;
 
   if (Object.keys(gate).length === 0) reasons.push('content_publish_gate_missing');
   if (!['可公開', 'ready', 'publishable', 'eligible'].some((status) => overallStatus.includes(status))) {
@@ -212,6 +224,9 @@ export function evaluatePremiumContentGate(
     'member_research_value_sentence_low_quality',
   ].includes(reason));
   reasons.push(...hardContentReasons);
+  if (researchQuality && !researchQuality.eligible) {
+    reasons.push(...researchQuality.reason_codes);
+  }
 
   const reasonCodes = unique(reasons);
   return {
@@ -231,5 +246,6 @@ export function evaluatePremiumContentGate(
     content_grade: contentReview.grade,
     content_score_breakdown: contentReview.breakdown,
     generic_content_flags: contentReview.generic_flags,
+    research_quality: researchQuality,
   };
 }

@@ -390,6 +390,29 @@ function searchText(value: string): string {
   return value.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
 }
 
+const EVIDENCE_TITLE_ALIASES: Record<string, string[]> = {
+  "nvda": ["nvidia", "輝達", "英偉達"],
+  "sox": ["費城半導體", "費半"],
+  "tsm": ["台積電adr", "台積電"],
+  "2330": ["台積電"],
+  "taiex": ["台灣加權", "加權指數", "台股大盤", "開盤方向"],
+  "txf": ["台指期", "台灣期貨"],
+  "nasdaq": ["那斯達克", "美股科技"],
+  "spx": ["標普500", "標普", "s&p500"],
+  "電子權值": ["權值股", "權值"],
+  "ai伺服器": ["ai server", "ai伺服器"],
+};
+
+function evidenceSearchTerms(evidence: ResearchEvidenceItem): string[] {
+  const title = toText(evidence.title);
+  const normalizedTitle = searchText(title);
+  return uniqueStrings([
+    title,
+    toText(evidence.raw_reference),
+    ...(EVIDENCE_TITLE_ALIASES[normalizedTitle] || []),
+  ]).map(searchText).filter((value) => value.length >= 2);
+}
+
 function matchingEvidenceRefs(
   texts: string[],
   evidenceIndex: ResearchEvidenceItem[],
@@ -398,9 +421,7 @@ function matchingEvidenceRefs(
   if (haystacks.length === 0) return [];
   const refs: string[] = [];
   for (const evidence of evidenceIndex) {
-    const needles = [evidence.title, evidence.raw_reference]
-      .map((value) => searchText(toText(value)))
-      .filter((value) => value.length >= 2);
+    const needles = evidenceSearchTerms(evidence);
     if (
       needles.some((needle) =>
         haystacks.some((haystack) =>
@@ -445,6 +466,7 @@ function boundedConfidence(...values: unknown[]): number | null {
 function sourceStatus(
   input: ResearchMasterV2AssemblerInput,
   hasLegacyResearch: boolean,
+  hasTraceableThesis: boolean,
 ): ResearchSourceStatus {
   if (input.evidenceIndex.length === 0) return "insufficient";
   const thesis = input.marketThesis || {};
@@ -455,7 +477,15 @@ function sourceStatus(
   const missing = Array.isArray(dataQuality.missing_sources)
     ? dataQuality.missing_sources.length
     : 0;
-  if (hasV10Thesis && missing === 0) return "complete";
+  const legacyDataQuality = firstText(
+    input.legacy.data_quality,
+    input.legacy.data_status,
+  ).toLowerCase();
+  if (
+    hasLegacyResearch && hasTraceableThesis &&
+    ["complete", "sufficient"].includes(legacyDataQuality)
+  ) return "complete";
+  if (hasV10Thesis && hasTraceableThesis && missing === 0) return "complete";
   if (hasV10Thesis) return "partial";
   return hasLegacyResearch ? "legacy_mapped" : "insufficient";
 }
@@ -509,32 +539,45 @@ function buildTransmissionPath(
 
   const memberChains = asRecords(note.overnight_chain);
   for (const chain of memberChains.slice(0, 3)) {
+    const chainTexts = [
+      firstText(chain.event_group, chain.event),
+      firstText(chain.event),
+      firstText(chain.source_market),
+      firstText(chain.impact_logic),
+      firstText(chain.taiwan_mapping),
+      ...asStrings(chain.validation_points),
+    ];
+    const chainRefs = resolveEvidenceRefs(
+      chain.evidence_refs,
+      chainTexts,
+      input.evidenceIndex,
+    );
     add(
       "global_event",
       firstText(chain.event_group, chain.event),
       firstText(chain.event),
-      chain.evidence_refs,
+      chainRefs,
     );
     add(
       "us_market",
       firstText(chain.source_market),
       firstText(chain.source_market),
-      chain.evidence_refs,
+      chainRefs,
     );
     add(
       "industry",
       firstText(chain.event, chain.source_market),
       firstText(chain.impact_logic),
-      chain.evidence_refs,
+      chainRefs,
     );
     add(
       "taiwan_market",
       firstText(chain.taiwan_mapping),
       firstText(chain.taiwan_mapping),
-      chain.evidence_refs,
+      chainRefs,
     );
     for (const validation of asStrings(chain.validation_points).slice(0, 2)) {
-      add("validation", "盤中驗證", validation, chain.evidence_refs);
+      add("validation", "盤中驗證", validation, chainRefs);
     }
   }
 
@@ -551,16 +594,26 @@ function buildTransmissionPath(
     ];
     for (const chain of asRecords(v8.chains).slice(0, 3)) {
       const steps = asStrings(chain.causal_steps);
+      const chainTexts = [
+        firstText(chain.theme, chain.event),
+        ...steps,
+        ...asStrings(chain.watch_points),
+      ];
+      const chainRefs = resolveEvidenceRefs(
+        chain.source_signals,
+        chainTexts,
+        input.evidenceIndex,
+      );
       steps.forEach((step, index) =>
         add(
           stageOrder[Math.min(index, stageOrder.length - 1)],
           firstText(chain.theme, chain.event),
           step,
-          chain.source_signals,
+          chainRefs,
         )
       );
       asStrings(chain.watch_points).slice(0, 2).forEach((watch) =>
-        add("validation", "盤中驗證", watch, chain.source_signals)
+        add("validation", "盤中驗證", watch, chainRefs)
       );
     }
   }
@@ -986,9 +1039,13 @@ function buildFailureScenario(
     ...asRecords(input.legacy.invalidation_conditions),
   ];
   const triggers: FailureTrigger[] = [];
+  const seenConditions = new Set<string>();
   for (const rule of rules) {
     const condition = firstText(rule.condition);
     if (!condition) continue;
+    const normalizedCondition = normalizedForHash(condition);
+    if (seenConditions.has(normalizedCondition)) continue;
+    seenConditions.add(normalizedCondition);
     const meaning = firstText(
       rule.meaning,
       rule.action_note,
@@ -1074,7 +1131,7 @@ export function assembleResearchMasterV2(
     safeIdPart(input.engineVersion)
   }`;
   const hasResearch = coreStatement !== INSUFFICIENT_TEXT;
-  const status = sourceStatus(input, hasResearch);
+  const status = sourceStatus(input, hasResearch, thesisRefs.length > 0);
   const transmissionPath = buildTransmissionPath(input, note);
   const intraday = asRecords(note.intraday_validation);
   const coreReasoning = asStrings(note.core_reasoning);
@@ -1246,7 +1303,10 @@ export function assembleResearchMasterV2(
     provenance: {
       engine_version: input.engineVersion,
       prompt_version: input.promptVersion,
-      evidence_pack_version: firstText(input.evidencePack.version) || null,
+      evidence_pack_version: firstText(
+        input.evidencePack.version,
+        asRecord(input.legacy.v10_analysis_debug).version,
+      ) || (input.evidenceIndex.length > 0 ? "V10" : null),
       generated_at: input.generatedAt,
       source_status: status,
     },

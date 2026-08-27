@@ -222,7 +222,7 @@ async function dispatchClaim(claim) {
 
 async function main() {
   if (process.env.GITHUB_REPOSITORY !== expected.repository || process.env.GITHUB_REF !== 'refs/heads/main' ||
-      !['schedule','workflow_dispatch'].includes(process.env.GITHUB_EVENT_NAME ?? '') ||
+      !['schedule','workflow_dispatch','push'].includes(process.env.GITHUB_EVENT_NAME ?? '') ||
       process.env.EMMA_OIDC_AUDIENCE !== expected.audience || process.env.EMMA_OIDC_BROKER_URL !== expected.brokerUrl) {
     throw new Error('WORKFLOW_PROVENANCE_INVALID');
   }

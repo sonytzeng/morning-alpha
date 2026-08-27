@@ -322,6 +322,10 @@ test('paid report fails closed when evidence does not meet the member threshold'
   assert.match(researchQualityGate, /research_unsupported_claims_present/);
   assert.match(contentOsMorningAlphaSource, /evaluateResearchQualityGate/);
   assert.match(contentOsMorningAlphaSource, /RESEARCH_QUALITY_GATE_BLOCKED/);
+  assert.ok(contentOsMorningAlphaSource.indexOf('ai.today_beneficiary_stocks_v10') < contentOsMorningAlphaSource.indexOf('generated.recommendations'));
+  assert.match(contentOsMorningAlphaSource, /publicTopicSource\.why_this_stock/);
+  assert.match(contentOsMorningAlphaSource, /report\.updated_at \?\? report\.created_at/);
+  assert.match(contentOsMorningAlphaSource, /PUBLIC_TOPIC_INCOMPLETE/);
   assert.match(reportPayloadFunction, /evaluatePremiumContentGate/);
   assert.match(reportPayloadFunction, /if \(!premiumGate\.eligible\)/);
   assert.match(reportPayloadFunction, /one_teaser_stock: premiumGate\.eligible \? buildTeaserStock\(ai\) : null/);

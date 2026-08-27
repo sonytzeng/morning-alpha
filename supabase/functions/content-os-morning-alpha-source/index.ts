@@ -225,8 +225,8 @@ Deno.serve(async (request) => {
   const coreThesis = optionalObject(researchSections.core_thesis);
   const generated = asObject(snapshot.generated_text);
   const opportunities = firstArray(
-    generated.recommendations,
     ai.today_beneficiary_stocks_v10,
+    generated.recommendations,
     ai.today_beneficiary_stocks,
     ai.v10_observation_watchlist,
     snapshot.watch_sectors,
@@ -244,8 +244,8 @@ Deno.serve(async (request) => {
     event_source: optionalString(publicTopicSource.event_source ?? publicTopicSource.trigger_event),
     transmission_path: optionalString(publicTopicSource.transmission_path ?? publicTopicSource.transmission_logic),
     taiwan_mapping: optionalString(publicTopicSource.taiwan_mapping ?? publicTopicSource.sector ?? publicTopicSource.industry_name),
-    reason: optionalString(publicTopicSource.why_today ?? publicTopicSource.reason ?? publicTopicSource.why_selected),
-    data_timestamp: optionalString(publicTopicSource.data_timestamp ?? publicTopicSource.updated_at ?? report.data_as_of),
+    reason: optionalString(publicTopicSource.why_today ?? publicTopicSource.why_this_stock ?? publicTopicSource.reason ?? publicTopicSource.why_selected),
+    data_timestamp: optionalString(publicTopicSource.data_timestamp ?? publicTopicSource.updated_at ?? report.updated_at ?? report.created_at),
     source_references: publicSourceReferences,
   };
   const primaryThesis = optionalString(coreThesis?.statement) ?? optionalString(generated.daily_sentence) ?? optionalString(report.today_quote);

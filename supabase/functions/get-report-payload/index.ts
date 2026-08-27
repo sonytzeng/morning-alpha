@@ -15,6 +15,7 @@ import {
 } from "../_shared/member-entitlement.ts";
 import { buildCanonicalIntradaySyncStatus } from "../_shared/runtime-report-state.ts";
 import { resolveCanonicalRuntimeMarketStatus } from "../_shared/canonical-runtime-market-status.mjs";
+import { resolveCanonicalDataQuality } from "../_shared/production-architecture-core.mjs";
 
 type ReportRow = Record<string, unknown> & {
   id?: string;
@@ -36,9 +37,11 @@ type PayloadContext = {
   closingDecisionSnapshot: Record<string, unknown> | null;
   closeMarketReview: Record<string, unknown> | null;
   learningRun: Record<string, unknown> | null;
+  learningMetricCorrection: Record<string, unknown> | null;
+  memberContentRevision: Record<string, unknown> | null;
   tradingDayState: Record<string, unknown> | null;
   componentQueryFailures: Array<{
-    source: "opening_market_radar" | "sector_rotation_scores" | "market_data_snapshots" | "decision_snapshots" | "closing_decision_snapshot" | "close_market_reviews" | "learning_runs" | "trading_day_state";
+    source: "opening_market_radar" | "sector_rotation_scores" | "market_data_snapshots" | "decision_snapshots" | "closing_decision_snapshot" | "close_market_reviews" | "learning_runs" | "learning_metric_corrections" | "member_content_revisions" | "trading_day_state";
     error_type: "QUERY_FAILED";
   }>;
 };
@@ -197,6 +200,8 @@ function buildAuthoritativeClosingVerification(
 function getEffectiveAi(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
   const ai = getAi(report);
   const closingVerification = buildAuthoritativeClosingVerification(ai, ctx);
+  const correctedLearning = asObject(ctx.learningMetricCorrection?.corrected_metrics);
+  const learningSource = ctx.learningMetricCorrection ? "append_only_metric_correction" : "learning_run";
   return {
     ...ai,
     ...(ctx.openingRadar ? {
@@ -220,13 +225,46 @@ function getEffectiveAi(report: ReportRow, ctx: PayloadContext): Record<string, 
       status: toStringValue(ctx.learningRun.status),
       run_id: toStringValue(ctx.learningRun.id),
       completed_at: toStringValue(ctx.learningRun.completed_at),
-      predictions_processed: toNumberValue(ctx.learningRun.predictions_processed),
-      outcomes_updated: toNumberValue(ctx.learningRun.outcomes_updated),
-      reviews_created: toNumberValue(ctx.learningRun.reviews_created),
-      cases_created: toNumberValue(ctx.learningRun.cases_created),
+      predictions_processed: toNumberValue(correctedLearning.predictions_processed) ?? toNumberValue(ctx.learningRun.predictions_processed),
+      outcomes_created: toNumberValue(correctedLearning.outcomes_created),
+      outcomes_updated: toNumberValue(correctedLearning.outcomes_updated) ?? toNumberValue(ctx.learningRun.outcomes_updated),
+      reviews_created: toNumberValue(correctedLearning.reviews_created) ?? toNumberValue(ctx.learningRun.reviews_created),
+      cases_created: toNumberValue(correctedLearning.cases_created) ?? toNumberValue(ctx.learningRun.cases_created),
       patterns_updated: toNumberValue(ctx.learningRun.patterns_updated),
+      metric_source: learningSource,
+      metric_correction_id: toStringValue(ctx.learningMetricCorrection?.id),
     } : null,
   };
+}
+
+function normalizeDataQualityToken(value: unknown): string | null {
+  const normalized = (toStringValue(value) || "").toLowerCase();
+  for (const token of ["blocked", "insufficient", "missing", "partial", "degraded", "sufficient", "complete"]) {
+    if (normalized.includes(token)) return token;
+  }
+  return null;
+}
+
+function getCanonicalPayloadQuality(ai: Record<string, unknown>, ctx: PayloadContext): string {
+  const note = asObject(ai.member_research_note_v2);
+  const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
+  return resolveCanonicalDataQuality([
+    normalizeDataQualityToken(ai.data_quality),
+    normalizeDataQualityToken(ai.data_status),
+    normalizeDataQualityToken(ai.v10_data_quality_status),
+    normalizeDataQualityToken(note.data_status),
+    normalizeDataQualityToken(openingRadar.data_status),
+    normalizeDataQualityToken(ctx.memberContentRevision?.data_quality_status),
+  ].filter(Boolean));
+}
+
+function isCanonicalMemberRevisionEligible(ctx: PayloadContext): boolean {
+  const revision = ctx.memberContentRevision;
+  if (!revision || !ctx.decisionSnapshot) return false;
+  return toStringValue(revision.status) === "PASSED"
+    && toStringValue(revision.semantic_status) === "PASSED"
+    && toStringValue(revision.decision_snapshot_id) === toStringValue(ctx.decisionSnapshot.id)
+    && toNumberValue(revision.decision_snapshot_version) === toNumberValue(ctx.decisionSnapshot.version);
 }
 
 function getImportantNews(report: ReportRow, ai: Record<string, unknown>): Record<string, unknown>[] {
@@ -431,8 +469,8 @@ function getBeneficiaryCount(ai: Record<string, unknown>): number {
   return unique.size;
 }
 
-function buildTeaserStock(ai: Record<string, unknown>): Record<string, unknown> | null {
-  const first = getBeneficiaryArrays(ai).flat().find((row) => toStringValue(row.stock_name) || toStringValue(row.name) || toStringValue(row.symbol));
+function buildCanonicalTeaserStock(memberContent: unknown): Record<string, unknown> | null {
+  const first = asArray(asObject(memberContent).representative_stocks)[0];
   if (!first) return null;
   return {
     symbol: toStringValue(first.symbol) || toStringValue(first.stock_id) || toStringValue(first.stock_code) || "",
@@ -478,33 +516,6 @@ function buildClosingSummary(ai: Record<string, unknown>): Record<string, unknow
   };
 }
 
-function buildValidationSignals(ai: Record<string, unknown>): unknown[] {
-  const note = asObject(ai.member_research_note_v2);
-  const candidates = asArray(note.beneficiary_candidates);
-  const candidateSignals = candidates.flatMap((candidate) => [
-    candidate.validation_signal,
-    candidate.watch_point,
-  ]).filter(Boolean);
-  const intradayValidation = asArray(note.intraday_validation);
-  return [...candidateSignals, ...intradayValidation].filter(Boolean);
-}
-
-function buildInvalidationConditions(ai: Record<string, unknown>): unknown[] {
-  const note = asObject(ai.member_research_note_v2);
-  const candidates = asArray(note.beneficiary_candidates);
-  const candidateRisks = candidates.flatMap((candidate) => [
-    candidate.invalidation_condition,
-    candidate.risk,
-    candidate.risk_note,
-  ]).filter(Boolean);
-  return [
-    ...asArray(note.invalidation_conditions),
-    ...asArray(note.invalidation_rules),
-    ...asArray(ai.invalidation_conditions),
-    ...candidateRisks,
-  ].filter(Boolean);
-}
-
 function buildCanonicalDecision(
   ctx: PayloadContext,
   includePremiumFields: boolean,
@@ -548,12 +559,13 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const ai = getEffectiveAi(report, ctx);
   const importantNews = getImportantNews(report, ai);
   const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
-  const publicV10DataQualityStatus = premiumGate.eligible
-    ? premiumGate.decision_mode === "no_trade" ? "no_trade_evidence_complete" : "complete"
-    : toStringValue(ai.v10_data_quality_status);
-  const publicDataQuality = premiumGate.eligible
-    ? "complete"
-    : toStringValue(ai.data_quality) || toStringValue(ai.data_status) || toStringValue(asObject(ai.member_research_note_v2).data_status) || "unknown";
+  const canonicalQuality = getCanonicalPayloadQuality(ai, ctx);
+  const semanticEligible = isCanonicalMemberRevisionEligible(ctx);
+  const premiumEligible = premiumGate.eligible && semanticEligible;
+  const premiumReasonCodes = Array.from(new Set([
+    ...premiumGate.reason_codes,
+    ...(semanticEligible ? [] : ["SEMANTIC_MEMBER_REVISION_NOT_ELIGIBLE"]),
+  ]));
   const confidenceScore = getConfidenceScore(report, ai);
   const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
   const marketMetadata = getCanonicalMarketMetadata(report, ai, ctx);
@@ -583,14 +595,14 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     v8_daily_sentence: asObject(ai.v8_daily_sentence),
     public_summary: Object.keys(publicSummary).length > 0 ? publicSummary : freeSummary,
     beneficiary_count: getBeneficiaryCount(ai),
-    one_teaser_stock: premiumGate.eligible ? buildTeaserStock(ai) : null,
+    one_teaser_stock: premiumEligible ? buildCanonicalTeaserStock(ctx.memberContentRevision?.member_content) : null,
     v10_beneficiary_enabled: isV10BeneficiaryEnabled(ai),
-    v10_data_quality_status: publicV10DataQualityStatus,
+    v10_data_quality_status: canonicalQuality,
     v10_warning: toStringValue(ai.v10_warning),
     v10_candidate_count: toNumberValue(ai.v10_candidate_count),
-    premium_content_status: premiumGate.status,
+    premium_content_status: premiumEligible ? "eligible" : "blocked",
     premium_decision_mode: premiumGate.decision_mode,
-    premium_content_reason_codes: premiumGate.reason_codes,
+    premium_content_reason_codes: premiumReasonCodes,
     recommendation_count: premiumGate.recommendation_count,
     complete_recommendation_count: premiumGate.complete_recommendation_count,
     member_value_score: toNumberValue(ai.member_value_score),
@@ -599,8 +611,8 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     content_score_breakdown: premiumGate.content_score_breakdown,
     canonical_decision: canonicalDecision,
     content_publish_gate: {
-      overall_status: premiumGate.status,
-      blocking_issues: premiumGate.reason_codes,
+      overall_status: premiumEligible ? "eligible" : "blocked",
+      blocking_issues: premiumReasonCodes,
     },
     important_news: buildPublicNews(importantNews),
     fresh_news_count: importantNews.length,
@@ -630,14 +642,14 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     })),
     sector_rotation_status: asObject(ai.sector_rotation_status),
     market_data_snapshots: Array.from(ctx.marketDataSnapshots.reduce((latestBySymbol, row) => {
-      const symbol = toStringValue(row.symbol).toUpperCase();
+      const symbol = (toStringValue(row.symbol) || "").toUpperCase();
       if (symbol && !latestBySymbol.has(symbol)) latestBySymbol.set(symbol, row);
       return latestBySymbol;
     }, new Map<string, Record<string, unknown>>()).values()).slice(0, 16),
     closing_verification: buildClosingVerdict(ai),
     continuous_learning: asObject(ai.continuous_learning),
     runtime_lifecycle_complete: asObject(ai.intraday_sync_status).lifecycle_complete === true,
-    data_quality: publicDataQuality,
+    data_quality: canonicalQuality,
   };
 }
 
@@ -645,18 +657,25 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const ai = getEffectiveAi(report, ctx);
   const importantNews = getImportantNews(report, ai);
   const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
-  const note = asObject(ai.member_research_note_v2);
-  const v8BeneficiaryChain = asObject(ai.v8_beneficiary_chain);
-  const v8OvernightCausalChain = asObject(ai.v8_overnight_causal_chain);
+  const revisionEligible = isCanonicalMemberRevisionEligible(ctx);
+  const note = revisionEligible ? asObject(ctx.memberContentRevision?.member_content) : {};
+  const canonicalRecommendations = asArray(note.representative_stocks);
+  const canonicalContract = asObject(note.canonical_contract);
+  const v8BeneficiaryChain = { recommendations: canonicalRecommendations };
+  const v8OvernightCausalChain = { chains: canonicalContract.primary_causal_chain || [] };
   const publicPayload = buildPublicPayload(report, ctx);
   const publicDegradedMetadata = asObject(publicPayload.degraded_metadata);
   const publicMissingSources = Array.isArray(publicDegradedMetadata.missing_sources) ? publicDegradedMetadata.missing_sources.map(String) : [];
   const reportMissingSources = Array.isArray(ai.missing_sources) ? ai.missing_sources.map(String) : [];
-  if (!premiumGate.eligible) {
+  if (!premiumGate.eligible || !revisionEligible) {
+    const reasonCodes = Array.from(new Set([
+      ...premiumGate.reason_codes,
+      ...(revisionEligible ? [] : ["SEMANTIC_MEMBER_REVISION_NOT_ELIGIBLE"]),
+    ]));
     return {
       ...publicPayload,
-      premium_content_status: premiumGate.status,
-      premium_content_reason_codes: premiumGate.reason_codes,
+      premium_content_status: "blocked",
+      premium_content_reason_codes: reasonCodes,
       premium_content_unavailable_reason: "EVIDENCE_GATE_NOT_MET",
     };
   }
@@ -664,37 +683,37 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     ...publicPayload,
     canonical_decision: buildCanonicalDecision(ctx, true),
     confidence_score: getConfidenceScore(report, ai),
-    today_beneficiary_stocks: isV10BeneficiaryEnabled(ai) ? asArray(ai.today_beneficiary_stocks_v10) : asArray(ai.today_beneficiary_stocks),
-    beneficiary_stocks: isV10BeneficiaryEnabled(ai) ? asArray(ai.today_beneficiary_stocks_v10) : asArray(ai.beneficiary_stocks),
-    core_beneficiary_stocks: isV10BeneficiaryEnabled(ai) ? asArray(ai.today_beneficiary_stocks_v10) : asArray(ai.core_beneficiary_stocks),
-    extended_watchlist: isV10BeneficiaryEnabled(ai) ? asArray(ai.v10_observation_watchlist) : asArray(ai.extended_watchlist),
-    scenario_watchlist: isV10BeneficiaryEnabled(ai) ? asArray(ai.v10_risk_watchlist) : asArray(ai.scenario_watchlist),
-    today_beneficiary_stocks_v10: asArray(ai.today_beneficiary_stocks_v10),
-    v10_observation_watchlist: asArray(ai.v10_observation_watchlist),
-    v10_risk_watchlist: asArray(ai.v10_risk_watchlist),
-    v10_beneficiary_enabled: isV10BeneficiaryEnabled(ai),
-    v10_data_quality_status: toStringValue(ai.v10_data_quality_status),
+    today_beneficiary_stocks: canonicalRecommendations,
+    beneficiary_stocks: canonicalRecommendations,
+    core_beneficiary_stocks: canonicalRecommendations,
+    extended_watchlist: [],
+    scenario_watchlist: [],
+    today_beneficiary_stocks_v10: canonicalRecommendations,
+    v10_observation_watchlist: [],
+    v10_risk_watchlist: [],
+    v10_beneficiary_enabled: true,
+    v10_data_quality_status: getCanonicalPayloadQuality(ai, ctx),
     v10_warning: toStringValue(ai.v10_warning),
     v10_candidate_count: toNumberValue(ai.v10_candidate_count),
     v8_beneficiary_chain: v8BeneficiaryChain,
     v8_overnight_causal_chain: v8OvernightCausalChain,
-    source_signals: ai.source_signals || v8BeneficiaryChain.source_signals || [],
-    why_this_stock: ai.why_this_stock || null,
-    data_status: toStringValue(ai.data_status) || toStringValue(note.data_status) || toStringValue(ai.data_quality) || null,
-    data_basis_note: toStringValue(ai.data_basis_note) || toStringValue(note.data_basis_note) || null,
-    strategy_summary: ai.strategy_summary || note.strategy_summary || null,
+    source_signals: Array.isArray(note.source_refs) ? note.source_refs : [],
+    why_this_stock: canonicalRecommendations,
+    data_status: getCanonicalPayloadQuality(ai, ctx),
+    data_basis_note: toStringValue(note.data_basis_note) || null,
+    strategy_summary: note.strategy_summary || null,
     degraded_metadata: {
       ...publicDegradedMetadata,
-      report_data_quality: toStringValue(ai.data_quality) || toStringValue(ai.data_status),
+      report_data_quality: getCanonicalPayloadQuality(ai, ctx),
       missing_sources: Array.from(new Set([...publicMissingSources, ...reportMissingSources])),
     },
     member_research_note_v2: note,
     intraday_tracking: asObject(ai.intraday_tracking),
     intraday_time_windows: asArray(note.intraday_time_windows),
     intraday_replay_time_windows: asArray(asObject(ai.closing_verification_v2).intraday_replay_time_windows),
-    overnight_chain: note.overnight_chain || v8OvernightCausalChain.chains || ai.causal_overnight_impact_chains || [],
-    validation_signal: buildValidationSignals(ai),
-    invalidation_condition: buildInvalidationConditions(ai),
+    overnight_chain: asObject(note.canonical_contract).primary_causal_chain || [],
+    validation_signal: Array.isArray(note.intraday_validation) ? note.intraday_validation : [],
+    invalidation_condition: Array.isArray(note.invalidation_conditions) ? note.invalidation_conditions : [],
     closing_verification: buildClosingSummary(ai),
     closing_verification_v2: asObject(ai.closing_verification_v2),
   };
@@ -702,7 +721,7 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
 
 function buildVipPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
   const ai = getEffectiveAi(report, ctx);
-  const note = asObject(ai.member_research_note_v2);
+  const note = isCanonicalMemberRevisionEligible(ctx) ? asObject(ctx.memberContentRevision?.member_content) : {};
   const closing = asObject(ai.closing_verification);
   const memberPayload = buildMemberPayload(report, ctx);
   if (memberPayload.premium_content_status !== "eligible") return memberPayload;
@@ -774,6 +793,8 @@ async function fetchPayloadContext(
     closingDecisionResult,
     closeReviewResult,
     learningRunResult,
+    learningMetricCorrectionResult,
+    memberContentRevisionResult,
   ] = await Promise.all([
     serviceClient
       .from("opening_market_radar")
@@ -830,6 +851,20 @@ async function fetchPayloadContext(
       .order("started_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    serviceClient
+      .from("learning_metric_corrections")
+      .select("id,business_date,learning_run_id,corrected_metrics,authoritative_counts,reason_code,created_at")
+      .eq("business_date", reportDate)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    serviceClient
+      .from("current_member_content_revisions_v1")
+      .select("*")
+      .eq("report_date", reportDate)
+      .order("revision", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (radarResult.error) console.error("GET_REPORT_PAYLOAD_RADAR_QUERY_FAILED", radarResult.error.message);
@@ -840,6 +875,8 @@ async function fetchPayloadContext(
   if (closingDecisionResult.error) console.error("GET_REPORT_PAYLOAD_CLOSING_DECISION_QUERY_FAILED", closingDecisionResult.error.message);
   if (closeReviewResult.error) console.error("GET_REPORT_PAYLOAD_CLOSE_REVIEW_QUERY_FAILED", closeReviewResult.error.message);
   if (learningRunResult.error) console.error("GET_REPORT_PAYLOAD_LEARNING_RUN_QUERY_FAILED", learningRunResult.error.message);
+  if (learningMetricCorrectionResult.error) console.error("GET_REPORT_PAYLOAD_LEARNING_METRIC_CORRECTION_QUERY_FAILED", learningMetricCorrectionResult.error.message);
+  if (memberContentRevisionResult.error) console.error("GET_REPORT_PAYLOAD_MEMBER_CONTENT_REVISION_QUERY_FAILED", memberContentRevisionResult.error.message);
 
   const componentQueryFailures: PayloadContext["componentQueryFailures"] = [];
   if (radarResult.error) componentQueryFailures.push({ source: "opening_market_radar", error_type: "QUERY_FAILED" });
@@ -850,6 +887,8 @@ async function fetchPayloadContext(
   if (closingDecisionResult.error) componentQueryFailures.push({ source: "closing_decision_snapshot", error_type: "QUERY_FAILED" });
   if (closeReviewResult.error) componentQueryFailures.push({ source: "close_market_reviews", error_type: "QUERY_FAILED" });
   if (learningRunResult.error) componentQueryFailures.push({ source: "learning_runs", error_type: "QUERY_FAILED" });
+  if (learningMetricCorrectionResult.error) componentQueryFailures.push({ source: "learning_metric_corrections", error_type: "QUERY_FAILED" });
+  if (memberContentRevisionResult.error) componentQueryFailures.push({ source: "member_content_revisions", error_type: "QUERY_FAILED" });
 
   return {
     openingRadar: radarResult.data ? radarResult.data as Record<string, unknown> : null,
@@ -859,6 +898,8 @@ async function fetchPayloadContext(
     closingDecisionSnapshot: closingDecisionResult.data ? closingDecisionResult.data as Record<string, unknown> : null,
     closeMarketReview: closeReviewResult.data ? closeReviewResult.data as Record<string, unknown> : null,
     learningRun: learningRunResult.data ? learningRunResult.data as Record<string, unknown> : null,
+    learningMetricCorrection: learningMetricCorrectionResult.data ? learningMetricCorrectionResult.data as Record<string, unknown> : null,
+    memberContentRevision: memberContentRevisionResult.data ? memberContentRevisionResult.data as Record<string, unknown> : null,
     tradingDayState: tradingDayStateResult.data ? tradingDayStateResult.data as Record<string, unknown> : null,
     componentQueryFailures,
   };

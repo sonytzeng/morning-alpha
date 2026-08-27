@@ -44,8 +44,11 @@ import {
 } from '../_shared/continuous-learning-core.mjs';
 import {
   RUNTIME_QUALITY_POLICY,
+  buildCanonicalDecisionContract,
+  buildCanonicalMemberResearchRevision,
   buildBullBearDebate,
   classifyMarketRegime,
+  evaluateCanonicalSemanticCoherenceGate,
   resolveAbstentionDecision,
 } from '../_shared/production-architecture-core.mjs';
 import { canonicalDecisionAction } from '../_shared/canonical-decision-contract.mjs';
@@ -2170,7 +2173,105 @@ async function publishCanonicalDecisionSnapshot(
   }
 }
 
-async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJson:Record<string,unknown>,marketBias:string,rawConfidenceScore:number|null,reportMode:string,md:MarketIndicator[],newsData:MarketNewsItem[],log:(m:string)=>void,tdInfo?:TradingDayInfo,dates?:MarketFreshnessDates,previousDailySentence:string='',learningConfidence:ProductionLearningConfidence|null=null,correlationId:string=crypto.randomUUID(),recoveryAttempt:number=1,startedAt:string=new Date().toISOString()):Promise<{reportId:string;snapshotId:string|null}|null>{
+type CanonicalMemberRevisionResult={
+  revisionId:string|null;
+  eligible:boolean;
+  status:string;
+  reasonCodes:string[];
+  canonicalContract:Record<string,unknown>|null;
+};
+
+async function publishCanonicalMemberRevision(
+  supabase:RuntimeClient,
+  reportDate:string,
+  reportId:string,
+  snapshotId:string,
+  ai:Record<string,unknown>,
+  idempotencyKey:string,
+  sourceRevision:string,
+  actor:string,
+  log:(message:string)=>void,
+):Promise<CanonicalMemberRevisionResult>{
+  const blocked=(reason:string):CanonicalMemberRevisionResult=>({revisionId:null,eligible:false,status:'BLOCKED',reasonCodes:[reason],canonicalContract:null});
+  try{
+    const snapshotResult=await supabase.from('decision_snapshots').select('id,report_id,report_date,version,status,action,generated_text,snapshot_fingerprint,content_score').eq('id',snapshotId).maybeSingle();
+    const{data:snapshot,error:snapshotError}=safeUnwrap<Record<string,unknown>>(snapshotResult,log,'canonicalMemberSnapshot');
+    if(snapshotError||!snapshot)return blocked('CANONICAL_SNAPSHOT_READ_FAILED');
+    const canonicalContract=buildCanonicalDecisionContract({report_date:reportDate,snapshot,ai}) as Record<string,unknown>;
+    const memberContent=buildCanonicalMemberResearchRevision({canonical_contract:canonicalContract,snapshot,ai,daily_sentence:canonicalText(canonicalRecord(snapshot.generated_text).daily_sentence)}) as Record<string,unknown>;
+    const researchMaster=canonicalRecord(ai.research_master_v2);
+    const researchQuality=canonicalRecord(researchMaster.quality);
+    const evidenceCoverage=Number(researchQuality.evidence_coverage??0);
+    const contentScore=Number(ai.content_score??snapshot.content_score??0);
+    const semanticResult=evaluateCanonicalSemanticCoherenceGate({
+      canonical_contract:canonicalContract,
+      sections:{
+        public_thesis:canonicalText(canonicalRecord(snapshot.generated_text).daily_sentence),
+        member_thesis:canonicalText(memberContent.today_core_thesis),
+        taiwan_transmission:memberContent.taiwan_transmission,
+        line_summary:memberContent.line_summary,
+        content_os_topic:memberContent.content_os_topic,
+      },
+      recommendations:memberContent.beneficiary_candidates,
+      quality_inputs:[ai.data_quality,ai.v10_data_quality_status,canonicalRecord(ai.member_research_note_v2).data_status],
+      quality_counters:{
+        unsupported_claim_count:Array.isArray(researchQuality.unsupported_claims)?researchQuality.unsupported_claims.length:0,
+        contradiction_count:Array.isArray(researchQuality.contradictions)?researchQuality.contradictions.length:0,
+        duplicate_claim_count:Array.isArray(researchQuality.duplicate_claims)?researchQuality.duplicate_claims.length:0,
+        missing_section_count:Array.isArray(researchQuality.missing_sections)?researchQuality.missing_sections.length:0,
+      },
+      evidence_coverage:evidenceCoverage,
+      content_score:contentScore,
+      checked_at:new Date().toISOString(),
+    }) as Record<string,unknown>;
+    const rpcResult=await supabase.rpc('publish_member_content_revision_v1',{
+      p_report_date:reportDate,
+      p_report_id:reportId,
+      p_decision_snapshot_id:snapshotId,
+      p_idempotency_key:idempotencyKey,
+      p_source_revision:sourceRevision,
+      p_canonical_contract:canonicalContract,
+      p_member_content:memberContent,
+      p_semantic_result:semanticResult,
+      p_content_score:contentScore,
+      p_evidence_coverage:evidenceCoverage,
+      p_generated_at:new Date().toISOString(),
+      p_metadata:{actor,suppress_notifications:true,source_report_version:canonicalText(ai.version)},
+    });
+    const{data:revisionId,error:revisionError}=safeUnwrap<string>(rpcResult,log,'publishCanonicalMemberRevision');
+    if(revisionError||!revisionId)return blocked('MEMBER_REVISION_PUBLISH_FAILED');
+    const eligible=semanticResult.eligible===true;
+    const reasonCodes=Array.isArray(semanticResult.reason_codes)?semanticResult.reason_codes.map(String):[];
+    log('CANONICAL_MEMBER_REVISION '+String(semanticResult.status||'BLOCKED')+' revision_id='+revisionId+' reasons='+(reasonCodes.join('|')||'none'));
+    return{revisionId:String(revisionId),eligible,status:String(semanticResult.status||'BLOCKED'),reasonCodes,canonicalContract};
+  }catch(error){
+    log('CANONICAL_MEMBER_REVISION_EXCEPTION '+(error instanceof Error?error.message:String(error)));
+    return blocked('MEMBER_REVISION_EXCEPTION');
+  }
+}
+
+async function recoverCanonicalMemberRevision(
+  supabase:RuntimeClient,
+  reportDate:string,
+  idempotencyKey:string,
+  log:(message:string)=>void,
+):Promise<CanonicalMemberRevisionResult & {reportId:string|null;snapshotId:string|null}>{
+  const [reportResult,snapshotResult]=await Promise.all([
+    supabase.from('reports').select('id,report_date,ai_strategy_json,summary,today_quote,updated_at').eq('report_date',reportDate).maybeSingle(),
+    supabase.from('decision_snapshots').select('id,report_id,report_date,version,status,action,generated_text,snapshot_fingerprint,content_score').eq('report_date',reportDate).eq('session_type','PREMARKET').eq('is_current',true).order('version',{ascending:false}).limit(1).maybeSingle(),
+  ]);
+  const report=reportResult.data as Record<string,unknown>|null;
+  const snapshot=snapshotResult.data as Record<string,unknown>|null;
+  if(reportResult.error||snapshotResult.error||!report||!snapshot){
+    return{revisionId:null,eligible:false,status:'BLOCKED',reasonCodes:['RECOVERY_SOURCE_NOT_FOUND'],canonicalContract:null,reportId:report?String(report.id):null,snapshotId:snapshot?String(snapshot.id):null};
+  }
+  const ai=canonicalRecord(report.ai_strategy_json);
+  const sourceRevision=canonicalText(snapshot.snapshot_fingerprint,`${snapshot.version}:${report.updated_at}`);
+  const result=await publishCanonicalMemberRevision(supabase,reportDate,String(report.id),String(snapshot.id),ai,idempotencyKey,sourceRevision,'ma-ops-safe-recovery',log);
+  return{...result,reportId:String(report.id),snapshotId:String(snapshot.id)};
+}
+
+async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJson:Record<string,unknown>,marketBias:string,rawConfidenceScore:number|null,reportMode:string,md:MarketIndicator[],newsData:MarketNewsItem[],log:(m:string)=>void,tdInfo?:TradingDayInfo,dates?:MarketFreshnessDates,previousDailySentence:string='',learningConfidence:ProductionLearningConfidence|null=null,correlationId:string=crypto.randomUUID(),recoveryAttempt:number=1,startedAt:string=new Date().toISOString()):Promise<{reportId:string;snapshotId:string|null;memberRevision:CanonicalMemberRevisionResult}|null>{
   try{
     const tradingDayInfo=tdInfo||getTaiwanTradingDayInfo(todayDate);
     aiStrategyJson={...aiStrategyJson,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,trading_day_reason:tradingDayInfo.reason,market_status:tradingDayInfo.is_trading_day?'OPEN':tradingDayInfo.reason,session_type:tradingDayInfo.session_type||'FULL_DAY',market_message:tradingDayInfo.market_message||(tradingDayInfo.is_trading_day?'今天正常交易。':'今日沒有台股交易，Morning Alpha 已切換休市模式。'),next_trading_day:tradingDayInfo.next_trading_day||todayDate};
@@ -2331,8 +2432,11 @@ async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJso
     decisionPayload.duration_ms=Math.max(0,Date.now()-Date.parse(startedAt));
     decisionPayload.recovery_plan={attempt:Math.max(1,recoveryAttempt),reason_codes:Array.isArray(aiStrategyJson.content_reason_codes)?aiStrategyJson.content_reason_codes:[]};
     const snapshotId=await publishCanonicalDecisionSnapshot(supabase,todayDate,data.id,decisionPayload,correlationId,recoveryAttempt,log);
-    log('writeReport OK: '+data.id+' snapshot_id='+(snapshotId||'pending_migration'));
-    return{reportId:data.id,snapshotId};
+    const memberRevision=snapshotId
+      ? await publishCanonicalMemberRevision(supabase,todayDate,data.id,snapshotId,aiStrategyJson,`member-content:${todayDate}:${snapshotId}:${String(decisionPayload.engine_version||VERSION)}`,String(decisionPayload.engine_version||VERSION),'generate-daily-report-v7',log)
+      : {revisionId:null,eligible:false,status:'BLOCKED',reasonCodes:['CANONICAL_SNAPSHOT_MISSING'],canonicalContract:null};
+    log('writeReport OK: '+data.id+' snapshot_id='+(snapshotId||'pending_migration')+' member_revision_id='+(memberRevision.revisionId||'blocked'));
+    return{reportId:data.id,snapshotId,memberRevision};
   }catch(e){log('writeReport exc: '+(e instanceof Error?e.message:String(e)));return null}
 }
 
@@ -2430,6 +2534,35 @@ Deno.serve(async (req:Request)=>{
     if(!supabaseUrl||!serviceRoleKey){log('NO_SUPABASE_CREDS');return corsResponse({success:false,error:'Supabase credentials missing',version:VERSION},500)}
     const supabase=createClient<RuntimeDatabase>(supabaseUrl,serviceRoleKey,{auth:{autoRefreshToken:false,persistSession:false}});
     timer.mark('SUPABASE_CLIENT_READY');
+
+    if(body?.mode==='canonical_member_recovery'){
+      const reportDate=String(body.report_date||'');
+      const recoveryIdempotencyKey=String(body.recovery_idempotency_key||'');
+      const recoveryRequestId=String(body.recovery_request_id||'');
+      const recoveryActor=String(body.recovery_actor||'').trim();
+      const recoveryReason=String(body.recovery_reason||'').trim();
+      const safeRecovery=body.source==='ma-ops-safe-recovery'&&body.suppress_notifications===true
+        &&recoveryActor.length>0&&recoveryReason.length>0
+        &&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(recoveryRequestId);
+      if(!safeRecovery||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(reportDate)||!recoveryIdempotencyKey){
+        return corsResponse({success:false,error:'CANONICAL_MEMBER_RECOVERY_CONTRACT_INVALID',error_code:'CANONICAL_MEMBER_RECOVERY_CONTRACT_INVALID',version:VERSION},400);
+      }
+      const recovery=await recoverCanonicalMemberRevision(supabase,reportDate,recoveryIdempotencyKey,log);
+      return corsResponse({
+        success:recovery.eligible,
+        report_date:reportDate,
+        report_id:recovery.reportId,
+        decision_snapshot_id:recovery.snapshotId,
+        member_content_revision_id:recovery.revisionId,
+        semantic_status:recovery.status,
+        semantic_reason_codes:recovery.reasonCodes,
+        notifications_sent:0,
+        checkpoints_replayed:0,
+        closing_replayed:false,
+        learning_replayed:false,
+        version:VERSION,
+      },recovery.eligible?200:409);
+    }
 
     const todayDate=getTaipeiDateString();const dow=getTaipeiDayOfWeek();log('TODAY='+todayDate+' DOW='+dow);
     const tradingDayInfo=getTaiwanTradingDayInfo(todayDate);
@@ -2666,11 +2799,12 @@ Deno.serve(async (req:Request)=>{
     const verifiedGate=evaluatePremiumContentGate(verified.aiJson||{},newsData.length);
     const reportState=await supabase.rpc('advance_trading_day_state_v1',{p_trading_date:todayDate,p_state:'REPORT_GENERATED',p_checkpoint:'report_generation',p_status:'SUCCEEDED',p_correlation_id:correlationId,p_metadata:{report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,input_fingerprint:String(aiStrategyJson.revision_id||''),output_fingerprint:String(writeResult.snapshotId||'')}});
     if(reportState.error)throw new Error('REPORT_STATE_ADVANCE_FAILED');
-    const deliveryEligible=verifiedGate.eligible&&Boolean(writeResult.snapshotId);
-    if(deliveryEligible){const editorialState=await supabase.rpc('advance_trading_day_state_v1',{p_trading_date:todayDate,p_state:'EDITORIAL_APPROVED',p_checkpoint:'editorial_gate',p_status:'SUCCEEDED',p_correlation_id:correlationId,p_metadata:{report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,content_score:verifiedGate.content_score,reason_codes:verifiedGate.reason_codes}});if(editorialState.error)throw new Error('EDITORIAL_STATE_ADVANCE_FAILED');}
+    const deliveryEligible=verifiedGate.eligible&&Boolean(writeResult.snapshotId)&&writeResult.memberRevision.eligible;
+    const deliveryReasonCodes=Array.from(new Set([...verifiedGate.reason_codes,...writeResult.memberRevision.reasonCodes]));
+    if(deliveryEligible){const editorialState=await supabase.rpc('advance_trading_day_state_v1',{p_trading_date:todayDate,p_state:'EDITORIAL_APPROVED',p_checkpoint:'editorial_gate',p_status:'SUCCEEDED',p_correlation_id:correlationId,p_metadata:{report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,member_content_revision_id:writeResult.memberRevision.revisionId,content_score:verifiedGate.content_score,semantic_status:writeResult.memberRevision.status,reason_codes:deliveryReasonCodes}});if(editorialState.error)throw new Error('EDITORIAL_STATE_ADVANCE_FAILED');}
     const durationMs=Date.now()-reqStart;log('DONE report_id='+verified.reportId+' premium_eligible='+deliveryEligible+' duration='+durationMs+'ms');
     const sloResult=await supabase.from('runtime_slo_measurements').insert({slo_key:'report_generation_latency',measured_at:new Date().toISOString(),report_date:todayDate,correlation_id:correlationId,success:durationMs<=120000,value:durationMs,latency_ms:durationMs,reason_codes:durationMs<=120000?[]:['report_generation_latency_exceeded'],metadata:{premium_eligible:verifiedGate.eligible,engine_version:VERSION}});
     if(sloResult.error)log('REPORT_SLO_MEASUREMENT_DEGRADED '+sloResult.error.message);
-    return corsResponse({success:deliveryEligible,message:deliveryEligible?'Report generated and approved (V9.4)':'Report generated but delivery gate blocked',error:deliveryEligible?undefined:'DELIVERY_GATE_BLOCKED',error_code:deliveryEligible?undefined:'DELIVERY_GATE_BLOCKED',report_generated:true,report_date:todayDate,report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,correlation_id:correlationId,premium_eligible:deliveryEligible,premium_content_score:verifiedGate.content_score,premium_decision_mode:verifiedGate.decision_mode,premium_reason_codes:writeResult.snapshotId?verifiedGate.reason_codes:Array.from(new Set([...verifiedGate.reason_codes,'editorial_snapshot_missing'])),recovery_attempt:recoveryAttempt,cost_guard:costGuard,cost_usage_id:runtimeCostUsageId,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,tw_core_date:dates.twCoreDate,us_global_date:dates.usGlobalDate,source:String(aiStrategyJson.build_method||'deterministic'),market_bias:marketBias,confidence_score:safeInteger(rawConfidenceScore,50),report_mode:reportMode,duration_ms:durationMs,version:VERSION,logs},deliveryEligible?200:409);
+    return corsResponse({success:deliveryEligible,message:deliveryEligible?'Report generated and approved (V9.5)':'Report generated but delivery gate blocked',error:deliveryEligible?undefined:'DELIVERY_GATE_BLOCKED',error_code:deliveryEligible?undefined:'DELIVERY_GATE_BLOCKED',report_generated:true,report_date:todayDate,report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,member_content_revision_id:writeResult.memberRevision.revisionId,semantic_status:writeResult.memberRevision.status,correlation_id:correlationId,premium_eligible:deliveryEligible,premium_content_score:verifiedGate.content_score,premium_decision_mode:verifiedGate.decision_mode,premium_reason_codes:writeResult.snapshotId?deliveryReasonCodes:Array.from(new Set([...deliveryReasonCodes,'editorial_snapshot_missing'])),recovery_attempt:recoveryAttempt,cost_guard:costGuard,cost_usage_id:runtimeCostUsageId,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,tw_core_date:dates.twCoreDate,us_global_date:dates.usGlobalDate,source:String(aiStrategyJson.build_method||'deterministic'),market_bias:marketBias,confidence_score:safeInteger(rawConfidenceScore,50),report_mode:reportMode,duration_ms:durationMs,version:VERSION,logs},deliveryEligible?200:409);
   }catch(err){const msg=err instanceof Error?err.message:String(err);log('FATAL: '+msg);return corsResponse({success:false,error:msg,correlation_id:correlationId,version:VERSION,logs},500)}
 });

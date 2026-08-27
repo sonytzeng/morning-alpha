@@ -1,12 +1,14 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { evaluateResearchQualityGate } from "../_shared/research-quality-gate.ts";
-import { evaluatePublicPremiumLeakageGate, evaluateSemanticCoherenceGate } from "../_shared/production-architecture-core.mjs";
+import { evaluateCanonicalSemanticCoherenceGate, evaluatePublicPremiumLeakageGate } from "../_shared/production-architecture-core.mjs";
 import { authorizeInternalRequest, internalCredentialsFromEnv } from "../_shared/internal-function-auth.mjs";
+import type { RuntimeDatabase } from "../_shared/runtime-database-contract.ts";
 
 type JsonRecord = Record<string, unknown>;
+type AdminClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 
 const MAX_RESPONSE_BYTES = 1_000_000;
-const SOURCE_PROJECTION_REVISION = "content_os_source_v6";
+const SOURCE_PROJECTION_REVISION = "content_os_source_v7_canonical_member";
 
 function asObject(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -84,6 +86,32 @@ function json(body: JsonRecord, status = 200): Response {
   });
 }
 
+async function recordBlockingIncident(
+  admin: AdminClient,
+  snapshot: JsonRecord,
+  reasonCodes: string[],
+  errorCode: string,
+  metadata: JsonRecord = {},
+): Promise<Response> {
+  const incidentKey = `content-os:${String(snapshot.report_date || "unknown")}:${String(snapshot.id || "unknown")}`;
+  const { data: incidentId, error } = await admin.rpc("record_content_os_incident_v1", {
+    p_incident_key: incidentKey,
+    p_business_date: String(snapshot.report_date || ""),
+    p_snapshot_id: String(snapshot.id || ""),
+    p_snapshot_version: Number(snapshot.version || 0),
+    p_reason_codes: Array.from(new Set(reasonCodes)),
+    p_http_status: 409,
+    p_metadata: { error_code: errorCode, source_revision: SOURCE_PROJECTION_REVISION, ...metadata },
+  });
+  if (error) return json({ error: "CONTENT_OS_INCIDENT_WRITE_FAILED", detail: error.message }, 503);
+  return json({
+    error: errorCode,
+    reason_codes: Array.from(new Set(reasonCodes)),
+    incident_id: incidentId,
+    incident_key: incidentKey,
+  }, 409);
+}
+
 Deno.serve(async (request) => {
   if (request.method !== "GET") {
     return json({ error: "METHOD_NOT_ALLOWED" }, 405);
@@ -118,7 +146,7 @@ Deno.serve(async (request) => {
   if (!supabaseUrl || !secretKey) {
     return json({ error: "SERVER_CONFIGURATION" }, 503);
   }
-  const admin = createClient(supabaseUrl, secretKey, {
+  const admin = createClient<RuntimeDatabase>(supabaseUrl, secretKey, {
     auth: { persistSession: false },
   });
 
@@ -183,7 +211,7 @@ Deno.serve(async (request) => {
     !review || !Number.isFinite(reviewScore) ||
     reviewScore < premiumPublishMinimum
   ) {
-    return json({ error: "APPROVED_EDITORIAL_EVIDENCE_REQUIRED" }, 409);
+    return recordBlockingIncident(admin, snapshot, ["APPROVED_EDITORIAL_EVIDENCE_REQUIRED"], "APPROVED_EDITORIAL_EVIDENCE_REQUIRED");
   }
 
   const reportResult = await admin
@@ -197,7 +225,7 @@ Deno.serve(async (request) => {
   if (!reportResult.data) return json({ error: "REPORT_NOT_FOUND" }, 404);
   const report = reportResult.data as JsonRecord;
   if (String(report.report_date ?? "") !== String(snapshot.report_date ?? "")) {
-    return json({ error: "REPORT_SNAPSHOT_DATE_MISMATCH" }, 409);
+    return recordBlockingIncident(admin, snapshot, ["REPORT_SNAPSHOT_DATE_MISMATCH"], "REPORT_SNAPSHOT_DATE_MISMATCH");
   }
 
   const ai = asObject(report.ai_strategy_json);
@@ -208,29 +236,76 @@ Deno.serve(async (request) => {
     premiumPublishMinimum,
   );
   if (!researchSections || !researchGate.eligible) {
-    return json({
-      error: "RESEARCH_QUALITY_GATE_BLOCKED",
-      quality_status: researchGate.publish_status,
-      evidence_coverage: researchGate.evidence_coverage,
+    return recordBlockingIncident(
+      admin,
+      snapshot,
+      ["RESEARCH_QUALITY_GATE_BLOCKED", ...researchGate.reason_codes],
+      "RESEARCH_QUALITY_GATE_BLOCKED",
+      {
+        quality_status: researchGate.publish_status,
+        evidence_coverage: researchGate.evidence_coverage,
+        unsupported_claim_count: researchGate.unsupported_claim_count,
+        duplicate_claim_count: researchGate.duplicate_claim_count,
+        contradiction_count: researchGate.contradiction_count,
+        missing_section_count: researchGate.missing_section_count,
+        required_score: researchGate.required_score,
+        policy_version: qualityPolicy.policy_version,
+      },
+    );
+  }
+
+  const memberRevisionResult = await admin
+    .from("current_member_content_revisions_v1")
+    .select("*")
+    .eq("report_date", String(snapshot.report_date))
+    .eq("decision_snapshot_id", String(snapshot.id))
+    .eq("decision_snapshot_version", Number(snapshot.version))
+    .order("revision", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (memberRevisionResult.error) return json({ error: "MEMBER_CONTENT_REVISION_READ_FAILED" }, 503);
+  if (!memberRevisionResult.data) {
+    return recordBlockingIncident(admin, snapshot, ["SEMANTIC_MEMBER_REVISION_MISSING"], "SEMANTIC_COHERENCE_BLOCKED");
+  }
+  const memberRevision = memberRevisionResult.data as JsonRecord;
+  const memberContent = asObject(memberRevision.member_content);
+  const canonicalContract = asObject(memberRevision.canonical_contract);
+  const canonicalRecommendations = asArray(memberContent.representative_stocks);
+  const semanticGate = evaluateCanonicalSemanticCoherenceGate({
+    canonical_contract: canonicalContract,
+    sections: {
+      today_core_thesis: memberContent.today_core_thesis,
+      strategy_summary: memberContent.strategy_summary,
+      taiwan_transmission: memberContent.taiwan_transmission,
+    },
+    recommendations: canonicalRecommendations,
+    quality_inputs: [
+      ai.data_quality,
+      ai.v10_data_quality_status,
+      optionalObject(ai.member_research_note_v2)?.data_status,
+      memberRevision.data_quality_status,
+    ],
+    quality_counters: {
       unsupported_claim_count: researchGate.unsupported_claim_count,
       duplicate_claim_count: researchGate.duplicate_claim_count,
       contradiction_count: researchGate.contradiction_count,
       missing_section_count: researchGate.missing_section_count,
-      required_score: researchGate.required_score,
-      reason_codes: researchGate.reason_codes,
-      policy_version: qualityPolicy.policy_version,
-    }, 409);
+    },
+    evidence_coverage: memberRevision.evidence_coverage,
+    content_score: memberRevision.content_score,
+  });
+  if (!semanticGate.eligible) {
+    return recordBlockingIncident(
+      admin,
+      snapshot,
+      ["SEMANTIC_COHERENCE_BLOCKED", ...semanticGate.reason_codes],
+      "SEMANTIC_COHERENCE_BLOCKED",
+      { conflicting_fields: semanticGate.conflicting_fields, member_content_revision_id: memberRevision.id },
+    );
   }
 
-  const coreThesis = optionalObject(researchSections.core_thesis);
   const generated = asObject(snapshot.generated_text);
-  const opportunities = firstArray(
-    ai.today_beneficiary_stocks_v10,
-    generated.recommendations,
-    ai.today_beneficiary_stocks,
-    ai.v10_observation_watchlist,
-    snapshot.watch_sectors,
-  );
+  const opportunities = canonicalRecommendations;
   const publicTopicSource = asObject(opportunities[0]);
   const publicSourceReferences = firstArray(
     publicTopicSource.source_references,
@@ -248,13 +323,12 @@ Deno.serve(async (request) => {
     data_timestamp: optionalString(publicTopicSource.data_timestamp ?? publicTopicSource.updated_at ?? report.updated_at ?? report.created_at),
     source_references: publicSourceReferences,
   };
-  const primaryThesis = optionalString(coreThesis?.statement) ?? optionalString(generated.daily_sentence) ?? optionalString(report.today_quote);
+  const primaryThesis = optionalString(memberContent.today_core_thesis) ?? optionalString(generated.daily_sentence) ?? optionalString(report.today_quote);
   const publicTopicComplete = Boolean(publicTopic.symbol && publicTopic.name && publicTopic.event_source && publicTopic.transmission_path && publicTopic.taiwan_mapping && publicTopic.reason && publicTopic.data_timestamp && publicSourceReferences.length);
-  if (!publicTopicComplete) return json({ error: 'PUBLIC_TOPIC_INCOMPLETE' }, 409);
-  const coherenceGate = evaluateSemanticCoherenceGate({ primary_thesis: primaryThesis, sections: [publicTopic.reason, publicTopic.transmission_path, publicTopic.taiwan_mapping], contradictions: researchGate.contradiction_count > 0 ? ['research_gate_contradiction'] : [] });
+  if (!publicTopicComplete) return recordBlockingIncident(admin, snapshot, ['PUBLIC_TOPIC_INCOMPLETE'], 'PUBLIC_TOPIC_INCOMPLETE', { member_content_revision_id: memberRevision.id });
   const premiumOnlySymbols = opportunities.slice(1).map((item) => optionalString(asObject(item).symbol ?? asObject(item).stock_code)).filter((symbol): symbol is string => Boolean(symbol) && symbol !== publicTopic.symbol);
   const leakageGate = evaluatePublicPremiumLeakageGate({ public_symbols: [publicTopic.symbol], premium_only_symbols: premiumOnlySymbols, public_fields: Object.keys(publicTopic), public_entities: [publicTopic.name,publicTopic.role].filter((value): value is string => Boolean(value)), premium_entities: [] });
-  if (!coherenceGate.eligible || !leakageGate.eligible) return json({ error: 'PUBLIC_TOPIC_GATE_BLOCKED', reason_codes: [...coherenceGate.reason_codes, ...leakageGate.reason_codes] }, 409);
+  if (!leakageGate.eligible) return recordBlockingIncident(admin, snapshot, ['PUBLIC_TOPIC_GATE_BLOCKED', ...leakageGate.reason_codes], 'PUBLIC_TOPIC_GATE_BLOCKED', { member_content_revision_id: memberRevision.id });
   const publishedAt = String(
     review.reviewed_at ?? snapshot.valid_from ?? report.updated_at ??
       report.created_at,
@@ -262,9 +336,17 @@ Deno.serve(async (request) => {
   const revision = String(
     snapshot.snapshot_fingerprint ?? `${snapshot.version}:${review.id}`,
   );
-  const projectedRevision = `${revision}:${SOURCE_PROJECTION_REVISION}`;
+  const projectedRevision = `${revision}:${String(memberRevision.id)}:${SOURCE_PROJECTION_REVISION}`;
   const topicFingerprint = await sha256Hex({ report_date: report.report_date, public_topic: publicTopic, primary_thesis: primaryThesis });
   const expiresAt = new Date(new Date(publishedAt).getTime() + 24 * 60 * 60 * 1000).toISOString();
+
+  const incidentKey = `content-os:${String(snapshot.report_date)}:${String(snapshot.id)}`;
+  const { error: resolveIncidentError } = await admin.rpc("resolve_content_os_incident_v1", {
+    p_incident_key: incidentKey,
+    p_snapshot_version: Number(snapshot.version),
+    p_metadata: { member_content_revision_id: memberRevision.id, source_revision: SOURCE_PROJECTION_REVISION },
+  });
+  if (resolveIncidentError) return json({ error: "CONTENT_OS_INCIDENT_RESOLUTION_FAILED" }, 503);
 
   return json({
     external_object_id: String(report.id),
@@ -315,7 +397,9 @@ Deno.serve(async (request) => {
       duplicate_claim_count: researchGate.duplicate_claim_count,
       contradiction_count: researchGate.contradiction_count,
       missing_section_count: researchGate.missing_section_count,
-      semantic_coherence: coherenceGate.eligible,
+      semantic_coherence: semanticGate.eligible,
+      semantic_gate_version: semanticGate.gate_version,
+      member_content_revision_id: memberRevision.id,
       public_premium_leakage: leakageGate.eligible,
     },
   });

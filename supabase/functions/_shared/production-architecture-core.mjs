@@ -412,6 +412,12 @@ function recommendationSymbol(value) {
   return firstText(record.symbol, record.stock_code, record.ticker).toUpperCase().replace(/^TWSE:/, '').replace(/\.TW$/, '');
 }
 
+function meaningfulTextValues(values) {
+  return values
+    .filter((value) => typeof value === 'string' && value.trim())
+    .map((value) => value.trim());
+}
+
 export function buildCanonicalDecisionContract(input = {}) {
   const snapshot = asPlainRecord(input.snapshot);
   const generated = asPlainRecord(snapshot.generated_text);
@@ -430,14 +436,14 @@ export function buildCanonicalDecisionContract(input = {}) {
     return (primaryEvent && event === primaryEvent) || (primaryTheme && theme === primaryTheme);
   });
   const primarySymbols = unique(primaryRecommendations.map(recommendationSymbol).filter(Boolean));
-  const validationSignals = unique(primaryRecommendations.flatMap((candidate) => {
+  const validationSignals = unique(meaningfulTextValues(primaryRecommendations.flatMap((candidate) => {
     const record = asPlainRecord(candidate);
     return [record.confirmation_condition, record.confirmation, record.validation_signal, record.watch_point];
-  }).map(String).filter(Boolean));
-  const invalidationConditions = unique(primaryRecommendations.flatMap((candidate) => {
+  })));
+  const invalidationConditions = unique(meaningfulTextValues(primaryRecommendations.flatMap((candidate) => {
     const record = asPlainRecord(candidate);
     return [record.invalidation_condition, record.invalidation, record.stop_condition, record.stop_observing_condition];
-  }).map(String).filter(Boolean));
+  })));
   const evidenceRefs = unique(primaryRecommendations.flatMap((candidate) => {
     const record = asPlainRecord(candidate);
     return [record.source_refs, record.source_references, record.supporting_evidence, record.evidence]
@@ -482,14 +488,14 @@ export function buildCanonicalMemberResearchRevision(input = {}) {
   const thesis = firstText(generated.daily_sentence, input.daily_sentence);
   const first = asPlainRecord(recommendations[0]);
   const transmission = firstText(first.transmission_path, first.transmission_logic, Array.isArray(contract.primary_causal_chain) ? contract.primary_causal_chain.join(' → ') : '');
-  const validation = unique(recommendations.flatMap((candidate) => {
+  const validation = unique(meaningfulTextValues(recommendations.flatMap((candidate) => {
     const record = asPlainRecord(candidate);
     return [record.confirmation_condition, record.confirmation, record.validation_signal, record.watch_point];
-  }).map(String).filter(Boolean));
-  const invalidation = unique(recommendations.flatMap((candidate) => {
+  })));
+  const invalidation = unique(meaningfulTextValues(recommendations.flatMap((candidate) => {
     const record = asPlainRecord(candidate);
     return [record.invalidation_condition, record.invalidation, record.stop_condition, record.stop_observing_condition];
-  }).map(String).filter(Boolean));
+  })));
   const sourceRefs = unique(recommendations.flatMap((candidate) => {
     const record = asPlainRecord(candidate);
     return [record.source_refs, record.source_references, record.supporting_evidence, record.evidence]

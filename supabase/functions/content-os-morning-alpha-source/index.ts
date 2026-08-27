@@ -319,7 +319,11 @@ Deno.serve(async (request) => {
     event_source: optionalString(publicTopicSource.event_source ?? publicTopicSource.trigger_event),
     transmission_path: optionalString(publicTopicSource.transmission_path ?? publicTopicSource.transmission_logic),
     taiwan_mapping: optionalString(publicTopicSource.taiwan_mapping ?? publicTopicSource.sector ?? publicTopicSource.industry_name),
-    reason: optionalString(publicTopicSource.why_today ?? publicTopicSource.why_this_stock ?? publicTopicSource.reason ?? publicTopicSource.why_selected),
+    reason: optionalString(
+      publicTopicSource.why_today ?? publicTopicSource.why_this_stock ??
+        publicTopicSource.reason ?? publicTopicSource.why_selected ??
+        publicTopicSource.taiwan_supply_chain_relation,
+    ),
     data_timestamp: optionalString(publicTopicSource.data_timestamp ?? publicTopicSource.updated_at ?? report.updated_at ?? report.created_at),
     source_references: publicSourceReferences,
   };

@@ -193,14 +193,15 @@ export function evaluatePremiumContentGate(
   const researchSections = asRecord(researchMaster.sections);
   const researchCore = asRecord(researchSections.core_thesis);
   const v8Sentence = asRecord(ai.v8_daily_sentence);
-  const semanticTheses = unique([
+  const semanticSourceValues = [
     firstText(researchCore.statement),
     firstText(memberNote.today_core_thesis),
     firstText(ai.today_core_thesis),
     firstText(v8Sentence.sentence),
     firstText(ai.daily_sentence),
     firstText(ai.today_quote),
-  ]);
+  ].filter(Boolean);
+  const semanticTheses = unique(semanticSourceValues);
   const semanticGate = evaluateSemanticCoherenceGate({
     primary_thesis: semanticTheses[0],
     sections: semanticTheses.slice(1),
@@ -244,7 +245,7 @@ export function evaluatePremiumContentGate(
   if (researchQuality && !researchQuality.eligible) {
     reasons.push(...researchQuality.reason_codes);
   }
-  if (semanticTheses.length < 2) reasons.push('semantic_sources_incomplete');
+  if (semanticSourceValues.length < 2) reasons.push('semantic_sources_incomplete');
   if (!semanticGate.eligible) reasons.push(...semanticGate.reason_codes.map((code: string) => code.toLowerCase()));
 
   const reasonCodes = unique(reasons);

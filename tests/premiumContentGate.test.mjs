@@ -116,6 +116,41 @@ test('ready research with full traceability keeps premium content eligible', () 
   assert.equal(result.research_quality?.eligible, true);
 });
 
+test('matching populated semantic sources remain eligible after canonical normalization', () => {
+  const ai = validAi();
+  const canonicalThesis = ai.research_master_v2.sections.core_thesis.statement;
+  ai.today_quote = canonicalThesis;
+  ai.free_summary.one_sentence = canonicalThesis;
+  delete ai.today_core_thesis;
+  delete ai.daily_sentence;
+  delete ai.member_research_note_v2.today_core_thesis;
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.reason_codes.includes('semantic_sources_incomplete'), false, JSON.stringify(result));
+  assert.equal(result.semantic_coherence.eligible, true, JSON.stringify(result));
+});
+
+test('premium gate still fails closed with only one populated semantic source', () => {
+  const ai = validAi();
+  delete ai.today_core_thesis;
+  delete ai.today_quote;
+  delete ai.daily_sentence;
+  delete ai.member_research_note_v2.today_core_thesis;
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.ok(result.reason_codes.includes('semantic_sources_incomplete'));
+});
+
+test('populated but divergent semantic sources remain blocked', () => {
+  const ai = validAi();
+  ai.today_quote = '油價急升改變航運報價，陽明列入收盤觀察。';
+  ai.free_summary.one_sentence = ai.today_quote;
+  delete ai.today_core_thesis;
+  delete ai.daily_sentence;
+  delete ai.member_research_note_v2.today_core_thesis;
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.semantic_coherence.eligible, false);
+  assert.ok(result.reason_codes.includes('primary_thesis_divergence'));
+});
+
 test('premium gate recognizes a structured subscriber action without depending on one fixed phrase', () => {
   const ai = validAi();
   ai.member_research_note_v2.subscriber_value_sentence = '先用台積電、TAIEX 與半導體同步性驗證主線；若族群沒有量價擴散，就不把它列為有效主線。';

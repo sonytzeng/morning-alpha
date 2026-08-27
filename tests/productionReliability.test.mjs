@@ -159,6 +159,35 @@ test('canonical decision contract keeps only the primary recommendation theme', 
   assert.equal(contract.data_quality_status, 'partial');
 });
 
+test('canonical contract drops absent optional signals instead of serializing undefined', () => {
+  const snapshot = {
+    id: 'snapshot-missing-value-guard', report_date: '2026-08-27', version: 4, action: 'WAIT',
+    generated_text: {
+      daily_sentence: 'oil 先傳導至航運。', next_checkpoint: '09:30',
+      recommendations: [
+        {
+          symbol: '2609', name: '陽明', sector: '航運', event_source: 'oil',
+          transmission_path: 'oil → 航運 → 2609', confirmation_condition: '09:30 航運同步',
+          confirmation: undefined, validation_signal: null, watch_point: '',
+          invalidation_condition: '航運未同步', invalidation: undefined,
+          stop_condition: null, stop_observing_condition: '', source_refs: ['NEWS002'],
+        },
+      ],
+    },
+  };
+  const contract = buildCanonicalDecisionContract({ report_date: '2026-08-27', snapshot, ai: { data_quality: 'partial' } });
+  const member = buildCanonicalMemberResearchRevision({ canonical_contract: contract, snapshot, ai: {} });
+  assert.deepEqual(contract.validation_signals, ['09:30 航運同步']);
+  assert.deepEqual(contract.invalidation_conditions, ['航運未同步']);
+  assert.doesNotMatch(JSON.stringify({ contract, member }), /undefined/);
+});
+
+test('Content OS public reason reuses canonical supply-chain evidence when no display reason exists', () => {
+  const source = readFileSync(new URL('../supabase/functions/content-os-morning-alpha-source/index.ts', import.meta.url), 'utf8');
+  assert.match(source, /publicTopicSource\.taiwan_supply_chain_relation/);
+  assert.doesNotMatch(source, /可能影響|受惠於|有利於|預期轉強/);
+});
+
 test('canonical member revision removes unrelated primary themes without inventing evidence', () => {
   const snapshot = {
     id: 'snapshot-1', report_date: '2026-08-27', version: 3, action: 'SELECTIVE',

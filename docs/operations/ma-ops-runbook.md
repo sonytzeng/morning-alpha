@@ -105,3 +105,47 @@ Auth 使用 SHA-256 digest 後的固定長度 XOR constant-time comparison；禁
 本機驗證暫以 Node 24 LTS 為準：Node `26.4.0` 曾造成 tsc、ESLint、Vite 異常停滯；Node `24.14.0` 可完成 type-check command，但現有 `src/` TypeScript errors 使其未通過。`Documents/GitHub` 可能受 macOS File Provider/iCloud metadata 影響，ESLint module loading 與 Vite PostCSS/caniuse-lite 曾出現極慢 filesystem I/O；後續應在非 File Provider 管理路徑重驗。
 
 目前不得宣稱 npm build、lint、type-check 或 Deno compile validation 通過。P1.1 未 Deploy、未執行 Migration、未設定 Cron，且沒有 Recovery。
+
+## 11. Production Reliability V2：Semantic、Content OS 與 CLE Recovery
+
+### 發布不變量
+
+- `decision_snapshots(PREMARKET,is_current=true)` 是唯一 canonical decision revision。
+- `member_content_revisions` 與 `semantic_coherence_reviews` 是 append-only；只有 `current_member_content_revisions_v1` 的 `PASSED` revision 可供付費 Payload、LINE 與 Content OS 使用。
+- 任何來源品質為 `partial/degraded/blocked/insufficient`，下游都不可提升為 `complete`。
+- Premium 分數不能覆蓋 Semantic、Evidence 或資料品質失敗。
+- Content OS 409 以 `business_date + snapshot_id + destination` 聚合為單一 open incident；輸入 revision 未變更時不可無限重跑。
+
+### 受控 Recovery
+
+只允許透過 `ma-ops-safe-recovery` 執行，正式 mutation 必須同時提供：
+
+- `approved=true`
+- `dry_run=false`
+- 唯一 `idempotency_key`
+- UUID `request_id`
+- 非空 `actor` 與 `reason`
+- `suppress_notifications=true`
+
+`rebuild_member_content_revision` 只讀既有 report/current PREMARKET snapshot，建立新的 immutable member revision；不得重跑市場資料、checkpoint、closing、CLE 或 LINE。`reconcile_learning_metrics` 只新增 `learning_metric_corrections`，不修改 `learning_runs`、outcomes、reviews 或 cases。
+
+### Recovery 後驗證
+
+1. 新 revision 的 snapshot id/version 必須等於 current PREMARKET snapshot。
+2. Semantic status 為 `PASSED`，reason codes 為空，Evidence Coverage=100，Content Score>=90。
+3. 付費 Payload 的 report date、revision id、data quality 與 DB revision 一致。
+4. Content OS 回 HTTP 200，對應 open incident 轉為 `RESOLVED`。
+5. LINE `SENT` 數、checkpoint 數、closing verification、learning business rows在 recovery 前後不增加。
+6. 相同 recovery idempotency key 重播回既有 audit/result，不產生第二個 revision 或 correction。
+
+### Token rotation
+
+內部呼叫以 versioned `x-cron-secret` 為主要契約；嚴格 Bearer parser 可接受 `Authorization: Bearer <token>`，但不得把 Supabase opaque/service-role key 放入 Bearer。輪替時先設定 current + previous + previous expiry，確認新 token 成功，再更新 scheduler，重測 401/403，最後等 overlap 到期並移除 previous。回滾時只回復 server-side secret reference；不得在 log、PR 或命令輸出顯示 token。
+
+### Migration rollback / forward-fix
+
+新表為 append-only 且被部署後 Function 依賴，不做破壞式 down migration。回滾順序是先重新部署上一版 Functions，使其停止讀寫新 contract，再停用新增 acceptance cron；保留所有 audit tables。Schema 缺陷以新的 forward migration 修正，不 DROP audit history、不改舊 revision。
+
+### 五日穩定性
+
+`production_acceptance_results` 每日保存 immutable verdict。單日 PASS 後整體狀態仍為 `OBSERVING`；連續五個完整台灣交易日全部 PASS 才可標記 `STABLE`。未到期 checkpoint 必須是 `NOT_DUE`，隔日成功不得覆寫前一日 FAIL。

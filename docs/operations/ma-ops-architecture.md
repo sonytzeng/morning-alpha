@@ -113,3 +113,17 @@ Read-only checks 保留 client timeout，late completion 沒有資料副作用�
 本機已知限制：Node `26.4.0` 曾使 tsc/ESLint/Vite 異常停滯；Node `24.14.0` 能完成 type-check command，但揭露 `src/` 既有 TypeScript errors，因此未通過。驗證暫以 Node 24 LTS 為準。`Documents/GitHub` 可能受 macOS File Provider/iCloud metadata 影響，ESLint module loading 與 Vite PostCSS/caniuse-lite 曾出現極慢 filesystem I/O；應移至非 File Provider 路徑重驗。npm build/lint/type-check 與 Deno compile validation 均未宣稱通過。
 
 P1.1 仍無 Recovery、Deploy、Migration execution 或 Cron；本節沒有改變 P1 Level 0 邊界。
+
+## 9. Production Reliability V2 已落地拓撲
+
+正式內容發布鏈固定為：
+
+`reports + current PREMARKET decision_snapshot` → `Canonical Decision Contract` → `member_content_revisions` → `semantic_coherence_reviews` → `get-report-payload / daily-delivery-orchestrator / content-os-morning-alpha-source`。
+
+三個 consumer 都查同一個 `current_member_content_revisions_v1`，並驗證 snapshot id/version；任何一邊缺 revision、semantic 未通過或 revision 與 current snapshot 不同，Premium 都 fail-closed。原始 `reports.ai_strategy_json.member_research_note_v2` 保留作 audit 與相容輸入，但不再是會員全文的 live source。
+
+Content OS 對相同 `report_date + snapshot_id + destination` 使用單一 incident key。阻擋時回 409 與結構化 reason codes，成功後原 open incident 轉為 resolved。Live Payload 的資料品質由所有來源的最低可信狀態決定，Premium score 不可升級品質。
+
+CLE correction 不修改原 `learning_runs` 或實體 learning rows；`learning_metric_corrections` 保存原 metrics、authoritative unique counts 與 corrected projection。Payload 若有 correction，顯示 correction projection 並附 source/id，保留原 audit 可追溯性。
+
+每日 acceptance 是 append-only。`production_acceptance_results` 只能新增，不會因隔日或 watchdog 成功覆寫既有 FAIL。Primary 與 watchdog 使用同一 business-date evaluator idempotency key，避免重複 verdict。

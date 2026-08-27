@@ -24,6 +24,16 @@ function headerValue(headers, name) {
   return headers && typeof headers.get === 'function' ? (headers.get(name) || '').trim() : '';
 }
 
+export function parseBearerAuthorizationHeader(value) {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return { ok: false, token: null, error_code: INTERNAL_AUTH_ERROR_CODES.MISSING };
+  const match = raw.match(/^Bearer\s+([^\s]+)$/i);
+  if (!match || !present(match[1])) {
+    return { ok: false, token: null, error_code: INTERNAL_AUTH_ERROR_CODES.INVALID };
+  }
+  return { ok: true, token: match[1], error_code: null };
+}
+
 function parseExpiry(value) {
   if (!present(value)) return null;
   const parsed = Date.parse(value);
@@ -31,7 +41,15 @@ function parseExpiry(value) {
 }
 
 export async function authorizeInternalRequest(headers, credentials = {}, now = new Date()) {
-  const presented = headerValue(headers, 'x-cron-secret');
+  let presented = headerValue(headers, 'x-cron-secret');
+  if (!presented) {
+    const authorization = headerValue(headers, 'authorization');
+    if (authorization) {
+      const parsed = parseBearerAuthorizationHeader(authorization);
+      if (!parsed.ok) return { ok: false, credential: null, version: String(credentials.version || 'v1'), error_code: parsed.error_code };
+      presented = parsed.token || '';
+    }
+  }
   const presentedVersion = headerValue(headers, 'x-internal-auth-version');
   const expectedVersion = String(credentials.version || 'v1');
   if (!presented) {

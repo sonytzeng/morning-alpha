@@ -1182,6 +1182,130 @@ async function loadPredictionAndMarketWindow(
   return { predictions: predictionRows, snapshots: (snapshots || []) as SnapshotRow[] };
 }
 
+async function reconcileLearningMetrics(
+  client: RuntimeClient,
+  targetDate: string,
+  body: JsonRecord,
+): Promise<Response> {
+  const source = firstText(body.source);
+  const suppressNotifications = body.suppress_notifications === true;
+  const idempotencyKey = firstText(body.recovery_idempotency_key);
+  const actor = firstText(body.recovery_actor);
+  const reason = firstText(body.recovery_reason);
+  const requestId = firstText(body.recovery_request_id);
+  if (
+    source !== 'ma-ops-safe-recovery' || !suppressNotifications || !idempotencyKey ||
+    !actor || !reason || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)
+  ) {
+    return jsonResponse({ success: false, error: 'METRIC_RECONCILIATION_APPROVAL_EVIDENCE_REQUIRED' }, 400);
+  }
+
+  const { data: run, error: runError } = await client
+    .from('learning_runs')
+    .select('*')
+    .eq('run_date', targetDate)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (runError) return jsonResponse({ success: false, error: 'LEARNING_RUN_READ_FAILED', detail: runError.message }, 500);
+  if (!run) return jsonResponse({ success: false, error: 'LEARNING_RUN_NOT_FOUND', target_date: targetDate }, 404);
+
+  const { data: predictions, error: predictionError } = await client
+    .from('learning_predictions')
+    .select('id')
+    .eq('report_date', targetDate);
+  if (predictionError) return jsonResponse({ success: false, error: 'LEARNING_PREDICTIONS_READ_FAILED', detail: predictionError.message }, 500);
+  const predictionIds = ((predictions || []) as JsonRecord[]).map((row) => String(row.id || '')).filter(Boolean);
+  if (predictionIds.length === 0) {
+    return jsonResponse({ success: false, error: 'AUTHORITATIVE_PREDICTIONS_MISSING', target_date: targetDate }, 409);
+  }
+
+  const { data: outcomes, error: outcomeError } = await client
+    .from('prediction_outcomes')
+    .select('id,prediction_id,horizon')
+    .in('prediction_id', predictionIds);
+  if (outcomeError) return jsonResponse({ success: false, error: 'PREDICTION_OUTCOMES_READ_FAILED', detail: outcomeError.message }, 500);
+  const { data: reviews, error: reviewError } = await client
+    .from('prediction_reviews')
+    .select('id,prediction_id')
+    .in('prediction_id', predictionIds);
+  if (reviewError) return jsonResponse({ success: false, error: 'PREDICTION_REVIEWS_READ_FAILED', detail: reviewError.message }, 500);
+  const reviewIds = ((reviews || []) as JsonRecord[]).map((row) => String(row.id || '')).filter(Boolean);
+  let cases: JsonRecord[] = [];
+  if (reviewIds.length > 0) {
+    const { data, error } = await client
+      .from('learning_cases')
+      .select('id,prediction_review_id')
+      .in('prediction_review_id', reviewIds);
+    if (error) return jsonResponse({ success: false, error: 'LEARNING_CASES_READ_FAILED', detail: error.message }, 500);
+    cases = (data || []) as JsonRecord[];
+  }
+
+  const runRecord = run as JsonRecord;
+  const originalMetrics = {
+    predictions_processed: Number(runRecord.predictions_processed || 0),
+    outcomes_created: Number(runRecord.outcomes_created || 0),
+    outcomes_updated: Number(runRecord.outcomes_updated || 0),
+    outcomes_unchanged: Number(runRecord.outcomes_unchanged || 0),
+    reviews_created: Number(runRecord.reviews_created || 0),
+    reviews_updated: Number(runRecord.reviews_updated || 0),
+    reviews_unchanged: Number(runRecord.reviews_unchanged || 0),
+    cases_created: Number(runRecord.cases_created || 0),
+    cases_unchanged: Number(runRecord.cases_unchanged || 0),
+  };
+  const authoritativeCounts = {
+    predictions: predictionIds.length,
+    outcomes: (outcomes || []).length,
+    reviews: (reviews || []).length,
+    cases: cases.length,
+    unique_prediction_ids: new Set(predictionIds).size,
+    unique_outcome_business_keys: new Set(((outcomes || []) as JsonRecord[]).map((row) => `${row.prediction_id}:${row.horizon}`)).size,
+    unique_review_prediction_ids: new Set(((reviews || []) as JsonRecord[]).map((row) => String(row.prediction_id || ''))).size,
+    unique_case_review_ids: new Set(cases.map((row) => String(row.prediction_review_id || ''))).size,
+  };
+  const correctedMetrics = {
+    predictions_processed: authoritativeCounts.predictions,
+    outcomes_created: authoritativeCounts.outcomes,
+    outcomes_updated: 0,
+    outcomes_unchanged: authoritativeCounts.outcomes,
+    reviews_created: authoritativeCounts.reviews,
+    reviews_updated: 0,
+    reviews_unchanged: authoritativeCounts.reviews,
+    cases_created: authoritativeCounts.cases,
+    cases_unchanged: authoritativeCounts.cases,
+    rows_inserted: 0,
+    rows_updated: 0,
+    rows_deleted: 0,
+  };
+
+  const { data: correctionId, error: correctionError } = await client.rpc('record_learning_metric_correction_v1', {
+    p_learning_run_id: String(runRecord.id),
+    p_business_date: targetDate,
+    p_idempotency_key: idempotencyKey,
+    p_engine_version: String(runRecord.engine_version || CLE_ENGINE_VERSION),
+    p_original_metrics: originalMetrics,
+    p_corrected_metrics: correctedMetrics,
+    p_authoritative_counts: authoritativeCounts,
+    p_reason_code: reason,
+    p_actor: actor,
+    p_request_id: requestId,
+  });
+  if (correctionError) return jsonResponse({ success: false, error: 'LEARNING_METRIC_CORRECTION_WRITE_FAILED', detail: correctionError.message }, 500);
+
+  return jsonResponse({
+    success: true,
+    reconciled: true,
+    target_date: targetDate,
+    learning_run_id: runRecord.id,
+    correction_id: correctionId,
+    original_metrics: originalMetrics,
+    corrected_metrics: correctedMetrics,
+    authoritative_counts: authoritativeCounts,
+    business_rows_mutated: 0,
+    notifications_sent: 0,
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== 'POST') return jsonResponse({ success: false, error: 'Only POST allowed' }, 405);
@@ -1197,6 +1321,15 @@ Deno.serve(async (req: Request) => {
 
   const body = await readRequestBody(req);
   const today = getTaipeiDateString();
+  const client = createClient<RuntimeDatabase>(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  if (body.mode === 'metrics_reconciliation') {
+    if (!isDateString(body.target_date) || body.target_date > today) {
+      return jsonResponse({ success: false, error: 'VALID_TARGET_DATE_REQUIRED' }, 400);
+    }
+    return reconcileLearningMetrics(client, body.target_date, body);
+  }
   const backfill = body.backfill === true;
   const requestedDate = body.target_date;
   if (requestedDate && (!backfill || !isDateString(requestedDate))) {
@@ -1222,9 +1355,6 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const client = createClient<RuntimeDatabase>(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
   const runType = backfill ? 'backfill' : 'daily';
   const runKey = `${targetDate}:${runType}:${CLE_ENGINE_VERSION}`;
 

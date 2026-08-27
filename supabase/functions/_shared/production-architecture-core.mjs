@@ -337,11 +337,28 @@ export function reconcileHttpReceipt(input = {}) {
   const status = Math.trunc(finiteNumber(input.http_status));
   const businessSuccess = input.payload?.success === true || input.payload?.ok === true;
   if (status >= 200 && status < 300 && businessSuccess) return { status: 'SUCCEEDED', retryable: false, dead_letter: false };
-  if (status === 401 || status === 403) return { status: 'DEAD_LETTERED', retryable: false, dead_letter: true };
+  const failure = classifyRuntimeFailure(input);
+  if (failure.error_class === 'AUTH') return { status: 'DEAD_LETTERED', retryable: false, dead_letter: true };
   if (input.timed_out === true) return { status: 'TIMED_OUT', retryable: true, dead_letter: false };
-  if (status === 409) return { status: 'FAILED', retryable: input.gate_can_recover === true, dead_letter: false };
-  if (status === 429 || status >= 500) return { status: 'FAILED', retryable: true, dead_letter: false };
-  return { status: 'FAILED', retryable: false, dead_letter: true };
+  return { status: 'FAILED', retryable: failure.retryable, dead_letter: failure.dead_letter };
+}
+
+export function classifyRuntimeFailure(input = {}) {
+  const status = Math.trunc(finiteNumber(input.http_status));
+  if (input.idempotent_replay === true || input.duplicate === true) {
+    return { error_class: 'DUPLICATE', retryable: false, dead_letter: false };
+  }
+  if (status === 401 || status === 403) {
+    return { error_class: 'AUTH', retryable: false, dead_letter: true };
+  }
+  if (status === 409) {
+    const changed = input.input_revision_changed === true || input.gate_can_recover === true;
+    return { error_class: 'QUALITY_BLOCK', retryable: changed, dead_letter: false };
+  }
+  if (input.timed_out === true || status === 429 || status >= 500) {
+    return { error_class: 'TRANSIENT', retryable: true, dead_letter: false };
+  }
+  return { error_class: 'PERMANENT', retryable: false, dead_letter: true };
 }
 
 function normalizedTokens(value) {
@@ -352,6 +369,224 @@ function normalizedTokens(value) {
     return Array.from({ length: segment.length - 1 }, (_, index) => segment.slice(index, index + 2));
   });
   return unique([...words, ...han]);
+}
+
+const DATA_QUALITY_RANK = Object.freeze({
+  blocked: 0,
+  insufficient: 1,
+  missing: 1,
+  partial: 2,
+  degraded: 2,
+  sufficient: 3,
+  complete: 4,
+});
+
+function dataQualityRank(value) {
+  return DATA_QUALITY_RANK[String(value || '').trim().toLowerCase()] ?? 0;
+}
+
+export function resolveCanonicalDataQuality(values = []) {
+  const normalized = unique(values.map((value) => String(value || '').trim().toLowerCase()))
+    .filter((value) => Object.prototype.hasOwnProperty.call(DATA_QUALITY_RANK, value));
+  if (normalized.length === 0) return 'insufficient';
+  return normalized.sort((left, right) => dataQualityRank(left) - dataQualityRank(right))[0];
+}
+
+function asPlainRecord(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function firstText(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function records(value) {
+  return Array.isArray(value) ? value.filter((item) => item && typeof item === 'object' && !Array.isArray(item)) : [];
+}
+
+function recommendationSymbol(value) {
+  const record = asPlainRecord(value);
+  return firstText(record.symbol, record.stock_code, record.ticker).toUpperCase().replace(/^TWSE:/, '').replace(/\.TW$/, '');
+}
+
+export function buildCanonicalDecisionContract(input = {}) {
+  const snapshot = asPlainRecord(input.snapshot);
+  const generated = asPlainRecord(snapshot.generated_text);
+  const ai = asPlainRecord(input.ai);
+  const sourceRecommendations = records(generated.recommendations).length > 0
+    ? records(generated.recommendations)
+    : records(ai.today_beneficiary_stocks_v10);
+  const first = asPlainRecord(sourceRecommendations[0]);
+  const primaryEvent = firstText(first.event_source, first.trigger_event, first.primary_event);
+  const primaryTheme = firstText(first.sector, first.industry_name, first.primary_taiwan_theme);
+  const primaryRecommendations = sourceRecommendations.filter((candidate) => {
+    const record = asPlainRecord(candidate);
+    const event = firstText(record.event_source, record.trigger_event, record.primary_event);
+    const theme = firstText(record.sector, record.industry_name, record.primary_taiwan_theme);
+    if (!primaryEvent && !primaryTheme) return candidate === sourceRecommendations[0];
+    return (primaryEvent && event === primaryEvent) || (primaryTheme && theme === primaryTheme);
+  });
+  const primarySymbols = unique(primaryRecommendations.map(recommendationSymbol).filter(Boolean));
+  const validationSignals = unique(primaryRecommendations.flatMap((candidate) => {
+    const record = asPlainRecord(candidate);
+    return [record.confirmation_condition, record.confirmation, record.validation_signal, record.watch_point];
+  }).map(String).filter(Boolean));
+  const invalidationConditions = unique(primaryRecommendations.flatMap((candidate) => {
+    const record = asPlainRecord(candidate);
+    return [record.invalidation_condition, record.invalidation, record.stop_condition, record.stop_observing_condition];
+  }).map(String).filter(Boolean));
+  const evidenceRefs = unique(primaryRecommendations.flatMap((candidate) => {
+    const record = asPlainRecord(candidate);
+    return [record.source_refs, record.source_references, record.supporting_evidence, record.evidence]
+      .filter(Array.isArray)
+      .flatMap((items) => items.map((item) => typeof item === 'string' ? item : JSON.stringify(item)));
+  }));
+  if (evidenceRefs.length === 0 && Array.isArray(snapshot.source_refs)) {
+    evidenceRefs.push(...unique(snapshot.source_refs.map((item) => typeof item === 'string' ? item : JSON.stringify(item))));
+  }
+  const primaryTransmission = firstText(first.transmission_path, first.transmission_logic, first.taiwan_supply_chain_relation);
+  const dataQualityStatus = resolveCanonicalDataQuality([
+    ai.data_quality,
+    ai.v10_data_quality_status,
+    asPlainRecord(ai.member_research_note_v2).data_status,
+    asPlainRecord(ai.raw_ai_json).v10_data_quality_status,
+  ]);
+  return {
+    contract_version: 'CANONICAL_DECISION_CONTRACT_V2',
+    report_date: String(input.report_date || snapshot.report_date || ''),
+    snapshot_id: String(snapshot.id || ''),
+    snapshot_version: Number.isFinite(Number(snapshot.version)) ? Number(snapshot.version) : null,
+    primary_event: primaryEvent,
+    primary_causal_chain: unique([primaryEvent, primaryTransmission, primaryTheme, ...primarySymbols].filter(Boolean)),
+    primary_taiwan_theme: primaryTheme,
+    primary_symbols: primarySymbols,
+    validation_checkpoint: firstText(generated.next_checkpoint, input.validation_checkpoint),
+    validation_signals: validationSignals,
+    invalidation_conditions: invalidationConditions,
+    action: firstText(snapshot.action, generated.action),
+    data_quality_status: dataQualityStatus,
+    evidence_refs: evidenceRefs,
+  };
+}
+
+export function buildCanonicalMemberResearchRevision(input = {}) {
+  const ai = asPlainRecord(input.ai);
+  const contract = asPlainRecord(input.canonical_contract);
+  const snapshot = asPlainRecord(input.snapshot);
+  const generated = asPlainRecord(snapshot.generated_text);
+  const allowedSymbols = new Set(unique(contract.primary_symbols).map((value) => String(value).toUpperCase()));
+  const recommendations = records(generated.recommendations).filter((candidate) => allowedSymbols.has(recommendationSymbol(candidate)));
+  const thesis = firstText(generated.daily_sentence, input.daily_sentence);
+  const first = asPlainRecord(recommendations[0]);
+  const transmission = firstText(first.transmission_path, first.transmission_logic, Array.isArray(contract.primary_causal_chain) ? contract.primary_causal_chain.join(' → ') : '');
+  const validation = unique(recommendations.flatMap((candidate) => {
+    const record = asPlainRecord(candidate);
+    return [record.confirmation_condition, record.confirmation, record.validation_signal, record.watch_point];
+  }).map(String).filter(Boolean));
+  const invalidation = unique(recommendations.flatMap((candidate) => {
+    const record = asPlainRecord(candidate);
+    return [record.invalidation_condition, record.invalidation, record.stop_condition, record.stop_observing_condition];
+  }).map(String).filter(Boolean));
+  const sourceRefs = unique(recommendations.flatMap((candidate) => {
+    const record = asPlainRecord(candidate);
+    return [record.source_refs, record.source_references, record.supporting_evidence, record.evidence]
+      .filter(Array.isArray)
+      .flatMap((items) => items.map((item) => typeof item === 'string' ? item : JSON.stringify(item)));
+  }));
+  if (sourceRefs.length === 0 && Array.isArray(contract.evidence_refs)) sourceRefs.push(...unique(contract.evidence_refs));
+  return {
+    contract_version: 'MEMBER_RESEARCH_REVISION_V1',
+    canonical_contract: contract,
+    data_status: contract.data_quality_status || 'insufficient',
+    today_core_thesis: thesis,
+    strategy_summary: thesis,
+    subscriber_value_sentence: thesis,
+    taiwan_transmission: transmission,
+    beneficiary_candidates: recommendations,
+    representative_stocks: recommendations,
+    intraday_validation: validation,
+    invalidation_conditions: invalidation,
+    invalidation_rules: invalidation,
+    source_refs: sourceRefs,
+    line_summary: thesis,
+    content_os_topic: {
+      event_source: contract.primary_event,
+      theme: contract.primary_taiwan_theme,
+      symbols: contract.primary_symbols,
+    },
+    source_member_data_status: asPlainRecord(ai.member_research_note_v2).data_status || null,
+  };
+}
+
+export function evaluateCanonicalSemanticCoherenceGate(input = {}) {
+  const contract = asPlainRecord(input.canonical_contract);
+  const requiredFields = [
+    'report_date', 'snapshot_id', 'snapshot_version', 'primary_event', 'primary_causal_chain',
+    'primary_taiwan_theme', 'primary_symbols', 'validation_checkpoint', 'validation_signals',
+    'invalidation_conditions', 'action', 'data_quality_status', 'evidence_refs',
+  ];
+  const reasonCodes = [];
+  const conflictingFields = [];
+  for (const field of requiredFields) {
+    const value = contract[field];
+    if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
+      reasonCodes.push('CANONICAL_CONTRACT_INCOMPLETE');
+      conflictingFields.push(field);
+    }
+  }
+  const primaryTokens = normalizedTokens([
+    contract.primary_event,
+    contract.primary_taiwan_theme,
+    ...(Array.isArray(contract.primary_symbols) ? contract.primary_symbols : []),
+  ].join(' '));
+  const sections = asPlainRecord(input.sections);
+  for (const [field, value] of Object.entries(sections)) {
+    const tokens = normalizedTokens(typeof value === 'string' ? value : JSON.stringify(value));
+    if (tokens.length > 0 && overlapScore(primaryTokens, tokens) === 0) {
+      reasonCodes.push('PRIMARY_THESIS_DIVERGENCE');
+      conflictingFields.push(field);
+    }
+  }
+  const recommendationRows = records(input.recommendations);
+  const primarySymbols = new Set(unique(contract.primary_symbols).map((value) => String(value).toUpperCase()));
+  for (const recommendation of recommendationRows) {
+    const symbol = recommendationSymbol(recommendation);
+    const record = asPlainRecord(recommendation);
+    if (symbol && !primarySymbols.has(symbol) && record.thesis_role !== 'secondary') {
+      reasonCodes.push('RECOMMENDATION_OUTSIDE_CANONICAL_THESIS');
+      conflictingFields.push(`recommendations.${symbol}`);
+    }
+  }
+  const sourceQuality = resolveCanonicalDataQuality(input.quality_inputs || []);
+  if (dataQualityRank(contract.data_quality_status) > dataQualityRank(sourceQuality)) {
+    reasonCodes.push('DATA_QUALITY_UPGRADE_BLOCKED');
+    conflictingFields.push('data_quality_status');
+  }
+  const counters = asPlainRecord(input.quality_counters);
+  for (const field of ['unsupported_claim_count', 'contradiction_count', 'duplicate_claim_count', 'missing_section_count']) {
+    if (Number(counters[field] || 0) > 0) {
+      reasonCodes.push('RESEARCH_QUALITY_COUNTER_NONZERO');
+      conflictingFields.push(field);
+    }
+  }
+  if (Number(input.evidence_coverage) !== 100) reasonCodes.push('EVIDENCE_COVERAGE_BELOW_100');
+  if (Number(input.content_score) < 90) reasonCodes.push('CONTENT_SCORE_BELOW_90');
+  const uniqueReasons = unique(reasonCodes);
+  const status = uniqueReasons.length === 0 ? 'PASSED' : 'BLOCKED';
+  return {
+    status,
+    eligible: status === 'PASSED',
+    reason_codes: uniqueReasons,
+    conflicting_fields: unique(conflictingFields),
+    canonical_snapshot_id: String(contract.snapshot_id || ''),
+    canonical_snapshot_version: Number.isFinite(Number(contract.snapshot_version)) ? Number(contract.snapshot_version) : null,
+    checked_at: String(input.checked_at || new Date().toISOString()),
+    gate_version: 'SEMANTIC_COHERENCE_V2',
+    source_data_quality_status: sourceQuality,
+  };
 }
 
 export function evaluateSemanticCoherenceGate(input = {}) {

@@ -18,6 +18,14 @@ const ACTIONS = {
     defaultBody: { mode: 'health_check', check_type: 'closing', source: 'ma-ops-safe-recovery' },
   },
   retry_continuous_learning: { target: 'continuous-learning-engine', defaultBody: {} },
+  rebuild_member_content_revision: {
+    target: 'generate-daily-report-v7',
+    defaultBody: { mode: 'canonical_member_recovery', source: 'ma-ops-safe-recovery', suppress_notifications: true },
+  },
+  reconcile_learning_metrics: {
+    target: 'continuous-learning-engine',
+    defaultBody: { mode: 'metrics_reconciliation', source: 'ma-ops-safe-recovery', suppress_notifications: true },
+  },
 } as const;
 
 type ActionName = keyof typeof ACTIONS;
@@ -57,6 +65,12 @@ Deno.serve(async (req: Request) => {
   const config = ACTIONS[action];
   const dryRun = body.dry_run !== false;
   const approved = body.approved === true;
+  const actor = String(body.actor || '').trim();
+  const reason = String(body.reason || '').trim();
+  const requestId = String(body.request_id || '').trim();
+  if (!dryRun && approved && (!actor || !reason || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId))) {
+    return jsonResponse({ success: false, executed: false, error: 'RECOVERY_APPROVAL_EVIDENCE_REQUIRED' }, 400);
+  }
   const attempt = Math.max(1, Math.trunc(Number(body.attempt) || 1));
   const retryDecision = buildRetryDecision({
     attempt,
@@ -67,8 +81,16 @@ Deno.serve(async (req: Request) => {
   const correlationId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedCorrelation)
     ? requestedCorrelation
     : crypto.randomUUID();
-  const requestPayload = { ...config.defaultBody, ...asRecord(body.payload), recovery_attempt: attempt };
   const idempotencyKey = String(body.idempotency_key || `${action}:${correlationId}:${attempt}`);
+  const requestPayload = {
+    ...config.defaultBody,
+    ...asRecord(body.payload),
+    recovery_attempt: attempt,
+    recovery_idempotency_key: idempotencyKey,
+    recovery_request_id: requestId || null,
+    recovery_actor: actor || null,
+    recovery_reason: reason || null,
+  };
   const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
   const { data: existingAudit, error: existingAuditError } = await supabase
@@ -97,6 +119,9 @@ Deno.serve(async (req: Request) => {
     before_json: {
       dry_run: dryRun,
       correlation_id: correlationId,
+      request_id: requestId || null,
+      actor: actor || null,
+      reason: reason || null,
       attempt,
       retry_decision: retryDecision,
       request_payload: requestPayload,

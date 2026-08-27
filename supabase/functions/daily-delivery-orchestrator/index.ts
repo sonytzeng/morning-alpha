@@ -263,7 +263,11 @@ async function loadDeliveryState(
   supabase: SupabaseClient,
   reportDate: string,
 ): Promise<DeliveryState> {
-  const [{ data: report, error: reportError }, { data: snapshot, error: snapshotError }] = await Promise.all([
+  const [
+    { data: report, error: reportError },
+    { data: snapshot, error: snapshotError },
+    { data: memberRevision, error: memberRevisionError },
+  ] = await Promise.all([
     supabase
       .from('reports')
       .select('id,report_date,ai_strategy_json,important_news_json,created_at,updated_at')
@@ -278,10 +282,18 @@ async function loadDeliveryState(
       .order('version', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('current_member_content_revisions_v1')
+      .select('id,status,semantic_status,decision_snapshot_id,decision_snapshot_version,revision,data_quality_status')
+      .eq('report_date', reportDate)
+      .order('revision', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (reportError) throw new Error(`REPORT_STATE_QUERY_FAILED:${reportError.message}`);
   if (snapshotError) throw new Error(`SNAPSHOT_STATE_QUERY_FAILED:${snapshotError.message}`);
+  if (memberRevisionError) throw new Error(`MEMBER_REVISION_STATE_QUERY_FAILED:${memberRevisionError.message}`);
   if (!report) {
     return {
       report: null,
@@ -304,17 +316,25 @@ async function loadDeliveryState(
     && snapshotRecord?.status === 'READY'
     && Number(snapshotRecord?.content_score) >= 90
     && ['recommendations', 'no_trade'].includes(String(snapshotRecord?.decision_mode || ''));
+  const memberRevisionRecord = memberRevision ? asRecord(memberRevision) : null;
+  const memberRevisionReady = Boolean(memberRevisionRecord)
+    && memberRevisionRecord?.status === 'PASSED'
+    && memberRevisionRecord?.semantic_status === 'PASSED'
+    && String(memberRevisionRecord?.decision_snapshot_id || '') === String(snapshotRecord?.id || '')
+    && Number(memberRevisionRecord?.decision_snapshot_version) === Number(snapshotRecord?.version);
   const reasonCodes = Array.from(new Set([
     ...premiumGate.reason_codes,
     ...asStringArray(snapshotRecord?.reason_codes),
     ...(snapshotRecord ? [] : ['decision_snapshot_missing']),
     ...(snapshotReady ? [] : ['decision_snapshot_not_publishable']),
+    ...(memberRevisionRecord ? [] : ['semantic_member_revision_missing']),
+    ...(memberRevisionReady ? [] : ['semantic_member_revision_not_publishable']),
   ]));
 
   return {
     report: reportRecord,
     snapshot: snapshotRecord,
-    premium_eligible: premiumGate.eligible && snapshotReady,
+    premium_eligible: premiumGate.eligible && snapshotReady && memberRevisionReady,
     reason_codes: reasonCodes,
   };
 }

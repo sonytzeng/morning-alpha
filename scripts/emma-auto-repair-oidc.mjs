@@ -130,6 +130,10 @@ export function githubFailureCode(operation, response) {
   return `${safeOperation}_HTTP_${status}`;
 }
 
+export function seedBaseSha(seedCommit) {
+  return seedCommit?.parents?.length === 1 ? exactSha(seedCommit.parents[0]?.sha) : '';
+}
+
 async function dispatchClaim(claim) {
   const repoPath = '/repos/sonytzeng/morning-alpha';
   const baseLookup = await github(`${repoPath}/git/ref/heads/main`);
@@ -150,8 +154,9 @@ async function dispatchClaim(claim) {
     if (!headSha) throw new Error('BRANCH_LOOKUP_FAILED');
   }
 
-  const taskText = buildTask(claim, baseSha);
-  const taskSha256 = createHash('sha256').update(taskText).digest('hex');
+  let taskText = buildTask(claim, baseSha);
+  let immutableBaseSha = baseSha;
+  let existingTaskText = null;
   const taskLookup = await github(`${repoPath}/contents/${claim.task_path}?ref=${encodeURIComponent(claim.head_ref)}`);
   let seedHeadSha = '';
   if (taskLookup.response.status === 404) {
@@ -163,9 +168,8 @@ async function dispatchClaim(claim) {
     seedHeadSha = created.response.ok ? exactSha(created.body?.commit?.sha) : '';
     if (!seedHeadSha) throw new Error('TASK_CREATE_FAILED');
   } else if (taskLookup.response.ok) {
-    const existing = typeof taskLookup.body?.content === 'string'
+    existingTaskText = typeof taskLookup.body?.content === 'string'
       ? Buffer.from(taskLookup.body.content.replace(/\s/g, ''), 'base64').toString('utf8') : '';
-    if (existing !== taskText) throw new Error('TASK_REPLAY_MISMATCH');
     const history = await github(`${repoPath}/commits?path=${encodeURIComponent(claim.task_path)}&sha=${encodeURIComponent(claim.head_ref)}&per_page=2`);
     if (!history.response.ok || !Array.isArray(history.body) || history.body.length !== 1) throw new Error('TASK_HISTORY_INVALID');
     seedHeadSha = exactSha(history.body[0]?.sha);
@@ -173,7 +177,14 @@ async function dispatchClaim(claim) {
   } else throw new Error('TASK_LOOKUP_FAILED');
 
   const seed = await github(`${repoPath}/commits/${seedHeadSha}`);
-  if (!seed.response.ok || seed.body?.parents?.length !== 1 || seed.body.parents[0]?.sha !== baseSha ||
+  if (existingTaskText !== null) {
+    immutableBaseSha = seedBaseSha(seed.body);
+    if (!immutableBaseSha) throw new Error('TASK_SEED_BASE_INVALID');
+    taskText = buildTask(claim, immutableBaseSha);
+    if (existingTaskText !== taskText) throw new Error('TASK_REPLAY_MISMATCH');
+  }
+  const taskSha256 = createHash('sha256').update(taskText).digest('hex');
+  if (!seed.response.ok || seedBaseSha(seed.body) !== immutableBaseSha ||
       seed.body?.files?.length !== 1 || seed.body.files[0]?.filename !== claim.task_path || seed.body.files[0]?.status !== 'added' ||
       seed.body?.commit?.message !== `chore(emma): seed automatic repair ${claim.dispatch_id}`) throw new Error('TASK_SEED_COMMIT_INVALID');
 
@@ -221,7 +232,7 @@ async function dispatchClaim(claim) {
   if (!final.response.ok || final.body?.draft !== true || final.body?.merged_at != null || final.body?.head?.sha !== seedHeadSha) {
     throw new Error('FINAL_DRAFT_VERIFICATION_FAILED');
   }
-  return { dispatch_id: claim.dispatch_id, claim_token: claim.claim_token, base_sha: baseSha,
+  return { dispatch_id: claim.dispatch_id, claim_token: claim.claim_token, base_sha: immutableBaseSha,
     seed_head_sha: seedHeadSha, task_sha256: taskSha256, pull_request_number: pull.number,
     pull_request_url: pull.html_url, dispatch_comment_id: comment.id,
     dispatch_comment_created_at: comment.created_at };

@@ -15,7 +15,7 @@ const marketSource = await readFile(new URL('../supabase/functions/fetch-market-
 const newsSource = await readFile(new URL('../supabase/functions/fetch-global-market-news/index.ts', import.meta.url), 'utf8');
 const reportSource = await readFile(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
 const deliveryOrchestratorSource = await readFile(new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url), 'utf8');
-const runtimeCronMigration = await readFile(new URL('../supabase/migrations/20260824110000_runtime_checkpoint_cron_backup.sql', import.meta.url), 'utf8');
+const runtimeCronMigration = await readFile(new URL('../supabase/migrations/20260824032831_runtime_checkpoint_cron_backup.sql', import.meta.url), 'utf8');
 const intradayContractSource = await readFile(new URL('../supabase/functions/_shared/intraday-runtime-contract.ts', import.meta.url), 'utf8');
 
 test('decision modes always map to the production decision_snapshots action contract', () => {

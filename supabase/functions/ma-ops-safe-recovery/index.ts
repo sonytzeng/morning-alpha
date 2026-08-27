@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 import { buildRetryDecision, RUNTIME_QUALITY_POLICY } from '../_shared/production-architecture-core.mjs';
+import { authorizeInternalRequest, buildInternalFunctionHeaders, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,10 @@ const ACTIONS = {
   retry_market_data: { target: 'fetch-market-data-v10', defaultBody: { phase: 'manual_backfill', force_run: true } },
   regenerate_report: { target: 'generate-daily-report-v7', defaultBody: { quality_retry: true } },
   retry_closing_verification: { target: 'closing-verification-engine', defaultBody: {} },
+  retry_closing_health: {
+    target: 'daily-delivery-orchestrator',
+    defaultBody: { mode: 'health_check', check_type: 'closing', source: 'ma-ops-safe-recovery' },
+  },
   retry_continuous_learning: { target: 'continuous-learning-engine', defaultBody: {} },
 } as const;
 
@@ -37,12 +42,8 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== 'POST') return jsonResponse({ success: false, error: 'METHOD_NOT_ALLOWED' }, 405);
 
-  const expectedSecret = Deno.env.get('CRON_SECRET') || '';
-  if (!expectedSecret) return jsonResponse({ success: false, error: 'CRON_SECRET_NOT_CONFIGURED' }, 500);
-  if ((req.headers.get('x-cron-secret') || '') !== expectedSecret) {
-    return jsonResponse({ success: false, error: 'UNAUTHORIZED' }, 401);
-  }
-
+  const auth = await authorizeInternalRequest(req.headers, internalCredentialsFromEnv());
+  if (!auth.ok) return jsonResponse({ success: false, error: auth.error_code, error_code: auth.error_code }, 401);
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
   if (!supabaseUrl || !serviceRoleKey) return jsonResponse({ success: false, error: 'SUPABASE_CREDENTIALS_MISSING' }, 500);
@@ -143,8 +144,11 @@ Deno.serve(async (req: Request) => {
     const response = await fetch(`${supabaseUrl}/functions/v1/${config.target}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-cron-secret': expectedSecret,
+        ...buildInternalFunctionHeaders({
+          cronSecret: Deno.env.get('CRON_SECRET') || '',
+          serviceRoleKey,
+          source: 'ma-ops-safe-recovery',
+        }),
         'x-correlation-id': correlationId,
       },
       body: JSON.stringify(requestPayload),

@@ -166,3 +166,4 @@ grant execute on function public.get_public_performance_journal(integer) to auth
 
 comment on function public.get_public_performance_journal(integer) is
   'Public performance ledger reconciled from the canonical report and the authoritative unique close_market_review.';
+;

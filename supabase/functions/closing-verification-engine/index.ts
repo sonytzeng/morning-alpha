@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { resolveMarketStatus } from "../_shared/market-status.ts";
-import { hasValidInternalCredentials } from "../_shared/internal-function-auth.mjs";
+import { authorizeInternalRequest, internalCredentialsFromEnv } from "../_shared/internal-function-auth.mjs";
 import {
   CORE_SYMBOL_ALIASES,
   CORE_SYMBOL_QUERY_ALIASES,
@@ -295,6 +295,12 @@ async function parseRequestBody(req: Request): Promise<Record<string, unknown>> 
 
 function normalizeSymbol(value: unknown): string {
   return String(value || "").trim().toUpperCase();
+}
+
+async function sha256Hex(value: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function readSymbolFromStock(row: unknown): string {
@@ -833,21 +839,11 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: false, error: "Only POST allowed" }, 405);
   }
 
-  const expectedSecret = Deno.env.get("CRON_SECRET");
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  if (!expectedSecret) {
-    return jsonResponse({ success: false, error: "CRON_SECRET not set" }, 500);
-  }
-  if (!supabaseUrl || !serviceRoleKey) {
-    return jsonResponse({
-      success: false,
-      error: "Supabase credentials missing",
-    }, 500);
-  }
-  if (!hasValidInternalCredentials(req.headers, { cronSecret: expectedSecret, serviceRoleKey })) {
-    return jsonResponse({ success: false, error: "Unauthorized" }, 401);
-  }
+  if (!supabaseUrl || !serviceRoleKey) return jsonResponse({ success: false, error: "Supabase credentials missing" }, 500);
+  const auth = await authorizeInternalRequest(req.headers, internalCredentialsFromEnv());
+  if (!auth.ok) return jsonResponse({ success: false, error: auth.error_code, error_code: auth.error_code }, 401);
 
   const requestBody = await parseRequestBody(req);
   const today = getTaipeiDateString();
@@ -973,6 +969,20 @@ Deno.serve(async (req: Request) => {
     verificationDate,
   );
   const closeWindow = closeMarket.closeWindow;
+  const evidenceFingerprint = await sha256Hex({
+    report_date: verificationDate,
+    opening_decision_snapshot_id: morningDecisionRow?.id || null,
+    opening_decision_snapshot_version: morningDecisionRow?.version || null,
+    close_rows: closeMarket.rows.map((row) => ({ symbol: normalizeSymbol(row.symbol), value: row.value, change: row.change, captured_at: row.capturedAt, source: row.source })).sort((left, right) => left.symbol.localeCompare(right.symbol)),
+  });
+  const existingClosing = await supabase.from("decision_snapshots")
+    .select("id,generated_text").eq("report_date", verificationDate).eq("session_type", "CLOSING").eq("is_current", true).maybeSingle();
+  if (!existingClosing.error && existingClosing.data) {
+    const generated = parseJsonObject(existingClosing.data.generated_text);
+    if (generated.evidence_fingerprint === evidenceFingerprint) {
+      return jsonResponse({ success: true, verification_date: verificationDate, closing_verification_status: "completed", closing_decision_snapshot_id: existingClosing.data.id, status: "SKIPPED_ALREADY_SUCCEEDED", log_inserted: false, log_reused: true, no_fake_data: true });
+    }
+  }
   const taiexCloseRow = rowBySymbol(closeMarket.rows, [
     ...CORE_SYMBOL_ALIASES.TAIEX,
   ]);
@@ -1348,6 +1358,7 @@ Deno.serve(async (req: Request) => {
       actual_taiex_change: taiexChange,
       verification_note: closingVerification.verification_note,
       lessons_learned: lessonsLearned,
+      evidence_fingerprint: evidenceFingerprint,
     },
     input_coverage: {
       taiex_close: Boolean(taiexCloseRow),

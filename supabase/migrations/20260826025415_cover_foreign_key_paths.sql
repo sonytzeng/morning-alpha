@@ -37,3 +37,4 @@ create index if not exists strategy_registry_rollback_target_id_idx
   on public.strategy_registry (rollback_target_id);
 create index if not exists strategy_registry_audit_actor_id_idx
   on public.strategy_registry_audit (actor_id);
+;

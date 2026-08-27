@@ -90,7 +90,7 @@ export function normalizeMarketDataRows(
     if (value === null) invalidFields.push('value');
     if (changePercent === null) invalidFields.push('change_percent');
 
-    if (!symbol || invalidFields.length > 0) {
+    if (!symbol || value === null || changePercent === null) {
       invalidNumericSources.add(`${symbol || 'unknown'}:${invalidFields.length > 0 ? invalidFields.join('+') : 'symbol'}`);
       continue;
     }

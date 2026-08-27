@@ -31,7 +31,7 @@ export function evaluateResearchQualityGate(
   researchMasterValue: unknown,
   minimumScore = 90,
 ): ResearchQualityGateResult {
-  const requiredScore = normalizedMinimum(minimumScore);
+  const requiredScore = Math.max(100, normalizedMinimum(minimumScore));
   const researchMaster = asRecord(researchMasterValue);
   const available = Object.keys(researchMaster).length > 0;
   const quality = asRecord(researchMaster.quality);
@@ -58,8 +58,8 @@ export function evaluateResearchQualityGate(
   if (!publishableStatuses.has(publishStatus)) {
     reasonCodes.push("research_publish_status_not_ready");
   }
-  if (evidenceCoverage === null || evidenceCoverage < requiredScore) {
-    reasonCodes.push("research_evidence_coverage_below_90");
+  if (evidenceCoverage === null || evidenceCoverage < 100) {
+    reasonCodes.push("research_evidence_coverage_below_100");
   }
   if (unsupportedClaims.length > 0) {
     reasonCodes.push("research_unsupported_claims_present");

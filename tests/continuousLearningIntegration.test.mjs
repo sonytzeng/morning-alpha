@@ -11,8 +11,8 @@ const deployWorkflowPath = new URL('../.github/workflows/deploy-morning-alpha-ru
 const learningCenterPath = new URL('../src/pages/admin/learning/page.tsx', import.meta.url);
 const closingVerificationPath = new URL('../supabase/functions/closing-verification-engine/index.ts', import.meta.url);
 const deliveryOrchestratorPath = new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url);
-const cronBackupPath = new URL('../supabase/migrations/20260824165454_continuous_learning_cron_backup.sql', import.meta.url);
-const sessionContractPath = new URL('../supabase/migrations/20260824180744_align_decision_snapshot_session_contract.sql', import.meta.url);
+const cronBackupPath = new URL('../supabase/migrations/20260824095332_continuous_learning_cron_backup.sql', import.meta.url);
+const sessionContractPath = new URL('../supabase/migrations/20260824101201_align_decision_snapshot_session_contract.sql', import.meta.url);
 
 const [
   migration,
@@ -64,7 +64,8 @@ test('predictions and audit logs are append-only while outcome jobs remain idemp
   assert.match(migration, /unique \(prediction_id, horizon\)/);
   assert.match(migration, /idempotency_key text not null unique/);
   assert.match(engine, /onConflict: 'prediction_id,horizon'/);
-  assert.match(engine, /onConflict: 'prediction_review_id,case_type'/);
+  assert.match(engine, /from\('learning_cases'\)\.select\('prediction_review_id,case_type'\)/);
+  assert.match(engine, /newCaseRows = caseRows\.filter/);
   assert.match(engine, /NO_TRUSTED_PREDICTIONS/);
   assert.match(engine, /CANONICAL_REPORT_MISSING/);
   assert.match(engine, /CANONICAL_DECISION_SNAPSHOT_MISSING/);
@@ -142,7 +143,8 @@ test('learning executes in an isolated job even when the closing job fails', () 
 test('daily learning waits for verified closing state without weakening explicit backfill', () => {
   assert.match(engine, /if \(!backfill\) \{/);
   assert.match(engine, /\.from\('trading_day_state'\)/);
-  assert.match(engine, /Number\(tradingDayState\?\.state_rank \|\| 0\) >= 80/);
+  assert.match(engine, /Number\(tradingDayState\?\.state_rank \|\| 0\) >= 110/);
+  assert.match(engine, /String\(closingStatus\.status \|\| ''\) === 'SUCCEEDED'/);
   assert.match(engine, /CLOSING_VERIFICATION_INCOMPLETE/);
   assert.match(engine, /production_rule_mutated: false/);
 });

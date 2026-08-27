@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { normalizeProviderQuote, summarizeProviderHealth } from '../_shared/market-provider-adapter.mjs';
 import {
@@ -857,20 +858,11 @@ Deno.serve(async (req) => {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    // ── Auth: x-cron-secret ──
-    const incomingCronSecret = req.headers.get("x-cron-secret") || "";
-    const cronSecret = Deno.env.get("CRON_SECRET") || "";
-    if (!cronSecret) {
-      console.error(`[${batchTag}] CRON_SECRET is not configured`);
+    // ── Auth: shared internal service contract ──
+    const auth = await authorizeInternalRequest(req.headers, internalCredentialsFromEnv());
+    if (!auth.ok) {
       return new Response(
-        JSON.stringify({ success: false, error: "Server configuration error", reason: "CRON_SECRET is not configured" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
-      );
-    }
-
-    if (incomingCronSecret !== cronSecret) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Unauthorized" }),
+        JSON.stringify({ success: false, error: auth.error_code, error_code: auth.error_code }),
         { status: 401, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
       );
     }

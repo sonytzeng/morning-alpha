@@ -61,3 +61,4 @@ $$;
 
 comment on function public.invoke_continuous_learning_tick_v1() is
   'Independent Supabase Cron watchdog for same-day Continuous Learning after closing verification.';
+;

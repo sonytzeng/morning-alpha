@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { resolveMarketStatus } from "../_shared/market-status.ts";
+import { authorizeInternalRequest, internalCredentialsFromEnv } from "../_shared/internal-function-auth.mjs";
 import {
   CORE_SYMBOL_QUERY_ALIASES,
   evaluateIntradayCheckpointRows,
@@ -531,25 +532,14 @@ Deno.serve(async (req) => {
   function log(m: string) { const line = `[${new Date().toISOString()}] ${m}`; logs.push(line); console.log(line); }
 
   try {
-    const cronSecret = req.headers.get('x-cron-secret') || '';
-    const authHeader = req.headers.get('Authorization') || '';
-    const envCronSecret = Deno.env.get('CRON_SECRET') || '';
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-    const supabaseServiceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-
-    const hasValidCronSecret = envCronSecret && cronSecret === envCronSecret;
-    const hasValidBearer = authHeader.startsWith('Bearer ') &&
-      (authHeader.slice(7) === supabaseAnonKey || authHeader.slice(7) === supabaseServiceRole);
-
-    if (!hasValidCronSecret && !hasValidBearer) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
-    }
+    const auth = await authorizeInternalRequest(req.headers, internalCredentialsFromEnv());
+    if (!auth.ok) return new Response(JSON.stringify({ success: false, error: auth.error_code, error_code: auth.error_code }), { status: 401, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
 
     log(`=== Opening Market Radar ${VERSION} [${requestId}] ===`);
 
     const supabase = createRuntimeClient(
       Deno.env.get('SUPABASE_URL') || '',
-      supabaseServiceRole,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
     );
 
     const today = getTaiwanDateString();

@@ -88,7 +88,7 @@ test('past-due state fails closed', () => {
 
 test('migration keeps entitlement writes server-only and payment events idempotent', async () => {
   const migration = await readFile(
-    new URL('../supabase/migrations/20260823230000_member_access_trial_state_machine.sql', import.meta.url),
+    new URL('../supabase/migrations/20260822183421_member_access_trial_state_machine.sql', import.meta.url),
     'utf8',
   );
   assert.match(migration, /alter table public\.member_entitlements enable row level security/i);

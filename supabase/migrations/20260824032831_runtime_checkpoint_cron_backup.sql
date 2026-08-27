@@ -75,3 +75,4 @@ $$;
 
 comment on function public.invoke_runtime_checkpoint_tick_v1(text) is
   'Independent Supabase Cron backup for all Morning Alpha intraday and closing checkpoints.';
+;

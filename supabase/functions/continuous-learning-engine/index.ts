@@ -16,6 +16,8 @@ import {
   stableCaseSignature,
 } from '../_shared/continuous-learning-core.mjs';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
+import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
+import type { RuntimeDatabase } from '../_shared/runtime-database-contract.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -24,7 +26,7 @@ const CORS_HEADERS = {
 };
 
 type JsonRecord = Record<string, unknown>;
-type RuntimeClient = ReturnType<typeof createClient>;
+type RuntimeClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 
 type SnapshotRow = {
   symbol: string;
@@ -520,7 +522,7 @@ async function updateOutcomes(
   targetDate: string,
   predictions: PredictionRow[],
   snapshots: SnapshotRow[],
-): Promise<OutcomeRow[]> {
+): Promise<{ outcomes: OutcomeRow[]; created: number; updated: number; unchanged: number }> {
   const tradingDates = [...new Set(
     snapshots
       .filter((row) => normalizeSymbol(row.symbol) === 'TAIEX' && row.phase === 'close' && row.trading_date)
@@ -642,13 +644,31 @@ async function updateOutcomes(
     }
   }
 
-  if (rows.length === 0) return [];
-  const { data, error } = await client
-    .from('prediction_outcomes')
-    .upsert(rows, { onConflict: 'prediction_id,horizon' })
-    .select('*');
+  if (rows.length === 0) return { outcomes: [], created: 0, updated: 0, unchanged: 0 };
+  const predictionIds = [...new Set(rows.map((row) => String(row.prediction_id)))];
+  const { data: beforeRows, error: beforeError } = await client
+    .from('prediction_outcomes').select('*').in('prediction_id', predictionIds);
+  if (beforeError) throw beforeError;
+  const beforeMap = new Map(((beforeRows || []) as JsonRecord[]).map((row) => [`${row.prediction_id}:${row.horizon}`, row]));
+  const stable = (row: JsonRecord): string => {
+    const { id: _id, created_at: _created, updated_at: _updated, evaluated_at: _evaluated, ...value } = row;
+    return JSON.stringify(value, Object.keys(value).sort());
+  };
+  const changedRows = rows.filter((row) => {
+    const existing = beforeMap.get(`${row.prediction_id}:${row.horizon}`);
+    return !existing || stable(existing) !== stable(row);
+  });
+  const created = changedRows.filter((row) => !beforeMap.has(`${row.prediction_id}:${row.horizon}`)).length;
+  const updated = changedRows.length - created;
+  const unchanged = rows.length - changedRows.length;
+  if (changedRows.length > 0) {
+    const { error } = await client.from('prediction_outcomes')
+      .upsert(changedRows, { onConflict: 'prediction_id,horizon' });
+    if (error) throw error;
+  }
+  const { data, error } = await client.from('prediction_outcomes').select('*').in('prediction_id', predictionIds);
   if (error) throw error;
-  return (data || []) as OutcomeRow[];
+  return { outcomes: (data || []) as OutcomeRow[], created, updated, unchanged };
 }
 
 async function createReviewsAndCases(
@@ -657,9 +677,11 @@ async function createReviewsAndCases(
   targetDate: string,
   predictions: PredictionRow[],
   outcomes: OutcomeRow[],
-): Promise<{ reviews: JsonRecord[]; casesCreated: number }> {
+): Promise<{ reviews: JsonRecord[]; reviewsCreated: number; reviewsUnchanged: number; casesCreated: number; casesUnchanged: number }> {
   const predictionMap = new Map(predictions.map((prediction) => [prediction.id, prediction]));
-  const closeOutcomes = outcomes.filter((outcome) => outcome.horizon === 'close');
+  const closeOutcomes = outcomes.filter((outcome) =>
+    outcome.horizon === 'close' && predictionMap.get(outcome.prediction_id)?.report_date === targetDate
+  );
   const reviewRows: JsonRecord[] = [];
   for (const outcome of closeOutcomes) {
     const prediction = predictionMap.get(outcome.prediction_id);
@@ -694,12 +716,20 @@ async function createReviewsAndCases(
       },
     });
   }
-  if (reviewRows.length === 0) return { reviews: [], casesCreated: 0 };
+  if (reviewRows.length === 0) return { reviews: [], reviewsCreated: 0, reviewsUnchanged: 0, casesCreated: 0, casesUnchanged: 0 };
   const enrichedReviewRows = await enrichReviewsWithSemanticAnalysis(reviewRows, predictions, outcomes, targetDate);
+  const reviewKeys = enrichedReviewRows.map((row) => String(row.idempotency_key));
+  const { data: existingReviews, error: existingReviewError } = await client
+    .from('prediction_reviews').select('*').in('idempotency_key', reviewKeys);
+  if (existingReviewError) throw existingReviewError;
+  const existingReviewKeys = new Set(((existingReviews || []) as JsonRecord[]).map((row) => String(row.idempotency_key)));
+  const newReviewRows = enrichedReviewRows.filter((row) => !existingReviewKeys.has(String(row.idempotency_key)));
+  if (newReviewRows.length > 0) {
+    const { error: reviewInsertError } = await client.from('prediction_reviews').insert(newReviewRows);
+    if (reviewInsertError) throw reviewInsertError;
+  }
   const { data: reviews, error: reviewError } = await client
-    .from('prediction_reviews')
-    .upsert(enrichedReviewRows, { onConflict: 'idempotency_key' })
-    .select('*');
+    .from('prediction_reviews').select('*').in('idempotency_key', reviewKeys);
   if (reviewError) throw reviewError;
 
   const caseRows: JsonRecord[] = [];
@@ -729,11 +759,21 @@ async function createReviewsAndCases(
       status: 'active',
     });
   }
+  let casesCreated = 0;
+  let casesUnchanged = 0;
   if (caseRows.length > 0) {
-    const { error: caseError } = await client
-      .from('learning_cases')
-      .upsert(caseRows, { onConflict: 'prediction_review_id,case_type', ignoreDuplicates: true });
-    if (caseError) throw caseError;
+    const reviewIds = caseRows.map((row) => String(row.prediction_review_id));
+    const { data: existingCases, error: existingCaseError } = await client
+      .from('learning_cases').select('prediction_review_id,case_type').in('prediction_review_id', reviewIds);
+    if (existingCaseError) throw existingCaseError;
+    const existingKeys = new Set(((existingCases || []) as JsonRecord[]).map((row) => `${row.prediction_review_id}:${row.case_type}`));
+    const newCaseRows = caseRows.filter((row) => !existingKeys.has(`${row.prediction_review_id}:${row.case_type}`));
+    casesCreated = newCaseRows.length;
+    casesUnchanged = caseRows.length - newCaseRows.length;
+    if (newCaseRows.length > 0) {
+      const { error: caseError } = await client.from('learning_cases').insert(newCaseRows);
+      if (caseError) throw caseError;
+    }
   }
 
   await client.from('learning_audit_logs').upsert({
@@ -744,10 +784,10 @@ async function createReviewsAndCases(
     action: 'reviews_generated',
     actor_type: 'system',
     before_json: {},
-    after_json: { reviews: reviews?.length || 0, cases: caseRows.length },
+    after_json: { reviews_created: newReviewRows.length, reviews_unchanged: enrichedReviewRows.length - newReviewRows.length, cases_created: casesCreated, cases_unchanged: casesUnchanged },
     reason: 'Deterministic Prediction vs Reality review completed.',
   }, { onConflict: 'idempotency_key', ignoreDuplicates: true });
-  return { reviews: (reviews || []) as JsonRecord[], casesCreated: caseRows.length };
+  return { reviews: (reviews || []) as JsonRecord[], reviewsCreated: newReviewRows.length, reviewsUnchanged: enrichedReviewRows.length - newReviewRows.length, casesCreated, casesUnchanged };
 }
 
 async function aggregatePatterns(
@@ -1146,11 +1186,8 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== 'POST') return jsonResponse({ success: false, error: 'Only POST allowed' }, 405);
 
-  const cronSecret = Deno.env.get('CRON_SECRET') || '';
-  if (!cronSecret) return jsonResponse({ success: false, error: 'CRON_SECRET not set' }, 500);
-  if (req.headers.get('x-cron-secret') !== cronSecret) {
-    return jsonResponse({ success: false, error: 'Unauthorized' }, 401);
-  }
+  const auth = await authorizeInternalRequest(req.headers, internalCredentialsFromEnv());
+  if (!auth.ok) return jsonResponse({ success: false, error: auth.error_code, error_code: auth.error_code }, 401);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -1185,7 +1222,7 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const client = createClient(supabaseUrl, serviceRoleKey, {
+  const client = createClient<RuntimeDatabase>(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const runType = backfill ? 'backfill' : 'daily';
@@ -1208,8 +1245,8 @@ Deno.serve(async (req: Request) => {
       }, 500);
     }
     const closingStatus = asObject(asObject(tradingDayState?.checkpoint_status).closing_verification);
-    const closingComplete = Number(tradingDayState?.state_rank || 0) >= 80
-      && ['SUCCEEDED', 'DEGRADED'].includes(String(closingStatus.status || ''));
+    const closingComplete = Number(tradingDayState?.state_rank || 0) >= 110
+      && String(closingStatus.status || '') === 'SUCCEEDED';
     if (!closingComplete) {
       return jsonResponse({
         success: true,
@@ -1225,9 +1262,16 @@ Deno.serve(async (req: Request) => {
   let runId: string | null = null;
   const counters = {
     predictions_processed: 0,
+    outcomes_created: 0,
     outcomes_updated: 0,
+    outcomes_unchanged: 0,
     reviews_created: 0,
+    reviews_updated: 0,
+    reviews_unchanged: 0,
     cases_created: 0,
+    cases_unchanged: 0,
+    skipped_count: 0,
+    failed_count: 0,
     patterns_updated: 0,
     rules_evaluated: 0,
   };
@@ -1239,7 +1283,7 @@ Deno.serve(async (req: Request) => {
       .eq('idempotency_key', runKey)
       .maybeSingle();
     if (existingRunError) throw existingRunError;
-    if (existingRun && ['succeeded', 'skipped'].includes(String(existingRun.status))) {
+    if (existingRun && String(existingRun.status) === 'succeeded') {
       return jsonResponse({
         success: true,
         reused: true,
@@ -1363,11 +1407,16 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const outcomes = await updateOutcomes(client, targetDate, window.predictions, window.snapshots);
-    counters.outcomes_updated = outcomes.length;
+    const outcomeResult = await updateOutcomes(client, targetDate, window.predictions, window.snapshots);
+    const outcomes = outcomeResult.outcomes;
+    counters.outcomes_created = outcomeResult.created;
+    counters.outcomes_updated = outcomeResult.updated;
+    counters.outcomes_unchanged = outcomeResult.unchanged;
     const reviewResult = await createReviewsAndCases(client, runId!, targetDate, window.predictions, outcomes);
-    counters.reviews_created = reviewResult.reviews.length;
+    counters.reviews_created = reviewResult.reviewsCreated;
+    counters.reviews_unchanged = reviewResult.reviewsUnchanged;
     counters.cases_created = reviewResult.casesCreated;
+    counters.cases_unchanged = reviewResult.casesUnchanged;
     const patternResult = await aggregatePatterns(
       client,
       targetDate,
@@ -1410,6 +1459,11 @@ Deno.serve(async (req: Request) => {
     }).eq('id', runId);
     if (completeError) throw completeError;
 
+    const { error: feedbackStateError } = await client.rpc('advance_trading_day_state_v1', {
+      p_trading_date: targetDate, p_state: 'FEEDBACK_COMPLETED', p_checkpoint: 'feedback', p_status: 'SUCCEEDED',
+      p_correlation_id: crypto.randomUUID(), p_metadata: { run_id: runId, review_count: reviewResult.reviews.length },
+    });
+    if (feedbackStateError) throw new Error('FEEDBACK_STATE_ADVANCE_FAILED');
     const { error: tradingDayStateError } = await client.rpc(
       'advance_trading_day_state_v1',
       {
@@ -1421,6 +1475,7 @@ Deno.serve(async (req: Request) => {
         p_metadata: { run_id: runId, engine_version: CLE_ENGINE_VERSION, ...counters },
       },
     );
+    if (tradingDayStateError) throw new Error('LEARNING_STATE_ADVANCE_FAILED');
 
     return jsonResponse({
       success: true,
@@ -1428,7 +1483,6 @@ Deno.serve(async (req: Request) => {
       target_date: targetDate,
       engine_version: CLE_ENGINE_VERSION,
       production_rule_mutated: false,
-      trading_day_state_error: tradingDayStateError?.message || null,
       ...counters,
     });
   } catch (error) {

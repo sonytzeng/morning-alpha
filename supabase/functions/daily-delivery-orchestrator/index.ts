@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
-import { buildInternalFunctionHeaders } from '../_shared/internal-function-auth.mjs';
+import { authorizeInternalRequest, buildInternalFunctionHeaders, constantTimeEqual, internalCredentialsFromEnv, INTERNAL_AUTH_ERROR_CODES } from '../_shared/internal-function-auth.mjs';
 import {
   buildDailyDeliveryRecoveryPlan,
   hasFailedEvidenceDependency,
@@ -79,19 +79,22 @@ async function authorizeRequest(
   req: Request,
   supabase: SupabaseClient,
   cronSecret: string,
-): Promise<boolean> {
-  const presentedCronSecret = req.headers.get('x-cron-secret') || '';
-  if (cronSecret && presentedCronSecret === cronSecret) return true;
+): Promise<{ ok: boolean; error_code: string | null }> {
+  const auth = await authorizeInternalRequest(req.headers, { ...internalCredentialsFromEnv(), currentToken: cronSecret, serviceRoleKey: '' });
+  if (auth.ok) return { ok: true, error_code: null };
 
   const token = req.headers.get('x-daily-delivery-token') || '';
-  if (!token) return false;
+  if (!token) return { ok: false, error_code: auth.error_code };
   const { data, error } = await supabase
     .from('runtime_job_tokens')
     .select('token_hash,is_active')
     .eq('name', 'morning_alpha_daily_delivery')
     .maybeSingle();
-  if (error || !data?.is_active || typeof data.token_hash !== 'string') return false;
-  return await sha256Hex(token) === data.token_hash;
+  if (error || !data?.is_active || typeof data.token_hash !== 'string') {
+    return { ok: false, error_code: INTERNAL_AUTH_ERROR_CODES.INVALID };
+  }
+  const accepted = await constantTimeEqual(await sha256Hex(token), data.token_hash);
+  return { ok: accepted, error_code: accepted ? null : INTERNAL_AUTH_ERROR_CODES.INVALID };
 }
 
 async function invokeFunction(
@@ -168,14 +171,12 @@ function checkpointResultOk(slug: string, checkpoint: string, result: FunctionRe
   if (slug === 'opening-market-radar') {
     return payload.success === true
       && String(payload.checkpoint || '') === checkpoint
-      && ['ready', 'degraded'].includes(String(payload.data_status || ''))
+      && String(payload.data_status || '') === 'ready'
       && String(payload.radar_status || '').length > 0;
   }
   if (slug === 'close-market-review') {
     return payload.success === true && (
       ['written_and_synced', 'skipped_idempotent'].includes(String(payload.action || ''))
-      || payload.pending === true
-      || payload.skipped === true
     );
   }
   if (slug === 'closing-verification-engine') {
@@ -191,6 +192,7 @@ async function executeRuntimeCheckpoint(
   baseUrl: string,
   cronSecret: string,
   checkpoint: string,
+  source: 'supabase_cron_primary' | 'supabase_cron_watchdog',
 ): Promise<{ success: boolean; results: JsonRecord; failures: string[] }> {
   const results: JsonRecord = {};
   const failures: string[] = [];
@@ -198,7 +200,7 @@ async function executeRuntimeCheckpoint(
   const market = await invokeFunctionWithRetry(baseUrl, 'fetch-market-data-v10', cronSecret, {
     phase,
     checkpoint,
-    source: 'supabase_cron_backup',
+    source,
   }, 180_000, 3);
   results.market = market;
   if (!checkpointResultOk('fetch-market-data-v10', checkpoint, market)) {
@@ -206,11 +208,15 @@ async function executeRuntimeCheckpoint(
     return { success: false, results, failures };
   }
 
+  if (checkpoint === '1410') {
+    return { success: true, results, failures };
+  }
+
   if (phase === 'intraday') {
     if (checkpoint !== '0900') {
       const radar = await invokeFunctionWithRetry(baseUrl, 'opening-market-radar', cronSecret, {
         checkpoint,
-        source: 'supabase_cron_backup',
+        source,
       }, 180_000, 3);
       results.radar = radar;
       if (!checkpointResultOk('opening-market-radar', checkpoint, radar)) failures.push('radar_checkpoint_incomplete');
@@ -222,7 +228,7 @@ async function executeRuntimeCheckpoint(
     phase: 'close',
     checkpoint,
     beneficiary_close_only: true,
-    source: 'supabase_cron_backup',
+    source,
   }, 180_000, 3);
   results.beneficiary_close = beneficiaryClose;
   const beneficiaryPayload = beneficiaryClose.payload;
@@ -237,7 +243,7 @@ async function executeRuntimeCheckpoint(
   }
 
   const review = await invokeFunctionWithRetry(baseUrl, 'close-market-review', cronSecret, {
-    source: 'supabase_cron_backup',
+    source,
   }, 180_000, 3);
   results.review = review;
   if (!checkpointResultOk('close-market-review', checkpoint, review)) {
@@ -246,7 +252,7 @@ async function executeRuntimeCheckpoint(
   }
 
   const verification = await invokeFunctionWithRetry(baseUrl, 'closing-verification-engine', cronSecret, {
-    source: 'supabase_cron_backup',
+    source,
   }, 180_000, 3);
   results.verification = verification;
   if (!checkpointResultOk('closing-verification-engine', checkpoint, verification)) failures.push('closing_verification_incomplete');
@@ -471,8 +477,9 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  if (!(await authorizeRequest(req, supabase, cronSecret))) {
-    return jsonResponse({ success: false, error: 'Unauthorized', version: VERSION }, 401);
+  const authorization = await authorizeRequest(req, supabase, cronSecret);
+  if (!authorization.ok) {
+    return jsonResponse({ success: false, error: authorization.error_code, error_code: authorization.error_code, version: VERSION }, 401);
   }
 
   let body: JsonRecord = {};
@@ -500,7 +507,13 @@ Deno.serve(async (req: Request) => {
     if (!RUNTIME_CHECKPOINTS.has(checkpoint)) {
       return jsonResponse({ success: false, error: 'UNSUPPORTED_RUNTIME_CHECKPOINT', checkpoint, version: VERSION }, 400);
     }
-    const execution = await executeRuntimeCheckpoint(`${supabaseUrl}/functions/v1`, cronSecret, checkpoint);
+    const existingState = await supabase.from('trading_day_state').select('checkpoint_status')
+      .eq('trading_date', clock.date).maybeSingle();
+    if (!existingState.error && String(asRecord(asRecord(existingState.data?.checkpoint_status)[checkpoint]).status || '').toUpperCase() === 'SUCCEEDED') {
+      return jsonResponse({ success: true, status: 'SKIPPED_ALREADY_SUCCEEDED', report_date: clock.date, checkpoint, version: VERSION });
+    }
+    const runtimeSource = body.source === 'supabase_cron_watchdog' ? 'supabase_cron_watchdog' : 'supabase_cron_primary';
+    const execution = await executeRuntimeCheckpoint(`${supabaseUrl}/functions/v1`, cronSecret, checkpoint, runtimeSource);
     return jsonResponse({
       success: execution.success,
       status: execution.success ? 'SUCCEEDED' : 'DEGRADED',
@@ -510,6 +523,52 @@ Deno.serve(async (req: Request) => {
       results: execution.results,
       version: VERSION,
     }, execution.success ? 200 : 409);
+  }
+  if (body.mode === 'health_check') {
+    const checkType = String(body.check_type || 'full');
+    if (!['report', 'closing', 'full'].includes(checkType)) return jsonResponse({ success: false, error: 'UNSUPPORTED_HEALTH_CHECK', version: VERSION }, 400);
+    const result = await invokeFunction(`${supabaseUrl}/functions/v1`, 'ma-ops-health-check', cronSecret, {
+      environment: 'production', check_type: checkType, target_date: clock.date, request_id: body.correlation_id || crypto.randomUUID(), dry_run: false,
+    }, 180_000);
+    const healthSucceeded = result.ok && result.payload.ok === true;
+    let recoveryLifecycle: JsonRecord | null = null;
+    if (healthSucceeded && body.source === 'ma-ops-safe-recovery') {
+      const stateResult = await supabase.from('trading_day_state').select('state_rank').eq('trading_date', clock.date).maybeSingle();
+      if (stateResult.error) {
+        return jsonResponse({ success: false, error: 'RECOVERY_LIFECYCLE_STATE_READ_FAILED', details: stateResult.error.message, report_date: clock.date, version: VERSION }, 500);
+      }
+      if (Number(stateResult.data?.state_rank || 0) < 130) {
+        return jsonResponse({ success: false, error: 'RECOVERY_LIFECYCLE_PREDECESSOR_NOT_SATISFIED', report_date: clock.date, state_rank: Number(stateResult.data?.state_rank || 0), version: VERSION }, 409);
+      }
+      const requestedCorrelation = req.headers.get('x-correlation-id') || String(body.correlation_id || '');
+      const correlationId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedCorrelation)
+        ? requestedCorrelation
+        : crypto.randomUUID();
+      const healthAdvance = await supabase.rpc('advance_trading_day_state_v1', {
+        p_trading_date: clock.date,
+        p_state: 'HEALTH_AUDITED',
+        p_checkpoint: 'closing_health',
+        p_status: 'SUCCEEDED',
+        p_correlation_id: correlationId,
+        p_metadata: { source: 'ma-ops-safe-recovery', health_http_status: result.status },
+      });
+      if (healthAdvance.error) {
+        return jsonResponse({ success: false, error: 'RECOVERY_HEALTH_LIFECYCLE_ADVANCE_FAILED', details: healthAdvance.error.message, report_date: clock.date, version: VERSION }, 500);
+      }
+      const completionAdvance = await supabase.rpc('advance_trading_day_state_v1', {
+        p_trading_date: clock.date,
+        p_state: 'DAY_COMPLETED',
+        p_checkpoint: 'day_completed',
+        p_status: 'SUCCEEDED',
+        p_correlation_id: correlationId,
+        p_metadata: { source: 'ma-ops-safe-recovery', health_http_status: result.status },
+      });
+      if (completionAdvance.error) {
+        return jsonResponse({ success: false, error: 'RECOVERY_COMPLETION_LIFECYCLE_ADVANCE_FAILED', details: completionAdvance.error.message, report_date: clock.date, version: VERSION }, 500);
+      }
+      recoveryLifecycle = { health_audited: true, day_completed: true, correlation_id: correlationId };
+    }
+    return jsonResponse({ success: healthSucceeded, status: result.status, health: result.payload, recovery_lifecycle: recoveryLifecycle, report_date: clock.date, version: VERSION }, healthSucceeded ? 200 : result.status);
   }
   if (body.mode === 'continuous_learning') {
     const result = await invokeFunction(
@@ -521,7 +580,10 @@ Deno.serve(async (req: Request) => {
     );
     const accepted = result.ok
       && result.payload.success === true
-      && (result.payload.run_id != null || result.payload.skipped === true || result.payload.reused === true);
+      && (
+        result.payload.reused === true
+        || (result.payload.run_id != null && result.payload.skipped !== true && result.payload.degraded !== true)
+      );
     return jsonResponse({
       success: accepted,
       status: accepted ? 'SUCCEEDED' : 'DEGRADED',

@@ -123,6 +123,13 @@ function exactSha(value) {
   return typeof value === 'string' && /^[0-9a-f]{40}$/.test(value) ? value : '';
 }
 
+export function githubFailureCode(operation, response) {
+  const safeOperation = /^[A-Z0-9_]{1,80}$/.test(operation) ? operation : 'GITHUB';
+  const status = Number.isInteger(response?.status) && response.status >= 100 && response.status <= 599
+    ? response.status : 0;
+  return `${safeOperation}_HTTP_${status}`;
+}
+
 async function dispatchClaim(claim) {
   const repoPath = '/repos/sonytzeng/morning-alpha';
   const baseLookup = await github(`${repoPath}/git/ref/heads/main`);
@@ -182,7 +189,7 @@ async function dispatchClaim(claim) {
     const created = await github(`${repoPath}/pulls`, { method: 'POST', body: JSON.stringify({
       title, body, head: claim.head_ref, base: 'main', draft: true,
     }) });
-    if (!created.response.ok) throw new Error('PR_CREATE_FAILED');
+    if (!created.response.ok) throw new Error(githubFailureCode('PR_CREATE', created.response));
     pull = created.body;
   }
   if (!Number.isSafeInteger(pull?.number) || pull.state !== 'open' || pull.draft !== true || pull.title !== title || pull.body !== body ||

@@ -1,6 +1,10 @@
 name: Emma automatic Draft PR dispatch
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/emma-auto-repair-oidc.yml"
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:

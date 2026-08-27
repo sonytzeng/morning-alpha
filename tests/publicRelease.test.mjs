@@ -34,6 +34,8 @@ const publicRuntimeCopy = read('src/utils/publicRuntimeCopy.ts');
 const reportPayloadFunction = read('supabase/functions/get-report-payload/index.ts');
 const premiumAvailability = read('src/lib/premiumContentAvailability.ts');
 const premiumGate = read('supabase/functions/_shared/premium-content-gate.ts');
+const researchQualityGate = read('supabase/functions/_shared/research-quality-gate.ts');
+const contentOsMorningAlphaSource = read('supabase/functions/content-os-morning-alpha-source/index.ts');
 const contentIntelligence = read('supabase/functions/_shared/content-intelligence.ts');
 const lineDailyPush = read('supabase/functions/line-daily-push/index.ts');
 const dailyDeliveryOrchestrator = read('supabase/functions/daily-delivery-orchestrator/index.ts');
@@ -312,6 +314,11 @@ test('paid report fails closed when evidence does not meet the member threshold'
   assert.match(premiumAvailability, /memberValueScore >= 90/);
   assert.match(premiumAvailability, /freshNewsCount > 0/);
   assert.match(premiumGate, /recommendation_reasoning_incomplete/);
+  assert.match(premiumGate, /evaluateResearchQualityGate/);
+  assert.match(researchQualityGate, /research_evidence_coverage_below_90/);
+  assert.match(researchQualityGate, /research_unsupported_claims_present/);
+  assert.match(contentOsMorningAlphaSource, /evaluateResearchQualityGate/);
+  assert.match(contentOsMorningAlphaSource, /RESEARCH_QUALITY_GATE_BLOCKED/);
   assert.match(reportPayloadFunction, /evaluatePremiumContentGate/);
   assert.match(reportPayloadFunction, /if \(!premiumGate\.eligible\)/);
   assert.match(reportPayloadFunction, /one_teaser_stock: premiumGate\.eligible \? buildTeaserStock\(ai\) : null/);
@@ -341,7 +348,7 @@ test('legacy opening radar UI fails closed without real core evidence', () => {
 });
 
 test('runtime deployment and missing checkpoint schedules are reproducible', () => {
-  for (const functionName of ['fetch-market-data-v10', 'fetch-global-market-news', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push', 'daily-delivery-orchestrator', 'get-report-payload']) {
+  for (const functionName of ['fetch-market-data-v10', 'fetch-global-market-news', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push', 'daily-delivery-orchestrator', 'get-report-payload', 'content-os-morning-alpha-source']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
   }
   for (const schedule of ["10 23 * * 0-4", "35 23 * * 0-4", "0 1 * * 1-5", "5 1 * * 1-5", "30 1 * * 1-5", "35 1 * * 1-5", "30 2 * * 1-5", "35 2 * * 1-5", "0 5 * * 1-5", "5 5 * * 1-5", "10 6 * * 1-5", "15 6 * * 1-5", "30 6 * * 1-5", "35 6 * * 1-5"]) {

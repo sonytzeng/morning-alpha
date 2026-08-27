@@ -419,3 +419,151 @@ Deno.test("Case F: identical input produces identical deterministic identities",
     "supporting claim identities must be deterministic",
   );
 });
+
+Deno.test("Case G: production aliases and guardrails remain fully traceable without debug agents", () => {
+  const fixture = completeFixture();
+  fixture.marketThesis = null;
+  fixture.evidencePack = {
+    data_quality: {
+      available_sources: [
+        "market_data",
+        "market_news",
+        "sector_rotation_scores",
+      ],
+      missing_sources: ["market_snapshot.djia", "market_snapshot.aapl"],
+    },
+  };
+  fixture.evidenceIndex = [
+    {
+      evidence_id: "MD001",
+      evidence_type: "market_data",
+      title: "TAIEX",
+      summary: "TAIEX UP 1.19% 台股現貨大盤方向",
+      raw_reference: "market_data:TAIEX@2026-07-14T00:00:00Z",
+      importance: 100,
+    },
+    {
+      evidence_id: "MD002",
+      evidence_type: "market_data",
+      title: "2330",
+      summary: "2330 UP 0.42% 台股最大權值與半導體核心驗證股",
+      raw_reference: "market_data:2330@2026-07-14T00:00:00Z",
+      importance: 100,
+    },
+    {
+      evidence_id: "MD003",
+      evidence_type: "market_data",
+      title: "SOX",
+      summary: "SOX UP 1.56% 半導體族群對台股電子權值影響",
+      raw_reference: "market_data:SOX@2026-07-14T00:00:00Z",
+      importance: 98,
+    },
+    {
+      evidence_id: "MD006",
+      evidence_type: "market_data",
+      title: "NVDA",
+      summary: "NVDA UP 2.19% AI server 與半導體供應鏈風向",
+      raw_reference: "market_data:NVDA@2026-07-14T00:00:00Z",
+      importance: 94,
+    },
+    {
+      evidence_id: "SEC001",
+      evidence_type: "sector_rotation",
+      title: "電子權值",
+      summary: "轉強",
+      raw_reference: "sector_rotation_scores:電子權值",
+      importance: 56,
+    },
+    {
+      evidence_id: "SEC003",
+      evidence_type: "sector_rotation",
+      title: "半導體",
+      summary: "觀察",
+      raw_reference: "sector_rotation_scores:半導體",
+      importance: 50,
+    },
+    {
+      evidence_id: "SEC004",
+      evidence_type: "sector_rotation",
+      title: "AI伺服器",
+      summary: "觀察",
+      raw_reference: "sector_rotation_scores:AI伺服器",
+      importance: 45,
+    },
+  ];
+  fixture.candidateUniverse = {
+    candidates: [{
+      symbol: "2330",
+      related_evidence: [
+        { evidence_id: "MD002" },
+        { evidence_id: "MD003" },
+      ],
+    }],
+  };
+  fixture.legacy.data_quality = "complete";
+  const note = fixture.legacy.member_research_note_v2 as Record<
+    string,
+    unknown
+  >;
+  note.opening_thesis = {
+    summary: "NVDA 先傳導至 AI Server，開盤確認台積電與族群是否同步。",
+    signals: ["NVDA", "TAIEX", "AI Server"],
+    confidence_score: 82,
+  };
+  note.today_core_thesis =
+    "NVDA 先傳導至 AI Server，開盤確認台積電與族群是否同步。";
+  note.overnight_chain = [
+    {
+      event: "NVIDIA 股價上漲",
+      source_market: "美股",
+      impact_logic: "NVIDIA 強勢推動半導體及 AI 伺服器信心",
+      taiwan_mapping: "台積電與 AI 伺服器供應鏈等待確認",
+    },
+    {
+      event: "費城半導體指數上漲",
+      source_market: "美股",
+      impact_logic: "費半上漲反映半導體需求預期",
+      taiwan_mapping: "台積電與半導體族群等待確認",
+    },
+  ];
+  note.invalidation_rules = [
+    {
+      condition: "開盤方向與盤前偏多觀察相反超過 1%",
+      meaning: "盤前假設失效",
+      action_note: "停止沿用盤前框架",
+    },
+    {
+      condition: "候選族群只有單一權值股表態",
+      meaning: "資金未擴散",
+      action_note: "延伸候選降級為觀察",
+    },
+  ];
+  fixture.legacy.invalidation_conditions = note.invalidation_rules;
+
+  const master = assembleResearchMasterV2(fixture);
+  const validation = validateResearchMasterV2(master);
+  assert(
+    master.provenance.source_status === "complete",
+    `traceable deterministic production input expected complete, received ${master.provenance.source_status}`,
+  );
+  assert(
+    validation.quality.evidence_coverage === 100,
+    `production alias coverage expected 100, received ${validation.quality.evidence_coverage}`,
+  );
+  assert(
+    validation.quality.unsupported_claims.length === 0,
+    `production aliases left unsupported claims: ${
+      validation.quality.unsupported_claims.join(" | ")
+    }`,
+  );
+  assert(
+    validation.quality.duplicate_claims.length === 0,
+    `duplicate failure triggers remained: ${
+      validation.quality.duplicate_claims.join(" | ")
+    }`,
+  );
+  assert(
+    validation.quality.publish_status === "ready",
+    `production regression expected ready, received ${validation.quality.publish_status}`,
+  );
+});

@@ -37,3 +37,6 @@ verify_jwt = true
 
 [functions.emma-morning-alpha-bridge]
 verify_jwt = false
+
+[functions.content-os-morning-alpha-source]
+verify_jwt = false

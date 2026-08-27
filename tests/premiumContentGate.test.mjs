@@ -64,6 +64,44 @@ test('premium content is eligible only with fresh news and complete stock reason
   assert.equal(result.complete_recommendation_count, 1);
 });
 
+test('website premium gate blocks the same degraded research rejected by Content OS', () => {
+  const ai = validAi();
+  ai.research_master_v2 = {
+    sections: { core_thesis: { statement: '有內容但證據映射尚未完整' } },
+    quality: {
+      publish_status: 'degraded',
+      evidence_coverage: 83,
+      unsupported_claims: ['claim:unsupported'],
+      duplicate_claims: [],
+      contradictions: [],
+      missing_sections: [],
+    },
+  };
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('research_publish_status_not_ready'));
+  assert.ok(result.reason_codes.includes('research_evidence_coverage_below_90'));
+  assert.ok(result.reason_codes.includes('research_unsupported_claims_present'));
+});
+
+test('ready research with full traceability keeps premium content eligible', () => {
+  const ai = validAi();
+  ai.research_master_v2 = {
+    sections: { core_thesis: { statement: '證據完整的研究主軸' } },
+    quality: {
+      publish_status: 'ready',
+      evidence_coverage: 100,
+      unsupported_claims: [],
+      duplicate_claims: [],
+      contradictions: [],
+      missing_sections: [],
+    },
+  };
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.eligible, true, JSON.stringify(result));
+  assert.equal(result.research_quality?.eligible, true);
+});
+
 test('premium gate recognizes a structured subscriber action without depending on one fixed phrase', () => {
   const ai = validAi();
   ai.member_research_note_v2.subscriber_value_sentence = '先用台積電、TAIEX 與半導體同步性驗證主線；若族群沒有量價擴散，就不把它列為有效主線。';

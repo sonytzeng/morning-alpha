@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildTask, githubFailureCode, parseClaim, redactEvidence } from '../scripts/emma-auto-repair-oidc.mjs';
+import { buildTask, githubFailureCode, parseClaim, redactEvidence, seedBaseSha } from '../scripts/emma-auto-repair-oidc.mjs';
 
 const claim = {
   dispatch_id: '11111111-1111-4111-8111-111111111111',
@@ -40,4 +40,11 @@ test('redacts credential-shaped evidence and builds immutable markers', () => {
 test('reports only a bounded GitHub HTTP status', () => {
   assert.equal(githubFailureCode('PR_CREATE', { status: 403 }), 'PR_CREATE_HTTP_403');
   assert.equal(githubFailureCode('not safe', { status: 999 }), 'GITHUB_HTTP_0');
+});
+
+test('binds a replayed task to its immutable seed parent', () => {
+  const base = 'b'.repeat(40);
+  assert.equal(seedBaseSha({ parents: [{ sha: base }] }), base);
+  assert.equal(seedBaseSha({ parents: [] }), '');
+  assert.equal(seedBaseSha({ parents: [{ sha: base }, { sha: 'c'.repeat(40) }] }), '');
 });

@@ -50,11 +50,20 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== 'POST') return jsonResponse({ success: false, error: 'METHOD_NOT_ALLOWED' }, 405);
 
-  const auth = await authorizeInternalRequest(req.headers, internalCredentialsFromEnv());
-  if (!auth.ok) return jsonResponse({ success: false, error: auth.error_code, error_code: auth.error_code }, 401);
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
   if (!supabaseUrl || !serviceRoleKey) return jsonResponse({ success: false, error: 'SUPABASE_CREDENTIALS_MISSING' }, 500);
+  const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const credentials = internalCredentialsFromEnv();
+  let auth = await authorizeInternalRequest(req.headers, credentials);
+  const presentedCronToken = req.headers.get('x-cron-secret')?.trim() || '';
+  if (!auth.ok && presentedCronToken) {
+    const { data: schedulerToken, error: schedulerTokenError } = await supabase.rpc('get_ma_ops_health_cron_secret');
+    if (!schedulerTokenError && typeof schedulerToken === 'string' && schedulerToken.trim()) {
+      auth = await authorizeInternalRequest(req.headers, { ...credentials, currentToken: schedulerToken });
+    }
+  }
+  if (!auth.ok) return jsonResponse({ success: false, error: auth.error_code, error_code: auth.error_code }, 401);
 
   const body = asRecord(await req.json().catch(() => ({})));
   if (!isAction(body.action)) {
@@ -91,8 +100,6 @@ Deno.serve(async (req: Request) => {
     recovery_actor: actor || null,
     recovery_reason: reason || null,
   };
-  const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
-
   const { data: existingAudit, error: existingAuditError } = await supabase
     .from('ma_ops_recovery_actions')
     .select('id,status,after_json')

@@ -140,3 +140,4 @@ revoke all on function public.advance_trading_day_state_v1(date, text, text, tex
   from public, anon, authenticated;
 grant execute on function public.advance_trading_day_state_v1(date, text, text, text, uuid, jsonb)
   to service_role;
+;

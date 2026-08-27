@@ -20,6 +20,20 @@ function validAi() {
     },
     v10_data_quality_status: 'sufficient',
     v10_beneficiary_enabled: true,
+    research_master_v2: {
+      sections: {
+        core_thesis: { statement: '費半上漲 2.1% 與 NVIDIA 財測上修，今日驗證台積電與 AI 供應鏈是否同步。' },
+      },
+      quality: {
+        publish_status: 'ready',
+        evidence_coverage: 100,
+        unsupported_claims: [],
+        duplicate_claims: [],
+        contradictions: [],
+        missing_sections: [],
+      },
+    },
+    today_core_thesis: '費半上漲 2.1% 與 NVIDIA 財測上修，今日驗證台積電與 AI 供應鏈是否同步。',
     today_quote: '費半上漲 2.1% 且 NVIDIA 財測上修；09:30 看台積電與 AI 供應鏈是否量價同步，若催化未傳導到族群，今日不追價。',
     free_summary: {
       one_sentence: '費半上漲 2.1% 且 NVIDIA 財測上修；09:30 看台積電與 AI 供應鏈是否量價同步，若催化未傳導到族群，今日不追價。',
@@ -80,14 +94,14 @@ test('website premium gate blocks the same degraded research rejected by Content
   const result = evaluatePremiumContentGate(ai, 2);
   assert.equal(result.eligible, false);
   assert.ok(result.reason_codes.includes('research_publish_status_not_ready'));
-  assert.ok(result.reason_codes.includes('research_evidence_coverage_below_90'));
+  assert.ok(result.reason_codes.includes('research_evidence_coverage_below_100'));
   assert.ok(result.reason_codes.includes('research_unsupported_claims_present'));
 });
 
 test('ready research with full traceability keeps premium content eligible', () => {
   const ai = validAi();
   ai.research_master_v2 = {
-    sections: { core_thesis: { statement: '證據完整的研究主軸' } },
+    sections: { core_thesis: { statement: '費半上漲與 NVIDIA 財測上修，今日驗證台積電與 AI 供應鏈是否同步。' } },
     quality: {
       publish_status: 'ready',
       evidence_coverage: 100,

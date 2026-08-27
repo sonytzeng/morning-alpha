@@ -4,6 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { resolveMarketStatus } from "../_shared/market-status.ts";
+import { authorizeInternalRequest, internalCredentialsFromEnv } from "../_shared/internal-function-auth.mjs";
 import {
   CORE_SYMBOL_ALIASES,
   CORE_SYMBOL_QUERY_ALIASES,
@@ -161,23 +162,15 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
-    const cronSecret = req.headers.get("x-cron-secret") || "";
-    const authHeader = req.headers.get("Authorization") || "";
-    const envCronSecret = Deno.env.get("CRON_SECRET") || "";
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const supabaseServiceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const hasValidCronSecret = Boolean(
-      envCronSecret && cronSecret === envCronSecret,
-    );
-    const hasValidBearer = authHeader.startsWith("Bearer ") &&
-      [supabaseAnonKey, supabaseServiceRole].includes(authHeader.slice(7));
-
-    if (!hasValidCronSecret && !hasValidBearer) {
+    const auth = await authorizeInternalRequest(req.headers, internalCredentialsFromEnv());
+    if (!auth.ok) {
       return jsonResponse({
         success: false,
         version: VERSION,
-        error: "Unauthorized",
+        error: auth.error_code,
+        error_code: auth.error_code,
       }, 401);
     }
     if (!supabaseUrl || !supabaseServiceRole) {

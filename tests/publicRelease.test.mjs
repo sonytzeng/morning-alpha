@@ -44,7 +44,8 @@ const closingVerification = read('supabase/functions/closing-verification-engine
 const opsHealthCheck = read('supabase/functions/ma-ops-health-check/index.ts');
 const contentIntelligenceMigration = read('supabase/migrations/20260820131721_content_intelligence_v2_foundation.sql');
 const deliveryGuaranteeMigration = read('supabase/migrations/20260821080555_daily_delivery_guarantee.sql');
-const publicCloseReconciliationMigration = read('supabase/migrations/20260825160000_public_close_reconciliation.sql');
+const publicCloseReconciliationMigration = read('supabase/migrations/20260825083924_public_close_reconciliation.sql');
+const productionReliabilityMigration = read('supabase/migrations/20260827084613_production_reliability_daily_lifecycle.sql');
 const accountDashboard = read('src/hooks/useAccountDashboard.ts');
 const accountInfoCards = read('src/pages/account/components/TodayInfoCards.tsx');
 
@@ -231,8 +232,10 @@ test('opening radar degrades safely when only TXF is unavailable', () => {
 
 test('premarket workflow delegates to the durable recovery state machine', () => {
   assert.match(runtimeDeployWorkflow, /supabase db push --linked/);
-  assert.match(runtimeCheckpointWorkflow, /cron: '10 23 \* \* 0-4'/);
-  assert.match(runtimeCheckpointWorkflow, /cron: '35 23 \* \* 0-4'/);
+  assert.doesNotMatch(runtimeCheckpointWorkflow, /schedule:/);
+  assert.match(productionReliabilityMigration, /morning-alpha-daily-deadline-watchdog','35 23 \* \* 0-4'/);
+  assert.match(productionReliabilityMigration, /morning-alpha-runtime-0900-watchdog','5 1 \* \* 1-5'/);
+  assert.match(productionReliabilityMigration, /reconcile_runtime_http_dispatches_v1/);
   assert.match(runtimeCheckpointWorkflow, /daily-delivery-orchestrator/);
   const newsAction = dailyDeliveryOrchestrator.indexOf("'fetch-global-market-news'");
   const reportAction = dailyDeliveryOrchestrator.indexOf("'generate-daily-report-v7'");
@@ -315,7 +318,7 @@ test('paid report fails closed when evidence does not meet the member threshold'
   assert.match(premiumAvailability, /freshNewsCount > 0/);
   assert.match(premiumGate, /recommendation_reasoning_incomplete/);
   assert.match(premiumGate, /evaluateResearchQualityGate/);
-  assert.match(researchQualityGate, /research_evidence_coverage_below_90/);
+  assert.match(researchQualityGate, /research_evidence_coverage_below_100/);
   assert.match(researchQualityGate, /research_unsupported_claims_present/);
   assert.match(contentOsMorningAlphaSource, /evaluateResearchQualityGate/);
   assert.match(contentOsMorningAlphaSource, /RESEARCH_QUALITY_GATE_BLOCKED/);
@@ -351,8 +354,8 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   for (const functionName of ['fetch-market-data-v10', 'fetch-global-market-news', 'opening-market-radar', 'close-market-review', 'closing-verification-engine', 'ma-ops-health-check', 'generate-daily-report-v7', 'generate-sector-rotation', 'line-daily-push', 'daily-delivery-orchestrator', 'get-report-payload', 'content-os-morning-alpha-source']) {
     assert.match(runtimeDeployWorkflow, new RegExp(`functions deploy ${functionName}`), `runtime deploy omits ${functionName}`);
   }
-  for (const schedule of ["10 23 * * 0-4", "35 23 * * 0-4", "0 1 * * 1-5", "5 1 * * 1-5", "30 1 * * 1-5", "35 1 * * 1-5", "30 2 * * 1-5", "35 2 * * 1-5", "0 5 * * 1-5", "5 5 * * 1-5", "10 6 * * 1-5", "15 6 * * 1-5", "30 6 * * 1-5", "35 6 * * 1-5"]) {
-    assert.match(runtimeCheckpointWorkflow, new RegExp(schedule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing runtime schedule: ${schedule}`);
+  for (const schedule of ["0 23 * * 0-4", "3 23 * * 0-4", "5 23 * * 0-4", "8 23 * * 0-4", "15 23 * * 0-4", "19 23 * * 0-4", "23 23 * * 0-4", "27 23 * * 0-4", "30 23 * * 0-4", "35 23 * * 0-4", "0 1 * * 1-5", "5 1 * * 1-5", "30 1 * * 1-5", "35 1 * * 1-5", "30 2 * * 1-5", "35 2 * * 1-5", "0 5 * * 1-5", "5 5 * * 1-5", "10 6 * * 1-5", "15 6 * * 1-5", "30 6 * * 1-5", "35 6 * * 1-5"]) {
+    assert.match(productionReliabilityMigration, new RegExp(schedule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing runtime schedule: ${schedule}`);
   }
   assert.match(runtimeCheckpointWorkflow, /\{\\"phase\\":\\"intraday\\",\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
   assert.match(runtimeCheckpointWorkflow, /\{\\"phase\\":\\"close\\",\\"checkpoint\\":\\"\$CHECKPOINT\\"\}/);
@@ -401,7 +404,8 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(opsHealthCheck, /invalidation_rules\)\.length < 2/);
   assert.match(opsHealthCheck, /verifiedCatalystCount < 1/);
   assert.match(opsHealthCheck, /verified_market_count/);
-  assert.match(runtimeCheckpointWorkflow, /&& 'premarket'/);
+  assert.match(runtimeCheckpointWorkflow, /MANUAL_CHECKPOINT: \${\{ inputs\.checkpoint \}\}/);
+  assert.doesNotMatch(runtimeCheckpointWorkflow, /^\s*schedule:/m);
 });
 
 test('LINE brief identifies analysis and market-data times and refuses weak day-trading scripts', () => {

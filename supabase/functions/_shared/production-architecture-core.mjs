@@ -289,3 +289,134 @@ export function buildRetryDecision(input, policy = RUNTIME_QUALITY_POLICY) {
     reason_code: deadLetter ? 'retry_budget_exhausted' : 'retry_scheduled',
   };
 }
+export const DAILY_LIFECYCLE_RANKS = Object.freeze({
+  SCHEDULED: 0,
+  PREMARKET_CAPTURED: 10,
+  REPORT_GENERATED: 20,
+  EDITORIAL_APPROVED: 30,
+  PREMARKET_DELIVERED: 40,
+  MARKET_OPEN_CAPTURED: 50,
+  CHECKPOINT_0930_CAPTURED: 60,
+  CHECKPOINT_1030_CAPTURED: 70,
+  CHECKPOINT_1300_CAPTURED: 80,
+  CLOSE_1410_CAPTURED: 90,
+  CLOSE_1430_CAPTURED: 100,
+  CLOSING_VERIFIED: 110,
+  FEEDBACK_COMPLETED: 120,
+  LEARNING_COMPLETED: 130,
+  HEALTH_AUDITED: 140,
+  DAY_COMPLETED: 150,
+});
+
+export function resolveLifecycleTransition(currentState, requestedState) {
+  const currentRank = DAILY_LIFECYCLE_RANKS[currentState];
+  const requestedRank = DAILY_LIFECYCLE_RANKS[requestedState];
+  if (!Number.isInteger(requestedRank)) return { allowed: false, reason_code: 'INVALID_STATE' };
+  if (Number.isInteger(currentRank) && requestedRank < currentRank) return { allowed: false, reason_code: 'STATE_RANK_REGRESSION_BLOCKED' };
+  return { allowed: true, reason_code: requestedRank === currentRank ? 'IDEMPOTENT_REPLAY' : 'STATE_ADVANCE' };
+}
+
+export function buildRuntimeIdempotencyKey({ trading_date, job_name, checkpoint, revision = 'canonical' } = {}) {
+  const parts = [trading_date, job_name, checkpoint, revision].map((value) => String(value || '').trim());
+  if (parts.some((value) => !value)) throw new Error('IDEMPOTENCY_KEY_INPUT_INCOMPLETE');
+  return parts.join(':');
+}
+
+export function resolvePrimaryBackupDecision(input = {}) {
+  if (input.completed === true) return { execute: false, status: 'SKIPPED_ALREADY_SUCCEEDED' };
+  if (input.in_flight === true && input.lease_expires_at && Date.parse(input.lease_expires_at) > Date.parse(input.now || new Date().toISOString())) {
+    return { execute: false, status: 'SKIPPED_ACTIVE_LEASE' };
+  }
+  if (input.role === 'backup' && input.primary_timed_out !== true && input.primary_failed !== true) {
+    return { execute: false, status: 'SKIPPED_PRIMARY_STILL_ELIGIBLE' };
+  }
+  return { execute: true, status: input.role === 'backup' ? 'WATCHDOG_TAKEOVER' : 'PRIMARY_EXECUTION' };
+}
+
+export function reconcileHttpReceipt(input = {}) {
+  const status = Math.trunc(finiteNumber(input.http_status));
+  const businessSuccess = input.payload?.success === true || input.payload?.ok === true;
+  if (status >= 200 && status < 300 && businessSuccess) return { status: 'SUCCEEDED', retryable: false, dead_letter: false };
+  if (status === 401 || status === 403) return { status: 'DEAD_LETTERED', retryable: false, dead_letter: true };
+  if (input.timed_out === true) return { status: 'TIMED_OUT', retryable: true, dead_letter: false };
+  if (status === 409) return { status: 'FAILED', retryable: input.gate_can_recover === true, dead_letter: false };
+  if (status === 429 || status >= 500) return { status: 'FAILED', retryable: true, dead_letter: false };
+  return { status: 'FAILED', retryable: false, dead_letter: true };
+}
+
+function normalizedTokens(value) {
+  const text = String(value || '').toLowerCase();
+  const words = text.replace(/[\p{Script=Han}]/gu, ' ').replace(/[^\p{L}\p{N}]+/gu, ' ').split(/\s+/).filter((token) => token.length >= 2);
+  const han = (text.match(/[\p{Script=Han}]+/gu) || []).flatMap((segment) => {
+    if (segment.length < 2) return [];
+    return Array.from({ length: segment.length - 1 }, (_, index) => segment.slice(index, index + 2));
+  });
+  return unique([...words, ...han]);
+}
+
+export function evaluateSemanticCoherenceGate(input = {}) {
+  const primary = normalizedTokens(input.primary_thesis);
+  const sections = (input.sections || []).map(normalizedTokens).filter((tokens) => tokens.length > 0);
+  const contradictions = unique(input.contradictions);
+  const incoherent = primary.length === 0 || sections.some((tokens) => overlapScore(primary, tokens) === 0);
+  return {
+    eligible: !incoherent && contradictions.length === 0,
+    contradiction_count: contradictions.length + (incoherent ? 1 : 0),
+    reason_codes: [...(incoherent ? ['PRIMARY_THESIS_DIVERGENCE'] : []), ...(contradictions.length ? ['SEMANTIC_CONTRADICTION'] : [])],
+  };
+}
+
+export function evaluatePublicPremiumLeakageGate(input = {}) {
+  const publicSymbols = new Set(unique(input.public_symbols).map((value) => value.toUpperCase()));
+  const premiumOnly = new Set(unique(input.premium_only_symbols).map((value) => value.toUpperCase()));
+  const leakedSymbols = [...publicSymbols].filter((value) => premiumOnly.has(value));
+  const forbiddenFields = unique(input.public_fields).filter((field) => ['confirmation','invalidation','premium_reasoning','source_refs'].includes(field));
+  const publicEntities = unique(input.public_entities);
+  const premiumEntities = unique(input.premium_entities);
+  const entityOverlap = publicEntities.length === 0 || premiumEntities.length === 0 ? 0 : overlapScore(publicEntities, premiumEntities);
+  const threshold = finiteNumber(input.max_entity_overlap, 0.8);
+  return {
+    eligible: leakedSymbols.length === 0 && forbiddenFields.length === 0 && entityOverlap <= threshold,
+    leaked_symbols: leakedSymbols,
+    leaked_fields: forbiddenFields,
+    named_entity_overlap: entityOverlap,
+    reason_codes: [...(leakedSymbols.length ? ['PREMIUM_SYMBOL_LEAKAGE'] : []), ...(forbiddenFields.length ? ['PREMIUM_REASONING_LEAKAGE'] : []), ...(entityOverlap > threshold ? ['ENTITY_OVERLAP_EXCEEDED'] : [])],
+  };
+}
+
+export function classifyMutationCounters(beforeRows = [], afterRows = [], keyOf = (row) => row?.id) {
+  const before = new Map(beforeRows.map((row) => [String(keyOf(row)), JSON.stringify(row)]));
+  const after = new Map(afterRows.map((row) => [String(keyOf(row)), JSON.stringify(row)]));
+  let created = 0; let updated = 0; let unchanged = 0;
+  for (const [key, value] of after) {
+    if (!before.has(key)) created += 1;
+    else if (before.get(key) === value) unchanged += 1;
+    else updated += 1;
+  }
+  return { created_count: created, updated_count: updated, unchanged_count: unchanged };
+}
+
+export function resolvePendingHorizon({ report_date, target_date, horizon_trading_days, trading_days = [] } = {}) {
+  const index = trading_days.indexOf(report_date);
+  if (index < 0) return { status: 'insufficient', reason_code: 'REPORT_DATE_NOT_IN_CALENDAR' };
+  const maturity = trading_days[index + Math.max(1, Math.trunc(finiteNumber(horizon_trading_days, 1)))];
+  if (!maturity || target_date < maturity) return { status: 'pending', maturity_date: maturity || null };
+  return { status: 'matured', maturity_date: maturity };
+}
+
+export function validateClosingWindowData(rows = [], options = {}) {
+  const required = unique(options.required_symbols || ['TAIEX', '2330', 'TXF']);
+  const tradingDate = String(options.trading_date || '');
+  const min = Date.parse(options.window_start || `${tradingDate}T14:00:00+08:00`);
+  const max = Date.parse(options.window_end || `${tradingDate}T14:40:00+08:00`);
+  const validSymbols = new Set();
+  const rejected = [];
+  for (const row of rows) {
+    const captured = Date.parse(row?.captured_at || '');
+    const symbol = String(row?.symbol || '').toUpperCase().replace(/^TWSE:/, '').replace(/\.TW$/, '');
+    if (row?.trading_date !== tradingDate || row?.phase !== 'close' || !Number.isFinite(captured) || captured < min || captured > max) rejected.push(symbol || 'UNKNOWN');
+    else validSymbols.add(symbol);
+  }
+  const missing = required.map((value) => value.toUpperCase()).filter((value) => !validSymbols.has(value));
+  return { valid: missing.length === 0, missing_symbols: missing, rejected_symbols: unique(rejected), no_intraday_fallback: true };
+}

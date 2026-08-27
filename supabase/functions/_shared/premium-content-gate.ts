@@ -4,7 +4,7 @@ import {
   hasDecisionGradeSourceCoverage,
   type ContentScoreBreakdown,
 } from './content-intelligence.ts';
-import { RUNTIME_QUALITY_POLICY } from './production-architecture-core.mjs';
+import { RUNTIME_QUALITY_POLICY, evaluateSemanticCoherenceGate } from './production-architecture-core.mjs';
 import {
   evaluateResearchQualityGate,
   type ResearchQualityGateResult,
@@ -25,6 +25,7 @@ export interface PremiumContentGateResult {
   content_score_breakdown: ContentScoreBreakdown;
   generic_content_flags: string[];
   research_quality: ResearchQualityGateResult | null;
+  semantic_coherence: { eligible: boolean; contradiction_count: number; reason_codes: string[] };
 }
 type JsonRecord = Record<string, unknown>;
 
@@ -189,6 +190,22 @@ export function evaluatePremiumContentGate(
       RUNTIME_QUALITY_POLICY.premium_publish_min,
     )
     : null;
+  const researchSections = asRecord(researchMaster.sections);
+  const researchCore = asRecord(researchSections.core_thesis);
+  const v8Sentence = asRecord(ai.v8_daily_sentence);
+  const semanticTheses = unique([
+    firstText(researchCore.statement),
+    firstText(memberNote.today_core_thesis),
+    firstText(ai.today_core_thesis),
+    firstText(v8Sentence.sentence),
+    firstText(ai.daily_sentence),
+    firstText(ai.today_quote),
+  ]);
+  const semanticGate = evaluateSemanticCoherenceGate({
+    primary_thesis: semanticTheses[0],
+    sections: semanticTheses.slice(1),
+    contradictions: researchQuality?.contradiction_count ? ['research_quality_contradiction'] : [],
+  });
 
   if (Object.keys(gate).length === 0) reasons.push('content_publish_gate_missing');
   if (!['可公開', 'ready', 'publishable', 'eligible'].some((status) => overallStatus.includes(status))) {
@@ -227,6 +244,8 @@ export function evaluatePremiumContentGate(
   if (researchQuality && !researchQuality.eligible) {
     reasons.push(...researchQuality.reason_codes);
   }
+  if (semanticTheses.length < 2) reasons.push('semantic_sources_incomplete');
+  if (!semanticGate.eligible) reasons.push(...semanticGate.reason_codes.map((code: string) => code.toLowerCase()));
 
   const reasonCodes = unique(reasons);
   return {
@@ -247,5 +266,6 @@ export function evaluatePremiumContentGate(
     content_score_breakdown: contentReview.breakdown,
     generic_content_flags: contentReview.generic_flags,
     research_quality: researchQuality,
+    semantic_coherence: semanticGate,
   };
 }

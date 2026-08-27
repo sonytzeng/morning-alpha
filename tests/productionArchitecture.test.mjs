@@ -28,13 +28,13 @@ const entitlementPath = new URL('../src/services/entitlementService.ts', import.
 const dashboardPath = new URL('../src/hooks/useHomeDashboard.ts', import.meta.url);
 const deployPath = new URL('../.github/workflows/deploy-morning-alpha-runtime.yml', import.meta.url);
 const replayWorkflowPath = new URL('../.github/workflows/weekly-strategy-replay.yml', import.meta.url);
-const checkpointMigrationPath = new URL('../supabase/migrations/20260822230000_preserve_checkpoint_snapshots.sql', import.meta.url);
-const terminalCheckpointMigrationPath = new URL('../supabase/migrations/20260826105000_preserve_terminal_checkpoint_evidence.sql', import.meta.url);
-const foreignKeyIndexMigrationPath = new URL('../supabase/migrations/20260826105500_cover_foreign_key_paths.sql', import.meta.url);
+const checkpointMigrationPath = new URL('../supabase/migrations/20260822173542_preserve_checkpoint_snapshots.sql', import.meta.url);
+const terminalCheckpointMigrationPath = new URL('../supabase/migrations/20260826025400_preserve_terminal_checkpoint_evidence.sql', import.meta.url);
+const foreignKeyIndexMigrationPath = new URL('../supabase/migrations/20260826025415_cover_foreign_key_paths.sql', import.meta.url);
 const runtimeCheckpointWorkflowPath = new URL('../.github/workflows/morning-alpha-runtime-checkpoints.yml', import.meta.url);
 const openingRadarPath = new URL('../supabase/functions/opening-market-radar/index.ts', import.meta.url);
 const closingVerificationPath = new URL('../supabase/functions/closing-verification-engine/index.ts', import.meta.url);
-const securityHardeningMigrationPath = new URL('../supabase/migrations/20260822233000_harden_runtime_permissions.sql', import.meta.url);
+const securityHardeningMigrationPath = new URL('../supabase/migrations/20260822173549_harden_runtime_permissions.sql', import.meta.url);
 const productionVerificationWorkflowPath = new URL('../.github/workflows/production-readiness-verification.yml', import.meta.url);
 
 const [migration, generator, collector, recovery, replay, entitlement, dashboard, deploy, replayWorkflow, checkpointMigration, terminalCheckpointMigration, foreignKeyIndexMigration, runtimeCheckpointWorkflow, openingRadar, closingVerification, securityHardeningMigration, productionVerificationWorkflow] = await Promise.all([

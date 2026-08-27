@@ -2,6 +2,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import { buildDeliveryIncidentLineMessage } from '../_shared/line-incident-message.ts';
+import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
+import type { RuntimeDatabase } from '../_shared/runtime-database-contract.ts';
 
 // LINE Daily Push V4 — 90 分硬閘門、事故通知、Transactional Outbox 重送
 // V3 升級：加入台股交易日 Gate，休市日不推播盤前報告
@@ -51,12 +53,10 @@ Deno.serve(async (req) => {
     });
   }
 
-  // 1. 驗證 cron secret
-  const cronSecret = Deno.env.get('CRON_SECRET');
-  const reqSecret = req.headers.get('x-cron-secret');
-
-  if (!cronSecret || reqSecret !== cronSecret) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+  // 1. Shared internal service authentication.
+  const auth = await authorizeInternalRequest(req.headers, internalCredentialsFromEnv());
+  if (!auth.ok) {
+    return new Response(JSON.stringify({ error: auth.error_code, error_code: auth.error_code }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     );
   }
 
-  const supabase = createClient(
+  const supabase = createClient<RuntimeDatabase>(
     Deno.env.get('SUPABASE_URL') || '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
   );
@@ -112,89 +112,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { data: subscribers, error: subError } = await supabase
-      .from('line_subscribers')
-      .select('id, line_user_id, display_name')
-      .eq('is_active', true);
-
-    if (subError) {
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch subscribers', detail: subError.message }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } },
-      );
-    }
-
     const message = buildMarketClosedLineMessage(siteUrl);
-    const messagePreview = message.text.slice(0, 200);
-    let sentCount = 0;
-    let failedCount = 0;
-    const now = new Date().toISOString();
-
-    for (const sub of subscribers || []) {
-      const userId = sub.line_user_id;
-      if (!userId) continue;
-      try {
-        const pushRes = await fetch('https://api.line.me/v2/bot/message/push', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${channelAccessToken}`,
-          },
-          body: JSON.stringify({ to: userId, messages: [message] }),
-        });
-
-        if (pushRes.ok) {
-          sentCount++;
-          await supabase.from('line_push_logs').insert({
-            line_user_id: userId,
-            push_type: 'market_closed_typhoon',
-            report_date: taipeiToday,
-            status: 'success',
-            message_preview: messagePreview,
-          });
-          await supabase
-            .from('line_subscribers')
-            .update({ last_pushed_at: now, updated_at: now })
-            .eq('line_user_id', userId);
-        } else {
-          const errText = await pushRes.text();
-          failedCount++;
-          await supabase.from('line_push_logs').insert({
-            line_user_id: userId,
-            push_type: 'market_closed_typhoon',
-            report_date: taipeiToday,
-            status: 'failed',
-            message_preview: messagePreview,
-            error_message: errText.slice(0, 500),
-          });
-        }
-      } catch (e) {
-        failedCount++;
-        const errMsg = e instanceof Error ? e.message : String(e);
-        await supabase.from('line_push_logs').insert({
-          line_user_id: userId,
-          push_type: 'market_closed_typhoon',
-          report_date: taipeiToday,
-          status: 'failed',
-          message_preview: messagePreview,
-          error_message: errMsg.slice(0, 500),
-        });
-      }
+    try {
+      const summary = await deliverOutboxMessage({
+        supabase, channelAccessToken, reportDate: taipeiToday, decisionSnapshotId: null,
+        pushType: 'market_closed_typhoon', message,
+      });
+      return new Response(JSON.stringify({
+        success: summary.failedCount === 0 && summary.pendingCount === 0,
+        sent: summary.sentCount > 0, reason: 'TYPHOON_MARKET_CLOSED_PUSH', date: taipeiToday,
+        market_status: currentMarketStatus.market_status, total_subscribers: summary.totalSubscribers,
+        sent_count: summary.sentCount, failed_count: summary.failedCount, pending_count: summary.pendingCount,
+      }), { status: summary.failedCount === 0 && summary.pendingCount === 0 ? 200 : 503, headers: { 'Content-Type': 'application/json' } });
+    } catch (error) {
+      return new Response(JSON.stringify({ success: false, sent: false, reason: 'TYPHOON_DELIVERY_ERROR', detail: error instanceof Error ? error.message : String(error) }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        sent: true,
-        reason: 'TYPHOON_MARKET_CLOSED_PUSH',
-        date: taipeiToday,
-        market_status: currentMarketStatus.market_status,
-        total_subscribers: subscribers?.length || 0,
-        sent_count: sentCount,
-        failed_count: failedCount,
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    );
   }
 
   if (deliveryMode === 'incident') {
@@ -337,10 +269,11 @@ Deno.serve(async (req) => {
       ? ai.important_news.length
       : Number(ai.fresh_news_count) || 0;
   const premiumGate = evaluatePremiumContentGate(ai, importantNewsCount);
+  const decisionSnapshotId = String(decisionSnapshot?.id ?? '').trim();
   const snapshotStatus = String(decisionSnapshot?.status || '');
   const snapshotScore = Number(decisionSnapshot?.content_score);
   const snapshotMode = String(decisionSnapshot?.decision_mode || '');
-  const snapshotEligible = Boolean(decisionSnapshot)
+  const snapshotEligible = Boolean(decisionSnapshotId)
     && snapshotStatus === 'READY'
     && Number.isFinite(snapshotScore)
     && snapshotScore >= 90
@@ -358,7 +291,7 @@ Deno.serve(async (req) => {
   if (!premiumGate.eligible || !snapshotEligible || !sentenceDateEligible) {
     const reasonCodes = Array.from(new Set([
       ...premiumGate.reason_codes,
-      ...(!decisionSnapshot ? ['decision_snapshot_missing'] : []),
+      ...(!decisionSnapshotId ? ['decision_snapshot_missing'] : []),
       ...(decisionSnapshot && snapshotStatus !== 'READY' ? ['decision_snapshot_not_ready'] : []),
       ...(decisionSnapshot && (!Number.isFinite(snapshotScore) || snapshotScore < 90) ? ['decision_snapshot_score_below_90'] : []),
       ...(decisionSnapshot && !['recommendations', 'no_trade'].includes(snapshotMode) ? ['decision_snapshot_mode_blocked'] : []),
@@ -392,7 +325,7 @@ Deno.serve(async (req) => {
       supabase,
       channelAccessToken,
       reportDate,
-      decisionSnapshotId: String(decisionSnapshot.id),
+      decisionSnapshotId,
       pushType: 'daily_report',
       message,
     });
@@ -408,6 +341,13 @@ Deno.serve(async (req) => {
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
+  }
+
+  if (delivery.failedCount === 0 && delivery.pendingCount === 0) {
+    await supabase.rpc('advance_trading_day_state_v1', {
+      p_trading_date: reportDate, p_state: 'PREMARKET_DELIVERED', p_checkpoint: 'line_delivery', p_status: 'SUCCEEDED',
+      p_correlation_id: crypto.randomUUID(), p_metadata: { decision_snapshot_id: decisionSnapshotId, sent_count: delivery.sentCount, already_sent_count: delivery.alreadySentCount },
+    });
   }
 
   return new Response(
@@ -433,14 +373,14 @@ Deno.serve(async (req) => {
   );
 });
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 
 async function deliverOutboxMessage(args: {
   supabase: SupabaseClient;
   channelAccessToken: string;
   reportDate: string;
   decisionSnapshotId: string | null;
-  pushType: 'daily_report' | 'data_incident';
+  pushType: 'daily_report' | 'data_incident' | 'market_closed_typhoon';
   message: Record<string, unknown>;
 }): Promise<DeliverySummary> {
   const subscribers = await fetchActiveSubscribers(args.supabase);

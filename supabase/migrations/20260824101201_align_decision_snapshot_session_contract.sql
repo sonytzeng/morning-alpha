@@ -236,3 +236,4 @@ grant execute on function public.publish_decision_snapshot_v2(date, text, uuid, 
 
 comment on function public.publish_decision_snapshot_v2(date, text, uuid, jsonb) is
   'Idempotently publishes one immutable canonical decision revision and normalizes legacy session names.';
+;

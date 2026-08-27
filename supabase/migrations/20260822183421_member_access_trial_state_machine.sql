@@ -555,3 +555,4 @@ comment on function public.apply_membership_billing_event_v1(
   'Service-role-only payment-provider adapter contract with event idempotency.';
 
 commit;
+;

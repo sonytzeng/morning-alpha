@@ -1,10 +1,12 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { evaluateResearchQualityGate } from "../_shared/research-quality-gate.ts";
+import { evaluatePublicPremiumLeakageGate, evaluateSemanticCoherenceGate } from "../_shared/production-architecture-core.mjs";
+import { authorizeInternalRequest, internalCredentialsFromEnv } from "../_shared/internal-function-auth.mjs";
 
 type JsonRecord = Record<string, unknown>;
 
 const MAX_RESPONSE_BYTES = 1_000_000;
-const SOURCE_PROJECTION_REVISION = "content_os_source_v5";
+const SOURCE_PROJECTION_REVISION = "content_os_source_v6";
 
 function asObject(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -20,6 +22,11 @@ function optionalObject(value: unknown): JsonRecord | null {
 
 function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
+}
+
+async function sha256Hex(value: unknown): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(value)));
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function optionalString(value: unknown): string | null {
@@ -82,14 +89,27 @@ Deno.serve(async (request) => {
     return json({ error: "METHOD_NOT_ALLOWED" }, 405);
   }
 
+  const internalAuth = await authorizeInternalRequest(
+    request.headers,
+    internalCredentialsFromEnv(),
+  );
   const expectedToken = Deno.env.get("SONY_CONTENT_OS_SOURCE_TOKEN")?.trim() ??
     "";
   const suppliedToken = request.headers.get("Authorization")
     ?.replace(/^Bearer\s+/i, "").trim() ?? "";
-  if (!expectedToken) {
-    return json({ error: "SOURCE_TOKEN_NOT_CONFIGURED" }, 503);
-  }
-  if (!suppliedToken || !constantTimeEqual(suppliedToken, expectedToken)) {
+  const sourceAuthorized = Boolean(
+    expectedToken && suppliedToken && constantTimeEqual(suppliedToken, expectedToken),
+  );
+  if (!internalAuth.ok && !sourceAuthorized) {
+    const hasInternalHeader = Boolean(
+      request.headers.get("x-cron-secret") || request.headers.get("apikey"),
+    );
+    if (hasInternalHeader) {
+      return json({ error: internalAuth.error_code, error_code: internalAuth.error_code }, 401);
+    }
+    if (!expectedToken) {
+      return json({ error: "SOURCE_TOKEN_NOT_CONFIGURED" }, 503);
+    }
     return json({ error: "SOURCE_AUTH_REQUIRED" }, 401);
   }
 
@@ -202,66 +222,8 @@ Deno.serve(async (request) => {
     }, 409);
   }
 
-  const overnightAnalysis = optionalObject(ai.v8_overnight_causal_chain);
-  const memberResearch = optionalObject(ai.member_research_note_v2);
-  const whyTodayMatters = optionalObject(researchSections.why_today_matters);
   const coreThesis = optionalObject(researchSections.core_thesis);
-  const globalEvents = firstArray(
-    memberResearch?.overnight_chain,
-    overnightAnalysis?.chains,
-  ).slice(0, 5);
-  const intradayValidation = asArray(memberResearch?.intraday_validation).slice(
-    0,
-    1,
-  );
-  const morningBrief = {
-    report_date: report.report_date,
-    ...(globalEvents.length ? { global_events: globalEvents } : {}),
-    ...(optionalString(whyTodayMatters?.narrative)
-      ? { overnight_market_summary: optionalString(whyTodayMatters?.narrative) }
-      : {}),
-    ...(optionalString(ai.today_summary)
-      ? { current_market_summary: optionalString(ai.today_summary) }
-      : {}),
-    ...(optionalString(
-        memberResearch?.taiwan_transmission ?? ai.taiwan_transmission,
-      )
-      ? {
-        taiwan_transmission: optionalString(
-          memberResearch?.taiwan_transmission ?? ai.taiwan_transmission,
-        ),
-      }
-      : {}),
-    ...(optionalString(coreThesis?.statement)
-      ? { core_thesis: optionalString(coreThesis?.statement) }
-      : {}),
-    ...(intradayValidation.length
-      ? { first_watch: intradayValidation[0] }
-      : {}),
-    ...(firstArray(
-        memberResearch?.invalidation_rules,
-        snapshot.invalidation_rules,
-      ).length
-      ? {
-        invalidation_rules: firstArray(
-          memberResearch?.invalidation_rules,
-          snapshot.invalidation_rules,
-        ).slice(0, 4),
-      }
-      : {}),
-    ...(optionalString(ai.data_quality)
-      ? { data_quality: optionalString(ai.data_quality) }
-      : {}),
-    ...(optionalString(ai.market_regime)
-      ? { market_regime: optionalString(ai.market_regime) }
-      : {}),
-  };
   const generated = asObject(snapshot.generated_text);
-  const sourceReferences = asArray(snapshot.source_refs);
-  const importantNews = firstArray(
-    report.important_news_json,
-    ai.important_news,
-  );
   const opportunities = firstArray(
     generated.recommendations,
     ai.today_beneficiary_stocks_v10,
@@ -269,11 +231,30 @@ Deno.serve(async (request) => {
     ai.v10_observation_watchlist,
     snapshot.watch_sectors,
   );
-  const surprises = firstArray(
-    ai.surprises,
-    ai.v10_observation_watchlist,
-    ai.extended_watchlist,
-  );
+  const publicTopicSource = asObject(opportunities[0]);
+  const publicSourceReferences = firstArray(
+    publicTopicSource.source_references,
+    publicTopicSource.supporting_evidence,
+    publicTopicSource.source_refs,
+  ).slice(0, 5);
+  const publicTopic = {
+    symbol: optionalString(publicTopicSource.symbol ?? publicTopicSource.stock_code),
+    name: optionalString(publicTopicSource.name ?? publicTopicSource.stock_name),
+    role: optionalString(publicTopicSource.role_title ?? publicTopicSource.role_label ?? publicTopicSource.role),
+    event_source: optionalString(publicTopicSource.event_source ?? publicTopicSource.trigger_event),
+    transmission_path: optionalString(publicTopicSource.transmission_path ?? publicTopicSource.transmission_logic),
+    taiwan_mapping: optionalString(publicTopicSource.taiwan_mapping ?? publicTopicSource.sector ?? publicTopicSource.industry_name),
+    reason: optionalString(publicTopicSource.why_today ?? publicTopicSource.reason ?? publicTopicSource.why_selected),
+    data_timestamp: optionalString(publicTopicSource.data_timestamp ?? publicTopicSource.updated_at ?? report.data_as_of),
+    source_references: publicSourceReferences,
+  };
+  const primaryThesis = optionalString(coreThesis?.statement) ?? optionalString(generated.daily_sentence) ?? optionalString(report.today_quote);
+  const publicTopicComplete = Boolean(publicTopic.symbol && publicTopic.name && publicTopic.event_source && publicTopic.transmission_path && publicTopic.taiwan_mapping && publicTopic.reason && publicTopic.data_timestamp && publicSourceReferences.length);
+  if (!publicTopicComplete) return json({ error: 'PUBLIC_TOPIC_INCOMPLETE' }, 409);
+  const coherenceGate = evaluateSemanticCoherenceGate({ primary_thesis: primaryThesis, sections: [publicTopic.reason, publicTopic.transmission_path, publicTopic.taiwan_mapping], contradictions: researchGate.contradiction_count > 0 ? ['research_gate_contradiction'] : [] });
+  const premiumOnlySymbols = opportunities.slice(1).map((item) => optionalString(asObject(item).symbol ?? asObject(item).stock_code)).filter((symbol): symbol is string => Boolean(symbol) && symbol !== publicTopic.symbol);
+  const leakageGate = evaluatePublicPremiumLeakageGate({ public_symbols: [publicTopic.symbol], premium_only_symbols: premiumOnlySymbols, public_fields: Object.keys(publicTopic), public_entities: [publicTopic.name,publicTopic.role].filter((value): value is string => Boolean(value)), premium_entities: [] });
+  if (!coherenceGate.eligible || !leakageGate.eligible) return json({ error: 'PUBLIC_TOPIC_GATE_BLOCKED', reason_codes: [...coherenceGate.reason_codes, ...leakageGate.reason_codes] }, 409);
   const publishedAt = String(
     review.reviewed_at ?? snapshot.valid_from ?? report.updated_at ??
       report.created_at,
@@ -282,6 +263,8 @@ Deno.serve(async (request) => {
     snapshot.snapshot_fingerprint ?? `${snapshot.version}:${review.id}`,
   );
   const projectedRevision = `${revision}:${SOURCE_PROJECTION_REVISION}`;
+  const topicFingerprint = await sha256Hex({ report_date: report.report_date, public_topic: publicTopic, primary_thesis: primaryThesis });
+  const expiresAt = new Date(new Date(publishedAt).getTime() + 24 * 60 * 60 * 1000).toISOString();
 
   return json({
     external_object_id: String(report.id),
@@ -295,32 +278,26 @@ Deno.serve(async (request) => {
     confidence_score: snapshot.confidence_score ?? report.confidence_score,
     daily_sentence: generated.daily_sentence ?? report.today_quote ??
       report.summary,
-    facts: sourceReferences,
-    catalysts: firstArray(
-      ai.causal_overnight_impact_chains,
-      ai.overnight_impact_chain,
-      importantNews,
-    ),
-    surprises,
+    topic_fingerprint: topicFingerprint,
+    expires_at: expiresAt,
+    public_topic: publicTopic,
+    facts: publicSourceReferences,
+    catalysts: [{ event_source: publicTopic.event_source }],
     taiwan_mapping: {
-      transmission: ai.taiwan_transmission ?? ai.taiwan_mapping ?? null,
-      preferred_sectors: asArray(snapshot.preferred_sectors),
-      watch_sectors: asArray(snapshot.watch_sectors),
+      transmission: publicTopic.taiwan_mapping,
+      preferred_sectors: publicTopic.role ? [publicTopic.role] : [],
+      watch_sectors: [],
     },
-    risk: {
-      risk_flags: asArray(snapshot.risk_flags),
-      invalidation_rules: firstArray(
-        snapshot.invalidation_rules,
-        generated.invalidation_conditions,
-        ai.invalidation_conditions,
-      ),
-      blocked_sectors: asArray(snapshot.blocked_sectors),
+    risk: { risk_flags: asArray(snapshot.risk_flags).slice(0, 3) },
+    opportunities: [publicTopic],
+    source_references: publicSourceReferences,
+    morning_brief: {
+      report_date: report.report_date,
+      current_market_summary: optionalString(ai.today_summary),
+      core_thesis: primaryThesis,
+      data_quality: optionalString(ai.data_quality),
+      market_regime: optionalString(ai.market_regime),
     },
-    opportunities,
-    source_references: sourceReferences,
-    morning_brief: morningBrief,
-    research_master_v2: researchMaster,
-    ...(overnightAnalysis ? { overnight_analysis: overnightAnalysis } : {}),
     verification: {
       status: "verified",
       decision_snapshot_id: snapshot.id,
@@ -338,6 +315,8 @@ Deno.serve(async (request) => {
       duplicate_claim_count: researchGate.duplicate_claim_count,
       contradiction_count: researchGate.contradiction_count,
       missing_section_count: researchGate.missing_section_count,
+      semantic_coherence: coherenceGate.eligible,
+      public_premium_leakage: leakageGate.eligible,
     },
   });
 });

@@ -6,7 +6,7 @@ import {
 } from '../supabase/functions/_shared/canonical-runtime-market-status.mjs';
 import {
   buildInternalFunctionHeaders,
-  hasValidInternalCredentials,
+  authorizeInternalRequest,
 } from '../supabase/functions/_shared/internal-function-auth.mjs';
 
 test('a trading day remains OPEN before terminal close evidence exists', () => {
@@ -56,13 +56,13 @@ test('internal function headers use apikey for service credentials', () => {
   assert.equal(Object.hasOwn(headers, 'Authorization'), false);
 });
 
-test('closing verification accepts either valid cron or service credentials', () => {
-  const cronHeaders = new Headers({ 'x-cron-secret': 'cron-secret' });
+test('closing verification accepts either valid cron or service credentials', async () => {
+  const cronHeaders = new Headers({ 'x-cron-secret': 'cron-secret', 'x-internal-auth-version': 'v1' });
   const serviceHeaders = new Headers({ apikey: 'service-key' });
   const invalidHeaders = new Headers({ 'x-cron-secret': 'wrong', apikey: 'wrong' });
-  const credentials = { cronSecret: 'cron-secret', serviceRoleKey: 'service-key' };
+  const credentials = { currentToken: 'cron-secret', serviceRoleKey: 'service-key', version: 'v1' };
 
-  assert.equal(hasValidInternalCredentials(cronHeaders, credentials), true);
-  assert.equal(hasValidInternalCredentials(serviceHeaders, credentials), true);
-  assert.equal(hasValidInternalCredentials(invalidHeaders, credentials), false);
+  assert.equal((await authorizeInternalRequest(cronHeaders, credentials)).ok, true);
+  assert.equal((await authorizeInternalRequest(serviceHeaders, credentials)).ok, true);
+  assert.equal((await authorizeInternalRequest(invalidHeaders, credentials)).ok, false);
 });

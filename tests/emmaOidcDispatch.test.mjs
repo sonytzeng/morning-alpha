@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildTask, parseClaim, redactEvidence } from '../scripts/emma-auto-repair-oidc.mjs';
+import { buildTask, githubFailureCode, parseClaim, redactEvidence } from '../scripts/emma-auto-repair-oidc.mjs';
 
 const claim = {
   dispatch_id: '11111111-1111-4111-8111-111111111111',
@@ -34,4 +34,10 @@ test('redacts credential-shaped evidence and builds immutable markers', () => {
   assert.match(task, /emma-codex-repair:55555555-5555-4555-8555-555555555555:66666666-6666-4666-8666-666666666666/);
   assert.doesNotMatch(task, /do-not-copy/);
   assert.match(task, /Never merge, deploy, execute migrations/);
+});
+
+
+test('reports only a bounded GitHub HTTP status', () => {
+  assert.equal(githubFailureCode('PR_CREATE', { status: 403 }), 'PR_CREATE_HTTP_403');
+  assert.equal(githubFailureCode('not safe', { status: 999 }), 'GITHUB_HTTP_0');
 });

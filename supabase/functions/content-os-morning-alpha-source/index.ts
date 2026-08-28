@@ -9,7 +9,7 @@ type AdminClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 
 const MAX_RESPONSE_BYTES = 1_000_000;
 const PUBLIC_CONTRACT_VERSION = "morning_alpha_public_contract_v1";
-const SOURCE_PROJECTION_REVISION = "content_os_source_v10_content_bound_revision";
+const SOURCE_PROJECTION_REVISION = "content_os_source_v11_full_projection_revision";
 
 function asObject(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -165,7 +165,36 @@ async function buildPublicOnlySource(
     premium_reason_codes: Array.from(new Set(premiumReasonCodes)),
     evidence_coverage: evidenceCoverage,
   });
-  const revisionId = `${revision}:${SOURCE_PROJECTION_REVISION}:${topicFingerprint.slice(0, 16)}`;
+  const projectionFingerprint = await sha256Hex({
+    external_object_id: report.id,
+    report_date: report.report_date,
+    report_mode: report.report_mode,
+    source_published_at: publishedAt,
+    generated_at: report.updated_at ?? report.created_at,
+    market_bias: marketBias,
+    confidence_score: confidenceScore,
+    daily_sentence: dailySentence,
+    public_summary: publicSummary,
+    public_topic: publicTopic,
+    facts: sourceReferences,
+    risk_flags: asArray(snapshot.risk_flags).slice(0, 3),
+    morning_brief: {
+      current_market_summary: optionalString(ai.today_summary),
+      data_quality: optionalString(ai.data_quality),
+      market_regime: optionalString(ai.market_regime),
+    },
+    core_data_status: ai.core_data_status ?? asObject(ai.core_data_gate).status ?? "BLOCKED",
+    premium_reason_codes: Array.from(new Set(premiumReasonCodes)),
+    verification: {
+      decision_snapshot_id: snapshot.id,
+      editorial_review_id: review?.id ?? null,
+      review_status: review?.review_status ?? null,
+      content_score: Number(review?.content_score ?? snapshot.content_score),
+      published_claim_evidence_coverage: evidenceCoverage,
+      unsupported_published_claims: unsupportedClaims,
+    },
+  });
+  const revisionId = `${revision}:${SOURCE_PROJECTION_REVISION}:${projectionFingerprint.slice(0, 16)}`;
   return json({
     contract_version: PUBLIC_CONTRACT_VERSION,
     external_object_id: String(report.id),

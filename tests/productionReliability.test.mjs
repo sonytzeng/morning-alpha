@@ -275,6 +275,19 @@ test('Content OS public reason reuses canonical supply-chain evidence when no di
   assert.doesNotMatch(source, /可能影響|受惠於|有利於|預期轉強/);
 });
 
+test('Content OS public-only projection uses one canonical evidence-backed contract', () => {
+  const source = readFileSync(new URL('../supabase/functions/content-os-morning-alpha-source/index.ts', import.meta.url), 'utf8');
+  assert.match(source, /morning_alpha_public_contract_v1/);
+  assert.match(source, /kind:\s*"market_brief"/);
+  assert.match(source, /premium_locked:\s*true/);
+  assert.match(source, /evidence_status:\s*"verified"/);
+  assert.match(source, /status:\s*"verified"/);
+  assert.match(source, /opportunities:\s*\[\]/);
+  assert.match(source, /published_claim_evidence_coverage:\s*evidenceCoverage/);
+  assert.doesNotMatch(source, /public_topic:\s*null/);
+  assert.doesNotMatch(source, /status:\s*"public_verified"/);
+});
+
 test('canonical member revision removes unrelated primary themes without inventing evidence', () => {
   const snapshot = {
     id: 'snapshot-1', report_date: '2026-08-27', version: 3, action: 'SELECTIVE',

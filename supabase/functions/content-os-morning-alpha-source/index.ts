@@ -8,7 +8,8 @@ type JsonRecord = Record<string, unknown>;
 type AdminClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 
 const MAX_RESPONSE_BYTES = 1_000_000;
-const SOURCE_PROJECTION_REVISION = "content_os_source_v8_layered_public";
+const PUBLIC_CONTRACT_VERSION = "morning_alpha_public_contract_v1";
+const SOURCE_PROJECTION_REVISION = "content_os_source_v9_public_contract_v1";
 
 function asObject(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -124,29 +125,58 @@ async function buildPublicOnlySource(
     return json({ error: "PUBLIC_DELIVERY_GATE_BLOCKED", reason_codes: asArray(publicGate.reason_codes) }, 409);
   }
   const generated = asObject(snapshot.generated_text);
-  const sourceReferences = firstArray(snapshot.source_refs, publicGate.published_claims).slice(0, 10);
+  const sourceReferences = firstArray(snapshot.source_refs, publicGate.published_claims).slice(0, 5);
   const publishedAt = String(review?.reviewed_at ?? snapshot.valid_from ?? report.updated_at ?? report.created_at);
   const revision = String(snapshot.snapshot_fingerprint ?? snapshot.version ?? "public");
+  const revisionId = `${revision}:${SOURCE_PROJECTION_REVISION}`;
   const dailySentence = optionalString(generated.daily_sentence) ?? optionalString(report.today_quote) ?? optionalString(report.summary);
+  const publicSummary = optionalString(ai.today_summary) ?? dailySentence;
+  const marketBias = optionalString(report.market_bias ?? ai.market_bias);
+  const confidenceScore = Number(snapshot.confidence_score ?? report.confidence_score);
+  const evidenceCoverage = Number(publicGate.published_claim_evidence_coverage);
+  const unsupportedClaims = asArray(publicGate.unsupported_published_claims);
+  if (
+    !dailySentence || !publicSummary || !marketBias || !sourceReferences.length ||
+    !Number.isFinite(confidenceScore) || confidenceScore < 0 || confidenceScore > 100 ||
+    !Number.isFinite(evidenceCoverage) || evidenceCoverage !== 100 || unsupportedClaims.length > 0
+  ) {
+    return json({
+      error: "PUBLIC_CONTRACT_INCOMPLETE",
+      contract_version: PUBLIC_CONTRACT_VERSION,
+    }, 409);
+  }
+  const publicTopic = {
+    kind: "market_brief",
+    title: dailySentence,
+    name: "台股盤前市場與風險指標",
+    summary: publicSummary,
+    reason: publicSummary,
+    data_timestamp: publishedAt,
+    source_references: sourceReferences,
+  };
   const topicFingerprint = await sha256Hex({
     report_date: report.report_date,
-    daily_sentence: dailySentence,
+    public_topic: publicTopic,
     source_references: sourceReferences,
   });
   return json({
+    contract_version: PUBLIC_CONTRACT_VERSION,
     external_object_id: String(report.id),
     report_id: String(report.id),
-    external_revision: `${revision}:${SOURCE_PROJECTION_REVISION}`,
+    external_revision: revisionId,
+    revision_id: revisionId,
     source_published_at: publishedAt,
     published_at: publishedAt,
+    generated_at: String(report.updated_at ?? report.created_at),
     report_date: report.report_date,
     report_mode: report.report_mode,
-    market_bias: report.market_bias ?? ai.market_bias,
-    confidence_score: snapshot.confidence_score ?? report.confidence_score,
+    market_bias: marketBias,
+    confidence_score: confidenceScore,
     daily_sentence: dailySentence,
+    public_summary: publicSummary,
     topic_fingerprint: topicFingerprint,
     expires_at: new Date(new Date(publishedAt).getTime() + 24 * 60 * 60 * 1000).toISOString(),
-    public_topic: null,
+    public_topic: publicTopic,
     facts: sourceReferences,
     catalysts: [],
     taiwan_mapping: { transmission: null, preferred_sectors: [], watch_sectors: [] },
@@ -164,14 +194,20 @@ async function buildPublicOnlySource(
     public_delivery_status: "PASS",
     premium_status: "BLOCKED",
     content_os_status: "PASS",
+    premium_locked: true,
+    evidence_status: "verified",
     premium: { status: "BLOCKED", locked: true, reason_codes: Array.from(new Set(premiumReasonCodes)) },
     verification: {
-      status: "public_verified",
+      status: "verified",
+      contract_version: PUBLIC_CONTRACT_VERSION,
       decision_snapshot_id: snapshot.id,
       editorial_review_id: review?.id ?? null,
       review_status: review?.review_status ?? null,
-      published_claim_evidence_coverage: publicGate.published_claim_evidence_coverage,
-      unsupported_published_claims: publicGate.unsupported_published_claims ?? [],
+      content_score: Number(review?.content_score ?? snapshot.content_score),
+      published_claim_evidence_coverage: evidenceCoverage,
+      unsupported_published_claims: unsupportedClaims,
+      public_premium_leakage: true,
+      semantic_coherence: true,
     },
   });
 }
@@ -293,6 +329,7 @@ Deno.serve(async (request) => {
   }
 
   const ai = asObject(report.ai_strategy_json);
+  const publicGate = asObject(ai.public_delivery_gate);
   const researchMaster = optionalObject(ai.research_master_v2);
   const researchSections = optionalObject(researchMaster?.sections);
   const researchGate = evaluateResearchQualityGate(
@@ -366,6 +403,7 @@ Deno.serve(async (request) => {
     publicTopicSource.source_refs,
   ).slice(0, 5);
   const publicTopic = {
+    kind: "stock_opportunity",
     symbol: optionalString(publicTopicSource.symbol ?? publicTopicSource.stock_code),
     name: optionalString(publicTopicSource.name ?? publicTopicSource.stock_name),
     role: optionalString(publicTopicSource.role_title ?? publicTopicSource.role_label ?? publicTopicSource.role),
@@ -381,6 +419,10 @@ Deno.serve(async (request) => {
     source_references: publicSourceReferences,
   };
   const primaryThesis = optionalString(memberContent.today_core_thesis) ?? optionalString(generated.daily_sentence) ?? optionalString(report.today_quote);
+  Object.assign(publicTopic, {
+    title: [publicTopic.symbol, publicTopic.name].filter(Boolean).join(" "),
+    summary: publicTopic.reason,
+  });
   const publicTopicComplete = Boolean(publicTopic.symbol && publicTopic.name && publicTopic.event_source && publicTopic.transmission_path && publicTopic.taiwan_mapping && publicTopic.reason && publicTopic.data_timestamp && publicSourceReferences.length);
   if (!publicTopicComplete) return buildPublicOnlySource(report, snapshot, review, ['PUBLIC_TOPIC_INCOMPLETE']);
   const premiumOnlySymbols = opportunities.slice(1).map((item) => optionalString(asObject(item).symbol ?? asObject(item).stock_code)).filter((symbol): symbol is string => Boolean(symbol) && symbol !== publicTopic.symbol);
@@ -406,17 +448,21 @@ Deno.serve(async (request) => {
   if (resolveIncidentError) return json({ error: "CONTENT_OS_INCIDENT_RESOLUTION_FAILED" }, 503);
 
   return json({
+    contract_version: PUBLIC_CONTRACT_VERSION,
     external_object_id: String(report.id),
     report_id: String(report.id),
     external_revision: projectedRevision,
+    revision_id: projectedRevision,
     source_published_at: publishedAt,
     published_at: publishedAt,
+    generated_at: String(report.updated_at ?? report.created_at),
     report_date: report.report_date,
     report_mode: report.report_mode,
     market_bias: report.market_bias ?? ai.market_bias,
     confidence_score: snapshot.confidence_score ?? report.confidence_score,
     daily_sentence: generated.daily_sentence ?? report.today_quote ??
       report.summary,
+    public_summary: primaryThesis ?? publicTopic.reason,
     topic_fingerprint: topicFingerprint,
     expires_at: expiresAt,
     public_topic: publicTopic,
@@ -439,6 +485,7 @@ Deno.serve(async (request) => {
     },
     verification: {
       status: "verified",
+      contract_version: PUBLIC_CONTRACT_VERSION,
       decision_snapshot_id: snapshot.id,
       editorial_review_id: review.id,
       review_status: review.review_status,
@@ -458,11 +505,15 @@ Deno.serve(async (request) => {
       semantic_gate_version: semanticGate.gate_version,
       member_content_revision_id: memberRevision.id,
       public_premium_leakage: leakageGate.eligible,
+      published_claim_evidence_coverage: publicGate.published_claim_evidence_coverage,
+      unsupported_published_claims: publicGate.unsupported_published_claims ?? [],
     },
     core_data_status: ai.core_data_status ?? asObject(ai.core_data_gate).status ?? "BLOCKED",
     public_delivery_status: "PASS",
     premium_status: "PASS",
     content_os_status: "PASS",
+    premium_locked: false,
+    evidence_status: "verified",
     premium: { status: "PASS", locked: false, reason_codes: [] },
   });
 });

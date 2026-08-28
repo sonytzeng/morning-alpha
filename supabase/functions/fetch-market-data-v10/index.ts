@@ -1476,8 +1476,12 @@ Deno.serve(async (req) => {
     const checkpointEvidenceComplete = beneficiaryCloseOnly
       ? beneficiaryCloseStatus.complete === true && canonicalComplete && snapshotComplete && relatedCoreHealth.evidence_complete
       : coreBatchComplete;
-    const checkpointStatus = checkpointEvidenceComplete && failed.length === 0 && !timedOut && !hasProviderDegradation &&
-        providerHealthWriteErrors.length === 0 && relatedCoreHealth.healthy
+    // Lifecycle progress is owned by the Core gate. Supplemental provider
+    // degradation remains visible in provider health, but must not block a
+    // complete TAIEX/2330/TXF checkpoint or couple Public runtime progress to
+    // Premium evidence.
+    const checkpointStatus = checkpointEvidenceComplete && !timedOut &&
+        providerHealthWriteErrors.length === 0
       ? "SUCCEEDED"
       : "DEGRADED";
     // A beneficiary-only close pass validates premium recommendations after the

@@ -15,6 +15,9 @@ const MAX_BODY_BYTES = 8_192;
 const MAX_GITHUB_RESPONSE_BYTES = 512 * 1024;
 const JWKS_URL = 'https://token.actions.githubusercontent.com/.well-known/jwks';
 const REPOSITORY_PATH = '/repos/sonytzeng/morning-alpha';
+const REPOSITORY_NAME = 'morning-alpha';
+const REPOSITORY_ID = 1_274_909_964;
+const GITHUB_APP_TOKEN_TTL_SECONDS = 9 * 60;
 
 function json(status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
@@ -66,13 +69,113 @@ async function fetchJwks(): Promise<unknown> {
   }
 }
 
-class EmmaServerTokenCredentialProvider {
-  readonly credentialType = emmaGithubRepairPolicy.credentialType;
+type GitHubCredential = { credentialType: string; token: string };
 
-  getCredential(): { credentialType: string; token: string } {
+function encodeBase64UrlBytes(value: Uint8Array): string {
+  let binary = '';
+  for (let index = 0; index < value.length; index += 8_192) {
+    binary += String.fromCharCode(...value.slice(index, index + 8_192));
+  }
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/u, '');
+}
+
+function encodeBase64UrlJson(value: Record<string, unknown>): string {
+  return encodeBase64UrlBytes(new TextEncoder().encode(JSON.stringify(value)));
+}
+
+function privateKeyDer(pem: string): ArrayBuffer {
+  const normalized = pem.replaceAll('\\n', '\n').trim();
+  const match = normalized.match(/^-----BEGIN PRIVATE KEY-----\s+([A-Za-z0-9+/=\s]+)\s+-----END PRIVATE KEY-----$/u);
+  if (!match) throw new Error('GITHUB_APP_CONFIGURATION_INVALID');
+  const binary = atob(match[1].replace(/\s/gu, ''));
+  const result = new ArrayBuffer(binary.length);
+  const bytes = new Uint8Array(result);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return result;
+}
+
+async function githubAppJwt(appId: string, privateKey: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    privateKeyDer(privateKey),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  ).catch(() => {
+    throw new Error('GITHUB_APP_CONFIGURATION_INVALID');
+  });
+  const now = Math.floor(Date.now() / 1_000);
+  const header = encodeBase64UrlJson({ alg: 'RS256', typ: 'JWT' });
+  const payload = encodeBase64UrlJson({
+    iat: now - 60,
+    exp: now + GITHUB_APP_TOKEN_TTL_SECONDS,
+    iss: appId,
+  });
+  const input = `${header}.${payload}`;
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    key,
+    new TextEncoder().encode(input),
+  );
+  return `${input}.${encodeBase64UrlBytes(new Uint8Array(signature))}`;
+}
+
+function exactPositiveInteger(value: string, code: string): number {
+  if (!/^[1-9][0-9]{0,19}$/u.test(value)) throw new Error(code);
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) throw new Error(code);
+  return parsed;
+}
+
+class EmmaGitHubCredentialProvider {
+  async getCredential(): Promise<GitHubCredential> {
+    const appId = Deno.env.get('GITHUB_APP_ID')?.trim() ?? '';
+    const installationIdValue = Deno.env.get('GITHUB_APP_INSTALLATION_ID')?.trim() ?? '';
+    const privateKey = Deno.env.get('GITHUB_APP_PRIVATE_KEY')?.trim() ?? '';
+    const appConfigurationPresent = Boolean(appId || installationIdValue || privateKey);
+    if (appConfigurationPresent) {
+      if (!appId || !installationIdValue || !privateKey) throw new Error('GITHUB_APP_CONFIGURATION_INVALID');
+      exactPositiveInteger(appId, 'GITHUB_APP_CONFIGURATION_INVALID');
+      const installationId = exactPositiveInteger(installationIdValue, 'GITHUB_APP_CONFIGURATION_INVALID');
+      const appJwt = await githubAppJwt(appId, privateKey);
+      const response = await fetch(`https://api.github.com/app/installations/${installationId}/access_tokens`, {
+        method: 'POST',
+        redirect: 'error',
+        headers: {
+          Authorization: `Bearer ${appJwt}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json',
+          'User-Agent': 'emma-github-oidc-broker-v5',
+        },
+        body: JSON.stringify({
+          repositories: [REPOSITORY_NAME],
+          permissions: { contents: 'write', pull_requests: 'write', issues: 'write' },
+        }),
+      });
+      const body = await readJson(response).catch(() => null);
+      if (response.status !== 201 || !isRecord(body)) {
+        throw new Error(githubErrorCode('INSTALLATION_TOKEN_CREATE', response.status));
+      }
+      const permissions = isRecord(body.permissions) ? body.permissions : {};
+      const repositories = Array.isArray(body.repositories) ? body.repositories : [];
+      const token = typeof body.token === 'string' ? body.token.trim() : '';
+      const expiresAt = typeof body.expires_at === 'string' ? Date.parse(body.expires_at) : Number.NaN;
+      const repositoryGranted = repositories.some((repository) =>
+        isRecord(repository) && repository.id === REPOSITORY_ID &&
+        String(repository.full_name ?? '').toLowerCase() === emmaGithubRepairPolicy.repository
+      );
+      if (
+        token.length < 20 || token.length > 512 || !Number.isFinite(expiresAt) || expiresAt <= Date.now() ||
+        permissions.contents !== 'write' || permissions.pull_requests !== 'write' || permissions.issues !== 'write' ||
+        !repositoryGranted
+      ) throw new Error('GITHUB_APP_PERMISSION_DENIED');
+      return { credentialType: 'github_app_installation', token };
+    }
+
     const token = Deno.env.get('GITHUB_TOKEN')?.trim() ?? '';
     if (token.length < 20 || token.length > 512) throw new Error('GITHUB_AUTH_FAILED');
-    return { credentialType: this.credentialType, token };
+    return { credentialType: emmaGithubRepairPolicy.credentialType, token };
   }
 }
 
@@ -97,7 +200,7 @@ class GitHubWriter {
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
         'Content-Type': 'application/json',
-        'User-Agent': 'emma-github-oidc-broker-v4',
+        'User-Agent': 'emma-github-oidc-broker-v5',
         ...(init.headers ?? {}),
       },
     });
@@ -184,7 +287,7 @@ type DispatchEvidence = {
 
 async function dispatchClaim(claimValue: unknown): Promise<DispatchEvidence> {
   const claim = parseEmmaRepairClaim(claimValue);
-  const credential = new EmmaServerTokenCredentialProvider().getCredential();
+  const credential = await new EmmaGitHubCredentialProvider().getCredential();
   const github = new GitHubWriter(credential, claim.head_ref);
   const preflight = await assertGitHubWriteCapability(github, claim.head_ref);
   const baseSha = preflight.baseSha;

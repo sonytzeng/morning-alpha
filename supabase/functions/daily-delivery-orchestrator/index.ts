@@ -358,13 +358,12 @@ async function loadDeliveryState(
     core_data_status: String(layered.core_gate.status || 'BLOCKED'),
     public_delivery_status: String(layered.public_gate.status || 'BLOCKED'),
     premium_status: premiumGate.eligible && memberRevisionReady ? 'PASS' : 'BLOCKED',
-    public_eligible: layered.public_gate.eligible === true && snapshotReady,
+    // Public delivery is governed by the Public gate. A Premium-only
+    // decision-snapshot failure must not suppress an otherwise evidence-backed
+    // Public report.
+    public_eligible: layered.public_gate.eligible === true,
     premium_eligible: layered.public_gate.eligible === true && snapshotReady && premiumGate.eligible && memberRevisionReady,
-    reason_codes: Array.from(new Set([
-      ...publicGateReasonCodes,
-      ...(snapshotRecord ? [] : ['decision_snapshot_missing']),
-      ...(snapshotReady ? [] : ['decision_snapshot_not_publishable']),
-    ])),
+    reason_codes: Array.from(new Set(publicGateReasonCodes)),
     premium_reason_codes: premiumReasonCodes,
   };
 }

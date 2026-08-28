@@ -304,16 +304,17 @@ Deno.serve(async (req) => {
   const leadingDate = deliverySentence.match(/^(\d{4}-\d{2}-\d{2})(?:未|[，,。；;：:\s])/i)?.[1] || '';
   const sentenceDateEligible = !leadingDate || leadingDate === reportDate;
 
-  const gateEligible = deliveryMode === 'premium'
-    ? premiumGate.eligible && layered.public_gate.eligible === true
+  const premiumDelivery = deliveryMode === 'premium';
+  const gateEligible = premiumDelivery
+    ? premiumGate.eligible && layered.public_gate.eligible === true && snapshotEligible
     : layered.public_gate.eligible === true;
-  if (!gateEligible || !snapshotEligible || !sentenceDateEligible) {
+  if (!gateEligible || !sentenceDateEligible) {
     const reasonCodes = Array.from(new Set([
-      ...(deliveryMode === 'premium' ? premiumGate.reason_codes : layered.public_gate.reason_codes),
-      ...(!decisionSnapshotId ? ['decision_snapshot_missing'] : []),
-      ...(decisionSnapshot && snapshotStatus !== 'READY' ? ['decision_snapshot_not_ready'] : []),
-      ...(decisionSnapshot && (!Number.isFinite(snapshotScore) || snapshotScore < 90) ? ['decision_snapshot_score_below_90'] : []),
-      ...(decisionSnapshot && !['recommendations', 'no_trade'].includes(snapshotMode) ? ['decision_snapshot_mode_blocked'] : []),
+      ...(premiumDelivery ? premiumGate.reason_codes : layered.public_gate.reason_codes),
+      ...(premiumDelivery && !decisionSnapshotId ? ['decision_snapshot_missing'] : []),
+      ...(premiumDelivery && decisionSnapshot && snapshotStatus !== 'READY' ? ['decision_snapshot_not_ready'] : []),
+      ...(premiumDelivery && decisionSnapshot && (!Number.isFinite(snapshotScore) || snapshotScore < 90) ? ['decision_snapshot_score_below_90'] : []),
+      ...(premiumDelivery && decisionSnapshot && !['recommendations', 'no_trade'].includes(snapshotMode) ? ['decision_snapshot_mode_blocked'] : []),
       ...(!sentenceDateEligible ? ['daily_sentence_date_mismatch'] : []),
     ]));
     const blockedReason = deliveryMode === 'premium'

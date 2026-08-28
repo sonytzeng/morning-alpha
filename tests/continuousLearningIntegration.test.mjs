@@ -145,6 +145,9 @@ test('daily learning waits for verified closing state without weakening explicit
   assert.match(engine, /\.from\('trading_day_state'\)/);
   assert.match(engine, /Number\(tradingDayState\?\.state_rank \|\| 0\) >= 110/);
   assert.match(engine, /String\(closingStatus\.status \|\| ''\) === 'SUCCEEDED'/);
+  assert.match(engine, /degradedDirectionComplete/);
+  assert.match(engine, /direction_completed_data_degraded/);
+  assert.match(engine, /closing_decision_snapshot_id/);
   assert.match(engine, /CLOSING_VERIFICATION_INCOMPLETE/);
   assert.match(engine, /production_rule_mutated: false/);
 });

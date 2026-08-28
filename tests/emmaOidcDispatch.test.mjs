@@ -83,7 +83,10 @@ test('broker preflights one server credential before any repair mutation and reu
   const broker = readFileSync(new URL('../supabase/functions/emma-github-oidc-broker/index.ts', import.meta.url), 'utf8');
   const workflow = readFileSync(new URL('../.github/workflows/emma-auto-repair-oidc.yml', import.meta.url), 'utf8');
   assert.ok(broker.indexOf('assertGitHubWriteCapability') < broker.indexOf("'BRANCH_LOOKUP'"));
-  assert.match(broker, /const credential = new EmmaServerTokenCredentialProvider\(\)\.getCredential\(\)/);
+  assert.match(broker, /const credential = await new EmmaGitHubCredentialProvider\(\)\.getCredential\(\)/);
+  assert.ok(broker.indexOf("Deno.env.get('GITHUB_APP_ID')") < broker.indexOf("Deno.env.get('GITHUB_TOKEN')"));
+  assert.match(broker, /permissions: \{ contents: 'write', pull_requests: 'write', issues: 'write' \}/);
+  assert.match(broker, /credentialType: 'github_app_installation'/);
   assert.match(broker, /existingPull/);
   assert.match(broker, /commentsResult\.body\.find/);
   assert.doesNotMatch(workflow, /GITHUB_TOKEN:/);
@@ -91,6 +94,17 @@ test('broker preflights one server credential before any repair mutation and reu
   assert.doesNotMatch(responseBody, /claim_token|credential\.token|GITHUB_TOKEN/);
   const structuredLog = broker.slice(broker.indexOf("event: 'github_write_operation'"), broker.indexOf('}));', broker.indexOf("event: 'github_write_operation'")));
   assert.doesNotMatch(structuredLog, /credential\.token|Authorization|GITHUB_TOKEN/);
+});
+
+test('GitHub App installation token is repository-bounded and fails closed on partial configuration', () => {
+  const broker = readFileSync(new URL('../supabase/functions/emma-github-oidc-broker/index.ts', import.meta.url), 'utf8');
+  assert.match(broker, /repositories: \[REPOSITORY_NAME\]/);
+  assert.match(broker, /repository\.id === REPOSITORY_ID/);
+  assert.match(broker, /if \(!appId \|\| !installationIdValue \|\| !privateKey\) throw new Error\('GITHUB_APP_CONFIGURATION_INVALID'\)/);
+  assert.match(broker, /permissions\.contents !== 'write'/);
+  assert.match(broker, /permissions\.pull_requests !== 'write'/);
+  assert.match(broker, /permissions\.issues !== 'write'/);
+  assert.doesNotMatch(broker, /console\.(?:log|error)[^\n]*(?:privateKey|appJwt|credential\.token)/);
 });
 
 test('GitHub permission failures have bounded actionable taxonomy', () => {

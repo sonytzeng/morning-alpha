@@ -13,6 +13,10 @@ const ACTIONS = {
   retry_global_news: { target: 'fetch-global-market-news', defaultBody: { source: 'ma-ops-safe-recovery' } },
   retry_market_data: { target: 'fetch-market-data-v10', defaultBody: { phase: 'manual_backfill', force_run: true } },
   regenerate_report: { target: 'generate-daily-report-v7', defaultBody: { quality_retry: true } },
+  retry_close_market_review: {
+    target: 'close-market-review',
+    defaultBody: { source: 'ma-ops-safe-recovery', suppress_notifications: true },
+  },
   retry_closing_verification: { target: 'closing-verification-engine', defaultBody: {} },
   retry_closing_health: {
     target: 'daily-delivery-orchestrator',

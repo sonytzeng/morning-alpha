@@ -46,6 +46,8 @@ const contentIntelligenceMigration = read('supabase/migrations/20260820131721_co
 const deliveryGuaranteeMigration = read('supabase/migrations/20260821080555_daily_delivery_guarantee.sql');
 const publicCloseReconciliationMigration = read('supabase/migrations/20260825083924_public_close_reconciliation.sql');
 const productionReliabilityMigration = read('supabase/migrations/20260827084613_production_reliability_daily_lifecycle.sql');
+const runtimeIncidentReconciliationMigration = read('supabase/migrations/20260828082702_classify_quality_blocks_and_reconcile_runtime_incidents.sql');
+const degradedLifecycleMigration = read('supabase/migrations/20260828083852_advance_core_complete_degraded_lifecycle.sql');
 const accountDashboard = read('src/hooks/useAccountDashboard.ts');
 const accountInfoCards = read('src/pages/account/components/TodayInfoCards.tsx');
 
@@ -268,6 +270,29 @@ test('premarket workflow delegates to the durable recovery state machine', () =>
   assert.match(globalMarketNews, /Promise\.all\(providerFetches\)/);
   assert.match(globalMarketNews, /NO_VALID_NEWS_FETCHED/);
   assert.match(globalMarketNews, /invalid_published_at_count/);
+});
+
+test('Public delivery stays independent from Premium snapshot quality', () => {
+  assert.match(dailyDeliveryOrchestrator, /public_eligible:\s*layered\.public_gate\.eligible === true,/);
+  assert.doesNotMatch(dailyDeliveryOrchestrator, /public_eligible:\s*layered\.public_gate\.eligible === true && snapshotReady/);
+  assert.match(lineDailyPush, /premiumDelivery[\s\S]*snapshotEligible[\s\S]*layered\.public_gate\.eligible === true/);
+});
+
+test('runtime reconciliation keeps 409 quality blocks terminal without fabricating success', () => {
+  assert.match(runtimeIncidentReconciliationMigration, /new\.http_status=409/);
+  assert.match(runtimeIncidentReconciliationMigration, /new\.dispatch_status:='FAILED'/);
+  assert.match(runtimeIncidentReconciliationMigration, /new\.next_retry_at:=null/);
+  assert.match(runtimeIncidentReconciliationMigration, /QUALITY_BLOCK_TERMINAL/);
+  assert.match(runtimeIncidentReconciliationMigration, /runtime_http_dispatch_attempts:first_attempt/);
+  assert.match(runtimeIncidentReconciliationMigration, /core_checkpoint_outside_window/);
+  assert.doesNotMatch(runtimeIncidentReconciliationMigration, /dispatch_status='SUCCEEDED'/);
+});
+
+test('Core-complete degraded verification advances without upgrading its quality label', () => {
+  assert.match(degradedLifecycleMigration, /upper\(p_status\)='DEGRADED'/);
+  assert.match(degradedLifecycleMigration, /direction_completed_data_degraded/);
+  assert.match(degradedLifecycleMigration, /v_effective_rank:=case when v_advances/);
+  assert.match(degradedLifecycleMigration, /'status',upper\(p_status\)/);
 });
 
 test('authenticated recovery can force report regeneration after a code-only fix', () => {

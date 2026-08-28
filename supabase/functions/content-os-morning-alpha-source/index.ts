@@ -9,7 +9,7 @@ type AdminClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 
 const MAX_RESPONSE_BYTES = 1_000_000;
 const PUBLIC_CONTRACT_VERSION = "morning_alpha_public_contract_v1";
-const SOURCE_PROJECTION_REVISION = "content_os_source_v9_public_contract_v1";
+const SOURCE_PROJECTION_REVISION = "content_os_source_v10_content_bound_revision";
 
 function asObject(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -128,7 +128,6 @@ async function buildPublicOnlySource(
   const sourceReferences = firstArray(snapshot.source_refs, publicGate.published_claims).slice(0, 5);
   const publishedAt = String(review?.reviewed_at ?? snapshot.valid_from ?? report.updated_at ?? report.created_at);
   const revision = String(snapshot.snapshot_fingerprint ?? snapshot.version ?? "public");
-  const revisionId = `${revision}:${SOURCE_PROJECTION_REVISION}`;
   const dailySentence = optionalString(generated.daily_sentence) ?? optionalString(report.today_quote) ?? optionalString(report.summary);
   const publicSummary = optionalString(ai.today_summary) ?? dailySentence;
   const marketBias = optionalString(report.market_bias ?? ai.market_bias);
@@ -156,9 +155,17 @@ async function buildPublicOnlySource(
   };
   const topicFingerprint = await sha256Hex({
     report_date: report.report_date,
+    report_mode: report.report_mode,
+    market_bias: marketBias,
+    confidence_score: confidenceScore,
     public_topic: publicTopic,
     source_references: sourceReferences,
+    risk_flags: asArray(snapshot.risk_flags).slice(0, 3),
+    core_data_status: ai.core_data_status ?? asObject(ai.core_data_gate).status ?? "BLOCKED",
+    premium_reason_codes: Array.from(new Set(premiumReasonCodes)),
+    evidence_coverage: evidenceCoverage,
   });
+  const revisionId = `${revision}:${SOURCE_PROJECTION_REVISION}:${topicFingerprint.slice(0, 16)}`;
   return json({
     contract_version: PUBLIC_CONTRACT_VERSION,
     external_object_id: String(report.id),

@@ -9,8 +9,9 @@ import {
   type DailyDeliveryAction,
   type DailyDeliveryPhase,
 } from '../_shared/daily-delivery-recovery.ts';
+import { projectLayeredDelivery } from '../_shared/layered-delivery-gates.mjs';
 
-const VERSION = 'DAILY_DELIVERY_V1.4_CONTENT_REPAIR_VERSION_BUDGET';
+const VERSION = 'DAILY_DELIVERY_V1.5_LAYERED_PUBLIC_PREMIUM';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -24,8 +25,13 @@ type SupabaseClient = ReturnType<typeof createClient<any>>;
 interface DeliveryState {
   report: JsonRecord | null;
   snapshot: JsonRecord | null;
+  core_data_status: string;
+  public_delivery_status: string;
+  premium_status: string;
+  public_eligible: boolean;
   premium_eligible: boolean;
   reason_codes: string[];
+  premium_reason_codes: string[];
 }
 
 interface FunctionResult {
@@ -270,7 +276,7 @@ async function loadDeliveryState(
   ] = await Promise.all([
     supabase
       .from('reports')
-      .select('id,report_date,ai_strategy_json,important_news_json,created_at,updated_at')
+      .select('id,report_date,report_mode,market_bias,ai_strategy_json,important_news_json,created_at,updated_at')
       .eq('report_date', reportDate)
       .maybeSingle(),
     supabase
@@ -298,8 +304,13 @@ async function loadDeliveryState(
     return {
       report: null,
       snapshot: snapshot ? asRecord(snapshot) : null,
+      core_data_status: 'BLOCKED',
+      public_delivery_status: 'BLOCKED',
+      premium_status: 'BLOCKED',
+      public_eligible: false,
       premium_eligible: false,
       reason_codes: ['report_missing'],
+      premium_reason_codes: ['report_missing'],
     };
   }
 
@@ -311,6 +322,15 @@ async function loadDeliveryState(
       ? ai.important_news.length
       : 0;
   const premiumGate = evaluatePremiumContentGate(ai, importantNewsCount);
+  const layered = projectLayeredDelivery({
+    ai,
+    report_date: reportDate,
+    report_mode: reportRecord.report_mode || ai.report_mode,
+    is_trading_day: ai.is_trading_day !== false,
+    market_bias: reportRecord.market_bias,
+    important_news_count: importantNewsCount,
+    premium_gate: premiumGate,
+  });
   const snapshotRecord = snapshot ? asRecord(snapshot) : null;
   const snapshotReady = Boolean(snapshotRecord)
     && snapshotRecord?.status === 'READY'
@@ -322,7 +342,8 @@ async function loadDeliveryState(
     && memberRevisionRecord?.semantic_status === 'PASSED'
     && String(memberRevisionRecord?.decision_snapshot_id || '') === String(snapshotRecord?.id || '')
     && Number(memberRevisionRecord?.decision_snapshot_version) === Number(snapshotRecord?.version);
-  const reasonCodes = Array.from(new Set([
+  const publicGateReasonCodes = asStringArray(layered.public_gate.reason_codes);
+  const premiumReasonCodes = Array.from(new Set([
     ...premiumGate.reason_codes,
     ...asStringArray(snapshotRecord?.reason_codes),
     ...(snapshotRecord ? [] : ['decision_snapshot_missing']),
@@ -334,8 +355,17 @@ async function loadDeliveryState(
   return {
     report: reportRecord,
     snapshot: snapshotRecord,
-    premium_eligible: premiumGate.eligible && snapshotReady && memberRevisionReady,
-    reason_codes: reasonCodes,
+    core_data_status: String(layered.core_gate.status || 'BLOCKED'),
+    public_delivery_status: String(layered.public_gate.status || 'BLOCKED'),
+    premium_status: premiumGate.eligible && memberRevisionReady ? 'PASS' : 'BLOCKED',
+    public_eligible: layered.public_gate.eligible === true && snapshotReady,
+    premium_eligible: layered.public_gate.eligible === true && snapshotReady && premiumGate.eligible && memberRevisionReady,
+    reason_codes: Array.from(new Set([
+      ...publicGateReasonCodes,
+      ...(snapshotRecord ? [] : ['decision_snapshot_missing']),
+      ...(snapshotReady ? [] : ['decision_snapshot_not_publishable']),
+    ])),
+    premium_reason_codes: premiumReasonCodes,
   };
 }
 
@@ -641,6 +671,7 @@ Deno.serve(async (req: Request) => {
     let state = await loadDeliveryState(supabase, clock.date);
     let plan = buildDailyDeliveryRecoveryPlan({
       has_report: Boolean(state.report),
+      public_eligible: state.public_eligible,
       premium_eligible: state.premium_eligible,
       reason_codes: state.reason_codes,
       attempt,
@@ -651,10 +682,10 @@ Deno.serve(async (req: Request) => {
     let actions = plan.actions;
     if (forceRegenerate) actions = ['regenerate_report'];
     else if (phase === 'refresh') actions = actions.filter((action) => action === 'refresh_news' || action === 'refresh_market');
-    else if (phase === 'generate') actions = state.premium_eligible
+    else if (phase === 'generate') actions = state.public_eligible
       ? []
       : actions.filter((action) => action === 'regenerate_report');
-    else if (phase === 'deliver' && state.premium_eligible) actions = ['deliver_premium'];
+    else if (phase === 'deliver' && state.public_eligible) actions = ['deliver_public'];
 
     const actionResults = await executeRecoveryActions({
       actions,
@@ -669,6 +700,7 @@ Deno.serve(async (req: Request) => {
       state = await loadDeliveryState(supabase, clock.date);
       plan = buildDailyDeliveryRecoveryPlan({
         has_report: Boolean(state.report),
+        public_eligible: state.public_eligible,
         premium_eligible: state.premium_eligible,
         reason_codes: state.reason_codes,
         attempt,
@@ -678,28 +710,29 @@ Deno.serve(async (req: Request) => {
     }
 
     const deliveryBlockedByEvidenceFailure = hasFailedEvidenceDependency(actionResults);
-    if (state.premium_eligible && clock.minutes >= 7 * 60 + 20 && !deliveryBlockedByEvidenceFailure) {
-      actionResults.deliver_premium = await invokeFunction(
+    if (state.public_eligible && clock.minutes >= 7 * 60 + 20 && !deliveryBlockedByEvidenceFailure) {
+      actionResults.deliver_public = await invokeFunction(
         `${supabaseUrl}/functions/v1`,
         'line-daily-push',
         cronSecret,
-        { delivery_mode: 'premium' },
+        { delivery_mode: 'public' },
         120_000,
       );
     }
 
-    const premiumDelivery = asRecord(actionResults.deliver_premium);
-    const premiumDeliveryPayload = asRecord(premiumDelivery.payload);
+    const publicDelivery = asRecord(actionResults.deliver_public);
+    const publicDeliveryPayload = asRecord(publicDelivery.payload);
     const incidentDelivery = asRecord(actionResults.deliver_incident);
     const incidentPayload = asRecord(incidentDelivery.payload);
-    const delivered = premiumDelivery.ok === true
-      && Number(premiumDeliveryPayload.failed_count || 0) === 0
-      && Number(premiumDeliveryPayload.pending_count || 0) === 0
+    const delivered = publicDelivery.ok === true
+      && Number(publicDeliveryPayload.failed_count || 0) === 0
+      && Number(publicDeliveryPayload.pending_count || 0) === 0
       && (
-        premiumDeliveryPayload.sent === true
-        || ['ALREADY_SENT', 'NO_ACTIVE_SUBSCRIBERS'].includes(String(premiumDeliveryPayload.reason || ''))
+        publicDeliveryPayload.sent === true
+        || ['ALREADY_SENT', 'NO_ACTIVE_SUBSCRIBERS'].includes(String(publicDeliveryPayload.reason || ''))
       );
     const actionFailures = Object.entries(actionResults)
+      .filter(([action]) => !(state.public_eligible && action === 'refresh_news'))
       .filter(([, result]) => asRecord(result).ok !== true)
       .map(([action, result]) => ({
         action,
@@ -707,8 +740,8 @@ Deno.serve(async (req: Request) => {
         error: String(asRecord(asRecord(result).payload).error || 'ACTION_RETURNED_UNSUCCESSFUL').slice(0, 300),
       }));
     const actionFailureCodes = actionFailures.map((failure) => `action_failed:${failure.action}`);
-    const completed = actionFailures.length === 0 && state.premium_eligible &&
-      (clock.minutes < 7 * 60 + 20 || delivered || Object.keys(premiumDelivery).length === 0);
+    const completed = actionFailures.length === 0 && state.public_eligible &&
+      (clock.minutes < 7 * 60 + 20 || delivered || Object.keys(publicDelivery).length === 0);
     const status = completed ? 'SUCCEEDED' : 'DEGRADED';
     const finalReasonCodes = Array.from(new Set([...state.reason_codes, ...actionFailureCodes]));
     await finishPipelineRun(
@@ -722,7 +755,13 @@ Deno.serve(async (req: Request) => {
         action_results: actionResults,
         action_failures: actionFailures,
         delivery_blocked_by_evidence_failure: deliveryBlockedByEvidenceFailure,
+        core_data_status: state.core_data_status,
+        public_delivery_status: state.public_delivery_status,
+        premium_status: state.premium_status,
+        public_eligible: state.public_eligible,
         premium_eligible: state.premium_eligible,
+        premium_reason_codes: state.premium_reason_codes,
+        line_status: delivered ? 'PASS' : Object.keys(publicDelivery).length === 0 ? 'NOT_ATTEMPTED' : 'DEGRADED',
         delivered,
         decision_snapshot_id: typeof state.snapshot?.id === 'string' ? state.snapshot.id : null,
         delivery_status: delivered
@@ -744,7 +783,12 @@ Deno.serve(async (req: Request) => {
       report_date: clock.date,
       phase,
       actions,
+      core_data_status: state.core_data_status,
+      public_delivery_status: state.public_delivery_status,
+      premium_status: state.premium_status,
+      public_eligible: state.public_eligible,
       premium_eligible: state.premium_eligible,
+      line_status: delivered ? 'PASS' : Object.keys(publicDelivery).length === 0 ? 'NOT_ATTEMPTED' : 'DEGRADED',
       delivered,
       action_failures: actionFailures,
       delivery_blocked_by_evidence_failure: deliveryBlockedByEvidenceFailure,

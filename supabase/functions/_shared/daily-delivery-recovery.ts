@@ -4,6 +4,7 @@ export type DailyDeliveryAction =
   | 'refresh_news'
   | 'refresh_market'
   | 'regenerate_report'
+  | 'deliver_public'
   | 'deliver_premium'
   | 'deliver_incident';
 
@@ -11,6 +12,7 @@ export type DailyDeliveryPhase = 'refresh' | 'generate' | 'repair' | 'deliver' |
 
 export interface DailyDeliveryRecoveryInput {
   has_report: boolean;
+  public_eligible?: boolean;
   premium_eligible: boolean;
   reason_codes: string[];
   attempt: number;
@@ -31,17 +33,12 @@ export interface DailyDeliveryRecoveryPlan {
 
 const NEWS_REASONS = new Set([
   'news_traceability_incomplete',
-  'verified_catalyst_evidence_missing',
-  'fresh_catalyst_evidence_missing',
   'market_news',
   'market_news:no_verified_relevant_items',
 ]);
 
 const MARKET_REASONS = new Set([
   'blank_market_change_detected',
-  'verified_catalyst_evidence_missing',
-  'fresh_catalyst_evidence_missing',
-  'source_data_incomplete',
   'market_data',
   'market_data_dates',
 ]);
@@ -58,9 +55,10 @@ const CONTENT_REASONS = new Set([
   'evidence_quality_contract_missing',
   'member_research_value_sentence_low_quality',
   'decision_snapshot_not_publishable',
+  'published_claim_evidence_incomplete',
 ]);
 const CONTENT_REPAIR_MAX_ATTEMPTS = 3;
-const EVIDENCE_DEPENDENCY_ACTIONS = ['refresh_news', 'refresh_market', 'regenerate_report'] as const;
+const EVIDENCE_DEPENDENCY_ACTIONS = ['refresh_market', 'regenerate_report'] as const;
 
 function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
@@ -104,14 +102,15 @@ export function buildDailyDeliveryRecoveryPlan(
   const contentRepairAttempts = Math.max(0, Math.trunc(input.content_repair_attempts || 0));
   const contentRepairBudgetExhausted = isContentOnlyDeliveryFailure(reasonCodes)
     && contentRepairAttempts >= CONTENT_REPAIR_MAX_ATTEMPTS;
+  const publicEligible = input.public_eligible ?? input.premium_eligible;
 
-  if (input.premium_eligible) {
+  if (publicEligible) {
     return {
       status: 'ready',
       phase,
       actions: phase === 'refresh' || phase === 'generate' || phase === 'repair'
         ? []
-        : ['deliver_premium'],
+        : ['deliver_public'],
       reason_codes: reasonCodes,
       attempt,
       deadline_reached: deadlineReached,
@@ -125,7 +124,8 @@ export function buildDailyDeliveryRecoveryPlan(
   } else {
     if (includesReason(reasonCodes, NEWS_REASONS)) actions.push('refresh_news');
     if (includesReason(reasonCodes, MARKET_REASONS, 'stale_market_data:')
-      || includesReason(reasonCodes, MARKET_REASONS, 'unavailable_market_data:')) {
+      || includesReason(reasonCodes, MARKET_REASONS, 'unavailable_market_data:')
+      || reasonCodes.some((reason) => reason.startsWith('core_stale:') || reason.startsWith('core_missing:') || reason.startsWith('core_invalid:'))) {
       actions.push('refresh_market');
     }
     if (!contentRepairBudgetExhausted && (includesReason(reasonCodes, CONTENT_REASONS)

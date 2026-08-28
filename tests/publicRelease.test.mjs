@@ -242,7 +242,7 @@ test('premarket workflow delegates to the durable recovery state machine', () =>
   const lineAction = dailyDeliveryOrchestrator.lastIndexOf("'line-daily-push'");
   assert.ok(newsAction >= 0, 'recovery router must refresh global market news');
   assert.ok(newsAction < reportAction, 'evidence refresh must precede report regeneration');
-  assert.ok(reportAction < lineAction, 'report regeneration must precede premium delivery');
+  assert.ok(reportAction < lineAction, 'report regeneration must precede Public delivery');
   assert.match(dailyDeliveryOrchestrator, /clock\.minutes >= 7 \* 60 \+ 30/);
   assert.match(dailyDeliveryOrchestrator, /payload\.success !== false/);
   assert.match(dailyDeliveryOrchestrator, /invokeFunctionWithRetry/);
@@ -280,10 +280,10 @@ test('authenticated recovery can force report regeneration after a code-only fix
   );
 });
 
-test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
-  const hardGate = lineDailyPush.indexOf("reason: 'PREMIUM_CONTENT_NOT_ELIGIBLE'");
+test('LINE Public delivery is fail-closed and persists per-subscriber retries', () => {
+  const hardGate = lineDailyPush.indexOf("? 'PREMIUM_CONTENT_NOT_ELIGIBLE'");
   const subscriberDelivery = lineDailyPush.indexOf('deliverOutboxMessage({', hardGate);
-  assert.ok(hardGate >= 0, 'LINE must expose a hard premium content gate');
+  assert.ok(hardGate >= 0, 'LINE must expose explicit layered content gates');
   assert.ok(subscriberDelivery > hardGate, 'subscriber delivery must happen only after the hard gate');
   assert.match(lineDailyPush, /snapshotStatus === 'READY'/);
   assert.match(lineDailyPush, /snapshotScore >= 90/);
@@ -295,7 +295,8 @@ test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
   assert.match(deliveryGuaranteeMigration, /0-40\/5 23 \* \* 0-4/);
   assert.match(deliveryGuaranteeMigration, /decision_snapshots_premium_90_gate/);
   assert.match(deliveryGuaranteeMigration, /new\.content_score is null or new\.content_score < 90/);
-  assert.match(opsHealthCheck, /ready_90_point_decision_snapshot/);
+  assert.match(opsHealthCheck, /ready_public_decision_snapshot/);
+  assert.match(opsHealthCheck, /public_delivery_gate/);
 });
 
 test('paid report fails closed when evidence does not meet the member threshold', () => {
@@ -411,9 +412,9 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeDeployWorkflow, /db push --linked/);
   assert.ok(runtimeDeployWorkflow.indexOf('db push --linked') < runtimeDeployWorkflow.indexOf('functions deploy daily-delivery-orchestrator'));
   assert.match(opsHealthCheck, /evaluatePremiumContentGate/);
-  assert.match(opsHealthCheck, /intraday_validation\)\.length < 3/);
-  assert.match(opsHealthCheck, /invalidation_rules\)\.length < 2/);
-  assert.match(opsHealthCheck, /verifiedCatalystCount < 1/);
+  assert.match(opsHealthCheck, /premium_content_status/);
+  assert.match(opsHealthCheck, /core_data_status/);
+  assert.match(opsHealthCheck, /public_delivery_status/);
   assert.match(opsHealthCheck, /verified_market_count/);
   assert.match(runtimeCheckpointWorkflow, /MANUAL_CHECKPOINT: \${\{ inputs\.checkpoint \}\}/);
   assert.doesNotMatch(runtimeCheckpointWorkflow, /^\s*schedule:/m);
@@ -423,7 +424,7 @@ test('LINE brief identifies analysis and market-data times and refuses weak day-
   for (const label of ['07:30 盤前', '今日一句', '最大機會', '最大風險', '下一確認', '分析產生', '資料截止']) {
     assert.match(lineDailyPush, new RegExp(label), `LINE brief is missing ${label}`);
   }
-  assert.match(lineDailyPush, /evaluatePremiumContentGate/);
+  assert.match(lineDailyPush, /projectLayeredDelivery/);
   assert.match(lineDailyPush, /資料未達標，不建立個股劇本/);
   assert.match(lineDailyPush, /ALREADY_SENT/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);

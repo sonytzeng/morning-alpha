@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient as SupabaseClientType } from "https://esm.sh/@supabase/supabase-js@2";
 import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
+import { projectLayeredDelivery } from "../_shared/layered-delivery-gates.mjs";
 
 const VERSION = "MA_OPS_DELIVERY_GUARANTEE_V3";
 const QUERY_TIMEOUT_MS = 3000;
@@ -370,6 +371,15 @@ const handlers: Record<CheckName, CheckHandler> = {
     const v8DailySentence = asObject(ai.v8_daily_sentence);
     const dailySentence = report.today_quote || ai.today_quote || v8DailySentence.sentence;
     const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
+    const layered = projectLayeredDelivery({
+      ai,
+      report_date: targetDate,
+      report_mode: report.report_mode || ai.report_mode,
+      is_trading_day: ai.is_trading_day === true,
+      market_bias: report.market_bias,
+      important_news_count: importantNews.length,
+      premium_gate: premiumGate,
+    });
     const missing = [
       !nonEmptyString(report.market_bias) ? "market_bias" : null,
       report.confidence_score === null || report.confidence_score === undefined || !Number.isFinite(Number(report.confidence_score)) ? "confidence_score" : null,
@@ -378,12 +388,8 @@ const handlers: Record<CheckName, CheckHandler> = {
       typeof ai.is_trading_day !== "boolean" ? "ai_strategy_json.is_trading_day" : null,
       !nonEmptyString(ai.market_status) ? "ai_strategy_json.market_status" : null,
       isTradingDay && !isActionableResearchSentence(dailySentence) ? "today_quote.actionable" : null,
-      isTradingDay && verifiedCatalystCount < 1 ? "verified_catalyst_evidence" : null,
-      isTradingDay && asArray(note.overnight_chain).length < 1 ? "member_research_note_v2.overnight_chain" : null,
-      isTradingDay && asArray(note.intraday_validation).length < 3 ? "member_research_note_v2.intraday_validation" : null,
-      isTradingDay && asArray(note.invalidation_rules).length < 2 ? "member_research_note_v2.invalidation_rules" : null,
-      isTradingDay && !isActionableResearchSentence(note.subscriber_value_sentence) ? "member_research_note_v2.subscriber_value_sentence" : null,
-      isTradingDay && !premiumGate.eligible ? "premium_content_gate" : null,
+      isTradingDay && layered.core_gate.eligible !== true ? "core_data_gate" : null,
+      isTradingDay && layered.public_gate.eligible !== true ? "public_delivery_gate" : null,
       isTradingDay && !snapshot ? "decision_snapshot" : null,
       isTradingDay && snapshot && String(snapshot.status || "") !== "READY" ? "decision_snapshot.status" : null,
       isTradingDay && snapshot && (!Number.isFinite(Number(snapshot.content_score)) || Number(snapshot.content_score) < 90) ? "decision_snapshot.content_score" : null,
@@ -391,7 +397,7 @@ const handlers: Record<CheckName, CheckHandler> = {
     ].filter((item): item is string => item !== null);
     return makeCheck(
       "daily-report-contract", "daily-report", missing.length === 0 ? "passed" : "failed", missing.length === 0 ? "info" : "critical",
-      { required_fields: ["market_bias", "confidence_score", "ai_strategy_json", "report_mode", "is_trading_day", "market_status", "actionable_daily_sentence", "verified_catalyst_evidence", "member_research_structure", "premium_content_gate", "ready_90_point_decision_snapshot"] },
+      { required_fields: ["market_bias", "confidence_score", "ai_strategy_json", "report_mode", "is_trading_day", "market_status", "actionable_daily_sentence", "core_data_gate", "public_delivery_gate", "ready_public_decision_snapshot"] },
       {
         missing_fields: missing,
         report_mode: report.report_mode || ai.report_mode || null,
@@ -404,6 +410,10 @@ const handlers: Record<CheckName, CheckHandler> = {
         overnight_step_count: asArray(note.overnight_chain).length,
         intraday_step_count: asArray(note.intraday_validation).length,
         invalidation_rule_count: asArray(note.invalidation_rules).length,
+        core_data_status: layered.core_gate.status,
+        public_delivery_status: layered.public_gate.status,
+        published_claim_evidence_coverage: layered.public_gate.published_claim_evidence_coverage,
+        unsupported_published_claims: layered.public_gate.unsupported_published_claims,
         premium_content_status: premiumGate.status,
         premium_content_score: premiumGate.content_score,
         premium_decision_mode: premiumGate.decision_mode,

@@ -8,7 +8,7 @@ type JsonRecord = Record<string, unknown>;
 type AdminClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 
 const MAX_RESPONSE_BYTES = 1_000_000;
-const SOURCE_PROJECTION_REVISION = "content_os_source_v7_canonical_member";
+const SOURCE_PROJECTION_REVISION = "content_os_source_v8_layered_public";
 
 function asObject(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -110,6 +110,70 @@ async function recordBlockingIncident(
     incident_id: incidentId,
     incident_key: incidentKey,
   }, 409);
+}
+
+async function buildPublicOnlySource(
+  report: JsonRecord,
+  snapshot: JsonRecord,
+  review: JsonRecord | null,
+  premiumReasonCodes: string[],
+): Promise<Response> {
+  const ai = asObject(report.ai_strategy_json);
+  const publicGate = asObject(ai.public_delivery_gate);
+  if (publicGate.eligible !== true || String(publicGate.status || "") !== "PASS") {
+    return json({ error: "PUBLIC_DELIVERY_GATE_BLOCKED", reason_codes: asArray(publicGate.reason_codes) }, 409);
+  }
+  const generated = asObject(snapshot.generated_text);
+  const sourceReferences = firstArray(snapshot.source_refs, publicGate.published_claims).slice(0, 10);
+  const publishedAt = String(review?.reviewed_at ?? snapshot.valid_from ?? report.updated_at ?? report.created_at);
+  const revision = String(snapshot.snapshot_fingerprint ?? snapshot.version ?? "public");
+  const dailySentence = optionalString(generated.daily_sentence) ?? optionalString(report.today_quote) ?? optionalString(report.summary);
+  const topicFingerprint = await sha256Hex({
+    report_date: report.report_date,
+    daily_sentence: dailySentence,
+    source_references: sourceReferences,
+  });
+  return json({
+    external_object_id: String(report.id),
+    report_id: String(report.id),
+    external_revision: `${revision}:${SOURCE_PROJECTION_REVISION}`,
+    source_published_at: publishedAt,
+    published_at: publishedAt,
+    report_date: report.report_date,
+    report_mode: report.report_mode,
+    market_bias: report.market_bias ?? ai.market_bias,
+    confidence_score: snapshot.confidence_score ?? report.confidence_score,
+    daily_sentence: dailySentence,
+    topic_fingerprint: topicFingerprint,
+    expires_at: new Date(new Date(publishedAt).getTime() + 24 * 60 * 60 * 1000).toISOString(),
+    public_topic: null,
+    facts: sourceReferences,
+    catalysts: [],
+    taiwan_mapping: { transmission: null, preferred_sectors: [], watch_sectors: [] },
+    risk: { risk_flags: asArray(snapshot.risk_flags).slice(0, 3) },
+    opportunities: [],
+    source_references: sourceReferences,
+    morning_brief: {
+      report_date: report.report_date,
+      current_market_summary: optionalString(ai.today_summary),
+      core_thesis: dailySentence,
+      data_quality: optionalString(ai.data_quality),
+      market_regime: optionalString(ai.market_regime),
+    },
+    core_data_status: ai.core_data_status ?? asObject(ai.core_data_gate).status ?? "BLOCKED",
+    public_delivery_status: "PASS",
+    premium_status: "BLOCKED",
+    content_os_status: "PASS",
+    premium: { status: "BLOCKED", locked: true, reason_codes: Array.from(new Set(premiumReasonCodes)) },
+    verification: {
+      status: "public_verified",
+      decision_snapshot_id: snapshot.id,
+      editorial_review_id: review?.id ?? null,
+      review_status: review?.review_status ?? null,
+      published_claim_evidence_coverage: publicGate.published_claim_evidence_coverage,
+      unsupported_published_claims: publicGate.unsupported_published_claims ?? [],
+    },
+  });
 }
 
 Deno.serve(async (request) => {
@@ -236,21 +300,11 @@ Deno.serve(async (request) => {
     premiumPublishMinimum,
   );
   if (!researchSections || !researchGate.eligible) {
-    return recordBlockingIncident(
-      admin,
+    return buildPublicOnlySource(
+      report,
       snapshot,
+      review,
       ["RESEARCH_QUALITY_GATE_BLOCKED", ...researchGate.reason_codes],
-      "RESEARCH_QUALITY_GATE_BLOCKED",
-      {
-        quality_status: researchGate.publish_status,
-        evidence_coverage: researchGate.evidence_coverage,
-        unsupported_claim_count: researchGate.unsupported_claim_count,
-        duplicate_claim_count: researchGate.duplicate_claim_count,
-        contradiction_count: researchGate.contradiction_count,
-        missing_section_count: researchGate.missing_section_count,
-        required_score: researchGate.required_score,
-        policy_version: qualityPolicy.policy_version,
-      },
     );
   }
 
@@ -265,7 +319,7 @@ Deno.serve(async (request) => {
     .maybeSingle();
   if (memberRevisionResult.error) return json({ error: "MEMBER_CONTENT_REVISION_READ_FAILED" }, 503);
   if (!memberRevisionResult.data) {
-    return recordBlockingIncident(admin, snapshot, ["SEMANTIC_MEMBER_REVISION_MISSING"], "SEMANTIC_COHERENCE_BLOCKED");
+    return buildPublicOnlySource(report, snapshot, review, ["SEMANTIC_MEMBER_REVISION_MISSING"]);
   }
   const memberRevision = memberRevisionResult.data as JsonRecord;
   const memberContent = asObject(memberRevision.member_content);
@@ -295,12 +349,11 @@ Deno.serve(async (request) => {
     content_score: memberRevision.content_score,
   });
   if (!semanticGate.eligible) {
-    return recordBlockingIncident(
-      admin,
+    return buildPublicOnlySource(
+      report,
       snapshot,
+      review,
       ["SEMANTIC_COHERENCE_BLOCKED", ...semanticGate.reason_codes],
-      "SEMANTIC_COHERENCE_BLOCKED",
-      { conflicting_fields: semanticGate.conflicting_fields, member_content_revision_id: memberRevision.id },
     );
   }
 
@@ -329,7 +382,7 @@ Deno.serve(async (request) => {
   };
   const primaryThesis = optionalString(memberContent.today_core_thesis) ?? optionalString(generated.daily_sentence) ?? optionalString(report.today_quote);
   const publicTopicComplete = Boolean(publicTopic.symbol && publicTopic.name && publicTopic.event_source && publicTopic.transmission_path && publicTopic.taiwan_mapping && publicTopic.reason && publicTopic.data_timestamp && publicSourceReferences.length);
-  if (!publicTopicComplete) return recordBlockingIncident(admin, snapshot, ['PUBLIC_TOPIC_INCOMPLETE'], 'PUBLIC_TOPIC_INCOMPLETE', { member_content_revision_id: memberRevision.id });
+  if (!publicTopicComplete) return buildPublicOnlySource(report, snapshot, review, ['PUBLIC_TOPIC_INCOMPLETE']);
   const premiumOnlySymbols = opportunities.slice(1).map((item) => optionalString(asObject(item).symbol ?? asObject(item).stock_code)).filter((symbol): symbol is string => Boolean(symbol) && symbol !== publicTopic.symbol);
   const leakageGate = evaluatePublicPremiumLeakageGate({ public_symbols: [publicTopic.symbol], premium_only_symbols: premiumOnlySymbols, public_fields: Object.keys(publicTopic), public_entities: [publicTopic.name,publicTopic.role].filter((value): value is string => Boolean(value)), premium_entities: [] });
   if (!leakageGate.eligible) return recordBlockingIncident(admin, snapshot, ['PUBLIC_TOPIC_GATE_BLOCKED', ...leakageGate.reason_codes], 'PUBLIC_TOPIC_GATE_BLOCKED', { member_content_revision_id: memberRevision.id });
@@ -406,5 +459,10 @@ Deno.serve(async (request) => {
       member_content_revision_id: memberRevision.id,
       public_premium_leakage: leakageGate.eligible,
     },
+    core_data_status: ai.core_data_status ?? asObject(ai.core_data_gate).status ?? "BLOCKED",
+    public_delivery_status: "PASS",
+    premium_status: "PASS",
+    content_os_status: "PASS",
+    premium: { status: "PASS", locked: false, reason_codes: [] },
   });
 });

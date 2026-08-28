@@ -283,6 +283,7 @@ test('Content OS public-only projection uses one canonical evidence-backed contr
   assert.match(source, /evidence_status:\s*"verified"/);
   assert.match(source, /status:\s*"verified"/);
   assert.match(source, /opportunities:\s*\[\]/);
+  assert.equal(source.match(/surprises:\s*\[\]/gu)?.length, 2);
   assert.match(source, /published_claim_evidence_coverage:\s*evidenceCoverage/);
   assert.doesNotMatch(source, /public_topic:\s*null/);
   assert.doesNotMatch(source, /status:\s*"public_verified"/);

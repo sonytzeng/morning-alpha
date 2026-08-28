@@ -179,6 +179,7 @@ async function buildPublicOnlySource(
     public_topic: publicTopic,
     facts: sourceReferences,
     catalysts: [],
+    surprises: [],
     taiwan_mapping: { transmission: null, preferred_sectors: [], watch_sectors: [] },
     risk: { risk_flags: asArray(snapshot.risk_flags).slice(0, 3) },
     opportunities: [],
@@ -468,6 +469,7 @@ Deno.serve(async (request) => {
     public_topic: publicTopic,
     facts: publicSourceReferences,
     catalysts: [{ event_source: publicTopic.event_source }],
+    surprises: [],
     taiwan_mapping: {
       transmission: publicTopic.taiwan_mapping,
       preferred_sectors: publicTopic.role ? [publicTopic.role] : [],

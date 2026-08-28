@@ -1,6 +1,10 @@
 import { createClient, type SupabaseClient as SupabaseClientType } from "https://esm.sh/@supabase/supabase-js@2";
 import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
 import { projectLayeredDelivery } from "../_shared/layered-delivery-gates.mjs";
+import {
+  authorizeInternalRequest,
+  internalCredentialsFromEnv,
+} from "../_shared/internal-function-auth.mjs";
 
 const VERSION = "MA_OPS_DELIVERY_GUARANTEE_V3";
 const QUERY_TIMEOUT_MS = 3000;
@@ -66,6 +70,10 @@ interface Database {
       get_public_performance_journal: {
         Args: { p_limit: number };
         Returns: JsonObject[];
+      };
+      get_ma_ops_health_cron_secret: {
+        Args: Record<string, never>;
+        Returns: string;
       };
     };
     Enums: Record<string, never>;
@@ -173,6 +181,27 @@ async function constantTimeSecretMatch(presented: string | null, expected: strin
     mismatch |= presentedHash[index] ^ expectedHash[index];
   }
   return mismatch === 0;
+}
+
+class SchedulerCredentialProvider {
+  constructor(private readonly supabase: SupabaseClient) {}
+
+  async authorize(headers: Headers): Promise<boolean> {
+    const internal = await authorizeInternalRequest(
+      headers,
+      internalCredentialsFromEnv(),
+    );
+    if (internal.ok) return true;
+
+    const presented = headers.get("x-cron-secret");
+    if (!presented) return false;
+    const { data, error } = await this.supabase.rpc(
+      "get_ma_ops_health_cron_secret",
+      {},
+    );
+    if (error || typeof data !== "string" || !data.trim()) return false;
+    return await constantTimeSecretMatch(presented, data);
+  }
 }
 
 function getTaipeiDateString(): string {
@@ -712,9 +741,12 @@ Deno.serve(async (req: Request) => {
 
   let requestId: string | null = null;
   try {
-    const expectedSecret = Deno.env.get("CRON_SECRET") ?? null;
-    const presentedSecret = req.headers.get("x-cron-secret");
-    if (!await constantTimeSecretMatch(presentedSecret, expectedSecret)) {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    if (!supabaseUrl || !serviceRoleKey) throw new Error("INTERNAL_ERROR");
+    const supabase = createClient<Database>(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+    const credentialProvider = new SchedulerCredentialProvider(supabase);
+    if (!await credentialProvider.authorize(req.headers)) {
       return jsonResponse({ ok: false, error_code: "UNAUTHORIZED", message: "Unauthorized", request_id: null }, 401);
     }
 
@@ -728,11 +760,6 @@ Deno.serve(async (req: Request) => {
     }
     const request = parseRequest(parsedBody);
     requestId = request.request_id;
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    if (!supabaseUrl || !serviceRoleKey) throw new Error("INTERNAL_ERROR");
-    const supabase = createClient<Database>(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
     const idempotencyKey = request.request_id
       ? `maops:p1:${request.environment}:${request.check_type}:${request.target_date}:${request.request_id}`

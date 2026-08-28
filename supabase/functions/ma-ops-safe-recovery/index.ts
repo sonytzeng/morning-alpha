@@ -10,6 +10,7 @@ const CORS_HEADERS = {
 
 const ACTIONS = {
   retry_daily_delivery: { target: 'daily-delivery-orchestrator', defaultBody: { mode: 'watchdog' } },
+  retry_global_news: { target: 'fetch-global-market-news', defaultBody: { source: 'ma-ops-safe-recovery' } },
   retry_market_data: { target: 'fetch-market-data-v10', defaultBody: { phase: 'manual_backfill', force_run: true } },
   regenerate_report: { target: 'generate-daily-report-v7', defaultBody: { quality_retry: true } },
   retry_closing_verification: { target: 'closing-verification-engine', defaultBody: {} },

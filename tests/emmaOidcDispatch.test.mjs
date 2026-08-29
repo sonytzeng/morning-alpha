@@ -4,6 +4,15 @@ import { buildTask, githubFailureCode, parseClaim, redactEvidence, seedBaseSha }
 import { validateGitHubOidcClaims } from '../supabase/functions/_shared/githubOidc.mjs';
 import { readFileSync } from 'node:fs';
 
+const brokerSource = readFileSync(
+  new URL('../supabase/functions/emma-github-oidc-broker/index.ts', import.meta.url),
+  'utf8',
+);
+const workflowSource = readFileSync(
+  new URL('../.github/workflows/emma-auto-repair-oidc.yml', import.meta.url),
+  'utf8',
+);
+
 const claim = {
   dispatch_id: '11111111-1111-4111-8111-111111111111',
   claim_token: '22222222-2222-4222-8222-222222222222',
@@ -80,13 +89,13 @@ test('uses a deterministic repair identity so replay cannot create another task 
 });
 
 test('broker preflights one server credential before any repair mutation and reuses exact artifacts', () => {
-  const broker = readFileSync(new URL('../supabase/functions/emma-github-oidc-broker/index.ts', import.meta.url), 'utf8');
-  const workflow = readFileSync(new URL('../.github/workflows/emma-auto-repair-oidc.yml', import.meta.url), 'utf8');
+  const broker = brokerSource;
+  const workflow = workflowSource;
   assert.ok(broker.indexOf('assertGitHubWriteCapability') < broker.indexOf("'BRANCH_LOOKUP'"));
-  assert.match(broker, /const credential = await new EmmaGitHubCredentialProvider\(\)\.getCredential\(\)/);
-  assert.ok(broker.indexOf("Deno.env.get('GITHUB_APP_ID')") < broker.indexOf("Deno.env.get('GITHUB_TOKEN')"));
-  assert.match(broker, /permissions: \{ contents: 'write', pull_requests: 'write', issues: 'write' \}/);
-  assert.match(broker, /credentialType: 'github_app_installation'/);
+  assert.match(broker, /const\s+credential\s*=\s*await\s+new\s+EmmaGitHubCredentialProvider\(\)\.getCredential\(\)/);
+  assert.doesNotMatch(broker, /Deno\.env\.get\(['"](?:GITHUB_TOKEN|GH_TOKEN|PAT)['"]\)/);
+  assert.match(broker, /permissions\s*:\s*\{\s*contents\s*:\s*'write'\s*,\s*pull_requests\s*:\s*'write'\s*,\s*issues\s*:\s*'write'\s*\}/);
+  assert.match(broker, /credentialType\s*:\s*'github_app_installation'/);
   assert.match(broker, /existingPull/);
   assert.match(broker, /commentsResult\.body\.find/);
   assert.doesNotMatch(workflow, /GITHUB_TOKEN:/);
@@ -97,13 +106,13 @@ test('broker preflights one server credential before any repair mutation and reu
 });
 
 test('GitHub App installation token is repository-bounded and fails closed on partial configuration', () => {
-  const broker = readFileSync(new URL('../supabase/functions/emma-github-oidc-broker/index.ts', import.meta.url), 'utf8');
-  assert.match(broker, /repositories: \[REPOSITORY_NAME\]/);
-  assert.match(broker, /repository\.id === REPOSITORY_ID/);
-  assert.match(broker, /if \(!appId \|\| !installationIdValue \|\| !privateKey\) throw new Error\('GITHUB_APP_CONFIGURATION_INVALID'\)/);
-  assert.match(broker, /permissions\.contents !== 'write'/);
-  assert.match(broker, /permissions\.pull_requests !== 'write'/);
-  assert.match(broker, /permissions\.issues !== 'write'/);
+  const broker = brokerSource;
+  assert.match(broker, /repositories\s*:\s*\[REPOSITORY_NAME\]/);
+  assert.match(broker, /repository\.id\s*===\s*REPOSITORY_ID/);
+  assert.match(broker, /if\s*\(!appId\s*\|\|\s*!installationIdValue\s*\|\|\s*!privateKey\)\s*throw new Error\('GITHUB_APP_CONFIGURATION_INVALID'\)/);
+  assert.match(broker, /permissions\.contents\s*!==\s*'write'/);
+  assert.match(broker, /permissions\.pull_requests\s*!==\s*'write'/);
+  assert.match(broker, /permissions\.issues\s*!==\s*'write'/);
   assert.doesNotMatch(broker, /console\.(?:log|error)[^\n]*(?:privateKey|appJwt|credential\.token)/);
 });
 

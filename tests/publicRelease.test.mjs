@@ -46,6 +46,8 @@ const contentIntelligenceMigration = read('supabase/migrations/20260820131721_co
 const deliveryGuaranteeMigration = read('supabase/migrations/20260821080555_daily_delivery_guarantee.sql');
 const publicCloseReconciliationMigration = read('supabase/migrations/20260825083924_public_close_reconciliation.sql');
 const productionReliabilityMigration = read('supabase/migrations/20260827084613_production_reliability_daily_lifecycle.sql');
+const runtimeIncidentReconciliationMigration = read('supabase/migrations/20260828082702_classify_quality_blocks_and_reconcile_runtime_incidents.sql');
+const degradedLifecycleMigration = read('supabase/migrations/20260828083852_advance_core_complete_degraded_lifecycle.sql');
 const accountDashboard = read('src/hooks/useAccountDashboard.ts');
 const accountInfoCards = read('src/pages/account/components/TodayInfoCards.tsx');
 
@@ -242,7 +244,7 @@ test('premarket workflow delegates to the durable recovery state machine', () =>
   const lineAction = dailyDeliveryOrchestrator.lastIndexOf("'line-daily-push'");
   assert.ok(newsAction >= 0, 'recovery router must refresh global market news');
   assert.ok(newsAction < reportAction, 'evidence refresh must precede report regeneration');
-  assert.ok(reportAction < lineAction, 'report regeneration must precede premium delivery');
+  assert.ok(reportAction < lineAction, 'report regeneration must precede Public delivery');
   assert.match(dailyDeliveryOrchestrator, /clock\.minutes >= 7 \* 60 \+ 30/);
   assert.match(dailyDeliveryOrchestrator, /payload\.success !== false/);
   assert.match(dailyDeliveryOrchestrator, /invokeFunctionWithRetry/);
@@ -270,6 +272,29 @@ test('premarket workflow delegates to the durable recovery state machine', () =>
   assert.match(globalMarketNews, /invalid_published_at_count/);
 });
 
+test('Public delivery stays independent from Premium snapshot quality', () => {
+  assert.match(dailyDeliveryOrchestrator, /public_eligible:\s*layered\.public_gate\.eligible === true,/);
+  assert.doesNotMatch(dailyDeliveryOrchestrator, /public_eligible:\s*layered\.public_gate\.eligible === true && snapshotReady/);
+  assert.match(lineDailyPush, /premiumDelivery[\s\S]*snapshotEligible[\s\S]*layered\.public_gate\.eligible === true/);
+});
+
+test('runtime reconciliation keeps 409 quality blocks terminal without fabricating success', () => {
+  assert.match(runtimeIncidentReconciliationMigration, /new\.http_status=409/);
+  assert.match(runtimeIncidentReconciliationMigration, /new\.dispatch_status:='FAILED'/);
+  assert.match(runtimeIncidentReconciliationMigration, /new\.next_retry_at:=null/);
+  assert.match(runtimeIncidentReconciliationMigration, /QUALITY_BLOCK_TERMINAL/);
+  assert.match(runtimeIncidentReconciliationMigration, /runtime_http_dispatch_attempts:first_attempt/);
+  assert.match(runtimeIncidentReconciliationMigration, /core_checkpoint_outside_window/);
+  assert.doesNotMatch(runtimeIncidentReconciliationMigration, /dispatch_status='SUCCEEDED'/);
+});
+
+test('Core-complete degraded verification advances without upgrading its quality label', () => {
+  assert.match(degradedLifecycleMigration, /upper\(p_status\)='DEGRADED'/);
+  assert.match(degradedLifecycleMigration, /direction_completed_data_degraded/);
+  assert.match(degradedLifecycleMigration, /v_effective_rank:=case when v_advances/);
+  assert.match(degradedLifecycleMigration, /'status',upper\(p_status\)/);
+});
+
 test('authenticated recovery can force report regeneration after a code-only fix', () => {
   assert.match(dailyDeliveryOrchestrator, /const forceRegenerate = body\.force_regenerate === true/);
   assert.match(dailyDeliveryOrchestrator, /if \(forceRegenerate\) actions = \['regenerate_report'\]/);
@@ -280,10 +305,10 @@ test('authenticated recovery can force report regeneration after a code-only fix
   );
 });
 
-test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
-  const hardGate = lineDailyPush.indexOf("reason: 'PREMIUM_CONTENT_NOT_ELIGIBLE'");
+test('LINE Public delivery is fail-closed and persists per-subscriber retries', () => {
+  const hardGate = lineDailyPush.indexOf("? 'PREMIUM_CONTENT_NOT_ELIGIBLE'");
   const subscriberDelivery = lineDailyPush.indexOf('deliverOutboxMessage({', hardGate);
-  assert.ok(hardGate >= 0, 'LINE must expose a hard premium content gate');
+  assert.ok(hardGate >= 0, 'LINE must expose explicit layered content gates');
   assert.ok(subscriberDelivery > hardGate, 'subscriber delivery must happen only after the hard gate');
   assert.match(lineDailyPush, /snapshotStatus === 'READY'/);
   assert.match(lineDailyPush, /snapshotScore >= 90/);
@@ -295,7 +320,8 @@ test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
   assert.match(deliveryGuaranteeMigration, /0-40\/5 23 \* \* 0-4/);
   assert.match(deliveryGuaranteeMigration, /decision_snapshots_premium_90_gate/);
   assert.match(deliveryGuaranteeMigration, /new\.content_score is null or new\.content_score < 90/);
-  assert.match(opsHealthCheck, /ready_90_point_decision_snapshot/);
+  assert.match(opsHealthCheck, /ready_public_decision_snapshot/);
+  assert.match(opsHealthCheck, /public_delivery_gate/);
 });
 
 test('paid report fails closed when evidence does not meet the member threshold', () => {
@@ -411,9 +437,9 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeDeployWorkflow, /db push --linked/);
   assert.ok(runtimeDeployWorkflow.indexOf('db push --linked') < runtimeDeployWorkflow.indexOf('functions deploy daily-delivery-orchestrator'));
   assert.match(opsHealthCheck, /evaluatePremiumContentGate/);
-  assert.match(opsHealthCheck, /intraday_validation\)\.length < 3/);
-  assert.match(opsHealthCheck, /invalidation_rules\)\.length < 2/);
-  assert.match(opsHealthCheck, /verifiedCatalystCount < 1/);
+  assert.match(opsHealthCheck, /premium_content_status/);
+  assert.match(opsHealthCheck, /core_data_status/);
+  assert.match(opsHealthCheck, /public_delivery_status/);
   assert.match(opsHealthCheck, /verified_market_count/);
   assert.match(runtimeCheckpointWorkflow, /MANUAL_CHECKPOINT: \${\{ inputs\.checkpoint \}\}/);
   assert.doesNotMatch(runtimeCheckpointWorkflow, /^\s*schedule:/m);
@@ -423,7 +449,7 @@ test('LINE brief identifies analysis and market-data times and refuses weak day-
   for (const label of ['07:30 盤前', '今日一句', '最大機會', '最大風險', '下一確認', '分析產生', '資料截止']) {
     assert.match(lineDailyPush, new RegExp(label), `LINE brief is missing ${label}`);
   }
-  assert.match(lineDailyPush, /evaluatePremiumContentGate/);
+  assert.match(lineDailyPush, /projectLayeredDelivery/);
   assert.match(lineDailyPush, /資料未達標，不建立個股劇本/);
   assert.match(lineDailyPush, /ALREADY_SENT/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);

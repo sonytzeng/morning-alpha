@@ -18,6 +18,7 @@ test('daily delivery phases reserve recovery time before the 07:30 deadline', ()
 test('traceability failures refresh only the affected evidence and regenerate', () => {
   const plan = buildDailyDeliveryRecoveryPlan({
     has_report: true,
+    public_eligible: false,
     premium_eligible: false,
     reason_codes: ['news_traceability_incomplete'],
     attempt: 2,
@@ -38,30 +39,33 @@ test('missing or stale market evidence routes to market recovery', () => {
   assert.deepEqual(plan.actions, ['refresh_market', 'regenerate_report']);
 });
 
-test('an eligible report is delivered only in the delivery window', () => {
+test('an eligible Public report is delivered even when Premium is blocked', () => {
   const early = buildDailyDeliveryRecoveryPlan({
     has_report: true,
-    premium_eligible: true,
+    public_eligible: true,
+    premium_eligible: false,
     reason_codes: [],
     attempt: 1,
     taipei_minutes: 7 * 60 + 10,
   });
   const ready = buildDailyDeliveryRecoveryPlan({
     has_report: true,
-    premium_eligible: true,
+    public_eligible: true,
+    premium_eligible: false,
     reason_codes: [],
     attempt: 1,
     taipei_minutes: 7 * 60 + 25,
   });
   assert.deepEqual(early.actions, []);
-  assert.deepEqual(ready.actions, ['deliver_premium']);
+  assert.deepEqual(ready.actions, ['deliver_public']);
 });
 
-test('after the deadline an honest incident notice precedes continued recovery', () => {
+test('after the deadline a Public evidence failure triggers an honest incident', () => {
   const plan = buildDailyDeliveryRecoveryPlan({
     has_report: true,
     premium_eligible: false,
-    reason_codes: ['verified_catalyst_evidence_missing'],
+    public_eligible: false,
+    reason_codes: ['core_missing:TXF'],
     attempt: 4,
     taipei_minutes: 7 * 60 + 31,
   });
@@ -69,7 +73,6 @@ test('after the deadline an honest incident notice precedes continued recovery',
   assert.equal(plan.deadline_reached, true);
   assert.deepEqual(plan.actions, [
     'deliver_incident',
-    'refresh_news',
     'refresh_market',
     'regenerate_report',
   ]);
@@ -87,9 +90,9 @@ test('a missing report triggers complete source recovery without fabricating a f
   assert.ok(plan.reason_codes.includes('daily_report_not_publishable'));
 });
 
-test('failed evidence dependencies block regeneration and premium delivery', () => {
+test('only Public dependencies block regeneration and delivery', () => {
   assert.equal(hasFailedEvidenceDependency({ refresh_news: { ok: true }, refresh_market: { ok: true } }), false);
-  assert.equal(hasFailedEvidenceDependency({ refresh_news: { ok: false }, refresh_market: { ok: true } }), true);
+  assert.equal(hasFailedEvidenceDependency({ refresh_news: { ok: false }, refresh_market: { ok: true } }), false);
   assert.equal(hasFailedEvidenceDependency({ regenerate_report: { ok: false } }), true);
   assert.equal(hasFailedEvidenceDependency({ deliver_incident: { ok: false } }), false);
 });

@@ -1,6 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
+import { projectLayeredDelivery } from '../_shared/layered-delivery-gates.mjs';
+import { buildLineDeliveryIdempotencyKey } from '../_shared/line-delivery-contract.mjs';
 import { buildDeliveryIncidentLineMessage } from '../_shared/line-incident-message.ts';
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 import type { RuntimeDatabase } from '../_shared/runtime-database-contract.ts';
@@ -82,7 +84,12 @@ Deno.serve(async (req) => {
   } catch {
     requestBody = {};
   }
-  const deliveryMode = requestBody.delivery_mode === 'incident' ? 'incident' : 'premium';
+  const deliveryMode = requestBody.delivery_mode === 'incident'
+    ? 'incident'
+    : requestBody.delivery_mode === 'premium' ? 'premium' : 'public';
+  const safeTestSubscriberId = typeof requestBody.safe_test_subscriber_id === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestBody.safe_test_subscriber_id)
+    ? requestBody.safe_test_subscriber_id : null;
   const incidentReasonCodes = Array.isArray(requestBody.incident_reason_codes)
     ? requestBody.incident_reason_codes.map(String).filter(Boolean)
     : [];
@@ -269,6 +276,15 @@ Deno.serve(async (req) => {
       ? ai.important_news.length
       : Number(ai.fresh_news_count) || 0;
   const premiumGate = evaluatePremiumContentGate(ai, importantNewsCount);
+  const layered = projectLayeredDelivery({
+    ai,
+    report_date: reportDate,
+    report_mode: report.report_mode || ai.report_mode,
+    is_trading_day: ai.is_trading_day !== false,
+    market_bias: report.market_bias,
+    important_news_count: importantNewsCount,
+    premium_gate: premiumGate,
+  });
   const decisionSnapshotId = String(decisionSnapshot?.id ?? '').trim();
   const snapshotStatus = String(decisionSnapshot?.status || '');
   const snapshotScore = Number(decisionSnapshot?.content_score);
@@ -288,22 +304,33 @@ Deno.serve(async (req) => {
   const leadingDate = deliverySentence.match(/^(\d{4}-\d{2}-\d{2})(?:未|[，,。；;：:\s])/i)?.[1] || '';
   const sentenceDateEligible = !leadingDate || leadingDate === reportDate;
 
-  if (!premiumGate.eligible || !snapshotEligible || !sentenceDateEligible) {
+  const premiumDelivery = deliveryMode === 'premium';
+  const gateEligible = premiumDelivery
+    ? premiumGate.eligible && layered.public_gate.eligible === true && snapshotEligible
+    : layered.public_gate.eligible === true;
+  if (!gateEligible || !sentenceDateEligible) {
     const reasonCodes = Array.from(new Set([
-      ...premiumGate.reason_codes,
-      ...(!decisionSnapshotId ? ['decision_snapshot_missing'] : []),
-      ...(decisionSnapshot && snapshotStatus !== 'READY' ? ['decision_snapshot_not_ready'] : []),
-      ...(decisionSnapshot && (!Number.isFinite(snapshotScore) || snapshotScore < 90) ? ['decision_snapshot_score_below_90'] : []),
-      ...(decisionSnapshot && !['recommendations', 'no_trade'].includes(snapshotMode) ? ['decision_snapshot_mode_blocked'] : []),
+      ...(premiumDelivery ? premiumGate.reason_codes : layered.public_gate.reason_codes),
+      ...(premiumDelivery && !decisionSnapshotId ? ['decision_snapshot_missing'] : []),
+      ...(premiumDelivery && decisionSnapshot && snapshotStatus !== 'READY' ? ['decision_snapshot_not_ready'] : []),
+      ...(premiumDelivery && decisionSnapshot && (!Number.isFinite(snapshotScore) || snapshotScore < 90) ? ['decision_snapshot_score_below_90'] : []),
+      ...(premiumDelivery && decisionSnapshot && !['recommendations', 'no_trade'].includes(snapshotMode) ? ['decision_snapshot_mode_blocked'] : []),
       ...(!sentenceDateEligible ? ['daily_sentence_date_mismatch'] : []),
     ]));
-    console.warn('[LINE-PUSH-V4] Premium content hard gate blocked delivery:', reasonCodes);
+    const blockedReason = deliveryMode === 'premium'
+      ? 'PREMIUM_CONTENT_NOT_ELIGIBLE'
+      : 'PUBLIC_CONTENT_NOT_ELIGIBLE';
+    console.warn('[LINE-PUSH-V5] '+deliveryMode+' delivery gate blocked:', reasonCodes);
     return new Response(
       JSON.stringify({
         success: false,
         sent: false,
-        reason: 'PREMIUM_CONTENT_NOT_ELIGIBLE',
+        reason: blockedReason,
+        line_status: 'BLOCKED',
         report_date: reportDate,
+        core_data_status: layered.core_gate.status,
+        public_delivery_status: layered.public_gate.status,
+        premium_status: premiumGate.eligible ? 'PASS' : 'BLOCKED',
         content_score: premiumGate.content_score,
         decision_snapshot_score: Number.isFinite(snapshotScore) ? snapshotScore : null,
         decision_mode: snapshotMode || premiumGate.decision_mode,
@@ -328,6 +355,14 @@ Deno.serve(async (req) => {
       decisionSnapshotId,
       pushType: 'daily_report',
       message,
+      targetSubscriberId: safeTestSubscriberId,
+      deliveryMetadata: {
+        delivery_mode: deliveryMode,
+        core_data_status: layered.core_gate.status,
+        public_delivery_status: layered.public_gate.status,
+        premium_status: premiumGate.eligible ? 'PASS' : 'BLOCKED',
+        safe_test: Boolean(safeTestSubscriberId),
+      },
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -343,10 +378,10 @@ Deno.serve(async (req) => {
     );
   }
 
-  if (delivery.failedCount === 0 && delivery.pendingCount === 0) {
+  if (!safeTestSubscriberId && delivery.failedCount === 0 && delivery.pendingCount === 0) {
     await supabase.rpc('advance_trading_day_state_v1', {
       p_trading_date: reportDate, p_state: 'PREMARKET_DELIVERED', p_checkpoint: 'line_delivery', p_status: 'SUCCEEDED',
-      p_correlation_id: crypto.randomUUID(), p_metadata: { decision_snapshot_id: decisionSnapshotId, sent_count: delivery.sentCount, already_sent_count: delivery.alreadySentCount },
+      p_correlation_id: crypto.randomUUID(), p_metadata: { decision_snapshot_id: decisionSnapshotId, delivery_mode: deliveryMode, core_data_status: layered.core_gate.status, public_delivery_status: layered.public_gate.status, premium_status: premiumGate.eligible?'PASS':'BLOCKED', sent_count: delivery.sentCount, already_sent_count: delivery.alreadySentCount },
     });
   }
 
@@ -362,6 +397,13 @@ Deno.serve(async (req) => {
           ? 'TRADING_DAY_PUSH'
           : 'PARTIAL_DELIVERY_FAILURE',
       report_date: reportDate,
+      delivery_mode: deliveryMode,
+      line_status: delivery.failedCount === 0 && delivery.pendingCount === 0 ? 'PASS' : 'DEGRADED',
+      core_data_status: layered.core_gate.status,
+      public_delivery_status: layered.public_gate.status,
+      premium_status: premiumGate.eligible ? 'PASS' : 'BLOCKED',
+      safe_test: Boolean(safeTestSubscriberId),
+      production_state_advanced: !safeTestSubscriberId && delivery.failedCount === 0 && delivery.pendingCount === 0,
       total_subscribers: delivery.totalSubscribers,
       eligible_count: delivery.eligibleCount,
       already_sent_count: delivery.alreadySentCount,
@@ -382,8 +424,10 @@ async function deliverOutboxMessage(args: {
   decisionSnapshotId: string | null;
   pushType: 'daily_report' | 'data_incident' | 'market_closed_typhoon';
   message: Record<string, unknown>;
+  targetSubscriberId?: string | null;
+  deliveryMetadata?: Record<string, unknown>;
 }): Promise<DeliverySummary> {
-  const subscribers = await fetchActiveSubscribers(args.supabase);
+  const subscribers = await fetchActiveSubscribers(args.supabase, args.targetSubscriberId ?? null);
   if (subscribers.length === 0) {
     return {
       totalSubscribers: 0,
@@ -423,6 +467,7 @@ async function deliverOutboxMessage(args: {
     pushType: args.pushType,
     message: args.message,
     messagePreview,
+    deliveryMetadata: args.deliveryMetadata ?? {},
   });
 
   let sentCount = 0;
@@ -497,6 +542,7 @@ async function enqueueDeliveryOutbox(args: {
   pushType: string;
   message: Record<string, unknown>;
   messagePreview: string;
+  deliveryMetadata: Record<string, unknown>;
 }): Promise<void> {
   const rows = args.subscribers.flatMap((subscriber) => {
     if (!subscriber.line_user_id) return [];
@@ -506,12 +552,12 @@ async function enqueueDeliveryOutbox(args: {
       line_subscriber_id: subscriber.id,
       line_user_id: subscriber.line_user_id,
       push_type: args.pushType,
-      idempotency_key: [
-        args.reportDate,
-        args.pushType,
-        subscriber.id,
-      ].join(':'),
-      payload: { message: args.message, message_preview: args.messagePreview },
+      idempotency_key: buildLineDeliveryIdempotencyKey({
+        report_date: args.reportDate,
+        push_type: args.pushType,
+        subscriber_id: subscriber.id,
+      }),
+      payload: { message: args.message, message_preview: args.messagePreview, delivery_status: args.deliveryMetadata },
     }];
   });
 
@@ -531,7 +577,7 @@ async function enqueueDeliveryOutbox(args: {
       .from('line_delivery_outbox')
       .update({
         decision_snapshot_id: args.decisionSnapshotId,
-        payload: { message: args.message, message_preview: args.messagePreview },
+        payload: { message: args.message, message_preview: args.messagePreview, delivery_status: args.deliveryMetadata },
         updated_at: new Date().toISOString(),
       })
       .eq('report_date', args.reportDate)
@@ -581,15 +627,16 @@ async function markDeliveryOutbox(
   if (error) throw new Error(`Failed to update LINE delivery outbox: ${error.message}`);
 }
 
-async function fetchActiveSubscribers(supabase: SupabaseClient): Promise<LineSubscriber[]> {
+async function fetchActiveSubscribers(supabase: SupabaseClient, targetSubscriberId: string | null): Promise<LineSubscriber[]> {
   const subscribers: LineSubscriber[] = [];
   for (let from = 0; ; from += SUBSCRIBER_PAGE_SIZE) {
-    const { data, error } = await supabase
+    let query = supabase
       .from('line_subscribers')
       .select('id, line_user_id, display_name')
       .eq('is_active', true)
-      .order('id', { ascending: true })
-      .range(from, from + SUBSCRIBER_PAGE_SIZE - 1);
+      .order('id', { ascending: true });
+    if (targetSubscriberId) query = query.eq('id', targetSubscriberId);
+    const { data, error } = await query.range(from, from + SUBSCRIBER_PAGE_SIZE - 1);
     if (error) throw new Error(`Failed to fetch subscribers: ${error.message}`);
     const page = (data || []) as LineSubscriber[];
     subscribers.push(...page);

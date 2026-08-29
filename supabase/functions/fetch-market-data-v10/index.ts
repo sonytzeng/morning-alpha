@@ -17,6 +17,10 @@ import {
   normalizeConfiguredProxyQuote,
   normalizeProviderTimestamp,
 } from '../_shared/provider-normalization.mjs';
+import {
+  buildImmutableMarketCheckpoint,
+  canonicalCheckpointName,
+} from '../_shared/immutable-market-checkpoint.mjs';
 
 // ═══════════════════════════════════════════════════════════
 // fetch-market-data-v10 V10.12 — CLOSE CHECKPOINT OWNERSHIP REPAIR
@@ -952,6 +956,7 @@ Deno.serve(async (req) => {
           && checkpointMetadata.required_core_complete === true
           && checkpointMetadata.canonical_complete === true;
         if (terminalCheckpoint) {
+          const immutableCheckpoint = canonicalCheckpointName(phase, checkpoint);
           const { data: existingSnapshots, error: existingSnapshotsError } = await supabase
             .from("market_data_snapshots")
             .select("symbol,name,value,change_percent,captured_at,source")
@@ -959,10 +964,23 @@ Deno.serve(async (req) => {
             .eq("phase", phase)
             .eq("checkpoint", checkpoint)
             .in("symbol", requiredSymbols);
+          const { data: immutableSnapshots, error: immutableSnapshotsError } = await supabase
+            .from("market_checkpoint_snapshots")
+            .select("symbol")
+            .eq("trading_date", tradingDate)
+            .eq("checkpoint", immutableCheckpoint)
+            .in("symbol", requiredSymbols);
           const snapshotRows = Array.isArray(existingSnapshots) ? existingSnapshots : [];
           const existingSymbols = new Set(snapshotRows.map((row) => String(row.symbol || "")));
+          const immutableSymbols = new Set(
+            (Array.isArray(immutableSnapshots) ? immutableSnapshots : [])
+              .map((row) => String(row.symbol || "")),
+          );
           const snapshotContractComplete = !existingSnapshotsError
-            && requiredSymbols.every((symbol) => existingSymbols.has(symbol));
+            && !immutableSnapshotsError
+            && requiredSymbols.every((symbol) =>
+              existingSymbols.has(symbol) && immutableSymbols.has(symbol)
+            );
           if (snapshotContractComplete) {
             console.log(`[${batchTag}] CHECKPOINT_REUSED checkpoint=${checkpoint} symbols=${requiredSymbols.join(",")}`);
             return new Response(JSON.stringify({
@@ -1005,7 +1023,7 @@ Deno.serve(async (req) => {
               timed_out: false,
             }), { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
           }
-          console.warn(`[${batchTag}] CHECKPOINT_REUSE_CONTRACT_INCOMPLETE checkpoint=${checkpoint} error=${existingSnapshotsError?.message || "required snapshots missing"}`);
+          console.warn(`[${batchTag}] CHECKPOINT_REUSE_CONTRACT_INCOMPLETE checkpoint=${checkpoint} error=${existingSnapshotsError?.message || immutableSnapshotsError?.message || "required snapshots missing"}`);
         }
       }
     }
@@ -1035,6 +1053,7 @@ Deno.serve(async (req) => {
     const inserted: Array<{ symbol: string; name: string; value: number; change_percent: number }> = [];
     const failed: string[] = [];
     const snapshotErrors: Array<{ symbol: string; error: string }> = [];
+    const immutableSnapshotErrors: Array<{ symbol: string; error: string }> = [];
     const dbWriteErrors: Array<{ symbol: string; error: string }> = [];
     const canonicalWriteErrors: Array<{ symbol: string; error: string }> = [];
     const providerHealthWriteErrors: string[] = [];
@@ -1043,8 +1062,10 @@ Deno.serve(async (req) => {
     const twCoreSymbolsSuccess: string[] = [];
     const twCoreSymbolsFailed: Array<{ symbol: string; reason: string }> = [];
     const snapshotSymbolsSuccess: string[] = [];
+    const immutableSnapshotSymbolsSuccess: string[] = [];
     const canonicalSymbolsSuccess: string[] = [];
     let snapshotUpsertedCount = 0;
+    let immutableSnapshotInsertedCount = 0;
     let canonicalUpsertedCount = 0;
     const allSymbols = symbolConfigs.map((s) => s.displaySymbol);
 
@@ -1197,6 +1218,36 @@ Deno.serve(async (req) => {
           snapshotSymbolsSuccess.push(config.displaySymbol);
         }
 
+        const immutableSnapshot = buildImmutableMarketCheckpoint({
+          phase,
+          checkpoint,
+          trading_date: tradingDate,
+          captured_at: capturedAt,
+          source_timestamp: capturedAt,
+          symbol: config.displaySymbol,
+          value,
+          change_percent: changePercent,
+          source: quote.provider,
+          correlation_id: correlationId,
+          raw: snapshotPayload.raw,
+        });
+        const { error: immutableSnapshotErr } = await supabase
+          .from("market_checkpoint_snapshots")
+          .upsert(immutableSnapshot, {
+            onConflict: "correlation_id,checkpoint,symbol",
+            ignoreDuplicates: true,
+          });
+        if (immutableSnapshotErr) {
+          console.error(`[${batchTag}] ${config.displaySymbol} immutable snapshot DB error: ${immutableSnapshotErr.message}`);
+          immutableSnapshotErrors.push({
+            symbol: config.displaySymbol,
+            error: immutableSnapshotErr.message,
+          });
+        } else {
+          immutableSnapshotInsertedCount++;
+          immutableSnapshotSymbolsSuccess.push(config.displaySymbol);
+        }
+
         const canonicalQuote = normalizeProviderQuote({
           provider: quote.provider,
           symbol: config.displaySymbol,
@@ -1308,17 +1359,20 @@ Deno.serve(async (req) => {
       : summarizedProviderHealth;
     const classifiedProviderFailures = classifyProviderFailures(providerFailureDetails);
     const canonicalComplete = canonicalUpsertedCount === inserted.length && canonicalWriteErrors.length === 0;
-    const snapshotComplete = snapshotUpsertedCount === inserted.length && snapshotErrors.length === 0;
+    const snapshotComplete = snapshotUpsertedCount === inserted.length &&
+      immutableSnapshotInsertedCount === inserted.length &&
+      snapshotErrors.length === 0 && immutableSnapshotErrors.length === 0;
     const requiredCoreSymbols = phase === "premarket" || phase === "manual_backfill"
       ? MVP_REQUIRED
       : TAIWAN_DECISION_REQUIRED;
     const requiredCoreComplete = requiredCoreSymbols.every((symbol) =>
       inserted.some((item) => item.symbol === symbol) &&
       snapshotSymbolsSuccess.includes(symbol) &&
+      immutableSnapshotSymbolsSuccess.includes(symbol) &&
       canonicalSymbolsSuccess.includes(symbol)
     );
     const coreBatchComplete = !beneficiaryCloseOnly && requiredCoreComplete &&
-      snapshotErrors.length === 0 && canonicalComplete;
+      snapshotErrors.length === 0 && immutableSnapshotErrors.length === 0 && canonicalComplete;
     const beneficiaryCloseStatus = buildBeneficiaryCloseStatus({
       lookup_status: beneficiaryLookup.lookupStatus,
       decision_mode: beneficiaryLookup.decisionMode,
@@ -1422,8 +1476,12 @@ Deno.serve(async (req) => {
     const checkpointEvidenceComplete = beneficiaryCloseOnly
       ? beneficiaryCloseStatus.complete === true && canonicalComplete && snapshotComplete && relatedCoreHealth.evidence_complete
       : coreBatchComplete;
-    const checkpointStatus = checkpointEvidenceComplete && failed.length === 0 && !timedOut && !hasProviderDegradation &&
-        providerHealthWriteErrors.length === 0 && relatedCoreHealth.healthy
+    // Lifecycle progress is owned by the Core gate. Supplemental provider
+    // degradation remains visible in provider health, but must not block a
+    // complete TAIEX/2330/TXF checkpoint or couple Public runtime progress to
+    // Premium evidence.
+    const checkpointStatus = checkpointEvidenceComplete && !timedOut &&
+        providerHealthWriteErrors.length === 0
       ? "SUCCEEDED"
       : "DEGRADED";
     // A beneficiary-only close pass validates premium recommendations after the
@@ -1442,6 +1500,8 @@ Deno.serve(async (req) => {
           phase,
           requested_count: symbolConfigs.length,
           snapshot_upserted_count: snapshotUpsertedCount,
+          immutable_snapshot_inserted_count: immutableSnapshotInsertedCount,
+          immutable_snapshot_errors: immutableSnapshotErrors,
           canonical_upserted_count: canonicalUpsertedCount,
           canonical_complete: canonicalComplete,
           failed_symbols: failed,
@@ -1513,7 +1573,9 @@ Deno.serve(async (req) => {
         txf_candidate_errors: classifiedProviderFailures.filter((f: Record<string, unknown>) => f.provider === "fugle_futopt"),
         provider_failures: classifiedProviderFailures,
         snapshot_upserted_count: snapshotUpsertedCount,
+        immutable_snapshot_inserted_count: immutableSnapshotInsertedCount,
         snapshot_errors: snapshotErrors,
+        immutable_snapshot_errors: immutableSnapshotErrors,
         symbols: allSymbols,
         healthy: healthy,
         timed_out: timedOut,

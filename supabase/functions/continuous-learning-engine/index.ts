@@ -1375,8 +1375,16 @@ Deno.serve(async (req: Request) => {
       }, 500);
     }
     const closingStatus = asObject(asObject(tradingDayState?.checkpoint_status).closing_verification);
+    const closingMetadata = asObject(closingStatus.metadata);
+    const degradedDirectionComplete = String(closingStatus.status || '') === 'DEGRADED'
+      && String(closingMetadata.closing_verification_status || '') === 'direction_completed_data_degraded'
+      && String(closingMetadata.closing_decision_snapshot_id || '').length > 0
+      && String(closingMetadata.report_id || '').length > 0;
     const closingComplete = Number(tradingDayState?.state_rank || 0) >= 110
-      && String(closingStatus.status || '') === 'SUCCEEDED';
+      && (
+        String(closingStatus.status || '') === 'SUCCEEDED'
+        || degradedDirectionComplete
+      );
     if (!closingComplete) {
       return jsonResponse({
         success: true,

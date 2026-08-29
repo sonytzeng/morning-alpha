@@ -1,6 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildTask, githubFailureCode, parseClaim, redactEvidence, seedBaseSha } from '../scripts/emma-auto-repair-oidc.mjs';
+import { validateGitHubOidcClaims } from '../supabase/functions/_shared/githubOidc.mjs';
+import { readFileSync } from 'node:fs';
+
+const brokerSource = readFileSync(
+  new URL('../supabase/functions/emma-github-oidc-broker/index.ts', import.meta.url),
+  'utf8',
+);
+const workflowSource = readFileSync(
+  new URL('../.github/workflows/emma-auto-repair-oidc.yml', import.meta.url),
+  'utf8',
+);
 
 const claim = {
   dispatch_id: '11111111-1111-4111-8111-111111111111',
@@ -38,7 +49,8 @@ test('redacts credential-shaped evidence and builds immutable markers', () => {
 
 
 test('reports only a bounded GitHub HTTP status', () => {
-  assert.equal(githubFailureCode('PR_CREATE', { status: 403 }), 'PR_CREATE_HTTP_403');
+  assert.equal(githubFailureCode('PR_CREATE', { status: 403 }), 'GITHUB_PULL_REQUEST_PERMISSION_DENIED');
+  assert.equal(githubFailureCode('TASK_CREATE', { status: 403 }), 'GITHUB_CONTENTS_PERMISSION_DENIED');
   assert.equal(githubFailureCode('not safe', { status: 999 }), 'GITHUB_HTTP_0');
 });
 
@@ -47,4 +59,65 @@ test('binds a replayed task to its immutable seed parent', () => {
   assert.equal(seedBaseSha({ parents: [{ sha: base }] }), base);
   assert.equal(seedBaseSha({ parents: [] }), '');
   assert.equal(seedBaseSha({ parents: [{ sha: base }, { sha: 'c'.repeat(40) }] }), '');
+});
+
+test('fails closed when the GitHub OIDC audience is not exact', () => {
+  const now = Math.floor(Date.now() / 1000);
+  const claims = {
+    iss: 'https://token.actions.githubusercontent.com',
+    aud: 'emma:wrong-project:morning-alpha',
+    sub: 'repo:sonytzeng/morning-alpha:ref:refs/heads/main',
+    repository: 'sonytzeng/morning-alpha',
+    repository_id: '1274909964',
+    repository_owner_id: '279634487',
+    workflow_ref: 'sonytzeng/morning-alpha/.github/workflows/emma-auto-repair-oidc.yml@refs/heads/main',
+    ref: 'refs/heads/main',
+    event_name: 'workflow_dispatch',
+    run_id: '33132814978',
+    run_attempt: '1',
+    iat: now,
+    exp: now + 300,
+  };
+  assert.throws(() => validateGitHubOidcClaims(claims, now), /OIDC_AUDIENCE_INVALID/);
+});
+
+test('uses a deterministic repair identity so replay cannot create another task path', () => {
+  const parsed = parseClaim(claim);
+  assert.equal(parsed.head_ref, parseClaim({ ...claim }).head_ref);
+  assert.equal(parsed.task_path, parseClaim({ ...claim }).task_path);
+  assert.match(buildTask(parsed, 'a'.repeat(40)), /emma-auto-repair:11111111-1111-4111-8111-111111111111/);
+});
+
+test('broker preflights one server credential before any repair mutation and reuses exact artifacts', () => {
+  const broker = brokerSource;
+  const workflow = workflowSource;
+  assert.ok(broker.indexOf('assertGitHubWriteCapability') < broker.indexOf("'BRANCH_LOOKUP'"));
+  assert.match(broker, /const\s+credential\s*=\s*await\s+new\s+EmmaGitHubCredentialProvider\(\)\.getCredential\(\)/);
+  assert.doesNotMatch(broker, /Deno\.env\.get\(['"](?:GITHUB_TOKEN|GH_TOKEN|PAT)['"]\)/);
+  assert.match(broker, /permissions\s*:\s*\{\s*contents\s*:\s*'write'\s*,\s*pull_requests\s*:\s*'write'\s*,\s*issues\s*:\s*'write'\s*\}/);
+  assert.match(broker, /credentialType\s*:\s*'github_app_installation'/);
+  assert.match(broker, /existingPull/);
+  assert.match(broker, /commentsResult\.body\.find/);
+  assert.doesNotMatch(workflow, /GITHUB_TOKEN:/);
+  const responseBody = broker.slice(broker.indexOf('const responseBody = {'), broker.indexOf('return json(payload.action', broker.indexOf('const responseBody = {')));
+  assert.doesNotMatch(responseBody, /claim_token|credential\.token|GITHUB_TOKEN/);
+  const structuredLog = broker.slice(broker.indexOf("event: 'github_write_operation'"), broker.indexOf('}));', broker.indexOf("event: 'github_write_operation'")));
+  assert.doesNotMatch(structuredLog, /credential\.token|Authorization|GITHUB_TOKEN/);
+});
+
+test('GitHub App installation token is repository-bounded and fails closed on partial configuration', () => {
+  const broker = brokerSource;
+  assert.match(broker, /repositories\s*:\s*\[REPOSITORY_NAME\]/);
+  assert.match(broker, /repository\.id\s*===\s*REPOSITORY_ID/);
+  assert.match(broker, /if\s*\(!appId\s*\|\|\s*!installationIdValue\s*\|\|\s*!privateKey\)\s*throw new Error\('GITHUB_APP_CONFIGURATION_INVALID'\)/);
+  assert.match(broker, /permissions\.contents\s*!==\s*'write'/);
+  assert.match(broker, /permissions\.pull_requests\s*!==\s*'write'/);
+  assert.match(broker, /permissions\.issues\s*!==\s*'write'/);
+  assert.doesNotMatch(broker, /console\.(?:log|error)[^\n]*(?:privateKey|appJwt|credential\.token)/);
+});
+
+test('GitHub permission failures have bounded actionable taxonomy', () => {
+  assert.equal(githubFailureCode('INSTALLATION_LOOKUP', { status: 404 }), 'GITHUB_INSTALLATION_NOT_FOUND');
+  assert.equal(githubFailureCode('REPOSITORY_LOOKUP', { status: 404 }), 'GITHUB_REPOSITORY_NOT_ALLOWED');
+  assert.equal(githubFailureCode('BRANCH_CREATE', { status: 422 }), 'GITHUB_BRANCH_CREATE_FAILED');
 });

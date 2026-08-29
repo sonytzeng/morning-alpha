@@ -25,6 +25,10 @@ import {
   buildInternalFunctionHeaders,
   parseBearerAuthorizationHeader,
 } from '../supabase/functions/_shared/internal-function-auth.mjs';
+import {
+  buildImmutableMarketCheckpoint,
+  immutableCheckpointIdentity,
+} from '../supabase/functions/_shared/immutable-market-checkpoint.mjs';
 
 const headers = (values = {}) => ({ get: (name) => values[name.toLowerCase()] || null });
 const credentials = {
@@ -64,6 +68,18 @@ test('internal outbound headers follow the active auth version without using bea
   assert.equal(outbound.Authorization, undefined);
 });
 
+test('MA-Ops scheduler credential provider supports shared auth and the existing Vault scheduler credential', () => {
+  const source = readFileSync(
+    new URL('../supabase/functions/ma-ops-health-check/index.ts', import.meta.url),
+    'utf8',
+  );
+  assert.match(source, /class SchedulerCredentialProvider/);
+  assert.match(source, /authorizeInternalRequest/);
+  assert.match(source, /get_ma_ops_health_cron_secret/);
+  assert.match(source, /constantTimeSecretMatch\(presented, data\)/);
+  assert.doesNotMatch(source, /verify_jwt\s*=\s*false/);
+});
+
 test('daily lifecycle is monotonic and contains all sixteen production states', () => {
   assert.equal(Object.keys(DAILY_LIFECYCLE_RANKS).length, 16);
   assert.deepEqual(resolveLifecycleTransition('CLOSING_VERIFIED', 'LEARNING_COMPLETED'), { allowed: true, reason_code: 'STATE_ADVANCE' });
@@ -91,6 +107,77 @@ test('HTTP receipts distinguish queueing from business success and bound retries
   assert.equal(reconcileHttpReceipt({ http_status: 429 }).retryable, true);
   assert.equal(reconcileHttpReceipt({ http_status: 500 }).retryable, true);
   assert.equal(reconcileHttpReceipt({ timed_out: true }).status, 'TIMED_OUT');
+});
+
+test('HTTP reconciler qualifies dispatch columns without changing receipt idempotency', () => {
+  const sql = readFileSync(
+    new URL(
+      '../supabase/migrations/20260828051007_qualify_runtime_http_reconciler_dispatch_status.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+
+  assert.match(sql, /from public\.runtime_http_dispatches as dispatches/);
+  assert.match(sql, /dispatches\.dispatch_status in \('FAILED', 'TIMED_OUT'\)/);
+  assert.match(sql, /dispatches\.dispatch_status in \('DISPATCHED', 'ACKNOWLEDGED'\)/);
+  assert.match(sql, /where attempts\.dispatch_id = v_row\.id/);
+  assert.match(sql, /on conflict do nothing/);
+  assert.doesNotMatch(
+    sql,
+    /from public\.runtime_http_dispatches\s+where dispatch_status/,
+  );
+  assert.doesNotMatch(sql, /insert into public\.runtime_http_dispatches/);
+});
+
+test('PREMARKET evidence survives a distinct RECOVERY capture and remains decision-bound', () => {
+  const premarket = buildImmutableMarketCheckpoint({
+    phase: 'premarket',
+    checkpoint: 'premarket',
+    trading_date: '2026-08-28',
+    captured_at: '2026-08-27T23:30:00.000Z',
+    source_timestamp: '2026-08-27T23:29:58.000Z',
+    symbol: 'TAIEX',
+    value: '24500.5',
+    change_percent: '0.25',
+    source: 'twse',
+    correlation_id: '11111111-1111-4111-8111-111111111111',
+  });
+  const recovery = buildImmutableMarketCheckpoint({
+    phase: 'manual_backfill',
+    checkpoint: 'manual',
+    trading_date: '2026-08-28',
+    captured_at: '2026-08-28T04:00:00.000Z',
+    source_timestamp: '2026-08-28T03:59:59.000Z',
+    symbol: 'TAIEX',
+    value: '24610.2',
+    change_percent: '0.7',
+    source: 'twse',
+    correlation_id: '22222222-2222-4222-8222-222222222222',
+  });
+
+  assert.equal(premarket.checkpoint, 'PREMARKET');
+  assert.equal(premarket.market_session, 'premarket');
+  assert.equal(recovery.checkpoint, 'RECOVERY');
+  assert.equal(recovery.market_session, 'recovery');
+  assert.notEqual(
+    immutableCheckpointIdentity(premarket),
+    immutableCheckpointIdentity(recovery),
+  );
+
+  const sql = readFileSync(
+    new URL(
+      '../supabase/migrations/20260828053022_retain_immutable_market_checkpoint_evidence.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  assert.match(sql, /snapshots\.checkpoint = 'PREMARKET'/);
+  assert.match(sql, /snapshots\.captured_at <= coalesce\(decision\.valid_from, decision\.created_at\)/);
+  assert.match(sql, /before update or delete on public\.market_checkpoint_snapshots/);
+  assert.match(sql, /before update or delete on public\.decision_snapshot_market_evidence/);
+  assert.doesNotMatch(sql, /update public\.market_checkpoint_snapshots/);
+  assert.doesNotMatch(sql, /delete from public\.market_checkpoint_snapshots/);
 });
 
 test('runtime failure classifier separates auth, quality, transient, permanent, and duplicate outcomes', () => {
@@ -186,6 +273,22 @@ test('Content OS public reason reuses canonical supply-chain evidence when no di
   const source = readFileSync(new URL('../supabase/functions/content-os-morning-alpha-source/index.ts', import.meta.url), 'utf8');
   assert.match(source, /publicTopicSource\.taiwan_supply_chain_relation/);
   assert.doesNotMatch(source, /可能影響|受惠於|有利於|預期轉強/);
+});
+
+test('Content OS public-only projection uses one canonical evidence-backed contract', () => {
+  const source = readFileSync(new URL('../supabase/functions/content-os-morning-alpha-source/index.ts', import.meta.url), 'utf8');
+  assert.match(source, /morning_alpha_public_contract_v1/);
+  assert.match(source, /content_os_source_v11_full_projection_revision/);
+  assert.match(source, /projectionFingerprint\.slice\(0, 16\)/);
+  assert.match(source, /kind:\s*"market_brief"/);
+  assert.match(source, /premium_locked:\s*true/);
+  assert.match(source, /evidence_status:\s*"verified"/);
+  assert.match(source, /status:\s*"verified"/);
+  assert.match(source, /opportunities:\s*\[\]/);
+  assert.equal(source.match(/surprises:\s*\[\]/gu)?.length, 2);
+  assert.match(source, /published_claim_evidence_coverage:\s*evidenceCoverage/);
+  assert.doesNotMatch(source, /public_topic:\s*null/);
+  assert.doesNotMatch(source, /status:\s*"public_verified"/);
 });
 
 test('canonical member revision removes unrelated primary themes without inventing evidence', () => {

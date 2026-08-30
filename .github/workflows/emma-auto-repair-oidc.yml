@@ -12,9 +12,7 @@ on:
 
 permissions:
   id-token: write
-  contents: write
-  pull-requests: write
-  issues: write
+  contents: read
 
 concurrency:
   group: emma-auto-repair-oidc-main
@@ -39,7 +37,6 @@ jobs:
 
       - name: Prepare one bounded Emma Draft PR
         env:
-          GITHUB_TOKEN: ${{ github.token }}
           EMMA_OIDC_AUDIENCE: emma:qjgrthjpffhtxvbkfyat:morning-alpha
-          EMMA_OIDC_BROKER_URL: https://qjgrthjpffhtxvbkfyat.supabase.co/functions/v1/emma-github-oidc-broker
+          EMMA_OIDC_BROKER_URL: https://qjgrthjpffhtxvbkfyat.supabase.co/functions/v1/emma-multisite-github-broker
         run: node scripts/emma-auto-repair-oidc.mjs

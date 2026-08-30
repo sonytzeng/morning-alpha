@@ -6,7 +6,7 @@ import { verifyReportFreshness } from '../_shared/report-freshness.ts';
 type JsonRecord = Record<string, unknown>;
 type Operation = 'get_today_health' | 'get_market_intelligence' | 'get_thesis' | 'get_closing_verification';
 
-const BRIDGE_VERSION = '1.5.0';
+const BRIDGE_VERSION = '1.6.0';
 const MAX_BODY_BYTES = 32_768;
 const MAX_INTROSPECTION_RESPONSE_BYTES = 4_096;
 const MAX_PUBLIC_REPORT_RESPONSE_BYTES = 524_288;
@@ -370,7 +370,7 @@ Deno.serve(async (request) => {
   const requestedReportDate = validIsoDate(payload.report_date);
   // The latest endpoint may return a report only when the response passes the
   // bounded freshness proof below. Historical latest is never treated LIVE.
-  const reportDate = requestedReportDate ?? (operation === 'get_today_health' ? todayDate : null);
+  const reportDate = requestedReportDate ?? null;
   const publicResult = await fetchPublicPayload(supabaseUrl, anonKey, reportDate);
   if (!publicResult.body) {
     const missing = publicResult.error === 'REPORT_NOT_FOUND';
@@ -419,13 +419,18 @@ Deno.serve(async (request) => {
   const providerTradingDay = boolean(publicPayload.is_trading_day);
   const providerMarketStatus = text(publicPayload.market_status).toUpperCase();
   const canonicalMarket = resolveMarketStatus(providerReportDate);
+  const todayMarket = resolveMarketStatus(todayDate);
   const canonicalMarketStatus = canonicalMarket.is_trading_day ? 'OPEN' : 'CLOSED';
   if (providerTradingDay === null || providerTradingDay !== canonicalMarket.is_trading_day || providerMarketStatus !== canonicalMarketStatus) {
     return failure({ statusCode: 502, status: 'TOOL_DEGRADED', error: 'MARKET_CALENDAR_VERIFICATION_FAILED', traceId, toolCallId, executionId, missionId, operation, startedAt });
   }
   const metadata = {
     today_date: todayDate,
+    today_market_status: todayMarket.is_trading_day ? 'open' : 'closed',
+    today_is_trading_day: todayMarket.is_trading_day,
+    today_closed_reason: todayMarket.closed_reason,
     report_date: providerReportDate,
+    latest_valid_trading_day: providerReportDate,
     data_as_of: freshness.dataAsOf,
     market_status: canonicalMarket.is_trading_day ? 'open' : 'closed',
     is_trading_day: canonicalMarket.is_trading_day,
@@ -498,6 +503,13 @@ Deno.serve(async (request) => {
       canonical_decision: publicPayload.canonical_decision,
       opening_radar: publicPayload.opening_radar,
       opening_radar_status: publicPayload.opening_radar_status,
+      premium_content_status: publicPayload.premium_content_status,
+      premium_content_reason_codes: publicPayload.premium_content_reason_codes,
+      content_publish_gate: publicPayload.content_publish_gate,
+      one_teaser_stock: publicPayload.one_teaser_stock,
+      closing_verification: publicPayload.closing_verification,
+      continuous_learning: publicPayload.continuous_learning,
+      runtime_lifecycle_complete: publicPayload.runtime_lifecycle_complete,
       data_quality: publicPayload.data_quality,
       degraded_metadata: publicPayload.degraded_metadata,
     };

@@ -139,6 +139,50 @@ function declaredMissingSources(ai: JsonRecord): string[] {
   ].flatMap((value) => Array.isArray(value) ? value.map((item) => asText(item)) : []));
 }
 
+function hasAuditableCurrentEvidence(ai: JsonRecord): boolean {
+  const evidenceQuality = asRecord(ai.content_evidence_quality);
+  if (asText(evidenceQuality.contract_version) !== 'PREMIUM_EVIDENCE_V1') return false;
+  const verifiedNewsCount = Math.max(0, Number(evidenceQuality.verified_news_count) || 0);
+  const verifiedMarketCount = Math.max(0, Number(evidenceQuality.verified_market_count) || 0);
+  return verifiedNewsCount + verifiedMarketCount > 0
+    && (verifiedNewsCount === 0 || evidenceQuality.all_news_traceable === true)
+    && Math.max(0, Number(evidenceQuality.blank_market_change_count) || 0) === 0;
+}
+
+function hasCompleteDecisionEvidence(
+  ai: JsonRecord,
+  mode: 'recommendations' | 'no_trade',
+): boolean {
+  if (!hasAuditableCurrentEvidence(ai)) return false;
+  if (mode === 'no_trade') {
+    const observations = asRecords(ai.v10_observation_watchlist);
+    return observations.length >= 3 && observations.every(hasSpecificSource);
+  }
+  const recommendations = recommendationRows(ai);
+  return recommendations.length > 0
+    && recommendations.every(hasSpecificSource)
+    && recommendationFieldCoverage(
+      recommendations,
+      ['transmission_logic', 'reason_chain', 'causal_chain', 'reason', 'why_this_stock'],
+      24,
+    )
+    && recommendationFieldCoverage(
+      recommendations,
+      ['taiwan_supply_chain_link', 'supply_chain_relationship', 'company_relationship', 'why_this_stock'],
+      12,
+    )
+    && recommendationFieldCoverage(
+      recommendations,
+      ['intraday_validation', 'validation_signal', 'confirmation_signal', 'watch_point'],
+      12,
+    )
+    && recommendationFieldCoverage(
+      recommendations,
+      ['invalidation_condition', 'not_buy_signal', 'risk_note', 'risk'],
+      12,
+    );
+}
+
 /**
  * TXF is an important confirmation source, not a critical cash-market dependency.
  * A declared entitlement gap may stay visible in either decision mode when every
@@ -152,8 +196,12 @@ export function hasDecisionGradeSourceCoverage(
   const ai = asRecord(aiValue);
   if (asText(ai.data_quality).toLowerCase() === 'complete') return true;
   const missingSources = declaredMissingSources(ai);
-  return missingSources.length > 0
-    && missingSources.every((source) => !isDecisionCriticalMissingSource(source, mode));
+  const completeDecisionEvidence = hasCompleteDecisionEvidence(ai, mode);
+  if (missingSources.length === 0) return completeDecisionEvidence;
+  return missingSources.every((source) => {
+    if (!isDecisionCriticalMissingSource(source, mode)) return true;
+    return OPTIONAL_NO_TRADE_CONTEXT_GAP.test(source) && completeDecisionEvidence;
+  });
 }
 
 function recommendationRows(ai: JsonRecord): JsonRecord[] {

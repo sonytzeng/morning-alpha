@@ -116,6 +116,41 @@ test('ready research with full traceability keeps premium content eligible', () 
   assert.equal(result.research_quality?.eligible, true);
 });
 
+test('legacy invalidation conditions are recovered as future failure triggers, not unsupported facts', () => {
+  const ai = validAi();
+  const claimId = 'claim:2026-08-28:invalidation:single-stock';
+  const condition = '候選族群只有單一權值股表態';
+  ai.research_master_v2 = {
+    sections: {
+      core_thesis: { statement: '費半上漲與 NVIDIA 財測上修，今日驗證台積電與 AI 供應鏈是否同步。' },
+      counter_evidence: [{ claim_id: claimId, statement: condition, evidence_refs: [] }],
+      failure_scenario: { triggers: [{ condition }] },
+    },
+    quality: {
+      publish_status: 'degraded',
+      evidence_coverage: 97,
+      unsupported_claims: [`${claimId}:${condition}`],
+      duplicate_claims: [],
+      contradictions: [],
+      missing_sections: [],
+    },
+  };
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.eligible, true, JSON.stringify(result));
+  assert.equal(result.research_quality?.ignored_conditional_claim_count, 1);
+  assert.equal(result.research_quality?.evidence_coverage, 100);
+});
+
+test('legacy recovery never ignores an unsupported current factual claim', () => {
+  const ai = validAi();
+  ai.research_master_v2.quality.publish_status = 'degraded';
+  ai.research_master_v2.quality.evidence_coverage = 97;
+  ai.research_master_v2.quality.unsupported_claims = ['claim:current-market-fact'];
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('research_unsupported_claims_present'));
+});
+
 test('matching populated semantic sources remain eligible after canonical normalization', () => {
   const ai = validAi();
   const canonicalThesis = ai.research_master_v2.sections.core_thesis.statement;
@@ -331,10 +366,30 @@ test('evidence-backed no-trade may publish when only prior sector context is una
   assert.equal(result.content_score >= 90, true);
 });
 
-test('recommendations still fail closed when sector rotation context is unavailable', () => {
+test('fully evidenced recommendations may publish when only prior sector context is unavailable', () => {
   const ai = validAi();
   ai.data_quality = 'degraded';
   ai.missing_sources = ['sector_rotation_scores:2026-08-24'];
+  const result = evaluatePremiumContentGate(ai, 3);
+  assert.equal(result.eligible, true, JSON.stringify(result));
+  assert.equal(result.content_score >= 90, true);
+});
+
+test('sector context gap still fails closed without the audited evidence contract', () => {
+  const ai = validAi();
+  ai.data_quality = 'degraded';
+  ai.missing_sources = ['sector_rotation_scores:2026-08-24'];
+  delete ai.content_evidence_quality.contract_version;
+  const result = evaluatePremiumContentGate(ai, 3);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('source_data_incomplete'));
+});
+
+test('sector context gap still fails closed when any recommendation evidence layer is incomplete', () => {
+  const ai = validAi();
+  ai.data_quality = 'degraded';
+  ai.missing_sources = ['sector_rotation_scores:2026-08-24'];
+  ai.today_beneficiary_stocks_v10[0].invalidation_condition = '';
   const result = evaluatePremiumContentGate(ai, 3);
   assert.equal(result.eligible, false);
   assert.ok(result.reason_codes.includes('source_data_incomplete'));

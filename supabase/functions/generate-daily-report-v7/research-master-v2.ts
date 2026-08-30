@@ -666,7 +666,6 @@ function buildSupportingEvidence(
 
 function buildCounterEvidence(
   input: ResearchMasterV2AssemblerInput,
-  note: Record<string, unknown>,
 ): CounterEvidenceItem[] {
   const thesis = input.marketThesis || {};
   const index = evidenceById(input.evidenceIndex);
@@ -705,31 +704,6 @@ function buildCounterEvidence(
       ], input.evidenceIndex),
       severity: "watch",
       implication: firstText(alternative.why_rejected, thesis.bear_case),
-    });
-  }
-  const invalidations = [
-    ...asRecords(note.invalidation_rules),
-    ...asRecords(note.invalidation_conditions),
-    ...asRecords(input.legacy.invalidation_conditions),
-  ];
-  for (const invalidation of invalidations) {
-    const statement = firstText(invalidation.condition);
-    if (!statement) continue;
-    result.push({
-      claim_id: claimId(input.reportDate, "invalidation", statement),
-      statement,
-      evidence_refs: resolveEvidenceRefs(invalidation.evidence_refs, [
-        statement,
-      ], input.evidenceIndex),
-      severity:
-        /失效|停止|反向/.test(`${statement}${firstText(invalidation.meaning)}`)
-          ? "invalidating"
-          : "threat",
-      implication: firstText(
-        invalidation.meaning,
-        invalidation.action_note,
-        invalidation.required_adjustment,
-      ),
     });
   }
   const unique = new Map<string, CounterEvidenceItem>();
@@ -1164,7 +1138,7 @@ export function assembleResearchMasterV2(
     coreStatement,
     thesisRefs,
   );
-  const counterEvidence = buildCounterEvidence(input, note);
+  const counterEvidence = buildCounterEvidence(input);
   const representativeStocks = buildRepresentativeStocks(input, note);
   const timeline = buildTimeline(input, note);
   const failureScenario = buildFailureScenario(input, note, counterEvidence);

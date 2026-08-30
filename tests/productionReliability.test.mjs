@@ -306,6 +306,26 @@ test('semantic reliability migration is append-only, fail-closed, and service-ro
   assert.doesNotMatch(sql, /service_role_key|cron_secret\s*[:=]\s*['"][^'"]+/i);
 });
 
+test('terminal recovery reconciles only after durable success and captures fresh acceptance', () => {
+  const sql = readFileSync(new URL('../supabase/migrations/20260830090000_reconcile_acceptance_and_replay_idempotency.sql', import.meta.url), 'utf8');
+  const orchestrator = readFileSync(new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url), 'utf8');
+  for (const fragment of [
+    'reconcile_runtime_terminal_failures_v1', 'DAY_COMPLETED', 'SEMANTIC_NOT_PASSED',
+    'CONTENT_OS_NOT_HEALTHY', 'DEAD_LETTER_PRESENT', 'PREMARKET_HEALTH_MISSING',
+    'CLOSING_HEALTH_MISSING', 'SUPERSEDED_BY_DURABLE_STATE', 'runtime_lifecycle_events',
+  ]) assert.match(sql, new RegExp(fragment, 'i'));
+  assert.match(sql, /where trading_date = p_business_date[\s\S]+dispatch_status = 'FAILED'/i);
+  assert.match(sql, /revoke all on function public\.reconcile_runtime_terminal_failures_v1[\s\S]+to service_role/i);
+  assert.doesNotMatch(sql, /update\s+public\.(reports|decision_snapshots|editorial_reviews|member_content_revisions|learning_runs|line_delivery_outbox)/i);
+  assert.match(orchestrator, /reconcile_runtime_terminal_failures_v1/);
+  assert.match(orchestrator, /capture_morning_alpha_acceptance_v1/);
+  assert.match(orchestrator, /RECOVERY_ACCEPTANCE_FAILED/);
+  assert.match(orchestrator, /verdict !== 'PASS'/);
+  assert.match(orchestrator, /requestedRecoveryDate/);
+  assert.match(orchestrator, /target_date: businessDate/);
+  assert.match(orchestrator, /INVALID_RECOVERY_BUSINESS_DATE/);
+});
+
 test('delivery, payload, and Content OS all require the same semantic member revision', () => {
   const orchestrator = readFileSync(new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url), 'utf8');
   const payload = readFileSync(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');

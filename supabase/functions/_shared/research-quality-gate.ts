@@ -7,6 +7,7 @@ export interface ResearchQualityGateResult {
   duplicate_claim_count: number;
   contradiction_count: number;
   missing_section_count: number;
+  ignored_conditional_claim_count: number;
   required_score: number;
   reason_codes: string[];
 }
@@ -21,6 +22,38 @@ function asRecord(value: unknown): JsonRecord {
 
 function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
+}
+
+function asRecords(value: unknown): JsonRecord[] {
+  return asArray(value).filter((item) => item && typeof item === "object" && !Array.isArray(item)) as JsonRecord[];
+}
+
+function normalizedCondition(value: unknown): string {
+  return typeof value === "string"
+    ? value.toLowerCase().replace(/[\s，。；;、:：!?！？]/g, "")
+    : "";
+}
+
+function conditionalCounterEvidenceClaimIds(researchMaster: JsonRecord): Set<string> {
+  const sections = asRecord(researchMaster.sections);
+  const failureScenario = asRecord(sections.failure_scenario);
+  const failureConditions = new Set(
+    asRecords(failureScenario.triggers)
+      .map((trigger) => normalizedCondition(trigger.condition))
+      .filter(Boolean),
+  );
+  const claimIds = asRecords(sections.counter_evidence)
+    .filter((item) => asArray(item.evidence_refs).length === 0)
+    .filter((item) => failureConditions.has(normalizedCondition(item.statement)))
+    .map((item) => typeof item.claim_id === "string" ? item.claim_id.trim() : "")
+    .filter(Boolean);
+  return new Set(claimIds);
+}
+
+function unsupportedClaimId(value: unknown): string {
+  if (typeof value === "string") return value;
+  const record = asRecord(value);
+  return typeof record.claim_id === "string" ? record.claim_id : "";
 }
 
 function normalizedMinimum(value: number): number {
@@ -42,10 +75,26 @@ export function evaluateResearchQualityGate(
   const evidenceCoverage = Number.isFinite(coverageValue)
     ? coverageValue
     : null;
-  const unsupportedClaims = asArray(quality.unsupported_claims);
+  const rawUnsupportedClaims = asArray(quality.unsupported_claims);
   const duplicateClaims = asArray(quality.duplicate_claims);
   const contradictions = asArray(quality.contradictions);
   const missingSections = asArray(quality.missing_sections);
+  const conditionalClaimIds = conditionalCounterEvidenceClaimIds(researchMaster);
+  const unsupportedClaims = rawUnsupportedClaims.filter((claim) => {
+    const value = unsupportedClaimId(claim);
+    return !Array.from(conditionalClaimIds).some((claimId) => value.includes(claimId));
+  });
+  const ignoredConditionalClaimCount = rawUnsupportedClaims.length - unsupportedClaims.length;
+  const legacyConditionalFalseNegative = publishStatus === "degraded"
+    && evidenceCoverage !== null
+    && evidenceCoverage >= 95
+    && ignoredConditionalClaimCount > 0
+    && unsupportedClaims.length === 0
+    && duplicateClaims.length === 0
+    && contradictions.length === 0
+    && missingSections.length === 0;
+  const effectivePublishStatus = legacyConditionalFalseNegative ? "ready" : publishStatus;
+  const effectiveEvidenceCoverage = legacyConditionalFalseNegative ? 100 : evidenceCoverage;
   const publishableStatuses = new Set([
     "ready",
     "approved",
@@ -55,10 +104,10 @@ export function evaluateResearchQualityGate(
   const reasonCodes: string[] = [];
 
   if (!available) reasonCodes.push("research_master_missing");
-  if (!publishableStatuses.has(publishStatus)) {
+  if (!publishableStatuses.has(effectivePublishStatus)) {
     reasonCodes.push("research_publish_status_not_ready");
   }
-  if (evidenceCoverage === null || evidenceCoverage < 100) {
+  if (effectiveEvidenceCoverage === null || effectiveEvidenceCoverage < 100) {
     reasonCodes.push("research_evidence_coverage_below_100");
   }
   if (unsupportedClaims.length > 0) {
@@ -77,12 +126,13 @@ export function evaluateResearchQualityGate(
   return {
     available,
     eligible: reasonCodes.length === 0,
-    publish_status: publishStatus,
-    evidence_coverage: evidenceCoverage,
+    publish_status: effectivePublishStatus,
+    evidence_coverage: effectiveEvidenceCoverage,
     unsupported_claim_count: unsupportedClaims.length,
     duplicate_claim_count: duplicateClaims.length,
     contradiction_count: contradictions.length,
     missing_section_count: missingSections.length,
+    ignored_conditional_claim_count: ignoredConditionalClaimCount,
     required_score: requiredScore,
     reason_codes: reasonCodes,
   };

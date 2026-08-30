@@ -14,7 +14,7 @@ const VERSION = 'DAILY_DELIVERY_V1.4_CONTENT_REPAIR_VERSION_BUDGET';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, x-cron-secret, x-daily-delivery-token',
+  'Access-Control-Allow-Headers': 'Content-Type, x-cron-secret, x-daily-delivery-token, x-correlation-id',
   'Content-Type': 'application/json',
 };
 
@@ -510,13 +510,20 @@ Deno.serve(async (req: Request) => {
   }
 
   const clock = taipeiClock();
-  const marketStatus = resolveMarketStatus(clock.date);
+  const requestedRecoveryDate = body.source === 'ma-ops-safe-recovery'
+    ? String(body.target_date || body.report_date || '').trim()
+    : '';
+  if (requestedRecoveryDate && (!/^\d{4}-\d{2}-\d{2}$/.test(requestedRecoveryDate) || requestedRecoveryDate > clock.date)) {
+    return jsonResponse({ success: false, error: 'INVALID_RECOVERY_BUSINESS_DATE', version: VERSION }, 400);
+  }
+  const businessDate = requestedRecoveryDate || clock.date;
+  const marketStatus = resolveMarketStatus(businessDate);
   if (!marketStatus.is_trading_day) {
     return jsonResponse({
       success: true,
       status: 'SKIPPED',
       reason: 'MARKET_STATUS_NOT_OPEN',
-      report_date: clock.date,
+      report_date: businessDate,
       market_status: marketStatus.market_status,
       next_trading_day: marketStatus.next_trading_day,
       version: VERSION,
@@ -528,16 +535,16 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: false, error: 'UNSUPPORTED_RUNTIME_CHECKPOINT', checkpoint, version: VERSION }, 400);
     }
     const existingState = await supabase.from('trading_day_state').select('checkpoint_status')
-      .eq('trading_date', clock.date).maybeSingle();
+      .eq('trading_date', businessDate).maybeSingle();
     if (!existingState.error && String(asRecord(asRecord(existingState.data?.checkpoint_status)[checkpoint]).status || '').toUpperCase() === 'SUCCEEDED') {
-      return jsonResponse({ success: true, status: 'SKIPPED_ALREADY_SUCCEEDED', report_date: clock.date, checkpoint, version: VERSION });
+      return jsonResponse({ success: true, status: 'SKIPPED_ALREADY_SUCCEEDED', report_date: businessDate, checkpoint, version: VERSION });
     }
     const runtimeSource = body.source === 'supabase_cron_watchdog' ? 'supabase_cron_watchdog' : 'supabase_cron_primary';
     const execution = await executeRuntimeCheckpoint(`${supabaseUrl}/functions/v1`, cronSecret, checkpoint, runtimeSource);
     return jsonResponse({
       success: execution.success,
       status: execution.success ? 'SUCCEEDED' : 'DEGRADED',
-      report_date: clock.date,
+      report_date: businessDate,
       checkpoint,
       failures: execution.failures,
       results: execution.results,
@@ -548,24 +555,24 @@ Deno.serve(async (req: Request) => {
     const checkType = String(body.check_type || 'full');
     if (!['report', 'closing', 'full'].includes(checkType)) return jsonResponse({ success: false, error: 'UNSUPPORTED_HEALTH_CHECK', version: VERSION }, 400);
     const result = await invokeFunction(`${supabaseUrl}/functions/v1`, 'ma-ops-health-check', cronSecret, {
-      environment: 'production', check_type: checkType, target_date: clock.date, request_id: body.correlation_id || crypto.randomUUID(), dry_run: false,
+      environment: 'production', check_type: checkType, target_date: businessDate, request_id: body.correlation_id || crypto.randomUUID(), dry_run: false,
     }, 180_000);
     const healthSucceeded = result.ok && result.payload.ok === true;
     let recoveryLifecycle: JsonRecord | null = null;
     if (healthSucceeded && body.source === 'ma-ops-safe-recovery') {
-      const stateResult = await supabase.from('trading_day_state').select('state_rank').eq('trading_date', clock.date).maybeSingle();
+      const stateResult = await supabase.from('trading_day_state').select('state_rank').eq('trading_date', businessDate).maybeSingle();
       if (stateResult.error) {
-        return jsonResponse({ success: false, error: 'RECOVERY_LIFECYCLE_STATE_READ_FAILED', details: stateResult.error.message, report_date: clock.date, version: VERSION }, 500);
+        return jsonResponse({ success: false, error: 'RECOVERY_LIFECYCLE_STATE_READ_FAILED', details: stateResult.error.message, report_date: businessDate, version: VERSION }, 500);
       }
       if (Number(stateResult.data?.state_rank || 0) < 130) {
-        return jsonResponse({ success: false, error: 'RECOVERY_LIFECYCLE_PREDECESSOR_NOT_SATISFIED', report_date: clock.date, state_rank: Number(stateResult.data?.state_rank || 0), version: VERSION }, 409);
+        return jsonResponse({ success: false, error: 'RECOVERY_LIFECYCLE_PREDECESSOR_NOT_SATISFIED', report_date: businessDate, state_rank: Number(stateResult.data?.state_rank || 0), version: VERSION }, 409);
       }
       const requestedCorrelation = req.headers.get('x-correlation-id') || String(body.correlation_id || '');
       const correlationId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedCorrelation)
         ? requestedCorrelation
         : crypto.randomUUID();
       const healthAdvance = await supabase.rpc('advance_trading_day_state_v1', {
-        p_trading_date: clock.date,
+        p_trading_date: businessDate,
         p_state: 'HEALTH_AUDITED',
         p_checkpoint: 'closing_health',
         p_status: 'SUCCEEDED',
@@ -573,10 +580,10 @@ Deno.serve(async (req: Request) => {
         p_metadata: { source: 'ma-ops-safe-recovery', health_http_status: result.status },
       });
       if (healthAdvance.error) {
-        return jsonResponse({ success: false, error: 'RECOVERY_HEALTH_LIFECYCLE_ADVANCE_FAILED', details: healthAdvance.error.message, report_date: clock.date, version: VERSION }, 500);
+        return jsonResponse({ success: false, error: 'RECOVERY_HEALTH_LIFECYCLE_ADVANCE_FAILED', details: healthAdvance.error.message, report_date: businessDate, version: VERSION }, 500);
       }
       const completionAdvance = await supabase.rpc('advance_trading_day_state_v1', {
-        p_trading_date: clock.date,
+        p_trading_date: businessDate,
         p_state: 'DAY_COMPLETED',
         p_checkpoint: 'day_completed',
         p_status: 'SUCCEEDED',
@@ -584,11 +591,59 @@ Deno.serve(async (req: Request) => {
         p_metadata: { source: 'ma-ops-safe-recovery', health_http_status: result.status },
       });
       if (completionAdvance.error) {
-        return jsonResponse({ success: false, error: 'RECOVERY_COMPLETION_LIFECYCLE_ADVANCE_FAILED', details: completionAdvance.error.message, report_date: clock.date, version: VERSION }, 500);
+        return jsonResponse({ success: false, error: 'RECOVERY_COMPLETION_LIFECYCLE_ADVANCE_FAILED', details: completionAdvance.error.message, report_date: businessDate, version: VERSION }, 500);
       }
-      recoveryLifecycle = { health_audited: true, day_completed: true, correlation_id: correlationId };
+      const terminalReconciliation = await supabase.rpc('reconcile_runtime_terminal_failures_v1', {
+        p_business_date: businessDate,
+        p_correlation_id: correlationId,
+      });
+      if (terminalReconciliation.error) {
+        return jsonResponse({
+          success: false,
+          error: 'RECOVERY_TERMINAL_RECONCILIATION_FAILED',
+          details: terminalReconciliation.error.message,
+          report_date: businessDate,
+          version: VERSION,
+        }, 409);
+      }
+      const evaluatorVersion = `PRODUCTION_ACCEPTANCE_V2_RECOVERY:${correlationId}`;
+      const acceptanceCapture = await supabase.rpc('capture_morning_alpha_acceptance_v1', {
+        p_business_date: businessDate,
+        p_evaluator_version: evaluatorVersion,
+      });
+      if (acceptanceCapture.error || !acceptanceCapture.data) {
+        return jsonResponse({
+          success: false,
+          error: 'RECOVERY_ACCEPTANCE_CAPTURE_FAILED',
+          details: acceptanceCapture.error?.message || 'Acceptance result id was not returned.',
+          report_date: businessDate,
+          version: VERSION,
+        }, 500);
+      }
+      const acceptanceResult = await supabase
+        .from('production_acceptance_results')
+        .select('id,verdict,blocking_checks,evaluated_at')
+        .eq('id', String(acceptanceCapture.data))
+        .maybeSingle();
+      if (acceptanceResult.error || acceptanceResult.data?.verdict !== 'PASS') {
+        return jsonResponse({
+          success: false,
+          error: 'RECOVERY_ACCEPTANCE_FAILED',
+          details: acceptanceResult.error?.message || null,
+          acceptance: acceptanceResult.data || null,
+          report_date: businessDate,
+          version: VERSION,
+        }, 409);
+      }
+      recoveryLifecycle = {
+        health_audited: true,
+        day_completed: true,
+        terminal_dispatches_reconciled: Number(terminalReconciliation.data || 0),
+        acceptance: acceptanceResult.data,
+        correlation_id: correlationId,
+      };
     }
-    return jsonResponse({ success: healthSucceeded, status: result.status, health: result.payload, recovery_lifecycle: recoveryLifecycle, report_date: clock.date, version: VERSION }, healthSucceeded ? 200 : result.status);
+    return jsonResponse({ success: healthSucceeded, status: result.status, health: result.payload, recovery_lifecycle: recoveryLifecycle, report_date: businessDate, version: VERSION }, healthSucceeded ? 200 : result.status);
   }
   if (body.mode === 'continuous_learning') {
     const result = await invokeFunction(
@@ -607,7 +662,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       success: accepted,
       status: accepted ? 'SUCCEEDED' : 'DEGRADED',
-      report_date: clock.date,
+      report_date: businessDate,
       continuous_learning: result.payload,
       version: VERSION,
     }, accepted ? 200 : 409);
@@ -621,14 +676,14 @@ Deno.serve(async (req: Request) => {
   let runId: string | null = null;
 
   try {
-    const claim = await claimPipelineSlot(supabase, clock.date, phase, clock.slot, attempt);
+    const claim = await claimPipelineSlot(supabase, businessDate, phase, clock.slot, attempt);
     if (!claim.acquired) {
       const existingSucceeded = claim.existingStatus === 'SUCCEEDED' || claim.existingStatus === 'SKIPPED';
       return jsonResponse({
         success: existingSucceeded,
         status: claim.existingStatus || 'RUNNING',
         reason: 'PIPELINE_SLOT_ALREADY_CLAIMED',
-        report_date: clock.date,
+        report_date: businessDate,
         phase,
         reason_codes: claim.existingReasonCodes,
         error_code: claim.existingErrorCode,
@@ -638,7 +693,7 @@ Deno.serve(async (req: Request) => {
     const activeRunId = String(claim.id);
     runId = activeRunId;
 
-    let state = await loadDeliveryState(supabase, clock.date);
+    let state = await loadDeliveryState(supabase, businessDate);
     let plan = buildDailyDeliveryRecoveryPlan({
       has_report: Boolean(state.report),
       premium_eligible: state.premium_eligible,
@@ -666,7 +721,7 @@ Deno.serve(async (req: Request) => {
     });
 
     if (actions.some((action) => action === 'refresh_news' || action === 'refresh_market' || action === 'regenerate_report')) {
-      state = await loadDeliveryState(supabase, clock.date);
+      state = await loadDeliveryState(supabase, businessDate);
       plan = buildDailyDeliveryRecoveryPlan({
         has_report: Boolean(state.report),
         premium_eligible: state.premium_eligible,
@@ -741,7 +796,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       success: completed,
       status,
-      report_date: clock.date,
+      report_date: businessDate,
       phase,
       actions,
       premium_eligible: state.premium_eligible,

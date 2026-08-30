@@ -28,6 +28,7 @@ import {
   normalizeEvidenceLeadForChineseSentence,
 } from '../_shared/content-intelligence.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
+import { evaluateResearchQualityGate } from '../_shared/research-quality-gate.ts';
 import {
   buildCanonicalIntradaySyncStatus,
   preserveRuntimeReportOverlay,
@@ -2200,7 +2201,7 @@ async function publishCanonicalMemberRevision(
     const canonicalContract=buildCanonicalDecisionContract({report_date:reportDate,snapshot,ai}) as Record<string,unknown>;
     const memberContent=buildCanonicalMemberResearchRevision({canonical_contract:canonicalContract,snapshot,ai,daily_sentence:canonicalText(canonicalRecord(snapshot.generated_text).daily_sentence)}) as Record<string,unknown>;
     const researchMaster=canonicalRecord(ai.research_master_v2);
-    const researchQuality=canonicalRecord(researchMaster.quality);
+    const researchQuality=evaluateResearchQualityGate(researchMaster,RUNTIME_QUALITY_POLICY.premium_publish_min);
     const evidenceCoverage=Number(researchQuality.evidence_coverage??0);
     const contentScore=Number(ai.content_score??snapshot.content_score??0);
     const semanticResult=evaluateCanonicalSemanticCoherenceGate({
@@ -2215,10 +2216,10 @@ async function publishCanonicalMemberRevision(
       recommendations:memberContent.beneficiary_candidates,
       quality_inputs:[ai.data_quality,ai.v10_data_quality_status,canonicalRecord(ai.member_research_note_v2).data_status],
       quality_counters:{
-        unsupported_claim_count:Array.isArray(researchQuality.unsupported_claims)?researchQuality.unsupported_claims.length:0,
-        contradiction_count:Array.isArray(researchQuality.contradictions)?researchQuality.contradictions.length:0,
-        duplicate_claim_count:Array.isArray(researchQuality.duplicate_claims)?researchQuality.duplicate_claims.length:0,
-        missing_section_count:Array.isArray(researchQuality.missing_sections)?researchQuality.missing_sections.length:0,
+        unsupported_claim_count:researchQuality.unsupported_claim_count,
+        contradiction_count:researchQuality.contradiction_count,
+        duplicate_claim_count:researchQuality.duplicate_claim_count,
+        missing_section_count:researchQuality.missing_section_count,
       },
       evidence_coverage:evidenceCoverage,
       content_score:contentScore,

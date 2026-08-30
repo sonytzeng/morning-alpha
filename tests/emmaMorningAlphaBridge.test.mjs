@@ -45,10 +45,14 @@ test('market intelligence crosses only the existing free public payload boundary
 });
 
 test('bridge exposes only the four registered read operations', () => {
+  const operationAllowlist = source.slice(
+    source.indexOf('const operations = new Set(['),
+    source.indexOf(']);', source.indexOf('const operations = new Set([')) + 3,
+  );
   for (const operation of ['get_today_health', 'get_market_intelligence', 'get_thesis', 'get_closing_verification']) {
-    assert.match(source, new RegExp(`['"]${operation}['"]`));
+    assert.match(operationAllowlist, new RegExp(`['"]${operation}['"]`));
   }
-  assert.doesNotMatch(source, /record_|update_|delete_|publish_/);
+  assert.doesNotMatch(operationAllowlist, /record_|update_|delete_|publish_/);
 });
 
 test('structured logs contain trace fields without logging provider payload', () => {
@@ -75,13 +79,34 @@ test('every successful operation returns explicit fresh market date evidence', (
   assert.doesNotMatch(publicPayloadSource, /isTradingDay === false\) return "non_trading_day"/);
   assert.match(source, /PUBLIC_PAYLOAD_REPORT_DATE_MISMATCH/);
   assert.match(source, /MARKET_CALENDAR_VERIFICATION_FAILED/);
-  assert.match(source, /operation === 'get_today_health' \? todayDate : null/);
+  assert.match(source, /const reportDate = requestedReportDate \?\? null/);
+  assert.match(source, /fetchPublicPayload\(supabaseUrl, anonKey, reportDate\)/);
   assert.match(source, /reportDate \? \{ report_date: reportDate \} : \{\}/);
   assert.match(source, /reportDate !== null && providerReportDate !== reportDate/);
   assert.match(freshnessSource, /MAX_NON_TRADING_LOOKBACK_DAYS = 4/);
   assert.match(freshnessSource, /REPORT_DATE_STALE/);
   assert.match(freshnessSource, /DATA_AS_OF_IN_FUTURE/);
   assert.match(freshnessSource, /DATA_AS_OF_DATE_MISMATCH/);
+});
+
+test('weekend and holiday reads use the latest bounded canonical trading day without inventing a report', () => {
+  for (const field of [
+    'today_market_status', 'today_is_trading_day', 'today_closed_reason',
+    'latest_valid_trading_day', 'report_freshness_verified',
+  ]) assert.match(source, new RegExp(field));
+  assert.match(source, /const todayMarket = resolveMarketStatus\(todayDate\)/);
+  assert.match(source, /latest_valid_trading_day: providerReportDate/);
+  assert.match(source, /is_current_report: providerReportDate === todayDate/);
+  assert.doesNotMatch(source, /todayMarket\.is_trading_day\s*\?\s*todayDate\s*:\s*todayDate/);
+});
+
+test('market intelligence exposes public canonical gates but never full Premium subscriber content', () => {
+  for (const field of [
+    'premium_content_status', 'premium_content_reason_codes', 'content_publish_gate',
+    'one_teaser_stock', 'closing_verification', 'continuous_learning',
+    'runtime_lifecycle_complete',
+  ]) assert.match(source, new RegExp(field));
+  assert.doesNotMatch(source, /member_research_note_v2|today_beneficiary_stocks_v10/);
 });
 
 test('today health cannot reuse an ops run from another Taipei date', () => {

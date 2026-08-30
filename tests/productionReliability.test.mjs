@@ -353,12 +353,13 @@ test('delivery, payload, and Content OS all require the same semantic member rev
   assert.match(contentOs, /resolve_content_os_incident_v1/);
 });
 
-test('safe recovery exposes only scoped member revision and metric correction actions', () => {
+test('safe recovery exposes only scoped, audited repair and replay actions', () => {
   const recovery = readFileSync(new URL('../supabase/functions/ma-ops-safe-recovery/index.ts', import.meta.url), 'utf8');
   const generator = readFileSync(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
   const learning = readFileSync(new URL('../supabase/functions/continuous-learning-engine/index.ts', import.meta.url), 'utf8');
   assert.match(recovery, /rebuild_member_content_revision/);
   assert.match(recovery, /reconcile_learning_metrics/);
+  assert.match(recovery, /replay_strategy[\s\S]+target:\s*'strategy-replay-engine'[\s\S]+defaultBody:\s*\{\s*dry_run:\s*true\s*\}/);
   assert.match(recovery, /RECOVERY_APPROVAL_EVIDENCE_REQUIRED/);
   assert.match(recovery, /get_ma_ops_health_cron_secret/);
   assert.match(recovery, /presentedCronToken/);

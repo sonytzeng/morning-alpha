@@ -326,6 +326,20 @@ test('terminal recovery reconciles only after durable success and captures fresh
   assert.match(orchestrator, /INVALID_RECOVERY_BUSINESS_DATE/);
 });
 
+test('quality-block classifier preserves strict 409 handling but permits audited terminal reconciliation', () => {
+  const sql = readFileSync(new URL('../supabase/migrations/20260830091500_allow_terminal_reconciliation_after_quality_block.sql', import.meta.url), 'utf8');
+  const reconciliationGuard = sql.indexOf("old.dispatch_status = 'FAILED'");
+  const strict409Classifier = sql.indexOf('new.http_status = 409');
+  assert.ok(reconciliationGuard >= 0 && strict409Classifier > reconciliationGuard);
+  for (const fragment of [
+    "current_user = 'postgres'", "new.dispatch_status = 'SKIPPED'",
+    "new.response_error_code = 'SUPERSEDED_BY_DURABLE_STATE'",
+    "{terminal_reconciliation,reason_code}", "{terminal_reconciliation,correlation_id}",
+    "new.dispatch_status := 'FAILED'", "new.response_error_code := 'QUALITY_BLOCK'",
+  ]) assert.match(sql, new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
+  assert.doesNotMatch(sql, /disable\s+trigger|drop\s+trigger|response_success\s*:=\s*true|http_status\s*:=\s*null/i);
+});
+
 test('delivery, payload, and Content OS all require the same semantic member revision', () => {
   const orchestrator = readFileSync(new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url), 'utf8');
   const payload = readFileSync(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');

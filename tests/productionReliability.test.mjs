@@ -269,10 +269,10 @@ test('canonical semantic gate accepts an evidence-backed explicit no-trade decis
 
 test('canonical member publication reads snapshot evidence refs for no-trade contracts', () => {
   const generatorSource = readFileSync(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
-  assert.match(
-    generatorSource,
-    /select\('id,report_id,report_date,version,status,action,generated_text,source_refs,snapshot_fingerprint,content_score'\)/,
-  );
+  const evidenceSnapshotReads = generatorSource.match(
+    /select\('id,report_id,report_date,version,status,action,generated_text,source_refs,snapshot_fingerprint,content_score'\)/g,
+  ) || [];
+  assert.equal(evidenceSnapshotReads.length, 2);
 });
 
 test('CLE counters count real inserts, updates, and unchanged entities', () => {

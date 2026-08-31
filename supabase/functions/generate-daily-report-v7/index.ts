@@ -2261,7 +2261,7 @@ async function recoverCanonicalMemberRevision(
 ):Promise<CanonicalMemberRevisionResult & {reportId:string|null;snapshotId:string|null}>{
   const [reportResult,snapshotResult]=await Promise.all([
     supabase.from('reports').select('id,report_date,ai_strategy_json,summary,today_quote,updated_at').eq('report_date',reportDate).maybeSingle(),
-    supabase.from('decision_snapshots').select('id,report_id,report_date,version,status,action,generated_text,snapshot_fingerprint,content_score').eq('report_date',reportDate).eq('session_type','PREMARKET').eq('is_current',true).order('version',{ascending:false}).limit(1).maybeSingle(),
+    supabase.from('decision_snapshots').select('id,report_id,report_date,version,status,action,generated_text,source_refs,snapshot_fingerprint,content_score').eq('report_date',reportDate).eq('session_type','PREMARKET').eq('is_current',true).order('version',{ascending:false}).limit(1).maybeSingle(),
   ]);
   const report=reportResult.data as Record<string,unknown>|null;
   const snapshot=snapshotResult.data as Record<string,unknown>|null;

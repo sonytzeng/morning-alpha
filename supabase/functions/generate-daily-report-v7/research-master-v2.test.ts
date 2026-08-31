@@ -586,8 +586,17 @@ Deno.test("Case H: no-trade report abstains from unsupported model chains and st
   fixture.legacy.missing_sources = ["sector_rotation_scores:2026-08-28"];
   fixture.legacy.v10_data_quality_status = "insufficient_positive_evidence";
   fixture.legacy.today_beneficiary_stocks_v10 = [];
-  fixture.legacy.today_beneficiary_stocks = [];
-  fixture.legacy.beneficiary_stocks = [];
+  fixture.legacy.today_beneficiary_stocks = [
+    {
+      stock_code: "2330",
+      stock_name: "台積電",
+      reason: "半導體權值只作為盤中止跌驗證，不是強受惠推薦。",
+      validation_signal: "09:30 確認 2330 與 TAIEX 是否同步止跌。",
+      invalidation_condition: "2330 與 TAIEX 持續同步轉弱。",
+      evidence_refs: ["MD001"],
+    },
+  ];
+  fixture.legacy.beneficiary_stocks = fixture.legacy.today_beneficiary_stocks;
   fixture.legacy.v10_observation_watchlist = [
     {
       symbol: "2330",

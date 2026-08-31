@@ -233,6 +233,40 @@ test('canonical semantic gate blocks mixed shipping, semiconductor, and finance 
   assert.equal(passed.status, 'PASSED');
 });
 
+test('canonical semantic gate accepts an evidence-backed explicit no-trade decision', () => {
+  const snapshot = {
+    id: 'snapshot-stop', report_date: '2026-08-31', version: 7, action: 'STOP',
+    source_refs: [{ title: 'SOX and TSM evidence', url: 'https://example.com/evidence' }],
+    generated_text: {
+      daily_sentence: '隔夜訊號未形成正向主線，今日不建立受惠股。',
+      next_checkpoint: '09:30',
+      reasons: ['09:30 只確認 TAIEX 與 2330 是否同步止跌。'],
+      recommendations: [],
+    },
+  };
+  const ai = { data_quality: 'degraded', v10_data_quality_status: 'insufficient_positive_evidence' };
+  const contract = buildCanonicalDecisionContract({ report_date: '2026-08-31', snapshot, ai });
+  const member = buildCanonicalMemberResearchRevision({ canonical_contract: contract, snapshot, ai });
+  assert.equal(contract.primary_event, snapshot.generated_text.daily_sentence);
+  assert.deepEqual(contract.primary_symbols, []);
+  assert.ok(contract.validation_signals.length > 0);
+  const passed = evaluateCanonicalSemanticCoherenceGate({
+    canonical_contract: contract,
+    sections: {
+      public_thesis: snapshot.generated_text.daily_sentence,
+      member_thesis: member.today_core_thesis,
+      taiwan_transmission: member.taiwan_transmission,
+      line_summary: member.line_summary,
+      content_os_topic: member.content_os_topic,
+    },
+    recommendations: member.beneficiary_candidates,
+    quality_inputs: ['degraded', 'insufficient_positive_evidence'],
+    quality_counters: {}, evidence_coverage: 100, content_score: 100,
+    checked_at: '2026-08-31T00:00:00Z',
+  });
+  assert.equal(passed.status, 'PASSED');
+});
+
 test('CLE counters count real inserts, updates, and unchanged entities', () => {
   const before = [{ id: 'a', value: 1 }, { id: 'b', value: 2 }];
   const after = [{ id: 'a', value: 1 }, { id: 'b', value: 3 }, { id: 'c', value: 4 }];

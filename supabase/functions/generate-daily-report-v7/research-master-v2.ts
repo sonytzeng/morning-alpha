@@ -484,17 +484,11 @@ function sourceStatus(
     input.legacy.data_quality,
     input.legacy.data_status,
   ).toLowerCase();
-  const recommendationRows = [
-    ...asRecords(input.legacy.today_beneficiary_stocks_v10),
-    ...asRecords(input.legacy.today_beneficiary_stocks),
-    ...asRecords(input.legacy.beneficiary_stocks),
-  ];
   const observationRows = asRecords(input.legacy.v10_observation_watchlist);
   const declaredMissingSources = asStrings(input.legacy.missing_sources);
   const traceableNoTradeDecision =
     firstText(input.legacy.v10_data_quality_status).toLowerCase() ===
       "insufficient_positive_evidence" &&
-    recommendationRows.length === 0 &&
     observationRows.length >= 3 &&
     declaredMissingSources.every((source) =>
       OPTIONAL_NO_TRADE_CONTEXT_GAP.test(source)

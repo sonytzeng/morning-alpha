@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import test from 'node:test';
+import { publicMarketCalendarIsConsistent } from '../supabase/functions/_shared/morning-alpha-public-market-status.mjs';
 
 const source = await readFile(new URL('../supabase/functions/emma-morning-alpha-bridge/index.ts', import.meta.url), 'utf8');
 const publicPayloadSource = await readFile(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');
@@ -98,6 +99,39 @@ test('weekend and holiday reads use the latest bounded canonical trading day wit
   assert.match(source, /latest_valid_trading_day: providerReportDate/);
   assert.match(source, /is_current_report: providerReportDate === todayDate/);
   assert.doesNotMatch(source, /todayMarket\.is_trading_day\s*\?\s*todayDate\s*:\s*todayDate/);
+});
+
+test('calendar validation accepts a verified trading day before and after terminal close', () => {
+  assert.equal(publicMarketCalendarIsConsistent({
+    calendarIsTradingDay: true,
+    providerIsTradingDay: true,
+    providerMarketStatus: 'OPEN',
+  }), true);
+  assert.equal(publicMarketCalendarIsConsistent({
+    calendarIsTradingDay: true,
+    providerIsTradingDay: true,
+    providerMarketStatus: 'CLOSED',
+  }), true);
+  assert.equal(publicMarketCalendarIsConsistent({
+    calendarIsTradingDay: false,
+    providerIsTradingDay: false,
+    providerMarketStatus: 'CLOSED',
+  }), true);
+  assert.equal(publicMarketCalendarIsConsistent({
+    calendarIsTradingDay: false,
+    providerIsTradingDay: false,
+    providerMarketStatus: 'OPEN',
+  }), false);
+  assert.equal(publicMarketCalendarIsConsistent({
+    calendarIsTradingDay: true,
+    providerIsTradingDay: false,
+    providerMarketStatus: 'CLOSED',
+  }), false);
+  assert.equal(publicMarketCalendarIsConsistent({
+    calendarIsTradingDay: true,
+    providerIsTradingDay: true,
+    providerMarketStatus: 'UNKNOWN',
+  }), false);
 });
 
 test('market intelligence exposes public canonical gates but never full Premium subscriber content', () => {

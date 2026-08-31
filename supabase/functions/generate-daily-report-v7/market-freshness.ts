@@ -51,7 +51,8 @@ export function computeMarketFreshnessDates(
 }
 
 export function isTaiwanMarketSymbol(symbol: string): boolean {
-  return TAIWAN_SYMBOLS.has(symbol.toUpperCase());
+  const normalized = symbol.toUpperCase().trim();
+  return TAIWAN_SYMBOLS.has(normalized) || /^\d{4,6}(?:\.(?:TW|TWO))?$/.test(normalized);
 }
 
 export function isMarketIndicatorStale(

@@ -1,12 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 import { readBoundedJsonResponse, readBoundedText } from '../_shared/bounded-json.ts';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
+import { publicMarketCalendarIsConsistent } from '../_shared/morning-alpha-public-market-status.mjs';
 import { verifyReportFreshness } from '../_shared/report-freshness.ts';
 
 type JsonRecord = Record<string, unknown>;
 type Operation = 'get_today_health' | 'get_market_intelligence' | 'get_thesis' | 'get_closing_verification';
 
-const BRIDGE_VERSION = '1.6.0';
+const BRIDGE_VERSION = '1.6.1';
 const MAX_BODY_BYTES = 32_768;
 const MAX_INTROSPECTION_RESPONSE_BYTES = 4_096;
 const MAX_PUBLIC_REPORT_RESPONSE_BYTES = 524_288;
@@ -420,8 +421,11 @@ Deno.serve(async (request) => {
   const providerMarketStatus = text(publicPayload.market_status).toUpperCase();
   const canonicalMarket = resolveMarketStatus(providerReportDate);
   const todayMarket = resolveMarketStatus(todayDate);
-  const canonicalMarketStatus = canonicalMarket.is_trading_day ? 'OPEN' : 'CLOSED';
-  if (providerTradingDay === null || providerTradingDay !== canonicalMarket.is_trading_day || providerMarketStatus !== canonicalMarketStatus) {
+  if (!publicMarketCalendarIsConsistent({
+    calendarIsTradingDay: canonicalMarket.is_trading_day,
+    providerIsTradingDay: providerTradingDay,
+    providerMarketStatus,
+  })) {
     return failure({ statusCode: 502, status: 'TOOL_DEGRADED', error: 'MARKET_CALENDAR_VERIFICATION_FAILED', traceId, toolCallId, executionId, missionId, operation, startedAt });
   }
   const metadata = {

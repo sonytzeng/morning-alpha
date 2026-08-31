@@ -701,3 +701,65 @@ Deno.test("Case H: no-trade report abstains from unsupported model chains and st
     `no-trade report expected ready, received ${validation.quality.publish_status}`,
   );
 });
+
+Deno.test("Case I: V10 recommendations cut over from unrelated legacy themes", () => {
+  const fixture = completeFixture();
+  fixture.legacy.data_quality = "degraded";
+  fixture.legacy.missing_sources = [
+    "sector_rotation_scores:2026-08-28",
+    "market_snapshot.aapl",
+    "market_snapshot.crude_oil",
+  ];
+  fixture.legacy.v10_data_quality_status = "partial";
+  fixture.legacy.today_beneficiary_stocks_v10 = [
+    {
+      symbol: "3037",
+      name: "欣興",
+      industry_name: "PCB / CCL",
+      trigger_event: "SEMICONDUCTOR",
+      why_this_stock: "高階 PCB 與載板是半導體需求往台灣零組件端傳導的驗證點。",
+      intraday_validation: "10:00 前確認 PCB 族群至少兩檔同步強於 TAIEX。",
+      invalidation_condition: "欣興弱於 TAIEX 且 PCB 族群沒有量價同步時失效。",
+      evidence_refs: ["MD001", "NEWS001"],
+    },
+  ];
+  const note = fixture.legacy.member_research_note_v2 as Record<
+    string,
+    unknown
+  >;
+  note.beneficiary_candidates = [
+    {
+      stock_code: "2882",
+      stock_name: "國泰金",
+      reason: "舊版金融防禦候選。",
+      validation_signal: "觀察金融指數。",
+      invalidation_condition: "金融族群轉弱。",
+      evidence_refs: ["MD002"],
+    },
+  ];
+  fixture.legacy.v10_observation_watchlist = [
+    {
+      symbol: "1303",
+      name: "南亞",
+      observation_reason: "舊版油價與塑化觀察。",
+      validation_signal: "觀察塑化族群。",
+      stop_observing_condition: "油價訊號反轉。",
+      evidence_refs: ["NEWS001"],
+    },
+  ];
+
+  const master = assembleResearchMasterV2(fixture);
+  const validation = validateResearchMasterV2(master);
+  assert(
+    master.sections.representative_stocks.map((stock) => stock.symbol).join(",") === "3037",
+    "canonical paid research must contain only the decided V10 recommendation set",
+  );
+  assert(
+    master.provenance.source_status === "complete",
+    `traceable recommendation expected complete, received ${master.provenance.source_status}`,
+  );
+  assert(
+    validation.quality.publish_status === "ready",
+    `traceable V10 recommendation expected ready, received ${validation.quality.publish_status}`,
+  );
+});

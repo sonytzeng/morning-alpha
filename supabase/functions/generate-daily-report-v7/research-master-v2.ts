@@ -406,6 +406,9 @@ const EVIDENCE_TITLE_ALIASES: Record<string, string[]> = {
 const OPTIONAL_NO_TRADE_CONTEXT_GAP =
   /^sector_rotation_scores(?::\d{4}-\d{2}-\d{2})?$/i;
 
+const CRITICAL_RECOMMENDATION_SOURCE_GAP =
+  /^(?:market_data|market_news|market_snapshot\.(?:taiex|txf|2330))$/i;
+
 function evidenceSearchTerms(evidence: ResearchEvidenceItem): string[] {
   const title = toText(evidence.title);
   const normalizedTitle = searchText(title);
@@ -485,6 +488,9 @@ function sourceStatus(
     input.legacy.data_status,
   ).toLowerCase();
   const observationRows = asRecords(input.legacy.v10_observation_watchlist);
+  const recommendationRows = asRecords(
+    input.legacy.today_beneficiary_stocks_v10,
+  );
   const declaredMissingSources = asStrings(input.legacy.missing_sources);
   const traceableNoTradeDecision =
     firstText(input.legacy.v10_data_quality_status).toLowerCase() ===
@@ -500,6 +506,24 @@ function sourceStatus(
   if (hasLegacyResearch && hasTraceableThesis && traceableNoTradeDecision) {
     return "complete";
   }
+  const traceableRecommendationDecision = recommendationRows.length > 0 &&
+    recommendationRows.every((row) =>
+      resolveEvidenceRefs(
+        row.evidence_refs,
+        [
+          stockSymbol(row),
+          firstText(row.data_basis, row.evidence_source),
+          firstText(row.transmission_logic, row.reason, row.why_this_stock),
+        ],
+        input.evidenceIndex,
+      ).length > 0
+    ) &&
+    declaredMissingSources.every((source) =>
+      !CRITICAL_RECOMMENDATION_SOURCE_GAP.test(source)
+    );
+  if (
+    hasLegacyResearch && hasTraceableThesis && traceableRecommendationDecision
+  ) return "complete";
   if (hasV10Thesis && hasTraceableThesis && missing === 0) return "complete";
   if (hasV10Thesis) return "partial";
   return hasLegacyResearch ? "legacy_mapped" : "insufficient";
@@ -780,23 +804,43 @@ function buildRepresentativeStocks(
   input: ResearchMasterV2AssemblerInput,
   note: Record<string, unknown>,
 ): RepresentativeStockItem[] {
-  const sources: StockSource[] = [
-    ...asRecords(note.beneficiary_candidates).map((record) => ({
-      record,
-      role: "transmission" as const,
-    })),
-    ...asRecords(input.legacy.today_beneficiary_stocks_v10).map((record) => ({
-      record,
-      role: "leader" as const,
-    })),
-    ...asRecords(input.legacy.v10_observation_watchlist).map((record) => ({
-      record,
-      role: "confirmation" as const,
-    })),
-    ...asRecords(asRecord(input.legacy.v8_beneficiary_chain).beneficiaries).map(
-      (record) => ({ record, role: "transmission" as const }),
-    ),
-  ];
+  const v10Recommendations = asRecords(
+    input.legacy.today_beneficiary_stocks_v10,
+  );
+  const v10Symbols = new Set(
+    v10Recommendations.map(stockSymbol).filter(Boolean),
+  );
+  const sameSymbolLegacySources: StockSource[] = [
+    ...asRecords(note.beneficiary_candidates),
+    ...asRecords(input.legacy.v10_observation_watchlist),
+    ...asRecords(asRecord(input.legacy.v8_beneficiary_chain).beneficiaries),
+  ].filter((record) => v10Symbols.has(stockSymbol(record))).map((record) => ({
+    record,
+    role: "confirmation" as const,
+  }));
+  // Once V10 has made a decision, its recommendation set is canonical. Legacy
+  // candidates and the broad observation watchlist remain in the audit payload,
+  // but must not leak unrelated themes into the paid research document.
+  const sources: StockSource[] = v10Recommendations.length > 0
+    ? [
+      ...v10Recommendations.map((record) => ({
+        record,
+        role: "leader" as const,
+      })),
+      ...sameSymbolLegacySources,
+    ]
+    : [
+      ...asRecords(note.beneficiary_candidates).map((record) => ({
+        record,
+        role: "transmission" as const,
+      })),
+      ...asRecords(input.legacy.v10_observation_watchlist).map((record) => ({
+        record,
+        role: "confirmation" as const,
+      })),
+      ...asRecords(asRecord(input.legacy.v8_beneficiary_chain).beneficiaries)
+        .map((record) => ({ record, role: "transmission" as const })),
+    ];
   const result = new Map<string, RepresentativeStockItem>();
   for (const source of sources) {
     const record = source.record;

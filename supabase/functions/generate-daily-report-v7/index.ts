@@ -2197,7 +2197,7 @@ async function publishCanonicalMemberRevision(
 ):Promise<CanonicalMemberRevisionResult>{
   const blocked=(reason:string):CanonicalMemberRevisionResult=>({revisionId:null,eligible:false,status:'BLOCKED',reasonCodes:[reason],canonicalContract:null});
   try{
-    const snapshotResult=await supabase.from('decision_snapshots').select('id,report_id,report_date,version,status,action,generated_text,snapshot_fingerprint,content_score').eq('id',snapshotId).maybeSingle();
+    const snapshotResult=await supabase.from('decision_snapshots').select('id,report_id,report_date,version,status,action,generated_text,source_refs,snapshot_fingerprint,content_score').eq('id',snapshotId).maybeSingle();
     const{data:snapshot,error:snapshotError}=safeUnwrap<Record<string,unknown>>(snapshotResult,log,'canonicalMemberSnapshot');
     if(snapshotError||!snapshot)return blocked('CANONICAL_SNAPSHOT_READ_FAILED');
     const canonicalContract=buildCanonicalDecisionContract({report_date:reportDate,snapshot,ai}) as Record<string,unknown>;

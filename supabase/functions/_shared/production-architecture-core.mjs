@@ -428,7 +428,7 @@ export function buildCanonicalDecisionContract(input = {}) {
   const first = asPlainRecord(sourceRecommendations[0]);
   const action = firstText(snapshot.action, generated.action);
   const explicitAbstention = sourceRecommendations.length === 0
-    && ['STOP', 'NO_TRADE', 'ABSTAIN'].includes(action.toUpperCase());
+    && ['WAIT', 'STOP', 'NO_TRADE', 'ABSTAIN'].includes(action.toUpperCase());
   const abstentionThesis = explicitAbstention
     ? firstText(generated.daily_sentence, ...(Array.isArray(generated.reasons) ? generated.reasons : []))
     : '';
@@ -545,7 +545,7 @@ export function evaluateCanonicalSemanticCoherenceGate(input = {}) {
   const recommendationRows = records(input.recommendations);
   const action = firstText(contract.action).toUpperCase();
   const explicitAbstention = recommendationRows.length === 0
-    && ['STOP', 'NO_TRADE', 'ABSTAIN'].includes(action);
+    && ['WAIT', 'STOP', 'NO_TRADE', 'ABSTAIN'].includes(action);
   const requiredFields = [
     'report_date', 'snapshot_id', 'snapshot_version', 'primary_event', 'primary_causal_chain',
     'primary_taiwan_theme', 'primary_symbols', 'validation_checkpoint', 'validation_signals',

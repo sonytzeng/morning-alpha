@@ -235,7 +235,7 @@ test('canonical semantic gate blocks mixed shipping, semiconductor, and finance 
 
 test('canonical semantic gate accepts an evidence-backed explicit no-trade decision', () => {
   const snapshot = {
-    id: 'snapshot-stop', report_date: '2026-08-31', version: 7, action: 'STOP',
+    id: 'snapshot-wait', report_date: '2026-08-31', version: 7, action: 'WAIT',
     source_refs: [{ title: 'SOX and TSM evidence', url: 'https://example.com/evidence' }],
     generated_text: {
       daily_sentence: '隔夜訊號未形成正向主線，今日不建立受惠股。',
@@ -265,6 +265,14 @@ test('canonical semantic gate accepts an evidence-backed explicit no-trade decis
     checked_at: '2026-08-31T00:00:00Z',
   });
   assert.equal(passed.status, 'PASSED');
+});
+
+test('canonical member publication reads snapshot evidence refs for no-trade contracts', () => {
+  const generatorSource = readFileSync(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
+  assert.match(
+    generatorSource,
+    /select\('id,report_id,report_date,version,status,action,generated_text,source_refs,snapshot_fingerprint,content_score'\)/,
+  );
 });
 
 test('CLE counters count real inserts, updates, and unchanged entities', () => {

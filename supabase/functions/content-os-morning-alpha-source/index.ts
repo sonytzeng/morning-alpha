@@ -345,6 +345,35 @@ Deno.serve(async (request) => {
   const expiresAt = new Date(new Date(publishedAt).getTime() + 24 * 60 * 60 * 1000).toISOString();
 
   const incidentKey = `content-os:${String(snapshot.report_date)}:${String(snapshot.id)}`;
+  const { data: staleIncidents, error: staleIncidentsError } = await admin
+    .from("content_os_sync_incidents")
+    .select("incident_key,snapshot_id,snapshot_version")
+    .eq("business_date", String(snapshot.report_date))
+    .eq("status", "OPEN")
+    .like("incident_key", `content-os:${String(snapshot.report_date)}:%`)
+    .neq("incident_key", incidentKey);
+  if (staleIncidentsError) return json({ error: "CONTENT_OS_STALE_INCIDENT_READ_FAILED" }, 503);
+
+  for (const staleIncidentValue of staleIncidents ?? []) {
+    const staleIncident = asObject(staleIncidentValue);
+    const staleIncidentKey = optionalString(staleIncident.incident_key);
+    if (!staleIncidentKey) return json({ error: "CONTENT_OS_STALE_INCIDENT_INVALID" }, 503);
+    const staleSnapshotVersion = Number(staleIncident.snapshot_version);
+    const { error: staleResolveError } = await admin.rpc("resolve_content_os_incident_v1", {
+      p_incident_key: staleIncidentKey,
+      p_snapshot_version: Number.isFinite(staleSnapshotVersion) ? staleSnapshotVersion : null,
+      p_metadata: {
+        resolution_reason: "SUPERSEDED_BY_CURRENT_MORNING_ALPHA_SNAPSHOT",
+        superseding_snapshot_id: snapshot.id,
+        superseding_snapshot_version: Number(snapshot.version),
+        superseding_semantic_status: memberRevision.semantic_status,
+        member_content_revision_id: memberRevision.id,
+        source_revision: SOURCE_PROJECTION_REVISION,
+      },
+    });
+    if (staleResolveError) return json({ error: "CONTENT_OS_STALE_INCIDENT_RESOLUTION_FAILED" }, 503);
+  }
+
   const { error: resolveIncidentError } = await admin.rpc("resolve_content_os_incident_v1", {
     p_incident_key: incidentKey,
     p_snapshot_version: Number(snapshot.version),

@@ -393,6 +393,11 @@ test('delivery, payload, and Content OS all require the same semantic member rev
   assert.match(contentOs, /evaluateCanonicalSemanticCoherenceGate/);
   assert.match(contentOs, /record_content_os_incident_v1/);
   assert.match(contentOs, /resolve_content_os_incident_v1/);
+  assert.match(contentOs, /content_os_sync_incidents/);
+  assert.match(contentOs, /\.eq\("business_date", String\(snapshot\.report_date\)\)/);
+  assert.match(contentOs, /\.eq\("status", "OPEN"\)/);
+  assert.match(contentOs, /SUPERSEDED_BY_CURRENT_MORNING_ALPHA_SNAPSHOT/);
+  assert.match(contentOs, /CONTENT_OS_STALE_INCIDENT_RESOLUTION_FAILED/);
 });
 
 test('safe recovery exposes only scoped, audited repair and replay actions', () => {

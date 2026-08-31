@@ -82,6 +82,20 @@ test('daily report fails closed instead of coercing missing market numerics to z
   assert.doesNotMatch(generatorSource, /const cp=hasChangePercent\?Number\(rawChangePercent\):0/);
 });
 
+test('research generation cannot see stale market rows or evidence-free candidates', () => {
+  assert.match(generatorSource, /const researchMarketData=filterFreshMarketIndicators\(marketData,dates\)/);
+  assert.match(generatorSource, /buildDeterministicAIStrategyJson\(researchMarketData,/);
+  assert.match(generatorSource, /buildOpenAIUserPrompt\(researchMarketData,/);
+  assert.match(generatorSource, /buildThreeTierBeneficiaryStocks\(researchMarketData,/);
+  assert.match(generatorSource, /const evidenceOk=relatedEvidence\.length>0/);
+  assert.match(generatorSource, /eligible candidate must have traceable evidence/);
+  assert.match(generatorSource, /today_beneficiary_stocks 可輸出 0 到 8 檔/);
+  assert.doesNotMatch(generatorSource, /today_beneficiary_stocks 必須輸出 5 到 8 檔/);
+  assert.match(generatorSource, /每個 overnight_chain 項目必須包含 evidence_refs/);
+  assert.match(generatorSource, /evidence_ref=market_data\./);
+  assert.match(generatorSource, /evidence_ref=market_news\./);
+});
+
 test('report payload bounds input and exposes component query failures for bridge rejection', () => {
   assert.match(reportPayloadSource, /MAX_BODY_BYTES = 32_768/);
   assert.match(reportPayloadSource, /readBoundedText\(req\.body, MAX_BODY_BYTES\)/);

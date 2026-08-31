@@ -403,6 +403,9 @@ const EVIDENCE_TITLE_ALIASES: Record<string, string[]> = {
   "ai伺服器": ["ai server", "ai伺服器"],
 };
 
+const OPTIONAL_NO_TRADE_CONTEXT_GAP =
+  /^sector_rotation_scores(?::\d{4}-\d{2}-\d{2})?$/i;
+
 function evidenceSearchTerms(evidence: ResearchEvidenceItem): string[] {
   const title = toText(evidence.title);
   const normalizedTitle = searchText(title);
@@ -481,10 +484,28 @@ function sourceStatus(
     input.legacy.data_quality,
     input.legacy.data_status,
   ).toLowerCase();
+  const recommendationRows = [
+    ...asRecords(input.legacy.today_beneficiary_stocks_v10),
+    ...asRecords(input.legacy.today_beneficiary_stocks),
+    ...asRecords(input.legacy.beneficiary_stocks),
+  ];
+  const observationRows = asRecords(input.legacy.v10_observation_watchlist);
+  const declaredMissingSources = asStrings(input.legacy.missing_sources);
+  const traceableNoTradeDecision =
+    firstText(input.legacy.v10_data_quality_status).toLowerCase() ===
+      "insufficient_positive_evidence" &&
+    recommendationRows.length === 0 &&
+    observationRows.length >= 3 &&
+    declaredMissingSources.every((source) =>
+      OPTIONAL_NO_TRADE_CONTEXT_GAP.test(source)
+    );
   if (
     hasLegacyResearch && hasTraceableThesis &&
     ["complete", "sufficient"].includes(legacyDataQuality)
   ) return "complete";
+  if (hasLegacyResearch && hasTraceableThesis && traceableNoTradeDecision) {
+    return "complete";
+  }
   if (hasV10Thesis && hasTraceableThesis && missing === 0) return "complete";
   if (hasV10Thesis) return "partial";
   return hasLegacyResearch ? "legacy_mapped" : "insufficient";
@@ -524,16 +545,22 @@ function buildTransmissionPath(
   ): void => {
     const statement = firstText(claim);
     if (!statement) return;
+    const evidenceRefs = resolveEvidenceRefs(
+      rawRefs,
+      [subject, statement],
+      input.evidenceIndex,
+    );
+    // Canonical premium research must never preserve a narrative node that
+    // cannot be traced to the current evidence index. The legacy report keeps
+    // the original model output for audit, while the publishable master
+    // abstains from unsupported transmission claims.
+    if (evidenceRefs.length === 0) return;
     paths.push({
       node_id: nodeId(input.reportDate, stage, statement),
       stage,
       subject: firstText(subject, statement),
       claim: statement,
-      evidence_refs: resolveEvidenceRefs(
-        rawRefs,
-        [subject, statement],
-        input.evidenceIndex,
-      ),
+      evidence_refs: evidenceRefs,
     });
   };
 
@@ -858,7 +885,12 @@ function buildRepresentativeStocks(
           : "insufficient",
     });
   }
-  return Array.from(result.values());
+  // Partial rows remain available in the legacy/debug payload for audit, but
+  // they are not claims that may enter the canonical paid research document.
+  // This is an abstention rule, not a quality-gate bypass.
+  return Array.from(result.values()).filter((item) =>
+    item.data_status === "complete" && item.evidence_refs.length > 0
+  );
 }
 
 function parseMinutes(value: string): number | null {

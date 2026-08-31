@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   computeMarketFreshnessDates,
+  filterFreshMarketIndicators,
   filterRecentNewsRows,
   isMarketIndicatorStale,
 } from '../supabase/functions/generate-daily-report-v7/market-freshness.ts';
@@ -58,4 +59,17 @@ test('news older than 48 hours is excluded before report generation', () => {
     { id: 'old', published_at: '2026-07-16T12:00:00.000Z' },
   ];
   assert.deepEqual(filterRecentNewsRows(rows, now, 48).map((row) => row.id), ['fresh']);
+});
+
+test('stale commodity rows are excluded from research inputs', () => {
+  const dates = { twCoreDate: '2026-08-28', usGlobalDate: '2026-08-28' };
+  const rows = [
+    { symbol: 'NVDA', updatedAt: '2026-08-28T20:00:00.000Z' },
+    { symbol: 'CL', updatedAt: '2026-08-27T20:00:00.000Z' },
+    { symbol: 'TAIEX', updatedAt: '2026-08-28T05:30:00.000Z' },
+  ];
+  assert.deepEqual(
+    filterFreshMarketIndicators(rows, dates).map((row) => row.symbol),
+    ['NVDA', 'TAIEX'],
+  );
 });

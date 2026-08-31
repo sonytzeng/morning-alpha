@@ -567,3 +567,128 @@ Deno.test("Case G: production aliases and guardrails remain fully traceable with
     `production regression expected ready, received ${validation.quality.publish_status}`,
   );
 });
+
+Deno.test("Case H: no-trade report abstains from unsupported model chains and stocks", () => {
+  const fixture = completeFixture();
+  fixture.reportDate = "2026-08-31";
+  fixture.todayDate = "2026-08-31";
+  fixture.marketThesis = null;
+  fixture.evidencePack = {
+    data_quality: {
+      available_sources: ["market_data", "market_news"],
+      missing_sources: [
+        "sector_rotation_scores:2026-08-28",
+        "market_snapshot.crude_oil",
+      ],
+    },
+  };
+  fixture.legacy.data_quality = "degraded";
+  fixture.legacy.missing_sources = ["sector_rotation_scores:2026-08-28"];
+  fixture.legacy.v10_data_quality_status = "insufficient_positive_evidence";
+  fixture.legacy.today_beneficiary_stocks_v10 = [];
+  fixture.legacy.today_beneficiary_stocks = [];
+  fixture.legacy.beneficiary_stocks = [];
+  fixture.legacy.v10_observation_watchlist = [
+    {
+      symbol: "2330",
+      name: "台積電",
+      observation_reason: "SOX 與台股電子權值的盤中確認角色。",
+      validation_signal: "09:30 確認台積電是否與 TAIEX 同向。",
+      stop_observing_condition: "台積電與電子權值同步轉弱。",
+      evidence_refs: ["MD001"],
+    },
+    {
+      symbol: "2308",
+      name: "台達電",
+      observation_reason: "AI 伺服器供應鏈的盤中確認角色。",
+      validation_signal: "09:30 確認 AI 伺服器族群是否同步止穩。",
+      stop_observing_condition: "AI 伺服器族群量價持續轉弱。",
+      evidence_refs: ["NEWS001"],
+    },
+    {
+      symbol: "2412",
+      name: "中華電",
+      observation_reason: "VIX 風險訊號的防禦型確認角色。",
+      validation_signal: "09:30 確認防禦型股票是否相對抗跌。",
+      stop_observing_condition: "VIX 回落且市場風險偏好轉強。",
+      evidence_refs: ["MD002"],
+    },
+  ];
+  const note = fixture.legacy.member_research_note_v2 as Record<
+    string,
+    unknown
+  >;
+  note.overnight_chain = [
+    {
+      event: "SOX 隔夜轉強",
+      source_market: "美股半導體",
+      impact_logic: "風險偏好先反映在半導體供應鏈。",
+      taiwan_mapping: "台股先由台積電與半導體族群驗證。",
+      evidence_refs: ["MD001"],
+    },
+    {
+      event: "市場不確定性升高",
+      source_market: "全球市場",
+      impact_logic: "不確定性使資金流向防禦性股票。",
+      taiwan_mapping: "國泰金與中信金受益。",
+      evidence_refs: [],
+    },
+    {
+      event: "油價波動",
+      source_market: "國際油市",
+      impact_logic: "油價波動影響塑化與航運成本。",
+      taiwan_mapping: "台塑與長榮受影響。",
+      evidence_refs: [],
+    },
+  ];
+  note.beneficiary_candidates = [
+    ...(note.beneficiary_candidates as Record<string, unknown>[]),
+    {
+      stock_code: "1301",
+      stock_name: "台塑",
+      reason: "油價波動直接影響塑化原料成本。",
+      validation_signal: "盤中確認塑化族群與油價是否同向。",
+      invalidation_condition: "油價波動未延續。",
+      evidence_refs: [],
+    },
+    {
+      stock_code: "2603",
+      stock_name: "長榮",
+      reason: "油價下跌有利貨櫃航運成本。",
+      validation_signal: "盤中確認航運族群與油價是否同向。",
+      invalidation_condition: "運價與油價訊號不一致。",
+      evidence_refs: [],
+    },
+  ];
+
+  const master = assembleResearchMasterV2(fixture);
+  const validation = validateResearchMasterV2(master);
+  assert(
+    master.provenance.source_status === "complete",
+    `traceable no-trade decision expected complete, received ${master.provenance.source_status}`,
+  );
+  assert(
+    master.sections.transmission_narrative.path.every((node) =>
+      node.evidence_refs.length > 0
+    ),
+    "canonical transmission path must abstain from unsupported nodes",
+  );
+  assert(
+    !master.sections.representative_stocks.some((stock) =>
+      ["1301", "2603"].includes(stock.symbol)
+    ),
+    "unsupported stocks must remain outside canonical paid research",
+  );
+  assert(
+    validation.quality.evidence_coverage === 100,
+    `no-trade evidence coverage expected 100, received ${validation.quality.evidence_coverage}`,
+  );
+  assert(
+    validation.quality.unsupported_claims.length === 0,
+    `no-trade report retained unsupported claims: ${validation.quality.unsupported_claims.join(" | ")}`,
+  );
+  assert(
+    validation.quality.publish_status === "ready",
+    `no-trade report expected ready, received ${validation.quality.publish_status}`,
+  );
+});

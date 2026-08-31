@@ -763,7 +763,17 @@ test('daily report freshness follows expected trading sessions and never writes 
 test('paid research enforces fresh evidence and complete beneficiary reasoning', () => {
   const reportGenerator = read('supabase/functions/generate-daily-report-v7/index.ts');
   assert.match(reportGenerator, /OPENAI_EVIDENCE_GUARDRAILS/);
+  assert.match(reportGenerator, /OPENAI_OUTPUT_ABSTENTION_RULES/);
   assert.match(reportGenerator, /發布時間在 48 小時內/);
+  assert.match(reportGenerator, /const researchMarketData=filterFreshMarketIndicators\(marketData,dates\)/);
+  assert.match(reportGenerator, /buildDeterministicAIStrategyJson\(researchMarketData/);
+  assert.match(reportGenerator, /buildOpenAIUserPrompt\(researchMarketData/);
+  assert.match(reportGenerator, /buildThreeTierBeneficiaryStocks\(researchMarketData/);
+  assert.match(reportGenerator, /today_beneficiary_stocks 可輸出 0 到 8 檔，沒有最低檔數/);
+  assert.doesNotMatch(reportGenerator, /today_beneficiary_stocks 必須輸出 5 到 8 檔/);
+  assert.match(reportGenerator, /const evidenceOk=relatedEvidence\.length>0/);
+  assert.match(reportGenerator, /No Traceable Evidence/);
+  assert.match(reportGenerator, /eligible candidate must have traceable evidence/);
   assert.match(reportGenerator, /enforceMemberResearchIntegrity/);
   assert.match(reportGenerator, /note\.data_status='partial'/);
   assert.match(reportGenerator, /note\.beneficiary_reasoning=orderedReasoning\.slice\(0,10\)/);

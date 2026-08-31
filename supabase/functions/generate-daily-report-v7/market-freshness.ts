@@ -71,6 +71,21 @@ export function isMarketIndicatorStale(
   return nowMs - timestamp > 36 * 60 * 60 * 1000;
 }
 
+export function filterFreshMarketIndicators<
+  T extends { symbol: unknown; updatedAt: unknown },
+>(
+  rows: T[],
+  dates?: MarketFreshnessDates,
+  nowMs = Date.now(),
+): T[] {
+  return rows.filter((row) => !isMarketIndicatorStale(
+    String(row.updatedAt || ''),
+    String(row.symbol || ''),
+    dates,
+    nowMs,
+  ));
+}
+
 export function filterRecentNewsRows<T extends Record<string, unknown>>(
   rows: T[],
   nowMs = Date.now(),

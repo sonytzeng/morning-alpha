@@ -87,6 +87,10 @@ function completeFixture(): ResearchMasterV2AssemblerInput {
         {
           symbol: "2330",
           name: "台積電",
+          industry_code: "ELECTRONIC_BLUE_CHIP",
+          industry: "電子權值",
+          sector: "半導體",
+          trigger_tags: ["SEMICONDUCTOR", "AI_SERVER"],
           related_evidence: [
             { evidence_id: "MD001", weight: 90, purpose: "primary_support" },
             { evidence_id: "SEC001", weight: 75, purpose: "confirming" },
@@ -761,5 +765,60 @@ Deno.test("Case I: V10 recommendations cut over from unrelated legacy themes", (
   assert(
     validation.quality.publish_status === "ready",
     `traceable V10 recommendation expected ready, received ${validation.quality.publish_status}`,
+  );
+});
+
+Deno.test("Case J: a cited but unrelated source cannot validate a stock recommendation", () => {
+  const fixture = completeFixture();
+  const master = assembleResearchMasterV2(fixture);
+  master.sections.representative_stocks = [{
+    ...master.sections.representative_stocks[0],
+    stock_id: "stock:2026-09-01:1101",
+    symbol: "1101",
+    name: "台泥",
+    reason: "水泥價格與基建需求使台泥成為今日受惠股。",
+    evidence_refs: ["NEWS003"],
+  }];
+  const evidenceIndex = [
+    ...fixture.evidenceIndex,
+    {
+      evidence_id: "NEWS003",
+      evidence_type: "market_news",
+      source: "market_news",
+      title: "Gold, silver ETFs tumble as US Fed rate hike bets surge",
+      summary:
+        "Gold and silver ETFs fell as investors increased Fed rate hike expectations.",
+      importance: 80,
+      freshness: "fresh",
+      raw_reference: "moneycontrol:gold-silver-etfs-fed-rate-hike",
+    },
+  ];
+  const validation = validateResearchMasterV2(master, {
+    evidenceIndex,
+    candidateUniverse: {
+      candidates: [{
+        symbol: "1101",
+        name: "台泥",
+        industry_code: "CEMENT",
+        industry: "水泥",
+        sector: "傳產",
+        trigger_tags: ["POLICY"],
+        related_evidence: [{ evidence_id: "NEWS003" }],
+      }],
+    },
+  });
+  assert(
+    validation.quality.publish_status === "degraded",
+    `unrelated stock evidence expected degraded, received ${validation.quality.publish_status}`,
+  );
+  assert(
+    validation.quality.unsupported_claims.some((claim) =>
+      claim.includes("evidence_relationship_not_supported")
+    ),
+    "a reference ID alone must not count as stock-to-evidence support",
+  );
+  assert(
+    validation.quality.evidence_coverage < 100,
+    "unrelated stock evidence must reduce evidence coverage",
   );
 });

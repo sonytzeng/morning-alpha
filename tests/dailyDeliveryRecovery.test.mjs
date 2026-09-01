@@ -4,6 +4,8 @@ import {
   buildDailyDeliveryRecoveryPlan,
   hasFailedEvidenceDependency,
   isContentOnlyDeliveryFailure,
+  resolveClaimedPipelineSlot,
+  resolveDailyDeliveryCompletion,
   resolveDailyDeliveryPhase,
 } from '../supabase/functions/_shared/daily-delivery-recovery.ts';
 
@@ -121,4 +123,62 @@ test('content-only failures use a bounded repair budget instead of repeating the
   });
   assert.deepEqual(exhausted.actions, ['deliver_incident']);
   assert.equal(exhausted.retry_after_seconds, null);
+});
+
+test('refresh completion is judged by refresh actions, not by a report that is not due yet', () => {
+  assert.equal(resolveDailyDeliveryCompletion({
+    phase: 'refresh',
+    action_failure_count: 0,
+    premium_eligible: false,
+    delivered: false,
+  }), true);
+  assert.equal(resolveDailyDeliveryCompletion({
+    phase: 'refresh',
+    action_failure_count: 1,
+    premium_eligible: false,
+    delivered: false,
+  }), false);
+});
+
+test('generate and delivery phases retain their own fail-closed completion gates', () => {
+  assert.equal(resolveDailyDeliveryCompletion({
+    phase: 'generate',
+    action_failure_count: 0,
+    premium_eligible: false,
+    delivered: false,
+  }), false);
+  assert.equal(resolveDailyDeliveryCompletion({
+    phase: 'generate',
+    action_failure_count: 0,
+    premium_eligible: true,
+    delivered: false,
+  }), true);
+  assert.equal(resolveDailyDeliveryCompletion({
+    phase: 'deliver',
+    action_failure_count: 0,
+    premium_eligible: true,
+    delivered: false,
+  }), false);
+  assert.equal(resolveDailyDeliveryCompletion({
+    phase: 'watchdog',
+    action_failure_count: 0,
+    premium_eligible: true,
+    delivered: true,
+  }), true);
+});
+
+test('duplicate active or completed slots are idempotent skips, not runtime failures', () => {
+  assert.deepEqual(resolveClaimedPipelineSlot('RUNNING'), {
+    success: true,
+    status: 'SKIPPED',
+    claimed_status: 'RUNNING',
+  });
+  assert.equal(resolveClaimedPipelineSlot('SUCCEEDED').success, true);
+  assert.equal(resolveClaimedPipelineSlot('SKIPPED').success, true);
+  assert.deepEqual(resolveClaimedPipelineSlot('DEGRADED'), {
+    success: false,
+    status: 'DEGRADED',
+    claimed_status: 'DEGRADED',
+  });
+  assert.equal(resolveClaimedPipelineSlot('FAILED').success, false);
 });

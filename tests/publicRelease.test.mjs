@@ -39,6 +39,7 @@ const contentOsMorningAlphaSource = read('supabase/functions/content-os-morning-
 const contentIntelligence = read('supabase/functions/_shared/content-intelligence.ts');
 const lineDailyPush = read('supabase/functions/line-daily-push/index.ts');
 const dailyDeliveryOrchestrator = read('supabase/functions/daily-delivery-orchestrator/index.ts');
+const dailyDeliveryRecovery = read('supabase/functions/_shared/daily-delivery-recovery.ts');
 const globalMarketNews = read('supabase/functions/fetch-global-market-news/index.ts');
 const closingVerification = read('supabase/functions/closing-verification-engine/index.ts');
 const opsHealthCheck = read('supabase/functions/ma-ops-health-check/index.ts');
@@ -246,7 +247,8 @@ test('premarket workflow delegates to the durable recovery state machine', () =>
   assert.match(dailyDeliveryOrchestrator, /clock\.minutes >= 7 \* 60 \+ 30/);
   assert.match(dailyDeliveryOrchestrator, /payload\.success !== false/);
   assert.match(dailyDeliveryOrchestrator, /invokeFunctionWithRetry/);
-  assert.match(dailyDeliveryOrchestrator, /actionFailures\.length === 0/);
+  assert.match(dailyDeliveryOrchestrator, /resolveDailyDeliveryCompletion/);
+  assert.match(dailyDeliveryRecovery, /input\.action_failure_count > 0/);
   assert.match(dailyDeliveryOrchestrator, /success: completed/);
   assert.match(dailyDeliveryOrchestrator, /EVIDENCE_REFRESH_DEPENDENCY_FAILED/);
   assert.match(dailyDeliveryOrchestrator, /deliveryBlockedByEvidenceFailure/);
@@ -772,7 +774,9 @@ test('paid research enforces fresh evidence and complete beneficiary reasoning',
   assert.match(reportGenerator, /today_beneficiary_stocks 可輸出 0 到 8 檔，沒有最低檔數/);
   assert.doesNotMatch(reportGenerator, /today_beneficiary_stocks 必須輸出 5 到 8 檔/);
   assert.match(reportGenerator, /const evidenceOk=relatedEvidence\.length>0/);
-  assert.match(reportGenerator, /No Traceable Evidence/);
+  assert.match(reportGenerator, /No Industry-Anchored Evidence/);
+  assert.match(reportGenerator, /candidateRepeatPenaltyContribution\(repeat_penalty\)/);
+  assert.match(reportGenerator, /repeat_penalty_contribution=/);
   assert.match(reportGenerator, /eligible candidate must have traceable evidence/);
   assert.match(reportGenerator, /enforceMemberResearchIntegrity/);
   assert.match(reportGenerator, /note\.data_status='partial'/);

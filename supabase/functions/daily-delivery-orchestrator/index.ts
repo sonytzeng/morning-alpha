@@ -5,12 +5,14 @@ import { authorizeInternalRequest, buildInternalFunctionHeaders, constantTimeEqu
 import {
   buildDailyDeliveryRecoveryPlan,
   hasFailedEvidenceDependency,
+  resolveClaimedPipelineSlot,
+  resolveDailyDeliveryCompletion,
   resolveDailyDeliveryPhase,
   type DailyDeliveryAction,
   type DailyDeliveryPhase,
 } from '../_shared/daily-delivery-recovery.ts';
 
-const VERSION = 'DAILY_DELIVERY_V1.4_CONTENT_REPAIR_VERSION_BUDGET';
+const VERSION = 'DAILY_DELIVERY_V1.5_PHASE_IDEMPOTENCY';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -678,17 +680,18 @@ Deno.serve(async (req: Request) => {
   try {
     const claim = await claimPipelineSlot(supabase, businessDate, phase, clock.slot, attempt);
     if (!claim.acquired) {
-      const existingSucceeded = claim.existingStatus === 'SUCCEEDED' || claim.existingStatus === 'SKIPPED';
+      const resolution = resolveClaimedPipelineSlot(claim.existingStatus);
       return jsonResponse({
-        success: existingSucceeded,
-        status: claim.existingStatus || 'RUNNING',
+        success: resolution.success,
+        status: resolution.status,
+        claimed_status: resolution.claimed_status,
         reason: 'PIPELINE_SLOT_ALREADY_CLAIMED',
         report_date: businessDate,
         phase,
         reason_codes: claim.existingReasonCodes,
         error_code: claim.existingErrorCode,
         version: VERSION,
-      });
+      }, resolution.success ? 200 : 409);
     }
     const activeRunId = String(claim.id);
     runId = activeRunId;
@@ -762,10 +765,16 @@ Deno.serve(async (req: Request) => {
         error: String(asRecord(asRecord(result).payload).error || 'ACTION_RETURNED_UNSUCCESSFUL').slice(0, 300),
       }));
     const actionFailureCodes = actionFailures.map((failure) => `action_failed:${failure.action}`);
-    const completed = actionFailures.length === 0 && state.premium_eligible &&
-      (clock.minutes < 7 * 60 + 20 || delivered || Object.keys(premiumDelivery).length === 0);
+    const completed = resolveDailyDeliveryCompletion({
+      phase,
+      action_failure_count: actionFailures.length,
+      premium_eligible: state.premium_eligible,
+      delivered,
+    });
     const status = completed ? 'SUCCEEDED' : 'DEGRADED';
-    const finalReasonCodes = Array.from(new Set([...state.reason_codes, ...actionFailureCodes]));
+    const finalReasonCodes = phase === 'refresh'
+      ? actionFailureCodes
+      : Array.from(new Set([...state.reason_codes, ...actionFailureCodes]));
     await finishPipelineRun(
       supabase,
       activeRunId,

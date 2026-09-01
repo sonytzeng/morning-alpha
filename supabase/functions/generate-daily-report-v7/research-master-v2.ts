@@ -1,3 +1,5 @@
+import { candidateEvidenceMatches } from "./candidate-evidence.ts";
+
 export type ResearchSourceStatus =
   | "complete"
   | "partial"
@@ -231,6 +233,11 @@ export interface ResearchMasterValidationResult {
   errors: string[];
   warnings: string[];
   quality: ResearchMasterQuality;
+}
+
+export interface ResearchMasterValidationContext {
+  evidenceIndex: ResearchEvidenceItem[];
+  candidateUniverse: Record<string, unknown>;
 }
 
 const SECTION_IDS = [
@@ -1441,8 +1448,51 @@ function duplicateStatements(
   return uniqueStrings(duplicates);
 }
 
+function unsupportedStockEvidenceRelationships(
+  master: ResearchMasterV2,
+  context: ResearchMasterValidationContext,
+): string[] {
+  const evidence = evidenceById(context.evidenceIndex);
+  const candidates = asRecords(context.candidateUniverse.candidates);
+  const unsupported: string[] = [];
+
+  for (const stock of master.sections.representative_stocks) {
+    if (!stock.reason || stock.evidence_refs.length === 0) continue;
+    const candidate = candidates.find((item) =>
+      stockSymbol(item) === stock.symbol.toUpperCase()
+    );
+    if (!candidate) {
+      unsupported.push(
+        `${stock.stock_id}:candidate_not_in_evidence_universe:${stock.reason}`,
+      );
+      continue;
+    }
+    const candidateTags = uniqueStrings([
+      stock.symbol,
+      stock.name,
+      firstText(candidate.symbol),
+      firstText(candidate.name),
+      firstText(candidate.industry_code),
+      firstText(candidate.industry),
+      firstText(candidate.sector),
+      ...asStrings(candidate.trigger_tags),
+    ]);
+    const relationshipSupported = stock.evidence_refs.some((evidenceId) => {
+      const item = evidence.get(evidenceId);
+      return item ? candidateEvidenceMatches(candidateTags, item) : false;
+    });
+    if (!relationshipSupported) {
+      unsupported.push(
+        `${stock.stock_id}:evidence_relationship_not_supported:${stock.reason}`,
+      );
+    }
+  }
+  return unsupported;
+}
+
 export function validateResearchMasterV2(
   master: ResearchMasterV2,
+  context?: ResearchMasterValidationContext,
 ): ResearchMasterValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -1542,6 +1592,9 @@ export function validateResearchMasterV2(
       unsupported.push(`${stock.stock_id}:${stock.reason}`);
     }
   });
+  if (context) {
+    unsupported.push(...unsupportedStockEvidenceRelationships(master, context));
+  }
   const symbols = master.sections.representative_stocks.map((stock) =>
     stock.symbol
   );

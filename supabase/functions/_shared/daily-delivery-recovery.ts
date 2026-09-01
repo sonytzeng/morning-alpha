@@ -29,6 +29,19 @@ export interface DailyDeliveryRecoveryPlan {
   retry_after_seconds: number | null;
 }
 
+export interface DailyDeliveryCompletionInput {
+  phase: DailyDeliveryPhase;
+  action_failure_count: number;
+  premium_eligible: boolean;
+  delivered: boolean;
+}
+
+export interface ClaimedPipelineSlotResolution {
+  success: boolean;
+  status: 'SKIPPED' | 'DEGRADED' | 'FAILED';
+  claimed_status: string;
+}
+
 const NEWS_REASONS = new Set([
   'news_traceability_incomplete',
   'verified_catalyst_evidence_missing',
@@ -91,6 +104,35 @@ export function resolveDailyDeliveryPhase(taipeiMinutes: number): DailyDeliveryP
   if (taipeiMinutes < 7 * 60 + 20) return 'repair';
   if (taipeiMinutes < 7 * 60 + 30) return 'deliver';
   return 'watchdog';
+}
+
+export function resolveDailyDeliveryCompletion(
+  input: DailyDeliveryCompletionInput,
+): boolean {
+  if (input.action_failure_count > 0) return false;
+  if (input.phase === 'refresh') return true;
+  if (input.phase === 'generate' || input.phase === 'repair') {
+    return input.premium_eligible;
+  }
+  return input.premium_eligible && input.delivered;
+}
+
+export function resolveClaimedPipelineSlot(
+  existingStatus: string | null | undefined,
+): ClaimedPipelineSlotResolution {
+  const claimedStatus = String(existingStatus || 'UNKNOWN').toUpperCase();
+  if (['RUNNING', 'SUCCEEDED', 'SKIPPED'].includes(claimedStatus)) {
+    return {
+      success: true,
+      status: 'SKIPPED',
+      claimed_status: claimedStatus,
+    };
+  }
+  return {
+    success: false,
+    status: claimedStatus === 'FAILED' ? 'FAILED' : 'DEGRADED',
+    claimed_status: claimedStatus,
+  };
 }
 
 export function buildDailyDeliveryRecoveryPlan(

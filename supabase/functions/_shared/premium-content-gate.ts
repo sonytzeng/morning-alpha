@@ -1,6 +1,7 @@
 import {
   evaluateDecisionSentenceValue,
   evaluateContentIntelligence,
+  hasAuditedCanonicalNoTrade,
   hasDecisionGradeSourceCoverage,
   type ContentScoreBreakdown,
 } from './content-intelligence.ts';
@@ -172,9 +173,12 @@ export function evaluatePremiumContentGate(
   const observationRows = asRecords(ai.v10_observation_watchlist);
   const sourcedObservationRows = observationRows.filter(hasSpecificSource);
   const recommendationMode = rows.length > 0;
-  const noTradeMode = rows.length === 0
+  const auditedCanonicalNoTrade = hasAuditedCanonicalNoTrade(ai);
+  const noTradeMode = auditedCanonicalNoTrade || (
+    rows.length === 0
     && dataQualityStatus === 'insufficient_positive_evidence'
-    && observationRows.length >= 3;
+    && observationRows.length >= 3
+  );
   const decisionSourceCoverage = hasDecisionGradeSourceCoverage(
     ai,
     noTradeMode ? 'no_trade' : 'recommendations',
@@ -226,7 +230,8 @@ export function evaluatePremiumContentGate(
   const hasFreshCatalystEvidence = verifiedNewsCount + verifiedMarketCount > 0
     && (
       (decisionSourceCoverage && rows.length > 0 && completeRows.length === rows.length)
-      || (decisionSourceCoverage && noTradeMode && sourcedObservationRows.length === observationRows.length)
+      || (decisionSourceCoverage && auditedCanonicalNoTrade)
+      || (decisionSourceCoverage && noTradeMode && observationRows.length > 0 && sourcedObservationRows.length === observationRows.length)
     );
   if (!hasFreshCatalystEvidence) reasons.push('fresh_catalyst_evidence_missing');
   if (rows.length > 0 && completeRows.length !== rows.length) reasons.push('recommendation_reasoning_incomplete');

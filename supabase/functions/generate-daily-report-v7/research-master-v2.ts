@@ -536,6 +536,33 @@ function sourceStatus(
   return hasLegacyResearch ? "legacy_mapped" : "insufficient";
 }
 
+function isCanonicalV10NoTrade(
+  input: ResearchMasterV2AssemblerInput,
+): boolean {
+  return firstText(input.legacy.v10_data_quality_status).toLowerCase() ===
+      "insufficient_positive_evidence" &&
+    asRecords(input.legacy.today_beneficiary_stocks_v10).length === 0;
+}
+
+function canonicalNoTradeEvidence(
+  input: ResearchMasterV2AssemblerInput,
+): ResearchEvidenceItem[] {
+  return [...input.evidenceIndex]
+    .filter((item) => item.evidence_id && item.evidence_type !== "previous_validation")
+    .sort((left, right) => (Number(right.importance) || 0) - (Number(left.importance) || 0))
+    .slice(0, 5);
+}
+
+function canonicalNoTradeEvidenceNarrative(
+  input: ResearchMasterV2AssemblerInput,
+): string {
+  return compactTextParts(
+    canonicalNoTradeEvidence(input).map((item) =>
+      firstText(item.summary, item.title, item.raw_reference)
+    ),
+  ) || INSUFFICIENT_TEXT;
+}
+
 function primaryResearchText(
   legacy: Record<string, unknown>,
   note: Record<string, unknown>,
@@ -588,6 +615,24 @@ function buildTransmissionPath(
       evidence_refs: evidenceRefs,
     });
   };
+
+  if (isCanonicalV10NoTrade(input)) {
+    for (const item of canonicalNoTradeEvidence(input)) {
+      const type = firstText(item.evidence_type).toLowerCase();
+      const stage: TransmissionStage = type === "market_news"
+        ? "global_event"
+        : type === "sector_rotation"
+        ? "taiwan_market"
+        : "validation";
+      add(
+        stage,
+        firstText(item.title, item.source, item.evidence_id),
+        firstText(item.summary, item.title, item.raw_reference),
+        [item.evidence_id],
+      );
+    }
+    return paths;
+  }
 
   const memberChains = asRecords(note.overnight_chain);
   for (const chain of memberChains.slice(0, 3)) {
@@ -840,6 +885,10 @@ function buildRepresentativeStocks(
   const v10Recommendations = asRecords(
     input.legacy.today_beneficiary_stocks_v10,
   );
+  // An explicit V10 no-trade decision is canonical. Legacy candidates and
+  // observation roles remain in the audit payload, but must never reappear as
+  // paid recommendations or representative stocks.
+  if (isCanonicalV10NoTrade(input)) return [];
   const v10Symbols = new Set(
     v10Recommendations.map(stockSymbol).filter(Boolean),
   );
@@ -1214,6 +1263,7 @@ export function assembleResearchMasterV2(
     safeIdPart(input.engineVersion)
   }`;
   const hasResearch = coreStatement !== INSUFFICIENT_TEXT;
+  const canonicalNoTrade = isCanonicalV10NoTrade(input);
   const status = sourceStatus(input, hasResearch, thesisRefs.length > 0);
   const transmissionPath = buildTransmissionPath(input, note);
   const intraday = asRecords(note.intraday_validation);
@@ -1222,20 +1272,28 @@ export function assembleResearchMasterV2(
   const previousValidation = asRecord(
     input.normalizedEvidence.previous_validation,
   );
-  const whyNarrative = compactTextParts([
-    ...asRecords(note.overnight_chain).flatMap((
-      chain,
-    ) => [chain.event, chain.impact_logic, chain.taiwan_mapping]),
-    thesis.market_story,
-    marketContext.macro_summary,
-  ]) || INSUFFICIENT_TEXT;
-  const whatChanged = firstText(
-    marketContext.primary_event,
-    previousValidation.summary,
-    previousValidation.previous_market_bias,
-    asRecords(note.overnight_chain)[0]?.event,
-    INSUFFICIENT_TEXT,
-  );
+  const whyNarrative = canonicalNoTrade
+    ? canonicalNoTradeEvidenceNarrative(input)
+    : compactTextParts([
+      ...asRecords(note.overnight_chain).flatMap((
+        chain,
+      ) => [chain.event, chain.impact_logic, chain.taiwan_mapping]),
+      thesis.market_story,
+      marketContext.macro_summary,
+    ]) || INSUFFICIENT_TEXT;
+  const whatChanged = canonicalNoTrade
+    ? firstText(
+      canonicalNoTradeEvidence(input)[0]?.summary,
+      canonicalNoTradeEvidence(input)[0]?.title,
+      INSUFFICIENT_TEXT,
+    )
+    : firstText(
+      marketContext.primary_event,
+      previousValidation.summary,
+      previousValidation.previous_market_bias,
+      asRecords(note.overnight_chain)[0]?.event,
+      INSUFFICIENT_TEXT,
+    );
   const primaryValidationAxis = firstText(
     thesis.primary_validation_axis,
     intraday[0]?.what_to_watch,
@@ -1298,9 +1356,9 @@ export function assembleResearchMasterV2(
   const capitalScenarios = asRecords(note.capital_rotation_scenarios);
   const riskScenarios = asRecords(note.risk_scenarios);
   const successAction = firstText(
-    tomorrow.continuation_condition,
-    capitalScenarios[0]?.beneficiary_impact,
-    closingPlan.success_criteria,
+    canonicalNoTrade ? primaryValidationAxis : tomorrow.continuation_condition,
+    canonicalNoTrade ? "" : capitalScenarios[0]?.beneficiary_impact,
+    canonicalNoTrade ? "" : closingPlan.success_criteria,
     CHECKPOINT_INSUFFICIENT_TEXT,
   );
   const failureAction = firstText(
@@ -1312,7 +1370,7 @@ export function assembleResearchMasterV2(
     section_id: "next_action",
     if_success: {
       action: successAction,
-      what_to_promote: uniqueStrings([
+      what_to_promote: canonicalNoTrade ? [] : uniqueStrings([
         ...asStrings(capitalScenarios[0]?.groups_to_watch),
         ...representativeStocks.filter((stock) =>
           stock.data_status === "complete"
@@ -1330,12 +1388,14 @@ export function assembleResearchMasterV2(
       next_checkpoint_id: checkpointId(input.reportDate, "14:10"),
     },
   };
-  const transmissionNarrative = compactTextParts([
-    ...coreReasoning,
-    whyNarrative,
-    thesis.taiwan_transmission,
-    ...transmissionPath.map((path) => path.claim),
-  ]) || INSUFFICIENT_TEXT;
+  const transmissionNarrative = compactTextParts(canonicalNoTrade
+    ? [whyNarrative, coreStatement, ...transmissionPath.map((path) => path.claim)]
+    : [
+      ...coreReasoning,
+      whyNarrative,
+      thesis.taiwan_transmission,
+      ...transmissionPath.map((path) => path.claim),
+    ]) || INSUFFICIENT_TEXT;
   const executiveText = coreStatement;
   const reelsParts = {
     hook: executiveText,

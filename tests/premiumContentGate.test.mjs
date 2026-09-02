@@ -71,6 +71,39 @@ function validAi() {
   };
 }
 
+function auditedCanonicalNoTrade() {
+  const ai = validAi();
+  const thesis = 'NASDAQ 下跌 1.27% 且台積電偏弱；09:30 驗證電子權值是否止跌，若沒有族群同步，今日不建立受惠股。';
+  ai.today_beneficiary_stocks_v10 = [];
+  ai.v10_data_quality_status = 'insufficient_positive_evidence';
+  ai.v10_observation_watchlist = [];
+  ai.today_quote = thesis;
+  ai.today_core_thesis = thesis;
+  ai.free_summary.one_sentence = thesis;
+  ai.member_research_note_v2.today_core_thesis = thesis;
+  ai.research_master_v2 = {
+    provenance: { source_status: 'complete' },
+    sections: {
+      core_thesis: { status: 'proposed', statement: thesis, evidence_refs: ['MD002', 'SEC004'] },
+      transmission_narrative: {
+        narrative: 'NASDAQ 下跌 1.27%，台積電偏弱，盤中只驗證電子權值是否止跌。',
+        path: [{ claim: 'NASDAQ 下跌 1.27%', evidence_refs: ['MD002'] }],
+      },
+      supporting_evidence: [{ statement: '台積電偏弱', evidence_refs: ['MD002'] }],
+      representative_stocks: [],
+      decision_guide: { current_action: '未確認族群同步前不建立受惠股。' },
+      timeline: [{ time: '09:00' }, { time: '09:30' }, { time: '13:00' }],
+      failure_scenario: { triggers: [{ condition: '電子權值持續轉弱' }] },
+      next_action: { if_failure: { action: '維持不建立受惠股並等待下一個檢查點。' } },
+    },
+    quality: {
+      publish_status: 'ready', evidence_coverage: 100, unsupported_claims: [],
+      duplicate_claims: [], contradictions: [], missing_sections: [],
+    },
+  };
+  return ai;
+}
+
 test('premium content is eligible only with fresh news and complete stock reasoning', () => {
   const result = evaluatePremiumContentGate(validAi(), 2);
   assert.equal(result.eligible, true, JSON.stringify(result));
@@ -279,6 +312,22 @@ test('an evidence-backed no-trade decision remains valuable premium research', (
   assert.equal(result.eligible, true);
   assert.equal(result.decision_mode, 'no_trade');
   assert.equal(result.recommendation_count, 0);
+});
+
+test('premium accepts a fully audited canonical no-trade report without legacy observation filler', () => {
+  const result = evaluatePremiumContentGate(auditedCanonicalNoTrade(), 1);
+  assert.equal(result.eligible, true, JSON.stringify(result));
+  assert.equal(result.decision_mode, 'no_trade');
+  assert.equal(result.recommendation_count, 0);
+  assert.ok(result.content_score >= 90);
+});
+
+test('premium blocks canonical no-trade when legacy stock claims leak into the research master', () => {
+  const ai = auditedCanonicalNoTrade();
+  ai.research_master_v2.sections.representative_stocks = [{ symbol: '2881' }];
+  const result = evaluatePremiumContentGate(ai, 1);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('no_trade_decision_incomplete'));
 });
 
 test('premium gate measures five-layer causal depth instead of requiring five unrelated events', () => {

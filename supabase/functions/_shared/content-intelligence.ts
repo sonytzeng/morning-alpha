@@ -149,12 +149,62 @@ function hasAuditableCurrentEvidence(ai: JsonRecord): boolean {
     && Math.max(0, Number(evidenceQuality.blank_market_change_count) || 0) === 0;
 }
 
+/**
+ * A zero-stock report is publishable only when the canonical research master
+ * explicitly records a fully audited no-trade decision. This deliberately
+ * ignores legacy candidate/observation rows so rejected model suggestions
+ * cannot leak back into Premium content through an older scoring path.
+ */
+export function hasAuditedCanonicalNoTrade(aiValue: unknown): boolean {
+  const ai = asRecord(aiValue);
+  if (asText(ai.v10_data_quality_status).toLowerCase() !== 'insufficient_positive_evidence') return false;
+  if (recommendationRows(ai).length > 0 || !hasAuditableCurrentEvidence(ai)) return false;
+
+  const master = asRecord(ai.research_master_v2);
+  const quality = asRecord(master.quality);
+  const provenance = asRecord(master.provenance);
+  const sections = asRecord(master.sections);
+  const core = asRecord(sections.core_thesis);
+  const transmission = asRecord(sections.transmission_narrative);
+  const decisionGuide = asRecord(sections.decision_guide);
+  const failureScenario = asRecord(sections.failure_scenario);
+  const nextAction = asRecord(sections.next_action);
+  const ifFailure = asRecord(nextAction.if_failure);
+  const supporting = asRecords(sections.supporting_evidence);
+  const representativeStocks = asRecords(sections.representative_stocks);
+  const timeline = asRecords(sections.timeline);
+  const path = asRecords(transmission.path);
+  const unsupported = Array.isArray(quality.unsupported_claims) ? quality.unsupported_claims : [];
+  const contradictions = Array.isArray(quality.contradictions) ? quality.contradictions : [];
+  const missing = Array.isArray(quality.missing_sections) ? quality.missing_sections : [];
+
+  return asText(quality.publish_status).toLowerCase() === 'ready'
+    && Number(quality.evidence_coverage) >= 100
+    && unsupported.length === 0
+    && contradictions.length === 0
+    && missing.length === 0
+    && asText(provenance.source_status).toLowerCase() === 'complete'
+    && representativeStocks.length === 0
+    && asText(core.status).toLowerCase() === 'proposed'
+    && asText(core.statement).length >= 20
+    && Array.isArray(core.evidence_refs) && core.evidence_refs.length > 0
+    && supporting.length > 0
+    && supporting.every((row) => Array.isArray(row.evidence_refs) && row.evidence_refs.length > 0)
+    && path.length > 0
+    && path.every((row) => Array.isArray(row.evidence_refs) && row.evidence_refs.length > 0)
+    && timeline.length >= 3
+    && asText(decisionGuide.current_action).length >= 8
+    && asRecords(failureScenario.triggers).length > 0
+    && asText(ifFailure.action).length >= 8;
+}
+
 function hasCompleteDecisionEvidence(
   ai: JsonRecord,
   mode: 'recommendations' | 'no_trade',
 ): boolean {
   if (!hasAuditableCurrentEvidence(ai)) return false;
   if (mode === 'no_trade') {
+    if (hasAuditedCanonicalNoTrade(ai)) return true;
     const observations = asRecords(ai.v10_observation_watchlist);
     return observations.length >= 3 && observations.every(hasSpecificSource);
   }
@@ -350,9 +400,12 @@ export function evaluateContentIntelligence(
   const note = asRecord(ai.member_research_note_v2);
   const recommendations = recommendationRows(ai);
   const observations = asRecords(ai.v10_observation_watchlist);
-  const noTradeMode = recommendations.length === 0
+  const auditedCanonicalNoTrade = hasAuditedCanonicalNoTrade(ai);
+  const noTradeMode = auditedCanonicalNoTrade || (
+    recommendations.length === 0
     && String(ai.v10_data_quality_status).toLowerCase() === 'insufficient_positive_evidence'
-    && observations.length >= 3;
+    && observations.length >= 3
+  );
   const decisionSourceCoverage = hasDecisionGradeSourceCoverage(
     ai,
     noTradeMode ? 'no_trade' : 'recommendations',
@@ -378,7 +431,7 @@ export function evaluateContentIntelligence(
   const blankMarketChangeCount = Math.max(0, Number(evidenceQuality.blank_market_change_count) || 0);
   const allSourcesSpecific = recommendations.length > 0
     ? recommendations.every(hasSpecificSource)
-    : noTradeMode && observations.every((row) => hasSpecificSource(row));
+    : auditedCanonicalNoTrade || (noTradeMode && observations.every((row) => hasSpecificSource(row)));
   const eventCoverage = recommendations.length > 0 && recommendations.every((row) => {
     const eventLabel = firstText(row.trigger_event, row.catalyst, row.event_source);
     const traceableSource = sourceText(row);
@@ -414,7 +467,11 @@ export function evaluateContentIntelligence(
     + (verifiedCatalystCount > 0 && (verifiedNewsCount === 0 || allNewsTraceable) ? 5 : 0));
   const taiwanRelevance = Math.min(15,
     (taiwanCoverage || noTradeMode ? 10 : 0)
-    + (firstText(ai.taiwan_transmission, note.taiwan_transmission).length >= 12 || taiwanCoverage ? 5 : 0));
+    + (firstText(
+      ai.taiwan_transmission,
+      note.taiwan_transmission,
+      asRecord(asRecord(asRecord(ai.research_master_v2).sections).transmission_narrative).narrative,
+    ).length >= 12 || taiwanCoverage ? 5 : 0));
   const specificity = Math.min(10,
     (dailySentenceValue.concrete_marker_count >= 2 ? 6 : 0)
     + (eventCoverage || noTradeMode ? 4 : 0));

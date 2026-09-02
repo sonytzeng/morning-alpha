@@ -912,4 +912,16 @@ Deno.test("Case K: 2026-09-02 risk context cannot become financial or telecom re
     master.sections.core_thesis.evidence_refs.includes("MD001"),
     "SEMICONDUCTOR thesis must retain the genuinely related SOX evidence",
   );
+  assert(
+    !/金融股|電信股|防禦型股票|可能受益/.test(
+      `${master.sections.why_today_matters.narrative} ${master.sections.transmission_narrative.narrative}`,
+    ),
+    "rejected VIX-to-financial/telecom inference must not leak into canonical no-trade research",
+  );
+  assert(
+    master.sections.transmission_narrative.path.every((node) =>
+      node.evidence_refs.length > 0
+    ),
+    "canonical no-trade transmission nodes must all remain traceable",
+  );
 });

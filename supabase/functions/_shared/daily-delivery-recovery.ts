@@ -3,6 +3,7 @@ import { RUNTIME_QUALITY_POLICY } from './production-architecture-core.mjs';
 export type DailyDeliveryAction =
   | 'refresh_news'
   | 'refresh_market'
+  | 'refresh_sector_rotation'
   | 'regenerate_report'
   | 'deliver_premium'
   | 'deliver_incident';
@@ -73,7 +74,13 @@ const CONTENT_REASONS = new Set([
   'decision_snapshot_not_publishable',
 ]);
 const CONTENT_REPAIR_MAX_ATTEMPTS = 3;
-const EVIDENCE_DEPENDENCY_ACTIONS = ['refresh_news', 'refresh_market', 'regenerate_report'] as const;
+const SECTOR_ROTATION_REASON = /^sector_rotation_scores:\d{4}-\d{2}-\d{2}$/i;
+const EVIDENCE_DEPENDENCY_ACTIONS = [
+  'refresh_news',
+  'refresh_market',
+  'refresh_sector_rotation',
+  'regenerate_report',
+] as const;
 
 function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
@@ -170,9 +177,13 @@ export function buildDailyDeliveryRecoveryPlan(
       || includesReason(reasonCodes, MARKET_REASONS, 'unavailable_market_data:')) {
       actions.push('refresh_market');
     }
+    if (reasonCodes.some((reason) => SECTOR_ROTATION_REASON.test(reason))) {
+      actions.push('refresh_sector_rotation');
+    }
     if (!contentRepairBudgetExhausted && (includesReason(reasonCodes, CONTENT_REASONS)
       || actions.includes('refresh_news')
-      || actions.includes('refresh_market'))) {
+      || actions.includes('refresh_market')
+      || actions.includes('refresh_sector_rotation'))) {
       actions.push('regenerate_report');
     }
   }

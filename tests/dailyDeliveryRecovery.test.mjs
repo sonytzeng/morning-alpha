@@ -40,6 +40,17 @@ test('missing or stale market evidence routes to market recovery', () => {
   assert.deepEqual(plan.actions, ['refresh_market', 'regenerate_report']);
 });
 
+test('missing prior-day sector rotation is rebuilt before report regeneration', () => {
+  const plan = buildDailyDeliveryRecoveryPlan({
+    has_report: true,
+    premium_eligible: false,
+    reason_codes: ['sector_rotation_scores:2026-09-01'],
+    attempt: 1,
+    taipei_minutes: 7 * 60 + 5,
+  });
+  assert.deepEqual(plan.actions, ['refresh_sector_rotation', 'regenerate_report']);
+});
+
 test('an eligible report is delivered only in the delivery window', () => {
   const early = buildDailyDeliveryRecoveryPlan({
     has_report: true,
@@ -93,6 +104,7 @@ test('failed evidence dependencies block regeneration and premium delivery', () 
   assert.equal(hasFailedEvidenceDependency({ refresh_news: { ok: true }, refresh_market: { ok: true } }), false);
   assert.equal(hasFailedEvidenceDependency({ refresh_news: { ok: false }, refresh_market: { ok: true } }), true);
   assert.equal(hasFailedEvidenceDependency({ regenerate_report: { ok: false } }), true);
+  assert.equal(hasFailedEvidenceDependency({ refresh_sector_rotation: { ok: false } }), true);
   assert.equal(hasFailedEvidenceDependency({ deliver_incident: { ok: false } }), false);
 });
 

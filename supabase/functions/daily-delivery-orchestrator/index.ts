@@ -12,7 +12,7 @@ import {
   type DailyDeliveryPhase,
 } from '../_shared/daily-delivery-recovery.ts';
 
-const VERSION = 'DAILY_DELIVERY_V1.5_PHASE_IDEMPOTENCY';
+const VERSION = 'DAILY_DELIVERY_V1.6_SECTOR_ROTATION_RECOVERY';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -187,6 +187,11 @@ function checkpointResultOk(slug: string, checkpoint: string, result: FunctionRe
       'direction_completed_data_degraded',
     ].includes(String(payload.closing_verification_status || ''));
   }
+  if (slug === 'generate-sector-rotation') {
+    return payload.success === true
+      && /^\d{4}-\d{2}-\d{2}$/.test(String(payload.score_date || ''))
+      && Number(payload.inserted_count || payload.inserted || 0) > 0;
+  }
   return result.ok;
 }
 
@@ -195,6 +200,7 @@ async function executeRuntimeCheckpoint(
   cronSecret: string,
   checkpoint: string,
   source: 'supabase_cron_primary' | 'supabase_cron_watchdog',
+  businessDate: string,
 ): Promise<{ success: boolean; results: JsonRecord; failures: string[] }> {
   const results: JsonRecord = {};
   const failures: string[] = [];
@@ -241,6 +247,24 @@ async function executeRuntimeCheckpoint(
     || beneficiaryPayload.canonical_complete !== true
     || beneficiaryPayload.checkpoint_complete !== true) {
     failures.push('beneficiary_close_incomplete');
+    return { success: false, results, failures };
+  }
+
+  const currentTaipeiDate = taipeiClock().date;
+  const sectorRotation = await invokeFunctionWithRetry(
+    baseUrl,
+    'generate-sector-rotation',
+    cronSecret,
+    businessDate === currentTaipeiDate
+      ? { source }
+      : { source, backfill: true, target_date: businessDate },
+    300_000,
+    3,
+  );
+  results.sector_rotation = sectorRotation;
+  if (!checkpointResultOk('generate-sector-rotation', checkpoint, sectorRotation)
+    || String(sectorRotation.payload.score_date || '') !== businessDate) {
+    failures.push('sector_rotation_incomplete');
     return { success: false, results, failures };
   }
 
@@ -326,6 +350,7 @@ async function loadDeliveryState(
     && Number(memberRevisionRecord?.decision_snapshot_version) === Number(snapshotRecord?.version);
   const reasonCodes = Array.from(new Set([
     ...premiumGate.reason_codes,
+    ...asStringArray(ai.missing_sources),
     ...asStringArray(snapshotRecord?.reason_codes),
     ...(snapshotRecord ? [] : ['decision_snapshot_missing']),
     ...(snapshotReady ? [] : ['decision_snapshot_not_publishable']),
@@ -460,6 +485,25 @@ async function executeRecoveryActions(args: {
       recovery_attempt: args.attempt,
     }, 180_000).then((result) => { results.refresh_market = result; }));
   }
+  if (args.actions.includes('refresh_sector_rotation')) {
+    const targetDate = args.reasonCodes
+      .map((reason) => reason.match(/^sector_rotation_scores:(\d{4}-\d{2}-\d{2})$/i)?.[1] || '')
+      .find(Boolean);
+    refreshes.push(targetDate
+      ? invokeFunctionWithRetry(args.baseUrl, 'generate-sector-rotation', args.cronSecret, {
+        backfill: true,
+        target_date: targetDate,
+        recovery_attempt: args.attempt,
+        source: 'daily-delivery-orchestrator',
+      }, 300_000).then((result) => { results.refresh_sector_rotation = result; })
+      : Promise.resolve().then(() => {
+        results.refresh_sector_rotation = {
+          ok: false,
+          status: 400,
+          payload: { success: false, error: 'SECTOR_ROTATION_TARGET_DATE_MISSING' },
+        };
+      }));
+  }
   await Promise.all(refreshes);
 
   if (args.actions.includes('regenerate_report')) {
@@ -542,7 +586,13 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: true, status: 'SKIPPED_ALREADY_SUCCEEDED', report_date: businessDate, checkpoint, version: VERSION });
     }
     const runtimeSource = body.source === 'supabase_cron_watchdog' ? 'supabase_cron_watchdog' : 'supabase_cron_primary';
-    const execution = await executeRuntimeCheckpoint(`${supabaseUrl}/functions/v1`, cronSecret, checkpoint, runtimeSource);
+    const execution = await executeRuntimeCheckpoint(
+      `${supabaseUrl}/functions/v1`,
+      cronSecret,
+      checkpoint,
+      runtimeSource,
+      businessDate,
+    );
     return jsonResponse({
       success: execution.success,
       status: execution.success ? 'SUCCEEDED' : 'DEGRADED',
@@ -708,10 +758,12 @@ Deno.serve(async (req: Request) => {
 
     let actions = plan.actions;
     if (forceRegenerate) actions = ['regenerate_report'];
-    else if (phase === 'refresh') actions = actions.filter((action) => action === 'refresh_news' || action === 'refresh_market');
+    else if (phase === 'refresh') actions = actions.filter((action) =>
+      action === 'refresh_news' || action === 'refresh_market' || action === 'refresh_sector_rotation'
+    );
     else if (phase === 'generate') actions = state.premium_eligible
       ? []
-      : actions.filter((action) => action === 'regenerate_report');
+      : actions.filter((action) => action === 'refresh_sector_rotation' || action === 'regenerate_report');
     else if (phase === 'deliver' && state.premium_eligible) actions = ['deliver_premium'];
 
     const actionResults = await executeRecoveryActions({
@@ -723,7 +775,12 @@ Deno.serve(async (req: Request) => {
       allowIncident: clock.minutes >= 7 * 60 + 30,
     });
 
-    if (actions.some((action) => action === 'refresh_news' || action === 'refresh_market' || action === 'regenerate_report')) {
+    if (actions.some((action) =>
+      action === 'refresh_news'
+      || action === 'refresh_market'
+      || action === 'refresh_sector_rotation'
+      || action === 'regenerate_report'
+    )) {
       state = await loadDeliveryState(supabase, businessDate);
       plan = buildDailyDeliveryRecoveryPlan({
         has_report: Boolean(state.report),

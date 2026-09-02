@@ -822,3 +822,94 @@ Deno.test("Case J: a cited but unrelated source cannot validate a stock recommen
     "unrelated stock evidence must reduce evidence coverage",
   );
 });
+
+Deno.test("Case K: 2026-09-02 risk context cannot become financial or telecom recommendations", () => {
+  const fixture = completeFixture();
+  fixture.reportDate = "2026-09-02";
+  fixture.todayDate = "2026-09-02";
+  fixture.legacy.today_beneficiary_stocks_v10 = [];
+  fixture.legacy.v10_data_quality_status = "insufficient_positive_evidence";
+  fixture.legacy.missing_sources = ["sector_rotation_scores:2026-09-01"];
+  fixture.evidencePack = {
+    data_quality: {
+      available_sources: ["market_data", "market_news"],
+      missing_sources: ["sector_rotation_scores:2026-09-01"],
+    },
+  };
+  fixture.evidenceIndex = [
+    {
+      evidence_id: "MD001",
+      evidence_type: "market_data",
+      source: "market_data",
+      title: "SOX",
+      summary: "SEMICONDUCTOR index provides a traceable industry risk signal.",
+      importance: 90,
+      freshness: "fresh",
+      raw_reference: "SOX",
+    },
+    {
+      evidence_id: "MD002",
+      evidence_type: "market_data",
+      source: "market_data",
+      title: "VIX",
+      summary: "VIX moved higher and the broad market entered a risk-off state.",
+      importance: 85,
+      freshness: "fresh",
+      raw_reference: "VIX",
+    },
+  ];
+  fixture.candidateUniverse = {
+    candidates: [
+      ...["2881", "2882", "2891"].map((symbol) => ({
+        symbol,
+        name: symbol,
+        industry_code: "FINANCIAL",
+        industry: "金融",
+        sector: "金融",
+        trigger_tags: ["RATE", "DEFENSIVE"],
+        related_evidence: [{ evidence_id: "MD002" }],
+      })),
+      {
+        symbol: "2412",
+        name: "中華電",
+        industry_code: "TELECOM",
+        industry: "電信",
+        sector: "電信",
+        trigger_tags: ["DEFENSIVE"],
+        related_evidence: [{ evidence_id: "MD002" }],
+      },
+    ],
+  };
+  const note = fixture.legacy.member_research_note_v2 as Record<string, unknown>;
+  note.today_core_thesis = "SEMICONDUCTOR 風險訊號仍需盤中確認。";
+  note.opening_thesis = {
+    summary: "SEMICONDUCTOR 風險訊號仍需盤中確認。",
+    confidence_score: 60,
+    signals: ["SEMICONDUCTOR", "VIX"],
+  };
+  note.beneficiary_candidates = [
+    ["2881", "富邦金"],
+    ["2882", "國泰金"],
+    ["2891", "中信金"],
+    ["2412", "中華電"],
+  ].map(([stock_code, stock_name]) => ({
+    stock_code,
+    stock_name,
+    reason: "VIX 上升可能使資金轉向防禦型股票。",
+    validation_signal: "盤中確認是否相對抗跌。",
+    invalidation_condition: "VIX 回落時停止觀察。",
+    evidence_refs: ["MD002"],
+  }));
+  fixture.legacy.v10_observation_watchlist = [];
+  fixture.legacy.v8_beneficiary_chain = { status: "insufficient", beneficiaries: [] };
+
+  const master = assembleResearchMasterV2(fixture);
+  assert(
+    master.sections.representative_stocks.length === 0,
+    `broad VIX context leaked into paid recommendations: ${master.sections.representative_stocks.map((stock) => stock.symbol).join(",")}`,
+  );
+  assert(
+    master.sections.core_thesis.evidence_refs.includes("MD001"),
+    "SEMICONDUCTOR thesis must retain the genuinely related SOX evidence",
+  );
+});

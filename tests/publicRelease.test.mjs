@@ -400,6 +400,9 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeCheckpointWorkflow, /closing-verification-engine/);
   assert.match(runtimeCheckpointWorkflow, /closing_verification_status/);
   assert.match(runtimeCheckpointWorkflow, /generate-sector-rotation/);
+  assert.match(dailyDeliveryOrchestrator, /generate-sector-rotation/);
+  assert.match(dailyDeliveryOrchestrator, /sector_rotation_incomplete/);
+  assert.match(dailyDeliveryOrchestrator, /refresh_sector_rotation/);
   assert.match(runtimeCheckpointWorkflow, /secrets\.CRON_SECRET/);
   assert.match(runtimeCheckpointWorkflow, /Wait until the checkpoint snapshot window/);
   assert.match(runtimeCheckpointWorkflow, /TZ=Asia\/Taipei/);

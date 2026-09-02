@@ -398,10 +398,10 @@ function searchText(value: string): string {
 }
 
 const EVIDENCE_TITLE_ALIASES: Record<string, string[]> = {
-  "nvda": ["nvidia", "輝達", "英偉達"],
-  "sox": ["費城半導體", "費半"],
-  "tsm": ["台積電adr", "台積電"],
-  "2330": ["台積電"],
+  "nvda": ["nvidia", "輝達", "英偉達", "semiconductor", "半導體", "晶片"],
+  "sox": ["費城半導體", "費半", "semiconductor", "半導體", "晶片"],
+  "tsm": ["台積電adr", "台積電", "semiconductor", "半導體", "晶片"],
+  "2330": ["台積電", "semiconductor", "半導體", "晶片"],
   "taiex": ["台灣加權", "加權指數", "台股大盤", "開盤方向"],
   "txf": ["台指期", "台灣期貨"],
   "nasdaq": ["那斯達克", "美股科技"],
@@ -807,6 +807,32 @@ function candidateUniverseRefs(
   );
 }
 
+function stockEvidenceRelationshipSupported(
+  stock: Pick<RepresentativeStockItem, "symbol" | "name" | "evidence_refs">,
+  candidateUniverse: ResearchMasterV2AssemblerInput["candidateUniverse"],
+  evidenceIndex: ResearchEvidenceItem[],
+): boolean {
+  const candidate = asRecords(candidateUniverse.candidates).find((item) =>
+    stockSymbol(item) === stock.symbol.toUpperCase()
+  );
+  if (!candidate) return false;
+  const candidateTags = uniqueStrings([
+    stock.symbol,
+    stock.name,
+    firstText(candidate.symbol),
+    firstText(candidate.name),
+    firstText(candidate.industry_code),
+    firstText(candidate.industry),
+    firstText(candidate.sector),
+    ...asStrings(candidate.trigger_tags),
+  ]);
+  const evidence = evidenceById(evidenceIndex);
+  return stock.evidence_refs.some((evidenceId) => {
+    const item = evidence.get(evidenceId);
+    return item ? candidateEvidenceMatches(candidateTags, item) : false;
+  });
+}
+
 function buildRepresentativeStocks(
   input: ResearchMasterV2AssemblerInput,
   note: Record<string, unknown>,
@@ -934,7 +960,13 @@ function buildRepresentativeStocks(
   // they are not claims that may enter the canonical paid research document.
   // This is an abstention rule, not a quality-gate bypass.
   return Array.from(result.values()).filter((item) =>
-    item.data_status === "complete" && item.evidence_refs.length > 0
+    item.data_status === "complete"
+    && item.evidence_refs.length > 0
+    && (v10Recommendations.length > 0 || stockEvidenceRelationshipSupported(
+      item,
+      input.candidateUniverse,
+      input.evidenceIndex,
+    ))
   );
 }
 
@@ -1452,36 +1484,24 @@ function unsupportedStockEvidenceRelationships(
   master: ResearchMasterV2,
   context: ResearchMasterValidationContext,
 ): string[] {
-  const evidence = evidenceById(context.evidenceIndex);
-  const candidates = asRecords(context.candidateUniverse.candidates);
   const unsupported: string[] = [];
 
   for (const stock of master.sections.representative_stocks) {
     if (!stock.reason || stock.evidence_refs.length === 0) continue;
-    const candidate = candidates.find((item) =>
+    const candidateExists = asRecords(context.candidateUniverse.candidates).some((item) =>
       stockSymbol(item) === stock.symbol.toUpperCase()
     );
-    if (!candidate) {
+    if (!candidateExists) {
       unsupported.push(
         `${stock.stock_id}:candidate_not_in_evidence_universe:${stock.reason}`,
       );
       continue;
     }
-    const candidateTags = uniqueStrings([
-      stock.symbol,
-      stock.name,
-      firstText(candidate.symbol),
-      firstText(candidate.name),
-      firstText(candidate.industry_code),
-      firstText(candidate.industry),
-      firstText(candidate.sector),
-      ...asStrings(candidate.trigger_tags),
-    ]);
-    const relationshipSupported = stock.evidence_refs.some((evidenceId) => {
-      const item = evidence.get(evidenceId);
-      return item ? candidateEvidenceMatches(candidateTags, item) : false;
-    });
-    if (!relationshipSupported) {
+    if (!stockEvidenceRelationshipSupported(
+      stock,
+      context.candidateUniverse,
+      context.evidenceIndex,
+    )) {
       unsupported.push(
         `${stock.stock_id}:evidence_relationship_not_supported:${stock.reason}`,
       );

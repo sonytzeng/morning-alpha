@@ -155,10 +155,10 @@ function hasAuditableCurrentEvidence(ai: JsonRecord): boolean {
  * ignores legacy candidate/observation rows so rejected model suggestions
  * cannot leak back into Premium content through an older scoring path.
  */
-export function hasAuditedCanonicalNoTrade(aiValue: unknown): boolean {
+export function hasCanonicalNoTradeResearchMaster(aiValue: unknown): boolean {
   const ai = asRecord(aiValue);
   if (asText(ai.v10_data_quality_status).toLowerCase() !== 'insufficient_positive_evidence') return false;
-  if (recommendationRows(ai).length > 0 || !hasAuditableCurrentEvidence(ai)) return false;
+  if (recommendationRows(ai).length > 0) return false;
 
   const master = asRecord(ai.research_master_v2);
   const quality = asRecord(master.quality);
@@ -196,6 +196,12 @@ export function hasAuditedCanonicalNoTrade(aiValue: unknown): boolean {
     && asText(decisionGuide.current_action).length >= 8
     && asRecords(failureScenario.triggers).length > 0
     && asText(ifFailure.action).length >= 8;
+}
+
+export function hasAuditedCanonicalNoTrade(aiValue: unknown): boolean {
+  const ai = asRecord(aiValue);
+  return hasAuditableCurrentEvidence(ai)
+    && hasCanonicalNoTradeResearchMaster(ai);
 }
 
 function hasCompleteDecisionEvidence(

@@ -32,6 +32,7 @@ import {
   deriveEvidenceBackedTaiwanTransmission,
   evaluateContentIntelligence,
   hasAuditedCanonicalNoTrade,
+  hasCanonicalNoTradeResearchMaster,
   isDecisionCriticalMissingSource,
   normalizeEvidenceLeadForChineseSentence,
 } from '../_shared/content-intelligence.ts';
@@ -1647,7 +1648,9 @@ function calculateMemberValueScore(ai:Record<string,unknown>,dataQuality:string,
   }else{
     const v10Status=String(ai.v10_data_quality_status||'').toLowerCase();
     const observationCount=Array.isArray(ai.v10_observation_watchlist)?ai.v10_observation_watchlist.length:0;
-    const evidenceBackedNoTrade=hasAuditedCanonicalNoTrade(ai)||(v10Status==='insufficient_positive_evidence'&&observationCount>=3&&freshNewsCount>=1);
+    const evidenceBackedNoTrade=hasAuditedCanonicalNoTrade(ai)
+      ||(hasCanonicalNoTradeResearchMaster(ai)&&freshNewsCount>=1)
+      ||(v10Status==='insufficient_positive_evidence'&&observationCount>=3&&freshNewsCount>=1);
     if(evidenceBackedNoTrade)score+=25;
   }
   return Math.max(0,Math.min(100,score));

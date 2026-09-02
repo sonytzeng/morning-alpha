@@ -4,6 +4,8 @@ import {
   deriveEvidenceBackedTaiwanTransmission,
   detectGenericContent,
   evaluateContentIntelligence,
+  hasAuditedCanonicalNoTrade,
+  hasCanonicalNoTradeResearchMaster,
 } from '../supabase/functions/_shared/content-intelligence.ts';
 
 function strongResearch() {
@@ -132,6 +134,13 @@ test('canonical audited no-trade remains publishable without legacy observation 
   assert.equal(result.publishable, true, JSON.stringify(result));
   assert.ok(result.score >= 90, JSON.stringify(result));
   assert.equal(result.reason_codes.includes('decision_mode_incomplete'), false);
+});
+
+test('canonical no-trade research can be verified before the write-time evidence contract exists', () => {
+  const ai = auditedCanonicalNoTrade();
+  delete ai.content_evidence_quality;
+  assert.equal(hasCanonicalNoTradeResearchMaster(ai), true);
+  assert.equal(hasAuditedCanonicalNoTrade(ai), false);
 });
 
 test('canonical no-trade fails closed when a rejected stock leaks into the research master', () => {

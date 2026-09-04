@@ -6,6 +6,7 @@ import {
   alphaCoachSourcesAreValid,
   buildGroundedAlphaCoachAnswer,
   evaluateAlphaCoachContext,
+  normalizeReportImportantNews,
   type AlphaCoachSource,
   validateAlphaCoachQuestion,
 } from '../_shared/alpha-coach-contract.ts';
@@ -94,32 +95,87 @@ async function readBody(req: Request): Promise<JsonRecord> {
   return parsed as JsonRecord;
 }
 
+type GlossaryMatch = (typeof OFFICIAL_GLOSSARY)[number] | undefined;
+
+function sourceLabel(value: JsonRecord): string {
+  return firstText(value.title, value.headline, value.label, value.source, value.name, value.evidence_id, value.id);
+}
+
+function sourceUrl(value: JsonRecord): string | undefined {
+  const candidate = firstText(value.url, value.source_url, value.link);
+  return /^https:\/\//i.test(candidate) ? candidate : undefined;
+}
+
 function collectStoredSources(
+  report: JsonRecord,
   snapshot: JsonRecord,
   member: JsonRecord,
+  importantNews: JsonRecord[],
   dataAsOf: string,
-): AlphaCoachSource[] {
+  glossaryMatch: GlossaryMatch,
+): { sources: AlphaCoachSource[]; storedEvidenceCount: number } {
   const sources: AlphaCoachSource[] = [{
     id: 'S1',
     label: `Morning Alpha Decision Snapshot v${text(snapshot.version)}`,
     data_as_of: dataAsOf,
+    supports: ['relation_to_today', 'confirmation_conditions', 'invalidation_conditions', 'data_source_and_time'],
   }, {
     id: 'S2',
     label: `Morning Alpha Member Research Revision v${text(member.revision)}`,
     data_as_of: text(member.generated_at) || dataAsOf,
+    supports: ['plain_explanation', 'relation_to_today', 'supporting_evidence', 'confirmation_conditions', 'invalidation_conditions', 'data_source_and_time'],
+  }, {
+    id: 'S3',
+    label: `Morning Alpha 正式報告 ${text(report.report_date)}`,
+    data_as_of: firstText(report.updated_at, report.created_at, dataAsOf),
+    supports: ['relation_to_today', 'data_source_and_time'],
   }];
-  OFFICIAL_GLOSSARY.forEach((item, index) => sources.push({
-    id: `S${index + 3}`,
-    label: `名詞來源：${item.term}`,
-    url: item.url,
-    data_as_of: dataAsOf,
-  }));
-  return sources;
+
+  const memberContent = asObject(member.member_content);
+  const canonical = asObject(member.canonical_contract);
+  const storedCandidates: unknown[] = [
+    ...asRecords(snapshot.source_refs),
+    ...(Array.isArray(snapshot.source_refs) ? snapshot.source_refs.filter((item) => typeof item === 'string') : []),
+    ...asRecords(memberContent.source_refs),
+    ...(Array.isArray(memberContent.source_refs) ? memberContent.source_refs.filter((item) => typeof item === 'string') : []),
+    ...asRecords(canonical.evidence_refs),
+    ...(Array.isArray(canonical.evidence_refs) ? canonical.evidence_refs.filter((item) => typeof item === 'string') : []),
+    ...importantNews.flatMap((item) => [item, ...asRecords(item.source_refs)]),
+  ];
+  const seen = new Set<string>();
+  let storedEvidenceCount = 0;
+  for (const candidate of storedCandidates) {
+    const row = typeof candidate === 'string' ? { label: candidate } : asObject(candidate);
+    const label = sourceLabel(row);
+    const url = sourceUrl(row);
+    if (!label && !url) continue;
+    const dedupeKey = (url || label).trim().toLowerCase();
+    if (!dedupeKey || seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    storedEvidenceCount += 1;
+    sources.push({
+      id: `S${sources.length + 1}`,
+      label: label || `正式證據來源 ${storedEvidenceCount}`,
+      url,
+      data_as_of: firstText(row.published_at, row.data_as_of, row.captured_at, dataAsOf),
+      supports: ['supporting_evidence'],
+    });
+  }
+
+  if (glossaryMatch) {
+    sources.push({
+      id: `S${sources.length + 1}`,
+      label: `名詞來源：${glossaryMatch.term}`,
+      url: glossaryMatch.url,
+      data_as_of: dataAsOf,
+      supports: ['plain_explanation'],
+    });
+  }
+  return { sources, storedEvidenceCount };
 }
 
-function matchingGlossaryExplanation(question: string): string {
-  const match = OFFICIAL_GLOSSARY.find((item) => question.toLowerCase().includes(item.term.toLowerCase()));
-  return match?.explanation || '以下說明只整理今天正式報告已確認的劇本、證據與驗證條件。';
+function matchingGlossary(question: string): GlossaryMatch {
+  return OFFICIAL_GLOSSARY.find((item) => question.toLowerCase().includes(item.term.toLowerCase()));
 }
 
 Deno.serve(async (req: Request) => {
@@ -177,9 +233,18 @@ Deno.serve(async (req: Request) => {
   const memberContent = asObject(member.member_content);
   const canonical = asObject(member.canonical_contract);
   const generatedText = asObject(snapshot.generated_text);
-  const premiumGate = evaluatePremiumContentGate(ai, asRecords(report.important_news).length);
+  const importantNews = normalizeReportImportantNews(report);
+  const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
   const dataAsOf = firstText(snapshot.data_as_of, snapshot.generated_at, report.updated_at, report.created_at);
-  const sources = collectStoredSources(snapshot, member, dataAsOf);
+  const glossaryMatch = matchingGlossary(questionCheck.question);
+  const { sources, storedEvidenceCount } = collectStoredSources(
+    report,
+    snapshot,
+    member,
+    importantNews,
+    dataAsOf,
+    glossaryMatch,
+  );
   const contextGate = evaluateAlphaCoachContext({
     today,
     reportDate: report.report_date,
@@ -195,7 +260,7 @@ Deno.serve(async (req: Request) => {
     memberSnapshotId: member.decision_snapshot_id,
     memberSnapshotVersion: member.decision_snapshot_version,
     premiumEligible: premiumGate.eligible,
-    sourceCount: sources.length,
+    sourceCount: storedEvidenceCount,
   });
   if (!contextGate.eligible) {
     console.warn('ALPHA_COACH_CONTEXT_BLOCKED', { reason_codes: contextGate.reasonCodes });
@@ -224,7 +289,7 @@ Deno.serve(async (req: Request) => {
     ...textList(ai.risk_checklist),
   ];
   const answer = buildGroundedAlphaCoachAnswer({
-    plainExplanation: matchingGlossaryExplanation(questionCheck.question),
+    plainExplanation: glossaryMatch?.explanation || '以下說明只整理今天正式報告已確認的劇本、證據與驗證條件。',
     relationToToday: thesis,
     supportingEvidence: evidence,
     confirmationConditions: confirmation,

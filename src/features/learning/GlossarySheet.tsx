@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { findLearningTerm, type LearningTerm } from './learningGlossary';
 import { trackEvent } from '@/utils/analytics';
@@ -10,23 +10,54 @@ type GlossarySheetProps = {
 };
 
 export default function GlossarySheet({ term, source = 'unknown', onClose }: GlossarySheetProps) {
+  const titleId = useId();
+  const descriptionId = useId();
+  const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const entry: LearningTerm | undefined = term ? findLearningTerm(term) : undefined;
 
   useEffect(() => {
     if (!entry) return undefined;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     closeButtonRef.current?.focus();
     trackEvent('learn_term_opened', { term: entry.slug, source });
 
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+    const handleDialogKeys = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = [...dialog.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )].filter((element) => !element.hasAttribute('hidden'));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener('keydown', closeOnEscape);
+    document.addEventListener('keydown', handleDialogKeys);
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', closeOnEscape);
+      document.removeEventListener('keydown', handleDialogKeys);
+      previousFocusRef.current?.focus();
+      previousFocusRef.current = null;
     };
   }, [entry, onClose, source]);
 
@@ -36,17 +67,24 @@ export default function GlossarySheet({ term, source = 'unknown', onClose }: Glo
     <div className="ma-glossary-sheet" role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();
     }}>
-      <section role="dialog" aria-modal="true" aria-labelledby="ma-glossary-title">
+      <section
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
+      >
         <header>
           <div>
             <span>{entry.category}</span>
-            <h2 id="ma-glossary-title">{entry.term}</h2>
+            <h2 id={titleId}>{entry.term}</h2>
           </div>
           <button ref={closeButtonRef} type="button" onClick={onClose} aria-label="關閉名詞解釋">
             <i className="ri-close-line" aria-hidden="true" />
           </button>
         </header>
-        <p className="ma-glossary-sheet__summary">{entry.plainExplanation}</p>
+        <p id={descriptionId} className="ma-glossary-sheet__summary">{entry.plainExplanation}</p>
         <dl>
           <div><dt>簡單例子</dt><dd>{entry.example}</dd></div>
           <div><dt>為什麼重要</dt><dd>{entry.whyItMatters}</dd></div>
@@ -55,7 +93,7 @@ export default function GlossarySheet({ term, source = 'unknown', onClose }: Glo
         </dl>
         <footer>
           <Link to={`/learn/${entry.slug}`} onClick={onClose}>查看完整解釋</Link>
-          <a href={entry.source.url} target="_blank" rel="noreferrer">{entry.source.label}<i className="ri-external-link-line" aria-hidden="true" /></a>
+          <a href={entry.source.url} target="_blank" rel="noopener noreferrer">{entry.source.label}<i className="ri-external-link-line" aria-hidden="true" /></a>
         </footer>
       </section>
     </div>

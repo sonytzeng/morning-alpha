@@ -65,8 +65,8 @@ export default function AlphaCoachPage() {
       <Navbar />
       <main>
         <section className="ma-alpha-coach-hero">
-          <div><p><i className="ri-shield-star-line" aria-hidden="true" />Owner Preview</p><h1>Alpha 教練</h1><span>只解釋今天已通過安全閘門的正式證據；資料不足，就明確拒答。</span></div>
-          <strong>零外部模型資料傳輸<small>不保存對話、不讀取個人持股</small></strong>
+          <div><p><i className="ri-shield-star-line" aria-hidden="true" />Owner Preview</p><h1>Alpha 教練測試版</h1><span>目前以規則式方法整理已通過安全閘門的正式報告，不使用生成式模型；資料不足就明確拒答。</span></div>
+          <strong>規則式整理<small>零外部模型資料傳輸、不保存對話、不讀取個人持股</small></strong>
         </section>
 
         <section className="ma-alpha-coach-workspace">
@@ -77,7 +77,7 @@ export default function AlphaCoachPage() {
           <form onSubmit={submitQuestion}>
             <label htmlFor="alpha-coach-question">想看懂今天報告的哪一段？</label>
             <textarea id="alpha-coach-question" value={question} onChange={(event) => setQuestion(event.target.value.slice(0, 280))} maxLength={280} rows={4} placeholder="例如：什麼情況下這個判斷會失效？" />
-            <div><small>{question.length}/280</small><button type="submit" disabled={!question.trim() || submitting}>{submitting ? '核對正式證據中…' : '請 Alpha 教練解釋'}</button></div>
+            <div><small>{question.length}/280</small><button type="submit" disabled={!question.trim() || submitting}>{submitting ? '核對正式證據中…' : '請測試版教練整理'}</button></div>
           </form>
         </section>
 
@@ -93,7 +93,7 @@ export default function AlphaCoachPage() {
                 <article><span>06</span><div><h2>資料來源與時間</h2><p>{answer.data_source_and_time}</p></div></article>
               </>
             ) : <p className="ma-alpha-coach-refusal">{answer}</p>}
-            {sources.length > 0 && <footer><strong>引用來源</strong>{sources.map((source) => source.url ? <a key={source.id} href={source.url} target="_blank" rel="noreferrer">[{source.id}] {source.label}</a> : <span key={source.id}>[{source.id}] {source.label}</span>)}</footer>}
+            {sources.length > 0 && <footer><strong>引用來源</strong>{sources.map((source) => source.url ? <a key={source.id} href={source.url} target="_blank" rel="noopener noreferrer">[{source.id}] {source.label}</a> : <span key={source.id}>[{source.id}] {source.label}</span>)}</footer>}
           </section>
         )}
       </main>

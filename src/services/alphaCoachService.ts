@@ -16,6 +16,14 @@ export type AlphaCoachSource = {
   label: string;
   url?: string;
   data_as_of?: string;
+  supports?: Array<
+    | 'plain_explanation'
+    | 'relation_to_today'
+    | 'supporting_evidence'
+    | 'confirmation_conditions'
+    | 'invalidation_conditions'
+    | 'data_source_and_time'
+  >;
 };
 
 export type AlphaCoachResponse = {

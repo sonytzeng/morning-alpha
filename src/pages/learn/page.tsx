@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
+import NotFound from '@/pages/NotFound';
 import { PRODUCT_FEATURE_FLAGS } from '@/config/productFeatures';
 import {
   filterLearningTerms,
@@ -26,7 +27,7 @@ function LearningDetail({ slug }: { slug: string }) {
     });
   }, [entry, slug]);
 
-  if (!entry) return <Navigate to="/learn" replace />;
+  if (!entry) return <NotFound />;
 
   return (
     <div className="ma-page ma-learn-page flex min-h-screen flex-col">
@@ -49,7 +50,7 @@ function LearningDetail({ slug }: { slug: string }) {
           <aside>
             <i className="ri-shield-check-line" aria-hidden="true" />
             <div><strong>查閱可靠來源</strong><p>名詞解釋僅供投資教育，不構成投資建議。</p></div>
-            <a href={entry.source.url} target="_blank" rel="noreferrer">{entry.source.label}<i className="ri-external-link-line" aria-hidden="true" /></a>
+            <a href={entry.source.url} target="_blank" rel="noopener noreferrer">{entry.source.label}<i className="ri-external-link-line" aria-hidden="true" /></a>
           </aside>
         </article>
       </main>

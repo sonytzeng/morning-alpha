@@ -22,6 +22,10 @@ const ACTIONS = {
     target: 'generate-daily-report-v7',
     defaultBody: { mode: 'canonical_member_recovery', source: 'ma-ops-safe-recovery', suppress_notifications: true },
   },
+  replay_strategy: {
+    target: 'strategy-replay-engine',
+    defaultBody: { dry_run: true },
+  },
   reconcile_learning_metrics: {
     target: 'continuous-learning-engine',
     defaultBody: { mode: 'metrics_reconciliation', source: 'ma-ops-safe-recovery', suppress_notifications: true },

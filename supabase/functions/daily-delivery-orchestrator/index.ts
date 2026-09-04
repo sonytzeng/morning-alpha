@@ -5,16 +5,19 @@ import { authorizeInternalRequest, buildInternalFunctionHeaders, constantTimeEqu
 import {
   buildDailyDeliveryRecoveryPlan,
   hasFailedEvidenceDependency,
+  resolveClaimedPipelineRetry,
+  resolveClaimedPipelineSlot,
+  resolveDailyDeliveryCompletion,
   resolveDailyDeliveryPhase,
   type DailyDeliveryAction,
   type DailyDeliveryPhase,
 } from '../_shared/daily-delivery-recovery.ts';
 
-const VERSION = 'DAILY_DELIVERY_V1.4_CONTENT_REPAIR_VERSION_BUDGET';
+const VERSION = 'DAILY_DELIVERY_V1.7_DUE_SLOT_RETRY';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, x-cron-secret, x-daily-delivery-token',
+  'Access-Control-Allow-Headers': 'Content-Type, x-cron-secret, x-daily-delivery-token, x-correlation-id',
   'Content-Type': 'application/json',
 };
 
@@ -185,6 +188,11 @@ function checkpointResultOk(slug: string, checkpoint: string, result: FunctionRe
       'direction_completed_data_degraded',
     ].includes(String(payload.closing_verification_status || ''));
   }
+  if (slug === 'generate-sector-rotation') {
+    return payload.success === true
+      && /^\d{4}-\d{2}-\d{2}$/.test(String(payload.score_date || ''))
+      && Number(payload.inserted_count || payload.inserted || 0) > 0;
+  }
   return result.ok;
 }
 
@@ -193,6 +201,7 @@ async function executeRuntimeCheckpoint(
   cronSecret: string,
   checkpoint: string,
   source: 'supabase_cron_primary' | 'supabase_cron_watchdog',
+  businessDate: string,
 ): Promise<{ success: boolean; results: JsonRecord; failures: string[] }> {
   const results: JsonRecord = {};
   const failures: string[] = [];
@@ -239,6 +248,24 @@ async function executeRuntimeCheckpoint(
     || beneficiaryPayload.canonical_complete !== true
     || beneficiaryPayload.checkpoint_complete !== true) {
     failures.push('beneficiary_close_incomplete');
+    return { success: false, results, failures };
+  }
+
+  const currentTaipeiDate = taipeiClock().date;
+  const sectorRotation = await invokeFunctionWithRetry(
+    baseUrl,
+    'generate-sector-rotation',
+    cronSecret,
+    businessDate === currentTaipeiDate
+      ? { source }
+      : { source, backfill: true, target_date: businessDate },
+    300_000,
+    3,
+  );
+  results.sector_rotation = sectorRotation;
+  if (!checkpointResultOk('generate-sector-rotation', checkpoint, sectorRotation)
+    || String(sectorRotation.payload.score_date || '') !== businessDate) {
+    failures.push('sector_rotation_incomplete');
     return { success: false, results, failures };
   }
 
@@ -324,6 +351,7 @@ async function loadDeliveryState(
     && Number(memberRevisionRecord?.decision_snapshot_version) === Number(snapshotRecord?.version);
   const reasonCodes = Array.from(new Set([
     ...premiumGate.reason_codes,
+    ...asStringArray(ai.missing_sources),
     ...asStringArray(snapshotRecord?.reason_codes),
     ...(snapshotRecord ? [] : ['decision_snapshot_missing']),
     ...(snapshotReady ? [] : ['decision_snapshot_not_publishable']),
@@ -348,38 +376,107 @@ async function claimPipelineSlot(
 ): Promise<{
   acquired: boolean;
   id: string | null;
+  attempt: number;
+  retryOfId: string | null;
+  retryDecision: string | null;
   existingStatus: string | null;
   existingReasonCodes: string[];
   existingErrorCode: string | null;
 }> {
-  const idempotencyKey = `${reportDate}:PREMARKET:${phase}:${slot}`;
-  const { data, error } = await supabase
-    .from('pipeline_runs')
-    .insert({
+  const baseIdempotencyKey = `${reportDate}:PREMARKET:${phase}:${slot}`;
+  const buildInsertPayload = (
+    idempotencyKey: string,
+    pipelineAttempt: number,
+    retryOfId: string | null = null,
+  ) => ({
       trading_date: reportDate,
       checkpoint: 'PREMARKET',
       idempotency_key: idempotencyKey,
       status: 'RUNNING',
-      attempt,
+      attempt: pipelineAttempt,
       started_at: new Date().toISOString(),
       deadline_at: new Date(`${reportDate}T07:30:00+08:00`).toISOString(),
       delivery_status: phase === 'refresh' || phase === 'generate' || phase === 'repair' ? 'NOT_DUE' : 'PENDING',
-      provider_status: { orchestrator_version: VERSION, phase },
-    })
+      provider_status: {
+        orchestrator_version: VERSION,
+        phase,
+        retry_of_pipeline_run_id: retryOfId,
+      },
+    });
+
+  const { data, error } = await supabase
+    .from('pipeline_runs')
+    .insert(buildInsertPayload(baseIdempotencyKey, attempt))
     .select('id')
     .maybeSingle();
   if (error?.code === '23505') {
-    const { data: existing, error: existingError } = await supabase
+    const { data: existingRows, error: existingError } = await supabase
       .from('pipeline_runs')
-      .select('id,status,reason_codes,error_code')
-      .eq('idempotency_key', idempotencyKey)
-      .maybeSingle();
+      .select('id,status,reason_codes,error_code,next_retry_at,attempt,idempotency_key,created_at')
+      .or(`idempotency_key.eq.${baseIdempotencyKey},idempotency_key.like.${baseIdempotencyKey}:retry:%`)
+      .order('attempt', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1);
+    const existing = Array.isArray(existingRows) ? existingRows[0] : null;
     if (existingError || !existing) {
       throw new Error(`PIPELINE_SLOT_STATUS_FAILED:${existingError?.message || 'existing run missing'}`);
     }
+
+    const retryResolution = resolveClaimedPipelineRetry({
+      status: String(existing.status || 'RUNNING'),
+      attempt: Number(existing.attempt || 1),
+      next_retry_at: typeof existing.next_retry_at === 'string' ? existing.next_retry_at : null,
+    });
+    if (retryResolution.retry) {
+      const retryIdempotencyKey = `${baseIdempotencyKey}:retry:${retryResolution.next_attempt}`;
+      const existingId = typeof existing.id === 'string' ? existing.id : null;
+      const { data: retryData, error: retryError } = await supabase
+        .from('pipeline_runs')
+        .insert(buildInsertPayload(retryIdempotencyKey, retryResolution.next_attempt, existingId))
+        .select('id')
+        .maybeSingle();
+      if (!retryError && retryData?.id) {
+        return {
+          acquired: true,
+          id: String(retryData.id),
+          attempt: retryResolution.next_attempt,
+          retryOfId: existingId,
+          retryDecision: retryResolution.reason,
+          existingStatus: null,
+          existingReasonCodes: [],
+          existingErrorCode: null,
+        };
+      }
+      if (retryError?.code !== '23505') {
+        throw new Error(`PIPELINE_SLOT_RETRY_CLAIM_FAILED:${retryError?.message || 'no id'}`);
+      }
+
+      const { data: concurrentRetry, error: concurrentRetryError } = await supabase
+        .from('pipeline_runs')
+        .select('id,status,reason_codes,error_code,attempt')
+        .eq('idempotency_key', retryIdempotencyKey)
+        .maybeSingle();
+      if (concurrentRetryError || !concurrentRetry) {
+        throw new Error(`PIPELINE_SLOT_RETRY_STATUS_FAILED:${concurrentRetryError?.message || 'retry run missing'}`);
+      }
+      return {
+        acquired: false,
+        id: typeof concurrentRetry.id === 'string' ? concurrentRetry.id : null,
+        attempt: Number(concurrentRetry.attempt || retryResolution.next_attempt),
+        retryOfId: existingId,
+        retryDecision: 'RETRY_ALREADY_CLAIMED',
+        existingStatus: String(concurrentRetry.status || 'RUNNING'),
+        existingReasonCodes: asStringArray(concurrentRetry.reason_codes),
+        existingErrorCode: typeof concurrentRetry.error_code === 'string' ? concurrentRetry.error_code : null,
+      };
+    }
+
     return {
       acquired: false,
       id: typeof existing.id === 'string' ? existing.id : null,
+      attempt: Number(existing.attempt || attempt),
+      retryOfId: null,
+      retryDecision: retryResolution.reason,
       existingStatus: String(existing.status || 'RUNNING'),
       existingReasonCodes: asStringArray(existing.reason_codes),
       existingErrorCode: typeof existing.error_code === 'string' ? existing.error_code : null,
@@ -389,6 +486,9 @@ async function claimPipelineSlot(
   return {
     acquired: true,
     id: String(data.id),
+    attempt,
+    retryOfId: null,
+    retryDecision: null,
     existingStatus: null,
     existingReasonCodes: [],
     existingErrorCode: null,
@@ -458,6 +558,25 @@ async function executeRecoveryActions(args: {
       recovery_attempt: args.attempt,
     }, 180_000).then((result) => { results.refresh_market = result; }));
   }
+  if (args.actions.includes('refresh_sector_rotation')) {
+    const targetDate = args.reasonCodes
+      .map((reason) => reason.match(/^sector_rotation_scores:(\d{4}-\d{2}-\d{2})$/i)?.[1] || '')
+      .find(Boolean);
+    refreshes.push(targetDate
+      ? invokeFunctionWithRetry(args.baseUrl, 'generate-sector-rotation', args.cronSecret, {
+        backfill: true,
+        target_date: targetDate,
+        recovery_attempt: args.attempt,
+        source: 'daily-delivery-orchestrator',
+      }, 300_000).then((result) => { results.refresh_sector_rotation = result; })
+      : Promise.resolve().then(() => {
+        results.refresh_sector_rotation = {
+          ok: false,
+          status: 400,
+          payload: { success: false, error: 'SECTOR_ROTATION_TARGET_DATE_MISSING' },
+        };
+      }));
+  }
   await Promise.all(refreshes);
 
   if (args.actions.includes('regenerate_report')) {
@@ -510,13 +629,20 @@ Deno.serve(async (req: Request) => {
   }
 
   const clock = taipeiClock();
-  const marketStatus = resolveMarketStatus(clock.date);
+  const requestedRecoveryDate = body.source === 'ma-ops-safe-recovery'
+    ? String(body.target_date || body.report_date || '').trim()
+    : '';
+  if (requestedRecoveryDate && (!/^\d{4}-\d{2}-\d{2}$/.test(requestedRecoveryDate) || requestedRecoveryDate > clock.date)) {
+    return jsonResponse({ success: false, error: 'INVALID_RECOVERY_BUSINESS_DATE', version: VERSION }, 400);
+  }
+  const businessDate = requestedRecoveryDate || clock.date;
+  const marketStatus = resolveMarketStatus(businessDate);
   if (!marketStatus.is_trading_day) {
     return jsonResponse({
       success: true,
       status: 'SKIPPED',
       reason: 'MARKET_STATUS_NOT_OPEN',
-      report_date: clock.date,
+      report_date: businessDate,
       market_status: marketStatus.market_status,
       next_trading_day: marketStatus.next_trading_day,
       version: VERSION,
@@ -528,16 +654,22 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: false, error: 'UNSUPPORTED_RUNTIME_CHECKPOINT', checkpoint, version: VERSION }, 400);
     }
     const existingState = await supabase.from('trading_day_state').select('checkpoint_status')
-      .eq('trading_date', clock.date).maybeSingle();
+      .eq('trading_date', businessDate).maybeSingle();
     if (!existingState.error && String(asRecord(asRecord(existingState.data?.checkpoint_status)[checkpoint]).status || '').toUpperCase() === 'SUCCEEDED') {
-      return jsonResponse({ success: true, status: 'SKIPPED_ALREADY_SUCCEEDED', report_date: clock.date, checkpoint, version: VERSION });
+      return jsonResponse({ success: true, status: 'SKIPPED_ALREADY_SUCCEEDED', report_date: businessDate, checkpoint, version: VERSION });
     }
     const runtimeSource = body.source === 'supabase_cron_watchdog' ? 'supabase_cron_watchdog' : 'supabase_cron_primary';
-    const execution = await executeRuntimeCheckpoint(`${supabaseUrl}/functions/v1`, cronSecret, checkpoint, runtimeSource);
+    const execution = await executeRuntimeCheckpoint(
+      `${supabaseUrl}/functions/v1`,
+      cronSecret,
+      checkpoint,
+      runtimeSource,
+      businessDate,
+    );
     return jsonResponse({
       success: execution.success,
       status: execution.success ? 'SUCCEEDED' : 'DEGRADED',
-      report_date: clock.date,
+      report_date: businessDate,
       checkpoint,
       failures: execution.failures,
       results: execution.results,
@@ -548,24 +680,24 @@ Deno.serve(async (req: Request) => {
     const checkType = String(body.check_type || 'full');
     if (!['report', 'closing', 'full'].includes(checkType)) return jsonResponse({ success: false, error: 'UNSUPPORTED_HEALTH_CHECK', version: VERSION }, 400);
     const result = await invokeFunction(`${supabaseUrl}/functions/v1`, 'ma-ops-health-check', cronSecret, {
-      environment: 'production', check_type: checkType, target_date: clock.date, request_id: body.correlation_id || crypto.randomUUID(), dry_run: false,
+      environment: 'production', check_type: checkType, target_date: businessDate, request_id: body.correlation_id || crypto.randomUUID(), dry_run: false,
     }, 180_000);
     const healthSucceeded = result.ok && result.payload.ok === true;
     let recoveryLifecycle: JsonRecord | null = null;
     if (healthSucceeded && body.source === 'ma-ops-safe-recovery') {
-      const stateResult = await supabase.from('trading_day_state').select('state_rank').eq('trading_date', clock.date).maybeSingle();
+      const stateResult = await supabase.from('trading_day_state').select('state_rank').eq('trading_date', businessDate).maybeSingle();
       if (stateResult.error) {
-        return jsonResponse({ success: false, error: 'RECOVERY_LIFECYCLE_STATE_READ_FAILED', details: stateResult.error.message, report_date: clock.date, version: VERSION }, 500);
+        return jsonResponse({ success: false, error: 'RECOVERY_LIFECYCLE_STATE_READ_FAILED', details: stateResult.error.message, report_date: businessDate, version: VERSION }, 500);
       }
       if (Number(stateResult.data?.state_rank || 0) < 130) {
-        return jsonResponse({ success: false, error: 'RECOVERY_LIFECYCLE_PREDECESSOR_NOT_SATISFIED', report_date: clock.date, state_rank: Number(stateResult.data?.state_rank || 0), version: VERSION }, 409);
+        return jsonResponse({ success: false, error: 'RECOVERY_LIFECYCLE_PREDECESSOR_NOT_SATISFIED', report_date: businessDate, state_rank: Number(stateResult.data?.state_rank || 0), version: VERSION }, 409);
       }
       const requestedCorrelation = req.headers.get('x-correlation-id') || String(body.correlation_id || '');
       const correlationId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedCorrelation)
         ? requestedCorrelation
         : crypto.randomUUID();
       const healthAdvance = await supabase.rpc('advance_trading_day_state_v1', {
-        p_trading_date: clock.date,
+        p_trading_date: businessDate,
         p_state: 'HEALTH_AUDITED',
         p_checkpoint: 'closing_health',
         p_status: 'SUCCEEDED',
@@ -573,10 +705,10 @@ Deno.serve(async (req: Request) => {
         p_metadata: { source: 'ma-ops-safe-recovery', health_http_status: result.status },
       });
       if (healthAdvance.error) {
-        return jsonResponse({ success: false, error: 'RECOVERY_HEALTH_LIFECYCLE_ADVANCE_FAILED', details: healthAdvance.error.message, report_date: clock.date, version: VERSION }, 500);
+        return jsonResponse({ success: false, error: 'RECOVERY_HEALTH_LIFECYCLE_ADVANCE_FAILED', details: healthAdvance.error.message, report_date: businessDate, version: VERSION }, 500);
       }
       const completionAdvance = await supabase.rpc('advance_trading_day_state_v1', {
-        p_trading_date: clock.date,
+        p_trading_date: businessDate,
         p_state: 'DAY_COMPLETED',
         p_checkpoint: 'day_completed',
         p_status: 'SUCCEEDED',
@@ -584,11 +716,59 @@ Deno.serve(async (req: Request) => {
         p_metadata: { source: 'ma-ops-safe-recovery', health_http_status: result.status },
       });
       if (completionAdvance.error) {
-        return jsonResponse({ success: false, error: 'RECOVERY_COMPLETION_LIFECYCLE_ADVANCE_FAILED', details: completionAdvance.error.message, report_date: clock.date, version: VERSION }, 500);
+        return jsonResponse({ success: false, error: 'RECOVERY_COMPLETION_LIFECYCLE_ADVANCE_FAILED', details: completionAdvance.error.message, report_date: businessDate, version: VERSION }, 500);
       }
-      recoveryLifecycle = { health_audited: true, day_completed: true, correlation_id: correlationId };
+      const terminalReconciliation = await supabase.rpc('reconcile_runtime_terminal_failures_v1', {
+        p_business_date: businessDate,
+        p_correlation_id: correlationId,
+      });
+      if (terminalReconciliation.error) {
+        return jsonResponse({
+          success: false,
+          error: 'RECOVERY_TERMINAL_RECONCILIATION_FAILED',
+          details: terminalReconciliation.error.message,
+          report_date: businessDate,
+          version: VERSION,
+        }, 409);
+      }
+      const evaluatorVersion = `PRODUCTION_ACCEPTANCE_V2_RECOVERY:${correlationId}`;
+      const acceptanceCapture = await supabase.rpc('capture_morning_alpha_acceptance_v1', {
+        p_business_date: businessDate,
+        p_evaluator_version: evaluatorVersion,
+      });
+      if (acceptanceCapture.error || !acceptanceCapture.data) {
+        return jsonResponse({
+          success: false,
+          error: 'RECOVERY_ACCEPTANCE_CAPTURE_FAILED',
+          details: acceptanceCapture.error?.message || 'Acceptance result id was not returned.',
+          report_date: businessDate,
+          version: VERSION,
+        }, 500);
+      }
+      const acceptanceResult = await supabase
+        .from('production_acceptance_results')
+        .select('id,verdict,blocking_checks,evaluated_at')
+        .eq('id', String(acceptanceCapture.data))
+        .maybeSingle();
+      if (acceptanceResult.error || acceptanceResult.data?.verdict !== 'PASS') {
+        return jsonResponse({
+          success: false,
+          error: 'RECOVERY_ACCEPTANCE_FAILED',
+          details: acceptanceResult.error?.message || null,
+          acceptance: acceptanceResult.data || null,
+          report_date: businessDate,
+          version: VERSION,
+        }, 409);
+      }
+      recoveryLifecycle = {
+        health_audited: true,
+        day_completed: true,
+        terminal_dispatches_reconciled: Number(terminalReconciliation.data || 0),
+        acceptance: acceptanceResult.data,
+        correlation_id: correlationId,
+      };
     }
-    return jsonResponse({ success: healthSucceeded, status: result.status, health: result.payload, recovery_lifecycle: recoveryLifecycle, report_date: clock.date, version: VERSION }, healthSucceeded ? 200 : result.status);
+    return jsonResponse({ success: healthSucceeded, status: result.status, health: result.payload, recovery_lifecycle: recoveryLifecycle, report_date: businessDate, version: VERSION }, healthSucceeded ? 200 : result.status);
   }
   if (body.mode === 'continuous_learning') {
     const result = await invokeFunction(
@@ -607,7 +787,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       success: accepted,
       status: accepted ? 'SUCCEEDED' : 'DEGRADED',
-      report_date: clock.date,
+      report_date: businessDate,
       continuous_learning: result.payload,
       version: VERSION,
     }, accepted ? 200 : 409);
@@ -621,57 +801,68 @@ Deno.serve(async (req: Request) => {
   let runId: string | null = null;
 
   try {
-    const claim = await claimPipelineSlot(supabase, clock.date, phase, clock.slot, attempt);
+    const claim = await claimPipelineSlot(supabase, businessDate, phase, clock.slot, attempt);
     if (!claim.acquired) {
-      const existingSucceeded = claim.existingStatus === 'SUCCEEDED' || claim.existingStatus === 'SKIPPED';
+      const resolution = resolveClaimedPipelineSlot(claim.existingStatus);
       return jsonResponse({
-        success: existingSucceeded,
-        status: claim.existingStatus || 'RUNNING',
+        success: resolution.success,
+        status: resolution.status,
+        claimed_status: resolution.claimed_status,
         reason: 'PIPELINE_SLOT_ALREADY_CLAIMED',
-        report_date: clock.date,
+        report_date: businessDate,
         phase,
+        pipeline_attempt: claim.attempt,
+        retry_decision: claim.retryDecision,
         reason_codes: claim.existingReasonCodes,
         error_code: claim.existingErrorCode,
         version: VERSION,
-      });
+      }, resolution.success ? 200 : 409);
     }
     const activeRunId = String(claim.id);
+    const activeAttempt = claim.attempt;
     runId = activeRunId;
 
-    let state = await loadDeliveryState(supabase, clock.date);
+    let state = await loadDeliveryState(supabase, businessDate);
     let plan = buildDailyDeliveryRecoveryPlan({
       has_report: Boolean(state.report),
       premium_eligible: state.premium_eligible,
       reason_codes: state.reason_codes,
-      attempt,
+      attempt: activeAttempt,
       content_repair_attempts: Number(state.snapshot?.version || 0),
       taipei_minutes: clock.minutes,
     });
 
     let actions = plan.actions;
     if (forceRegenerate) actions = ['regenerate_report'];
-    else if (phase === 'refresh') actions = actions.filter((action) => action === 'refresh_news' || action === 'refresh_market');
+    else if (phase === 'refresh') actions = actions.filter((action) =>
+      action === 'refresh_news' || action === 'refresh_market' || action === 'refresh_sector_rotation'
+    );
     else if (phase === 'generate') actions = state.premium_eligible
       ? []
-      : actions.filter((action) => action === 'regenerate_report');
+      : actions.filter((action) => action === 'refresh_sector_rotation' || action === 'regenerate_report');
     else if (phase === 'deliver' && state.premium_eligible) actions = ['deliver_premium'];
 
     const actionResults = await executeRecoveryActions({
       actions,
       baseUrl: `${supabaseUrl}/functions/v1`,
       cronSecret,
-      attempt,
+      attempt: activeAttempt,
       reasonCodes: state.reason_codes,
       allowIncident: clock.minutes >= 7 * 60 + 30,
     });
 
-    if (actions.some((action) => action === 'refresh_news' || action === 'refresh_market' || action === 'regenerate_report')) {
-      state = await loadDeliveryState(supabase, clock.date);
+    if (actions.some((action) =>
+      action === 'refresh_news'
+      || action === 'refresh_market'
+      || action === 'refresh_sector_rotation'
+      || action === 'regenerate_report'
+    )) {
+      state = await loadDeliveryState(supabase, businessDate);
       plan = buildDailyDeliveryRecoveryPlan({
         has_report: Boolean(state.report),
         premium_eligible: state.premium_eligible,
         reason_codes: state.reason_codes,
-        attempt,
+        attempt: activeAttempt,
         content_repair_attempts: Number(state.snapshot?.version || 0),
         taipei_minutes: clock.minutes,
       });
@@ -707,10 +898,16 @@ Deno.serve(async (req: Request) => {
         error: String(asRecord(asRecord(result).payload).error || 'ACTION_RETURNED_UNSUCCESSFUL').slice(0, 300),
       }));
     const actionFailureCodes = actionFailures.map((failure) => `action_failed:${failure.action}`);
-    const completed = actionFailures.length === 0 && state.premium_eligible &&
-      (clock.minutes < 7 * 60 + 20 || delivered || Object.keys(premiumDelivery).length === 0);
+    const completed = resolveDailyDeliveryCompletion({
+      phase,
+      action_failure_count: actionFailures.length,
+      premium_eligible: state.premium_eligible,
+      delivered,
+    });
     const status = completed ? 'SUCCEEDED' : 'DEGRADED';
-    const finalReasonCodes = Array.from(new Set([...state.reason_codes, ...actionFailureCodes]));
+    const finalReasonCodes = phase === 'refresh'
+      ? actionFailureCodes
+      : Array.from(new Set([...state.reason_codes, ...actionFailureCodes]));
     await finishPipelineRun(
       supabase,
       activeRunId,
@@ -741,8 +938,10 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       success: completed,
       status,
-      report_date: clock.date,
+      report_date: businessDate,
       phase,
+      pipeline_attempt: activeAttempt,
+      retry_of_pipeline_run_id: claim.retryOfId,
       actions,
       premium_eligible: state.premium_eligible,
       delivered,

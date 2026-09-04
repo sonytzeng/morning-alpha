@@ -51,7 +51,8 @@ export function computeMarketFreshnessDates(
 }
 
 export function isTaiwanMarketSymbol(symbol: string): boolean {
-  return TAIWAN_SYMBOLS.has(symbol.toUpperCase());
+  const normalized = symbol.toUpperCase().trim();
+  return TAIWAN_SYMBOLS.has(normalized) || /^\d{4,6}(?:\.(?:TW|TWO))?$/.test(normalized);
 }
 
 export function isMarketIndicatorStale(
@@ -69,6 +70,21 @@ export function isMarketIndicatorStale(
     if (expected && observed) return observed < expected;
   }
   return nowMs - timestamp > 36 * 60 * 60 * 1000;
+}
+
+export function filterFreshMarketIndicators<
+  T extends { symbol: unknown; updatedAt: unknown },
+>(
+  rows: T[],
+  dates?: MarketFreshnessDates,
+  nowMs = Date.now(),
+): T[] {
+  return rows.filter((row) => !isMarketIndicatorStale(
+    String(row.updatedAt || ''),
+    String(row.symbol || ''),
+    dates,
+    nowMs,
+  ));
 }
 
 export function filterRecentNewsRows<T extends Record<string, unknown>>(

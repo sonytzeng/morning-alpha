@@ -38,7 +38,9 @@ const researchQualityGate = read('supabase/functions/_shared/research-quality-ga
 const contentOsMorningAlphaSource = read('supabase/functions/content-os-morning-alpha-source/index.ts');
 const contentIntelligence = read('supabase/functions/_shared/content-intelligence.ts');
 const lineDailyPush = read('supabase/functions/line-daily-push/index.ts');
+const lineDailyFlexMessage = read('supabase/functions/_shared/line-daily-flex-message.mjs');
 const dailyDeliveryOrchestrator = read('supabase/functions/daily-delivery-orchestrator/index.ts');
+const dailyDeliveryRecovery = read('supabase/functions/_shared/daily-delivery-recovery.ts');
 const globalMarketNews = read('supabase/functions/fetch-global-market-news/index.ts');
 const closingVerification = read('supabase/functions/closing-verification-engine/index.ts');
 const opsHealthCheck = read('supabase/functions/ma-ops-health-check/index.ts');
@@ -246,7 +248,8 @@ test('premarket workflow delegates to the durable recovery state machine', () =>
   assert.match(dailyDeliveryOrchestrator, /clock\.minutes >= 7 \* 60 \+ 30/);
   assert.match(dailyDeliveryOrchestrator, /payload\.success !== false/);
   assert.match(dailyDeliveryOrchestrator, /invokeFunctionWithRetry/);
-  assert.match(dailyDeliveryOrchestrator, /actionFailures\.length === 0/);
+  assert.match(dailyDeliveryOrchestrator, /resolveDailyDeliveryCompletion/);
+  assert.match(dailyDeliveryRecovery, /input\.action_failure_count > 0/);
   assert.match(dailyDeliveryOrchestrator, /success: completed/);
   assert.match(dailyDeliveryOrchestrator, /EVIDENCE_REFRESH_DEPENDENCY_FAILED/);
   assert.match(dailyDeliveryOrchestrator, /deliveryBlockedByEvidenceFailure/);
@@ -398,6 +401,9 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeCheckpointWorkflow, /closing-verification-engine/);
   assert.match(runtimeCheckpointWorkflow, /closing_verification_status/);
   assert.match(runtimeCheckpointWorkflow, /generate-sector-rotation/);
+  assert.match(dailyDeliveryOrchestrator, /generate-sector-rotation/);
+  assert.match(dailyDeliveryOrchestrator, /sector_rotation_incomplete/);
+  assert.match(dailyDeliveryOrchestrator, /refresh_sector_rotation/);
   assert.match(runtimeCheckpointWorkflow, /secrets\.CRON_SECRET/);
   assert.match(runtimeCheckpointWorkflow, /Wait until the checkpoint snapshot window/);
   assert.match(runtimeCheckpointWorkflow, /TZ=Asia\/Taipei/);
@@ -419,14 +425,19 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.doesNotMatch(runtimeCheckpointWorkflow, /^\s*schedule:/m);
 });
 
-test('LINE brief identifies analysis and market-data times and refuses weak day-trading scripts', () => {
-  for (const label of ['07:30 盤前', '今日一句', '最大機會', '最大風險', '下一確認', '分析產生', '資料截止']) {
-    assert.match(lineDailyPush, new RegExp(label), `LINE brief is missing ${label}`);
+test('LINE brief uses a branded Flex card and refuses weak day-trading scripts', () => {
+  for (const label of ['今日盤前決策', '今日主線', '焦點觀察', '成立條件', '失效條件', '操作原則']) {
+    assert.match(lineDailyFlexMessage, new RegExp(label), `LINE Flex card is missing ${label}`);
   }
+  assert.match(lineDailyFlexMessage, /type: 'flex'/);
+  assert.match(lineDailyFlexMessage, /type: 'bubble'/);
+  assert.match(lineDailyFlexMessage, /type: 'uri'/);
+  assert.match(lineDailyPush, /buildLineDailyFlexMessage/);
+  assert.match(lineDailyPush, /args\.message\.altText/);
   assert.match(lineDailyPush, /evaluatePremiumContentGate/);
-  assert.match(lineDailyPush, /資料未達標，不建立個股劇本/);
   assert.match(lineDailyPush, /ALREADY_SENT/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);
+  assert.doesNotMatch(lineDailyFlexMessage, /\/100|分析產生|資料截止/);
 });
 
 test('trading-day reports and public timelines fail closed with correct times', () => {
@@ -763,7 +774,19 @@ test('daily report freshness follows expected trading sessions and never writes 
 test('paid research enforces fresh evidence and complete beneficiary reasoning', () => {
   const reportGenerator = read('supabase/functions/generate-daily-report-v7/index.ts');
   assert.match(reportGenerator, /OPENAI_EVIDENCE_GUARDRAILS/);
+  assert.match(reportGenerator, /OPENAI_OUTPUT_ABSTENTION_RULES/);
   assert.match(reportGenerator, /發布時間在 48 小時內/);
+  assert.match(reportGenerator, /const researchMarketData=filterFreshMarketIndicators\(marketData,dates\)/);
+  assert.match(reportGenerator, /buildDeterministicAIStrategyJson\(researchMarketData/);
+  assert.match(reportGenerator, /buildOpenAIUserPrompt\(researchMarketData/);
+  assert.match(reportGenerator, /buildThreeTierBeneficiaryStocks\(researchMarketData/);
+  assert.match(reportGenerator, /today_beneficiary_stocks 可輸出 0 到 8 檔，沒有最低檔數/);
+  assert.doesNotMatch(reportGenerator, /today_beneficiary_stocks 必須輸出 5 到 8 檔/);
+  assert.match(reportGenerator, /const evidenceOk=relatedEvidence\.length>0/);
+  assert.match(reportGenerator, /No Industry-Anchored Evidence/);
+  assert.match(reportGenerator, /candidateRepeatPenaltyContribution\(repeat_penalty\)/);
+  assert.match(reportGenerator, /repeat_penalty_contribution=/);
+  assert.match(reportGenerator, /eligible candidate must have traceable evidence/);
   assert.match(reportGenerator, /enforceMemberResearchIntegrity/);
   assert.match(reportGenerator, /note\.data_status='partial'/);
   assert.match(reportGenerator, /note\.beneficiary_reasoning=orderedReasoning\.slice\(0,10\)/);
@@ -845,8 +868,8 @@ test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempo
   assert.match(lineDailyPush, /customAggregationUnits/);
   assert.match(lineDailyPush, /dailySentence\.sentence/);
   assert.ok(lineDailyPush.indexOf('report.today_quote') < lineDailyPush.indexOf('copy.one_sentence'));
-  assert.match(lineDailyPush, /確認：/);
-  assert.match(lineDailyPush, /避免：/);
+  assert.match(lineDailyFlexMessage, /成立條件/);
+  assert.match(lineDailyFlexMessage, /失效條件/);
   assert.doesNotMatch(lineDailyPush, /sent:\s*true,\s*report_date: reportDate,\s*total_subscribers: 0/);
 });
 

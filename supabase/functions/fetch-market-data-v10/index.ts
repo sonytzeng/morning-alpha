@@ -19,10 +19,12 @@ import {
 } from '../_shared/provider-normalization.mjs';
 
 // ═══════════════════════════════════════════════════════════
-// fetch-market-data-v10 V10.12 — CLOSE CHECKPOINT OWNERSHIP REPAIR
+// fetch-market-data-v10 V10.14 — PROVIDER-LANE TIMEOUT RECOVERY
 // Uses Finnhub for US equities/ETF proxies, Fugle/TWSE for Taiwan core, best-effort Fugle futopt for TXF.
 // Each symbol: 6s timeout, max 1 retry.
-// Overall: 28s hard cap → always returns within 30s for cron.
+// Global and Taiwan providers run in separate sequential lanes so one slow
+// provider cannot consume the other provider's entire collection budget.
+// Overall provider budget: 60s, below the orchestrator's 180s request timeout.
 // ═══════════════════════════════════════════════════════════
 
 const CORS_HEADERS = {
@@ -34,8 +36,8 @@ const CORS_HEADERS = {
 const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
-const OVERALL_TIMEOUT_MS = 28_000;
-const VERSION = "V10.13_TERMINAL_CHECKPOINT_REUSE";
+const OVERALL_TIMEOUT_MS = 60_000;
+const VERSION = "V10.14_PROVIDER_LANE_TIMEOUT_RECOVERY";
 
 interface FinnhubQuote {
   c: number;
@@ -123,12 +125,21 @@ const TAIWAN_DECISION_REQUIRED = ["TAIEX", "2330"];
 const TAIWAN_FIRST_ORDER = ["TAIEX", "2330", "TXF", "SPX", "IXIC", "SOX", "NVDA", "TSM", "VIX", "DXY", "US10Y"];
 
 function prioritizeCoreSymbols(configs: SymbolConfig[], phase: MarketDataPhase): SymbolConfig[] {
-  if (phase === "premarket" || phase === "manual_backfill") return configs;
+  if (phase === "manual_backfill") return configs;
   const priority = new Map(TAIWAN_FIRST_ORDER.map((symbol, index) => [symbol, index]));
   return [...configs].sort((left, right) =>
     (priority.get(left.displaySymbol) ?? Number.MAX_SAFE_INTEGER) -
     (priority.get(right.displaySymbol) ?? Number.MAX_SAFE_INTEGER)
   );
+}
+
+function buildProviderLanes(configs: SymbolConfig[]): Array<{ name: "GLOBAL" | "TAIWAN"; symbols: SymbolConfig[] }> {
+  const globalSymbols = configs.filter((config) => config.market !== "TW");
+  const taiwanSymbols = configs.filter((config) => config.market === "TW");
+  return [
+    { name: "GLOBAL" as const, symbols: globalSymbols },
+    { name: "TAIWAN" as const, symbols: taiwanSymbols },
+  ].filter((lane) => lane.symbols.length > 0);
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -1051,36 +1062,65 @@ Deno.serve(async (req) => {
     console.log(`[${batchTag}] phase=${phase} trading_date=${tradingDate} taipei=${taipei.hour}:${String(taipei.minute).padStart(2, "0")} close_core_only=${phase === "close" && !includeBeneficiaryClose} beneficiary_close_only=${beneficiaryCloseOnly} beneficiary_symbols=${beneficiarySymbolConfigs.map((s) => s.displaySymbol).join(",") || "none"}`);
 
     // ═══════════════════════════════════════════════════════
-    // Fetch all symbols sequentially with delay
-    // Overall deadline: OVERALL_TIMEOUT_MS from start
-    // Single failure → continue (do not abort batch)
+    // Fetch in two provider-isolated lanes. Calls remain sequential inside
+    // each provider lane to preserve rate-limit protection, while a slow
+    // global quote can no longer prevent Taiwan core quotes from running.
+    // Database writes remain deterministic in the original symbol order.
     // ═══════════════════════════════════════════════════════
     let timedOut = false;
+    const fetchedQuotes = new Map<SymbolConfig, MarketQuote | null>();
+    const fetchStartedMs = Date.now();
+    const providerLanes = buildProviderLanes(symbolConfigs);
+
+    await Promise.all(providerLanes.map(async (lane) => {
+      for (let laneIndex = 0; laneIndex < lane.symbols.length; laneIndex++) {
+        const config = lane.symbols[laneIndex];
+        const originalIndex = symbolConfigs.indexOf(config);
+        if (Date.now() - fetchStartedMs > OVERALL_TIMEOUT_MS) {
+          const remaining = lane.symbols.slice(laneIndex);
+          console.warn(`[${batchTag}] ${lane.name} LANE TIMEOUT after ${OVERALL_TIMEOUT_MS / 1000}s — ${remaining.length} symbols skipped`);
+          for (const skippedConfig of remaining) {
+            fetchedQuotes.set(skippedConfig, null);
+            providerFailureDetails.push({
+              provider: skippedConfig.market === "TW" ? "fugle" : "finnhub",
+              symbol: skippedConfig.displaySymbol,
+              endpoint: "provider_lane",
+              error: "overall_timeout",
+            });
+          }
+          timedOut = true;
+          return;
+        }
+
+        if (laneIndex > 0 && !(phase === "close" && !includeBeneficiaryClose)) {
+          await sleep(SYMBOL_DELAY_MS);
+        }
+
+        console.log(`[${batchTag}] [${originalIndex + 1}/${symbolConfigs.length}] Fetching ${config.displaySymbol} on ${lane.name} lane...`);
+        try {
+          const fetchedQuote = config.market === "TW"
+            ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, providerFailureDetails)
+            : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`, providerFailureDetails);
+          fetchedQuotes.set(config, fetchedQuote);
+        } catch (err) {
+          const message = sanitizeProviderError(err instanceof Error ? err.message : String(err));
+          console.error(`[${batchTag}] ${config.displaySymbol} provider lane exception: ${message}`);
+          fetchedQuotes.set(config, null);
+          providerFailureDetails.push({
+            provider: config.market === "TW" ? "fugle" : "finnhub",
+            symbol: config.displaySymbol,
+            endpoint: "provider_lane",
+            error: message,
+          });
+        }
+      }
+    }));
 
     for (let i = 0; i < symbolConfigs.length; i++) {
-      // Check overall timeout before each symbol
-      if (Date.now() - startedMs > OVERALL_TIMEOUT_MS) {
-        console.warn(`[${batchTag}] OVERALL TIMEOUT after ${OVERALL_TIMEOUT_MS / 1000}s — ${symbolConfigs.length - i} symbols skipped`);
-        for (let j = i; j < symbolConfigs.length; j++) {
-          failed.push(symbolConfigs[j].displaySymbol);
-        }
-        timedOut = true;
-        break;
-      }
-
       const config = symbolConfigs[i];
 
-      if (i > 0 && !(phase === "close" && !includeBeneficiaryClose)) {
-        await sleep(SYMBOL_DELAY_MS);
-      }
-
-      console.log(`[${batchTag}] [${i + 1}/${symbolConfigs.length}] Fetching ${config.displaySymbol}...`);
-
       try {
-        const fetchedQuote = config.market === "TW"
-          ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, providerFailureDetails)
-          : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`, providerFailureDetails);
-        const quote = normalizeConfiguredProxyQuote(fetchedQuote, config) as MarketQuote | null;
+        const quote = normalizeConfiguredProxyQuote(fetchedQuotes.get(config) ?? null, config) as MarketQuote | null;
 
         if (!quote) {
           console.error(`[${batchTag}] [${i + 1}/${symbolConfigs.length}] ${config.displaySymbol} fetch returned null`);
@@ -1359,6 +1399,12 @@ Deno.serve(async (req) => {
             : classifiedProviderFailures[0]?.failure_code || (failed.length > 0 ? "PARTIAL_PROVIDER_FAILURE" : null),
       correlation_id: correlationId,
       details: {
+        fetch_strategy: "parallel_provider_lanes",
+        fetch_timeout_ms: OVERALL_TIMEOUT_MS,
+        provider_lanes: providerLanes.map((lane) => ({
+          name: lane.name,
+          symbols: lane.symbols.map((symbol) => symbol.displaySymbol),
+        })),
         providers_by_symbol: providerUsedBySymbol,
         provider_failures: classifiedProviderFailures,
         canonical_write_errors: canonicalWriteErrors,
@@ -1472,6 +1518,8 @@ Deno.serve(async (req) => {
         started_at: startedAt,
         completed_at: new Date().toISOString(),
         elapsed_seconds: parseFloat(elapsed),
+        fetch_strategy: "parallel_provider_lanes",
+        fetch_timeout_ms: OVERALL_TIMEOUT_MS,
         inserted: inserted,
         failed: failed,
         beneficiary_symbols_requested: beneficiarySymbolConfigs.map((s) => s.displaySymbol),

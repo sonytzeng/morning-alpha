@@ -38,6 +38,10 @@ function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
 }
 
+function uniqueByKey<T>(rows: T[], key: (row: T) => string): T[] {
+  return Array.from(new Map(rows.map((row) => [key(row), row])).values());
+}
+
 async function inspectRuntimeSchema(supabase: ReturnType<typeof createClient>): Promise<JsonRecord> {
   const checks = await Promise.all([
     supabase.from('market_data_snapshots').select('checkpoint').limit(1),
@@ -209,7 +213,7 @@ Deno.serve(async (req: Request) => {
   }
   const outcomeByPrediction = new Map(outcomes.map((row) => [String(row.prediction_id), row]));
   const evaluated = predictionRows.filter((row) => outcomeByPrediction.has(String(row.id)));
-  const resultRows = evaluated.map((prediction) => {
+  const resultRows = uniqueByKey(evaluated.map((prediction) => {
     const outcome = outcomeByPrediction.get(String(prediction.id)) || {};
     const confidence = Math.max(0, Math.min(100, Number(prediction.calibrated_confidence ?? prediction.model_confidence) || 0));
     const correct = outcome.direction_correct === true;
@@ -226,7 +230,7 @@ Deno.serve(async (req: Request) => {
       brier_component: Math.round((probability - (correct ? 1 : 0)) ** 2 * 10000) / 10000,
       reason_codes: [String(prediction.data_quality_status || 'unknown'), String(outcome.data_quality_status || 'unknown')],
     };
-  });
+  }), (row) => String(row.prediction_id));
   const accuracy = resultRows.length === 0 ? null : Math.round(resultRows.filter((row) => row.correct).length / resultRows.length * 10000) / 100;
   const brierScore = resultRows.length === 0 ? null : Math.round(resultRows.reduce((sum, row) => sum + row.brier_component, 0) / resultRows.length * 10000) / 10000;
 
@@ -287,6 +291,7 @@ Deno.serve(async (req: Request) => {
       total_cases: predictionRows.length,
       evaluated_cases: resultRows.length,
       started_at: new Date().toISOString(),
+      completed_at: null,
     }, { onConflict: 'idempotency_key' })
     .select('id')
     .single();
@@ -297,11 +302,17 @@ Deno.serve(async (req: Request) => {
       resultRows.map((row) => ({ ...row, replay_run_id: replayRun.id })),
       { onConflict: 'replay_run_id,prediction_id' },
     );
-    if (error) return jsonResponse({ success: false, error: 'REPLAY_RESULTS_WRITE_FAILED', details: error.message, correlation_id: correlationId }, 500);
+    if (error) {
+      await supabase.from('historical_replay_runs').update({ status: 'failed', completed_at: new Date().toISOString() }).eq('id', replayRun.id);
+      return jsonResponse({ success: false, error: 'REPLAY_RESULTS_WRITE_FAILED', details: error.message, correlation_id: correlationId }, 500);
+    }
   }
   if (similarityRows.length > 0) {
     const { error } = await supabase.from('historical_similarity_results').upsert(similarityRows, { onConflict: 'target_snapshot_id,similar_snapshot_id,algorithm_version' });
-    if (error) return jsonResponse({ success: false, error: 'SIMILARITY_RESULTS_WRITE_FAILED', details: error.message, correlation_id: correlationId }, 500);
+    if (error) {
+      await supabase.from('historical_replay_runs').update({ status: 'failed', completed_at: new Date().toISOString() }).eq('id', replayRun.id);
+      return jsonResponse({ success: false, error: 'SIMILARITY_RESULTS_WRITE_FAILED', details: error.message, correlation_id: correlationId }, 500);
+    }
   }
   await supabase.from('historical_replay_runs').update({ status: 'succeeded', accuracy, brier_score: brierScore, completed_at: new Date().toISOString() }).eq('id', replayRun.id);
   return jsonResponse({ success: true, dry_run: false, version: VERSION, correlation_id: correlationId, replay_run_id: replayRun.id, strategy_id: strategy.id, from_date: fromDate, to_date: toDate, total_predictions: predictionRows.length, evaluated_cases: resultRows.length, accuracy, brier_score: brierScore, similarity_pairs: similarityRows.length });

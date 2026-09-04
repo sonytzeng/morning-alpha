@@ -233,6 +233,48 @@ test('canonical semantic gate blocks mixed shipping, semiconductor, and finance 
   assert.equal(passed.status, 'PASSED');
 });
 
+test('canonical semantic gate accepts an evidence-backed explicit no-trade decision', () => {
+  const snapshot = {
+    id: 'snapshot-wait', report_date: '2026-08-31', version: 7, action: 'WAIT',
+    source_refs: [{ title: 'SOX and TSM evidence', url: 'https://example.com/evidence' }],
+    generated_text: {
+      daily_sentence: '隔夜訊號未形成正向主線，今日不建立受惠股。',
+      next_checkpoint: '09:30',
+      reasons: ['09:30 只確認 TAIEX 與 2330 是否同步止跌。'],
+      recommendations: [],
+    },
+  };
+  const ai = { data_quality: 'degraded', v10_data_quality_status: 'insufficient_positive_evidence' };
+  const contract = buildCanonicalDecisionContract({ report_date: '2026-08-31', snapshot, ai });
+  const member = buildCanonicalMemberResearchRevision({ canonical_contract: contract, snapshot, ai });
+  assert.equal(contract.primary_event, snapshot.generated_text.daily_sentence);
+  assert.deepEqual(contract.primary_symbols, []);
+  assert.ok(contract.validation_signals.length > 0);
+  const passed = evaluateCanonicalSemanticCoherenceGate({
+    canonical_contract: contract,
+    sections: {
+      public_thesis: snapshot.generated_text.daily_sentence,
+      member_thesis: member.today_core_thesis,
+      taiwan_transmission: member.taiwan_transmission,
+      line_summary: member.line_summary,
+      content_os_topic: member.content_os_topic,
+    },
+    recommendations: member.beneficiary_candidates,
+    quality_inputs: ['degraded', 'insufficient_positive_evidence'],
+    quality_counters: {}, evidence_coverage: 100, content_score: 100,
+    checked_at: '2026-08-31T00:00:00Z',
+  });
+  assert.equal(passed.status, 'PASSED');
+});
+
+test('canonical member publication reads snapshot evidence refs for no-trade contracts', () => {
+  const generatorSource = readFileSync(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
+  const evidenceSnapshotReads = generatorSource.match(
+    /select\('id,report_id,report_date,version,status,action,generated_text,source_refs,snapshot_fingerprint,content_score'\)/g,
+  ) || [];
+  assert.equal(evidenceSnapshotReads.length, 2);
+});
+
 test('CLE counters count real inserts, updates, and unchanged entities', () => {
   const before = [{ id: 'a', value: 1 }, { id: 'b', value: 2 }];
   const after = [{ id: 'a', value: 1 }, { id: 'b', value: 3 }, { id: 'c', value: 4 }];
@@ -306,6 +348,40 @@ test('semantic reliability migration is append-only, fail-closed, and service-ro
   assert.doesNotMatch(sql, /service_role_key|cron_secret\s*[:=]\s*['"][^'"]+/i);
 });
 
+test('terminal recovery reconciles only after durable success and captures fresh acceptance', () => {
+  const sql = readFileSync(new URL('../supabase/migrations/20260830090000_reconcile_acceptance_and_replay_idempotency.sql', import.meta.url), 'utf8');
+  const orchestrator = readFileSync(new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url), 'utf8');
+  for (const fragment of [
+    'reconcile_runtime_terminal_failures_v1', 'DAY_COMPLETED', 'SEMANTIC_NOT_PASSED',
+    'CONTENT_OS_NOT_HEALTHY', 'DEAD_LETTER_PRESENT', 'PREMARKET_HEALTH_MISSING',
+    'CLOSING_HEALTH_MISSING', 'SUPERSEDED_BY_DURABLE_STATE', 'runtime_lifecycle_events',
+  ]) assert.match(sql, new RegExp(fragment, 'i'));
+  assert.match(sql, /where trading_date = p_business_date[\s\S]+dispatch_status = 'FAILED'/i);
+  assert.match(sql, /revoke all on function public\.reconcile_runtime_terminal_failures_v1[\s\S]+to service_role/i);
+  assert.doesNotMatch(sql, /update\s+public\.(reports|decision_snapshots|editorial_reviews|member_content_revisions|learning_runs|line_delivery_outbox)/i);
+  assert.match(orchestrator, /reconcile_runtime_terminal_failures_v1/);
+  assert.match(orchestrator, /capture_morning_alpha_acceptance_v1/);
+  assert.match(orchestrator, /RECOVERY_ACCEPTANCE_FAILED/);
+  assert.match(orchestrator, /verdict !== 'PASS'/);
+  assert.match(orchestrator, /requestedRecoveryDate/);
+  assert.match(orchestrator, /target_date: businessDate/);
+  assert.match(orchestrator, /INVALID_RECOVERY_BUSINESS_DATE/);
+});
+
+test('quality-block classifier preserves strict 409 handling but permits audited terminal reconciliation', () => {
+  const sql = readFileSync(new URL('../supabase/migrations/20260830091500_allow_terminal_reconciliation_after_quality_block.sql', import.meta.url), 'utf8');
+  const reconciliationGuard = sql.indexOf("old.dispatch_status = 'FAILED'");
+  const strict409Classifier = sql.indexOf('new.http_status = 409');
+  assert.ok(reconciliationGuard >= 0 && strict409Classifier > reconciliationGuard);
+  for (const fragment of [
+    "current_user = 'postgres'", "new.dispatch_status = 'SKIPPED'",
+    "new.response_error_code = 'SUPERSEDED_BY_DURABLE_STATE'",
+    "{terminal_reconciliation,reason_code}", "{terminal_reconciliation,correlation_id}",
+    "new.dispatch_status := 'FAILED'", "new.response_error_code := 'QUALITY_BLOCK'",
+  ]) assert.match(sql, new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
+  assert.doesNotMatch(sql, /disable\s+trigger|drop\s+trigger|response_success\s*:=\s*true|http_status\s*:=\s*null/i);
+});
+
 test('delivery, payload, and Content OS all require the same semantic member revision', () => {
   const orchestrator = readFileSync(new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url), 'utf8');
   const payload = readFileSync(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');
@@ -317,14 +393,20 @@ test('delivery, payload, and Content OS all require the same semantic member rev
   assert.match(contentOs, /evaluateCanonicalSemanticCoherenceGate/);
   assert.match(contentOs, /record_content_os_incident_v1/);
   assert.match(contentOs, /resolve_content_os_incident_v1/);
+  assert.match(contentOs, /content_os_sync_incidents/);
+  assert.match(contentOs, /\.eq\("business_date", String\(snapshot\.report_date\)\)/);
+  assert.match(contentOs, /\.eq\("status", "OPEN"\)/);
+  assert.match(contentOs, /SUPERSEDED_BY_CURRENT_MORNING_ALPHA_SNAPSHOT/);
+  assert.match(contentOs, /CONTENT_OS_STALE_INCIDENT_RESOLUTION_FAILED/);
 });
 
-test('safe recovery exposes only scoped member revision and metric correction actions', () => {
+test('safe recovery exposes only scoped, audited repair and replay actions', () => {
   const recovery = readFileSync(new URL('../supabase/functions/ma-ops-safe-recovery/index.ts', import.meta.url), 'utf8');
   const generator = readFileSync(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
   const learning = readFileSync(new URL('../supabase/functions/continuous-learning-engine/index.ts', import.meta.url), 'utf8');
   assert.match(recovery, /rebuild_member_content_revision/);
   assert.match(recovery, /reconcile_learning_metrics/);
+  assert.match(recovery, /replay_strategy[\s\S]+target:\s*'strategy-replay-engine'[\s\S]+defaultBody:\s*\{\s*dry_run:\s*true\s*\}/);
   assert.match(recovery, /RECOVERY_APPROVAL_EVIDENCE_REQUIRED/);
   assert.match(recovery, /get_ma_ops_health_cron_secret/);
   assert.match(recovery, /presentedCronToken/);

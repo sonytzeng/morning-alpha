@@ -87,6 +87,10 @@ function completeFixture(): ResearchMasterV2AssemblerInput {
         {
           symbol: "2330",
           name: "台積電",
+          industry_code: "ELECTRONIC_BLUE_CHIP",
+          industry: "電子權值",
+          sector: "半導體",
+          trigger_tags: ["SEMICONDUCTOR", "AI_SERVER"],
           related_evidence: [
             { evidence_id: "MD001", weight: 90, purpose: "primary_support" },
             { evidence_id: "SEC001", weight: 75, purpose: "confirming" },
@@ -565,5 +569,359 @@ Deno.test("Case G: production aliases and guardrails remain fully traceable with
   assert(
     validation.quality.publish_status === "ready",
     `production regression expected ready, received ${validation.quality.publish_status}`,
+  );
+});
+
+Deno.test("Case H: no-trade report abstains from unsupported model chains and stocks", () => {
+  const fixture = completeFixture();
+  fixture.reportDate = "2026-08-31";
+  fixture.todayDate = "2026-08-31";
+  fixture.marketThesis = null;
+  fixture.evidencePack = {
+    data_quality: {
+      available_sources: ["market_data", "market_news"],
+      missing_sources: [
+        "sector_rotation_scores:2026-08-28",
+        "market_snapshot.crude_oil",
+      ],
+    },
+  };
+  fixture.legacy.data_quality = "degraded";
+  fixture.legacy.missing_sources = ["sector_rotation_scores:2026-08-28"];
+  fixture.legacy.v10_data_quality_status = "insufficient_positive_evidence";
+  fixture.legacy.today_beneficiary_stocks_v10 = [];
+  fixture.legacy.today_beneficiary_stocks = [
+    {
+      stock_code: "2330",
+      stock_name: "台積電",
+      reason: "半導體權值只作為盤中止跌驗證，不是強受惠推薦。",
+      validation_signal: "09:30 確認 2330 與 TAIEX 是否同步止跌。",
+      invalidation_condition: "2330 與 TAIEX 持續同步轉弱。",
+      evidence_refs: ["MD001"],
+    },
+  ];
+  fixture.legacy.beneficiary_stocks = fixture.legacy.today_beneficiary_stocks;
+  fixture.legacy.v10_observation_watchlist = [
+    {
+      symbol: "2330",
+      name: "台積電",
+      observation_reason: "SOX 與台股電子權值的盤中確認角色。",
+      validation_signal: "09:30 確認台積電是否與 TAIEX 同向。",
+      stop_observing_condition: "台積電與電子權值同步轉弱。",
+      evidence_refs: ["MD001"],
+    },
+    {
+      symbol: "2308",
+      name: "台達電",
+      observation_reason: "AI 伺服器供應鏈的盤中確認角色。",
+      validation_signal: "09:30 確認 AI 伺服器族群是否同步止穩。",
+      stop_observing_condition: "AI 伺服器族群量價持續轉弱。",
+      evidence_refs: ["NEWS001"],
+    },
+    {
+      symbol: "2412",
+      name: "中華電",
+      observation_reason: "VIX 風險訊號的防禦型確認角色。",
+      validation_signal: "09:30 確認防禦型股票是否相對抗跌。",
+      stop_observing_condition: "VIX 回落且市場風險偏好轉強。",
+      evidence_refs: ["MD002"],
+    },
+  ];
+  const note = fixture.legacy.member_research_note_v2 as Record<
+    string,
+    unknown
+  >;
+  note.overnight_chain = [
+    {
+      event: "SOX 隔夜轉強",
+      source_market: "美股半導體",
+      impact_logic: "風險偏好先反映在半導體供應鏈。",
+      taiwan_mapping: "台股先由台積電與半導體族群驗證。",
+      evidence_refs: ["MD001"],
+    },
+    {
+      event: "市場不確定性升高",
+      source_market: "全球市場",
+      impact_logic: "不確定性使資金流向防禦性股票。",
+      taiwan_mapping: "國泰金與中信金受益。",
+      evidence_refs: [],
+    },
+    {
+      event: "油價波動",
+      source_market: "國際油市",
+      impact_logic: "油價波動影響塑化與航運成本。",
+      taiwan_mapping: "台塑與長榮受影響。",
+      evidence_refs: [],
+    },
+  ];
+  note.beneficiary_candidates = [
+    ...(note.beneficiary_candidates as Record<string, unknown>[]),
+    {
+      stock_code: "1301",
+      stock_name: "台塑",
+      reason: "油價波動直接影響塑化原料成本。",
+      validation_signal: "盤中確認塑化族群與油價是否同向。",
+      invalidation_condition: "油價波動未延續。",
+      evidence_refs: [],
+    },
+    {
+      stock_code: "2603",
+      stock_name: "長榮",
+      reason: "油價下跌有利貨櫃航運成本。",
+      validation_signal: "盤中確認航運族群與油價是否同向。",
+      invalidation_condition: "運價與油價訊號不一致。",
+      evidence_refs: [],
+    },
+  ];
+
+  const master = assembleResearchMasterV2(fixture);
+  const validation = validateResearchMasterV2(master);
+  assert(
+    master.provenance.source_status === "complete",
+    `traceable no-trade decision expected complete, received ${master.provenance.source_status}`,
+  );
+  assert(
+    master.sections.transmission_narrative.path.every((node) =>
+      node.evidence_refs.length > 0
+    ),
+    "canonical transmission path must abstain from unsupported nodes",
+  );
+  assert(
+    !master.sections.representative_stocks.some((stock) =>
+      ["1301", "2603"].includes(stock.symbol)
+    ),
+    "unsupported stocks must remain outside canonical paid research",
+  );
+  assert(
+    validation.quality.evidence_coverage === 100,
+    `no-trade evidence coverage expected 100, received ${validation.quality.evidence_coverage}`,
+  );
+  assert(
+    validation.quality.unsupported_claims.length === 0,
+    `no-trade report retained unsupported claims: ${validation.quality.unsupported_claims.join(" | ")}`,
+  );
+  assert(
+    validation.quality.publish_status === "ready",
+    `no-trade report expected ready, received ${validation.quality.publish_status}`,
+  );
+});
+
+Deno.test("Case I: V10 recommendations cut over from unrelated legacy themes", () => {
+  const fixture = completeFixture();
+  fixture.legacy.data_quality = "degraded";
+  fixture.legacy.missing_sources = [
+    "sector_rotation_scores:2026-08-28",
+    "market_snapshot.aapl",
+    "market_snapshot.crude_oil",
+  ];
+  fixture.legacy.v10_data_quality_status = "partial";
+  fixture.legacy.today_beneficiary_stocks_v10 = [
+    {
+      symbol: "3037",
+      name: "欣興",
+      industry_name: "PCB / CCL",
+      trigger_event: "SEMICONDUCTOR",
+      why_this_stock: "高階 PCB 與載板是半導體需求往台灣零組件端傳導的驗證點。",
+      intraday_validation: "10:00 前確認 PCB 族群至少兩檔同步強於 TAIEX。",
+      invalidation_condition: "欣興弱於 TAIEX 且 PCB 族群沒有量價同步時失效。",
+      evidence_refs: ["MD001", "NEWS001"],
+    },
+  ];
+  const note = fixture.legacy.member_research_note_v2 as Record<
+    string,
+    unknown
+  >;
+  note.beneficiary_candidates = [
+    {
+      stock_code: "2882",
+      stock_name: "國泰金",
+      reason: "舊版金融防禦候選。",
+      validation_signal: "觀察金融指數。",
+      invalidation_condition: "金融族群轉弱。",
+      evidence_refs: ["MD002"],
+    },
+  ];
+  fixture.legacy.v10_observation_watchlist = [
+    {
+      symbol: "1303",
+      name: "南亞",
+      observation_reason: "舊版油價與塑化觀察。",
+      validation_signal: "觀察塑化族群。",
+      stop_observing_condition: "油價訊號反轉。",
+      evidence_refs: ["NEWS001"],
+    },
+  ];
+
+  const master = assembleResearchMasterV2(fixture);
+  const validation = validateResearchMasterV2(master);
+  assert(
+    master.sections.representative_stocks.map((stock) => stock.symbol).join(",") === "3037",
+    "canonical paid research must contain only the decided V10 recommendation set",
+  );
+  assert(
+    master.provenance.source_status === "complete",
+    `traceable recommendation expected complete, received ${master.provenance.source_status}`,
+  );
+  assert(
+    validation.quality.publish_status === "ready",
+    `traceable V10 recommendation expected ready, received ${validation.quality.publish_status}`,
+  );
+});
+
+Deno.test("Case J: a cited but unrelated source cannot validate a stock recommendation", () => {
+  const fixture = completeFixture();
+  const master = assembleResearchMasterV2(fixture);
+  master.sections.representative_stocks = [{
+    ...master.sections.representative_stocks[0],
+    stock_id: "stock:2026-09-01:1101",
+    symbol: "1101",
+    name: "台泥",
+    reason: "水泥價格與基建需求使台泥成為今日受惠股。",
+    evidence_refs: ["NEWS003"],
+  }];
+  const evidenceIndex = [
+    ...fixture.evidenceIndex,
+    {
+      evidence_id: "NEWS003",
+      evidence_type: "market_news",
+      source: "market_news",
+      title: "Gold, silver ETFs tumble as US Fed rate hike bets surge",
+      summary:
+        "Gold and silver ETFs fell as investors increased Fed rate hike expectations.",
+      importance: 80,
+      freshness: "fresh",
+      raw_reference: "moneycontrol:gold-silver-etfs-fed-rate-hike",
+    },
+  ];
+  const validation = validateResearchMasterV2(master, {
+    evidenceIndex,
+    candidateUniverse: {
+      candidates: [{
+        symbol: "1101",
+        name: "台泥",
+        industry_code: "CEMENT",
+        industry: "水泥",
+        sector: "傳產",
+        trigger_tags: ["POLICY"],
+        related_evidence: [{ evidence_id: "NEWS003" }],
+      }],
+    },
+  });
+  assert(
+    validation.quality.publish_status === "degraded",
+    `unrelated stock evidence expected degraded, received ${validation.quality.publish_status}`,
+  );
+  assert(
+    validation.quality.unsupported_claims.some((claim) =>
+      claim.includes("evidence_relationship_not_supported")
+    ),
+    "a reference ID alone must not count as stock-to-evidence support",
+  );
+  assert(
+    validation.quality.evidence_coverage < 100,
+    "unrelated stock evidence must reduce evidence coverage",
+  );
+});
+
+Deno.test("Case K: 2026-09-02 risk context cannot become financial or telecom recommendations", () => {
+  const fixture = completeFixture();
+  fixture.reportDate = "2026-09-02";
+  fixture.todayDate = "2026-09-02";
+  fixture.legacy.today_beneficiary_stocks_v10 = [];
+  fixture.legacy.v10_data_quality_status = "insufficient_positive_evidence";
+  fixture.legacy.missing_sources = ["sector_rotation_scores:2026-09-01"];
+  fixture.evidencePack = {
+    data_quality: {
+      available_sources: ["market_data", "market_news"],
+      missing_sources: ["sector_rotation_scores:2026-09-01"],
+    },
+  };
+  fixture.evidenceIndex = [
+    {
+      evidence_id: "MD001",
+      evidence_type: "market_data",
+      source: "market_data",
+      title: "SOX",
+      summary: "SEMICONDUCTOR index provides a traceable industry risk signal.",
+      importance: 90,
+      freshness: "fresh",
+      raw_reference: "SOX",
+    },
+    {
+      evidence_id: "MD002",
+      evidence_type: "market_data",
+      source: "market_data",
+      title: "VIX",
+      summary: "VIX moved higher and the broad market entered a risk-off state.",
+      importance: 85,
+      freshness: "fresh",
+      raw_reference: "VIX",
+    },
+  ];
+  fixture.candidateUniverse = {
+    candidates: [
+      ...["2881", "2882", "2891"].map((symbol) => ({
+        symbol,
+        name: symbol,
+        industry_code: "FINANCIAL",
+        industry: "金融",
+        sector: "金融",
+        trigger_tags: ["RATE", "DEFENSIVE"],
+        related_evidence: [{ evidence_id: "MD002" }],
+      })),
+      {
+        symbol: "2412",
+        name: "中華電",
+        industry_code: "TELECOM",
+        industry: "電信",
+        sector: "電信",
+        trigger_tags: ["DEFENSIVE"],
+        related_evidence: [{ evidence_id: "MD002" }],
+      },
+    ],
+  };
+  const note = fixture.legacy.member_research_note_v2 as Record<string, unknown>;
+  note.today_core_thesis = "SEMICONDUCTOR 風險訊號仍需盤中確認。";
+  note.opening_thesis = {
+    summary: "SEMICONDUCTOR 風險訊號仍需盤中確認。",
+    confidence_score: 60,
+    signals: ["SEMICONDUCTOR", "VIX"],
+  };
+  note.beneficiary_candidates = [
+    ["2881", "富邦金"],
+    ["2882", "國泰金"],
+    ["2891", "中信金"],
+    ["2412", "中華電"],
+  ].map(([stock_code, stock_name]) => ({
+    stock_code,
+    stock_name,
+    reason: "VIX 上升可能使資金轉向防禦型股票。",
+    validation_signal: "盤中確認是否相對抗跌。",
+    invalidation_condition: "VIX 回落時停止觀察。",
+    evidence_refs: ["MD002"],
+  }));
+  fixture.legacy.v10_observation_watchlist = [];
+  fixture.legacy.v8_beneficiary_chain = { status: "insufficient", beneficiaries: [] };
+
+  const master = assembleResearchMasterV2(fixture);
+  assert(
+    master.sections.representative_stocks.length === 0,
+    `broad VIX context leaked into paid recommendations: ${master.sections.representative_stocks.map((stock) => stock.symbol).join(",")}`,
+  );
+  assert(
+    master.sections.core_thesis.evidence_refs.includes("MD001"),
+    "SEMICONDUCTOR thesis must retain the genuinely related SOX evidence",
+  );
+  assert(
+    !/金融股|電信股|防禦型股票|可能受益/.test(
+      `${master.sections.why_today_matters.narrative} ${master.sections.transmission_narrative.narrative}`,
+    ),
+    "rejected VIX-to-financial/telecom inference must not leak into canonical no-trade research",
+  );
+  assert(
+    master.sections.transmission_narrative.path.every((node) =>
+      node.evidence_refs.length > 0
+    ),
+    "canonical no-trade transmission nodes must all remain traceable",
   );
 });

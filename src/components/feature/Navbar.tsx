@@ -4,6 +4,8 @@ import MarketStatusLight from '@/components/base/MarketStatusLight';
 import { BRAND_ICON_URL, BRAND_NAME } from '@/config/brand';
 import type { MarketState } from '@/services/marketStateEngine';
 import { supabase } from '@/lib/supabase';
+import { PRODUCT_FEATURE_FLAGS } from '@/config/productFeatures';
+import { trackEvent } from '@/utils/analytics';
 
 interface NavbarProps {
   marketState?: MarketState | null;
@@ -44,6 +46,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
 
   const navLinks = [
     { to: '/report/today', label: '今日判斷' },
+    ...(PRODUCT_FEATURE_FLAGS.beginner_learning.enabled ? [{ to: '/learn', label: '小白學堂' }] : []),
     { to: '/war-room', label: '盤中追蹤' },
     { to: '/verification', label: '收盤驗證' },
     { to: '/performance', label: '歷史績效' },
@@ -94,6 +97,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
             {!isLoggedIn && (
               <Link
                 to="/pricing"
+                onClick={() => trackEvent('trial_cta_clicked', { source: 'navbar_desktop' })}
                 className="ml-1 inline-flex min-h-10 items-center rounded-lg bg-primary-500 px-3 text-xs font-bold text-background-50 transition-colors hover:bg-primary-400"
               >
                 14 天完整試用
@@ -139,7 +143,10 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
             {!isLoggedIn && (
               <Link
                 to="/pricing"
-                onClick={() => setMobileOpen(false)}
+                onClick={() => {
+                  setMobileOpen(false);
+                  trackEvent('trial_cta_clicked', { source: 'navbar_mobile' });
+                }}
                 className="mt-2 flex min-h-11 items-center justify-center rounded-lg bg-primary-500 px-4 text-sm font-bold text-background-50"
               >
                 14 天完整試用

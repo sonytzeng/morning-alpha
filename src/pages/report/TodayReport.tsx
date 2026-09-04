@@ -5,7 +5,7 @@ import Footer from '@/components/feature/Footer';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
 import { mapRowToReport } from '@/services/reportService';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
-import { trackPageView } from '@/utils/analytics';
+import { trackEvent, trackPageView } from '@/utils/analytics';
 import { trackEngagementEvent } from '@/services/engagementService';
 import { renderSafeText } from '@/utils/renderSafe';
 import { formatTaipeiDate } from '@/utils/tradingDay';
@@ -21,6 +21,11 @@ import {
   type RuntimeTimelineNode,
 } from '@/lib/runtimeDecisionTimeline';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
+import BeginnerTodayView from './BeginnerTodayView';
+import { canUseProductFeature, PRODUCT_FEATURE_FLAGS } from '@/config/productFeatures';
+import { getCurrentEntitlement } from '@/services/entitlementService';
+import type { UserEntitlement } from '@/types/subscription';
+import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 
 type AnyObj = Record<string, any>;
 
@@ -268,6 +273,8 @@ function TodayReportContent() {
   const [error, setError] = useState<string | null>(null);
   const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
   const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
+  const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null);
+  const [reportMode, setReportMode] = useState<'professional' | 'beginner'>('professional');
   // V8.4: Unified display state — same source as Home, Opportunities, WarRoom, MemberNote
   const [displayState, setDisplayState] = useState<MorningAlphaDisplayState | null>(null);
   const marketClosed = displayState
@@ -283,7 +290,13 @@ function TodayReportContent() {
         setLoading(true);
         setError(null);
 
-        const resolved = await resolveActiveMorningAlphaReport();
+        const [resolved, currentEntitlement] = await Promise.all([
+          resolveActiveMorningAlphaReport(),
+          PRODUCT_FEATURE_FLAGS.beginner_report_mode.enabled
+            ? getCurrentEntitlement().catch(() => null)
+            : Promise.resolve(null),
+        ]);
+        setEntitlement(currentEntitlement);
         const finalReport = resolved.rawRow
           ? mapRowToReport(resolved.rawRow as unknown as Record<string, unknown>)
           : null;
@@ -415,6 +428,7 @@ function TodayReportContent() {
   ];
 
   const avoidAction = report?.avoid_today?.find((item) => Boolean(item?.trim())) || '';
+  const premiumAvailability = resolvePremiumContentAvailability(ai);
   const focusStocks = presentation.opportunities
     .filter((stock) => stock.oneLineReason || stock.confirmation || stock.invalidation)
     .slice(0, 3)
@@ -428,6 +442,18 @@ function TodayReportContent() {
         displayObservation: readableTexts[1],
       };
     });
+  const beginnerFocusStocks = presentation.primaryDecision.state === 'ACT'
+    && premiumAvailability.eligible
+    && premiumAvailability.decisionMode === 'recommendations'
+    ? presentation.opportunities
+      .filter((stock) => Boolean(safeStockDisplayText(stock.oneLineReason)))
+      .slice(0, 3)
+      .map((stock) => ({
+        symbol: stock.symbol,
+        name: stock.name,
+        reason: safeStockDisplayText(stock.oneLineReason),
+      }))
+    : [];
 
   const rotation = asObj(ai.capital_rotation_path);
   const reduceWeight = firstPopulatedText(
@@ -504,6 +530,15 @@ function TodayReportContent() {
     : hasInsufficientRuntimeNode
       ? '下一步要補齊的證據'
       : `${nextRuntimeNode.time} ${nextRuntimeNode.label}`;
+  const canPreviewBeginnerMode = canUseProductFeature('beginner_report_mode', entitlement)
+    && !isHistoricalFallback
+    && report.report_date === todayStr;
+  const setTodayReportMode = (mode: 'professional' | 'beginner') => {
+    setReportMode(mode);
+    trackEvent(mode === 'beginner' ? 'beginner_mode_enabled' : 'beginner_mode_disabled', {
+      report_date: report?.report_date || todayStr,
+    });
+  };
   if (loading) {
     return (
       <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -621,6 +656,24 @@ function TodayReportContent() {
     );
   }
 
+  if (canPreviewBeginnerMode && reportMode === 'beginner') {
+    return (
+      <BeginnerTodayView
+        reportDate={report.report_date}
+        marketStatusLabel={nextDecisionTime}
+        scenario={renderSafeText(primaryScenario)}
+        explanation={renderSafeText(oneLineConclusion || presentation.primaryDecision.reason)}
+        action={renderSafeText(decisionCopy.instruction)}
+        nextCheckpoint={renderSafeText(nextDecisionTime)}
+        stocks={beginnerFocusStocks}
+        confirmationItems={successConditions}
+        invalidationItems={presentation.invalidationItems}
+        avoidAction={avoidAction ? publicTodayText(avoidAction) : undefined}
+        onShowProfessional={() => setTodayReportMode('professional')}
+      />
+    );
+  }
+
   return (
     <div className="ma-page ma-pixel-page ma-today-page flex flex-col overflow-x-hidden">
       <Navbar marketStatusLabel={nextDecisionTime} />
@@ -631,7 +684,10 @@ function TodayReportContent() {
             <article className={`ma-today-v4-workbench is-${presentation.primaryDecision.state.toLowerCase()}`}>
               <header>
                 <p className="ma-pixel-eyebrow"><i className="ri-focus-3-line" aria-hidden="true" />今日判斷工作台 · {isHistoricalFallback ? `歷史資料 ${report.report_date}` : report.report_date}</p>
-                <span className={`ma-today-v3-state is-${presentation.primaryDecision.state.toLowerCase()}`}>{workbenchStateLabel}</span>
+                <div className="ma-today-mode-actions">
+                  {canPreviewBeginnerMode && <button type="button" onClick={() => setTodayReportMode('beginner')}>切換小白模式</button>}
+                  <span className={`ma-today-v3-state is-${presentation.primaryDecision.state.toLowerCase()}`}>{workbenchStateLabel}</span>
+                </div>
               </header>
               <h1>{todayWorkbenchTitle}</h1>
               <p className="ma-today-v4-thesis">{renderSafeText(oneLineConclusion || primaryScenario)}</p>

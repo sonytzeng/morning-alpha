@@ -2,6 +2,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 import { contentLengthExceedsLimit, readBoundedText, RequestBodyTooLargeError } from '../_shared/bounded-json.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import {
+  consumeAlphaCoachRateLimit,
+  resolveAlphaCoachRateLimitPolicy,
+} from '../_shared/alpha-coach-rate-limit.ts';
+import {
   ALPHA_COACH_REFUSAL,
   alphaCoachSourcesAreValid,
   buildGroundedAlphaCoachAnswer,
@@ -15,13 +19,11 @@ type JsonRecord = Record<string, unknown>;
 
 const VERSION = 'ALPHA_COACH_OWNER_PREVIEW_V1';
 const MAX_BODY_BYTES = 4096;
-const REQUESTS_PER_MINUTE = 5;
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
 };
-const rateWindows = new Map<string, number[]>();
 
 const OFFICIAL_GLOSSARY = [
   { term: '相對大盤', explanation: '把個股走勢和加權指數相比，觀察它是否真的更強或更弱。', url: 'https://investoredu.twse.com.tw/Pages/TWSE.aspx' },
@@ -76,15 +78,6 @@ function taipeiDate(): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(new Date());
-}
-
-function consumeRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const active = (rateWindows.get(userId) || []).filter((time) => now - time < 60_000);
-  if (active.length >= REQUESTS_PER_MINUTE) return false;
-  active.push(now);
-  rateWindows.set(userId, active);
-  return true;
 }
 
 async function readBody(req: Request): Promise<JsonRecord> {
@@ -199,8 +192,30 @@ Deno.serve(async (req: Request) => {
   const serviceClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: profile, error: profileError } = await serviceClient.from('profiles').select('role').eq('id', authData.user.id).maybeSingle();
   if (profileError) return jsonResponse({ success: false, error: 'ROLE_LOOKUP_FAILED' }, 500);
-  if (text(profile?.role).toLowerCase() !== 'admin') return jsonResponse({ success: false, error: 'OWNER_REQUIRED' }, 403);
-  if (!consumeRateLimit(authData.user.id)) return jsonResponse({ success: false, error: 'RATE_LIMITED' }, 429);
+  const verifiedRole = text(profile?.role).toLowerCase();
+  if (verifiedRole !== 'admin') return jsonResponse({ success: false, error: 'OWNER_REQUIRED' }, 403);
+
+  const rateLimit = await consumeAlphaCoachRateLimit(
+    (functionName, args) => serviceClient.rpc(functionName, args),
+    authData.user.id,
+    resolveAlphaCoachRateLimitPolicy(verifiedRole),
+  );
+  if (rateLimit.status === 'backend_error') {
+    console.error('ALPHA_COACH_RATE_LIMIT_BACKEND_ERROR', { reason: rateLimit.reason });
+    return jsonResponse({
+      success: false,
+      error: 'RATE_LIMIT_BACKEND_ERROR',
+      message: '服務暫時忙碌，請稍後再試。',
+    }, 503);
+  }
+  if (rateLimit.status === 'limited') {
+    return jsonResponse({
+      success: false,
+      error: 'RATE_LIMITED',
+      message: '請稍後再試。',
+      retry_after_seconds: rateLimit.retryAfterSeconds,
+    }, 429);
+  }
 
   let body: JsonRecord;
   try {

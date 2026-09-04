@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   buildDailyDeliveryRecoveryPlan,
   hasFailedEvidenceDependency,
+  resolveClaimedPipelineRetry,
   isContentOnlyDeliveryFailure,
   resolveClaimedPipelineSlot,
   resolveDailyDeliveryCompletion,
@@ -193,4 +194,47 @@ test('duplicate active or completed slots are idempotent skips, not runtime fail
     claimed_status: 'DEGRADED',
   });
   assert.equal(resolveClaimedPipelineSlot('FAILED').success, false);
+});
+
+test('a due degraded slot creates a bounded append-only retry attempt', () => {
+  assert.deepEqual(resolveClaimedPipelineRetry({
+    status: 'DEGRADED',
+    attempt: 1,
+    next_retry_at: '2026-09-04T23:02:14.000Z',
+    now: '2026-09-04T23:03:00.000Z',
+  }), {
+    retry: true,
+    next_attempt: 2,
+    reason: 'RETRY_DUE',
+  });
+
+  assert.deepEqual(resolveClaimedPipelineRetry({
+    status: 'FAILED',
+    attempt: 2,
+    next_retry_at: '2026-09-04T23:05:00.000Z',
+    now: '2026-09-04T23:03:00.000Z',
+  }), {
+    retry: false,
+    next_attempt: 3,
+    reason: 'RETRY_NOT_DUE',
+  });
+});
+
+test('pipeline retry refuses active, unscheduled, and exhausted slots', () => {
+  assert.equal(resolveClaimedPipelineRetry({
+    status: 'RUNNING', attempt: 1, next_retry_at: '2026-09-04T23:02:00.000Z', now: '2026-09-04T23:03:00.000Z',
+  }).reason, 'STATUS_NOT_RETRYABLE');
+  assert.equal(resolveClaimedPipelineRetry({
+    status: 'DEGRADED', attempt: 1, next_retry_at: null, now: '2026-09-04T23:03:00.000Z',
+  }).reason, 'RETRY_NOT_SCHEDULED');
+  assert.deepEqual(resolveClaimedPipelineRetry({
+    status: 'DEGRADED',
+    attempt: 4,
+    next_retry_at: '2026-09-04T23:02:00.000Z',
+    now: '2026-09-04T23:03:00.000Z',
+  }), {
+    retry: false,
+    next_attempt: 5,
+    reason: 'RETRY_BUDGET_EXHAUSTED',
+  });
 });

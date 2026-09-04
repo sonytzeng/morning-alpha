@@ -5,6 +5,7 @@ import { authorizeInternalRequest, buildInternalFunctionHeaders, constantTimeEqu
 import {
   buildDailyDeliveryRecoveryPlan,
   hasFailedEvidenceDependency,
+  resolveClaimedPipelineRetry,
   resolveClaimedPipelineSlot,
   resolveDailyDeliveryCompletion,
   resolveDailyDeliveryPhase,
@@ -12,7 +13,7 @@ import {
   type DailyDeliveryPhase,
 } from '../_shared/daily-delivery-recovery.ts';
 
-const VERSION = 'DAILY_DELIVERY_V1.6_SECTOR_ROTATION_RECOVERY';
+const VERSION = 'DAILY_DELIVERY_V1.7_DUE_SLOT_RETRY';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -375,38 +376,107 @@ async function claimPipelineSlot(
 ): Promise<{
   acquired: boolean;
   id: string | null;
+  attempt: number;
+  retryOfId: string | null;
+  retryDecision: string | null;
   existingStatus: string | null;
   existingReasonCodes: string[];
   existingErrorCode: string | null;
 }> {
-  const idempotencyKey = `${reportDate}:PREMARKET:${phase}:${slot}`;
-  const { data, error } = await supabase
-    .from('pipeline_runs')
-    .insert({
+  const baseIdempotencyKey = `${reportDate}:PREMARKET:${phase}:${slot}`;
+  const buildInsertPayload = (
+    idempotencyKey: string,
+    pipelineAttempt: number,
+    retryOfId: string | null = null,
+  ) => ({
       trading_date: reportDate,
       checkpoint: 'PREMARKET',
       idempotency_key: idempotencyKey,
       status: 'RUNNING',
-      attempt,
+      attempt: pipelineAttempt,
       started_at: new Date().toISOString(),
       deadline_at: new Date(`${reportDate}T07:30:00+08:00`).toISOString(),
       delivery_status: phase === 'refresh' || phase === 'generate' || phase === 'repair' ? 'NOT_DUE' : 'PENDING',
-      provider_status: { orchestrator_version: VERSION, phase },
-    })
+      provider_status: {
+        orchestrator_version: VERSION,
+        phase,
+        retry_of_pipeline_run_id: retryOfId,
+      },
+    });
+
+  const { data, error } = await supabase
+    .from('pipeline_runs')
+    .insert(buildInsertPayload(baseIdempotencyKey, attempt))
     .select('id')
     .maybeSingle();
   if (error?.code === '23505') {
-    const { data: existing, error: existingError } = await supabase
+    const { data: existingRows, error: existingError } = await supabase
       .from('pipeline_runs')
-      .select('id,status,reason_codes,error_code')
-      .eq('idempotency_key', idempotencyKey)
-      .maybeSingle();
+      .select('id,status,reason_codes,error_code,next_retry_at,attempt,idempotency_key,created_at')
+      .or(`idempotency_key.eq.${baseIdempotencyKey},idempotency_key.like.${baseIdempotencyKey}:retry:%`)
+      .order('attempt', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1);
+    const existing = Array.isArray(existingRows) ? existingRows[0] : null;
     if (existingError || !existing) {
       throw new Error(`PIPELINE_SLOT_STATUS_FAILED:${existingError?.message || 'existing run missing'}`);
     }
+
+    const retryResolution = resolveClaimedPipelineRetry({
+      status: String(existing.status || 'RUNNING'),
+      attempt: Number(existing.attempt || 1),
+      next_retry_at: typeof existing.next_retry_at === 'string' ? existing.next_retry_at : null,
+    });
+    if (retryResolution.retry) {
+      const retryIdempotencyKey = `${baseIdempotencyKey}:retry:${retryResolution.next_attempt}`;
+      const existingId = typeof existing.id === 'string' ? existing.id : null;
+      const { data: retryData, error: retryError } = await supabase
+        .from('pipeline_runs')
+        .insert(buildInsertPayload(retryIdempotencyKey, retryResolution.next_attempt, existingId))
+        .select('id')
+        .maybeSingle();
+      if (!retryError && retryData?.id) {
+        return {
+          acquired: true,
+          id: String(retryData.id),
+          attempt: retryResolution.next_attempt,
+          retryOfId: existingId,
+          retryDecision: retryResolution.reason,
+          existingStatus: null,
+          existingReasonCodes: [],
+          existingErrorCode: null,
+        };
+      }
+      if (retryError?.code !== '23505') {
+        throw new Error(`PIPELINE_SLOT_RETRY_CLAIM_FAILED:${retryError?.message || 'no id'}`);
+      }
+
+      const { data: concurrentRetry, error: concurrentRetryError } = await supabase
+        .from('pipeline_runs')
+        .select('id,status,reason_codes,error_code,attempt')
+        .eq('idempotency_key', retryIdempotencyKey)
+        .maybeSingle();
+      if (concurrentRetryError || !concurrentRetry) {
+        throw new Error(`PIPELINE_SLOT_RETRY_STATUS_FAILED:${concurrentRetryError?.message || 'retry run missing'}`);
+      }
+      return {
+        acquired: false,
+        id: typeof concurrentRetry.id === 'string' ? concurrentRetry.id : null,
+        attempt: Number(concurrentRetry.attempt || retryResolution.next_attempt),
+        retryOfId: existingId,
+        retryDecision: 'RETRY_ALREADY_CLAIMED',
+        existingStatus: String(concurrentRetry.status || 'RUNNING'),
+        existingReasonCodes: asStringArray(concurrentRetry.reason_codes),
+        existingErrorCode: typeof concurrentRetry.error_code === 'string' ? concurrentRetry.error_code : null,
+      };
+    }
+
     return {
       acquired: false,
       id: typeof existing.id === 'string' ? existing.id : null,
+      attempt: Number(existing.attempt || attempt),
+      retryOfId: null,
+      retryDecision: retryResolution.reason,
       existingStatus: String(existing.status || 'RUNNING'),
       existingReasonCodes: asStringArray(existing.reason_codes),
       existingErrorCode: typeof existing.error_code === 'string' ? existing.error_code : null,
@@ -416,6 +486,9 @@ async function claimPipelineSlot(
   return {
     acquired: true,
     id: String(data.id),
+    attempt,
+    retryOfId: null,
+    retryDecision: null,
     existingStatus: null,
     existingReasonCodes: [],
     existingErrorCode: null,
@@ -738,12 +811,15 @@ Deno.serve(async (req: Request) => {
         reason: 'PIPELINE_SLOT_ALREADY_CLAIMED',
         report_date: businessDate,
         phase,
+        pipeline_attempt: claim.attempt,
+        retry_decision: claim.retryDecision,
         reason_codes: claim.existingReasonCodes,
         error_code: claim.existingErrorCode,
         version: VERSION,
       }, resolution.success ? 200 : 409);
     }
     const activeRunId = String(claim.id);
+    const activeAttempt = claim.attempt;
     runId = activeRunId;
 
     let state = await loadDeliveryState(supabase, businessDate);
@@ -751,7 +827,7 @@ Deno.serve(async (req: Request) => {
       has_report: Boolean(state.report),
       premium_eligible: state.premium_eligible,
       reason_codes: state.reason_codes,
-      attempt,
+      attempt: activeAttempt,
       content_repair_attempts: Number(state.snapshot?.version || 0),
       taipei_minutes: clock.minutes,
     });
@@ -770,7 +846,7 @@ Deno.serve(async (req: Request) => {
       actions,
       baseUrl: `${supabaseUrl}/functions/v1`,
       cronSecret,
-      attempt,
+      attempt: activeAttempt,
       reasonCodes: state.reason_codes,
       allowIncident: clock.minutes >= 7 * 60 + 30,
     });
@@ -786,7 +862,7 @@ Deno.serve(async (req: Request) => {
         has_report: Boolean(state.report),
         premium_eligible: state.premium_eligible,
         reason_codes: state.reason_codes,
-        attempt,
+        attempt: activeAttempt,
         content_repair_attempts: Number(state.snapshot?.version || 0),
         taipei_minutes: clock.minutes,
       });
@@ -864,6 +940,8 @@ Deno.serve(async (req: Request) => {
       status,
       report_date: businessDate,
       phase,
+      pipeline_attempt: activeAttempt,
+      retry_of_pipeline_run_id: claim.retryOfId,
       actions,
       premium_eligible: state.premium_eligible,
       delivered,

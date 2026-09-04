@@ -43,6 +43,20 @@ export interface ClaimedPipelineSlotResolution {
   claimed_status: string;
 }
 
+export interface ClaimedPipelineRetryInput {
+  status: string | null | undefined;
+  attempt: number | null | undefined;
+  next_retry_at: string | null | undefined;
+  now?: string;
+  max_attempts?: number;
+}
+
+export interface ClaimedPipelineRetryResolution {
+  retry: boolean;
+  next_attempt: number;
+  reason: 'RETRY_DUE' | 'STATUS_NOT_RETRYABLE' | 'RETRY_NOT_SCHEDULED' | 'RETRY_NOT_DUE' | 'RETRY_BUDGET_EXHAUSTED';
+}
+
 const NEWS_REASONS = new Set([
   'news_traceability_incomplete',
   'verified_catalyst_evidence_missing',
@@ -140,6 +154,32 @@ export function resolveClaimedPipelineSlot(
     status: claimedStatus === 'FAILED' ? 'FAILED' : 'DEGRADED',
     claimed_status: claimedStatus,
   };
+}
+
+export function resolveClaimedPipelineRetry(
+  input: ClaimedPipelineRetryInput,
+): ClaimedPipelineRetryResolution {
+  const status = String(input.status || 'UNKNOWN').toUpperCase();
+  const attempt = Math.max(1, Math.trunc(Number(input.attempt) || 1));
+  const maxAttempts = Math.max(1, Math.trunc(Number(input.max_attempts) || RUNTIME_QUALITY_POLICY.max_recovery_attempts));
+  const nextAttempt = attempt + 1;
+
+  if (!['DEGRADED', 'FAILED'].includes(status)) {
+    return { retry: false, next_attempt: nextAttempt, reason: 'STATUS_NOT_RETRYABLE' };
+  }
+  if (attempt >= maxAttempts) {
+    return { retry: false, next_attempt: nextAttempt, reason: 'RETRY_BUDGET_EXHAUSTED' };
+  }
+
+  const retryAtMs = Date.parse(String(input.next_retry_at || ''));
+  if (!Number.isFinite(retryAtMs)) {
+    return { retry: false, next_attempt: nextAttempt, reason: 'RETRY_NOT_SCHEDULED' };
+  }
+  const nowMs = Date.parse(String(input.now || new Date().toISOString()));
+  if (!Number.isFinite(nowMs) || retryAtMs > nowMs) {
+    return { retry: false, next_attempt: nextAttempt, reason: 'RETRY_NOT_DUE' };
+  }
+  return { retry: true, next_attempt: nextAttempt, reason: 'RETRY_DUE' };
 }
 
 export function buildDailyDeliveryRecoveryPlan(

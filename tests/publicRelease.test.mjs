@@ -38,6 +38,7 @@ const researchQualityGate = read('supabase/functions/_shared/research-quality-ga
 const contentOsMorningAlphaSource = read('supabase/functions/content-os-morning-alpha-source/index.ts');
 const contentIntelligence = read('supabase/functions/_shared/content-intelligence.ts');
 const lineDailyPush = read('supabase/functions/line-daily-push/index.ts');
+const lineDailyFlexMessage = read('supabase/functions/_shared/line-daily-flex-message.mjs');
 const dailyDeliveryOrchestrator = read('supabase/functions/daily-delivery-orchestrator/index.ts');
 const dailyDeliveryRecovery = read('supabase/functions/_shared/daily-delivery-recovery.ts');
 const globalMarketNews = read('supabase/functions/fetch-global-market-news/index.ts');
@@ -424,14 +425,19 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.doesNotMatch(runtimeCheckpointWorkflow, /^\s*schedule:/m);
 });
 
-test('LINE brief identifies analysis and market-data times and refuses weak day-trading scripts', () => {
-  for (const label of ['07:30 盤前', '今日一句', '最大機會', '最大風險', '下一確認', '分析產生', '資料截止']) {
-    assert.match(lineDailyPush, new RegExp(label), `LINE brief is missing ${label}`);
+test('LINE brief uses a branded Flex card and refuses weak day-trading scripts', () => {
+  for (const label of ['今日盤前決策', '今日主線', '焦點觀察', '成立條件', '失效條件', '操作原則']) {
+    assert.match(lineDailyFlexMessage, new RegExp(label), `LINE Flex card is missing ${label}`);
   }
+  assert.match(lineDailyFlexMessage, /type: 'flex'/);
+  assert.match(lineDailyFlexMessage, /type: 'bubble'/);
+  assert.match(lineDailyFlexMessage, /type: 'uri'/);
+  assert.match(lineDailyPush, /buildLineDailyFlexMessage/);
+  assert.match(lineDailyPush, /args\.message\.altText/);
   assert.match(lineDailyPush, /evaluatePremiumContentGate/);
-  assert.match(lineDailyPush, /資料未達標，不建立個股劇本/);
   assert.match(lineDailyPush, /ALREADY_SENT/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);
+  assert.doesNotMatch(lineDailyFlexMessage, /\/100|分析產生|資料截止/);
 });
 
 test('trading-day reports and public timelines fail closed with correct times', () => {
@@ -862,8 +868,8 @@ test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempo
   assert.match(lineDailyPush, /customAggregationUnits/);
   assert.match(lineDailyPush, /dailySentence\.sentence/);
   assert.ok(lineDailyPush.indexOf('report.today_quote') < lineDailyPush.indexOf('copy.one_sentence'));
-  assert.match(lineDailyPush, /確認：/);
-  assert.match(lineDailyPush, /避免：/);
+  assert.match(lineDailyFlexMessage, /成立條件/);
+  assert.match(lineDailyFlexMessage, /失效條件/);
   assert.doesNotMatch(lineDailyPush, /sent:\s*true,\s*report_date: reportDate,\s*total_subscribers: 0/);
 });
 

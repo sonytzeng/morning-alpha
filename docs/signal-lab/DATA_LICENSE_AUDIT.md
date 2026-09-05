@@ -84,3 +84,11 @@ TWSE_MIS_SIGNAL_LAB_USE = LEGAL_REVIEW_REQUIRED
 ```
 
 No new paid dataset has been purchased or activated by Signal Lab V1.
+
+## Data and validation phase findings
+
+The official OGL endpoints were queried directly on 2026-09-05 and retained only in an isolated `/tmp` research dataset. The current TWSE/TPEx OHLCV endpoints return the latest trading day, while the TAIEX dataset explicitly contains only the latest month. The TPEx metadata advertises dealer proprietary and hedge fields, but the actual OpenAPI response inspected exposed only aggregate dealer fields; the adapter therefore does not infer or fabricate the split.
+
+Fugle currently documents historical daily candles for listed/OTC stocks from 2010 and indices from 2015, with adjusted-price support and daily completion by 16:30. Its published personal-plan pricing is free / NT$1,499 / NT$2,999 per month, but repository evidence does not identify the active plan or establish business storage and derived-commercial rights. The historical adapter is ready but remains blocked without a locally available credential and a license decision.
+
+The official free sources remain approved for forward internal research with attribution. They do not supply the five-year historical institutional, universe and corporate-action ledger required by the V1 validity gate. No plan purchase, upgrade or license acceptance occurred.

@@ -164,3 +164,9 @@ Coverage is saved as `eligible_universe`, `analyzed_count`, `complete_count`, an
 ## Stage 1 conclusion
 
 Stage 1 passes because the actual limits are known and recorded. Historical performance remains `INSUFFICIENT`; this is not converted into a fake backtest. Development continues through deterministic engines and Shadow infrastructure while Production impact remains zero.
+
+## 2026-09-05 acquisition update
+
+The official adapters were executed against the current TWSE and TPEx OpenAPI responses and imported into an isolated `/tmp` SQLite research database. They produced 2,121 valid one-day OHLCV rows, 1,570 foreign/trust rows and four partial TAIEX rows. Thirty-seven invalid or suspended source rows were rejected rather than zero-filled.
+
+This improves forward acquisition readiness but does not change the historical verdict: the sample contains one trading day, dealer proprietary/hedge history is absent from the actual response, TAIEX volume is absent, corporate actions are unresolved, historical universe membership is unavailable, and historical publication time is unproven. See `DATA_VALIDATION_PHASE.md` for commands and the immutable manifest evidence.

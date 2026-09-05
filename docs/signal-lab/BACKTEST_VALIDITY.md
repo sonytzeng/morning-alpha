@@ -28,6 +28,10 @@ Synthetic fixtures may validate math, idempotency, leakage guards, score calibra
 
 No CAGR is calculated because there is no complete portfolio strategy.
 
+## Frozen V1 readiness run
+
+The official 2026-09-04 sample was passed through the validation runner without changing V1 parameters. The gate exited with code `4`, sample size `0`, all performance and baseline metrics `null`, score calibration `insufficient`, and `SIGNAL_EDGE = INVALID_BACKTEST`. This is the required fail-closed outcome for a one-day, incomplete dataset—not evidence against or for the strategy.
+
 ## Forward validation path
 
 The defensible path is to ingest legally approved daily observations prospectively, preserve their availability and universe snapshots, emit immutable Shadow predictions, then evaluate outcomes as horizons mature. Until sample size spans multiple regimes, `SIGNAL_EDGE` remains `PENDING_TIME` or `UNPROVEN`.

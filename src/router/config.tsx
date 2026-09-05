@@ -3,6 +3,7 @@ import { lazy } from "react";
 import Home from "../pages/home/page";
 import { Navigate } from "react-router-dom";
 import DeferredRoute from "./DeferredRoute";
+import { PRODUCT_FEATURE_FLAGS } from "@/config/productFeatures";
 
 const NotFound = lazy(() => import("../pages/NotFound"));
 const Account = lazy(() => import("../pages/account/Account"));
@@ -29,6 +30,8 @@ const Pricing = lazy(() => import("../pages/pricing/Pricing"));
 const Verification = lazy(() => import("../pages/verification/page"));
 const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
 const AuthCallbackPage = lazy(() => import("../pages/auth/AuthCallbackPage"));
+const LearnPage = lazy(() => import("../pages/learn/page"));
+const AlphaCoachPage = lazy(() => import("../pages/alpha-coach/page"));
 
 const routes: RouteObject[] = [
   {
@@ -39,6 +42,17 @@ const routes: RouteObject[] = [
     path: "/report/today",
     element: <DeferredRoute><TodayReport /></DeferredRoute>,
   },
+  ...(PRODUCT_FEATURE_FLAGS.beginner_learning.enabled ? [{
+    path: "/learn",
+    element: <DeferredRoute><LearnPage /></DeferredRoute>,
+  }, {
+    path: "/learn/:slug",
+    element: <DeferredRoute><LearnPage /></DeferredRoute>,
+  }] : []),
+  ...(PRODUCT_FEATURE_FLAGS.alpha_coach.enabled ? [{
+    path: "/alpha-coach",
+    element: <DeferredRoute><AlphaCoachPage /></DeferredRoute>,
+  }] : []),
   {
     path: "/opportunities",
     element: <DeferredRoute><Opportunities /></DeferredRoute>,

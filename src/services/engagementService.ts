@@ -1,26 +1,17 @@
 /**
  * engagementService — User retention & early access conversion tracking
  *
- * 提供匿名事件追蹤與早鳥名單寫入。
- * 所有寫入操作都不影響前台使用：失敗只 console.warn。
+ * Optional telemetry is explicitly non-persistent until a safe write contract exists.
+ * Early-access business operations retain their existing explicit error handling.
  */
 
 import { supabase } from '@/lib/supabase';
+import { evaluateEngagementEvent, type EngagementEventName, type EngagementOptions, type EngagementOutcome } from './engagementTelemetryContract';
+export type { EngagementEventName } from './engagementTelemetryContract';
 
 // ═══════════════════════════════════════════════════
 // Types
 // ═══════════════════════════════════════════════════
-
-export type EngagementEventName =
-  | 'view_home'
-  | 'view_report_today'
-  | 'click_free_summary'
-  | 'click_member_preview'
-  | 'click_early_access'
-  | 'submit_early_access'
-  | 'click_reels_preview'
-  | 'click_line_interest'
-  | 'view_close_review';
 
 export interface EarlyAccessInput {
   email?: string;
@@ -57,33 +48,15 @@ export interface EarlyAccessSignup {
 }
 
 // ═══════════════════════════════════════════════════
-// Track engagement event (fire & forget)
+// BEST_EFFORT_TELEMETRY: explicit skip, not a successful insert or swallowed 403.
 // ═══════════════════════════════════════════════════
 
 export async function trackEngagementEvent(
   eventName: EngagementEventName,
-  options?: {
-    page_path?: string;
-    report_date?: string;
-    content_type?: string;
-    metadata?: Record<string, unknown>;
-  }
-): Promise<void> {
-  try {
-    const { error } = await supabase.from('content_engagement_events').insert({
-      event_name: eventName,
-      page_path: options?.page_path || (typeof window !== 'undefined' ? window.location.pathname : null),
-      report_date: options?.report_date || null,
-      content_type: options?.content_type || null,
-      metadata: options?.metadata || null,
-    });
-
-    if (error) {
-      console.warn('[engagementService] Failed to track event:', eventName, error.message);
-    }
-  } catch (err) {
-    console.warn('[engagementService] trackEngagementEvent error:', err);
-  }
+  options?: EngagementOptions,
+): Promise<EngagementOutcome> {
+  // No network attempt, anonymous-client substitution, retry, or security-error suppression.
+  return evaluateEngagementEvent(eventName, options);
 }
 
 // ═══════════════════════════════════════════════════

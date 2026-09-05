@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { BRAND_NAME, BRAND_ICON_URL } from '@/config/brand';
+import { PRODUCT_FEATURE_FLAGS } from '@/config/productFeatures';
+import { trackEvent } from '@/utils/analytics';
 
 export default function Footer() {
   return (
@@ -29,6 +31,11 @@ export default function Footer() {
             <Link to="/report/today" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               今日判斷
             </Link>
+            {PRODUCT_FEATURE_FLAGS.beginner_learning.enabled && (
+              <Link to="/learn" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+                股票小白學堂
+              </Link>
+            )}
             <Link to="/war-room" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               盤中追蹤
             </Link>
@@ -41,7 +48,7 @@ export default function Footer() {
             <Link to="/contact" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               聯絡我們
             </Link>
-            <Link to="/pricing" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+            <Link to="/pricing" onClick={() => trackEvent('trial_cta_clicked', { source: 'footer' })} className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               會員方案
             </Link>
             <Link to="/terms" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">

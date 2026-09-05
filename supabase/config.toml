@@ -35,6 +35,9 @@ verify_jwt = false
 [functions.get-learning-center]
 verify_jwt = true
 
+[functions.alpha-coach]
+verify_jwt = true
+
 [functions.emma-morning-alpha-bridge]
 verify_jwt = false
 

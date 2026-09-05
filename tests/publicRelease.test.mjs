@@ -66,6 +66,7 @@ const publicSourceFiles = [
   'src/pages/contact/page.tsx',
   'src/pages/pricing/Pricing.tsx',
   'src/pages/NotFound.tsx',
+  'src/pages/learn/page.tsx',
   'src/components/feature/EarlyAccessForm.tsx',
   'src/components/feature/Navbar.tsx',
   'src/components/feature/Footer.tsx',
@@ -89,6 +90,7 @@ const expectedRoutes = [
   '/privacy',
   '/contact',
   '/pricing',
+  '/learn',
 ];
 
 test('public route inventory is registered', () => {

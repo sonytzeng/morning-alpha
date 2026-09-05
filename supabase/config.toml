@@ -40,3 +40,12 @@ verify_jwt = false
 
 [functions.content-os-morning-alpha-source]
 verify_jwt = false
+
+[functions.signal-lab-api]
+verify_jwt = true
+
+[functions.signal-lab-shadow]
+verify_jwt = true
+
+[functions.signal-lab-outcomes]
+verify_jwt = true

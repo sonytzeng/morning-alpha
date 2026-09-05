@@ -29,6 +29,7 @@ const Pricing = lazy(() => import("../pages/pricing/Pricing"));
 const Verification = lazy(() => import("../pages/verification/page"));
 const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
 const AuthCallbackPage = lazy(() => import("../pages/auth/AuthCallbackPage"));
+const SignalLabPage = lazy(() => import("../pages/signal-lab/page"));
 
 const routes: RouteObject[] = [
   {
@@ -98,6 +99,10 @@ const routes: RouteObject[] = [
   {
     path: "/account",
     element: <DeferredRoute><Account /></DeferredRoute>,
+  },
+  {
+    path: "/signal-lab",
+    element: <DeferredRoute><SignalLabPage /></DeferredRoute>,
   },
   // V377: Redirect legacy routes
   {

@@ -20,9 +20,10 @@ export default function GlossarySheet({ term, source = 'unknown', onClose }: Glo
   useEffect(() => {
     if (!entry) return undefined;
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const fallbackRegion = previousFocusRef.current?.closest<HTMLElement>('main, [role="main"], nav');
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    closeButtonRef.current?.focus();
+    closeButtonRef.current?.focus({ preventScroll: true });
     trackEvent('learn_term_opened', { term: entry.slug, source });
 
     const handleDialogKeys = (event: KeyboardEvent) => {
@@ -56,7 +57,21 @@ export default function GlossarySheet({ term, source = 'unknown', onClose }: Glo
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleDialogKeys);
-      previousFocusRef.current?.focus();
+      const usable = (element: HTMLElement | null | undefined): element is HTMLElement => Boolean(
+        element?.isConnected && element !== document.body
+        && !element.closest('[hidden], [inert], [aria-hidden="true"]')
+        && !element.hasAttribute('disabled') && element.getClientRects().length
+        && getComputedStyle(element).visibility === 'visible',
+      );
+      const candidates = [previousFocusRef.current, fallbackRegion, document.querySelector<HTMLElement>('main')];
+      const target = candidates.find(usable);
+      if (target) {
+        const previousTabIndex = target.getAttribute('tabindex');
+        if (target.tabIndex < 0) target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+        if (previousTabIndex === null) target.removeAttribute('tabindex');
+        else target.setAttribute('tabindex', previousTabIndex);
+      }
       previousFocusRef.current = null;
     };
   }, [entry, onClose, source]);
@@ -65,7 +80,11 @@ export default function GlossarySheet({ term, source = 'unknown', onClose }: Glo
 
   return (
     <div className="ma-glossary-sheet" role="presentation" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) onClose();
+      if (event.target === event.currentTarget) {
+        // Keep the backdrop's default focus action from undoing focus restoration.
+        event.preventDefault();
+        onClose();
+      }
     }}>
       <section
         ref={dialogRef}

@@ -195,8 +195,10 @@ test('routes, Today presentation mode, analytics, and mobile scopes are wired wi
   assert.doesNotMatch(`${today}\n${coach}\n${edge}`, /localStorage|[?&]tier=|client[_ -]?tier/i);
   assert.doesNotMatch(edge, /user_metadata|app_metadata/);
   assert.doesNotMatch(edge, /\.insert\(|\.update\(|\.upsert\(|OPENAI_API_KEY|api\.openai\.com/i);
-  assert.match(today, /presentation\.primaryDecision\.state === 'ACT'/);
-  assert.match(today, /premiumAvailability\.decisionMode === 'recommendations'/);
+  assert.match(today, /canShowBeginnerRecommendations\(\{/);
+  assert.match(today, /action: presentation\.primaryDecision\.state/);
+  assert.match(today, /premiumEligible: premiumAvailability\.eligible/);
+  assert.match(today, /decisionMode: premiumAvailability\.decisionMode/);
   assert.match(today, /safeStockDisplayText\(stock\.oneLineReason\)/);
   assert.match(today, /stocks=\{beginnerFocusStocks\}/);
   assert.match(beginner, /今天沒有符合標準的標的/);
@@ -212,7 +214,8 @@ test('Glossary Sheet exposes real dialog semantics and keyboard focus management
   assert.match(sheet, /aria-describedby=\{descriptionId\}/);
   assert.match(sheet, /event\.key === 'Escape'/);
   assert.match(sheet, /event\.key !== 'Tab'/);
-  assert.match(sheet, /previousFocusRef\.current\?\.focus\(\)/);
+  assert.match(sheet, /\[previousFocusRef\.current, fallbackRegion, document\.querySelector/);
+  assert.match(sheet, /target\.focus\(\{ preventScroll: true \}\)/);
   assert.match(sheet, /document\.body\.style\.overflow = 'hidden'/);
   assert.match(sheet, /event\.target === event\.currentTarget/);
   assert.match(sheet, /rel="noopener noreferrer"/);

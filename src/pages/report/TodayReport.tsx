@@ -24,6 +24,8 @@ import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import BeginnerTodayView from './BeginnerTodayView';
 import { canUseProductFeature, PRODUCT_FEATURE_FLAGS } from '@/config/productFeatures';
 import { getCurrentEntitlement } from '@/services/entitlementService';
+import { canShowBeginnerRecommendations } from '@/features/learning/beginnerReportContract';
+import { useReportDisplayMode } from '@/features/learning/useReportDisplayMode';
 import type { UserEntitlement } from '@/types/subscription';
 import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 
@@ -274,7 +276,7 @@ function TodayReportContent() {
   const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
   const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
   const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null);
-  const [reportMode, setReportMode] = useState<'professional' | 'beginner'>('professional');
+  const [reportMode, setReportMode] = useReportDisplayMode();
   // V8.4: Unified display state — same source as Home, Opportunities, WarRoom, MemberNote
   const [displayState, setDisplayState] = useState<MorningAlphaDisplayState | null>(null);
   const marketClosed = displayState
@@ -442,9 +444,14 @@ function TodayReportContent() {
         displayObservation: readableTexts[1],
       };
     });
-  const beginnerFocusStocks = presentation.primaryDecision.state === 'ACT'
-    && premiumAvailability.eligible
-    && premiumAvailability.decisionMode === 'recommendations'
+  const beginnerFocusStocks = canShowBeginnerRecommendations({
+    action: presentation.primaryDecision.state,
+    premiumEligible: premiumAvailability.eligible,
+    decisionMode: premiumAvailability.decisionMode,
+    reportDate: report?.report_date,
+    todayDate: todayStr,
+    isHistoricalFallback,
+  })
     ? presentation.opportunities
       .filter((stock) => Boolean(safeStockDisplayText(stock.oneLineReason)))
       .slice(0, 3)

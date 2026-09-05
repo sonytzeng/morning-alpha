@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "type-check": "tsc --noEmit --project tsconfig.app.json",
-    "test:public": "node --test tests/*.test.mjs"
+    "test:public": "node --test tests/*.test.mjs",
+    "test:beginner-preview": "MA_BEGINNER_E2E=1 vite --config tests/browser/vite.config.ts"
   },
   "dependencies": {
     "i18next": "^25.3.2",

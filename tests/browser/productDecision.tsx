@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import '../../src/index.css';
 import { DecisionBrief, DecisionEvidence } from '../../src/features/decision-v1/DecisionBrief';
-import { evaluateDecisionV1 } from '../../src/features/decision-v1/engine';
+import { evaluateDecisionV1 } from '../fixtures/legacy-decision-evaluator';
 import { decisionFixture, DAY } from '../fixtures/decision-v1.mjs';
 
 // Explicit render fixture, not a fake Auth service, real route, provider, or production report.

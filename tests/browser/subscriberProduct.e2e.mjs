@@ -15,6 +15,7 @@ const clean = url => { const u = new URL(url); return u.origin + u.pathname; };
 const browser = await chromium.launch({executablePath:process.env.MA_CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
 const context = await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
 const evidence = {scope:'ISOLATED_LOCAL_SUPABASE',production_requests:[],network:[],console:[],routes:[],auth:null,glossary:null,reload:null};
+const payloadChecks=[]; evidence.decision_payload=[];
 await context.route('**/*', route => {
   const u = new URL(route.request().url());
   const staticHost = ['storage.readdy-site.link','cdnjs.cloudflare.com','fonts.googleapis.com','fonts.gstatic.com'].includes(u.hostname);
@@ -27,6 +28,15 @@ const page = await context.newPage();
 page.on('response', response => {
   const path = clean(response.url());
   if (path.startsWith(api) || response.request().isNavigationRequest()) evidence.network.push({path,status:response.status(),method:response.request().method()});
+  if (path === api+'/functions/v1/get-report-payload' && response.status()===200) payloadChecks.push(response.json().then(body=>{
+    if (!body.payload) return;
+    const d=body.payload.decision_engine_v1;
+    assert.equal(d?.schema_version,'decision-evidence-v1');assert.equal(d?.revision_id,body.revision_id);
+    assert.equal(d?.generated_at,body.generated_at);assert.equal(d?.direction_probability,null);
+    assert.ok(d?.assessment_id?.startsWith('decision-evidence-v1:'));
+    assert.ok(!d.issues.some(i=>i.includes('QUERY_FAILED')));
+    evidence.decision_payload.push({tier:body.tier,report_date:body.report_date,revision_id:body.revision_id,assessment_id:d.assessment_id,action:d.action,calibration_status:d.calibration_status,stock_count:d.stock_opportunities.length,evidence_count:d.evidence.length,provenance:d.evidence.every(e=>e.table&&e.row_id&&e.source&&e.observed_at&&e.available_at)});
+  }));
 });
 page.on('console', message => {
   if (['error','warning'].includes(message.type())) evidence.console.push({type:message.type(),text:message.text().replace(/https?:\S+/g, s => {try{return clean(s)}catch{return '[URL]'}}).replace(/eyJ[\w.-]+/g,'[REDACTED]')});
@@ -107,6 +117,7 @@ try {
   assert.equal(evidence.production_requests.length,0);
   assert.equal(evidence.network.filter(r=>r.status>=400 && !r.path.endsWith('/alpha-coach')).length,0);
   assert.equal(evidence.console.length,0);
+  await Promise.all(payloadChecks);assert.ok(evidence.decision_payload.length>0);assert.ok(evidence.decision_payload.every(p=>p.provenance));
   evidence.status='PASS';
 } catch(error) {
   evidence.status='FAIL'; evidence.failure=String(error.message).replace(/https?:\S+/g,s=>{try{return clean(s)}catch{return '[URL]'}}).replace(/eyJ[\w.-]+/g,'[REDACTED]'); process.exitCode=1;

@@ -40,7 +40,7 @@ export function DecisionBrief({ decision, date, marketBias, legacyInstruction, l
         <div><dt>進場環境</dt><dd>{scoreText(decision.entry_environment_score, '尚未完成評估')}</dd></div>
         <div><dt>市場狀態</dt><dd>{decision.market_regime ? REGIMES[decision.market_regime] : '尚未完成分類'}</dd></div>
       </dl>
-      <p className="ma-subscriber-caption">方向機率不等於買進勝率；信心與進場分數是不同的評估。<button type="button" onClick={() => setTerm('chasing-price')}>為什麼看多還不追？</button></p>
+      <p className="ma-subscriber-caption">{decision.calibration_status === 'INSUFFICIENT_HISTORY' ? '校準歷史不足；目前僅有可追溯的證據品質指標，不是獲利機率。' : '方向機率不等於買進勝率；信心與進場分數是不同的評估。'}<button type="button" onClick={() => setTerm('chasing-price')}>為什麼看多還不追？</button></p>
       {actions && <div className="ma-subscriber-actions">{actions}</div>}
     </SubscriberAnswer>
     <GlossarySheet term={term} source="decision_brief" onClose={() => setTerm(null)} />

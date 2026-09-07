@@ -189,7 +189,7 @@ test('real payload handler and SDK over loopback: server roles, locked data, can
     const endpoint = `http://127.0.0.1:${server.address().port}`;
     const { handler, diagnostics } = isolatedEdge(path('../supabase/functions/get-report-payload/index.ts'), {
       SUPABASE_URL: endpoint, SUPABASE_SERVICE_ROLE_KEY: 'isolated-non-production-key',
-    });
+    }, { Date: class extends Date { constructor(value='2026-09-07T02:00:00Z'){ super(value); } } });
     const request = identity => new Request(`${endpoint}/functions/v1/get-report-payload?tier=admin`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', ...(identity ? { Authorization: `Bearer fixture-${identity}` } : {}) },
       body: JSON.stringify({ tier: 'vip', report_date: day }),
@@ -217,7 +217,16 @@ test('real payload handler and SDK over loopback: server roles, locked data, can
         assert.equal(result.payload.ai_strategy_json.v8_daily_sentence.sentence, sentence);
         assert.equal(result.payload.admin_source_report.summary, 'OLD_RAW_THESIS');
       } else assert.equal(result.payload.admin_source_report, undefined);
-      assert.ok(trace.length - start <= 14, `unbounded request count ${trace.length - start}`);
+      const evidenceTables = new Set(['market_quotes','news_events','institutional_flows','earnings_events','sector_stock_map','catalyst_tw_mappings','research_catalysts','model_evaluations']);
+      const requests = trace.slice(start);
+      const evidenceReads = requests.filter(r=>evidenceTables.has(r.path.split('/').pop()));
+      assert.equal(evidenceReads.length,8,'exactly one bounded read per evidence dataset');
+      assert.equal(new Set(evidenceReads.map(r=>r.path)).size,8,'no evidence retries or duplicate scans');
+      assert.ok(evidenceReads.every(r=>r.method==='GET'));
+      assert.ok(requests.length-evidenceReads.length<=14,'original Core request budget unchanged');
+      assert.equal(result.payload.decision_engine_v1.schema_version,'decision-evidence-v1');
+      assert.equal(result.payload.decision_engine_v1.revision_id,revision);
+      assert.equal(result.payload.decision_engine_v1.direction_probability,null);
       const repeated = await (await handler(request(identity))).json();
       assert.equal(repeated.revision_id, revision); assert.equal(repeated.tier, result.tier);
     }

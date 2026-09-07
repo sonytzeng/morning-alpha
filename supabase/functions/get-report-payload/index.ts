@@ -17,6 +17,8 @@ import { buildCanonicalIntradaySyncStatus } from "../_shared/runtime-report-stat
 import { resolveCanonicalRuntimeMarketStatus } from "../_shared/canonical-runtime-market-status.mjs";
 import { resolveCanonicalDataQuality } from "../_shared/production-architecture-core.mjs";
 import { canonicalAdminReaderProjection } from "../_shared/research-pipeline-contract.ts";
+import { loadDecisionEvidence } from "../_shared/decision-v1-data.ts";
+import { buildEvidenceDecision, projectEvidenceDecision, sealEvidenceDecision } from "../_shared/decision-v1-evidence.ts";
 
 type ReportRow = Record<string, unknown> & {
   id?: string;
@@ -1085,6 +1087,35 @@ Deno.serve(async (req: Request) => {
   const publicMetadata = buildPublicPayload(report, context);
   const canonicalDecision = asObject(publicMetadata.canonical_decision);
 
+  // Additive, read-only projection at the published decision's as-of time. Never
+  // evaluate today's close against a morning revision or write back to reports.
+  const decisionIdentity = {
+    report_date: getReportDate(report),
+    revision_id: toStringValue(canonicalDecision.id) || "",
+    generated_at: toStringValue(publicMetadata.generated_at) || "",
+    data_as_of: toStringValue(publicMetadata.generated_at) || "",
+    is_trading_day: publicMetadata.is_trading_day === true,
+    today_date: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date()),
+  };
+  const realEvidence = await loadDecisionEvidence(async (request) => {
+    let read = serviceClient.from(request.table).select(request.columns);
+    for (const filter of request.filters) read = filter.operator === "lte"
+      ? read.lte(filter.column, filter.value) : read.gte(filter.column, filter.value);
+    return await read.order(request.order, { ascending: false }).limit(request.limit)
+      .abortSignal(AbortSignal.timeout(4000));
+  }, decisionIdentity);
+  const payload = buildPayload(report, tier, context);
+  const memberRows = asArray(payload.today_beneficiary_stocks);
+  const decisionEvidence = projectEvidenceDecision(await sealEvidenceDecision(buildEvidenceDecision(realEvidence, decisionIdentity)), {
+    companyContentAllowed: tier !== "free" && publicMetadata.premium_content_status === "eligible"
+      && isCanonicalMemberRevisionEligible(context),
+    canonicalAction: toStringValue(canonicalDecision.action) || "WAIT",
+    publishedSymbols: memberRows.map(r => toStringValue(asObject(r).symbol) || toStringValue(asObject(r).stock_code) || ""),
+  });
+  payload.decision_engine_v1 = decisionEvidence;
+  // Admin has a nested effective-AI view as well; no stale nested model may win.
+  if (tier === "admin") payload.ai_strategy_json = { ...asObject(payload.ai_strategy_json), decision_engine_v1: decisionEvidence };
+
   return jsonResponse({
     tier,
     report_date: getReportDate(report),
@@ -1093,7 +1124,7 @@ Deno.serve(async (req: Request) => {
     data_as_of: publicMetadata.data_as_of,
     market_status: publicMetadata.market_status,
     is_trading_day: publicMetadata.is_trading_day,
-    payload: buildPayload(report, tier, context),
+    payload,
     locked_sections: getLockedSections(tier),
     source: "server_trimmed_payload",
     authenticated: Boolean(userId),

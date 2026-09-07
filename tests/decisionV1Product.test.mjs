@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { evaluateDecisionV1, normalizeDecisionSymbol, actionTone } from '../src/features/decision-v1/engine.ts';
+import { evaluateDecisionV1 } from './fixtures/legacy-decision-evaluator.ts';
+import { normalizeDecisionSymbol, actionTone } from '../src/features/decision-v1/engine.ts';
 import { applyPublishedDecisionGate, decisionFromReport, intradayAnswer, opportunitySummary } from '../src/features/decision-v1/presentation.ts';
 import { summarizeForwardValidation, closingDataComplete } from '../src/features/decision-v1/forwardValidation.ts';
 import { LEARNING_TERMS } from '../src/features/learning/learningGlossary.ts';
@@ -128,7 +129,10 @@ test('same-day same-revision fresh evidence required; no future or stale evidenc
 });
 test('nested assessment cannot select another published identity', () => {
   const input = decisionFixture(); const identity = {report_date:DAY,revision_id:'synthetic-v1',generated_at:input.generated_at};
-  assert.equal(decisionFromReport({decision_engine_v1:input}, identity, DAY).action, 'ACTIVE_WATCH');
+  // Precomputed fixture result, never untrusted factor inputs in React.
+  const output = { ...evaluate(input), schema_version: 'decision-evidence-v1', calibration_status: 'INSUFFICIENT_HISTORY', direction_probability: null };
+  assert.equal(decisionFromReport({decision_engine_v1:output}, identity, DAY).action, 'ACTIVE_WATCH');
+  assert.equal(decisionFromReport({decision_engine_v1:input}, identity, DAY).action, 'INSUFFICIENT_DATA');
   assert.equal(decisionFromReport({decision_engine_v1:input}, {...identity,revision_id:'different'}, DAY).action, 'INSUFFICIENT_DATA');
 });
 test('non-trading day never presents a pending opportunity', () => {

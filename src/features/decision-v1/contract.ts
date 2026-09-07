@@ -9,6 +9,8 @@ export type Evidence = {
   id: string; source: string; summary: string; observed_at: string;
   report_date: string; revision_id: string;
   kind: 'market' | 'event' | 'fundamental' | 'calibration';
+  table?: string; row_id?: string; available_at?: string; source_url?: string;
+  fields?: Record<string, string | number>; freshness_seconds?: number;
 };
 /** Ratios are measured, not LLM ratings; each measurement retains source evidence. */
 export type Measure = { value: number; evidence_ids: string[]; method: 'measured' };
@@ -69,6 +71,13 @@ export type Opportunity = {
   data_quality: 'complete';
 };
 export type Decision = {
+  schema_version?: 'decision-evidence-v1';
+  calibration_status?: 'INSUFFICIENT_HISTORY';
+  direction_evidence_score?: Score | null;
+  factor_availability?: Record<string, { status: 'AVAILABLE' | 'UNAVAILABLE' | 'CONFLICTING'; value: number | null; evidence_ids: string[]; calculation: string }>;
+  screening?: { status: 'COMPLETE' | 'INCOMPLETE'; universe_count: number; evaluated_count: number; rejected: { symbol: string; reasons: string[] }[] };
+  assessment_id?: string;
+  catalysts?: { source: string; published_at: string; event_type: string; affected_sector: string[]; affected_company: string[]; fundamental_impact: 'UNAVAILABLE'; evidence: string[] }[];
   report_date: string; revision_id: string; generated_at: string; data_as_of: string;
   market_direction: Direction | null; market_regime: Regime | null;
   direction_probability: Score | null; model_confidence: Score | null;

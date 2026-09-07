@@ -8,7 +8,7 @@ Owner specification: Decision Engine V1 / Subscriber UX approval, 2026-09-07.
 Fetch v64 is awaiting the **2026-09-08 natural Production Acceptance**. This product change must not modify, deploy, replay or advance Core Fetch, Acceptance, Cron, Publication, LINE, Closing or Learning producers. No Production writes, Migration, Merge or deployment are authorized by this candidate.
 
 Frozen source baseline: `dcf1a8c976b5e78a00356d4443930191731f119a`.
-`tests/productContract.test.mjs` pins the 110 tracked Supabase/workflow/core-reader files with a deterministic content hash. The pin can only change with a separately approved Core release, not to make this product's tests pass.
+`tests/productContract.test.mjs` retains the original bytes of 109 Supabase/workflow/core-reader files. The only user-approved exception for this follow-up is the read-side `get-report-payload` adapter and two newly added `decision-v1-*` modules. `coreProductionPreservation.test.mjs` removes exactly that additive block and checks the previous reader's complete source hash, including Auth, entitlement, retry and publication-alignment code. No Core producer pin was refreshed.
 
 The reading contract is independent from backend implementation. Backend maintenance must preserve the questions, states, evidence requirements, identity and access boundaries below. A legitimate producer fix must rerun product tests; it must not restore the old dashboard UI.
 
@@ -26,13 +26,13 @@ Navigation: Today → Intraday → Closing → Performance → Learn → Account
 
 Semantic colors are **not the only state signal**: green opportunity/confirmed; amber waiting/no-chase; red risk/invalid; blue information; neutral reading. Labels accompany color. Premium dark is retained. Main answer must fit the first screen at 375/390/430/1440, with no horizontal overflow. Long text is not clipped. Dialog must trap focus, close on Esc, restore focus and restore body scrolling. This release adds no animation.
 
-## Canonical typed product input
+## Canonical server Decision Evidence Payload
 
-`src/features/decision-v1/contract.ts` defines `DecisionInput`, `Decision`, `Evidence`, `Score`, `OpportunityInput` and `Transmission`. `engine.ts` is pure: no HTTP, database, Supabase, timers or side effects.
+`src/features/decision-v1/contract.ts` defines the typed output. `engine.ts` now contains labels and an empty-state constructor only; it performs **no score calculation**. The original hypothetical measured-input evaluator is archived under `tests/fixtures` solely to retain regression fixtures; it is absent from the product import graph and build.
 
-The **optional** read-side extension is `ai_strategy_json.decision_engine_v1` (`contract_version: decision-v1`). It is only accepted when `report_date`, `revision_id` and `generated_at` exactly match the existing **server resolver's** identity. `data_as_of` must not be later than generation, and generation must belong to the Taipei report day. Cross-day/future/mixed-revision evidence is rejected.
+The additive server field is `payload.decision_engine_v1` (`schema_version: decision-evidence-v1`). The existing report adapter exposes that server payload in its effective AI view, without recomputing scores. React accepts only the validated output, exactly matching the server-resolved `report_date`, `revision_id`, `generated_at`. `data_as_of` is actual eligible market observation time, never later than generation. The report date must be Taipei today. Raw factor inputs, unsupported percentages, future or mismatched identities fail closed.
 
-This candidate does **not** populate that extension in Production. Today's existing producer does not yet deliver the complete calibrated/factor evidence. Absent input is explicitly unavailable; legacy `confidence_score`, radar confidence and arbitrary prose never become new scores. No API/Schema/Prompt change is hidden in a frontend fallback.
+`get-report-payload` locally reads eight existing canonical datasets through `decision-v1-data.ts` and derives the output in `decision-v1-evidence.ts`. Each query is bounded, has a 4-second abort, and requires both observation and first-availability timestamps no later than the published revision. Query failure/truncation is an explicit gap. No insert, update, RPC, external provider/AI request, producer import or schema change is introduced. This is an **as-of read model**, not an immutable stored Decision ledger. A SHA-256 `assessment_id` makes changed inputs/missingness detectable independently of the published revision; public/member projections share that assessment hash. No deployment has been performed.
 
 Legacy compatibility:
 
@@ -48,24 +48,25 @@ All scores retain `score_version`, measured inputs, evidence IDs and calculation
 
 | Output | V1 calculation / requirements | Honest missing behavior |
 | --- | --- | --- |
-| Direction Probability | Explicit sample-out-of-training calibrated model result, model version, calibration ending strictly before assessment, at least 20 integer samples and calibration evidence | No probability; **not** substituted with confidence |
-| Model Confidence | 100 × (equal mean of measured completeness, freshness, source agreement, signal agreement, historical calibration − measured missing-evidence penalty), clamped 0–100 | Any absent/invalid measurement → unavailable |
-| Entry Environment | Equal mean ×100 of regime fit, risk/reward, valuation, price position, catalyst, fundamental impact, not-priced-in, institutional condition, evidence quality, historical validation | All ten evidence-backed ratios required |
-| Opportunity Score | Same ten dimensions evaluated for the company, independently from market entry score | No incomplete company ranking |
-| Catalyst / Priced-in / Risk / Mispricing | Explicit measured ratios ×100 with evidence | No default 75/80/90 or null-to-zero |
+| Direction Probability | No valid out-of-sample calibration exists; always null with `INSUFFICIENT_HISTORY` | Never substituted with CLE accuracy or legacy confidence |
+| Direction evidence score | Five fresh quotes TAIEX/TXF/2330/SOX/SPX; mean normalized signed price-change pressure | Deterministic quality index, **not probability**; missing/conflicting markets → null |
+| Model Confidence | Equal mean of audited-factor coverage, timestamp freshness, independent-source coverage, sign agreement and calibration evidence coverage | Missing factors reduce coverage; no calibration/source evidence contributes 0 coverage, not fabricated raw values. No market evidence → null |
+| Entry Environment | Mean of regime, inverse risk, inverse 20-close price position, explicit-universe breadth, institutional flow, sourced catalyst availability, inverse price response, evidence quality | Any required factor missing → null. Valuation unavailable is declared/excluded and lowers confidence, never imputed |
+| Opportunity Score | Five evidence-based dimensions: inverse priced-in, four-quarter earnings agreement, institutional net/gross, volume ratio, relative performance | Incomplete candidate/universe → no recommendation; complete candidate score <50 can be excluded |
+| Priced-in | Six measured components: pre-event return, post-event return, relative return, volume ratio, 20-close price position, sector reaction | Missing pre/post data/volume/sector → no stock score; no sentiment substitution |
 
-These quality indices and guardrail thresholds are transparent **V1 candidate policy**, not an empirically calibrated win rate. Parameters are source-controlled and must undergo forward validation before a commercial predictive claim. The 20-sample floor is a display floor, not proof of statistical validity.
+These quality indices and guardrail thresholds are transparent **prospective V1 policy**, not empirically calibrated probabilities or expected returns. Calibration cannot be enabled by increasing a `sample_count` field: a separate point-in-time, out-of-sample contract and validation is required. Current CLE rows (0–8 samples) have a different target and are not used as directional calibration.
 
-Evidence freshness is evaluated at the immutable `data_as_of`, not used to advance any browser timeline. Maximum age: market 24h (permits prior overseas session), event 96h, fundamental 120 days, calibration 365 days; all evidence must still be attached to the same report day/revision. Provider session-specific validity remains the upstream producer's responsibility. Browser clock never completes a checkpoint.
+Freshness is evaluated at the published revision's generation cutoff. Taiwan quotes have a conservative 20-hour cutoff, overseas quotes 80 hours; premarket weekend/holiday gaps are explicitly unavailable, never refreshed by retrieval time. News window begins previous Taipei calendar day 16:00 and ends at assessment; only source-linked, already ingested events qualify. Financial checks need four consecutive sourced quarters, newest ≤120 days and full four-quarter range ≤550 days. Latest provider values never retroactively fill a morning decision. Browser time never completes a checkpoint.
 
 ## Decision safeguards
 
 - Action enum: ACTIVE_WATCH, WAIT_FOR_PULLBACK, WAIT_FOR_CONFIRMATION, HOLD_WATCH, DO_NOT_CHASE, DEFENSIVE, AVOID, NO_QUALIFIED_OPPORTUNITY, INSUFFICIENT_DATA, NOT_APPLICABLE. No BUY output.
 - A complete, evidence-backed empty screening result is `NO_QUALIFIED_OPPORTUNITY`; absent screening, rejected candidates or missing quality fields are `INSUFFICIENT_DATA`. A broken pipeline must not look like a legitimate no-opportunity day.
-- Missing direction calibration also keeps the new assessment incomplete. Market-level no-chase, defensive and waiting gates propagate to company cards; a green company card cannot contradict the global entry restriction. Withheld member content is distinguished from an incomplete assessment.
+- Missing calibration prohibits probability, not transparent deterministic evidence indices. Missing required entry data prevents ACTIVE_WATCH. Withheld member content is distinct from an incomplete screen. Server projection only exposes company cards already in the same approved member revision's published symbols. Existing publisher SELECTIVE/TRADE enums permit paid observations but are not treated as completed entry checkpoints; their new ACTIVE_WATCH is capped at WAIT_FOR_CONFIRMATION.
 - EXTENDED or company priced-in ≥80 → DO_NOT_CHASE. Market risk ≥70 or RISK_OFF → defensive. Entry score <50 → wait for better conditions. Model-confidence quality <50 cannot upgrade an active watch. These are reviewable candidate guardrails, not provider facts.
 - Company fundamental damage / company-specific negative / evidenced failed confirmation → AVOID, regardless of how far price fell.
-- Broad selloff with intact fundamentals is only a MISPRICING_CANDIDATE after company-specific negative, revenue exposure, supply chain, guidance, sector demand, institutional, valuation and price-reaction checks are complete. Still WAIT_FOR_CONFIRMATION; a high mispricing score cannot create BUY.
+- Broad selloff requires sourced company transmission, four consecutive revenue/EPS actual-versus-consensus checks, non-reduced guidance, institutional support and price/volume/sector evidence before MISPRICING_CANDIDATE. "Intact" refers narrowly to those observed filings, not a guarantee about balance-sheet health or future earnings. Valuation remains explicitly unavailable; this is relative selloff observation, not a claim of intrinsic undervaluation. Still WAIT_FOR_CONFIRMATION, never BUY.
 - Every company needs thesis, full transmission, market/event/fundamental evidence, action, and explicit invalidation. Sector names alone do not imply company benefit.
 - Transmission: Catalyst → Cause → Market → Sector → Company exposure → Fundamental impact → Price reaction → Priced-in → Risk/reward → Action. Missing steps reject the candidate.
 - COMPLETED/FAILED confirmation requires corresponding evidence. Prose containing ready/成立/確認/失效/跌破/停止 has no state authority.
@@ -100,7 +101,7 @@ Browser:
 - `tests/browser/productDecision.e2e.mjs` renders `productDecision.html` under that loopback dev server. These are visibly labelled synthetic UI fixtures, not Auth/provider/Production evidence. All external networking is blocked. Five scenarios × four sizes; not included in application build/router.
 - Provide `MA_LOCAL_SCOPE=ma-core-final-20260907`, `MA_E2E_OUTPUT=/private/tmp/<evidence-dir>` and `MA_PLAYWRIGHT_MODULE=<installed playwright module>`; no new runtime dependency is needed. See script headers for precise boundaries.
 
-Remaining release gates: natural Core Production Acceptance; approved producer integration for V1 inputs and public/member projection; calibrated data and prospective performance collection; separate Product deployment approval. Local/CI PASS does not satisfy any of these Production gates.
+Remaining release gates: natural Core Production Acceptance; complete real source datasets described in `decision-evidence-inventory-20260907.md`; genuine calibrated history and prospective collection; separate Product deployment approval. Local wiring/CI PASS does not mean real recommendations or Production readiness. No Frozen Core change is authorized to fill those gaps.
 
 ## Education references
 

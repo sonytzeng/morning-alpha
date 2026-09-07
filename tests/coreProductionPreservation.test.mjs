@@ -11,7 +11,19 @@ test('trusted deployed generator/orchestrator dependencies: protected AI setting
   assert.ok(manifest.protected_declarations.length>100);
   for(const deployment of manifest.production){
     for(const file of deployment.files){
-      assert.equal(hash(readFileSync(new URL(file.path,root),'utf8')),file.integrated_sha256,
+      let bytes=readFileSync(new URL(file.path,root),'utf8');
+      if(file.path==='supabase/functions/get-report-payload/index.ts'){
+        // 2026-09-07 explicit read-side Evidence approval. Remove ONLY the
+        // additive block to prove every pre-existing Core/Auth byte is intact.
+        const extension=bytes.match(/  \/\/ Additive, read-only projection[\s\S]*?(?=\n  return jsonResponse\(\{\n    tier,\n    report_date: getReportDate\(report\))/)?.[0];
+        assert.ok(extension,'approved additive block missing');
+        assert.doesNotMatch(extension,/\.rpc\(|\.insert\(|\.update\(|\.delete\(|\.upsert\(/,'read model must never write');
+        bytes=bytes.replace(/import \{ loadDecisionEvidence \} from "\.\.\/_shared\/decision-v1-data.ts";\n/,'')
+          .replace(/import \{ buildEvidenceDecision, projectEvidenceDecision, sealEvidenceDecision \} from "\.\.\/_shared\/decision-v1-evidence.ts";\n/,'')
+          .replace('\n'+extension,'')
+          .replace('    payload,\n    locked_sections: getLockedSections(tier),','    payload: buildPayload(report, tier, context),\n    locked_sections: getLockedSections(tier),');
+      }
+      assert.equal(hash(bytes),file.integrated_sha256,
         `integrated artifact drift: ${deployment.slug}:${file.path}`);
     }
   }

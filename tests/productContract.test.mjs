@@ -6,11 +6,14 @@ import { readFileSync } from 'node:fs';
 import postcss from 'postcss';
 
 test('Core v64 natural-acceptance freeze: producers, migrations, cron and canonical readers unchanged', () => {
-  const files = execFileSync('git',['ls-files','supabase','.github/workflows','src/lib/decisionEvidence.ts','src/lib/runtimeDecisionTimeline.ts','src/services/resolveActiveReport.ts'],{encoding:'utf8'}).trim().split('\n');
+  // Read-side get-report-payload and exactly two new evidence modules are the
+  // only approved exception. Remaining Core bytes stay pinned to pre-work HEAD.
+  const approved = new Set(['supabase/functions/get-report-payload/index.ts','supabase/functions/_shared/decision-v1-data.ts','supabase/functions/_shared/decision-v1-evidence.ts']);
+  const files = execFileSync('git',['ls-files','supabase','.github/workflows','src/lib/decisionEvidence.ts','src/lib/runtimeDecisionTimeline.ts','src/services/resolveActiveReport.ts'],{encoding:'utf8'}).trim().split('\n').filter(f=>!approved.has(f));
   const hash = createHash('sha256');
   for (const file of files) hash.update(file+'\0').update(readFileSync(file)).update('\0');
-  assert.equal(files.length,110);
-  assert.equal(hash.digest('hex'),'a766fdff32e9fa18f6bdd2a1386a159e9ca370cfad6ae06f70685fa071fb6e67');
+  assert.equal(files.length,109);
+  assert.equal(hash.digest('hex'),'d0e0959ccc86b8b0d8480aa7f56e55385e5bb48477f1971704fa901c1073c08c');
 });
 test('subscriber CSS parses, remains scoped, and has no fixed-height clipping or forced global overrides', () => {
   const css = readFileSync('src/features/decision-v1/subscriber.css','utf8');

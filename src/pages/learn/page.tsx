@@ -40,10 +40,11 @@ function LearningDetail({ slug }: { slug: string }) {
             <h1>{entry.term}</h1>
             {entry.aliases.length > 0 && <p>也常寫作：{entry.aliases.join('、')}</p>}
           </header>
-          <section className="ma-learn-lead"><h2>一句話看懂</h2><p>{entry.plainExplanation}</p></section>
-          <div className="ma-learn-detail-grid">
-            <section><h2>簡單例子</h2><p>{entry.example}</p></section>
-            <section><h2>為什麼重要</h2><p>{entry.whyItMatters}</p></section>
+          <section className="ma-learn-lead"><h2>白話先懂</h2><p>{entry.plainExplanation}</p></section>
+          <div className="ma-subscriber-learn-flow">
+            <section><h2>生活化例子</h2><p>{entry.example}</p></section>
+            <section><h2>Morning Alpha 為什麼看</h2><p>{entry.whyItMatters}</p></section>
+            <section><h2>今天怎麼用</h2><p>{entry.todayUsage}</p></section>
             <section><h2>常見誤解</h2><p>{entry.misconception}</p></section>
             <section className="is-risk"><h2>風險提醒</h2><p>{entry.riskReminder}</p></section>
           </div>
@@ -100,10 +101,10 @@ function LearningIndex() {
           </header>
           <div className="ma-learn-filters" role="group" aria-label="名詞分類">
             {(['全部', ...LEARNING_CATEGORIES] as CategoryFilter[]).map((item) => (
-              <button key={item} type="button" className={category === item ? 'is-active' : ''} onClick={() => setCategory(item)}>{item}</button>
+              <button key={item} type="button" aria-pressed={category === item} className={category === item ? 'is-active' : ''} onClick={() => setCategory(item)}>{item}</button>
             ))}
           </div>
-          <p className="ma-learn-result-count">找到 {results.length} 個名詞</p>
+          <p className="ma-learn-result-count" aria-live="polite">找到 {results.length} 個名詞</p>
           {results.length > 0 ? (
             <div className="ma-learn-grid">
               {results.map((entry) => (

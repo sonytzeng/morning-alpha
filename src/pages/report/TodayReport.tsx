@@ -28,6 +28,8 @@ import { canShowBeginnerRecommendations } from '@/features/learning/beginnerRepo
 import { useReportDisplayMode } from '@/features/learning/useReportDisplayMode';
 import type { UserEntitlement } from '@/types/subscription';
 import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
+import { DecisionBrief, DecisionEvidence } from '@/features/decision-v1/DecisionBrief';
+import { applyPublishedDecisionGate, decisionFromReport, type ReportIdentity } from '@/features/decision-v1/presentation';
 
 type AnyObj = Record<string, any>;
 
@@ -206,30 +208,6 @@ function todayDecisionCopy(
   };
 }
 
-function workbenchTitle(
-  state: PresentationDecisionState,
-  nextNode: RuntimeTimelineNode,
-  lifecycleComplete = false,
-): string {
-  if (lifecycleComplete) {
-    if (state === 'ACT') return '今日條件成立，收盤驗證已完成';
-    if (state === 'STOP') return '今日條件失效，收盤驗證已完成';
-    if (state === 'CLOSED') return '今日休市，流程已結束';
-    return state === 'INSUFFICIENT_DATA' ? '收盤流程已結束，部分資料仍不足' : '今日收盤驗證已完成';
-  }
-  if (state === 'ACT') return '條件成立，接下來只做計畫內的事';
-  if (state === 'STOP') return '原定條件失效，先停止再重新判斷';
-  if (state === 'CLOSED') return '今日流程已結束';
-  const subject = nextNode.label === '主線確認'
-    ? '主線是否成立'
-    : nextNode.label === '開盤驗證'
-      ? '開盤訊號是否一致'
-      : nextNode.label;
-  return nextNode.status === 'current'
-    ? `現在先確認${subject}`
-    : `${nextNode.time} 前，先確認${subject}`;
-}
-
 function listText(value: unknown): string {
   if (Array.isArray(value)) return value.map((item) => safeText(item, '')).filter(Boolean).join('、');
   return safeText(value, '');
@@ -270,6 +248,7 @@ function validationStatusLabel(status: TodayValidationStatus): string {
 
 function TodayReportContent() {
   const [report, setReport] = useState<Report | null>(null);
+  const [identity, setIdentity] = useState<ReportIdentity>({ report_date: '', revision_id: null, generated_at: null });
   const [reportSnapshotRadar, setReportSnapshotRadar] = useState<RadarView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -312,6 +291,7 @@ function TodayReportContent() {
         }
 
         setReport(finalReport);
+        setIdentity({ report_date: resolved.active_report_date || '', revision_id: resolved.revision_id, generated_at: resolved.generated_at });
 
         const radarFromReport = normalizeRadarFromReport(finalReport);
         setReportSnapshotRadar(radarFromReport);
@@ -431,8 +411,14 @@ function TodayReportContent() {
 
   const avoidAction = report?.avoid_today?.find((item) => Boolean(item?.trim())) || '';
   const premiumAvailability = resolvePremiumContentAvailability(ai);
-  const focusStocks = presentation.opportunities
-    .filter((stock) => stock.oneLineReason || stock.confirmation || stock.invalidation)
+  const hasDecisionV1Input = Object.prototype.hasOwnProperty.call(ai, 'decision_engine_v1');
+  const productDecision = applyPublishedDecisionGate(decisionFromReport(ai, identity, todayStr), presentation.primaryDecision.state, premiumAvailability.eligible);
+  const recommendationAccess = canShowBeginnerRecommendations({
+    action: presentation.primaryDecision.state, premiumEligible: premiumAvailability.eligible,
+    decisionMode: premiumAvailability.decisionMode, reportDate: report?.report_date, todayDate: todayStr, isHistoricalFallback,
+  });
+  const focusStocks = (recommendationAccess && !hasDecisionV1Input ? presentation.opportunities : [])
+    .filter((stock) => stock.oneLineReason && stock.confirmation && stock.invalidation)
     .slice(0, 3)
     .map((stock) => {
       const readableTexts = [stock.oneLineReason, stock.confirmation, stock.invalidation]
@@ -452,8 +438,12 @@ function TodayReportContent() {
     todayDate: todayStr,
     isHistoricalFallback,
   })
-    ? presentation.opportunities
-      .filter((stock) => Boolean(safeStockDisplayText(stock.oneLineReason)))
+    ? hasDecisionV1Input
+      ? productDecision.action === 'ACTIVE_WATCH'
+        ? productDecision.stock_opportunities.filter(stock => stock.action === 'ACTIVE_WATCH').slice(0, 3).map(stock => ({ symbol: stock.symbol, name: stock.company_name, reason: stock.thesis }))
+        : []
+      : presentation.opportunities
+      .filter((stock) => Boolean(safeStockDisplayText(stock.oneLineReason)) && Boolean(stock.confirmation) && Boolean(stock.invalidation))
       .slice(0, 3)
       .map((stock) => ({
         symbol: stock.symbol,
@@ -512,11 +502,6 @@ function TodayReportContent() {
   const validationProgressLabel = hasInsufficientRuntimeNode
     ? '待補資料'
     : `${completedRuntimeNodes}/${applicableRuntimeNodes.length} 已完成`;
-  const todayWorkbenchTitle = workbenchTitle(
-    presentation.primaryDecision.state,
-    nextRuntimeNode,
-    runtimeLifecycleComplete,
-  );
   const validationState = runtimeLifecycleComplete
     ? 'confirmed'
     : hasInsufficientRuntimeNode
@@ -545,6 +530,7 @@ function TodayReportContent() {
       : `${nextRuntimeNode.time} ${nextRuntimeNode.label}`;
   const canPreviewBeginnerMode = canUseProductFeature('beginner_report_mode', entitlement)
     && !isHistoricalFallback
+    && report !== null
     && report.report_date === todayStr;
   const setTodayReportMode = (mode: 'professional' | 'beginner') => {
     setReportMode(mode);
@@ -692,33 +678,19 @@ function TodayReportContent() {
       <Navbar marketStatusLabel={nextDecisionTime} />
 
       <main className="flex-1 overflow-x-hidden">
-        <section className="ma-today-v4-workbench-shell">
-          <div className="ma-pixel-content">
-            <article className={`ma-today-v4-workbench is-${presentation.primaryDecision.state.toLowerCase()}`}>
-              <header>
-                <p className="ma-pixel-eyebrow"><i className="ri-focus-3-line" aria-hidden="true" />今日判斷工作台 · {isHistoricalFallback ? `歷史資料 ${report.report_date}` : report.report_date}</p>
-                <div className="ma-today-mode-actions">
-                  {canPreviewBeginnerMode && <button type="button" onClick={() => setTodayReportMode('beginner')}>切換小白模式</button>}
-                  <span className={`ma-today-v3-state is-${presentation.primaryDecision.state.toLowerCase()}`}>{workbenchStateLabel}</span>
-                </div>
-              </header>
-              <h1>{todayWorkbenchTitle}</h1>
-              <p className="ma-today-v4-thesis">{renderSafeText(oneLineConclusion || primaryScenario)}</p>
-              <dl className="ma-today-v4-status-grid">
-                <div><dt>現在怎麼做</dt><dd>{renderSafeText(decisionCopy.instruction)}</dd></div>
-                <div><dt>為什麼</dt><dd>{renderSafeText(decisionCopy.headline)}</dd></div>
-                <div><dt>{runtimeLifecycleComplete ? '最後完成' : nextRuntimeNode.status === 'current' ? '目前節點' : '何時再看'}</dt><dd>{renderSafeText(nextDecisionTime)}</dd></div>
-              </dl>
-              {avoidAction && <p className="ma-today-v4-caution"><span>今天先不要</span>{renderSafeText(publicTodayText(avoidAction))}</p>}
-            </article>
-          </div>
-        </section>
+        <DecisionBrief decision={productDecision} date={report.report_date}
+          marketBias={publicTodayText(presentation.marketBiasLabel)} legacyInstruction={hasDecisionV1Input ? '評估尚未完成，先等待' : decisionCopy.instruction}
+          legacyReason={publicTodayText(oneLineConclusion || primaryScenario)} legacyCount={focusStocks.length}
+          stocksWithheld={!recommendationAccess}
+          actions={canPreviewBeginnerMode && <button type="button" onClick={() => setTodayReportMode('beginner')}>切換小白模式</button>} />
+        <DecisionEvidence decision={productDecision} canShowStocks={recommendationAccess} />
         {!isReportForToday && (
           <div className="ma-section-inner px-4 pt-4 md:px-6"><span className="ma-badge ma-badge-danger">歷史資料：{fallbackReportDate || report.report_date}，今日為 {todayStr}</span></div>
         )}
 
         <div className="ma-pixel-content ma-today-v3-sections">
-          <section className={`ma-today-v3-validation-card is-${validationState}`}>
+          <details className={`ma-subscriber-timeline ma-today-v3-validation-card is-${validationState}`}>
+            <summary>查看目前驗證進度 · {workbenchStateLabel}</summary>
             <header className="ma-today-v3-section-header"><div><p>{validationHeaderKicker}</p><h2>{validationHeaderTitle}</h2></div><strong>{validationProgressLabel}</strong></header>
             <div className={`ma-today-v3-checklist${validationItems.length === 1 ? ' is-single' : ''}`}>
               {validationItems.map((item, index) => (
@@ -731,19 +703,15 @@ function TodayReportContent() {
               ))}
             </div>
             {scriptProgress != null && <div className="ma-today-v3-validation-progress"><span style={{ width: `${scriptProgress}%` }} /></div>}
-          </section>
+          </details>
 
           <section>
             <header className="ma-today-v3-section-header"><div><p>盤中證據</p><h2>市場即時資料</h2></div><span>{hasFreshIntradayRadar ? '盤中資料已同步' : '依目前可用資料'}</span></header>
-            <div className="ma-today-v3-kpi-grid">
+            <dl className="ma-subscriber-market">
               {marketMetrics.map((metric) => (
-                <article key={metric.label} className={`ma-today-v3-kpi-card is-${metric.priority}${metric.value === '尚未取得' ? ' is-missing' : ''}`}>
-                  <i className={metric.icon} aria-hidden="true" />
-                  <span>{metric.label}</span>
-                  <strong>{metric.value}</strong>
-                </article>
+                <div key={metric.label}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>
               ))}
-            </div>
+            </dl>
           </section>
 
           {focusStocks.length > 0 && (
@@ -755,6 +723,7 @@ function TodayReportContent() {
                     <div><div><span>{stock.symbol}</span><h3>{stock.name}</h3></div>{stock.roleLabel && <b>{stock.roleLabel}</b>}</div>
                     {stock.displayHeadline && <p>{stock.displayHeadline}</p>}
                     {stock.displayObservation && <small><i className="ri-focus-3-line" aria-hidden="true" />{stock.displayObservation}</small>}
+                    <small>不再成立：{safeStockDisplayText(stock.invalidation)}</small>
                   </Link>
                 ))}
               </div>

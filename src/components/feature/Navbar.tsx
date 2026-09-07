@@ -6,6 +6,7 @@ import type { MarketState } from '@/services/marketStateEngine';
 import { supabase } from '@/lib/supabase';
 import { PRODUCT_FEATURE_FLAGS } from '@/config/productFeatures';
 import { trackEvent } from '@/utils/analytics';
+import '@/features/decision-v1/subscriber.css';
 
 interface NavbarProps {
   marketState?: MarketState | null;
@@ -46,14 +47,14 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
 
   const navLinks = [
     { to: '/report/today', label: '今日判斷' },
-    ...(PRODUCT_FEATURE_FLAGS.beginner_learning.enabled ? [{ to: '/learn', label: '小白學堂' }] : []),
     { to: '/war-room', label: '盤中追蹤' },
     { to: '/verification', label: '收盤驗證' },
     { to: '/performance', label: '歷史績效' },
+    ...(PRODUCT_FEATURE_FLAGS.beginner_learning.enabled ? [{ to: '/learn', label: '小白學堂' }] : []),
     { to: isLoggedIn ? '/account' : '/login', label: isLoggedIn ? '會員中心' : '登入' },
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path || (path === '/learn' && location.pathname.startsWith('/learn/'));
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-background-200/70 bg-background-50">
@@ -74,8 +75,8 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
             </span>
           </Link>
 
-          {/* Desktop nav — hidden below md (768px) */}
-          <div className="hidden md:flex items-center gap-1">
+          {/* Keep the decision journey usable on narrow tablets too. */}
+          <div className="hidden lg:flex items-center gap-1">
             {/* Market Status Light in navbar — V25: powered by marketState */}
             <div className="mr-2 hidden lg:block">
               <MarketStatusLight compact marketState={marketState} displayLabelOverride={marketStatusLabel} />
@@ -85,7 +86,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
               <Link
                 key={link.to}
                 to={link.to}
-                className={`rounded-md px-3 py-2 text-xs font-semibold transition-colors whitespace-nowrap ${
+                className={`inline-flex min-h-11 items-center rounded-md px-3 py-2 text-xs font-semibold transition-colors whitespace-nowrap ${
                   isActive(link.to)
                     ? 'text-primary-300 bg-primary-500/10'
                     : 'text-white/50 hover:text-white hover:bg-white/5'
@@ -108,7 +109,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
           {/* Mobile hamburger — bigger tap target */}
           <button
             type="button"
-            className="md:hidden w-11 h-11 flex items-center justify-center text-white -mr-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/40"
+            className="lg:hidden w-11 h-11 flex items-center justify-center text-white -mr-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/40"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label={mobileOpen ? '關閉選單' : '開啟選單'}
             aria-expanded={mobileOpen}
@@ -121,7 +122,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div id="morning-alpha-mobile-menu" className="border-t border-background-200/70 bg-background-50 md:hidden">
+        <div id="morning-alpha-mobile-menu" className="border-t border-background-200/70 bg-background-50 lg:hidden">
           <div className="px-4 py-3 space-y-1">
             <div className="px-3 py-2.5">
               <MarketStatusLight compact marketState={marketState} displayLabelOverride={marketStatusLabel} />

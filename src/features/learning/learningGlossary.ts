@@ -1,3 +1,5 @@
+import { LEARNING_USAGE } from './learningUsage.ts';
+
 export type LearningCategory = '基礎財務' | '交易觀念' | '量價技術' | '籌碼市場' | 'Morning Alpha';
 
 export type LearningTerm = {
@@ -8,6 +10,7 @@ export type LearningTerm = {
   plainExplanation: string;
   example: string;
   whyItMatters: string;
+  todayUsage: string;
   misconception: string;
   riskReminder: string;
   source: { label: string; url: string };
@@ -24,10 +27,10 @@ const MOPS = 'https://mops.twse.com.tw/';
 const MOPS_FINANCE = 'https://mopsfin.twse.com.tw/';
 const TPEX_DAY_TRADING = 'https://www.tpex.org.tw/zh-tw/mainboard/trading/day-trading/rules.html';
 
-export const LEARNING_TERMS: LearningTerm[] = [
+const BASE_LEARNING_TERMS: Omit<LearningTerm, 'todayUsage'>[] = [
   {
     slug: 'price-earnings-ratio', term: '本益比', aliases: ['P/E', 'PE'], category: '基礎財務',
-    plainExplanation: '股價相對於公司每股獲利的倍數，用來觀察市場願意為一元獲利付多少錢。',
+    plainExplanation: '你可以先把它想成：市場願意花多少錢，去買公司目前每股賺到的 1 元。',
     example: '股價 100 元、近四季 EPS 5 元，本益比約為 20 倍。',
     whyItMatters: '可協助比較同產業公司目前的價格是否偏高或偏低。',
     misconception: '本益比低不一定便宜，也可能反映市場預期獲利下降。',
@@ -323,6 +326,10 @@ export const LEARNING_TERMS: LearningTerm[] = [
     source: { label: 'Morning Alpha 使用說明', url: '/faq' },
   },
 ];
+
+export const LEARNING_TERMS: LearningTerm[] = BASE_LEARNING_TERMS.map((term) => ({
+  ...term, example: LEARNING_USAGE[term.slug].example, todayUsage: LEARNING_USAGE[term.slug].todayUsage,
+}));
 
 const normalize = (value: string) => value.trim().toLocaleLowerCase('zh-Hant-TW');
 

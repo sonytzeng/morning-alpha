@@ -543,10 +543,15 @@ test('today report keeps runtime state and technical copy out of the public UI',
   assert.match(today, /marketStatusLabel=\{nextDecisionTime\}/);
 });
 
-test('today report is a drill-down workbench rather than a duplicate home dashboard', () => {
-  for (const label of ['今日判斷工作台', '現在怎麼做', '為什麼', '何時再看', '下一步要補齊的證據', '只看上一個結果與下一個動作']) {
-    assert.match(today, new RegExp(label), `today report is missing workbench copy: ${label}`);
+test('today answers the subscriber first and keeps runtime details behind a drill-down', () => {
+  const brief = read('src/features/decision-v1/DecisionBrief.tsx');
+  for (const label of ['今天市場怎麼看', '現在該怎麼做', '有沒有值得關注的機會', '方向機率', '模型信心', '進場環境']) {
+    assert.match(brief, new RegExp(label), `today decision brief is missing: ${label}`);
   }
+  assert.match(today, /<DecisionBrief/);
+  assert.match(today, /<details className=\{`ma-subscriber-timeline/);
+  assert.match(today, /下一步要補齊的證據/);
+  assert.match(today, /只看上一個結果與下一個動作/);
   assert.doesNotMatch(today, /ma-today-v3-advice-card/);
   assert.doesNotMatch(today, />判斷信心</);
   assert.match(today, /humanizePublicRuntimeText/);
@@ -594,7 +599,7 @@ test('opportunities is a candidate screening flow with complete public copy', ()
 });
 
 test('war room is a live monitor rather than another dashboard page', () => {
-  for (const label of ['盤中監控中', '盤中更新', '還沒有新的盤中更新', '跟早上相比，哪裡變了？', '現在怎麼做']) {
+  for (const label of ['早上的判斷有沒有改變', '盤中更新', '還沒有新的盤中更新', '跟早上相比，哪裡變了？', '現在怎麼做']) {
     assert.match(warRoom, new RegExp(label), `war room is missing monitor copy: ${label}`);
   }
   for (const repeatedSurface of ['證據矩陣', '監控清單', 'ma-war-room-v3-evidence-table', 'ma-war-room-v3-watch-table']) {
@@ -676,7 +681,7 @@ test('core product pages have distinct jobs instead of repeated dashboard surfac
   assert.doesNotMatch(performance, /ma-pixel-hero|ma-phase2-kpi-grid|ma-phase2-status-card/);
 
   assert.match(home, /ma-home-v2/);
-  assert.match(today, /ma-today-v4-workbench/);
+  assert.match(today, /<DecisionBrief/);
   assert.match(opportunities, /ma-opportunities-v2/);
   assert.match(warRoom, /ma-war-room-v3/);
 });

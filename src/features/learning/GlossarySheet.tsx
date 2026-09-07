@@ -103,10 +103,11 @@ export default function GlossarySheet({ term, source = 'unknown', onClose }: Glo
             <i className="ri-close-line" aria-hidden="true" />
           </button>
         </header>
-        <p id={descriptionId} className="ma-glossary-sheet__summary">{entry.plainExplanation}</p>
+        <p id={descriptionId} className="ma-glossary-sheet__summary"><strong>白話先懂</strong><br />{entry.plainExplanation}</p>
         <dl>
-          <div><dt>簡單例子</dt><dd>{entry.example}</dd></div>
-          <div><dt>為什麼重要</dt><dd>{entry.whyItMatters}</dd></div>
+          <div><dt>生活化例子</dt><dd>{entry.example}</dd></div>
+          <div><dt>Morning Alpha 為什麼看</dt><dd>{entry.whyItMatters}</dd></div>
+          <div><dt>今天怎麼用</dt><dd>{entry.todayUsage}</dd></div>
           <div><dt>常見誤解</dt><dd>{entry.misconception}</dd></div>
           <div><dt>風險提醒</dt><dd>{entry.riskReminder}</dd></div>
         </dl>

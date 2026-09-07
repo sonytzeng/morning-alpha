@@ -15,6 +15,8 @@ import { renderSafeText } from '@/utils/renderSafe';
 import { trackPageView } from '@/utils/analytics';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import { resolveClosingVerificationState } from '@/lib/closingVerificationState';
+import { SubscriberAnswer } from '@/features/decision-v1/DecisionBrief';
+import { closingDataComplete } from '@/features/decision-v1/forwardValidation';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -83,9 +85,7 @@ function buildClosingView(ai: UnknownRecord): ClosingView {
     && !['unknown', 'pending', 'unavailable', 'n/a', '尚未取得', '待資料'].includes(actualDirection);
   const hasActualOutcome = hasNamedDirection || actualChange !== null;
   const directionVerified = resolvedClosing.state !== 'pending' && hasActualOutcome;
-  const fullData = directionVerified
-    && !status.includes('degraded')
-    && !['degraded', 'insufficient'].includes(dataStatus);
+  const fullData = directionVerified && closingDataComplete(status, dataStatus, hasActualOutcome);
 
   let outcome: ClosingView['outcome'] = 'waiting';
   if (directionVerified && ['hit', 'correct', 'confirmed', 'success'].includes(rawOutcome)) outcome = 'complete';
@@ -217,13 +217,12 @@ function VerificationContent() {
     <div className="ma-page flex min-h-screen flex-col overflow-x-hidden">
       <Navbar />
       <main className="flex-1">
-        <header className="border-b border-white/10 bg-slate-950 px-4 py-12 md:py-16">
-          <div className="mx-auto max-w-6xl">
-            <p className="text-xs font-semibold tracking-[0.16em] text-sky-300">今日驗證 · {reportDate}</p>
-            <h1 className="mt-4 max-w-3xl text-3xl font-bold leading-tight text-white md:text-5xl">今天的判斷走到哪裡？</h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-white/65 md:text-base">把盤前假設、盤中證據與收盤結果分開核對；資料未完成時，不把暫時訊號包裝成命中率。</p>
-          </div>
-        </header>
+        <SubscriberAnswer question="今天的判斷最後有沒有成立？" date={reportDate}
+          answer={displayState.is_trading_day ? closing.outcomeLabel : '今日休市，不判定成敗'}
+          reason={displayState.is_trading_day ? closing.actualSummary : '今日非交易日，本節點不適用；等待下一個交易日。'}
+          tone={!displayState.is_trading_day ? 'blue' : closing.outcome === 'failed' ? 'red' : closing.outcome === 'complete' && closing.fullData ? 'green' : 'amber'}>
+          <p className="ma-subscriber-caption">{displayState.is_trading_day && closing.statusNote}</p>
+        </SubscriberAnswer>
 
         <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6">
@@ -236,7 +235,8 @@ function VerificationContent() {
               </dl>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 md:p-7">
+            <details className="ma-subscriber-timeline rounded-2xl border border-white/10 bg-white/[0.04] p-5 md:p-7">
+              <summary>展開盤中驗證紀錄</summary>
               <span className="text-xs font-semibold tracking-[0.14em] text-white/45">盤中進度</span>
               <h2 className="mt-2 text-xl font-bold text-white">每個節點只記錄已發生的結果</h2>
               <p className="mt-2 text-sm leading-6 text-white/60">{renderSafeText(openingSummary)}</p>
@@ -248,7 +248,7 @@ function VerificationContent() {
                   </li>
                 ))}
               </ol>
-            </section>
+            </details>
 
             <section className={`rounded-2xl border p-5 md:p-7 ${toneClass}`}>
               <span className="text-xs font-semibold tracking-[0.14em] opacity-65">收盤結果</span>

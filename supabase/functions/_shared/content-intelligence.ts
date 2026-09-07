@@ -2,6 +2,8 @@ import {
   RUNTIME_QUALITY_POLICY,
   gradeContentScore,
 } from './production-architecture-core.mjs';
+import { evaluateResearchQualityGate } from './research-quality-gate.ts';
+import { presentNumber } from './research-pipeline-contract.ts';
 
 export type ContentQualityGrade = 'reject' | 'degraded' | 'publish' | 'high_quality';
 
@@ -121,14 +123,13 @@ export function deriveEvidenceBackedTaiwanTransmission(
 }
 
 const OPTIONAL_DECISION_SOURCE_GAP = /^(?:unavailable_market_data:)?TXF:no_authorized_source_or_contract_mapping$/i;
-const OPTIONAL_NO_TRADE_CONTEXT_GAP = /^sector_rotation_scores:\d{4}-\d{2}-\d{2}$/i;
 
 export function isDecisionCriticalMissingSource(
   source: string,
-  mode: 'recommendations' | 'no_trade',
+  _mode: 'recommendations' | 'no_trade',
 ): boolean {
-  return !OPTIONAL_DECISION_SOURCE_GAP.test(source)
-    && !(mode === 'no_trade' && OPTIONAL_NO_TRADE_CONTEXT_GAP.test(source));
+  // Choosing no-trade does not repair missing sector evidence.
+  return !OPTIONAL_DECISION_SOURCE_GAP.test(source);
 }
 
 function declaredMissingSources(ai: JsonRecord): string[] {
@@ -150,10 +151,44 @@ export function hasDecisionGradeSourceCoverage(
   mode: 'recommendations' | 'no_trade',
 ): boolean {
   const ai = asRecord(aiValue);
-  if (asText(ai.data_quality).toLowerCase() === 'complete') return true;
   const missingSources = declaredMissingSources(ai);
+  if (missingSources.some((source) => /sector_rotation|market_data_dates|required_tw_market|required_us_market|invalid_numeric/i.test(source))) return false;
+  if (asText(ai.data_quality).toLowerCase() === 'complete') return missingSources.every((source)=>!isDecisionCriticalMissingSource(source,mode));
   return missingSources.length > 0
     && missingSources.every((source) => !isDecisionCriticalMissingSource(source, mode));
+}
+
+// Preserve the deployed canonical no-trade capability without its historical
+// missing-counter/coverage coercion. Source completeness is independent of
+// whether positive company evidence exists; observations cannot substitute it.
+export function hasCanonicalNoTradeResearchMaster(aiValue: unknown): boolean {
+  const ai=asRecord(aiValue), master=asRecord(ai.research_master_v2), sections=asRecord(master.sections);
+  const core=asRecord(sections.core_thesis);
+  const path=asRecords(asRecord(sections.transmission_narrative).path);
+  return recommendationRows(ai).length===0 && asText(ai.v10_data_quality_status)==='insufficient_positive_evidence'
+    && evaluateResearchQualityGate(master).eligible && asText(asRecord(master.provenance).source_status)==='complete'
+    && hasDecisionGradeSourceCoverage(ai,'no_trade')
+    && asRecords(sections.representative_stocks).length===0
+    && asText(core.status)==='proposed' && asText(core.statement).length>=20
+    && Array.isArray(core.evidence_refs) && core.evidence_refs.length>0
+    && asRecords(sections.supporting_evidence).length>0
+    && asRecords(sections.supporting_evidence).every((row)=>Array.isArray(row.evidence_refs)&&row.evidence_refs.length>0)
+    && path.length>0 && path.every((row)=>Array.isArray(row.evidence_refs)&&row.evidence_refs.length>0)
+    && asRecords(sections.timeline).length>=6
+    && asText(asRecord(sections.decision_guide).current_action).length>=8
+    && asRecords(asRecord(sections.failure_scenario).triggers).length>0
+    && asText(asRecord(asRecord(sections.next_action).if_failure).action).length>=8;
+}
+
+export function hasAuditedCanonicalNoTrade(aiValue: unknown): boolean {
+  const ai=asRecord(aiValue);
+  const quality=asRecord(ai.content_evidence_quality);
+  const counts=[quality.verified_market_count,quality.verified_news_count,quality.blank_market_change_count].map(presentNumber);
+  const [markets,news,blank]=counts;
+  return hasCanonicalNoTradeResearchMaster(ai)
+    && counts.every((n)=>n!==null&&Number.isSafeInteger(n)&&n>=0) && markets!==null && news!==null && markets+news>0
+    && blank===0 && (news===0||quality.all_news_traceable===true)
+    && quality.contract_version==='PREMIUM_EVIDENCE_V1';
 }
 
 function recommendationRows(ai: JsonRecord): JsonRecord[] {
@@ -302,9 +337,7 @@ export function evaluateContentIntelligence(
   const note = asRecord(ai.member_research_note_v2);
   const recommendations = recommendationRows(ai);
   const observations = asRecords(ai.v10_observation_watchlist);
-  const noTradeMode = recommendations.length === 0
-    && String(ai.v10_data_quality_status).toLowerCase() === 'insufficient_positive_evidence'
-    && observations.length >= 3;
+  const noTradeMode = hasAuditedCanonicalNoTrade(ai);
   const decisionSourceCoverage = hasDecisionGradeSourceCoverage(
     ai,
     noTradeMode ? 'no_trade' : 'recommendations',
@@ -330,7 +363,7 @@ export function evaluateContentIntelligence(
   const blankMarketChangeCount = Math.max(0, Number(evidenceQuality.blank_market_change_count) || 0);
   const allSourcesSpecific = recommendations.length > 0
     ? recommendations.every(hasSpecificSource)
-    : noTradeMode && observations.every((row) => hasSpecificSource(row));
+    : noTradeMode;
   const eventCoverage = recommendations.length > 0 && recommendations.every((row) => {
     const eventLabel = firstText(row.trigger_event, row.catalyst, row.event_source);
     const traceableSource = sourceText(row);
@@ -366,7 +399,9 @@ export function evaluateContentIntelligence(
     + (verifiedCatalystCount > 0 && (verifiedNewsCount === 0 || allNewsTraceable) ? 5 : 0));
   const taiwanRelevance = Math.min(15,
     (taiwanCoverage || noTradeMode ? 10 : 0)
-    + (firstText(ai.taiwan_transmission, note.taiwan_transmission).length >= 12 || taiwanCoverage ? 5 : 0));
+    + (firstText(ai.taiwan_transmission, note.taiwan_transmission,
+      asRecord(asRecord(asRecord(ai.research_master_v2).sections).transmission_narrative).narrative,
+    ).length >= 12 || taiwanCoverage ? 5 : 0));
   const specificity = Math.min(10,
     (dailySentenceValue.concrete_marker_count >= 2 ? 6 : 0)
     + (eventCoverage || noTradeMode ? 4 : 0));

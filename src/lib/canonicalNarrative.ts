@@ -247,7 +247,13 @@ function buildTodayFocus(
 function buildTodayScript(note: UnknownRecord, ai: UnknownRecord): CanonicalTodayScript {
   const windows = asArray(note.intraday_time_windows).length > 0
     ? asArray(note.intraday_time_windows)
-    : asArray(note.intraday_validation);
+    : Array.isArray(note.intraday_validation)
+      ? note.intraday_validation.map((item: unknown) => typeof item === 'string'
+        // Canonical member revisions store evidence-backed condition strings.
+        // Retain them verbatim; only use their explicit checkpoint, never a clock fallback.
+        ? { time_window: firstText(asRecord(note.canonical_contract).validation_checkpoint), what_to_watch: item }
+        : asRecord(item))
+      : [];
   const sync = asRecord(ai.intraday_sync_status);
   const steps = windows.slice(0, 5).map((window, index) => {
     const time = firstText(window.time, window.time_window, window.label);
@@ -295,9 +301,10 @@ function buildTodayScript(note: UnknownRecord, ai: UnknownRecord): CanonicalToda
 }
 
 function buildFailureTriggers(note: UnknownRecord): CanonicalFailureTrigger[] {
-  const rows = asArray(note.invalidation_conditions).length > 0
-    ? asArray(note.invalidation_conditions)
-    : asArray(note.invalidation_rules);
+  const source = Array.isArray(note.invalidation_conditions) && note.invalidation_conditions.length > 0
+    ? note.invalidation_conditions
+    : Array.isArray(note.invalidation_rules) ? note.invalidation_rules : [];
+  const rows = source.map((item: unknown) => typeof item === 'string' ? { condition: item } : asRecord(item));
 
   return rows.slice(0, 5).map((row) => ({
     trigger: firstText(row.condition, row.trigger),

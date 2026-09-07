@@ -1,6 +1,7 @@
 import {
   evaluateDecisionSentenceValue,
   evaluateContentIntelligence,
+  hasAuditedCanonicalNoTrade,
   hasDecisionGradeSourceCoverage,
   type ContentScoreBreakdown,
 } from './content-intelligence.ts';
@@ -172,9 +173,7 @@ export function evaluatePremiumContentGate(
   const observationRows = asRecords(ai.v10_observation_watchlist);
   const sourcedObservationRows = observationRows.filter(hasSpecificSource);
   const recommendationMode = rows.length > 0;
-  const noTradeMode = rows.length === 0
-    && dataQualityStatus === 'insufficient_positive_evidence'
-    && observationRows.length >= 3;
+  const noTradeMode = hasAuditedCanonicalNoTrade(ai);
   const decisionSourceCoverage = hasDecisionGradeSourceCoverage(
     ai,
     noTradeMode ? 'no_trade' : 'recommendations',
@@ -184,12 +183,10 @@ export function evaluatePremiumContentGate(
   const verifiedNewsCount = Math.max(0, Number(evidenceQuality.verified_news_count) || 0);
   const verifiedMarketCount = Math.max(0, Number(evidenceQuality.verified_market_count) || 0);
   const researchMaster = asRecord(ai.research_master_v2);
-  const researchQuality = Object.keys(researchMaster).length > 0
-    ? evaluateResearchQualityGate(
+  const researchQuality = evaluateResearchQualityGate(
       researchMaster,
       RUNTIME_QUALITY_POLICY.premium_publish_min,
-    )
-    : null;
+    );
   const researchSections = asRecord(researchMaster.sections);
   const researchCore = asRecord(researchSections.core_thesis);
   const v8Sentence = asRecord(ai.v8_daily_sentence);
@@ -226,7 +223,7 @@ export function evaluatePremiumContentGate(
   const hasFreshCatalystEvidence = verifiedNewsCount + verifiedMarketCount > 0
     && (
       (decisionSourceCoverage && rows.length > 0 && completeRows.length === rows.length)
-      || (decisionSourceCoverage && noTradeMode && sourcedObservationRows.length === observationRows.length)
+      || (decisionSourceCoverage && noTradeMode)
     );
   if (!hasFreshCatalystEvidence) reasons.push('fresh_catalyst_evidence_missing');
   if (rows.length > 0 && completeRows.length !== rows.length) reasons.push('recommendation_reasoning_incomplete');

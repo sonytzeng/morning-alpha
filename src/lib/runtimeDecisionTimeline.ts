@@ -29,13 +29,13 @@ function currentTaipeiMinutes(): number {
 export function reconcileRuntimeTimeline<T extends { status: RuntimeTimelineStatus; time?: string }>(
   nodes: T[],
   taipeiMinutes = currentTaipeiMinutes(),
-): T[] {
+): Array<Omit<T, 'status'> & { status: RuntimeTimelineStatus }> {
   let lastResolvedIndex = -1;
   nodes.forEach((node, index) => {
     if (node.status === 'completed' || node.status === 'insufficient') lastResolvedIndex = index;
   });
 
-  const reconciled = nodes.map((node, index) => ({
+  const reconciled: Array<Omit<T, 'status'> & { status: RuntimeTimelineStatus }> = nodes.map((node, index) => ({
     ...node,
     status: node.status === 'pending' && index < lastResolvedIndex
       ? 'insufficient' as const

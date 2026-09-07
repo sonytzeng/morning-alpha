@@ -184,8 +184,8 @@ function homeDecisionCopy(
   currentNode?: TimelineNode,
   lifecycleComplete = false,
 ): { headline: string; instruction: string } {
-  if (lifecycleComplete && !['ACT', 'STOP', 'CLOSED', 'INSUFFICIENT_DATA'].includes(state)) {
-    return { headline: '今日條件未成立', instruction: '收盤驗證已完成，今日不追價' };
+  if (state === 'COMPLETED' || (lifecycleComplete && state === 'WAIT')) {
+    return { headline: '今日收盤驗證已完成', instruction: '查看收盤驗證，等待下一個交易日' };
   }
   switch (state) {
     case 'ACT': return { headline: '今日條件成立', instruction: '依計畫分批執行' };

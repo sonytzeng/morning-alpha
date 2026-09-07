@@ -422,12 +422,15 @@ export function buildCanonicalDecisionContract(input = {}) {
   const snapshot = asPlainRecord(input.snapshot);
   const generated = asPlainRecord(snapshot.generated_text);
   const ai = asPlainRecord(input.ai);
-  const sourceRecommendations = records(generated.recommendations).length > 0
-    ? records(generated.recommendations)
+  // An explicit canonical empty list is a decision, not a missing legacy field.
+  const sourceRecommendations = snapshot.decision_mode === 'blocked' ? []
+    : Array.isArray(generated.recommendations) ? records(generated.recommendations)
     : records(ai.today_beneficiary_stocks_v10);
+  const noTrade = snapshot.decision_mode === 'no_trade' && snapshot.action === 'WAIT'
+    && Array.isArray(generated.recommendations) && sourceRecommendations.length === 0;
   const first = asPlainRecord(sourceRecommendations[0]);
-  const primaryEvent = firstText(first.event_source, first.trigger_event, first.primary_event);
-  const primaryTheme = firstText(first.sector, first.industry_name, first.primary_taiwan_theme);
+  const primaryEvent = firstText(first.event_source, first.trigger_event, first.primary_event, noTrade ? generated.daily_sentence : '');
+  const primaryTheme = firstText(first.sector, first.industry_name, first.primary_taiwan_theme, noTrade ? '不建立受惠股' : '');
   const primaryRecommendations = sourceRecommendations.filter((candidate) => {
     const record = asPlainRecord(candidate);
     const event = firstText(record.event_source, record.trigger_event, record.primary_event);
@@ -462,6 +465,7 @@ export function buildCanonicalDecisionContract(input = {}) {
   ]);
   return {
     contract_version: 'CANONICAL_DECISION_CONTRACT_V2',
+    decision_mode: snapshot.decision_mode || (sourceRecommendations.length ? 'recommendations' : 'blocked'),
     report_date: String(input.report_date || snapshot.report_date || ''),
     snapshot_id: String(snapshot.id || ''),
     snapshot_version: Number.isFinite(Number(snapshot.version)) ? Number(snapshot.version) : null,
@@ -470,7 +474,7 @@ export function buildCanonicalDecisionContract(input = {}) {
     primary_taiwan_theme: primaryTheme,
     primary_symbols: primarySymbols,
     validation_checkpoint: firstText(generated.next_checkpoint, input.validation_checkpoint),
-    validation_signals: validationSignals,
+    validation_signals: noTrade ? unique(meaningfulTextValues([generated.next_checkpoint, ...(Array.isArray(generated.reasons) ? generated.reasons : [])])) : validationSignals,
     invalidation_conditions: invalidationConditions,
     action: firstText(snapshot.action, generated.action),
     data_quality_status: dataQualityStatus,
@@ -536,7 +540,11 @@ export function evaluateCanonicalSemanticCoherenceGate(input = {}) {
   ];
   const reasonCodes = [];
   const conflictingFields = [];
+  const noTrade = contract.decision_mode === 'no_trade' && contract.action === 'WAIT';
+  if (contract.decision_mode === 'blocked') reasonCodes.push('CANONICAL_DECISION_BLOCKED');
+  if (noTrade && contract.data_quality_status !== 'complete') reasonCodes.push('NO_TRADE_SOURCE_INCOMPLETE');
   for (const field of requiredFields) {
+    if (noTrade && ['primary_symbols', 'invalidation_conditions'].includes(field)) continue;
     const value = contract[field];
     if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
       reasonCodes.push('CANONICAL_CONTRACT_INCOMPLETE');
@@ -573,13 +581,19 @@ export function evaluateCanonicalSemanticCoherenceGate(input = {}) {
   }
   const counters = asPlainRecord(input.quality_counters);
   for (const field of ['unsupported_claim_count', 'contradiction_count', 'duplicate_claim_count', 'missing_section_count']) {
-    if (Number(counters[field] || 0) > 0) {
+    const raw = counters[field];
+    const count = typeof raw === 'number' || (typeof raw === 'string' && raw.trim()) ? Number(raw) : NaN;
+    if (!Number.isSafeInteger(count) || count < 0) {
+      reasonCodes.push('RESEARCH_QUALITY_COUNTER_MISSING_OR_INVALID');
+      conflictingFields.push(field);
+    } else if (count > 0) {
       reasonCodes.push('RESEARCH_QUALITY_COUNTER_NONZERO');
       conflictingFields.push(field);
     }
   }
   if (Number(input.evidence_coverage) !== 100) reasonCodes.push('EVIDENCE_COVERAGE_BELOW_100');
-  if (Number(input.content_score) < 90) reasonCodes.push('CONTENT_SCORE_BELOW_90');
+  const score = typeof input.content_score === 'number' || (typeof input.content_score === 'string' && input.content_score.trim()) ? Number(input.content_score) : NaN;
+  if (!Number.isFinite(score) || score < 90 || score > 100) reasonCodes.push('CONTENT_SCORE_BELOW_90');
   const uniqueReasons = unique(reasonCodes);
   const status = uniqueReasons.length === 0 ? 'PASSED' : 'BLOCKED';
   return {

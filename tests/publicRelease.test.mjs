@@ -248,7 +248,11 @@ test('premarket workflow delegates to the durable recovery state machine', () =>
   assert.match(dailyDeliveryOrchestrator, /clock\.minutes >= 7 \* 60 \+ 30/);
   assert.match(dailyDeliveryOrchestrator, /payload\.success !== false/);
   assert.match(dailyDeliveryOrchestrator, /invokeFunctionWithRetry/);
-  assert.match(dailyDeliveryOrchestrator, /actionFailures\.length === 0/);
+  // Deployed V1.7 moved this gate into the phase-aware completion helper.
+  // Assert its wiring here; coreRuntimeIntegration executes the actual helper
+  // with failures in every phase instead of requiring V1.4's inline syntax.
+  assert.match(dailyDeliveryOrchestrator, /resolveDailyDeliveryCompletion\(/);
+  assert.match(dailyDeliveryOrchestrator, /action_failure_count: actionFailures\.length/);
   assert.match(dailyDeliveryOrchestrator, /success: completed/);
   assert.match(dailyDeliveryOrchestrator, /EVIDENCE_REFRESH_DEPENDENCY_FAILED/);
   assert.match(dailyDeliveryOrchestrator, /deliveryBlockedByEvidenceFailure/);
@@ -519,7 +523,7 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /資料不足，已安全降級/);
   assert.match(home, /selectNextRuntimeTimelineNode\(timelineNodes\)/);
   assert.match(home, /runtimeLifecycleComplete/);
-  assert.match(home, /收盤驗證已完成，今日不追價/);
+  assert.match(home, /查看收盤驗證，等待下一個交易日/);
   assert.match(home, /今日沒有強受惠股/);
   assert.match(home, /marketStatusLabel=\{marketStatusLabel\}/);
   assert.match(home, /今日觀察名單已完成/);
@@ -551,8 +555,9 @@ test('today report is a drill-down workbench rather than a duplicate home dashbo
   assert.match(today, /節點時間已到，但完整市場資料尚未到齊；資料補齊前不更新判斷/);
   assert.match(today, /label: `\$\{nextRuntimeNode\.time\} \$\{nextRuntimeNode\.label\}`/);
   assert.match(today, /runtimeLifecycleComplete/);
-  assert.match(today, /今日條件未成立，收盤驗證已完成/);
-  assert.match(today, /今日進場條件未成立/);
+  assert.match(today, /今日收盤驗證已完成/);
+  assert.doesNotMatch(today, /今日條件未成立，收盤驗證已完成/);
+  assert.doesNotMatch(today, /headline: '今日進場條件未成立'/);
   assert.match(today, /六個交易節點均已完成/);
 });
 

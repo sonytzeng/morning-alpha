@@ -8,6 +8,43 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+Deno.test('Sep 7: distinct sector subjects must survive identical direction summaries', () => {
+  const fixture = completeFixture();
+  fixture.evidenceIndex.push(
+    { evidence_id: 'SEC002', evidence_type: 'sector_rotation', title: '電子權值', summary: '轉強', raw_reference: '電子權值' },
+    { evidence_id: 'SEC003', evidence_type: 'sector_rotation', title: 'AI Server', summary: '轉強', raw_reference: 'AI Server' },
+  );
+  fixture.marketThesis!.supporting_evidence = [{ evidence_id: 'SEC002' }, { evidence_id: 'SEC003' }];
+  const master = assembleResearchMasterV2(fixture);
+  assert(master.sections.supporting_evidence.length === 2, 'must retain both actual sectors');
+  assert(validateResearchMasterV2(master).quality.duplicate_claims.length === 0, 'different subjects are not duplicates');
+  assert(master.sections.supporting_evidence[0].statement.includes('電子權值'), 'subject must remain visible');
+});
+
+Deno.test('reposted evidence is one claim with retained lineage, not two independent confirmations', () => {
+  const fixture = completeFixture();
+  fixture.evidenceIndex.push({ ...fixture.evidenceIndex[0], evidence_id: 'MD_REPOST' });
+  fixture.marketThesis!.supporting_evidence = [{ evidence_id: 'MD001' }, { evidence_id: 'MD_REPOST' }];
+  const master = assembleResearchMasterV2(fixture);
+  assert(master.sections.supporting_evidence.length === 1, 'same subject/source/time/claim must merge');
+  assert(master.sections.supporting_evidence[0].evidence_refs.length === 2, 'retain both evidence references');
+});
+
+Deno.test('canonical empty recommendation set does not resurrect legacy or observation stocks', () => {
+  const fixture=completeFixture();
+  fixture.legacy.today_beneficiary_stocks_v10=[];
+  const master=assembleResearchMasterV2(fixture);
+  assert(master.sections.representative_stocks.length===0,'canonical abstention must remain authoritative');
+});
+Deno.test('future failure conditions remain criteria, never asserted as observed counter-evidence', () => {
+  const fixture=completeFixture();
+  const note=fixture.legacy.member_research_note_v2 as Record<string,unknown>;
+  note.invalidation_rules=[{condition:'若台積電明日反向則停止假設',action_note:'等候新的市場證據'}];
+  const master=assembleResearchMasterV2(fixture);
+  assert(!master.sections.counter_evidence.some(row=>row.statement.includes('明日反向')),'a future condition is not an observed failure');
+  assert(master.sections.failure_scenario.triggers.some(row=>row.condition.includes('明日反向')),'do not remove the actual failure criterion');
+});
+
 function completeFixture(): ResearchMasterV2AssemblerInput {
   return {
     reportDate: "2026-07-14",

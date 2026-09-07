@@ -2,7 +2,7 @@ import type { CanonicalMorningNarrative } from './canonicalNarrative.ts';
 import type { MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { canPresentConfirmedDecision, canPresentRejectedDecision } from './decisionEvidence.ts';
 
-export type PresentationDecisionState = 'WAIT' | 'ACT' | 'STOP' | 'CLOSED' | 'INSUFFICIENT_DATA';
+export type PresentationDecisionState = 'WAIT' | 'ACT' | 'STOP' | 'CLOSED' | 'COMPLETED' | 'INSUFFICIENT_DATA';
 
 export type PresentedOpportunity = {
   symbol: string;
@@ -147,14 +147,14 @@ function mapOpportunity(value: unknown): PresentedOpportunity | null {
   if (!symbol && !name) return null;
   const benefitChain = Array.isArray(row.benefitChain) ? row.benefitChain : Array.isArray(row.benefit_chain) ? row.benefit_chain : [];
   const scoringReasons = Array.isArray(row.scoringReasons) ? row.scoringReasons : Array.isArray(row.scoring_reasons) ? row.scoring_reasons : [];
-  const rawReason = firstText(row.reason, row.rationale, row.investment_reason, row.benefit_source, row.relationship_to_thesis, row.observationReason, row.observation_reason, scoringReasons[0], benefitChain[0]);
+  const rawReason = firstText(row.reason, row.rationale, row.investment_reason, row.transmission_logic, row.transmission_path, row.benefit_source, row.relationship_to_thesis, row.observationReason, row.observation_reason, scoringReasons[0], benefitChain[0]);
   const translatedReason = compact(rawReason, 240);
   return {
     symbol,
     name,
     roleLabel: roleLabel(row),
     oneLineReason: translatedReason || undefined,
-    confirmation: compact(firstText(row.confirmation, row.confirmation_needed, row.validation_signal, row.watch_point, row.what_to_watch, row.confirmationPendingReason, row.confirmation_pending_reason), 240) || undefined,
+    confirmation: compact(firstText(row.confirmation_condition, row.confirmation, row.confirmation_needed, row.validation_signal, row.watch_point, row.what_to_watch, row.confirmationPendingReason, row.confirmation_pending_reason), 240) || undefined,
     invalidation: compact(firstText(row.invalidation, row.invalidation_condition, row.stop_condition, row.risk_note, row.risk, row.stopObservingCondition, row.stop_observing_condition), 240) || undefined,
     priority: typeof row.priority === 'string' || typeof row.priority === 'number'
       ? row.priority
@@ -198,6 +198,9 @@ function decisionState(input: DecisionPresentationInput): PresentationDecisionSt
 
   const status = narrative.decision_lifecycle.decision_status.status;
   if (status === 'Rejected' && canPresentRejectedDecision(narrative.decision_evidence)) return 'STOP';
+  // A verified close is a historical outcome, not an unconfirmed entry and
+  // never a new ACT signal. Missing intraday entry fields cannot undo it.
+  if (status === 'Completed' && narrative.decision_evidence.closingVerified) return 'COMPLETED';
   const canonicalAllowsAction = !canonicalAction
     || ['TRADE', 'SELECTIVE'].includes(canonicalAction)
     || canonicalMode === 'recommendations';
@@ -214,6 +217,7 @@ function decisionCopy(state: PresentationDecisionState): Pick<DecisionPresentati
   if (state === 'ACT') return { headline: '劇本成立', instruction: '依原定計畫執行' };
   if (state === 'STOP') return { headline: '停止原定計畫', instruction: '今天不再延伸原本劇本' };
   if (state === 'CLOSED') return { headline: '今日休市', instruction: '今天不執行盤中流程' };
+  if (state === 'COMPLETED') return { headline: '今日收盤驗證已完成', instruction: '查看收盤驗證，等待下一個交易日' };
   if (state === 'INSUFFICIENT_DATA') return { headline: '資料尚未完整', instruction: '暫不建立交易判斷' };
   return { headline: '等待確認', instruction: '現在不要追價' };
 }

@@ -6,10 +6,19 @@ import {
   preserveRuntimeReportOverlay,
 } from '../supabase/functions/_shared/runtime-report-state.ts';
 import { buildDecisionPresentation } from '../src/lib/decisionPresentation.ts';
+import { dedupePresentedOpportunities } from '../src/lib/decisionPresentation.ts';
 import { buildCanonicalNarrative } from '../src/lib/canonicalNarrative.ts';
 
 const generatorSource = readFileSync(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
 const payloadSource = readFileSync(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');
+const deliverySource = readFileSync(new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url), 'utf8');
+
+test('delivery receipt preserves the durable run and decision identities for exact reconciliation', () => {
+  assert.match(deliverySource, /pipeline_run_id: activeRunId/);
+  assert.match(deliverySource, /decision_snapshot_id: typeof state.snapshot\?\.id/);
+  assert.match(deliverySource, /pipeline_run_id: claim.id/);
+  assert.match(deliverySource, /decision_snapshot_id: claim.existingDecisionSnapshotId/);
+});
 
 test('production consumers cannot bypass the canonical runtime overlay contract', () => {
   assert.match(generatorSource, /preserveRuntimeReportOverlay\(aiStrategyJson/);
@@ -205,6 +214,53 @@ test('completed runtime evidence may confirm a canonical selective recommendatio
     narrative: confirmedNarrative(),
   });
   assert.equal(presentation.primaryDecision.state, 'ACT');
+});
+
+test('a verified closing outcome is COMPLETED, neither missing data nor a new entry signal', () => {
+  const displayState = displayStateWithCanonicalDecision('SELECTIVE', 'recommendations');
+  const narrative = confirmedNarrative();
+  narrative.decision_evidence.status = 'Completed';
+  narrative.decision_evidence.closingVerified = true;
+  narrative.decision_evidence.checklistAvailable = false;
+  narrative.decision_lifecycle.decision_status.status = 'Completed';
+  const presentation = buildDecisionPresentation({ displayState, narrative });
+  assert.equal(presentation.primaryDecision.state, 'COMPLETED');
+  assert.match(presentation.primaryDecision.instruction, /收盤驗證/);
+  for (const page of ['home/page.tsx', 'report/TodayReport.tsx']) {
+    const source = readFileSync(new URL(`../src/pages/${page}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /今日(?:進場)?條件未成立.*收盤驗證已完成/);
+  }
+  // Canonical abstention is still respected after close; completion never means ACT.
+  assert.equal(buildDecisionPresentation({ displayState: displayStateWithCanonicalDecision('WAIT', 'no_trade'), narrative }).primaryDecision.state, 'WAIT');
+  narrative.decision_evidence.status = 'Rejected';
+  narrative.decision_evidence.runtimeFailure = true;
+  narrative.decision_lifecycle.decision_status.status = 'Rejected';
+  assert.equal(buildDecisionPresentation({ displayState, narrative }).primaryDecision.state, 'STOP');
+});
+
+test('canonical member string conditions and stock fields survive presentation without fabricated evidence', () => {
+  const confirmation = '09:30 台積電與台指期需同步，電子權值需有量價承接。';
+  const invalidation = '台積電相對大盤轉弱時取消觀察。';
+  const reason = '公司公開來源支持先進封裝需求，但仍需盤中確認。';
+  const narrative = buildCanonicalNarrative({ ai: {
+    member_research_note_v2: {
+      canonical_contract: { validation_checkpoint: '09:30' },
+      intraday_validation: [confirmation], invalidation_conditions: [invalidation],
+    },
+  } });
+  assert.equal(narrative.today_script.steps[0].detail, confirmation);
+  assert.equal(narrative.today_script.steps[0].time, '09:30');
+  assert.equal(narrative.today_script.steps[0].status, 'pending');
+  assert.equal(narrative.decision_evidence.status, 'Waiting');
+  assert.equal(narrative.failure_triggers[0].trigger, invalidation);
+  const today = readFileSync(new URL('../src/pages/report/TodayReport.tsx', import.meta.url), 'utf8');
+  assert.match(today, /const activeFailure = presentation\.primaryDecision\.state === 'STOP'\s*&& canonicalNarrative\.decision_evidence\.runtimeFailure/);
+  assert.match(today, /trigger: canonicalNarrative\.decision_evidence\.reason/);
+  const [stock] = dedupePresentedOpportunities([{ symbol: '2330', name: '台積電', transmission_logic: reason,
+    confirmation_condition: confirmation, invalidation_condition: invalidation }]);
+  assert.equal(stock.oneLineReason, reason);
+  assert.equal(stock.confirmation, confirmation);
+  assert.equal(stock.invalidation, invalidation);
 });
 
 test('complete runtime evidence never exposes a generic data-insufficient change trigger', () => {

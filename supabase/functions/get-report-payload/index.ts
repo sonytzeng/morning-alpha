@@ -16,6 +16,7 @@ import {
 import { buildCanonicalIntradaySyncStatus } from "../_shared/runtime-report-state.ts";
 import { resolveCanonicalRuntimeMarketStatus } from "../_shared/canonical-runtime-market-status.mjs";
 import { resolveCanonicalDataQuality } from "../_shared/production-architecture-core.mjs";
+import { canonicalAdminReaderProjection } from "../_shared/research-pipeline-contract.ts";
 
 type ReportRow = Record<string, unknown> & {
   id?: string;
@@ -566,7 +567,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     ...premiumGate.reason_codes,
     ...(semanticEligible ? [] : ["SEMANTIC_MEMBER_REVISION_NOT_ELIGIBLE"]),
   ]));
-  const confidenceScore = getConfidenceScore(report, ai);
+  const confidenceScore = toNumberValue(ctx.decisionSnapshot?.confidence_score) ?? getConfidenceScore(report, ai);
   const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
   const marketMetadata = getCanonicalMarketMetadata(report, ai, ctx);
   const publicSummary = asObject(ai.public_summary);
@@ -581,19 +582,24 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     revision_id: toStringValue(canonicalDecision?.id) || toStringValue(report.id),
     market_date: getMarketDate(report, ai),
     base_date: getMarketDate(report, ai),
-    generated_at: getGeneratedAt(report, ai),
+    generated_at: toStringValue(ctx.decisionSnapshot?.created_at) || getGeneratedAt(report, ai),
     data_as_of: getDataAsOf(ai, ctx),
     market_status: marketMetadata.marketStatus,
     is_trading_day: marketMetadata.isTradingDay,
     closed_reason: marketMetadata.closedReason,
+    // Regime (e.g. range) is not directional bias. Preserve both contracts.
     market_bias: getMarketBias(report, ai),
     confidence_score: confidenceScore,
     confidence_label: getConfidenceLabel(confidenceScore),
     confidence_band: getConfidenceBand(confidenceScore),
     today_quote: dailySentence,
     daily_sentence: dailySentence,
-    v8_daily_sentence: asObject(ai.v8_daily_sentence),
-    public_summary: Object.keys(publicSummary).length > 0 ? publicSummary : freeSummary,
+    v8_daily_sentence: { ...asObject(ai.v8_daily_sentence), sentence: dailySentence },
+    public_summary: {
+      ...(Object.keys(publicSummary).length > 0 ? publicSummary : freeSummary),
+      daily_sentence: dailySentence,
+      one_sentence: dailySentence,
+    },
     beneficiary_count: getBeneficiaryCount(ai),
     one_teaser_stock: premiumEligible ? buildCanonicalTeaserStock(ctx.memberContentRevision?.member_content) : null,
     v10_beneficiary_enabled: isV10BeneficiaryEnabled(ai),
@@ -682,7 +688,7 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   return {
     ...publicPayload,
     canonical_decision: buildCanonicalDecision(ctx, true),
-    confidence_score: getConfidenceScore(report, ai),
+    confidence_score: publicPayload.confidence_score,
     today_beneficiary_stocks: canonicalRecommendations,
     beneficiary_stocks: canonicalRecommendations,
     core_beneficiary_stocks: canonicalRecommendations,
@@ -740,7 +746,7 @@ function buildVipPayload(report: ReportRow, ctx: PayloadContext): Record<string,
 }
 
 function buildAdminPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
-  return { ...report, ai_strategy_json: getEffectiveAi(report, ctx) };
+  return canonicalAdminReaderProjection(report, getEffectiveAi(report, ctx), buildVipPayload(report, ctx));
 }
 
 function buildPayload(report: ReportRow, tier: SubscriptionTier, ctx: PayloadContext): Record<string, unknown> {
@@ -779,6 +785,23 @@ function createServiceClient(supabaseUrl: string, serviceRoleKey: string) {
 }
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
+
+function isPublishedReadAligned(report: ReportRow, context: PayloadContext): boolean {
+  const ai = asObject(report.ai_strategy_json);
+  const revision = toStringValue(ai.revision_id);
+  const memberRevision = toStringValue(ai.canonical_member_revision_id);
+  // Historical rows that predate atomic publication keep their legacy reader.
+  if (!revision && !memberRevision) return true;
+  const decision = context.decisionSnapshot;
+  if (!revision || !decision || decision.id !== revision
+    || decision.report_id !== report.id || decision.report_date !== report.report_date) return false;
+  // A safe member-only correction may have a newer member revision while still
+  // belonging to exactly the same published decision. Never mix decision IDs.
+  return !memberRevision || Boolean(context.memberContentRevision
+    && context.memberContentRevision.decision_snapshot_id === revision
+    && context.memberContentRevision.report_date === report.report_date
+    && context.memberContentRevision.report_id === report.id);
+}
 
 async function fetchPayloadContext(
   serviceClient: ServiceClient,
@@ -1030,7 +1053,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: false, error: "REPORT_QUERY_FAILED" }, 500);
   }
 
-  const report = Array.isArray(data) && data.length > 0 ? data[0] as ReportRow : null;
+  let report = Array.isArray(data) && data.length > 0 ? data[0] as ReportRow : null;
   if (!report) {
     return jsonResponse({
       success: false,
@@ -1044,7 +1067,21 @@ Deno.serve(async (req: Request) => {
     }, 404);
   }
 
-  const context = await fetchPayloadContext(serviceClient, getReportDate(report));
+  let context = await fetchPayloadContext(serviceClient, getReportDate(report));
+  if (!isPublishedReadAligned(report, context)) {
+    // PostgREST requests are separate transactions. A publication may commit
+    // between the report query and the context queries. Re-read at most once.
+    const refreshed = await serviceClient.from("reports").select("*")
+      .eq("id", report.id).eq("report_date", getReportDate(report)).limit(1).maybeSingle();
+    if (refreshed.error || !refreshed.data) {
+      return jsonResponse({ success: false, error: "REPORT_RECHECK_FAILED", payload: null }, 503);
+    }
+    report = refreshed.data as ReportRow;
+    context = await fetchPayloadContext(serviceClient, getReportDate(report));
+    if (!isPublishedReadAligned(report, context)) {
+      return jsonResponse({ success: false, error: "REPORT_REVISION_CHANGED", report_date: getReportDate(report), payload: null }, 409);
+    }
+  }
   const publicMetadata = buildPublicPayload(report, context);
   const canonicalDecision = asObject(publicMetadata.canonical_decision);
 
@@ -1052,7 +1089,7 @@ Deno.serve(async (req: Request) => {
     tier,
     report_date: getReportDate(report),
     revision_id: toStringValue(canonicalDecision.id) || toStringValue(report.id),
-    generated_at: getGeneratedAt(report, getAi(report)),
+    generated_at: publicMetadata.generated_at,
     data_as_of: publicMetadata.data_as_of,
     market_status: publicMetadata.market_status,
     is_trading_day: publicMetadata.is_trading_day,

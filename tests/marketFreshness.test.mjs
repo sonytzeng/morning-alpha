@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   computeMarketFreshnessDates,
+  filterFreshMarketIndicators,
   filterRecentNewsRows,
   isMarketIndicatorStale,
 } from '../supabase/functions/generate-daily-report-v7/market-freshness.ts';
@@ -49,6 +50,12 @@ test('Taiwan cash freshness advances once the current session opens', () => {
   assert.equal(dates.twCoreDate, '2026-08-25');
   assert.equal(isMarketIndicatorStale('2026-08-24T05:30:00.000Z', 'TAIEX', dates), true);
   assert.equal(isMarketIndicatorStale('2026-08-25T01:00:20.000Z', 'TAIEX', dates), false);
+});
+
+test('research input excludes stale quotes and uses Taiwan dates for local company symbols', () => {
+  const dates={twCoreDate:'2026-09-04',usGlobalDate:'2026-09-04'};
+  const rows=[{symbol:'2317',updatedAt:'2026-09-04T05:30:00Z'},{symbol:'CRUDE OIL',updatedAt:'2026-07-04T20:00:00Z'}];
+  assert.deepEqual(filterFreshMarketIndicators(rows,dates).map(row=>row.symbol),['2317']);
 });
 
 test('news older than 48 hours is excluded before report generation', () => {

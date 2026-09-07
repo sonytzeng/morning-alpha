@@ -181,9 +181,9 @@ function todayDecisionCopy(
   if (state === 'ACT') return { headline: '驗證條件已成立', instruction: '條件成立，依計畫分批執行' };
   if (state === 'STOP') return { headline: '原定條件已失效', instruction: '停止原定計畫，先控制風險' };
   if (state === 'CLOSED') return { headline: '今日休市', instruction: '今天不執行盤中流程' };
-  if (lifecycleComplete) {
+  if (state === 'COMPLETED' || (lifecycleComplete && state === 'WAIT')) {
     return {
-      headline: '今日進場條件未成立',
+      headline: '今日收盤驗證已完成',
       instruction: '今日不追價，等待下一個交易日',
     };
   }
@@ -215,7 +215,7 @@ function workbenchTitle(
     if (state === 'ACT') return '今日條件成立，收盤驗證已完成';
     if (state === 'STOP') return '今日條件失效，收盤驗證已完成';
     if (state === 'CLOSED') return '今日休市，流程已結束';
-    return '今日條件未成立，收盤驗證已完成';
+    return state === 'INSUFFICIENT_DATA' ? '收盤流程已結束，部分資料仍不足' : '今日收盤驗證已完成';
   }
   if (state === 'ACT') return '條件成立，接下來只做計畫內的事';
   if (state === 'STOP') return '原定條件失效，先停止再重新判斷';
@@ -475,8 +475,14 @@ function TodayReportContent() {
     listText(rotation.add),
     listText(ai.increase_sector_weights),
   );
-  const activeFailure = canonicalNarrative.failure_triggers[0]
-    || (presentation.primaryDecision.state === 'STOP' ? canonicalNarrative.decision_lifecycle.failure_condition : null);
+  // Invalidation rules describe future conditions, not failures that happened.
+  const activeFailure = presentation.primaryDecision.state === 'STOP'
+    && canonicalNarrative.decision_evidence.runtimeFailure
+    ? {
+      trigger: canonicalNarrative.decision_evidence.reason,
+      action: presentation.primaryDecision.instruction,
+    }
+    : null;
 
   const nextRuntimeIndex = runtimeTimeline.findIndex((node) => node.time === nextRuntimeNode.time);
   const previousRuntimeNode = [...runtimeTimeline.slice(0, Math.max(0, nextRuntimeIndex))]

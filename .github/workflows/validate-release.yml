@@ -48,6 +48,7 @@ jobs:
           supabase/functions/generate-daily-report-v7/index.ts
           supabase/functions/daily-delivery-orchestrator/index.ts
           supabase/functions/get-report-payload/index.ts
+          supabase/functions/fetch-market-data-v10/index.ts
       - name: Core contract regressions
         run: >-
           deno test --no-lock

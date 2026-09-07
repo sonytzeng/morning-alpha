@@ -1,0 +1,223 @@
+{
+  "scope": "ISOLATED_LOCAL_ONLY",
+  "vendor": "synthetic JSON at provider boundary",
+  "auth": "real local gateway/internal auth",
+  "rpc_invocations_prohibited": [
+    "capture_morning_alpha_acceptance_v1",
+    "reconcile_runtime_terminal_failures_v1",
+    "reconcile_runtime_http_dispatches_v1"
+  ],
+  "records": [
+    {
+      "name": "real local auth rejects anonymous",
+      "status": "PASS",
+      "http": 401
+    },
+    {
+      "name": "actual Fetch opening (or original retained reuse)",
+      "status": "PASS",
+      "http": 200,
+      "correlation": "6f757588-a0eb-45db-b1dd-ee3b6662f837",
+      "versions": [
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128
+      ]
+    },
+    {
+      "name": "09:20 source rejected at 09:30",
+      "status": "PASS",
+      "http": 200,
+      "success": false
+    },
+    {
+      "name": "09:27 accepted; actual immutable retry and lifecycle",
+      "status": "PASS",
+      "http": 200,
+      "correlation": "f2c17029-d25b-402d-84c1-e0625abcb5e4",
+      "versions": [
+        137,
+        138,
+        139,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136
+      ]
+    },
+    {
+      "name": "provider missing change fields never normalized to zero",
+      "status": "PASS",
+      "success": false
+    },
+    {
+      "name": "valid retry after missing provider data",
+      "status": "PASS",
+      "http": 200,
+      "correlation": "7f722f00-3fe6-46fa-b638-322b66a22c20",
+      "versions": [
+        156,
+        157,
+        158,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155
+      ]
+    },
+    {
+      "name": "real DB write failure cannot mark checkpoint complete",
+      "status": "PASS",
+      "success": false
+    },
+    {
+      "name": "partial retry keeps original per-symbol observation",
+      "status": "PASS",
+      "http": 200,
+      "correlation": "33f8e5c4-4220-4eda-a37b-18954cddbfea",
+      "versions": [
+        167,
+        168,
+        180,
+        170,
+        171,
+        172,
+        173,
+        174,
+        175,
+        176,
+        177
+      ]
+    },
+    {
+      "name": "concurrent identical close request 1",
+      "status": "PASS",
+      "http": 200,
+      "correlation": "6bb4fda2-63f5-4c64-8f03-4554ba52d0da",
+      "versions": [
+        189,
+        191,
+        193,
+        195,
+        197,
+        199,
+        201,
+        203,
+        205
+      ]
+    },
+    {
+      "name": "concurrent identical close request 2",
+      "status": "PASS",
+      "http": 200,
+      "correlation": "6bb4fda2-63f5-4c64-8f03-4554ba52d0da",
+      "versions": [
+        189,
+        191,
+        193,
+        195,
+        197,
+        199,
+        201,
+        203,
+        205
+      ]
+    },
+    {
+      "name": "real close 14:30",
+      "status": "PASS",
+      "http": 200,
+      "correlation": "00b0f26a-fef7-40f0-a54d-be6380076263",
+      "versions": [
+        207,
+        208,
+        209,
+        210,
+        211,
+        212,
+        213,
+        214,
+        215
+      ]
+    },
+    {
+      "name": "late retry reuses original observation, no refetch",
+      "status": "PASS",
+      "http": 200,
+      "correlation": "f2c17029-d25b-402d-84c1-e0625abcb5e4",
+      "versions": [
+        138,
+        137,
+        139
+      ]
+    },
+    {
+      "name": "Acceptance six checkpoints × three core symbols, actual producer only",
+      "status": "PASS",
+      "matched": 18,
+      "missing": 0,
+      "acceptance_rpc_called": false
+    },
+    {
+      "name": "actual PREMARKET retention",
+      "status": "PASS",
+      "http": 200,
+      "correlation": "34c17fe7-3bd4-4baf-8c95-c3cceb4e08de",
+      "versions": [
+        216,
+        217,
+        218,
+        219,
+        220,
+        221,
+        222,
+        223,
+        224,
+        225,
+        226
+      ]
+    },
+    {
+      "name": "RECOVERY is separate; immutable PREMARKET unchanged; lifecycle no-op not success",
+      "status": "PASS"
+    },
+    {
+      "name": "late execution does not backfill historical checkpoint",
+      "status": "PASS",
+      "http": 409
+    },
+    {
+      "name": "TAIEX + 2330 without TXF is insufficient, not healthy",
+      "status": "PASS"
+    },
+    {
+      "name": "real immutable UPDATE/DELETE guards reject mutation",
+      "status": "PASS"
+    },
+    {
+      "name": "LINE untouched, no recovery or acceptance RPC invocation",
+      "status": "PASS"
+    },
+    {
+      "name": "FINAL",
+      "status": "PASS",
+      "scope": "Fetch → true immutable persistence → lifecycle → Acceptance evidence predicate (not full Production Acceptance)"
+    }
+  ]
+}

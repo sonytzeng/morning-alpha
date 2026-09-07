@@ -1,0 +1,222 @@
+{
+  "production_version": 63,
+  "production_updated_at": 1788490890516,
+  "production_source_sha256": "2832ff1c0e9009521beeb73bf3292af77d6e8549f73274e658a605df6dde0f93",
+  "candidate_source_sha256": "6b15f14ad76d20413f3483e01ab918dad7340cd4843bc8090d23837e4780beb0",
+  "changed_declarations": [
+    "VERSION",
+    "TAIWAN_DECISION_REQUIRED",
+    "normalizeFugleQuote"
+  ],
+  "handler_change": "Durable evidence retention, completeness gate and verified terminal reuse; no strategy change",
+  "protected_declarations": [
+    {
+      "name": "CORS_HEADERS",
+      "sha256": "b387f45452d659b17a72a731a8b879031d3d5e99ee84115511b8a3bdef2c19fe"
+    },
+    {
+      "name": "SYMBOL_DELAY_MS",
+      "sha256": "62a3349f12fe7f9920eb49284efa58b57ed424b8d1430e2745da7e8c9f4c33df"
+    },
+    {
+      "name": "FETCH_TIMEOUT_MS",
+      "sha256": "c569bf8f3ee2d703cae6361a2aca7b9800faa6c53fdf3ae83366b0eb28ba8959"
+    },
+    {
+      "name": "MAX_RETRIES",
+      "sha256": "598678fafd92be3ebe341d3d3133ca12f5aa230af4beffc2f379f64b889408d5"
+    },
+    {
+      "name": "OVERALL_TIMEOUT_MS",
+      "sha256": "096414c588c0aef8308fd1a86d0d5afa75892a9ab5b8ad90b7f10bc0b052b99b"
+    },
+    {
+      "name": "FinnhubQuote",
+      "sha256": "29f128deff1d9a31cd6e1833b3bb0867453870acf7d14821a7c61ca8df01452c"
+    },
+    {
+      "name": "MarketQuote",
+      "sha256": "956e1aafb08aa90ef36dd1b434c37155ab0b00ee1153e6f1c4646cb7a862a88f"
+    },
+    {
+      "name": "ProviderFailureDetail",
+      "sha256": "244b0cb21b52081bc99e4b97b2e15a42d0ea7d9417fb9e4ecf8b41e472b321e8"
+    },
+    {
+      "name": "SymbolConfig",
+      "sha256": "cc2bd23b626ee78e8440e9fbc18b07684ed4557d73cc608e8b8391ff8b2c1d20"
+    },
+    {
+      "name": "BeneficiaryLookupResult",
+      "sha256": "5d2091106888a9b137042937f6bcd000da6f164be061cfffae2d3b11e72070f2"
+    },
+    {
+      "name": "RuntimeSupabaseClient",
+      "sha256": "18f411c0f08012bafd0543a62158fc2c3c1b187352e1d05d1eb5307aab15fc8b"
+    },
+    {
+      "name": "MarketDataPhase",
+      "sha256": "2169d21d74640f8609ef85c21de94abf12a2047c5f9e0c32d95c3fd672661ea1"
+    },
+    {
+      "name": "RequestBody",
+      "sha256": "1fd13fc02cb3d1fb57e524f1bfd6778d6fd025775451b62c237c247b2ea732f6"
+    },
+    {
+      "name": "SYMBOLS",
+      "sha256": "5ad24db9b12030ce95f9b8bdb43122496290d46aaf40edcf25ef1fd514b888b4"
+    },
+    {
+      "name": "CLOSE_CORE_SYMBOLS",
+      "sha256": "bda806cd8d78ef5841f7a610601fbf17d4898e0822aedae6431ef5ff6f29cc66"
+    },
+    {
+      "name": "MVP_REQUIRED",
+      "sha256": "30f98aec7e8585f39da51aa4bb5bb739285b3a26195d7df7a754def8dcee53ee"
+    },
+    {
+      "name": "TAIWAN_FIRST_ORDER",
+      "sha256": "6ab069a34d7c78b049f56cf5ed97257f8557742837f6bc3fd9c2cd49f1a80560"
+    },
+    {
+      "name": "prioritizeCoreSymbols",
+      "sha256": "b7c9e3f7ab8f9429b6085522372852d569af05cdfcb5a9171ce9fc837c9ef485"
+    },
+    {
+      "name": "buildProviderLanes",
+      "sha256": "56ffa48fe012c2765a5d1c78cd5c3f0342da8c03fc4514de0ff948690c269a4e"
+    },
+    {
+      "name": "asRecord",
+      "sha256": "af08e014487db54bae931f8cf440be7f5f727fbd30bb00bd31e7c23e569913b5"
+    },
+    {
+      "name": "isTaiwanStockSymbol",
+      "sha256": "621c97605b94a55054c2c33e4e2f605460845a53806c8e3ab58f55890b417275"
+    },
+    {
+      "name": "fetchBeneficiarySymbolConfigsForDate",
+      "sha256": "6944021582b6f250b511d0897da72a6082ccb5c5b154385b419b265ae41a5e7b"
+    },
+    {
+      "name": "sleep",
+      "sha256": "efc4dd325f33bd7ada0aa0955b7d8bdc96b39eafc98820ce9c412b19bf93aeed"
+    },
+    {
+      "name": "getTaipeiParts",
+      "sha256": "523457008951392f4561a8e5c855f2a416b911aab36d44c087b2d6dfaa55d491"
+    },
+    {
+      "name": "resolveDefaultPhase",
+      "sha256": "673cd48217121387f9ccdf83c400e5486c8e923581cf3964c0ddfd30c1e6d2c7"
+    },
+    {
+      "name": "isMarketDataPhase",
+      "sha256": "8c5dfa39b3de0a81d12288763a756c26c624d3c8c7705b676b18968e238a874b"
+    },
+    {
+      "name": "readRequestBody",
+      "sha256": "b29bbedb6d1bf5c1c5fee22c5e29d04e62d21a26744fc424e8770101bc09936b"
+    },
+    {
+      "name": "fetchFinnhubQuote",
+      "sha256": "33b10a27016d4076f9f957cb8fbf9fb8e1c6570873fce081d26d05785ab14b8a"
+    },
+    {
+      "name": "extractNumber",
+      "sha256": "321c9126fbf23168e10a383edace914f0c2a3232110e8b42603895cc446c7b59"
+    },
+    {
+      "name": "taipeiDateTimeToIso",
+      "sha256": "5418f87133d7fba810de9c0921381c457d5517364bcab517e6aab2ea91667273"
+    },
+    {
+      "name": "normalizeTimestamp",
+      "sha256": "57ddd87ed846721367ca13ec69e05ab877560c04605260db3840b928ade99a90"
+    },
+    {
+      "name": "fetchFugleQuoteFromPath",
+      "sha256": "4b9554eec927c4cd68fd4738abb60c3f08ed87669f4f26811b4a66a10dc77d27"
+    },
+    {
+      "name": "fetchFugleStockQuote",
+      "sha256": "61ff5b69dfb1352a016f89e9d88bb56373d36ce68e7ec07954ddb30c71e6cdcb"
+    },
+    {
+      "name": "fetchFugleJson",
+      "sha256": "9b59b6359cb6e3fa15f131994a505dcfe733792f1897abd487b69b11636abf9b"
+    },
+    {
+      "name": "flattenTickerRows",
+      "sha256": "349cc636964628a8ce2fe314688d47bfd468c61eb676cc2758e6015d385a702a"
+    },
+    {
+      "name": "textField",
+      "sha256": "f8171a0343ac0b872149a453c85ec5bdd1f77f2a520a8126f97510a5b9bbb42f"
+    },
+    {
+      "name": "isActiveContract",
+      "sha256": "17d5edca82a20c271820b609c8a1416fa42602213b725ebc9c7fce89bb43eff7"
+    },
+    {
+      "name": "expiryMillis",
+      "sha256": "aa352a4f804fdc6529a53bf5931f2867b72a636ddebe48f6e032acab63d2f368"
+    },
+    {
+      "name": "selectNearestTxfContract",
+      "sha256": "ff7dbdd38f2d1dba81fb09c011a005efc334020d7c887937fcf536fc2debd783"
+    },
+    {
+      "name": "getActiveTxfContractSymbol",
+      "sha256": "3d500137da8da287021e0b61a2182df93591d450892990c739dd72a1d61e8388"
+    },
+    {
+      "name": "fetchFugleFutOptQuote",
+      "sha256": "8a8fff31ea8397eb9f35ffceb36cec2a666fb8b5e6a5af19df818815bcc2e5ed"
+    },
+    {
+      "name": "normalizeTwseQuote",
+      "sha256": "7227da10cfa0937825d06a85d0e9cf63b68183a97dedb29d5021bb76d60eb223"
+    },
+    {
+      "name": "fetchTwseQuote",
+      "sha256": "1af1e95eacf4e9e0671ab64279db2cb6a84b771cf6edcdc45f9712234cf181a1"
+    },
+    {
+      "name": "fetchTaiwanCoreQuote",
+      "sha256": "23f512a440c80bec9bca93936198861d13c112e5278f815bd8baa4322023f1eb"
+    }
+  ],
+  "dependencies": [
+    {
+      "path": "supabase/functions/_shared/internal-function-auth.mjs",
+      "production_sha256": "2a15efde1117cf2f8c1ef3adf376de95c930254902c57f2ec5dbf74ce0f930be",
+      "candidate_sha256": "2a15efde1117cf2f8c1ef3adf376de95c930254902c57f2ec5dbf74ce0f930be"
+    },
+    {
+      "path": "supabase/functions/_shared/market-status.ts",
+      "production_sha256": "d13a66c4e1bf350faa015147ef168e8f10eb8c6e696817cc6a68a6642572942b",
+      "candidate_sha256": "d13a66c4e1bf350faa015147ef168e8f10eb8c6e696817cc6a68a6642572942b"
+    },
+    {
+      "path": "supabase/functions/_shared/market-provider-adapter.mjs",
+      "production_sha256": "a038f26f655d95bc4736b3505f628e509e345c413ba808eb0fd702128fade316",
+      "candidate_sha256": "a038f26f655d95bc4736b3505f628e509e345c413ba808eb0fd702128fade316"
+    },
+    {
+      "path": "supabase/functions/_shared/runtime-checkpoint-core.mjs",
+      "production_sha256": "427c7600d397de12acae4e2e4c2bfd2dc7d49e46386946466dea81961600bc6f",
+      "candidate_sha256": "427c7600d397de12acae4e2e4c2bfd2dc7d49e46386946466dea81961600bc6f"
+    },
+    {
+      "path": "supabase/functions/_shared/market-runtime-stability.mjs",
+      "production_sha256": "ef0c4a9c6836ed979545804bdc058d6af4e7936ea8740f46713d035958d3e697",
+      "candidate_sha256": "ef0c4a9c6836ed979545804bdc058d6af4e7936ea8740f46713d035958d3e697"
+    },
+    {
+      "path": "supabase/functions/_shared/provider-normalization.mjs",
+      "production_sha256": "c3d115db804d3cdbc1a64368a338cd2b50fd73e8304587d9aa81648edc3dd7ee",
+      "candidate_sha256": "c3d115db804d3cdbc1a64368a338cd2b50fd73e8304587d9aa81648edc3dd7ee"
+    }
+  ]
+}

@@ -1,6 +1,41 @@
 # Core Stability：本機完整 Runtime 驗收續作 — 2026-09-07
 
-## 最新結案：本機 Core Stability Gate（2026-09-07，supersedes 下方歷史紀錄）
+## 目前有效狀態：Production release FAIL 已回復／Fetch Contract 候選完成
+
+**下方早先 `LOCAL_FULL_STACK_E2E = PASS` 不涵蓋真實 Fetch producer，不能再當作完整 Production release 依據。**
+2026-09-07 正式 Acceptance `c787c5ac-4b02-46cb-9116-30afd74dcb20` 實際 FAIL 並永久保留：已部署 Fetch v63 只寫 `market_data_snapshots`，新的 Acceptance 卻要求 `market_checkpoint_snapshots`。先前 harness 直接填入後者，漏驗了 producer 路徑。
+本輪已依精確核准回復三個原始 private RPC；沒有呼叫它們。Migration ledger `20260907114550`，body hash／signature／owner／security／search_path／ACL 全部與事前保存原版一致。詳見 `core-rpc-rollback-20260907.json`。
+正式 Edge 已在前輪回復 generator v229（原v227 source）、orchestrator v29（原v27 source）、payload v42（原v40 source）；本輪沒有再部署任何 Function。既有 canonical hardening 與新增三個 private publication RPC 保留，未 DROP 資料或回寫業務結果。
+
+### 本輪真實 Fetch 修補
+
+- 以可核對 hash 的 Production v63 為基底，保留雙 provider lane、60秒預算、6秒 timeout／1次 retry、Fugle/TWSE fallback、Premium beneficiary 分離及六個 shared dependencies。44個具名 declarations 原樣保留；來源與候選雜湊見 `core-fetch-source-manifest-20260907.json`。
+- Fetch 寫入並讀回 append-only `market_checkpoint_snapshots` 後才更新既有 compatibility tables；同 correlation + checkpoint + symbol 用 DO NOTHING，重試仍使用原保存報價，不 overwrite immutable。
+- `captured_at` 是實際 collection start；`source_timestamp` 是 provider 原始時間，絕不把 quote 改標為排程時間。PREMARKET 使用 uppercase canonical identity；manual_backfill 使用獨立 RECOVERY。
+- 盤中 collection windows（Asia/Taipei，右界不含）為 09:00–09:15、09:25–09:45、10:25–10:45、12:55–13:15；close collection 是14:10–14:25、14:30–14:45，涵蓋現有+5分鐘backup。PREMARKET最晚07:35。來源 freshness 仍保留原版規則，台股 intraday 再核對同 checkpoint window；close 可保留13:30/13:45官方價，不冒稱14:10價格更新。
+- intraday/close 必須 TAIEX + 2330 + TXF 均有完整 evidence／canonical／compatibility write；不再只憑前兩組宣告完整。Fugle 缺 change／percent 且無 previousClose 可推導時拒絕，不補0。這是品質契約修正，不是新選股策略。
+- terminal reuse 只讀原 lifecycle correlation 的 immutable evidence；若只有舊 mutable rows，回409 `TERMINAL_CHECKPOINT_EVIDENCE_MISSING`，不回填歷史、不重新抓晚到行情冒充早盤。
+- lifecycle RPC 的rank-regression no-op不再當成功；核對returned checkpoint ownership／immutable metadata。保留原state-machine、Auth及權限不變。
+
+### 重新驗證與限制
+
+本機正式Edge Runtime1.74.1、真實local Auth/JWT、PostgREST／PG／RLS／trigger：19項場景PASS，六checkpoints×三core symbols的candidate Acceptance證據predicate18/18匹配；詳細去識別證據 `core-fetch-local-evidence-20260907.json`。
+涵蓋09:27接受／09:20拒絕、缺percent拒絕、真實DB注入失敗與retry、相同correlation並行插入只留一組、PREMARKET/RECOVERY隔離、UPDATE/DELETE guard拒絕、late replay不補資料、TXF缺失不報healthy、LINE outbox未變。
+供應商只在local vendor boundary回傳synthetic JSON；時間只由test wrapper控制。**不是正式資料商delivery PASS、不是今日自動穩定日，也不是Full Production Acceptance PASS。** 本輪未執行三個受限RPC，僅以同predicate唯讀查詢核對證據。
+先前local502為CLI hot-reload重啟worker；並行clock fixture的提早restore也已修正，只改測試harness。修正後用新合成日期2026-09-14整批重跑PASS，沒有拿之前部分結果拼成通過。
+Type-check／lint／build／Deno checks／Node及Deno regressions已重跑；以本次候選最終CI結果為準。舊測試數字不得替代本輪結果。
+
+### 重現與下一次 Production Gate
+
+1. 沿用已驗證隔離stack，先由local-contract檢查`MA_LOCAL_SCOPE=ma-core-final-20260907`、Internal=true網路與DB identity；不可改連Production。
+2. 用原固定SDK import-map bundle實際Fetch entrypoint；只在本機bundle前加`tests/fixtures/fetch-provider-boundary.mjs`，local env使用無效vendor fixture keys，不能把wrapper部署到Production。CLI hot-reload穩定後才開始測試。
+3. `MA_LOCAL_SCOPE=ma-core-final-20260907 MA_FETCH_TEST_DATE=2026-09-14 node tests/integration/fetch-checkpoint-local.mjs`。整批重新執行需使用乾淨的合成交易日／隔離庫，不清除既有immutable evidence。原子publication完整測試另由既有CI isolated PG執行，非Production呼叫。
+4. 最新核准只允許三個原版RPC回復；新Fetch artifact不在先前SHA6dd7的production release內，**本轮不自行Deploy新Fetch、不重新發布三支已回復的Function、不重新套用forward Acceptance定义**。
+5. 下次正式發布必須以新的最終CI SHA審查：先讀回rollback baselines與table RLS/guard，再發布Fetch（entrypoint +原6shared +新fetch-checkpoint-evidence.mjs），唯讀等自然checkpoint形成持久證據；不得以09/07回填或人工advance補驗。Generator／orchestrator／payload與三個forward RPC是否再次發布，必須單獨以完整依賴與來源版本核准。
+6. Fetch回復方案：重部署保存的v63 entrypoint與原6shared，保持原JWT策略；不可DELETE已保留的證據。Acceptance三原版private定義與ACL回復基線已保存。
+7. 現在Production Gate仍FAIL；Core Gate之前不進Decision Engine/Subscriber UX發布、不啟動14日穩定認證。原09/07fail、缺原始immutable與正常LINE未成功等歷史事實不改寫。
+
+## 歷史結案：本機 Core Stability Gate（被上述真實Fetch驗收範圍更正）
 
 LOCAL_FULL_STACK_E2E = PASS（合成來源、真實本機 Runtime）；PRODUCTION_FIXED = NO。
 Schema source blocker 已由 Sony 的逐物件核准解除，沒有繞過原安全審核。

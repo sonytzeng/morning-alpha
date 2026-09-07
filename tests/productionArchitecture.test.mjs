@@ -188,7 +188,10 @@ test('runtime dual-writes canonical data and emits traceable decisions', () => {
   assert.match(collector, /from\("decision_snapshots"\)/);
   assert.match(collector, /\.eq\("session_type", "PREMARKET"\)/);
   assert.match(collector, /generatedText\.recommendations/);
-  assert.match(collector, /TAIWAN_DECISION_REQUIRED = \["TAIEX", "2330"\]/);
+  assert.match(collector, /TAIWAN_DECISION_REQUIRED = \["TAIEX", "2330", "TXF"\]/);
+  assert.match(collector, /from\("market_checkpoint_snapshots"\)/);
+  assert.match(collector, /ignoreDuplicates: true/);
+  assert.match(collector, /immutable_evidence_complete: immutableEvidenceComplete/);
   assert.match(collector, /prioritizeCoreSymbols/);
   assert.match(collector, /required_core_complete: requiredCoreComplete/);
   assert.match(collector, /evaluateCheckpointFreshness/);

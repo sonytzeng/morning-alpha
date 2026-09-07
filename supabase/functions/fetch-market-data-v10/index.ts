@@ -17,12 +17,20 @@ import {
   normalizeConfiguredProxyQuote,
   normalizeProviderTimestamp,
 } from '../_shared/provider-normalization.mjs';
+import {
+  buildCheckpointEvidence,
+  checkpointCollectionContract,
+  quoteFromCheckpointEvidence,
+  validRetainedCheckpointRow,
+} from '../_shared/fetch-checkpoint-evidence.mjs';
 
 // ═══════════════════════════════════════════════════════════
-// fetch-market-data-v10 V10.12 — CLOSE CHECKPOINT OWNERSHIP REPAIR
+// fetch-market-data-v10 V10.14 — PROVIDER-LANE TIMEOUT RECOVERY
 // Uses Finnhub for US equities/ETF proxies, Fugle/TWSE for Taiwan core, best-effort Fugle futopt for TXF.
 // Each symbol: 6s timeout, max 1 retry.
-// Overall: 28s hard cap → always returns within 30s for cron.
+// Global and Taiwan providers run in separate sequential lanes so one slow
+// provider cannot consume the other provider's entire collection budget.
+// Overall provider budget: 60s, below the orchestrator's 180s request timeout.
 // ═══════════════════════════════════════════════════════════
 
 const CORS_HEADERS = {
@@ -34,8 +42,8 @@ const CORS_HEADERS = {
 const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
-const OVERALL_TIMEOUT_MS = 28_000;
-const VERSION = "V10.13_TERMINAL_CHECKPOINT_REUSE";
+const OVERALL_TIMEOUT_MS = 60_000;
+const VERSION = "V10.15_DURABLE_CHECKPOINT_EVIDENCE";
 
 interface FinnhubQuote {
   c: number;
@@ -119,16 +127,25 @@ const CLOSE_CORE_SYMBOLS = new Set(["TAIEX", "2330", "TXF", "SPX", "IXIC", "SOX"
 
 // MVP required symbols for safe bias to work
 const MVP_REQUIRED = ["NVDA", "TSM", "SPX"];
-const TAIWAN_DECISION_REQUIRED = ["TAIEX", "2330"];
+const TAIWAN_DECISION_REQUIRED = ["TAIEX", "2330", "TXF"];
 const TAIWAN_FIRST_ORDER = ["TAIEX", "2330", "TXF", "SPX", "IXIC", "SOX", "NVDA", "TSM", "VIX", "DXY", "US10Y"];
 
 function prioritizeCoreSymbols(configs: SymbolConfig[], phase: MarketDataPhase): SymbolConfig[] {
-  if (phase === "premarket" || phase === "manual_backfill") return configs;
+  if (phase === "manual_backfill") return configs;
   const priority = new Map(TAIWAN_FIRST_ORDER.map((symbol, index) => [symbol, index]));
   return [...configs].sort((left, right) =>
     (priority.get(left.displaySymbol) ?? Number.MAX_SAFE_INTEGER) -
     (priority.get(right.displaySymbol) ?? Number.MAX_SAFE_INTEGER)
   );
+}
+
+function buildProviderLanes(configs: SymbolConfig[]): Array<{ name: "GLOBAL" | "TAIWAN"; symbols: SymbolConfig[] }> {
+  const globalSymbols = configs.filter((config) => config.market !== "TW");
+  const taiwanSymbols = configs.filter((config) => config.market === "TW");
+  return [
+    { name: "GLOBAL" as const, symbols: globalSymbols },
+    { name: "TAIWAN" as const, symbols: taiwanSymbols },
+  ].filter((lane) => lane.symbols.length > 0);
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -466,10 +483,12 @@ function normalizeFugleQuote(data: Record<string, unknown>, sourceSymbol: string
   let changePercent = extractNumber(data, ["changePercent", "change_percent", "priceChangePercent"]);
 
   if (price === null || price <= 0) return null;
-  const computedChange = change ?? (previousClose && previousClose > 0 ? price - previousClose : 0);
+  const computedChange = change ?? (previousClose && previousClose > 0 ? price - previousClose : null);
+  if (computedChange === null) return null;
   if (changePercent === null) {
-    changePercent = previousClose && previousClose > 0 ? (computedChange / previousClose) * 100 : 0;
+    changePercent = previousClose && previousClose > 0 ? (computedChange / previousClose) * 100 : null;
   }
+  if (changePercent === null) return null;
 
   const lastTrade = data.lastTrade && typeof data.lastTrade === "object" && !Array.isArray(data.lastTrade)
     ? data.lastTrade as Record<string, unknown>
@@ -929,6 +948,8 @@ Deno.serve(async (req) => {
     }
     const beneficiaryCloseOnly = phase === "close" && requestBody.beneficiary_close_only === true;
     const includeBeneficiaryClose = phase === "close" && (beneficiaryCloseOnly || requestBody.include_beneficiary_close === true || requestBody.beneficiary_close === true);
+    const evidenceInput = { phase, checkpoint, tradingDate, observedAt: startedAt, correlationId };
+    const collection = checkpointCollectionContract(evidenceInput);
 
     // A completed checkpoint is an immutable point-in-time observation. Backup
     // Cron or an operator replay may safely reuse it, but must never replace the
@@ -952,17 +973,21 @@ Deno.serve(async (req) => {
           && checkpointMetadata.required_core_complete === true
           && checkpointMetadata.canonical_complete === true;
         if (terminalCheckpoint) {
+          const originalCorrelation = String(checkpointRecord.correlation_id || "");
           const { data: existingSnapshots, error: existingSnapshotsError } = await supabase
-            .from("market_data_snapshots")
-            .select("symbol,name,value,change_percent,captured_at,source")
+            .from("market_checkpoint_snapshots")
+            .select("*")
             .eq("trading_date", tradingDate)
-            .eq("phase", phase)
-            .eq("checkpoint", checkpoint)
+            .eq("correlation_id", originalCorrelation || correlationId)
+            .eq("checkpoint", phase === "premarket" ? "PREMARKET" : phase === "manual_backfill" ? "RECOVERY" : checkpoint)
             .in("symbol", requiredSymbols);
           const snapshotRows = Array.isArray(existingSnapshots) ? existingSnapshots : [];
           const existingSymbols = new Set(snapshotRows.map((row) => String(row.symbol || "")));
           const snapshotContractComplete = !existingSnapshotsError
-            && requiredSymbols.every((symbol) => existingSymbols.has(symbol));
+            && requiredSymbols.every((symbol) => snapshotRows.some((row) => {
+              const config = SYMBOLS.find((item) => item.displaySymbol === symbol);
+              return config && validRetainedCheckpointRow(row, { ...evidenceInput, correlationId: originalCorrelation }, config);
+            }));
           if (snapshotContractComplete) {
             console.log(`[${batchTag}] CHECKPOINT_REUSED checkpoint=${checkpoint} symbols=${requiredSymbols.join(",")}`);
             return new Response(JSON.stringify({
@@ -970,6 +995,9 @@ Deno.serve(async (req) => {
               version: VERSION,
               request_id: requestId,
               correlation_id: correlationId,
+              evidence_correlation_id: originalCorrelation,
+              immutable_evidence_complete: true,
+              immutable_snapshot_versions: snapshotRows.map((row) => row.snapshot_version),
               phase,
               checkpoint,
               trading_date: tradingDate,
@@ -1006,8 +1034,18 @@ Deno.serve(async (req) => {
             }), { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
           }
           console.warn(`[${batchTag}] CHECKPOINT_REUSE_CONTRACT_INCOMPLETE checkpoint=${checkpoint} error=${existingSnapshotsError?.message || "required snapshots missing"}`);
+          // Do not manufacture historical retention from today's latest mutable rows.
+          return new Response(JSON.stringify({ success: false, error: "TERMINAL_CHECKPOINT_EVIDENCE_MISSING",
+            checkpoint, trading_date: tradingDate, checkpoint_complete: false, immutable_evidence_complete: false }),
+            { status: 409, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
         }
       }
+    }
+
+    if (!beneficiaryCloseOnly && !collection.valid) {
+      return new Response(JSON.stringify({ success: false, error: collection.error, checkpoint, trading_date: tradingDate,
+        checkpoint_complete: false, immutable_evidence_complete: false }),
+        { status: 409, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
     }
 
     const beneficiaryLookup: BeneficiaryLookupResult = includeBeneficiaryClose
@@ -1044,6 +1082,8 @@ Deno.serve(async (req) => {
     const twCoreSymbolsFailed: Array<{ symbol: string; reason: string }> = [];
     const snapshotSymbolsSuccess: string[] = [];
     const canonicalSymbolsSuccess: string[] = [];
+    const immutableSnapshotVersions: Array<number | string> = [];
+    const immutableSymbolsSuccess: string[] = [];
     let snapshotUpsertedCount = 0;
     let canonicalUpsertedCount = 0;
     const allSymbols = symbolConfigs.map((s) => s.displaySymbol);
@@ -1051,36 +1091,65 @@ Deno.serve(async (req) => {
     console.log(`[${batchTag}] phase=${phase} trading_date=${tradingDate} taipei=${taipei.hour}:${String(taipei.minute).padStart(2, "0")} close_core_only=${phase === "close" && !includeBeneficiaryClose} beneficiary_close_only=${beneficiaryCloseOnly} beneficiary_symbols=${beneficiarySymbolConfigs.map((s) => s.displaySymbol).join(",") || "none"}`);
 
     // ═══════════════════════════════════════════════════════
-    // Fetch all symbols sequentially with delay
-    // Overall deadline: OVERALL_TIMEOUT_MS from start
-    // Single failure → continue (do not abort batch)
+    // Fetch in two provider-isolated lanes. Calls remain sequential inside
+    // each provider lane to preserve rate-limit protection, while a slow
+    // global quote can no longer prevent Taiwan core quotes from running.
+    // Database writes remain deterministic in the original symbol order.
     // ═══════════════════════════════════════════════════════
     let timedOut = false;
+    const fetchedQuotes = new Map<SymbolConfig, MarketQuote | null>();
+    const fetchStartedMs = Date.now();
+    const providerLanes = buildProviderLanes(symbolConfigs);
+
+    await Promise.all(providerLanes.map(async (lane) => {
+      for (let laneIndex = 0; laneIndex < lane.symbols.length; laneIndex++) {
+        const config = lane.symbols[laneIndex];
+        const originalIndex = symbolConfigs.indexOf(config);
+        if (Date.now() - fetchStartedMs > OVERALL_TIMEOUT_MS) {
+          const remaining = lane.symbols.slice(laneIndex);
+          console.warn(`[${batchTag}] ${lane.name} LANE TIMEOUT after ${OVERALL_TIMEOUT_MS / 1000}s — ${remaining.length} symbols skipped`);
+          for (const skippedConfig of remaining) {
+            fetchedQuotes.set(skippedConfig, null);
+            providerFailureDetails.push({
+              provider: skippedConfig.market === "TW" ? "fugle" : "finnhub",
+              symbol: skippedConfig.displaySymbol,
+              endpoint: "provider_lane",
+              error: "overall_timeout",
+            });
+          }
+          timedOut = true;
+          return;
+        }
+
+        if (laneIndex > 0 && !(phase === "close" && !includeBeneficiaryClose)) {
+          await sleep(SYMBOL_DELAY_MS);
+        }
+
+        console.log(`[${batchTag}] [${originalIndex + 1}/${symbolConfigs.length}] Fetching ${config.displaySymbol} on ${lane.name} lane...`);
+        try {
+          const fetchedQuote = config.market === "TW"
+            ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, providerFailureDetails)
+            : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`, providerFailureDetails);
+          fetchedQuotes.set(config, fetchedQuote);
+        } catch (err) {
+          const message = sanitizeProviderError(err instanceof Error ? err.message : String(err));
+          console.error(`[${batchTag}] ${config.displaySymbol} provider lane exception: ${message}`);
+          fetchedQuotes.set(config, null);
+          providerFailureDetails.push({
+            provider: config.market === "TW" ? "fugle" : "finnhub",
+            symbol: config.displaySymbol,
+            endpoint: "provider_lane",
+            error: message,
+          });
+        }
+      }
+    }));
 
     for (let i = 0; i < symbolConfigs.length; i++) {
-      // Check overall timeout before each symbol
-      if (Date.now() - startedMs > OVERALL_TIMEOUT_MS) {
-        console.warn(`[${batchTag}] OVERALL TIMEOUT after ${OVERALL_TIMEOUT_MS / 1000}s — ${symbolConfigs.length - i} symbols skipped`);
-        for (let j = i; j < symbolConfigs.length; j++) {
-          failed.push(symbolConfigs[j].displaySymbol);
-        }
-        timedOut = true;
-        break;
-      }
-
       const config = symbolConfigs[i];
 
-      if (i > 0 && !(phase === "close" && !includeBeneficiaryClose)) {
-        await sleep(SYMBOL_DELAY_MS);
-      }
-
-      console.log(`[${batchTag}] [${i + 1}/${symbolConfigs.length}] Fetching ${config.displaySymbol}...`);
-
       try {
-        const fetchedQuote = config.market === "TW"
-          ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, providerFailureDetails)
-          : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`, providerFailureDetails);
-        const quote = normalizeConfiguredProxyQuote(fetchedQuote, config) as MarketQuote | null;
+        let quote = normalizeConfiguredProxyQuote(fetchedQuotes.get(config) ?? null, config) as MarketQuote | null;
 
         if (!quote) {
           console.error(`[${batchTag}] [${i + 1}/${symbolConfigs.length}] ${config.displaySymbol} fetch returned null`);
@@ -1122,6 +1191,35 @@ Deno.serve(async (req) => {
             twCoreSymbolsFailed.push({ symbol: config.displaySymbol, reason: "STALE_OR_INVALID_PROVIDER_TIMESTAMP" });
           }
           continue;
+        }
+
+        // Persist before claiming completeness. ON CONFLICT DO NOTHING preserves
+        // the first observation for this request identity, including partial retries.
+        // Read it back and use that exact observation for all compatibility writers.
+        let immutableVersion: number | string | null = null;
+        if (!beneficiaryCloseOnly) {
+          const evidence = buildCheckpointEvidence(evidenceInput, quote, config);
+          if (!evidence.valid) {
+            failed.push(config.displaySymbol);
+            snapshotErrors.push({ symbol: config.displaySymbol, error: evidence.error || "INVALID_IMMUTABLE_EVIDENCE" });
+            continue;
+          }
+          const retainedWrite = await supabase.from("market_checkpoint_snapshots").upsert(evidence.row, {
+            onConflict: "correlation_id,checkpoint,symbol", ignoreDuplicates: true,
+          });
+          const retained = retainedWrite.error ? { data: null, error: retainedWrite.error } : await supabase
+            .from("market_checkpoint_snapshots").select("*")
+            .eq("correlation_id", correlationId).eq("checkpoint", collection.checkpoint)
+            .eq("symbol", config.displaySymbol).maybeSingle();
+          if (retained.error || !validRetainedCheckpointRow(retained.data, evidenceInput, config)) {
+            failed.push(config.displaySymbol);
+            snapshotErrors.push({ symbol: config.displaySymbol, error: retained.error?.message || "IMMUTABLE_EVIDENCE_READBACK_FAILED" });
+            continue;
+          }
+          quote = quoteFromCheckpointEvidence(retained.data) as MarketQuote;
+          immutableVersion = retained.data.snapshot_version;
+          immutableSnapshotVersions.push(immutableVersion as number | string);
+          immutableSymbolsSuccess.push(config.displaySymbol);
         }
 
         const value = quote.value;
@@ -1181,6 +1279,9 @@ Deno.serve(async (req) => {
               change_percent: changePercent,
             },
             request_id: requestId,
+            correlation_id: correlationId,
+            immutable_snapshot_version: immutableVersion,
+            immutable_checkpoint: beneficiaryCloseOnly ? null : collection.checkpoint,
             checkpoint,
           },
         };
@@ -1315,8 +1416,10 @@ Deno.serve(async (req) => {
     const requiredCoreComplete = requiredCoreSymbols.every((symbol) =>
       inserted.some((item) => item.symbol === symbol) &&
       snapshotSymbolsSuccess.includes(symbol) &&
-      canonicalSymbolsSuccess.includes(symbol)
+      canonicalSymbolsSuccess.includes(symbol) &&
+      immutableSymbolsSuccess.includes(symbol)
     );
+    const immutableEvidenceComplete = !beneficiaryCloseOnly && requiredCoreSymbols.every((symbol) => immutableSymbolsSuccess.includes(symbol));
     const coreBatchComplete = !beneficiaryCloseOnly && requiredCoreComplete &&
       snapshotErrors.length === 0 && canonicalComplete;
     const beneficiaryCloseStatus = buildBeneficiaryCloseStatus({
@@ -1359,6 +1462,12 @@ Deno.serve(async (req) => {
             : classifiedProviderFailures[0]?.failure_code || (failed.length > 0 ? "PARTIAL_PROVIDER_FAILURE" : null),
       correlation_id: correlationId,
       details: {
+        fetch_strategy: "parallel_provider_lanes",
+        fetch_timeout_ms: OVERALL_TIMEOUT_MS,
+        provider_lanes: providerLanes.map((lane) => ({
+          name: lane.name,
+          symbols: lane.symbols.map((symbol) => symbol.displaySymbol),
+        })),
         providers_by_symbol: providerUsedBySymbol,
         provider_failures: classifiedProviderFailures,
         canonical_write_errors: canonicalWriteErrors,
@@ -1369,6 +1478,8 @@ Deno.serve(async (req) => {
         required_core_complete: requiredCoreComplete,
         canonical_complete: canonicalComplete,
         snapshot_complete: snapshotComplete,
+        immutable_evidence_complete: immutableEvidenceComplete,
+        immutable_snapshot_versions: immutableSnapshotVersions,
         has_provider_degradation: hasProviderDegradation,
       },
       checked_at: new Date().toISOString(),
@@ -1449,12 +1560,26 @@ Deno.serve(async (req) => {
           core_batch_complete: coreBatchComplete,
           required_core_symbols: requiredCoreSymbols,
           required_core_complete: requiredCoreComplete,
+          immutable_evidence_complete: immutableEvidenceComplete,
+          immutable_snapshot_versions: immutableSnapshotVersions,
+          evidence_correlation_id: correlationId,
           related_core_health: relatedCoreHealth,
           provider_failure_codes: classifiedProviderFailures.map((failure: Record<string, unknown>) => failure.failure_code),
         },
       })
       : { error: { message: "checkpoint_state_mapping_missing" } };
-    const tradingDayStateError = tradingDayStateResult.error;
+    let tradingDayStateError = tradingDayStateResult.error;
+    if (!beneficiaryCloseOnly && !tradingDayStateError) {
+      const returnedState = asRecord('data' in tradingDayStateResult ? tradingDayStateResult.data : null);
+      const returnedCheckpoint = asRecord(asRecord(returnedState.checkpoint_status)[checkpoint]);
+      const returnedMetadata = asRecord(returnedCheckpoint.metadata);
+      // The lifecycle RPC deliberately ignores rank regressions / older status.
+      // An HTTP 200 from that RPC alone is not evidence that this batch owns it.
+      if (returnedCheckpoint.correlation_id !== correlationId ||
+        (checkpointEvidenceComplete && returnedMetadata.immutable_evidence_complete !== true)) {
+        tradingDayStateError = { message: 'CHECKPOINT_STATE_EVIDENCE_MISMATCH' };
+      }
+    }
     const operationSucceeded = !timedOut && providerHealthWriteErrors.length === 0 && !tradingDayStateError &&
       (beneficiaryCloseOnly ? checkpointEvidenceComplete : coreBatchComplete);
 
@@ -1472,6 +1597,8 @@ Deno.serve(async (req) => {
         started_at: startedAt,
         completed_at: new Date().toISOString(),
         elapsed_seconds: parseFloat(elapsed),
+        fetch_strategy: "parallel_provider_lanes",
+        fetch_timeout_ms: OVERALL_TIMEOUT_MS,
         inserted: inserted,
         failed: failed,
         beneficiary_symbols_requested: beneficiarySymbolConfigs.map((s) => s.displaySymbol),
@@ -1499,6 +1626,9 @@ Deno.serve(async (req) => {
         canonical_complete: canonicalComplete,
         snapshot_complete: snapshotComplete,
         core_batch_complete: coreBatchComplete,
+        immutable_evidence_complete: immutableEvidenceComplete,
+        immutable_snapshot_versions: immutableSnapshotVersions,
+        evidence_correlation_id: correlationId,
         required_core_symbols: requiredCoreSymbols,
         required_core_complete: requiredCoreComplete,
         related_core_health: relatedCoreHealth,
@@ -1515,7 +1645,7 @@ Deno.serve(async (req) => {
         snapshot_upserted_count: snapshotUpsertedCount,
         snapshot_errors: snapshotErrors,
         symbols: allSymbols,
-        healthy: healthy,
+        healthy: healthy && checkpointEvidenceComplete && !tradingDayStateError,
         timed_out: timedOut,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },

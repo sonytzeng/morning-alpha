@@ -3,7 +3,10 @@ import test from 'node:test';
 import {
   buildDailyDeliveryRecoveryPlan,
   hasFailedEvidenceDependency,
+  resolveClaimedPipelineRetry,
   isContentOnlyDeliveryFailure,
+  resolveClaimedPipelineSlot,
+  resolveDailyDeliveryCompletion,
   resolveDailyDeliveryPhase,
 } from '../supabase/functions/_shared/daily-delivery-recovery.ts';
 
@@ -36,6 +39,17 @@ test('missing or stale market evidence routes to market recovery', () => {
     taipei_minutes: 7 * 60 + 15,
   });
   assert.deepEqual(plan.actions, ['refresh_market', 'regenerate_report']);
+});
+
+test('missing prior-day sector rotation is rebuilt before report regeneration', () => {
+  const plan = buildDailyDeliveryRecoveryPlan({
+    has_report: true,
+    premium_eligible: false,
+    reason_codes: ['sector_rotation_scores:2026-09-01'],
+    attempt: 1,
+    taipei_minutes: 7 * 60 + 5,
+  });
+  assert.deepEqual(plan.actions, ['refresh_sector_rotation', 'regenerate_report']);
 });
 
 test('an eligible report is delivered only in the delivery window', () => {
@@ -91,6 +105,7 @@ test('failed evidence dependencies block regeneration and premium delivery', () 
   assert.equal(hasFailedEvidenceDependency({ refresh_news: { ok: true }, refresh_market: { ok: true } }), false);
   assert.equal(hasFailedEvidenceDependency({ refresh_news: { ok: false }, refresh_market: { ok: true } }), true);
   assert.equal(hasFailedEvidenceDependency({ regenerate_report: { ok: false } }), true);
+  assert.equal(hasFailedEvidenceDependency({ refresh_sector_rotation: { ok: false } }), true);
   assert.equal(hasFailedEvidenceDependency({ deliver_incident: { ok: false } }), false);
 });
 
@@ -121,4 +136,105 @@ test('content-only failures use a bounded repair budget instead of repeating the
   });
   assert.deepEqual(exhausted.actions, ['deliver_incident']);
   assert.equal(exhausted.retry_after_seconds, null);
+});
+
+test('refresh completion is judged by refresh actions, not by a report that is not due yet', () => {
+  assert.equal(resolveDailyDeliveryCompletion({
+    phase: 'refresh',
+    action_failure_count: 0,
+    premium_eligible: false,
+    delivered: false,
+  }), true);
+  assert.equal(resolveDailyDeliveryCompletion({
+    phase: 'refresh',
+    action_failure_count: 1,
+    premium_eligible: false,
+    delivered: false,
+  }), false);
+});
+
+test('generate and delivery phases retain their own fail-closed completion gates', () => {
+  assert.equal(resolveDailyDeliveryCompletion({
+    phase: 'generate',
+    action_failure_count: 0,
+    premium_eligible: false,
+    delivered: false,
+  }), false);
+  assert.equal(resolveDailyDeliveryCompletion({
+    phase: 'generate',
+    action_failure_count: 0,
+    premium_eligible: true,
+    delivered: false,
+  }), true);
+  assert.equal(resolveDailyDeliveryCompletion({
+    phase: 'deliver',
+    action_failure_count: 0,
+    premium_eligible: true,
+    delivered: false,
+  }), false);
+  assert.equal(resolveDailyDeliveryCompletion({
+    phase: 'watchdog',
+    action_failure_count: 0,
+    premium_eligible: true,
+    delivered: true,
+  }), true);
+});
+
+test('duplicate active or completed slots are idempotent skips, not runtime failures', () => {
+  assert.deepEqual(resolveClaimedPipelineSlot('RUNNING'), {
+    success: true,
+    status: 'SKIPPED',
+    claimed_status: 'RUNNING',
+  });
+  assert.equal(resolveClaimedPipelineSlot('SUCCEEDED').success, true);
+  assert.equal(resolveClaimedPipelineSlot('SKIPPED').success, true);
+  assert.deepEqual(resolveClaimedPipelineSlot('DEGRADED'), {
+    success: false,
+    status: 'DEGRADED',
+    claimed_status: 'DEGRADED',
+  });
+  assert.equal(resolveClaimedPipelineSlot('FAILED').success, false);
+});
+
+test('a due degraded slot creates a bounded append-only retry attempt', () => {
+  assert.deepEqual(resolveClaimedPipelineRetry({
+    status: 'DEGRADED',
+    attempt: 1,
+    next_retry_at: '2026-09-04T23:02:14.000Z',
+    now: '2026-09-04T23:03:00.000Z',
+  }), {
+    retry: true,
+    next_attempt: 2,
+    reason: 'RETRY_DUE',
+  });
+
+  assert.deepEqual(resolveClaimedPipelineRetry({
+    status: 'FAILED',
+    attempt: 2,
+    next_retry_at: '2026-09-04T23:05:00.000Z',
+    now: '2026-09-04T23:03:00.000Z',
+  }), {
+    retry: false,
+    next_attempt: 3,
+    reason: 'RETRY_NOT_DUE',
+  });
+});
+
+test('pipeline retry refuses active, unscheduled, and exhausted slots', () => {
+  assert.equal(resolveClaimedPipelineRetry({
+    status: 'RUNNING', attempt: 1, next_retry_at: '2026-09-04T23:02:00.000Z', now: '2026-09-04T23:03:00.000Z',
+  }).reason, 'STATUS_NOT_RETRYABLE');
+  assert.equal(resolveClaimedPipelineRetry({
+    status: 'DEGRADED', attempt: 1, next_retry_at: null, now: '2026-09-04T23:03:00.000Z',
+  }).reason, 'RETRY_NOT_SCHEDULED');
+  assert.deepEqual(resolveClaimedPipelineRetry({
+    status: 'DEGRADED',
+    attempt: 4,
+    next_retry_at: '2026-09-04T23:02:00.000Z',
+    now: '2026-09-04T23:03:00.000Z',
+  }), {
+    retry: false,
+    next_attempt: 5,
+    reason: 'RETRY_BUDGET_EXHAUSTED',
+  });
 });

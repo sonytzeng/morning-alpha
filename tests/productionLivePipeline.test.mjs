@@ -46,6 +46,22 @@ test('Taiwan adapters follow the Fugle v1 symbol and session contract', () => {
   assert.match(marketSource, /lastTrade\.time \|\| total\.time \|\|/);
 });
 
+test('market collection isolates global and Taiwan providers within a safe request budget', () => {
+  assert.match(marketSource, /const OVERALL_TIMEOUT_MS = 60_000/);
+  assert.match(marketSource, /buildProviderLanes\(symbolConfigs\)/);
+  assert.match(marketSource, /Promise\.all\(providerLanes\.map/);
+  assert.match(marketSource, /fetch_strategy: "parallel_provider_lanes"/);
+  assert.match(marketSource, /Fetching \$\{config\.displaySymbol\} on \$\{lane\.name\} lane/);
+});
+
+test('daily delivery retries a due failed slot without overwriting the original run', () => {
+  assert.match(deliveryOrchestratorSource, /resolveClaimedPipelineRetry/);
+  assert.match(deliveryOrchestratorSource, /idempotency_key\.eq\.\$\{baseIdempotencyKey\},idempotency_key\.like\.\$\{baseIdempotencyKey\}:retry:%/);
+  assert.match(deliveryOrchestratorSource, /`\$\{baseIdempotencyKey\}:retry:\$\{retryResolution\.next_attempt\}`/);
+  assert.match(deliveryOrchestratorSource, /retry_of_pipeline_run_id: retryOfId/);
+  assert.match(deliveryOrchestratorSource, /retry_of_pipeline_run_id: claim\.retryOfId/);
+});
+
 test('daily sentence rejects stale report dates and delivery fails closed', async () => {
   const linePushSource = await readFile(new URL('../supabase/functions/line-daily-push/index.ts', import.meta.url), 'utf8');
   assert.match(reportSource, /daily_sentence_date_mismatch|\^\\d\{4\}-\\d\{2\}-\\d\{2\}/);

@@ -36,8 +36,9 @@ const openingRadarPath = new URL('../supabase/functions/opening-market-radar/ind
 const closingVerificationPath = new URL('../supabase/functions/closing-verification-engine/index.ts', import.meta.url);
 const securityHardeningMigrationPath = new URL('../supabase/migrations/20260822173549_harden_runtime_permissions.sql', import.meta.url);
 const productionVerificationWorkflowPath = new URL('../.github/workflows/production-readiness-verification.yml', import.meta.url);
+const acceptanceReplayFixMigrationPath = new URL('../supabase/migrations/20260830090000_reconcile_acceptance_and_replay_idempotency.sql', import.meta.url);
 
-const [migration, generator, collector, recovery, replay, entitlement, dashboard, deploy, replayWorkflow, checkpointMigration, terminalCheckpointMigration, foreignKeyIndexMigration, runtimeCheckpointWorkflow, openingRadar, closingVerification, securityHardeningMigration, productionVerificationWorkflow] = await Promise.all([
+const [migration, generator, collector, recovery, replay, entitlement, dashboard, deploy, replayWorkflow, checkpointMigration, terminalCheckpointMigration, foreignKeyIndexMigration, runtimeCheckpointWorkflow, openingRadar, closingVerification, securityHardeningMigration, productionVerificationWorkflow, acceptanceReplayFixMigration] = await Promise.all([
   migrationPath,
   generatorPath,
   collectorPath,
@@ -55,6 +56,7 @@ const [migration, generator, collector, recovery, replay, entitlement, dashboard
   closingVerificationPath,
   securityHardeningMigrationPath,
   productionVerificationWorkflowPath,
+  acceptanceReplayFixMigrationPath,
 ].map((path) => readFile(path, 'utf8')));
 
 test('central production policy preserves the strict premium threshold', () => {
@@ -279,6 +281,13 @@ test('safe recovery is allowlisted and replay is shadow-only by default', () => 
   assert.match(deploy, /supabase functions deploy strategy-replay-engine/);
   assert.match(replayWorkflow, /cron: '15 2 \* \* 6'/);
   assert.match(replayWorkflow, /"dry_run":false/);
+});
+
+test('strategy replay persists one result per prediction without snapshot-level collisions', () => {
+  assert.match(acceptanceReplayFixMigration, /drop constraint if exists historical_replay_results_replay_run_id_report_date_decisio_key/i);
+  assert.match(replay, /uniqueByKey/);
+  assert.match(replay, /onConflict: 'replay_run_id,prediction_id'/);
+  assert.match(replay, /status: 'failed'/);
 });
 
 test('frontend traffic is deduplicated and uses adaptive polling with Realtime', () => {

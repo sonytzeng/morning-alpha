@@ -426,8 +426,19 @@ export function buildCanonicalDecisionContract(input = {}) {
     ? records(generated.recommendations)
     : records(ai.today_beneficiary_stocks_v10);
   const first = asPlainRecord(sourceRecommendations[0]);
-  const primaryEvent = firstText(first.event_source, first.trigger_event, first.primary_event);
-  const primaryTheme = firstText(first.sector, first.industry_name, first.primary_taiwan_theme);
+  const action = firstText(snapshot.action, generated.action);
+  const explicitAbstention = sourceRecommendations.length === 0
+    && ['WAIT', 'STOP', 'NO_TRADE', 'ABSTAIN'].includes(action.toUpperCase());
+  const abstentionThesis = explicitAbstention
+    ? firstText(generated.daily_sentence, ...(Array.isArray(generated.reasons) ? generated.reasons : []))
+    : '';
+  const primaryEvent = firstText(first.event_source, first.trigger_event, first.primary_event, abstentionThesis);
+  const primaryTheme = firstText(
+    first.sector,
+    first.industry_name,
+    first.primary_taiwan_theme,
+    explicitAbstention ? '不建立受惠股' : '',
+  );
   const primaryRecommendations = sourceRecommendations.filter((candidate) => {
     const record = asPlainRecord(candidate);
     const event = firstText(record.event_source, record.trigger_event, record.primary_event);
@@ -439,7 +450,9 @@ export function buildCanonicalDecisionContract(input = {}) {
   const validationSignals = unique(meaningfulTextValues(primaryRecommendations.flatMap((candidate) => {
     const record = asPlainRecord(candidate);
     return [record.confirmation_condition, record.confirmation, record.validation_signal, record.watch_point];
-  })));
+  }).concat(explicitAbstention
+    ? [generated.next_checkpoint, ...(Array.isArray(generated.reasons) ? generated.reasons : [])]
+    : [])));
   const invalidationConditions = unique(meaningfulTextValues(primaryRecommendations.flatMap((candidate) => {
     const record = asPlainRecord(candidate);
     return [record.invalidation_condition, record.invalidation, record.stop_condition, record.stop_observing_condition];
@@ -472,7 +485,7 @@ export function buildCanonicalDecisionContract(input = {}) {
     validation_checkpoint: firstText(generated.next_checkpoint, input.validation_checkpoint),
     validation_signals: validationSignals,
     invalidation_conditions: invalidationConditions,
-    action: firstText(snapshot.action, generated.action),
+    action,
     data_quality_status: dataQualityStatus,
     evidence_refs: evidenceRefs,
   };
@@ -529,11 +542,15 @@ export function buildCanonicalMemberResearchRevision(input = {}) {
 
 export function evaluateCanonicalSemanticCoherenceGate(input = {}) {
   const contract = asPlainRecord(input.canonical_contract);
+  const recommendationRows = records(input.recommendations);
+  const action = firstText(contract.action).toUpperCase();
+  const explicitAbstention = recommendationRows.length === 0
+    && ['WAIT', 'STOP', 'NO_TRADE', 'ABSTAIN'].includes(action);
   const requiredFields = [
     'report_date', 'snapshot_id', 'snapshot_version', 'primary_event', 'primary_causal_chain',
     'primary_taiwan_theme', 'primary_symbols', 'validation_checkpoint', 'validation_signals',
     'invalidation_conditions', 'action', 'data_quality_status', 'evidence_refs',
-  ];
+  ].filter((field) => !explicitAbstention || !['primary_symbols', 'invalidation_conditions'].includes(field));
   const reasonCodes = [];
   const conflictingFields = [];
   for (const field of requiredFields) {
@@ -556,7 +573,6 @@ export function evaluateCanonicalSemanticCoherenceGate(input = {}) {
       conflictingFields.push(field);
     }
   }
-  const recommendationRows = records(input.recommendations);
   const primarySymbols = new Set(unique(contract.primary_symbols).map((value) => String(value).toUpperCase()));
   for (const recommendation of recommendationRows) {
     const symbol = recommendationSymbol(recommendation);

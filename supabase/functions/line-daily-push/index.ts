@@ -3,6 +3,7 @@ import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import { buildDeliveryIncidentLineMessage } from '../_shared/line-incident-message.ts';
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
+import { buildLineDailyFlexMessage } from '../_shared/line-daily-flex-message.mjs';
 import type { RuntimeDatabase } from '../_shared/runtime-database-contract.ts';
 
 // LINE Daily Push V4 — 90 分硬閘門、事故通知、Transactional Outbox 重送
@@ -414,7 +415,7 @@ async function deliverOutboxMessage(args: {
     };
   }
 
-  const messagePreview = String(args.message.text || '').slice(0, 200);
+  const messagePreview = firstText(args.message.altText, args.message.text).slice(0, 200);
   await enqueueDeliveryOutbox({
     supabase: args.supabase,
     subscribers: eligibleSubscribers,
@@ -879,7 +880,6 @@ function buildLineMessage(
   const canonicalInvalidations = Array.isArray(canonicalText.invalidation_conditions) ? canonicalText.invalidation_conditions : [];
   const firstCanonicalInvalidation = parseRecord(canonicalInvalidations[0]);
   const bias = String(canonicalText.market_bias || decisionSnapshot?.market_regime || copy.market_bias || report.market_bias || '中性觀察');
-  const confidence = String(canonicalText.confidence_score || decisionSnapshot?.confidence_score || copy.confidence || report.confidence_score || '待驗證');
   const todayLine = firstText(
     canonicalText.daily_sentence,
     report.today_quote,
@@ -922,50 +922,33 @@ function buildLineMessage(
       ? report.important_news_json.length
       : Number(ai.fresh_news_count) || 0;
   const premiumGate = evaluatePremiumContentGate(ai, importantNewsCount);
-  const analysisTime = formatTaipeiTime(firstText(decisionSnapshot?.valid_from, ai.generated_at, report.updated_at, report.created_at));
-  const researchMetadata = parseRecord(parseRecord(ai.research_master_v2).metadata);
-  const dataCutoffTime = formatTaipeiTime(firstText(
-    ai.data_as_of,
-    researchMetadata.data_as_of,
-    report.market_data_latest_at,
-  ));
-  const timeLine = [
-    analysisTime ? `分析產生 ${analysisTime}` : '',
-    dataCutoffTime ? `資料截止 ${dataCutoffTime}` : '',
-  ].filter(Boolean).join('｜');
-
-  let text = 'Morning Alpha｜07:30 盤前\n';
-  text += `今日一句：${clipLine(todayLine, 52)}\n`;
-  text += `最大機會：${clipLine(opportunity, 30)}\n`;
-  text += `最大風險：${clipLine(risk, 30)}\n`;
   const canonicalDecisionMode = firstText(decisionSnapshot?.decision_mode, premiumGate.decision_mode);
-  text += `當沖：${canonicalDecisionMode === 'recommendations'
-    ? '只在成立條件出現後觀察'
-    : canonicalDecisionMode === 'no_trade'
-      ? '無強受惠股，先驗證觀察名單、不勉強出手'
-      : '資料未達標，不建立個股劇本'}\n`;
-  text += `避免：${clipLine(avoid, 28)}\n`;
-  text += `${bias}｜${confidence}/100\n`;
-  text += '下一確認：09:30 開盤證據\n';
-  if (timeLine) text += `${timeLine}\n`;
-  text += `${siteUrl}/report/today`;
+  const canonicalRecommendations = Array.isArray(canonicalText.recommendations)
+    ? canonicalText.recommendations
+    : [];
+  const v10Recommendations = Array.isArray(ai.today_beneficiary_stocks_v10)
+    ? ai.today_beneficiary_stocks_v10
+    : [];
+  const legacyRecommendations = Array.isArray(ai.today_beneficiary_stocks)
+    ? ai.today_beneficiary_stocks
+    : [];
+  const recommendations = canonicalRecommendations.length > 0
+    ? canonicalRecommendations
+    : v10Recommendations.length > 0
+      ? v10Recommendations
+      : legacyRecommendations;
 
-  return { type: 'text', text };
-}
-
-function formatTaipeiTime(value: string): string {
-  if (!value) return '';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    const timeMatch = value.match(/(?:T|\s)(\d{2}:\d{2})/);
-    return timeMatch?.[1] || '';
-  }
-  return new Intl.DateTimeFormat('zh-TW', {
-    timeZone: 'Asia/Taipei',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(parsed);
+  return buildLineDailyFlexMessage({
+    reportDate: String(report.report_date || ''),
+    bias,
+    todayLine,
+    opportunity,
+    risk,
+    avoid,
+    decisionMode: canonicalDecisionMode,
+    recommendations,
+    siteUrl,
+  });
 }
 
 function parseAiStrategy(value: unknown): Record<string, unknown> {

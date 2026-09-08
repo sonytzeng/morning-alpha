@@ -71,6 +71,39 @@ function validAi() {
   };
 }
 
+function auditedCanonicalNoTrade() {
+  const ai = validAi();
+  const thesis = 'NASDAQ 下跌 1.27% 且台積電偏弱；09:30 驗證電子權值是否止跌，若沒有族群同步，今日不建立受惠股。';
+  ai.today_beneficiary_stocks_v10 = [];
+  ai.v10_data_quality_status = 'insufficient_positive_evidence';
+  ai.v10_observation_watchlist = [];
+  ai.today_quote = thesis;
+  ai.today_core_thesis = thesis;
+  ai.free_summary.one_sentence = thesis;
+  ai.member_research_note_v2.today_core_thesis = thesis;
+  ai.research_master_v2 = {
+    provenance: { source_status: 'complete' },
+    sections: {
+      core_thesis: { status: 'proposed', statement: thesis, evidence_refs: ['MD002', 'SEC004'] },
+      transmission_narrative: {
+        narrative: 'NASDAQ 下跌 1.27%，台積電偏弱，盤中只驗證電子權值是否止跌。',
+        path: [{ claim: 'NASDAQ 下跌 1.27%', evidence_refs: ['MD002'] }],
+      },
+      supporting_evidence: [{ statement: '台積電偏弱', evidence_refs: ['MD002'] }],
+      representative_stocks: [],
+      decision_guide: { current_action: '未確認族群同步前不建立受惠股。' },
+      timeline: [{ time: '09:00' }, { time: '09:30' }, { time: '13:00' }],
+      failure_scenario: { triggers: [{ condition: '電子權值持續轉弱' }] },
+      next_action: { if_failure: { action: '維持不建立受惠股並等待下一個檢查點。' } },
+    },
+    quality: {
+      publish_status: 'ready', evidence_coverage: 100, unsupported_claims: [],
+      duplicate_claims: [], contradictions: [], missing_sections: [],
+    },
+  };
+  return ai;
+}
+
 test('premium content is eligible only with fresh news and complete stock reasoning', () => {
   const result = evaluatePremiumContentGate(validAi(), 2);
   assert.equal(result.eligible, true, JSON.stringify(result));
@@ -114,6 +147,41 @@ test('ready research with full traceability keeps premium content eligible', () 
   const result = evaluatePremiumContentGate(ai, 2);
   assert.equal(result.eligible, true, JSON.stringify(result));
   assert.equal(result.research_quality?.eligible, true);
+});
+
+test('legacy invalidation conditions are recovered as future failure triggers, not unsupported facts', () => {
+  const ai = validAi();
+  const claimId = 'claim:2026-08-28:invalidation:single-stock';
+  const condition = '候選族群只有單一權值股表態';
+  ai.research_master_v2 = {
+    sections: {
+      core_thesis: { statement: '費半上漲與 NVIDIA 財測上修，今日驗證台積電與 AI 供應鏈是否同步。' },
+      counter_evidence: [{ claim_id: claimId, statement: condition, evidence_refs: [] }],
+      failure_scenario: { triggers: [{ condition }] },
+    },
+    quality: {
+      publish_status: 'degraded',
+      evidence_coverage: 97,
+      unsupported_claims: [`${claimId}:${condition}`],
+      duplicate_claims: [],
+      contradictions: [],
+      missing_sections: [],
+    },
+  };
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.eligible, true, JSON.stringify(result));
+  assert.equal(result.research_quality?.ignored_conditional_claim_count, 1);
+  assert.equal(result.research_quality?.evidence_coverage, 100);
+});
+
+test('legacy recovery never ignores an unsupported current factual claim', () => {
+  const ai = validAi();
+  ai.research_master_v2.quality.publish_status = 'degraded';
+  ai.research_master_v2.quality.evidence_coverage = 97;
+  ai.research_master_v2.quality.unsupported_claims = ['claim:current-market-fact'];
+  const result = evaluatePremiumContentGate(ai, 2);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('research_unsupported_claims_present'));
 });
 
 test('matching populated semantic sources remain eligible after canonical normalization', () => {
@@ -246,6 +314,22 @@ test('an evidence-backed no-trade decision remains valuable premium research', (
   assert.equal(result.recommendation_count, 0);
 });
 
+test('premium accepts a fully audited canonical no-trade report without legacy observation filler', () => {
+  const result = evaluatePremiumContentGate(auditedCanonicalNoTrade(), 1);
+  assert.equal(result.eligible, true, JSON.stringify(result));
+  assert.equal(result.decision_mode, 'no_trade');
+  assert.equal(result.recommendation_count, 0);
+  assert.ok(result.content_score >= 90);
+});
+
+test('premium blocks canonical no-trade when legacy stock claims leak into the research master', () => {
+  const ai = auditedCanonicalNoTrade();
+  ai.research_master_v2.sections.representative_stocks = [{ symbol: '2881' }];
+  const result = evaluatePremiumContentGate(ai, 1);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('no_trade_decision_incomplete'));
+});
+
 test('premium gate measures five-layer causal depth instead of requiring five unrelated events', () => {
   const ai = validAi();
   ai.member_research_note_v2.overnight_chain = ai.member_research_note_v2.overnight_chain.slice(0, 3);
@@ -331,10 +415,30 @@ test('evidence-backed no-trade may publish when only prior sector context is una
   assert.equal(result.content_score >= 90, true);
 });
 
-test('recommendations still fail closed when sector rotation context is unavailable', () => {
+test('fully evidenced recommendations may publish when only prior sector context is unavailable', () => {
   const ai = validAi();
   ai.data_quality = 'degraded';
   ai.missing_sources = ['sector_rotation_scores:2026-08-24'];
+  const result = evaluatePremiumContentGate(ai, 3);
+  assert.equal(result.eligible, true, JSON.stringify(result));
+  assert.equal(result.content_score >= 90, true);
+});
+
+test('sector context gap still fails closed without the audited evidence contract', () => {
+  const ai = validAi();
+  ai.data_quality = 'degraded';
+  ai.missing_sources = ['sector_rotation_scores:2026-08-24'];
+  delete ai.content_evidence_quality.contract_version;
+  const result = evaluatePremiumContentGate(ai, 3);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reason_codes.includes('source_data_incomplete'));
+});
+
+test('sector context gap still fails closed when any recommendation evidence layer is incomplete', () => {
+  const ai = validAi();
+  ai.data_quality = 'degraded';
+  ai.missing_sources = ['sector_rotation_scores:2026-08-24'];
+  ai.today_beneficiary_stocks_v10[0].invalidation_condition = '';
   const result = evaluatePremiumContentGate(ai, 3);
   assert.equal(result.eligible, false);
   assert.ok(result.reason_codes.includes('source_data_incomplete'));

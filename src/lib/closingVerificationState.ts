@@ -1,5 +1,4 @@
-import { hasSubscriberState, isSubscriberAnalysisUnavailable, subscriberState } from './subscriberReportContract.ts';
-import { hasMatchingSubscriberClosingReceipt } from '../../shared/subscriber-state-contract.ts';
+import { hasSubscriberState, isSubscriberAnalysisUnavailable, subscriberState, hasMatchingSubscriberClosingReceipt } from './subscriberReportContract.ts';
 
 export type ClosingVerificationState = 'complete' | 'degraded' | 'pending';
 

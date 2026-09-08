@@ -23,6 +23,7 @@ import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import { SubscriberAnswer } from '@/features/decision-v1/DecisionBrief';
 import { intradayAnswer } from '@/features/decision-v1/presentation';
 import { resolveClosingVerificationState } from '@/lib/closingVerificationState';
+import { hasSubscriberState, isSubscriberAnalysisUnavailable, SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -74,7 +75,7 @@ function WarRoomContent() {
     openingRadar,
     marketData,
     marketDataTodayOnly,
-    todayCloseVerification,
+    todayCloseVerification: rawTodayCloseVerification,
     morningState,
   } = useLatestReport();
   const [sectorFreshness, setSectorFreshness] = useState<SectorRotationFreshness | null>(null);
@@ -93,10 +94,14 @@ function WarRoomContent() {
     ? report.ai_strategy_json as Record<string, unknown>
     : null;
   const rawAI = displayState?.rawAI ?? reportAI;
-  const closingVerificationV2 = isRecord(rawAI?.closing_verification_v2)
+  const analysisUnavailable = isSubscriberAnalysisUnavailable(rawAI);
+  const subscriberClosingAllowed = !analysisUnavailable
+    && (!hasSubscriberState(rawAI) || resolveClosingVerificationState(rawAI).state !== 'pending');
+  const todayCloseVerification = subscriberClosingAllowed ? rawTodayCloseVerification : null;
+  const closingVerificationV2 = subscriberClosingAllowed && isRecord(rawAI?.closing_verification_v2)
     ? rawAI.closing_verification_v2
     : null;
-  const publicClosingVerification = isRecord(rawAI?.closing_verification)
+  const publicClosingVerification = subscriberClosingAllowed && isRecord(rawAI?.closing_verification)
     ? rawAI.closing_verification
     : null;
   const runtimeSyncStatus = isRecord(rawAI?.intraday_sync_status)
@@ -236,6 +241,7 @@ function WarRoomContent() {
     publicClosingVerification,
     todayCloseVerification,
   });
+  const verifiedClosing = resolveClosingVerificationState(closingVerificationV2, publicClosingVerification, todayCloseVerification);
   const timeline = buildWarRoomTimeline({
     intradaySyncStatus: runtimeSyncStatus,
     openingRadar: isRecord(openingRadar) ? openingRadar : null,
@@ -243,7 +249,10 @@ function WarRoomContent() {
     publicClosingVerification,
     todayCloseVerification,
     isTradingDay: !isNonTradingDay,
-  });
+  }).map((node) => node.time === '14:30' && verifiedClosing.state === 'pending'
+    ? { ...node, status: analysisUnavailable ? 'insufficient' as const : 'pending' as const,
+      statusLabel: analysisUnavailable ? '資料不足' : '等待驗證' }
+    : node);
   const currentNode = selectNextRuntimeTimelineNode(timeline);
   const nextCheckpoint = currentNode
     ? `${currentNode.time}｜${currentNode.label}`
@@ -256,14 +265,17 @@ function WarRoomContent() {
     ...timeline.filter((item) => !['current', 'pending'].includes(item.status)).reverse(),
     ...timeline.filter((item) => item.status === 'pending'),
   ];
-  const verifiedClosing = resolveClosingVerificationState(closingVerificationV2, publicClosingVerification, todayCloseVerification);
-  const answer = intradayAnswer({
+  const answer = analysisUnavailable
+    ? { title: SUBSCRIBER_ANALYSIS_INCOMPLETE, action: '等待正式市場判斷，不把候選分析當成失效劇本', tone: 'amber' as const }
+    : intradayAnswer({
     status: decisionState, runtimeFailure: canonicalNarrative.decision_evidence.runtimeFailure,
     confirmedEvidence: ['0930', '1030', '1300'].some((time) => getRuntimeCheckpointState(runtimeSyncStatus, time) === 'completed'),
     closing: verifiedClosing.state === 'complete' ? verifiedClosing.outcome : '',
   });
   const action = answer.action;
-  const statusLabel = closingState.isPostClose
+  const statusLabel = analysisUnavailable
+    ? '分析尚未完成'
+    : closingState.isPostClose
     ? closingState.label
     : currentNode?.status === 'current'
       ? '監控中'

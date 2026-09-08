@@ -17,6 +17,7 @@ import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import { resolveClosingVerificationState } from '@/lib/closingVerificationState';
 import { SubscriberAnswer } from '@/features/decision-v1/DecisionBrief';
 import { closingDataComplete } from '@/features/decision-v1/forwardValidation';
+import { isSubscriberAnalysisUnavailable, SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -149,6 +150,7 @@ function VerificationContent() {
   }, []);
 
   const ai = useMemo(() => displayState?.rawAI || {}, [displayState?.rawAI]);
+  const analysisUnavailable = isSubscriberAnalysisUnavailable(ai);
   const narrative = useMemo(() => buildCanonicalNarrative({ displayState, ai }), [ai, displayState]);
   const closing = useMemo(() => buildClosingView(ai), [ai]);
   const timeline = useMemo(() => buildRuntimeDecisionTimeline({
@@ -218,8 +220,8 @@ function VerificationContent() {
       <Navbar />
       <main className="flex-1">
         <SubscriberAnswer question="今天的判斷最後有沒有成立？" date={reportDate}
-          answer={displayState.is_trading_day ? closing.outcomeLabel : '今日休市，不判定成敗'}
-          reason={displayState.is_trading_day ? closing.actualSummary : '今日非交易日，本節點不適用；等待下一個交易日。'}
+          answer={displayState.is_trading_day ? analysisUnavailable ? SUBSCRIBER_ANALYSIS_INCOMPLETE : closing.outcomeLabel : '今日休市，不判定成敗'}
+          reason={displayState.is_trading_day ? analysisUnavailable ? '當日市場判斷尚未正式發布，不顯示收盤成敗，也不建立績效樣本。' : closing.actualSummary : '今日非交易日，本節點不適用；等待下一個交易日。'}
           tone={!displayState.is_trading_day ? 'blue' : closing.outcome === 'failed' ? 'red' : closing.outcome === 'complete' && closing.fullData ? 'green' : 'amber'}>
           <p className="ma-subscriber-caption">{displayState.is_trading_day && closing.statusNote}</p>
         </SubscriberAnswer>

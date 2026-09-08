@@ -179,6 +179,16 @@ function getV10MarketThesis(ai: UnknownRecord): UnknownRecord {
   };
 }
 
+function publishedMarketReasonText(reasons: string[]): string {
+  // A legacy assessment score is not a market-evidence reason or a bound
+  // confidence value. Keep adjacent facts; formal scores use structured fields.
+  const assessmentScore = /^(?:(?:綜合|內容|品質|資料|模型|判斷|AI)?(?:評分|分數|信心)|內容品質|資料完整度|quality(?:_score)?|confidence(?:_score)?|score)\s*[：:=]?\s*\d+(?:\.\d+)?\s*[／/]\s*100(?:\s*分)?$/i;
+  return reasons.flatMap((reason) => reason.split(/[。；;\n]/))
+    .map((clause) => clause.trim())
+    .filter((clause) => clause && !assessmentScore.test(clause))
+    .join('；');
+}
+
 function buildTodayFocus(
   displayState: MorningAlphaDisplayState | null,
   ai: UnknownRecord,
@@ -224,8 +234,9 @@ function buildTodayFocus(
     freeSummary.do_not_do,
   );
 
-  const why = firstText(
-    asStringArray(published.reasons).join('；'),
+  const publishedReasons = asStringArray(published.reasons);
+  // Do not refill excluded canonical QA-only reasons with private draft prose.
+  const why = publishedReasons.length > 0 ? publishedMarketReasonText(publishedReasons) : firstText(
     v10Thesis.taiwan_transmission,
     ai.taiwan_transmission,
     openingThesis.why,

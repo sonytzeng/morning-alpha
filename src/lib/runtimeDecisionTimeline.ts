@@ -1,6 +1,7 @@
 import { getRuntimeCheckpointState } from './decisionEvidence.ts';
 import { isClosingVerificationComplete } from './closingVerificationState.ts';
 import { getTaipeiNow } from '../utils/tradingDay.ts';
+import { hasSubscriberState, isSubscriberAnalysisUnavailable, subscriberState } from './subscriberReportContract.ts';
 
 export type RuntimeTimelineStatus = 'completed' | 'current' | 'pending' | 'insufficient' | 'not_applicable';
 
@@ -97,12 +98,14 @@ export function buildRuntimeDecisionTimeline(params: {
 }): RuntimeTimelineNode[] {
   const ai = record(params.ai);
   const sync = record(ai.intraday_sync_status);
+  const unpublished = isSubscriberAnalysisUnavailable(ai);
+  const state = subscriberState(ai);
   const rawNodes: RuntimeTimelineNode[] = [
     {
       time: '07:30',
       label: '今日劇本',
       detail: '盤前決策報告',
-      status: params.hasReport && Boolean(params.reportRevisionId || params.reportGeneratedAt) ? 'completed' : 'pending',
+      status: unpublished ? 'insufficient' : params.hasReport && Boolean(params.reportRevisionId || params.reportGeneratedAt) ? 'completed' : 'pending',
     },
     {
       time: '09:00',
@@ -142,11 +145,17 @@ export function buildRuntimeDecisionTimeline(params: {
       detail: '讀取結構化收盤驗證',
       status: isClosingVerificationComplete(ai)
         ? 'completed'
-        : timelineStatus(getRuntimeCheckpointState(sync, '1430')),
+        : unpublished || state?.closing === 'INSUFFICIENT_EVIDENCE'
+          ? 'insufficient'
+          : 'pending',
     },
   ];
 
   if (!params.isTradingDay) return rawNodes.map((node) => ({ ...node, status: 'not_applicable' }));
 
-  return reconcileRuntimeTimeline(rawNodes, params.taipeiMinutes);
+  const reconciled = reconcileRuntimeTimeline(rawNodes, params.taipeiMinutes);
+  // A declared NOT_DUE close is not advanced by browser clock or a fetched raw
+  // 14:30 snapshot. Data capture and verification completion are distinct.
+  if (hasSubscriberState(ai) && state?.closing === 'NOT_DUE') reconciled[reconciled.length - 1].status = 'pending';
+  return reconciled;
 }

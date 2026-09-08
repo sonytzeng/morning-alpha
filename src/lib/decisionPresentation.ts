@@ -1,7 +1,7 @@
 import type { CanonicalMorningNarrative } from './canonicalNarrative.ts';
 import type { MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { canPresentConfirmedDecision, canPresentRejectedDecision } from './decisionEvidence.ts';
-import { isMarketPublicationReady, recommendationPublication } from './subscriberReportContract.ts';
+import { isMarketPublicationReady, isSubscriberAnalysisUnavailable, recommendationPublication, subscriberConfidence, SUBSCRIBER_ANALYSIS_INCOMPLETE } from './subscriberReportContract.ts';
 
 export type PresentationDecisionState = 'WAIT' | 'ACT' | 'STOP' | 'CLOSED' | 'COMPLETED' | 'INSUFFICIENT_DATA';
 
@@ -185,6 +185,7 @@ export function dedupePresentedOpportunities(source: UnknownRecord[], limit = 8)
 function decisionState(input: DecisionPresentationInput): PresentationDecisionState {
   const { displayState, narrative } = input;
   if (displayState && (!displayState.is_trading_day || displayState.market_status !== 'OPEN')) return 'CLOSED';
+  if (isSubscriberAnalysisUnavailable(displayState?.rawAI)) return 'INSUFFICIENT_DATA';
   const canonicalDecision = record(displayState?.rawAI?.canonical_decision);
   const canonicalAction = text(canonicalDecision.action).toUpperCase();
   const canonicalMode = text(canonicalDecision.decision_mode).toLowerCase();
@@ -230,6 +231,7 @@ function decisionCopy(state: PresentationDecisionState): Pick<DecisionPresentati
 export function buildDecisionPresentation(input: DecisionPresentationInput): DecisionPresentation {
   const { displayState, narrative } = input;
   const lifecycle = narrative.decision_lifecycle;
+  const unavailable = isSubscriberAnalysisUnavailable(displayState?.rawAI);
   const state = decisionState(input);
   const copy = decisionCopy(state);
   const nextRaw = firstText(
@@ -241,22 +243,22 @@ export function buildDecisionPresentation(input: DecisionPresentationInput): Dec
     narrative.today_script.current_step,
     displayState?.nextUpdateTime,
   );
-  const score = displayState?.confidenceScore;
+  const score = state === 'INSUFFICIENT_DATA' ? null : subscriberConfidence(displayState?.rawAI, displayState?.confidenceScore);
   const stockPublication = recommendationPublication(displayState?.rawAI);
-  const opportunities = stockPublication.explicit && !stockPublication.stocksAllowed
+  const opportunities = unavailable || (stockPublication.explicit && !stockPublication.stocksAllowed)
     ? [] : dedupePresentedOpportunities(input.opportunitySource || []);
   return {
     dateLabel: displayState?.reportDate || displayState?.currentDate || '',
     marketStateLabel: displayState?.market_message || '等待市場狀態',
-    marketBiasLabel: compact(displayState?.marketBias, 24) || undefined,
+    marketBiasLabel: unavailable ? undefined : compact(displayState?.marketBias, 24) || undefined,
     primaryDecision: {
       state,
-      ...copy,
-      reason: compact(firstText(lifecycle.decision_status.reason, narrative.today_focus.why, narrative.today_focus.summary), 88) || undefined,
+      ...(unavailable && state !== 'CLOSED' ? { headline: SUBSCRIBER_ANALYSIS_INCOMPLETE, instruction: '等待市場證據與正式分析' } : copy),
+      reason: unavailable ? '當日候選尚未完成正式發布，不把資料缺失解讀為判斷失效。' : compact(firstText(lifecycle.decision_status.reason, narrative.today_focus.why, narrative.today_focus.summary), 88) || undefined,
     },
     mission: {
-      title: compact(firstText(lifecycle.question.question, lifecycle.current_thesis.title, narrative.today_focus.headline), 72) || '等待今日主要劇本',
-      explanation: compact(firstText(lifecycle.current_thesis.summary, narrative.today_focus.summary), 96) || undefined,
+      title: unavailable ? SUBSCRIBER_ANALYSIS_INCOMPLETE : compact(firstText(lifecycle.question.question, lifecycle.current_thesis.title, narrative.today_focus.headline), 72) || '等待今日主要劇本',
+      explanation: unavailable ? '保留今日資料日期，等待足夠市場證據與正式發布。' : compact(firstText(lifecycle.current_thesis.summary, narrative.today_focus.summary), 96) || undefined,
     },
     nextCheckpoint: splitCheckpoint(nextRaw),
     actionItems: unique([

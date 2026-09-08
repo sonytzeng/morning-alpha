@@ -1,6 +1,6 @@
 import type { Decision } from './contract.ts';
 import { ACTION_LABEL, emptyDecision, object } from './engine.ts';
-import { hasCompleteUniverseAssessment, RECOMMENDATION_EVIDENCE_INSUFFICIENT } from '../../lib/subscriberReportContract.ts';
+import { hasCompleteUniverseAssessment, isSubscriberAnalysisUnavailable, RECOMMENDATION_EVIDENCE_INSUFFICIENT } from '../../lib/subscriberReportContract.ts';
 
 export type ReportIdentity = { report_date: string; revision_id: string | null; generated_at: string | null };
 const textList = (v: unknown): v is string[] => Array.isArray(v) && v.every(s => typeof s === 'string');
@@ -46,6 +46,7 @@ function isServerDecision(value: unknown): value is Decision {
 }
 /** Read only the server-resolved revision. A nested model cannot select its own identity. */
 export function decisionFromReport(ai: unknown, identity: ReportIdentity, today: string): Decision {
+  if (isSubscriberAnalysisUnavailable(ai)) return emptyDecision();
   const input = object(object(ai).decision_engine_v1);
   if (!identity.revision_id || input.report_date !== identity.report_date || input.revision_id !== identity.revision_id
     || input.generated_at !== identity.generated_at || identity.report_date !== today || typeof input.generated_at !== 'string'

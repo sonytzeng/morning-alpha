@@ -30,7 +30,8 @@ import type { UserEntitlement } from '@/types/subscription';
 import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 import { DecisionBrief, DecisionEvidence } from '@/features/decision-v1/DecisionBrief';
 import { applyPublishedDecisionGate, decisionFromReport, type ReportIdentity } from '@/features/decision-v1/presentation';
-import { recommendationPublication, RECOMMENDATION_EVIDENCE_INSUFFICIENT } from '@/lib/subscriberReportContract';
+import { isSubscriberAnalysisUnavailable, recommendationPublication, RECOMMENDATION_EVIDENCE_INSUFFICIENT, SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
+import { isClosingVerificationComplete } from '@/lib/closingVerificationState';
 
 type AnyObj = Record<string, any>;
 
@@ -314,6 +315,7 @@ function TodayReportContent() {
   const todayStr = formatTaipeiDate();
   const isReportForToday = report?.report_date === todayStr;
   const ai = asObj((report as AnyObj | null)?.ai_strategy_json);
+  const analysisUnavailable = isSubscriberAnalysisUnavailable(ai);
   // V8.4: Unified display state — marketBias and confidenceScore from getMorningAlphaDisplayState
   // Same values as Home, Opportunities, WarRoom, MemberNote. No opening_radar override.
   const intradayFreshness = useMemo(() => isFreshIntradayData(report as AnyObj | null, reportSnapshotRadar as AnyObj | null), [report, reportSnapshotRadar]);
@@ -373,7 +375,7 @@ function TodayReportContent() {
   }];
   const applicableRuntimeNodes = runtimeTimeline.filter((node) => node.status !== 'not_applicable');
   const completedRuntimeNodes = applicableRuntimeNodes.filter((node) => node.status === 'completed').length;
-  const scriptProgress = applicableRuntimeNodes.length > 0
+  const scriptProgress = !analysisUnavailable && applicableRuntimeNodes.length > 0
     ? Math.round((completedRuntimeNodes / applicableRuntimeNodes.length) * 100)
     : null;
 
@@ -483,9 +485,11 @@ function TodayReportContent() {
     .find((node) => node.status === 'completed' || node.status === 'insufficient')
     || runtimeTimeline[0];
   const closingRuntimeNode = runtimeTimeline[runtimeTimeline.length - 1];
-  const runtimeLifecycleComplete = runtimeTimeline.every((node) =>
+  const runtimeLifecycleComplete = !analysisUnavailable && isClosingVerificationComplete(ai) && runtimeTimeline.every((node) =>
     node.status === 'completed' || node.status === 'not_applicable');
-  const decisionCopy = todayDecisionCopy(
+  const decisionCopy = analysisUnavailable && displayState?.is_trading_day
+    ? { headline: SUBSCRIBER_ANALYSIS_INCOMPLETE, instruction: '等待市場證據與正式分析' }
+    : todayDecisionCopy(
     presentation.primaryDecision.state,
     runtimeTimeline,
     runtimeLifecycleComplete,
@@ -512,7 +516,9 @@ function TodayReportContent() {
     : presentation.primaryDecision.state === 'ACT'
       ? 'confirmed'
       : 'pending';
-  const workbenchStateLabel = runtimeLifecycleComplete
+  const workbenchStateLabel = analysisUnavailable
+    ? '分析尚未完成'
+    : runtimeLifecycleComplete
     ? '收盤完成'
     : validationState === 'insufficient'
     ? '待補資料'
@@ -682,7 +688,7 @@ function TodayReportContent() {
       <Navbar marketStatusLabel={nextDecisionTime} />
 
       <main className="flex-1 overflow-x-hidden">
-        <DecisionBrief decision={productDecision} date={report.report_date}
+        <DecisionBrief decision={productDecision} date={report.report_date} analysisUnavailable={analysisUnavailable}
           marketBias={publicTodayText(presentation.marketBiasLabel)} legacyInstruction={decisionCopy.instruction}
           legacyReason={publicTodayText(oneLineConclusion || primaryScenario)} legacyCount={focusStocks.length}
           stocksWithheld={!recommendationAccess}

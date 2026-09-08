@@ -342,7 +342,7 @@ test('paid report fails closed when evidence does not meet the member threshold'
   assert.match(contentOsMorningAlphaSource, /report\.updated_at \?\? report\.created_at/);
   assert.match(contentOsMorningAlphaSource, /PUBLIC_TOPIC_INCOMPLETE/);
   assert.match(reportPayloadFunction, /evaluatePremiumContentGate/);
-  assert.match(reportPayloadFunction, /if \(!premiumGate\.eligible \|\| !revisionEligible \|\| \(!recommendationGate\.eligible && !marketOnlyNote\)\)/);
+  assert.match(reportPayloadFunction, /if \(asObject\(publicPayload\.subscriber_state\)\.publication !== "PUBLISHED"\s*\|\| !premiumGate\.eligible \|\| !revisionEligible \|\| \(!recommendationGate\.eligible && !marketOnlyNote\)\)/);
   assert.match(reportPayloadFunction, /const premiumEligible = premiumGate\.eligible && semanticEligible/);
   assert.match(reportPayloadFunction, /one_teaser_stock: recommendationsEligible \? buildCanonicalTeaserStock/);
   assert.match(reportPayloadFunction, /recommendationsEligible = premiumEligible && marketPublished && marketGate\.recommendation_gate\.eligible/);
@@ -480,7 +480,7 @@ test('public payload distinguishes an evidence-backed no-trade day from missing 
   assert.match(reportPayloadFunction, /taiex_change: toNumberValue\(radar\.taiex_change\)/);
   assert.match(reportPayloadFunction, /txf_change: toNumberValue\(radar\.txf_change\)/);
   assert.match(reportPayloadFunction, /tsmc_change: toNumberValue\(radar\.tsmc_change\)/);
-  assert.match(reportPayloadFunction, /member_research_note_v2: buildPublicValidationSkeleton\(\)/);
+  assert.match(reportPayloadFunction, /member_research_note_v2: marketPublished \? buildPublicValidationSkeleton\(\) : \{\}/);
 });
 
 test('opening radar preserves the complete War Room decision contract', () => {
@@ -538,10 +538,11 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /selectNextRuntimeTimelineNode\(timelineNodes\)/);
   assert.match(home, /runtimeLifecycleComplete/);
   assert.match(home, /查看收盤驗證，等待下一個交易日/);
-  assert.match(home, /今日沒有強受惠股/);
+  assert.doesNotMatch(home, /今日沒有強受惠股|今日觀察名單已完成/);
   assert.match(home, /marketStatusLabel=\{marketStatusLabel\}/);
-  assert.match(home, /今日觀察名單已完成/);
-  assert.match(home, /完整代表股、原因與取消條件請查看會員研究/);
+  assert.match(home, /recommendationNotice \|\| \(evidenceIsInsufficient/);
+  assert.match(home, /renderSafeText\(recommendationNotice \|\|/);
+  assert.match(home, /沒有公開觀察內容不代表已完成所有股票評估/);
   assert.match(home, /今日風險條件已完成/);
   assert.match(home, /完整失效條件與因果鏈請查看會員研究/);
   assert.match(home, /核心資料未達新鮮度標準，暫不建立觀察名單/);

@@ -5,6 +5,7 @@ import { ACTION_LABEL, actionTone } from './engine';
 import { opportunitySummary } from './presentation';
 import GlossarySheet from '@/features/learning/GlossarySheet';
 import './subscriber.css';
+import { SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
 
 const DIRECTIONS = { BULLISH: '偏多', BEARISH: '偏空', RANGE: '區間整理' };
 const REGIMES = { TREND: '趨勢行情', RANGE: '區間行情', RISK_OFF: '風險退避', HIGH_VOLATILITY: '高波動' };
@@ -19,26 +20,26 @@ export function SubscriberAnswer({ question, answer, reason, tone = 'blue', date
   </header>;
 }
 
-export function DecisionBrief({ decision, date, marketBias, legacyInstruction, legacyReason, legacyCount, stocksWithheld = false, recommendationNotice = null, actions }: {
-  decision: Decision; date: string; marketBias: string; legacyInstruction: string; legacyReason: string; legacyCount: number; stocksWithheld?: boolean; recommendationNotice?: string | null; actions?: ReactNode;
+export function DecisionBrief({ decision, date, marketBias, legacyInstruction, legacyReason, legacyCount, stocksWithheld = false, recommendationNotice = null, analysisUnavailable = false, actions }: {
+  decision: Decision; date: string; marketBias: string; legacyInstruction: string; legacyReason: string; legacyCount: number; stocksWithheld?: boolean; recommendationNotice?: string | null; analysisUnavailable?: boolean; actions?: ReactNode;
 }) {
   const [term, setTerm] = useState<string | null>(null);
-  const hasAssessment = decision.action !== 'INSUFFICIENT_DATA';
-  const direction = decision.market_direction ? DIRECTIONS[decision.market_direction] : marketBias;
+  const hasAssessment = !analysisUnavailable && decision.action !== 'INSUFFICIENT_DATA';
+  const direction = analysisUnavailable ? SUBSCRIBER_ANALYSIS_INCOMPLETE : decision.market_direction ? DIRECTIONS[decision.market_direction] : marketBias;
   return <>
     <SubscriberAnswer question="今天市場怎麼看？" date={date} tone={actionTone(decision.action)}
       answer={direction && !['—', 'unknown', '尚未結構化'].includes(direction) ? direction : '先等待可核對的市場判斷'}
-      reason={hasAssessment ? decision.reason_summary : legacyReason || decision.reason_summary}>
+      reason={analysisUnavailable ? '保留今日資料日期，等待足夠市場證據與正式發布；不把未完成分析當成失效判斷。' : hasAssessment ? decision.reason_summary : legacyReason || decision.reason_summary}>
       <div className="ma-subscriber-three-answers">
-        <div><h2>現在該怎麼做？</h2><strong>{hasAssessment ? ACTION_LABEL[decision.action] : legacyInstruction || ACTION_LABEL.INSUFFICIENT_DATA}</strong>
+        <div><h2>現在該怎麼做？</h2><strong>{analysisUnavailable ? '等待市場證據與正式分析' : hasAssessment ? ACTION_LABEL[decision.action] : legacyInstruction || ACTION_LABEL.INSUFFICIENT_DATA}</strong>
           {!hasAssessment && <p>新進場評估尚未完成，不將舊信心值當成進場分數。</p>}</div>
         <div><h2>有沒有值得關注的機會？</h2><strong>{opportunitySummary(decision, legacyCount, stocksWithheld, recommendationNotice)}</strong></div>
       </div>
       <dl className="ma-subscriber-metrics" aria-label="方向與進場分開評估">
-        <div><dt>方向機率</dt><dd>{scoreText(decision.direction_probability, '尚無校準結果')}</dd></div>
-        <div><dt>模型信心</dt><dd>{scoreText(decision.model_confidence, '證據尚未齊全')}</dd></div>
-        <div><dt>進場環境</dt><dd>{scoreText(decision.entry_environment_score, '尚未完成評估')}</dd></div>
-        <div><dt>市場狀態</dt><dd>{decision.market_regime ? REGIMES[decision.market_regime] : '尚未完成分類'}</dd></div>
+        <div><dt>方向機率</dt><dd>{scoreText(analysisUnavailable ? null : decision.direction_probability, '尚無校準結果')}</dd></div>
+        <div><dt>模型信心</dt><dd>{scoreText(analysisUnavailable ? null : decision.model_confidence, '證據尚未齊全')}</dd></div>
+        <div><dt>進場環境</dt><dd>{scoreText(analysisUnavailable ? null : decision.entry_environment_score, '尚未完成評估')}</dd></div>
+        <div><dt>市場狀態</dt><dd>{!analysisUnavailable && decision.market_regime ? REGIMES[decision.market_regime] : '尚未完成分類'}</dd></div>
       </dl>
       <p className="ma-subscriber-caption">{decision.calibration_status === 'INSUFFICIENT_HISTORY' ? '校準歷史不足；目前僅有可追溯的證據品質指標，不是獲利機率。' : '方向機率不等於買進勝率；信心與進場分數是不同的評估。'}<button type="button" onClick={() => setTerm('chasing-price')}>為什麼看多還不追？</button></p>
       {actions && <div className="ma-subscriber-actions">{actions}</div>}

@@ -201,6 +201,13 @@ test('real payload handler and SDK over loopback: server roles, locked data, can
   const trace = [];
   let blocked = false;
   let misaligned = false;
+  let history = false;
+  const historyPartial = { ...report, id: '00000000-0000-4000-8000-000000000004', report_date: '2026-09-06', confidence_score: 100,
+    summary: 'QA 原劇本失效，不得作為公開歷史摘要', ai_strategy_json: { ...report.ai_strategy_json,
+      confidence_score: 100, revision_id: '00000000-0000-4000-8000-000000000003' } };
+  const historyDecisions = [{ ...snapshot, action: 'STOP', confidence_score: 67 },
+    { ...snapshot, id: historyPartial.ai_strategy_json.revision_id, report_id: historyPartial.id, report_date: historyPartial.report_date,
+      status: 'PARTIAL', action: 'STOP', confidence_score: 100, generated_text: { daily_sentence: historyPartial.summary } }];
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1');
     const chunks = []; for await (const chunk of req) chunks.push(chunk);
@@ -213,14 +220,15 @@ test('real payload handler and SDK over loopback: server roles, locked data, can
       else { status = 401; payload = { message: 'Invalid isolated identity', code: 'bad_jwt' }; }
     } else if (resource === 'profiles') payload = [{ role: url.searchParams.get('id') === 'eq.admin' ? 'admin' : 'user', subscription_status: 'inactive' }];
     else if (resource === 'ensure_member_entitlement_v1') payload = { state: ['member', 'vip'].includes(body.p_user_id) ? 'paid_active' : 'free', tier: body.p_user_id, access_ends_at: '2099-01-01T00:00:00Z' };
-    else if (resource === 'reports') payload = [{ ...report, ai_strategy_json: misaligned ? { ...report.ai_strategy_json, revision_id: 'older-decision', canonical_member_revision_id: 'older-member' }
+    else if (resource === 'reports') payload = history ? [{ ...report, confidence_score: 100 }, historyPartial] : [{ ...report, ai_strategy_json: misaligned ? { ...report.ai_strategy_json, revision_id: 'older-decision', canonical_member_revision_id: 'older-member' }
       : blocked ? { ...report.ai_strategy_json, missing_sources: ['sector_rotation_scores'], data_quality: 'degraded' } : report.ai_strategy_json }];
-    else if (resource === 'decision_snapshots') payload = url.searchParams.get('session_type') === 'eq.CLOSING' ? [] : [{ ...snapshot,
+    else if (resource === 'decision_snapshots') payload = history ? historyDecisions : url.searchParams.get('session_type') === 'eq.CLOSING' ? [] : [{ ...snapshot,
       ...(blocked ? { action: 'STOP', decision_mode: 'blocked', status: 'PARTIAL', generated_text: { daily_sentence: '資料不足，研究未發布。', recommendations: [] } } : {}) }];
     else if (resource === 'member_content_revisions' || resource === 'current_member_content_revisions_v1') payload = blocked ? [] : [{ ...member,
       semantic_coherence_reviews: [{ status: 'PASSED', reason_codes: [], checked_at: report.created_at }] }];
     else if (resource === 'market_data_snapshots') payload = quotes;
-    trace.push({ method: req.method, path: url.pathname, status }); // No headers/credentials/PII.
+    trace.push({ method: req.method, path: url.pathname, status, limit: url.searchParams.get('limit'),
+      batchedRevisionRead: resource === 'decision_snapshots' && (url.searchParams.get('id') || '').startsWith('in.') }); // No headers/credentials/PII.
     res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(payload));
   });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
@@ -269,12 +277,41 @@ test('real payload handler and SDK over loopback: server roles, locked data, can
       const repeated = await (await handler(request(identity))).json();
       assert.equal(repeated.revision_id, revision); assert.equal(repeated.tier, result.tier);
     }
+    history = true;
+    const historyStart = trace.length;
+    const historyResponse = await handler(new Request(`${endpoint}/functions/v1/get-report-payload`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history_limit: 3 }),
+    }));
+    assert.equal(historyResponse.status, 200);
+    const historical = await historyResponse.json();
+    assert.equal(historical.reports.length, 2);
+    const [publishedHistory, partialHistory] = historical.reports;
+    assert.equal(publishedHistory.report_date, day); assert.equal(publishedHistory.revision_id, revision);
+    assert.equal(publishedHistory.subscriber_state.publication, 'PUBLISHED'); assert.equal(publishedHistory.subscriber_state.analysis, 'READY');
+    assert.equal(publishedHistory.confidence_score, 67); assert.equal(publishedHistory.summary, sentence);
+    assert.equal(partialHistory.report_date, historyPartial.report_date);
+    assert.equal(partialHistory.revision_id, historyPartial.ai_strategy_json.revision_id);
+    assert.equal(partialHistory.subscriber_state.publication, 'UNPUBLISHED'); assert.equal(partialHistory.subscriber_state.analysis, 'PARTIAL');
+    assert.equal(partialHistory.confidence_score, null); assert.equal(partialHistory.summary, '今日分析尚未完成／證據不足');
+    assert.equal(partialHistory.market_bias, '分析尚未完成');
+    const historyRequests = trace.slice(historyStart);
+    assert.equal(historyRequests.length, 2, 'History uses one reports read plus one batched decision read, no per-row payload contexts');
+    assert.equal(historyRequests[0].limit, '3'); assert.equal(historyRequests[1].limit, '30');
+    assert.equal(historyRequests[1].batchedRevisionRead, true);
+    history = false;
     blocked = true;
     for (const identity of ['member', 'admin']) {
       const result = await (await handler(request(identity))).json();
       assert.equal(result.payload.premium_content_status, 'blocked');
-      assert.equal(result.payload.canonical_decision.action, 'STOP');
-      assert.equal(result.payload.daily_sentence, '資料不足，研究未發布。');
+      assert.equal(result.payload.canonical_decision.action, 'WAIT', 'Unpublished PARTIAL is not a failed market thesis');
+      assert.equal(result.payload.canonical_decision.status, 'PARTIAL');
+      assert.equal(result.payload.daily_sentence, '今日分析尚未完成／證據不足');
+      assert.equal(result.payload.subscriber_state.publication, 'UNPUBLISHED');
+      assert.equal(result.payload.subscriber_state.analysis, 'PARTIAL');
+      assert.equal(result.payload.confidence_score, null);
+      assert.equal(result.payload.decision_engine_v1.model_confidence, null);
+      assert.equal(result.payload.closing_verification, null);
+      assert.equal(result.report_date, day); assert.equal(result.revision_id, revision);
       assert.equal(result.payload.today_beneficiary_stocks?.length || 0, 0);
     }
     blocked = false;

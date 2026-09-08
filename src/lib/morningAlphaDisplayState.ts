@@ -17,6 +17,7 @@
 
 import { resolveMarketStatus, type MarketStatusCode, type MarketStatusType, type SessionType } from '@/utils/tradingDay';
 import { isFreshIntradayData } from '@/utils/intradayFreshness';
+import { subscriberConfidence } from './subscriberReportContract.ts';
 
 // ═══════════════════════════════════════════════════
 // Output Type — FIXED STRUCTURE
@@ -302,10 +303,10 @@ export function getMorningAlphaDisplayState(
 
   const radarOverride = getFreshRadarOverride(rawRow, liveOpeningRadar);
   const marketBias = radarOverride?.marketBias ?? reportMarketBias;
-  const confidenceScore = radarOverride ? radarOverride.confidenceScore : reportConfidenceScore;
+  const confidenceScore = subscriberConfidence(ai, radarOverride ? radarOverride.confidenceScore : reportConfidenceScore);
 
   const confidenceLabel = confidenceScore === null
-    ? '休市不評分'
+    ? '證據不足，暫不評分'
     : confidenceScore >= 75 ? '高' : confidenceScore >= 55 ? '中' : '低';
 
   const v8DailySentence = grabObj(ai, 'v8_daily_sentence');

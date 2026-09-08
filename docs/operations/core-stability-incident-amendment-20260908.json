@@ -1,0 +1,1198 @@
+{
+  "baseline_commit": "ce3ff722c7247e1949b4740b20d2ccb96b1c77cf",
+  "approval": "2026-09-08 Production incident attachment d36741d2-5b6d-403e-b1f7-87f50bdf39c8",
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "baseline_sha256": "c87fe5aff417ad07647d3231e997ab4d9313f127330dc67325df77c985e38ad4",
+      "incident_sha256": "996f9461967057ec54f28a65ffaffd2f067eb33875ee2293a52306a93205c1c6"
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "baseline_sha256": "cd437d3425dca427a3ee4df7014f9e1b08a70c6e1cb69a14865da76d98e8a8c2",
+      "incident_sha256": "448d32828658d44dc526f9a4de3b340f43c7412da60d3eab1388858a401bd464"
+    },
+    {
+      "path": "supabase/functions/_shared/market-report-gate.ts",
+      "baseline_sha256": null,
+      "incident_sha256": "1cec4ce674d93b639b07d6c875548b2aed11e733cd4b471ab4e6ce07520a652c"
+    },
+    {
+      "path": "supabase/functions/_shared/premium-evidence.ts",
+      "baseline_sha256": "3b7eee4a67cacb8623ff901fe91ea334effd80117a28873afdcd34f26af691c2",
+      "incident_sha256": "04b61d5a8cfdb2582b66f479376c77dfc31a4055b76387d5af4c598ffc995437"
+    },
+    {
+      "path": "supabase/functions/_shared/us-cash-session-calendar.ts",
+      "baseline_sha256": null,
+      "incident_sha256": "dbc7b5c762cd6921385c1d38262a987a5fe82f122e3855069a2e25d6c7078e7f"
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "baseline_sha256": "97355f6d15a834e52e2fa892bd2f0b273ab8aa10902ed8ec142ad48b5019feda",
+      "incident_sha256": "741ff45bb1903560e5cfc87c855a40d2d4844d96d0253ac5f486077d42706c59"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "baseline_sha256": "40561b2a092af876e396bc32dc47ab58e2daeb055005fd02af08d050a123522c",
+      "incident_sha256": "79473cf68c334619a064120aa6d19cac961efffdd66316dcf6c3983d686039c6"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/market-data-evidence.ts",
+      "baseline_sha256": "ae145e4998182b9b2e365d8a462c84b03a5e2d35b6c71fac8db0e6f3b406ef23",
+      "incident_sha256": "c1a67bedd21d37d20a5e22dbc7adfaf538425d418aa75b711568875c56700648"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/market-freshness.ts",
+      "baseline_sha256": "f5b4fe117af538328070ce49d2b4b71debe1573e097705486c7875962b4609ef",
+      "incident_sha256": "5887c106d5a1eac0d663b3aba025cc209cbeeac721805c09f985a34d095738d2"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/research-master-v2.test.ts",
+      "baseline_sha256": "91dd530e5e95fe72a6b37142bff37427158e5b94094495e4dcaff1e7436df9a1",
+      "incident_sha256": "f2e7628e12016345883d093b98341f7bd29d9e46b7cd979ea85f98dfe2c5a1d2"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/research-master-v2.ts",
+      "baseline_sha256": "bcf78bb2070c0b7e622663d4df8145b2c6befe83da9b0cfe1fa1d3b70b137fc7",
+      "incident_sha256": "d00c0fa643709bf927d89b71a607b1887756beb3c8be028726d37e27e875275d"
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "baseline_sha256": "3195efd17035cf81a69d01cac19c2a1f315b04a3a17faf8076c5933d8101b370",
+      "incident_sha256": "2a22a1403ed22a09b2e2aa0bebd829d02b81ec3866511df2585307053efeb441"
+    },
+    {
+      "path": "supabase/functions/line-daily-push/index.ts",
+      "baseline_sha256": "e93a8d0f16534de99acd58916e3fc0a6bc743742540908851b05117bb74b1c2c",
+      "incident_sha256": "c890c749eb8dfa53462ea3b2aa7291ecfaf9ea2a80fe6e3d270723aea8bad89e"
+    },
+    {
+      "path": "supabase/functions/ma-ops-health-check/index.ts",
+      "baseline_sha256": "296f4bd106e1ab00d5cf82a9637462b8091380536658964ebb2c0e073c71ba32",
+      "incident_sha256": "88ddffcd7cbf0975e2fb829abf076b36576499b55acd162aaa332bd2027d9557"
+    },
+    {
+      "path": "supabase/migrations/20260908020000_incident_acceptance_market_delivery.sql",
+      "baseline_sha256": null,
+      "incident_sha256": "1cbeb6cf7299bcddde733fcdfd7584d5c7b709bf5fe84089d5692a01fe54c282"
+    },
+    {
+      "path": "src/services/resolveActiveReport.ts",
+      "baseline_sha256": "1400690c2f8ffcafff0061e3cbfc35ab5a6276de0fc668359a32ebcf86af5f61",
+      "incident_sha256": "7878c8cf7d3f46502bd4d4005804e5bf3aa31faca4acec087c9cf6c346d20a0c"
+    },
+    {
+      "path": "supabase/functions/_shared/canonical-decision-contract.mjs",
+      "baseline_sha256": "4a0099148a5e8ad054e16082b6bb3975a4a298893d9166f8e899ac91bd8d9280",
+      "incident_sha256": "7dcaeaff9977450edeb1526ca3c706f44d6e6658525394086d123c4d9bbafaee"
+    },
+    {
+      "path": "supabase/functions/_shared/content-intelligence.ts",
+      "baseline_sha256": "65ba66409373caa65c40e7dd7f5d80077b1260cbdd70aa545da403ea5f20caa0",
+      "incident_sha256": "623b6f6392440435434585c3633b9d4e252abf7ed005c6e9b4ce1e6242be7c98"
+    },
+    {
+      "path": "supabase/functions/_shared/production-architecture-core.mjs",
+      "baseline_sha256": "788f7c208f7ee0fd7c319e691b4faa3f4eb7a0532341af51e33bf0b89015189b",
+      "incident_sha256": "4999bc2a0a5d915103fdb79394c1f30491b70c64bd84867af9850db1ec4c8157"
+    },
+    {
+      "path": "supabase/functions/_shared/research-pipeline-contract.ts",
+      "baseline_sha256": "f6b23af0719c53e3ff0a1ffe36c2847826213f0e60d0ff8e8879d3827fe7b857",
+      "incident_sha256": "4bd20863cb39afb2293dda274b1ad6e9618d5ddfdadafec5b65dcbf2bcfe508d"
+    },
+    {
+      "path": "supabase/migrations/20260908050000_market_publication_recommendation_isolation.sql",
+      "baseline_sha256": null,
+      "incident_sha256": "e2de4f09095449655a7ee071c44e0d3ce22a491932d4b2b638d7006bf5c3854f"
+    },
+    {
+      "path": "supabase/functions/_shared/line-daily-flex-message.mjs",
+      "baseline_sha256": null,
+      "incident_sha256": "ae170ab38e1640c55ed02b93446b94a1911c9f9bf98caf19db5ff58ba84f4f9a"
+    },
+    {
+      "path": "src/lib/decisionEvidence.ts",
+      "baseline_sha256": "28d4cf5a967828746487ab2706e7f37a6e82a9376fb84d2d17a0e1542e5cde14",
+      "incident_sha256": "91e401353867673a7254babe4c43e04ed96bfd561ba4e9963b2e67e4f5af8b2c"
+    },
+    {
+      "path": "src/lib/runtimeDecisionTimeline.ts",
+      "baseline_sha256": "a14950b57c9cc43416c0341d8023684041d75a9a864817f3b1767426a7eb41a4",
+      "incident_sha256": "0a3533406f7f5000c05a55ee3e20375f6c7e892cc8d524ca6468dd447e65c872"
+    }
+  ],
+  "modified_declarations": [
+    {
+      "path": "supabase/functions/generate-daily-report-v7/research-master-v2.ts",
+      "name": "assembleResearchMasterV2",
+      "production_sha256": "6ba88393bfb5c479d68817155a41180dcd5914a243df3df47faffe984d3c8059",
+      "incident_sha256": "bdbee974d6c15d7dac47da770bbe753f6e52189b904486db1877777e1c2c0141",
+      "reason": "No-recommendation narrative must cite the exact selected source list rather than unrelated thesis refs; all other assembly behavior retained"
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "name": "getDataAsOf",
+      "production_sha256": "4a1ae3c8e3584c4dae0dc6ffa248078d19d43a1046fe71f089974394e04af11d",
+      "incident_sha256": "e7efcf362586351f95362305b41f1a1f532e1cfae7715f5321c954cd02248f64",
+      "reason": "Withhold future timestamps; keep original provenance timestamps intact"
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "name": "fetchPayloadContext",
+      "production_sha256": "eb6db68bc2f68c30c19714e6f60cd859a44c12a4d75f094c7bf7240c66413932",
+      "incident_sha256": "d3af6d57690c501526cb5c3a6b6947fdbf48325eb3d991ab13f4cc7487eb1eaf",
+      "reason": "Freeze evaluation time before bounded component queries so the same canonical state is reused by all projections without browser-clock advancement."
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "VERSION",
+      "production_sha256": "3ee1e0b4733ce11633c97b6098fd2bd6b7bf3ca7fc630acecd9195b4a1d6b24a",
+      "incident_sha256": "b68ba6dad682b06438066fd8e0a1d59d27e47a24df96f4913b91acec8a7f842a",
+      "reason": "Version V9.6.3 binds the tested market-only canonical publication contract to a distinct idempotency fingerprint."
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "attachResearchMasterV2Shadow",
+      "production_sha256": "0cbfaf3f58ad40399b1082b0ff925e956a0afb7451478293e441c87a8d934123",
+      "incident_sha256": "3d982bf3b493e8d05f4697093784a85eeca30dd2ba1d7d93f1a97820fcfcc904",
+      "reason": "Keep rejected company evidence in private audit while assembling the separately audited market document; no fake no-opportunity result."
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "SectorRotationRow",
+      "production_sha256": "1108652131958f0e8d371c315fa40ea0686544145d0d62f773fb3b9073e28036",
+      "incident_sha256": "f2c75f3bc14f2e943655a6ac4642a6c4b528414aa804f15859183a249315da95",
+      "reason": "Preserve actual sector score_date provenance"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "buildV10SectorContext",
+      "production_sha256": "ac881cf063031fb921e3557ae798acceb2a36e9fdeb9c3176c9ac2829bbb50b6",
+      "incident_sha256": "040be7c4c3d526c589f212a33f0378b58e0697b91d22cb42ca09a395b34a0caa",
+      "reason": "Forward source_date without inventing timestamps"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "buildEvidenceIndex",
+      "production_sha256": "0ddf677378bdae33f9c6343339757ffb078f04c9aae48d9fd34f1dfa379b82d2",
+      "incident_sha256": "97db848e51ad422b8b131dec43ddb47f8437da46700feb14e46cb297c500df5a",
+      "reason": "Retain source date in evidence reference; missing sector date is not evidence"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "fetchSectorRotationForDate",
+      "production_sha256": "a42ed5d635675ea5f30bcb6dbfa4a2e2e0caf7c0b37cb3845859aff80a3931fa",
+      "incident_sha256": "bcc6a0da39d01a1574cefb44f1053b835cc5cc9aa891bcba72c7fe8833d6ef42",
+      "reason": "Read existing score_date column and preserve it"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "fetchMarketData",
+      "production_sha256": "f196e0f7a3582dd92508ce606743eafa894c5fa1aa632f343739e9263f8991dc",
+      "incident_sha256": "6a1a863c8bd61cd316e8c65114b680dbef82a1fa350bd208fc9d41924a229cf9",
+      "reason": "Reject future rows before latest-row selection"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/research-master-v2.ts",
+      "name": "ResearchMasterQuality",
+      "production_sha256": "f4bc2d54618a9654fc561253dc7c0bad469e0f1a4fa6fd1fd431998d0c933e7f",
+      "incident_sha256": "3a2b3948791bf21ebab1a8f9088683d3be64b8a316438ef43faf1bdf3dffb2f9",
+      "reason": "Add auditable claim numerator/denominator and source ledger"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/market-freshness.ts",
+      "name": "isMarketIndicatorStale",
+      "production_sha256": "637bbcb4339964d8bba8b387ab24cc3a2ebe01701f3c4a983154774900994859",
+      "incident_sha256": "151a070e1d08a689942d6999079bc11f554194836e8e89da5e598691209f1769",
+      "reason": "Reject future provider timestamps"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/market-data-evidence.ts",
+      "name": "normalizeMarketDataRows",
+      "production_sha256": "57759f523711673e023ed00897c33fec8e4034b3d2000f42ec18029da42c9dc4",
+      "incident_sha256": "0e23f0ad3399ed2ed63d8f3f35d2db78a0ba5e87ad47769c731991f44e13d803",
+      "reason": "Reject null/invalid raw numeric and future capture"
+    },
+    {
+      "path": "supabase/functions/_shared/premium-evidence.ts",
+      "name": "normalizePremiumMarketEvidence",
+      "production_sha256": "bbdd499279b66e4f456afcb43486b3d86a13a7ec629d1b80f7ac07253c1e24da",
+      "incident_sha256": "44638fd8f847080f22299301646dc67a91f2b0af3660686fd514114aa1fe60fb",
+      "reason": "Preserve valid latest completed US cash session; reject missing raw fields"
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "name": "VERSION",
+      "production_sha256": "7036f591e9e2818ad42f0a888dbb303fe6cc81684d26cab0ed325eb78260a80e",
+      "incident_sha256": "3e6bdc778fd7b28e1f88c6370501647596671bdbf19c54c198fca70f923ea66e",
+      "reason": "Incident contract version identifier only"
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "name": "DeliveryState",
+      "production_sha256": "88beae04190ec5051b6d372da20a36256601af01382e7732e6163a334af580ce",
+      "incident_sha256": "6b2bd31eb391acce768c171ed47cac8f7fed122c4ea631593d8efaad589bd04a",
+      "reason": "Independent public market report eligibility"
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "name": "loadDeliveryState",
+      "production_sha256": "9271dcebe511028f6a66ba0b43447e938f8fcbccc4de9f3d2b7fb111b67c9e97",
+      "incident_sha256": "b845c65d103382fe82571b1be9107aa53832abd69d9bc5d87bcff98ca8df4d7e",
+      "reason": "Use the exact published report/decision/member/semantic revision and independent audited market gate, including intraday; never substitute a newer private QA candidate or weaken stock quality."
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "name": "DailyDeliveryRecoveryInput",
+      "production_sha256": "3c6c75d20d1b40f5b4af07188719b99289d72e21623da0c3a58aeeaeba9c50b4",
+      "incident_sha256": "4d7d465f47b3ac22447ba23e588faeb2364e73c6307cd7ba6a70b7f961f35c12",
+      "reason": "Add independent public report eligibility"
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "name": "DailyDeliveryRecoveryPlan",
+      "production_sha256": "a578f1040bc2d9a927997737bf999bc66d424244330a5b53d2ff6f34e91fc6e5",
+      "incident_sha256": "b6623dff27d56f9c36bbd4961e3d88bb69c0ddec6b7a4ad6cd9b91064468ce35",
+      "reason": "Explicit non-retryable quality-block state"
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "name": "DailyDeliveryCompletionInput",
+      "production_sha256": "383a75e3fd9f9c3353ed2af697776f8782984f59e5ab9292922cbcdba8b13183",
+      "incident_sha256": "e998e857074442b8b6f56929738bb6e80c431f8843a427bcfb42a32b5b77516e",
+      "reason": "Add independent public report eligibility"
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "name": "resolveDailyDeliveryCompletion",
+      "production_sha256": "7cdb31cb436b7e3ce99823aedf0397c06853ceeb080a64a850e11cc97e24aa17",
+      "incident_sha256": "3cab4aa27078cc9ec548f19f0c89e83d9fe8d9174c9a022dab907730e3209193",
+      "reason": "Quality-approved public report can complete without paid-note eligibility"
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "name": "buildDailyDeliveryRecoveryPlan",
+      "production_sha256": "a40c1d0e7c417e03fe8623853494cf155b1e5ce262faefda223e5df1600fd19b",
+      "incident_sha256": "da719e6fe8cfc3f5f745da1b2830c7aa170d1105eb15f6ac021c1c760137dbd7",
+      "reason": "No unchanged-evidence LLM retries; keep bounded transient recovery"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/research-master-v2.ts",
+      "name": "isCanonicalV10NoTrade",
+      "production_sha256": "f7e7ab0a5f5be4ec09b92977606027b9a14c0719accf0a656d1d587b934776b7",
+      "incident_sha256": "153293f31ddb25cf21fe75818f7044feaf9b1d9c7278b2291ee5ed9f1292b11f",
+      "reason": "Legacy-named market narrative assembly helper now handles explicit empty admitted stock lists without claiming a complete-universe no-trade assessment."
+    },
+    {
+      "path": "supabase/functions/_shared/production-architecture-core.mjs",
+      "name": "buildCanonicalMemberResearchRevision",
+      "production_sha256": "c153bb00eeb5d7183921529f2656968ee855162f5b5a83b80275b26a5a189443",
+      "incident_sha256": "6e7e7c5d2e84a45c30e9611a900433dc2afafa2371429b171cfa6db8ece1c557",
+      "reason": "New explicit market_only revision preserves audited market validation/invalidation and evidence, never stock aliases; legacy modes unchanged."
+    },
+    {
+      "path": "supabase/functions/_shared/canonical-decision-contract.mjs",
+      "name": "DECISION_ACTION_BY_MODE",
+      "production_sha256": "bcc31ed29e012b8d81ffe2e8653986ff717bf8adc0a63d942a4d1c692c7fc108",
+      "incident_sha256": "9e52a162432f17817274a4dc5f1753d537a926b028d04fbd3a079a2fae1814ce",
+      "reason": "Add explicit market_only WAIT mapping; preserve all pre-existing action mappings."
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "name": "getCanonicalPayloadQuality",
+      "production_sha256": "42be4e66aa8645d035f6e75940b0e6e3d9ee381758e27703daf97c55700eea9d",
+      "incident_sha256": "ef4dcc0202649528408717257ad40a8dee54a2c73db1bb9c82b5780916fe32f4",
+      "reason": "Use published market-source completeness independently of recommendation and member QA; preserve per-checkpoint runtime quality."
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "name": "isCanonicalMemberRevisionEligible",
+      "production_sha256": "805896cc3e9d249db6f7c81cb4fb3374554e18c670a63a1d8f582815418e4766",
+      "incident_sha256": "590f177da6786613b4a80177e72ca5f69ca7947be34054381ecd39e82e989aff",
+      "reason": "Require real matching report, snapshot version and explicit passed semantic result before paid content exposure."
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "name": "buildVipPayload",
+      "production_sha256": "bea9ff2f46121c765d0b2038046708d21140c41e7d5a5c97497024020c1f17b7",
+      "incident_sha256": "af55aa182105bf34a8e92c89f2b15d54a727065e1558a42682ff19a157180a2f",
+      "reason": "Apply the same COMPLETE closing-evidence gate to VIP closing prose; no lower-tier alias can reintroduce an unverified closing outcome."
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "resolveEvidenceBackedDailySentence",
+      "production_sha256": "86158a6eb633aa9b434bc62e2451aad5b7892515a07818541bd5b1ad64a62d8c",
+      "incident_sha256": "b3db2d67e3abaae34c4b884c9ee9b366b69fd43ba3b1ba733732f71c2cbccb44",
+      "reason": "Validate the selected sentence with the unchanged action/checkpoint validator before accepting it; preserve actual fresh market-quote fallback and reject unsupported text."
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "name": "getEffectiveAi",
+      "production_sha256": "943f14845145fb29179e2ed116dbdf2744ce00c6dfb01bbfc55e204d8c29fbdb",
+      "incident_sha256": "b8a16d1972c292da3155232b61450429a27161f2394adc04d3811e8dcdea9cbd",
+      "reason": "Keep subscriber published AI separate from admin-only raw QA; apply the same-revision runtime overlay then reject cross-date, future or unproven checkpoint completion without changing stored evidence."
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "name": "PayloadContext",
+      "production_sha256": "dc054f79a4d764f5d6287b549f6577229773d196f4e02bb47944bae5e4ffb458",
+      "incident_sha256": "e90edcf50eb2533149c97488d4451a3815d9bb244034eebcce4c3fd45d089eea",
+      "reason": "Capture one authoritative evaluation timestamp for all envelope/tier/nested state projections; prevent a checkpoint boundary from producing contradictory states in one request."
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "name": "buildAuthoritativeClosingVerification",
+      "production_sha256": "79840de58d9f411c4d971a7d77916b36c3da2317f51c02189017d4ba166e4fe2",
+      "incident_sha256": "fe80561aa10ae5a4f0d968031e1700aa84eb09e4827c11762e9e8e9a043e991a",
+      "reason": "Keep closing receipts indivisible and bind verification to the same published decision; a date-only close review cannot borrow another revision's identity or outcome."
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "name": "buildClosingVerdict",
+      "production_sha256": "77c393f6db9ea14bbbfc5d2a4d5b712cd3af4912fd095accc874b883c27f108c",
+      "incident_sha256": "103825987247c69b0c1a1eb645da27394f9d80c49ee830ce9685b881d600f927",
+      "reason": "Preserve the verified receipt's report date, opening decision identity and all three actual market values in the safe subscriber projection."
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "name": "buildHistorySummary",
+      "production_sha256": "0a08c59517a74a16b5c746d9b41f6a2c7e826a60e2e85b5f78c4771e72205c4a",
+      "incident_sha256": "0f2ace90c60a7f0d340b069e3e4e414b5fe1dc95a270c79db20230631d252366",
+      "reason": "Expose canonical confidence and summary only after exact committed report/revision/date, READY and unchanged market evidence validation; unpublished QA remains incomplete at its actual date."
+    }
+  ],
+  "market_recommendation_split_approval": "2026-09-08 explicit approval: separate Market Report Publication Gate from Stock Recommendation Gate; local regression only, Production deployment remains a separate approval gate.",
+  "integrity_approval_history": [
+    {
+      "approval_id": "INTEGRITY_VALIDATION_ORDER_APPROVAL_20260908",
+      "approval_source": "Explicit owner approval in latest user turn: precise reviewed baseline registration -> fresh full local regression -> ALL PASS -> feature-branch Commit/Push -> NEW commit SHA GitHub CI. Production Deploy/Merge/Migration/Cron/LINE/Recovery/business-data writes excluded.",
+      "approval_date": "2026-09-08",
+      "approval_recorded_at": "2026-09-08T05:37:52Z",
+      "branch": "codex/core-stability-20260907",
+      "candidate_git_sha": null,
+      "candidate_base_git_sha": "3782878184515195a3c5f59988ab871dced6ec87",
+      "candidate_status": "UNCOMMITTED: content-addressed artifact, not a deployed release",
+      "source_diff_reference": {
+        "path": "docs/operations/evidence/market-publication-candidate-20260908.json",
+        "sha256": "75a95ba5964cb9b52a7495f75096940ddcfc854be248d65098cecd305e4cf894",
+        "reconstruct": "patch_lines.join('\\n')"
+      },
+      "previous_registration_sha256": "3527515caed03256c20b086d6f5e0bef5b5ab6d66affc04276c12b12a61ddeea",
+      "previous_registration": {
+        "baseline_commit": "ce3ff722c7247e1949b4740b20d2ccb96b1c77cf",
+        "approval": "2026-09-08 Production incident attachment d36741d2-5b6d-403e-b1f7-87f50bdf39c8",
+        "files": [
+          {
+            "path": ".github/workflows/validate-release.yml",
+            "baseline_sha256": "c87fe5aff417ad07647d3231e997ab4d9313f127330dc67325df77c985e38ad4",
+            "incident_sha256": "996f9461967057ec54f28a65ffaffd2f067eb33875ee2293a52306a93205c1c6"
+          },
+          {
+            "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+            "baseline_sha256": "cd437d3425dca427a3ee4df7014f9e1b08a70c6e1cb69a14865da76d98e8a8c2",
+            "incident_sha256": "448d32828658d44dc526f9a4de3b340f43c7412da60d3eab1388858a401bd464"
+          },
+          {
+            "path": "supabase/functions/_shared/market-report-gate.ts",
+            "baseline_sha256": null,
+            "incident_sha256": "1cec4ce674d93b639b07d6c875548b2aed11e733cd4b471ab4e6ce07520a652c"
+          },
+          {
+            "path": "supabase/functions/_shared/premium-evidence.ts",
+            "baseline_sha256": "3b7eee4a67cacb8623ff901fe91ea334effd80117a28873afdcd34f26af691c2",
+            "incident_sha256": "04b61d5a8cfdb2582b66f479376c77dfc31a4055b76387d5af4c598ffc995437"
+          },
+          {
+            "path": "supabase/functions/_shared/us-cash-session-calendar.ts",
+            "baseline_sha256": null,
+            "incident_sha256": "dbc7b5c762cd6921385c1d38262a987a5fe82f122e3855069a2e25d6c7078e7f"
+          },
+          {
+            "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+            "baseline_sha256": "97355f6d15a834e52e2fa892bd2f0b273ab8aa10902ed8ec142ad48b5019feda",
+            "incident_sha256": "8568b4cfd93731dbf57d3b37e7613bb236ae3d9dfa1c75deeffc913edca68aa3"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/index.ts",
+            "baseline_sha256": "40561b2a092af876e396bc32dc47ab58e2daeb055005fd02af08d050a123522c",
+            "incident_sha256": "7331f7fac4ded8d78c5ec7ea79a30586fb213b0dec68c1ccc477b9da13fa28dd"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/market-data-evidence.ts",
+            "baseline_sha256": "ae145e4998182b9b2e365d8a462c84b03a5e2d35b6c71fac8db0e6f3b406ef23",
+            "incident_sha256": "c1a67bedd21d37d20a5e22dbc7adfaf538425d418aa75b711568875c56700648"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/market-freshness.ts",
+            "baseline_sha256": "f5b4fe117af538328070ce49d2b4b71debe1573e097705486c7875962b4609ef",
+            "incident_sha256": "5887c106d5a1eac0d663b3aba025cc209cbeeac721805c09f985a34d095738d2"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/research-master-v2.test.ts",
+            "baseline_sha256": "91dd530e5e95fe72a6b37142bff37427158e5b94094495e4dcaff1e7436df9a1",
+            "incident_sha256": "f2e7628e12016345883d093b98341f7bd29d9e46b7cd979ea85f98dfe2c5a1d2"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/research-master-v2.ts",
+            "baseline_sha256": "bcf78bb2070c0b7e622663d4df8145b2c6befe83da9b0cfe1fa1d3b70b137fc7",
+            "incident_sha256": "d00c0fa643709bf927d89b71a607b1887756beb3c8be028726d37e27e875275d"
+          },
+          {
+            "path": "supabase/functions/get-report-payload/index.ts",
+            "baseline_sha256": "3195efd17035cf81a69d01cac19c2a1f315b04a3a17faf8076c5933d8101b370",
+            "incident_sha256": "28bf4406c761670aa27a98087476a3ce1485a161c8130a25e7a08234b6f7fca0"
+          },
+          {
+            "path": "supabase/functions/line-daily-push/index.ts",
+            "baseline_sha256": "e93a8d0f16534de99acd58916e3fc0a6bc743742540908851b05117bb74b1c2c",
+            "incident_sha256": "c54fbbcac5ca0811801b88cedd22e88cd5033397cfe25b4743829f9a0ac6b158"
+          },
+          {
+            "path": "supabase/functions/ma-ops-health-check/index.ts",
+            "baseline_sha256": "296f4bd106e1ab00d5cf82a9637462b8091380536658964ebb2c0e073c71ba32",
+            "incident_sha256": "88ddffcd7cbf0975e2fb829abf076b36576499b55acd162aaa332bd2027d9557"
+          },
+          {
+            "path": "supabase/migrations/20260908020000_incident_acceptance_market_delivery.sql",
+            "baseline_sha256": null,
+            "incident_sha256": "1cbeb6cf7299bcddde733fcdfd7584d5c7b709bf5fe84089d5692a01fe54c282"
+          },
+          {
+            "path": "src/services/resolveActiveReport.ts",
+            "baseline_sha256": "1400690c2f8ffcafff0061e3cbfc35ab5a6276de0fc668359a32ebcf86af5f61",
+            "incident_sha256": "7878c8cf7d3f46502bd4d4005804e5bf3aa31faca4acec087c9cf6c346d20a0c"
+          },
+          {
+            "path": "supabase/functions/_shared/canonical-decision-contract.mjs",
+            "baseline_sha256": "4a0099148a5e8ad054e16082b6bb3975a4a298893d9166f8e899ac91bd8d9280",
+            "incident_sha256": "7dcaeaff9977450edeb1526ca3c706f44d6e6658525394086d123c4d9bbafaee"
+          },
+          {
+            "path": "supabase/functions/_shared/content-intelligence.ts",
+            "baseline_sha256": "65ba66409373caa65c40e7dd7f5d80077b1260cbdd70aa545da403ea5f20caa0",
+            "incident_sha256": "623b6f6392440435434585c3633b9d4e252abf7ed005c6e9b4ce1e6242be7c98"
+          },
+          {
+            "path": "supabase/functions/_shared/production-architecture-core.mjs",
+            "baseline_sha256": "788f7c208f7ee0fd7c319e691b4faa3f4eb7a0532341af51e33bf0b89015189b",
+            "incident_sha256": "4999bc2a0a5d915103fdb79394c1f30491b70c64bd84867af9850db1ec4c8157"
+          },
+          {
+            "path": "supabase/functions/_shared/research-pipeline-contract.ts",
+            "baseline_sha256": "f6b23af0719c53e3ff0a1ffe36c2847826213f0e60d0ff8e8879d3827fe7b857",
+            "incident_sha256": "4bd20863cb39afb2293dda274b1ad6e9618d5ddfdadafec5b65dcbf2bcfe508d"
+          },
+          {
+            "path": "supabase/migrations/20260908050000_market_publication_recommendation_isolation.sql",
+            "baseline_sha256": null,
+            "incident_sha256": "e2de4f09095449655a7ee071c44e0d3ce22a491932d4b2b638d7006bf5c3854f"
+          }
+        ],
+        "modified_declarations": [
+          {
+            "path": "supabase/functions/generate-daily-report-v7/research-master-v2.ts",
+            "name": "assembleResearchMasterV2",
+            "production_sha256": "6ba88393bfb5c479d68817155a41180dcd5914a243df3df47faffe984d3c8059",
+            "incident_sha256": "bdbee974d6c15d7dac47da770bbe753f6e52189b904486db1877777e1c2c0141",
+            "reason": "No-recommendation narrative must cite the exact selected source list rather than unrelated thesis refs; all other assembly behavior retained"
+          },
+          {
+            "path": "supabase/functions/get-report-payload/index.ts",
+            "name": "getDataAsOf",
+            "production_sha256": "4a1ae3c8e3584c4dae0dc6ffa248078d19d43a1046fe71f089974394e04af11d",
+            "incident_sha256": "e7efcf362586351f95362305b41f1a1f532e1cfae7715f5321c954cd02248f64",
+            "reason": "Withhold future timestamps; keep original provenance timestamps intact"
+          },
+          {
+            "path": "supabase/functions/get-report-payload/index.ts",
+            "name": "fetchPayloadContext",
+            "production_sha256": "eb6db68bc2f68c30c19714e6f60cd859a44c12a4d75f094c7bf7240c66413932",
+            "incident_sha256": "a8458b26dd85aa2daf24279679947e6c020bf46c79423286f28bd8883e582420",
+            "reason": "Read exact published report/decision/member pointers, including intraday, rather than newer internal QA revisions; keep bounded timestamp filters."
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/index.ts",
+            "name": "VERSION",
+            "production_sha256": "3ee1e0b4733ce11633c97b6098fd2bd6b7bf3ca7fc630acecd9195b4a1d6b24a",
+            "incident_sha256": "1b54c66984960b13a460975fcaac829a6411edaa50105e19fc117e035769e273",
+            "reason": "Version the coordinated market-only publication contract so idempotency fingerprints distinguish it from the previous coupled gate."
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/index.ts",
+            "name": "attachResearchMasterV2Shadow",
+            "production_sha256": "0cbfaf3f58ad40399b1082b0ff925e956a0afb7451478293e441c87a8d934123",
+            "incident_sha256": "3d982bf3b493e8d05f4697093784a85eeca30dd2ba1d7d93f1a97820fcfcc904",
+            "reason": "Keep rejected company evidence in private audit while assembling the separately audited market document; no fake no-opportunity result."
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/index.ts",
+            "name": "SectorRotationRow",
+            "production_sha256": "1108652131958f0e8d371c315fa40ea0686544145d0d62f773fb3b9073e28036",
+            "incident_sha256": "f2c75f3bc14f2e943655a6ac4642a6c4b528414aa804f15859183a249315da95",
+            "reason": "Preserve actual sector score_date provenance"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/index.ts",
+            "name": "buildV10SectorContext",
+            "production_sha256": "ac881cf063031fb921e3557ae798acceb2a36e9fdeb9c3176c9ac2829bbb50b6",
+            "incident_sha256": "040be7c4c3d526c589f212a33f0378b58e0697b91d22cb42ca09a395b34a0caa",
+            "reason": "Forward source_date without inventing timestamps"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/index.ts",
+            "name": "buildEvidenceIndex",
+            "production_sha256": "0ddf677378bdae33f9c6343339757ffb078f04c9aae48d9fd34f1dfa379b82d2",
+            "incident_sha256": "97db848e51ad422b8b131dec43ddb47f8437da46700feb14e46cb297c500df5a",
+            "reason": "Retain source date in evidence reference; missing sector date is not evidence"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/index.ts",
+            "name": "fetchSectorRotationForDate",
+            "production_sha256": "a42ed5d635675ea5f30bcb6dbfa4a2e2e0caf7c0b37cb3845859aff80a3931fa",
+            "incident_sha256": "bcc6a0da39d01a1574cefb44f1053b835cc5cc9aa891bcba72c7fe8833d6ef42",
+            "reason": "Read existing score_date column and preserve it"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/index.ts",
+            "name": "fetchMarketData",
+            "production_sha256": "f196e0f7a3582dd92508ce606743eafa894c5fa1aa632f343739e9263f8991dc",
+            "incident_sha256": "6a1a863c8bd61cd316e8c65114b680dbef82a1fa350bd208fc9d41924a229cf9",
+            "reason": "Reject future rows before latest-row selection"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/research-master-v2.ts",
+            "name": "ResearchMasterQuality",
+            "production_sha256": "f4bc2d54618a9654fc561253dc7c0bad469e0f1a4fa6fd1fd431998d0c933e7f",
+            "incident_sha256": "3a2b3948791bf21ebab1a8f9088683d3be64b8a316438ef43faf1bdf3dffb2f9",
+            "reason": "Add auditable claim numerator/denominator and source ledger"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/market-freshness.ts",
+            "name": "isMarketIndicatorStale",
+            "production_sha256": "637bbcb4339964d8bba8b387ab24cc3a2ebe01701f3c4a983154774900994859",
+            "incident_sha256": "151a070e1d08a689942d6999079bc11f554194836e8e89da5e598691209f1769",
+            "reason": "Reject future provider timestamps"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/market-data-evidence.ts",
+            "name": "normalizeMarketDataRows",
+            "production_sha256": "57759f523711673e023ed00897c33fec8e4034b3d2000f42ec18029da42c9dc4",
+            "incident_sha256": "0e23f0ad3399ed2ed63d8f3f35d2db78a0ba5e87ad47769c731991f44e13d803",
+            "reason": "Reject null/invalid raw numeric and future capture"
+          },
+          {
+            "path": "supabase/functions/_shared/premium-evidence.ts",
+            "name": "normalizePremiumMarketEvidence",
+            "production_sha256": "bbdd499279b66e4f456afcb43486b3d86a13a7ec629d1b80f7ac07253c1e24da",
+            "incident_sha256": "44638fd8f847080f22299301646dc67a91f2b0af3660686fd514114aa1fe60fb",
+            "reason": "Preserve valid latest completed US cash session; reject missing raw fields"
+          },
+          {
+            "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+            "name": "VERSION",
+            "production_sha256": "7036f591e9e2818ad42f0a888dbb303fe6cc81684d26cab0ed325eb78260a80e",
+            "incident_sha256": "3e6bdc778fd7b28e1f88c6370501647596671bdbf19c54c198fca70f923ea66e",
+            "reason": "Incident contract version identifier only"
+          },
+          {
+            "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+            "name": "DeliveryState",
+            "production_sha256": "88beae04190ec5051b6d372da20a36256601af01382e7732e6163a334af580ce",
+            "incident_sha256": "6b2bd31eb391acce768c171ed47cac8f7fed122c4ea631593d8efaad589bd04a",
+            "reason": "Independent public market report eligibility"
+          },
+          {
+            "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+            "name": "loadDeliveryState",
+            "production_sha256": "9271dcebe511028f6a66ba0b43447e938f8fcbccc4de9f3d2b7fb111b67c9e97",
+            "incident_sha256": "3713c4d73736343bd4972eadc69550a45bf75d5b7bf90319ecf3dd2d888aa27a",
+            "reason": "Public quality and same revision instead of paid-note depth"
+          },
+          {
+            "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+            "name": "DailyDeliveryRecoveryInput",
+            "production_sha256": "3c6c75d20d1b40f5b4af07188719b99289d72e21623da0c3a58aeeaeba9c50b4",
+            "incident_sha256": "4d7d465f47b3ac22447ba23e588faeb2364e73c6307cd7ba6a70b7f961f35c12",
+            "reason": "Add independent public report eligibility"
+          },
+          {
+            "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+            "name": "DailyDeliveryRecoveryPlan",
+            "production_sha256": "a578f1040bc2d9a927997737bf999bc66d424244330a5b53d2ff6f34e91fc6e5",
+            "incident_sha256": "b6623dff27d56f9c36bbd4961e3d88bb69c0ddec6b7a4ad6cd9b91064468ce35",
+            "reason": "Explicit non-retryable quality-block state"
+          },
+          {
+            "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+            "name": "DailyDeliveryCompletionInput",
+            "production_sha256": "383a75e3fd9f9c3353ed2af697776f8782984f59e5ab9292922cbcdba8b13183",
+            "incident_sha256": "e998e857074442b8b6f56929738bb6e80c431f8843a427bcfb42a32b5b77516e",
+            "reason": "Add independent public report eligibility"
+          },
+          {
+            "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+            "name": "resolveDailyDeliveryCompletion",
+            "production_sha256": "7cdb31cb436b7e3ce99823aedf0397c06853ceeb080a64a850e11cc97e24aa17",
+            "incident_sha256": "3cab4aa27078cc9ec548f19f0c89e83d9fe8d9174c9a022dab907730e3209193",
+            "reason": "Quality-approved public report can complete without paid-note eligibility"
+          },
+          {
+            "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+            "name": "buildDailyDeliveryRecoveryPlan",
+            "production_sha256": "a40c1d0e7c417e03fe8623853494cf155b1e5ce262faefda223e5df1600fd19b",
+            "incident_sha256": "da719e6fe8cfc3f5f745da1b2830c7aa170d1105eb15f6ac021c1c760137dbd7",
+            "reason": "No unchanged-evidence LLM retries; keep bounded transient recovery"
+          },
+          {
+            "path": "supabase/functions/generate-daily-report-v7/research-master-v2.ts",
+            "name": "isCanonicalV10NoTrade",
+            "production_sha256": "f7e7ab0a5f5be4ec09b92977606027b9a14c0719accf0a656d1d587b934776b7",
+            "incident_sha256": "153293f31ddb25cf21fe75818f7044feaf9b1d9c7278b2291ee5ed9f1292b11f",
+            "reason": "Legacy-named market narrative assembly helper now handles explicit empty admitted stock lists without claiming a complete-universe no-trade assessment."
+          },
+          {
+            "path": "supabase/functions/_shared/production-architecture-core.mjs",
+            "name": "buildCanonicalMemberResearchRevision",
+            "production_sha256": "c153bb00eeb5d7183921529f2656968ee855162f5b5a83b80275b26a5a189443",
+            "incident_sha256": "6e7e7c5d2e84a45c30e9611a900433dc2afafa2371429b171cfa6db8ece1c557",
+            "reason": "New explicit market_only revision preserves audited market validation/invalidation and evidence, never stock aliases; legacy modes unchanged."
+          },
+          {
+            "path": "supabase/functions/_shared/canonical-decision-contract.mjs",
+            "name": "DECISION_ACTION_BY_MODE",
+            "production_sha256": "bcc31ed29e012b8d81ffe2e8653986ff717bf8adc0a63d942a4d1c692c7fc108",
+            "incident_sha256": "9e52a162432f17817274a4dc5f1753d537a926b028d04fbd3a079a2fae1814ce",
+            "reason": "Add explicit market_only WAIT mapping; preserve all pre-existing action mappings."
+          },
+          {
+            "path": "supabase/functions/get-report-payload/index.ts",
+            "name": "getCanonicalPayloadQuality",
+            "production_sha256": "42be4e66aa8645d035f6e75940b0e6e3d9ee381758e27703daf97c55700eea9d",
+            "incident_sha256": "ef4dcc0202649528408717257ad40a8dee54a2c73db1bb9c82b5780916fe32f4",
+            "reason": "Use published market-source completeness independently of recommendation and member QA; preserve per-checkpoint runtime quality."
+          },
+          {
+            "path": "supabase/functions/get-report-payload/index.ts",
+            "name": "isCanonicalMemberRevisionEligible",
+            "production_sha256": "805896cc3e9d249db6f7c81cb4fb3374554e18c670a63a1d8f582815418e4766",
+            "incident_sha256": "590f177da6786613b4a80177e72ca5f69ca7947be34054381ecd39e82e989aff",
+            "reason": "Require real matching report, snapshot version and explicit passed semantic result before paid content exposure."
+          },
+          {
+            "path": "supabase/functions/get-report-payload/index.ts",
+            "name": "buildVipPayload",
+            "production_sha256": "bea9ff2f46121c765d0b2038046708d21140c41e7d5a5c97497024020c1f17b7",
+            "incident_sha256": "cdc5c8e6f0a4d5d563803d6e0ff451b65452c1bf8c84ca8affebea7b7875efbb",
+            "reason": "Prevent independently blocked recommendation evidence from leaking through legacy VIP stock narratives."
+          }
+        ],
+        "market_recommendation_split_approval": "2026-09-08 explicit approval: separate Market Report Publication Gate from Stock Recommendation Gate; local regression only, Production deployment remains a separate approval gate."
+      },
+      "original_production_manifest": {
+        "path": "docs/operations/core-stability-source-manifest-20260907.json",
+        "sha256": "bf1b697f3a20f5e1b1f558a730ed18805af5e0144cc80651f66c334d1725054c"
+      },
+      "saved_production_sources": [
+        {
+          "name": "generate-daily-report-v7",
+          "production_git_sha": "UNKNOWN: saved deployment source, not inferred from Git",
+          "version": 229,
+          "updated_at": "2026-09-07T10:50:31.625Z",
+          "verify_jwt": false,
+          "bundle_sha256": "4ab69849c0e6de44589be886de1cdbe6b45bc342fefbca8433ef4d177fd29220",
+          "rollback_source": "/private/tmp/ma-incident-20260908-rollback/generate-daily-report-v7",
+          "files": [
+            {
+              "path": "supabase/functions/generate-daily-report-v7/index.ts",
+              "production_sha256": "fef92b2edd3a17c2b1a7ab93b78c8e5015cc040657e28b8f57674219e2b30f96",
+              "candidate_sha256": "79473cf68c334619a064120aa6d19cac961efffdd66316dcf6c3983d686039c6",
+              "head_sha256": "2cdaf796e0e5c0f1fae3516c474bbad37d6ba7faaf89d7bd842b9a1fb28003ee",
+              "classification": "REVIEWED_MARKET_PUBLICATION_RECOMMENDATION_ISOLATION",
+              "source_diff_reference": {
+                "production_source": "/private/tmp/ma-incident-20260908-rollback/generate-daily-report-v7/supabase/functions/generate-daily-report-v7/index.ts",
+                "candidate_source": "supabase/functions/generate-daily-report-v7/index.ts",
+                "command": "git diff --no-index -- /private/tmp/ma-incident-20260908-rollback/generate-daily-report-v7/supabase/functions/generate-daily-report-v7/index.ts supabase/functions/generate-daily-report-v7/index.ts"
+              }
+            }
+          ]
+        },
+        {
+          "name": "daily-delivery-orchestrator",
+          "production_git_sha": "UNKNOWN: saved deployment source, not inferred from Git",
+          "version": 29,
+          "updated_at": "2026-09-07T10:50:21.883Z",
+          "verify_jwt": false,
+          "bundle_sha256": "e496bafd073b241f6043e53da966363c4c54015050f40e1cb0ef8a24927ced20",
+          "rollback_source": "/private/tmp/ma-incident-20260908-rollback/daily-delivery-orchestrator",
+          "files": [
+            {
+              "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+              "production_sha256": "c24eb655a0b0c121728a099e73562817296fa671573c252a407fb6dfd598f626",
+              "candidate_sha256": "741ff45bb1903560e5cfc87c855a40d2d4844d96d0253ac5f486077d42706c59",
+              "head_sha256": "09fd18f707b3c03ab42190bee7f2d13ea01bb66f9ee4f3cc7167f3cc8970f01e",
+              "classification": "REVIEWED_MARKET_PUBLICATION_RECOMMENDATION_ISOLATION",
+              "source_diff_reference": {
+                "production_source": "/private/tmp/ma-incident-20260908-rollback/daily-delivery-orchestrator/supabase/functions/daily-delivery-orchestrator/index.ts",
+                "candidate_source": "supabase/functions/daily-delivery-orchestrator/index.ts",
+                "command": "git diff --no-index -- /private/tmp/ma-incident-20260908-rollback/daily-delivery-orchestrator/supabase/functions/daily-delivery-orchestrator/index.ts supabase/functions/daily-delivery-orchestrator/index.ts"
+              }
+            }
+          ]
+        },
+        {
+          "name": "get-report-payload",
+          "production_git_sha": "UNKNOWN: saved deployment source, not inferred from Git",
+          "version": 42,
+          "updated_at": "2026-09-07T10:49:23.543Z",
+          "verify_jwt": false,
+          "bundle_sha256": "4fb67826dedbdfa0d3e518507828e7c1e3fffef163fa457136b921b26161eb71",
+          "rollback_source": "/private/tmp/ma-incident-20260908-rollback/get-report-payload",
+          "files": [
+            {
+              "path": "supabase/functions/get-report-payload/index.ts",
+              "production_sha256": "50869c00bb4c6cbe176eb5b05382544b3200d5f9787ba9d90830327aea047e82",
+              "candidate_sha256": "0794ca0c295c2ac2c415f17416dfe04601b5be8db057f4ce790bc04ac6253e3e",
+              "head_sha256": "01a45e12e35b0565896af1aa06adb55dc5c61b6d77d394dc323ecacad4599a18",
+              "classification": "REVIEWED_MARKET_PUBLICATION_RECOMMENDATION_ISOLATION",
+              "source_diff_reference": {
+                "production_source": "/private/tmp/ma-incident-20260908-rollback/get-report-payload/supabase/functions/get-report-payload/index.ts",
+                "candidate_source": "supabase/functions/get-report-payload/index.ts",
+                "command": "git diff --no-index -- /private/tmp/ma-incident-20260908-rollback/get-report-payload/supabase/functions/get-report-payload/index.ts supabase/functions/get-report-payload/index.ts"
+              }
+            }
+          ]
+        },
+        {
+          "name": "line-daily-push",
+          "production_git_sha": "UNKNOWN: saved deployment source, not inferred from Git",
+          "version": 59,
+          "updated_at": "2026-09-04T03:58:16.360Z",
+          "verify_jwt": false,
+          "bundle_sha256": "41f06fd5540c561e0f5933fef4c22a54cc721193c17cb4d19adf7edfdd03133e",
+          "rollback_source": "/private/tmp/ma-incident-20260908-rollback/line-daily-push",
+          "files": [
+            {
+              "path": "supabase/functions/line-daily-push/index.ts",
+              "production_sha256": "df561b1e1252260dd989e732e71fe398ffddde6bbde1c3527c8f96d16983a96f",
+              "candidate_sha256": "c890c749eb8dfa53462ea3b2aa7291ecfaf9ea2a80fe6e3d270723aea8bad89e",
+              "head_sha256": "c54fbbcac5ca0811801b88cedd22e88cd5033397cfe25b4743829f9a0ac6b158",
+              "classification": "REVIEWED_MARKET_PUBLICATION_RECOMMENDATION_ISOLATION",
+              "source_diff_reference": {
+                "production_source": "/private/tmp/ma-incident-20260908-rollback/line-daily-push/supabase/functions/line-daily-push/index.ts",
+                "candidate_source": "supabase/functions/line-daily-push/index.ts",
+                "command": "git diff --no-index -- /private/tmp/ma-incident-20260908-rollback/line-daily-push/supabase/functions/line-daily-push/index.ts supabase/functions/line-daily-push/index.ts"
+              }
+            },
+            {
+              "path": "supabase/functions/_shared/line-daily-flex-message.mjs",
+              "production_sha256": "595c4812faecdac6bb78f68e182454448b367db9f95e946a910d0c932def18d8",
+              "candidate_sha256": "ae170ab38e1640c55ed02b93446b94a1911c9f9bf98caf19db5ff58ba84f4f9a",
+              "head_sha256": null,
+              "classification": "REVIEWED_MARKET_PUBLICATION_RECOMMENDATION_ISOLATION",
+              "source_diff_reference": {
+                "production_source": "/private/tmp/ma-incident-20260908-rollback/line-daily-push/supabase/functions/_shared/line-daily-flex-message.mjs",
+                "candidate_source": "supabase/functions/_shared/line-daily-flex-message.mjs",
+                "command": "git diff --no-index -- /private/tmp/ma-incident-20260908-rollback/line-daily-push/supabase/functions/_shared/line-daily-flex-message.mjs supabase/functions/_shared/line-daily-flex-message.mjs"
+              }
+            }
+          ]
+        }
+      ],
+      "candidate_files": [
+        {
+          "path": "supabase/functions/_shared/line-daily-flex-message.mjs",
+          "sha256": "ae170ab38e1640c55ed02b93446b94a1911c9f9bf98caf19db5ff58ba84f4f9a"
+        },
+        {
+          "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+          "sha256": "741ff45bb1903560e5cfc87c855a40d2d4844d96d0253ac5f486077d42706c59"
+        },
+        {
+          "path": "supabase/functions/generate-daily-report-v7/index.ts",
+          "sha256": "79473cf68c334619a064120aa6d19cac961efffdd66316dcf6c3983d686039c6"
+        },
+        {
+          "path": "supabase/functions/get-report-payload/index.ts",
+          "sha256": "0794ca0c295c2ac2c415f17416dfe04601b5be8db057f4ce790bc04ac6253e3e"
+        },
+        {
+          "path": "supabase/functions/line-daily-push/index.ts",
+          "sha256": "c890c749eb8dfa53462ea3b2aa7291ecfaf9ea2a80fe6e3d270723aea8bad89e"
+        }
+      ],
+      "registered_file_changes": [
+        {
+          "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+          "previous_registered_sha256": "8568b4cfd93731dbf57d3b37e7613bb236ae3d9dfa1c75deeffc913edca68aa3",
+          "candidate_sha256": "741ff45bb1903560e5cfc87c855a40d2d4844d96d0253ac5f486077d42706c59"
+        },
+        {
+          "path": "supabase/functions/generate-daily-report-v7/index.ts",
+          "previous_registered_sha256": "7331f7fac4ded8d78c5ec7ea79a30586fb213b0dec68c1ccc477b9da13fa28dd",
+          "candidate_sha256": "79473cf68c334619a064120aa6d19cac961efffdd66316dcf6c3983d686039c6"
+        },
+        {
+          "path": "supabase/functions/get-report-payload/index.ts",
+          "previous_registered_sha256": "28bf4406c761670aa27a98087476a3ce1485a161c8130a25e7a08234b6f7fca0",
+          "candidate_sha256": "0794ca0c295c2ac2c415f17416dfe04601b5be8db057f4ce790bc04ac6253e3e"
+        },
+        {
+          "path": "supabase/functions/line-daily-push/index.ts",
+          "previous_registered_sha256": "c54fbbcac5ca0811801b88cedd22e88cd5033397cfe25b4743829f9a0ac6b158",
+          "candidate_sha256": "c890c749eb8dfa53462ea3b2aa7291ecfaf9ea2a80fe6e3d270723aea8bad89e"
+        }
+      ],
+      "registered_declaration_changes": [
+        {
+          "path": "supabase/functions/generate-daily-report-v7/index.ts",
+          "name": "VERSION",
+          "production_sha256": "3ee1e0b4733ce11633c97b6098fd2bd6b7bf3ca7fc630acecd9195b4a1d6b24a",
+          "previous_registered_sha256": "1b54c66984960b13a460975fcaac829a6411edaa50105e19fc117e035769e273",
+          "candidate_sha256": "b68ba6dad682b06438066fd8e0a1d59d27e47a24df96f4913b91acec8a7f842a"
+        },
+        {
+          "path": "supabase/functions/generate-daily-report-v7/index.ts",
+          "name": "resolveEvidenceBackedDailySentence",
+          "production_sha256": "86158a6eb633aa9b434bc62e2451aad5b7892515a07818541bd5b1ad64a62d8c",
+          "previous_registered_sha256": null,
+          "candidate_sha256": "b3db2d67e3abaae34c4b884c9ee9b366b69fd43ba3b1ba733732f71c2cbccb44"
+        },
+        {
+          "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+          "name": "loadDeliveryState",
+          "production_sha256": "9271dcebe511028f6a66ba0b43447e938f8fcbccc4de9f3d2b7fb111b67c9e97",
+          "previous_registered_sha256": "3713c4d73736343bd4972eadc69550a45bf75d5b7bf90319ecf3dd2d888aa27a",
+          "candidate_sha256": "b845c65d103382fe82571b1be9107aa53832abd69d9bc5d87bcff98ca8df4d7e"
+        },
+        {
+          "path": "supabase/functions/get-report-payload/index.ts",
+          "name": "getEffectiveAi",
+          "production_sha256": "943f14845145fb29179e2ed116dbdf2744ce00c6dfb01bbfc55e204d8c29fbdb",
+          "previous_registered_sha256": null,
+          "candidate_sha256": "b8a16d1972c292da3155232b61450429a27161f2394adc04d3811e8dcdea9cbd"
+        }
+      ],
+      "new_production_dependency": {
+        "path": "supabase/functions/_shared/line-daily-flex-message.mjs",
+        "production_version": 59,
+        "production_sha256": "595c4812faecdac6bb78f68e182454448b367db9f95e946a910d0c932def18d8",
+        "candidate_sha256": "ae170ab38e1640c55ed02b93446b94a1911c9f9bf98caf19db5ff58ba84f4f9a",
+        "reason": "Preserve existing v59 recommendations/no_trade Flex; market_only renders the exact insufficient-evidence notice with no stock ranking claim. Actual delivery preview altText/text behavior restored byte-for-byte to v59."
+      },
+      "behavior_review": {
+        "publication": "Audited current market report may publish independently of blocked stock recommendation; SQL requires same-date identical proof and atomic same-revision pointers.",
+        "recommendation": "No fake scores/stocks; existing research/evidence/Premium constraints retained. NO_QUALIFIED_OPPORTUNITY requires complete real nonempty evaluated universe.",
+        "market_gate": "Editorial >=90, evidence coverage100, unsupported claims0, source/timestamp and semantic proof are required, not waived.",
+        "delivery": "Consumers read published pointer, not QA; no notifications invoked. Idempotency, suppression, Auth and v59 Flex audit are preserved.",
+        "security": "Existing Auth/JWT strategies and entitlement helper preserved. No RLS/policy/owner/grant changes. Existing ensure_member_entitlement_v1 behavior remains; not a claim that all payload calls are side-effect-free.",
+        "rollback": "Before new-mode publication restore saved versions/private SQL ACL. After new-mode rows exist stop producer first and retain compatible readers/schema; forward correction, never delete or relabel business evidence."
+      },
+      "validation_references": [
+        "tests/coreProductionPreservation.test.mjs (unchanged)",
+        "tests/productContract.test.mjs (unchanged)",
+        "tests/marketPublicationDelivery.test.mjs",
+        "tests/marketPublicationPayload.test.mjs",
+        "tests/marketPublicationDatabase.integration.mjs",
+        "tests/subscriberMarketPublication.test.mjs"
+      ],
+      "today_all_pass": "NO",
+      "business_date": "2026-09-08",
+      "automatic_stable_day": false,
+      "approval_timestamp_semantics": "Time approval was recorded during this session; not an inferred message-send timestamp.",
+      "approved_scope": [
+        "supabase/functions/daily-delivery-orchestrator/index.ts",
+        "supabase/functions/generate-daily-report-v7/index.ts",
+        "supabase/functions/get-report-payload/index.ts",
+        "supabase/functions/line-daily-push/index.ts",
+        "supabase/functions/_shared/line-daily-flex-message.mjs"
+      ],
+      "registration_state": "REVIEWED_SOURCE_ONLY_REQUIRES_FRESH_VERIFICATION",
+      "validation_requirement": {
+        "node": "459/459",
+        "integrity": "PASS",
+        "deno": "57/57",
+        "isolated_db": "13/13",
+        "isolated_browser": "105/105",
+        "typecheck": "PASS",
+        "lint": "PASS",
+        "build": "PASS",
+        "edge_checks": "PASS",
+        "diff_check": "PASS",
+        "github_ci": "NEW_COMMIT_SHA_AFTER_AUTHORIZED_COMMIT_PUSH"
+      },
+      "preserved_failure_history": {
+        "date": "2026-09-08",
+        "previous_node_result": "457 PASS / 2 integrity FAIL / 459",
+        "registered_as_approved_test_failure": false,
+        "production_today_all_pass": "NO",
+        "automatic_stable_day": false
+      }
+    },
+    {
+      "approval_id": "SUBSCRIBER_STATE_ROLLBACK_LOCAL_CONTRACT_20260908",
+      "approval_source": "Explicit owner controlled rollback approval plus Branch/Local Canonical Payload/Subscriber Frontend state contract repair, full matrix/regression/CI. This registration covers the independently reviewed exact local read-side patch only, not a Production release or the earlier rejected review artifact.",
+      "approval_recorded_at": "2026-09-08 09:22:08 UTC",
+      "approval_timestamp_semantics": "Time the owner approval was recorded for this reviewed artifact, not inferred user-message time.",
+      "branch": "codex/core-stability-20260907",
+      "candidate_base_git_sha": "fc127b0cbb1169974d44df3fc43fa009e1e5740f",
+      "candidate_git_sha": null,
+      "candidate_status": "CONTENT_ADDRESSED_LOCAL_CANDIDATE_NOT_DEPLOYED",
+      "source_diff_reference": {
+        "path": "docs/operations/evidence/subscriber-state-candidate-20260908.json",
+        "patch_sha256": "b66a5e99ee246dd63ba756f898d64bf24238968ce09d57f8539b022fe086315d",
+        "reconstruct": "patch_lines.join('\\n')"
+      },
+      "previous_registration_sha256": "036e89280392a77639ff1891b00d6b57a9b99b2452bfe776b6cc67301e7e6b66",
+      "previous_registration_git_reference": "fc127b0cbb1169974d44df3fc43fa009e1e5740f:docs/operations/core-stability-incident-amendment-20260908.json",
+      "previous_payload_registration": {
+        "path": "supabase/functions/get-report-payload/index.ts",
+        "baseline_sha256": "3195efd17035cf81a69d01cac19c2a1f315b04a3a17faf8076c5933d8101b370",
+        "incident_sha256": "0794ca0c295c2ac2c415f17416dfe04601b5be8db057f4ce790bc04ac6253e3e"
+      },
+      "modified_declaration_history": [
+        {
+          "path": "supabase/functions/get-report-payload/index.ts",
+          "name": "PayloadContext",
+          "production_sha256": "dc054f79a4d764f5d6287b549f6577229773d196f4e02bb47944bae5e4ffb458",
+          "previous_candidate_sha256": "dc054f79a4d764f5d6287b549f6577229773d196f4e02bb47944bae5e4ffb458",
+          "candidate_sha256": "e90edcf50eb2533149c97488d4451a3815d9bb244034eebcce4c3fd45d089eea"
+        },
+        {
+          "path": "supabase/functions/get-report-payload/index.ts",
+          "name": "buildAuthoritativeClosingVerification",
+          "production_sha256": "79840de58d9f411c4d971a7d77916b36c3da2317f51c02189017d4ba166e4fe2",
+          "previous_candidate_sha256": "79840de58d9f411c4d971a7d77916b36c3da2317f51c02189017d4ba166e4fe2",
+          "candidate_sha256": "fe80561aa10ae5a4f0d968031e1700aa84eb09e4827c11762e9e8e9a043e991a"
+        },
+        {
+          "path": "supabase/functions/get-report-payload/index.ts",
+          "name": "buildClosingVerdict",
+          "production_sha256": "77c393f6db9ea14bbbfc5d2a4d5b712cd3af4912fd095accc874b883c27f108c",
+          "previous_candidate_sha256": "77c393f6db9ea14bbbfc5d2a4d5b712cd3af4912fd095accc874b883c27f108c",
+          "candidate_sha256": "103825987247c69b0c1a1eb645da27394f9d80c49ee830ce9685b881d600f927"
+        },
+        {
+          "path": "supabase/functions/get-report-payload/index.ts",
+          "name": "buildVipPayload",
+          "production_sha256": "bea9ff2f46121c765d0b2038046708d21140c41e7d5a5c97497024020c1f17b7",
+          "previous_candidate_sha256": "cdc5c8e6f0a4d5d563803d6e0ff451b65452c1bf8c84ca8affebea7b7875efbb",
+          "candidate_sha256": "af55aa182105bf34a8e92c89f2b15d54a727065e1558a42682ff19a157180a2f"
+        },
+        {
+          "path": "supabase/functions/get-report-payload/index.ts",
+          "name": "buildHistorySummary",
+          "production_sha256": "0a08c59517a74a16b5c746d9b41f6a2c7e826a60e2e85b5f78c4771e72205c4a",
+          "previous_candidate_sha256": "0a08c59517a74a16b5c746d9b41f6a2c7e826a60e2e85b5f78c4771e72205c4a",
+          "candidate_sha256": "0f2ace90c60a7f0d340b069e3e4e414b5fe1dc95a270c79db20230631d252366"
+        },
+        {
+          "path": "supabase/functions/get-report-payload/index.ts",
+          "name": "fetchPayloadContext",
+          "production_sha256": "eb6db68bc2f68c30c19714e6f60cd859a44c12a4d75f094c7bf7240c66413932",
+          "previous_candidate_sha256": "a8458b26dd85aa2daf24279679947e6c020bf46c79423286f28bd8883e582420",
+          "candidate_sha256": "d3af6d57690c501526cb5c3a6b6947fdbf48325eb3d991ab13f4cc7487eb1eaf"
+        }
+      ],
+      "original_production_manifest_sha256": "bf1b697f3a20f5e1b1f558a730ed18805af5e0144cc80651f66c334d1725054c",
+      "original_production_sources": {
+        "payload_v42_entrypoint_sha256": "50869c00bb4c6cbe176eb5b05382544b3200d5f9787ba9d90830327aea047e82",
+        "health_v20_entrypoint_sha256": "296f4bd106e1ab00d5cf82a9637462b8091380536658964ebb2c0e073c71ba32"
+      },
+      "rollback_target": {
+        "payload": "Saved original Payload v42 complete source, restored as platform v44",
+        "health": "Saved original Health v20 complete source, restored as platform v22",
+        "publication_rpc": "Exact pre-fc127b0 saved definitions/private ACL",
+        "source_reference": "docs/operations/subscriber-state-rollback-20260908.md"
+      },
+      "review": {
+        "patch_sha256": "b66a5e99ee246dd63ba756f898d64bf24238968ce09d57f8539b022fe086315d",
+        "source_review": "Independent immutable follow-up: prior raw 1430 and history QA-confidence bypasses fixed; legitimate READY/COMPLETE controls retained; no new source-visible blocker in reviewed boundaries.",
+        "rejected_previous_patch_sha256": "6408b73c4765c0f9a5a05250926764c014b5c13386011c9ac698fe90c3fc1bd3",
+        "rejected_previous_artifact_approved": false,
+        "source_boundaries": [
+          "publication pointer + current decision identity",
+          "whole closing receipt",
+          "legacy cached-reader 1430 fallback",
+          "single bounded history revision lookup",
+          "versioned recommendation enum",
+          "unchanged server entitlement/private QA"
+        ],
+        "checks_before_registration": {
+          "focused_shared_payload": "31/31 PASS",
+          "sdk_loopback": "9/9 PASS",
+          "frontend_focused": "24/24 PASS",
+          "node": "487/489 PASS; exactly two old hash-pin failures, not waived",
+          "deno": "57/57 PASS",
+          "type_check": "PASS",
+          "lint": "PASS",
+          "build": "PASS 2.53s",
+          "edge_checks": "PASS"
+        },
+        "post_registration_full_regression_required": true
+      },
+      "unchanged": [
+        "Original Production hashes and prior integrity history",
+        "Fetch v64",
+        "Generator / Orchestrator / LINE sources",
+        "Auth / RLS / ACL",
+        "Publication RPC and schema",
+        "Research / Evidence / Editorial / Semantic gates",
+        "2026-09-07 FAIL",
+        "2026-09-08 FAIL"
+      ],
+      "production_deploy_authorized": false
+    },
+    {
+      "approval_id": "SUBSCRIBER_STATE_LOCAL_BROWSER_CAPTURE_SEQUENCE_20260908",
+      "approval_recorded_at": "2026-09-08 09:30:00 UTC",
+      "approval_source": "Same owner-approved Local/Browser state matrix verification; two harness waits only, no Product/Auth/config/assertion changes. Scope revalidated after file-safety review required actual Git root and dirty-file ownership proof.",
+      "candidate_base_git_sha": "fc127b0cbb1169974d44df3fc43fa009e1e5740f",
+      "candidate_status": "LOCAL_VALIDATION_ONLY_NOT_DEPLOYED",
+      "source_diff_reference": {
+        "path": "docs/operations/evidence/subscriber-state-candidate-20260908-v3.json",
+        "patch_sha256": "a646d9d1ab2cc94d78e983ed1981976f3ca03abfcd7740043b1fd2fc13ca0eda",
+        "reconstruct": "patch_lines.join('\\n')"
+      },
+      "prior_source_diff_reference": {
+        "path": "docs/operations/evidence/subscriber-state-candidate-20260908.json",
+        "patch_sha256": "b66a5e99ee246dd63ba756f898d64bf24238968ce09d57f8539b022fe086315d",
+        "reconstruct": "patch_lines.join('\\n')"
+      },
+      "changed_validation_file": {
+        "path": "tests/browser/subscriberState.e2e.mjs",
+        "previous_sha256": "d1929dc1287d25a63ab4016af5d8123751dfd5ce801d05471ae6b69bfbb00ac1",
+        "candidate_sha256": "6aec35b574b91ddddb550f4acf96475d37f804d490cc1539e2265ccfa3f64cc1",
+        "reason": "Wait for current HTTP response bodies before intentional login navigation; retains all error and payload assertions."
+      },
+      "preserved_failed_evidence": "/private/tmp/ma-subscriber-state-e2e-20260908T0930-v2/subscriber-state-results.json",
+      "failure_classification": "Harness response-body navigation race before baseline assertions; actual response HTTP 200, Console empty, all local fixtures restored. Not a Product PASS and not discarded.",
+      "all_production_source_hashes_unchanged": true,
+      "all_assertions_preserved": true,
+      "production_deploy_authorized": false
+    },
+    {
+      "approval_id": "SUBSCRIBER_STATE_HOME_VISIBLE_PARTIAL_20260908",
+      "approval_recorded_at": "2026-09-08 09:36:35 UTC",
+      "approval_source": "Owner-approved complete Local/Browser subscriber state matrix and necessary frontend fixes. Real PARTIAL wire was correct but Home Hero hid the incomplete status inside collapsed details.",
+      "candidate_base_git_sha": "fc127b0cbb1169974d44df3fc43fa009e1e5740f",
+      "candidate_status": "LOCAL_CANDIDATE_NOT_DEPLOYED",
+      "source_diff_reference": {
+        "path": "docs/operations/evidence/subscriber-state-candidate-20260908-v4.json",
+        "patch_sha256": "b57edac8a04b3615708f434cc35c6509f7aa1bb8f5a59e1523f3adf12c7ba644",
+        "reconstruct": "patch_lines.join('\\n')"
+      },
+      "prior_source_diff_reference": {
+        "path": "docs/operations/evidence/subscriber-state-candidate-20260908-v3.json",
+        "patch_sha256": "a646d9d1ab2cc94d78e983ed1981976f3ca03abfcd7740043b1fd2fc13ca0eda",
+        "reconstruct": "patch_lines.join('\\n')"
+      },
+      "changed_files": [
+        {
+          "path": "src/pages/home/page.tsx",
+          "previous_sha256": "1d4e4157332c2684f3bbc1668a1a5c1d3f6236ecc841837d02007e52dfedbfd7",
+          "candidate_sha256": "5e1f263ad6138938ee0a393e33a6ec6d3ca0bb0933d03602c28afcf3015c3145",
+          "reason": "Show the already-authoritative incomplete analysis headline in the visible Hero when analysis is unavailable, not only collapsed details."
+        },
+        {
+          "path": "tests/subscriberStateFrontend.test.mjs",
+          "previous_sha256": "7c3348041456df436528650563c1ab0173aa975ea8d8196333c0524c47a1ed59",
+          "candidate_sha256": "874c26214d7a6a72259b02d4f1790dae263b9cf602ede7215f296f4621344893",
+          "reason": "Added visible-first-screen PARTIAL headline regression with unchanged runtime/hidden-confidence assertions."
+        }
+      ],
+      "preserved_failed_browser_evidence": "/private/tmp/ma-subscriber-state-e2e-20260908T0930-v3/subscriber-state-results.json",
+      "previous_browser_result": "105 baseline +20 READY checks passed; PARTIAL Home visibility failed. Not full Browser PASS. All local fixtures restored.",
+      "focused_regression": "25/25 PASS; type-check and diff-check PASS",
+      "server_source_hashes_unchanged": true,
+      "gate_assertions_preserved": true,
+      "production_deploy_authorized": false
+    },
+    {
+      "approval_id": "SUBSCRIBER_STATE_FINAL_LOCAL_MATRIX_20260908",
+      "approval_recorded_at": "2026-09-08 10:11:43 UTC",
+      "approval_source": "Owner-approved post-rollback Branch/Local Payload and Frontend state correction, full state matrix, regression and new-commit CI. Earlier registry-write review required completed Browser evidence and actual Git-root ownership; both conditions are now evidenced. This append records exact locally verified candidate changes, not an integrity-test exemption or Production authorization.",
+      "candidate_base_git_sha": "fc127b0cbb1169974d44df3fc43fa009e1e5740f",
+      "candidate_status": "LOCALLY_VERIFIED_NOT_DEPLOYED_NEW_COMMIT_CI_PENDING",
+      "source_diff_reference": {
+        "path": "docs/operations/evidence/subscriber-state-candidate-20260908-v6.json",
+        "patch_sha256": "0fea753d274be2c3a28246d36001992ca8c332bc92f30ad9ca4fc9138c88ecd4",
+        "reconstruct": "patch_lines.join('\\n')"
+      },
+      "prior_source_diff_reference": {
+        "path": "docs/operations/evidence/subscriber-state-candidate-20260908-v4.json",
+        "patch_sha256": "b57edac8a04b3615708f434cc35c6509f7aa1bb8f5a59e1523f3adf12c7ba644"
+      },
+      "changed_files": [
+        {
+          "path": "src/lib/canonicalNarrative.ts",
+          "previous_sha256": "23b19fe3ca41f524f1ffc6e5c6b00d4cd7e5f963bd1d192264f0c9e2ebf024d4",
+          "previous_reference": "fc127b0cbb1169974d44df3fc43fa009e1e5740f:src/lib/canonicalNarrative.ts; unchanged in earlier subscriber artifacts",
+          "candidate_sha256": "754213394595ddb981c390a5c53b2118fe46a21d8eabb2d37bf210484e0cdd9e",
+          "reason": "Actual missing-confidence Browser H2 exposed an internal QA aggregate score. Exclude only standalone unbound assessment-score reason clauses, retaining factual numbers and structured confidence."
+        },
+        {
+          "path": "src/lib/subscriberReportContract.ts",
+          "previous_sha256": "0fca7e08ac4be69f9286d84248ecaa3cac0776ba11cbdceec0798a67b4589c34",
+          "candidate_sha256": "bc28681d7e914cbd5782d25d1c2fa66b5f4fc2d2058d72b317c1da739e5d217e",
+          "reason": "Withhold legacy individual-stock observation aliases when the explicit canonical recommendation contract blocks stocks; retain market/sector facts and qualified controls."
+        },
+        {
+          "path": "src/pages/home/page.tsx",
+          "previous_sha256": "5e1f263ad6138938ee0a393e33a6ec6d3ca0bb0933d03602c28afcf3015c3145",
+          "candidate_sha256": "35bfb5abec74dd9d4115e17e181000fb9dbad2fedc03c6c507327d8b30834632",
+          "reason": "Actual Browser required a visible recommendation-blocked notice, no completed-universe assertion from empty public lists, and preserved market reporting."
+        },
+        {
+          "path": "tests/browser/subscriberState.e2e.mjs",
+          "previous_sha256": "6aec35b574b91ddddb550f4acf96475d37f804d490cc1539e2265ccfa3f64cc1",
+          "candidate_sha256": "cd20af5d04549443c29b4bd675ba5d10594bc0038d31e5a128f1a8ce26f025df",
+          "reason": "Failure-only sanitized leaf-DOM/private screenshot capture before the unchanged missing-confidence assertion; no test bypass or changed fixture outcome."
+        },
+        {
+          "path": "tests/publicRelease.test.mjs",
+          "previous_sha256": "806bf4d514c2cfd17f76fce6b2fb698ed8a99297791daed00e9cb89d06ee7eee",
+          "candidate_sha256": "8d5c0660ded9cd041a32d0434ecd4c8119d5a5df87a914014b6889cd708ced90",
+          "reason": "Replace obsolete unsupported empty-list success-copy assertions with stronger blocked-notice and no completed-universe-claim assertions; no runtime gate relaxed."
+        },
+        {
+          "path": "tests/subscriberStateFrontend.test.mjs",
+          "previous_sha256": "874c26214d7a6a72259b02d4f1790dae263b9cf602ede7215f296f4621344893",
+          "candidate_sha256": "975dbc567c9420c4be71cb8100238269cbc584799f001c734f3787110634f661",
+          "reason": "Executable regressions for blocked observation aliases, visible empty-list semantics, QA-only reason prose, preserved market facts and canonical scores."
+        }
+      ],
+      "superseded_failed_evidence_preserved": [
+        "ma-subscriber-state-e2e-20260908T0940-v4/subscriber-state-results.json",
+        "ma-subscriber-state-e2e-20260908T0948-v5/subscriber-state-results.json",
+        "ma-subscriber-state-e2e-20260908T1000-v5-diagnostic/subscriber-state-results.json"
+      ],
+      "final_local_validation": {
+        "node": "492/492 PASS",
+        "deno": "57/57 PASS",
+        "database": "13/13 PASS",
+        "browser": "252/252 PASS",
+        "type_check": "PASS",
+        "lint": "0 errors / 0 warnings",
+        "build": "PASS 2.91 seconds",
+        "edge_checks": "6 PASS",
+        "original_integrity": "4/4 PASS",
+        "diff_check": "PASS",
+        "browser_artifact_sha256": "c856be995e42000522f0b8708dc1435498d8e1303aff07511bda1ad87b8203e5",
+        "database_artifact_sha256": "2e699cdcd1462813fe11dc4161f04509e2570afd34da13563b7301b265111caa",
+        "source_drift": [],
+        "production_requests": 0,
+        "synthetic_fixtures_restored": true,
+        "new_commit_ci": "REQUIRED_AFTER_AUTHORIZED_COMMIT_AND_PUSH"
+      },
+      "rollback_target": "Production remains restored to exact original Payload v42 and Health v20 sources and pre-fc127b0 Publication definitions/private ACL. No new deployment permitted.",
+      "original_production_hashes_preserved": true,
+      "existing_protected_file_and_declaration_hashes_unchanged": true,
+      "original_integrity_tests_unchanged": true,
+      "previous_integrity_history_preserved": true,
+      "production_deploy_authorized": false,
+      "merge_authorized": false
+    }
+  ]
+}

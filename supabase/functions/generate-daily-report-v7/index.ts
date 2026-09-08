@@ -5,12 +5,14 @@ type RuntimeClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import {
   assembleResearchMasterV2,
+  admitResearchRecommendations,
   buildBlockedResearchMasterV2,
   validateResearchMasterV2,
   type ResearchMasterV2AssemblerInput,
 } from './research-master-v2.ts';
 import {
   computeMarketFreshnessDates,
+  filterFreshMarketIndicators,
   filterRecentNewsRows,
   isMarketIndicatorStale,
   type MarketFreshnessDates,
@@ -20,14 +22,26 @@ import {
   normalizeMarketDataRows,
   type NormalizedMarketIndicator,
 } from './market-data-evidence.ts';
+import {
+  CANDIDATE_EVIDENCE_POLICY_VERSION,
+  candidateRepeatPenaltyContribution,
+  candidateEvidenceRelevance,
+  evidenceSemanticTags,
+} from './candidate-evidence.ts';
 import { sanitizeUnsupportedAbsolutePriceLevels } from './content-integrity.ts';
 import {
   deriveEvidenceBackedTaiwanTransmission,
-  evaluateContentIntelligence,
+  evaluateDecisionSentenceValue,
+  evaluateMarketContentIntelligence,
+  hasAuditedCanonicalNoTrade,
+  hasCanonicalNoTradeResearchMaster,
   isDecisionCriticalMissingSource,
   normalizeEvidenceLeadForChineseSentence,
 } from '../_shared/content-intelligence.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
+import { evaluateMarketReportGate } from '../_shared/market-report-gate.ts';
+import { evaluateResearchQualityGate } from '../_shared/research-quality-gate.ts';
+import { RESEARCH_PIPELINE_VERSION, researchInputFingerprint, canonicalReportProjection, companyEvidenceSupported, presentNumber, currentResearchDateError } from '../_shared/research-pipeline-contract.ts';
 import {
   buildCanonicalIntradaySyncStatus,
   preserveRuntimeReportOverlay,
@@ -57,8 +71,9 @@ import {
   buildRecommendationDecisionCopy,
 } from '../_shared/decision-sentence-builder.ts';
 
-const VERSION='V9.5_CANONICAL_MARKET_REPORT_CONTRACT';
-const OPENAI_EVIDENCE_GUARDRAILS='market_news 只可使用發布時間在 48 小時內的資料。若 TXF 或其他資料源缺失，不可把缺失資料寫成方向、價位或驗證條件。禁止自行編造輸入資料未提供的個股絕對價位。每一檔最終受惠股都必須有事件來源、事件到產業與供應鏈再到公司的傳導路徑、台灣供應鏈關係、盤中成立條件與失效條件；沒有足夠證據就不要輸出該股票。';
+const VERSION='V9.6.3_MARKET_RECOMMENDATION_GATE_SPLIT';
+const OPENAI_EVIDENCE_GUARDRAILS='market_news 只可使用發布時間在 48 小時內的資料。market_data 已先排除所有過期資料；不得猜測、補回或引用輸入中不存在的市場指標。若 TXF、原油或其他資料源缺失，不可把缺失資料寫成事件、方向、價位、產業傳導或驗證條件。禁止自行編造輸入資料未提供的個股絕對價位。每一檔最終受惠股都必須有事件來源、事件到產業與供應鏈再到公司的傳導路徑、台灣供應鏈關係、盤中成立條件與失效條件；沒有足夠證據就不要輸出該股票。不得為滿足篇幅、事件數、層數或股票數而新增任何未被輸入證據支持的敘事。';
+const OPENAI_OUTPUT_ABSTENTION_RULES='最高優先規則：today_beneficiary_stocks 可輸出 0 到 8 檔，沒有最低檔數；allowed_beneficiary_candidates 為空時必須輸出空陣列。overnight_chain 的至少 5 層是同一個有證據事件的傳導步驟，不是要求至少 5 個不同事件。每個 overnight_chain 項目必須包含 evidence_refs，且只能逐字使用輸入提供的 evidence_ref；沒有 evidence_ref 的事件必須刪除。beneficiary_candidates.evidence 與每檔 data_basis 也必須引用輸入提供的 evidence_ref，否則不得輸出該候選股。';
 const REPORT_MODE_NORMAL='normal_overnight',REPORT_MODE_WEEKEND='weekend_digest',REPORT_MODE_NON_TRADING='non_trading_day';
 const CORS_HEADERS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, apikey, x-client-info, x-cron-secret'};
 
@@ -142,8 +157,22 @@ function corsResponse(body:Record<string,unknown>,status:number):Response{try{re
 function safeUnwrap<T>(result:unknown,log:(m:string)=>void,label:string):{data:T|null;error:string|null}{if(!result||typeof result!=='object'){log('safeUnwrap['+label+']: null');return{data:null,error:'RESULT_UNDEFINED'}}const r=result as{data?:T;error?:{message?:string}|null};return{data:r.data??null,error:r.error?.message||null}}
 function attachResearchMasterV2Shadow(target:Record<string,unknown>,input:ResearchMasterV2AssemblerInput,log:(message:string)=>void):void{
   try{
-    const master=assembleResearchMasterV2(input);
-    const validation=validateResearchMasterV2(master);
+    let publicationInput=input;
+    if(input.isTradingDay && Array.isArray(target.today_beneficiary_stocks_v10)){
+      const admission=admitResearchRecommendations(input);
+      const sourceMaster=assembleResearchMasterV2(input);
+      target.research_generation_audit={contract_version:'RESEARCH_ADMISSION_V1',report_date:input.reportDate,source_quality:validateResearchMasterV2(sourceMaster,input).quality,rejected_recommendations:admission.rejected};
+      target.today_beneficiary_stocks_v10=admission.accepted;
+      // An admission gap is not proof of a complete universe with no matches.
+      // Market publication uses the explicit independent market_only contract.
+      if(!admission.accepted.length)target.v10_data_quality_status='insufficient_positive_evidence';
+      publicationInput={...input,legacy:target};
+    }
+    const master=assembleResearchMasterV2(publicationInput);
+    const validation=validateResearchMasterV2(master,{
+      evidenceIndex:input.evidenceIndex,
+      candidateUniverse:input.candidateUniverse,
+    });
     target.research_master_v2={...master,quality:validation.quality};
     log('RESEARCH_MASTER_V2_SHADOW status='+validation.quality.publish_status+' coverage='+validation.quality.evidence_coverage+' unsupported='+validation.quality.unsupported_claims.length+' missing='+validation.quality.missing_sections.length+' contradictions='+validation.quality.contradictions.length);
   }catch(error){
@@ -180,7 +209,7 @@ type ReportConfidenceScore={score:number;breakdown:Record<string,unknown>};
 type TWCoreStatus={taiexPresent:boolean;txfPresent:boolean;ts2330Present:boolean;missingCount:number;dataInsufficient:boolean};
 type MVPStatus={nvdaPresent:boolean;tsmPresent:boolean;spxPresent:boolean;mvpCount:number;mvpInsufficient:boolean};
 
-type SectorRotationRow={sector:string;sub_sector:string;rotation_score:number;direction:string;signal_label:string;leading_symbols:string[];lagging_symbols:string[];summary?:string};
+type SectorRotationRow={sector:string;sub_sector:string;rotation_score:number;direction:string;signal_label:string;leading_symbols:string[];lagging_symbols:string[];summary?:string;score_date?:string};
 type MemberResearchNoteV2={overnight_chain:Record<string,unknown>[];taiwan_impact_map:Record<string,unknown>[];beneficiary_candidates:Record<string,unknown>[];intraday_validation:Record<string,unknown>[];invalidation_rules:Record<string,unknown>[];closing_feedback_plan:Record<string,unknown>;subscriber_value_sentence:string;data_status:'complete'|'partial'|'insufficient';today_core_thesis?:string;market_mispricing?:string;institutional_behavior?:string;fund_flow_scenario?:string;beneficiary_reasoning?:Record<string,unknown>[];close_backtest_plan?:Record<string,unknown>;tomorrow_extension_watch?:string[];opening_thesis?:Record<string,unknown>;core_reasoning?:string[];first_beneficiary_stock?:Record<string,unknown>|null;risk_scenarios?:Record<string,unknown>[];capital_rotation_scenarios?:Record<string,unknown>[];tomorrow_follow_up?:Record<string,unknown>;closing_feedback_placeholder?:Record<string,unknown>;intraday_time_windows?:Record<string,unknown>[]};
 type V8Contract={v8_beneficiary_chain:Record<string,unknown>;v8_overnight_causal_chain:Record<string,unknown>;v8_daily_sentence:Record<string,unknown>};
 type V10EvidencePack=Record<string,unknown>;
@@ -255,7 +284,7 @@ function buildV10NewsClusters(newsData:MarketNewsItem[]):Record<string,unknown>[
     source_items:cluster.items.slice(0,3).map((item)=>({id:item.id,title:item.title,source:item.source,url:item.url,published_at:item.published_at||item.created_at,taiwan_impact_summary:item.taiwan_impact_summary||''})),
   }));
 }
-function buildV10SectorContext(sectorData:SectorRotationRow[]):Record<string,unknown>[]{return (sectorData??[]).map((row)=>({sector:row.sector,score:row.rotation_score??null,direction:row.direction??null,reason:row.signal_label||row.summary||null,related_symbols:[...(row.leading_symbols??[]),...(row.lagging_symbols??[])]}));}
+function buildV10SectorContext(sectorData:SectorRotationRow[]):Record<string,unknown>[]{return (sectorData??[]).map((row)=>({sector:row.sector,score:row.rotation_score??null,direction:row.direction??null,reason:row.signal_label||row.summary||null,source_date:row.score_date??null,related_symbols:[...(row.leading_symbols??[]),...(row.lagging_symbols??[])]}));}
 function readV10Stocks(value:unknown,limit=5):Record<string,unknown>[]{if(!Array.isArray(value))return [];return value.slice(0,limit).filter((item)=>item&&typeof item==='object').map((item)=>{const r=item as Record<string,unknown>;return {ticker:r.ticker??r.symbol??null,name:r.name??r.stock_name??null,category:r.category??r.sector??null,confidence:r.confidence??null};});}
 function buildV10PreviousValidation(previousReport:Record<string,unknown>|null):Record<string,unknown>|null{if(!previousReport)return null;const json=(previousReport.ai_strategy_json&&typeof previousReport.ai_strategy_json==='object'?previousReport.ai_strategy_json:{} ) as Record<string,unknown>;const closing=(json.closing_verification_v2??json.closing_verification??null) as Record<string,unknown>|null;return {previous_report_date:previousReport.report_date??null,previous_market_bias:previousReport.market_bias??json.market_bias??null,previous_top_beneficiaries:readV10Stocks(json.today_beneficiary_stocks??json.beneficiary_stocks,5),previous_closing_verification:closing,what_was_right:closing?.what_was_right??closing?.correct_assumptions??null,what_was_wrong:closing?.what_was_wrong??closing?.failed_assumptions??null};}
 function buildV10EvidencePack(args:{todayDate:string;dates:{twCoreDate:string;usGlobalDate:string};tradingDayInfo:TradingDayInfo;marketData:MarketIndicator[];newsData:MarketNewsItem[];sectorData:SectorRotationRow[];previousReport:Record<string,unknown>|null;dataQuality:string;missingSources:string[];staleCoreSources:string[];unavailableSources:string[];confidenceResult:ReportConfidenceScore}):V10EvidencePack{const missing=new Set<string>(args.missingSources??[]);const stale=new Set<string>(args.staleCoreSources??[]);const available=new Set<string>();const get=(key:string,syms:string[])=>{const indicator=findIndicator(args.marketData,syms);if(!indicator){missing.add(`market_snapshot.${key}`);return null;}if(isCoreMarketDataStale(indicator,args.dates)){stale.add(`market_snapshot.${key}`);missing.add(`market_snapshot.${key}`);return null;}const value=normalizePremiumMarketEvidence(indicator);if(!value){missing.add(`market_snapshot.${key}`);return null;}available.add(`market_snapshot.${key}`);return value;};const marketSnapshot={report_date:args.todayDate,data_freshness:{tw_core_date:args.dates.twCoreDate,us_global_date:args.dates.usGlobalDate},taiwan_market_status:{is_trading_day:args.tradingDayInfo.is_trading_day,market_closed:args.tradingDayInfo.market_closed,holiday_name:args.tradingDayInfo.holiday_name??null},taiex:get('taiex',['TAIEX','TWII','^TWII']),txf:get('txf',['TXF','TX','MTX','TXF1']),'2330':get('2330',['2330','2330.TW']),tsm_adr:get('tsm_adr',['TSM']),spx:get('spx',['SPX','^GSPC']),nasdaq:get('nasdaq',['IXIC','NASDAQ','^IXIC']),sox:get('sox',['SOX','^SOX']),djia:get('djia',['DJIA','^DJI']),nvda:get('nvda',['NVDA']),aapl:get('aapl',['AAPL']),msft:get('msft',['MSFT']),meta:get('meta',['META']),amzn:get('amzn',['AMZN']),vix:get('vix',['VIX','^VIX']),dxy:get('dxy',['DXY','DX-Y.NYB']),us10y:get('us10y',['US10Y','TNX','^TNX']),crude_oil:get('crude_oil',['CL','WTI','CRUDE_OIL'])};if(args.marketData.length)available.add('market_data');else missing.add('market_data');if(args.newsData.length)available.add('market_news');else missing.add('market_news');if(args.sectorData.length)available.add('sector_rotation_scores');else missing.add('sector_rotation_scores');const previousValidation=buildV10PreviousValidation(args.previousReport);if(previousValidation)available.add('previous_report');else missing.add('previous_validation');for(const u of args.unavailableSources??[])missing.add(u);const warningFlags=[...(args.dataQuality==='degraded'?['data_quality_degraded']:[]),...(args.unavailableSources??[]).map((source)=>`unavailable:${source}`),...(stale.size?['stale_core_sources_present']:[])];return {market_snapshot:marketSnapshot,overnight_moves:buildV10OvernightMoves(args.marketData).filter((item)=>String(item.freshness_status??'').toLowerCase()!=='stale'),news_clusters:buildV10NewsClusters(args.newsData),sector_context:buildV10SectorContext(args.sectorData),previous_validation:previousValidation,data_quality:{available_sources:Array.from(available),missing_sources:Array.from(missing),stale_sources:Array.from(stale),confidence_base:args.confidenceResult.score,warning_flags:warningFlags}};}
@@ -285,9 +314,9 @@ function buildEvidenceIndex(normalizedEvidence:Record<string,unknown>):V10Eviden
   const news=Array.isArray(normalizedEvidence.normalized_news)?normalizedEvidence.normalized_news:[];
   news.forEach((item,idx)=>{const n=(item&&typeof item==='object'?item:{} ) as Record<string,unknown>;const url=String(n.url??'');const publishedAt=String(n.published_at??'');const source=String(n.source??'');if(!/^https?:\/\//i.test(url)||!publishedAt||!source)return;push('NEWS',idx,'market_news',source,String(n.topic??n.event_type??''),String(n.representative_summary??''),n.importance,n.freshness??'unknown',url,{published_at:publishedAt,url,quality_status:'verified'});});
   const sectors=Array.isArray(normalizedEvidence.sector_context)?normalizedEvidence.sector_context:[];
-  sectors.forEach((item,idx)=>{const sec=(item&&typeof item==='object'?item:{} ) as Record<string,unknown>;push('SEC',idx,'sector_rotation','sector_rotation_scores',String(sec.sector??''),String(sec.reason??sec.direction??''),sec.score??50,'previous_trading_day',`sector_rotation_scores:${String(sec.sector??'')}`,{quality_status:'context'});});
+  sectors.forEach((item,idx)=>{const sec=(item&&typeof item==='object'?item:{} ) as Record<string,unknown>;const sourceDate=String(sec.source_date??'');if(!/^\d{4}-\d{2}-\d{2}$/.test(sourceDate))return;push('SEC',idx,'sector_rotation','sector_rotation_scores',String(sec.sector??''),String(sec.reason??sec.direction??''),sec.score??50,sourceDate?'previous_trading_day':'unknown',`sector_rotation_scores:${String(sec.sector??'')}@${sourceDate}`,{published_at:sourceDate||undefined,quality_status:'context'});});
   const prev=normalizedEvidence.previous_validation;
-  if(prev&&typeof prev==='object'){const p=prev as Record<string,unknown>;push('VAL',0,'previous_validation','reports',String(p.previous_report_date??'previous_report'),String(p.previous_market_bias??''),70,'previous_report',`reports:${String(p.previous_report_date??'')}`,{quality_status:'context'});}
+  if(prev&&typeof prev==='object'){const p=prev as Record<string,unknown>;push('VAL',0,'previous_validation','reports',String(p.previous_report_date??'previous_report'),String(p.previous_market_bias??''),70,'previous_report',`reports:${String(p.previous_report_date??'')}`,{published_at:String(p.previous_report_date??'')||undefined,quality_status:'context'});}
   return out;
 }
 function validateV10EvidenceReferenceArray(value:unknown,path:string,evidenceIds:Set<string>,errors:string[],warnings:string[]):void{if(!Array.isArray(value)){errors.push(`${path} must be an array`);return;}const missingSeen=new Set<string>();for(let i=0;i<value.length;i++){const ref=(value[i]&&typeof value[i]==='object'?value[i]:null) as Record<string,unknown>|null;if(!ref){errors.push(`${path}[${i}] must be an object`);continue;}const id=String(ref.evidence_id??'').trim();if(!id){errors.push(`${path}[${i}].evidence_id must be a non-empty string`);}else if(!evidenceIds.has(id)){errors.push(`${path}[${i}].evidence_id does not exist in evidence_index`);if(missingSeen.has(id))warnings.push(`${path}[${i}].evidence_id repeats a missing evidence reference`);missingSeen.add(id);}validateV10Range(ref.weight,`${path}[${i}].weight`,errors);validateV10Text(ref.purpose,`${path}[${i}].purpose`,errors);}}
@@ -434,12 +463,12 @@ const V10_CANDIDATE_METADATA:Record<string,V10CandidateMetadata>={
   '3083':v10Candidate('網龍','遊戲 / 文化內容','遊戲','GAMING_CONTENT','small',50,['GAMING','CONTENT','CONSUMER'])
 };
 function addV10TagsFromText(tags:Set<string>,text:string):void{const t=text.toUpperCase();const zh=text;const has=(patterns:(string|RegExp)[])=>patterns.some((p)=>typeof p==='string'?t.includes(p.toUpperCase()):p.test(zh));if(has(['AI_SERVER','AI SERVER','NVDA','NVIDIA','GB200','GB300','BLACKWELL','AI伺服器','資料中心','雲端資本支出']))tags.add('AI_SERVER');if(has(['SEMICONDUCTOR','SOX','TSM','TSMC','半導體','晶片','先進製程']))tags.add('SEMICONDUCTOR');if(has(['PCB','CCL','ABF','載板','銅箔基板']))tags.add('PCB_CCL');if(has(['COOLING','散熱','水冷','均熱片']))tags.add('COOLING');if(has(['CPO','OPTICAL','光通訊','高速傳輸','矽光子','800G','1.6T']))tags.add('HIGH_SPEED_OPTICAL');if(has(['MEMORY','DRAM','NAND','記憶體','HBM']))tags.add('MEMORY');if(has(['IC_DESIGN','ASIC','IC設計','矽智財','IP']))tags.add('IC_DESIGN');if(has(['SEMI_EQUIPMENT','CAPEX','設備','材料','先進封裝']))tags.add('SEMI_EQUIPMENT_MATERIALS');if(has(['FINANCIAL','金融','金控','銀行','壽險']))tags.add('FINANCIAL');if(has(['CONSTRUCTION','REAL ESTATE','營建','資產','房市','建材']))tags.add('CONSTRUCTION_ASSET');if(has(['SHIPPING','航運','貨櫃','散裝','運價','紅海']))tags.add('SHIPPING');if(has(['AIRLINE','TOURISM','航空','觀光','旅遊','飯店','餐飲']))tags.add('AIRLINE_TOURISM');if(has(['RETAIL','CONSUMER','百貨','零售','消費','內需','通路']))tags.add('RETAIL_CONSUMER');if(has(['AUTO','EV','汽車','電動車','車用']))tags.add('AUTO_EV');if(has(['GREEN','POWER_GRID','SOLAR','重電','綠能','電網','電線電纜','太陽能','儲能']))tags.add('GREEN_POWER_GRID');if(has(['STEEL','鋼鐵','鋼價']))tags.add('STEEL');if(has(['PETROCHEMICAL','石化','塑化','油價','原油']))tags.add('PETROCHEMICAL');if(has(['CEMENT','水泥']))tags.add('CEMENT');if(has(['FOOD','食品','飼料','民生']))tags.add('FOOD');if(has(['BIOTECH','HEALTHCARE','生技','醫療','製藥','新藥']))tags.add('BIOTECH_HEALTHCARE');if(has(['DEFENSE','DRONE','軍工','無人機','航太','地緣政治']))tags.add('DEFENSE_DRONE');if(has(['CYBER','SECURITY','SOFTWARE','資安','軟體','系統整合']))tags.add('CYBERSECURITY_SOFTWARE');if(has(['GAMING','CONTENT','遊戲','文化內容','IP']))tags.add('GAMING_CONTENT');if(has(['OIL','CRUDE','WTI','原油']))tags.add('OIL');if(has(['FX','DXY','USD','匯率','美元','台幣']))tags.add('FX');if(has(['RATE','US10Y','YIELD','殖利率','利率','FED']))tags.add('RATE');if(has(['TARIFF','關稅','貿易戰']))tags.add('TARIFF');if(has(['POLICY','政策','補助','法規']))tags.add('POLICY');if(has(['GEOPOLITICS','地緣','戰爭','衝突']))tags.add('GEOPOLITICS');if(has(['EARNINGS','財報','法說','指引','營收']))tags.add('EARNINGS');}
-function v10PrimaryEventTags(marketContext:Record<string,unknown>,normalizedNews:Record<string,unknown>[]):string[]{const tags=new Set<string>();const primary=(marketContext.primary_event&&typeof marketContext.primary_event==='object'?marketContext.primary_event:{} ) as Record<string,unknown>;const sym=String(primary.symbol??'').toUpperCase();const event=String(primary.event_type??'').toUpperCase();if(event&&event!=='OTHER')tags.add(event);if(sym){if(['SOX','TSM','NVDA','2330'].includes(sym))tags.add('SEMICONDUCTOR');if(['NVDA','MSFT','META','AMZN'].includes(sym))tags.add('AI_SERVER');if(['VIX'].includes(sym))tags.add('RISK');if(['DXY'].includes(sym))tags.add('FX');if(['US10Y'].includes(sym))tags.add('RATE');if(['CRUDE OIL'].includes(sym))tags.add('OIL');if(['TAIEX','TXF','SPX','NASDAQ','DJIA'].includes(sym))tags.add('ELECTRONIC_BLUE_CHIP');tags.add(sym);}addV10TagsFromText(tags,JSON.stringify(primary));for(const n of normalizedNews.slice(0,6)){const et=String(n.event_type??'').toUpperCase();if(et&&et!=='OTHER')tags.add(et);addV10TagsFromText(tags,[n.topic,n.representative_summary,...(Array.isArray(n.related_sectors)?n.related_sectors:[]),...(Array.isArray(n.related_markets)?n.related_markets:[])].filter(Boolean).join(' '));}return Array.from(tags);}
+function v10PrimaryEventTags(marketContext:Record<string,unknown>,normalizedNews:Record<string,unknown>[]):string[]{const tags=new Set<string>();const primary=(marketContext.primary_event&&typeof marketContext.primary_event==='object'?marketContext.primary_event:{} ) as Record<string,unknown>;const sym=String(primary.symbol??'').toUpperCase();const event=String(primary.event_type??'').toUpperCase();if(event&&event!=='OTHER')tags.add(event);if(sym){if(['SOX','TSM','NVDA','2330'].includes(sym))tags.add('SEMICONDUCTOR');if(['NVDA','MSFT','META','AMZN'].includes(sym))tags.add('AI_SERVER');if(['VIX'].includes(sym))tags.add('RISK');if(['DXY'].includes(sym))tags.add('FX');if(['US10Y'].includes(sym))tags.add('RATE');if(['CRUDE OIL'].includes(sym))tags.add('OIL');if(['TAIEX','TXF','SPX','NASDAQ','DJIA'].includes(sym))tags.add('ELECTRONIC_BLUE_CHIP');tags.add(sym);}const primaryDirection=String(primary.direction??'').toUpperCase();const primaryChange=Number(primary.change_percent);if(primaryDirection==='DOWN'&&Number.isFinite(primaryChange)&&primaryChange<=-1)tags.add('DEFENSIVE');addV10TagsFromText(tags,JSON.stringify(primary));for(const n of normalizedNews.slice(0,6)){const et=String(n.event_type??'').toUpperCase();if(et&&et!=='OTHER')tags.add(et);addV10TagsFromText(tags,[n.topic,n.representative_summary,...(Array.isArray(n.related_sectors)?n.related_sectors:[]),...(Array.isArray(n.related_markets)?n.related_markets:[])].filter(Boolean).join(' '));}return Array.from(tags);}
 function extractV10HistoricalSymbols(report:Record<string,unknown>):string[]{const json=(report.ai_strategy_json&&typeof report.ai_strategy_json==='object'?report.ai_strategy_json:{} ) as Record<string,unknown>;const buckets=[json.today_beneficiary_stocks,json.beneficiary_stocks,json.core_beneficiary_stocks];const out:string[]=[];for(const bucket of buckets){if(!Array.isArray(bucket))continue;for(const item of bucket){if(!item||typeof item!=='object')continue;const r=item as Record<string,unknown>;const symbol=String(r.ticker??r.symbol??'').trim();if(symbol)out.push(symbol);}}return Array.from(new Set(out));}
 function calculateRepeatPenalty(symbol:string,recentReports:Record<string,unknown>[]):{historical_repeat_days:number;repeat_penalty:number}{let repeat=0;for(const report of recentReports.slice(0,14)){if(extractV10HistoricalSymbols(report).includes(symbol))repeat++;}const last3=recentReports.slice(0,3).filter((r)=>extractV10HistoricalSymbols(r).includes(symbol)).length;const penalty=Math.min(100,repeat*8+last3*12);return {historical_repeat_days:repeat,repeat_penalty:penalty};}
-function buildV10EvidenceRefsForTags(tags:string[],evidenceIndex:V10EvidenceItem[]):V10EvidenceReference[]{const refs:V10EvidenceReference[]=[];for(const item of evidenceIndex){const text=[item.title,item.summary,item.evidence_type].join(' ').toUpperCase();if(tags.some((tag)=>text.includes(tag))){refs.push({evidence_id:item.evidence_id,weight:Math.min(100,Math.max(10,item.importance)),purpose:'primary_support'});}if(refs.length>=4)break;}return refs;}
-function buildCandidateUniverse(args:{normalizedEvidence:Record<string,unknown>;evidenceIndex:V10EvidenceItem[];recentReports:Record<string,unknown>[]}):{enabled:false;candidate_count:number;primary_event:string;candidates:V10CandidateCard[];validation:V10ContractValidationResult}{const normalizedNews=Array.isArray(args.normalizedEvidence.normalized_news)?args.normalizedEvidence.normalized_news as Record<string,unknown>[]:[];const marketContext=(args.normalizedEvidence.market_context&&typeof args.normalizedEvidence.market_context==='object'?args.normalizedEvidence.market_context:{} ) as Record<string,unknown>;const primary=(marketContext.primary_event&&typeof marketContext.primary_event==='object'?marketContext.primary_event:{} ) as Record<string,unknown>;const tags=v10PrimaryEventTags(marketContext,normalizedNews);const candidates:V10CandidateCard[]=[];for(const [symbol,meta] of Object.entries(V10_CANDIDATE_METADATA)){if(!meta.tags.some((tag)=>tags.includes(tag)))continue;const repeats=calculateRepeatPenalty(symbol,args.recentReports);const whitelistOk=TW_STOCK_WHITELIST.has(symbol);const liquidityOk=meta.liquidity_score>=50;const eligibility=whitelistOk&&liquidityOk;const excluded_reason=whitelistOk?(liquidityOk?'':'Low Liquidity'):'Not In Whitelist';candidates.push({symbol,name:meta.name,sector:meta.sector,industry:meta.industry,industry_code:meta.industry_code,market_cap_bucket:meta.market_cap_bucket,liquidity_score:meta.liquidity_score,trigger_tags:meta.tags.filter((tag)=>tags.includes(tag)),related_evidence:buildV10EvidenceRefsForTags(meta.tags,args.evidenceIndex),historical_repeat_days:repeats.historical_repeat_days,repeat_penalty:repeats.repeat_penalty,eligibility,excluded_reason});}const unique=Array.from(new Map(candidates.map((c)=>[c.symbol,c])).values());const universe:{enabled:false;candidate_count:number;primary_event:string;candidates:V10CandidateCard[];validation:V10ContractValidationResult}={enabled:false,candidate_count:unique.length,primary_event:String(primary.event_type??primary.symbol??tags[0]??'UNKNOWN'),candidates:unique,validation:{is_valid:true,errors:[],warnings:[]}};universe.validation=validateCandidateUniverse(universe,args.evidenceIndex);return universe;}
-function validateCandidateUniverse(universe:unknown,evidenceIndex:V10EvidenceItem[]):V10ContractValidationResult{const errors:string[]=[],warnings:string[]=[];const ids=new Set(evidenceIndex.map((item)=>item.evidence_id));const seen=new Set<string>();const u=(universe&&typeof universe==='object'?universe:{} ) as Record<string,unknown>;const candidates=Array.isArray(u.candidates)?u.candidates:[];if(!Array.isArray(u.candidates))errors.push('candidate_universe.candidates must be an array');for(let i=0;i<candidates.length;i++){const c=(candidates[i]&&typeof candidates[i]==='object'?candidates[i]:null) as Record<string,unknown>|null;if(!c){errors.push(`candidates[${i}] must be an object`);continue;}const symbol=String(c.symbol??'').trim();if(!symbol)errors.push(`candidates[${i}].symbol is required`);if(seen.has(symbol))errors.push(`candidates[${i}].symbol duplicates another candidate`);seen.add(symbol);const whitelistOk=TW_STOCK_WHITELIST.has(symbol);if(!whitelistOk&&c.eligibility!==false)errors.push(`candidates[${i}].symbol outside whitelist must be ineligible`);if(!Array.isArray(c.trigger_tags))errors.push(`candidates[${i}].trigger_tags must be an array`);validateV10Range(c.liquidity_score,`candidates[${i}].liquidity_score`,errors);validateV10Range(c.repeat_penalty,`candidates[${i}].repeat_penalty`,errors);if(typeof c.eligibility!=='boolean')errors.push(`candidates[${i}].eligibility must be boolean`);if(c.eligibility===false&&String(c.excluded_reason??'').trim().length===0)warnings.push(`candidates[${i}].excluded_reason should explain ineligibility`);validateV10EvidenceReferenceArray(c.related_evidence,`candidates[${i}].related_evidence`,ids,errors,warnings);}return {is_valid:errors.length===0,errors,warnings};}
+function buildV10EvidenceRefsForTags(tags:string[],evidenceIndex:V10EvidenceItem[]):V10EvidenceReference[]{const refs:V10EvidenceReference[]=[];for(const item of evidenceIndex){const relevance=candidateEvidenceRelevance(tags,item);if(relevance==='direct'||relevance==='approved_bridge'){const relevanceMultiplier=relevance==='direct'?1:0.85;refs.push({evidence_id:item.evidence_id,weight:Math.min(100,Math.max(10,Math.round(item.importance*relevanceMultiplier))),purpose:relevance==='direct'?'direct_industry_support':'approved_supply_chain_bridge'});}if(refs.length>=4)break;}return refs;}
+function buildCandidateUniverse(args:{normalizedEvidence:Record<string,unknown>;evidenceIndex:V10EvidenceItem[];recentReports:Record<string,unknown>[]}):{enabled:false;candidate_count:number;primary_event:string;candidates:V10CandidateCard[];validation:V10ContractValidationResult}{const normalizedNews=Array.isArray(args.normalizedEvidence.normalized_news)?args.normalizedEvidence.normalized_news as Record<string,unknown>[]:[];const marketContext=(args.normalizedEvidence.market_context&&typeof args.normalizedEvidence.market_context==='object'?args.normalizedEvidence.market_context:{} ) as Record<string,unknown>;const primary=(marketContext.primary_event&&typeof marketContext.primary_event==='object'?marketContext.primary_event:{} ) as Record<string,unknown>;const tags=v10PrimaryEventTags(marketContext,normalizedNews);const candidates:V10CandidateCard[]=[];for(const [symbol,meta] of Object.entries(V10_CANDIDATE_METADATA)){if(!meta.tags.some((tag)=>tags.includes(tag)))continue;const repeats=calculateRepeatPenalty(symbol,args.recentReports);const whitelistOk=TW_STOCK_WHITELIST.has(symbol);const liquidityOk=meta.liquidity_score>=50;const candidateEvidenceTags=[symbol,meta.name,meta.industry_code,...meta.tags];const companyEvidence=args.evidenceIndex.filter((item)=>companyEvidenceSupported({symbol,name:meta.name,aliases:symbol==='2317'?['Hon Hai','Foxconn']:symbol==='2330'?['Taiwan Semiconductor','TSMC']:[]},{...item}));const relatedEvidence=buildV10EvidenceRefsForTags(candidateEvidenceTags,[...companyEvidence,...args.evidenceIndex.filter((item)=>!companyEvidence.includes(item))]);const companyEvidenceOk=companyEvidence.some((item)=>relatedEvidence.some((ref)=>ref.evidence_id===item.evidence_id));const evidenceOk=relatedEvidence.length>0&&companyEvidenceOk;const eligibility=whitelistOk&&liquidityOk&&evidenceOk;const excluded_reason=!whitelistOk?'Not In Whitelist':!liquidityOk?'Low Liquidity':!evidenceOk?'No Company-Specific Source Evidence':'';candidates.push({symbol,name:meta.name,sector:meta.sector,industry:meta.industry,industry_code:meta.industry_code,market_cap_bucket:meta.market_cap_bucket,liquidity_score:meta.liquidity_score,trigger_tags:meta.tags.filter((tag)=>tags.includes(tag)),related_evidence:relatedEvidence,historical_repeat_days:repeats.historical_repeat_days,repeat_penalty:repeats.repeat_penalty,eligibility,excluded_reason});}const unique=Array.from(new Map(candidates.map((c)=>[c.symbol,c])).values());const universe:{enabled:false;candidate_count:number;primary_event:string;candidates:V10CandidateCard[];validation:V10ContractValidationResult}={enabled:false,candidate_count:unique.length,primary_event:String(primary.event_type??primary.symbol??tags[0]??'UNKNOWN'),candidates:unique,validation:{is_valid:true,errors:[],warnings:[]}};universe.validation=validateCandidateUniverse(universe,args.evidenceIndex);return universe;}
+function validateCandidateUniverse(universe:unknown,evidenceIndex:V10EvidenceItem[]):V10ContractValidationResult{const errors:string[]=[],warnings:string[]=[];const ids=new Set(evidenceIndex.map((item)=>item.evidence_id));const seen=new Set<string>();const u=(universe&&typeof universe==='object'?universe:{} ) as Record<string,unknown>;const candidates=Array.isArray(u.candidates)?u.candidates:[];if(!Array.isArray(u.candidates))errors.push('candidate_universe.candidates must be an array');for(let i=0;i<candidates.length;i++){const c=(candidates[i]&&typeof candidates[i]==='object'?candidates[i]:null) as Record<string,unknown>|null;if(!c){errors.push(`candidates[${i}] must be an object`);continue;}const symbol=String(c.symbol??'').trim();if(!symbol)errors.push(`candidates[${i}].symbol is required`);if(seen.has(symbol))errors.push(`candidates[${i}].symbol duplicates another candidate`);seen.add(symbol);const whitelistOk=TW_STOCK_WHITELIST.has(symbol);if(!whitelistOk&&c.eligibility!==false)errors.push(`candidates[${i}].symbol outside whitelist must be ineligible`);if(!Array.isArray(c.trigger_tags))errors.push(`candidates[${i}].trigger_tags must be an array`);validateV10Range(c.liquidity_score,`candidates[${i}].liquidity_score`,errors);validateV10Range(c.repeat_penalty,`candidates[${i}].repeat_penalty`,errors);if(typeof c.eligibility!=='boolean')errors.push(`candidates[${i}].eligibility must be boolean`);if(c.eligibility===true&&(!Array.isArray(c.related_evidence)||c.related_evidence.length===0))errors.push(`candidates[${i}].eligible candidate must have traceable evidence`);if(c.eligibility===false&&String(c.excluded_reason??'').trim().length===0)warnings.push(`candidates[${i}].excluded_reason should explain ineligibility`);validateV10EvidenceReferenceArray(c.related_evidence,`candidates[${i}].related_evidence`,ids,errors,warnings);}return {is_valid:errors.length===0,errors,warnings};}
 
 
 type V10EvidenceDirection='positive'|'negative'|'neutral';
@@ -453,10 +482,125 @@ function v10ConfidenceLevelFromSignals(eventScore:number,sectorScore:number,evid
 function v10EvidenceItemById(evidenceIndex:V10EvidenceItem[]):Map<string,V10EvidenceItem>{return new Map(evidenceIndex.map((item)=>[item.evidence_id,item]));}
 function v10ParseEvidenceMarketDirection(item:V10EvidenceItem):V10EvidenceDirection{const text=`${item.title} ${item.summary}`.toUpperCase();if(/\bDOWN\b|跌|下跌|重挫|承壓|利空/.test(text))return 'negative';if(/\bUP\b|漲|上漲|走強|利多/.test(text))return 'positive';const match=text.match(/(-?\d+(?:\.\d+)?)%/);if(match){const n=Number(match[1]);if(Number.isFinite(n)){if(n>0.25)return 'positive';if(n<-0.25)return 'negative';}}return 'neutral';}
 function v10IndustryRelevantTags(industryCode:string):Set<string>{const map:Record<string,string[]>={FINANCIAL:['FX','RATE','DXY','US10Y','FINANCIAL'],ELECTRONIC_BLUE_CHIP:['2330','TSM','TSM_ADR','SOX','NVDA','NASDAQ','IXIC','SEMICONDUCTOR','ELECTRONIC_BLUE_CHIP','AI_SERVER'],AI_SERVER:['NVDA','AI_SERVER','SOX','MSFT','META','AMZN'],SHIPPING:['OIL','FREIGHT','SHIPPING','GEOPOLITICS','TARIFF'],PETROCHEMICAL:['OIL','PETROCHEMICAL','COMMODITY'],PCB_CCL:['PCB','CCL','AI_SERVER','SEMICONDUCTOR'],COOLING:['COOLING','AI_SERVER','NVDA'],IC_DESIGN:['IC_DESIGN','SEMICONDUCTOR','SOX'],MEMORY:['MEMORY','SEMICONDUCTOR'],SEMI_EQUIPMENT_MATERIALS:['SEMI_EQUIPMENT','SEMICONDUCTOR','CAPEX','MATERIALS'],AIRLINE_TOURISM:['AIRLINE','TOURISM','OIL','FX','CONSUMER'],AUTO_EV:['AUTO_EV','EV','CONSUMER','POLICY'],GREEN_POWER_GRID:['GREEN_ENERGY','POWER_GRID','POLICY','INFRASTRUCTURE'],STEEL:['STEEL','COMMODITY','CONSTRUCTION','TARIFF'],CONSTRUCTION_ASSET:['CONSTRUCTION','RATE','POLICY','ASSET'],RETAIL_CONSUMER:['RETAIL','CONSUMER','DEFENSIVE','FX'],FOOD:['FOOD','CONSUMER','DEFENSIVE'],BIOTECH_HEALTHCARE:['BIOTECH','HEALTHCARE','POLICY','EARNINGS'],DEFENSE_DRONE:['DEFENSE','DRONE','GEOPOLITICS','POLICY'],CYBERSECURITY_SOFTWARE:['CYBER_SECURITY','SOFTWARE','POLICY'],GAMING_CONTENT:['GAMING','CONTENT','CONSUMER'],CEMENT:['CEMENT','CONSTRUCTION','POLICY']};return new Set(map[industryCode]??[industryCode]);}
-function v10EvidenceDirectionForCandidate(candidate:V10CandidateCard,item:V10EvidenceItem):V10EvidenceDirection{const base=v10ParseEvidenceMarketDirection(item);const title=item.title.toUpperCase();const industry=candidate.industry_code;const negativeForElectronics=['ELECTRONIC_BLUE_CHIP','AI_SERVER','PCB_CCL','COOLING','HIGH_SPEED_OPTICAL','MEMORY','IC_DESIGN','SEMI_EQUIPMENT_MATERIALS'];if(negativeForElectronics.includes(industry)&&['SOX','NVDA','TSM','NASDAQ','IXIC','2330'].some((key)=>title.includes(key)))return base;if(industry==='FINANCIAL'&&['DXY','US10Y'].some((key)=>title.includes(key))){if(base==='positive')return 'positive';if(base==='negative')return 'negative';return 'neutral';}if(industry==='SHIPPING'&&/(OIL|CRUDE|CL)/.test(title)){if(base==='negative')return 'positive';if(base==='positive')return 'negative';return 'neutral';}if(industry==='PETROCHEMICAL'&&/(OIL|CRUDE|CL)/.test(title))return base;if(item.evidence_type==='market_news'){const text=`${item.title} ${item.summary}`.toLowerCase();if(/risk|風險|tariff|關稅|war|跌|下修|miss|weak|利空/.test(text))return 'negative';if(/beat|strong|成長|上修|利多|policy|補助/.test(text))return 'positive';}return base==='negative'?'negative':base==='positive'?'positive':'neutral';}
+function v10EvidenceDirectionForCandidate(candidate:V10CandidateCard,item:V10EvidenceItem):V10EvidenceDirection{const base=v10ParseEvidenceMarketDirection(item);const title=item.title.toUpperCase();const industry=candidate.industry_code;const metadata=V10_CANDIDATE_METADATA[candidate.symbol];const defensive=Boolean(metadata?.tags.includes('DEFENSIVE'));const semanticTags=evidenceSemanticTags(item);if(defensive&&semanticTags.has('MARKET_RISK')){if(title==='VIX'&&base==='positive')return 'neutral';if(base==='negative')return 'neutral';if(base==='positive')return 'negative';return 'neutral';}const negativeForElectronics=['ELECTRONIC_BLUE_CHIP','AI_SERVER','PCB_CCL','COOLING','HIGH_SPEED_OPTICAL','MEMORY','IC_DESIGN','SEMI_EQUIPMENT_MATERIALS'];if(negativeForElectronics.includes(industry)&&['SOX','NVDA','TSM','NASDAQ','IXIC','2330'].some((key)=>title.includes(key)))return base;if(industry==='FINANCIAL'&&['DXY','US10Y'].some((key)=>title.includes(key))){if(base==='positive')return 'positive';if(base==='negative')return 'negative';return 'neutral';}if(industry==='CONSTRUCTION_ASSET'&&item.evidence_type==='market_news'&&/RATE HIKE|INFLATION.*HIGH|升息|通膨.*高/i.test(`${item.title} ${item.summary}`))return 'negative';if(industry==='SHIPPING'&&/(OIL|CRUDE|CL)/.test(title)){if(base==='negative')return 'positive';if(base==='positive')return 'negative';return 'neutral';}if(industry==='PETROCHEMICAL'&&/(OIL|CRUDE|CL)/.test(title))return base;if(item.evidence_type==='market_news'){const text=`${item.title} ${item.summary}`.toLowerCase();if(/risk|風險|tariff|關稅|war|跌|下修|miss|weak|利空/.test(text))return 'negative';if(/beat|strong|成長|上修|利多|policy|補助/.test(text))return 'positive';}return base==='negative'?'negative':base==='positive'?'positive':'neutral';}
 function v10NetEvidenceDirection(directions:V10EvidenceDirection[]):V10EvidenceDirection{const positive=directions.filter((d)=>d==='positive').length;const negative=directions.filter((d)=>d==='negative').length;if(negative>positive)return 'negative';if(positive>negative)return 'positive';return 'neutral';}
 function v10CandidateEventLabel(candidate:V10CandidateCard,refs:V10EvidenceReference[],evidenceIndex:V10EvidenceItem[]):string{const byId=v10EvidenceItemById(evidenceIndex);const allowed=v10IndustryRelevantTags(candidate.industry_code);const matched:V10EvidenceItem[]=[];for(const ref of refs){const item=byId.get(ref.evidence_id);if(!item)continue;const text=`${item.title} ${item.summary}`.toUpperCase();if(candidate.trigger_tags.some((tag)=>text.includes(tag))||Array.from(allowed).some((tag)=>text.includes(tag)))matched.push(item);}return matched[0]?.title||candidate.trigger_tags.find((tag)=>allowed.has(tag))||candidate.industry_code;}
-function calculateV10BeneficiaryPhase1Record(candidate:V10CandidateCard,evidenceIndex:V10EvidenceItem[],primaryEvent:string):V10BeneficiaryPhase1Record{const refs=Array.isArray(candidate.related_evidence)?candidate.related_evidence:[];const byId=v10EvidenceItemById(evidenceIndex);const evidenceSources=refs.map((ref)=>byId.get(ref.evidence_id)).filter(Boolean).map((item)=>`${(item as V10EvidenceItem).title}｜${(item as V10EvidenceItem).raw_reference||'evidence'}`).filter(Boolean);const evidenceTypes=v10EvidenceTypesForRefs(refs,evidenceIndex);const directions=refs.map((ref)=>byId.get(ref.evidence_id)).filter(Boolean).map((item)=>v10EvidenceDirectionForCandidate(candidate,item as V10EvidenceItem));const positive_evidence_count=directions.filter((d)=>d==='positive').length;const negative_evidence_count=directions.filter((d)=>d==='negative').length;const net_evidence_direction=v10NetEvidenceDirection(directions);const rawEventScore=v10ClampScore(refs.length>0?v10AverageEvidenceWeight(refs):0);const directional_event_score=v10ClampScore(net_evidence_direction==='positive'?rawEventScore:net_evidence_direction==='negative'?rawEventScore*0.25:rawEventScore*0.6);const sector_score=v10ClampScore((candidate.trigger_tags.length>0?55:0)+(evidenceTypes.has('sector_rotation')?30:0)+(candidate.industry_code&&primaryEvent.includes(candidate.industry_code)?15:0));const evidence_score=v10ClampScore(Math.min(100,refs.length*22+evidenceTypes.size*10));const market_score=v10ClampScore(candidate.liquidity_score);const repeat_penalty=v10ClampScore(candidate.repeat_penalty);const directionPenalty=net_evidence_direction==='negative'?22:0;const total_score=v10ClampScore(directional_event_score*0.30+sector_score*0.25+evidence_score*0.20+market_score*0.15-repeat_penalty-directionPenalty);const confidence_level=v10ConfidenceLevelFromSignals(directional_event_score,sector_score,evidence_score,market_score,refs.length>0,net_evidence_direction);const eventLabel=v10CandidateEventLabel(candidate,refs,evidenceIndex);const benefit_chain=[eventLabel&&eventLabel!=='UNKNOWN'?`事件：${eventLabel}`:'事件：尚未明確',candidate.trigger_tags.length?`觸發標籤：${candidate.trigger_tags.filter((tag)=>v10IndustryRelevantTags(candidate.industry_code).has(tag)||refs.some((ref)=>String(byId.get(ref.evidence_id)?.title??'').toUpperCase().includes(tag))).join(', ')||candidate.trigger_tags.join(', ')}`:'觸發標籤：不足',`產業：${candidate.industry_code}`,`台灣供應鏈：${candidate.industry}`,`${candidate.symbol} ${candidate.name}`];const signalCount=[directional_event_score>=50,sector_score>=55,evidence_score>=40,market_score>=50].filter(Boolean).length;const risk_flags=[...(net_evidence_direction==='negative'?['negative_evidence_blocks_high_beneficiary','exclude_from_top3_strong_beneficiary']:[]),...(negative_evidence_count>0?[`negative_evidence_count=${negative_evidence_count}`]:[])];const scoring_reasons=[`event_score=${rawEventScore}`,`directional_event_score=${directional_event_score}`,`sector_score=${sector_score}`,`evidence_score=${evidence_score}`,`market_score=${market_score}`,`repeat_penalty=${repeat_penalty}`,`positive_evidence_count=${positive_evidence_count}`,`negative_evidence_count=${negative_evidence_count}`,`net_evidence_direction=${net_evidence_direction}`,`confidence_signals_passed=${signalCount}`,refs.length>0?`evidence_refs=${refs.map((ref)=>ref.evidence_id).join(',')}`:'evidence_refs=none',...(risk_flags.length?[`risk_flags=${risk_flags.join(',')}`]:[])];return {symbol:candidate.symbol,name:candidate.name,industry_code:candidate.industry_code,industry_name:candidate.sector,company_role:candidate.industry,trigger_event:eventLabel,evidence_sources:evidenceSources,rank:0,event_score:rawEventScore,directional_event_score,sector_score,evidence_score,market_score,repeat_penalty,total_score,confidence_level,positive_evidence_count,negative_evidence_count,net_evidence_direction,risk_flags,benefit_chain,scoring_reasons,data_quality_status:refs.length>0?'sufficient':'insufficient'};}
+function calculateV10BeneficiaryPhase1Record(
+  candidate: V10CandidateCard,
+  evidenceIndex: V10EvidenceItem[],
+  primaryEvent: string,
+): V10BeneficiaryPhase1Record {
+  const refs = Array.isArray(candidate.related_evidence) ? candidate.related_evidence : [];
+  const byId = v10EvidenceItemById(evidenceIndex);
+  const evidenceSources = refs.map((ref) => byId.get(ref.evidence_id)).filter(Boolean)
+    .map((item) => `${(item as V10EvidenceItem).title}｜${(item as V10EvidenceItem).raw_reference || 'evidence'}`)
+    .filter(Boolean);
+  const evidenceTypes = v10EvidenceTypesForRefs(refs, evidenceIndex);
+  const directions = refs.map((ref) => byId.get(ref.evidence_id)).filter(Boolean)
+    .map((item) => v10EvidenceDirectionForCandidate(candidate, item as V10EvidenceItem));
+  const positive_evidence_count = directions.filter((direction) => direction === 'positive').length;
+  const negative_evidence_count = directions.filter((direction) => direction === 'negative').length;
+  const net_evidence_direction = v10NetEvidenceDirection(directions);
+  const rawEventScore = v10ClampScore(refs.length > 0 ? v10AverageEvidenceWeight(refs) : 0);
+  const directional_event_score = v10ClampScore(
+    net_evidence_direction === 'positive'
+      ? rawEventScore
+      : net_evidence_direction === 'negative'
+        ? rawEventScore * 0.25
+        : rawEventScore * 0.6,
+  );
+  const sector_score = v10ClampScore(
+    (candidate.trigger_tags.length > 0 ? 55 : 0)
+      + (evidenceTypes.has('sector_rotation') ? 30 : 0)
+      + (candidate.industry_code && primaryEvent.includes(candidate.industry_code) ? 15 : 0),
+  );
+  const evidence_score = v10ClampScore(Math.min(100, refs.length * 22 + evidenceTypes.size * 10));
+  const market_score = v10ClampScore(candidate.liquidity_score);
+  const repeat_penalty = v10ClampScore(candidate.repeat_penalty);
+  const repeatPenaltyContribution = candidateRepeatPenaltyContribution(repeat_penalty);
+  const directionPenalty = net_evidence_direction === 'negative' ? 22 : 0;
+  const total_score = v10ClampScore(
+    directional_event_score * 0.30
+      + sector_score * 0.25
+      + evidence_score * 0.20
+      + market_score * 0.15
+      - repeatPenaltyContribution
+      - directionPenalty,
+  );
+  const confidence_level = v10ConfidenceLevelFromSignals(
+    directional_event_score,
+    sector_score,
+    evidence_score,
+    market_score,
+    refs.length > 0,
+    net_evidence_direction,
+  );
+  const eventLabel = v10CandidateEventLabel(candidate, refs, evidenceIndex);
+  const benefit_chain = [
+    eventLabel && eventLabel !== 'UNKNOWN' ? `事件：${eventLabel}` : '事件：尚未明確',
+    candidate.trigger_tags.length
+      ? `觸發標籤：${candidate.trigger_tags.filter((tag) =>
+        v10IndustryRelevantTags(candidate.industry_code).has(tag)
+        || refs.some((ref) => String(byId.get(ref.evidence_id)?.title ?? '').toUpperCase().includes(tag))
+      ).join(', ') || candidate.trigger_tags.join(', ')}`
+      : '觸發標籤：不足',
+    `產業：${candidate.industry_code}`,
+    `台灣供應鏈：${candidate.industry}`,
+    `${candidate.symbol} ${candidate.name}`,
+  ];
+  const signalCount = [
+    directional_event_score >= 50,
+    sector_score >= 55,
+    evidence_score >= 40,
+    market_score >= 50,
+  ].filter(Boolean).length;
+  const risk_flags = [
+    ...(net_evidence_direction === 'negative'
+      ? ['negative_evidence_blocks_high_beneficiary', 'exclude_from_top3_strong_beneficiary']
+      : []),
+    ...(negative_evidence_count > 0 ? [`negative_evidence_count=${negative_evidence_count}`] : []),
+  ];
+  const scoring_reasons = [
+    `event_score=${rawEventScore}`,
+    `directional_event_score=${directional_event_score}`,
+    `sector_score=${sector_score}`,
+    `evidence_score=${evidence_score}`,
+    `market_score=${market_score}`,
+    `repeat_penalty=${repeat_penalty}`,
+    `repeat_penalty_contribution=${repeatPenaltyContribution}`,
+    `positive_evidence_count=${positive_evidence_count}`,
+    `negative_evidence_count=${negative_evidence_count}`,
+    `net_evidence_direction=${net_evidence_direction}`,
+    `confidence_signals_passed=${signalCount}`,
+    refs.length > 0 ? `evidence_refs=${refs.map((ref) => ref.evidence_id).join(',')}` : 'evidence_refs=none',
+    ...(risk_flags.length ? [`risk_flags=${risk_flags.join(',')}`] : []),
+  ];
+  return {
+    symbol: candidate.symbol,
+    name: candidate.name,
+    industry_code: candidate.industry_code,
+    industry_name: candidate.sector,
+    company_role: candidate.industry,
+    trigger_event: eventLabel,
+    evidence_sources: evidenceSources,
+    rank: 0,
+    event_score: rawEventScore,
+    directional_event_score,
+    sector_score,
+    evidence_score,
+    market_score,
+    repeat_penalty,
+    total_score,
+    confidence_level,
+    positive_evidence_count,
+    negative_evidence_count,
+    net_evidence_direction,
+    risk_flags,
+    benefit_chain,
+    scoring_reasons,
+    data_quality_status: refs.length > 0 ? 'sufficient' : 'insufficient',
+  };
+}
 function buildV10DiverseTopCandidates(records:V10BeneficiaryPhase1Record[],limit=5):V10BeneficiaryPhase1Record[]{const selected:V10BeneficiaryPhase1Record[]=[];const counts:Record<string,number>={};const firstIndustry=records[0]?.industry_code??'';const firstIndustryTop10Count=records.slice(0,10).filter((record)=>record.industry_code===firstIndustry&&record.data_quality_status==='sufficient').length;const concentratedIndustry=firstIndustry&&firstIndustryTop10Count>=4?firstIndustry:'';for(const record of records){if(selected.length>=limit)break;const current=counts[record.industry_code]??0;const maxForIndustry=record.industry_code===concentratedIndustry?3:2;if(current>=maxForIndustry)continue;const next={...record,scoring_reasons:[...record.scoring_reasons]};if(record.industry_code===concentratedIndustry&&maxForIndustry===3)next.scoring_reasons.push(`sector_diversity_guard=primary_industry_concentration_allow_3:${record.industry_code}`);else next.scoring_reasons.push('sector_diversity_guard=max_2_per_industry');selected.push(next);counts[record.industry_code]=current+1;}return selected;}
 function v11ObservationIndustryTheme(industryCode:string):string{const map:Record<string,string>={FINANCIAL:'金融接棒',ELECTRONIC_BLUE_CHIP:'電子權值止跌',AI_SERVER:'AI 伺服器止跌',PETROCHEMICAL:'油價與塑化利差',SHIPPING:'油價與航運成本',CONSTRUCTION_ASSET:'資產與利率敏感',RETAIL_CONSUMER:'內需消費',GREEN_POWER_GRID:'政策與電網題材',PCB_CCL:'AI 供應鏈材料',COOLING:'AI 散熱鏈',HIGH_SPEED_OPTICAL:'高速傳輸需求',MEMORY:'記憶體報價',IC_DESIGN:'IC 設計族群',SEMI_EQUIPMENT_MATERIALS:'半導體設備材料',AUTO_EV:'車用與電動車',STEEL:'鋼價與關稅',CEMENT:'營建需求',FOOD:'民生防禦',BIOTECH_HEALTHCARE:'醫療題材',DEFENSE_DRONE:'軍工無人機',CYBERSECURITY_SOFTWARE:'資安軟體',GAMING_CONTENT:'遊戲內容'};return map[industryCode]??industryCode;}
 function v11ConfirmationReason(candidate:V10CandidateCard,netDirection:V10EvidenceDirection,positive:number,negative:number):string{const theme=v11ObservationIndustryTheme(candidate.industry_code);if(netDirection==='positive'&&positive<=negative+1)return `${theme}已有初步訊號，但還需要 09:30 / 10:30 盤中資金確認。`;if(netDirection==='neutral')return `${theme}與今日主線有關，但尚缺 09:30、10:30 或 13:00 的資金確認。`;return `${theme}目前訊號偏弱，不列入觀察名單。`;}
@@ -584,7 +728,55 @@ function buildV11ObservationNarrativeRoles(input:{legacyObservation:Record<strin
   }
 }
 function validateV10BeneficiaryPhase1(records:V10BeneficiaryPhase1Record[],candidateUniverse:Record<string,unknown>):V10ContractValidationResult{const errors:string[]=[],warnings:string[]=[];const candidates=Array.isArray(candidateUniverse.candidates)?candidateUniverse.candidates as V10CandidateCard[]:[];const allowed=new Set(candidates.map((c)=>String(c.symbol??'')).filter(Boolean));const ranks=new Set<number>();for(let i=0;i<records.length;i++){const r=records[i];if(!r.symbol)errors.push(`today_beneficiary_stocks_v10[${i}].symbol is required`);if(r.symbol&&!allowed.has(r.symbol))errors.push(`today_beneficiary_stocks_v10[${i}].symbol is outside candidate_universe`);if(!TW_STOCK_WHITELIST.has(r.symbol))errors.push(`today_beneficiary_stocks_v10[${i}].symbol is outside whitelist`);validateV10Range(r.total_score,`today_beneficiary_stocks_v10[${i}].total_score`,errors);if(!Number.isInteger(r.rank)||r.rank<1)errors.push(`today_beneficiary_stocks_v10[${i}].rank must be positive integer`);if(ranks.has(r.rank))errors.push(`today_beneficiary_stocks_v10[${i}].rank duplicates another rank`);ranks.add(r.rank);if(!r.industry_code)errors.push(`today_beneficiary_stocks_v10[${i}].industry_code is required`);if(!Array.isArray(r.benefit_chain)||r.benefit_chain.length===0)warnings.push(`today_beneficiary_stocks_v10[${i}].benefit_chain is empty`);if(!Array.isArray(r.scoring_reasons)||r.scoring_reasons.length===0)warnings.push(`today_beneficiary_stocks_v10[${i}].scoring_reasons is empty`);}return {is_valid:errors.length===0,errors,warnings};}
-function buildV10BeneficiaryPhase1(candidateUniverse:Record<string,unknown>,evidenceIndex:V10EvidenceItem[]):V10BeneficiaryPhase1Output{const candidates=Array.isArray(candidateUniverse.candidates)?candidateUniverse.candidates as V10CandidateCard[]:[];const eligible=candidates.filter((candidate)=>candidate.eligibility!==false);const primaryEvent=String(candidateUniverse.primary_event??'UNKNOWN');const scored=eligible.map((candidate)=>calculateV10BeneficiaryPhase1Record(candidate,evidenceIndex,primaryEvent)).sort((a,b)=>b.total_score-a.total_score||b.evidence_score-a.evidence_score||a.repeat_penalty-b.repeat_penalty).map((record,index)=>({...record,rank:index+1}));const toOutputRecord=(record:V10BeneficiaryPhase1Record)=>({symbol:record.symbol,name:record.name,industry_code:record.industry_code,industry_name:record.industry_name,rank:record.rank,total_score:record.total_score,confidence_level:record.confidence_level,directional_event_score:record.directional_event_score,positive_evidence_count:record.positive_evidence_count,negative_evidence_count:record.negative_evidence_count,net_evidence_direction:record.net_evidence_direction,risk_flags:record.risk_flags,trigger_event:record.trigger_event,data_basis:record.evidence_sources.join('；'),evidence_source:record.evidence_sources[0]||'',transmission_logic:record.benefit_chain.join(' → '),taiwan_supply_chain_link:`${record.name} 是台灣 ${record.industry_name} 中的 ${record.company_role} 代表公司，事件必須先傳導到同族群後才成立。`,intraday_validation:`09:30 確認 ${record.symbol} ${record.name} 相對加權指數強勢，且 ${record.industry_name} 至少兩檔代表股同步。`,invalidation_condition:`若 ${record.symbol} ${record.name} 弱於加權指數，或 ${record.industry_name} 沒有量價同步，受惠假設失效。`,benefit_chain:record.benefit_chain,scoring_reasons:record.scoring_reasons,data_quality_status:record.data_quality_status});const riskRecords=scored.filter((record)=>record.net_evidence_direction==='negative');const positiveBacked=scored.filter((record)=>record.data_quality_status==='sufficient'&&record.net_evidence_direction==='positive'&&record.positive_evidence_count>=1&&record.positive_evidence_count>record.negative_evidence_count&&['medium','high'].includes(record.confidence_level)&&record.total_score>=45);const noCandidates=scored.length===0;const noPositiveEvidence=!noCandidates&&positiveBacked.length===0;const insufficient=noCandidates;const diverseTop=buildV10DiverseTopCandidates(positiveBacked,5).map((record,index)=>({...record,rank:index+1}));const today=insufficient||noPositiveEvidence?[]:diverseTop.map(toOutputRecord);const legacyObservationWatchlist=buildV11ObservationWatchlist(eligible,scored,riskRecords,diverseTop,evidenceIndex,10).map(outputV11ObservationRecord);const riskWatchlist=riskRecords.slice(0,10).map(toOutputRecord);const status=insufficient?'insufficient':noPositiveEvidence?'insufficient_positive_evidence':(today.length<5?'partial':'sufficient');const warning=insufficient?'今日事件、產業或行情驗證資料不足，未輸出 V10 強受惠股':noPositiveEvidence?'今日沒有足夠正向證據支持強受惠股，僅提供觀察名單與風險名單':null;const roleObservationWatchlist=buildV11ObservationNarrativeRoles({legacyObservation:legacyObservationWatchlist,riskWatchlist,strongWatchlist:today,topCandidates:scored.slice(0,10),candidateUniverse,evidenceIndex,dataQualityStatus:status,warning,log:(msg)=>console.log(msg)});const observationWatchlist=applyV11CurrentObservationEvidence(roleObservationWatchlist??legacyObservationWatchlist,evidenceIndex);const validation=validateV10BeneficiaryPhase1(scored.slice(0,10),candidateUniverse);return {enabled:false,candidate_count:scored.length,data_quality_status:status,warning,top_10_candidates:scored.slice(0,10),today_beneficiary_stocks_v10:today,observation_watchlist:observationWatchlist,risk_watchlist:riskWatchlist,validation};}
+function buildV10BeneficiaryPhase1(candidateUniverse:Record<string,unknown>,evidenceIndex:V10EvidenceItem[]):V10BeneficiaryPhase1Output{
+  const candidates=Array.isArray(candidateUniverse.candidates)?candidateUniverse.candidates as V10CandidateCard[]:[];
+  const eligible=candidates.filter((candidate)=>candidate.eligibility!==false);
+  const candidateBySymbol=new Map(eligible.map((candidate)=>[candidate.symbol,candidate]));
+  const evidenceById=v10EvidenceItemById(evidenceIndex);
+  const primaryEvent=String(candidateUniverse.primary_event??'UNKNOWN');
+  const scored=eligible.map((candidate)=>calculateV10BeneficiaryPhase1Record(candidate,evidenceIndex,primaryEvent))
+    .sort((a,b)=>b.total_score-a.total_score||b.evidence_score-a.evidence_score||a.repeat_penalty-b.repeat_penalty)
+    .map((record,index)=>({...record,rank:index+1}));
+  const toOutputRecord=(record:V10BeneficiaryPhase1Record,recommendationState:'confirmed'|'conditional'='confirmed')=>({
+    symbol:record.symbol,name:record.name,industry_code:record.industry_code,industry_name:record.industry_name,
+    rank:record.rank,total_score:record.total_score,confidence_level:record.confidence_level,
+    directional_event_score:record.directional_event_score,positive_evidence_count:record.positive_evidence_count,
+    negative_evidence_count:record.negative_evidence_count,net_evidence_direction:record.net_evidence_direction,
+    risk_flags:record.risk_flags,trigger_event:record.trigger_event,data_basis:record.evidence_sources.join('；'),
+    evidence_source:record.evidence_sources[0]||'',transmission_logic:record.benefit_chain.join(' → '),
+    taiwan_supply_chain_link:`${record.name} 是台灣 ${record.industry_name} 中的 ${record.company_role} 代表公司，事件必須先傳導到同族群後才成立。`,
+    intraday_validation:`09:30 確認 ${record.symbol} ${record.name} 相對加權指數強勢，且 ${record.industry_name} 至少兩檔代表股同步。`,
+    entry_condition:`${record.symbol} 相對加權指數轉強，且 ${record.industry_name} 至少兩檔代表股同步放量後，條件才成立。`,
+    invalidation_condition:`若 ${record.symbol} ${record.name} 弱於加權指數，或 ${record.industry_name} 沒有量價同步，受惠假設失效。`,
+    recommendation_state:recommendationState,direction:recommendationState==='confirmed'?'證據確認':'條件式推薦',
+    not_buy_signal:recommendationState==='conditional',benefit_chain:record.benefit_chain,
+    scoring_reasons:[...record.scoring_reasons,`recommendation_state=${recommendationState}`],data_quality_status:record.data_quality_status,
+  });
+  const currentDecisionEvidenceCount=(record:V10BeneficiaryPhase1Record):number=>{
+    const candidate=candidateBySymbol.get(record.symbol);
+    if(!candidate)return 0;
+    return candidate.related_evidence.filter((ref)=>evidenceById.get(ref.evidence_id)?.evidence_type!=='previous_validation').length;
+  };
+  const riskRecords=scored.filter((record)=>record.net_evidence_direction==='negative');
+  const positiveBacked=scored.filter((record)=>record.data_quality_status==='sufficient'&&record.net_evidence_direction==='positive'&&record.positive_evidence_count>=1&&record.positive_evidence_count>record.negative_evidence_count&&['medium','high'].includes(record.confidence_level)&&record.total_score>=45&&currentDecisionEvidenceCount(record)>=1);
+  const conditionalBacked=scored.filter((record)=>record.data_quality_status==='sufficient'&&record.net_evidence_direction==='neutral'&&['medium','high'].includes(record.confidence_level)&&record.total_score>=40&&currentDecisionEvidenceCount(record)>=2);
+  const noCandidates=scored.length===0;
+  const insufficient=noCandidates;
+  const confirmedTop=buildV10DiverseTopCandidates(positiveBacked,5).map((record,index)=>({...record,rank:index+1}));
+  const conditionalTop=buildV10DiverseTopCandidates(conditionalBacked,3).map((record,index)=>({...record,rank:index+1}));
+  const selected=confirmedTop.length>0?confirmedTop:conditionalTop;
+  const recommendationState:'confirmed'|'conditional'=confirmedTop.length>0?'confirmed':'conditional';
+  const today=insufficient||selected.length===0?[]:selected.map((record)=>toOutputRecord(record,recommendationState));
+  const noRecommendation=!insufficient&&today.length===0;
+  const legacyObservationWatchlist=buildV11ObservationWatchlist(eligible,scored,riskRecords,selected,evidenceIndex,10).map(outputV11ObservationRecord);
+  const riskWatchlist=riskRecords.slice(0,10).map((record)=>toOutputRecord(record));
+  const status=insufficient?'insufficient':noRecommendation?'insufficient_positive_evidence':(recommendationState==='conditional'||today.length<5?'partial':'sufficient');
+  const warning=insufficient?'今日事件、產業或行情驗證資料不足，未輸出 V10 推薦股':noRecommendation?'今日沒有足夠可追溯證據建立推薦股':recommendationState==='conditional'?'今日沒有直接多方確認，提供具來源、進場條件與失效條件的條件式推薦；條件未成立前不可視為進場訊號':null;
+  const roleObservationWatchlist=buildV11ObservationNarrativeRoles({legacyObservation:legacyObservationWatchlist,riskWatchlist,strongWatchlist:today,topCandidates:scored.slice(0,10),candidateUniverse,evidenceIndex,dataQualityStatus:status,warning,log:(msg)=>console.log(msg)});
+  const observationWatchlist=applyV11CurrentObservationEvidence(roleObservationWatchlist??legacyObservationWatchlist,evidenceIndex);
+  const validation=validateV10BeneficiaryPhase1(scored.slice(0,10),candidateUniverse);
+  return {enabled:false,candidate_count:scored.length,data_quality_status:status,warning,top_10_candidates:scored.slice(0,10),today_beneficiary_stocks_v10:today,observation_watchlist:observationWatchlist,risk_watchlist:riskWatchlist,validation};
+}
 
 function v10NarrativeText(value:unknown,maxLength=52):string{return String(value??'').replace(/\s+/g,' ').trim().replace(/[。；;]+$/,'').slice(0,maxLength);}
 function v10NarrativeSourceDetail(sourceRefs:string[]):string{
@@ -897,7 +1089,7 @@ function finalSanitizeTWStocks(stocks:Record<string,unknown>[],_fallback:Record<
 }
 
 async function fetchSectorRotationForDate(supabase:RuntimeClient,scoreDate:string,log:(m:string)=>void):Promise<SectorRotationRow[]>{
-  try{const r=await supabase.from('sector_rotation_scores').select('sector,sub_sector,rotation_score,direction,signal_label,leading_symbols,lagging_symbols,summary').eq('score_date',scoreDate).order('rotation_score',{ascending:false}).limit(10);const{data,error}=safeUnwrap<Record<string,unknown>[]>(r,log,'sector_rotation');if(error||!data?.length){log('[fetchSectorRotationForDate] no data for '+scoreDate);return [];}const rows:SectorRotationRow[]=data.map(function(row){return{sector:String(row.sector||''),sub_sector:String(row.sub_sector||''),rotation_score:Number(row.rotation_score)||0,direction:String(row.direction||''),signal_label:String(row.signal_label||''),leading_symbols:Array.isArray(row.leading_symbols)?row.leading_symbols.map(String):[],lagging_symbols:Array.isArray(row.lagging_symbols)?row.lagging_symbols.map(String):[],summary:row.summary?String(row.summary):undefined}});log('[fetchSectorRotationForDate] got '+rows.length+' sectors for '+scoreDate);return rows;}catch(e){log('[fetchSectorRotationForDate] exception: '+(e instanceof Error?e.message:String(e)));return [];}
+  try{const r=await supabase.from('sector_rotation_scores').select('score_date,sector,sub_sector,rotation_score,direction,signal_label,leading_symbols,lagging_symbols,summary').eq('score_date',scoreDate).order('rotation_score',{ascending:false}).limit(10);const{data,error}=safeUnwrap<Record<string,unknown>[]>(r,log,'sector_rotation');if(error||!data?.length){log('[fetchSectorRotationForDate] no data for '+scoreDate);return [];}const rows:SectorRotationRow[]=data.map(function(row){return{score_date:row.score_date?String(row.score_date):undefined,sector:String(row.sector||''),sub_sector:String(row.sub_sector||''),rotation_score:Number(row.rotation_score)||0,direction:String(row.direction||''),signal_label:String(row.signal_label||''),leading_symbols:Array.isArray(row.leading_symbols)?row.leading_symbols.map(String):[],lagging_symbols:Array.isArray(row.lagging_symbols)?row.lagging_symbols.map(String):[],summary:row.summary?String(row.summary):undefined}});log('[fetchSectorRotationForDate] got '+rows.length+' sectors for '+scoreDate);return rows;}catch(e){log('[fetchSectorRotationForDate] exception: '+(e instanceof Error?e.message:String(e)));return [];}
 }
 
 // ═══ V9.0 THREE-TIER BENEFICIARY ═══
@@ -1471,7 +1663,9 @@ function calculateMemberValueScore(ai:Record<string,unknown>,dataQuality:string,
   }else{
     const v10Status=String(ai.v10_data_quality_status||'').toLowerCase();
     const observationCount=Array.isArray(ai.v10_observation_watchlist)?ai.v10_observation_watchlist.length:0;
-    const evidenceBackedNoTrade=v10Status==='insufficient_positive_evidence'&&observationCount>=3&&freshNewsCount>=1;
+    const evidenceBackedNoTrade=hasAuditedCanonicalNoTrade(ai)
+      ||(hasCanonicalNoTradeResearchMaster(ai)&&freshNewsCount>=1)
+      ||(v10Status==='insufficient_positive_evidence'&&observationCount>=3&&freshNewsCount>=1);
     if(evidenceBackedNoTrade)score+=25;
   }
   return Math.max(0,Math.min(100,score));
@@ -1713,8 +1907,8 @@ async function fetchMarketData(supabase:RuntimeClient,log:(msg:string)=>void){
   const empty={marketData:[] as MarketIndicator[],latestDataTime:null as Date|null,isStale:true,dataCount:0,rawDataCount:0,invalidNumericSources:[] as string[]};
   try{
     const [canonicalResult,legacyResult]=await Promise.all([
-      supabase.from('market_quotes').select('symbol,name,market,value,change_value,change_percent,captured_at,provider,freshness_status,quality_status').order('captured_at',{ascending:false}).limit(60),
-      supabase.from('market_data').select('*').order('captured_at',{ascending:false}).limit(60),
+      supabase.from('market_quotes').select('symbol,name,market,value,change_value,change_percent,captured_at,provider,freshness_status,quality_status').lte('captured_at',new Date().toISOString()).order('captured_at',{ascending:false}).limit(60),
+      supabase.from('market_data').select('*').lte('captured_at',new Date().toISOString()).order('captured_at',{ascending:false}).limit(60),
     ]);
     const canonical=safeUnwrap<Record<string,unknown>[]>(canonicalResult,log,'market_quotes');
     const legacy=safeUnwrap<Record<string,unknown>[]>(legacyResult,log,'market_data_fallback');
@@ -1904,7 +2098,7 @@ async function recordRuntimeOpenAIUsage(
     return data?String(data):null;
   }catch(error){log('recordRuntimeOpenAIUsage exception: '+(error instanceof Error?error.message:String(error)));return null;}
 }
-function buildOpenAISystemPrompt():string{return'你是 Morning Alpha 的盤前研究員，不是新聞摘要機器。根據提供的真實市場數據產出完整 JSON。只輸出 JSON，不輸出 markdown，不輸出 JSON 外的自然語言，不新增 root 欄位，不改既有欄位名稱，不移除既有必要欄位。受惠股欄位只能解釋 allowed_beneficiary_candidates 中已由 scoring engine 排序的候選股，不得新增候選池以外股票，不得改變候選排序，不得自行推薦股票。所有段落都必須回答「所以呢？」與「投資人接下來看什麼？」。禁止使用「可能」「或許」「留意」「關注」等空泛文字，改用具體變數、價位方向、族群同步性、成交量、匯率、期貨、ADR、原物料或新聞催化。必須同時輸出 member_research_note 舊純文字相容欄位，以及 member_research_note_v2 結構化會員研究筆記。member_research_note 目標 600-900 字，提高內容密度，不要用背景介紹灌字數；第一段禁止背景介紹，第一段直接回答：今天如果只能看一件事，投資人最應該看什麼；第二段回答為什麼；第三段說市場如何驗證；第四段說什麼情況代表判斷錯誤；第五段說明天需要追蹤什麼。member_research_note 不可拿 summary、free_summary、today_summary 改寫充數。member_research_note_v2 必須包含 overnight_chain、taiwan_impact_map、beneficiary_candidates、intraday_validation、invalidation_rules、closing_feedback_plan、subscriber_value_sentence、data_status，保留既有 schema 不刪欄位。beneficiary_stocks 與 today_beneficiary_stocks 每檔必須包含 symbol、name、sector、reason、trigger_event、watch_point、risk_note、confidence_level、data_basis；today_beneficiary_stocks 必須輸出 5 到 8 檔，beneficiary_stocks 最多輸出 10 檔；不要為了湊數加入低信心或資料不足的股票，若真實資料不足，寧可少於上限，也不可補假資料。confidence_level 只可用 High、Medium、Low。每檔必須寫出催化來源、傳導路徑、公司受惠原因與反向風險：催化來源例如 NVIDIA 上漲、美國能源政策、原油大漲、美元走弱；傳導路徑必須是事件 → 產業 → 供應鏈 → 公司；公司受惠原因必須連到公司產品、公司客戶或公司營收來源，不可只寫因需求增加。每檔受惠股的 reason、trigger_reason、causal_chain 說明需控制在 1 到 2 句，必須具體，但不要寫成長篇文章。禁止把「AI受惠」「半導體受惠」「科技股受惠」當成完整答案，不可只寫「AI概念股受惠」或只列產業。不可自由生成未提供、未在 allowed_beneficiary_candidates、或未由資料支撐的股票；資料不足時不可硬湊，應降低 data_status 為 partial 或 insufficient。member_research_note_v2 語氣要像研究員晨會筆記：overnight_chain 必須寫出海外事件 → 資金流向 → 美股族群 → 供應鏈 → 台股族群 → 代表個股，至少 5 層，每一層都要回答為什麼；taiwan_impact_map.why_it_matters 必須說明傳導機制，不可只列產業；beneficiary_candidates 每檔 evidence 必須引用 market_data、sector_rotation_scores、market_news、overnight chain 或既有 beneficiary stocks；invalidation_rules 必須具體可觀察；subscriber_value_sentence 要像今天的研究員結論，不是產品行銷文。War Room 相關內容不要重複首頁摘要，只能寫入既有欄位 intraday_validation、intraday_validation_plan、invalidation_rules、closing_feedback_plan，要提供開盤觀察重點、盤中驗證指標、失敗訊號、應變方案；禁止新增任何 root 欄位，例如 war_room、war_room_plan、trading_plan、market_plan、execution_plan，也禁止新增任何前端尚未支援的新 root 欄位。today_quote 必須指出今天真正看的變數，不可空泛，不可保證獲利，不可使用買進、賣出、加碼、減碼等命令，語氣清楚、有人味，但不要像誇張社群標題。另必須輸出 V8 三欄位：v8_beneficiary_chain、v8_overnight_causal_chain、v8_daily_sentence；資料不足也要輸出 status="insufficient" 的安全結構。v8_beneficiary_chain 的 beneficiaries 只能使用提供資料或既有受惠股中的台股 symbol，不可自由生成股票；每檔必須有 symbol、name、sector、reason_chain、confidence_score、risk_level、invalidation_condition；reason_chain 至少 3 層，且必須包含催化來源 → 供應鏈傳導 → 公司產品/客戶/營收連結。v8_overnight_causal_chain 每條 causal_steps 至少 5 層，從海外事件傳導到資金流向、美股族群、供應鏈、台股族群與代表個股，watch_points 必須可盤中驗證。v8_daily_sentence 不可空泛，不可使用「市場仍有不確定性」「投資人應謹慎」「關注後續變化」「後續仍需觀察」，不可出現買進、賣出、加碼、減碼等命令，不可保證獲利。推理鏈必須是：隔夜事件 → 台股族群 → 個股 → 盤中驗證 → 失效條件。beneficiary_candidates 只能解釋 allowed_beneficiary_candidates 中的候選股，目標最多 8 到 15 檔但禁止硬湊；每檔必須有 reason、evidence、risk、confidence，evidence 只能來自提供的 market_data、sector_rotation_scores、market_news、overnight chain 或既有 beneficiary stocks。today_beneficiary_stocks 只可輸出台股個股。方向只可用：偏多觀察、中性偏多、震盪觀察、偏弱觀察、高風險日。';}
+function buildOpenAISystemPrompt():string{return'你是 Morning Alpha 的盤前研究員，不是新聞摘要機器。根據提供的真實市場數據產出完整 JSON。只輸出 JSON，不輸出 markdown，不輸出 JSON 外的自然語言，不新增 root 欄位，不改既有欄位名稱，不移除既有必要欄位。受惠股欄位只能解釋 allowed_beneficiary_candidates 中已由 scoring engine 排序的候選股，不得新增候選池以外股票，不得改變候選排序，不得自行推薦股票。所有段落都必須回答「所以呢？」與「投資人接下來看什麼？」。禁止使用「可能」「或許」「留意」「關注」等空泛文字，改用具體變數、價位方向、族群同步性、成交量、匯率、期貨、ADR、原物料或新聞催化。必須同時輸出 member_research_note 舊純文字相容欄位，以及 member_research_note_v2 結構化會員研究筆記。member_research_note 目標 600-900 字，提高內容密度，不要用背景介紹灌字數；第一段禁止背景介紹，第一段直接回答：今天如果只能看一件事，投資人最應該看什麼；第二段回答為什麼；第三段說市場如何驗證；第四段說什麼情況代表判斷錯誤；第五段說明天需要追蹤什麼。member_research_note 不可拿 summary、free_summary、today_summary 改寫充數。member_research_note_v2 必須包含 overnight_chain、taiwan_impact_map、beneficiary_candidates、intraday_validation、invalidation_rules、closing_feedback_plan、subscriber_value_sentence、data_status，保留既有 schema 不刪欄位。beneficiary_stocks 與 today_beneficiary_stocks 每檔必須包含 symbol、name、sector、reason、trigger_event、watch_point、risk_note、confidence_level、data_basis；today_beneficiary_stocks 可輸出 0 到 8 檔，沒有最低檔數，beneficiary_stocks 最多輸出 10 檔；不要為了湊數加入低信心或資料不足的股票，若真實資料不足，寧可少於上限，也不可補假資料。confidence_level 只可用 High、Medium、Low。每檔必須寫出催化來源、傳導路徑、公司受惠原因與反向風險；催化來源只能是輸入證據實際提供的事件，不得把提示中的說明或例子當成今日事實；傳導路徑必須是事件 → 產業 → 供應鏈 → 公司；公司受惠原因必須連到公司產品、公司客戶或公司營收來源，不可只寫因需求增加。每檔受惠股的 reason、trigger_reason、causal_chain 說明需控制在 1 到 2 句，必須具體，但不要寫成長篇文章。禁止把「AI受惠」「半導體受惠」「科技股受惠」當成完整答案，不可只寫「AI概念股受惠」或只列產業。不可自由生成未提供、未在 allowed_beneficiary_candidates、或未由資料支撐的股票；資料不足時不可硬湊，應降低 data_status 為 partial 或 insufficient。member_research_note_v2 語氣要像研究員晨會筆記：overnight_chain 必須寫出海外事件 → 資金流向 → 美股族群 → 供應鏈 → 台股族群 → 代表個股，至少 5 層，每一層都要回答為什麼；這是同一事件的傳導深度，不是要求 5 個不同事件；taiwan_impact_map.why_it_matters 必須說明傳導機制，不可只列產業；beneficiary_candidates 每檔 evidence 必須引用 market_data、sector_rotation_scores、market_news、overnight chain 或既有 beneficiary stocks；invalidation_rules 必須具體可觀察；subscriber_value_sentence 要像今天的研究員結論，不是產品行銷文。War Room 相關內容不要重複首頁摘要，只能寫入既有欄位 intraday_validation、intraday_validation_plan、invalidation_rules、closing_feedback_plan，要提供開盤觀察重點、盤中驗證指標、失敗訊號、應變方案；禁止新增任何 root 欄位，例如 war_room、war_room_plan、trading_plan、market_plan、execution_plan，也禁止新增任何前端尚未支援的新 root 欄位。today_quote 必須指出今天真正看的變數，不可空泛，不可保證獲利，不可使用買進、賣出、加碼、減碼等命令，語氣清楚、有人味，但不要像誇張社群標題。另必須輸出 V8 三欄位：v8_beneficiary_chain、v8_overnight_causal_chain、v8_daily_sentence；資料不足也要輸出 status="insufficient" 的安全結構。v8_beneficiary_chain 的 beneficiaries 只能使用提供資料或既有受惠股中的台股 symbol，不可自由生成股票；每檔必須有 symbol、name、sector、reason_chain、confidence_score、risk_level、invalidation_condition；reason_chain 至少 3 層，且必須包含催化來源 → 供應鏈傳導 → 公司產品/客戶/營收連結。v8_overnight_causal_chain 每條 causal_steps 至少 5 層，從海外事件傳導到資金流向、美股族群、供應鏈、台股族群與代表個股，watch_points 必須可盤中驗證。v8_daily_sentence 不可空泛，不可使用「市場仍有不確定性」「投資人應謹慎」「關注後續變化」「後續仍需觀察」，不可出現買進、賣出、加碼、減碼等命令，不可保證獲利。推理鏈必須是：隔夜事件 → 台股族群 → 個股 → 盤中驗證 → 失效條件。beneficiary_candidates 只能解釋 allowed_beneficiary_candidates 中的候選股，目標最多 8 到 15 檔但禁止硬湊；每檔必須有 reason、evidence、risk、confidence，evidence 只能來自提供的 market_data、sector_rotation_scores、market_news、overnight chain 或既有 beneficiary stocks。today_beneficiary_stocks 只可輸出台股個股。方向只可用：偏多觀察、中性偏多、震盪觀察、偏弱觀察、高風險日。';}
 function safeOpenAIMarketDataLine(m:MarketIndicator):string{
   const sym=m.symbol.toUpperCase();const pct=(m.changePercent>=0?'+':'')+m.changePercent.toFixed(2)+'%';const meta=[m.name,m.market,m.status,(m as unknown as Record<string,unknown>).source,(m as unknown as Record<string,unknown>).raw_source].map(function(v){return String(v||'').toLowerCase();}).join(' ');
   const isProxy=meta.includes('proxy')||meta.includes('代理')||meta.includes('vxx');
@@ -1914,9 +2108,9 @@ function safeOpenAIMarketDataLine(m:MarketIndicator):string{
   return m.symbol+' | '+m.name+' | 值='+m.value+' | 變動='+pct+(isProxy?' | 注意：proxy，value 不代表真實指數 level':'');
 }
 function buildOpenAIUserPrompt(md:MarketIndicator[],newsData:MarketNewsItem[],todayDate:string,dates:{twCoreDate:string;usGlobalDate:string},sectorContextSummary:string,allowedCandidateRows:Record<string,unknown>[]=[]):string{
-  const mdLines=md.map(safeOpenAIMarketDataLine).join('\n');
-  const newsLines=newsData.slice(0,12).map(function(n){return n.title+' | '+(n.taiwan_impact_summary||'')}).join('\n');
-  const allowedCandidateLines=allowedCandidateRows.map(function(row,idx){const r=row as Record<string,unknown>;return String(idx+1)+'. '+String(r.symbol??r.stock_id??'')+' '+String(r.name??r.stock_name??'')+' | '+String(r.sector??r.category??'')+' | level='+String(r.beneficiary_level??'')+' | reason='+String(r.reason??'')+' | data_basis='+String(r.data_basis??'');}).join('\n');
+  const mdLines=md.map(function(m){return 'evidence_ref=market_data.'+m.symbol.toUpperCase()+' | '+safeOpenAIMarketDataLine(m);}).join('\n');
+  const newsLines=newsData.slice(0,12).map(function(n,idx){return 'evidence_ref=market_news.'+(n.id||String(idx+1))+' | '+n.title+' | '+(n.taiwan_impact_summary||'')}).join('\n');
+  const allowedCandidateLines=allowedCandidateRows.map(function(row,idx){const r=row as Record<string,unknown>;const symbol=String(r.symbol??r.stock_id??'');return String(idx+1)+'. evidence_ref=allowed_candidate.'+symbol+' | '+symbol+' '+String(r.name??r.stock_name??'')+' | '+String(r.sector??r.category??'')+' | level='+String(r.beneficiary_level??'')+' | reason='+String(r.reason??'')+' | data_basis='+String(r.data_basis??'');}).join('\n');
   return'今日日期：'+todayDate+'\n台股基準：'+dates.twCoreDate+'\n海外基準：'+dates.usGlobalDate+'\n\n產業輪動（sector_rotation_scores）：'+(sectorContextSummary||'無')+'\n\nallowed_beneficiary_candidates（已由 scoring engine 排序，OpenAI 只能解釋，不可新增或改排序）：\n'+(allowedCandidateLines||'無候選；資料不足時受惠股欄位應保持空陣列或 partial/insufficient')+'\n\n市場資料說明：若市場資料標示為 proxy / 代理指標，只能使用變動百分比，不得把 value 寫成實際指數、實際殖利率或實際價格。\n\n市場數據（market_data）：\n'+mdLines+'\n\n市場新聞（market_news）：\n'+(newsLines||'無')+'\n\n請產生今日盤前報告 JSON。只輸出 JSON，不輸出 markdown，不輸出 JSON 外的自然語言，不新增 root 欄位，不改既有欄位名稱，不移除既有必要欄位。所有輸出都要具體回答「所以呢？」與「投資人接下來看什麼？」禁止使用「可能」「或許」「留意」「關注」等空泛詞。member_research_note 是 600-900 字純文字相容欄位；提高內容密度，不要用背景介紹灌字數；第一段不可背景介紹，直接回答今天如果只能看一件事，投資人最應該看什麼；第二段回答為什麼；第三段說市場如何驗證；第四段說什麼情況代表判斷錯誤；第五段說明天需要追蹤什麼。member_research_note_v2 是結構化物件，schema: {overnight_chain:[{event,source_market,impact_logic,taiwan_mapping,confidence}], taiwan_impact_map:[{sector,why_it_matters,affected_stocks,sensitivity,invalidation}], beneficiary_candidates:[{stock_code,stock_name,sector,reason,evidence,risk,confidence}], intraday_validation:[{time_window,what_to_watch,bullish_confirm,bearish_fail,neutral_condition}], invalidation_rules:[{condition,meaning,action_note}], closing_feedback_plan:{what_to_compare,success_criteria,miss_reason_tracking}, subscriber_value_sentence, data_status}. beneficiary_stocks 與 today_beneficiary_stocks 只能從 allowed_beneficiary_candidates 依原排序選取與解釋，不得新增候選池以外股票，不得改變排序；每檔欄位必須包含 symbol、name、sector、reason、trigger_event、watch_point、risk_note、confidence_level、data_basis；today_beneficiary_stocks 最多輸出 5 到 8 檔，beneficiary_stocks 最多輸出 10 檔；不要為了湊數加入低信心或資料不足的股票，若 allowed_beneficiary_candidates 為空或真實資料不足，寧可少於上限或空陣列，也不可補假資料。confidence_level 只可用 High、Medium、Low。trigger_event 是催化來源，例如 NVIDIA 上漲、能源政策、原油價格、美元或美債變化；reason 必須包含事件 → 產業 → 供應鏈 → 公司，且說明公司產品、公司客戶或公司營收來源如何連到該事件；reason、trigger_reason、causal_chain 說明需控制在 1 到 2 句，必須具體，但不要寫成長篇文章；禁止「AI受惠」「半導體受惠」「科技股受惠」這類泛化答案。watch_point 要是盤中可驗證指標；risk_note 要說明什麼情況讓判斷失效；data_basis 要列出使用的資料來源名稱，例如 market_data.NVDA.change_percent、sector_rotation_scores.半導體、market_news.title 或 existing_beneficiary_stock。member_research_note_v2 要像研究員晨會筆記，不要像新聞摘要：overnight_chain 至少 5 層，格式為海外事件 → 資金流向 → 美股族群 → 供應鏈 → 台股族群 → 代表個股，每一層都要說明為什麼；taiwan_impact_map.why_it_matters 要說明為何影響台股；beneficiary_candidates.evidence 必須引用 market_data、sector_rotation_scores、market_news、overnight chain 或既有 beneficiary stocks；invalidation_rules 必須具體可觀察；subscriber_value_sentence 是今天的研究員結論，不是產品行銷文。War Room 相關內容不要重複首頁，只能寫入既有欄位 intraday_validation、intraday_validation_plan、invalidation_rules、closing_feedback_plan，要提供開盤觀察重點、盤中驗證指標、失敗訊號、應變方案；禁止新增任何 root 欄位，例如 war_room、war_room_plan、trading_plan、market_plan、execution_plan，也禁止新增任何前端尚未支援的新 root 欄位。today_quote 必須指出今天真正看的變數，不可使用空泛句，不可保證獲利，不可使用買進、賣出、加碼、減碼等命令。V8 schema 必填：v8_beneficiary_chain={status,source_signals,beneficiaries:[{symbol,name,sector,reason_chain,confidence_score,risk_level,invalidation_condition}]}; v8_overnight_causal_chain={status,chains:[{theme,event,causal_steps,taiwan_impact,affected_sectors,watch_points,invalidation_condition}]}; v8_daily_sentence={status,sentence,logic_source,tone:"clear, sharp, human-readable"}。v8_overnight_causal_chain.causal_steps 至少 5 層，必須從海外事件一路傳導到代表個股。不可把 summary/free_summary 當會員筆記，不可編造未在資料或既有受惠股中有支撐的股票；資料不足時保留空陣列並將 data_status 或 status 設為 partial/insufficient，不可硬湊。';
 }
 
@@ -1932,14 +2126,17 @@ function resolveEvidenceBackedDailySentence(ai:Record<string,unknown>,md:MarketI
   const previousFingerprint=dailySentenceFingerprint(previousSentence);
   const isNovel=function(text:string):boolean{return !previousFingerprint||dailySentenceFingerprint(text)!==previousFingerprint;};
   const candidates=[v8.sentence,ai.today_quote,line.one_sentence,note.subscriber_value_sentence,free.one_sentence];
-  for(const value of candidates){const text=typeof value==='string'?sanitizeUnsupportedResearchText(value.replace(/\s+/g,' ').trim(),txfAvailable):'';if(text.length>=16&&!isSyntheticDailySentence(text)&&isNovel(text))return text;}
+  // A legacy alias must satisfy the same public decision-sentence contract as
+  // every other source. Otherwise continue to the existing real-quote path;
+  // accepting it solely for length could hide action/checkpoint evidence.
+  for(const value of candidates){const text=typeof value==='string'?sanitizeUnsupportedResearchText(value.replace(/\s+/g,' ').trim(),txfAvailable):'';if(text.length>=16&&!isSyntheticDailySentence(text)&&isNovel(text)&&evaluateDecisionSentenceValue(text).eligible)return text;}
   const importantNews=Array.isArray(ai.important_news)?ai.important_news as Record<string,unknown>[]:[];
   for(const item of importantNews.slice(0,3)){
     const title=String(item.title||'').trim();
     const impact=String(item.taiwan_impact_summary||item.summary||'').trim();
     if(!title)continue;
     const text=sanitizeUnsupportedResearchText(title.slice(0,46)+'；'+(impact?impact.slice(0,42):'09:30 先看台股相關族群是否出現同向量價確認。'),txfAvailable);
-    if(text.length>=20&&isNovel(text))return text;
+    if(text.length>=20&&isNovel(text)&&evaluateDecisionSentenceValue(text).eligible)return text;
   }
   const definitions:[string[],string,string,string][]=[
     [['TSM','TSMC'],'TSM ADR','電子權值','2330 是否相對加權指數抗跌且電子成交量同步'],
@@ -2015,7 +2212,7 @@ function buildCanonicalDecisionPayload(
   const freeSummary=canonicalRecord(ai.free_summary);
   const dailySentence=canonicalRecord(ai.v8_daily_sentence);
   const researchMaster=canonicalRecord(ai.research_master_v2);
-  const researchMetadata=canonicalRecord(researchMaster.metadata);
+  const researchQuality=evaluateResearchQualityGate(researchMaster);
   const v10Enabled=ai.v10_beneficiary_enabled===true||String(ai.v10_beneficiary_enabled).toLowerCase()==='true';
   const recommendations=(v10Enabled?canonicalRecords(ai.today_beneficiary_stocks_v10):canonicalRecords(ai.today_beneficiary_stocks)).map(function(stock){
     const stockSourceRefs=[
@@ -2034,6 +2231,7 @@ function buildCanonicalDecisionPayload(
       confirmation_condition:canonicalText(stock.intraday_validation,stock.validation_signal,stock.confirmation_signal,stock.watch_point),
       invalidation_condition:canonicalText(stock.invalidation_condition,stock.not_buy_signal,stock.risk_note,stock.risk),
       source_refs:Array.from(new Set(stockSourceRefs)),
+      research_evidence_admission:canonicalRecord(stock.research_evidence_admission),
     };
   }).filter(function(stock){return Boolean(stock.symbol);});
   const reasons=(Array.isArray(ai.key_drivers)?ai.key_drivers:Array.isArray(ai.reasoning_chain)?ai.reasoning_chain:[])
@@ -2061,12 +2259,13 @@ function buildCanonicalDecisionPayload(
     url:canonicalText(news.url),
     published_at:canonicalText(news.published_at,news.created_at),
   };}).filter(function(source){return Boolean(source.source||source.url||source.title);});
-  const contentReview=evaluateContentIntelligence(ai,importantNews.length);
-  const premiumGate=evaluatePremiumContentGate(ai,importantNews.length);
-  const publishable=premiumGate.eligible;
-  const evidenceDecisionMode=recommendations.length>0?'recommendations':String(ai.v10_data_quality_status)==='insufficient_positive_evidence'?'no_trade':'blocked';
-  const decisionMode=publishable?evidenceDecisionMode:'blocked';
-  const publishedRecommendations=publishable?recommendations:[];
+  const contentReview=evaluateMarketContentIntelligence(ai,importantNews.length);
+  const marketGate=evaluateMarketReportGate({...ai,important_news:importantNews},String(researchMaster.report_date||''));
+  const publishable=marketGate.eligible&&researchQuality.eligible;
+  // Company-source, reasoning and admission checks live in the independent
+  // recommendation gate. Its rejection cannot erase an audited market report.
+  const decisionMode=publishable?marketGate.decision_mode:'blocked';
+  const publishedRecommendations=publishable&&marketGate.recommendation_gate.eligible?recommendations:[];
   const publishedReasons=publishable?reasons:[
     importantNews.length===0?'盤前沒有通過時效檢查的重大新聞來源。':'可驗證新聞已有，但整體內容仍未通過發布門檻。',
     String(ai.data_quality).toLowerCase()==='complete'?'市場資料完整，但推論鏈仍不足。':'核心市場資料尚未完整。',
@@ -2078,14 +2277,18 @@ function buildCanonicalDecisionPayload(
     report_mode:reportMode,
     market_status:tradingDayInfo.is_trading_day?'OPEN':'CLOSED',
     is_trading_day:tradingDayInfo.is_trading_day,
-    data_as_of:canonicalText(ai.data_as_of,researchMetadata.data_as_of),
+    data_as_of:canonicalText(researchMaster.data_as_of,ai.data_as_of)||null,
     generated_at:canonicalText(ai.generated_at),
-    engine_version:canonicalText(ai.version,VERSION),
-    market_score:Number.isFinite(Number(ai.market_bias_score))?Number(ai.market_bias_score):null,
+    engine_version:canonicalText(ai.version,VERSION)+':'+RESEARCH_PIPELINE_VERSION,
+    market_score:presentNumber(ai.market_bias_score),
     confidence_score:confidenceScore,
-    coverage_score:Number.isFinite(Number(researchMaster.coverage_score))?Number(researchMaster.coverage_score):null,
+    coverage_score:researchQuality.evidence_coverage,
     action:canonicalDecisionAction(decisionMode),
     decision_mode:decisionMode,
+    report_status:marketGate.report_status,
+    recommendation_status:marketGate.recommendation_status,
+    recommendation_gate:marketGate.recommendation_gate,
+    market_report_gate:marketGate,
     market_regime:canonicalText(ai.market_regime,marketBias),
     preferred_sectors:publishedSectors,
     watch_sectors:canonicalRecords(ai.v10_observation_watchlist).slice(0,3),
@@ -2121,6 +2324,11 @@ function buildCanonicalDecisionPayload(
     },
     source_refs:sourceRefs,
     generated_text:{
+      report_date:marketGate.report_date,
+      report_status:marketGate.report_status,
+      recommendation_status:marketGate.recommendation_status,
+      recommendation_gate:marketGate.recommendation_gate,
+      market_report_gate:marketGate,
       daily_sentence:publishable?canonicalText(ai.today_quote,dailySentence.sentence,freeSummary.one_sentence):blockedDailySentence,
       market_bias:marketBias,
       confidence_score:confidenceScore,
@@ -2131,12 +2339,13 @@ function buildCanonicalDecisionPayload(
       invalidation_conditions:publishable?invalidationRules:[],
       next_checkpoint:'09:30',
     },
-    input_coverage:canonicalRecord(researchMaster.coverage),
+    input_coverage:{data_quality:ai.data_quality,source_breakdown:canonicalRecord(ai.source_breakdown),research_quality:researchQuality},
     missing_sources:Array.isArray(ai.missing_sources)?ai.missing_sources:[],
     content_score:contentReview.score,
     content_grade:contentReview.grade,
     content_score_breakdown:contentReview.breakdown,
-    reason_codes:Array.from(new Set([...contentReview.reason_codes,...premiumGate.reason_codes])),
+    reason_codes:Array.from(new Set([...marketGate.reason_codes,...researchQuality.reason_codes])),
+    recommendation_reason_codes:marketGate.recommendation_gate.reason_codes,
     generic_content_flags:contentReview.generic_flags,
   };
 }
@@ -2194,15 +2403,15 @@ async function publishCanonicalMemberRevision(
 ):Promise<CanonicalMemberRevisionResult>{
   const blocked=(reason:string):CanonicalMemberRevisionResult=>({revisionId:null,eligible:false,status:'BLOCKED',reasonCodes:[reason],canonicalContract:null});
   try{
-    const snapshotResult=await supabase.from('decision_snapshots').select('id,report_id,report_date,version,status,action,generated_text,snapshot_fingerprint,content_score').eq('id',snapshotId).maybeSingle();
+    const snapshotResult=await supabase.from('decision_snapshots').select('id,report_id,report_date,version,status,action,decision_mode,generated_text,source_refs,snapshot_fingerprint,content_score').eq('id',snapshotId).maybeSingle();
     const{data:snapshot,error:snapshotError}=safeUnwrap<Record<string,unknown>>(snapshotResult,log,'canonicalMemberSnapshot');
     if(snapshotError||!snapshot)return blocked('CANONICAL_SNAPSHOT_READ_FAILED');
     const canonicalContract=buildCanonicalDecisionContract({report_date:reportDate,snapshot,ai}) as Record<string,unknown>;
     const memberContent=buildCanonicalMemberResearchRevision({canonical_contract:canonicalContract,snapshot,ai,daily_sentence:canonicalText(canonicalRecord(snapshot.generated_text).daily_sentence)}) as Record<string,unknown>;
     const researchMaster=canonicalRecord(ai.research_master_v2);
-    const researchQuality=canonicalRecord(researchMaster.quality);
-    const evidenceCoverage=Number(researchQuality.evidence_coverage??0);
-    const contentScore=Number(ai.content_score??snapshot.content_score??0);
+    const qualityGate=evaluateResearchQualityGate(researchMaster);
+    const evidenceCoverage=qualityGate.evidence_coverage;
+    const contentScore=Number(snapshot.decision_mode==='market_only'?snapshot.content_score:ai.content_score??snapshot.content_score??0);
     const semanticResult=evaluateCanonicalSemanticCoherenceGate({
       canonical_contract:canonicalContract,
       sections:{
@@ -2213,12 +2422,14 @@ async function publishCanonicalMemberRevision(
         content_os_topic:memberContent.content_os_topic,
       },
       recommendations:memberContent.beneficiary_candidates,
-      quality_inputs:[ai.data_quality,ai.v10_data_quality_status,canonicalRecord(ai.member_research_note_v2).data_status],
+      quality_inputs:snapshot.decision_mode==='market_only'
+        ?[ai.data_quality,canonicalRecord(researchMaster.provenance).source_status]
+        :[ai.data_quality,ai.v10_data_quality_status,canonicalRecord(ai.member_research_note_v2).data_status],
       quality_counters:{
-        unsupported_claim_count:Array.isArray(researchQuality.unsupported_claims)?researchQuality.unsupported_claims.length:0,
-        contradiction_count:Array.isArray(researchQuality.contradictions)?researchQuality.contradictions.length:0,
-        duplicate_claim_count:Array.isArray(researchQuality.duplicate_claims)?researchQuality.duplicate_claims.length:0,
-        missing_section_count:Array.isArray(researchQuality.missing_sections)?researchQuality.missing_sections.length:0,
+        unsupported_claim_count:qualityGate.unsupported_claim_count,
+        contradiction_count:qualityGate.contradiction_count,
+        duplicate_claim_count:qualityGate.duplicate_claim_count,
+        missing_section_count:qualityGate.missing_section_count,
       },
       evidence_coverage:evidenceCoverage,
       content_score:contentScore,
@@ -2258,7 +2469,7 @@ async function recoverCanonicalMemberRevision(
 ):Promise<CanonicalMemberRevisionResult & {reportId:string|null;snapshotId:string|null}>{
   const [reportResult,snapshotResult]=await Promise.all([
     supabase.from('reports').select('id,report_date,ai_strategy_json,summary,today_quote,updated_at').eq('report_date',reportDate).maybeSingle(),
-    supabase.from('decision_snapshots').select('id,report_id,report_date,version,status,action,generated_text,snapshot_fingerprint,content_score').eq('report_date',reportDate).eq('session_type','PREMARKET').eq('is_current',true).order('version',{ascending:false}).limit(1).maybeSingle(),
+    supabase.from('decision_snapshots').select('id,report_id,report_date,version,status,action,decision_mode,generated_text,source_refs,snapshot_fingerprint,content_score').eq('report_date',reportDate).eq('session_type','PREMARKET').eq('is_current',true).order('version',{ascending:false}).limit(1).maybeSingle(),
   ]);
   const report=reportResult.data as Record<string,unknown>|null;
   const snapshot=snapshotResult.data as Record<string,unknown>|null;
@@ -2271,7 +2482,12 @@ async function recoverCanonicalMemberRevision(
   return{...result,reportId:String(report.id),snapshotId:String(snapshot.id)};
 }
 
-async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJson:Record<string,unknown>,marketBias:string,rawConfidenceScore:number|null,reportMode:string,md:MarketIndicator[],newsData:MarketNewsItem[],log:(m:string)=>void,tdInfo?:TradingDayInfo,dates?:MarketFreshnessDates,previousDailySentence:string='',learningConfidence:ProductionLearningConfidence|null=null,correlationId:string=crypto.randomUUID(),recoveryAttempt:number=1,startedAt:string=new Date().toISOString()):Promise<{reportId:string;snapshotId:string|null;memberRevision:CanonicalMemberRevisionResult}|null>{
+class PublicationQualityError extends Error {
+  constructor(readonly reasonCodes:string[]){super('PUBLICATION_GATE_BLOCKED');}
+}
+type ResearchInputRun={id:string;fingerprint:string;attempt:number};
+
+async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJson:Record<string,unknown>,marketBias:string,rawConfidenceScore:number|null,reportMode:string,md:MarketIndicator[],newsData:MarketNewsItem[],log:(m:string)=>void,tdInfo?:TradingDayInfo,dates?:MarketFreshnessDates,previousDailySentence:string='',learningConfidence:ProductionLearningConfidence|null=null,correlationId:string=crypto.randomUUID(),recoveryAttempt:number=1,startedAt:string=new Date().toISOString(),inputRun?:ResearchInputRun):Promise<{reportId:string;snapshotId:string|null;memberRevision:CanonicalMemberRevisionResult}|null>{
   try{
     const tradingDayInfo=tdInfo||getTaiwanTradingDayInfo(todayDate);
     aiStrategyJson={...aiStrategyJson,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,trading_day_reason:tradingDayInfo.reason,market_status:tradingDayInfo.is_trading_day?'OPEN':tradingDayInfo.reason,session_type:tradingDayInfo.session_type||'FULL_DAY',market_message:tradingDayInfo.market_message||(tradingDayInfo.is_trading_day?'今天正常交易。':'今日沒有台股交易，Morning Alpha 已切換休市模式。'),next_trading_day:tradingDayInfo.next_trading_day||todayDate};
@@ -2327,7 +2543,7 @@ async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJso
     const sentimentReason=mrnIsString?(confScore===null?marketBias+'方向，休市不評分。':marketBias+'方向，信心分數 '+confScore+'/100。'):String(mrn?.executive_view||'');
     const aiConfidenceReason=mrnIsString?'根據 '+todayDate+' 市場數據，盤前方向為 '+marketBias+'。':String(mrn?.main_thesis||'');
 
-    const contentReview=evaluateContentIntelligence(aiStrategyJson,importantNews.length);
+    const contentReview=evaluateMarketContentIntelligence(aiStrategyJson,importantNews.length);
     aiStrategyJson.content_score=contentReview.score;
     aiStrategyJson.content_grade=contentReview.grade;
     aiStrategyJson.content_score_breakdown=contentReview.breakdown;
@@ -2422,6 +2638,39 @@ async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJso
       ai_retail_reminder:'盤前判斷僅供參考，實際操作以開盤後市場走勢為準。',
       avoid_today:avoidToday,...marketNumerics,
     };
+    if(tradingDayInfo.is_trading_day){
+      if(!inputRun)throw new Error('RESEARCH_INPUT_LEASE_REQUIRED');
+      const decisionPayload=buildCanonicalDecisionPayload(aiStrategyJson,importantNews,reportMode,marketBias,confScore,tradingDayInfo,learningConfidence);
+      decisionPayload.input_fingerprint=inputRun.fingerprint;
+      if(decisionPayload.decision_mode==='blocked')throw new PublicationQualityError((decisionPayload.reason_codes as string[]).concat('CANONICAL_DECISION_BLOCKED'));
+      // Provisional metadata is replaced inside the transaction with the actual
+      // snapshot identity. It is never returned as a published revision.
+      const snapshot={...decisionPayload,id:correlationId,version:1,report_date:todayDate};
+      const contract=buildCanonicalDecisionContract({report_date:todayDate,snapshot,ai:aiStrategyJson}) as Record<string,unknown>;
+      const member=buildCanonicalMemberResearchRevision({canonical_contract:contract,snapshot,ai:aiStrategyJson}) as Record<string,unknown>;
+      const quality=evaluateResearchQualityGate(aiStrategyJson.research_master_v2);
+      const semantic=evaluateCanonicalSemanticCoherenceGate({canonical_contract:contract,
+        sections:{public_thesis:canonicalRecord(decisionPayload.generated_text).daily_sentence,member_thesis:member.today_core_thesis,line_summary:member.line_summary,taiwan_transmission:member.taiwan_transmission,content_os_topic:member.content_os_topic},
+        recommendations:member.beneficiary_candidates,
+        quality_inputs:decisionPayload.decision_mode==='market_only'
+          ?[aiStrategyJson.data_quality,canonicalRecord(canonicalRecord(aiStrategyJson.research_master_v2).provenance).source_status]
+          :[aiStrategyJson.data_quality,aiStrategyJson.v10_data_quality_status,canonicalRecord(aiStrategyJson.member_research_note_v2).data_status],
+        quality_counters:quality,evidence_coverage:quality.evidence_coverage,content_score:decisionPayload.content_score,
+      }) as Record<string,unknown>;
+      if(semantic.eligible!==true)throw new PublicationQualityError((semantic.reason_codes as string[])||['SEMANTIC_BLOCKED']);
+      const projected=canonicalReportProjection(aiStrategyJson,decisionPayload);
+      const sentence=canonicalRecord(decisionPayload.generated_text).daily_sentence;
+      const bundle=await supabase.rpc('publish_research_bundle_v1',{
+        p_run_id:inputRun.id,p_correlation_id:correlationId,
+        p_report:{...insertPayload,ai_strategy_json:projected,summary:sentence,today_summary:sentence,today_quote:sentence},
+        p_decision:decisionPayload,p_contract:contract,p_member:member,p_semantic:semantic,
+      });
+      if(bundle.error)throw new Error('ATOMIC_PUBLICATION_FAILED: '+bundle.error.message);
+      const published=canonicalRecord(bundle.data);
+      if(published.success!==true||!published.report_id||!published.decision_snapshot_id||!published.member_content_revision_id)throw new Error('ATOMIC_PUBLICATION_RECEIPT_INVALID');
+      return{reportId:String(published.report_id),snapshotId:String(published.decision_snapshot_id),memberRevision:{revisionId:String(published.member_content_revision_id),eligible:true,status:'PASSED',reasonCodes:[],canonicalContract:contract}};
+    }
+    // Existing non-trading-day digest remains separate from trading acceptance.
     const r=await supabase.from('reports').upsert(insertPayload,{onConflict:'report_date'}).select('id').single();
     const{data,error}=safeUnwrap<{id:string}>(r,log,'writeReport');
     if(error||!data?.id){log('writeReport FAIL: '+(error||'no id'));return null}
@@ -2437,7 +2686,7 @@ async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJso
       : {revisionId:null,eligible:false,status:'BLOCKED',reasonCodes:['CANONICAL_SNAPSHOT_MISSING'],canonicalContract:null};
     log('writeReport OK: '+data.id+' snapshot_id='+(snapshotId||'pending_migration')+' member_revision_id='+(memberRevision.revisionId||'blocked'));
     return{reportId:data.id,snapshotId,memberRevision};
-  }catch(e){log('writeReport exc: '+(e instanceof Error?e.message:String(e)));return null}
+  }catch(e){log('writeReport exc: '+(e instanceof Error?e.message:String(e)));throw e}
 }
 
 function dScoreFromAI(aiJson:Record<string,unknown>):number{const fg=aiJson.fear_greed;if(fg!==null&&fg!==undefined)return Number(fg);const bs=aiJson.baseScore??aiJson.base_score??aiJson.confidence_score;if(bs!==null&&bs!==undefined){const n=Number(bs);if(!Number.isNaN(n))return n>50?25:n;}return 50;}
@@ -2511,6 +2760,8 @@ Deno.serve(async (req:Request)=>{
   const timer=createStepTimer(log);
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:CORS_HEADERS});
   if(req.method!=='POST')return corsResponse({success:false,error:'Only POST allowed',version:VERSION},405);
+  let activeInputRun:ResearchInputRun|undefined;
+  let inputRunClient:RuntimeClient|undefined;
 
   try{
     const auth=await authorizeInternalRequest(req.headers,internalCredentialsFromEnv());
@@ -2533,6 +2784,7 @@ Deno.serve(async (req:Request)=>{
     const supabaseUrl=Deno.env.get('SUPABASE_URL')||'';const serviceRoleKey=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
     if(!supabaseUrl||!serviceRoleKey){log('NO_SUPABASE_CREDS');return corsResponse({success:false,error:'Supabase credentials missing',version:VERSION},500)}
     const supabase=createClient<RuntimeDatabase>(supabaseUrl,serviceRoleKey,{auth:{autoRefreshToken:false,persistSession:false}});
+    inputRunClient=supabase;
     timer.mark('SUPABASE_CLIENT_READY');
 
     if(body?.mode==='canonical_member_recovery'){
@@ -2565,6 +2817,8 @@ Deno.serve(async (req:Request)=>{
     }
 
     const todayDate=getTaipeiDateString();const dow=getTaipeiDayOfWeek();log('TODAY='+todayDate+' DOW='+dow);
+    const dateError=currentResearchDateError(body,todayDate);
+    if(dateError)return corsResponse({success:false,error:dateError,error_code:dateError,version:VERSION},400);
     const tradingDayInfo=getTaiwanTradingDayInfo(todayDate);
     log('TRADING_DAY_CHECK: is_trading_day='+tradingDayInfo.is_trading_day+' market_closed='+tradingDayInfo.market_closed+' holiday_name='+tradingDayInfo.holiday_name+' reason='+tradingDayInfo.reason);
     timer.mark('TRADING_DAY_CHECK');
@@ -2616,7 +2870,7 @@ Deno.serve(async (req:Request)=>{
       }
     }
     const sectorRotationReferenceDate=getPreviousTaiwanTradingDay(todayDate);log('SECTOR_ROTATION reference_date='+sectorRotationReferenceDate+' basis=previous_trading_day');
-    const rawDatesFetch=(async function(){try{const [canonicalResult,legacyResult]=await Promise.all([supabase.from('market_quotes').select('symbol,captured_at,value,change_percent').order('captured_at',{ascending:false}).limit(60),supabase.from('market_data').select('symbol,captured_at,value,change_percent').order('captured_at',{ascending:false}).limit(60)]);const canonical=safeUnwrap<Record<string,unknown>[]>(canonicalResult,log,'rawCanonicalForDates');const legacy=safeUnwrap<Record<string,unknown>[]>(legacyResult,log,'rawLegacyForDates');const rows=mergeCanonicalAndLegacyMarketRows(canonical.data||[],legacy.data||[]);return normalizeMarketDataRows(rows).marketData.map(function(row){return{symbol:row.symbol,captured_at:row.updatedAt};});}catch{log('rawForDates fetch failed');return [] as Record<string,unknown>[];}})();
+    const rawDatesFetch=(async function(){try{const [canonicalResult,legacyResult]=await Promise.all([supabase.from('market_quotes').select('symbol,captured_at,value,change_percent').lte('captured_at',new Date().toISOString()).order('captured_at',{ascending:false}).limit(60),supabase.from('market_data').select('symbol,captured_at,value,change_percent').lte('captured_at',new Date().toISOString()).order('captured_at',{ascending:false}).limit(60)]);const canonical=safeUnwrap<Record<string,unknown>[]>(canonicalResult,log,'rawCanonicalForDates');const legacy=safeUnwrap<Record<string,unknown>[]>(legacyResult,log,'rawLegacyForDates');const rows=mergeCanonicalAndLegacyMarketRows(canonical.data||[],legacy.data||[]);return normalizeMarketDataRows(rows).marketData.map(function(row){return{symbol:row.symbol,captured_at:row.updatedAt};});}catch{log('rawForDates fetch failed');return [] as Record<string,unknown>[];}})();
     const [marketSettled,newsSettled,sectorSettled,rawDatesSettled,previousReportSettled,recentReportsSettled]=await Promise.allSettled([
       withTimeout(fetchMarketData(supabase,log),5000,'market_data_query',log,{marketData:[] as MarketIndicator[],latestDataTime:null as Date|null,isStale:true,dataCount:0,rawDataCount:0,invalidNumericSources:[] as string[]}),
       withTimeout(fetchMarketNews(supabase,log),3000,'market_news_query',log,{newsData:[],latestNewsTime:null,isStale:true,newsCount:0}),
@@ -2633,6 +2887,8 @@ Deno.serve(async (req:Request)=>{
     if(newsReview.rejected.length>0){const rejectedReasons=Array.from(new Set(newsReview.rejected.flatMap((entry)=>entry.reason_codes)));log('NEWS_EVIDENCE_REJECTED count='+newsReview.rejected.length+' reasons='+rejectedReasons.join('|'));}
     const dates=computeDatesFromMarketData(rawDataForDates);log('DATES tw_core='+dates.twCoreDate+' us_global='+dates.usGlobalDate);
     const staleCoreSources=detectStaleCoreMarketData(marketData,dates);const unavailableSources=detectUnavailableMarketData(marketData,dates);
+    const researchMarketData=filterFreshMarketIndicators(marketData,dates);const excludedResearchSymbols=marketData.filter((row)=>!researchMarketData.includes(row)).map((row)=>row.symbol);
+    if(excludedResearchSymbols.length>0)log('RESEARCH_STALE_INPUT_FILTER excluded='+Array.from(new Set(excludedResearchSymbols)).join('|'));
     const twStatus=checkTWCoreStatus(marketData,log);const mvpStatus=checkMVPStatus(marketData,log);
     const requiredEvidenceAvailable=!twStatus.dataInsufficient&&!mvpStatus.mvpInsufficient;
     const missingSources:string[]=[];if(dataCount===0)missingSources.push('market_data');if(newsData.length===0)missingSources.push(newsFetch.newsData.length>0?'market_news:no_verified_relevant_items':'market_news');if(sectorData.length===0)missingSources.push('sector_rotation_scores:'+sectorRotationReferenceDate);if(rawDataForDates.length===0)missingSources.push('market_data_dates');for(const invalid of marketFetch.invalidNumericSources)missingSources.push('invalid_numeric_market_data:'+invalid);if(twStatus.dataInsufficient)missingSources.push('required_tw_market_evidence');if(mvpStatus.mvpInsufficient)missingSources.push('required_us_market_evidence');for(const stale of staleCoreSources)missingSources.push('stale_market_data:'+stale);for(const unavailable of unavailableSources)missingSources.push('unavailable_market_data:'+unavailable);
@@ -2643,6 +2899,62 @@ Deno.serve(async (req:Request)=>{
     const hasMarketData=dataCount>0;const reportMode=determineReportMode(dow,hasMarketData,dataCount);
     if(sectorData.length===0)log('SECTOR_ROTATION_MISSING reference_date='+sectorRotationReferenceDate+'; continuing without fallback to today');
 
+    const learningInputs=await Promise.all([
+      supabase.from('learning_rules').select('id,rule_key,status,condition_json,action_json').eq('status','production').order('id').limit(100),
+      supabase.from('model_evaluations').select('evaluation_key,model_version,confidence_bucket,sample_size,accuracy,period_end').eq('window_days',90).order('period_end',{ascending:false}).limit(100),
+    ]);
+    if(learningInputs.some((result)=>result.error))throw new Error('LEARNING_INPUT_MANIFEST_UNAVAILABLE');
+    const inputFingerprint=await researchInputFingerprint({
+      report_date:todayDate,source_version:'market_quotes/news_events/sector_rotation_scores:V1',
+      engine_version:VERSION+':'+RESEARCH_PIPELINE_VERSION,
+      quality_policy:{...RUNTIME_QUALITY_POLICY,skip_openai:skipOpenAI,run_v10_debug_agents:runV10DebugAgents,policy_aligned:runtimePolicyIntegrity.aligned},
+      sources:{market:marketData,news:newsData,sectors:sectorData,missing_sources:missingSources,learning:learningInputs.map((result)=>result.data)},
+      previous_revision:{
+        previous:buildV10PreviousValidation(previousReport),
+        previous_daily_sentence:canonicalText(canonicalRecord(previousReport?.ai_strategy_json).today_quote,canonicalRecord(canonicalRecord(previousReport?.ai_strategy_json).v8_daily_sentence).sentence),
+        // Only these fields feed the repeat-penalty engine. Report updated_at,
+        // execution logs and unrelated runtime overlays are not input changes.
+        recent:recentReportsForUniverse.map((report)=>({report_date:report.report_date,symbols:extractV10HistoricalSymbols(report)})),
+      },
+    });
+    const claimed=await supabase.rpc('claim_research_input_v1',{p_report_date:todayDate,p_fingerprint:inputFingerprint,
+      p_correlation_id:correlationId,p_engine_version:VERSION+':'+RESEARCH_PIPELINE_VERSION,
+      p_trigger:body.recovery_request_id||body.recovery_actor?'manual_recovery':canonicalText(body.source,body.mode,'scheduled'),
+      p_manifest:{report_date:todayDate,source_version:'market_quotes/news_events/sector_rotation_scores:V1',engine_version:RESEARCH_PIPELINE_VERSION,
+        policy_version:RUNTIME_QUALITY_POLICY.version,input_fingerprint:inputFingerprint,source_dates:dates,missing_sources:missingSources,
+        market_count:marketData.length,news_count:newsData.length,sector_count:sectorData.length},
+    });
+    if(claimed.error)throw new Error('RESEARCH_INPUT_CLAIM_UNAVAILABLE: '+claimed.error.message);
+    const claim=canonicalRecord(claimed.data);
+    if(claim.status!=='ACQUIRED'){
+      const cached=canonicalRecord(claim.result);
+      if(claim.status==='REUSED'&&claim.outcome==='SUCCEEDED'){
+        const current=await verifyReportExists(supabase,todayDate,log);
+        const currentAi=canonicalRecord(current?.aiJson);
+        if(!current?.reportId || current.reportId!==cached.report_id || currentAi.revision_id!==cached.decision_snapshot_id){
+          return corsResponse({success:false,error_code:'CACHED_REVISION_SUPERSEDED',report_date:todayDate,reused:true},409);
+        }
+        const cachedMarket=evaluateMarketReportGate(currentAi,todayDate);
+        const cachedPremium=evaluatePremiumContentGate(currentAi,newsData.length);
+        if(!cachedMarket.eligible)return corsResponse({success:false,error_code:'CACHED_PUBLICATION_NOT_READY',reason_codes:cachedMarket.reason_codes,report_date:todayDate,reused:true},409);
+        // Publication is durable before lifecycle bookkeeping. A transport
+        // failure after commit must resume bookkeeping, never re-run the AI.
+        for(const [state,checkpoint] of [['REPORT_GENERATED','report_generation'],['EDITORIAL_APPROVED','editorial_gate']]){
+          const advanced=await supabase.rpc('advance_trading_day_state_v1',{p_trading_date:todayDate,p_state:state,
+            p_checkpoint:checkpoint,p_status:'SUCCEEDED',p_correlation_id:correlationId,
+            p_metadata:{...cached,input_fingerprint:inputFingerprint,reused:true}});
+          if(advanced.error)throw new Error('CACHED_PUBLICATION_STATE_ADVANCE_FAILED');
+        }
+        return corsResponse({...cached,success:true,reused:true,report_generated:true,report_eligible:true,
+          report_status:cachedMarket.report_status,recommendation_status:cachedMarket.recommendation_status,
+          premium_eligible:cachedPremium.eligible,premium_reason_codes:cachedPremium.reason_codes,
+          input_fingerprint:inputFingerprint,correlation_id:correlationId},200);
+      }
+      const code=claim.status==='IN_PROGRESS'?'RESEARCH_IN_PROGRESS':claim.status==='BACKOFF'?'RESEARCH_BACKOFF':claim.status==='EXHAUSTED'?'RESEARCH_RETRY_EXHAUSTED':'RESEARCH_QUALITY_REJECTED_UNCHANGED';
+      return corsResponse({success:false,error_code:code,report_date:todayDate,input_fingerprint:inputFingerprint,reused:claim.status==='REUSED',reason_codes:cached.reason_codes||[]},409);
+    }
+    activeInputRun={id:String(claim.run_id),fingerprint:inputFingerprint,attempt:Number(claim.attempt)};
+
 
     let dScore=calculateMarketDataScore(marketData);const guardrailPreview=applyBiasGuardrails(marketData,dScore.baseScore,dates);if(guardrailPreview.shouldDowngrade){log('BIAS_GUARDRAIL adjusted_score='+guardrailPreview.adjustedScore+' risk='+(guardrailPreview.riskSignals.join('|')||'none')+' stale='+(guardrailPreview.staleSignals.join('|')||'none'));dScore={...dScore,baseScore:guardrailPreview.adjustedScore,riskReasons:Array.from(new Set([...dScore.riskReasons,...guardrailPreview.riskSignals,...guardrailPreview.staleSignals])),details:{...dScore.details,bias_guardrail_original_score:dScore.baseScore,bias_guardrail_adjusted_score:guardrailPreview.adjustedScore}};}
     log('SCORE='+dScore.baseScore+' BIAS='+classifyMarketBias(dScore.baseScore));
@@ -2650,10 +2962,10 @@ Deno.serve(async (req:Request)=>{
     let confidenceResult=calculateReportConfidenceScore({marketData,newsData,sectorData,dates,dataQuality,missingSources,openAIUsed:false});
     log('CONFIDENCE_SCORE='+confidenceResult.score+' MARKET_BIAS_SCORE='+dScore.baseScore);
 
-    const deterministicJson=buildDeterministicAIStrategyJson(marketData,newsData,todayDate,dates,dScore,twStatus,mvpStatus,reportMode,sectorData,log,confidenceResult);
+    const deterministicJson=buildDeterministicAIStrategyJson(researchMarketData,newsData,todayDate,dates,dScore,twStatus,mvpStatus,reportMode,sectorData,log,confidenceResult);
     timer.mark('DETERMINISTIC_REPORT_BUILT');
     const marketBiasDet=classifyMarketBias(dScore.baseScore);const confScoreDet=confidenceResult.score;
-    const detMemberNoteText=typeof deterministicJson.member_research_note==='string'?String(deterministicJson.member_research_note):buildMemberResearchNoteText(marketData,todayDate,dates,dScore,marketBiasDet,confScoreDet,Array.isArray(deterministicJson.today_beneficiary_stocks)?deterministicJson.today_beneficiary_stocks as Record<string,unknown>[]:[],reportMode,log);
+    const detMemberNoteText=typeof deterministicJson.member_research_note==='string'?String(deterministicJson.member_research_note):buildMemberResearchNoteText(researchMarketData,todayDate,dates,dScore,marketBiasDet,confScoreDet,Array.isArray(deterministicJson.today_beneficiary_stocks)?deterministicJson.today_beneficiary_stocks as Record<string,unknown>[]:[],reportMode,log);
     const detMemberNoteV2=deterministicJson.member_research_note_v2 as MemberResearchNoteV2;
     const safeV8Fallback=buildV8InsufficientContract();
 
@@ -2665,9 +2977,9 @@ Deno.serve(async (req:Request)=>{
       if(openAiKey){
         log('OPENAI_MODE');
         const strongSectors=sectorData.filter(isStrongSectorRotation).slice(0,3);
-        const sectorContextSummary=strongSectors.length>0?strongSectors.map(function(s){return s.sector+'(輪動分數='+s.rotation_score+')'}).join('；'):'上一交易日類股輪動資料缺失或無強勢族群';
+        const sectorContextSummary=strongSectors.length>0?strongSectors.map(function(s){return 'evidence_ref=sector_rotation_scores.'+s.sector+' | '+s.sector+'(輪動分數='+s.rotation_score+')'}).join('；'):'上一交易日類股輪動資料缺失或無強勢族群';
         const allowedCandidateRows=[...((Array.isArray(deterministicJson.today_beneficiary_stocks)?deterministicJson.today_beneficiary_stocks:[]) as Record<string,unknown>[]),...((Array.isArray(deterministicJson.beneficiary_stocks)?deterministicJson.beneficiary_stocks:[]) as Record<string,unknown>[])];
-        const sysPrompt=buildOpenAISystemPrompt()+'\n'+OPENAI_EVIDENCE_GUARDRAILS;const userPrompt=buildOpenAIUserPrompt(marketData,newsData,todayDate,dates,sectorContextSummary,allowedCandidateRows);
+        const sysPrompt=buildOpenAISystemPrompt()+'\n'+OPENAI_EVIDENCE_GUARDRAILS+'\n'+OPENAI_OUTPUT_ABSTENTION_RULES;const userPrompt=buildOpenAIUserPrompt(researchMarketData,newsData,todayDate,dates,sectorContextSummary,allowedCandidateRows);
         const openAiResult=await callOpenAI(sysPrompt,userPrompt,openAiKey,log);
         timer.mark('OPENAI_STEP_DONE');
         if(openAiResult){
@@ -2681,7 +2993,7 @@ Deno.serve(async (req:Request)=>{
           const oaiTodayRaw=Array.isArray(openAiResult.today_beneficiary_stocks)?openAiResult.today_beneficiary_stocks as Record<string,unknown>[]:[];
           const oaiFullRaw=Array.isArray(openAiResult.beneficiary_stocks)?openAiResult.beneficiary_stocks as Record<string,unknown>[]:[];
           const oaiTodayTW=preFilterOpenaiTWStocks(oaiTodayRaw,log);const oaiFullTW=preFilterOpenaiTWStocks(oaiFullRaw,log);
-          const sectorResult=buildThreeTierBeneficiaryStocks(marketData,sectorData,dScore,log);
+          const sectorResult=buildThreeTierBeneficiaryStocks(researchMarketData,sectorData,dScore,log);
           const dynMap=new Map<string,Record<string,unknown>>();
           for(const d of[...sectorResult.todayStocks,...sectorResult.fullStocks])dynMap.set(String(d.symbol||d.stock_id||''),d);
           const enrich=function(stocks:Record<string,unknown>[]):Record<string,unknown>[]{
@@ -2695,7 +3007,7 @@ Deno.serve(async (req:Request)=>{
           openAiResult.member_research_note_v2=sanitizeMemberResearchNoteV2(openAiResult.member_research_note_v2,detMemberNoteV2,log);
           let sanitizedV8=sanitizeV8ContractSafe(openAiResult,log);
           if(!v8ContractHasUsableData(sanitizedV8)){
-            const bridgeV8=buildV8ContractFromMemberNoteV2(openAiResult.member_research_note_v2,openAiResult.beneficiary_stocks as Record<string,unknown>[],marketData,sectorData);
+            const bridgeV8=buildV8ContractFromMemberNoteV2(openAiResult.member_research_note_v2,openAiResult.beneficiary_stocks as Record<string,unknown>[],researchMarketData,sectorData);
             if(v8ContractHasUsableData(bridgeV8)){log('V8_BRIDGE_FROM_MEMBER_NOTE_V2_OPENAI');sanitizedV8=bridgeV8;}
           }
           openAiResult.v8_beneficiary_chain=sanitizedV8.v8_beneficiary_chain;
@@ -2714,7 +3026,7 @@ Deno.serve(async (req:Request)=>{
     aiStrategyJson=applyMemberResearchNoteV2Aliases(aiStrategyJson);
     let finalV8=hasCompleteV8Contract(aiStrategyJson)?sanitizeV8ContractSafe(aiStrategyJson,log):safeV8Fallback;
     if(!v8ContractHasUsableData(finalV8)){
-      const bridgeV8=buildV8ContractFromMemberNoteV2(aiStrategyJson.member_research_note_v2,aiStrategyJson.beneficiary_stocks as Record<string,unknown>[],marketData,sectorData);
+      const bridgeV8=buildV8ContractFromMemberNoteV2(aiStrategyJson.member_research_note_v2,aiStrategyJson.beneficiary_stocks as Record<string,unknown>[],researchMarketData,sectorData);
       if(v8ContractHasUsableData(bridgeV8)){log('V8_BRIDGE_FROM_MEMBER_NOTE_V2_FINAL_GUARD');finalV8=bridgeV8;}
     }
     aiStrategyJson.v8_beneficiary_chain=finalV8.v8_beneficiary_chain;
@@ -2741,7 +3053,7 @@ Deno.serve(async (req:Request)=>{
     aiStrategyJson.missing_sources=missingSources;
     aiStrategyJson=enforceMemberResearchIntegrity(aiStrategyJson,dataQuality,marketData,log);
     aiStrategyJson=applyMemberResearchNoteV2Aliases(aiStrategyJson);
-    aiStrategyJson.performance_timing={total_before_write_ms:timer.total(),data_quality:dataQuality,missing_sources:missingSources};const v10EvidencePack=buildV10EvidencePack({todayDate,dates,tradingDayInfo,marketData,newsData,sectorData,previousReport,dataQuality,missingSources,staleCoreSources,unavailableSources,confidenceResult});const v10NormalizedEvidence=buildV10NormalizedEvidence(v10EvidencePack);const v10EvidenceIndex=buildEvidenceIndex(v10NormalizedEvidence);const v10CandidateUniverse=buildCandidateUniverse({normalizedEvidence:v10NormalizedEvidence,evidenceIndex:v10EvidenceIndex,recentReports:recentReportsForUniverse});const v10BeneficiaryPhase1=buildV10BeneficiaryPhase1(v10CandidateUniverse,v10EvidenceIndex);aiStrategyJson.today_beneficiary_stocks_v10=v10BeneficiaryPhase1.today_beneficiary_stocks_v10;aiStrategyJson.v10_observation_watchlist=v10BeneficiaryPhase1.observation_watchlist;aiStrategyJson.v10_risk_watchlist=v10BeneficiaryPhase1.risk_watchlist;aiStrategyJson.v10_beneficiary_enabled=true;aiStrategyJson.v10_candidate_count=v10BeneficiaryPhase1.candidate_count;aiStrategyJson.v10_data_quality_status=v10BeneficiaryPhase1.data_quality_status;if(v10BeneficiaryPhase1.warning)aiStrategyJson.v10_warning=v10BeneficiaryPhase1.warning;const v10EvaluationFramework=buildV10EvaluationFramework(v10EvidenceIndex);const v10EmptyDecisionContract=buildEmptyV10DecisionContract(v10EvidencePack);let v10MarketThesisDebug:{enabled:false;used_openai:boolean;market_thesis:V10MarketThesisContract|null;raw_response:Record<string,unknown>|null;error:string|null}={enabled:false,used_openai:false,market_thesis:null,raw_response:null,error:runV10DebugAgents?(skipOpenAI?'skip_openai_or_fast_mode':'not_run'):'debug_agents_skipped_for_cron'};if(runV10DebugAgents&&!skipOpenAI){v10MarketThesisDebug=await withTimeout(runV10MarketThesisAgentDebug({evidencePack:v10EvidencePack,normalizedEvidence:v10NormalizedEvidence,evidenceIndex:v10EvidenceIndex,marketContext:(v10NormalizedEvidence.market_context&&typeof v10NormalizedEvidence.market_context==='object'?v10NormalizedEvidence.market_context:{} ) as Record<string,unknown>,apiKey:Deno.env.get('OPENAI_API_KEY')||'',log}),10000,'v10_market_thesis_agent',log,v10MarketThesisDebug);}const v10MarketThesisValidation=buildV10MarketThesisValidation(v10MarketThesisDebug,v10EmptyDecisionContract,v10EvidenceIndex);let v10CandidateEvaluationDebug:{enabled:false;used_openai:boolean;candidate_count:number;evaluations:V10CandidateEvaluationRecord[];raw_response:Record<string,unknown>|null;error:string|null}={enabled:false,used_openai:false,candidate_count:Array.isArray(v10CandidateUniverse.candidates)?v10CandidateUniverse.candidates.length:0,evaluations:[],raw_response:null,error:runV10DebugAgents?(skipOpenAI?'skip_openai_or_fast_mode':'not_run'):'debug_agents_skipped_for_cron'};if(runV10DebugAgents&&!skipOpenAI){v10CandidateEvaluationDebug=await withTimeout(runV10CandidateEvaluationAgentDebug({marketThesis:v10MarketThesisDebug.market_thesis,candidateUniverse:v10CandidateUniverse,evidenceIndex:v10EvidenceIndex,evaluationFramework:v10EvaluationFramework,apiKey:Deno.env.get('OPENAI_API_KEY')||'',log}),10000,'v10_candidate_evaluation_agent',log,v10CandidateEvaluationDebug);}const v10CandidateEvaluationValidation=validateV10CandidateEvaluationRecords(v10CandidateEvaluationDebug.evaluations,v10CandidateUniverse,v10EvidenceIndex);const v10ScoreEngine=buildV10ScoreEngine(v10CandidateEvaluationDebug.evaluations,v10CandidateUniverse,v10EvaluationFramework);const v10CapitalFlowEngine=buildV10CapitalFlowEngineDebug({marketThesis:v10MarketThesisDebug.market_thesis,candidateUniverse:v10CandidateUniverse,scores:(Array.isArray(v10ScoreEngine.scores)?v10ScoreEngine.scores:[]) as V10CandidateScoreRecord[],evidenceIndex:v10EvidenceIndex});const v10ThesisCutoverValidation=validateV10MarketThesisCutover(v10MarketThesisDebug.market_thesis,v10EvidenceIndex);const v10ThesisSwitchLog=applyV10ThesisCutover(aiStrategyJson,v10MarketThesisDebug.market_thesis,v10ThesisCutoverValidation,V10_FEATURE_FLAGS);log('V10_SWITCH '+JSON.stringify(v10ThesisSwitchLog));aiStrategyJson.v10_analysis_debug={version:'V10_EVIDENCE_PACK_DEBUG',enabled:false,feature_flags:V10_FEATURE_FLAGS,debug_agents_blocking_cron:false,debug_agents_requested:runV10DebugAgents,switch_log:[v10ThesisSwitchLog],thesis_cutover_validation:v10ThesisCutoverValidation,evidence_pack:v10EvidencePack,normalized_evidence:v10NormalizedEvidence,evidence_index:v10EvidenceIndex,candidate_universe:v10CandidateUniverse,beneficiary_phase1:v10BeneficiaryPhase1,evaluation_framework:v10EvaluationFramework,candidate_evaluation:{enabled:false,used_openai:v10CandidateEvaluationDebug.used_openai,candidate_count:v10CandidateEvaluationDebug.candidate_count,evaluations:v10CandidateEvaluationDebug.evaluations,error:v10CandidateEvaluationDebug.error},candidate_evaluation_validation:{enabled:false,validation:v10CandidateEvaluationValidation},score_engine:v10ScoreEngine,capital_flow_engine:v10CapitalFlowEngine,decision_summary:buildV10DecisionSummaryDebug(v10MarketThesisDebug.market_thesis,(Array.isArray(v10ScoreEngine.scores)?v10ScoreEngine.scores:[]) as V10CandidateScoreRecord[],v10CandidateEvaluationDebug.evaluations,v10EvidenceIndex,(v10CapitalFlowEngine.chain&&typeof v10CapitalFlowEngine.chain==='object'?v10CapitalFlowEngine.chain:undefined) as V10CapitalFlowChain|undefined),agent_specification:buildV10AgentSpecification(),market_thesis:{enabled:false,used_openai:v10MarketThesisDebug.used_openai,market_thesis:v10MarketThesisDebug.market_thesis,error:v10MarketThesisDebug.error},market_thesis_validation:{enabled:false,validation:v10MarketThesisValidation},market_thesis_refinement:{enabled:false,input_sources:['evidence_pack','normalized_evidence','evidence_index','market_context'],confidence_inputs:v10MarketThesisDebug.market_thesis?.confidence_inputs??buildMarketThesisConfidenceInputs(v10EvidencePack,v10NormalizedEvidence,v10EvidenceIndex),alternative_hypotheses:v10MarketThesisDebug.market_thesis?.alternative_hypotheses??[],evidence_breakdown:v10MarketThesisDebug.market_thesis?.evidence_breakdown??buildV10EvidenceBreakdown(v10EvidenceIndex)},decision_contract_schema:{enabled:false,schema_version:'V10',contract:v10EmptyDecisionContract,validation:validateV10DecisionContract(v10EmptyDecisionContract)},evidence_reference_schema:{enabled:false,reference_shape:{evidence_id:'MD001',weight:0,purpose:'primary_support'},validation:validateEvidenceReferences(v10EmptyDecisionContract,v10EvidenceIndex)}};
+    aiStrategyJson.performance_timing={total_before_write_ms:timer.total(),data_quality:dataQuality,missing_sources:missingSources};const v10EvidencePack=buildV10EvidencePack({todayDate,dates,tradingDayInfo,marketData,newsData,sectorData,previousReport,dataQuality,missingSources,staleCoreSources,unavailableSources,confidenceResult});const v10NormalizedEvidence=buildV10NormalizedEvidence(v10EvidencePack);const v10EvidenceIndex=buildEvidenceIndex(v10NormalizedEvidence);const v10CandidateUniverse=buildCandidateUniverse({normalizedEvidence:v10NormalizedEvidence,evidenceIndex:v10EvidenceIndex,recentReports:recentReportsForUniverse});const v10BeneficiaryPhase1=buildV10BeneficiaryPhase1(v10CandidateUniverse,v10EvidenceIndex);aiStrategyJson.today_beneficiary_stocks_v10=v10BeneficiaryPhase1.today_beneficiary_stocks_v10;aiStrategyJson.v10_observation_watchlist=v10BeneficiaryPhase1.observation_watchlist;aiStrategyJson.v10_risk_watchlist=v10BeneficiaryPhase1.risk_watchlist;aiStrategyJson.v10_beneficiary_enabled=true;aiStrategyJson.v10_candidate_count=v10BeneficiaryPhase1.candidate_count;aiStrategyJson.v10_data_quality_status=v10BeneficiaryPhase1.data_quality_status;if(v10BeneficiaryPhase1.warning)aiStrategyJson.v10_warning=v10BeneficiaryPhase1.warning;const v10EvaluationFramework=buildV10EvaluationFramework(v10EvidenceIndex);const v10EmptyDecisionContract=buildEmptyV10DecisionContract(v10EvidencePack);let v10MarketThesisDebug:{enabled:false;used_openai:boolean;market_thesis:V10MarketThesisContract|null;raw_response:Record<string,unknown>|null;error:string|null}={enabled:false,used_openai:false,market_thesis:null,raw_response:null,error:runV10DebugAgents?(skipOpenAI?'skip_openai_or_fast_mode':'not_run'):'debug_agents_skipped_for_cron'};if(runV10DebugAgents&&!skipOpenAI){v10MarketThesisDebug=await withTimeout(runV10MarketThesisAgentDebug({evidencePack:v10EvidencePack,normalizedEvidence:v10NormalizedEvidence,evidenceIndex:v10EvidenceIndex,marketContext:(v10NormalizedEvidence.market_context&&typeof v10NormalizedEvidence.market_context==='object'?v10NormalizedEvidence.market_context:{} ) as Record<string,unknown>,apiKey:Deno.env.get('OPENAI_API_KEY')||'',log}),10000,'v10_market_thesis_agent',log,v10MarketThesisDebug);}const v10MarketThesisValidation=buildV10MarketThesisValidation(v10MarketThesisDebug,v10EmptyDecisionContract,v10EvidenceIndex);let v10CandidateEvaluationDebug:{enabled:false;used_openai:boolean;candidate_count:number;evaluations:V10CandidateEvaluationRecord[];raw_response:Record<string,unknown>|null;error:string|null}={enabled:false,used_openai:false,candidate_count:Array.isArray(v10CandidateUniverse.candidates)?v10CandidateUniverse.candidates.length:0,evaluations:[],raw_response:null,error:runV10DebugAgents?(skipOpenAI?'skip_openai_or_fast_mode':'not_run'):'debug_agents_skipped_for_cron'};if(runV10DebugAgents&&!skipOpenAI){v10CandidateEvaluationDebug=await withTimeout(runV10CandidateEvaluationAgentDebug({marketThesis:v10MarketThesisDebug.market_thesis,candidateUniverse:v10CandidateUniverse,evidenceIndex:v10EvidenceIndex,evaluationFramework:v10EvaluationFramework,apiKey:Deno.env.get('OPENAI_API_KEY')||'',log}),10000,'v10_candidate_evaluation_agent',log,v10CandidateEvaluationDebug);}const v10CandidateEvaluationValidation=validateV10CandidateEvaluationRecords(v10CandidateEvaluationDebug.evaluations,v10CandidateUniverse,v10EvidenceIndex);const v10ScoreEngine=buildV10ScoreEngine(v10CandidateEvaluationDebug.evaluations,v10CandidateUniverse,v10EvaluationFramework);const v10CapitalFlowEngine=buildV10CapitalFlowEngineDebug({marketThesis:v10MarketThesisDebug.market_thesis,candidateUniverse:v10CandidateUniverse,scores:(Array.isArray(v10ScoreEngine.scores)?v10ScoreEngine.scores:[]) as V10CandidateScoreRecord[],evidenceIndex:v10EvidenceIndex});const v10ThesisCutoverValidation=validateV10MarketThesisCutover(v10MarketThesisDebug.market_thesis,v10EvidenceIndex);const v10ThesisSwitchLog=applyV10ThesisCutover(aiStrategyJson,v10MarketThesisDebug.market_thesis,v10ThesisCutoverValidation,V10_FEATURE_FLAGS);log('V10_SWITCH '+JSON.stringify(v10ThesisSwitchLog));aiStrategyJson.v10_analysis_debug={version:'V10_EVIDENCE_PACK_DEBUG',candidate_evidence_policy_version:CANDIDATE_EVIDENCE_POLICY_VERSION,enabled:false,feature_flags:V10_FEATURE_FLAGS,debug_agents_blocking_cron:false,debug_agents_requested:runV10DebugAgents,switch_log:[v10ThesisSwitchLog],thesis_cutover_validation:v10ThesisCutoverValidation,evidence_pack:v10EvidencePack,normalized_evidence:v10NormalizedEvidence,evidence_index:v10EvidenceIndex,candidate_universe:v10CandidateUniverse,beneficiary_phase1:v10BeneficiaryPhase1,evaluation_framework:v10EvaluationFramework,candidate_evaluation:{enabled:false,used_openai:v10CandidateEvaluationDebug.used_openai,candidate_count:v10CandidateEvaluationDebug.candidate_count,evaluations:v10CandidateEvaluationDebug.evaluations,error:v10CandidateEvaluationDebug.error},candidate_evaluation_validation:{enabled:false,validation:v10CandidateEvaluationValidation},score_engine:v10ScoreEngine,capital_flow_engine:v10CapitalFlowEngine,decision_summary:buildV10DecisionSummaryDebug(v10MarketThesisDebug.market_thesis,(Array.isArray(v10ScoreEngine.scores)?v10ScoreEngine.scores:[]) as V10CandidateScoreRecord[],v10CandidateEvaluationDebug.evaluations,v10EvidenceIndex,(v10CapitalFlowEngine.chain&&typeof v10CapitalFlowEngine.chain==='object'?v10CapitalFlowEngine.chain:undefined) as V10CapitalFlowChain|undefined),agent_specification:buildV10AgentSpecification(),market_thesis:{enabled:false,used_openai:v10MarketThesisDebug.used_openai,market_thesis:v10MarketThesisDebug.market_thesis,error:v10MarketThesisDebug.error},market_thesis_validation:{enabled:false,validation:v10MarketThesisValidation},market_thesis_refinement:{enabled:false,input_sources:['evidence_pack','normalized_evidence','evidence_index','market_context'],confidence_inputs:v10MarketThesisDebug.market_thesis?.confidence_inputs??buildMarketThesisConfidenceInputs(v10EvidencePack,v10NormalizedEvidence,v10EvidenceIndex),alternative_hypotheses:v10MarketThesisDebug.market_thesis?.alternative_hypotheses??[],evidence_breakdown:v10MarketThesisDebug.market_thesis?.evidence_breakdown??buildV10EvidenceBreakdown(v10EvidenceIndex)},decision_contract_schema:{enabled:false,schema_version:'V10',contract:v10EmptyDecisionContract,validation:validateV10DecisionContract(v10EmptyDecisionContract)},evidence_reference_schema:{enabled:false,reference_shape:{evidence_id:'MD001',weight:0,purpose:'primary_support'},validation:validateEvidenceReferences(v10EmptyDecisionContract,v10EvidenceIndex)}};
     aiStrategyJson=applyV10EvidenceBackedNarrative(aiStrategyJson,v10BeneficiaryPhase1);
     attachResearchMasterV2Shadow(aiStrategyJson,{reportDate:todayDate,todayDate,dataAsOf:marketFetch.latestDataTime?.toISOString()??newsFetch.latestNewsTime?.toISOString()??null,engineVersion:VERSION,promptVersion:null,generatedAt:String(aiStrategyJson.generated_at||''),reportMode,marketStatus:'OPEN',isTradingDay:true,legacy:aiStrategyJson,evidencePack:v10EvidencePack,normalizedEvidence:v10NormalizedEvidence,evidenceIndex:v10EvidenceIndex,candidateUniverse:v10CandidateUniverse,marketThesis:v10MarketThesisDebug.market_thesis},log);
     aiStrategyJson=enforceMemberResearchIntegrity(aiStrategyJson,dataQuality,marketData,log,newsData.length);
@@ -2778,7 +3090,7 @@ Deno.serve(async (req:Request)=>{
     const previousAI=(previousReport?.ai_strategy_json&&typeof previousReport.ai_strategy_json==='object'&&!Array.isArray(previousReport.ai_strategy_json)?previousReport.ai_strategy_json:{} ) as Record<string,unknown>;
     const previousV8=(previousAI.v8_daily_sentence&&typeof previousAI.v8_daily_sentence==='object'&&!Array.isArray(previousAI.v8_daily_sentence)?previousAI.v8_daily_sentence:{} ) as Record<string,unknown>;
     const previousDailySentence=String(previousAI.today_quote||previousV8.sentence||'');
-    const writeResult=await writeReport(supabase,todayDate,aiStrategyJson,marketBias,rawConfidenceScore,reportMode,marketData,newsData,log,tradingDayInfo,dates,previousDailySentence,learningConfidence,correlationId,Math.max(1,recoveryAttempt),reqStartedAt);
+    const writeResult=await writeReport(supabase,todayDate,aiStrategyJson,marketBias,rawConfidenceScore,reportMode,marketData,newsData,log,tradingDayInfo,dates,previousDailySentence,learningConfidence,correlationId,Math.max(1,recoveryAttempt),reqStartedAt,activeInputRun);
     timer.mark('REPORT_WRITTEN');
     if(!writeResult?.reportId){log('WRITE_FAILED');return corsResponse({success:false,error:'Failed to write report',report_date:todayDate,version:VERSION,logs},500);}
 
@@ -2797,14 +3109,28 @@ Deno.serve(async (req:Request)=>{
     if(!verified?.reportId){log('VERIFY_FAILED');return corsResponse({success:false,error:'Report written but verification failed',report_date:todayDate,report_id:writeResult.reportId,version:VERSION,logs},500);}
 
     const verifiedGate=evaluatePremiumContentGate(verified.aiJson||{},newsData.length);
-    const reportState=await supabase.rpc('advance_trading_day_state_v1',{p_trading_date:todayDate,p_state:'REPORT_GENERATED',p_checkpoint:'report_generation',p_status:'SUCCEEDED',p_correlation_id:correlationId,p_metadata:{report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,input_fingerprint:String(aiStrategyJson.revision_id||''),output_fingerprint:String(writeResult.snapshotId||'')}});
+    const verifiedMarketGate=evaluateMarketReportGate(verified.aiJson||{},todayDate);
+    const reportState=await supabase.rpc('advance_trading_day_state_v1',{p_trading_date:todayDate,p_state:'REPORT_GENERATED',p_checkpoint:'report_generation',p_status:'SUCCEEDED',p_correlation_id:correlationId,p_metadata:{report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,input_fingerprint:activeInputRun?.fingerprint||'',output_fingerprint:String(writeResult.snapshotId||'')}});
     if(reportState.error)throw new Error('REPORT_STATE_ADVANCE_FAILED');
-    const deliveryEligible=verifiedGate.eligible&&Boolean(writeResult.snapshotId)&&writeResult.memberRevision.eligible;
-    const deliveryReasonCodes=Array.from(new Set([...verifiedGate.reason_codes,...writeResult.memberRevision.reasonCodes]));
-    if(deliveryEligible){const editorialState=await supabase.rpc('advance_trading_day_state_v1',{p_trading_date:todayDate,p_state:'EDITORIAL_APPROVED',p_checkpoint:'editorial_gate',p_status:'SUCCEEDED',p_correlation_id:correlationId,p_metadata:{report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,member_content_revision_id:writeResult.memberRevision.revisionId,content_score:verifiedGate.content_score,semantic_status:writeResult.memberRevision.status,reason_codes:deliveryReasonCodes}});if(editorialState.error)throw new Error('EDITORIAL_STATE_ADVANCE_FAILED');}
-    const durationMs=Date.now()-reqStart;log('DONE report_id='+verified.reportId+' premium_eligible='+deliveryEligible+' duration='+durationMs+'ms');
+    const deliveryEligible=verifiedMarketGate.eligible&&Boolean(writeResult.snapshotId)&&writeResult.memberRevision.eligible;
+    const deliveryReasonCodes=Array.from(new Set([...verifiedMarketGate.reason_codes,...writeResult.memberRevision.reasonCodes]));
+    if(deliveryEligible){const editorialState=await supabase.rpc('advance_trading_day_state_v1',{p_trading_date:todayDate,p_state:'EDITORIAL_APPROVED',p_checkpoint:'editorial_gate',p_status:'SUCCEEDED',p_correlation_id:correlationId,p_metadata:{report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,member_content_revision_id:writeResult.memberRevision.revisionId,content_score:verifiedMarketGate.content_score,semantic_status:writeResult.memberRevision.status,reason_codes:deliveryReasonCodes}});if(editorialState.error)throw new Error('EDITORIAL_STATE_ADVANCE_FAILED');}
+    const durationMs=Date.now()-reqStart;log('DONE report_id='+verified.reportId+' report_eligible='+deliveryEligible+' premium_eligible='+verifiedGate.eligible+' duration='+durationMs+'ms');
     const sloResult=await supabase.from('runtime_slo_measurements').insert({slo_key:'report_generation_latency',measured_at:new Date().toISOString(),report_date:todayDate,correlation_id:correlationId,success:durationMs<=120000,value:durationMs,latency_ms:durationMs,reason_codes:durationMs<=120000?[]:['report_generation_latency_exceeded'],metadata:{premium_eligible:verifiedGate.eligible,engine_version:VERSION}});
     if(sloResult.error)log('REPORT_SLO_MEASUREMENT_DEGRADED '+sloResult.error.message);
-    return corsResponse({success:deliveryEligible,message:deliveryEligible?'Report generated and approved (V9.5)':'Report generated but delivery gate blocked',error:deliveryEligible?undefined:'DELIVERY_GATE_BLOCKED',error_code:deliveryEligible?undefined:'DELIVERY_GATE_BLOCKED',report_generated:true,report_date:todayDate,report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,member_content_revision_id:writeResult.memberRevision.revisionId,semantic_status:writeResult.memberRevision.status,correlation_id:correlationId,premium_eligible:deliveryEligible,premium_content_score:verifiedGate.content_score,premium_decision_mode:verifiedGate.decision_mode,premium_reason_codes:writeResult.snapshotId?deliveryReasonCodes:Array.from(new Set([...deliveryReasonCodes,'editorial_snapshot_missing'])),recovery_attempt:recoveryAttempt,cost_guard:costGuard,cost_usage_id:runtimeCostUsageId,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,tw_core_date:dates.twCoreDate,us_global_date:dates.usGlobalDate,source:String(aiStrategyJson.build_method||'deterministic'),market_bias:marketBias,confidence_score:safeInteger(rawConfidenceScore,50),report_mode:reportMode,duration_ms:durationMs,version:VERSION,logs},deliveryEligible?200:409);
-  }catch(err){const msg=err instanceof Error?err.message:String(err);log('FATAL: '+msg);return corsResponse({success:false,error:msg,correlation_id:correlationId,version:VERSION,logs},500)}
+    return corsResponse({success:deliveryEligible,message:deliveryEligible?'Report generated and approved (V9.5)':'Report generated but delivery gate blocked',error:deliveryEligible?undefined:'DELIVERY_GATE_BLOCKED',error_code:deliveryEligible?undefined:'DELIVERY_GATE_BLOCKED',report_generated:true,report_date:todayDate,report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,member_content_revision_id:writeResult.memberRevision.revisionId,semantic_status:writeResult.memberRevision.status,correlation_id:correlationId,report_eligible:deliveryEligible,report_status:verifiedMarketGate.report_status,recommendation_status:verifiedMarketGate.recommendation_status,premium_eligible:verifiedGate.eligible,premium_content_score:verifiedGate.content_score,premium_decision_mode:verifiedGate.decision_mode,premium_reason_codes:verifiedGate.reason_codes,report_reason_codes:writeResult.snapshotId?deliveryReasonCodes:Array.from(new Set([...deliveryReasonCodes,'editorial_snapshot_missing'])),recovery_attempt:recoveryAttempt,cost_guard:costGuard,cost_usage_id:runtimeCostUsageId,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,tw_core_date:dates.twCoreDate,us_global_date:dates.usGlobalDate,source:String(aiStrategyJson.build_method||'deterministic'),market_bias:marketBias,confidence_score:safeInteger(rawConfidenceScore,50),report_mode:reportMode,duration_ms:durationMs,version:VERSION,logs},deliveryEligible?200:409);
+  }catch(err){
+    const qualityFailure=err instanceof PublicationQualityError;
+    const msg=err instanceof Error?err.message:String(err);
+    const result={success:false,error_code:qualityFailure?'RESEARCH_QUALITY_REJECTED':'RESEARCH_EXECUTION_FAILED',
+      reason_codes:qualityFailure?err.reasonCodes:[msg],correlation_id:correlationId,version:VERSION};
+    if(activeInputRun&&inputRunClient){
+      const finished=await inputRunClient.rpc('finish_research_input_v1',{p_run_id:activeInputRun.id,p_correlation_id:correlationId,
+        p_outcome:qualityFailure?'DEGRADED':'FAILED',p_result:result,
+        p_retry_after_seconds:qualityFailure||activeInputRun.attempt>=3?null:30*2**(activeInputRun.attempt-1)});
+      if(finished.error)log('RESEARCH_OUTCOME_PERSISTENCE_FAILED '+finished.error.message);
+    }
+    log('FATAL: '+msg);
+    return corsResponse({...result,logs},qualityFailure?409:500);
+  }
 });

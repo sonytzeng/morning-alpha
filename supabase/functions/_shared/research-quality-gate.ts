@@ -3,10 +3,11 @@ export interface ResearchQualityGateResult {
   eligible: boolean;
   publish_status: string;
   evidence_coverage: number | null;
-  unsupported_claim_count: number;
-  duplicate_claim_count: number;
-  contradiction_count: number;
-  missing_section_count: number;
+  unsupported_claim_count: number | null;
+  duplicate_claim_count: number | null;
+  contradiction_count: number | null;
+  missing_section_count: number | null;
+  ignored_conditional_claim_count: number;
   required_score: number;
   reason_codes: string[];
 }
@@ -19,8 +20,9 @@ function asRecord(value: unknown): JsonRecord {
     : {};
 }
 
-function asArray(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
+function claimCount(value: unknown): number | null {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string' && item.trim())
+    ? value.length : null;
 }
 
 function normalizedMinimum(value: number): number {
@@ -38,14 +40,16 @@ export function evaluateResearchQualityGate(
   const publishStatus = typeof quality.publish_status === "string"
     ? quality.publish_status.trim().toLowerCase()
     : "missing";
-  const coverageValue = Number(quality.evidence_coverage);
-  const evidenceCoverage = Number.isFinite(coverageValue)
+  const rawCoverage = quality.evidence_coverage;
+  const coverageValue = typeof rawCoverage === 'number' || (typeof rawCoverage === 'string' && rawCoverage.trim())
+    ? Number(rawCoverage) : NaN;
+  const evidenceCoverage = Number.isFinite(coverageValue) && coverageValue >= 0 && coverageValue <= 100
     ? coverageValue
     : null;
-  const unsupportedClaims = asArray(quality.unsupported_claims);
-  const duplicateClaims = asArray(quality.duplicate_claims);
-  const contradictions = asArray(quality.contradictions);
-  const missingSections = asArray(quality.missing_sections);
+  const unsupportedClaims = claimCount(quality.unsupported_claims);
+  const duplicateClaims = claimCount(quality.duplicate_claims);
+  const contradictions = claimCount(quality.contradictions);
+  const missingSections = claimCount(quality.missing_sections);
   const publishableStatuses = new Set([
     "ready",
     "approved",
@@ -61,16 +65,19 @@ export function evaluateResearchQualityGate(
   if (evidenceCoverage === null || evidenceCoverage < 100) {
     reasonCodes.push("research_evidence_coverage_below_100");
   }
-  if (unsupportedClaims.length > 0) {
+  if ([unsupportedClaims, duplicateClaims, contradictions, missingSections].some((count) => count === null)) {
+    reasonCodes.push('research_quality_counters_missing_or_invalid');
+  }
+  if (unsupportedClaims !== null && unsupportedClaims > 0) {
     reasonCodes.push("research_unsupported_claims_present");
   }
-  if (duplicateClaims.length > 0) {
+  if (duplicateClaims !== null && duplicateClaims > 0) {
     reasonCodes.push("research_duplicate_claims_present");
   }
-  if (contradictions.length > 0) {
+  if (contradictions !== null && contradictions > 0) {
     reasonCodes.push("research_contradictions_present");
   }
-  if (missingSections.length > 0) {
+  if (missingSections !== null && missingSections > 0) {
     reasonCodes.push("research_sections_missing");
   }
 
@@ -79,10 +86,13 @@ export function evaluateResearchQualityGate(
     eligible: reasonCodes.length === 0,
     publish_status: publishStatus,
     evidence_coverage: evidenceCoverage,
-    unsupported_claim_count: unsupportedClaims.length,
-    duplicate_claim_count: duplicateClaims.length,
-    contradiction_count: contradictions.length,
-    missing_section_count: missingSections.length,
+    unsupported_claim_count: unsupportedClaims,
+    duplicate_claim_count: duplicateClaims,
+    contradiction_count: contradictions,
+    missing_section_count: missingSections,
+    // Historical conditional rows are not silently erased or upgraded to 100%.
+    // The assembler now classifies future criteria in failure_scenario instead.
+    ignored_conditional_claim_count: 0,
     required_score: requiredScore,
     reason_codes: reasonCodes,
   };

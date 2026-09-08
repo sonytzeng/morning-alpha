@@ -228,9 +228,28 @@ test('canonical semantic gate blocks mixed shipping, semiconductor, and finance 
     sections: { public_thesis: 'oil 航運 2609', member_thesis: 'oil 航運 2609', taiwan_transmission: 'oil 航運 2609' },
     recommendations: [{ symbol: '2609', sector: '航運' }],
     quality_inputs: ['partial'],
-    quality_counters: {}, evidence_coverage: 100, content_score: 100, checked_at: '2026-08-27T00:00:00Z',
+    quality_counters: { unsupported_claim_count: 0, contradiction_count: 0, duplicate_claim_count: 0, missing_section_count: 0 }, evidence_coverage: 100, content_score: 100, checked_at: '2026-08-27T00:00:00Z',
   });
   assert.equal(passed.status, 'PASSED');
+});
+
+test('Sep 7 STOP canonical empty recommendations never resurrect legacy candidates', () => {
+  const snapshot = { id: 'blocked', report_date: '2026-09-07', version: 7, action: 'STOP', decision_mode: 'blocked', generated_text: { daily_sentence: '尚未通過證據門檻', recommendations: [] } };
+  const contract = buildCanonicalDecisionContract({ snapshot, ai: { today_beneficiary_stocks_v10: [{ symbol: '2308', sector: '電子權值', event_source: 'AI Server' }] } });
+  assert.deepEqual(contract.primary_symbols, []);
+  assert.equal(evaluateCanonicalSemanticCoherenceGate({ canonical_contract: contract, quality_counters: {}, evidence_coverage: 100, content_score: 100 }).eligible, false);
+});
+
+test('semantic gate requires numeric counters and score rather than absent values coercing to zero', () => {
+  const contract = { report_date: '2026-09-07', snapshot_id: 's', snapshot_version: 1, primary_event: 'oil', primary_causal_chain: ['oil'], primary_taiwan_theme: '航運', primary_symbols: ['2609'], validation_checkpoint: '09:30', validation_signals: ['oil'], invalidation_conditions: ['oil'], action: 'SELECTIVE', data_quality_status: 'complete', evidence_refs: ['NEWS1'] };
+  const good = { canonical_contract: contract, quality_inputs: ['complete'], quality_counters: { unsupported_claim_count: 0, contradiction_count: 0, duplicate_claim_count: 0, missing_section_count: 0 }, evidence_coverage: 100, content_score: 100 };
+  assert.equal(evaluateCanonicalSemanticCoherenceGate(good).eligible, true);
+  for (const bad of [undefined, null, '', false, 'NaN', NaN, Infinity, -1, 0.5]) {
+    assert.equal(evaluateCanonicalSemanticCoherenceGate({ ...good, quality_counters: { ...good.quality_counters, unsupported_claim_count: bad } }).eligible, false, String(bad));
+  }
+  for (const bad of [undefined, null, '', 'NaN', NaN, Infinity, 101]) {
+    assert.equal(evaluateCanonicalSemanticCoherenceGate({ ...good, content_score: bad }).eligible, false, String(bad));
+  }
 });
 
 test('CLE counters count real inserts, updates, and unchanged entities', () => {

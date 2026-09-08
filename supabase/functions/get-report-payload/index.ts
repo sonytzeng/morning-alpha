@@ -6,6 +6,7 @@ import {
 } from "../_shared/bounded-json.ts";
 import { resolveMarketStatus } from "../_shared/market-status.ts";
 import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
+import { evaluateMarketReportGate } from "../_shared/market-report-gate.ts";
 import {
   resolveEffectiveMemberAccess,
   type EffectiveMemberAccess,
@@ -16,6 +17,10 @@ import {
 import { buildCanonicalIntradaySyncStatus } from "../_shared/runtime-report-state.ts";
 import { resolveCanonicalRuntimeMarketStatus } from "../_shared/canonical-runtime-market-status.mjs";
 import { resolveCanonicalDataQuality } from "../_shared/production-architecture-core.mjs";
+import { canonicalAdminReaderProjection } from "../_shared/research-pipeline-contract.ts";
+import { loadDecisionEvidence } from "../_shared/decision-v1-data.ts";
+import { buildEvidenceDecision, projectEvidenceDecision, sealEvidenceDecision } from "../_shared/decision-v1-evidence.ts";
+import { createSubscriberState, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE } from "../../../shared/subscriber-state-contract.ts";
 
 type ReportRow = Record<string, unknown> & {
   id?: string;
@@ -30,6 +35,7 @@ type ReportRow = Record<string, unknown> & {
 };
 
 type PayloadContext = {
+  evaluatedAt?: string;
   openingRadar: Record<string, unknown> | null;
   sectorRotationRows: Record<string, unknown>[];
   marketDataSnapshots: Record<string, unknown>[];
@@ -146,54 +152,85 @@ function buildAuthoritativeClosingVerification(
   const existingV2 = asObject(ai.closing_verification_v2);
   const existingLegacy = asObject(ai.closing_verification);
   const generatedText = asObject(ctx.closingDecisionSnapshot?.generated_text);
-  const review = ctx.closeMarketReview;
-  const base = {
-    ...existingLegacy,
-    ...existingV2,
+  // A receipt is an indivisible assertion. Never borrow revision B from a
+  // snapshot and outcome/actuals from date-only review A, or fill incomplete V2
+  // fields from a different legacy receipt. Strict matching happens downstream.
+  if (Object.keys(existingV2).length) return { ...existingV2, source_priority: "canonical_closing_verification_v2" };
+  if (Object.keys(existingLegacy).length) return { ...existingLegacy, source_priority: "canonical_closing_verification" };
+  if (Object.keys(generatedText).length) return {
+    report_date: ctx.closingDecisionSnapshot?.report_date,
+    status: ctx.closingDecisionSnapshot?.status,
+    data_status: asObject(ctx.closingDecisionSnapshot?.factor_scores).data_status,
+    verified_at: ctx.closingDecisionSnapshot?.created_at,
     ...generatedText,
+    source_priority: "closing_decision_snapshot",
   };
-  if (!review) return Object.keys(base).length > 0 ? base : null;
+  // close_market_reviews currently has no opening decision identity. Its raw
+  // actuals still contribute to data_as_of, but cannot establish a thesis result.
+  if (ctx.closeMarketReview) return {
+    report_date: ctx.closeMarketReview.report_date,
+    status: "pending_real_market_data", data_status: "insufficient",
+    source_priority: "unbound_close_market_review", reason_code: "CLOSING_REVISION_UNBOUND",
+  };
+  return null;
+}
 
-  const missingData = Array.isArray(review.missing_data) ? review.missing_data.map(String) : [];
-  const taiexChange = toNumberValue(review.taiex_change);
-  const tsmcChange = toNumberValue(review.tsmc_change);
-  const txfChange = toNumberValue(review.txf_change);
-  const outcome = normalizeClosingOutcome(review.verification_result || review.verification_label);
-  const dataQuality = toStringValue(review.data_quality) || "unknown";
-  const complete = taiexChange !== null
-    && missingData.length === 0
-    && ["高可信", "verified", "complete", "high_confidence"].includes(dataQuality.toLowerCase())
-    && outcome !== "pending";
-
+/** Validate the final read projection, including preserved report overlays.
+ * Ledger filtering alone cannot invalidate an older completed overlay. Never
+ * rewrite persisted evidence or promote an elapsed checkpoint to completion. */
+function sanitizeRuntimeCompletionEvidence(
+  value: unknown,
+  reportDate: string,
+  now = Date.now(),
+): Record<string, unknown> {
+  const sync = asObject(value);
+  const originalWindows = asObject(sync.windows);
+  const windows: Record<string, unknown> = { ...originalWindows };
+  const invalidated: string[] = [];
+  const completedStatuses = ["ready", "complete", "completed", "synced", "succeeded", "success", "done"];
+  const taipeiDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit",
+  });
+  for (const checkpoint of ["0900", "0930", "1030", "1300", "1410", "1430"]) {
+    const row = asObject(windows[checkpoint]);
+    if (!completedStatuses.includes((toStringValue(row.status || row.checkpoint_status || windows[checkpoint]) || "").toLowerCase())) continue;
+    const originalCompletedAt = typeof row.completed_at === "string" ? row.completed_at : null;
+    const timestamp = originalCompletedAt && /T.*(?:Z|[+-]\d{2}:?\d{2})$/i.test(originalCompletedAt)
+      ? Date.parse(originalCompletedAt) : NaN;
+    const reasons: string[] = [];
+    if (!Number.isFinite(timestamp)) reasons.push("CHECKPOINT_COMPLETION_TIMESTAMP_INVALID");
+    else {
+      if (taipeiDate.format(new Date(timestamp)) !== reportDate) reasons.push("CHECKPOINT_COMPLETION_DATE_MISMATCH");
+      if (timestamp > now) reasons.push("FUTURE_RUNTIME_EVIDENCE");
+    }
+    const scheduledAt = Date.parse(`${reportDate}T${checkpoint.slice(0, 2)}:${checkpoint.slice(2)}:00+08:00`);
+    if (!Number.isFinite(scheduledAt)) reasons.push("CHECKPOINT_REPORT_DATE_INVALID");
+    else if (scheduledAt > now && !reasons.includes("FUTURE_RUNTIME_EVIDENCE")) reasons.push("FUTURE_RUNTIME_EVIDENCE");
+    if (toStringValue(sync.report_date) && sync.report_date !== reportDate) reasons.push("CHECKPOINT_REPORT_DATE_MISMATCH");
+    if (reasons.length === 0) continue;
+    invalidated.push(checkpoint);
+    windows[checkpoint] = {
+      ...row, status: "insufficient", checkpoint_status: "insufficient", completed_at: null,
+      real_checkpoint_observation: false,
+      evidence: { source: "get-report-payload", valid_completion: false, reason_codes: reasons },
+      diagnostic: { ...asObject(row.diagnostic), original_completed_at: originalCompletedAt, reason_codes: reasons },
+    };
+  }
+  if (invalidated.length === 0) return sync;
+  const completed = Object.entries(windows).filter(([key, raw]) => /^\d{4}$/.test(key)
+    && completedStatuses.includes((toStringValue(asObject(raw).status) || "").toLowerCase()));
+  const latest = completed.sort(([left], [right]) => left.localeCompare(right)).at(-1);
+  const latestWindow = asObject(latest?.[1]);
   return {
-    ...base,
-    status: complete ? "completed" : taiexChange !== null ? "direction_completed_data_degraded" : "pending_real_market_data",
-    data_status: complete ? "complete" : taiexChange !== null ? "degraded" : "pending",
-    report_date: toStringValue(review.report_date),
-    verified_at: toStringValue(review.updated_at) || toStringValue(review.created_at),
-    hit_or_miss: outcome,
-    prediction_result: outcome,
-    verdict_label: toStringValue(review.verification_label) || toStringValue(review.verification_result),
-    verification_note: toStringValue(review.verification_note),
-    actual_direction: toStringValue(review.actual_market_result),
-    actual_taiex_change: taiexChange,
-    actual_taiex_close: {
-      ...asObject(base.actual_taiex_close),
-      change_percent: taiexChange,
-    },
-    actual_2330_close: {
-      ...asObject(base.actual_2330_close),
-      change_percent: tsmcChange,
-    },
-    actual_txf_close: {
-      ...asObject(base.actual_txf_close),
-      change_percent: txfChange,
-    },
-    data_quality: dataQuality,
-    missing_data: missingData,
-    close_market_review_id: toStringValue(review.id),
-    source_priority: "close_market_review",
-    no_fake_data: true,
+    ...sync, report_date: reportDate, windows,
+    checkpoint: latest?.[0] || null,
+    checkpoint_status: latest ? "completed" : "insufficient",
+    captured_at: latestWindow.completed_at || null,
+    last_checked_at: latestWindow.completed_at || null,
+    current_state: latest ? toStringValue(asObject(latestWindow.evidence).state) : null,
+    state_rank: null, ledger_guarantee: false, lifecycle_complete: false,
+    warning: `已完成 ${completed.length} 個盤中驗證節點；${invalidated.length} 個節點的完成證據不足。`,
+    diagnostic: { ...asObject(sync.diagnostic), invalid_completion_checkpoints: invalidated },
   };
 }
 
@@ -208,7 +245,7 @@ function getEffectiveAi(report: ReportRow, ctx: PayloadContext): Record<string, 
       opening_radar: ctx.openingRadar,
       opening_radar_status: toStringValue(ctx.openingRadar.radar_status) || toStringValue(ctx.openingRadar.status),
     } : {}),
-    intraday_sync_status: buildCanonicalIntradaySyncStatus(
+    intraday_sync_status: sanitizeRuntimeCompletionEvidence(buildCanonicalIntradaySyncStatus(
       ai.intraday_sync_status,
       ctx.tradingDayState,
       {
@@ -216,7 +253,7 @@ function getEffectiveAi(report: ReportRow, ctx: PayloadContext): Record<string, 
         closingDecisionSnapshot: ctx.closingDecisionSnapshot,
         learningRun: ctx.learningRun,
       },
-    ),
+    ), getReportDate(report)),
     ...(closingVerification ? {
       closing_verification: closingVerification,
       closing_verification_v2: closingVerification,
@@ -246,6 +283,15 @@ function normalizeDataQualityToken(value: unknown): string | null {
 }
 
 function getCanonicalPayloadQuality(ai: Record<string, unknown>, ctx: PayloadContext): string {
+  const snapshotGate = asObject(asObject(ctx.decisionSnapshot?.generated_text).market_report_gate);
+  const master = asObject(ai.research_master_v2);
+  if (ctx.decisionSnapshot?.status === 'READY' && snapshotGate.eligible === true
+    && snapshotGate.report_date === ctx.decisionSnapshot.report_date) {
+    // Editorial/market completeness is independent of stock screening and paid QA.
+    // Runtime checkpoint quality remains separately exposed on the radar/timeline.
+    return resolveCanonicalDataQuality([normalizeDataQualityToken(ai.data_quality),
+      normalizeDataQualityToken(asObject(master.provenance).source_status)].filter(Boolean));
+  }
   const note = asObject(ai.member_research_note_v2);
   const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
   return resolveCanonicalDataQuality([
@@ -263,8 +309,11 @@ function isCanonicalMemberRevisionEligible(ctx: PayloadContext): boolean {
   if (!revision || !ctx.decisionSnapshot) return false;
   return toStringValue(revision.status) === "PASSED"
     && toStringValue(revision.semantic_status) === "PASSED"
+    && Array.isArray(revision.semantic_reason_codes) && revision.semantic_reason_codes.length === 0
     && toStringValue(revision.decision_snapshot_id) === toStringValue(ctx.decisionSnapshot.id)
-    && toNumberValue(revision.decision_snapshot_version) === toNumberValue(ctx.decisionSnapshot.version);
+    && toNumberValue(revision.decision_snapshot_version) === toNumberValue(ctx.decisionSnapshot.version)
+    && revision.report_id === ctx.decisionSnapshot.report_id
+    && revision.report_date === ctx.decisionSnapshot.report_date;
 }
 
 function getImportantNews(report: ReportRow, ai: Record<string, unknown>): Record<string, unknown>[] {
@@ -392,7 +441,7 @@ function getDataAsOf(ai: Record<string, unknown>, ctx: PayloadContext): string |
     ctx.learningRun?.completed_at,
   ]
     .map(toIsoTimestamp)
-    .filter((value): value is string => value !== null)
+    .filter((value): value is string => value !== null && Date.parse(value) <= Date.now())
     .sort((a, b) => b.localeCompare(a));
 
   return evidenceTimestamps[0] || null;
@@ -486,6 +535,8 @@ function buildClosingVerdict(ai: Record<string, unknown>): Record<string, unknow
   return {
     status: toStringValue(closing.status),
     data_status: toStringValue(closing.data_status),
+    report_date: toStringValue(closing.report_date),
+    opening_decision_snapshot_id: toStringValue(closing.opening_decision_snapshot_id),
     verdict_label: toStringValue(closing.verdict_label) || toStringValue(closing.hit_or_miss),
     prediction_result: toStringValue(closing.prediction_result) || toStringValue(closing.hit_or_miss),
     accuracy_score: toNumberValue(closing.accuracy_score),
@@ -493,6 +544,8 @@ function buildClosingVerdict(ai: Record<string, unknown>): Record<string, unknow
     actual_direction: toStringValue(closing.actual_direction),
     actual_taiex_change: toNumberValue(closing.actual_taiex_change) ?? toNumberValue(asObject(closing.actual_taiex_close).change_percent),
     actual_taiex_close: asObject(closing.actual_taiex_close),
+    actual_2330_close: asObject(closing.actual_2330_close || closing.actual_tsmc_close),
+    actual_txf_close: asObject(closing.actual_txf_close),
     data_quality: toStringValue(closing.data_quality),
     missing_data: Array.isArray(closing.missing_data) ? closing.missing_data : [],
     no_fake_data: closing.no_fake_data === true,
@@ -559,67 +612,125 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const ai = getEffectiveAi(report, ctx);
   const importantNews = getImportantNews(report, ai);
   const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
+  const marketGate = evaluateMarketReportGate(ai, getReportDate(report));
   const canonicalQuality = getCanonicalPayloadQuality(ai, ctx);
   const semanticEligible = isCanonicalMemberRevisionEligible(ctx);
+  // Alignment alone also permits legacy rows without an atomic pointer. Such
+  // rows remain readable at their real date, but are not publication evidence.
+  const publicationAligned = isPublishedReadAligned(report, ctx)
+    && Boolean(toStringValue(getAi(report).revision_id))
+    && ctx.decisionSnapshot?.id === getAi(report).revision_id;
   const premiumEligible = premiumGate.eligible && semanticEligible;
   const premiumReasonCodes = Array.from(new Set([
     ...premiumGate.reason_codes,
     ...(semanticEligible ? [] : ["SEMANTIC_MEMBER_REVISION_NOT_ELIGIBLE"]),
   ]));
-  const confidenceScore = getConfidenceScore(report, ai);
   const openingRadar = ctx.openingRadar || asObject(ai.opening_radar);
   const marketMetadata = getCanonicalMarketMetadata(report, ai, ctx);
-  const publicSummary = asObject(ai.public_summary);
-  const freeSummary = asObject(ai.free_summary);
-  const canonicalDecision = buildCanonicalDecision(ctx, false);
-  const dailySentence = toStringValue(canonicalDecision?.daily_sentence) || getTodayQuote(report, ai);
+  const originalDecision = buildCanonicalDecision(ctx, false);
+  const revisionId = toStringValue(originalDecision?.id) || toStringValue(report.id);
+  const generatedAt = toStringValue(ctx.decisionSnapshot?.created_at) || getGeneratedAt(report, ai);
+  const subscriberState = createSubscriberState({
+    report_date: getReportDate(report), revision_id: revisionId, generated_at: generatedAt,
+    publicationVerified: publicationAligned, marketEvidenceReady: marketGate.eligible,
+    analysisStatus: ctx.decisionSnapshot?.status, isTradingDay: marketMetadata.isTradingDay,
+    confidenceValue: ctx.decisionSnapshot?.confidence_score,
+    recommendationGate: marketGate.recommendation_gate.status === "QUALIFIED" && !premiumEligible
+      ? { ...marketGate.recommendation_gate, status: "BLOCKED", eligible: false } : marketGate.recommendation_gate,
+    closing: ai.closing_verification_v2 || ai.closing_verification, now: ctx.evaluatedAt || new Date().toISOString(),
+  });
+  const marketPublished = subscriberState.publication === "PUBLISHED";
+  const recommendationsEligible = premiumEligible && marketPublished && marketGate.recommendation_gate.eligible;
+  const confidenceScore = subscriberState.confidence.value;
+  // Backward-safe aliases: an older deployed UI must not see QA STOP/100 or a
+  // close outcome for a thesis that was never published. Raw QA stays private.
+  const canonicalDecision: Record<string, unknown> = subscriberState.publication === "PUBLISHED" ? {
+    ...originalDecision, confidence_score: confidenceScore,
+  } : {
+    id: revisionId, status: subscriberState.analysis, action: "WAIT", decision_mode: "blocked",
+    confidence_score: null, daily_sentence: INCOMPLETE_ANALYSIS_MESSAGE, reasons: [],
+    preferred_sectors: [], do_not_do: "", next_checkpoint: "等待有效市場分析",
+  };
+  const dailySentence = subscriberState.publication === "PUBLISHED"
+    ? toStringValue(canonicalDecision.daily_sentence) || getTodayQuote(report, ai) : INCOMPLETE_ANALYSIS_MESSAGE;
+  const rawSync = asObject(ai.intraday_sync_status);
+  const subscriberSync = subscriberState.publication === "PUBLISHED" ? subscriberState.closing === "COMPLETE" ? rawSync : {
+    ...rawSync, current_state: null, state_rank: null, lifecycle_complete: false,
+    checkpoint: String(rawSync.checkpoint || "").replace(/\D/g, "") === "1430" ? null : rawSync.checkpoint,
+    checkpoint_status: String(rawSync.checkpoint || "").replace(/\D/g, "") === "1430" ? "insufficient" : rawSync.checkpoint_status,
+    // Older deployed clients fall back to this checkpoint even when the close
+    // receipt is absent. A dispatch completion is not a verified close result.
+    windows: { ...asObject(rawSync.windows), "1430": {
+      status: subscriberState.closing === "NOT_DUE" ? "pending" : "insufficient",
+      completed_at: null, real_checkpoint_observation: false,
+      reason: "CLOSING_PUBLICATION_EVIDENCE_UNVERIFIED",
+    } },
+  } : {
+    report_date: getReportDate(report), current_state: null, state_rank: null,
+    checkpoint: null, checkpoint_status: "insufficient", lifecycle_complete: false,
+    windows: Object.fromEntries(Object.keys(asObject(rawSync.windows)).map(key => [key, {
+      status: "insufficient", completed_at: null, real_checkpoint_observation: false,
+      reason: "MARKET_ANALYSIS_UNPUBLISHED",
+    }])),
+  };
   const componentFailureSources = ctx.componentQueryFailures.map((failure) => failure.source);
   const radarMissingSources = Array.isArray(openingRadar.missing_sources) ? openingRadar.missing_sources.map(String) : [];
   return {
     report_date: getReportDate(report),
     report_mode: getReportMode(report, ai),
-    revision_id: toStringValue(canonicalDecision?.id) || toStringValue(report.id),
+    revision_id: revisionId,
     market_date: getMarketDate(report, ai),
     base_date: getMarketDate(report, ai),
-    generated_at: getGeneratedAt(report, ai),
+    generated_at: generatedAt,
+    subscriber_state: subscriberState,
     data_as_of: getDataAsOf(ai, ctx),
     market_status: marketMetadata.marketStatus,
     is_trading_day: marketMetadata.isTradingDay,
     closed_reason: marketMetadata.closedReason,
-    market_bias: getMarketBias(report, ai),
+    // Regime (e.g. range) is not directional bias. Preserve both contracts.
+    market_bias: subscriberState.publication === "PUBLISHED" ? getMarketBias(report, ai) : "分析尚未完成",
     confidence_score: confidenceScore,
     confidence_label: getConfidenceLabel(confidenceScore),
     confidence_band: getConfidenceBand(confidenceScore),
     today_quote: dailySentence,
     daily_sentence: dailySentence,
-    v8_daily_sentence: asObject(ai.v8_daily_sentence),
-    public_summary: Object.keys(publicSummary).length > 0 ? publicSummary : freeSummary,
-    beneficiary_count: getBeneficiaryCount(ai),
-    one_teaser_stock: premiumEligible ? buildCanonicalTeaserStock(ctx.memberContentRevision?.member_content) : null,
+    v8_daily_sentence: { sentence: dailySentence },
+    public_summary: {
+      daily_sentence: dailySentence,
+      one_sentence: dailySentence,
+    },
+    beneficiary_count: recommendationsEligible ? getBeneficiaryCount(ai) : 0,
+    one_teaser_stock: recommendationsEligible ? buildCanonicalTeaserStock(ctx.memberContentRevision?.member_content) : null,
     v10_beneficiary_enabled: isV10BeneficiaryEnabled(ai),
     v10_data_quality_status: canonicalQuality,
     v10_warning: toStringValue(ai.v10_warning),
     v10_candidate_count: toNumberValue(ai.v10_candidate_count),
-    premium_content_status: premiumEligible ? "eligible" : "blocked",
+    premium_content_status: premiumEligible && marketPublished ? "eligible" : "blocked",
+    report_status: subscriberState.analysis,
+    recommendation_status: subscriberState.recommendation,
+    recommendation_gate: subscriberState.publication === "PUBLISHED" && subscriberState.recommendation !== "BLOCKED" ? marketGate.recommendation_gate
+      : { ...marketGate.recommendation_gate, eligible: false, status: "BLOCKED", subscriber_message: RECOMMENDATION_INSUFFICIENT_MESSAGE },
+    recommendation_message: subscriberState.recommendation === "BLOCKED" ? RECOMMENDATION_INSUFFICIENT_MESSAGE : marketGate.recommendation_gate.subscriber_message,
+    market_report_gate: marketGate,
     premium_decision_mode: premiumGate.decision_mode,
     premium_content_reason_codes: premiumReasonCodes,
-    recommendation_count: premiumGate.recommendation_count,
-    complete_recommendation_count: premiumGate.complete_recommendation_count,
-    member_value_score: toNumberValue(ai.member_value_score),
-    content_score: toNumberValue(canonicalDecision?.content_score) ?? premiumGate.content_score,
-    content_grade: toStringValue(canonicalDecision?.content_grade) || premiumGate.content_grade,
+    recommendation_count: recommendationsEligible ? premiumGate.recommendation_count : 0,
+    complete_recommendation_count: recommendationsEligible ? premiumGate.complete_recommendation_count : 0,
+    member_value_score: marketPublished ? toNumberValue(ai.member_value_score) : null,
+    content_score: marketPublished ? toNumberValue(canonicalDecision?.content_score) ?? premiumGate.content_score : null,
+    content_grade: marketPublished ? toStringValue(canonicalDecision?.content_grade) || premiumGate.content_grade : null,
     content_score_breakdown: premiumGate.content_score_breakdown,
     canonical_decision: canonicalDecision,
     content_publish_gate: {
-      overall_status: premiumEligible ? "eligible" : "blocked",
-      blocking_issues: premiumReasonCodes,
+      overall_status: marketPublished ? "eligible" : "blocked",
+      blocking_issues: [...marketGate.reason_codes, ...(publicationAligned && ctx.decisionSnapshot?.status === "READY" ? [] : ['CANONICAL_REVISION_NOT_VERIFIED'])],
     },
     important_news: buildPublicNews(importantNews),
     fresh_news_count: importantNews.length,
     opening_radar_status: toStringValue(openingRadar.radar_status) || toStringValue(openingRadar.status),
     opening_radar: buildPublicOpeningRadar(openingRadar),
-    member_research_note_v2: buildPublicValidationSkeleton(),
-    intraday_sync_status: asObject(ai.intraday_sync_status),
+    member_research_note_v2: marketPublished ? buildPublicValidationSkeleton() : {},
+    intraday_sync_status: subscriberSync,
     input_source: toStringValue(openingRadar.input_source) || null,
     degraded_metadata: {
       data_status: toStringValue(openingRadar.data_status),
@@ -646,10 +757,40 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
       if (symbol && !latestBySymbol.has(symbol)) latestBySymbol.set(symbol, row);
       return latestBySymbol;
     }, new Map<string, Record<string, unknown>>()).values()).slice(0, 16),
-    closing_verification: buildClosingVerdict(ai),
-    continuous_learning: asObject(ai.continuous_learning),
-    runtime_lifecycle_complete: asObject(ai.intraday_sync_status).lifecycle_complete === true,
+    closing_verification: subscriberState.closing === "COMPLETE" ? buildClosingVerdict(ai) : null,
+    closing_verification_v2: subscriberState.closing === "COMPLETE" ? buildClosingVerdict(ai) : null,
+    continuous_learning: subscriberState.closing === "COMPLETE" ? asObject(ai.continuous_learning) : null,
+    runtime_lifecycle_complete: subscriberState.closing === "COMPLETE" && rawSync.lifecycle_complete === true,
     data_quality: canonicalQuality,
+  };
+}
+
+function projectMarketOnlyMemberNote(value: unknown): Record<string, unknown> {
+  const note = asObject(value), contract = asObject(note.canonical_contract);
+  // A validated market-only document is not permission to spread old stock/QA
+  // aliases. Keep only the canonical market narrative and its evidence fields.
+  return {
+    contract_version: note.contract_version,
+    decision_mode: 'market_only', action: 'WAIT',
+    market_report_gate: contract.market_report_gate,
+    canonical_contract: Object.fromEntries([
+      'contract_version', 'decision_mode', 'market_report_gate', 'report_date',
+      'snapshot_id', 'snapshot_version', 'primary_event', 'primary_causal_chain',
+      'primary_taiwan_theme', 'validation_checkpoint', 'validation_signals',
+      'invalidation_conditions', 'action', 'data_quality_status', 'evidence_refs',
+    ].map(key => [key, contract[key]]).concat([['primary_symbols', []]])),
+    data_status: note.data_status,
+    today_core_thesis: note.today_core_thesis,
+    strategy_summary: note.strategy_summary,
+    subscriber_value_sentence: note.subscriber_value_sentence,
+    taiwan_transmission: note.taiwan_transmission,
+    beneficiary_candidates: [], representative_stocks: [],
+    intraday_validation: note.intraday_validation,
+    invalidation_conditions: note.invalidation_conditions,
+    invalidation_rules: note.invalidation_rules,
+    source_refs: note.source_refs,
+    line_summary: note.line_summary,
+    content_os_topic: { event_source: contract.primary_event, theme: contract.primary_taiwan_theme, symbols: [] },
   };
 }
 
@@ -658,8 +799,14 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const importantNews = getImportantNews(report, ai);
   const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
   const revisionEligible = isCanonicalMemberRevisionEligible(ctx);
-  const note = revisionEligible ? asObject(ctx.memberContentRevision?.member_content) : {};
-  const canonicalRecommendations = asArray(note.representative_stocks);
+  const rawNote = revisionEligible ? asObject(ctx.memberContentRevision?.member_content) : {};
+  const recommendationGate = evaluateMarketReportGate(ai, getReportDate(report)).recommendation_gate;
+  const marketOnlyNote = asObject(rawNote.canonical_contract).decision_mode === 'market_only'
+    && asObject(asObject(rawNote.canonical_contract).market_report_gate).eligible === true
+    && Array.isArray(rawNote.representative_stocks) && rawNote.representative_stocks.length === 0
+    && Array.isArray(rawNote.beneficiary_candidates) && rawNote.beneficiary_candidates.length === 0;
+  const note = marketOnlyNote ? projectMarketOnlyMemberNote(rawNote) : rawNote;
+  const canonicalRecommendations = recommendationGate.eligible ? asArray(note.representative_stocks) : [];
   const canonicalContract = asObject(note.canonical_contract);
   const v8BeneficiaryChain = { recommendations: canonicalRecommendations };
   const v8OvernightCausalChain = { chains: canonicalContract.primary_causal_chain || [] };
@@ -667,10 +814,12 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const publicDegradedMetadata = asObject(publicPayload.degraded_metadata);
   const publicMissingSources = Array.isArray(publicDegradedMetadata.missing_sources) ? publicDegradedMetadata.missing_sources.map(String) : [];
   const reportMissingSources = Array.isArray(ai.missing_sources) ? ai.missing_sources.map(String) : [];
-  if (!premiumGate.eligible || !revisionEligible) {
+  if (asObject(publicPayload.subscriber_state).publication !== "PUBLISHED"
+    || !premiumGate.eligible || !revisionEligible || (!recommendationGate.eligible && !marketOnlyNote)) {
     const reasonCodes = Array.from(new Set([
       ...premiumGate.reason_codes,
       ...(revisionEligible ? [] : ["SEMANTIC_MEMBER_REVISION_NOT_ELIGIBLE"]),
+      ...(!recommendationGate.eligible && !marketOnlyNote ? ["RECOMMENDATION_NOTE_NOT_PUBLISHED"] : []),
     ]));
     return {
       ...publicPayload,
@@ -681,8 +830,8 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   }
   return {
     ...publicPayload,
-    canonical_decision: buildCanonicalDecision(ctx, true),
-    confidence_score: getConfidenceScore(report, ai),
+    canonical_decision: { ...buildCanonicalDecision(ctx, true), confidence_score: publicPayload.confidence_score, recommendations: canonicalRecommendations },
+    confidence_score: publicPayload.confidence_score,
     today_beneficiary_stocks: canonicalRecommendations,
     beneficiary_stocks: canonicalRecommendations,
     core_beneficiary_stocks: canonicalRecommendations,
@@ -714,17 +863,19 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     overnight_chain: asObject(note.canonical_contract).primary_causal_chain || [],
     validation_signal: Array.isArray(note.intraday_validation) ? note.intraday_validation : [],
     invalidation_condition: Array.isArray(note.invalidation_conditions) ? note.invalidation_conditions : [],
-    closing_verification: buildClosingSummary(ai),
-    closing_verification_v2: asObject(ai.closing_verification_v2),
+    closing_verification: asObject(publicPayload.subscriber_state).closing === "COMPLETE" ? buildClosingSummary(ai) : null,
+    closing_verification_v2: asObject(publicPayload.subscriber_state).closing === "COMPLETE" ? asObject(ai.closing_verification_v2) : null,
   };
 }
 
 function buildVipPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
   const ai = getEffectiveAi(report, ctx);
   const note = isCanonicalMemberRevisionEligible(ctx) ? asObject(ctx.memberContentRevision?.member_content) : {};
-  const closing = asObject(ai.closing_verification);
   const memberPayload = buildMemberPayload(report, ctx);
-  if (memberPayload.premium_content_status !== "eligible") return memberPayload;
+  if (memberPayload.premium_content_status !== "eligible" || asObject(memberPayload.recommendation_gate).eligible !== true) return memberPayload;
+  // VIP prose must obey the same closing gate as every other subscriber alias.
+  const closing = asObject(memberPayload.subscriber_state).closing === "COMPLETE"
+    ? asObject(ai.closing_verification) : {};
   return {
     ...memberPayload,
     fund_flow_scenario: note.fund_flow_scenario || ai.fund_flow_scenario || null,
@@ -740,7 +891,7 @@ function buildVipPayload(report: ReportRow, ctx: PayloadContext): Record<string,
 }
 
 function buildAdminPayload(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
-  return { ...report, ai_strategy_json: getEffectiveAi(report, ctx) };
+  return canonicalAdminReaderProjection(report, getEffectiveAi(report, ctx), buildVipPayload(report, ctx));
 }
 
 function buildPayload(report: ReportRow, tier: SubscriptionTier, ctx: PayloadContext): Record<string, unknown> {
@@ -750,15 +901,40 @@ function buildPayload(report: ReportRow, tier: SubscriptionTier, ctx: PayloadCon
   return buildPublicPayload(report, ctx);
 }
 
-function buildHistorySummary(report: ReportRow): Record<string, unknown> {
+function buildHistorySummary(
+  report: ReportRow,
+  decision: Record<string, unknown> | null,
+  evaluatedAt: string,
+): Record<string, unknown> {
   const ai = getAi(report);
-  const confidenceScore = getConfidenceScore(report, ai);
-  const dailySentence = getTodayQuote(report, ai);
+  const reportDate = getReportDate(report);
+  const revisionId = toStringValue(ai.revision_id);
+  const bound = Boolean(revisionId) && decision?.id === revisionId
+    && decision.report_id === report.id && decision.report_date === reportDate;
+  const generatedAt = bound ? toStringValue(decision?.created_at) || getGeneratedAt(report, ai) : getGeneratedAt(report, ai);
+  const marketGate = evaluateMarketReportGate(ai, reportDate);
+  const subscriberState = createSubscriberState({
+    report_date: reportDate, revision_id: revisionId || toStringValue(report.id), generated_at: generatedAt,
+    publicationVerified: bound, marketEvidenceReady: marketGate.eligible,
+    analysisStatus: bound ? decision?.status : undefined,
+    isTradingDay: resolveMarketStatus(reportDate).is_trading_day,
+    confidenceValue: bound ? decision?.confidence_score : null,
+    // History carries no stocks or member/semantic proof. It must not advertise
+    // recommendations as qualified just because the market report is readable.
+    recommendationGate: { status: "BLOCKED", eligible: false },
+    closing: ai.closing_verification_v2 || ai.closing_verification, now: evaluatedAt,
+  });
+  const published = subscriberState.publication === "PUBLISHED";
+  const confidenceScore = subscriberState.confidence.value;
+  const dailySentence = published
+    ? toStringValue(asObject(decision?.generated_text).daily_sentence) || INCOMPLETE_ANALYSIS_MESSAGE
+    : INCOMPLETE_ANALYSIS_MESSAGE;
   return {
-    report_date: getReportDate(report),
-    revision_id: toStringValue(report.id),
-    generated_at: getGeneratedAt(report, ai),
-    market_bias: getMarketBias(report, ai),
+    report_date: reportDate,
+    revision_id: subscriberState.revision_id,
+    generated_at: generatedAt,
+    subscriber_state: subscriberState,
+    market_bias: published ? getMarketBias(report, ai) : "分析尚未完成",
     confidence_score: confidenceScore,
     confidence_label: getConfidenceLabel(confidenceScore),
     summary: dailySentence,
@@ -780,10 +956,80 @@ function createServiceClient(supabaseUrl: string, serviceRoleKey: string) {
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
+function isPublishedReadAligned(report: ReportRow, context: PayloadContext): boolean {
+  const ai = getAi(report);
+  const revision = toStringValue(ai.revision_id);
+  const memberRevision = toStringValue(ai.canonical_member_revision_id);
+  // Historical rows that predate atomic publication keep their legacy reader.
+  if (!revision && !memberRevision) return true;
+  const decision = context.decisionSnapshot;
+  if (!revision || !decision || decision.id !== revision
+    || decision.report_id !== report.id || decision.report_date !== report.report_date) return false;
+  // Published market identity does not depend on paid-note/QA eligibility.
+  // The member reader independently checks its decision/date/report/semantic gate.
+  return true;
+}
+
+/** Read the report's committed pointer, never the newest internal QA attempt.
+ * A published intraday revision is valid regardless of its session label. */
+function publishedDecisionQuery(serviceClient: ServiceClient, report: ReportRow) {
+  const revision = toStringValue(getAi(report).revision_id);
+  const query = serviceClient.from("decision_snapshots").select("*")
+    .eq("report_date", getReportDate(report)).eq("report_id", report.id);
+  return (revision ? query.eq("id", revision)
+    : query.eq("session_type", "PREMARKET").eq("is_current", true))
+    .order("version", { ascending: false }).limit(1).maybeSingle();
+}
+
+async function publishedMemberQuery(serviceClient: ServiceClient, report: ReportRow) {
+  const ai = getAi(report);
+  const revision = toStringValue(ai.canonical_member_revision_id);
+  const decision = toStringValue(ai.revision_id);
+  if (!revision || !decision) {
+    return await serviceClient.from("current_member_content_revisions_v1").select("*")
+      .eq("report_date", getReportDate(report)).eq("report_id", report.id)
+      .order("revision", { ascending: false }).limit(1).maybeSingle();
+  }
+  // One bounded PostgREST read through the existing FK. Preserve the Core request
+  // budget while pinning the member document and its real latest semantic review.
+  const member = await serviceClient.from("member_content_revisions")
+    .select("*,semantic_coherence_reviews(status,reason_codes,checked_at)")
+    .eq("id", revision).eq("decision_snapshot_id", decision)
+    .eq("report_date", getReportDate(report)).eq("report_id", report.id)
+    .order("checked_at", { referencedTable: "semantic_coherence_reviews", ascending: false })
+    .limit(1, { referencedTable: "semantic_coherence_reviews" }).maybeSingle();
+  if (member.error || !member.data) return member;
+  const semantic = asArray(member.data.semantic_coherence_reviews)[0];
+  return { data: { ...member.data,
+    semantic_status: semantic?.status ?? null,
+    semantic_reason_codes: semantic?.reason_codes ?? null }, error: null };
+}
+
+/** Runtime time is checked on the server. Elapsed time never creates success;
+ * impossible future receipts are withheld without changing immutable DB rows. */
+function observableTradingDayState(value: unknown, now = Date.now()): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const state = asObject(value);
+  const checkpoints = asObject(state.checkpoint_status);
+  return { ...state, checkpoint_status: Object.fromEntries(Object.entries(checkpoints).map(([key, raw]) => {
+    const row = asObject(raw);
+    const time = Date.parse(toStringValue(row.updated_at || row.completed_at) || "");
+    const slot = /^\d{4}$/.test(key) ? Date.parse(`${state.trading_date}T${key.slice(0, 2)}:${key.slice(2)}:00+08:00`) : null;
+    if ((Number.isFinite(time) && time > now) || (slot !== null && Number.isFinite(slot) && slot > now)) {
+      return [key, { ...row, status: "INSUFFICIENT_DATA", metadata: { ...asObject(row.metadata), core_batch_complete: false, error_code: "FUTURE_RUNTIME_EVIDENCE" } }];
+    }
+    return [key, row];
+  })) };
+}
+
 async function fetchPayloadContext(
   serviceClient: ServiceClient,
-  reportDate: string,
+  report: ReportRow,
 ): Promise<PayloadContext> {
+  // Reused by public envelope and tier-specific/nested projections even when
+  // bounded evidence reads cross a checkpoint boundary during this request.
+  const evaluatedAt = new Date().toISOString();
+  const reportDate = getReportDate(report);
   const [
     radarResult,
     sectorResult,
@@ -800,6 +1046,7 @@ async function fetchPayloadContext(
       .from("opening_market_radar")
       .select("*")
       .eq("report_date", reportDate)
+      .lte("captured_at", new Date().toISOString())
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -812,17 +1059,10 @@ async function fetchPayloadContext(
       .from("market_data_snapshots")
       .select("symbol,name,market,value,change_percent,captured_at,source,phase,trading_date")
       .eq("trading_date", reportDate)
+      .lte("captured_at", new Date().toISOString())
       .order("captured_at", { ascending: false })
       .limit(50),
-    serviceClient
-      .from("decision_snapshots")
-      .select("*")
-      .eq("report_date", reportDate)
-      .eq("session_type", "PREMARKET")
-      .eq("is_current", true)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    publishedDecisionQuery(serviceClient, report),
     serviceClient
       .from("trading_day_state")
       .select("trading_date,current_state,state_rank,checkpoint_status,updated_at")
@@ -858,13 +1098,7 @@ async function fetchPayloadContext(
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    serviceClient
-      .from("current_member_content_revisions_v1")
-      .select("*")
-      .eq("report_date", reportDate)
-      .order("revision", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    publishedMemberQuery(serviceClient, report),
   ]);
 
   if (radarResult.error) console.error("GET_REPORT_PAYLOAD_RADAR_QUERY_FAILED", radarResult.error.message);
@@ -891,6 +1125,7 @@ async function fetchPayloadContext(
   if (memberContentRevisionResult.error) componentQueryFailures.push({ source: "member_content_revisions", error_type: "QUERY_FAILED" });
 
   return {
+    evaluatedAt,
     openingRadar: radarResult.data ? radarResult.data as Record<string, unknown> : null,
     sectorRotationRows: Array.isArray(sectorResult.data) ? sectorResult.data as Record<string, unknown>[] : [],
     marketDataSnapshots: Array.isArray(snapshotResult.data) ? snapshotResult.data as Record<string, unknown>[] : [],
@@ -900,7 +1135,7 @@ async function fetchPayloadContext(
     learningRun: learningRunResult.data ? learningRunResult.data as Record<string, unknown> : null,
     learningMetricCorrection: learningMetricCorrectionResult.data ? learningMetricCorrectionResult.data as Record<string, unknown> : null,
     memberContentRevision: memberContentRevisionResult.data ? memberContentRevisionResult.data as Record<string, unknown> : null,
-    tradingDayState: tradingDayStateResult.data ? tradingDayStateResult.data as Record<string, unknown> : null,
+    tradingDayState: observableTradingDayState(tradingDayStateResult.data),
     componentQueryFailures,
   };
 }
@@ -982,6 +1217,7 @@ Deno.serve(async (req: Request) => {
   const serviceClient = createServiceClient(supabaseUrl, serviceRoleKey);
 
   const { tier, userId, access } = await resolveTierFromRequest(req, serviceClient);
+  const todayDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date());
 
   if (body.history_limit !== undefined) {
     const requestedLimit = Math.trunc(Number(body.history_limit));
@@ -989,6 +1225,7 @@ Deno.serve(async (req: Request) => {
     const { data: historyRows, error: historyError } = await serviceClient
       .from("reports")
       .select("id,report_date,market_bias,confidence_score,summary,today_quote,created_at,updated_at,ai_strategy_json")
+      .lte("report_date", todayDate)
       .order("report_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(historyLimit);
@@ -996,11 +1233,30 @@ Deno.serve(async (req: Request) => {
       console.error("GET_REPORT_PAYLOAD_HISTORY_QUERY_FAILED", historyError.message);
       return jsonResponse({ success: false, error: "REPORT_HISTORY_QUERY_FAILED" }, 500);
     }
+    const rows = Array.isArray(historyRows) ? historyRows.slice(0, historyLimit) as ReportRow[] : [];
+    const revisionIds = Array.from(new Set(rows.map(row => toStringValue(getAi(row).revision_id))
+      .filter((id): id is string => Boolean(id))));
+    const historyDecisions = new Map<string, Record<string, unknown>>();
+    if (revisionIds.length > 0) {
+      // One bounded read for the whole history, never N full payload contexts.
+      // Missing or mismatched committed pointers stay incomplete at their date.
+      const { data, error } = await serviceClient.from("decision_snapshots")
+        .select("id,report_id,report_date,status,confidence_score,created_at,generated_text")
+        .in("id", revisionIds).limit(30);
+      if (error) {
+        console.error("GET_REPORT_PAYLOAD_HISTORY_REVISION_QUERY_FAILED", error.message);
+        return jsonResponse({ success: false, error: "REPORT_HISTORY_REVISION_QUERY_FAILED" }, 500);
+      }
+      for (const row of data || []) historyDecisions.set(String(row.id), row);
+    }
+    const evaluatedAt = new Date().toISOString();
     return jsonResponse({
       tier,
+      today_date: todayDate,
       report_date: null,
       payload: null,
-      reports: Array.isArray(historyRows) ? historyRows.map((row) => buildHistorySummary(row as ReportRow)) : [],
+      reports: rows.map(row => buildHistorySummary(row,
+        historyDecisions.get(toStringValue(getAi(row).revision_id) || "") || null, evaluatedAt)),
       locked_sections: getLockedSections(tier),
       source: "server_trimmed_payload",
       authenticated: Boolean(userId),
@@ -1011,6 +1267,7 @@ Deno.serve(async (req: Request) => {
   let query = serviceClient
     .from("reports")
     .select("*")
+    .lte("report_date", todayDate)
     .order("report_date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(1);
@@ -1020,6 +1277,7 @@ Deno.serve(async (req: Request) => {
       .from("reports")
       .select("*")
       .eq("report_date", body.report_date)
+      .lte("report_date", todayDate)
       .order("created_at", { ascending: false })
       .limit(1);
   }
@@ -1030,12 +1288,13 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: false, error: "REPORT_QUERY_FAILED" }, 500);
   }
 
-  const report = Array.isArray(data) && data.length > 0 ? data[0] as ReportRow : null;
+  let report = Array.isArray(data) && data.length > 0 ? data[0] as ReportRow : null;
   if (!report) {
     return jsonResponse({
       success: false,
       error: "REPORT_NOT_FOUND",
       tier,
+      today_date: todayDate,
       report_date: isValidDate(body.report_date) ? body.report_date : null,
       payload: null,
       locked_sections: getLockedSections(tier),
@@ -1044,19 +1303,73 @@ Deno.serve(async (req: Request) => {
     }, 404);
   }
 
-  const context = await fetchPayloadContext(serviceClient, getReportDate(report));
+  let context = await fetchPayloadContext(serviceClient, report);
+  if (!isPublishedReadAligned(report, context)) {
+    // PostgREST requests are separate transactions. A publication may commit
+    // between the report query and the context queries. Re-read at most once.
+    const refreshed = await serviceClient.from("reports").select("*")
+      .eq("id", report.id).eq("report_date", getReportDate(report)).limit(1).maybeSingle();
+    if (refreshed.error || !refreshed.data) {
+      return jsonResponse({ success: false, error: "REPORT_RECHECK_FAILED", payload: null }, 503);
+    }
+    report = refreshed.data as ReportRow;
+    context = await fetchPayloadContext(serviceClient, report);
+    if (!isPublishedReadAligned(report, context)) {
+      return jsonResponse({ success: false, error: "REPORT_REVISION_CHANGED", report_date: getReportDate(report), payload: null }, 409);
+    }
+  }
   const publicMetadata = buildPublicPayload(report, context);
   const canonicalDecision = asObject(publicMetadata.canonical_decision);
 
+  // Additive, read-only projection at the published decision's as-of time. Never
+  // evaluate today's close against a morning revision or write back to reports.
+  const decisionIdentity = {
+    report_date: getReportDate(report),
+    revision_id: toStringValue(canonicalDecision.id) || "",
+    generated_at: toStringValue(publicMetadata.generated_at) || "",
+    data_as_of: toStringValue(publicMetadata.generated_at) || "",
+    is_trading_day: publicMetadata.is_trading_day === true,
+    today_date: todayDate,
+  };
+  const realEvidence = await loadDecisionEvidence(async (request) => {
+    let read = serviceClient.from(request.table).select(request.columns);
+    for (const filter of request.filters) read = filter.operator === "lte"
+      ? read.lte(filter.column, filter.value) : read.gte(filter.column, filter.value);
+    return await read.order(request.order, { ascending: false }).limit(request.limit)
+      .abortSignal(AbortSignal.timeout(4000));
+  }, decisionIdentity);
+  const payload = buildPayload(report, tier, context);
+  const memberRows = asArray(payload.today_beneficiary_stocks);
+  const decisionEvidence = projectEvidenceDecision(await sealEvidenceDecision(buildEvidenceDecision(realEvidence, decisionIdentity)), {
+    companyContentAllowed: tier !== "free" && publicMetadata.premium_content_status === "eligible"
+      && asObject(publicMetadata.recommendation_gate).eligible === true
+      && isCanonicalMemberRevisionEligible(context),
+    canonicalAction: toStringValue(canonicalDecision.action) || "WAIT",
+    publishedSymbols: memberRows.map(r => toStringValue(asObject(r).symbol) || toStringValue(asObject(r).stock_code) || ""),
+  });
+  const published = asObject(publicMetadata.subscriber_state).publication === "PUBLISHED";
+  const subscriberDecisionEvidence = published ? decisionEvidence : {
+    ...decisionEvidence, action: "INSUFFICIENT_DATA", reason_summary: INCOMPLETE_ANALYSIS_MESSAGE,
+    direction_probability: null, model_confidence: null, entry_environment_score: null,
+    market_risk_score: null, direction_evidence_score: null, stock_opportunities: [],
+    evidence_quality: "insufficient", data_freshness: "unavailable",
+    issues: [...decisionEvidence.issues, "MARKET_ANALYSIS_UNPUBLISHED"],
+  };
+  payload.decision_engine_v1 = subscriberDecisionEvidence;
+  // Admin has a nested effective-AI view as well; no stale nested model may win.
+  if (tier === "admin") payload.ai_strategy_json = { ...asObject(payload.ai_strategy_json), decision_engine_v1: subscriberDecisionEvidence };
+
   return jsonResponse({
     tier,
+    today_date: todayDate,
     report_date: getReportDate(report),
     revision_id: toStringValue(canonicalDecision.id) || toStringValue(report.id),
-    generated_at: getGeneratedAt(report, getAi(report)),
+    generated_at: publicMetadata.generated_at,
     data_as_of: publicMetadata.data_as_of,
     market_status: publicMetadata.market_status,
     is_trading_day: publicMetadata.is_trading_day,
-    payload: buildPayload(report, tier, context),
+    subscriber_state: publicMetadata.subscriber_state,
+    payload,
     locked_sections: getLockedSections(tier),
     source: "server_trimmed_payload",
     authenticated: Boolean(userId),

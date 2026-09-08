@@ -248,7 +248,11 @@ test('premarket workflow delegates to the durable recovery state machine', () =>
   assert.match(dailyDeliveryOrchestrator, /clock\.minutes >= 7 \* 60 \+ 30/);
   assert.match(dailyDeliveryOrchestrator, /payload\.success !== false/);
   assert.match(dailyDeliveryOrchestrator, /invokeFunctionWithRetry/);
-  assert.match(dailyDeliveryOrchestrator, /actionFailures\.length === 0/);
+  // Deployed V1.7 moved this gate into the phase-aware completion helper.
+  // Assert its wiring here; coreRuntimeIntegration executes the actual helper
+  // with failures in every phase instead of requiring V1.4's inline syntax.
+  assert.match(dailyDeliveryOrchestrator, /resolveDailyDeliveryCompletion\(/);
+  assert.match(dailyDeliveryOrchestrator, /action_failure_count: actionFailures\.length/);
   assert.match(dailyDeliveryOrchestrator, /success: completed/);
   assert.match(dailyDeliveryOrchestrator, /EVIDENCE_REFRESH_DEPENDENCY_FAILED/);
   assert.match(dailyDeliveryOrchestrator, /deliveryBlockedByEvidenceFailure/);
@@ -283,12 +287,15 @@ test('authenticated recovery can force report regeneration after a code-only fix
 });
 
 test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
-  const hardGate = lineDailyPush.indexOf("reason: 'PREMIUM_CONTENT_NOT_ELIGIBLE'");
+  const hardGate = lineDailyPush.indexOf("reason: 'MARKET_REPORT_NOT_ELIGIBLE'");
   const subscriberDelivery = lineDailyPush.indexOf('deliverOutboxMessage({', hardGate);
-  assert.ok(hardGate >= 0, 'LINE must expose a hard premium content gate');
+  assert.ok(hardGate >= 0, 'LINE must expose the independent hard public Research/Evidence/Editorial gate');
+  assert.match(lineDailyPush, /evaluateMarketReportGate/);
   assert.ok(subscriberDelivery > hardGate, 'subscriber delivery must happen only after the hard gate');
-  assert.match(lineDailyPush, /snapshotStatus === 'READY'/);
-  assert.match(lineDailyPush, /snapshotScore >= 90/);
+  assert.match(lineDailyPush, /snapshotEligible = isPublishedDeliveryEligible\(report, decisionSnapshot, memberRevision, marketGate\)/);
+  assert.match(lineDailyPush, /snapshot\.status !== 'READY'/);
+  assert.match(lineDailyPush, /snapshot\.content_score < 90/);
+  assert.match(lineDailyPush, /member\.semantic_status !== 'PASSED'/);
   assert.match(lineDailyPush, /claim_line_delivery_outbox_v1/);
   assert.match(lineDailyPush, /mark_line_delivery_outbox_v1/);
   assert.match(lineDailyPush, /delivery_mode === 'incident'/);
@@ -335,9 +342,10 @@ test('paid report fails closed when evidence does not meet the member threshold'
   assert.match(contentOsMorningAlphaSource, /report\.updated_at \?\? report\.created_at/);
   assert.match(contentOsMorningAlphaSource, /PUBLIC_TOPIC_INCOMPLETE/);
   assert.match(reportPayloadFunction, /evaluatePremiumContentGate/);
-  assert.match(reportPayloadFunction, /if \(!premiumGate\.eligible \|\| !revisionEligible\)/);
+  assert.match(reportPayloadFunction, /if \(asObject\(publicPayload\.subscriber_state\)\.publication !== "PUBLISHED"\s*\|\| !premiumGate\.eligible \|\| !revisionEligible \|\| \(!recommendationGate\.eligible && !marketOnlyNote\)\)/);
   assert.match(reportPayloadFunction, /const premiumEligible = premiumGate\.eligible && semanticEligible/);
-  assert.match(reportPayloadFunction, /one_teaser_stock: premiumEligible \? buildCanonicalTeaserStock/);
+  assert.match(reportPayloadFunction, /one_teaser_stock: recommendationsEligible \? buildCanonicalTeaserStock/);
+  assert.match(reportPayloadFunction, /recommendationsEligible = premiumEligible && marketPublished && marketGate\.recommendation_gate\.eligible/);
   assert.match(reportPayloadFunction, /premium_content_unavailable_reason: "EVIDENCE_GATE_NOT_MET"/);
 });
 
@@ -413,20 +421,30 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeDeployWorkflow, /db push --linked/);
   assert.ok(runtimeDeployWorkflow.indexOf('db push --linked') < runtimeDeployWorkflow.indexOf('functions deploy daily-delivery-orchestrator'));
   assert.match(opsHealthCheck, /evaluatePremiumContentGate/);
-  assert.match(opsHealthCheck, /intraday_validation\)\.length < 3/);
-  assert.match(opsHealthCheck, /invalidation_rules\)\.length < 2/);
+  assert.match(opsHealthCheck, /evaluateMarketReportGate/);
+  assert.match(opsHealthCheck, /premium_gate_independent: true/);
+  assert.match(opsHealthCheck, /canonical_research_evidence_editorial_gate/);
+  assert.match(opsHealthCheck, /intraday_step_count: asArray\(note\.intraday_validation\)\.length/);
+  assert.match(opsHealthCheck, /invalidation_rule_count: asArray\(note\.invalidation_rules\)\.length/);
   assert.match(opsHealthCheck, /verifiedCatalystCount < 1/);
   assert.match(opsHealthCheck, /verified_market_count/);
   assert.match(runtimeCheckpointWorkflow, /MANUAL_CHECKPOINT: \${\{ inputs\.checkpoint \}\}/);
   assert.doesNotMatch(runtimeCheckpointWorkflow, /^\s*schedule:/m);
 });
 
-test('LINE brief identifies analysis and market-data times and refuses weak day-trading scripts', () => {
-  for (const label of ['07:30 盤前', '今日一句', '最大機會', '最大風險', '下一確認', '分析產生', '資料截止']) {
-    assert.match(lineDailyPush, new RegExp(label), `LINE brief is missing ${label}`);
-  }
+test('LINE retains verified Production v59 Flex layout and refuses evidence-blocked stock delivery', () => {
+  const flex=read('supabase/functions/_shared/line-daily-flex-message.mjs');
+  assert.match(lineDailyPush, /return buildLineDailyFlexMessage\(/);
+  for(const label of ['今日盤前決策','今日主線','成立條件','失效條件']) assert.match(flex,new RegExp(label));
+  assert.match(flex,/type: 'flex'/);
+  assert.match(lineDailyPush,/reportDate: String\(report\.report_date/);
+  assert.match(lineDailyPush,/snapshot\.decision_mode === 'recommendations'\) return marketGate\.recommendation_gate\.eligible === true/);
+  assert.match(lineDailyPush,/const recommendations = marketOnly \? \[\]/);
+  assert.match(flex,/推薦評估證據不足，今日暫不發布正式個股推薦/);
+  // v59 does not display analysis/data-cutoff timestamp text. Do not claim that
+  // removed pre-release plain-text behavior passed by leaving dead calculations.
+  assert.doesNotMatch(flex,/分析產生|資料截止/);
   assert.match(lineDailyPush, /evaluatePremiumContentGate/);
-  assert.match(lineDailyPush, /資料未達標，不建立個股劇本/);
   assert.match(lineDailyPush, /ALREADY_SENT/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);
 });
@@ -462,7 +480,7 @@ test('public payload distinguishes an evidence-backed no-trade day from missing 
   assert.match(reportPayloadFunction, /taiex_change: toNumberValue\(radar\.taiex_change\)/);
   assert.match(reportPayloadFunction, /txf_change: toNumberValue\(radar\.txf_change\)/);
   assert.match(reportPayloadFunction, /tsmc_change: toNumberValue\(radar\.tsmc_change\)/);
-  assert.match(reportPayloadFunction, /member_research_note_v2: buildPublicValidationSkeleton\(\)/);
+  assert.match(reportPayloadFunction, /member_research_note_v2: marketPublished \? buildPublicValidationSkeleton\(\) : \{\}/);
 });
 
 test('opening radar preserves the complete War Room decision contract', () => {
@@ -519,11 +537,12 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /資料不足，已安全降級/);
   assert.match(home, /selectNextRuntimeTimelineNode\(timelineNodes\)/);
   assert.match(home, /runtimeLifecycleComplete/);
-  assert.match(home, /收盤驗證已完成，今日不追價/);
-  assert.match(home, /今日沒有強受惠股/);
+  assert.match(home, /查看收盤驗證，等待下一個交易日/);
+  assert.doesNotMatch(home, /今日沒有強受惠股|今日觀察名單已完成/);
   assert.match(home, /marketStatusLabel=\{marketStatusLabel\}/);
-  assert.match(home, /今日觀察名單已完成/);
-  assert.match(home, /完整代表股、原因與取消條件請查看會員研究/);
+  assert.match(home, /recommendationNotice \|\| \(evidenceIsInsufficient/);
+  assert.match(home, /renderSafeText\(recommendationNotice \|\|/);
+  assert.match(home, /沒有公開觀察內容不代表已完成所有股票評估/);
   assert.match(home, /今日風險條件已完成/);
   assert.match(home, /完整失效條件與因果鏈請查看會員研究/);
   assert.match(home, /核心資料未達新鮮度標準，暫不建立觀察名單/);
@@ -539,10 +558,15 @@ test('today report keeps runtime state and technical copy out of the public UI',
   assert.match(today, /marketStatusLabel=\{nextDecisionTime\}/);
 });
 
-test('today report is a drill-down workbench rather than a duplicate home dashboard', () => {
-  for (const label of ['今日判斷工作台', '現在怎麼做', '為什麼', '何時再看', '下一步要補齊的證據', '只看上一個結果與下一個動作']) {
-    assert.match(today, new RegExp(label), `today report is missing workbench copy: ${label}`);
+test('today answers the subscriber first and keeps runtime details behind a drill-down', () => {
+  const brief = read('src/features/decision-v1/DecisionBrief.tsx');
+  for (const label of ['今天市場怎麼看', '現在該怎麼做', '有沒有值得關注的機會', '方向機率', '模型信心', '進場環境']) {
+    assert.match(brief, new RegExp(label), `today decision brief is missing: ${label}`);
   }
+  assert.match(today, /<DecisionBrief/);
+  assert.match(today, /<details className=\{`ma-subscriber-timeline/);
+  assert.match(today, /下一步要補齊的證據/);
+  assert.match(today, /只看上一個結果與下一個動作/);
   assert.doesNotMatch(today, /ma-today-v3-advice-card/);
   assert.doesNotMatch(today, />判斷信心</);
   assert.match(today, /humanizePublicRuntimeText/);
@@ -551,8 +575,9 @@ test('today report is a drill-down workbench rather than a duplicate home dashbo
   assert.match(today, /節點時間已到，但完整市場資料尚未到齊；資料補齊前不更新判斷/);
   assert.match(today, /label: `\$\{nextRuntimeNode\.time\} \$\{nextRuntimeNode\.label\}`/);
   assert.match(today, /runtimeLifecycleComplete/);
-  assert.match(today, /今日條件未成立，收盤驗證已完成/);
-  assert.match(today, /今日進場條件未成立/);
+  assert.match(today, /今日收盤驗證已完成/);
+  assert.doesNotMatch(today, /今日條件未成立，收盤驗證已完成/);
+  assert.doesNotMatch(today, /headline: '今日進場條件未成立'/);
   assert.match(today, /六個交易節點均已完成/);
 });
 
@@ -589,7 +614,7 @@ test('opportunities is a candidate screening flow with complete public copy', ()
 });
 
 test('war room is a live monitor rather than another dashboard page', () => {
-  for (const label of ['盤中監控中', '盤中更新', '還沒有新的盤中更新', '跟早上相比，哪裡變了？', '現在怎麼做']) {
+  for (const label of ['早上的判斷有沒有改變', '盤中更新', '還沒有新的盤中更新', '跟早上相比，哪裡變了？', '現在怎麼做']) {
     assert.match(warRoom, new RegExp(label), `war room is missing monitor copy: ${label}`);
   }
   for (const repeatedSurface of ['證據矩陣', '監控清單', 'ma-war-room-v3-evidence-table', 'ma-war-room-v3-watch-table']) {
@@ -671,7 +696,7 @@ test('core product pages have distinct jobs instead of repeated dashboard surfac
   assert.doesNotMatch(performance, /ma-pixel-hero|ma-phase2-kpi-grid|ma-phase2-status-card/);
 
   assert.match(home, /ma-home-v2/);
-  assert.match(today, /ma-today-v4-workbench/);
+  assert.match(today, /<DecisionBrief/);
   assert.match(opportunities, /ma-opportunities-v2/);
   assert.match(warRoom, /ma-war-room-v3/);
 });
@@ -847,8 +872,9 @@ test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempo
   assert.match(lineDailyPush, /customAggregationUnits/);
   assert.match(lineDailyPush, /dailySentence\.sentence/);
   assert.ok(lineDailyPush.indexOf('report.today_quote') < lineDailyPush.indexOf('copy.one_sentence'));
-  assert.match(lineDailyPush, /確認：/);
-  assert.match(lineDailyPush, /避免：/);
+  const flex=read('supabase/functions/_shared/line-daily-flex-message.mjs');
+  assert.match(flex, /成立條件/);
+  assert.match(flex, /操作原則/);
   assert.doesNotMatch(lineDailyPush, /sent:\s*true,\s*report_date: reportDate,\s*total_subscribers: 0/);
 });
 

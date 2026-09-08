@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import { supabase } from '@/lib/supabase';
+import { SubscriberAnswer } from '@/features/decision-v1/DecisionBrief';
+import { closingDataComplete } from '@/features/decision-v1/forwardValidation';
 
 type PublicPerformanceJournalRow = {
   report_date: string;
@@ -112,7 +114,7 @@ function publicPerformanceText(value: unknown): string {
 }
 
 function numberOrNull(value: unknown): number | null {
-  if (value === null || value === undefined || value === '') return null;
+  if ((typeof value !== 'number' && typeof value !== 'string') || (typeof value === 'string' && !value.trim())) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -238,8 +240,7 @@ function isCompleteClosingData(closing: Record<string, unknown> | null): boolean
     || numberOrNull(actualTaiexClose?.change_percent) !== null
     || numberOrNull(actualTaiexClose?.change) !== null;
   if (!hasVerifiableDirection) return false;
-  if (status === 'direction_completed_data_degraded' || dataStatus === 'degraded') return false;
-  return ['completed', 'complete', 'ready'].includes(status) || dataStatus === 'complete';
+  return closingDataComplete(status, dataStatus, hasVerifiableDirection);
 }
 
 function reportSelectionScore(row: ReportRecord): number[] {
@@ -406,13 +407,9 @@ export default function PerformancePage() {
     <div className="ma-page ma-performance-page ma-performance-v3 flex flex-col overflow-x-hidden">
       <Navbar />
       <main className="flex-1 overflow-x-hidden">
-        <header className="ma-performance-v3-header">
-          <div className="ma-performance-v3-shell">
-            <span>公開決策帳本</span>
-            <h1>績效不是宣傳數字，<br />是每一天可回看的驗證紀錄</h1>
-            <p>{hasMatureSample ? '只計入完成收盤驗證的交易日，並保留成功、失敗與下一次改善。' : `目前累積 ${stats.validCount} 個有效交易日；樣本未滿 20 日前，不用小樣本包裝命中率。`}</p>
-          </div>
-        </header>
+        <SubscriberAnswer question="Morning Alpha 長期到底有沒有用？"
+          answer={loading ? '正在核對可驗證的紀錄' : errorMessage ? '目前無法完整評估' : hasMatureSample ? `${stats.validCount} 個交易日，公開檢驗判斷` : `已累積 ${stats.validCount} 個有效交易日，仍在驗證`}
+          reason="績效不是宣傳數字，是每天可回看的驗證紀錄。方向正確不等於買進獲利；樣本未滿 20 日不展示命中率。" />
 
         <div className="ma-performance-v3-shell ma-performance-v3-content">
           {loading ? (
@@ -431,7 +428,7 @@ export default function PerformancePage() {
               </section>
 
               <section className="ma-performance-v3-ledger" aria-labelledby="performance-ledger-title">
-                <header><div><span>逐日紀錄</span><h2 id="performance-ledger-title">驗證帳本</h2></div><p>點開任一日期，查看當天成功、失敗與改善。</p></header>
+                <header><div><span>公開決策帳本</span><h2 id="performance-ledger-title">驗證帳本</h2></div><p>點開任一日期，查看當天成功、失敗與改善。</p></header>
                 <div className="ma-performance-v3-ledger-head" aria-hidden="true"><span>日期</span><span>盤前方向</span><span>收盤結果</span><span>判定</span></div>
                 {visibleEntries.map((entry) => {
                   const expanded = expandedId === entry.reportId;
@@ -468,6 +465,16 @@ export default function PerformancePage() {
             </>
           )}
         </div>
+        <section className="ma-subscriber-reading" aria-labelledby="forward-validation-title">
+          <h2 id="forward-validation-title">下一步：判斷之外，驗證是否值得進場</h2>
+          <p>以下分開累積，不與既有方向命中率混算。尚無可核對的前瞻紀錄時，不展示報酬或成功率。</p>
+          <dl className="ma-subscriber-forward">
+            <div><dt>方向判斷</dt><dd>對照同日收盤方向；成功與失敗都保留。</dd></div>
+            <div><dt>不追高是否合理</dt><dd>先固定判斷當下的價格與失效條件，再看後續結果；尚未建立成熟樣本。</dd></div>
+            <div><dt>錯殺候選</dt><dd>檢查基本面假設與後續修正；不能因後來反彈才倒推成錯殺。</dd></div>
+            <div><dt>5D / 20D / 60D</dt><dd>以交易日觀察後續結果。未到期、缺證據、休市、人工重播不計入有效樣本。</dd></div>
+          </dl>
+        </section>
       </main>
       <Footer />
     </div>

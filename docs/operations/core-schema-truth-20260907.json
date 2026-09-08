@@ -1,0 +1,541 @@
+{
+  "schema_version": 1,
+  "project_ref": "cttfzgvhiewfckydcrci",
+  "captured_at_utc": "2026-09-07 07:18:23 UTC",
+  "source": "Production PostgreSQL object-level catalog, read-only",
+  "business_rows_read": false,
+  "secrets_read": false,
+  "reconstruction_complete": true,
+  "reconstruction_scope": "Required core Runtime only: 81 public tables compared with Production catalog; six unrelated tables not claimed as rebuilt. No Production migration applied.",
+  "objects": [
+    {
+      "relname": "market_checkpoint_snapshots",
+      "rls": true,
+      "force_rls": true,
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "not_null": true
+        },
+        {
+          "name": "checkpoint",
+          "type": "text",
+          "default": null,
+          "not_null": true
+        },
+        {
+          "name": "trading_date",
+          "type": "date",
+          "default": null,
+          "not_null": true
+        },
+        {
+          "name": "captured_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "not_null": true
+        },
+        {
+          "name": "market_session",
+          "type": "text",
+          "default": null,
+          "not_null": true
+        },
+        {
+          "name": "symbol",
+          "type": "text",
+          "default": null,
+          "not_null": true
+        },
+        {
+          "name": "value",
+          "type": "numeric",
+          "default": null,
+          "not_null": true
+        },
+        {
+          "name": "change_percent",
+          "type": "numeric",
+          "default": null,
+          "not_null": false
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "default": null,
+          "not_null": true
+        },
+        {
+          "name": "source_timestamp",
+          "type": "timestamp with time zone",
+          "default": null,
+          "not_null": true
+        },
+        {
+          "name": "correlation_id",
+          "type": "uuid",
+          "default": null,
+          "not_null": true
+        },
+        {
+          "name": "snapshot_version",
+          "type": "bigint",
+          "default": null,
+          "not_null": true,
+          "identity": {
+            "generation": "ALWAYS",
+            "sequence": "public.market_checkpoint_snapshots_snapshot_version_seq"
+          }
+        },
+        {
+          "name": "raw",
+          "type": "jsonb",
+          "default": "'{}'::jsonb",
+          "not_null": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "not_null": true
+        }
+      ],
+      "constraints": [
+        {
+          "name": "market_checkpoint_snapshots_checkpoint_check",
+          "type": "c",
+          "definition": "CHECK (checkpoint ~ '^[A-Z0-9_]{2,40}$'::text)"
+        },
+        {
+          "name": "market_checkpoint_snapshots_correlation_id_checkpoint_symbo_key",
+          "type": "u",
+          "definition": "UNIQUE (correlation_id, checkpoint, symbol)"
+        },
+        {
+          "name": "market_checkpoint_snapshots_market_session_check",
+          "type": "c",
+          "definition": "CHECK (market_session = ANY (ARRAY['premarket'::text, 'intraday'::text, 'close'::text, 'recovery'::text]))"
+        },
+        {
+          "name": "market_checkpoint_snapshots_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "market_checkpoint_snapshots_raw_check",
+          "type": "c",
+          "definition": "CHECK (jsonb_typeof(raw) = 'object'::text)"
+        },
+        {
+          "name": "market_checkpoint_snapshots_snapshot_version_key",
+          "type": "u",
+          "definition": "UNIQUE (snapshot_version)"
+        },
+        {
+          "name": "market_checkpoint_snapshots_source_check",
+          "type": "c",
+          "definition": "CHECK (length(TRIM(BOTH FROM source)) >= 1 AND length(TRIM(BOTH FROM source)) <= 120)"
+        },
+        {
+          "name": "market_checkpoint_snapshots_symbol_check",
+          "type": "c",
+          "definition": "CHECK (length(TRIM(BOTH FROM symbol)) >= 1 AND length(TRIM(BOTH FROM symbol)) <= 40)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "market_checkpoint_snapshots_pkey",
+          "definition": "CREATE UNIQUE INDEX market_checkpoint_snapshots_pkey ON public.market_checkpoint_snapshots USING btree (id)"
+        },
+        {
+          "name": "market_checkpoint_snapshots_correlation_id_checkpoint_symbo_key",
+          "definition": "CREATE UNIQUE INDEX market_checkpoint_snapshots_correlation_id_checkpoint_symbo_key ON public.market_checkpoint_snapshots USING btree (correlation_id, checkpoint, symbol)"
+        },
+        {
+          "name": "market_checkpoint_snapshots_snapshot_version_key",
+          "definition": "CREATE UNIQUE INDEX market_checkpoint_snapshots_snapshot_version_key ON public.market_checkpoint_snapshots USING btree (snapshot_version)"
+        },
+        {
+          "name": "market_checkpoint_snapshots_lookup_idx",
+          "definition": "CREATE INDEX market_checkpoint_snapshots_lookup_idx ON public.market_checkpoint_snapshots USING btree (trading_date DESC, checkpoint, symbol, captured_at DESC, snapshot_version DESC)"
+        }
+      ],
+      "policies": null,
+      "grants": [
+        {
+          "grantee": "postgres",
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "postgres",
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "postgres",
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "postgres",
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "postgres",
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "postgres",
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "postgres",
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "TRIGGER"
+        }
+      ],
+      "triggers": [
+        {
+          "name": "reject_market_checkpoint_snapshot_mutation",
+          "function": "reject_immutable_market_checkpoint_mutation_v1()",
+          "definition": "CREATE TRIGGER reject_market_checkpoint_snapshot_mutation BEFORE DELETE OR UPDATE ON market_checkpoint_snapshots FOR EACH ROW EXECUTE FUNCTION reject_immutable_market_checkpoint_mutation_v1()"
+        }
+      ]
+    },
+    {
+      "relname": "news_event_tags",
+      "rls": true,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "not_null": true
+        },
+        {
+          "name": "news_key",
+          "type": "text",
+          "default": null,
+          "not_null": true
+        },
+        {
+          "name": "news_title",
+          "type": "text",
+          "default": null,
+          "not_null": false
+        },
+        {
+          "name": "news_source",
+          "type": "text",
+          "default": null,
+          "not_null": false
+        },
+        {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "not_null": false
+        },
+        {
+          "name": "event_type",
+          "type": "text",
+          "default": null,
+          "not_null": false
+        },
+        {
+          "name": "related_sectors",
+          "type": "text[]",
+          "default": "'{}'::text[]",
+          "not_null": true
+        },
+        {
+          "name": "related_symbols",
+          "type": "text[]",
+          "default": "'{}'::text[]",
+          "not_null": true
+        },
+        {
+          "name": "related_global_symbols",
+          "type": "text[]",
+          "default": "'{}'::text[]",
+          "not_null": true
+        },
+        {
+          "name": "impact_direction",
+          "type": "text",
+          "default": null,
+          "not_null": false
+        },
+        {
+          "name": "impact_strength",
+          "type": "numeric",
+          "default": "0",
+          "not_null": true
+        },
+        {
+          "name": "confidence_score",
+          "type": "numeric",
+          "default": "0",
+          "not_null": true
+        },
+        {
+          "name": "reasoning",
+          "type": "text",
+          "default": null,
+          "not_null": false
+        },
+        {
+          "name": "tagged_by",
+          "type": "text",
+          "default": "'system'::text",
+          "not_null": true
+        },
+        {
+          "name": "tagged_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "not_null": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "not_null": true
+        }
+      ],
+      "constraints": [
+        {
+          "name": "news_event_tags_news_key_unique",
+          "type": "u",
+          "definition": "UNIQUE (news_key)"
+        },
+        {
+          "name": "news_event_tags_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "news_event_tags_pkey",
+          "definition": "CREATE UNIQUE INDEX news_event_tags_pkey ON public.news_event_tags USING btree (id)"
+        },
+        {
+          "name": "news_event_tags_news_key_unique",
+          "definition": "CREATE UNIQUE INDEX news_event_tags_news_key_unique ON public.news_event_tags USING btree (news_key)"
+        },
+        {
+          "name": "idx_news_event_tags_published_at",
+          "definition": "CREATE INDEX idx_news_event_tags_published_at ON public.news_event_tags USING btree (published_at)"
+        },
+        {
+          "name": "idx_news_event_tags_event_type",
+          "definition": "CREATE INDEX idx_news_event_tags_event_type ON public.news_event_tags USING btree (event_type)"
+        }
+      ],
+      "policies": [
+        {
+          "name": "public_read_news_event_tags",
+          "check": null,
+          "roles": [
+            "anon",
+            "authenticated"
+          ],
+          "using": "true",
+          "command": "SELECT",
+          "permissive": "PERMISSIVE"
+        }
+      ],
+      "grants": [
+        {
+          "grantee": "postgres",
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "postgres",
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "postgres",
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "postgres",
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "postgres",
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "postgres",
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "postgres",
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "anon",
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "anon",
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "anon",
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "anon",
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "anon",
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "anon",
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "anon",
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "authenticated",
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "authenticated",
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "authenticated",
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "authenticated",
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "authenticated",
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "authenticated",
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "authenticated",
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "service_role",
+          "privilege": "TRIGGER"
+        }
+      ],
+      "triggers": null
+    }
+  ],
+  "blocked_definitions": [],
+  "block_reason": null,
+  "previous_blocker_resolution": "Sony explicitly approved exact local preservation of advance_trading_day_state_v1, set_updated_at and the two updated-at triggers. Approved patch applied and clean local rebuild plus runtime parity passed; no alternate path around the previous review rejection was used.",
+  "security_observations": [
+    "news_event_tags grants include TRUNCATE for anon/authenticated. RLS does not protect TRUNCATE; validate and remove this capability in the reviewed least-privilege repair before release. This audit did not execute TRUNCATE or modify Production grants."
+  ],
+  "owner_supplied_functions": {
+    "source": "Sony supplied schema-only definitions in this task; normalized MD5 independently compared with Production pg_proc metadata",
+    "definitions_contain_secret": false,
+    "normalized_md5": {
+      "handle_new_user": "4af697fc01a4af733bfd687bb54d82f6",
+      "handle_user_email_update": "e5b1798c5ba06caa9b431ac8d52dec98",
+      "reject_immutable_market_checkpoint_mutation_v1": "85a162edd9622ea1903e53952f950611"
+    },
+    "local_parity": "PASS: real GoTrue PKCE, automatic profile creation, email update, immutable UPDATE/DELETE rejection"
+  },
+  "approved_local_integrations": {
+    "functions": [
+      "public.advance_trading_day_state_v1(date,text,text,text,uuid,jsonb)",
+      "public.set_updated_at()"
+    ],
+    "triggers": [
+      "public.sector_stock_map.trg_sector_stock_map_updated_at",
+      "public.market_patterns.market_patterns_set_updated_at"
+    ],
+    "read_only_source_md5": {
+      "advance_trading_day_state_v1": "a1af0d71f9ef824c5876816a2040fcc9",
+      "set_updated_at": "9b1889f56258bf9d6554213c05019c76"
+    },
+    "status": "PASS: signatures, source hashes, security/search_path/ACL and timing/event preserved; DEGRADED core-complete behavior, terminal protection and both updated-at triggers executed locally",
+    "service_role_grants_reconciled": ["ma_ops_runs", "ma_ops_checks", "ma_ops_recovery_actions", "ma_ops_component_registry", "prediction_accuracy_logs", "system_health_logs"]
+  },
+  "local_clean_bootstrap": {
+    "scope": "ma-core-final-20260907",
+    "applied_files": 25,
+    "passed_files": 25,
+    "production_users_copied": false,
+    "previous_test_rows_copied": false,
+    "auth_trigger_parity": "PASS",
+    "full_chain": "PASS_LOCAL_SYNTHETIC_INPUTS_ACTUAL_RUNTIME",
+    "column_and_rls_hash_matches": 81,
+    "column_and_rls_hash_differences": 0,
+    "excluded_tables": ["content_engagement_events", "decision_snapshot_market_evidence", "early_access_signups", "market_data_history", "market_source_health", "voice_reports"],
+    "automatic_stable_day": false,
+    "acceptance_missing_table_resolved": true,
+    "empty_day_acceptance": "FAIL (correct fail-closed, not a complete day PASS)"
+  }
+}

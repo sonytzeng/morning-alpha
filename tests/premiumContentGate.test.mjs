@@ -71,6 +71,20 @@ function validAi() {
   };
 }
 
+function addAuditedNoTradeMaster(ai) {
+  const master=ai.research_master_v2;
+  master.provenance={source_status:'complete'};
+  master.sections.core_thesis.status='proposed';
+  master.sections.core_thesis.evidence_refs=['MD:SOX','MD:TSM'];
+  master.sections.representative_stocks=[];
+  master.sections.decision_guide={current_action:'訊號尚未同步，先不建立新部位'};
+  master.sections.failure_scenario={triggers:[{condition:'市場證據發生反向變化'}]};
+  master.sections.next_action={if_failure:{action:'停止原先觀察並等待下一次確認'}};
+  master.sections.supporting_evidence=[{statement:'費半與台積電 ADR 訊號分歧',evidence_refs:['MD:SOX','MD:TSM']}];
+  master.sections.transmission_narrative={path:[{subject:'台灣半導體',claim:'目前訊號分歧，等待同步',evidence_refs:['MD:SOX','MD:TSM']}]};
+  master.sections.timeline=['0830','0900','1100','1300','1330','1410'].map(time=>({time,purpose:'確認既有市場證據'}));
+}
+
 test('premium content is eligible only with fresh news and complete stock reasoning', () => {
   const result = evaluatePremiumContentGate(validAi(), 2);
   assert.equal(result.eligible, true, JSON.stringify(result));
@@ -231,6 +245,7 @@ test('every recommended stock must include source, transmission, Taiwan relation
 
 test('an evidence-backed no-trade decision remains valuable premium research', () => {
   const ai = validAi();
+  addAuditedNoTradeMaster(ai);
   ai.today_beneficiary_stocks_v10 = [];
   ai.v10_data_quality_status = 'insufficient_positive_evidence';
   ai.today_quote = '費半上漲 2.1%，但台積電 ADR 與台指期訊號分歧；09:30 驗證量價，若權值與族群未同步，今日不建立受惠股部位。';
@@ -279,6 +294,7 @@ test('premium gate still fails closed when overnight causal depth is below five 
 
 test('no-trade may publish with the declared optional TXF entitlement gap', () => {
   const ai = validAi();
+  addAuditedNoTradeMaster(ai);
   ai.data_quality = 'degraded';
   ai.missing_sources = ['unavailable_market_data:TXF:no_authorized_source_or_contract_mapping'];
   ai.today_beneficiary_stocks_v10 = [];
@@ -312,8 +328,9 @@ test('no-trade still blocks when any non-optional decision source is missing', (
   assert.ok(result.reason_codes.includes('source_data_incomplete'));
 });
 
-test('evidence-backed no-trade may publish when only prior sector context is unavailable', () => {
+test('Sep 2: missing sector evidence is insufficient, not a qualified no-trade decision', () => {
   const ai = validAi();
+  addAuditedNoTradeMaster(ai);
   ai.data_quality = 'degraded';
   ai.missing_sources = ['sector_rotation_scores:2026-08-24'];
   ai.today_beneficiary_stocks_v10 = [];
@@ -326,9 +343,9 @@ test('evidence-backed no-trade may publish when only prior sector context is una
     { symbol: '2882', data_basis: 'MD003｜market_data.US10Y｜US10Y UP' },
   ];
   const result = evaluatePremiumContentGate(ai, 3);
-  assert.equal(result.eligible, true);
-  assert.equal(result.decision_mode, 'no_trade');
-  assert.equal(result.content_score >= 90, true);
+  assert.equal(result.eligible, false);
+  assert.equal(result.decision_mode, 'blocked');
+  assert.ok(result.reason_codes.includes('source_data_incomplete'));
 });
 
 test('recommendations still fail closed when sector rotation context is unavailable', () => {
@@ -341,7 +358,7 @@ test('recommendations still fail closed when sector rotation context is unavaila
 });
 
 test('safe-mode source classification stays aligned with premium decision mode', () => {
-  assert.equal(isDecisionCriticalMissingSource('sector_rotation_scores:2026-08-24', 'no_trade'), false);
+  assert.equal(isDecisionCriticalMissingSource('sector_rotation_scores:2026-08-24', 'no_trade'), true);
   assert.equal(isDecisionCriticalMissingSource('sector_rotation_scores:2026-08-24', 'recommendations'), true);
   assert.equal(isDecisionCriticalMissingSource('stale_market_data:TAIEX:2026-08-24T05:30:00+00:00', 'no_trade'), true);
 });

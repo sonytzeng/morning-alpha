@@ -1,4 +1,5 @@
 import { resolveClosingVerificationState } from './closingVerificationState.ts';
+import { isSubscriberAnalysisUnavailable } from './subscriberReportContract.ts';
 
 export type RuntimeDecisionStatus = 'Waiting' | 'Confirmed' | 'Rejected' | 'Completed';
 
@@ -111,6 +112,13 @@ export function buildDecisionRuntimeEvidence(params: {
   const failedCheckpoint = checkpointStates.some((status) => status === 'failed');
   const marketSnapshotAvailable = hasMarketSnapshot(ai);
   const checklistAvailable = params.checklistItemCount > 0;
+  if (isSubscriberAnalysisUnavailable(ai)) {
+    return {
+      status: 'Waiting', reason: '今日分析尚未完成／證據不足',
+      completedCheckpoints, totalCheckpoints: checkpointStates.length,
+      checklistAvailable, marketSnapshotAvailable, runtimeFailure: false, closingVerified: false,
+    };
+  }
   const closing = closingResult(ai);
   const runtimeFailure = closing.rejected
     || failedCheckpoint

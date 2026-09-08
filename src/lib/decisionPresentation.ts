@@ -1,8 +1,9 @@
 import type { CanonicalMorningNarrative } from './canonicalNarrative.ts';
 import type { MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { canPresentConfirmedDecision, canPresentRejectedDecision } from './decisionEvidence.ts';
+import { isMarketPublicationReady, isSubscriberAnalysisUnavailable, recommendationPublication, subscriberConfidence, SUBSCRIBER_ANALYSIS_INCOMPLETE } from './subscriberReportContract.ts';
 
-export type PresentationDecisionState = 'WAIT' | 'ACT' | 'STOP' | 'CLOSED' | 'INSUFFICIENT_DATA';
+export type PresentationDecisionState = 'WAIT' | 'ACT' | 'STOP' | 'CLOSED' | 'COMPLETED' | 'INSUFFICIENT_DATA';
 
 export type PresentedOpportunity = {
   symbol: string;
@@ -147,14 +148,14 @@ function mapOpportunity(value: unknown): PresentedOpportunity | null {
   if (!symbol && !name) return null;
   const benefitChain = Array.isArray(row.benefitChain) ? row.benefitChain : Array.isArray(row.benefit_chain) ? row.benefit_chain : [];
   const scoringReasons = Array.isArray(row.scoringReasons) ? row.scoringReasons : Array.isArray(row.scoring_reasons) ? row.scoring_reasons : [];
-  const rawReason = firstText(row.reason, row.rationale, row.investment_reason, row.benefit_source, row.relationship_to_thesis, row.observationReason, row.observation_reason, scoringReasons[0], benefitChain[0]);
+  const rawReason = firstText(row.reason, row.rationale, row.investment_reason, row.transmission_logic, row.transmission_path, row.benefit_source, row.relationship_to_thesis, row.observationReason, row.observation_reason, scoringReasons[0], benefitChain[0]);
   const translatedReason = compact(rawReason, 240);
   return {
     symbol,
     name,
     roleLabel: roleLabel(row),
     oneLineReason: translatedReason || undefined,
-    confirmation: compact(firstText(row.confirmation, row.confirmation_needed, row.validation_signal, row.watch_point, row.what_to_watch, row.confirmationPendingReason, row.confirmation_pending_reason), 240) || undefined,
+    confirmation: compact(firstText(row.confirmation_condition, row.confirmation, row.confirmation_needed, row.validation_signal, row.watch_point, row.what_to_watch, row.confirmationPendingReason, row.confirmation_pending_reason), 240) || undefined,
     invalidation: compact(firstText(row.invalidation, row.invalidation_condition, row.stop_condition, row.risk_note, row.risk, row.stopObservingCondition, row.stop_observing_condition), 240) || undefined,
     priority: typeof row.priority === 'string' || typeof row.priority === 'number'
       ? row.priority
@@ -184,20 +185,28 @@ export function dedupePresentedOpportunities(source: UnknownRecord[], limit = 8)
 function decisionState(input: DecisionPresentationInput): PresentationDecisionState {
   const { displayState, narrative } = input;
   if (displayState && (!displayState.is_trading_day || displayState.market_status !== 'OPEN')) return 'CLOSED';
+  if (isSubscriberAnalysisUnavailable(displayState?.rawAI)) return 'INSUFFICIENT_DATA';
   const canonicalDecision = record(displayState?.rawAI?.canonical_decision);
   const canonicalAction = text(canonicalDecision.action).toUpperCase();
   const canonicalMode = text(canonicalDecision.decision_mode).toLowerCase();
   const canonicalStatus = text(canonicalDecision.status).toUpperCase();
+  const marketPublished = isMarketPublicationReady(displayState?.rawAI);
 
   // Runtime completion only means that the market checkpoint was observed. It
   // must never promote an evidence-backed no-trade decision into an ACT state.
   if (canonicalAction === 'CLOSED') return 'CLOSED';
   if (canonicalAction === 'WAIT' || canonicalMode === 'no_trade') return 'WAIT';
-  if (['STOP', 'REDUCE'].includes(canonicalAction) || canonicalMode === 'blocked') return 'STOP';
-  if (canonicalStatus && canonicalStatus !== 'READY') return 'INSUFFICIENT_DATA';
+  if (['STOP', 'REDUCE'].includes(canonicalAction)) return 'STOP';
+  if (canonicalMode === 'market_only' || canonicalMode === 'blocked') return marketPublished ? 'WAIT' : 'INSUFFICIENT_DATA';
+  // A failed stock/research-quality gate is not a failed market thesis. Only
+  // the pinned market action or actual runtime failure can stop that thesis.
+  if (!marketPublished && canonicalStatus && canonicalStatus !== 'READY') return 'INSUFFICIENT_DATA';
 
   const status = narrative.decision_lifecycle.decision_status.status;
   if (status === 'Rejected' && canPresentRejectedDecision(narrative.decision_evidence)) return 'STOP';
+  // A verified close is a historical outcome, not an unconfirmed entry and
+  // never a new ACT signal. Missing intraday entry fields cannot undo it.
+  if (status === 'Completed' && narrative.decision_evidence.closingVerified) return 'COMPLETED';
   const canonicalAllowsAction = !canonicalAction
     || ['TRADE', 'SELECTIVE'].includes(canonicalAction)
     || canonicalMode === 'recommendations';
@@ -214,6 +223,7 @@ function decisionCopy(state: PresentationDecisionState): Pick<DecisionPresentati
   if (state === 'ACT') return { headline: '劇本成立', instruction: '依原定計畫執行' };
   if (state === 'STOP') return { headline: '停止原定計畫', instruction: '今天不再延伸原本劇本' };
   if (state === 'CLOSED') return { headline: '今日休市', instruction: '今天不執行盤中流程' };
+  if (state === 'COMPLETED') return { headline: '今日收盤驗證已完成', instruction: '查看收盤驗證，等待下一個交易日' };
   if (state === 'INSUFFICIENT_DATA') return { headline: '資料尚未完整', instruction: '暫不建立交易判斷' };
   return { headline: '等待確認', instruction: '現在不要追價' };
 }
@@ -221,6 +231,7 @@ function decisionCopy(state: PresentationDecisionState): Pick<DecisionPresentati
 export function buildDecisionPresentation(input: DecisionPresentationInput): DecisionPresentation {
   const { displayState, narrative } = input;
   const lifecycle = narrative.decision_lifecycle;
+  const unavailable = isSubscriberAnalysisUnavailable(displayState?.rawAI);
   const state = decisionState(input);
   const copy = decisionCopy(state);
   const nextRaw = firstText(
@@ -232,20 +243,22 @@ export function buildDecisionPresentation(input: DecisionPresentationInput): Dec
     narrative.today_script.current_step,
     displayState?.nextUpdateTime,
   );
-  const score = displayState?.confidenceScore;
-  const opportunities = dedupePresentedOpportunities(input.opportunitySource || []);
+  const score = state === 'INSUFFICIENT_DATA' ? null : subscriberConfidence(displayState?.rawAI, displayState?.confidenceScore);
+  const stockPublication = recommendationPublication(displayState?.rawAI);
+  const opportunities = unavailable || (stockPublication.explicit && !stockPublication.stocksAllowed)
+    ? [] : dedupePresentedOpportunities(input.opportunitySource || []);
   return {
     dateLabel: displayState?.reportDate || displayState?.currentDate || '',
     marketStateLabel: displayState?.market_message || '等待市場狀態',
-    marketBiasLabel: compact(displayState?.marketBias, 24) || undefined,
+    marketBiasLabel: unavailable ? undefined : compact(displayState?.marketBias, 24) || undefined,
     primaryDecision: {
       state,
-      ...copy,
-      reason: compact(firstText(lifecycle.decision_status.reason, narrative.today_focus.why, narrative.today_focus.summary), 88) || undefined,
+      ...(unavailable && state !== 'CLOSED' ? { headline: SUBSCRIBER_ANALYSIS_INCOMPLETE, instruction: '等待市場證據與正式分析' } : copy),
+      reason: unavailable ? '當日候選尚未完成正式發布，不把資料缺失解讀為判斷失效。' : compact(firstText(lifecycle.decision_status.reason, narrative.today_focus.why, narrative.today_focus.summary), 88) || undefined,
     },
     mission: {
-      title: compact(firstText(lifecycle.question.question, lifecycle.current_thesis.title, narrative.today_focus.headline), 72) || '等待今日主要劇本',
-      explanation: compact(firstText(lifecycle.current_thesis.summary, narrative.today_focus.summary), 96) || undefined,
+      title: unavailable ? SUBSCRIBER_ANALYSIS_INCOMPLETE : compact(firstText(lifecycle.question.question, lifecycle.current_thesis.title, narrative.today_focus.headline), 72) || '等待今日主要劇本',
+      explanation: unavailable ? '保留今日資料日期，等待足夠市場證據與正式發布。' : compact(firstText(lifecycle.current_thesis.summary, narrative.today_focus.summary), 96) || undefined,
     },
     nextCheckpoint: splitCheckpoint(nextRaw),
     actionItems: unique([

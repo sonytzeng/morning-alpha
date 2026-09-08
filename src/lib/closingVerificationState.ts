@@ -1,3 +1,6 @@
+import { hasSubscriberState, isSubscriberAnalysisUnavailable, subscriberState } from './subscriberReportContract.ts';
+import { hasMatchingSubscriberClosingReceipt } from '../../shared/subscriber-state-contract.ts';
+
 export type ClosingVerificationState = 'complete' | 'degraded' | 'pending';
 
 export interface ResolvedClosingVerification {
@@ -49,6 +52,17 @@ function hasNamedDirection(value: unknown): boolean {
 }
 
 export function resolveClosingVerificationState(...sources: unknown[]): ResolvedClosingVerification {
+  // Only a published decision can have a subscriber-facing closing outcome.
+  // Detached historical records retain their legacy contract; full payloads do
+  // not use a raw close row to bypass the versioned publication/status gate.
+  const envelope = sources.find((source) => {
+    const row = asRecord(source);
+    return hasSubscriberState(row) || row.canonical_decision !== undefined || row.content_publish_gate !== undefined || row.report_status !== undefined;
+  });
+  if (envelope && (isSubscriberAnalysisUnavailable(envelope)
+    || (hasSubscriberState(envelope) && subscriberState(envelope)?.closing !== 'COMPLETE'))) {
+    return { state: 'pending', record: {}, taiexChange: null, outcome: '' };
+  }
   let record: UnknownRecord = {};
   for (const source of sources) {
     const candidate = closingCandidate(source);
@@ -56,6 +70,11 @@ export function resolveClosingVerificationState(...sources: unknown[]): Resolved
       record = candidate;
       break;
     }
+  }
+
+  const state = envelope && hasSubscriberState(envelope) ? subscriberState(envelope) : null;
+  if (state && !hasMatchingSubscriberClosingReceipt(record, state)) {
+    return { state: 'pending', record: {}, taiexChange: null, outcome: '' };
   }
 
   const taiex = asRecord(record.actual_taiex_close);

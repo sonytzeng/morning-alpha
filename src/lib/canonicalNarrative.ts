@@ -1,5 +1,6 @@
 import type { MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { buildDecisionRuntimeEvidence, getRuntimeCheckpointState, type DecisionRuntimeEvidence } from './decisionEvidence.ts';
+import { isMarketPublicationReady } from './subscriberReportContract.ts';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -178,6 +179,16 @@ function getV10MarketThesis(ai: UnknownRecord): UnknownRecord {
   };
 }
 
+function publishedMarketReasonText(reasons: string[]): string {
+  // A legacy assessment score is not a market-evidence reason or a bound
+  // confidence value. Keep adjacent facts; formal scores use structured fields.
+  const assessmentScore = /^(?:(?:綜合|內容|品質|資料|模型|判斷|AI)?(?:評分|分數|信心)|內容品質|資料完整度|quality(?:_score)?|confidence(?:_score)?|score)\s*[：:=]?\s*\d+(?:\.\d+)?\s*[／/]\s*100(?:\s*分)?$/i;
+  return reasons.flatMap((reason) => reason.split(/[。；;\n]/))
+    .map((clause) => clause.trim())
+    .filter((clause) => clause && !assessmentScore.test(clause))
+    .join('；');
+}
+
 function buildTodayFocus(
   displayState: MorningAlphaDisplayState | null,
   ai: UnknownRecord,
@@ -187,8 +198,13 @@ function buildTodayFocus(
   const openingThesis = asRecord(note.opening_thesis);
   const v8Sentence = asRecord(ai.v8_daily_sentence);
   const freeSummary = asRecord(ai.free_summary) || asRecord(ai.public_summary);
+  // The server-pinned published decision outranks a deeper internal research
+  // note. A newer blocked QA draft must not rewrite the subscriber's market view.
+  const published = isMarketPublicationReady(ai) ? asRecord(ai.canonical_decision) : {};
+  const publishedSentence = toText(published.daily_sentence);
 
   const headline = firstText(
+    publishedSentence,
     v10Thesis.primary_driver,
     firstMeaningfulTextFromObject(openingThesis, ['primary_driver', 'title', 'primary_theme', 'market_theme']),
     ai.primary_driver,
@@ -197,6 +213,7 @@ function buildTodayFocus(
   );
 
   const summary = firstText(
+    publishedSentence,
     v10Thesis.market_story,
     ai.market_story,
     openingThesis.summary,
@@ -209,6 +226,7 @@ function buildTodayFocus(
   );
 
   const action = firstText(
+    published.do_not_do,
     openingThesis.action,
     openingThesis.action_note,
     ai.action_guidance,
@@ -216,7 +234,9 @@ function buildTodayFocus(
     freeSummary.do_not_do,
   );
 
-  const why = firstText(
+  const publishedReasons = asStringArray(published.reasons);
+  // Do not refill excluded canonical QA-only reasons with private draft prose.
+  const why = publishedReasons.length > 0 ? publishedMarketReasonText(publishedReasons) : firstText(
     v10Thesis.taiwan_transmission,
     ai.taiwan_transmission,
     openingThesis.why,
@@ -247,7 +267,13 @@ function buildTodayFocus(
 function buildTodayScript(note: UnknownRecord, ai: UnknownRecord): CanonicalTodayScript {
   const windows = asArray(note.intraday_time_windows).length > 0
     ? asArray(note.intraday_time_windows)
-    : asArray(note.intraday_validation);
+    : Array.isArray(note.intraday_validation)
+      ? note.intraday_validation.map((item: unknown) => typeof item === 'string'
+        // Canonical member revisions store evidence-backed condition strings.
+        // Retain them verbatim; only use their explicit checkpoint, never a clock fallback.
+        ? { time_window: firstText(asRecord(note.canonical_contract).validation_checkpoint), what_to_watch: item }
+        : asRecord(item))
+      : [];
   const sync = asRecord(ai.intraday_sync_status);
   const steps = windows.slice(0, 5).map((window, index) => {
     const time = firstText(window.time, window.time_window, window.label);
@@ -278,6 +304,7 @@ function buildTodayScript(note: UnknownRecord, ai: UnknownRecord): CanonicalToda
   const current = steps.find((step) => step.status === 'pending' || step.status === 'missing') || steps[steps.length - 1];
   const openingThesis = asRecord(note.opening_thesis);
   const headline = firstText(
+    isMarketPublicationReady(ai) ? asRecord(ai.canonical_decision).daily_sentence : '',
     openingThesis.primary_theme,
     openingThesis.title,
     ai.primary_driver,
@@ -295,9 +322,10 @@ function buildTodayScript(note: UnknownRecord, ai: UnknownRecord): CanonicalToda
 }
 
 function buildFailureTriggers(note: UnknownRecord): CanonicalFailureTrigger[] {
-  const rows = asArray(note.invalidation_conditions).length > 0
-    ? asArray(note.invalidation_conditions)
-    : asArray(note.invalidation_rules);
+  const source = Array.isArray(note.invalidation_conditions) && note.invalidation_conditions.length > 0
+    ? note.invalidation_conditions
+    : Array.isArray(note.invalidation_rules) ? note.invalidation_rules : [];
+  const rows = source.map((item: unknown) => typeof item === 'string' ? { condition: item } : asRecord(item));
 
   return rows.slice(0, 5).map((row) => ({
     trigger: firstText(row.condition, row.trigger),

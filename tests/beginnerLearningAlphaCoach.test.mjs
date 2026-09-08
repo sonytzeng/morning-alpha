@@ -201,7 +201,10 @@ test('routes, Today presentation mode, analytics, and mobile scopes are wired wi
   assert.match(today, /decisionMode: premiumAvailability\.decisionMode/);
   assert.match(today, /safeStockDisplayText\(stock\.oneLineReason\)/);
   assert.match(today, /stocks=\{beginnerFocusStocks\}/);
-  assert.match(beginner, /今天沒有符合標準的標的/);
+  // An empty list is not evidence that the universe was completely screened.
+  // Only Today's explicit publication contract may supply a qualified-empty message.
+  assert.match(beginner, /emptyStockMessage = RECOMMENDATION_EVIDENCE_INSUFFICIENT/);
+  assert.match(read('src/lib/subscriberReportContract.ts'), /status === 'NO_QUALIFIED_OPPORTUNITY' && gate\.universe_evaluation_complete === true && hasCompleteUniverseAssessment\(screening\)/);
   assert.match(css, /@media \(max-width: 600px\)/);
   assert.match(css, /grid-template-columns: minmax\(0, 1fr\)/);
 });

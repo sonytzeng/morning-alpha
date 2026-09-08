@@ -22,7 +22,7 @@ export default function Footer() {
               <span className="text-white/80 font-semibold text-sm">{BRAND_NAME}</span>
             </div>
             <p className="text-white/45 text-xs leading-relaxed">
-              每天早上 30 秒，先看市場情緒與今天最容易失控的地方。不預測漲跌，只幫你在開盤前保留冷靜判斷。
+              每天早上 30 秒，分開看市場方向與進場風險，再用盤中與收盤證據核對判斷。
             </p>
           </div>
 
@@ -31,17 +31,20 @@ export default function Footer() {
             <Link to="/report/today" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               今日判斷
             </Link>
-            {PRODUCT_FEATURE_FLAGS.beginner_learning.enabled && (
-              <Link to="/learn" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
-                股票小白學堂
-              </Link>
-            )}
             <Link to="/war-room" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               盤中追蹤
             </Link>
             <Link to="/verification" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               收盤驗證
             </Link>
+            <Link to="/performance" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+              歷史績效
+            </Link>
+            {PRODUCT_FEATURE_FLAGS.beginner_learning.enabled && (
+              <Link to="/learn" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
+                股票小白學堂
+              </Link>
+            )}
             <Link to="/faq" className="inline-flex min-h-11 items-center text-white/50 hover:text-white text-xs font-medium transition-colors whitespace-nowrap">
               常見問題
             </Link>

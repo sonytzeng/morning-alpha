@@ -185,8 +185,8 @@ function mapV10OpportunityStocks(rows: unknown): V10OpportunityStock[] {
   return asRecordArray(rows).map((row, index) => {
     const triggerEvent = compactText(row.trigger_event || row.event_source);
     const evidenceSource = compactText(row.data_basis || row.evidence_source || row.source_reference);
-    const transmissionLogic = compactText(row.transmission_logic || row.reason_chain || row.causal_chain);
-    const taiwanSupplyChainLink = compactText(row.taiwan_supply_chain_link || row.supply_chain_relationship || row.company_relationship);
+    const transmissionLogic = compactText(row.transmission_logic || row.transmission_path || row.reason_chain || row.causal_chain);
+    const taiwanSupplyChainLink = compactText(row.taiwan_supply_chain_link || row.taiwan_supply_chain_relation || row.supply_chain_relationship || row.company_relationship);
     const completeReason = [
       triggerEvent && `事件來源：${triggerEvent}`,
       transmissionLogic && `傳導路徑：${transmissionLogic}`,
@@ -208,7 +208,7 @@ function mapV10OpportunityStocks(rows: unknown): V10OpportunityStock[] {
     scoringReasons: stringArray(row.scoring_reasons),
     benefitChain: stringArray(row.benefit_chain),
     observationReason: compactText(row.observation_reason) || completeReason,
-    confirmationPendingReason: compactText(row.confirmation_pending_reason || row.intraday_validation || row.validation_signal),
+    confirmationPendingReason: compactText(row.confirmation_condition || row.confirmation_pending_reason || row.intraday_validation || row.validation_signal),
     stopObservingCondition: compactText(row.stop_observing_condition || row.invalidation_condition || row.risk_note),
     observationChain: stringArray(row.observation_chain),
     triggerEvent,

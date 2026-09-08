@@ -97,6 +97,10 @@ export function normalizeMarketDataRows(
 
     const updatedAt = String(row.captured_at ?? row.created_at ?? row.updated_at ?? '');
     const capturedAt = new Date(updatedAt);
+    if (!updatedAt || !Number.isFinite(capturedAt.getTime()) || capturedAt.getTime() > now) {
+      invalidNumericSources.add(`${symbol}:invalid_or_future_timestamp`);
+      continue;
+    }
     if (updatedAt && Number.isFinite(capturedAt.getTime()) && (!latestDataTime || capturedAt > latestDataTime)) {
       latestDataTime = capturedAt;
     }

@@ -12,8 +12,26 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      isolated-postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: isolated-ci-only
+          POSTGRES_DB: ma_core_test1
+        ports:
+          - 55439:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGUSER: postgres
+      PGPASSWORD: isolated-ci-only
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Verify incident changes against the immutable approved baseline.
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -23,3 +41,42 @@ jobs:
       - run: npm run lint
       - run: npm run test:public
       - run: npm run build
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Integrated Edge checks
+        run: >-
+          deno check --no-lock
+          supabase/functions/generate-daily-report-v7/index.ts
+          supabase/functions/daily-delivery-orchestrator/index.ts
+          supabase/functions/get-report-payload/index.ts
+          supabase/functions/fetch-market-data-v10/index.ts
+          supabase/functions/line-daily-push/index.ts
+          supabase/functions/ma-ops-health-check/index.ts
+      - name: Core contract regressions
+        run: >-
+          deno test --no-lock
+          supabase/functions/_shared/research-pipeline-contract.test.ts
+          supabase/functions/_shared/research-quality-gate.test.ts
+          supabase/functions/generate-daily-report-v7/research-master-v2.test.ts
+          supabase/functions/_shared/intraday-runtime-contract.test.ts
+          tests/runtimeDecisionTimeline.test.ts
+          tests/decisionLifecycle.test.ts
+      - name: Isolated PostgreSQL migration twice and atomicity tests
+        env:
+          MA_ISOLATED_TEST_DB: ma_core_test1
+        run: |
+          psql -X -h 127.0.0.1 -p 55439 -d "$MA_ISOLATED_TEST_DB" -v ON_ERROR_STOP=1 -q \
+            -f tests/fixtures/core-research-schema.sql \
+            -f tests/fixtures/core-research-indexes.sql \
+            -f tests/fixtures/core-research-publish-baseline.sql \
+            -f tests/fixtures/core-acceptance-schema.sql \
+            -f supabase/migrations/20260907030607_core_research_atomic_publication.sql \
+            -f supabase/migrations/20260907030607_core_research_atomic_publication.sql \
+            -f supabase/migrations/20260908020000_incident_acceptance_market_delivery.sql \
+            -f supabase/migrations/20260908020000_incident_acceptance_market_delivery.sql \
+            -f supabase/migrations/20260908050000_market_publication_recommendation_isolation.sql \
+            -f supabase/migrations/20260908050000_market_publication_recommendation_isolation.sql
+          node --test tests/researchPipelineDatabase.integration.mjs
+          MA_LOCAL_SCOPE=ma-core-final-20260907 MA_ISOLATED_TEST_DB=ma_market_publication_test1 \
+            node --test tests/marketPublicationDatabase.integration.mjs

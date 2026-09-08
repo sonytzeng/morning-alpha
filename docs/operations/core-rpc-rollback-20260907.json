@@ -1,0 +1,63 @@
+{
+  "date": "2026-09-07",
+  "project": "cttfzgvhiewfckydcrci",
+  "rollback_migration": "20260907114550",
+  "scope": "Restore exactly three saved original definitions and private ACLs; no RPC invocation",
+  "functions": [
+    {
+      "nspname": "public",
+      "proname": "capture_morning_alpha_acceptance_v1",
+      "signature": "p_business_date date, p_evaluator_version text",
+      "returns": "uuid",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+      "body_md5": "05ac50938b8a5c1373295b1f98d5766a",
+      "normalized_md5": "16180e2653820ea4b469ffb13f5eaed6",
+      "owner": "postgres"
+    },
+    {
+      "nspname": "public",
+      "proname": "reconcile_runtime_http_dispatches_v1",
+      "signature": "p_limit integer",
+      "returns": "TABLE(dispatch_id uuid, dispatch_status text, http_status integer, error_code text)",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=public, net"
+      ],
+      "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+      "body_md5": "9bc3ea57c1e14e023c29e3a83e916fa6",
+      "normalized_md5": "bb37edbef06b72440b25b2f21abbab68",
+      "owner": "postgres"
+    },
+    {
+      "nspname": "public",
+      "proname": "reconcile_runtime_terminal_failures_v1",
+      "signature": "p_business_date date, p_correlation_id uuid",
+      "returns": "integer",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+      "body_md5": "cd462b1acb4a6d872a3b368480e89cd2",
+      "normalized_md5": "089ee2f323ee65c581d5dc973230e72f",
+      "owner": "postgres"
+    }
+  ],
+  "prior_acceptance": {
+    "id": "c787c5ac-4b02-46cb-9116-30afd74dcb20",
+    "verdict": "FAIL",
+    "preserved": true
+  },
+  "production_fetch": {
+    "version": 63,
+    "source_sha256": "2832ff1c0e9009521beeb73bf3292af77d6e8549f73274e658a605df6dde0f93",
+    "deployed_this_turn": false
+  },
+  "production_business_data_write": false,
+  "production_rpc_execution": false,
+  "production_line_resent": false
+}

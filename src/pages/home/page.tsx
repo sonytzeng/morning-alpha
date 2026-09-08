@@ -22,6 +22,8 @@ import {
 } from '@/lib/runtimeDecisionTimeline';
 import { supabase } from '@/lib/supabase';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
+import { isClosingVerificationComplete } from '@/lib/closingVerificationState';
+import { isSubscriberAnalysisUnavailable, recommendationPublication, subscriberObservationSources, SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
 
 export default function HomePage() {
   return (
@@ -184,8 +186,8 @@ function homeDecisionCopy(
   currentNode?: TimelineNode,
   lifecycleComplete = false,
 ): { headline: string; instruction: string } {
-  if (lifecycleComplete && !['ACT', 'STOP', 'CLOSED', 'INSUFFICIENT_DATA'].includes(state)) {
-    return { headline: '今日條件未成立', instruction: '收盤驗證已完成，今日不追價' };
+  if (state === 'COMPLETED' || (lifecycleComplete && state === 'WAIT')) {
+    return { headline: '今日收盤驗證已完成', instruction: '查看收盤驗證，等待下一個交易日' };
   }
   switch (state) {
     case 'ACT': return { headline: '今日條件成立', instruction: '依計畫分批執行' };
@@ -350,6 +352,9 @@ function HomePageContent() {
   const marketIsClosed = displayState.market_status !== 'OPEN';
 
   const homeAI = ms?.resolveResult?.rawRow?.ai_strategy_json as Record<string, unknown> | null;
+  const analysisUnavailable = isSubscriberAnalysisUnavailable(homeAI);
+  const recommendationState = recommendationPublication(homeAI);
+  const recommendationNotice = recommendationState.notice;
   const canonicalNarrative = useMemo(() => buildCanonicalNarrative({
     displayState,
     ai: homeAI,
@@ -376,7 +381,7 @@ function HomePageContent() {
 
   const currentTimelineNode = selectNextRuntimeTimelineNode(timelineNodes)
     || timelineNodes[timelineNodes.length - 1];
-  const runtimeLifecycleComplete = timelineNodes.every((node) =>
+  const runtimeLifecycleComplete = !analysisUnavailable && isClosingVerificationComplete(homeAI) && timelineNodes.every((node) =>
     node.status === 'completed' || node.status === 'not_applicable');
   const presentation = useMemo(() => buildDecisionPresentation({
     displayState,
@@ -384,17 +389,20 @@ function HomePageContent() {
     nextCheckpointFallback: `${currentTimelineNode.time} ${currentTimelineNode.label}`,
   }), [canonicalNarrative, currentTimelineNode.label, currentTimelineNode.time, displayState]);
   const decisionState = presentation.primaryDecision.state;
-  const homeDecision = homeDecisionCopy(
+  const homeDecision = analysisUnavailable && displayMode !== 'market-closed'
+    ? { headline: SUBSCRIBER_ANALYSIS_INCOMPLETE, instruction: '等待市場證據與正式分析' }
+    : homeDecisionCopy(
     decisionState,
     currentTimelineNode,
     runtimeLifecycleComplete,
   );
   const nextAction = homeDecision.instruction;
   const reportDecisionSentence = translateKnownTerms(firstMeaningfulString(displayState.todayQuote));
-  const heroDecisionSentence = reportDecisionSentence.length >= 24
-    && !isSyntheticResearchSentence(reportDecisionSentence)
-    ? reportDecisionSentence
-    : homeDecision.instruction;
+  const heroDecisionSentence = analysisUnavailable
+    ? SUBSCRIBER_ANALYSIS_INCOMPLETE
+    : reportDecisionSentence.length >= 24 && !isSyntheticResearchSentence(reportDecisionSentence)
+      ? reportDecisionSentence
+      : homeDecision.instruction;
   const decisionContext = translateKnownTerms([
     presentation.marketBiasLabel ? `今天市場${presentation.marketBiasLabel}。` : '',
     presentation.primaryDecision.reason,
@@ -422,7 +430,7 @@ function HomePageContent() {
     closingRecord.result,
     closingRecord.hit_or_miss,
   );
-  const hasRuntimeClosing = Boolean(closingResultValue || /completed|degraded|verified/.test(closingStatus.toLowerCase()));
+  const hasRuntimeClosing = isClosingVerificationComplete(homeAI);
   const nextActionTime = displayMode === 'market-closed'
     ? displayState.nextUpdateTime
     : hasRuntimeClosing ? '今日收盤驗證已完成' : (currentTimelineNode.time || presentation.nextCheckpoint.time);
@@ -532,12 +540,11 @@ function HomePageContent() {
     firstString(riskObservation.observation_reason),
   ], 4);
 
-  const observationSource = [
+  const observationSource = subscriberObservationSources(homeAI, [
     ...displayState.v10BeneficiaryStocks,
     ...displayState.coreBeneficiaryStocks,
     ...displayState.beneficiaryStocks,
-    ...displayState.v10ObservationWatchlist,
-  ];
+  ], displayState.v10ObservationWatchlist);
   const observationCards = observationSource.reduce<ObservationCard[]>((items, source) => {
     const item = asRecord(source);
     const title = translateKnownTerms(firstMeaningfulString(
@@ -659,7 +666,7 @@ function HomePageContent() {
     firstMeaningfulString(closingOutcome.result, closingResultValue),
     closingStatus,
   );
-  const hasClosingOutcome = Boolean(
+  const hasClosingOutcome = hasRuntimeClosing && Boolean(
     closingDisplayResult
     || closingOutcome.summary
     || closingOutcome.accuracy
@@ -870,7 +877,7 @@ function HomePageContent() {
                   <article className="ma-home-v2-answer-card is-neutral">
                     <p>今天優先看什麼？</p>
                     <strong>{renderSafeText(priorityFocus)}</strong>
-                    <span>需要更多證據時，再展開成立與取消條件</span>
+                    <span>{renderSafeText(recommendationNotice || '需要更多證據時，再展開成立與取消條件')}</span>
                   </article>
                   <article className="ma-home-v2-answer-card is-danger">
                     <p>今天最容易犯的錯？</p>
@@ -969,16 +976,14 @@ function HomePageContent() {
                   </div>
                 ) : (
                   <div className="ma-home-v2-empty is-section">
-                    <strong>{evidenceIsInsufficient
+                    <strong>{recommendationNotice || (evidenceIsInsufficient
                       ? '今日資料尚未完整'
-                      : runtimeLifecycleComplete
-                        ? '今日沒有強受惠股'
-                        : '今日觀察名單已完成'}</strong>
-                    <span>{evidenceIsInsufficient
+                      : '目前沒有可顯示的公開觀察內容')}</strong>
+                    <span>{recommendationNotice
+                      ? '個股推薦與市場判斷分開驗證，仍可閱讀今日市場分析與驗證進度。'
+                      : evidenceIsInsufficient
                       ? '核心資料未達新鮮度標準，暫不建立觀察名單。'
-                      : runtimeLifecycleComplete
-                        ? '今日條件未成立，不用空泛觀察名單填補。'
-                        : '公開版保留每日一句與驗證節點；完整代表股、原因與取消條件請查看會員研究。'}</span>
+                      : '公開版保留每日一句與驗證節點；沒有公開觀察內容不代表已完成所有股票評估。'}</span>
                   </div>
                 )}
               </section>

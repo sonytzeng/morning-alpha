@@ -1,3 +1,6 @@
+import { candidateEvidenceMatches } from "./candidate-evidence.ts";
+import { companyEvidenceSupported } from '../_shared/research-pipeline-contract.ts';
+
 export type ResearchSourceStatus =
   | "complete"
   | "partial"
@@ -64,6 +67,7 @@ export interface TransmissionNarrativeSection {
 }
 
 export interface SupportingEvidenceItem {
+  evidence_identity?: string;
   claim_id: string;
   statement: string;
   evidence_refs: string[];
@@ -72,6 +76,7 @@ export interface SupportingEvidenceItem {
 }
 
 export interface CounterEvidenceItem {
+  evidence_identity?: string;
   claim_id: string;
   statement: string;
   evidence_refs: string[];
@@ -159,6 +164,24 @@ export interface ResearchMasterQuality {
   contradictions: string[];
   missing_sections: string[];
   publish_status: ResearchPublishStatus;
+  coverage_audit?: {
+    contract_version: 'CLAIM_EVIDENCE_LEDGER_V1';
+    numerator: number;
+    denominator: number;
+    excluded_conditional_criteria: string[];
+    claims: ResearchClaimAudit[];
+  };
+}
+
+export interface ResearchClaimAudit {
+  claim_id: string;
+  statement: string;
+  scope: 'market' | 'stock';
+  evidence_ids: string[];
+  sources: Array<{ evidence_id: string; source: string | null; source_date: string | null; freshness: string | null }>;
+  confidence: ResearchEvidenceStrength | null;
+  supported: boolean;
+  reason_codes: string[];
 }
 
 export interface ResearchMasterV2 {
@@ -206,6 +229,12 @@ export interface ResearchEvidenceItem {
   importance?: number;
   freshness?: string;
   raw_reference?: string;
+  event_id?: string;
+  subject?: string;
+  published_at?: string | null;
+  data_as_of?: string | null;
+  condition?: string;
+  source_fingerprint?: string;
 }
 
 export interface ResearchMasterV2AssemblerInput {
@@ -231,6 +260,56 @@ export interface ResearchMasterValidationResult {
   errors: string[];
   warnings: string[];
   quality: ResearchMasterQuality;
+}
+
+export interface ResearchMasterValidationContext {
+  evidenceIndex: ResearchEvidenceItem[];
+  candidateUniverse: Record<string, unknown>;
+}
+
+/** Admission is separate from market-report validity. Keep every rejected
+ * candidate and its evidence IDs in the server audit; never coerce its result
+ * to a recommendation or let one rejected company erase valid market facts. */
+export function admitResearchRecommendations(input: ResearchMasterV2AssemblerInput): {
+  accepted: Record<string, unknown>[];
+  rejected: Array<{ symbol: string; evidence_ids: string[]; reason_codes: string[] }>;
+} {
+  const accepted: Record<string, unknown>[] = [];
+  const rejected: Array<{ symbol: string; evidence_ids: string[]; reason_codes: string[] }> = [];
+  const candidates = asRecords(input.candidateUniverse.candidates);
+  for (const stock of asRecords(input.legacy.today_beneficiary_stocks_v10)) {
+    const symbol = stockSymbol(stock);
+    const candidate = candidates.find((item) => stockSymbol(item) === symbol);
+    const refs = candidateUniverseRefs(input, symbol);
+    const company = { symbol, name: firstText(stock.name, stock.stock_name), aliases: symbol === '2330' ? ['TSMC', 'Taiwan Semiconductor'] : symbol === '2317' ? ['Hon Hai', 'Foxconn'] : [] };
+    const reasons: string[] = [];
+    if (!candidate || candidate.eligibility === false) reasons.push('candidate_not_eligible');
+    const companyEvidence = input.evidenceIndex.filter((item) => refs.includes(item.evidence_id)
+      && !/^(stale|expired|invalid|conflicting)$/i.test(item.freshness || '')
+      && Boolean(item.published_at || item.data_as_of)
+      && Number.isFinite(Date.parse(String(item.published_at || item.data_as_of)))
+      && Date.parse(String(item.published_at || item.data_as_of)) <= Date.parse(input.generatedAt)
+      && companyEvidenceSupported(company, { ...item }));
+    if (!companyEvidence.length) reasons.push('company_source_evidence_missing');
+    if (!firstText(stock.entry_condition)) reasons.push('entry_condition_missing');
+    if (!firstText(stock.intraday_validation, stock.validation_signal, stock.confirmation_condition)) reasons.push('confirmation_condition_missing');
+    if (!firstText(stock.invalidation_condition, stock.stop_condition)) reasons.push('invalidation_condition_missing');
+    if (reasons.length) rejected.push({ symbol, evidence_ids: refs, reason_codes: reasons });
+    else accepted.push({
+      ...stock,
+      confirmation_condition: firstText(stock.confirmation_condition, stock.intraday_validation, stock.validation_signal),
+      invalidation_condition: firstText(stock.invalidation_condition, stock.stop_condition),
+      stop_logic: firstText(stock.stop_logic, stock.stop_condition, stock.invalidation_condition),
+      market_dependency: firstText(stock.market_dependency, stock.transmission_logic, stock.transmission_path, stock.validation_signal),
+      confidence: boundedConfidence(stock.confidence, stock.confidence_score),
+      data_timestamp: companyEvidence.map(item => String(item.published_at || item.data_as_of)).sort().at(-1) || null,
+      research_evidence_admission: {
+        contract_version: 'COMPANY_EVIDENCE_ADMISSION_V1', status: 'PASSED',
+        report_date: input.reportDate, company_evidence_ids: companyEvidence.map(item => item.evidence_id),
+      },
+    });
+  }
+  return { accepted, rejected };
 }
 
 const SECTION_IDS = [
@@ -391,10 +470,10 @@ function searchText(value: string): string {
 }
 
 const EVIDENCE_TITLE_ALIASES: Record<string, string[]> = {
-  "nvda": ["nvidia", "輝達", "英偉達"],
-  "sox": ["費城半導體", "費半"],
-  "tsm": ["台積電adr", "台積電"],
-  "2330": ["台積電"],
+  "nvda": ["nvidia", "輝達", "英偉達", "semiconductor", "半導體", "晶片"],
+  "sox": ["費城半導體", "費半", "semiconductor", "半導體", "晶片"],
+  "tsm": ["台積電adr", "台積電", "semiconductor", "半導體", "晶片"],
+  "2330": ["台積電", "semiconductor", "半導體", "晶片"],
   "taiex": ["台灣加權", "加權指數", "台股大盤", "開盤方向"],
   "txf": ["台指期", "台灣期貨"],
   "nasdaq": ["那斯達克", "美股科技"],
@@ -402,6 +481,12 @@ const EVIDENCE_TITLE_ALIASES: Record<string, string[]> = {
   "電子權值": ["權值股", "權值"],
   "ai伺服器": ["ai server", "ai伺服器"],
 };
+
+const OPTIONAL_NO_TRADE_CONTEXT_GAP =
+  /^sector_rotation_scores(?::\d{4}-\d{2}-\d{2})?$/i;
+
+const CRITICAL_RECOMMENDATION_SOURCE_GAP =
+  /^(?:market_data|market_news|market_snapshot\.(?:taiex|txf|2330))$/i;
 
 function evidenceSearchTerms(evidence: ResearchEvidenceItem): string[] {
   const title = toText(evidence.title);
@@ -481,13 +566,77 @@ function sourceStatus(
     input.legacy.data_quality,
     input.legacy.data_status,
   ).toLowerCase();
+  // Missing required source evidence stays partial regardless of stock count.
+  const sourceGaps = asStrings(input.legacy.missing_sources);
+  if (sourceGaps.some((gap) => /sector_rotation|market_data|market_news|market_snapshot|required_tw_market|required_us_market|invalid_numeric/i.test(gap))) return "partial";
+  const observationRows = asRecords(input.legacy.v10_observation_watchlist);
+  const recommendationRows = asRecords(
+    input.legacy.today_beneficiary_stocks_v10,
+  );
+  const declaredMissingSources = asStrings(input.legacy.missing_sources);
+  const traceableNoTradeDecision =
+    firstText(input.legacy.v10_data_quality_status).toLowerCase() ===
+      "insufficient_positive_evidence" &&
+    observationRows.length >= 3 &&
+    declaredMissingSources.every((source) =>
+      OPTIONAL_NO_TRADE_CONTEXT_GAP.test(source)
+    );
   if (
     hasLegacyResearch && hasTraceableThesis &&
     ["complete", "sufficient"].includes(legacyDataQuality)
   ) return "complete";
+  if (hasLegacyResearch && hasTraceableThesis && traceableNoTradeDecision) {
+    return "complete";
+  }
+  const traceableRecommendationDecision = recommendationRows.length > 0 &&
+    recommendationRows.every((row) =>
+      resolveEvidenceRefs(
+        row.evidence_refs,
+        [
+          stockSymbol(row),
+          firstText(row.data_basis, row.evidence_source),
+          firstText(row.transmission_logic, row.reason, row.why_this_stock),
+        ],
+        input.evidenceIndex,
+      ).length > 0
+    ) &&
+    declaredMissingSources.every((source) =>
+      !CRITICAL_RECOMMENDATION_SOURCE_GAP.test(source)
+    );
+  if (
+    hasLegacyResearch && hasTraceableThesis && traceableRecommendationDecision
+  ) return "complete";
   if (hasV10Thesis && hasTraceableThesis && missing === 0) return "complete";
   if (hasV10Thesis) return "partial";
   return hasLegacyResearch ? "legacy_mapped" : "insufficient";
+}
+
+function isCanonicalV10NoTrade(
+  input: ResearchMasterV2AssemblerInput,
+): boolean {
+  // This legacy-named helper selects market-only narrative assembly, not a
+  // completed-universe/no-opportunity outcome. Publication uses market_only.
+  return Array.isArray(input.legacy.today_beneficiary_stocks_v10) &&
+    asRecords(input.legacy.today_beneficiary_stocks_v10).length === 0;
+}
+
+function canonicalNoTradeEvidence(
+  input: ResearchMasterV2AssemblerInput,
+): ResearchEvidenceItem[] {
+  return [...input.evidenceIndex]
+    .filter((item) => item.evidence_id && item.evidence_type !== "previous_validation")
+    .sort((left, right) => (Number(right.importance) || 0) - (Number(left.importance) || 0))
+    .slice(0, 5);
+}
+
+function canonicalNoTradeEvidenceNarrative(
+  input: ResearchMasterV2AssemblerInput,
+): string {
+  return compactTextParts(
+    canonicalNoTradeEvidence(input).map((item) =>
+      firstText(item.summary, item.title, item.raw_reference)
+    ),
+  ) || INSUFFICIENT_TEXT;
 }
 
 function primaryResearchText(
@@ -524,18 +673,42 @@ function buildTransmissionPath(
   ): void => {
     const statement = firstText(claim);
     if (!statement) return;
+    const evidenceRefs = resolveEvidenceRefs(
+      rawRefs,
+      [subject, statement],
+      input.evidenceIndex,
+    );
+    // Canonical premium research must never preserve a narrative node that
+    // cannot be traced to the current evidence index. The legacy report keeps
+    // the original model output for audit, while the publishable master
+    // abstains from unsupported transmission claims.
+    if (evidenceRefs.length === 0) return;
     paths.push({
       node_id: nodeId(input.reportDate, stage, statement),
       stage,
       subject: firstText(subject, statement),
       claim: statement,
-      evidence_refs: resolveEvidenceRefs(
-        rawRefs,
-        [subject, statement],
-        input.evidenceIndex,
-      ),
+      evidence_refs: evidenceRefs,
     });
   };
+
+  if (isCanonicalV10NoTrade(input)) {
+    for (const item of canonicalNoTradeEvidence(input)) {
+      const type = firstText(item.evidence_type).toLowerCase();
+      const stage: TransmissionStage = type === "market_news"
+        ? "global_event"
+        : type === "sector_rotation"
+        ? "taiwan_market"
+        : "validation";
+      add(
+        stage,
+        firstText(item.title, item.source, item.evidence_id),
+        firstText(item.summary, item.title, item.raw_reference),
+        [item.evidence_id],
+      );
+    }
+    return paths;
+  }
 
   const memberChains = asRecords(note.overnight_chain);
   for (const chain of memberChains.slice(0, 3)) {
@@ -626,6 +799,36 @@ function buildTransmissionPath(
   return Array.from(unique.values());
 }
 
+// Keep the subject and observation time in claim identity. Two sectors saying
+// "轉強" are distinct observations; a syndicated copy is not independent evidence.
+function evidenceIdentity(evidence: ResearchEvidenceItem | undefined, reportDate: string, statement: string): string {
+  if (!evidence) return `${reportDate}:unresolved:${statement}`;
+  return JSON.stringify([
+    reportDate, evidence.event_id || '', evidence.subject || evidence.title || evidence.raw_reference || '',
+    evidence.published_at || evidence.data_as_of || reportDate, evidence.condition || '',
+    // Claim identity is not source identity. Independent sources corroborating
+    // one assertion merge; two assertions supported by one source stay distinct.
+    normalizedForHash(statement),
+  ]);
+}
+
+function evidenceStatement(evidence: ResearchEvidenceItem | undefined, fallback = ''): string {
+  const summary = firstText(evidence?.summary, evidence?.title, fallback);
+  const subject = firstText(evidence?.subject, evidence?.title);
+  return subject && !searchText(summary).includes(searchText(subject)) ? `${subject}：${summary}` : summary;
+}
+
+function mergeEvidenceClaims<T extends { evidence_identity?: string; evidence_refs: string[] }>(items: T[]): T[] {
+  const merged = new Map<string, T>();
+  items.forEach((item, index) => {
+    const key = item.evidence_identity || `unresolved:${index}`;
+    const existing = merged.get(key);
+    if (existing) existing.evidence_refs = uniqueStrings([...existing.evidence_refs, ...item.evidence_refs]);
+    else merged.set(key, item);
+  });
+  return [...merged.values()];
+}
+
 function buildSupportingEvidence(
   input: ResearchMasterV2AssemblerInput,
   coreStatement: string,
@@ -638,15 +841,12 @@ function buildSupportingEvidence(
     evidenceIdSet(input.evidenceIndex),
   );
   const refs = explicitRefs.length > 0 ? explicitRefs : coreRefs;
-  return refs.map((ref, indexPosition) => {
+  return mergeEvidenceClaims(refs.map((ref, indexPosition): SupportingEvidenceItem => {
     const evidence = index.get(ref);
-    const statement = firstText(
-      evidence?.summary,
-      evidence?.title,
-      coreStatement,
-    );
+    const statement = evidenceStatement(evidence, coreStatement);
     const importance = Number(evidence?.importance ?? 0);
     return {
+      evidence_identity: evidenceIdentity(evidence, input.reportDate, statement),
       claim_id: claimId(
         input.reportDate,
         "supporting_evidence",
@@ -661,12 +861,11 @@ function buildSupportingEvidence(
         : "weak",
       role: indexPosition === 0 ? "primary" : "confirming",
     };
-  });
+  }));
 }
 
 function buildCounterEvidence(
   input: ResearchMasterV2AssemblerInput,
-  note: Record<string, unknown>,
 ): CounterEvidenceItem[] {
   const thesis = input.marketThesis || {};
   const index = evidenceById(input.evidenceIndex);
@@ -677,9 +876,10 @@ function buildCounterEvidence(
   );
   for (const ref of explicitRefs) {
     const evidence = index.get(ref);
-    const statement = firstText(evidence?.summary, evidence?.title);
+    const statement = evidenceStatement(evidence);
     if (!statement) continue;
     result.push({
+      evidence_identity: evidenceIdentity(evidence, input.reportDate, statement),
       claim_id: claimId(
         input.reportDate,
         "counter_evidence",
@@ -707,35 +907,13 @@ function buildCounterEvidence(
       implication: firstText(alternative.why_rejected, thesis.bear_case),
     });
   }
-  const invalidations = [
-    ...asRecords(note.invalidation_rules),
-    ...asRecords(note.invalidation_conditions),
-    ...asRecords(input.legacy.invalidation_conditions),
-  ];
-  for (const invalidation of invalidations) {
-    const statement = firstText(invalidation.condition);
-    if (!statement) continue;
-    result.push({
-      claim_id: claimId(input.reportDate, "invalidation", statement),
-      statement,
-      evidence_refs: resolveEvidenceRefs(invalidation.evidence_refs, [
-        statement,
-      ], input.evidenceIndex),
-      severity:
-        /失效|停止|反向/.test(`${statement}${firstText(invalidation.meaning)}`)
-          ? "invalidating"
-          : "threat",
-      implication: firstText(
-        invalidation.meaning,
-        invalidation.action_note,
-        invalidation.required_adjustment,
-      ),
-    });
-  }
+  // Future invalidation criteria remain in failure_scenario. They are not
+  // observations that have already occurred and cannot be counter-evidence.
   const unique = new Map<string, CounterEvidenceItem>();
   result.forEach((item) => {
-    const key = normalizedForHash(item.statement);
-    if (!unique.has(key)) unique.set(key, item);
+    const key = item.evidence_identity || normalizedForHash(item.statement);
+    const existing = unique.get(key);
+    unique.set(key, existing ? { ...existing, evidence_refs: uniqueStrings([...existing.evidence_refs, ...item.evidence_refs]) } : item);
   });
   return Array.from(unique.values());
 }
@@ -781,29 +959,85 @@ function candidateUniverseRefs(
   );
 }
 
+function stockEvidenceRelationshipSupported(
+  stock: Pick<RepresentativeStockItem, "symbol" | "name" | "evidence_refs">,
+  candidateUniverse: ResearchMasterV2AssemblerInput["candidateUniverse"],
+  evidenceIndex: ResearchEvidenceItem[],
+): boolean {
+  const candidate = asRecords(candidateUniverse.candidates).find((item) =>
+    stockSymbol(item) === stock.symbol.toUpperCase()
+  );
+  if (!candidate) return false;
+  const candidateTags = uniqueStrings([
+    stock.symbol,
+    stock.name,
+    firstText(candidate.symbol),
+    firstText(candidate.name),
+    firstText(candidate.industry_code),
+    firstText(candidate.industry),
+    firstText(candidate.sector),
+    ...asStrings(candidate.trigger_tags),
+  ]);
+  const evidence = evidenceById(evidenceIndex);
+  return stock.evidence_refs.some((evidenceId) => {
+    const item = evidence.get(evidenceId);
+    return item ? candidateEvidenceMatches(candidateTags, item) : false;
+  });
+}
+
 function buildRepresentativeStocks(
   input: ResearchMasterV2AssemblerInput,
   note: Record<string, unknown>,
 ): RepresentativeStockItem[] {
-  const sources: StockSource[] = [
-    ...asRecords(note.beneficiary_candidates).map((record) => ({
-      record,
-      role: "transmission" as const,
-    })),
-    ...asRecords(input.legacy.today_beneficiary_stocks_v10).map((record) => ({
-      record,
-      role: "leader" as const,
-    })),
-    ...asRecords(input.legacy.v10_observation_watchlist).map((record) => ({
-      record,
-      role: "confirmation" as const,
-    })),
-    ...asRecords(asRecord(input.legacy.v8_beneficiary_chain).beneficiaries).map(
-      (record) => ({ record, role: "transmission" as const }),
-    ),
-  ];
+  const canonicalStocks = Array.isArray(input.legacy.today_beneficiary_stocks_v10)
+    ? new Set(asRecords(input.legacy.today_beneficiary_stocks_v10).map(stockSymbol)) : null;
+  if (canonicalStocks && canonicalStocks.size === 0) return [];
+  const v10Recommendations = asRecords(
+    input.legacy.today_beneficiary_stocks_v10,
+  );
+  // An explicit V10 no-trade decision is canonical. Legacy candidates and
+  // observation roles remain in the audit payload, but must never reappear as
+  // paid recommendations or representative stocks.
+  if (isCanonicalV10NoTrade(input)) return [];
+  const v10Symbols = new Set(
+    v10Recommendations.map(stockSymbol).filter(Boolean),
+  );
+  const sameSymbolLegacySources: StockSource[] = [
+    ...asRecords(note.beneficiary_candidates),
+    ...asRecords(input.legacy.v10_observation_watchlist),
+    ...asRecords(asRecord(input.legacy.v8_beneficiary_chain).beneficiaries),
+  ].filter((record) => v10Symbols.has(stockSymbol(record))).map((record) => ({
+    record,
+    role: "confirmation" as const,
+  }));
+  // Once V10 has made a decision, its recommendation set is canonical. Legacy
+  // candidates and the broad observation watchlist remain in the audit payload,
+  // but must not leak unrelated themes into the paid research document.
+  const sources: StockSource[] = v10Recommendations.length > 0
+    ? [
+      ...v10Recommendations.map((record) => ({
+        record,
+        role: "leader" as const,
+      })),
+      ...sameSymbolLegacySources,
+    ]
+    : [
+      ...asRecords(note.beneficiary_candidates).map((record) => ({
+        record,
+        role: "transmission" as const,
+      })),
+      ...asRecords(input.legacy.v10_observation_watchlist).map((record) => ({
+        record,
+        role: "confirmation" as const,
+      })),
+      ...asRecords(asRecord(input.legacy.v8_beneficiary_chain).beneficiaries)
+        .map((record) => ({ record, role: "transmission" as const })),
+    ];
   const result = new Map<string, RepresentativeStockItem>();
   for (const source of sources) {
+    // An explicit canonical empty set is not permission to resurrect legacy
+    // recommendation aliases or observation-only roles.
+    if (canonicalStocks && !canonicalStocks.has(stockSymbol(source.record))) continue;
     const record = source.record;
     const symbol = stockSymbol(record);
     if (!symbol) continue;
@@ -884,7 +1118,18 @@ function buildRepresentativeStocks(
           : "insufficient",
     });
   }
-  return Array.from(result.values());
+  // Partial rows remain available in the legacy/debug payload for audit, but
+  // they are not claims that may enter the canonical paid research document.
+  // This is an abstention rule, not a quality-gate bypass.
+  return Array.from(result.values()).filter((item) =>
+    item.data_status === "complete"
+    && item.evidence_refs.length > 0
+    && (v10Recommendations.length > 0 || stockEvidenceRelationshipSupported(
+      item,
+      input.candidateUniverse,
+      input.evidenceIndex,
+    ))
+  );
 }
 
 function parseMinutes(value: string): number | null {
@@ -1131,6 +1376,7 @@ export function assembleResearchMasterV2(
     safeIdPart(input.engineVersion)
   }`;
   const hasResearch = coreStatement !== INSUFFICIENT_TEXT;
+  const canonicalNoTrade = isCanonicalV10NoTrade(input);
   const status = sourceStatus(input, hasResearch, thesisRefs.length > 0);
   const transmissionPath = buildTransmissionPath(input, note);
   const intraday = asRecords(note.intraday_validation);
@@ -1139,20 +1385,28 @@ export function assembleResearchMasterV2(
   const previousValidation = asRecord(
     input.normalizedEvidence.previous_validation,
   );
-  const whyNarrative = compactTextParts([
-    ...asRecords(note.overnight_chain).flatMap((
-      chain,
-    ) => [chain.event, chain.impact_logic, chain.taiwan_mapping]),
-    thesis.market_story,
-    marketContext.macro_summary,
-  ]) || INSUFFICIENT_TEXT;
-  const whatChanged = firstText(
-    marketContext.primary_event,
-    previousValidation.summary,
-    previousValidation.previous_market_bias,
-    asRecords(note.overnight_chain)[0]?.event,
-    INSUFFICIENT_TEXT,
-  );
+  const whyNarrative = canonicalNoTrade
+    ? canonicalNoTradeEvidenceNarrative(input)
+    : compactTextParts([
+      ...asRecords(note.overnight_chain).flatMap((
+        chain,
+      ) => [chain.event, chain.impact_logic, chain.taiwan_mapping]),
+      thesis.market_story,
+      marketContext.macro_summary,
+    ]) || INSUFFICIENT_TEXT;
+  const whatChanged = canonicalNoTrade
+    ? firstText(
+      canonicalNoTradeEvidence(input)[0]?.summary,
+      canonicalNoTradeEvidence(input)[0]?.title,
+      INSUFFICIENT_TEXT,
+    )
+    : firstText(
+      marketContext.primary_event,
+      previousValidation.summary,
+      previousValidation.previous_market_bias,
+      asRecords(note.overnight_chain)[0]?.event,
+      INSUFFICIENT_TEXT,
+    );
   const primaryValidationAxis = firstText(
     thesis.primary_validation_axis,
     intraday[0]?.what_to_watch,
@@ -1164,7 +1418,7 @@ export function assembleResearchMasterV2(
     coreStatement,
     thesisRefs,
   );
-  const counterEvidence = buildCounterEvidence(input, note);
+  const counterEvidence = buildCounterEvidence(input);
   const representativeStocks = buildRepresentativeStocks(input, note);
   const timeline = buildTimeline(input, note);
   const failureScenario = buildFailureScenario(input, note, counterEvidence);
@@ -1215,9 +1469,9 @@ export function assembleResearchMasterV2(
   const capitalScenarios = asRecords(note.capital_rotation_scenarios);
   const riskScenarios = asRecords(note.risk_scenarios);
   const successAction = firstText(
-    tomorrow.continuation_condition,
-    capitalScenarios[0]?.beneficiary_impact,
-    closingPlan.success_criteria,
+    canonicalNoTrade ? primaryValidationAxis : tomorrow.continuation_condition,
+    canonicalNoTrade ? "" : capitalScenarios[0]?.beneficiary_impact,
+    canonicalNoTrade ? "" : closingPlan.success_criteria,
     CHECKPOINT_INSUFFICIENT_TEXT,
   );
   const failureAction = firstText(
@@ -1229,7 +1483,7 @@ export function assembleResearchMasterV2(
     section_id: "next_action",
     if_success: {
       action: successAction,
-      what_to_promote: uniqueStrings([
+      what_to_promote: canonicalNoTrade ? [] : uniqueStrings([
         ...asStrings(capitalScenarios[0]?.groups_to_watch),
         ...representativeStocks.filter((stock) =>
           stock.data_status === "complete"
@@ -1247,12 +1501,14 @@ export function assembleResearchMasterV2(
       next_checkpoint_id: checkpointId(input.reportDate, "14:10"),
     },
   };
-  const transmissionNarrative = compactTextParts([
-    ...coreReasoning,
-    whyNarrative,
-    thesis.taiwan_transmission,
-    ...transmissionPath.map((path) => path.claim),
-  ]) || INSUFFICIENT_TEXT;
+  const transmissionNarrative = compactTextParts(canonicalNoTrade
+    ? [whyNarrative, coreStatement, ...transmissionPath.map((path) => path.claim)]
+    : [
+      ...coreReasoning,
+      whyNarrative,
+      thesis.taiwan_transmission,
+      ...transmissionPath.map((path) => path.claim),
+    ]) || INSUFFICIENT_TEXT;
   const executiveText = coreStatement;
   const reelsParts = {
     hook: executiveText,
@@ -1327,7 +1583,7 @@ export function assembleResearchMasterV2(
         ),
         what_changed: whatChanged,
         why_now: primaryValidationAxis,
-        evidence_refs: resolveEvidenceRefs(
+        evidence_refs: canonicalNoTrade ? canonicalNoTradeEvidence(input).map(item => item.evidence_id) : resolveEvidenceRefs(
           thesis.supporting_evidence,
           [whyNarrative, whatChanged, primaryValidationAxis],
           input.evidenceIndex,
@@ -1383,12 +1639,12 @@ function direction(
 }
 
 function duplicateStatements(
-  items: Array<{ claim_id: string; statement: string }>,
+  items: Array<{ claim_id: string; statement: string; evidence_identity?: string }>,
 ): string[] {
   const seen = new Map<string, string>();
   const duplicates: string[] = [];
   for (const item of items) {
-    const normalized = normalizedForHash(item.statement);
+    const normalized = item.evidence_identity || normalizedForHash(item.statement);
     if (!normalized) continue;
     const previous = seen.get(normalized);
     if (previous) duplicates.push(`${previous}|${item.claim_id}`);
@@ -1397,8 +1653,86 @@ function duplicateStatements(
   return uniqueStrings(duplicates);
 }
 
+function unsupportedStockEvidenceRelationships(
+  master: ResearchMasterV2,
+  context: ResearchMasterValidationContext,
+): string[] {
+  const unsupported: string[] = [];
+
+  for (const stock of master.sections.representative_stocks) {
+    if (!stock.reason || stock.evidence_refs.length === 0) continue;
+    const candidateExists = asRecords(context.candidateUniverse.candidates).some((item) =>
+      stockSymbol(item) === stock.symbol.toUpperCase()
+    );
+    if (!candidateExists) {
+      unsupported.push(
+        `${stock.stock_id}:candidate_not_in_evidence_universe:${stock.reason}`,
+      );
+      continue;
+    }
+    if (!stockEvidenceRelationshipSupported(
+      stock,
+      context.candidateUniverse,
+      context.evidenceIndex,
+    )) {
+      unsupported.push(
+        `${stock.stock_id}:evidence_relationship_not_supported:${stock.reason}`,
+      );
+    }
+  }
+  return unsupported;
+}
+
+function buildClaimEvidenceLedger(
+  master: ResearchMasterV2,
+  context?: ResearchMasterValidationContext,
+): ResearchClaimAudit[] {
+  const sections = master.sections;
+  const index = new Map(context?.evidenceIndex.map((item) => [item.evidence_id, item]));
+  const stockFailures = context ? unsupportedStockEvidenceRelationships(master, context) : [];
+  const rows: Array<{ id: string; text: string; refs: string[]; scope: 'market' | 'stock'; confidence?: ResearchEvidenceStrength }> = [
+    { id: sections.executive_summary.claim_id, text: sections.executive_summary.text, refs: sections.executive_summary.evidence_refs, scope: 'market' },
+    { id: sections.core_thesis.thesis_id, text: sections.core_thesis.statement, refs: sections.core_thesis.evidence_refs, scope: 'market' },
+    { id: `${master.research_id}:why_today_matters`, text: sections.why_today_matters.narrative, refs: sections.why_today_matters.evidence_refs, scope: 'market' },
+    ...sections.supporting_evidence.map((item) => ({ id: item.claim_id, text: item.statement, refs: item.evidence_refs, scope: 'market' as const, confidence: item.strength })),
+    ...sections.counter_evidence.map((item) => ({ id: item.claim_id, text: item.statement, refs: item.evidence_refs, scope: 'market' as const })),
+    ...sections.transmission_narrative.path.filter((item) => item.stage !== 'validation').map((item) => ({ id: item.node_id, text: item.claim, refs: item.evidence_refs, scope: 'market' as const })),
+    ...sections.representative_stocks.map((item) => ({ id: item.stock_id, text: item.reason, refs: item.evidence_refs, scope: 'stock' as const })),
+  ];
+  return rows.map((row) => {
+    const refs = uniqueStrings(row.refs);
+    const reasons: string[] = [];
+    if (!row.text.trim()) reasons.push('claim_empty');
+    if (!refs.length) reasons.push('evidence_missing');
+    for (const ref of refs) {
+      const evidence = index.get(ref);
+      if (context && !evidence) reasons.push(`evidence_not_found:${ref}`);
+      if (evidence && /^(stale|expired|invalid|conflicting)$/i.test(evidence.freshness || '')) reasons.push(`evidence_${evidence.freshness}:${ref}`);
+      if (evidence) {
+        const sourceDate = evidence.published_at || evidence.data_as_of
+          || evidence.raw_reference?.match(/@(\d{4}-\d{2}-\d{2}(?:T[^\s]+)?)/)?.[1];
+        if (!sourceDate || !Number.isFinite(Date.parse(sourceDate))) reasons.push(`evidence_source_date_missing:${ref}`);
+        if (!evidence.source && !evidence.raw_reference) reasons.push(`evidence_source_missing:${ref}`);
+      }
+    }
+    if (row.scope === 'stock' && stockFailures.some((failure) => failure.startsWith(`${row.id}:`))) reasons.push('company_evidence_relationship_not_supported');
+    return {
+      claim_id: row.id, statement: row.text, scope: row.scope, evidence_ids: refs,
+      sources: refs.map((ref) => {
+        const evidence = index.get(ref);
+        // Never label the report date as a source timestamp. Legacy evidence
+        // without timestamps stays explicitly unknown in the audit.
+        const embeddedTimestamp = evidence?.raw_reference?.match(/@(\d{4}-\d{2}-\d{2}T[^\s]+)/)?.[1];
+        return { evidence_id: ref, source: evidence?.source || evidence?.raw_reference || null, source_date: evidence?.published_at || evidence?.data_as_of || embeddedTimestamp || null, freshness: evidence?.freshness || null };
+      }),
+      confidence: row.confidence ?? null, supported: reasons.length === 0, reason_codes: uniqueStrings(reasons),
+    };
+  });
+}
+
 export function validateResearchMasterV2(
   master: ResearchMasterV2,
+  context?: ResearchMasterValidationContext,
 ): ResearchMasterValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -1410,6 +1744,7 @@ export function validateResearchMasterV2(
   }
   if (!master.research_id) errors.push("research_id is required");
   if (!master.thesis_id) errors.push("thesis_id is required");
+  if (master.timezone !== 'Asia/Taipei' || master.report_date !== master.today_date) errors.push('research_trading_date_mismatch');
   if (master.sections.core_thesis.thesis_id !== master.thesis_id) {
     errors.push("core_thesis.thesis_id must equal master.thesis_id");
   }
@@ -1498,6 +1833,9 @@ export function validateResearchMasterV2(
       unsupported.push(`${stock.stock_id}:${stock.reason}`);
     }
   });
+  if (context) {
+    unsupported.push(...unsupportedStockEvidenceRelationships(master, context));
+  }
   const symbols = master.sections.representative_stocks.map((stock) =>
     stock.symbol
   );
@@ -1545,10 +1883,12 @@ export function validateResearchMasterV2(
     ...duplicateStatements(master.sections.supporting_evidence.map((item) => ({
       claim_id: item.claim_id,
       statement: item.statement,
+      evidence_identity: item.evidence_identity,
     }))),
     ...duplicateStatements(master.sections.counter_evidence.map((item) => ({
       claim_id: item.claim_id,
       statement: item.statement,
+      evidence_identity: item.evidence_identity,
     }))),
     ...duplicateStatements(
       master.sections.failure_scenario.triggers.map((item) => ({
@@ -1557,11 +1897,14 @@ export function validateResearchMasterV2(
       })),
     ),
   ]);
-  const claimCount = allClaimIds.length +
-    master.sections.transmission_narrative.path.length +
-    master.sections.representative_stocks.filter((stock) => stock.reason)
-      .length;
-  const supportedCount = claimCount - unsupported.length;
+  const ledger = buildClaimEvidenceLedger(master, context);
+  // One actual assertion is one denominator item. Future invalidation criteria
+  // are not observations and cannot inflate measured evidence coverage.
+  const claimCount = ledger.length;
+  const supportedCount = ledger.filter((claim) => claim.supported).length;
+  for (const claim of ledger.filter((item) => !item.supported)) {
+    if (!unsupported.some((failure) => failure.startsWith(`${claim.claim_id}:`))) unsupported.push(`${claim.claim_id}:${claim.reason_codes.join(',')}`);
+  }
   const coverage = claimCount > 0
     ? Math.max(
       0,
@@ -1599,6 +1942,14 @@ export function validateResearchMasterV2(
     contradictions: uniqueStrings(contradictions),
     missing_sections: uniqueStrings(missing),
     publish_status: publishStatus,
+    coverage_audit: {
+      contract_version: 'CLAIM_EVIDENCE_LEDGER_V1', numerator: supportedCount, denominator: claimCount,
+      excluded_conditional_criteria: [
+        ...master.sections.failure_scenario.triggers.map((item) => item.claim_id),
+        ...master.sections.transmission_narrative.path.filter((item) => item.stage === 'validation').map((item) => item.node_id),
+      ],
+      claims: ledger,
+    },
   };
   return {
     is_valid: publishStatus !== "blocked",

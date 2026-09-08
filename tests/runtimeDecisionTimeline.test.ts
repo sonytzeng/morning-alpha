@@ -155,6 +155,7 @@ Deno.test('a completed later checkpoint closes earlier pending gaps', () => {
       closing_verification_v2: {
         status: 'completed',
         hit_or_miss: 'hit',
+        actual_taiex_change: 0.8,
       },
     },
     hasReport: true,
@@ -171,6 +172,14 @@ Deno.test('a completed later checkpoint closes earlier pending gaps', () => {
     'no earlier checkpoint may remain current or pending after closing completes',
   );
   assert(timeline[6]?.status === 'completed', 'closing checkpoint must remain completed');
+});
+
+Deno.test('a closing hit label without actual market evidence is not completion', () => {
+  const timeline = buildRuntimeDecisionTimeline({
+    ai: { closing_verification_v2: { status: 'completed', hit_or_miss: 'hit' } },
+    hasReport: true, reportRevisionId: 'revision-1', isTradingDay: true,
+  });
+  assert(timeline[6]?.status !== 'completed', 'an evaluation label must not manufacture closing evidence');
 });
 
 Deno.test('an insufficient later checkpoint closes earlier pending gaps', () => {

@@ -1,8 +1,22 @@
 import { RUNTIME_QUALITY_POLICY } from './production-architecture-core.mjs';
 
+/** Business outcome is distinct from legacy outbox/provider receipt enums. */
+export function resolveReportDeliveryStatus(input: {
+  is_trading_day: boolean; system_failure: boolean; report_eligible: boolean;
+  delivered: boolean; no_recommendation: boolean; suppressed: boolean;
+}): 'DELIVERED' | 'DELIVERED_NO_RECOMMENDATION' | 'SKIPPED_NON_TRADING_DAY' | 'BLOCKED_QUALITY' | 'FAILED_SYSTEM' | 'SUPPRESSED' | 'WAITING' {
+  if (!input.is_trading_day) return 'SKIPPED_NON_TRADING_DAY';
+  if (input.system_failure) return 'FAILED_SYSTEM';
+  if (!input.report_eligible) return 'BLOCKED_QUALITY';
+  if (input.suppressed) return 'SUPPRESSED';
+  if (!input.delivered) return 'WAITING';
+  return input.no_recommendation ? 'DELIVERED_NO_RECOMMENDATION' : 'DELIVERED';
+}
+
 export type DailyDeliveryAction =
   | 'refresh_news'
   | 'refresh_market'
+  | 'refresh_sector_rotation'
   | 'regenerate_report'
   | 'deliver_premium'
   | 'deliver_incident';
@@ -12,6 +26,7 @@ export type DailyDeliveryPhase = 'refresh' | 'generate' | 'repair' | 'deliver' |
 export interface DailyDeliveryRecoveryInput {
   has_report: boolean;
   premium_eligible: boolean;
+  report_eligible?: boolean;
   reason_codes: string[];
   attempt: number;
   content_repair_attempts?: number;
@@ -20,13 +35,41 @@ export interface DailyDeliveryRecoveryInput {
 }
 
 export interface DailyDeliveryRecoveryPlan {
-  status: 'ready' | 'repairing' | 'incident';
+  status: 'ready' | 'repairing' | 'incident' | 'blocked_quality';
   phase: DailyDeliveryPhase;
   actions: DailyDeliveryAction[];
   reason_codes: string[];
   attempt: number;
   deadline_reached: boolean;
   retry_after_seconds: number | null;
+}
+
+export interface DailyDeliveryCompletionInput {
+  phase: DailyDeliveryPhase;
+  action_failure_count: number;
+  premium_eligible: boolean;
+  report_eligible?: boolean;
+  delivered: boolean;
+}
+
+export interface ClaimedPipelineSlotResolution {
+  success: boolean;
+  status: 'RUNNING' | 'SKIPPED' | 'DEGRADED' | 'FAILED';
+  claimed_status: string;
+}
+
+export interface ClaimedPipelineRetryInput {
+  status: string | null | undefined;
+  attempt: number | null | undefined;
+  next_retry_at: string | null | undefined;
+  now?: string;
+  max_attempts?: number;
+}
+
+export interface ClaimedPipelineRetryResolution {
+  retry: boolean;
+  next_attempt: number;
+  reason: 'RETRY_DUE' | 'STATUS_NOT_RETRYABLE' | 'RETRY_NOT_SCHEDULED' | 'RETRY_NOT_DUE' | 'RETRY_BUDGET_EXHAUSTED';
 }
 
 const NEWS_REASONS = new Set([
@@ -60,7 +103,13 @@ const CONTENT_REASONS = new Set([
   'decision_snapshot_not_publishable',
 ]);
 const CONTENT_REPAIR_MAX_ATTEMPTS = 3;
-const EVIDENCE_DEPENDENCY_ACTIONS = ['refresh_news', 'refresh_market', 'regenerate_report'] as const;
+const SECTOR_ROTATION_REASON = /^sector_rotation_scores:\d{4}-\d{2}-\d{2}$/i;
+const EVIDENCE_DEPENDENCY_ACTIONS = [
+  'refresh_news',
+  'refresh_market',
+  'refresh_sector_rotation',
+  'regenerate_report',
+] as const;
 
 function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
@@ -93,6 +142,64 @@ export function resolveDailyDeliveryPhase(taipeiMinutes: number): DailyDeliveryP
   return 'watchdog';
 }
 
+export function resolveDailyDeliveryCompletion(
+  input: DailyDeliveryCompletionInput,
+): boolean {
+  if (input.action_failure_count > 0) return false;
+  if (input.phase === 'refresh') return true;
+  if (input.phase === 'generate' || input.phase === 'repair') {
+    return input.report_eligible ?? input.premium_eligible;
+  }
+  return (input.report_eligible ?? input.premium_eligible) && input.delivered;
+}
+
+export function resolveClaimedPipelineSlot(
+  existingStatus: string | null | undefined,
+): ClaimedPipelineSlotResolution {
+  const claimedStatus = String(existingStatus || 'UNKNOWN').toUpperCase();
+  if (claimedStatus === 'RUNNING') {
+    return { success: false, status: 'RUNNING', claimed_status: claimedStatus };
+  }
+  if (['SUCCEEDED', 'SKIPPED'].includes(claimedStatus)) {
+    return {
+      success: true,
+      status: 'SKIPPED',
+      claimed_status: claimedStatus,
+    };
+  }
+  return {
+    success: false,
+    status: claimedStatus === 'FAILED' ? 'FAILED' : 'DEGRADED',
+    claimed_status: claimedStatus,
+  };
+}
+
+export function resolveClaimedPipelineRetry(
+  input: ClaimedPipelineRetryInput,
+): ClaimedPipelineRetryResolution {
+  const status = String(input.status || 'UNKNOWN').toUpperCase();
+  const attempt = Math.max(1, Math.trunc(Number(input.attempt) || 1));
+  const maxAttempts = Math.max(1, Math.trunc(Number(input.max_attempts) || RUNTIME_QUALITY_POLICY.max_recovery_attempts));
+  const nextAttempt = attempt + 1;
+
+  if (!['DEGRADED', 'FAILED'].includes(status)) {
+    return { retry: false, next_attempt: nextAttempt, reason: 'STATUS_NOT_RETRYABLE' };
+  }
+  if (attempt >= maxAttempts) {
+    return { retry: false, next_attempt: nextAttempt, reason: 'RETRY_BUDGET_EXHAUSTED' };
+  }
+
+  const retryAtMs = Date.parse(String(input.next_retry_at || ''));
+  if (!Number.isFinite(retryAtMs)) {
+    return { retry: false, next_attempt: nextAttempt, reason: 'RETRY_NOT_SCHEDULED' };
+  }
+  const nowMs = Date.parse(String(input.now || new Date().toISOString()));
+  if (!Number.isFinite(nowMs) || retryAtMs > nowMs) {
+    return { retry: false, next_attempt: nextAttempt, reason: 'RETRY_NOT_DUE' };
+  }
+  return { retry: true, next_attempt: nextAttempt, reason: 'RETRY_DUE' };
+}
+
 export function buildDailyDeliveryRecoveryPlan(
   input: DailyDeliveryRecoveryInput,
 ): DailyDeliveryRecoveryPlan {
@@ -105,7 +212,7 @@ export function buildDailyDeliveryRecoveryPlan(
   const contentRepairBudgetExhausted = isContentOnlyDeliveryFailure(reasonCodes)
     && contentRepairAttempts >= CONTENT_REPAIR_MAX_ATTEMPTS;
 
-  if (input.premium_eligible) {
+  if (input.report_eligible ?? input.premium_eligible) {
     return {
       status: 'ready',
       phase,
@@ -119,6 +226,14 @@ export function buildDailyDeliveryRecoveryPlan(
     };
   }
 
+  // Retrying unchanged unsupported content cannot create evidence. A changed
+  // input fingerprint may be evaluated by the normal generator on a later run;
+  // this planner must never regenerate repeatedly until an LLM evades a gate.
+  if (reasonCodes.some((reason) => /unsupported_claim|evidence_coverage|research_duplicate|research_contradiction|schema_mismatch|schema_corruption|company_.*evidence|quality_counter|no_recommendation_not_audited/.test(reason))) {
+    return { status: 'blocked_quality', phase, actions: deadlineReached ? ['deliver_incident'] : [],
+      reason_codes: reasonCodes, attempt, deadline_reached: deadlineReached, retry_after_seconds: null };
+  }
+
   const actions: DailyDeliveryAction[] = [];
   if (!input.has_report) {
     actions.push('refresh_news', 'refresh_market', 'regenerate_report');
@@ -128,9 +243,13 @@ export function buildDailyDeliveryRecoveryPlan(
       || includesReason(reasonCodes, MARKET_REASONS, 'unavailable_market_data:')) {
       actions.push('refresh_market');
     }
+    if (reasonCodes.some((reason) => SECTOR_ROTATION_REASON.test(reason))) {
+      actions.push('refresh_sector_rotation');
+    }
     if (!contentRepairBudgetExhausted && (includesReason(reasonCodes, CONTENT_REASONS)
       || actions.includes('refresh_news')
-      || actions.includes('refresh_market'))) {
+      || actions.includes('refresh_market')
+      || actions.includes('refresh_sector_rotation'))) {
       actions.push('regenerate_report');
     }
   }

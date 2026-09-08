@@ -422,12 +422,25 @@ export function buildCanonicalDecisionContract(input = {}) {
   const snapshot = asPlainRecord(input.snapshot);
   const generated = asPlainRecord(snapshot.generated_text);
   const ai = asPlainRecord(input.ai);
-  const sourceRecommendations = records(generated.recommendations).length > 0
-    ? records(generated.recommendations)
+  const marketOnly = snapshot.decision_mode === 'market_only';
+  const marketGate = asPlainRecord(generated.market_report_gate);
+  const master = asPlainRecord(ai.research_master_v2);
+  const marketSections = asPlainRecord(master.sections);
+  const transmission = asPlainRecord(marketSections.transmission_narrative);
+  const guide = asPlainRecord(marketSections.decision_guide);
+  const failure = asPlainRecord(marketSections.failure_scenario);
+  // An explicit canonical empty list is a decision, not a missing legacy field.
+  const sourceRecommendations = snapshot.decision_mode === 'blocked' || marketOnly ? []
+    : Array.isArray(generated.recommendations) ? records(generated.recommendations)
     : records(ai.today_beneficiary_stocks_v10);
+  const noTrade = snapshot.decision_mode === 'no_trade' && snapshot.action === 'WAIT'
+    && Array.isArray(generated.recommendations) && sourceRecommendations.length === 0;
   const first = asPlainRecord(sourceRecommendations[0]);
-  const primaryEvent = firstText(first.event_source, first.trigger_event, first.primary_event);
-  const primaryTheme = firstText(first.sector, first.industry_name, first.primary_taiwan_theme);
+  const primaryEvent = marketOnly ? firstText(generated.daily_sentence)
+    : firstText(first.event_source, first.trigger_event, first.primary_event, noTrade ? generated.daily_sentence : '');
+  const marketTheme = records(transmission.path).find((node) => node.stage === 'taiwan_market' || node.stage === 'industry');
+  const primaryTheme = marketOnly ? firstText(asPlainRecord(marketTheme).subject, asPlainRecord(marketSections.core_thesis).statement)
+    : firstText(first.sector, first.industry_name, first.primary_taiwan_theme, noTrade ? '不建立受惠股' : '');
   const primaryRecommendations = sourceRecommendations.filter((candidate) => {
     const record = asPlainRecord(candidate);
     const event = firstText(record.event_source, record.trigger_event, record.primary_event);
@@ -453,8 +466,9 @@ export function buildCanonicalDecisionContract(input = {}) {
   if (evidenceRefs.length === 0 && Array.isArray(snapshot.source_refs)) {
     evidenceRefs.push(...unique(snapshot.source_refs.map((item) => typeof item === 'string' ? item : JSON.stringify(item))));
   }
-  const primaryTransmission = firstText(first.transmission_path, first.transmission_logic, first.taiwan_supply_chain_relation);
-  const dataQualityStatus = resolveCanonicalDataQuality([
+  const primaryTransmission = marketOnly ? firstText(transmission.narrative)
+    : firstText(first.transmission_path, first.transmission_logic, first.taiwan_supply_chain_relation);
+  const dataQualityStatus = resolveCanonicalDataQuality(marketOnly ? [ai.data_quality, asPlainRecord(master.provenance).source_status] : [
     ai.data_quality,
     ai.v10_data_quality_status,
     asPlainRecord(ai.member_research_note_v2).data_status,
@@ -462,6 +476,8 @@ export function buildCanonicalDecisionContract(input = {}) {
   ]);
   return {
     contract_version: 'CANONICAL_DECISION_CONTRACT_V2',
+    decision_mode: snapshot.decision_mode || (sourceRecommendations.length ? 'recommendations' : 'blocked'),
+    ...(marketOnly ? { market_report_gate: marketGate } : {}),
     report_date: String(input.report_date || snapshot.report_date || ''),
     snapshot_id: String(snapshot.id || ''),
     snapshot_version: Number.isFinite(Number(snapshot.version)) ? Number(snapshot.version) : null,
@@ -469,9 +485,10 @@ export function buildCanonicalDecisionContract(input = {}) {
     primary_causal_chain: unique([primaryEvent, primaryTransmission, primaryTheme, ...primarySymbols].filter(Boolean)),
     primary_taiwan_theme: primaryTheme,
     primary_symbols: primarySymbols,
-    validation_checkpoint: firstText(generated.next_checkpoint, input.validation_checkpoint),
-    validation_signals: validationSignals,
-    invalidation_conditions: invalidationConditions,
+    validation_checkpoint: firstText(marketOnly ? guide.next_checkpoint_time : '', generated.next_checkpoint, input.validation_checkpoint),
+    validation_signals: marketOnly ? unique(meaningfulTextValues([guide.first_watch, transmission.primary_validation_axis, ...records(marketSections.timeline).map((node) => node.expected_signal)]))
+      : noTrade ? unique(meaningfulTextValues([generated.next_checkpoint, ...(Array.isArray(generated.reasons) ? generated.reasons : [])])) : validationSignals,
+    invalidation_conditions: marketOnly ? unique(meaningfulTextValues(records(failure.triggers).map((trigger) => trigger.condition))) : invalidationConditions,
     action: firstText(snapshot.action, generated.action),
     data_quality_status: dataQualityStatus,
     evidence_refs: evidenceRefs,
@@ -483,8 +500,9 @@ export function buildCanonicalMemberResearchRevision(input = {}) {
   const contract = asPlainRecord(input.canonical_contract);
   const snapshot = asPlainRecord(input.snapshot);
   const generated = asPlainRecord(snapshot.generated_text);
+  const marketOnly = contract.decision_mode === 'market_only';
   const allowedSymbols = new Set(unique(contract.primary_symbols).map((value) => String(value).toUpperCase()));
-  const recommendations = records(generated.recommendations).filter((candidate) => allowedSymbols.has(recommendationSymbol(candidate)));
+  const recommendations = marketOnly ? [] : records(generated.recommendations).filter((candidate) => allowedSymbols.has(recommendationSymbol(candidate)));
   const thesis = firstText(generated.daily_sentence, input.daily_sentence);
   const first = asPlainRecord(recommendations[0]);
   const transmission = firstText(first.transmission_path, first.transmission_logic, Array.isArray(contract.primary_causal_chain) ? contract.primary_causal_chain.join(' → ') : '');
@@ -506,6 +524,7 @@ export function buildCanonicalMemberResearchRevision(input = {}) {
   return {
     contract_version: 'MEMBER_RESEARCH_REVISION_V1',
     canonical_contract: contract,
+    ...(marketOnly ? { decision_mode: 'market_only', action: 'WAIT', market_report_gate: contract.market_report_gate } : {}),
     data_status: contract.data_quality_status || 'insufficient',
     today_core_thesis: thesis,
     strategy_summary: thesis,
@@ -513,9 +532,9 @@ export function buildCanonicalMemberResearchRevision(input = {}) {
     taiwan_transmission: transmission,
     beneficiary_candidates: recommendations,
     representative_stocks: recommendations,
-    intraday_validation: validation,
-    invalidation_conditions: invalidation,
-    invalidation_rules: invalidation,
+    intraday_validation: marketOnly ? contract.validation_signals : validation,
+    invalidation_conditions: marketOnly ? contract.invalidation_conditions : invalidation,
+    invalidation_rules: marketOnly ? contract.invalidation_conditions : invalidation,
     source_refs: sourceRefs,
     line_summary: thesis,
     content_os_topic: {
@@ -536,7 +555,30 @@ export function evaluateCanonicalSemanticCoherenceGate(input = {}) {
   ];
   const reasonCodes = [];
   const conflictingFields = [];
+  const noTrade = contract.decision_mode === 'no_trade' && contract.action === 'WAIT';
+  const marketOnly = contract.decision_mode === 'market_only';
+  if (marketOnly) {
+    const gate = asPlainRecord(contract.market_report_gate);
+    const recommendation = asPlainRecord(gate.recommendation_gate);
+    const screening = asPlainRecord(recommendation.screening);
+    const noQualified = recommendation.status === 'NO_QUALIFIED_OPPORTUNITY';
+    const completeUniverse = recommendation.universe_evaluation_complete === true && screening.status === 'COMPLETE'
+      && Number.isSafeInteger(screening.universe_count) && screening.universe_count > 0
+      && screening.evaluated_count === screening.universe_count && Array.isArray(screening.rejected) && screening.rejected.length === 0;
+    if (contract.action !== 'WAIT' || contract.data_quality_status !== 'complete'
+      || gate.contract_version !== 'MARKET_REPORT_GATE_V2' || gate.report_date !== contract.report_date
+      || gate.eligible !== true || gate.status !== 'READY_MARKET_ONLY' || gate.report_status !== 'READY'
+      || gate.decision_mode !== 'market_only' || !Array.isArray(gate.reason_codes) || gate.reason_codes.length !== 0
+      || recommendation.eligible !== false || gate.recommendation_status !== recommendation.status
+      || (recommendation.status !== 'BLOCKED' && !(noQualified && completeUniverse))) reasonCodes.push('MARKET_PUBLICATION_PROOF_INVALID');
+    if (!Array.isArray(contract.primary_symbols) || contract.primary_symbols.length !== 0
+      || !Array.isArray(input.recommendations) || input.recommendations.length !== 0) reasonCodes.push('MARKET_ONLY_RECOMMENDATIONS_FORBIDDEN');
+  }
+  if (contract.decision_mode === 'blocked') reasonCodes.push('CANONICAL_DECISION_BLOCKED');
+  if (noTrade && contract.data_quality_status !== 'complete') reasonCodes.push('NO_TRADE_SOURCE_INCOMPLETE');
   for (const field of requiredFields) {
+    if (noTrade && ['primary_symbols', 'invalidation_conditions'].includes(field)) continue;
+    if (marketOnly && field === 'primary_symbols') continue;
     const value = contract[field];
     if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
       reasonCodes.push('CANONICAL_CONTRACT_INCOMPLETE');
@@ -573,13 +615,19 @@ export function evaluateCanonicalSemanticCoherenceGate(input = {}) {
   }
   const counters = asPlainRecord(input.quality_counters);
   for (const field of ['unsupported_claim_count', 'contradiction_count', 'duplicate_claim_count', 'missing_section_count']) {
-    if (Number(counters[field] || 0) > 0) {
+    const raw = counters[field];
+    const count = typeof raw === 'number' || (typeof raw === 'string' && raw.trim()) ? Number(raw) : NaN;
+    if (!Number.isSafeInteger(count) || count < 0) {
+      reasonCodes.push('RESEARCH_QUALITY_COUNTER_MISSING_OR_INVALID');
+      conflictingFields.push(field);
+    } else if (count > 0) {
       reasonCodes.push('RESEARCH_QUALITY_COUNTER_NONZERO');
       conflictingFields.push(field);
     }
   }
   if (Number(input.evidence_coverage) !== 100) reasonCodes.push('EVIDENCE_COVERAGE_BELOW_100');
-  if (Number(input.content_score) < 90) reasonCodes.push('CONTENT_SCORE_BELOW_90');
+  const score = typeof input.content_score === 'number' || (typeof input.content_score === 'string' && input.content_score.trim()) ? Number(input.content_score) : NaN;
+  if (!Number.isFinite(score) || score < 90 || score > 100) reasonCodes.push('CONTENT_SCORE_BELOW_90');
   const uniqueReasons = unique(reasonCodes);
   const status = uniqueReasons.length === 0 ? 'PASSED' : 'BLOCKED';
   return {

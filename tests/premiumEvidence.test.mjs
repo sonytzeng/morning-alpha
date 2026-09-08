@@ -8,6 +8,31 @@ import {
 
 const NOW = new Date('2026-08-21T07:00:00Z').getTime();
 
+test('Labor Day preserves the latest real US close, not an invented Monday quote', () => {
+  const now = Date.parse('2026-09-08T00:00:00Z');
+  const row = { symbol: 'NVDA', value: 120, changePercent: 1.2, updatedAt: '2026-09-04T20:00:00Z' };
+  const result = normalizePremiumMarketEvidence(row, now);
+  assert.equal(result.freshness_status, 'recent');
+  assert.equal(result.freshness_basis, 'latest_completed_us_cash_session');
+  assert.equal(result.updated_at, row.updatedAt);
+  assert.equal(normalizePremiumMarketEvidence({ ...row, updatedAt: '2026-09-03T20:00:00Z' }, now).freshness_status, 'stale');
+  assert.equal(normalizePremiumMarketEvidence({ ...row, updatedAt: '2026-09-04T16:00:00Z' }, now).freshness_status, 'stale');
+  assert.equal(normalizePremiumMarketEvidence({ ...row, symbol: 'TXF' }, now).freshness_status, 'stale');
+  assert.equal(normalizePremiumMarketEvidence(row, Date.parse('2026-09-09T01:00:00Z')).freshness_status, 'stale');
+});
+
+test('null numeric and future timestamp evidence fail closed', () => {
+  const row = { symbol: 'SOX', value: 120, changePercent: 1, updatedAt: '2026-08-21T06:30:00Z' };
+  assert.equal(normalizePremiumMarketEvidence({ ...row, value: null }, NOW), null);
+  for (const value of ['', ' ', false, true, undefined, 'NaN', Infinity]) {
+    assert.equal(normalizePremiumMarketEvidence({ ...row, value }, NOW), null);
+    assert.equal(normalizePremiumMarketEvidence({ ...row, changePercent: value }, NOW), null);
+  }
+  assert.equal(normalizePremiumMarketEvidence({ ...row, value: '123.45' }, NOW).value, 123.45);
+  assert.equal(normalizePremiumMarketEvidence({ ...row, changePercent: null }, NOW), null);
+  assert.equal(normalizePremiumMarketEvidence({ ...row, updatedAt: '2026-08-22T06:30:00Z' }, NOW), null);
+});
+
 test('canonical camelCase market data becomes numeric evidence with a timestamp', () => {
   const evidence = normalizePremiumMarketEvidence({
     symbol: 'SOX',

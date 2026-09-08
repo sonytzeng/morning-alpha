@@ -6,12 +6,18 @@ import { createHash } from 'node:crypto';
 const root=new URL('../',import.meta.url);
 const manifest=JSON.parse(readFileSync(new URL('docs/operations/core-stability-source-manifest-20260907.json',root),'utf8'));
 const hash=value=>createHash('sha256').update(value).digest('hex');
+const incident=JSON.parse(readFileSync(new URL('docs/operations/core-stability-incident-amendment-20260908.json',root),'utf8'));
 test('trusted deployed generator/orchestrator dependencies: protected AI settings, prompts and strategy declarations remain unchanged',()=>{
   const parsed=new Map();
   assert.ok(manifest.protected_declarations.length>100);
   for(const deployment of manifest.production){
     for(const file of deployment.files){
       let bytes=readFileSync(new URL(file.path,root),'utf8');
+      const amendment=incident.files.find(row=>row.path===file.path);
+      if(amendment){
+        assert.equal(hash(bytes),amendment.incident_sha256,`incident artifact drift: ${file.path}`);
+        continue;
+      }
       if(file.path==='supabase/functions/get-report-payload/index.ts'){
         // 2026-09-07 explicit read-side Evidence approval. Remove ONLY the
         // additive block to prove every pre-existing Core/Auth byte is intact.
@@ -37,9 +43,15 @@ test('trusted deployed generator/orchestrator dependencies: protected AI setting
     }
     const text=parsed.get(record.path).get(record.name);
     assert.equal(typeof text,'string',record.path+':'+record.name);
-    assert.equal(hash(text),record.production_sha256,record.path+':'+record.name);
+    const amendment=incident.modified_declarations.find(row=>row.path===record.path&&row.name===record.name);
+    if(amendment){
+      assert.equal(amendment.production_sha256,record.production_sha256,'Original Production baseline must remain recorded');
+      assert.ok(amendment.reason.length>15);
+      assert.equal(hash(text),amendment.incident_sha256,record.path+':'+record.name);
+    }else assert.equal(hash(text),record.production_sha256,record.path+':'+record.name);
   }
   for(const name of ['OPENAI_EVIDENCE_GUARDRAILS','OPENAI_OUTPUT_ABSTENTION_RULES','buildOpenAISystemPrompt','buildOpenAIUserPrompt','calculateV10BeneficiaryPhase1Record','V10_CANDIDATE_METADATA','calculateRepeatPenalty']){
     assert.ok(manifest.protected_declarations.some(row=>row.name===name),`required policy omitted: ${name}`);
+    assert.ok(!incident.modified_declarations.some(row=>row.name===name),`AI/selection policy must not be amended: ${name}`);
   }
 });

@@ -1,5 +1,18 @@
 import { RUNTIME_QUALITY_POLICY } from './production-architecture-core.mjs';
 
+/** Business outcome is distinct from legacy outbox/provider receipt enums. */
+export function resolveReportDeliveryStatus(input: {
+  is_trading_day: boolean; system_failure: boolean; report_eligible: boolean;
+  delivered: boolean; no_recommendation: boolean; suppressed: boolean;
+}): 'DELIVERED' | 'DELIVERED_NO_RECOMMENDATION' | 'SKIPPED_NON_TRADING_DAY' | 'BLOCKED_QUALITY' | 'FAILED_SYSTEM' | 'SUPPRESSED' | 'WAITING' {
+  if (!input.is_trading_day) return 'SKIPPED_NON_TRADING_DAY';
+  if (input.system_failure) return 'FAILED_SYSTEM';
+  if (!input.report_eligible) return 'BLOCKED_QUALITY';
+  if (input.suppressed) return 'SUPPRESSED';
+  if (!input.delivered) return 'WAITING';
+  return input.no_recommendation ? 'DELIVERED_NO_RECOMMENDATION' : 'DELIVERED';
+}
+
 export type DailyDeliveryAction =
   | 'refresh_news'
   | 'refresh_market'
@@ -13,6 +26,7 @@ export type DailyDeliveryPhase = 'refresh' | 'generate' | 'repair' | 'deliver' |
 export interface DailyDeliveryRecoveryInput {
   has_report: boolean;
   premium_eligible: boolean;
+  report_eligible?: boolean;
   reason_codes: string[];
   attempt: number;
   content_repair_attempts?: number;
@@ -21,7 +35,7 @@ export interface DailyDeliveryRecoveryInput {
 }
 
 export interface DailyDeliveryRecoveryPlan {
-  status: 'ready' | 'repairing' | 'incident';
+  status: 'ready' | 'repairing' | 'incident' | 'blocked_quality';
   phase: DailyDeliveryPhase;
   actions: DailyDeliveryAction[];
   reason_codes: string[];
@@ -34,6 +48,7 @@ export interface DailyDeliveryCompletionInput {
   phase: DailyDeliveryPhase;
   action_failure_count: number;
   premium_eligible: boolean;
+  report_eligible?: boolean;
   delivered: boolean;
 }
 
@@ -133,9 +148,9 @@ export function resolveDailyDeliveryCompletion(
   if (input.action_failure_count > 0) return false;
   if (input.phase === 'refresh') return true;
   if (input.phase === 'generate' || input.phase === 'repair') {
-    return input.premium_eligible;
+    return input.report_eligible ?? input.premium_eligible;
   }
-  return input.premium_eligible && input.delivered;
+  return (input.report_eligible ?? input.premium_eligible) && input.delivered;
 }
 
 export function resolveClaimedPipelineSlot(
@@ -197,7 +212,7 @@ export function buildDailyDeliveryRecoveryPlan(
   const contentRepairBudgetExhausted = isContentOnlyDeliveryFailure(reasonCodes)
     && contentRepairAttempts >= CONTENT_REPAIR_MAX_ATTEMPTS;
 
-  if (input.premium_eligible) {
+  if (input.report_eligible ?? input.premium_eligible) {
     return {
       status: 'ready',
       phase,
@@ -209,6 +224,14 @@ export function buildDailyDeliveryRecoveryPlan(
       deadline_reached: deadlineReached,
       retry_after_seconds: null,
     };
+  }
+
+  // Retrying unchanged unsupported content cannot create evidence. A changed
+  // input fingerprint may be evaluated by the normal generator on a later run;
+  // this planner must never regenerate repeatedly until an LLM evades a gate.
+  if (reasonCodes.some((reason) => /unsupported_claim|evidence_coverage|research_duplicate|research_contradiction|schema_mismatch|schema_corruption|company_.*evidence|quality_counter|no_recommendation_not_audited/.test(reason))) {
+    return { status: 'blocked_quality', phase, actions: deadlineReached ? ['deliver_incident'] : [],
+      reason_codes: reasonCodes, attempt, deadline_reached: deadlineReached, retry_after_seconds: null };
   }
 
   const actions: DailyDeliveryAction[] = [];

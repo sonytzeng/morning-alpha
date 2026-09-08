@@ -1,4 +1,5 @@
 import { candidateEvidenceMatches } from "./candidate-evidence.ts";
+import { companyEvidenceSupported } from '../_shared/research-pipeline-contract.ts';
 
 export type ResearchSourceStatus =
   | "complete"
@@ -163,6 +164,24 @@ export interface ResearchMasterQuality {
   contradictions: string[];
   missing_sections: string[];
   publish_status: ResearchPublishStatus;
+  coverage_audit?: {
+    contract_version: 'CLAIM_EVIDENCE_LEDGER_V1';
+    numerator: number;
+    denominator: number;
+    excluded_conditional_criteria: string[];
+    claims: ResearchClaimAudit[];
+  };
+}
+
+export interface ResearchClaimAudit {
+  claim_id: string;
+  statement: string;
+  scope: 'market' | 'stock';
+  evidence_ids: string[];
+  sources: Array<{ evidence_id: string; source: string | null; source_date: string | null; freshness: string | null }>;
+  confidence: ResearchEvidenceStrength | null;
+  supported: boolean;
+  reason_codes: string[];
 }
 
 export interface ResearchMasterV2 {
@@ -246,6 +265,47 @@ export interface ResearchMasterValidationResult {
 export interface ResearchMasterValidationContext {
   evidenceIndex: ResearchEvidenceItem[];
   candidateUniverse: Record<string, unknown>;
+}
+
+/** Admission is separate from market-report validity. Keep every rejected
+ * candidate and its evidence IDs in the server audit; never coerce its result
+ * to a recommendation or let one rejected company erase valid market facts. */
+export function admitResearchRecommendations(input: ResearchMasterV2AssemblerInput): {
+  accepted: Record<string, unknown>[];
+  rejected: Array<{ symbol: string; evidence_ids: string[]; reason_codes: string[] }>;
+} {
+  const accepted: Record<string, unknown>[] = [];
+  const rejected: Array<{ symbol: string; evidence_ids: string[]; reason_codes: string[] }> = [];
+  const candidates = asRecords(input.candidateUniverse.candidates);
+  for (const stock of asRecords(input.legacy.today_beneficiary_stocks_v10)) {
+    const symbol = stockSymbol(stock);
+    const candidate = candidates.find((item) => stockSymbol(item) === symbol);
+    const refs = candidateUniverseRefs(input, symbol);
+    const company = { symbol, name: firstText(stock.name, stock.stock_name), aliases: symbol === '2330' ? ['TSMC', 'Taiwan Semiconductor'] : symbol === '2317' ? ['Hon Hai', 'Foxconn'] : [] };
+    const reasons: string[] = [];
+    if (!candidate || candidate.eligibility === false) reasons.push('candidate_not_eligible');
+    const companyEvidence = input.evidenceIndex.filter((item) => refs.includes(item.evidence_id)
+      && !/^(stale|expired|invalid|conflicting)$/i.test(item.freshness || '')
+      && Boolean(item.published_at || item.data_as_of)
+      && Number.isFinite(Date.parse(String(item.published_at || item.data_as_of)))
+      && Date.parse(String(item.published_at || item.data_as_of)) <= Date.parse(input.generatedAt)
+      && companyEvidenceSupported(company, { ...item }));
+    if (!companyEvidence.length) reasons.push('company_source_evidence_missing');
+    if (!firstText(stock.entry_condition)) reasons.push('entry_condition_missing');
+    if (!firstText(stock.intraday_validation, stock.validation_signal, stock.confirmation_condition)) reasons.push('confirmation_condition_missing');
+    if (!firstText(stock.invalidation_condition, stock.stop_condition)) reasons.push('invalidation_condition_missing');
+    if (reasons.length) rejected.push({ symbol, evidence_ids: refs, reason_codes: reasons });
+    else accepted.push({
+      ...stock,
+      confirmation_condition: firstText(stock.confirmation_condition, stock.intraday_validation, stock.validation_signal),
+      invalidation_condition: firstText(stock.invalidation_condition, stock.stop_condition),
+      stop_logic: firstText(stock.stop_logic, stock.stop_condition, stock.invalidation_condition),
+      market_dependency: firstText(stock.market_dependency, stock.transmission_logic, stock.transmission_path, stock.validation_signal),
+      confidence: boundedConfidence(stock.confidence, stock.confidence_score),
+      data_timestamp: companyEvidence.map(item => String(item.published_at || item.data_as_of)).sort().at(-1) || null,
+    });
+  }
+  return { accepted, rejected };
 }
 
 const SECTION_IDS = [
@@ -741,7 +801,9 @@ function evidenceIdentity(evidence: ResearchEvidenceItem | undefined, reportDate
   return JSON.stringify([
     reportDate, evidence.event_id || '', evidence.subject || evidence.title || evidence.raw_reference || '',
     evidence.published_at || evidence.data_as_of || reportDate, evidence.condition || '',
-    evidence.source_fingerprint || normalizedForHash(statement),
+    // Claim identity is not source identity. Independent sources corroborating
+    // one assertion merge; two assertions supported by one source stay distinct.
+    normalizedForHash(statement),
   ]);
 }
 
@@ -1516,7 +1578,7 @@ export function assembleResearchMasterV2(
         ),
         what_changed: whatChanged,
         why_now: primaryValidationAxis,
-        evidence_refs: resolveEvidenceRefs(
+        evidence_refs: canonicalNoTrade ? canonicalNoTradeEvidence(input).map(item => item.evidence_id) : resolveEvidenceRefs(
           thesis.supporting_evidence,
           [whyNarrative, whatChanged, primaryValidationAxis],
           input.evidenceIndex,
@@ -1616,6 +1678,53 @@ function unsupportedStockEvidenceRelationships(
   return unsupported;
 }
 
+function buildClaimEvidenceLedger(
+  master: ResearchMasterV2,
+  context?: ResearchMasterValidationContext,
+): ResearchClaimAudit[] {
+  const sections = master.sections;
+  const index = new Map(context?.evidenceIndex.map((item) => [item.evidence_id, item]));
+  const stockFailures = context ? unsupportedStockEvidenceRelationships(master, context) : [];
+  const rows: Array<{ id: string; text: string; refs: string[]; scope: 'market' | 'stock'; confidence?: ResearchEvidenceStrength }> = [
+    { id: sections.executive_summary.claim_id, text: sections.executive_summary.text, refs: sections.executive_summary.evidence_refs, scope: 'market' },
+    { id: sections.core_thesis.thesis_id, text: sections.core_thesis.statement, refs: sections.core_thesis.evidence_refs, scope: 'market' },
+    { id: `${master.research_id}:why_today_matters`, text: sections.why_today_matters.narrative, refs: sections.why_today_matters.evidence_refs, scope: 'market' },
+    ...sections.supporting_evidence.map((item) => ({ id: item.claim_id, text: item.statement, refs: item.evidence_refs, scope: 'market' as const, confidence: item.strength })),
+    ...sections.counter_evidence.map((item) => ({ id: item.claim_id, text: item.statement, refs: item.evidence_refs, scope: 'market' as const })),
+    ...sections.transmission_narrative.path.filter((item) => item.stage !== 'validation').map((item) => ({ id: item.node_id, text: item.claim, refs: item.evidence_refs, scope: 'market' as const })),
+    ...sections.representative_stocks.map((item) => ({ id: item.stock_id, text: item.reason, refs: item.evidence_refs, scope: 'stock' as const })),
+  ];
+  return rows.map((row) => {
+    const refs = uniqueStrings(row.refs);
+    const reasons: string[] = [];
+    if (!row.text.trim()) reasons.push('claim_empty');
+    if (!refs.length) reasons.push('evidence_missing');
+    for (const ref of refs) {
+      const evidence = index.get(ref);
+      if (context && !evidence) reasons.push(`evidence_not_found:${ref}`);
+      if (evidence && /^(stale|expired|invalid|conflicting)$/i.test(evidence.freshness || '')) reasons.push(`evidence_${evidence.freshness}:${ref}`);
+      if (evidence) {
+        const sourceDate = evidence.published_at || evidence.data_as_of
+          || evidence.raw_reference?.match(/@(\d{4}-\d{2}-\d{2}(?:T[^\s]+)?)/)?.[1];
+        if (!sourceDate || !Number.isFinite(Date.parse(sourceDate))) reasons.push(`evidence_source_date_missing:${ref}`);
+        if (!evidence.source && !evidence.raw_reference) reasons.push(`evidence_source_missing:${ref}`);
+      }
+    }
+    if (row.scope === 'stock' && stockFailures.some((failure) => failure.startsWith(`${row.id}:`))) reasons.push('company_evidence_relationship_not_supported');
+    return {
+      claim_id: row.id, statement: row.text, scope: row.scope, evidence_ids: refs,
+      sources: refs.map((ref) => {
+        const evidence = index.get(ref);
+        // Never label the report date as a source timestamp. Legacy evidence
+        // without timestamps stays explicitly unknown in the audit.
+        const embeddedTimestamp = evidence?.raw_reference?.match(/@(\d{4}-\d{2}-\d{2}T[^\s]+)/)?.[1];
+        return { evidence_id: ref, source: evidence?.source || evidence?.raw_reference || null, source_date: evidence?.published_at || evidence?.data_as_of || embeddedTimestamp || null, freshness: evidence?.freshness || null };
+      }),
+      confidence: row.confidence ?? null, supported: reasons.length === 0, reason_codes: uniqueStrings(reasons),
+    };
+  });
+}
+
 export function validateResearchMasterV2(
   master: ResearchMasterV2,
   context?: ResearchMasterValidationContext,
@@ -1630,6 +1739,7 @@ export function validateResearchMasterV2(
   }
   if (!master.research_id) errors.push("research_id is required");
   if (!master.thesis_id) errors.push("thesis_id is required");
+  if (master.timezone !== 'Asia/Taipei' || master.report_date !== master.today_date) errors.push('research_trading_date_mismatch');
   if (master.sections.core_thesis.thesis_id !== master.thesis_id) {
     errors.push("core_thesis.thesis_id must equal master.thesis_id");
   }
@@ -1782,11 +1892,14 @@ export function validateResearchMasterV2(
       })),
     ),
   ]);
-  const claimCount = allClaimIds.length +
-    master.sections.transmission_narrative.path.length +
-    master.sections.representative_stocks.filter((stock) => stock.reason)
-      .length;
-  const supportedCount = claimCount - unsupported.length;
+  const ledger = buildClaimEvidenceLedger(master, context);
+  // One actual assertion is one denominator item. Future invalidation criteria
+  // are not observations and cannot inflate measured evidence coverage.
+  const claimCount = ledger.length;
+  const supportedCount = ledger.filter((claim) => claim.supported).length;
+  for (const claim of ledger.filter((item) => !item.supported)) {
+    if (!unsupported.some((failure) => failure.startsWith(`${claim.claim_id}:`))) unsupported.push(`${claim.claim_id}:${claim.reason_codes.join(',')}`);
+  }
   const coverage = claimCount > 0
     ? Math.max(
       0,
@@ -1824,6 +1937,14 @@ export function validateResearchMasterV2(
     contradictions: uniqueStrings(contradictions),
     missing_sections: uniqueStrings(missing),
     publish_status: publishStatus,
+    coverage_audit: {
+      contract_version: 'CLAIM_EVIDENCE_LEDGER_V1', numerator: supportedCount, denominator: claimCount,
+      excluded_conditional_criteria: [
+        ...master.sections.failure_scenario.triggers.map((item) => item.claim_id),
+        ...master.sections.transmission_narrative.path.filter((item) => item.stage === 'validation').map((item) => item.node_id),
+      ],
+      claims: ledger,
+    },
   };
   return {
     is_valid: publishStatus !== "blocked",

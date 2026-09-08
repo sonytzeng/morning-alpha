@@ -1,3 +1,5 @@
+import { isLatestCompletedUsCashQuote } from './us-cash-session-calendar.ts';
+
 export interface PremiumNewsEvidenceInput {
   id?: string;
   title?: string;
@@ -116,17 +118,24 @@ export function normalizePremiumMarketEvidence(
   item: PremiumMarketEvidenceInput,
   nowMs = Date.now(),
 ): Record<string, unknown> | null {
-  const changePercent = Number(item.changePercent);
+  // Runtime JSON can violate the TypeScript input shape. Empty strings and
+  // booleans must never become fabricated zero-valued market evidence.
+  const numeric = (raw: unknown): number | null => (typeof raw === 'number'
+    || (typeof raw === 'string' && raw.trim() !== '')) && Number.isFinite(Number(raw)) ? Number(raw) : null;
+  const changePercent = numeric(item.changePercent);
+  const value = numeric(item.value);
   const updatedMs = parseEvidenceTime(item.updatedAt);
   const explicitlyMissing = item.hasChangePercent === false;
-  if (explicitlyMissing || !Number.isFinite(changePercent) || updatedMs === null) return null;
+  if (explicitlyMissing || value === null || changePercent === null
+    || updatedMs === null || updatedMs > nowMs) return null;
   const ageHours = (nowMs - updatedMs) / 3_600_000;
-  const freshness = ageHours <= 18 ? 'fresh' : ageHours <= 48 ? 'recent' : 'stale';
+  const calendarCurrent = ageHours > 48 && isLatestCompletedUsCashQuote(item.symbol, updatedMs, nowMs);
+  const freshness = ageHours <= 18 ? 'fresh' : ageHours <= 48 || calendarCurrent ? 'recent' : 'stale';
   const direction = changePercent > 0.25 ? 'up' : changePercent < -0.25 ? 'down' : 'flat';
   return {
     symbol: String(item.symbol || '').trim().toUpperCase(),
     name: String(item.name || item.symbol || '').trim(),
-    value: Number.isFinite(Number(item.value)) ? Number(item.value) : null,
+    value,
     change_percent: changePercent,
     direction,
     captured_at: item.updatedAt,
@@ -134,5 +143,7 @@ export function normalizePremiumMarketEvidence(
     source: 'market_data',
     provider: 'supabase_market_data',
     freshness_status: freshness,
+    freshness_basis: calendarCurrent ? 'latest_completed_us_cash_session' : 'elapsed_hours',
+    calendar_source: calendarCurrent ? 'https://www.nasdaqtrader.com/Trader.aspx?id=calendar' : null,
   };
 }

@@ -5,6 +5,7 @@ type RuntimeClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import {
   assembleResearchMasterV2,
+  admitResearchRecommendations,
   buildBlockedResearchMasterV2,
   validateResearchMasterV2,
   type ResearchMasterV2AssemblerInput,
@@ -37,6 +38,7 @@ import {
   normalizeEvidenceLeadForChineseSentence,
 } from '../_shared/content-intelligence.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
+import { evaluateMarketReportGate } from '../_shared/market-report-gate.ts';
 import { evaluateResearchQualityGate } from '../_shared/research-quality-gate.ts';
 import { RESEARCH_PIPELINE_VERSION, researchInputFingerprint, canonicalReportProjection, companyEvidenceSupported, presentNumber, currentResearchDateError } from '../_shared/research-pipeline-contract.ts';
 import {
@@ -68,7 +70,7 @@ import {
   buildRecommendationDecisionCopy,
 } from '../_shared/decision-sentence-builder.ts';
 
-const VERSION='V9.5_CANONICAL_MARKET_REPORT_CONTRACT';
+const VERSION='V9.6.1_MARKET_EVIDENCE_GATE_V1';
 const OPENAI_EVIDENCE_GUARDRAILS='market_news 只可使用發布時間在 48 小時內的資料。market_data 已先排除所有過期資料；不得猜測、補回或引用輸入中不存在的市場指標。若 TXF、原油或其他資料源缺失，不可把缺失資料寫成事件、方向、價位、產業傳導或驗證條件。禁止自行編造輸入資料未提供的個股絕對價位。每一檔最終受惠股都必須有事件來源、事件到產業與供應鏈再到公司的傳導路徑、台灣供應鏈關係、盤中成立條件與失效條件；沒有足夠證據就不要輸出該股票。不得為滿足篇幅、事件數、層數或股票數而新增任何未被輸入證據支持的敘事。';
 const OPENAI_OUTPUT_ABSTENTION_RULES='最高優先規則：today_beneficiary_stocks 可輸出 0 到 8 檔，沒有最低檔數；allowed_beneficiary_candidates 為空時必須輸出空陣列。overnight_chain 的至少 5 層是同一個有證據事件的傳導步驟，不是要求至少 5 個不同事件。每個 overnight_chain 項目必須包含 evidence_refs，且只能逐字使用輸入提供的 evidence_ref；沒有 evidence_ref 的事件必須刪除。beneficiary_candidates.evidence 與每檔 data_basis 也必須引用輸入提供的 evidence_ref，否則不得輸出該候選股。';
 const REPORT_MODE_NORMAL='normal_overnight',REPORT_MODE_WEEKEND='weekend_digest',REPORT_MODE_NON_TRADING='non_trading_day';
@@ -154,7 +156,18 @@ function corsResponse(body:Record<string,unknown>,status:number):Response{try{re
 function safeUnwrap<T>(result:unknown,log:(m:string)=>void,label:string):{data:T|null;error:string|null}{if(!result||typeof result!=='object'){log('safeUnwrap['+label+']: null');return{data:null,error:'RESULT_UNDEFINED'}}const r=result as{data?:T;error?:{message?:string}|null};return{data:r.data??null,error:r.error?.message||null}}
 function attachResearchMasterV2Shadow(target:Record<string,unknown>,input:ResearchMasterV2AssemblerInput,log:(message:string)=>void):void{
   try{
-    const master=assembleResearchMasterV2(input);
+    let publicationInput=input;
+    if(input.isTradingDay && Array.isArray(target.today_beneficiary_stocks_v10)){
+      const admission=admitResearchRecommendations(input);
+      const sourceMaster=assembleResearchMasterV2(input);
+      target.research_generation_audit={contract_version:'RESEARCH_ADMISSION_V1',report_date:input.reportDate,source_quality:validateResearchMasterV2(sourceMaster,input).quality,rejected_recommendations:admission.rejected};
+      target.today_beneficiary_stocks_v10=admission.accepted;
+      // This says only that no company qualified. Source completeness is still
+      // independently checked by Research, Market and atomic-publication gates.
+      if(!admission.accepted.length)target.v10_data_quality_status='insufficient_positive_evidence';
+      publicationInput={...input,legacy:target};
+    }
+    const master=assembleResearchMasterV2(publicationInput);
     const validation=validateResearchMasterV2(master,{
       evidenceIndex:input.evidenceIndex,
       candidateUniverse:input.candidateUniverse,
@@ -195,7 +208,7 @@ type ReportConfidenceScore={score:number;breakdown:Record<string,unknown>};
 type TWCoreStatus={taiexPresent:boolean;txfPresent:boolean;ts2330Present:boolean;missingCount:number;dataInsufficient:boolean};
 type MVPStatus={nvdaPresent:boolean;tsmPresent:boolean;spxPresent:boolean;mvpCount:number;mvpInsufficient:boolean};
 
-type SectorRotationRow={sector:string;sub_sector:string;rotation_score:number;direction:string;signal_label:string;leading_symbols:string[];lagging_symbols:string[];summary?:string};
+type SectorRotationRow={sector:string;sub_sector:string;rotation_score:number;direction:string;signal_label:string;leading_symbols:string[];lagging_symbols:string[];summary?:string;score_date?:string};
 type MemberResearchNoteV2={overnight_chain:Record<string,unknown>[];taiwan_impact_map:Record<string,unknown>[];beneficiary_candidates:Record<string,unknown>[];intraday_validation:Record<string,unknown>[];invalidation_rules:Record<string,unknown>[];closing_feedback_plan:Record<string,unknown>;subscriber_value_sentence:string;data_status:'complete'|'partial'|'insufficient';today_core_thesis?:string;market_mispricing?:string;institutional_behavior?:string;fund_flow_scenario?:string;beneficiary_reasoning?:Record<string,unknown>[];close_backtest_plan?:Record<string,unknown>;tomorrow_extension_watch?:string[];opening_thesis?:Record<string,unknown>;core_reasoning?:string[];first_beneficiary_stock?:Record<string,unknown>|null;risk_scenarios?:Record<string,unknown>[];capital_rotation_scenarios?:Record<string,unknown>[];tomorrow_follow_up?:Record<string,unknown>;closing_feedback_placeholder?:Record<string,unknown>;intraday_time_windows?:Record<string,unknown>[]};
 type V8Contract={v8_beneficiary_chain:Record<string,unknown>;v8_overnight_causal_chain:Record<string,unknown>;v8_daily_sentence:Record<string,unknown>};
 type V10EvidencePack=Record<string,unknown>;
@@ -270,7 +283,7 @@ function buildV10NewsClusters(newsData:MarketNewsItem[]):Record<string,unknown>[
     source_items:cluster.items.slice(0,3).map((item)=>({id:item.id,title:item.title,source:item.source,url:item.url,published_at:item.published_at||item.created_at,taiwan_impact_summary:item.taiwan_impact_summary||''})),
   }));
 }
-function buildV10SectorContext(sectorData:SectorRotationRow[]):Record<string,unknown>[]{return (sectorData??[]).map((row)=>({sector:row.sector,score:row.rotation_score??null,direction:row.direction??null,reason:row.signal_label||row.summary||null,related_symbols:[...(row.leading_symbols??[]),...(row.lagging_symbols??[])]}));}
+function buildV10SectorContext(sectorData:SectorRotationRow[]):Record<string,unknown>[]{return (sectorData??[]).map((row)=>({sector:row.sector,score:row.rotation_score??null,direction:row.direction??null,reason:row.signal_label||row.summary||null,source_date:row.score_date??null,related_symbols:[...(row.leading_symbols??[]),...(row.lagging_symbols??[])]}));}
 function readV10Stocks(value:unknown,limit=5):Record<string,unknown>[]{if(!Array.isArray(value))return [];return value.slice(0,limit).filter((item)=>item&&typeof item==='object').map((item)=>{const r=item as Record<string,unknown>;return {ticker:r.ticker??r.symbol??null,name:r.name??r.stock_name??null,category:r.category??r.sector??null,confidence:r.confidence??null};});}
 function buildV10PreviousValidation(previousReport:Record<string,unknown>|null):Record<string,unknown>|null{if(!previousReport)return null;const json=(previousReport.ai_strategy_json&&typeof previousReport.ai_strategy_json==='object'?previousReport.ai_strategy_json:{} ) as Record<string,unknown>;const closing=(json.closing_verification_v2??json.closing_verification??null) as Record<string,unknown>|null;return {previous_report_date:previousReport.report_date??null,previous_market_bias:previousReport.market_bias??json.market_bias??null,previous_top_beneficiaries:readV10Stocks(json.today_beneficiary_stocks??json.beneficiary_stocks,5),previous_closing_verification:closing,what_was_right:closing?.what_was_right??closing?.correct_assumptions??null,what_was_wrong:closing?.what_was_wrong??closing?.failed_assumptions??null};}
 function buildV10EvidencePack(args:{todayDate:string;dates:{twCoreDate:string;usGlobalDate:string};tradingDayInfo:TradingDayInfo;marketData:MarketIndicator[];newsData:MarketNewsItem[];sectorData:SectorRotationRow[];previousReport:Record<string,unknown>|null;dataQuality:string;missingSources:string[];staleCoreSources:string[];unavailableSources:string[];confidenceResult:ReportConfidenceScore}):V10EvidencePack{const missing=new Set<string>(args.missingSources??[]);const stale=new Set<string>(args.staleCoreSources??[]);const available=new Set<string>();const get=(key:string,syms:string[])=>{const indicator=findIndicator(args.marketData,syms);if(!indicator){missing.add(`market_snapshot.${key}`);return null;}if(isCoreMarketDataStale(indicator,args.dates)){stale.add(`market_snapshot.${key}`);missing.add(`market_snapshot.${key}`);return null;}const value=normalizePremiumMarketEvidence(indicator);if(!value){missing.add(`market_snapshot.${key}`);return null;}available.add(`market_snapshot.${key}`);return value;};const marketSnapshot={report_date:args.todayDate,data_freshness:{tw_core_date:args.dates.twCoreDate,us_global_date:args.dates.usGlobalDate},taiwan_market_status:{is_trading_day:args.tradingDayInfo.is_trading_day,market_closed:args.tradingDayInfo.market_closed,holiday_name:args.tradingDayInfo.holiday_name??null},taiex:get('taiex',['TAIEX','TWII','^TWII']),txf:get('txf',['TXF','TX','MTX','TXF1']),'2330':get('2330',['2330','2330.TW']),tsm_adr:get('tsm_adr',['TSM']),spx:get('spx',['SPX','^GSPC']),nasdaq:get('nasdaq',['IXIC','NASDAQ','^IXIC']),sox:get('sox',['SOX','^SOX']),djia:get('djia',['DJIA','^DJI']),nvda:get('nvda',['NVDA']),aapl:get('aapl',['AAPL']),msft:get('msft',['MSFT']),meta:get('meta',['META']),amzn:get('amzn',['AMZN']),vix:get('vix',['VIX','^VIX']),dxy:get('dxy',['DXY','DX-Y.NYB']),us10y:get('us10y',['US10Y','TNX','^TNX']),crude_oil:get('crude_oil',['CL','WTI','CRUDE_OIL'])};if(args.marketData.length)available.add('market_data');else missing.add('market_data');if(args.newsData.length)available.add('market_news');else missing.add('market_news');if(args.sectorData.length)available.add('sector_rotation_scores');else missing.add('sector_rotation_scores');const previousValidation=buildV10PreviousValidation(args.previousReport);if(previousValidation)available.add('previous_report');else missing.add('previous_validation');for(const u of args.unavailableSources??[])missing.add(u);const warningFlags=[...(args.dataQuality==='degraded'?['data_quality_degraded']:[]),...(args.unavailableSources??[]).map((source)=>`unavailable:${source}`),...(stale.size?['stale_core_sources_present']:[])];return {market_snapshot:marketSnapshot,overnight_moves:buildV10OvernightMoves(args.marketData).filter((item)=>String(item.freshness_status??'').toLowerCase()!=='stale'),news_clusters:buildV10NewsClusters(args.newsData),sector_context:buildV10SectorContext(args.sectorData),previous_validation:previousValidation,data_quality:{available_sources:Array.from(available),missing_sources:Array.from(missing),stale_sources:Array.from(stale),confidence_base:args.confidenceResult.score,warning_flags:warningFlags}};}
@@ -300,9 +313,9 @@ function buildEvidenceIndex(normalizedEvidence:Record<string,unknown>):V10Eviden
   const news=Array.isArray(normalizedEvidence.normalized_news)?normalizedEvidence.normalized_news:[];
   news.forEach((item,idx)=>{const n=(item&&typeof item==='object'?item:{} ) as Record<string,unknown>;const url=String(n.url??'');const publishedAt=String(n.published_at??'');const source=String(n.source??'');if(!/^https?:\/\//i.test(url)||!publishedAt||!source)return;push('NEWS',idx,'market_news',source,String(n.topic??n.event_type??''),String(n.representative_summary??''),n.importance,n.freshness??'unknown',url,{published_at:publishedAt,url,quality_status:'verified'});});
   const sectors=Array.isArray(normalizedEvidence.sector_context)?normalizedEvidence.sector_context:[];
-  sectors.forEach((item,idx)=>{const sec=(item&&typeof item==='object'?item:{} ) as Record<string,unknown>;push('SEC',idx,'sector_rotation','sector_rotation_scores',String(sec.sector??''),String(sec.reason??sec.direction??''),sec.score??50,'previous_trading_day',`sector_rotation_scores:${String(sec.sector??'')}`,{quality_status:'context'});});
+  sectors.forEach((item,idx)=>{const sec=(item&&typeof item==='object'?item:{} ) as Record<string,unknown>;const sourceDate=String(sec.source_date??'');if(!/^\d{4}-\d{2}-\d{2}$/.test(sourceDate))return;push('SEC',idx,'sector_rotation','sector_rotation_scores',String(sec.sector??''),String(sec.reason??sec.direction??''),sec.score??50,sourceDate?'previous_trading_day':'unknown',`sector_rotation_scores:${String(sec.sector??'')}@${sourceDate}`,{published_at:sourceDate||undefined,quality_status:'context'});});
   const prev=normalizedEvidence.previous_validation;
-  if(prev&&typeof prev==='object'){const p=prev as Record<string,unknown>;push('VAL',0,'previous_validation','reports',String(p.previous_report_date??'previous_report'),String(p.previous_market_bias??''),70,'previous_report',`reports:${String(p.previous_report_date??'')}`,{quality_status:'context'});}
+  if(prev&&typeof prev==='object'){const p=prev as Record<string,unknown>;push('VAL',0,'previous_validation','reports',String(p.previous_report_date??'previous_report'),String(p.previous_market_bias??''),70,'previous_report',`reports:${String(p.previous_report_date??'')}`,{published_at:String(p.previous_report_date??'')||undefined,quality_status:'context'});}
   return out;
 }
 function validateV10EvidenceReferenceArray(value:unknown,path:string,evidenceIds:Set<string>,errors:string[],warnings:string[]):void{if(!Array.isArray(value)){errors.push(`${path} must be an array`);return;}const missingSeen=new Set<string>();for(let i=0;i<value.length;i++){const ref=(value[i]&&typeof value[i]==='object'?value[i]:null) as Record<string,unknown>|null;if(!ref){errors.push(`${path}[${i}] must be an object`);continue;}const id=String(ref.evidence_id??'').trim();if(!id){errors.push(`${path}[${i}].evidence_id must be a non-empty string`);}else if(!evidenceIds.has(id)){errors.push(`${path}[${i}].evidence_id does not exist in evidence_index`);if(missingSeen.has(id))warnings.push(`${path}[${i}].evidence_id repeats a missing evidence reference`);missingSeen.add(id);}validateV10Range(ref.weight,`${path}[${i}].weight`,errors);validateV10Text(ref.purpose,`${path}[${i}].purpose`,errors);}}
@@ -1075,7 +1088,7 @@ function finalSanitizeTWStocks(stocks:Record<string,unknown>[],_fallback:Record<
 }
 
 async function fetchSectorRotationForDate(supabase:RuntimeClient,scoreDate:string,log:(m:string)=>void):Promise<SectorRotationRow[]>{
-  try{const r=await supabase.from('sector_rotation_scores').select('sector,sub_sector,rotation_score,direction,signal_label,leading_symbols,lagging_symbols,summary').eq('score_date',scoreDate).order('rotation_score',{ascending:false}).limit(10);const{data,error}=safeUnwrap<Record<string,unknown>[]>(r,log,'sector_rotation');if(error||!data?.length){log('[fetchSectorRotationForDate] no data for '+scoreDate);return [];}const rows:SectorRotationRow[]=data.map(function(row){return{sector:String(row.sector||''),sub_sector:String(row.sub_sector||''),rotation_score:Number(row.rotation_score)||0,direction:String(row.direction||''),signal_label:String(row.signal_label||''),leading_symbols:Array.isArray(row.leading_symbols)?row.leading_symbols.map(String):[],lagging_symbols:Array.isArray(row.lagging_symbols)?row.lagging_symbols.map(String):[],summary:row.summary?String(row.summary):undefined}});log('[fetchSectorRotationForDate] got '+rows.length+' sectors for '+scoreDate);return rows;}catch(e){log('[fetchSectorRotationForDate] exception: '+(e instanceof Error?e.message:String(e)));return [];}
+  try{const r=await supabase.from('sector_rotation_scores').select('score_date,sector,sub_sector,rotation_score,direction,signal_label,leading_symbols,lagging_symbols,summary').eq('score_date',scoreDate).order('rotation_score',{ascending:false}).limit(10);const{data,error}=safeUnwrap<Record<string,unknown>[]>(r,log,'sector_rotation');if(error||!data?.length){log('[fetchSectorRotationForDate] no data for '+scoreDate);return [];}const rows:SectorRotationRow[]=data.map(function(row){return{score_date:row.score_date?String(row.score_date):undefined,sector:String(row.sector||''),sub_sector:String(row.sub_sector||''),rotation_score:Number(row.rotation_score)||0,direction:String(row.direction||''),signal_label:String(row.signal_label||''),leading_symbols:Array.isArray(row.leading_symbols)?row.leading_symbols.map(String):[],lagging_symbols:Array.isArray(row.lagging_symbols)?row.lagging_symbols.map(String):[],summary:row.summary?String(row.summary):undefined}});log('[fetchSectorRotationForDate] got '+rows.length+' sectors for '+scoreDate);return rows;}catch(e){log('[fetchSectorRotationForDate] exception: '+(e instanceof Error?e.message:String(e)));return [];}
 }
 
 // ═══ V9.0 THREE-TIER BENEFICIARY ═══
@@ -1893,8 +1906,8 @@ async function fetchMarketData(supabase:RuntimeClient,log:(msg:string)=>void){
   const empty={marketData:[] as MarketIndicator[],latestDataTime:null as Date|null,isStale:true,dataCount:0,rawDataCount:0,invalidNumericSources:[] as string[]};
   try{
     const [canonicalResult,legacyResult]=await Promise.all([
-      supabase.from('market_quotes').select('symbol,name,market,value,change_value,change_percent,captured_at,provider,freshness_status,quality_status').order('captured_at',{ascending:false}).limit(60),
-      supabase.from('market_data').select('*').order('captured_at',{ascending:false}).limit(60),
+      supabase.from('market_quotes').select('symbol,name,market,value,change_value,change_percent,captured_at,provider,freshness_status,quality_status').lte('captured_at',new Date().toISOString()).order('captured_at',{ascending:false}).limit(60),
+      supabase.from('market_data').select('*').lte('captured_at',new Date().toISOString()).order('captured_at',{ascending:false}).limit(60),
     ]);
     const canonical=safeUnwrap<Record<string,unknown>[]>(canonicalResult,log,'market_quotes');
     const legacy=safeUnwrap<Record<string,unknown>[]>(legacyResult,log,'market_data_fallback');
@@ -2242,12 +2255,12 @@ function buildCanonicalDecisionPayload(
     published_at:canonicalText(news.published_at,news.created_at),
   };}).filter(function(source){return Boolean(source.source||source.url||source.title);});
   const contentReview=evaluateContentIntelligence(ai,importantNews.length);
-  const premiumGate=evaluatePremiumContentGate(ai,importantNews.length);
   const unsupportedCompanies=recommendations.filter((stock)=>!importantNews.some((news)=>companyEvidenceSupported(
     {...stock,aliases:stock.symbol==='2317'?['Hon Hai','Foxconn']:stock.symbol==='2330'?['Taiwan Semiconductor','TSMC']:[]},
     {...news,evidence_type:'market_news'},
   ))).map((stock)=>'company_catalyst_evidence_missing:'+stock.symbol);
-  const publishable=premiumGate.eligible&&researchQuality.eligible&&unsupportedCompanies.length===0;
+  const marketGate=evaluateMarketReportGate(ai,String(researchMaster.report_date||''));
+  const publishable=marketGate.eligible&&researchQuality.eligible&&unsupportedCompanies.length===0;
   const evidenceDecisionMode=recommendations.length>0?'recommendations':String(ai.v10_data_quality_status)==='insufficient_positive_evidence'?'no_trade':'blocked';
   const decisionMode=publishable?evidenceDecisionMode:'blocked';
   const publishedRecommendations=publishable?recommendations:[];
@@ -2270,6 +2283,9 @@ function buildCanonicalDecisionPayload(
     coverage_score:researchQuality.evidence_coverage,
     action:canonicalDecisionAction(decisionMode),
     decision_mode:decisionMode,
+    report_status:marketGate.report_status,
+    recommendation_status:marketGate.recommendation_status,
+    market_report_gate:marketGate,
     market_regime:canonicalText(ai.market_regime,marketBias),
     preferred_sectors:publishedSectors,
     watch_sectors:canonicalRecords(ai.v10_observation_watchlist).slice(0,3),
@@ -2320,7 +2336,7 @@ function buildCanonicalDecisionPayload(
     content_score:contentReview.score,
     content_grade:contentReview.grade,
     content_score_breakdown:contentReview.breakdown,
-    reason_codes:Array.from(new Set([...contentReview.reason_codes,...premiumGate.reason_codes,...researchQuality.reason_codes,...unsupportedCompanies])),
+    reason_codes:Array.from(new Set([...marketGate.reason_codes,...researchQuality.reason_codes,...unsupportedCompanies])),
     generic_content_flags:contentReview.generic_flags,
   };
 }
@@ -2840,7 +2856,7 @@ Deno.serve(async (req:Request)=>{
       }
     }
     const sectorRotationReferenceDate=getPreviousTaiwanTradingDay(todayDate);log('SECTOR_ROTATION reference_date='+sectorRotationReferenceDate+' basis=previous_trading_day');
-    const rawDatesFetch=(async function(){try{const [canonicalResult,legacyResult]=await Promise.all([supabase.from('market_quotes').select('symbol,captured_at,value,change_percent').order('captured_at',{ascending:false}).limit(60),supabase.from('market_data').select('symbol,captured_at,value,change_percent').order('captured_at',{ascending:false}).limit(60)]);const canonical=safeUnwrap<Record<string,unknown>[]>(canonicalResult,log,'rawCanonicalForDates');const legacy=safeUnwrap<Record<string,unknown>[]>(legacyResult,log,'rawLegacyForDates');const rows=mergeCanonicalAndLegacyMarketRows(canonical.data||[],legacy.data||[]);return normalizeMarketDataRows(rows).marketData.map(function(row){return{symbol:row.symbol,captured_at:row.updatedAt};});}catch{log('rawForDates fetch failed');return [] as Record<string,unknown>[];}})();
+    const rawDatesFetch=(async function(){try{const [canonicalResult,legacyResult]=await Promise.all([supabase.from('market_quotes').select('symbol,captured_at,value,change_percent').lte('captured_at',new Date().toISOString()).order('captured_at',{ascending:false}).limit(60),supabase.from('market_data').select('symbol,captured_at,value,change_percent').lte('captured_at',new Date().toISOString()).order('captured_at',{ascending:false}).limit(60)]);const canonical=safeUnwrap<Record<string,unknown>[]>(canonicalResult,log,'rawCanonicalForDates');const legacy=safeUnwrap<Record<string,unknown>[]>(legacyResult,log,'rawLegacyForDates');const rows=mergeCanonicalAndLegacyMarketRows(canonical.data||[],legacy.data||[]);return normalizeMarketDataRows(rows).marketData.map(function(row){return{symbol:row.symbol,captured_at:row.updatedAt};});}catch{log('rawForDates fetch failed');return [] as Record<string,unknown>[];}})();
     const [marketSettled,newsSettled,sectorSettled,rawDatesSettled,previousReportSettled,recentReportsSettled]=await Promise.allSettled([
       withTimeout(fetchMarketData(supabase,log),5000,'market_data_query',log,{marketData:[] as MarketIndicator[],latestDataTime:null as Date|null,isStale:true,dataCount:0,rawDataCount:0,invalidNumericSources:[] as string[]}),
       withTimeout(fetchMarketNews(supabase,log),3000,'market_news_query',log,{newsData:[],latestNewsTime:null,isStale:true,newsCount:0}),
@@ -2899,6 +2915,14 @@ Deno.serve(async (req:Request)=>{
     if(claim.status!=='ACQUIRED'){
       const cached=canonicalRecord(claim.result);
       if(claim.status==='REUSED'&&claim.outcome==='SUCCEEDED'){
+        const current=await verifyReportExists(supabase,todayDate,log);
+        const currentAi=canonicalRecord(current?.aiJson);
+        if(!current?.reportId || current.reportId!==cached.report_id || currentAi.revision_id!==cached.decision_snapshot_id){
+          return corsResponse({success:false,error_code:'CACHED_REVISION_SUPERSEDED',report_date:todayDate,reused:true},409);
+        }
+        const cachedMarket=evaluateMarketReportGate(currentAi,todayDate);
+        const cachedPremium=evaluatePremiumContentGate(currentAi,newsData.length);
+        if(!cachedMarket.eligible)return corsResponse({success:false,error_code:'CACHED_PUBLICATION_NOT_READY',reason_codes:cachedMarket.reason_codes,report_date:todayDate,reused:true},409);
         // Publication is durable before lifecycle bookkeeping. A transport
         // failure after commit must resume bookkeeping, never re-run the AI.
         for(const [state,checkpoint] of [['REPORT_GENERATED','report_generation'],['EDITORIAL_APPROVED','editorial_gate']]){
@@ -2907,7 +2931,9 @@ Deno.serve(async (req:Request)=>{
             p_metadata:{...cached,input_fingerprint:inputFingerprint,reused:true}});
           if(advanced.error)throw new Error('CACHED_PUBLICATION_STATE_ADVANCE_FAILED');
         }
-        return corsResponse({...cached,success:true,reused:true,report_generated:true,premium_eligible:true,
+        return corsResponse({...cached,success:true,reused:true,report_generated:true,report_eligible:true,
+          report_status:cachedMarket.report_status,recommendation_status:cachedMarket.recommendation_status,
+          premium_eligible:cachedPremium.eligible,premium_reason_codes:cachedPremium.reason_codes,
           input_fingerprint:inputFingerprint,correlation_id:correlationId},200);
       }
       const code=claim.status==='IN_PROGRESS'?'RESEARCH_IN_PROGRESS':claim.status==='BACKOFF'?'RESEARCH_BACKOFF':claim.status==='EXHAUSTED'?'RESEARCH_RETRY_EXHAUSTED':'RESEARCH_QUALITY_REJECTED_UNCHANGED';
@@ -3069,15 +3095,16 @@ Deno.serve(async (req:Request)=>{
     if(!verified?.reportId){log('VERIFY_FAILED');return corsResponse({success:false,error:'Report written but verification failed',report_date:todayDate,report_id:writeResult.reportId,version:VERSION,logs},500);}
 
     const verifiedGate=evaluatePremiumContentGate(verified.aiJson||{},newsData.length);
+    const verifiedMarketGate=evaluateMarketReportGate(verified.aiJson||{},todayDate);
     const reportState=await supabase.rpc('advance_trading_day_state_v1',{p_trading_date:todayDate,p_state:'REPORT_GENERATED',p_checkpoint:'report_generation',p_status:'SUCCEEDED',p_correlation_id:correlationId,p_metadata:{report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,input_fingerprint:activeInputRun?.fingerprint||'',output_fingerprint:String(writeResult.snapshotId||'')}});
     if(reportState.error)throw new Error('REPORT_STATE_ADVANCE_FAILED');
-    const deliveryEligible=verifiedGate.eligible&&Boolean(writeResult.snapshotId)&&writeResult.memberRevision.eligible;
-    const deliveryReasonCodes=Array.from(new Set([...verifiedGate.reason_codes,...writeResult.memberRevision.reasonCodes]));
+    const deliveryEligible=verifiedMarketGate.eligible&&Boolean(writeResult.snapshotId)&&writeResult.memberRevision.eligible;
+    const deliveryReasonCodes=Array.from(new Set([...verifiedMarketGate.reason_codes,...writeResult.memberRevision.reasonCodes]));
     if(deliveryEligible){const editorialState=await supabase.rpc('advance_trading_day_state_v1',{p_trading_date:todayDate,p_state:'EDITORIAL_APPROVED',p_checkpoint:'editorial_gate',p_status:'SUCCEEDED',p_correlation_id:correlationId,p_metadata:{report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,member_content_revision_id:writeResult.memberRevision.revisionId,content_score:verifiedGate.content_score,semantic_status:writeResult.memberRevision.status,reason_codes:deliveryReasonCodes}});if(editorialState.error)throw new Error('EDITORIAL_STATE_ADVANCE_FAILED');}
-    const durationMs=Date.now()-reqStart;log('DONE report_id='+verified.reportId+' premium_eligible='+deliveryEligible+' duration='+durationMs+'ms');
+    const durationMs=Date.now()-reqStart;log('DONE report_id='+verified.reportId+' report_eligible='+deliveryEligible+' premium_eligible='+verifiedGate.eligible+' duration='+durationMs+'ms');
     const sloResult=await supabase.from('runtime_slo_measurements').insert({slo_key:'report_generation_latency',measured_at:new Date().toISOString(),report_date:todayDate,correlation_id:correlationId,success:durationMs<=120000,value:durationMs,latency_ms:durationMs,reason_codes:durationMs<=120000?[]:['report_generation_latency_exceeded'],metadata:{premium_eligible:verifiedGate.eligible,engine_version:VERSION}});
     if(sloResult.error)log('REPORT_SLO_MEASUREMENT_DEGRADED '+sloResult.error.message);
-    return corsResponse({success:deliveryEligible,message:deliveryEligible?'Report generated and approved (V9.5)':'Report generated but delivery gate blocked',error:deliveryEligible?undefined:'DELIVERY_GATE_BLOCKED',error_code:deliveryEligible?undefined:'DELIVERY_GATE_BLOCKED',report_generated:true,report_date:todayDate,report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,member_content_revision_id:writeResult.memberRevision.revisionId,semantic_status:writeResult.memberRevision.status,correlation_id:correlationId,premium_eligible:deliveryEligible,premium_content_score:verifiedGate.content_score,premium_decision_mode:verifiedGate.decision_mode,premium_reason_codes:writeResult.snapshotId?deliveryReasonCodes:Array.from(new Set([...deliveryReasonCodes,'editorial_snapshot_missing'])),recovery_attempt:recoveryAttempt,cost_guard:costGuard,cost_usage_id:runtimeCostUsageId,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,tw_core_date:dates.twCoreDate,us_global_date:dates.usGlobalDate,source:String(aiStrategyJson.build_method||'deterministic'),market_bias:marketBias,confidence_score:safeInteger(rawConfidenceScore,50),report_mode:reportMode,duration_ms:durationMs,version:VERSION,logs},deliveryEligible?200:409);
+    return corsResponse({success:deliveryEligible,message:deliveryEligible?'Report generated and approved (V9.5)':'Report generated but delivery gate blocked',error:deliveryEligible?undefined:'DELIVERY_GATE_BLOCKED',error_code:deliveryEligible?undefined:'DELIVERY_GATE_BLOCKED',report_generated:true,report_date:todayDate,report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,member_content_revision_id:writeResult.memberRevision.revisionId,semantic_status:writeResult.memberRevision.status,correlation_id:correlationId,report_eligible:deliveryEligible,report_status:verifiedMarketGate.report_status,recommendation_status:verifiedMarketGate.recommendation_status,premium_eligible:verifiedGate.eligible,premium_content_score:verifiedGate.content_score,premium_decision_mode:verifiedGate.decision_mode,premium_reason_codes:verifiedGate.reason_codes,report_reason_codes:writeResult.snapshotId?deliveryReasonCodes:Array.from(new Set([...deliveryReasonCodes,'editorial_snapshot_missing'])),recovery_attempt:recoveryAttempt,cost_guard:costGuard,cost_usage_id:runtimeCostUsageId,is_trading_day:tradingDayInfo.is_trading_day,market_closed:tradingDayInfo.market_closed,holiday_name:tradingDayInfo.holiday_name,tw_core_date:dates.twCoreDate,us_global_date:dates.usGlobalDate,source:String(aiStrategyJson.build_method||'deterministic'),market_bias:marketBias,confidence_score:safeInteger(rawConfidenceScore,50),report_mode:reportMode,duration_ms:durationMs,version:VERSION,logs},deliveryEligible?200:409);
   }catch(err){
     const qualityFailure=err instanceof PublicationQualityError;
     const msg=err instanceof Error?err.message:String(err);

@@ -1,0 +1,237 @@
+{
+  "baseline_commit": "ce3ff722c7247e1949b4740b20d2ccb96b1c77cf",
+  "approval": "2026-09-08 Production incident attachment d36741d2-5b6d-403e-b1f7-87f50bdf39c8",
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "baseline_sha256": "c87fe5aff417ad07647d3231e997ab4d9313f127330dc67325df77c985e38ad4",
+      "incident_sha256": "1144446e72671a36d7a86afdb8d04a11183621494c7c7d2c57fa07fd6d4d1ea2"
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "baseline_sha256": "cd437d3425dca427a3ee4df7014f9e1b08a70c6e1cb69a14865da76d98e8a8c2",
+      "incident_sha256": "448d32828658d44dc526f9a4de3b340f43c7412da60d3eab1388858a401bd464"
+    },
+    {
+      "path": "supabase/functions/_shared/market-report-gate.ts",
+      "baseline_sha256": null,
+      "incident_sha256": "744c761414b6a10395cf1fa01fafbc11975ea2516c002831a63a63373c3b4ccf"
+    },
+    {
+      "path": "supabase/functions/_shared/premium-evidence.ts",
+      "baseline_sha256": "3b7eee4a67cacb8623ff901fe91ea334effd80117a28873afdcd34f26af691c2",
+      "incident_sha256": "04b61d5a8cfdb2582b66f479376c77dfc31a4055b76387d5af4c598ffc995437"
+    },
+    {
+      "path": "supabase/functions/_shared/us-cash-session-calendar.ts",
+      "baseline_sha256": null,
+      "incident_sha256": "dbc7b5c762cd6921385c1d38262a987a5fe82f122e3855069a2e25d6c7078e7f"
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "baseline_sha256": "97355f6d15a834e52e2fa892bd2f0b273ab8aa10902ed8ec142ad48b5019feda",
+      "incident_sha256": "09fd18f707b3c03ab42190bee7f2d13ea01bb66f9ee4f3cc7167f3cc8970f01e"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "baseline_sha256": "40561b2a092af876e396bc32dc47ab58e2daeb055005fd02af08d050a123522c",
+      "incident_sha256": "2cdaf796e0e5c0f1fae3516c474bbad37d6ba7faaf89d7bd842b9a1fb28003ee"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/market-data-evidence.ts",
+      "baseline_sha256": "ae145e4998182b9b2e365d8a462c84b03a5e2d35b6c71fac8db0e6f3b406ef23",
+      "incident_sha256": "c1a67bedd21d37d20a5e22dbc7adfaf538425d418aa75b711568875c56700648"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/market-freshness.ts",
+      "baseline_sha256": "f5b4fe117af538328070ce49d2b4b71debe1573e097705486c7875962b4609ef",
+      "incident_sha256": "5887c106d5a1eac0d663b3aba025cc209cbeeac721805c09f985a34d095738d2"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/research-master-v2.test.ts",
+      "baseline_sha256": "91dd530e5e95fe72a6b37142bff37427158e5b94094495e4dcaff1e7436df9a1",
+      "incident_sha256": "aa25278fb3c8594b33d52cfe89de8ce97bfa6609fc078d6d2e2595367e4901af"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/research-master-v2.ts",
+      "baseline_sha256": "bcf78bb2070c0b7e622663d4df8145b2c6befe83da9b0cfe1fa1d3b70b137fc7",
+      "incident_sha256": "4b740064083cdaebb65044e7190ec2a5cd5542d4d2a42bd7612ccab86694b00d"
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "baseline_sha256": "3195efd17035cf81a69d01cac19c2a1f315b04a3a17faf8076c5933d8101b370",
+      "incident_sha256": "01a45e12e35b0565896af1aa06adb55dc5c61b6d77d394dc323ecacad4599a18"
+    },
+    {
+      "path": "supabase/functions/line-daily-push/index.ts",
+      "baseline_sha256": "e93a8d0f16534de99acd58916e3fc0a6bc743742540908851b05117bb74b1c2c",
+      "incident_sha256": "c54fbbcac5ca0811801b88cedd22e88cd5033397cfe25b4743829f9a0ac6b158"
+    },
+    {
+      "path": "supabase/functions/ma-ops-health-check/index.ts",
+      "baseline_sha256": "296f4bd106e1ab00d5cf82a9637462b8091380536658964ebb2c0e073c71ba32",
+      "incident_sha256": "d66b471529c77a1dac7bdc80e68d02af8df1a4446487c767adc98219819b79a7"
+    },
+    {
+      "path": "supabase/migrations/20260908020000_incident_acceptance_market_delivery.sql",
+      "baseline_sha256": null,
+      "incident_sha256": "1cbeb6cf7299bcddde733fcdfd7584d5c7b709bf5fe84089d5692a01fe54c282"
+    }
+  ],
+  "modified_declarations": [
+    {
+      "path": "supabase/functions/generate-daily-report-v7/research-master-v2.ts",
+      "name": "assembleResearchMasterV2",
+      "production_sha256": "6ba88393bfb5c479d68817155a41180dcd5914a243df3df47faffe984d3c8059",
+      "incident_sha256": "bdbee974d6c15d7dac47da770bbe753f6e52189b904486db1877777e1c2c0141",
+      "reason": "No-recommendation narrative must cite the exact selected source list rather than unrelated thesis refs; all other assembly behavior retained"
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "name": "getDataAsOf",
+      "production_sha256": "4a1ae3c8e3584c4dae0dc6ffa248078d19d43a1046fe71f089974394e04af11d",
+      "incident_sha256": "e7efcf362586351f95362305b41f1a1f532e1cfae7715f5321c954cd02248f64",
+      "reason": "Withhold future timestamps; keep original provenance timestamps intact"
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "name": "fetchPayloadContext",
+      "production_sha256": "eb6db68bc2f68c30c19714e6f60cd859a44c12a4d75f094c7bf7240c66413932",
+      "incident_sha256": "a319457a671185c8368332f71e0afaa8251eb3851b0a5daf6463983cf5f2ecc6",
+      "reason": "Exclude future radar/snapshot rows and impossible future checkpoint receipts on the server; no stored evidence mutation"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "VERSION",
+      "production_sha256": "3ee1e0b4733ce11633c97b6098fd2bd6b7bf3ca7fc630acecd9195b4a1d6b24a",
+      "incident_sha256": "eec96b52164a269bb0c721e817cda3b068f4b3f2bb614fa23bc2ea992696d199",
+      "reason": "Incident contract version identifier only"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "attachResearchMasterV2Shadow",
+      "production_sha256": "0cbfaf3f58ad40399b1082b0ff925e956a0afb7451478293e441c87a8d934123",
+      "incident_sha256": "a5a233b05135fe0a2727910f8f58834af089990ee540b32910fa4029585e62b5",
+      "reason": "Admit evidence-backed recommendations and retain rejected rows in private audit"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "SectorRotationRow",
+      "production_sha256": "1108652131958f0e8d371c315fa40ea0686544145d0d62f773fb3b9073e28036",
+      "incident_sha256": "f2c75f3bc14f2e943655a6ac4642a6c4b528414aa804f15859183a249315da95",
+      "reason": "Preserve actual sector score_date provenance"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "buildV10SectorContext",
+      "production_sha256": "ac881cf063031fb921e3557ae798acceb2a36e9fdeb9c3176c9ac2829bbb50b6",
+      "incident_sha256": "040be7c4c3d526c589f212a33f0378b58e0697b91d22cb42ca09a395b34a0caa",
+      "reason": "Forward source_date without inventing timestamps"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "buildEvidenceIndex",
+      "production_sha256": "0ddf677378bdae33f9c6343339757ffb078f04c9aae48d9fd34f1dfa379b82d2",
+      "incident_sha256": "97db848e51ad422b8b131dec43ddb47f8437da46700feb14e46cb297c500df5a",
+      "reason": "Retain source date in evidence reference; missing sector date is not evidence"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "fetchSectorRotationForDate",
+      "production_sha256": "a42ed5d635675ea5f30bcb6dbfa4a2e2e0caf7c0b37cb3845859aff80a3931fa",
+      "incident_sha256": "bcc6a0da39d01a1574cefb44f1053b835cc5cc9aa891bcba72c7fe8833d6ef42",
+      "reason": "Read existing score_date column and preserve it"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "fetchMarketData",
+      "production_sha256": "f196e0f7a3582dd92508ce606743eafa894c5fa1aa632f343739e9263f8991dc",
+      "incident_sha256": "6a1a863c8bd61cd316e8c65114b680dbef82a1fa350bd208fc9d41924a229cf9",
+      "reason": "Reject future rows before latest-row selection"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/research-master-v2.ts",
+      "name": "ResearchMasterQuality",
+      "production_sha256": "f4bc2d54618a9654fc561253dc7c0bad469e0f1a4fa6fd1fd431998d0c933e7f",
+      "incident_sha256": "3a2b3948791bf21ebab1a8f9088683d3be64b8a316438ef43faf1bdf3dffb2f9",
+      "reason": "Add auditable claim numerator/denominator and source ledger"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/market-freshness.ts",
+      "name": "isMarketIndicatorStale",
+      "production_sha256": "637bbcb4339964d8bba8b387ab24cc3a2ebe01701f3c4a983154774900994859",
+      "incident_sha256": "151a070e1d08a689942d6999079bc11f554194836e8e89da5e598691209f1769",
+      "reason": "Reject future provider timestamps"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/market-data-evidence.ts",
+      "name": "normalizeMarketDataRows",
+      "production_sha256": "57759f523711673e023ed00897c33fec8e4034b3d2000f42ec18029da42c9dc4",
+      "incident_sha256": "0e23f0ad3399ed2ed63d8f3f35d2db78a0ba5e87ad47769c731991f44e13d803",
+      "reason": "Reject null/invalid raw numeric and future capture"
+    },
+    {
+      "path": "supabase/functions/_shared/premium-evidence.ts",
+      "name": "normalizePremiumMarketEvidence",
+      "production_sha256": "bbdd499279b66e4f456afcb43486b3d86a13a7ec629d1b80f7ac07253c1e24da",
+      "incident_sha256": "44638fd8f847080f22299301646dc67a91f2b0af3660686fd514114aa1fe60fb",
+      "reason": "Preserve valid latest completed US cash session; reject missing raw fields"
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "name": "VERSION",
+      "production_sha256": "7036f591e9e2818ad42f0a888dbb303fe6cc81684d26cab0ed325eb78260a80e",
+      "incident_sha256": "3e6bdc778fd7b28e1f88c6370501647596671bdbf19c54c198fca70f923ea66e",
+      "reason": "Incident contract version identifier only"
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "name": "DeliveryState",
+      "production_sha256": "88beae04190ec5051b6d372da20a36256601af01382e7732e6163a334af580ce",
+      "incident_sha256": "6b2bd31eb391acce768c171ed47cac8f7fed122c4ea631593d8efaad589bd04a",
+      "reason": "Independent public market report eligibility"
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "name": "loadDeliveryState",
+      "production_sha256": "9271dcebe511028f6a66ba0b43447e938f8fcbccc4de9f3d2b7fb111b67c9e97",
+      "incident_sha256": "3713c4d73736343bd4972eadc69550a45bf75d5b7bf90319ecf3dd2d888aa27a",
+      "reason": "Public quality and same revision instead of paid-note depth"
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "name": "DailyDeliveryRecoveryInput",
+      "production_sha256": "3c6c75d20d1b40f5b4af07188719b99289d72e21623da0c3a58aeeaeba9c50b4",
+      "incident_sha256": "4d7d465f47b3ac22447ba23e588faeb2364e73c6307cd7ba6a70b7f961f35c12",
+      "reason": "Add independent public report eligibility"
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "name": "DailyDeliveryRecoveryPlan",
+      "production_sha256": "a578f1040bc2d9a927997737bf999bc66d424244330a5b53d2ff6f34e91fc6e5",
+      "incident_sha256": "b6623dff27d56f9c36bbd4961e3d88bb69c0ddec6b7a4ad6cd9b91064468ce35",
+      "reason": "Explicit non-retryable quality-block state"
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "name": "DailyDeliveryCompletionInput",
+      "production_sha256": "383a75e3fd9f9c3353ed2af697776f8782984f59e5ab9292922cbcdba8b13183",
+      "incident_sha256": "e998e857074442b8b6f56929738bb6e80c431f8843a427bcfb42a32b5b77516e",
+      "reason": "Add independent public report eligibility"
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "name": "resolveDailyDeliveryCompletion",
+      "production_sha256": "7cdb31cb436b7e3ce99823aedf0397c06853ceeb080a64a850e11cc97e24aa17",
+      "incident_sha256": "3cab4aa27078cc9ec548f19f0c89e83d9fe8d9174c9a022dab907730e3209193",
+      "reason": "Quality-approved public report can complete without paid-note eligibility"
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "name": "buildDailyDeliveryRecoveryPlan",
+      "production_sha256": "a40c1d0e7c417e03fe8623853494cf155b1e5ce262faefda223e5df1600fd19b",
+      "incident_sha256": "da719e6fe8cfc3f5f745da1b2830c7aa170d1105eb15f6ac021c1c760137dbd7",
+      "reason": "No unchanged-evidence LLM retries; keep bounded transient recovery"
+    }
+  ]
+}

@@ -287,9 +287,10 @@ test('authenticated recovery can force report regeneration after a code-only fix
 });
 
 test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
-  const hardGate = lineDailyPush.indexOf("reason: 'PREMIUM_CONTENT_NOT_ELIGIBLE'");
+  const hardGate = lineDailyPush.indexOf("reason: 'MARKET_REPORT_NOT_ELIGIBLE'");
   const subscriberDelivery = lineDailyPush.indexOf('deliverOutboxMessage({', hardGate);
-  assert.ok(hardGate >= 0, 'LINE must expose a hard premium content gate');
+  assert.ok(hardGate >= 0, 'LINE must expose the independent hard public Research/Evidence/Editorial gate');
+  assert.match(lineDailyPush, /evaluateMarketReportGate/);
   assert.ok(subscriberDelivery > hardGate, 'subscriber delivery must happen only after the hard gate');
   assert.match(lineDailyPush, /snapshotStatus === 'READY'/);
   assert.match(lineDailyPush, /snapshotScore >= 90/);
@@ -417,8 +418,11 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(runtimeDeployWorkflow, /db push --linked/);
   assert.ok(runtimeDeployWorkflow.indexOf('db push --linked') < runtimeDeployWorkflow.indexOf('functions deploy daily-delivery-orchestrator'));
   assert.match(opsHealthCheck, /evaluatePremiumContentGate/);
-  assert.match(opsHealthCheck, /intraday_validation\)\.length < 3/);
-  assert.match(opsHealthCheck, /invalidation_rules\)\.length < 2/);
+  assert.match(opsHealthCheck, /evaluateMarketReportGate/);
+  assert.match(opsHealthCheck, /premium_gate_independent: true/);
+  assert.match(opsHealthCheck, /canonical_research_evidence_editorial_gate/);
+  assert.match(opsHealthCheck, /intraday_step_count: asArray\(note\.intraday_validation\)\.length/);
+  assert.match(opsHealthCheck, /invalidation_rule_count: asArray\(note\.invalidation_rules\)\.length/);
   assert.match(opsHealthCheck, /verifiedCatalystCount < 1/);
   assert.match(opsHealthCheck, /verified_market_count/);
   assert.match(runtimeCheckpointWorkflow, /MANUAL_CHECKPOINT: \${\{ inputs\.checkpoint \}\}/);

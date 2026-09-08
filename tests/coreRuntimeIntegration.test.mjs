@@ -36,6 +36,26 @@ test('recovered canonical member recommendation survives the actual Opportunitie
 const generator = read('../supabase/functions/generate-daily-report-v7/index.ts');
 const orchestrator = read('../supabase/functions/daily-delivery-orchestrator/index.ts');
 
+test('server payload rejects future snapshot cutoffs and impossible future checkpoint completion',()=>{
+  const source=read('../supabase/functions/get-report-payload/index.ts');
+  const deps={asObject:value=>value&&typeof value==='object'?value:{},toStringValue:value=>typeof value==='string'?value:''};
+  const observable=isolatedFunction(source,'observableTradingDayState',deps);
+  const now=Date.parse('2026-09-08T02:00:00Z');
+  const original={trading_date:'2026-09-08',checkpoint_status:{
+    '0900':{status:'SUCCEEDED',updated_at:'2026-09-08T01:00:10Z',metadata:{core_batch_complete:true}},
+    '1300':{status:'SUCCEEDED',updated_at:'2026-09-08T05:00:10Z',metadata:{core_batch_complete:true}},
+  }};
+  const result=observable(original,now);
+  assert.equal(result.checkpoint_status['0900'].status,'SUCCEEDED');
+  assert.equal(result.checkpoint_status['1300'].status,'INSUFFICIENT_DATA');
+  assert.equal(result.checkpoint_status['1300'].metadata.core_batch_complete,false);
+  assert.equal(original.checkpoint_status['1300'].status,'SUCCEEDED','Do not mutate stored evidence');
+  deps.toIsoTimestamp=isolatedFunction(source,'toIsoTimestamp',deps);
+  const cutoff=isolatedFunction(source,'getDataAsOf',deps);
+  assert.equal(cutoff({data_as_of:'2026-09-01T00:00:00Z'},{marketDataSnapshots:[{captured_at:'2099-09-01T00:00:00Z'}]}),'2026-09-01T00:00:00.000Z');
+  assert.match(source,/\.lte\("captured_at", new Date\(\)\.toISOString\(\)\)/);
+});
+
 test('atomic reader requires same report/decision/member revision; legacy rows remain compatible', () => {
   const aligned = isolatedFunction(read('../supabase/functions/get-report-payload/index.ts'), 'isPublishedReadAligned', {
     asObject: value => value || {}, toStringValue: value => typeof value === 'string' ? value : '',
@@ -112,7 +132,8 @@ test('actual recovery action dispatcher suppresses LINE, forwards exact date, pr
   calls.length = 0;
   await execute({ ...args, actions: ['deliver_incident'], suppressNotifications: false });
   assert.equal(calls[0].name, 'line-daily-push'); // Normal scheduled behavior preserved.
-  assert.match(orchestrator, /if \(!suppressNotifications && state.premium_eligible/);
+  assert.match(orchestrator, /if \(!suppressNotifications && state.report_eligible/);
+  assert.match(orchestrator, /!actionResults.deliver_premium/,'one delivery attempt per orchestrator invocation');
   assert.match(orchestrator, /delivery_status: suppressNotifications \? 'SUPPRESSED'/);
 });
 

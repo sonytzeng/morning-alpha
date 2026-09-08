@@ -1,12 +1,89 @@
 import {
   assembleResearchMasterV2,
+  admitResearchRecommendations,
   type ResearchMasterV2AssemblerInput,
   validateResearchMasterV2,
 } from "./research-master-v2.ts";
+import { evaluateMarketReportGate } from '../_shared/market-report-gate.ts';
+import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
+
+Deno.test('same evidence identity can support different assertions without merging claims', () => {
+  const fixture = completeFixture();
+  fixture.evidenceIndex[0].source_fingerprint = 'one-source';
+  fixture.evidenceIndex.push({ ...fixture.evidenceIndex[0], evidence_id: 'MD_OTHER', summary: 'SOX 成交量增加。' });
+  fixture.marketThesis!.supporting_evidence = [{ evidence_id: 'MD001' }, { evidence_id: 'MD_OTHER' }];
+  const master = assembleResearchMasterV2(fixture);
+  assert(master.sections.supporting_evidence.length === 2, 'distinct claims cannot be collapsed by shared source');
+});
+
+Deno.test('same claim from independent sources merges while preserving corroboration refs', () => {
+  const fixture = completeFixture();
+  fixture.evidenceIndex[0].source_fingerprint = 'source-a';
+  fixture.evidenceIndex.push({ ...fixture.evidenceIndex[0], evidence_id: 'MD_CORROBORATION', source: 'source-b', source_fingerprint: 'source-b' });
+  fixture.marketThesis!.supporting_evidence = [{ evidence_id: 'MD001' }, { evidence_id: 'MD_CORROBORATION' }];
+  const master = assembleResearchMasterV2(fixture);
+  assert(master.sections.supporting_evidence.length === 1, 'corroboration is one assertion');
+  assert(master.sections.supporting_evidence[0].evidence_refs.length === 2, 'both source references retained');
+});
+
+Deno.test('coverage is traceable and cannot count future criteria or unresolved evidence as supported', () => {
+  const input = completeFixture();
+  const master = assembleResearchMasterV2(input);
+  master.sections.supporting_evidence[0].evidence_refs = ['DOES_NOT_EXIST'];
+  const quality = validateResearchMasterV2(master, input).quality;
+  const audit = quality.coverage_audit!;
+  assert(audit.numerator < audit.denominator && quality.evidence_coverage < 100, 'unknown reference must reduce coverage');
+  assert(audit.denominator === audit.claims.length, 'one denominator per audited assertion');
+  assert(audit.numerator === audit.claims.filter((row) => row.supported).length, 'numerator must be reproducible');
+  assert(master.sections.failure_scenario.triggers.every((row) => audit.excluded_conditional_criteria.includes(row.claim_id)), 'future invalidation is not evidence');
+});
+
+Deno.test('stock admission preserves genuine company evidence and audits unsupported candidates', () => {
+  const input = completeFixture();
+  input.evidenceIndex.push({ evidence_id: 'COMPANY_NEWS', evidence_type: 'market_news', title: '2330 台積電 raises revenue outlook', summary: '2330 company revenue', source: 'Company IR', freshness: 'fresh', published_at: input.generatedAt });
+  const candidates = input.candidateUniverse.candidates as Record<string, unknown>[];
+  candidates[0].related_evidence = [{ evidence_id: 'COMPANY_NEWS' }];
+  input.legacy.today_beneficiary_stocks_v10 = [
+    { symbol: '2330', name: '台積電', entry_condition: '放量確認', validation_signal: '量價同步', invalidation_condition: '反向失效' },
+    { symbol: '3034', name: '聯詠', entry_condition: '放量確認', validation_signal: '量價同步', invalidation_condition: '反向失效' },
+  ];
+  const result = admitResearchRecommendations(input);
+  assert(result.accepted.length === 1 && result.accepted[0].symbol === '2330', 'supported stock must remain');
+  assert(result.rejected.length === 1 && result.rejected[0].symbol === '3034', 'unsupported company must be audited, not recommended');
+  assert(result.accepted[0].confirmation_condition === '量價同步', 'confirmation alias preserves source condition');
+  assert(result.accepted[0].stop_logic === '反向失效', 'stop condition is not invented');
+  assert(result.accepted[0].confidence === null, 'missing confidence must not become a fake score');
+  assert(result.accepted[0].data_timestamp === input.generatedAt, 'actual source timestamp retained');
+  input.evidenceIndex.find((row) => row.evidence_id === 'COMPANY_NEWS')!.freshness = 'stale';
+  assert(admitResearchRecommendations(input).accepted.length === 0, 'stale company evidence cannot qualify');
+});
+
+Deno.test('valid no-recommendation market report is independent of Premium note quality', () => {
+  const input = completeFixture(), ai = input.legacy;
+  const sentence = 'SOX 上漲帶動半導體風險偏好，09:30 先確認台積電與 TAIEX 是否同向；未確認前不追價，若權值轉弱就撤回偏多假設。';
+  ai.today_quote = sentence; ai.v8_daily_sentence = { sentence };
+  ai.free_summary = { one_sentence: sentence };
+  (ai.member_research_note_v2 as Record<string, unknown>).today_core_thesis = sentence;
+  ai.today_beneficiary_stocks_v10 = []; ai.v10_beneficiary_enabled = true;
+  ai.v10_data_quality_status = 'insufficient_positive_evidence';
+  ai.data_quality = 'complete'; ai.missing_sources = []; ai.member_value_score = 0;
+  ai.content_evidence_quality = { contract_version: 'PREMIUM_EVIDENCE_V1', verified_market_count: 3, verified_news_count: 1, blank_market_change_count: 0, all_news_traceable: true };
+  const master = assembleResearchMasterV2(input); master.quality = validateResearchMasterV2(master, input).quality;
+  const selectedEvidence = [...input.evidenceIndex].filter(item=>item.evidence_id&&item.evidence_type!=='previous_validation').sort((a,b)=>(Number(b.importance)||0)-(Number(a.importance)||0)).slice(0,5);
+  assert(JSON.stringify(master.sections.why_today_matters.evidence_refs)===JSON.stringify(selectedEvidence.map(item=>item.evidence_id)), 'every source used in the no-recommendation narrative must be cited, not replaced by unrelated thesis refs');
+  ai.research_master_v2 = master;
+  const gate = evaluateMarketReportGate(ai, input.reportDate);
+  assert(gate.eligible, JSON.stringify(gate));
+  assert(gate.status === 'READY_NO_RECOMMENDATION', 'no stocks is not STOP or FAILED');
+  assert(!evaluatePremiumContentGate(ai, 1).eligible, 'do not relax Premium quality');
+  assert(Boolean(gate.wait_reason && gate.watch_condition && gate.next_recheck_time), 'abstention must have actionable context');
+  ai.data_quality = 'insufficient'; ai.missing_sources = ['market_data'];
+  assert(!evaluateMarketReportGate(ai, input.reportDate).eligible, 'missing market data cannot be disguised as no recommendation');
+});
 
 Deno.test('Sep 7: distinct sector subjects must survive identical direction summaries', () => {
   const fixture = completeFixture();
@@ -87,6 +164,7 @@ function completeFixture(): ResearchMasterV2AssemblerInput {
         importance: 90,
         freshness: "fresh",
         raw_reference: "SOX",
+        published_at: "2026-07-13T20:00:00Z",
       },
       {
         evidence_id: "NEWS001",
@@ -97,6 +175,7 @@ function completeFixture(): ResearchMasterV2AssemblerInput {
         importance: 70,
         freshness: "fresh",
         raw_reference: "AI Server",
+        published_at: "2026-07-13T22:00:00Z",
       },
       {
         evidence_id: "SEC001",
@@ -107,6 +186,7 @@ function completeFixture(): ResearchMasterV2AssemblerInput {
         importance: 75,
         freshness: "previous_trading_day",
         raw_reference: "半導體",
+        published_at: "2026-07-13",
       },
       {
         evidence_id: "MD002",
@@ -117,6 +197,7 @@ function completeFixture(): ResearchMasterV2AssemblerInput {
         importance: 85,
         freshness: "fresh",
         raw_reference: "VIX",
+        published_at: "2026-07-13T20:00:00Z",
       },
     ],
     candidateUniverse: {

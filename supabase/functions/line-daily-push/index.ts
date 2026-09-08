@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
+import { evaluateMarketReportGate } from '../_shared/market-report-gate.ts';
 import { buildDeliveryIncidentLineMessage } from '../_shared/line-incident-message.ts';
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 import type { RuntimeDatabase } from '../_shared/runtime-database-contract.ts';
@@ -288,21 +289,22 @@ Deno.serve(async (req) => {
   const leadingDate = deliverySentence.match(/^(\d{4}-\d{2}-\d{2})(?:未|[，,。；;：:\s])/i)?.[1] || '';
   const sentenceDateEligible = !leadingDate || leadingDate === reportDate;
 
-  if (!premiumGate.eligible || !snapshotEligible || !sentenceDateEligible) {
+  const marketGate = evaluateMarketReportGate(ai, reportDate);
+  if (!marketGate.eligible || !snapshotEligible || !sentenceDateEligible) {
     const reasonCodes = Array.from(new Set([
-      ...premiumGate.reason_codes,
+      ...marketGate.reason_codes,
       ...(!decisionSnapshotId ? ['decision_snapshot_missing'] : []),
       ...(decisionSnapshot && snapshotStatus !== 'READY' ? ['decision_snapshot_not_ready'] : []),
       ...(decisionSnapshot && (!Number.isFinite(snapshotScore) || snapshotScore < 90) ? ['decision_snapshot_score_below_90'] : []),
       ...(decisionSnapshot && !['recommendations', 'no_trade'].includes(snapshotMode) ? ['decision_snapshot_mode_blocked'] : []),
       ...(!sentenceDateEligible ? ['daily_sentence_date_mismatch'] : []),
     ]));
-    console.warn('[LINE-PUSH-V4] Premium content hard gate blocked delivery:', reasonCodes);
+    console.warn('[LINE-PUSH-V4] Market report hard gate blocked delivery:', reasonCodes);
     return new Response(
       JSON.stringify({
         success: false,
         sent: false,
-        reason: 'PREMIUM_CONTENT_NOT_ELIGIBLE',
+        reason: 'MARKET_REPORT_NOT_ELIGIBLE',
         report_date: reportDate,
         content_score: premiumGate.content_score,
         decision_snapshot_score: Number.isFinite(snapshotScore) ? snapshotScore : null,

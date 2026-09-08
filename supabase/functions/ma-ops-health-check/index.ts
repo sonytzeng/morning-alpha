@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient as SupabaseClientType } from "https://esm.sh/@supabase/supabase-js@2";
 import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
+import { evaluateMarketReportGate } from "../_shared/market-report-gate.ts";
 
-const VERSION = "MA_OPS_DELIVERY_GUARANTEE_V3";
+const VERSION = "MA_OPS_MARKET_DELIVERY_V4";
 const QUERY_TIMEOUT_MS = 3000;
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -59,6 +60,8 @@ interface Database {
       line_delivery_outbox: GenericTable;
       ma_ops_runs: GenericTable;
       ma_ops_checks: GenericTable;
+      production_acceptance_results: GenericTable;
+      pipeline_runs: GenericTable;
     };
     Views: Record<string, never>;
     Functions: {
@@ -370,6 +373,7 @@ const handlers: Record<CheckName, CheckHandler> = {
     const v8DailySentence = asObject(ai.v8_daily_sentence);
     const dailySentence = report.today_quote || ai.today_quote || v8DailySentence.sentence;
     const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
+    const reportGate = evaluateMarketReportGate(ai, targetDate);
     const missing = [
       !nonEmptyString(report.market_bias) ? "market_bias" : null,
       report.confidence_score === null || report.confidence_score === undefined || !Number.isFinite(Number(report.confidence_score)) ? "confidence_score" : null,
@@ -379,11 +383,9 @@ const handlers: Record<CheckName, CheckHandler> = {
       !nonEmptyString(ai.market_status) ? "ai_strategy_json.market_status" : null,
       isTradingDay && !isActionableResearchSentence(dailySentence) ? "today_quote.actionable" : null,
       isTradingDay && verifiedCatalystCount < 1 ? "verified_catalyst_evidence" : null,
-      isTradingDay && asArray(note.overnight_chain).length < 1 ? "member_research_note_v2.overnight_chain" : null,
-      isTradingDay && asArray(note.intraday_validation).length < 3 ? "member_research_note_v2.intraday_validation" : null,
-      isTradingDay && asArray(note.invalidation_rules).length < 2 ? "member_research_note_v2.invalidation_rules" : null,
-      isTradingDay && !isActionableResearchSentence(note.subscriber_value_sentence) ? "member_research_note_v2.subscriber_value_sentence" : null,
-      isTradingDay && !premiumGate.eligible ? "premium_content_gate" : null,
+      // Paid-note depth remains diagnostic; it cannot erase a valid public
+      // market report. The canonical Research/Evidence/Editorial gate is strict.
+      isTradingDay && !reportGate.eligible ? "market_report_gate" : null,
       isTradingDay && !snapshot ? "decision_snapshot" : null,
       isTradingDay && snapshot && String(snapshot.status || "") !== "READY" ? "decision_snapshot.status" : null,
       isTradingDay && snapshot && (!Number.isFinite(Number(snapshot.content_score)) || Number(snapshot.content_score) < 90) ? "decision_snapshot.content_score" : null,
@@ -391,7 +393,7 @@ const handlers: Record<CheckName, CheckHandler> = {
     ].filter((item): item is string => item !== null);
     return makeCheck(
       "daily-report-contract", "daily-report", missing.length === 0 ? "passed" : "failed", missing.length === 0 ? "info" : "critical",
-      { required_fields: ["market_bias", "confidence_score", "ai_strategy_json", "report_mode", "is_trading_day", "market_status", "actionable_daily_sentence", "verified_catalyst_evidence", "member_research_structure", "premium_content_gate", "ready_90_point_decision_snapshot"] },
+      { required_fields: ["market_bias", "confidence_score", "ai_strategy_json", "report_mode", "is_trading_day", "market_status", "actionable_daily_sentence", "verified_catalyst_evidence", "canonical_research_evidence_editorial_gate", "ready_90_point_decision_snapshot"] },
       {
         missing_fields: missing,
         report_mode: report.report_mode || ai.report_mode || null,
@@ -408,6 +410,12 @@ const handlers: Record<CheckName, CheckHandler> = {
         premium_content_score: premiumGate.content_score,
         premium_decision_mode: premiumGate.decision_mode,
         premium_reason_codes: premiumGate.reason_codes,
+        market_report_status: reportGate.status,
+        market_report_reason_codes: reportGate.reason_codes,
+        recommendation_status: reportGate.recommendation_status,
+        premium_gate_independent: true,
+        current_revision: snapshot?.id || null,
+        first_failure_stage: !isTradingDay || missing.length === 0 ? null : !reportGate.eligible ? "RESEARCH_EVIDENCE_EDITORIAL" : "PUBLICATION",
         decision_snapshot_id: snapshot?.id || null,
         decision_snapshot_status: snapshot?.status || null,
         decision_snapshot_score: snapshot?.content_score ?? null,
@@ -525,17 +533,19 @@ const handlers: Record<CheckName, CheckHandler> = {
     const rowCount = Object.values(counts).reduce((total, count) => total + count, 0);
     const failed = counts.FAILED || 0;
     const pending = (counts.PENDING || 0) + (counts.PROCESSING || 0);
-    const status: CheckStatus = failed > 0 ? "failed" : pending > 0 || rowCount === 0 ? "warning" : "passed";
+    // A successfully delivered incident is not a successfully delivered report.
+    const incidentOnly = sentIncident > 0 && sentPremium === 0;
+    const status: CheckStatus = failed > 0 || incidentOnly ? "failed" : pending > 0 || rowCount === 0 ? "warning" : "passed";
     return makeCheck(
       "line-push-delivery",
       "line-push",
       status,
       failed > 0 ? "critical" : status === "warning" ? "warning" : "info",
-      { durable_outbox: true, failed_count: 0, pending_count: 0 },
+      { durable_outbox: true, failed_count: 0, pending_count: 0, daily_report_required: true },
       { row_count: rowCount, status_counts: counts, sent_premium_count: sentPremium, sent_incident_count: sentIncident },
       started,
-      failed > 0 ? "LINE_DELIVERY_FAILED" : pending > 0 ? "LINE_DELIVERY_PENDING" : rowCount === 0 ? "LINE_DELIVERY_NOT_STARTED" : null,
-      failed > 0 ? "One or more LINE deliveries exhausted their retry budget" : pending > 0 ? "LINE delivery retry is pending" : rowCount === 0 ? "No LINE delivery has been enqueued for target_date" : null,
+      failed > 0 ? "LINE_DELIVERY_FAILED" : incidentOnly ? "NORMAL_REPORT_NOT_DELIVERED" : pending > 0 ? "LINE_DELIVERY_PENDING" : rowCount === 0 ? "LINE_DELIVERY_NOT_STARTED" : null,
+      failed > 0 ? "One or more LINE deliveries exhausted their retry budget" : incidentOnly ? "Incident notification delivered; normal market report was not delivered" : pending > 0 ? "LINE delivery retry is pending" : rowCount === 0 ? "No LINE delivery has been enqueued for target_date" : null,
     );
   },
 };
@@ -581,6 +591,57 @@ function responseBody(request: HealthRequest, runId: string | null, checks: Chec
     recovery_attempted: false,
     generated_at: generatedAt,
   };
+}
+
+/** Internal, read-only dashboard. Unchecked/stale stages remain WAITING;
+ * a historical PASS is never relabelled as this revision's success. */
+async function attachDailyHealthTrace(supabase: SupabaseClient, request: HealthRequest, response: JsonObject): Promise<JsonObject> {
+  const [acceptance, runs] = await Promise.all([
+    withTimeout(supabase.from("production_acceptance_results").select("id,verdict,evidence,blocking_checks,evaluated_at").eq("business_date", request.target_date).order("evaluated_at", { ascending: false }).limit(1).maybeSingle()),
+    withTimeout(supabase.from("pipeline_runs").select("status,attempt,started_at,completed_at,reason_codes").eq("trading_date", request.target_date).order("started_at", { ascending: false }).limit(30)),
+  ]);
+  if (acceptance.error || runs.error) return { ...response, daily_health: { trading_date: request.target_date, status: "FAIL", first_failure_stage: "HEALTH_QUERY", error_code: "DATABASE_QUERY_FAILED" } };
+  const checks = asArray(response.checks).map(asObject);
+  const contract = asObject(checks.find(check => check.check_name === "daily-report-contract")?.actual_state);
+  const currentRevision = contract.current_revision || null;
+  const record = asObject(acceptance.data);
+  const evidence = asObject(record.evidence);
+  const aligned = Boolean(currentRevision && currentRevision === evidence.canonical_revision_id);
+  const stages: Record<string, string> = {};
+  for (const [stage, key] of [
+    ["Market Data", "market_data_pass"], ["Research", "research_pass"], ["Editorial", "editorial_pass"],
+    ["Semantic", "semantic_pass"], ["Decision", "report_pass"], ["Publication", "publication_pass"],
+    ["Delivery", "delivery_pass"], ["Checkpoint", "checkpoint_pass"],
+  ]) stages[stage] = aligned ? evidence[key] === true ? "PASS" : evidence[key] === false ? "BLOCKED" : "WAITING" : "WAITING";
+  stages.Frontend = "WAITING"; // Requires independent real-origin Browser/HTTP evidence.
+  stages.Closing = aligned ? String(evidence.closing_status || "WAITING") : "WAITING";
+  stages.Learning = aligned ? String(evidence.learning_status || "WAITING") : "WAITING";
+  stages.Acceptance = aligned ? record.verdict === "NOT_DUE" ? "WAITING" : String(record.verdict || "WAITING") : "WAITING";
+  if (contract.first_failure_stage) stages.Research = "BLOCKED";
+  const stageByCheck: Record<string, string> = {
+    "market-data-freshness": "Market Data", "daily-report-exists": "Research",
+    "daily-report-date-consistency": "Publication", "daily-report-contract": "Research",
+    "opening-radar-exists": "Checkpoint", "opening-radar-freshness": "Checkpoint",
+    "war-room-contract": "Checkpoint", "closing-verification-status": "Closing",
+    "line-push-delivery": "Delivery",
+  };
+  const liveFailure = checks.find(check => check.status === "failed");
+  for (const check of checks) if (check.status === "failed" && stageByCheck[String(check.check_name)]) {
+    stages[stageByCheck[String(check.check_name)]] = "FAIL";
+  }
+  const history = asArray(runs.data).map(asObject);
+  const failure = history.find(run => ["FAILED", "DEGRADED"].includes(String(run.status)));
+  const firstFailure = Object.entries(stages).find(([, status]) => ["BLOCKED", "FAIL"].includes(status));
+  return { ...response, daily_health: {
+    trading_date: request.target_date, stages, current_revision: currentRevision,
+    first_failure_stage: firstFailure?.[0] || liveFailure?.check_name || null,
+    error_code: firstFailure || liveFailure ? liveFailure?.error_code || asArray(record.blocking_checks)[0] || asArray(contract.market_report_reason_codes)[0] || "STAGE_BLOCKED" : null,
+    last_success_at: history.find(run => run.status === "SUCCEEDED")?.completed_at || null,
+    last_failure_at: failure?.completed_at || failure?.started_at || null,
+    retry_count: typeof history[0]?.attempt === "number" ? Math.max(0, history[0].attempt - 1) : null,
+    acceptance_record_id: record.id || null, acceptance_revision_aligned: aligned,
+    evidence_scope: "SERVER_READ_ONLY_NOT_EXTERNAL_DELIVERY_ATTESTATION",
+  } };
 }
 
 async function findIdempotentRun(supabase: SupabaseClient, key: string): Promise<IdempotentRunRow | null> {
@@ -739,7 +800,8 @@ Deno.serve(async (req: Request) => {
     const generatedAt = new Date().toISOString();
     if (request.dry_run) {
       const checks = await Promise.all(selected.map((name) => runCheck(name, { supabase, targetDate: request.target_date })));
-      return jsonResponse(responseBody(request, null, checks, generatedAt));
+      const response = responseBody(request, null, checks, generatedAt);
+      return jsonResponse(request.check_type === "full" ? await attachDailyHealthTrace(supabase, request, response) : response);
     }
 
     const initial = await supabase.from("ma_ops_runs").insert({
@@ -770,7 +832,8 @@ Deno.serve(async (req: Request) => {
     try {
       const checks = await Promise.all(selected.map((name) => runCheck(name, { supabase, targetDate: request.target_date })));
       const state = deriveRunState(checks);
-      const response = responseBody(request, runId, checks, generatedAt);
+      const baseResponse = responseBody(request, runId, checks, generatedAt);
+      const response = request.check_type === "full" ? await attachDailyHealthTrace(supabase, request, baseResponse) : baseResponse;
       persistenceStarted = true;
       await persistAuditResult(supabase, runId, checks, response, state);
       return jsonResponse(response);

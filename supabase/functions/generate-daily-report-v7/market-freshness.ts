@@ -62,7 +62,7 @@ export function isMarketIndicatorStale(
   nowMs = Date.now(),
 ): boolean {
   const timestamp = Date.parse(updatedAt);
-  if (!Number.isFinite(timestamp)) return true;
+  if (!Number.isFinite(timestamp) || timestamp > nowMs) return true;
   if (dates) {
     const taiwan = isTaiwanMarketSymbol(symbol);
     const expected = taiwan ? dates.twCoreDate : dates.usGlobalDate;

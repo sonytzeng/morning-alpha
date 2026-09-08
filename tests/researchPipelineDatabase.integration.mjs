@@ -160,6 +160,8 @@ test('isolated DB: append-only full-chain acceptance, same revision, incident vs
   const checkpoints=Object.fromEntries(Object.entries(checkpointIds).map(([k,id])=>[k,{
     status:'SUCCEEDED',updated_at:historical+'T14:30:00+08:00',correlation_id:id,metadata:{core_batch_complete:true},
   }]));
+  const premarketCorrelation=randomUUID();
+  checkpoints.premarket={status:'SUCCEEDED',correlation_id:premarketCorrelation,metadata:{core_batch_complete:true}};
   const closing={status:'completed',data_status:'complete',report_date:historical,opening_decision_snapshot_id:snapshot,verified_at:historical+'T14:31:00+08:00',
     ...Object.fromEntries(['actual_taiex_close','actual_2330_close','actual_txf_close'].map(key=>[key,{value:100,change_percent:1,source:'isolated',captured_at:historical+'T13:30:00+08:00'}]))};
   await sql(`update public.reports set ai_strategy_json=ai_strategy_json||jsonb_build_object('closing_verification_v2',${json(closing)});
@@ -171,10 +173,14 @@ test('isolated DB: append-only full-chain acceptance, same revision, incident vs
   for(const [checkpoint,id] of Object.entries(checkpointIds)){
     for(const symbol of ['TAIEX','2330','TXF']){
     await sql(`insert into public.market_checkpoint_snapshots(checkpoint,trading_date,captured_at,market_session,symbol,value,change_percent,source,source_timestamp,correlation_id,snapshot_version)
-      values('${checkpoint}','${historical}','${historical}T${checkpoint.slice(0,2)}:${checkpoint.slice(2)}:00+08:00','intraday','${symbol}',20000,1,'isolated','${historical}T09:00:00+08:00','${id}',${Number(checkpoint)*10+['TAIEX','2330','TXF'].indexOf(symbol)});`);
+      values('${checkpoint}','${historical}','${historical}T${checkpoint.slice(0,2)}:${checkpoint.slice(2)}:00+08:00','${['1410','1430'].includes(checkpoint)?'close':'intraday'}','${symbol}',20000,1,'isolated','${historical}T09:00:00+08:00','${id}',${Number(checkpoint)*10+['TAIEX','2330','TXF'].indexOf(symbol)});`);
     }
   }
   const prediction=randomUUID();
+  for(const [index,symbol] of ['TAIEX','2330','TXF','NVDA','TSM','SPX'].entries()){
+    await sql(`insert into public.market_checkpoint_snapshots(checkpoint,trading_date,captured_at,market_session,symbol,value,change_percent,source,source_timestamp,correlation_id,snapshot_version,raw)
+      values('PREMARKET','${historical}','${historical}T07:00:00+08:00','premarket','${symbol}',100,1,'isolated','${historical}T05:00:00+08:00','${premarketCorrelation}',${100+index},'{"contract":"FETCH_CHECKPOINT_EVIDENCE_V1","fixture":true}');`);
+  }
   await sql(`insert into public.learning_runs(run_date,run_type,idempotency_key,engine_version,status,completed_at,failed_count,errors) values('${historical}','daily','isolated-learning','isolated','succeeded',now(),0,'[]');
     insert into public.learning_predictions(id,decision_snapshot_id,report_id,report_date,prediction_at,analysis_window,prediction_scope,symbol,thesis,direction,expected_horizon,data_quality_status,idempotency_key)
     values('${prediction}',${quote(snapshot)},${quote(report)},'${historical}','${historical}T07:00:00+08:00','PREMARKET','market','TAIEX','isolated fixture','neutral','close','complete','isolated-prediction');

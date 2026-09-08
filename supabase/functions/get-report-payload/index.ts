@@ -6,6 +6,7 @@ import {
 } from "../_shared/bounded-json.ts";
 import { resolveMarketStatus } from "../_shared/market-status.ts";
 import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
+import { evaluateMarketReportGate } from "../_shared/market-report-gate.ts";
 import {
   resolveEffectiveMemberAccess,
   type EffectiveMemberAccess,
@@ -395,7 +396,7 @@ function getDataAsOf(ai: Record<string, unknown>, ctx: PayloadContext): string |
     ctx.learningRun?.completed_at,
   ]
     .map(toIsoTimestamp)
-    .filter((value): value is string => value !== null)
+    .filter((value): value is string => value !== null && Date.parse(value) <= Date.now())
     .sort((a, b) => b.localeCompare(a));
 
   return evidenceTimestamps[0] || null;
@@ -562,6 +563,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const ai = getEffectiveAi(report, ctx);
   const importantNews = getImportantNews(report, ai);
   const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
+  const marketGate = evaluateMarketReportGate(ai, getReportDate(report));
   const canonicalQuality = getCanonicalPayloadQuality(ai, ctx);
   const semanticEligible = isCanonicalMemberRevisionEligible(ctx);
   const premiumEligible = premiumGate.eligible && semanticEligible;
@@ -609,6 +611,9 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     v10_warning: toStringValue(ai.v10_warning),
     v10_candidate_count: toNumberValue(ai.v10_candidate_count),
     premium_content_status: premiumEligible ? "eligible" : "blocked",
+    report_status: marketGate.report_status,
+    recommendation_status: marketGate.recommendation_status,
+    market_report_gate: marketGate,
     premium_decision_mode: premiumGate.decision_mode,
     premium_content_reason_codes: premiumReasonCodes,
     recommendation_count: premiumGate.recommendation_count,
@@ -619,8 +624,8 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     content_score_breakdown: premiumGate.content_score_breakdown,
     canonical_decision: canonicalDecision,
     content_publish_gate: {
-      overall_status: premiumEligible ? "eligible" : "blocked",
-      blocking_issues: premiumReasonCodes,
+      overall_status: marketGate.eligible && semanticEligible ? "eligible" : "blocked",
+      blocking_issues: [...marketGate.reason_codes, ...(semanticEligible ? [] : ['CANONICAL_REVISION_NOT_VERIFIED'])],
     },
     important_news: buildPublicNews(importantNews),
     fresh_news_count: importantNews.length,
@@ -805,6 +810,23 @@ function isPublishedReadAligned(report: ReportRow, context: PayloadContext): boo
     && context.memberContentRevision.report_id === report.id);
 }
 
+/** Runtime time is checked on the server. Elapsed time never creates success;
+ * impossible future receipts are withheld without changing immutable DB rows. */
+function observableTradingDayState(value: unknown, now = Date.now()): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const state = asObject(value);
+  const checkpoints = asObject(state.checkpoint_status);
+  return { ...state, checkpoint_status: Object.fromEntries(Object.entries(checkpoints).map(([key, raw]) => {
+    const row = asObject(raw);
+    const time = Date.parse(toStringValue(row.updated_at || row.completed_at) || "");
+    const slot = /^\d{4}$/.test(key) ? Date.parse(`${state.trading_date}T${key.slice(0, 2)}:${key.slice(2)}:00+08:00`) : null;
+    if ((Number.isFinite(time) && time > now) || (slot !== null && Number.isFinite(slot) && slot > now)) {
+      return [key, { ...row, status: "INSUFFICIENT_DATA", metadata: { ...asObject(row.metadata), core_batch_complete: false, error_code: "FUTURE_RUNTIME_EVIDENCE" } }];
+    }
+    return [key, row];
+  })) };
+}
+
 async function fetchPayloadContext(
   serviceClient: ServiceClient,
   reportDate: string,
@@ -825,6 +847,7 @@ async function fetchPayloadContext(
       .from("opening_market_radar")
       .select("*")
       .eq("report_date", reportDate)
+      .lte("captured_at", new Date().toISOString())
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -837,6 +860,7 @@ async function fetchPayloadContext(
       .from("market_data_snapshots")
       .select("symbol,name,market,value,change_percent,captured_at,source,phase,trading_date")
       .eq("trading_date", reportDate)
+      .lte("captured_at", new Date().toISOString())
       .order("captured_at", { ascending: false })
       .limit(50),
     serviceClient
@@ -925,7 +949,7 @@ async function fetchPayloadContext(
     learningRun: learningRunResult.data ? learningRunResult.data as Record<string, unknown> : null,
     learningMetricCorrection: learningMetricCorrectionResult.data ? learningMetricCorrectionResult.data as Record<string, unknown> : null,
     memberContentRevision: memberContentRevisionResult.data ? memberContentRevisionResult.data as Record<string, unknown> : null,
-    tradingDayState: tradingDayStateResult.data ? tradingDayStateResult.data as Record<string, unknown> : null,
+    tradingDayState: observableTradingDayState(tradingDayStateResult.data),
     componentQueryFailures,
   };
 }

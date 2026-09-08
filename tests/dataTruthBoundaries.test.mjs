@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+
+test('future and malformed source timestamps cannot choose the current market date', () => {
+  const now=Date.parse('2026-09-08T01:00:00Z');
+  const rows=['2026-09-16T01:00:00Z','invalid',''].map(captured_at=>({symbol:'TAIEX',value:21000,change_percent:1,captured_at}));
+  const result=normalizeMarketDataRows(rows,now);
+  assert.equal(result.marketData.length,0);
+  assert.equal(result.latestDataTime,null);
+  assert.equal(result.isStale,true);
+  assert.ok(result.invalidNumericSources.includes('TAIEX:invalid_or_future_timestamp'));
+});
 import {
   contentLengthExceedsLimit,
   readBoundedBytes,

@@ -1,6 +1,7 @@
 import type { CanonicalMorningNarrative } from './canonicalNarrative.ts';
 import type { MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { canPresentConfirmedDecision, canPresentRejectedDecision } from './decisionEvidence.ts';
+import { isMarketPublicationReady, recommendationPublication } from './subscriberReportContract.ts';
 
 export type PresentationDecisionState = 'WAIT' | 'ACT' | 'STOP' | 'CLOSED' | 'COMPLETED' | 'INSUFFICIENT_DATA';
 
@@ -188,13 +189,17 @@ function decisionState(input: DecisionPresentationInput): PresentationDecisionSt
   const canonicalAction = text(canonicalDecision.action).toUpperCase();
   const canonicalMode = text(canonicalDecision.decision_mode).toLowerCase();
   const canonicalStatus = text(canonicalDecision.status).toUpperCase();
+  const marketPublished = isMarketPublicationReady(displayState?.rawAI);
 
   // Runtime completion only means that the market checkpoint was observed. It
   // must never promote an evidence-backed no-trade decision into an ACT state.
   if (canonicalAction === 'CLOSED') return 'CLOSED';
   if (canonicalAction === 'WAIT' || canonicalMode === 'no_trade') return 'WAIT';
-  if (['STOP', 'REDUCE'].includes(canonicalAction) || canonicalMode === 'blocked') return 'STOP';
-  if (canonicalStatus && canonicalStatus !== 'READY') return 'INSUFFICIENT_DATA';
+  if (['STOP', 'REDUCE'].includes(canonicalAction)) return 'STOP';
+  if (canonicalMode === 'market_only' || canonicalMode === 'blocked') return marketPublished ? 'WAIT' : 'INSUFFICIENT_DATA';
+  // A failed stock/research-quality gate is not a failed market thesis. Only
+  // the pinned market action or actual runtime failure can stop that thesis.
+  if (!marketPublished && canonicalStatus && canonicalStatus !== 'READY') return 'INSUFFICIENT_DATA';
 
   const status = narrative.decision_lifecycle.decision_status.status;
   if (status === 'Rejected' && canPresentRejectedDecision(narrative.decision_evidence)) return 'STOP';
@@ -237,7 +242,9 @@ export function buildDecisionPresentation(input: DecisionPresentationInput): Dec
     displayState?.nextUpdateTime,
   );
   const score = displayState?.confidenceScore;
-  const opportunities = dedupePresentedOpportunities(input.opportunitySource || []);
+  const stockPublication = recommendationPublication(displayState?.rawAI);
+  const opportunities = stockPublication.explicit && !stockPublication.stocksAllowed
+    ? [] : dedupePresentedOpportunities(input.opportunitySource || []);
   return {
     dateLabel: displayState?.reportDate || displayState?.currentDate || '',
     marketStateLabel: displayState?.market_message || '等待市場狀態',

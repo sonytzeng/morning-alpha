@@ -54,6 +54,90 @@ function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
 }
 
+/** Read committed report pointers; a newer QA row is not a delivery revision. */
+async function fetchPublishedDeliveryEvidence(
+  supabase: SupabaseClient,
+  report: Record<string, unknown>,
+): Promise<{ snapshot: Record<string, unknown> | null; member: Record<string, unknown> | null }> {
+  const record = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const ai = record(report.ai_strategy_json);
+  const revision = typeof ai.revision_id === 'string' && ai.revision_id.trim() ? ai.revision_id : null;
+  const memberRevision = typeof ai.canonical_member_revision_id === 'string' && ai.canonical_member_revision_id.trim() ? ai.canonical_member_revision_id : null;
+  const snapshotQuery = supabase.from('decision_snapshots').select('*')
+    .eq('report_date', String(report.report_date)).eq('report_id', String(report.id));
+  const snapshotResult = await (revision ? snapshotQuery.eq('id', revision)
+    : snapshotQuery.eq('session_type', 'PREMARKET').eq('is_current', true))
+    .order('version', { ascending: false }).limit(1).maybeSingle();
+  if (snapshotResult.error) throw new Error(`SNAPSHOT_STATE_QUERY_FAILED:${snapshotResult.error.message}`);
+  const snapshot = snapshotResult.data ? record(snapshotResult.data) : null;
+  // A partially populated canonical pointer must fail closed, not use the view.
+  if ((revision && !memberRevision) || (!revision && memberRevision)) return { snapshot, member: null };
+  const memberResult = revision && memberRevision
+    ? await supabase.from('member_content_revisions')
+      .select('*,semantic_coherence_reviews(status,reason_codes,checked_at,canonical_snapshot_id,canonical_snapshot_version)')
+      .eq('id', memberRevision).eq('decision_snapshot_id', revision)
+      .eq('report_date', String(report.report_date)).eq('report_id', String(report.id))
+      .order('checked_at', { referencedTable: 'semantic_coherence_reviews', ascending: false })
+      .limit(1, { referencedTable: 'semantic_coherence_reviews' }).maybeSingle()
+    : await supabase.from('current_member_content_revisions_v1').select('*')
+      .eq('report_date', String(report.report_date)).eq('report_id', String(report.id))
+      .order('revision', { ascending: false }).limit(1).maybeSingle();
+  if (memberResult.error) throw new Error(`MEMBER_REVISION_STATE_QUERY_FAILED:${memberResult.error.message}`);
+  if (!memberResult.data) return { snapshot, member: null };
+  const member = record(memberResult.data);
+  if (!revision) return { snapshot, member };
+  const reviews = Array.isArray(member.semantic_coherence_reviews) ? member.semantic_coherence_reviews : [];
+  const semantic = record(reviews[0]);
+  const semanticAligned = semantic.canonical_snapshot_id === snapshot?.id
+    && semantic.canonical_snapshot_version === snapshot?.version;
+  return { snapshot, member: { ...member,
+    semantic_status: semanticAligned ? semantic.status : null,
+    semantic_reason_codes: semanticAligned ? semantic.reason_codes : null } };
+}
+
+/** Market-only delivery keeps 90/100, real member semantic proof, and zero stocks. */
+function isPublishedDeliveryEligible(
+  report: Record<string, unknown>,
+  snapshot: Record<string, unknown> | null,
+  member: Record<string, unknown> | null,
+  marketGate: ReturnType<typeof evaluateMarketReportGate>,
+): boolean {
+  const record = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const empty = (value: unknown) => Array.isArray(value) && value.length === 0;
+  const json = (value: unknown): string => Array.isArray(value) ? '[' + value.map(json).join(',') + ']'
+    : value && typeof value === 'object' ? '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + json(record(value)[key])).join(',') + '}'
+      : JSON.stringify(value) ?? 'undefined';
+  if (!marketGate.eligible || !snapshot || !member || snapshot.status !== 'READY'
+    || typeof snapshot.content_score !== 'number' || snapshot.content_score < 90 || snapshot.content_score > 100
+    || snapshot.report_id !== report.id || snapshot.report_date !== report.report_date
+    || member.report_id !== report.id || member.report_date !== report.report_date
+    || member.decision_snapshot_id !== snapshot.id || member.decision_snapshot_version !== snapshot.version
+    || member.status !== 'PASSED' || member.semantic_status !== 'PASSED' || !empty(member.semantic_reason_codes)) return false;
+  const ai = record(report.ai_strategy_json);
+  if ((ai.revision_id && ai.revision_id !== snapshot.id)
+    || (ai.canonical_member_revision_id && ai.canonical_member_revision_id !== member.id)) return false;
+  if (snapshot.decision_mode === 'recommendations') return marketGate.recommendation_gate.eligible === true;
+  if (snapshot.decision_mode !== 'market_only') return snapshot.decision_mode === 'no_trade';
+  const generated = record(snapshot.generated_text), content = record(member.member_content);
+  const contract = record(member.canonical_contract), gate = record(generated.market_report_gate);
+  return typeof ai.revision_id === 'string' && ai.revision_id === snapshot.id
+    && typeof ai.canonical_member_revision_id === 'string' && ai.canonical_member_revision_id === member.id
+    && snapshot.action === 'WAIT' && snapshot.coverage_score === 100
+    && Array.isArray(snapshot.source_refs) && snapshot.source_refs.length > 0
+    && marketGate.status === 'READY_MARKET_ONLY' && marketGate.decision_mode === 'market_only'
+    && marketGate.recommendation_gate.eligible === false && gate.content_score === snapshot.content_score
+    && json(gate) === json(marketGate) && json(gate) === json(ai.market_report_gate)
+    && json(gate) === json(contract.market_report_gate) && json(contract) === json(content.canonical_contract)
+    && contract.snapshot_id === snapshot.id && contract.snapshot_version === snapshot.version
+    && contract.report_date === report.report_date && contract.action === 'WAIT' && contract.decision_mode === 'market_only'
+    && empty(contract.primary_symbols) && empty(generated.recommendations)
+    && empty(ai.today_beneficiary_stocks) && empty(ai.today_beneficiary_stocks_v10)
+    && empty(content.beneficiary_candidates) && empty(content.representative_stocks)
+    && (generated.opportunity_score === null || generated.opportunity_score === undefined)
+    && (content.opportunity_score === null || content.opportunity_score === undefined);
+}
+
+
 function taipeiClock(now = new Date()): { date: string; minutes: number; slot: number } {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Taipei',
@@ -294,41 +378,17 @@ async function loadDeliveryState(
   supabase: SupabaseClient,
   reportDate: string,
 ): Promise<DeliveryState> {
-  const [
-    { data: report, error: reportError },
-    { data: snapshot, error: snapshotError },
-    { data: memberRevision, error: memberRevisionError },
-  ] = await Promise.all([
-    supabase
+  const { data: report, error: reportError } = await supabase
       .from('reports')
       .select('id,report_date,ai_strategy_json,important_news_json,created_at,updated_at')
       .eq('report_date', reportDate)
-      .maybeSingle(),
-    supabase
-      .from('decision_snapshots')
-      .select('id,status,decision_mode,content_score,reason_codes,is_current,version')
-      .eq('report_date', reportDate)
-      .eq('session_type', 'PREMARKET')
-      .eq('is_current', true)
-      .order('version', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from('current_member_content_revisions_v1')
-      .select('id,status,semantic_status,decision_snapshot_id,decision_snapshot_version,revision,data_quality_status')
-      .eq('report_date', reportDate)
-      .order('revision', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+      .maybeSingle();
 
   if (reportError) throw new Error(`REPORT_STATE_QUERY_FAILED:${reportError.message}`);
-  if (snapshotError) throw new Error(`SNAPSHOT_STATE_QUERY_FAILED:${snapshotError.message}`);
-  if (memberRevisionError) throw new Error(`MEMBER_REVISION_STATE_QUERY_FAILED:${memberRevisionError.message}`);
   if (!report) {
     return {
       report: null,
-      snapshot: snapshot ? asRecord(snapshot) : null,
+      snapshot: null,
       premium_eligible: false,
       report_eligible: false,
       reason_codes: ['report_missing'],
@@ -336,6 +396,7 @@ async function loadDeliveryState(
   }
 
   const reportRecord = asRecord(report);
+  const { snapshot, member: memberRevision } = await fetchPublishedDeliveryEvidence(supabase, reportRecord);
   const ai = asRecord(reportRecord.ai_strategy_json);
   const importantNewsCount = Array.isArray(reportRecord.important_news_json)
     ? reportRecord.important_news_json.length
@@ -345,10 +406,7 @@ async function loadDeliveryState(
   const premiumGate = evaluatePremiumContentGate(ai, importantNewsCount);
   const marketGate = evaluateMarketReportGate(ai, reportDate);
   const snapshotRecord = snapshot ? asRecord(snapshot) : null;
-  const snapshotReady = Boolean(snapshotRecord)
-    && snapshotRecord?.status === 'READY'
-    && Number(snapshotRecord?.content_score) >= 90
-    && ['recommendations', 'no_trade'].includes(String(snapshotRecord?.decision_mode || ''));
+  const snapshotReady = isPublishedDeliveryEligible(reportRecord, snapshotRecord, memberRevision, marketGate);
   const memberRevisionRecord = memberRevision ? asRecord(memberRevision) : null;
   const memberRevisionReady = Boolean(memberRevisionRecord)
     && memberRevisionRecord?.status === 'PASSED'
@@ -936,7 +994,7 @@ Deno.serve(async (req: Request) => {
       system_failure: actionFailures.some((failure) => failure.status >= 500),
       report_eligible: state.report_eligible,
       delivered: delivered && premiumDeliveryPayload.reason !== 'NO_ACTIVE_SUBSCRIBERS',
-      no_recommendation: evaluateMarketReportGate(state.report?.ai_strategy_json, businessDate).recommendation_status === 'NO_RECOMMENDATION',
+      no_recommendation: evaluateMarketReportGate(state.report?.ai_strategy_json, businessDate).recommendation_status === 'NO_QUALIFIED_OPPORTUNITY',
       suppressed: suppressNotifications,
     });
     const completed = resolveDailyDeliveryCompletion({

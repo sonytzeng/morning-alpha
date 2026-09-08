@@ -296,6 +296,21 @@ async function fetchReport(supabase: SupabaseClient, targetDate: string): Promis
   return result.data ? result.data as JsonObject : null;
 }
 
+async function fetchPublishedHealthDecision(supabase: SupabaseClient, report: JsonObject, targetDate: string): Promise<JsonObject | null> {
+  const revision = asObject(report.ai_strategy_json).revision_id;
+  let query = supabase.from("decision_snapshots")
+    .select("id,report_id,report_date,status,decision_mode,content_score,is_current,version")
+    .eq("report_date", targetDate);
+  // Atomic publication's pointer is authoritative. A newer internal QA draft
+  // can be is_current without replacing the subscriber-facing publication.
+  query = nonEmptyString(revision)
+    ? query.eq("id", String(revision)).eq("report_id", String(report.id))
+    : query.eq("session_type", "PREMARKET").eq("is_current", true);
+  const result = await withTimeout(query.order("version", { ascending: false }).limit(1).maybeSingle());
+  if (result.error) throw new Error("DATABASE_QUERY_FAILED");
+  return result.data ? result.data as JsonObject : null;
+}
+
 const handlers: Record<CheckName, CheckHandler> = {
   "market-data-freshness": async ({ supabase, targetDate }) => {
     const started = Date.now();
@@ -348,17 +363,7 @@ const handlers: Record<CheckName, CheckHandler> = {
     const started = Date.now();
     const report = await fetchReport(supabase, targetDate);
     if (!report) return makeCheck("daily-report-contract", "daily-report", "skipped", "info", {}, {}, started, "REPORT_MISSING", "Contract cannot be checked without a report");
-    const snapshotResult = await withTimeout(supabase
-      .from("decision_snapshots")
-      .select("id,status,decision_mode,content_score,is_current,version")
-      .eq("report_date", targetDate)
-      .eq("session_type", "PREMARKET")
-      .eq("is_current", true)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle());
-    if (snapshotResult.error) throw new Error("DATABASE_QUERY_FAILED");
-    const snapshot = snapshotResult.data ? snapshotResult.data as JsonObject : null;
+    const snapshot = await fetchPublishedHealthDecision(supabase, report, targetDate);
     const ai = asObject(report.ai_strategy_json);
     const note = asObject(ai.member_research_note_v2);
     const marketStatus = String(ai.market_status || "").toUpperCase();
@@ -593,6 +598,29 @@ function responseBody(request: HealthRequest, runId: string | null, checks: Chec
   };
 }
 
+/** Full-day business health is not a release/PR approval. Only observed
+ * Production stages can affect it; missing evidence never becomes PASS. */
+function summarizeProductionBusinessHealth(stages: Record<string, string>) {
+  const requiredStages = [
+    "Market Data", "Research", "Editorial", "Semantic", "Decision", "Publication",
+    "Delivery", "Checkpoint", "Frontend", "Closing", "Learning", "Acceptance",
+  ];
+  const failed = requiredStages.filter(stage => ["FAIL", "BLOCKED"].includes(stages[stage]));
+  const pending = requiredStages.filter(stage => !["PASS", "FAIL", "BLOCKED", "NOT_APPLICABLE"].includes(stages[stage]));
+  const applicable = requiredStages.filter(stage => stages[stage] !== "NOT_APPLICABLE");
+  const status = failed.length > 0 ? "FAIL"
+    : pending.length > 0 ? "WAITING"
+    : applicable.length === 0 ? "NOT_APPLICABLE" : "PASS";
+  return {
+    status,
+    today_all_pass: status === "PASS" ? "YES" : status === "FAIL" ? "NO" : "PENDING",
+    failed_stages: failed,
+    pending_stages: pending,
+    basis: "PRODUCTION_RUNTIME_EVIDENCE_ONLY",
+    engineering_release_independent: true,
+  };
+}
+
 /** Internal, read-only dashboard. Unchecked/stale stages remain WAITING;
  * a historical PASS is never relabelled as this revision's success. */
 async function attachDailyHealthTrace(supabase: SupabaseClient, request: HealthRequest, response: JsonObject): Promise<JsonObject> {
@@ -634,6 +662,10 @@ async function attachDailyHealthTrace(supabase: SupabaseClient, request: HealthR
   const firstFailure = Object.entries(stages).find(([, status]) => ["BLOCKED", "FAIL"].includes(status));
   return { ...response, daily_health: {
     trading_date: request.target_date, stages, current_revision: currentRevision,
+    production_business_health: summarizeProductionBusinessHealth(stages),
+    // GitHub state belongs to release tooling. A Draft/Open PR cannot mark a
+    // delivered market decision unhealthy, nor can merged code prove delivery.
+    engineering_release: { status: "NOT_EVALUATED", affects_business_health: false },
     first_failure_stage: firstFailure?.[0] || liveFailure?.check_name || null,
     error_code: firstFailure || liveFailure ? liveFailure?.error_code || asArray(record.blocking_checks)[0] || asArray(contract.market_report_reason_codes)[0] || "STAGE_BLOCKED" : null,
     last_success_at: history.find(run => run.status === "SUCCEEDED")?.completed_at || null,

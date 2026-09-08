@@ -12,6 +12,20 @@ Frozen source baseline: `dcf1a8c976b5e78a00356d4443930191731f119a`.
 
 The reading contract is independent from backend implementation. Backend maintenance must preserve the questions, states, evidence requirements, identity and access boundaries below. A legitimate producer fix must rerun product tests; it must not restore the old dashboard UI.
 
+## Market publication and recommendation are independent gates
+
+The 2026-09-08 follow-up authorizes branch corrections and Production-safe regression only. New Production deployment remains a separate approval gate; this contract does not authorize a Migration, Recovery, Cron change or historical-data rewrite.
+
+- **Market Report Publication Gate** evaluates current-date market sources, provenance, completeness, Research/Evidence/Editorial/Semantic quality and canonical publication identity. Its thresholds are not weakened to publish a report.
+- **Stock Recommendation Gate** independently evaluates company evidence, actual screening coverage, entry/invalidation conditions and all existing Premium requirements. Market PASS does not imply any stock, opportunity score or Premium entitlement passes.
+- Market PASS + Recommendation BLOCKED must keep today's valid market report, intraday revision and canonical payload available. The subscriber message is **「推薦評估證據不足，今日暫不發布正式個股推薦」**. Unsupported company recommendations and scores remain absent, not zero-filled.
+- `NO_QUALIFIED_OPPORTUNITY` is allowed only after the complete declared universe was evaluated with sufficient evidence and no company qualified. Missing or incomplete screening is insufficient evidence, never a completed empty result.
+- Once a valid published canonical report for Taipei today exists, the canonical selector → payload → frontend chain must retain its `report_date` / `revision_id` / `generated_at`. It must not substitute an older holiday report, or a newer internal rejected draft for the subscriber-facing published revision.
+- Production Business Health and Engineering Release Status are separate. An open or Draft PR alone cannot make `TODAY ALL PASS = NO`; a merged PR or green CI alone cannot make it YES. Full-day business PASS requires observed Production evidence for every applicable stage. Missing/not-due evidence stays WAITING/NOT_DUE; actual Publication, Delivery, Checkpoint or Acceptance failures remain failures.
+- Internal Research/QA diagnostics are not subscriber decisions. They cannot erase a still-valid published market revision, but evidence that invalidates that publication remains a real business failure and must not be hidden.
+
+Permanent coverage: market/recommendation gate contract tests; canonical current-date selection and frontend read-model regressions; `tests/incidentHealthContract.test.mjs` for independent engineering/QA status and retained genuine runtime failures. These local tests are not Production acceptance evidence.
+
 ## One question per page
 
 | Page | First-screen answer | Detail order |

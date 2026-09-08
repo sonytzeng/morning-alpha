@@ -1,5 +1,6 @@
 import type { MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { buildDecisionRuntimeEvidence, getRuntimeCheckpointState, type DecisionRuntimeEvidence } from './decisionEvidence.ts';
+import { isMarketPublicationReady } from './subscriberReportContract.ts';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -187,8 +188,13 @@ function buildTodayFocus(
   const openingThesis = asRecord(note.opening_thesis);
   const v8Sentence = asRecord(ai.v8_daily_sentence);
   const freeSummary = asRecord(ai.free_summary) || asRecord(ai.public_summary);
+  // The server-pinned published decision outranks a deeper internal research
+  // note. A newer blocked QA draft must not rewrite the subscriber's market view.
+  const published = isMarketPublicationReady(ai) ? asRecord(ai.canonical_decision) : {};
+  const publishedSentence = toText(published.daily_sentence);
 
   const headline = firstText(
+    publishedSentence,
     v10Thesis.primary_driver,
     firstMeaningfulTextFromObject(openingThesis, ['primary_driver', 'title', 'primary_theme', 'market_theme']),
     ai.primary_driver,
@@ -197,6 +203,7 @@ function buildTodayFocus(
   );
 
   const summary = firstText(
+    publishedSentence,
     v10Thesis.market_story,
     ai.market_story,
     openingThesis.summary,
@@ -209,6 +216,7 @@ function buildTodayFocus(
   );
 
   const action = firstText(
+    published.do_not_do,
     openingThesis.action,
     openingThesis.action_note,
     ai.action_guidance,
@@ -217,6 +225,7 @@ function buildTodayFocus(
   );
 
   const why = firstText(
+    asStringArray(published.reasons).join('；'),
     v10Thesis.taiwan_transmission,
     ai.taiwan_transmission,
     openingThesis.why,
@@ -284,6 +293,7 @@ function buildTodayScript(note: UnknownRecord, ai: UnknownRecord): CanonicalToda
   const current = steps.find((step) => step.status === 'pending' || step.status === 'missing') || steps[steps.length - 1];
   const openingThesis = asRecord(note.opening_thesis);
   const headline = firstText(
+    isMarketPublicationReady(ai) ? asRecord(ai.canonical_decision).daily_sentence : '',
     openingThesis.primary_theme,
     openingThesis.title,
     ai.primary_driver,

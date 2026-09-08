@@ -4,6 +4,7 @@ import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import GlossarySheet from '@/features/learning/GlossarySheet';
 import { trackEvent } from '@/utils/analytics';
+import { RECOMMENDATION_EVIDENCE_INSUFFICIENT } from '@/lib/subscriberReportContract';
 
 export type BeginnerStock = {
   symbol: string;
@@ -19,6 +20,7 @@ type BeginnerTodayViewProps = {
   action: string;
   nextCheckpoint: string;
   stocks: BeginnerStock[];
+  emptyStockMessage?: string;
   confirmationItems: string[];
   invalidationItems: string[];
   avoidAction?: string;
@@ -35,6 +37,7 @@ export default function BeginnerTodayView({
   action,
   nextCheckpoint,
   stocks,
+  emptyStockMessage = RECOMMENDATION_EVIDENCE_INSUFFICIENT,
   confirmationItems,
   invalidationItems,
   avoidAction,
@@ -75,7 +78,7 @@ export default function BeginnerTodayView({
             <span>02</span><div><p>為什麼值得注意</p><h2>{explanation}</h2></div>
           </article>
           <article>
-            <span>03</span><div><p>哪些股票可能受影響</p>{stocks.length > 0 ? <ul>{stocks.map((stock) => <li key={`${stock.symbol}-${stock.name}`}><strong>{stock.symbol} {stock.name}</strong>{stock.reason && <span>{stock.reason}</span>}</li>)}</ul> : <h2>今天沒有符合標準的標的</h2>}</div>
+            <span>03</span><div><p>哪些股票可能受影響</p>{stocks.length > 0 ? <ul>{stocks.map((stock) => <li key={`${stock.symbol}-${stock.name}`}><strong>{stock.symbol} {stock.name}</strong>{stock.reason && <span>{stock.reason}</span>}</li>)}</ul> : <h2>{emptyStockMessage}</h2>}</div>
           </article>
           <article>
             <span>04</span><div><p>什麼條件成立才可繼續觀察</p>{confirmationItems.length > 0 ? <ul>{confirmationItems.slice(0, 4).map((item) => <li key={item}>{item}</li>)}</ul> : <h2>先等待市場證據補齊</h2>}</div>

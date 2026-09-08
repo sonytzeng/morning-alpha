@@ -1,5 +1,6 @@
 import type { Decision } from './contract.ts';
 import { ACTION_LABEL, emptyDecision, object } from './engine.ts';
+import { hasCompleteUniverseAssessment, RECOMMENDATION_EVIDENCE_INSUFFICIENT } from '../../lib/subscriberReportContract.ts';
 
 export type ReportIdentity = { report_date: string; revision_id: string | null; generated_at: string | null };
 const textList = (v: unknown): v is string[] => Array.isArray(v) && v.every(s => typeof s === 'string');
@@ -50,11 +51,17 @@ export function decisionFromReport(ai: unknown, identity: ReportIdentity, today:
     || input.generated_at !== identity.generated_at || identity.report_date !== today || typeof input.generated_at !== 'string'
     || !Number.isFinite(Date.parse(input.generated_at)) || typeof input.data_as_of !== 'string' || !Number.isFinite(Date.parse(input.data_as_of))
     || Date.parse(input.data_as_of) > Date.parse(input.generated_at) || !isServerDecision(input)) return emptyDecision();
+  if (input.action === 'NO_QUALIFIED_OPPORTUNITY' && !hasCompleteUniverseAssessment(input.screening)) {
+    return { ...input, action: 'INSUFFICIENT_DATA', reason_summary: RECOMMENDATION_EVIDENCE_INSUFFICIENT, stock_opportunities: [],
+      issues: [...input.issues, 'UNIVERSE_EVALUATION_INCOMPLETE'] };
+  }
   return input;
 }
-export function opportunitySummary(decision: Decision, legacyQualifiedCount: number, stocksWithheld = false): string {
+export function opportunitySummary(decision: Decision, legacyQualifiedCount: number, stocksWithheld = false, publicationNotice: string | null = null): string {
   if (decision.action === 'NOT_APPLICABLE') return '今日休市，不建立新的交易機會';
-  if (decision.action === 'NO_QUALIFIED_OPPORTUNITY') return ACTION_LABEL.NO_QUALIFIED_OPPORTUNITY;
+  if (publicationNotice) return publicationNotice;
+  if (decision.action === 'NO_QUALIFIED_OPPORTUNITY') return hasCompleteUniverseAssessment(decision.screening)
+    ? ACTION_LABEL.NO_QUALIFIED_OPPORTUNITY : RECOMMENDATION_EVIDENCE_INSUFFICIENT;
   const count = decision.stock_opportunities.filter((o) => !['AVOID', 'DO_NOT_CHASE'].includes(o.action)).length;
   if (decision.action === 'DO_NOT_CHASE') return '目前以不追價為優先；不是新增進場訊號';
   if (decision.action === 'AVOID' || decision.action === 'DEFENSIVE') return '先處理風險，不新增進場訊號';

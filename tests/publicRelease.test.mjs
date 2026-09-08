@@ -292,8 +292,10 @@ test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
   assert.ok(hardGate >= 0, 'LINE must expose the independent hard public Research/Evidence/Editorial gate');
   assert.match(lineDailyPush, /evaluateMarketReportGate/);
   assert.ok(subscriberDelivery > hardGate, 'subscriber delivery must happen only after the hard gate');
-  assert.match(lineDailyPush, /snapshotStatus === 'READY'/);
-  assert.match(lineDailyPush, /snapshotScore >= 90/);
+  assert.match(lineDailyPush, /snapshotEligible = isPublishedDeliveryEligible\(report, decisionSnapshot, memberRevision, marketGate\)/);
+  assert.match(lineDailyPush, /snapshot\.status !== 'READY'/);
+  assert.match(lineDailyPush, /snapshot\.content_score < 90/);
+  assert.match(lineDailyPush, /member\.semantic_status !== 'PASSED'/);
   assert.match(lineDailyPush, /claim_line_delivery_outbox_v1/);
   assert.match(lineDailyPush, /mark_line_delivery_outbox_v1/);
   assert.match(lineDailyPush, /delivery_mode === 'incident'/);
@@ -340,9 +342,10 @@ test('paid report fails closed when evidence does not meet the member threshold'
   assert.match(contentOsMorningAlphaSource, /report\.updated_at \?\? report\.created_at/);
   assert.match(contentOsMorningAlphaSource, /PUBLIC_TOPIC_INCOMPLETE/);
   assert.match(reportPayloadFunction, /evaluatePremiumContentGate/);
-  assert.match(reportPayloadFunction, /if \(!premiumGate\.eligible \|\| !revisionEligible\)/);
+  assert.match(reportPayloadFunction, /if \(!premiumGate\.eligible \|\| !revisionEligible \|\| \(!recommendationGate\.eligible && !marketOnlyNote\)\)/);
   assert.match(reportPayloadFunction, /const premiumEligible = premiumGate\.eligible && semanticEligible/);
-  assert.match(reportPayloadFunction, /one_teaser_stock: premiumEligible \? buildCanonicalTeaserStock/);
+  assert.match(reportPayloadFunction, /one_teaser_stock: recommendationsEligible \? buildCanonicalTeaserStock/);
+  assert.match(reportPayloadFunction, /recommendationsEligible = premiumEligible && marketPublished && marketGate\.recommendation_gate\.eligible/);
   assert.match(reportPayloadFunction, /premium_content_unavailable_reason: "EVIDENCE_GATE_NOT_MET"/);
 });
 
@@ -429,12 +432,19 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.doesNotMatch(runtimeCheckpointWorkflow, /^\s*schedule:/m);
 });
 
-test('LINE brief identifies analysis and market-data times and refuses weak day-trading scripts', () => {
-  for (const label of ['07:30 盤前', '今日一句', '最大機會', '最大風險', '下一確認', '分析產生', '資料截止']) {
-    assert.match(lineDailyPush, new RegExp(label), `LINE brief is missing ${label}`);
-  }
+test('LINE retains verified Production v59 Flex layout and refuses evidence-blocked stock delivery', () => {
+  const flex=read('supabase/functions/_shared/line-daily-flex-message.mjs');
+  assert.match(lineDailyPush, /return buildLineDailyFlexMessage\(/);
+  for(const label of ['今日盤前決策','今日主線','成立條件','失效條件']) assert.match(flex,new RegExp(label));
+  assert.match(flex,/type: 'flex'/);
+  assert.match(lineDailyPush,/reportDate: String\(report\.report_date/);
+  assert.match(lineDailyPush,/snapshot\.decision_mode === 'recommendations'\) return marketGate\.recommendation_gate\.eligible === true/);
+  assert.match(lineDailyPush,/const recommendations = marketOnly \? \[\]/);
+  assert.match(flex,/推薦評估證據不足，今日暫不發布正式個股推薦/);
+  // v59 does not display analysis/data-cutoff timestamp text. Do not claim that
+  // removed pre-release plain-text behavior passed by leaving dead calculations.
+  assert.doesNotMatch(flex,/分析產生|資料截止/);
   assert.match(lineDailyPush, /evaluatePremiumContentGate/);
-  assert.match(lineDailyPush, /資料未達標，不建立個股劇本/);
   assert.match(lineDailyPush, /ALREADY_SENT/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);
 });
@@ -861,8 +871,9 @@ test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempo
   assert.match(lineDailyPush, /customAggregationUnits/);
   assert.match(lineDailyPush, /dailySentence\.sentence/);
   assert.ok(lineDailyPush.indexOf('report.today_quote') < lineDailyPush.indexOf('copy.one_sentence'));
-  assert.match(lineDailyPush, /確認：/);
-  assert.match(lineDailyPush, /避免：/);
+  const flex=read('supabase/functions/_shared/line-daily-flex-message.mjs');
+  assert.match(flex, /成立條件/);
+  assert.match(flex, /操作原則/);
   assert.doesNotMatch(lineDailyPush, /sent:\s*true,\s*report_date: reportDate,\s*total_subscribers: 0/);
 });
 

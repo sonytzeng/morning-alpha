@@ -31,7 +31,8 @@ import {
 import { sanitizeUnsupportedAbsolutePriceLevels } from './content-integrity.ts';
 import {
   deriveEvidenceBackedTaiwanTransmission,
-  evaluateContentIntelligence,
+  evaluateDecisionSentenceValue,
+  evaluateMarketContentIntelligence,
   hasAuditedCanonicalNoTrade,
   hasCanonicalNoTradeResearchMaster,
   isDecisionCriticalMissingSource,
@@ -70,7 +71,7 @@ import {
   buildRecommendationDecisionCopy,
 } from '../_shared/decision-sentence-builder.ts';
 
-const VERSION='V9.6.1_MARKET_EVIDENCE_GATE_V1';
+const VERSION='V9.6.3_MARKET_RECOMMENDATION_GATE_SPLIT';
 const OPENAI_EVIDENCE_GUARDRAILS='market_news 只可使用發布時間在 48 小時內的資料。market_data 已先排除所有過期資料；不得猜測、補回或引用輸入中不存在的市場指標。若 TXF、原油或其他資料源缺失，不可把缺失資料寫成事件、方向、價位、產業傳導或驗證條件。禁止自行編造輸入資料未提供的個股絕對價位。每一檔最終受惠股都必須有事件來源、事件到產業與供應鏈再到公司的傳導路徑、台灣供應鏈關係、盤中成立條件與失效條件；沒有足夠證據就不要輸出該股票。不得為滿足篇幅、事件數、層數或股票數而新增任何未被輸入證據支持的敘事。';
 const OPENAI_OUTPUT_ABSTENTION_RULES='最高優先規則：today_beneficiary_stocks 可輸出 0 到 8 檔，沒有最低檔數；allowed_beneficiary_candidates 為空時必須輸出空陣列。overnight_chain 的至少 5 層是同一個有證據事件的傳導步驟，不是要求至少 5 個不同事件。每個 overnight_chain 項目必須包含 evidence_refs，且只能逐字使用輸入提供的 evidence_ref；沒有 evidence_ref 的事件必須刪除。beneficiary_candidates.evidence 與每檔 data_basis 也必須引用輸入提供的 evidence_ref，否則不得輸出該候選股。';
 const REPORT_MODE_NORMAL='normal_overnight',REPORT_MODE_WEEKEND='weekend_digest',REPORT_MODE_NON_TRADING='non_trading_day';
@@ -162,8 +163,8 @@ function attachResearchMasterV2Shadow(target:Record<string,unknown>,input:Resear
       const sourceMaster=assembleResearchMasterV2(input);
       target.research_generation_audit={contract_version:'RESEARCH_ADMISSION_V1',report_date:input.reportDate,source_quality:validateResearchMasterV2(sourceMaster,input).quality,rejected_recommendations:admission.rejected};
       target.today_beneficiary_stocks_v10=admission.accepted;
-      // This says only that no company qualified. Source completeness is still
-      // independently checked by Research, Market and atomic-publication gates.
+      // An admission gap is not proof of a complete universe with no matches.
+      // Market publication uses the explicit independent market_only contract.
       if(!admission.accepted.length)target.v10_data_quality_status='insufficient_positive_evidence';
       publicationInput={...input,legacy:target};
     }
@@ -2125,14 +2126,17 @@ function resolveEvidenceBackedDailySentence(ai:Record<string,unknown>,md:MarketI
   const previousFingerprint=dailySentenceFingerprint(previousSentence);
   const isNovel=function(text:string):boolean{return !previousFingerprint||dailySentenceFingerprint(text)!==previousFingerprint;};
   const candidates=[v8.sentence,ai.today_quote,line.one_sentence,note.subscriber_value_sentence,free.one_sentence];
-  for(const value of candidates){const text=typeof value==='string'?sanitizeUnsupportedResearchText(value.replace(/\s+/g,' ').trim(),txfAvailable):'';if(text.length>=16&&!isSyntheticDailySentence(text)&&isNovel(text))return text;}
+  // A legacy alias must satisfy the same public decision-sentence contract as
+  // every other source. Otherwise continue to the existing real-quote path;
+  // accepting it solely for length could hide action/checkpoint evidence.
+  for(const value of candidates){const text=typeof value==='string'?sanitizeUnsupportedResearchText(value.replace(/\s+/g,' ').trim(),txfAvailable):'';if(text.length>=16&&!isSyntheticDailySentence(text)&&isNovel(text)&&evaluateDecisionSentenceValue(text).eligible)return text;}
   const importantNews=Array.isArray(ai.important_news)?ai.important_news as Record<string,unknown>[]:[];
   for(const item of importantNews.slice(0,3)){
     const title=String(item.title||'').trim();
     const impact=String(item.taiwan_impact_summary||item.summary||'').trim();
     if(!title)continue;
     const text=sanitizeUnsupportedResearchText(title.slice(0,46)+'；'+(impact?impact.slice(0,42):'09:30 先看台股相關族群是否出現同向量價確認。'),txfAvailable);
-    if(text.length>=20&&isNovel(text))return text;
+    if(text.length>=20&&isNovel(text)&&evaluateDecisionSentenceValue(text).eligible)return text;
   }
   const definitions:[string[],string,string,string][]=[
     [['TSM','TSMC'],'TSM ADR','電子權值','2330 是否相對加權指數抗跌且電子成交量同步'],
@@ -2227,6 +2231,7 @@ function buildCanonicalDecisionPayload(
       confirmation_condition:canonicalText(stock.intraday_validation,stock.validation_signal,stock.confirmation_signal,stock.watch_point),
       invalidation_condition:canonicalText(stock.invalidation_condition,stock.not_buy_signal,stock.risk_note,stock.risk),
       source_refs:Array.from(new Set(stockSourceRefs)),
+      research_evidence_admission:canonicalRecord(stock.research_evidence_admission),
     };
   }).filter(function(stock){return Boolean(stock.symbol);});
   const reasons=(Array.isArray(ai.key_drivers)?ai.key_drivers:Array.isArray(ai.reasoning_chain)?ai.reasoning_chain:[])
@@ -2254,16 +2259,13 @@ function buildCanonicalDecisionPayload(
     url:canonicalText(news.url),
     published_at:canonicalText(news.published_at,news.created_at),
   };}).filter(function(source){return Boolean(source.source||source.url||source.title);});
-  const contentReview=evaluateContentIntelligence(ai,importantNews.length);
-  const unsupportedCompanies=recommendations.filter((stock)=>!importantNews.some((news)=>companyEvidenceSupported(
-    {...stock,aliases:stock.symbol==='2317'?['Hon Hai','Foxconn']:stock.symbol==='2330'?['Taiwan Semiconductor','TSMC']:[]},
-    {...news,evidence_type:'market_news'},
-  ))).map((stock)=>'company_catalyst_evidence_missing:'+stock.symbol);
-  const marketGate=evaluateMarketReportGate(ai,String(researchMaster.report_date||''));
-  const publishable=marketGate.eligible&&researchQuality.eligible&&unsupportedCompanies.length===0;
-  const evidenceDecisionMode=recommendations.length>0?'recommendations':String(ai.v10_data_quality_status)==='insufficient_positive_evidence'?'no_trade':'blocked';
-  const decisionMode=publishable?evidenceDecisionMode:'blocked';
-  const publishedRecommendations=publishable?recommendations:[];
+  const contentReview=evaluateMarketContentIntelligence(ai,importantNews.length);
+  const marketGate=evaluateMarketReportGate({...ai,important_news:importantNews},String(researchMaster.report_date||''));
+  const publishable=marketGate.eligible&&researchQuality.eligible;
+  // Company-source, reasoning and admission checks live in the independent
+  // recommendation gate. Its rejection cannot erase an audited market report.
+  const decisionMode=publishable?marketGate.decision_mode:'blocked';
+  const publishedRecommendations=publishable&&marketGate.recommendation_gate.eligible?recommendations:[];
   const publishedReasons=publishable?reasons:[
     importantNews.length===0?'盤前沒有通過時效檢查的重大新聞來源。':'可驗證新聞已有，但整體內容仍未通過發布門檻。',
     String(ai.data_quality).toLowerCase()==='complete'?'市場資料完整，但推論鏈仍不足。':'核心市場資料尚未完整。',
@@ -2285,6 +2287,7 @@ function buildCanonicalDecisionPayload(
     decision_mode:decisionMode,
     report_status:marketGate.report_status,
     recommendation_status:marketGate.recommendation_status,
+    recommendation_gate:marketGate.recommendation_gate,
     market_report_gate:marketGate,
     market_regime:canonicalText(ai.market_regime,marketBias),
     preferred_sectors:publishedSectors,
@@ -2321,6 +2324,11 @@ function buildCanonicalDecisionPayload(
     },
     source_refs:sourceRefs,
     generated_text:{
+      report_date:marketGate.report_date,
+      report_status:marketGate.report_status,
+      recommendation_status:marketGate.recommendation_status,
+      recommendation_gate:marketGate.recommendation_gate,
+      market_report_gate:marketGate,
       daily_sentence:publishable?canonicalText(ai.today_quote,dailySentence.sentence,freeSummary.one_sentence):blockedDailySentence,
       market_bias:marketBias,
       confidence_score:confidenceScore,
@@ -2336,7 +2344,8 @@ function buildCanonicalDecisionPayload(
     content_score:contentReview.score,
     content_grade:contentReview.grade,
     content_score_breakdown:contentReview.breakdown,
-    reason_codes:Array.from(new Set([...marketGate.reason_codes,...researchQuality.reason_codes,...unsupportedCompanies])),
+    reason_codes:Array.from(new Set([...marketGate.reason_codes,...researchQuality.reason_codes])),
+    recommendation_reason_codes:marketGate.recommendation_gate.reason_codes,
     generic_content_flags:contentReview.generic_flags,
   };
 }
@@ -2402,7 +2411,7 @@ async function publishCanonicalMemberRevision(
     const researchMaster=canonicalRecord(ai.research_master_v2);
     const qualityGate=evaluateResearchQualityGate(researchMaster);
     const evidenceCoverage=qualityGate.evidence_coverage;
-    const contentScore=Number(ai.content_score??snapshot.content_score??0);
+    const contentScore=Number(snapshot.decision_mode==='market_only'?snapshot.content_score:ai.content_score??snapshot.content_score??0);
     const semanticResult=evaluateCanonicalSemanticCoherenceGate({
       canonical_contract:canonicalContract,
       sections:{
@@ -2413,7 +2422,9 @@ async function publishCanonicalMemberRevision(
         content_os_topic:memberContent.content_os_topic,
       },
       recommendations:memberContent.beneficiary_candidates,
-      quality_inputs:[ai.data_quality,ai.v10_data_quality_status,canonicalRecord(ai.member_research_note_v2).data_status],
+      quality_inputs:snapshot.decision_mode==='market_only'
+        ?[ai.data_quality,canonicalRecord(researchMaster.provenance).source_status]
+        :[ai.data_quality,ai.v10_data_quality_status,canonicalRecord(ai.member_research_note_v2).data_status],
       quality_counters:{
         unsupported_claim_count:qualityGate.unsupported_claim_count,
         contradiction_count:qualityGate.contradiction_count,
@@ -2532,7 +2543,7 @@ async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJso
     const sentimentReason=mrnIsString?(confScore===null?marketBias+'方向，休市不評分。':marketBias+'方向，信心分數 '+confScore+'/100。'):String(mrn?.executive_view||'');
     const aiConfidenceReason=mrnIsString?'根據 '+todayDate+' 市場數據，盤前方向為 '+marketBias+'。':String(mrn?.main_thesis||'');
 
-    const contentReview=evaluateContentIntelligence(aiStrategyJson,importantNews.length);
+    const contentReview=evaluateMarketContentIntelligence(aiStrategyJson,importantNews.length);
     aiStrategyJson.content_score=contentReview.score;
     aiStrategyJson.content_grade=contentReview.grade;
     aiStrategyJson.content_score_breakdown=contentReview.breakdown;
@@ -2640,7 +2651,10 @@ async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJso
       const quality=evaluateResearchQualityGate(aiStrategyJson.research_master_v2);
       const semantic=evaluateCanonicalSemanticCoherenceGate({canonical_contract:contract,
         sections:{public_thesis:canonicalRecord(decisionPayload.generated_text).daily_sentence,member_thesis:member.today_core_thesis,line_summary:member.line_summary,taiwan_transmission:member.taiwan_transmission,content_os_topic:member.content_os_topic},
-        recommendations:member.beneficiary_candidates,quality_inputs:[aiStrategyJson.data_quality,aiStrategyJson.v10_data_quality_status,canonicalRecord(aiStrategyJson.member_research_note_v2).data_status],
+        recommendations:member.beneficiary_candidates,
+        quality_inputs:decisionPayload.decision_mode==='market_only'
+          ?[aiStrategyJson.data_quality,canonicalRecord(canonicalRecord(aiStrategyJson.research_master_v2).provenance).source_status]
+          :[aiStrategyJson.data_quality,aiStrategyJson.v10_data_quality_status,canonicalRecord(aiStrategyJson.member_research_note_v2).data_status],
         quality_counters:quality,evidence_coverage:quality.evidence_coverage,content_score:decisionPayload.content_score,
       }) as Record<string,unknown>;
       if(semantic.eligible!==true)throw new PublicationQualityError((semantic.reason_codes as string[])||['SEMANTIC_BLOCKED']);
@@ -3100,7 +3114,7 @@ Deno.serve(async (req:Request)=>{
     if(reportState.error)throw new Error('REPORT_STATE_ADVANCE_FAILED');
     const deliveryEligible=verifiedMarketGate.eligible&&Boolean(writeResult.snapshotId)&&writeResult.memberRevision.eligible;
     const deliveryReasonCodes=Array.from(new Set([...verifiedMarketGate.reason_codes,...writeResult.memberRevision.reasonCodes]));
-    if(deliveryEligible){const editorialState=await supabase.rpc('advance_trading_day_state_v1',{p_trading_date:todayDate,p_state:'EDITORIAL_APPROVED',p_checkpoint:'editorial_gate',p_status:'SUCCEEDED',p_correlation_id:correlationId,p_metadata:{report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,member_content_revision_id:writeResult.memberRevision.revisionId,content_score:verifiedGate.content_score,semantic_status:writeResult.memberRevision.status,reason_codes:deliveryReasonCodes}});if(editorialState.error)throw new Error('EDITORIAL_STATE_ADVANCE_FAILED');}
+    if(deliveryEligible){const editorialState=await supabase.rpc('advance_trading_day_state_v1',{p_trading_date:todayDate,p_state:'EDITORIAL_APPROVED',p_checkpoint:'editorial_gate',p_status:'SUCCEEDED',p_correlation_id:correlationId,p_metadata:{report_id:verified.reportId,decision_snapshot_id:writeResult.snapshotId,member_content_revision_id:writeResult.memberRevision.revisionId,content_score:verifiedMarketGate.content_score,semantic_status:writeResult.memberRevision.status,reason_codes:deliveryReasonCodes}});if(editorialState.error)throw new Error('EDITORIAL_STATE_ADVANCE_FAILED');}
     const durationMs=Date.now()-reqStart;log('DONE report_id='+verified.reportId+' report_eligible='+deliveryEligible+' premium_eligible='+verifiedGate.eligible+' duration='+durationMs+'ms');
     const sloResult=await supabase.from('runtime_slo_measurements').insert({slo_key:'report_generation_latency',measured_at:new Date().toISOString(),report_date:todayDate,correlation_id:correlationId,success:durationMs<=120000,value:durationMs,latency_ms:durationMs,reason_codes:durationMs<=120000?[]:['report_generation_latency_exceeded'],metadata:{premium_eligible:verifiedGate.eligible,engine_version:VERSION}});
     if(sloResult.error)log('REPORT_SLO_MEASUREMENT_DEGRADED '+sloResult.error.message);

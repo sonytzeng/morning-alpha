@@ -1,5 +1,7 @@
 const DECISION_ACTION_BY_MODE = Object.freeze({
   recommendations: 'SELECTIVE',
+  // Market publication is not a claim that a full stock universe had no trades.
+  market_only: 'WAIT',
   no_trade: 'WAIT',
   blocked: 'STOP',
 });

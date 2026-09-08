@@ -23,6 +23,7 @@ import {
 } from '@/lib/morningAlphaReportAdapter';
 import { callGetReportPayload } from '@/services/entitlementService';
 import type { ServerReportPayloadResponse, SubscriptionTier } from '@/types/subscription';
+import { resolveSubscriberPayloadIdentity } from '@/lib/subscriberReportContract';
 
 /**
  * Validate that a string looks like a real YYYY-MM-DD date.
@@ -127,13 +128,14 @@ function getPayloadDailySentence(payload: Record<string, unknown>): string {
 }
 
 function toTrimmedReportRow(response: ServerReportPayloadResponse): ReportRow | null {
-  if (!response.payload || !response.report_date) return null;
+  const identity = resolveSubscriberPayloadIdentity(response);
+  if (!response.payload || !identity) return null;
   const payload = response.payload;
-  const generatedAt = getPayloadGeneratedAt(payload);
+  const generatedAt = identity.generatedAt || getPayloadGeneratedAt(payload);
   const dailySentence = getPayloadDailySentence(payload);
   return {
-    id: response.revision_id || `server-trimmed:${response.report_date}`,
-    report_date: response.report_date,
+    id: identity.revisionId || `server-trimmed:${identity.reportDate}`,
+    report_date: identity.reportDate,
     market_bias: typeof payload.market_bias === 'string' ? payload.market_bias : null,
     confidence_score: payload.confidence_score != null ? Number(payload.confidence_score) : null,
     created_at: generatedAt,
@@ -265,18 +267,21 @@ async function resolveViaServerTrimmedPayload(params: {
   const response = await callGetReportPayload({ reportDate: requestedDate });
   const row = toTrimmedReportRow(response);
   if (!row) return null;
+  // The server computes Asia/Taipei today. A browser clock must not reclassify
+  // an already selected current canonical report as an old holiday fallback.
+  const resolvedTodayDate = resolveSubscriberPayloadIdentity(response)?.todayDate || todayDate;
   const normalized = normalizeMorningAlphaReport(row);
-  const isUrlHistorical = Boolean(requestedDate && requestedDate !== todayDate);
+  const isUrlHistorical = Boolean(requestedDate && requestedDate !== resolvedTodayDate);
   const status = isUrlHistorical
     ? { dataStatus: 'stale_reference_only' as const, staleReason: `URL 指定歷史報告 ${requestedDate}` }
-    : getServerPayloadDataStatus({ rawRow: row, todayDate, marketStatus, closedReason });
+    : getServerPayloadDataStatus({ rawRow: row, todayDate: resolvedTodayDate, marketStatus, closedReason });
 
   return buildResolveResult({
     report: normalized,
     rawRow: row,
     source: 'server_trimmed_payload',
     queriedDate: requestedDate || row.report_date || todayDate,
-    todayDate,
+    todayDate: resolvedTodayDate,
     marketStatus,
     closedReason,
     dataStatus: status.dataStatus,

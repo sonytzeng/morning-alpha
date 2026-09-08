@@ -19,8 +19,8 @@ export function SubscriberAnswer({ question, answer, reason, tone = 'blue', date
   </header>;
 }
 
-export function DecisionBrief({ decision, date, marketBias, legacyInstruction, legacyReason, legacyCount, stocksWithheld = false, actions }: {
-  decision: Decision; date: string; marketBias: string; legacyInstruction: string; legacyReason: string; legacyCount: number; stocksWithheld?: boolean; actions?: ReactNode;
+export function DecisionBrief({ decision, date, marketBias, legacyInstruction, legacyReason, legacyCount, stocksWithheld = false, recommendationNotice = null, actions }: {
+  decision: Decision; date: string; marketBias: string; legacyInstruction: string; legacyReason: string; legacyCount: number; stocksWithheld?: boolean; recommendationNotice?: string | null; actions?: ReactNode;
 }) {
   const [term, setTerm] = useState<string | null>(null);
   const hasAssessment = decision.action !== 'INSUFFICIENT_DATA';
@@ -32,7 +32,7 @@ export function DecisionBrief({ decision, date, marketBias, legacyInstruction, l
       <div className="ma-subscriber-three-answers">
         <div><h2>現在該怎麼做？</h2><strong>{hasAssessment ? ACTION_LABEL[decision.action] : legacyInstruction || ACTION_LABEL.INSUFFICIENT_DATA}</strong>
           {!hasAssessment && <p>新進場評估尚未完成，不將舊信心值當成進場分數。</p>}</div>
-        <div><h2>有沒有值得關注的機會？</h2><strong>{opportunitySummary(decision, legacyCount, stocksWithheld)}</strong></div>
+        <div><h2>有沒有值得關注的機會？</h2><strong>{opportunitySummary(decision, legacyCount, stocksWithheld, recommendationNotice)}</strong></div>
       </div>
       <dl className="ma-subscriber-metrics" aria-label="方向與進場分開評估">
         <div><dt>方向機率</dt><dd>{scoreText(decision.direction_probability, '尚無校準結果')}</dd></div>

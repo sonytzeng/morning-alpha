@@ -5,16 +5,19 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
+import { Buffer } from 'node:buffer';
 import { isolatedEdge, isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
 import { currentResearchDateError, companyEvidenceSupported } from '../supabase/functions/_shared/research-pipeline-contract.ts';
 import { candidateEvidenceRelevance } from '../supabase/functions/generate-daily-report-v7/candidate-evidence.ts';
 import { hasFailedEvidenceDependency, resolveClaimedPipelineSlot, resolveClaimedPipelineRetry, resolveDailyDeliveryCompletion } from '../supabase/functions/_shared/daily-delivery-recovery.ts';
 import { RUNTIME_QUALITY_POLICY } from '../supabase/functions/_shared/production-architecture-core.mjs';
 import { dedupePresentedOpportunities } from '../src/lib/decisionPresentation.ts';
+import { evaluateMarketReportGate } from '../supabase/functions/_shared/market-report-gate.ts';
 
 const path = relative => fileURLToPath(new URL(relative, import.meta.url));
 const read = relative => readFileSync(path(relative), 'utf8');
+const { Request } = globalThis;
 
 test('recovered canonical member recommendation survives the actual Opportunities page mapper', () => {
   const source = read('../src/pages/opportunities/page.tsx');
@@ -56,9 +59,9 @@ test('server payload rejects future snapshot cutoffs and impossible future check
   assert.match(source,/\.lte\("captured_at", new Date\(\)\.toISOString\(\)\)/);
 });
 
-test('atomic reader requires same report/decision/member revision; legacy rows remain compatible', () => {
+test('atomic market reader requires same published report/decision; paid member quality is independent', () => {
   const aligned = isolatedFunction(read('../supabase/functions/get-report-payload/index.ts'), 'isPublishedReadAligned', {
-    asObject: value => value || {}, toStringValue: value => typeof value === 'string' ? value : '',
+    getAi: report => report.ai_strategy_json || {}, toStringValue: value => typeof value === 'string' ? value : '',
   });
   const report = { id: 'r1', report_date: '2026-09-07', ai_strategy_json: { revision_id: 'd1', canonical_member_revision_id: 'm1' } };
   const context = { decisionSnapshot: { id: 'd1', report_id: 'r1', report_date: report.report_date },
@@ -66,9 +69,11 @@ test('atomic reader requires same report/decision/member revision; legacy rows r
   assert.equal(aligned(report, context), true);
   assert.equal(aligned({ ...report, ai_strategy_json: {} }, {}), true);
   assert.equal(aligned(report, { ...context, decisionSnapshot: { ...context.decisionSnapshot, id: 'd2' } }), false);
-  assert.equal(aligned(report, { ...context, memberContentRevision: { ...context.memberContentRevision, decision_snapshot_id: 'd2' } }), false);
-  assert.equal(aligned(report, { ...context, memberContentRevision: { ...context.memberContentRevision, report_date: '2026-09-04' } }), false);
-  assert.equal(aligned(report, { ...context, memberContentRevision: null }), false);
+  // Internal/member QA cannot take the market report off-line. The member
+  // reader has its own strict identity+semantic checks, exercised separately.
+  assert.equal(aligned(report, { ...context, memberContentRevision: { ...context.memberContentRevision, decision_snapshot_id: 'd2' } }), true);
+  assert.equal(aligned(report, { ...context, memberContentRevision: { ...context.memberContentRevision, report_date: '2026-09-04' } }), true);
+  assert.equal(aligned(report, { ...context, memberContentRevision: null }), true);
   assert.equal(aligned({ ...report, ai_strategy_json: { canonical_member_revision_id: 'm1' } }, context), false);
 });
 
@@ -170,14 +175,26 @@ test('real payload handler and SDK over loopback: server roles, locked data, can
   const ai = validAi();
   const sentence = ai.today_quote;
   const day = '2026-09-07', revision = '00000000-0000-4000-8000-000000000001';
+  // Synthetic provider rows carry the same fields required by the independent
+  // stock gate. This does not waive date, company evidence, or semantic checks.
+  isolatedFunction(read('./premiumContentGate.test.mjs'), 'addAuditedNoTradeMaster')(ai);
+  ai.research_master_v2.report_date = day;
+  ai.research_master_v2.today_date = day;
+  ai.research_master_v2.provenance.generated_at = `${day}T07:20:00+08:00`;
+  ai.research_master_v2.sections.representative_stocks = [{ symbol: '2330', evidence_refs: ['SYNTHETIC_COMPANY_IR'] }];
+  ai.important_news = [{ title: '2330 台積電先進封裝需求', summary: '合成公司證據，僅限隔離契約測試。', source: 'isolated official fixture',
+    url: 'https://example.invalid/fixture', published_at: `${day}T07:00:00+08:00` }];
+  const marketGate = evaluateMarketReportGate(ai, day);
+  assert.equal(marketGate.eligible, true, JSON.stringify(marketGate));
+  assert.equal(marketGate.recommendation_gate.eligible, true, JSON.stringify(marketGate.recommendation_gate));
   const report = { id: '00000000-0000-4000-8000-000000000002', report_date: day, report_mode: 'normal_overnight',
-    summary: 'OLD_RAW_THESIS', ai_strategy_json: { ...ai, v8_daily_sentence: { sentence } },
-    created_at: `${day}T07:20:00+08:00`, important_news_json: [{ title: '台積電先進封裝需求', source: 'isolated official fixture', url: 'https://example.invalid/fixture' }] };
+    summary: 'OLD_RAW_THESIS', ai_strategy_json: { ...ai, revision_id: revision, canonical_member_revision_id: 'isolated-member', v8_daily_sentence: { sentence } },
+    created_at: `${day}T07:20:00+08:00`, important_news_json: ai.important_news };
   const snapshot = { id: revision, report_id: report.id, report_date: day, version: 1, session_type: 'PREMARKET', is_current: true,
     status: 'READY', action: 'SELECTIVE', decision_mode: 'recommendations', content_score: 100, market_regime: 'range',
-    created_at: report.created_at, generated_text: { daily_sentence: sentence, recommendations: ai.today_beneficiary_stocks_v10 } };
-  const member = { id: 'isolated-member', report_date: day, decision_snapshot_id: revision, decision_snapshot_version: 1,
-    revision: 1, status: 'PASSED', semantic_status: 'PASSED', member_content: {
+    created_at: report.created_at, generated_text: { daily_sentence: sentence, recommendations: ai.today_beneficiary_stocks_v10, market_report_gate: marketGate } };
+  const member = { id: 'isolated-member', report_id: report.id, report_date: day, decision_snapshot_id: revision, decision_snapshot_version: 1,
+    revision: 1, status: 'PASSED', semantic_status: 'PASSED', semantic_reason_codes: [], member_content: {
       ...ai.member_research_note_v2, today_core_thesis: sentence, representative_stocks: ai.today_beneficiary_stocks_v10,
       canonical_contract: { snapshot_id: revision, primary_thesis: sentence } } };
   const quotes = ['TAIEX', '2330', 'TXF'].map(symbol => ({ symbol, value: 100, change_percent: 1, source: 'isolated fixture', trading_date: day, phase: 'premarket', captured_at: report.created_at }));
@@ -200,7 +217,8 @@ test('real payload handler and SDK over loopback: server roles, locked data, can
       : blocked ? { ...report.ai_strategy_json, missing_sources: ['sector_rotation_scores'], data_quality: 'degraded' } : report.ai_strategy_json }];
     else if (resource === 'decision_snapshots') payload = url.searchParams.get('session_type') === 'eq.CLOSING' ? [] : [{ ...snapshot,
       ...(blocked ? { action: 'STOP', decision_mode: 'blocked', status: 'PARTIAL', generated_text: { daily_sentence: '資料不足，研究未發布。', recommendations: [] } } : {}) }];
-    else if (resource === 'current_member_content_revisions_v1') payload = blocked ? [] : [member];
+    else if (resource === 'member_content_revisions' || resource === 'current_member_content_revisions_v1') payload = blocked ? [] : [{ ...member,
+      semantic_coherence_reviews: [{ status: 'PASSED', reason_codes: [], checked_at: report.created_at }] }];
     else if (resource === 'market_data_snapshots') payload = quotes;
     trace.push({ method: req.method, path: url.pathname, status }); // No headers/credentials/PII.
     res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(payload));
@@ -244,7 +262,7 @@ test('real payload handler and SDK over loopback: server roles, locked data, can
       assert.equal(evidenceReads.length,8,'exactly one bounded read per evidence dataset');
       assert.equal(new Set(evidenceReads.map(r=>r.path)).size,8,'no evidence retries or duplicate scans');
       assert.ok(evidenceReads.every(r=>r.method==='GET'));
-      assert.ok(requests.length-evidenceReads.length<=14,'original Core request budget unchanged');
+      assert.ok(requests.length-evidenceReads.length<=14, `original Core request budget unchanged: ${JSON.stringify(requests.filter(r => !evidenceTables.has(r.path.split('/').pop())))}`);
       assert.equal(result.payload.decision_engine_v1.schema_version,'decision-evidence-v1');
       assert.equal(result.payload.decision_engine_v1.revision_id,revision);
       assert.equal(result.payload.decision_engine_v1.direction_probability,null);

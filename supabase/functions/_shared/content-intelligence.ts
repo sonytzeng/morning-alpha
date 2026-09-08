@@ -329,15 +329,59 @@ function gradeForScore(score: number): ContentQualityGrade {
   return gradeContentScore(score, RUNTIME_QUALITY_POLICY) as ContentQualityGrade;
 }
 
+/** A market document has its own audited evidence, risk and verification path.
+ * Its editorial score must not depend on whether a company recommendation was
+ * admitted. This does not waive any Research quality counter or market source. */
+function hasAuditedMarketNarrative(ai: JsonRecord): boolean {
+  const master = asRecord(ai.research_master_v2), sections = asRecord(master.sections);
+  const quality = asRecord(ai.content_evidence_quality);
+  const core = asRecord(sections.core_thesis), guide = asRecord(sections.decision_guide);
+  const support = asRecords(sections.supporting_evidence);
+  const path = asRecords(asRecord(sections.transmission_narrative).path);
+  const hasRefs = (row: JsonRecord) => Array.isArray(row.evidence_refs) && row.evidence_refs.length > 0;
+  const markets = presentNumber(quality.verified_market_count), news = presentNumber(quality.verified_news_count);
+  return evaluateResearchQualityGate(master).eligible
+    && asText(asRecord(master.provenance).source_status) === 'complete'
+    && hasDecisionGradeSourceCoverage(ai, 'no_trade')
+    && quality.contract_version === 'PREMIUM_EVIDENCE_V1'
+    && markets !== null && Number.isSafeInteger(markets) && markets > 0
+    && news !== null && Number.isSafeInteger(news) && news >= 0
+    && presentNumber(quality.blank_market_change_count) === 0
+    && (news === 0 || quality.all_news_traceable === true)
+    && asText(core.statement).length >= 20 && hasRefs(core)
+    && support.length > 0 && support.every(hasRefs)
+    && path.length > 0 && path.every(hasRefs)
+    && asRecords(sections.timeline).length >= 6
+    && asText(guide.current_action).length >= 8
+    && asRecords(asRecord(sections.failure_scenario).triggers).length > 0
+    && asText(asRecord(asRecord(sections.next_action).if_failure).action).length >= 8;
+}
+
 export function evaluateContentIntelligence(
   aiValue: unknown,
   _importantNewsCount: number,
 ): ContentIntelligenceResult {
-  const ai = asRecord(aiValue);
+  return evaluateScopedContentIntelligence(aiValue, 'recommendations');
+}
+
+export function evaluateMarketContentIntelligence(
+  aiValue: unknown,
+  _importantNewsCount: number,
+): ContentIntelligenceResult {
+  return evaluateScopedContentIntelligence(aiValue, 'market');
+}
+
+function evaluateScopedContentIntelligence(
+  aiValue: unknown,
+  scope: 'market' | 'recommendations',
+): ContentIntelligenceResult {
+  const source = asRecord(aiValue);
+  // Private member-note prose is independently checked by the Premium gate.
+  // It cannot overwrite the public canonical market document's editorial score.
+  const ai = scope === 'market' ? { ...source, member_research_note_v2: {} } : source;
   const note = asRecord(ai.member_research_note_v2);
-  const recommendations = recommendationRows(ai);
-  const observations = asRecords(ai.v10_observation_watchlist);
-  const noTradeMode = hasAuditedCanonicalNoTrade(ai);
+  const recommendations = scope === 'market' ? [] : recommendationRows(ai);
+  const noTradeMode = scope === 'market' ? hasAuditedMarketNarrative(ai) : hasAuditedCanonicalNoTrade(ai);
   const decisionSourceCoverage = hasDecisionGradeSourceCoverage(
     ai,
     noTradeMode ? 'no_trade' : 'recommendations',

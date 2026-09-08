@@ -60,11 +60,17 @@ export function canonicalReportProjection(ai: Row, decision: Row): Row {
       taiwan_supply_chain_link:row.taiwan_supply_chain_relation,intraday_validation:row.confirmation_condition};
   }) : [];
   const blocked = decision.decision_mode === 'blocked';
-  if (blocked && recommendations.length) throw new Error('BLOCKED_RECOMMENDATIONS_CONTRADICTION');
+  const marketOnly = decision.decision_mode === 'market_only';
+  if ((blocked || marketOnly) && recommendations.length) throw new Error('BLOCKED_RECOMMENDATIONS_CONTRADICTION');
+  const marketGate = record(generated.market_report_gate);
+  if (marketOnly && (marketGate.eligible !== true || marketGate.status !== 'READY_MARKET_ONLY'
+    || marketGate.decision_mode !== 'market_only' || decision.action !== 'WAIT')) throw new Error('MARKET_PUBLICATION_PROOF_INVALID');
   return {
     ...ai,
     decision_mode: decision.decision_mode,
     canonical_action: decision.action,
+    ...(Object.keys(marketGate).length ? { market_report_gate: marketGate, report_status: marketGate.report_status,
+      recommendation_status: marketGate.recommendation_status, recommendation_gate: marketGate.recommendation_gate } : {}),
     today_quote: sentence,
     today_summary: sentence,
     daily_sentence: sentence,
@@ -84,7 +90,7 @@ export function canonicalReportProjection(ai: Row, decision: Row): Row {
 // Only the server-authorized admin branch calls this. Owner screens must use
 // the same gated read model as other readers; raw diagnostics remain explicitly
 // separate and cannot take precedence through nested ai_strategy_json aliases.
-export function canonicalAdminReaderProjection(report: Row, effectiveAi: Row, reader: Row): Row {
+export function canonicalAdminReaderProjection(report: Row, _effectiveAi: Row, reader: Row): Row {
   const stocks = reader.premium_content_status === 'eligible' && Array.isArray(reader.today_beneficiary_stocks)
     ? reader.today_beneficiary_stocks : [];
   const display = {
@@ -101,9 +107,11 @@ export function canonicalAdminReaderProjection(report: Row, effectiveAi: Row, re
     today_summary: reader.daily_sentence,
   };
   return {
-    ...report,
     ...display,
-    ai_strategy_json: { ...effectiveAi, ...display },
+    id: report.id,
+    // Raw Owner diagnostics are accessible only through their explicit namespace;
+    // they must not become a second subscriber content or recommendation source.
+    ai_strategy_json: { ...display },
     admin_source_report: report,
   };
 }

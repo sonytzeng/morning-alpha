@@ -303,6 +303,10 @@ export function admitResearchRecommendations(input: ResearchMasterV2AssemblerInp
       market_dependency: firstText(stock.market_dependency, stock.transmission_logic, stock.transmission_path, stock.validation_signal),
       confidence: boundedConfidence(stock.confidence, stock.confidence_score),
       data_timestamp: companyEvidence.map(item => String(item.published_at || item.data_as_of)).sort().at(-1) || null,
+      research_evidence_admission: {
+        contract_version: 'COMPANY_EVIDENCE_ADMISSION_V1', status: 'PASSED',
+        report_date: input.reportDate, company_evidence_ids: companyEvidence.map(item => item.evidence_id),
+      },
     });
   }
   return { accepted, rejected };
@@ -610,8 +614,9 @@ function sourceStatus(
 function isCanonicalV10NoTrade(
   input: ResearchMasterV2AssemblerInput,
 ): boolean {
-  return firstText(input.legacy.v10_data_quality_status).toLowerCase() ===
-      "insufficient_positive_evidence" &&
+  // This legacy-named helper selects market-only narrative assembly, not a
+  // completed-universe/no-opportunity outcome. Publication uses market_only.
+  return Array.isArray(input.legacy.today_beneficiary_stocks_v10) &&
     asRecords(input.legacy.today_beneficiary_stocks_v10).length === 0;
 }
 

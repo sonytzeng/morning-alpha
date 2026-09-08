@@ -18,6 +18,7 @@ export interface UserEntitlement {
 
 export interface ServerReportPayloadResponse {
   tier: SubscriptionTier;
+  today_date?: string | null;
   report_date: string | null;
   revision_id?: string | null;
   generated_at?: string | null;

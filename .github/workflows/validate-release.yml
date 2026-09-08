@@ -74,5 +74,9 @@ jobs:
             -f supabase/migrations/20260907030607_core_research_atomic_publication.sql \
             -f supabase/migrations/20260907030607_core_research_atomic_publication.sql \
             -f supabase/migrations/20260908020000_incident_acceptance_market_delivery.sql \
-            -f supabase/migrations/20260908020000_incident_acceptance_market_delivery.sql
+            -f supabase/migrations/20260908020000_incident_acceptance_market_delivery.sql \
+            -f supabase/migrations/20260908050000_market_publication_recommendation_isolation.sql \
+            -f supabase/migrations/20260908050000_market_publication_recommendation_isolation.sql
           node --test tests/researchPipelineDatabase.integration.mjs
+          MA_LOCAL_SCOPE=ma-core-final-20260907 MA_ISOLATED_TEST_DB=ma_market_publication_test1 \
+            node --test tests/marketPublicationDatabase.integration.mjs

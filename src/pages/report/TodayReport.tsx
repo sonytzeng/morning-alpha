@@ -30,6 +30,7 @@ import type { UserEntitlement } from '@/types/subscription';
 import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 import { DecisionBrief, DecisionEvidence } from '@/features/decision-v1/DecisionBrief';
 import { applyPublishedDecisionGate, decisionFromReport, type ReportIdentity } from '@/features/decision-v1/presentation';
+import { recommendationPublication, RECOMMENDATION_EVIDENCE_INSUFFICIENT } from '@/lib/subscriberReportContract';
 
 type AnyObj = Record<string, any>;
 
@@ -411,9 +412,11 @@ function TodayReportContent() {
 
   const avoidAction = report?.avoid_today?.find((item) => Boolean(item?.trim())) || '';
   const premiumAvailability = resolvePremiumContentAvailability(ai);
+  const stockPublication = recommendationPublication(ai);
   const hasDecisionV1Input = Object.prototype.hasOwnProperty.call(ai, 'decision_engine_v1');
-  const productDecision = applyPublishedDecisionGate(decisionFromReport(ai, identity, todayStr), presentation.primaryDecision.state, premiumAvailability.eligible);
-  const recommendationAccess = canShowBeginnerRecommendations({
+  const productDecision = applyPublishedDecisionGate(decisionFromReport(ai, identity, todayStr), presentation.primaryDecision.state,
+    premiumAvailability.eligible && (!stockPublication.explicit || stockPublication.stocksAllowed));
+  const recommendationAccess = (!stockPublication.explicit || stockPublication.stocksAllowed) && canShowBeginnerRecommendations({
     action: presentation.primaryDecision.state, premiumEligible: premiumAvailability.eligible,
     decisionMode: premiumAvailability.decisionMode, reportDate: report?.report_date, todayDate: todayStr, isHistoricalFallback,
   });
@@ -430,7 +433,7 @@ function TodayReportContent() {
         displayObservation: readableTexts[1],
       };
     });
-  const beginnerFocusStocks = canShowBeginnerRecommendations({
+  const beginnerFocusStocks = recommendationAccess && canShowBeginnerRecommendations({
     action: presentation.primaryDecision.state,
     premiumEligible: premiumAvailability.eligible,
     decisionMode: premiumAvailability.decisionMode,
@@ -665,6 +668,7 @@ function TodayReportContent() {
         action={renderSafeText(decisionCopy.instruction)}
         nextCheckpoint={renderSafeText(nextDecisionTime)}
         stocks={beginnerFocusStocks}
+        emptyStockMessage={stockPublication.notice || RECOMMENDATION_EVIDENCE_INSUFFICIENT}
         confirmationItems={successConditions}
         invalidationItems={presentation.invalidationItems}
         avoidAction={avoidAction ? publicTodayText(avoidAction) : undefined}
@@ -679,9 +683,10 @@ function TodayReportContent() {
 
       <main className="flex-1 overflow-x-hidden">
         <DecisionBrief decision={productDecision} date={report.report_date}
-          marketBias={publicTodayText(presentation.marketBiasLabel)} legacyInstruction={hasDecisionV1Input ? '評估尚未完成，先等待' : decisionCopy.instruction}
+          marketBias={publicTodayText(presentation.marketBiasLabel)} legacyInstruction={decisionCopy.instruction}
           legacyReason={publicTodayText(oneLineConclusion || primaryScenario)} legacyCount={focusStocks.length}
           stocksWithheld={!recommendationAccess}
+          recommendationNotice={stockPublication.notice}
           actions={canPreviewBeginnerMode && <button type="button" onClick={() => setTodayReportMode('beginner')}>切換小白模式</button>} />
         <DecisionEvidence decision={productDecision} canShowStocks={recommendationAccess} />
         {!isReportForToday && (

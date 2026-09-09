@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { getSubscriberReportProjection } from '../src/lib/subscriberReportContract.ts';
+import { subscriberProjectionFixture } from './fixtures/subscriber-projection-v1.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
@@ -311,7 +313,13 @@ test('paid report fails closed when evidence does not meet the member threshold'
   assert.match(reportDetail, /memberResearchDegraded/);
   assert.match(reportDetail, /resolvePremiumContentAvailability/);
   assert.match(reportDetail, /今日研究資料尚未達付費發布標準/);
-  assert.match(reportDetail, /不會把資料不足包裝成高信心受惠股/);
+  assert.match(reportDetail, /memberResearchDegraded = !projection\.recommendation\.available/);
+  assert.match(reportDetail, /projection\.recommendation\.message/);
+  const withheld = getSubscriberReportProjection(subscriberProjectionFixture('MARKET_READY_RECOMMENDATION_BLOCKED'));
+  assert.equal(withheld.analysisAvailable, true, 'paid evidence failures must not block an independently published market report');
+  assert.equal(withheld.recommendation.available, false);
+  assert.deepEqual(withheld.recommendation.items, []);
+  assert.match(withheld.recommendation.message, /推薦評估證據不足/);
   assert.match(reportDetail, /本報告沒有可核對的 48 小時內新聞來源/);
   assert.doesNotMatch(reportDetail, /等待 09:30 開盤雷達/);
   assert.doesNotMatch(reportDetail, /market_data_latest_date \|\| report\.report_date\} 收盤/);
@@ -321,7 +329,8 @@ test('paid report fails closed when evidence does not meet the member threshold'
   assert.match(opportunities, /premiumResearchPublishable/);
   assert.match(opportunities, /resolvePremiumContentAvailability/);
   assert.match(reportsCenter, /selectedResearchPublishable/);
-  assert.match(reportsCenter, /這天的個股研究已降級/);
+  assert.match(reportsCenter, /selectedResearchPublishable = selectedProjection\.recommendation\.available/);
+  assert.match(reportsCenter, /selectedProjection\.recommendation\.message/);
   assert.match(premiumAvailability, /Object\.keys\(gate\)\.length > 0/);
   assert.match(premiumAvailability, /memberValueScore >= 90/);
   assert.match(premiumAvailability, /freshNewsCount > 0/);
@@ -461,7 +470,9 @@ test('trading-day reports and public timelines fail closed with correct times', 
   assert.match(runtimeTimeline, /time: '14:30'/);
   assert.doesNotMatch(runtimeTimeline, /time: '13:30'/);
   assert.match(today, /if \(!isReportForToday\)/);
-  assert.match(warRoom, /report\.report_date !== todayTaipeiStr/);
+  assert.match(warRoom, /if \(projection\.historical\)/);
+  assert.doesNotMatch(warRoom, /report\.report_date !== todayTaipeiStr/);
+  assert.match(warRoom, /data-report-date=\{projection\.identity\.reportDate\}/);
   assert.match(warRoom, /不會把歷史時間軸冒充成今天進度/);
 });
 
@@ -532,9 +543,13 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /查看完整研究與當沖條件/);
   assert.doesNotMatch(home, /查看完整 AI 推理/);
   assert.match(home, /最近一次收盤驗證 ·/);
-  assert.match(home, /dataStatus === 'complete'/);
-  assert.match(home, /hasDirection/);
-  assert.match(home, /資料不足，已安全降級/);
+  assert.match(home, /getSubscriberReportProjection\(row, \{ historical: true \}\)/);
+  assert.match(home, /projection\.identity\.reportDate <= formatTaipeiDate\(\)[\s\S]*&& projection\.closing\.complete/);
+  assert.match(home, /const hasRuntimeClosing = projection\.closing\.complete/);
+  assert.match(home, /closingResultLabel\(\s*projection\.closing\.outcome/);
+  assert.equal(getSubscriberReportProjection(subscriberProjectionFixture('PARTIAL')).closing.complete, false);
+  assert.equal(getSubscriberReportProjection({ report_date: '2026-09-09', data_status: 'complete', hit_or_miss: 'hit', actual_direction: 'up' }).closing.complete, false,
+    'a flattened legacy row without publication/revision/receipt cannot appear as a completed public result');
   assert.match(home, /selectNextRuntimeTimelineNode\(timelineNodes\)/);
   assert.match(home, /runtimeLifecycleComplete/);
   assert.match(home, /查看收盤驗證，等待下一個交易日/);
@@ -621,8 +636,8 @@ test('war room is a live monitor rather than another dashboard page', () => {
     assert.doesNotMatch(warRoom, new RegExp(repeatedSurface), `war room still repeats a morning surface: ${repeatedSurface}`);
   }
   assert.match(warRoom, /hasNewIntradayEvidence/);
-  assert.match(warRoom, /getRuntimeCheckpointState\(runtimeSyncStatus, '1030'\) === 'completed'/);
-  assert.match(warRoom, /getRuntimeCheckpointState\(runtimeSyncStatus, '1300'\) === 'completed'/);
+  assert.match(warRoom, /projection\.runtime\.newIntradayEvidence/);
+  assert.doesNotMatch(warRoom, /getRuntimeCheckpointState\(/, 'subscriber checkpoint claims must use the canonical projection');
   assert.match(warRoom, /feedTimeline/);
   for (const legacySurface of ['ma-pixel-hero', 'ma-phase2-kpi-grid', 'ma-phase2-timeline', 'ma-phase2-observation-grid']) {
     assert.doesNotMatch(warRoom, new RegExp(legacySurface), `war room still uses repeated surface: ${legacySurface}`);
@@ -709,10 +724,21 @@ test('member note translates research enums and checkpoint diagnostics for reade
 });
 
 test('performance excludes outcomes that have no verifiable closing direction', () => {
-  assert.match(performance, /const hasVerifiableDirection/);
-  assert.match(performance, /const hasNamedDirection/);
-  assert.match(performance, /numberOrNull\(actualTaiexClose\?\.change_percent\)/);
-  assert.match(performance, /if \(!hasVerifiableDirection\) return false/);
+  assert.match(performance, /getSubscriberReportProjection\(row, \{ historical: true \}\)/);
+  assert.match(performance, /const hasCompleteVerification = projection\.closing\.complete/);
+  assert.match(performance, /tradingDay && hasMorningReport && hasCompleteVerification \? rawOutcome : 'insufficient'/);
+  assert.doesNotMatch(performance, /row\.confidence_score|ai\.confidence_score/);
+  const verified = subscriberProjectionFixture('READY');
+  verified.subscriber_state.closing = 'COMPLETE';
+  verified.closing_verification_v2 = verified.closing_verification;
+  assert.equal(getSubscriberReportProjection(verified, { historical: true }).closing.complete, true);
+  for (const field of ['actual_taiex_change', 'actual_2330_close', 'actual_txf_close']) {
+    const missing = globalThis.structuredClone(verified);
+    delete missing.closing_verification_v2[field];
+    const projection = getSubscriberReportProjection(missing, { historical: true });
+    assert.equal(projection.closing.complete, false, `${field} is mandatory for a verified sample`);
+    assert.equal(projection.closing.outcome, null, 'a hit/miss label cannot survive missing core closing evidence');
+  }
   assert.match(performance, /publicPerformanceText/);
   assert.match(closingVerification, /actual_taiex_change: params\.taiexClose\?\.change \?\? null/);
   assert.match(closingVerification, /actual_direction: params\.taiexClose/);
@@ -728,8 +754,11 @@ test('verification is a public fail-closed audit instead of an internal diagnost
   for (const internalName of ['FINNHUB', 'SUPABASE_REPORTS', 'close-market-review', 'DATA SOURCE CHECK', 'SCRIPT VERIFICATION', 'OPENAI']) {
     assert.doesNotMatch(verification, new RegExp(internalName, 'i'), `verification exposes an internal name: ${internalName}`);
   }
-  assert.match(verification, /hasActualOutcome/);
-  assert.match(verification, /resolveClosingVerificationState/);
+  assert.match(verification, /const directionVerified = projection\.closing\.complete/);
+  assert.match(verification, /const fullData = projection\.closing\.complete/);
+  assert.match(verification, /const closing = projection\.closing\.result/);
+  assert.doesNotMatch(verification, /resolveClosingVerificationState\(/);
+  assert.equal(getSubscriberReportProjection(subscriberProjectionFixture('NOT_DUE')).closing.complete, false);
   assert.match(verification, /部分個股或期貨欄位不足/);
   assert.match(verification, /if \(isHistoricalFallback\)/);
   assert.match(verification, /不會把 .* 的進度誤標為今天/);
@@ -740,10 +769,15 @@ test('report pages translate public market labels and require a real closing out
     assert.doesNotMatch(reportsCenter, new RegExp(label, 'i'), `reports center renders an untranslated label: ${label}`);
   }
   assert.match(reportsCenter, /publicReportText/);
-  assert.match(reportDetail, /resolveClosingVerificationState/);
-  assert.match(reportDetail, /收盤方向已驗證（部分資料不足）/);
-  assert.match(reportDetail, /歷史收盤驗證資料不足/);
-  assert.match(reportDetail, /closingVerification\.taiexChange\.toFixed\(2\)/);
+  assert.match(reportDetail, /getSubscriberReportProjection\(report, \{ todayDate: taipeiToday, historical: true \}\)/);
+  assert.match(reportDetail, /const closing = projection\.closing\.result/);
+  assert.match(reportDetail, /projection\.closing\.complete \? \(/);
+  assert.match(reportDetail, /taiexChange\.toFixed\(2\)/);
+  assert.doesNotMatch(reportDetail, /report\.confidence_score|strategy\.confidence|resolveClosingVerificationState\(/);
+  const partial = getSubscriberReportProjection(subscriberProjectionFixture('PARTIAL'), { historical: true });
+  assert.equal(partial.analysisAvailable, false);
+  assert.equal(partial.confidence.value, null);
+  assert.equal(partial.closing.complete, false);
   assert.doesNotMatch(reportDetail, /!!strategy\.closing_feedback_plan/);
   assert.match(observationSection, /步驟 \$\{step\}/);
   assert.match(observationSection, /盤前觀察/);
@@ -762,7 +796,9 @@ test('account health cards use the server-trimmed report contract instead of har
   assert.match(accountDashboard, /getLatestReports\(30\)/);
   assert.match(accountDashboard, /payload\.market_data_snapshots/);
   assert.match(accountDashboard, /payload\.important_news/);
-  assert.match(accountDashboard, /payload\.opening_radar/);
+  assert.match(accountDashboard, /getAccountIntradayView\(projection\)/);
+  assert.match(accountDashboard, /projection\.runtime\.checkpoints\['0930'\]/);
+  assert.doesNotMatch(accountDashboard, /payload\.opening_radar|openingRadar\.radar_status/);
   assert.doesNotMatch(accountDashboard, /V8: Simplified — no direct market_data/);
   assert.match(accountInfoCards, /09:30 開盤校正/);
   assert.doesNotMatch(accountInfoCards, /09:15 開盤校正/);

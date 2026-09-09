@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import {
@@ -12,8 +12,56 @@ import {
   generateVoiceScript,
 } from '@/services/voiceScriptEngine';
 import type { VoiceScript, VoiceReportRow } from '@/services/voiceScriptEngine';
+import { getCurrentEntitlement } from '@/services/entitlementService';
+import { supabase } from '@/lib/supabase';
 
 export default function VoicePage() {
+  const [authorized, setAuthorized] = useState(false);
+  const [checking, setChecking] = useState(true);
+  useEffect(() => {
+    let active = true;
+    let request = 0;
+    const check = async () => {
+      const revision = ++request;
+      setAuthorized(false);
+      setChecking(true);
+      try {
+        const entitlement = await getCurrentEntitlement();
+        if (active && revision === request) setAuthorized(entitlement.isLoggedIn && entitlement.isAdmin);
+      } catch {
+        if (active && revision === request) setAuthorized(false);
+      } finally {
+        if (active && revision === request) setChecking(false);
+      }
+    };
+    void check();
+    // Invalidate immediately; defer the server request outside the Auth callback.
+    const { data } = supabase.auth.onAuthStateChange(() => {
+      request += 1;
+      setAuthorized(false);
+      setChecking(true);
+      globalThis.setTimeout(() => { if (active) void check(); }, 0);
+    });
+    return () => { active = false; request += 1; data.subscription.unsubscribe(); };
+  }, []);
+  if (checking || !authorized) return (
+    <div className="min-h-screen bg-navy-950 flex flex-col">
+      <Navbar />
+      <main className="flex-1 flex items-center justify-center px-4" data-internal-qa-authorized="false">
+        <section className="text-center max-w-md">
+          <h1 className="text-white font-semibold text-lg">{checking ? '正在確認存取權限' : '內部工具頁面'}</h1>
+          <p className="mt-2 text-sm text-white/50">{checking ? '請稍候。' : '此頁面僅供經伺服器確認的管理員使用。'}</p>
+          {!checking && <Link to="/" className="mt-4 inline-flex min-h-11 items-center text-white/60">返回首頁</Link>}
+        </section>
+      </main>
+      <Footer />
+    </div>
+  );
+  // Raw QA readers are not mounted before a real server entitlement is granted.
+  return <InternalVoicePage />;
+}
+
+function InternalVoicePage() {
   const [voiceReport, setVoiceReport] = useState<VoiceReportRow | null>(null);
   const [generatedScript, setGeneratedScript] = useState<VoiceScript | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,24 +133,7 @@ export default function VoicePage() {
   const wordCount = displayScript.replace(/\s/g, '').length;
   const readingPace = Math.round(wordCount / Math.max(estimatedSeconds, 1));
 
-  // ── Admin gate ──
-  const isAdmin = (() => {
-    try { return localStorage.getItem('ma_tools') === '1'; } catch { return false; }
-  })();
-  const navigate = useNavigate();
-  const [accessCountdown, setAccessCountdown] = useState(3);
-
-  useEffect(() => {
-    if (!isAdmin && accessCountdown > 0) {
-      const timer = setTimeout(() => setAccessCountdown((prev) => prev - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-    if (!isAdmin && accessCountdown === 0) {
-      navigate('/', { replace: true });
-    }
-  }, [isAdmin, accessCountdown, navigate]);
-
-  // ── Internal tools toggle (localStorage gated) ──
+  // Display preference only, inside the server-authorized QA component.
   const [internalMode, setInternalMode] = useState(() => {
     try { return localStorage.getItem('ma_tools') === '1'; } catch { return false; }
   });
@@ -142,40 +173,6 @@ export default function VoicePage() {
   }, []);
 
   const reels = (sourceMode === 'generated' && generatedScript?.reels) ? generatedScript.reels : null;
-
-  // ==========================================
-  // ADMIN GATE — block all non-admin access
-  // ==========================================
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-navy-950 flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center px-4">
-          <div className="text-center max-w-md">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-5">
-              <i className="ri-shield-keyhole-line text-amber-400 text-2xl" />
-            </div>
-            <h2 className="text-white font-semibold text-lg mb-2">內部工具頁面</h2>
-            <p className="text-white/35 text-sm mb-1">此頁面為 Morning Alpha 站方內部營運工具，不對外公開。</p>
-            <p className="text-white/20 text-xs mb-6">僅限管理員與內部人員使用。</p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl">
-              <span className="text-white/30 text-xs">{accessCountdown} 秒後自動返回首頁</span>
-            </div>
-            <div className="mt-4">
-              <Link
-                to="/"
-                className="inline-flex items-center gap-2 text-white/40 hover:text-white/60 text-xs transition-colors whitespace-nowrap"
-              >
-                <i className="ri-arrow-left-line" />
-                立即返回首頁
-              </Link>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
 
   // --- LOADING ---
   if (loading) {

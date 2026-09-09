@@ -12,7 +12,7 @@ import { resolveCanonicalRuntimeMarketStatus } from '../supabase/functions/_shar
 import { resolveCanonicalDataQuality } from '../supabase/functions/_shared/production-architecture-core.mjs';
 import { canonicalAdminReaderProjection } from '../supabase/functions/_shared/research-pipeline-contract.ts';
 import { assembleResearchMasterV2, validateResearchMasterV2 } from '../supabase/functions/generate-daily-report-v7/research-master-v2.ts';
-import { createSubscriberState, parseSubscriberState, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE } from '../shared/subscriber-state-contract.ts';
+import { createSubscriberState, getSubscriberReportProjection, parseSubscriberState, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE } from '../shared/subscriber-state-contract.ts';
 
 const source = readFileSync(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');
 const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -75,7 +75,8 @@ test('published member content is pinned independently and requires real matchin
 
 test('market publication eligibility has no Premium/QA gate dependency; recommendation counts remain separately gated',()=>{
   const publicBody=source.slice(source.indexOf('function buildPublicPayload('),source.indexOf('function buildMemberPayload('));
-  assert.match(publicBody,/marketPublished = subscriberState\.publication === "PUBLISHED"/);
+  assert.match(publicBody,/marketPublished = subscriberProjection\.analysisAvailable/);
+  assert.match(publicBody,/subscriberProjection = getSubscriberReportProjection/);
   assert.match(publicBody,/publicationVerified: publicationAligned, marketEvidenceReady: marketGate\.eligible/);
   assert.match(publicBody,/analysisStatus: ctx\.decisionSnapshot\?\.status/);
   assert.match(publicBody,/overall_status: marketPublished \? "eligible" : "blocked"/);
@@ -110,7 +111,7 @@ const projectionNames = ['asObject', 'asArray', 'parseAi', 'toStringValue', 'toN
 const projections = {};
 const projectionDeps = { evaluateMarketReportGate, evaluatePremiumContentGate, resolveMarketStatus,
   buildCanonicalIntradaySyncStatus, resolveCanonicalRuntimeMarketStatus, resolveCanonicalDataQuality, canonicalAdminReaderProjection,
-  createSubscriberState, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE,
+  createSubscriberState, getSubscriberReportProjection, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE,
   ...Object.fromEntries(projectionNames.map(name => [name, (...args) => projections[name](...args)])) };
 for (const name of projectionNames) projections[name] = isolatedFunction(source, name, projectionDeps);
 
@@ -392,6 +393,49 @@ test('published confidence is canonical-only and missing confidence cannot reuse
   }
   ctx.decisionSnapshot.confidence_score = 73;
   assert.equal(projections.buildPublicPayload(report, ctx).confidence_score, 73);
+});
+
+test('subscriber sentence aliases cannot restore confidence prose suppressed by the canonical projection', () => {
+  const { report, ctx } = projectionFixture();
+  ctx.decisionSnapshot.confidence_score = null;
+  for (const sentence of ['模型信心 100/100，市場趨勢尚待驗證。', 'TAIEX 與台積電同向；模型信心 100/100；未確認前不追價']) {
+    ctx.decisionSnapshot.generated_text.daily_sentence = sentence;
+    for (const name of ['buildPublicPayload', 'buildMemberPayload', 'buildVipPayload', 'buildAdminPayload']) {
+      const payload = projections[name](report, ctx);
+      const expected = payload.subscriber_projection.marketDecision.summary ?? payload.subscriber_projection.statusLabel;
+      assert.equal(payload.subscriber_state.publication, 'PUBLISHED', name);
+      assert.equal(payload.subscriber_projection.analysisAvailable, true, name);
+      assert.equal(payload.confidence_score, null, name);
+      for (const alias of [payload.daily_sentence, payload.today_quote, payload.v8_daily_sentence.sentence,
+        payload.public_summary.daily_sentence, payload.public_summary.one_sentence, payload.canonical_decision.daily_sentence]) {
+        assert.equal(alias, expected, name); assert.doesNotMatch(alias, /100\s*\/\s*100/, name);
+      }
+      if (sentence.includes('；')) assert.equal(expected, 'TAIEX 與台積電同向；未確認前不追價', name);
+    }
+    const history = projections.buildHistorySummary(report, ctx.decisionSnapshot, '2026-09-08T07:00:00Z');
+    const expectedHistory = history.subscriber_projection.marketDecision.summary ?? history.subscriber_projection.statusLabel;
+    assert.equal(history.subscriber_state.publication, 'PUBLISHED');
+    assert.equal(history.summary, expectedHistory); assert.equal(history.today_quote, expectedHistory);
+    assert.doesNotMatch(history.summary, /100\s*\/\s*100/); assert.equal(history.confidence_score, null);
+  }
+});
+
+test('projection preserves a legitimate canonical market summary and validates legacy fallback before emitting aliases', () => {
+  const { report, ctx } = projectionFixture();
+  ctx.decisionSnapshot.confidence_score = null;
+  const sentence = '市場量能尚待確認；先觀察權值與指數是否同向';
+  ctx.decisionSnapshot.generated_text.daily_sentence = sentence;
+  const publicPayload = projections.buildPublicPayload(report, ctx);
+  const history = projections.buildHistorySummary(report, ctx.decisionSnapshot, '2026-09-08T07:00:00Z');
+  assert.equal(publicPayload.daily_sentence, sentence); assert.equal(history.summary, sentence);
+  assert.equal(publicPayload.subscriber_projection.marketDecision.summary, sentence);
+  delete ctx.decisionSnapshot.generated_text.daily_sentence;
+  report.today_quote = '指數待驗證；模型信心 100/100；不得追價';
+  const fallback = projections.buildPublicPayload(report, ctx);
+  assert.equal(fallback.daily_sentence, '指數待驗證；不得追價');
+  assert.equal(fallback.canonical_decision.daily_sentence, fallback.daily_sentence);
+  assert.equal(fallback.subscriber_projection.analysisAvailable, true);
+  assert.equal(fallback.confidence_score, null);
 });
 
 test('a genuinely published READY market STOP remains STOP; only unpublished QA STOP is withheld', () => {

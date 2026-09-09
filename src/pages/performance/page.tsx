@@ -4,7 +4,7 @@ import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import { supabase } from '@/lib/supabase';
 import { SubscriberAnswer } from '@/features/decision-v1/DecisionBrief';
-import { closingDataComplete } from '@/features/decision-v1/forwardValidation';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 
 type PublicPerformanceJournalRow = {
   report_date: string;
@@ -175,10 +175,10 @@ function listFromAdjustment(value: unknown): string[] {
 function buildReportRecordFromPublicRow(row: PublicPerformanceJournalRow): ReportRecord {
   const actualTaiexClose = numberOrNull(row.actual_taiex_close);
   return {
+    ...row,
     id: row.report_date,
     report_date: row.report_date,
     market_bias: row.market_bias,
-    confidence_score: row.confidence_score,
     updated_at: row.updated_at,
     ai_strategy_json: {
       is_trading_day: row.is_trading_day,
@@ -219,35 +219,12 @@ function normalizeOutcome(value: unknown): JournalOutcome {
   return 'insufficient';
 }
 
-function isPendingVerification(closing: Record<string, unknown> | null): boolean {
-  if (!closing) return true;
-  const raw = [closing.status, closing.hit_or_miss, closing.prediction_result, closing.data_status]
-    .map((item) => text(item).toLowerCase())
-    .join('|');
-  return raw.includes('pending') || raw.includes('real_market_data');
-}
-
-function isCompleteClosingData(closing: Record<string, unknown> | null): boolean {
-  if (!closing || isPendingVerification(closing)) return false;
-  const status = text(closing.status).toLowerCase();
-  const dataStatus = text(closing.data_status).toLowerCase();
-  const actualTaiexClose = asRecord(closing.actual_taiex_close);
-  const actualDirection = text(closing.actual_direction).toLowerCase();
-  const hasNamedDirection = Boolean(actualDirection)
-    && !['unknown', 'pending', 'unavailable', 'n/a', '尚未取得', '待資料'].includes(actualDirection);
-  const hasVerifiableDirection = hasNamedDirection
-    || numberOrNull(closing.actual_taiex_change) !== null
-    || numberOrNull(actualTaiexClose?.change_percent) !== null
-    || numberOrNull(actualTaiexClose?.change) !== null;
-  if (!hasVerifiableDirection) return false;
-  return closingDataComplete(status, dataStatus, hasVerifiableDirection);
-}
-
 function reportSelectionScore(row: ReportRecord): number[] {
   const ai = row.ai_strategy_json || {};
-  const closing = asRecord(ai.closing_verification_v2);
-  const outcome = normalizeOutcome(closing?.hit_or_miss || closing?.prediction_result || closing?.status);
-  const hasCompletedOutcome = isCompleteClosingData(closing) && outcome !== 'insufficient';
+  const projection = getSubscriberReportProjection(row, { historical: true });
+  const closing = projection.closing.result;
+  const outcome = normalizeOutcome(projection.closing.outcome);
+  const hasCompletedOutcome = projection.closing.complete && outcome !== 'insufficient';
   const dataStatus = text(closing?.data_status).toLowerCase();
   return [
     hasCompletedOutcome ? 1 : 0,
@@ -276,13 +253,14 @@ function directionFromChange(change: number | null): string {
 
 function buildEntry(row: ReportRecord): DecisionJournalEntry {
   const ai = row.ai_strategy_json || {};
-  const closing = asRecord(ai.closing_verification_v2);
-  const dataStatus = text(closing?.data_status || ai.data_status || ai.data_quality, '資料不足');
+  const projection = getSubscriberReportProjection(row, { historical: true });
+  const closing = projection.closing.result;
+  const dataStatus = projection.evidence.status;
   const tradingDay = isTradingDay(ai, row);
   const hasMorningReport = Boolean(row.id && row.report_date);
   const hasClosingVerification = Boolean(closing);
-  const hasCompleteVerification = isCompleteClosingData(closing);
-  const rawOutcome = normalizeOutcome(closing?.hit_or_miss || closing?.prediction_result || closing?.status);
+  const hasCompleteVerification = projection.closing.complete;
+  const rawOutcome = normalizeOutcome(projection.closing.outcome);
   const futureReport = isFutureReportDate(row.report_date);
   const outcome: JournalOutcome = !futureReport && tradingDay && hasMorningReport && hasCompleteVerification ? rawOutcome : 'insufficient';
   const actualTaiex = asRecord(closing?.actual_taiex_close);
@@ -302,16 +280,16 @@ function buildEntry(row: ReportRecord): DecisionJournalEntry {
 
   return {
     reportId: row.id,
-    marketDate: row.report_date,
+    marketDate: projection.identity.reportDate,
     outcome,
     isTradingDay: tradingDay,
     hasMorningReport,
     hasClosingVerification,
     hasCompleteVerification,
-    marketBias: publicPerformanceText(firstText(row.market_bias, ai.market_bias, closing?.opening_bias, '尚未結構化')),
-    closingSummary: publicPerformanceText(firstText(closing?.actual_direction, closing?.verdict_label, directionFromChange(taiexChange))),
+    marketBias: publicPerformanceText(projection.marketDecision.bias || projection.statusLabel),
+    closingSummary: projection.closing.complete ? publicPerformanceText(firstText(closing?.actual_direction, closing?.verdict_label, directionFromChange(taiexChange))) : '尚未完成收盤驗證',
     correctionSummary: publicPerformanceText(firstText(wrong[0], adjustment[0], '本日尚未留下結構化修正')),
-    confidence: numberOrNull(row.confidence_score) ?? numberOrNull(ai.confidence_score) ?? numberOrNull(closing?.opening_confidence),
+    confidence: projection.confidence.value,
     statusNote,
     whatWasRight: right,
     whatWasWrong: wrong,

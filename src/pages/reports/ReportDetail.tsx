@@ -3,15 +3,14 @@ import { useParams, Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import { mapRowToReport } from '@/services/reportService';
-import { getMarketBiasLabel, getSentimentColor, formatTaipeiDateTime } from '@/services/narrativeBuilder';
+import { getSentimentColor, formatTaipeiDateTime } from '@/services/narrativeBuilder';
 import { isTaipeiToday } from '@/services/marketSourceHealthService';
 import type { Report } from '@/types/report';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
-import { getTaipeiNow, formatTaipeiDate } from '@/utils/tradingDay';
 import { parseAIStrategy, type ParsedAIStrategy } from '@/utils/aiStrategyParser';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
-import { resolveClosingVerificationState } from '@/lib/closingVerificationState';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 
 // ═══ Constants ═══
@@ -65,6 +64,7 @@ function closingOutcomeLabel(value: unknown): string {
   if (['hit', 'correct', 'confirmed', 'success'].includes(normalized)) return '方向符合';
   if (['partial', 'mixed', 'partial_hit'].includes(normalized)) return '部分符合';
   if (['miss', 'wrong', 'failed', 'rejected', 'incorrect'].includes(normalized)) return '方向不符';
+  if (normalized === 'neutral') return '中性結果，收盤驗證已完成';
   return '尚未評分';
 }
 
@@ -90,8 +90,7 @@ function hasValidSectors(list: string[]): boolean {
   return list.map(translateSector).filter(Boolean).length > 0;
 }
 
-function deriveCheckpoints(report: Report): { check0915: string; check1030: string; check1300: string } {
-  const bias = report.market_bias || '';
+function deriveCheckpoints(bias: string): { check0915: string; check1030: string; check1300: string } {
   if (bias.includes('偏多')) {
     return {
       check0915: '確認加權指數、台積電與台指期開盤方向是否與盤前偏多假設一致。若開盤漲幅超過 0.5%，劇本初步成立。',
@@ -121,38 +120,23 @@ export default function ReportDetail() {
   const [error, setError] = useState<string | null>(null);
 
   const taipeiToday = isTaipeiToday();
-  const effectiveReportDate = report?.report_date || reportDate;
-  const isToday = effectiveReportDate === taipeiToday || (!reportDate || reportDate === ':reportDate' || reportDate === 'undefined' || reportDate === 'null') && report?.report_date === taipeiToday;
-
-  // A closing field can be a plan or placeholder; require a real outcome, while keeping
-  // a completed direction visible when secondary market fields are degraded.
+  // Subscriber routes consume one presentation contract, including legacy payloads.
+  // The route never upgrades raw report fields into publication or closing evidence.
+  const projection = getSubscriberReportProjection(report, { todayDate: taipeiToday, historical: true });
+  const isToday = projection.identity.reportDate === taipeiToday;
   const strategy: ParsedAIStrategy = parseAIStrategy(report);
-  const closingVerification = resolveClosingVerificationState(strategy.raw);
-  const closing = closingVerification.record;
-  const closingOutcome = closingOutcomeLabel(closing.hit_or_miss ?? closing.prediction_result ?? closing.result);
-  const closingDirection = closingDirectionLabel(closing.actual_direction, closingVerification.taiexChange);
+  const closing = projection.closing.result ?? {};
+  const closeChange = closing.actual_taiex_change ?? asRecord(closing.actual_taiex_close).change_percent;
+  const taiexChange = typeof closeChange === 'number' && Number.isFinite(closeChange) ? closeChange : null;
+  const closingOutcome = closingOutcomeLabel(projection.closing.outcome);
+  const closingDirection = closingDirectionLabel(closing.actual_direction, taiexChange);
   const closingVerifiedAt = String(closing.verified_at ?? '').trim();
-
-  const now = getTaipeiNow();
-  const hour = now.getHours();
-  const minute = now.getMinutes();
-  const displayStatus = (() => {
-    if (!report) return { label: '今日報告尚未產生', chip: 'slate', icon: 'ri-time-line' };
-    if (closingVerification.state === 'complete') return { label: '收盤驗證完成', chip: 'emerald', icon: 'ri-check-double-line' };
-    if (closingVerification.state === 'degraded') return { label: '收盤方向已驗證（部分資料不足）', chip: 'amber', icon: 'ri-check-double-line' };
-    if (!isToday) return { label: '歷史收盤驗證資料不足', chip: 'slate', icon: 'ri-information-line' };
-    if (hour >= 9 && hour < 13 || (hour === 13 && minute < 30)) return { label: '盤中追蹤中', chip: 'amber', icon: 'ri-radar-line' };
-    if (hour >= 14 || (hour === 13 && minute >= 30) || (hour === 14 && minute >= 10)) return { label: '等待收盤驗證更新', chip: 'amber', icon: 'ri-hourglass-line' };
-    return { label: '收盤待驗證', chip: 'amber', icon: 'ri-time-line' };
-  })();
-
-  const statusBanner = (() => {
-    if (!report) return { title: '今日報告尚未產生', body: '請等待系統產生今日報告。', chip: 'slate' };
-    if (closingVerification.state === 'complete') return { title: `${isToday ? '今日' : '本日'}收盤驗證已完成`, body: '系統已將盤前假設與收盤結果比對，請查看下方收盤驗證與明日修正方向。', chip: 'emerald' };
-    if (closingVerification.state === 'degraded') return { title: `${isToday ? '今日' : '本日'}收盤方向已驗證`, body: '加權指數方向已有真實收盤資料，但部分個股或期貨資料不足；方向結果會顯示，缺漏部分不納入完整績效。', chip: 'amber' };
-    if (!isToday) return { title: '歷史收盤驗證資料不足', body: '這份歷史報告沒有足夠的真實收盤資料可完成驗證，系統不會事後補造結果。', chip: 'slate' };
-    return { title: '今日仍在追蹤中', body: '今日盤前劇本尚未完成收盤驗證，請搭配盤中追蹤觀察。', chip: 'amber' };
-  })();
+  const displayStatus = { label: projection.statusLabel, chip: projection.analysisAvailable ? 'emerald' : 'amber' };
+  const statusBanner = {
+    title: projection.title,
+    body: projection.marketDecision.summary ?? projection.statusLabel,
+    chip: displayStatus.chip,
+  };
 
   useEffect(() => {
     const isInvalidReportDate = !reportDate || reportDate === ':reportDate' || reportDate === 'undefined' || reportDate === 'null';
@@ -189,7 +173,7 @@ export default function ReportDetail() {
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="w-8 h-8 border-2 border-white/20 border-t-white/60 rounded-full animate-spin mx-auto mb-3" />
-            <span className="text-white/50 text-sm">載入完整判讀...</span>
+            <span className="text-white/50 text-sm">載入報告...</span>
           </div>
         </main>
         <Footer />
@@ -216,15 +200,15 @@ export default function ReportDetail() {
   }
 
   // ═══ Data Ready ═══
-  const sentimentColor = getSentimentColor(report.market_bias);
-  const displayBias = getMarketBiasLabel(report.market_bias, report.confidence_score ?? 0);
+  const sentimentColor = getSentimentColor(projection.marketDecision.bias ?? '');
+  const displayBias = projection.marketDecision.label;
   const canWatchRaw = safeArray(report.can_watch);
   const avoidRaw = safeArray(report.avoid_today);
   const keyDrivers = safeArray(report.key_drivers).map(publicReportText);
-  const checkpoints = deriveCheckpoints(report);
+  const checkpoints = deriveCheckpoints(projection.marketDecision.bias ?? '');
   const rawAI = (strategy.raw || {}) as Record<string, unknown>;
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
-  const v11ObservationScripts = mapV11ObservationItems(rawAI.v10_observation_watchlist, 5);
+  const v11ObservationScripts = mapV11ObservationItems(projection.recommendation.items, 5);
   const premiumAvailability = resolvePremiumContentAvailability(rawAI);
   const memberValueScore = premiumAvailability.memberValueScore;
   const performanceTiming = asRecord(rawAI.performance_timing);
@@ -241,7 +225,7 @@ export default function ReportDetail() {
     serverMarketSnapshots.length,
   );
   const hasFreshNewsEvidence = premiumAvailability.freshNewsCount > 0;
-  const memberResearchDegraded = !premiumAvailability.eligible;
+  const memberResearchDegraded = !projection.recommendation.available;
   const showV11Observations = v10BeneficiaryEnabled
     && v11ObservationScripts.length > 0
     && !memberResearchDegraded;
@@ -251,7 +235,7 @@ export default function ReportDetail() {
   const avoidSectors = avoidRaw.map(translateSector).filter(Boolean) as string[];
 
   // Script reasons
-  const scriptWhy = publicReportText(report.ai_confidence_reason || report.summary || '盤前訊號來自多個數據源的一致性分析。');
+  const scriptWhy = publicReportText(projection.marketDecision.summary ?? projection.statusLabel);
   const scriptValidate = [
     keyDrivers.length > 0 ? `盤前主線 ${keyDrivers.slice(0, 3).join('、')} 開盤後是否延續` : null,
     watchSectors.length > 0 ? `受惠族群 ${watchSectors.slice(0, 2).join('、')} 是否有資金流入` : null,
@@ -279,7 +263,8 @@ export default function ReportDetail() {
     <div className="ma-page flex flex-col overflow-x-hidden">
       <Navbar />
 
-      <main className="flex-1 overflow-x-hidden">
+      <main className="flex-1 overflow-x-hidden" data-subscriber-state={projection.displayStatus}
+        data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId ?? ''}>
         {/* ═══ HERO ═══ */}
         <section className="relative w-full px-4 md:px-6 pt-8 pb-8 md:pt-12 md:pb-10 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-[#07111f] via-[#0b1628] to-background-50" />
@@ -293,12 +278,12 @@ export default function ReportDetail() {
                 <span className="text-white/20 text-xs">/</span>
                 <Link to="/report/today" className="text-white/40 hover:text-white text-xs transition-colors whitespace-nowrap">今日判斷</Link>
                 <span className="text-white/20 text-xs">/</span>
-                <span className="text-white/60 text-xs">完整判讀</span>
+                <span className="text-white/60 text-xs">{projection.title}</span>
               </>) : (<>
                 <span className="text-white/20 text-xs">/</span>
                 <Link to="/reports" className="text-white/40 hover:text-white text-xs transition-colors whitespace-nowrap">報告中心</Link>
                 <span className="text-white/20 text-xs">/</span>
-                <span className="text-white/60 text-xs">{report.report_date}</span>
+                <span className="text-white/60 text-xs">{projection.identity.reportDate}</span>
               </>)}
             </div>
 
@@ -306,10 +291,10 @@ export default function ReportDetail() {
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <h1 className="text-white font-bold text-3xl md:text-5xl leading-tight mb-4">
-                  Morning Alpha 會員完整判讀｜{report.report_date || formatTaipeiDate()}
+                  {projection.title}｜{projection.identity.reportDate}
                 </h1>
                 <p className="text-white/65 text-sm leading-relaxed max-w-xl">
-                  這是今日盤前假設、盤中追蹤與收盤驗證的完整紀錄。
+                  {projection.marketDecision.summary ?? projection.statusLabel}
                 </p>
               </div>
               <div className="flex items-center gap-4 flex-shrink-0">
@@ -333,10 +318,10 @@ export default function ReportDetail() {
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
                     <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round"
-                      strokeDasharray={`${(report.confidence_score ?? 0) * 2.64} 264`} className={sentimentColor.progress} />
+                      strokeDasharray={`${(projection.confidence.value ?? 0) * 2.64} 264`} className={sentimentColor.progress} />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={`text-base font-bold ${sentimentColor.text}`}>{report.confidence_score ?? '—'}</span>
+                    <span className={`font-bold ${projection.confidence.suppressed ? 'text-[10px]' : 'text-base'} ${sentimentColor.text}`}>{projection.confidence.value ?? '證據不足'}</span>
                     <span className="text-white/20 text-[9px]">把握度</span>
                   </div>
                 </div>
@@ -390,7 +375,8 @@ export default function ReportDetail() {
         <section className="ma-section pt-0 pb-16 md:pb-24">
           <div className="max-w-5xl mx-auto w-full space-y-6 md:space-y-8">
 
-            {/* ── 1. 今日完整判讀 ── */}
+            {projection.analysisAvailable && <>
+            {/* ── 1. 已發布市場判讀 ── */}
             <section className="ma-card-elevated">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-6 h-6 rounded-md bg-amber-500/15 flex items-center justify-center"><i className="ri-sun-line text-amber-400 text-xs" /></div>
@@ -401,7 +387,7 @@ export default function ReportDetail() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                 <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                   <p className="text-white/50 text-[10px] uppercase tracking-wider mb-1">報告日期</p>
-                  <p className="text-white font-bold text-sm">{report.report_date}</p>
+                  <p className="text-white font-bold text-sm">{projection.identity.reportDate}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                   <p className="text-white/50 text-[10px] uppercase tracking-wider mb-1">盤前假設</p>
@@ -412,8 +398,8 @@ export default function ReportDetail() {
                 <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                   <p className="text-white/50 text-[10px] uppercase tracking-wider mb-1">盤前判讀把握度</p>
                   <div className="flex items-center gap-2">
-                    <span className={`text-xl font-bold ${sentimentColor.text}`}>{report.confidence_score ?? '—'}</span>
-                    <span className="text-white/50 text-xs">/100</span>
+                    <span className={`text-xl font-bold ${sentimentColor.text}`}>{projection.confidence.value ?? projection.confidence.label}</span>
+                    {projection.confidence.value !== null && <span className="text-white/50 text-xs">/100</span>}
                   </div>
                 </div>
               </div>
@@ -422,9 +408,9 @@ export default function ReportDetail() {
                 <div className="flex items-center gap-4 flex-wrap text-xs">
                   <div>
                     <span className="text-sky-400/70 text-[10px] uppercase tracking-wider">資料所屬交易日</span>
-                    <span className="text-sky-200 font-semibold ml-2">{strategy.market_data_latest_date || report.report_date}</span>
+                    <span className="text-sky-200 font-semibold ml-2">{strategy.market_data_latest_date || projection.identity.reportDate}</span>
                   </div>
-                  {(strategy.market_data_latest_date && strategy.market_data_latest_date !== report.report_date) && (
+                  {(strategy.market_data_latest_date && strategy.market_data_latest_date !== projection.identity.reportDate) && (
                     <span className="text-sky-400/50 text-[10px]">前一個完整交易日，正常</span>
                   )}
                   <div className="ml-auto">
@@ -434,10 +420,10 @@ export default function ReportDetail() {
                 </div>
               </div>
 
-              {(report.summary || report.today_summary) && (
+              {projection.marketDecision.summary && (
                 <div className="bg-amber-500/[0.04] border border-amber-500/15 rounded-xl p-4 mb-3">
                   <p className="text-amber-300/70 text-xs font-medium mb-2 flex items-center gap-1.5"><i className="ri-file-text-line" /> 今日摘要</p>
-                  <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{publicReportText(report.today_summary || report.summary)}</p>
+                  <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{publicReportText(projection.marketDecision.summary)}</p>
                 </div>
               )}
 
@@ -510,7 +496,7 @@ export default function ReportDetail() {
                 </div>
                 <h2 className="ma-section-title text-white mb-3">今日研究資料尚未達付費發布標準</h2>
                 <p className="text-white/65 text-sm leading-relaxed mb-4">
-                  系統不會把資料不足包裝成高信心受惠股。今天保留市場方向、風險與盤中驗證條件，但暫不發布個股主線、資金下一站或高信心排序。
+                  {projection.recommendation.message}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
@@ -530,7 +516,7 @@ export default function ReportDetail() {
             )}
 
             {/* ── 3. 資金觀察方向 ── */}
-            {!v10BeneficiaryEnabled && watchSectors.length > 0 && (
+            {projection.recommendation.available && !v10BeneficiaryEnabled && watchSectors.length > 0 && (
             <section className="ma-card-elevated">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-6 h-6 rounded-md bg-emerald-500/15 flex items-center justify-center"><i className="ri-arrow-up-circle-line text-emerald-300 text-xs" /></div>
@@ -591,7 +577,7 @@ export default function ReportDetail() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                 <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3 md:p-4">
                   <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">資料所屬交易日</p>
-                  <p className="text-white/70 text-sm font-medium">{strategy.market_data_latest_date || report.report_date}</p>
+                  <p className="text-white/70 text-sm font-medium">{strategy.market_data_latest_date || projection.identity.reportDate}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3 md:p-4">
                   <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">市場數據記錄</p>
@@ -600,7 +586,7 @@ export default function ReportDetail() {
               </div>
 
               <p className="text-white/35 text-[10px] mt-3">
-                市場資料基準來自 {report.report_date} 盤前報告。
+                市場資料基準來自 {projection.identity.reportDate} 盤前報告。
               </p>
             </section>
 
@@ -687,6 +673,8 @@ export default function ReportDetail() {
               </div>
             </section>
 
+            </>}
+
             {/* ── 9. 收盤驗證與修正 ── */}
             <section className="ma-card-elevated">
               <div className="flex items-center gap-2 mb-4">
@@ -695,7 +683,7 @@ export default function ReportDetail() {
               </div>
               <h2 className="ma-section-title text-white mb-4">收盤驗證與修正</h2>
 
-              {closingVerification.state !== 'pending' ? (
+              {projection.closing.complete ? (
                 <div className="mb-5 space-y-4">
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
@@ -705,9 +693,9 @@ export default function ReportDetail() {
                     <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
                       <p className="text-white/40 text-[10px] font-semibold tracking-wider mb-1">加權指數</p>
                       <p className="text-white font-semibold">
-                        {closingVerification.taiexChange === null
+                        {taiexChange === null
                           ? '尚未取得'
-                          : `${closingVerification.taiexChange >= 0 ? '+' : ''}${closingVerification.taiexChange.toFixed(2)}%`}
+                          : `${taiexChange >= 0 ? '+' : ''}${taiexChange.toFixed(2)}%`}
                       </p>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
@@ -718,14 +706,6 @@ export default function ReportDetail() {
 
                   {closingVerifiedAt && (
                     <p className="text-white/35 text-xs">驗證時間：{formatTaipeiDateTime(closingVerifiedAt)}</p>
-                  )}
-
-                  {closingVerification.state === 'degraded' && (
-                    <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.05] p-4">
-                      <p className="text-amber-200 text-sm leading-relaxed">
-                        已取得真實加權指數收盤結果；部分個股、台積電或台指期收盤欄位不足，因此只驗證市場方向，不把這筆列為完整資料績效。
-                      </p>
-                    </div>
                   )}
 
                   {(closingRight.length > 0 || closingWrong.length > 0) && (
@@ -748,14 +728,12 @@ export default function ReportDetail() {
               ) : (
                 <div className="mb-5 rounded-xl border border-white/10 bg-white/[0.025] p-4">
                   <p className="text-white/65 text-sm leading-relaxed">
-                    {isToday
-                      ? '尚未取得有效收盤資料，系統不會用盤中或舊資料假裝收盤結果。'
-                      : '這份歷史報告沒有足夠的真實收盤資料，故不判定命中或失敗。'}
+                    {projection.statusLabel}。尚未取得符合本份報告版本的完整收盤驗證結果。
                   </p>
                 </div>
               )}
 
-              {report.risk_reason && (
+              {projection.analysisAvailable && report.risk_reason && (
                 <div className="mb-4">
                   <h3 className="text-rose-300 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="ri-alert-line" /> 風險提醒</h3>
                   <div className="bg-red-500/[0.04] border border-red-500/15 rounded-xl p-4">
@@ -764,7 +742,7 @@ export default function ReportDetail() {
                 </div>
               )}
 
-              <div>
+              {projection.closing.complete && <div>
                 <h3 className="text-amber-300 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="ri-loop-left-line" /> 明日修正方向</h3>
                 <div className="bg-amber-500/[0.04] border border-amber-500/15 rounded-xl p-4">
                   {closingAdjustments.length > 0 ? (
@@ -774,12 +752,12 @@ export default function ReportDetail() {
                   ) : (
                     <p className="text-white/75 text-sm leading-relaxed">
                       若開盤後主流族群無法延續，今日劇本需下修為觀望。
-                      {report.market_bias?.includes('偏多') ? ' 若加權指數開高走低或台積電轉弱，偏多判斷需重新評估，改以震盪視角觀察今日盤勢。' : ''}
-                      {report.market_bias?.includes('偏空') ? ' 若加權指數開低走高或權值股逆勢轉強，偏空判斷需調整為中性震盪。' : ''}
+                      {projection.marketDecision.bias?.includes('偏多') ? ' 若加權指數開高走低或台積電轉弱，偏多判斷需重新評估，改以震盪視角觀察今日盤勢。' : ''}
+                      {projection.marketDecision.bias?.includes('偏空') ? ' 若加權指數開低走高或權值股逆勢轉強，偏空判斷需調整為中性震盪。' : ''}
                     </p>
                   )}
                 </div>
-              </div>
+              </div>}
             </section>
 
             {/* ── 10. 合規提醒 ── */}

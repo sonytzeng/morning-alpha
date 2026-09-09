@@ -1,5 +1,7 @@
-import { formatTaipeiTimeShort } from '@/hooks/useAccountDashboard';
+import { formatTaipeiTimeShort, getAccountIntradayView } from '@/hooks/useAccountDashboard';
 import type { Report } from '@/types/report';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
+import { isTaipeiToday } from '@/services/marketSourceHealthService';
 
 interface TodayInfoCardsProps {
   todayReport: Report | null;
@@ -26,24 +28,33 @@ interface TodayInfoCardsProps {
 
 export default function TodayInfoCards({
   todayReport,
-  hasTodayReport,
+  hasTodayReport: reportedToday,
   marketDataLatestAt,
   isMarketDataToday,
   marketNewsLatestAt,
   selectedNewsCount,
   totalNewsCount,
   isMarketNewsToday,
-  intradayLatestAt,
-  intradayCheckDate,
-  hasIntradayData,
-  isIntradayToday,
-  intradayRadarStatus,
-  intradayRadarBias,
-  intradayRadarSummary,
   isWeekend,
   fallbackReportDate,
   isTXFAvailable,
 }: TodayInfoCardsProps) {
+  const projection = getSubscriberReportProjection(todayReport, { todayDate: isTaipeiToday() });
+  const openingCheckpoint = projection.runtime.checkpoints['0930'];
+  const { intradayLatestAt, intradayCheckDate, hasIntradayData, isIntradayToday,
+    intradayRadarStatus, intradayRadarBias } = getAccountIntradayView(projection);
+  const hasTodayReport = reportedToday && projection.analysisAvailable && !projection.historical;
+  if (todayReport && !projection.analysisAvailable) return (
+    <div data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
+      <div className="mb-4 md:mb-5"><h2 className="text-white font-bold text-base md:text-lg mb-1">今日情報狀態</h2></div>
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
+        <p className="text-amber-400 text-sm font-semibold">{projection.title}</p>
+        <p className="text-white/40 text-xs mt-2">報告日期：{projection.identity.reportDate}</p>
+        <p className="text-white/40 text-xs mt-2">判讀把握度：{projection.confidence.label}</p>
+        <p className="text-white/40 text-xs mt-2">等待市場證據完成，不將尚未發布的分析視為正常報告。</p>
+      </div>
+    </div>
+  );
   function getDataStatusLabel(isToday: boolean) {
     if (isToday) {
       return (
@@ -135,19 +146,19 @@ export default function TodayInfoCards({
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
                 <span className="text-white/40 text-xs">日期</span>
-                <span className="text-white text-xs font-medium">{todayReport?.report_date || '—'}</span>
+                <span className="text-white text-xs font-medium">{projection.identity.reportDate}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-white/40 text-xs">盤前訊號</span>
-                <span className="text-white text-xs font-medium">{todayReport?.market_bias || '—'}</span>
+                <span className="text-white text-xs font-medium">{projection.marketDecision.bias || projection.marketDecision.label}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-white/40 text-xs">判讀把握度</span>
-                <span className="text-white text-xs font-medium">{todayReport?.confidence_score ?? '—'}/100</span>
+                <span className="text-white text-xs font-medium">{projection.confidence.label}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-white/40 text-xs">產生時間</span>
-                <span className="text-white text-xs font-medium">{formatTaipeiTimeShort(todayReport?.created_at)}</span>
+                <span className="text-white text-xs font-medium">{formatTaipeiTimeShort(projection.identity.generatedAt)}</span>
               </div>
             </div>
           ) : (
@@ -240,7 +251,7 @@ export default function TodayInfoCards({
           )}
         </div>
 
-        {/* Card 4: Opening Radar (Intraday) — 依實際 radar_status 顯示 */}
+        {/* Card 4: Opening Radar — only the same-revision canonical 09:30 proof. */}
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
           <div className="flex items-center gap-2 mb-3">
             <div className={`w-8 h-8 ${getFreshnessIcon(isIntradayToday, hasIntradayData)} rounded-lg flex items-center justify-center border`}>
@@ -280,9 +291,9 @@ export default function TodayInfoCards({
                 <div className="flex justify-between items-center">
                   <span className="text-white/40 text-xs">雷達狀態</span>
                   <span className={`text-xs font-semibold ${
-                    intradayRadarStatus === '明顯偏弱' || intradayRadarStatus === '盤中轉弱'
+                    openingCheckpoint.status === 'failed'
                       ? 'text-red-400'
-                      : intradayRadarStatus === '劇本成立'
+                      : openingCheckpoint.status === 'completed'
                       ? 'text-forest-400'
                       : 'text-amber-400'
                   }`}>{intradayRadarStatus}</span>
@@ -303,7 +314,9 @@ export default function TodayInfoCards({
           ) : hasIntradayData && !intradayCheckDate ? (
             <p className="text-amber-400/80 text-xs">雷達資料讀取異常，缺少 report_date</p>
           ) : !hasIntradayData ? (
-            <p className="text-white/30 text-xs">尚未產生</p>
+            <p className="text-white/30 text-xs">{openingCheckpoint.status === 'not_applicable'
+              ? '本節點不適用，等待下一個交易日'
+              : '尚未取得符合本報告版本的開盤驗證'}</p>
           ) : null}
         </div>
       </div>

@@ -14,6 +14,7 @@ const generatedAt = `${DAY}T00:35:00.000Z`;
 function marketAi() {
   return { report_date: DAY, revision_id: REV, generated_at: generatedAt,
     report_status: 'READY', recommendation_status: 'BLOCKED', premium_content_status: 'blocked',
+    content_publish_gate: { overall_status: 'eligible' },
     market_report_gate: { eligible: true, status: 'READY_MARKET_ONLY', report_status: 'READY' },
     recommendation_gate: { status: 'BLOCKED', eligible: false, screening: { status: 'INCOMPLETE', universe_count: 2, evaluated_count: 0 } },
     canonical_decision: { id: REV, status: 'READY', action: 'WAIT', decision_mode: 'market_only',
@@ -109,7 +110,8 @@ test('NO_QUALIFIED requires proof of a complete non-empty universe, not an empty
   const screening = { status: 'COMPLETE', universe_count: 5, evaluated_count: 5, rejected: [] };
   assert.equal(hasCompleteUniverseAssessment(screening), true);
   assert.equal(recommendationPublication({ recommendation_status: 'NO_QUALIFIED_OPPORTUNITY', recommendation_gate: { screening } }).notice, RECOMMENDATION_EVIDENCE_INSUFFICIENT);
-  assert.equal(recommendationPublication({ recommendation_status: 'NO_QUALIFIED_OPPORTUNITY', recommendation_gate: { universe_evaluation_complete: true, screening } }).notice, '今天沒有符合標準的新增機會');
+  assert.equal(recommendationPublication({ ...marketAi(), recommendation_status: 'NO_QUALIFIED_OPPORTUNITY', recommendation_gate: { universe_evaluation_complete: true, screening } }).notice, '今天沒有符合標準的新增機會');
+  assert.equal(recommendationPublication({ recommendation_status: 'NO_QUALIFIED_OPPORTUNITY', recommendation_gate: { universe_evaluation_complete: true, screening } }).notice, RECOMMENDATION_EVIDENCE_INSUFFICIENT, 'A detached complete-universe claim is not publication proof');
   for (const rejected of [undefined, null, ['MISSING_INSTITUTIONAL_EVIDENCE']]) {
     assert.equal(hasCompleteUniverseAssessment({ ...screening, rejected }), false);
     assert.equal(recommendationPublication({ recommendation_status: 'NO_QUALIFIED_OPPORTUNITY', recommendation_gate: { universe_evaluation_complete: true, screening: { ...screening, rejected } } }).notice, RECOMMENDATION_EVIDENCE_INSUFFICIENT);
@@ -119,21 +121,22 @@ test('NO_QUALIFIED requires proof of a complete non-empty universe, not an empty
 test('malformed server no-qualified decision is downgraded without inventing a new market direction', () => {
   const input = { ...emptyDecision(), report_date: DAY, revision_id: REV, generated_at: generatedAt, data_as_of: generatedAt,
     schema_version: 'decision-evidence-v1', calibration_status: 'INSUFFICIENT_HISTORY', action: 'NO_QUALIFIED_OPPORTUNITY', market_direction: 'BULLISH', screening: { status: 'INCOMPLETE', universe_count: 2, evaluated_count: 0 } };
-  const result = decisionFromReport({ decision_engine_v1: input }, { report_date: DAY, revision_id: REV, generated_at: generatedAt }, DAY);
+  const result = decisionFromReport({ ...marketAi(), decision_engine_v1: input }, { report_date: DAY, revision_id: REV, generated_at: generatedAt }, DAY);
   assert.equal(result.action, 'INSUFFICIENT_DATA');
   assert.equal(result.market_direction, 'BULLISH');
   assert.deepEqual(result.stock_opportunities, []);
 });
 
 test('stock admission remains independent of Premium entitlement and unknown statuses fail closed', () => {
-  assert.equal(recommendationPublication({ recommendation_status: 'QUALIFIED', recommendation_gate: { eligible: true }, premium_content_status: 'blocked' }).stocksAllowed, true);
+  assert.equal(recommendationPublication({ ...marketAi(), recommendation_status: 'QUALIFIED', recommendation_gate: { eligible: true }, premium_content_status: 'blocked' }).stocksAllowed, true);
+  assert.equal(recommendationPublication({ recommendation_status: 'QUALIFIED', recommendation_gate: { eligible: true }, premium_content_status: 'blocked' }).stocksAllowed, false, 'Detached stock gate cannot grant publication');
   for (const eligible of [undefined, null, false, 'true', 1]) {
     assert.equal(recommendationPublication({ recommendation_status: 'QUALIFIED', recommendation_gate: { eligible } }).stocksAllowed, false, String(eligible));
   }
   assert.equal(recommendationPublication({ recommendation_status: 'UNRECOGNIZED' }).stocksAllowed, false);
   const today = readFileSync(new URL('../src/pages/report/TodayReport.tsx', import.meta.url), 'utf8');
-  assert.match(today, /stockPublication\.stocksAllowed\) && canShowBeginnerRecommendations/);
+  assert.match(today, /projection\.recommendation\.available && canShowBeginnerRecommendations/);
   assert.match(today, /premiumEligible: premiumAvailability\.eligible/);
-  assert.match(today, /emptyStockMessage=\{stockPublication\.notice \|\| RECOMMENDATION_EVIDENCE_INSUFFICIENT\}/);
-  assert.match(today, /recommendationNotice=\{stockPublication\.notice\}/);
+  assert.match(today, /emptyStockMessage=\{projection\.recommendation\.message \|\| RECOMMENDATION_EVIDENCE_INSUFFICIENT\}/);
+  assert.match(today, /recommendationNotice=\{projection\.recommendation\.message\}/);
 });

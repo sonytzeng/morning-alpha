@@ -131,9 +131,12 @@ test('nested assessment cannot select another published identity', () => {
   const input = decisionFixture(); const identity = {report_date:DAY,revision_id:'synthetic-v1',generated_at:input.generated_at};
   // Precomputed fixture result, never untrusted factor inputs in React.
   const output = { ...evaluate(input), schema_version: 'decision-evidence-v1', calibration_status: 'INSUFFICIENT_HISTORY', direction_probability: null };
-  assert.equal(decisionFromReport({decision_engine_v1:output}, identity, DAY).action, 'ACTIVE_WATCH');
-  assert.equal(decisionFromReport({decision_engine_v1:input}, identity, DAY).action, 'INSUFFICIENT_DATA');
-  assert.equal(decisionFromReport({decision_engine_v1:input}, {...identity,revision_id:'different'}, DAY).action, 'INSUFFICIENT_DATA');
+  const report = { ...identity, canonical_decision: { id: identity.revision_id, status: 'READY', action: 'ACT' },
+    content_publish_gate: { overall_status: 'eligible' }, decision_engine_v1: output };
+  assert.equal(decisionFromReport(report, identity, DAY).action, 'ACTIVE_WATCH');
+  assert.equal(decisionFromReport({decision_engine_v1:output}, identity, DAY).action, 'INSUFFICIENT_DATA', 'nested evidence cannot self-publish');
+  assert.equal(decisionFromReport({...report,decision_engine_v1:input}, identity, DAY).action, 'INSUFFICIENT_DATA');
+  assert.equal(decisionFromReport(report, {...identity,revision_id:'different'}, DAY).action, 'INSUFFICIENT_DATA', 'even valid evidence must match the published identity');
 });
 test('non-trading day never presents a pending opportunity', () => {
   const input = decisionFixture(); input.is_trading_day = false;

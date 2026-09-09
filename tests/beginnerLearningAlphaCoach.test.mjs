@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { canUseProductFeature, PRODUCT_FEATURE_FLAGS } from '../src/config/productFeatures.ts';
+import { getSubscriberReportProjection } from '../src/lib/subscriberReportContract.ts';
 import {
   filterLearningTerms,
   findLearningTerm,
@@ -196,7 +197,10 @@ test('routes, Today presentation mode, analytics, and mobile scopes are wired wi
   assert.doesNotMatch(edge, /user_metadata|app_metadata/);
   assert.doesNotMatch(edge, /\.insert\(|\.update\(|\.upsert\(|OPENAI_API_KEY|api\.openai\.com/i);
   assert.match(today, /canShowBeginnerRecommendations\(\{/);
-  assert.match(today, /action: presentation\.primaryDecision\.state/);
+  assert.match(today, /action: projection\.marketDecision\.action/);
+  assert.match(today, /getSubscriberReportProjection\(/);
+  assert.match(today, /projection\.recommendation\.available/);
+  assert.doesNotMatch(today, /action: presentation\.primaryDecision\.state/);
   assert.match(today, /premiumEligible: premiumAvailability\.eligible/);
   assert.match(today, /decisionMode: premiumAvailability\.decisionMode/);
   assert.match(today, /safeStockDisplayText\(stock\.oneLineReason\)/);
@@ -204,7 +208,19 @@ test('routes, Today presentation mode, analytics, and mobile scopes are wired wi
   // An empty list is not evidence that the universe was completely screened.
   // Only Today's explicit publication contract may supply a qualified-empty message.
   assert.match(beginner, /emptyStockMessage = RECOMMENDATION_EVIDENCE_INSUFFICIENT/);
-  assert.match(read('src/lib/subscriberReportContract.ts'), /status === 'NO_QUALIFIED_OPPORTUNITY' && gate\.universe_evaluation_complete === true && hasCompleteUniverseAssessment\(screening\)/);
+  assert.match(read('src/lib/subscriberReportContract.ts'), /recommendationStatus === 'NO_QUALIFIED_OPPORTUNITY'\s*&& gate\.universe_evaluation_complete === true && hasCompleteUniverseAssessment\(screening\)/);
+  const screened = {
+    report_date: '2026-09-09', revision_id: 'synthetic-screening', generated_at: '2026-09-09T00:00:00Z',
+    canonical_decision: { id: 'synthetic-screening', status: 'READY', action: 'WAIT' },
+    content_publish_gate: { overall_status: 'eligible' },
+    recommendation_gate: { status: 'NO_QUALIFIED_OPPORTUNITY', universe_evaluation_complete: true,
+      screening: { status: 'COMPLETE', universe_count: 2, evaluated_count: 2, rejected: [] } },
+  };
+  assert.equal(getSubscriberReportProjection(screened).recommendation.status, 'NO_QUALIFIED_OPPORTUNITY');
+  screened.recommendation_gate.screening.evaluated_count = 1;
+  const incomplete = getSubscriberReportProjection(screened).recommendation;
+  assert.equal(incomplete.status, 'BLOCKED');
+  assert.match(incomplete.message, /推薦評估證據不足/);
   assert.match(css, /@media \(max-width: 600px\)/);
   assert.match(css, /grid-template-columns: minmax\(0, 1fr\)/);
 });

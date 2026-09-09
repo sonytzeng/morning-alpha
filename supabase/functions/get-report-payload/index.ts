@@ -20,7 +20,7 @@ import { resolveCanonicalDataQuality } from "../_shared/production-architecture-
 import { canonicalAdminReaderProjection } from "../_shared/research-pipeline-contract.ts";
 import { loadDecisionEvidence } from "../_shared/decision-v1-data.ts";
 import { buildEvidenceDecision, projectEvidenceDecision, sealEvidenceDecision } from "../_shared/decision-v1-evidence.ts";
-import { createSubscriberState, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE } from "../../../shared/subscriber-state-contract.ts";
+import { createSubscriberState, getSubscriberReportProjection, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE } from "../../../shared/subscriber-state-contract.ts";
 
 type ReportRow = Record<string, unknown> & {
   id?: string;
@@ -639,29 +639,37 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
       ? { ...marketGate.recommendation_gate, status: "BLOCKED", eligible: false } : marketGate.recommendation_gate,
     closing: ai.closing_verification_v2 || ai.closing_verification, now: ctx.evaluatedAt || new Date().toISOString(),
   });
-  const marketPublished = subscriberState.publication === "PUBLISHED";
+  const subscriberProjection = getSubscriberReportProjection({
+    report_date: getReportDate(report), revision_id: revisionId, generated_at: generatedAt,
+    subscriber_state: subscriberState, canonical_decision: originalDecision,
+    market_bias: getMarketBias(report, ai), is_trading_day: marketMetadata.isTradingDay,
+    daily_sentence: getTodayQuote(report, ai),
+    recommendation_gate: marketGate.recommendation_gate,
+    closing_verification_v2: buildClosingVerdict(ai),
+  });
+  const marketPublished = subscriberProjection.analysisAvailable;
   const recommendationsEligible = premiumEligible && marketPublished && marketGate.recommendation_gate.eligible;
-  const confidenceScore = subscriberState.confidence.value;
+  const confidenceScore = subscriberProjection.confidence.value;
+  const dailySentence = marketPublished
+    ? subscriberProjection.marketDecision.summary ?? subscriberProjection.statusLabel : INCOMPLETE_ANALYSIS_MESSAGE;
   // Backward-safe aliases: an older deployed UI must not see QA STOP/100 or a
   // close outcome for a thesis that was never published. Raw QA stays private.
-  const canonicalDecision: Record<string, unknown> = subscriberState.publication === "PUBLISHED" ? {
-    ...originalDecision, confidence_score: confidenceScore,
+  const canonicalDecision: Record<string, unknown> = marketPublished ? {
+    ...originalDecision, confidence_score: confidenceScore, daily_sentence: dailySentence,
   } : {
     id: revisionId, status: subscriberState.analysis, action: "WAIT", decision_mode: "blocked",
     confidence_score: null, daily_sentence: INCOMPLETE_ANALYSIS_MESSAGE, reasons: [],
     preferred_sectors: [], do_not_do: "", next_checkpoint: "等待有效市場分析",
   };
-  const dailySentence = subscriberState.publication === "PUBLISHED"
-    ? toStringValue(canonicalDecision.daily_sentence) || getTodayQuote(report, ai) : INCOMPLETE_ANALYSIS_MESSAGE;
   const rawSync = asObject(ai.intraday_sync_status);
-  const subscriberSync = subscriberState.publication === "PUBLISHED" ? subscriberState.closing === "COMPLETE" ? rawSync : {
+  const subscriberSync = marketPublished ? subscriberProjection.closing.complete ? rawSync : {
     ...rawSync, current_state: null, state_rank: null, lifecycle_complete: false,
     checkpoint: String(rawSync.checkpoint || "").replace(/\D/g, "") === "1430" ? null : rawSync.checkpoint,
     checkpoint_status: String(rawSync.checkpoint || "").replace(/\D/g, "") === "1430" ? "insufficient" : rawSync.checkpoint_status,
     // Older deployed clients fall back to this checkpoint even when the close
     // receipt is absent. A dispatch completion is not a verified close result.
     windows: { ...asObject(rawSync.windows), "1430": {
-      status: subscriberState.closing === "NOT_DUE" ? "pending" : "insufficient",
+      status: subscriberProjection.closing.state === "NOT_DUE" ? "pending" : "insufficient",
       completed_at: null, real_checkpoint_observation: false,
       reason: "CLOSING_PUBLICATION_EVIDENCE_UNVERIFIED",
     } },
@@ -683,12 +691,13 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     base_date: getMarketDate(report, ai),
     generated_at: generatedAt,
     subscriber_state: subscriberState,
+    subscriber_projection: subscriberProjection,
     data_as_of: getDataAsOf(ai, ctx),
     market_status: marketMetadata.marketStatus,
     is_trading_day: marketMetadata.isTradingDay,
     closed_reason: marketMetadata.closedReason,
     // Regime (e.g. range) is not directional bias. Preserve both contracts.
-    market_bias: subscriberState.publication === "PUBLISHED" ? getMarketBias(report, ai) : "分析尚未完成",
+    market_bias: marketPublished ? subscriberProjection.marketDecision.bias : "分析尚未完成",
     confidence_score: confidenceScore,
     confidence_label: getConfidenceLabel(confidenceScore),
     confidence_band: getConfidenceBand(confidenceScore),
@@ -708,7 +717,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     premium_content_status: premiumEligible && marketPublished ? "eligible" : "blocked",
     report_status: subscriberState.analysis,
     recommendation_status: subscriberState.recommendation,
-    recommendation_gate: subscriberState.publication === "PUBLISHED" && subscriberState.recommendation !== "BLOCKED" ? marketGate.recommendation_gate
+    recommendation_gate: marketPublished && subscriberProjection.recommendation.status !== "BLOCKED" ? marketGate.recommendation_gate
       : { ...marketGate.recommendation_gate, eligible: false, status: "BLOCKED", subscriber_message: RECOMMENDATION_INSUFFICIENT_MESSAGE },
     recommendation_message: subscriberState.recommendation === "BLOCKED" ? RECOMMENDATION_INSUFFICIENT_MESSAGE : marketGate.recommendation_gate.subscriber_message,
     market_report_gate: marketGate,
@@ -757,10 +766,10 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
       if (symbol && !latestBySymbol.has(symbol)) latestBySymbol.set(symbol, row);
       return latestBySymbol;
     }, new Map<string, Record<string, unknown>>()).values()).slice(0, 16),
-    closing_verification: subscriberState.closing === "COMPLETE" ? buildClosingVerdict(ai) : null,
-    closing_verification_v2: subscriberState.closing === "COMPLETE" ? buildClosingVerdict(ai) : null,
-    continuous_learning: subscriberState.closing === "COMPLETE" ? asObject(ai.continuous_learning) : null,
-    runtime_lifecycle_complete: subscriberState.closing === "COMPLETE" && rawSync.lifecycle_complete === true,
+    closing_verification: subscriberProjection.closing.result,
+    closing_verification_v2: subscriberProjection.closing.result,
+    continuous_learning: subscriberProjection.closing.complete ? asObject(ai.continuous_learning) : null,
+    runtime_lifecycle_complete: subscriberProjection.closing.complete && rawSync.lifecycle_complete === true,
     data_quality: canonicalQuality,
   };
 }
@@ -924,16 +933,25 @@ function buildHistorySummary(
     recommendationGate: { status: "BLOCKED", eligible: false },
     closing: ai.closing_verification_v2 || ai.closing_verification, now: evaluatedAt,
   });
-  const published = subscriberState.publication === "PUBLISHED";
-  const confidenceScore = subscriberState.confidence.value;
+  const subscriberProjection = getSubscriberReportProjection({
+    report_date: reportDate, revision_id: subscriberState.revision_id, generated_at: generatedAt,
+    subscriber_state: subscriberState, market_bias: getMarketBias(report, ai),
+    is_trading_day: resolveMarketStatus(reportDate).is_trading_day,
+    canonical_decision: { ...asObject(decision), ...asObject(decision?.generated_text) },
+    closing_verification_v2: buildClosingVerdict(ai),
+  }, { historical: true });
+  const published = subscriberProjection.analysisAvailable;
+  const confidenceScore = subscriberProjection.confidence.value;
   const dailySentence = published
-    ? toStringValue(asObject(decision?.generated_text).daily_sentence) || INCOMPLETE_ANALYSIS_MESSAGE
+    ? subscriberProjection.marketDecision.summary ?? subscriberProjection.statusLabel
     : INCOMPLETE_ANALYSIS_MESSAGE;
   return {
     report_date: reportDate,
     revision_id: subscriberState.revision_id,
     generated_at: generatedAt,
     subscriber_state: subscriberState,
+    subscriber_projection: subscriberProjection,
+    closing_verification_v2: subscriberProjection.closing.result,
     market_bias: published ? getMarketBias(report, ai) : "分析尚未完成",
     confidence_score: confidenceScore,
     confidence_label: getConfidenceLabel(confidenceScore),
@@ -1358,6 +1376,10 @@ Deno.serve(async (req: Request) => {
   payload.decision_engine_v1 = subscriberDecisionEvidence;
   // Admin has a nested effective-AI view as well; no stale nested model may win.
   if (tier === "admin") payload.ai_strategy_json = { ...asObject(payload.ai_strategy_json), decision_engine_v1: subscriberDecisionEvidence };
+  // Subscriber routes (including Owner browsing them) use one projection. The
+  // existing admin nested raw document remains an explicitly internal QA view.
+  const subscriberProjection = getSubscriberReportProjection({ ...payload, today_date: todayDate });
+  payload.subscriber_projection = subscriberProjection;
 
   return jsonResponse({
     tier,
@@ -1369,6 +1391,7 @@ Deno.serve(async (req: Request) => {
     market_status: publicMetadata.market_status,
     is_trading_day: publicMetadata.is_trading_day,
     subscriber_state: publicMetadata.subscriber_state,
+    subscriber_projection: subscriberProjection,
     payload,
     locked_sections: getLockedSections(tier),
     source: "server_trimmed_payload",

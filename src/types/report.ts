@@ -105,6 +105,23 @@ export interface ImportantNews {
 export interface Report {
   id: string;
   report_date: string;
+  revision_id?: string | null;
+  generated_at?: string | null;
+  today_date?: string | null;
+  data_as_of?: string | null;
+  subscriber_state?: unknown;
+  canonical?: Record<string, unknown> | null;
+  canonical_decision?: Record<string, unknown> | null;
+  content_publish_gate?: Record<string, unknown> | null;
+  market_report_gate?: Record<string, unknown> | null;
+  recommendation_gate?: Record<string, unknown> | null;
+  report_status?: string | null;
+  closing_verification_v2?: Record<string, unknown> | null;
+  closing_verification?: Record<string, unknown> | null;
+  publication?: unknown;
+  market_status?: string | null;
+  is_trading_day?: boolean | null;
+  action?: string;
   summary: string | null;
   market_bias: string | null;
   confidence_score: number | null;

@@ -12,6 +12,8 @@ import { buildRuntimeDecisionTimeline, selectNextRuntimeTimelineNode } from '@/l
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
+import { normalizeDecisionSymbol } from '@/features/decision-v1/engine';
 
 // ═══════════════════════════════════════════════════
 // V9.0: Three-tier beneficiary stock types
@@ -24,8 +26,6 @@ interface TierStock {
   trigger_event: string;
   reason: string;
   risk_note: string;
-  confidence_level?: 'high' | 'medium' | 'low';
-  has_confidence: boolean;
   data_basis: string;
   // legacy compat
   symbol?: string;
@@ -46,7 +46,6 @@ interface V10OpportunityStock {
   industryName: string;
   rank: number | null;
   totalScore: number | null;
-  confidenceLevel: string;
   netEvidenceDirection: 'positive' | 'neutral' | 'negative' | string;
   positiveEvidenceCount: number;
   negativeEvidenceCount: number;
@@ -94,26 +93,9 @@ function opportunityBadge(roleLabel: string | undefined) {
 }
 
 
-function confidenceLevelFrom(value: unknown): TierStock['confidence_level'] {
-  const normalized = compactText(value).toLowerCase();
-  if (normalized === 'high' || normalized === 'medium' || normalized === 'low') return normalized;
-
-  const numeric = typeof value === 'number' ? value : Number(value);
-  if (Number.isFinite(numeric)) {
-    if (numeric >= 75) return 'high';
-    if (numeric >= 50) return 'medium';
-  }
-
-  return 'low';
-}
-
 function parseEvidence(value: unknown): string {
   if (Array.isArray(value)) return value.map((item) => compactText(item)).filter(Boolean).join('；');
   return compactText(value);
-}
-
-function hasConfidenceValue(raw: Record<string, unknown>): boolean {
-  return raw.confidence_level !== undefined || raw.confidence !== undefined || raw.confidence_score !== undefined || raw.score !== undefined;
 }
 
 function hasExplicitStockIdentity(row: Record<string, unknown>): boolean {
@@ -144,8 +126,6 @@ function parseTierStock(
     trigger_event: compactText(raw.trigger_event || raw.catalyst || raw.catalyst_type || raw.event),
     reason: compactText(raw.reason || raw.why_this_stock || raw.thesis || raw.member_thesis || raw.why_it_matters || raw.score_reason),
     risk_note: compactText(raw.risk_note || raw.risk || raw.invalidation_condition || raw.invalidation_conditions || raw.failure_conditions),
-    confidence_level: hasConfidenceValue(raw) ? confidenceLevelFrom(raw.confidence_level || raw.confidence || raw.confidence_score || raw.score) : undefined,
-    has_confidence: hasConfidenceValue(raw),
     data_basis: compactText(raw.data_basis || raw.source_type || raw.source || fallbackDataBasis || parseEvidence(raw.evidence) || parseEvidence(raw.source_signals)),
     symbol: stockId,
     name: stockName,
@@ -200,7 +180,6 @@ function mapV10OpportunityStocks(rows: unknown): V10OpportunityStock[] {
     industryName: compactText(row.industry_name || row.industry || row.sector),
     rank: numberOrNull(row.rank) ?? index + 1,
     totalScore: numberOrNull(row.total_score),
-    confidenceLevel: compactText(row.confidence_level || 'low'),
     netEvidenceDirection: compactText(row.net_evidence_direction || 'neutral'),
     positiveEvidenceCount: numberOrNull(row.positive_evidence_count) ?? 0,
     negativeEvidenceCount: numberOrNull(row.negative_evidence_count) ?? 0,
@@ -227,7 +206,6 @@ function legacyToV10(stock: TierStock, index: number, tone: 'beneficiary' | 'obs
     industryName: stock.sector,
     rank: index + 1,
     totalScore: null,
-    confidenceLevel: stock.confidence_level || 'low',
     netEvidenceDirection: tone === 'risk' ? 'negative' : tone === 'beneficiary' ? 'positive' : 'neutral',
     positiveEvidenceCount: tone === 'beneficiary' ? 1 : 0,
     negativeEvidenceCount: tone === 'risk' ? 1 : 0,
@@ -325,7 +303,8 @@ function OpportunitiesContent() {
         setIsHistoricalFallback(resolved.isHistoricalFallback);
         setFallbackReportDate(resolved.fallbackReportDate);
 
-        if (displayState.market_status !== 'OPEN' || resolved.isHistoricalFallback) {
+        const projection = getSubscriberReportProjection(report);
+        if (!projection.recommendation.available || displayState.market_status !== 'OPEN' || resolved.isHistoricalFallback) {
           setCoreStocks([]);
           setExtendedStocks([]);
           setScenarioStocks([]);
@@ -442,6 +421,27 @@ function OpportunitiesContent() {
     );
   }
 
+  const projection = getSubscriberReportProjection(ds.rawRow);
+  if (!projection.analysisAvailable || !projection.recommendation.available) {
+    return (
+      <div className="ma-page ma-pixel-page ma-opportunities-page flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center px-4" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
+          <section className="max-w-md rounded-2xl border border-amber-400/20 bg-navy-900/70 p-6 text-center" role="status">
+            <p className="text-sm text-slate-400">{projection.identity.reportDate}</p>
+            <h1 className="mt-3 text-xl font-bold text-white">{projection.analysisAvailable ? '今日推薦狀態' : projection.title}</h1>
+            <p className="mt-3 text-sm text-slate-400">{projection.recommendation.message}</p>
+            <Link to="/report/today" className="mt-5 inline-flex min-h-11 items-center rounded-xl border border-white/10 px-4 py-2 text-sm text-white">查看今日市場判斷</Link>
+          </section>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+  const allowedSymbols = new Set(projection.recommendation.items.map((value) => {
+    const row = asRecord(value);
+    return normalizeDecisionSymbol(row.symbol || row.stock_code || row.stock_id || row.ticker);
+  }).filter(Boolean));
   const rawAI = (ds.rawAI || {}) as Record<string, unknown>;
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true' || ds.v10BeneficiaryEnabled === true;
   const v10BeneficiaryStocks = mapV10OpportunityStocks(rawAI.today_beneficiary_stocks_v10 || ds.v10BeneficiaryStocks);
@@ -467,16 +467,18 @@ function OpportunitiesContent() {
   // V10 remains the only path to a strong-beneficiary label. Until that engine is
   // enabled, complete legacy evidence is shown honestly as an observation list
   // instead of hiding every real candidate.
-  const strongOpportunityStocks = hasRecommendationEvidence ? v10BeneficiaryStocks : [];
+  const strongOpportunityStocks = (hasRecommendationEvidence ? v10BeneficiaryStocks : [])
+    .filter((stock) => allowedSymbols.has(normalizeDecisionSymbol(stock.symbol)));
   const observationOpportunityStocks = hasRecommendationEvidence || hasNoTradeEvidence
     ? v10ObservationWatchlist
     : hasUsableLegacyEvidence
       ? legacyObservationStocks
       : [];
   const presentedStocks = dedupePresentedOpportunities(
-    [...strongOpportunityStocks, ...observationOpportunityStocks] as unknown as Record<string, unknown>[],
+    [...strongOpportunityStocks, ...observationOpportunityStocks]
+      .filter((stock) => allowedSymbols.has(normalizeDecisionSymbol(stock.symbol))) as unknown as Record<string, unknown>[],
     12,
-  );
+  ).filter((stock) => allowedSymbols.has(normalizeDecisionSymbol(stock.symbol)));
   const safePresentedStocks = presentedStocks.map((stock) => ({
     stock,
     reason: publicOpportunityText(stock.oneLineReason),
@@ -486,7 +488,9 @@ function OpportunitiesContent() {
   const completeEnoughStocks = safePresentedStocks.filter(({ reason, confirmation, invalidation }) => (
     Boolean(reason && confirmation && invalidation)
   ));
-  const hasStrongBeneficiaryEvidence = strongOpportunityStocks.length > 0;
+  const strongSymbols = new Set(strongOpportunityStocks.map((stock) => normalizeDecisionSymbol(stock.symbol)));
+  const visibleStrongCount = completeEnoughStocks.filter(({ stock }) => strongSymbols.has(normalizeDecisionSymbol(stock.symbol))).length;
+  const hasStrongBeneficiaryEvidence = visibleStrongCount > 0;
   const canonicalNarrative = buildCanonicalNarrative({ displayState: ds, ai: rawAI });
   const opportunityPresentation = buildDecisionPresentation({
     displayState: ds,
@@ -510,7 +514,7 @@ function OpportunitiesContent() {
         publicOpportunityText(opportunityPresentation.nextCheckpoint.label),
       ].filter(Boolean).join('｜') || '等待下一個有效市場節點';
   const opportunityHeroTitle = hasStrongBeneficiaryEvidence
-    ? `今天有 ${strongOpportunityStocks.length} 檔通過強受惠篩選`
+    ? `今天有 ${visibleStrongCount} 檔通過強受惠篩選`
     : completeEnoughStocks.length > 0
       ? `今天沒有強受惠股，先觀察 ${completeEnoughStocks.length} 檔`
       : '今天不公布個股名單';
@@ -523,7 +527,7 @@ function OpportunitiesContent() {
     <div className="ma-page ma-pixel-page ma-opportunities-page flex flex-col overflow-x-hidden">
       <Navbar />
 
-      <main className="flex-1 overflow-x-hidden">
+      <main className="flex-1 overflow-x-hidden" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
         <section className="ma-opportunities-v2-hero">
           <div className="ma-pixel-content">
             <div className="ma-opportunities-v2-hero-grid">

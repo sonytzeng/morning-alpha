@@ -8,5 +8,7 @@ export {
   resolveSubscriberState,
   hasMatchingSubscriberClosingReceipt,
   createSubscriberState,
+  getSubscriberReportProjection,
+  SUBSCRIBER_PROJECTION_VERSION,
 } from '../src/lib/subscriberReportContract.ts';
-export type { SubscriberState } from '../src/lib/subscriberReportContract.ts';
+export type { SubscriberState, SubscriberReportProjection } from '../src/lib/subscriberReportContract.ts';

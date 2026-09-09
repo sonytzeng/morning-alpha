@@ -30,8 +30,9 @@ import type { UserEntitlement } from '@/types/subscription';
 import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 import { DecisionBrief, DecisionEvidence } from '@/features/decision-v1/DecisionBrief';
 import { applyPublishedDecisionGate, decisionFromReport, type ReportIdentity } from '@/features/decision-v1/presentation';
-import { isSubscriberAnalysisUnavailable, recommendationPublication, RECOMMENDATION_EVIDENCE_INSUFFICIENT, SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
-import { isClosingVerificationComplete } from '@/lib/closingVerificationState';
+import { RECOMMENDATION_EVIDENCE_INSUFFICIENT, SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
+import { normalizeDecisionSymbol } from '@/features/decision-v1/engine';
 
 type AnyObj = Record<string, any>;
 
@@ -40,7 +41,6 @@ type RadarView = {
   report_date?: string;
   radar_status?: string;
   market_bias?: string;
-  confidence_score?: number | string | null;
   summary?: string;
   today_quote?: string;
   taiex_change?: number | null;
@@ -100,7 +100,6 @@ function normalizeRadarFromReport(report: Report | null): RadarView | null {
       report_date: safeText(sourceRadar.report_date || report.report_date, ''),
       radar_status: safeText(sourceRadar.radar_status || sourceRadar.status, ''),
       market_bias: safeText(sourceRadar.market_bias || sourceRadar.bias, ''),
-      confidence_score: sourceRadar.confidence_score ?? null,
       summary: safeText(sourceRadar.summary || sourceRadar.opening_summary, ''),
       today_quote: safeText(sourceRadar.today_quote, ''),
       taiex_change: toNumber(sourceRadar.taiex_change),
@@ -315,7 +314,8 @@ function TodayReportContent() {
   const todayStr = formatTaipeiDate();
   const isReportForToday = report?.report_date === todayStr;
   const ai = asObj((report as AnyObj | null)?.ai_strategy_json);
-  const analysisUnavailable = isSubscriberAnalysisUnavailable(ai);
+  const projection = getSubscriberReportProjection(displayState?.rawRow || report, { todayDate: todayStr });
+  const analysisUnavailable = !projection.analysisAvailable;
   // V8.4: Unified display state — marketBias and confidenceScore from getMorningAlphaDisplayState
   // Same values as Home, Opportunities, WarRoom, MemberNote. No opening_radar override.
   const intradayFreshness = useMemo(() => isFreshIntradayData(report as AnyObj | null, reportSnapshotRadar as AnyObj | null), [report, reportSnapshotRadar]);
@@ -414,15 +414,22 @@ function TodayReportContent() {
 
   const avoidAction = report?.avoid_today?.find((item) => Boolean(item?.trim())) || '';
   const premiumAvailability = resolvePremiumContentAvailability(ai);
-  const stockPublication = recommendationPublication(ai);
   const hasDecisionV1Input = Object.prototype.hasOwnProperty.call(ai, 'decision_engine_v1');
-  const productDecision = applyPublishedDecisionGate(decisionFromReport(ai, identity, todayStr), presentation.primaryDecision.state,
-    premiumAvailability.eligible && (!stockPublication.explicit || stockPublication.stocksAllowed));
-  const recommendationAccess = (!stockPublication.explicit || stockPublication.stocksAllowed) && canShowBeginnerRecommendations({
-    action: presentation.primaryDecision.state, premiumEligible: premiumAvailability.eligible,
+  const allowedSymbols = new Set(projection.recommendation.items.map((value) => {
+    const stock = asObj(value);
+    return normalizeDecisionSymbol(stock.symbol || stock.stock_code || stock.stock_id || stock.ticker);
+  }).filter(Boolean));
+  const publishedDecision = applyPublishedDecisionGate(decisionFromReport(ai, identity, todayStr), projection.marketDecision.action,
+    premiumAvailability.eligible && projection.recommendation.available);
+  const productDecision = { ...publishedDecision, stock_opportunities: publishedDecision.stock_opportunities
+    .filter((stock) => allowedSymbols.has(normalizeDecisionSymbol(stock.symbol))) };
+  const publishedOpportunities = presentation.opportunities
+    .filter((stock) => allowedSymbols.has(normalizeDecisionSymbol(stock.symbol)));
+  const recommendationAccess = projection.recommendation.available && canShowBeginnerRecommendations({
+    action: projection.marketDecision.action, premiumEligible: premiumAvailability.eligible,
     decisionMode: premiumAvailability.decisionMode, reportDate: report?.report_date, todayDate: todayStr, isHistoricalFallback,
   });
-  const focusStocks = (recommendationAccess && !hasDecisionV1Input ? presentation.opportunities : [])
+  const focusStocks = (recommendationAccess && !hasDecisionV1Input ? publishedOpportunities : [])
     .filter((stock) => stock.oneLineReason && stock.confirmation && stock.invalidation)
     .slice(0, 3)
     .map((stock) => {
@@ -436,7 +443,7 @@ function TodayReportContent() {
       };
     });
   const beginnerFocusStocks = recommendationAccess && canShowBeginnerRecommendations({
-    action: presentation.primaryDecision.state,
+    action: projection.marketDecision.action,
     premiumEligible: premiumAvailability.eligible,
     decisionMode: premiumAvailability.decisionMode,
     reportDate: report?.report_date,
@@ -447,7 +454,7 @@ function TodayReportContent() {
       ? productDecision.action === 'ACTIVE_WATCH'
         ? productDecision.stock_opportunities.filter(stock => stock.action === 'ACTIVE_WATCH').slice(0, 3).map(stock => ({ symbol: stock.symbol, name: stock.company_name, reason: stock.thesis }))
         : []
-      : presentation.opportunities
+      : publishedOpportunities
       .filter((stock) => Boolean(safeStockDisplayText(stock.oneLineReason)) && Boolean(stock.confirmation) && Boolean(stock.invalidation))
       .slice(0, 3)
       .map((stock) => ({
@@ -471,7 +478,7 @@ function TodayReportContent() {
     listText(ai.increase_sector_weights),
   );
   // Invalidation rules describe future conditions, not failures that happened.
-  const activeFailure = presentation.primaryDecision.state === 'STOP'
+  const activeFailure = projection.marketDecision.action === 'STOP'
     && canonicalNarrative.decision_evidence.runtimeFailure
     ? {
       trigger: canonicalNarrative.decision_evidence.reason,
@@ -485,12 +492,12 @@ function TodayReportContent() {
     .find((node) => node.status === 'completed' || node.status === 'insufficient')
     || runtimeTimeline[0];
   const closingRuntimeNode = runtimeTimeline[runtimeTimeline.length - 1];
-  const runtimeLifecycleComplete = !analysisUnavailable && isClosingVerificationComplete(ai) && runtimeTimeline.every((node) =>
+  const runtimeLifecycleComplete = projection.closing.complete && runtimeTimeline.every((node) =>
     node.status === 'completed' || node.status === 'not_applicable');
   const decisionCopy = analysisUnavailable && displayState?.is_trading_day
     ? { headline: SUBSCRIBER_ANALYSIS_INCOMPLETE, instruction: '等待市場證據與正式分析' }
     : todayDecisionCopy(
-    presentation.primaryDecision.state,
+    projection.marketDecision.action,
     runtimeTimeline,
     runtimeLifecycleComplete,
   );
@@ -513,7 +520,7 @@ function TodayReportContent() {
     ? 'confirmed'
     : hasInsufficientRuntimeNode
     ? 'insufficient'
-    : presentation.primaryDecision.state === 'ACT'
+    : projection.marketDecision.action === 'ACT'
       ? 'confirmed'
       : 'pending';
   const workbenchStateLabel = analysisUnavailable
@@ -522,9 +529,9 @@ function TodayReportContent() {
     ? '收盤完成'
     : validationState === 'insufficient'
     ? '待補資料'
-    : presentation.primaryDecision.state === 'ACT'
+    : projection.marketDecision.action === 'ACT'
       ? '條件成立'
-      : presentation.primaryDecision.state === 'STOP'
+      : projection.marketDecision.action === 'STOP'
         ? '已停止'
         : '驗證中';
   const validationHeaderKicker = runtimeLifecycleComplete
@@ -648,7 +655,7 @@ function TodayReportContent() {
     return (
       <div className="min-h-screen bg-navy-950 flex flex-col">
         <Navbar marketStatusLabel="等待今日報告" />
-        <main className="flex-1 flex items-center justify-center px-4">
+        <main className="flex-1 flex items-center justify-center px-4" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
           <div className="max-w-md text-center bg-navy-900/70 border border-amber-400/20 rounded-2xl p-6">
             <i className="ri-calendar-event-line text-amber-300 text-3xl" aria-hidden="true" />
             <h1 className="text-white font-bold text-xl mt-3">今天的判斷尚未產生</h1>
@@ -658,6 +665,25 @@ function TodayReportContent() {
               <Link to={`/reports/${report.report_date}`} className="inline-flex min-h-11 items-center px-4 py-2 rounded-xl border border-white/10 text-white text-sm">查看 {report.report_date} 歷史報告</Link>
             </div>
           </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (analysisUnavailable) {
+    return (
+      <div className="ma-page ma-pixel-page ma-today-page flex min-h-screen flex-col">
+        <Navbar marketStatusLabel={projection.statusLabel} />
+        <main className="flex-1 flex items-center justify-center px-4" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
+          <section className="max-w-md rounded-2xl border border-amber-400/20 bg-navy-900/70 p-6 text-center" role="status">
+            <p className="text-sm text-slate-400">{projection.identity.reportDate}</p>
+            <h1 className="mt-3 text-xl font-bold text-white">{projection.title}</h1>
+            <p className="mt-2 text-sm text-slate-400">{projection.statusLabel}</p>
+            <p className="mt-3 text-sm text-slate-400">判斷信心：{projection.confidence.label}</p>
+            <p className="mt-2 text-sm text-slate-400">{projection.recommendation.message}</p>
+            <Link to="/" className="mt-5 inline-flex min-h-11 items-center rounded-xl border border-white/10 px-4 py-2 text-sm text-white">返回首頁</Link>
+          </section>
         </main>
         <Footer />
       </div>
@@ -674,7 +700,7 @@ function TodayReportContent() {
         action={renderSafeText(decisionCopy.instruction)}
         nextCheckpoint={renderSafeText(nextDecisionTime)}
         stocks={beginnerFocusStocks}
-        emptyStockMessage={stockPublication.notice || RECOMMENDATION_EVIDENCE_INSUFFICIENT}
+        emptyStockMessage={projection.recommendation.message || RECOMMENDATION_EVIDENCE_INSUFFICIENT}
         confirmationItems={successConditions}
         invalidationItems={presentation.invalidationItems}
         avoidAction={avoidAction ? publicTodayText(avoidAction) : undefined}
@@ -687,12 +713,12 @@ function TodayReportContent() {
     <div className="ma-page ma-pixel-page ma-today-page flex flex-col overflow-x-hidden">
       <Navbar marketStatusLabel={nextDecisionTime} />
 
-      <main className="flex-1 overflow-x-hidden">
+      <main className="flex-1 overflow-x-hidden" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
         <DecisionBrief decision={productDecision} date={report.report_date} analysisUnavailable={analysisUnavailable}
-          marketBias={publicTodayText(presentation.marketBiasLabel)} legacyInstruction={decisionCopy.instruction}
+          marketBias={publicTodayText(projection.marketDecision.bias || projection.statusLabel)} legacyInstruction={projection.marketDecision.label}
           legacyReason={publicTodayText(oneLineConclusion || primaryScenario)} legacyCount={focusStocks.length}
           stocksWithheld={!recommendationAccess}
-          recommendationNotice={stockPublication.notice}
+          recommendationNotice={projection.recommendation.message}
           actions={canPreviewBeginnerMode && <button type="button" onClick={() => setTodayReportMode('beginner')}>切換小白模式</button>} />
         <DecisionEvidence decision={productDecision} canShowStocks={recommendationAccess} />
         {!isReportForToday && (
@@ -743,7 +769,7 @@ function TodayReportContent() {
 
           {activeFailure && (
             <section className="ma-today-v3-correction-card">
-              <header className="ma-today-v3-section-header"><div><p>劇本調整</p><h2>判斷修正</h2></div><span className={`is-${presentation.primaryDecision.state === 'STOP' ? 'danger' : 'warning'}`}>{presentation.primaryDecision.state === 'STOP' ? '已觸發' : '監控中'}</span></header>
+              <header className="ma-today-v3-section-header"><div><p>劇本調整</p><h2>判斷修正</h2></div><span className={`is-${projection.marketDecision.action === 'STOP' ? 'danger' : 'warning'}`}>{projection.marketDecision.action === 'STOP' ? '已觸發' : '監控中'}</span></header>
               <div className="ma-today-v3-correction-flow">
                 <div className="is-before">
                   <b>原判斷</b>

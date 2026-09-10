@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
 import Footer from '@/components/feature/Footer';
@@ -7,11 +7,6 @@ import { useLatestReport } from '@/hooks/useLatestReport';
 import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { reconcileRuntimeTimeline, runtimeTimelineStatusLabel, selectNextRuntimeTimelineNode } from '@/lib/runtimeDecisionTimeline';
-import { buildMarketState, type MarketState } from '@/services/marketStateEngine';
-import {
-  computeSectorRotationFreshness,
-  type SectorRotationFreshness,
-} from '@/services/sectorRotationService';
 import { formatTaipeiDate, resolveMarketStatus } from '@/utils/tradingDay';
 import type { WarRoomTimelineStatus } from './warRoomPresentationMapper';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
@@ -67,17 +62,11 @@ function WarRoomContent() {
     report,
     isLoading,
     error,
-    openingRadar,
-    marketData,
-    marketDataTodayOnly,
-    todayCloseVerification: rawTodayCloseVerification,
     morningState,
   } = useLatestReport();
-  const [sectorFreshness, setSectorFreshness] = useState<SectorRotationFreshness | null>(null);
 
   const todayTaipeiStr = formatTaipeiDate();
   const canonicalMarketStatus = resolveMarketStatus(todayTaipeiStr);
-  const isNonTradingDay = canonicalMarketStatus.market_status !== 'OPEN';
   const isWeekend = canonicalMarketStatus.market_status === 'WEEKEND';
   const displayState: MorningAlphaDisplayState | null = useMemo(() => {
     if (!morningState?.resolveResult?.rawRow) return null;
@@ -91,42 +80,9 @@ function WarRoomContent() {
   const rawAI = displayState?.rawAI ?? reportAI;
   const projection = getSubscriberReportProjection(displayState?.rawRow || report, { todayDate: todayTaipeiStr });
   const analysisUnavailable = !projection.analysisAvailable;
-  const todayCloseVerification = projection.closing.complete ? rawTodayCloseVerification : null;
-  const hasVerifiedClose = projection.closing.complete;
-  const hasIntradayCheckpoint = projection.runtime.confirmedIntradayEvidence;
   const marketClosedInfo = displayState
     ? { closed: displayState.market_status !== 'OPEN', holidayName: displayState.holidayName }
     : { closed: isWeekend, holidayName: isWeekend ? '週末休市' : null as string | null };
-
-  const marketState: MarketState = buildMarketState({
-    todayReport: report,
-    todayOpeningRadar: openingRadar,
-    todayMarketData: marketDataTodayOnly ?? marketData ?? null,
-    todayCloseVerification,
-    sectorRotationFreshness: sectorFreshness,
-  });
-
-  useEffect(() => {
-    const result = morningState?.sectorRotationState;
-    if (!result) {
-      setSectorFreshness(null);
-      return;
-    }
-    const hasCloseVerification = hasVerifiedClose
-      && projection.identity.reportDate === todayTaipeiStr;
-    let phaseForFreshness = 'intraday';
-    if (isNonTradingDay) phaseForFreshness = 'pre_market';
-    else if (hasCloseVerification) phaseForFreshness = 'after_close_verified';
-    else if (!hasIntradayCheckpoint) phaseForFreshness = 'pre_market';
-    setSectorFreshness(computeSectorRotationFreshness(result, todayTaipeiStr, phaseForFreshness));
-  }, [
-    hasVerifiedClose,
-    isNonTradingDay,
-    morningState?.sectorRotationState,
-    hasIntradayCheckpoint,
-    projection.identity.reportDate,
-    todayTaipeiStr,
-  ]);
 
   if (isLoading) {
     return (
@@ -289,7 +245,7 @@ function WarRoomContent() {
 
   return (
     <div className="ma-page ma-war-room-page ma-war-room-v3 flex flex-col overflow-x-hidden">
-      <Navbar marketState={marketState} />
+      <Navbar />
       <main className="flex-1 overflow-x-hidden" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
         <SubscriberAnswer question="早上的判斷有沒有改變？" date={projection.identity.reportDate}
           answer={answer.title} reason={decisionReason} tone={answer.tone}>

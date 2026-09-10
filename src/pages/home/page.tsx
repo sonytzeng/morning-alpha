@@ -9,7 +9,6 @@ import { trackEngagementEvent } from '@/services/engagementService';
 import { useHomeDashboard } from '@/hooks/useHomeDashboard';
 import { formatTaipeiDate } from '@/utils/tradingDay';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
-import { buildMarketState, type MarketState } from '@/services/marketStateEngine';
 import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { renderSafeText } from '@/utils/renderSafe';
 import { buildDecisionPresentation } from '@/lib/decisionPresentation';
@@ -20,7 +19,8 @@ import {
   selectNextRuntimeTimelineNode,
   type RuntimeTimelineStatus,
 } from '@/lib/runtimeDecisionTimeline';
-import { supabase } from '@/lib/supabase';
+import { callGetReportHistory } from '@/services/entitlementService';
+import { selectPublicPerformanceRows } from '@/lib/performanceJournalProjection';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import { SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
 import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
@@ -266,19 +266,21 @@ function HomePageContent() {
     let mounted = true;
 
     async function loadLatestPublicClosing() {
-      const { data: rows, error: historyError } = await supabase.rpc('get_public_performance_journal', { p_limit: 30 });
-      if (!mounted || historyError || !Array.isArray(rows)) return;
+      let response;
+      try { response = await callGetReportHistory(30); }
+      catch { return; }
+      if (!mounted) return;
 
-      const latest = rows.find((value) => {
-        const row = asRecord(value);
+      const latest = selectPublicPerformanceRows(response.reports).find((selection) => {
+        const row = selection.row;
         const projection = getSubscriberReportProjection(row, { historical: true });
         return Boolean(projection.identity.reportDate)
-          && projection.identity.reportDate <= formatTaipeiDate()
+          && Boolean(response.today_date) && projection.identity.reportDate <= String(response.today_date)
           && projection.closing.complete;
       });
 
       if (!latest) return;
-      const row = asRecord(latest);
+      const row = latest.row;
       const projection = getSubscriberReportProjection(row, { historical: true });
       const result = closingResultLabel(
         projection.closing.outcome || '',
@@ -287,7 +289,7 @@ function HomePageContent() {
       setLatestPublicClosing({
         reportDate: projection.identity.reportDate,
         result,
-        summary: firstMeaningfulString(row.what_was_right, row.what_was_wrong),
+        summary: firstMeaningfulString(projection.closing.result?.what_was_right, projection.closing.result?.what_was_wrong),
       });
     }
 
@@ -297,13 +299,6 @@ function HomePageContent() {
 
   const report: Report | null = data?.report ?? null;
   const todayTaipeiStr = formatTaipeiDate();
-
-  const marketState: MarketState = buildMarketState({
-    todayReport: report,
-    todayOpeningRadar: data?.openingRadar ?? null,
-    todayMarketData: data?.marketDataTodayOnly ?? data?.marketData ?? null,
-    todayCloseVerification: data?.todayCloseVerification ?? null,
-  });
 
   // Stable mode: use morningState as single source of truth.
   const ms = morningState;
@@ -346,10 +341,8 @@ function HomePageContent() {
   }, [dataStatus, hasHistoricalReport, reportExists, isTodayReport, marketIsClosed]);
 
   const timelineNodes: TimelineNode[] = buildRuntimeDecisionTimeline({
-    ai: homeAI,
+    projection,
     hasReport: reportExists && isTodayReport,
-    reportRevisionId: ms?.revisionId,
-    reportGeneratedAt: ms?.generatedAt,
     isTradingDay: displayMode !== 'market-closed' && displayState.is_trading_day,
   });
 
@@ -714,7 +707,7 @@ function HomePageContent() {
 
   return (
     <div className="ma-page ma-pixel-page ma-home-page ma-home-v2-page flex flex-col overflow-x-hidden">
-      <Navbar marketState={marketState} marketStatusLabel={marketStatusLabel} />
+      <Navbar marketStatusLabel={marketStatusLabel} />
 
       <main className="flex-1 overflow-x-hidden" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
 

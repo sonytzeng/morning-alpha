@@ -1,0 +1,201 @@
+{
+  "schema_version": "CONSOLIDATION_FAILURE_CAPTURE_V1",
+  "fixture_id": "2026-09-09-premarket-quality",
+  "market_date": {
+    "today_date": "2026-09-09",
+    "report_date": "2026-09-09",
+    "data_as_of": "2026-09-08T20:59:59.230Z",
+    "market_status": "open",
+    "is_trading_day": true,
+    "report_mode": "normal_overnight",
+    "timezone": "Asia/Taipei"
+  },
+  "provenance": {
+    "kind": "SANITIZED_CAPTURE_REPLAY",
+    "sources": [
+      {
+        "artifact": "fetch-v64-20260909-0846.json",
+        "sha256": "5d89c7d21bca59004a417d795193605162d655c976f65db52644ae03b0e8ac52",
+        "selected_fields": "verdict,evidence.report_quality,evidence.required_core_symbols,evidence.public_payload"
+      },
+      {
+        "artifact": "fetch-v64-20260909-0852.json",
+        "sha256": "cf4b1272842b5341c60f0e1b88ba1f394de0c36dde200d7faa52e9bb08a15a00",
+        "selected_fields": "observed_at,evidence.health_runs,health_dispatch_receipt,verdict"
+      }
+    ],
+    "observed_at": "2026-09-09T00:51:13.982023+00:00",
+    "removed": [
+      "production identifiers",
+      "SQL text",
+      "cron definitions",
+      "membership",
+      "news bodies",
+      "unsupported claim prose",
+      "non-core market rows"
+    ],
+    "unavailable": [
+      "original vendor HTTP response bytes",
+      "complete market claim source ledger",
+      "original stock claim prose and source links"
+    ],
+    "full_producer_replay_available": false,
+    "initial_observation_window": {
+      "start_utc": "2026-09-09T00:35:57Z",
+      "end_utc": "2026-09-09 00:48:29 UTC"
+    }
+  },
+  "observed": {
+    "generated_at": "2026-09-08T23:35:17.363Z",
+    "fetch_version": 64,
+    "immutable_premarket_count": 11,
+    "required_core_lineage": [
+      {
+        "symbol": "2330",
+        "source_symbol": "2330",
+        "provider": "fugle",
+        "value": "2470",
+        "change_percent": "0.41",
+        "snapshot_version": 478,
+        "canonical_immutable_version": "478",
+        "compatibility_immutable_version": "478",
+        "captured_at": "2026-09-08 23:00:02.809+00",
+        "source_timestamp": "2026-09-08 05:30:00+00",
+        "canonical_values_match": true
+      },
+      {
+        "symbol": "NVDA",
+        "source_symbol": "NVDA",
+        "provider": "finnhub",
+        "value": "225.73",
+        "change_percent": "-2.0099",
+        "snapshot_version": 483,
+        "canonical_immutable_version": "483",
+        "compatibility_immutable_version": "483",
+        "captured_at": "2026-09-08 23:00:02.809+00",
+        "source_timestamp": "2026-09-08 20:00:00+00",
+        "canonical_values_match": true
+      },
+      {
+        "symbol": "SPX",
+        "source_symbol": "SPY",
+        "provider": "finnhub",
+        "value": "765.96",
+        "change_percent": "-0.5492",
+        "snapshot_version": 480,
+        "canonical_immutable_version": "480",
+        "compatibility_immutable_version": "480",
+        "captured_at": "2026-09-08 23:00:02.809+00",
+        "source_timestamp": "2026-09-08 20:00:00+00",
+        "canonical_values_match": true
+      },
+      {
+        "symbol": "TAIEX",
+        "source_symbol": "IX0001",
+        "provider": "fugle",
+        "value": "47105.78",
+        "change_percent": "-0.47",
+        "snapshot_version": 477,
+        "canonical_immutable_version": "477",
+        "compatibility_immutable_version": "477",
+        "captured_at": "2026-09-08 23:00:02.809+00",
+        "source_timestamp": "2026-09-08 05:30:00+00",
+        "canonical_values_match": true
+      },
+      {
+        "symbol": "TSM",
+        "source_symbol": "TSM",
+        "provider": "finnhub",
+        "value": "439",
+        "change_percent": "2.3525",
+        "snapshot_version": 484,
+        "canonical_immutable_version": "484",
+        "compatibility_immutable_version": "484",
+        "captured_at": "2026-09-08 23:00:02.809+00",
+        "source_timestamp": "2026-09-08 20:00:00+00",
+        "canonical_values_match": true
+      },
+      {
+        "symbol": "TXF",
+        "source_symbol": "TXF1!",
+        "provider": "fugle_futopt",
+        "value": "47055",
+        "change_percent": "0.21",
+        "snapshot_version": 479,
+        "canonical_immutable_version": "479",
+        "compatibility_immutable_version": "479",
+        "captured_at": "2026-09-08 23:00:02.809+00",
+        "source_timestamp": "2026-09-08 20:59:59.23+00",
+        "canonical_values_match": true
+      }
+    ],
+    "research_quality": {
+      "publish_status": "degraded",
+      "evidence_coverage": 76,
+      "duplicate_claims": [],
+      "contradictions": [],
+      "missing_sections": [],
+      "unsupported_claims": [
+        {
+          "symbol": "3034",
+          "reason": "evidence_relationship_not_supported",
+          "claim_sha256": "b8ab59791a1cb480fd39ca3e45a00f2fcfc7adefa7f7b6b6aa93e9574fca272b"
+        },
+        {
+          "symbol": "3529",
+          "reason": "evidence_relationship_not_supported",
+          "claim_sha256": "a60a1defc1df6912acadc32d2bf5dade5d45b99685c39af42c4957c79e2e1dac"
+        },
+        {
+          "symbol": "5274",
+          "reason": "evidence_relationship_not_supported",
+          "claim_sha256": "c2cfd95f38c4fb8af58cdcd25ddb361d7d91447b877b75ff2578cba351a1434a"
+        },
+        {
+          "symbol": "3131",
+          "reason": "evidence_relationship_not_supported",
+          "claim_sha256": "7cfee67abf7ab840235f6f8b45df64ffd2cc586c54f43707b6a37b8f32cafb7f"
+        },
+        {
+          "symbol": "4763",
+          "reason": "evidence_relationship_not_supported",
+          "claim_sha256": "97c9048fca1377cb9c95c35b1d7d407c4d73b24dd700c375d9ca2f80adc17f57"
+        }
+      ]
+    },
+    "canonical_status": "PARTIAL",
+    "editorial_status": "REJECTED",
+    "premium_status": "BLOCKED",
+    "semantic_status": "BLOCKED",
+    "public_payload_http": 200,
+    "public_payload_body_sha256": "296ffb8e48235879504010c0c741c91f487c78b39e2f55c07a5de371ea62a462",
+    "normal_report_line_receipts": 0,
+    "incident_line_receipts": 3,
+    "failed_dispatches": 4,
+    "health_status": "failed",
+    "health_error_code": "REPORT_CONTRACT_INVALID",
+    "health_dispatch_status": "SUCCEEDED",
+    "health_dispatch_http": 200,
+    "premarket_business_gate": "FAIL",
+    "full_day_acceptance": "NOT_DUE",
+    "acceptance_record_id": null,
+    "not_due": [
+      "0900",
+      "0930",
+      "1030",
+      "1300",
+      "1410",
+      "1430",
+      "closing",
+      "learning",
+      "full_day_acceptance"
+    ],
+    "automatic_stable_day": false
+  },
+  "replay_assertions": [
+    "76 percent and five unsupported stocks are actual saved observations, not fabricated fixture counts.",
+    "Historical full-day verdict remains NOT_DUE although the due premarket gate failed.",
+    "Working Fetch lineage does not prove publication or normal LINE success.",
+    "Reconstructed source-complete market-only counterfactual must be labelled synthetic and independently earn eligibility."
+  ]
+}

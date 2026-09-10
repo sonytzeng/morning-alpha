@@ -5,18 +5,21 @@ import { execFileSync } from 'node:child_process';
 import { URL } from 'node:url';
 import { isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
 import { evaluateMarketReportGate } from '../supabase/functions/_shared/market-report-gate.ts';
+import { evaluatePublishedMarketDelivery, readPublishedMarketDecision, readPublishedMemberRevision } from '../supabase/functions/_shared/market-publication-contract.ts';
+import { validateOpeningPublication, resolveOpeningPublicationIdentity, resolveClosingReceiptPointer, evaluateClosingContract } from '../supabase/functions/_shared/closing-learning-contract.ts';
+import { buildCanonicalMarketState, canonicalMarketSourceRefs } from '../supabase/functions/_shared/canonical-market-state.ts';
 import { evaluatePremiumContentGate } from '../supabase/functions/_shared/premium-content-gate.ts';
 import { resolveMarketStatus } from '../supabase/functions/_shared/market-status.ts';
 import { buildCanonicalIntradaySyncStatus } from '../supabase/functions/_shared/runtime-report-state.ts';
 import { resolveCanonicalRuntimeMarketStatus } from '../supabase/functions/_shared/canonical-runtime-market-status.mjs';
 import { resolveCanonicalDataQuality } from '../supabase/functions/_shared/production-architecture-core.mjs';
 import { canonicalAdminReaderProjection } from '../supabase/functions/_shared/research-pipeline-contract.ts';
-import { assembleResearchMasterV2, validateResearchMasterV2 } from '../supabase/functions/generate-daily-report-v7/research-master-v2.ts';
+import { assembleCanonicalMarketResearch, assembleResearchMasterV2, validateResearchMasterV2 } from '../supabase/functions/generate-daily-report-v7/research-master-v2.ts';
 import { createSubscriberState, getSubscriberReportProjection, parseSubscriberState, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE } from '../shared/subscriber-state-contract.ts';
 
 const source = readFileSync(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');
 const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-const deps = { asObject: object, asArray: v => Array.isArray(v) ? v : [],
+const deps = { readPublishedMarketDecision, readPublishedMemberRevision, asObject: object, asArray: v => Array.isArray(v) ? v : [],
   toStringValue: v => typeof v === 'string' && v.trim() ? v : null,
   toNumberValue: v => typeof v === 'number' ? v : null,
   getAi: r => object(r.ai_strategy_json), getReportDate: r => r.report_date };
@@ -51,6 +54,7 @@ test('published pointer wins over newer internal QA and includes an intraday rev
   assert.equal(result.data.report_date,'2026-09-08');
   assert.deepEqual(trace[0].filters,[['report_date','2026-09-08'],['report_id','report-today'],['id','published-intraday']]);
   assert.equal((await query(db,{...report,ai_strategy_json:{revision_id:'missing'}})).data,null,'Missing pinned revision must not silently fall back to QA or Sunday');
+  assert.equal((await query(db,{...report,ai_strategy_json:{}})).data,null,'Absent publication pointer must not select latest private QA');
 });
 
 test('published member content is pinned independently and requires real matching semantic result',async()=>{
@@ -60,11 +64,15 @@ test('published member content is pinned independently and requires real matchin
   const decision={id:'d',report_id:'r',report_date:report.report_date,version:8};
   const member={id:'m',report_id:'r',report_date:report.report_date,decision_snapshot_id:'d',decision_snapshot_version:8,revision:8,status:'PASSED'};
   const trace=[];
-  const tables={member_content_revisions:[{...member,semantic_coherence_reviews:[{member_content_revision_id:'m',status:'PASSED',reason_codes:[],checked_at:'2026-09-08T02:00:00Z'}]},
+  const tables={member_content_revisions:[{...member,semantic_coherence_reviews:[{member_content_revision_id:'m',canonical_snapshot_id:'d',canonical_snapshot_version:8,status:'PASSED',reason_codes:[],checked_at:'2026-09-08T02:00:00Z'}]},
     {...member,id:'qa',revision:99,status:'BLOCKED'}]};
   const r=await query(database(tables,trace),report);
   assert.equal(r.data.id,'m');
   assert.equal(eligible({decisionSnapshot:decision,memberContentRevision:r.data}),true);
+  assert.equal((await query(database(tables,[]),{...report,ai_strategy_json:{revision_id:'d'}})).data,null,'Missing member pointer cannot fall back to current QA');
+  tables.member_content_revisions[0].semantic_coherence_reviews[0].canonical_snapshot_version=99;
+  assert.equal((await query(database(tables,[]),report)).data.semantic_status,null,'Wrong semantic revision cannot qualify the published member row');
+  tables.member_content_revisions[0].semantic_coherence_reviews[0].canonical_snapshot_version=8;
   for(const change of [{semantic_status:'BLOCKED'},{semantic_reason_codes:['UNSUPPORTED']},{semantic_reason_codes:null},
     {decision_snapshot_id:'other'},{decision_snapshot_version:9},{report_date:'2026-09-06'},{report_id:'other'}, {status:'BLOCKED'}]) {
     assert.equal(eligible({decisionSnapshot:decision,memberContentRevision:{...r.data,...change}}),false,JSON.stringify(change));
@@ -77,11 +85,14 @@ test('market publication eligibility has no Premium/QA gate dependency; recommen
   const publicBody=source.slice(source.indexOf('function buildPublicPayload('),source.indexOf('function buildMemberPayload('));
   assert.match(publicBody,/marketPublished = subscriberProjection\.analysisAvailable/);
   assert.match(publicBody,/subscriberProjection = getSubscriberReportProjection/);
-  assert.match(publicBody,/publicationVerified: publicationAligned, marketEvidenceReady: marketGate\.eligible/);
+  assert.match(publicBody,/publicationVerified = !ctx\.publicationEvidence\?\.queryBoundExceeded && delivered\.eligible/);
+  assert.match(publicBody,/evaluatePublishedMarketDelivery\(readerReport/);
+  assert.match(publicBody,/publicationVerified, marketEvidenceReady: publicationVerified/);
+  assert.doesNotMatch(publicBody,/publicationVerified: publicationAligned|marketEvidenceReady: marketGate\.eligible/);
   assert.match(publicBody,/analysisStatus: ctx\.decisionSnapshot\?\.status/);
   assert.match(publicBody,/overall_status: marketPublished \? "eligible" : "blocked"/);
   assert.doesNotMatch(publicBody,/overall_status:.*semanticEligible/);
-  assert.match(publicBody,/recommendationsEligible = premiumEligible && marketPublished && marketGate\.recommendation_gate\.eligible/);
+  assert.match(publicBody,/recommendationsEligible = premiumEligible && marketPublished && subscriberProjection\.recommendation\.available/);
   assert.match(publicBody,/one_teaser_stock: recommendationsEligible \?/);
   assert.match(publicBody,/recommendation_count: recommendationsEligible \? premiumGate\.recommendation_count : 0/);
   assert.match(source,/companyContentAllowed:[\s\S]*?asObject\(publicMetadata\.recommendation_gate\)\.eligible === true/);
@@ -107,13 +118,22 @@ const projectionNames = ['asObject', 'asArray', 'parseAi', 'toStringValue', 'toN
   'getConfidenceBand', 'getTodayQuote', 'getGeneratedAt', 'getMarketDate', 'toIsoTimestamp', 'getDataAsOf',
   'getCanonicalMarketMetadata', 'getReportMode', 'getConfidenceLabel', 'getBeneficiaryArrays', 'isV10BeneficiaryEnabled',
   'getBeneficiaryCount', 'buildCanonicalTeaserStock', 'buildClosingVerdict', 'buildClosingSummary', 'buildCanonicalDecision',
-  'isPublishedReadAligned', 'projectMarketOnlyMemberNote', 'buildPublicPayload', 'buildMemberPayload', 'buildVipPayload', 'buildAdminPayload', 'buildHistorySummary'];
+  'isPublishedReadAligned', 'projectMarketOnlyMemberNote', 'buildPublicPayload', 'buildMemberPayload', 'buildVipPayload', 'buildAdminPayload', 'buildHistoryClosingVerdict', 'buildHistorySummary'];
 const projections = {};
 const projectionDeps = { evaluateMarketReportGate, evaluatePremiumContentGate, resolveMarketStatus,
+  evaluatePublishedMarketDelivery, validateOpeningPublication, resolveOpeningPublicationIdentity, resolveClosingReceiptPointer, evaluateClosingContract,
   buildCanonicalIntradaySyncStatus, resolveCanonicalRuntimeMarketStatus, resolveCanonicalDataQuality, canonicalAdminReaderProjection,
   createSubscriberState, getSubscriberReportProjection, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE,
   ...Object.fromEntries(projectionNames.map(name => [name, (...args) => projections[name](...args)])) };
 for (const name of projectionNames) projections[name] = isolatedFunction(source, name, projectionDeps);
+
+function verifiedHistoryFixture() {
+  const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+  return isolatedFunction(read('tests/consolidationPerformanceHistory.test.mjs'), 'fixture', {
+    isolatedFunction, read, assert, structuredClone, assembleCanonicalMarketResearch, buildCanonicalMarketState,
+    canonicalMarketSourceRefs, evaluateMarketReportGate,
+  })();
+}
 
 test('merged checkpoint completion rejects previous-day overlays without rewriting their evidence', () => {
   const at = '2026-09-07T12:05:42.55516+00:00';
@@ -200,27 +220,34 @@ test('sanitizing after the real overlay merge prevents an unrecognized filtered 
 function projectionFixture() {
   const fixtureSource = readFileSync(new URL('./premiumContentGate.test.mjs', import.meta.url), 'utf8');
   const ai = isolatedFunction(fixtureSource, 'validAi')();
+  ai.missing_sources = []; // This complete market fixture has no missing measured source.
   // A subscriber publication test needs the real complete research contract,
   // not the old Premium-only fixture's incomplete master stub.
   const masterFixtureSource = readFileSync(new URL('../supabase/functions/generate-daily-report-v7/research-master-v2.test.ts', import.meta.url), 'utf8');
   const masterInput = isolatedFunction(masterFixtureSource, 'completeFixture')();
   masterInput.reportDate = '2026-09-08'; masterInput.todayDate = masterInput.reportDate;
   masterInput.generatedAt = '2026-09-08T00:01:00Z'; masterInput.dataAsOf = '2026-09-08T00:00:00Z';
-  for (const row of masterInput.evidenceIndex) row.published_at = '2026-09-07T22:00:00Z';
+  for (const row of masterInput.evidenceIndex) row.published_at = row.published_at.replace('2026-07-13', '2026-09-07');
   const marketSentence = 'SOX 上漲帶動半導體風險偏好，09:30 先確認台積電與 TAIEX 是否同向；未確認前不追價，若權值轉弱就撤回偏多假設。';
   Object.assign(masterInput.legacy, { today_quote: marketSentence, v8_daily_sentence: { sentence: marketSentence },
     free_summary: { one_sentence: marketSentence }, today_beneficiary_stocks_v10: [] });
   masterInput.legacy.member_research_note_v2.today_core_thesis = marketSentence;
-  const master = assembleResearchMasterV2(masterInput);
-  master.quality = validateResearchMasterV2(master, masterInput).quality;
+  const master = assembleCanonicalMarketResearch(masterInput);
   ai.research_master_v2 = master;
+  ai.canonical_market_state = buildCanonicalMarketState(structuredClone(master));
   const report = { id: 'synthetic-report', report_date: '2026-09-08', created_at: '2026-09-08T00:00:00Z',
     summary: 'OLD_SYNTHETIC_QA', ai_strategy_json: { ...ai, revision_id: 'synthetic-published', canonical_member_revision_id: 'synthetic-member' } };
   const decisionSnapshot = { id: 'synthetic-published', report_id: report.id, report_date: report.report_date, version: 8,
-    status: 'READY', action: 'WAIT', decision_mode: 'market_only', generated_text: { daily_sentence: '已發布合成市場判斷', recommendations: [] } };
+    status: 'READY', action: 'WAIT', decision_mode: 'recommendations', market_regime: '中性觀察',
+    content_score: evaluateMarketReportGate(ai, report.report_date).content_score, coverage_score: 100,
+    created_at: masterInput.generatedAt, source_refs: canonicalMarketSourceRefs(ai),
+    generated_text: { daily_sentence: master.sections.executive_summary.text, recommendations: [],
+      canonical_market_state: structuredClone(ai.canonical_market_state),
+      content_evidence_quality: structuredClone(ai.content_evidence_quality), data_quality: ai.data_quality,
+      missing_sources: structuredClone(ai.missing_sources) } };
   const ctx = { openingRadar: null, sectorRotationRows: [], marketDataSnapshots: [], decisionSnapshot,
     closingDecisionSnapshot: null, closeMarketReview: null, learningRun: null, learningMetricCorrection: null,
-    tradingDayState: null, componentQueryFailures: [],
+    tradingDayState: null, componentQueryFailures: [], evaluatedAt: '2026-09-08T07:30:00Z', todayDate: '2026-09-08',
     memberContentRevision: { id: 'synthetic-member', report_id: report.id, report_date: report.report_date,
       decision_snapshot_id: decisionSnapshot.id, decision_snapshot_version: decisionSnapshot.version,
       status: 'PASSED', semantic_status: 'PASSED', semantic_reason_codes: [], member_content: {
@@ -231,7 +258,7 @@ function projectionFixture() {
         canonical_contract: { primary_symbols: ['SYNTHETIC-LEGACY-STOCK'] },
       } } };
   assert.equal(evaluatePremiumContentGate(ai, 0).eligible, true, 'Fixture retains independent paid-content eligibility');
-  assert.equal(evaluateMarketReportGate(ai, report.report_date).eligible, true, 'Fixture also has genuine synthetic market publication evidence');
+  assert.equal(evaluateMarketReportGate(ai, report.report_date).eligible, true, JSON.stringify(evaluateMarketReportGate(ai, report.report_date)));
   assert.equal(evaluateMarketReportGate(ai, report.report_date).recommendation_gate.status, 'BLOCKED', 'No fresh audited company evidence fixture');
   assert.equal(projections.isCanonicalMemberRevisionEligible(ctx), true);
   return { report, ctx };
@@ -243,7 +270,7 @@ test('blocked recommendation gate with otherwise eligible Premium and semantic r
     const payload = projections[name](report, ctx);
     assert.equal(payload.premium_content_status, 'blocked');
     assert.ok(payload.premium_content_reason_codes.includes('RECOMMENDATION_NOTE_NOT_PUBLISHED'));
-    assert.equal(payload.canonical_decision.daily_sentence, '已發布合成市場判斷');
+    assert.equal(payload.canonical_decision.daily_sentence, ctx.decisionSnapshot.generated_text.canonical_market_state.document.sections.executive_summary.text);
     assert.equal(payload.canonical_decision.recommendations, undefined);
     assert.equal(payload.one_teaser_stock, null);
     assert.equal(payload.recommendation_count, 0);
@@ -282,7 +309,7 @@ test('public summary and daily sentence are allowlisted rather than spreading ra
   }
   const payload = projections.buildPublicPayload(report, ctx);
   assert.deepEqual(Object.keys(payload.public_summary).sort(), ['daily_sentence', 'one_sentence']);
-  assert.equal(payload.public_summary.daily_sentence, '已發布合成市場判斷');
+  assert.equal(payload.public_summary.daily_sentence, ctx.decisionSnapshot.generated_text.canonical_market_state.document.sections.executive_summary.text);
   assert.deepEqual(Object.keys(payload.v8_daily_sentence), ['sentence']);
   assert.doesNotMatch(JSON.stringify(payload), /SYNTHETIC-LEAK|PRIVATE_SYNTHETIC_QA|OLD_SYNTHETIC_QA/);
 });
@@ -295,8 +322,8 @@ test('admin raw diagnostics remain only in admin_source_report, never a nested s
   assert.equal(payload.admin_source_report, report);
   assert.match(JSON.stringify(payload.admin_source_report), /SYNTHETIC-RAW/);
   const subscriber = { ...payload }; delete subscriber.admin_source_report;
-  assert.equal(subscriber.summary, '已發布合成市場判斷');
-  assert.equal(subscriber.ai_strategy_json.summary, '已發布合成市場判斷');
+  assert.equal(subscriber.summary, ctx.decisionSnapshot.generated_text.canonical_market_state.document.sections.executive_summary.text);
+  assert.equal(subscriber.ai_strategy_json.summary, subscriber.summary);
   assert.equal(subscriber.ai_strategy_json.decision_v1, undefined);
   assert.equal(subscriber.ai_strategy_json.research_master_v2, undefined);
   assert.doesNotMatch(JSON.stringify(subscriber), /SYNTHETIC-RAW|SYNTHETIC-LEGACY-STOCK|OLD_SYNTHETIC_QA/);
@@ -307,7 +334,7 @@ test('real assembled same-day market evidence publishes despite recommendation B
   const input = isolatedFunction(fixtureSource, 'completeFixture')();
   input.reportDate = '2026-09-08'; input.todayDate = input.reportDate;
   input.generatedAt = '2026-09-08T00:01:00.000Z'; input.dataAsOf = '2026-09-08T00:00:00.000Z';
-  for (const row of input.evidenceIndex) row.published_at = '2026-09-07T22:00:00.000Z';
+  for (const row of input.evidenceIndex) row.published_at = row.published_at.replace('2026-07-13', '2026-09-07');
   const ai = input.legacy;
   const sentence = 'SOX 上漲帶動半導體風險偏好，09:30 先確認台積電與 TAIEX 是否同向；未確認前不追價，若權值轉弱就撤回偏多假設。';
   ai.today_quote = sentence; ai.v8_daily_sentence = { sentence }; ai.free_summary = { one_sentence: sentence };
@@ -315,8 +342,8 @@ test('real assembled same-day market evidence publishes despite recommendation B
   ai.today_beneficiary_stocks_v10 = []; ai.v10_beneficiary_enabled = true;
   ai.v10_data_quality_status = 'insufficient_positive_evidence'; ai.data_quality = 'complete'; ai.missing_sources = []; ai.member_value_score = 0;
   ai.content_evidence_quality = { contract_version: 'PREMIUM_EVIDENCE_V1', verified_market_count: 3, verified_news_count: 1, blank_market_change_count: 0, all_news_traceable: true };
-  const master = assembleResearchMasterV2(input);
-  master.quality = validateResearchMasterV2(master, input).quality; ai.research_master_v2 = master;
+  const master = assembleCanonicalMarketResearch(input);
+  ai.research_master_v2 = master; ai.canonical_market_state = buildCanonicalMarketState(master);
   ai.research_generation_audit = { report_date: '2026-09-06', source_quality: { publish_status: 'blocked' } };
   const marketGate = evaluateMarketReportGate(ai, input.reportDate);
   assert.equal(marketGate.eligible, true, JSON.stringify(marketGate));
@@ -324,12 +351,24 @@ test('real assembled same-day market evidence publishes despite recommendation B
   assert.equal(evaluatePremiumContentGate(ai, 1).eligible, false, 'Paid quality remains independent and blocked');
   const { report, ctx } = projectionFixture();
   report.report_date = input.reportDate;
-  report.ai_strategy_json = { ...ai, revision_id: ctx.decisionSnapshot.id, canonical_member_revision_id: 'synthetic-qa-member' };
+  report.ai_strategy_json = { ...ai, revision_id: ctx.decisionSnapshot.id, canonical_member_revision_id: ctx.memberContentRevision.id,
+    market_publication_contract: { schema_version: 'CORE_MARKET_PUBLICATION_V1', status: 'PUBLISHED', report_date: report.report_date,
+      revision_id: ctx.decisionSnapshot.id, opening_publication_revision_id: ctx.decisionSnapshot.id } };
   report.ai_strategy_json.intraday_sync_status = { report_date: input.reportDate, windows: {
     '1410': { status: 'completed', completed_at: '2026-09-07T12:05:42Z', evidence: { source: 'local-synthetic' } },
   } };
-  ctx.memberContentRevision = null;
-  ctx.decisionSnapshot.generated_text = { daily_sentence: sentence, recommendations: [], market_report_gate: marketGate };
+  ctx.memberContentRevision.status = 'BLOCKED';
+  ctx.decisionSnapshot.source_freshness = { status: 'complete' };
+  ctx.decisionSnapshot.source_refs = canonicalMarketSourceRefs(ai);
+  ctx.decisionSnapshot.generated_text = { daily_sentence: sentence, recommendations: [], market_report_gate: marketGate,
+    canonical_market_state: structuredClone(ai.canonical_market_state),
+    content_evidence_quality: structuredClone(ai.content_evidence_quality), data_quality: ai.data_quality,
+    missing_sources: structuredClone(ai.missing_sources) };
+  ctx.publicationEvidence = { snapshots: new Map([[ctx.decisionSnapshot.id, ctx.decisionSnapshot]]), members: new Map(), runs: [{
+    id: 'synthetic-actual-publication', trading_date: report.report_date, status: 'SUCCEEDED',
+    idempotency_key: 'research-input:synthetic', completed_at: '2026-09-08T00:02:00Z', provider_status: { result: {
+      success: true, report_id: report.id, report_date: report.report_date, decision_snapshot_id: ctx.decisionSnapshot.id,
+      member_content_revision_id: ctx.memberContentRevision.id, semantic_status: 'PASSED' } } }] };
   const payload = projections.buildPublicPayload(report, ctx);
   assert.equal(payload.report_date, '2026-09-08');
   assert.equal(payload.revision_id, ctx.decisionSnapshot.id);
@@ -410,9 +449,12 @@ test('subscriber sentence aliases cannot restore confidence prose suppressed by 
         payload.public_summary.daily_sentence, payload.public_summary.one_sentence, payload.canonical_decision.daily_sentence]) {
         assert.equal(alias, expected, name); assert.doesNotMatch(alias, /100\s*\/\s*100/, name);
       }
-      if (sentence.includes('；')) assert.equal(expected, 'TAIEX 與台積電同向；未確認前不追價', name);
+      assert.equal(expected, ctx.decisionSnapshot.generated_text.canonical_market_state.document.sections.executive_summary.text,
+        'Unverified snapshot copy cannot replace the audited summary or inject confidence prose');
     }
-    const history = projections.buildHistorySummary(report, ctx.decisionSnapshot, '2026-09-08T07:00:00Z');
+    const f = verifiedHistoryFixture();
+    f.snapshot.confidence_score = null; f.report.confidence_score = 100;
+    const history = projections.buildHistorySummary(f.report, f.snapshot, f.now, f.evidence);
     const expectedHistory = history.subscriber_projection.marketDecision.summary ?? history.subscriber_projection.statusLabel;
     assert.equal(history.subscriber_state.publication, 'PUBLISHED');
     assert.equal(history.summary, expectedHistory); assert.equal(history.today_quote, expectedHistory);
@@ -420,19 +462,24 @@ test('subscriber sentence aliases cannot restore confidence prose suppressed by 
   }
 });
 
-test('projection preserves a legitimate canonical market summary and validates legacy fallback before emitting aliases', () => {
+test('projection preserves the audited canonical market summary and refuses unaudited legacy copy fallback', () => {
   const { report, ctx } = projectionFixture();
   ctx.decisionSnapshot.confidence_score = null;
-  const sentence = '市場量能尚待確認；先觀察權值與指數是否同向';
-  ctx.decisionSnapshot.generated_text.daily_sentence = sentence;
+  const sentence = ctx.decisionSnapshot.generated_text.canonical_market_state.document.sections.executive_summary.text;
+  ctx.decisionSnapshot.generated_text.daily_sentence = '市場量能尚待確認；先觀察權值與指數是否同向';
   const publicPayload = projections.buildPublicPayload(report, ctx);
-  const history = projections.buildHistorySummary(report, ctx.decisionSnapshot, '2026-09-08T07:00:00Z');
-  assert.equal(publicPayload.daily_sentence, sentence); assert.equal(history.summary, sentence);
+  const f = verifiedHistoryFixture(); f.snapshot.confidence_score = null;
+  const history = projections.buildHistorySummary(f.report, f.snapshot, f.now, f.evidence);
+  assert.equal(publicPayload.daily_sentence, sentence);
+  assert.equal(history.summary, history.subscriber_projection.marketDecision.summary);
+  assert.equal(history.subscriber_projection.analysisAvailable, true);
+  assert.doesNotMatch(history.summary, /100\s*\/\s*100/);
   assert.equal(publicPayload.subscriber_projection.marketDecision.summary, sentence);
   delete ctx.decisionSnapshot.generated_text.daily_sentence;
   report.today_quote = '指數待驗證；模型信心 100/100；不得追價';
   const fallback = projections.buildPublicPayload(report, ctx);
-  assert.equal(fallback.daily_sentence, '指數待驗證；不得追價');
+  assert.equal(fallback.daily_sentence, sentence, 'The real audited document remains the source; raw legacy prose cannot replace it');
+  assert.doesNotMatch(fallback.daily_sentence, /100\s*\/\s*100/);
   assert.equal(fallback.canonical_decision.daily_sentence, fallback.daily_sentence);
   assert.equal(fallback.subscriber_projection.analysisAvailable, true);
   assert.equal(fallback.confidence_score, null);
@@ -472,6 +519,7 @@ test('VIP closing prose cannot bypass the same NOT_DUE and evidence gate; genuin
     source: 'isolated company source', url: 'https://example.invalid/fixture', published_at: '2026-09-07T23:00:00Z' }];
   ai.research_master_v2.sections.representative_stocks = [{ symbol: '2330', evidence_refs: ['SYNTHETIC-COMPANY-NEWS'] }];
   ctx.memberContentRevision.member_content.representative_stocks = ai.today_beneficiary_stocks_v10;
+  ctx.decisionSnapshot.generated_text.recommendations = ai.today_beneficiary_stocks_v10;
   assert.equal(evaluateMarketReportGate(ai, report.report_date).recommendation_gate.eligible, true, 'Real gate evaluates the synthetic company source');
   const close = { report_date: report.report_date, opening_decision_snapshot_id: ctx.decisionSnapshot.id,
     status: 'completed', data_status: 'complete', verified_at: '2026-09-08T06:30:00Z', prediction_result: 'miss', missing_data: [],
@@ -488,6 +536,15 @@ test('VIP closing prose cannot bypass the same NOT_DUE and evidence gate; genuin
   const complete = projections.buildVipPayload(report, ctx);
   assert.equal(complete.subscriber_state.closing, 'COMPLETE');
   assert.equal(complete.failure_analysis.miss_reason, close.miss_reason);
+  // A real CORE publication receipt, not a legacy alignment-only assertion,
+  // preserves the published market when today's private semantic QA fails.
+  ai.market_publication_contract = { schema_version: 'CORE_MARKET_PUBLICATION_V1', status: 'PUBLISHED', report_date: report.report_date,
+    revision_id: ctx.decisionSnapshot.id, opening_publication_revision_id: ctx.decisionSnapshot.id };
+  ctx.decisionSnapshot.source_freshness = { status: 'complete' };
+  ctx.publicationEvidence = { snapshots: new Map([[ctx.decisionSnapshot.id, ctx.decisionSnapshot]]), members: new Map(), runs: [{
+    id: 'synthetic-vip-publication', trading_date: report.report_date, status: 'SUCCEEDED', idempotency_key: 'research-input:synthetic',
+    completed_at: '2026-09-08T00:02:00Z', provider_status: { result: { success: true, report_id: report.id, report_date: report.report_date,
+      decision_snapshot_id: ctx.decisionSnapshot.id, member_content_revision_id: ctx.memberContentRevision.id, semantic_status: 'PASSED' } } }] };
   ctx.memberContentRevision.semantic_status = 'BLOCKED';
   const blocked = projections.buildPublicPayload(report, ctx);
   assert.equal(blocked.subscriber_state.publication, 'PUBLISHED'); assert.equal(blocked.subscriber_state.recommendation, 'BLOCKED');
@@ -521,6 +578,77 @@ test('closing revision B cannot borrow outcome, timestamp or actuals from an unb
   assert.equal(valid.closing_verification.actual_taiex_change, 1);
   delete ai.closing_verification_v2; delete ai.closing_verification;
   assert.notEqual(projections.buildPublicPayload(report, ctx).subscriber_state.closing, 'COMPLETE', 'Partial snapshot B plus unbound complete review A is still insufficient');
+});
+
+test('actual public and history readers carry the committed frozen opening contract into the shared closing projection', () => {
+  const f = verifiedHistoryFixture(), report = f.report, ai = report.ai_strategy_json, date = report.report_date;
+  const opening = f.snapshot, closing = f.closingSnapshot.generated_text.closing_verification_v2;
+  opening.id = 'synthetic-frozen-opening'; opening.confidence_score = 61;
+  opening.generated_text.market_bias = 'synthetic-opening-bearish';
+  f.publicationRun.provider_status.result.decision_snapshot_id = opening.id;
+  f.closingSnapshot.generated_text.opening_decision_snapshot_id = opening.id;
+  closing.opening_decision_snapshot_id = opening.id; closing.opening_bias = 'synthetic-opening-bearish'; closing.opening_confidence = 61;
+  const decision = { ...opening, id: 'synthetic-current-publication', version: 2, session_type: 'INTRADAY',
+    created_at: `${date}T15:00:00+08:00`, valid_from: `${date}T15:00:00+08:00`, confidence_score: 73,
+    generated_text: { ...opening.generated_text, market_bias: 'synthetic-current-bullish' } };
+  f.member.decision_snapshot_id = decision.id; f.member.decision_snapshot_version = decision.version;
+  const currentRun = structuredClone(f.publicationRun); currentRun.id = 'synthetic-current-run';
+  currentRun.completed_at = `${date}T15:01:00+08:00`; currentRun.provider_status.result.decision_snapshot_id = decision.id;
+  ai.revision_id = decision.id;
+  ai.closing_contract.opening_publication_revision_id = opening.id;
+  const ctx = { evaluatedAt: `${date}T15:30:00+08:00`, todayDate: date, decisionSnapshot: decision,
+    closingDecisionSnapshot: f.closingSnapshot, memberContentRevision: f.member, componentQueryFailures: [],
+    openingRadar: null, sectorRotationRows: [], marketDataSnapshots: [], closeMarketReview: null,
+    publicationEvidence: { snapshots: new Map([[opening.id, opening], [decision.id, decision], [f.closingSnapshot.id, f.closingSnapshot]]),
+      members: new Map([[f.member.id, f.member]]), runs: [f.publicationRun, currentRun] } };
+  ai.market_bias = 'synthetic-current-bullish';
+  ai.market_publication_contract = { schema_version: 'CORE_MARKET_PUBLICATION_V1', status: 'PUBLISHED',
+    report_date: date, revision_id: decision.id, opening_publication_revision_id: opening.id, publication_run_id: currentRun.id };
+  ai.closing_verification_v2 = { ...closing, actual_taiex_change: 99 };
+  const readers = [
+    () => projections.buildPublicPayload(report, ctx),
+    () => projections.buildMemberPayload(report, ctx),
+    () => projections.buildVipPayload(report, ctx),
+    () => projections.buildAdminPayload(report, ctx),
+  ];
+  for (const read of readers) {
+    const result = read();
+    assert.equal(result.subscriber_state.closing, 'COMPLETE');
+    assert.deepEqual(result.market_publication_contract, ai.market_publication_contract);
+    assert.equal(getSubscriberReportProjection(result).closing.state, 'COMPLETE');
+    assert.equal(getSubscriberReportProjection(result).closing.result.opening_decision_snapshot_id, 'synthetic-frozen-opening');
+    assert.deepEqual(getSubscriberReportProjection(result).closing.openingDecision, {
+      revisionId: 'synthetic-frozen-opening', bias: 'synthetic-opening-bearish', confidence: 61, summary: null,
+    });
+    assert.equal(getSubscriberReportProjection(result).marketDecision.bias, 'synthetic-current-bullish');
+    assert.equal(getSubscriberReportProjection(result).confidence.value, 73);
+  }
+  const history = projections.buildHistorySummary(report, ctx.decisionSnapshot, ctx.evaluatedAt);
+  assert.equal(history.subscriber_projection.closing.complete, false,
+    'Raw aliases alone cannot replace actual opening publication and durable CLOSING receipts in history');
+  assert.equal(history.report_date, report.report_date);
+  const valid = structuredClone(ai.market_publication_contract);
+  for (const patch of [{ revision_id: 'synthetic-unbound-current' }, { report_date: '2026-09-07' },
+    { status: 'READY' }, { schema_version: 'unknown' }, { opening_publication_revision_id: null },
+    { opening_publication_revision_id: 'synthetic-wrong-opening' }]) {
+    ai.market_publication_contract = { ...valid, ...patch };
+    for (const read of readers) {
+      const invalid = read();
+      assert.notEqual(invalid.subscriber_state.closing, 'COMPLETE', JSON.stringify(patch));
+      assert.equal(invalid.closing_verification_v2, null, 'Invalid core identity cannot expose a completed outcome');
+    }
+  }
+  ai.market_publication_contract = valid;
+  delete closing.opening_bias; delete closing.opening_confidence;
+  for (const read of readers) assert.deepEqual(getSubscriberReportProjection(read()).closing.openingDecision, {
+    revisionId: 'synthetic-frozen-opening', bias: null, confidence: null, summary: null,
+  });
+  ctx.decisionSnapshot.status = 'PARTIAL';
+  for (const read of readers) {
+    const result = read();
+    assert.equal(result.subscriber_state.analysis, 'PARTIAL');
+    assert.equal(result.subscriber_state.closing, 'INSUFFICIENT_EVIDENCE');
+  }
 });
 
 test('one captured request time keeps public envelope and later member/admin projection on the same closing state', () => {
@@ -593,14 +721,15 @@ test('pinned fc127b0 frontend cannot revive closing completion through the legac
 });
 
 test('history summary requires the same published report/revision/READY/market proof and never copies QA confidence', () => {
-  const { report, ctx } = projectionFixture(), decision = ctx.decisionSnapshot;
+  const f = verifiedHistoryFixture(), report = f.report, decision = f.snapshot;
   decision.action = 'STOP'; decision.confidence_score = 67;
   report.confidence_score = 100; report.ai_strategy_json.confidence_score = 100;
   report.summary = 'QA 原劇本已失效';
-  const evaluate = (row, snapshot) => projections.buildHistorySummary(row, snapshot, '2026-09-08T07:00:00Z');
+  const evaluate = (row, snapshot) => projections.buildHistorySummary(row, snapshot, f.now, f.evidence);
   const valid = evaluate(report, decision);
   assert.equal(valid.subscriber_state.publication, 'PUBLISHED'); assert.equal(valid.subscriber_state.analysis, 'READY');
-  assert.equal(valid.confidence_score, 67); assert.equal(valid.summary, decision.generated_text.daily_sentence);
+  assert.equal(valid.confidence_score, 67);
+  assert.equal(valid.summary, decision.generated_text.canonical_market_state.document.sections.executive_summary.text);
   assert.equal(valid.revision_id, decision.id);
   for (const [row, snapshot] of [
     [report, { ...decision, status: 'PARTIAL', confidence_score: 100 }],
@@ -609,7 +738,7 @@ test('history summary requires the same published report/revision/READY/market p
     [report, { ...decision, id: 'other-revision' }],
     [report, null],
     [{ ...report, ai_strategy_json: { ...report.ai_strategy_json, revision_id: undefined } }, decision],
-    [{ ...report, ai_strategy_json: { ...report.ai_strategy_json, research_master_v2: null } }, decision],
+    [report, { ...decision, generated_text: { ...decision.generated_text, canonical_market_state: null } }],
   ]) {
     const history = evaluate(row, snapshot);
     assert.equal(history.report_date, report.report_date); assert.equal(history.confidence_score, null);

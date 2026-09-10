@@ -2,38 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
-import { supabase } from '@/lib/supabase';
+import { callGetReportHistory } from '@/services/entitlementService';
 import { SubscriberAnswer } from '@/features/decision-v1/DecisionBrief';
 import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
-
-type PublicPerformanceJournalRow = {
-  report_date: string;
-  market_bias: string | null;
-  confidence_score: number | null;
-  is_trading_day: boolean | null;
-  report_mode: string | null;
-  verification_status: string | null;
-  verification_data_status: string | null;
-  hit_or_miss: string | null;
-  prediction_result: string | null;
-  opening_bias: string | null;
-  actual_direction: string | null;
-  actual_taiex_close: number | null;
-  what_was_right: string | null;
-  what_was_wrong: string | null;
-  tomorrow_adjustment: string | null;
-  updated_at: string | null;
-};
-
-type ReportRecord = {
-  id: string;
-  report_date: string;
-  market_bias: string | null;
-  confidence_score: number | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-  ai_strategy_json: Record<string, unknown> | null;
-};
+import { selectPublicPerformanceRows, type PublicPerformanceSelection } from '@/lib/performanceJournalProjection';
 
 type JournalOutcome = 'complete' | 'partial' | 'failed' | 'insufficient';
 
@@ -119,22 +91,8 @@ function numberOrNull(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function timestampMs(value: unknown): number {
-  const parsed = Date.parse(text(value));
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function taipeiToday(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Taipei',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-}
-
-function isFutureReportDate(reportDate: string): boolean {
-  return Boolean(reportDate) && reportDate > taipeiToday();
+function isFutureReportDate(reportDate: string, todayDate: string | null): boolean {
+  return Boolean(reportDate && todayDate) && reportDate > String(todayDate);
 }
 
 function listFromUnknown(value: unknown): string[] {
@@ -172,76 +130,12 @@ function listFromAdjustment(value: unknown): string[] {
   ].filter(Boolean).slice(0, 5);
 }
 
-function buildReportRecordFromPublicRow(row: PublicPerformanceJournalRow): ReportRecord {
-  const actualTaiexClose = numberOrNull(row.actual_taiex_close);
-  return {
-    ...row,
-    id: row.report_date,
-    report_date: row.report_date,
-    market_bias: row.market_bias,
-    updated_at: row.updated_at,
-    ai_strategy_json: {
-      is_trading_day: row.is_trading_day,
-      report_mode: row.report_mode,
-      closing_verification_v2: {
-        status: row.verification_status,
-        data_status: row.verification_data_status,
-        hit_or_miss: row.hit_or_miss,
-        prediction_result: row.prediction_result,
-        opening_bias: row.opening_bias,
-        actual_direction: row.actual_direction,
-        actual_taiex_close: actualTaiexClose === null ? null : { close: actualTaiexClose },
-        what_was_right: row.what_was_right,
-        what_was_wrong: row.what_was_wrong,
-        tomorrow_adjustment: row.tomorrow_adjustment,
-      },
-    },
-  };
-}
-
-function isTradingDay(ai: Record<string, unknown>, row: ReportRecord): boolean {
-  const marketStatus = text(ai.market_status).toUpperCase();
-  const reportMode = text(ai.report_mode).toLowerCase();
-  const bias = text(row.market_bias || ai.market_bias);
-  if (ai.is_trading_day === false) return false;
-  if (ai.market_closed === true) return false;
-  if (marketStatus && marketStatus !== 'OPEN') return false;
-  if (reportMode.includes('non_trading') || reportMode.includes('holiday') || reportMode.includes('weekend')) return false;
-  if (bias === '休市') return false;
-  return true;
-}
-
 function normalizeOutcome(value: unknown): JournalOutcome {
   const raw = text(value).toLowerCase();
   if (['hit', 'correct', 'confirmed', 'success', 'accurate'].includes(raw)) return 'complete';
   if (['partial', 'mixed', 'partially_confirmed'].includes(raw)) return 'partial';
   if (['miss', 'wrong', 'failed', 'rejected', 'incorrect', 'inaccurate'].includes(raw)) return 'failed';
   return 'insufficient';
-}
-
-function reportSelectionScore(row: ReportRecord): number[] {
-  const ai = row.ai_strategy_json || {};
-  const projection = getSubscriberReportProjection(row, { historical: true });
-  const closing = projection.closing.result;
-  const outcome = normalizeOutcome(projection.closing.outcome);
-  const hasCompletedOutcome = projection.closing.complete && outcome !== 'insufficient';
-  const dataStatus = text(closing?.data_status).toLowerCase();
-  return [
-    hasCompletedOutcome ? 1 : 0,
-    dataStatus === 'complete' ? 1 : 0,
-    !isFutureReportDate(row.report_date) && isTradingDay(ai, row) ? 1 : 0,
-    timestampMs(row.updated_at),
-    timestampMs(row.created_at),
-  ];
-}
-
-function shouldPreferReport(candidate: ReportRecord, current: ReportRecord): boolean {
-  const candidateScore = reportSelectionScore(candidate);
-  const currentScore = reportSelectionScore(current);
-  for (let index = 0; index < candidateScore.length; index += 1) {
-    if (candidateScore[index] !== currentScore[index]) return candidateScore[index] > currentScore[index];
-  }
-  return false;
 }
 
 function directionFromChange(change: number | null): string {
@@ -251,24 +145,27 @@ function directionFromChange(change: number | null): string {
   return `加權指數收盤震盪 ${change.toFixed(2)}%`;
 }
 
-function buildEntry(row: ReportRecord): DecisionJournalEntry {
-  const ai = row.ai_strategy_json || {};
-  const projection = getSubscriberReportProjection(row, { historical: true });
+function buildEntry(selection: PublicPerformanceSelection): DecisionJournalEntry {
+  const projection = getSubscriberReportProjection(selection.row, { historical: true });
   const closing = projection.closing.result;
   const dataStatus = projection.evidence.status;
-  const tradingDay = isTradingDay(ai, row);
-  const hasMorningReport = Boolean(row.id && row.report_date);
+  const tradingDay = projection.closing.state !== 'NOT_APPLICABLE';
+  const hasMorningReport = projection.analysisAvailable;
   const hasClosingVerification = Boolean(closing);
   const hasCompleteVerification = projection.closing.complete;
   const rawOutcome = normalizeOutcome(projection.closing.outcome);
-  const futureReport = isFutureReportDate(row.report_date);
+  const futureReport = isFutureReportDate(selection.reportDate, projection.identity.todayDate);
   const outcome: JournalOutcome = !futureReport && tradingDay && hasMorningReport && hasCompleteVerification ? rawOutcome : 'insufficient';
   const actualTaiex = asRecord(closing?.actual_taiex_close);
   const taiexChange = numberOrNull(closing?.actual_taiex_change) ?? numberOrNull(actualTaiex?.change_percent) ?? numberOrNull(actualTaiex?.change);
   const right = listFromUnknown(closing?.what_was_right).map(publicPerformanceText).filter(Boolean);
   const wrong = listFromUnknown(closing?.what_was_wrong).map(publicPerformanceText).filter(Boolean);
   const adjustment = listFromAdjustment(closing?.tomorrow_adjustment).map(publicPerformanceText).filter(Boolean);
-  const statusNote = futureReport
+  const statusNote = selection.issue
+    ? '同日公開資料身分衝突，不納入績效'
+    : !hasMorningReport
+      ? '公開資料缺少可核對的發布身分，不納入績效'
+    : futureReport
     ? '未來日期報告，不納入績效'
     : !tradingDay
       ? '休市或非交易日，不納入績效'
@@ -279,8 +176,8 @@ function buildEntry(row: ReportRecord): DecisionJournalEntry {
         : '已完成收盤驗證且納入統計';
 
   return {
-    reportId: row.id,
-    marketDate: projection.identity.reportDate,
+    reportId: projection.identity.revisionId || selection.reportDate,
+    marketDate: selection.reportDate,
     outcome,
     isTradingDay: tradingDay,
     hasMorningReport,
@@ -335,36 +232,24 @@ export default function PerformancePage() {
       setLoading(true);
       setErrorMessage('');
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!mounted) return;
-      setIsSignedIn(Boolean(sessionData.session));
-
-      const { data, error } = await supabase.rpc('get_public_performance_journal', { p_limit: 90 });
-
-      if (!mounted) return;
-
-      if (error) {
-        const message = error.message || '';
-        const isRlsBlocked = error.code === '42501' || /permission denied|row level security|rls/i.test(message);
+      try {
+        const response = await callGetReportHistory(30);
+        if (!mounted) return;
+        setIsSignedIn(response.authenticated === true);
+        setEntries(selectPublicPerformanceRows(response.reports).map(buildEntry));
+      } catch (error) {
+        if (!mounted) return;
+        const message = error instanceof Error ? error.message : '';
+        const isRlsBlocked = /42501|permission denied|row level security|rls/i.test(message);
         setEntries([]);
         setErrorMessage(
           isRlsBlocked
             ? '目前無法讀取公開績效資料。請登入會員後查看完整決策帳本。'
             : '決策帳本暫時無法載入，請稍後再試。',
         );
-        setLoading(false);
-        return;
+      } finally {
+        if (mounted) setLoading(false);
       }
-
-      const uniqueByDate = new Map<string, ReportRecord>();
-      const publicRows = (data || []) as PublicPerformanceJournalRow[];
-      for (const publicRow of publicRows) {
-        const row = buildReportRecordFromPublicRow(publicRow);
-        const current = uniqueByDate.get(row.report_date);
-        if (!current || shouldPreferReport(row, current)) uniqueByDate.set(row.report_date, row);
-      }
-      setEntries(Array.from(uniqueByDate.values()).map(buildEntry));
-      setLoading(false);
     }
 
     loadReports();

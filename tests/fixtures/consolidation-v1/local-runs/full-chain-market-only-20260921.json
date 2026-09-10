@@ -1,0 +1,239 @@
+{
+  "schema_version": "CORE_CONSOLIDATION_LOCAL_CHAIN_EVIDENCE_V1",
+  "fixture_id": "full-chain-market-only-20260921",
+  "provenance": {
+    "kind": "SANITIZED_LOCAL_PERSISTENT_REPLAY",
+    "provider_inputs": "SYNTHETIC_PROVIDER_CONTROL",
+    "historical_capture": false,
+    "output_evidence_only": true,
+    "not_a_business_seed": true,
+    "omitted": [
+      "credentials",
+      "Auth user identity",
+      "subscriber identity",
+      "provider request headers",
+      "full private source/prose"
+    ]
+  },
+  "scope": "ma-consolidation-v1-20260909170000",
+  "report_date": "2026-09-21",
+  "warmup_date": "2026-09-18",
+  "attempt_id": "dbc23233-8aba-4c82-aa2a-d77c1828752f",
+  "observed": {
+    "status": "PASS",
+    "full_persisted_chain_executed": true,
+    "record_count": 96,
+    "actual_handlers": 12,
+    "transitive_business_sources": 53,
+    "sql_definitions": 7,
+    "manual_warmup": "MANUAL_INPUT_BOOTSTRAP_ONLY",
+    "fresh_business_scope": true,
+    "adopted_old_publication": false,
+    "publication": {
+      "report_id": "36f385c5-5502-4184-8266-96a5c13b30d0",
+      "revision_id": "9ee577cb-cc1f-417b-b56d-15f96cfe45b5",
+      "member_revision_id": "c5e07c54-0786-4a36-afc7-3a8ef58a7c40",
+      "publication_run_id": "1e269e98-7099-417e-b9f7-8b9e4c5db2bf",
+      "decision_mode": "market_only",
+      "content_score": 100,
+      "coverage_score": 100,
+      "recommendation_available": false
+    },
+    "checkpoints": [
+      {
+        "checkpoint": "PREMARKET",
+        "producer_readback_verified": true,
+        "immutable_sha256": "5796af880d505cfe3599529f33f8e0354de95b55ae9a7da01d7022b9ab9fc626",
+        "raw_sha256": "c9fafab9fb6464de30e78d1c87d5f2b2b873e4150bb4aa1803bbdba9facc0f33",
+        "canonical_sha256": "98159c4ac5b85283517b6ffa90ed2a08f9c49a225a2142775cda6af4f44cf5f5",
+        "compatibility_sha256": "74e59e444958cba1c9a19001ca2c9928e2478a82ff9414d88171ec33ba73efa5"
+      },
+      {
+        "checkpoint": "0900",
+        "producer_readback_verified": true,
+        "immutable_sha256": "7a02ec293d4cbb1cbcd7a5399326be85bb756077f5624b070e671a385170deed",
+        "raw_sha256": "397fe31c04150e065f200cfbeefe1bf2b8ce8cd3a7ed003bc499200a237d9990",
+        "canonical_sha256": "d887e3a8c058680146de8263f2efa274ddedefb6d9a004d5885b50ac80b5924c",
+        "compatibility_sha256": "d989208f50377ac609ba00be1946afaa4a43eea2e6cdcf08426cbc1d76b99582"
+      },
+      {
+        "checkpoint": "0930",
+        "producer_readback_verified": true,
+        "immutable_sha256": "1be6135300ab40811e76afb1d8eace50008a50080c2d40f858c17903a7c4840d",
+        "raw_sha256": "845009878d01f42bd47fd60929c186ce8dda00ede963fa6f44760b4ef0eb461a",
+        "canonical_sha256": "4db4ce97ca9cf0724302fde0f20088bd5cd609a6bafb1e0ed9f4558c53451c3f",
+        "compatibility_sha256": "39d1f81c9dcf3eb4cbfc20831293f8bd1c424c133971ad422fbf147e8c2c25a5"
+      },
+      {
+        "checkpoint": "1030",
+        "producer_readback_verified": true,
+        "immutable_sha256": "0441c0133f7f0b8fddbbe1d508ed7c917515c668ceae97f95a0dcd36d5acc5f9",
+        "raw_sha256": "9f260da5a0b03c59947b7ed54e043b0c211a6d462b0a4ee61c1920acd8c904e1",
+        "canonical_sha256": "6f170b222f512abe475b2d2199debdfdad0bc58bf9f16e4dcf00d184cc88a559",
+        "compatibility_sha256": "b1320d3b9ab5c5ff78213b585ee0080262d5ff3f8704ba5a408bc6b11680749d"
+      },
+      {
+        "checkpoint": "1300",
+        "producer_readback_verified": true,
+        "immutable_sha256": "26827f7a74f6f32468429a9402dbb4f18c362bc4285f2f8c075644676e90afc7",
+        "raw_sha256": "d4001bc271a5d528e4bcd4ed803299682338d16c5c1666dd7b4f54bb14013733",
+        "canonical_sha256": "e70452db8810399ef6236bbe4af9e6b66e398b3da168aa41b5e8e1b7a352d29f",
+        "compatibility_sha256": "53fa363252b20073f3e840351da66cd575a73dbeb27a36250e52ca309fc87756"
+      },
+      {
+        "checkpoint": "1410",
+        "producer_readback_verified": true,
+        "immutable_sha256": "aa3d1473f8377c3cc0f434cd7bfc0705d37c48b5842fcfdb72579efdb4394b22",
+        "raw_sha256": "86691027af3d8b46753aa77a9452095279d530f503e9c0b3fdeedec4e8ecaae2",
+        "canonical_sha256": "52fca87134ff6e94b70d8f39f7a62a06a24f5f91f9aa9e0321c2b037db980190",
+        "compatibility_sha256": "46c285ef4ec7f3d97f35e0c95a6d7d5b50f662ab764692d7318bab5ac3228af2"
+      },
+      {
+        "checkpoint": "1430",
+        "producer_readback_verified": true,
+        "immutable_sha256": "7f14558f5d359d7643e6798b8e15b973e5a3bd1a866497bcc8f6b67c52647379",
+        "raw_sha256": "86691027af3d8b46753aa77a9452095279d530f503e9c0b3fdeedec4e8ecaae2",
+        "canonical_sha256": "05c4d27226404f6b4c838c71b6aac3f621bec5c4bc2667b7d2e292601c599f5c",
+        "compatibility_sha256": "59edf22b7bfae33fcae9d711ca8eb3a4b1e08b7c25673965ad470b4871ef8bfd"
+      }
+    ],
+    "line": {
+      "local_only": true,
+      "actual_receiver_sends": 1,
+      "persisted_sent_outboxes": 1,
+      "exact_retry_receipt_unchanged": true
+    },
+    "closing": {
+      "status": "COMPLETE",
+      "closing_snapshot_id": "42e2c168-e0d6-494f-818f-3e0ede1c9809",
+      "opening_publication_revision_id": "9ee577cb-cc1f-417b-b56d-15f96cfe45b5",
+      "evidence_fingerprint": "6d00452f7fa90ead68b12a28693e018d22dcc686bed2356d69f9730bfe43065c",
+      "exact_retry_receipt_unchanged": true
+    },
+    "learning": {
+      "status": "COMPLETE",
+      "run_id": "0217492f-2a28-4191-b87b-355e0af3e944",
+      "prediction_rows": 1,
+      "outcomes": [
+        {
+          "horizon": "1D",
+          "status": "pending"
+        },
+        {
+          "horizon": "3D",
+          "status": "pending"
+        },
+        {
+          "horizon": "5D",
+          "status": "pending"
+        },
+        {
+          "horizon": "close",
+          "status": "completed"
+        },
+        {
+          "horizon": "intraday",
+          "status": "completed"
+        }
+      ],
+      "raw_prediction_and_outcome_retry_sets_unchanged": true
+    },
+    "terminal": {
+      "actual_handler": "daily-delivery-orchestrator",
+      "source": "ma-ops-safe-recovery",
+      "success": true
+    },
+    "acceptance": {
+      "id": "3bab9924-9542-42d5-8351-09d8443896f9",
+      "phase": "FULL_DAY",
+      "verdict": "PASS",
+      "blocking_checks": [],
+      "automatic_stable_day": false,
+      "manual_intervention": true,
+      "automatic_blocking_checks": [
+        "MANUAL_RECOVERY_OR_UNVERIFIED_TRIGGER",
+        "AUTOMATION_PROVENANCE_UNVERIFIED"
+      ],
+      "frontend_status": "EXTERNAL_SMOKE_REQUIRED"
+    },
+    "table_counts": {
+      "market_data": 11,
+      "market_checkpoint_snapshots": 84,
+      "market_quotes": 51,
+      "market_data_snapshots": 84,
+      "data_provider_health": 8,
+      "trading_day_state": 2,
+      "reports": 1,
+      "decision_snapshots": 2,
+      "line_delivery_outbox": 1,
+      "line_subscribers": 1,
+      "learning_runs": 1,
+      "learning_predictions": 1,
+      "prediction_outcomes": 5,
+      "news_events": 12,
+      "market_news": 12,
+      "sector_rotation_scores": 7,
+      "pipeline_runs": 2,
+      "member_content_revisions": 1,
+      "production_acceptance_results": 2,
+      "runtime_http_dispatches": 0,
+      "runtime_dead_letters": 0,
+      "ma_ops_runs": 3,
+      "editorial_reviews": 1,
+      "semantic_coherence_reviews": 1
+    },
+    "provider_receipts": 92
+  },
+  "scope_limits": {
+    "production_requests": 0,
+    "external_provider_business_requests": 0,
+    "host_clock_changed": false,
+    "natural_scheduler_executed": false,
+    "automatic_stable_day": false,
+    "browser_in_this_lane": "NOT_RUN",
+    "historical_success_claim": false,
+    "historical_120_day_learning": "NOT_DEMONSTRATED",
+    "future_1D_3D_5D_outcomes": "PENDING"
+  },
+  "evidence": {
+    "actual_result": {
+      "path": "/private/tmp/ma-consolidation-v1-20260909170000-evidence/result.json",
+      "sha256": "d0e53dc47ff0e28b86c6cd419d0798da2855e51d19c21115b669ba3363cc8d50"
+    },
+    "actual_readback": {
+      "path": "/private/tmp/ma-consolidation-v1-20260909170000/actual-chain-final-readback.json",
+      "sha256": "7d6a7fd5ebcf48a6ee0916d58f8c0d13565009138cbb4f6e6b837b39ec4f9963"
+    },
+    "configuration": {
+      "path": "/private/tmp/ma-consolidation-v1-20260909170000/replay-config.json",
+      "sha256": "3e5eb1a0d22d21c1ae16b5a108c99fc3bfb016577571cd1ae02790332a610edc"
+    },
+    "source_preimages": {
+      "path": "/private/tmp/ma-consolidation-v1-20260909170000/executed-source-preimages/manifest.json",
+      "sha256": "ac344f3ece3e85d701f8ebef0cf9115f9c883bae352ea6a78f220b68a2c2681e",
+      "verified_files": 76
+    },
+    "candidate_sql": {
+      "path": "supabase/migrations/20260909015650_core_market_publication_contract.sql",
+      "sha256": "353a30988429fa1ac1847174bf00199a3f876f0311e7ae1f2ecf165d9ccb0ce0"
+    },
+    "provider_fixture": {
+      "path": "/Users/sonytzeng/Documents/GitHub/morning-alpha/tests/fixtures/consolidation-v1/providers/full-chain-synthetic-20260921.json",
+      "sha256": "843846d0c26be761010b394924a0d1b3f4266bbfa7f2b2bf74fa06cf4b2b8a09"
+    },
+    "old_failure_preservation": {
+      "path": "/private/tmp/ma-consolidation-v1-20260909170000/prior-terminal-failure-preservation.json",
+      "sha256": "00c2cd4a378edd34c348b1d448e01930af7a696196f4d890be5cf03c048ff131",
+      "previous_result": {
+        "path": "/private/tmp/ma-consolidation-v1-20260909154500-evidence-continuation-001/result.json",
+        "sha256": "15ecbabac65df46280bd342c5191a636708b06f96ffe6ead75ccdab19c8ae7ca",
+        "status": "FAIL"
+      },
+      "all_22_previous_tables_unchanged": true
+    },
+    "separate_readback_attempt_001": {
+      "path": "/private/tmp/ma-consolidation-v1-20260909170000/final-readback-diagnostic-attempt-001.json",
+      "sha256": "68d76bd12146cd1b2a84c31001ca64fe5474adfbdd1dd435cff0114066463d1b"
+    }
+  }
+}

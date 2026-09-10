@@ -1,0 +1,41 @@
+{
+  "schema_version": "CONSOLIDATION_REPLAY_SCENARIO_V1",
+  "fixture_id": "market-only-counterfactual",
+  "provenance": {
+    "kind": "SYNTHETIC_FAILURE_SHAPE",
+    "based_on": "2026-09-09-premarket-quality",
+    "reason": "The capture preserves the quality failure but not every original claim/source input. New source-complete inputs must come from the isolated provider boundary, not be invented as historical evidence."
+  },
+  "historical_observation": {
+    "research_evidence_coverage": 76,
+    "unsupported_stock_count": 5,
+    "premarket_business_gate": "FAIL",
+    "full_day_acceptance": "NOT_DUE"
+  },
+  "required_runtime_inputs": [
+    "fresh isolated business date",
+    "provider-shaped premarket responses",
+    "source-bearing market claims",
+    "five unsupported stock relationships",
+    "six provider-shaped checkpoint batches",
+    "real local publication and closing identities"
+  ],
+  "expected_behavior": {
+    "market_publication": "ELIGIBLE_ONLY_AFTER_INDEPENDENT_MARKET_EVIDENCE_VALIDATION",
+    "recommendation": "BLOCKED",
+    "stock_recommendations": [],
+    "stock_learning_outcomes": [],
+    "line": "ELIGIBILITY_ONLY_UNLESS_SEPARATE_LOCAL_RECEIVER_LANE",
+    "acceptance": "DERIVED_FROM_REAL_STAGE_RECEIPTS_NOT_SEEDED",
+    "automatic_stable_day": false
+  },
+  "forbidden_shortcuts": [
+    "seed READY publication",
+    "seed SENT receipt",
+    "insert checkpoint completion instead of running Fetch",
+    "seed completed Closing or Learning",
+    "force coverage 100",
+    "rewrite original capture dates",
+    "treat unsupported recommendations as no-qualified universe"
+  ]
+}

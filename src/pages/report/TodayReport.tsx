@@ -327,10 +327,8 @@ function TodayReportContent() {
     memberResearchNoteV2: asObj(ai.member_research_note_v2),
   }), [displayState, ai]);
   const runtimeTimeline = buildRuntimeDecisionTimeline({
-    ai,
+    projection,
     hasReport: isReportForToday,
-    reportRevisionId: report?.id,
-    reportGeneratedAt: report?.created_at,
     isTradingDay: Boolean(displayState?.is_trading_day && displayState.market_status === 'OPEN'),
   });
   const nextRuntimeNode = selectNextRuntimeTimelineNode(runtimeTimeline) || runtimeTimeline[runtimeTimeline.length - 1];
@@ -413,7 +411,7 @@ function TodayReportContent() {
   ];
 
   const avoidAction = report?.avoid_today?.find((item) => Boolean(item?.trim())) || '';
-  const premiumAvailability = resolvePremiumContentAvailability(ai);
+  const premiumAvailability = resolvePremiumContentAvailability(displayState?.rawRow || report, projection);
   const hasDecisionV1Input = Object.prototype.hasOwnProperty.call(ai, 'decision_engine_v1');
   const allowedSymbols = new Set(projection.recommendation.items.map((value) => {
     const stock = asObj(value);

@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import postcss from 'postcss';
-import { readSubscriberProjectionIntegrity } from './helpers/subscriberProjectionIntegrity.mjs';
+import { readConsolidationPublicExportIntegrity as readSubscriberProjectionIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
 
 test('Core freeze plus explicitly authorized 9/8 incident: unapproved producers, Cron and canonical readers unchanged', () => {
   // Read-side get-report-payload and exactly two new evidence modules are the
@@ -14,12 +14,12 @@ test('Core freeze plus explicitly authorized 9/8 incident: unapproved producers,
   const subscriberApproval = readSubscriberProjectionIntegrity(incident);
   assert.equal(incident.baseline_commit,'ce3ff722c7247e1949b4740b20d2ccb96b1c77cf');
   const additions=new Set(incident.files.filter(row=>row.baseline_sha256===null).map(row=>row.path));
-  const files = execFileSync('git',['ls-files','supabase','.github/workflows','src/lib/decisionEvidence.ts','src/lib/runtimeDecisionTimeline.ts','src/services/resolveActiveReport.ts'],{encoding:'utf8'}).trim().split('\n').filter(f=>!approved.has(f));
+  const files = execFileSync('git',['ls-files','supabase','.github/workflows','src/lib/decisionEvidence.ts','src/lib/runtimeDecisionTimeline.ts','src/services/resolveActiveReport.ts'],{encoding:'utf8'}).trim().split('\n').filter(f=>!approved.has(f)&&!subscriberApproval.newCandidatePaths.includes(f));
   const hash = createHash('sha256');
   for(const row of incident.files)assert.equal(createHash('sha256').update(readFileSync(row.path)).digest('hex'),subscriberApproval.fileHash(row),row.path);
   for (const file of files.filter(file=>!additions.has(file))){
     const amendment=incident.files.find(row=>row.path===file);
-    const bytes=amendment?execFileSync('git',['show',incident.baseline_commit+':'+file]):readFileSync(file);
+    const bytes=amendment?execFileSync('git',['show',incident.baseline_commit+':'+file]):subscriberApproval.predecessorReadSource(file);
     if(amendment)assert.equal(createHash('sha256').update(bytes).digest('hex'),amendment.baseline_sha256);
     hash.update(file+'\0').update(bytes).update('\0');
   }

@@ -1,0 +1,91 @@
+{
+  "schema_version": "CONSOLIDATION_FAILURE_CAPTURE_V1",
+  "fixture_id": "2026-09-08-quality-projection",
+  "market_date": {
+    "today_date": null,
+    "report_date": "2026-09-08",
+    "data_as_of": "2026-09-08T06:40:02.519Z",
+    "market_status": "closed",
+    "is_trading_day": true,
+    "report_mode": "normal_overnight",
+    "timezone": "Asia/Taipei"
+  },
+  "provenance": {
+    "kind": "SANITIZED_CAPTURE_REPLAY",
+    "sources": [
+      {
+        "artifact": "report-readonly-baseline.json",
+        "sha256": "c862c421a2eae4bae8eb4f29faa9dd762b8fc4e9dc3b1287c514f28750bac5ca",
+        "selected_fields": "report_date,ai_strategy_json.generated_at,research_master_v2.quality"
+      },
+      {
+        "artifact": "subscriber-projection-legacy-payload44.json",
+        "sha256": "0b2c3bab91ef094dcd29093b5e6e0a11e22fcae922bd62d0bcf9442e419f8ec7",
+        "selected_fields": "response.payload market date,canonical_decision and conflicting legacy state aliases"
+      }
+    ],
+    "observed_at": null,
+    "removed": [
+      "membership",
+      "news bodies",
+      "production identifiers",
+      "unsupported claim prose",
+      "raw market rows"
+    ],
+    "unavailable": [
+      "original vendor response bytes",
+      "complete market claim source ledger",
+      "exact capture timestamp"
+    ],
+    "full_producer_replay_available": false
+  },
+  "observed": {
+    "generated_at": "2026-09-07T23:35:11.857Z",
+    "research_quality": {
+      "publish_status": "degraded",
+      "evidence_coverage": 79,
+      "duplicate_claim_count": 1,
+      "unsupported_claims": [
+        {
+          "symbol": "3034",
+          "reason": "evidence_relationship_not_supported",
+          "claim_sha256": "c6ec56a270cc5482c4dee3c185843d2443a4398baa65ace4da3f8093afc4cb75"
+        },
+        {
+          "symbol": "3529",
+          "reason": "evidence_relationship_not_supported",
+          "claim_sha256": "fd3fe8fb210cb9903d4b68f9bce3d25f5114e9817f9bd9cb17efa1813bb0a806"
+        },
+        {
+          "symbol": "4763",
+          "reason": "evidence_relationship_not_supported",
+          "claim_sha256": "450d093e59be45f5795d5877dd73c47552026890da8541e370e60633be8192e9"
+        },
+        {
+          "symbol": "3131",
+          "reason": "evidence_relationship_not_supported",
+          "claim_sha256": "579d56ec3ad2e9d5d06a5e7c39c657fef0c7192d47ee131f0e7ff66b2d1747ce"
+        }
+      ]
+    },
+    "canonical": {
+      "status": "PARTIAL",
+      "action": "STOP",
+      "decision_mode": "blocked"
+    },
+    "legacy_aliases": {
+      "v8_daily_sentence_status": "ready",
+      "v8_daily_sentence_decision_mode": "recommendations",
+      "confidence_score": 100,
+      "closing_status": "completed",
+      "runtime_lifecycle_complete": true
+    },
+    "premium_content_status": "blocked",
+    "automatic_stable_day": false
+  },
+  "replay_assertions": [
+    "Unsupported stock relationships remain rejected; sector prose is not company evidence.",
+    "PARTIAL canonical state cannot be upgraded by ready/completed/confidence aliases.",
+    "Historical report_date remains distinct from replay today_date."
+  ]
+}

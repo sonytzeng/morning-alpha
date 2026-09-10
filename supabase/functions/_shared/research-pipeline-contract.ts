@@ -153,7 +153,11 @@ export function evaluateAutomaticTradingDay(input: {
 }) {
   if (!input.is_trading_day) return { status: 'NOT_APPLICABLE', automatic_stable_day: false, reasons: ['NON_TRADING_DAY'] };
   const reasons: string[] = [];
-  const required = ['sources', 'canonical', 'evidence', 'editorial', 'premium', 'semantic', 'line', 'closing', 'learning', 'acceptance'];
+  // Premium depth/recommendation eligibility is a separate product contract.
+  // All published market claims still require the evidence/editorial/semantic
+  // proofs below; a blocked private research lane is neither PASS nor failure
+  // of an independently verified market-decision day.
+  const required = ['sources', 'canonical', 'evidence', 'editorial', 'semantic', 'line', 'closing', 'learning', 'acceptance'];
   const revision = input.stages.canonical?.revision_id;
   for (const stage of required) {
     const row = input.stages[stage];
@@ -168,5 +172,6 @@ export function evaluateAutomaticTradingDay(input: {
   if (input.failed_dispatches !== 0 || input.open_dead_letters !== 0) reasons.push('RUNTIME_FAILURES_UNRESOLVED');
   if (input.manual_recovery) reasons.push('MANUAL_RECOVERY');
   if (input.report_date !== input.today_date) reasons.push('HISTORICAL_REPLAY');
-  return { status: reasons.length ? 'FAIL' : 'PASS', automatic_stable_day: reasons.length === 0, reasons };
+  return { status: reasons.length ? 'FAIL' : 'PASS', automatic_stable_day: reasons.length === 0,
+    premium_gate_independent: true, premium_status: input.stages.premium?.status || 'UNKNOWN', reasons };
 }

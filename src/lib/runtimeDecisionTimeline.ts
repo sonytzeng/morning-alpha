@@ -1,5 +1,5 @@
 import { getTaipeiNow } from '../utils/tradingDay.ts';
-import { getSubscriberReportProjection, type SubscriberCheckpoint } from './subscriberReportContract.ts';
+import { getSubscriberReportProjection, type SubscriberCheckpoint, type SubscriberReportProjection } from './subscriberReportContract.ts';
 
 export type RuntimeTimelineStatus = 'completed' | 'current' | 'pending' | 'insufficient' | 'not_applicable';
 
@@ -81,6 +81,10 @@ function timelineStatus(value: SubscriberCheckpoint['status']): 'completed' | 'p
 }
 
 export function buildRuntimeDecisionTimeline(params: {
+  /** Active subscribers pass their already-resolved projection. Full envelopes
+   * are also accepted; nested AI is retained only for legacy call compatibility. */
+  projection?: SubscriberReportProjection;
+  report?: unknown;
   ai?: UnknownRecord | null;
   hasReport: boolean;
   reportRevisionId?: string | null;
@@ -89,7 +93,8 @@ export function buildRuntimeDecisionTimeline(params: {
   taipeiMinutes?: number;
 }): RuntimeTimelineNode[] {
   const ai = record(params.ai);
-  const projection = getSubscriberReportProjection(ai);
+  const projection = params.projection ?? (params.report !== undefined
+    ? getSubscriberReportProjection(params.report) : getSubscriberReportProjection(ai));
   const checkpoints = projection.runtime.checkpoints;
   const rawNodes: RuntimeTimelineNode[] = [
     {

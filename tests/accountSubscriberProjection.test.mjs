@@ -10,6 +10,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
 import { getSubscriberReportProjection } from '../src/lib/subscriberReportProjection.ts';
+import { getSubscriberOpportunityList } from '../src/lib/subscriberOpportunities.ts';
 import { normalizeDecisionSymbol } from '../src/features/decision-v1/engine.ts';
 import { renderSafeText } from '../src/utils/renderSafe.ts';
 import { subscriberProjectionFixture } from './fixtures/subscriber-projection-v1.mjs';
@@ -292,11 +293,19 @@ test('Today legacy and Decision V1 candidates are restricted to canonical normal
 
 test('Opportunities headline counts only canonical stocks that survive rendering completeness checks', () => {
   const path = 'src/pages/opportunities/page.tsx';
+  const report = fixture('READY');
+  report.ai_strategy_json.today_beneficiary_stocks_v10 = [{ symbol: '2317', name: 'unselected preview' }];
+  const canonicalStocks = getSubscriberOpportunityList(report);
+  assert.deepEqual(canonicalStocks.map(stock => stock.symbol), ['2330']);
+  const completeEnoughStocks = canonicalStocks.filter(stock => stock.oneLineReason && stock.confirmation && stock.invalidation)
+    .map(stock => ({ stock }));
   const visibleStrongCount = evaluateRouteConst(path, 'visibleStrongCount', {
-    completeEnoughStocks: [{ stock: { symbol: 'TWSE:2330' } }],
-    strongSymbols: new Set(['2330', '2317', '2382']), normalizeDecisionSymbol,
+    completeEnoughStocks,
   });
   assert.equal(visibleStrongCount, 1);
-  assert.match(read(path), /今天有 \$\{visibleStrongCount\} 檔通過強受惠篩選/);
+  assert.match(read(path), /今天有 \$\{visibleStrongCount\} 檔通過推薦篩選/);
+  assert.match(read(path), /presentedStocks = getSubscriberOpportunityList\(ds\.rawRow, projection\)/);
+  report.ai_strategy_json.premium_content_status = 'blocked';
+  assert.deepEqual(getSubscriberOpportunityList(report), [], 'canonical qualification cannot bypass Premium');
   assert.doesNotMatch(read(path), /今天有 \$\{strongOpportunityStocks\.length\}/);
 });

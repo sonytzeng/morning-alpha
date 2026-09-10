@@ -1,6 +1,9 @@
+import { getSubscriberReportProjection, type SubscriberReportProjection } from './subscriberReportProjection.ts';
+
 export interface PremiumContentAvailability {
   status: 'eligible' | 'degraded' | 'blocked';
   eligible: boolean;
+  marketContentAvailable: boolean;
   decisionMode: 'recommendations' | 'no_trade' | 'blocked';
   reasonCodes: string[];
   memberValueScore: number | null;
@@ -14,72 +17,40 @@ function asRecord(value: unknown): JsonRecord {
     : {};
 }
 
-function asStrings(value: unknown): string[] {
-  return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+function diagnosticNumber(value: unknown): number | null {
+  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function resolvePremiumContentAvailability(value: unknown): PremiumContentAvailability {
-  const ai = asRecord(value);
+/** Compatibility view, not a research evaluator. Preserve the independent
+ * server Premium qualification; never infer it from scores, news or stocks.
+ * A published market narrative is available independently of Premium/stocks. */
+export function resolvePremiumContentAvailability(
+  value: unknown,
+  suppliedProjection?: SubscriberReportProjection,
+): PremiumContentAvailability {
+  const projection = suppliedProjection ?? getSubscriberReportProjection(value);
+  const outer = asRecord(value);
+  const payload = outer.payload === undefined ? outer : asRecord(outer.payload);
+  const ai = payload.ai_strategy_json === undefined ? payload : asRecord(payload.ai_strategy_json);
   const explicitStatus = String(ai.premium_content_status ?? '').trim().toLowerCase();
-  const explicitDecisionMode = String(ai.premium_decision_mode ?? '').trim().toLowerCase();
-  const gate = asRecord(ai.content_publish_gate);
-  const gateStatus = String(gate.overall_status ?? '').trim().toLowerCase();
-  const reasonCodes = Array.from(new Set([
-    ...asStrings(ai.premium_content_reason_codes),
-    ...asStrings(gate.blocking_issues),
-  ]));
-  const score = Number(ai.member_value_score);
-  const memberValueScore = Number.isFinite(score) ? score : null;
+  const memberValueScore = diagnosticNumber(ai.member_value_score);
   const importantNews = Array.isArray(ai.important_news) ? ai.important_news.length : 0;
-  const explicitNewsCount = Number(ai.fresh_news_count);
-  const freshNewsCount = Number.isFinite(explicitNewsCount) ? explicitNewsCount : importantNews;
-  const dataQuality = String(ai.v10_data_quality_status ?? '').trim().toLowerCase();
-  const sourceDataQuality = String(ai.data_quality ?? '').trim().toLowerCase();
-  const v10Enabled = ai.v10_beneficiary_enabled === true || String(ai.v10_beneficiary_enabled).toLowerCase() === 'true';
-  const recommendationCount = v10Enabled
-    ? (Array.isArray(ai.today_beneficiary_stocks_v10) ? ai.today_beneficiary_stocks_v10.length : 0)
-    : (Array.isArray(ai.today_beneficiary_stocks) ? ai.today_beneficiary_stocks.length : 0);
-  const observationCount = Array.isArray(ai.v10_observation_watchlist) ? ai.v10_observation_watchlist.length : 0;
-  const inferredDecisionMode = recommendationCount > 0
-    ? 'recommendations'
-    : dataQuality === 'insufficient_positive_evidence' && observationCount >= 3
-      ? 'no_trade'
-      : 'blocked';
-  const decisionMode = explicitDecisionMode === 'recommendations' || explicitDecisionMode === 'no_trade'
-    ? explicitDecisionMode
-    : inferredDecisionMode;
-
-  if (explicitStatus === 'eligible') {
-    return { status: 'eligible', eligible: true, decisionMode, reasonCodes, memberValueScore, freshNewsCount };
-  }
-  if (explicitStatus === 'blocked' || explicitStatus === 'degraded') {
-    return {
-      status: explicitStatus,
-      eligible: false,
-      decisionMode: 'blocked',
-      reasonCodes,
-      memberValueScore,
-      freshNewsCount,
-    };
-  }
-
-  const strictEligible = Object.keys(gate).length > 0
-    && (gateStatus.includes('可公開') || gateStatus === 'eligible')
-    && reasonCodes.length === 0
-    && memberValueScore !== null
-    && memberValueScore >= 90
-    && sourceDataQuality === 'complete'
-    && (
-      (recommendationCount > 0 && ['sufficient', 'partial'].includes(dataQuality))
-      || (recommendationCount === 0 && dataQuality === 'insufficient_positive_evidence' && observationCount >= 3)
-    )
-    && freshNewsCount > 0;
+  const explicitNewsCount = diagnosticNumber(ai.fresh_news_count);
+  const freshNewsCount = explicitNewsCount !== null && Number.isInteger(explicitNewsCount) && explicitNewsCount >= 0
+    ? explicitNewsCount : importantNews;
+  const marketContentAvailable = projection.analysisAvailable;
+  const eligible = marketContentAvailable && explicitStatus === 'eligible';
+  const decisionMode = projection.recommendation.available ? 'recommendations'
+    : marketContentAvailable && projection.recommendation.status === 'NO_QUALIFIED_OPPORTUNITY' ? 'no_trade' : 'blocked';
 
   return {
-    status: strictEligible ? 'eligible' : gateStatus.includes('降級') ? 'degraded' : 'blocked',
-    eligible: strictEligible,
-    decisionMode: strictEligible ? decisionMode : 'blocked',
-    reasonCodes,
+    status: eligible ? 'eligible' : explicitStatus === 'degraded' ? 'degraded' : 'blocked',
+    eligible,
+    marketContentAvailable,
+    decisionMode,
+    reasonCodes: !marketContentAvailable ? [projection.evidence.status] : eligible ? [] : ['PREMIUM_CONTENT_NOT_ELIGIBLE'],
     memberValueScore,
     freshNewsCount,
   };

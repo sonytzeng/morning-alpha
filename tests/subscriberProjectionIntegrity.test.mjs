@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolveSubscriberProjectionIntegrity } from './helpers/subscriberProjectionIntegrity.mjs';
-const registry = JSON.parse(readFileSync('docs/operations/core-stability-incident-amendment-20260908.json'));
+import { readConsolidationPublicExportIntegrity as readConsolidationIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
+// Run every original negative/assertion below against the verified exact predecessor.
+const consolidation = readConsolidationIntegrity(JSON.parse(readFileSync('docs/operations/core-stability-incident-amendment-20260908.json')));
+const registry = consolidation.predecessorRegistry;
 const artifact = readFileSync('docs/operations/evidence/subscriber-projection-candidate-20260909.json');
-const readSource = path => readFileSync(path);
+const readSource = consolidation.predecessorReadSource;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const verify = (value = registry, bytes = artifact, source = readSource) => resolveSubscriberProjectionIntegrity(value, bytes, source);
 const clone = () => structuredClone(registry);

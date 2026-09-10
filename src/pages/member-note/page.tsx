@@ -908,10 +908,8 @@ function MemberNoteContent() {
     nextCheckpointFallback: decisionLifecycle.validation_plan.next_step,
   });
   const memberRuntimeTimeline = buildRuntimeDecisionTimeline({
-    ai: rawAI,
+    projection,
     hasReport: true,
-    reportRevisionId: reportDate,
-    reportGeneratedAt: firstText(rawAI.data_as_of, rawAI.generated_at, reportDate),
     isTradingDay: Boolean(dsState?.is_trading_day && dsState.market_status === 'OPEN'),
   });
   const memberRuntimeNode = selectNextRuntimeTimelineNode(memberRuntimeTimeline)
@@ -932,7 +930,7 @@ function MemberNoteContent() {
     rawAI.daily_sentence,
   ], [], ''));
   const todayOneLine = heroConclusion;
-  const premiumAvailability = resolvePremiumContentAvailability(rawAI);
+  const premiumAvailability = resolvePremiumContentAvailability(dsState?.rawRow, projection);
   const memberValueScore = premiumAvailability.memberValueScore;
   const hasFreshNewsEvidence = premiumAvailability.freshNewsCount > 0;
   const memberResearchPublishable = premiumAvailability.eligible;

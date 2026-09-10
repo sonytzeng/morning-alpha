@@ -37,6 +37,7 @@ export interface ServerReportPayloadResponse {
 
 export interface ServerReportHistoryResponse {
   tier: SubscriptionTier;
+  today_date?: string | null;
   report_date: null;
   payload: null;
   reports: Record<string, unknown>[];

@@ -1,0 +1,822 @@
+{
+  "schema_version": "CORE_PERSISTED_HISTORICAL_ISOLATION_VIEW_V1",
+  "kind": "DERIVED_ACTUAL_LOCAL_OUTPUT_NOT_PROVIDER_INPUT",
+  "scope": "ma-consolidation-v1-20260909200000",
+  "report_date": "2026-09-30",
+  "source_readback": {
+    "path": "/private/tmp/ma-consolidation-v1-20260909200000/final-persistent-readback.json",
+    "sha256": "35d2cc283ced1d28e733fa6feb069a5647aa26b5c2a8b26184edf416c9076d76"
+  },
+  "source_result": {
+    "path": "/private/tmp/ma-consolidation-v1-20260909200000-evidence/result.json",
+    "sha256": "fa0fcc81bf14a4a83b3acc38b29e2e6895eb329e4096ef5d560c277bb82a5838",
+    "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339",
+    "status": "PASS",
+    "records": 102
+  },
+  "report_id": "07314d70-66f9-42c5-aa13-37762f65a3a8",
+  "revision_id": "15666ab6-5e39-4aee-b285-56c6eff67a82",
+  "member_revision_id": "07387729-8571-4e94-8ad4-0415a9022417",
+  "publication_run_id": "a4d1daee-44b1-4587-8719-79fdcd70172c",
+  "universe_count": 75,
+  "company_candidates": [
+    {
+      "symbol": "3034",
+      "name": "聯詠",
+      "eligibility": false,
+      "excluded_reason": "No Company-Specific Source Evidence",
+      "trigger_tags": [
+        "IC_DESIGN",
+        "SEMICONDUCTOR"
+      ],
+      "related_evidence": [
+        {
+          "weight": 85,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD002"
+        },
+        {
+          "weight": 83,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD003"
+        },
+        {
+          "weight": 82,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD004"
+        },
+        {
+          "weight": 80,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD006"
+        }
+      ]
+    },
+    {
+      "symbol": "3131",
+      "name": "弘塑",
+      "eligibility": false,
+      "excluded_reason": "No Company-Specific Source Evidence",
+      "trigger_tags": [
+        "SEMICONDUCTOR",
+        "POLICY"
+      ],
+      "related_evidence": [
+        {
+          "weight": 85,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD002"
+        },
+        {
+          "weight": 83,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD003"
+        },
+        {
+          "weight": 82,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD004"
+        },
+        {
+          "weight": 80,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD006"
+        }
+      ]
+    },
+    {
+      "symbol": "3529",
+      "name": "力旺",
+      "eligibility": false,
+      "excluded_reason": "No Company-Specific Source Evidence",
+      "trigger_tags": [
+        "IC_DESIGN",
+        "SEMICONDUCTOR"
+      ],
+      "related_evidence": [
+        {
+          "weight": 85,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD002"
+        },
+        {
+          "weight": 83,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD003"
+        },
+        {
+          "weight": 82,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD004"
+        },
+        {
+          "weight": 80,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD006"
+        }
+      ]
+    },
+    {
+      "symbol": "4763",
+      "name": "材料-KY",
+      "eligibility": false,
+      "excluded_reason": "No Company-Specific Source Evidence",
+      "trigger_tags": [
+        "SEMICONDUCTOR",
+        "FX"
+      ],
+      "related_evidence": [
+        {
+          "weight": 85,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD002"
+        },
+        {
+          "weight": 83,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD003"
+        },
+        {
+          "weight": 82,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD004"
+        },
+        {
+          "weight": 80,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD006"
+        }
+      ]
+    },
+    {
+      "symbol": "5274",
+      "name": "信驊",
+      "eligibility": false,
+      "excluded_reason": "No Company-Specific Source Evidence",
+      "trigger_tags": [
+        "IC_DESIGN",
+        "SEMICONDUCTOR"
+      ],
+      "related_evidence": [
+        {
+          "weight": 85,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD002"
+        },
+        {
+          "weight": 83,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD003"
+        },
+        {
+          "weight": 82,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD004"
+        },
+        {
+          "weight": 80,
+          "purpose": "approved_supply_chain_bridge",
+          "evidence_id": "MD006"
+        }
+      ]
+    }
+  ],
+  "referenced_evidence_index": [
+    {
+      "title": "2330",
+      "source": "market_data",
+      "summary": "2330 UP 1.00% 台股最大權值與半導體核心驗證股",
+      "freshness": "fresh",
+      "importance": 100,
+      "evidence_id": "MD002",
+      "published_at": "2026-09-29T05:30:00+00:00",
+      "evidence_type": "market_data",
+      "raw_reference": "market_data:2330@2026-09-29T05:30:00+00:00",
+      "quality_status": "verified"
+    },
+    {
+      "title": "SOX",
+      "source": "market_data",
+      "summary": "SOX UP 1.00% 半導體族群對台股電子權值影響",
+      "freshness": "fresh",
+      "importance": 98,
+      "evidence_id": "MD003",
+      "published_at": "2026-09-29T20:00:00+00:00",
+      "evidence_type": "market_data",
+      "raw_reference": "market_data:SOX@2026-09-29T20:00:00+00:00",
+      "quality_status": "verified"
+    },
+    {
+      "title": "TSM",
+      "source": "market_data",
+      "summary": "TSM UP 1.00% 台積電 ADR 對 2330 與台股電子開盤情緒影響",
+      "freshness": "fresh",
+      "importance": 96,
+      "evidence_id": "MD004",
+      "published_at": "2026-09-29T20:00:00+00:00",
+      "evidence_type": "market_data",
+      "raw_reference": "market_data:TSM@2026-09-29T20:00:00+00:00",
+      "quality_status": "verified"
+    },
+    {
+      "title": "NVDA",
+      "source": "market_data",
+      "summary": "NVDA UP 1.00% AI server 與半導體供應鏈風向",
+      "freshness": "fresh",
+      "importance": 94,
+      "evidence_id": "MD006",
+      "published_at": "2026-09-29T20:00:00+00:00",
+      "evidence_type": "market_data",
+      "raw_reference": "market_data:NVDA@2026-09-29T20:00:00+00:00",
+      "quality_status": "verified"
+    }
+  ],
+  "phase1": {
+    "candidate_count": 0,
+    "recommendations": []
+  },
+  "admission": {
+    "source_coverage": 100,
+    "source_unsupported_claims": [],
+    "rejected_recommendations": []
+  },
+  "market": {
+    "cms_status": "READY",
+    "coverage": 100,
+    "decision_mode": "market_only",
+    "content_score": 97,
+    "recommendation_available": false,
+    "public_recommendations": [],
+    "canonical_stocks": []
+  },
+  "checkpoint_records": [
+    {
+      "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339",
+      "scope": "ma-consolidation-v1-20260909200000",
+      "stage": "persisted-checkpoint",
+      "recorded_at_host": "2026-09-09T13:13:27.433Z",
+      "checkpoint": "PREMARKET",
+      "correlation_id": "1ed48434-e233-412b-8d61-ecd1023b2064",
+      "verified_symbols": [
+        "2330",
+        "DXY",
+        "IXIC",
+        "NVDA",
+        "SOX",
+        "SPX",
+        "TAIEX",
+        "TSM",
+        "TXF",
+        "US10Y",
+        "VIX"
+      ],
+      "immutable_versions": [
+        13,
+        21,
+        16,
+        18,
+        17,
+        15,
+        12,
+        19,
+        14,
+        22,
+        20
+      ],
+      "immutable_sha256": "90776627a38fe1b00dccc419e2edac9e38ff85a230e4733f6236c6faaf0bbb93",
+      "raw_sha256": "8148798c0084e57f91e0120bda54438fc79d3c01870bb883bf44d3eeff561fb4",
+      "canonical_sha256": "258ac2664023674a96465c0c1e8898b4493dc45131285cb92d1875a15b6979ae",
+      "compatibility_sha256": "341dc6baa11f720de0ee093ff638bdd9b5fedd81fc21fbce709a3d3b2f1486c8",
+      "producer_readback_verified": true,
+      "direct_seed_writes": 0
+    },
+    {
+      "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339",
+      "scope": "ma-consolidation-v1-20260909200000",
+      "stage": "persisted-checkpoint",
+      "recorded_at_host": "2026-09-09T13:13:46.007Z",
+      "checkpoint": "0900",
+      "correlation_id": "4165667b-5076-4de9-addb-006872c825ba",
+      "verified_symbols": [
+        "2330",
+        "DXY",
+        "IXIC",
+        "NVDA",
+        "SOX",
+        "SPX",
+        "TAIEX",
+        "TSM",
+        "TXF",
+        "US10Y",
+        "VIX"
+      ],
+      "immutable_versions": [
+        24,
+        32,
+        27,
+        29,
+        28,
+        26,
+        23,
+        30,
+        25,
+        33,
+        31
+      ],
+      "immutable_sha256": "b3e38dbdba12c17d1f1056af88243b9c953a5d5301fcf6b49fb2e395a4306b73",
+      "raw_sha256": "22c2f259540d62f9e566041ec1a8857aea07eb282ecdf0976815665eebfa61aa",
+      "canonical_sha256": "8c2f11eaa18b561c5065218f0a7bd55333f129059000590a1277dabf3940aac6",
+      "compatibility_sha256": "508129e5239c9ee83b23a7dd53fc623425a640b22daf657fd998e691881b697e",
+      "producer_readback_verified": true,
+      "direct_seed_writes": 0
+    },
+    {
+      "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339",
+      "scope": "ma-consolidation-v1-20260909200000",
+      "stage": "persisted-checkpoint",
+      "recorded_at_host": "2026-09-09T13:13:58.754Z",
+      "checkpoint": "0930",
+      "correlation_id": "33450d40-248a-4398-86d5-a7e618342ce6",
+      "verified_symbols": [
+        "2330",
+        "DXY",
+        "IXIC",
+        "NVDA",
+        "SOX",
+        "SPX",
+        "TAIEX",
+        "TSM",
+        "TXF",
+        "US10Y",
+        "VIX"
+      ],
+      "immutable_versions": [
+        35,
+        43,
+        38,
+        40,
+        39,
+        37,
+        34,
+        41,
+        36,
+        44,
+        42
+      ],
+      "immutable_sha256": "9f4d7cb5699f2e401bdf6315768b07ef65c1bf43ad41c6d8bcab71da5f2dec76",
+      "raw_sha256": "7211c28ed50a84f1c7b770448a4ac0288866a7127e6a73d606723a5f4c8df1ce",
+      "canonical_sha256": "f22d8e45f4b1b83d6bda28e49b1141d6b060e29586a506b055ffedb7246a4e2a",
+      "compatibility_sha256": "5748e8ba6822bb99c74a6643514a6b264af739347322b058eb1ea75f76e23df5",
+      "producer_readback_verified": true,
+      "direct_seed_writes": 0
+    },
+    {
+      "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339",
+      "scope": "ma-consolidation-v1-20260909200000",
+      "stage": "persisted-checkpoint",
+      "recorded_at_host": "2026-09-09T13:14:14.129Z",
+      "checkpoint": "1030",
+      "correlation_id": "444ec0a6-9740-402c-861e-bb3ef1696db5",
+      "verified_symbols": [
+        "2330",
+        "DXY",
+        "IXIC",
+        "NVDA",
+        "SOX",
+        "SPX",
+        "TAIEX",
+        "TSM",
+        "TXF",
+        "US10Y",
+        "VIX"
+      ],
+      "immutable_versions": [
+        46,
+        54,
+        49,
+        51,
+        50,
+        48,
+        45,
+        52,
+        47,
+        55,
+        53
+      ],
+      "immutable_sha256": "0412bdcbd7e2c681c63e53da434bc050f3b107b350770f279570b1557cee79ad",
+      "raw_sha256": "d22a39d3634e0706df3afbebea5215bf628419a55d1ff0eaae85ba3e10e7835d",
+      "canonical_sha256": "d1ab461639b83437e272c64d03f4ec1528c48dc6ba22a8ffbb916a6569dd595a",
+      "compatibility_sha256": "915ac7847dd6890a8b1a63c65d95c8ba35361a52fd57285fcc571fb511b404f7",
+      "producer_readback_verified": true,
+      "direct_seed_writes": 0
+    },
+    {
+      "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339",
+      "scope": "ma-consolidation-v1-20260909200000",
+      "stage": "persisted-checkpoint",
+      "recorded_at_host": "2026-09-09T13:14:24.979Z",
+      "checkpoint": "1300",
+      "correlation_id": "3f7e5f36-5a4d-49ce-931d-70f2de5c31e2",
+      "verified_symbols": [
+        "2330",
+        "DXY",
+        "IXIC",
+        "NVDA",
+        "SOX",
+        "SPX",
+        "TAIEX",
+        "TSM",
+        "TXF",
+        "US10Y",
+        "VIX"
+      ],
+      "immutable_versions": [
+        57,
+        65,
+        60,
+        62,
+        61,
+        59,
+        56,
+        63,
+        58,
+        66,
+        64
+      ],
+      "immutable_sha256": "eaddcf2a01d8456227c96b8dabc13c2067a4ccc42a9cab2bb89401aea915fa0d",
+      "raw_sha256": "8cffa5e080d6a992e77bc79f29845e7aa5d9764a9a4e45f66345b93465c2a682",
+      "canonical_sha256": "6fc5d585f0987fe355946a383afa8d6e48d0e2152fdd3781a578fc174ee2dfba",
+      "compatibility_sha256": "75eb455bd4b7da1dbfdece365e2796e6cd3597c8d815334916a6ee9b5670e95a",
+      "producer_readback_verified": true,
+      "direct_seed_writes": 0
+    },
+    {
+      "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339",
+      "scope": "ma-consolidation-v1-20260909200000",
+      "stage": "persisted-checkpoint",
+      "recorded_at_host": "2026-09-09T13:14:29.117Z",
+      "checkpoint": "1410",
+      "correlation_id": "491f392c-b062-4b7b-a0c0-f7c6534cc8ae",
+      "verified_symbols": [
+        "2330",
+        "IXIC",
+        "NVDA",
+        "SOX",
+        "SPX",
+        "TAIEX",
+        "TSM",
+        "TXF",
+        "VIX"
+      ],
+      "immutable_versions": [
+        68,
+        71,
+        73,
+        72,
+        70,
+        67,
+        74,
+        69,
+        75
+      ],
+      "immutable_sha256": "b5a17f64b8da204f1ad9f99db3fff39b7f7f253633e66a543e15e6885a602ad3",
+      "raw_sha256": "30e328a7e52b67cbc87fe21a92638598ba3842b86d5b93d75c4284d06e71310b",
+      "canonical_sha256": "b9110252cea995e0ab057b18f71f9bbc7dc2e7cc31a6a3afaabc3be3cd88108b",
+      "compatibility_sha256": "42dbe99125f7ddcef756f92f439cde4cf519bc63608bed0a483a28e317f893a1",
+      "producer_readback_verified": true,
+      "direct_seed_writes": 0
+    },
+    {
+      "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339",
+      "scope": "ma-consolidation-v1-20260909200000",
+      "stage": "persisted-checkpoint",
+      "recorded_at_host": "2026-09-09T13:14:32.668Z",
+      "checkpoint": "1430",
+      "correlation_id": "7e7115a6-33cc-4fde-99de-818a630772fa",
+      "verified_symbols": [
+        "2330",
+        "IXIC",
+        "NVDA",
+        "SOX",
+        "SPX",
+        "TAIEX",
+        "TSM",
+        "TXF",
+        "VIX"
+      ],
+      "immutable_versions": [
+        77,
+        80,
+        82,
+        81,
+        79,
+        76,
+        83,
+        78,
+        84
+      ],
+      "immutable_sha256": "9bab37b2ae76d88d487fb1fd4968d72f30c7c4dc2105616981b369df62333d70",
+      "raw_sha256": "30e328a7e52b67cbc87fe21a92638598ba3842b86d5b93d75c4284d06e71310b",
+      "canonical_sha256": "024614891b1ea86f168ae3fa6b9e1375f597129e2b43b0156dc1ce9ae1f3ba59",
+      "compatibility_sha256": "977223d2437c176be6d5cf030299a2b384a8a1e53db3cdec3244bc7a1daa88c8",
+      "producer_readback_verified": true,
+      "direct_seed_writes": 0
+    }
+  ],
+  "public_export_records": [
+    {
+      "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339",
+      "scope": "ma-consolidation-v1-20260909200000",
+      "stage": "actual-public-export-publication",
+      "recorded_at_host": "2026-09-09T13:13:29.902Z",
+      "response_sha256": "05bad4804bcf0a4975791affe217ac01e5560184abfdb6ea0b27a334e83ab660",
+      "revision_id": "15666ab6-5e39-4aee-b285-56c6eff67a82",
+      "reference_count": 3,
+      "source_references_from_actual_frozen_generator": true,
+      "external_content_os_delivery": false
+    },
+    {
+      "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339",
+      "scope": "ma-consolidation-v1-20260909200000",
+      "stage": "actual-public-export-closing",
+      "recorded_at_host": "2026-09-09T13:14:48.435Z",
+      "response_sha256": "05bad4804bcf0a4975791affe217ac01e5560184abfdb6ea0b27a334e83ab660",
+      "revision_id": "15666ab6-5e39-4aee-b285-56c6eff67a82",
+      "reference_count": 3,
+      "source_references_from_actual_frozen_generator": true,
+      "external_content_os_delivery": false
+    }
+  ],
+  "downstream_records": [
+    {
+      "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339",
+      "scope": "ma-consolidation-v1-20260909200000",
+      "stage": "durable-closing",
+      "recorded_at_host": "2026-09-09T13:14:34.646Z",
+      "schema_version": "CORE_CLOSING_V1",
+      "report_date": "2026-09-30",
+      "opening_publication_revision_id": "15666ab6-5e39-4aee-b285-56c6eff67a82",
+      "status": "COMPLETE",
+      "closing_snapshot_id": "b88eb722-7ce6-4c7b-a354-3ff9e1ae2129",
+      "evidence_fingerprint": "252b11bd374565cf6f8ddc60c193b3b9f0eff5573dc4664e685c7f7e3aff021b",
+      "evidence_ready": true,
+      "market_close": {
+        "phase": "close",
+        "value": 25250,
+        "source": "fugle",
+        "symbol": "TAIEX",
+        "captured_at": "2026-09-30T05:30:00+00:00",
+        "trading_date": "2026-09-30",
+        "change_percent": 1,
+        "table": "market_data_snapshots"
+      },
+      "market_evaluation": "COMPLETE",
+      "stock_evaluation": "NOT_APPLICABLE",
+      "verified_at": "2026-09-30T06:30:03.293Z",
+      "reason_codes": [],
+      "market_reason_codes": [],
+      "stock_reason_codes": []
+    },
+    {
+      "run_id": "30176674-9dcb-49f5-8624-e450d659b662",
+      "scope": "ma-consolidation-v1-20260909200000",
+      "stage": "durable-learning",
+      "recorded_at_host": "2026-09-09T13:14:40.252Z",
+      "contract": {
+        "schema_version": "CORE_LEARNING_V1",
+        "report_date": "2026-09-30",
+        "opening_publication_revision_id": "15666ab6-5e39-4aee-b285-56c6eff67a82",
+        "status": "COMPLETE",
+        "market_prediction_count": 1,
+        "stock_prediction_count": 0,
+        "stock_evaluation": "NOT_APPLICABLE",
+        "reason_codes": [],
+        "market_reason_codes": [],
+        "stock_reason_codes": []
+      },
+      "prediction_ids": [
+        "6f63eb85-c16d-47c6-ab6f-2a16e7bae71e"
+      ],
+      "outcome_ids": [
+        "381bf433-7782-4d76-8a20-026469162103",
+        "7af586ee-be8d-475a-9312-1b9cbbf74094",
+        "9b9de05a-4933-44da-a1cc-16e8e3ef541c",
+        "d774f267-9d29-452a-96ff-85aa3de2d093",
+        "db50fb7a-50bf-4058-a955-4f938086774e"
+      ],
+      "all_prediction_rows_sha256": "a04b5c1caf93b809708c9c5fb4d81325366f1f74dda936b390187c36c554beba",
+      "all_outcome_rows_sha256": "69e0a2681522106eeb91701b06b35de055258d9e81049987f1be10a2fbc26abb",
+      "raw_whole_set_retry_verified": true,
+      "historical_120_day_lane": "NOT_DEMONSTRATED_BY_SINGLE_DAY_REPLAY"
+    },
+    {
+      "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339",
+      "scope": "ma-consolidation-v1-20260909200000",
+      "stage": "actual-manual-terminal-handler",
+      "recorded_at_host": "2026-09-09T13:14:44.781Z",
+      "handler": "daily-delivery-orchestrator",
+      "mode": "health_check",
+      "source": "ma-ops-safe-recovery",
+      "natural_scheduler_executed": false,
+      "automatic_stable_day": false,
+      "lifecycle_sha256": "1ea8fc7a3ab4c0be3f2c1880eb2e35cfa8b982da3742d656daa7510a0dfb4ea0",
+      "recovery_lifecycle": {
+        "health_audited": true,
+        "day_completed": true,
+        "terminal_dispatches_reconciled": 0,
+        "acceptance": {
+          "id": "efcd3d95-6c54-457e-b4c6-b664439bcce9",
+          "verdict": "PASS",
+          "blocking_checks": [],
+          "evaluated_at": "2026-09-30T07:15:03.706349+00:00"
+        },
+        "correlation_id": "170f7d57-b5cc-477c-b418-f29f39dba3ee"
+      }
+    }
+  ],
+  "handler_http": [
+    {
+      "stage": "handler:fetch-market-data-v10",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:fetch-global-market-news",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:generate-sector-rotation",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:fetch-market-data-v10",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:fetch-global-market-news",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:generate-daily-report-v7",
+      "http": 401,
+      "business_success": false
+    },
+    {
+      "stage": "handler:generate-daily-report-v7",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:content-os-morning-alpha-source",
+      "http": 200
+    },
+    {
+      "stage": "handler:ma-ops-health-check",
+      "http": 200
+    },
+    {
+      "stage": "handler:get-report-payload",
+      "http": 200
+    },
+    {
+      "stage": "handler:get-report-payload",
+      "http": 200
+    },
+    {
+      "stage": "handler:line-daily-push",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:line-daily-push",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:fetch-market-data-v10",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:fetch-market-data-v10",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:opening-market-radar",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:fetch-market-data-v10",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:opening-market-radar",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:fetch-market-data-v10",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:opening-market-radar",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:fetch-market-data-v10",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:fetch-market-data-v10",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:generate-sector-rotation",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:close-market-review",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:closing-verification-engine",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:closing-verification-engine",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:get-report-payload",
+      "http": 200
+    },
+    {
+      "stage": "handler:get-report-payload",
+      "http": 200
+    },
+    {
+      "stage": "handler:get-report-payload",
+      "http": 200
+    },
+    {
+      "stage": "handler:get-report-payload",
+      "http": 200
+    },
+    {
+      "stage": "handler:continuous-learning-engine",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:continuous-learning-engine",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:ma-ops-health-check",
+      "http": 200
+    },
+    {
+      "stage": "handler:daily-delivery-orchestrator",
+      "http": 200,
+      "business_success": true
+    },
+    {
+      "stage": "handler:content-os-morning-alpha-source",
+      "http": 200
+    }
+  ],
+  "line_outbox": [
+    {
+      "id": "65b8c65d-a223-4a8e-87ec-640d2e3898a0",
+      "status": "SENT",
+      "report_date": "2026-09-30"
+    }
+  ],
+  "acceptance": {
+    "id": "f7579ffe-7786-4d63-adcf-2d859524466b",
+    "verdict": "PASS",
+    "business_date": "2026-09-30",
+    "automatic_stable_day": false,
+    "manual_intervention": true,
+    "content_handoff_evidence_scope": "PROJECTION_CONTRACT_ONLY_NOT_DOWNSTREAM_DELIVERY"
+  },
+  "historical_dates_replayed": false,
+  "exact_historical_coverage76_regenerated": false,
+  "production_requests": 0
+}

@@ -1,6 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { evaluateResearchQualityGate } from "../_shared/research-quality-gate.ts";
-import { evaluateCanonicalSemanticCoherenceGate, evaluatePublicPremiumLeakageGate } from "../_shared/production-architecture-core.mjs";
+import { evaluatePublicPremiumLeakageGate } from "../_shared/production-architecture-core.mjs";
+import { evaluateMarketReportGate } from "../_shared/market-report-gate.ts";
+import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
+import { evaluatePublishedMarketDelivery, fetchPublishedDeliveryEvidence } from "../_shared/market-publication-contract.ts";
+import { canonicalMarketDocument, canonicalMarketSourceRefs } from "../_shared/canonical-market-state.ts";
 import { authorizeInternalRequest, internalCredentialsFromEnv } from "../_shared/internal-function-auth.mjs";
 import type { RuntimeDatabase } from "../_shared/runtime-database-contract.ts";
 
@@ -8,18 +12,13 @@ type JsonRecord = Record<string, unknown>;
 type AdminClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 
 const MAX_RESPONSE_BYTES = 1_000_000;
-const SOURCE_PROJECTION_REVISION = "content_os_source_v7_canonical_member";
+const PUBLIC_CONTRACT_VERSION = "morning_alpha_public_contract_v1";
+const SOURCE_PROJECTION_REVISION = "content_os_source_v13_committed_market_projection";
 
 function asObject(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as JsonRecord
     : {};
-}
-
-function optionalObject(value: unknown): JsonRecord | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? value as JsonRecord
-    : null;
 }
 
 function asArray(value: unknown): unknown[] {
@@ -40,6 +39,164 @@ function firstArray(...values: unknown[]): unknown[] {
     if (Array.isArray(value) && value.length > 0) return value;
   }
   return [];
+}
+
+/** The deployed v19 market_brief wire requires actual HTTPS references. Ledger
+ * IDs are not URLs. Only committed snapshot references may supply these fields;
+ * missing metadata must never be filled from mutable report/news aliases. */
+function publicHttpsSourceReferences(value: unknown, generated: JsonRecord): JsonRecord[] {
+  // canonicalMarketSourceRefs applies the producer's one metadata validator.
+  // Every outward URL must be an exact view of that frozen claim source, not an
+  // arbitrary URL attached to an otherwise valid ledger ID at read time.
+  const frozenReferences = canonicalMarketSourceRefs(generated);
+  return asArray(value).map(asObject).flatMap((reference) => {
+    const keys = ["evidence_id", "source", "source_date", "freshness"];
+    if (!keys.every((key) => optionalString(reference[key]))) return [];
+    const frozen = frozenReferences.find((row) => keys.every((key) => row[key] === reference[key]));
+    if (!frozen || !["title", "url", "published_at"].every((key) => optionalString(frozen[key]) && frozen[key] === reference[key])
+      || reference.published_at !== reference.source_date) return [];
+    const url = optionalString(reference.url);
+    const source = optionalString(reference.source);
+    const title = optionalString(reference.title);
+    const publishedAt = optionalString(reference.published_at);
+    if (!url || !source || !title || !publishedAt || !Number.isFinite(Date.parse(publishedAt))) return [];
+    try {
+      if (new URL(url).protocol !== "https:") return [];
+    } catch {
+      return [];
+    }
+    return [{ source, title, url, published_at: publishedAt }];
+  }).slice(0, 5);
+}
+
+type PublishedDelivery = ReturnType<typeof evaluatePublishedMarketDelivery>;
+
+/** Presentation of an already verified publication. It does not select a
+ * decision, score research, or promote a private recommendation draft. */
+async function buildContentOsPublicPayload(
+  report: JsonRecord,
+  snapshot: JsonRecord,
+  memberRevision: JsonRecord,
+  review: JsonRecord,
+  policy: JsonRecord,
+  publicationRun: JsonRecord | null,
+  delivery: PublishedDelivery,
+): Promise<{ payload: JsonRecord | null; reasonCodes: string[] }> {
+  const projection = delivery.projection;
+  if (!delivery.eligible) return { payload: null, reasonCodes: delivery.reason_codes };
+  const generated = asObject(snapshot.generated_text);
+  const document = canonicalMarketDocument(generated);
+  // The new outgoing source contract never borrows a mutable legacy report
+  // document. Older snapshots remain untouched and explicitly unsupported when
+  // the frozen proof required for this verified wire was not persisted.
+  if (!Object.hasOwn(generated, "canonical_market_state") || !Object.keys(document).length) {
+    return { payload: null, reasonCodes: ["FROZEN_PUBLIC_MARKET_EVIDENCE_REQUIRED"] };
+  }
+  const researchGate = evaluateResearchQualityGate(document);
+  const sections = asObject(document.sections);
+  const sentence = projection.marketDecision.summary;
+  const publishedAt = optionalString(publicationRun?.completed_at) ?? optionalString(review.reviewed_at);
+  const generatedAt = projection.identity.generatedAt;
+  const confidence = projection.confidence.value;
+  if (!sentence || !projection.marketDecision.bias || confidence === null || !publishedAt || !generatedAt
+    || !Number.isFinite(Date.parse(publishedAt)) || !Number.isFinite(Date.parse(generatedAt))) {
+    return { payload: null, reasonCodes: ["PUBLIC_TOPIC_INCOMPLETE"] };
+  }
+
+  const opportunities = projection.recommendation.available ? projection.recommendation.items : [];
+  const stock = asObject(opportunities[0]);
+  let publicTopic: JsonRecord;
+  let references: unknown[];
+  if (opportunities.length > 0) {
+    references = firstArray(stock.source_references, stock.supporting_evidence, stock.source_refs).slice(0, 5);
+    publicTopic = {
+      kind: "stock_opportunity",
+      symbol: optionalString(stock.symbol ?? stock.stock_code),
+      name: optionalString(stock.name ?? stock.stock_name),
+      role: optionalString(stock.role_title ?? stock.role_label ?? stock.role),
+      event_source: optionalString(stock.event_source ?? stock.trigger_event),
+      transmission_path: optionalString(stock.transmission_path ?? stock.transmission_logic),
+      taiwan_mapping: optionalString(stock.taiwan_mapping ?? stock.sector ?? stock.industry_name),
+      reason: optionalString(stock.why_today ?? stock.why_this_stock ?? stock.reason ?? stock.why_selected ?? stock.taiwan_supply_chain_relation),
+      data_timestamp: optionalString(stock.data_timestamp ?? stock.updated_at) ?? publishedAt,
+      source_references: references,
+    };
+    if (!["symbol", "name", "event_source", "transmission_path", "taiwan_mapping", "reason", "data_timestamp"].every((key) => optionalString(publicTopic[key])) || !references.length) {
+      return { payload: null, reasonCodes: ["PUBLIC_TOPIC_INCOMPLETE"] };
+    }
+    publicTopic.title = `${publicTopic.symbol} ${publicTopic.name}`;
+    publicTopic.summary = publicTopic.reason;
+  } else {
+    references = publicHttpsSourceReferences(snapshot.source_refs, generated);
+    if (!references.length) return { payload: null, reasonCodes: ["PUBLIC_MARKET_EVIDENCE_INCOMPLETE"] };
+    const firstReference = asObject(references[0]);
+    publicTopic = {
+      kind: "market_brief",
+      title: sentence,
+      name: "台股盤前市場與風險指標",
+      summary: sentence,
+      reason: sentence,
+      event_source: `${firstReference.source}：${firstReference.title}`,
+      transmission_path: optionalString(asObject(sections.transmission_narrative).narrative) ?? sentence,
+      taiwan_mapping: "台股大盤與盤前風險指標",
+      data_timestamp: publishedAt,
+      source_references: references,
+    };
+  }
+  const premiumSymbols = opportunities.slice(1).map((value) => {
+    const stock = asObject(value);
+    return optionalString(stock.symbol ?? stock.stock_code);
+  }).filter((symbol): symbol is string => Boolean(symbol) && symbol !== publicTopic.symbol);
+  const leakageGate = evaluatePublicPremiumLeakageGate({
+    public_symbols: publicTopic.symbol ? [publicTopic.symbol] : [],
+    premium_only_symbols: premiumSymbols,
+    public_fields: Object.keys(publicTopic),
+    public_entities: publicTopic.symbol ? [publicTopic.name, publicTopic.role].filter(Boolean) : [],
+    premium_entities: [],
+  });
+  if (!leakageGate.eligible) return { payload: null, reasonCodes: ["PUBLIC_TOPIC_GATE_BLOCKED", ...leakageGate.reason_codes] };
+  const marketBrief = publicTopic.kind === "market_brief";
+  const payload: JsonRecord = {
+    contract_version: PUBLIC_CONTRACT_VERSION,
+    external_object_id: String(report.id), report_id: String(report.id),
+    source_published_at: publishedAt, published_at: publishedAt, generated_at: generatedAt,
+    report_date: projection.identity.reportDate,
+    report_mode: optionalString(document.report_mode) ?? optionalString(report.report_mode),
+    market_bias: projection.marketDecision.bias, confidence_score: confidence,
+    daily_sentence: sentence, public_summary: sentence,
+    expires_at: new Date(Date.parse(publishedAt) + 24 * 60 * 60 * 1000).toISOString(),
+    public_topic: publicTopic, facts: references,
+    catalysts: marketBrief ? [] : [{ event_source: publicTopic.event_source }], surprises: [],
+    taiwan_mapping: { transmission: marketBrief ? null : publicTopic.taiwan_mapping,
+      preferred_sectors: !marketBrief && publicTopic.role ? [publicTopic.role] : [], watch_sectors: [] },
+    risk: { risk_flags: delivery.marketContent.risk ? [delivery.marketContent.risk] : [] },
+    opportunities: marketBrief ? [] : [publicTopic], source_references: references,
+    morning_brief: { report_date: projection.identity.reportDate, current_market_summary: sentence,
+      core_thesis: sentence, data_quality: generated.data_quality, market_regime: projection.marketDecision.bias },
+    core_data_status: generated.data_quality,
+    public_delivery_status: "PASS", content_os_status: "PASS", premium_locked: true, evidence_status: "verified",
+    premium: { status: "BLOCKED", locked: true, reason_codes: marketBrief
+      ? ["NO_VERIFIED_STOCK_OPPORTUNITY"] : ["PUBLIC_SOURCE_CONTRACT"] },
+    verification: {
+      status: "verified", contract_version: PUBLIC_CONTRACT_VERSION,
+      decision_snapshot_id: snapshot.id, editorial_review_id: review.id, review_status: review.review_status,
+      content_score: review.content_score, content_grade: snapshot.content_grade,
+      reviewed_at: review.reviewed_at, reviewed_by: review.reviewed_by,
+      ...(!marketBrief ? { quality_policy_version: policy.policy_version, required_score: policy.premium_publish_min } : {}),
+      research_publish_status: researchGate.publish_status, evidence_coverage: researchGate.evidence_coverage,
+      published_claim_evidence_coverage: researchGate.evidence_coverage,
+      unsupported_published_claims: asArray(asObject(document.quality).unsupported_claims),
+      unsupported_claim_count: researchGate.unsupported_claim_count, duplicate_claim_count: researchGate.duplicate_claim_count,
+      contradiction_count: researchGate.contradiction_count, missing_section_count: researchGate.missing_section_count,
+      semantic_coherence: true, member_content_revision_id: memberRevision.id, public_premium_leakage: leakageGate.eligible,
+    },
+  };
+  payload.topic_fingerprint = await sha256Hex({ report_date: report.report_date, public_topic: publicTopic, primary_thesis: sentence });
+  const projectionFingerprint = await sha256Hex(payload);
+  const projectedRevision = `${snapshot.snapshot_fingerprint ?? `${snapshot.version}:${review.id}`}:${memberRevision.id}:${SOURCE_PROJECTION_REVISION}:${projectionFingerprint.slice(0, 16)}`;
+  payload.external_revision = projectedRevision;
+  payload.revision_id = projectedRevision;
+  return { payload, reasonCodes: [] };
 }
 
 function serverSecretKey(): string {
@@ -150,261 +307,85 @@ Deno.serve(async (request) => {
     auth: { persistSession: false },
   });
 
-  const snapshotResult = await admin
-    .from("decision_snapshots")
-    .select(
-      "id,report_id,report_date,session_type,version,status,decision_mode,action,confidence_score,coverage_score,content_score,content_grade,source_refs,generated_text,preferred_sectors,watch_sectors,blocked_sectors,reasons,risk_flags,invalidation_rules,valid_from,snapshot_fingerprint",
-    )
-    .eq("is_current", true)
-    .eq("status", "READY")
-    .eq("session_type", "PREMARKET")
-    .not("report_id", "is", null)
-    .order("report_date", { ascending: false })
-    .order("valid_from", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (snapshotResult.error) {
-    return json({ error: "DECISION_SNAPSHOT_READ_FAILED" }, 503);
-  }
-  if (!snapshotResult.data) {
-    return json({ error: "VERIFIED_DECISION_NOT_FOUND" }, 404);
-  }
-  const snapshot = snapshotResult.data as JsonRecord;
-
-  const policyResult = await admin
-    .from("runtime_quality_policies")
-    .select("policy_version,premium_publish_min")
-    .eq("active", true)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (policyResult.error || !policyResult.data) {
-    return json({ error: "RUNTIME_QUALITY_POLICY_REQUIRED" }, 503);
-  }
-  const qualityPolicy = policyResult.data as JsonRecord;
-  const premiumPublishMinimum = Number(qualityPolicy.premium_publish_min);
-  if (
-    !Number.isFinite(premiumPublishMinimum) || premiumPublishMinimum < 1 ||
-    premiumPublishMinimum > 100
-  ) {
-    return json({ error: "RUNTIME_QUALITY_POLICY_INVALID" }, 503);
-  }
-
-  const reviewResult = await admin
-    .from("editorial_reviews")
-    .select(
-      "id,review_status,content_score,reason_codes,reviewed_at,reviewed_by",
-    )
-    .eq("decision_snapshot_id", String(snapshot.id))
-    .eq("review_status", "APPROVED")
-    .order("reviewed_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (reviewResult.error) {
-    return json({ error: "EDITORIAL_REVIEW_READ_FAILED" }, 503);
-  }
-  const review = reviewResult.data as JsonRecord | null;
-  const reviewScore = Number(
-    review?.content_score ?? snapshot.content_score ?? 0,
-  );
-  if (
-    !review || !Number.isFinite(reviewScore) ||
-    reviewScore < premiumPublishMinimum
-  ) {
-    return recordBlockingIncident(admin, snapshot, ["APPROVED_EDITORIAL_EVIDENCE_REQUIRED"], "APPROVED_EDITORIAL_EVIDENCE_REQUIRED");
-  }
-
-  const reportResult = await admin
-    .from("reports")
-    .select(
-      "id,report_date,report_mode,summary,market_bias,confidence_score,today_quote,ai_strategy_json,important_news_json,created_at,updated_at",
-    )
-    .eq("id", String(snapshot.report_id))
-    .maybeSingle();
+  const now = new Date().toISOString();
+  const todayDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date(now));
+  const reportResult = await admin.from("reports")
+    .select("id,report_date,report_mode,created_at,updated_at,ai_strategy_json,important_news_json")
+    .eq("report_date", todayDate).order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (reportResult.error) return json({ error: "REPORT_READ_FAILED" }, 503);
-  if (!reportResult.data) return json({ error: "REPORT_NOT_FOUND" }, 404);
-  const report = reportResult.data as JsonRecord;
-  if (String(report.report_date ?? "") !== String(snapshot.report_date ?? "")) {
-    return recordBlockingIncident(admin, snapshot, ["REPORT_SNAPSHOT_DATE_MISMATCH"], "REPORT_SNAPSHOT_DATE_MISMATCH");
+  if (!reportResult.data) return json({ error: "VERIFIED_DECISION_NOT_FOUND" }, 404);
+  const report = asObject(reportResult.data);
+  let evidence: Awaited<ReturnType<typeof fetchPublishedDeliveryEvidence>>;
+  try {
+    evidence = await fetchPublishedDeliveryEvidence(admin, report);
+  } catch {
+    return json({ error: "PUBLISHED_DECISION_EVIDENCE_READ_FAILED" }, 503);
   }
-
+  const { snapshot, member: memberRevision, publicationRun } = evidence;
+  if (!snapshot) return json({ error: "VERIFIED_DECISION_NOT_FOUND" }, 404);
+  const policyResult = await admin.from("runtime_quality_policies")
+    .select("policy_version,premium_publish_min").eq("active", true)
+    .order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  const qualityPolicy = asObject(policyResult.data);
+  const premiumPublishMinimum = qualityPolicy.premium_publish_min;
+  const premiumPolicyAvailable = !policyResult.error && typeof premiumPublishMinimum === "number"
+    && Number.isFinite(premiumPublishMinimum) && premiumPublishMinimum >= 1 && premiumPublishMinimum <= 100;
   const ai = asObject(report.ai_strategy_json);
-  const researchMaster = optionalObject(ai.research_master_v2);
-  const researchSections = optionalObject(researchMaster?.sections);
-  const researchGate = evaluateResearchQualityGate(
-    researchMaster,
-    premiumPublishMinimum,
-  );
-  if (!researchSections || !researchGate.eligible) {
-    return recordBlockingIncident(
-      admin,
-      snapshot,
-      ["RESEARCH_QUALITY_GATE_BLOCKED", ...researchGate.reason_codes],
-      "RESEARCH_QUALITY_GATE_BLOCKED",
-      {
-        quality_status: researchGate.publish_status,
-        evidence_coverage: researchGate.evidence_coverage,
-        unsupported_claim_count: researchGate.unsupported_claim_count,
-        duplicate_claim_count: researchGate.duplicate_claim_count,
-        contradiction_count: researchGate.contradiction_count,
-        missing_section_count: researchGate.missing_section_count,
-        required_score: researchGate.required_score,
-        policy_version: qualityPolicy.policy_version,
-      },
-    );
+  const newsCount = asArray(report.important_news_json).length;
+  const premiumGate = evaluatePremiumContentGate(ai, newsCount);
+  const marketGate = evaluateMarketReportGate(ai, String(report.report_date));
+  // The live Premium policy may suppress stocks, never revoke a committed
+  // market publication. The shared authority retains its frozen Editorial proof.
+  const delivery = evaluatePublishedMarketDelivery(report, snapshot, memberRevision, marketGate,
+    { todayDate, now, premiumEligible: premiumGate.eligible && premiumPolicyAvailable
+      && typeof snapshot.content_score === "number" && typeof premiumPublishMinimum === "number"
+      && snapshot.content_score >= premiumPublishMinimum, publicationRun });
+  if (!delivery.eligible || !memberRevision) {
+    return recordBlockingIncident(admin, snapshot, delivery.reason_codes, "PUBLISHED_MARKET_CONTRACT_BLOCKED");
   }
 
-  const memberRevisionResult = await admin
-    .from("current_member_content_revisions_v1")
-    .select("*")
-    .eq("report_date", String(snapshot.report_date))
-    .eq("decision_snapshot_id", String(snapshot.id))
-    .eq("decision_snapshot_version", Number(snapshot.version))
-    .order("revision", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (memberRevisionResult.error) return json({ error: "MEMBER_CONTENT_REVISION_READ_FAILED" }, 503);
-  if (!memberRevisionResult.data) {
-    return recordBlockingIncident(admin, snapshot, ["SEMANTIC_MEMBER_REVISION_MISSING"], "SEMANTIC_COHERENCE_BLOCKED");
+  // These are the existing export's editorial/semantic receipts, not a new
+  // assessment of current research or member quality. They must name this exact
+  // committed revision; a same-day/newest private QA result is not a substitute.
+  const reviewResult = await admin.from("editorial_reviews")
+    .select("id,decision_snapshot_id,review_status,content_score,reviewed_at,reviewed_by,reason_codes")
+    .eq("decision_snapshot_id", String(snapshot.id)).eq("review_status", "APPROVED")
+    .order("reviewed_at", { ascending: false }).limit(1).maybeSingle();
+  if (reviewResult.error) return json({ error: "EDITORIAL_REVIEW_READ_FAILED" }, 503);
+  const review = asObject(reviewResult.data);
+  const reviewScore = review.content_score;
+  const publishedAt = optionalString(publicationRun?.completed_at) ?? optionalString(review.reviewed_at);
+  const reviewedAt = Date.parse(String(review.reviewed_at || ""));
+  if (!reviewResult.data || typeof reviewScore !== "number" || !Number.isFinite(reviewScore)
+    || reviewScore !== snapshot.content_score
+    || !Number.isFinite(reviewedAt) || reviewedAt > Date.parse(publishedAt || "")
+    || !Array.isArray(review.reason_codes) || review.reason_codes.length > 0) {
+    return recordBlockingIncident(admin, snapshot, ["EDITORIAL_REVIEW_NOT_APPROVED"], "EDITORIAL_REVIEW_NOT_APPROVED");
   }
-  const memberRevision = memberRevisionResult.data as JsonRecord;
-  const memberContent = asObject(memberRevision.member_content);
-  const canonicalContract = asObject(memberRevision.canonical_contract);
-  const canonicalRecommendations = asArray(memberContent.representative_stocks);
-  const semanticGate = evaluateCanonicalSemanticCoherenceGate({
-    canonical_contract: canonicalContract,
-    sections: {
-      today_core_thesis: memberContent.today_core_thesis,
-      strategy_summary: memberContent.strategy_summary,
-      taiwan_transmission: memberContent.taiwan_transmission,
-    },
-    recommendations: canonicalRecommendations,
-    quality_inputs: [
-      ai.data_quality,
-      ai.v10_data_quality_status,
-      optionalObject(ai.member_research_note_v2)?.data_status,
-      memberRevision.data_quality_status,
-    ],
-    quality_counters: {
-      unsupported_claim_count: researchGate.unsupported_claim_count,
-      duplicate_claim_count: researchGate.duplicate_claim_count,
-      contradiction_count: researchGate.contradiction_count,
-      missing_section_count: researchGate.missing_section_count,
-    },
-    evidence_coverage: memberRevision.evidence_coverage,
-    content_score: memberRevision.content_score,
-  });
-  if (!semanticGate.eligible) {
-    return recordBlockingIncident(
-      admin,
-      snapshot,
-      ["SEMANTIC_COHERENCE_BLOCKED", ...semanticGate.reason_codes],
-      "SEMANTIC_COHERENCE_BLOCKED",
-      { conflicting_fields: semanticGate.conflicting_fields, member_content_revision_id: memberRevision.id },
-    );
+  const semantic = asObject(asArray(memberRevision.semantic_coherence_reviews)[0]);
+  const semanticCheckedAt = Date.parse(String(semantic.checked_at || ""));
+  if (memberRevision.semantic_status !== "PASSED" || !Array.isArray(memberRevision.semantic_reason_codes)
+    || memberRevision.semantic_reason_codes.length > 0 || !Number.isFinite(semanticCheckedAt)
+    || semanticCheckedAt > Date.parse(publishedAt || "")) {
+    return recordBlockingIncident(admin, snapshot, ["SEMANTIC_COHERENCE_BLOCKED"], "SEMANTIC_COHERENCE_BLOCKED",
+      { member_content_revision_id: memberRevision.id });
   }
 
-  const generated = asObject(snapshot.generated_text);
-  const opportunities = canonicalRecommendations;
-  const publicTopicSource = asObject(opportunities[0]);
-  const publicSourceReferences = firstArray(
-    publicTopicSource.source_references,
-    publicTopicSource.supporting_evidence,
-    publicTopicSource.source_refs,
-  ).slice(0, 5);
-  const publicTopic = {
-    symbol: optionalString(publicTopicSource.symbol ?? publicTopicSource.stock_code),
-    name: optionalString(publicTopicSource.name ?? publicTopicSource.stock_name),
-    role: optionalString(publicTopicSource.role_title ?? publicTopicSource.role_label ?? publicTopicSource.role),
-    event_source: optionalString(publicTopicSource.event_source ?? publicTopicSource.trigger_event),
-    transmission_path: optionalString(publicTopicSource.transmission_path ?? publicTopicSource.transmission_logic),
-    taiwan_mapping: optionalString(publicTopicSource.taiwan_mapping ?? publicTopicSource.sector ?? publicTopicSource.industry_name),
-    reason: optionalString(
-      publicTopicSource.why_today ?? publicTopicSource.why_this_stock ??
-        publicTopicSource.reason ?? publicTopicSource.why_selected ??
-        publicTopicSource.taiwan_supply_chain_relation,
-    ),
-    data_timestamp: optionalString(publicTopicSource.data_timestamp ?? publicTopicSource.updated_at ?? report.updated_at ?? report.created_at),
-    source_references: publicSourceReferences,
-  };
-  const primaryThesis = optionalString(memberContent.today_core_thesis) ?? optionalString(generated.daily_sentence) ?? optionalString(report.today_quote);
-  const publicTopicComplete = Boolean(publicTopic.symbol && publicTopic.name && publicTopic.event_source && publicTopic.transmission_path && publicTopic.taiwan_mapping && publicTopic.reason && publicTopic.data_timestamp && publicSourceReferences.length);
-  if (!publicTopicComplete) return recordBlockingIncident(admin, snapshot, ['PUBLIC_TOPIC_INCOMPLETE'], 'PUBLIC_TOPIC_INCOMPLETE', { member_content_revision_id: memberRevision.id });
-  const premiumOnlySymbols = opportunities.slice(1).map((item) => optionalString(asObject(item).symbol ?? asObject(item).stock_code)).filter((symbol): symbol is string => Boolean(symbol) && symbol !== publicTopic.symbol);
-  const leakageGate = evaluatePublicPremiumLeakageGate({ public_symbols: [publicTopic.symbol], premium_only_symbols: premiumOnlySymbols, public_fields: Object.keys(publicTopic), public_entities: [publicTopic.name,publicTopic.role].filter((value): value is string => Boolean(value)), premium_entities: [] });
-  if (!leakageGate.eligible) return recordBlockingIncident(admin, snapshot, ['PUBLIC_TOPIC_GATE_BLOCKED', ...leakageGate.reason_codes], 'PUBLIC_TOPIC_GATE_BLOCKED', { member_content_revision_id: memberRevision.id });
-  const publishedAt = String(
-    review.reviewed_at ?? snapshot.valid_from ?? report.updated_at ??
-      report.created_at,
-  );
-  const revision = String(
-    snapshot.snapshot_fingerprint ?? `${snapshot.version}:${review.id}`,
-  );
-  const projectedRevision = `${revision}:${String(memberRevision.id)}:${SOURCE_PROJECTION_REVISION}`;
-  const topicFingerprint = await sha256Hex({ report_date: report.report_date, public_topic: publicTopic, primary_thesis: primaryThesis });
-  const expiresAt = new Date(new Date(publishedAt).getTime() + 24 * 60 * 60 * 1000).toISOString();
-
+  const result = await buildContentOsPublicPayload(report, snapshot, memberRevision, review, qualityPolicy, publicationRun, delivery);
+  if (!result.payload) {
+    return recordBlockingIncident(admin, snapshot, result.reasonCodes, result.reasonCodes[0] || "PUBLIC_TOPIC_INCOMPLETE",
+      { member_content_revision_id: memberRevision.id });
+  }
+  // A too-large or incomplete export must never close an existing incident.
+  const response = json(result.payload);
+  if (response.status !== 200) return response;
   const incidentKey = `content-os:${String(snapshot.report_date)}:${String(snapshot.id)}`;
   const { error: resolveIncidentError } = await admin.rpc("resolve_content_os_incident_v1", {
     p_incident_key: incidentKey,
     p_snapshot_version: Number(snapshot.version),
-    p_metadata: { member_content_revision_id: memberRevision.id, source_revision: SOURCE_PROJECTION_REVISION },
+    p_metadata: { member_content_revision_id: memberRevision.id, source_revision: SOURCE_PROJECTION_REVISION,
+      projection_mode: asObject(result.payload.public_topic).kind },
   });
   if (resolveIncidentError) return json({ error: "CONTENT_OS_INCIDENT_RESOLUTION_FAILED" }, 503);
-
-  return json({
-    external_object_id: String(report.id),
-    report_id: String(report.id),
-    external_revision: projectedRevision,
-    source_published_at: publishedAt,
-    published_at: publishedAt,
-    report_date: report.report_date,
-    report_mode: report.report_mode,
-    market_bias: report.market_bias ?? ai.market_bias,
-    confidence_score: snapshot.confidence_score ?? report.confidence_score,
-    daily_sentence: generated.daily_sentence ?? report.today_quote ??
-      report.summary,
-    topic_fingerprint: topicFingerprint,
-    expires_at: expiresAt,
-    public_topic: publicTopic,
-    facts: publicSourceReferences,
-    catalysts: [{ event_source: publicTopic.event_source }],
-    taiwan_mapping: {
-      transmission: publicTopic.taiwan_mapping,
-      preferred_sectors: publicTopic.role ? [publicTopic.role] : [],
-      watch_sectors: [],
-    },
-    risk: { risk_flags: asArray(snapshot.risk_flags).slice(0, 3) },
-    opportunities: [publicTopic],
-    source_references: publicSourceReferences,
-    morning_brief: {
-      report_date: report.report_date,
-      current_market_summary: optionalString(ai.today_summary),
-      core_thesis: primaryThesis,
-      data_quality: optionalString(ai.data_quality),
-      market_regime: optionalString(ai.market_regime),
-    },
-    verification: {
-      status: "verified",
-      decision_snapshot_id: snapshot.id,
-      editorial_review_id: review.id,
-      review_status: review.review_status,
-      content_score: reviewScore,
-      content_grade: snapshot.content_grade,
-      reviewed_at: review.reviewed_at,
-      reviewed_by: review.reviewed_by,
-      quality_policy_version: qualityPolicy.policy_version,
-      required_score: premiumPublishMinimum,
-      research_publish_status: researchGate.publish_status,
-      evidence_coverage: researchGate.evidence_coverage,
-      unsupported_claim_count: researchGate.unsupported_claim_count,
-      duplicate_claim_count: researchGate.duplicate_claim_count,
-      contradiction_count: researchGate.contradiction_count,
-      missing_section_count: researchGate.missing_section_count,
-      semantic_coherence: semanticGate.eligible,
-      semantic_gate_version: semanticGate.gate_version,
-      member_content_revision_id: memberRevision.id,
-      public_premium_leakage: leakageGate.eligible,
-    },
-  });
+  return response;
 });

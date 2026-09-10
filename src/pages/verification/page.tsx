@@ -153,11 +153,10 @@ function VerificationContent() {
   const narrative = useMemo(() => buildCanonicalNarrative({ displayState, ai }), [ai, displayState]);
   const closing = useMemo(() => buildClosingView(projection), [projection]);
   const timeline = useMemo(() => buildRuntimeDecisionTimeline({
-    ai,
+    projection,
     hasReport: Boolean(displayState?.rawRow),
-    reportGeneratedAt: firstText(asRecord(displayState?.rawRow).generated_at, asRecord(displayState?.rawRow).created_at),
     isTradingDay: displayState?.is_trading_day ?? true,
-  }), [ai, displayState]);
+  }), [projection, displayState]);
 
   if (loading) {
     return <div className="ma-page flex min-h-screen flex-col"><Navbar /><main className="flex-1 grid place-items-center text-white/60">正在讀取今日驗證...</main><Footer /></div>;

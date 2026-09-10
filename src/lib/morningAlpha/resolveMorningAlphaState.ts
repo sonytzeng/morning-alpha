@@ -11,38 +11,33 @@
  *   - Build its own data fetching logic
  *   - Use literal ":reportDate" in navigation
  *
- * All of the above are COMPUTED HERE and exposed via the normalized output.
+ * All state is projected by SubscriberReportProjection; this resolver only loads
+ * the canonical selected envelope and formats already-authorized content.
  *
  * Date contract (locked):
  *   reportDate         = reports.report_date (the date this report serves)
  *   marketDataDate     = ai_strategy_json.market_data_date or tw_core_date (premarket TW basis)
  *   usMarketDate       = ai_strategy_json.us_global_date (US/global basis)
  *   createdAtTaipei    = reports.created_at → Asia/Taipei
- *   todayTaipeiDate    = frontend today (only for "is today?" checks, never overrides reportDate)
+ *   todayTaipeiDate    = active server envelope date; never a second browser-clock decision
  *
- * publish_ready rules (locked):
- *   reportExists=false → "今日報告尚未產生"
- *   reportExists=true, publishReady=false → "報告已產生，需人工檢查" (frontend still shows content)
- *   reportExists=true, publishReady=true → "可公開"
- *   LINE/Reels/Social readiness does NOT affect reportExists or display.
+ * Publication and completion are evidence-backed projection states, never
+ * inferred from row existence, client time, or internal quality counters.
  *
  * Report content should come from server-trimmed payload when available.
  * Frontend gates are display scaffolding only; raw data security requires server-side trimming + RLS.
  */
 
 import { resolveActiveMorningAlphaReport, type ResolveResult } from '@/services/resolveActiveReport';
-import { resolveIntradayTrackingState, type IntradayTrackingState } from '@/services/intradayTrackingResolver';
-import { parseAIStrategy, hasMemberResearchNote, type ParsedAIStrategy } from '@/utils/aiStrategyParser';
-import { hasUsefulContent, filterUsefulSections, hasAnyUsefulItem } from '@/lib/morningAlpha/contentGuard';
-import { normalizeMorningAlphaReport, type MorningAlphaNormalizedReport } from '@/lib/morningAlphaReportAdapter';
-import { formatTaipeiDate, isTaipeiWeekendToday } from '@/utils/tradingDay';
-import { getRuntimeCheckpointState } from '@/lib/decisionEvidence';
+import type { IntradayTrackingState } from '@/services/intradayTrackingResolver';
+import { parseAIStrategy, type ParsedAIStrategy } from '@/utils/aiStrategyParser';
+import { hasUsefulContent } from '@/lib/morningAlpha/contentGuard';
+import type { MorningAlphaNormalizedReport } from '@/lib/morningAlphaReportAdapter';
+import type { SubscriberReportProjection } from '@/lib/subscriberReportContract';
 import { mapRowToOpeningRadar, type OpeningRadar } from '@/services/openingRadarService';
 import { mapClosingVerificationToCloseMarketReview, type CloseMarketReview } from '@/services/closeMarketReviewService';
 import {
-  computeSectorRotationFreshness,
   type SectorRotationItem,
-  type SectorRotationFreshness,
   type SectorRotationResult,
 } from '@/services/sectorRotationService';
 import { useState, useEffect, useCallback } from 'react';
@@ -54,6 +49,7 @@ import { useState, useEffect, useCallback } from 'react';
 export interface MorningAlphaState {
   // ── IDs & Dates ──
   activeReport: MorningAlphaNormalizedReport;
+  subscriberProjection: SubscriberReportProjection;
   activeReportId: string;
   reportDate: string;
   revisionId: string;
@@ -174,44 +170,16 @@ function formatTaipeiTimeString(isoStr: string): string {
   }
 }
 
-/**
- * Determine data integrity status based on report quality flags.
- */
-function getDataIntegrityStatus(normalized: MorningAlphaNormalizedReport): 'complete' | 'partial' | 'insufficient' {
-  if (!normalized.rawReport) return 'insufficient';
-  if (normalized.noFakeFallback && !normalized.fakeFallbackUsed && normalized.dataDateAligned) return 'complete';
-  if (normalized.noFakeFallback) return 'partial';
-  return 'insufficient';
+function getDataIntegrityStatus(projection: SubscriberReportProjection): 'complete' | 'partial' | 'insufficient' {
+  return projection.evidence.status === 'SUFFICIENT' ? 'complete'
+    : projection.displayStatus === 'PARTIAL' ? 'partial' : 'insufficient';
 }
-
-/**
- * Build display badges array.
- */
-function buildDisplayBadges(normalized: MorningAlphaNormalizedReport, reportExists: boolean, publishReady: boolean): Array<{ label: string; color: 'green' | 'amber' | 'red' | 'slate'; icon: string }> {
-  const badges: Array<{ label: string; color: 'green' | 'amber' | 'red' | 'slate'; icon: string }> = [];
-
-  // V376: Public-facing rule — report exists → 今日報告已產生, never 整理中
-  if (!reportExists) {
-    badges.push({ label: '今日報告尚未產生', color: 'red', icon: 'ri-error-warning-line' });
-  } else {
-    badges.push({ label: '今日報告已產生', color: 'green', icon: 'ri-check-double-line' });
-  }
-
-  // Public visibility: always visible during beta
-  badges.push({ label: '完整公開', color: 'green', icon: 'ri-eye-line' });
-
-  // Subscription status (for reference only)
-  badges.push({ label: '尚未啟用付款', color: 'slate', icon: 'ri-store-2-line' });
-
-  // Data integrity — still useful for public transparency
-  const integrity = getDataIntegrityStatus(normalized);
-  if (integrity === 'complete') {
-    badges.push({ label: '真實資料 / 無假資料', color: 'green', icon: 'ri-database-2-line' });
-  } else if (integrity === 'partial') {
-    badges.push({ label: '真實資料 / 部分驗證', color: 'amber', icon: 'ri-database-2-line' });
-  }
-
-  return badges;
+function buildDisplayBadges(projection: SubscriberReportProjection): MorningAlphaState['displayBadges'] {
+  return [{
+    label: projection.statusLabel,
+    color: projection.analysisAvailable ? 'green' : 'amber',
+    icon: projection.analysisAvailable ? 'ri-check-double-line' : 'ri-information-line',
+  }];
 }
 
 // ═══════════════════════════════════════════════════
@@ -221,11 +189,14 @@ function buildDisplayBadges(normalized: MorningAlphaNormalizedReport, reportExis
 export async function resolveMorningAlphaState(
   urlReportDate?: string | null,
 ): Promise<MorningAlphaState> {
-  const todayStr = formatTaipeiDate();
   // ── Step 1: Resolve the active report ──
   const resolved = await resolveActiveMorningAlphaReport(urlReportDate);
+  const todayStr = resolved.today_date;
   const normalized = resolved.report;
   const reportExists = resolved.rawRow !== null;
+  // Reuse the upstream envelope interpretation. A client clock skew or midnight
+  // between reads must not silently turn the same server revision into history.
+  const subscriberProjection = resolved.subscriberProjection;
 
   // ── Step 2: Parse ai_strategy_json ──
   // We use the aiStrategyParser for rich structured content
@@ -241,8 +212,7 @@ export async function resolveMorningAlphaState(
     report_date: embeddedRadar.report_date || normalized.reportDate,
   }) : null;
   const closeReview = mapClosingVerificationToCloseMarketReview(
-    normalized.reportDate,
-    strategyRaw?.closing_verification_v2 || strategyRaw?.closing_verification,
+    subscriberProjection,
   );
   const sectorItems = Array.isArray(strategyRaw?.sector_rotation_scores)
     ? strategyRaw.sector_rotation_scores as unknown as SectorRotationItem[]
@@ -257,46 +227,12 @@ export async function resolveMorningAlphaState(
     generatedAt: sectorItems.find((item) => item.generated_at)?.generated_at || null,
   };
 
-  // ── Step 4: Build intraday tracking state ──
-  let intradayTracking: IntradayTrackingState | null = null;
-  try {
-    const sync = strategyRaw?.intraday_sync_status;
-    const taipeiHour = closeReview?.data_quality === 'verified'
-      ? 15
-      : getRuntimeCheckpointState(sync, '1300') === 'completed'
-        ? 13
-        : getRuntimeCheckpointState(sync, '1030') === 'completed'
-          ? 10
-          : getRuntimeCheckpointState(sync, '0930') === 'completed' || openingRadar
-            ? 9
-            : 7;
-    const isWeekend = isTaipeiWeekendToday();
-
-    intradayTracking = resolveIntradayTrackingState({
-      report: null,
-      reportDate: normalized.reportDate,
-      premarketBaseDate: normalized.marketDataBasisDate,
-      todayDate: todayStr,
-      openingRadar,
-      marketDataTodayOnly: null,
-      marketData: null,
-      closeReview,
-      sectorItems: sectorResult.items,
-      sectorScoreDate: sectorResult.scoreDate,
-      sectorFreshness: computeSectorRotationFreshness(
-        sectorResult,
-        todayStr,
-        isWeekend ? 'pre_market' : (closeReview?.data_quality === 'verified' ? 'after_close_verified' : 'intraday'),
-      ),
-      taipeiHour,
-      isWeekend,
-    });
-  } catch (e) {
-    console.error('resolveMorningAlphaState: resolveIntradayTrackingState failed:', e);
-  }
+  // Legacy clock-based resolver is no longer executed. Subscribers consume
+  // subscriberProjection.runtime, including verified per-checkpoint identity.
+  const intradayTracking: IntradayTrackingState | null = null;
 
   // ── Step 5: Extract structured content from ai_strategy_json ──
-  const ai = strategyRaw || {};
+  const ai = subscriberProjection.analysisAvailable ? strategyRaw || {} : {};
   const marketDataDate = (ai.market_data_date as string) || (ai.tw_core_date as string) || normalized.marketDataBasisDate || '—';
   const usMarketDate = (ai.us_global_date as string) || (ai.us_market_date as string) || '—';
   const createdAtTaipei = formatTaipeiTimeString(normalized.reportCreatedAt);
@@ -327,34 +263,21 @@ export async function resolveMorningAlphaState(
   const hasLinePush = hasUsefulContent(linePush);
 
   // ── Stable Mode: Strict date checks ──
-  const reportDateStr = normalized.reportDate;
+  const reportDateStr = subscriberProjection.identity.reportDate;
   const isReportForToday = reportExists && reportDateStr !== '—' && reportDateStr === todayStr;
   const todayReportExists = reportExists && isReportForToday;
 
-  // ── Step 7: Display status (V376: simplified — report exists → 今日報告已產生) ──
-  const publishReady = normalized.publishReady;
-
+  // Display state never inherits raw report existence/quality counters.
+  const publishReady = subscriberProjection.analysisAvailable;
   const displayStatus = {
-    overallLabel: resolved.data_status === 'market_closed'
-      ? `今日休市${resolved.closed_reason ? `（${resolved.closed_reason}）` : ''}`
-      : resolved.data_status === 'missing_today_report'
-        ? '今日盤前報告尚未產生'
-        : resolved.data_status === 'stale_reference_only'
-          ? `上一交易日參考（${reportDateStr}）`
-          : '今日報告已產生',
-    memberContentLabel: hasMemberContent ? '完整公開' : '本報告尚未產生會員研究筆記',
-    subscriptionLabel: '尚未啟用付款',
-    visibilityLabel: '完整公開',
-    publishBadge: resolved.data_status === 'ready'
-      ? '今日報告已產生'
-      : resolved.data_status === 'market_closed'
-        ? '今日休市'
-        : resolved.data_status === 'stale_reference_only'
-          ? '歷史參考'
-          : '尚未產生',
+    overallLabel: subscriberProjection.historical
+      ? `歷史參考（${reportDateStr}）` : subscriberProjection.statusLabel,
+    memberContentLabel: hasMemberContent ? '會員研究內容' : '會員研究內容尚未提供',
+    subscriptionLabel: resolved.tier,
+    visibilityLabel: publishReady ? '市場分析已發布' : subscriberProjection.statusLabel,
+    publishBadge: subscriberProjection.statusLabel,
   };
-
-  const displayBadges = buildDisplayBadges(normalized, reportExists, publishReady);
+  const displayBadges = buildDisplayBadges(subscriberProjection);
 
   // ── Step 8: Build debug block ──
   const debug = {
@@ -379,10 +302,11 @@ export async function resolveMorningAlphaState(
   return {
     // ── IDs & Dates ──
     activeReport: normalized,
+    subscriberProjection,
     activeReportId: normalized.reportId,
-    reportDate: normalized.reportDate,
-    revisionId: resolved.revision_id || normalized.reportId,
-    generatedAt: resolved.generated_at || normalized.reportCreatedAt,
+    reportDate: subscriberProjection.identity.reportDate,
+    revisionId: subscriberProjection.identity.revisionId || '',
+    generatedAt: subscriberProjection.identity.generatedAt || '',
     todayTaipeiDate: todayStr,
     marketDataDate,
     usMarketDate,
@@ -403,11 +327,11 @@ export async function resolveMorningAlphaState(
     reportExists,
     publishReady,
     needsReview: reportExists && !publishReady,
-    dataIntegrityStatus: getDataIntegrityStatus(normalized),
+    dataIntegrityStatus: getDataIntegrityStatus(subscriberProjection),
 
     // ── Core Content ──
-    marketBias: normalized.marketBias,
-    confidenceScore: normalized.confidenceScore,
+    marketBias: subscriberProjection.marketDecision.bias || subscriberProjection.marketDecision.label,
+    confidenceScore: subscriberProjection.confidence.value,
     freeSummary,
     memberResearchNote,
     reasoningChain,
@@ -462,6 +386,7 @@ export function useMorningAlphaState(urlReportDate?: string | null) {
       const result = await resolveMorningAlphaState(urlReportDate);
       setState(result);
     } catch (err) {
+      setState(null);
       setError(err instanceof Error ? err.message : '資料讀取失敗');
     } finally {
       setIsLoading(false);

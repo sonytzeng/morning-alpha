@@ -209,7 +209,7 @@ export default function ReportDetail() {
   const rawAI = (strategy.raw || {}) as Record<string, unknown>;
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(projection.recommendation.items, 5);
-  const premiumAvailability = resolvePremiumContentAvailability(rawAI);
+  const premiumAvailability = resolvePremiumContentAvailability(report, projection);
   const memberValueScore = premiumAvailability.memberValueScore;
   const performanceTiming = asRecord(rawAI.performance_timing);
   const missingSources = safeArray(performanceTiming.missing_sources);

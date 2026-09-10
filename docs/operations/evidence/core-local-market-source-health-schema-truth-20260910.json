@@ -1,0 +1,586 @@
+{
+  "schema_version": "SCHEMA_ONLY_TRUTH_V1",
+  "source": "Supabase execute_sql BEGIN READ ONLY; catalog-only; no business SELECT",
+  "production_rows_read": 0,
+  "production_writes": 0,
+  "truth": {
+    "table": {
+      "acl": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}",
+      "rls": true,
+      "kind": "r",
+      "name": "market_source_health",
+      "owner": "postgres",
+      "schema": "public",
+      "options": null,
+      "force_rls": false,
+      "persistence": "p",
+      "replica_identity": "d"
+    },
+    "grants": [
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "DELETE"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "INSERT"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "MAINTAIN"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "REFERENCES"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "SELECT"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "TRIGGER"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "TRUNCATE"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "UPDATE"
+      },
+      {
+        "grantee": "anon",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "DELETE"
+      },
+      {
+        "grantee": "anon",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "INSERT"
+      },
+      {
+        "grantee": "anon",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "MAINTAIN"
+      },
+      {
+        "grantee": "anon",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "REFERENCES"
+      },
+      {
+        "grantee": "anon",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "SELECT"
+      },
+      {
+        "grantee": "anon",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "TRIGGER"
+      },
+      {
+        "grantee": "anon",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "TRUNCATE"
+      },
+      {
+        "grantee": "anon",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "UPDATE"
+      },
+      {
+        "grantee": "authenticated",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "DELETE"
+      },
+      {
+        "grantee": "authenticated",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "INSERT"
+      },
+      {
+        "grantee": "authenticated",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "MAINTAIN"
+      },
+      {
+        "grantee": "authenticated",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "REFERENCES"
+      },
+      {
+        "grantee": "authenticated",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "SELECT"
+      },
+      {
+        "grantee": "authenticated",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "TRIGGER"
+      },
+      {
+        "grantee": "authenticated",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "TRUNCATE"
+      },
+      {
+        "grantee": "authenticated",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "UPDATE"
+      },
+      {
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "DELETE"
+      },
+      {
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "INSERT"
+      },
+      {
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "MAINTAIN"
+      },
+      {
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "REFERENCES"
+      },
+      {
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "SELECT"
+      },
+      {
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "TRIGGER"
+      },
+      {
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "TRUNCATE"
+      },
+      {
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "UPDATE"
+      }
+    ],
+    "columns": [
+      {
+        "acl": null,
+        "name": "id",
+        "type": "uuid",
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "position": 1,
+        "collation": null,
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "uuid",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "source_name",
+        "type": "text",
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "position": 2,
+        "collation": "\"default\"",
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "text",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "source_type",
+        "type": "text",
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "position": 3,
+        "collation": "\"default\"",
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "text",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "status",
+        "type": "text",
+        "default": "'unknown'::text",
+        "identity": "",
+        "not_null": true,
+        "position": 4,
+        "collation": "\"default\"",
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "text",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "last_success_at",
+        "type": "timestamp with time zone",
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "position": 5,
+        "collation": null,
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "timestamptz",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "last_error_at",
+        "type": "timestamp with time zone",
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "position": 6,
+        "collation": null,
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "timestamptz",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "latest_data_at",
+        "type": "timestamp with time zone",
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "position": 7,
+        "collation": null,
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "timestamptz",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "records_count",
+        "type": "integer",
+        "default": "0",
+        "identity": "",
+        "not_null": false,
+        "position": 8,
+        "collation": null,
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "int4",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "success_rate",
+        "type": "numeric",
+        "default": "0",
+        "identity": "",
+        "not_null": false,
+        "position": 9,
+        "collation": null,
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "numeric",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "error_message",
+        "type": "text",
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "position": 10,
+        "collation": "\"default\"",
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "text",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "symbols",
+        "type": "jsonb",
+        "default": "'[]'::jsonb",
+        "identity": "",
+        "not_null": false,
+        "position": 11,
+        "collation": null,
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "jsonb",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "metadata",
+        "type": "jsonb",
+        "default": "'{}'::jsonb",
+        "identity": "",
+        "not_null": false,
+        "position": 12,
+        "collation": null,
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "jsonb",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "identity": "",
+        "not_null": false,
+        "position": 13,
+        "collation": null,
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "timestamptz",
+        "type_schema": "pg_catalog"
+      },
+      {
+        "acl": null,
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "identity": "",
+        "not_null": false,
+        "position": 14,
+        "collation": null,
+        "generated": "",
+        "type_kind": "b",
+        "type_name": "timestamptz",
+        "type_schema": "pg_catalog"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_market_source_health_source_name",
+        "valid": true,
+        "unique": true,
+        "primary": false,
+        "definition": "CREATE UNIQUE INDEX idx_market_source_health_source_name ON public.market_source_health USING btree (source_name)"
+      },
+      {
+        "name": "idx_market_source_health_updated_at",
+        "valid": true,
+        "unique": false,
+        "primary": false,
+        "definition": "CREATE INDEX idx_market_source_health_updated_at ON public.market_source_health USING btree (updated_at DESC)"
+      },
+      {
+        "name": "market_source_health_pkey",
+        "valid": true,
+        "unique": true,
+        "primary": true,
+        "definition": "CREATE UNIQUE INDEX market_source_health_pkey ON public.market_source_health USING btree (id)"
+      },
+      {
+        "name": "market_source_health_source_name_unique",
+        "valid": true,
+        "unique": true,
+        "primary": false,
+        "definition": "CREATE UNIQUE INDEX market_source_health_source_name_unique ON public.market_source_health USING btree (source_name)"
+      }
+    ],
+    "project": "cttfzgvhiewfckydcrci",
+    "policies": [
+      {
+        "name": "public read market_source_health",
+        "roles": [
+          "public"
+        ],
+        "using": "true",
+        "command": "r",
+        "permissive": true,
+        "with_check": null
+      }
+    ],
+    "triggers": [],
+    "captured_at": "2026-09-10T04:04:35.60849+00:00",
+    "constraints": [
+      {
+        "name": "market_source_health_pkey",
+        "type": "p",
+        "deferred": false,
+        "validated": true,
+        "deferrable": false,
+        "definition": "PRIMARY KEY (id)",
+        "referenced_table": null
+      },
+      {
+        "name": "market_source_health_source_name_unique",
+        "type": "u",
+        "deferred": false,
+        "validated": true,
+        "deferrable": false,
+        "definition": "UNIQUE (source_name)",
+        "referenced_table": null
+      }
+    ],
+    "publication": [],
+    "dependencies": [
+      {
+        "type": "i",
+        "class": "pg_type",
+        "object": "type market_source_health",
+        "referenced_class": "pg_class",
+        "referenced_object": "table market_source_health"
+      },
+      {
+        "type": "n",
+        "class": "pg_class",
+        "object": "table market_source_health",
+        "referenced_class": "pg_namespace",
+        "referenced_object": "schema public"
+      },
+      {
+        "type": "a",
+        "class": "pg_class",
+        "object": "index idx_market_source_health_source_name",
+        "referenced_class": "pg_class",
+        "referenced_object": "column source_name of table market_source_health"
+      },
+      {
+        "type": "a",
+        "class": "pg_class",
+        "object": "index idx_market_source_health_updated_at",
+        "referenced_class": "pg_class",
+        "referenced_object": "column updated_at of table market_source_health"
+      },
+      {
+        "type": "a",
+        "class": "pg_attrdef",
+        "object": "default value for column id of table market_source_health",
+        "referenced_class": "pg_class",
+        "referenced_object": "column id of table market_source_health"
+      },
+      {
+        "type": "a",
+        "class": "pg_attrdef",
+        "object": "default value for column status of table market_source_health",
+        "referenced_class": "pg_class",
+        "referenced_object": "column status of table market_source_health"
+      },
+      {
+        "type": "a",
+        "class": "pg_attrdef",
+        "object": "default value for column records_count of table market_source_health",
+        "referenced_class": "pg_class",
+        "referenced_object": "column records_count of table market_source_health"
+      },
+      {
+        "type": "a",
+        "class": "pg_attrdef",
+        "object": "default value for column success_rate of table market_source_health",
+        "referenced_class": "pg_class",
+        "referenced_object": "column success_rate of table market_source_health"
+      },
+      {
+        "type": "a",
+        "class": "pg_attrdef",
+        "object": "default value for column symbols of table market_source_health",
+        "referenced_class": "pg_class",
+        "referenced_object": "column symbols of table market_source_health"
+      },
+      {
+        "type": "a",
+        "class": "pg_attrdef",
+        "object": "default value for column metadata of table market_source_health",
+        "referenced_class": "pg_class",
+        "referenced_object": "column metadata of table market_source_health"
+      },
+      {
+        "type": "a",
+        "class": "pg_attrdef",
+        "object": "default value for column created_at of table market_source_health",
+        "referenced_class": "pg_class",
+        "referenced_object": "column created_at of table market_source_health"
+      },
+      {
+        "type": "a",
+        "class": "pg_attrdef",
+        "object": "default value for column updated_at of table market_source_health",
+        "referenced_class": "pg_class",
+        "referenced_object": "column updated_at of table market_source_health"
+      },
+      {
+        "type": "a",
+        "class": "pg_constraint",
+        "object": "constraint market_source_health_pkey on table market_source_health",
+        "referenced_class": "pg_class",
+        "referenced_object": "column id of table market_source_health"
+      },
+      {
+        "type": "a",
+        "class": "pg_constraint",
+        "object": "constraint market_source_health_source_name_unique on table market_source_health",
+        "referenced_class": "pg_class",
+        "referenced_object": "column source_name of table market_source_health"
+      },
+      {
+        "type": "a",
+        "class": "pg_policy",
+        "object": "policy public read market_source_health on table market_source_health",
+        "referenced_class": "pg_class",
+        "referenced_object": "table market_source_health"
+      }
+    ],
+    "server_version": "17.6"
+  }
+}

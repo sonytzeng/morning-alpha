@@ -1,7 +1,7 @@
 import type { CanonicalMorningNarrative } from './canonicalNarrative.ts';
 import type { MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
 import { canPresentConfirmedDecision } from './decisionEvidence.ts';
-import { getSubscriberReportProjection, isSubscriberAnalysisUnavailable, recommendationPublication, subscriberConfidence, SUBSCRIBER_ANALYSIS_INCOMPLETE } from './subscriberReportContract.ts';
+import { getSubscriberReportProjection, type SubscriberReportProjection, SUBSCRIBER_ANALYSIS_INCOMPLETE } from './subscriberReportContract.ts';
 
 export type PresentationDecisionState = 'WAIT' | 'ACT' | 'STOP' | 'CLOSED' | 'COMPLETED' | 'INSUFFICIENT_DATA';
 
@@ -182,10 +182,9 @@ export function dedupePresentedOpportunities(source: UnknownRecord[], limit = 8)
   return Array.from(byKey.values()).slice(0, limit);
 }
 
-function decisionState(input: DecisionPresentationInput): PresentationDecisionState {
+function decisionState(input: DecisionPresentationInput, projection: SubscriberReportProjection): PresentationDecisionState {
   const { displayState, narrative } = input;
   if (displayState && (!displayState.is_trading_day || displayState.market_status !== 'OPEN')) return 'CLOSED';
-  const projection = getSubscriberReportProjection(displayState?.rawAI);
   if (!projection.analysisAvailable) return 'INSUFFICIENT_DATA';
   const canonicalAction = projection.marketDecision.action;
   if (canonicalAction === 'STOP') return 'STOP';
@@ -218,8 +217,11 @@ function decisionCopy(state: PresentationDecisionState): Pick<DecisionPresentati
 export function buildDecisionPresentation(input: DecisionPresentationInput): DecisionPresentation {
   const { displayState, narrative } = input;
   const lifecycle = narrative.decision_lifecycle;
-  const unavailable = isSubscriberAnalysisUnavailable(displayState?.rawAI);
-  const state = decisionState(input);
+  // The selected envelope owns identity and publication. A nested READY draft
+  // must not restore confidence, opportunities or state after that row failed.
+  const projection = getSubscriberReportProjection(displayState?.rawRow ?? displayState?.rawAI);
+  const unavailable = !projection.analysisAvailable;
+  const state = decisionState(input, projection);
   const copy = decisionCopy(state);
   const nextRaw = firstText(
     /\d{1,2}:\d{2}/.test(lifecycle.validation_plan.next_step) ? lifecycle.validation_plan.next_step : '',
@@ -230,14 +232,13 @@ export function buildDecisionPresentation(input: DecisionPresentationInput): Dec
     narrative.today_script.current_step,
     displayState?.nextUpdateTime,
   );
-  const score = state === 'INSUFFICIENT_DATA' ? null : subscriberConfidence(displayState?.rawAI, displayState?.confidenceScore);
-  const stockPublication = recommendationPublication(displayState?.rawAI);
-  const opportunities = unavailable || (stockPublication.explicit && !stockPublication.stocksAllowed)
+  const score = state === 'INSUFFICIENT_DATA' ? null : projection.confidence.value;
+  const opportunities = unavailable || !projection.recommendation.available
     ? [] : dedupePresentedOpportunities(input.opportunitySource || []);
   return {
-    dateLabel: displayState?.reportDate || displayState?.currentDate || '',
+    dateLabel: projection.identity.reportDate || displayState?.currentDate || '',
     marketStateLabel: displayState?.market_message || '等待市場狀態',
-    marketBiasLabel: unavailable ? undefined : compact(displayState?.marketBias, 24) || undefined,
+    marketBiasLabel: unavailable ? undefined : compact(projection.marketDecision.bias, 24) || undefined,
     primaryDecision: {
       state,
       ...(unavailable && state !== 'CLOSED' ? { headline: SUBSCRIBER_ANALYSIS_INCOMPLETE, instruction: '等待市場證據與正式分析' } : copy),
@@ -265,7 +266,7 @@ export function buildDecisionPresentation(input: DecisionPresentationInput): Dec
       ...narrative.failure_triggers.flatMap((item) => [item.trigger, item.meaning, item.action]),
     ], 5),
     confidence: score == null ? undefined : {
-      label: displayState?.confidenceLabel || '待確認',
+      label: projection.confidence.label,
       score,
       explanation: compact(displayState?.dataBasisNote, 72) || undefined,
     },

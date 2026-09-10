@@ -7,6 +7,8 @@ import {
 import { resolveMarketStatus } from "../_shared/market-status.ts";
 import { evaluatePremiumContentGate } from "../_shared/premium-content-gate.ts";
 import { evaluateMarketReportGate } from "../_shared/market-report-gate.ts";
+import { evaluatePublishedMarketDelivery, readPublishedMarketDecision, readPublishedMemberRevision } from "../_shared/market-publication-contract.ts";
+import { evaluateClosingContract, resolveClosingReceiptPointer, resolveOpeningPublicationIdentity, validateOpeningPublication } from "../_shared/closing-learning-contract.ts";
 import {
   resolveEffectiveMemberAccess,
   type EffectiveMemberAccess,
@@ -36,6 +38,8 @@ type ReportRow = Record<string, unknown> & {
 
 type PayloadContext = {
   evaluatedAt?: string;
+  todayDate?: string;
+  publicationEvidence?: HistoryEvidence;
   openingRadar: Record<string, unknown> | null;
   sectorRotationRows: Record<string, unknown>[];
   marketDataSnapshots: Record<string, unknown>[];
@@ -148,7 +152,25 @@ function normalizeClosingOutcome(value: unknown): "hit" | "partial" | "miss" | "
 function buildAuthoritativeClosingVerification(
   ai: Record<string, unknown>,
   ctx: PayloadContext,
+  report?: ReportRow,
 ): Record<string, unknown> | null {
+  if (Object.hasOwn(ai, "market_publication_contract") || Object.hasOwn(ai, "closing_contract")) {
+    // CORE receipts can only be read from the exact durable snapshot. A mutable
+    // report alias or date-current closing row cannot supply missing evidence.
+    if (!report || !ctx.publicationEvidence || ctx.publicationEvidence.queryBoundExceeded) return null;
+    const evidence = ctx.publicationEvidence;
+    const now = Date.parse(ctx.evaluatedAt || new Date().toISOString());
+    const identity = resolveOpeningPublicationIdentity(report);
+    const snapshot = evidence.snapshots.get(identity.opening_publication_revision_id) || null;
+    const opening = evidence.runs.map(publicationRun => validateOpeningPublication({ report, snapshot, publicationRun, now }))
+      .find(value => value.status === "PUBLISHED")
+      || validateOpeningPublication({ report, snapshot, publicationRun: null, now });
+    const closingId = resolveClosingReceiptPointer(report, opening);
+    const closingSnapshot = closingId ? evidence.snapshots.get(closingId) || null : null;
+    const verified = evaluateClosingContract({ opening, closingSnapshot, expectedSnapshotId: closingId, now });
+    return closingId && verified.status === "COMPLETE"
+      ? buildHistoryClosingVerdict(asObject(asObject(closingSnapshot?.generated_text).closing_verification_v2), verified) : null;
+  }
   const existingV2 = asObject(ai.closing_verification_v2);
   const existingLegacy = asObject(ai.closing_verification);
   const generatedText = asObject(ctx.closingDecisionSnapshot?.generated_text);
@@ -236,7 +258,7 @@ function sanitizeRuntimeCompletionEvidence(
 
 function getEffectiveAi(report: ReportRow, ctx: PayloadContext): Record<string, unknown> {
   const ai = getAi(report);
-  const closingVerification = buildAuthoritativeClosingVerification(ai, ctx);
+  const closingVerification = buildAuthoritativeClosingVerification(ai, ctx, report);
   const correctedLearning = asObject(ctx.learningMetricCorrection?.corrected_metrics);
   const learningSource = ctx.learningMetricCorrection ? "append_only_metric_correction" : "learning_run";
   return {
@@ -254,10 +276,8 @@ function getEffectiveAi(report: ReportRow, ctx: PayloadContext): Record<string, 
         learningRun: ctx.learningRun,
       },
     ), getReportDate(report)),
-    ...(closingVerification ? {
-      closing_verification: closingVerification,
-      closing_verification_v2: closingVerification,
-    } : {}),
+    closing_verification: closingVerification,
+    closing_verification_v2: closingVerification,
     continuous_learning: ctx.learningRun ? {
       status: toStringValue(ctx.learningRun.status),
       run_id: toStringValue(ctx.learningRun.id),
@@ -537,6 +557,10 @@ function buildClosingVerdict(ai: Record<string, unknown>): Record<string, unknow
     data_status: toStringValue(closing.data_status),
     report_date: toStringValue(closing.report_date),
     opening_decision_snapshot_id: toStringValue(closing.opening_decision_snapshot_id),
+    opening_bias: toStringValue(closing.opening_bias),
+    opening_confidence: toNumberValue(closing.opening_confidence),
+    predicted_bias: toStringValue(closing.predicted_bias),
+    predicted_confidence: toNumberValue(closing.predicted_confidence),
     verdict_label: toStringValue(closing.verdict_label) || toStringValue(closing.hit_or_miss),
     prediction_result: toStringValue(closing.prediction_result) || toStringValue(closing.hit_or_miss),
     accuracy_score: toNumberValue(closing.accuracy_score),
@@ -615,11 +639,6 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const marketGate = evaluateMarketReportGate(ai, getReportDate(report));
   const canonicalQuality = getCanonicalPayloadQuality(ai, ctx);
   const semanticEligible = isCanonicalMemberRevisionEligible(ctx);
-  // Alignment alone also permits legacy rows without an atomic pointer. Such
-  // rows remain readable at their real date, but are not publication evidence.
-  const publicationAligned = isPublishedReadAligned(report, ctx)
-    && Boolean(toStringValue(getAi(report).revision_id))
-    && ctx.decisionSnapshot?.id === getAi(report).revision_id;
   const premiumEligible = premiumGate.eligible && semanticEligible;
   const premiumReasonCodes = Array.from(new Set([
     ...premiumGate.reason_codes,
@@ -629,26 +648,41 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const marketMetadata = getCanonicalMarketMetadata(report, ai, ctx);
   const originalDecision = buildCanonicalDecision(ctx, false);
   const revisionId = toStringValue(originalDecision?.id) || toStringValue(report.id);
-  const generatedAt = toStringValue(ctx.decisionSnapshot?.created_at) || getGeneratedAt(report, ai);
+  const evaluatedAt = ctx.evaluatedAt || new Date().toISOString();
+  const todayDate = ctx.todayDate || new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date(evaluatedAt));
+  const readerReport = { ...report, ai_strategy_json: { ...ai, is_trading_day: marketMetadata.isTradingDay } };
+  const deliveryOptions = { todayDate, now: evaluatedAt, premiumEligible, historicalRead: true };
+  const runs = ctx.publicationEvidence?.queryBoundExceeded ? [] : ctx.publicationEvidence?.runs || [];
+  const delivered = runs.map(publicationRun => evaluatePublishedMarketDelivery(readerReport, ctx.decisionSnapshot,
+    ctx.memberContentRevision, marketGate, { ...deliveryOptions, publicationRun })).find(value => value.eligible)
+    || evaluatePublishedMarketDelivery(readerReport, ctx.decisionSnapshot, ctx.memberContentRevision, marketGate, deliveryOptions);
+  const publicationVerified = !ctx.publicationEvidence?.queryBoundExceeded && delivered.eligible;
+  const recommendationGate = { ...marketGate.recommendation_gate,
+    status: delivered.projection.recommendation.status, eligible: delivered.projection.recommendation.available };
+  const generatedAt = delivered.projection.identity.generatedAt || getGeneratedAt(report, ai);
   const subscriberState = createSubscriberState({
     report_date: getReportDate(report), revision_id: revisionId, generated_at: generatedAt,
-    publicationVerified: publicationAligned, marketEvidenceReady: marketGate.eligible,
+    publicationVerified, marketEvidenceReady: publicationVerified,
+    marketPublicationContract: getAi(report).market_publication_contract,
     analysisStatus: ctx.decisionSnapshot?.status, isTradingDay: marketMetadata.isTradingDay,
-    confidenceValue: ctx.decisionSnapshot?.confidence_score,
-    recommendationGate: marketGate.recommendation_gate.status === "QUALIFIED" && !premiumEligible
-      ? { ...marketGate.recommendation_gate, status: "BLOCKED", eligible: false } : marketGate.recommendation_gate,
-    closing: ai.closing_verification_v2 || ai.closing_verification, now: ctx.evaluatedAt || new Date().toISOString(),
+    confidenceValue: delivered.projection.confidence.value,
+    recommendationGate,
+    closing: ai.closing_verification_v2, now: evaluatedAt,
   });
   const subscriberProjection = getSubscriberReportProjection({
     report_date: getReportDate(report), revision_id: revisionId, generated_at: generatedAt,
-    subscriber_state: subscriberState, canonical_decision: originalDecision,
-    market_bias: getMarketBias(report, ai), is_trading_day: marketMetadata.isTradingDay,
-    daily_sentence: getTodayQuote(report, ai),
-    recommendation_gate: marketGate.recommendation_gate,
+    today_date: todayDate,
+    subscriber_state: subscriberState, canonical_decision: originalDecision ? { ...originalDecision,
+      report_date: getReportDate(report), generated_at: generatedAt,
+      daily_sentence: delivered.projection.marketDecision.summary, market_bias: delivered.projection.marketDecision.bias } : null,
+    market_publication_contract: getAi(report).market_publication_contract,
+    market_bias: delivered.projection.marketDecision.bias, is_trading_day: marketMetadata.isTradingDay,
+    daily_sentence: delivered.projection.marketDecision.summary,
+    recommendation_gate: recommendationGate,
     closing_verification_v2: buildClosingVerdict(ai),
   });
   const marketPublished = subscriberProjection.analysisAvailable;
-  const recommendationsEligible = premiumEligible && marketPublished && marketGate.recommendation_gate.eligible;
+  const recommendationsEligible = premiumEligible && marketPublished && subscriberProjection.recommendation.available;
   const confidenceScore = subscriberProjection.confidence.value;
   const dailySentence = marketPublished
     ? subscriberProjection.marketDecision.summary ?? subscriberProjection.statusLabel : INCOMPLETE_ANALYSIS_MESSAGE;
@@ -685,12 +719,14 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const radarMissingSources = Array.isArray(openingRadar.missing_sources) ? openingRadar.missing_sources.map(String) : [];
   return {
     report_date: getReportDate(report),
+    today_date: todayDate,
     report_mode: getReportMode(report, ai),
     revision_id: revisionId,
     market_date: getMarketDate(report, ai),
     base_date: getMarketDate(report, ai),
     generated_at: generatedAt,
     subscriber_state: subscriberState,
+    market_publication_contract: getAi(report).market_publication_contract,
     subscriber_projection: subscriberProjection,
     data_as_of: getDataAsOf(ai, ctx),
     market_status: marketMetadata.marketStatus,
@@ -717,7 +753,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     premium_content_status: premiumEligible && marketPublished ? "eligible" : "blocked",
     report_status: subscriberState.analysis,
     recommendation_status: subscriberState.recommendation,
-    recommendation_gate: marketPublished && subscriberProjection.recommendation.status !== "BLOCKED" ? marketGate.recommendation_gate
+    recommendation_gate: marketPublished && subscriberProjection.recommendation.status !== "BLOCKED" ? recommendationGate
       : { ...marketGate.recommendation_gate, eligible: false, status: "BLOCKED", subscriber_message: RECOMMENDATION_INSUFFICIENT_MESSAGE },
     recommendation_message: subscriberState.recommendation === "BLOCKED" ? RECOMMENDATION_INSUFFICIENT_MESSAGE : marketGate.recommendation_gate.subscriber_message,
     market_report_gate: marketGate,
@@ -732,7 +768,8 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     canonical_decision: canonicalDecision,
     content_publish_gate: {
       overall_status: marketPublished ? "eligible" : "blocked",
-      blocking_issues: [...marketGate.reason_codes, ...(publicationAligned && ctx.decisionSnapshot?.status === "READY" ? [] : ['CANONICAL_REVISION_NOT_VERIFIED'])],
+      blocking_issues: [...delivered.reason_codes,
+        ...(ctx.publicationEvidence?.queryBoundExceeded ? ["PUBLICATION_EVIDENCE_QUERY_BOUND_EXCEEDED"] : [])],
     },
     important_news: buildPublicNews(importantNews),
     fresh_news_count: importantNews.length,
@@ -809,7 +846,8 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
   const revisionEligible = isCanonicalMemberRevisionEligible(ctx);
   const rawNote = revisionEligible ? asObject(ctx.memberContentRevision?.member_content) : {};
-  const recommendationGate = evaluateMarketReportGate(ai, getReportDate(report)).recommendation_gate;
+  const publicPayload = buildPublicPayload(report, ctx);
+  const recommendationGate = asObject(publicPayload.recommendation_gate);
   const marketOnlyNote = asObject(rawNote.canonical_contract).decision_mode === 'market_only'
     && asObject(asObject(rawNote.canonical_contract).market_report_gate).eligible === true
     && Array.isArray(rawNote.representative_stocks) && rawNote.representative_stocks.length === 0
@@ -819,7 +857,6 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   const canonicalContract = asObject(note.canonical_contract);
   const v8BeneficiaryChain = { recommendations: canonicalRecommendations };
   const v8OvernightCausalChain = { chains: canonicalContract.primary_causal_chain || [] };
-  const publicPayload = buildPublicPayload(report, ctx);
   const publicDegradedMetadata = asObject(publicPayload.degraded_metadata);
   const publicMissingSources = Array.isArray(publicDegradedMetadata.missing_sources) ? publicDegradedMetadata.missing_sources.map(String) : [];
   const reportMissingSources = Array.isArray(ai.missing_sources) ? ai.missing_sources.map(String) : [];
@@ -839,7 +876,7 @@ function buildMemberPayload(report: ReportRow, ctx: PayloadContext): Record<stri
   }
   return {
     ...publicPayload,
-    canonical_decision: { ...buildCanonicalDecision(ctx, true), confidence_score: publicPayload.confidence_score, recommendations: canonicalRecommendations },
+    canonical_decision: { ...buildCanonicalDecision(ctx, true), ...asObject(publicPayload.canonical_decision), recommendations: canonicalRecommendations },
     confidence_score: publicPayload.confidence_score,
     today_beneficiary_stocks: canonicalRecommendations,
     beneficiary_stocks: canonicalRecommendations,
@@ -910,49 +947,178 @@ function buildPayload(report: ReportRow, tier: SubscriptionTier, ctx: PayloadCon
   return buildPublicPayload(report, ctx);
 }
 
+type HistoryEvidence = {
+  snapshots: Map<string, Record<string, unknown>>;
+  members: Map<string, Record<string, unknown>>;
+  runs: Record<string, unknown>[];
+  queryBoundExceeded?: boolean;
+};
+
+async function loadHistoryEvidence(client: ReturnType<typeof createServiceClient>, rows: ReportRow[]): Promise<HistoryEvidence> {
+  const unique = (values: unknown[]) => Array.from(new Set(values.map(toStringValue)
+    .filter((value): value is string => Boolean(value))));
+  const publicationIds = unique(rows.flatMap(row => [getAi(row).revision_id,
+    resolveOpeningPublicationIdentity(row).opening_publication_revision_id]));
+  const snapshotIds = unique([...publicationIds, ...rows.map(row =>
+    asObject(getAi(row).closing_contract).closing_snapshot_id)]);
+  const memberIds = unique(rows.map(row => getAi(row).canonical_member_revision_id));
+  const reportIds = unique(rows.map(row => row.id));
+  const receiptLimit = Math.max(1, publicationIds.length * 2);
+  const empty = { data: [], error: null };
+  // Three independent batch reads after the bounded report query: never one
+  // context per report. Exact identity is checked by the shared authorities.
+  const [snapshots, members, runs] = await Promise.all([
+    snapshotIds.length ? client.from("decision_snapshots")
+      .select("id,report_id,report_date,version,session_type,status,decision_mode,action,market_regime,confidence_score,coverage_score,content_score,content_grade,content_score_breakdown,reason_codes,source_refs,source_freshness,created_at,valid_from,generated_text")
+      .in("id", snapshotIds).limit(90) : empty,
+    memberIds.length ? client.from("member_content_revisions")
+      .select("id,report_id,report_date,decision_snapshot_id,decision_snapshot_version,status,data_quality_status,member_content,canonical_contract,semantic_coherence_reviews(status,reason_codes,checked_at,canonical_snapshot_id,canonical_snapshot_version)")
+      .in("id", memberIds).order("checked_at", { referencedTable: "semantic_coherence_reviews", ascending: false })
+      .limit(1, { referencedTable: "semantic_coherence_reviews" }).limit(30) : empty,
+    publicationIds.length ? client.from("pipeline_runs")
+      .select("id,trading_date,status,idempotency_key,completed_at,provider_status")
+      .in("provider_status->result->>decision_snapshot_id", publicationIds)
+      .in("provider_status->result->>report_id", reportIds)
+      .eq("status", "SUCCEEDED").like("idempotency_key", "research-input:%")
+      .order("completed_at", { ascending: true }).limit(receiptLimit + 1) : empty,
+  ]);
+  for (const [source, result] of [["REVISION", snapshots], ["MEMBER", members], ["RECEIPT", runs]] as const) {
+    if (result.error) throw new Error(`REPORT_HISTORY_${source}_QUERY_FAILED`);
+  }
+  const memberMap = new Map<string, Record<string, unknown>>();
+  for (const value of members.data || []) {
+    const member = asObject(value), reviews = asArray(member.semantic_coherence_reviews);
+    const semantic = asObject(reviews[0]);
+    const aligned = semantic.canonical_snapshot_id === member.decision_snapshot_id
+      && semantic.canonical_snapshot_version === member.decision_snapshot_version;
+    memberMap.set(String(member.id), { ...member, semantic_status: aligned ? semantic.status : null,
+      semantic_reason_codes: aligned ? semantic.reason_codes : null });
+  }
+  return { snapshots: new Map((snapshots.data || []).map(row => [String(row.id), asObject(row)])),
+    members: memberMap, runs: (runs.data || []).map(asObject),
+    // A bounded result may be incomplete, never evidence for an arbitrary winner.
+    queryBoundExceeded: (runs.data || []).length > receiptLimit };
+}
+
+/** Public market fields only. The source is a validated immutable CLOSING
+ * receipt, never report aliases, a date-joined review, or individual stocks. */
+function buildHistoryClosingVerdict(closing: Record<string, unknown>, verified: ReturnType<typeof evaluateClosingContract>): Record<string, unknown> {
+  const quote = (value: unknown) => {
+    const row = asObject(value);
+    return { symbol: toStringValue(row.symbol), source: toStringValue(row.source),
+      value: toNumberValue(row.value), change_percent: toNumberValue(row.change_percent),
+      captured_at: toStringValue(row.captured_at), trading_date: toStringValue(row.trading_date),
+      phase: toStringValue(row.phase) };
+  };
+  const prose = (value: unknown) => typeof value === "string" ? value
+    : Array.isArray(value) ? value.filter(item => typeof item === "string").slice(0, 5) : null;
+  const adjustment = asObject(closing.tomorrow_adjustment);
+  return {
+    status: closing.status, data_status: closing.data_status, report_date: closing.report_date,
+    opening_decision_snapshot_id: closing.opening_decision_snapshot_id,
+    opening_bias: toStringValue(closing.opening_bias), opening_confidence: toNumberValue(closing.opening_confidence),
+    prediction_result: toStringValue(closing.hit_or_miss), actual_direction: toStringValue(closing.actual_direction),
+    verified_at: toStringValue(closing.verified_at),
+    // The real V2 producer omits this legacy field. Adapt only the shared
+    // validator's measured market evidence, never infer completion from absence.
+    missing_data: closing.missing_data === undefined ? verified.market_reason_codes
+      : Array.isArray(closing.missing_data) && closing.missing_data.length === 0
+        ? verified.market_reason_codes : ["CLOSING_MISSING_DATA_UNVERIFIED"],
+    actual_taiex_change: toNumberValue(asObject(closing.actual_taiex_close).change_percent),
+    actual_taiex_close: quote(closing.actual_taiex_close), actual_2330_close: quote(closing.actual_2330_close),
+    actual_txf_close: quote(closing.actual_txf_close),
+    what_was_right: prose(closing.what_was_right), what_was_wrong: prose(closing.what_was_wrong),
+    tomorrow_adjustment: Object.keys(adjustment).length ? {
+      keep: prose(adjustment.keep), downgrade: prose(adjustment.downgrade), watch_tomorrow: prose(adjustment.watch_tomorrow),
+    } : prose(closing.tomorrow_adjustment),
+  };
+}
+
 function buildHistorySummary(
   report: ReportRow,
   decision: Record<string, unknown> | null,
   evaluatedAt: string,
+  evidence: HistoryEvidence = { snapshots: new Map(), members: new Map(), runs: [] },
+  todayDate?: string,
 ): Record<string, unknown> {
   const ai = getAi(report);
   const reportDate = getReportDate(report);
   const revisionId = toStringValue(ai.revision_id);
-  const bound = Boolean(revisionId) && decision?.id === revisionId
-    && decision.report_id === report.id && decision.report_date === reportDate;
-  const generatedAt = bound ? toStringValue(decision?.created_at) || getGeneratedAt(report, ai) : getGeneratedAt(report, ai);
+  const runs = evidence.queryBoundExceeded ? [] : evidence.runs.filter(run => {
+    const result = asObject(asObject(run.provider_status).result);
+    return result.report_id === report.id && result.report_date === reportDate;
+  });
+  const openingIdentity = resolveOpeningPublicationIdentity(report);
+  const openingSnapshot = evidence.snapshots.get(openingIdentity.opening_publication_revision_id) || null;
+  const opening = runs.map(publicationRun => validateOpeningPublication({ report, snapshot: openingSnapshot,
+    publicationRun, now: Date.parse(evaluatedAt) })).find(value => value.status === "PUBLISHED")
+    || validateOpeningPublication({ report, snapshot: openingSnapshot, publicationRun: null, now: Date.parse(evaluatedAt) });
+  const closingId = resolveClosingReceiptPointer(report, opening);
+  const closingSnapshot = closingId ? evidence.snapshots.get(closingId) || null : null;
+  const closingContract = evaluateClosingContract({ opening, closingSnapshot,
+    expectedSnapshotId: closingId, now: Date.parse(evaluatedAt) });
+  const closing = closingId && closingContract.status === "COMPLETE"
+    ? buildHistoryClosingVerdict(asObject(asObject(closingSnapshot?.generated_text).closing_verification_v2), closingContract) : null;
+  // A raw completed alias is deliberately absent from this reader input.
+  const readerAi = { ...ai, is_trading_day: resolveMarketStatus(reportDate).is_trading_day,
+    closing_verification_v2: closing, closing_verification: null };
+  const readerReport = { ...report, ai_strategy_json: readerAi };
   const marketGate = evaluateMarketReportGate(ai, reportDate);
+  const member = evidence.members.get(toStringValue(ai.canonical_member_revision_id) || "") || null;
+  const deliveryOptions = { todayDate: todayDate || reportDate, now: evaluatedAt, premiumEligible: false, historicalRead: true };
+  const delivered = runs.map(publicationRun => evaluatePublishedMarketDelivery(readerReport, decision, member,
+    marketGate, { ...deliveryOptions, publicationRun })).find(value => value.eligible)
+    || evaluatePublishedMarketDelivery(readerReport, decision, member, marketGate, deliveryOptions);
+  const published = !evidence.queryBoundExceeded && delivered.eligible;
+  const generatedAt = delivered.projection.identity.generatedAt || getGeneratedAt(report, ai);
   const subscriberState = createSubscriberState({
     report_date: reportDate, revision_id: revisionId || toStringValue(report.id), generated_at: generatedAt,
-    publicationVerified: bound, marketEvidenceReady: marketGate.eligible,
-    analysisStatus: bound ? decision?.status : undefined,
+    publicationVerified: published, marketEvidenceReady: published,
+    marketPublicationContract: ai.market_publication_contract,
+    analysisStatus: decision?.status,
     isTradingDay: resolveMarketStatus(reportDate).is_trading_day,
-    confidenceValue: bound ? decision?.confidence_score : null,
-    // History carries no stocks or member/semantic proof. It must not advertise
+    confidenceValue: delivered.projection.confidence.value,
+    // Public history carries no stocks or private member/semantic body. It must not advertise
     // recommendations as qualified just because the market report is readable.
     recommendationGate: { status: "BLOCKED", eligible: false },
-    closing: ai.closing_verification_v2 || ai.closing_verification, now: evaluatedAt,
+    closing, now: evaluatedAt,
   });
-  const subscriberProjection = getSubscriberReportProjection({
+  if (evidence.queryBoundExceeded) subscriberState.reason_codes.push("HISTORY_EVIDENCE_QUERY_BOUND_EXCEEDED");
+  const publication = asObject(ai.market_publication_contract);
+  const publicRow = {
+    report_id: toStringValue(report.id),
     report_date: reportDate, revision_id: subscriberState.revision_id, generated_at: generatedAt,
-    subscriber_state: subscriberState, market_bias: getMarketBias(report, ai),
+    today_date: todayDate || null, subscriber_state: subscriberState,
+    market_publication_contract: ai.market_publication_contract === undefined ? undefined : {
+      schema_version: toStringValue(publication.schema_version), status: toStringValue(publication.status),
+      report_date: toStringValue(publication.report_date), revision_id: toStringValue(publication.revision_id),
+      opening_publication_revision_id: toStringValue(publication.opening_publication_revision_id),
+    },
     is_trading_day: resolveMarketStatus(reportDate).is_trading_day,
-    canonical_decision: { ...asObject(decision), ...asObject(decision?.generated_text) },
-    closing_verification_v2: buildClosingVerdict(ai),
+    market_bias: delivered.projection.marketDecision.bias,
+    summary: delivered.projection.marketDecision.summary,
+    closing_verification_v2: closing,
+    closing_contract: closingContract.status === "COMPLETE" ? {
+      schema_version: closingContract.schema_version, status: closingContract.status,
+      report_date: closingContract.report_date,
+      opening_publication_revision_id: closingContract.opening_publication_revision_id,
+      closing_snapshot_id: closingContract.closing_snapshot_id,
+      evidence_fingerprint: closingContract.evidence_fingerprint, verified_at: closingContract.verified_at,
+    } : null,
+  };
+  const subscriberProjection = getSubscriberReportProjection({
+    ...publicRow,
   }, { historical: true });
-  const published = subscriberProjection.analysisAvailable;
   const confidenceScore = subscriberProjection.confidence.value;
-  const dailySentence = published
+  const dailySentence = subscriberProjection.analysisAvailable
     ? subscriberProjection.marketDecision.summary ?? subscriberProjection.statusLabel
     : INCOMPLETE_ANALYSIS_MESSAGE;
   return {
-    report_date: reportDate,
-    revision_id: subscriberState.revision_id,
-    generated_at: generatedAt,
-    subscriber_state: subscriberState,
+    ...publicRow,
     subscriber_projection: subscriberProjection,
     closing_verification_v2: subscriberProjection.closing.result,
-    market_bias: published ? getMarketBias(report, ai) : "分析尚未完成",
+    closing_contract: subscriberProjection.closing.complete ? publicRow.closing_contract : null,
+    market_bias: subscriberProjection.marketDecision.bias || "分析尚未完成",
     confidence_score: confidenceScore,
     confidence_label: getConfidenceLabel(confidenceScore),
     summary: dailySentence,
@@ -978,8 +1144,8 @@ function isPublishedReadAligned(report: ReportRow, context: PayloadContext): boo
   const ai = getAi(report);
   const revision = toStringValue(ai.revision_id);
   const memberRevision = toStringValue(ai.canonical_member_revision_id);
-  // Historical rows that predate atomic publication keep their legacy reader.
-  if (!revision && !memberRevision) return true;
+  // No committed pointer is an unpublished report, never a current-QA selector.
+  if (!revision && !memberRevision) return context.decisionSnapshot == null;
   const decision = context.decisionSnapshot;
   if (!revision || !decision || decision.id !== revision
     || decision.report_id !== report.id || decision.report_date !== report.report_date) return false;
@@ -991,36 +1157,11 @@ function isPublishedReadAligned(report: ReportRow, context: PayloadContext): boo
 /** Read the report's committed pointer, never the newest internal QA attempt.
  * A published intraday revision is valid regardless of its session label. */
 function publishedDecisionQuery(serviceClient: ServiceClient, report: ReportRow) {
-  const revision = toStringValue(getAi(report).revision_id);
-  const query = serviceClient.from("decision_snapshots").select("*")
-    .eq("report_date", getReportDate(report)).eq("report_id", report.id);
-  return (revision ? query.eq("id", revision)
-    : query.eq("session_type", "PREMARKET").eq("is_current", true))
-    .order("version", { ascending: false }).limit(1).maybeSingle();
+  return readPublishedMarketDecision(serviceClient, report);
 }
 
 async function publishedMemberQuery(serviceClient: ServiceClient, report: ReportRow) {
-  const ai = getAi(report);
-  const revision = toStringValue(ai.canonical_member_revision_id);
-  const decision = toStringValue(ai.revision_id);
-  if (!revision || !decision) {
-    return await serviceClient.from("current_member_content_revisions_v1").select("*")
-      .eq("report_date", getReportDate(report)).eq("report_id", report.id)
-      .order("revision", { ascending: false }).limit(1).maybeSingle();
-  }
-  // One bounded PostgREST read through the existing FK. Preserve the Core request
-  // budget while pinning the member document and its real latest semantic review.
-  const member = await serviceClient.from("member_content_revisions")
-    .select("*,semantic_coherence_reviews(status,reason_codes,checked_at)")
-    .eq("id", revision).eq("decision_snapshot_id", decision)
-    .eq("report_date", getReportDate(report)).eq("report_id", report.id)
-    .order("checked_at", { referencedTable: "semantic_coherence_reviews", ascending: false })
-    .limit(1, { referencedTable: "semantic_coherence_reviews" }).maybeSingle();
-  if (member.error || !member.data) return member;
-  const semantic = asArray(member.data.semantic_coherence_reviews)[0];
-  return { data: { ...member.data,
-    semantic_status: semantic?.status ?? null,
-    semantic_reason_codes: semantic?.reason_codes ?? null }, error: null };
+  return await readPublishedMemberRevision(serviceClient, report);
 }
 
 /** Runtime time is checked on the server. Elapsed time never creates success;
@@ -1052,13 +1193,11 @@ async function fetchPayloadContext(
     radarResult,
     sectorResult,
     snapshotResult,
-    decisionResult,
+    publicationEvidence,
     tradingDayStateResult,
-    closingDecisionResult,
     closeReviewResult,
     learningRunResult,
     learningMetricCorrectionResult,
-    memberContentRevisionResult,
   ] = await Promise.all([
     serviceClient
       .from("opening_market_radar")
@@ -1080,20 +1219,11 @@ async function fetchPayloadContext(
       .lte("captured_at", new Date().toISOString())
       .order("captured_at", { ascending: false })
       .limit(50),
-    publishedDecisionQuery(serviceClient, report),
+    loadHistoryEvidence(serviceClient, [report]),
     serviceClient
       .from("trading_day_state")
       .select("trading_date,current_state,state_rank,checkpoint_status,updated_at")
       .eq("trading_date", reportDate)
-      .maybeSingle(),
-    serviceClient
-      .from("decision_snapshots")
-      .select("*")
-      .eq("report_date", reportDate)
-      .eq("session_type", "CLOSING")
-      .eq("is_current", true)
-      .order("version", { ascending: false })
-      .limit(1)
       .maybeSingle(),
     serviceClient
       .from("close_market_reviews")
@@ -1116,43 +1246,38 @@ async function fetchPayloadContext(
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    publishedMemberQuery(serviceClient, report),
   ]);
 
   if (radarResult.error) console.error("GET_REPORT_PAYLOAD_RADAR_QUERY_FAILED", radarResult.error.message);
   if (sectorResult.error) console.error("GET_REPORT_PAYLOAD_SECTOR_QUERY_FAILED", sectorResult.error.message);
   if (snapshotResult.error) console.error("GET_REPORT_PAYLOAD_SNAPSHOT_QUERY_FAILED", snapshotResult.error.message);
-  if (decisionResult.error) console.error("GET_REPORT_PAYLOAD_DECISION_QUERY_FAILED", decisionResult.error.message);
   if (tradingDayStateResult.error) console.error("GET_REPORT_PAYLOAD_TRADING_DAY_STATE_QUERY_FAILED", tradingDayStateResult.error.message);
-  if (closingDecisionResult.error) console.error("GET_REPORT_PAYLOAD_CLOSING_DECISION_QUERY_FAILED", closingDecisionResult.error.message);
   if (closeReviewResult.error) console.error("GET_REPORT_PAYLOAD_CLOSE_REVIEW_QUERY_FAILED", closeReviewResult.error.message);
   if (learningRunResult.error) console.error("GET_REPORT_PAYLOAD_LEARNING_RUN_QUERY_FAILED", learningRunResult.error.message);
   if (learningMetricCorrectionResult.error) console.error("GET_REPORT_PAYLOAD_LEARNING_METRIC_CORRECTION_QUERY_FAILED", learningMetricCorrectionResult.error.message);
-  if (memberContentRevisionResult.error) console.error("GET_REPORT_PAYLOAD_MEMBER_CONTENT_REVISION_QUERY_FAILED", memberContentRevisionResult.error.message);
 
   const componentQueryFailures: PayloadContext["componentQueryFailures"] = [];
   if (radarResult.error) componentQueryFailures.push({ source: "opening_market_radar", error_type: "QUERY_FAILED" });
   if (sectorResult.error) componentQueryFailures.push({ source: "sector_rotation_scores", error_type: "QUERY_FAILED" });
   if (snapshotResult.error) componentQueryFailures.push({ source: "market_data_snapshots", error_type: "QUERY_FAILED" });
-  if (decisionResult.error) componentQueryFailures.push({ source: "decision_snapshots", error_type: "QUERY_FAILED" });
   if (tradingDayStateResult.error) componentQueryFailures.push({ source: "trading_day_state", error_type: "QUERY_FAILED" });
-  if (closingDecisionResult.error) componentQueryFailures.push({ source: "closing_decision_snapshot", error_type: "QUERY_FAILED" });
   if (closeReviewResult.error) componentQueryFailures.push({ source: "close_market_reviews", error_type: "QUERY_FAILED" });
   if (learningRunResult.error) componentQueryFailures.push({ source: "learning_runs", error_type: "QUERY_FAILED" });
   if (learningMetricCorrectionResult.error) componentQueryFailures.push({ source: "learning_metric_corrections", error_type: "QUERY_FAILED" });
-  if (memberContentRevisionResult.error) componentQueryFailures.push({ source: "member_content_revisions", error_type: "QUERY_FAILED" });
 
   return {
     evaluatedAt,
+    todayDate: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date(evaluatedAt)),
+    publicationEvidence,
     openingRadar: radarResult.data ? radarResult.data as Record<string, unknown> : null,
     sectorRotationRows: Array.isArray(sectorResult.data) ? sectorResult.data as Record<string, unknown>[] : [],
     marketDataSnapshots: Array.isArray(snapshotResult.data) ? snapshotResult.data as Record<string, unknown>[] : [],
-    decisionSnapshot: decisionResult.data ? decisionResult.data as Record<string, unknown> : null,
-    closingDecisionSnapshot: closingDecisionResult.data ? closingDecisionResult.data as Record<string, unknown> : null,
+    decisionSnapshot: publicationEvidence.snapshots.get(toStringValue(getAi(report).revision_id) || "") || null,
+    closingDecisionSnapshot: publicationEvidence.snapshots.get(toStringValue(asObject(getAi(report).closing_contract).closing_snapshot_id) || "") || null,
     closeMarketReview: closeReviewResult.data ? closeReviewResult.data as Record<string, unknown> : null,
     learningRun: learningRunResult.data ? learningRunResult.data as Record<string, unknown> : null,
     learningMetricCorrection: learningMetricCorrectionResult.data ? learningMetricCorrectionResult.data as Record<string, unknown> : null,
-    memberContentRevision: memberContentRevisionResult.data ? memberContentRevisionResult.data as Record<string, unknown> : null,
+    memberContentRevision: publicationEvidence.members.get(toStringValue(getAi(report).canonical_member_revision_id) || "") || null,
     tradingDayState: observableTradingDayState(tradingDayStateResult.data),
     componentQueryFailures,
   };
@@ -1252,20 +1377,12 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "REPORT_HISTORY_QUERY_FAILED" }, 500);
     }
     const rows = Array.isArray(historyRows) ? historyRows.slice(0, historyLimit) as ReportRow[] : [];
-    const revisionIds = Array.from(new Set(rows.map(row => toStringValue(getAi(row).revision_id))
-      .filter((id): id is string => Boolean(id))));
-    const historyDecisions = new Map<string, Record<string, unknown>>();
-    if (revisionIds.length > 0) {
-      // One bounded read for the whole history, never N full payload contexts.
-      // Missing or mismatched committed pointers stay incomplete at their date.
-      const { data, error } = await serviceClient.from("decision_snapshots")
-        .select("id,report_id,report_date,status,confidence_score,created_at,generated_text")
-        .in("id", revisionIds).limit(30);
-      if (error) {
-        console.error("GET_REPORT_PAYLOAD_HISTORY_REVISION_QUERY_FAILED", error.message);
-        return jsonResponse({ success: false, error: "REPORT_HISTORY_REVISION_QUERY_FAILED" }, 500);
-      }
-      for (const row of data || []) historyDecisions.set(String(row.id), row);
+    let historyEvidence: HistoryEvidence;
+    try { historyEvidence = await loadHistoryEvidence(serviceClient, rows); }
+    catch (error) {
+      const code = error instanceof Error ? error.message : "REPORT_HISTORY_EVIDENCE_QUERY_FAILED";
+      console.error("GET_REPORT_PAYLOAD_HISTORY_EVIDENCE_QUERY_FAILED", code);
+      return jsonResponse({ success: false, error: code }, 500);
     }
     const evaluatedAt = new Date().toISOString();
     return jsonResponse({
@@ -1274,7 +1391,8 @@ Deno.serve(async (req: Request) => {
       report_date: null,
       payload: null,
       reports: rows.map(row => buildHistorySummary(row,
-        historyDecisions.get(toStringValue(getAi(row).revision_id) || "") || null, evaluatedAt)),
+        historyEvidence.snapshots.get(toStringValue(getAi(row).revision_id) || "") || null,
+        evaluatedAt, historyEvidence, todayDate)),
       locked_sections: getLockedSections(tier),
       source: "server_trimmed_payload",
       authenticated: Boolean(userId),
@@ -1321,7 +1439,12 @@ Deno.serve(async (req: Request) => {
     }, 404);
   }
 
-  let context = await fetchPayloadContext(serviceClient, report);
+  let context: PayloadContext;
+  try { context = await fetchPayloadContext(serviceClient, report); }
+  catch (error) {
+    console.error("GET_REPORT_PAYLOAD_EVIDENCE_QUERY_FAILED", error instanceof Error ? error.message : "QUERY_FAILED");
+    return jsonResponse({ success: false, error: "REPORT_EVIDENCE_QUERY_FAILED", payload: null }, 503);
+  }
   if (!isPublishedReadAligned(report, context)) {
     // PostgREST requests are separate transactions. A publication may commit
     // between the report query and the context queries. Re-read at most once.
@@ -1331,7 +1454,11 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "REPORT_RECHECK_FAILED", payload: null }, 503);
     }
     report = refreshed.data as ReportRow;
-    context = await fetchPayloadContext(serviceClient, report);
+    try { context = await fetchPayloadContext(serviceClient, report); }
+    catch (error) {
+      console.error("GET_REPORT_PAYLOAD_EVIDENCE_QUERY_FAILED", error instanceof Error ? error.message : "QUERY_FAILED");
+      return jsonResponse({ success: false, error: "REPORT_EVIDENCE_QUERY_FAILED", payload: null }, 503);
+    }
     if (!isPublishedReadAligned(report, context)) {
       return jsonResponse({ success: false, error: "REPORT_REVISION_CHANGED", report_date: getReportDate(report), payload: null }, 409);
     }

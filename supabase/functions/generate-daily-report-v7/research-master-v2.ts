@@ -1,5 +1,6 @@
 import { candidateEvidenceMatches } from "./candidate-evidence.ts";
 import { companyEvidenceSupported } from '../_shared/research-pipeline-contract.ts';
+import { publicResearchSourceMetadata } from '../_shared/canonical-market-state.ts';
 
 export type ResearchSourceStatus =
   | "complete"
@@ -178,7 +179,8 @@ export interface ResearchClaimAudit {
   statement: string;
   scope: 'market' | 'stock';
   evidence_ids: string[];
-  sources: Array<{ evidence_id: string; source: string | null; source_date: string | null; freshness: string | null }>;
+  sources: Array<{ evidence_id: string; source: string | null; source_date: string | null; freshness: string | null;
+    title?: string; url?: string; published_at?: string }>;
   confidence: ResearchEvidenceStrength | null;
   supported: boolean;
   reason_codes: string[];
@@ -229,6 +231,7 @@ export interface ResearchEvidenceItem {
   importance?: number;
   freshness?: string;
   raw_reference?: string;
+  url?: string;
   event_id?: string;
   subject?: string;
   published_at?: string | null;
@@ -1628,6 +1631,85 @@ export function assembleResearchMasterV2(
   };
 }
 
+/** Market publication is a separately assembled document, not a filtered quality
+ * summary of stock research. Reuse the same assembler and evidence validator;
+ * retain the original research/audit unchanged in the private research branch.
+ * Explicit empty recommendation input selects the existing market narrative
+ * path, never a completed-universe/no-opportunity decision.
+ */
+export function assembleCanonicalMarketResearch(
+  input: ResearchMasterV2AssemblerInput,
+): ResearchMasterV2 {
+  const note = asRecord(input.legacy.member_research_note_v2);
+  const marketInput: ResearchMasterV2AssemblerInput = {
+    ...input,
+    legacy: {
+      ...input.legacy,
+      today_beneficiary_stocks_v10: [],
+      member_research_note_v2: {
+        ...note,
+        beneficiary_candidates: [],
+        representative_stocks: [],
+        capital_rotation_scenarios: [],
+      },
+    },
+  };
+  const document = assembleResearchMasterV2(marketInput);
+  // Finalize the actual public decision sentence before its claim ledger is
+  // audited. The stock-research thesis keeps its existing one-sentence rule;
+  // the independent market summary must not discard its action/checkpoint or
+  // invalidation clause and later publish a different sentence from the one
+  // reviewed by Editorial. Missing/untraceable prose is rejected by the same
+  // validators below, never repaired with a score or an empty-universe claim.
+  const finalSentence = toText(marketInput.legacy.today_quote);
+  if (finalSentence) {
+    document.sections.executive_summary = {
+      section_id: "executive_summary",
+      text: finalSentence,
+      claim_id: claimId(input.reportDate, "executive_summary", finalSentence),
+      evidence_refs: resolveEvidenceRefs([], [finalSentence], input.evidenceIndex),
+    };
+    const reels = document.sections.reels_summary;
+    reels.hook_0_5_sec = finalSentence;
+    reels.full_script = compactTextParts([
+      reels.hook_0_5_sec, reels.context_5_15_sec, reels.thesis_15_30_sec,
+      reels.action_30_42_sec, reels.risk_42_52_sec, reels.close_52_60_sec,
+    ]);
+  }
+  // The private narrative's top-five presentation limit is not the canonical
+  // market fact inventory. Retain real news observations as their own claims,
+  // with the original statement and exact ID, not as extra support inferred
+  // from generic text such as "台股". Never promote conditional validation nodes.
+  const existingFacts = buildClaimEvidenceLedger(document, marketInput);
+  const generatedAt = Date.parse(marketInput.generatedAt);
+  const newsFacts = marketInput.evidenceIndex.filter((evidence) => {
+    const metadata = publicResearchSourceMetadata({ title: evidence.title,
+      url: evidence.url ?? evidence.raw_reference, published_at: evidence.published_at });
+    if (evidence.evidence_type !== 'market_news' || !toText(evidence.evidence_id)
+      || asRecord(evidence).quality_status !== 'verified' || !toText(evidence.source)
+      || !toText(evidence.summary) || toText(evidence.condition)
+      || !['fresh', 'recent'].includes(toText(evidence.freshness).toLowerCase())
+      || !metadata || !Number.isFinite(generatedAt)
+      || Date.parse(metadata.published_at) > generatedAt
+      || marketInput.evidenceIndex.filter(item => item.evidence_id === evidence.evidence_id).length !== 1) return false;
+    const statement = evidenceStatement(evidence);
+    return !existingFacts.some(claim => claim.evidence_ids.includes(evidence.evidence_id)
+      && (claim.statement === statement || claim.statement === toText(evidence.summary)));
+  });
+  if (newsFacts.length > 0) {
+    const additionalFacts = buildSupportingEvidence({
+      ...marketInput,
+      marketThesis: { ...marketInput.marketThesis,
+        supporting_evidence: newsFacts.map(evidence => ({ evidence_id: evidence.evidence_id })) },
+    }, '', []);
+    document.sections.supporting_evidence = mergeEvidenceClaims([
+      ...document.sections.supporting_evidence, ...additionalFacts,
+    ]);
+  }
+  const validation = validateResearchMasterV2(document, marketInput);
+  return { ...document, quality: validation.quality };
+}
+
 function direction(
   value: string,
 ): "positive" | "negative" | "neutral" | "unknown" {
@@ -1723,7 +1805,9 @@ function buildClaimEvidenceLedger(
         // Never label the report date as a source timestamp. Legacy evidence
         // without timestamps stays explicitly unknown in the audit.
         const embeddedTimestamp = evidence?.raw_reference?.match(/@(\d{4}-\d{2}-\d{2}T[^\s]+)/)?.[1];
-        return { evidence_id: ref, source: evidence?.source || evidence?.raw_reference || null, source_date: evidence?.published_at || evidence?.data_as_of || embeddedTimestamp || null, freshness: evidence?.freshness || null };
+        return { evidence_id: ref, source: evidence?.source || evidence?.raw_reference || null, source_date: evidence?.published_at || evidence?.data_as_of || embeddedTimestamp || null, freshness: evidence?.freshness || null,
+          ...publicResearchSourceMetadata({ title: evidence?.title, url: evidence?.url ?? evidence?.raw_reference,
+            published_at: evidence?.published_at }) };
       }),
       confidence: row.confidence ?? null, supported: reasons.length === 0, reason_codes: uniqueStrings(reasons),
     };

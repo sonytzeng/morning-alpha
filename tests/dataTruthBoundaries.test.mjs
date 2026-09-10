@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
 
 test('future and malformed source timestamps cannot choose the current market date', () => {
   const now=Date.parse('2026-09-08T01:00:00Z');
@@ -20,10 +21,63 @@ import {
   mergeCanonicalAndLegacyMarketRows,
   normalizeMarketDataRows,
 } from '../supabase/functions/generate-daily-report-v7/market-data-evidence.ts';
+import { filterFreshMarketIndicators } from '../supabase/functions/generate-daily-report-v7/market-freshness.ts';
+import { hasDecisionGradeSourceCoverage } from '../supabase/functions/_shared/content-intelligence.ts';
 
 const generatorSource = await readFile(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
 const reportPayloadSource = await readFile(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');
 const lineWebhookSource = await readFile(new URL('../supabase/functions/line-webhook/index.ts', import.meta.url), 'utf8');
+const usableMarket = isolatedFunction(generatorSource, 'hasUsableMarketEvidence');
+const findMarket = isolatedFunction(generatorSource, 'findIndicator', { hasUsableMarketEvidence: usableMarket });
+const requiredUsMarket = isolatedFunction(generatorSource, 'checkMVPStatus', { findIndicator: findMarket });
+const requiredTwMarket = isolatedFunction(generatorSource, 'checkTWCoreStatus', { findIndicator: findMarket });
+const marketSymbols = ['NVDA', 'TSM', 'SPX', 'TAIEX', 'TXF', '2330'];
+const sourceNow = Date.parse('2026-07-14T00:01:00.000Z');
+const sourceDates = { twCoreDate: '2026-07-13', usGlobalDate: '2026-07-13' };
+const requiredRows = () => marketSymbols.map((symbol, index) => ({ symbol, value: 100 + index,
+  change_percent: 0, captured_at: ['TAIEX', 'TXF', '2330'].includes(symbol)
+    ? '2026-07-13T06:30:00.000Z' : '2026-07-13T20:00:00.000Z' }));
+function requiredStatus(rows) {
+  const normalized = normalizeMarketDataRows(rows, sourceNow);
+  const fresh = filterFreshMarketIndicators(normalized.marketData, sourceDates, sourceNow);
+  return { normalized, fresh, us: requiredUsMarket(fresh, () => {}), tw: requiredTwMarket(normalized.marketData, () => {}) };
+}
+
+test('complete required US inputs and existing Taiwan inputs preserve real zero changes', () => {
+  const value = requiredStatus(requiredRows());
+  assert.equal(value.fresh.length, 6); assert.equal(value.us.mvpCount, 3);
+  assert.equal(value.us.mvpInsufficient, false); assert.equal(value.tw.missingCount, 0);
+  assert.equal(value.tw.dataInsufficient, false);
+  assert.ok(value.fresh.every(row => row.changePercent === 0));
+});
+for (const symbol of ['NVDA', 'TSM', 'SPX']) test('required US market input is not optional: ' + symbol, () => {
+  for (const [name, mutate] of [
+    ['absent', rows => rows.filter(row => row.symbol !== symbol)],
+    ['missing value', rows => rows.map(row => row.symbol === symbol ? { ...row, value: null } : row)],
+    ['blank change', rows => rows.map(row => row.symbol === symbol ? { ...row, change_percent: '' } : row)],
+    ['non-finite value', rows => rows.map(row => row.symbol === symbol ? { ...row, value: Infinity } : row)],
+    ['stale session', rows => rows.map(row => row.symbol === symbol ? { ...row, captured_at: '2026-07-10T06:30:00.000Z' } : row)],
+  ]) {
+    const value = requiredStatus(mutate(requiredRows()));
+    assert.equal(value.fresh.some(row => row.symbol === symbol), false, name);
+    assert.equal(value.us.mvpCount, 2, name); assert.equal(value.us.mvpInsufficient, true, name);
+    assert.equal(value.tw.dataInsufficient, false, name);
+  }
+});
+test('missing optional TXF does not silently change the existing Taiwan source policy', () => {
+  const value = requiredStatus(requiredRows().filter(row => row.symbol !== 'TXF'));
+  assert.equal(value.tw.txfPresent, false); assert.equal(value.tw.missingCount, 1);
+  assert.equal(value.tw.dataInsufficient, false); assert.equal(value.us.mvpInsufficient, false);
+  assert.equal(hasDecisionGradeSourceCoverage({ data_quality: 'degraded',
+    missing_sources: ['unavailable_market_data:TXF:no_authorized_source_or_contract_mapping'] }, 'no_trade'), true);
+});
+test('Generator checks the actual fresh research input rather than allowing stale rows to satisfy required markets', () => {
+  assert.match(generatorSource, /const researchMarketData=filterFreshMarketIndicators\(marketData,dates\)/);
+  assert.match(generatorSource, /checkTWCoreStatus\(marketData,log\)/);
+  assert.match(generatorSource, /checkMVPStatus\(researchMarketData,log\)/);
+  assert.match(generatorSource, /if\(mvpStatus\.mvpInsufficient\)missingSources\.push\('required_us_market_evidence'\)/);
+  assert.match(generatorSource, /if\(twStatus\.dataInsufficient\)missingSources\.push\('required_tw_market_evidence'\)/);
+});
 
 test('market evidence keeps real zeroes but rejects missing or non-finite numerics', () => {
   const normalized = normalizeMarketDataRows([

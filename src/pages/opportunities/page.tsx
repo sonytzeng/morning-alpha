@@ -7,76 +7,18 @@ import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/li
 import { trackPageView } from '@/utils/analytics';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
 import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
-import { buildDecisionPresentation, dedupePresentedOpportunities } from '@/lib/decisionPresentation';
+import { buildDecisionPresentation } from '@/lib/decisionPresentation';
 import { buildRuntimeDecisionTimeline, selectNextRuntimeTimelineNode } from '@/lib/runtimeDecisionTimeline';
 import VisualSectionHeader from '@/components/feature/VisualSectionHeader';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
-import { normalizeDecisionSymbol } from '@/features/decision-v1/engine';
-
-// ═══════════════════════════════════════════════════
-// V9.0: Three-tier beneficiary stock types
-// ═══════════════════════════════════════════════════
-interface TierStock {
-  stock_id: string;
-  stock_name: string;
-  sector: string;
-  beneficiary_level: 'core' | 'extended' | 'scenario';
-  trigger_event: string;
-  reason: string;
-  risk_note: string;
-  data_basis: string;
-  // legacy compat
-  symbol?: string;
-  name?: string;
-  direction?: string;
-  conviction_level?: string;
-  catalyst_type?: string;
-  watch_point?: string;
-  validation_signal?: string;
-  source_signals?: string;
-  not_buy_signal?: boolean;
-}
-
-interface V10OpportunityStock {
-  symbol: string;
-  name: string;
-  industryCode: string;
-  industryName: string;
-  rank: number | null;
-  totalScore: number | null;
-  netEvidenceDirection: 'positive' | 'neutral' | 'negative' | string;
-  positiveEvidenceCount: number;
-  negativeEvidenceCount: number;
-  riskFlags: string[];
-  scoringReasons: string[];
-  benefitChain: string[];
-  observationReason: string;
-  confirmationPendingReason: string;
-  stopObservingCondition: string;
-  observationChain: string[];
-  triggerEvent: string;
-  evidenceSource: string;
-  transmissionLogic: string;
-  taiwanSupplyChainLink: string;
-}
-
+import { getSubscriberOpportunityList } from '@/lib/subscriberOpportunities';
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
-function asRecordArray(value: unknown): Record<string, unknown>[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
-    : [];
-}
-
-function compactText(value: unknown): string {
-  return String(value ?? '').trim();
-}
-
-const UNSAFE_OPPORTUNITY_TEXT = /event[\s_-]*score|market[\s_-]*score|ai[\s_-]*chain|undefined|null|確認訊號.{0,2}提供|取消條件.{0,2}提供|\b[a-z][a-z0-9]*_[a-z0-9_]+\b/i;
+const UNSAFE_OPPORTUNITY_TEXT = /event[\\s_-]*score|market[\\s_-]*score|ai[\\s_-]*chain|undefined|null|確認訊號.{0,2}提供|取消條件.{0,2}提供|\\b[a-z][a-z0-9]*_[a-z0-9_]+\\b/i;
 
 function publicOpportunityText(value: string | undefined): string | undefined {
   const text = value?.trim() || '';
@@ -92,199 +34,11 @@ function opportunityBadge(roleLabel: string | undefined) {
   return { label: '待補資料', className: 'ma-badge-neutral' };
 }
 
-
-function parseEvidence(value: unknown): string {
-  if (Array.isArray(value)) return value.map((item) => compactText(item)).filter(Boolean).join('；');
-  return compactText(value);
-}
-
-function hasExplicitStockIdentity(row: Record<string, unknown>): boolean {
-  const stockId = compactText(row.stock_id || row.symbol || row.stock_code || row.code || row.ticker);
-  const stockName = compactText(row.stock_name || row.name || row.stock || row.company_name || row.title);
-  return Boolean(stockId || stockName);
-}
-
-function parseTierStock(
-  raw: Record<string, unknown>,
-  fallbackLevel: TierStock['beneficiary_level'] = 'extended',
-  fallbackDataBasis = '',
-): TierStock | null {
-  const stockId = compactText(raw.stock_id || raw.symbol || raw.stock_code || raw.code || raw.ticker);
-  const stockName = compactText(raw.stock_name || raw.name || raw.stock || raw.company_name || raw.title);
-  if (!stockId && !stockName) return null;
-
-  const rawLevel = compactText(raw.beneficiary_level);
-  const beneficiaryLevel: TierStock['beneficiary_level'] = rawLevel === 'core' || rawLevel === 'extended' || rawLevel === 'scenario'
-    ? rawLevel
-    : fallbackLevel;
-
-  return {
-    stock_id: stockId,
-    stock_name: stockName || stockId,
-    sector: compactText(raw.sector || raw.group || raw.category || raw.industry),
-    beneficiary_level: beneficiaryLevel,
-    trigger_event: compactText(raw.trigger_event || raw.catalyst || raw.catalyst_type || raw.event),
-    reason: compactText(raw.reason || raw.why_this_stock || raw.thesis || raw.member_thesis || raw.why_it_matters || raw.score_reason),
-    risk_note: compactText(raw.risk_note || raw.risk || raw.invalidation_condition || raw.invalidation_conditions || raw.failure_conditions),
-    data_basis: compactText(raw.data_basis || raw.source_type || raw.source || fallbackDataBasis || parseEvidence(raw.evidence) || parseEvidence(raw.source_signals)),
-    symbol: stockId,
-    name: stockName,
-    direction: compactText(raw.direction || '觀察'),
-    conviction_level: compactText(raw.conviction_level || ''),
-    catalyst_type: compactText(raw.catalyst_type || ''),
-    watch_point: compactText(raw.watch_point || raw.validation_signal || raw.what_to_watch),
-    validation_signal: compactText(raw.validation_signal),
-    source_signals: parseEvidence(raw.source_signals),
-    not_buy_signal: raw.not_buy_signal !== false,
-  };
-}
-
-function mapTierStocks(
-  rows: unknown,
-  level: TierStock['beneficiary_level'],
-  dataBasis: string,
-): TierStock[] {
-  return asRecordArray(rows)
-    .map((row) => parseTierStock(row, level, dataBasis))
-    .filter((stock): stock is TierStock => stock !== null);
-}
-
-function numberOrNull(value: unknown): number | null {
-  if (value === null || value === undefined || value === '') return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function stringArray(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map((item) => compactText(item)).filter(Boolean);
-  if (typeof value === 'string' && value.trim()) return [value.trim()];
-  return [];
-}
-
-function mapV10OpportunityStocks(rows: unknown): V10OpportunityStock[] {
-  return asRecordArray(rows).map((row, index) => {
-    const triggerEvent = compactText(row.trigger_event || row.event_source);
-    const evidenceSource = compactText(row.data_basis || row.evidence_source || row.source_reference);
-    const transmissionLogic = compactText(row.transmission_logic || row.transmission_path || row.reason_chain || row.causal_chain);
-    const taiwanSupplyChainLink = compactText(row.taiwan_supply_chain_link || row.taiwan_supply_chain_relation || row.supply_chain_relationship || row.company_relationship);
-    const completeReason = [
-      triggerEvent && `事件來源：${triggerEvent}`,
-      transmissionLogic && `傳導路徑：${transmissionLogic}`,
-      taiwanSupplyChainLink && `台灣供應鏈：${taiwanSupplyChainLink}`,
-      evidenceSource && `資料依據：${evidenceSource}`,
-    ].filter(Boolean).join('；');
-    return ({
-    symbol: compactText(row.symbol || row.stock_id || row.stock_code),
-    name: compactText(row.name || row.stock_name || row.company_name),
-    industryCode: compactText(row.industry_code),
-    industryName: compactText(row.industry_name || row.industry || row.sector),
-    rank: numberOrNull(row.rank) ?? index + 1,
-    totalScore: numberOrNull(row.total_score),
-    netEvidenceDirection: compactText(row.net_evidence_direction || 'neutral'),
-    positiveEvidenceCount: numberOrNull(row.positive_evidence_count) ?? 0,
-    negativeEvidenceCount: numberOrNull(row.negative_evidence_count) ?? 0,
-    riskFlags: stringArray(row.risk_flags),
-    scoringReasons: stringArray(row.scoring_reasons),
-    benefitChain: stringArray(row.benefit_chain),
-    observationReason: compactText(row.observation_reason) || completeReason,
-    confirmationPendingReason: compactText(row.confirmation_condition || row.confirmation_pending_reason || row.intraday_validation || row.validation_signal),
-    stopObservingCondition: compactText(row.stop_observing_condition || row.invalidation_condition || row.risk_note),
-    observationChain: stringArray(row.observation_chain),
-    triggerEvent,
-    evidenceSource,
-    transmissionLogic,
-    taiwanSupplyChainLink,
-  });
-  }).filter((stock) => Boolean(stock.symbol || stock.name));
-}
-
-function legacyToV10(stock: TierStock, index: number, tone: 'beneficiary' | 'observation' | 'risk'): V10OpportunityStock {
-  return {
-    symbol: stock.stock_id,
-    name: stock.stock_name,
-    industryCode: stock.sector,
-    industryName: stock.sector,
-    rank: index + 1,
-    totalScore: null,
-    netEvidenceDirection: tone === 'risk' ? 'negative' : tone === 'beneficiary' ? 'positive' : 'neutral',
-    positiveEvidenceCount: tone === 'beneficiary' ? 1 : 0,
-    negativeEvidenceCount: tone === 'risk' ? 1 : 0,
-    riskFlags: tone === 'risk' ? [stock.risk_note || 'risk'] : [],
-    scoringReasons: stock.reason ? [stock.reason] : [],
-    benefitChain: [stock.trigger_event, stock.sector, stock.stock_id].filter(Boolean),
-    observationReason: stock.reason,
-    confirmationPendingReason: stock.validation_signal || stock.watch_point,
-    stopObservingCondition: stock.risk_note,
-    observationChain: [stock.trigger_event, stock.sector, stock.stock_id].filter(Boolean),
-    triggerEvent: stock.trigger_event,
-    evidenceSource: stock.data_basis,
-    transmissionLogic: stock.reason,
-    taiwanSupplyChainLink: stock.sector,
-  };
-}
-
-function mapMemberResearchCandidates(rows: unknown): TierStock[] {
-  return asRecordArray(rows)
-    .map((row) => parseTierStock({
-      ...row,
-      stock_id: row.stock_id || row.symbol || row.stock_code,
-      stock_name: row.stock_name || row.name,
-      risk_note: row.risk_note || row.risk,
-      data_basis: row.data_basis || parseEvidence(row.evidence) || 'member_research_note_v2.beneficiary_candidates',
-    }, 'core', 'member_research_note_v2.beneficiary_candidates'))
-    .filter((stock): stock is TierStock => stock !== null);
-}
-
-function dedupeTierStocks(stocks: TierStock[], used = new Set<string>()): TierStock[] {
-  const result: TierStock[] = [];
-
-  stocks.forEach((stock) => {
-    const key = (stock.stock_id ? `ID:${stock.stock_id}` : `NAME:${stock.stock_name}`).trim().toUpperCase();
-    if (!key || used.has(key)) return;
-    used.add(key);
-    result.push(stock);
-  });
-
-  return result;
-}
-
-function resolveLegacyBeneficiaries(ai: Record<string, unknown>, report: Record<string, unknown>) {
-  const memberResearchNoteV2 = asRecord(ai.member_research_note_v2);
-  const publicSummary = asRecord(ai.public_summary) || asRecord(ai.free_summary);
-  const used = new Set<string>();
-
-  // Debug-safe resolver: use only real existing V7/member-note fields, never static fallback stocks.
-  const coreStocks = dedupeTierStocks([
-    ...mapTierStocks(ai.core_beneficiary_stocks, 'core', 'core_beneficiary_stocks'),
-    ...mapTierStocks(ai.beneficiary_stocks, 'core', 'beneficiary_stocks'),
-    ...mapTierStocks(ai.today_beneficiary_stocks, 'core', 'today_beneficiary_stocks'),
-    ...mapTierStocks(ai.one_teaser_stock ? [ai.one_teaser_stock] : [], 'core', 'one_teaser_stock'),
-    ...mapTierStocks(publicSummary.beneficiary_stocks, 'core', 'public_summary.beneficiary_stocks'),
-    ...mapMemberResearchCandidates(memberResearchNoteV2.beneficiary_candidates),
-    ...mapTierStocks(report.focus_stock_json, 'core', 'reports.focus_stock_json'),
-  ], used);
-
-  const extendedStocks = dedupeTierStocks([
-    ...mapTierStocks(ai.extended_watchlist, 'extended', 'extended_watchlist'),
-    ...mapTierStocks(ai.watchlist, 'extended', 'watchlist'),
-    ...mapTierStocks(asRecordArray(report.watch_sectors_json).filter(hasExplicitStockIdentity), 'extended', 'reports.watch_sectors_json'),
-  ], used);
-
-  const scenarioStocks = dedupeTierStocks([
-    ...mapTierStocks(ai.scenario_watchlist, 'scenario', 'scenario_watchlist'),
-  ], used);
-
-  return { coreStocks, extendedStocks, scenarioStocks };
-}
-
 // ═══════════════════════════════════════════════════
 function OpportunitiesContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ds, setDs] = useState<MorningAlphaDisplayState | null>(null);
-  const [coreStocks, setCoreStocks] = useState<TierStock[]>([]);
-  const [extendedStocks, setExtendedStocks] = useState<TierStock[]>([]);
-  const [scenarioStocks, setScenarioStocks] = useState<TierStock[]>([]);
   const [isHistoricalFallback, setIsHistoricalFallback] = useState(false);
   const [fallbackReportDate, setFallbackReportDate] = useState<string | null>(null);
 
@@ -302,22 +56,6 @@ function OpportunitiesContent() {
         setDs(displayState);
         setIsHistoricalFallback(resolved.isHistoricalFallback);
         setFallbackReportDate(resolved.fallbackReportDate);
-
-        const projection = getSubscriberReportProjection(report);
-        if (!projection.recommendation.available || displayState.market_status !== 'OPEN' || resolved.isHistoricalFallback) {
-          setCoreStocks([]);
-          setExtendedStocks([]);
-          setScenarioStocks([]);
-          return;
-        }
-
-        // V9.0/V8 preview: V8 ready wins; otherwise fall back to real V7 beneficiary fields.
-        const ai = displayState.rawAI || {};
-        const legacyBeneficiaries = resolveLegacyBeneficiaries(ai, report as unknown as Record<string, unknown>);
-
-        setCoreStocks(legacyBeneficiaries.coreStocks);
-        setExtendedStocks(legacyBeneficiaries.extendedStocks);
-        setScenarioStocks(legacyBeneficiaries.scenarioStocks);
 
       } catch {
         setError('今日觀察名單暫時無法取得，請稍後重新載入。');
@@ -438,47 +176,9 @@ function OpportunitiesContent() {
       </div>
     );
   }
-  const allowedSymbols = new Set(projection.recommendation.items.map((value) => {
-    const row = asRecord(value);
-    return normalizeDecisionSymbol(row.symbol || row.stock_code || row.stock_id || row.ticker);
-  }).filter(Boolean));
   const rawAI = (ds.rawAI || {}) as Record<string, unknown>;
-  const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true' || ds.v10BeneficiaryEnabled === true;
-  const v10BeneficiaryStocks = mapV10OpportunityStocks(rawAI.today_beneficiary_stocks_v10 || ds.v10BeneficiaryStocks);
-  const v10ObservationWatchlist = mapV10OpportunityStocks(rawAI.v10_observation_watchlist || ds.v10ObservationWatchlist);
-  const premiumAvailability = resolvePremiumContentAvailability(rawAI);
-  const premiumResearchPublishable = premiumAvailability.eligible;
-  const hasRecommendationEvidence = v10BeneficiaryEnabled
-    && premiumResearchPublishable
-    && ds.dataStatus !== 'insufficient'
-    && ['sufficient', 'partial'].includes(ds.v10DataQualityStatus)
-    && v10BeneficiaryStocks.length > 0;
-  const hasNoTradeEvidence = v10BeneficiaryEnabled
-    && premiumResearchPublishable
-    && premiumAvailability.decisionMode === 'no_trade'
-    && ds.v10DataQualityStatus === 'insufficient_positive_evidence'
-    && v10ObservationWatchlist.length > 0;
-  const hasUsableLegacyEvidence = !v10BeneficiaryEnabled
-    && ds.dataStatus !== 'insufficient'
-    && !/missing|failed|unavailable/i.test(ds.v10DataQualityStatus);
-  const legacyObservationStocks = [...coreStocks, ...extendedStocks, ...scenarioStocks]
-    .map((stock, index) => legacyToV10(stock, index, 'observation'));
-
-  // V10 remains the only path to a strong-beneficiary label. Until that engine is
-  // enabled, complete legacy evidence is shown honestly as an observation list
-  // instead of hiding every real candidate.
-  const strongOpportunityStocks = (hasRecommendationEvidence ? v10BeneficiaryStocks : [])
-    .filter((stock) => allowedSymbols.has(normalizeDecisionSymbol(stock.symbol)));
-  const observationOpportunityStocks = hasRecommendationEvidence || hasNoTradeEvidence
-    ? v10ObservationWatchlist
-    : hasUsableLegacyEvidence
-      ? legacyObservationStocks
-      : [];
-  const presentedStocks = dedupePresentedOpportunities(
-    [...strongOpportunityStocks, ...observationOpportunityStocks]
-      .filter((stock) => allowedSymbols.has(normalizeDecisionSymbol(stock.symbol))) as unknown as Record<string, unknown>[],
-    12,
-  ).filter((stock) => allowedSymbols.has(normalizeDecisionSymbol(stock.symbol)));
+  const premiumAvailability = resolvePremiumContentAvailability(ds.rawRow, projection);
+  const presentedStocks = getSubscriberOpportunityList(ds.rawRow, projection);
   const safePresentedStocks = presentedStocks.map((stock) => ({
     stock,
     reason: publicOpportunityText(stock.oneLineReason),
@@ -488,8 +188,7 @@ function OpportunitiesContent() {
   const completeEnoughStocks = safePresentedStocks.filter(({ reason, confirmation, invalidation }) => (
     Boolean(reason && confirmation && invalidation)
   ));
-  const strongSymbols = new Set(strongOpportunityStocks.map((stock) => normalizeDecisionSymbol(stock.symbol)));
-  const visibleStrongCount = completeEnoughStocks.filter(({ stock }) => strongSymbols.has(normalizeDecisionSymbol(stock.symbol))).length;
+  const visibleStrongCount = completeEnoughStocks.length;
   const hasStrongBeneficiaryEvidence = visibleStrongCount > 0;
   const canonicalNarrative = buildCanonicalNarrative({ displayState: ds, ai: rawAI });
   const opportunityPresentation = buildDecisionPresentation({
@@ -497,15 +196,14 @@ function OpportunitiesContent() {
     narrative: canonicalNarrative,
   });
   const runtimeTimeline = buildRuntimeDecisionTimeline({
-    ai: rawAI,
+    projection,
     hasReport: true,
-    reportGeneratedAt: ds.reportDate,
     isTradingDay: ds.is_trading_day,
   });
   const nextRuntimeNode = selectNextRuntimeTimelineNode(runtimeTimeline);
   const thesisTitle = hasStrongBeneficiaryEvidence
     ? publicOpportunityText(opportunityPresentation.mission.title) || '等待今日主線確認'
-    : '目前沒有足夠正向證據支持強受惠股';
+    : premiumAvailability.eligible ? '入選個股的呈現條件尚未完整' : '個股研究尚未通過 Premium 資格';
   const thesisExplanation = publicOpportunityText(opportunityPresentation.mission.explanation);
   const checkpointLabel = nextRuntimeNode
     ? `${nextRuntimeNode.time}｜${nextRuntimeNode.label}`
@@ -514,7 +212,7 @@ function OpportunitiesContent() {
         publicOpportunityText(opportunityPresentation.nextCheckpoint.label),
       ].filter(Boolean).join('｜') || '等待下一個有效市場節點';
   const opportunityHeroTitle = hasStrongBeneficiaryEvidence
-    ? `今天有 ${visibleStrongCount} 檔通過強受惠篩選`
+    ? `今天有 ${visibleStrongCount} 檔通過推薦篩選`
     : completeEnoughStocks.length > 0
       ? `今天沒有強受惠股，先觀察 ${completeEnoughStocks.length} 檔`
       : '今天不公布個股名單';
@@ -595,7 +293,9 @@ function OpportunitiesContent() {
             ) : (
               <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.06] p-5 text-sm leading-relaxed text-amber-200">
                 <strong className="mb-1 block text-amber-100">今日不公布個股名單</strong>
-                當日主線、個股承接、成立條件與取消條件尚未同時通過資料門檻。資料完整前維持空白，不沿用舊名單。
+                {premiumAvailability.eligible
+                  ? '正式入選資料的理由、成立條件或取消條件尚未完整。補齊前不展示個股，不沿用舊名單。'
+                  : '市場判斷已發布，但個股研究尚未通過獨立 Premium 資格；不以市場就緒狀態代替。'}
               </div>
             )}
           </section>

@@ -1,0 +1,677 @@
+{
+  "schema_version": "CORE_CONSOLIDATION_LOCAL_FAILURE_CAPTURE_V1",
+  "fixture_id": "local-20260917-terminal-market-only-failure",
+  "provenance": {
+    "kind": "LOCAL_ACTUAL_HANDLER_CAPTURE",
+    "provider_kind": "SYNTHETIC_PROVIDER_CONTROL",
+    "historical_capture": false,
+    "production_data": false,
+    "source_receipts": [
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909154500-evidence-continuation-001/result.json",
+        "sha256": "15ecbabac65df46280bd342c5191a636708b06f96ffe6ead75ccdab19c8ae7ca"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909154500/terminal-reconciliation-failure-readback.json",
+        "sha256": "945c036b12c89ab403db8715a109883929bef2190fabf9ce8874fbd54f1e271b"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909154500/terminal-reconciliation-catalog.json",
+        "sha256": "0577554c7521c4ddcb556ebeb5143d748408e06de9fb21a30591a58d50c9df89"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909154500/executed-source-preimages/manifest.json",
+        "sha256": "f15111ab8465987214b73b94ba6d316b466986c490ef243be2b954720206d019"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909154500/continuation-001-source-preimages/manifest.json",
+        "sha256": "21cbdbc92b2e1c56bc1dbbf78185c615364c956100b252707a92fdbd05025cbd"
+      }
+    ]
+  },
+  "scope": "ma-consolidation-v1-20260909154500",
+  "report_date": "2026-09-17",
+  "warmup_date": "2026-09-16",
+  "failed_attempt_id": "42894738-5b25-4d13-84c6-6e5ee8fb2fdf",
+  "observed": {
+    "full_chain_result": "FAIL",
+    "full_persisted_chain_executed": false,
+    "automatic_stable_day": false,
+    "historical_success_claim": false,
+    "failing_handler": "daily-delivery-orchestrator",
+    "http_status": 409,
+    "error": "RECOVERY_TERMINAL_RECONCILIATION_FAILED",
+    "details": "TERMINAL_RECONCILIATION_BLOCKED:CURRENT_QUALITY_NOT_APPROVED",
+    "acceptance": "NOT_RUN",
+    "acceptance_rows": 0,
+    "terminal_dispatch_rows": 0,
+    "dead_letter_rows": 0,
+    "actual_lifecycle": [
+      {
+        "trading_date": "2026-09-17",
+        "current_state": "DAY_COMPLETED",
+        "state_rank": 150,
+        "completed_at": "2026-09-17T07:15:04.066551+00:00"
+      }
+    ],
+    "publication_contract": {
+      "status": "PUBLISHED",
+      "report_date": "2026-09-17",
+      "revision_id": "8503e615-40cf-4f30-abe2-848ac7018455",
+      "published_at": "2026-09-16T23:00:14.07962+00:00",
+      "schema_version": "CORE_MARKET_PUBLICATION_V1",
+      "publication_run_id": "4e879159-b01c-42c2-8186-a0a80aeb9bc7",
+      "opening_publication_revision_id": "8503e615-40cf-4f30-abe2-848ac7018455"
+    },
+    "published_predicate_rows": [
+      {
+        "id": "8503e615-40cf-4f30-abe2-848ac7018455",
+        "report_id": "5710ba6b-1050-4c2f-9b32-8d4a2f0e880b",
+        "report_date": "2026-09-17",
+        "session_type": "PREMARKET",
+        "is_current": true,
+        "status": "READY",
+        "decision_mode": "market_only",
+        "content_score": 100,
+        "coverage_score": 100,
+        "editorial_status": "APPROVED",
+        "member_id": "44da01ab-b5c4-4142-8563-d06e314dbdd6",
+        "member_status": "PASSED",
+        "semantic_status": "PASSED",
+        "semantic_snapshot": "8503e615-40cf-4f30-abe2-848ac7018455",
+        "semantic_version": 1,
+        "snapshot_version": 1
+      }
+    ],
+    "legacy_allowed_modes": [
+      "recommendations",
+      "no_trade"
+    ],
+    "checkpoint_receipts": [
+      {
+        "run_id": "42894738-5b25-4d13-84c6-6e5ee8fb2fdf",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "persisted-checkpoint",
+        "recorded_at_host": "2026-09-09T08:12:36.797Z",
+        "checkpoint": "PREMARKET",
+        "correlation_id": "33720cff-6300-49b1-b3ae-b4ff18278efc",
+        "verified_symbols": [
+          "2330",
+          "DXY",
+          "IXIC",
+          "NVDA",
+          "SOX",
+          "SPX",
+          "TAIEX",
+          "TSM",
+          "TXF",
+          "US10Y",
+          "VIX"
+        ],
+        "immutable_versions": [
+          13,
+          21,
+          16,
+          18,
+          17,
+          15,
+          12,
+          19,
+          14,
+          22,
+          20
+        ],
+        "immutable_sha256": "f987a61126837c44512874084d28ec7de406227141430275bb4d7f3d39e93d62",
+        "raw_sha256": "1bd2022040d8eff3370c8e00b761e73ed4dc10e84c910646b3a6dae340efa4c2",
+        "canonical_sha256": "a6687360d5763bdb2aab5fb8897a7ab74f661cd5d9e7774eae7482218c33c49c",
+        "compatibility_sha256": "7760d753474cb13230c1d10d7e1f4e0d50d1e52991d0a4940078ce7f1b660d09",
+        "producer_readback_verified": true,
+        "direct_seed_writes": 0
+      },
+      {
+        "run_id": "42894738-5b25-4d13-84c6-6e5ee8fb2fdf",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "persisted-checkpoint",
+        "recorded_at_host": "2026-09-09T08:13:00.629Z",
+        "checkpoint": "0900",
+        "correlation_id": "25191a2a-9df7-41c0-b411-461709d8fe4b",
+        "verified_symbols": [
+          "2330",
+          "DXY",
+          "IXIC",
+          "NVDA",
+          "SOX",
+          "SPX",
+          "TAIEX",
+          "TSM",
+          "TXF",
+          "US10Y",
+          "VIX"
+        ],
+        "immutable_versions": [
+          24,
+          32,
+          27,
+          29,
+          28,
+          26,
+          23,
+          30,
+          25,
+          33,
+          31
+        ],
+        "immutable_sha256": "f471dfb61975dae00e01c56f314db4a7fefe6d5ff56b8506bb582130f790d3da",
+        "raw_sha256": "3aa654eec9ad83620f1233c10208144a12366d4c982f22763c85e64472d8fd0c",
+        "canonical_sha256": "8bc4541748e97e4b4f580fd0003aee3678c176f60a87aa0b5edec79aeb1ca167",
+        "compatibility_sha256": "8b96fb9b0891dcc968c72bfa52378127ba286895afaf2d0148805a638411d121",
+        "producer_readback_verified": true,
+        "direct_seed_writes": 0
+      },
+      {
+        "run_id": "42894738-5b25-4d13-84c6-6e5ee8fb2fdf",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "persisted-checkpoint",
+        "recorded_at_host": "2026-09-09T08:13:13.515Z",
+        "checkpoint": "0930",
+        "correlation_id": "b46ecbd8-c4af-463a-9034-d5296c85f6dc",
+        "verified_symbols": [
+          "2330",
+          "DXY",
+          "IXIC",
+          "NVDA",
+          "SOX",
+          "SPX",
+          "TAIEX",
+          "TSM",
+          "TXF",
+          "US10Y",
+          "VIX"
+        ],
+        "immutable_versions": [
+          35,
+          43,
+          38,
+          40,
+          39,
+          37,
+          34,
+          41,
+          36,
+          44,
+          42
+        ],
+        "immutable_sha256": "65988f67754939d31094d5cb8c33a2495fa5cc40847a8dbc78f931e93f890455",
+        "raw_sha256": "b496c993c68e3abfbfd93edbb2317fab52e4267f45ee85726dce00522dffeb74",
+        "canonical_sha256": "12360175ee6ce7f05d0d7dcfb02b2859b266e7d46a4ed03798673038de6575f4",
+        "compatibility_sha256": "111a0d6d33a7a137415ab8fa0f2173902f596cddacc1d8d008c4ce7711b80d86",
+        "producer_readback_verified": true,
+        "direct_seed_writes": 0
+      },
+      {
+        "run_id": "42894738-5b25-4d13-84c6-6e5ee8fb2fdf",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "persisted-checkpoint",
+        "recorded_at_host": "2026-09-09T08:13:28.973Z",
+        "checkpoint": "1030",
+        "correlation_id": "e7d2f526-9bf1-444a-b65e-a5c7c062dba7",
+        "verified_symbols": [
+          "2330",
+          "DXY",
+          "IXIC",
+          "NVDA",
+          "SOX",
+          "SPX",
+          "TAIEX",
+          "TSM",
+          "TXF",
+          "US10Y",
+          "VIX"
+        ],
+        "immutable_versions": [
+          46,
+          54,
+          49,
+          51,
+          50,
+          48,
+          45,
+          52,
+          47,
+          55,
+          53
+        ],
+        "immutable_sha256": "d34c0667924a8468f0ca587dce10df758eed9acc634460411d75920eb298f6bb",
+        "raw_sha256": "7454fbaf6c43bae15be91418d4e2fc2002f5f9e5ae1682023b8480274334a937",
+        "canonical_sha256": "315a0081fb303b84275a9fb82011c9a32cab8e35fc417d30bffc0ab2801435aa",
+        "compatibility_sha256": "d86d5ab829856f190870d1e68a3c3955f902dc51bc081b14b37827be9faa8854",
+        "producer_readback_verified": true,
+        "direct_seed_writes": 0
+      },
+      {
+        "run_id": "42894738-5b25-4d13-84c6-6e5ee8fb2fdf",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "persisted-checkpoint",
+        "recorded_at_host": "2026-09-09T08:13:48.974Z",
+        "checkpoint": "1300",
+        "correlation_id": "83473266-3a7e-430d-9da0-58d2925537f1",
+        "verified_symbols": [
+          "2330",
+          "DXY",
+          "IXIC",
+          "NVDA",
+          "SOX",
+          "SPX",
+          "TAIEX",
+          "TSM",
+          "TXF",
+          "US10Y",
+          "VIX"
+        ],
+        "immutable_versions": [
+          57,
+          65,
+          60,
+          62,
+          61,
+          59,
+          56,
+          63,
+          58,
+          66,
+          64
+        ],
+        "immutable_sha256": "48d6094bcf1de83ad2ecc6023d5a2326b5be7b3097ebaa59df9234bf56fb7347",
+        "raw_sha256": "315cedbc9d846a556b96bcf72f9fe550bb2ca2c6c10a962ccf39cb099bb5a9dd",
+        "canonical_sha256": "36d572d5de667d419d985e557ee0ec770003beab6e5300698b1fede04e616489",
+        "compatibility_sha256": "af23e1add154aa35b20b919099e37d74f09850b5ec14c66ba18ea1fff90e3183",
+        "producer_readback_verified": true,
+        "direct_seed_writes": 0
+      },
+      {
+        "run_id": "42894738-5b25-4d13-84c6-6e5ee8fb2fdf",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "persisted-checkpoint",
+        "recorded_at_host": "2026-09-09T08:14:04.315Z",
+        "checkpoint": "1410",
+        "correlation_id": "1e78eab0-358d-43ac-a3d8-8478c4e63d52",
+        "verified_symbols": [
+          "2330",
+          "IXIC",
+          "NVDA",
+          "SOX",
+          "SPX",
+          "TAIEX",
+          "TSM",
+          "TXF",
+          "VIX"
+        ],
+        "immutable_versions": [
+          68,
+          71,
+          73,
+          72,
+          70,
+          67,
+          74,
+          69,
+          75
+        ],
+        "immutable_sha256": "add40966d8064a449c6013bcfb4303e07212d2b9a7722eddf35e2a85557d503f",
+        "raw_sha256": "8c2390a1c84e8876d62667ff0bf232a12fcb3acb23bb828db25df5b36f9a4d79",
+        "canonical_sha256": "d558fe16696778f2dc544698e8741f91cff90348cbe336200e4e741fd2290e75",
+        "compatibility_sha256": "d24d19efa6388e5cf1ad429a6a10571520a09f8453b62f2bfdfe20128e09996b",
+        "producer_readback_verified": true,
+        "direct_seed_writes": 0
+      },
+      {
+        "run_id": "42894738-5b25-4d13-84c6-6e5ee8fb2fdf",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "persisted-checkpoint",
+        "recorded_at_host": "2026-09-09T08:14:16.263Z",
+        "checkpoint": "1430",
+        "correlation_id": "be1f748c-95d5-4b3b-b0d8-85af19b06694",
+        "verified_symbols": [
+          "2330",
+          "IXIC",
+          "NVDA",
+          "SOX",
+          "SPX",
+          "TAIEX",
+          "TSM",
+          "TXF",
+          "VIX"
+        ],
+        "immutable_versions": [
+          77,
+          80,
+          82,
+          81,
+          79,
+          76,
+          83,
+          78,
+          84
+        ],
+        "immutable_sha256": "0d629d73bb207abd9fbbd091ec2c33cf0887f92baa016fba8bc558573739be93",
+        "raw_sha256": "8c2390a1c84e8876d62667ff0bf232a12fcb3acb23bb828db25df5b36f9a4d79",
+        "canonical_sha256": "a85df441f2ec31e47562cc14f717982189f75401f4a5ee51e69ed48331ff8334",
+        "compatibility_sha256": "d806c2a89e04bd59da7a5d053676d2431304fdab21626df6335efbc9f262114f",
+        "producer_readback_verified": true,
+        "direct_seed_writes": 0
+      }
+    ],
+    "closing": {
+      "run_id": "42894738-5b25-4d13-84c6-6e5ee8fb2fdf",
+      "scope": "ma-consolidation-v1-20260909154500",
+      "stage": "durable-closing",
+      "recorded_at_host": "2026-09-09T08:14:22.643Z",
+      "schema_version": "CORE_CLOSING_V1",
+      "report_date": "2026-09-17",
+      "opening_publication_revision_id": "8503e615-40cf-4f30-abe2-848ac7018455",
+      "status": "COMPLETE",
+      "closing_snapshot_id": "b05714a1-1c37-4de3-ae52-e37dd11df1ed",
+      "evidence_fingerprint": "040cb412507c7166f57b1d7da84e2118f252c8597fdaac7a641b50ebcb3f36ef",
+      "evidence_ready": true,
+      "market_close": {
+        "phase": "close",
+        "value": 25250,
+        "source": "fugle",
+        "symbol": "TAIEX",
+        "captured_at": "2026-09-17T05:30:00+00:00",
+        "trading_date": "2026-09-17",
+        "change_percent": 1,
+        "table": "market_data_snapshots"
+      },
+      "market_evaluation": "COMPLETE",
+      "stock_evaluation": "NOT_APPLICABLE",
+      "verified_at": "2026-09-17T06:30:14.548Z",
+      "reason_codes": [],
+      "market_reason_codes": [],
+      "stock_reason_codes": []
+    },
+    "learning": {
+      "run_id": "6c28a97f-be7b-453a-89ac-18a19281ea22",
+      "scope": "ma-consolidation-v1-20260909154500",
+      "stage": "durable-learning",
+      "recorded_at_host": "2026-09-09T08:14:36.511Z",
+      "contract": {
+        "schema_version": "CORE_LEARNING_V1",
+        "report_date": "2026-09-17",
+        "opening_publication_revision_id": "8503e615-40cf-4f30-abe2-848ac7018455",
+        "status": "COMPLETE",
+        "market_prediction_count": 1,
+        "stock_prediction_count": 0,
+        "stock_evaluation": "NOT_APPLICABLE",
+        "reason_codes": [],
+        "market_reason_codes": [],
+        "stock_reason_codes": []
+      },
+      "prediction_ids": [
+        "6c89975e-0a29-47ad-a2ed-a1749560dea7"
+      ],
+      "outcome_ids": [
+        "0692e514-3f41-42e6-abea-d470dd0ea839",
+        "25cb5003-9332-44a4-93c2-5b0202cc58a6",
+        "2f0b937b-17eb-473e-86ee-e60720a4a8a3",
+        "61f2e26d-a202-4080-9912-d356aabd5925",
+        "c94d0dc3-cac2-4171-895f-73be923da41c"
+      ],
+      "all_prediction_rows_sha256": "0a607c53c6b5a0cd172de9e2575d5a242c06dc7d0da1678be41ee01ee0c3afe2",
+      "all_outcome_rows_sha256": "e01841125f9643348f8d9aa9f51e15c55eda470f312bf426e010ef1676e616b4",
+      "raw_whole_set_retry_verified": true,
+      "historical_120_day_lane": "NOT_DEMONSTRATED_BY_SINGLE_DAY_REPLAY"
+    },
+    "handler_receipts": [
+      {
+        "stage": "handler:fetch-global-market-news",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "a9c68c9f1d5ee9e5e4337a45b7586f0ced746ac06a885595524998675233a448",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:generate-sector-rotation",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "b73ee60c8ca29d61cc6cb78ea291b2532c7d97e36dc2408e8327363ded9979a1",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:fetch-market-data-v10",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "038ce6739b072793cf9082ac0e595d9a9341df544626f26682965fa4ce3df015",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:fetch-global-market-news",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "4da248faa680ddf6aca9614e0537ec67b980640c6872d1444b0160e56b0473a2",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:generate-daily-report-v7",
+        "http": 401,
+        "business_success": false,
+        "response_sha256": "c4cbe6e83d0eabcaced71eac7ab23eca7292579ce4d5d8faf59f9d27cd0cca9d",
+        "expected_unauthorized_negative": true
+      },
+      {
+        "stage": "handler:generate-daily-report-v7",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "c7086bc7b357423526f25157a98dfb5bef7050b56fee094e6d1463af48acd25d",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:ma-ops-health-check",
+        "http": 200,
+        "response_sha256": "0009b9f86d9993a1a1d0fa302d6f74326d950727cad90e82a787060e81bc3e94",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:get-report-payload",
+        "http": 200,
+        "response_sha256": "d95da22323b9f8d5f5baded9098da63a3365efc4ddc4216bc6879b3e9ba0e79b",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:get-report-payload",
+        "http": 200,
+        "response_sha256": "19b0f239dcef76738cb0e8f9b755c10b36b35ef3825508326ee73f7c8caeaaa2",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:line-daily-push",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "83446ab533852adb5ae835f78b05c5a5ceb6fc4c6abaff4036ab96a2c168e858",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:line-daily-push",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "977455466d2b1a347fe72ff0f9e3d6d87c6ffa359ede4f11d0243f1e91cd138a",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:fetch-market-data-v10",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "94f50377fe04b9db18100e918c30fe66c9652f133efe8ff0f02b85b52a4e8a85",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:fetch-market-data-v10",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "ba6335b6115f41f931fa0dc5af4c008d7bca332f3060234045e174ff40378afa",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:opening-market-radar",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "fd7b4f1bfc07aa9819e016aec347a9752c6e5673ec2d6e4c202eb29bdc0558ae",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:fetch-market-data-v10",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "f83feeb4b3a154b68c52bb722ba816a7cbeee13fc55fefaf2a8c7174c98652c6",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:opening-market-radar",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "15f60fae920ba47ea211a47ea121e19a9ea96ad78930e2a5ae2a275e99aa6c81",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:fetch-market-data-v10",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "ba54e3c57831e1871d376941cf738bc15ba97676a9df79fd8f43152ce0af3892",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:opening-market-radar",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "13a1370e5a905de9cc5bc21d8fa5e053eb0ea3a4864698531c3af0da34b88b8d",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:fetch-market-data-v10",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "8d24288cae6601ca6f014aee64eea5242919251b8b11419aa257e748c3ec125d",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:fetch-market-data-v10",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "4762f2c415f55c760ad0e8c30d54d53642ad6ccea22c249744a4925a54e63850",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:generate-sector-rotation",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "06c1e21565402271b23fd7cc7275d1cbe4a8e39fa7e8ab086546263e42aa5644",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:close-market-review",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "67828f48dcfaabb0d745f2f6f8032e8f62202067f7ab1e4a73373d9e7944de5e",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:closing-verification-engine",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "186b236bf1c1bd6ba925cc0567f615d1227953dbfd18eb5b8bb4f5a094e669a1",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:closing-verification-engine",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "53d00585c5683db64f678bc3bfb5ed181ab91a908cf0a2ea7f6a005223b9fc3c",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:get-report-payload",
+        "http": 200,
+        "response_sha256": "d008b83f507edbc7a75754517b23a7e23b743664b3ef32909baf6b7a3a6ba4b0",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:get-report-payload",
+        "http": 200,
+        "response_sha256": "9df1a0ca25caf0c93607f98b334b7a444f274e1c89ba6bea4328621ea4b64a87",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:get-report-payload",
+        "http": 200,
+        "response_sha256": "3e08f02e635f51c5b837cb819a0c28356c910bdca76979fdd2cd2367154c2835",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:get-report-payload",
+        "http": 200,
+        "response_sha256": "0c9377cc9d50564c9b394c90e72cf53a6092a0b3cb8fca3ec1186d3a7e2beefe",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:continuous-learning-engine",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "eb92cb04039f64fba25da5c92b3c38b2e567f7d110b80ee0274311d3fb548863",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:continuous-learning-engine",
+        "http": 200,
+        "business_success": true,
+        "response_sha256": "76ab543ec0a75f60541137785f039b613aab83141ffab7d77fe29ba5b213dc2b",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:ma-ops-health-check",
+        "http": 200,
+        "response_sha256": "5b7c9ffe314dacce37f4da97c4ad9f6365c0816f6c1c3e3182dc6ef8c0c3f9eb",
+        "expected_unauthorized_negative": false
+      },
+      {
+        "stage": "handler:daily-delivery-orchestrator",
+        "http": 409,
+        "business_success": false,
+        "response_sha256": "57fc99861a9b2fba9bc8ff83d9d97f6be0ee46698863de1f5b62992b1079a770",
+        "expected_unauthorized_negative": false
+      }
+    ],
+    "provider_receipt_count": 92,
+    "local_line_delivery_count": 1,
+    "production_requests": 0,
+    "browser_executed": false,
+    "historical_120_day_effects_verified": false
+  },
+  "existing_function": {
+    "signature": "reconcile_runtime_terminal_failures_v1(date,uuid)",
+    "owner": "postgres",
+    "security_definer": true,
+    "config": [
+      "search_path=\"\""
+    ],
+    "acl": [
+      "postgres=X/postgres",
+      "service_role=X/postgres"
+    ],
+    "definition_md5": "a2b2b1a36d1d3b06ec29ae513cab0ee1",
+    "definition_sha256": "56c218ab3052929ea74f3de9326112d423cc56f6a90e0c9504a1bca40567a2c7"
+  },
+  "authoring_boundary": {
+    "currently_named_existing_functions": 5,
+    "private_validator": 1,
+    "additional_existing_rpc": "public.reconcile_runtime_terminal_failures_v1(date,uuid)",
+    "additional_local_sql_authoring_authorized": false,
+    "no_existing_function_or_row_modified_for_bypass": true
+  },
+  "redaction": {
+    "credentials_included": false,
+    "auth_users_included": false,
+    "subscriber_identifiers_included": false,
+    "provider_request_headers_included": false,
+    "local_business_receipt_ids_retained": true
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "schema_version": "CORE_CONTENT_OS_FRESH13_EVIDENCE_V1",
+  "scope": "ma-consolidation-v1-20260909183000",
+  "scenario_kind": "SYNTHETIC_PROVIDER_CONTROL",
+  "historical_capture": false,
+  "historical_success_claim": false,
+  "business_date": "2026-09-23",
+  "warmup_date": "2026-09-22",
+  "status": "FAIL",
+  "full_chain_positive": "NOT_DEMONSTRATED",
+  "production_requests": 0,
+  "automatic_stable_day": false,
+  "original_96_run_reused": false,
+  "original_attempt": {
+    "run_id": "d68dfa68-701a-4bdd-92ab-8f01a48460c0",
+    "path": "/private/tmp/ma-consolidation-v1-20260909183000-evidence/result.json",
+    "sha256": "80b61c535cb1a293c810c386b75af60c71faecebee2a2794fadb0aedb554635a",
+    "records": 24,
+    "status": "FAIL",
+    "failure": "ContentOS worker BOOT_ERROR HTTP503: npm Node type dependency could not load under runtime default-deny",
+    "completed_actual_prefix": ["manual warmup Fetch", "warmup news", "warmup sector rotation", "main PREMARKET Fetch", "main news", "Generator", "atomic publication and central persisted proof validation"]
+  },
+  "continuation": {
+    "path": "/private/tmp/ma-consolidation-v1-20260909183000-evidence-continuation-001/result.json",
+    "sha256": "ed3f57d6b4929d2a30cac6380e4bed77d0fc81b639c056450d8664de2e356565",
+    "records": 6,
+    "status": "FAIL",
+    "original_failure_rewritten": false,
+    "producer_requests_resent": false,
+    "actual_export_http": 409,
+    "reason_code": "PUBLIC_MARKET_EVIDENCE_INCOMPLETE",
+    "incident_id": "49ce850c-b5b9-495d-af9e-c5c1bf7bab79",
+    "incident_status": "OPEN",
+    "packaging_transform": "npm:@supabase/supabase-js@2.57.4 to exact same-version https://esm.sh/@supabase/supabase-js@2.57.4?target=es2022",
+    "production_runtime_packaging_parity_claim": false,
+    "original_bundle_sha256": "e9fb2e9705bda7321759716a65813b0c59e766b21d8e79dc9f3bbe04d3465a32",
+    "new_bundle_sha256": "20c4a8dcad1cec6193c2cc95ef212566e876cd66069d9ebd4203dc8dbbec0f0e",
+    "transform_path": "/private/tmp/ma-consolidation-v1-20260909183000/bundle-successor-001/transform.json",
+    "transform_sha256": "97283ef125f73d7ab1cb4778e4b9049bfd1739048848a0985cfa2f6855b8d024"
+  },
+  "actual_publication_identity": {
+    "report_id": "9db468b4-4400-4752-a588-f1d5ab785187",
+    "decision_snapshot_id": "fec4aed8-a421-4cbb-9d34-b5b7a5bf9221",
+    "member_content_revision_id": "7309cf47-84e1-4f8a-834d-56d07b9ed3af",
+    "publication_run_id": "4181aca5-2c3a-42a5-827f-b91f8682a9ec",
+    "decision_mode": "market_only",
+    "recommendation_available": false,
+    "frozen_audited_claim_count": 6,
+    "frozen_evidence_ids": ["MD003", "MD004", "MD005", "MD001", "MD002"],
+    "frozen_public_https_reference_count": 0,
+    "raw_news_rows_with_synthetic_https_urls": 12,
+    "news_reference_disposition": "NEWS001/NEWS002/NEWS003 appear only in conditional validation nodes excluded from the factual claim ledger. They must not be promoted into frozen publication citations or joined from mutable news."
+  },
+  "readbacks": {
+    "before_export": {
+      "path": "/private/tmp/ma-consolidation-v1-20260909183000/post-publication-failure-readback.json",
+      "sha256": "bf0dc4a13973abcb207c205bf52e6fdfb761b8261283e62af854808cae7c193b"
+    },
+    "after_export409": {
+      "path": "/private/tmp/ma-consolidation-v1-20260909183000/post-publication-export409-readback.json",
+      "sha256": "d92179edda5db4eff11aa6a5c4d74f2279763334e6172c2d285067b3f6840077"
+    },
+    "tables_compared": 27,
+    "unchanged_tables_after_export": 26,
+    "only_new_business_evidence": "One actual OPEN content_os_sync_incidents row",
+    "provider_receipts_unchanged": 29,
+    "line_subscribers": 0,
+    "line_outbox": 0,
+    "closing_snapshots": 0,
+    "learning_runs": 0,
+    "predictions": 0,
+    "outcomes": 0,
+    "acceptance_results": 0
+  },
+  "source_provenance": {
+    "original_runtime_sources": 54,
+    "original_total_source_paths": 65,
+    "original_manifest_path": "/private/tmp/ma-consolidation-v1-20260909183000/executed-source-manifest.json",
+    "original_manifest_sha256": "2c833f47795bac0eb8b777fb7fcd8d08a5caab1759ceaa53428141a7e29cb389",
+    "original_preimages_sha256": "94e39c4ae77a68499e1b4e240a82796094d8fd6c8a9de6a8f6d120a622de383d",
+    "continuation_manifest_path": "/private/tmp/ma-consolidation-v1-20260909183000/continuation-source-manifest.json",
+    "continuation_manifest_sha256": "94ae10f09926deb3fd5bd1933d3f37198eed2608d945153e5f11bdd6d6e6b6c8",
+    "continuation_preimages_sha256": "b616e4cf7a120ac7e3fd7a9ff95d7e94859b09f05b741e13c510ed5f416ad0e3"
+  },
+  "runtime_safety": {
+    "dedicated_vm_boot_id": "d9f73673-b3e3-4daf-8080-13d8dde5b2c0",
+    "old_shared_vm_clock_changed": false,
+    "host_clock_changed": false,
+    "internal_network": "ma-consolidation-v1-20260909183000-isolated",
+    "runtime_external_egress": false,
+    "all_14_jwt_verification_flags": true,
+    "new_ordinary_synthetic_auth_users": 1,
+    "admin_or_entitlement_fixtures_created": false,
+    "realtime_added": false,
+    "local_test_key_logging_incident_contained": true,
+    "retired_key_http": 403,
+    "replacement_key_http": 200,
+    "containment_receipt_sha256": "f38be887d412e507b0077a546d277331c7f2e36f1e666d9a37c3d18401918cd7",
+    "old_key_values_in_this_artifact": false
+  },
+  "validation_scope": {
+    "new_continuation_guard_tests": "61/61 PASS; pure guard tests, not E2E",
+    "tail_preservation": "Actual export-through-Acceptance tail remains byte-identical to the reviewed 13-handler driver",
+    "downstream_line_checkpoints_closing_learning_terminal_acceptance": "NOT_RUN after actual export409; no incident bypass",
+    "browser": "NOT_RUN",
+    "external_content_os_delivery": "NOT_RUN",
+    "release_readiness": "NOT_READY"
+  }
+}

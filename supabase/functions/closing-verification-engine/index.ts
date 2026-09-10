@@ -7,10 +7,17 @@ import {
   evaluateIntradayCheckpointRows,
   type IntradayCheckpoint,
   isSnapshotInCheckpointWindow,
-  isSnapshotInCloseWindow,
   type RuntimeSnapshotRow,
   shouldInsertAccuracyLog,
 } from "../_shared/intraday-runtime-contract.ts";
+import {
+  evaluateClosingContract,
+  isTrustedCloseSnapshot,
+  resolveOpeningPublicationIdentity,
+  resolveClosingReceiptPointer,
+  validateOpeningPublication,
+  type OpeningPublication,
+} from "../_shared/closing-learning-contract.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -313,7 +320,7 @@ function readNameFromStock(row: unknown): string {
   return String(obj.name || obj.stock_name || obj.company_name || "").trim();
 }
 
-type BeneficiaryDecisionMode = "recommendations" | "no_trade" | "blocked";
+type BeneficiaryDecisionMode = "recommendations" | "no_trade" | "market_only" | "blocked";
 
 function isV10BeneficiaryEnabled(ai: Record<string, unknown>): boolean {
   return ai.v10_beneficiary_enabled === true || String(ai.v10_beneficiary_enabled || "").toLowerCase() === "true";
@@ -366,7 +373,7 @@ function closeRowFromSnapshot(
     change,
     capturedAt: row.captured_at ? String(row.captured_at) : null,
     updatedAt: null,
-    source: row.source ? String(row.source) : "market_data_snapshots",
+    source: row.source ? String(row.source) : null,
     table: "market_data_snapshots",
     tradingDate: row.trading_date ? String(row.trading_date) : null,
     phase: row.phase ? String(row.phase) : null,
@@ -410,10 +417,7 @@ async function fetchCloseRowsForDate(
   ) {
     const rows = (snapshotResult.data as unknown as Record<string, unknown>[])
       .filter((row) =>
-        isSnapshotInCloseWindow(
-          row as unknown as RuntimeSnapshotRow,
-          targetDate,
-        )
+        isTrustedCloseSnapshot(row, targetDate)
       )
       .map(closeRowFromSnapshot)
       .filter((row): row is CloseMarketRow => row !== null);
@@ -510,7 +514,8 @@ function compareBeneficiaryStocks(
     outperformed_taiex_count: withData.filter((item) => item.outperformed_taiex === true).length,
     underperformed_taiex_count: withData.filter((item) => item.outperformed_taiex === false).length,
     decision_mode: decisionMode,
-    data_status: decisionMode === "no_trade"
+    evaluation_status: decisionMode === "market_only" || decisionMode === "no_trade" ? "NOT_APPLICABLE" : "APPLICABLE",
+    data_status: decisionMode === "no_trade" || decisionMode === "market_only"
       ? "not_applicable_no_recommendations"
       : predictedStocks.length === 0 || withData.length < Math.max(1, Math.ceil(predictedStocks.length * 0.5))
         ? "degraded"
@@ -730,9 +735,9 @@ function buildClosingVerificationV2(params: {
   const allItems = Array.isArray(params.beneficiaryValidation.items) ? params.beneficiaryValidation.items as Record<string, unknown>[] : [];
   const firstItem = allItems.find((item) => normalizeSymbol(item.symbol) === normalizeSymbol(firstSymbol));
   const firstOutperformed = typeof firstItem?.taiex_relative_percent === "number" ? Number(firstItem.taiex_relative_percent) >= 0 : null;
-  const beneficiaryValidationComplete = params.beneficiaryValidation.data_status === "complete"
-    || params.beneficiaryValidation.data_status === "not_applicable_no_recommendations";
-  const dataStatus = params.taiexClose && params.tsmcClose && params.txfClose && beneficiaryValidationComplete ? "complete" : "degraded";
+  // Stock verification is a separate outcome scope. Missing stock close quotes
+  // must remain visible there without invalidating real core-market evidence.
+  const dataStatus = params.taiexClose && params.tsmcClose && params.txfClose ? "complete" : "degraded";
   const verificationStatus = params.taiexClose
     ? dataStatus === "complete"
       ? "completed"
@@ -764,6 +769,8 @@ function buildClosingVerificationV2(params: {
       change_percent: params.taiexClose.change,
       captured_at: params.taiexClose.capturedAt,
       source: params.taiexClose.source,
+      phase: params.taiexClose.phase,
+      trading_date: params.taiexClose.tradingDate,
     } : null,
     actual_taiex_change: params.taiexClose?.change ?? null,
     actual_direction: params.taiexClose
@@ -779,6 +786,8 @@ function buildClosingVerificationV2(params: {
       change_percent: params.tsmcClose.change,
       captured_at: params.tsmcClose.capturedAt,
       source: params.tsmcClose.source,
+      phase: params.tsmcClose.phase,
+      trading_date: params.tsmcClose.tradingDate,
     } : null,
     actual_txf_close: params.txfClose ? {
       symbol: params.txfClose.symbol,
@@ -786,6 +795,8 @@ function buildClosingVerificationV2(params: {
       change_percent: params.txfClose.change,
       captured_at: params.txfClose.capturedAt,
       source: params.txfClose.source,
+      phase: params.txfClose.phase,
+      trading_date: params.txfClose.tradingDate,
     } : null,
     actual_sector_performance: params.sectorPerformance,
     hit_or_miss: params.result,
@@ -812,7 +823,7 @@ function buildClosingVerificationV2(params: {
           : firstOutperformed
             ? "第一受惠股收盤表現跑贏或不弱於 TAIEX，受惠邏輯獲得相對確認。"
             : "第一受惠股未跑贏 TAIEX，代表盤前傳導鏈需要降權。"
-        : params.beneficiaryDecisionMode === "no_trade"
+        : params.beneficiaryDecisionMode === "no_trade" || params.beneficiaryDecisionMode === "market_only"
           ? "盤前結論為沒有足夠正向證據，不勉強推薦個股；個股命中驗證不適用。"
           : "盤前未產生第一受惠股，無法驗證。",
     },
@@ -829,6 +840,61 @@ function buildClosingVerificationV2(params: {
       no_fake_data: true,
     },
   };
+}
+
+/** Publish the read-side completion only after validating the durable receipt.
+ * The same finalizer is used for new and reused snapshots, so an interrupted
+ * report projection or lifecycle advance is retried rather than skipped. */
+async function finalizeClosingReceipt(
+  supabase: RuntimeClient,
+  report: Record<string, unknown>,
+  opening: OpeningPublication,
+  snapshot: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const contract = evaluateClosingContract({ opening, closingSnapshot: snapshot, expectedSnapshotId: String(snapshot.id || "") });
+  const base = { verification_date: opening.report_date, opening_decision_snapshot_id: opening.opening_publication_revision_id,
+    closing_decision_snapshot_id: snapshot.id || null, closing_contract: contract, no_fake_data: true };
+  if (contract.status !== "COMPLETE") return { ...base, success: false, error: "DURABLE_CLOSING_RECEIPT_UNVERIFIED", report_updated: false };
+  const currentResult = await supabase.from("reports").select("id,report_date,ai_strategy_json,updated_at")
+    .eq("id", opening.report_id).eq("report_date", opening.report_date).maybeSingle();
+  if (currentResult.error || !currentResult.data) return { ...base, success: false, error: "CLOSING_REPORT_READ_FAILED", report_updated: false };
+  const current = currentResult.data as Record<string, unknown>;
+  const currentIdentity = resolveOpeningPublicationIdentity(current);
+  if (currentIdentity.reason_codes.length || currentIdentity.opening_publication_revision_id !== opening.opening_publication_revision_id) {
+    return { ...base, success: false, error: "CLOSING_PUBLICATION_CHANGED", report_updated: false };
+  }
+  const currentAi = parseJsonObject(current.ai_strategy_json), generated = parseJsonObject(snapshot.generated_text);
+  const updatedAi = { ...currentAi, closing_verification: generated.closing_verification,
+    closing_verification_v2: generated.closing_verification_v2, closing_contract: contract };
+  // Avoid replacing a concurrent publication or other producer's JSON update.
+  let update = supabase.from("reports").update({ ai_strategy_json: updatedAi }).eq("id", report.id);
+  update = current.updated_at ? update.eq("updated_at", current.updated_at) : update.is("updated_at", null);
+  const saved = await update.select("id").maybeSingle();
+  if (saved.error || !saved.data) return { ...base, success: false, error: "CLOSING_REPORT_PROJECTION_RETRY_REQUIRED", report_updated: false };
+  const stateResult = await supabase.from("trading_day_state").select("checkpoint_status")
+    .eq("trading_date", opening.report_date).maybeSingle();
+  if (stateResult.error) return { ...base, success: false, error: "CLOSING_LIFECYCLE_READ_FAILED", report_updated: true };
+  const checkpoint = asObject(asObject(asObject(stateResult.data).checkpoint_status).closing_verification);
+  const metadata = asObject(checkpoint.metadata);
+  if (checkpoint.status === "SUCCEEDED" && metadata.closing_decision_snapshot_id === snapshot.id
+    && metadata.opening_publication_revision_id === opening.opening_publication_revision_id) {
+    return { ...base, success: true, report_updated: true, closing_verification_status: "completed", lifecycle_reused: true };
+  }
+  const advanced = await supabase.rpc("advance_trading_day_state_v1", {
+    p_trading_date: opening.report_date, p_state: "CLOSING_VERIFIED", p_checkpoint: "closing_verification", p_status: "SUCCEEDED",
+    p_correlation_id: crypto.randomUUID(), p_metadata: { closing_verification_status: "completed",
+      closing_decision_snapshot_id: snapshot.id, report_id: opening.report_id,
+      opening_publication_revision_id: opening.opening_publication_revision_id, closing_contract: contract },
+  });
+  const advancedCheckpoint = asObject(asObject(asObject(advanced.data).checkpoint_status).closing_verification);
+  const advancedMetadata = asObject(advancedCheckpoint.metadata);
+  const lifecycleComplete = !advanced.error && advancedCheckpoint.status === "SUCCEEDED"
+    && advancedMetadata.closing_decision_snapshot_id === snapshot.id
+    && advancedMetadata.opening_publication_revision_id === opening.opening_publication_revision_id;
+  return { ...base, success: lifecycleComplete, report_updated: true,
+    closing_verification_status: lifecycleComplete ? "completed" : "pending_lifecycle",
+    error: lifecycleComplete ? null : "CLOSING_LIFECYCLE_RETRY_REQUIRED",
+    trading_day_state_error: advanced.error?.message || null };
 }
 
 Deno.serve(async (req: Request) => {
@@ -921,14 +987,17 @@ Deno.serve(async (req: Request) => {
 
   const reportRow = report as Record<string, unknown>;
   const ai = parseJsonObject(reportRow.ai_strategy_json);
+  const openingIdentity = resolveOpeningPublicationIdentity(reportRow);
+  if (openingIdentity.reason_codes.length > 0) {
+    return jsonResponse({ success: false, error: "OPENING_PUBLICATION_UNVERIFIED", verification_date: verificationDate,
+      reason_codes: openingIdentity.reason_codes, report_updated: false, no_fake_data: true }, 409);
+  }
   const { data: morningDecision, error: morningDecisionError } = await supabase
     .from("decision_snapshots")
     .select("*")
     .eq("report_date", verificationDate)
-    .eq("session_type", "PREMARKET")
-    .eq("is_current", true)
-    .order("version", { ascending: false })
-    .limit(1)
+    .eq("report_id", reportRow.id)
+    .eq("id", openingIdentity.opening_publication_revision_id)
     .maybeSingle();
   if (morningDecisionError) {
     console.warn("CLOSING_VERIFICATION_MORNING_DECISION_QUERY_FAILED", morningDecisionError.message);
@@ -936,11 +1005,28 @@ Deno.serve(async (req: Request) => {
   const morningDecisionRow = morningDecision && typeof morningDecision === "object"
     ? morningDecision as Record<string, unknown>
     : null;
+  const publicationReceipt = await supabase.from("pipeline_runs").select("*")
+    .eq("trading_date", verificationDate).eq("status", "SUCCEEDED").like("idempotency_key", "research-input:%")
+    .eq("provider_status->result->>decision_snapshot_id", openingIdentity.opening_publication_revision_id)
+    .order("completed_at", { ascending: true }).limit(1).maybeSingle();
+  const openingPublication = validateOpeningPublication({ report: reportRow, snapshot: morningDecisionRow, publicationRun: publicationReceipt.data });
+  if (morningDecisionError || publicationReceipt.error || openingPublication.status !== "PUBLISHED") {
+    return jsonResponse({ success: false, error: "OPENING_PUBLICATION_UNVERIFIED", verification_date: verificationDate,
+      reason_codes: openingPublication.reason_codes, report_updated: false, no_fake_data: true }, 409);
+  }
+  const durablePointer = resolveClosingReceiptPointer(reportRow, openingPublication);
+  if (durablePointer) {
+    const durable = await supabase.from("decision_snapshots").select("*").eq("id", durablePointer)
+      .eq("report_id", openingPublication.report_id).eq("report_date", verificationDate).maybeSingle();
+    if (durable.error || !durable.data) return jsonResponse({ success: false, error: "DURABLE_CLOSING_RECEIPT_MISSING", verification_date: verificationDate, report_updated: false }, 409);
+    const finalized = await finalizeClosingReceipt(supabase, reportRow, openingPublication, durable.data as Record<string, unknown>);
+    return jsonResponse({ ...finalized, receipt_reused: true, log_inserted: false, log_reused: true }, finalized.success ? 200 : 409);
+  }
   const morningGeneratedText = parseJsonObject(morningDecisionRow?.generated_text);
   const predictedBias = String(
-    morningGeneratedText.market_bias || morningDecisionRow?.market_regime || reportRow.market_bias || ai.market_bias || "",
+    morningGeneratedText.market_bias || morningDecisionRow?.market_regime || "",
   );
-  const confidenceRaw = morningGeneratedText.confidence_score ?? morningDecisionRow?.confidence_score ?? reportRow.confidence_score ?? ai.confidence_score;
+  const confidenceRaw = morningGeneratedText.confidence_score ?? morningDecisionRow?.confidence_score;
   const confidence = confidenceRaw === null || confidenceRaw === undefined ||
       Number.isNaN(Number(confidenceRaw))
     ? null
@@ -953,7 +1039,7 @@ Deno.serve(async (req: Request) => {
   const predictedBeneficiaryStocks = morningDecisionRow
     ? snapshotDecisionMode === "recommendations" ? snapshotRecommendations : []
     : extractPredictedBeneficiaryStocks(ai);
-  const beneficiaryDecisionMode = snapshotDecisionMode === "recommendations" || snapshotDecisionMode === "no_trade" || snapshotDecisionMode === "blocked"
+  const beneficiaryDecisionMode = snapshotDecisionMode === "recommendations" || snapshotDecisionMode === "no_trade" || snapshotDecisionMode === "market_only" || snapshotDecisionMode === "blocked"
     ? snapshotDecisionMode as BeneficiaryDecisionMode
     : resolveBeneficiaryDecisionMode(ai, predictedBeneficiaryStocks);
   const beneficiarySymbols = predictedBeneficiaryStocks.map(readSymbolFromStock)
@@ -976,11 +1062,16 @@ Deno.serve(async (req: Request) => {
     close_rows: closeMarket.rows.map((row) => ({ symbol: normalizeSymbol(row.symbol), value: row.value, change: row.change, captured_at: row.capturedAt, source: row.source })).sort((left, right) => left.symbol.localeCompare(right.symbol)),
   });
   const existingClosing = await supabase.from("decision_snapshots")
-    .select("id,generated_text").eq("report_date", verificationDate).eq("session_type", "CLOSING").eq("is_current", true).maybeSingle();
+    .select("*").eq("report_date", verificationDate).eq("report_id", openingPublication.report_id).eq("session_type", "CLOSING")
+    .eq("generated_text->>opening_decision_snapshot_id", openingPublication.opening_publication_revision_id)
+    .eq("generated_text->>evidence_fingerprint", evidenceFingerprint).order("version", { ascending: false }).limit(1).maybeSingle();
   if (!existingClosing.error && existingClosing.data) {
     const generated = parseJsonObject(existingClosing.data.generated_text);
-    if (generated.evidence_fingerprint === evidenceFingerprint) {
-      return jsonResponse({ success: true, verification_date: verificationDate, closing_verification_status: "completed", closing_decision_snapshot_id: existingClosing.data.id, status: "SKIPPED_ALREADY_SUCCEEDED", log_inserted: false, log_reused: true, no_fake_data: true });
+    const existingContract = evaluateClosingContract({ opening: openingPublication, closingSnapshot: existingClosing.data });
+    if (generated.evidence_fingerprint === evidenceFingerprint && existingContract.status === "COMPLETE"
+      && generated.opening_decision_snapshot_id === openingPublication.opening_publication_revision_id) {
+      const finalized = await finalizeClosingReceipt(supabase, reportRow, openingPublication, existingClosing.data as Record<string, unknown>);
+      return jsonResponse({ ...finalized, receipt_reused: true, log_inserted: false, log_reused: true }, finalized.success ? 200 : 409);
     }
   }
   const taiexCloseRow = rowBySymbol(closeMarket.rows, [
@@ -992,10 +1083,10 @@ Deno.serve(async (req: Request) => {
   const txfCloseRow = rowBySymbol(closeMarket.rows, [
     ...CORE_SYMBOL_ALIASES.TXF,
   ]);
-  const taiexCloseData: TaiexCloseData | null = taiexCloseRow
+  const taiexCloseData: TaiexCloseData | null = taiexCloseRow && taiexCloseRow.change !== null
     ? {
       symbol: taiexCloseRow.symbol,
-      change: taiexCloseRow.change ?? 0,
+      change: taiexCloseRow.change,
       value: taiexCloseRow.value,
       capturedAt: taiexCloseRow.capturedAt,
       updatedAt: taiexCloseRow.updatedAt,
@@ -1045,6 +1136,7 @@ Deno.serve(async (req: Request) => {
       closeWindow,
       source: closeMarket.source,
     });
+    const pendingClosingContract = evaluateClosingContract({ opening: openingPublication, closing: pendingClosingVerificationV2 });
 
     const pendingClosingVerification: Record<string, unknown> = {
       version: "P20_CLOSE_WINDOW_VERIFICATION",
@@ -1086,34 +1178,8 @@ Deno.serve(async (req: Request) => {
       no_fake_data: true,
     };
 
-    const { error: updatePendingError } = await supabase
-      .from("reports")
-      .update({
-        ai_strategy_json: {
-          ...ai,
-          closing_verification: pendingClosingVerification,
-          closing_verification_v2: pendingClosingVerificationV2,
-        },
-      })
-      .eq("id", reportRow.id);
-
-    if (updatePendingError) {
-      return jsonResponse({
-        success: false,
-        error: updatePendingError.message,
-        code: "NO_CLOSE_DATA",
-        verification_date: verificationDate,
-        today_date: today,
-        backfill_mode: backfillMode,
-        close_window_start: closeWindow.start,
-        close_window_end: closeWindow.end,
-        status: "pending_real_market_data",
-        report_updated: false,
-        log_inserted: false,
-        no_fake_data: true,
-      }, 500);
-    }
-
+    // Missing evidence is response-only. A delayed retry must never erase a
+    // concurrently persisted complete receipt with an earlier pending read.
     return jsonResponse({
       success: false,
       code: "NO_CLOSE_DATA",
@@ -1123,10 +1189,13 @@ Deno.serve(async (req: Request) => {
       close_window_start: closeWindow.start,
       close_window_end: closeWindow.end,
       status: "pending_real_market_data",
-      report_updated: true,
+      closing_contract: pendingClosingContract,
+      closing_verification: pendingClosingVerification,
+      closing_verification_v2: pendingClosingVerificationV2,
+      report_updated: false,
       log_inserted: false,
       no_fake_data: true,
-    });
+    }, 409);
   }
 
   const scored = scorePrediction(predictedBias, taiexChange);
@@ -1231,6 +1300,7 @@ Deno.serve(async (req: Request) => {
     closeWindow,
     source: closeMarket.source,
   });
+  closingVerificationV2.evidence_fingerprint = evidenceFingerprint;
   const closingVerification = {
     version: "P20_CLOSE_WINDOW_VERIFICATION",
     status: closingVerificationV2.status === "direction_completed_data_degraded"
@@ -1245,9 +1315,7 @@ Deno.serve(async (req: Request) => {
     predicted_confidence: confidence,
     confidence_score: confidence,
     actual_taiex_change: taiexChange,
-    actual_direction: structuredActualDirection === "unknown"
-      ? "flat"
-      : structuredActualDirection,
+    actual_direction: structuredActualDirection,
     prediction_result: structuredPredictionResult,
     accuracy_score: structuredAccuracyScore,
     verdict_label: verdictLabel(structuredPredictionResult),
@@ -1283,33 +1351,11 @@ Deno.serve(async (req: Request) => {
     no_fake_data: true,
   };
 
-  const updatedAiStrategyJson = {
-    ...ai,
-    closing_verification: closingVerification,
-    closing_verification_v2: closingVerificationV2,
-  };
+  const closingContract = evaluateClosingContract({ opening: openingPublication, closing: closingVerificationV2 });
 
-  const { error: updateReportError } = await supabase
-    .from("reports")
-    .update({ ai_strategy_json: updatedAiStrategyJson })
-    .eq("id", reportRow.id);
-
-  if (updateReportError) {
-    return jsonResponse({
-      success: false,
-      error: updateReportError.message,
-      verification_date: verificationDate,
-      today_date: today,
-      backfill_mode: backfillMode,
-      prediction_log_inserted: logInserted,
-      prediction_log_reused: !logInserted,
-      report_updated: false,
-      closing_verification_status:
-        closingVerificationV2.status === "direction_completed_data_degraded"
-          ? "direction_completed_data_degraded"
-          : "completed",
-      no_fake_data: true,
-    }, 500);
+  if (!closingContract.evidence_ready) {
+    return jsonResponse({ success: false, error: "CLOSING_EVIDENCE_INCOMPLETE", verification_date: verificationDate,
+      report_updated: false, closing_verification_status: "pending_real_market_data", closing_contract: closingContract, no_fake_data: true }, 409);
   }
 
   let closingDecisionSnapshotId: string | null = null;
@@ -1359,6 +1405,9 @@ Deno.serve(async (req: Request) => {
       verification_note: closingVerification.verification_note,
       lessons_learned: lessonsLearned,
       evidence_fingerprint: evidenceFingerprint,
+      closing_contract: closingContract,
+      closing_verification: closingVerification,
+      closing_verification_v2: closingVerificationV2,
     },
     input_coverage: {
       taiex_close: Boolean(taiexCloseRow),
@@ -1395,26 +1444,21 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const { error: tradingDayStateError } = await supabase.rpc(
-    "advance_trading_day_state_v1",
-    {
-      p_trading_date: verificationDate,
-      p_state: "CLOSING_VERIFIED",
-      p_checkpoint: "closing_verification",
-      p_status: closingVerificationV2.status === "direction_completed_data_degraded"
-        ? "DEGRADED"
-        : "SUCCEEDED",
-      p_correlation_id: crypto.randomUUID(),
-      p_metadata: {
-        closing_verification_status: closingVerificationV2.status,
-        closing_decision_snapshot_id: closingDecisionSnapshotId,
-        report_id: reportRow.id,
-      },
-    },
-  );
+  // A direction-only observation is useful, but it is not a completed closing
+  // receipt and cannot unlock Learning or a full-day Acceptance.
+  if (!closingDecisionSnapshotId) {
+    return jsonResponse({ success: false, verification_date: verificationDate, report_updated: false,
+      closing_verification_status: "pending_durable_receipt", closing_contract: closingContract,
+      closing_decision_snapshot_id: closingDecisionSnapshotId, error: "CLOSING_CONTRACT_INCOMPLETE", no_fake_data: true }, 409);
+  }
+  const persisted = await supabase.from("decision_snapshots").select("*").eq("id", closingDecisionSnapshotId)
+    .eq("report_id", openingPublication.report_id).eq("report_date", verificationDate).maybeSingle();
+  if (persisted.error || !persisted.data) return jsonResponse({ success: false, error: "CLOSING_RECEIPT_READBACK_FAILED",
+    verification_date: verificationDate, closing_decision_snapshot_id: closingDecisionSnapshotId, report_updated: false }, 409);
+  const finalized = await finalizeClosingReceipt(supabase, reportRow, openingPublication, persisted.data as Record<string, unknown>);
 
   return jsonResponse({
-    success: true,
+    ...finalized,
     verification_date: verificationDate,
     today_date: today,
     backfill_mode: backfillMode,
@@ -1423,19 +1467,13 @@ Deno.serve(async (req: Request) => {
     legacy_prediction_result: predictionResult,
     accuracy_score: structuredAccuracyScore,
     actual_taiex_change: taiexChange,
-    report_updated: true,
     opening_decision_snapshot_id: morningDecisionRow?.id || null,
     closing_decision_snapshot_id: closingDecisionSnapshotId,
     log_inserted: logInserted,
     log_reused: !logInserted,
-    closing_verification_status:
-      closingVerificationV2.status === "direction_completed_data_degraded"
-        ? "direction_completed_data_degraded"
-        : "completed",
     closing_verification_v2_status: closingVerificationV2.status,
     beneficiary_validation_status: beneficiaryValidation.data_status,
     beneficiary_decision_mode: beneficiaryDecisionMode,
     no_fake_data: true,
-    trading_day_state_error: tradingDayStateError?.message || null,
-  });
+  }, finalized.success ? 200 : 409);
 });

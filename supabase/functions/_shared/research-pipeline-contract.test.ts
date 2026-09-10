@@ -69,10 +69,19 @@ Deno.test('full-day chain must share date/revision; incident delivery and manual
   const bad=[{...good,manual_recovery:true},{...good,today_date:'2026-09-08'},
     {...good,delivery:{type:'data_incident',sent_at:good.delivery.sent_at}},
     {...good,delivery:{type:'daily_report',sent_at:'2026-09-07T08:01:00+08:00'}},
-    {...good,failed_dispatches:null},{...good,stages:{...good.stages,premium:{...good.stages.premium,status:'BLOCKED'}}},
+    {...good,failed_dispatches:null},
     {...good,stages:{...good.stages,canonical:{...good.stages.canonical,revision_id:'mixed'}}},
     {...good,stages:{...good.stages,editorial:{...good.stages.editorial,report_date:'2026-09-04'}}},
     {...good,checkpoints:good.checkpoints.map((row,i)=>({...row,evidence:i!==2}))}];
   for(const input of bad)eq(evaluateAutomaticTradingDay(input).automatic_stable_day,false);
   eq(evaluateAutomaticTradingDay({...good,is_trading_day:false}).status,'NOT_APPLICABLE');
+});
+
+Deno.test('market automatic-day evidence is independent of a still-blocked Premium lane',()=>{
+  const good=completeDay();
+  const result=evaluateAutomaticTradingDay({...good,stages:{...good.stages,premium:{...good.stages.premium,status:'BLOCKED'}}});
+  eq(result.status,'PASS');
+  eq(result.premium_status,'BLOCKED');
+  eq(result.premium_gate_independent,true);
+  eq(evaluateAutomaticTradingDay({...good,stages:{...good.stages,evidence:{...good.stages.evidence,status:'BLOCKED'}}}).status,'FAIL');
 });

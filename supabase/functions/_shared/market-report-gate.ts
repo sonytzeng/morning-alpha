@@ -1,6 +1,7 @@
 import { evaluateContentIntelligence, evaluateMarketContentIntelligence, hasDecisionGradeSourceCoverage } from './content-intelligence.ts';
 import { evaluateResearchQualityGate } from './research-quality-gate.ts';
 import { companyEvidenceSupported, presentNumber } from './research-pipeline-contract.ts';
+import { buildCanonicalMarketState, canonicalMarketDocument, marketDocumentInput } from './canonical-market-state.ts';
 
 type JsonRecord = Record<string, unknown>;
 const record = (value: unknown): JsonRecord => value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {};
@@ -11,7 +12,7 @@ export const RECOMMENDATION_EVIDENCE_INSUFFICIENT_MESSAGE = '推薦評估證據�
 /** No rows is not a completed universe assessment. Admission and full-universe
  * exclusion are distinct proofs; a model-authored empty list proves neither. */
 export function evaluateStockRecommendationGate(value: unknown) {
-  const ai = record(value), master = record(ai.research_master_v2);
+  const ai = record(value), master = record(record(ai.stock_research).document || ai.research_master_v2);
   const rows = records(ai.today_beneficiary_stocks_v10);
   const canonicalStocks = records(record(master.sections).representative_stocks);
   const evidence = records(record(ai.v10_analysis_debug).evidence_index);
@@ -67,19 +68,22 @@ export function evaluateStockRecommendationGate(value: unknown) {
  * Recommendation admission happens before assembly; rejected rows stay in the
  * private generation audit, never in the published market document. */
 export function evaluateMarketReportGate(value: unknown, expectedReportDate?: string) {
-  const ai = record(value), master = record(ai.research_master_v2);
+  const source = record(value), ai = marketDocumentInput(source), master = canonicalMarketDocument(source);
   const research = evaluateResearchQualityGate(master);
   const content = evaluateMarketContentIntelligence(ai, Array.isArray(ai.important_news) ? ai.important_news.length : 0);
   const quality = record(ai.content_evidence_quality);
-  const rows = Array.isArray(ai.today_beneficiary_stocks_v10) ? ai.today_beneficiary_stocks_v10 : [];
-  const recommendationGate = evaluateStockRecommendationGate(ai);
+  const recommendationGate = evaluateStockRecommendationGate(source);
   const noRecommendation = !recommendationGate.eligible;
   const reasons = [...research.reason_codes, ...content.reason_codes];
   const markets = presentNumber(quality.verified_market_count);
   const blank = presentNumber(quality.blank_market_change_count);
-  if (!hasDecisionGradeSourceCoverage(ai, rows.length ? 'recommendations' : 'no_trade')
+  if (!hasDecisionGradeSourceCoverage(ai, 'no_trade')
     || markets === null || markets <= 0 || blank !== 0) reasons.push('market_evidence_incomplete');
   if (expectedReportDate && (master.report_date !== expectedReportDate || master.today_date !== expectedReportDate)) reasons.push('report_date_mismatch');
+  if (Object.hasOwn(source, 'canonical_market_state')) {
+    const canonical = buildCanonicalMarketState(master);
+    if (record(source.canonical_market_state).status !== 'READY' || canonical.status !== 'READY') reasons.push(...canonical.reason_codes, 'canonical_market_evidence_not_ready');
+  }
   if (!content.publishable) reasons.push('market_editorial_not_ready');
   const reasonCodes = [...new Set(reasons)];
   const eligible = research.eligible && content.publishable && reasonCodes.length === 0;

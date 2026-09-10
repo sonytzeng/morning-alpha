@@ -7,29 +7,33 @@ import { URL } from 'node:url';
 import { isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
 import { evaluateMarketReportGate } from '../supabase/functions/_shared/market-report-gate.ts';
 import { evaluatePremiumContentGate } from '../supabase/functions/_shared/premium-content-gate.ts';
-import { assembleResearchMasterV2, validateResearchMasterV2 } from '../supabase/functions/generate-daily-report-v7/research-master-v2.ts';
+import { fetchPublishedDeliveryEvidence as readMarketPublicationEvidence, isPublishedDeliveryEligible as validateMarketPublicationDelivery, evaluatePublishedMarketDelivery } from '../supabase/functions/_shared/market-publication-contract.ts';
+import { assembleCanonicalMarketResearch } from '../supabase/functions/generate-daily-report-v7/research-master-v2.ts';
+import { canonicalMarketSourceRefs } from '../supabase/functions/_shared/canonical-market-state.ts';
 import { buildLineDailyFlexMessage } from '../supabase/functions/_shared/line-daily-flex-message.mjs';
 
 const record = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
 const read = path => readFileSync(new URL('../'+path, import.meta.url),'utf8');
 const entries = ['line-daily-push','daily-delivery-orchestrator'].map(name => {
   const source=read(`supabase/functions/${name}/index.ts`);
-  return {name,source,fetch:isolatedFunction(source,'fetchPublishedDeliveryEvidence'),eligible:isolatedFunction(source,'isPublishedDeliveryEligible')};
+  const dependencies={readMarketPublicationEvidence,validateMarketPublicationDelivery};
+  return {name,source,fetch:isolatedFunction(source,'fetchPublishedDeliveryEvidence',dependencies),eligible:isolatedFunction(source,'isPublishedDeliveryEligible',dependencies)};
 });
 function fixture() {
   const input=isolatedFunction(read('supabase/functions/generate-daily-report-v7/research-master-v2.test.ts'),'completeFixture')();
   input.reportDate='2026-09-08';input.todayDate=input.reportDate;input.generatedAt='2026-09-08T00:01:00.000Z';input.dataAsOf='2026-09-08T00:00:00.000Z';
-  for(const row of input.evidenceIndex)row.published_at='2026-09-07T22:00:00.000Z';
+  // The real sector context carries the prior date, not a relabeled news timestamp.
+  for(const row of input.evidenceIndex)row.published_at=row.source==='sector_rotation_scores'?'2026-09-07':'2026-09-07T22:00:00.000Z';
   const ai=input.legacy,sentence='SOX 上漲帶動半導體風險偏好，09:30 先確認台積電與 TAIEX 是否同向；未確認前不追價，若權值轉弱就撤回偏多假設。';
   Object.assign(ai,{today_quote:sentence,v8_daily_sentence:{sentence},free_summary:{one_sentence:sentence},today_beneficiary_stocks_v10:[],today_beneficiary_stocks:[],
     v10_beneficiary_enabled:true,v10_data_quality_status:'insufficient_positive_evidence',data_quality:'complete',missing_sources:[],member_value_score:0,
     content_evidence_quality:{contract_version:'PREMIUM_EVIDENCE_V1',verified_market_count:3,verified_news_count:1,blank_market_change_count:0,all_news_traceable:true}});
   ai.member_research_note_v2.today_core_thesis=sentence;
-  const master=assembleResearchMasterV2(input);master.quality=validateResearchMasterV2(master,input).quality;ai.research_master_v2=master;
+  const master=assembleCanonicalMarketResearch(input);ai.research_master_v2=master;
   const gate=evaluateMarketReportGate(ai,input.reportDate);assert.equal(gate.eligible,true,JSON.stringify(gate));assert.equal(gate.recommendation_gate.status,'BLOCKED');
   const report={id:'synthetic-report',report_date:input.reportDate,ai_strategy_json:ai};
   const snapshot={id:'synthetic-intraday',report_id:report.id,report_date:report.report_date,version:8,is_current:false,session_type:'INTRADAY',
-    decision_mode:'market_only',action:'WAIT',status:'READY',content_score:gate.content_score,coverage_score:100,source_refs:['synthetic:source'],
+    decision_mode:'market_only',action:'WAIT',status:'READY',market_regime:'中性觀察',content_score:gate.content_score,coverage_score:100,source_refs:canonicalMarketSourceRefs(ai),
     generated_text:{daily_sentence:sentence,recommendations:[],market_report_gate:gate,next_checkpoint:'13:00 盤中確認'}};
   const contract={snapshot_id:snapshot.id,snapshot_version:8,report_date:report.report_date,decision_mode:'market_only',action:'WAIT',primary_symbols:[],market_report_gate:gate};
   const member={id:'synthetic-member',report_id:report.id,report_date:report.report_date,decision_snapshot_id:snapshot.id,decision_snapshot_version:8,revision:8,
@@ -71,11 +75,16 @@ for(const edge of entries) {
   test(`${edge.name}: existing recommendation/no_trade modes keep 90 and matching member semantic requirements`,()=>{
     for(const mode of ['recommendations','no_trade']){
       const f=fixture();f.snapshot.decision_mode=mode;
-      // The legacy recommendation branch still needs independent stock admission.
-      // A real market-only gate is not evidence that old recommendation rows qualify.
+      // Current stock admission only controls recommendation projection. The
+      // exact legacy publication still retains its 90/PASSED proof boundary.
       const gate=mode==='recommendations'?{...f.gate,recommendation_gate:{...f.gate.recommendation_gate,eligible:true,status:'QUALIFIED'}}:f.gate;
       assert.equal(edge.eligible(f.report,f.snapshot,f.member,gate),true);
-      if(mode==='recommendations')assert.equal(edge.eligible(f.report,f.snapshot,f.member,f.gate),false);
+      if(mode==='recommendations'){
+        const delivery=evaluatePublishedMarketDelivery(f.report,f.snapshot,f.member,f.gate);
+        assert.equal(delivery.eligible,true);
+        assert.equal(delivery.projection.recommendation.available,false);
+        assert.deepEqual(delivery.projection.recommendation.items,[]);
+      }
       f.snapshot.content_score=89;assert.equal(edge.eligible(f.report,f.snapshot,f.member,f.gate),false);
     }
   });
@@ -84,7 +93,7 @@ for(const edge of entries) {
 test('actual orchestrator state treats valid market publication independently of stock/Premium eligibility',async()=>{
   const edge=entries[1],f=fixture();
   const load=isolatedFunction(edge.source,'loadDeliveryState',{asRecord:record,asStringArray:v=>Array.isArray(v)?v.map(String):[],evaluateMarketReportGate,evaluatePremiumContentGate,
-    fetchPublishedDeliveryEvidence:edge.fetch,isPublishedDeliveryEligible:edge.eligible});
+    fetchPublishedDeliveryEvidence:edge.fetch,isPublishedDeliveryEligible:edge.eligible,evaluatePublishedMarketDelivery});
   const state=await load(database(f),f.report.report_date);assert.equal(state.report_eligible,true);assert.equal(state.premium_eligible,false);
   f.member=null;assert.equal((await load(database(f),f.report.report_date)).report_eligible,false);
 });
@@ -95,10 +104,11 @@ test('LINE market-only payload does not reuse private recommendation aliases or 
   const deps={evaluatePremiumContentGate,buildLineDailyFlexMessage,Date,Intl,...Object.fromEntries(names.map(name=>[name,(...args)=>functions[name](...args)]))};
   for(const name of names)functions[name]=isolatedFunction(source,name,deps);
   const f=fixture();f.report.ai_strategy_json.line_push_copy={opportunity:'SYNTHETIC_PRIVATE_STOCK',do_not_do:'SYNTHETIC_PRIVATE_STOCK',risk:'SYNTHETIC_PRIVATE_STOCK'};
-  const message=functions.buildLineMessage(f.report,'https://example.invalid',f.snapshot);
+  const delivery=evaluatePublishedMarketDelivery(f.report,f.snapshot,f.member,f.gate);
+  const message=functions.buildLineMessage(delivery,'https://example.invalid');
   const rendered=JSON.stringify(message);assert.equal(message.type,'flex');
   assert.match(rendered,/推薦評估證據不足，今日暫不發布正式個股推薦/);
-  assert.match(rendered,/13:00 盤中確認/);assert.doesNotMatch(rendered,/SYNTHETIC_PRIVATE_STOCK|無強受惠股|NO_QUALIFIED_OPPORTUNITY|待驗證\/100|5 檔排序/);
+  assert.match(rendered,new RegExp(delivery.marketContent.confirmation));assert.doesNotMatch(rendered,/SYNTHETIC_PRIVATE_STOCK|無強受惠股|NO_QUALIFIED_OPPORTUNITY|待驗證\/100|5 檔排序/);
 });
 
 test('verified Production v59 recommendation/no_trade Flex output is preserved byte-for-byte',()=>{

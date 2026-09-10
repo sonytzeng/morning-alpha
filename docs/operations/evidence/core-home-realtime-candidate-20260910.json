@@ -1,0 +1,111 @@
+{
+  "schema_version": "CORE_HOME_REALTIME_REVIEWED_CANDIDATE_PROVENANCE_V1",
+  "recorded_at": "2026-09-10T04:54:43Z",
+  "scope": "BRANCH_LOCAL_BROWSER_RELIABILITY_ONLY",
+  "authorization": "Existing Core Consolidation root-cause repair and local Browser parity approvals; keep all seven Home subscriptions and existing Auth/RLS/ACL. No Production write/deploy/merge authority.",
+  "reason": "Installed Realtime2.15.5 queues old tokenless join payload before lazy Auth resolves. Wait for actual SDK session and its member token authorization before constructing first join. Anonymous keeps original public socket behavior. Cancel disposed effects after both awaits.",
+  "original": {
+    "commit": "6469630795fb1215595306c026437d850b668801",
+    "path": "src/hooks/useHomeDashboard.ts",
+    "sha256": "e248cd67c1cf326eafe53c78657c56ab6bf371f1b11f55372680068ec7562809",
+    "source": "import { useState, useEffect, useCallback, useRef } from 'react';\nimport { supabase } from '@/lib/supabase';\nimport {\n  loadHomeDashboardData,\n  type HomeDashboardData,\n} from '@/services/homeDashboardService';\nimport {\n  resolveMorningAlphaState,\n  type MorningAlphaState,\n} from '@/lib/morningAlpha/resolveMorningAlphaState';\n\n// Realtime is the primary update path. A five-minute reconciliation poll keeps\n// the dashboard self-healing without multiplying Edge Function traffic at scale.\nconst ACTIVE_MARKET_POLL_MS = 300_000;\nconst OFF_HOURS_POLL_MS = 900_000;\n\nexport function getAdaptiveDashboardPollMs(now = new Date(), hidden = false): number {\n  if (hidden) return OFF_HOURS_POLL_MS;\n  const taipeiParts = new Intl.DateTimeFormat('en-US', {\n    timeZone: 'Asia/Taipei',\n    hour: '2-digit',\n    minute: '2-digit',\n    hour12: false,\n  }).formatToParts(now);\n  const read = (type: string) => Number(taipeiParts.find((part) => part.type === type)?.value || 0);\n  const taipeiMinutes = read('hour') * 60 + read('minute');\n  return taipeiMinutes >= 5 * 60 + 30 && taipeiMinutes <= 14 * 60 + 30\n    ? ACTIVE_MARKET_POLL_MS\n    : OFF_HOURS_POLL_MS;\n}\n\nexport function useHomeDashboard() {\n  const [data, setData] = useState<HomeDashboardData | null>(null);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState<string | null>(null);\n  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);\n  const [refreshing, setRefreshing] = useState(false);\n  const isFetchingRef = useRef(false);\n\n  /** V27 Stable Mode: MorningAlphaState is the PRIMARY data source — loaded FIRST */\n  const [morningState, setMorningState] = useState<MorningAlphaState | null>(null);\n  const [morningStateLoading, setMorningStateLoading] = useState(true);\n\n  const loadMorningState = useCallback(async () => {\n    try {\n      setMorningStateLoading(true);\n      const ms = await resolveMorningAlphaState();\n      setMorningState(ms);\n    } catch {\n      // V28: Do NOT leave morningStateLoading=true — set error so page can show fallback\n      setMorningState(null);\n    } finally {\n      setMorningStateLoading(false);\n    }\n  }, []);\n\n  const refresh = useCallback(async () => {\n    if (isFetchingRef.current) return;\n    isFetchingRef.current = true;\n    setRefreshing(true);\n\n    try {\n      const result = await loadHomeDashboardData();\n      setData(result);\n      setError(result.error);\n      setLastSyncAt(new Date().toISOString());\n    } catch {\n      setError('首頁資料暫時無法取得，請稍後重新載入。');\n    } finally {\n      setRefreshing(false);\n      setLoading(false);\n      isFetchingRef.current = false;\n    }\n  }, []);\n\n  useEffect(() => {\n    // V27: morningState is loaded FIRST as primary data source\n    loadMorningState();\n\n    // Secondary: load dashboard data in parallel\n    refresh();\n\n    // Realtime is primary; adaptive polling is a low-traffic recovery path.\n    let pollTimer: ReturnType<typeof setTimeout> | null = null;\n    let disposed = false;\n    const schedulePoll = () => {\n      if (disposed) return;\n      pollTimer = setTimeout(async () => {\n        if (document.visibilityState === 'visible') await refresh();\n        if (!disposed) schedulePoll();\n      }, getAdaptiveDashboardPollMs(new Date(), document.visibilityState !== 'visible'));\n    };\n    const refreshWhenVisible = () => {\n      if (document.visibilityState === 'visible') refresh();\n    };\n    schedulePoll();\n    document.addEventListener('visibilitychange', refreshWhenVisible);\n    window.addEventListener('focus', refreshWhenVisible);\n\n    // Supabase Realtime 訂閱\n    const channel = supabase\n      .channel('morning-alpha-home-live')\n      .on(\n        'postgres_changes',\n        { event: '*', schema: 'public', table: 'market_data' },\n        () => { refresh(); }\n      )\n      .on(\n        'postgres_changes',\n        { event: '*', schema: 'public', table: 'reports' },\n        () => {\n          refresh();\n          loadMorningState(); // Also refresh morningState when reports change\n        }\n      )\n      .on(\n        'postgres_changes',\n        { event: '*', schema: 'public', table: 'intraday_checks' },\n        () => { refresh(); }\n      )\n      .on(\n        'postgres_changes',\n        { event: '*', schema: 'public', table: 'opening_market_radar' },\n        () => { refresh(); }\n      )\n      .on(\n        'postgres_changes',\n        { event: '*', schema: 'public', table: 'market_source_health' },\n        () => { refresh(); }\n      )\n      .on(\n        'postgres_changes',\n        { event: '*', schema: 'public', table: 'market_news' },\n        () => { refresh(); }\n      )\n      .on(\n        'postgres_changes',\n        { event: '*', schema: 'public', table: 'close_market_reviews' },\n        () => { refresh(); }\n      )\n      .subscribe();\n\n    return () => {\n      disposed = true;\n      if (pollTimer) clearTimeout(pollTimer);\n      document.removeEventListener('visibilitychange', refreshWhenVisible);\n      window.removeEventListener('focus', refreshWhenVisible);\n      supabase.removeChannel(channel);\n    };\n  }, [refresh, loadMorningState]);\n\n  return {\n    data,\n    loading: loading || morningStateLoading,\n    error,\n    lastSyncAt,\n    refreshing,\n    refresh: () => { refresh(); loadMorningState(); },\n    morningState,\n  };\n}\n"
+  },
+  "candidate_sources": [
+    {
+      "path": "src/hooks/useHomeDashboard.ts",
+      "sha256": "32c1d997d8725a9c036b1cfdd6a1f4d9688e038ebcc9270cd267520c163992b7"
+    },
+    {
+      "path": "tests/homeRealtimeLifecycle.test.mjs",
+      "sha256": "d90ac08f388ddf66b3c62b5bd5e592720b118d47c4c0bf86fdac28b59c7ca902"
+    },
+    {
+      "path": "tests/homeRealtimeSdk.test.mjs",
+      "sha256": "e1c16f15f242af025c228d95defe97b316121174ff7fb76e3a74f652a23d6403"
+    }
+  ],
+  "source_diff": {
+    "base": "6469630795fb1215595306c026437d850b668801",
+    "format": "git diff -- src/hooks/useHomeDashboard.ts",
+    "patch": "diff --git a/src/hooks/useHomeDashboard.ts b/src/hooks/useHomeDashboard.ts\nindex 03a5a36..397aefd 100644\n--- a/src/hooks/useHomeDashboard.ts\n+++ b/src/hooks/useHomeDashboard.ts\n@@ -97,55 +97,71 @@ export function useHomeDashboard() {\n     document.addEventListener('visibilitychange', refreshWhenVisible);\n     window.addEventListener('focus', refreshWhenVisible);\n \n-    // Supabase Realtime 訂閱\n-    const channel = supabase\n-      .channel('morning-alpha-home-live')\n-      .on(\n-        'postgres_changes',\n-        { event: '*', schema: 'public', table: 'market_data' },\n-        () => { refresh(); }\n-      )\n-      .on(\n-        'postgres_changes',\n-        { event: '*', schema: 'public', table: 'reports' },\n-        () => {\n-          refresh();\n-          loadMorningState(); // Also refresh morningState when reports change\n-        }\n-      )\n-      .on(\n-        'postgres_changes',\n-        { event: '*', schema: 'public', table: 'intraday_checks' },\n-        () => { refresh(); }\n-      )\n-      .on(\n-        'postgres_changes',\n-        { event: '*', schema: 'public', table: 'opening_market_radar' },\n-        () => { refresh(); }\n-      )\n-      .on(\n-        'postgres_changes',\n-        { event: '*', schema: 'public', table: 'market_source_health' },\n-        () => { refresh(); }\n-      )\n-      .on(\n-        'postgres_changes',\n-        { event: '*', schema: 'public', table: 'market_news' },\n-        () => { refresh(); }\n-      )\n-      .on(\n-        'postgres_changes',\n-        { event: '*', schema: 'public', table: 'close_market_reviews' },\n-        () => { refresh(); }\n-      )\n-      .subscribe();\n+    // Resolve the SDK session before the first join. Realtime 2.15.5 can queue\n+    // a tokenless join while its lazy access-token callback is still pending.\n+    // Keep anonymous clients on the public socket contract: a publishable API\n+    // key is not a session JWT and must not be passed to setAuth explicitly.\n+    let channel: ReturnType<typeof supabase.channel> | null = null;\n+    const subscribe = async () => {\n+      const { data: auth, error: authError } = await supabase.auth.getSession();\n+      if (authError) throw authError;\n+      if (disposed) return;\n+      if (auth.session) await supabase.realtime.setAuth(auth.session.access_token);\n+      if (disposed) return;\n+      channel = supabase\n+        .channel('morning-alpha-home-live')\n+        .on(\n+          'postgres_changes',\n+          { event: '*', schema: 'public', table: 'market_data' },\n+          () => { refresh(); }\n+        )\n+        .on(\n+          'postgres_changes',\n+          { event: '*', schema: 'public', table: 'reports' },\n+          () => {\n+            refresh();\n+            loadMorningState(); // Also refresh morningState when reports change\n+          }\n+        )\n+        .on(\n+          'postgres_changes',\n+          { event: '*', schema: 'public', table: 'intraday_checks' },\n+          () => { refresh(); }\n+        )\n+        .on(\n+          'postgres_changes',\n+          { event: '*', schema: 'public', table: 'opening_market_radar' },\n+          () => { refresh(); }\n+        )\n+        .on(\n+          'postgres_changes',\n+          { event: '*', schema: 'public', table: 'market_source_health' },\n+          () => { refresh(); }\n+        )\n+        .on(\n+          'postgres_changes',\n+          { event: '*', schema: 'public', table: 'market_news' },\n+          () => { refresh(); }\n+        )\n+        .on(\n+          'postgres_changes',\n+          { event: '*', schema: 'public', table: 'close_market_reviews' },\n+          () => { refresh(); }\n+        )\n+        .subscribe();\n+    };\n+    void subscribe().catch(() => {\n+      // Do not fall back to an anonymous join after an Auth error. The existing\n+      // bounded reconciliation poll remains active; never log credentials.\n+      if (!disposed) console.warn('Home realtime subscription unavailable; periodic refresh remains active.');\n+    });\n \n     return () => {\n       disposed = true;\n       if (pollTimer) clearTimeout(pollTimer);\n       document.removeEventListener('visibilitychange', refreshWhenVisible);\n       window.removeEventListener('focus', refreshWhenVisible);\n-      supabase.removeChannel(channel);\n+      if (channel) void supabase.removeChannel(channel);\n     };\n   }, [refresh, loadMorningState]);\n \n"
+  },
+  "rollback_target": "6469630795fb1215595306c026437d850b668801:src/hooks/useHomeDashboard.ts",
+  "existing_integrity_registry": {
+    "path": "docs/operations/core-stability-incident-amendment-20260908.json",
+    "sha256": "48668fbb895cb926fbec2c696358161bb701b1534805a078caa268998086087c",
+    "modified_by_this_repair": false,
+    "prior_nine_layers_retained": true
+  },
+  "verification": {
+    "lifecycle_before": {
+      "passed": 2,
+      "failed": 7
+    },
+    "lifecycle_after": {
+      "passed": 9,
+      "failed": 0
+    },
+    "installed_sdk": {
+      "passed": 6,
+      "failed": 0,
+      "transport": "MEMORY_UNIT_NOT_AUTH_RLS"
+    },
+    "browser": {
+      "result": "PASS",
+      "content_cells": 24,
+      "real_auth_checks": 2,
+      "persisted_readers": 2,
+      "native_realtime_subscriptions": 8,
+      "bindings_per_subscription": 7,
+      "member_initial_join": "REAL_SESSION_SUBJECT_MATCHED_SERVER_ACKNOWLEDGED",
+      "business_change_event_delivery": "NOT_TESTED_NO_BUSINESS_WRITE",
+      "original_generator_fixture": "HISTORICAL_PREDECESSOR_POSITIVE_NOT_NEW_GENERATOR_PROOF"
+    },
+    "node": {
+      "passed": 2139,
+      "failed": 0
+    },
+    "evidence": [
+      {
+        "path": "/private/tmp/ma-home-realtime-source-amendment-20260910.json",
+        "sha256": "f2c80e46e7699917f4b05fb08a37101a1fc3c0aeb3ee3360d34b2f778ceaf069"
+      },
+      {
+        "path": "/private/tmp/ma-realtime-lazy-auth-race-20260910-result.json",
+        "sha256": "2e488b905db70d3c462d54c114292308c99d6c1f8947e9db14cff00e7ab4fd60"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909200000-browser-smoke-v8/result.json",
+        "sha256": "d873f8ffd3084bc580d1a25f71b81a98e13c256be3114d65d65c351bc7ff798a"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909200000-browser-smoke-v9/result.json",
+        "sha256": "32a3fb7b065b4a831b7d57acfc11200073baa272decce94c9539d3548e60d979"
+      },
+      {
+        "path": "/private/tmp/ma-home-realtime-before-fix-20260910.log",
+        "sha256": "5d15a9b6f58ca44010de944701ae2728f413aa50239561cb534cdd720063da9b"
+      },
+      {
+        "path": "/private/tmp/ma-home-realtime-after-fix-20260910.log",
+        "sha256": "1ef134bd04676bcd2111aa6c6d43d592fc3eba88fed5e29b4c301b3905555a0a"
+      },
+      {
+        "path": "/private/tmp/ma-home-realtime-sdk-20260910.log",
+        "sha256": "c1937291b58d7b80414f64f0cc96dd2df4bd50d3d4b57466c4dfbcd1afd3a168"
+      },
+      {
+        "path": "/private/tmp/ma-home-realtime-full-node-20260910.log",
+        "sha256": "fa5bcfa60aafe47a767ac167aad74cf3c05d8ba10600d866ae4c4a0e812dc7bf"
+      }
+    ]
+  },
+  "limitations": [
+    "Reviewed provenance appendix, not an additional machine-enforced Integrity override or exception.",
+    "Existing nine protected Integrity layers unchanged.",
+    "Fresh newest-Generator positive closed-loop and final remote CI/Readdy Host remain separate gates."
+  ],
+  "production_operations": 0,
+  "approval_for_production": false,
+  "official_reference": "https://supabase.com/docs/reference/javascript/setauth"
+}

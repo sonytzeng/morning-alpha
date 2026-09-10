@@ -1,0 +1,101 @@
+{
+  "schema_version": "CORE_CONSOLIDATION_PROVIDER_BOUNDARY_V1",
+  "fixture_id": "synthetic-full-chain-market-control-20260915",
+  "report_date": "2026-09-15",
+  "warmup_date": "2026-09-14",
+  "provenance": {
+    "kind": "SYNTHETIC_PROVIDER_CONTROL",
+    "historical_capture": false,
+    "source": "Repository-authored deterministic external wire responses, not an archived vendor response",
+    "purpose": "Counterfactual market-ready / stock-blocked input candidate; publishability is decided by actual handlers and SQL",
+    "historical_success_claim": false,
+    "unsupported_claims": "No statement that the September 7, 8 or 9 incidents passed; incomplete historical source ledgers remain UNKNOWN"
+  },
+  "phases": [
+    {
+      "id": "prior-close-warmup",
+      "starts_at": "2026-09-14T14:30:00+08:00",
+      "ends_at": "2026-09-15T00:00:00+08:00",
+      "news_source_at": "2026-09-14T14:00:00+08:00",
+      "source_times": { "US": "2026-09-11T20:00:00Z", "TW": "2026-09-14T13:30:00+08:00", "TXF": "2026-09-14T13:45:00+08:00" }
+    },
+    {
+      "id": "premarket",
+      "starts_at": "2026-09-15T07:00:00+08:00",
+      "ends_at": "2026-09-15T09:00:00+08:00",
+      "news_source_at": "2026-09-15T06:30:00+08:00",
+      "source_times": { "US": "2026-09-14T20:00:00Z", "TW": "2026-09-14T13:30:00+08:00", "TXF": "2026-09-15T05:00:00+08:00" }
+    },
+    {
+      "id": "0900",
+      "starts_at": "2026-09-15T09:00:00+08:00",
+      "ends_at": "2026-09-15T09:30:00+08:00",
+      "news_source_at": "2026-09-15T06:30:00+08:00",
+      "source_times": { "US": "2026-09-14T20:00:00Z", "TW": "2026-09-15T09:00:00+08:00", "TXF": "2026-09-15T09:00:00+08:00" }
+    },
+    {
+      "id": "0930",
+      "starts_at": "2026-09-15T09:30:00+08:00",
+      "ends_at": "2026-09-15T10:30:00+08:00",
+      "news_source_at": "2026-09-15T06:30:00+08:00",
+      "source_times": { "US": "2026-09-14T20:00:00Z", "TW": "2026-09-15T09:30:00+08:00", "TXF": "2026-09-15T09:30:00+08:00" }
+    },
+    {
+      "id": "1030",
+      "starts_at": "2026-09-15T10:30:00+08:00",
+      "ends_at": "2026-09-15T13:00:00+08:00",
+      "news_source_at": "2026-09-15T06:30:00+08:00",
+      "source_times": { "US": "2026-09-14T20:00:00Z", "TW": "2026-09-15T10:30:00+08:00", "TXF": "2026-09-15T10:30:00+08:00" }
+    },
+    {
+      "id": "1300",
+      "starts_at": "2026-09-15T13:00:00+08:00",
+      "ends_at": "2026-09-15T14:10:00+08:00",
+      "news_source_at": "2026-09-15T06:30:00+08:00",
+      "source_times": { "US": "2026-09-14T20:00:00Z", "TW": "2026-09-15T13:00:00+08:00", "TXF": "2026-09-15T13:00:00+08:00" }
+    },
+    {
+      "id": "1410",
+      "starts_at": "2026-09-15T14:10:00+08:00",
+      "ends_at": "2026-09-15T14:30:00+08:00",
+      "news_source_at": "2026-09-15T06:30:00+08:00",
+      "source_times": { "US": "2026-09-14T20:00:00Z", "TW": "2026-09-15T13:30:00+08:00", "TXF": "2026-09-15T13:45:00+08:00" }
+    },
+    {
+      "id": "1430-through-acceptance",
+      "starts_at": "2026-09-15T14:30:00+08:00",
+      "ends_at": "2026-09-16T00:00:00+08:00",
+      "news_source_at": "2026-09-15T06:30:00+08:00",
+      "source_times": { "US": "2026-09-14T20:00:00Z", "TW": "2026-09-15T13:30:00+08:00", "TXF": "2026-09-15T13:45:00+08:00" }
+    }
+  ],
+  "quotes": {
+    "SPY": { "market": "US", "value": 505, "change": 5, "change_percent": 1 },
+    "QQQ": { "market": "US", "value": 505, "change": 5, "change_percent": 1 },
+    "SOXX": { "market": "US", "value": 252.5, "change": 2.5, "change_percent": 1 },
+    "NVDA": { "market": "US", "value": 151.5, "change": 1.5, "change_percent": 1 },
+    "TSM": { "market": "US", "value": 202, "change": 2, "change_percent": 1 },
+    "VXX": { "market": "US", "value": 19.8, "change": -0.2, "change_percent": -1 },
+    "UUP": { "market": "US", "value": 100.1, "change": 0.1, "change_percent": 0.1 },
+    "IEF": { "market": "US", "value": 100.1, "change": 0.1, "change_percent": 0.1 },
+    "IX0001": { "market": "TW", "value": 25250, "change": 250, "change_percent": 1 },
+    "TAIEX": { "market": "TW", "value": 25250, "change": 250, "change_percent": 1 },
+    "2330": { "market": "TW", "value": 1010, "change": 10, "change_percent": 1 },
+    "TXF1!": { "market": "TXF", "value": 25350, "change": 250, "change_percent": 0.99601593625498 },
+    "TXF202609": { "market": "TXF", "value": 25350, "change": 250, "change_percent": 0.99601593625498 }
+  },
+  "futures": [{ "symbol": "TXF202609", "product": "TXF", "deliveryDate": "2026-09-16", "status": "active" }],
+  "news": [
+    { "url": "https://fixture.example.invalid/market/us-index-close", "title": "US equity indices close higher as market breadth improves", "summary": "Synthetic provider control: the broad market and technology benchmarks advanced during the completed cash session. This headline supplies market context only and makes no Taiwan stock recommendation." },
+    { "url": "https://fixture.example.invalid/market/treasury-and-dollar", "title": "Treasury prices and dollar index show limited overnight movement", "summary": "Synthetic provider control: Treasury and dollar proxy changes remain modest. Investors continue to watch rate expectations and volatility alongside broad equity benchmarks." },
+    { "url": "https://fixture.example.invalid/market/semiconductor-breadth", "title": "Semiconductor sector gains alongside the broader technology market", "summary": "Synthetic provider control: the semiconductor benchmark participated in a broad technology advance. The report contains sector-level observations without asserting an unverified company catalyst or trading entry." },
+    { "url": "https://fixture.example.invalid/market/risk-observation", "title": "Market participants await opening confirmation after global rebound", "summary": "Synthetic provider control: overnight index performance is an input, not proof of the next local session. The opening range and futures confirmation remain necessary before revising the market scenario." }
+  ],
+  "openai_completion": {
+    "id": "synthetic-chat-completion-market-control",
+    "object": "chat.completion",
+    "model": "offline-deterministic-provider-boundary",
+    "choices": [{ "index": 0, "message": { "role": "assistant", "content": "{\"today_beneficiary_stocks\":[],\"beneficiary_stocks\":[],\"v8_daily_sentence\":\"大盤先看開盤確認，個股證據不足，不列推薦。\",\"free_summary\":\"隔夜市場方向需由台股開盤與台指期共同確認；個股尚無完整證據，僅提供大盤觀察。\",\"member_research_note\":\"\",\"v8_beneficiary_chain\":[],\"v8_overnight_causal_chain\":[]}" }, "finish_reason": "stop" }],
+    "usage": { "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0 }
+  }
+}

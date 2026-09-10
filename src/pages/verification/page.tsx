@@ -14,17 +14,16 @@ import {
 import { renderSafeText } from '@/utils/renderSafe';
 import { trackPageView } from '@/utils/analytics';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
-import { resolveClosingVerificationState } from '@/lib/closingVerificationState';
 import { SubscriberAnswer } from '@/features/decision-v1/DecisionBrief';
-import { closingDataComplete } from '@/features/decision-v1/forwardValidation';
-import { isSubscriberAnalysisUnavailable, SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
+import { SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
+import { getSubscriberReportProjection, type SubscriberReportProjection } from '@/lib/subscriberReportProjection';
 
 type UnknownRecord = Record<string, unknown>;
 
 type ClosingView = {
   complete: boolean;
   fullData: boolean;
-  outcome: 'complete' | 'partial' | 'failed' | 'waiting';
+  outcome: 'complete' | 'partial' | 'failed' | 'neutral' | 'waiting';
   outcomeLabel: string;
   actualSummary: string;
   whatWasRight: string;
@@ -74,24 +73,19 @@ function directionFromChange(change: number | null): string {
   return `加權指數收盤震盪 ${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
 }
 
-function buildClosingView(ai: UnknownRecord): ClosingView {
-  const resolvedClosing = resolveClosingVerificationState(ai);
-  const closing = resolvedClosing.record;
-  const status = firstText(closing.status, closing.verification_status).toLowerCase();
-  const dataStatus = firstText(closing.data_status).toLowerCase();
-  const rawOutcome = firstText(closing.hit_or_miss, closing.prediction_result, closing.result).toLowerCase();
-  const actualDirection = firstText(closing.actual_direction).toLowerCase();
-  const actualChange = resolvedClosing.taiexChange;
-  const hasNamedDirection = Boolean(actualDirection)
-    && !['unknown', 'pending', 'unavailable', 'n/a', '尚未取得', '待資料'].includes(actualDirection);
-  const hasActualOutcome = hasNamedDirection || actualChange !== null;
-  const directionVerified = resolvedClosing.state !== 'pending' && hasActualOutcome;
-  const fullData = directionVerified && closingDataComplete(status, dataStatus, hasActualOutcome);
+function buildClosingView(projection: SubscriberReportProjection): ClosingView {
+  const closing = projection.closing.result || {};
+  const rawOutcome = projection.closing.outcome || '';
+  const rawChange = closing.actual_taiex_change ?? asRecord(closing.actual_taiex_close).change_percent;
+  const actualChange = typeof rawChange === 'number' && Number.isFinite(rawChange) ? rawChange : null;
+  const directionVerified = projection.closing.complete;
+  const fullData = projection.closing.complete;
 
   let outcome: ClosingView['outcome'] = 'waiting';
   if (directionVerified && ['hit', 'correct', 'confirmed', 'success'].includes(rawOutcome)) outcome = 'complete';
   else if (directionVerified && ['partial', 'mixed', 'partial_hit'].includes(rawOutcome)) outcome = 'partial';
   else if (directionVerified && ['miss', 'wrong', 'failed', 'rejected', 'incorrect'].includes(rawOutcome)) outcome = 'failed';
+  else if (directionVerified && rawOutcome === 'neutral') outcome = 'neutral';
 
   const outcomeLabel = outcome === 'complete'
     ? fullData ? '完整成立' : '方向成立（部分資料不足）'
@@ -99,7 +93,9 @@ function buildClosingView(ai: UnknownRecord): ClosingView {
       ? '部分成立'
       : outcome === 'failed'
         ? '未成立'
-        : '等待完整收盤資料';
+        : outcome === 'neutral'
+          ? '中性結果，收盤驗證已完成'
+          : '等待完整收盤資料';
 
   return {
     complete: directionVerified,
@@ -112,7 +108,9 @@ function buildClosingView(ai: UnknownRecord): ClosingView {
     whatWasRight: directionVerified ? valueSummary(closing.what_was_right) : '',
     whatWasWrong: directionVerified ? valueSummary(closing.what_was_wrong) : '',
     nextAdjustment: directionVerified ? valueSummary(closing.tomorrow_adjustment) : '',
-    statusNote: fullData
+    statusNote: outcome === 'neutral'
+      ? '收盤驗證已完成；中性結果不計為命中或失準，也不納入命中率樣本。'
+      : fullData
       ? '已取得可核對的收盤方向與完整資料，這筆紀錄可進入歷史績效。'
       : directionVerified
         ? '收盤方向已完成驗證；部分個股或期貨欄位不足，因此顯示結果但不納入完整資料績效。'
@@ -150,15 +148,15 @@ function VerificationContent() {
   }, []);
 
   const ai = useMemo(() => displayState?.rawAI || {}, [displayState?.rawAI]);
-  const analysisUnavailable = isSubscriberAnalysisUnavailable(ai);
+  const projection = useMemo(() => getSubscriberReportProjection(displayState?.rawRow), [displayState?.rawRow]);
+  const analysisUnavailable = !projection.analysisAvailable;
   const narrative = useMemo(() => buildCanonicalNarrative({ displayState, ai }), [ai, displayState]);
-  const closing = useMemo(() => buildClosingView(ai), [ai]);
+  const closing = useMemo(() => buildClosingView(projection), [projection]);
   const timeline = useMemo(() => buildRuntimeDecisionTimeline({
-    ai,
+    projection,
     hasReport: Boolean(displayState?.rawRow),
-    reportGeneratedAt: firstText(asRecord(displayState?.rawRow).generated_at, asRecord(displayState?.rawRow).created_at),
     isTradingDay: displayState?.is_trading_day ?? true,
-  }), [ai, displayState]);
+  }), [projection, displayState]);
 
   if (loading) {
     return <div className="ma-page flex min-h-screen flex-col"><Navbar /><main className="flex-1 grid place-items-center text-white/60">正在讀取今日驗證...</main><Footer /></div>;
@@ -184,7 +182,7 @@ function VerificationContent() {
     return (
       <div className="ma-page flex min-h-screen flex-col">
         <Navbar />
-        <main className="flex-1 grid place-items-center px-4">
+        <main className="flex-1 grid place-items-center px-4" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
           <section className="w-full max-w-lg rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-6 text-center">
             <h1 className="text-xl font-bold text-white">今日驗證尚未建立</h1>
             <p className="mt-2 text-sm leading-relaxed text-white/60">今日盤前報告尚未產生，因此不會把 {fallbackReportDate || '上一交易日'} 的進度誤標為今天。</p>
@@ -199,7 +197,7 @@ function VerificationContent() {
     );
   }
 
-  const reportDate = displayState.reportDate;
+  const reportDate = projection.identity.reportDate;
   const thesis = publicVerificationText(
     narrative.decision_lifecycle.current_thesis.summary
       || narrative.today_focus.summary
@@ -215,10 +213,26 @@ function VerificationContent() {
       ? 'border-rose-400/30 bg-rose-400/10 text-rose-100'
       : 'border-amber-300/25 bg-amber-300/10 text-amber-100';
 
+  if (analysisUnavailable && displayState.is_trading_day) {
+    return (
+      <div className="ma-page flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex-1" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
+          <SubscriberAnswer question="今天的判斷最後有沒有成立？" date={projection.identity.reportDate}
+            answer={projection.title} reason={projection.statusLabel} tone="amber">
+            <p>判斷信心：{projection.confidence.label}</p>
+            <p>當日分析尚未完成，不顯示收盤成敗，也不建立績效樣本。</p>
+          </SubscriberAnswer>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="ma-page flex min-h-screen flex-col overflow-x-hidden">
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
         <SubscriberAnswer question="今天的判斷最後有沒有成立？" date={reportDate}
           answer={displayState.is_trading_day ? analysisUnavailable ? SUBSCRIBER_ANALYSIS_INCOMPLETE : closing.outcomeLabel : '今日休市，不判定成敗'}
           reason={displayState.is_trading_day ? analysisUnavailable ? '當日市場判斷尚未正式發布，不顯示收盤成敗，也不建立績效樣本。' : closing.actualSummary : '今日非交易日，本節點不適用；等待下一個交易日。'}
@@ -232,8 +246,8 @@ function VerificationContent() {
               <span className="text-xs font-semibold tracking-[0.14em] text-white/45">盤前假設</span>
               <h2 className="mt-3 text-xl font-bold text-white md:text-2xl">{renderSafeText(thesis || '今日主線仍在整理')}</h2>
               <dl className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl bg-black/20 p-4"><dt className="text-xs text-white/45">盤前方向</dt><dd className="mt-1 font-semibold text-white">{renderSafeText(displayState.marketBias)}</dd></div>
-                <div className="rounded-xl bg-black/20 p-4"><dt className="text-xs text-white/45">判斷信心</dt><dd className="mt-1 font-semibold text-white">{displayState.confidenceScore == null ? '資料不足' : `${displayState.confidenceScore}/100`}</dd></div>
+                <div className="rounded-xl bg-black/20 p-4"><dt className="text-xs text-white/45">盤前方向</dt><dd className="mt-1 font-semibold text-white">{renderSafeText(projection.marketDecision.bias || projection.statusLabel)}</dd></div>
+                <div className="rounded-xl bg-black/20 p-4"><dt className="text-xs text-white/45">判斷信心</dt><dd className="mt-1 font-semibold text-white">{projection.confidence.label}</dd></div>
               </dl>
             </section>
 

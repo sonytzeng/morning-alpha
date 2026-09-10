@@ -12,6 +12,7 @@ import { getTodayOnlyMarketData } from '@/services/marketStateEngine';
 import { mapClosingVerificationToCloseMarketReview, type CloseMarketReview } from '@/services/closeMarketReviewService';
 import { normalizeMorningAlphaReport, type MorningAlphaNormalizedReport } from '@/lib/morningAlphaReportAdapter';
 import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportContract';
 
 export interface HomeDashboardData {
   marketData: SupabaseMarketData[];
@@ -88,10 +89,8 @@ export async function loadHomeDashboardData(): Promise<HomeDashboardData> {
           report_date: embeddedRadar.report_date || resolved.rawRow.report_date,
         });
       }
-      const closing = ai.closing_verification_v2 || ai.closing_verification;
       result.todayCloseVerification = mapClosingVerificationToCloseMarketReview(
-        resolved.rawRow.report_date,
-        closing,
+        getSubscriberReportProjection(resolved.rawRow),
       );
     } else {
       result.morningAlpha = resolved.report;

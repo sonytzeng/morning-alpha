@@ -1,5 +1,6 @@
 import type { Report } from '@/types/report';
 import { BRAND_ICON_URL, BRAND_NAME } from '@/config/brand';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 
 interface CoreConclusionCardProps {
   report: Report | null;
@@ -8,11 +9,11 @@ interface CoreConclusionCardProps {
 export default function CoreConclusionCard({ report }: CoreConclusionCardProps) {
   if (!report) return null;
 
-  const bias = report.market_bias || '震盪';
-  const score = report.confidence_score ?? 50;
-  const label = report.confidence_label || (score >= 75 ? '頗高' : score >= 50 ? '尚可' : '偏低');
-
-  const mainQuote = report.summary || report.today_summary || '今日市場觀察中...';
+  const projection = getSubscriberReportProjection(report);
+  const bias = projection.marketDecision.label;
+  const score = projection.confidence.value;
+  const label = projection.confidence.label;
+  const mainQuote = projection.marketDecision.summary ?? projection.statusLabel;
 
   const biasStyle = (() => {
     if (bias.includes('偏多')) return {
@@ -42,7 +43,7 @@ export default function CoreConclusionCard({ report }: CoreConclusionCardProps) 
         <div className="flex flex-wrap items-center gap-2 mb-5">
           <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold ${biasStyle.badge}`}>
             <i className={`${biasStyle.icon} text-xs`}></i>
-            {bias}｜{score}/100
+            {bias}｜{score === null ? label : `${score}/100`}
           </span>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white/60 text-xs font-medium">
             <img
@@ -53,11 +54,11 @@ export default function CoreConclusionCard({ report }: CoreConclusionCardProps) 
                 (e.target as HTMLImageElement).style.display = 'none';
               }}
             />
-            劇本成立度 {score}/100 · {label}
+            {projection.statusLabel}
           </span>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/5 bg-white/3 text-white/40 text-[10px]">
             <i className="ri-time-line text-[10px]"></i>
-            {report.report_date} 07:30 更新
+            {projection.identity.reportDate}
           </span>
         </div>
 
@@ -74,13 +75,13 @@ export default function CoreConclusionCard({ report }: CoreConclusionCardProps) 
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-white/40 text-[10px] uppercase tracking-wider">劇本成立度</span>
             <span className={`text-xs font-bold ${bias.includes('偏多') ? 'text-forest-400' : bias.includes('偏空') ? 'text-red-400' : 'text-amber-400'}`}>
-              {score}/100
+              {score === null ? label : `${score}/100`}
             </span>
           </div>
           <div className="h-2 bg-navy-800 rounded-full overflow-hidden">
             <div
               className={`h-full ${biasStyle.bar} rounded-full transition-all duration-700`}
-              style={{ width: `${score}%` }}
+              style={{ width: `${score ?? 0}%` }}
             ></div>
           </div>
           <p className="text-white/25 text-[10px] mt-1.5">劇本成立度代表盤前訊號一致程度，不代表漲跌保證</p>

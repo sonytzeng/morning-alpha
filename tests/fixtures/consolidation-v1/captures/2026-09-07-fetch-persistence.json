@@ -1,0 +1,84 @@
+{
+  "schema_version": "CONSOLIDATION_FAILURE_CAPTURE_V1",
+  "fixture_id": "2026-09-07-fetch-persistence",
+  "market_date": {
+    "today_date": null,
+    "report_date": "2026-09-07",
+    "data_as_of": null,
+    "market_status": null,
+    "is_trading_day": null,
+    "report_mode": null,
+    "timezone": "Asia/Taipei"
+  },
+  "provenance": {
+    "kind": "SANITIZED_CAPTURE_REPLAY",
+    "sources": [
+      {
+        "artifact": "production-acceptance.json",
+        "sha256": "6d7f50cfc815259cdf75eb02fb7d9e7cb7b615fb3d1ff505fdd7c1c57ecbdf5e",
+        "selected_fields": "[0].business_date,verdict,blocking_checks,evidence,created_at"
+      },
+      {
+        "artifact": "production-checkpoint-evidence.json",
+        "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "selected_fields": "empty captured checkpoint result"
+      }
+    ],
+    "observed_at": "2026-09-07T10:47:33.225078Z",
+    "removed": [
+      "production identifiers",
+      "operations metadata"
+    ],
+    "unavailable": [
+      "original vendor response bytes",
+      "complete original research inputs"
+    ],
+    "full_producer_replay_available": false
+  },
+  "observed": {
+    "immutable_checkpoint_rows": [],
+    "acceptance_verdict": "FAIL",
+    "blocking_checks": [
+      "CANONICAL_NOT_READY",
+      "REPORT_REVISION_MISMATCH",
+      "INPUT_LINEAGE_UNVERIFIED",
+      "SOURCE_COMPLETENESS_UNVERIFIED",
+      "RESEARCH_NOT_READY",
+      "QUALITY_COUNTER_DUPLICATE_CLAIMS",
+      "EDITORIAL_NOT_APPROVED",
+      "PREMIUM_SEMANTIC_NOT_PASSED",
+      "CANONICAL_OUTPUT_DIVERGENCE",
+      "NORMAL_REPORT_LINE_NOT_COMPLETE",
+      "PREMARKET_HEALTH_UNVERIFIED",
+      "CHECKPOINT_0900_TAIEX_EVIDENCE_MISSING",
+      "CHECKPOINT_0900_2330_EVIDENCE_MISSING",
+      "CHECKPOINT_0900_TXF_EVIDENCE_MISSING",
+      "CHECKPOINT_0930_TAIEX_EVIDENCE_MISSING",
+      "CHECKPOINT_0930_2330_EVIDENCE_MISSING",
+      "CHECKPOINT_0930_TXF_EVIDENCE_MISSING",
+      "CHECKPOINT_1030_TAIEX_EVIDENCE_MISSING",
+      "CHECKPOINT_1030_2330_EVIDENCE_MISSING",
+      "CHECKPOINT_1030_TXF_EVIDENCE_MISSING",
+      "CHECKPOINT_1300_TAIEX_EVIDENCE_MISSING",
+      "CHECKPOINT_1300_2330_EVIDENCE_MISSING",
+      "CHECKPOINT_1300_TXF_EVIDENCE_MISSING",
+      "CHECKPOINT_1410_TAIEX_EVIDENCE_MISSING",
+      "CHECKPOINT_1410_2330_EVIDENCE_MISSING",
+      "CHECKPOINT_1410_TXF_EVIDENCE_MISSING",
+      "CHECKPOINT_1430_TAIEX_EVIDENCE_MISSING",
+      "CHECKPOINT_1430_2330_EVIDENCE_MISSING",
+      "CHECKPOINT_1430_TXF_EVIDENCE_MISSING",
+      "CLOSING_REVISION_UNVERIFIED",
+      "LEARNING_REVISION_UNVERIFIED",
+      "RUNTIME_FAILURE_PRESENT"
+    ],
+    "normal_report_line_count": 0,
+    "failed_dispatches": 4,
+    "automatic_stable_day": false
+  },
+  "replay_assertions": [
+    "Mutable quote availability cannot substitute for missing immutable checkpoint evidence.",
+    "Original FAIL remains FAIL; new synthetic runs never update this capture.",
+    "Historical capture is diagnostic input, not permission to backfill original checkpoints."
+  ]
+}

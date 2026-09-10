@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Report } from '@/types/report';
 import { getLatestReports, getTodayReport } from '@/services/reportService';
 import { isDateTaipeiToday, isTaipeiToday } from '@/services/marketSourceHealthService';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 
 export interface AccountDashboardData {
   // Today report
@@ -79,6 +80,24 @@ function latestTimestamp(rows: Record<string, unknown>[], keys: string[]): strin
   return latest;
 }
 
+/** Account is a subscriber surface; an opening-radar label is not a receipt. */
+export function getAccountIntradayView(projection: ReturnType<typeof getSubscriberReportProjection>) {
+  const checkpoint = projection.runtime.checkpoints['0930'];
+  const verified = projection.analysisAvailable && !projection.historical
+    && checkpoint.evidenceVerified && (checkpoint.status === 'completed' || checkpoint.status === 'failed');
+  return {
+    intradayLatestAt: verified ? checkpoint.observedAt : null,
+    intradayCheckDate: verified ? projection.identity.reportDate : null,
+    hasIntradayData: verified,
+    isIntradayToday: verified && projection.identity.reportDate === projection.identity.todayDate,
+    intradayRadarStatus: verified
+      ? checkpoint.status === 'failed' ? '開盤驗證回報失敗' : '開盤驗證已完成'
+      : null,
+    intradayRadarBias: verified ? projection.marketDecision.bias : null,
+    intradayRadarSummary: verified ? projection.marketDecision.label : null,
+  };
+}
+
 async function loadAccountDashboard(): Promise<AccountDashboardData> {
   const result: AccountDashboardData = {
     todayReport: null,
@@ -110,17 +129,17 @@ async function loadAccountDashboard(): Promise<AccountDashboardData> {
       getTodayReport(),
       getLatestReports(30),
     ]);
+    const projection = getSubscriberReportProjection(todayReport, { todayDate: isTaipeiToday() });
     if (todayReport) {
       result.todayReport = todayReport;
-      result.hasTodayReport = true;
+      result.hasTodayReport = projection.analysisAvailable && !projection.historical;
     }
 
     // Use the same server-trimmed payload as the rest of the public product.
     // This avoids opening direct browser access to raw reports or provider data.
-    const payload = asRecord(todayReport?.ai_strategy_json);
+    const payload = projection.analysisAvailable ? asRecord(todayReport?.ai_strategy_json) : {};
     const marketSnapshots = asRecords(payload.market_data_snapshots);
     const importantNews = asRecords(payload.important_news);
-    const openingRadar = asRecord(payload.opening_radar);
 
     result.marketDataLatestAt = latestTimestamp(marketSnapshots, ['captured_at', 'created_at', 'updated_at'])
       || firstText(payload.data_as_of);
@@ -134,16 +153,7 @@ async function loadAccountDashboard(): Promise<AccountDashboardData> {
     result.totalNewsCount = result.selectedNewsCount;
     result.isMarketNewsToday = isDateTaipeiToday(result.marketNewsLatestAt);
 
-    result.intradayLatestAt = firstText(openingRadar.captured_at, openingRadar.updated_at);
-    result.intradayCheckDate = firstText(openingRadar.report_date);
-    result.intradayRadarStatus = firstText(openingRadar.radar_status, payload.opening_radar_status);
-    result.hasIntradayData = Boolean(
-      result.intradayCheckDate || result.intradayLatestAt || result.intradayRadarStatus,
-    );
-    result.isIntradayToday = result.intradayCheckDate === isTaipeiToday()
-      || isDateTaipeiToday(result.intradayLatestAt);
-    result.intradayRadarBias = result.hasIntradayData ? todayReport?.market_bias || null : null;
-    result.intradayRadarSummary = firstText(openingRadar.data_status);
+    Object.assign(result, getAccountIntradayView(projection));
     result.isTXFAvailable = marketSnapshots.some((snapshot) =>
       /^(TXF|MTX|TAIEX_FUTURES)$/i.test(String(snapshot.symbol || snapshot.code || '')),
     );
@@ -164,7 +174,9 @@ function computeStreakFromReports(reports: Report[]): number {
 
   const today = isTaipeiToday();
   const dates = reports
-    .map((r) => r.report_date)
+    .map((report) => getSubscriberReportProjection(report, { todayDate: today, historical: true }))
+    .filter((projection) => projection.analysisAvailable)
+    .map((projection) => projection.identity.reportDate)
     .filter((d): d is string => !!d)
     .sort()
     .reverse(); // newest first

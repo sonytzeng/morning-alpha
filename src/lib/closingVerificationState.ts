@@ -1,4 +1,4 @@
-import { hasSubscriberState, isSubscriberAnalysisUnavailable, subscriberState, hasMatchingSubscriberClosingReceipt } from './subscriberReportContract.ts';
+import { getSubscriberReportProjection, hasSubscriberState } from './subscriberReportContract.ts';
 
 export type ClosingVerificationState = 'complete' | 'degraded' | 'pending';
 
@@ -58,9 +58,15 @@ export function resolveClosingVerificationState(...sources: unknown[]): Resolved
     const row = asRecord(source);
     return hasSubscriberState(row) || row.canonical_decision !== undefined || row.content_publish_gate !== undefined || row.report_status !== undefined;
   });
-  if (envelope && (isSubscriberAnalysisUnavailable(envelope)
-    || (hasSubscriberState(envelope) && subscriberState(envelope)?.closing !== 'COMPLETE'))) {
-    return { state: 'pending', record: {}, taiexChange: null, outcome: '' };
+  if (envelope) {
+    const projection = getSubscriberReportProjection(envelope);
+    if (!projection.closing.complete || !projection.closing.result) {
+      return { state: 'pending', record: {}, taiexChange: null, outcome: '' };
+    }
+    const close = projection.closing.result;
+    return { state: 'complete', record: close,
+      taiexChange: numberOrNull(close.actual_taiex_change) ?? numberOrNull(asRecord(close.actual_taiex_close).change_percent),
+      outcome: projection.closing.outcome || '' };
   }
   let record: UnknownRecord = {};
   for (const source of sources) {
@@ -69,11 +75,6 @@ export function resolveClosingVerificationState(...sources: unknown[]): Resolved
       record = candidate;
       break;
     }
-  }
-
-  const state = envelope && hasSubscriberState(envelope) ? subscriberState(envelope) : null;
-  if (state && !hasMatchingSubscriberClosingReceipt(record, state)) {
-    return { state: 'pending', record: {}, taiexChange: null, outcome: '' };
   }
 
   const taiex = asRecord(record.actual_taiex_close);

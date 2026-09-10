@@ -97,55 +97,71 @@ export function useHomeDashboard() {
     document.addEventListener('visibilitychange', refreshWhenVisible);
     window.addEventListener('focus', refreshWhenVisible);
 
-    // Supabase Realtime 訂閱
-    const channel = supabase
-      .channel('morning-alpha-home-live')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'market_data' },
-        () => { refresh(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'reports' },
-        () => {
-          refresh();
-          loadMorningState(); // Also refresh morningState when reports change
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'intraday_checks' },
-        () => { refresh(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'opening_market_radar' },
-        () => { refresh(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'market_source_health' },
-        () => { refresh(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'market_news' },
-        () => { refresh(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'close_market_reviews' },
-        () => { refresh(); }
-      )
-      .subscribe();
+    // Resolve the SDK session before the first join. Realtime 2.15.5 can queue
+    // a tokenless join while its lazy access-token callback is still pending.
+    // Keep anonymous clients on the public socket contract: a publishable API
+    // key is not a session JWT and must not be passed to setAuth explicitly.
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    const subscribe = async () => {
+      const { data: auth, error: authError } = await supabase.auth.getSession();
+      if (authError) throw authError;
+      if (disposed) return;
+      if (auth.session) await supabase.realtime.setAuth(auth.session.access_token);
+      if (disposed) return;
+      channel = supabase
+        .channel('morning-alpha-home-live')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'market_data' },
+          () => { refresh(); }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'reports' },
+          () => {
+            refresh();
+            loadMorningState(); // Also refresh morningState when reports change
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'intraday_checks' },
+          () => { refresh(); }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'opening_market_radar' },
+          () => { refresh(); }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'market_source_health' },
+          () => { refresh(); }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'market_news' },
+          () => { refresh(); }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'close_market_reviews' },
+          () => { refresh(); }
+        )
+        .subscribe();
+    };
+    void subscribe().catch(() => {
+      // Do not fall back to an anonymous join after an Auth error. The existing
+      // bounded reconciliation poll remains active; never log credentials.
+      if (!disposed) console.warn('Home realtime subscription unavailable; periodic refresh remains active.');
+    });
 
     return () => {
       disposed = true;
       if (pollTimer) clearTimeout(pollTimer);
       document.removeEventListener('visibilitychange', refreshWhenVisible);
       window.removeEventListener('focus', refreshWhenVisible);
-      supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [refresh, loadMorningState]);
 

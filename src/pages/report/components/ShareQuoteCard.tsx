@@ -1,5 +1,5 @@
 import type { Report } from '@/types/report';
-import { formatTaipeiDate } from '@/utils/tradingDay';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 
 interface ShareQuoteCardProps {
   report: Report | null;
@@ -24,10 +24,11 @@ export default function ShareQuoteCard({
   generatingImage,
   shareImageUrl,
 }: ShareQuoteCardProps) {
-  const quote = report?.today_quote || report?.summary || '今日市場觀察中...';
-  const bias = report?.market_bias || '震盪';
-  const score = report?.confidence_score ?? 50;
-  const date = report?.report_date || formatTaipeiDate();
+  const projection = getSubscriberReportProjection(report);
+  const quote = projection.marketDecision.summary ?? projection.statusLabel;
+  const bias = projection.marketDecision.label;
+  const score = projection.confidence.value;
+  const date = projection.identity.reportDate;
 
   return (
     <div className="relative bg-navy-900/80 border border-navy-800 rounded-2xl p-6 md:p-8 overflow-hidden">
@@ -50,10 +51,10 @@ export default function ShareQuoteCard({
           }`}>
             {bias}
           </span>
-          <span className="text-white/30 text-xs">把握度 {score}/100 · {date}</span>
+          <span className="text-white/30 text-xs">把握度 {score === null ? projection.confidence.label : `${score}/100`} · {date}</span>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-2">
+        {projection.analysisAvailable && <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             onClick={onCopy}
             className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-medium rounded-xl transition-all border border-white/10 min-h-11"
@@ -95,9 +96,9 @@ export default function ShareQuoteCard({
               下載圖卡
             </button>
           )}
-        </div>
+        </div>}
 
-        {shareImageUrl && (
+        {projection.analysisAvailable && shareImageUrl && (
           <div className="mt-4 flex justify-center">
             <img
               src={shareImageUrl}

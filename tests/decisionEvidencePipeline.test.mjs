@@ -6,6 +6,11 @@ import { loadDecisionEvidence, DATA_QUERIES, emptyEvidenceData } from '../supaba
 import { decisionFromReport } from '../src/features/decision-v1/presentation.ts';
 import { IDENTITY as id, evidenceRows } from './fixtures/decision-evidence-rows.mjs';
 const run = d => buildEvidenceDecision(d,id);
+// The assessment is a nested read model, not proof that its report was published.
+const publishedReport = assessment => ({
+  ...id, canonical_decision: { id: id.revision_id, status: 'READY', action: 'ACT' },
+  content_publish_gate: { overall_status: 'eligible' }, decision_engine_v1: assessment,
+});
 test('real-shaped row pipeline preserves source, timestamp, calculation and identity; no probability without calibration',()=>{
   const d=run(evidenceRows());
   assert.equal(d.screening.status,'COMPLETE',JSON.stringify(d.screening));
@@ -15,7 +20,8 @@ test('real-shaped row pipeline preserves source, timestamp, calculation and iden
   assert.equal(d.entry_environment_score.meaning,'quality_index'); assert.equal(d.factor_availability.valuation.value,null);assert.match(d.entry_environment_score.calculation,/valuation UNAVAILABLE/);
   for(const e of d.evidence){assert.ok(e.table&&e.row_id&&e.source&&e.observed_at&&e.available_at);assert.equal(e.revision_id,id.revision_id);}
   for(const o of d.stock_opportunities){assert.equal(o.action,'ACTIVE_WATCH');assert.equal(o.opportunity_score.meaning,'quality_index');assert.equal(Object.keys(o.priced_in_score.inputs).length,6);assert.ok(o.evidence.length&&o.invalidation_conditions.length);}
-  assert.equal(decisionFromReport({decision_engine_v1:d},id,id.today_date).action,d.action);
+  assert.equal(decisionFromReport(publishedReport(d),id,id.today_date).action,d.action);
+  assert.equal(decisionFromReport({decision_engine_v1:d},id,id.today_date).action,'INSUFFICIENT_DATA', 'a complete assessment alone is not a published report');
 });
 test('stale news is excluded; empty mappings never invent affected companies or bullish catalyst',()=>{
   const d=evidenceRows();d.news[0].published_at='2026-09-04T00:00:00Z';
@@ -71,7 +77,8 @@ test('private projection removes companies, company evidence and private score i
   assert.equal(free.stock_opportunities.length,0);assert.equal(free.screening.rejected.length,0);
   assert.doesNotMatch(JSON.stringify(free),/Synthetic company|earnings-2317|mapping-2317|"2317"|"2382"/);
   const paid=projectEvidenceDecision(d,{companyContentAllowed:true,canonicalAction:'ACT',publishedSymbols:['2330']});assert.deepEqual(paid.stock_opportunities.map(o=>o.symbol),['2330']);
-  assert.equal(decisionFromReport({decision_engine_v1:paid},id,id.today_date).stock_opportunities.length,1);
+  assert.equal(decisionFromReport(publishedReport(paid),id,id.today_date).stock_opportunities.length,1);
+  assert.equal(decisionFromReport({...publishedReport(paid),content_publish_gate:{overall_status:'blocked'}},id,id.today_date).stock_opportunities.length,0);
   assert.doesNotMatch(JSON.stringify(paid),/earnings-2317|mapping-2317|Synthetic company 2317/);
   const stop=projectEvidenceDecision(d,{companyContentAllowed:true,canonicalAction:'STOP',publishedSymbols:['2330']});assert.equal(stop.action,'DEFENSIVE');assert.equal(stop.stock_opportunities.length,0);
 });

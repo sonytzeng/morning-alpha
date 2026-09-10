@@ -1,0 +1,280 @@
+{
+  "schema_version": "CORE_CONSOLIDATION_PROVIDER_BOUNDARY_V1",
+  "fixture_id": "full-chain-synthetic-20260923-public-export",
+  "report_date": "2026-09-23",
+  "warmup_date": "2026-09-22",
+  "provenance": {
+    "kind": "SYNTHETIC_PROVIDER_CONTROL",
+    "historical_capture": false,
+    "historical_success_claim": false,
+    "source": "Repository-authored synthetic external provider observations and conditional prose; not an archived vendor response",
+    "purpose": "Fresh Wednesday 9/23 synthetic control for actual Generator frozen public news metadata and the thirteenth ContentOS projection handler; not external consumer delivery",
+    "synthetic_template": {
+      "path": "tests/fixtures/consolidation-v1/providers/full-chain-synthetic-20260921.json",
+      "sha256": "843846d0c26be761010b394924a0d1b3f4266bbfa7f2b2bf74fa06cf4b2b8a09",
+      "reason": "A distinct new empty scope; source timestamps use real prior weekdays. Raw quotes and conditional prose unchanged; only dates and unique explicit synthetic news URLs advance. No publication score, accepted status, evidence coverage or frozen source metadata is assigned by this fixture."
+    }
+  },
+  "phases": [
+    {
+      "id": "prior-close-warmup",
+      "starts_at": "2026-09-22T06:30:00.000Z",
+      "ends_at": "2026-09-22T16:00:00.000Z",
+      "news_source_at": "2026-09-22T06:00:00.000Z",
+      "source_times": {
+        "US": "2026-09-21T20:00:00.000Z",
+        "TW": "2026-09-22T05:30:00.000Z",
+        "TXF": "2026-09-22T05:45:00.000Z"
+      },
+      "news": [
+        {
+          "url": "https://fixture.example.invalid/synthetic-news-20260923/fed-policy-transmission-warmup-20260922",
+          "title": "Synthetic scenario: Federal Reserve rate cut follows FOMC meeting as bond yields ease",
+          "summary": "Synthetic market event, not historical news: the Federal Reserve announces a quarter-point interest rate cut after the FOMC meeting. The policy statement cites slowing inflation and CPI pressure. US Treasury bond yields ease as the yield curve reprices; the dollar index DXY remains broadly stable. Lower funding costs support a market rally, while foreign flows and the Taiwan dollar remain the transmission channels to Taiwan bank and export-sector valuations. This is a systemic scenario, not evidence about any individual company."
+        },
+        {
+          "url": "https://fixture.example.invalid/synthetic-news-20260923/treasury-valuation-warmup-20260922",
+          "title": "Synthetic scenario: US Treasury 10-year yield eases after rate decision, lifting technology valuations",
+          "summary": "Synthetic market event: US Treasury prices rise modestly after the Federal Reserve interest rate decision. Bond yield and 10-year yield declines support duration-sensitive technology valuations during a market rally. Inflation and CPI expectations remain under review; the yield curve and dollar index DXY show no disorderly move. Taiwan equity investors must verify foreign capital flows and the opening range before treating global valuation support as local buying. No company order, earnings result, capacity change, or recommendation is asserted."
+        },
+        {
+          "url": "https://fixture.example.invalid/synthetic-news-20260923/dollar-capital-flows-warmup-20260922",
+          "title": "Synthetic scenario: Dollar index DXY stays stable after Fed rate cut as Taiwan monitors capital flows",
+          "summary": "Synthetic market event: the dollar index DXY and US dollar show limited movement despite a Federal Reserve rate cut and a modest market rally. The Taiwan dollar transmission depends on foreign exchange settlement and external capital flows. US Treasury bond yields, the yield curve, inflation and CPI remain cross-market checks. A stable USD is a macro observation; it supplies no verified company catalyst and cannot establish an individual stock entry."
+        },
+        {
+          "url": "https://fixture.example.invalid/synthetic-news-20260923/oil-supply-risk-warmup-20260922",
+          "title": "Synthetic scenario: Crude oil and Brent remain contained as OPEC addresses supply shortage risk",
+          "summary": "Synthetic market event: OPEC indicates that crude oil supply can meet near-term demand despite supply shortage risk and trade tension. WTI and Brent oil price changes remain contained rather than showing a spike. Stable energy costs reduce an external inflation channel for Taiwan shipping and manufacturing, while transport costs and foreign exchange still require observation. The report describes a systemic transmission scenario, not an actual company contract or earnings announcement."
+        },
+        {
+          "url": "https://fixture.example.invalid/synthetic-news-20260923/inflation-risk-monitor-warmup-20260922",
+          "title": "Synthetic scenario: CPI inflation cools as FOMC rate decision supports a broad market rally",
+          "summary": "Synthetic market event: CPI inflation moderates before a Federal Reserve FOMC meeting, and a subsequent interest rate cut supports a broad market rally. US Treasury bond yields decline modestly while the dollar index DXY stays stable. Taiwan bank funding costs and export-sector discount rates are possible transmission channels, but local opening confirmation is still necessary. These synthetic macro facts do not verify any individual stock beneficiary or supply-chain order."
+        },
+        {
+          "url": "https://fixture.example.invalid/synthetic-news-20260923/volatility-systemic-warmup-20260922",
+          "title": "Synthetic scenario: VIX volatility index falls after Federal Reserve rate decision, but opening risk remains",
+          "summary": "Synthetic market event: VIX and the volatility index ease after a Federal Reserve interest rate cut and broad market rally. US Treasury bond yields and dollar index DXY do not show a disruptive spike. Taiwan foreign capital flows, futures confirmation and the opening range remain required observations because lower global volatility does not prove a local trend. The scenario provides systemic market context only, with no verified company-specific catalyst or trade recommendation."
+        }
+      ]
+    },
+    {
+      "id": "premarket",
+      "starts_at": "2026-09-22T23:00:00.000Z",
+      "ends_at": "2026-09-23T01:00:00.000Z",
+      "news_source_at": "2026-09-22T22:30:00.000Z",
+      "source_times": {
+        "US": "2026-09-22T20:00:00.000Z",
+        "TW": "2026-09-22T05:30:00.000Z",
+        "TXF": "2026-09-22T21:00:00.000Z"
+      }
+    },
+    {
+      "id": "0900",
+      "starts_at": "2026-09-23T01:00:00.000Z",
+      "ends_at": "2026-09-23T01:30:00.000Z",
+      "news_source_at": "2026-09-22T22:30:00.000Z",
+      "source_times": {
+        "US": "2026-09-22T20:00:00.000Z",
+        "TW": "2026-09-23T01:00:00.000Z",
+        "TXF": "2026-09-23T01:00:00.000Z"
+      }
+    },
+    {
+      "id": "0930",
+      "starts_at": "2026-09-23T01:30:00.000Z",
+      "ends_at": "2026-09-23T02:30:00.000Z",
+      "news_source_at": "2026-09-22T22:30:00.000Z",
+      "source_times": {
+        "US": "2026-09-22T20:00:00.000Z",
+        "TW": "2026-09-23T01:30:00.000Z",
+        "TXF": "2026-09-23T01:30:00.000Z"
+      }
+    },
+    {
+      "id": "1030",
+      "starts_at": "2026-09-23T02:30:00.000Z",
+      "ends_at": "2026-09-23T05:00:00.000Z",
+      "news_source_at": "2026-09-22T22:30:00.000Z",
+      "source_times": {
+        "US": "2026-09-22T20:00:00.000Z",
+        "TW": "2026-09-23T02:30:00.000Z",
+        "TXF": "2026-09-23T02:30:00.000Z"
+      }
+    },
+    {
+      "id": "1300",
+      "starts_at": "2026-09-23T05:00:00.000Z",
+      "ends_at": "2026-09-23T06:10:00.000Z",
+      "news_source_at": "2026-09-22T22:30:00.000Z",
+      "source_times": {
+        "US": "2026-09-22T20:00:00.000Z",
+        "TW": "2026-09-23T05:00:00.000Z",
+        "TXF": "2026-09-23T05:00:00.000Z"
+      }
+    },
+    {
+      "id": "1410",
+      "starts_at": "2026-09-23T06:10:00.000Z",
+      "ends_at": "2026-09-23T06:30:00.000Z",
+      "news_source_at": "2026-09-22T22:30:00.000Z",
+      "source_times": {
+        "US": "2026-09-22T20:00:00.000Z",
+        "TW": "2026-09-23T05:30:00.000Z",
+        "TXF": "2026-09-23T05:45:00.000Z"
+      }
+    },
+    {
+      "id": "1430-through-acceptance",
+      "starts_at": "2026-09-23T06:30:00.000Z",
+      "ends_at": "2026-09-23T16:00:00.000Z",
+      "news_source_at": "2026-09-22T22:30:00.000Z",
+      "source_times": {
+        "US": "2026-09-22T20:00:00.000Z",
+        "TW": "2026-09-23T05:30:00.000Z",
+        "TXF": "2026-09-23T05:45:00.000Z"
+      }
+    }
+  ],
+  "quotes": {
+    "2330": {
+      "market": "TW",
+      "value": 1010,
+      "change": 10,
+      "change_percent": 1
+    },
+    "SPY": {
+      "market": "US",
+      "value": 505,
+      "change": 5,
+      "change_percent": 1
+    },
+    "QQQ": {
+      "market": "US",
+      "value": 505,
+      "change": 5,
+      "change_percent": 1
+    },
+    "SOXX": {
+      "market": "US",
+      "value": 252.5,
+      "change": 2.5,
+      "change_percent": 1
+    },
+    "NVDA": {
+      "market": "US",
+      "value": 151.5,
+      "change": 1.5,
+      "change_percent": 1
+    },
+    "TSM": {
+      "market": "US",
+      "value": 202,
+      "change": 2,
+      "change_percent": 1
+    },
+    "VXX": {
+      "market": "US",
+      "value": 19.8,
+      "change": -0.2,
+      "change_percent": -1
+    },
+    "UUP": {
+      "market": "US",
+      "value": 100.1,
+      "change": 0.1,
+      "change_percent": 0.1
+    },
+    "IEF": {
+      "market": "US",
+      "value": 100.1,
+      "change": 0.1,
+      "change_percent": 0.1
+    },
+    "IX0001": {
+      "market": "TW",
+      "value": 25250,
+      "change": 250,
+      "change_percent": 1
+    },
+    "TAIEX": {
+      "market": "TW",
+      "value": 25250,
+      "change": 250,
+      "change_percent": 1
+    },
+    "TXF1!": {
+      "market": "TXF",
+      "value": 25350,
+      "change": 250,
+      "change_percent": 0.99601593625498
+    },
+    "TXF202610": {
+      "market": "TXF",
+      "value": 25350,
+      "change": 250,
+      "change_percent": 0.99601593625498
+    }
+  },
+  "futures": [
+    {
+      "symbol": "TXF202610",
+      "product": "TXF",
+      "deliveryDate": "2026-10-21",
+      "status": "active"
+    }
+  ],
+  "news": [
+    {
+      "url": "https://fixture.example.invalid/synthetic-news-20260923/fed-policy-transmission",
+      "title": "Synthetic scenario: Federal Reserve rate cut follows FOMC meeting as bond yields ease",
+      "summary": "Synthetic market event, not historical news: the Federal Reserve announces a quarter-point interest rate cut after the FOMC meeting. The policy statement cites slowing inflation and CPI pressure. US Treasury bond yields ease as the yield curve reprices; the dollar index DXY remains broadly stable. Lower funding costs support a market rally, while foreign flows and the Taiwan dollar remain the transmission channels to Taiwan bank and export-sector valuations. This is a systemic scenario, not evidence about any individual company."
+    },
+    {
+      "url": "https://fixture.example.invalid/synthetic-news-20260923/treasury-valuation",
+      "title": "Synthetic scenario: US Treasury 10-year yield eases after rate decision, lifting technology valuations",
+      "summary": "Synthetic market event: US Treasury prices rise modestly after the Federal Reserve interest rate decision. Bond yield and 10-year yield declines support duration-sensitive technology valuations during a market rally. Inflation and CPI expectations remain under review; the yield curve and dollar index DXY show no disorderly move. Taiwan equity investors must verify foreign capital flows and the opening range before treating global valuation support as local buying. No company order, earnings result, capacity change, or recommendation is asserted."
+    },
+    {
+      "url": "https://fixture.example.invalid/synthetic-news-20260923/dollar-capital-flows",
+      "title": "Synthetic scenario: Dollar index DXY stays stable after Fed rate cut as Taiwan monitors capital flows",
+      "summary": "Synthetic market event: the dollar index DXY and US dollar show limited movement despite a Federal Reserve rate cut and a modest market rally. The Taiwan dollar transmission depends on foreign exchange settlement and external capital flows. US Treasury bond yields, the yield curve, inflation and CPI remain cross-market checks. A stable USD is a macro observation; it supplies no verified company catalyst and cannot establish an individual stock entry."
+    },
+    {
+      "url": "https://fixture.example.invalid/synthetic-news-20260923/oil-supply-risk",
+      "title": "Synthetic scenario: Crude oil and Brent remain contained as OPEC addresses supply shortage risk",
+      "summary": "Synthetic market event: OPEC indicates that crude oil supply can meet near-term demand despite supply shortage risk and trade tension. WTI and Brent oil price changes remain contained rather than showing a spike. Stable energy costs reduce an external inflation channel for Taiwan shipping and manufacturing, while transport costs and foreign exchange still require observation. The report describes a systemic transmission scenario, not an actual company contract or earnings announcement."
+    },
+    {
+      "url": "https://fixture.example.invalid/synthetic-news-20260923/inflation-risk-monitor",
+      "title": "Synthetic scenario: CPI inflation cools as FOMC rate decision supports a broad market rally",
+      "summary": "Synthetic market event: CPI inflation moderates before a Federal Reserve FOMC meeting, and a subsequent interest rate cut supports a broad market rally. US Treasury bond yields decline modestly while the dollar index DXY stays stable. Taiwan bank funding costs and export-sector discount rates are possible transmission channels, but local opening confirmation is still necessary. These synthetic macro facts do not verify any individual stock beneficiary or supply-chain order."
+    },
+    {
+      "url": "https://fixture.example.invalid/synthetic-news-20260923/volatility-systemic",
+      "title": "Synthetic scenario: VIX volatility index falls after Federal Reserve rate decision, but opening risk remains",
+      "summary": "Synthetic market event: VIX and the volatility index ease after a Federal Reserve interest rate cut and broad market rally. US Treasury bond yields and dollar index DXY do not show a disruptive spike. Taiwan foreign capital flows, futures confirmation and the opening range remain required observations because lower global volatility does not prove a local trend. The scenario provides systemic market context only, with no verified company-specific catalyst or trade recommendation."
+    }
+  ],
+  "openai_completion": {
+    "id": "synthetic-chat-completion-market-control-20260917",
+    "object": "chat.completion",
+    "model": "offline-deterministic-provider-boundary",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "{\"today_beneficiary_stocks\":[],\"beneficiary_stocks\":[],\"today_quote\":\"合成情境：SOX 與 TSM 隔夜約漲 1%、台指期夜盤約漲 1%；09:30 若期現貨未同向站穩開盤區間，先不追價並停止延伸偏多假設。\",\"free_summary\":{\"one_sentence\":\"合成情境：SOX 與 TSM 隔夜約漲 1%、台指期夜盤約漲 1%；09:30 若期現貨未同向站穩開盤區間，先不追價並停止延伸偏多假設。\",\"do_not_do\":\"沒有公司級證據，不以宏觀傳導或隔夜漲幅列出推薦股票。\"},\"member_research_note\":\"合成情境：SOX 與 TSM 隔夜約漲 1%、台指期夜盤約漲 1%；09:30 若期現貨未同向站穩開盤區間，先不追價並停止延伸偏多假設。\\n\\n合成情境：隔夜主要股指與半導體指數約上漲 1%，波動代理約下跌 1%，美元代理僅小幅變動。這提供大盤偏多但需開盤確認的背景；台股前收與台指期夜盤並非今日現貨成交，不能將外部風險偏好直接當成個股進場證據。\\n\\n合成新聞的核心是利率與資金傳導：Fed 政策轉向和債券殖利率回落可改善長久期資產評價，但美元代理穩定不等於外資已買入台股。能源供給風險若重新升高，通膨與資金成本的改善可能被抵銷，因此需同時觀察期現貨方向及市場廣度。\\n\\n09:00 先看現貨指數相對前收、台指期相對夜盤是否同向，09:30 再看開盤區間能否維持；10:30 若指數與期貨分歧，應把方向判斷降為觀察，不能因隔夜上漲而補寫盤中確認。13:00 追蹤原先的方向假設是否被相反走勢否定，收盤再用真實當日指數與期貨讀值檢查。\\n\\n本情境沒有公司訂單、財報、法說會或產能公告，供應鏈關聯只作宏觀傳導背景，不能支持任何個股推薦。收盤比較的是已凍結開盤方向及真實收盤走勢；若缺乏完整讀值或無法對應原始證據，回饋應保持資料不足，不事後修改預測。\",\"member_research_note_v2\":{\"today_core_thesis\":\"合成情境：SOX 與 TSM 隔夜約漲 1%、台指期夜盤約漲 1%；09:30 若期現貨未同向站穩開盤區間，先不追價並停止延伸偏多假設。\",\"overnight_chain\":[{\"event\":\"合成 Fed 利率決策與債券殖利率回落，隔夜股指約上漲 1%。\",\"source_market\":\"US\",\"impact_logic\":\"資金成本和波動風險的改善可能支撐市場評價，但須以現貨和期貨共同確認。\",\"taiwan_mapping\":\"僅有台股大盤與外資資金傳導，未建立公司級催化證據。\"}],\"taiwan_impact_map\":[{\"sector\":\"大盤與資金環境\",\"why_it_matters\":\"前收、夜盤與隔夜市場共同構成開盤前觀察，不代表當日現貨已確認。\",\"affected_stocks\":[],\"invalidation\":\"現貨跌破開盤區間且期貨方向轉弱時，原偏多觀察失效。\"}],\"beneficiary_candidates\":[],\"intraday_validation\":[{\"time_window\":\"09:00–09:30\",\"what_to_watch\":\"現貨與台指期方向及開盤區間\",\"bullish_confirm\":\"現貨與期貨同向維持開盤區間上緣\",\"bearish_fail\":\"現貨跌破區間且期貨同步轉弱\",\"neutral_condition\":\"期現貨方向分歧，保留觀察\"},{\"time_window\":\"10:30\",\"what_to_watch\":\"開盤方向是否延續及期現貨分歧\",\"bullish_confirm\":\"兩者方向同向且不跌破開盤區間\",\"bearish_fail\":\"兩者轉弱並跌破開盤區間\",\"neutral_condition\":\"僅單一指標轉強不能確認\"},{\"time_window\":\"13:00\",\"what_to_watch\":\"午盤方向與開盤假設是否一致\",\"bullish_confirm\":\"午盤維持原方向且期貨配合\",\"bearish_fail\":\"午盤走勢反轉且期貨同步\",\"neutral_condition\":\"資料不足或走勢混合維持未確認\"}],\"invalidation_rules\":[{\"condition\":\"現貨與期貨共同跌破開盤區間\",\"meaning\":\"原外部偏多背景未被本地市場承接\",\"action_note\":\"停止以隔夜上漲作方向確認\"},{\"condition\":\"來源時間或期现货证据缺失\",\"meaning\":\"無法驗證原始方向假設\",\"action_note\":\"保留資料不足，不補寫價格或成功狀態\"}],\"closing_feedback_plan\":{\"what_to_compare\":\"已凍結開盤方向、當日真實現貨及期貨收盤讀值\",\"success_criteria\":\"資料完整且方向與原假設一致才可由實際評估器判定\",\"miss_reason_tracking\":\"記錄期現貨分歧、區間跌破或來源缺漏；不改寫原始預測\"},\"subscriber_value_sentence\":\"SOX、TSM 與台指期約漲 1% 僅是合成盤前背景；09:30 若現貨與期貨無法共同站穩開盤區間，不追價且停止偏多推演，不把宏觀傳導列為個股推薦。\"}}"
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0
+    }
+  }
+}

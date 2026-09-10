@@ -4,22 +4,32 @@ import Navbar from '@/components/feature/Navbar';
 import Footer from '@/components/feature/Footer';
 import { getLatestReports } from '@/services/reportService';
 import { trackPageView } from '@/utils/analytics';
-import { getMarketBiasLabel, MARKET_BIAS_EXPLANATION } from '@/services/narrativeBuilder';
-import {
-  getCloseMarketReviewsByDates,
-  getVerificationLabelStyle,
-} from '@/services/closeMarketReviewService';
+import { MARKET_BIAS_EXPLANATION } from '@/services/narrativeBuilder';
+import { getVerificationLabelStyle } from '@/services/closeMarketReviewService';
 import type { Report } from '@/types/report';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
-import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 
 const publicReportText = (value: unknown) => humanizePublicRuntimeText(value);
 
 const previewText = (report: Report) => {
-  const text = report.summary || report.today_summary || report.today_quote || '';
+  const projection = getSubscriberReportProjection(report, { historical: true });
+  const text = projection.marketDecision.summary ?? projection.statusLabel;
   return publicReportText(text);
 };
+
+// Formatting only: both the outcome and permission to show it come from the
+// matching canonical receipt, never a date-only close_market_reviews lookup.
+function projectedClosingLabel(closing: ReturnType<typeof getSubscriberReportProjection>['closing']) {
+  if (!closing.complete) return undefined;
+  const outcomeLabels: Record<string, string> = {
+    hit: '方向一致', correct: '方向一致', partial: '部分命中', mixed: '部分命中',
+    miss: '未命中', wrong: '未命中', neutral: '中性結果',
+  };
+  const label = closing.outcome ? outcomeLabels[closing.outcome] : undefined;
+  return label ? getVerificationLabelStyle(label) : undefined;
+}
 
 export default function ReportsCenter() {
   const [reports7, setReports7] = useState<Report[]>([]);
@@ -27,7 +37,6 @@ export default function ReportsCenter() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-  const [verificationMap, setVerificationMap] = useState<Map<string, ReturnType<typeof getVerificationLabelStyle>>>(new Map());
 
   useEffect(() => {
     trackPageView('/reports');
@@ -39,16 +48,6 @@ export default function ReportsCenter() {
         const all = await getLatestReports(30);
         setReports7(all.slice(0, 7));
         setReports30(all.slice(7, 30));
-
-        const allDates = all.map((r) => r.report_date);
-        if (allDates.length > 0) {
-          const cmrMap = await getCloseMarketReviewsByDates(allDates);
-          const labelMap = new Map<string, ReturnType<typeof getVerificationLabelStyle>>();
-          for (const [date, cmr] of cmrMap) {
-            labelMap.set(date, getVerificationLabelStyle(cmr.verification_label));
-          }
-          setVerificationMap(labelMap);
-        }
       } catch {
         setError('歷史報告暫時無法取得，請稍後重新載入。');
       } finally {
@@ -83,37 +82,25 @@ export default function ReportsCenter() {
   };
 
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const month = d.getMonth() + 1;
-    const day = d.getDate();
-    const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-    return `${month}/${day} (${weekDays[d.getDay()]})`;
+    if (!dateStr || !Number.isFinite(Date.parse(dateStr))) return '日期尚未確認';
+    return new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', weekday: 'short' }).format(new Date(dateStr));
   };
 
-  const getScoreLabel = (score: number | null) => {
-    if (score === null || score === undefined) return { label: '觀察中', color: 'text-white/45' };
-    if (score >= 80) return { label: '高把握度', color: 'text-emerald-300' };
-    if (score >= 60) return { label: '明確', color: 'text-emerald-300/80' };
-    if (score >= 40) return { label: '中性', color: 'text-amber-300' };
-    if (score >= 20) return { label: '偏弱', color: 'text-amber-300/80' };
-    return { label: '謹慎', color: 'text-rose-300' };
-  };
-
+  const selectedProjection = getSubscriberReportProjection(selectedReport, { historical: true });
   const selectedAI = selectedReport?.ai_strategy_json && typeof selectedReport.ai_strategy_json === 'object'
     ? selectedReport.ai_strategy_json as Record<string, unknown>
     : {};
   const selectedV10Enabled = selectedAI.v10_beneficiary_enabled === true || selectedAI.v10_beneficiary_enabled === 'true';
-  const selectedV11ObservationScripts = mapV11ObservationItems(selectedAI.v10_observation_watchlist, 5);
-  const selectedAvailability = resolvePremiumContentAvailability(selectedAI);
-  const selectedResearchPublishable = selectedAvailability.eligible;
+  const selectedV11ObservationScripts = mapV11ObservationItems(selectedProjection.recommendation.items, 5);
+  const selectedResearchPublishable = selectedProjection.recommendation.available;
   const allReports = [...reports7, ...reports30];
-  const latestReportDate = allReports[0]?.report_date || '';
+  const latestReportDate = getSubscriberReportProjection(allReports[0], { historical: true }).identity.reportDate;
 
   const renderReportCard = (r: Report, emphasis: 'featured' | 'compact' = 'compact') => {
-    const displayBias = getMarketBiasLabel(r.market_bias, r.confidence_score);
-    const color = getSentimentColor(r.market_bias || displayBias);
-    const scoreInfo = getScoreLabel(r.confidence_score);
-    const vLabel = verificationMap.get(r.report_date);
+    const projection = getSubscriberReportProjection(r, { historical: true });
+    const displayBias = projection.marketDecision.label;
+    const color = getSentimentColor(projection.marketDecision.bias ?? '');
+    const vLabel = projectedClosingLabel(projection.closing);
     const summary = previewText(r);
 
     return (
@@ -123,7 +110,7 @@ export default function ReportsCenter() {
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className="ma-badge ma-badge-info">
                 <i className="ri-calendar-line text-[11px]" />
-                {formatDate(r.report_date)}
+                {formatDate(projection.identity.reportDate)}
               </span>
               {vLabel && (
                 <span className={`ma-badge ${vLabel.bg} ${vLabel.border} ${vLabel.text}`}>
@@ -140,14 +127,14 @@ export default function ReportsCenter() {
             <div className="grid gap-3 md:grid-cols-[112px_minmax(0,1fr)] md:items-start">
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-center md:text-left">
                 <p className="text-white/35 text-[10px] tracking-[0.22em] mb-1">報告</p>
-                <p className="text-white text-lg font-bold leading-tight">{r.report_date}</p>
-                <p className={`mt-2 text-sm font-semibold ${scoreInfo.color}`}>{r.confidence_score ?? '—'}<span className="text-white/30 text-xs ml-1">/100</span></p>
-                <p className="text-white/40 text-xs mt-1">{scoreInfo.label}</p>
+                <p className="text-white text-lg font-bold leading-tight">{projection.identity.reportDate}</p>
+                <p className="mt-2 text-sm font-semibold text-white/75">{projection.confidence.value ?? projection.confidence.label}{projection.confidence.value !== null && <span className="text-white/30 text-xs ml-1">/100</span>}</p>
+                <p className="text-white/40 text-xs mt-1">{projection.statusLabel}</p>
               </div>
 
               <div className="min-w-0">
                 <h3 className="ma-card-title text-white group-hover:text-amber-200 transition-colors">
-                  Morning Alpha 盤前研究｜{r.report_date}
+                  Morning Alpha {projection.title}｜{projection.identity.reportDate}
                 </h3>
                 {summary && (
                   <p className={`ma-body mt-2 text-white/65 ${emphasis === 'featured' ? 'line-clamp-3' : 'line-clamp-2'}`}>
@@ -161,8 +148,8 @@ export default function ReportsCenter() {
             </div>
           </button>
 
-          <Link to={`/reports/${r.report_date}`} className="ma-btn-outline shrink-0 border-white/10 text-white hover:bg-white/10 md:self-center">
-            查看完整報告
+          <Link to={`/reports/${projection.identity.reportDate}`} className="ma-btn-outline shrink-0 border-white/10 text-white hover:bg-white/10 md:self-center">
+            查看報告
             <i className="ri-arrow-right-up-line" />
           </Link>
         </div>
@@ -310,10 +297,10 @@ export default function ReportsCenter() {
             <div className="sticky top-0 z-10 border-b border-white/10 bg-[#07111f]/95 px-5 py-4 md:px-6 flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span id="report-preview-title" className="text-white font-bold text-sm">{formatDate(selectedReport.report_date)}</span>
-                  <span className="text-white/35 text-xs">{selectedReport.report_date}</span>
+                  <span id="report-preview-title" className="text-white font-bold text-sm">{formatDate(selectedProjection.identity.reportDate)}</span>
+                  <span className="text-white/35 text-xs">{selectedProjection.identity.reportDate}</span>
                   {(() => {
-                    const vLabel = verificationMap.get(selectedReport.report_date);
+                    const vLabel = projectedClosingLabel(selectedProjection.closing);
                     if (!vLabel) return null;
                     return <span className={`ma-badge ${vLabel.bg} ${vLabel.border} ${vLabel.text}`}><i className={`${vLabel.icon} text-[11px]`} />{vLabel.display}</span>;
                   })()}
@@ -328,26 +315,26 @@ export default function ReportsCenter() {
             <div className="px-5 py-5 md:px-6 space-y-5">
               <div className="flex items-center gap-4">
                 <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-center">
-                  <p className={`text-xl font-bold ${getSentimentColor(selectedReport.market_bias || '').text}`}>{selectedReport.confidence_score ?? 0}</p>
+                  <p className={`text-xl font-bold ${getSentimentColor(selectedProjection.marketDecision.bias ?? '').text}`}>{selectedProjection.confidence.value ?? selectedProjection.confidence.label}</p>
                   <p className="text-white/35 text-xs">把握度</p>
                 </div>
                 <div>
-                  <p className="text-white font-medium text-sm">劇本成立度</p>
-                  <p className="text-white/45 text-xs">{getScoreLabel(selectedReport.confidence_score).label}</p>
+                  <p className="text-white font-medium text-sm">{selectedProjection.title}</p>
+                  <p className="text-white/45 text-xs">{selectedProjection.statusLabel}</p>
                 </div>
               </div>
 
-              {(selectedReport.summary || selectedReport.ai_confidence_reason) && (
+              {selectedProjection.marketDecision.summary && (
                 <div className="ma-callout bg-amber-500/[0.04] border-amber-400/20">
                   <div className="flex items-center gap-2 mb-2">
                     <i className="ri-sword-line text-amber-300 text-sm" />
                     <span className="text-amber-200 text-xs font-semibold">AI 軍師解讀</span>
                   </div>
-                  <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{publicReportText(selectedReport.summary || selectedReport.ai_confidence_reason)}</p>
+                  <p className="text-white/75 text-sm leading-relaxed whitespace-pre-line">{publicReportText(selectedProjection.marketDecision.summary)}</p>
                 </div>
               )}
 
-              {selectedReport.today_strategy && (
+              {selectedProjection.analysisAvailable && selectedReport.today_strategy && (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {(selectedReport.today_strategy.do || []).length > 0 && (
                     <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4">
@@ -364,7 +351,7 @@ export default function ReportsCenter() {
                 </div>
               )}
 
-              {(selectedReport.watch_sectors_json || []).length > 0 && (
+              {selectedProjection.analysisAvailable && (selectedReport.watch_sectors_json || []).length > 0 && (
                 <div>
                   <h4 className="text-white/45 text-xs font-semibold uppercase tracking-wider mb-2">今日主線</h4>
                   <div className="space-y-2">{(selectedReport.watch_sectors_json || []).map((s, idx) => <div key={idx} className="flex items-center gap-2 text-sm text-white/70"><span className="text-white/35 text-xs">{idx + 1}.</span><span>{publicReportText(s.sector)}</span>{s.direction && <span className="text-white/40 text-xs">({publicReportText(s.direction)})</span>}</div>)}</div>
@@ -377,26 +364,26 @@ export default function ReportsCenter() {
 
               {!selectedResearchPublishable && (
                 <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.06] p-4">
-                  <h4 className="text-amber-200 text-sm font-semibold mb-2">這天的個股研究已降級</h4>
-                  <p className="text-white/60 text-sm leading-relaxed">新聞來源、資料完整度或會員價值分數未達發布門檻，因此不顯示高信心個股、資金輪動與外部變數卡片。</p>
+                  <h4 className="text-amber-200 text-sm font-semibold mb-2">個股推薦狀態</h4>
+                  <p className="text-white/60 text-sm leading-relaxed">{selectedProjection.recommendation.message}</p>
                 </div>
               )}
 
-              {!selectedV10Enabled && (selectedReport.focus_stock_json || []).length > 0 && (
+              {selectedResearchPublishable && !selectedV10Enabled && (selectedReport.focus_stock_json || []).length > 0 && (
                 <div>
                   <h4 className="text-white/45 text-xs font-semibold uppercase tracking-wider mb-2">資金觀察方向</h4>
                   <div className="flex flex-wrap gap-2">{(selectedReport.focus_stock_json || []).map((s, idx) => <span key={idx} className="ma-badge ma-badge-neutral">{publicReportText(s.group)}{s.direction && <span className="text-white/40">· {publicReportText(s.direction)}</span>}</span>)}</div>
                 </div>
               )}
 
-              {(selectedReport.risk_factors_json || []).length > 0 && (
+              {selectedProjection.analysisAvailable && (selectedReport.risk_factors_json || []).length > 0 && (
                 <div>
                   <h4 className="text-white/45 text-xs font-semibold uppercase tracking-wider mb-2">風險因素</h4>
                   <div className="space-y-2">{(selectedReport.risk_factors_json || []).map((r, idx) => <div key={idx} className="flex items-center gap-2 text-sm"><span className={`text-xs font-medium ${r.level === 'high' ? 'text-rose-300' : r.level === 'medium' ? 'text-amber-300' : 'text-white/45'}`}>{r.level === 'high' ? '高' : r.level === 'medium' ? '中' : '低'}</span><span className="text-white/65">{publicReportText(r.title)}</span></div>)}</div>
                 </div>
               )}
 
-              {selectedReport.today_quote && (
+              {selectedProjection.analysisAvailable && selectedReport.today_quote && (
                 <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
                   <div className="flex items-start gap-2"><i className="ri-double-quotes-l text-amber-300/50 text-lg flex-shrink-0 mt-0.5" /><p className="text-amber-100/75 text-sm italic leading-relaxed">{publicReportText(selectedReport.today_quote)}</p></div>
                 </div>
@@ -405,7 +392,7 @@ export default function ReportsCenter() {
 
             <div className="sticky bottom-0 border-t border-white/10 bg-[#07111f]/95 px-5 py-4 md:px-6 flex items-center justify-end gap-3">
               <button type="button" onClick={() => setSelectedReport(null)} className="ma-btn-ghost min-h-11 text-white/60 hover:bg-white/10 hover:text-white">關閉</button>
-              <Link to={`/reports/${selectedReport.report_date}`} onClick={() => setSelectedReport(null)} className="ma-btn-primary">查看完整報告</Link>
+              <Link to={`/reports/${selectedProjection.identity.reportDate}`} onClick={() => setSelectedReport(null)} className="ma-btn-primary">查看報告</Link>
             </div>
           </div>
         </div>

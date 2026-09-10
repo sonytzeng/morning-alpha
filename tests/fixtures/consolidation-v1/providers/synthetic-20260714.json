@@ -1,0 +1,37 @@
+{
+  "schema_version": "CONSOLIDATION_PROVIDER_INPUT_V1",
+  "fixture_id": "synthetic-provider-input-20260714",
+  "provenance": {
+    "kind": "SYNTHETIC_FAILURE_SHAPE",
+    "historical_capture": false,
+    "description": "Deterministic provider-shaped inputs for component replay; not the missing September 7-9 vendor payloads.",
+    "market_assembler_seed": "supabase/functions/generate-daily-report-v7/research-master-v2.test.ts#completeFixture",
+    "news_and_sector_inputs": "Existing synthetic assembler inputs, not real ingestion or persisted rows."
+  },
+  "collection": {
+    "phase": "premarket",
+    "checkpoint": "premarket",
+    "tradingDate": "2026-07-14",
+    "observedAt": "2026-07-13T22:30:00.000Z",
+    "correlationId": "10000000-0000-4000-8000-000000000001"
+  },
+  "quotes": [
+    {
+      "provider": "finnhub",
+      "config": { "finnhubSymbol": "SOXX", "displaySymbol": "SOX", "name": "Synthetic semiconductor proxy", "market": "US" },
+      "response": { "c": 345, "d": 3, "dp": 0.877193, "h": 346, "l": 339, "o": 342, "pc": 342, "t": 1783972800 }
+    },
+    {
+      "provider": "finnhub",
+      "config": { "finnhubSymbol": "VXX", "displaySymbol": "VIX", "name": "Synthetic volatility proxy", "market": "US" },
+      "response": { "c": 28, "d": 1, "dp": 3.703704, "h": 29, "l": 26, "o": 27, "pc": 27, "t": 1783972800 }
+    },
+    {
+      "provider": "fugle",
+      "config": { "finnhubSymbol": "TXF202607", "displaySymbol": "TXF", "name": "Synthetic Taiwan futures", "market": "TW" },
+      "response": { "price": 25000, "change": 50, "changePercent": 0.200401, "lastUpdated": "2026-07-13T21:00:00.000Z" }
+    }
+  ],
+  "unsupported_stock_symbols": ["3034", "3529", "5274", "3131", "4763"],
+  "unexecuted_boundaries": ["FETCH_HANDLER", "IMMUTABLE_DB_READBACK", "NEWS_INGESTION", "SECTOR_INGESTION", "GENERATOR_HANDLER", "SQL_PUBLICATION", "PAYLOAD_HANDLER", "AUTH_RLS", "LINE_OUTBOX", "CLOSING", "LEARNING", "ACCEPTANCE", "BROWSER"]
+}

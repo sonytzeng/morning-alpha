@@ -296,21 +296,6 @@ async function fetchReport(supabase: SupabaseClient, targetDate: string): Promis
   return result.data ? result.data as JsonObject : null;
 }
 
-async function fetchPublishedHealthDecision(supabase: SupabaseClient, report: JsonObject, targetDate: string): Promise<JsonObject | null> {
-  const revision = asObject(report.ai_strategy_json).revision_id;
-  let query = supabase.from("decision_snapshots")
-    .select("id,report_id,report_date,status,decision_mode,content_score,is_current,version")
-    .eq("report_date", targetDate);
-  // Atomic publication's pointer is authoritative. A newer internal QA draft
-  // can be is_current without replacing the subscriber-facing publication.
-  query = nonEmptyString(revision)
-    ? query.eq("id", String(revision)).eq("report_id", String(report.id))
-    : query.eq("session_type", "PREMARKET").eq("is_current", true);
-  const result = await withTimeout(query.order("version", { ascending: false }).limit(1).maybeSingle());
-  if (result.error) throw new Error("DATABASE_QUERY_FAILED");
-  return result.data ? result.data as JsonObject : null;
-}
-
 const handlers: Record<CheckName, CheckHandler> = {
   "market-data-freshness": async ({ supabase, targetDate }) => {
     const started = Date.now();
@@ -363,7 +348,8 @@ const handlers: Record<CheckName, CheckHandler> = {
     const started = Date.now();
     const report = await fetchReport(supabase, targetDate);
     if (!report) return makeCheck("daily-report-contract", "daily-report", "skipped", "info", {}, {}, started, "REPORT_MISSING", "Contract cannot be checked without a report");
-    const snapshot = await fetchPublishedHealthDecision(supabase, report, targetDate);
+    const publicationEvidence = await fetchPublishedDeliveryEvidence(supabase, report);
+    const snapshot = publicationEvidence.snapshot;
     const ai = asObject(report.ai_strategy_json);
     const note = asObject(ai.member_research_note_v2);
     const marketStatus = String(ai.market_status || "").toUpperCase();
@@ -375,30 +361,26 @@ const handlers: Record<CheckName, CheckHandler> = {
     const verifiedNewsCount = Math.max(0, Number(evidenceQuality.verified_news_count) || 0);
     const verifiedMarketCount = Math.max(0, Number(evidenceQuality.verified_market_count) || 0);
     const verifiedCatalystCount = verifiedNewsCount + verifiedMarketCount;
-    const v8DailySentence = asObject(ai.v8_daily_sentence);
-    const dailySentence = report.today_quote || ai.today_quote || v8DailySentence.sentence;
     const premiumGate = evaluatePremiumContentGate(ai, importantNews.length);
     const reportGate = evaluateMarketReportGate(ai, targetDate);
+    const publication = evaluatePublishedMarketDelivery(report, snapshot, publicationEvidence.member, reportGate, {
+      todayDate: targetDate,
+      premiumEligible: premiumGate.eligible,
+      publicationRun: publicationEvidence.publicationRun,
+    });
     const missing = [
-      !nonEmptyString(report.market_bias) ? "market_bias" : null,
-      report.confidence_score === null || report.confidence_score === undefined || !Number.isFinite(Number(report.confidence_score)) ? "confidence_score" : null,
+      !isTradingDay && !nonEmptyString(report.market_bias) ? "market_bias" : null,
       Object.keys(ai).length === 0 ? "ai_strategy_json" : null,
       !nonEmptyString(report.report_mode) && !nonEmptyString(ai.report_mode) ? "report_mode" : null,
       typeof ai.is_trading_day !== "boolean" ? "ai_strategy_json.is_trading_day" : null,
       !nonEmptyString(ai.market_status) ? "ai_strategy_json.market_status" : null,
-      isTradingDay && !isActionableResearchSentence(dailySentence) ? "today_quote.actionable" : null,
-      isTradingDay && verifiedCatalystCount < 1 ? "verified_catalyst_evidence" : null,
-      // Paid-note depth remains diagnostic; it cannot erase a valid public
-      // market report. The canonical Research/Evidence/Editorial gate is strict.
-      isTradingDay && !reportGate.eligible ? "market_report_gate" : null,
-      isTradingDay && !snapshot ? "decision_snapshot" : null,
-      isTradingDay && snapshot && String(snapshot.status || "") !== "READY" ? "decision_snapshot.status" : null,
-      isTradingDay && snapshot && (!Number.isFinite(Number(snapshot.content_score)) || Number(snapshot.content_score) < 90) ? "decision_snapshot.content_score" : null,
-      isTradingDay && snapshot && !["recommendations", "no_trade"].includes(String(snapshot.decision_mode || "")) ? "decision_snapshot.decision_mode" : null,
+      // The shared validator checks committed Research/Evidence/Editorial and
+      // publication identity. Mutable note text/counters are diagnostics only.
+      isTradingDay && !publication.eligible ? "market_publication_contract" : null,
     ].filter((item): item is string => item !== null);
     return makeCheck(
       "daily-report-contract", "daily-report", missing.length === 0 ? "passed" : "failed", missing.length === 0 ? "info" : "critical",
-      { required_fields: ["market_bias", "confidence_score", "ai_strategy_json", "report_mode", "is_trading_day", "market_status", "actionable_daily_sentence", "verified_catalyst_evidence", "canonical_research_evidence_editorial_gate", "ready_90_point_decision_snapshot"] },
+      { required_fields: ["market_bias", "ai_strategy_json", "report_mode", "is_trading_day", "market_status", "canonical_research_evidence_editorial_gate", "market_publication_contract"] },
       {
         missing_fields: missing,
         report_mode: report.report_mode || ai.report_mode || null,
@@ -415,12 +397,14 @@ const handlers: Record<CheckName, CheckHandler> = {
         premium_content_score: premiumGate.content_score,
         premium_decision_mode: premiumGate.decision_mode,
         premium_reason_codes: premiumGate.reason_codes,
-        market_report_status: reportGate.status,
-        market_report_reason_codes: reportGate.reason_codes,
-        recommendation_status: reportGate.recommendation_status,
+        market_report_status: publication.projection.displayStatus,
+        market_report_reason_codes: publication.reason_codes,
+        current_market_gate_status: reportGate.status,
+        current_market_gate_reason_codes: reportGate.reason_codes,
+        recommendation_status: publication.projection.recommendation.status,
         premium_gate_independent: true,
         current_revision: snapshot?.id || null,
-        first_failure_stage: !isTradingDay || missing.length === 0 ? null : !reportGate.eligible ? "RESEARCH_EVIDENCE_EDITORIAL" : "PUBLICATION",
+        first_failure_stage: !isTradingDay || missing.length === 0 ? null : "PUBLICATION",
         decision_snapshot_id: snapshot?.id || null,
         decision_snapshot_status: snapshot?.status || null,
         decision_snapshot_score: snapshot?.content_score ?? null,
@@ -479,17 +463,36 @@ const handlers: Record<CheckName, CheckHandler> = {
 
   "closing-verification-status": async ({ supabase, targetDate }) => {
     const started = Date.now();
+    const due = closeContractFns.closingDueState(targetDate, started);
+    if (due !== "DUE") return makeCheck("closing-verification-status", "closing-verification", "skipped", "info",
+      { status: due }, { status: due }, started);
     const report = await fetchReport(supabase, targetDate);
-    if (!report) return makeCheck("closing-verification-status", "closing-verification", "skipped", "info", {}, {}, started, "REPORT_MISSING", "Closing verification cannot be checked without a report");
-    const verification = asObject(asObject(report.ai_strategy_json).closing_verification_v2);
-    if (Object.keys(verification).length === 0) return makeCheck("closing-verification-status", "closing-verification", "warning", "warning", { status: "completed" }, { status: null }, started, "CLOSING_VERIFICATION_PENDING", "closing_verification_v2 is missing");
-    const status = String(verification.status || "").toLowerCase();
-    const completed = status === "completed" || status === "direction_completed_data_degraded";
+    if (!report) return makeCheck("closing-verification-status", "closing-verification", "failed", "critical", {}, {}, started, "REPORT_MISSING", "Closing verification cannot be checked without a report");
+    const identity = closeContractFns.resolveOpeningPublicationIdentity(report);
+    if (identity.reason_codes.length > 0) return makeCheck("closing-verification-status", "closing-verification", "failed", "critical",
+      { status: "COMPLETE" }, { status: "INSUFFICIENT_EVIDENCE", reason_codes: identity.reason_codes }, started,
+      "OPENING_PUBLICATION_UNVERIFIED", "Closing requires the frozen published opening decision");
+    const [snapshotResult, receiptResult] = await Promise.all([
+      withTimeout(supabase.from("decision_snapshots").select("*").eq("id", identity.opening_publication_revision_id)
+        .eq("report_id", identity.report_id).eq("report_date", targetDate).maybeSingle()),
+      withTimeout(supabase.from("pipeline_runs").select("*").eq("trading_date", targetDate).eq("status", "SUCCEEDED")
+        .like("idempotency_key", "research-input:%").eq("provider_status->result->>decision_snapshot_id", identity.opening_publication_revision_id)
+        .order("completed_at", { ascending: true }).limit(1).maybeSingle()),
+    ]);
+    if (snapshotResult.error || receiptResult.error) throw new Error("DATABASE_QUERY_FAILED");
+    const opening = closeContractFns.validateOpeningPublication({ report, snapshot: snapshotResult.data, publicationRun: receiptResult.data, now: started });
+    const closingReceiptId = closeContractFns.resolveClosingReceiptPointer(report, opening);
+    const closingReceipt = closingReceiptId ? await withTimeout(supabase.from("decision_snapshots").select("*")
+      .eq("id", closingReceiptId).eq("report_id", opening.report_id).eq("report_date", targetDate).maybeSingle())
+      : { data: null, error: null };
+    if (closingReceipt.error) throw new Error("DATABASE_QUERY_FAILED");
+    const contract = closeContractFns.evaluateClosingContract({ opening, closingSnapshot: closingReceipt.data, expectedSnapshotId: closingReceiptId, now: started });
+    const completed = contract.status === "COMPLETE";
     return makeCheck(
-      "closing-verification-status", "closing-verification", completed ? "passed" : "warning", completed ? "info" : "warning",
-      { status: ["completed", "direction_completed_data_degraded"] },
-      { status: verification.status || null, data_status: verification.data_status || null, report_date: verification.report_date || null, no_fake_data: verification.no_fake_data ?? null },
-      started, completed ? null : "CLOSING_VERIFICATION_PENDING", completed ? null : "Closing verification is pending",
+      "closing-verification-status", "closing-verification", completed ? "passed" : "failed", completed ? "info" : "critical",
+      { status: "COMPLETE", schema_version: "CORE_CLOSING_V1" },
+      { status: contract.status, closing_contract: contract, report_date: targetDate, opening_publication_revision_id: opening.opening_publication_revision_id },
+      started, completed ? null : "CLOSING_CONTRACT_INCOMPLETE", completed ? null : "Closing evidence is incomplete or does not match the published opening",
     );
   },
 
@@ -895,3 +898,5 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ ok: false, error_code: code, message, request_id: requestId }, status);
   }
 });
+import * as closeContractFns from '../_shared/closing-learning-contract.ts';
+import { evaluatePublishedMarketDelivery, fetchPublishedDeliveryEvidence } from '../_shared/market-publication-contract.ts';

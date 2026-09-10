@@ -4,6 +4,7 @@ import {
 } from './production-architecture-core.mjs';
 import { evaluateResearchQualityGate } from './research-quality-gate.ts';
 import { presentNumber } from './research-pipeline-contract.ts';
+import { canonicalMarketDocument } from './canonical-market-state.ts';
 
 export type ContentQualityGrade = 'reject' | 'degraded' | 'publish' | 'high_quality';
 
@@ -342,8 +343,11 @@ function hasAuditedMarketNarrative(ai: JsonRecord): boolean {
   const markets = presentNumber(quality.verified_market_count), news = presentNumber(quality.verified_news_count);
   return evaluateResearchQualityGate(master).eligible
     && asText(asRecord(master.provenance).source_status) === 'complete'
+    && Array.isArray(ai.missing_sources) && ai.missing_sources.every(source => typeof source === 'string')
     && hasDecisionGradeSourceCoverage(ai, 'no_trade')
     && quality.contract_version === 'PREMIUM_EVIDENCE_V1'
+    && typeof quality.verified_market_count === 'number' && typeof quality.verified_news_count === 'number'
+    && typeof quality.blank_market_change_count === 'number' && typeof quality.all_news_traceable === 'boolean'
     && markets !== null && Number.isSafeInteger(markets) && markets > 0
     && news !== null && Number.isSafeInteger(news) && news >= 0
     && presentNumber(quality.blank_market_change_count) === 0
@@ -376,22 +380,40 @@ function evaluateScopedContentIntelligence(
   scope: 'market' | 'recommendations',
 ): ContentIntelligenceResult {
   const source = asRecord(aiValue);
-  // Private member-note prose is independently checked by the Premium gate.
-  // It cannot overwrite the public canonical market document's editorial score.
-  const ai = scope === 'market' ? { ...source, member_research_note_v2: {} } : source;
+  // Market editorial quality grades the exact document that will be published.
+  // Compatibility copy and private research remain diagnostic inputs, not a
+  // second sentence/reason/sector selector. Recommendation editorial is separate.
+  // Publication readers provide these exact measurements frozen with the CMS.
+  // Missing measurements fail the audited market contract; current QA aliases,
+  // data_quality_detail and private stock research cannot fill their gaps.
+  const ai: JsonRecord = scope === 'market' ? {
+    research_master_v2: canonicalMarketDocument(source),
+    content_evidence_quality: source.content_evidence_quality,
+    data_quality: source.data_quality,
+    missing_sources: source.missing_sources,
+  } : source;
   const note = asRecord(ai.member_research_note_v2);
+  const marketSections = asRecord(asRecord(ai.research_master_v2).sections);
+  const marketTransmission = asRecord(marketSections.transmission_narrative);
   const recommendations = scope === 'market' ? [] : recommendationRows(ai);
   const noTradeMode = scope === 'market' ? hasAuditedMarketNarrative(ai) : hasAuditedCanonicalNoTrade(ai);
   const decisionSourceCoverage = hasDecisionGradeSourceCoverage(
     ai,
     noTradeMode ? 'no_trade' : 'recommendations',
   );
-  const dailySentence = getDailySentence(ai);
+  const dailySentence = scope === 'market'
+    ? asText(asRecord(marketSections.executive_summary).text)
+    : getDailySentence(ai);
   const dailySentenceValue = evaluateDecisionSentenceValue(dailySentence);
-  const reasons = getReasons(ai);
-  const sectors = getSectors(ai);
+  const reasons = scope === 'market' ? asRecords(marketSections.supporting_evidence) : getReasons(ai);
+  const sectors = scope === 'market'
+    ? unique(asRecords(marketTransmission.path).filter(row => row.stage === 'industry').map(row => asText(row.subject)))
+    : getSectors(ai);
+  const taiwanTransmission = scope === 'market'
+    ? asText(marketTransmission.narrative)
+    : firstText(ai.taiwan_transmission, note.taiwan_transmission, marketTransmission.narrative);
   const genericFlags = unique([
-    ...detectGenericContent(ai),
+    ...detectGenericContent(scope === 'market' ? { today_quote: dailySentence } : ai),
     ...dailySentenceValue.flags,
   ]);
   const evidenceQuality = asRecord(ai.content_evidence_quality);
@@ -443,9 +465,7 @@ function evaluateScopedContentIntelligence(
     + (verifiedCatalystCount > 0 && (verifiedNewsCount === 0 || allNewsTraceable) ? 5 : 0));
   const taiwanRelevance = Math.min(15,
     (taiwanCoverage || noTradeMode ? 10 : 0)
-    + (firstText(ai.taiwan_transmission, note.taiwan_transmission,
-      asRecord(asRecord(asRecord(ai.research_master_v2).sections).transmission_narrative).narrative,
-    ).length >= 12 || taiwanCoverage ? 5 : 0));
+    + (taiwanTransmission.length >= 12 || taiwanCoverage ? 5 : 0));
   const specificity = Math.min(10,
     (dailySentenceValue.concrete_marker_count >= 2 ? 6 : 0)
     + (eventCoverage || noTradeMode ? 4 : 0));

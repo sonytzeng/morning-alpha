@@ -1,0 +1,41 @@
+{
+  "schema_version": "CONSOLIDATION_REPLAY_MANIFEST_V1",
+  "scope": "OFFLINE_SANITIZED_EVIDENCE_AND_LOCAL_ONLY_REPLAY",
+  "production_operations_authorized": false,
+  "automatic_stability_claim": false,
+  "full_chain_executed": false,
+  "provider_inputs": [
+    {
+      "path": "providers/synthetic-20260714.json",
+      "fixture_id": "synthetic-provider-input-20260714",
+      "kind": "SYNTHETIC_FAILURE_SHAPE",
+      "sha256": "6aab9b5f4ea89e607eafd3a8e673dc8c38a61e6697312485c3f68dd37ebf5ab6"
+    }
+  ],
+  "fixtures": [
+    {
+      "path": "captures/2026-09-07-fetch-persistence.json",
+      "fixture_id": "2026-09-07-fetch-persistence",
+      "kind": "SANITIZED_CAPTURE_REPLAY",
+      "sha256": "72382ea27f76d54b388188bb72c0685546e73a1b78ae10827bdeefbaa2ab7be6"
+    },
+    {
+      "path": "captures/2026-09-08-quality-projection.json",
+      "fixture_id": "2026-09-08-quality-projection",
+      "kind": "SANITIZED_CAPTURE_REPLAY",
+      "sha256": "9d06a150df101d27c15c1d84ac63e459f3c8b870ba906aa07f13209d0b81fecc"
+    },
+    {
+      "path": "captures/2026-09-09-premarket-quality.json",
+      "fixture_id": "2026-09-09-premarket-quality",
+      "kind": "SANITIZED_CAPTURE_REPLAY",
+      "sha256": "6c7bfa621f62c89aa9ec8387e09cba43caf591c6ee28e73a3ff9b46810a99868"
+    },
+    {
+      "path": "scenarios/market-only-counterfactual.json",
+      "fixture_id": "market-only-counterfactual",
+      "kind": "SYNTHETIC_FAILURE_SHAPE",
+      "sha256": "9049ff39d407451690245feb81723d951ad7054d98b39b5fa72484dc2c4c0fd6"
+    }
+  ]
+}

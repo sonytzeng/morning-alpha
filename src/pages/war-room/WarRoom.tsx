@@ -1,29 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import ErrorBoundary from '@/components/base/ErrorBoundary';
 import Footer from '@/components/feature/Footer';
 import Navbar from '@/components/feature/Navbar';
 import { useLatestReport } from '@/hooks/useLatestReport';
 import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
-import { getRuntimeCheckpointState } from '@/lib/decisionEvidence';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
-import { selectNextRuntimeTimelineNode } from '@/lib/runtimeDecisionTimeline';
-import { buildMarketState, type MarketState } from '@/services/marketStateEngine';
-import {
-  computeSectorRotationFreshness,
-  type SectorRotationFreshness,
-} from '@/services/sectorRotationService';
+import { reconcileRuntimeTimeline, runtimeTimelineStatusLabel, selectNextRuntimeTimelineNode } from '@/lib/runtimeDecisionTimeline';
 import { formatTaipeiDate, resolveMarketStatus } from '@/utils/tradingDay';
-import {
-  buildWarRoomClosingState,
-  buildWarRoomTimeline,
-  type WarRoomTimelineStatus,
-} from './warRoomPresentationMapper';
+import type { WarRoomTimelineStatus } from './warRoomPresentationMapper';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import { SubscriberAnswer } from '@/features/decision-v1/DecisionBrief';
 import { intradayAnswer } from '@/features/decision-v1/presentation';
-import { resolveClosingVerificationState } from '@/lib/closingVerificationState';
-import { hasSubscriberState, isSubscriberAnalysisUnavailable, SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
+import { SUBSCRIBER_ANALYSIS_INCOMPLETE, type SubscriberCheckpointKey } from '@/lib/subscriberReportContract';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -72,17 +62,11 @@ function WarRoomContent() {
     report,
     isLoading,
     error,
-    openingRadar,
-    marketData,
-    marketDataTodayOnly,
-    todayCloseVerification: rawTodayCloseVerification,
     morningState,
   } = useLatestReport();
-  const [sectorFreshness, setSectorFreshness] = useState<SectorRotationFreshness | null>(null);
 
   const todayTaipeiStr = formatTaipeiDate();
   const canonicalMarketStatus = resolveMarketStatus(todayTaipeiStr);
-  const isNonTradingDay = canonicalMarketStatus.market_status !== 'OPEN';
   const isWeekend = canonicalMarketStatus.market_status === 'WEEKEND';
   const displayState: MorningAlphaDisplayState | null = useMemo(() => {
     if (!morningState?.resolveResult?.rawRow) return null;
@@ -94,55 +78,11 @@ function WarRoomContent() {
     ? report.ai_strategy_json as Record<string, unknown>
     : null;
   const rawAI = displayState?.rawAI ?? reportAI;
-  const analysisUnavailable = isSubscriberAnalysisUnavailable(rawAI);
-  const subscriberClosingAllowed = !analysisUnavailable
-    && (!hasSubscriberState(rawAI) || resolveClosingVerificationState(rawAI).state !== 'pending');
-  const todayCloseVerification = subscriberClosingAllowed ? rawTodayCloseVerification : null;
-  const closingVerificationV2 = subscriberClosingAllowed && isRecord(rawAI?.closing_verification_v2)
-    ? rawAI.closing_verification_v2
-    : null;
-  const publicClosingVerification = subscriberClosingAllowed && isRecord(rawAI?.closing_verification)
-    ? rawAI.closing_verification
-    : null;
-  const runtimeSyncStatus = isRecord(rawAI?.intraday_sync_status)
-    ? rawAI.intraday_sync_status
-    : null;
-  const hasVerifiedClose = todayCloseVerification?.data_quality === 'verified';
+  const projection = getSubscriberReportProjection(displayState?.rawRow || report, { todayDate: todayTaipeiStr });
+  const analysisUnavailable = !projection.analysisAvailable;
   const marketClosedInfo = displayState
     ? { closed: displayState.market_status !== 'OPEN', holidayName: displayState.holidayName }
     : { closed: isWeekend, holidayName: isWeekend ? '週末休市' : null as string | null };
-
-  const marketState: MarketState = buildMarketState({
-    todayReport: report,
-    todayOpeningRadar: openingRadar,
-    todayMarketData: marketDataTodayOnly ?? marketData ?? null,
-    todayCloseVerification,
-    sectorRotationFreshness: sectorFreshness,
-  });
-
-  useEffect(() => {
-    const result = morningState?.sectorRotationState;
-    if (!result) {
-      setSectorFreshness(null);
-      return;
-    }
-    const hasCloseVerification = hasVerifiedClose
-      && todayCloseVerification?.report_date === todayTaipeiStr;
-    const hasIntradayCheckpoint = ['0930', '1030', '1300']
-      .some((checkpoint) => getRuntimeCheckpointState(runtimeSyncStatus, checkpoint) === 'completed');
-    let phaseForFreshness = 'intraday';
-    if (isNonTradingDay) phaseForFreshness = 'pre_market';
-    else if (hasCloseVerification) phaseForFreshness = 'after_close_verified';
-    else if (!hasIntradayCheckpoint) phaseForFreshness = 'pre_market';
-    setSectorFreshness(computeSectorRotationFreshness(result, todayTaipeiStr, phaseForFreshness));
-  }, [
-    hasVerifiedClose,
-    isNonTradingDay,
-    morningState?.sectorRotationState,
-    runtimeSyncStatus,
-    todayCloseVerification,
-    todayTaipeiStr,
-  ]);
 
   if (isLoading) {
     return (
@@ -212,18 +152,18 @@ function WarRoomContent() {
     );
   }
 
-  if (report.report_date !== todayTaipeiStr) {
+  if (projection.historical) {
     return (
       <div className="min-h-screen bg-navy-950 flex flex-col">
         <Navbar marketStatusLabel="等待今日盤中資料" />
-        <main className="flex-1 flex items-center justify-center px-4">
+        <main className="flex-1 flex items-center justify-center px-4" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
           <div className="max-w-md text-center bg-navy-900/70 border border-amber-400/20 rounded-2xl p-6">
             <i className="ri-time-line text-amber-300 text-3xl" aria-hidden="true" />
             <h1 className="text-white font-bold text-xl mt-3">今天尚未建立盤中追蹤</h1>
-            <p className="text-slate-400 text-sm mt-2">目前最新報告是 {report.report_date}，不會把歷史時間軸冒充成今天進度。</p>
+            <p className="text-slate-400 text-sm mt-2">目前最新報告是 {projection.identity.reportDate}，不會把歷史時間軸冒充成今天進度。</p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">
               <Link to="/report/today" className="inline-flex min-h-11 items-center px-4 py-2 rounded-xl bg-emerald-500 text-navy-950 text-sm font-semibold">返回今日判斷</Link>
-              <Link to={`/reports/${report.report_date}`} className="inline-flex min-h-11 items-center px-4 py-2 rounded-xl border border-white/10 text-white text-sm">查看 {report.report_date} 歷史報告</Link>
+              <Link to={`/reports/${projection.identity.reportDate}`} className="inline-flex min-h-11 items-center px-4 py-2 rounded-xl border border-white/10 text-white text-sm">查看 {projection.identity.reportDate} 歷史報告</Link>
             </div>
           </div>
         </main>
@@ -233,33 +173,26 @@ function WarRoomContent() {
   }
 
   const canonicalNarrative = buildCanonicalNarrative({ displayState, ai: rawAI });
-  const decisionStatus = canonicalNarrative.decision_lifecycle.decision_status;
-  const decisionState = safeText(decisionStatus.status).toLowerCase();
-  const decisionReason = publicWarRoomText(decisionStatus.reason, '目前沒有足夠新證據升級早上的判斷。');
-  const closingState = buildWarRoomClosingState({
-    closingVerificationV2,
-    publicClosingVerification,
-    todayCloseVerification,
+  const decisionReason = publicWarRoomText(projection.marketDecision.summary || projection.statusLabel, '目前沒有足夠新證據升級早上的判斷。');
+  // Raw runtime labels never establish subscriber evidence. The shared
+  // projection has already bound each checkpoint to this report and revision.
+  const checkpointLabels: Array<[SubscriberCheckpointKey, string, string]> = [
+    ['0900', '09:00', '開盤資料'], ['0930', '09:30', '開盤驗證'],
+    ['1030', '10:30', '主線確認'], ['1300', '13:00', '午後追蹤'],
+    ['1410', '14:10', '收盤資料'], ['1430', '14:30', '收盤驗證'],
+  ];
+  const timeline = reconcileRuntimeTimeline(checkpointLabels.map(([key, time, label]) => {
+    const proof = projection.runtime.checkpoints[key];
+    return { time, label, status: proof.status === 'failed' ? 'insufficient' as const : proof.status };
+  })).map((node) => {
+    const status = node.time === '14:30' && projection.closing.state === 'NOT_DUE' ? 'pending' as const : node.status;
+    return { ...node, status, statusLabel: runtimeTimelineStatusLabel(status) };
   });
-  const verifiedClosing = resolveClosingVerificationState(closingVerificationV2, publicClosingVerification, todayCloseVerification);
-  const timeline = buildWarRoomTimeline({
-    intradaySyncStatus: runtimeSyncStatus,
-    openingRadar: isRecord(openingRadar) ? openingRadar : null,
-    closingVerificationV2,
-    publicClosingVerification,
-    todayCloseVerification,
-    isTradingDay: !isNonTradingDay,
-  }).map((node) => node.time === '14:30' && verifiedClosing.state === 'pending'
-    ? { ...node, status: analysisUnavailable ? 'insufficient' as const : 'pending' as const,
-      statusLabel: analysisUnavailable ? '資料不足' : '等待驗證' }
-    : node);
   const currentNode = selectNextRuntimeTimelineNode(timeline);
   const nextCheckpoint = currentNode
     ? `${currentNode.time}｜${currentNode.label}`
     : '等待下一次驗證';
-  const hasNewIntradayEvidence = closingState.isPostClose
-    || getRuntimeCheckpointState(runtimeSyncStatus, '1030') === 'completed'
-    || getRuntimeCheckpointState(runtimeSyncStatus, '1300') === 'completed';
+  const hasNewIntradayEvidence = projection.runtime.newIntradayEvidence;
   const feedTimeline = [
     ...timeline.filter((item) => item.status === 'current'),
     ...timeline.filter((item) => !['current', 'pending'].includes(item.status)).reverse(),
@@ -268,15 +201,16 @@ function WarRoomContent() {
   const answer = analysisUnavailable
     ? { title: SUBSCRIBER_ANALYSIS_INCOMPLETE, action: '等待正式市場判斷，不把候選分析當成失效劇本', tone: 'amber' as const }
     : intradayAnswer({
-    status: decisionState, runtimeFailure: canonicalNarrative.decision_evidence.runtimeFailure,
-    confirmedEvidence: ['0930', '1030', '1300'].some((time) => getRuntimeCheckpointState(runtimeSyncStatus, time) === 'completed'),
-    closing: verifiedClosing.state === 'complete' ? verifiedClosing.outcome : '',
-  });
-  const action = answer.action;
+      status: projection.marketDecision.action === 'ACT' ? 'confirmed' : '',
+      runtimeFailure: projection.marketDecision.runtimeFailure,
+      confirmedEvidence: projection.runtime.confirmedIntradayEvidence,
+      closing: projection.closing.outcome || '',
+    });
+  const action = projection.marketDecision.label;
   const statusLabel = analysisUnavailable
     ? '分析尚未完成'
-    : closingState.isPostClose
-    ? closingState.label
+    : projection.closing.complete
+    ? '收盤驗證完成'
     : currentNode?.status === 'current'
       ? '監控中'
       : currentNode?.statusLabel || '等待驗證';
@@ -293,11 +227,27 @@ function WarRoomContent() {
     )
     : `等 ${nextCheckpoint} 取得完整資料後再判斷`;
 
+  if (analysisUnavailable) {
+    return (
+      <div className="ma-page ma-war-room-page ma-war-room-v3 flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex-1" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
+          <SubscriberAnswer question="早上的判斷有沒有改變？" date={projection.identity.reportDate}
+            answer={projection.title} reason={projection.statusLabel} tone="amber">
+            <p>判斷信心：{projection.confidence.label}</p>
+            <p>{projection.marketDecision.label}</p>
+          </SubscriberAnswer>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="ma-page ma-war-room-page ma-war-room-v3 flex flex-col overflow-x-hidden">
-      <Navbar marketState={marketState} />
-      <main className="flex-1 overflow-x-hidden">
-        <SubscriberAnswer question="早上的判斷有沒有改變？" date={report.report_date}
+      <Navbar />
+      <main className="flex-1 overflow-x-hidden" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
+        <SubscriberAnswer question="早上的判斷有沒有改變？" date={projection.identity.reportDate}
           answer={answer.title} reason={decisionReason} tone={answer.tone}>
           <div className="ma-subscriber-three-answers"><div><h2>現在怎麼做</h2><strong>{action}</strong></div><div><h2>驗證狀態</h2><strong>{statusLabel}</strong></div></div>
         </SubscriberAnswer>

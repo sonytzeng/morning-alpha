@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {isolatedFunction} from './helpers/isolatedEdgeLoader.mjs';
+import { fetchPublishedDeliveryEvidence } from '../supabase/functions/_shared/market-publication-contract.ts';
 
 const source=readFileSync(new URL('../supabase/functions/ma-ops-health-check/index.ts',import.meta.url),'utf8');
 const makeCheck=isolatedFunction(source,'makeCheck');
 const summarizeProductionBusinessHealth=isolatedFunction(source,'summarizeProductionBusinessHealth');
 const asObject=v=>v&&typeof v==='object'&&!Array.isArray(v)?v:{};
 const nonEmptyString=v=>typeof v==='string'&&v.trim().length>0;
-const fetchPublishedHealthDecision=isolatedFunction(source,'fetchPublishedHealthDecision',{withTimeout:p=>p,asObject,nonEmptyString});
 const handlers=isolatedFunction(source,'handlers',{withTimeout:p=>p,makeCheck,Date});
 const database=(daily,incident,failed=0)=>({from(table){
   assert.equal(table,'line_delivery_outbox');
@@ -29,7 +29,8 @@ test('actual normal receipt passes; pending or exhausted delivery remains non-PA
   assert.equal((await handlers['line-push-delivery']({supabase:database(3,0,1),targetDate:'2026-09-08'})).status,'failed');
 });
 test('market health is gated by canonical market evidence, not paid-note depth',()=>{
-  assert.match(source,/isTradingDay && !reportGate\.eligible \? "market_report_gate"/);
+  assert.match(source,/isTradingDay && !publication\.eligible \? "market_publication_contract"/);
+  assert.doesNotMatch(source,/isTradingDay && !reportGate\.eligible/);
   assert.doesNotMatch(source,/isTradingDay && !premiumGate\.eligible/);
   assert.match(source,/premium_gate_independent: true/);
   assert.match(source,/premium_reason_codes: premiumGate.reason_codes/);
@@ -82,15 +83,16 @@ test('health keeps published market revision even when newer internal QA is curr
     {id:'published-9-8',report_id:'report-9-8',report_date:'2026-09-08',status:'READY',decision_mode:'no_trade',content_score:92,is_current:false,version:1},
     {id:'qa-9-8',report_id:'report-9-8',report_date:'2026-09-08',status:'PARTIAL',decision_mode:'blocked',content_score:79,is_current:true,version:2,session_type:'PREMARKET'},
   ];
-  const db={from(table){assert.equal(table,'decision_snapshots');const filters={};const query={
+  const db={from(table){assert.ok(['decision_snapshots','member_content_revisions'].includes(table));const filters={};const query={
     select(){return query;},eq(k,v){filters[k]=v;return query;},order(){return query;},limit(){return query;},maybeSingle(){return query;},
-    then(resolve){return Promise.resolve({error:null,data:rows.filter(row=>Object.entries(filters).every(([k,v])=>row[k]===v)).sort((a,b)=>b.version-a.version)[0]||null}).then(resolve);},
+    then(resolve){return Promise.resolve({error:null,data:table==='decision_snapshots'?rows.filter(row=>Object.entries(filters).every(([k,v])=>row[k]===v)).sort((a,b)=>b.version-a.version)[0]||null:null}).then(resolve);},
   };return query;}};
-  const report={id:'report-9-8',ai_strategy_json:{revision_id:'published-9-8'}};
-  assert.equal((await fetchPublishedHealthDecision(db,report,'2026-09-08')).id,'published-9-8');
-  assert.equal(await fetchPublishedHealthDecision(db,{...report,id:'another-report'},'2026-09-08'),null);
-  assert.equal(await fetchPublishedHealthDecision(db,{...report,ai_strategy_json:{revision_id:'missing-published'}},'2026-09-08'),null);
-  assert.equal(await fetchPublishedHealthDecision(db,report,'2026-09-06'),null);
+  const report={id:'report-9-8',report_date:'2026-09-08',ai_strategy_json:{revision_id:'published-9-8',canonical_member_revision_id:'member-9-8'}};
+  assert.equal((await fetchPublishedDeliveryEvidence(db,report)).snapshot.id,'published-9-8');
+  assert.equal((await fetchPublishedDeliveryEvidence(db,{...report,id:'another-report'})).snapshot,null);
+  assert.equal((await fetchPublishedDeliveryEvidence(db,{...report,ai_strategy_json:{...report.ai_strategy_json,revision_id:'missing-published'}})).snapshot,null);
+  assert.equal((await fetchPublishedDeliveryEvidence(db,{...report,report_date:'2026-09-06'})).snapshot,null);
+  assert.equal((await fetchPublishedDeliveryEvidence(db,{...report,ai_strategy_json:{}})).snapshot,null,'No current-QA fallback');
 });
 
 test('actual report-health handler admits Market PASS + Recommendation BLOCKED but never Market FAIL',async()=>{
@@ -104,7 +106,9 @@ test('actual report-health handler admits Market PASS + Recommendation BLOCKED b
   let eligible=true;
   const reportHandlers=isolatedFunction(source,'handlers',{
     withTimeout:p=>p,makeCheck,Date,asObject,nonEmptyString,asArray:v=>Array.isArray(v)?v:[],
-    fetchReport:async()=>report,fetchPublishedHealthDecision:async()=>snapshot,
+    fetchReport:async()=>report,fetchPublishedDeliveryEvidence:async()=>({snapshot,member:{}}),
+    evaluatePublishedMarketDelivery:()=>({eligible,reason_codes:eligible?[]:['market_evidence_incomplete'],
+      projection:{displayStatus:eligible?'READY':'INSUFFICIENT_EVIDENCE',marketDecision:{bias:eligible?'中性':null},recommendation:{status:'BLOCKED'}}}),
     isActionableResearchSentence:isolatedFunction(source,'isActionableResearchSentence',{nonEmptyString}),
     evaluatePremiumContentGate:()=>({status:'BLOCKED',content_score:22,decision_mode:'blocked',reason_codes:['member_depth_insufficient']}),
     evaluateMarketReportGate:()=>({eligible,status:eligible?'READY':'BLOCKED',recommendation_status:'BLOCKED',reason_codes:eligible?[]:['market_evidence_incomplete']}),
@@ -117,5 +121,6 @@ test('actual report-health handler admits Market PASS + Recommendation BLOCKED b
   eligible=false;
   const blocked=await reportHandlers['daily-report-contract']({supabase:{},targetDate:'2026-09-08'});
   assert.equal(blocked.status,'failed');
-  assert.ok(blocked.actual_state.missing_fields.includes('market_report_gate'));
+  assert.ok(blocked.actual_state.missing_fields.includes('market_publication_contract'));
+  assert.ok(blocked.actual_state.market_report_reason_codes.includes('market_evidence_incomplete'));
 });

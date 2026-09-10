@@ -3,6 +3,13 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { getSubscriberReportProjection } from '../src/lib/subscriberReportContract.ts';
+import { getSubscriberOpportunityList } from '../src/lib/subscriberOpportunities.ts';
+import { resolvePremiumContentAvailability } from '../src/lib/premiumContentAvailability.ts';
+import { selectPublicPerformanceRows } from '../src/lib/performanceJournalProjection.ts';
+import { subscriberProjectionFixture } from './fixtures/subscriber-projection-v1.mjs';
+import { isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
+import { buildLineDailyFlexMessage } from '../supabase/functions/_shared/line-daily-flex-message.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
@@ -287,15 +294,20 @@ test('authenticated recovery can force report regeneration after a code-only fix
 });
 
 test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
+  const publication = read('supabase/functions/_shared/market-publication-contract.ts');
   const hardGate = lineDailyPush.indexOf("reason: 'MARKET_REPORT_NOT_ELIGIBLE'");
   const subscriberDelivery = lineDailyPush.indexOf('deliverOutboxMessage({', hardGate);
   assert.ok(hardGate >= 0, 'LINE must expose the independent hard public Research/Evidence/Editorial gate');
   assert.match(lineDailyPush, /evaluateMarketReportGate/);
   assert.ok(subscriberDelivery > hardGate, 'subscriber delivery must happen only after the hard gate');
-  assert.match(lineDailyPush, /snapshotEligible = isPublishedDeliveryEligible\(report, decisionSnapshot, memberRevision, marketGate\)/);
-  assert.match(lineDailyPush, /snapshot\.status !== 'READY'/);
-  assert.match(lineDailyPush, /snapshot\.content_score < 90/);
-  assert.match(lineDailyPush, /member\.semantic_status !== 'PASSED'/);
+  assert.match(lineDailyPush, /evaluatePublishedMarketDelivery\(report, decisionSnapshot, memberRevision, marketGate/);
+  assert.match(lineDailyPush, /snapshotEligible = deliveryState\.eligible/);
+  const publicationGuard = lineDailyPush.indexOf('if (!snapshotEligible)');
+  assert.ok(publicationGuard >= 0 && publicationGuard < hardGate, 'the shared publication refusal must enter the 409 path');
+  assert.match(lineDailyPush, /return validateMarketPublicationDelivery\(report, snapshot, member, marketGate\)/);
+  assert.match(publication, /snapshot\.status !== 'READY'/);
+  assert.match(publication, /snapshot\.content_score < 90/);
+  assert.match(publication, /member\.semantic_status !== 'PASSED'/);
   assert.match(lineDailyPush, /claim_line_delivery_outbox_v1/);
   assert.match(lineDailyPush, /mark_line_delivery_outbox_v1/);
   assert.match(lineDailyPush, /delivery_mode === 'incident'/);
@@ -304,48 +316,74 @@ test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
   assert.match(deliveryGuaranteeMigration, /0-40\/5 23 \* \* 0-4/);
   assert.match(deliveryGuaranteeMigration, /decision_snapshots_premium_90_gate/);
   assert.match(deliveryGuaranteeMigration, /new\.content_score is null or new\.content_score < 90/);
-  assert.match(opsHealthCheck, /ready_90_point_decision_snapshot/);
+  assert.match(opsHealthCheck, /evaluatePublishedMarketDelivery\(report, snapshot, publicationEvidence\.member, reportGate/);
+  assert.match(opsHealthCheck, /publicationRun: publicationEvidence\.publicationRun/);
+  assert.match(opsHealthCheck, /isTradingDay && !publication\.eligible \? "market_publication_contract" : null/);
 });
 
 test('paid report fails closed when evidence does not meet the member threshold', () => {
   assert.match(reportDetail, /memberResearchDegraded/);
   assert.match(reportDetail, /resolvePremiumContentAvailability/);
   assert.match(reportDetail, /今日研究資料尚未達付費發布標準/);
-  assert.match(reportDetail, /不會把資料不足包裝成高信心受惠股/);
+  assert.match(reportDetail, /memberResearchDegraded = !projection\.recommendation\.available/);
+  assert.match(reportDetail, /projection\.recommendation\.message/);
+  const withheld = getSubscriberReportProjection(subscriberProjectionFixture('MARKET_READY_RECOMMENDATION_BLOCKED'));
+  assert.equal(withheld.analysisAvailable, true, 'paid evidence failures must not block an independently published market report');
+  assert.equal(withheld.recommendation.available, false);
+  assert.deepEqual(withheld.recommendation.items, []);
+  assert.match(withheld.recommendation.message, /推薦評估證據不足/);
   assert.match(reportDetail, /本報告沒有可核對的 48 小時內新聞來源/);
   assert.doesNotMatch(reportDetail, /等待 09:30 開盤雷達/);
   assert.doesNotMatch(reportDetail, /market_data_latest_date \|\| report\.report_date\} 收盤/);
   assert.match(memberNote, /memberResearchPublishable/);
   assert.match(memberNote, /今日資料不足，不發布付費個股研究/);
   assert.match(memberNote, /resolvePremiumContentAvailability/);
-  assert.match(opportunities, /premiumResearchPublishable/);
+  assert.match(opportunities, /getSubscriberOpportunityList\(ds\.rawRow, projection\)/);
   assert.match(opportunities, /resolvePremiumContentAvailability/);
   assert.match(reportsCenter, /selectedResearchPublishable/);
-  assert.match(reportsCenter, /這天的個股研究已降級/);
-  assert.match(premiumAvailability, /Object\.keys\(gate\)\.length > 0/);
-  assert.match(premiumAvailability, /memberValueScore >= 90/);
-  assert.match(premiumAvailability, /freshNewsCount > 0/);
+  assert.match(reportsCenter, /selectedResearchPublishable = selectedProjection\.recommendation\.available/);
+  assert.match(reportsCenter, /selectedProjection\.recommendation\.message/);
+  assert.match(premiumAvailability, /marketContentAvailable = projection\.analysisAvailable/);
+  assert.match(premiumAvailability, /eligible = marketContentAvailable && explicitStatus === 'eligible'/);
+  assert.doesNotMatch(premiumAvailability, /memberValueScore >=|freshNewsCount >|inferredDecisionMode|strictEligible/);
+  const qualified = subscriberProjectionFixture('READY');
+  assert.equal(getSubscriberOpportunityList(qualified).length, 1, 'preserve the actual qualified positive control');
+  qualified.premium_content_status = 'blocked';
+  qualified.member_value_score = 100;
+  qualified.fresh_news_count = 100;
+  assert.equal(getSubscriberReportProjection(qualified).recommendation.available, true);
+  assert.equal(resolvePremiumContentAvailability(qualified).marketContentAvailable, true);
+  assert.equal(resolvePremiumContentAvailability(qualified).eligible, false);
+  assert.deepEqual(getSubscriberOpportunityList(qualified), [], 'QA scores/news must not override blocked Premium');
   assert.match(premiumGate, /recommendation_reasoning_incomplete/);
   assert.match(premiumGate, /evaluateResearchQualityGate/);
   assert.match(researchQualityGate, /research_evidence_coverage_below_100/);
   assert.match(researchQualityGate, /research_unsupported_claims_present/);
-  assert.match(contentOsMorningAlphaSource, /evaluateResearchQualityGate/);
-  assert.match(contentOsMorningAlphaSource, /RESEARCH_QUALITY_GATE_BLOCKED/);
-  const memberRevisionRead = contentOsMorningAlphaSource.indexOf('current_member_content_revisions_v1');
-  const canonicalRecommendationsRead = contentOsMorningAlphaSource.indexOf('memberContent.representative_stocks');
-  const publicTopicProjection = contentOsMorningAlphaSource.indexOf('const publicTopicSource');
-  assert.ok(memberRevisionRead >= 0, 'Content OS must read the immutable canonical member revision');
-  assert.ok(canonicalRecommendationsRead > memberRevisionRead, 'Content OS recommendations must come from the canonical member revision');
-  assert.ok(publicTopicProjection > canonicalRecommendationsRead, 'public topic projection must happen after canonical recommendations are resolved');
+  assert.match(contentOsMorningAlphaSource, /evaluateResearchQualityGate\(document\)/);
+  assert.match(contentOsMorningAlphaSource, /PUBLISHED_MARKET_CONTRACT_BLOCKED/);
+  const memberRevisionRead = contentOsMorningAlphaSource.indexOf('await fetchPublishedDeliveryEvidence(admin, report)');
+  const canonicalPublicationRead = contentOsMorningAlphaSource.indexOf('const delivery = evaluatePublishedMarketDelivery(report, snapshot, memberRevision');
+  const publicTopicProjection = contentOsMorningAlphaSource.indexOf('await buildContentOsPublicPayload(report, snapshot, memberRevision');
+  assert.ok(memberRevisionRead >= 0, 'Content OS resolves the exact committed decision/member/run tuple');
+  assert.ok(canonicalPublicationRead > memberRevisionRead, 'durable publication authority precedes public projection');
+  assert.ok(publicTopicProjection > canonicalPublicationRead, 'public projection cannot preempt publication verification');
+  assert.doesNotMatch(contentOsMorningAlphaSource, /current_member_content_revisions_v1|\.eq\("is_current"/);
+  assert.match(contentOsMorningAlphaSource, /projection\.recommendation\.available \? projection\.recommendation\.items : \[\]/);
+  assert.match(contentOsMorningAlphaSource, /kind: "stock_opportunity"/);
+  assert.match(contentOsMorningAlphaSource, /kind: "market_brief"/);
   assert.doesNotMatch(contentOsMorningAlphaSource, /firstArray\(\s*ai\.today_beneficiary_stocks_v10/);
-  assert.match(contentOsMorningAlphaSource, /publicTopicSource\.why_this_stock/);
-  assert.match(contentOsMorningAlphaSource, /report\.updated_at \?\? report\.created_at/);
+  assert.match(contentOsMorningAlphaSource, /stock\.why_this_stock/);
+  assert.match(contentOsMorningAlphaSource, /projection\.identity\.generatedAt/);
+  assert.doesNotMatch(contentOsMorningAlphaSource, /report\.updated_at \?\? report\.created_at/);
   assert.match(contentOsMorningAlphaSource, /PUBLIC_TOPIC_INCOMPLETE/);
   assert.match(reportPayloadFunction, /evaluatePremiumContentGate/);
   assert.match(reportPayloadFunction, /if \(asObject\(publicPayload\.subscriber_state\)\.publication !== "PUBLISHED"\s*\|\| !premiumGate\.eligible \|\| !revisionEligible \|\| \(!recommendationGate\.eligible && !marketOnlyNote\)\)/);
   assert.match(reportPayloadFunction, /const premiumEligible = premiumGate\.eligible && semanticEligible/);
   assert.match(reportPayloadFunction, /one_teaser_stock: recommendationsEligible \? buildCanonicalTeaserStock/);
-  assert.match(reportPayloadFunction, /recommendationsEligible = premiumEligible && marketPublished && marketGate\.recommendation_gate\.eligible/);
+  // Availability includes the committed recommendation projection; a current
+  // private research gate alone cannot introduce uncommitted stock aliases.
+  assert.match(reportPayloadFunction, /recommendationsEligible = premiumEligible && marketPublished && subscriberProjection\.recommendation\.available/);
+  assert.doesNotMatch(reportPayloadFunction, /recommendationsEligible = premiumEligible && marketPublished && marketGate\.recommendation_gate\.eligible/);
   assert.match(reportPayloadFunction, /premium_content_unavailable_reason: "EVIDENCE_GATE_NOT_MET"/);
 });
 
@@ -426,7 +464,15 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.match(opsHealthCheck, /canonical_research_evidence_editorial_gate/);
   assert.match(opsHealthCheck, /intraday_step_count: asArray\(note\.intraday_validation\)\.length/);
   assert.match(opsHealthCheck, /invalidation_rule_count: asArray\(note\.invalidation_rules\)\.length/);
-  assert.match(opsHealthCheck, /verifiedCatalystCount < 1/);
+  assert.match(opsHealthCheck, /verified_catalyst_count: verifiedCatalystCount/);
+  assert.doesNotMatch(opsHealthCheck, /verifiedCatalystCount < 1/);
+  const publication = read('supabase/functions/_shared/market-publication-contract.ts');
+  assert.match(publication, /const audited = buildCanonicalMarketState\(document\)/);
+  assert.match(publication, /audited\.status === 'READY' && audited\.report_date === reportDate/);
+  assert.match(publication, /JSON\.stringify\(tupleKeys\(snapshot\.source_refs\)\) === JSON\.stringify\(tupleKeys\(expectedSources\)\)/);
+  assert.match(publication, /snapshot\.content_score < 90/);
+  assert.match(publication, /snapshot\.coverage_score === 100/);
+  assert.match(opsHealthCheck, /isTradingDay && !publication\.eligible \? "market_publication_contract" : null/);
   assert.match(opsHealthCheck, /verified_market_count/);
   assert.match(runtimeCheckpointWorkflow, /MANUAL_CHECKPOINT: \${\{ inputs\.checkpoint \}\}/);
   assert.doesNotMatch(runtimeCheckpointWorkflow, /^\s*schedule:/m);
@@ -437,9 +483,11 @@ test('LINE retains verified Production v59 Flex layout and refuses evidence-bloc
   assert.match(lineDailyPush, /return buildLineDailyFlexMessage\(/);
   for(const label of ['今日盤前決策','今日主線','成立條件','失效條件']) assert.match(flex,new RegExp(label));
   assert.match(flex,/type: 'flex'/);
-  assert.match(lineDailyPush,/reportDate: String\(report\.report_date/);
-  assert.match(lineDailyPush,/snapshot\.decision_mode === 'recommendations'\) return marketGate\.recommendation_gate\.eligible === true/);
-  assert.match(lineDailyPush,/const recommendations = marketOnly \? \[\]/);
+  assert.match(lineDailyPush,/reportDate: projection\.identity\.reportDate/);
+  const publication=read('supabase/functions/_shared/market-publication-contract.ts');
+  assert.match(publication,/snapshot\?\.decision_mode !== 'recommendations' \|\| !committedSymbolsAdmitted/);
+  assert.match(publication,/committedRecommendations\.every\(row => Boolean\(stockSymbol\(row\)\) && admittedSymbols\.has\(stockSymbol\(row\)\)\)/);
+  assert.match(lineDailyPush,/const recommendations = projection\.recommendation\.available \? projection\.recommendation\.items : \[\]/);
   assert.match(flex,/推薦評估證據不足，今日暫不發布正式個股推薦/);
   // v59 does not display analysis/data-cutoff timestamp text. Do not claim that
   // removed pre-release plain-text behavior passed by leaving dead calculations.
@@ -447,6 +495,19 @@ test('LINE retains verified Production v59 Flex layout and refuses evidence-bloc
   assert.match(lineDailyPush, /evaluatePremiumContentGate/);
   assert.match(lineDailyPush, /ALREADY_SENT/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);
+  // Actual formatter boundary, synthetic projection only: no SDK, SQL, outbox
+  // or LINE request. Refusing publication and suppressing stocks are distinct.
+  const format=isolatedFunction(lineDailyPush,'buildLineMessage',{buildLineDailyFlexMessage});
+  const delivery={eligible:true,projection:getSubscriberReportProjection(subscriberProjectionFixture('MARKET_READY_RECOMMENDATION_BLOCKED')),
+    marketContent:{opportunity:'合成市場觀察',confirmation:'09:30',avoid:'合成風險界線',risk:'合成市場失效條件'},
+    ai_strategy_json:{today_beneficiary_stocks_v10:[{symbol:'UNREVIEWED_STOCK'}],line_push_copy:{opportunity:'UNREVIEWED_COPY_999999'}}};
+  const rendered=JSON.stringify(format(delivery,'https://example.invalid'));
+  assert.match(rendered,/推薦評估證據不足，今日暫不發布正式個股推薦/);
+  assert.doesNotMatch(rendered,/UNREVIEWED_STOCK|UNREVIEWED_COPY_999999|5 檔排序/);
+  assert.throws(()=>format({...delivery,eligible:false},'https://example.invalid'),/MARKET_DELIVERY_PROJECTION_UNAVAILABLE/);
+  assert.throws(()=>format({...delivery,projection:getSubscriberReportProjection(subscriberProjectionFixture('PARTIAL'))},'https://example.invalid'),/MARKET_DELIVERY_PROJECTION_UNAVAILABLE/);
+  const qualified={...delivery,projection:getSubscriberReportProjection(subscriberProjectionFixture('READY'))};
+  assert.match(JSON.stringify(format(qualified,'https://example.invalid')),/2330/);
 });
 
 test('trading-day reports and public timelines fail closed with correct times', () => {
@@ -461,7 +522,9 @@ test('trading-day reports and public timelines fail closed with correct times', 
   assert.match(runtimeTimeline, /time: '14:30'/);
   assert.doesNotMatch(runtimeTimeline, /time: '13:30'/);
   assert.match(today, /if \(!isReportForToday\)/);
-  assert.match(warRoom, /report\.report_date !== todayTaipeiStr/);
+  assert.match(warRoom, /if \(projection\.historical\)/);
+  assert.doesNotMatch(warRoom, /report\.report_date !== todayTaipeiStr/);
+  assert.match(warRoom, /data-report-date=\{projection\.identity\.reportDate\}/);
   assert.match(warRoom, /不會把歷史時間軸冒充成今天進度/);
 });
 
@@ -527,14 +590,20 @@ test('home public decision copy is user-facing and internally consistent', () =>
   assert.match(home, /取消條件/);
   assert.doesNotMatch(home, /81%|勝率保證|保證獲利/);
   assert.match(home, /isSyntheticResearchSentence/);
-  assert.match(home, /get_public_performance_journal/);
+  assert.match(home, /callGetReportHistory\(30\)/);
+  assert.match(home, /selectPublicPerformanceRows\(response.reports\)/);
+  assert.doesNotMatch(home, /get_public_performance_journal/);
   assert.match(home, /latestPublicClosing/);
   assert.match(home, /查看完整研究與當沖條件/);
   assert.doesNotMatch(home, /查看完整 AI 推理/);
   assert.match(home, /最近一次收盤驗證 ·/);
-  assert.match(home, /dataStatus === 'complete'/);
-  assert.match(home, /hasDirection/);
-  assert.match(home, /資料不足，已安全降級/);
+  assert.match(home, /getSubscriberReportProjection\(row, \{ historical: true \}\)/);
+  assert.match(home, /projection\.identity\.reportDate <= String\(response.today_date\)[\s\S]*&& projection\.closing\.complete/);
+  assert.match(home, /const hasRuntimeClosing = projection\.closing\.complete/);
+  assert.match(home, /closingResultLabel\(\s*projection\.closing\.outcome/);
+  assert.equal(getSubscriberReportProjection(subscriberProjectionFixture('PARTIAL')).closing.complete, false);
+  assert.equal(getSubscriberReportProjection({ report_date: '2026-09-09', data_status: 'complete', hit_or_miss: 'hit', actual_direction: 'up' }).closing.complete, false,
+    'a flattened legacy row without publication/revision/receipt cannot appear as a completed public result');
   assert.match(home, /selectNextRuntimeTimelineNode\(timelineNodes\)/);
   assert.match(home, /runtimeLifecycleComplete/);
   assert.match(home, /查看收盤驗證，等待下一個交易日/);
@@ -603,8 +672,17 @@ test('opportunities is a candidate screening flow with complete public copy', ()
   assert.match(opportunities, /hasStrongBeneficiaryEvidence/);
   assert.match(opportunities, /今天沒有強受惠股，先觀察/);
   assert.match(opportunities, /不把觀察股包裝成受惠股/);
-  assert.match(opportunities, /legacyObservationStocks/);
-  assert.match(opportunities, /hasUsableLegacyEvidence/);
+  assert.match(opportunities, /getSubscriberOpportunityList\(ds\.rawRow, projection\)/);
+  assert.doesNotMatch(opportunities, /legacyObservationStocks|hasUsableLegacyEvidence|hasNoTradeEvidence|v10DataQualityStatus/);
+  const canonical = subscriberProjectionFixture('READY');
+  canonical.v10_beneficiary_enabled = true;
+  canonical.v10_data_quality_status = 'QUALIFIED';
+  canonical.today_beneficiary_stocks_v10 = [{ symbol: '9999', name: 'unselected synthetic preview' }];
+  canonical.v10_observation_watchlist = [{ symbol: '8888', name: 'unselected synthetic observation' }];
+  const actual = getSubscriberOpportunityList(canonical);
+  assert.deepEqual(actual.map(item => item.symbol), ['2330']);
+  assert.ok(actual.every(item => item.oneLineReason && item.confirmation && item.invalidation));
+  assert.deepEqual(getSubscriberOpportunityList(subscriberProjectionFixture('MARKET_READY_RECOMMENDATION_BLOCKED')), []);
   const css = read('src/index.css');
   const cardRule = css.match(/\.ma-opportunities-page \.ma-opportunity-card \{([^}]*)\}/)?.[1] || '';
   const detailRule = css.match(/\.ma-opportunities-page \.ma-opportunity-details > div > dd \{([^}]*)\}/)?.[1] || '';
@@ -621,8 +699,8 @@ test('war room is a live monitor rather than another dashboard page', () => {
     assert.doesNotMatch(warRoom, new RegExp(repeatedSurface), `war room still repeats a morning surface: ${repeatedSurface}`);
   }
   assert.match(warRoom, /hasNewIntradayEvidence/);
-  assert.match(warRoom, /getRuntimeCheckpointState\(runtimeSyncStatus, '1030'\) === 'completed'/);
-  assert.match(warRoom, /getRuntimeCheckpointState\(runtimeSyncStatus, '1300'\) === 'completed'/);
+  assert.match(warRoom, /projection\.runtime\.newIntradayEvidence/);
+  assert.doesNotMatch(warRoom, /getRuntimeCheckpointState\(/, 'subscriber checkpoint claims must use the canonical projection');
   assert.match(warRoom, /feedTimeline/);
   for (const legacySurface of ['ma-pixel-hero', 'ma-phase2-kpi-grid', 'ma-phase2-timeline', 'ma-phase2-observation-grid']) {
     assert.doesNotMatch(warRoom, new RegExp(legacySurface), `war room still uses repeated surface: ${legacySurface}`);
@@ -709,10 +787,31 @@ test('member note translates research enums and checkpoint diagnostics for reade
 });
 
 test('performance excludes outcomes that have no verifiable closing direction', () => {
-  assert.match(performance, /const hasVerifiableDirection/);
-  assert.match(performance, /const hasNamedDirection/);
-  assert.match(performance, /numberOrNull\(actualTaiexClose\?\.change_percent\)/);
-  assert.match(performance, /if \(!hasVerifiableDirection\) return false/);
+  assert.match(performance, /getSubscriberReportProjection\(selection\.row, \{ historical: true \}\)/);
+  assert.match(performance, /setEntries\(selectPublicPerformanceRows\(response.reports\)\.map\(buildEntry\)\)/);
+  assert.match(performance, /setIsSignedIn\(response.authenticated === true\)/);
+  assert.doesNotMatch(performance, /reportSelectionScore|shouldPreferReport|buildReportRecordFromPublicRow/);
+  assert.match(performance, /const hasCompleteVerification = projection\.closing\.complete/);
+  assert.match(performance, /tradingDay && hasMorningReport && hasCompleteVerification \? rawOutcome : 'insufficient'/);
+  assert.doesNotMatch(performance, /row\.confidence_score|ai\.confidence_score/);
+  const verified = subscriberProjectionFixture('READY');
+  verified.subscriber_state.closing = 'COMPLETE';
+  verified.closing_verification_v2 = verified.closing_verification;
+  assert.equal(getSubscriberReportProjection(verified, { historical: true }).closing.complete, true);
+  assert.equal(selectPublicPerformanceRows([verified])[0].row, verified, 'keep real selected-row identity and receipt');
+  const flat = { report_date: verified.report_date, confidence_score: 100, verification_status: 'completed',
+    verification_data_status: 'complete', hit_or_miss: 'hit', actual_taiex_close: 30000 };
+  const flatSelection = selectPublicPerformanceRows([flat])[0];
+  assert.equal(flatSelection.row, flat);
+  assert.equal(getSubscriberReportProjection(flatSelection.row, { historical: true }).closing.complete, false);
+  assert.equal(selectPublicPerformanceRows([verified, flat])[0].row, null, 'conflicts cannot choose a better score/outcome');
+  for (const field of ['actual_taiex_change', 'actual_2330_close', 'actual_txf_close']) {
+    const missing = globalThis.structuredClone(verified);
+    delete missing.closing_verification_v2[field];
+    const projection = getSubscriberReportProjection(missing, { historical: true });
+    assert.equal(projection.closing.complete, false, `${field} is mandatory for a verified sample`);
+    assert.equal(projection.closing.outcome, null, 'a hit/miss label cannot survive missing core closing evidence');
+  }
   assert.match(performance, /publicPerformanceText/);
   assert.match(closingVerification, /actual_taiex_change: params\.taiexClose\?\.change \?\? null/);
   assert.match(closingVerification, /actual_direction: params\.taiexClose/);
@@ -728,8 +827,11 @@ test('verification is a public fail-closed audit instead of an internal diagnost
   for (const internalName of ['FINNHUB', 'SUPABASE_REPORTS', 'close-market-review', 'DATA SOURCE CHECK', 'SCRIPT VERIFICATION', 'OPENAI']) {
     assert.doesNotMatch(verification, new RegExp(internalName, 'i'), `verification exposes an internal name: ${internalName}`);
   }
-  assert.match(verification, /hasActualOutcome/);
-  assert.match(verification, /resolveClosingVerificationState/);
+  assert.match(verification, /const directionVerified = projection\.closing\.complete/);
+  assert.match(verification, /const fullData = projection\.closing\.complete/);
+  assert.match(verification, /const closing = projection\.closing\.result/);
+  assert.doesNotMatch(verification, /resolveClosingVerificationState\(/);
+  assert.equal(getSubscriberReportProjection(subscriberProjectionFixture('NOT_DUE')).closing.complete, false);
   assert.match(verification, /部分個股或期貨欄位不足/);
   assert.match(verification, /if \(isHistoricalFallback\)/);
   assert.match(verification, /不會把 .* 的進度誤標為今天/);
@@ -740,10 +842,15 @@ test('report pages translate public market labels and require a real closing out
     assert.doesNotMatch(reportsCenter, new RegExp(label, 'i'), `reports center renders an untranslated label: ${label}`);
   }
   assert.match(reportsCenter, /publicReportText/);
-  assert.match(reportDetail, /resolveClosingVerificationState/);
-  assert.match(reportDetail, /收盤方向已驗證（部分資料不足）/);
-  assert.match(reportDetail, /歷史收盤驗證資料不足/);
-  assert.match(reportDetail, /closingVerification\.taiexChange\.toFixed\(2\)/);
+  assert.match(reportDetail, /getSubscriberReportProjection\(report, \{ todayDate: taipeiToday, historical: true \}\)/);
+  assert.match(reportDetail, /const closing = projection\.closing\.result/);
+  assert.match(reportDetail, /projection\.closing\.complete \? \(/);
+  assert.match(reportDetail, /taiexChange\.toFixed\(2\)/);
+  assert.doesNotMatch(reportDetail, /report\.confidence_score|strategy\.confidence|resolveClosingVerificationState\(/);
+  const partial = getSubscriberReportProjection(subscriberProjectionFixture('PARTIAL'), { historical: true });
+  assert.equal(partial.analysisAvailable, false);
+  assert.equal(partial.confidence.value, null);
+  assert.equal(partial.closing.complete, false);
   assert.doesNotMatch(reportDetail, /!!strategy\.closing_feedback_plan/);
   assert.match(observationSection, /步驟 \$\{step\}/);
   assert.match(observationSection, /盤前觀察/);
@@ -762,7 +869,9 @@ test('account health cards use the server-trimmed report contract instead of har
   assert.match(accountDashboard, /getLatestReports\(30\)/);
   assert.match(accountDashboard, /payload\.market_data_snapshots/);
   assert.match(accountDashboard, /payload\.important_news/);
-  assert.match(accountDashboard, /payload\.opening_radar/);
+  assert.match(accountDashboard, /getAccountIntradayView\(projection\)/);
+  assert.match(accountDashboard, /projection\.runtime\.checkpoints\['0930'\]/);
+  assert.doesNotMatch(accountDashboard, /payload\.opening_radar|openingRadar\.radar_status/);
   assert.doesNotMatch(accountDashboard, /V8: Simplified — no direct market_data/);
   assert.match(accountInfoCards, /09:30 開盤校正/);
   assert.doesNotMatch(accountInfoCards, /09:15 開盤校正/);
@@ -834,8 +943,13 @@ test('report, site payload, and LINE converge on the same immutable decision sna
   assert.match(dailyReportGenerator, /buildCanonicalDecisionPayload/);
   assert.match(reportPayloadFunction, /\.from\("decision_snapshots"\)/);
   assert.match(reportPayloadFunction, /canonical_decision/);
-  assert.match(lineDailyPush, /\.from\('decision_snapshots'\)/);
-  assert.match(lineDailyPush, /decisionSnapshot\?\.generated_text/);
+  assert.match(lineDailyPush, /return readMarketPublicationEvidence\(supabase, report\)/);
+  assert.match(read('supabase/functions/_shared/market-publication-contract.ts'), /selectPublicationRows\(supabase, 'decision_snapshots', '\*'\)/);
+  const publication = read('supabase/functions/_shared/market-publication-contract.ts');
+  assert.match(publication, /generated = record\(snapshot\?\.generated_text\)/);
+  assert.match(publication, /\.eq\('report_date', String\(report\.report_date\)\)\.eq\('report_id', String\(report\.id\)\)\.eq\('id', revision\)/);
+  assert.match(lineDailyPush, /buildLineMessage\(deliveryState, siteUrl\)/);
+  assert.doesNotMatch(lineDailyPush, /canonicalText = parseRecord\(decisionSnapshot\?\.generated_text\)/);
   assert.match(closingVerification, /opening_decision_snapshot_id/);
   assert.match(closingVerification, /p_session_type:\s*"CLOSING"/);
   assert.match(closingVerification, /closing_decision_snapshot_id/);
@@ -870,8 +984,11 @@ test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempo
   assert.match(lineDailyPush, /message\/multicast/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);
   assert.match(lineDailyPush, /customAggregationUnits/);
-  assert.match(lineDailyPush, /dailySentence\.sentence/);
-  assert.ok(lineDailyPush.indexOf('report.today_quote') < lineDailyPush.indexOf('copy.one_sentence'));
+  assert.match(lineDailyPush, /todayLine: projection\.marketDecision\.summary/);
+  const publication=read('supabase/functions/_shared/market-publication-contract.ts');
+  assert.match(publication, /const document = canonicalMarketDocument\(frozenPresent \? generated : ai\)/);
+  assert.match(publication, /const summary = marketDocumentVerified \? pointer\(record\(sections\.executive_summary\)\.text\)/);
+  assert.doesNotMatch(lineDailyPush, /dailySentence\.sentence|copy\.one_sentence|canonicalText\.daily_sentence/);
   const flex=read('supabase/functions/_shared/line-daily-flex-message.mjs');
   assert.match(flex, /成立條件/);
   assert.match(flex, /操作原則/);

@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { Report } from '@/types/report';
 import { formatTaipeiTimeShort } from '@/hooks/useAccountDashboard';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
+import { isTaipeiToday } from '@/services/marketSourceHealthService';
 
 interface MorningHeroCardProps {
   todayReport: Report | null;
@@ -59,14 +61,22 @@ function getMoodClasses(bias: string | undefined) {
   };
 }
 
-export default function MorningHeroCard({ todayReport, hasTodayReport, streak, isWeekend, hasAnyReport }: MorningHeroCardProps) {
-  const bias = todayReport?.market_bias || '';
-  const score = todayReport?.confidence_score ?? 0;
-  const reportDate = todayReport?.report_date || '';
-  const createdAt = todayReport?.created_at || '';
+export default function MorningHeroCard({ todayReport, hasTodayReport: reportedToday, streak, isWeekend, hasAnyReport }: MorningHeroCardProps) {
+  const projection = getSubscriberReportProjection(todayReport, { todayDate: isTaipeiToday() });
+  const hasTodayReport = reportedToday && projection.analysisAvailable && !projection.historical;
+  const unpublished = Boolean(todayReport) && !projection.analysisAvailable;
+  const bias = projection.marketDecision.bias || projection.marketDecision.label;
+  const reportDate = projection.identity.reportDate;
+  const createdAt = projection.identity.generatedAt;
   const mood = getMoodClasses(bias);
 
   function getStatusBadge() {
+    if (unpublished) return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-xs font-semibold text-amber-300">
+        <i className="ri-information-line text-[10px]"></i>
+        {projection.statusLabel}
+      </span>
+    );
     if (hasTodayReport) {
       return (
         <>
@@ -76,7 +86,7 @@ export default function MorningHeroCard({ todayReport, hasTodayReport, streak, i
           </span>
           <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-xs font-medium text-white/60">
             <i className="ri-brain-line text-amber-400 text-[10px]"></i>
-            判讀把握度 {score}/100
+            判讀把握度 {projection.confidence.label}
           </span>
           <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-forest-500/30 bg-forest-500/10 text-xs font-medium text-forest-300">
             <i className="ri-check-double-line text-forest-400 text-[10px]"></i>
@@ -99,7 +109,7 @@ export default function MorningHeroCard({ todayReport, hasTodayReport, streak, i
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-forest-500/30 bg-forest-500/10 text-xs font-semibold text-forest-300">
           <i className="ri-check-double-line text-forest-400 text-[10px]"></i>
-          最近交易日報告已產生
+          可查看歷史報告狀態
         </span>
       );
     }
@@ -113,7 +123,8 @@ export default function MorningHeroCard({ todayReport, hasTodayReport, streak, i
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-8">
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-8"
+      data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
       <div className="relative">
         {/* Top badges row */}
         <div className="flex flex-wrap items-center gap-2 mb-4 md:mb-5">
@@ -138,10 +149,10 @@ export default function MorningHeroCard({ todayReport, hasTodayReport, streak, i
               </div>
               <span className="text-white/40 text-xs font-medium">最近報告</span>
             </div>
-            {hasTodayReport ? (
+            {reportDate ? (
               <>
                 <p className="text-white font-bold text-sm">{reportDate}</p>
-                <p className="text-white/30 text-[11px] mt-0.5">產生時間 {formatTaipeiTimeShort(createdAt)}</p>
+                <p className="text-white/30 text-[11px] mt-0.5">資料時間 {formatTaipeiTimeShort(createdAt)}</p>
               </>
             ) : hasAnyReport && isWeekend ? (
               <>
@@ -163,10 +174,10 @@ export default function MorningHeroCard({ todayReport, hasTodayReport, streak, i
               </div>
               <span className="text-white/40 text-xs font-medium">盤前判斷</span>
             </div>
-            {hasTodayReport ? (
+            {hasTodayReport || unpublished ? (
               <>
-                <p className={`font-bold text-sm ${mood.textClass}`}>{bias || '—'}</p>
-                <p className="text-white/30 text-[11px] mt-0.5">把握度 {score}/100</p>
+                <p className={`font-bold text-sm ${mood.textClass}`}>{bias}</p>
+                <p className="text-white/30 text-[11px] mt-0.5">把握度 {projection.confidence.label}</p>
               </>
             ) : (
               <p className="text-amber-400 text-sm font-medium">等待生成</p>
@@ -181,7 +192,7 @@ export default function MorningHeroCard({ todayReport, hasTodayReport, streak, i
               </div>
               <span className="text-white/40 text-xs font-medium">下次更新</span>
             </div>
-            <p className="text-white font-bold text-sm">明日 07:30</p>
+            <p className="text-white font-bold text-sm">{unpublished ? '等待有效市場資料' : '明日 07:30'}</p>
             <p className="text-white/30 text-[11px] mt-0.5">AI 盤前自動生成</p>
           </div>
 

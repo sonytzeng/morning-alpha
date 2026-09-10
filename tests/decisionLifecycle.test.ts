@@ -15,8 +15,15 @@ const completeSnapshots = [
   { symbol: 'TXF', value: 23420, change_percent: 0.3 },
 ];
 
+const publishedReport = {
+  report_date: '2026-07-15', revision_id: 'synthetic-runtime-revision', generated_at: '2026-07-14T23:30:00Z',
+  canonical_decision: { id: 'synthetic-runtime-revision', status: 'READY', action: 'ACT' },
+  content_publish_gate: { overall_status: 'eligible' },
+};
+
 function completedCheckpoint() {
   return {
+    ...publishedReport,
     intraday_sync_status: {
       windows: {
         '0930': {
@@ -37,11 +44,16 @@ Deno.test('structured runtime evidence can confirm a decision', () => {
   });
   assert(evidence.status === 'Confirmed', 'expected Confirmed');
   assert(canPresentConfirmedDecision(evidence), 'confirmed decision must pass presentation guard');
+  const unpublished = buildDecisionRuntimeEvidence({
+    ai: { ...completedCheckpoint(), content_publish_gate: { overall_status: 'blocked' } }, checklistItemCount: 2,
+  });
+  assert(unpublished.status === 'Waiting', 'runtime evidence cannot publish a blocked report');
+  assert(!canPresentConfirmedDecision(unpublished), 'unpublished decision cannot present ACT');
 });
 
 Deno.test('missing checkpoint stays Waiting', () => {
   const evidence = buildDecisionRuntimeEvidence({
-    ai: { market_data_snapshots: completeSnapshots },
+    ai: { ...publishedReport, market_data_snapshots: completeSnapshots },
     checklistItemCount: 2,
   });
   assert(evidence.status === 'Waiting', 'expected Waiting');
@@ -51,10 +63,13 @@ Deno.test('missing checkpoint stays Waiting', () => {
 Deno.test('runtime failure evidence can reject a decision', () => {
   const evidence = buildDecisionRuntimeEvidence({
     ai: {
+      ...publishedReport,
       intraday_sync_status: {
         windows: {
           '0930': {
             status: 'failed',
+            report_date: publishedReport.report_date,
+            revision_id: publishedReport.revision_id,
             failed_at: '2026-07-15T01:31:00.000Z',
             evidence: { reason: 'runtime failure' },
           },
@@ -70,7 +85,7 @@ Deno.test('runtime failure evidence can reject a decision', () => {
 
 Deno.test('missing market snapshot presents INSUFFICIENT_DATA', () => {
   const evidence = buildDecisionRuntimeEvidence({
-    ai: {},
+    ai: { ...publishedReport },
     checklistItemCount: 2,
   });
   const presentation = buildDecisionPresentation({
@@ -81,6 +96,7 @@ Deno.test('missing market snapshot presents INSUFFICIENT_DATA', () => {
       reportDate: '2026-07-15',
       currentDate: '2026-07-15',
       market_message: '今天正常交易。',
+      rawAI: publishedReport,
     },
     narrative: {
       decision_evidence: evidence,
@@ -103,6 +119,7 @@ Deno.test('missing market snapshot presents INSUFFICIENT_DATA', () => {
 Deno.test('unrecognized natural language cannot upgrade decision state', () => {
   const evidence = buildDecisionRuntimeEvidence({
     ai: {
+      ...publishedReport,
       summary: 'ready 偏強 成立 確認 失效 跌破 停止',
       market_data_snapshots: completeSnapshots,
     },

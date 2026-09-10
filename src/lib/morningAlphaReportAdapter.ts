@@ -16,6 +16,7 @@
 import { formatTaipeiDate, isTaipeiWeekendToday } from '@/utils/tradingDay';
 import { callGetReportPayload } from '@/services/entitlementService';
 import type { ServerReportPayloadResponse } from '@/types/subscription';
+import { getSubscriberReportProjection, type SubscriberReportProjection } from '@/lib/subscriberReportProjection';
 
 // ═══════════════════════════════════════════════════
 // Raw Supabase Row Type
@@ -24,6 +25,19 @@ import type { ServerReportPayloadResponse } from '@/types/subscription';
 export interface ReportRow {
   id: string;
   report_date: string;
+  revision_id?: string | null;
+  generated_at?: string | null;
+  today_date?: string | null;
+  data_as_of?: string | null;
+  subscriber_state?: unknown;
+  canonical_decision?: Record<string, unknown> | null;
+  content_publish_gate?: Record<string, unknown> | null;
+  market_report_gate?: Record<string, unknown> | null;
+  recommendation_gate?: Record<string, unknown> | null;
+  report_status?: string | null;
+  is_trading_day?: boolean | null;
+  closing_verification_v2?: Record<string, unknown> | null;
+  closing_verification?: Record<string, unknown> | null;
   market_bias: string | null;
   confidence_score: number | null;
   created_at: string;
@@ -38,6 +52,8 @@ export interface ReportRow {
 // ═══════════════════════════════════════════════════
 
 export interface MorningAlphaNormalizedReport {
+  /** Subscriber presentation authority; rawReport/strategy below are internal data only. */
+  subscriberProjection: SubscriberReportProjection;
   rawReport: ReportRow | null;
   strategy: Record<string, unknown> | null;
 
@@ -153,45 +169,33 @@ function firstPayloadString(...values: unknown[]): string {
   return '';
 }
 
-function getPayloadGeneratedAt(payload: Record<string, unknown>): string {
-  const nestedAI = payloadRecord(payload.ai_strategy_json);
-  return firstPayloadString(
-    payload.generated_at,
-    payload.generatedAt,
-    payload.report_generated_at,
-    payload.created_at,
-    payload.updated_at,
-    nestedAI?.generated_at,
-  );
-}
-
-function getPayloadSummary(payload: Record<string, unknown>): string | null {
-  const nestedAI = payloadRecord(payload.ai_strategy_json);
-  const publicSummary = payloadRecord(payload.public_summary) || payloadRecord(nestedAI?.public_summary) || payloadRecord(payload.free_summary);
-  const v8DailySentence = payloadRecord(nestedAI?.v8_daily_sentence) || payloadRecord(payload.v8_daily_sentence);
-  return firstPayloadString(
-    v8DailySentence?.sentence,
-    nestedAI?.daily_sentence,
-    payload.daily_sentence,
-    publicSummary?.daily_sentence,
-    payload.summary,
-    payload.today_quote,
-  ) || null;
-}
-
 function mapServerPayloadToReportRow(response: ServerReportPayloadResponse): ReportRow | null {
   const payload = payloadRecord(response.payload);
   if (!payload || !response.report_date) return null;
-  const generatedAt = getPayloadGeneratedAt(payload);
+  const projection = getSubscriberReportProjection(response);
+  const generatedAt = projection.identity.generatedAt ?? '';
   return {
-    id: `server-trimmed:${response.report_date}`,
-    report_date: response.report_date,
-    market_bias: typeof payload.market_bias === 'string' ? payload.market_bias : null,
-    confidence_score: payload.confidence_score != null ? Number(payload.confidence_score) : null,
+    id: projection.identity.revisionId ?? firstPayloadString(payload.id),
+    report_date: projection.identity.reportDate,
+    revision_id: projection.identity.revisionId,
+    generated_at: projection.identity.generatedAt,
+    today_date: projection.identity.todayDate,
+    data_as_of: response.data_as_of ?? (firstPayloadString(payload.data_as_of) || null),
+    ...(Object.prototype.hasOwnProperty.call(payload, 'subscriber_state') ? { subscriber_state: payload.subscriber_state } : {}),
+    canonical_decision: payloadRecord(payload.canonical_decision),
+    content_publish_gate: payloadRecord(payload.content_publish_gate),
+    market_report_gate: payloadRecord(payload.market_report_gate),
+    recommendation_gate: payloadRecord(payload.recommendation_gate),
+    report_status: typeof payload.report_status === 'string' ? payload.report_status : undefined,
+    is_trading_day: response.is_trading_day ?? (typeof payload.is_trading_day === 'boolean' ? payload.is_trading_day : null),
+    closing_verification_v2: payloadRecord(payload.closing_verification_v2),
+    closing_verification: payloadRecord(payload.closing_verification),
+    market_bias: projection.marketDecision.bias,
+    confidence_score: projection.confidence.value,
     created_at: generatedAt,
     updated_at: firstPayloadString(payload.updated_at) || null,
     ai_strategy_json: payload,
-    summary: getPayloadSummary(payload),
+    summary: projection.marketDecision.summary,
     watch_sectors_json: null,
   };
 }
@@ -217,31 +221,9 @@ export async function fetchBestReport(): Promise<ReportRow | null> {
   const reports = await fetchLatestReports(10);
   if (reports.length === 0) return null;
 
-  // V28: Check content_publish_gate first, then fall back to ai.publish_ready
-  const ready = reports.find((r) => {
-    const ai = r.ai_strategy_json;
-    if (!ai) return false;
-    const cpg = (ai as Record<string, unknown>).content_publish_gate as Record<string, unknown> | undefined;
-    if (cpg) {
-      const status = cpg.status as string | undefined;
-      if (status && ['pass', 'passed', 'ready', 'approved'].includes(status.toLowerCase())) return true;
-    }
-    const pr = (ai as Record<string, unknown>).publish_ready;
-    return pr === true || pr === 'true';
-  });
-
-  if (ready && ready.id !== reports[0].id) {
-    const latest = reports[0];
-    const latestAi = latest.ai_strategy_json;
-    if (latestAi) {
-      const noFake = (latestAi as Record<string, unknown>).no_fake_fallback === true;
-      const fakeUsed = (latestAi as Record<string, unknown>).fake_fallback_used === true;
-      if (noFake && !fakeUsed) return latest;
-    }
-    if (!latestAi && latest.report_date === reports[0].report_date) return latest;
-  }
-
-  return ready || reports[0];
+  // The server selects the canonical business date. An unpublished current
+  // report must never be replaced with a more optimistic previous-day report.
+  return reports[0];
 }
 
 // ═══════════════════════════════════════════════════
@@ -297,38 +279,20 @@ function grabArr(obj: unknown, key: string): Record<string, unknown>[] {
   return Array.isArray(o[key]) ? (o[key] as Record<string, unknown>[]) : [];
 }
 
-function firstNonEmptyString(...values: unknown[]): string {
-  for (const value of values) {
-    if (typeof value === 'string' && value.trim()) return value.trim();
-  }
-  return '';
-}
-
-function resolveGeneratedAt(raw: ReportRow, ai: Record<string, unknown>): string {
-  const rawRecord = raw as unknown as Record<string, unknown>;
-  return firstNonEmptyString(
-    ai.generated_at,
-    ai.generatedAt,
-    ai.report_generated_at,
-    rawRecord.created_at,
-    rawRecord.updated_at,
-    grabObj(ai, 'ai_strategy_json')?.generated_at,
-  );
-}
-
 // ═══════════════════════════════════════════════════
 // Core Normalization
 // ═══════════════════════════════════════════════════
 
 export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlphaNormalizedReport {
+  const subscriberProjection = getSubscriberReportProjection(raw);
   if (!raw) {
     const todayStr = formatTaipeiDate();
     return {
-      rawReport: null, strategy: null,
+      subscriberProjection, rawReport: null, strategy: null,
       reportId: '', reportCreatedAt: '', reportDate: todayStr, reportDisplayDate: todayStr,
       marketDataBasisDate: '—', usMarketBasisDate: '—', generatedAt: '',
       aiVersion: '', source: '',
-      marketBias: '—', confidenceScore: null, qualityScore: 0, memberValueScore: 0,
+      marketBias: subscriberProjection.marketDecision.label, confidenceScore: null, qualityScore: 0, memberValueScore: 0,
       publishReady: false, contentGateStatus: '', noFakeFallback: false, fakeFallbackUsed: false, dataDateAligned: false,
       qualityPass: false, memberValuePass: false, canPublish: false,
       hasFreeSummary: false, hasMemberResearchNote: false, hasReasoningChain: false,
@@ -345,7 +309,7 @@ export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlpha
       dashboardStatus: { level: 'error', label: '報告缺失', message: 'reports 資料表無報告，請檢查 cron 排程。' },
       contentStatus: { baseReport: false, freeSummary: false, memberResearchNote: false,
         reelsScript: false, socialPost: false, lineCopy: 'not_connected', qualityCheck: false, autoPublish: false },
-      publicPageStatus: { displayLabel: '報告準備中', displayBias: '—', displayConfidence: null,
+      publicPageStatus: { displayLabel: subscriberProjection.statusLabel, displayBias: subscriberProjection.marketDecision.label, displayConfidence: null,
         sourceStatusText: '資料驗證中' },
       adminActionRequired: true, nextActionText: '請檢查 cron-job.org 排程與 Edge Function 是否正常執行。',
       diagnostics: { reportId: '', aiVersion: '', source: '', publishReady: false,
@@ -367,11 +331,11 @@ export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlpha
   const strategy = ai;
 
   // ── IDs & dates ──
-  const reportId = raw.id;
-  const generatedAt = resolveGeneratedAt(raw, ai);
+  const reportId = subscriberProjection.identity.revisionId ?? raw.id;
+  const generatedAt = subscriberProjection.identity.generatedAt ?? '';
   const reportCreatedAt = generatedAt || raw.created_at;
-  const reportDate = raw.report_date || formatTaipeiDate();
-  const reportDisplayDate = raw.report_date || formatTaipeiDate();
+  const reportDate = subscriberProjection.identity.reportDate;
+  const reportDisplayDate = subscriberProjection.identity.reportDate;
   // V28: TW core date — priority: tw_core_date > data_basis > market_data_date > raw.report_date
   const marketDataBasisDate =
     grabStr(ai, 'tw_core_date') || grabStr(ai, 'data_basis') || grabStr(ai, 'market_data_date') || grabStr(ai, 'market_data_latest_date') || raw.report_date || '—';
@@ -384,12 +348,8 @@ export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlpha
   const isOpenAISource = source.startsWith('openai');
 
   // ── Core values ──
-  // V8.3: ai_strategy_json.market_bias is PRIMARY source, root column is fallback only
-  const marketBias = grabStr(ai, 'market_bias') || (raw.market_bias ?? '') || grabStr(ai, 'estimated_market_bias_from_market_data') || '—';
-  // V8.3: ai_strategy_json.confidence_score is PRIMARY source, root column is fallback only
-  const aiConfValue = (ai as Record<string, unknown>).confidence_score;
-  const aiConfScore = (typeof aiConfValue === 'number' && !Number.isNaN(aiConfValue)) ? aiConfValue : null;
-  const confidenceScore = aiConfScore ?? raw.confidence_score ?? null;
+  const marketBias = subscriberProjection.marketDecision.bias ?? subscriberProjection.marketDecision.label;
+  const confidenceScore = subscriberProjection.confidence.value;
   const qualityScore = grabNum(ai, 'quality_score');
   const memberValueScore = grabNum(ai, 'member_value_score');
 
@@ -397,32 +357,31 @@ export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlpha
   // V376: Read overall_status in addition to status — Edge Function V7.54.2 writes overall_status
   const rawContentGate = (ai as Record<string, unknown>).content_publish_gate as Record<string, unknown> | undefined;
   const contentGateStatus = grabStr(rawContentGate || null, 'overall_status') || grabStr(rawContentGate || null, 'status');
-  const contentGatePassed = rawContentGate && (
-    ['pass', 'passed', 'ready', 'approved'].includes(contentGateStatus.toLowerCase()) ||
-    contentGateStatus === '可公開'
-  );
-  const publishReady = contentGatePassed || grabBool(ai, 'publish_ready');
+  const publishReady = subscriberProjection.analysisAvailable;
   const noFakeFallback = grabBool(ai, 'no_fake_fallback');
   const fakeFallbackUsed = grabBool(ai, 'fake_fallback_used');
   const dataDateAligned = grabBool(ai, 'data_date_aligned');
 
   // ── Computed gates ──
-  const canPublish =
-    !!raw && !!raw.report_date && !!raw.market_bias && raw.confidence_score != null &&
-    !!raw.ai_strategy_json && noFakeFallback && !fakeFallbackUsed && contentGatePassed;
+  const canPublish = subscriberProjection.analysisAvailable;
   const qualityPass = qualityScore >= 75;
   const memberValuePass = memberValueScore >= 80;
 
   // ── Structured data ──
-  const freeSummary = grabObj(ai, 'free_summary') || grabObj(ai, 'public_summary');
-  const memberNote = grabObj(ai, 'member_research_note');
-  const reasoningChain = grabArr(ai, 'reasoning_chain');
-  const overnightImpactChain = grabArr(ai, 'overnight_impact_chain');
-  const intradayPlan = grabObj(ai, 'intraday_validation_plan');
-  const invalidationConditions = grabArr(ai, 'invalidation_conditions').filter(
+  const freeSummary = canPublish ? {
+    ...(grabObj(ai, 'free_summary') || grabObj(ai, 'public_summary') || {}),
+    market_bias: marketBias,
+    confidence_score: confidenceScore,
+    daily_sentence: subscriberProjection.marketDecision.summary,
+  } : null;
+  const memberNote = canPublish ? grabObj(ai, 'member_research_note') : null;
+  const reasoningChain = canPublish ? grabArr(ai, 'reasoning_chain') : [];
+  const overnightImpactChain = canPublish ? grabArr(ai, 'overnight_impact_chain') : [];
+  const intradayPlan = canPublish ? grabObj(ai, 'intraday_validation_plan') : null;
+  const invalidationConditions = (canPublish ? grabArr(ai, 'invalidation_conditions') : []).filter(
     (inv) => typeof inv.condition === 'string' && inv.condition.trim().length > 0,
   );
-  const closingPlan = grabObj(ai, 'closing_feedback_plan');
+  const closingPlan = canPublish ? grabObj(ai, 'closing_feedback_plan') : null;
   const renewalBlock = grabObj(ai, 'renewal_value_block');
   const reelsScript = grabObj(ai, 'reels_script');
   const socialPost = grabObj(ai, 'social_post');
@@ -464,12 +423,12 @@ export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlpha
   }).length;
 
   // ── One sentence ──
-  const oneSentence = computeOneSentence(ai, freeSummary, socialPost, memberNote);
+  const oneSentence = subscriberProjection.marketDecision.summary ?? subscriberProjection.statusLabel;
 
   // ── Important observations ──
-  const importantObservations = computeImportantObservations(
+  const importantObservations = canPublish ? computeImportantObservations(
     memberNoteKeyObservations, reasoningChain, freeSummary, socialPost,
-  );
+  ) : [];
 
   // ── Content status ──
   const contentStatus = {
@@ -495,12 +454,10 @@ export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlpha
 
   // ── Public page status ──
   const publicPageStatus = {
-    displayLabel: raw ? '今日報告已產生' : '今日報告尚未產生',
-    displayBias: grabStr(freeSummary, 'market_bias') || marketBias,
-    displayConfidence: freeSummary ? grabNum(freeSummary, 'confidence_score') || (confidenceScore ?? null) : (confidenceScore ?? null),
-    sourceStatusText: noFakeFallback && !fakeFallbackUsed && dataDateAligned
-      ? '真實資料 / 無假資料 / 已通過發布檢查'
-      : noFakeFallback ? '真實資料 / 無假資料' : '資料驗證中',
+    displayLabel: subscriberProjection.statusLabel,
+    displayBias: marketBias,
+    displayConfidence: subscriberProjection.confidence.value,
+    sourceStatusText: subscriberProjection.analysisAvailable ? '市場證據已通過發布檢查' : subscriberProjection.statusLabel,
   };
 
   // ── Diagnostics ──
@@ -525,7 +482,7 @@ export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlpha
     : '本篇盤前研究筆記。';
 
   return {
-    rawReport: raw, strategy,
+    subscriberProjection, rawReport: raw, strategy,
     reportId, reportCreatedAt, reportDate, reportDisplayDate,
     marketDataBasisDate, usMarketBasisDate, generatedAt,
     aiVersion, source,
@@ -549,79 +506,6 @@ export function normalizeMorningAlphaReport(raw: ReportRow | null): MorningAlpha
     memberNoteDisplayTitle,
     memberNoteDisplaySubtitle,
   };
-}
-
-// ═══════════════════════════════════════════════════
-// One Sentence Computation
-// ═══════════════════════════════════════════════════
-
-const FORBIDDEN_ONE_LINERS = [
-  '今天非交易日', '等待更多市場訊號', '保持觀望', '關注後續',
-  '市場方向：中性震盪', '等待更多資料確認', '市場情緒持平',
-  '關注市場變化', '需謹慎', '留意風險', '等待更多訊號',
-  '可能受到影響', '影響市場情緒', '投資人應保持謹慎',
-  '市場情緒中性震盪', '半導體與 AI 成為焦點', '靈活應對',
-  '關注半導體', '保持靈活',
-];
-
-function isForbiddenOneLiner(text: string): boolean {
-  return FORBIDDEN_ONE_LINERS.some((p) => text.includes(p));
-}
-
-function computeOneSentence(
-  ai: Record<string, unknown>,
-  freeSummary: Record<string, unknown> | null,
-  socialPost: Record<string, unknown> | null,
-  memberNote: Record<string, unknown> | null,
-): string {
-  const v8DailySentence = grabObj(ai, 'v8_daily_sentence');
-  const v8Sentence = v8DailySentence?.sentence;
-  if (typeof v8Sentence === 'string' && v8Sentence.trim() && !isForbiddenOneLiner(v8Sentence)) {
-    return v8Sentence.trim();
-  }
-  const aiDailySentence = ai.daily_sentence;
-  if (typeof aiDailySentence === 'string' && aiDailySentence.trim() && !isForbiddenOneLiner(aiDailySentence)) {
-    return aiDailySentence.trim();
-  }
-  const aiTodayQuote = ai.today_quote;
-  if (typeof aiTodayQuote === 'string' && aiTodayQuote.trim() && !isForbiddenOneLiner(aiTodayQuote)) {
-    return aiTodayQuote.trim();
-  }
-  const fsDailySentence = freeSummary?.daily_sentence;
-  if (typeof fsDailySentence === 'string' && fsDailySentence.trim() && !isForbiddenOneLiner(fsDailySentence)) {
-    return fsDailySentence.trim();
-  }
-  // V28: free_summary.one_liner (primary for one-liner)
-  const fsOneLiner = freeSummary?.one_liner;
-  if (typeof fsOneLiner === 'string' && fsOneLiner.trim() && !isForbiddenOneLiner(fsOneLiner)) {
-    return fsOneLiner.trim();
-  }
-  // free_summary.one_sentence
-  const fsOneSentence = freeSummary?.one_sentence;
-  if (typeof fsOneSentence === 'string' && fsOneSentence.trim() && !isForbiddenOneLiner(fsOneSentence)) {
-    return fsOneSentence.trim();
-  }
-  // free_summary.summary
-  const fsSummary = freeSummary?.summary;
-  if (typeof fsSummary === 'string' && fsSummary.trim() && !isForbiddenOneLiner(fsSummary)) {
-    return fsSummary.length > 200 ? fsSummary.slice(0, 200) + '...' : fsSummary.trim();
-  }
-  // social_post.title
-  const spTitle = socialPost?.title;
-  if (typeof spTitle === 'string' && spTitle.trim() && !isForbiddenOneLiner(spTitle)) {
-    return spTitle.trim();
-  }
-  // member_research_note.main_thesis
-  const mnThesis = memberNote?.main_thesis;
-  if (typeof mnThesis === 'string' && mnThesis.trim() && !isForbiddenOneLiner(mnThesis)) {
-    return mnThesis.length > 120 ? mnThesis.slice(0, 120) + '...' : mnThesis;
-  }
-  // member_research_note.executive_view
-  const mnExecView = memberNote?.executive_view;
-  if (typeof mnExecView === 'string' && mnExecView.trim() && !isForbiddenOneLiner(mnExecView)) {
-    return mnExecView.length > 120 ? mnExecView.slice(0, 120) + '...' : mnExecView;
-  }
-  return '';
 }
 
 // ═══════════════════════════════════════════════════
@@ -685,26 +569,9 @@ export function isReportGeneratedToday(raw: ReportRow | null): boolean {
 
 export function isReportHealthy(raw: ReportRow | null, strategy?: Record<string, unknown> | null): boolean {
   if (!raw || !raw.report_date) return false;
-  const ai = strategy || raw.ai_strategy_json || {};
-  const confidence = Number(
-    (ai as Record<string, unknown>).confidence_score || raw.confidence_score || 0,
-  );
-  const noFakeFallback = (ai as Record<string, unknown>).no_fake_fallback === true || (raw as unknown as Record<string, unknown>).no_fake_fallback === true;
-  const fakeFallbackUsed = (ai as Record<string, unknown>).fake_fallback_used === true || (raw as unknown as Record<string, unknown>).fake_fallback_used === true;
-  const blocked = ((ai as Record<string, unknown>).content_publish_gate as Record<string, unknown>)?.blocked === true;
-  return confidence >= 70 && noFakeFallback && !fakeFallbackUsed && !blocked;
+  return getSubscriberReportProjection({ ...raw, ai_strategy_json: strategy ?? raw.ai_strategy_json }).analysisAvailable;
 }
 
 export function getSafeReportDate(report: ReportRow | null): string | null {
-  if (!report) return null;
-  const rd = report.report_date;
-  if (rd && rd.trim() !== '' && rd !== ':reportDate' && rd !== 'undefined' && rd !== 'null') return rd;
-  const ai = report.ai_strategy_json;
-  if (ai) {
-    const mdDate = (ai as Record<string, unknown>).market_data_latest_date;
-    if (typeof mdDate === 'string' && mdDate.trim() !== '' && mdDate !== ':reportDate') return mdDate.trim();
-    const gfd = (ai as Record<string, unknown>).generated_for_date;
-    if (typeof gfd === 'string' && gfd.trim() !== '' && gfd !== ':reportDate') return gfd.trim();
-  }
-  return null;
+  return getSubscriberReportProjection(report).identity.reportDate || null;
 }

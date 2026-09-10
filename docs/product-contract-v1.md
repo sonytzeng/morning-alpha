@@ -3,6 +3,96 @@
 Status: LOCAL PRODUCT CANDIDATE — not a Production release or a calibrated trading strategy.
 Owner specification: Decision Engine V1 / Subscriber UX approval, 2026-09-07.
 
+## Current amendment — Core Pipeline Consolidation, 2026-09-09
+
+This is the current **local/branch** architecture requirement. The earlier
+release-boundary paragraphs below remain historical approval records; the
+2026-09-09 Owner approval permits reviewed consolidation work, append-only
+Integrity, tests and candidate Git/Preview work. It does not authorize Production
+publication, deployment, migration, recovery, Cron changes or rewriting failed
+days. The specific unresolved local SQL safety-review refusal remains recorded
+in `docs/operations/core-consolidation-local-sql-approval-v1.md`; this document
+is not a substitute authorization for that refused operation.
+
+### One market path, independent stock research
+
+```text
+Raw Market Data → Canonical Market Evidence → Market Decision
+  → Market Publication → SubscriberReportProjection → Website / LINE
+  → Intraday → Closing → Learning → Acceptance
+
+Canonical Market Evidence + Company Evidence → Stock Research
+  → Recommendation Evidence Gate → Recommendation Projection
+```
+
+Required invariants are **Single Market Publication Path**, **Recommendation
+Isolation**, **Single Subscriber Projection**, **No Raw Subscriber State Reads**
+and **No Duplicate Canonical Selector**. A recommendation-quality counter must
+never veto an independently proven market publication. These are requirements,
+not a claim that the current unfinished SQL/LINE chain already satisfies them.
+
+| Contract | Sole authority / required proof | Forbidden substitute |
+| --- | --- | --- |
+| CanonicalMarketState | Independently audited market claim ledger and fresh, retained source identities | Deleting failed stock counters and declaring the remaining market coverage 100 |
+| MarketPublicationContract | Actual committed transaction receipt with exact business date, current revision, member/semantic identity and frozen opening revision | Latest QA row, a high score, HTTP 200, or a caller-provided READY flag |
+| RecommendationContract | Separate company evidence, unchanged thresholds and explicit completed-universe proof | Empty candidates interpreted as `NO_QUALIFIED_OPPORTUNITY`, fabricated stocks/scores |
+| SubscriberReportProjection | `src/lib/subscriberReportContract.ts`; browser/Edge re-exports are aliases, not implementations | Route-specific raw confidence/status/closing interpretations |
+| ClosingContract | Durable same-day closing snapshot and complete TAIEX/2330/TXF evidence tied to the frozen opening publication | Latest intraday thesis relabelled as the morning forecast; elapsed time or a fetched close bucket |
+| LearningContract | Persisted actual outcome and successful learning/lifecycle receipt tied to that opening and close | A report alias, an empty successful function response, copied old outcomes or manual recovery counted as natural |
+| AcceptanceContract | Immutable observed same-day producer, publication, normal delivery, checkpoint, closing and learning proof | CI/Preview success, incident notification, missing/not-due evidence, or a rewritten historical failure |
+
+`Market READY + Recommendation BLOCKED` must retain the market report and
+normal-market LINE eligibility while suppressing unsupported company claims.
+The subscriber stock area says **推薦評估證據不足，今日暫不發布正式個股推薦**.
+Premium entitlement/depth remains independently server-verified; making market
+content available must not unlock a paid stock/research section.
+
+`PARTIAL` means analysis/evidence incomplete: no complete interpretation, raw
+confidence, completed closing, invalidated judgment or official recommendation.
+Missing confidence is null/unavailable, never 100 or another inferred default.
+A real zero must remain distinguishable from missing. `NOT_DUE` and
+`NOT_APPLICABLE` are not completed. Stale business dates or wrong revisions do
+not acquire completion by sharing one valid newer checkpoint.
+
+Every subscriber consumer, including history detail, the Performance daily
+ledger, summaries/formatters and LINE decision state, must use the same
+projection identity. Transport parsing and explicitly guarded internal QA are
+not public state authorities. Legacy compatibility readers must be inventoried
+and their outputs must not acquire a new subscriber consumer without review.
+Performance rows without publication/closing proof stay unverified; no client
+score-based canonical winner or invented revision is permitted.
+
+### Mandatory consolidation regression/release gate
+
+Preserve the captured 9/7 Fetch persistence failure, 9/8 recommendation/publication
+coupling and PARTIAL→100 misprojection, and 9/9 76%-coverage/five-unsupported-stock
+failure as immutable negative evidence. An explicitly synthetic counterfactual
+may prove corrected behavior; it cannot fabricate uncaptured original vendor
+responses or turn those historical FAIL days into successful executions.
+
+The same isolated run must exercise real Fetch-shaped ingestion/persistence,
+the generator, atomic publication, payload, normal LINE eligibility, intraday,
+Closing, Learning and Acceptance. Injected report-response browser tests and
+pure component replay are separately labelled evidence, never full-chain PASS.
+Required Browser coverage is State × Route × Anonymous/Free/Member/Admin ×
+375/390/430/1440; the exact completed subset must be reported, not inferred.
+
+Permanent executable checks currently include the consolidation source graph,
+market-evidence/stock isolation, subscriber loaders/eligibility, frozen-opening
+receipt and Closing/Learning tests, the three nested replay lanes, and the fixed
+append-only Integrity successor. The precise commands, actual results and
+unfinished SQL/producer work are recorded in
+`docs/operations/core-pipeline-consolidation-v1-replay.md` and
+`docs/operations/core-pipeline-subscriber-graph-v1.md`.
+
+No new release candidate may be labelled READY until actual duplicate gates,
+recommendation-to-market blockers, raw subscriber state authorities and legacy
+selectors are cleared and the full fresh local/DB/Browser/CI/Readdy gates pass.
+Old tests cannot be disabled, thresholds lowered, missing evidence synthesized,
+or unreviewed source hashes approved to satisfy that requirement. Production
+natural observation proceeds independently; `OBSERVING` is not a reason to stop
+branch work, and branch success is not a natural stability day.
+
 ## Release boundary (mandatory)
 
 Fetch v64 is awaiting the **2026-09-08 natural Production Acceptance**. This product change must not modify, deploy, replay or advance Core Fetch, Acceptance, Cron, Publication, LINE, Closing or Learning producers. No Production writes, Migration, Merge or deployment are authorized by this candidate.

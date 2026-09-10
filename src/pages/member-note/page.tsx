@@ -23,6 +23,8 @@ import { buildEntitlementFromTier, hasFeature } from '@/services/entitlementServ
 import type { UserEntitlement } from '@/types/subscription';
 import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
+import { normalizeDecisionSymbol } from '@/features/decision-v1/engine';
 
 function hasItems<T>(items: T[] | undefined): items is T[] {
   return Array.isArray(items) && items.length > 0;
@@ -39,7 +41,6 @@ type MemberBeneficiaryCandidate = {
   confirmation?: string;
   invalidation?: string;
   transmissionPath?: string;
-  confidence?: string | number;
   evidence?: string[];
   eventSource?: string;
   evidenceSource?: string;
@@ -58,12 +59,6 @@ function asRecordArray(value: unknown): Record<string, unknown>[] {
 
 function textValue(value: unknown): string {
   return String(value ?? '').trim();
-}
-
-function numericOrTextValue(value: unknown): string | number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim()) return value.trim();
-  return undefined;
 }
 
 function firstText(...values: unknown[]): string {
@@ -212,7 +207,6 @@ function normalizeLegacyBeneficiary(row: Record<string, unknown>): MemberBenefic
     confirmation: firstText(row.confirmation, row.validation_signal, row.observation, row.catalyst, row.watch_point),
     invalidation: firstText(row.invalidation, row.invalidation_condition, row.risk, row.risk_note, row.stop_condition),
     transmissionPath: firstText(row.transmission_path),
-    confidence: numericOrTextValue(row.confidence ?? row.confidence_level ?? row.confidence_score),
     evidence,
   };
 }
@@ -233,7 +227,6 @@ function normalizeV2Beneficiary(item: NonNullable<MemberResearchNoteV2['benefici
     confirmation: firstText(row.confirmation, row.validation_signal, row.observation, row.catalyst, row.watch_point),
     invalidation: firstText(row.invalidation, row.invalidation_condition, row.risk, row.risk_note, row.stop_condition),
     transmissionPath: firstText(row.transmission_path),
-    confidence: numericOrTextValue(row.confidence ?? row.confidence_level ?? row.confidence_score),
     evidence: Array.isArray(row.evidence) ? row.evidence.map((value) => textValue(value)).filter(Boolean) : undefined,
   };
 }
@@ -296,15 +289,6 @@ function humanStatus(value: unknown): string {
   if (raw === 'miss' || raw === 'wrong') return '失準';
   if (raw === 'degraded') return '資料部分完成';
   return textValue(value);
-}
-
-function scoreTone(score: number | null): { stars: string; label: string } {
-  if (score === null || !Number.isFinite(score)) return { stars: '☆☆☆☆☆', label: '待驗證' };
-  if (score >= 80) return { stars: '★★★★★', label: '高把握' };
-  if (score >= 65) return { stars: '★★★★☆', label: '中高把握' };
-  if (score >= 50) return { stars: '★★★☆☆', label: '觀察' };
-  if (score >= 35) return { stars: '★★☆☆☆', label: '低把握' };
-  return { stars: '★☆☆☆☆', label: '僅供觀察' };
 }
 
 function firstLine(value: unknown): string {
@@ -503,7 +487,7 @@ function MemberResearchNoteV2View({
                 {note.overnight_chain.map((item, idx) => (
                   <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
                     <p className="text-white/80 text-sm font-medium">{renderSafeText(item.event || '—')}</p>
-                    <p className="text-white/40 text-xs mt-1">來源市場：{renderSafeText(item.source_market || '—')}｜判斷把握度：{item.confidence ?? '—'}</p>
+                    <p className="text-white/40 text-xs mt-1">來源市場：{renderSafeText(item.source_market || '—')}</p>
                     <p className="text-white/55 text-xs mt-2 leading-relaxed">{renderSafeText(item.impact_logic || '—')}</p>
                     <p className="text-forest-300/70 text-xs mt-1 leading-relaxed">台股映射：{renderSafeText(item.taiwan_mapping || '—')}</p>
                   </div>
@@ -539,7 +523,7 @@ function MemberResearchNoteV2View({
                   <div key={idx} className="p-3 rounded-lg bg-navy-800/50 border border-white/5">
                     <p className="text-white/85 text-sm font-semibold">{[item.symbol, item.name].filter(Boolean).join(' ')}</p>
                     <p className="text-white/35 text-[10px] mt-0.5">
-                      {renderSafeText(item.sector || '—')}{item.confidence !== undefined && item.confidence !== '' ? `｜判斷把握度：${item.confidence}` : ''}
+                      {renderSafeText(item.sector || '—')}
                     </p>
                     <p className="text-white/55 text-xs mt-2 leading-relaxed">{renderSafeText(item.reason || '—')}</p>
                     {hasItems(item.evidence) && <p className="text-forest-300/70 text-xs mt-1">證據：{item.evidence.join('；')}</p>}
@@ -647,7 +631,6 @@ function MemberNoteContent() {
   const [reportData, setReportData] = useState<{
     reportDate: string;
     marketBias: string;
-    confidenceScore: number | null;
     twCoreDate: string;
     usGlobalDate: string;
     created_at: string;
@@ -690,10 +673,10 @@ function MemberNoteContent() {
         const twDate = (ai.tw_core_date as string) || (ai.market_data_date as string) || r.report_date || '—';
         const usDate = (ai.us_global_date as string) || (ai.us_market_date as string) || '—';
 
+        const projection = getSubscriberReportProjection(r, { historical: resolved.isHistoricalFallback });
         setReportData({
-          reportDate: r.report_date || '—',
-          marketBias: ds.marketBias,
-          confidenceScore: ds.confidenceScore,
+          reportDate: projection.identity.reportDate,
+          marketBias: projection.marketDecision.bias || projection.statusLabel,
           twCoreDate: twDate,
           usGlobalDate: usDate,
           created_at: r.created_at || '—',
@@ -810,7 +793,25 @@ function MemberNoteContent() {
     );
   }
 
-  const { reportDate, marketBias, confidenceScore, twCoreDate, usGlobalDate } = reportData;
+  const { reportDate, marketBias, twCoreDate, usGlobalDate } = reportData;
+  const projection = getSubscriberReportProjection(dsState?.rawRow, { historical: isHistoricalFallback });
+  if (!projection.analysisAvailable) {
+    return (
+      <div className="ma-page ma-research-note-page ma-research-note-v3 flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center px-4" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
+          <section className="max-w-md rounded-2xl border border-amber-400/20 bg-navy-900/70 p-6 text-center" role="status">
+            <p className="text-sm text-slate-400">{projection.identity.reportDate}</p>
+            <h1 className="mt-3 text-xl font-bold text-white">{projection.title}</h1>
+            <p className="mt-2 text-sm text-slate-400">{projection.statusLabel}</p>
+            <p className="mt-3 text-sm text-slate-400">判斷信心：{projection.confidence.label}</p>
+            <Link to="/report/today" className="mt-5 inline-flex min-h-11 items-center rounded-xl border border-white/10 px-4 py-2 text-sm text-white">查看今日判斷</Link>
+          </section>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   const memberNoteV2 = hasValidMemberResearchNoteV2(strategy) ? strategy.member_research_note_v2 : null;
   const memberNoteText = !memberNoteV2 && hasValidMemberResearchText(strategy) && typeof strategy.member_research_note === 'string'
@@ -831,13 +832,13 @@ function MemberNoteContent() {
     strategy.premium_value_summary?.strongest_member_value_today,
     rawAI.today_quote,
   );
-  const v2BeneficiaryCandidates = (memberNoteV2?.beneficiary_candidates || [])
+  const v2BeneficiaryCandidates = (projection.recommendation.available ? memberNoteV2?.beneficiary_candidates || [] : [])
     .map(normalizeV2Beneficiary)
     .filter((candidate): candidate is MemberBeneficiaryCandidate => candidate !== null);
-  const legacyBeneficiaryCandidates = asRecordArray(rawAI.beneficiary_stocks)
+  const legacyBeneficiaryCandidates = asRecordArray(projection.recommendation.items)
     .map(normalizeLegacyBeneficiary)
     .filter((candidate): candidate is MemberBeneficiaryCandidate => candidate !== null);
-  const v10BeneficiaryCandidates = asRecordArray(rawAI.today_beneficiary_stocks_v10)
+  const v10BeneficiaryCandidates = asRecordArray(projection.recommendation.items)
     .map((row): MemberBeneficiaryCandidate | null => {
       const name = firstText(row.name, row.stock_name);
       if (!name) return null;
@@ -860,28 +861,19 @@ function MemberNoteContent() {
       };
     })
     .filter((candidate): candidate is MemberBeneficiaryCandidate => candidate !== null);
-  const beneficiaryCandidates: MemberBeneficiaryCandidate[] = v10BeneficiaryEnabled
+  const allowedSymbols = new Set(projection.recommendation.items.map((value) => {
+    const row = asRecord(value);
+    return normalizeDecisionSymbol(row.symbol || row.stock_code || row.stock_id || row.ticker);
+  }).filter(Boolean));
+  const beneficiaryCandidates: MemberBeneficiaryCandidate[] = (v10BeneficiaryEnabled
     ? v10BeneficiaryCandidates
     : hasItems(v2BeneficiaryCandidates)
       ? v2BeneficiaryCandidates
-      : legacyBeneficiaryCandidates;
+      : legacyBeneficiaryCandidates).filter((candidate) => allowedSymbols.has(normalizeDecisionSymbol(candidate.symbol)));
   const openingRadar = rawAI.opening_radar;
-  const closingVerificationV2 = asRecord(rawAI.closing_verification_v2);
-  const closingVerification = valueHasContent(closingVerificationV2) ? closingVerificationV2 : rawAI.closing_verification;
-  const closingVerificationRecord = asRecord(closingVerification);
-  const closingStatus = firstText(
-    closingVerificationRecord.status,
-    closingVerificationRecord.hit_or_miss,
-    closingVerificationRecord.prediction_result,
-    closingVerificationRecord.verdict_label,
-  ).toLowerCase();
+  const closingVerificationRecord = projection.closing.result || {};
   const hasOpeningRadar = valueHasContent(openingRadar);
-  const hasClosingVerification = valueHasContent(closingVerification);
-  const isClosingVerificationPending = !hasClosingVerification
-    || closingStatus.includes('pending')
-    || firstText(closingVerificationRecord.data_status).toLowerCase() === 'pending'
-    || firstText(closingVerificationRecord.status).toLowerCase() === 'pending_real_market_data';
-  const hasCompletedClosingVerification = hasClosingVerification && !isClosingVerificationPending;
+  const hasCompletedClosingVerification = projection.closing.complete;
   const isClosingVerificationDegraded = hasCompletedClosingVerification
     && firstText(closingVerificationRecord.data_status).toLowerCase() === 'degraded';
   const openingRadarLines = getDataLines(openingRadar, [
@@ -902,7 +894,6 @@ function MemberNoteContent() {
   const sectorPerformance = asRecordArray(closingVerificationRecord.actual_sector_performance);
   const tomorrowAdjustment = asRecord(closingVerificationRecord.tomorrow_adjustment);
   const canViewMemberNoteFull = hasFeature(entitlement, 'member_note_full');
-  const scoreDisplay = scoreTone(confidenceScore);
   const canonicalNarrative = buildCanonicalNarrative({
     displayState: dsState,
     ai: rawAI,
@@ -913,16 +904,12 @@ function MemberNoteContent() {
   const decisionPresentation = buildDecisionPresentation({
     displayState: dsState,
     narrative: canonicalNarrative,
-    opportunitySource: hasItems(v2BeneficiaryCandidates)
-      ? memberNoteV2?.beneficiary_candidates || []
-      : asRecordArray(rawAI.beneficiary_stocks),
+    opportunitySource: asRecordArray(projection.recommendation.items),
     nextCheckpointFallback: decisionLifecycle.validation_plan.next_step,
   });
   const memberRuntimeTimeline = buildRuntimeDecisionTimeline({
-    ai: rawAI,
+    projection,
     hasReport: true,
-    reportRevisionId: reportDate,
-    reportGeneratedAt: firstText(rawAI.data_as_of, rawAI.generated_at, reportDate),
     isTradingDay: Boolean(dsState?.is_trading_day && dsState.market_status === 'OPEN'),
   });
   const memberRuntimeNode = selectNextRuntimeTimelineNode(memberRuntimeTimeline)
@@ -933,6 +920,7 @@ function MemberNoteContent() {
   const readableMarketDirection = formatResearchLabel(marketBias);
   const readableThesis = formatResearchLabel(decisionLifecycle.current_thesis.summary);
   const heroConclusion = naturalizeResearchHeadline(firstUniqueResearchText([
+    projection.marketDecision.summary,
     canonicalNarrative.today_focus.summary,
     decisionPresentation.primaryDecision.headline,
     readableMarketDirection && readableThesis ? `${readableMarketDirection}：${readableThesis}` : '',
@@ -942,7 +930,7 @@ function MemberNoteContent() {
     rawAI.daily_sentence,
   ], [], ''));
   const todayOneLine = heroConclusion;
-  const premiumAvailability = resolvePremiumContentAvailability(rawAI);
+  const premiumAvailability = resolvePremiumContentAvailability(dsState?.rawRow, projection);
   const memberValueScore = premiumAvailability.memberValueScore;
   const hasFreshNewsEvidence = premiumAvailability.freshNewsCount > 0;
   const memberResearchPublishable = premiumAvailability.eligible;
@@ -1148,9 +1136,9 @@ function MemberNoteContent() {
   const hasCompleteDayTradingEvidence = Boolean(dayTradingSetup && dayTradingConfirmation && dayTradingInvalidation);
   const dayTradingSuitability = !hasCompleteDayTradingEvidence
     ? '資料不足，今天不建立當沖劇本'
-    : decisionPresentation.primaryDecision.state === 'ACT'
+    : projection.marketDecision.action === 'ACT'
       ? '符合成立條件才參與'
-      : decisionPresentation.primaryDecision.state === 'STOP'
+      : projection.marketDecision.action === 'STOP'
         ? '今天不適合當沖'
         : '先不做，等待成立條件';
   const dayTradingDecisionRows = hasCompleteDayTradingEvidence
@@ -1166,12 +1154,7 @@ function MemberNoteContent() {
     {
       label: '收盤結果',
       value: hasCompletedClosingVerification
-        ? humanStatus(firstText(
-            closingVerificationRecord.hit_or_miss,
-            closingVerificationRecord.prediction_result,
-            closingVerificationRecord.verdict_label,
-            closingVerificationRecord.status,
-          ))
+        ? humanStatus(projection.closing.outcome)
         : '等待 14:30 收盤完整驗證',
     },
     {
@@ -1205,7 +1188,7 @@ function MemberNoteContent() {
   return (
     <div className="ma-page ma-research-note-page ma-research-note-v3 flex flex-col overflow-x-hidden">
       <Navbar />
-      <main className="flex-1 overflow-x-hidden">
+      <main className="flex-1 overflow-x-hidden" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
         <header className="ma-research-note-v3-masthead">
           <div className="ma-research-note-v3-shell">
             <div className="ma-research-note-v3-kicker"><span>{isHistoricalFallback ? '歷史會員決策簡報' : '會員決策簡報'}</span><time dateTime={reportDate}>{reportDate}</time></div>
@@ -1213,7 +1196,7 @@ function MemberNoteContent() {
             <p>{isHistoricalFallback ? '先看當天怎麼做，再核對事件、傳導路徑、支持證據與失效條件；這不是今日建議。' : '先看今天怎麼做，再按需要核對事件、傳導路徑、支持證據與失效條件。'}</p>
             <dl>
               <div><dt>市場方向</dt><dd>{renderSafeText(formatResearchLabel(marketBias) || '資料不足')}</dd></div>
-              <div><dt>判斷信心</dt><dd>{confidenceScore != null ? `${confidenceScore}/100 · ${scoreDisplay.label}` : scoreDisplay.label}</dd></div>
+              <div><dt>判斷信心</dt><dd>{projection.confidence.label}</dd></div>
               <div><dt>最重要驗證</dt><dd>{renderSafeText(heroValidation)}</dd></div>
             </dl>
           </div>

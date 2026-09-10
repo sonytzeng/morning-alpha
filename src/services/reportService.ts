@@ -1,4 +1,6 @@
 import { callGetReportHistory, callGetReportPayload } from '@/services/entitlementService';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
+import type { ServerReportPayloadResponse } from '@/types/subscription';
 import type {
   Report,
   RiskFactor,
@@ -80,31 +82,38 @@ function getPayloadGeneratedAt(payload: Record<string, unknown> | undefined): st
   );
 }
 
-function getPayloadSummary(payload: Record<string, unknown> | undefined): string | null {
-  if (!payload) return null;
-  const nestedAI = asRecord(payload.ai_strategy_json);
-  const publicSummary = asRecord(payload.public_summary) || asRecord(nestedAI?.public_summary) || asRecord(payload.free_summary);
-  const v8DailySentence = asRecord(nestedAI?.v8_daily_sentence) || asRecord(payload.v8_daily_sentence);
-  return firstString(
-    v8DailySentence?.sentence,
-    nestedAI?.daily_sentence,
-    payload.daily_sentence,
-    publicSummary?.daily_sentence,
-    payload.summary,
-    payload.today_quote,
-  );
-}
-
 export function mapRowToReport(row: Record<string, unknown>): Report {
+  const projection = getSubscriberReportProjection(row);
+  const ai = safeJsonObject<AIStrategy & Record<string, unknown>>(row.ai_strategy_json);
+  const tradingDay = row.is_trading_day ?? ai?.is_trading_day;
+  const statePresent = Object.prototype.hasOwnProperty.call(row, 'subscriber_state')
+    || Object.prototype.hasOwnProperty.call(ai ?? {}, 'subscriber_state');
   return {
-    id: String(row.id || ''),
-    report_date: String(row.report_date || ''),
-    summary: safeString(row.summary),
-    market_bias: safeString(row.market_bias),
-    confidence_score: safeNumber(row.confidence_score),
-    confidence_label: safeString(row.confidence_label),
-    can_watch: safeStringArray(row.can_watch),
-    avoid_today: safeStringArray(row.avoid_today),
+    id: projection.identity.revisionId ?? safeString(row.id) ?? '',
+    report_date: projection.identity.reportDate,
+    revision_id: projection.identity.revisionId,
+    generated_at: projection.identity.generatedAt,
+    today_date: projection.identity.todayDate,
+    data_as_of: safeString(row.data_as_of),
+    ...(statePresent ? { subscriber_state: row.subscriber_state ?? ai?.subscriber_state } : {}),
+    canonical: asRecord(row.canonical) ?? asRecord(ai?.canonical),
+    canonical_decision: asRecord(row.canonical_decision) ?? asRecord(ai?.canonical_decision),
+    content_publish_gate: asRecord(row.content_publish_gate) ?? asRecord(ai?.content_publish_gate),
+    market_report_gate: asRecord(row.market_report_gate) ?? asRecord(ai?.market_report_gate),
+    recommendation_gate: asRecord(row.recommendation_gate) ?? asRecord(ai?.recommendation_gate),
+    report_status: safeString(row.report_status ?? ai?.report_status) ?? undefined,
+    closing_verification_v2: asRecord(row.closing_verification_v2) ?? asRecord(ai?.closing_verification_v2),
+    closing_verification: asRecord(row.closing_verification) ?? asRecord(ai?.closing_verification),
+    publication: row.publication ?? ai?.publication,
+    market_status: safeString(row.market_status ?? ai?.market_status),
+    is_trading_day: typeof tradingDay === 'boolean' ? tradingDay : null,
+    action: projection.marketDecision.action,
+    summary: projection.marketDecision.summary,
+    market_bias: projection.marketDecision.bias,
+    confidence_score: projection.confidence.value,
+    confidence_label: projection.confidence.label,
+    can_watch: projection.recommendation.available ? safeStringArray(row.can_watch) : null,
+    avoid_today: projection.analysisAvailable ? safeStringArray(row.avoid_today) : null,
     fear_greed: safeNumber(row.fear_greed),
     fear_greed_summary: safeString(row.fear_greed_summary),
     vix: safeNumber(row.vix),
@@ -120,21 +129,21 @@ export function mapRowToReport(row: Record<string, unknown>): Report {
     btc_price: safeNumber(row.btc_price),
     risk_factors_json: safeJsonArray<RiskFactor>(row.risk_factors_json),
     watch_sectors_json: safeJsonArray<WatchSector>(row.watch_sectors_json),
-    focus_stock_json: safeJsonArray<FocusStock>(row.focus_stock_json),
+    focus_stock_json: projection.recommendation.available ? safeJsonArray<FocusStock>(row.focus_stock_json) : null,
     tomorrow_watch_json: safeJsonArray<TomorrowWatch>(row.tomorrow_watch_json),
     global_events_json: safeJsonArray<GlobalEvent>(row.global_events_json),
-    ai_strategy_json: safeJsonObject<AIStrategy>(row.ai_strategy_json),
+    ai_strategy_json: ai,
     important_news_json: safeJsonArray<ImportantNews>(row.important_news_json),
     yesterday_summary: safeString(row.yesterday_summary),
-    today_summary: safeString(row.today_summary),
+    today_summary: projection.marketDecision.summary,
     created_at: String(row.created_at || ''),
     // V2 新增欄位
-    today_quote: safeString(row.today_quote),
-    today_strategy: safeJsonObject<TodayStrategy>(row.today_strategy),
+    today_quote: projection.marketDecision.summary,
+    today_strategy: projection.analysisAvailable ? safeJsonObject<TodayStrategy>(row.today_strategy) : null,
     watch_sectors_detailed: safeJsonArray(row.watch_sectors_detailed),
     ai_psychology: safeString(row.ai_psychology),
     ai_retail_reminder: safeString(row.ai_retail_reminder),
-    ai_confidence_reason: safeString(row.ai_confidence_reason),
+    ai_confidence_reason: projection.analysisAvailable ? safeString(row.ai_confidence_reason) : null,
     // V7 Market Intelligence Engine 新增欄位
     sentiment_score: safeNumber(row.sentiment_score),
     sentiment_label: safeString(row.sentiment_label),
@@ -146,6 +155,18 @@ export function mapRowToReport(row: Record<string, unknown>): Report {
   };
 }
 
+function mapPayloadResponse(response: ServerReportPayloadResponse): Report | null {
+  if (!response.report_date || !response.payload) return null;
+  // Preserve the complete server-trimmed payload and its canonical identity. A
+  // date-only synthetic id must never be substituted for a publication revision.
+  return mapRowToReport({
+    ...response.payload,
+    ...response,
+    ai_strategy_json: response.payload,
+    created_at: response.generated_at ?? getPayloadGeneratedAt(response.payload),
+  });
+}
+
 export async function getTodayReport(): Promise<Report | null> {
   const now = new Date();
   const twNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
@@ -153,16 +174,7 @@ export async function getTodayReport(): Promise<Report | null> {
 
   try {
     const response = await callGetReportPayload({ reportDate: today });
-    if (!response.report_date || !response.payload) return null;
-    return mapRowToReport({
-      id: `server-trimmed:${response.report_date}`,
-      report_date: response.report_date,
-      market_bias: response.payload?.market_bias,
-      confidence_score: response.payload?.confidence_score,
-      summary: getPayloadSummary(response.payload),
-      ai_strategy_json: response.payload,
-      created_at: getPayloadGeneratedAt(response.payload),
-    });
+    return mapPayloadResponse(response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message === 'REPORT_NOT_FOUND') console.info('Today report is not available yet.');
@@ -174,16 +186,7 @@ export async function getTodayReport(): Promise<Report | null> {
 export async function getReportByDate(date: string): Promise<Report | null> {
   try {
     const response = await callGetReportPayload({ reportDate: date });
-    if (!response.report_date || !response.payload) return null;
-    return mapRowToReport({
-      id: `server-trimmed:${response.report_date}`,
-      report_date: response.report_date,
-      market_bias: response.payload?.market_bias,
-      confidence_score: response.payload?.confidence_score,
-      summary: getPayloadSummary(response.payload),
-      ai_strategy_json: response.payload,
-      created_at: getPayloadGeneratedAt(response.payload),
-    });
+    return mapPayloadResponse(response);
   } catch (error) {
     console.error('getReportByDate error:', error instanceof Error ? error.message : error);
     return null;
@@ -195,13 +198,8 @@ export async function getLatestReports(limit = 7): Promise<Report[]> {
     if (limit <= 0) return [];
     const response = await callGetReportHistory(limit);
     return response.reports.map((summary) => mapRowToReport({
-      id: summary.revision_id || `server-trimmed:${summary.report_date}`,
-      report_date: summary.report_date,
-      market_bias: summary.market_bias,
-      confidence_score: summary.confidence_score,
-      confidence_label: summary.confidence_label,
-      summary: summary.summary,
-      today_quote: summary.today_quote,
+      ...summary,
+      id: summary.revision_id ?? summary.id,
       created_at: summary.generated_at,
     }));
   } catch (error) {

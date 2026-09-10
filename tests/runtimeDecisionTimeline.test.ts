@@ -9,6 +9,14 @@ function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
 }
 
+// An explicit published revision, not `hasReport: true` alone, establishes the
+// premarket node. All data below is synthetic and isolated from Production.
+const publishedReport = {
+  report_date: '2026-07-15', revision_id: 'revision-1', generated_at: '2026-07-14T23:30:00Z',
+  canonical_decision: { id: 'revision-1', status: 'READY', action: 'WAIT' },
+  content_publish_gate: { overall_status: 'eligible' },
+};
+
 function assertEveryNotApplicable(label: string, date: string, expectedMarketStatus: string): void {
   const market = resolveMarketStatus(date);
   assert(market.market_status === expectedMarketStatus, `${label}: unexpected market status`);
@@ -37,7 +45,7 @@ Deno.test('typhoon closure checkpoints are not applicable', () => {
   assertEveryNotApplicable('typhoon closure', '2026-07-10', 'TYPHOON');
 });
 
-Deno.test('trading day without checkpoint evidence remains pending/current', () => {
+Deno.test('trading day without a published report is insufficient, never completed or non-trading', () => {
   const market = resolveMarketStatus('2026-07-15');
   assert(market.market_status === 'OPEN', 'regular trading day must resolve OPEN');
   const timeline = buildRuntimeDecisionTimeline({
@@ -46,10 +54,10 @@ Deno.test('trading day without checkpoint evidence remains pending/current', () 
     isTradingDay: market.is_trading_day,
     taipeiMinutes: 8 * 60,
   });
-  assert(timeline[0]?.status === 'current', 'first missing trading checkpoint should be current');
+  assert(timeline[0]?.status === 'insufficient', 'a missing published report is incomplete, not a successful premarket checkpoint');
   assert(
-    timeline.slice(1).every((node) => node.status === 'pending'),
-    'later missing trading checkpoints should remain pending',
+    timeline.every((node) => node.status !== 'completed'),
+    'time passing without report or checkpoint evidence cannot manufacture completion',
   );
   assert(
     timeline.every((node) => node.status !== 'not_applicable'),
@@ -60,6 +68,7 @@ Deno.test('trading day without checkpoint evidence remains pending/current', () 
 Deno.test('checkpoint marked complete without execution evidence is not completed', () => {
   const timeline = buildRuntimeDecisionTimeline({
     ai: {
+      ...publishedReport,
       intraday_sync_status: {
         windows: { '0930': { status: 'completed' } },
       },
@@ -69,12 +78,12 @@ Deno.test('checkpoint marked complete without execution evidence is not complete
     isTradingDay: true,
     taipeiMinutes: 10 * 60,
   });
-  assert(timeline[2]?.status === 'current', 'checkpoint without completed_at/evidence must remain current');
+  assert(timeline[2]?.status === 'insufficient', 'a claimed completion without its receipt is insufficient, never completed');
 });
 
 Deno.test('a future checkpoint is waiting, not current', () => {
   const timeline = buildRuntimeDecisionTimeline({
-    ai: {},
+    ai: publishedReport,
     hasReport: true,
     reportRevisionId: 'revision-1',
     isTradingDay: true,
@@ -85,16 +94,23 @@ Deno.test('a future checkpoint is waiting, not current', () => {
   assert(timeline[1]?.status === 'pending', '09:00 must still be waiting at 08:40');
   assert(timeline[2]?.status === 'pending', '09:30 must still be waiting at 08:40');
   assert(timeline.every((node) => node.status !== 'current'), 'future checkpoints must not be marked current');
+  const noPublication = buildRuntimeDecisionTimeline({
+    ai: {}, hasReport: true, reportRevisionId: 'revision-1', isTradingDay: true, taipeiMinutes: 8 * 60 + 40,
+  });
+  assert(noPublication[0]?.status === 'insufficient', 'hasReport and a revision string cannot self-certify publication');
 });
 
 Deno.test('checkpoint completed with evidence is completed', () => {
   const timeline = buildRuntimeDecisionTimeline({
     ai: {
+      ...publishedReport,
       intraday_sync_status: {
         windows: {
           '0930': {
             status: 'completed',
+            report_date: publishedReport.report_date, revision_id: publishedReport.revision_id,
             completed_at: '2026-07-15T01:31:00.000Z',
+            evidence: { source: 'synthetic-runtime' },
           },
         },
       },
@@ -109,10 +125,12 @@ Deno.test('checkpoint completed with evidence is completed', () => {
 Deno.test('failed checkpoint with evidence is insufficient, never completed', () => {
   const timeline = buildRuntimeDecisionTimeline({
     ai: {
+      ...publishedReport,
       intraday_sync_status: {
         windows: {
           '0930': {
             status: 'failed',
+            report_date: publishedReport.report_date, revision_id: publishedReport.revision_id,
             failed_at: '2026-07-15T01:31:00.000Z',
             evidence: { reason: 'runtime failure' },
           },
@@ -129,11 +147,13 @@ Deno.test('failed checkpoint with evidence is insufficient, never completed', ()
 Deno.test('next checkpoint skips an insufficient past node for the next pending node', () => {
   const timeline = buildRuntimeDecisionTimeline({
     ai: {
+      ...publishedReport,
       intraday_sync_status: {
         windows: {
           '0930': {
             status: 'failed',
-            failed_at: '2026-07-17T01:31:00.000Z',
+            report_date: publishedReport.report_date, revision_id: publishedReport.revision_id,
+            failed_at: '2026-07-15T01:31:00.000Z',
             evidence: { reason: 'missing source' },
           },
         },
@@ -152,10 +172,15 @@ Deno.test('next checkpoint skips an insufficient past node for the next pending 
 Deno.test('a completed later checkpoint closes earlier pending gaps', () => {
   const timeline = buildRuntimeDecisionTimeline({
     ai: {
+      ...publishedReport,
       closing_verification_v2: {
         status: 'completed',
+        data_status: 'complete', report_date: publishedReport.report_date,
+        opening_decision_snapshot_id: publishedReport.revision_id,
+        verified_at: '2026-07-15T06:30:00Z',
         hit_or_miss: 'hit',
         actual_taiex_change: 0.8,
+        actual_2330_close: { change_percent: 1.2 }, actual_txf_close: { change_percent: 0.7 }, missing_data: [],
       },
     },
     hasReport: true,
@@ -176,7 +201,7 @@ Deno.test('a completed later checkpoint closes earlier pending gaps', () => {
 
 Deno.test('a closing hit label without actual market evidence is not completion', () => {
   const timeline = buildRuntimeDecisionTimeline({
-    ai: { closing_verification_v2: { status: 'completed', hit_or_miss: 'hit' } },
+    ai: { ...publishedReport, closing_verification_v2: { status: 'completed', hit_or_miss: 'hit' } },
     hasReport: true, reportRevisionId: 'revision-1', isTradingDay: true,
   });
   assert(timeline[6]?.status !== 'completed', 'an evaluation label must not manufacture closing evidence');

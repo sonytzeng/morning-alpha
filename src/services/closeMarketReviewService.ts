@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import type { SubscriberReportProjection } from '@/lib/subscriberReportContract';
 import { formatTaipeiDate } from '@/utils/tradingDay';
 
 export interface CloseMarketReview {
@@ -85,61 +86,43 @@ export function mapRowToCloseMarketReview(row: Record<string, unknown>): CloseMa
   };
 }
 
+/** Formats an already verified subscriber result; never infers completion from raw fields. */
 export function mapClosingVerificationToCloseMarketReview(
-  reportDate: string,
-  closingVerification: unknown,
+  projection: SubscriberReportProjection,
 ): CloseMarketReview | null {
-  const verification = safeObject(closingVerification);
-  if (Object.keys(verification).length === 0) return null;
-
+  if (!projection.closing.complete || !projection.closing.result) return null;
+  const verification = projection.closing.result;
+  const reportDate = projection.identity.reportDate;
+  const verifiedAt = safeString(verification.verified_at);
+  if (!verifiedAt) return null;
   const reason = safeObject(verification.reason);
-  const status = safeString(verification.status);
-  const predictionResult = safeString(verification.prediction_result);
-  const hitOrMiss = safeString(verification.hit_or_miss);
-  const verifiedAt = safeString(verification.verified_at) || new Date().toISOString();
-  const actualTaiexClose = safeObject(verification.actual_taiex_close);
-  const taiexChange =
-    safeNumber(verification.actual_taiex_change) ??
-    safeNumber(actualTaiexClose.change_percent) ??
-    safeNumber(actualTaiexClose.close_change_percent);
-  const isPendingRealData =
-    status === 'pending_real_market_data' ||
-    predictionResult === 'PENDING_REAL_MARKET_DATA' ||
-    hitOrMiss === 'pending';
-
-  const verificationNote = isPendingRealData
-    ? '收盤驗證已執行，但尚缺真實台股收盤資料。'
-    : safeString(verification.verification_note) ||
-      safeString(reason.message) ||
-      [predictionResult, hitOrMiss, status].filter(Boolean).join('｜') ||
-      null;
-
   return {
-    id: `ai_strategy_json.closing_verification.${reportDate}`,
+    id: `subscriber-closing:${projection.identity.revisionId}`,
     report_date: reportDate,
-    premarket_bias: safeString(verification.predicted_bias) || safeString(verification.opening_bias),
-    premarket_confidence: safeNumber(verification.confidence_score) ?? safeNumber(verification.opening_confidence),
-    premarket_summary: null,
+    premarket_bias: projection.closing.openingDecision?.bias ?? null,
+    premarket_confidence: projection.closing.openingDecision?.confidence ?? null,
+    premarket_summary: projection.closing.openingDecision?.summary ?? null,
     opening_radar_status: null,
     opening_radar_bias: null,
     opening_radar_confidence: null,
     opening_radar_summary: null,
     actual_market_result: safeString(verification.actual_direction),
-    verification_result: predictionResult || hitOrMiss || status,
-    verification_label: safeString(verification.verdict_label) || predictionResult || hitOrMiss || status,
-    verification_note: verificationNote,
-    taiex_change: taiexChange,
-    tsmc_change: null,
-    txf_change: null,
-    data_quality: isPendingRealData ? 'pending_real_market_data' : 'verified',
-    missing_data: isPendingRealData ? 'TAIEX_CLOSE' : null,
-    intraday_correction_success: false,
-    defensive_call_success: false,
-    ai_too_bullish: false,
-    ai_too_bearish: false,
+    verification_result: projection.closing.outcome,
+    verification_label: safeString(verification.verdict_label) || projection.closing.outcome,
+    verification_note: safeString(verification.verification_note) || safeString(reason.message),
+    taiex_change: safeNumber(verification.actual_taiex_change)
+      ?? safeNumber(safeObject(verification.actual_taiex_close).change_percent),
+    tsmc_change: safeNumber(safeObject(verification.actual_2330_close).change_percent),
+    txf_change: safeNumber(safeObject(verification.actual_txf_close).change_percent),
+    data_quality: 'verified',
+    missing_data: null,
+    intraday_correction_success: safeBoolean(verification.intraday_correction_success),
+    defensive_call_success: safeBoolean(verification.defensive_call_success),
+    ai_too_bullish: safeBoolean(verification.ai_too_bullish),
+    ai_too_bearish: safeBoolean(verification.ai_too_bearish),
     accuracy_score: safeNumber(verification.accuracy_score),
     no_fake_data: verification.no_fake_data === true,
-    source: safeString(verification.version) ? 'ai_strategy_json.closing_verification_v2' : 'ai_strategy_json.closing_verification',
+    source: 'subscriber-report-projection-v1',
     created_at: verifiedAt,
     updated_at: verifiedAt,
   };

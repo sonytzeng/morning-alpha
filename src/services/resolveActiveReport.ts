@@ -24,6 +24,7 @@ import {
 import { callGetReportPayload } from '@/services/entitlementService';
 import type { ServerReportPayloadResponse, SubscriptionTier } from '@/types/subscription';
 import { resolveSubscriberPayloadIdentity } from '@/lib/subscriberReportContract';
+import { getSubscriberReportProjection, type SubscriberReportProjection } from '@/lib/subscriberReportProjection';
 
 /**
  * Validate that a string looks like a real YYYY-MM-DD date.
@@ -41,6 +42,8 @@ export interface ResolveResult {
   report: MorningAlphaNormalizedReport;
   /** The raw Supabase row */
   rawRow: ReportRow | null;
+  /** Subscriber decisions/statuses must use this projection, not rawRow. */
+  subscriberProjection: SubscriberReportProjection;
   /** Which resolution path was used */
   source: 'server_trimmed_payload' | 'server_payload_unavailable' | 'today_match' | 'best_fallback' | 'url_param' | 'empty';
   /** The report_date that was queried */
@@ -70,27 +73,10 @@ export interface ResolveResult {
   payload_source: 'server_trimmed_payload' | 'server_payload_unavailable' | 'empty';
 }
 
-function toReportRow(data: Record<string, unknown>): ReportRow {
-  return {
-    id: String(data.id || ''),
-    report_date: String(data.report_date || ''),
-    market_bias: data.market_bias ? String(data.market_bias) : null,
-    confidence_score: data.confidence_score != null ? Number(data.confidence_score) : null,
-    created_at: String(data.created_at || ''),
-    ai_strategy_json: (data.ai_strategy_json as Record<string, unknown>) || null,
-    summary: data.summary ? String(data.summary) : null,
-    watch_sectors_json: Array.isArray(data.watch_sectors_json) ? (data.watch_sectors_json as Record<string, unknown>[]) : null,
-  };
-}
-
 function getMarketDataDate(row: ReportRow | null): string | null {
   const ai = row?.ai_strategy_json as Record<string, unknown> | null;
   const value = ai?.market_data_date || ai?.tw_core_date || null;
   return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
 function firstString(...values: unknown[]): string {
@@ -100,48 +86,22 @@ function firstString(...values: unknown[]): string {
   return '';
 }
 
-function getPayloadGeneratedAt(payload: Record<string, unknown>): string {
-  const nestedAI = asRecord(payload.ai_strategy_json);
-  return firstString(
-    payload.generated_at,
-    payload.generatedAt,
-    payload.report_generated_at,
-    nestedAI?.generated_at,
-    payload.updated_at,
-    payload.created_at,
-  );
-}
-
-function getPayloadDailySentence(payload: Record<string, unknown>): string {
-  const nestedAI = asRecord(payload.ai_strategy_json);
-  const publicSummary = asRecord(payload.public_summary) || asRecord(nestedAI?.public_summary) || asRecord(payload.free_summary);
-  const v8DailySentence = asRecord(nestedAI?.v8_daily_sentence) || asRecord(payload.v8_daily_sentence);
-  return firstString(
-    v8DailySentence?.sentence,
-    nestedAI?.daily_sentence,
-    payload.v8_daily_sentence,
-    payload.daily_sentence,
-    publicSummary?.daily_sentence,
-    payload.summary,
-    payload.today_quote,
-  );
-}
-
 function toTrimmedReportRow(response: ServerReportPayloadResponse): ReportRow | null {
   const identity = resolveSubscriberPayloadIdentity(response);
   if (!response.payload || !identity) return null;
   const payload = response.payload;
-  const generatedAt = identity.generatedAt || getPayloadGeneratedAt(payload);
-  const dailySentence = getPayloadDailySentence(payload);
+  const projection = getSubscriberReportProjection(response);
   return {
-    id: identity.revisionId || `server-trimmed:${identity.reportDate}`,
+    id: identity.revisionId || '',
     report_date: identity.reportDate,
-    market_bias: typeof payload.market_bias === 'string' ? payload.market_bias : null,
-    confidence_score: payload.confidence_score != null ? Number(payload.confidence_score) : null,
-    created_at: generatedAt,
+    market_bias: projection.marketDecision.bias,
+    confidence_score: projection.confidence.value,
+    created_at: identity.generatedAt || '',
     updated_at: firstString(payload.updated_at),
-    ai_strategy_json: payload,
-    summary: dailySentence || null,
+    ai_strategy_json: { ...payload, report_date: identity.reportDate, revision_id: identity.revisionId,
+      generated_at: identity.generatedAt, today_date: identity.todayDate,
+      ...(response.subscriber_state !== undefined ? { subscriber_state: response.subscriber_state } : {}) },
+    summary: projection.marketDecision.summary,
     watch_sectors_json: null,
   };
 }
@@ -177,10 +137,12 @@ function buildResolveResult(params: {
   const isTodayReport = !!rawRow && rawRow.report_date === todayDate;
   const isHistoricalFallback = !!rawRow && rawRow.report_date !== todayDate;
   const activeReport = dataStatus === 'ready' ? report : null;
+  const subscriberProjection = getSubscriberReportProjection(rawRow, { todayDate });
 
   return {
     report,
     rawRow,
+    subscriberProjection,
     source,
     queriedDate,
     isHistoricalFallback,
@@ -191,8 +153,8 @@ function buildResolveResult(params: {
     active_report: activeReport,
     active_report_date: rawRow?.report_date ?? null,
     market_data_date: getMarketDataDate(rawRow),
-    revision_id: rawRow?.id || null,
-    generated_at: rawRow?.created_at || null,
+    revision_id: subscriberProjection.identity.revisionId,
+    generated_at: subscriberProjection.identity.generatedAt,
     is_today_report: isTodayReport,
     is_stale_report: dataStatus === 'stale_reference_only' || isHistoricalFallback,
     stale_reason: staleReason,

@@ -1,6 +1,6 @@
 import type { MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
-import { buildDecisionRuntimeEvidence, getRuntimeCheckpointState, type DecisionRuntimeEvidence } from './decisionEvidence.ts';
-import { isMarketPublicationReady } from './subscriberReportContract.ts';
+import type { DecisionRuntimeEvidence } from './decisionEvidence.ts';
+import { getSubscriberReportProjection, type SubscriberCheckpointKey, type SubscriberReportProjection } from './subscriberReportContract.ts';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -125,15 +125,6 @@ function firstText(...values: unknown[]): string {
   return '';
 }
 
-function firstMeaningfulTextFromObject(value: unknown, keys: string[]): string {
-  const record = asRecord(value);
-  for (const key of keys) {
-    const text = toText(record[key]);
-    if (text) return text;
-  }
-  return '';
-}
-
 function firstLine(value: unknown): string {
   const text = Array.isArray(value) ? value.map(toText).find(Boolean) || '' : toText(value);
   return text.split(/[。；\n]/).map((part) => part.trim()).find(Boolean) || '';
@@ -159,14 +150,6 @@ function compactLesson(value: string): string {
   return ensureSentence(text.length > 35 ? `${text.slice(0, 34)}…` : text);
 }
 
-function normalizeStatus(value: unknown): CanonicalTodayScript['status'] {
-  const text = toText(value).toLowerCase();
-  if (['ready', 'complete', 'completed', 'done'].includes(text)) return 'completed';
-  if (['pending', 'waiting'].includes(text)) return 'pending';
-  if (['missing', 'failed', 'stale'].includes(text)) return 'missing';
-  return 'missing';
-}
-
 function getV10MarketThesis(ai: UnknownRecord): UnknownRecord {
   const direct = asRecord(ai);
   const debug = asRecord(ai.v10_analysis_debug);
@@ -190,49 +173,24 @@ function publishedMarketReasonText(reasons: string[]): string {
 }
 
 function buildTodayFocus(
-  displayState: MorningAlphaDisplayState | null,
   ai: UnknownRecord,
   note: UnknownRecord,
+  projection: SubscriberReportProjection,
 ): CanonicalTodayFocus {
+  if (!projection.analysisAvailable) return {
+    headline: projection.title, summary: projection.statusLabel,
+    action: projection.marketDecision.label, why: '', risk: '',
+  };
   const v10Thesis = getV10MarketThesis(ai);
   const openingThesis = asRecord(note.opening_thesis);
-  const v8Sentence = asRecord(ai.v8_daily_sentence);
-  const freeSummary = asRecord(ai.free_summary) || asRecord(ai.public_summary);
   // The server-pinned published decision outranks a deeper internal research
   // note. A newer blocked QA draft must not rewrite the subscriber's market view.
-  const published = isMarketPublicationReady(ai) ? asRecord(ai.canonical_decision) : {};
-  const publishedSentence = toText(published.daily_sentence);
+  const published = asRecord(ai.canonical_decision);
+  const publishedSentence = projection.marketDecision.summary || '';
 
-  const headline = firstText(
-    publishedSentence,
-    v10Thesis.primary_driver,
-    firstMeaningfulTextFromObject(openingThesis, ['primary_driver', 'title', 'primary_theme', 'market_theme']),
-    ai.primary_driver,
-    freeSummary.primary_driver,
-    '今日核心判斷',
-  );
-
-  const summary = firstText(
-    publishedSentence,
-    v10Thesis.market_story,
-    ai.market_story,
-    openingThesis.summary,
-    openingThesis.market_story,
-    ai.today_quote,
-    displayState?.todayQuote,
-    v8Sentence.sentence,
-    freeSummary.one_sentence,
-    freeSummary.summary,
-  );
-
-  const action = firstText(
-    published.do_not_do,
-    openingThesis.action,
-    openingThesis.action_note,
-    ai.action_guidance,
-    ai.today_action,
-    freeSummary.do_not_do,
-  );
+  const headline = publishedSentence || projection.title;
+  const summary = publishedSentence;
+  const action = projection.marketDecision.label;
 
   const publishedReasons = asStringArray(published.reasons);
   // Do not refill excluded canonical QA-only reasons with private draft prose.
@@ -264,7 +222,12 @@ function buildTodayFocus(
   };
 }
 
-function buildTodayScript(note: UnknownRecord, ai: UnknownRecord): CanonicalTodayScript {
+function buildTodayScript(note: UnknownRecord, projection: SubscriberReportProjection): CanonicalTodayScript {
+  if (!projection.analysisAvailable || projection.closing.state === 'NOT_APPLICABLE') return {
+    headline: projection.statusLabel, steps: [],
+    current_step: projection.closing.state === 'NOT_APPLICABLE' ? '本節點不適用' : projection.statusLabel,
+    status: 'missing',
+  };
   const windows = asArray(note.intraday_time_windows).length > 0
     ? asArray(note.intraday_time_windows)
     : Array.isArray(note.intraday_validation)
@@ -274,8 +237,7 @@ function buildTodayScript(note: UnknownRecord, ai: UnknownRecord): CanonicalToda
         ? { time_window: firstText(asRecord(note.canonical_contract).validation_checkpoint), what_to_watch: item }
         : asRecord(item))
       : [];
-  const sync = asRecord(ai.intraday_sync_status);
-  const steps = windows.slice(0, 5).map((window, index) => {
+  const steps = windows.slice(0, 5).map((window) => {
     const time = firstText(window.time, window.time_window, window.label);
     const title = firstText(window.title, window.purpose, window.what_to_watch);
     const detail = firstText(
@@ -286,10 +248,11 @@ function buildTodayScript(note: UnknownRecord, ai: UnknownRecord): CanonicalToda
       window.what_to_watch,
     );
     const syncKey = time.replace(/\D/g, '');
-    const runtimeStatus = getRuntimeCheckpointState(sync, syncKey);
-    const status: CanonicalScriptStep['status'] = runtimeStatus === 'completed'
+    const checkpoint = Object.prototype.hasOwnProperty.call(projection.runtime.checkpoints, syncKey)
+      ? projection.runtime.checkpoints[syncKey as SubscriberCheckpointKey] : null;
+    const status: CanonicalScriptStep['status'] = checkpoint?.status === 'completed' && checkpoint.evidenceVerified
       ? 'completed'
-      : runtimeStatus === 'insufficient'
+      : !checkpoint || checkpoint.status === 'insufficient' || checkpoint.status === 'failed'
         ? 'missing'
         : 'pending';
     return {
@@ -302,16 +265,7 @@ function buildTodayScript(note: UnknownRecord, ai: UnknownRecord): CanonicalToda
 
   const completed = steps.filter((step) => step.status === 'completed');
   const current = steps.find((step) => step.status === 'pending' || step.status === 'missing') || steps[steps.length - 1];
-  const openingThesis = asRecord(note.opening_thesis);
-  const headline = firstText(
-    isMarketPublicationReady(ai) ? asRecord(ai.canonical_decision).daily_sentence : '',
-    openingThesis.primary_theme,
-    openingThesis.title,
-    ai.primary_driver,
-    ai.market_story,
-    steps[0]?.title,
-    '今日劇本',
-  );
+  const headline = projection.marketDecision.summary || projection.title;
 
   return {
     headline,
@@ -334,36 +288,37 @@ function buildFailureTriggers(note: UnknownRecord): CanonicalFailureTrigger[] {
   })).filter((row) => row.trigger || row.meaning || row.action);
 }
 
-function buildIntradayProgress(ai: UnknownRecord, script: CanonicalTodayScript): CanonicalIntradayProgress {
-  const sync = asRecord(ai.intraday_sync_status);
-  const openingRadar = asRecord(ai.opening_radar);
-  const intradayTracking = asRecord(ai.intraday_tracking);
-  const completed_steps = ['0930', '1030', '1300']
-    .filter((key) => getRuntimeCheckpointState(sync, key) === 'completed');
-
-  const currentFromTracking = firstText(
-    intradayTracking.status,
-    openingRadar.radar_status,
-    sync.warning,
-    script.current_step,
-  );
-
+function buildIntradayProgress(projection: SubscriberReportProjection, script: CanonicalTodayScript): CanonicalIntradayProgress {
+  if (projection.closing.state === 'NOT_APPLICABLE') return {
+    completed_steps: [], current_step: '今日非交易日，本節點不適用',
+    next_step: '等待下一個交易日', status: 'missing',
+  };
+  if (!projection.analysisAvailable) return {
+    completed_steps: [], current_step: projection.statusLabel,
+    next_step: '等待正式市場分析與完整驗證證據', status: 'missing',
+  };
+  const intradayKeys = ['0930', '1030', '1300'] as const;
+  const completed_steps = intradayKeys.filter((key) => projection.runtime.checkpoints[key].status === 'completed'
+    && projection.runtime.checkpoints[key].evidenceVerified);
   const pendingStep = script.steps.find((step) => step.status !== 'completed');
-
+  const incomplete = !projection.runtime.decisionEvidence.checklistAvailable
+    || intradayKeys.some(key => ['insufficient', 'failed'].includes(projection.runtime.checkpoints[key].status));
   return {
     completed_steps,
-    current_step: currentFromTracking,
-    next_step: firstText(pendingStep?.title, pendingStep?.time, sync.warning),
-    status: normalizeStatus(firstText(intradayTracking.status, openingRadar.radar_status, sync.warning, script.status)),
+    current_step: projection.closing.complete ? '收盤驗證已完成'
+      : firstText(pendingStep?.title, pendingStep?.time, projection.runtime.decisionEvidence.reason),
+    next_step: projection.closing.complete ? '檢視已完成的收盤驗證'
+      : firstText(pendingStep?.title, pendingStep?.time, '等待下一個具完整證據的驗證節點'),
+    status: completed_steps.length === intradayKeys.length ? 'completed' : incomplete ? 'missing' : 'pending',
   };
 }
 
-function buildClosingOutcome(ai: UnknownRecord): CanonicalClosingOutcome {
-  const closingV2 = asRecord(ai.closing_verification_v2);
-  const closing = Object.keys(closingV2).length > 0 ? closingV2 : asRecord(ai.closing_verification);
+function buildClosingOutcome(projection: SubscriberReportProjection): CanonicalClosingOutcome {
+  if (!projection.closing.complete || !projection.closing.result) return { result: '', summary: '', accuracy: '', lessons: [] };
+  const closing = projection.closing.result;
   const tomorrow = asRecord(closing.tomorrow_adjustment);
   return {
-    result: firstText(closing.verdict_label, closing.hit_or_miss, closing.prediction_result, closing.status),
+    result: projection.closing.outcome || '',
     summary: firstText(closing.verification_note, closing.summary, closing.what_was_right, closing.reason),
     accuracy: firstText(closing.accuracy_score, closing.accuracy, closing.relative_result),
     lessons: [
@@ -436,17 +391,19 @@ function buildDecisionLifecycle(
 }
 
 export function buildCanonicalNarrative(input: BuildCanonicalNarrativeInput): CanonicalMorningNarrative {
-  const ai = asRecord(input.ai ?? input.displayState?.rawAI);
-  const note = asRecord(input.memberResearchNoteV2 ?? ai.member_research_note_v2);
-  const today_focus = buildTodayFocus(input.displayState, ai, note);
-  const today_script = buildTodayScript(note, ai);
-  const failure_triggers = buildFailureTriggers(note);
-  const intraday_progress = buildIntradayProgress(ai, today_script);
-  const closing_outcome = buildClosingOutcome(ai);
-  const decision_evidence = buildDecisionRuntimeEvidence({
-    ai,
-    checklistItemCount: today_script.steps.filter((step) => Boolean(step.title || step.detail)).length,
-  });
+  // The server-selected row owns both identity and explanatory content. Do not
+  // combine that row's proof with a caller's different revision of AI or notes.
+  const sourceRow = input.displayState?.rawRow;
+  const ai = sourceRow ? { ...asRecord(sourceRow.ai_strategy_json), ...sourceRow }
+    : asRecord(input.ai ?? input.displayState?.rawAI);
+  const note = asRecord(sourceRow ? ai.member_research_note_v2 : input.memberResearchNoteV2 ?? ai.member_research_note_v2);
+  const projection = getSubscriberReportProjection(sourceRow ?? ai);
+  const today_focus = buildTodayFocus(ai, note, projection);
+  const today_script = buildTodayScript(note, projection);
+  const failure_triggers = projection.analysisAvailable ? buildFailureTriggers(note) : [];
+  const intraday_progress = buildIntradayProgress(projection, today_script);
+  const closing_outcome = buildClosingOutcome(projection);
+  const decision_evidence = projection.runtime.decisionEvidence;
   return {
     today_focus,
     today_script,

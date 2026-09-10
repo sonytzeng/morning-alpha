@@ -12,29 +12,30 @@ import { currentResearchDateError, companyEvidenceSupported } from '../supabase/
 import { candidateEvidenceRelevance } from '../supabase/functions/generate-daily-report-v7/candidate-evidence.ts';
 import { hasFailedEvidenceDependency, resolveClaimedPipelineSlot, resolveClaimedPipelineRetry, resolveDailyDeliveryCompletion } from '../supabase/functions/_shared/daily-delivery-recovery.ts';
 import { RUNTIME_QUALITY_POLICY } from '../supabase/functions/_shared/production-architecture-core.mjs';
-import { dedupePresentedOpportunities } from '../src/lib/decisionPresentation.ts';
+import { getSubscriberOpportunityList } from '../src/lib/subscriberOpportunities.ts';
+import { subscriberProjectionFixture } from './fixtures/subscriber-projection-v1.mjs';
 import { evaluateMarketReportGate } from '../supabase/functions/_shared/market-report-gate.ts';
+import { assembleCanonicalMarketResearch, assembleResearchMasterV2, admitResearchRecommendations, validateResearchMasterV2 } from '../supabase/functions/generate-daily-report-v7/research-master-v2.ts';
+import { buildCanonicalMarketState, canonicalMarketSourceRefs } from '../supabase/functions/_shared/canonical-market-state.ts';
+import { evaluatePremiumContentGate } from '../supabase/functions/_shared/premium-content-gate.ts';
 
 const path = relative => fileURLToPath(new URL(relative, import.meta.url));
 const read = relative => readFileSync(path(relative), 'utf8');
 const { Request } = globalThis;
 
 test('recovered canonical member recommendation survives the actual Opportunities page mapper', () => {
-  const source = read('../src/pages/opportunities/page.tsx');
-  const map = isolatedFunction(source, 'mapV10OpportunityStocks', {
-    asRecordArray: value => Array.isArray(value) ? value : [],
-    compactText: value => String(value ?? '').trim(),
-    numberOrNull: value => value == null ? null : Number(value),
-    stringArray: value => Array.isArray(value) ? value : [],
-  });
-  const rows = map([{ symbol: '2330', name: '台積電', event_source: '公開公司來源',
+  const ai = subscriberProjectionFixture('READY');
+  ai.canonical_decision.recommendations = [{ symbol: '2330', name: '台積電', event_source: '公開公司來源',
     transmission_path: '先進封裝需求傳導至製程供應鏈。', taiwan_supply_chain_relation: '台積電為供應鏈驗證點。',
-    confirmation_condition: '09:30 相對大盤轉強且權值同步。', invalidation_condition: '相對大盤轉弱取消觀察。' }]);
-  const [stock] = dedupePresentedOpportunities(rows);
+    confirmation_condition: '09:30 相對大盤轉強且權值同步。', invalidation_condition: '相對大盤轉弱取消觀察。' }];
+  const [stock] = getSubscriberOpportunityList(ai);
   assert.match(stock.oneLineReason, /先進封裝需求/);
   assert.equal(stock.confirmation, '09:30 相對大盤轉強且權值同步。');
   assert.equal(stock.invalidation, '相對大盤轉弱取消觀察。');
-  assert.equal(dedupePresentedOpportunities(map([{ symbol: '2330', name: '台積電' }]))[0].confirmation, undefined);
+  ai.canonical_decision.recommendations = [{ symbol: '2330', name: '台積電' }];
+  assert.equal(getSubscriberOpportunityList(ai)[0].confirmation, undefined);
+  ai.premium_content_status = 'blocked';
+  assert.deepEqual(getSubscriberOpportunityList(ai), [], 'the formatter cannot bypass the independent paid evidence gate');
 });
 const generator = read('../supabase/functions/generate-daily-report-v7/index.ts');
 const orchestrator = read('../supabase/functions/daily-delivery-orchestrator/index.ts');
@@ -68,6 +69,9 @@ test('atomic market reader requires same published report/decision; paid member 
     memberContentRevision: { id: 'm2', decision_snapshot_id: 'd1', report_id: 'r1', report_date: report.report_date } };
   assert.equal(aligned(report, context), true);
   assert.equal(aligned({ ...report, ai_strategy_json: {} }, {}), true);
+  assert.equal(aligned({ ...report, ai_strategy_json: {} }, { decisionSnapshot: null }), true);
+  assert.equal(aligned({ ...report, ai_strategy_json: {} }, context), false,
+    'a detached QA snapshot must not supply a missing committed publication pointer');
   assert.equal(aligned(report, { ...context, decisionSnapshot: { ...context.decisionSnapshot, id: 'd2' } }), false);
   // Internal/member QA cannot take the market report off-line. The member
   // reader has its own strict identity+semantic checks, exercised separately.
@@ -171,41 +175,37 @@ test('suppressed recovery preserves audit semantics within existing Production d
 });
 
 test('real payload handler and SDK over loopback: server roles, locked data, canonical revision, repeat reads, bounded network', async () => {
-  const validAi = isolatedFunction(read('./premiumContentGate.test.mjs'), 'validAi');
-  const ai = validAi();
-  const sentence = ai.today_quote;
-  const day = '2026-09-07', revision = '00000000-0000-4000-8000-000000000001';
-  // Synthetic provider rows carry the same fields required by the independent
-  // stock gate. This does not waive date, company evidence, or semantic checks.
-  isolatedFunction(read('./premiumContentGate.test.mjs'), 'addAuditedNoTradeMaster')(ai);
-  ai.research_master_v2.report_date = day;
-  ai.research_master_v2.today_date = day;
-  ai.research_master_v2.provenance.generated_at = `${day}T07:20:00+08:00`;
-  ai.research_master_v2.sections.representative_stocks = [{ symbol: '2330', evidence_refs: ['SYNTHETIC_COMPANY_IR'] }];
-  ai.important_news = [{ title: '2330 台積電先進封裝需求', summary: '合成公司證據，僅限隔離契約測試。', source: 'isolated official fixture',
-    url: 'https://example.invalid/fixture', published_at: `${day}T07:00:00+08:00` }];
-  const marketGate = evaluateMarketReportGate(ai, day);
-  assert.equal(marketGate.eligible, true, JSON.stringify(marketGate));
-  assert.equal(marketGate.recommendation_gate.eligible, true, JSON.stringify(marketGate.recommendation_gate));
-  const report = { id: '00000000-0000-4000-8000-000000000002', report_date: day, report_mode: 'normal_overnight',
-    summary: 'OLD_RAW_THESIS', ai_strategy_json: { ...ai, revision_id: revision, canonical_member_revision_id: 'isolated-member', v8_daily_sentence: { sentence } },
-    created_at: `${day}T07:20:00+08:00`, important_news_json: ai.important_news };
-  const snapshot = { id: revision, report_id: report.id, report_date: day, version: 1, session_type: 'PREMARKET', is_current: true,
-    status: 'READY', action: 'SELECTIVE', decision_mode: 'recommendations', content_score: 100, market_regime: 'range',
-    created_at: report.created_at, generated_text: { daily_sentence: sentence, recommendations: ai.today_beneficiary_stocks_v10, market_report_gate: marketGate } };
-  const member = { id: 'isolated-member', report_id: report.id, report_date: day, decision_snapshot_id: revision, decision_snapshot_version: 1,
-    revision: 1, status: 'PASSED', semantic_status: 'PASSED', semantic_reason_codes: [], member_content: {
-      ...ai.member_research_note_v2, today_core_thesis: sentence, representative_stocks: ai.today_beneficiary_stocks_v10,
-      canonical_contract: { snapshot_id: revision, primary_thesis: sentence } } };
+  // Reuse the actual assembler/admission fixture, not a Premium-only master
+  // stub. Shift its synthetic date tuple together; no evidence counter is edited.
+  const fixtureRead = file => read('../' + file);
+  const fixtureDeps = { exports: {}, isolatedFunction, read: fixtureRead, assert, structuredClone, assembleCanonicalMarketResearch,
+    assembleResearchMasterV2, admitResearchRecommendations, validateResearchMasterV2,
+    buildCanonicalMarketState, canonicalMarketSourceRefs, evaluateMarketReportGate, evaluatePremiumContentGate };
+  const currentSource = read('./consolidationCurrentPayloadAuthority.test.mjs');
+  const f = isolatedFunction(currentSource, 'currentPayloadFixture', { ...fixtureDeps, fixtureDeps })();
+  isolatedFunction(currentSource, 'qualifyCurrentFixture', fixtureDeps)(f);
+  const shift = value => JSON.parse(JSON.stringify(value).replaceAll('2026-07-14', '2026-09-07').replaceAll('2026-07-13', '2026-09-06'));
+  const report = shift(f.report), snapshot = shift(f.snapshot), member = shift(f.member), publicationRun = shift(f.publicationRun);
+  report.summary = 'OLD_RAW_THESIS'; snapshot.market_regime = 'range';
+  const ai = report.ai_strategy_json, day = report.report_date, revision = snapshot.id;
+  const sentence = snapshot.generated_text.canonical_market_state.document.sections.executive_summary.text;
+  assert.equal(evaluateMarketReportGate(ai, day).eligible, true);
+  assert.equal(evaluateMarketReportGate(ai, day).recommendation_gate.eligible, true);
   const quotes = ['TAIEX', '2330', 'TXF'].map(symbol => ({ symbol, value: 100, change_percent: 1, source: 'isolated fixture', trading_date: day, phase: 'premarket', captured_at: report.created_at }));
   const trace = [];
   let blocked = false;
   let misaligned = false;
+  let semanticMisaligned = false;
   let history = false;
+  const historyFixture = isolatedFunction(read('./consolidationPerformanceHistory.test.mjs'), 'fixture', {
+    isolatedFunction, read: file => read('../' + file), assert, structuredClone, assembleCanonicalMarketResearch,
+    buildCanonicalMarketState, canonicalMarketSourceRefs, evaluateMarketReportGate,
+  })();
+  historyFixture.snapshot.confidence_score = 67;
   const historyPartial = { ...report, id: '00000000-0000-4000-8000-000000000004', report_date: '2026-09-06', confidence_score: 100,
     summary: 'QA 原劇本失效，不得作為公開歷史摘要', ai_strategy_json: { ...report.ai_strategy_json,
       confidence_score: 100, revision_id: '00000000-0000-4000-8000-000000000003' } };
-  const historyDecisions = [{ ...snapshot, action: 'STOP', confidence_score: 67 },
+  const historyDecisions = [historyFixture.snapshot, historyFixture.closingSnapshot,
     { ...snapshot, id: historyPartial.ai_strategy_json.revision_id, report_id: historyPartial.id, report_date: historyPartial.report_date,
       status: 'PARTIAL', action: 'STOP', confidence_score: 100, generated_text: { daily_sentence: historyPartial.summary } }];
   const server = createServer(async (req, res) => {
@@ -220,12 +220,15 @@ test('real payload handler and SDK over loopback: server roles, locked data, can
       else { status = 401; payload = { message: 'Invalid isolated identity', code: 'bad_jwt' }; }
     } else if (resource === 'profiles') payload = [{ role: url.searchParams.get('id') === 'eq.admin' ? 'admin' : 'user', subscription_status: 'inactive' }];
     else if (resource === 'ensure_member_entitlement_v1') payload = { state: ['member', 'vip'].includes(body.p_user_id) ? 'paid_active' : 'free', tier: body.p_user_id, access_ends_at: '2099-01-01T00:00:00Z' };
-    else if (resource === 'reports') payload = history ? [{ ...report, confidence_score: 100 }, historyPartial] : [{ ...report, ai_strategy_json: misaligned ? { ...report.ai_strategy_json, revision_id: 'older-decision', canonical_member_revision_id: 'older-member' }
+    else if (resource === 'reports') payload = history ? [{ ...historyFixture.report, confidence_score: 100 }, historyPartial] : [{ ...report, ai_strategy_json: misaligned ? { ...report.ai_strategy_json, revision_id: 'older-decision', canonical_member_revision_id: 'older-member' }
       : blocked ? { ...report.ai_strategy_json, missing_sources: ['sector_rotation_scores'], data_quality: 'degraded' } : report.ai_strategy_json }];
     else if (resource === 'decision_snapshots') payload = history ? historyDecisions : url.searchParams.get('session_type') === 'eq.CLOSING' ? [] : [{ ...snapshot,
       ...(blocked ? { action: 'STOP', decision_mode: 'blocked', status: 'PARTIAL', generated_text: { daily_sentence: '資料不足，研究未發布。', recommendations: [] } } : {}) }];
-    else if (resource === 'member_content_revisions' || resource === 'current_member_content_revisions_v1') payload = blocked ? [] : [{ ...member,
-      semantic_coherence_reviews: [{ status: 'PASSED', reason_codes: [], checked_at: report.created_at }] }];
+    else if (resource === 'pipeline_runs') payload = history ? [historyFixture.publicationRun] : [publicationRun];
+    else if (resource === 'member_content_revisions' || resource === 'current_member_content_revisions_v1') payload = history ? [historyFixture.member] : blocked ? [] : [{ ...member,
+      semantic_coherence_reviews: [{ status: 'PASSED', reason_codes: [], checked_at: report.created_at,
+        canonical_snapshot_id: semanticMisaligned ? 'wrong-semantic-revision' : revision,
+        canonical_snapshot_version: snapshot.version }] }];
     else if (resource === 'market_data_snapshots') payload = quotes;
     trace.push({ method: req.method, path: url.pathname, status, limit: url.searchParams.get('limit'),
       batchedRevisionRead: resource === 'decision_snapshots' && (url.searchParams.get('id') || '').startsWith('in.') }); // No headers/credentials/PII.
@@ -286,19 +289,32 @@ test('real payload handler and SDK over loopback: server roles, locked data, can
     const historical = await historyResponse.json();
     assert.equal(historical.reports.length, 2);
     const [publishedHistory, partialHistory] = historical.reports;
-    assert.equal(publishedHistory.report_date, day); assert.equal(publishedHistory.revision_id, revision);
+    assert.equal(publishedHistory.report_date, historyFixture.report.report_date);
+    assert.equal(publishedHistory.revision_id, historyFixture.snapshot.id);
     assert.equal(publishedHistory.subscriber_state.publication, 'PUBLISHED'); assert.equal(publishedHistory.subscriber_state.analysis, 'READY');
-    assert.equal(publishedHistory.confidence_score, 67); assert.equal(publishedHistory.summary, sentence);
+    assert.equal(publishedHistory.confidence_score, 67);
+    assert.equal(publishedHistory.summary, historyFixture.snapshot.generated_text.canonical_market_state.document.sections.executive_summary.text);
+    assert.equal(publishedHistory.subscriber_projection.closing.complete, true);
+    assert.equal(publishedHistory.subscriber_projection.closing.result.actual_taiex_change, 0);
     assert.equal(partialHistory.report_date, historyPartial.report_date);
     assert.equal(partialHistory.revision_id, historyPartial.ai_strategy_json.revision_id);
     assert.equal(partialHistory.subscriber_state.publication, 'UNPUBLISHED'); assert.equal(partialHistory.subscriber_state.analysis, 'PARTIAL');
     assert.equal(partialHistory.confidence_score, null); assert.equal(partialHistory.summary, '今日分析尚未完成／證據不足');
     assert.equal(partialHistory.market_bias, '分析尚未完成');
     const historyRequests = trace.slice(historyStart);
-    assert.equal(historyRequests.length, 2, 'History uses one reports read plus one batched decision read, no per-row payload contexts');
-    assert.equal(historyRequests[0].limit, '3'); assert.equal(historyRequests[1].limit, '30');
-    assert.equal(historyRequests[1].batchedRevisionRead, true);
+    assert.equal(historyRequests.length, 4, 'History uses reports plus three bounded evidence batches, no per-row contexts');
+    assert.equal(historyRequests[0].limit, '3');
+    const snapshotRead = historyRequests.find(row => row.path.endsWith('/decision_snapshots'));
+    assert.equal(snapshotRead.limit, '90'); assert.equal(snapshotRead.batchedRevisionRead, true);
+    assert.equal(historyRequests.find(row => row.path.endsWith('/member_content_revisions')).limit, '30');
+    assert.ok(Number(historyRequests.find(row => row.path.endsWith('/pipeline_runs')).limit) <= 121);
     history = false;
+    semanticMisaligned = true;
+    const wrongSemantic = await (await handler(request('member'))).json();
+    assert.equal(wrongSemantic.payload.premium_content_status, 'blocked', 'PASSED review for another revision is not Premium evidence');
+    assert.ok(wrongSemantic.payload.premium_content_reason_codes.includes('SEMANTIC_MEMBER_REVISION_NOT_ELIGIBLE'));
+    assert.equal(wrongSemantic.payload.today_beneficiary_stocks?.length || 0, 0);
+    semanticMisaligned = false;
     blocked = true;
     for (const identity of ['member', 'admin']) {
       const result = await (await handler(request(identity))).json();

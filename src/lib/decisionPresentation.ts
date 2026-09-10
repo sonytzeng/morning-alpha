@@ -1,7 +1,7 @@
 import type { CanonicalMorningNarrative } from './canonicalNarrative.ts';
 import type { MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
-import { canPresentConfirmedDecision, canPresentRejectedDecision } from './decisionEvidence.ts';
-import { isMarketPublicationReady, isSubscriberAnalysisUnavailable, recommendationPublication, subscriberConfidence, SUBSCRIBER_ANALYSIS_INCOMPLETE } from './subscriberReportContract.ts';
+import { canPresentConfirmedDecision } from './decisionEvidence.ts';
+import { getSubscriberReportProjection, type SubscriberReportProjection, SUBSCRIBER_ANALYSIS_INCOMPLETE } from './subscriberReportContract.ts';
 
 export type PresentationDecisionState = 'WAIT' | 'ACT' | 'STOP' | 'CLOSED' | 'COMPLETED' | 'INSUFFICIENT_DATA';
 
@@ -182,34 +182,20 @@ export function dedupePresentedOpportunities(source: UnknownRecord[], limit = 8)
   return Array.from(byKey.values()).slice(0, limit);
 }
 
-function decisionState(input: DecisionPresentationInput): PresentationDecisionState {
+function decisionState(input: DecisionPresentationInput, projection: SubscriberReportProjection): PresentationDecisionState {
   const { displayState, narrative } = input;
   if (displayState && (!displayState.is_trading_day || displayState.market_status !== 'OPEN')) return 'CLOSED';
-  if (isSubscriberAnalysisUnavailable(displayState?.rawAI)) return 'INSUFFICIENT_DATA';
-  const canonicalDecision = record(displayState?.rawAI?.canonical_decision);
-  const canonicalAction = text(canonicalDecision.action).toUpperCase();
-  const canonicalMode = text(canonicalDecision.decision_mode).toLowerCase();
-  const canonicalStatus = text(canonicalDecision.status).toUpperCase();
-  const marketPublished = isMarketPublicationReady(displayState?.rawAI);
-
-  // Runtime completion only means that the market checkpoint was observed. It
-  // must never promote an evidence-backed no-trade decision into an ACT state.
-  if (canonicalAction === 'CLOSED') return 'CLOSED';
-  if (canonicalAction === 'WAIT' || canonicalMode === 'no_trade') return 'WAIT';
-  if (['STOP', 'REDUCE'].includes(canonicalAction)) return 'STOP';
-  if (canonicalMode === 'market_only' || canonicalMode === 'blocked') return marketPublished ? 'WAIT' : 'INSUFFICIENT_DATA';
-  // A failed stock/research-quality gate is not a failed market thesis. Only
-  // the pinned market action or actual runtime failure can stop that thesis.
-  if (!marketPublished && canonicalStatus && canonicalStatus !== 'READY') return 'INSUFFICIENT_DATA';
+  if (!projection.analysisAvailable) return 'INSUFFICIENT_DATA';
+  const canonicalAction = projection.marketDecision.action;
+  if (canonicalAction === 'STOP') return 'STOP';
+  if (projection.closing.complete) return 'COMPLETED';
+  if (canonicalAction === 'WAIT') return 'WAIT';
+  if (canonicalAction === 'INSUFFICIENT_DATA') return 'INSUFFICIENT_DATA';
 
   const status = narrative.decision_lifecycle.decision_status.status;
-  if (status === 'Rejected' && canPresentRejectedDecision(narrative.decision_evidence)) return 'STOP';
   // A verified close is a historical outcome, not an unconfirmed entry and
   // never a new ACT signal. Missing intraday entry fields cannot undo it.
-  if (status === 'Completed' && narrative.decision_evidence.closingVerified) return 'COMPLETED';
-  const canonicalAllowsAction = !canonicalAction
-    || ['TRADE', 'SELECTIVE'].includes(canonicalAction)
-    || canonicalMode === 'recommendations';
+  const canonicalAllowsAction = canonicalAction === 'ACT';
   if (status === 'Confirmed' && canonicalAllowsAction && canPresentConfirmedDecision(narrative.decision_evidence)) return 'ACT';
   if (!narrative.decision_evidence.marketSnapshotAvailable || !narrative.decision_evidence.checklistAvailable) {
     return 'INSUFFICIENT_DATA';
@@ -231,8 +217,11 @@ function decisionCopy(state: PresentationDecisionState): Pick<DecisionPresentati
 export function buildDecisionPresentation(input: DecisionPresentationInput): DecisionPresentation {
   const { displayState, narrative } = input;
   const lifecycle = narrative.decision_lifecycle;
-  const unavailable = isSubscriberAnalysisUnavailable(displayState?.rawAI);
-  const state = decisionState(input);
+  // The selected envelope owns identity and publication. A nested READY draft
+  // must not restore confidence, opportunities or state after that row failed.
+  const projection = getSubscriberReportProjection(displayState?.rawRow ?? displayState?.rawAI);
+  const unavailable = !projection.analysisAvailable;
+  const state = decisionState(input, projection);
   const copy = decisionCopy(state);
   const nextRaw = firstText(
     /\d{1,2}:\d{2}/.test(lifecycle.validation_plan.next_step) ? lifecycle.validation_plan.next_step : '',
@@ -243,14 +232,13 @@ export function buildDecisionPresentation(input: DecisionPresentationInput): Dec
     narrative.today_script.current_step,
     displayState?.nextUpdateTime,
   );
-  const score = state === 'INSUFFICIENT_DATA' ? null : subscriberConfidence(displayState?.rawAI, displayState?.confidenceScore);
-  const stockPublication = recommendationPublication(displayState?.rawAI);
-  const opportunities = unavailable || (stockPublication.explicit && !stockPublication.stocksAllowed)
+  const score = state === 'INSUFFICIENT_DATA' ? null : projection.confidence.value;
+  const opportunities = unavailable || !projection.recommendation.available
     ? [] : dedupePresentedOpportunities(input.opportunitySource || []);
   return {
-    dateLabel: displayState?.reportDate || displayState?.currentDate || '',
+    dateLabel: projection.identity.reportDate || displayState?.currentDate || '',
     marketStateLabel: displayState?.market_message || '等待市場狀態',
-    marketBiasLabel: unavailable ? undefined : compact(displayState?.marketBias, 24) || undefined,
+    marketBiasLabel: unavailable ? undefined : compact(projection.marketDecision.bias, 24) || undefined,
     primaryDecision: {
       state,
       ...(unavailable && state !== 'CLOSED' ? { headline: SUBSCRIBER_ANALYSIS_INCOMPLETE, instruction: '等待市場證據與正式分析' } : copy),
@@ -278,7 +266,7 @@ export function buildDecisionPresentation(input: DecisionPresentationInput): Dec
       ...narrative.failure_triggers.flatMap((item) => [item.trigger, item.meaning, item.action]),
     ], 5),
     confidence: score == null ? undefined : {
-      label: displayState?.confidenceLabel || '待確認',
+      label: projection.confidence.label,
       score,
       explanation: compact(displayState?.dataBasisNote, 72) || undefined,
     },

@@ -4,7 +4,7 @@ import { resolveActiveMorningAlphaReport } from '@/services/resolveActiveReport'
 import type { Report } from '@/types/report';
 import type { IntradayCheck } from '@/services/intradayCheckService';
 import type { MarketState } from '@/services/marketStateEngine';
-import { formatTaipeiDate } from '@/utils/tradingDay';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 
 export type MarketStatus = 'calm' | 'overheat' | 'panic' | 'fear' | 'watch' | 'opening_strengthened' | 'opening_weakened' | 'opening_confirmed' | 'opening_invalidated' | 'rebound_verification' | 'waiting_premarket' | 'premarket_generated' | 'after_close_pending' | 'non_trading_with_data' | 'non_trading_no_data';
 
@@ -140,58 +140,12 @@ const STATUS_MAP: Record<MarketStatus, StatusConfig> = {
   },
 };
 
-function deriveStatus(report: Report | null, intraday?: IntradayCheck | null): MarketStatus {
-  const now = new Date();
-  const twNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-  const twHour = twNow.getHours();
-  const twMinute = twNow.getMinutes();
-  const twDay = twNow.getDay();
-  const isWeekend = twDay === 0 || twDay === 6;
-
-  // ═══ Non-trading day (weekend) — NEVER show "收盤待驗證" ═══
-  if (isWeekend) {
-    // If we have a report with a date that differs from today, show "非交易日｜最近資料"
-    if (report && report.report_date) {
-      const todayStr = formatTaipeiDate(twNow);
-      if (report.report_date !== todayStr) {
-        return 'non_trading_with_data';
-      }
-    }
-    return 'non_trading_no_data';
-  }
-
-  // ═══ Trading day logic ═══
-  if (twHour > 13 || (twHour === 13 && twMinute >= 30)) {
-    return 'after_close_pending';
-  }
-
-  if (twHour < 7 || (twHour === 7 && twMinute < 30)) {
-    return 'waiting_premarket';
-  }
-
-  if (twHour < 9 || (twHour === 9 && twMinute < 15)) {
-    return 'premarket_generated';
-  }
-
-  if (intraday?.opening_status) {
-    const status = intraday.opening_status;
-    if (status === 'strengthened') return 'opening_strengthened';
-    if (status === 'weakened') return 'opening_weakened';
-    if (status === 'confirmed') return 'opening_confirmed';
-    if (status === 'invalidated' || status === 'reversal') return 'opening_invalidated';
-    if (status === 'unknown') return 'watch';
-  }
-
-  if (!report) return 'watch';
-  const bias = report.market_bias || '震盪';
-  const score = report.confidence_score ?? 50;
-
-  if (bias.includes('反彈') || bias.includes('驗證') || bias.includes('修復')) return 'rebound_verification';
-  if (bias.includes('偏多') && score >= 80 && !bias.includes('資料不足')) return 'overheat';
-  if (bias.includes('偏空') && score <= 30) return 'panic';
-  if (bias.includes('偏空') && score <= 45) return 'fear';
-  if (bias.includes('偏多') || score >= 65) return 'calm';
-  if (bias.includes('偏空')) return 'fear';
+function deriveStatus(report: Report | null): MarketStatus {
+  const projection = getSubscriberReportProjection(report);
+  if (projection.closing.state === 'NOT_APPLICABLE') return 'non_trading_no_data';
+  if (!projection.analysisAvailable) return 'watch';
+  if (projection.marketDecision.action === 'STOP') return 'panic';
+  if (projection.marketDecision.action === 'ACT') return 'calm';
   return 'watch';
 }
 
@@ -203,27 +157,26 @@ interface Props {
   displayLabelOverride?: string;
 }
 
-function useMarketStatus(report?: Report | null, intradayCheck?: IntradayCheck | null, skipFetch = false) {
+function useMarketStatus(report?: Report | null) {
   const [status, setStatus] = useState<MarketStatus>('watch');
   const [config, setConfig] = useState<StatusConfig>(STATUS_MAP.watch);
   const [resolvedReport, setResolvedReport] = useState<Report | null>(null);
 
   useEffect(() => {
-    if (report || intradayCheck) {
-      const s = deriveStatus(report || null, intradayCheck || null);
+    if (report) {
+      const s = deriveStatus(report);
       setStatus(s);
       setConfig(STATUS_MAP[s]);
       setResolvedReport(report || null);
       return;
     }
-    if (skipFetch) return; // V28: when marketState is passed, skip internal fetch entirely
     async function load() {
       try {
         const resolved = await resolveActiveMorningAlphaReport();
         const r = resolved.rawRow && !resolved.isHistoricalFallback
           ? mapRowToReport(resolved.rawRow as unknown as Record<string, unknown>)
           : null;
-        const s = deriveStatus(r, null);
+        const s = deriveStatus(r);
         setStatus(s);
         setConfig(STATUS_MAP[s]);
         setResolvedReport(r);
@@ -232,32 +185,18 @@ function useMarketStatus(report?: Report | null, intradayCheck?: IntradayCheck |
       }
     }
     load();
-  }, [report, intradayCheck, skipFetch]);
+  }, [report]);
 
   return { status, config, resolvedReport };
 }
 
-export default function MarketStatusLight({ compact = false, report, intradayCheck, marketState, displayLabelOverride }: Props) {
-  // V28: when marketState is provided, skip internal fetch — marketState is the single source of truth
-  const skipInternalFetch = Boolean(marketState || displayLabelOverride);
-  const { status, config, resolvedReport } = useMarketStatus(report, intradayCheck, skipInternalFetch);
-  const currentTime = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-  // V11: Always prefer report.market_bias as display label — it is the SINGLE SOURCE OF TRUTH
-  // Engine-derived labels like 「偏強觀察」 are forbidden when report has a real market_bias value
-  const displayLabel = (() => {
-    if (displayLabelOverride?.trim()) return displayLabelOverride.trim();
-    const realBias = resolvedReport?.market_bias || report?.market_bias;
-    if (realBias && realBias !== '震盪' && realBias !== '觀察中' && realBias !== '—' && realBias.trim().length > 0) {
-      return realBias;
-    }
-    return marketState?.displayLabel ?? (() => {
-      if (status === 'rebound_verification' && resolvedReport?.market_bias) {
-        return resolvedReport.market_bias;
-      }
-      return config.label;
-    })();
-  })();
+export default function MarketStatusLight({ compact = false, report }: Props) {
+  // Legacy display overrides remain source-compatible props, not authority to
+  // bypass subscriber publication/evidence gates. The clock is display-only.
+  const { resolvedReport } = useMarketStatus(report);
+  const projection = getSubscriberReportProjection(report ?? resolvedReport);
+  const currentTime = new Date().toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false });
+  const displayLabel = projection.marketDecision.label;
 
   // V15: Derive chip colors from actual market_bias text — NOT from engine riskTone
   // Colors per bias type: 偏多=rose, 偏空=emerald, 中性/震盪=amber, no data=slate

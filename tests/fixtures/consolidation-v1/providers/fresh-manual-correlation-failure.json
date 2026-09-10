@@ -1,0 +1,2777 @@
+{
+  "provenance": {
+    "kind": "LOCAL_ACTUAL_HANDLER_CAPTURE",
+    "historical_capture": false,
+    "production_data": false,
+    "full_chain_pass": false
+  },
+  "config": {
+    "scope": "ma-consolidation-v1-20260909154500",
+    "report_date": "2026-09-17",
+    "warmup_date": "2026-09-16",
+    "clock": {
+      "configuration": {
+        "bootId": "2879f43f-0819-4a08-88dc-195166474350"
+      }
+    }
+  },
+  "baseline": {
+    "scope": "ma-consolidation-v1-20260909154500",
+    "report_date": "2026-09-17",
+    "warmup_date": "2026-09-16",
+    "guest": {
+      "boot_id": "2879f43f-0819-4a08-88dc-195166474350",
+      "observed_at": "2026-09-16T06:32:23.000Z",
+      "host": {
+        "wall_ms": 1788941070411,
+        "monotonic_ns": "488350868372541"
+      }
+    },
+    "postgres": {
+      "scope": "ma-consolidation-v1-20260909154500",
+      "observed_at": "2026-09-16T06:32:24.128583+00:00"
+    },
+    "config_sha256": "43ba97676f22c5656e8794d3123f6ee108d9af0d0c72b2e03335b3679f762aae",
+    "prior_result": {
+      "path": "/private/tmp/ma-consolidation-v1-20260909154500-evidence/result.json",
+      "sha256": "1d254ccbd968ebf21e9f433d266f9f98386d74c0b34afcac0ec78fa6e72b5a84",
+      "run_id": "e9c6cebd-7431-42c2-90f1-aa09233ecbae",
+      "status": "FAIL"
+    },
+    "tables": {
+      "market_data": {
+        "http": 200,
+        "rows": [
+          {
+            "id": "a24b6421-6073-48e9-bc89-2de282ed0aeb",
+            "symbol": "SPX",
+            "name": "S&P 500（proxy: SPY ETF proxy）",
+            "market": "US",
+            "value": 505,
+            "change_percent": 1,
+            "status": null,
+            "taiwan_impact": "美股整體健康度指標",
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "change": null,
+            "updated_at": "2026-09-15T20:00:00+00:00"
+          },
+          {
+            "id": "d40f8576-1c6b-4a63-8e3a-250e1dba8fa2",
+            "symbol": "IXIC",
+            "name": "Nasdaq（proxy: QQQ ETF proxy）",
+            "market": "US",
+            "value": 505,
+            "change_percent": 1,
+            "status": null,
+            "taiwan_impact": "科技股風向標",
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "change": null,
+            "updated_at": "2026-09-15T20:00:00+00:00"
+          },
+          {
+            "id": "203d1f98-5c40-44c0-a8e7-1fe3810a2e4f",
+            "symbol": "SOX",
+            "name": "費城半導體指數（proxy: SOXX ETF proxy）",
+            "market": "US",
+            "value": 252.5,
+            "change_percent": 1,
+            "status": null,
+            "taiwan_impact": "半導體族群強弱指標",
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "change": null,
+            "updated_at": "2026-09-15T20:00:00+00:00"
+          },
+          {
+            "id": "1ed84a58-3304-4387-9005-38ecd67e2458",
+            "symbol": "NVDA",
+            "name": "Nvidia",
+            "market": "US",
+            "value": 151.5,
+            "change_percent": 1,
+            "status": null,
+            "taiwan_impact": "AI 龍頭，直接牽動台灣 AI 供應鏈",
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "change": null,
+            "updated_at": "2026-09-15T20:00:00+00:00"
+          },
+          {
+            "id": "26416d03-9ae5-4c0b-9510-bce77d613500",
+            "symbol": "TSM",
+            "name": "TSMC ADR",
+            "market": "US",
+            "value": 202,
+            "change_percent": 1,
+            "status": null,
+            "taiwan_impact": "台積電 ADR 連動台股價格",
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "change": null,
+            "updated_at": "2026-09-15T20:00:00+00:00"
+          },
+          {
+            "id": "463b4a22-b3b1-4a33-af58-887e66fc2a43",
+            "symbol": "VIX",
+            "name": "恐慌指數（proxy: VXX ETN proxy）",
+            "market": "US",
+            "value": 19.8,
+            "change_percent": -1,
+            "status": null,
+            "taiwan_impact": "市場恐慌情緒",
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "change": null,
+            "updated_at": "2026-09-15T20:00:00+00:00"
+          },
+          {
+            "id": "22fa311d-421c-4931-badb-c5e5b24277b6",
+            "symbol": "DXY",
+            "name": "美元指數方向（proxy: UUP ETF）",
+            "market": "US",
+            "value": 100.1,
+            "change_percent": 0.1,
+            "status": null,
+            "taiwan_impact": "影響外資流向與台幣匯率",
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "change": null,
+            "updated_at": "2026-09-15T20:00:00+00:00"
+          },
+          {
+            "id": "335f7e5c-ef95-4e86-b244-76d98068d782",
+            "symbol": "US10Y",
+            "name": "美國10年債殖利率方向（proxy: inverse IEF ETF）",
+            "market": "US",
+            "value": 100.1,
+            "change_percent": -0.1,
+            "status": null,
+            "taiwan_impact": "影響資金成本與科技股估值",
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "change": null,
+            "updated_at": "2026-09-15T20:00:00+00:00"
+          },
+          {
+            "id": "2d95eb4b-4bf6-400a-a887-41876251decf",
+            "symbol": "TAIEX",
+            "name": "台股加權指數",
+            "market": "TW",
+            "value": 25250,
+            "change_percent": 1,
+            "status": null,
+            "taiwan_impact": "台股大盤整體風向指標",
+            "captured_at": "2026-09-16T05:30:00+00:00",
+            "change": null,
+            "updated_at": "2026-09-16T05:30:00+00:00"
+          },
+          {
+            "id": "51cea8b6-567d-48ca-938d-300b64e52291",
+            "symbol": "2330",
+            "name": "台積電",
+            "market": "TW",
+            "value": 1010,
+            "change_percent": 1,
+            "status": null,
+            "taiwan_impact": "台股權值股龍頭",
+            "captured_at": "2026-09-16T05:30:00+00:00",
+            "change": null,
+            "updated_at": "2026-09-16T05:30:00+00:00"
+          },
+          {
+            "id": "46018d82-9f1c-4f48-af1e-0279a68535ce",
+            "symbol": "TXF",
+            "name": "台指期",
+            "market": "TW",
+            "value": 25350,
+            "change_percent": 0.99601593625498,
+            "status": null,
+            "taiwan_impact": "台指期提供期貨領先訊號",
+            "captured_at": "2026-09-16T05:45:00+00:00",
+            "change": null,
+            "updated_at": "2026-09-16T05:45:00+00:00"
+          }
+        ]
+      },
+      "market_checkpoint_snapshots": {
+        "http": 200,
+        "rows": [
+          {
+            "id": "538160cc-31cc-4bc1-964e-5e7e4493ea0e",
+            "checkpoint": "RECOVERY",
+            "trading_date": "2026-09-16",
+            "captured_at": "2026-09-16T06:30:04.326+00:00",
+            "market_session": "recovery",
+            "symbol": "SPX",
+            "value": 505,
+            "change_percent": 1,
+            "source": "finnhub",
+            "source_timestamp": "2026-09-15T20:00:00+00:00",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "snapshot_version": 1,
+            "raw": {
+              "name": "S&P 500（proxy: SPY ETF proxy）",
+              "change": 5,
+              "market": "US",
+              "contract": "FETCH_CHECKPOINT_EVIDENCE_V1",
+              "source_raw": {
+                "quote": {
+                  "low": 504,
+                  "high": 506,
+                  "open": 500,
+                  "change": 5,
+                  "current": 505,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 500
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "SPY"
+              },
+              "source_symbol": "SPY"
+            },
+            "created_at": "2026-09-16T06:30:10.77453+00:00"
+          },
+          {
+            "id": "a41ac7d0-0293-4513-862f-95f15c50328d",
+            "checkpoint": "RECOVERY",
+            "trading_date": "2026-09-16",
+            "captured_at": "2026-09-16T06:30:04.326+00:00",
+            "market_session": "recovery",
+            "symbol": "IXIC",
+            "value": 505,
+            "change_percent": 1,
+            "source": "finnhub",
+            "source_timestamp": "2026-09-15T20:00:00+00:00",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "snapshot_version": 2,
+            "raw": {
+              "name": "Nasdaq（proxy: QQQ ETF proxy）",
+              "change": 5,
+              "market": "US",
+              "contract": "FETCH_CHECKPOINT_EVIDENCE_V1",
+              "source_raw": {
+                "quote": {
+                  "low": 504,
+                  "high": 506,
+                  "open": 500,
+                  "change": 5,
+                  "current": 505,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 500
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "QQQ"
+              },
+              "source_symbol": "QQQ"
+            },
+            "created_at": "2026-09-16T06:30:10.948117+00:00"
+          },
+          {
+            "id": "d7cc4048-b7d5-4414-b52a-2b8c0403442a",
+            "checkpoint": "RECOVERY",
+            "trading_date": "2026-09-16",
+            "captured_at": "2026-09-16T06:30:04.326+00:00",
+            "market_session": "recovery",
+            "symbol": "SOX",
+            "value": 252.5,
+            "change_percent": 1,
+            "source": "finnhub",
+            "source_timestamp": "2026-09-15T20:00:00+00:00",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "snapshot_version": 3,
+            "raw": {
+              "name": "費城半導體指數（proxy: SOXX ETF proxy）",
+              "change": 2.5,
+              "market": "US",
+              "contract": "FETCH_CHECKPOINT_EVIDENCE_V1",
+              "source_raw": {
+                "quote": {
+                  "low": 251.5,
+                  "high": 253.5,
+                  "open": 250,
+                  "change": 2.5,
+                  "current": 252.5,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 250
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "SOXX"
+              },
+              "source_symbol": "SOXX"
+            },
+            "created_at": "2026-09-16T06:30:11.043484+00:00"
+          },
+          {
+            "id": "76d440b8-bf2d-4120-8d02-1943ffa7605c",
+            "checkpoint": "RECOVERY",
+            "trading_date": "2026-09-16",
+            "captured_at": "2026-09-16T06:30:04.326+00:00",
+            "market_session": "recovery",
+            "symbol": "NVDA",
+            "value": 151.5,
+            "change_percent": 1,
+            "source": "finnhub",
+            "source_timestamp": "2026-09-15T20:00:00+00:00",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "snapshot_version": 4,
+            "raw": {
+              "name": "Nvidia",
+              "change": 1.5,
+              "market": "US",
+              "contract": "FETCH_CHECKPOINT_EVIDENCE_V1",
+              "source_raw": {
+                "quote": {
+                  "low": 150.5,
+                  "high": 152.5,
+                  "open": 150,
+                  "change": 1.5,
+                  "current": 151.5,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 150
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "NVDA"
+              },
+              "source_symbol": "NVDA"
+            },
+            "created_at": "2026-09-16T06:30:11.088372+00:00"
+          },
+          {
+            "id": "9d793ab7-2554-460e-8120-bd4bd9b2f860",
+            "checkpoint": "RECOVERY",
+            "trading_date": "2026-09-16",
+            "captured_at": "2026-09-16T06:30:04.326+00:00",
+            "market_session": "recovery",
+            "symbol": "TSM",
+            "value": 202,
+            "change_percent": 1,
+            "source": "finnhub",
+            "source_timestamp": "2026-09-15T20:00:00+00:00",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "snapshot_version": 5,
+            "raw": {
+              "name": "TSMC ADR",
+              "change": 2,
+              "market": "US",
+              "contract": "FETCH_CHECKPOINT_EVIDENCE_V1",
+              "source_raw": {
+                "quote": {
+                  "low": 201,
+                  "high": 203,
+                  "open": 200,
+                  "change": 2,
+                  "current": 202,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 200
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "TSM"
+              },
+              "source_symbol": "TSM"
+            },
+            "created_at": "2026-09-16T06:30:11.119633+00:00"
+          },
+          {
+            "id": "157a537d-a432-43ab-a304-127015572846",
+            "checkpoint": "RECOVERY",
+            "trading_date": "2026-09-16",
+            "captured_at": "2026-09-16T06:30:04.326+00:00",
+            "market_session": "recovery",
+            "symbol": "VIX",
+            "value": 19.8,
+            "change_percent": -1,
+            "source": "finnhub",
+            "source_timestamp": "2026-09-15T20:00:00+00:00",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "snapshot_version": 6,
+            "raw": {
+              "name": "恐慌指數（proxy: VXX ETN proxy）",
+              "change": -0.2,
+              "market": "US",
+              "contract": "FETCH_CHECKPOINT_EVIDENCE_V1",
+              "source_raw": {
+                "quote": {
+                  "low": 18.8,
+                  "high": 20.8,
+                  "open": 20,
+                  "change": -0.2,
+                  "current": 19.8,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": -1,
+                  "previous_close": 20
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "VXX"
+              },
+              "source_symbol": "VXX"
+            },
+            "created_at": "2026-09-16T06:30:11.165884+00:00"
+          },
+          {
+            "id": "8782dd61-4023-4bcf-bfdc-be220e276d96",
+            "checkpoint": "RECOVERY",
+            "trading_date": "2026-09-16",
+            "captured_at": "2026-09-16T06:30:04.326+00:00",
+            "market_session": "recovery",
+            "symbol": "DXY",
+            "value": 100.1,
+            "change_percent": 0.1,
+            "source": "finnhub",
+            "source_timestamp": "2026-09-15T20:00:00+00:00",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "snapshot_version": 7,
+            "raw": {
+              "name": "美元指數方向（proxy: UUP ETF）",
+              "change": 0.1,
+              "market": "US",
+              "contract": "FETCH_CHECKPOINT_EVIDENCE_V1",
+              "source_raw": {
+                "quote": {
+                  "low": 99.1,
+                  "high": 101.1,
+                  "open": 100,
+                  "change": 0.1,
+                  "current": 100.1,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 0.1,
+                  "previous_close": 100
+                },
+                "provider": "finnhub",
+                "proxy_symbol": "UUP",
+                "finnhub_symbol": "UUP",
+                "proxy_semantics": "same_direction_us_dollar_proxy",
+                "direction_multiplier": 1
+              },
+              "source_symbol": "UUP"
+            },
+            "created_at": "2026-09-16T06:30:11.202137+00:00"
+          },
+          {
+            "id": "5dc630d8-f471-4094-86c7-341641fbbe15",
+            "checkpoint": "RECOVERY",
+            "trading_date": "2026-09-16",
+            "captured_at": "2026-09-16T06:30:04.326+00:00",
+            "market_session": "recovery",
+            "symbol": "US10Y",
+            "value": 100.1,
+            "change_percent": -0.1,
+            "source": "finnhub",
+            "source_timestamp": "2026-09-15T20:00:00+00:00",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "snapshot_version": 8,
+            "raw": {
+              "name": "美國10年債殖利率方向（proxy: inverse IEF ETF）",
+              "change": -0.1,
+              "market": "US",
+              "contract": "FETCH_CHECKPOINT_EVIDENCE_V1",
+              "source_raw": {
+                "quote": {
+                  "low": 99.1,
+                  "high": 101.1,
+                  "open": 100,
+                  "change": 0.1,
+                  "current": 100.1,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 0.1,
+                  "previous_close": 100
+                },
+                "provider": "finnhub",
+                "proxy_symbol": "IEF",
+                "finnhub_symbol": "IEF",
+                "proxy_semantics": "inverse_7_10y_treasury_price_proxy",
+                "direction_multiplier": -1
+              },
+              "source_symbol": "IEF"
+            },
+            "created_at": "2026-09-16T06:30:11.235893+00:00"
+          },
+          {
+            "id": "8fa407c3-e3cf-4f67-8fe8-14a3eefd4539",
+            "checkpoint": "RECOVERY",
+            "trading_date": "2026-09-16",
+            "captured_at": "2026-09-16T06:30:04.326+00:00",
+            "market_session": "recovery",
+            "symbol": "TAIEX",
+            "value": 25250,
+            "change_percent": 1,
+            "source": "fugle",
+            "source_timestamp": "2026-09-16T05:30:00+00:00",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "snapshot_version": 9,
+            "raw": {
+              "name": "台股加權指數",
+              "change": 250,
+              "market": "TW",
+              "contract": "FETCH_CHECKPOINT_EVIDENCE_V1",
+              "source_raw": {
+                "date": null,
+                "type": null,
+                "price": 25250,
+                "change": 250,
+                "market": null,
+                "exchange": null,
+                "provider": "fugle",
+                "captured_at": "2026-09-16T05:30:00.000Z",
+                "source_symbol": "IX0001",
+                "change_percent": 1
+              },
+              "source_symbol": "IX0001"
+            },
+            "created_at": "2026-09-16T06:30:11.262719+00:00"
+          },
+          {
+            "id": "8894cf78-3b56-400e-9943-2cd8f506f91c",
+            "checkpoint": "RECOVERY",
+            "trading_date": "2026-09-16",
+            "captured_at": "2026-09-16T06:30:04.326+00:00",
+            "market_session": "recovery",
+            "symbol": "2330",
+            "value": 1010,
+            "change_percent": 1,
+            "source": "fugle",
+            "source_timestamp": "2026-09-16T05:30:00+00:00",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "snapshot_version": 10,
+            "raw": {
+              "name": "台積電",
+              "change": 10,
+              "market": "TW",
+              "contract": "FETCH_CHECKPOINT_EVIDENCE_V1",
+              "source_raw": {
+                "date": null,
+                "type": null,
+                "price": 1010,
+                "change": 10,
+                "market": null,
+                "exchange": null,
+                "provider": "fugle",
+                "captured_at": "2026-09-16T05:30:00.000Z",
+                "source_symbol": "2330",
+                "change_percent": 1
+              },
+              "source_symbol": "2330"
+            },
+            "created_at": "2026-09-16T06:30:11.302444+00:00"
+          },
+          {
+            "id": "f560ed34-91c8-4074-8072-467dc10d0a01",
+            "checkpoint": "RECOVERY",
+            "trading_date": "2026-09-16",
+            "captured_at": "2026-09-16T06:30:04.326+00:00",
+            "market_session": "recovery",
+            "symbol": "TXF",
+            "value": 25350,
+            "change_percent": 0.99601593625498,
+            "source": "fugle_futopt",
+            "source_timestamp": "2026-09-16T05:45:00+00:00",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "snapshot_version": 11,
+            "raw": {
+              "name": "台指期",
+              "change": 250,
+              "market": "TW",
+              "contract": "FETCH_CHECKPOINT_EVIDENCE_V1",
+              "source_raw": {
+                "date": null,
+                "type": null,
+                "price": 25350,
+                "change": 250,
+                "market": null,
+                "product": "TXF",
+                "session": "afterhours",
+                "exchange": null,
+                "provider": "fugle_futopt",
+                "captured_at": "2026-09-16T05:45:00.000Z",
+                "fallback_used": false,
+                "source_symbol": "TXF1!",
+                "change_percent": 0.99601593625498,
+                "contract_resolution": "continuous_alias"
+              },
+              "source_symbol": "TXF1!"
+            },
+            "created_at": "2026-09-16T06:30:11.330511+00:00"
+          }
+        ]
+      },
+      "market_quotes": {
+        "http": 200,
+        "rows": [
+          {
+            "id": "d71c3a9a-1560-40a7-a16d-be1b01213c2a",
+            "provider": "finnhub",
+            "symbol": "SPX",
+            "source_symbol": "SPY",
+            "name": "S&P 500（proxy: SPY ETF proxy）",
+            "asset_type": "index",
+            "market": "US",
+            "trading_date": "2026-09-16",
+            "phase": "manual_backfill",
+            "value": 505,
+            "change_value": 5,
+            "change_percent": 1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "freshness_status": "provider_returned",
+            "quality_status": "verified",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "raw_payload": {
+              "quote": {
+                "change": 5,
+                "current": 505,
+                "change_percent": 1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 504,
+                  "high": 506,
+                  "open": 500,
+                  "change": 5,
+                  "current": 505,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 500
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "SPY"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "SPY",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "SPX",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 1
+            },
+            "ingested_at": "2026-09-16T06:30:10.854569+00:00"
+          },
+          {
+            "id": "97e89616-5bdf-46a4-93cb-29d5b5c29fbe",
+            "provider": "finnhub",
+            "symbol": "IXIC",
+            "source_symbol": "QQQ",
+            "name": "Nasdaq（proxy: QQQ ETF proxy）",
+            "asset_type": "index",
+            "market": "US",
+            "trading_date": "2026-09-16",
+            "phase": "manual_backfill",
+            "value": 505,
+            "change_value": 5,
+            "change_percent": 1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "freshness_status": "provider_returned",
+            "quality_status": "verified",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "raw_payload": {
+              "quote": {
+                "change": 5,
+                "current": 505,
+                "change_percent": 1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 504,
+                  "high": 506,
+                  "open": 500,
+                  "change": 5,
+                  "current": 505,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 500
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "QQQ"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "QQQ",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "IXIC",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 2
+            },
+            "ingested_at": "2026-09-16T06:30:11.001974+00:00"
+          },
+          {
+            "id": "dd46a21a-81de-4730-9985-0e3e58420291",
+            "provider": "finnhub",
+            "symbol": "SOX",
+            "source_symbol": "SOXX",
+            "name": "費城半導體指數（proxy: SOXX ETF proxy）",
+            "asset_type": "index",
+            "market": "US",
+            "trading_date": "2026-09-16",
+            "phase": "manual_backfill",
+            "value": 252.5,
+            "change_value": 2.5,
+            "change_percent": 1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "freshness_status": "provider_returned",
+            "quality_status": "verified",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "raw_payload": {
+              "quote": {
+                "change": 2.5,
+                "current": 252.5,
+                "change_percent": 1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 251.5,
+                  "high": 253.5,
+                  "open": 250,
+                  "change": 2.5,
+                  "current": 252.5,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 250
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "SOXX"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "SOXX",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "SOX",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 3
+            },
+            "ingested_at": "2026-09-16T06:30:11.072476+00:00"
+          },
+          {
+            "id": "dc137297-97e2-4cd0-af8c-3f67e37e2c11",
+            "provider": "finnhub",
+            "symbol": "NVDA",
+            "source_symbol": "NVDA",
+            "name": "Nvidia",
+            "asset_type": "equity",
+            "market": "US",
+            "trading_date": "2026-09-16",
+            "phase": "manual_backfill",
+            "value": 151.5,
+            "change_value": 1.5,
+            "change_percent": 1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "freshness_status": "provider_returned",
+            "quality_status": "verified",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "raw_payload": {
+              "quote": {
+                "change": 1.5,
+                "current": 151.5,
+                "change_percent": 1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 150.5,
+                  "high": 152.5,
+                  "open": 150,
+                  "change": 1.5,
+                  "current": 151.5,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 150
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "NVDA"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "NVDA",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "NVDA",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 4
+            },
+            "ingested_at": "2026-09-16T06:30:11.112155+00:00"
+          },
+          {
+            "id": "7848cb0f-5779-4dce-9927-b2e54ef66031",
+            "provider": "finnhub",
+            "symbol": "TSM",
+            "source_symbol": "TSM",
+            "name": "TSMC ADR",
+            "asset_type": "equity",
+            "market": "US",
+            "trading_date": "2026-09-16",
+            "phase": "manual_backfill",
+            "value": 202,
+            "change_value": 2,
+            "change_percent": 1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "freshness_status": "provider_returned",
+            "quality_status": "verified",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "raw_payload": {
+              "quote": {
+                "change": 2,
+                "current": 202,
+                "change_percent": 1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 201,
+                  "high": 203,
+                  "open": 200,
+                  "change": 2,
+                  "current": 202,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 200
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "TSM"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "TSM",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "TSM",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 5
+            },
+            "ingested_at": "2026-09-16T06:30:11.157257+00:00"
+          },
+          {
+            "id": "4eb992fd-e0fe-4754-b193-00b0db29d261",
+            "provider": "finnhub",
+            "symbol": "VIX",
+            "source_symbol": "VXX",
+            "name": "恐慌指數（proxy: VXX ETN proxy）",
+            "asset_type": "index",
+            "market": "US",
+            "trading_date": "2026-09-16",
+            "phase": "manual_backfill",
+            "value": 19.8,
+            "change_value": -0.2,
+            "change_percent": -1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "freshness_status": "provider_returned",
+            "quality_status": "verified",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "raw_payload": {
+              "quote": {
+                "change": -0.2,
+                "current": 19.8,
+                "change_percent": -1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 18.8,
+                  "high": 20.8,
+                  "open": 20,
+                  "change": -0.2,
+                  "current": 19.8,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": -1,
+                  "previous_close": 20
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "VXX"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "VXX",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "VIX",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 6
+            },
+            "ingested_at": "2026-09-16T06:30:11.188203+00:00"
+          },
+          {
+            "id": "17f4d94e-4c31-4116-9a24-5bc373cebf46",
+            "provider": "finnhub",
+            "symbol": "DXY",
+            "source_symbol": "UUP",
+            "name": "美元指數方向（proxy: UUP ETF）",
+            "asset_type": "index",
+            "market": "US",
+            "trading_date": "2026-09-16",
+            "phase": "manual_backfill",
+            "value": 100.1,
+            "change_value": 0.1,
+            "change_percent": 0.1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "freshness_status": "provider_returned",
+            "quality_status": "verified",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "raw_payload": {
+              "quote": {
+                "change": 0.1,
+                "current": 100.1,
+                "change_percent": 0.1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 99.1,
+                  "high": 101.1,
+                  "open": 100,
+                  "change": 0.1,
+                  "current": 100.1,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 0.1,
+                  "previous_close": 100
+                },
+                "provider": "finnhub",
+                "proxy_symbol": "UUP",
+                "finnhub_symbol": "UUP",
+                "proxy_semantics": "same_direction_us_dollar_proxy",
+                "direction_multiplier": 1
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "UUP",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "DXY",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 7
+            },
+            "ingested_at": "2026-09-16T06:30:11.219931+00:00"
+          },
+          {
+            "id": "ba97d3f6-0ce4-47c6-a971-93f7b447dd8a",
+            "provider": "finnhub",
+            "symbol": "US10Y",
+            "source_symbol": "IEF",
+            "name": "美國10年債殖利率方向（proxy: inverse IEF ETF）",
+            "asset_type": "index",
+            "market": "US",
+            "trading_date": "2026-09-16",
+            "phase": "manual_backfill",
+            "value": 100.1,
+            "change_value": -0.1,
+            "change_percent": -0.1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "freshness_status": "provider_returned",
+            "quality_status": "verified",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "raw_payload": {
+              "quote": {
+                "change": -0.1,
+                "current": 100.1,
+                "change_percent": -0.1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 99.1,
+                  "high": 101.1,
+                  "open": 100,
+                  "change": 0.1,
+                  "current": 100.1,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 0.1,
+                  "previous_close": 100
+                },
+                "provider": "finnhub",
+                "proxy_symbol": "IEF",
+                "finnhub_symbol": "IEF",
+                "proxy_semantics": "inverse_7_10y_treasury_price_proxy",
+                "direction_multiplier": -1
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "IEF",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "US10Y",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 8
+            },
+            "ingested_at": "2026-09-16T06:30:11.25458+00:00"
+          },
+          {
+            "id": "6377b7c0-4320-4174-8705-cb2b83b4a7ce",
+            "provider": "fugle",
+            "symbol": "TAIEX",
+            "source_symbol": "IX0001",
+            "name": "台股加權指數",
+            "asset_type": "index",
+            "market": "TW",
+            "trading_date": "2026-09-16",
+            "phase": "manual_backfill",
+            "value": 25250,
+            "change_value": 250,
+            "change_percent": 1,
+            "captured_at": "2026-09-16T05:30:00+00:00",
+            "freshness_status": "provider_returned",
+            "quality_status": "verified",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "raw_payload": {
+              "quote": {
+                "change": 250,
+                "current": 25250,
+                "change_percent": 1
+              },
+              "provider": "fugle",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "date": null,
+                "type": null,
+                "price": 25250,
+                "change": 250,
+                "market": null,
+                "exchange": null,
+                "provider": "fugle",
+                "captured_at": "2026-09-16T05:30:00.000Z",
+                "source_symbol": "IX0001",
+                "change_percent": 1
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": true,
+              "returned_date": "2026-09-16T05:30:00+00:00",
+              "source_symbol": "IX0001",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "TAIEX",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 60.2,
+              "immutable_snapshot_version": 9
+            },
+            "ingested_at": "2026-09-16T06:30:11.285099+00:00"
+          },
+          {
+            "id": "0d681a88-c1b3-4d97-badc-8fed34134e53",
+            "provider": "fugle",
+            "symbol": "2330",
+            "source_symbol": "2330",
+            "name": "台積電",
+            "asset_type": "equity",
+            "market": "TW",
+            "trading_date": "2026-09-16",
+            "phase": "manual_backfill",
+            "value": 1010,
+            "change_value": 10,
+            "change_percent": 1,
+            "captured_at": "2026-09-16T05:30:00+00:00",
+            "freshness_status": "provider_returned",
+            "quality_status": "verified",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "raw_payload": {
+              "quote": {
+                "change": 10,
+                "current": 1010,
+                "change_percent": 1
+              },
+              "provider": "fugle",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "date": null,
+                "type": null,
+                "price": 1010,
+                "change": 10,
+                "market": null,
+                "exchange": null,
+                "provider": "fugle",
+                "captured_at": "2026-09-16T05:30:00.000Z",
+                "source_symbol": "2330",
+                "change_percent": 1
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-16T05:30:00+00:00",
+              "source_symbol": "2330",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "2330",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 60.2,
+              "immutable_snapshot_version": 10
+            },
+            "ingested_at": "2026-09-16T06:30:11.323614+00:00"
+          },
+          {
+            "id": "db2ac7e4-271d-42ff-9795-7224f39500da",
+            "provider": "fugle_futopt",
+            "symbol": "TXF",
+            "source_symbol": "TXF1!",
+            "name": "台指期",
+            "asset_type": "future",
+            "market": "TW",
+            "trading_date": "2026-09-16",
+            "phase": "manual_backfill",
+            "value": 25350,
+            "change_value": 250,
+            "change_percent": 0.996016,
+            "captured_at": "2026-09-16T05:45:00+00:00",
+            "freshness_status": "provider_returned",
+            "quality_status": "verified",
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "raw_payload": {
+              "quote": {
+                "change": 250,
+                "current": 25350,
+                "change_percent": 0.99601593625498
+              },
+              "provider": "fugle_futopt",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "date": null,
+                "type": null,
+                "price": 25350,
+                "change": 250,
+                "market": null,
+                "product": "TXF",
+                "session": "afterhours",
+                "exchange": null,
+                "provider": "fugle_futopt",
+                "captured_at": "2026-09-16T05:45:00.000Z",
+                "fallback_used": false,
+                "source_symbol": "TXF1!",
+                "change_percent": 0.99601593625498,
+                "contract_resolution": "continuous_alias"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": true,
+              "returned_date": "2026-09-16T05:45:00+00:00",
+              "source_symbol": "TXF1!",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "TXF",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 45.2,
+              "immutable_snapshot_version": 11
+            },
+            "ingested_at": "2026-09-16T06:30:11.354333+00:00"
+          }
+        ]
+      },
+      "market_data_snapshots": {
+        "http": 200,
+        "rows": [
+          {
+            "id": "e07e3820-eced-4747-8460-e3922a1a8856",
+            "symbol": "SPX",
+            "name": "S&P 500（proxy: SPY ETF proxy）",
+            "market": "US",
+            "value": 505,
+            "change_percent": 1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "source": "finnhub",
+            "phase": "manual_backfill",
+            "trading_date": "2026-09-16",
+            "raw": {
+              "quote": {
+                "change": 5,
+                "current": 505,
+                "change_percent": 1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 504,
+                  "high": 506,
+                  "open": 500,
+                  "change": 5,
+                  "current": 505,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 500
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "SPY"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "SPY",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "SPX",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 1
+            },
+            "created_at": "2026-09-16T06:30:10.83435+00:00",
+            "checkpoint": "manual"
+          },
+          {
+            "id": "2ccf0b79-79ce-4848-bafe-7d1cb74bb129",
+            "symbol": "IXIC",
+            "name": "Nasdaq（proxy: QQQ ETF proxy）",
+            "market": "US",
+            "value": 505,
+            "change_percent": 1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "source": "finnhub",
+            "phase": "manual_backfill",
+            "trading_date": "2026-09-16",
+            "raw": {
+              "quote": {
+                "change": 5,
+                "current": 505,
+                "change_percent": 1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 504,
+                  "high": 506,
+                  "open": 500,
+                  "change": 5,
+                  "current": 505,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 500
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "QQQ"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "QQQ",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "IXIC",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 2
+            },
+            "created_at": "2026-09-16T06:30:10.991605+00:00",
+            "checkpoint": "manual"
+          },
+          {
+            "id": "58ecfb6b-97a4-42a1-9e07-ee9570f6ca9b",
+            "symbol": "SOX",
+            "name": "費城半導體指數（proxy: SOXX ETF proxy）",
+            "market": "US",
+            "value": 252.5,
+            "change_percent": 1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "source": "finnhub",
+            "phase": "manual_backfill",
+            "trading_date": "2026-09-16",
+            "raw": {
+              "quote": {
+                "change": 2.5,
+                "current": 252.5,
+                "change_percent": 1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 251.5,
+                  "high": 253.5,
+                  "open": 250,
+                  "change": 2.5,
+                  "current": 252.5,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 250
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "SOXX"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "SOXX",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "SOX",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 3
+            },
+            "created_at": "2026-09-16T06:30:11.063282+00:00",
+            "checkpoint": "manual"
+          },
+          {
+            "id": "2bdd3bf8-763f-4bf2-895e-7e375efda495",
+            "symbol": "NVDA",
+            "name": "Nvidia",
+            "market": "US",
+            "value": 151.5,
+            "change_percent": 1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "source": "finnhub",
+            "phase": "manual_backfill",
+            "trading_date": "2026-09-16",
+            "raw": {
+              "quote": {
+                "change": 1.5,
+                "current": 151.5,
+                "change_percent": 1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 150.5,
+                  "high": 152.5,
+                  "open": 150,
+                  "change": 1.5,
+                  "current": 151.5,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 150
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "NVDA"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "NVDA",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "NVDA",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 4
+            },
+            "created_at": "2026-09-16T06:30:11.106597+00:00",
+            "checkpoint": "manual"
+          },
+          {
+            "id": "461f231c-10ec-4e3e-9dfe-57b620192792",
+            "symbol": "TSM",
+            "name": "TSMC ADR",
+            "market": "US",
+            "value": 202,
+            "change_percent": 1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "source": "finnhub",
+            "phase": "manual_backfill",
+            "trading_date": "2026-09-16",
+            "raw": {
+              "quote": {
+                "change": 2,
+                "current": 202,
+                "change_percent": 1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 201,
+                  "high": 203,
+                  "open": 200,
+                  "change": 2,
+                  "current": 202,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 1,
+                  "previous_close": 200
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "TSM"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "TSM",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "TSM",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 5
+            },
+            "created_at": "2026-09-16T06:30:11.14646+00:00",
+            "checkpoint": "manual"
+          },
+          {
+            "id": "2520742d-f2d7-49ce-a014-f267f65281f9",
+            "symbol": "VIX",
+            "name": "恐慌指數（proxy: VXX ETN proxy）",
+            "market": "US",
+            "value": 19.8,
+            "change_percent": -1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "source": "finnhub",
+            "phase": "manual_backfill",
+            "trading_date": "2026-09-16",
+            "raw": {
+              "quote": {
+                "change": -0.2,
+                "current": 19.8,
+                "change_percent": -1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 18.8,
+                  "high": 20.8,
+                  "open": 20,
+                  "change": -0.2,
+                  "current": 19.8,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": -1,
+                  "previous_close": 20
+                },
+                "provider": "finnhub",
+                "finnhub_symbol": "VXX"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "VXX",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "VIX",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 6
+            },
+            "created_at": "2026-09-16T06:30:11.181913+00:00",
+            "checkpoint": "manual"
+          },
+          {
+            "id": "6db19eb9-c094-445b-a15b-5691adc6d301",
+            "symbol": "DXY",
+            "name": "美元指數方向（proxy: UUP ETF）",
+            "market": "US",
+            "value": 100.1,
+            "change_percent": 0.1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "source": "finnhub",
+            "phase": "manual_backfill",
+            "trading_date": "2026-09-16",
+            "raw": {
+              "quote": {
+                "change": 0.1,
+                "current": 100.1,
+                "change_percent": 0.1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 99.1,
+                  "high": 101.1,
+                  "open": 100,
+                  "change": 0.1,
+                  "current": 100.1,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 0.1,
+                  "previous_close": 100
+                },
+                "provider": "finnhub",
+                "proxy_symbol": "UUP",
+                "finnhub_symbol": "UUP",
+                "proxy_semantics": "same_direction_us_dollar_proxy",
+                "direction_multiplier": 1
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "UUP",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "DXY",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 7
+            },
+            "created_at": "2026-09-16T06:30:11.215625+00:00",
+            "checkpoint": "manual"
+          },
+          {
+            "id": "f8bd593f-1c7f-4571-9641-839a734b3628",
+            "symbol": "US10Y",
+            "name": "美國10年債殖利率方向（proxy: inverse IEF ETF）",
+            "market": "US",
+            "value": 100.1,
+            "change_percent": -0.1,
+            "captured_at": "2026-09-15T20:00:00+00:00",
+            "source": "finnhub",
+            "phase": "manual_backfill",
+            "trading_date": "2026-09-16",
+            "raw": {
+              "quote": {
+                "change": -0.1,
+                "current": 100.1,
+                "change_percent": -0.1
+              },
+              "provider": "finnhub",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "quote": {
+                  "low": 99.1,
+                  "high": 101.1,
+                  "open": 100,
+                  "change": 0.1,
+                  "current": 100.1,
+                  "timestamp": 1789502400,
+                  "captured_at": "2026-09-15T20:00:00.000Z",
+                  "change_percent": 0.1,
+                  "previous_close": 100
+                },
+                "provider": "finnhub",
+                "proxy_symbol": "IEF",
+                "finnhub_symbol": "IEF",
+                "proxy_semantics": "inverse_7_10y_treasury_price_proxy",
+                "direction_multiplier": -1
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-15T20:00:00+00:00",
+              "source_symbol": "IEF",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "US10Y",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 630.2,
+              "immutable_snapshot_version": 8
+            },
+            "created_at": "2026-09-16T06:30:11.25065+00:00",
+            "checkpoint": "manual"
+          },
+          {
+            "id": "0222b08b-c676-47a7-8b9d-f3f789a3c248",
+            "symbol": "TAIEX",
+            "name": "台股加權指數",
+            "market": "TW",
+            "value": 25250,
+            "change_percent": 1,
+            "captured_at": "2026-09-16T05:30:00+00:00",
+            "source": "fugle",
+            "phase": "manual_backfill",
+            "trading_date": "2026-09-16",
+            "raw": {
+              "quote": {
+                "change": 250,
+                "current": 25250,
+                "change_percent": 1
+              },
+              "provider": "fugle",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "date": null,
+                "type": null,
+                "price": 25250,
+                "change": 250,
+                "market": null,
+                "exchange": null,
+                "provider": "fugle",
+                "captured_at": "2026-09-16T05:30:00.000Z",
+                "source_symbol": "IX0001",
+                "change_percent": 1
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": true,
+              "returned_date": "2026-09-16T05:30:00+00:00",
+              "source_symbol": "IX0001",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "TAIEX",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 60.2,
+              "immutable_snapshot_version": 9
+            },
+            "created_at": "2026-09-16T06:30:11.279063+00:00",
+            "checkpoint": "manual"
+          },
+          {
+            "id": "fe0c7efd-ba6c-4d87-b63e-8811ddbbbc66",
+            "symbol": "2330",
+            "name": "台積電",
+            "market": "TW",
+            "value": 1010,
+            "change_percent": 1,
+            "captured_at": "2026-09-16T05:30:00+00:00",
+            "source": "fugle",
+            "phase": "manual_backfill",
+            "trading_date": "2026-09-16",
+            "raw": {
+              "quote": {
+                "change": 10,
+                "current": 1010,
+                "change_percent": 1
+              },
+              "provider": "fugle",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "date": null,
+                "type": null,
+                "price": 1010,
+                "change": 10,
+                "market": null,
+                "exchange": null,
+                "provider": "fugle",
+                "captured_at": "2026-09-16T05:30:00.000Z",
+                "source_symbol": "2330",
+                "change_percent": 1
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": false,
+              "returned_date": "2026-09-16T05:30:00+00:00",
+              "source_symbol": "2330",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "2330",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 60.2,
+              "immutable_snapshot_version": 10
+            },
+            "created_at": "2026-09-16T06:30:11.318987+00:00",
+            "checkpoint": "manual"
+          },
+          {
+            "id": "989388c4-b053-479e-91ec-2983b14cfa0e",
+            "symbol": "TXF",
+            "name": "台指期",
+            "market": "TW",
+            "value": 25350,
+            "change_percent": 0.99601593625498,
+            "captured_at": "2026-09-16T05:45:00+00:00",
+            "source": "fugle_futopt",
+            "phase": "manual_backfill",
+            "trading_date": "2026-09-16",
+            "raw": {
+              "quote": {
+                "change": 250,
+                "current": 25350,
+                "change_percent": 0.99601593625498
+              },
+              "provider": "fugle_futopt",
+              "checkpoint": "manual",
+              "request_id": "8139c37c",
+              "source_raw": {
+                "date": null,
+                "type": null,
+                "price": 25350,
+                "change": 250,
+                "market": null,
+                "product": "TXF",
+                "session": "afterhours",
+                "exchange": null,
+                "provider": "fugle_futopt",
+                "captured_at": "2026-09-16T05:45:00.000Z",
+                "fallback_used": false,
+                "source_symbol": "TXF1!",
+                "change_percent": 0.99601593625498,
+                "contract_resolution": "continuous_alias"
+              },
+              "requested_at": "2026-09-16T06:30:04.326Z",
+              "fallback_used": true,
+              "returned_date": "2026-09-16T05:45:00+00:00",
+              "source_symbol": "TXF1!",
+              "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "display_symbol": "TXF",
+              "freshness_status": "provider_returned",
+              "immutable_checkpoint": "RECOVERY",
+              "captured_session_date": "2026-09-16",
+              "freshness_age_minutes": 45.2,
+              "immutable_snapshot_version": 11
+            },
+            "created_at": "2026-09-16T06:30:11.350683+00:00",
+            "checkpoint": "manual"
+          }
+        ]
+      },
+      "data_provider_health": {
+        "http": 200,
+        "rows": [
+          {
+            "id": "267b5398-26e8-4025-aef3-cf573e3e8cf0",
+            "provider": "market_fetch_v10",
+            "service_date": "2026-09-16",
+            "phase": "manual_backfill",
+            "status": "healthy",
+            "success_rate": 100,
+            "requested_count": 11,
+            "succeeded_count": 11,
+            "failed_count": 0,
+            "latency_ms": 7043,
+            "timed_out": false,
+            "last_error_code": null,
+            "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "details": {
+              "fetch_strategy": "parallel_provider_lanes",
+              "provider_lanes": [
+                {
+                  "name": "GLOBAL",
+                  "symbols": [
+                    "SPX",
+                    "IXIC",
+                    "SOX",
+                    "NVDA",
+                    "TSM",
+                    "VIX",
+                    "DXY",
+                    "US10Y"
+                  ]
+                },
+                {
+                  "name": "TAIWAN",
+                  "symbols": [
+                    "TAIEX",
+                    "2330",
+                    "TXF"
+                  ]
+                }
+              ],
+              "fetch_timeout_ms": 60000,
+              "provider_failures": [],
+              "snapshot_complete": true,
+              "beneficiary_lookup": {
+                "error": null,
+                "configs": [],
+                "v10Enabled": false,
+                "sourceField": "not_requested",
+                "decisionMode": "blocked",
+                "lookupStatus": "not_requested",
+                "contractValid": false,
+                "sourceRowCount": 0,
+                "invalidRowCount": 0
+              },
+              "canonical_complete": true,
+              "core_batch_complete": true,
+              "providers_by_symbol": {
+                "2330": "fugle",
+                "DXY": "finnhub",
+                "SOX": "finnhub",
+                "SPX": "finnhub",
+                "TSM": "finnhub",
+                "TXF": "fugle_futopt",
+                "VIX": "finnhub",
+                "IXIC": "finnhub",
+                "NVDA": "finnhub",
+                "TAIEX": "fugle",
+                "US10Y": "finnhub"
+              },
+              "required_core_symbols": [
+                "NVDA",
+                "TSM",
+                "SPX"
+              ],
+              "canonical_write_errors": [],
+              "required_core_complete": true,
+              "beneficiary_close_status": {
+                "status": "NOT_REQUESTED",
+                "complete": false,
+                "failed_count": 0,
+                "decision_mode": "blocked",
+                "lookup_status": "not_requested",
+                "contract_valid": false,
+                "failed_symbols": [],
+                "requested_count": 0,
+                "succeeded_count": 0,
+                "requested_symbols": [],
+                "succeeded_symbols": []
+              },
+              "has_provider_degradation": false,
+              "immutable_evidence_complete": true,
+              "immutable_snapshot_versions": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+              ]
+            },
+            "checked_at": "2026-09-16T06:30:11.369+00:00",
+            "checkpoint": "manual"
+          }
+        ]
+      },
+      "trading_day_state": {
+        "http": 200,
+        "rows": [
+          {
+            "trading_date": "2026-09-16",
+            "current_state": "MANUAL_CAPTURED",
+            "state_rank": 0,
+            "checkpoint_status": {
+              "manual": {
+                "state": "MANUAL_CAPTURED",
+                "status": "SUCCEEDED",
+                "metadata": {
+                  "phase": "manual_backfill",
+                  "failed_symbols": [],
+                  "requested_count": 11,
+                  "canonical_complete": true,
+                  "core_batch_complete": true,
+                  "related_core_health": {
+                    "error": null,
+                    "status": "healthy",
+                    "healthy": true,
+                    "evidence_complete": true
+                  },
+                  "required_core_symbols": [
+                    "NVDA",
+                    "TSM",
+                    "SPX"
+                  ],
+                  "provider_failure_codes": [],
+                  "required_core_complete": true,
+                  "evidence_correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+                  "snapshot_upserted_count": 11,
+                  "beneficiary_close_status": {
+                    "status": "NOT_REQUESTED",
+                    "complete": false,
+                    "failed_count": 0,
+                    "decision_mode": "blocked",
+                    "lookup_status": "not_requested",
+                    "contract_valid": false,
+                    "failed_symbols": [],
+                    "requested_count": 0,
+                    "succeeded_count": 0,
+                    "requested_symbols": [],
+                    "succeeded_symbols": []
+                  },
+                  "canonical_upserted_count": 11,
+                  "immutable_evidence_complete": true,
+                  "immutable_snapshot_versions": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    11
+                  ]
+                },
+                "updated_at": "2026-09-16T06:30:11.383311+00:00",
+                "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956"
+              }
+            },
+            "last_correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+            "last_metadata": {
+              "phase": "manual_backfill",
+              "failed_symbols": [],
+              "requested_count": 11,
+              "canonical_complete": true,
+              "core_batch_complete": true,
+              "related_core_health": {
+                "error": null,
+                "status": "healthy",
+                "healthy": true,
+                "evidence_complete": true
+              },
+              "required_core_symbols": [
+                "NVDA",
+                "TSM",
+                "SPX"
+              ],
+              "provider_failure_codes": [],
+              "required_core_complete": true,
+              "evidence_correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+              "snapshot_upserted_count": 11,
+              "beneficiary_close_status": {
+                "status": "NOT_REQUESTED",
+                "complete": false,
+                "failed_count": 0,
+                "decision_mode": "blocked",
+                "lookup_status": "not_requested",
+                "contract_valid": false,
+                "failed_symbols": [],
+                "requested_count": 0,
+                "succeeded_count": 0,
+                "requested_symbols": [],
+                "succeeded_symbols": []
+              },
+              "canonical_upserted_count": 11,
+              "immutable_evidence_complete": true,
+              "immutable_snapshot_versions": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+              ]
+            },
+            "completed_at": null,
+            "created_at": "2026-09-16T06:30:11.383311+00:00",
+            "updated_at": "2026-09-16T06:30:11.383311+00:00"
+          }
+        ]
+      },
+      "reports": {
+        "http": 200,
+        "rows": []
+      },
+      "decision_snapshots": {
+        "http": 200,
+        "rows": []
+      },
+      "line_delivery_outbox": {
+        "http": 200,
+        "rows": []
+      },
+      "line_subscribers": {
+        "http": 200,
+        "rows": []
+      },
+      "learning_runs": {
+        "http": 200,
+        "rows": []
+      },
+      "learning_predictions": {
+        "http": 200,
+        "rows": []
+      },
+      "prediction_outcomes": {
+        "http": 200,
+        "rows": []
+      },
+      "news_events": {
+        "http": 200,
+        "rows": []
+      },
+      "market_news": {
+        "http": 200,
+        "rows": []
+      },
+      "sector_rotation_scores": {
+        "http": 200,
+        "rows": []
+      },
+      "pipeline_runs": {
+        "http": 200,
+        "rows": []
+      },
+      "member_content_revisions": {
+        "http": 200,
+        "rows": []
+      },
+      "production_acceptance_results": {
+        "http": 200,
+        "rows": []
+      },
+      "runtime_http_dispatches": {
+        "http": 200,
+        "rows": []
+      },
+      "runtime_dead_letters": {
+        "http": 200,
+        "rows": []
+      },
+      "ma_ops_runs": {
+        "http": 200,
+        "rows": []
+      }
+    },
+    "boundary": {
+      "success": true,
+      "scope": "ma-consolidation-v1-20260909154500",
+      "receipts": [
+        {
+          "id": "aea5c570-6f22-4b2d-972c-c54aa4c2b96f",
+          "scope": "ma-consolidation-v1-20260909154500",
+          "observed_at": "2026-09-16T06:30:04.520Z",
+          "provider": "finnhub",
+          "operation": "quote",
+          "fixture_id": "synthetic-full-chain-market-control-20260917",
+          "phase": "prior-close-warmup",
+          "request_sha256": "ae7a5e74a07e8fa55e5c9b6d8152590a359308a1037669f0bcf7e4e672bedd6a",
+          "response_sha256": "e582aff0ef9b5ce7d88913850f1fa868a3254136f7cd3987791027489bf202a1",
+          "status": 200,
+          "source_kind": "SYNTHETIC_PROVIDER_CONTROL",
+          "historical_capture": false
+        },
+        {
+          "id": "e2a69538-f60e-41a1-a315-788d4fbdaf54",
+          "scope": "ma-consolidation-v1-20260909154500",
+          "observed_at": "2026-09-16T06:30:04.524Z",
+          "provider": "fugle",
+          "operation": "quote",
+          "fixture_id": "synthetic-full-chain-market-control-20260917",
+          "phase": "prior-close-warmup",
+          "request_sha256": "d1b7322bc87560fa45ceb6ae8bb3df633537b1c316d13ae726a4fa1140b1020d",
+          "response_sha256": "f27ae0aaf369b7df77865be62d36bcf77b85323ef1bf9f2f5203cb54b5562ca0",
+          "status": 200,
+          "source_kind": "SYNTHETIC_PROVIDER_CONTROL",
+          "historical_capture": false
+        },
+        {
+          "id": "baf7f77c-2578-4b76-8062-d82c2a6009ab",
+          "scope": "ma-consolidation-v1-20260909154500",
+          "observed_at": "2026-09-16T06:30:05.355Z",
+          "provider": "finnhub",
+          "operation": "quote",
+          "fixture_id": "synthetic-full-chain-market-control-20260917",
+          "phase": "prior-close-warmup",
+          "request_sha256": "63724f133e79ac2bf0183c1aeace1f18eaed394dae83047988dedfd359a8a502",
+          "response_sha256": "e582aff0ef9b5ce7d88913850f1fa868a3254136f7cd3987791027489bf202a1",
+          "status": 200,
+          "source_kind": "SYNTHETIC_PROVIDER_CONTROL",
+          "historical_capture": false
+        },
+        {
+          "id": "c401d684-0f33-4e6f-a42c-12e935b64988",
+          "scope": "ma-consolidation-v1-20260909154500",
+          "observed_at": "2026-09-16T06:30:05.357Z",
+          "provider": "fugle",
+          "operation": "quote",
+          "fixture_id": "synthetic-full-chain-market-control-20260917",
+          "phase": "prior-close-warmup",
+          "request_sha256": "433c28cc81f27dac430f71b76cc0fb5efb2aedff27cd1de9b1eabbd5cc272d34",
+          "response_sha256": "de30f57c54dae398fd7146d4c52ec83a6e0048901bfb63e5672995fcfa93cbf0",
+          "status": 200,
+          "source_kind": "SYNTHETIC_PROVIDER_CONTROL",
+          "historical_capture": false
+        },
+        {
+          "id": "550c84b7-2497-4426-bd4e-b15b99d255cf",
+          "scope": "ma-consolidation-v1-20260909154500",
+          "observed_at": "2026-09-16T06:30:06.309Z",
+          "provider": "finnhub",
+          "operation": "quote",
+          "fixture_id": "synthetic-full-chain-market-control-20260917",
+          "phase": "prior-close-warmup",
+          "request_sha256": "eb08e10543c5a43cb73f3920acf834e141ada3348208f2a8aa1ceff0b15ed4d2",
+          "response_sha256": "dc9601e9d62fc618eda3af4b09916abf5ec0bd4eb156d52386720114ca0d2241",
+          "status": 200,
+          "source_kind": "SYNTHETIC_PROVIDER_CONTROL",
+          "historical_capture": false
+        },
+        {
+          "id": "0239b2db-4be0-4654-bc29-9590d18ae2f6",
+          "scope": "ma-consolidation-v1-20260909154500",
+          "observed_at": "2026-09-16T06:30:06.349Z",
+          "provider": "fugle",
+          "operation": "quote",
+          "fixture_id": "synthetic-full-chain-market-control-20260917",
+          "phase": "prior-close-warmup",
+          "request_sha256": "c8ff5b6832a649173c18c775570c539c7db6544abbadcf74a7fb0c6f09b980ae",
+          "response_sha256": "667e8eee4d435aa6bb9c6ad847191bf0daa0af1f753531d69d5e433b2e44c8f3",
+          "status": 200,
+          "source_kind": "SYNTHETIC_PROVIDER_CONTROL",
+          "historical_capture": false
+        },
+        {
+          "id": "8861b901-e3aa-4ab2-a863-6c94af36c503",
+          "scope": "ma-consolidation-v1-20260909154500",
+          "observed_at": "2026-09-16T06:30:07.302Z",
+          "provider": "finnhub",
+          "operation": "quote",
+          "fixture_id": "synthetic-full-chain-market-control-20260917",
+          "phase": "prior-close-warmup",
+          "request_sha256": "2584eb715987c4cc14589d502627f55d45d06409657c236e15206aeba6c1098f",
+          "response_sha256": "ecd30a046f485d59125962b148c308f2365b5697cbee63b85d5ebff8876d5743",
+          "status": 200,
+          "source_kind": "SYNTHETIC_PROVIDER_CONTROL",
+          "historical_capture": false
+        },
+        {
+          "id": "ae75237f-e73d-4e22-8ed8-4f12b8d0b170",
+          "scope": "ma-consolidation-v1-20260909154500",
+          "observed_at": "2026-09-16T06:30:08.137Z",
+          "provider": "finnhub",
+          "operation": "quote",
+          "fixture_id": "synthetic-full-chain-market-control-20260917",
+          "phase": "prior-close-warmup",
+          "request_sha256": "1cf0c10514a573f0926254de46c08508c579a6f0dcec2a85d49c770eb5c8a8b4",
+          "response_sha256": "9b4f784056e17186bc3eca8c040684decf420546123dcee921005b2a4f81cb20",
+          "status": 200,
+          "source_kind": "SYNTHETIC_PROVIDER_CONTROL",
+          "historical_capture": false
+        },
+        {
+          "id": "bbe48ef1-aa4f-416d-a58b-9b7cd6a94d22",
+          "scope": "ma-consolidation-v1-20260909154500",
+          "observed_at": "2026-09-16T06:30:08.985Z",
+          "provider": "finnhub",
+          "operation": "quote",
+          "fixture_id": "synthetic-full-chain-market-control-20260917",
+          "phase": "prior-close-warmup",
+          "request_sha256": "77bf8e55e629b8753d197bdcf06e5f76c6bc7481cc9de630329e2c5295ea4cde",
+          "response_sha256": "ef85f9e5819e7df126feaa5d851703284c698e691a6340a95701e7060b0a6b70",
+          "status": 200,
+          "source_kind": "SYNTHETIC_PROVIDER_CONTROL",
+          "historical_capture": false
+        },
+        {
+          "id": "5713be23-dffc-4490-9367-239b28a5a735",
+          "scope": "ma-consolidation-v1-20260909154500",
+          "observed_at": "2026-09-16T06:30:09.883Z",
+          "provider": "finnhub",
+          "operation": "quote",
+          "fixture_id": "synthetic-full-chain-market-control-20260917",
+          "phase": "prior-close-warmup",
+          "request_sha256": "1cc8060e8fe9f40839470fb73ede660e001cdbea3f82c2947b52104402f95295",
+          "response_sha256": "cab6988b2da6b21cb2364088875850dddba59b63bed9b4a12a0e847b06c2c487",
+          "status": 200,
+          "source_kind": "SYNTHETIC_PROVIDER_CONTROL",
+          "historical_capture": false
+        },
+        {
+          "id": "2f67458d-7d18-45dc-a630-60ebf9af84e3",
+          "scope": "ma-consolidation-v1-20260909154500",
+          "observed_at": "2026-09-16T06:30:10.746Z",
+          "provider": "finnhub",
+          "operation": "quote",
+          "fixture_id": "synthetic-full-chain-market-control-20260917",
+          "phase": "prior-close-warmup",
+          "request_sha256": "45062767dee6cfad1bb6719b0ff5ce8a20bb225031fd4fc05aac1e9a16f4c2e2",
+          "response_sha256": "cab6988b2da6b21cb2364088875850dddba59b63bed9b4a12a0e847b06c2c487",
+          "status": 200,
+          "source_kind": "SYNTHETIC_PROVIDER_CONTROL",
+          "historical_capture": false
+        }
+      ]
+    },
+    "business_writes_by_diagnostic": 0,
+    "production_requests": 0
+  },
+  "priorResult": {
+    "schema_version": "CORE_CONSOLIDATION_FULL_CHAIN_RESULT_V1",
+    "run_id": "e9c6cebd-7431-42c2-90f1-aa09233ecbae",
+    "scope": "ma-consolidation-v1-20260909154500",
+    "status": "FAIL",
+    "scenario_kind": "SYNTHETIC_MARKET_READY_STOCK_BLOCKED_CONTROL",
+    "historical_success_claim": false,
+    "automatic_stable_day": false,
+    "production_requests": 0,
+    "provider_delivery": "SYNTHETIC_LOCAL_BOUNDARY",
+    "natural_scheduler_executed": false,
+    "terminal_lifecycle_path": "ACTUAL_MANUAL_RECOVERY_HANDLER",
+    "full_persisted_chain_executed": false,
+    "records": [
+      {
+        "run_id": "e9c6cebd-7431-42c2-90f1-aa09233ecbae",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "historical-evidence-boundary",
+        "recorded_at_host": "2026-09-09T08:02:02.175Z",
+        "historical_captures": [
+          {
+            "fixture_id": "2026-09-07-fetch-persistence",
+            "source_capture_available": false,
+            "exact_historical_full_chain": "UNKNOWN",
+            "observed": {
+              "immutable_checkpoint_rows": [],
+              "acceptance_verdict": "FAIL",
+              "blocking_checks": [
+                "CANONICAL_NOT_READY",
+                "REPORT_REVISION_MISMATCH",
+                "INPUT_LINEAGE_UNVERIFIED",
+                "SOURCE_COMPLETENESS_UNVERIFIED",
+                "RESEARCH_NOT_READY",
+                "QUALITY_COUNTER_DUPLICATE_CLAIMS",
+                "EDITORIAL_NOT_APPROVED",
+                "PREMIUM_SEMANTIC_NOT_PASSED",
+                "CANONICAL_OUTPUT_DIVERGENCE",
+                "NORMAL_REPORT_LINE_NOT_COMPLETE",
+                "PREMARKET_HEALTH_UNVERIFIED",
+                "CHECKPOINT_0900_TAIEX_EVIDENCE_MISSING",
+                "CHECKPOINT_0900_2330_EVIDENCE_MISSING",
+                "CHECKPOINT_0900_TXF_EVIDENCE_MISSING",
+                "CHECKPOINT_0930_TAIEX_EVIDENCE_MISSING",
+                "CHECKPOINT_0930_2330_EVIDENCE_MISSING",
+                "CHECKPOINT_0930_TXF_EVIDENCE_MISSING",
+                "CHECKPOINT_1030_TAIEX_EVIDENCE_MISSING",
+                "CHECKPOINT_1030_2330_EVIDENCE_MISSING",
+                "CHECKPOINT_1030_TXF_EVIDENCE_MISSING",
+                "CHECKPOINT_1300_TAIEX_EVIDENCE_MISSING",
+                "CHECKPOINT_1300_2330_EVIDENCE_MISSING",
+                "CHECKPOINT_1300_TXF_EVIDENCE_MISSING",
+                "CHECKPOINT_1410_TAIEX_EVIDENCE_MISSING",
+                "CHECKPOINT_1410_2330_EVIDENCE_MISSING",
+                "CHECKPOINT_1410_TXF_EVIDENCE_MISSING",
+                "CHECKPOINT_1430_TAIEX_EVIDENCE_MISSING",
+                "CHECKPOINT_1430_2330_EVIDENCE_MISSING",
+                "CHECKPOINT_1430_TXF_EVIDENCE_MISSING",
+                "CLOSING_REVISION_UNVERIFIED",
+                "LEARNING_REVISION_UNVERIFIED",
+                "RUNTIME_FAILURE_PRESENT"
+              ],
+              "normal_report_line_count": 0,
+              "failed_dispatches": 4,
+              "automatic_stable_day": false
+            }
+          },
+          {
+            "fixture_id": "2026-09-08-quality-projection",
+            "source_capture_available": false,
+            "exact_historical_full_chain": "UNKNOWN",
+            "observed": {
+              "generated_at": "2026-09-07T23:35:11.857Z",
+              "research_quality": {
+                "publish_status": "degraded",
+                "evidence_coverage": 79,
+                "duplicate_claim_count": 1,
+                "unsupported_claims": [
+                  {
+                    "symbol": "3034",
+                    "reason": "evidence_relationship_not_supported",
+                    "claim_sha256": "c6ec56a270cc5482c4dee3c185843d2443a4398baa65ace4da3f8093afc4cb75"
+                  },
+                  {
+                    "symbol": "3529",
+                    "reason": "evidence_relationship_not_supported",
+                    "claim_sha256": "fd3fe8fb210cb9903d4b68f9bce3d25f5114e9817f9bd9cb17efa1813bb0a806"
+                  },
+                  {
+                    "symbol": "4763",
+                    "reason": "evidence_relationship_not_supported",
+                    "claim_sha256": "450d093e59be45f5795d5877dd73c47552026890da8541e370e60633be8192e9"
+                  },
+                  {
+                    "symbol": "3131",
+                    "reason": "evidence_relationship_not_supported",
+                    "claim_sha256": "579d56ec3ad2e9d5d06a5e7c39c657fef0c7192d47ee131f0e7ff66b2d1747ce"
+                  }
+                ]
+              },
+              "canonical": {
+                "status": "PARTIAL",
+                "action": "STOP",
+                "decision_mode": "blocked"
+              },
+              "legacy_aliases": {
+                "v8_daily_sentence_status": "ready",
+                "v8_daily_sentence_decision_mode": "recommendations",
+                "confidence_score": 100,
+                "closing_status": "completed",
+                "runtime_lifecycle_complete": true
+              },
+              "premium_content_status": "blocked",
+              "automatic_stable_day": false
+            }
+          },
+          {
+            "fixture_id": "2026-09-09-premarket-quality",
+            "source_capture_available": false,
+            "exact_historical_full_chain": "UNKNOWN",
+            "observed": {
+              "generated_at": "2026-09-08T23:35:17.363Z",
+              "fetch_version": 64,
+              "immutable_premarket_count": 11,
+              "required_core_lineage": [
+                {
+                  "symbol": "2330",
+                  "source_symbol": "2330",
+                  "provider": "fugle",
+                  "value": "2470",
+                  "change_percent": "0.41",
+                  "snapshot_version": 478,
+                  "canonical_immutable_version": "478",
+                  "compatibility_immutable_version": "478",
+                  "captured_at": "2026-09-08 23:00:02.809+00",
+                  "source_timestamp": "2026-09-08 05:30:00+00",
+                  "canonical_values_match": true
+                },
+                {
+                  "symbol": "NVDA",
+                  "source_symbol": "NVDA",
+                  "provider": "finnhub",
+                  "value": "225.73",
+                  "change_percent": "-2.0099",
+                  "snapshot_version": 483,
+                  "canonical_immutable_version": "483",
+                  "compatibility_immutable_version": "483",
+                  "captured_at": "2026-09-08 23:00:02.809+00",
+                  "source_timestamp": "2026-09-08 20:00:00+00",
+                  "canonical_values_match": true
+                },
+                {
+                  "symbol": "SPX",
+                  "source_symbol": "SPY",
+                  "provider": "finnhub",
+                  "value": "765.96",
+                  "change_percent": "-0.5492",
+                  "snapshot_version": 480,
+                  "canonical_immutable_version": "480",
+                  "compatibility_immutable_version": "480",
+                  "captured_at": "2026-09-08 23:00:02.809+00",
+                  "source_timestamp": "2026-09-08 20:00:00+00",
+                  "canonical_values_match": true
+                },
+                {
+                  "symbol": "TAIEX",
+                  "source_symbol": "IX0001",
+                  "provider": "fugle",
+                  "value": "47105.78",
+                  "change_percent": "-0.47",
+                  "snapshot_version": 477,
+                  "canonical_immutable_version": "477",
+                  "compatibility_immutable_version": "477",
+                  "captured_at": "2026-09-08 23:00:02.809+00",
+                  "source_timestamp": "2026-09-08 05:30:00+00",
+                  "canonical_values_match": true
+                },
+                {
+                  "symbol": "TSM",
+                  "source_symbol": "TSM",
+                  "provider": "finnhub",
+                  "value": "439",
+                  "change_percent": "2.3525",
+                  "snapshot_version": 484,
+                  "canonical_immutable_version": "484",
+                  "compatibility_immutable_version": "484",
+                  "captured_at": "2026-09-08 23:00:02.809+00",
+                  "source_timestamp": "2026-09-08 20:00:00+00",
+                  "canonical_values_match": true
+                },
+                {
+                  "symbol": "TXF",
+                  "source_symbol": "TXF1!",
+                  "provider": "fugle_futopt",
+                  "value": "47055",
+                  "change_percent": "0.21",
+                  "snapshot_version": 479,
+                  "canonical_immutable_version": "479",
+                  "compatibility_immutable_version": "479",
+                  "captured_at": "2026-09-08 23:00:02.809+00",
+                  "source_timestamp": "2026-09-08 20:59:59.23+00",
+                  "canonical_values_match": true
+                }
+              ],
+              "research_quality": {
+                "publish_status": "degraded",
+                "evidence_coverage": 76,
+                "duplicate_claims": [],
+                "contradictions": [],
+                "missing_sections": [],
+                "unsupported_claims": [
+                  {
+                    "symbol": "3034",
+                    "reason": "evidence_relationship_not_supported",
+                    "claim_sha256": "b8ab59791a1cb480fd39ca3e45a00f2fcfc7adefa7f7b6b6aa93e9574fca272b"
+                  },
+                  {
+                    "symbol": "3529",
+                    "reason": "evidence_relationship_not_supported",
+                    "claim_sha256": "a60a1defc1df6912acadc32d2bf5dade5d45b99685c39af42c4957c79e2e1dac"
+                  },
+                  {
+                    "symbol": "5274",
+                    "reason": "evidence_relationship_not_supported",
+                    "claim_sha256": "c2cfd95f38c4fb8af58cdcd25ddb361d7d91447b877b75ff2578cba351a1434a"
+                  },
+                  {
+                    "symbol": "3131",
+                    "reason": "evidence_relationship_not_supported",
+                    "claim_sha256": "7cfee67abf7ab840235f6f8b45df64ffd2cc586c54f43707b6a37b8f32cafb7f"
+                  },
+                  {
+                    "symbol": "4763",
+                    "reason": "evidence_relationship_not_supported",
+                    "claim_sha256": "97c9048fca1377cb9c95c35b1d7d407c4d73b24dd700c375d9ca2f80adc17f57"
+                  }
+                ]
+              },
+              "canonical_status": "PARTIAL",
+              "editorial_status": "REJECTED",
+              "premium_status": "BLOCKED",
+              "semantic_status": "BLOCKED",
+              "public_payload_http": 200,
+              "public_payload_body_sha256": "296ffb8e48235879504010c0c741c91f487c78b39e2f55c07a5de371ea62a462",
+              "normal_report_line_receipts": 0,
+              "incident_line_receipts": 3,
+              "failed_dispatches": 4,
+              "health_status": "failed",
+              "health_error_code": "REPORT_CONTRACT_INVALID",
+              "health_dispatch_status": "SUCCEEDED",
+              "health_dispatch_http": 200,
+              "premarket_business_gate": "FAIL",
+              "full_day_acceptance": "NOT_DUE",
+              "acceptance_record_id": null,
+              "not_due": [
+                "0900",
+                "0930",
+                "1030",
+                "1300",
+                "1410",
+                "1430",
+                "closing",
+                "learning",
+                "full_day_acceptance"
+              ],
+              "automatic_stable_day": false
+            }
+          }
+        ],
+        "capture_manifest_sha256": "1f1ffa954a67b8787dda7cfb735b78561b27f4a1cd0c023ad5fb114e2292c1ef",
+        "historical_success_claim": false
+      },
+      {
+        "run_id": "e9c6cebd-7431-42c2-90f1-aa09233ecbae",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "fresh-business-scope-readback",
+        "recorded_at_host": "2026-09-09T08:02:03.043Z",
+        "all_required_tables_empty": true,
+        "previous_attempt_results": [],
+        "direct_business_seed_writes": 0
+      },
+      {
+        "run_id": "e9c6cebd-7431-42c2-90f1-aa09233ecbae",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "real-runtime-clock",
+        "recorded_at_host": "2026-09-09T08:02:10.637Z",
+        "target": "2026-09-16T06:30:00.000Z",
+        "boot_id": "2879f43f-0819-4a08-88dc-195166474350",
+        "postgres": {
+          "scope": "ma-consolidation-v1-20260909154500",
+          "observed_at": "2026-09-16T06:30:02.460463+00:00"
+        },
+        "edge": {
+          "success": true,
+          "scope": "ma-consolidation-v1-20260909154500",
+          "boot_id": "2879f43f-0819-4a08-88dc-195166474350",
+          "observed_at": "2026-09-16T06:30:02.958Z",
+          "clock_override": false,
+          "fixture_sha256": "44aabd2372919131f717ead7fb46e459d5dc1c1599a62b6189934f1683f68628",
+          "boundary_source_sha256": "ea8975797e84d15033d6d01f76c1307580ff1d6e3e7243d8277af1bbcb6fc748",
+          "receiver_observed_at": "2026-09-16T06:30:02.916Z",
+          "business_edge_clock_observed": true
+        },
+        "authenticated_session_issued_at": "2026-09-16T06:30:03.000Z",
+        "real_auth_verified": true,
+        "host_clock_unchanged": true,
+        "business_clock_override": false
+      },
+      {
+        "run_id": "e9c6cebd-7431-42c2-90f1-aa09233ecbae",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "handler:fetch-market-data-v10",
+        "recorded_at_host": "2026-09-09T08:02:10.639Z",
+        "request_attempted": true,
+        "request_body": {
+          "source": "LOCAL_CONSOLIDATION_SYNTHETIC",
+          "phase": "manual_backfill",
+          "checkpoint": "manual",
+          "correlation_id": "935d6050-ec59-4236-9ec7-b68cc49fd50f"
+        },
+        "request_sha256": "6080f7fa87b593b7c689f80e1d76b294ef481cb1ba92e3599adaab5404d3da69",
+        "response_received": false
+      },
+      {
+        "run_id": "e9c6cebd-7431-42c2-90f1-aa09233ecbae",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "handler:fetch-market-data-v10",
+        "recorded_at_host": "2026-09-09T08:02:17.912Z",
+        "http": 200,
+        "response_sha256": "e118e0724e76a9aebc0ba8f8a0d0344a6bdf56e9c2442bd27a1a3e1ffdbbc177",
+        "response_body": {
+          "success": true,
+          "version": "V10.15_DURABLE_CHECKPOINT_EVIDENCE",
+          "request_id": "8139c37c",
+          "correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+          "phase": "manual_backfill",
+          "checkpoint": "manual",
+          "trading_date": "2026-09-16",
+          "started_at": "2026-09-16T06:30:04.326Z",
+          "completed_at": "2026-09-16T06:30:11.416Z",
+          "elapsed_seconds": 7,
+          "fetch_strategy": "parallel_provider_lanes",
+          "fetch_timeout_ms": 60000,
+          "inserted": [
+            {
+              "symbol": "SPX",
+              "name": "S&P 500（proxy: SPY ETF proxy）",
+              "value": 505,
+              "change_percent": 1
+            },
+            {
+              "symbol": "IXIC",
+              "name": "Nasdaq（proxy: QQQ ETF proxy）",
+              "value": 505,
+              "change_percent": 1
+            },
+            {
+              "symbol": "SOX",
+              "name": "費城半導體指數（proxy: SOXX ETF proxy）",
+              "value": 252.5,
+              "change_percent": 1
+            },
+            {
+              "symbol": "NVDA",
+              "name": "Nvidia",
+              "value": 151.5,
+              "change_percent": 1
+            },
+            {
+              "symbol": "TSM",
+              "name": "TSMC ADR",
+              "value": 202,
+              "change_percent": 1
+            },
+            {
+              "symbol": "VIX",
+              "name": "恐慌指數（proxy: VXX ETN proxy）",
+              "value": 19.8,
+              "change_percent": -1
+            },
+            {
+              "symbol": "DXY",
+              "name": "美元指數方向（proxy: UUP ETF）",
+              "value": 100.1,
+              "change_percent": 0.1
+            },
+            {
+              "symbol": "US10Y",
+              "name": "美國10年債殖利率方向（proxy: inverse IEF ETF）",
+              "value": 100.1,
+              "change_percent": -0.1
+            },
+            {
+              "symbol": "TAIEX",
+              "name": "台股加權指數",
+              "value": 25250,
+              "change_percent": 1
+            },
+            {
+              "symbol": "2330",
+              "name": "台積電",
+              "value": 1010,
+              "change_percent": 1
+            },
+            {
+              "symbol": "TXF",
+              "name": "台指期",
+              "value": 25350,
+              "change_percent": 0.99601593625498
+            }
+          ],
+          "failed": [],
+          "beneficiary_symbols_requested": [],
+          "beneficiary_lookup": {
+            "status": "not_requested",
+            "decision_mode": "blocked",
+            "contract_valid": false,
+            "source_field": "not_requested",
+            "v10_enabled": false,
+            "source_row_count": 0,
+            "invalid_row_count": 0,
+            "error": null
+          },
+          "beneficiary_close_status": {
+            "status": "NOT_REQUESTED",
+            "complete": false,
+            "lookup_status": "not_requested",
+            "decision_mode": "blocked",
+            "contract_valid": false,
+            "requested_count": 0,
+            "succeeded_count": 0,
+            "failed_count": 0,
+            "requested_symbols": [],
+            "succeeded_symbols": [],
+            "failed_symbols": []
+          },
+          "close_core_only": false,
+          "beneficiary_close_only": false,
+          "beneficiary_close_deferred": false,
+          "tw_core_status": {
+            "taiex": "ok",
+            "stock_2330": "ok",
+            "txf": "ok"
+          },
+          "tw_core_symbols_success": [
+            "TAIEX",
+            "2330",
+            "TXF"
+          ],
+          "tw_core_symbols_failed": [],
+          "provider_used_by_symbol": {
+            "2330": "fugle",
+            "SPX": "finnhub",
+            "IXIC": "finnhub",
+            "SOX": "finnhub",
+            "NVDA": "finnhub",
+            "TSM": "finnhub",
+            "VIX": "finnhub",
+            "DXY": "finnhub",
+            "US10Y": "finnhub",
+            "TAIEX": "fugle",
+            "TXF": "fugle_futopt"
+          },
+          "db_write_errors": [],
+          "canonical_upserted_count": 11,
+          "canonical_write_errors": [],
+          "canonical_complete": true,
+          "snapshot_complete": true,
+          "core_batch_complete": true,
+          "immutable_evidence_complete": true,
+          "immutable_snapshot_versions": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "evidence_correlation_id": "8139c37c-e27e-4a83-b2b7-4797003cd956",
+          "required_core_symbols": [
+            "NVDA",
+            "TSM",
+            "SPX"
+          ],
+          "required_core_complete": true,
+          "related_core_health": {
+            "status": "healthy",
+            "evidence_complete": true,
+            "healthy": true,
+            "error": null
+          },
+          "provider_health": {
+            "status": "healthy",
+            "success_rate": 100,
+            "requested_count": 11,
+            "succeeded_count": 11,
+            "failed_count": 0,
+            "timed_out": false
+          },
+          "provider_health_write_errors": [],
+          "trading_day_state_status": "SUCCEEDED",
+          "trading_day_state_error": null,
+          "trading_day_state_transition_skipped": false,
+          "checkpoint_complete": true,
+          "operation_succeeded": true,
+          "txf_status": "ok",
+          "txf_candidate_errors": [],
+          "provider_failures": [],
+          "snapshot_upserted_count": 11,
+          "snapshot_errors": [],
+          "symbols": [
+            "SPX",
+            "IXIC",
+            "SOX",
+            "NVDA",
+            "TSM",
+            "VIX",
+            "DXY",
+            "US10Y",
+            "TAIEX",
+            "2330",
+            "TXF"
+          ],
+          "healthy": true,
+          "timed_out": false
+        },
+        "business_success": true
+      },
+      {
+        "run_id": "e9c6cebd-7431-42c2-90f1-aa09233ecbae",
+        "scope": "ma-consolidation-v1-20260909154500",
+        "stage": "FIRST_FAILURE",
+        "recorded_at_host": "2026-09-09T08:02:17.937Z",
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ '8139c37c-e27e-4a83-b2b7-4797003cd956'\n- '935d6050-ec59-4236-9ec7-b68cc49fd50f'\n",
+        "full_chain_pass": false
+      }
+    ],
+    "browser_executed": false,
+    "historical_120_day_effects_verified": false,
+    "complete_user_release_gate": "NOT_DEMONSTRATED_BY_THIS_RUNNER_ALONE"
+  }
+}

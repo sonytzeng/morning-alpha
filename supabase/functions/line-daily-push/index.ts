@@ -6,6 +6,7 @@ import { buildDeliveryIncidentLineMessage } from '../_shared/line-incident-messa
 import { buildLineDailyFlexMessage } from '../_shared/line-daily-flex-message.mjs';
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 import type { RuntimeDatabase } from '../_shared/runtime-database-contract.ts';
+import { evaluatePublishedMarketDelivery } from '../_shared/market-publication-contract.ts';
 
 // LINE Daily Push V4 — 90 分硬閘門、事故通知、Transactional Outbox 重送
 // V3 升級：加入台股交易日 Gate，休市日不推播盤前報告
@@ -39,41 +40,8 @@ const DATABASE_BATCH_SIZE = 200;
 async function fetchPublishedDeliveryEvidence(
   supabase: ReturnType<typeof createClient<RuntimeDatabase>>,
   report: Record<string, unknown>,
-): Promise<{ snapshot: Record<string, unknown> | null; member: Record<string, unknown> | null }> {
-  const record = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-  const ai = record(report.ai_strategy_json);
-  const revision = typeof ai.revision_id === 'string' && ai.revision_id.trim() ? ai.revision_id : null;
-  const memberRevision = typeof ai.canonical_member_revision_id === 'string' && ai.canonical_member_revision_id.trim() ? ai.canonical_member_revision_id : null;
-  const snapshotQuery = supabase.from('decision_snapshots').select('*')
-    .eq('report_date', String(report.report_date)).eq('report_id', String(report.id));
-  const snapshotResult = await (revision ? snapshotQuery.eq('id', revision)
-    : snapshotQuery.eq('session_type', 'PREMARKET').eq('is_current', true))
-    .order('version', { ascending: false }).limit(1).maybeSingle();
-  if (snapshotResult.error) throw new Error(`SNAPSHOT_STATE_QUERY_FAILED:${snapshotResult.error.message}`);
-  const snapshot = snapshotResult.data ? record(snapshotResult.data) : null;
-  // A partially populated canonical pointer must fail closed, not use the view.
-  if ((revision && !memberRevision) || (!revision && memberRevision)) return { snapshot, member: null };
-  const memberResult = revision && memberRevision
-    ? await supabase.from('member_content_revisions')
-      .select('*,semantic_coherence_reviews(status,reason_codes,checked_at,canonical_snapshot_id,canonical_snapshot_version)')
-      .eq('id', memberRevision).eq('decision_snapshot_id', revision)
-      .eq('report_date', String(report.report_date)).eq('report_id', String(report.id))
-      .order('checked_at', { referencedTable: 'semantic_coherence_reviews', ascending: false })
-      .limit(1, { referencedTable: 'semantic_coherence_reviews' }).maybeSingle()
-    : await supabase.from('current_member_content_revisions_v1').select('*')
-      .eq('report_date', String(report.report_date)).eq('report_id', String(report.id))
-      .order('revision', { ascending: false }).limit(1).maybeSingle();
-  if (memberResult.error) throw new Error(`MEMBER_REVISION_STATE_QUERY_FAILED:${memberResult.error.message}`);
-  if (!memberResult.data) return { snapshot, member: null };
-  const member = record(memberResult.data);
-  if (!revision) return { snapshot, member };
-  const reviews = Array.isArray(member.semantic_coherence_reviews) ? member.semantic_coherence_reviews : [];
-  const semantic = record(reviews[0]);
-  const semanticAligned = semantic.canonical_snapshot_id === snapshot?.id
-    && semantic.canonical_snapshot_version === snapshot?.version;
-  return { snapshot, member: { ...member,
-    semantic_status: semanticAligned ? semantic.status : null,
-    semantic_reason_codes: semanticAligned ? semantic.reason_codes : null } };
+): Promise<{ snapshot: Record<string, unknown> | null; member: Record<string, unknown> | null; publicationRun: Record<string, unknown> | null }> {
+  return readMarketPublicationEvidence(supabase, report);
 }
 
 /** Market-only delivery keeps 90/100, real member semantic proof, and zero stocks. */
@@ -83,39 +51,7 @@ function isPublishedDeliveryEligible(
   member: Record<string, unknown> | null,
   marketGate: ReturnType<typeof evaluateMarketReportGate>,
 ): boolean {
-  const record = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-  const empty = (value: unknown) => Array.isArray(value) && value.length === 0;
-  const json = (value: unknown): string => Array.isArray(value) ? '[' + value.map(json).join(',') + ']'
-    : value && typeof value === 'object' ? '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + json(record(value)[key])).join(',') + '}'
-      : JSON.stringify(value) ?? 'undefined';
-  if (!marketGate.eligible || !snapshot || !member || snapshot.status !== 'READY'
-    || typeof snapshot.content_score !== 'number' || snapshot.content_score < 90 || snapshot.content_score > 100
-    || snapshot.report_id !== report.id || snapshot.report_date !== report.report_date
-    || member.report_id !== report.id || member.report_date !== report.report_date
-    || member.decision_snapshot_id !== snapshot.id || member.decision_snapshot_version !== snapshot.version
-    || member.status !== 'PASSED' || member.semantic_status !== 'PASSED' || !empty(member.semantic_reason_codes)) return false;
-  const ai = record(report.ai_strategy_json);
-  if ((ai.revision_id && ai.revision_id !== snapshot.id)
-    || (ai.canonical_member_revision_id && ai.canonical_member_revision_id !== member.id)) return false;
-  if (snapshot.decision_mode === 'recommendations') return marketGate.recommendation_gate.eligible === true;
-  if (snapshot.decision_mode !== 'market_only') return snapshot.decision_mode === 'no_trade';
-  const generated = record(snapshot.generated_text), content = record(member.member_content);
-  const contract = record(member.canonical_contract), gate = record(generated.market_report_gate);
-  return typeof ai.revision_id === 'string' && ai.revision_id === snapshot.id
-    && typeof ai.canonical_member_revision_id === 'string' && ai.canonical_member_revision_id === member.id
-    && snapshot.action === 'WAIT' && snapshot.coverage_score === 100
-    && Array.isArray(snapshot.source_refs) && snapshot.source_refs.length > 0
-    && marketGate.status === 'READY_MARKET_ONLY' && marketGate.decision_mode === 'market_only'
-    && marketGate.recommendation_gate.eligible === false && gate.content_score === snapshot.content_score
-    && json(gate) === json(marketGate) && json(gate) === json(ai.market_report_gate)
-    && json(gate) === json(contract.market_report_gate) && json(contract) === json(content.canonical_contract)
-    && contract.snapshot_id === snapshot.id && contract.snapshot_version === snapshot.version
-    && contract.report_date === report.report_date && contract.action === 'WAIT' && contract.decision_mode === 'market_only'
-    && empty(contract.primary_symbols) && empty(generated.recommendations)
-    && empty(ai.today_beneficiary_stocks) && empty(ai.today_beneficiary_stocks_v10)
-    && empty(content.beneficiary_candidates) && empty(content.representative_stocks)
-    && (generated.opportunity_score === null || generated.opportunity_score === undefined)
-    && (content.opportunity_score === null || content.opportunity_score === undefined);
+  return validateMarketPublicationDelivery(report, snapshot, member, marketGate);
 }
 
 
@@ -328,8 +264,9 @@ Deno.serve(async (req) => {
   const reportDate = taipeiToday;
   let decisionSnapshot: Record<string, unknown> | null;
   let memberRevision: Record<string, unknown> | null;
+  let publicationRun: Record<string, unknown> | null;
   try {
-    ({ snapshot: decisionSnapshot, member: memberRevision } = await fetchPublishedDeliveryEvidence(supabase, report));
+    ({ snapshot: decisionSnapshot, member: memberRevision, publicationRun } = await fetchPublishedDeliveryEvidence(supabase, report));
   } catch (error) {
     return new Response(
       JSON.stringify({
@@ -355,26 +292,18 @@ Deno.serve(async (req) => {
   const snapshotScore = Number(decisionSnapshot?.content_score);
   const snapshotMode = String(decisionSnapshot?.decision_mode || '');
   const marketGate = evaluateMarketReportGate(ai, reportDate);
-  const snapshotEligible = isPublishedDeliveryEligible(report, decisionSnapshot, memberRevision, marketGate);
-  const canonicalText = parseRecord(decisionSnapshot?.generated_text);
-  const deliverySentence = firstText(
-    canonicalText.daily_sentence,
-    report.today_quote,
-    parseRecord(ai.v8_daily_sentence).sentence,
-    ai.today_quote,
-  );
-  const leadingDate = deliverySentence.match(/^(\d{4}-\d{2}-\d{2})(?:未|[，,。；;：:\s])/i)?.[1] || '';
-  const sentenceDateEligible = !leadingDate || leadingDate === reportDate;
+  const deliveryState = evaluatePublishedMarketDelivery(report, decisionSnapshot, memberRevision, marketGate,
+    { todayDate: reportDate, now: new Date().toISOString(), premiumEligible: premiumGate.eligible, publicationRun });
+  const snapshotEligible = deliveryState.eligible;
 
-  if (!marketGate.eligible || !snapshotEligible || !sentenceDateEligible) {
+  if (!snapshotEligible) {
     const reasonCodes = Array.from(new Set([
-      ...marketGate.reason_codes,
+      ...deliveryState.reason_codes,
       ...(!decisionSnapshotId ? ['decision_snapshot_missing'] : []),
       ...(decisionSnapshot && snapshotStatus !== 'READY' ? ['decision_snapshot_not_ready'] : []),
       ...(decisionSnapshot && (!Number.isFinite(snapshotScore) || snapshotScore < 90) ? ['decision_snapshot_score_below_90'] : []),
       ...(decisionSnapshot && !['recommendations', 'no_trade', 'market_only'].includes(snapshotMode) ? ['decision_snapshot_mode_blocked'] : []),
       ...(!snapshotEligible ? ['published_delivery_revision_not_eligible'] : []),
-      ...(!sentenceDateEligible ? ['daily_sentence_date_mismatch'] : []),
     ]));
     console.warn('[LINE-PUSH-V4] Market report hard gate blocked delivery:', reasonCodes);
     return new Response(
@@ -393,11 +322,7 @@ Deno.serve(async (req) => {
   }
 
   // 4. 組成 LINE push message
-  const message = buildLineMessage(
-    report,
-    siteUrl,
-    decisionSnapshot && typeof decisionSnapshot === 'object' ? decisionSnapshot as Record<string, unknown> : null,
-  );
+  const message = buildLineMessage(deliveryState, siteUrl);
   let delivery: DeliverySummary;
   try {
     delivery = await deliverOutboxMessage({
@@ -944,80 +869,26 @@ function buildMarketClosedLineMessage(siteUrl: string) {
 
 // ─── 推播訊息建構：短版、低重複、以報告 guardrail copy 為準 ───
 function buildLineMessage(
-  report: Record<string, unknown>,
+  delivery: ReturnType<typeof evaluatePublishedMarketDelivery>,
   siteUrl: string,
-  decisionSnapshot: Record<string, unknown> | null = null,
 ) {
-  const ai = parseAiStrategy(report.ai_strategy_json);
-  const copy = parseRecord(ai.line_push_copy);
-  const freeSummary = parseRecord(ai.free_summary);
-  const dailySentence = parseRecord(ai.v8_daily_sentence);
-  const canonicalText = parseRecord(decisionSnapshot?.generated_text);
-  const canonicalReasons = Array.isArray(canonicalText.reasons) ? canonicalText.reasons : [];
-  const canonicalSectors = Array.isArray(canonicalText.preferred_sectors) ? canonicalText.preferred_sectors : [];
-  const canonicalInvalidations = Array.isArray(canonicalText.invalidation_conditions) ? canonicalText.invalidation_conditions : [];
-  const firstCanonicalInvalidation = parseRecord(canonicalInvalidations[0]);
-  const marketOnly = decisionSnapshot?.decision_mode === 'market_only';
-  const bias = String(canonicalText.market_bias || decisionSnapshot?.market_regime || copy.market_bias || report.market_bias || '中性觀察');
-  const todayLine = firstText(
-    canonicalText.daily_sentence,
-    report.today_quote,
-    dailySentence.sentence,
-    ai.today_quote,
-    copy.one_sentence,
-    freeSummary.one_sentence,
-    report.summary,
-    '資料不足，今日降級觀察，開盤後再確認方向。',
-  );
-  const opportunity = marketOnly ? firstText(canonicalSectors[0], canonicalReasons[0]) : firstText(
-    canonicalSectors[0],
-    canonicalReasons[0],
-    copy.opportunity,
-    copy.watch_point,
-    inferOpportunity(report, ai),
-    '等待開盤後族群同步性確認',
-  );
-  const avoid = marketOnly ? firstText(canonicalText.do_not_do) : firstText(
-    canonicalText.do_not_do,
-    copy.do_not_do,
-    freeSummary.do_not_do,
-    firstArrayText(report.avoid_today),
-    bias.includes('多') ? '避免把盤前偏多當成追價理由，先等量價確認。' : '避免急著撿便宜，先等賣壓與量能訊號。',
-  );
-  const risk = marketOnly ? firstText(firstCanonicalInvalidation.condition, firstCanonicalInvalidation.trigger,
-    firstCanonicalInvalidation.invalidation_condition, canonicalInvalidations[0]) : firstText(
-    firstCanonicalInvalidation.condition,
-    firstCanonicalInvalidation.trigger,
-    firstCanonicalInvalidation.invalidation_condition,
-    canonicalInvalidations[0],
-    copy.risk,
-    copy.max_risk,
-    freeSummary.risk,
-    ai.primary_risk,
-    avoid,
-  );
-  const importantNewsCount = Array.isArray(ai.important_news)
-    ? ai.important_news.length
-    : Array.isArray(report.important_news_json)
-      ? report.important_news_json.length
-      : Number(ai.fresh_news_count) || 0;
-  const premiumGate = evaluatePremiumContentGate(ai, importantNewsCount);
-  const canonicalDecisionMode = firstText(decisionSnapshot?.decision_mode, premiumGate.decision_mode);
-  const canonicalRecommendations = Array.isArray(canonicalText.recommendations) ? canonicalText.recommendations : [];
-  const v10Recommendations = Array.isArray(ai.today_beneficiary_stocks_v10) ? ai.today_beneficiary_stocks_v10 : [];
-  const legacyRecommendations = Array.isArray(ai.today_beneficiary_stocks) ? ai.today_beneficiary_stocks : [];
-  const recommendations = marketOnly ? [] : canonicalRecommendations.length > 0 ? canonicalRecommendations
-    : v10Recommendations.length > 0 ? v10Recommendations : legacyRecommendations;
-  // Preserve the deployed v59 Flex renderer. A market-only revision cannot
-  // rehydrate private legacy stock arrays or claim a completed stock screen.
+  if (!delivery.eligible || !delivery.projection.analysisAvailable) throw new Error('MARKET_DELIVERY_PROJECTION_UNAVAILABLE');
+  const projection = delivery.projection;
+  const recommendations = projection.recommendation.available ? projection.recommendation.items : [];
+  // Renderer mode is presentation-only. Never rewrite the persisted publication
+  // mode/action/revision merely because today's stock evidence became unavailable.
+  const displayMode = projection.recommendation.available ? 'recommendations'
+    : projection.recommendation.status === 'NO_QUALIFIED_OPPORTUNITY' ? 'no_trade' : 'market_only';
   return buildLineDailyFlexMessage({
-    reportDate: String(report.report_date || ''), bias, todayLine, opportunity, risk, avoid,
-    decisionMode: canonicalDecisionMode, recommendations, siteUrl,
-    ...(marketOnly ? {
-      confirmation: clipLine(firstText(canonicalText.next_checkpoint, parseRecord(canonicalText.market_report_gate).next_recheck_time), 84),
-      recommendationMessage: firstText(parseRecord(parseRecord(canonicalText.market_report_gate).recommendation_gate).subscriber_message,
-        '推薦評估證據不足，今日暫不發布正式個股推薦'),
-    } : {}),
+    reportDate: projection.identity.reportDate,
+    bias: projection.marketDecision.bias || '方向待確認',
+    todayLine: projection.marketDecision.summary || '',
+    opportunity: delivery.marketContent.opportunity || '',
+    risk: delivery.marketContent.risk || '',
+    avoid: delivery.marketContent.avoid || '',
+    confirmation: delivery.marketContent.confirmation || '',
+    decisionMode: displayMode, recommendations, siteUrl,
+    recommendationMessage: projection.recommendation.message,
   });
 }
 
@@ -1065,3 +936,4 @@ function inferOpportunity(report: Record<string, unknown>, ai: Record<string, un
   if (sox !== null && sox > 0) return '半導體與 AI 供應鏈是否同步擴散';
   return '開盤後資金最先集中的族群';
 }
+import { fetchPublishedDeliveryEvidence as readMarketPublicationEvidence, isPublishedDeliveryEligible as validateMarketPublicationDelivery } from '../_shared/market-publication-contract.ts';

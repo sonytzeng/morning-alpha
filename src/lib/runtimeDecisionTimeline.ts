@@ -1,7 +1,5 @@
-import { getRuntimeCheckpointState } from './decisionEvidence.ts';
-import { isClosingVerificationComplete } from './closingVerificationState.ts';
 import { getTaipeiNow } from '../utils/tradingDay.ts';
-import { hasSubscriberState, isSubscriberAnalysisUnavailable, subscriberState } from './subscriberReportContract.ts';
+import { getSubscriberReportProjection, type SubscriberCheckpoint, type SubscriberReportProjection } from './subscriberReportContract.ts';
 
 export type RuntimeTimelineStatus = 'completed' | 'current' | 'pending' | 'insufficient' | 'not_applicable';
 
@@ -75,20 +73,18 @@ function record(value: unknown): UnknownRecord {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : {};
 }
 
-function timelineStatus(value: ReturnType<typeof getRuntimeCheckpointState>): 'completed' | 'pending' | 'insufficient' {
+function timelineStatus(value: SubscriberCheckpoint['status']): 'completed' | 'pending' | 'insufficient' | 'not_applicable' {
   if (value === 'completed') return 'completed';
   if (value === 'failed' || value === 'insufficient') return 'insufficient';
+  if (value === 'not_applicable') return 'not_applicable';
   return 'pending';
 }
 
-function openingCompleted(ai: UnknownRecord): boolean {
-  const radar = record(ai.opening_radar);
-  return Boolean(radar.report_date || radar.captured_at || radar.updated_at)
-    && [radar.taiex_change, radar.txf_change, radar.tsmc_change]
-      .filter((value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))).length === 3;
-}
-
 export function buildRuntimeDecisionTimeline(params: {
+  /** Active subscribers pass their already-resolved projection. Full envelopes
+   * are also accepted; nested AI is retained only for legacy call compatibility. */
+  projection?: SubscriberReportProjection;
+  report?: unknown;
   ai?: UnknownRecord | null;
   hasReport: boolean;
   reportRevisionId?: string | null;
@@ -97,65 +93,59 @@ export function buildRuntimeDecisionTimeline(params: {
   taipeiMinutes?: number;
 }): RuntimeTimelineNode[] {
   const ai = record(params.ai);
-  const sync = record(ai.intraday_sync_status);
-  const unpublished = isSubscriberAnalysisUnavailable(ai);
-  const state = subscriberState(ai);
+  const projection = params.projection ?? (params.report !== undefined
+    ? getSubscriberReportProjection(params.report) : getSubscriberReportProjection(ai));
+  const checkpoints = projection.runtime.checkpoints;
   const rawNodes: RuntimeTimelineNode[] = [
     {
       time: '07:30',
       label: '今日劇本',
       detail: '盤前決策報告',
-      status: unpublished ? 'insufficient' : params.hasReport && Boolean(params.reportRevisionId || params.reportGeneratedAt) ? 'completed' : 'pending',
+      status: projection.analysisAvailable ? 'completed' : 'insufficient',
     },
     {
       time: '09:00',
       label: '開盤資料',
       detail: '第一筆台股核心資料',
-      status: openingCompleted(ai)
-        ? 'completed'
-        : timelineStatus(getRuntimeCheckpointState(sync, '0900')),
+      status: timelineStatus(checkpoints['0900'].status),
     },
     {
       time: '09:30',
       label: '開盤驗證',
       detail: '確認開盤方向與盤前劇本',
-      status: timelineStatus(getRuntimeCheckpointState(sync, '0930')),
+      status: timelineStatus(checkpoints['0930'].status),
     },
     {
       time: '10:30',
       label: '主線確認',
       detail: '確認主線與資金是否同步',
-      status: timelineStatus(getRuntimeCheckpointState(sync, '1030')),
+      status: timelineStatus(checkpoints['1030'].status),
     },
     {
       time: '13:00',
       label: '盤中追蹤',
       detail: '讀取午後盤中資料',
-      status: timelineStatus(getRuntimeCheckpointState(sync, '1300')),
+      status: timelineStatus(checkpoints['1300'].status),
     },
     {
       time: '14:10',
       label: '收盤資料',
       detail: '確認現貨與期貨正式終值',
-      status: timelineStatus(getRuntimeCheckpointState(sync, '1410')),
+      status: timelineStatus(checkpoints['1410'].status),
     },
     {
       time: '14:30',
       label: '收盤驗證',
       detail: '讀取結構化收盤驗證',
-      status: isClosingVerificationComplete(ai)
-        ? 'completed'
-        : unpublished || state?.closing === 'INSUFFICIENT_EVIDENCE'
-          ? 'insufficient'
-          : 'pending',
+      status: timelineStatus(checkpoints['1430'].status),
     },
   ];
 
-  if (!params.isTradingDay) return rawNodes.map((node) => ({ ...node, status: 'not_applicable' }));
+  if (!params.isTradingDay || projection.closing.state === 'NOT_APPLICABLE') return rawNodes.map((node) => ({ ...node, status: 'not_applicable' }));
 
   const reconciled = reconcileRuntimeTimeline(rawNodes, params.taipeiMinutes);
   // A declared NOT_DUE close is not advanced by browser clock or a fetched raw
   // 14:30 snapshot. Data capture and verification completion are distinct.
-  if (hasSubscriberState(ai) && state?.closing === 'NOT_DUE') reconciled[reconciled.length - 1].status = 'pending';
+  if (projection.closing.state === 'NOT_DUE') reconciled[reconciled.length - 1].status = 'pending';
   return reconciled;
 }

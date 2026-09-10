@@ -184,7 +184,7 @@ test('canonical contract drops absent optional signals instead of serializing un
 
 test('Content OS public reason reuses canonical supply-chain evidence when no display reason exists', () => {
   const source = readFileSync(new URL('../supabase/functions/content-os-morning-alpha-source/index.ts', import.meta.url), 'utf8');
-  assert.match(source, /publicTopicSource\.taiwan_supply_chain_relation/);
+  assert.match(source, /stock\.taiwan_supply_chain_relation/);
   assert.doesNotMatch(source, /可能影響|受惠於|有利於|預期轉強/);
 });
 
@@ -329,11 +329,29 @@ test('delivery, payload, and Content OS all require the same semantic member rev
   const orchestrator = readFileSync(new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url), 'utf8');
   const payload = readFileSync(new URL('../supabase/functions/get-report-payload/index.ts', import.meta.url), 'utf8');
   const contentOs = readFileSync(new URL('../supabase/functions/content-os-morning-alpha-source/index.ts', import.meta.url), 'utf8');
-  for (const source of [orchestrator, payload, contentOs]) assert.match(source, /current_member_content_revisions_v1/);
-  assert.match(orchestrator, /semantic_member_revision_not_publishable/);
+  const publication = readFileSync(new URL('../supabase/functions/_shared/market-publication-contract.ts', import.meta.url), 'utf8');
+  assert.match(orchestrator, /market-publication-contract\.ts/);
+  assert.match(publication, /selectPublicationRows\(supabase, 'member_content_revisions',/);
+  assert.match(publication, /member\.decision_snapshot_id !== snapshot\.id/);
+  assert.match(publication, /member\.semantic_status !== 'PASSED'/);
+  assert.doesNotMatch(publication, /current_member_content_revisions_v1/);
+  assert.doesNotMatch(payload, /current_member_content_revisions_v1/);
+  assert.match(payload, /readPublishedMarketDecision/);
+  assert.match(payload, /readPublishedMemberRevision/);
+  // The existing public wire uses the same committed revision reader. A newer
+  // private QA snapshot must never replace or block the published market report.
+  assert.match(contentOs, /fetchPublishedDeliveryEvidence\(admin, report\)/);
+  assert.doesNotMatch(contentOs, /current_member_content_revisions_v1|\.eq\("is_current"/);
+  assert.match(orchestrator, /evaluatePublishedMarketDelivery\(reportRecord, snapshotRecord, memberRevision, marketGate/);
+  assert.match(orchestrator, /reason_codes: publication\.reason_codes/);
+  assert.match(publication, /if \(!receiptEligible\) reasons\.push\('PUBLISHED_MARKET_RECEIPT_NOT_ELIGIBLE'\)/);
+  assert.match(publication, /receipt\.success === true && receipt\.semantic_status === 'PASSED'/);
+  assert.match(publication, /receipt\.report_id === report\.id && receipt\.report_date === reportDate/);
+  assert.match(publication, /receipt\.decision_snapshot_id === revision && receipt\.member_content_revision_id === member\?\.id/);
   assert.match(payload, /resolveCanonicalDataQuality/);
   assert.doesNotMatch(payload, /premiumGate\.eligible\s*\?\s*[\s\S]{0,80}["']complete["']/);
-  assert.match(contentOs, /evaluateCanonicalSemanticCoherenceGate/);
+  assert.match(contentOs, /evaluatePublishedMarketDelivery\(report, snapshot, memberRevision/);
+  assert.match(contentOs, /memberRevision\.semantic_status !== "PASSED"/);
   assert.match(contentOs, /record_content_os_incident_v1/);
   assert.match(contentOs, /resolve_content_os_incident_v1/);
 });

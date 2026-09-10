@@ -25,6 +25,8 @@ export interface ServerReportPayloadResponse {
   data_as_of?: string | null;
   market_status?: string | null;
   is_trading_day?: boolean | null;
+  subscriber_state?: unknown;
+  subscriber_projection?: import('../lib/subscriberReportProjection').SubscriberReportProjection;
   payload: Record<string, unknown> | null;
   locked_sections: string[];
   source: 'server_trimmed_payload';
@@ -35,6 +37,7 @@ export interface ServerReportPayloadResponse {
 
 export interface ServerReportHistoryResponse {
   tier: SubscriptionTier;
+  today_date?: string | null;
   report_date: null;
   payload: null;
   reports: Record<string, unknown>[];

@@ -1,0 +1,14 @@
+{
+  "schema_version": "CORE_CONSOLIDATION_LOCAL_FAILURE_INDEX_V1",
+  "historical_success_claim": false,
+  "full_chain_pass": false,
+  "entries": [
+    {
+      "fixture_id": "local-20260917-terminal-market-only-failure",
+      "path": "terminal-market-only-20260917.json",
+      "sha256": "d62dadf687b38d23afef81782fed3369c23131ad177398dfdfff1dccc02e4848",
+      "kind": "LOCAL_ACTUAL_HANDLER_CAPTURE",
+      "result": "FAIL"
+    }
+  ]
+}

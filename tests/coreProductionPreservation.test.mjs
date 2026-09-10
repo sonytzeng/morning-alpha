@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import ts from 'typescript';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { readConsolidationPublicExportIntegrity as readSubscriberProjectionIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
 const root=new URL('../',import.meta.url);
 const manifest=JSON.parse(readFileSync(new URL('docs/operations/core-stability-source-manifest-20260907.json',root),'utf8'));
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const incident=JSON.parse(readFileSync(new URL('docs/operations/core-stability-incident-amendment-20260908.json',root),'utf8'));
 test('trusted deployed generator/orchestrator dependencies: protected AI settings, prompts and strategy declarations remain unchanged',()=>{
+  const subscriberApproval = readSubscriberProjectionIntegrity(incident);
   const parsed=new Map();
   assert.ok(manifest.protected_declarations.length>100);
   for(const deployment of manifest.production){
@@ -15,9 +17,11 @@ test('trusted deployed generator/orchestrator dependencies: protected AI setting
       let bytes=readFileSync(new URL(file.path,root),'utf8');
       const amendment=incident.files.find(row=>row.path===file.path);
       if(amendment){
-        assert.equal(hash(bytes),amendment.incident_sha256,`incident artifact drift: ${file.path}`);
+        assert.equal(hash(bytes),subscriberApproval.fileHash(amendment),`incident artifact drift: ${file.path}`);
         continue;
       }
+      // Only fixed fourth-layer candidates are reverse-patched; all other bytes remain live.
+      bytes=subscriberApproval.predecessorReadSource(file.path).toString('utf8');
       if(file.path==='supabase/functions/get-report-payload/index.ts'){
         // 2026-09-07 explicit read-side Evidence approval. Remove ONLY the
         // additive block to prove every pre-existing Core/Auth byte is intact.
@@ -47,8 +51,8 @@ test('trusted deployed generator/orchestrator dependencies: protected AI setting
     if(amendment){
       assert.equal(amendment.production_sha256,record.production_sha256,'Original Production baseline must remain recorded');
       assert.ok(amendment.reason.length>15);
-      assert.equal(hash(text),amendment.incident_sha256,record.path+':'+record.name);
-    }else assert.equal(hash(text),record.production_sha256,record.path+':'+record.name);
+      assert.equal(hash(text),subscriberApproval.declarationHash(amendment),record.path+':'+record.name);
+    }else assert.equal(hash(text),subscriberApproval.declarationHash(record),record.path+':'+record.name);
   }
   for(const name of ['OPENAI_EVIDENCE_GUARDRAILS','OPENAI_OUTPUT_ABSTENTION_RULES','buildOpenAISystemPrompt','buildOpenAIUserPrompt','calculateV10BeneficiaryPhase1Record','V10_CANDIDATE_METADATA','calculateRepeatPenalty']){
     assert.ok(manifest.protected_declarations.some(row=>row.name===name),`required policy omitted: ${name}`);

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
 import { createSubscriberState } from '../shared/subscriber-state-contract.ts';
 import { buildCanonicalNarrative } from '../src/lib/canonicalNarrative.ts';
 import { buildDecisionPresentation } from '../src/lib/decisionPresentation.ts';
@@ -89,11 +90,11 @@ test('READY published market decision remains visible while recommendation is BL
 
 test('Home keeps the blocked recommendation notice visible and does not treat an empty list as completed screening', () => {
   const home = readFileSync(new URL('../src/pages/home/page.tsx', import.meta.url), 'utf8');
-  assert.match(home, /const recommendationState = recommendationPublication\(homeAI\)/);
-  assert.match(home, /const recommendationNotice = recommendationState\.notice/);
+  assert.match(home, /const projection = getSubscriberReportProjection\(/);
+  assert.match(home, /const recommendationNotice = projection\.recommendation\.message/);
   const visibleNotice = home.indexOf('<span>{renderSafeText(recommendationNotice ||');
   assert.ok(visibleNotice >= 0 && visibleNotice < home.indexOf('<details'), 'stock publication status must remain visible before collapsed details');
-  assert.match(home, /const observationSource = subscriberObservationSources\(homeAI, \[/);
+  assert.match(home, /const observationSource = projection\.recommendation\.items/);
   assert.match(home, /<strong>\{recommendationNotice \|\| \(evidenceIsInsufficient/);
   assert.doesNotMatch(home, /今日觀察名單已完成|今日沒有強受惠股/);
   const blocked = ai(), qualified = ai(wire({ recommendationGate: { status: 'QUALIFIED', eligible: true } }));
@@ -164,7 +165,8 @@ test('MISSING_CONFIDENCE is unavailable, never the raw 100 or a fabricated numer
   for (const invalid of [undefined, null, '', ' ', false, true, [], {}, Infinity, NaN, 101, -1]) {
     assert.equal(subscriberConfidence({}, invalid), null, String(invalid));
   }
-  assert.equal(subscriberConfidence({}, 0), 0);
+  assert.equal(subscriberConfidence({}, 0), null, 'A detached numeric value is not a published confidence');
+  assert.equal(subscriberConfidence(ai(wire({ confidenceValue: 0 })), 100), 0, 'A published real zero remains zero');
 });
 
 test('unbound QA assessment prose cannot impersonate missing confidence while market facts and formal scores survive', () => {

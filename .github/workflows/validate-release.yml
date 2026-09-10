@@ -40,6 +40,12 @@ jobs:
       - run: npm run type-check
       - run: npm run lint
       - run: npm run test:public
+      - name: Preserved incident captures and provider-shaped replay boundaries
+        run: >-
+          node --test
+          tests/fixtures/consolidation-v1/offline.test.mjs
+          tests/fixtures/consolidation-v1/clock.test.mjs
+          tests/fixtures/consolidation-v1/provider-chain.test.mjs
       - run: npm run build
       - uses: denoland/setup-deno@v2
         with:
@@ -53,12 +59,17 @@ jobs:
           supabase/functions/fetch-market-data-v10/index.ts
           supabase/functions/line-daily-push/index.ts
           supabase/functions/ma-ops-health-check/index.ts
+          supabase/functions/close-market-review/index.ts
+          supabase/functions/closing-verification-engine/index.ts
+          supabase/functions/continuous-learning-engine/index.ts
+          supabase/functions/content-os-morning-alpha-source/index.ts
       - name: Core contract regressions
         run: >-
           deno test --no-lock
           supabase/functions/_shared/research-pipeline-contract.test.ts
           supabase/functions/_shared/research-quality-gate.test.ts
           supabase/functions/generate-daily-report-v7/research-master-v2.test.ts
+          tests/consolidationPublicationReadAdapter.test.ts
           supabase/functions/_shared/intraday-runtime-contract.test.ts
           tests/runtimeDecisionTimeline.test.ts
           tests/decisionLifecycle.test.ts
@@ -80,3 +91,9 @@ jobs:
           node --test tests/researchPipelineDatabase.integration.mjs
           MA_LOCAL_SCOPE=ma-core-final-20260907 MA_ISOLATED_TEST_DB=ma_market_publication_test1 \
             node --test tests/marketPublicationDatabase.integration.mjs
+      - name: Core consolidation publication, ACL parity, replay and acceptance
+        env:
+          MA_LOCAL_SCOPE: ma-core-consolidation-20260909
+          MA_ISOLATED_TEST_DB: ma_core_consolidation_test1
+          MA_CONSOLIDATION_CI_SERVICE_ID: ${{ job.services.isolated-postgres.id }}
+        run: node --experimental-strip-types --test tests/coreConsolidationDatabase.integration.mjs

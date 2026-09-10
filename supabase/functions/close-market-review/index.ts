@@ -5,6 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { resolveMarketStatus } from "../_shared/market-status.ts";
 import { authorizeInternalRequest, internalCredentialsFromEnv } from "../_shared/internal-function-auth.mjs";
+import { isTrustedCloseSnapshot, resolveOpeningPublicationIdentity, validateOpeningPublication, type OpeningPublication } from "../_shared/closing-learning-contract.ts";
 import {
   CORE_SYMBOL_ALIASES,
   CORE_SYMBOL_QUERY_ALIASES,
@@ -13,6 +14,10 @@ import {
 } from "../_shared/intraday-runtime-contract.ts";
 
 const VERSION = "V1.5_STRICT_CLOSE_SNAPSHOT";
+
+function createCloseReviewClient(url: string, key: string) {
+  return createClient(url, key);
+}
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -65,8 +70,27 @@ function rowForAliases(
 
 function readChange(row: RuntimeSnapshotRow | null): number | null {
   if (!row) return null;
-  const value = Number(row.change_percent);
-  return Number.isFinite(value) ? value : null;
+  return typeof row.change_percent === "number" && Number.isFinite(row.change_percent) ? row.change_percent : null;
+}
+
+async function syncCloseReviewProjection(
+  supabase: ReturnType<typeof createCloseReviewClient>, opening: OpeningPublication,
+  review: Record<string, unknown>, validation: Record<string, unknown>,
+): Promise<void> {
+  if (review.report_date !== opening.report_date || review.opening_publication_revision_id !== opening.opening_publication_revision_id
+    || validation.opening_publication_revision_id !== opening.opening_publication_revision_id) throw new Error("CLOSE_REVIEW_PROJECTION_UNVERIFIED");
+  const current = await supabase.from("reports").select("id,report_date,ai_strategy_json,updated_at")
+    .eq("id", opening.report_id).eq("report_date", opening.report_date).maybeSingle();
+  if (current.error || !current.data) throw new Error("CLOSE_REVIEW_REPORT_READ_FAILED");
+  const identity = resolveOpeningPublicationIdentity(current.data);
+  if (identity.reason_codes.length || identity.opening_publication_revision_id !== opening.opening_publication_revision_id) throw new Error("CLOSE_REVIEW_PUBLICATION_CHANGED");
+  const ai = asObject(current.data.ai_strategy_json);
+  let update = supabase.from("reports").update({ ai_strategy_json: { ...ai,
+    close_market_review: review, close_validation: validation,
+    close_review_synced_at: review.generated_at, close_review_source: "close-market-review" } }).eq("id", opening.report_id);
+  update = current.data.updated_at ? update.eq("updated_at", current.data.updated_at) : update.is("updated_at", null);
+  const saved = await update.select("id").maybeSingle();
+  if (saved.error || !saved.data) throw new Error("CLOSE_REVIEW_PROJECTION_RETRY_REQUIRED");
 }
 
 function classifyCloseResult(taiexChange: number | null): string {
@@ -139,11 +163,13 @@ function generateVerification(
 function hasStrictCloseProvenance(
   rawPayload: unknown,
   reportDate: string,
+  openingRevision: string,
 ): boolean {
   const raw = asObject(rawPayload);
   return raw.source_table === "market_data_snapshots" &&
     raw.source_phase === "close" &&
     raw.trading_date === reportDate &&
+    raw.opening_publication_revision_id === openingRevision &&
     raw.no_intraday_fallback === true;
 }
 
@@ -225,12 +251,12 @@ Deno.serve(async (req: Request) => {
     log(
       `=== Close Market Review ${VERSION} [${requestId}] date=${reportDate} force=${isForce} ===`,
     );
-    const supabase = createClient(supabaseUrl, supabaseServiceRole);
+    const supabase = createCloseReviewClient(supabaseUrl, supabaseServiceRole);
 
     const snapshotResult = await supabase
       .from("market_data_snapshots")
       .select(
-        "symbol,name,value,change_percent,captured_at,source,trading_date,phase",
+        "symbol,name,value,change_percent,captured_at,source,trading_date,phase,raw",
       )
       .eq("trading_date", reportDate)
       .eq("phase", "close")
@@ -238,7 +264,8 @@ Deno.serve(async (req: Request) => {
       .order("captured_at", { ascending: false });
 
     if (snapshotResult.error) throw snapshotResult.error;
-    const snapshots = (snapshotResult.data || []) as RuntimeSnapshotRow[];
+    const snapshots = ((snapshotResult.data || []) as RuntimeSnapshotRow[])
+      .filter(row => isTrustedCloseSnapshot(row, reportDate));
     const closeEvaluation = evaluateCloseSnapshotRows(snapshots, reportDate);
     if (!closeEvaluation.ready) {
       log(
@@ -247,7 +274,7 @@ Deno.serve(async (req: Request) => {
         }`,
       );
       return jsonResponse({
-        success: true,
+        success: false,
         pending: true,
         version: VERSION,
         action: "no_write",
@@ -259,7 +286,7 @@ Deno.serve(async (req: Request) => {
         close_window: "13:30-15:30 Asia/Taipei",
         no_intraday_fallback: true,
         logs,
-      });
+      }, 409);
     }
 
     const acceptedRows = closeEvaluation.acceptedRows;
@@ -292,6 +319,24 @@ Deno.serve(async (req: Request) => {
 
     const reportRow = reportResult.data as Record<string, unknown>;
     const existingAiStrategy = asObject(reportRow.ai_strategy_json);
+    const openingIdentity = resolveOpeningPublicationIdentity(reportRow);
+    if (openingIdentity.reason_codes.length > 0) {
+      return jsonResponse({ success: false, version: VERSION, error: "OPENING_PUBLICATION_UNVERIFIED",
+        report_date: reportDate, reason_codes: openingIdentity.reason_codes, action: "no_write" }, 409);
+    }
+    const openingSnapshotResult = await supabase.from("decision_snapshots").select("*")
+      .eq("id", openingIdentity.opening_publication_revision_id).eq("report_id", openingIdentity.report_id)
+      .eq("report_date", reportDate).maybeSingle();
+    const publicationResult = await supabase.from("pipeline_runs").select("*")
+      .eq("trading_date", reportDate).eq("status", "SUCCEEDED").like("idempotency_key", "research-input:%")
+      .eq("provider_status->result->>decision_snapshot_id", openingIdentity.opening_publication_revision_id)
+      .order("completed_at", { ascending: true }).limit(1).maybeSingle();
+    const openingPublication = validateOpeningPublication({ report: reportRow, snapshot: openingSnapshotResult.data, publicationRun: publicationResult.data });
+    if (openingSnapshotResult.error || publicationResult.error || openingPublication.status !== "PUBLISHED") {
+      return jsonResponse({ success: false, version: VERSION, error: "OPENING_PUBLICATION_UNVERIFIED",
+        report_date: reportDate, reason_codes: openingPublication.reason_codes, action: "no_write" }, 409);
+    }
+    const openingSnapshot = asObject(openingSnapshotResult.data), openingGenerated = asObject(openingSnapshot.generated_text);
     const existingReviewResult = await supabase
       .from("close_market_reviews")
       .select("id,verification_result,raw_payload,updated_at,created_at")
@@ -316,14 +361,22 @@ Deno.serve(async (req: Request) => {
         existingReportResult !== "待確認",
     );
     const strictProvenance = existingReview
-      ? hasStrictCloseProvenance(existingReview.raw_payload, reportDate)
+      ? hasStrictCloseProvenance(existingReview.raw_payload, reportDate, openingPublication.opening_publication_revision_id)
       : false;
 
     if (!isForce && existingIsFinal && strictProvenance) {
+      const existingRaw = asObject(existingReview?.raw_payload);
+      const reviewProjection = asObject(existingRaw.review_projection), validationProjection = asObject(existingRaw.validation_projection);
+      if (!Object.keys(reviewProjection).length || !Object.keys(validationProjection).length) {
+        return jsonResponse({ success: false, version: VERSION, error: "EXISTING_REVIEW_REQUIRES_EXPLICIT_CORRECTION",
+          report_date: reportDate, historical_row_modified: false, action: "no_write" }, 409);
+      }
+      await syncCloseReviewProjection(supabase, openingPublication, reviewProjection, validationProjection);
       return jsonResponse({
         success: true,
         version: VERSION,
         action: "skipped_idempotent",
+        synced_to_reports_ai_strategy_json: true,
         report_date: reportDate,
         logs,
       });
@@ -345,9 +398,10 @@ Deno.serve(async (req: Request) => {
       }, 409);
     }
 
-    const premarketBias = String(reportRow.market_bias || "");
-    const premarketConfidence = Number(reportRow.confidence_score || 0);
-    const premarketSummary = String(reportRow.summary || "");
+    const premarketBias = String(openingGenerated.market_bias || openingSnapshot.market_regime || "");
+    const confidence = openingGenerated.confidence_score ?? openingSnapshot.confidence_score;
+    const premarketConfidence = typeof confidence === "number" && Number.isFinite(confidence) ? confidence : null;
+    const premarketSummary = String(openingGenerated.daily_sentence || "");
     const closeResult = classifyCloseResult(taiexChange);
     const verification = generateVerification(
       premarketBias,
@@ -369,6 +423,7 @@ Deno.serve(async (req: Request) => {
       premarket_bias: premarketBias,
       premarket_confidence: premarketConfidence,
       premarket_summary: premarketSummary,
+      opening_publication_revision_id: openingPublication.opening_publication_revision_id,
       actual_market_result: closeResult,
       verification_result: verification.validation_result,
       verification_note: verification.summary,
@@ -382,6 +437,7 @@ Deno.serve(async (req: Request) => {
     };
     const closeValidation = {
       version: VERSION,
+      opening_publication_revision_id: openingPublication.opening_publication_revision_id,
       result: verification.validation_result,
       label: verification.validation_result,
       summary: verification.summary,
@@ -400,11 +456,16 @@ Deno.serve(async (req: Request) => {
       request_id: requestId,
       source_table: "market_data_snapshots",
       source_phase: "close",
+      opening_publication_revision_id: openingPublication.opening_publication_revision_id,
+      opening_decision_snapshot_version: openingPublication.snapshot_version,
+      publication_run_id: openingPublication.publication_run_id,
       trading_date: reportDate,
       close_window: "13:30-15:30 Asia/Taipei",
       no_intraday_fallback: true,
       force_overwrite: isForce,
       snapshots: snapshotProvenance,
+      review_projection: closeMarketReview,
+      validation_projection: closeValidation,
     };
 
     const upsertResult = await supabase
@@ -428,19 +489,7 @@ Deno.serve(async (req: Request) => {
       }, { onConflict: "report_date" });
     if (upsertResult.error) throw upsertResult.error;
 
-    const reportUpdateResult = await supabase
-      .from("reports")
-      .update({
-        ai_strategy_json: {
-          ...existingAiStrategy,
-          close_market_review: closeMarketReview,
-          close_validation: closeValidation,
-          close_review_synced_at: now,
-          close_review_source: "close-market-review",
-        },
-      })
-      .eq("id", reportRow.id);
-    if (reportUpdateResult.error) throw reportUpdateResult.error;
+    await syncCloseReviewProjection(supabase, openingPublication, closeMarketReview, closeValidation);
 
     return jsonResponse({
       success: true,
@@ -449,6 +498,7 @@ Deno.serve(async (req: Request) => {
       report_date: reportDate,
       close_result: closeResult,
       validation_result: verification.validation_result,
+      opening_publication_revision_id: openingPublication.opening_publication_revision_id,
       taiex_change: taiexChange,
       tsmc_change: tsmcChange,
       txf_change: txfChange,

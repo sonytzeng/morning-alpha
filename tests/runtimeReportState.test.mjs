@@ -190,7 +190,12 @@ function displayStateWithCanonicalDecision(action, decisionMode) {
     currentDate: '2026-08-25',
     market_message: '今天正常交易。',
     rawAI: {
+      report_date: '2026-08-25',
+      revision_id: 'synthetic-runtime-revision',
+      generated_at: '2026-08-24T23:30:00Z',
+      content_publish_gate: { overall_status: 'eligible' },
       canonical_decision: {
+        id: 'synthetic-runtime-revision',
         status: 'READY',
         action,
         decision_mode: decisionMode,
@@ -206,23 +211,35 @@ test('completed runtime evidence cannot promote canonical no-trade WAIT into ACT
   });
   assert.equal(presentation.primaryDecision.state, 'WAIT');
   assert.equal(presentation.primaryDecision.instruction, '現在不要追價');
+  const unpublished = displayStateWithCanonicalDecision('WAIT', 'no_trade');
+  unpublished.rawAI.content_publish_gate.overall_status = 'blocked';
+  assert.equal(buildDecisionPresentation({ displayState: unpublished, narrative: confirmedNarrative() }).primaryDecision.state, 'INSUFFICIENT_DATA');
 });
 
-test('completed runtime evidence may confirm a canonical selective recommendation', () => {
+test('completed runtime evidence may confirm published ACT; legacy SELECTIVE cannot impersonate ACT', () => {
   const presentation = buildDecisionPresentation({
-    displayState: displayStateWithCanonicalDecision('SELECTIVE', 'recommendations'),
+    displayState: displayStateWithCanonicalDecision('ACT', 'recommendations'),
     narrative: confirmedNarrative(),
   });
   assert.equal(presentation.primaryDecision.state, 'ACT');
+  assert.equal(buildDecisionPresentation({ displayState: displayStateWithCanonicalDecision('SELECTIVE', 'recommendations'), narrative: confirmedNarrative() }).primaryDecision.state, 'INSUFFICIENT_DATA');
 });
 
 test('a verified closing outcome is COMPLETED, neither missing data nor a new entry signal', () => {
-  const displayState = displayStateWithCanonicalDecision('SELECTIVE', 'recommendations');
+  const displayState = displayStateWithCanonicalDecision('ACT', 'recommendations');
+  const close = {
+    status: 'completed', data_status: 'complete', report_date: '2026-08-25',
+    opening_decision_snapshot_id: 'synthetic-runtime-revision', verified_at: '2026-08-25T06:30:00Z',
+    prediction_result: 'hit', actual_taiex_change: 0.8,
+    actual_2330_close: { change_percent: 1.2 }, actual_txf_close: { change_percent: 0.7 }, missing_data: [],
+  };
   const narrative = confirmedNarrative();
   narrative.decision_evidence.status = 'Completed';
   narrative.decision_evidence.closingVerified = true;
   narrative.decision_evidence.checklistAvailable = false;
   narrative.decision_lifecycle.decision_status.status = 'Completed';
+  assert.notEqual(buildDecisionPresentation({ displayState, narrative }).primaryDecision.state, 'COMPLETED', 'a narrative completion flag cannot substitute for the canonical closing receipt');
+  displayState.rawAI.closing_verification_v2 = close;
   const presentation = buildDecisionPresentation({ displayState, narrative });
   assert.equal(presentation.primaryDecision.state, 'COMPLETED');
   assert.match(presentation.primaryDecision.instruction, /收盤驗證/);
@@ -230,11 +247,16 @@ test('a verified closing outcome is COMPLETED, neither missing data nor a new en
     const source = readFileSync(new URL(`../src/pages/${page}`, import.meta.url), 'utf8');
     assert.doesNotMatch(source, /今日(?:進場)?條件未成立.*收盤驗證已完成/);
   }
-  // Canonical abstention is still respected after close; completion never means ACT.
-  assert.equal(buildDecisionPresentation({ displayState: displayStateWithCanonicalDecision('WAIT', 'no_trade'), narrative }).primaryDecision.state, 'WAIT');
+  // A completed no-trade day is a historical result, never a new ACT entry signal.
+  const noTrade = displayStateWithCanonicalDecision('WAIT', 'no_trade');
+  noTrade.rawAI.closing_verification_v2 = close;
+  assert.equal(buildDecisionPresentation({ displayState: noTrade, narrative }).primaryDecision.state, 'COMPLETED');
   narrative.decision_evidence.status = 'Rejected';
   narrative.decision_evidence.runtimeFailure = true;
   narrative.decision_lifecycle.decision_status.status = 'Rejected';
+  const noFailureReceipt = displayStateWithCanonicalDecision('ACT', 'recommendations');
+  assert.notEqual(buildDecisionPresentation({ displayState: noFailureReceipt, narrative }).primaryDecision.state, 'STOP', 'a narrative rejection flag cannot substitute for runtime failure evidence');
+  displayState.rawAI.closing_verification_v2 = { ...close, prediction_result: 'miss' };
   assert.equal(buildDecisionPresentation({ displayState, narrative }).primaryDecision.state, 'STOP');
 });
 
@@ -243,6 +265,7 @@ test('canonical member string conditions and stock fields survive presentation w
   const invalidation = '台積電相對大盤轉弱時取消觀察。';
   const reason = '公司公開來源支持先進封裝需求，但仍需盤中確認。';
   const narrative = buildCanonicalNarrative({ ai: {
+    ...displayStateWithCanonicalDecision('WAIT', 'no_trade').rawAI,
     member_research_note_v2: {
       canonical_contract: { validation_checkpoint: '09:30' },
       intraday_validation: [confirmation], invalidation_conditions: [invalidation],
@@ -254,19 +277,27 @@ test('canonical member string conditions and stock fields survive presentation w
   assert.equal(narrative.decision_evidence.status, 'Waiting');
   assert.equal(narrative.failure_triggers[0].trigger, invalidation);
   const today = readFileSync(new URL('../src/pages/report/TodayReport.tsx', import.meta.url), 'utf8');
-  assert.match(today, /const activeFailure = presentation\.primaryDecision\.state === 'STOP'\s*&& canonicalNarrative\.decision_evidence\.runtimeFailure/);
+  assert.match(today, /const activeFailure = projection\.marketDecision\.action === 'STOP'\s*&& canonicalNarrative\.decision_evidence\.runtimeFailure/);
+  assert.match(today, /getSubscriberReportProjection\(/);
   assert.match(today, /trigger: canonicalNarrative\.decision_evidence\.reason/);
   const [stock] = dedupePresentedOpportunities([{ symbol: '2330', name: '台積電', transmission_logic: reason,
     confirmation_condition: confirmation, invalidation_condition: invalidation }]);
   assert.equal(stock.oneLineReason, reason);
   assert.equal(stock.confirmation, confirmation);
   assert.equal(stock.invalidation, invalidation);
+  const unpublished = buildCanonicalNarrative({ displayState: null, ai: {
+    member_research_note_v2: { intraday_validation: [confirmation], invalidation_conditions: [invalidation] },
+  } });
+  assert.deepEqual(unpublished.today_script.steps, []);
+  assert.deepEqual(unpublished.failure_triggers, []);
+  assert.equal(unpublished.decision_evidence.status, 'Waiting');
 });
 
 test('complete runtime evidence never exposes a generic data-insufficient change trigger', () => {
   const narrative = buildCanonicalNarrative({
     displayState: null,
     ai: {
+      ...displayStateWithCanonicalDecision('WAIT', 'no_trade').rawAI,
       primary_driver: '金融止跌確認',
       market_story: '盤中維持原本不追價判斷。',
       taiwan_transmission: '金融未形成相對強勢。',
@@ -281,6 +312,8 @@ test('complete runtime evidence never exposes a generic data-insufficient change
         windows: {
           '0930': {
             status: 'completed',
+            report_date: '2026-08-25',
+            revision_id: 'synthetic-runtime-revision',
             completed_at: '2026-08-25T01:35:12.422Z',
             evidence: { source: 'trading_day_state' },
           },

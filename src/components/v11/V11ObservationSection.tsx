@@ -110,7 +110,9 @@ export function mapV11ObservationItems(rows: unknown, limit = 5): V11Observation
         roleQuestion: text(row.role_question),
         decisionStep: numberOrNull(row.decision_step),
         nextRole: text(row.next_role),
-        decisionConfidence: numberOrNull(row.decision_confidence),
+        // Legacy per-observation scores have no bound confidence/evidence
+        // contract. Do not substitute the report's score or expose raw numbers.
+        decisionConfidence: null,
         confirmationChecklist: textList(row.confirmation_checklist),
         riskChecklist: textList(row.risk_checklist),
         capitalRotationPath: textList(row.capital_rotation_path),
@@ -218,7 +220,7 @@ function Card({ item, tone }: { item: V11ObservationItem; tone: 'light' | 'dark'
           <h3 className={`text-base font-bold leading-snug ${titleClass}`}>{renderSafeText(scriptTitle(item))}</h3>
         </div>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] border ${isDark ? 'bg-amber-400/10 text-amber-200 border-amber-300/20' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
-          {item.decisionConfidence !== null ? `信心 ${Math.round(item.decisionConfidence)}` : '觀察'}
+          觀察
         </span>
       </div>
 

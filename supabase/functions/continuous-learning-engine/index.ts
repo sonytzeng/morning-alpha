@@ -16,8 +16,21 @@ import {
   stableCaseSignature,
 } from '../_shared/continuous-learning-core.mjs';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
+import { canonicalMarketDocument } from '../_shared/canonical-market-state.ts';
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 import type { RuntimeDatabase } from '../_shared/runtime-database-contract.ts';
+import {
+  evaluateClosingContract,
+  evaluateLearningContract,
+  isTrustedCloseSnapshot,
+  resolveOpeningPublicationIdentity,
+  resolveClosingReceiptPointer,
+  selectLearningPredictionSamples,
+  canWriteLearningOutcome,
+  validateOpeningPublication,
+  type OpeningPublication,
+  type LearningContract,
+} from '../_shared/closing-learning-contract.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -132,7 +145,11 @@ async function readRequestBody(req: Request): Promise<JsonRecord> {
   }
 }
 
-function resolveDataQuality(snapshot: JsonRecord | null, ai: JsonRecord): string {
+function resolveDataQuality(snapshot: JsonRecord | null, ai: JsonRecord, opening?: OpeningPublication): string {
+  // Company/Premium evidence is not the quality of an already verified market
+  // prediction. This branch requires real atomic opening-publication lineage.
+  if (opening?.status === 'PUBLISHED'
+    && snapshot?.id === opening.opening_publication_revision_id) return 'complete';
   const sourceFreshness = asObject(snapshot?.source_freshness);
   const missing = [
     ...asStrings(sourceFreshness.missing_sources),
@@ -182,6 +199,7 @@ function latestSnapshot(rows: SnapshotRow[], symbol: string, date: string, phase
   const matches = rows.filter((row) =>
     normalizeSymbol(row.symbol) === normalizeSymbol(symbol) &&
     row.trading_date === date && row.phase === phase
+      && (phase !== 'close' || isTrustedCloseSnapshot(row, date))
   );
   matches.sort((a, b) => String(b.captured_at || '').localeCompare(String(a.captured_at || '')));
   return matches[0] || null;
@@ -210,13 +228,16 @@ async function capturePredictions(
   report: JsonRecord,
   decisionSnapshot: JsonRecord | null,
   premarketRows: SnapshotRow[],
+  opening: OpeningPublication,
 ): Promise<PredictionRow[]> {
-  const ai = asObject(report.ai_strategy_json);
   const generated = asObject(decisionSnapshot?.generated_text);
+  // New publications freeze the source market document with the opening
+  // snapshot. A later report/QA mutation cannot replace that prediction input.
+  const ai = canonicalMarketDocument(generated);
   const sourceFreshness = asObject(decisionSnapshot?.source_freshness);
   const sourceRefs = Array.isArray(decisionSnapshot?.source_refs)
     ? decisionSnapshot?.source_refs
-    : Array.isArray(ai.important_news_json) ? ai.important_news_json : [];
+    : [];
   const modelVersion = firstText(decisionSnapshot?.engine_version, ai.version, ai.engine_version, 'unknown');
   const factorScores = asObject(decisionSnapshot?.factor_scores);
   const decisionLearning = asObject(factorScores.learning_confidence);
@@ -224,8 +245,6 @@ async function capturePredictions(
     decisionLearning.model_confidence,
     generated.confidence_score,
     decisionSnapshot?.confidence_score,
-    report.confidence_score,
-    ai.confidence_score,
   );
   const calibrationMap = await fetchCalibrationMap(client);
   const decisionFinalConfidence = firstNumber(decisionLearning.final_confidence);
@@ -238,11 +257,11 @@ async function capturePredictions(
     adjustment: modelConfidence === null ? 0 : Math.round((decisionFinalConfidence - modelConfidence) * 100) / 100,
     applied: decisionLearning.calibration_applied === true || (firstNumber(decisionLearning.production_rule_adjustment) || 0) !== 0,
   };
-  const predictionAt = firstText(decisionSnapshot?.valid_from, report.created_at, ai.generated_at, new Date().toISOString());
-  const dataQuality = resolveDataQuality(decisionSnapshot, ai);
+  const predictionAt = firstText(decisionSnapshot?.valid_from);
+  const dataQuality = resolveDataQuality(decisionSnapshot, ai, opening);
   const decisionMode = firstText(decisionSnapshot?.decision_mode, ai.premium_decision_mode, ai.decision_mode, 'blocked');
-  const marketRegime = firstText(decisionSnapshot?.market_regime, ai.market_regime, report.market_bias, 'unknown');
-  const researchMaster = asObject(ai.research_master_v2);
+  const marketRegime = firstText(decisionSnapshot?.market_regime, ai.market_regime, 'unknown');
+  const researchMaster = ai;
   const marketThesis = asObject(researchMaster.market_thesis);
   const common = {
     decision_snapshot_id: decisionSnapshot?.id || null,
@@ -284,13 +303,14 @@ async function capturePredictions(
       asStrings(generated.reasons)[0],
       marketThesis.thesis,
       marketThesis.summary,
-      report.summary,
-      `盤前市場方向：${firstText(report.market_bias, ai.market_bias, '震盪觀察')}`,
+      generated.daily_sentence,
+      `盤前市場方向：${firstText(generated.market_bias, decisionSnapshot?.market_regime)}`,
     ),
-    direction: normalizePredictionDirection(firstText(report.market_bias, ai.market_bias, marketRegime)),
+    direction: normalizePredictionDirection(firstText(generated.market_bias, decisionSnapshot?.market_regime)),
     price_at_prediction: finiteNumber(marketSnapshot?.value),
     benchmark_price_at_prediction: finiteNumber(marketSnapshot?.value),
     data_snapshot: {
+      learning_contract_version: 'CORE_LEARNING_V1',
       market_regime: marketRegime,
       decision_mode: decisionMode,
       content_score: finiteNumber(decisionSnapshot?.content_score ?? ai.content_score),
@@ -331,6 +351,7 @@ async function capturePredictions(
         price_at_prediction: finiteNumber(priceRow?.value),
         benchmark_price_at_prediction: finiteNumber(marketSnapshot?.value),
         data_snapshot: {
+          learning_contract_version: 'CORE_LEARNING_V1',
           market_regime: marketRegime,
           decision_mode: decisionMode,
           recommendation_role: firstText(recommendation.role, recommendation.role_label) || null,
@@ -347,7 +368,7 @@ async function capturePredictions(
   const captured: PredictionRow[] = [];
   for (const draft of drafts) {
     const sourceIdentity = String(decisionSnapshot?.id || report.id || targetDate);
-    const idempotencyKey = `${sourceIdentity}:${String(draft.analysis_window)}:${String(draft.symbol)}:${String(draft.expected_horizon)}:${CLE_ENGINE_VERSION}`;
+    const idempotencyKey = `${sourceIdentity}:${String(draft.analysis_window)}:${String(draft.symbol)}:${String(draft.expected_horizon)}:${CLE_ENGINE_VERSION}:CORE_LEARNING_V1`;
     const { data: existingExact, error: exactError } = await client
       .from('learning_predictions')
       .select('*')
@@ -356,6 +377,21 @@ async function capturePredictions(
     if (exactError) throw exactError;
     if (existingExact) {
       captured.push(existingExact as PredictionRow);
+      continue;
+    }
+
+    // Reuse an equivalent immutable forecast instead of manufacturing a second
+    // v1 sample merely because its serialization/schema marker changed.
+    const { data: equivalent, error: equivalentError } = await client.from('learning_predictions').select('*')
+      .eq('decision_snapshot_id', opening.opening_publication_revision_id).eq('report_date', targetDate)
+      .eq('analysis_window', String(draft.analysis_window)).eq('symbol', String(draft.symbol))
+      .order('revision', { ascending: false }).limit(1).maybeSingle();
+    if (equivalentError) throw equivalentError;
+    if (equivalent && equivalent.record_status === 'valid' && equivalent.data_quality_status === 'complete'
+      && equivalent.prediction_scope === draft.prediction_scope && equivalent.direction === draft.direction
+      && equivalent.prediction_at === draft.prediction_at && equivalent.model_confidence === draft.model_confidence
+      && JSON.stringify(equivalent.source_refs) === JSON.stringify(draft.source_refs)) {
+      captured.push(equivalent as PredictionRow);
       continue;
     }
 
@@ -637,6 +673,8 @@ async function updateOutcomes(
           trading_date: target.trading_date,
           captured_at: target.captured_at,
           source: target.source,
+          value: finiteNumber(target.value),
+          change_percent: finiteNumber(target.change_percent),
         }] : [],
         failure_reason: completed ? null : 'TARGET_MARKET_SNAPSHOT_MISSING',
         outcome_version: 'CLE_OUTCOME_V1',
@@ -656,16 +694,31 @@ async function updateOutcomes(
   };
   const changedRows = rows.filter((row) => {
     const existing = beforeMap.get(`${row.prediction_id}:${row.horizon}`);
-    return !existing || stable(existing) !== stable(row);
+    const predictionDate = predictions.find(prediction => prediction.id === row.prediction_id)?.report_date || '';
+    return canWriteLearningOutcome(row, existing, predictionDate, targetDate) && (!existing || stable(existing) !== stable(row));
   });
-  const created = changedRows.filter((row) => !beforeMap.has(`${row.prediction_id}:${row.horizon}`)).length;
-  const updated = changedRows.length - created;
-  const unchanged = rows.length - changedRows.length;
-  if (changedRows.length > 0) {
-    const { error } = await client.from('prediction_outcomes')
-      .upsert(changedRows, { onConflict: 'prediction_id,horizon' });
-    if (error) throw error;
+  let created = 0, updated = 0;
+  const newRows = changedRows.filter(row => !beforeMap.has(`${row.prediction_id}:${row.horizon}`));
+  if (newRows.length > 0) {
+    // A concurrent retry may have already created the real observation. Never
+    // overwrite it on conflict, including its original evaluated_at/source refs.
+    const inserted = await client.from('prediction_outcomes')
+      .upsert(newRows, { onConflict: 'prediction_id,horizon', ignoreDuplicates: true }).select('prediction_id,horizon');
+    if (inserted.error) throw inserted.error;
+    created = inserted.data?.length || 0;
   }
+  for (const row of changedRows) {
+    const existing = beforeMap.get(`${row.prediction_id}:${row.horizon}`);
+    if (!existing) continue;
+    let update = client.from('prediction_outcomes').update(row)
+      .eq('prediction_id', String(row.prediction_id)).eq('horizon', String(row.horizon))
+      .eq('status', String(existing.status));
+    update = existing.updated_at ? update.eq('updated_at', existing.updated_at) : update.is('updated_at', null);
+    const saved = await update.select('prediction_id,horizon');
+    if (saved.error) throw saved.error;
+    updated += saved.data?.length || 0;
+  }
+  const unchanged = rows.length - created - updated;
   const { data, error } = await client.from('prediction_outcomes').select('*').in('prediction_id', predictionIds);
   if (error) throw error;
   return { outcomes: (data || []) as OutcomeRow[], created, updated, unchanged };
@@ -1306,6 +1359,31 @@ async function reconcileLearningMetrics(
   });
 }
 
+async function finalizeLearningLifecycle(
+  client: RuntimeClient, targetDate: string, runId: string, contract: LearningContract, counters: JsonRecord,
+): Promise<void> {
+  if (contract.status !== 'COMPLETE' || contract.report_date !== targetDate) throw new Error('LEARNING_CONTRACT_INCOMPLETE');
+  const state = await client.from('trading_day_state').select('checkpoint_status').eq('trading_date', targetDate).maybeSingle();
+  if (state.error) throw new Error('LEARNING_LIFECYCLE_READ_FAILED');
+  const matches = (value: unknown): boolean => {
+    const checkpoint = asObject(value), metadata = asObject(checkpoint.metadata);
+    return checkpoint.status === 'SUCCEEDED' && metadata.run_id === runId
+      && metadata.opening_publication_revision_id === contract.opening_publication_revision_id;
+  };
+  let checkpoints = asObject(asObject(state.data).checkpoint_status);
+  for (const [checkpoint, lifecycleState] of [['feedback', 'FEEDBACK_COMPLETED'], ['continuous_learning', 'LEARNING_COMPLETED']]) {
+    if (matches(checkpoints[checkpoint])) continue;
+    const result = await client.rpc('advance_trading_day_state_v1', {
+      p_trading_date: targetDate, p_state: lifecycleState, p_checkpoint: checkpoint, p_status: 'SUCCEEDED',
+      p_correlation_id: crypto.randomUUID(), p_metadata: { ...counters, run_id: runId,
+        engine_version: CLE_ENGINE_VERSION, opening_publication_revision_id: contract.opening_publication_revision_id,
+        learning_contract: contract },
+    });
+    checkpoints = asObject(asObject(result.data).checkpoint_status);
+    if (result.error || !matches(checkpoints[checkpoint])) throw new Error('LEARNING_LIFECYCLE_RETRY_REQUIRED');
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== 'POST') return jsonResponse({ success: false, error: 'Only POST allowed' }, 405);
@@ -1355,8 +1433,44 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  // Resolve the immutable published opening before creating/reusing a run. A
+  // current PREMARKET QA row and a successful lifecycle label are not lineage.
+  const reportResult = await client.from('reports')
+    .select('id,report_date,summary,market_bias,confidence_score,ai_strategy_json,created_at,updated_at')
+    .eq('report_date', targetDate).maybeSingle();
+  if (reportResult.error || !reportResult.data) {
+    return jsonResponse({ success: false, error: 'CANONICAL_REPORT_MISSING', target_date: targetDate }, 409);
+  }
+  const publishedReport = reportResult.data as JsonRecord;
+  const openingIdentity = resolveOpeningPublicationIdentity(publishedReport);
+  if (openingIdentity.reason_codes.length > 0) {
+    return jsonResponse({ success: false, error: 'OPENING_PUBLICATION_UNVERIFIED', target_date: targetDate,
+      reason_codes: openingIdentity.reason_codes }, 409);
+  }
+  const snapshotResult = await client.from('decision_snapshots').select('*')
+    .eq('id', openingIdentity.opening_publication_revision_id).eq('report_id', openingIdentity.report_id)
+    .eq('report_date', targetDate).maybeSingle();
+  if (snapshotResult.error || !snapshotResult.data) {
+    return jsonResponse({ success: false, error: 'CANONICAL_DECISION_SNAPSHOT_MISSING', target_date: targetDate,
+      opening_publication_revision_id: openingIdentity.opening_publication_revision_id }, 409);
+  }
+  const receiptResult = await client.from('pipeline_runs').select('*')
+    .eq('trading_date', targetDate).eq('status', 'SUCCEEDED').like('idempotency_key', 'research-input:%')
+    .eq('provider_status->result->>decision_snapshot_id', openingIdentity.opening_publication_revision_id)
+    .order('completed_at', { ascending: true }).limit(1).maybeSingle();
+  const openingPublication = validateOpeningPublication({ report: publishedReport, snapshot: snapshotResult.data, publicationRun: receiptResult.data });
+  const closingReceiptId = resolveClosingReceiptPointer(publishedReport, openingPublication);
+  const closingReceipt = closingReceiptId ? await client.from('decision_snapshots').select('*').eq('id', closingReceiptId)
+    .eq('report_id', openingPublication.report_id).eq('report_date', targetDate).maybeSingle() : { data: null, error: null };
+  const closingContract = evaluateClosingContract({ opening: openingPublication,
+    closingSnapshot: closingReceipt.data, expectedSnapshotId: closingReceiptId });
+  if (receiptResult.error || closingReceipt.error || openingPublication.status !== 'PUBLISHED' || closingContract.status !== 'COMPLETE') {
+    return jsonResponse({ success: false, error: 'CLOSING_VERIFICATION_INCOMPLETE', target_date: targetDate,
+      opening_publication: openingPublication, closing_contract: closingContract }, 409);
+  }
+  const openingSnapshot = snapshotResult.data as JsonRecord;
   const runType = backfill ? 'backfill' : 'daily';
-  const runKey = `${targetDate}:${runType}:${CLE_ENGINE_VERSION}`;
+  const runKey = `${targetDate}:${runType}:${CLE_ENGINE_VERSION}:${openingPublication.opening_publication_revision_id}:CORE_LEARNING_V1`;
 
   if (!backfill) {
     const { data: tradingDayState, error: tradingDayStateError } = await client
@@ -1375,21 +1489,24 @@ Deno.serve(async (req: Request) => {
       }, 500);
     }
     const closingStatus = asObject(asObject(tradingDayState?.checkpoint_status).closing_verification);
+    const closingMetadata = asObject(closingStatus.metadata);
     const closingComplete = Number(tradingDayState?.state_rank || 0) >= 110
-      && String(closingStatus.status || '') === 'SUCCEEDED';
+      && String(closingStatus.status || '') === 'SUCCEEDED'
+      && closingMetadata.closing_decision_snapshot_id === closingContract.closing_snapshot_id
+      && closingMetadata.opening_publication_revision_id === openingPublication.opening_publication_revision_id;
     if (!closingComplete) {
       return jsonResponse({
-        success: true,
-        skipped: true,
+        success: false,
         reason: 'CLOSING_VERIFICATION_INCOMPLETE',
         target_date: targetDate,
         engine_version: CLE_ENGINE_VERSION,
         closing_state: tradingDayState?.current_state || null,
-      });
+      }, 409);
     }
   }
 
   let runId: string | null = null;
+  let runEvidencePersisted = false;
   const counters = {
     predictions_processed: 0,
     outcomes_created: 0,
@@ -1414,13 +1531,23 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     if (existingRunError) throw existingRunError;
     if (existingRun && String(existingRun.status) === 'succeeded') {
-      return jsonResponse({
-        success: true,
-        reused: true,
-        run_id: existingRun.id,
-        target_date: targetDate,
-        engine_version: CLE_ENGINE_VERSION,
-      });
+      const predictionsResult = await client.from('learning_predictions').select('*')
+        .eq('report_date', targetDate).eq('decision_snapshot_id', openingPublication.opening_publication_revision_id);
+      if (predictionsResult.error) throw predictionsResult.error;
+      const currentPredictions = selectLearningPredictionSamples((predictionsResult.data || []) as JsonRecord[]);
+      const outcomesResult = currentPredictions.length > 0
+        ? await client.from('prediction_outcomes').select('*').in('prediction_id', currentPredictions.map(row => String(row.id)))
+        : { data: [], error: null };
+      if (outcomesResult.error) throw outcomesResult.error;
+      const contract = evaluateLearningContract({ opening: openingPublication, closing: closingContract,
+        predictions: currentPredictions, outcomes: outcomesResult.data });
+      if (contract.status === 'COMPLETE') {
+        runId = String(existingRun.id);
+        runEvidencePersisted = true;
+        await finalizeLearningLifecycle(client, targetDate, runId, contract, {});
+        return jsonResponse({ success: true, reused: true, run_id: existingRun.id, target_date: targetDate,
+          engine_version: CLE_ENGINE_VERSION, learning_contract: contract });
+      }
     }
     if (existingRun) {
       runId = String(existingRun.id);
@@ -1439,67 +1566,15 @@ Deno.serve(async (req: Request) => {
         idempotency_key: runKey,
         engine_version: CLE_ENGINE_VERSION,
         status: 'running',
-        metadata: { failure_isolation: true, production_rule_mutation: false },
+        metadata: { failure_isolation: true, production_rule_mutation: false,
+          opening_publication_revision_id: openingPublication.opening_publication_revision_id },
       }).select('id').single();
       if (error) throw error;
       runId = String(insertedRun.id);
     }
 
-    const { data: report, error: reportError } = await client
-      .from('reports')
-      .select('id,report_date,summary,market_bias,confidence_score,ai_strategy_json,created_at,updated_at')
-      .eq('report_date', targetDate)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (reportError) throw reportError;
-
-    if (!report) {
-      const { error: skipError } = await client.from('learning_runs').update({
-        status: 'skipped',
-        completed_at: new Date().toISOString(),
-        errors: [{ code: 'CANONICAL_REPORT_MISSING', message: 'No canonical report exists for the requested trading date.' }],
-        ...counters,
-      }).eq('id', runId);
-      if (skipError) throw skipError;
-      return jsonResponse({
-        success: true,
-        skipped: true,
-        run_id: runId,
-        target_date: targetDate,
-        reason: 'CANONICAL_REPORT_MISSING',
-        engine_version: CLE_ENGINE_VERSION,
-      });
-    }
-
-    if (report) {
-      const { data: decisionSnapshot, error: decisionError } = await client
-        .from('decision_snapshots')
-        .select('*')
-        .eq('report_date', targetDate)
-        .eq('session_type', 'PREMARKET')
-        .eq('is_current', true)
-        .order('version', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (decisionError) throw decisionError;
-      if (!decisionSnapshot) {
-        const { error: degradeError } = await client.from('learning_runs').update({
-          status: 'degraded',
-          completed_at: new Date().toISOString(),
-          errors: [{ code: 'CANONICAL_DECISION_SNAPSHOT_MISSING', message: 'A report exists but no current PREMARKET decision snapshot is available; the date is not trusted for learning.' }],
-          ...counters,
-        }).eq('id', runId);
-        if (degradeError) throw degradeError;
-        return jsonResponse({
-          success: true,
-          degraded: true,
-          run_id: runId,
-          target_date: targetDate,
-          reason: 'CANONICAL_DECISION_SNAPSHOT_MISSING',
-          engine_version: CLE_ENGINE_VERSION,
-        });
-      }
+    let currentPredictions: PredictionRow[] = [];
+    {
       const { data: premarketRows, error: premarketError } = await client
         .from('market_data_snapshots')
         .select('symbol,name,value,change_percent,captured_at,source,phase,trading_date,raw')
@@ -1511,14 +1586,20 @@ Deno.serve(async (req: Request) => {
       const captured = await capturePredictions(
         client,
         targetDate,
-        report as JsonRecord,
-        decisionSnapshot as JsonRecord | null,
+        publishedReport,
+        openingSnapshot,
         (premarketRows || []) as SnapshotRow[],
+        openingPublication,
       );
+      currentPredictions = captured;
       counters.predictions_processed = captured.length;
     }
 
     const window = await loadPredictionAndMarketWindow(client, targetDate);
+    // Every statistics/review/rule consumer receives the same deduplicated set.
+    // A corrected serialization of a frozen forecast is not a second sample.
+    window.predictions = selectLearningPredictionSamples(window.predictions.filter(prediction =>
+      prediction.report_date !== targetDate || prediction.decision_snapshot_id === openingPublication.opening_publication_revision_id));
     if (window.predictions.length === 0) {
       const { error } = await client.from('learning_runs').update({
         status: 'degraded',
@@ -1539,6 +1620,18 @@ Deno.serve(async (req: Request) => {
 
     const outcomeResult = await updateOutcomes(client, targetDate, window.predictions, window.snapshots);
     const outcomes = outcomeResult.outcomes;
+    const learningContract = evaluateLearningContract({ opening: openingPublication, closing: closingContract,
+      predictions: currentPredictions, outcomes });
+    if (learningContract.status !== 'COMPLETE') {
+      const { error } = await client.from('learning_runs').update({ status: 'degraded', completed_at: new Date().toISOString(),
+        errors: learningContract.reason_codes.map(code => ({ code })), ...counters,
+        metadata: { failure_isolation: true, production_rule_mutation: false, learning_contract: learningContract,
+          opening_publication_revision_id: openingPublication.opening_publication_revision_id },
+      }).eq('id', runId);
+      if (error) throw error;
+      return jsonResponse({ success: false, degraded: true, run_id: runId, target_date: targetDate,
+        error: 'LEARNING_CONTRACT_INCOMPLETE', learning_contract: learningContract }, 409);
+    }
     counters.outcomes_created = outcomeResult.created;
     counters.outcomes_updated = outcomeResult.updated;
     counters.outcomes_unchanged = outcomeResult.unchanged;
@@ -1586,26 +1679,14 @@ Deno.serve(async (req: Request) => {
       completed_at: new Date().toISOString(),
       ...counters,
       errors: [],
+      metadata: { failure_isolation: true, production_rule_mutation: false, learning_contract: learningContract,
+        opening_publication_revision_id: openingPublication.opening_publication_revision_id },
     }).eq('id', runId);
     if (completeError) throw completeError;
+    runEvidencePersisted = true;
 
-    const { error: feedbackStateError } = await client.rpc('advance_trading_day_state_v1', {
-      p_trading_date: targetDate, p_state: 'FEEDBACK_COMPLETED', p_checkpoint: 'feedback', p_status: 'SUCCEEDED',
-      p_correlation_id: crypto.randomUUID(), p_metadata: { run_id: runId, review_count: reviewResult.reviews.length },
-    });
-    if (feedbackStateError) throw new Error('FEEDBACK_STATE_ADVANCE_FAILED');
-    const { error: tradingDayStateError } = await client.rpc(
-      'advance_trading_day_state_v1',
-      {
-        p_trading_date: targetDate,
-        p_state: 'LEARNING_COMPLETED',
-        p_checkpoint: 'continuous_learning',
-        p_status: 'SUCCEEDED',
-        p_correlation_id: crypto.randomUUID(),
-        p_metadata: { run_id: runId, engine_version: CLE_ENGINE_VERSION, ...counters },
-      },
-    );
-    if (tradingDayStateError) throw new Error('LEARNING_STATE_ADVANCE_FAILED');
+    await finalizeLearningLifecycle(client, targetDate, runId!, learningContract,
+      { ...counters, review_count: reviewResult.reviews.length });
 
     return jsonResponse({
       success: true,
@@ -1613,11 +1694,12 @@ Deno.serve(async (req: Request) => {
       target_date: targetDate,
       engine_version: CLE_ENGINE_VERSION,
       production_rule_mutated: false,
+      learning_contract: learningContract,
       ...counters,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (runId) {
+    if (runId && !runEvidencePersisted) {
       await client.from('learning_runs').update({
         status: 'failed',
         completed_at: new Date().toISOString(),
@@ -1633,6 +1715,7 @@ Deno.serve(async (req: Request) => {
       run_id: runId,
       target_date: targetDate,
       engine_version: CLE_ENGINE_VERSION,
+      learning_status: runEvidencePersisted ? 'pending_lifecycle' : 'failed',
       failure_isolated: true,
     }, 500);
   }

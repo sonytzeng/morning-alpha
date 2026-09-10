@@ -70,18 +70,32 @@ export function resolveSubscriberState(ai: unknown): SubscriberState | null {
  * separately rejects future receipts against its authoritative request time. */
 export function hasMatchingSubscriberClosingReceipt(value: unknown, identity: {
   report_date: string; revision_id: string | null; generated_at: string | null;
+  publicationVerified?: boolean; marketPublicationContract?: unknown;
 }): boolean {
+  const hasPublicationContract = identity.marketPublicationContract !== undefined;
+  const publication = record(identity.marketPublicationContract);
+  // Only the verified current publication can bind an earlier opening. The
+  // receipt itself never chooses its comparison revision, and a malformed new
+  // contract cannot fall back to the legacy current-revision interpretation.
+  if (hasPublicationContract && (identity.publicationVerified !== true
+    || publication.schema_version !== 'CORE_MARKET_PUBLICATION_V1' || publication.status !== 'PUBLISHED'
+    || publication.report_date !== identity.report_date || publication.revision_id !== identity.revision_id
+    || !text(publication.opening_publication_revision_id))) return false;
+  const openingRevision = hasPublicationContract ? text(publication.opening_publication_revision_id) : identity.revision_id;
   const close = record(value), at = timestamp(close.verified_at);
   const actuals = [close.actual_taiex_change ?? record(close.actual_taiex_close).change_percent,
     record(close.actual_2330_close).change_percent ?? record(close.actual_tsmc_close).change_percent,
     record(close.actual_txf_close).change_percent];
   const outcome = text(close.prediction_result || close.hit_or_miss).toLowerCase();
   const verifiedDate = Number.isFinite(at) ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date(at)) : '';
-  return validDate(identity.report_date) && Boolean(identity.revision_id)
+  return validDate(identity.report_date) && Boolean(identity.revision_id) && Number.isFinite(timestamp(identity.generated_at))
     && ['COMPLETE', 'COMPLETED', 'VERIFIED'].includes(text(close.status).toUpperCase())
     && text(close.data_status).toLowerCase() === 'complete'
-    && close.report_date === identity.report_date && close.opening_decision_snapshot_id === identity.revision_id
-    && Number.isFinite(at) && at >= timestamp(identity.generated_at)
+    && close.report_date === identity.report_date && close.opening_decision_snapshot_id === openingRevision
+    // A later published revision may be generated after this frozen opening's
+    // close. Its timestamp is not the opening time; same-day close timing below
+    // remains mandatory. Legacy/current-opening receipts keep the original guard.
+    && Number.isFinite(at) && (openingRevision !== identity.revision_id || at >= timestamp(identity.generated_at))
     && at >= Date.parse(`${identity.report_date}T14:10:00+08:00`) && verifiedDate === identity.report_date
     && actuals.every(v => number(v) !== null)
     && ['hit', 'partial', 'miss', 'correct', 'wrong', 'mixed', 'neutral'].includes(outcome)
@@ -91,6 +105,7 @@ export function hasMatchingSubscriberClosingReceipt(value: unknown, identity: {
 export function createSubscriberState(input: {
   report_date: string; revision_id: string | null; generated_at: string | null;
   publicationVerified: boolean; marketEvidenceReady: boolean; analysisStatus: unknown;
+  marketPublicationContract?: unknown;
   isTradingDay: boolean | null; confidenceValue: unknown; recommendationGate: unknown;
   closing: unknown; now: string;
 }): SubscriberState {
@@ -118,7 +133,8 @@ export function createSubscriberState(input: {
   if (input.isTradingDay === false) closing = 'NOT_APPLICABLE';
   else if (status === 'NOT_DUE' || (Number.isFinite(now) && now < due)) closing = 'NOT_DUE';
   else if (Object.keys(close).length) {
-    const complete = published && at <= now && hasMatchingSubscriberClosingReceipt(close, input);
+    const complete = published && at <= now && timestamp(input.generated_at) <= now
+      && hasMatchingSubscriberClosingReceipt(close, { ...input, publicationVerified: published });
     closing = complete ? 'COMPLETE' : 'INSUFFICIENT_EVIDENCE';
     if (!complete) reasons.push('CLOSING_PUBLICATION_EVIDENCE_UNVERIFIED');
   }
@@ -138,6 +154,252 @@ export function createSubscriberState(input: {
 export const RECOMMENDATION_EVIDENCE_INSUFFICIENT = RECOMMENDATION_INSUFFICIENT_MESSAGE;
 export const SUBSCRIBER_ANALYSIS_INCOMPLETE = INCOMPLETE_ANALYSIS_MESSAGE;
 
+export const SUBSCRIBER_PROJECTION_VERSION = 'ma-subscriber-projection-v1' as const;
+export const SUBSCRIBER_CHECKPOINT_KEYS = ['0900', '0930', '1030', '1300', '1410', '1430'] as const;
+export type SubscriberCheckpointKey = typeof SUBSCRIBER_CHECKPOINT_KEYS[number];
+export type SubscriberCheckpoint = {
+  status: 'completed' | 'failed' | 'insufficient' | 'pending' | 'not_applicable';
+  evidenceVerified: boolean;
+  observedAt: string | null;
+};
+export type SubscriberReportProjection = {
+  schemaVersion: typeof SUBSCRIBER_PROJECTION_VERSION;
+  identity: { reportDate: string; revisionId: string | null; generatedAt: string | null; todayDate: string | null };
+  displayStatus: 'READY' | 'PARTIAL' | 'INSUFFICIENT_EVIDENCE' | 'INVALIDATED';
+  statusLabel: string;
+  title: string;
+  analysisAvailable: boolean;
+  confidence: { value: number | null; label: string; suppressed: boolean };
+  marketDecision: { action: 'ACT' | 'WAIT' | 'STOP' | 'INSUFFICIENT_DATA'; label: string; bias: string | null; summary: string | null; runtimeFailure: boolean };
+  recommendation: { available: boolean; status: SubscriberState['recommendation']; message: string | null; items: unknown[] };
+  closing: {
+    state: SubscriberState['closing']; complete: boolean; result: Row | null; outcome: string | null;
+    openingDecision: { revisionId: string; bias: string | null; confidence: number | null; summary: string | null } | null;
+  };
+  runtime: {
+    checkpoints: Record<SubscriberCheckpointKey, SubscriberCheckpoint>;
+    confirmedIntradayEvidence: boolean;
+    newIntradayEvidence: boolean;
+    decisionEvidence: {
+      status: 'Waiting' | 'Confirmed' | 'Rejected' | 'Completed';
+      reason: string;
+      completedCheckpoints: number;
+      totalCheckpoints: number;
+      checklistAvailable: boolean;
+      marketSnapshotAvailable: boolean;
+      runtimeFailure: boolean;
+      closingVerified: boolean;
+    };
+  };
+  evidence: { status: 'SUFFICIENT' | 'INSUFFICIENT_EVIDENCE' | 'IDENTITY_MISMATCH' | 'INVALID_CONTRACT' };
+  historical: boolean;
+};
+
+/** A raw checkpoint label is not proof. Each observation must independently
+ * bind the published date/revision, an actual timestamp and structured evidence.
+ * No parent-window fallback, browser clock or opening quote can supply proof. */
+function projectSubscriberCheckpoints(ai: Row, identity: SubscriberReportProjection['identity'], ready: boolean,
+  nonTrading: boolean, closing: SubscriberState['closing'], closingAt: string): Record<SubscriberCheckpointKey, SubscriberCheckpoint> {
+  const sync = record(ai.intraday_sync_status), windows = record(sync.windows);
+  const parentMatches = (sync.report_date === undefined || sync.report_date === identity.reportDate)
+    && (sync.revision_id === undefined || sync.revision_id === identity.revisionId);
+  const entries = SUBSCRIBER_CHECKPOINT_KEYS.map((key): [SubscriberCheckpointKey, SubscriberCheckpoint] => {
+    const empty = (status: SubscriberCheckpoint['status']): SubscriberCheckpoint => ({ status, evidenceVerified: false, observedAt: null });
+    if (nonTrading) return [key, empty('not_applicable')];
+    if (key === '1430') return [key, closing === 'COMPLETE'
+      ? { status: 'completed', evidenceVerified: true, observedAt: closingAt }
+      : empty(closing === 'INSUFFICIENT_EVIDENCE' || !ready ? 'insufficient' : 'pending')];
+    if (!ready) return [key, empty('insufficient')];
+    const checkpoint = record(windows[key]);
+    if (!Object.keys(checkpoint).length) return [key, empty('pending')];
+    const status = text(checkpoint.status).toUpperCase();
+    const failed = ['FAILED', 'REJECTED', 'INVALIDATED'].includes(status);
+    const completed = ['READY', 'COMPLETE', 'COMPLETED', 'SYNCED'].includes(status);
+    if (!failed && !completed) return [key, empty(['MISSING', 'STALE', 'INSUFFICIENT', 'NOT_UPDATED'].includes(status) ? 'insufficient' : 'pending')];
+    const observedAt = text(failed ? checkpoint.failed_at : checkpoint.completed_at);
+    const at = timestamp(observedAt);
+    const day = Number.isFinite(at) ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date(at)) : '';
+    const evidence = checkpoint.evidence;
+    const hasEvidence = Array.isArray(evidence)
+      ? evidence.some(item => Object.keys(record(item)).length > 0)
+      : Object.keys(record(evidence)).length > 0;
+    const checkpointStart = Date.parse(`${identity.reportDate}T${key.slice(0, 2)}:${key.slice(2)}:00+08:00`);
+    const verified = parentMatches && checkpoint.report_date === identity.reportDate && checkpoint.revision_id === identity.revisionId
+      && Boolean(identity.revisionId) && Number.isFinite(at) && at >= timestamp(identity.generatedAt)
+      && at >= checkpointStart && day === identity.reportDate && hasEvidence;
+    return [key, verified ? { status: failed ? 'failed' : 'completed', evidenceVerified: true, observedAt }
+      : empty('insufficient')];
+  });
+  return Object.fromEntries(entries) as Record<SubscriberCheckpointKey, SubscriberCheckpoint>;
+}
+
+/** The ONLY subscriber interpretation boundary. Accepts a trimmed payload,
+ * response envelope or report row. Never evaluates a role, fabricates evidence,
+ * or advances a checkpoint with browser time. Raw/internal fields cannot override
+ * a versioned state. A missing legacy publication receipt fails closed. */
+export function getSubscriberReportProjection(value: unknown, options: { todayDate?: string; historical?: boolean } = {}): SubscriberReportProjection {
+  const outer = record(value);
+  const payload = Object.keys(record(outer.payload)).length ? record(outer.payload) : outer;
+  const nested = record(payload.ai_strategy_json);
+  // Trimmed public fields win over the admin-only nested raw report.
+  const ai: Row = { ...nested, ...payload };
+  const canonical = record(ai.canonical_decision);
+  const stateValue = outer.subscriber_state ?? ai.subscriber_state;
+  const rawState = record(stateValue);
+  const reportDate = text(outer.report_date || ai.report_date || canonical.report_date || rawState.report_date);
+  const revisionId = text(outer.revision_id || ai.revision_id || canonical.id || rawState.revision_id) || null;
+  const generatedAt = text(outer.generated_at || ai.generated_at || canonical.generated_at || rawState.generated_at || outer.created_at) || null;
+  const todayDate = validDate(options.todayDate) ? options.todayDate
+    : validDate(outer.today_date) ? outer.today_date : validDate(ai.today_date) ? ai.today_date : null;
+  const identity = { reportDate, revisionId, generatedAt, todayDate };
+  const matches = (values: unknown[], expected: unknown) => values.every(v => v === undefined || v === null || v === '' || v === expected);
+  const mixedIdentity = !matches([outer.report_date, ai.report_date, canonical.report_date, rawState.report_date], reportDate)
+    || !matches([outer.revision_id, ai.revision_id, canonical.id, rawState.revision_id], revisionId)
+    || !matches([outer.generated_at, ai.generated_at, canonical.generated_at, rawState.generated_at], generatedAt);
+  const hasState = Object.prototype.hasOwnProperty.call(outer, 'subscriber_state') || Object.prototype.hasOwnProperty.call(ai, 'subscriber_state');
+  const state = hasState ? parseSubscriberState(stateValue, { report_date: reportDate, revision_id: revisionId, generated_at: generatedAt }) : null;
+  const validIdentity = validDate(reportDate) && Boolean(revisionId) && Number.isFinite(timestamp(generatedAt)) && !mixedIdentity;
+  const publication = record(ai.content_publish_gate);
+  const ready = validIdentity && (hasState
+    ? state?.publication === 'PUBLISHED' && state.analysis === 'READY'
+    : canonical.status === 'READY' && publication.overall_status === 'eligible'
+      && (ai.report_status === undefined || ai.report_status === 'READY'));
+  const partial = state?.analysis === 'PARTIAL' || (!hasState && canonical.status === 'PARTIAL');
+  const confidenceValue = !ready ? null : hasState
+    ? state?.confidence.status === 'AVAILABLE' ? state.confidence.value : null
+    : score(canonical.confidence_score);
+  const historical = options.historical === true || Boolean(todayDate && reportDate && todayDate !== reportDate);
+  const nonTrading = ai.is_trading_day === false;
+  const rawAction = text(canonical.action).toUpperCase();
+  let action: SubscriberReportProjection['marketDecision']['action'] = !ready ? 'INSUFFICIENT_DATA'
+    : nonTrading ? 'WAIT' : ['ACT', 'WAIT', 'STOP'].includes(rawAction) ? rawAction as 'ACT' | 'WAIT' | 'STOP' : 'INSUFFICIENT_DATA';
+  const gate = record(ai.recommendation_gate || record(ai.market_report_gate).recommendation_gate);
+  const recommendationStatus = hasState ? state?.recommendation : text(ai.recommendation_status || gate.status).toUpperCase();
+  const screening = gate.screening || record(ai.decision_engine_v1).screening;
+  const noQualified = ready && recommendationStatus === 'NO_QUALIFIED_OPPORTUNITY'
+    && gate.universe_evaluation_complete === true && hasCompleteUniverseAssessment(screening);
+  const hasCanonicalCandidates = Object.hasOwn(canonical, 'recommendations');
+  const candidates = hasCanonicalCandidates ? canonical.recommendations
+    : ai.today_beneficiary_stocks_v10 ?? ai.today_beneficiary_stocks
+      ?? record(ai.decision_engine_v1).stock_opportunities ?? ai.stock_recommendations ?? ai.recommendations;
+  // Explicitly empty/invalid committed candidates cannot become a qualified
+  // recommendation or fall back to private legacy lists. Complete omission is
+  // different: a server-trimmed Free payload may retain the evidence status
+  // while withholding every stock field. It grants no items or entitlement.
+  const candidateListConsistent = !hasCanonicalCandidates && candidates === undefined
+    || Array.isArray(candidates) && candidates.length > 0;
+  const qualified = ready && !historical && !nonTrading && recommendationStatus === 'QUALIFIED'
+    && candidateListConsistent
+    && (hasState ? state?.recommendation === 'QUALIFIED' : gate.eligible === true);
+  const items = qualified && Array.isArray(candidates) ? candidates : [];
+  const recommendation: SubscriberReportProjection['recommendation'] = {
+    available: qualified, status: qualified ? 'QUALIFIED' : noQualified ? 'NO_QUALIFIED_OPPORTUNITY' : 'BLOCKED',
+    message: qualified ? null : noQualified ? '今天沒有符合標準的新增機會' : RECOMMENDATION_INSUFFICIENT_MESSAGE, items,
+  };
+  // Priority is deterministic. No fallback from an explicit NOT_DUE or invalid
+  // v2 receipt to a legacy completed claim from another revision.
+  const close = record(ai.closing_verification_v2 ?? ai.closing_verification ?? ai.todayCloseVerification);
+  const declaredClose = hasState ? state?.closing : text(close.status).toUpperCase();
+  const receipt = ready && hasMatchingSubscriberClosingReceipt(close, {
+    report_date: reportDate, revision_id: revisionId, generated_at: generatedAt,
+    publicationVerified: hasState && state?.publication === 'PUBLISHED' && state.analysis === 'READY',
+    marketPublicationContract: ai.market_publication_contract,
+  });
+  let closingState: SubscriberState['closing'] = 'PENDING';
+  if (nonTrading || declaredClose === 'NOT_APPLICABLE') closingState = 'NOT_APPLICABLE';
+  else if (declaredClose === 'NOT_DUE') closingState = 'NOT_DUE';
+  else if (receipt && (!hasState || declaredClose === 'COMPLETE')) closingState = 'COMPLETE';
+  else if (!ready || Object.keys(close).length || declaredClose === 'INSUFFICIENT_EVIDENCE') closingState = 'INSUFFICIENT_EVIDENCE';
+  const checkpoints = projectSubscriberCheckpoints(ai, identity, ready, nonTrading, closingState, text(close.verified_at));
+  const failedCheckpoint = Object.values(checkpoints).some(checkpoint => checkpoint.status === 'failed');
+  const runtimeFailure = ready && (failedCheckpoint || closingState === 'COMPLETE'
+    && ['miss', 'wrong'].includes(text(close.prediction_result || close.hit_or_miss).toLowerCase()));
+  if (runtimeFailure) action = 'STOP';
+  const displayStatus = runtimeFailure ? 'INVALIDATED' : ready ? 'READY' : partial && !mixedIdentity ? 'PARTIAL' : 'INSUFFICIENT_EVIDENCE';
+  const statusLabel = ready ? runtimeFailure ? '驗證顯示原判斷已失效' : historical ? '歷史市場分析（非今日）' : nonTrading ? '今日非交易日' : '市場分析已發布' : INCOMPLETE_ANALYSIS_MESSAGE;
+  const rawSummary = text(canonical.daily_sentence || ai.daily_sentence || ai.summary);
+  // Legacy prose may repeat an unverified numeric confidence. Withholding that
+  // summary is safer than editing the number or inventing replacement analysis.
+  const summary = confidenceValue !== null ? rawSummary : rawSummary.split(/[；;\n]/).filter(clause =>
+    !/\d+(?:\.\d+)?\s*\/\s*100/.test(clause)
+    && !/(?:信心|把握|confidence|評分)[^。；\n]{0,16}\d+(?:\.\d+)?\s*(?:%|分)/i.test(clause)).join('；');
+  // Preserve the existing three-core-market and nonempty checklist prerequisites
+  // inside the single subscriber projection. Availability may withhold a claim;
+  // it never supplies missing publication, revision-bound runtime or close proof.
+  const snapshots = Array.isArray(ai.market_data_snapshots) ? ai.market_data_snapshots : [];
+  const coreSymbols = new Set(snapshots.flatMap(value => {
+    const row = record(value);
+    if (number(row.value) === null || number(row.change_percent) === null) return [];
+    const symbol = text(row.symbol || row.ticker).toUpperCase().replace(/^(TWSE|TPEX):/, '').replace(/\.(TW|TWO)$/, '');
+    if (['TAIEX', '^TWII'].includes(symbol)) return ['TAIEX'];
+    if (['TXF', 'TX', 'TX1', 'TX01'].includes(symbol)) return ['TXF'];
+    return symbol === '2330' ? ['2330'] : [];
+  }));
+  const marketSnapshotAvailable = ['TAIEX', 'TXF', '2330'].every(symbol => coreSymbols.has(symbol));
+  const note = record(ai.member_research_note_v2);
+  const timeWindows = Array.isArray(note.intraday_time_windows)
+    ? note.intraday_time_windows.filter(value => value !== null && typeof value === 'object' && !Array.isArray(value)) : [];
+  const checklistRows = timeWindows.length ? timeWindows : Array.isArray(note.intraday_validation)
+    ? note.intraday_validation.map(value => typeof value === 'string' ? { what_to_watch: value } : record(value)) : [];
+  const hasContent = (value: unknown): boolean => Boolean(text(value)) || typeof value === 'number' && Number.isFinite(value);
+  const checklistAvailable = ready && !nonTrading && checklistRows.slice(0, 5).some(value => {
+    const row = record(value);
+    return ['title', 'purpose', 'what_to_watch', 'action_note', 'signals_to_watch', 'bullish_confirmation', 'bullish_confirm']
+      .some(key => hasContent(row[key]));
+  });
+  const completedCheckpoints = (['0930', '1030', '1300'] as const)
+    .filter(key => checkpoints[key].status === 'completed' && checkpoints[key].evidenceVerified).length;
+  const decisionEvidence: SubscriberReportProjection['runtime']['decisionEvidence'] = {
+    status: 'Waiting', reason: '尚無完成的盤中驗證節點。', completedCheckpoints, totalCheckpoints: 3,
+    checklistAvailable, marketSnapshotAvailable, runtimeFailure: false, closingVerified: false,
+  };
+  if (!ready) decisionEvidence.reason = INCOMPLETE_ANALYSIS_MESSAGE;
+  else if (closingState === 'NOT_APPLICABLE') decisionEvidence.reason = '今日非交易日，本節點不適用，等待下一個交易日。';
+  else if (closingState === 'COMPLETE') {
+    const closingRejected = ['miss', 'wrong'].includes(text(close.prediction_result || close.hit_or_miss).toLowerCase());
+    decisionEvidence.status = closingRejected ? 'Rejected' : 'Completed';
+    decisionEvidence.reason = closingRejected ? '收盤驗證確認原劇本失效。' : '收盤驗證已完成。';
+    decisionEvidence.runtimeFailure = closingRejected;
+    decisionEvidence.closingVerified = true;
+  } else if (runtimeFailure && marketSnapshotAvailable) {
+    decisionEvidence.status = 'Rejected';
+    decisionEvidence.reason = '盤中驗證節點已回傳明確失敗證據。';
+    decisionEvidence.runtimeFailure = true;
+  } else if (completedCheckpoints > 0 && checklistAvailable && marketSnapshotAvailable) {
+    decisionEvidence.status = 'Confirmed';
+    decisionEvidence.reason = '盤中驗證節點、驗證清單與市場快照均已到位。';
+  } else if (!marketSnapshotAvailable) decisionEvidence.reason = '市場快照不足，暫不升級決策。';
+  else if (!checklistAvailable) decisionEvidence.reason = '驗證清單不足，暫不升級決策。';
+  const projectedBias = ready ? text(canonical.market_bias || ai.market_bias) || null : null;
+  const projectedSummary = ready ? summary || null : null;
+  const openingIsCurrent = close.opening_decision_snapshot_id === revisionId;
+  // Closing producer V2 persists opening_*; its legacy receipt uses predicted_*.
+  // Neither receipt currently stores an opening summary. A newer publication is
+  // never a substitute for missing frozen-opening text or confidence.
+  const openingDecision: SubscriberReportProjection['closing']['openingDecision'] = closingState === 'COMPLETE' ? {
+    revisionId: text(close.opening_decision_snapshot_id),
+    bias: text(close.opening_bias ?? close.predicted_bias) || (openingIsCurrent ? projectedBias : null),
+    confidence: score(close.opening_confidence ?? close.predicted_confidence) ?? (openingIsCurrent ? confidenceValue : null),
+    summary: openingIsCurrent ? projectedSummary : null,
+  } : null;
+  return {
+    schemaVersion: SUBSCRIBER_PROJECTION_VERSION, identity, displayStatus, statusLabel,
+    title: ready ? 'Morning Alpha 市場判讀' : INCOMPLETE_ANALYSIS_MESSAGE, analysisAvailable: ready,
+    confidence: { value: confidenceValue, label: confidenceValue === null ? '證據不足，暫不提供把握度' : `${confidenceValue} / 100`, suppressed: confidenceValue === null },
+    marketDecision: { action, label: !ready ? INCOMPLETE_ANALYSIS_MESSAGE : nonTrading ? '等待下一個交易日'
+      : action === 'ACT' ? '依已確認條件執行' : action === 'STOP' ? '停止原定計畫' : action === 'WAIT' ? '等待確認' : INCOMPLETE_ANALYSIS_MESSAGE,
+      bias: projectedBias, summary: projectedSummary, runtimeFailure },
+    recommendation,
+    closing: { state: closingState, complete: closingState === 'COMPLETE', result: closingState === 'COMPLETE' ? close : null,
+      outcome: closingState === 'COMPLETE' ? text(close.prediction_result || close.hit_or_miss).toLowerCase() || null : null,
+      openingDecision },
+    runtime: { checkpoints, decisionEvidence,
+      confirmedIntradayEvidence: (['0930', '1030', '1300'] as const).some(key => checkpoints[key].status === 'completed'),
+      newIntradayEvidence: ready && (closingState === 'COMPLETE' || checkpoints['1030'].status === 'completed' || checkpoints['1300'].status === 'completed') },
+    evidence: { status: mixedIdentity ? 'IDENTITY_MISMATCH' : hasState && !state ? 'INVALID_CONTRACT' : ready ? 'SUFFICIENT' : 'INSUFFICIENT_EVIDENCE' }, historical,
+  };
+}
+
 /** New payloads are interpreted by the same schema as the producer. An invalid
  * version is an unavailable contract, never permission to use legacy fields. */
 export function subscriberState(value: unknown): SubscriberState | null {
@@ -152,29 +414,11 @@ export function hasSubscriberState(value: unknown): boolean {
 }
 
 export function isSubscriberAnalysisUnavailable(value: unknown): boolean {
-  const ai = record(value);
-  if (hasSubscriberState(ai)) {
-    const state = subscriberState(ai);
-    return !state || state.publication !== 'PUBLISHED' || state.analysis !== 'READY';
-  }
-  const canonical = record(ai.canonical_decision), publication = record(ai.content_publish_gate);
-  // Legacy explicitly-unpublished candidates remain on their real report date.
-  // STOP/closing/quality labels cannot turn them into published judgments.
-  if (ai.content_publish_gate !== undefined && publication.overall_status !== 'eligible') return true;
-  if (ai.canonical_decision !== undefined && canonical.status !== 'READY') return true;
-  return typeof ai.report_status === 'string' && ai.report_status !== 'READY';
+  return !getSubscriberReportProjection(value).analysisAvailable;
 }
 
 export function subscriberConfidence(value: unknown, legacyValue: unknown): number | null {
-  if (isSubscriberAnalysisUnavailable(value)) return null;
-  if (hasSubscriberState(value)) {
-    const confidence = subscriberState(value)?.confidence;
-    return confidence?.status === 'AVAILABLE' ? confidence.value : null;
-  }
-  if ((typeof legacyValue !== 'number' && typeof legacyValue !== 'string')
-    || (typeof legacyValue === 'string' && !legacyValue.trim())) return null;
-  const score = typeof legacyValue === 'number' ? legacyValue : Number(legacyValue);
-  return Number.isFinite(score) && score >= 0 && score <= 100 ? score : null;
+  return getSubscriberReportProjection({ confidence_score: legacyValue, ...record(value) }).confidence.value;
 }
 
 export function hasCompleteUniverseAssessment(value: unknown): boolean {
@@ -186,46 +430,19 @@ export function hasCompleteUniverseAssessment(value: unknown): boolean {
 }
 
 export function isMarketPublicationReady(value: unknown): boolean {
-  const ai = record(value), gate = record(ai.market_report_gate);
-  if (hasSubscriberState(ai)) return !isSubscriberAnalysisUnavailable(ai);
-  // Evidence eligibility is not proof that a candidate was atomically published.
-  // Retain its current date, but never present PARTIAL/internal QA as READY.
-  const publication = record(ai.content_publish_gate), canonical = record(ai.canonical_decision);
-  if (ai.content_publish_gate !== undefined && publication.overall_status !== 'eligible') return false;
-  if (ai.canonical_decision !== undefined && canonical.status !== 'READY') return false;
-  return gate.eligible === true && (gate.report_status === 'READY' || ai.report_status === 'READY');
+  return getSubscriberReportProjection(value).analysisAvailable;
 }
 
 export function recommendationPublication(value: unknown): { explicit: boolean; stocksAllowed: boolean; notice: string | null } {
-  const ai = record(value), gate = record(ai.recommendation_gate || record(ai.market_report_gate).recommendation_gate);
-  if (hasSubscriberState(ai)) {
-    const state = subscriberState(ai);
-    if (isSubscriberAnalysisUnavailable(ai) || !state || state.recommendation === 'BLOCKED') {
-      return { explicit: true, stocksAllowed: false, notice: RECOMMENDATION_EVIDENCE_INSUFFICIENT };
-    }
-    if (state.recommendation === 'QUALIFIED') return { explicit: true, stocksAllowed: true, notice: null };
-    // A versioned no-qualified label still requires complete-universe evidence.
-    // It must never fall through to a stale QUALIFIED alias and restore stocks.
-    const screening = gate.screening || record(ai.decision_engine_v1).screening;
-    return { explicit: true, stocksAllowed: false,
-      notice: gate.universe_evaluation_complete === true && hasCompleteUniverseAssessment(screening)
-        ? '今天沒有符合標準的新增機會' : RECOMMENDATION_EVIDENCE_INSUFFICIENT };
-  }
-  const status = text(ai.recommendation_status || gate.status).toUpperCase();
-  if (!status && Object.keys(gate).length === 0) return { explicit: false, stocksAllowed: false, notice: null };
-  if (status === 'QUALIFIED' && gate.eligible === true) return { explicit: true, stocksAllowed: true, notice: null };
-  const screening = gate.screening || record(ai.decision_engine_v1).screening;
-  if (status === 'NO_QUALIFIED_OPPORTUNITY' && gate.universe_evaluation_complete === true && hasCompleteUniverseAssessment(screening)) {
-    return { explicit: true, stocksAllowed: false, notice: '今天沒有符合標準的新增機會' };
-  }
-  return { explicit: true, stocksAllowed: false, notice: RECOMMENDATION_EVIDENCE_INSUFFICIENT };
+  const recommendation = getSubscriberReportProjection(value).recommendation;
+  return { explicit: true, stocksAllowed: recommendation.available, notice: recommendation.message };
 }
 
 /** Keep market/sector observations when stock publication is withheld. Only
  * structured stock identities are excluded; prose is not used to guess one. */
 export function subscriberObservationSources(value: unknown, beneficiaries: unknown[], observations: unknown[]): unknown[] {
-  const publication = recommendationPublication(value);
-  if (!publication.explicit || publication.stocksAllowed) return [...beneficiaries, ...observations];
+  const projection = getSubscriberReportProjection(value);
+  if (projection.recommendation.available) return [...beneficiaries, ...observations];
   return observations.filter((value) => {
     const item = record(value);
     if (['stock_code', 'stock_id', 'stock_name', 'company_name'].some((key) => text(item[key]) || typeof item[key] === 'number')) return false;

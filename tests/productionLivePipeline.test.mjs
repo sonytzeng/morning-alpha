@@ -48,10 +48,17 @@ test('Taiwan adapters follow the Fugle v1 symbol and session contract', () => {
 
 test('daily sentence rejects stale report dates and delivery fails closed', async () => {
   const linePushSource = await readFile(new URL('../supabase/functions/line-daily-push/index.ts', import.meta.url), 'utf8');
+  const publicationSource = await readFile(new URL('../supabase/functions/_shared/market-publication-contract.ts', import.meta.url), 'utf8');
   assert.match(reportSource, /daily_sentence_date_mismatch|\^\\d\{4\}-\\d\{2\}-\\d\{2\}/);
   assert.match(reportSource, /v10NarrativeSourceDetail/);
-  assert.match(linePushSource, /daily_sentence_date_mismatch/);
-  assert.match(linePushSource, /leadingDate === reportDate/);
+  assert.match(publicationSource, /if \(!summaryDateVerified\) reasons\.push\('daily_sentence_date_mismatch'\)/);
+  assert.match(publicationSource, /summaryDateVerified = !leadingDate \|\| leadingDate === reportDate/);
+  assert.match(publicationSource, /summaryDateVerified && projection\.analysisAvailable/);
+  assert.match(linePushSource, /evaluatePublishedMarketDelivery\(report, decisionSnapshot, memberRevision, marketGate/);
+  assert.match(linePushSource, /snapshotEligible = deliveryState\.eligible/);
+  const publicationGuard = linePushSource.indexOf('if (!snapshotEligible)');
+  assert.ok(publicationGuard >= 0 && linePushSource.indexOf('deliverOutboxMessage({', publicationGuard) > publicationGuard,
+    'shared date failure must stop normal report notification; the separate incident-notice branch is not report delivery');
 });
 
 test('observation watchlist cannot use a previous report as current evidence', () => {

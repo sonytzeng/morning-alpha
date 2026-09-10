@@ -1,0 +1,190 @@
+{
+  "schema_version": "CORE_CONTENT_OS_FRESH13_FACTUAL_EVIDENCE_V1",
+  "scope": "ma-consolidation-v1-20260909200000",
+  "scenario_kind": "SYNTHETIC_PROVIDER_CONTROL_DATE_ONLY_SUCCESSOR",
+  "historical_capture": false,
+  "historical_success_claim": false,
+  "business_date": "2026-09-30",
+  "warmup_date": "2026-09-29",
+  "status": "PASS",
+  "full_chain_positive": "ACTUAL_13_HANDLERS_PERSISTENT_LOCAL",
+  "production_requests": 0,
+  "automatic_stable_day": false,
+  "manual_intervention": true,
+  "external_content_os_delivery": false,
+  "production_runtime_packaging_parity_claim": false,
+  "original_96_run_reused": false,
+  "actual_result": {
+    "path": "/private/tmp/ma-consolidation-v1-20260909200000-evidence/result.json",
+    "sha256": "fa0fcc81bf14a4a83b3acc38b29e2e6895eb329e4096ef5d560c277bb82a5838",
+    "records": 102,
+    "run_id": "26a2fe1c-4f55-46a3-bd30-4c742106e339"
+  },
+  "acceptance": {
+    "id": "f7579ffe-7786-4d63-adcf-2d859524466b",
+    "verdict": "PASS",
+    "automatic_stable_day": false,
+    "manual_intervention": true,
+    "content_handoff_evidence_scope": "PROJECTION_CONTRACT_ONLY_NOT_DOWNSTREAM_DELIVERY",
+    "natural_scheduler_executed": false
+  },
+  "actual_publication_identity": {
+    "report_id": "07314d70-66f9-42c5-aa13-37762f65a3a8",
+    "decision_snapshot_id": "15666ab6-5e39-4aee-b285-56c6eff67a82",
+    "member_content_revision_id": "07387729-8571-4e94-8ad4-0415a9022417",
+    "publication_run_id": "a4d1daee-44b1-4587-8719-79fdcd70172c",
+    "decision_mode": "market_only",
+    "market_content_score": 97,
+    "recommendation_available": false,
+    "recommended_symbols": [],
+    "frozen_public_https_reference_count": 3,
+    "closing_snapshot_id": "b88eb722-7ce6-4c7b-a354-3ff9e1ae2129"
+  },
+  "actual_exports": [
+    {
+      "stage": "actual-public-export-publication",
+      "http": 200,
+      "response_sha256": "05bad4804bcf0a4975791affe217ac01e5560184abfdb6ea0b27a334e83ab660",
+      "revision_id": "15666ab6-5e39-4aee-b285-56c6eff67a82",
+      "reference_count": 3,
+      "source_references_from_actual_frozen_generator": true,
+      "external_content_os_delivery": false
+    },
+    {
+      "stage": "actual-public-export-closing",
+      "http": 200,
+      "response_sha256": "05bad4804bcf0a4975791affe217ac01e5560184abfdb6ea0b27a334e83ab660",
+      "revision_id": "15666ab6-5e39-4aee-b285-56c6eff67a82",
+      "reference_count": 3,
+      "source_references_from_actual_frozen_generator": true,
+      "external_content_os_delivery": false
+    }
+  ],
+  "readback": {
+    "path": "/private/tmp/ma-consolidation-v1-20260909200000/final-persistent-readback.json",
+    "sha256": "35d2cc283ced1d28e733fa6feb069a5647aa26b5c2a8b26184edf416c9076d76",
+    "read_only": true,
+    "auth_rows_read": false,
+    "credential_values_read": false,
+    "tables": 27,
+    "provider_receipts": 92,
+    "table_counts": {
+      "market_data": 11,
+      "market_checkpoint_snapshots": 84,
+      "market_quotes": 51,
+      "market_data_snapshots": 84,
+      "data_provider_health": 8,
+      "trading_day_state": 2,
+      "reports": 1,
+      "decision_snapshots": 2,
+      "line_delivery_outbox": 1,
+      "line_subscribers": 1,
+      "learning_runs": 1,
+      "learning_predictions": 1,
+      "prediction_outcomes": 5,
+      "news_events": 12,
+      "market_news": 12,
+      "sector_rotation_scores": 7,
+      "pipeline_runs": 2,
+      "member_content_revisions": 1,
+      "production_acceptance_results": 2,
+      "runtime_http_dispatches": 0,
+      "runtime_dead_letters": 0,
+      "ma_ops_runs": 3,
+      "research_sessions": 2,
+      "runtime_quality_policies": 1,
+      "content_os_sync_incidents": 0,
+      "editorial_reviews": 1,
+      "semantic_coherence_reviews": 1
+    }
+  },
+  "source_provenance": {
+    "execution_manifest": {
+      "path": "/private/tmp/ma-factual-export-20260930-continuation-001-source-manifest.json",
+      "sha256": "27e94bee18c7215053044ce2eed2d775df3c3e93a8bf18ef6f9f890dfff9f976",
+      "source_paths": 122,
+      "business_runtime_sources": 54
+    },
+    "files": [
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909200000/bootstrap-result.json",
+        "sha256": "62e5661f779efda3681b855439141533de203328dcd75868e7e5141eec03b208"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909200000/bootstrap-continuation-001.json",
+        "sha256": "44e7aff0f80ab49f270b550d1bb7597f85ea6675dfe3b29f751be7fb3146225f"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909200000/replay-config.json",
+        "sha256": "60ee1969032d44c23207ff1fbb857ef0dfeba6e0f0be170ec0e02bf0d072b6ed"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909200000/executed-source-manifest.json",
+        "sha256": "b7e8005f2d7012ccbffa7dd1c546d5c75e66637d5eeea77bbe2cc1c62e9eba6b"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909200000/executed-source-preimages.tar",
+        "sha256": "dd9a90f0a1cb098430e50d3924d185c220d445e67fc061402b00078271d34b83"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909200000/schema-rebuild-results.json",
+        "sha256": "c1601295d907127d740bd05290464b0858741307cd32a49531682356479f6194"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909200000/auth-bootstrap-receipt.json",
+        "sha256": "8bba6e2b0a9e86cdb9f4ea377cf10f952d55c3cd8016837fec1f02a413e92273"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909200000/network-runtime-attestation.json",
+        "sha256": "6e6c4338ebbfe7c62e6fad3c1f432b284fb1e20d65112bd13e39c8c1b35e83c1"
+      },
+      {
+        "path": "/private/tmp/ma-consolidation-v1-20260909200000/old-scope-preservation.json",
+        "sha256": "a64a19ea2c0a861a02ea0fbc75ae7c90e969460641dc4a9db300416621452195"
+      }
+    ],
+    "producer_sha256": "6d767876c0899af5524c6e3225854dfe72ef02cb8c41b4feb9ed275025dce2e5",
+    "exporter_sha256": "b9430383ba63262bb9b10cacd2084d9c97a95f30090aa14b81c12e56834b7e61",
+    "sql_candidate_sha256": "353a30988429fa1ac1847174bf00199a3f876f0311e7ae1f2ecf165d9ccb0ce0",
+    "input_fact_invariance": "Same 9/23 raw provider quotes, facts, news importance and AI bytes; only dates, source timestamps and date-containing URLs moved +7 days."
+  },
+  "retained_failures": {
+    "old_923_evidence_index": "tests/fixtures/consolidation-v1/content-os/fresh13-20260923-evidence.json",
+    "old_attempt_status": "FAIL",
+    "old_export_boot_http": 503,
+    "old_continuation_status": "FAIL",
+    "old_export_semantic_http": 409,
+    "old_incident_status": "OPEN",
+    "old_business_rows_modified": false,
+    "old_provider_receipts": 29,
+    "old_tables": 27,
+    "retained_stopped_containers": 6,
+    "retained_volumes": 3,
+    "old_ephemeral_edge": "Removed by original CLI shutdown; not recreated or described as preserved.",
+    "new_bootstrap_first_attempt_status": "FAIL",
+    "new_bootstrap_first_failure_sha256": "62e5661f779efda3681b855439141533de203328dcd75868e7e5141eec03b208",
+    "new_bootstrap_continuation_status": "PASS"
+  },
+  "runtime_safety": {
+    "dedicated_vm_boot_id": "d9f73673-b3e3-4daf-8080-13d8dde5b2c0",
+    "host_clock_changed": false,
+    "old_shared_vm_clock_changed": false,
+    "old_auth_stopped_before_guest_clock_advance": true,
+    "internal_network": "ma-consolidation-v1-20260909200000-isolated",
+    "runtime_external_egress": false,
+    "all_14_jwt_verification_flags": true,
+    "new_ordinary_synthetic_auth_users": 1,
+    "admin_or_entitlement_fixtures_created": false,
+    "realtime_added": false,
+    "local_key2_reuse": "Explicitly authorized same dedicated test VM; no secret values in this evidence",
+    "key1_containment_receipt_sha256": "f38be887d412e507b0077a546d277331c7f2e36f1e666d9a37c3d18401918cd7"
+  },
+  "limitations": [
+    "Not Production or external Sony ContentOS ingestion/delivery.",
+    "Not an automatic natural stable day; manual warmup and isolated forward-clock control are disclosed.",
+    "Original 9/7, 9/8 and 9/9 historical raw input ledgers remain incomplete; their exact historical full-chain outcome remains UNKNOWN.",
+    "Current persistent control validates exact Fetch lineage and stock-blocked market-only publication, but does not assert that private historical coverage76/unsupported5 or PARTIAL-confidence states were regenerated.",
+    "Authenticated/API producer proof does not establish anonymous public gateway or Realtime Browser parity; all local JWT gates remain true.",
+    "Single-day CLE proof does not establish the complete historical120-day lane."
+  ]
+}

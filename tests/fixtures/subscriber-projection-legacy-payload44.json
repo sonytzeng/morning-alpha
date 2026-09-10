@@ -1,0 +1,106 @@
+{
+  "provenance": {
+    "kind": "CAPTURED_PUBLIC_LEGACY_PAYLOAD",
+    "version": 44,
+    "source_sha256": "8f27f5751612a02054adb6f669f4e14c8d36445d2b590aed5a3019a894f5b00f",
+    "captured_report_date": "2026-09-08",
+    "removed": "membership, news, raw market rows, operational details; no personal identity or credentials retained"
+  },
+  "response": {
+    "tier": "free",
+    "authenticated": false,
+    "source": "server_trimmed_payload",
+    "report_date": "2026-09-08",
+    "revision_id": "082e552d-f637-4d49-84e5-2f8e6ceb3411",
+    "generated_at": "2026-09-07T23:35:11.857Z",
+    "market_status": "CLOSED",
+    "is_trading_day": true,
+    "payload": {
+      "report_date": "2026-09-08",
+      "report_mode": "normal_overnight",
+      "revision_id": "082e552d-f637-4d49-84e5-2f8e6ceb3411",
+      "generated_at": "2026-09-07T23:35:11.857Z",
+      "data_as_of": "2026-09-08T06:40:02.519Z",
+      "market_status": "CLOSED",
+      "is_trading_day": true,
+      "closed_reason": null,
+      "market_bias": "偏多觀察",
+      "confidence_score": 100,
+      "confidence_label": "高把握度",
+      "confidence_band": "high",
+      "today_quote": "今日新鮮新聞證據 7 則、資料狀態完整、內容評分 100/100，尚未通過完整證據發布門檻；不建立受惠股，09:30 只確認 TAIEX 與 2330 是否同向。",
+      "daily_sentence": "今日新鮮新聞證據 7 則、資料狀態完整、內容評分 100/100，尚未通過完整證據發布門檻；不建立受惠股，09:30 只確認 TAIEX 與 2330 是否同向。",
+      "v8_daily_sentence": {
+        "tone": "clear, evidence-first, human-readable",
+        "status": "ready",
+        "sentence": "2330先傳導至電子權值；09:30 看台積電是否相對大盤轉強；若 2330 弱於 TAIEX、電子權值 沒有量價同步，今日不追價並撤回受惠假設。",
+        "logic_source": [
+          "2330｜market_data:2330@2026-09-07T05:30:00+00:00",
+          "半導體｜sector_rotation_scores:半導體",
+          "AI伺服器｜sector_rotation_scores:AI伺服器",
+          "電子權值｜sector_rotation_scores:電子權值"
+        ],
+        "decision_mode": "recommendations"
+      },
+      "public_summary": {
+        "one_sentence": "2330先傳導至電子權值；09:30 看台積電是否相對大盤轉強；若 2330 弱於 TAIEX、電子權值 沒有量價同步，今日不追價並撤回受惠假設。"
+      },
+      "premium_content_status": "blocked",
+      "canonical_decision": {
+        "id": "082e552d-f637-4d49-84e5-2f8e6ceb3411",
+        "version": 7,
+        "session_type": "PREMARKET",
+        "status": "PARTIAL",
+        "action": "STOP",
+        "decision_mode": "blocked",
+        "market_regime": "stress",
+        "confidence_score": 100,
+        "coverage_score": null,
+        "content_score": 100,
+        "content_grade": "high_quality",
+        "daily_sentence": "今日新鮮新聞證據 7 則、資料狀態完整、內容評分 100/100，尚未通過完整證據發布門檻；不建立受惠股，09:30 只確認 TAIEX 與 2330 是否同向。",
+        "reasons": [
+          "可驗證新聞已有，但整體內容仍未通過發布門檻。",
+          "市場資料完整，但推論鏈仍不足。",
+          "09:30 只確認 TAIEX、2330 與主要族群是否同向，不把觀察名單當成推薦。"
+        ],
+        "preferred_sectors": [],
+        "do_not_do": "不要把未達證據標準的觀察名單當成推薦或追價理由。",
+        "next_checkpoint": "09:30",
+        "valid_from": "2026-09-07T23:35:12.137819+00:00"
+      },
+      "content_publish_gate": {
+        "overall_status": "blocked",
+        "blocking_issues": [
+          "research_publish_status_not_ready",
+          "research_evidence_coverage_below_100",
+          "research_unsupported_claims_present",
+          "research_duplicate_claims_present",
+          "SEMANTIC_MEMBER_REVISION_NOT_ELIGIBLE"
+        ]
+      },
+      "closing_verification": {
+        "status": "completed",
+        "data_status": "complete",
+        "verdict_label": "未命中",
+        "prediction_result": "miss",
+        "accuracy_score": 20,
+        "verified_at": "2026-09-08T06:30:06.79+00:00",
+        "actual_direction": "小跌",
+        "actual_taiex_change": -0.47,
+        "actual_taiex_close": {
+          "value": 47105.78,
+          "source": "fugle",
+          "symbol": "TAIEX",
+          "captured_at": "2026-09-08T05:30:00+00:00",
+          "change_percent": -0.47
+        },
+        "data_quality": "高可信",
+        "missing_data": [],
+        "no_fake_data": true
+      },
+      "runtime_lifecycle_complete": true,
+      "data_quality": "partial"
+    }
+  }
+}

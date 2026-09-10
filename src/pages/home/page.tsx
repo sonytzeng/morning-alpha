@@ -9,7 +9,6 @@ import { trackEngagementEvent } from '@/services/engagementService';
 import { useHomeDashboard } from '@/hooks/useHomeDashboard';
 import { formatTaipeiDate } from '@/utils/tradingDay';
 import { getMorningAlphaDisplayState, type MorningAlphaDisplayState } from '@/lib/morningAlphaDisplayState';
-import { buildMarketState, type MarketState } from '@/services/marketStateEngine';
 import { buildCanonicalNarrative } from '@/lib/canonicalNarrative';
 import { renderSafeText } from '@/utils/renderSafe';
 import { buildDecisionPresentation } from '@/lib/decisionPresentation';
@@ -20,10 +19,11 @@ import {
   selectNextRuntimeTimelineNode,
   type RuntimeTimelineStatus,
 } from '@/lib/runtimeDecisionTimeline';
-import { supabase } from '@/lib/supabase';
+import { callGetReportHistory } from '@/services/entitlementService';
+import { selectPublicPerformanceRows } from '@/lib/performanceJournalProjection';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
-import { isClosingVerificationComplete } from '@/lib/closingVerificationState';
-import { isSubscriberAnalysisUnavailable, recommendationPublication, subscriberObservationSources, SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
+import { SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
+import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 
 export default function HomePage() {
   return (
@@ -81,17 +81,6 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-function firstNumber(...values: unknown[]): number | null {
-  for (const value of values) {
-    if (typeof value === 'number' && Number.isFinite(value)) return value;
-    if (typeof value === 'string' && value.trim()) {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed)) return parsed;
-    }
-  }
-  return null;
-}
-
 const LOW_INFORMATION_TEXT = new Set([
   '',
   '資料不足',
@@ -134,10 +123,11 @@ function uniqueStrings(values: string[], limit: number): string[] {
 function closingResultLabel(result: string, status: string): string {
   const normalizedResult = result.trim().toLowerCase();
   const normalizedStatus = status.trim().toLowerCase();
-  if (normalizedResult === 'hit' && normalizedStatus.includes('degraded')) return '方向命中，資料仍不完整';
-  if (normalizedResult === 'hit') return '命中';
-  if (normalizedResult === 'partial' || normalizedResult === 'partial_hit') return '部分命中';
-  if (normalizedResult === 'miss') return '未命中';
+  if (['hit', 'correct'].includes(normalizedResult) && normalizedStatus.includes('degraded')) return '方向命中，資料仍不完整';
+  if (['hit', 'correct'].includes(normalizedResult)) return '命中';
+  if (['partial', 'mixed', 'partial_hit'].includes(normalizedResult)) return '部分命中';
+  if (['miss', 'wrong'].includes(normalizedResult)) return '未命中';
+  if (normalizedResult === 'neutral') return '中性結果，收盤驗證已完成';
   if (normalizedStatus.includes('insufficient')) return '資料不足，尚無法驗證';
   return result;
 }
@@ -161,14 +151,6 @@ function decisionDayLabel(state: string, hasTodayReport: boolean, currentNode?: 
     case 'INSUFFICIENT_DATA': return hasTodayReport ? runtimePhaseLabel(currentNode) : '資料整理中';
     default: return '觀望日';
   }
-}
-
-function dataCompletenessLabel(status: string, hasReport: boolean, evidenceIsInsufficient: boolean): string {
-  if (evidenceIsInsufficient) return hasReport ? '資料不足，已安全降級' : '尚未取得報告';
-  const normalized = status.trim().toLowerCase();
-  if (['complete', 'completed', 'ready', 'reliable', 'ok', 'sufficient'].includes(normalized)) return '資料完整';
-  if (['partial', 'degraded', 'limited', 'stale'].includes(normalized)) return '部分完成';
-  return hasReport ? '盤前報告已載入' : '尚未取得報告';
 }
 
 function exposureLabel(state: string): string {
@@ -284,36 +266,30 @@ function HomePageContent() {
     let mounted = true;
 
     async function loadLatestPublicClosing() {
-      const { data: rows, error: historyError } = await supabase.rpc('get_public_performance_journal', { p_limit: 30 });
-      if (!mounted || historyError || !Array.isArray(rows)) return;
+      let response;
+      try { response = await callGetReportHistory(30); }
+      catch { return; }
+      if (!mounted) return;
 
-      const latest = rows.find((value) => {
-        const row = asRecord(value);
-        const reportDate = firstString(row.report_date);
-        const status = firstString(row.verification_status).toLowerCase();
-        const dataStatus = firstString(row.verification_data_status).toLowerCase();
-        const direction = firstString(row.actual_direction).toLowerCase();
-        const result = firstString(row.hit_or_miss, row.prediction_result).toLowerCase();
-        const hasDirection = Boolean(direction)
-          && !['unknown', 'pending', 'unavailable', 'n/a', '尚未取得', '待資料'].includes(direction);
-        return Boolean(reportDate)
-          && reportDate <= formatTaipeiDate()
-          && ['completed', 'complete', 'ready'].includes(status)
-          && dataStatus === 'complete'
-          && hasDirection
-          && ['hit', 'correct', 'confirmed', 'partial', 'mixed', 'partial_hit', 'miss', 'wrong', 'failed'].includes(result);
+      const latest = selectPublicPerformanceRows(response.reports).find((selection) => {
+        const row = selection.row;
+        const projection = getSubscriberReportProjection(row, { historical: true });
+        return Boolean(projection.identity.reportDate)
+          && Boolean(response.today_date) && projection.identity.reportDate <= String(response.today_date)
+          && projection.closing.complete;
       });
 
       if (!latest) return;
-      const row = asRecord(latest);
+      const row = latest.row;
+      const projection = getSubscriberReportProjection(row, { historical: true });
       const result = closingResultLabel(
-        firstString(row.hit_or_miss, row.prediction_result),
-        firstString(row.verification_status),
+        projection.closing.outcome || '',
+        projection.closing.state,
       );
       setLatestPublicClosing({
-        reportDate: firstString(row.report_date),
+        reportDate: projection.identity.reportDate,
         result,
-        summary: firstMeaningfulString(row.what_was_right, row.what_was_wrong),
+        summary: firstMeaningfulString(projection.closing.result?.what_was_right, projection.closing.result?.what_was_wrong),
       });
     }
 
@@ -324,20 +300,12 @@ function HomePageContent() {
   const report: Report | null = data?.report ?? null;
   const todayTaipeiStr = formatTaipeiDate();
 
-  const marketState: MarketState = buildMarketState({
-    todayReport: report,
-    todayOpeningRadar: data?.openingRadar ?? null,
-    todayMarketData: data?.marketDataTodayOnly ?? data?.marketData ?? null,
-    todayCloseVerification: data?.todayCloseVerification ?? null,
-  });
-
   // Stable mode: use morningState as single source of truth.
   const ms = morningState;
   const hasMorningState = !!ms;
 
   // Formal pages fail closed and never switch to an independently fetched report revision.
   const dataStatus = ms?.dataStatus ?? null;
-  const displayReportDate = ms?.reportDate || todayTaipeiStr;
   const isTodayReport = ms?.isReportForToday ?? false;
   const reportExists = ms?.reportExists ?? false;
   const hasHistoricalReport = reportExists && !isTodayReport;
@@ -352,9 +320,10 @@ function HomePageContent() {
   const marketIsClosed = displayState.market_status !== 'OPEN';
 
   const homeAI = ms?.resolveResult?.rawRow?.ai_strategy_json as Record<string, unknown> | null;
-  const analysisUnavailable = isSubscriberAnalysisUnavailable(homeAI);
-  const recommendationState = recommendationPublication(homeAI);
-  const recommendationNotice = recommendationState.notice;
+  const projection = getSubscriberReportProjection(ms?.resolveResult?.rawRow, { todayDate: todayTaipeiStr });
+  const displayReportDate = projection.identity.reportDate || todayTaipeiStr;
+  const analysisUnavailable = !projection.analysisAvailable;
+  const recommendationNotice = projection.recommendation.message;
   const canonicalNarrative = useMemo(() => buildCanonicalNarrative({
     displayState,
     ai: homeAI,
@@ -372,23 +341,21 @@ function HomePageContent() {
   }, [dataStatus, hasHistoricalReport, reportExists, isTodayReport, marketIsClosed]);
 
   const timelineNodes: TimelineNode[] = buildRuntimeDecisionTimeline({
-    ai: homeAI,
+    projection,
     hasReport: reportExists && isTodayReport,
-    reportRevisionId: ms?.revisionId,
-    reportGeneratedAt: ms?.generatedAt,
     isTradingDay: displayMode !== 'market-closed' && displayState.is_trading_day,
   });
 
   const currentTimelineNode = selectNextRuntimeTimelineNode(timelineNodes)
     || timelineNodes[timelineNodes.length - 1];
-  const runtimeLifecycleComplete = !analysisUnavailable && isClosingVerificationComplete(homeAI) && timelineNodes.every((node) =>
+  const runtimeLifecycleComplete = projection.closing.complete && timelineNodes.every((node) =>
     node.status === 'completed' || node.status === 'not_applicable');
   const presentation = useMemo(() => buildDecisionPresentation({
     displayState,
     narrative: canonicalNarrative,
     nextCheckpointFallback: `${currentTimelineNode.time} ${currentTimelineNode.label}`,
   }), [canonicalNarrative, currentTimelineNode.label, currentTimelineNode.time, displayState]);
-  const decisionState = presentation.primaryDecision.state;
+  const decisionState = projection.marketDecision.action;
   const homeDecision = analysisUnavailable && displayMode !== 'market-closed'
     ? { headline: SUBSCRIBER_ANALYSIS_INCOMPLETE, instruction: '等待市場證據與正式分析' }
     : homeDecisionCopy(
@@ -397,40 +364,21 @@ function HomePageContent() {
     runtimeLifecycleComplete,
   );
   const nextAction = homeDecision.instruction;
-  const reportDecisionSentence = translateKnownTerms(firstMeaningfulString(displayState.todayQuote));
+  const reportDecisionSentence = translateKnownTerms(firstMeaningfulString(projection.marketDecision.summary));
   const heroDecisionSentence = analysisUnavailable
     ? SUBSCRIBER_ANALYSIS_INCOMPLETE
     : reportDecisionSentence.length >= 24 && !isSyntheticResearchSentence(reportDecisionSentence)
       ? reportDecisionSentence
       : homeDecision.instruction;
   const decisionContext = translateKnownTerms([
-    presentation.marketBiasLabel ? `今天市場${presentation.marketBiasLabel}。` : '',
-    presentation.primaryDecision.reason,
+    projection.marketDecision.bias ? `今天市場${projection.marketDecision.bias}。` : '',
+    projection.marketDecision.label,
   ].filter(Boolean).join(' ') || displayState.market_message || '今日資料整理中，正在等待市場資料完成。');
   const publicSummary = asRecord(homeAI?.public_summary);
   const openingRadar = asRecord(homeAI?.opening_radar);
   const intradayTracking = asRecord(homeAI?.intraday_tracking);
   const intradaySync = asRecord(homeAI?.intraday_sync_status);
-  const closingV2 = asRecord(homeAI?.closing_verification_v2);
-  const closingLegacy = asRecord(homeAI?.closing_verification);
-  const closingSummary = asRecord(homeAI?.closing);
-  const closingRecord = Object.keys(closingV2).length > 0
-    ? closingV2
-    : Object.keys(closingLegacy).length > 0
-      ? closingLegacy
-      : closingSummary;
-  const closingStatus = firstString(
-    closingRecord.status,
-    closingRecord.data_status,
-    closingRecord.verification_status,
-  );
-  const closingResultValue = firstString(
-    closingRecord.verdict_label,
-    closingRecord.prediction_result,
-    closingRecord.result,
-    closingRecord.hit_or_miss,
-  );
-  const hasRuntimeClosing = isClosingVerificationComplete(homeAI);
+  const hasRuntimeClosing = projection.closing.complete;
   const nextActionTime = displayMode === 'market-closed'
     ? displayState.nextUpdateTime
     : hasRuntimeClosing ? '今日收盤驗證已完成' : (currentTimelineNode.time || presentation.nextCheckpoint.time);
@@ -442,15 +390,8 @@ function HomePageContent() {
   const researchMaster = asRecord(homeAI?.research_master_v2);
   const researchMetadata = asRecord(researchMaster.metadata);
   const reportRecord = asRecord(report);
-  const evidenceIsInsufficient = decisionState === 'INSUFFICIENT_DATA'
-    || displayState.dataStatus === 'insufficient'
-    || /insufficient|missing|failed|unavailable/i.test(displayState.v10DataQualityStatus);
-  const confidenceScore = evidenceIsInsufficient
-    ? null
-    : firstNumber(
-      presentation.confidence?.score,
-      displayState.confidenceScore,
-    );
+  const evidenceIsInsufficient = projection.evidence.status !== 'SUFFICIENT';
+  const confidenceScore = projection.confidence.value;
   const riskLevel = firstString(
     homeAI?.risk_level,
     publicSummary.risk_level,
@@ -462,13 +403,7 @@ function HomePageContent() {
     researchMetadata.data_as_of,
     openingRadar.data_as_of,
   );
-  const reportGeneratedAt = firstString(
-    homeAI?.generated_at,
-    researchMetadata.generated_at,
-    reportRecord.updated_at,
-    reportRecord.created_at,
-    ms?.generatedAt,
-  );
+  const reportGeneratedAt = projection.identity.generatedAt || '';
   const normalizedRiskLevel = riskLevel.toLowerCase();
   const riskLevelDisplay = ['high', 'critical', 'severe'].includes(normalizedRiskLevel)
     ? '高'
@@ -484,11 +419,7 @@ function HomePageContent() {
     publicSummary.engine_version,
   ) || '未提供版本資訊';
   const morningBriefCandidate = firstMeaningfulString(
-    homeAI?.morning_brief,
-    publicSummary.morning_brief,
-    canonicalNarrative.today_focus.why,
-    canonicalNarrative.today_focus.summary,
-    displayState.todayQuote,
+    projection.marketDecision.summary,
     decisionContext,
   );
   const morningBrief = evidenceIsInsufficient
@@ -503,7 +434,7 @@ function HomePageContent() {
     ? 'success'
     : decisionState === 'STOP'
       ? 'danger'
-      : decisionState === 'CLOSED' || decisionState === 'INSUFFICIENT_DATA'
+      : marketIsClosed || decisionState === 'INSUFFICIENT_DATA'
         ? 'neutral'
         : 'warning';
 
@@ -540,11 +471,7 @@ function HomePageContent() {
     firstString(riskObservation.observation_reason),
   ], 4);
 
-  const observationSource = subscriberObservationSources(homeAI, [
-    ...displayState.v10BeneficiaryStocks,
-    ...displayState.coreBeneficiaryStocks,
-    ...displayState.beneficiaryStocks,
-  ], displayState.v10ObservationWatchlist);
+  const observationSource = projection.recommendation.items;
   const observationCards = observationSource.reduce<ObservationCard[]>((items, source) => {
     const item = asRecord(source);
     const title = translateKnownTerms(firstMeaningfulString(
@@ -635,16 +562,7 @@ function HomePageContent() {
     : decisionState === 'STOP'
       ? '今天不做'
       : '先等待';
-  const todayStrategy = translateKnownTerms(firstMeaningfulString(
-    homeAI?.today_strategy,
-    homeAI?.recommended_strategy,
-    publicSummary.today_strategy,
-    publicSummary.strategy,
-    openingRadar.today_strategy,
-    openingRadar.strategy,
-    canonicalNarrative.today_focus.action,
-    presentation.primaryDecision.instruction,
-  ) || (decisionState === 'ACT' ? '只做已確認的主線' : '保留現金，等待確認'));
+  const todayStrategy = projection.marketDecision.label;
   const priorityFocus = observationCards.length > 0
     ? observationCards.map((item) => item.title).join('、')
     : waitingFor;
@@ -663,8 +581,8 @@ function HomePageContent() {
 
   const closingOutcome = canonicalNarrative.closing_outcome;
   const closingDisplayResult = closingResultLabel(
-    firstMeaningfulString(closingOutcome.result, closingResultValue),
-    closingStatus,
+    projection.closing.outcome || '',
+    projection.closing.state,
   );
   const hasClosingOutcome = hasRuntimeClosing && Boolean(
     closingDisplayResult
@@ -680,7 +598,7 @@ function HomePageContent() {
     { label: '市場資料基準', value: formatTaipeiTimestamp(dataAsOf) },
     { label: '報告產生時間', value: formatTaipeiTimestamp(reportGeneratedAt) },
     { label: '分析版本', value: aiVersion },
-    { label: '資料狀態', value: dataCompletenessLabel(displayState.dataStatus, reportExists, evidenceIsInsufficient) },
+    { label: '資料狀態', value: projection.statusLabel },
   ];
 
   const hasReportData = hasMorningState && reportExists;
@@ -712,6 +630,25 @@ function HomePageContent() {
             >
               重新載入
             </button>
+          </section>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (displayMode === 'normal' && hasReportData && analysisUnavailable) {
+    return (
+      <div className="ma-page ma-pixel-page ma-home-page ma-home-v2-page flex min-h-screen flex-col">
+        <Navbar />
+        <main className="ma-home-v2-state-shell" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
+          <section className="ma-home-v2-state-card" role="status">
+            <p>{projection.identity.reportDate}</p>
+            <h1>{projection.title}</h1>
+            <p>{projection.statusLabel}</p>
+            <p>判斷信心：{projection.confidence.label}</p>
+            <p>{projection.marketDecision.label}</p>
+            <Link to="/report/today" className="ma-pixel-primary-button">查看今日分析狀態</Link>
           </section>
         </main>
         <Footer />
@@ -770,9 +707,9 @@ function HomePageContent() {
 
   return (
     <div className="ma-page ma-pixel-page ma-home-page ma-home-v2-page flex flex-col overflow-x-hidden">
-      <Navbar marketState={marketState} marketStatusLabel={marketStatusLabel} />
+      <Navbar marketStatusLabel={marketStatusLabel} />
 
-      <main className="flex-1 overflow-x-hidden">
+      <main className="flex-1 overflow-x-hidden" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
 
         {displayMode === 'normal' && hasReportData && (
           <>
@@ -819,7 +756,7 @@ function HomePageContent() {
                       </div>
                     )}
                     <span>
-                      {renderSafeText(translateKnownTerms(presentation.confidence?.explanation || '盤前信心，仍需盤中資料驗證'))}
+                      {renderSafeText(projection.confidence.label)}
                     </span>
                   </article>
                   <article className="ma-home-v2-metric">

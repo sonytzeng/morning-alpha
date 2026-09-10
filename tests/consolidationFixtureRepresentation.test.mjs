@@ -1,15 +1,26 @@
 // Pure source/representation contracts. No DB, runtime, network, Auth or Git writes.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync as readActualFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import vm from 'node:vm';
 import ts from 'typescript';
 import { isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
-import { PUBLIC_EXPORT_ARTIFACT_PATH, resolveConsolidationPublicExportIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
+import { PUBLIC_EXPORT_ARTIFACT_PATH, readConsolidationPublicExportIntegrity as readCurrentIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
 import { FIXTURE_REPRESENTATION_ARTIFACT_PATH, EXACT_FIXTURE_REPRESENTATIONS,
   readExactFixturePreimage, resolveConsolidationFixtureRepresentation } from './helpers/consolidationFixtureRepresentation.mjs';
+
+// Verify the complete live Eleventh before executing the unchanged Tenth attacks.
+const currentRoot = new URL('../', import.meta.url);
+const currentIntegrity = readCurrentIntegrity(JSON.parse(readActualFileSync(new URL('docs/operations/core-stability-incident-amendment-20260908.json', currentRoot))));
+const readFileSync = target => {
+  const absolute = fileURLToPath(target), base = fileURLToPath(currentRoot);
+  assert.ok(absolute.startsWith(base), 'historical test read must remain inside repository');
+  return currentIntegrity.tenthReadSource(absolute.slice(base.length));
+};
+const resolveConsolidationPublicExportIntegrity = currentIntegrity.verifyTenth;
 
 const REGISTRY='docs/operations/core-stability-incident-amendment-20260908.json';
 const GUARD='tests/helpers/consolidationFixtureRepresentation.mjs';

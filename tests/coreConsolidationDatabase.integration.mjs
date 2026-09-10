@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { isIP } from 'node:net';
 import { isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
 import { assembleResearchMasterV2, assembleCanonicalMarketResearch, validateResearchMasterV2, admitResearchRecommendations } from '../supabase/functions/generate-daily-report-v7/research-master-v2.ts';
@@ -25,6 +25,21 @@ const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8'
 const migrationPath = 'supabase/migrations/20260909015650_core_market_publication_contract.sql';
 const migration = read(migrationPath);
 assert.ok(migration.includes('validate_core_market_publication_v1') && migration.includes('CORE_CONSOLIDATION_V1'), 'Named candidate must exist before creating the isolated database');
+const productionAcceptanceFixture = JSON.parse(read('tests/fixtures/core-production-acceptance-v1.json'));
+const productionAcceptance = productionAcceptanceFixture.function;
+const sha256 = value => createHash('sha256').update(value).digest('hex');
+assert.equal(sha256(productionAcceptance.definition), '7ce49074d08cfcd79cea707615ff16ca0818f2bcc28df487e6bf88251dce8063', 'The complete captured Production definition, not a rewritten default, is the baseline');
+assert.deepEqual({ ...productionAcceptance, definition: undefined }, {
+  regprocedure: 'capture_morning_alpha_acceptance_v1(date,text)', definition: undefined,
+  owner: 'postgres', acl: '{postgres=X/postgres,service_role=X/postgres}', security_definer: true,
+  settings: ['search_path=""'], arguments: "p_business_date date, p_evaluator_version text DEFAULT 'PRODUCTION_ACCEPTANCE_V1'::text", result: 'uuid',
+});
+const acceptanceDefaultV1 = "p_evaluator_version text default 'PRODUCTION_ACCEPTANCE_V1'";
+assert.equal(migration.split(acceptanceDefaultV1).length, 2, 'Exactly one captured Production-compatible parameter default is required');
+// Reconstruct only the rejected c088 candidate, with an immutable whole-file
+// pin. This is not a second migration or a general source compatibility shim.
+const rejectedV3Migration = migration.replace(acceptanceDefaultV1, "p_evaluator_version text default 'PRODUCTION_ACCEPTANCE_V3'");
+assert.equal(sha256(rejectedV3Migration), '353a30988429fa1ac1847174bf00199a3f876f0311e7ae1f2ecf165d9ccb0ce0');
 const bin = process.env.MA_TEST_PSQL || 'psql';
 const q = value => `'${String(value).replaceAll("'", "''")}'`;
 const j = value => `${q(JSON.stringify(value))}::jsonb`;
@@ -103,6 +118,10 @@ sql(definition('supabase/migrations/20260822090305_production_architecture_v1.sq
 sql(`create trigger decision_snapshots_premium_90_gate before insert or update of status,content_score,decision_mode on public.decision_snapshots for each row execute function public.enforce_decision_snapshot_premium_90_gate_v1();`);
 sql(read('supabase/migrations/20260908020000_incident_acceptance_market_delivery.sql'));
 sql(read('supabase/migrations/20260908050000_market_publication_recommendation_isolation.sql'));
+// The local historical bootstrap above includes a V3 default that is not the
+// captured Production baseline. Restore the exact original function before
+// recording metadata or applying either candidate; do not pre-upgrade it.
+sql(productionAcceptance.definition + ';');
 const signatures = [
   ['enforce_decision_snapshot_premium_90_gate_v1()', 'trigger', false],
   ['publish_research_bundle_v1(uuid,uuid,jsonb,jsonb,jsonb,jsonb,jsonb)', 'jsonb', false],
@@ -131,6 +150,13 @@ const functionMetadata = signature => JSON.parse(sql(`select json_build_object('
   'service',has_function_privilege('service_role',p.oid,'EXECUTE')) from pg_proc p where p.oid=${q('public.' + signature)}::regprocedure;`));
 const triggerMetadata = () => sql("select json_agg(json_build_object('definition',pg_get_triggerdef(oid),'enabled',tgenabled,'function',tgfoid::regprocedure::text) order by tgname) from pg_trigger where not tgisinternal;");
 const accessMetadata = () => sql("select json_agg(json_build_object('name',c.relname,'rls',c.relrowsecurity,'force',c.relforcerowsecurity,'owner',pg_get_userbyid(c.relowner),'acl',c.relacl::text) order by c.relname) from pg_class c where c.relnamespace='public'::regnamespace and c.relkind='r';");
+const productionAcceptanceCatalog = () => JSON.parse(sql(`select json_build_object(
+  'regprocedure',p.oid::regprocedure::text,'definition',pg_get_functiondef(p.oid),
+  'owner',pg_get_userbyid(p.proowner),'acl',p.proacl::text,'security_definer',p.prosecdef,
+  'settings',p.proconfig,'arguments',pg_get_function_arguments(p.oid),'result',pg_get_function_result(p.oid))
+  from pg_proc p where p.oid='public.capture_morning_alpha_acceptance_v1(date,text)'::regprocedure;`));
+const productionAcceptanceBefore = productionAcceptanceCatalog();
+assert.deepEqual(productionAcceptanceBefore, productionAcceptance, 'Actual local pre-candidate catalog must exactly match all captured Production fields');
 const before = new Map(signatures.map(([signature]) => [signature, functionMetadata(signature)]));
 const terminalBefore = functionMetadata(terminalSignature);
 const v2Before = functionMetadata('publish_decision_snapshot_v2(date,text,uuid,jsonb)');
@@ -140,6 +166,23 @@ sql(`insert into public.production_acceptance_results(business_date,evaluator_ve
     ('2026-09-08','ISOLATED_ORIGINAL_FAIL','isolated-original-fail-0809','FAIL',array['ORIGINAL_DELIVERY_FAILURE'],'{"fixture":true,"original":true}');`);
 const historical = () => sql("select jsonb_agg(to_jsonb(a) order by business_date) from production_acceptance_results a where evaluator_version='ISOLATED_ORIGINAL_FAIL';");
 const historicalBefore = historical();
+const migrationRollbackState = () => ({
+  functions: [...signatures, [terminalSignature], ['publish_decision_snapshot_v2(date,text,uuid,jsonb)'], ['finish_research_input_v1(uuid,uuid,text,jsonb,integer)']]
+    .map(([signature]) => [signature, functionMetadata(signature)]),
+  acceptance: productionAcceptanceCatalog(), triggers: triggerMetadata(), access: accessMetadata(),
+  rows: sql(`select jsonb_object_agg(name,rows) from (values ${tables.map(table =>
+    `(${q(table)},(select coalesce(jsonb_agg(to_jsonb(r) order by to_jsonb(r)::text),'[]'::jsonb) from public.${table} r))`).join(',')}) retained(name,rows);`),
+  validatorAbsent: sql(`select to_regprocedure(${q('public.' + validatorSignature)}) is null;`),
+});
+const rejectedMigrationBefore = migrationRollbackState();
+assert.equal(rejectedMigrationBefore.validatorAbsent, 't');
+let rejectedMigrationError;
+assert.throws(() => sql(rejectedV3Migration), error => {
+  rejectedMigrationError = error.message;
+  return /EXISTING_FUNCTION_AUTHORITY_DRIFT/.test(error.message);
+}, 'The actual c088 V3 migration must fail against the captured V1 baseline');
+const rejectedMigrationAfter = migrationRollbackState();
+assert.deepEqual(rejectedMigrationAfter, rejectedMigrationBefore, 'The failed transaction must restore all functions, ACL/RLS, triggers and every public row; its new validator must not survive');
 sql(migration);
 const once = new Map([...signatures, [validatorSignature]].map(([signature]) => [signature, functionMetadata(signature)]));
 const terminalOnce = functionMetadata(terminalSignature);
@@ -187,6 +230,24 @@ const claim = f => JSON.parse(sql(`select public.claim_research_input_v1(${q(f.d
 const publish = (f, run) => JSON.parse(sql(`set role service_role; select public.publish_research_bundle_v1(${q(run.run_id)},${q(f.correlation)},${j(f.report)},${j(f.decision)},${j(f.contract)},${j(f.member)},${j(f.semantic)});`).replace(/^SET\n/, ''));
 const rowState = () => sql(`select jsonb_build_object(${['reports', 'decision_snapshots', 'member_content_revisions', 'semantic_coherence_reviews', 'editorial_reviews', 'research_sessions', 'line_delivery_outbox'].map(table => `${q(table)},(select jsonb_agg(to_jsonb(r) order by id) from public.${table} r)`).join(',')});`);
 let valid, published, opening, closingSnapshot, closingContract, learningContract, prediction, outcome, run;
+
+test('captured Production Acceptance V1 baseline is exact and survives candidate apply and reapply without authority changes', () => {
+  assert.deepEqual(productionAcceptanceBefore, productionAcceptance);
+  const { definition: originalDefinition, ...originalAuthority } = productionAcceptance;
+  const { definition: currentDefinition, ...currentAuthority } = productionAcceptanceCatalog();
+  assert.deepEqual(currentAuthority, originalAuthority);
+  assert.notEqual(currentDefinition, originalDefinition, 'The candidate implementation replaces the original body, not its authority or default');
+  assert.deepEqual(functionMetadata(productionAcceptance.regprocedure), once.get(productionAcceptance.regprocedure), 'The second application preserves the exact first-application body and metadata');
+  assert.equal(historical(), historicalBefore);
+});
+
+test('the pinned c088 V3 candidate fails authority audit on Production V1 and rolls back the entire migration', () => {
+  assert.equal(sha256(rejectedV3Migration), '353a30988429fa1ac1847174bf00199a3f876f0311e7ae1f2ecf165d9ccb0ce0');
+  assert.match(rejectedMigrationError, /EXISTING_FUNCTION_AUTHORITY_DRIFT/);
+  assert.deepEqual(rejectedMigrationAfter, rejectedMigrationBefore);
+  assert.equal(rejectedMigrationAfter.validatorAbsent, 't');
+  assert.deepEqual(rejectedMigrationAfter.acceptance, productionAcceptance);
+});
 
 test('CI adapter accepts only the exact local job service and leaves ordinary loopback authority unchanged', () => {
   assert.deepEqual(isolatedDatabaseServer({}, () => assert.fail('Local mode must never inspect Docker')), { address: '127.0.0.1', port: '55439' });
@@ -449,6 +510,30 @@ test('historical timing fixtures bind real opening receipt, durable close rows a
   assert.notEqual(result.id, before.id); assert.equal(capture().id, result.id);
   assert.equal(sql(`select verdict from production_acceptance_results where id=${q(before.id)};`), 'FAIL');
   assert.equal(historical(), historicalBefore);
+});
+
+test('the preserved Production V1 default executes the actual Acceptance closure and keeps missing frozen evidence fail-closed', () => {
+  const explicit = capture(); assert.equal(explicit.verdict, 'PASS');
+  const invoke = suffix => sql(`set role service_role; select public.capture_morning_alpha_acceptance_v1(${q(valid.date)}${suffix});`).replace(/^SET\n/, '');
+  const id = invoke(''), result = JSON.parse(sql(`select row_to_json(a) from production_acceptance_results a where id=${q(id)};`));
+  assert.equal(result.verdict, 'PASS');
+  assert.match(result.evaluator_version, /^PRODUCTION_ACCEPTANCE_V1:CORE_CONSOLIDATION_V1:FULL_DAY:/);
+  assert.deepEqual(result.evidence, explicit.evidence);
+  assert.equal(result.evidence.canonical_revision_id, published.decision_snapshot_id);
+  assert.equal(result.evidence.closing_snapshot_id, closingSnapshot.id);
+  assert.equal(result.evidence.automatic_stable_day, false, 'A local historical fixture never becomes natural Production execution');
+  assert.equal(invoke(''), id, 'The real one-argument default call is idempotent');
+  assert.equal(invoke(", 'PRODUCTION_ACCEPTANCE_V1'"), id, 'Explicit V1 and omitted default share the same actual receipt');
+  const stable = rowState(), acceptanceRows = sql('select jsonb_agg(to_jsonb(a) order by id) from production_acceptance_results a;');
+  const output = sql(`begin; update decision_snapshots set generated_text=generated_text-'data_quality' where id=${q(published.decision_snapshot_id)};
+    set local role service_role; create temp table isolated_default_acceptance as select public.capture_morning_alpha_acceptance_v1(${q(valid.date)}) as id;
+    select row_to_json(a) from public.production_acceptance_results a join isolated_default_acceptance i on a.id=i.id; rollback;`);
+  const rejected = JSON.parse(output.split('\n').find(line => line.startsWith('{')) || 'null');
+  assert.ok(rejected); assert.equal(rejected.verdict, 'FAIL');
+  assert.ok(rejected.blocking_checks.includes('CORE_MARKET_PUBLICATION_UNVERIFIED'));
+  assert.equal(rejected.evidence.automatic_stable_day, false);
+  assert.equal(rowState(), stable); assert.equal(sql('select jsonb_agg(to_jsonb(a) order by id) from production_acceptance_results a;'), acceptanceRows);
+  assert.equal(invoke(''), id); assert.equal(historical(), historicalBefore);
 });
 
 test('a later real atomic publication preserves the original opening and its Closing/Learning/LINE evidence', () => {

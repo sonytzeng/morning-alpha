@@ -668,7 +668,7 @@ revoke all on function public.reconcile_runtime_terminal_failures_v1(date,uuid) 
 grant execute on function public.reconcile_runtime_terminal_failures_v1(date,uuid) to service_role;
 
 create or replace function public.capture_morning_alpha_acceptance_v1(
-  p_business_date date, p_evaluator_version text default 'PRODUCTION_ACCEPTANCE_V3'
+  p_business_date date, p_evaluator_version text default 'PRODUCTION_ACCEPTANCE_V1'
 ) returns uuid language plpgsql security definer set search_path='' as $$
 declare
   v_d public.decision_snapshots; v_current public.decision_snapshots; v_c public.decision_snapshots;

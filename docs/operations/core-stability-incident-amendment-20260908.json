@@ -5601,4 +5601,206 @@
       }
     ]
   }
+,
+  "core_acceptance_default_v1_registration": {
+    "approval_id": "CORE_ACCEPTANCE_PRODUCTION_DEFAULT_V1_APPEND",
+    "candidate_base_git_sha": "c0885967b160120f9e65666c1406fafd21cf61aa",
+    "previous_complete_registry_sha256": "188a0b57dc9c3363dce9f73a20737c927bbaca068909edbdfdb98cd253d88e35",
+    "approval_provenance": "The user explicitly approved the minimal Production Acceptance V1 candidate and the necessary append-only Integrity synchronization in this turn. This admission is limited to the unique captured default, exact Production fixture and additive regression plumbing; it does not authorize Production execution, change historical evidence, waive raw runtime hashes, or grant release readiness. No approval timestamp is inferred.",
+    "production_operations": false,
+    "production_sql_execution": false,
+    "auth_change": false,
+    "acl_change": false,
+    "runtime_raw_hash_waiver": false,
+    "external_delivery_verified": false,
+    "natural_stability_claim": false,
+    "release_ready": false,
+    "reviewed_scope": [
+      "docs/operations/core-stability-incident-amendment-20260908.json",
+      "docs/operations/evidence/core-acceptance-default-v1-20260910.json",
+      "supabase/migrations/20260909015650_core_market_publication_contract.sql",
+      "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+      "tests/consolidationFixtureRepresentation.test.mjs",
+      "tests/coreConsolidationDatabase.integration.mjs",
+      "tests/fixtures/core-production-acceptance-v1.json",
+      "tests/helpers/consolidationAcceptanceDefaultIntegrity.mjs",
+      "tests/helpers/consolidationPublicExportIntegrity.mjs"
+    ],
+    "files": [
+      {
+        "path": "supabase/migrations/20260909015650_core_market_publication_contract.sql",
+        "original_hash": "353a30988429fa1ac1847174bf00199a3f876f0311e7ae1f2ecf165d9ccb0ce0",
+        "candidate_hash": "32e940f48ed7590638992c1503e0a9b472a628149710d7aadb92489476f68433",
+        "production_hash": null,
+        "original_bytes": 77834,
+        "candidate_bytes": 77834,
+        "original_ends_with_newline": true,
+        "candidate_ends_with_newline": true,
+        "diff_hash": "fc4cd5cd51856f9635b8e249183faab2b108b93c71847b273c4b72e1a70eb6e0",
+        "reason": "Preserve the captured Production V1 parameter default while every other byte of the reviewed c088 SQL remains identical.",
+        "rollback_target": "Exact c088 source bytes restored from the independently pinned compressed preimage.",
+        "approval_provenance": "The user explicitly approved the minimal Production Acceptance V1 candidate and the necessary append-only Integrity synchronization in this turn. This admission is limited to the unique captured default, exact Production fixture and additive regression plumbing; it does not authorize Production execution, change historical evidence, waive raw runtime hashes, or grant release readiness. No approval timestamp is inferred."
+      },
+      {
+        "path": "tests/consolidationFixtureRepresentation.test.mjs",
+        "original_hash": "cede8c1004820997770bc96f09d9fad2f3ee1843e7fab8831769dce632648ae7",
+        "candidate_hash": "c39655a9b736851a6f42f9c30f7dec2f1252174610cc3d944017d3b9be1c15e9",
+        "production_hash": null,
+        "original_bytes": 11548,
+        "candidate_bytes": 12297,
+        "original_ends_with_newline": true,
+        "candidate_ends_with_newline": true,
+        "diff_hash": "71b3144f2d7c974ac085f862b55ce10ddc2fbaacb47e5b4677747e904ea45bab",
+        "reason": "Adapt only the test prelude to verified Tenth predecessor bytes; all historical constants and attack bodies remain identical.",
+        "rollback_target": "Exact c088 source bytes restored from the independently pinned compressed preimage.",
+        "approval_provenance": "The user explicitly approved the minimal Production Acceptance V1 candidate and the necessary append-only Integrity synchronization in this turn. This admission is limited to the unique captured default, exact Production fixture and additive regression plumbing; it does not authorize Production execution, change historical evidence, waive raw runtime hashes, or grant release readiness. No approval timestamp is inferred."
+      },
+      {
+        "path": "tests/coreConsolidationDatabase.integration.mjs",
+        "original_hash": "d88db9bfb8ef8ba45b7a71e4fbeb73d2c0bf07a88781446d448ac00b421641e8",
+        "candidate_hash": "6aab0330fc0da3541d97793f7b642c66a4873a7760801c7de870243705b86ee7",
+        "production_hash": null,
+        "original_bytes": 88243,
+        "candidate_bytes": 95773,
+        "original_ends_with_newline": true,
+        "candidate_ends_with_newline": true,
+        "diff_hash": "1bfc36587d338a6e99ce41289a46f9f8300b9568dd3b1e98f928663a07cf0764",
+        "reason": "Load the exact captured Production catalog before applying the candidate; preserve all 24 callbacks and add three actual V1/rollback regressions.",
+        "rollback_target": "Exact c088 source bytes restored from the independently pinned compressed preimage.",
+        "approval_provenance": "The user explicitly approved the minimal Production Acceptance V1 candidate and the necessary append-only Integrity synchronization in this turn. This admission is limited to the unique captured default, exact Production fixture and additive regression plumbing; it does not authorize Production execution, change historical evidence, waive raw runtime hashes, or grant release readiness. No approval timestamp is inferred."
+      },
+      {
+        "path": "tests/fixtures/core-production-acceptance-v1.json",
+        "original_hash": null,
+        "candidate_hash": "6a8ed6a43bd301659006400b76bac70e1e13ae92e31bb2267ca8359030e2ff14",
+        "production_hash": null,
+        "original_bytes": 0,
+        "candidate_bytes": 4767,
+        "original_ends_with_newline": false,
+        "candidate_ends_with_newline": true,
+        "diff_hash": "67bc77a837f8543cbefa587b4e9153f4b5a4275d7f4aca7c8ef413cc10dcacff",
+        "reason": "Add only the read-only captured function definition and eight catalog metadata fields; no business rows, credentials or runtime state.",
+        "rollback_target": "Remove only this new test fixture from the candidate; no runtime data is involved.",
+        "approval_provenance": "The user explicitly approved the minimal Production Acceptance V1 candidate and the necessary append-only Integrity synchronization in this turn. This admission is limited to the unique captured default, exact Production fixture and additive regression plumbing; it does not authorize Production execution, change historical evidence, waive raw runtime hashes, or grant release readiness. No approval timestamp is inferred."
+      },
+      {
+        "path": "tests/helpers/consolidationPublicExportIntegrity.mjs",
+        "original_hash": "6397a0d25bd0e398b71790b8c253a8b6ccd188dc3d56df5a7788f08dc1a767c6",
+        "candidate_hash": "d4cda72931e160b6e07457f83f916c5390e0123bf497e81d33de8c37b42994bc",
+        "production_hash": null,
+        "original_bytes": 18851,
+        "candidate_bytes": 19127,
+        "original_ends_with_newline": true,
+        "candidate_ends_with_newline": true,
+        "diff_hash": "21f1d652de142df3a2f5ac280603dbfbcfa911c0ae3cfb2ce5b4328460add6f2",
+        "reason": "Authenticate the exact live Eleventh source set before invoking the fixed unchanged Tenth and all earlier verifiers.",
+        "rollback_target": "Exact c088 source bytes restored from the independently pinned compressed preimage.",
+        "approval_provenance": "The user explicitly approved the minimal Production Acceptance V1 candidate and the necessary append-only Integrity synchronization in this turn. This admission is limited to the unique captured default, exact Production fixture and additive regression plumbing; it does not authorize Production execution, change historical evidence, waive raw runtime hashes, or grant release readiness. No approval timestamp is inferred."
+      }
+    ],
+    "database_callbacks": [
+      {
+        "name": "CI adapter accepts only the exact local job service and leaves ordinary loopback authority unchanged",
+        "sha256": "79ba0211c4b8857dcd46ecfad5966160a13a2661ea74e76c0ddf39231465e00f"
+      },
+      {
+        "name": "named migration twice preserves five RPC signatures/defaults/owner/private ACL/security/search_path and original trigger/RLS",
+        "sha256": "4490aa38ce745121dfe9904d1c512ff920cd69c7bf5fc816e8e9843e952b484d"
+      },
+      {
+        "name": "market READY with private recommendation 76 percent and five unsupported claims publishes atomically without stocks",
+        "sha256": "eee4e6bbf0729a111fca7257b844ae63e8a03115a135ded13bce46a28322e907"
+      },
+      {
+        "name": "stale/missing/wrong identity and unsupported market evidence reject validator and roll back publication",
+        "sha256": "2d9baeca545fe0c905dbade3fa8cd0cbd38252dae817d682e72b9b4eb79b5adb"
+      },
+      {
+        "name": "TS and SQL require the same exact evidence ID union and real producer freshness context",
+        "sha256": "5b2c2b8fff3e30da31e3ad868433c117e73db3c7481ca8d410b34e9f53137b0b"
+      },
+      {
+        "name": "actual member-insert failure rolls back all publication rows and keeps the original successful receipt",
+        "sha256": "ac9deddc1f2a61bbe35a6b9e8e8f636b8c5251db17b7609922da32ca2e583468"
+      },
+      {
+        "name": "direct v3/member RPCs cannot bypass canonical market, semantic or identity gates",
+        "sha256": "f3ea9834ab75e5d51451355ba57f6bfb552a02fc8e8694ba86f02d5f7b483dc1"
+      },
+      {
+        "name": "historical timing fixtures bind real opening receipt, durable close rows and market learning; raw completed JSON alone never passes",
+        "sha256": "010c77a825c9ba9c5ab9de68d495ea5e6cb51d97c9c2afe3ffd9533cb7b0bbea"
+      },
+      {
+        "name": "a later real atomic publication preserves the original opening and its Closing/Learning/LINE evidence",
+        "sha256": "412f22c27d45d8d755310ee4bc1cb97c4d352ffa4803678c83b1710bec55f912"
+      },
+      {
+        "name": "closing/learning wrong revision, missing raw price/source, malformed time and JSON-only completion remain fail-closed",
+        "sha256": "3d16f3f27a9b530ccb10d728897418a6591aba6e8da91505ecd903e3cf294a16"
+      },
+      {
+        "name": "private current QA cannot override frozen market, while exact raw checkpoint/correlation/version remains mandatory",
+        "sha256": "bcddfae206676be0f6b897135406696bbb88c26f286dff7cf56813565d29b54a"
+      },
+      {
+        "name": "scheduled label alone is not natural execution; exact scheduler receipt still cannot turn historical replay or Recovery into a stable day",
+        "sha256": "ad8cf50fe0a74b7ab89844bcbc16dfdddb63b9bae19bd6fe7a963a9ab00140c3"
+      },
+      {
+        "name": "original historical FAIL rows and private business-table permissions survive all isolated observations",
+        "sha256": "240642b4ddd1907aa68f2a12b67d5cc91e7f8a0f96f2290c634558f2ac716779"
+      },
+      {
+        "name": "actual company admission and audited research preserve a qualified stock through the same atomic SQL path",
+        "sha256": "71a51a5c36ac17fcabd61202fcd912c2d7e5e28f0273c6fe32ec8cfc94a76340"
+      },
+      {
+        "name": "concurrent calls to the final atomic publication RPC return one committed decision and member revision",
+        "sha256": "041327cb605bfec73fde8ad42a9cea974b741f828b0069769b2e1a02b118c9b4"
+      },
+      {
+        "name": "sixth terminal RPC preserves its exact original private catalog contract across both candidate applications",
+        "sha256": "0956392c4832bfa383d29e7e34083318979a2af7955767dcd8d836f820178a2d"
+      },
+      {
+        "name": "a real committed market-only publication returns terminal zero without inventing delivery, lifecycle or Acceptance",
+        "sha256": "7eee07bfde749520c313892fbff57055be22fec698863467fbb2f154b3ba7dee"
+      },
+      {
+        "name": "terminal publication proof rejects missing or wrong durable identities, semantic rows and frozen evidence atomically",
+        "sha256": "f15bad2d3737da2c627192465007b15edb916926f6948f3905ffd13cfd82a306"
+      },
+      {
+        "name": "receipt-bound member diagnostic scores and status do not become a second market publication gate",
+        "sha256": "51262faff339cb0fea3ba2ea985e768c97e85f7e98be1ca5ef3ecae0c6c9fabb"
+      },
+      {
+        "name": "new current private QA cannot replace a committed market-only terminal authority",
+        "sha256": "9febd83c27e8fc4396c38961b5d1b1c30dd85f476bd652124b666a21c58a773f"
+      },
+      {
+        "name": "Acceptance independently rejects frozen quality and co-mutated opening canonical identities",
+        "sha256": "7eef9c61c768e53d3aedaaae60213f105c3f81cb9006927cbf5dbb2232dada09"
+      },
+      {
+        "name": "terminal replacement retains exact same-job/checkpoint/endpoint/later-success rules and original failed attempts",
+        "sha256": "336bb31c66f92c8d9685e1ed14d3c1f280beb2cb38dbd8f8af3fd53221d36a89"
+      },
+      {
+        "name": "terminal repair rolls back if durable dead-letter persistence fails after dispatch reconciliation",
+        "sha256": "f2c5206fd1a655134a30d0a2ffafe61028bb5bac4dd4198c08402a571d141929"
+      },
+      {
+        "name": "concurrent terminal calls repair once without duplicate dispatch or artificial natural stability",
+        "sha256": "e9f5cf542021c879a0c4fb73d503e6f825fe8c9356fd1c5fa3d5051c3db5e96f"
+      }
+    ],
+    "added_database_tests": [
+      "captured Production Acceptance V1 baseline is exact and survives candidate apply and reapply without authority changes",
+      "the pinned c088 V3 candidate fails authority audit on Production V1 and rolls back the entire migration",
+      "the preserved Production V1 default executes the actual Acceptance closure and keeps missing frozen evidence fail-closed"
+    ],
+    "tenth_test_tail": "4ec486730453bfeaf0bbfda05059893a82490904b36667c0e86176c93992c748"
+  }
 }

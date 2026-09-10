@@ -6,6 +6,7 @@ import ts from 'typescript';
 import { resolveConsolidationSqlHistoryIntegrity } from './consolidationSqlHistoryIntegrity.mjs';
 import { resolveConsolidationRequiredMarketIntegrity } from './consolidationRequiredMarketIntegrity.mjs';
 import { resolveConsolidationFixtureRepresentation } from './consolidationFixtureRepresentation.mjs';
+import { resolveConsolidationAcceptanceDefaultIntegrity } from './consolidationAcceptanceDefaultIntegrity.mjs';
 
 // Eighth source admission is additive. The immutable Seventh guard executes on
 // exact reconstructed predecessor bytes, followed by checks of every live byte
@@ -301,12 +302,14 @@ function verifyPublicExport(seal, registry, artifactBytes, readSource) {
 export function resolveConsolidationPublicExportIntegrity(registry, artifactBytes, readSource = defaultRead) {
   if (FINAL_SEAL === null) throw Object.assign(new Error('EIGHTH_REVIEWED_SOURCE_FREEZE_REQUIRED'),
     { code: 'EIGHTH_REVIEWED_SOURCE_FREEZE_REQUIRED' });
-  // Verify the exact live serialization successor before the unchanged Ninth.
-  return resolveConsolidationFixtureRepresentation(registry, artifactBytes, readSource,
-    (ninthRegistry, ninthArtifact, ninthRead) =>
-      resolveConsolidationRequiredMarketIntegrity(ninthRegistry, ninthArtifact, ninthRead,
-        (previousRegistry, previousArtifact, previousRead) =>
-          verifyPublicExport(FINAL_SEAL, previousRegistry, previousArtifact, previousRead)));
+  // Verify the exact V1 default admission before all unchanged historical layers.
+  return resolveConsolidationAcceptanceDefaultIntegrity(registry, artifactBytes, readSource,
+    (tenthRegistry, tenthArtifact, tenthRead) =>
+      resolveConsolidationFixtureRepresentation(tenthRegistry, tenthArtifact, tenthRead,
+        (ninthRegistry, ninthArtifact, ninthRead) =>
+          resolveConsolidationRequiredMarketIntegrity(ninthRegistry, ninthArtifact, ninthRead,
+            (previousRegistry, previousArtifact, previousRead) =>
+              verifyPublicExport(FINAL_SEAL, previousRegistry, previousArtifact, previousRead))));
 }
 export const readConsolidationPublicExportIntegrity = registry =>
   resolveConsolidationPublicExportIntegrity(registry, defaultRead(PUBLIC_EXPORT_ARTIFACT_PATH));

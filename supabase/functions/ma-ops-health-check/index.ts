@@ -300,7 +300,7 @@ const handlers: Record<CheckName, CheckHandler> = {
   "market-data-freshness": async ({ supabase, targetDate }) => {
     const started = Date.now();
     const result = await withTimeout(supabase
-      .from("market_data_snapshots")
+      .from("authoritative_market_data_snapshots_v1")
       .select("symbol,trading_date,phase,captured_at,source")
       .eq("trading_date", targetDate)
       .order("captured_at", { ascending: false })

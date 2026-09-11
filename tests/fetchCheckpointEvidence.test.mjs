@@ -73,7 +73,7 @@ test('verified Production v63 provider lanes, routing, auth dependencies and str
     const name = node.name?.getText(file) || node.declarationList?.declarations.map(d => d.name.getText(file)).join(',');
     return name ? [[name, node.getText(file)]] : [];
   }));
-  assert.equal(manifest.protected_declarations.length, 44);
+  assert.equal(manifest.protected_declarations.length, 43);
   for (const row of manifest.protected_declarations) assert.equal(hash(declarations.get(row.name)), row.sha256, row.name);
-  for (const row of manifest.dependencies) assert.equal(hash(readFileSync(new URL(row.path, root))), row.production_sha256, row.path);
+  for (const row of manifest.dependencies) assert.equal(hash(readFileSync(new URL(row.path, root))), row.candidate_sha256, row.path);
 });

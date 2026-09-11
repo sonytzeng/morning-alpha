@@ -143,7 +143,10 @@ jobs:
                 .success == true
                 and .phase == "intraday"
                 and .checkpoint == $checkpoint
-                and ((.checkpoint_reused == true and .snapshot_reused_count >= 2) or .snapshot_upserted_count >= 2)
+                and ((.checkpoint_reused == true and .snapshot_reused_count == 11 and .snapshot_reused_count >= 2) or (.snapshot_upserted_count >= 2 and .snapshot_upserted_count == 11))
+                and .atomic_checkpoint_row_count == 11
+                and .atomic_batch_id != null
+                and .atomic_commit_error == null
                 and .canonical_complete == true
                 and .core_batch_complete == true
                 and .required_core_complete == true
@@ -268,7 +271,10 @@ jobs:
                 .success == true
                 and .phase == "close"
                 and .checkpoint == $checkpoint
-                and ((.checkpoint_reused == true and .snapshot_reused_count >= 2) or .snapshot_upserted_count >= 2)
+                and ((.checkpoint_reused == true and .snapshot_reused_count == 11 and .snapshot_reused_count >= 2) or (.snapshot_upserted_count >= 2 and .snapshot_upserted_count == 11))
+                and .atomic_checkpoint_row_count == 11
+                and .atomic_batch_id != null
+                and .atomic_commit_error == null
                 and .canonical_complete == true
                 and .core_batch_complete == true
                 and .required_core_complete == true

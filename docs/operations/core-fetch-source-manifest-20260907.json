@@ -2,13 +2,14 @@
   "production_version": 63,
   "production_updated_at": 1788490890516,
   "production_source_sha256": "2832ff1c0e9009521beeb73bf3292af77d6e8549f73274e658a605df6dde0f93",
-  "candidate_source_sha256": "6b15f14ad76d20413f3483e01ab918dad7340cd4843bc8090d23837e4780beb0",
+  "candidate_source_sha256": "d2e117006c8bf7433cdc2efdba729fbe5ec17d47d2949aa98c81c58b57cd7266",
   "changed_declarations": [
     "VERSION",
     "TAIWAN_DECISION_REQUIRED",
-    "normalizeFugleQuote"
+    "normalizeFugleQuote",
+    "CLOSE_CORE_SYMBOLS"
   ],
-  "handler_change": "Durable evidence retention, completeness gate and verified terminal reuse; no strategy change",
+  "handler_change": "Atomic 11-provider checkpoint assembly, transactional commit, post-commit response-loss recovery, idempotent retry and authoritative downstream admission; no strategy change",
   "protected_declarations": [
     {
       "name": "CORS_HEADERS",
@@ -65,10 +66,6 @@
     {
       "name": "SYMBOLS",
       "sha256": "5ad24db9b12030ce95f9b8bdb43122496290d46aaf40edcf25ef1fd514b888b4"
-    },
-    {
-      "name": "CLOSE_CORE_SYMBOLS",
-      "sha256": "bda806cd8d78ef5841f7a610601fbf17d4898e0822aedae6431ef5ff6f29cc66"
     },
     {
       "name": "MVP_REQUIRED",
@@ -217,6 +214,11 @@
       "path": "supabase/functions/_shared/provider-normalization.mjs",
       "production_sha256": "c3d115db804d3cdbc1a64368a338cd2b50fd73e8304587d9aa81648edc3dd7ee",
       "candidate_sha256": "c3d115db804d3cdbc1a64368a338cd2b50fd73e8304587d9aa81648edc3dd7ee"
+    },
+    {
+      "path": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",
+      "production_sha256": "da53556544590d5d0e59322de26bd997fe6779dac26cb1b1fd95cbfd85bbf43a",
+      "candidate_sha256": "b45b984740e4bc5e42ad3cce45ba8b3ea4539fa77485c5dd6a447efb87b77b35"
     }
   ]
 }

@@ -413,33 +413,25 @@ Deno.serve(async (req) => {
     });
 
     const closeWindow = taipeiWindowUtc(scoreDate);
-    const marketSelect = "symbol,name,market,value,change_percent,status,taiwan_impact,captured_at,change,updated_at";
     const snapshotSelect = "symbol,name,market,value,change_percent,captured_at,raw";
-    const [snapshotResult, capturedResult, updatedResult, newsResult, reportResult] = await Promise.all([
+    const [snapshotResult, newsResult, reportResult] = await Promise.all([
       supabase
-        .from("market_data_snapshots")
+        .from("authoritative_market_data_snapshots_v1")
         .select(snapshotSelect)
         .eq("trading_date", scoreDate)
         .eq("phase", "close")
         .limit(200),
-      supabase.from("market_data").select(marketSelect).gte("captured_at", closeWindow.start).lte("captured_at", closeWindow.end).limit(200),
-      supabase.from("market_data").select(marketSelect).gte("updated_at", closeWindow.start).lte("updated_at", closeWindow.end).limit(200),
       supabase.from("market_news").select("title,taiwan_impact_summary,related_sectors,published_at,created_at").gte("created_at", `${scoreDate}T00:00:00+08:00`).limit(100),
       supabase.from("reports").select("id,report_date,market_bias,summary,ai_strategy_json").eq("report_date", scoreDate).maybeSingle(),
     ]);
 
     if (snapshotResult.error) {
-      console.warn(`${logPrefix} market_data_snapshots query warning: ${snapshotResult.error.message}; falling back to market_data`);
-    }
-
-    const marketError = capturedResult.error || updatedResult.error;
-    if (marketError) {
-      console.error(`${logPrefix} market_data query failed: ${marketError.message}`);
+      console.error(`${logPrefix} authoritative checkpoint query failed: ${snapshotResult.error.message}`);
       return jsonResponse({
         success: false,
-        code: "MARKET_DATA_QUERY_FAILED",
-        reason: "MARKET_DATA_QUERY_FAILED",
-        detail: marketError.message,
+        code: "AUTHORITATIVE_MARKET_DATA_QUERY_FAILED",
+        reason: "AUTHORITATIVE_MARKET_DATA_QUERY_FAILED",
+        detail: snapshotResult.error.message,
         score_date: scoreDate,
         backfill_mode: backfillMode,
         close_window_start: closeWindow.start,
@@ -447,15 +439,10 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
-    const snapshotRows = snapshotResult.error ? [] : ((snapshotResult.data || []) as Record<string, unknown>[]);
-    const legacyRows = [
-      ...(capturedResult.data || []),
-      ...(updatedResult.data || []),
-    ] as Record<string, unknown>[];
-    const marketDataSource = snapshotRows.length > 0 ? "market_data_snapshots" : "market_data";
-    const rawRows = snapshotRows.length > 0 ? snapshotRows : legacyRows;
+    const snapshotRows = (snapshotResult.data || []) as Record<string, unknown>[];
+    const marketDataSource = "authoritative_market_data_snapshots_v1";
 
-    const rows = latestRowsBySymbol(rawRows.map(mapMarketRow).filter((row): row is MarketRow => row !== null));
+    const rows = latestRowsBySymbol(snapshotRows.map(mapMarketRow).filter((row): row is MarketRow => row !== null));
     if (rows.length === 0) {
       console.log(`${logPrefix} no close-window market data for ${scoreDate} source=${marketDataSource}`);
       return jsonResponse({
@@ -471,7 +458,7 @@ Deno.serve(async (req) => {
         market_data_source: marketDataSource,
         snapshot_count: snapshotRows.length,
         usable_sector_count: 0,
-        skipped_reason: "No close-phase snapshots or market_data rows in Taiwan close window",
+        skipped_reason: "No committed, complete and lifecycle-authoritative close checkpoint batch",
       }, 200);
     }
 

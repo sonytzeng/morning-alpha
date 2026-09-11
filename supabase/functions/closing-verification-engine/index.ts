@@ -18,6 +18,7 @@ import {
   validateOpeningPublication,
   type OpeningPublication,
 } from "../_shared/closing-learning-contract.ts";
+import { CHECKPOINT_PROVIDER_KEYS } from "../_shared/fetch-checkpoint-evidence.mjs";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -402,33 +403,53 @@ async function fetchCloseRowsForDate(
   }
 
   const snapshotResult = await supabase
-    .from("market_data_snapshots")
+    .from("authoritative_market_data_snapshots_v1")
     .select(
-      "symbol,name,value,change_percent,captured_at,source,trading_date,phase,checkpoint",
+      "symbol,name,value,change_percent,captured_at,source,trading_date,phase,checkpoint,batch_id",
     )
     .eq("trading_date", targetDate)
     .eq("phase", "close")
     .in("symbol", uniqueSymbols)
     .order("captured_at", { ascending: false });
 
-  if (
-    !snapshotResult.error && Array.isArray(snapshotResult.data) &&
-    snapshotResult.data.length > 0
-  ) {
-    const rows = (snapshotResult.data as unknown as Record<string, unknown>[])
+  if (snapshotResult.error) {
+    return { rows: [], closeWindow, source: "market_data_snapshots", degraded: true };
+  }
+
+  const authoritativeRows = Array.isArray(snapshotResult.data)
+    ? (snapshotResult.data as unknown as Record<string, unknown>[])
       .filter((row) =>
         isTrustedCloseSnapshot(row, targetDate)
       )
       .map(closeRowFromSnapshot)
-      .filter((row): row is CloseMarketRow => row !== null);
-    if (rows.length > 0) {
-      return {
-        rows,
-        closeWindow,
-        source: "market_data_snapshots",
-        degraded: false,
-      };
-    }
+      .filter((row): row is CloseMarketRow => row !== null)
+    : [];
+
+  // Beneficiary symbols are a separate, non-authoritative enrichment contract.
+  // They may supplement evaluation but can never satisfy a core checkpoint.
+  const coreKeys = new Set([...CHECKPOINT_PROVIDER_KEYS, ...CORE_SYMBOL_QUERY_ALIASES].map(normalizeSymbol));
+  const beneficiaryOnlySymbols = uniqueSymbols.filter((symbol) => !coreKeys.has(normalizeSymbol(symbol)));
+  const beneficiaryResult = beneficiaryOnlySymbols.length > 0
+    ? await supabase.from("market_data_snapshots")
+      .select("symbol,name,value,change_percent,captured_at,source,trading_date,phase,checkpoint")
+      .eq("trading_date", targetDate)
+      .eq("phase", "close")
+      .in("symbol", beneficiaryOnlySymbols)
+      .order("captured_at", { ascending: false })
+    : { data: [], error: null };
+  const beneficiaryRows = !beneficiaryResult.error && Array.isArray(beneficiaryResult.data)
+    ? (beneficiaryResult.data as unknown as Record<string, unknown>[])
+      .filter((row) => isTrustedCloseSnapshot(row, targetDate))
+      .map(closeRowFromSnapshot)
+      .filter((row): row is CloseMarketRow => row !== null)
+    : [];
+  if (authoritativeRows.length > 0) {
+    return {
+      rows: [...authoritativeRows, ...beneficiaryRows],
+      closeWindow,
+      source: "market_data_snapshots",
+      degraded: false,
+    };
   }
 
   // market_data does not carry phase/trading_date provenance. A close verification must
@@ -446,9 +467,9 @@ async function fetchIntradayRowsForDate(
   targetDate: string,
 ): Promise<CloseMarketRow[]> {
   const result = await supabase
-    .from("market_data_snapshots")
+    .from("authoritative_market_data_snapshots_v1")
     .select(
-      "symbol,name,value,change_percent,captured_at,source,trading_date,phase,checkpoint",
+      "symbol,name,value,change_percent,captured_at,source,trading_date,phase,checkpoint,batch_id",
     )
     .eq("trading_date", targetDate)
     .eq("phase", "intraday")
@@ -835,6 +856,7 @@ function buildClosingVerificationV2(params: {
     },
     data_source: {
       table: params.source,
+      authority: "authoritative_market_data_snapshots_v1",
       close_window_start: params.closeWindow.start,
       close_window_end: params.closeWindow.end,
       no_fake_data: true,
@@ -1163,6 +1185,7 @@ Deno.serve(async (req: Request) => {
       ),
       data_source: {
         source: "market_data_snapshots",
+        authority: "authoritative_market_data_snapshots_v1",
         symbol: "TAIEX",
         taiex_symbol: "TAIEX",
         captured_at: null,
@@ -1335,6 +1358,7 @@ Deno.serve(async (req: Request) => {
     lessons_learned: lessonsLearned,
     data_source: {
       source: taiexCloseData?.source || closeMarket.source,
+      authority: "authoritative_market_data_snapshots_v1",
       symbol: taiexCloseData?.symbol || taiexCloseRow?.symbol || "TAIEX",
       taiex_symbol: taiexCloseData?.symbol || taiexCloseRow?.symbol || "TAIEX",
       captured_at: taiexCloseData?.capturedAt || taiexCloseRow?.capturedAt ||

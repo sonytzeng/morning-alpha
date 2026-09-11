@@ -38,9 +38,9 @@ function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
 }
 
-async function inspectRuntimeSchema(supabase: ReturnType<typeof createClient>): Promise<JsonRecord> {
+async function inspectRuntimeSchema(supabase: ReturnType<typeof createClient<any>>): Promise<JsonRecord> {
   const checks = await Promise.all([
-    supabase.from('market_data_snapshots').select('checkpoint').limit(1),
+    supabase.from('authoritative_market_data_snapshots_v1').select('checkpoint').limit(1),
     supabase.from('data_provider_health').select('checkpoint').limit(1),
     supabase.from('trading_day_state').select('trading_date,current_state,state_rank,checkpoint_status').limit(1),
   ]);

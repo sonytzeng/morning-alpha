@@ -19,13 +19,17 @@ import {
 } from '../_shared/provider-normalization.mjs';
 import {
   buildCheckpointEvidence,
+  CHECKPOINT_PROVIDER_KEYS,
+  checkpointBatchIdempotencyKey,
   checkpointCollectionContract,
+  parseAtomicCheckpointCommit,
   quoteFromCheckpointEvidence,
+  validateAtomicCheckpointEvidenceRows,
   validRetainedCheckpointRow,
 } from '../_shared/fetch-checkpoint-evidence.mjs';
 
 // ═══════════════════════════════════════════════════════════
-// fetch-market-data-v10 V10.14 — PROVIDER-LANE TIMEOUT RECOVERY
+// fetch-market-data-v10 V10.16 — ATOMIC CHECKPOINT BATCH
 // Uses Finnhub for US equities/ETF proxies, Fugle/TWSE for Taiwan core, best-effort Fugle futopt for TXF.
 // Each symbol: 6s timeout, max 1 retry.
 // Global and Taiwan providers run in separate sequential lanes so one slow
@@ -43,7 +47,7 @@ const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
 const OVERALL_TIMEOUT_MS = 60_000;
-const VERSION = "V10.15_DURABLE_CHECKPOINT_EVIDENCE";
+const VERSION = "V10.16_ATOMIC_CHECKPOINT_BATCH";
 
 interface FinnhubQuote {
   c: number;
@@ -123,7 +127,7 @@ const SYMBOLS: SymbolConfig[] = [
   { finnhubSymbol: "TXF", displaySymbol: "TXF", name: "台指期", market: "TW", taiwanImpact: "台指期提供期貨領先訊號" },
 ];
 
-const CLOSE_CORE_SYMBOLS = new Set(["TAIEX", "2330", "TXF", "SPX", "IXIC", "SOX", "NVDA", "TSM", "VIX"]);
+const CLOSE_CORE_SYMBOLS = new Set(CHECKPOINT_PROVIDER_KEYS);
 
 // MVP required symbols for safe bias to work
 const MVP_REQUIRED = ["NVDA", "TSM", "SPX"];
@@ -950,15 +954,20 @@ Deno.serve(async (req) => {
     const includeBeneficiaryClose = phase === "close" && (beneficiaryCloseOnly || requestBody.include_beneficiary_close === true || requestBody.beneficiary_close === true);
     const evidenceInput = { phase, checkpoint, tradingDate, observedAt: startedAt, correlationId };
     const collection = checkpointCollectionContract(evidenceInput);
+    const canonicalCheckpoint = phase === "premarket"
+      ? "PREMARKET"
+      : phase === "manual_backfill"
+      ? "RECOVERY"
+      : checkpoint;
+    const atomicIdempotencyKey = checkpointBatchIdempotencyKey(tradingDate, canonicalCheckpoint);
+    let committedRecoveryRows: Record<string, unknown>[] = [];
 
     // A completed checkpoint is an immutable point-in-time observation. Backup
     // Cron or an operator replay may safely reuse it, but must never replace the
     // 09:00 snapshot with a later quote just because the same checkpoint label
     // was sent again.
     if (!beneficiaryCloseOnly) {
-      const requiredSymbols = phase === "premarket" || phase === "manual_backfill"
-        ? MVP_REQUIRED
-        : TAIWAN_DECISION_REQUIRED;
+      const requiredSymbols = [...CHECKPOINT_PROVIDER_KEYS];
       const { data: existingDayState, error: existingDayStateError } = await supabase
         .from("trading_day_state")
         .select("checkpoint_status")
@@ -971,19 +980,28 @@ Deno.serve(async (req) => {
         const checkpointMetadata = asRecord(checkpointRecord.metadata);
         const terminalCheckpoint = String(checkpointRecord.status || "") === "SUCCEEDED"
           && checkpointMetadata.required_core_complete === true
-          && checkpointMetadata.canonical_complete === true;
+          && checkpointMetadata.canonical_complete === true
+          && checkpointMetadata.atomic_checkpoint_complete === true
+          && String(checkpointMetadata.atomic_batch_id || "").length > 0;
         if (terminalCheckpoint) {
           const originalCorrelation = String(checkpointRecord.correlation_id || "");
           const { data: existingSnapshots, error: existingSnapshotsError } = await supabase
-            .from("market_checkpoint_snapshots")
-            .select("*")
-            .eq("trading_date", tradingDate)
-            .eq("correlation_id", originalCorrelation || correlationId)
-            .eq("checkpoint", phase === "premarket" ? "PREMARKET" : phase === "manual_backfill" ? "RECOVERY" : checkpoint)
-            .in("symbol", requiredSymbols);
+            .rpc("read_committed_market_checkpoint_batch_v1", {
+              p_business_date: tradingDate,
+              p_checkpoint: canonicalCheckpoint,
+            });
           const snapshotRows = Array.isArray(existingSnapshots) ? existingSnapshots : [];
           const existingSymbols = new Set(snapshotRows.map((row) => String(row.symbol || "")));
+          const terminalBatchId = String(checkpointMetadata.atomic_batch_id || "");
+          const terminalIdempotencyKey = String(checkpointMetadata.atomic_idempotency_key || atomicIdempotencyKey);
           const snapshotContractComplete = !existingSnapshotsError
+            && snapshotRows.length === CHECKPOINT_PROVIDER_KEYS.length
+            && validateAtomicCheckpointEvidenceRows(snapshotRows).valid
+            && terminalIdempotencyKey === atomicIdempotencyKey
+            && snapshotRows.every((row) =>
+              String(row.batch_id || "") === terminalBatchId
+              && String(row.idempotency_key || "") === terminalIdempotencyKey
+            )
             && requiredSymbols.every((symbol) => snapshotRows.some((row) => {
               const config = SYMBOLS.find((item) => item.displaySymbol === symbol);
               return config && validRetainedCheckpointRow(row, { ...evidenceInput, correlationId: originalCorrelation }, config);
@@ -996,6 +1014,12 @@ Deno.serve(async (req) => {
               request_id: requestId,
               correlation_id: correlationId,
               evidence_correlation_id: originalCorrelation,
+              atomic_batch_id: terminalBatchId,
+              atomic_idempotency_key: terminalIdempotencyKey,
+              atomic_checkpoint_row_count: snapshotRows.length,
+              atomic_checkpoint_reused: true,
+              atomic_payload_matches: true,
+              atomic_commit_error: null,
               immutable_evidence_complete: true,
               immutable_snapshot_versions: snapshotRows.map((row) => row.snapshot_version),
               phase,
@@ -1040,9 +1064,49 @@ Deno.serve(async (req) => {
             { status: 409, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
         }
       }
+
+      // The atomic transaction may have committed even when its HTTP response
+      // was lost or the process died before lifecycle/canonical follow-up. Read
+      // that immutable batch before enforcing the current wall-clock window so
+      // a later retry can finish without fetching or replacing the observation.
+      const { data: committedRows, error: committedRowsError } = await supabase
+        .rpc("read_committed_market_checkpoint_batch_v1", {
+          p_business_date: tradingDate,
+          p_checkpoint: canonicalCheckpoint,
+        });
+      const candidateRows = Array.isArray(committedRows)
+        ? committedRows as Record<string, unknown>[]
+        : [];
+      const committedCorrelation = String(candidateRows[0]?.correlation_id || "");
+      const committedBatchId = String(candidateRows[0]?.batch_id || "");
+      const committedIdempotencyKey = String(candidateRows[0]?.idempotency_key || "");
+      const committedAssembly = validateAtomicCheckpointEvidenceRows(candidateRows);
+      const committedRecoveryComplete = !committedRowsError
+        && committedAssembly.valid
+        && candidateRows.length === CHECKPOINT_PROVIDER_KEYS.length
+        && committedBatchId.length > 0
+        && committedIdempotencyKey === atomicIdempotencyKey
+        && candidateRows.every((row) =>
+          String(row.batch_id || "") === committedBatchId
+          && String(row.correlation_id || "") === committedCorrelation
+          && String(row.idempotency_key || "") === committedIdempotencyKey
+        )
+        && CHECKPOINT_PROVIDER_KEYS.every((symbol) => {
+          const config = SYMBOLS.find((item) => item.displaySymbol === symbol);
+          return config && candidateRows.some((row) =>
+            String(row.provider_key || row.symbol || "") === symbol
+            && validRetainedCheckpointRow(row, { ...evidenceInput, correlationId: committedCorrelation }, config)
+          );
+        });
+      if (committedRecoveryComplete) {
+        committedRecoveryRows = candidateRows;
+        console.log(`[${batchTag}] RECOVER_COMMITTED_ATOMIC_BATCH checkpoint=${checkpoint} batch=${committedBatchId}`);
+      } else if (committedRowsError) {
+        console.warn(`[${batchTag}] COMMITTED_ATOMIC_BATCH_LOOKUP_FAILED ${committedRowsError.message}`);
+      }
     }
 
-    if (!beneficiaryCloseOnly && !collection.valid) {
+    if (!beneficiaryCloseOnly && !collection.valid && committedRecoveryRows.length === 0) {
       return new Response(JSON.stringify({ success: false, error: collection.error, checkpoint, trading_date: tradingDate,
         checkpoint_complete: false, immutable_evidence_complete: false }),
         { status: 409, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
@@ -1084,9 +1148,30 @@ Deno.serve(async (req) => {
     const canonicalSymbolsSuccess: string[] = [];
     const immutableSnapshotVersions: Array<number | string> = [];
     const immutableSymbolsSuccess: string[] = [];
+    const retainedCoreEvidence = new Map<string, Record<string, unknown>>();
+    let atomicBatchId: string | null = null;
+    let evidenceCorrelationId = correlationId;
+    let atomicCheckpointReused = false;
+    let atomicPayloadMatches = false;
+    let atomicCommitError: string | null = null;
     let snapshotUpsertedCount = 0;
+    let snapshotReusedCount = 0;
     let canonicalUpsertedCount = 0;
     const allSymbols = symbolConfigs.map((s) => s.displaySymbol);
+
+    if (committedRecoveryRows.length === CHECKPOINT_PROVIDER_KEYS.length) {
+      atomicBatchId = String(committedRecoveryRows[0].batch_id);
+      evidenceCorrelationId = String(committedRecoveryRows[0].correlation_id);
+      atomicCheckpointReused = true;
+      atomicPayloadMatches = true;
+      snapshotReusedCount = committedRecoveryRows.length;
+      for (const row of committedRecoveryRows) {
+        retainedCoreEvidence.set(String(row.provider_key || row.symbol || ""), row);
+        immutableSnapshotVersions.push(Number(row.snapshot_version));
+        immutableSymbolsSuccess.push(String(row.symbol || ""));
+        snapshotSymbolsSuccess.push(String(row.symbol || ""));
+      }
+    }
 
     console.log(`[${batchTag}] phase=${phase} trading_date=${tradingDate} taipei=${taipei.hour}:${String(taipei.minute).padStart(2, "0")} close_core_only=${phase === "close" && !includeBeneficiaryClose} beneficiary_close_only=${beneficiaryCloseOnly} beneficiary_symbols=${beneficiarySymbolConfigs.map((s) => s.displaySymbol).join(",") || "none"}`);
 
@@ -1101,7 +1186,7 @@ Deno.serve(async (req) => {
     const fetchStartedMs = Date.now();
     const providerLanes = buildProviderLanes(symbolConfigs);
 
-    await Promise.all(providerLanes.map(async (lane) => {
+    if (committedRecoveryRows.length === 0) await Promise.all(providerLanes.map(async (lane) => {
       for (let laneIndex = 0; laneIndex < lane.symbols.length; laneIndex++) {
         const config = lane.symbols[laneIndex];
         const originalIndex = symbolConfigs.indexOf(config);
@@ -1145,11 +1230,110 @@ Deno.serve(async (req) => {
       }
     }));
 
+    // Canonical checkpoint evidence is assembled and validated completely in
+    // memory. No checkpoint-scoped database write is attempted until every one
+    // of the 11 provider slots is present and valid.
+    if (!beneficiaryCloseOnly && committedRecoveryRows.length === 0) {
+      const evidenceRows: Record<string, unknown>[] = [];
+      for (const config of coreSymbolConfigs) {
+        const quote = normalizeConfiguredProxyQuote(fetchedQuotes.get(config) ?? null, config) as MarketQuote | null;
+        if (!quote) {
+          if (!failed.includes(config.displaySymbol)) failed.push(config.displaySymbol);
+          if (config.market === "TW" && !twCoreSymbolsFailed.some((item) => item.symbol === config.displaySymbol)) {
+            twCoreSymbolsFailed.push({ symbol: config.displaySymbol, reason: "ATOMIC_PROVIDER_RESULT_MISSING" });
+          }
+          continue;
+        }
+        const freshness = evaluateCheckpointFreshness({
+          captured_at: quote.capturedAt,
+          evaluated_at: startedAt,
+          trading_date: tradingDate,
+          market: config.market,
+          phase,
+          symbol: config.displaySymbol,
+        });
+        if (freshness.valid !== true) {
+          if (!failed.includes(config.displaySymbol)) failed.push(config.displaySymbol);
+          providerFailureDetails.push({
+            provider: quote.provider,
+            symbol: config.displaySymbol,
+            endpoint: "atomic_checkpoint_assembly",
+            error: `provider_timestamp:${String(freshness.status || "invalid")}`,
+          });
+          if (config.market === "TW" && !twCoreSymbolsFailed.some((item) => item.symbol === config.displaySymbol)) {
+            twCoreSymbolsFailed.push({ symbol: config.displaySymbol, reason: "STALE_OR_INVALID_PROVIDER_TIMESTAMP" });
+          }
+          continue;
+        }
+        const evidence = buildCheckpointEvidence(evidenceInput, quote, config);
+        if (!evidence.valid) {
+          if (!failed.includes(config.displaySymbol)) failed.push(config.displaySymbol);
+          snapshotErrors.push({ symbol: config.displaySymbol, error: evidence.error || "INVALID_IMMUTABLE_EVIDENCE" });
+          continue;
+        }
+        evidenceRows.push({ ...evidence.row, provider_key: config.displaySymbol });
+      }
+
+      const assembly = validateAtomicCheckpointEvidenceRows(evidenceRows);
+      if (!assembly.valid) {
+        atomicCommitError = assembly.error || "ATOMIC_CHECKPOINT_ASSEMBLY_FAILED";
+        snapshotErrors.push({ symbol: "__atomic_batch__", error: atomicCommitError });
+      } else {
+        const atomicResult = await supabase.rpc("commit_market_checkpoint_batch_v1", {
+          p_business_date: tradingDate,
+          p_checkpoint: canonicalCheckpoint,
+          p_market_session: collection.valid ? collection.session : phase,
+          p_correlation_id: correlationId,
+          p_idempotency_key: atomicIdempotencyKey,
+          p_rows: evidenceRows,
+        });
+        if (atomicResult.error) {
+          atomicCommitError = atomicResult.error.message;
+          snapshotErrors.push({ symbol: "__atomic_batch__", error: atomicCommitError });
+          for (const symbol of CHECKPOINT_PROVIDER_KEYS) if (!failed.includes(symbol)) failed.push(symbol);
+        } else {
+          const committed = parseAtomicCheckpointCommit(atomicResult.data, {
+            tradingDate,
+            checkpoint: canonicalCheckpoint,
+            idempotencyKey: atomicIdempotencyKey,
+          });
+          if (!committed.valid) {
+            atomicCommitError = committed.error || "ATOMIC_CHECKPOINT_COMMIT_RESPONSE_INVALID";
+            snapshotErrors.push({ symbol: "__atomic_batch__", error: atomicCommitError });
+            for (const symbol of CHECKPOINT_PROVIDER_KEYS) if (!failed.includes(symbol)) failed.push(symbol);
+          } else {
+            atomicBatchId = String(committed.batchId);
+            evidenceCorrelationId = String(committed.correlationId);
+            atomicCheckpointReused = committed.reused === true;
+            atomicPayloadMatches = committed.payload.payload_matches === true;
+            for (const rowValue of committed.rows) {
+              const row = asRecord(rowValue);
+              retainedCoreEvidence.set(String(row.provider_key || row.symbol || ""), row);
+              immutableSnapshotVersions.push(Number(row.snapshot_version));
+              immutableSymbolsSuccess.push(String(row.symbol || ""));
+              snapshotSymbolsSuccess.push(String(row.symbol || ""));
+            }
+            if (atomicCheckpointReused) snapshotReusedCount = committed.rows.length;
+            else snapshotUpsertedCount = committed.rows.length;
+          }
+        }
+      }
+    }
+
     for (let i = 0; i < symbolConfigs.length; i++) {
       const config = symbolConfigs[i];
 
+      // A non-beneficiary checkpoint with an incomplete provider set performs
+      // no canonical or compatibility write. Provider health/lifecycle evidence
+      // is still recorded below so the retry remains observable.
+      if (!beneficiaryCloseOnly && !atomicBatchId) continue;
+
       try {
-        let quote = normalizeConfiguredProxyQuote(fetchedQuotes.get(config) ?? null, config) as MarketQuote | null;
+        const retainedEvidence = retainedCoreEvidence.get(config.displaySymbol);
+        const isAtomicCore = Boolean(retainedEvidence);
+        let quote = isAtomicCore
+          ? quoteFromCheckpointEvidence(retainedEvidence) as MarketQuote
+          : normalizeConfiguredProxyQuote(fetchedQuotes.get(config) ?? null, config) as MarketQuote | null;
 
         if (!quote) {
           console.error(`[${batchTag}] [${i + 1}/${symbolConfigs.length}] ${config.displaySymbol} fetch returned null`);
@@ -1171,7 +1355,7 @@ Deno.serve(async (req) => {
 
         const freshness = evaluateCheckpointFreshness({
           captured_at: quote.capturedAt,
-          evaluated_at: new Date().toISOString(),
+          evaluated_at: isAtomicCore ? String(retainedEvidence?.captured_at || startedAt) : new Date().toISOString(),
           trading_date: tradingDate,
           market: config.market,
           phase,
@@ -1193,34 +1377,12 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Persist before claiming completeness. ON CONFLICT DO NOTHING preserves
-        // the first observation for this request identity, including partial retries.
-        // Read it back and use that exact observation for all compatibility writers.
-        let immutableVersion: number | string | null = null;
-        if (!beneficiaryCloseOnly) {
-          const evidence = buildCheckpointEvidence(evidenceInput, quote, config);
-          if (!evidence.valid) {
-            failed.push(config.displaySymbol);
-            snapshotErrors.push({ symbol: config.displaySymbol, error: evidence.error || "INVALID_IMMUTABLE_EVIDENCE" });
-            continue;
-          }
-          const retainedWrite = await supabase.from("market_checkpoint_snapshots").upsert(evidence.row, {
-            onConflict: "correlation_id,checkpoint,symbol", ignoreDuplicates: true,
-          });
-          const retained = retainedWrite.error ? { data: null, error: retainedWrite.error } : await supabase
-            .from("market_checkpoint_snapshots").select("*")
-            .eq("correlation_id", correlationId).eq("checkpoint", collection.checkpoint)
-            .eq("symbol", config.displaySymbol).maybeSingle();
-          if (retained.error || !validRetainedCheckpointRow(retained.data, evidenceInput, config)) {
-            failed.push(config.displaySymbol);
-            snapshotErrors.push({ symbol: config.displaySymbol, error: retained.error?.message || "IMMUTABLE_EVIDENCE_READBACK_FAILED" });
-            continue;
-          }
-          quote = quoteFromCheckpointEvidence(retained.data) as MarketQuote;
-          immutableVersion = retained.data.snapshot_version;
-          immutableSnapshotVersions.push(immutableVersion as number | string);
-          immutableSymbolsSuccess.push(config.displaySymbol);
-        }
+        // Core quotes now come from the exact row set returned by the atomic
+        // transaction. Optional beneficiary rows retain their separate contract
+        // and can never become checkpoint authority.
+        const immutableVersion: number | string | null = isAtomicCore
+          ? Number(retainedEvidence?.snapshot_version)
+          : null;
 
         const value = quote.value;
         const change = quote.change;
@@ -1278,24 +1440,32 @@ Deno.serve(async (req) => {
               change,
               change_percent: changePercent,
             },
-            request_id: requestId,
-            correlation_id: correlationId,
+            request_id: isAtomicCore ? evidenceCorrelationId.slice(0, 8) : requestId,
+            correlation_id: isAtomicCore ? evidenceCorrelationId : correlationId,
             immutable_snapshot_version: immutableVersion,
-            immutable_checkpoint: beneficiaryCloseOnly ? null : collection.checkpoint,
+            immutable_checkpoint: isAtomicCore ? canonicalCheckpoint : null,
+            checkpoint_batch_id: isAtomicCore ? atomicBatchId : null,
+            checkpoint_idempotency_key: isAtomicCore ? atomicIdempotencyKey : null,
             checkpoint,
           },
         };
 
-        const { error: snapshotErr } = await supabase
-          .from("market_data_snapshots")
-          .upsert(snapshotPayload, { onConflict: "symbol,trading_date,phase,checkpoint" });
-
-        if (snapshotErr) {
-          console.error(`[${batchTag}] ${config.displaySymbol} snapshot DB error: ${snapshotErr.message}`);
-          snapshotErrors.push({ symbol: config.displaySymbol, error: snapshotErr.message });
+        if (isAtomicCore) {
+          // The compatibility row was inserted in the same PostgreSQL
+          // transaction as all 11 immutable rows.
+          if (!snapshotSymbolsSuccess.includes(config.displaySymbol)) snapshotSymbolsSuccess.push(config.displaySymbol);
         } else {
-          snapshotUpsertedCount++;
-          snapshotSymbolsSuccess.push(config.displaySymbol);
+          const { error: snapshotErr } = await supabase
+            .from("market_data_snapshots")
+            .upsert(snapshotPayload, { onConflict: "symbol,trading_date,phase,checkpoint" });
+
+          if (snapshotErr) {
+            console.error(`[${batchTag}] ${config.displaySymbol} snapshot DB error: ${snapshotErr.message}`);
+            snapshotErrors.push({ symbol: config.displaySymbol, error: snapshotErr.message });
+          } else {
+            snapshotUpsertedCount++;
+            snapshotSymbolsSuccess.push(config.displaySymbol);
+          }
         }
 
         const canonicalQuote = normalizeProviderQuote({
@@ -1311,7 +1481,7 @@ Deno.serve(async (req) => {
           change_percent: changePercent,
           captured_at: capturedAt,
           freshness_status: freshness.status,
-          correlation_id: correlationId,
+          correlation_id: isAtomicCore ? evidenceCorrelationId : correlationId,
           raw_payload: snapshotPayload.raw,
         });
 
@@ -1344,7 +1514,7 @@ Deno.serve(async (req) => {
               value,
               change_percent: changePercent,
               captured_at: capturedAt,
-              correlation_id: correlationId,
+              correlation_id: isAtomicCore ? evidenceCorrelationId : correlationId,
             };
             const specializedTable = canonicalQuote.asset_type === "future"
               ? "futures_snapshots"
@@ -1408,19 +1578,23 @@ Deno.serve(async (req) => {
       }
       : summarizedProviderHealth;
     const classifiedProviderFailures = classifyProviderFailures(providerFailureDetails);
-    const canonicalComplete = canonicalUpsertedCount === inserted.length && canonicalWriteErrors.length === 0;
-    const snapshotComplete = snapshotUpsertedCount === inserted.length && snapshotErrors.length === 0;
-    const requiredCoreSymbols = phase === "premarket" || phase === "manual_backfill"
-      ? MVP_REQUIRED
-      : TAIWAN_DECISION_REQUIRED;
+    const requiredCoreSymbols = [...CHECKPOINT_PROVIDER_KEYS];
+    const atomicCheckpointComplete = !beneficiaryCloseOnly && atomicBatchId !== null &&
+      retainedCoreEvidence.size === CHECKPOINT_PROVIDER_KEYS.length && atomicCommitError === null;
+    const compatibilityCanonicalComplete = canonicalUpsertedCount === inserted.length && canonicalWriteErrors.length === 0;
+    const compatibilitySnapshotComplete = inserted.every((item) => snapshotSymbolsSuccess.includes(item.symbol)) && snapshotErrors.length === 0;
+    const canonicalComplete = compatibilityCanonicalComplete && (beneficiaryCloseOnly ||
+      (atomicCheckpointComplete && requiredCoreSymbols.every((symbol) => canonicalSymbolsSuccess.includes(symbol))));
+    const snapshotComplete = compatibilitySnapshotComplete && (beneficiaryCloseOnly ||
+      (atomicCheckpointComplete && requiredCoreSymbols.every((symbol) => snapshotSymbolsSuccess.includes(symbol))));
     const requiredCoreComplete = requiredCoreSymbols.every((symbol) =>
       inserted.some((item) => item.symbol === symbol) &&
       snapshotSymbolsSuccess.includes(symbol) &&
       canonicalSymbolsSuccess.includes(symbol) &&
       immutableSymbolsSuccess.includes(symbol)
     );
-    const immutableEvidenceComplete = !beneficiaryCloseOnly && requiredCoreSymbols.every((symbol) => immutableSymbolsSuccess.includes(symbol));
-    const coreBatchComplete = !beneficiaryCloseOnly && requiredCoreComplete &&
+    const immutableEvidenceComplete = atomicCheckpointComplete && requiredCoreSymbols.every((symbol) => immutableSymbolsSuccess.includes(symbol));
+    const coreBatchComplete = atomicCheckpointComplete && requiredCoreComplete &&
       snapshotErrors.length === 0 && canonicalComplete;
     const beneficiaryCloseStatus = buildBeneficiaryCloseStatus({
       lookup_status: beneficiaryLookup.lookupStatus,
@@ -1455,12 +1629,14 @@ Deno.serve(async (req) => {
       latency_ms: Date.now() - startedMs,
       last_error_code: timedOut
         ? "OVERALL_TIMEOUT"
+        : atomicCommitError
+          ? "ATOMIC_CHECKPOINT_COMMIT_FAILED"
         : !canonicalComplete
           ? "CANONICAL_WRITE_FAILED"
           : beneficiaryCloseOnly && beneficiaryCloseStatus.complete !== true
             ? String(beneficiaryCloseStatus.status || "BENEFICIARY_CLOSE_INCOMPLETE")
             : classifiedProviderFailures[0]?.failure_code || (failed.length > 0 ? "PARTIAL_PROVIDER_FAILURE" : null),
-      correlation_id: correlationId,
+      correlation_id: beneficiaryCloseOnly ? correlationId : evidenceCorrelationId,
       details: {
         fetch_strategy: "parallel_provider_lanes",
         fetch_timeout_ms: OVERALL_TIMEOUT_MS,
@@ -1480,6 +1656,12 @@ Deno.serve(async (req) => {
         snapshot_complete: snapshotComplete,
         immutable_evidence_complete: immutableEvidenceComplete,
         immutable_snapshot_versions: immutableSnapshotVersions,
+        atomic_checkpoint_complete: atomicCheckpointComplete,
+        atomic_batch_id: atomicBatchId,
+        atomic_idempotency_key: atomicIdempotencyKey,
+        atomic_checkpoint_reused: atomicCheckpointReused,
+        atomic_payload_matches: atomicPayloadMatches,
+        atomic_commit_error: atomicCommitError,
         has_provider_degradation: hasProviderDegradation,
       },
       checked_at: new Date().toISOString(),
@@ -1548,7 +1730,7 @@ Deno.serve(async (req) => {
         p_state: state,
         p_checkpoint: checkpoint,
         p_status: checkpointStatus,
-        p_correlation_id: correlationId,
+        p_correlation_id: evidenceCorrelationId,
         p_metadata: {
           phase,
           requested_count: symbolConfigs.length,
@@ -1562,7 +1744,13 @@ Deno.serve(async (req) => {
           required_core_complete: requiredCoreComplete,
           immutable_evidence_complete: immutableEvidenceComplete,
           immutable_snapshot_versions: immutableSnapshotVersions,
-          evidence_correlation_id: correlationId,
+          evidence_correlation_id: evidenceCorrelationId,
+          atomic_checkpoint_complete: atomicCheckpointComplete,
+          atomic_batch_id: atomicBatchId,
+          atomic_idempotency_key: atomicIdempotencyKey,
+          atomic_checkpoint_row_count: retainedCoreEvidence.size,
+          atomic_checkpoint_reused: atomicCheckpointReused,
+          atomic_payload_matches: atomicPayloadMatches,
           related_core_health: relatedCoreHealth,
           provider_failure_codes: classifiedProviderFailures.map((failure: Record<string, unknown>) => failure.failure_code),
         },
@@ -1575,8 +1763,10 @@ Deno.serve(async (req) => {
       const returnedMetadata = asRecord(returnedCheckpoint.metadata);
       // The lifecycle RPC deliberately ignores rank regressions / older status.
       // An HTTP 200 from that RPC alone is not evidence that this batch owns it.
-      if (returnedCheckpoint.correlation_id !== correlationId ||
-        (checkpointEvidenceComplete && returnedMetadata.immutable_evidence_complete !== true)) {
+      if (returnedCheckpoint.correlation_id !== evidenceCorrelationId ||
+        (checkpointEvidenceComplete && (returnedMetadata.immutable_evidence_complete !== true ||
+          returnedMetadata.atomic_checkpoint_complete !== true ||
+          returnedMetadata.atomic_batch_id !== atomicBatchId))) {
         tradingDayStateError = { message: 'CHECKPOINT_STATE_EVIDENCE_MISMATCH' };
       }
     }
@@ -1628,7 +1818,14 @@ Deno.serve(async (req) => {
         core_batch_complete: coreBatchComplete,
         immutable_evidence_complete: immutableEvidenceComplete,
         immutable_snapshot_versions: immutableSnapshotVersions,
-        evidence_correlation_id: correlationId,
+        evidence_correlation_id: evidenceCorrelationId,
+        atomic_batch_id: atomicBatchId,
+        atomic_idempotency_key: atomicIdempotencyKey,
+        atomic_checkpoint_row_count: retainedCoreEvidence.size,
+        atomic_checkpoint_reused: atomicCheckpointReused,
+        checkpoint_reused: atomicCheckpointReused,
+        atomic_payload_matches: atomicPayloadMatches,
+        atomic_commit_error: atomicCommitError,
         required_core_symbols: requiredCoreSymbols,
         required_core_complete: requiredCoreComplete,
         related_core_health: relatedCoreHealth,
@@ -1643,6 +1840,7 @@ Deno.serve(async (req) => {
         txf_candidate_errors: classifiedProviderFailures.filter((f: Record<string, unknown>) => f.provider === "fugle_futopt"),
         provider_failures: classifiedProviderFailures,
         snapshot_upserted_count: snapshotUpsertedCount,
+        snapshot_reused_count: snapshotReusedCount,
         snapshot_errors: snapshotErrors,
         symbols: allSymbols,
         healthy: healthy && checkpointEvidenceComplete && !tradingDayStateError,

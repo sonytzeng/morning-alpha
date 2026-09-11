@@ -592,12 +592,13 @@ Deno.serve(async (req) => {
 
     log(`Premarket from reports: bias="${premarketBias}", confidence=${premarketConfidence}`);
 
-    // 2. A checkpoint may only consume same-day, phase=intraday snapshots inside its own freshness window.
-    // market_data has no phase/trading_date contract and therefore is intentionally not a fallback.
+    // 2. A checkpoint may only consume an atomic 11/11 batch that is committed,
+    // complete and bound to the successful lifecycle transition. The view
+    // returns zero rows for partial, unbatched or mixed-revision evidence.
     const now = new Date().toISOString();
 
     const { data: snapshotRows, error: snapshotErr } = await supabase
-      .from('market_data_snapshots')
+      .from('authoritative_market_data_snapshots_v1')
       .select('symbol, name, value, change_percent, captured_at, source, trading_date, phase, checkpoint')
       .eq('trading_date', today)
       .eq('phase', 'intraday')
@@ -617,7 +618,7 @@ Deno.serve(async (req) => {
     const rawSnapshotRows = (snapshotRows || []) as RuntimeSnapshotRow[];
     const checkpointEvaluation = evaluateIntradayCheckpointRows(rawSnapshotRows, today, checkpoint);
     const marketData = mapMarketDataRows(checkpointEvaluation.acceptedRows as unknown as Record<string, unknown>[]);
-    const marketDataSource = 'market_data_snapshots';
+    const marketDataSource = 'authoritative_market_data_snapshots_v1';
     const latestCapturedAt = getLatestCapturedAt(marketData);
     const missingCoreSymbols = checkpointEvaluation.missingSymbols;
     // TAIEX + 2330 are sufficient for a conservative degraded radar. TXF remains

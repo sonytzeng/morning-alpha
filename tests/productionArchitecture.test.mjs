@@ -189,8 +189,9 @@ test('runtime dual-writes canonical data and emits traceable decisions', () => {
   assert.match(collector, /\.eq\("session_type", "PREMARKET"\)/);
   assert.match(collector, /generatedText\.recommendations/);
   assert.match(collector, /TAIWAN_DECISION_REQUIRED = \["TAIEX", "2330", "TXF"\]/);
-  assert.match(collector, /from\("market_checkpoint_snapshots"\)/);
-  assert.match(collector, /ignoreDuplicates: true/);
+  assert.match(collector, /commit_market_checkpoint_batch_v1/);
+  assert.match(collector, /CHECKPOINT_PROVIDER_KEYS/);
+  assert.doesNotMatch(collector, /from\("market_checkpoint_snapshots"\)\.upsert/);
   assert.match(collector, /immutable_evidence_complete: immutableEvidenceComplete/);
   assert.match(collector, /prioritizeCoreSymbols/);
   assert.match(collector, /required_core_complete: requiredCoreComplete/);
@@ -213,9 +214,9 @@ test('checkpoint snapshots are immutable across the six Taipei market checkpoint
   assert.match(collector, /onConflict: "symbol,trading_date,phase,checkpoint"/);
   assert.match(collector, /advance_trading_day_state_v1/);
   assert.match(collector, /CHECKPOINT_REUSED/);
-  assert.match(collector, /checkpoint_reused: true/);
+  assert.match(collector, /checkpoint_reused: atomicCheckpointReused/);
   assert.match(collector, /trading_day_state_transition_skipped: true/);
-  assert.match(runtimeCheckpointWorkflow, /checkpoint_reused == true and \.snapshot_reused_count >= 2/);
+  assert.match(runtimeCheckpointWorkflow, /checkpoint_reused == true and \.snapshot_reused_count == 11/);
   assert.match(terminalCheckpointMigration, /v_status_rank > coalesce\(v_existing_status_rank, -1\)/);
   assert.match(terminalCheckpointMigration, /pg_advisory_xact_lock/);
   assert.doesNotMatch(terminalCheckpointMigration, /v_status_rank >= coalesce\(v_existing_status_rank, -1\)/);

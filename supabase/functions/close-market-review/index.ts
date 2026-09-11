@@ -167,6 +167,7 @@ function hasStrictCloseProvenance(
 ): boolean {
   const raw = asObject(rawPayload);
   return raw.source_table === "market_data_snapshots" &&
+    (reportDate < "2026-09-11" || raw.authority_table === "authoritative_market_data_snapshots_v1") &&
     raw.source_phase === "close" &&
     raw.trading_date === reportDate &&
     raw.opening_publication_revision_id === openingRevision &&
@@ -254,7 +255,7 @@ Deno.serve(async (req: Request) => {
     const supabase = createCloseReviewClient(supabaseUrl, supabaseServiceRole);
 
     const snapshotResult = await supabase
-      .from("market_data_snapshots")
+      .from("authoritative_market_data_snapshots_v1")
       .select(
         "symbol,name,value,change_percent,captured_at,source,trading_date,phase,raw",
       )
@@ -432,6 +433,7 @@ Deno.serve(async (req: Request) => {
       txf_change: txfChange,
       data_quality: "高可信",
       data_source: "market_data_snapshots phase=close",
+      input_source: "authoritative_market_data_snapshots_v1",
       missing_data: [],
       latest_market_rows: snapshotProvenance,
     };
@@ -450,11 +452,13 @@ Deno.serve(async (req: Request) => {
       generated_at: now,
       missing_data: [],
       data_source: "market_data_snapshots phase=close",
+      input_source: "authoritative_market_data_snapshots_v1",
     };
     const rawPayload = {
       version: VERSION,
       request_id: requestId,
       source_table: "market_data_snapshots",
+      authority_table: "authoritative_market_data_snapshots_v1",
       source_phase: "close",
       opening_publication_revision_id: openingPublication.opening_publication_revision_id,
       opening_decision_snapshot_version: openingPublication.snapshot_version,
@@ -503,6 +507,7 @@ Deno.serve(async (req: Request) => {
       tsmc_change: tsmcChange,
       txf_change: txfChange,
       source_table: "market_data_snapshots",
+      authority_table: "authoritative_market_data_snapshots_v1",
       source_phase: "close",
       synced_to_reports_ai_strategy_json: true,
       duration_ms: Date.now() - startTime,

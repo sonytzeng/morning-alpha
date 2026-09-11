@@ -19,6 +19,7 @@ import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { canonicalMarketDocument } from '../_shared/canonical-market-state.ts';
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 import type { RuntimeDatabase } from '../_shared/runtime-database-contract.ts';
+import { CHECKPOINT_PROVIDER_KEYS } from '../_shared/fetch-checkpoint-evidence.mjs';
 import {
   evaluateClosingContract,
   evaluateLearningContract,
@@ -51,6 +52,7 @@ type SnapshotRow = {
   phase: string | null;
   trading_date: string | null;
   raw?: unknown;
+  batch_id?: string | null;
 };
 
 type PredictionRow = JsonRecord & {
@@ -668,6 +670,8 @@ async function updateOutcomes(
           : 'insufficient_data',
         source_refs: target ? [{
           table: 'market_data_snapshots',
+          authority: target.batch_id ? 'authoritative_market_data_snapshots_v1' : null,
+          checkpoint_batch_id: target.batch_id || null,
           symbol: target.symbol,
           phase: target.phase,
           trading_date: target.trading_date,
@@ -1222,17 +1226,37 @@ async function loadPredictionAndMarketWindow(
   if (predictionError) throw predictionError;
   const predictionRows = (predictions || []) as PredictionRow[];
   const symbols = [...new Set(['TAIEX', ...predictionRows.map((row) => normalizeSymbol(row.symbol)).filter(Boolean)])];
-  const { data: snapshots, error: snapshotError } = await client
-    .from('market_data_snapshots')
-    .select('symbol,name,value,change_percent,captured_at,source,phase,trading_date,raw')
+  const providerKeys = new Set(CHECKPOINT_PROVIDER_KEYS.map(normalizeSymbol));
+  const authoritativeSymbols = symbols.filter((symbol) => providerKeys.has(normalizeSymbol(symbol)));
+  const beneficiarySymbols = symbols.filter((symbol) => !providerKeys.has(normalizeSymbol(symbol)));
+  const authoritativeResult = await client
+    .from('authoritative_market_data_snapshots_v1')
+    .select('symbol,name,value,change_percent,captured_at,source,phase,trading_date,raw,batch_id')
     .gte('trading_date', earliest)
     .lte('trading_date', targetDate)
-    .in('symbol', symbols)
+    .in('symbol', authoritativeSymbols)
     .in('phase', ['premarket', 'intraday', 'close'])
     .order('captured_at', { ascending: true })
     .limit(10000);
-  if (snapshotError) throw snapshotError;
-  return { predictions: predictionRows, snapshots: (snapshots || []) as SnapshotRow[] };
+  if (authoritativeResult.error) throw authoritativeResult.error;
+  const beneficiaryResult = beneficiarySymbols.length > 0
+    ? await client.from('market_data_snapshots')
+      .select('symbol,name,value,change_percent,captured_at,source,phase,trading_date,raw')
+      .gte('trading_date', earliest)
+      .lte('trading_date', targetDate)
+      .in('symbol', beneficiarySymbols)
+      .in('phase', ['premarket', 'intraday', 'close'])
+      .order('captured_at', { ascending: true })
+      .limit(10000)
+    : { data: [], error: null };
+  if (beneficiaryResult.error) throw beneficiaryResult.error;
+  return {
+    predictions: predictionRows,
+    snapshots: [
+      ...((authoritativeResult.data || []) as SnapshotRow[]),
+      ...((beneficiaryResult.data || []) as SnapshotRow[]),
+    ],
+  };
 }
 
 async function reconcileLearningMetrics(
@@ -1576,8 +1600,8 @@ Deno.serve(async (req: Request) => {
     let currentPredictions: PredictionRow[] = [];
     {
       const { data: premarketRows, error: premarketError } = await client
-        .from('market_data_snapshots')
-        .select('symbol,name,value,change_percent,captured_at,source,phase,trading_date,raw')
+        .from('authoritative_market_data_snapshots_v1')
+        .select('symbol,name,value,change_percent,captured_at,source,phase,trading_date,raw,batch_id')
         .eq('trading_date', targetDate)
         .eq('phase', 'premarket')
         .order('captured_at', { ascending: false })

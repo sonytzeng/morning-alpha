@@ -1,15 +1,17 @@
 {
-  "production_version": 63,
-  "production_updated_at": 1788490890516,
-  "production_source_sha256": "2832ff1c0e9009521beeb73bf3292af77d6e8549f73274e658a605df6dde0f93",
-  "candidate_source_sha256": "d2e117006c8bf7433cdc2efdba729fbe5ec17d47d2949aa98c81c58b57cd7266",
+  "production_version": 65,
+  "production_updated_at": 1789103035770,
+  "production_source_sha256": "d2e117006c8bf7433cdc2efdba729fbe5ec17d47d2949aa98c81c58b57cd7266",
+  "candidate_source_sha256": "bbe5222a0fccfacaee1add96b35c6114e4a7245e7bc85e7c8e2983e72752de27",
   "changed_declarations": [
     "VERSION",
-    "TAIWAN_DECISION_REQUIRED",
-    "normalizeFugleQuote",
-    "CLOSE_CORE_SYMBOLS"
+    "ProviderFailureDetail",
+    "SYMBOLS",
+    "FUGLE_TAIEX_ADAPTER_MAPPING",
+    "fetchFugleTaiexQuote",
+    "fetchTaiwanCoreQuote"
   ],
-  "handler_change": "Atomic 11-provider checkpoint assembly, transactional commit, post-commit response-loss recovery, idempotent retry and authoritative downstream admission; no strategy change",
+  "handler_change": "TAIEX-only Fugle INDEX discovery, current-session ticker reference for premarket and IX0001 quote validation for live checkpoints, explicit 404 classification and no stale/cross-provider fallback; atomic 11-provider gate unchanged",
   "protected_declarations": [
     {
       "name": "CORS_HEADERS",
@@ -41,7 +43,7 @@
     },
     {
       "name": "ProviderFailureDetail",
-      "sha256": "244b0cb21b52081bc99e4b97b2e15a42d0ea7d9417fb9e4ecf8b41e472b321e8"
+      "sha256": "dd9b69210b93f87b63533a7d0574353aa7bce5c5669e230f5f2778e9215982e2"
     },
     {
       "name": "SymbolConfig",
@@ -65,7 +67,7 @@
     },
     {
       "name": "SYMBOLS",
-      "sha256": "5ad24db9b12030ce95f9b8bdb43122496290d46aaf40edcf25ef1fd514b888b4"
+      "sha256": "3c8196eff70e534d6e73bd21f780e5b432764097ff668b29146aed05417cd119"
     },
     {
       "name": "MVP_REQUIRED",
@@ -181,7 +183,7 @@
     },
     {
       "name": "fetchTaiwanCoreQuote",
-      "sha256": "23f512a440c80bec9bca93936198861d13c112e5278f815bd8baa4322023f1eb"
+      "sha256": "465c0d615b7ffe99db3f4d10c14facfce054f0a3d80b06e0729d8ab87717f13a"
     }
   ],
   "dependencies": [
@@ -208,7 +210,7 @@
     {
       "path": "supabase/functions/_shared/market-runtime-stability.mjs",
       "production_sha256": "ef0c4a9c6836ed979545804bdc058d6af4e7936ea8740f46713d035958d3e697",
-      "candidate_sha256": "ef0c4a9c6836ed979545804bdc058d6af4e7936ea8740f46713d035958d3e697"
+      "candidate_sha256": "5b5b8d7bbf80389263c6a45c9318d54176c60ca2f8e18d7dd00f549e25a17064"
     },
     {
       "path": "supabase/functions/_shared/provider-normalization.mjs",
@@ -219,6 +221,11 @@
       "path": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",
       "production_sha256": "da53556544590d5d0e59322de26bd997fe6779dac26cb1b1fd95cbfd85bbf43a",
       "candidate_sha256": "b45b984740e4bc5e42ad3cce45ba8b3ea4539fa77485c5dd6a447efb87b77b35"
+    },
+    {
+      "path": "supabase/functions/_shared/fugle-taiex-provider.mjs",
+      "production_sha256": null,
+      "candidate_sha256": "4f48b3630cd59fa72c8ddae3b7371d06e25a3f59451c84f4dc7d1e9355c65eac"
     }
   ]
 }

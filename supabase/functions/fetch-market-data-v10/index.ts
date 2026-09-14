@@ -27,9 +27,14 @@ import {
   validateAtomicCheckpointEvidenceRows,
   validRetainedCheckpointRow,
 } from '../_shared/fetch-checkpoint-evidence.mjs';
+import {
+  FUGLE_TAIEX_CONTRACT,
+  resolveFugleTaiexProvider,
+  validateFugleTaiexAdapterMapping,
+} from '../_shared/fugle-taiex-provider.mjs';
 
 // ═══════════════════════════════════════════════════════════
-// fetch-market-data-v10 V10.16 — ATOMIC CHECKPOINT BATCH
+// fetch-market-data-v10 V10.17 — FUGLE TAIEX INDEX CONTRACT
 // Uses Finnhub for US equities/ETF proxies, Fugle/TWSE for Taiwan core, best-effort Fugle futopt for TXF.
 // Each symbol: 6s timeout, max 1 retry.
 // Global and Taiwan providers run in separate sequential lanes so one slow
@@ -47,7 +52,9 @@ const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
 const OVERALL_TIMEOUT_MS = 60_000;
-const VERSION = "V10.16_ATOMIC_CHECKPOINT_BATCH";
+const VERSION = "V10.17_FUGLE_TAIEX_INDEX_CONTRACT";
+const FUGLE_TAIEX_ADAPTER_MAPPING = validateFugleTaiexAdapterMapping();
+if (!FUGLE_TAIEX_ADAPTER_MAPPING.valid) throw new Error("FUGLE_TAIEX_ADAPTER_MAPPING_INVALID");
 
 interface FinnhubQuote {
   c: number;
@@ -76,6 +83,7 @@ interface ProviderFailureDetail {
   endpoint: string;
   status?: number;
   error?: string;
+  failure_code?: string;
 }
 
 interface SymbolConfig {
@@ -122,7 +130,7 @@ const SYMBOLS: SymbolConfig[] = [
   { finnhubSymbol: "VXX", displaySymbol: "VIX", name: "恐慌指數（proxy: VXX ETN proxy）", market: "US", taiwanImpact: "市場恐慌情緒" },
   { finnhubSymbol: "UUP", displaySymbol: "DXY", name: "美元指數方向（proxy: UUP ETF）", market: "US", taiwanImpact: "影響外資流向與台幣匯率", proxySemantics: "same_direction_us_dollar_proxy" },
   { finnhubSymbol: "IEF", displaySymbol: "US10Y", name: "美國10年債殖利率方向（proxy: inverse IEF ETF）", market: "US", taiwanImpact: "影響資金成本與科技股估值", directionMultiplier: -1, proxySemantics: "inverse_7_10y_treasury_price_proxy" },
-  { finnhubSymbol: "TAIEX", displaySymbol: "TAIEX", name: "台股加權指數", market: "TW", taiwanImpact: "台股大盤整體風向指標" },
+  { finnhubSymbol: FUGLE_TAIEX_CONTRACT.symbol, displaySymbol: "TAIEX", name: "台股加權指數", market: "TW", taiwanImpact: "台股大盤整體風向指標" },
   { finnhubSymbol: "2330", displaySymbol: "2330", name: "台積電", market: "TW", taiwanImpact: "台股權值股龍頭" },
   { finnhubSymbol: "TXF", displaySymbol: "TXF", name: "台指期", market: "TW", taiwanImpact: "台指期提供期貨領先訊號" },
 ];
@@ -574,6 +582,99 @@ async function fetchFugleStockQuote(symbol: string, apiKey: string, logPrefix: s
   return fetchFugleQuoteFromPath("stock/intraday/quote", symbol, apiKey, logPrefix, "fugle", failureDetails);
 }
 
+async function fetchFugleTaiexQuote(
+  apiKey: string,
+  logPrefix: string,
+  tradingDate: string,
+  phase: MarketDataPhase,
+  failureDetails?: ProviderFailureDetail[],
+): Promise<MarketQuote | null> {
+  if (!apiKey) {
+    failureDetails?.push({
+      provider: "fugle",
+      symbol: FUGLE_TAIEX_CONTRACT.displaySymbol,
+      endpoint: FUGLE_TAIEX_CONTRACT.discoveryEndpoint,
+      error: "missing_api_key",
+    });
+    return null;
+  }
+
+  const result = await resolveFugleTaiexProvider(async (request: { endpoint: string }) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4_000);
+    try {
+      const response = await fetch(`https://api.fugle.tw/marketdata/v1.0/${request.endpoint}`, {
+        headers: {
+          "Accept": "application/json",
+          "X-API-KEY": apiKey,
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (!response.ok) {
+        let errorBody = "";
+        try { errorBody = sanitizeProviderError((await response.text()).slice(0, 240)); } catch { errorBody = ""; }
+        return { status: response.status, error: errorBody || `HTTP ${response.status}` };
+      }
+      return { status: response.status, payload: await response.json() };
+    } catch (err) {
+      clearTimeout(timeoutId);
+      return { error: sanitizeProviderError(err instanceof Error ? err.message : String(err)) };
+    }
+  }, { tradingDate, phase });
+
+  if (!result.ok) {
+    console.warn(
+      `[${logPrefix}] Fugle TAIEX ${String(result.failureCode || "PROVIDER_REQUEST_REJECTED")}` +
+        `${result.status ? ` HTTP ${result.status}` : ""}: ${String(result.error || "provider_failed")}`,
+    );
+    const failure: ProviderFailureDetail = {
+      provider: "fugle",
+      symbol: FUGLE_TAIEX_CONTRACT.displaySymbol,
+      endpoint: String(result.endpoint || FUGLE_TAIEX_CONTRACT.quoteEndpoint),
+      error: String(result.error || "provider_failed"),
+      failure_code: String(result.failureCode || "PROVIDER_REQUEST_REJECTED"),
+    };
+    if (Number.isFinite(Number(result.status)) && Number(result.status) > 0) failure.status = Number(result.status);
+    failureDetails?.push(failure);
+    return null;
+  }
+
+  const providerPayload = result.priceBasis === "CURRENT_SESSION_REFERENCE_PRICE"
+    ? {
+      ...(result.payload as Record<string, unknown>),
+      closePrice: Number(result.referencePrice),
+      change: 0,
+      changePercent: 0,
+      lastUpdated: String(result.sourceTimestamp || ""),
+    }
+    : result.payload as Record<string, unknown>;
+  const quote = normalizeFugleQuote(providerPayload, FUGLE_TAIEX_CONTRACT.symbol);
+  if (!quote) {
+    failureDetails?.push({
+      provider: "fugle",
+      symbol: FUGLE_TAIEX_CONTRACT.displaySymbol,
+      endpoint: FUGLE_TAIEX_CONTRACT.quoteEndpoint,
+      error: "taiex_quote_normalization_failed",
+      failure_code: "PROVIDER_RESPONSE_CONTRACT_INVALID",
+    });
+    return null;
+  }
+  return {
+    ...quote,
+    provider: "fugle",
+    sourceSymbol: FUGLE_TAIEX_CONTRACT.symbol,
+    raw: {
+      ...quote.raw,
+      provider: "fugle",
+      index_contract_validated: true,
+      discovery_symbol: FUGLE_TAIEX_CONTRACT.symbol,
+      price_basis: String(result.priceBasis || "CURRENT_SESSION_QUOTE"),
+      response_date: String((result.payload as Record<string, unknown>).date || ""),
+    },
+  };
+}
+
 async function fetchFugleJson(
   pathWithQuery: string,
   apiKey: string,
@@ -793,6 +894,7 @@ async function fetchTaiwanCoreQuote(
   fugleApiKey: string,
   logPrefix: string,
   phase: MarketDataPhase,
+  tradingDate: string,
   failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
   if (config.displaySymbol === "2330") {
@@ -802,15 +904,10 @@ async function fetchTaiwanCoreQuote(
   }
 
   if (config.displaySymbol === "TAIEX") {
-    // IX0001 is the TWSE price index. IR0001 is the total-return index and is
-    // not semantically interchangeable with TAIEX; accepting it silently
-    // produces a plausible but materially wrong six-digit market level.
-    const fugleIndexCandidates = ["IX0001", "TAIEX"];
-    for (const candidate of fugleIndexCandidates) {
-      const quote = await fetchFugleStockQuote(candidate, fugleApiKey, logPrefix, failureDetails);
-      if (quote) return { ...quote, sourceSymbol: candidate };
-    }
-    return await fetchTwseQuote("tse_t00.tw", "TAIEX", logPrefix, failureDetails);
+    // TAIEX is exclusively the Fugle INDEX ticker discovered as IX0001. A
+    // missing/invalid resource fails this provider slot; it never falls back
+    // to the invalid TAIEX alias or a previous-session substitute.
+    return await fetchFugleTaiexQuote(fugleApiKey, logPrefix, tradingDate, phase, failureDetails);
   }
 
   if (config.displaySymbol === "TXF") {
@@ -1213,7 +1310,7 @@ Deno.serve(async (req) => {
         console.log(`[${batchTag}] [${originalIndex + 1}/${symbolConfigs.length}] Fetching ${config.displaySymbol} on ${lane.name} lane...`);
         try {
           const fetchedQuote = config.market === "TW"
-            ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, providerFailureDetails)
+            ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, tradingDate, providerFailureDetails)
             : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`, providerFailureDetails);
           fetchedQuotes.set(config, fetchedQuote);
         } catch (err) {
@@ -1609,6 +1706,9 @@ Deno.serve(async (req) => {
       "AUTHENTICATION_FAILED",
       "BLOCKED_BY_SUBSCRIPTION",
       "CONFIGURATION_MISSING",
+      "PROVIDER_SYMBOL_INVALID",
+      "RESOURCE_NOT_FOUND",
+      "PROVIDER_RESPONSE_CONTRACT_INVALID",
       "RATE_LIMITED",
       "PROVIDER_UNAVAILABLE",
       "TIMEOUT",

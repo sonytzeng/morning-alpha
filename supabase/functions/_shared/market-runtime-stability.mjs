@@ -166,6 +166,14 @@ export function classifyProviderFailure(detail) {
   const failure = asRecord(detail);
   const status = Number(failure.status);
   const error = String(failure.error || '').toLowerCase();
+  const explicitFailureCode = String(failure.failure_code || '');
+  if (['PROVIDER_SYMBOL_INVALID', 'RESOURCE_NOT_FOUND', 'PROVIDER_RESPONSE_CONTRACT_INVALID', 'STALE_PROVIDER_DATA'].includes(explicitFailureCode)) {
+    return {
+      ...failure,
+      failure_code: explicitFailureCode,
+      retryable: false,
+    };
+  }
   const subscriptionSignal = status === 402 || status === 403 ||
     /subscription|entitlement|not[ _-]?entitled|plan[ _-]?required|permission[ _-]?denied|insufficient[ _-]?scope/.test(error);
   let failureCode = 'UNKNOWN_PROVIDER_FAILURE';

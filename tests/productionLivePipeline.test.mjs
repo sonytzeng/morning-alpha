@@ -40,8 +40,9 @@ test('Fugle epoch timestamps normalize seconds, milliseconds, microseconds, and 
 });
 
 test('Taiwan adapters follow the Fugle v1 symbol and session contract', () => {
-  assert.match(marketSource, /fugleIndexCandidates = \["IX0001", "TAIEX"\]/);
-  assert.doesNotMatch(marketSource, /fugleIndexCandidates = \[[^\]]*"IR0001"/);
+  assert.match(marketSource, /resolveFugleTaiexProvider/);
+  assert.match(marketSource, /FUGLE_TAIEX_CONTRACT\.symbol/);
+  assert.doesNotMatch(marketSource, /fugleIndexCandidates|fetchTwseQuote\("tse_t00\.tw", "TAIEX"/);
   assert.match(marketSource, /session === "afterhours" \? \{ session: "afterhours" \} : undefined/);
   assert.match(marketSource, /lastTrade\.time \|\| total\.time \|\|/);
 });

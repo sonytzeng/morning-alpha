@@ -61,12 +61,17 @@ export function validateFugleTaiexTicker(payload, expectedTradingDate = '') {
   if (expectedTradingDate && String(response.date || '') !== expectedTradingDate) {
     return { valid: false, failure_code: 'STALE_PROVIDER_DATA' };
   }
-  if (!positiveNumber(response.referencePrice)) {
+  const hasReferencePrice = positiveNumber(response.referencePrice);
+  const hasPreviousClose = positiveNumber(response.previousClose);
+  if (!hasReferencePrice && !hasPreviousClose) {
     return { valid: false, failure_code: 'PROVIDER_RESPONSE_CONTRACT_INVALID' };
   }
   return {
     valid: true,
-    reference_price: Number(response.referencePrice),
+    reference_price: Number(hasReferencePrice ? response.referencePrice : response.previousClose),
+    price_basis: hasReferencePrice
+      ? 'CURRENT_SESSION_REFERENCE_PRICE'
+      : 'CURRENT_SESSION_PREVIOUS_CLOSE_REFERENCE',
     source_timestamp: taipeiStartOfDate(response.date),
     failure_code: null,
   };
@@ -186,7 +191,7 @@ export async function resolveFugleTaiexProvider(request, options = {}) {
       symbol: FUGLE_TAIEX_CONTRACT.symbol,
       endpoint: FUGLE_TAIEX_CONTRACT.tickerEndpoint,
       discovery: discoveryContract.ticker,
-      priceBasis: 'CURRENT_SESSION_REFERENCE_PRICE',
+      priceBasis: tickerContract.price_basis,
       referencePrice: tickerContract.reference_price,
       sourceTimestamp: tickerContract.source_timestamp,
     };

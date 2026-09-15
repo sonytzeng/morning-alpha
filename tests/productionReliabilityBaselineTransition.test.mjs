@@ -1,0 +1,49 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import {
+  PUBLIC_EXPORT_ARTIFACT_PATH,
+  resolveConsolidationPublicExportIntegrity,
+} from './helpers/consolidationPublicExportIntegrity.mjs';
+
+const MANIFEST = 'docs/operations/evidence/production-reliability-baseline-transition-20260915.json';
+const REGISTRY = 'docs/operations/core-stability-incident-amendment-20260908.json';
+const ENTRY = 'tests/helpers/consolidationPublicExportIntegrity.mjs';
+const GENERIC = 'tests/helpers/reviewedBaselineTransition.mjs';
+const PIPELINE_TEST = 'tests/productionLivePipeline.test.mjs';
+const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+const json = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
+const read = path => readFileSync(new URL('../' + path, import.meta.url));
+const registry = JSON.parse(read(REGISTRY));
+const artifact = read(PUBLIC_EXPORT_ARTIFACT_PATH);
+const manifest = JSON.parse(read(MANIFEST));
+const verify = (source = read) => resolveConsolidationPublicExportIntegrity(registry, artifact, source);
+
+test('reviewed reliability baseline pins transition roots and reconstructs all eleven predecessors', () => {
+  assert.equal(hash(read(MANIFEST)), '86ecc8a5a1b236c4ccb157b7c999962cd410fceea6ecec4e53696a117e37a93c');
+  assert.equal(hash(read(GENERIC)), '1fc83a16c0de588629ba861f77450e9110fea5b18f398c3381302d9269c3498f');
+  assert.equal(hash(read(ENTRY)), 'ca1883a11f6ba005e93e464f067860dcce70ba65f0021a4733507781f11288fb');
+  const result = verify();
+  assert.equal(result.reviewedBaselineTransition.transition_id, 'MORNING_ALPHA_PRODUCTION_RELIABILITY_20260915');
+  assert.equal(hash(result.reviewedBaselinePredecessorReadSource(ENTRY)), 'd4cda72931e160b6e07457f83f916c5390e0123bf497e81d33de8c37b42994bc');
+  assert.equal(hash(result.reviewedBaselinePredecessorReadSource(PIPELINE_TEST)), '9021c72366b2b5a31ec9f9b53fb12ed52dd0047c8f543028cbbd87de629ea0e8');
+  assert.equal(result.reviewedBaselineTransition.natural_day_pass_claimed, false);
+});
+
+test('candidate drift, predecessor drift, and authority escalation remain fail closed', () => {
+  assert.throws(() => verify(path => path === PIPELINE_TEST
+    ? Buffer.concat([read(path), Buffer.from('\nUNREVIEWED\n')]) : read(path)), /unreviewed candidate drift/);
+  for (const mutate of [
+    value => { value.files[0].predecessor_sha256 = '0'.repeat(64); },
+    value => { value.files[0].candidate_sha256 = '0'.repeat(64); },
+    value => { value.baseline_excluded_reviewed_paths[0].candidate_sha256 = '0'.repeat(64); },
+    value => { value.baseline_restored_reviewed_paths[0].baseline_sha256 = '0'.repeat(64); },
+    value => { value.auth_change = true; },
+    value => { value.natural_day_pass_claimed = true; },
+  ]) {
+    const changed = structuredClone(manifest);
+    mutate(changed);
+    assert.throws(() => verify(path => path === MANIFEST ? json(changed) : read(path)));
+  }
+});

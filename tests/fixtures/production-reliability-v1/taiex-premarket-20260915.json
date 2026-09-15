@@ -1,0 +1,23 @@
+{
+  "schema_version": "PRODUCTION_PROVIDER_SHAPE_V1",
+  "provider": "fugle",
+  "display_symbol": "TAIEX",
+  "source_symbol": "IX0001",
+  "phase": "premarket",
+  "endpoint": "stock/intraday/ticker/IX0001",
+  "captured_via": "market-readiness-preflight diagnostic",
+  "captured_payload": {
+    "date": "2026-09-15",
+    "name": "發行量加權股價指數",
+    "type": "INDEX",
+    "market": "TSE",
+    "symbol": "IX0001",
+    "exchange": "TWSE",
+    "openTime": "0900",
+    "closeTime": "1330",
+    "previousClose": 45862.52
+  },
+  "response_sha256": "40d7cb1bcc5ad31df0cd12f5e408e2a962adefbf92cb0f4007812bc07210bf39",
+  "contains_secrets": false,
+  "historical_success_claim": false
+}

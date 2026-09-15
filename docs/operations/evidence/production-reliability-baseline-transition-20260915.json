@@ -1,0 +1,375 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_PRODUCTION_RELIABILITY_20260915",
+  "candidate_base_git_sha": "427dc83357c52eef4df32cc9ea7342cc93570db7",
+  "predecessor_integrity_id": "CORE_ACCEPTANCE_DEFAULT_V1_ADMISSION",
+  "approval_provenance": "Sony's explicit Morning Alpha Production Reliability Closure request authorizes the reviewed reversible Provider adapter, reliability tooling, Production-shaped fixtures, replay, preflight, Integrity transition, controlled release, and scoped smoke while preserving all historical failures and forbidding Auth, RLS, secret, member, UI, LINE-copy, strategy, recommendation, and unrelated product changes.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/fugleTaiexProvider.test.mjs",
+    "tests/fetchCheckpointEvidence.test.mjs",
+    "tests/checkpointAtomicity.test.mjs",
+    "tests/providerReliabilityClosure.test.mjs",
+    "tests/productionRealityProviderReplay.test.mjs",
+    "tests/productionReliabilityClosureReplay.test.mjs",
+    "tests/productionReliabilityBaselineTransition.test.mjs",
+    "tests/consolidationAcceptanceDefaultIntegrity.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [
+    {
+      "path": ".github/workflows/checkpoint-atomicity-validation.yml",
+      "candidate_sha256": "8f17212d104eae8a05c77e3e04f36fbae9c764e8d190b23c456d0312718b51d8",
+      "reason": "The previously approved Atomic Snapshot validation workflow was added after the original Core product baseline and remains byte-exact."
+    },
+    {
+      "path": "supabase/functions/_shared/fugle-taiex-provider.mjs",
+      "candidate_sha256": "5204bab01bf3f66cb738a117f1d1ed02e84ffccc8679e2cfe3e9a2ba7bf84843",
+      "reason": "The TAIEX adapter was introduced after the original Core product baseline and is independently reviewed by this transition."
+    },
+    {
+      "path": "supabase/migrations/20260911033927_checkpoint_snapshot_atomic_batch_v1.sql",
+      "candidate_sha256": "a96f0606c6e22ff0b3367ca9d3a41b112a8b9fc569bf5b2d6dce7a17538795be",
+      "reason": "The previously approved Atomic Snapshot additive migration was added after the original Core product baseline and remains byte-exact."
+    }
+  ],
+  "baseline_restored_reviewed_paths": [
+    {
+      "path": ".github/workflows/morning-alpha-runtime-checkpoints.yml",
+      "baseline_git_sha": "c0885967b160120f9e65666c1406fafd21cf61aa",
+      "baseline_sha256": "d7cc0de84248fa4cf37b3432f608b8674c4f42d32086f0e67b59a4cd04f3b864",
+      "candidate_sha256": "a4e4966a062f50b57ce6da41a359a6d2cf76745bfa6385e07cb621a5216219e1",
+      "reason": "Restore the exact pre-Atomic runtime workflow only for the historical Core product-freeze digest while retaining the reviewed live workflow."
+    },
+    {
+      "path": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",
+      "baseline_git_sha": "c0885967b160120f9e65666c1406fafd21cf61aa",
+      "baseline_sha256": "da53556544590d5d0e59322de26bd997fe6779dac26cb1b1fd95cbfd85bbf43a",
+      "candidate_sha256": "b45b984740e4bc5e42ad3cce45ba8b3ea4539fa77485c5dd6a447efb87b77b35",
+      "reason": "Restore the exact pre-Atomic evidence helper only for the historical Core product-freeze digest while current Atomic tests retain authority."
+    },
+    {
+      "path": "supabase/functions/_shared/market-runtime-stability.mjs",
+      "baseline_git_sha": "c0885967b160120f9e65666c1406fafd21cf61aa",
+      "baseline_sha256": "ef0c4a9c6836ed979545804bdc058d6af4e7936ea8740f46713d035958d3e697",
+      "candidate_sha256": "5b5b8d7bbf80389263c6a45c9318d54176c60ca2f8e18d7dd00f549e25a17064",
+      "reason": "Restore the exact pre-Atomic runtime helper only for the historical Core product-freeze digest while preserving current failure classification."
+    },
+    {
+      "path": "supabase/functions/fetch-market-data-v10/index.ts",
+      "baseline_git_sha": "c0885967b160120f9e65666c1406fafd21cf61aa",
+      "baseline_sha256": "6b15f14ad76d20413f3483e01ab918dad7340cd4843bc8090d23837e4780beb0",
+      "candidate_sha256": "216fde43400b90c98996a6ddcdd6d3451b44eeab3393b7262bd9e3bbfefb93f9",
+      "reason": "Restore the exact consolidated Fetch source only for the historical Core product-freeze digest while the current TAIEX candidate is validated separately."
+    },
+    {
+      "path": "supabase/functions/generate-sector-rotation/index.ts",
+      "baseline_git_sha": "c0885967b160120f9e65666c1406fafd21cf61aa",
+      "baseline_sha256": "2ab974d10950aba6152389481ea70b9b54fa2c8b7aaf24e591a4da40c60efbc0",
+      "candidate_sha256": "1678f76d6b446655e7d2cf145a38c609d24e41adcea79f22495e09f661fe78e3",
+      "reason": "Restore the exact pre-Atomic sector producer only for the historical Core product-freeze digest without modifying its current implementation."
+    },
+    {
+      "path": "supabase/functions/opening-market-radar/index.ts",
+      "baseline_git_sha": "c0885967b160120f9e65666c1406fafd21cf61aa",
+      "baseline_sha256": "1144afa367dab3c118188a64ed056388bc703d1cb6f651e00e231efaffac0856",
+      "candidate_sha256": "e76f9728fb3c643ec01184b1a364ff54be914326f573c4255eea070bc9eb06ac",
+      "reason": "Restore the exact pre-Atomic radar producer only for the historical Core product-freeze digest without modifying its current implementation."
+    },
+    {
+      "path": "supabase/functions/strategy-replay-engine/index.ts",
+      "baseline_git_sha": "c0885967b160120f9e65666c1406fafd21cf61aa",
+      "baseline_sha256": "a94c9bed4cdc8e13eba9145a2d492e7bccb53ba3d6030767b984fdb4a0e4e28c",
+      "candidate_sha256": "aa17ed7c2de9730587adadcb7181b97c2844c87f634214d8b3d817cd14fce2e7",
+      "reason": "Restore the exact pre-Atomic replay reader only for the historical Core product-freeze digest without modifying its current implementation."
+    }
+  ],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "427dc83357c52eef4df32cc9ea7342cc93570db7",
+      "predecessor_sha256": "35cf4e902449c7ebc916de3ac8ed76993f620e20a76f0dab6c977d464ff6b098",
+      "candidate_sha256": "b570fe360f23cb69f2062dc222190b2c129483e6900ac6f7289ec3148cd5c7e2",
+      "source_lineage": "Existing release workflow at candidate base 427dc833 plus one affected Edge Function type-check target.",
+      "reason": "Keep the new 06:50 preflight inside the existing integrated Edge validation lane without adding an unrelated test job.",
+      "rollback_target": "Restore the exact release workflow from Git object 427dc83357c52eef4df32cc9ea7342cc93570db7."
+    },
+    {
+      "path": "supabase/config.toml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "427dc83357c52eef4df32cc9ea7342cc93570db7",
+      "predecessor_sha256": "68af4af168bfe7b0450cb1dfb5145e6f7fb6fad52734f467ee3a197f1a46eaae",
+      "candidate_sha256": "48d26772f94be632f94c0ce15ead5d6621f1e05df45e3f14dc618ff298e9e191",
+      "source_lineage": "Existing Supabase function configuration at candidate base 427dc833 plus one custom-auth preflight stanza.",
+      "reason": "Register the isolated preflight custom authentication boundary without changing any existing function setting.",
+      "rollback_target": "Restore supabase/config.toml from Git object 427dc83357c52eef4df32cc9ea7342cc93570db7."
+    },
+    {
+      "path": "supabase/functions/_shared/fugle-taiex-provider.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "427dc83357c52eef4df32cc9ea7342cc93570db7",
+      "predecessor_sha256": "4f48b3630cd59fa72c8ddae3b7371d06e25a3f59451c84f4dc7d1e9355c65eac",
+      "candidate_sha256": "5204bab01bf3f66cb738a117f1d1ed02e84ffccc8679e2cfe3e9a2ba7bf84843",
+      "source_lineage": "Production V66 TAIEX adapter plus exact deidentified IX0001 ticker response captured on 2026-09-15.",
+      "reason": "Accept only the current-date official ticker previousClose when referencePrice is absent, retaining every identity and stale-data guard.",
+      "rollback_target": "Restore the exact V66 adapter from Git object 427dc83357c52eef4df32cc9ea7342cc93570db7."
+    },
+    {
+      "path": "supabase/functions/fetch-market-data-v10/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "427dc83357c52eef4df32cc9ea7342cc93570db7",
+      "predecessor_sha256": "bbe5222a0fccfacaee1add96b35c6114e4a7245e7bc85e7c8e2983e72752de27",
+      "candidate_sha256": "216fde43400b90c98996a6ddcdd6d3451b44eeab3393b7262bd9e3bbfefb93f9",
+      "source_lineage": "Production V66 Fetch entrypoint with a single TAIEX premarket selected-price normalization successor.",
+      "reason": "Normalize the strictly validated ticker basis while leaving all eleven-provider, Atomic, persistence, and downstream contracts unchanged.",
+      "rollback_target": "Restore fetch-market-data-v10 from Git object 427dc83357c52eef4df32cc9ea7342cc93570db7."
+    },
+    {
+      "path": "tests/fugleTaiexProvider.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "427dc83357c52eef4df32cc9ea7342cc93570db7",
+      "predecessor_sha256": "632635b36401078e8df48cccf580ae78c5b7708b860b2c657ae06ea17ae80919",
+      "candidate_sha256": "7082a7e830c7d38842cb7fdf87e59f35ba3639041f0d090557b0b20e1cccaa87",
+      "source_lineage": "Existing TAIEX adapter regression plus exact Production premarket nullability and fail-closed negative controls.",
+      "reason": "Lock the observed previousClose-only legal shape and reject absent, zero, negative, stale, malformed, and wrong-symbol responses.",
+      "rollback_target": "Restore the previous TAIEX regression source from Git object 427dc83357c52eef4df32cc9ea7342cc93570db7."
+    },
+    {
+      "path": "tests/productionLivePipeline.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "dce7831ad283b68e8094866e885da28453067a54",
+      "predecessor_sha256": "9021c72366b2b5a31ec9f9b53fb12ed52dd0047c8f543028cbbd87de629ea0e8",
+      "candidate_sha256": "47e7356ed25937d63188761a8bc0cd3dfc135feaa575c442844909ca3967a6bc",
+      "source_lineage": "Exact previously sealed test source at dce7831 followed by reviewed TAIEX contract assertions committed in 427dc833.",
+      "reason": "Admit the strengthened TAIEX adapter assertion that caused nine fail-closed Integrity cascades without changing any product behavior now.",
+      "rollback_target": "Restore the exact predecessor test source from Git object dce7831ad283b68e8094866e885da28453067a54."
+    },
+    {
+      "path": "supabase/functions/ma-ops-health-check/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c0885967b160120f9e65666c1406fafd21cf61aa",
+      "predecessor_sha256": "f2d5ddd6772c0af2fd28eb35c4e966d089c6fe2aaf2feb320ca3d3861793d651",
+      "candidate_sha256": "001348d1b2be8e453a0b2116e2d3048e6de65edb8bca7d905d74898a6351e4a6",
+      "source_lineage": "Exact previously sealed c088 health source followed by the reviewed Atomic committed-batch health reader in dce7831.",
+      "reason": "Admit the already-deployed authoritative Atomic health-reader successor that caused the reported Integrity hash drift.",
+      "rollback_target": "Restore the exact predecessor health source from Git object c0885967b160120f9e65666c1406fafd21cf61aa."
+    },
+    {
+      "path": "supabase/functions/close-market-review/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c0885967b160120f9e65666c1406fafd21cf61aa",
+      "predecessor_sha256": "24f9f9b005e7cc84453ac78c6569098d601ef76101b0967b6143053d28e2aa49",
+      "candidate_sha256": "0690d91a4cb2f97de04e894d7dc39395ffa69b0494b656d6e12afb2720ba3520",
+      "source_lineage": "Exact previously sealed c088 close-review source followed by the reviewed Atomic authoritative-snapshot reader in dce7831.",
+      "reason": "Admit the already-deployed close reader's authoritative Atomic source transition that caused the reported Integrity hash drift.",
+      "rollback_target": "Restore the exact predecessor close-review source from Git object c0885967b160120f9e65666c1406fafd21cf61aa."
+    },
+    {
+      "path": "supabase/functions/closing-verification-engine/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c0885967b160120f9e65666c1406fafd21cf61aa",
+      "predecessor_sha256": "730f0dd698c74f33fa98e8e730d32cef13e4cccaa681646df0cb92d647b8b189",
+      "candidate_sha256": "3226ee82d4de2c79ba66048b5f37c055ecc477000fd53fbee5cb56fbd6cf60e6",
+      "source_lineage": "Exact previously sealed c088 closing-verification source followed by the reviewed Atomic authoritative-snapshot reader in dce7831.",
+      "reason": "Admit the already-deployed closing verifier's authoritative Atomic source transition that caused the reported Integrity hash drift.",
+      "rollback_target": "Restore the exact predecessor closing-verification source from Git object c0885967b160120f9e65666c1406fafd21cf61aa."
+    },
+    {
+      "path": "supabase/functions/continuous-learning-engine/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c0885967b160120f9e65666c1406fafd21cf61aa",
+      "predecessor_sha256": "8b4e67a36b73b4aa3736379774c993b6446bcb357f21aeb5e756249e7cf4f54f",
+      "candidate_sha256": "9def4ea1c937a05fd77656029a54b29dd6b6f84656d8c94ac5468611ac95e34d",
+      "source_lineage": "Exact previously sealed c088 learning source followed by the reviewed Atomic authoritative-snapshot reader in dce7831.",
+      "reason": "Admit the already-deployed learning reader's authoritative Atomic source transition that caused the reported Integrity hash drift.",
+      "rollback_target": "Restore the exact predecessor learning source from Git object c0885967b160120f9e65666c1406fafd21cf61aa."
+    },
+    {
+      "path": "tests/helpers/consolidationPublicExportIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "427dc83357c52eef4df32cc9ea7342cc93570db7",
+      "predecessor_sha256": "d4cda72931e160b6e07457f83f916c5390e0123bf497e81d33de8c37b42994bc",
+      "candidate_sha256": "ca1883a11f6ba005e93e464f067860dcce70ba65f0021a4733507781f11288fb",
+      "source_lineage": "Unchanged eleven-layer Integrity entrypoint wrapped by a reviewed predecessor-reconstruction transition.",
+      "reason": "Run the generic transition before every unchanged historical verifier so legitimate releases do not create repeated false hash cascades.",
+      "rollback_target": "Restore the exact eleven-layer entrypoint from Git object 427dc83357c52eef4df32cc9ea7342cc93570db7."
+    },
+    {
+      "path": "docs/operations/evidence/production-reliability-known-failures-20260915.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "d31fd3b4763ad1f87997745d09a17cf426715e1d06628d1dd2e121a6870629cf",
+      "source_lineage": "Read-only Production scheduler, Edge version, provider health, atomic rows, migration ledger, and Acceptance observations.",
+      "reason": "Separate true root causes, cascades, environment drift, fixes, regression evidence, and remaining candidate reachability.",
+      "rollback_target": "Remove only this additive evidence registry; never modify any historical Production row."
+    },
+    {
+      "path": "supabase/functions/_shared/provider-reliability-contract.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "26f7ce7a4f68037f2449098122184b42bcff982740176f3631daa85533440951",
+      "source_lineage": "Current Production 11-provider mapping and a strict public-market-field allowlist for fixture capture.",
+      "reason": "Centralize the fixed readiness inventory and guarantee diagnostic fixture capture strips secret-like and unrelated fields.",
+      "rollback_target": "Remove the additive reliability contract together with its isolated preflight consumer."
+    },
+    {
+      "path": "supabase/functions/market-readiness-preflight/index.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "7c43d370a2077be9fa6034d91b99e635374495e13ca1fbbf5f18e9d72287c639",
+      "source_lineage": "New isolated custom-auth Edge Function using existing provider credentials and official provider endpoints.",
+      "reason": "Detect credential, reachability, symbol, adapter, and response-contract failures at 06:50 without creating business artifacts.",
+      "rollback_target": "Delete or undeploy only market-readiness-preflight; the 07:00 pipeline remains unchanged."
+    },
+    {
+      "path": "supabase/migrations/20260915065000_market_readiness_preflight_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "92b16ed91a8357961a024196907a0fe80b5f34abb1241b4d8267ba3dcdeabc10",
+      "source_lineage": "Additive service-role-only pg_net dispatcher and one isolated 06:50 Asia/Taipei cron registration.",
+      "reason": "Install the small readiness call without changing existing jobs, lifecycle state, business tables, Auth, RLS, or secrets.",
+      "rollback_target": "Unschedule morning-alpha-provider-readiness-0650 and drop only invoke_market_readiness_preflight_v1 after review."
+    },
+    {
+      "path": "tests/fixtures/production-reliability-v1/finnhub-required-20260915.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "7411435b93e493a29dcf2e587050f0f84c289f60f2e501934c396cdd2fcd73a6",
+      "source_lineage": "Eight exact deidentified Finnhub response samples captured through the Production preflight diagnostic.",
+      "reason": "Bind every required US provider adapter regression to real field structures, numeric values, timestamps, and response hashes.",
+      "rollback_target": "Remove only this additive deidentified fixture if its recorded source lineage is rejected."
+    },
+    {
+      "path": "tests/fixtures/production-reliability-v1/recent-taiex-failure-20260915.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "e24249580978a09eee2932e63dc39d72ba47b056ceb15c577ec760a4dc5d2095",
+      "source_lineage": "Exact Production health failure classification and atomic row-count observation without an unavailable raw payload claim.",
+      "reason": "Permanently preserve the recent true failure boundary as regression evidence without relabeling the failed day.",
+      "rollback_target": "Remove only this additive evidence file; never rewrite the preserved Production failure."
+    },
+    {
+      "path": "tests/fixtures/production-reliability-v1/stock-2330-20260915.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "6fbc946eecdc780874f873acebf36c44561a8a45a1c9aedaa4add05a2e4f77b6",
+      "source_lineage": "Exact deidentified Fugle 2330 response sample captured through the Production preflight diagnostic.",
+      "reason": "Prove the 2330 adapter has a recognized independent Production shape and was not itself the recorded 07:00 root cause.",
+      "rollback_target": "Remove only this additive deidentified 2330 fixture after a reviewed replacement."
+    },
+    {
+      "path": "tests/fixtures/production-reliability-v1/taiex-intraday-20260915.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "a2a75961c3c446fc4b1b77865162b0771d76434942a089392efc133734cbfc72",
+      "source_lineage": "Exact deidentified Fugle IX0001 intraday response sample captured through the Production preflight diagnostic.",
+      "reason": "Lock the intraday index quote structure and timestamp scale independently from the premarket ticker contract.",
+      "rollback_target": "Remove only this additive deidentified TAIEX intraday fixture after a reviewed replacement."
+    },
+    {
+      "path": "tests/fixtures/production-reliability-v1/taiex-premarket-20260915.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "6e5b55c0231d2631d295604b99690bdbb0571cc5084100fd6268a4731a7e2bfe",
+      "source_lineage": "Exact deidentified Fugle IX0001 premarket ticker that reproduced the Production V66 contract rejection.",
+      "reason": "Preserve the legal previousClose-only nullability that must remain accepted only for the current dated official index ticker.",
+      "rollback_target": "Remove only this additive deidentified TAIEX premarket fixture after a reviewed replacement."
+    },
+    {
+      "path": "tests/fixtures/production-reliability-v1/txf-afterhours-20260915.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "27219ee16a05402d6eb055d5e6565603fb1f70f8e42f2275b0d93c076398cfd9",
+      "source_lineage": "Exact deidentified Fugle TXF afterhours response with prior session date and a current Taipei trading-day timestamp.",
+      "reason": "Prevent preflight from rejecting the legal night-session date model while preserving source timestamp freshness checks.",
+      "rollback_target": "Remove only this additive deidentified TXF fixture after a reviewed replacement."
+    },
+    {
+      "path": "tests/helpers/reviewedBaselineTransition.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "1fc83a16c0de588629ba861f77450e9110fea5b18f398c3381302d9269c3498f",
+      "source_lineage": "Generic fail-closed source transition helper introduced by this reviewed reliability candidate.",
+      "reason": "Verify candidate and predecessor hashes and reconstruct prior bytes before running the unchanged historical Integrity chain.",
+      "rollback_target": "Remove the helper and restore the exact predecessor Integrity entrypoint together."
+    },
+    {
+      "path": "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "427dc83357c52eef4df32cc9ea7342cc93570db7",
+      "predecessor_sha256": "3dc2cc6d07ab9f1c922115f62ec31b22a6477bd69f81813a9e1dcaa3073d0b90",
+      "candidate_sha256": "ee604ddaa2c6ca4836144b40b3731bcdc831d70ee3f6032d313c8681674b32a1",
+      "source_lineage": "Existing Acceptance Integrity regression adapted only to consume the reviewed transition's explicit historical source view.",
+      "reason": "Keep the original Acceptance predecessor pin and tamper assertions meaningful after the Integrity entrypoint gains a reviewed successor.",
+      "rollback_target": "Restore the exact Acceptance Integrity test from Git object 427dc83357c52eef4df32cc9ea7342cc93570db7."
+    },
+    {
+      "path": "tests/fetchCheckpointEvidence.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "427dc83357c52eef4df32cc9ea7342cc93570db7",
+      "predecessor_sha256": "4459dc9113e361283d04d5cfbf8c9d5e9e322406771640cf2767263c3173a851",
+      "candidate_sha256": "ce58d8385aec707af1e6af7fdce3ea4198e285ed8396dfbdd3c79b81d3c38748",
+      "source_lineage": "Existing V63 source-pin regression adapted only to consume the reviewed transition's reconstructed predecessor source view.",
+      "reason": "Preserve the historical provider-lane and declaration pins while current TAIEX behavior is verified by the new Production reality tests.",
+      "rollback_target": "Restore the exact checkpoint evidence test from Git object 427dc83357c52eef4df32cc9ea7342cc93570db7."
+    },
+    {
+      "path": "tests/helpers/productionRealityProviderReplay.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ab6fb96faccd1f9cb92fa12ac69907485b446e6a8ae2915afeff6bb52096564a",
+      "source_lineage": "Replay helper executing actual Fetch adapter declarations against deidentified Production provider payloads.",
+      "reason": "Exercise Provider through adapter, normalization, evidence, and exact 11-row atomic candidate assembly without Production writes.",
+      "rollback_target": "Remove only this additive isolated replay helper and its tests."
+    },
+    {
+      "path": "tests/providerReliabilityClosure.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "43ed97bb637586341d2978cd24c56ac0b6a208b05b0573e9eecc9c3086507135",
+      "source_lineage": "Impact-based regression for provider registry, fixture hashing, preflight boundaries, migration scope, and failure registry.",
+      "reason": "Fail closed if the required-provider count, sanitizer, 06:50 no-business-write boundary, or historical classification drifts.",
+      "rollback_target": "Remove only this additive affected regression together with the reliability tooling."
+    },
+    {
+      "path": "tests/productionRealityProviderReplay.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "be9338696e4ec194af54650fa536d153128a6bd6b93f2ce2c7aa0519f3631f5c",
+      "source_lineage": "Isolated impact regression over the real provider-shape adapter and atomic assembly replay helper.",
+      "reason": "Require an exact 11-row candidate and prove the captured TAIEX failure still yields atomic rejection rather than ten rows.",
+      "rollback_target": "Remove only this additive isolated replay test together with its helper."
+    },
+    {
+      "path": "tests/productionReliabilityClosureReplay.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "0af62f3785b3a4320d65b2791e83d8af34d1bf12e82035c0cc9eec70c0c40d5f",
+      "source_lineage": "Task-scoped closure replay joining the actual current Fetch adapter path over deidentified Production payloads to the immutable 12-handler full-chain output baseline.",
+      "reason": "Prove the only changed business path forms a complete 11-row atomic candidate while every unchanged downstream stage retains its prior actual persisted PASS evidence.",
+      "rollback_target": "Remove only this additive closure replay test; preserve the immutable full-chain baseline and every historical Production failure."
+    }
+  ]
+}

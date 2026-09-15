@@ -1,0 +1,22 @@
+{
+  "schema_version": "PRODUCTION_PROVIDER_FAILURE_OBSERVATION_V1",
+  "service_date": "2026-09-15",
+  "phase": "premarket",
+  "checkpoint": "PREMARKET",
+  "provider": "fugle",
+  "display_symbol": "TAIEX",
+  "source_symbol": "IX0001",
+  "endpoint": "stock/intraday/ticker/IX0001",
+  "http_status": 200,
+  "failure_code": "PROVIDER_RESPONSE_CONTRACT_INVALID",
+  "adapter_error": "taiex_ticker_contract_invalid",
+  "identity_and_date_path_reached": true,
+  "committed_checkpoint_rows": 0,
+  "required_checkpoint_rows": 11,
+  "report_generated": false,
+  "historical_result": "FAIL_PRESERVED",
+  "raw_provider_payload_captured": false,
+  "contains_secrets": false,
+  "source_lineage": "Production data_provider_health failure detail and atomic row-count readback",
+  "claim_limit": "This observation proves the failure path, not the uncaptured payload field values."
+}

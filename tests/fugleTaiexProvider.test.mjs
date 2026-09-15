@@ -26,7 +26,7 @@ const officialDiscovery = {
   data: [{ symbol: 'IX0001', name: '發行量加權股價指數' }],
 };
 const officialQuote = {
-  date: '2026-09-14',
+  date: '2026-09-15',
   type: 'INDEX',
   exchange: 'TWSE',
   market: 'TSE',
@@ -36,10 +36,10 @@ const officialQuote = {
   closePrice: 47000,
   change: 59.51,
   changePercent: 0.13,
-  lastUpdated: 1789347600000000,
+  lastUpdated: 1789434000000000,
 };
 const officialTicker = {
-  date: '2026-09-14',
+  date: '2026-09-15',
   type: 'INDEX',
   exchange: 'TWSE',
   market: 'TSE',
@@ -51,6 +51,21 @@ const officialTicker = {
   closeTime: '13:30:00',
 };
 
+// Fugle documents `market`, `referencePrice`, and `previousClose` as optional
+// ticker fields. This shape represents a valid premarket INDEX response where
+// market/referencePrice are absent but the provider still supplies the current
+// trading date and a truthful previous-close basis.
+const officialPremarketTicker = {
+  date: '2026-09-15',
+  type: 'INDEX',
+  exchange: 'TWSE',
+  symbol: 'IX0001',
+  name: '發行量加權股價指數',
+  previousClose: 46184.85,
+  openTime: '09:00:00',
+  closeTime: '13:30:00',
+};
+
 function evidenceRows(includeTaiex) {
   return CHECKPOINT_PROVIDER_KEYS.filter(key => includeTaiex || key !== 'TAIEX').map((key, index) => ({
     provider_key: key,
@@ -58,15 +73,15 @@ function evidenceRows(includeTaiex) {
     value: 100 + index,
     change_percent: 0,
     source: key === 'TAIEX' ? 'fugle' : 'UNCHANGED_PROVIDER',
-    source_timestamp: '2026-09-14T09:30:00+08:00',
-    captured_at: '2026-09-14T09:30:00+08:00',
+    source_timestamp: '2026-09-15T09:30:00+08:00',
+    captured_at: '2026-09-15T09:30:00+08:00',
     raw: {
       contract: 'FETCH_CHECKPOINT_EVIDENCE_V1',
       market: ['TAIEX', '2330', 'TXF'].includes(key) ? 'TW' : 'US',
       change: 0,
       freshness_status: ['TAIEX', '2330', 'TXF'].includes(key) ? 'fresh' : 'provider_returned',
       freshness_age_minutes: 0,
-      captured_session_date: '2026-09-14',
+      captured_session_date: '2026-09-15',
     },
   }));
 }
@@ -88,7 +103,16 @@ test('official INDEX mapping is GET IX0001 and is startup-testable', () => {
   assert.equal(validateFugleTaiexAdapterMapping({ ...FUGLE_TAIEX_CONTRACT, symbol: 'TAIEX' }).failure_code, 'PROVIDER_SYMBOL_INVALID');
   assert.equal(validateFugleTaiexDiscovery(officialDiscovery).valid, true);
   assert.equal(validateFugleTaiexDiscovery({ ...officialDiscovery, data: [] }).failure_code, 'PROVIDER_SYMBOL_INVALID');
-  assert.equal(validateFugleTaiexTicker(officialTicker, '2026-09-14').valid, true);
+  assert.equal(validateFugleTaiexTicker(officialTicker, '2026-09-15').valid, true);
+});
+
+test('premarket INDEX ticker accepts official optional fields without synthesizing a quote', () => {
+  const result = validateFugleTaiexTicker(officialPremarketTicker, '2026-09-15');
+  assert.equal(result.valid, true);
+  assert.equal(result.reference_price, 46184.85);
+  assert.equal(result.reference_source, 'previousClose');
+  assert.equal(validateFugleTaiexTicker({ ...officialPremarketTicker, previousClose: null }, '2026-09-15').failure_code, 'PROVIDER_RESPONSE_CONTRACT_INVALID');
+  assert.equal(validateFugleTaiexTicker({ ...officialPremarketTicker, market: 'OTC' }, '2026-09-15').failure_code, 'PROVIDER_SYMBOL_INVALID');
 });
 
 test('official symbol discovery then current-session ticker succeeds for premarket', async () => {
@@ -97,12 +121,13 @@ test('official symbol discovery then current-session ticker succeeds for premark
     calls.push(request);
     return calls.length === 1
       ? { status: 200, payload: officialDiscovery }
-      : { status: 200, payload: officialTicker };
-  }, { tradingDate: '2026-09-14', phase: 'premarket' });
+      : { status: 200, payload: officialPremarketTicker };
+  }, { tradingDate: '2026-09-15', phase: 'premarket' });
   assert.equal(result.ok, true);
   assert.equal(result.symbol, 'IX0001');
   assert.equal(result.priceBasis, 'CURRENT_SESSION_REFERENCE_PRICE');
   assert.equal(result.referencePrice, 46184.85);
+  assert.equal(result.referenceSource, 'previousClose');
   assert.deepEqual(calls.map(call => call.endpoint), [
     'stock/intraday/tickers?type=INDEX&exchange=TWSE',
     'stock/intraday/ticker/IX0001',
@@ -118,7 +143,7 @@ test('official symbol discovery then current-session quote succeeds intraday', a
     return calls.length === 1
       ? { status: 200, payload: officialDiscovery }
       : { status: 200, payload: officialQuote };
-  }, { tradingDate: '2026-09-14', phase: 'intraday' });
+  }, { tradingDate: '2026-09-15', phase: 'intraday' });
   assert.equal(result.ok, true);
   assert.equal(result.priceBasis, 'CURRENT_SESSION_QUOTE');
   assert.deepEqual(calls.map(call => call.endpoint), [
@@ -134,7 +159,7 @@ test('legacy or unknown symbol 404 is explicit and official-resource 404 remains
   assert.equal(classifyFugleTaiexHttpFailure(404, null), 'RESOURCE_NOT_FOUND');
   const result = await resolveFugleTaiexProvider(async request => request.endpoint.includes('tickers?')
     ? { status: 200, payload: officialDiscovery }
-    : { status: 404, error: 'Resource Not Found' }, { tradingDate: '2026-09-14', phase: 'intraday' });
+    : { status: 404, error: 'Resource Not Found' }, { tradingDate: '2026-09-15', phase: 'intraday' });
   assert.deepEqual({ ok: result.ok, code: result.failureCode, status: result.status }, {
     ok: false,
     code: 'RESOURCE_NOT_FOUND',
@@ -147,10 +172,10 @@ test('legacy or unknown symbol 404 is explicit and official-resource 404 remains
 });
 
 test('previous-day TAIEX ticker is rejected instead of masquerading as the current trading date', async () => {
-  const previousDay = { ...officialTicker, date: '2026-09-11' };
+  const previousDay = { ...officialPremarketTicker, date: '2026-09-14' };
   const result = await resolveFugleTaiexProvider(async request => request.endpoint.includes('tickers?')
     ? { status: 200, payload: officialDiscovery }
-    : { status: 200, payload: previousDay }, { tradingDate: '2026-09-14', phase: 'premarket' });
+    : { status: 200, payload: previousDay }, { tradingDate: '2026-09-15', phase: 'premarket' });
   assert.deepEqual({ ok: result.ok, code: result.failureCode, error: result.error }, {
     ok: false,
     code: 'STALE_PROVIDER_DATA',

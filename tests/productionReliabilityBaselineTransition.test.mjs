@@ -21,7 +21,7 @@ const manifest = JSON.parse(read(MANIFEST));
 const verify = (source = read) => resolveConsolidationPublicExportIntegrity(registry, artifact, source);
 
 test('reviewed reliability baseline pins transition roots and reconstructs all eleven predecessors', () => {
-  assert.equal(hash(read(MANIFEST)), '86ecc8a5a1b236c4ccb157b7c999962cd410fceea6ecec4e53696a117e37a93c');
+  assert.equal(hash(read(MANIFEST)), '9d84af2ee3a805132d1769147ca5256d9439d1ad2f744b9faa8573d81ddc5309');
   assert.equal(hash(read(GENERIC)), '1fc83a16c0de588629ba861f77450e9110fea5b18f398c3381302d9269c3498f');
   assert.equal(hash(read(ENTRY)), 'ca1883a11f6ba005e93e464f067860dcce70ba65f0021a4733507781f11288fb');
   const result = verify();

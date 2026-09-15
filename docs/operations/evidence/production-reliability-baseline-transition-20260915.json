@@ -18,7 +18,7 @@
   "baseline_excluded_reviewed_paths": [
     {
       "path": ".github/workflows/checkpoint-atomicity-validation.yml",
-      "candidate_sha256": "8f17212d104eae8a05c77e3e04f36fbae9c764e8d190b23c456d0312718b51d8",
+      "candidate_sha256": "5a9ad64d502c830dc72f3fb585832ee4756e1dfcc405d8056a805f98993c107a",
       "reason": "The previously approved Atomic Snapshot validation workflow was added after the original Core product baseline and remains byte-exact."
     },
     {

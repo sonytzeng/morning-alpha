@@ -1,0 +1,33 @@
+{
+  "schema_version": "PRODUCTION_PROVIDER_SHAPE_V1",
+  "provider": "fugle",
+  "display_symbol": "TAIEX",
+  "source_symbol": "IX0001",
+  "phase": "intraday",
+  "endpoint": "stock/intraday/quote/IX0001",
+  "captured_via": "market-readiness-preflight diagnostic",
+  "captured_payload": {
+    "date": "2026-09-15",
+    "name": "發行量加權股價指數",
+    "type": "INDEX",
+    "market": "TSE",
+    "symbol": "IX0001",
+    "exchange": "TWSE",
+    "openPrice": 45847.27,
+    "openTime": 1789434005000000,
+    "highPrice": 46009.85,
+    "highTime": 1789435620000000,
+    "lowPrice": 45673.37,
+    "lowTime": 1789442755000000,
+    "closePrice": 45723.4,
+    "closeTime": 1789443490000000,
+    "previousClose": 45862.52,
+    "change": -139.12,
+    "changePercent": -0.3,
+    "lastUpdated": 1789443490000000,
+    "total": { "time": 1789443490000000 }
+  },
+  "response_sha256": "636d43294d49c1e9febfd68433a5f7ca5916a56abcd54b158e16dd3f622824e9",
+  "contains_secrets": false,
+  "historical_success_claim": false
+}

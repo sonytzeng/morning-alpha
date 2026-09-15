@@ -1,0 +1,85 @@
+{
+  "schema_version": "MORNING_ALPHA_KNOWN_FAILURE_REGISTRY_V1",
+  "as_of": "2026-09-15",
+  "natural_day_pass_claimed": false,
+  "historical_failures_preserved": true,
+  "entries": [
+    {
+      "id": "2026-09-11-0900-non-atomic-checkpoint",
+      "classification": "ROOT_CAUSE",
+      "root_cause": "Legacy checkpoint persistence admitted independently written rows and could expose a partial batch.",
+      "cascades": ["2026-09-11 09:00 contains 21 legacy unbatched rows", "Acceptance remains FAIL"],
+      "fix": "Checkpoint Atomic Batch with an exact 0-or-11 database transaction, idempotency key, concurrency lock, and committed-batch reader.",
+      "test": "tests/checkpointAtomicity.test.mjs",
+      "production_reality_fixture": "Production row-count and batch-identity readback; historical rows are never replayed as a PASS fixture.",
+      "still_reachable": false,
+      "historical_result": "FAIL_PRESERVED"
+    },
+    {
+      "id": "2026-09-14-0700-taiex-invalid-fallback",
+      "classification": "ROOT_CAUSE",
+      "root_cause": "After IX0001 did not yield a usable premarket quote, Production V65 fell through to the invalid Fugle symbol TAIEX and received HTTP 404.",
+      "cascades": ["Provider Contract 0/11", "Atomic correctly rejected commit", "Premarket report was not generated"],
+      "fix": "Fugle TAIEX adapter now discovers and requests only official INDEX symbol IX0001 and fails closed with no legacy/cross-provider/previous-day fallback.",
+      "test": "tests/fugleTaiexProvider.test.mjs",
+      "production_reality_fixture": "tests/fixtures/production-reliability-v1/recent-taiex-failure-20260915.json",
+      "still_reachable": false,
+      "historical_result": "FAIL_PRESERVED"
+    },
+    {
+      "id": "2026-09-15-0700-taiex-premarket-nullability",
+      "classification": "ROOT_CAUSE",
+      "root_cause": "The official IX0001 ticker returned HTTP 200 and passed identity/date checks, but its premarket price-field nullability did not satisfy the V66 positive-referencePrice-only adapter contract.",
+      "cascades": ["TAIEX PROVIDER_RESPONSE_CONTRACT_INVALID", "Provider Contract 0/11", "Atomic correctly rejected commit", "Premarket report was not generated"],
+      "fix": "The exact deidentified Production ticker proves that current-date IX0001 may omit referencePrice while carrying a positive previousClose. The candidate accepts that field only as CURRENT_SESSION_PREVIOUS_CLOSE_REFERENCE after strict symbol/type/exchange/market/date checks.",
+      "test": "tests/fugleTaiexProvider.test.mjs",
+      "production_reality_fixture": "tests/fixtures/production-reliability-v1/taiex-premarket-20260915.json",
+      "still_reachable": false,
+      "historical_result": "FAIL_PRESERVED"
+    },
+    {
+      "id": "2026-09-15-0700-2330-missing-from-atomic-batch",
+      "classification": "CASCADE",
+      "root_cause": "No independent 2330 provider fault was recorded. TAIEX blocked assembly of the authoritative 11-slot batch, so no individual provider row was committed.",
+      "cascades": ["2330 absent from the rejected 0/11 batch"],
+      "fix": "No 2330 product change. Preserve its existing Fugle quote and trusted TWSE MIS fallback behavior.",
+      "test": "Production provider-failure detail plus later natural 11/11 checkpoint readback.",
+      "production_reality_fixture": "tests/fixtures/production-reliability-v1/stock-2330-20260915.json",
+      "still_reachable": false,
+      "historical_result": "CASCADE_PRESERVED"
+    },
+    {
+      "id": "integrity-production-live-pipeline-hash-drift",
+      "classification": "ROOT_CAUSE",
+      "root_cause": "The reviewed TAIEX contract test was strengthened in commit 427dc833, but the append-only Integrity predecessor still pins the prior productionLivePipeline test hash.",
+      "cascades": ["Nine Integrity callers fail closed on the same unreviewed live-source drift"],
+      "fix": "A generic reviewed baseline transition validates exact candidate hashes, resolves every predecessor from its immutable Git object, preserves predecessor hashes, grants no Production/Auth/RLS/secret/history authority, and executes the unchanged prior eleven-layer verifier on reconstructed source bytes.",
+      "test": "tests/productionReliabilityBaselineTransition.test.mjs",
+      "production_reality_fixture": "Not a provider fixture; exact source preimage and diff are required.",
+      "still_reachable": false,
+      "historical_result": "FAIL_CLOSED"
+    },
+    {
+      "id": "deployed-shared-runtime-package-parity",
+      "classification": "ENVIRONMENT_DRIFT",
+      "root_cause": "Deployed non-fetch Edge Function packages contain an older market-runtime-stability shared-file hash; fetch-market-data-v10 V66 alone contains the current explicit provider-failure classification.",
+      "cascades": ["Source-package parity is not uniform"],
+      "fix": "Do not mass-redeploy unrelated functions. Verify whether each deployed entrypoint imports and executes the changed declaration; no known daily-flow blocker was proven outside fetch-market-data-v10.",
+      "test": "Exact deployed package-source hash inventory.",
+      "production_reality_fixture": "Production Edge Function metadata and package hashes.",
+      "still_reachable": false,
+      "historical_result": "DRIFT_RECORDED"
+    },
+    {
+      "id": "remote-local-atomic-migration-name-drift",
+      "classification": "ENVIRONMENT_DRIFT",
+      "root_cause": "The remote ledger records the atomic migration as 20260911050200 while the local filename uses 20260911033927; verified database objects and contracts are present.",
+      "cascades": ["Migration-name parity differs without schema-contract drift"],
+      "fix": "Preserve remote history and local audited migration; do not rename or reapply the historical migration.",
+      "test": "Read-only remote function/schema/ACL contract inspection.",
+      "production_reality_fixture": "Production migration ledger readback.",
+      "still_reachable": false,
+      "historical_result": "DRIFT_RECORDED"
+    }
+  ]
+}

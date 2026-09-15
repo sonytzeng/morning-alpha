@@ -29,6 +29,9 @@ verify_jwt = false
 [functions.daily-delivery-orchestrator]
 verify_jwt = false
 
+[functions.market-readiness-preflight]
+verify_jwt = false
+
 [functions.continuous-learning-engine]
 verify_jwt = false
 

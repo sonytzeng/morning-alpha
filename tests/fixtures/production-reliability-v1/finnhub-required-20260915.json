@@ -1,0 +1,18 @@
+{
+  "schema_version": "PRODUCTION_PROVIDER_BATCH_SHAPE_V1",
+  "provider": "finnhub",
+  "phase": "premarket",
+  "captured_via": "market-readiness-preflight diagnostic",
+  "contains_secrets": false,
+  "historical_success_claim": false,
+  "responses": {
+    "SPY": { "payload": { "c": 760.88, "d": -3.41, "h": 763.52, "l": 757.93, "o": 759, "t": 1789416000, "dp": -0.4462, "pc": 764.29 }, "response_sha256": "b1f970492da8d53e4287ada4a5a7344c1c447f142de4480bb1b5a43e9a1ba187" },
+    "QQQ": { "payload": { "c": 709.18, "d": -5.7, "h": 712.95, "l": 702.74, "o": 703.325, "t": 1789416000, "dp": -0.7973, "pc": 714.88 }, "response_sha256": "5f92305b2e50dabe666e77e0993213ffbb858db9379d2d694de8aa6697c76cd4" },
+    "SOXX": { "payload": { "c": 497.4, "d": -29.67, "h": 503.18, "l": 495.15, "o": 497.17, "t": 1789416000, "dp": -5.6292, "pc": 527.07 }, "response_sha256": "46a03f031da47116bc393227be6432b58941fdea6dba1c6250bff0198c4deb4a" },
+    "NVDA": { "payload": { "c": 210.96, "d": -7.33, "h": 212.77, "l": 208.93, "o": 211.24, "t": 1789416000, "dp": -3.3579, "pc": 218.29 }, "response_sha256": "02aeb0174d6c2398fdd7d32d36465f70667a56be08889bef2861416603a4570a" },
+    "TSM": { "payload": { "c": 418.01, "d": -15.23, "h": 424.45, "l": 416.01, "o": 416.01, "t": 1789416000, "dp": -3.5154, "pc": 433.24 }, "response_sha256": "6c669867b709174169e347b5cdc41268529f47c222fcbc8302244c6565899066" },
+    "VXX": { "payload": { "c": 18.23, "d": 0.16, "h": 18.67, "l": 18.11, "o": 18.63, "t": 1789416000, "dp": 0.8854, "pc": 18.07 }, "response_sha256": "24a2265e0cf50ec85066ab8a0dfa17724f6128f79f04cb849e2b7bd60dd089f3" },
+    "UUP": { "payload": { "c": 28.17, "d": 0.1, "h": 28.24, "l": 28.14, "o": 28.2, "t": 1789416000, "dp": 0.3563, "pc": 28.07 }, "response_sha256": "68464c69b126d26f4b79f83db6dfe9b90710182576f2744e29ed05d1fc772159" },
+    "IEF": { "payload": { "c": 90.93, "d": -0.08, "h": 91.25, "l": 90.754376, "o": 90.94, "t": 1789416000, "dp": -0.0879, "pc": 91.01 }, "response_sha256": "c79eb04bc7b28b1fb00a06bc6b12566d1394d69e9e71a2a92c677155929d07c0" }
+  }
+}

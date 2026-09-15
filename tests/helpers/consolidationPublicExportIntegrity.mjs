@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 import ts from 'typescript';
 import { resolveConsolidationSqlHistoryIntegrity } from './consolidationSqlHistoryIntegrity.mjs';
 import { resolveConsolidationRequiredMarketIntegrity } from './consolidationRequiredMarketIntegrity.mjs';
 import { resolveConsolidationFixtureRepresentation } from './consolidationFixtureRepresentation.mjs';
 import { resolveConsolidationAcceptanceDefaultIntegrity } from './consolidationAcceptanceDefaultIntegrity.mjs';
+import { readReviewedGitPredecessor, resolveReviewedBaselineTransition } from './reviewedBaselineTransition.mjs';
 
 // Eighth source admission is additive. The immutable Seventh guard executes on
 // exact reconstructed predecessor bytes, followed by checks of every live byte
@@ -302,14 +304,25 @@ function verifyPublicExport(seal, registry, artifactBytes, readSource) {
 export function resolveConsolidationPublicExportIntegrity(registry, artifactBytes, readSource = defaultRead) {
   if (FINAL_SEAL === null) throw Object.assign(new Error('EIGHTH_REVIEWED_SOURCE_FREEZE_REQUIRED'),
     { code: 'EIGHTH_REVIEWED_SOURCE_FREEZE_REQUIRED' });
-  // Verify the exact V1 default admission before all unchanged historical layers.
-  return resolveConsolidationAcceptanceDefaultIntegrity(registry, artifactBytes, readSource,
-    (tenthRegistry, tenthArtifact, tenthRead) =>
-      resolveConsolidationFixtureRepresentation(tenthRegistry, tenthArtifact, tenthRead,
-        (ninthRegistry, ninthArtifact, ninthRead) =>
-          resolveConsolidationRequiredMarketIntegrity(ninthRegistry, ninthArtifact, ninthRead,
-            (previousRegistry, previousArtifact, previousRead) =>
-              verifyPublicExport(FINAL_SEAL, previousRegistry, previousArtifact, previousRead))));
+  const manifest = JSON.parse(readSource('docs/operations/evidence/production-reliability-baseline-transition-20260915.json'));
+  return resolveReviewedBaselineTransition({
+    manifest,
+    readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, fileURLToPath(new URL('../../', import.meta.url))),
+    // Reconstruct the exact prior source view before executing every unchanged
+    // historical layer. The transition adds no bypass to any predecessor guard.
+    verifyPredecessor: predecessorRead => resolveConsolidationAcceptanceDefaultIntegrity(
+      registry,
+      artifactBytes,
+      predecessorRead,
+      (tenthRegistry, tenthArtifact, tenthRead) =>
+        resolveConsolidationFixtureRepresentation(tenthRegistry, tenthArtifact, tenthRead,
+          (ninthRegistry, ninthArtifact, ninthRead) =>
+            resolveConsolidationRequiredMarketIntegrity(ninthRegistry, ninthArtifact, ninthRead,
+              (previousRegistry, previousArtifact, previousRead) =>
+                verifyPublicExport(FINAL_SEAL, previousRegistry, previousArtifact, previousRead))),
+    ),
+  });
 }
 export const readConsolidationPublicExportIntegrity = registry =>
   resolveConsolidationPublicExportIntegrity(registry, defaultRead(PUBLIC_EXPORT_ARTIFACT_PATH));

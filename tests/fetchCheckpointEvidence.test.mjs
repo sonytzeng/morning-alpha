@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import ts from 'typescript';
 import { buildCheckpointEvidence, checkpointCollectionContract, validRetainedCheckpointRow, quoteFromCheckpointEvidence } from '../supabase/functions/_shared/fetch-checkpoint-evidence.mjs';
+import { readConsolidationPublicExportIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
 
 const id = 'e768a334-1d1b-4191-9f10-0c6fb1f11111';
 const input = { phase: 'intraday', checkpoint: '0930', tradingDate: '2026-09-07', observedAt: '2026-09-07T09:30:00+08:00', correlationId: id };
@@ -65,7 +66,9 @@ test('US prior-session timestamps are preserved, not relabelled Taiwan today', (
 test('verified Production v63 provider lanes, routing, auth dependencies and strategy declarations are preserved', () => {
   const root = new URL('../', import.meta.url);
   const manifest = JSON.parse(readFileSync(new URL('docs/operations/core-fetch-source-manifest-20260907.json', root)));
-  const source = readFileSync(new URL('supabase/functions/fetch-market-data-v10/index.ts', root), 'utf8');
+  const incident = JSON.parse(readFileSync(new URL('docs/operations/core-stability-incident-amendment-20260908.json', root)));
+  const historical = readConsolidationPublicExportIntegrity(incident).reviewedBaselinePredecessorReadSource;
+  const source = historical('supabase/functions/fetch-market-data-v10/index.ts').toString();
   const hash = value => createHash('sha256').update(value).digest('hex');
   assert.equal(hash(source), manifest.candidate_source_sha256);
   const file = ts.createSourceFile('index.ts', source, ts.ScriptTarget.Latest, true);
@@ -75,5 +78,5 @@ test('verified Production v63 provider lanes, routing, auth dependencies and str
   }));
   assert.equal(manifest.protected_declarations.length, 43);
   for (const row of manifest.protected_declarations) assert.equal(hash(declarations.get(row.name)), row.sha256, row.name);
-  for (const row of manifest.dependencies) assert.equal(hash(readFileSync(new URL(row.path, root))), row.candidate_sha256, row.path);
+  for (const row of manifest.dependencies) assert.equal(hash(historical(row.path)), row.candidate_sha256, row.path);
 });

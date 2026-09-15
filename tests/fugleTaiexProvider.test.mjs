@@ -111,6 +111,38 @@ test('official symbol discovery then current-session ticker succeeds for premark
   assert.doesNotMatch(calls.map(call => call.endpoint).join(' '), /quote\/TAIEX|tse_t00|api\.twse|previous/i);
 });
 
+test('captured Production premarket ticker accepts current-date previousClose as the opening reference', async () => {
+  const captured = {
+    date: '2026-09-15', name: '發行量加權股價指數', type: 'INDEX', market: 'TSE',
+    symbol: 'IX0001', exchange: 'TWSE', openTime: '0900', closeTime: '1330', previousClose: 45862.52,
+  };
+  const validated = validateFugleTaiexTicker(captured, '2026-09-15');
+  assert.deepEqual(validated, {
+    valid: true,
+    reference_price: 45862.52,
+    price_basis: 'CURRENT_SESSION_PREVIOUS_CLOSE_REFERENCE',
+    source_timestamp: '2026-09-14T16:00:00.000Z',
+    failure_code: null,
+  });
+  const result = await resolveFugleTaiexProvider(async request => request.endpoint.includes('tickers?')
+    ? { status: 200, payload: officialDiscovery }
+    : { status: 200, payload: captured }, { tradingDate: '2026-09-15', phase: 'premarket' });
+  assert.equal(result.ok, true);
+  assert.equal(result.referencePrice, 45862.52);
+  assert.equal(result.priceBasis, 'CURRENT_SESSION_PREVIOUS_CLOSE_REFERENCE');
+});
+
+test('missing/zero current-session reference fields fail closed without stale fallback', () => {
+  for (const ticker of [
+    { ...officialTicker, referencePrice: undefined, previousClose: undefined },
+    { ...officialTicker, referencePrice: null, previousClose: 0 },
+    { ...officialTicker, referencePrice: 0, previousClose: -1 },
+  ]) {
+    assert.equal(validateFugleTaiexTicker(ticker, '2026-09-14').failure_code, 'PROVIDER_RESPONSE_CONTRACT_INVALID');
+  }
+  assert.equal(validateFugleTaiexTicker({ ...officialTicker, date: '2026-09-11', referencePrice: undefined }, '2026-09-14').failure_code, 'STALE_PROVIDER_DATA');
+});
+
 test('official symbol discovery then current-session quote succeeds intraday', async () => {
   const calls = [];
   const result = await resolveFugleTaiexProvider(async request => {

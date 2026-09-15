@@ -34,7 +34,7 @@ import {
 } from '../_shared/fugle-taiex-provider.mjs';
 
 // ═══════════════════════════════════════════════════════════
-// fetch-market-data-v10 V10.17 — FUGLE TAIEX INDEX CONTRACT
+// fetch-market-data-v10 V10.18 — FUGLE TAIEX PREMARKET CONTRACT
 // Uses Finnhub for US equities/ETF proxies, Fugle/TWSE for Taiwan core, best-effort Fugle futopt for TXF.
 // Each symbol: 6s timeout, max 1 retry.
 // Global and Taiwan providers run in separate sequential lanes so one slow
@@ -52,7 +52,7 @@ const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
 const OVERALL_TIMEOUT_MS = 60_000;
-const VERSION = "V10.17_FUGLE_TAIEX_INDEX_CONTRACT";
+const VERSION = "V10.18_FUGLE_TAIEX_PREMARKET_CONTRACT";
 const FUGLE_TAIEX_ADAPTER_MAPPING = validateFugleTaiexAdapterMapping();
 if (!FUGLE_TAIEX_ADAPTER_MAPPING.valid) throw new Error("FUGLE_TAIEX_ADAPTER_MAPPING_INVALID");
 
@@ -640,7 +640,7 @@ async function fetchFugleTaiexQuote(
     return null;
   }
 
-  const providerPayload = result.priceBasis === "CURRENT_SESSION_REFERENCE_PRICE"
+  const providerPayload = result.endpoint === FUGLE_TAIEX_CONTRACT.tickerEndpoint
     ? {
       ...(result.payload as Record<string, unknown>),
       closePrice: Number(result.referencePrice),

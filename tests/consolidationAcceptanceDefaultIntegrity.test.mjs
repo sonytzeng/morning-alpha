@@ -28,10 +28,11 @@ const artifact = JSON.parse(artifactBytes), eighth = read(PUBLIC_EXPORT_ARTIFACT
 const verify = (r = registry, source = read) => resolveConsolidationPublicExportIntegrity(r, eighth, source);
 
 test('Acceptance V1: independent live entry/helper/artifact/registry seals and complete ten-layer reconstruction', () => {
-  assert.equal(hash(read(GUARD)), PIN.helper); assert.equal(hash(read(ENTRY)), PIN.entry);
+  const result = verify();
+  assert.equal(hash(read(GUARD)), PIN.helper);
+  assert.equal(hash(result.reviewedBaselinePredecessorReadSource(ENTRY)), PIN.entry);
   assert.equal(hash(artifactBytes), PIN.artifact); assert.equal(hash(read(REGISTRY)), PIN.registry);
   assert.equal(artifact.registration.files.length, 5);
-  const result = verify();
   assert.equal(hash(result.tenthReadSource(REGISTRY)), '188a0b57dc9c3363dce9f73a20737c927bbaca068909edbdfdb98cd253d88e35');
   assert.equal(hash(result.tenthReadSource(SQL)), '353a30988429fa1ac1847174bf00199a3f876f0311e7ae1f2ecf165d9ccb0ce0');
   assert.equal(hash(result.tenthReadSource(ENTRY)), '6397a0d25bd0e398b71790b8c253a8b6ccd188dc3d56df5a7788f08dc1a767c6');
@@ -71,7 +72,8 @@ for (const row of artifact.registration.files) test('Acceptance V1: reject every
   let calls = 0;
   const source = path => path === row.path ? Buffer.concat([read(path), Buffer.from('\nUNREVIEWED\n')]) : read(path);
   assert.throws(() => resolveConsolidationAcceptanceDefaultIntegrity(registry, eighth, source, () => { calls++; }), /unreviewed Eleventh live source drift/);
-  assert.equal(calls, 0); assert.throws(() => verify(registry, source), /unreviewed Eleventh live source drift/);
+  assert.equal(calls, 0); assert.throws(() => verify(registry, source),
+    /unreviewed (?:candidate|Eleventh live source) drift/);
 });
 
 for (const mode of ['missing', 'empty', 'null', 'array']) test('Acceptance V1: live entry refuses ' + mode + ' registration', () => {

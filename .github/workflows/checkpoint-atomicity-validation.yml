@@ -50,6 +50,8 @@ jobs:
       PGPASSWORD: isolated-ci-only
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Integrity checks require immutable reviewed predecessor objects.
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc

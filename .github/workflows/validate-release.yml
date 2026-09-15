@@ -57,6 +57,7 @@ jobs:
           supabase/functions/daily-delivery-orchestrator/index.ts
           supabase/functions/get-report-payload/index.ts
           supabase/functions/fetch-market-data-v10/index.ts
+          supabase/functions/market-readiness-preflight/index.ts
           supabase/functions/line-daily-push/index.ts
           supabase/functions/ma-ops-health-check/index.ts
           supabase/functions/close-market-review/index.ts

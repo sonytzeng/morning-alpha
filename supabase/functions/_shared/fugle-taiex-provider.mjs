@@ -51,22 +51,33 @@ export function validateFugleTaiexAdapterMapping(mapping = FUGLE_TAIEX_CONTRACT)
 
 export function validateFugleTaiexTicker(payload, expectedTradingDate = '') {
   const response = record(payload);
+  const responseMarket = normalized(response.market);
   const identityValid = normalized(response.symbol) === FUGLE_TAIEX_CONTRACT.symbol &&
     normalized(response.type) === FUGLE_TAIEX_CONTRACT.type &&
     normalized(response.exchange) === FUGLE_TAIEX_CONTRACT.exchange &&
-    normalized(response.market) === FUGLE_TAIEX_CONTRACT.market;
+    (!responseMarket || responseMarket === FUGLE_TAIEX_CONTRACT.market);
   if (!identityValid) {
     return { valid: false, failure_code: 'PROVIDER_SYMBOL_INVALID' };
   }
   if (expectedTradingDate && String(response.date || '') !== expectedTradingDate) {
     return { valid: false, failure_code: 'STALE_PROVIDER_DATA' };
   }
-  if (!positiveNumber(response.referencePrice)) {
+
+  // Fugle documents `market`, `referencePrice`, and `previousClose` as optional
+  // ticker fields. Before the session opens an INDEX ticker may legitimately omit
+  // `market` and/or `referencePrice`; the previous close is then the only truthful
+  // premarket price basis. We accept only a positive provider-supplied value and
+  // never synthesize a price.
+  const hasReferencePrice = positiveNumber(response.referencePrice);
+  const hasPreviousClose = positiveNumber(response.previousClose);
+  if (!hasReferencePrice && !hasPreviousClose) {
     return { valid: false, failure_code: 'PROVIDER_RESPONSE_CONTRACT_INVALID' };
   }
+  const referencePrice = hasReferencePrice ? Number(response.referencePrice) : Number(response.previousClose);
   return {
     valid: true,
-    reference_price: Number(response.referencePrice),
+    reference_price: referencePrice,
+    reference_source: hasReferencePrice ? 'referencePrice' : 'previousClose',
     source_timestamp: taipeiStartOfDate(response.date),
     failure_code: null,
   };
@@ -93,10 +104,11 @@ export function validateFugleTaiexQuote(payload, expectedTradingDate = '') {
   const sourceDate = providerTimestampDate(
     response.lastUpdated || response.closeTime || lastTrade.time || total.time,
   );
+  const responseMarket = normalized(response.market);
   const identityValid = normalized(response.symbol) === FUGLE_TAIEX_CONTRACT.symbol &&
     normalized(response.type) === FUGLE_TAIEX_CONTRACT.type &&
     normalized(response.exchange) === FUGLE_TAIEX_CONTRACT.exchange &&
-    normalized(response.market) === FUGLE_TAIEX_CONTRACT.market;
+    (!responseMarket || responseMarket === FUGLE_TAIEX_CONTRACT.market);
   const freshnessValid = !expectedTradingDate ||
     (String(response.date || '') === expectedTradingDate && sourceDate === expectedTradingDate);
   const valid = identityValid && freshnessValid;
@@ -188,6 +200,7 @@ export async function resolveFugleTaiexProvider(request, options = {}) {
       discovery: discoveryContract.ticker,
       priceBasis: 'CURRENT_SESSION_REFERENCE_PRICE',
       referencePrice: tickerContract.reference_price,
+      referenceSource: tickerContract.reference_source,
       sourceTimestamp: tickerContract.source_timestamp,
     };
   }

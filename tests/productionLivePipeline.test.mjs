@@ -10,8 +10,10 @@ import {
   normalizeProviderTimestamp,
 } from '../supabase/functions/_shared/provider-normalization.mjs';
 import { applySystemicCatalystFloors } from '../supabase/functions/_shared/news-catalyst-scoring.mjs';
+import { REQUIRED_PROVIDER_CONFIG } from '../supabase/functions/_shared/required-provider-validation.mjs';
 
 const marketSource = await readFile(new URL('../supabase/functions/fetch-market-data-v10/index.ts', import.meta.url), 'utf8');
+const sharedProviderSource = await readFile(new URL('../supabase/functions/_shared/required-provider-validation.mjs', import.meta.url), 'utf8');
 const newsSource = await readFile(new URL('../supabase/functions/fetch-global-market-news/index.ts', import.meta.url), 'utf8');
 const reportSource = await readFile(new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url), 'utf8');
 const deliveryOrchestratorSource = await readFile(new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url), 'utf8');
@@ -41,10 +43,11 @@ test('Fugle epoch timestamps normalize seconds, milliseconds, microseconds, and 
 
 test('Taiwan adapters follow the Fugle v1 symbol and session contract', () => {
   assert.match(marketSource, /resolveFugleTaiexProvider/);
-  assert.match(marketSource, /FUGLE_TAIEX_CONTRACT\.symbol/);
+  assert.match(marketSource, /FUGLE_TAIEX_CONTRACT/);
+  assert.equal(REQUIRED_PROVIDER_CONFIG.find(slot => slot.key === 'TAIEX')?.sourceSymbol, 'IX0001');
   assert.doesNotMatch(marketSource, /fugleIndexCandidates|fetchTwseQuote\("tse_t00\.tw", "TAIEX"/);
-  assert.match(marketSource, /session === "afterhours" \? \{ session: "afterhours" \} : undefined/);
-  assert.match(marketSource, /lastTrade\.time \|\| total\.time \|\|/);
+  assert.match(sharedProviderSource, /\['afterhours', 'regular'\]/);
+  assert.match(sharedProviderSource, /record\(data\.lastTrade\)\.time/);
 });
 
 test('daily sentence rejects stale report dates and delivery fails closed', async () => {
@@ -87,8 +90,9 @@ test('Supabase Cron independently backs every production runtime checkpoint', ()
 });
 
 test('DXY and US10Y unsupported Finnhub symbols are replaced by explicit liquid proxies', () => {
-  assert.match(marketSource, /finnhubSymbol: "UUP", displaySymbol: "DXY"/);
-  assert.match(marketSource, /finnhubSymbol: "IEF", displaySymbol: "US10Y"/);
+  assert.match(marketSource, /REQUIRED_PROVIDER_CONFIG\.map/);
+  assert.equal(REQUIRED_PROVIDER_CONFIG.find(slot => slot.key === 'DXY')?.sourceSymbol, 'UUP');
+  assert.equal(REQUIRED_PROVIDER_CONFIG.find(slot => slot.key === 'US10Y')?.sourceSymbol, 'IEF');
   const transformed = normalizeConfiguredProxyQuote({
     value: 100,
     change: 1,

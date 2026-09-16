@@ -556,15 +556,17 @@ test('opening radar preserves the complete War Room decision contract', () => {
 
 test('TXF discovery and quote URLs follow the Fugle futopt contract', () => {
   const source = read('supabase/functions/fetch-market-data-v10/index.ts');
-  assert.match(source, /continuousAlias = "TXF1!"/);
+  const shared = read('supabase/functions/_shared/required-provider-validation.mjs');
+  assert.match(source, /resolveRequiredTxfQuote/);
+  assert.match(shared, /const alias = 'TXF1!'/);
   assert.match(
-    source,
+    shared,
     /futopt\/intraday\/tickers\?type=FUTURE&exchange=TAIFEX&session=\$\{session\}&product=TXF/,
   );
-  assert.match(source, /"futopt\/intraday\/quote"/);
-  assert.match(source, /session === "afterhours" \? \{ session: "afterhours" \} : undefined/);
-  assert.doesNotMatch(source, /futopt\/intraday\/quote\?session=/);
-  assert.doesNotMatch(source, /futopt\/products/);
+  assert.match(shared, /futopt\/intraday\/quote\/\$\{encodeURIComponent\(symbol\)\}/);
+  assert.match(shared, /session === 'afterhours' \? `\$\{path\}\?session=afterhours` : path/);
+  assert.doesNotMatch(shared, /futopt\/intraday\/quote\?session=/);
+  assert.doesNotMatch(shared, /futopt\/products/);
   assert.match(source, /`tse_\$\{symbol\}\.tw`/);
   assert.match(source, /`otc_\$\{symbol\}\.tw`/);
   assert.match(source, /provider: "twse_mis"/);

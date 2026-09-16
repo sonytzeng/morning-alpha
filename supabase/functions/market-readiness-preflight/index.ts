@@ -9,31 +9,38 @@ import {
 import {
   FUGLE_2330_CONTRACT,
   FUGLE_TAIEX_CONTRACT,
-  normalizeFugleTaiwanCoreResult,
   resolveFugle2330Provider,
   resolveFugleTaiexProvider,
 } from '../_shared/fugle-taiex-provider.mjs';
 import {
   REQUIRED_PROVIDER_COUNT,
-  REQUIRED_PROVIDER_SLOTS,
   describeProductionResponseShape,
   sanitizeProductionMarketPayload,
   stableJson,
   validateRequiredProviderRegistry,
 } from '../_shared/provider-reliability-contract.mjs';
+import {
+  REQUIRED_PROVIDER_CONFIG,
+  classifyRequiredProviderFailure,
+  fetchRequiredFugleResponse,
+  fetchRequiredFinnhubResponse,
+  normalizeRequiredFinnhubQuote,
+  normalizeRequiredTaiwanCoreQuote,
+  resolveRequiredTxfQuote,
+  validateRequiredProviderEvidence,
+} from '../_shared/required-provider-validation.mjs';
 
-const VERSION = 'MARKET_READINESS_PREFLIGHT_V2_PRODUCTION_PARITY';
+const VERSION = 'MARKET_READINESS_PREFLIGHT_V3_SHARED_PROVIDER_EVIDENCE';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, apikey, authorization, x-cron-secret, x-daily-delivery-token, x-internal-auth-version',
   'Content-Type': 'application/json',
 };
-const PROVIDER_TIMEOUT_MS = 5_000;
 
 type JsonRecord = Record<string, unknown>;
-type CheckStatus = 'PASS' | 'FAIL';
-type ReadinessStatus = 'READY' | 'DEGRADED' | 'BLOCKED';
+type CheckStatus = 'PASS' | 'FAIL' | 'EXPECTED';
+type ReadinessStatus = 'READY' | 'DEGRADED' | 'BLOCKED' | 'MARKET_PHASE_EXPECTED';
 
 interface ProviderCheck {
   key: string;
@@ -64,26 +71,6 @@ interface FugleCoreResolution {
 
 function asRecord(value: unknown): JsonRecord {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {};
-}
-
-function normalized(value: unknown): string {
-  return String(value || '').trim().toUpperCase();
-}
-
-function taipeiDateFromTimestamp(value: unknown): string {
-  let timestamp = Number(value);
-  if (!Number.isFinite(timestamp) || timestamp <= 0) return '';
-  while (timestamp > 100_000_000_000_000) timestamp /= 1000;
-  if (timestamp < 100_000_000_000) timestamp *= 1000;
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date(timestamp));
-  const get = (type: string) => parts.find(part => part.type === type)?.value || '';
-  return `${get('year')}-${get('month')}-${get('day')}`;
-}
-
-function positive(value: unknown): boolean {
-  return Number.isFinite(Number(value)) && Number(value) > 0;
 }
 
 function taipeiClock(now = new Date()): { date: string; minutes: number } {
@@ -118,37 +105,8 @@ async function authorized(req: Request, supabase: ReturnType<typeof createClient
     await constantTimeEqual(tokenHash, data.token_hash);
 }
 
-async function fetchJson(url: string, headers: Record<string, string>): Promise<{ status: number | null; payload: unknown; error: string | null }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
-  try {
-    const response = await fetch(url, { headers, signal: controller.signal });
-    if (!response.ok) return { status: response.status, payload: null, error: `HTTP_${response.status}` };
-    return { status: response.status, payload: await response.json(), error: null };
-  } catch (error) {
-    return {
-      status: null,
-      payload: null,
-      error: error instanceof DOMException && error.name === 'AbortError' ? 'TIMEOUT' : 'PROVIDER_UNAVAILABLE',
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function failureCode(result: { status: number | null; error: string | null }, invalidContract = false): string {
-  if (result.status === 404) return 'RESOURCE_NOT_FOUND';
-  if ([401, 403].includes(Number(result.status))) return 'AUTHENTICATION_FAILED';
-  if (result.status === 402) return 'BLOCKED_BY_SUBSCRIPTION';
-  if (result.status === 429) return 'RATE_LIMITED';
-  if (Number(result.status) >= 500) return 'PROVIDER_UNAVAILABLE';
-  if (result.error === 'TIMEOUT') return 'TIMEOUT';
-  if (invalidContract) return 'PROVIDER_RESPONSE_CONTRACT_INVALID';
-  return String(result.error || 'PROVIDER_REQUEST_REJECTED');
-}
-
 async function checkedResult(
-  slot: typeof REQUIRED_PROVIDER_SLOTS[number],
+  slot: typeof REQUIRED_PROVIDER_CONFIG[number],
   endpoint: string,
   result: { status: number | null; payload: unknown; error: string | null },
   contractValid: boolean,
@@ -162,7 +120,7 @@ async function checkedResult(
     source_symbol: slot.sourceSymbol,
     endpoint,
     status: ok ? 'PASS' : 'FAIL',
-    failure_code: ok ? null : failureCode(result, result.status === 200 && !contractValid),
+    failure_code: ok ? null : classifyRequiredProviderFailure(result, result.status === 200 ? 'ATOMIC_PROVIDER_RESULT_MISSING' : null),
     http_status: result.status,
     response_hash: sanitized ? await sha256Hex(stableJson(sanitized)) : null,
     shape: sanitized ? asRecord(describeProductionResponseShape(sanitized)) : null,
@@ -187,28 +145,32 @@ async function providerObservation(
 }
 
 async function checkFinnhub(
-  slot: typeof REQUIRED_PROVIDER_SLOTS[number],
+  slot: typeof REQUIRED_PROVIDER_CONFIG[number],
   apiKey: string,
   captureSample: boolean,
+  evidenceInput: JsonRecord,
+  phaseExpected: boolean,
 ): Promise<ProviderCheck> {
   if (!apiKey) {
     return checkedResult(slot, 'quote', { status: null, payload: null, error: 'CONFIGURATION_MISSING' }, false, captureSample);
   }
-  const result = await fetchJson(
-    `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(slot.sourceSymbol)}&token=${encodeURIComponent(apiKey)}`,
-    { Accept: 'application/json' },
-  );
-  const payload = asRecord(result.payload);
-  const valid = positive(payload.c) && positive(payload.pc) && positive(payload.t);
-  return checkedResult(slot, 'quote', result, valid, captureSample);
+  const result = await fetchRequiredFinnhubResponse(slot.sourceSymbol, apiKey);
+  const quote = result.status === 200 ? normalizeRequiredFinnhubQuote(result.payload, slot.sourceSymbol) : null;
+  const evidence = validateRequiredProviderEvidence(slot, quote, evidenceInput);
+  const checked = await checkedResult(slot, slot.endpoint, result, evidence.valid, captureSample);
+  return withEvidenceStatus(checked, result, evidence, phaseExpected);
 }
 
-function fugleHeaders(apiKey: string): Record<string, string> {
-  return { Accept: 'application/json', 'X-API-KEY': apiKey };
-}
-
-function fugleUrl(path: string): string {
-  return `https://api.fugle.tw/marketdata/v1.0/${path}`;
+function withEvidenceStatus(check: ProviderCheck, response: JsonRecord, evidence: JsonRecord, phaseExpected: boolean): ProviderCheck {
+  if (check.status === 'PASS') return check;
+  const error = String(evidence.error || 'ATOMIC_PROVIDER_RESULT_MISSING');
+  const expected = phaseExpected && Number(response.status) === 200 &&
+    ['INVALID_EVIDENCE_IDENTITY', 'OUTSIDE_REAL_CHECKPOINT_WINDOW', 'INVALID_CHECKPOINT_SOURCE_TIME', 'STALE_PROVIDER_DATA'].includes(error);
+  return {
+    ...check,
+    status: expected ? 'EXPECTED' : 'FAIL',
+    failure_code: expected ? 'MARKET_PHASE_EXPECTED' : classifyRequiredProviderFailure(response, error),
+  };
 }
 
 async function checkTaiwanCore(
@@ -216,9 +178,11 @@ async function checkTaiwanCore(
   apiKey: string,
   tradingDate: string,
   captureSample: boolean,
+  evidenceInput: JsonRecord,
+  phaseExpected: boolean,
   phase: 'premarket' | 'intraday' = 'premarket',
 ): Promise<ProviderCheck> {
-  const slot = REQUIRED_PROVIDER_SLOTS.find(item => item.key === key)!;
+  const slot = REQUIRED_PROVIDER_CONFIG.find(item => item.key === key)!;
   const contract = key === 'TAIEX' ? FUGLE_TAIEX_CONTRACT : FUGLE_2330_CONTRACT;
   if (!apiKey) {
     return checkedResult(slot, contract.tickerEndpoint, { status: null, payload: null, error: 'CONFIGURATION_MISSING' }, false, captureSample);
@@ -226,7 +190,7 @@ async function checkTaiwanCore(
   const responses = new Map<string, { status: number | null; payload: unknown; error: string | null }>();
   const resolver = key === 'TAIEX' ? resolveFugleTaiexProvider : resolveFugle2330Provider;
   const result = await resolver(async ({ endpoint }: { endpoint: string }) => {
-    const response = await fetchJson(fugleUrl(endpoint), fugleHeaders(apiKey));
+    const response = await fetchRequiredFugleResponse(endpoint, apiKey);
     responses.set(endpoint, response);
     return response;
   }, { tradingDate, phase }) as FugleCoreResolution;
@@ -237,12 +201,15 @@ async function checkTaiwanCore(
     payload: result.payload || null,
     error: result.error ? String(result.error) : null,
   };
-  const normalizedQuote = result.ok ? normalizeFugleTaiwanCoreResult(result, key) : null;
-  const checked = await checkedResult(slot, endpoint, primary, Boolean(normalizedQuote), captureSample);
+  const normalizedQuote = result.ok ? normalizeRequiredTaiwanCoreQuote(result, key) : null;
+  const evidence = validateRequiredProviderEvidence(slot, normalizedQuote, evidenceInput);
+  const checked = withEvidenceStatus(
+    await checkedResult(slot, endpoint, primary, evidence.valid, captureSample), primary, evidence, phaseExpected,
+  );
   const observations = await Promise.all([...responses.entries()]
     .filter(([observedEndpoint]) => observedEndpoint !== endpoint)
     .map(([observedEndpoint, response]) => providerObservation(observedEndpoint, response, captureSample)));
-  if (result.ok && normalizedQuote) {
+  if (result.ok && evidence.valid) {
     return {
       ...checked,
       ...(observations.length ? { observations } : {}),
@@ -251,7 +218,9 @@ async function checkTaiwanCore(
   }
   return {
     ...checked,
-    failure_code: String(result.failureCode || checked.failure_code),
+    failure_code: phaseExpected && result.failureCode === 'STALE_PROVIDER_DATA'
+      ? 'MARKET_PHASE_EXPECTED' : String(result.failureCode || checked.failure_code),
+    status: phaseExpected && result.failureCode === 'STALE_PROVIDER_DATA' ? 'EXPECTED' : checked.status,
     rejected_field: result.rejectedField ? String(result.rejectedField) : null,
     ...(observations.length ? { observations } : {}),
   };
@@ -262,26 +231,35 @@ async function checkFugleQuote(
   apiKey: string,
   tradingDate: string,
   captureSample: boolean,
+  evidenceInput: JsonRecord,
+  phaseExpected: boolean,
 ): Promise<ProviderCheck> {
-  const slot = REQUIRED_PROVIDER_SLOTS.find(item => item.key === key)!;
+  const slot = REQUIRED_PROVIDER_CONFIG.find(item => item.key === key)!;
   const endpoint = `${slot.endpoint}?session=afterhours`;
   if (!apiKey) {
     return checkedResult(slot, endpoint, { status: null, payload: null, error: 'CONFIGURATION_MISSING' }, false, captureSample);
   }
-  const result = await fetchJson(fugleUrl(endpoint), fugleHeaders(apiKey));
-  const payload = asRecord(result.payload);
-  const symbol = normalized(payload.symbol);
-  const identityValid = /^TXF[A-Z0-9!]+$/.test(symbol);
-  const sourceTimestamp = payload.lastUpdated || payload.closeTime || asRecord(payload.lastTrade).time || asRecord(payload.total).time;
-  const dateValid = taipeiDateFromTimestamp(sourceTimestamp) === tradingDate;
-  const priceValid = [payload.previousClose, payload.referencePrice, payload.closePrice, payload.price]
-    .some(positive);
-  return checkedResult(slot, endpoint, result, identityValid && dateValid && priceValid, captureSample);
+  const resolved = await resolveRequiredTxfQuote(
+    (path: string) => fetchRequiredFugleResponse(path, apiKey), { phase: 'premarket' },
+  );
+  const last = resolved.observations.at(-1) || { status: null, payload: null, error: 'PROVIDER_REQUEST_REJECTED' };
+  const response = resolved.response || last;
+  const evidence = validateRequiredProviderEvidence(slot, resolved.quote, evidenceInput);
+  const checked = withEvidenceStatus(
+    await checkedResult(slot, resolved.endpoint || String(last.endpoint || endpoint), response, evidence.valid, captureSample),
+    response, evidence, phaseExpected,
+  );
+  const observations = await Promise.all(resolved.observations
+    .filter((item: JsonRecord) => item.endpoint !== checked.endpoint)
+    .map((item: JsonRecord) => providerObservation(String(item.endpoint), item as { status: number | null; payload: unknown; error: string | null }, captureSample)));
+  return { ...checked, source_symbol: String(resolved.quote?.sourceSymbol || slot.sourceSymbol),
+    ...(observations.length ? { observations } : {}) };
 }
 
 function readiness(checks: ProviderCheck[]): ReadinessStatus {
   const failures = checks.filter(check => check.status === 'FAIL');
-  if (failures.length === 0) return 'READY';
+  const expected = checks.filter(check => check.status === 'EXPECTED');
+  if (failures.length === 0) return expected.length ? 'MARKET_PHASE_EXPECTED' : 'READY';
   const blocking = new Set([
     'CONFIGURATION_MISSING', 'AUTHENTICATION_FAILED', 'BLOCKED_BY_SUBSCRIPTION',
     'PROVIDER_SYMBOL_INVALID', 'RESOURCE_NOT_FOUND', 'PROVIDER_RESPONSE_CONTRACT_INVALID',
@@ -323,7 +301,7 @@ Deno.serve(async (req) => {
     }), { status: 409, headers: CORS_HEADERS });
   }
 
-  const registry = validateRequiredProviderRegistry();
+  const registry = validateRequiredProviderRegistry(REQUIRED_PROVIDER_CONFIG);
   if (!registry.valid) {
     return new Response(JSON.stringify({
       success: false, readiness_status: 'BLOCKED', error_code: registry.failure_code,
@@ -334,12 +312,17 @@ Deno.serve(async (req) => {
   const finnhubKey = Deno.env.get('FINNHUB_API_KEY') || '';
   const fugleKey = Deno.env.get('FUGLE_API_KEY') || '';
   const taiexPhase = mode === 'diagnostic' && body.taiex_phase === 'intraday' ? 'intraday' : 'premarket';
+  const evidenceInput = {
+    phase: 'premarket', checkpoint: 'premarket', tradingDate,
+    observedAt: new Date().toISOString(), correlationId: crypto.randomUUID(),
+  };
+  const phaseExpected = mode === 'diagnostic' && (tradingDate > clock.date || clock.minutes > 455);
   const checks = await Promise.all([
-    ...REQUIRED_PROVIDER_SLOTS.filter(slot => slot.provider === 'finnhub')
-      .map(slot => checkFinnhub(slot, finnhubKey, captureSample)),
-    checkTaiwanCore('TAIEX', fugleKey, tradingDate, captureSample, taiexPhase),
-    checkTaiwanCore('2330', fugleKey, tradingDate, captureSample, taiexPhase),
-    checkFugleQuote('TXF', fugleKey, tradingDate, captureSample),
+    ...REQUIRED_PROVIDER_CONFIG.filter(slot => slot.provider === 'finnhub')
+      .map(slot => checkFinnhub(slot, finnhubKey, captureSample, evidenceInput, phaseExpected)),
+    checkTaiwanCore('TAIEX', fugleKey, tradingDate, captureSample, evidenceInput, phaseExpected, taiexPhase),
+    checkTaiwanCore('2330', fugleKey, tradingDate, captureSample, evidenceInput, phaseExpected, taiexPhase),
+    checkFugleQuote('TXF', fugleKey, tradingDate, captureSample, evidenceInput, phaseExpected),
   ]);
   const readinessStatus = readiness(checks);
   const succeeded = checks.filter(check => check.status === 'PASS').length;

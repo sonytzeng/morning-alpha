@@ -42,10 +42,14 @@ export function normalizeConfiguredProxyQuote(quote, config = {}) {
   if (!quote) return null;
   const multiplier = Number(config.directionMultiplier) === -1 ? -1 : 1;
   if (!config.proxySemantics && multiplier === 1) return quote;
+  // Missing provider values remain missing. Coercing null/undefined to zero
+  // would let a proxy bypass the same required-field evidence contract.
+  const directed = value => (typeof value === 'number' || (typeof value === 'string' && value.trim()))
+    && Number.isFinite(Number(value)) ? Number(value) * multiplier : value;
   return {
     ...quote,
-    change: Number(quote.change || 0) * multiplier,
-    changePercent: Number(quote.changePercent || 0) * multiplier,
+    change: directed(quote.change),
+    changePercent: directed(quote.changePercent),
     raw: {
       ...(quote.raw || {}),
       proxy_symbol: quote.sourceSymbol || null,

@@ -18,7 +18,6 @@ import {
   normalizeProviderTimestamp,
 } from '../_shared/provider-normalization.mjs';
 import {
-  buildCheckpointEvidence,
   CHECKPOINT_PROVIDER_KEYS,
   checkpointBatchIdempotencyKey,
   checkpointCollectionContract,
@@ -36,6 +35,17 @@ import {
   validateFugle2330AdapterMapping,
   validateFugleTaiexAdapterMapping,
 } from '../_shared/fugle-taiex-provider.mjs';
+import {
+  REQUIRED_PROVIDER_CONFIG,
+  classifyRequiredProviderFailure,
+  fetchRequiredFinnhubResponse,
+  normalizeRequiredFinnhubQuote,
+  normalizeRequiredTaiwanCoreQuote,
+  requiredProviderSlot,
+  resolveRequiredTxfQuote,
+  fetchRequiredFugleResponse,
+  validateRequiredProviderEvidence,
+} from '../_shared/required-provider-validation.mjs';
 
 // ═══════════════════════════════════════════════════════════
 // fetch-market-data-v10 V10.19 — PRODUCTION-PARITY TAIWAN CORE CONTRACT
@@ -142,19 +152,28 @@ interface RequestBody {
   force_run?: boolean;
 }
 
-const SYMBOLS: SymbolConfig[] = [
-  { finnhubSymbol: "SPY", displaySymbol: "SPX", name: "S&P 500（proxy: SPY ETF proxy）", market: "US", taiwanImpact: "美股整體健康度指標" },
-  { finnhubSymbol: "QQQ", displaySymbol: "IXIC", name: "Nasdaq（proxy: QQQ ETF proxy）", market: "US", taiwanImpact: "科技股風向標" },
-  { finnhubSymbol: "SOXX", displaySymbol: "SOX", name: "費城半導體指數（proxy: SOXX ETF proxy）", market: "US", taiwanImpact: "半導體族群強弱指標" },
-  { finnhubSymbol: "NVDA", displaySymbol: "NVDA", name: "Nvidia", market: "US", taiwanImpact: "AI 龍頭，直接牽動台灣 AI 供應鏈" },
-  { finnhubSymbol: "TSM", displaySymbol: "TSM", name: "TSMC ADR", market: "US", taiwanImpact: "台積電 ADR 連動台股價格" },
-  { finnhubSymbol: "VXX", displaySymbol: "VIX", name: "恐慌指數（proxy: VXX ETN proxy）", market: "US", taiwanImpact: "市場恐慌情緒" },
-  { finnhubSymbol: "UUP", displaySymbol: "DXY", name: "美元指數方向（proxy: UUP ETF）", market: "US", taiwanImpact: "影響外資流向與台幣匯率", proxySemantics: "same_direction_us_dollar_proxy" },
-  { finnhubSymbol: "IEF", displaySymbol: "US10Y", name: "美國10年債殖利率方向（proxy: inverse IEF ETF）", market: "US", taiwanImpact: "影響資金成本與科技股估值", directionMultiplier: -1, proxySemantics: "inverse_7_10y_treasury_price_proxy" },
-  { finnhubSymbol: FUGLE_TAIEX_CONTRACT.symbol, displaySymbol: "TAIEX", name: "台股加權指數", market: "TW", taiwanImpact: "台股大盤整體風向指標" },
-  { finnhubSymbol: "2330", displaySymbol: "2330", name: "台積電", market: "TW", taiwanImpact: "台股權值股龍頭" },
-  { finnhubSymbol: "TXF", displaySymbol: "TXF", name: "台指期", market: "TW", taiwanImpact: "台指期提供期貨領先訊號" },
-];
+const SYMBOL_DETAILS: Record<string, { name: string; taiwanImpact: string }> = {
+  SPX: { name: "S&P 500（proxy: SPY ETF proxy）", taiwanImpact: "美股整體健康度指標" },
+  IXIC: { name: "Nasdaq（proxy: QQQ ETF proxy）", taiwanImpact: "科技股風向標" },
+  SOX: { name: "費城半導體指數（proxy: SOXX ETF proxy）", taiwanImpact: "半導體族群強弱指標" },
+  NVDA: { name: "Nvidia", taiwanImpact: "AI 龍頭，直接牽動台灣 AI 供應鏈" },
+  TSM: { name: "TSMC ADR", taiwanImpact: "台積電 ADR 連動台股價格" },
+  VIX: { name: "恐慌指數（proxy: VXX ETN proxy）", taiwanImpact: "市場恐慌情緒" },
+  DXY: { name: "美元指數方向（proxy: UUP ETF）", taiwanImpact: "影響外資流向與台幣匯率" },
+  US10Y: { name: "美國10年債殖利率方向（proxy: inverse IEF ETF）", taiwanImpact: "影響資金成本與科技股估值" },
+  TAIEX: { name: "台股加權指數", taiwanImpact: "台股大盤整體風向指標" },
+  '2330': { name: "台積電", taiwanImpact: "台股權值股龍頭" },
+  TXF: { name: "台指期", taiwanImpact: "台指期提供期貨領先訊號" },
+};
+const SYMBOLS: SymbolConfig[] = REQUIRED_PROVIDER_CONFIG.map((slot) => ({
+  finnhubSymbol: slot.sourceSymbol,
+  displaySymbol: slot.key,
+  market: slot.market,
+  name: SYMBOL_DETAILS[slot.key].name,
+  taiwanImpact: SYMBOL_DETAILS[slot.key].taiwanImpact,
+  ...(slot.directionMultiplier === -1 ? { directionMultiplier: -1 as const } : {}),
+  ...(slot.proxySemantics ? { proxySemantics: slot.proxySemantics } : {}),
+}));
 
 const CLOSE_CORE_SYMBOLS = new Set(CHECKPOINT_PROVIDER_KEYS);
 
@@ -374,102 +393,18 @@ async function fetchFinnhubQuote(
   logPrefix: string,
   failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-    try {
-      const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(finnhubSymbol)}&token=${apiKey}`;
-
-      const response = await fetch(url, {
-        headers: { "Accept": "application/json" },
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.status === 429) {
-        if (attempt < MAX_RETRIES) {
-          const waitMs = 10000 * (attempt + 1);
-          console.log(`[${logPrefix}] 429 rate-limited, waiting ${waitMs / 1000}s before retry ${attempt + 1}/${MAX_RETRIES}`);
-          await sleep(waitMs);
-          continue;
-        }
-        failureDetails?.push({ provider: "finnhub", symbol: finnhubSymbol, endpoint: "quote", status: response.status });
-        return null;
-      }
-
-      if (response.status === 503) {
-        if (attempt < MAX_RETRIES) {
-          console.log(`[${logPrefix}] 503 unavailable, retry ${attempt + 1}/${MAX_RETRIES} after 3s`);
-          await sleep(3000);
-          continue;
-        }
-        failureDetails?.push({ provider: "finnhub", symbol: finnhubSymbol, endpoint: "quote", status: response.status });
-        return null;
-      }
-
-      if (!response.ok) {
-        console.error(`[${logPrefix}] HTTP ${response.status}, aborting`);
-        failureDetails?.push({ provider: "finnhub", symbol: finnhubSymbol, endpoint: "quote", status: response.status });
-        return null;
-      }
-
-      const data: FinnhubQuote = await response.json();
-
-      // Finnhub returns all zeros for invalid/missing symbols
-      if (data.c === 0 && data.h === 0 && data.l === 0 && data.o === 0 && data.pc === 0) {
-        console.error(`[${logPrefix}] Finnhub returned all-zero quote — symbol may be invalid or unsupported`);
-        failureDetails?.push({ provider: "finnhub", symbol: finnhubSymbol, endpoint: "quote", error: "all_zero_quote" });
-        return null;
-      }
-
-      return {
-        value: data.c,
-        change: data.d,
-        changePercent: data.dp,
-        capturedAt: normalizeTimestamp(data.t),
-        provider: "finnhub",
-        sourceSymbol: finnhubSymbol,
-        raw: {
-          provider: "finnhub",
-          finnhub_symbol: finnhubSymbol,
-          quote: {
-            current: data.c,
-            change: data.d,
-            change_percent: data.dp,
-            high: data.h,
-            low: data.l,
-            open: data.o,
-            previous_close: data.pc,
-            timestamp: data.t,
-            captured_at: normalizeTimestamp(data.t),
-          },
-        },
-      };
-    } catch (err) {
-      clearTimeout(timeoutId);
-      const isTimeout = err instanceof DOMException && err.name === "AbortError";
-      const message = sanitizeProviderError(err instanceof Error ? err.message : String(err));
-      if (isTimeout) {
-        console.error(`[${logPrefix}] TIMEOUT after ${FETCH_TIMEOUT_MS / 1000}s (attempt ${attempt + 1}/${MAX_RETRIES + 1})`);
-      } else {
-        console.error(`[${logPrefix}] Fetch error: ${message}`);
-      }
-      if (attempt < MAX_RETRIES) {
-        await sleep(3000);
-        continue;
-      }
-      failureDetails?.push({
-        provider: "finnhub",
-        symbol: finnhubSymbol,
-        endpoint: "quote",
-        error: isTimeout ? "timeout" : message,
-      });
-      return null;
-    }
+  const response = await fetchRequiredFinnhubResponse(finnhubSymbol, apiKey);
+  if (Number(response.status) !== 200) {
+    failureDetails?.push({ provider: "finnhub", symbol: finnhubSymbol, endpoint: "quote",
+      ...(Number.isFinite(Number(response.status)) && Number(response.status) > 0 ? { status: Number(response.status) } : {}),
+      failure_code: classifyRequiredProviderFailure(response),
+      error: String(response.error || "PROVIDER_REQUEST_REJECTED") });
+    return null;
   }
-  return null;
+  const quote = normalizeRequiredFinnhubQuote(response.payload, finnhubSymbol) as MarketQuote | null;
+  if (!quote) failureDetails?.push({ provider: "finnhub", symbol: finnhubSymbol, endpoint: "quote",
+    failure_code: classifyRequiredProviderFailure(response, "ATOMIC_PROVIDER_RESULT_MISSING"), error: "PROVIDER_RESPONSE_CONTRACT_INVALID" });
+  return quote;
 }
 
 function extractNumber(source: Record<string, unknown>, keys: string[]): number | null {
@@ -624,27 +559,7 @@ async function fetchFugleTaiwanCoreQuote(
 
   const resolver = displaySymbol === "TAIEX" ? resolveFugleTaiexProvider : resolveFugle2330Provider;
   const result = await resolver(async (request: { endpoint: string }) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4_000);
-    try {
-      const response = await fetch(`https://api.fugle.tw/marketdata/v1.0/${request.endpoint}`, {
-        headers: {
-          "Accept": "application/json",
-          "X-API-KEY": apiKey,
-        },
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      if (!response.ok) {
-        let errorBody = "";
-        try { errorBody = sanitizeProviderError((await response.text()).slice(0, 240)); } catch { errorBody = ""; }
-        return { status: response.status, error: errorBody || `HTTP ${response.status}` };
-      }
-      return { status: response.status, payload: await response.json() };
-    } catch (err) {
-      clearTimeout(timeoutId);
-      return { error: sanitizeProviderError(err instanceof Error ? err.message : String(err)) };
-    }
+    return fetchRequiredFugleResponse(request.endpoint, apiKey);
   }, { tradingDate, phase }) as FugleCoreResolution;
 
   if (!result.ok) {
@@ -666,7 +581,7 @@ async function fetchFugleTaiwanCoreQuote(
     return null;
   }
 
-  const quote = normalizeFugleTaiwanCoreResult(result, displaySymbol) as MarketQuote | null;
+  const quote = normalizeRequiredTaiwanCoreQuote(result, displaySymbol) as MarketQuote | null;
   if (!quote) {
     failureDetails?.push({
       provider: "fugle",
@@ -677,15 +592,7 @@ async function fetchFugleTaiwanCoreQuote(
     });
     return null;
   }
-  return {
-    ...quote,
-    raw: {
-      ...quote.raw,
-      provider_contract_validated: true,
-      discovery_symbol: displaySymbol === "TAIEX" ? FUGLE_TAIEX_CONTRACT.symbol : null,
-      response_date: String((result.payload as Record<string, unknown>).date || ""),
-    },
-  };
+  return quote;
 }
 
 async function fetchFugleTaiexQuote(
@@ -947,40 +854,19 @@ async function fetchTaiwanCoreQuote(
   }
 
   if (config.displaySymbol === "TXF") {
-    const preferredSession: "regular" | "afterhours" = phase === "premarket" || phase === "manual_backfill" ? "afterhours" : "regular";
-    const fallbackSession: "regular" | "afterhours" = preferredSession === "afterhours" ? "regular" : "afterhours";
-    const aliasFailureStart = failureDetails?.length || 0;
-    const continuousAlias = "TXF1!";
-    const aliasQuote = await fetchFugleFutOptQuote(continuousAlias, fugleApiKey, logPrefix, preferredSession, failureDetails);
-    if (aliasQuote) {
-      return { ...aliasQuote, sourceSymbol: continuousAlias, raw: { ...aliasQuote.raw, contract_resolution: "continuous_alias", fallback_used: false } };
-    }
-    const aliasAccessBlocked = (failureDetails || []).slice(aliasFailureStart)
-      .some((detail) => [401, 402, 403].includes(Number(detail.status)));
-    if (aliasAccessBlocked) return null;
-
-    const aliasFallbackQuote = await fetchFugleFutOptQuote(continuousAlias, fugleApiKey, logPrefix, fallbackSession, failureDetails);
-    if (aliasFallbackQuote) {
-      return {
-        ...aliasFallbackQuote,
-        sourceSymbol: continuousAlias,
-        raw: { ...aliasFallbackQuote.raw, contract_resolution: "continuous_alias", fallback_used: true, fallback_from_session: preferredSession },
-      };
-    }
-    const contractSymbol = await getActiveTxfContractSymbol(
-      fugleApiKey,
-      logPrefix,
-      preferredSession === "afterhours" ? "AFTERHOURS" : "REGULAR",
-      failureDetails,
+    const resolved = await resolveRequiredTxfQuote(
+      (endpoint: string) => fetchRequiredFugleResponse(endpoint, fugleApiKey), { phase },
     );
-    if (!contractSymbol) {
-      failureDetails?.push({ provider: "fugle_futopt", symbol: "TXF", endpoint: "contract_resolution", error: "cannot_resolve_active_txf_contract" });
-      return null;
+    for (const observation of resolved.observations) {
+      if (Number(observation.status) === 200) continue;
+      failureDetails?.push({
+        provider: "fugle_futopt", symbol: "TXF", endpoint: String(observation.endpoint),
+        ...(Number.isFinite(Number(observation.status)) && Number(observation.status) > 0 ? { status: Number(observation.status) } : {}),
+        failure_code: classifyRequiredProviderFailure(observation),
+        error: String(observation.error || "PROVIDER_RESPONSE_CONTRACT_INVALID"),
+      });
     }
-    const quote = await fetchFugleFutOptQuote(contractSymbol, fugleApiKey, logPrefix, preferredSession, failureDetails);
-    if (quote) return { ...quote, sourceSymbol: contractSymbol, raw: { ...quote.raw, contract_resolution: "ticker_discovery", fallback_used: false } };
-    const fallbackQuote = await fetchFugleFutOptQuote(contractSymbol, fugleApiKey, logPrefix, fallbackSession, failureDetails);
-    if (fallbackQuote) return { ...fallbackQuote, sourceSymbol: contractSymbol, raw: { ...fallbackQuote.raw, contract_resolution: "ticker_discovery", fallback_used: true, fallback_from_session: preferredSession } };
+    return resolved.quote as MarketQuote | null;
   }
 
   if (isTaiwanStockSymbol(config.displaySymbol)) {
@@ -1369,38 +1255,24 @@ Deno.serve(async (req) => {
     if (!beneficiaryCloseOnly && committedRecoveryRows.length === 0) {
       const evidenceRows: Record<string, unknown>[] = [];
       for (const config of coreSymbolConfigs) {
-        const quote = normalizeConfiguredProxyQuote(fetchedQuotes.get(config) ?? null, config) as MarketQuote | null;
+        const quote = fetchedQuotes.get(config) ?? null;
         if (!quote) {
           if (!failed.includes(config.displaySymbol)) failed.push(config.displaySymbol);
+          providerFailureDetails.push({ provider: config.market === "TW" ? "fugle" : "finnhub",
+            symbol: config.displaySymbol, endpoint: "atomic_checkpoint_assembly",
+            failure_code: classifyRequiredProviderFailure({ status: 200 }, "ATOMIC_PROVIDER_RESULT_MISSING") });
           if (config.market === "TW" && !twCoreSymbolsFailed.some((item) => item.symbol === config.displaySymbol)) {
             twCoreSymbolsFailed.push({ symbol: config.displaySymbol, reason: "ATOMIC_PROVIDER_RESULT_MISSING" });
           }
           continue;
         }
-        const freshness = evaluateCheckpointFreshness({
-          captured_at: quote.capturedAt,
-          evaluated_at: startedAt,
-          trading_date: tradingDate,
-          market: config.market,
-          phase,
-          symbol: config.displaySymbol,
-        });
-        if (freshness.valid !== true) {
-          if (!failed.includes(config.displaySymbol)) failed.push(config.displaySymbol);
-          providerFailureDetails.push({
-            provider: quote.provider,
-            symbol: config.displaySymbol,
-            endpoint: "atomic_checkpoint_assembly",
-            error: `provider_timestamp:${String(freshness.status || "invalid")}`,
-          });
-          if (config.market === "TW" && !twCoreSymbolsFailed.some((item) => item.symbol === config.displaySymbol)) {
-            twCoreSymbolsFailed.push({ symbol: config.displaySymbol, reason: "STALE_OR_INVALID_PROVIDER_TIMESTAMP" });
-          }
-          continue;
-        }
-        const evidence = buildCheckpointEvidence(evidenceInput, quote, config);
+        const evidence = validateRequiredProviderEvidence(requiredProviderSlot(config.displaySymbol), quote, evidenceInput, config.name);
         if (!evidence.valid) {
           if (!failed.includes(config.displaySymbol)) failed.push(config.displaySymbol);
+          providerFailureDetails.push({ provider: quote.provider, symbol: config.displaySymbol,
+            endpoint: "atomic_checkpoint_assembly",
+            failure_code: classifyRequiredProviderFailure({ status: 200 }, evidence.error),
+            error: String(evidence.error || "INVALID_IMMUTABLE_EVIDENCE") });
           snapshotErrors.push({ symbol: config.displaySymbol, error: evidence.error || "INVALID_IMMUTABLE_EVIDENCE" });
           continue;
         }

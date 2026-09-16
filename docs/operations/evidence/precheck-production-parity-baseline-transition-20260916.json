@@ -1,0 +1,158 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_PRECHECK_PRODUCTION_PARITY_20260916",
+  "candidate_base_git_sha": "9aae0389c7ca75ad721a9ae52a637366787a1950",
+  "predecessor_integrity_id": "MORNING_ALPHA_PRODUCTION_PARITY_20260916",
+  "approval_provenance": "Sony requested a narrowly scoped Morning Alpha 06:50 and 07:00 provider Contract parity candidate with one shared eleven-provider validation core, Production fixture parity, Replay, Integrity and Release CI; this review grants no Production deployment, history rewrite, account privilege, secret, migration, or natural-day success authority.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/precheckProductionParity.test.mjs",
+    "tests/productionRealityProviderReplay.test.mjs",
+    "tests/providerReliabilityClosure.test.mjs",
+    "tests/fugleTaiexProvider.test.mjs",
+    "tests/fetchCheckpointEvidence.test.mjs",
+    "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+    "tests/productionReliabilityBaselineTransition.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": "supabase/functions/_shared/provider-normalization.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "9aae0389c7ca75ad721a9ae52a637366787a1950",
+      "predecessor_sha256": "c3d115db804d3cdbc1a64368a338cd2b50fd73e8304587d9aa81648edc3dd7ee",
+      "candidate_sha256": "c8bd578f6e4d5b204a42b90c77debfe234428727085d91ee91a92b7d9db2b261",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "Shared proxy normalization must preserve missing numeric fields so both paths reject invalid evidence.",
+      "rollback_target": "Restore only this scoped source file from reviewed Git object 9aae0389c7ca75ad721a9ae52a637366787a1950."
+    },
+    {
+      "path": "supabase/functions/fetch-market-data-v10/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "9aae0389c7ca75ad721a9ae52a637366787a1950",
+      "predecessor_sha256": "c0576ce0ac3a66e3c2fb26d9b35675006bf4713aebc52ead3975817e074ba115",
+      "candidate_sha256": "3223fb495dd3b8600116ecfcccd165d8926271c8ce7832c07a99b1814a3c7171",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "07:00 Fetch consumes the common eleven-provider mapping, adapters, transport, normalization, and evidence validation.",
+      "rollback_target": "Restore only this scoped source file from reviewed Git object 9aae0389c7ca75ad721a9ae52a637366787a1950."
+    },
+    {
+      "path": "supabase/functions/market-readiness-preflight/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "9aae0389c7ca75ad721a9ae52a637366787a1950",
+      "predecessor_sha256": "7b46665e8fc1b75d8441c0ebfcfeb6726a7b3a45d3c1f499726a6a13c03bd80a",
+      "candidate_sha256": "0eff2af71e0ec4c3044448a8fb869820bef13c381f4d8bb46495994c2cb1bd33",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "06:50 Preflight consumes the same provider validation path and distinguishes expected market phase without business writes.",
+      "rollback_target": "Restore only this scoped source file from reviewed Git object 9aae0389c7ca75ad721a9ae52a637366787a1950."
+    },
+    {
+      "path": "tests/helpers/consolidationProviderReplay.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "9aae0389c7ca75ad721a9ae52a637366787a1950",
+      "predecessor_sha256": "dc5fe1c4da2eb6e26edf5666aab7fbaf2cb383c36292e21ac98be3f23cd10092",
+      "candidate_sha256": "54673df8eb88c9291b31eec19dbcdd76201f0c63f7fb331ab872de3276e20c81",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "Existing isolated provider replay invokes the shared adapters after the scoped refactor.",
+      "rollback_target": "Restore only this scoped source file from reviewed Git object 9aae0389c7ca75ad721a9ae52a637366787a1950."
+    },
+    {
+      "path": "tests/helpers/productionRealityProviderReplay.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "9aae0389c7ca75ad721a9ae52a637366787a1950",
+      "predecessor_sha256": "d08d2cb93e2804c86c4ba947e5e44b8e64beaa6c2d93915f6036c9c4b0fc9248",
+      "candidate_sha256": "62d54f1ff5f52023f66ab45616220961e6012e35b41943e045e2e08b1a81b788",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "Hash-bound real Production replay invokes the shared Finnhub and Fugle normalization path.",
+      "rollback_target": "Restore only this scoped source file from reviewed Git object 9aae0389c7ca75ad721a9ae52a637366787a1950."
+    },
+    {
+      "path": "supabase/functions/_shared/required-provider-validation.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "7b85054c1bfdd8fa23970aaec1cf75d12d948519693c16639a7d0d7d40d55b33",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "Single source of truth for required provider selection, transport, adapters, normalization, evidence, and failure classification.",
+      "rollback_target": "Remove only this additive scoped parity file; preserve Production business and historical data."
+    },
+    {
+      "path": "tests/precheckProductionParity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "f76717d9f9e146c2dc54814d88069b0c9102d7175fca03a648f840d294b2d319",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "Permanent eleven-provider parity gate using existing deidentified real Production fixtures and stale-invalid negative controls.",
+      "rollback_target": "Remove only this additive scoped parity file; preserve Production business and historical data."
+    },
+    {
+      "path": "tests/publicRelease.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "9aae0389c7ca75ad721a9ae52a637366787a1950",
+      "predecessor_sha256": "f3d436e61e6210c39407a957257203cf52459ff0104b1a273666c36a00fe09ae",
+      "candidate_sha256": "cb2365e7c339edcce507cd5681ff8cb0aa1abfda1be0f15b4c30e4cf3895e2e0",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "Move the existing TXF endpoint assertion to the shared provider validation source consumed by both functions.",
+      "rollback_target": "Restore only this scoped source file from reviewed Git object 9aae0389c7ca75ad721a9ae52a637366787a1950."
+    },
+    {
+      "path": "tests/productionLivePipeline.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "9aae0389c7ca75ad721a9ae52a637366787a1950",
+      "predecessor_sha256": "47e7356ed25937d63188761a8bc0cd3dfc135feaa575c442844909ca3967a6bc",
+      "candidate_sha256": "4cdad3f4dd62927280ef34f00deaa8b505378e3b533b837fbf83ca25f203a399",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "Point the existing Taiwan symbol, session, timestamp and Finnhub proxy assertions to the shared provider source used by both paths.",
+      "rollback_target": "Restore only this scoped source file from reviewed Git object 9aae0389c7ca75ad721a9ae52a637366787a1950."
+    },
+    {
+      "path": "tests/helpers/consolidationPublicExportIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "9aae0389c7ca75ad721a9ae52a637366787a1950",
+      "predecessor_sha256": "90e304ddd25ebccda0736814926121e19af4976972b05b12075f27d2285cebfd",
+      "candidate_sha256": "243d2b9fab29f5e1af23549f925a4c2ef0da306f9733140dc08e7e35ae52ef85",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "Add a reviewed transition while reconstructing and executing the exact prior 9/16 Integrity chain.",
+      "rollback_target": "Restore only this scoped source file from reviewed Git object 9aae0389c7ca75ad721a9ae52a637366787a1950."
+    },
+    {
+      "path": "tests/fetchCheckpointEvidence.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "9aae0389c7ca75ad721a9ae52a637366787a1950",
+      "predecessor_sha256": "947526dcf197bc2e8bfc7498169602b64408ac11ed29575a0b8cc31659366b95",
+      "candidate_sha256": "c2d3e8c27344673c0851a385b0d6cc1cebd6c622e6754a93ab853e56cefd32ed",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "Preserve the historical Fetch evidence pin through the newly nested reviewed transition.",
+      "rollback_target": "Restore only this scoped source file from reviewed Git object 9aae0389c7ca75ad721a9ae52a637366787a1950."
+    },
+    {
+      "path": "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "9aae0389c7ca75ad721a9ae52a637366787a1950",
+      "predecessor_sha256": "587182299154830e10a3fc7fb5610d5e34b0c32933934f89fb29266e18dd4634",
+      "candidate_sha256": "a4bee18cf2588840d3dddfe7fd88757185a3d6004a9c8e8c96591300a8fb087b",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "Preserve the unchanged historical Acceptance Integrity pin through the new transition.",
+      "rollback_target": "Restore only this scoped source file from reviewed Git object 9aae0389c7ca75ad721a9ae52a637366787a1950."
+    },
+    {
+      "path": "tests/productionReliabilityBaselineTransition.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "9aae0389c7ca75ad721a9ae52a637366787a1950",
+      "predecessor_sha256": "bf44663b7bf1e0118759aa7be4ccbc9f63c621d0fd02e4b3bb7e2eb2381ee7b0",
+      "candidate_sha256": "88e9fb824e79e174482450bdc1864b93a1c76e1107e610746897cf54ec3058f6",
+      "source_lineage": "Scoped 2026-09-16 Preflight and Production Fetch provider parity review from existing Production Reality fixtures and prior immutable Integrity baseline.",
+      "reason": "Assert new scoped transition, old predecessor chain, candidate drift, and authority escalation remain fail closed.",
+      "rollback_target": "Restore only this scoped source file from reviewed Git object 9aae0389c7ca75ad721a9ae52a637366787a1950."
+    }
+  ]
+}

@@ -68,7 +68,7 @@ test('verified Production v63 provider lanes, routing, auth dependencies and str
   const manifest = JSON.parse(readFileSync(new URL('docs/operations/core-fetch-source-manifest-20260907.json', root)));
   const incident = JSON.parse(readFileSync(new URL('docs/operations/core-stability-incident-amendment-20260908.json', root)));
   const historical = readConsolidationPublicExportIntegrity(incident)
-    .reviewedBaselinePredecessor.reviewedBaselinePredecessorReadSource;
+    .reviewedBaselinePredecessor.reviewedBaselinePredecessor.reviewedBaselinePredecessorReadSource;
   const source = historical('supabase/functions/fetch-market-data-v10/index.ts').toString();
   const hash = value => createHash('sha256').update(value).digest('hex');
   assert.equal(hash(source), manifest.candidate_source_sha256);

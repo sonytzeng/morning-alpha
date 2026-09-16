@@ -325,7 +325,7 @@ export function resolveProductionReliabilityIntegrity(registry, artifactBytes, r
   });
 }
 
-export function resolveConsolidationPublicExportIntegrity(registry, artifactBytes, readSource = defaultRead) {
+export function resolveProductionParityIntegrity(registry, artifactBytes, readSource = defaultRead) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/production-parity-baseline-transition-20260916.json'));
   return resolveReviewedBaselineTransition({
     manifest,
@@ -337,6 +337,17 @@ export function resolveConsolidationPublicExportIntegrity(registry, artifactByte
       artifactBytes,
       predecessorRead,
     ),
+  });
+}
+
+export function resolveConsolidationPublicExportIntegrity(registry, artifactBytes, readSource = defaultRead) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/precheck-production-parity-baseline-transition-20260916.json'));
+  return resolveReviewedBaselineTransition({
+    manifest,
+    readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, fileURLToPath(new URL('../../', import.meta.url))),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_PRODUCTION_PARITY_20260916',
+    verifyPredecessor: predecessorRead => resolveProductionParityIntegrity(registry, artifactBytes, predecessorRead),
   });
 }
 

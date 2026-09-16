@@ -6,12 +6,10 @@ import { createHash } from 'node:crypto';
 import { isolatedFunction } from './isolatedEdgeLoader.mjs';
 import { normalizeProviderTimestamp } from '../../supabase/functions/_shared/provider-normalization.mjs';
 import { buildCheckpointEvidence, validRetainedCheckpointRow } from '../../supabase/functions/_shared/fetch-checkpoint-evidence.mjs';
+import { normalizeRequiredFinnhubQuote, normalizeRequiredFugleQuote } from '../../supabase/functions/_shared/required-provider-validation.mjs';
 
 const source = readFileSync(new URL('../../supabase/functions/fetch-market-data-v10/index.ts', import.meta.url), 'utf8');
-const extractNumber = isolatedFunction(source, 'extractNumber');
-const normalizeFugleQuote = isolatedFunction(source, 'normalizeFugleQuote', {
-  extractNumber, normalizeTimestamp: normalizeProviderTimestamp,
-});
+const normalizeFugleQuote = normalizeRequiredFugleQuote;
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 
 export async function replayProviderQuote(entry) {
@@ -24,19 +22,16 @@ export async function replayProviderQuote(entry) {
     quote = normalizeFugleQuote(JSON.parse(bytes), entry.config.finnhubSymbol);
   } else {
     const fetchFinnhubQuote = isolatedFunction(source, 'fetchFinnhubQuote', {
-      MAX_RETRIES: 0, FETCH_TIMEOUT_MS: 6000, AbortController, DOMException,
-      setTimeout, clearTimeout, normalizeTimestamp: normalizeProviderTimestamp,
-      sanitizeProviderError: () => 'offline-provider-error',
+      normalizeRequiredFinnhubQuote,
       console: { log() {}, error() {} },
-      sleep: () => { throw new Error('Offline replay must not retry or sleep'); },
-      fetch: async url => {
-        const request = new URL(url);
+      fetchRequiredFinnhubResponse: async (symbol, apiKey) => {
+        const request = new URL(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(apiKey)}`);
         assert.equal(request.origin, 'https://finnhub.io');
         assert.equal(request.pathname, '/api/v1/quote');
         assert.equal(request.searchParams.get('symbol'), entry.config.finnhubSymbol);
         assert.equal(request.searchParams.get('token'), 'LOCAL_OFFLINE_PLACEHOLDER');
         requests++;
-        return new Response(bytes, { status: 200, headers: { 'content-type': 'application/json' } });
+        return { status: 200, payload: JSON.parse(bytes), error: null };
       },
     });
     quote = await fetchFinnhubQuote(entry.config.finnhubSymbol, 'LOCAL_OFFLINE_PLACEHOLDER', 'SYNTHETIC');

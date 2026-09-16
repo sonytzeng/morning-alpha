@@ -5,6 +5,10 @@ import { isolatedFunction } from './isolatedEdgeLoader.mjs';
 import { normalizeConfiguredProxyQuote, normalizeProviderTimestamp } from '../../supabase/functions/_shared/provider-normalization.mjs';
 import { sanitizeProviderError } from '../../supabase/functions/_shared/market-runtime-stability.mjs';
 import {
+  normalizeRequiredFinnhubQuote,
+  normalizeRequiredFugleQuote,
+} from '../../supabase/functions/_shared/required-provider-validation.mjs';
+import {
   normalizeFugleTaiwanCoreResult,
   resolveFugle2330Provider,
   resolveFugleTaiexProvider,
@@ -50,31 +54,19 @@ validateRealProductionCapture(capture, ['SPX', 'IXIC', 'SOX', 'NVDA', 'TSM', 'VI
 validateRealProductionCapture(taiwanPremarket, ['TAIEX', '2330']);
 validateRealProductionCapture(premarketFailure, ['TAIEX_DISCOVERY']);
 
-const extractNumber = isolatedFunction(fetchSource, 'extractNumber');
-const normalizeTimestamp = isolatedFunction(fetchSource, 'normalizeTimestamp', { normalizeProviderTimestamp });
-const normalizeFugleQuote = isolatedFunction(fetchSource, 'normalizeFugleQuote', { extractNumber, normalizeTimestamp });
+const normalizeFugleQuote = normalizeRequiredFugleQuote;
 const finnhubResponses = Object.fromEntries(
   Object.values(capture.responses)
     .filter(response => response.provider === 'finnhub')
     .map(response => [response.source_symbol, response]),
 );
 const fetchFinnhubQuote = isolatedFunction(fetchSource, 'fetchFinnhubQuote', {
-  MAX_RETRIES: 1,
-  FETCH_TIMEOUT_MS: 6000,
-  sleep: async () => {},
-  sanitizeProviderError,
-  normalizeTimestamp,
-  setTimeout,
-  clearTimeout,
-  AbortController,
-  DOMException,
-  fetch: async input => {
-    const symbol = new URL(String(input)).searchParams.get('symbol');
+  fetchRequiredFinnhubResponse: async symbol => {
     const captured = finnhubResponses[symbol];
-    return captured
-      ? new Response(JSON.stringify(captured.payload), { status: captured.http_status, headers: { 'Content-Type': 'application/json' } })
-      : new Response('{}', { status: 404 });
+    return captured ? { status: captured.http_status, payload: captured.payload, error: null }
+      : { status: 404, payload: null, error: 'HTTP_404' };
   },
+  normalizeRequiredFinnhubQuote,
   console: { log() {}, warn() {}, error() {} },
 });
 

@@ -7,7 +7,10 @@ import {
   INTERNAL_AUTH_ERROR_CODES,
 } from '../_shared/internal-function-auth.mjs';
 import {
+  FUGLE_2330_CONTRACT,
   FUGLE_TAIEX_CONTRACT,
+  normalizeFugleTaiwanCoreResult,
+  resolveFugle2330Provider,
   resolveFugleTaiexProvider,
 } from '../_shared/fugle-taiex-provider.mjs';
 import {
@@ -19,7 +22,7 @@ import {
   validateRequiredProviderRegistry,
 } from '../_shared/provider-reliability-contract.mjs';
 
-const VERSION = 'MARKET_READINESS_PREFLIGHT_V1';
+const VERSION = 'MARKET_READINESS_PREFLIGHT_V2_PRODUCTION_PARITY';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -43,6 +46,20 @@ interface ProviderCheck {
   response_hash: string | null;
   shape: JsonRecord | null;
   sample?: JsonRecord | null;
+  observations?: JsonRecord[];
+  rejected_field?: string | null;
+  discovery_status?: string | null;
+}
+
+interface FugleCoreResolution {
+  ok: boolean;
+  endpoint?: unknown;
+  status?: unknown;
+  payload?: unknown;
+  error?: unknown;
+  failureCode?: unknown;
+  rejectedField?: unknown;
+  discoveryStatus?: unknown;
 }
 
 function asRecord(value: unknown): JsonRecord {
@@ -153,6 +170,22 @@ async function checkedResult(
   };
 }
 
+async function providerObservation(
+  endpoint: string,
+  result: { status: number | null; payload: unknown; error: string | null },
+  captureSample: boolean,
+): Promise<JsonRecord> {
+  const sanitized = result.payload ? asRecord(sanitizeProductionMarketPayload(result.payload)) : null;
+  return {
+    endpoint,
+    http_status: result.status,
+    error: result.error,
+    response_hash: sanitized ? await sha256Hex(stableJson(sanitized)) : null,
+    shape: sanitized ? asRecord(describeProductionResponseShape(sanitized)) : null,
+    ...(captureSample ? { sample: sanitized } : {}),
+  };
+}
+
 async function checkFinnhub(
   slot: typeof REQUIRED_PROVIDER_SLOTS[number],
   apiKey: string,
@@ -178,49 +211,69 @@ function fugleUrl(path: string): string {
   return `https://api.fugle.tw/marketdata/v1.0/${path}`;
 }
 
-async function checkTaiex(
+async function checkTaiwanCore(
+  key: 'TAIEX' | '2330',
   apiKey: string,
   tradingDate: string,
   captureSample: boolean,
   phase: 'premarket' | 'intraday' = 'premarket',
 ): Promise<ProviderCheck> {
-  const slot = REQUIRED_PROVIDER_SLOTS.find(item => item.key === 'TAIEX')!;
+  const slot = REQUIRED_PROVIDER_SLOTS.find(item => item.key === key)!;
+  const contract = key === 'TAIEX' ? FUGLE_TAIEX_CONTRACT : FUGLE_2330_CONTRACT;
   if (!apiKey) {
-    return checkedResult(slot, FUGLE_TAIEX_CONTRACT.tickerEndpoint, { status: null, payload: null, error: 'CONFIGURATION_MISSING' }, false, captureSample);
+    return checkedResult(slot, contract.tickerEndpoint, { status: null, payload: null, error: 'CONFIGURATION_MISSING' }, false, captureSample);
   }
-  let last = { status: null as number | null, payload: null as unknown, error: null as string | null };
-  const result = await resolveFugleTaiexProvider(async ({ endpoint }: { endpoint: string }) => {
-    last = await fetchJson(fugleUrl(endpoint), fugleHeaders(apiKey));
-    return last;
-  }, { tradingDate, phase });
-  if (result.ok) {
-    return checkedResult(slot, String(result.endpoint), last, true, captureSample);
+  const responses = new Map<string, { status: number | null; payload: unknown; error: string | null }>();
+  const resolver = key === 'TAIEX' ? resolveFugleTaiexProvider : resolveFugle2330Provider;
+  const result = await resolver(async ({ endpoint }: { endpoint: string }) => {
+    const response = await fetchJson(fugleUrl(endpoint), fugleHeaders(apiKey));
+    responses.set(endpoint, response);
+    return response;
+  }, { tradingDate, phase }) as FugleCoreResolution;
+
+  const endpoint = String(result.endpoint || (phase === 'premarket' ? contract.tickerEndpoint : contract.quoteEndpoint));
+  const primary = responses.get(endpoint) || {
+    status: Number.isFinite(Number(result.status)) ? Number(result.status) : null,
+    payload: result.payload || null,
+    error: result.error ? String(result.error) : null,
+  };
+  const normalizedQuote = result.ok ? normalizeFugleTaiwanCoreResult(result, key) : null;
+  const checked = await checkedResult(slot, endpoint, primary, Boolean(normalizedQuote), captureSample);
+  const observations = await Promise.all([...responses.entries()]
+    .filter(([observedEndpoint]) => observedEndpoint !== endpoint)
+    .map(([observedEndpoint, response]) => providerObservation(observedEndpoint, response, captureSample)));
+  if (result.ok && normalizedQuote) {
+    return {
+      ...checked,
+      ...(observations.length ? { observations } : {}),
+      discovery_status: key === 'TAIEX' ? String(result.discoveryStatus || '') : null,
+    };
   }
-  const checked = await checkedResult(slot, String(result.endpoint || slot.endpoint), last, false, captureSample);
-  return { ...checked, failure_code: String(result.failureCode || checked.failure_code) };
+  return {
+    ...checked,
+    failure_code: String(result.failureCode || checked.failure_code),
+    rejected_field: result.rejectedField ? String(result.rejectedField) : null,
+    ...(observations.length ? { observations } : {}),
+  };
 }
 
 async function checkFugleQuote(
-  key: '2330' | 'TXF',
+  key: 'TXF',
   apiKey: string,
   tradingDate: string,
   captureSample: boolean,
 ): Promise<ProviderCheck> {
   const slot = REQUIRED_PROVIDER_SLOTS.find(item => item.key === key)!;
-  const endpoint = key === 'TXF'
-    ? `${slot.endpoint}?session=afterhours`
-    : slot.endpoint;
+  const endpoint = `${slot.endpoint}?session=afterhours`;
   if (!apiKey) {
     return checkedResult(slot, endpoint, { status: null, payload: null, error: 'CONFIGURATION_MISSING' }, false, captureSample);
   }
   const result = await fetchJson(fugleUrl(endpoint), fugleHeaders(apiKey));
   const payload = asRecord(result.payload);
   const symbol = normalized(payload.symbol);
-  const identityValid = key === '2330' ? symbol === '2330' : /^TXF[A-Z0-9!]+$/.test(symbol);
+  const identityValid = /^TXF[A-Z0-9!]+$/.test(symbol);
   const sourceTimestamp = payload.lastUpdated || payload.closeTime || asRecord(payload.lastTrade).time || asRecord(payload.total).time;
-  const dateValid = key === 'TXF'
-    ? taipeiDateFromTimestamp(sourceTimestamp) === tradingDate
-    : String(payload.date || '') === tradingDate;
+  const dateValid = taipeiDateFromTimestamp(sourceTimestamp) === tradingDate;
   const priceValid = [payload.previousClose, payload.referencePrice, payload.closePrice, payload.price]
     .some(positive);
   return checkedResult(slot, endpoint, result, identityValid && dateValid && priceValid, captureSample);
@@ -284,8 +337,8 @@ Deno.serve(async (req) => {
   const checks = await Promise.all([
     ...REQUIRED_PROVIDER_SLOTS.filter(slot => slot.provider === 'finnhub')
       .map(slot => checkFinnhub(slot, finnhubKey, captureSample)),
-    checkTaiex(fugleKey, tradingDate, captureSample, taiexPhase),
-    checkFugleQuote('2330', fugleKey, tradingDate, captureSample),
+    checkTaiwanCore('TAIEX', fugleKey, tradingDate, captureSample, taiexPhase),
+    checkTaiwanCore('2330', fugleKey, tradingDate, captureSample, taiexPhase),
     checkFugleQuote('TXF', fugleKey, tradingDate, captureSample),
   ]);
   const readinessStatus = readiness(checks);

@@ -1,0 +1,58 @@
+{
+  "schema_version": "MORNING_ALPHA_REAL_PRODUCTION_PREMARKET_CAPTURE_V2",
+  "real_production_capture": true,
+  "business_date": "2026-09-16",
+  "market_phase": "premarket_contract_diagnostic",
+  "capture_time": "2026-09-16T14:01:17.313105+08:00",
+  "captured_via": "Production market-readiness-preflight V3 diagnostic request 491 with premarket adapter phase",
+  "lineage": {
+    "project_ref": "cttfzgvhiewfckydcrci",
+    "function": "market-readiness-preflight",
+    "function_version": 3,
+    "request_id": 491,
+    "function_contract_version": "MARKET_READINESS_PREFLIGHT_V2_PRODUCTION_PARITY",
+    "readiness_status": "READY",
+    "provider_contract": "11/11",
+    "business_writes": []
+  },
+  "contains_secrets": false,
+  "responses": {
+    "TAIEX": {
+      "provider": "fugle",
+      "source_symbol": "IX0001",
+      "endpoint": "stock/intraday/ticker/IX0001",
+      "http_status": 200,
+      "source_hash": "9295dd9d46e76c050b62d28baf4f18d622aeba2ac28bb4ed464a707386f4b7aa",
+      "payload": {
+        "closeTime": "1330",
+        "date": "2026-09-16",
+        "exchange": "TWSE",
+        "market": "TSE",
+        "name": "發行量加權股價指數",
+        "openTime": "0900",
+        "previousClose": 45511.49,
+        "symbol": "IX0001",
+        "type": "INDEX"
+      }
+    },
+    "2330": {
+      "provider": "fugle",
+      "source_symbol": "2330",
+      "endpoint": "stock/intraday/ticker/2330",
+      "http_status": 200,
+      "source_hash": "12ad808986b9a26484f0c92ae2ec35935605792211c3511aae0dbfea97512715",
+      "payload": {
+        "date": "2026-09-16",
+        "exchange": "TWSE",
+        "industry": "24",
+        "market": "TSE",
+        "name": "台積電",
+        "previousClose": 2380,
+        "referencePrice": 2380,
+        "securityType": "01",
+        "symbol": "2330",
+        "type": "EQUITY"
+      }
+    }
+  }
+}

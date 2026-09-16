@@ -1,0 +1,188 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_PRODUCTION_PARITY_20260916",
+  "candidate_base_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+  "predecessor_integrity_id": "MORNING_ALPHA_PRODUCTION_RELIABILITY_20260915",
+  "approval_provenance": "Sony explicitly authorized the Morning Alpha Production Parity Closure, including real deidentified Production response capture, exact adapter and contract replay, the narrowly scoped TAIEX and 2330 provider correction, full Release CI, controlled Function release, and Production smoke while preserving the 2026-09-16 failure and forbidding historical recovery, Auth, RLS, secret, member, UI, LINE, decision, recommendation, Atomic, and unrelated changes.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/fugleTaiexProvider.test.mjs",
+    "tests/providerReliabilityClosure.test.mjs",
+    "tests/productionRealityProviderReplay.test.mjs",
+    "tests/productionReliabilityClosureReplay.test.mjs",
+    "tests/productionReliabilityBaselineTransition.test.mjs",
+    "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+    "tests/fetchCheckpointEvidence.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": "supabase/functions/_shared/fugle-taiex-provider.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+      "predecessor_sha256": "5204bab01bf3f66cb738a117f1d1ed02e84ffccc8679e2cfe3e9a2ba7bf84843",
+      "candidate_sha256": "5791abf19ed567267c47147f331f93d0133f8d4a57d2f2b5f8688e2e39a7dff8",
+      "source_lineage": "Production V67 Taiwan provider path plus deidentified 2026-09-16 Fugle IX0001 and 2330 ticker, quote, discovery, status, shape, and hash evidence.",
+      "reason": "Use one fail-closed phase-aware Fugle adapter for both Production Fetch and readiness validation without stale or previous-day fallback.",
+      "rollback_target": "Restore this shared adapter from Git object 58c25dc3acb029d8630c0a48eb09f05bba913206."
+    },
+    {
+      "path": "supabase/functions/fetch-market-data-v10/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+      "predecessor_sha256": "216fde43400b90c98996a6ddcdd6d3451b44eeab3393b7262bd9e3bbfefb93f9",
+      "candidate_sha256": "c0576ce0ac3a66e3c2fb26d9b35675006bf4713aebc52ead3975817e074ba115",
+      "source_lineage": "Production V67 Fetch entrypoint routed through the exact reviewed Taiwan core provider adapter used by replay and preflight.",
+      "reason": "Correct only the TAIEX and 2330 phase contract while retaining the existing eleven-slot Atomic commit and downstream behavior.",
+      "rollback_target": "Restore Fetch from Git object 58c25dc3acb029d8630c0a48eb09f05bba913206."
+    },
+    {
+      "path": "supabase/functions/market-readiness-preflight/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+      "predecessor_sha256": "7c43d370a2077be9fa6034d91b99e635374495e13ca1fbbf5f18e9d72287c639",
+      "candidate_sha256": "7b46665e8fc1b75d8441c0ebfcfeb6726a7b3a45d3c1f499726a6a13c03bd80a",
+      "source_lineage": "Existing service-role-only 06:50 readiness function with the same Taiwan adapter, normalization, market phase, and contract as Production Fetch.",
+      "reason": "Make 06:50 validate real premarket contracts instead of treating HTTP 200 or a phase-empty discovery list as readiness.",
+      "rollback_target": "Restore Preflight from Git object 58c25dc3acb029d8630c0a48eb09f05bba913206."
+    },
+    {
+      "path": "tests/fugleTaiexProvider.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+      "predecessor_sha256": "7082a7e830c7d38842cb7fdf87e59f35ba3639041f0d090557b0b20e1cccaa87",
+      "candidate_sha256": "141e3e3c28c52101fd3d6c2ecbbbc6e6588e536d12435bca196b069cc82ab15d",
+      "source_lineage": "Existing provider regression extended with exact 2026-09-16 premarket phase shapes and fail-closed negative controls.",
+      "reason": "Lock direct IX0001 validity, advisory phase-empty discovery, 2330 ticker routing, quote routing, and stale rejection.",
+      "rollback_target": "Restore the provider test from Git object 58c25dc3acb029d8630c0a48eb09f05bba913206."
+    },
+    {
+      "path": "tests/helpers/productionRealityProviderReplay.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+      "predecessor_sha256": "ab6fb96faccd1f9cb92fa12ac69907485b446e6a8ae2915afeff6bb52096564a",
+      "candidate_sha256": "d08d2cb93e2804c86c4ba947e5e44b8e64beaa6c2d93915f6036c9c4b0fc9248",
+      "source_lineage": "Real deidentified 2026-09-16 Production captures executed through the exact Fetch adapter and normalization modules.",
+      "reason": "Reject hand-written mocks and timestamp rewrites while enforcing capture, adapter, contract, and market-phase parity gates.",
+      "rollback_target": "Restore the replay helper from Git object 58c25dc3acb029d8630c0a48eb09f05bba913206."
+    },
+    {
+      "path": "tests/productionRealityProviderReplay.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+      "predecessor_sha256": "be9338696e4ec194af54650fa536d153128a6bd6b93f2ce2c7aa0519f3631f5c",
+      "candidate_sha256": "c8779f296569258ac880a3897f69da7810eb458205bef940500f1612f89c4691",
+      "source_lineage": "Affected Replay test over hash-bound Production captures and the shared Production provider adapter.",
+      "reason": "Require all four parity gates and prove fixtures without real Production provenance fail closed.",
+      "rollback_target": "Restore the replay test from Git object 58c25dc3acb029d8630c0a48eb09f05bba913206."
+    },
+    {
+      "path": "tests/productionReliabilityClosureReplay.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+      "predecessor_sha256": "0af62f3785b3a4320d65b2791e83d8af34d1bf12e82035c0cc9eec70c0c40d5f",
+      "candidate_sha256": "75b1fe6ce65350c2846ed0c6be26439e9692b5acf6411a233e8e6db4dd4c4341",
+      "source_lineage": "Existing full persisted-chain replay composition with the 2026-09-16 real provider input boundary and parity gates.",
+      "reason": "Bind the complete closure replay to real current-date inputs without relabeling any historical natural-day failure.",
+      "rollback_target": "Restore the closure replay test from Git object 58c25dc3acb029d8630c0a48eb09f05bba913206."
+    },
+    {
+      "path": "tests/helpers/reviewedBaselineTransition.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+      "predecessor_sha256": "1fc83a16c0de588629ba861f77450e9110fea5b18f398c3381302d9269c3498f",
+      "candidate_sha256": "a91e0aaa6f9c1e0ec47594eebb568e89cf9b44eb793b254526c14c326ffb57bd",
+      "source_lineage": "Existing fail-closed transition verifier extended to chain a named reviewed predecessor without bypassing any hash or authority assertion.",
+      "reason": "Allow the 9/16 parity admission to reconstruct and execute the complete reviewed 9/15 predecessor Integrity chain.",
+      "rollback_target": "Restore the transition helper from Git object 58c25dc3acb029d8630c0a48eb09f05bba913206."
+    },
+    {
+      "path": "tests/helpers/consolidationPublicExportIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+      "predecessor_sha256": "ca1883a11f6ba005e93e464f067860dcce70ba65f0021a4733507781f11288fb",
+      "candidate_sha256": "90e304ddd25ebccda0736814926121e19af4976972b05b12075f27d2285cebfd",
+      "source_lineage": "Unchanged historical Integrity stack wrapped by a second reviewed transition that reconstructs the complete 9/15 successor before execution.",
+      "reason": "Admit only the Production parity candidate while preserving every prior Integrity verifier and exact predecessor source view.",
+      "rollback_target": "Restore the Integrity entrypoint from Git object 58c25dc3acb029d8630c0a48eb09f05bba913206."
+    },
+    {
+      "path": "tests/productionReliabilityBaselineTransition.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+      "predecessor_sha256": "209d7d86b02025e74a699857d4233db5e39ebbf1b8aa5ecc4196eb9c15dec52b",
+      "candidate_sha256": "bf44663b7bf1e0118759aa7be4ccbc9f63c621d0fd02e4b3bb7e2eb2381ee7b0",
+      "source_lineage": "Existing baseline-transition regression extended to assert the new reviewed successor and preserved 9/15 predecessor chain.",
+      "reason": "Prove candidate drift, predecessor drift, and prohibited authority escalation remain fail closed across both transitions.",
+      "rollback_target": "Restore the transition test from Git object 58c25dc3acb029d8630c0a48eb09f05bba913206."
+    },
+    {
+      "path": "docs/operations/evidence/production-parity-report-20260916.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "449df25bec951cc48aa2ceea7117e2072f999cdb3106a9bb1c5c34be72e95d06",
+      "source_lineage": "Read-only Production response metadata, endpoint, shape, hash, phase, lineage, prior Replay behavior, and exact parity comparison.",
+      "reason": "Record the single capture-path root cause and its two observed provider manifestations without secrets or historical rewrites.",
+      "rollback_target": "Remove only this additive evidence report; do not modify any Production history."
+    },
+    {
+      "path": "tests/fixtures/production-parity-v2/premarket-failure-20260916.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "206e781c9831386b55310e09d5be8b899438de2a45852f8f4a3e7306cbb82f71",
+      "source_lineage": "Exact deidentified 2026-09-16 06:50 TAIEX payload and hash-bound 2330 failure shape captured from Production evidence.",
+      "reason": "Preserve the natural failed boundary that the old Replay missed and prevent synthetic phase substitution.",
+      "rollback_target": "Remove only this additive failed-boundary fixture; preserve the Production failure records."
+    },
+    {
+      "path": "tests/fixtures/production-parity-v2/provider-capture-20260916.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "f996adc9541880bb5bfc11e7c449d48a0910ca877237e77ecb8f93902d1922f4",
+      "source_lineage": "Deidentified 2026-09-16 Production diagnostic capture for the complete immutable eleven-provider readiness set.",
+      "reason": "Bind provider replay to real status, endpoint, response shape, hash, phase, and capture lineage for all required slots.",
+      "rollback_target": "Remove only this additive provider capture after a reviewed real Production replacement."
+    },
+    {
+      "path": "tests/fixtures/production-parity-v2/taiwan-premarket-capture-20260916.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "df43f31f436042d767e97a36471e0f15193c3410c999096c24f297ebb66546ed",
+      "source_lineage": "Exact deidentified 2026-09-16 IX0001 and 2330 ticker payloads captured through the shared Production premarket adapter.",
+      "reason": "Prove both Taiwan core symbols satisfy the official current-date premarket ticker contract without timestamp rewrites.",
+      "rollback_target": "Remove only this additive Taiwan premarket capture after a reviewed real Production replacement."
+    },
+    {
+      "path": "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+      "predecessor_sha256": "ee604ddaa2c6ca4836144b40b3731bcdc831d70ee3f6032d313c8681674b32a1",
+      "candidate_sha256": "587182299154830e10a3fc7fb5610d5e34b0c32933934f89fb29266e18dd4634",
+      "source_lineage": "Existing Acceptance Integrity regression pointed through the new parity transition to the unchanged 9/15 predecessor reconstruction.",
+      "reason": "Keep the historical Acceptance entry pin exact while admitting no Acceptance source or behavior change.",
+      "rollback_target": "Restore the Acceptance Integrity test from Git object 58c25dc3acb029d8630c0a48eb09f05bba913206."
+    },
+    {
+      "path": "tests/fetchCheckpointEvidence.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "58c25dc3acb029d8630c0a48eb09f05bba913206",
+      "predecessor_sha256": "ce58d8385aec707af1e6af7fdce3ea4198e285ed8396dfbdd3c79b81d3c38748",
+      "candidate_sha256": "947526dcf197bc2e8bfc7498169602b64408ac11ed29575a0b8cc31659366b95",
+      "source_lineage": "Existing historical Fetch declaration regression pointed through the new parity transition to the unchanged V63 predecessor source.",
+      "reason": "Preserve every historical provider-lane declaration pin while current parity behavior remains covered by affected tests.",
+      "rollback_target": "Restore the Fetch evidence test from Git object 58c25dc3acb029d8630c0a48eb09f05bba913206."
+    }
+  ]
+}

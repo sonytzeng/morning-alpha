@@ -301,7 +301,7 @@ function verifyPublicExport(seal, registry, artifactBytes, readSource) {
   };
 }
 
-export function resolveConsolidationPublicExportIntegrity(registry, artifactBytes, readSource = defaultRead) {
+export function resolveProductionReliabilityIntegrity(registry, artifactBytes, readSource = defaultRead) {
   if (FINAL_SEAL === null) throw Object.assign(new Error('EIGHTH_REVIEWED_SOURCE_FREEZE_REQUIRED'),
     { code: 'EIGHTH_REVIEWED_SOURCE_FREEZE_REQUIRED' });
   const manifest = JSON.parse(readSource('docs/operations/evidence/production-reliability-baseline-transition-20260915.json'));
@@ -324,5 +324,21 @@ export function resolveConsolidationPublicExportIntegrity(registry, artifactByte
     ),
   });
 }
+
+export function resolveConsolidationPublicExportIntegrity(registry, artifactBytes, readSource = defaultRead) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/production-parity-baseline-transition-20260916.json'));
+  return resolveReviewedBaselineTransition({
+    manifest,
+    readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, fileURLToPath(new URL('../../', import.meta.url))),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_PRODUCTION_RELIABILITY_20260915',
+    verifyPredecessor: predecessorRead => resolveProductionReliabilityIntegrity(
+      registry,
+      artifactBytes,
+      predecessorRead,
+    ),
+  });
+}
+
 export const readConsolidationPublicExportIntegrity = registry =>
   resolveConsolidationPublicExportIntegrity(registry, defaultRead(PUBLIC_EXPORT_ARTIFACT_PATH));

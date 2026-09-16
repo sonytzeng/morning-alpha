@@ -1,0 +1,87 @@
+{
+  "schema_version": "MORNING_ALPHA_REAL_PRODUCTION_PROVIDER_CAPTURE_V2",
+  "real_production_capture": true,
+  "business_date": "2026-09-16",
+  "market_phase": "diagnostic",
+  "capture_time": "2026-09-16T13:33:52.706791+08:00",
+  "captured_via": "Production market-readiness-preflight V2 diagnostic request 490",
+  "lineage": {
+    "project_ref": "cttfzgvhiewfckydcrci",
+    "function": "market-readiness-preflight",
+    "function_version": 2,
+    "request_id": 490,
+    "business_writes": []
+  },
+  "contains_secrets": false,
+  "responses": {
+    "SPX": {
+      "provider": "finnhub", "source_symbol": "SPY", "endpoint": "quote", "http_status": 200,
+      "source_hash": "edc22b42b1acdf5f8188e0e4be550555887b10acdff5cd609f2ad2c51dd45fca",
+      "payload": { "c": 757.39, "d": -3.49, "dp": -0.4587, "h": 760.35, "l": 756.15, "o": 760.117, "pc": 760.88, "t": 1789502400 }
+    },
+    "IXIC": {
+      "provider": "finnhub", "source_symbol": "QQQ", "endpoint": "quote", "http_status": 200,
+      "source_hash": "c53f75f2e9c5b3d41d25d3ba1bbfb3a867042dcfdc15c64c5a812c1bd3a474bc",
+      "payload": { "c": 704.54, "d": -4.64, "dp": -0.6543, "h": 709.5299, "l": 703.635, "o": 708.8, "pc": 709.18, "t": 1789502400 }
+    },
+    "SOX": {
+      "provider": "finnhub", "source_symbol": "SOXX", "endpoint": "quote", "http_status": 200,
+      "source_hash": "cda4105c70a3b1b726d0b16245c93b38b8f31e6f3a62048404e4d56ff4aea674",
+      "payload": { "c": 498.85, "d": 1.45, "dp": 0.2915, "h": 504.74, "l": 496.58, "o": 502.55, "pc": 497.4, "t": 1789502400 }
+    },
+    "NVDA": {
+      "provider": "finnhub", "source_symbol": "NVDA", "endpoint": "quote", "http_status": 200,
+      "source_hash": "9ecb0a4e04566a9a3d3338cd21ce7212a2e25549ff879f08527fed6e62beef13",
+      "payload": { "c": 212.17, "d": 1.21, "dp": 0.5736, "h": 213.94, "l": 211.16, "o": 213.375, "pc": 210.96, "t": 1789502400 }
+    },
+    "TSM": {
+      "provider": "finnhub", "source_symbol": "TSM", "endpoint": "quote", "http_status": 200,
+      "source_hash": "cbf8893e30cc26ec96e10ee463862e4bd5aea8e9b82cb91382fd689531216828",
+      "payload": { "c": 413.75, "d": -4.26, "dp": -1.0191, "h": 421.94, "l": 412.55, "o": 421.94, "pc": 418.01, "t": 1789502400 }
+    },
+    "VIX": {
+      "provider": "finnhub", "source_symbol": "VXX", "endpoint": "quote", "http_status": 200,
+      "source_hash": "c80299ca7fd061d9685996377b61b848eaec2792cf9f44cc687397b39f1535d2",
+      "payload": { "c": 18.26, "d": 0.03, "dp": 0.1646, "h": 18.52, "l": 18.08, "o": 18.1, "pc": 18.23, "t": 1789502400 }
+    },
+    "DXY": {
+      "provider": "finnhub", "source_symbol": "UUP", "endpoint": "quote", "http_status": 200,
+      "source_hash": "01355fd74f5233419f8248cfdd4fdbcc91bee657d2573c9acb978c0ddf12e371",
+      "payload": { "c": 28.22, "d": 0.05, "dp": 0.1775, "h": 28.23, "l": 28.185, "o": 28.21, "pc": 28.17, "t": 1789502400 }
+    },
+    "US10Y": {
+      "provider": "finnhub", "source_symbol": "IEF", "endpoint": "quote", "http_status": 200,
+      "source_hash": "0041b300311d301cefc4794238d8e7c3aa7b0abfd0f96fcd55e20f22e2351c6e",
+      "payload": { "c": 90.82, "d": -0.11, "dp": -0.121, "h": 90.92, "l": 90.75, "o": 90.84, "pc": 90.93, "t": 1789502400 }
+    },
+    "TAIEX": {
+      "provider": "fugle", "source_symbol": "IX0001", "endpoint": "stock/intraday/ticker/IX0001", "http_status": 200,
+      "source_hash": "9295dd9d46e76c050b62d28baf4f18d622aeba2ac28bb4ed464a707386f4b7aa",
+      "payload": { "closeTime": "1330", "date": "2026-09-16", "exchange": "TWSE", "market": "TSE", "name": "發行量加權股價指數", "openTime": "0900", "previousClose": 45511.49, "symbol": "IX0001", "type": "INDEX" }
+    },
+    "2330": {
+      "provider": "fugle", "source_symbol": "2330", "endpoint": "stock/intraday/quote/2330", "http_status": 200,
+      "source_hash": "6f9a54a8c193db905fe3c262cb4c5da480ae6d22df563cfc2113f77db805e8c9",
+      "payload": {
+        "avgPrice": 2380.93, "change": 0, "changePercent": 0, "closePrice": 2380, "closeTime": 1789536600000000,
+        "date": "2026-09-16", "exchange": "TWSE", "highPrice": 2395, "highTime": 1789529832155277,
+        "lastTrade": { "price": 2380, "time": 1789536600000000 }, "lastUpdated": 1789536600000000,
+        "lowPrice": 2375, "lowTime": 1789520409721819, "market": "TSE", "name": "台積電",
+        "openPrice": 2375, "openTime": 1789520409721819, "previousClose": 2385, "referencePrice": 2380,
+        "symbol": "2330", "total": { "time": 1789536600000000 }, "type": "EQUITY"
+      }
+    },
+    "TXF": {
+      "provider": "fugle_futopt", "source_symbol": "TXF1!", "endpoint": "futopt/intraday/quote/TXF1!?session=afterhours", "http_status": 200,
+      "source_hash": "9b64c129bae3a971f049004dfea2515dce6bf9890c24cd569c3d175eb1645c35",
+      "payload": {
+        "avgPrice": 45673.28, "change": -87, "changePercent": -0.19, "closePrice": 45640, "closeTime": 1789505979148000,
+        "date": "2026-09-15", "exchange": "TAIFEX", "highPrice": 45856, "highTime": 1789470596152000,
+        "lastTrade": { "price": 45640, "time": 1789505979148000 }, "lastUpdated": 1789506000014000,
+        "lowPrice": 45475, "lowTime": 1789484400791000, "name": "臺股期貨106", "openPrice": 45684,
+        "openTime": 1789455600034000, "previousClose": 45685, "symbol": "TXFJ6",
+        "total": { "time": 1789505979148000 }, "type": "FUTURE_AH"
+      }
+    }
+  }
+}

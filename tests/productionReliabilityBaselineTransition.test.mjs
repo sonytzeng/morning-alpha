@@ -8,9 +8,9 @@ import {
 } from './helpers/consolidationPublicExportIntegrity.mjs';
 
 const MANIFEST = 'docs/operations/evidence/production-reliability-baseline-transition-20260915.json';
+const PARITY_MANIFEST = 'docs/operations/evidence/production-parity-baseline-transition-20260916.json';
 const REGISTRY = 'docs/operations/core-stability-incident-amendment-20260908.json';
 const ENTRY = 'tests/helpers/consolidationPublicExportIntegrity.mjs';
-const GENERIC = 'tests/helpers/reviewedBaselineTransition.mjs';
 const PIPELINE_TEST = 'tests/productionLivePipeline.test.mjs';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const json = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
@@ -20,14 +20,17 @@ const artifact = read(PUBLIC_EXPORT_ARTIFACT_PATH);
 const manifest = JSON.parse(read(MANIFEST));
 const verify = (source = read) => resolveConsolidationPublicExportIntegrity(registry, artifact, source);
 
-test('reviewed reliability baseline pins transition roots and reconstructs all eleven predecessors', () => {
+test('reviewed parity baseline preserves the reliability transition and reconstructs all predecessors', () => {
   assert.equal(hash(read(MANIFEST)), '9d84af2ee3a805132d1769147ca5256d9439d1ad2f744b9faa8573d81ddc5309');
-  assert.equal(hash(read(GENERIC)), '1fc83a16c0de588629ba861f77450e9110fea5b18f398c3381302d9269c3498f');
-  assert.equal(hash(read(ENTRY)), 'ca1883a11f6ba005e93e464f067860dcce70ba65f0021a4733507781f11288fb');
   const result = verify();
-  assert.equal(result.reviewedBaselineTransition.transition_id, 'MORNING_ALPHA_PRODUCTION_RELIABILITY_20260915');
-  assert.equal(hash(result.reviewedBaselinePredecessorReadSource(ENTRY)), 'd4cda72931e160b6e07457f83f916c5390e0123bf497e81d33de8c37b42994bc');
-  assert.equal(hash(result.reviewedBaselinePredecessorReadSource(PIPELINE_TEST)), '9021c72366b2b5a31ec9f9b53fb12ed52dd0047c8f543028cbbd87de629ea0e8');
+  assert.equal(result.reviewedBaselineTransition.transition_id, 'MORNING_ALPHA_PRODUCTION_PARITY_20260916');
+  assert.equal(result.reviewedBaselineTransition.predecessor_integrity_id, 'MORNING_ALPHA_PRODUCTION_RELIABILITY_20260915');
+  assert.equal(result.reviewedBaselinePredecessor.reviewedBaselineTransition.transition_id,
+    'MORNING_ALPHA_PRODUCTION_RELIABILITY_20260915');
+  assert.equal(hash(result.reviewedBaselinePredecessor.reviewedBaselinePredecessorReadSource(ENTRY)),
+    'd4cda72931e160b6e07457f83f916c5390e0123bf497e81d33de8c37b42994bc');
+  assert.equal(hash(result.reviewedBaselinePredecessor.reviewedBaselinePredecessorReadSource(PIPELINE_TEST)),
+    '9021c72366b2b5a31ec9f9b53fb12ed52dd0047c8f543028cbbd87de629ea0e8');
   assert.equal(result.reviewedBaselineTransition.natural_day_pass_claimed, false);
 });
 
@@ -46,4 +49,7 @@ test('candidate drift, predecessor drift, and authority escalation remain fail c
     mutate(changed);
     assert.throws(() => verify(path => path === MANIFEST ? json(changed) : read(path)));
   }
+  const parity = JSON.parse(read(PARITY_MANIFEST));
+  parity.auth_change = true;
+  assert.throws(() => verify(path => path === PARITY_MANIFEST ? json(parity) : read(path)));
 });

@@ -22,11 +22,12 @@ export function resolveReviewedBaselineTransition({
   readSource,
   readPredecessor,
   verifyPredecessor,
+  expectedPredecessorIntegrityId = 'CORE_ACCEPTANCE_DEFAULT_V1_ADMISSION',
 }) {
   assert.equal(manifest.schema_version, 'REVIEWED_BASELINE_TRANSITION_V1');
   assert.match(String(manifest.transition_id || ''), /^[A-Z0-9_]+$/);
   assert.match(String(manifest.candidate_base_git_sha || ''), /^[a-f0-9]{40}$/);
-  assert.equal(manifest.predecessor_integrity_id, 'CORE_ACCEPTANCE_DEFAULT_V1_ADMISSION');
+  assert.equal(manifest.predecessor_integrity_id, expectedPredecessorIntegrityId);
   assert.ok(String(manifest.approval_provenance || '').length > 100);
   assert.equal(manifest.affected_tests_status, 'PASS');
   assert.ok(Array.isArray(manifest.affected_tests) && manifest.affected_tests.length > 0);
@@ -103,6 +104,7 @@ export function resolveReviewedBaselineTransition({
   const productBaselineRead = path => baselineRestored.get(path) ?? predecessor.predecessorReadSource(path);
   return {
     ...predecessor,
+    reviewedBaselinePredecessor: predecessor,
     reviewedBaselineTransition: manifest,
     reviewedBaselinePredecessorReadSource: predecessorRead,
     predecessorReadSource: productBaselineRead,

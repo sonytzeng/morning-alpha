@@ -1,0 +1,114 @@
+{
+  "schema_version": "MORNING_ALPHA_REPLAY_PRODUCTION_PARITY_REPORT_V1",
+  "report_name": "9/15_REPLAY_VS_9/16_PRODUCTION_PARITY_REPORT",
+  "generated_for_incident_date": "2026-09-16",
+  "replay_parity_root_cause": "CAPTURE_PATH_DIFFERENT_FROM_PRODUCTION",
+  "known_root_causes": 1,
+  "root_cause_evidence": [
+    {
+      "provider_key": "TAIEX",
+      "replay_behavior": "tests/helpers/productionRealityProviderReplay.mjs created taiexDiscovery in source with data=[IX0001]",
+      "production_behavior": "06:50 Production returned HTTP 200 with INDEX/TWSE/date envelope and data=[]",
+      "classification": "HAND_WRITTEN_MOCK",
+      "effect": "Replay could not exercise official_index_symbol_not_discovered"
+    },
+    {
+      "provider_key": "2330",
+      "replay_behavior": "Replay used an intraday quote capture and rewrote provider timestamps to 06:55",
+      "production_behavior": "06:50 Production called stock/intraday/quote/2330 and rejected its premarket contract",
+      "classification": "WRONG_MARKET_PHASE",
+      "effect": "Replay bypassed the real premarket endpoint and freshness contract"
+    }
+  ],
+  "parity_matrix": [
+    {
+      "field": "endpoint",
+      "replay_taiex": "hand-written discovery then stock/intraday/ticker/IX0001",
+      "production_taiex": "stock/intraday/tickers?type=INDEX&exchange=TWSE stopped the old path before ticker",
+      "replay_2330": "stock/intraday/quote/2330 payload normalized directly",
+      "production_2330": "stock/intraday/quote/2330",
+      "parity": false
+    },
+    {
+      "field": "symbol",
+      "replay_taiex": "IX0001 inserted by test source",
+      "production_taiex": "IX0001 absent from discovery data=[]",
+      "replay_2330": "2330",
+      "production_2330": "2330 endpoint and EQUITY response shape",
+      "parity": false
+    },
+    {
+      "field": "envelope_and_nesting",
+      "replay_taiex": "INDEX/TWSE/data=[{symbol:IX0001}]",
+      "production_taiex": "INDEX/TWSE/date/data=[]",
+      "replay_2330": "flat intraday quote with nested lastTrade/total",
+      "production_2330": "same field shape, but captured in a different market phase",
+      "parity": false
+    },
+    {
+      "field": "field_names_types_nullables",
+      "replay_taiex": "not captured for discovery",
+      "production_taiex": "date:string, type:string, exchange:string, data:array length 0; all non-null",
+      "replay_2330": "real intraday field shape",
+      "production_2330": "real intraday field shape retained by data_provider_health",
+      "parity": false
+    },
+    {
+      "field": "timestamp",
+      "replay_taiex": "ticker date converted to Taipei start-of-date",
+      "production_taiex": "capture 2026-09-16 06:50:01.618 Asia/Taipei",
+      "replay_2330": "provider timestamps overwritten to 2026-09-15 06:55 Asia/Taipei",
+      "production_2330": "unmodified provider timestamp fields retained only as numeric shape; capture 2026-09-16 06:50:01.618 Asia/Taipei",
+      "parity": false
+    },
+    {
+      "field": "market_phase",
+      "replay_taiex": "premarket label with hand-written discovery",
+      "production_taiex": "premarket",
+      "replay_2330": "intraday-observation rewritten as premarket",
+      "production_2330": "premarket",
+      "parity": false
+    },
+    {
+      "field": "price_previousClose_referencePrice",
+      "replay_taiex": "previousClose from real 9/15 ticker",
+      "production_taiex": "old path never reached the valid direct ticker; later real 9/16 ticker returned previousClose=45511.49",
+      "replay_2330": "intraday closePrice/previousClose/referencePrice",
+      "production_2330": "quote response exposed numeric closePrice/previousClose/referencePrice but failed the premarket contract",
+      "parity": false
+    },
+    {
+      "field": "business_date",
+      "replay_taiex": "2026-09-15",
+      "production_taiex": "2026-09-16",
+      "replay_2330": "2026-09-15",
+      "production_2330": "2026-09-16",
+      "parity": false
+    },
+    {
+      "field": "source_hash",
+      "replay_taiex": "discovery absent; ticker 40d7cb1bcc5ad31df0cd12f5e408e2a962adefbf92cb0f4007812bc07210bf39",
+      "production_taiex": "discovery db5976858ced6daeab038282ffb5fa619db920ff567c501b8ff70fa50040023b; ticker 9295dd9d46e76c050b62d28baf4f18d622aeba2ac28bb4ed464a707386f4b7aa",
+      "replay_2330": "f15105eb749eaa7a4663f09646e42b019dbedb9ad1780614be6aeac0e194b189",
+      "production_2330": "eec7bd63a488b855e437770b07fb6f11494983b7df6ce224e7da911f24673803",
+      "parity": false
+    },
+    {
+      "field": "lineage",
+      "replay_taiex": "mixed real ticker plus hand-written discovery",
+      "production_taiex": "data_provider_health correlation e7dc53d2-b3f6-4eb5-913a-ddc873cdd418 and diagnostic request 490",
+      "replay_2330": "real intraday payload plus synthetic timestamp rewrite",
+      "production_2330": "data_provider_health correlation e7dc53d2-b3f6-4eb5-913a-ddc873cdd418",
+      "parity": false
+    }
+  ],
+  "production_evidence": {
+    "preflight_cron_run_id": 28380,
+    "preflight_result": "BLOCKED_9_OF_11",
+    "preflight_business_writes": [],
+    "taiex_failure_fixture": "tests/fixtures/production-parity-v2/premarket-failure-20260916.json",
+    "diagnostic_capture_fixture": "tests/fixtures/production-parity-v2/provider-capture-20260916.json"
+  },
+  "historical_result": "2026-09-16_FAIL_PRESERVED",
+  "natural_day_pass_claimed": false
+}

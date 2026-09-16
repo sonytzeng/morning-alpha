@@ -1,0 +1,74 @@
+{
+  "schema_version": "MORNING_ALPHA_REAL_PRODUCTION_PREMARKET_FAILURE_V2",
+  "real_production_capture": true,
+  "business_date": "2026-09-16",
+  "market_phase": "premarket",
+  "capture_time": "2026-09-16T06:50:01.618+08:00",
+  "captured_via": "Production data_provider_health market_readiness_preflight",
+  "lineage": {
+    "project_ref": "cttfzgvhiewfckydcrci",
+    "function": "market-readiness-preflight",
+    "function_version": 2,
+    "correlation_id": "e7dc53d2-b3f6-4eb5-913a-ddc873cdd418",
+    "checkpoint": "readiness_0650",
+    "business_writes": []
+  },
+  "contains_secrets": false,
+  "responses": {
+    "TAIEX_DISCOVERY": {
+      "provider": "fugle",
+      "source_symbol": "IX0001",
+      "endpoint": "stock/intraday/tickers?type=INDEX&exchange=TWSE",
+      "http_status": 200,
+      "failure_code": "PROVIDER_SYMBOL_INVALID",
+      "source_hash": "db5976858ced6daeab038282ffb5fa619db920ff567c501b8ff70fa50040023b",
+      "payload_retained": true,
+      "payload": { "date": "2026-09-16", "type": "INDEX", "exchange": "TWSE", "data": [] },
+      "shape": {
+        "type": "object", "nullable": false,
+        "fields": {
+          "data": { "type": "array", "nullable": false, "length": 0, "samples": [] },
+          "date": { "type": "string", "nullable": false },
+          "exchange": { "type": "string", "nullable": false },
+          "type": { "type": "string", "nullable": false }
+        }
+      }
+    },
+    "2330_QUOTE": {
+      "provider": "fugle",
+      "source_symbol": "2330",
+      "endpoint": "stock/intraday/quote/2330",
+      "http_status": 200,
+      "failure_code": "PROVIDER_RESPONSE_CONTRACT_INVALID",
+      "source_hash": "eec7bd63a488b855e437770b07fb6f11494983b7df6ce224e7da911f24673803",
+      "payload_retained": false,
+      "shape": {
+        "type": "object", "nullable": false,
+        "fields": {
+          "avgPrice": { "type": "number", "nullable": false },
+          "change": { "type": "number", "nullable": false },
+          "changePercent": { "type": "number", "nullable": false },
+          "closePrice": { "type": "number", "nullable": false },
+          "closeTime": { "type": "number", "nullable": false },
+          "date": { "type": "string", "nullable": false },
+          "exchange": { "type": "string", "nullable": false },
+          "highPrice": { "type": "number", "nullable": false },
+          "highTime": { "type": "number", "nullable": false },
+          "lastTrade": { "type": "object", "nullable": false, "fields": { "price": { "type": "number", "nullable": false }, "time": { "type": "number", "nullable": false } } },
+          "lastUpdated": { "type": "number", "nullable": false },
+          "lowPrice": { "type": "number", "nullable": false },
+          "lowTime": { "type": "number", "nullable": false },
+          "market": { "type": "string", "nullable": false },
+          "name": { "type": "string", "nullable": false },
+          "openPrice": { "type": "number", "nullable": false },
+          "openTime": { "type": "number", "nullable": false },
+          "previousClose": { "type": "number", "nullable": false },
+          "referencePrice": { "type": "number", "nullable": false },
+          "symbol": { "type": "string", "nullable": false },
+          "total": { "type": "object", "nullable": false, "fields": { "time": { "type": "number", "nullable": false } } },
+          "type": { "type": "string", "nullable": false }
+        }
+      }
+    }
+  }
+}

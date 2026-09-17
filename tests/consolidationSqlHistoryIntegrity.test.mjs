@@ -11,7 +11,7 @@ import {
   CONSOLIDATION_SQL_HISTORY_SEAL_STATUS as ACTUAL_SEAL_STATUS,
   resolveConsolidationSqlHistoryIntegrity as resolveOriginalSealedIntegrity,
 } from './helpers/consolidationSqlHistoryIntegrity.mjs';
-import { readConsolidationPublicExportIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
+import { readConsolidationPublicExportIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 
 // The complete live Eighth guard must pass before replaying the unmodified
 // historical Seventh assertions against its exact reconstructed source state.

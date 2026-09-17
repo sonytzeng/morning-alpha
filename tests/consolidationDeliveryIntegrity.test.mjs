@@ -6,7 +6,7 @@ import ts from 'typescript';
 import {
   CONSOLIDATION_DELIVERY_ARTIFACT_PATH, resolveConsolidationDeliveryIntegrity,
 } from './helpers/consolidationDeliveryIntegrity.mjs';
-import { readConsolidationPublicExportIntegrity as readConsolidationTestWiringIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
+import { readConsolidationPublicExportIntegrity as readConsolidationTestWiringIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 import { resolveConsolidationIntegrity } from './helpers/consolidationIntegrity.mjs';
 import { resolveSubscriberProjectionIntegrity } from './helpers/subscriberProjectionIntegrity.mjs';
 

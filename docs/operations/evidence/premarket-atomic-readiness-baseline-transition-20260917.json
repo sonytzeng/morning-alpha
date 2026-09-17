@@ -1,0 +1,186 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_PREMARKET_ATOMIC_READINESS_20260917",
+  "candidate_base_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+  "predecessor_integrity_id": "MORNING_ALPHA_PREMARKET_READINESS_20260917",
+  "approval_provenance": "Sony explicitly approved the Integrity Baseline Transition for the sole named 20260917120000_premarket_atomic_readiness_window_v1.sql candidate after the sealed 109-file Core inventory rejected the 110-file successor. This layer independently reconstructs the unchanged predecessor and pins the exact added SQL plus all 109 predecessor paths and hashes. It grants no historical mutation, Auth, RLS, secrets, or natural-day success authority.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/productContract.test.mjs",
+    "tests/premarketAtomicInventory.test.mjs",
+    "tests/premarketChaosDatabase.integration.mjs",
+    "tests/consolidationIntegrity.test.mjs",
+    "tests/premarketReadinessRetry.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": "supabase/migrations/20260917120000_premarket_atomic_readiness_window_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "32e3828364e6e69d83b675c8f3ab6a1f0b580d7e9cbcdee987620fe5d0c708ad",
+      "source_lineage": "Real 2026-09-17 08:31 Production provider capture plus exact deployed Atomic function md5 pin.",
+      "reason": "Align future premarket Atomic commits with the existing bounded 08:45 readiness deadline.",
+      "rollback_target": "Restore the exact prior Atomic function only after separate Production rollback approval."
+    },
+    {
+      "path": "tests/premarketChaosDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "0f7a51b88a7418c92bc5650ed95224d0b92017227cd69092bba87d10c3901b23",
+      "source_lineage": "Real hash-bound Production provider response replay and a fresh isolated PostgreSQL Atomic baseline.",
+      "reason": "Prove the old late-commit failure, future-only recovery, deadline rejection, and historical preservation.",
+      "rollback_target": "Remove only this additive regression test after a separately reviewed rollback."
+    },
+    {
+      "path": "tests/productContract.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "1c56f17068f40f9e1e67cc4a0af61126ac0bc06a5227cc50e1475ecd90b09d2f",
+      "candidate_sha256": "c50957020ed678de63d615019f5b89a6d2d8c1a26ab1073a64e31490ba93247f",
+      "source_lineage": "The sealed Core freeze test remains byte-identical except for the Integrity successor import.",
+      "reason": "Route the current 110-file inventory through the reviewed successor without weakening the 109-file assertion.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "b3ab9badea83d8f338456ef326441a3755c47ca3e4618508a3eedd442b89bef9",
+      "source_lineage": "The exact 2026-09-17 premarket readiness Integrity layer remains the independently verified predecessor.",
+      "reason": "Verify the full 109-to-110 file and hash transition without modifying any historical Integrity helper.",
+      "rollback_target": "Remove only this additive Integrity successor after separately reviewed rollback."
+    },
+    {
+      "path": "docs/operations/evidence/premarket-atomic-core-inventory-20260917.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "abe755ee627d82ca930f477639b4dcf2ec212075998d14f616fec72ff6292305",
+      "source_lineage": "The pinned main Git tree c77798272c34a7be42de376a19ad2d7dc90877a7 supplies every original path and byte hash.",
+      "reason": "Pin the exact predecessor paths and hashes plus the sole named Migration addition.",
+      "rollback_target": "Remove only this additive inventory artifact after separately reviewed rollback."
+    },
+    {
+      "path": "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "aa41e15840e9f4638a7345c63103754c60a1abc72470aa243b1f36d56ce4a3d6",
+      "candidate_sha256": "0287347ab8aaeb303357654f6b46e7e36bf10d101bd0fbeb7c4df3fcfef049ed",
+      "source_lineage": "The exact sealed 2026-09-17 predecessor test is reconstructed from the pinned main Git object.",
+      "reason": "Route this unchanged historical assertion suite through the reviewed 110-file candidate Integrity view.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
+    },
+    {
+      "path": "tests/consolidationDeliveryIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "fce9991b11e1c43822f2f19eec07bf3bef64381995a1de7e80d2e0191bf72c1d",
+      "candidate_sha256": "d739d70db18c4fd7bed8a2ba1517a9a4e7b6c9daf239ca6c948b031ce69a3bad",
+      "source_lineage": "The exact sealed 2026-09-17 predecessor test is reconstructed from the pinned main Git object.",
+      "reason": "Route this unchanged historical assertion suite through the reviewed 110-file candidate Integrity view.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
+    },
+    {
+      "path": "tests/consolidationIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "446e921220678322a11bf574790c7bf8f383f3a50a7d9beb5f58b6fb233555b6",
+      "candidate_sha256": "b1ed81828d16c8a6d2b7eb13018497438a87745f8a9c6135c3b5299049b0529a",
+      "source_lineage": "The exact sealed 2026-09-17 predecessor test is reconstructed from the pinned main Git object.",
+      "reason": "Route this unchanged historical assertion suite through the reviewed 110-file candidate Integrity view.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
+    },
+    {
+      "path": "tests/consolidationPublicExportIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "928b87150dcbac89dfa7db8727f525ff1caef0898eea06fe77c36012279bdd7c",
+      "candidate_sha256": "5315bfaa96fce612c2c9cfefee8dc6d51d19f71b5fc456acbf09b285f9edc913",
+      "source_lineage": "The exact sealed 2026-09-17 predecessor test is reconstructed from the pinned main Git object.",
+      "reason": "Route this unchanged historical assertion suite through the reviewed 110-file candidate Integrity view.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
+    },
+    {
+      "path": "tests/consolidationRequiredMarketIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "8203d3ae66fac7d9afd0075988da939653bd5dee834039f1c45b2a57f03faa0d",
+      "candidate_sha256": "11c4346765e4566214d6e855d09af32133c2b18075fb4dc922f6b59c6fb2953a",
+      "source_lineage": "The exact sealed 2026-09-17 predecessor test is reconstructed from the pinned main Git object.",
+      "reason": "Route this unchanged historical assertion suite through the reviewed 110-file candidate Integrity view.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
+    },
+    {
+      "path": "tests/consolidationSqlHistoryIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "a35fb7872bc7478b61cf517436fb1cdb8ec151a0c8801935ee832ca6ff477819",
+      "candidate_sha256": "750c834341299f9545cd1b29fd40adc6064dbafbf9f60b5ff118821bf1d7f050",
+      "source_lineage": "The exact sealed 2026-09-17 predecessor test is reconstructed from the pinned main Git object.",
+      "reason": "Route this unchanged historical assertion suite through the reviewed 110-file candidate Integrity view.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
+    },
+    {
+      "path": "tests/consolidationTestWiringIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "3b4802a939bba8f4656313c1ae7a8e7ab4f62adad660509407b479556e0ecd12",
+      "candidate_sha256": "adfd7224cd5605392f10421b7bc668b136381fd4e08622f133ec0e95f5cf54b9",
+      "source_lineage": "The exact sealed 2026-09-17 predecessor test is reconstructed from the pinned main Git object.",
+      "reason": "Route this unchanged historical assertion suite through the reviewed 110-file candidate Integrity view.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
+    },
+    {
+      "path": "tests/coreProductionPreservation.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "979f2714723f417ce2f29d7962946f2e013e9f6f658989b6dff028701b5d1fd7",
+      "candidate_sha256": "5318d8587e2157386e45ca72b0457b2285fa8b0d8cf45e508996532502dbdccb",
+      "source_lineage": "The exact sealed 2026-09-17 predecessor test is reconstructed from the pinned main Git object.",
+      "reason": "Route this unchanged historical assertion suite through the reviewed 110-file candidate Integrity view.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
+    },
+    {
+      "path": "tests/productionReliabilityBaselineTransition.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "737082556843296618814660a3baf854694efee689967677d43c0084414d939e",
+      "candidate_sha256": "cc480e9c91228932bad965e3c35cf78fb87f4780bc284d14480b72fa7a45254c",
+      "source_lineage": "The exact sealed 2026-09-17 predecessor test is reconstructed from the pinned main Git object.",
+      "reason": "Route this unchanged historical assertion suite through the reviewed 110-file candidate Integrity view.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
+    },
+    {
+      "path": "tests/subscriberProjectionIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "834b8cd72d175639b9ebe8ae84aa605fa5efaabd3c86cbdc0901834d65dc3227",
+      "candidate_sha256": "ea429e4d07e4b5b90ee44c53d31dfa39afdacbce018e8d0d41dafa4832adba09",
+      "source_lineage": "The exact sealed 2026-09-17 predecessor test is reconstructed from the pinned main Git object.",
+      "reason": "Route this unchanged historical assertion suite through the reviewed 110-file candidate Integrity view.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
+    },
+    {
+      "path": "tests/premarketAtomicInventory.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "a407aa7a6e4f9499fdce63082a865595f816dd0d0967af3596926ac99b568af4",
+      "source_lineage": "The pinned main Git tree and the sole named SQL provide all positive and negative inventory evidence.",
+      "reason": "Prove that unexpected files, missing predecessors, wrong hashes, and SQL substitution fail closed.",
+      "rollback_target": "Remove only this additive inventory regression after separately reviewed rollback."
+    }
+  ]
+}

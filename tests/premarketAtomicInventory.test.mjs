@@ -32,6 +32,29 @@ test('reviewed 109-to-110 transition preserves every predecessor path and hash a
     && !result.reviewedBaselinePredecessor.newCandidatePaths.includes(path)).join(','), migrationPath);
 });
 
+test('report publication and freshness successor pins only reviewed Handler, shared validation and direct regressions', () => {
+  const result = readPremarketAtomicReadinessIntegrity(registry);
+  const successor = result.reportPublicationCandidateIntegrity.reviewedBaselineTransition;
+  assert.equal(successor.transition_id, 'MORNING_ALPHA_REPORT_PUBLICATION_CONTRACT_20260917');
+  assert.equal(successor.predecessor_integrity_id, 'MORNING_ALPHA_PREMARKET_ATOMIC_READINESS_20260917');
+  assert.deepEqual(successor.files.map(row => row.path).sort(), [
+    'supabase/functions/_shared/market-runtime-stability.mjs',
+    'supabase/functions/_shared/production-architecture-core.mjs',
+    'supabase/functions/generate-daily-report-v7/index.ts',
+    'tests/consolidationGeneratorEditorial.test.mjs',
+    'tests/fixtures/consolidation-v1/provider-chain.test.mjs',
+    'tests/helpers/premarketAtomicReadinessIntegrity.mjs',
+    'tests/marketRuntimeStability.test.mjs',
+    'tests/precheckProductionParity.test.mjs',
+    'tests/premarketAtomicInventory.test.mjs',
+    'tests/productionReliability.test.mjs',
+  ]);
+  assert.throws(() => verify(path => path === 'supabase/functions/generate-daily-report-v7/index.ts'
+    ? Buffer.concat([read(path), Buffer.from('\n// unreviewed drift\n')]) : read(path)), /unreviewed candidate drift/);
+  assert.throws(() => verify(path => path === 'supabase/functions/_shared/market-runtime-stability.mjs'
+    ? Buffer.concat([read(path), Buffer.from('\n// unreviewed freshness drift\n')]) : read(path)), /unreviewed candidate drift/);
+});
+
 test('unknown file, missing predecessor, changed hash and renamed migration all fail closed', () => {
   const mutations = [
     inventory => { inventory.predecessor.push({ path: 'supabase/migrations/unreviewed.sql', sha256: '0'.repeat(64) }); },

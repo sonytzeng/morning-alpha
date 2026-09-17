@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { replayCheckpointConstruction, replayProviderQuote } from '../../helpers/consolidationProviderReplay.mjs';
 import { isolatedFunction } from '../../helpers/isolatedEdgeLoader.mjs';
 import { buildCheckpointEvidence, checkpointCollectionContract } from '../../../supabase/functions/_shared/fetch-checkpoint-evidence.mjs';
+import { CHECKPOINT_MAX_SOURCE_AGE_MS } from '../../../supabase/functions/_shared/market-runtime-stability.mjs';
 import { assembleResearchMasterV2, assembleCanonicalMarketResearch, validateResearchMasterV2 } from '../../../supabase/functions/generate-daily-report-v7/research-master-v2.ts';
 import { buildCanonicalMarketState } from '../../../supabase/functions/_shared/canonical-market-state.ts';
 import { evaluateMarketReportGate } from '../../../supabase/functions/_shared/market-report-gate.ts';
@@ -129,12 +130,16 @@ test('malformed provider numbers are rejected rather than coerced to market evid
 });
 
 test('stale or future raw market source time blocks the independently assembled market', async () => {
-  for (const t of [0, Date.parse('2026-07-01T20:00:00Z') / 1000, Date.parse('2026-07-14T20:00:00Z') / 1000]) {
+  for (const t of [0, Date.parse('2026-07-01T20:00:00Z') / 1000,
+    Date.parse('2026-07-10T20:00:00Z') / 1000, Date.parse('2026-07-14T20:00:00Z') / 1000]) {
     const result = await marketCounterfactual(input => { input.quotes[0].response.t = t; });
-    // Existing premarket Fetch preserves provider-returned overnight timestamps;
-    // the actual premium evidence normalizer rejects stale research input later.
-    if (t === 0 || t > Date.parse(result.input.generatedAt) / 1000) {
+    const beyondAtomicSourceAge = t > 0 && t * 1000 <
+      Date.parse(result.vendor.collection.observedAt) - CHECKPOINT_MAX_SOURCE_AGE_MS;
+    // Premarket evidence now rejects the database-invalid source age itself;
+    // a stale quote still within that bound is rejected by premium research.
+    if (t === 0 || beyondAtomicSourceAge || t > Date.parse(result.input.generatedAt) / 1000) {
       assert.equal(result.replay.observations[0].evidence.valid, false);
+      if (beyondAtomicSourceAge) assert.equal(result.replay.observations[0].evidence.error, 'INVALID_CHECKPOINT_SOURCE_TIME');
     } else {
       assert.equal(result.replay.observations[0].evidence.valid, true);
       assert.equal(result.input.evidenceIndex[0].freshness, 'stale');

@@ -11,6 +11,7 @@ import {
 } from '../supabase/functions/_shared/required-provider-validation.mjs';
 import { CHECKPOINT_PROVIDER_KEYS, validateAtomicCheckpointEvidenceRows } from '../supabase/functions/_shared/fetch-checkpoint-evidence.mjs';
 import { resolveFugle2330Provider, resolveFugleTaiexProvider } from '../supabase/functions/_shared/fugle-taiex-provider.mjs';
+import { CHECKPOINT_MAX_SOURCE_AGE_MS } from '../supabase/functions/_shared/market-runtime-stability.mjs';
 
 const source = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const capture = JSON.parse(source('tests/fixtures/production-parity-v2/provider-capture-20260916.json'));
@@ -121,4 +122,34 @@ test('PRECHECK_PRODUCTION_PARITY: stale, future and not-yet-formed phases never 
     assert.equal(validateRequiredProviderEvidence(slot, malformed, tomorrow).error, 'INCOMPLETE_CHECKPOINT_QUOTE',
       `${slot.key} invalid HTTP 200 cannot be hidden by tomorrow's expected market phase`);
   }
+});
+
+test('PRECHECK_PRODUCTION_PARITY: all eight US slots reject a 30-day-old quote before the Atomic commit', async () => {
+  const rows = [];
+  for (const slot of REQUIRED_PROVIDER_CONFIG) {
+    const response = structuredClone(responseFor(slot));
+    if (slot.provider === 'finnhub') response.t -= 30 * 86_400;
+    const [preflight, production] = await both(slot, response);
+    if (slot.provider === 'finnhub') {
+      assert.equal(preflight.error, 'INVALID_CHECKPOINT_SOURCE_TIME', `${slot.key} 06:50`);
+      assert.equal(production.error, 'INVALID_CHECKPOINT_SOURCE_TIME', `${slot.key} 07:00`);
+      assert.equal(classifyRequiredProviderFailure({ status: 200 }, preflight.error), 'STALE_PROVIDER_DATA');
+    } else {
+      assert.equal(preflight.valid, true, `${slot.key} Taiwan preflight unaffected`);
+      assert.equal(production.valid, true, `${slot.key} Taiwan production unaffected`);
+      rows.push({ provider_key: slot.key, ...production.row });
+    }
+  }
+  assert.equal(rows.length, 3);
+  assert.equal(validateAtomicCheckpointEvidenceRows(rows).error, 'ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY');
+});
+
+test('PRECHECK_PRODUCTION_PARITY: shared source-age ceiling equals the pinned Atomic database rule', () => {
+  const atomic = source('supabase/migrations/20260911033927_checkpoint_snapshot_atomic_batch_v1.sql');
+  const guard = atomic.match(/source_timestamp'\)::timestamptz < \(row_value->>'captured_at'\)::timestamptz - interval '(\d+) days'/);
+  assert.ok(guard, 'the original Atomic seven-day source guard must remain pinned');
+  assert.equal(CHECKPOINT_MAX_SOURCE_AGE_MS, Number(guard[1]) * 86_400_000);
+  const later = source('supabase/migrations/20260917120000_premarket_atomic_readiness_window_v1.sql');
+  assert.match(later, /v_baseline constant text := '[0-9a-f]{32}'/);
+  assert.match(later, /v_candidate := replace\(replace\(replace\(v_original/);
 });

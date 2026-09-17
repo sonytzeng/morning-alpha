@@ -140,7 +140,7 @@ test('canonical quality is monotonic and never upgrades partial to complete', ()
   assert.equal(resolveCanonicalDataQuality([]), 'insufficient');
 });
 
-test('canonical decision contract keeps only the primary recommendation theme', () => {
+test('canonical decision contract keeps only the primary recommendation theme and separates market from stock QA', () => {
   const snapshot = {
     id: 'snapshot-1', report_date: '2026-08-27', version: 3, action: 'SELECTIVE',
     generated_text: {
@@ -156,7 +156,7 @@ test('canonical decision contract keeps only the primary recommendation theme', 
   assert.deepEqual(contract.primary_symbols, ['2609', '2615']);
   assert.equal(contract.primary_event, 'oil');
   assert.equal(contract.primary_taiwan_theme, '航運');
-  assert.equal(contract.data_quality_status, 'partial');
+  assert.equal(contract.data_quality_status, 'complete');
 });
 
 test('canonical contract drops absent optional signals instead of serializing undefined', () => {

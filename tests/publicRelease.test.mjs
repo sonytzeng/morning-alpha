@@ -252,7 +252,7 @@ test('premarket workflow delegates to the durable recovery state machine', () =>
   assert.ok(newsAction >= 0, 'recovery router must refresh global market news');
   assert.ok(newsAction < reportAction, 'evidence refresh must precede report regeneration');
   assert.ok(reportAction < lineAction, 'report regeneration must precede premium delivery');
-  assert.match(dailyDeliveryOrchestrator, /clock\.minutes >= 7 \* 60 \+ 30/);
+  assert.match(dailyDeliveryOrchestrator, /clock\.minutes >= \(providerDelayContext \? PREMARKET_REPORT_DEADLINE_MINUTES : 7 \* 60 \+ 30\)/);
   assert.match(dailyDeliveryOrchestrator, /payload\.success !== false/);
   assert.match(dailyDeliveryOrchestrator, /invokeFunctionWithRetry/);
   // Deployed V1.7 moved this gate into the phase-aware completion helper.

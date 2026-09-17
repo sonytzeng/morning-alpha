@@ -58,6 +58,17 @@ function nextTradingDay(dateString: string): string {
   return dateString;
 }
 
+export function previousTradingDay(dateString: string): string | null {
+  const date = dateFromString(dateString);
+  if (!date) return null;
+  for (let i = 0; i < 30; i++) {
+    date.setUTCDate(date.getUTCDate() - 1);
+    const candidate = formatDate(date);
+    if (resolveMarketStatus(candidate).is_trading_day) return candidate;
+  }
+  return null;
+}
+
 export function resolveMarketStatus(dateString: string): ResolvedMarketStatus {
   const date = dateFromString(dateString);
   if (!date) {

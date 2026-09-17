@@ -152,7 +152,9 @@ test('real checkpoint windows distinguish premarket, six phases and recovery wit
     assert.equal(checkpointCollectionContract(input).valid, true, checkpoint);
     assert.equal(checkpointCollectionContract({ ...input, observedAt: '2026-07-14T16:00:00+08:00' }).valid, false);
   }
-  assert.equal(checkpointCollectionContract({ ...base, observedAt: '2026-07-14T08:00:00+08:00' }).valid, false);
+  assert.equal(checkpointCollectionContract({ ...base, observedAt: '2026-07-14T08:00:00+08:00' }).valid, true);
+  assert.equal(checkpointCollectionContract({ ...base, observedAt: '2026-07-14T08:44:00+08:00' }).valid, true);
+  assert.equal(checkpointCollectionContract({ ...base, observedAt: '2026-07-14T08:45:00+08:00' }).valid, false);
   assert.equal(checkpointCollectionContract({ ...base, phase: 'manual_backfill', checkpoint: 'manual' }).checkpoint, 'RECOVERY');
 });
 

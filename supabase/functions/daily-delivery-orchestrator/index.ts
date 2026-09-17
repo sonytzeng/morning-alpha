@@ -2,15 +2,17 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import { evaluateMarketReportGate } from '../_shared/market-report-gate.ts';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
+import { PREMARKET_REPORT_DEADLINE_MINUTES } from '../_shared/premarket-provider-readiness.mjs';
 import { currentResearchDateError } from '../_shared/research-pipeline-contract.ts';
 import { authorizeInternalRequest, buildInternalFunctionHeaders, constantTimeEqual, internalCredentialsFromEnv, INTERNAL_AUTH_ERROR_CODES } from '../_shared/internal-function-auth.mjs';
 import {
-  buildDailyDeliveryRecoveryPlan,
+  buildPremarketProviderReadinessPlan,
   hasFailedEvidenceDependency,
   resolveClaimedPipelineRetry,
   resolveClaimedPipelineSlot,
   resolveDailyDeliveryCompletion,
   resolveDailyDeliveryPhase,
+  resolvePremarketReadinessTiming,
   resolveReportDeliveryStatus,
   type DailyDeliveryAction,
   type DailyDeliveryPhase,
@@ -365,6 +367,19 @@ async function loadDeliveryState(
   };
 }
 
+async function loadProviderNotReady(supabase: SupabaseClient, reportDate: string): Promise<boolean> {
+  const { data, error } = await supabase.from('data_provider_health')
+    .select('last_error_code,details')
+    .eq('provider', 'market_fetch_v10')
+    .eq('service_date', reportDate)
+    .eq('phase', 'premarket')
+    .eq('checkpoint', 'premarket')
+    .maybeSingle();
+  if (error) throw new Error(`PROVIDER_READINESS_QUERY_FAILED:${error.message}`);
+  return data?.last_error_code === 'PROVIDER_DATA_NOT_READY' &&
+    asRecord(data.details).provider_readiness_state === 'WAITING_FOR_PROVIDER_DATA';
+}
+
 async function claimPipelineSlot(
   supabase: SupabaseClient,
   reportDate: string,
@@ -514,6 +529,9 @@ async function finishPipelineRun(
     .update({
       status,
       completed_at: new Date().toISOString(),
+      ...(typeof details.report_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(details.report_date)
+        ? { deadline_at: new Date(`${details.report_date}T07:30:00+08:00`).toISOString() }
+        : {}),
       next_retry_at: nextRetryAt,
       updated_at: new Date().toISOString(),
       decision_snapshot_id: typeof details.decision_snapshot_id === 'string' ? details.decision_snapshot_id : null,
@@ -843,7 +861,9 @@ Deno.serve(async (req: Request) => {
     runId = activeRunId;
 
     let state = await loadDeliveryState(supabase, businessDate);
-    let plan = buildDailyDeliveryRecoveryPlan({
+    let providerNotReady = await loadProviderNotReady(supabase, businessDate);
+    const providerDelayContext = body.readiness_retry === true || providerNotReady;
+    let plan = buildPremarketProviderReadinessPlan({
       has_report: Boolean(state.report),
       premium_eligible: state.premium_eligible,
       report_eligible: state.report_eligible,
@@ -851,6 +871,7 @@ Deno.serve(async (req: Request) => {
       attempt: activeAttempt,
       content_repair_attempts: Number(state.snapshot?.version || 0),
       taipei_minutes: clock.minutes,
+      provider_not_ready: providerDelayContext,
     });
 
     let actions = plan.actions;
@@ -868,8 +889,10 @@ Deno.serve(async (req: Request) => {
       baseUrl: `${supabaseUrl}/functions/v1`,
       cronSecret,
       attempt: activeAttempt,
-      reasonCodes: state.reason_codes,
-      allowIncident: clock.minutes >= 7 * 60 + 30,
+      reasonCodes: providerDelayContext
+        ? Array.from(new Set([...state.reason_codes, 'PROVIDER_DATA_NOT_READY']))
+        : state.reason_codes,
+      allowIncident: clock.minutes >= (providerDelayContext ? PREMARKET_REPORT_DEADLINE_MINUTES : 7 * 60 + 30),
       reportDate: businessDate,
       suppressNotifications,
     });
@@ -881,7 +904,8 @@ Deno.serve(async (req: Request) => {
       || action === 'regenerate_report'
     )) {
       state = await loadDeliveryState(supabase, businessDate);
-      plan = buildDailyDeliveryRecoveryPlan({
+      providerNotReady = await loadProviderNotReady(supabase, businessDate);
+      plan = buildPremarketProviderReadinessPlan({
         has_report: Boolean(state.report),
         premium_eligible: state.premium_eligible,
       report_eligible: state.report_eligible,
@@ -889,6 +913,7 @@ Deno.serve(async (req: Request) => {
         attempt: activeAttempt,
         content_repair_attempts: Number(state.snapshot?.version || 0),
         taipei_minutes: clock.minutes,
+        provider_not_ready: providerDelayContext,
       });
     }
 
@@ -914,6 +939,16 @@ Deno.serve(async (req: Request) => {
         premiumDeliveryPayload.sent === true
         || ['ALREADY_SENT', 'NO_ACTIVE_SUBSCRIBERS'].includes(String(premiumDeliveryPayload.reason || ''))
       );
+    // The readiness window is a reliability recovery boundary, never a new
+    // 07:30 delivery SLA. Keep both outcomes explicit on the durable run.
+    const timing = resolvePremarketReadinessTiming({
+      report_date: businessDate,
+      completed_at: new Date().toISOString(),
+      provider_delay_context: providerDelayContext,
+      report_eligible: state.report_eligible,
+      provider_not_ready: providerNotReady,
+      delivered,
+    });
     const actionFailures = Object.entries(actionResults)
       .filter(([, result]) => asRecord(result).ok !== true)
       .map(([action, result]) => ({
@@ -922,7 +957,7 @@ Deno.serve(async (req: Request) => {
         error: String(asRecord(asRecord(result).payload).error || 'ACTION_RETURNED_UNSUCCESSFUL').slice(0, 300),
       }));
     const actionFailureCodes = actionFailures.map((failure) => `action_failed:${failure.action}`);
-    const reportDeliveryStatus = resolveReportDeliveryStatus({
+    const reportDeliveryStatus = providerNotReady && !plan.deadline_reached ? 'WAITING' : resolveReportDeliveryStatus({
       is_trading_day: marketStatus.is_trading_day,
       system_failure: actionFailures.some((failure) => failure.status >= 500),
       report_eligible: state.report_eligible,
@@ -937,8 +972,8 @@ Deno.serve(async (req: Request) => {
       report_eligible: state.report_eligible,
       delivered,
     });
-    const status = completed ? 'SUCCEEDED' : 'DEGRADED';
-    const finalReasonCodes = phase === 'refresh'
+    const status = completed ? 'SUCCEEDED' : providerDelayContext && plan.deadline_reached ? 'FAILED' : 'DEGRADED';
+    const finalReasonCodes = providerNotReady ? ['PROVIDER_DATA_NOT_READY'] : phase === 'refresh'
       ? actionFailureCodes
       : Array.from(new Set([...state.reason_codes, ...actionFailureCodes]));
     await finishPipelineRun(
@@ -947,6 +982,10 @@ Deno.serve(async (req: Request) => {
       status,
       {
         orchestrator_version: VERSION,
+        report_date: businessDate,
+        provider_not_ready: providerNotReady,
+        provider_delay_context: providerDelayContext,
+        ...timing,
         report_delivery_status: reportDeliveryStatus,
         phase,
         actions,
@@ -974,7 +1013,10 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       success: completed,
       report_delivery_status: reportDeliveryStatus,
-      status,
+      status: providerNotReady && !plan.deadline_reached ? 'WAITING_FOR_PROVIDER_DATA' : status,
+      provider_readiness_state: providerNotReady ? 'WAITING_FOR_PROVIDER_DATA' : null,
+      delivery_sla_status: timing.delivery_sla_status,
+      readiness_recovery_status: timing.readiness_recovery_status,
       report_date: businessDate,
       phase,
       pipeline_attempt: activeAttempt,

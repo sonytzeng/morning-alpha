@@ -1,0 +1,27 @@
+{
+  "schema_version": "PROVIDER_READINESS_TIMELINE_V1",
+  "business_date": "2026-09-17",
+  "time_zone": "Asia/Taipei",
+  "source": "Read-only Production net._http_response, pipeline_runs and data_provider_health; request 516 was diagnostic-only with business_writes=[]",
+  "source_timestamp_semantics": "Fugle ticker carries a business date, not a trade timestamp. The previous-date raw payload was not retained in 06:50/07:00 receipts; do not fabricate its exact source timestamp or first-current transition time.",
+  "observations": [
+    { "provider": "fugle", "symbol": "IX0001", "observed_at": "2026-09-17T06:50:00.076825+08:00", "source_timestamp": null, "source_business_date": null, "contract_state": "PREVIOUS_SESSION_VALID_BUT_NOT_CURRENT", "evidence": "scheduled Preflight response 505: HTTP 200, STALE_PROVIDER_DATA, rejected_field=date; source date value not persisted" },
+    { "provider": "fugle", "symbol": "2330", "observed_at": "2026-09-17T06:50:00.076825+08:00", "source_timestamp": null, "source_business_date": null, "contract_state": "PREVIOUS_SESSION_VALID_BUT_NOT_CURRENT", "evidence": "scheduled Preflight response 505: HTTP 200, STALE_PROVIDER_DATA, rejected_field=date; source date value not persisted" },
+    { "provider": "fugle", "symbol": "IX0001", "observed_at": "2026-09-17T07:00:00.157224+08:00", "source_timestamp": null, "source_business_date": null, "contract_state": "PREVIOUS_SESSION_VALID_BUT_NOT_CURRENT", "evidence": "orchestrator response 506 and pipeline_run refresh_market: HTTP 200, previous_day_taiex_rejected:date; source date value not persisted" },
+    { "provider": "fugle", "symbol": "2330", "observed_at": "2026-09-17T07:00:00.157224+08:00", "source_timestamp": null, "source_business_date": null, "contract_state": "PREVIOUS_SESSION_VALID_BUT_NOT_CURRENT", "evidence": "orchestrator response 506 and pipeline_run refresh_market: HTTP 200, previous_session_payload_rejected:date; source date value not persisted" },
+    { "provider": "fugle", "symbol": "IX0001", "observed_at": "2026-09-17T07:30:00.121573+08:00", "source_timestamp": null, "source_business_date": null, "contract_state": "PREVIOUS_SESSION_VALID_BUT_NOT_CURRENT", "evidence": "orchestrator response 514 and pipeline_run refresh_market: HTTP 200, STALE_PROVIDER_DATA, rejected_field=date" },
+    { "provider": "fugle", "symbol": "2330", "observed_at": "2026-09-17T07:30:00.121573+08:00", "source_timestamp": null, "source_business_date": null, "contract_state": "PREVIOUS_SESSION_VALID_BUT_NOT_CURRENT", "evidence": "orchestrator response 514 and pipeline_run refresh_market: HTTP 200, STALE_PROVIDER_DATA, rejected_field=date" },
+    { "provider": "fugle", "symbol": "IX0001", "observed_at": "2026-09-17T08:31:16.914245+08:00", "source_timestamp": null, "source_business_date": "2026-09-17", "contract_state": "CURRENT_VALID", "evidence": "diagnostic-only Preflight response 516: HTTP 200, sample ticker.date=2026-09-17, response_hash=70138def5f82251b56a89cdf3c05a3679712c48498dcd3a7cdcdf2d20219f21a" },
+    { "provider": "fugle", "symbol": "2330", "observed_at": "2026-09-17T08:31:16.914245+08:00", "source_timestamp": null, "source_business_date": "2026-09-17", "contract_state": "CURRENT_VALID", "evidence": "diagnostic-only Preflight response 516: HTTP 200, sample ticker.date=2026-09-17, response_hash=a7e8077a87e2996ebcc8d614a615e9a5e15f39239b1a664c84f2aa08129d81ae" }
+  ],
+  "transition_bound": "After 07:30 and no later than the 08:31 diagnostic observation; 07:35 Fetch failed collection-time validation before a provider request.",
+  "usual_ready_time": "UNKNOWN: recent comparable successful 06:50/07:00 source-date observations were not retained; historical snapshot source timestamps do not establish Fugle ticker readiness.",
+  "policy_basis": "Fugle ticker/quote documentation describes returned date/last trade fields without promising a current-date ticker at 07:00. TWSE pre-open market information begins at 08:30. 08:45 is a bounded exception candidate consistent with existing runtime dispatch deadline, not proof of historical 07:30 SLO success.",
+  "official_contract_urls": [
+    "https://developer.fugle.tw/docs/data/http-api/intraday/ticker/",
+    "https://developer.fugle.tw/docs/data/http-api/intraday/quote/",
+    "https://www.twse.com.tw/zh/products/system/trading.html"
+  ],
+  "historical_20260917_mutations": false,
+  "natural_day_pass_claimed": false
+}

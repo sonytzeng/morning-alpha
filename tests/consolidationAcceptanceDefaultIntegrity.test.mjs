@@ -30,7 +30,7 @@ const verify = (r = registry, source = read) => resolveConsolidationPublicExport
 test('Acceptance V1: independent live entry/helper/artifact/registry seals and complete ten-layer reconstruction', () => {
   const result = verify();
   assert.equal(hash(read(GUARD)), PIN.helper);
-  assert.equal(hash(result.reviewedBaselinePredecessor.reviewedBaselinePredecessor.reviewedBaselinePredecessorReadSource(ENTRY)), PIN.entry);
+  assert.equal(hash(result.reviewedBaselinePredecessor.reviewedBaselinePredecessor.reviewedBaselinePredecessor.reviewedBaselinePredecessorReadSource(ENTRY)), PIN.entry);
   assert.equal(hash(artifactBytes), PIN.artifact); assert.equal(hash(read(REGISTRY)), PIN.registry);
   assert.equal(artifact.registration.files.length, 5);
   assert.equal(hash(result.tenthReadSource(REGISTRY)), '188a0b57dc9c3363dce9f73a20737c927bbaca068909edbdfdb98cd253d88e35');

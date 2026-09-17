@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { resolveMarketStatus } from '../_shared/market-status.ts';
+import { previousTradingDay, resolveMarketStatus } from '../_shared/market-status.ts';
+import { evaluatePremarketCoreReadiness, PREMARKET_REPORT_DEADLINE_MINUTES } from '../_shared/premarket-provider-readiness.mjs';
 import {
   authorizeInternalRequest,
   constantTimeEqual,
@@ -39,8 +40,8 @@ const CORS_HEADERS = {
 };
 
 type JsonRecord = Record<string, unknown>;
-type CheckStatus = 'PASS' | 'FAIL' | 'EXPECTED';
-type ReadinessStatus = 'READY' | 'DEGRADED' | 'BLOCKED' | 'MARKET_PHASE_EXPECTED';
+type CheckStatus = 'PASS' | 'FAIL' | 'EXPECTED' | 'WAITING';
+type ReadinessStatus = 'READY' | 'DEGRADED' | 'BLOCKED' | 'MARKET_PHASE_EXPECTED' | 'WAITING_FOR_MARKET_DATA';
 
 interface ProviderCheck {
   key: string;
@@ -194,6 +195,12 @@ async function checkTaiwanCore(
     responses.set(endpoint, response);
     return response;
   }, { tradingDate, phase }) as FugleCoreResolution;
+  const readiness = phase === 'premarket'
+    ? evaluatePremarketCoreReadiness({
+      key, result, tradingDate, previousTradingDate: previousTradingDay(tradingDate),
+      taipeiMinutes: taipeiClock().minutes,
+    })
+    : null;
 
   const endpoint = String(result.endpoint || (phase === 'premarket' ? contract.tickerEndpoint : contract.quoteEndpoint));
   const primary = responses.get(endpoint) || {
@@ -216,11 +223,19 @@ async function checkTaiwanCore(
       discovery_status: key === 'TAIEX' ? String(result.discoveryStatus || '') : null,
     };
   }
+  if (readiness?.state === 'WAITING_FOR_PROVIDER_DATA') {
+    return {
+      ...checked, status: 'WAITING', failure_code: 'PROVIDER_DATA_NOT_READY',
+      rejected_field: result.rejectedField ? String(result.rejectedField) : null,
+      ...(observations.length ? { observations } : {}),
+    };
+  }
+  const futureDate = tradingDate > taipeiClock().date;
   return {
     ...checked,
-    failure_code: phaseExpected && result.failureCode === 'STALE_PROVIDER_DATA'
+    failure_code: phaseExpected && futureDate && result.failureCode === 'STALE_PROVIDER_DATA'
       ? 'MARKET_PHASE_EXPECTED' : String(result.failureCode || checked.failure_code),
-    status: phaseExpected && result.failureCode === 'STALE_PROVIDER_DATA' ? 'EXPECTED' : checked.status,
+    status: phaseExpected && futureDate && result.failureCode === 'STALE_PROVIDER_DATA' ? 'EXPECTED' : checked.status,
     rejected_field: result.rejectedField ? String(result.rejectedField) : null,
     ...(observations.length ? { observations } : {}),
   };
@@ -259,7 +274,8 @@ async function checkFugleQuote(
 function readiness(checks: ProviderCheck[]): ReadinessStatus {
   const failures = checks.filter(check => check.status === 'FAIL');
   const expected = checks.filter(check => check.status === 'EXPECTED');
-  if (failures.length === 0) return expected.length ? 'MARKET_PHASE_EXPECTED' : 'READY';
+  const waiting = checks.filter(check => check.status === 'WAITING');
+  if (failures.length === 0) return waiting.length ? 'WAITING_FOR_MARKET_DATA' : expected.length ? 'MARKET_PHASE_EXPECTED' : 'READY';
   const blocking = new Set([
     'CONFIGURATION_MISSING', 'AUTHENTICATION_FAILED', 'BLOCKED_BY_SUBSCRIPTION',
     'PROVIDER_SYMBOL_INVALID', 'RESOURCE_NOT_FOUND', 'PROVIDER_RESPONSE_CONTRACT_INVALID',
@@ -316,7 +332,7 @@ Deno.serve(async (req) => {
     phase: 'premarket', checkpoint: 'premarket', tradingDate,
     observedAt: new Date().toISOString(), correlationId: crypto.randomUUID(),
   };
-  const phaseExpected = mode === 'diagnostic' && (tradingDate > clock.date || clock.minutes > 455);
+  const phaseExpected = mode === 'diagnostic' && (tradingDate > clock.date || clock.minutes >= PREMARKET_REPORT_DEADLINE_MINUTES);
   const checks = await Promise.all([
     ...REQUIRED_PROVIDER_CONFIG.filter(slot => slot.provider === 'finnhub')
       .map(slot => checkFinnhub(slot, finnhubKey, captureSample, evidenceInput, phaseExpected)),
@@ -349,7 +365,8 @@ Deno.serve(async (req) => {
   };
 
   if (mode === 'scheduled') {
-    const healthStatus = readinessStatus === 'READY' ? 'healthy' : readinessStatus === 'DEGRADED' ? 'degraded' : 'down';
+    const healthStatus = readinessStatus === 'READY' ? 'healthy'
+      : ['DEGRADED', 'WAITING_FOR_MARKET_DATA'].includes(readinessStatus) ? 'degraded' : 'down';
     const { error } = await supabase.from('data_provider_health').upsert({
       provider: 'market_readiness_preflight',
       service_date: tradingDate,
@@ -362,7 +379,7 @@ Deno.serve(async (req) => {
       failed_count: REQUIRED_PROVIDER_COUNT - succeeded,
       latency_ms: Date.now() - started,
       timed_out: checks.some(check => check.failure_code === 'TIMEOUT'),
-      last_error_code: checks.find(check => check.status === 'FAIL')?.failure_code || null,
+      last_error_code: checks.find(check => check.status !== 'PASS')?.failure_code || null,
       correlation_id: correlationId,
       details: {
         version: VERSION,

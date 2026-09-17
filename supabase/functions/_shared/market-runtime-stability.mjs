@@ -64,6 +64,12 @@ export function isV10BeneficiaryEnabled(ai) {
   return row.v10_beneficiary_enabled === true || String(row.v10_beneficiary_enabled || '').toLowerCase() === 'true';
 }
 
+// Match commit_market_checkpoint_batch_v1's seven-day source age guard for premarket admission.
+// Historical close reads reuse this evaluator long after capture, so their
+// same-session / official-close contract must not be measured against read time.
+// Taiwan intraday retains its stricter same-session / 30-minute contract.
+export const CHECKPOINT_MAX_SOURCE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
 export function evaluateCheckpointFreshness(input = {}) {
   const capturedAt = String(input.captured_at || '').trim();
   const capturedMs = Date.parse(capturedAt);
@@ -80,6 +86,9 @@ export function evaluateCheckpointFreshness(input = {}) {
   const ageMinutes = Math.round(((evaluatedMs - capturedMs) / 60_000) * 10) / 10;
   if (capturedMs > evaluatedMs + 10 * 60_000) {
     return { valid: false, status: 'future_timestamp', age_minutes: ageMinutes, captured_session_date: taipeiDateFromMillis(capturedMs) };
+  }
+  if (phase === 'premarket' && capturedMs < evaluatedMs - CHECKPOINT_MAX_SOURCE_AGE_MS) {
+    return { valid: false, status: 'source_age_exceeded', age_minutes: ageMinutes, captured_session_date: taipeiDateFromMillis(capturedMs) };
   }
 
   if (market === 'TW' && (phase === 'intraday' || phase === 'close')) {

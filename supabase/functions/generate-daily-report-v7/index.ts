@@ -63,6 +63,7 @@ import {
   RUNTIME_QUALITY_POLICY,
   buildCanonicalDecisionContract,
   buildCanonicalMemberResearchRevision,
+  canonicalMarketQualityInputs,
   buildBullBearDebate,
   classifyMarketRegime,
   evaluateCanonicalSemanticCoherenceGate,
@@ -2437,9 +2438,7 @@ async function publishCanonicalMemberRevision(
         content_os_topic:memberContent.content_os_topic,
       },
       recommendations:memberContent.beneficiary_candidates,
-      quality_inputs:snapshot.decision_mode==='market_only'
-        ?[ai.data_quality,canonicalRecord(researchMaster.provenance).source_status]
-        :[ai.data_quality,ai.v10_data_quality_status,canonicalRecord(ai.member_research_note_v2).data_status],
+      quality_inputs:canonicalMarketQualityInputs(ai),
       quality_counters:{
         unsupported_claim_count:qualityGate.unsupported_claim_count,
         contradiction_count:qualityGate.contradiction_count,
@@ -2680,9 +2679,7 @@ async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJso
       const semantic=evaluateCanonicalSemanticCoherenceGate({canonical_contract:contract,
         sections:{public_thesis:canonicalRecord(decisionPayload.generated_text).daily_sentence,member_thesis:member.today_core_thesis,line_summary:member.line_summary,taiwan_transmission:member.taiwan_transmission,content_os_topic:member.content_os_topic},
         recommendations:member.beneficiary_candidates,
-        quality_inputs:decisionPayload.decision_mode==='market_only'
-          ?[aiStrategyJson.data_quality,canonicalRecord(canonicalRecord(aiStrategyJson.research_master_v2).provenance).source_status]
-          :[aiStrategyJson.data_quality,aiStrategyJson.v10_data_quality_status,canonicalRecord(aiStrategyJson.member_research_note_v2).data_status],
+        quality_inputs:canonicalMarketQualityInputs(aiStrategyJson),
         quality_counters:quality,evidence_coverage:quality.evidence_coverage,content_score:decisionPayload.content_score,
       }) as Record<string,unknown>;
       if(semantic.eligible!==true)throw new PublicationQualityError((semantic.reason_codes as string[])||['SEMANTIC_BLOCKED']);

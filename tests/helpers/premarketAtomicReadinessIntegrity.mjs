@@ -54,7 +54,7 @@ export function verifyPremarketAtomicCoreInventory(registry, integrity, readSour
   return { predecessor_count: 109, candidate_count: 110, reviewed_addition: namedMigration };
 }
 
-export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+function resolvePremarketAtomicReadinessBaseline(registry, artifactBytes, readSource = read) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/premarket-atomic-readiness-baseline-transition-20260917.json'));
   const integrity = resolveReviewedBaselineTransition({
     manifest,
@@ -64,6 +64,25 @@ export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes
     verifyPredecessor: predecessorRead => resolveConsolidationPublicExportIntegrity(registry, artifactBytes, predecessorRead),
   });
   return { ...integrity, atomicCoreInventory: verifyPremarketAtomicCoreInventory(registry, integrity, readSource) };
+}
+
+export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/report-publication-contract-baseline-transition-20260917.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest,
+    readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_PREMARKET_ATOMIC_READINESS_20260917',
+    verifyPredecessor: predecessorRead => resolvePremarketAtomicReadinessBaseline(registry, artifactBytes, predecessorRead),
+  });
+  // Preserve the historical public result shape for every predecessor test;
+  // the new candidate is an additional, exact-hash successor, not a rewrite.
+  return {
+    ...candidate.reviewedBaselinePredecessor,
+    fileHash: candidate.fileHash,
+    newCandidatePaths: candidate.newCandidatePaths,
+    reportPublicationCandidateIntegrity: candidate,
+  };
 }
 
 export const readPremarketAtomicReadinessIntegrity = registry =>

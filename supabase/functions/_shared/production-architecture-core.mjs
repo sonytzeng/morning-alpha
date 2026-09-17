@@ -392,6 +392,13 @@ export function resolveCanonicalDataQuality(values = []) {
   return normalized.sort((left, right) => dataQualityRank(left) - dataQualityRank(right))[0];
 }
 
+// Publication quality describes the market report. Stock-specific research is
+// guarded separately by the recommendation gate and the database validator.
+export function canonicalMarketQualityInputs(ai = {}) {
+  const source = asPlainRecord(ai);
+  return [source.data_quality, asPlainRecord(asPlainRecord(source.research_master_v2).provenance).source_status];
+}
+
 function asPlainRecord(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
@@ -468,16 +475,11 @@ export function buildCanonicalDecisionContract(input = {}) {
   }
   const primaryTransmission = marketOnly ? firstText(transmission.narrative)
     : firstText(first.transmission_path, first.transmission_logic, first.taiwan_supply_chain_relation);
-  const dataQualityStatus = resolveCanonicalDataQuality(marketOnly ? [ai.data_quality, asPlainRecord(master.provenance).source_status] : [
-    ai.data_quality,
-    ai.v10_data_quality_status,
-    asPlainRecord(ai.member_research_note_v2).data_status,
-    asPlainRecord(ai.raw_ai_json).v10_data_quality_status,
-  ]);
+  const dataQualityStatus = resolveCanonicalDataQuality(canonicalMarketQualityInputs(ai));
   return {
     contract_version: 'CANONICAL_DECISION_CONTRACT_V2',
     decision_mode: snapshot.decision_mode || (sourceRecommendations.length ? 'recommendations' : 'blocked'),
-    ...(marketOnly ? { market_report_gate: marketGate } : {}),
+    market_report_gate: marketGate,
     report_date: String(input.report_date || snapshot.report_date || ''),
     snapshot_id: String(snapshot.id || ''),
     snapshot_version: Number.isFinite(Number(snapshot.version)) ? Number(snapshot.version) : null,

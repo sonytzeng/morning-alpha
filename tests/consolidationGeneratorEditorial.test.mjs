@@ -17,7 +17,7 @@ import { normalizeMarketDataRows } from '../supabase/functions/generate-daily-re
 import { filterFreshMarketIndicators, isMarketIndicatorStale } from '../supabase/functions/generate-daily-report-v7/market-freshness.ts';
 import { normalizePremiumMarketEvidence } from '../supabase/functions/_shared/premium-evidence.ts';
 import { RUNTIME_QUALITY_POLICY, resolveAbstentionDecision, classifyMarketRegime, buildBullBearDebate,
-  buildCanonicalDecisionContract, buildCanonicalMemberResearchRevision, evaluateCanonicalSemanticCoherenceGate } from '../supabase/functions/_shared/production-architecture-core.mjs';
+  buildCanonicalDecisionContract, buildCanonicalMemberResearchRevision, canonicalMarketQualityInputs, evaluateCanonicalSemanticCoherenceGate } from '../supabase/functions/_shared/production-architecture-core.mjs';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const source = read('supabase/functions/generate-daily-report-v7/index.ts');
@@ -119,7 +119,7 @@ const writer = isolatedFunction(source, 'writeReport', {
   evaluateMarketContentIntelligence, evaluatePremiumContentGate, isDecisionCriticalMissingSource,
   resolveAbstentionDecision, RUNTIME_QUALITY_POLICY, classifyMarketRegime, buildBullBearDebate,
   buildCanonicalDecisionPayload: build, buildCanonicalDecisionContract, buildCanonicalMemberResearchRevision,
-  evaluateResearchQualityGate, evaluateCanonicalSemanticCoherenceGate, projectReviewedMarketDecision: project,
+  canonicalMarketQualityInputs, evaluateResearchQualityGate, evaluateCanonicalSemanticCoherenceGate, projectReviewedMarketDecision: project,
 });
 const failureStart = source.indexOf('    const qualityFailure=err instanceof PublicationQualityError;');
 const failureEnd = source.indexOf('\n  }\n});', failureStart);
@@ -182,6 +182,10 @@ test('complete required inputs retain market-only publication with company recom
   assert.equal(attempted.reachedAtomicBoundary, true, String(attempted.error)); assert.equal(calls.length, 1);
   assert.equal(calls[0].args.p_decision.decision_mode, 'market_only');
   assert.deepEqual(plain(calls[0].args.p_decision.generated_text.recommendations), []);
+  assert.deepEqual(plain(calls[0].args.p_contract.market_report_gate), plain(calls[0].args.p_decision.generated_text.market_report_gate));
+  assert.equal(calls[0].args.p_contract.data_quality_status, 'complete');
+  assert.deepEqual(plain(calls[0].args.p_member.beneficiary_candidates), []);
+  assert.deepEqual(plain(calls[0].args.p_member.representative_stocks), []);
 });
 
 test('market assembler keeps the complete decision sentence rather than truncating at its first period', () => {
@@ -270,6 +274,27 @@ test('qualified company evidence survives canonical editorial projection without
   assert.equal(projected.today_beneficiary_stocks_v10[0].symbol, '2330');
   assert.equal(evaluatePremiumContentGate(ai, 0).eligible, true);
   assert.deepEqual(editorial(projected), editorial(ai));
+});
+
+test('qualified recommendations map the actual READY market gate and complete market quality into publication documents', () => {
+  const value = assembleRequiredInput(marketRows());
+  const qualify = isolatedFunction(read('tests/consolidationCurrentPayloadAuthority.test.mjs'), 'qualifyCurrentFixture', {
+    isolatedFunction, read, assert, structuredClone, exports: {}, admitResearchRecommendations, assembleResearchMasterV2,
+    validateResearchMasterV2, evaluatePremiumContentGate, evaluateMarketReportGate,
+  });
+  qualify({ report: { report_date: value.ai.research_master_v2.report_date, ai_strategy_json: value.ai },
+    snapshot: { generated_text: { canonical_market_state: structuredClone(value.ai.canonical_market_state) } },
+    member: { canonical_contract: { primary_symbols: [] } } });
+  const decisionPayload = decision(value.ai);
+  const snapshot = { ...decisionPayload, id: 'synthetic-qualified-revision', version: 1, report_date: value.ai.research_master_v2.report_date };
+  const contract = buildCanonicalDecisionContract({ report_date: snapshot.report_date, snapshot, ai: value.ai });
+  const member = buildCanonicalMemberResearchRevision({ canonical_contract: contract, snapshot, ai: value.ai });
+  assert.equal(decisionPayload.decision_mode, 'recommendations');
+  assert.equal(decisionPayload.generated_text.market_report_gate.report_status, 'READY');
+  assert.deepEqual(plain(contract.market_report_gate), plain(decisionPayload.generated_text.market_report_gate));
+  assert.equal(contract.data_quality_status, 'complete');
+  assert.equal(contract.primary_symbols.length, 1);
+  assert.deepEqual(plain(member.canonical_contract), plain(contract));
 });
 
 const consumerSource = read('tests/consolidationPublicationConsumers.test.mjs');

@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   buildBeneficiaryBatchContract,
   buildBeneficiaryCloseStatus,
+  CHECKPOINT_MAX_SOURCE_AGE_MS,
   classifyProviderFailure,
   evaluateCheckpointFreshness,
   sanitizeProviderError,
@@ -166,6 +167,35 @@ test('Taiwan checkpoint freshness rejects fabricated, cross-session, and stale c
     evaluated_at: '2026-08-24T15:45:00+08:00',
     captured_at: '2026-08-24T13:45:00+08:00',
   }).status, 'fresh');
+});
+
+test('overnight source age has the same exact seven-day boundary as the Atomic database guard', () => {
+  const evaluatedAt = '2026-09-17T07:00:00+08:00';
+  const now = Date.parse(evaluatedAt);
+  const input = { market: 'US', phase: 'premarket', symbol: 'SPX', trading_date: '2026-09-17', evaluated_at: evaluatedAt };
+  const atAge = age => evaluateCheckpointFreshness({ ...input, captured_at: new Date(now - age).toISOString() });
+  assert.equal(CHECKPOINT_MAX_SOURCE_AGE_MS, 7 * 86_400_000);
+  assert.equal(atAge(3 * 86_400_000).valid, true, 'previous US session over a weekend is valid');
+  assert.equal(atAge(6 * 86_400_000).valid, true, 'a legitimate long market closure under seven days is valid');
+  assert.equal(atAge(CHECKPOINT_MAX_SOURCE_AGE_MS).valid, true, 'the exact seven-day boundary is valid');
+  assert.equal(atAge(CHECKPOINT_MAX_SOURCE_AGE_MS + 1).status, 'source_age_exceeded');
+  assert.equal(atAge(30 * 86_400_000).status, 'source_age_exceeded');
+});
+
+test('historical close evidence keeps its original session validity when read after seven days', () => {
+  const base = {
+    market: 'TW', phase: 'close', symbol: 'TAIEX', trading_date: '2026-07-14',
+    evaluated_at: '2026-09-09T15:00:00+08:00',
+  };
+  assert.equal(evaluateCheckpointFreshness({
+    ...base, captured_at: '2026-07-14T14:30:00+08:00',
+  }).status, 'fresh');
+  assert.equal(evaluateCheckpointFreshness({
+    ...base, captured_at: '2026-07-13T14:30:00+08:00',
+  }).status, 'cross_session_stale');
+  assert.equal(evaluateCheckpointFreshness({
+    ...base, captured_at: '2026-07-14T12:59:00+08:00',
+  }).status, 'stale');
 });
 
 test('provider diagnostics redact query and header credentials', () => {

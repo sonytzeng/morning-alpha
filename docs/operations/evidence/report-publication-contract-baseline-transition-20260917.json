@@ -1,0 +1,129 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_REPORT_PUBLICATION_CONTRACT_20260917",
+  "candidate_base_git_sha": "4eccd689d5677050ca9fa12826e82d6e1f670f2f",
+  "predecessor_integrity_id": "MORNING_ALPHA_PREMARKET_ATOMIC_READINESS_20260917",
+  "approval_provenance": "Sony directed a scoped local candidate and Integrity gate for the real Report Publication Contract bug after 11-provider Atomic success, then explicitly directed a local fix for the confirmed reachable 06:50 versus Atomic seven-day freshness parity bug. This exact-hash successor records the original Report mapping unchanged, the shared Provider freshness limit and their direct regressions only. The prior 109-to-110 inventory, hashes, historical failures and Production database contract remain unchanged; this manifest grants no commit, deploy, migration or Production-data authority.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/consolidationGeneratorEditorial.test.mjs",
+    "tests/fixtures/consolidation-v1/provider-chain.test.mjs",
+    "tests/marketOnlyCanonical.test.mjs",
+    "tests/marketPublicationDelivery.test.mjs",
+    "tests/productionReliability.test.mjs",
+    "tests/premarketAtomicInventory.test.mjs",
+    "tests/marketRuntimeStability.test.mjs",
+    "tests/precheckProductionParity.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": "supabase/functions/_shared/market-runtime-stability.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4eccd689d5677050ca9fa12826e82d6e1f670f2f",
+      "predecessor_sha256": "4bd5e744587cff19148386b9a2967c0e7211a8cb913042d61058923553211ff1",
+      "candidate_sha256": "646daf7cfa3c95b824b527f8d22ffcace7f3c4d471bcaaf2c987f4b86c94111d",
+      "source_lineage": "Exact current Git predecessor and the read-only Production commit_market_checkpoint_batch_v1 seven-day source timestamp guard, with the unchanged historical sealed inventory reconstructed from Git.",
+      "reason": "Reject premarket source quotes older than the database's exact seven-day threshold in the shared 06:50 and 07:00 evaluator without invalidating archived close reads.",
+      "rollback_target": "Restore only this shared freshness evaluator from Git object 4eccd689d5677050ca9fa12826e82d6e1f670f2f."
+    },
+    {
+      "path": "supabase/functions/_shared/production-architecture-core.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4eccd689d5677050ca9fa12826e82d6e1f670f2f",
+      "predecessor_sha256": "4999bc2a0a5d915103fdb79394c1f30491b70c64bd84867af9850db1ec4c8157",
+      "candidate_sha256": "3e9520f6382bf0ea47d287b157b278e9db8ee02be63a4fa75d59a44500bbbd69",
+      "source_lineage": "Exact current Git predecessor and the active 2026-09-17 Production-shaped Report Handler/DB contract comparison.",
+      "reason": "Map published market quality independently from private stock QA and carry the real market gate in every decision mode.",
+      "rollback_target": "Restore only this shared publication mapping from Git object 4eccd689d5677050ca9fa12826e82d6e1f670f2f."
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4eccd689d5677050ca9fa12826e82d6e1f670f2f",
+      "predecessor_sha256": "6422ed6beb659f715fe02b7d5ac30866fad6dffe73020b6db78d7ff8627709b9",
+      "candidate_sha256": "59bf9b0b87e80c10f4948da0253affa52fcb2d6dd2248c9d808a5dd48b97e089",
+      "source_lineage": "Exact current Git predecessor and the active 2026-09-17 Production-shaped Report Handler/DB contract comparison.",
+      "reason": "Use the one shared market-quality source in both publication and member semantic evaluation paths.",
+      "rollback_target": "Restore only this Report Handler from Git object 4eccd689d5677050ca9fa12826e82d6e1f670f2f."
+    },
+    {
+      "path": "tests/consolidationGeneratorEditorial.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4eccd689d5677050ca9fa12826e82d6e1f670f2f",
+      "predecessor_sha256": "d31ad6d5c5d8feeec4c0032b92170efefbf5b9385fd289e5a32954023970de07",
+      "candidate_sha256": "c6e3f003b8b9685ce416142edc4ab767d92be2c9fca39576229baf0c4c5d3adf",
+      "source_lineage": "The unchanged reviewed editorial fixture with only direct market-only and qualified publication mapping assertions added.",
+      "reason": "Permanently assert that both decision branches send the actual market gate and complete market-only quality without fake stocks.",
+      "rollback_target": "Restore only this direct regression test from Git object 4eccd689d5677050ca9fa12826e82d6e1f670f2f."
+    },
+    {
+      "path": "tests/fixtures/consolidation-v1/provider-chain.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4eccd689d5677050ca9fa12826e82d6e1f670f2f",
+      "predecessor_sha256": "9caf8fd4a42e11f3562ca0431339d77cb0b41da89d1a4705f8b4256d780d5cfe",
+      "candidate_sha256": "14164200daf8b6cee146f9415f8fe4cbfe6d21b3ab0467bff06e09bd99f0920a",
+      "source_lineage": "The unchanged provider-shaped replay fixture from the reviewed Git predecessor, with its stale premarket timing expectation aligned to the approved seven-day Atomic admission rule.",
+      "reason": "Assert that a database-invalid old quote fails during premarket evidence construction while a younger stale quote still fails the later report gate.",
+      "rollback_target": "Restore only this provider fixture regression test from Git object 4eccd689d5677050ca9fa12826e82d6e1f670f2f."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4eccd689d5677050ca9fa12826e82d6e1f670f2f",
+      "predecessor_sha256": "b3ab9badea83d8f338456ef326441a3755c47ca3e4618508a3eedd442b89bef9",
+      "candidate_sha256": "2d845c241d0991d90d85a437be85e2ed8c8cc4d420395637d0db5911cbf26576",
+      "source_lineage": "The original 109-to-110 atomic readiness verifier is reconstructed byte-for-byte from the current Git predecessor.",
+      "reason": "Require an exact-hash publication successor before invoking every unchanged historical Integrity guard.",
+      "rollback_target": "Restore only this Integrity entrypoint from Git object 4eccd689d5677050ca9fa12826e82d6e1f670f2f."
+    },
+    {
+      "path": "tests/marketRuntimeStability.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4eccd689d5677050ca9fa12826e82d6e1f670f2f",
+      "predecessor_sha256": "8c16ed451b8cbe8c63689aa12e7c36e8872271826c1139a746cb7117d354b797",
+      "candidate_sha256": "a22be0673a944883db94ad9997f667e84882d950480a9a5cb9ecc07139829211",
+      "source_lineage": "The current Git predecessor test with only the database-matched seven-day boundary and legitimate prior US session cases added.",
+      "reason": "Keep the strict premarket seven-day boundary and valid weekend or long-closure behavior covered while preserving historical close-session evidence.",
+      "rollback_target": "Restore only this direct freshness test from Git object 4eccd689d5677050ca9fa12826e82d6e1f670f2f."
+    },
+    {
+      "path": "tests/premarketAtomicInventory.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4eccd689d5677050ca9fa12826e82d6e1f670f2f",
+      "predecessor_sha256": "a407aa7a6e4f9499fdce63082a865595f816dd0d0967af3596926ac99b568af4",
+      "candidate_sha256": "3ddc0e6d3de1b3762389aca0addbe8e0abaf1366991741adee4d0ef643bc0ffe",
+      "source_lineage": "The existing historical 109-to-110 inventory assertions remain in place and the new successor is checked separately.",
+      "reason": "Prove the named publication and freshness candidate accepts only the exact ten-file change set and rejects Handler or freshness drift.",
+      "rollback_target": "Restore only this Integrity regression from Git object 4eccd689d5677050ca9fa12826e82d6e1f670f2f."
+    },
+    {
+      "path": "tests/precheckProductionParity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4eccd689d5677050ca9fa12826e82d6e1f670f2f",
+      "predecessor_sha256": "f76717d9f9e146c2dc54814d88069b0c9102d7175fca03a648f840d294b2d319",
+      "candidate_sha256": "2dc763b288f2a7fc1d0a83a07c45c91f04f063ac122b513b36bed09465137dae",
+      "source_lineage": "The current Git predecessor Production parity fixture replay with only the shared 30-day stale quote rejection asserted for all eight US slots.",
+      "reason": "Detect future 06:50 and 07:00 freshness drift before a stale quote reaches Atomic commit.",
+      "rollback_target": "Restore only this direct parity regression from Git object 4eccd689d5677050ca9fa12826e82d6e1f670f2f."
+    },
+    {
+      "path": "tests/productionReliability.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4eccd689d5677050ca9fa12826e82d6e1f670f2f",
+      "predecessor_sha256": "2197893b49b24dee66be3b388f05a0a0b3a7aa1c4787b096792a8088e381de9f",
+      "candidate_sha256": "eb8f6fd6fd37cccce80c021d2dbb7c1e42e84857853c480c4ee64e0b0e7cf0df",
+      "source_lineage": "The existing monotonic quality and single-theme tests remain; one expectation is aligned to the approved market-only quality meaning.",
+      "reason": "Prevent private recommendation QA from downgrading a complete market publication while keeping source quality monotonic.",
+      "rollback_target": "Restore only this direct regression test from Git object 4eccd689d5677050ca9fa12826e82d6e1f670f2f."
+    }
+  ]
+}

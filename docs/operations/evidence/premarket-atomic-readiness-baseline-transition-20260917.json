@@ -181,6 +181,26 @@
       "source_lineage": "The pinned main Git tree and the sole named SQL provide all positive and negative inventory evidence.",
       "reason": "Prove that unexpected files, missing predecessors, wrong hashes, and SQL substitution fail closed.",
       "rollback_target": "Remove only this additive inventory regression after separately reviewed rollback."
+    },
+    {
+      "path": "tests/consolidationFixtureRepresentation.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "c39655a9b736851a6f42f9c30f7dec2f1252174610cc3d944017d3b9be1c15e9",
+      "candidate_sha256": "8702a530d91b6c9da27c1a4c7c663853c82ec044007a6fe617278cb8c824cf37",
+      "source_lineage": "The exact sealed 2026-09-17 predecessor test is reconstructed from the pinned main Git object.",
+      "reason": "Route this unchanged historical assertion suite through the reviewed 110-file candidate Integrity view.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
+    },
+    {
+      "path": "tests/fetchCheckpointEvidence.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+      "predecessor_sha256": "fe40ce9827b03da7e15c8da95914bab0da730926a539b0d5f752323832981823",
+      "candidate_sha256": "5fb689a04f699d245488fd918552eadfdc4dbfdc354d91ac9966a64c4f14468e",
+      "source_lineage": "The exact sealed 2026-09-17 predecessor test is reconstructed from the pinned main Git object.",
+      "reason": "Route this unchanged historical assertion suite through the reviewed 110-file candidate Integrity view.",
+      "rollback_target": "Restore this test from reviewed main commit c77798272c34a7be42de376a19ad2d7dc90877a7."
     }
   ]
 }

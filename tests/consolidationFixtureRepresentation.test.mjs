@@ -8,7 +8,7 @@ import { gunzipSync, gzipSync } from 'node:zlib';
 import vm from 'node:vm';
 import ts from 'typescript';
 import { isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
-import { PUBLIC_EXPORT_ARTIFACT_PATH, readConsolidationPublicExportIntegrity as readCurrentIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
+import { PUBLIC_EXPORT_ARTIFACT_PATH, readConsolidationPublicExportIntegrity as readCurrentIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 import { FIXTURE_REPRESENTATION_ARTIFACT_PATH, EXACT_FIXTURE_REPRESENTATIONS,
   readExactFixturePreimage, resolveConsolidationFixtureRepresentation } from './helpers/consolidationFixtureRepresentation.mjs';
 

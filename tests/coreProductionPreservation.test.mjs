@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import ts from 'typescript';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { readConsolidationPublicExportIntegrity as readSubscriberProjectionIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
+import { readConsolidationPublicExportIntegrity as readSubscriberProjectionIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 const root=new URL('../',import.meta.url);
 const manifest=JSON.parse(readFileSync(new URL('docs/operations/core-stability-source-manifest-20260907.json',root),'utf8'));
 const hash=value=>createHash('sha256').update(value).digest('hex');

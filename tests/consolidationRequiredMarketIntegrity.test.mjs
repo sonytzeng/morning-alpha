@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 import ts from 'typescript';
-import { PUBLIC_EXPORT_ARTIFACT_PATH, readConsolidationPublicExportIntegrity as readCurrentIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
+import { PUBLIC_EXPORT_ARTIFACT_PATH, readConsolidationPublicExportIntegrity as readCurrentIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 import { REQUIRED_MARKET_ARTIFACT_PATH, resolveConsolidationRequiredMarketIntegrity } from './helpers/consolidationRequiredMarketIntegrity.mjs';
 
 // The complete live Tenth is verified before these unchanged Ninth tests run.

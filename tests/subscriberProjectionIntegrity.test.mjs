@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolveSubscriberProjectionIntegrity } from './helpers/subscriberProjectionIntegrity.mjs';
-import { readConsolidationPublicExportIntegrity as readConsolidationIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
+import { readConsolidationPublicExportIntegrity as readConsolidationIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 // Run every original negative/assertion below against the verified exact predecessor.
 const consolidation = readConsolidationIntegrity(JSON.parse(readFileSync('docs/operations/core-stability-incident-amendment-20260908.json')));
 const registry = consolidation.predecessorRegistry;

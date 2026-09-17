@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import postcss from 'postcss';
-import { readConsolidationPublicExportIntegrity as readSubscriberProjectionIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
+import { readPremarketAtomicReadinessIntegrity as readSubscriberProjectionIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 
 test('Core freeze plus explicitly authorized 9/8 incident: unapproved producers, Cron and canonical readers unchanged', () => {
   // Read-side get-report-payload and exactly two new evidence modules are the

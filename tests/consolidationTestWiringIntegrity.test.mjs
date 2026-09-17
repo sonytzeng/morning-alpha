@@ -10,7 +10,7 @@ import {
 import { resolveConsolidationDeliveryIntegrity } from './helpers/consolidationDeliveryIntegrity.mjs';
 import { resolveConsolidationIntegrity } from './helpers/consolidationIntegrity.mjs';
 import { resolveSubscriberProjectionIntegrity } from './helpers/subscriberProjectionIntegrity.mjs';
-import { readConsolidationPublicExportIntegrity as readConsolidationSqlHistoryIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
+import { readConsolidationPublicExportIntegrity as readConsolidationSqlHistoryIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 
 // Independent review pins. Every negative first executes the complete clean
 // predecessor chain. All tampering is in memory: no runtime, SQL or baseline writes.

@@ -4,8 +4,8 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import {
   PUBLIC_EXPORT_ARTIFACT_PATH,
-  resolveConsolidationPublicExportIntegrity,
-} from './helpers/consolidationPublicExportIntegrity.mjs';
+  resolvePremarketAtomicReadinessIntegrity,
+} from './helpers/premarketAtomicReadinessIntegrity.mjs';
 
 const MANIFEST = 'docs/operations/evidence/production-reliability-baseline-transition-20260915.json';
 const PARITY_MANIFEST = 'docs/operations/evidence/production-parity-baseline-transition-20260916.json';
@@ -20,7 +20,8 @@ const read = path => readFileSync(new URL('../' + path, import.meta.url));
 const registry = JSON.parse(read(REGISTRY));
 const artifact = read(PUBLIC_EXPORT_ARTIFACT_PATH);
 const manifest = JSON.parse(read(MANIFEST));
-const verify = (source = read) => resolveConsolidationPublicExportIntegrity(registry, artifact, source);
+const verify = (source = read) =>
+  resolvePremarketAtomicReadinessIntegrity(registry, artifact, source).reviewedBaselinePredecessor;
 
 test('reviewed parity baseline preserves the reliability transition and reconstructs all predecessors', () => {
   assert.equal(hash(read(MANIFEST)), '9d84af2ee3a805132d1769147ca5256d9439d1ad2f744b9faa8573d81ddc5309');

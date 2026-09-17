@@ -7,7 +7,7 @@ import { gunzipSync } from 'node:zlib';
 import {
   PUBLIC_EXPORT_ARTIFACT_PATH,
   readConsolidationPublicExportIntegrity as readCurrentIntegrity,
-} from './helpers/consolidationPublicExportIntegrity.mjs';
+} from './helpers/premarketAtomicReadinessIntegrity.mjs';
 
 // Validate the complete live Ninth source before exposing the exact old
 // Eighth view to these unchanged historical tests and independent pins.

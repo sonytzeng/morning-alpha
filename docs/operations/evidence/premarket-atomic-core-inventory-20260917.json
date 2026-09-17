@@ -1,0 +1,448 @@
+{
+  "schema_version": "PREMARKET_ATOMIC_CORE_INVENTORY_V1",
+  "predecessor_commit": "c77798272c34a7be42de376a19ad2d7dc90877a7",
+  "predecessor_count": 109,
+  "candidate_count": 110,
+  "reviewed_addition": {
+    "path": "supabase/migrations/20260917120000_premarket_atomic_readiness_window_v1.sql",
+    "sha256": "32e3828364e6e69d83b675c8f3ab6a1f0b580d7e9cbcdee987620fe5d0c708ad"
+  },
+  "predecessor": [
+    {
+      "path": ".github/workflows/deploy-fetch-market-data-v10.yml",
+      "sha256": "170886a7c9a50b623da9b319197853fd45513146de1678c5bb7ee48ac417afbe"
+    },
+    {
+      "path": ".github/workflows/deploy-morning-alpha-runtime.yml",
+      "sha256": "c402254ed309b0d8432757456cee81104a6cd3bd0ef46e9efc98d46cfbc4474a"
+    },
+    {
+      "path": ".github/workflows/deploy-opening-market-radar.yml",
+      "sha256": "fbbe9828838d85618b1486bc63bebb79ea4be1d3819fad627ca237b91e345c65"
+    },
+    {
+      "path": ".github/workflows/emma-auto-repair-oidc.yml",
+      "sha256": "e9f8fd09e15f8ef00cf813fb2fdc2fa527e0c1b24f82c32ac63c47c5ded6c20d"
+    },
+    {
+      "path": ".github/workflows/morning-alpha-runtime-checkpoints.yml",
+      "sha256": "a4e4966a062f50b57ce6da41a359a6d2cf76745bfa6385e07cb621a5216219e1"
+    },
+    {
+      "path": ".github/workflows/production-readiness-verification.yml",
+      "sha256": "251b05dc029966a7b44655a46cc40dd52d8f6858d4a84cb16380842ca270e7a1"
+    },
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "sha256": "b570fe360f23cb69f2062dc222190b2c129483e6900ac6f7289ec3148cd5c7e2"
+    },
+    {
+      "path": ".github/workflows/weekly-strategy-replay.yml",
+      "sha256": "a6f8e38c9a7867d9688f53b2f387636852a086f325b524484abb4415ff0f0344"
+    },
+    {
+      "path": "src/lib/decisionEvidence.ts",
+      "sha256": "91e401353867673a7254babe4c43e04ed96bfd561ba4e9963b2e67e4f5af8b2c"
+    },
+    {
+      "path": "src/lib/runtimeDecisionTimeline.ts",
+      "sha256": "3329f669b5da5e4ef937b350b0ab9400ba4249e15717cc453856dd4d8358f094"
+    },
+    {
+      "path": "src/services/resolveActiveReport.ts",
+      "sha256": "8aa41928fffed876a43d9284b4d833cbe02833bb2fd7bd5769abc13e67e61454"
+    },
+    {
+      "path": "supabase/.temp/linked-project.json",
+      "sha256": "4acd726da323326cc05311e5300f596d78d17a5195f87741c9fddc7ecd6dcc5d"
+    },
+    {
+      "path": "supabase/config.toml",
+      "sha256": "48d26772f94be632f94c0ce15ead5d6621f1e05df45e3f14dc618ff298e9e191"
+    },
+    {
+      "path": "supabase/functions/_shared/alpha-coach-contract.ts",
+      "sha256": "3e91b7269b70f65009e3afd46ea2899e5d2737982d94f9dbe3520add66a297d5"
+    },
+    {
+      "path": "supabase/functions/_shared/alpha-coach-rate-limit.test.ts",
+      "sha256": "f20f3458e212fce9dde152171b362e4cd9191974b6d9d6eaad299bf2d357b93a"
+    },
+    {
+      "path": "supabase/functions/_shared/alpha-coach-rate-limit.ts",
+      "sha256": "5fa344d211b0982a9b45c08c9d2c641bd806690ccbedc15e61981bbddb8ab02a"
+    },
+    {
+      "path": "supabase/functions/_shared/bounded-json.ts",
+      "sha256": "5129429836332e4e24cff0c2bae58381cf8b7fd9fd04fa9da556c7ec43ab02be"
+    },
+    {
+      "path": "supabase/functions/_shared/canonical-decision-contract.mjs",
+      "sha256": "7dcaeaff9977450edeb1526ca3c706f44d6e6658525394086d123c4d9bbafaee"
+    },
+    {
+      "path": "supabase/functions/_shared/canonical-runtime-market-status.mjs",
+      "sha256": "e00da0ede67bf366b40422f730e9b49e1d33336f8aaf63b9400553028c3b5fe1"
+    },
+    {
+      "path": "supabase/functions/_shared/content-intelligence.ts",
+      "sha256": "d16f1282a185dd80dcbacc18538138f56b734221d9bb2445ce391237dfcd96d7"
+    },
+    {
+      "path": "supabase/functions/_shared/continuous-learning-core.mjs",
+      "sha256": "455cb6797be9726d504506dcfd351323a9702c3a31f5743ec822cc8e075ee4f1"
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "sha256": "02dd9cdcdc4fe5668eff154b0fb0c691fbd8ab9bc33e5f8e97cd5cd53002b454"
+    },
+    {
+      "path": "supabase/functions/_shared/decision-sentence-builder.ts",
+      "sha256": "2ca9cc3b671c5bcf39a4cb7cd37e825e139b28e49e4eeef184eeaa0b274d12ad"
+    },
+    {
+      "path": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",
+      "sha256": "1721259976880bba3d7d4e1415e80b42062f79fdc57f224f3edf32336b46b3d7"
+    },
+    {
+      "path": "supabase/functions/_shared/internal-function-auth.mjs",
+      "sha256": "2a15efde1117cf2f8c1ef3adf376de95c930254902c57f2ec5dbf74ce0f930be"
+    },
+    {
+      "path": "supabase/functions/_shared/intraday-runtime-contract.test.ts",
+      "sha256": "906ff60473d8a4b629399dae7f8a1e22ce2cf952a9435065ee19469edab7cd37"
+    },
+    {
+      "path": "supabase/functions/_shared/intraday-runtime-contract.ts",
+      "sha256": "a4dd6a44f26c403be788f26f9381367866bc0437556bb6ac12debd490f249ce8"
+    },
+    {
+      "path": "supabase/functions/_shared/line-incident-message.ts",
+      "sha256": "424be77a9a5a5c199a7b12393147ec133a162de86dcbc15d5fcd104f384b19f3"
+    },
+    {
+      "path": "supabase/functions/_shared/market-provider-adapter.mjs",
+      "sha256": "a038f26f655d95bc4736b3505f628e509e345c413ba808eb0fd702128fade316"
+    },
+    {
+      "path": "supabase/functions/_shared/market-runtime-stability.mjs",
+      "sha256": "4bd5e744587cff19148386b9a2967c0e7211a8cb913042d61058923553211ff1"
+    },
+    {
+      "path": "supabase/functions/_shared/market-status.ts",
+      "sha256": "16b8a32e01e064ea055c951e0bf60377e4c2a195d9d8ac45c3d88f1bb551ad67"
+    },
+    {
+      "path": "supabase/functions/_shared/member-entitlement.ts",
+      "sha256": "06df34bf03538ab96d704089c706d71118206f2bd1645b3c7d32f529212b0f03"
+    },
+    {
+      "path": "supabase/functions/_shared/morning-alpha-public-market-status.mjs",
+      "sha256": "811aee17063bf349f5b1b48da33073e6d27f8e880f1ce4789d7ad9ba766a3b17"
+    },
+    {
+      "path": "supabase/functions/_shared/news-catalyst-scoring.mjs",
+      "sha256": "f9ce3e724e2551be7bd7db8f6b814de987f94b94c83a7fc11fc04a8f6c259dba"
+    },
+    {
+      "path": "supabase/functions/_shared/premium-content-gate.ts",
+      "sha256": "c01ea71f06ff85a73af3ad81a805e006d1fbc8a28e76dbf58a4c806684479ee8"
+    },
+    {
+      "path": "supabase/functions/_shared/premium-evidence.ts",
+      "sha256": "04b61d5a8cfdb2582b66f479376c77dfc31a4055b76387d5af4c598ffc995437"
+    },
+    {
+      "path": "supabase/functions/_shared/production-architecture-core.mjs",
+      "sha256": "4999bc2a0a5d915103fdb79394c1f30491b70c64bd84867af9850db1ec4c8157"
+    },
+    {
+      "path": "supabase/functions/_shared/provider-normalization.mjs",
+      "sha256": "c8bd578f6e4d5b204a42b90c77debfe234428727085d91ee91a92b7d9db2b261"
+    },
+    {
+      "path": "supabase/functions/_shared/report-freshness.ts",
+      "sha256": "26070ec9de2a2f1cdf2738532a6941a1dd6a02a22fa6c11d073ec005b9a380c3"
+    },
+    {
+      "path": "supabase/functions/_shared/research-pipeline-contract.test.ts",
+      "sha256": "6557eb1b40fbeea66bb4a929cd60ced523c368de25c90f2704b79f322d7aa7e3"
+    },
+    {
+      "path": "supabase/functions/_shared/research-pipeline-contract.ts",
+      "sha256": "ba2c6c8c3fc70018315c2738c09b43aeb7f17e7ff9130a5e2d3d1076eac3db81"
+    },
+    {
+      "path": "supabase/functions/_shared/research-quality-gate.test.ts",
+      "sha256": "b22c7ccb0fcc3e45915b42dddb02f700daa753517f87093d204e576e155a2eb6"
+    },
+    {
+      "path": "supabase/functions/_shared/research-quality-gate.ts",
+      "sha256": "18a19d9bdddb1d5c79e3c6a4a5f35031604d7931d7eeb350fd38b3ff8b4a66c6"
+    },
+    {
+      "path": "supabase/functions/_shared/runtime-checkpoint-core.mjs",
+      "sha256": "427c7600d397de12acae4e2e4c2bfd2dc7d49e46386946466dea81961600bc6f"
+    },
+    {
+      "path": "supabase/functions/_shared/runtime-database-contract.ts",
+      "sha256": "cfd2bbf6d41363c878c45b1deae92e9797992b76c1e4db496aaae8be7817d3ed"
+    },
+    {
+      "path": "supabase/functions/_shared/runtime-report-state.ts",
+      "sha256": "63d685a82eb0c62a8f2114d5b1ce7aac66d2d6ab1145d9af9b47822625b40816"
+    },
+    {
+      "path": "supabase/functions/alpha-coach/index.ts",
+      "sha256": "3b8ccf708a90a17b846a88e26f67f69e72cc06bacf361901ef601d0c17ccfe08"
+    },
+    {
+      "path": "supabase/functions/close-market-review/index.ts",
+      "sha256": "0690d91a4cb2f97de04e894d7dc39395ffa69b0494b656d6e12afb2720ba3520"
+    },
+    {
+      "path": "supabase/functions/closing-verification-engine/index.ts",
+      "sha256": "3226ee82d4de2c79ba66048b5f37c055ecc477000fd53fbee5cb56fbd6cf60e6"
+    },
+    {
+      "path": "supabase/functions/content-os-morning-alpha-source/index.ts",
+      "sha256": "b9430383ba63262bb9b10cacd2084d9c97a95f30090aa14b81c12e56834b7e61"
+    },
+    {
+      "path": "supabase/functions/continuous-learning-engine/index.ts",
+      "sha256": "9def4ea1c937a05fd77656029a54b29dd6b6f84656d8c94ac5468611ac95e34d"
+    },
+    {
+      "path": "supabase/functions/cron-generate-report/index.ts",
+      "sha256": "b7d07b6a0406cdebcd9d3afb74e916082acb40dcba393f0cf124e1c6df2c7898"
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "sha256": "a672f448e79df957bc303f67e4f47d2122af3d9c4ee65e9e4a769e79423bc6bf"
+    },
+    {
+      "path": "supabase/functions/daily-health-check/index.ts",
+      "sha256": "fbb260d03b27456c1d7246d4a9e4764517f5207396b9f0bc5c47603a3e702de5"
+    },
+    {
+      "path": "supabase/functions/emma-morning-alpha-bridge/index.ts",
+      "sha256": "c8835e2a21547cf08815f2b88d67cb4ba44007b4039cbf4f5654b949f9c87bd6"
+    },
+    {
+      "path": "supabase/functions/fetch-global-market-news/index.ts",
+      "sha256": "3c501c2838ef7f1e7f3a69b361efc0581b527908bf376302dffe98106d886e55"
+    },
+    {
+      "path": "supabase/functions/fetch-market-data-v10/index.ts",
+      "sha256": "b484273cd8377fe81083db0fc863452dd4795d397f1db0e513fbfe8d6f494bb4"
+    },
+    {
+      "path": "supabase/functions/fetch-market-data-v7/index.ts",
+      "sha256": "02f27103719f6ec0c6b5b1f35d665a907fd3afe36a86acf783edbbc95416cade"
+    },
+    {
+      "path": "supabase/functions/fetch-market-data-v8/index.ts",
+      "sha256": "bfe853d43b03869a04631423db3264b4fd61017ee753d00afc52d3099527cdf9"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/candidate-evidence.ts",
+      "sha256": "8eff5e80c2b44faefb4a4391683713fbd20c19cc5b45101d3243e0d52bc80279"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/content-integrity.ts",
+      "sha256": "f975679af076b78f34387b010472f16960cf400c8e9389abaf8f0b1ed08196e5"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "sha256": "6422ed6beb659f715fe02b7d5ac30866fad6dffe73020b6db78d7ff8627709b9"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/market-data-evidence.ts",
+      "sha256": "c1a67bedd21d37d20a5e22dbc7adfaf538425d418aa75b711568875c56700648"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/market-freshness.ts",
+      "sha256": "5887c106d5a1eac0d663b3aba025cc209cbeeac721805c09f985a34d095738d2"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/research-master-v2.test.ts",
+      "sha256": "f2e7628e12016345883d093b98341f7bd29d9e46b7cd979ea85f98dfe2c5a1d2"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/research-master-v2.ts",
+      "sha256": "6d767876c0899af5524c6e3225854dfe72ef02cb8c41b4feb9ed275025dce2e5"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report/index.ts",
+      "sha256": "6322a407b315075df78eac3f4afcbff7a10f07de1b63c349afe79d2fbcac81c9"
+    },
+    {
+      "path": "supabase/functions/generate-sector-rotation/index.ts",
+      "sha256": "1678f76d6b446655e7d2cf145a38c609d24e41adcea79f22495e09f661fe78e3"
+    },
+    {
+      "path": "supabase/functions/get-learning-center/index.ts",
+      "sha256": "699d0d0ab9a4bee15ff3dca20fc909aebf54ae236cc9f2669caec9436a94d489"
+    },
+    {
+      "path": "supabase/functions/line-daily-push/index.ts",
+      "sha256": "6a659df04f16b4553f2f5e18a6fb8f0a1f0b866bbc4e1a9b00d83f0bd80c695c"
+    },
+    {
+      "path": "supabase/functions/line-webhook/index.ts",
+      "sha256": "23b8a4b14fba809accacf799c0b6159a2c658d8be35828db4a1864f0432c58ec"
+    },
+    {
+      "path": "supabase/functions/ma-ops-health-check/README.md",
+      "sha256": "0231828275f6ab11183b0465f158f271613ad88162345400fcdd332b49037349"
+    },
+    {
+      "path": "supabase/functions/ma-ops-health-check/index.ts",
+      "sha256": "001348d1b2be8e453a0b2116e2d3048e6de65edb8bca7d905d74898a6351e4a6"
+    },
+    {
+      "path": "supabase/functions/ma-ops-safe-recovery/index.ts",
+      "sha256": "27b088bc39d3319b3941e97f93efaa92e5f00967d8330450eb0c8d044d976157"
+    },
+    {
+      "path": "supabase/functions/market-source-health-check/index.ts",
+      "sha256": "6c0bb363c35cd622b07a4e337318d1e50c154ed79489970f99f62dff5f3f9931"
+    },
+    {
+      "path": "supabase/functions/member-access/index.ts",
+      "sha256": "1ef5b823c3bb82fb4d0d52b7b02fdd1ca31f41a7622fbdb56fd0b82d9142d90b"
+    },
+    {
+      "path": "supabase/functions/opening-market-radar/index.ts",
+      "sha256": "e76f9728fb3c643ec01184b1a364ff54be914326f573c4255eea070bc9eb06ac"
+    },
+    {
+      "path": "supabase/functions/push-stats/index.ts",
+      "sha256": "db7d61ff6b37d5182005a8e7f690caa3e8444b8901e70290b0a019379d948ac1"
+    },
+    {
+      "path": "supabase/functions/strategy-replay-engine/index.ts",
+      "sha256": "aa17ed7c2de9730587adadcb7181b97c2844c87f634214d8b3d817cd14fce2e7"
+    },
+    {
+      "path": "supabase/migrations/202606210001_p4_qa_engine.sql",
+      "sha256": "2b59a00a2a44e485a8d3d25a3deae28f63408dc5b716b87c6a89d11008a97099"
+    },
+    {
+      "path": "supabase/migrations/202606230001_opening_market_radar_source_contract.sql",
+      "sha256": "bb7ccb2768bf077ef583fe5dc26ff581d718f622bdfd1c039c5a8d00224d8ddc"
+    },
+    {
+      "path": "supabase/migrations/202606260001_market_data_snapshots.sql",
+      "sha256": "504ac422c742fe2a262295ec54513a1594b9aeff2775b25b7dca3189037f7dc7"
+    },
+    {
+      "path": "supabase/migrations/202606260002_opening_radar_degraded_metadata.sql",
+      "sha256": "589ae7e02943ebb5cc6cbaa571929e0b17dc46f4726312be325f8fddabe0b2c6"
+    },
+    {
+      "path": "supabase/migrations/202607100001_public_performance_journal_rpc.sql",
+      "sha256": "4d145e72c896454c7cb6fad74b10224cc7b1c7959c09c76c28e5e8d238487c9a"
+    },
+    {
+      "path": "supabase/migrations/20260727022943_create_decision_snapshots_v1.sql",
+      "sha256": "d72c63d9aa8bfd3accf6300b1a5d25ae1626e2e6748622ebc72ef8290ec9cd79"
+    },
+    {
+      "path": "supabase/migrations/20260727023020_index_decision_snapshot_supersedes.sql",
+      "sha256": "9860a5968bb414da9913e11164face493e3d046eb1ead693692bc0179541ffb2"
+    },
+    {
+      "path": "supabase/migrations/20260820131721_content_intelligence_v2_foundation.sql",
+      "sha256": "f8034cf2aa318ff772e9be854dbd393e069245ce8b8d8b4bc9fb88853a8f100e"
+    },
+    {
+      "path": "supabase/migrations/20260821080544_create_ma_ops_monitoring.sql",
+      "sha256": "bf689b657854e9d47e42a0f18bf097df1713f0f6b7a947bebda5e75b08979993"
+    },
+    {
+      "path": "supabase/migrations/20260821080555_daily_delivery_guarantee.sql",
+      "sha256": "485bdf0434df081eeee0a695ec1c4544eb6600bea60867edbbb50ba110502893"
+    },
+    {
+      "path": "supabase/migrations/20260822090000_continuous_learning_engine_v1.sql",
+      "sha256": "005781835814f11d9cfc5bed6b91eef6ece41cee6dd12634ce32da965ec4b720"
+    },
+    {
+      "path": "supabase/migrations/20260822090305_production_architecture_v1.sql",
+      "sha256": "cf7fb1d9d1725ae4c023b5ff93ebe613a9b5e7749a667d35af6b6b2c4a8182d0"
+    },
+    {
+      "path": "supabase/migrations/20260822173542_preserve_checkpoint_snapshots.sql",
+      "sha256": "449302bcc12d16bf905774d63a9dfcaefdb400d298f26f6c370de46ee5cf736c"
+    },
+    {
+      "path": "supabase/migrations/20260822173549_harden_runtime_permissions.sql",
+      "sha256": "dc10451b7ae55af7ac492156443dc70f638be07be7f086de0c0797cbce68c9e7"
+    },
+    {
+      "path": "supabase/migrations/20260822183421_member_access_trial_state_machine.sql",
+      "sha256": "2ca102e751378484ef5ec2450093c9006ca110322abbcf2c1aafa90caf048f9f"
+    },
+    {
+      "path": "supabase/migrations/20260824032831_runtime_checkpoint_cron_backup.sql",
+      "sha256": "270b7983b2318381fbb4ff87ceac07e1cba31e305bfe2a83a3a6817e2791ae8a"
+    },
+    {
+      "path": "supabase/migrations/20260824095332_continuous_learning_cron_backup.sql",
+      "sha256": "ae2a5a7048db0ab59565dbb8fb703175010ddefe77ceaca70626a9c7c2a43537"
+    },
+    {
+      "path": "supabase/migrations/20260824101201_align_decision_snapshot_session_contract.sql",
+      "sha256": "2544f41889efad5e7ed02337e67f6da9067e8ea0a8ac540210bbe1f03a2f12c4"
+    },
+    {
+      "path": "supabase/migrations/20260825083924_public_close_reconciliation.sql",
+      "sha256": "8250f296c1cc08298c9479ecfad347f67524aede1b003feb93996bdb444e18f0"
+    },
+    {
+      "path": "supabase/migrations/20260825164534_emma_health_vault_secret_reader.sql",
+      "sha256": "883b0fa9d561edc52f3903bfc52aef60051daa872fd80a81f830f3ef832dbd67"
+    },
+    {
+      "path": "supabase/migrations/20260825165921_ma_ops_emma_health_schedule.sql",
+      "sha256": "5c3dc213fb6fd8cf5b1af0c4bbb20add85fa7317075d04ff1ba8691fbb1987a4"
+    },
+    {
+      "path": "supabase/migrations/20260826025400_preserve_terminal_checkpoint_evidence.sql",
+      "sha256": "1c809d1cb70090c64b7183d3a295e16556dc20b429fa11cead68c9874f5815ea"
+    },
+    {
+      "path": "supabase/migrations/20260826025415_cover_foreign_key_paths.sql",
+      "sha256": "2f57f9348f7a79a05a995ed8559c3b12ca889371bdba1d6ee0ee68f1bc2b39fb"
+    },
+    {
+      "path": "supabase/migrations/20260827084613_production_reliability_daily_lifecycle.sql",
+      "sha256": "bca25583fa25d7766ee5093cd4374642e9fb2796bc3314b3db11e0fa67e33be9"
+    },
+    {
+      "path": "supabase/migrations/20260827153000_semantic_content_reliability.sql",
+      "sha256": "712dba92ec048e2d9cce48b7becbcee00e22434689ea00f09a64c8203038cb58"
+    },
+    {
+      "path": "supabase/migrations/20260904143326_alpha_coach_durable_rate_limits.sql",
+      "sha256": "f21c3ac30270f85bc69c7c610e24bb3be0e56c9c0262d74d8756aeb129630451"
+    },
+    {
+      "path": "supabase/migrations/20260907030607_core_research_atomic_publication.sql",
+      "sha256": "a3a683a947fd8a16e155ac3c09e4434599ac5e28e133882a37ef495c79b3f542"
+    },
+    {
+      "path": "supabase/migrations/20260907072722_reconcile_canonical_schema_truth.sql",
+      "sha256": "3bcfcc1beaa208b4ff5199c7694a9b520e2e8500176abb1b70bcc746f61248f5"
+    },
+    {
+      "path": "supabase/tests/alpha_coach_rate_limit.sql",
+      "sha256": "65220786a3bcf38c1d6e47532ef60df3b503e8ac1825b98409ca068367ad6411"
+    },
+    {
+      "path": "supabase/tests/alpha_coach_rate_limit_concurrency.integration.mjs",
+      "sha256": "cf128d6e6fbace02702395534b6ed5c25d710935ecd51c28bcb57e78a3306e6a"
+    }
+  ]
+}

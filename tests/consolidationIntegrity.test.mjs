@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { CONSOLIDATION_ARTIFACT_PATH, resolveConsolidationIntegrity } from './helpers/consolidationIntegrity.mjs';
-import { readConsolidationPublicExportIntegrity as readConsolidationDeliveryIntegrity } from './helpers/consolidationPublicExportIntegrity.mjs';
+import { readConsolidationPublicExportIntegrity as readConsolidationDeliveryIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 import { resolveSubscriberProjectionIntegrity } from './helpers/subscriberProjectionIntegrity.mjs';
 
 // Tamper simulations are in memory only. Never rewrite registered source,

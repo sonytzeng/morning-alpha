@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
-import { resolveMarketStatus } from '../_shared/market-status.ts';
+import { previousTradingDay, resolveMarketStatus } from '../_shared/market-status.ts';
+import { evaluatePremarketCoreReadiness, PREMARKET_REPORT_DEADLINE_MINUTES } from '../_shared/premarket-provider-readiness.mjs';
 import { normalizeProviderQuote, summarizeProviderHealth } from '../_shared/market-provider-adapter.mjs';
 import {
   resolveSnapshotCheckpoint,
@@ -115,6 +116,7 @@ interface ProviderFailureDetail {
   status?: number;
   error?: string;
   failure_code?: string;
+  retryable?: boolean;
 }
 
 interface SymbolConfig {
@@ -563,6 +565,14 @@ async function fetchFugleTaiwanCoreQuote(
   }, { tradingDate, phase }) as FugleCoreResolution;
 
   if (!result.ok) {
+    const clock = getTaipeiParts();
+    const readiness = phase === "premarket"
+      ? evaluatePremarketCoreReadiness({
+        key: displaySymbol, result, tradingDate,
+        previousTradingDate: previousTradingDay(tradingDate),
+        taipeiMinutes: clock.hour * 60 + clock.minute,
+      })
+      : null;
     console.warn(
       `[${logPrefix}] Fugle ${displaySymbol} ${String(result.failureCode || "PROVIDER_REQUEST_REJECTED")}` +
         `${result.status ? ` HTTP ${result.status}` : ""}: ${String(result.error || "provider_failed")}`,
@@ -574,7 +584,8 @@ async function fetchFugleTaiwanCoreQuote(
       error: result.rejectedField
         ? `${String(result.error || "provider_failed")}:${String(result.rejectedField)}`
         : String(result.error || "provider_failed"),
-      failure_code: String(result.failureCode || "PROVIDER_REQUEST_REJECTED"),
+      failure_code: readiness?.failure_code || String(result.failureCode || "PROVIDER_REQUEST_REJECTED"),
+      retryable: readiness?.state === 'WAITING_FOR_PROVIDER_DATA',
     };
     if (Number.isFinite(Number(result.status)) && Number(result.status) > 0) failure.status = Number(result.status);
     failureDetails?.push(failure);
@@ -1280,9 +1291,17 @@ Deno.serve(async (req) => {
       }
 
       const assembly = validateAtomicCheckpointEvidenceRows(evidenceRows);
+      const commitClock = getTaipeiParts();
+      const premarketDeadlineReached = phase === 'premarket' &&
+        commitClock.hour * 60 + commitClock.minute >= PREMARKET_REPORT_DEADLINE_MINUTES;
       if (!assembly.valid) {
         atomicCommitError = assembly.error || "ATOMIC_CHECKPOINT_ASSEMBLY_FAILED";
         snapshotErrors.push({ symbol: "__atomic_batch__", error: atomicCommitError });
+      } else if (premarketDeadlineReached) {
+        // A request that began in-window cannot commit after the terminal
+        // deadline merely because a slow provider returned later.
+        atomicCommitError = 'PREMARKET_READINESS_DEADLINE_EXCEEDED';
+        snapshotErrors.push({ symbol: '__atomic_batch__', error: atomicCommitError });
       } else {
         const atomicResult = await supabase.rpc("commit_market_checkpoint_batch_v1", {
           p_business_date: tradingDate,
@@ -1583,6 +1602,14 @@ Deno.serve(async (req) => {
       }
       : summarizedProviderHealth;
     const classifiedProviderFailures = classifyProviderFailures(providerFailureDetails);
+    const waitingSymbols = new Set(classifiedProviderFailures
+      .filter((failure: Record<string, unknown>) => failure.failure_code === 'PROVIDER_DATA_NOT_READY')
+      .map((failure: Record<string, unknown>) => String(failure.symbol || '')));
+    const otherProviderFailures = classifiedProviderFailures.filter((failure: Record<string, unknown>) =>
+      failure.failure_code !== 'PROVIDER_DATA_NOT_READY' &&
+      !(failure.endpoint === 'atomic_checkpoint_assembly' && waitingSymbols.has(String(failure.symbol || ''))));
+    const waitingForProviderData = phase === 'premarket' && !atomicBatchId &&
+      waitingSymbols.size > 0 && otherProviderFailures.length === 0;
     const requiredCoreSymbols = [...CHECKPOINT_PROVIDER_KEYS];
     const atomicCheckpointComplete = !beneficiaryCloseOnly && atomicBatchId !== null &&
       retainedCoreEvidence.size === CHECKPOINT_PROVIDER_KEYS.length && atomicCommitError === null;
@@ -1621,6 +1648,7 @@ Deno.serve(async (req) => {
       "PROVIDER_UNAVAILABLE",
       "TIMEOUT",
       "STALE_PROVIDER_DATA",
+      "PROVIDER_DATA_NOT_READY",
     ]);
     const hasProviderDegradation = classifiedProviderFailures.some((failure: Record<string, unknown>) =>
       providerDegradationCodes.has(String(failure.failure_code || ""))
@@ -1635,7 +1663,7 @@ Deno.serve(async (req) => {
       checkpoint,
       ...overallHealth,
       latency_ms: Date.now() - startedMs,
-      last_error_code: timedOut
+      last_error_code: waitingForProviderData ? 'PROVIDER_DATA_NOT_READY' : timedOut
         ? "OVERALL_TIMEOUT"
         : atomicCommitError
           ? "ATOMIC_CHECKPOINT_COMMIT_FAILED"
@@ -1654,6 +1682,7 @@ Deno.serve(async (req) => {
         })),
         providers_by_symbol: providerUsedBySymbol,
         provider_failures: classifiedProviderFailures,
+        provider_readiness_state: waitingForProviderData ? 'WAITING_FOR_PROVIDER_DATA' : null,
         canonical_write_errors: canonicalWriteErrors,
         beneficiary_lookup: beneficiaryLookup,
         beneficiary_close_status: beneficiaryCloseStatus,
@@ -1847,6 +1876,7 @@ Deno.serve(async (req) => {
         txf_status: twCoreStatus.txf,
         txf_candidate_errors: classifiedProviderFailures.filter((f: Record<string, unknown>) => f.provider === "fugle_futopt"),
         provider_failures: classifiedProviderFailures,
+        provider_readiness_state: waitingForProviderData ? 'WAITING_FOR_PROVIDER_DATA' : null,
         snapshot_upserted_count: snapshotUpsertedCount,
         snapshot_reused_count: snapshotReusedCount,
         snapshot_errors: snapshotErrors,

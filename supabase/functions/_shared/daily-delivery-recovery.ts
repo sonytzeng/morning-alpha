@@ -1,4 +1,5 @@
 import { RUNTIME_QUALITY_POLICY } from './production-architecture-core.mjs';
+import { PREMARKET_REPORT_DEADLINE_MINUTES } from './premarket-provider-readiness.mjs';
 
 /** Business outcome is distinct from legacy outbox/provider receipt enums. */
 export function resolveReportDeliveryStatus(input: {
@@ -267,5 +268,52 @@ export function buildDailyDeliveryRecoveryPlan(
     retry_after_seconds: contentRepairBudgetExhausted
       ? null
       : attempt >= RUNTIME_QUALITY_POLICY.max_recovery_attempts ? 300 : Math.min(180, 30 * attempt),
+  };
+}
+
+// The protected legacy planner remains byte-for-byte unchanged. The only
+// exception is a verified prior-session Taiwan provider delay, with its own
+// bounded deadline and terminal incident-only action.
+export function buildPremarketProviderReadinessPlan(
+  input: DailyDeliveryRecoveryInput & { provider_not_ready?: boolean },
+): DailyDeliveryRecoveryPlan {
+  if (!input.provider_not_ready) return buildDailyDeliveryRecoveryPlan(input);
+  const base = buildDailyDeliveryRecoveryPlan({
+    ...input, delivery_deadline_minutes: PREMARKET_REPORT_DEADLINE_MINUTES,
+  });
+  if (!input.has_report && input.taipei_minutes >= PREMARKET_REPORT_DEADLINE_MINUTES) {
+    return {
+      status: 'incident', phase: base.phase, actions: ['deliver_incident'],
+      reason_codes: ['PROVIDER_DATA_NOT_READY'], attempt: base.attempt,
+      deadline_reached: true, retry_after_seconds: null,
+    };
+  }
+  return { ...base, retry_after_seconds: base.deadline_reached ? base.retry_after_seconds : 300 };
+}
+
+// A late recovery must not move the original 07:30 delivery deadline.
+export function resolvePremarketReadinessTiming(input: {
+  report_date: string;
+  completed_at: string;
+  provider_delay_context: boolean;
+  report_eligible: boolean;
+  provider_not_ready: boolean;
+  delivered: boolean;
+}): {
+  delivery_sla_status: 'MET' | 'MISS' | 'PENDING';
+  readiness_recovery_status: 'RECOVERED_WITHIN_READINESS_WINDOW' | null;
+  readiness_window_deadline_at: string | null;
+} {
+  const completedAtMs = Date.parse(input.completed_at);
+  const deliverySlaMs = Date.parse(`${input.report_date}T07:30:00+08:00`);
+  const readinessDeadlineMs = Date.parse(`${input.report_date}T08:45:00+08:00`);
+  const deliverySlaStatus = input.delivered && completedAtMs <= deliverySlaMs ? 'MET'
+    : completedAtMs > deliverySlaMs ? 'MISS' : 'PENDING';
+  const recovered = input.provider_delay_context && input.report_eligible && !input.provider_not_ready
+    && completedAtMs > deliverySlaMs && completedAtMs < readinessDeadlineMs;
+  return {
+    delivery_sla_status: deliverySlaStatus,
+    readiness_recovery_status: recovered ? 'RECOVERED_WITHIN_READINESS_WINDOW' : null,
+    readiness_window_deadline_at: input.provider_delay_context ? new Date(readinessDeadlineMs).toISOString() : null,
   };
 }

@@ -167,6 +167,9 @@ export function classifyProviderFailure(detail) {
   const status = Number(failure.status);
   const error = String(failure.error || '').toLowerCase();
   const explicitFailureCode = String(failure.failure_code || '');
+  if (explicitFailureCode === 'PROVIDER_DATA_NOT_READY') {
+    return { ...failure, failure_code: explicitFailureCode, retryable: true };
+  }
   if (['PROVIDER_SYMBOL_INVALID', 'RESOURCE_NOT_FOUND', 'PROVIDER_RESPONSE_CONTRACT_INVALID', 'STALE_PROVIDER_DATA'].includes(explicitFailureCode)) {
     return {
       ...failure,

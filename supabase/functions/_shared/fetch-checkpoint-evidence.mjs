@@ -1,6 +1,7 @@
 // Durable evidence contract, not a new market strategy. Collection time and
 // provider time are distinct. A recovery request can never create PREMARKET.
 import { evaluateCheckpointFreshness } from './market-runtime-stability.mjs';
+import { PREMARKET_LAST_COLLECTION_MINUTES } from './premarket-provider-readiness.mjs';
 
 const WINDOWS = Object.freeze({
   '0900': ['intraday', 540, 555],
@@ -29,7 +30,7 @@ export function checkpointCollectionContract({ phase, checkpoint, tradingDate, o
   const observed = taipei(observedAt);
   if (!observed || observed.date !== tradingDate || !uuid(correlationId)) return { valid: false, error: 'INVALID_EVIDENCE_IDENTITY' };
   if (phase === 'manual_backfill' && checkpoint === 'manual') return { valid: true, checkpoint: 'RECOVERY', session: 'recovery' };
-  if (phase === 'premarket' && checkpoint === 'premarket' && observed.minutes <= 455) {
+  if (phase === 'premarket' && checkpoint === 'premarket' && observed.minutes <= PREMARKET_LAST_COLLECTION_MINUTES) {
     return { valid: true, checkpoint: 'PREMARKET', session: 'premarket' };
   }
   const window = WINDOWS[checkpoint];

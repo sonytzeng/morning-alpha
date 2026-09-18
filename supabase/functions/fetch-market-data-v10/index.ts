@@ -132,7 +132,7 @@ interface SymbolConfig {
 interface BeneficiaryLookupResult {
   configs: SymbolConfig[];
   lookupStatus: "not_requested" | "loaded" | "report_not_found" | "query_failed";
-  decisionMode: "recommendations" | "no_trade" | "blocked";
+  decisionMode: "recommendations" | "no_trade" | "market_only" | "blocked";
   contractValid: boolean;
   sourceField: string;
   v10Enabled: boolean;
@@ -245,7 +245,7 @@ async function fetchBeneficiarySymbolConfigsForDate(
     const generatedText = asRecord(decision.generated_text);
     const recommendations = Array.isArray(generatedText.recommendations) ? generatedText.recommendations : [];
     const decisionMode = String(decision.decision_mode || "").trim().toLowerCase();
-    if (decisionMode === "no_trade" || decisionMode === "blocked") {
+    if (decisionMode === "no_trade" || decisionMode === "blocked" || decisionMode === "market_only") {
       const contractValid = recommendations.length === 0;
       return {
         configs: [],

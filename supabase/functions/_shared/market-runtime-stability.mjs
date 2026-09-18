@@ -306,6 +306,22 @@ export function buildBeneficiaryCloseStatus(input = {}) {
     };
   }
 
+  if (decisionMode === 'market_only' && contractValid && requested.length === 0) {
+    return {
+      status: 'NOT_APPLICABLE_MARKET_ONLY',
+      complete: true,
+      lookup_status: lookupStatus,
+      decision_mode: decisionMode,
+      contract_valid: contractValid,
+      requested_count: 0,
+      succeeded_count: 0,
+      failed_count: 0,
+      requested_symbols: [],
+      succeeded_symbols: [],
+      failed_symbols: [],
+    };
+  }
+
   if (decisionMode !== 'recommendations' || requested.length === 0 || !contractValid) {
     return {
       status: 'BLOCKED_INVALID_RECOMMENDATION_CONTRACT',

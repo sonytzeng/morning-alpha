@@ -97,6 +97,29 @@ test('an explicit canonical blocked decision closes without fabricating stocks',
   assert.equal(status.complete, true);
 });
 
+test('market-only publication closes without inventing recommendations', () => {
+  const status = buildBeneficiaryCloseStatus({
+    lookup_status: 'loaded',
+    decision_mode: 'market_only',
+    contract_valid: true,
+    requested_symbols: [],
+  });
+  assert.equal(status.status, 'NOT_APPLICABLE_MARKET_ONLY');
+  assert.equal(status.complete, true);
+  assert.equal(status.requested_count, 0);
+  assert.equal(buildBeneficiaryCloseStatus({
+    lookup_status: 'loaded',
+    decision_mode: 'market_only',
+    contract_valid: false,
+  }).complete, false);
+  assert.equal(buildBeneficiaryCloseStatus({
+    lookup_status: 'loaded',
+    decision_mode: 'market_only',
+    contract_valid: true,
+    requested_symbols: ['2330'],
+  }).complete, false);
+});
+
 test('provider failures distinguish subscription, auth, rate, outage, and mapping failures', () => {
   assert.equal(classifyProviderFailure({ status: 401 }).failure_code, 'AUTHENTICATION_FAILED');
   assert.equal(

@@ -85,7 +85,7 @@ function resolveReportPublicationCandidateIntegrity(registry, artifactBytes, rea
   };
 }
 
-export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+function resolveCrossDaySectorRecoveryIntegrity(registry, artifactBytes, readSource = read) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/cross-day-sector-recovery-baseline-transition-20260918.json'));
   const candidate = resolveReviewedBaselineTransition({
     manifest,
@@ -99,6 +99,23 @@ export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes
     fileHash: candidate.fileHash,
     newCandidatePaths: candidate.newCandidatePaths,
     crossDayCandidateIntegrity: candidate,
+  };
+}
+
+export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/full-day-counterfactual-baseline-transition-20260918.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest,
+    readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_CROSS_DAY_SECTOR_RECOVERY_20260918',
+    verifyPredecessor: predecessorRead => resolveCrossDaySectorRecoveryIntegrity(registry, artifactBytes, predecessorRead),
+  });
+  return {
+    ...candidate.reviewedBaselinePredecessor,
+    fileHash: candidate.fileHash,
+    newCandidatePaths: candidate.newCandidatePaths,
+    fullDayCandidateIntegrity: candidate,
   };
 }
 

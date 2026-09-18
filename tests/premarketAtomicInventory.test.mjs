@@ -82,6 +82,34 @@ test('cross-day Research successor pins only reviewed report evidence, provenanc
   }
 });
 
+test('full-day counterfactual successor preserves cross-day lineage and rejects unknown candidate drift', () => {
+  const result = readPremarketAtomicReadinessIntegrity(registry);
+  const successor = result.fullDayCandidateIntegrity.reviewedBaselineTransition;
+  assert.equal(successor.transition_id, 'MORNING_ALPHA_FULL_DAY_COUNTERFACTUAL_20260918');
+  assert.equal(successor.predecessor_integrity_id, 'MORNING_ALPHA_CROSS_DAY_SECTOR_RECOVERY_20260918');
+  assert.deepEqual(successor.files.map(row => row.path).sort(), [
+    'supabase/functions/_shared/daily-delivery-recovery.ts',
+    'supabase/functions/_shared/market-runtime-stability.mjs',
+    'supabase/functions/daily-delivery-orchestrator/index.ts',
+    'supabase/functions/fetch-market-data-v10/index.ts',
+    'tests/dailyDeliveryRecovery.test.mjs',
+    'tests/helpers/premarketAtomicReadinessIntegrity.mjs',
+    'tests/marketRuntimeStability.test.mjs',
+    'tests/premarketAtomicInventory.test.mjs',
+  ]);
+  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+    && !result.crossDayCandidateIntegrity.newCandidatePaths.includes(path)), []);
+  for (const path of [
+    'supabase/functions/_shared/market-runtime-stability.mjs',
+    'supabase/functions/daily-delivery-orchestrator/index.ts',
+    'supabase/functions/fetch-market-data-v10/index.ts',
+  ]) {
+    assert.throws(() => verify(name => name === path
+      ? Buffer.concat([read(name), Buffer.from('\n// unreviewed full-day drift\n')]) : read(name)),
+    /unreviewed candidate drift/);
+  }
+});
+
 test('unknown file, missing predecessor, changed hash and renamed migration all fail closed', () => {
   const mutations = [
     inventory => { inventory.predecessor.push({ path: 'supabase/migrations/unreviewed.sql', sha256: '0'.repeat(64) }); },

@@ -66,7 +66,7 @@ function resolvePremarketAtomicReadinessBaseline(registry, artifactBytes, readSo
   return { ...integrity, atomicCoreInventory: verifyPremarketAtomicCoreInventory(registry, integrity, readSource) };
 }
 
-export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+function resolveReportPublicationCandidateIntegrity(registry, artifactBytes, readSource) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/report-publication-contract-baseline-transition-20260917.json'));
   const candidate = resolveReviewedBaselineTransition({
     manifest,
@@ -82,6 +82,23 @@ export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes
     fileHash: candidate.fileHash,
     newCandidatePaths: candidate.newCandidatePaths,
     reportPublicationCandidateIntegrity: candidate,
+  };
+}
+
+export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/cross-day-sector-recovery-baseline-transition-20260918.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest,
+    readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_REPORT_PUBLICATION_CONTRACT_20260917',
+    verifyPredecessor: predecessorRead => resolveReportPublicationCandidateIntegrity(registry, artifactBytes, predecessorRead),
+  });
+  return {
+    ...candidate.reviewedBaselinePredecessor,
+    fileHash: candidate.fileHash,
+    newCandidatePaths: candidate.newCandidatePaths,
+    crossDayCandidateIntegrity: candidate,
   };
 }
 

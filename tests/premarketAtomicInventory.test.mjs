@@ -55,6 +55,33 @@ test('report publication and freshness successor pins only reviewed Handler, sha
     ? Buffer.concat([read(path), Buffer.from('\n// unreviewed freshness drift\n')]) : read(path)), /unreviewed candidate drift/);
 });
 
+test('cross-day Research successor pins only reviewed report evidence, provenance and direct regressions', () => {
+  const result = readPremarketAtomicReadinessIntegrity(registry);
+  const successor = result.crossDayCandidateIntegrity.reviewedBaselineTransition;
+  assert.equal(successor.transition_id, 'MORNING_ALPHA_CROSS_DAY_SECTOR_RECOVERY_20260918');
+  assert.equal(successor.predecessor_integrity_id, 'MORNING_ALPHA_REPORT_PUBLICATION_CONTRACT_20260917');
+  assert.deepEqual(successor.files.map(row => row.path).sort(), [
+    '.github/workflows/validate-release.yml',
+    'supabase/functions/_shared/canonical-market-state.ts',
+    'supabase/functions/generate-daily-report-v7/index.ts',
+    'supabase/functions/generate-daily-report-v7/market-data-evidence.ts',
+    'tests/crossDaySectorReconstruction.test.ts',
+    'tests/helpers/premarketAtomicReadinessIntegrity.mjs',
+    'tests/marketPublicationDelivery.test.mjs',
+    'tests/premarketAtomicInventory.test.mjs',
+  ]);
+  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/')
+    && !result.reportPublicationCandidateIntegrity.newCandidatePaths.includes(path)), []);
+  for (const path of [
+    'supabase/functions/generate-daily-report-v7/index.ts',
+    'supabase/functions/generate-daily-report-v7/market-data-evidence.ts',
+    'tests/crossDaySectorReconstruction.test.ts',
+  ]) {
+    assert.throws(() => verify(name => name === path
+      ? Buffer.concat([read(name), Buffer.from('\n// unreviewed drift\n')]) : read(name)), /unreviewed candidate drift/);
+  }
+});
+
 test('unknown file, missing predecessor, changed hash and renamed migration all fail closed', () => {
   const mutations = [
     inventory => { inventory.predecessor.push({ path: 'supabase/migrations/unreviewed.sql', sha256: '0'.repeat(64) }); },

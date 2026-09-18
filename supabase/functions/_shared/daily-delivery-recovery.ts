@@ -73,6 +73,20 @@ export interface ClaimedPipelineRetryResolution {
   reason: 'RETRY_DUE' | 'STATUS_NOT_RETRYABLE' | 'RETRY_NOT_SCHEDULED' | 'RETRY_NOT_DUE' | 'RETRY_BUDGET_EXHAUSTED';
 }
 
+/** A committed 14:30 market batch does not imply that closing verification finished. */
+export function shouldSkipRuntimeCheckpoint(
+  checkpoint: string,
+  checkpointStatus: unknown,
+  readFailed = false,
+): boolean {
+  if (readFailed || !checkpointStatus || typeof checkpointStatus !== 'object' || Array.isArray(checkpointStatus)) return false;
+  const statuses = checkpointStatus as Record<string, unknown>;
+  const succeeded = (value: unknown): boolean =>
+    !!value && typeof value === 'object' && !Array.isArray(value)
+    && String((value as Record<string, unknown>).status || '').toUpperCase() === 'SUCCEEDED';
+  return succeeded(statuses[checkpoint]) && (checkpoint !== '1430' || succeeded(statuses.closing_verification));
+}
+
 const NEWS_REASONS = new Set([
   'news_traceability_incomplete',
   'verified_catalyst_evidence_missing',

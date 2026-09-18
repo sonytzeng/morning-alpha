@@ -7,7 +7,16 @@ import {
   resolveDailyDeliveryPhase,
   resolveDailyDeliveryCompletion,
   resolveReportDeliveryStatus,
+  shouldSkipRuntimeCheckpoint,
 } from '../supabase/functions/_shared/daily-delivery-recovery.ts';
+
+test('14:30 watchdog retries unfinished closing even after market batch committed', () => {
+  const statuses = { '1430': { status: 'SUCCEEDED' }, closing_verification: { status: 'DEGRADED' } };
+  assert.equal(shouldSkipRuntimeCheckpoint('1430', statuses), false);
+  assert.equal(shouldSkipRuntimeCheckpoint('1430', { ...statuses, closing_verification: { status: 'SUCCEEDED' } }), true);
+  assert.equal(shouldSkipRuntimeCheckpoint('1410', { '1410': { status: 'SUCCEEDED' } }), true);
+  assert.equal(shouldSkipRuntimeCheckpoint('1430', statuses, true), false);
+});
 
 test('delivery business outcomes distinguish abstention, quality failure, provider failure and suppression',()=>{
   const base={is_trading_day:true,system_failure:false,report_eligible:true,delivered:true,no_recommendation:false,suppressed:false};

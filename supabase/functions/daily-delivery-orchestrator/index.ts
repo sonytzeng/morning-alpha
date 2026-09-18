@@ -14,6 +14,7 @@ import {
   resolveDailyDeliveryPhase,
   resolvePremarketReadinessTiming,
   resolveReportDeliveryStatus,
+  shouldSkipRuntimeCheckpoint,
   type DailyDeliveryAction,
   type DailyDeliveryPhase,
 } from '../_shared/daily-delivery-recovery.ts';
@@ -686,7 +687,7 @@ Deno.serve(async (req: Request) => {
     }
     const existingState = await supabase.from('trading_day_state').select('checkpoint_status')
       .eq('trading_date', businessDate).maybeSingle();
-    if (!existingState.error && String(asRecord(asRecord(existingState.data?.checkpoint_status)[checkpoint]).status || '').toUpperCase() === 'SUCCEEDED') {
+    if (shouldSkipRuntimeCheckpoint(checkpoint, existingState.data?.checkpoint_status, !!existingState.error)) {
       return jsonResponse({ success: true, status: 'SKIPPED_ALREADY_SUCCEEDED', report_date: businessDate, checkpoint, version: VERSION });
     }
     const runtimeSource = body.source === 'supabase_cron_watchdog' ? 'supabase_cron_watchdog' : 'supabase_cron_primary';

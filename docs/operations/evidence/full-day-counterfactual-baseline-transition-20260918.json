@@ -1,0 +1,105 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_FULL_DAY_COUNTERFACTUAL_20260918",
+  "candidate_base_git_sha": "f203fc21c32d212bf19a25502b5b09847f8135ed",
+  "predecessor_integrity_id": "MORNING_ALPHA_CROSS_DAY_SECTOR_RECOVERY_20260918",
+  "approval_provenance": "Sony approved scoped SYNTHETIC COUNTERFACTUAL five-day full-lifecycle certification and directed minimum candidate fixes for confirmed reachable product bugs, affected regressions, Integrity, type checking, lint, and build, while prohibiting all Production changes. This exact-hash successor records only market-only Closing completion and 14:30 unfinished-Closing retry logic discovered through isolated true Handler chains. Every earlier reviewed predecessor, the 109-to-110 Core inventory, historical hashes, failures, and the sole historical named migration remain unchanged. This record grants no commit, push, deploy, migration, Cron, or Production-data authority.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/marketRuntimeStability.test.mjs",
+    "tests/dailyDeliveryRecovery.test.mjs",
+    "tests/closingLearningContract.test.mjs",
+    "SYNTHETIC_COUNTERFACTUAL isolated five-day Handler lifecycle 2026-11-16..2026-11-20"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "f203fc21c32d212bf19a25502b5b09847f8135ed",
+      "predecessor_sha256": "02dd9cdcdc4fe5668eff154b0fb0c691fbd8ab9bc33e5f8e97cd5cd53002b454",
+      "candidate_sha256": "d74f2e668c919466409b0eec43b8a4ec165fd2a10e4b66fbb9c5ded55d97c3c1",
+      "source_lineage": "Exact merged main predecessor and isolated 14:30 Handler replay where the Atomic market batch succeeded while Closing remained unfinished.",
+      "reason": "Expose a pure exact-state decision so 14:30 retries skip only when Closing verification itself succeeded.",
+      "rollback_target": "Restore only this shared recovery helper from merged main f203fc21c32d212bf19a25502b5b09847f8135ed."
+    },
+    {
+      "path": "supabase/functions/_shared/market-runtime-stability.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "f203fc21c32d212bf19a25502b5b09847f8135ed",
+      "predecessor_sha256": "646daf7cfa3c95b824b527f8d22ffcace7f3c4d471bcaaf2c987f4b86c94111d",
+      "candidate_sha256": "f5de47a40d14d91c94e95ea44b56a21cf7138387a755642096cbe9b0a327f938",
+      "source_lineage": "Exact merged main predecessor plus isolated market-only publication and Closing Handler responses with zero canonical stock recommendations.",
+      "reason": "Recognize valid market-only Closing as complete without manufacturing beneficiary stock outcomes.",
+      "rollback_target": "Restore only this shared market-status evaluator from merged main f203fc21c32d212bf19a25502b5b09847f8135ed."
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "f203fc21c32d212bf19a25502b5b09847f8135ed",
+      "predecessor_sha256": "a672f448e79df957bc303f67e4f47d2122af3d9c4ee65e9e4a769e79423bc6bf",
+      "candidate_sha256": "31618208a2cbb45165dc0359033690359de65df370495f4501669a761fcf738a",
+      "source_lineage": "Exact merged main predecessor and isolated watchdog retry after a committed 14:30 market batch with incomplete Closing.",
+      "reason": "Allow the real Closing pipeline to retry instead of skipping solely on Atomic market completion.",
+      "rollback_target": "Restore only this Orchestrator Handler from merged main f203fc21c32d212bf19a25502b5b09847f8135ed."
+    },
+    {
+      "path": "supabase/functions/fetch-market-data-v10/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "f203fc21c32d212bf19a25502b5b09847f8135ed",
+      "predecessor_sha256": "b484273cd8377fe81083db0fc863452dd4795d397f1db0e513fbfe8d6f494bb4",
+      "candidate_sha256": "5b431351411297db7547b6a6e88f627ed64dbda47456064215b82c823c92f40a",
+      "source_lineage": "Exact merged main Fetch Handler and isolated canonical market-only decision replay at the 14:30 beneficiary lookup boundary.",
+      "reason": "Treat zero-recommendation market-only decisions as valid for Closing and keep the TypeScript contract exact.",
+      "rollback_target": "Restore only this Fetch Handler from merged main f203fc21c32d212bf19a25502b5b09847f8135ed."
+    },
+    {
+      "path": "tests/dailyDeliveryRecovery.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "f203fc21c32d212bf19a25502b5b09847f8135ed",
+      "predecessor_sha256": "4698567a7b4d2697460e48db43b240926a8088a049d5b5b0964fcaecd2414e78",
+      "candidate_sha256": "937617f77790773b2eefd88bde43fec04cd5d1190239085fea683552c08d69d4",
+      "source_lineage": "Existing recovery regression extended with exact isolated 14:30 Atomic-complete and Closing-incomplete state.",
+      "reason": "Keep a failed Closing retry reachable while allowing fully verified checkpoints to skip safely.",
+      "rollback_target": "Restore only this recovery regression from merged main f203fc21c32d212bf19a25502b5b09847f8135ed."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "f203fc21c32d212bf19a25502b5b09847f8135ed",
+      "predecessor_sha256": "ebec85eda277bc47375d60682662dbafb894c0b6b3ae9e37a2bb5f4b053261cd",
+      "candidate_sha256": "0e260b7ed4a96a55beedca4dff739a135b7ad58443d57af273f7032df6545382",
+      "source_lineage": "Exact previous cross-day Integrity entrypoint is reconstructed byte-for-byte before verifying this scoped successor.",
+      "reason": "Pin the precise eight modified candidate paths while preserving all predecessor hash checks and history.",
+      "rollback_target": "Restore only this Integrity entrypoint from merged main f203fc21c32d212bf19a25502b5b09847f8135ed."
+    },
+    {
+      "path": "tests/marketRuntimeStability.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "f203fc21c32d212bf19a25502b5b09847f8135ed",
+      "predecessor_sha256": "a22be0673a944883db94ad9997f667e84882d950480a9a5cb9ecc07139829211",
+      "candidate_sha256": "7f19bcc31a9354a619310e22000e0870962e3865de8c75ce2442b40b98a74d16",
+      "source_lineage": "Existing shared market stability tests extended with valid market-only and invalid nonzero-recommendation Closing cases.",
+      "reason": "Prove no fake beneficiary recommendation is introduced and malformed market-only decisions remain blocked.",
+      "rollback_target": "Restore only this market regression from merged main f203fc21c32d212bf19a25502b5b09847f8135ed."
+    },
+    {
+      "path": "tests/premarketAtomicInventory.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "f203fc21c32d212bf19a25502b5b09847f8135ed",
+      "predecessor_sha256": "6ce80b7c3131ae73f93047571a9c60f1a1e5445ad428a105805a6f43664036d5",
+      "candidate_sha256": "cc39120e83309d786ab6253200448ad047d9cd164a421e8f3b488e232bd0e3ae",
+      "source_lineage": "Existing exact historical 109-to-110 and cross-day successor test extended without modifying predecessor assertions.",
+      "reason": "Check the full-day successor path set and fail closed on unreviewed candidate drift or migrations.",
+      "rollback_target": "Restore only this Integrity regression from merged main f203fc21c32d212bf19a25502b5b09847f8135ed."
+    }
+  ]
+}

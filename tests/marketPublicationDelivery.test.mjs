@@ -11,6 +11,7 @@ import { fetchPublishedDeliveryEvidence as readMarketPublicationEvidence, isPubl
 import { assembleCanonicalMarketResearch } from '../supabase/functions/generate-daily-report-v7/research-master-v2.ts';
 import { canonicalMarketSourceRefs } from '../supabase/functions/_shared/canonical-market-state.ts';
 import { buildLineDailyFlexMessage } from '../supabase/functions/_shared/line-daily-flex-message.mjs';
+import { reconstructSectorRotationFromAuthoritativeClose, SECTOR_RECONSTRUCTION_SOURCE } from '../supabase/functions/generate-daily-report-v7/market-data-evidence.ts';
 
 const record = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
 const read = path => readFileSync(new URL('../'+path, import.meta.url),'utf8');
@@ -19,11 +20,15 @@ const entries = ['line-daily-push','daily-delivery-orchestrator'].map(name => {
   const dependencies={readMarketPublicationEvidence,validateMarketPublicationDelivery};
   return {name,source,fetch:isolatedFunction(source,'fetchPublishedDeliveryEvidence',dependencies),eligible:isolatedFunction(source,'isPublishedDeliveryEligible',dependencies)};
 });
-function fixture() {
+function fixture({ reportDate='2026-09-08', sectorEvidence=null, previousReportMissing=false }={}) {
   const input=isolatedFunction(read('supabase/functions/generate-daily-report-v7/research-master-v2.test.ts'),'completeFixture')();
-  input.reportDate='2026-09-08';input.todayDate=input.reportDate;input.generatedAt='2026-09-08T00:01:00.000Z';input.dataAsOf='2026-09-08T00:00:00.000Z';
+  input.reportDate=reportDate;input.todayDate=input.reportDate;input.generatedAt=`${reportDate}T00:01:00.000Z`;input.dataAsOf=`${reportDate}T00:00:00.000Z`;
   // The real sector context carries the prior date, not a relabeled news timestamp.
-  for(const row of input.evidenceIndex)row.published_at=row.source==='sector_rotation_scores'?'2026-09-07':'2026-09-07T22:00:00.000Z';
+  const priorCalendarDate=new Date(Date.parse(`${reportDate}T00:00:00Z`)-86_400_000).toISOString().slice(0,10);
+  for(const row of input.evidenceIndex)row.published_at=row.source==='sector_rotation_scores'?priorCalendarDate:`${priorCalendarDate}T22:00:00.000Z`;
+  if(sectorEvidence){const index=input.evidenceIndex.findIndex(row=>row.evidence_type==='sector_rotation');input.evidenceIndex[index]=sectorEvidence;
+    input.evidencePack.data_quality.available_sources=['market_data','market_news','sector_rotation_derived_authoritative_close'];}
+  if(previousReportMissing)input.normalizedEvidence.previous_validation=null;
   const ai=input.legacy,sentence='SOX 上漲帶動半導體風險偏好，09:30 先確認台積電與 TAIEX 是否同向；未確認前不追價，若權值轉弱就撤回偏多假設。';
   Object.assign(ai,{today_quote:sentence,v8_daily_sentence:{sentence},free_summary:{one_sentence:sentence},today_beneficiary_stocks_v10:[],today_beneficiary_stocks:[],
     v10_beneficiary_enabled:true,v10_data_quality_status:'insufficient_positive_evidence',data_quality:'complete',missing_sources:[],member_value_score:0,
@@ -43,6 +48,53 @@ function fixture() {
   ai.revision_id=snapshot.id;ai.canonical_member_revision_id=member.id;ai.market_report_gate=gate;
   return {report,snapshot,member,gate};
 }
+
+test('previous-day report FAIL + genuine close batch can reach Research, publication and market-only LINE without historical recovery',()=>{
+  const reportDate='2026-09-18',sourceDate='2026-09-17';
+  const changes=new Map([['2330',1.89],['DXY',0.6378],['IXIC',0.0255],['NVDA',0.8154],['SOX',0.6435],['SPX',-0.441],
+    ['TAIEX',0.96],['TSM',0.9595],['TXF',0.84],['US10Y',0.0991],['VIX',0.931]]);
+  const close=[...changes].map(([symbol,change_percent])=>({symbol,change_percent,trading_date:sourceDate,checkpoint:'1430',phase:'close',
+    batch_id:'11111111-1111-4111-8111-111111111111',provider_contract_version:'MARKET_CHECKPOINT_PROVIDER_V1',
+    captured_at: ['2330','TAIEX','TXF'].includes(symbol)?'2026-09-17T05:30:00Z':'2026-09-16T20:00:00Z',
+    committed_at:'2026-09-17T06:30:03.417Z'}));
+  const derived=reconstructSectorRotationFromAuthoritativeClose(close,sourceDate);
+  assert.equal(derived.status,'RECONSTRUCTED');
+  const source=read('supabase/functions/generate-daily-report-v7/index.ts');
+  const sectorContext=isolatedFunction(source,'buildResearchSectorContext',{
+    buildV10SectorContext:isolatedFunction(source,'buildV10SectorContext'),
+    readSectorEvidenceLineage:isolatedFunction(source,'readSectorEvidenceLineage'),
+  })([derived.rows.find(row=>row.sector==='半導體')]);
+  const evidenceIndex=isolatedFunction(source,'buildResearchEvidenceIndex',{
+    buildEvidenceIndex:isolatedFunction(source,'buildEvidenceIndex'),SECTOR_RECONSTRUCTION_SOURCE,
+  })({
+    normalized_market_snapshot:[],normalized_news:[],sector_context:sectorContext,previous_validation:null});
+  assert.equal(evidenceIndex.length,1);assert.equal(evidenceIndex[0].source,SECTOR_RECONSTRUCTION_SOURCE);
+  assert.match(evidenceIndex[0].raw_reference,/batch:11111111.*@2026-09-17/);
+  const f=fixture({reportDate,sectorEvidence:evidenceIndex[0],previousReportMissing:true});
+  assert.equal(f.report.ai_strategy_json.research_master_v2.quality.publish_status,'ready');
+  assert.equal(f.gate.eligible,true);assert.equal(f.gate.recommendation_gate.status,'BLOCKED');
+  const publication=evaluatePublishedMarketDelivery(f.report,f.snapshot,f.member,f.gate);
+  assert.equal(publication.eligible,true);
+  assert.equal(publication.projection.recommendation.available,false);
+  const message=buildLineDailyFlexMessage({reportDate,decisionMode:'market_only',todayLine:publication.marketContent.dailySentence,
+    recommendations:[],siteUrl:'https://example.invalid'});
+  assert.equal(message.type,'flex');
+  assert.doesNotMatch(JSON.stringify(message),/11111111-1111|sector_rotation_scores:2026-09-17/);
+});
+
+test('previous-day report FAIL with no authoritative close cannot invent sector evidence or publish',()=>{
+  const input=isolatedFunction(read('supabase/functions/generate-daily-report-v7/research-master-v2.test.ts'),'completeFixture')();
+  input.reportDate='2026-09-18';input.todayDate=input.reportDate;input.generatedAt='2026-09-18T00:01:00Z';
+  input.evidenceIndex=input.evidenceIndex.filter(row=>row.evidence_type!=='sector_rotation');
+  input.evidencePack.data_quality.available_sources=['market_data','market_news'];
+  input.evidencePack.data_quality.missing_sources=['sector_rotation_scores:2026-09-17'];
+  input.normalizedEvidence.previous_validation=null;
+  const master=assembleCanonicalMarketResearch(input);
+  assert.notEqual(master.quality.publish_status,'ready');
+  const ai={...input.legacy,research_master_v2:master,data_quality:'degraded',
+    missing_sources:['sector_rotation_scores:2026-09-17'],today_beneficiary_stocks_v10:[],today_beneficiary_stocks:[]};
+  assert.equal(evaluateMarketReportGate(ai,input.reportDate).eligible,false);
+});
 function database(f,trace=[]) {
   const tables={reports:[f.report],decision_snapshots:[f.snapshot,{...f.snapshot,id:'newer-private-qa',session_type:'PREMARKET',is_current:true,status:'PARTIAL',version:99}],
     member_content_revisions:f.member?[f.member]:[],current_member_content_revisions_v1:f.member?[f.member]:[]};

@@ -41,7 +41,10 @@ function marketSourceFreshnessVerified(source: JsonRecord, reportDate: string): 
   const freshness = typeof source.freshness === 'string' ? source.freshness.trim().toLowerCase() : '';
   const priorContext = typeof source.source_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(source.source_date)
     && source.source_date < reportDate;
-  if (source.source === 'sector_rotation_scores') return freshness === 'previous_trading_day' && priorContext;
+  if (source.source === 'sector_rotation_scores'
+    || source.source === 'authoritative_market_data_snapshots_v1') {
+    return freshness === 'previous_trading_day' && priorContext;
+  }
   if (source.source === 'reports') return freshness === 'previous_report' && priorContext;
   return freshness === 'fresh' || freshness === 'recent';
 }

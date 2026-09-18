@@ -1,0 +1,106 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_CROSS_DAY_SECTOR_RECOVERY_20260918",
+  "candidate_base_git_sha": "0f332b3e2f90aaea9d0c123ca515402333a6aca2",
+  "predecessor_integrity_id": "MORNING_ALPHA_REPORT_PUBLICATION_CONTRACT_20260917",
+  "approval_provenance": "Sony requested a scoped post-Atomic Research and cross-day resilience candidate after the natural 2026-09-18 report failure, while explicitly prohibiting Production changes, historical Recovery, Provider and Atomic changes, and fabricated prior-day evidence. This successor records only the read-only 2026-09-17 authoritative-close reconstruction path, distinct provenance, direct tests, and exact-hash Integrity wiring. The predecessor 109-to-110 inventory and every historical hash remain intact; this manifest grants no commit, deploy, migration, or Production-data authority.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/crossDaySectorReconstruction.test.ts",
+    "tests/marketPublicationDelivery.test.mjs",
+    "tests/marketPublicationPayload.test.mjs",
+    "tests/premarketAtomicInventory.test.mjs",
+    "supabase/functions/generate-daily-report-v7/research-master-v2.test.ts",
+    "supabase/functions/_shared/research-quality-gate.test.ts"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "0f332b3e2f90aaea9d0c123ca515402333a6aca2",
+      "predecessor_sha256": "b570fe360f23cb69f2062dc222190b2c129483e6900ac6f7289ec3148cd5c7e2",
+      "candidate_sha256": "f647fc444e2756f31714d4e7f7c46d330b3dbc219ce487f1131a3d33f6400688",
+      "source_lineage": "Exact merged main Release CI workflow with only the new cross-day reconstruction Deno regression appended to the existing Core contract test step.",
+      "reason": "Keep the reconstructed-evidence and no-fake-data regression permanently required by Release CI without skipping prior tests.",
+      "rollback_target": "Restore only this Release CI workflow from merged main 0f332b3e2f90aaea9d0c123ca515402333a6aca2."
+    },
+    {
+      "path": "supabase/functions/_shared/canonical-market-state.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "0f332b3e2f90aaea9d0c123ca515402333a6aca2",
+      "predecessor_sha256": "18c2aaed96714e76a2e7633a77d1107b212026ef8a9c5735829deadd8524febd",
+      "candidate_sha256": "1c733f061f829447634c7365c44dd88e81a07776bc811e79aca187257a5db0d9",
+      "source_lineage": "Exact merged main predecessor and the read-only 2026-09-18 Production Research rejection caused by absent 2026-09-17 sector context.",
+      "reason": "Recognize only prior-day, explicitly reconstructed authoritative-close context without promoting it to current market freshness.",
+      "rollback_target": "Restore only this provenance validator from merged main 0f332b3e2f90aaea9d0c123ca515402333a6aca2."
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "0f332b3e2f90aaea9d0c123ca515402333a6aca2",
+      "predecessor_sha256": "59bf9b0b87e80c10f4948da0253affa52fcb2d6dd2248c9d808a5dd48b97e089",
+      "candidate_sha256": "679504dfed2935bd66582a2d85a6679968d25c1729078e418a02b9b3042ec0e1",
+      "source_lineage": "Exact deployed Report Handler predecessor plus 2026-09-17 immutable 14:30 close batch and 2026-09-18 RESEARCH_QUALITY_REJECTED manifest, queried read-only.",
+      "reason": "Read the exact prior trading day's complete close batch only when published sector scores are missing, and disclose reconstructed evidence lineage.",
+      "rollback_target": "Restore only this Report Handler from merged main 0f332b3e2f90aaea9d0c123ca515402333a6aca2."
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/market-data-evidence.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "0f332b3e2f90aaea9d0c123ca515402333a6aca2",
+      "predecessor_sha256": "c1a67bedd21d37d20a5e22dbc7adfaf538425d418aa75b711568875c56700648",
+      "candidate_sha256": "852d1646aa9f83b87a0a9ab18f2362f89b7e05f4174c4dcbe294919e3c03bf01",
+      "source_lineage": "Exact prior market-data evidence module, with only a pure read-only derivation from a single complete and lifecycle-authoritative close batch.",
+      "reason": "Reject mixed, partial, stale Taiwan-close, wrong-date, or nonnumeric evidence and deterministically reconstruct sector context without any database write.",
+      "rollback_target": "Restore only this market evidence module from merged main 0f332b3e2f90aaea9d0c123ca515402333a6aca2."
+    },
+    {
+      "path": "tests/crossDaySectorReconstruction.test.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "8d1357744be234a8456dd6a80487f19ed5ee74775614987197e363156892011d",
+      "source_lineage": "De-identified shape and public market percentage changes from the 2026-09-17 Production authoritative 14:30 batch; internal batch UUID replaced locally.",
+      "reason": "Permanently test exact-date reconstruction, missing raw evidence rejection, batch lineage, reproducibility, and consecutive failed-report recovery.",
+      "rollback_target": "Remove only this newly added local cross-day regression test."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "0f332b3e2f90aaea9d0c123ca515402333a6aca2",
+      "predecessor_sha256": "2d845c241d0991d90d85a437be85e2ed8c8cc4d420395637d0db5911cbf26576",
+      "candidate_sha256": "ebec85eda277bc47375d60682662dbafb894c0b6b3ae9e37a2bb5f4b053261cd",
+      "source_lineage": "Original 109-to-110 predecessor and Report Publication successor are reconstructed byte-for-byte from pinned Git predecessors.",
+      "reason": "Verify the exact cross-day successor before running every unchanged predecessor Integrity assertion.",
+      "rollback_target": "Restore only this Integrity entrypoint from merged main 0f332b3e2f90aaea9d0c123ca515402333a6aca2."
+    },
+    {
+      "path": "tests/marketPublicationDelivery.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "0f332b3e2f90aaea9d0c123ca515402333a6aca2",
+      "predecessor_sha256": "4c7f93a16a8671abfb0768cbf2423f0c3afb56737a3ab30afc0b782d2c291eaa",
+      "candidate_sha256": "699c17fe3731f212c22ce6ec3fb4e9c349d09976b7c65ac51d696f26387db78e",
+      "source_lineage": "Existing isolated Research-to-Publication-to-LINE decision fixture extended with de-identified 2026-09-17 authoritative close evidence.",
+      "reason": "Prove a failed previous report does not block the next market-only report when immutable close evidence is complete; no LINE network call occurs.",
+      "rollback_target": "Restore only this direct publication regression from merged main 0f332b3e2f90aaea9d0c123ca515402333a6aca2."
+    },
+    {
+      "path": "tests/premarketAtomicInventory.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "0f332b3e2f90aaea9d0c123ca515402333a6aca2",
+      "predecessor_sha256": "3ddc0e6d3de1b3762389aca0addbe8e0abaf1366991741adee4d0ef643bc0ffe",
+      "candidate_sha256": "6ce80b7c3131ae73f93047571a9c60f1a1e5445ad428a105805a6f43664036d5",
+      "source_lineage": "Existing exact 109-to-110 inventory and Report Publication successor tests are retained without changing their historical assertions.",
+      "reason": "Add exact path-set and negative-drift checks for the next cross-day Research candidate while preserving the sole named historical migration.",
+      "rollback_target": "Restore only this Integrity regression from merged main 0f332b3e2f90aaea9d0c123ca515402333a6aca2."
+    }
+  ]
+}

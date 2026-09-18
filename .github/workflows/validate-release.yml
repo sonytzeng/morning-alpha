@@ -70,6 +70,7 @@ jobs:
           supabase/functions/_shared/research-pipeline-contract.test.ts
           supabase/functions/_shared/research-quality-gate.test.ts
           supabase/functions/generate-daily-report-v7/research-master-v2.test.ts
+          tests/crossDaySectorReconstruction.test.ts
           tests/consolidationPublicationReadAdapter.test.ts
           supabase/functions/_shared/intraday-runtime-contract.test.ts
           tests/runtimeDecisionTimeline.test.ts

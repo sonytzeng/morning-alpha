@@ -93,6 +93,12 @@ jobs:
           node --test tests/researchPipelineDatabase.integration.mjs
           MA_LOCAL_SCOPE=ma-core-final-20260907 MA_ISOLATED_TEST_DB=ma_market_publication_test1 \
             node --test tests/marketPublicationDatabase.integration.mjs
+      - name: Isolated 9/21 TXF session-date parity migration and replay
+        env:
+          MA_LOCAL_SCOPE: ma-txf-session-parity-20260921
+          MA_ISOLATED_TEST_DB: ma_txf_session_parity_test1
+          MA_TEST_PGPORT: 55439
+        run: node --test tests/txfSessionDatabase.integration.mjs
       - name: Core consolidation publication, ACL parity, replay and acceptance
         env:
           MA_LOCAL_SCOPE: ma-core-consolidation-20260909

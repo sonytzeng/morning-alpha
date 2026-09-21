@@ -20,6 +20,11 @@ export async function replayProviderQuote(entry) {
   if (entry.provider === 'fugle') {
     // Fugle's actual pure parser is tested; transport is explicitly not run.
     quote = normalizeFugleQuote(JSON.parse(bytes), entry.config.finnhubSymbol);
+    // The Production resolver binds endpoint-selected session identity after
+    // normalizing the Fugle payload. Preserve that same adapter step here.
+    if (quote && entry.config.displaySymbol === 'TXF') {
+      quote = { ...quote, raw: { ...quote.raw, session: entry.config.session } };
+    }
   } else {
     const fetchFinnhubQuote = isolatedFunction(source, 'fetchFinnhubQuote', {
       normalizeRequiredFinnhubQuote,

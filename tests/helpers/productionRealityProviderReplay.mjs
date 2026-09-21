@@ -6,7 +6,7 @@ import { normalizeConfiguredProxyQuote, normalizeProviderTimestamp } from '../..
 import { sanitizeProviderError } from '../../supabase/functions/_shared/market-runtime-stability.mjs';
 import {
   normalizeRequiredFinnhubQuote,
-  normalizeRequiredFugleQuote,
+  resolveRequiredTxfQuote,
 } from '../../supabase/functions/_shared/required-provider-validation.mjs';
 import {
   normalizeFugleTaiwanCoreResult,
@@ -54,7 +54,6 @@ validateRealProductionCapture(capture, ['SPX', 'IXIC', 'SOX', 'NVDA', 'TSM', 'VI
 validateRealProductionCapture(taiwanPremarket, ['TAIEX', '2330']);
 validateRealProductionCapture(premarketFailure, ['TAIEX_DISCOVERY']);
 
-const normalizeFugleQuote = normalizeRequiredFugleQuote;
 const finnhubResponses = Object.fromEntries(
   Object.values(capture.responses)
     .filter(response => response.provider === 'finnhub')
@@ -109,9 +108,13 @@ export async function replayProductionRealityProviderBatch() {
   quotes.set('2330', stockQuote);
 
   const txfResponse = capture.responses.TXF;
-  quotes.set('TXF', {
-    ...normalizeFugleQuote(txfResponse.payload, 'TXF1!'), provider: 'fugle_futopt', sourceSymbol: 'TXF1!',
+  const txf = await resolveRequiredTxfQuote(async endpoint => endpoint === txfResponse.endpoint
+    ? { status: txfResponse.http_status, payload: txfResponse.payload, error: null }
+    : { status: 404, payload: null, error: 'HTTP_404' }, {
+    phase: 'premarket', tradingDate: '2026-09-16', observedAt: '2026-09-16T07:00:00+08:00',
   });
+  if (!txf.quote) throw new Error('TXF_REALITY_ADAPTER_FAILED');
+  quotes.set('TXF', txf.quote);
 
   const correlationId = '16070000-0000-4000-8000-000000000001';
   const input = {

@@ -34,7 +34,10 @@ async function quoteFor(slot, payload) {
   }
   const resolved = await resolveRequiredTxfQuote(async endpoint => endpoint === capture.responses.TXF.endpoint
     ? { status: 200, payload, error: null }
-    : { status: 404, payload: null, error: 'HTTP_404' }, { phase: 'premarket', nowMs: Date.parse('2026-09-16T06:50:00+08:00') });
+    : { status: 404, payload: null, error: 'HTTP_404' }, {
+    phase: 'premarket', tradingDate: date, observedAt: preflightInput.observedAt,
+    nowMs: Date.parse(preflightInput.observedAt),
+  });
   return resolved.quote;
 }
 

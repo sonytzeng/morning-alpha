@@ -1,0 +1,28 @@
+{
+  "schema_version": "MORNING_ALPHA_SANITIZED_PRODUCTION_CONTRACT_EVIDENCE_V1",
+  "business_date": "2026-09-21",
+  "observed_at": "2026-09-21T08:35:38.180000+08:00",
+  "contains_secrets": false,
+  "business_writes": [],
+  "historical_success_claim": false,
+  "contract_relevant_fields_from_production": true,
+  "non_contract_numeric_values": "NORMALIZED_TEST_CONTROLS",
+  "provider_state": {
+    "TAIEX": "READY",
+    "2330": "READY",
+    "TXF": "READY",
+    "required_provider_count": 11,
+    "provider_failures": []
+  },
+  "txf": {
+    "source_timestamp": "2026-09-19T05:00:00+08:00",
+    "provider_session_date": "2026-09-18",
+    "session": "afterhours",
+    "source_symbol": "TXF1!"
+  },
+  "production_outcome": {
+    "atomic_error": "ATOMIC_CHECKPOINT_ROW_CONTRACT_INVALID",
+    "committed_rows": 0,
+    "report_count": 0
+  }
+}

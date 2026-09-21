@@ -1,0 +1,227 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_TXF_SESSION_DATE_PARITY_20260921",
+  "candidate_base_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+  "predecessor_integrity_id": "MORNING_ALPHA_FULL_DAY_COUNTERFACTUAL_20260918",
+  "approval_provenance": "Sony explicitly approved the Morning Alpha 9/21 P0 Production Parity candidate and the sole named 20260921120000_premarket_txf_session_date_parity_v1.sql migration after Production evidence proved that a legitimate Friday after-hours TXF session was rejected on Monday. This successor preserves every earlier Integrity lineage and historical failure while pinning only the shared session calendar, TXF contract, three approved runtime paths, direct replay tests, and deidentified evidence.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/txfSessionParity.test.mjs",
+    "tests/txfSessionDatabase.integration.mjs",
+    "tests/precheckProductionParity.test.mjs",
+    "tests/premarketReadinessRetry.test.mjs",
+    "tests/productionRealityProviderReplay.test.mjs",
+    "tests/fixtures/consolidation-v1/provider-chain.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "f647fc444e2756f31714d4e7f7c46d330b3dbc219ce487f1131a3d33f6400688",
+      "candidate_sha256": "e941df9f4367a7f96404a863d285fada8aa1473a1d6f4b1585708ba21b3497ef",
+      "source_lineage": "Exact merged main Release CI with one additive fresh PostgreSQL job for the sole named 9/21 migration.",
+      "reason": "Make GitHub Release CI independently replay the TXF session-date contract and migration twice.",
+      "rollback_target": "Restore only this workflow from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "1721259976880bba3d7d4e1415e80b42062f79fdc57f224f3edf32336b46b3d7",
+      "candidate_sha256": "169d538d4cbfc9b4601aca22b86ad2d3a50d7ac6b8bccf1a8f4d0249c50056e2",
+      "source_lineage": "Exact merged main Atomic evidence validator plus the confirmed 9/21 TXF Friday after-hours Production identity.",
+      "reason": "Apply the shared TXF session contract before local Atomic admission and persist its auditable mapping metadata.",
+      "rollback_target": "Restore only this validator from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "supabase/functions/_shared/required-provider-validation.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "7b85054c1bfdd8fa23970aaec1cf75d12d948519693c16639a7d0d7d40d55b33",
+      "candidate_sha256": "0b0fa6478ea344c239d41b3c98a4aa7c59bf360843c16ab22dc868ead1658135",
+      "source_lineage": "Exact merged main Fugle TXF resolver and the same session identity now consumed by evidence validation.",
+      "reason": "Reject invalid session candidates during adapter selection without accepting arbitrary previous-day data.",
+      "rollback_target": "Restore only this provider validator from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "supabase/functions/fetch-market-data-v10/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "5b431351411297db7547b6a6e88f627ed64dbda47456064215b82c823c92f40a",
+      "candidate_sha256": "3cbf3c9bda8b6eea8ac5bf287db579dfcfe44ccb1cb22652f3eae0c6cabfaa5a",
+      "source_lineage": "Exact merged main Production Fetch Handler with the confirmed business date and observation time passed to the shared TXF resolver.",
+      "reason": "Make the 07:00 path evaluate the same session identity that the Atomic boundary enforces.",
+      "rollback_target": "Restore only this Fetch Handler from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "supabase/functions/market-readiness-preflight/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "cc9f702c4349bfeb8a9b58434bebc840e60898cf84bef01e3a56a9334350e5e1",
+      "candidate_sha256": "2fa626391ec8fe2993099eca8752482ee03a536d4299b2683be4142e8595634b",
+      "source_lineage": "Exact merged main 06:50 Preflight Handler with its existing read-only evidence identity.",
+      "reason": "Pass that identity into the same TXF session resolver used by the 07:00 Production path.",
+      "rollback_target": "Restore only this Preflight Handler from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "0e260b7ed4a96a55beedca4dff739a135b7ad58443d57af273f7032df6545382",
+      "candidate_sha256": "41b3e42a140e9b8cf2fbf611b53fe6cf9cebf682c9ae196bd97fbaac915b67e2",
+      "source_lineage": "Exact Full-Day Integrity entrypoint reconstructed before evaluating this separately reviewed TXF successor.",
+      "reason": "Verify exact candidate hashes while retaining the sealed 109-to-110 predecessor transition unchanged.",
+      "rollback_target": "Restore only this Integrity entrypoint from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "tests/helpers/productionRealityProviderReplay.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "62d54f1ff5f52023f66ab45616220961e6012e35b41943e045e2e08b1a81b788",
+      "candidate_sha256": "ca7ccab9aae32a96a68b210eaa67c9885ba8bd2f615d5a269aae702d9cbc3729",
+      "source_lineage": "Existing hash-bound Production replay now routes TXF through the real shared resolver instead of direct normalization.",
+      "reason": "Remove the replay shortcut that previously omitted TXF session semantics.",
+      "rollback_target": "Restore only this replay helper from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "tests/helpers/consolidationProviderReplay.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "54673df8eb88c9291b31eec19dbcdd76201f0c63f7fb331ab872de3276e20c81",
+      "candidate_sha256": "8bfbef2a12fac7d969f139392cbed89ab7796efa41db057fd74b5901b08b319e",
+      "source_lineage": "Existing offline consolidation replay with the Fugle endpoint-selected TXF session identity bound after normalization, as in the Production resolver.",
+      "reason": "Keep the preserved provider-shaped Release fixture on the real session-aware adapter boundary.",
+      "rollback_target": "Restore only this test helper from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "tests/fixtures/consolidation-v1/providers/synthetic-20260714.json",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "6aab9b5f4ea89e607eafd3a8e673dc8c38a61e6697312485c3f68dd37ebf5ab6",
+      "candidate_sha256": "aa9017ccca13d446967ef629f5bc4cf26790149b0c9c43a59b8131a7087cbd73",
+      "source_lineage": "Existing synthetic provider-shaped fixture with an explicit reviewed TXF provider session date and endpoint session.",
+      "reason": "Prevent the preserved Release fixture from omitting evidence now required by the Production TXF contract.",
+      "rollback_target": "Restore only this synthetic fixture from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "tests/fixtures/consolidation-v1/manifest.json",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "7ca6fcca0386978da0f727bc0eb40c66963f43d30a7dc1b42d50fb65e7a2a33c",
+      "candidate_sha256": "cd0087342b14f6b66512e4dff2068dc62df0e347503bdad2613c3e56c6da9808",
+      "source_lineage": "Existing immutable consolidation fixture registry with only the reviewed synthetic provider input digest advanced.",
+      "reason": "Retain exact fixture hash verification after adding explicit TXF session identity.",
+      "rollback_target": "Restore only this fixture manifest from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "tests/precheckProductionParity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "2dc763b288f2a7fc1d0a83a07c45c91f04f063ac122b513b36bed09465137dae",
+      "candidate_sha256": "9e3e4784ab1da7d4ffb9ff0249843c66ce5c1bef00034847125b6523c756b36a",
+      "source_lineage": "Existing 06:50 and 07:00 parity regression supplied with its explicit date and observation identity.",
+      "reason": "Exercise the new session-aware adapter without changing the other ten provider fixtures.",
+      "rollback_target": "Restore only this parity test from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "tests/premarketAtomicInventory.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "cc39120e83309d786ab6253200448ad047d9cd164a421e8f3b488e232bd0e3ae",
+      "candidate_sha256": "ae69de7fb6c185d82c06f0fd8301765a930cbc4c2e1766b2920c500354713211",
+      "source_lineage": "Existing immutable predecessor tests extended with one independently pinned 9/21 TXF successor.",
+      "reason": "Fail closed on any migration rename, unknown shared file, or byte drift in this candidate.",
+      "rollback_target": "Restore only this Integrity regression from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "tests/premarketChaosDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "0f7a51b88a7418c92bc5650ed95224d0b92017227cd69092bba87d10c3901b23",
+      "candidate_sha256": "c85072bd20d8efcfd182034f3663b7970ccbaa7ab54d32a0e568892f56eb66f0",
+      "source_lineage": "Existing isolated premarket replay now supplies the date identity required by the shared TXF adapter.",
+      "reason": "Keep the historical replay representative without rerunning unrelated Chaos scenarios.",
+      "rollback_target": "Restore only this database replay from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "tests/premarketReadinessRetry.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "fd793b437056c886901eee661497ab89c22ba0be",
+      "predecessor_sha256": "2b938880e2172f61af9d2183a615c364a5e2223e4393128ea22151f59b39bae9",
+      "candidate_sha256": "b80ab39690d236dec3bf1a2334faad09e11e7e57242e9dee122ad303401853f9",
+      "source_lineage": "Existing bounded readiness-window regression supplied with the same TXF business date and observation time.",
+      "reason": "Verify retry behavior with the session-aware TXF adapter and unchanged 08:45 deadline.",
+      "rollback_target": "Restore only this readiness test from merged main fd793b437056c886901eee661497ab89c22ba0be."
+    },
+    {
+      "path": "docs/operations/evidence/9_21_production_vs_certified_parity_report.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ec7c60485f7382b9900feae18e1a83eb93a998d7f4869f12bcdaaf8afab9eb4c",
+      "source_lineage": "Read-only 9/21 Production provider health, pipeline timeline, Atomic function definition, and historical row counts.",
+      "reason": "Preserve the deidentified diagnosis and exact Production-versus-certified parity gap.",
+      "rollback_target": "Remove only this additive evidence report after a separately reviewed rollback."
+    },
+    {
+      "path": "supabase/functions/_shared/txf-session-contract.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e",
+      "source_lineage": "TAIFEX after-hours and regular session semantics applied to the confirmed 9/21 Production evidence shape.",
+      "reason": "Define the shared fail-closed mapping for weekday, weekend and holiday TXF evidence.",
+      "rollback_target": "Remove only this shared session contract after a separately reviewed rollback."
+    },
+    {
+      "path": "supabase/migrations/20260921120000_premarket_txf_session_date_parity_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "cf4b910c00c3a7cabcf601291f4bbe4e86389b42a92b37df6851a2f724b52ab6",
+      "source_lineage": "Exact Production Atomic definition MD5 a23ebaaed203ae96d32008f7d23066fa and the isolated 9/21 TXF replay.",
+      "reason": "Replace only the invalid PREMARKET TXF calendar-date equality with formal session mapping.",
+      "rollback_target": "Restore the prior Atomic function only after separate named Production rollback approval."
+    },
+    {
+      "path": "tests/fixtures/production-parity-v3/txf-weekend-20260921.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "19c85b8b4c6ff42acc72c157a8ae7a7ea5e442ccbbbeca876c348ff671769c4d",
+      "source_lineage": "Deidentified contract-relevant 9/21 Production identity with all non-contract numeric values explicitly normalized.",
+      "reason": "Replay the actual Friday after-hours to Monday mapping without storing secrets or claiming a historical PASS.",
+      "rollback_target": "Remove only this additive sanitized fixture after a separately reviewed rollback."
+    },
+    {
+      "path": "tests/txfSessionDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "3399f9014eb3b850e3f497f39a1e803fe92c9d2cd0f3e2daa4f7bf6259e29b22",
+      "source_lineage": "Fresh loopback PostgreSQL recreation of the exact Atomic predecessor and sole named candidate migration.",
+      "reason": "Prove SQL weekday, Monday, long-holiday, rejection, metadata, idempotency and historical preservation contracts.",
+      "rollback_target": "Remove only this additive isolated database test after a separately reviewed rollback."
+    },
+    {
+      "path": "tests/txfSessionParity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "fa65acb7195c81ae0c81df1cfdffb4a584c04da0529126a87dc3a183353421a0",
+      "source_lineage": "Shared Edge, Preflight, Atomic and orchestration replay of the 9/21 TXF contract evidence.",
+      "reason": "Keep all parity paths and fail-closed cases permanently covered without rerunning unrelated Chaos.",
+      "rollback_target": "Remove only this additive parity regression after a separately reviewed rollback."
+    }
+  ]
+}

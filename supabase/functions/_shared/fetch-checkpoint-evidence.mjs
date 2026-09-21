@@ -2,6 +2,7 @@
 // provider time are distinct. A recovery request can never create PREMARKET.
 import { evaluateCheckpointFreshness } from './market-runtime-stability.mjs';
 import { PREMARKET_LAST_COLLECTION_MINUTES } from './premarket-provider-readiness.mjs';
+import { evaluatePremarketTxfSession } from './txf-session-contract.mjs';
 
 const WINDOWS = Object.freeze({
   '0900': ['intraday', 540, 555],
@@ -58,6 +59,16 @@ export function buildCheckpointEvidence(input, quote, config) {
     trading_date: input.tradingDate, market: config.market, phase: input.phase, symbol: config.displaySymbol,
   });
   if (!freshness.valid) return { valid: false, error: 'INVALID_CHECKPOINT_SOURCE_TIME' };
+  const txfSession = config.displaySymbol === 'TXF' && input.phase === 'premarket'
+    ? evaluatePremarketTxfSession({
+      tradingDate: input.tradingDate,
+      sourceTimestamp: quote.capturedAt,
+      observedAt: input.observedAt,
+      providerSessionDate: record(quote.raw).date,
+      session: record(quote.raw).session,
+    })
+    : null;
+  if (txfSession && !txfSession.valid) return { valid: false, error: txfSession.error };
   // Existing provider freshness is deliberately preserved for US overnight data.
   // Taiwan intraday quotes additionally belong to this checkpoint, not the prior one.
   const window = WINDOWS[input.checkpoint];
@@ -74,6 +85,12 @@ export function buildCheckpointEvidence(input, quote, config) {
       source_symbol: quote.sourceSymbol, change: Number(quote.change), source_raw: record(quote.raw),
       freshness_status: freshness.status, freshness_age_minutes: freshness.age_minutes,
       captured_session_date: freshness.captured_session_date,
+      ...(txfSession ? {
+        txf_session_contract: txfSession.contract,
+        txf_expected_previous_trading_date: txfSession.expected_session_date,
+        txf_provider_session_date: txfSession.provider_session_date,
+        txf_session_type: txfSession.session,
+      } : {}),
       fallback_used: quote.sourceSymbol !== config.finnhubSymbol },
   } };
 }
@@ -102,6 +119,21 @@ export function validateAtomicCheckpointEvidenceRows(rows) {
       !['fresh', 'provider_returned'].includes(String(raw.freshness_status || '')) ||
       !presentFiniteNumber(raw.freshness_age_minutes) || !/^\d{4}-\d{2}-\d{2}$/.test(String(raw.captured_session_date || ''))) {
       return { valid: false, error: 'ATOMIC_CHECKPOINT_ROW_CONTRACT_INVALID', providerKey: row.provider_key || null };
+    }
+    if (String(row.provider_key || '') === 'TXF' && String(row.checkpoint || '') === 'PREMARKET') {
+      const sourceRaw = record(raw.source_raw);
+      const txf = evaluatePremarketTxfSession({
+        tradingDate: row.trading_date,
+        sourceTimestamp: row.source_timestamp,
+        observedAt: row.captured_at,
+        providerSessionDate: sourceRaw.date,
+        session: sourceRaw.session,
+      });
+      if (!txf.valid || raw.txf_session_contract !== txf.contract ||
+        raw.txf_expected_previous_trading_date !== txf.expected_session_date ||
+        raw.txf_provider_session_date !== txf.provider_session_date || raw.txf_session_type !== txf.session) {
+        return { valid: false, error: txf.error || 'ATOMIC_CHECKPOINT_ROW_CONTRACT_INVALID', providerKey: 'TXF' };
+      }
     }
   }
   return { valid: true, rows };

@@ -37,7 +37,13 @@ export function verifyPremarketAtomicCoreInventory(registry, integrity, readSour
   assert.equal(new Set(paths).size, 109);
   assert.deepEqual(paths, [...paths].sort());
   const historicalAdditions = new Set(registry.files.filter(row => row.baseline_sha256 === null).map(row => row.path));
-  const include = path => !approvedHistoricalExceptions.has(path) && !historicalAdditions.has(path)
+  const availableToReviewedLayer = path => {
+    try { readSource(path); return true; } catch (error) {
+      if (error?.code === 'ENOENT') return false;
+      throw error;
+    }
+  };
+  const include = path => availableToReviewedLayer(path) && !approvedHistoricalExceptions.has(path) && !historicalAdditions.has(path)
     && (!integrity.newCandidatePaths.includes(path) || path === namedMigration);
   const predecessorPaths = git(['ls-tree', '-r', '--name-only', predecessorCommit, '--', ...scopes]).filter(include);
   assert.deepEqual(paths, predecessorPaths, 'the exact sealed 109-file predecessor set must survive');
@@ -102,7 +108,7 @@ function resolveCrossDaySectorRecoveryIntegrity(registry, artifactBytes, readSou
   };
 }
 
-export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+function resolveFullDayCounterfactualIntegrity(registry, artifactBytes, readSource = read) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/full-day-counterfactual-baseline-transition-20260918.json'));
   const candidate = resolveReviewedBaselineTransition({
     manifest,
@@ -116,6 +122,23 @@ export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes
     fileHash: candidate.fileHash,
     newCandidatePaths: candidate.newCandidatePaths,
     fullDayCandidateIntegrity: candidate,
+  };
+}
+
+export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/txf-session-date-parity-baseline-transition-20260921.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest,
+    readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_FULL_DAY_COUNTERFACTUAL_20260918',
+    verifyPredecessor: predecessorRead => resolveFullDayCounterfactualIntegrity(registry, artifactBytes, predecessorRead),
+  });
+  return {
+    ...candidate.reviewedBaselinePredecessor,
+    fileHash: candidate.fileHash,
+    newCandidatePaths: candidate.newCandidatePaths,
+    txfSessionParityCandidateIntegrity: candidate,
   };
 }
 

@@ -49,7 +49,8 @@ async function realRows() {
       const resolved = await resolveRequiredTxfQuote(async endpoint => endpoint === response.endpoint
         ? { status: response.http_status, payload: response.payload, error: null }
         : { status: 404, payload: null, error: 'HTTP_404' },
-      { phase: 'premarket', nowMs: Date.parse(capture.capture_time) });
+      { phase: 'premarket', tradingDate: capture.business_date, observedAt: capture.capture_time,
+        nowMs: Date.parse(capture.capture_time) });
       normalized = resolved.quote;
     }
     const evidence = validateRequiredProviderEvidence(slot, normalized, {

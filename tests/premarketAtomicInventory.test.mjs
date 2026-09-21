@@ -28,7 +28,8 @@ test('reviewed 109-to-110 transition preserves every predecessor path and hash a
   });
   assert.equal(result.reviewedBaselinePredecessor.reviewedBaselineTransition.transition_id,
     'MORNING_ALPHA_PREMARKET_READINESS_20260917');
-  assert.equal(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+  const atomicCandidate = result.reportPublicationCandidateIntegrity.reviewedBaselinePredecessor;
+  assert.equal(atomicCandidate.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
     && !result.reviewedBaselinePredecessor.newCandidatePaths.includes(path)).join(','), migrationPath);
 });
 
@@ -70,7 +71,7 @@ test('cross-day Research successor pins only reviewed report evidence, provenanc
     'tests/marketPublicationDelivery.test.mjs',
     'tests/premarketAtomicInventory.test.mjs',
   ]);
-  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/')
+  assert.deepEqual(result.crossDayCandidateIntegrity.newCandidatePaths.filter(path => path.startsWith('supabase/')
     && !result.reportPublicationCandidateIntegrity.newCandidatePaths.includes(path)), []);
   for (const path of [
     'supabase/functions/generate-daily-report-v7/index.ts',
@@ -97,7 +98,7 @@ test('full-day counterfactual successor preserves cross-day lineage and rejects 
     'tests/marketRuntimeStability.test.mjs',
     'tests/premarketAtomicInventory.test.mjs',
   ]);
-  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+  assert.deepEqual(result.txfSessionParityCandidateIntegrity.reviewedBaselinePredecessor.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
     && !result.crossDayCandidateIntegrity.newCandidatePaths.includes(path)), []);
   for (const path of [
     'supabase/functions/_shared/market-runtime-stability.mjs',
@@ -106,6 +107,35 @@ test('full-day counterfactual successor preserves cross-day lineage and rejects 
   ]) {
     assert.throws(() => verify(name => name === path
       ? Buffer.concat([read(name), Buffer.from('\n// unreviewed full-day drift\n')]) : read(name)),
+    /unreviewed candidate drift/);
+  }
+});
+
+test('9/21 TXF parity successor pins the sole named migration and exact shared contract surface', () => {
+  const result = readPremarketAtomicReadinessIntegrity(registry);
+  const successor = result.txfSessionParityCandidateIntegrity.reviewedBaselineTransition;
+  assert.equal(successor.transition_id, 'MORNING_ALPHA_TXF_SESSION_DATE_PARITY_20260921');
+  assert.equal(successor.predecessor_integrity_id, 'MORNING_ALPHA_FULL_DAY_COUNTERFACTUAL_20260918');
+  assert.deepEqual(successor.files.filter(row => row.operation === 'ADD').map(row => row.path).sort(), [
+    'docs/operations/evidence/9_21_production_vs_certified_parity_report.md',
+    'supabase/functions/_shared/txf-session-contract.mjs',
+    'supabase/migrations/20260921120000_premarket_txf_session_date_parity_v1.sql',
+    'tests/fixtures/production-parity-v3/txf-weekend-20260921.json',
+    'tests/txfSessionDatabase.integration.mjs',
+    'tests/txfSessionParity.test.mjs',
+  ]);
+  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+    && !result.fullDayCandidateIntegrity.newCandidatePaths.includes(path)), [
+    'supabase/migrations/20260921120000_premarket_txf_session_date_parity_v1.sql',
+  ]);
+  for (const path of [
+    'supabase/functions/_shared/txf-session-contract.mjs',
+    'supabase/functions/_shared/fetch-checkpoint-evidence.mjs',
+    'supabase/functions/fetch-market-data-v10/index.ts',
+    'supabase/functions/market-readiness-preflight/index.ts',
+  ]) {
+    assert.throws(() => verify(name => name === path
+      ? Buffer.concat([read(name), Buffer.from('\n// unreviewed TXF drift\n')]) : read(name)),
     /unreviewed candidate drift/);
   }
 });

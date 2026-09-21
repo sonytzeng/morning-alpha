@@ -28,8 +28,8 @@
     },
     {
       "provider": "fugle",
-      "config": { "finnhubSymbol": "TXF202607", "displaySymbol": "TXF", "name": "Synthetic Taiwan futures", "market": "TW" },
-      "response": { "price": 25000, "change": 50, "changePercent": 0.200401, "lastUpdated": "2026-07-13T21:00:00.000Z" }
+      "config": { "finnhubSymbol": "TXF202607", "displaySymbol": "TXF", "name": "Synthetic Taiwan futures", "market": "TW", "session": "afterhours" },
+      "response": { "price": 25000, "change": 50, "changePercent": 0.200401, "date": "2026-07-13", "lastUpdated": "2026-07-13T21:00:00.000Z" }
     }
   ],
   "unsupported_stock_symbols": ["3034", "3529", "5274", "3131", "4763"],

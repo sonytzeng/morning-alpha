@@ -9,7 +9,7 @@
       "path": "providers/synthetic-20260714.json",
       "fixture_id": "synthetic-provider-input-20260714",
       "kind": "SYNTHETIC_FAILURE_SHAPE",
-      "sha256": "6aab9b5f4ea89e607eafd3a8e673dc8c38a61e6697312485c3f68dd37ebf5ab6"
+      "sha256": "aa9017ccca13d446967ef629f5bc4cf26790149b0c9c43a59b8131a7087cbd73"
     }
   ],
   "fixtures": [

@@ -2,6 +2,7 @@ import { buildCheckpointEvidence, presentFiniteNumber } from './fetch-checkpoint
 import { normalizeConfiguredProxyQuote, normalizeProviderTimestamp } from './provider-normalization.mjs';
 import { REQUIRED_PROVIDER_SLOTS } from './provider-reliability-contract.mjs';
 import { normalizeFugleTaiwanCoreResult } from './fugle-taiex-provider.mjs';
+import { evaluatePremarketTxfSession } from './txf-session-contract.mjs';
 
 const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const number = value => {
@@ -221,6 +222,7 @@ export function classifyRequiredProviderFailure(response, evidenceError = null) 
   if (status >= 500) return 'PROVIDER_UNAVAILABLE';
   if (String(record(response).error || '') === 'TIMEOUT') return 'TIMEOUT';
   if (evidenceError === 'INVALID_CHECKPOINT_SOURCE_TIME') return 'STALE_PROVIDER_DATA';
+  if (['TXF_SESSION_DATE_MISMATCH', 'TXF_SESSION_STALE'].includes(String(evidenceError || ''))) return 'STALE_PROVIDER_DATA';
   if (evidenceError === 'OUTSIDE_REAL_CHECKPOINT_WINDOW') return 'MARKET_PHASE_EXPECTED';
   if (evidenceError) return 'PROVIDER_RESPONSE_CONTRACT_INVALID';
   return String(record(response).error || 'PROVIDER_REQUEST_REJECTED');
@@ -249,11 +251,25 @@ export async function resolveRequiredTxfQuote(request, options = {}) {
   const tryQuote = async (symbol, session, resolution, fallbackUsed) => {
     const endpoint = txfQuoteEndpoint(symbol, session);
     const response = await request(endpoint);
-    observations.push({ endpoint, ...record(response) });
+    const observation = { endpoint, ...record(response) };
+    observations.push(observation);
     if (Number(response?.status) !== 200) return null;
     if (!/^TXF[A-Z0-9!]+$/i.test(String(record(response.payload).symbol || ''))) return null;
     const base = normalizeRequiredFugleQuote(response.payload, symbol);
     if (!base) return null;
+    if ((options.phase === 'premarket' || options.phase === 'manual_backfill') && options.tradingDate && options.observedAt) {
+      const sessionContract = evaluatePremarketTxfSession({
+        tradingDate: options.tradingDate,
+        sourceTimestamp: base.capturedAt,
+        observedAt: options.observedAt,
+        providerSessionDate: record(response.payload).date,
+        session,
+      });
+      if (!sessionContract.valid) {
+        observation.contract_error = sessionContract.error;
+        return null;
+      }
+    }
     return {
       quote: {
         ...base, provider: 'fugle_futopt', sourceSymbol: symbol,

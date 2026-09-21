@@ -44,7 +44,9 @@ async function currentBatch(observedAt = current.capture_time) {
     } else {
       const result = await resolveRequiredTxfQuote(async endpoint => endpoint === captured.endpoint
         ? { status: 200, payload: captured.payload, error: null }
-        : { status: 404, payload: null, error: 'HTTP_404' }, { phase: 'premarket', nowMs: Date.parse(observedAt) });
+        : { status: 404, payload: null, error: 'HTTP_404' }, {
+        phase: 'premarket', tradingDate: date, observedAt, nowMs: Date.parse(observedAt),
+      });
       quote = result.quote;
     }
     const checked = validateRequiredProviderEvidence(slot, quote, input(observedAt));

@@ -255,7 +255,8 @@ async function checkFugleQuote(
     return checkedResult(slot, endpoint, { status: null, payload: null, error: 'CONFIGURATION_MISSING' }, false, captureSample);
   }
   const resolved = await resolveRequiredTxfQuote(
-    (path: string) => fetchRequiredFugleResponse(path, apiKey), { phase: 'premarket' },
+    (path: string) => fetchRequiredFugleResponse(path, apiKey),
+    { phase: 'premarket', tradingDate, observedAt: String(evidenceInput.observedAt || '') },
   );
   const last = resolved.observations.at(-1) || { status: null, payload: null, error: 'PROVIDER_REQUEST_REJECTED' };
   const response = resolved.response || last;

@@ -846,6 +846,7 @@ async function fetchTaiwanCoreQuote(
   logPrefix: string,
   phase: MarketDataPhase,
   tradingDate: string,
+  observedAt: string,
   failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
   if (config.displaySymbol === "2330") {
@@ -866,7 +867,8 @@ async function fetchTaiwanCoreQuote(
 
   if (config.displaySymbol === "TXF") {
     const resolved = await resolveRequiredTxfQuote(
-      (endpoint: string) => fetchRequiredFugleResponse(endpoint, fugleApiKey), { phase },
+      (endpoint: string) => fetchRequiredFugleResponse(endpoint, fugleApiKey),
+      { phase, tradingDate, observedAt },
     );
     for (const observation of resolved.observations) {
       if (Number(observation.status) === 200) continue;
@@ -1243,7 +1245,7 @@ Deno.serve(async (req) => {
         console.log(`[${batchTag}] [${originalIndex + 1}/${symbolConfigs.length}] Fetching ${config.displaySymbol} on ${lane.name} lane...`);
         try {
           const fetchedQuote = config.market === "TW"
-            ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, tradingDate, providerFailureDetails)
+            ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, tradingDate, startedAt, providerFailureDetails)
             : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`, providerFailureDetails);
           fetchedQuotes.set(config, fetchedQuote);
         } catch (err) {

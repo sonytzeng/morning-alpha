@@ -1,0 +1,85 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_ACCEPTANCE_READINESS_WINDOW_PARITY_20260922",
+  "candidate_base_git_sha": "eb47476c8fc3392affe218ff0bd09a197ba4b71e",
+  "predecessor_integrity_id": "MORNING_ALPHA_PREMARKET_TW_CASH_PHASE_20260922",
+  "approval_provenance": "Sony explicitly and by name authorized the sole Morning Alpha ACCEPTANCE_READINESS_WINDOW_PARITY_DRIFT P0 migration, fresh isolated boundary validation, Acceptance regression, Production parity, Integrity, GitHub Release CI, and later exact Production execution only after every gate passes. The authorization preserves all historical FAIL rows and forbids Function, Cron, Auth, RLS, secret, provider, Atomic, report, LINE, closing, learning, or member changes.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/acceptanceReadinessWindowParity.test.mjs",
+    "tests/acceptanceReadinessWindowDatabase.integration.mjs",
+    "tests/coreConsolidationDatabase.integration.mjs",
+    "tests/premarketAtomicInventory.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "eb47476c8fc3392affe218ff0bd09a197ba4b71e",
+      "predecessor_sha256": "7f2a0fa14b82b80b5be79b2215ad0a94ef58a8a3aca44e509cd61d71dccf3def",
+      "candidate_sha256": "0f81b0d32f0676d712f7d2f3abe6a60475c5678143bbf8afe8997300967bc63c",
+      "source_lineage": "Merged PR 150 Release workflow plus one sequential isolated Acceptance boundary test on the same fresh PostgreSQL fixture.",
+      "reason": "Require GitHub Release CI to execute the exact migration and seven real Acceptance boundaries.",
+      "rollback_target": "Restore only the Release workflow from merged main eb47476c8fc3392affe218ff0bd09a197ba4b71e."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "eb47476c8fc3392affe218ff0bd09a197ba4b71e",
+      "predecessor_sha256": "e8a5bccae039acc9b5be7790d74f08a1d436e7c242ebcb3ba4f108410b7411da",
+      "candidate_sha256": "6d0b2c2a927223a36a74936b7e346d6b24e95870f1a6bfda056df83260170856",
+      "source_lineage": "Exact 9/22 Taiwan cash phase Integrity result reconstructed before this independent Acceptance successor.",
+      "reason": "Pin the sole migration and its direct tests without changing any predecessor hash or lineage.",
+      "rollback_target": "Restore only this Integrity entrypoint from merged main after a separately authorized rollback."
+    },
+    {
+      "path": "tests/premarketAtomicInventory.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "eb47476c8fc3392affe218ff0bd09a197ba4b71e",
+      "predecessor_sha256": "14b60a022325779b2796bc00ad08710efecc717f58fe1b747c4aa0155d9e01da",
+      "candidate_sha256": "4dae271038eadb5027f2134b26a6beace4ba2bb621a9b960f72ae10ef69ff8b2",
+      "source_lineage": "Existing append-only Integrity regression extended with the named Acceptance readiness successor.",
+      "reason": "Reject renamed migrations, unknown additions, changed tests, or missing predecessor lineage.",
+      "rollback_target": "Restore only this Integrity regression from merged main after a separately authorized rollback."
+    },
+    {
+      "path": "supabase/migrations/20260922153000_acceptance_readiness_window_parity_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "68efc9a6c9836adc266cf385892f766ca01a4c0464c3371e5158d3f5f60b8e4c",
+      "source_lineage": "Exact Production Acceptance function MD5 6b24694c90fff258727147df13ae2638 with fail-closed four-anchor replacement.",
+      "reason": "Separate the 07:30 delivery SLA from the existing 08:45 readiness recovery deadline.",
+      "rollback_target": "Restore the prior Acceptance function only after separate named Production rollback approval."
+    },
+    {
+      "path": "tests/acceptanceReadinessWindowParity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "1abc21844a5582276f7159f557298853f380d8f81186807c0bfba5965f70f10d",
+      "source_lineage": "Direct static and semantic boundary regression for the named migration and seven approved completion times.",
+      "reason": "Fail CI if Lifecycle, Readiness, or Delivery SLA are collapsed into one cutoff again.",
+      "rollback_target": "Remove only this additive contract regression after a separately authorized rollback."
+    },
+    {
+      "path": "tests/acceptanceReadinessWindowDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ba9ce07049d61cc0da873e8440dc1a207d83be870ef16a2a74d7592da1f5ce9f",
+      "source_lineage": "Fresh PostgreSQL 17 schema replay followed by the exact candidate twice and actual Acceptance RPC boundary calls.",
+      "reason": "Prove 07:00 through 08:44 succeed, 08:45 fails, metadata is unchanged, and historical rows remain byte-identical.",
+      "rollback_target": "Remove only this additive isolated database regression after a separately authorized rollback."
+    }
+  ]
+}

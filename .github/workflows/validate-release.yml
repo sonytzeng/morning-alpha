@@ -111,3 +111,10 @@ jobs:
           MA_ISOLATED_TEST_DB: ma_core_consolidation_test1
           MA_CONSOLIDATION_CI_SERVICE_ID: ${{ job.services.isolated-postgres.id }}
         run: node --experimental-strip-types --test tests/coreConsolidationDatabase.integration.mjs
+      - name: Acceptance 07:30 SLA and 08:45 readiness-window parity
+        env:
+          MA_LOCAL_SCOPE: ma-core-consolidation-20260909
+          MA_ACCEPTANCE_LOCAL_SCOPE: ma-acceptance-readiness-parity-20260922
+          MA_ISOLATED_TEST_DB: ma_core_consolidation_test1
+          MA_TEST_PGPORT: 55439
+        run: node --test tests/acceptanceReadinessWindowDatabase.integration.mjs

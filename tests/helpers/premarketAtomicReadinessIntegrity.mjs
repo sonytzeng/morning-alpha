@@ -142,7 +142,7 @@ function resolveTxfSessionParityIntegrity(registry, artifactBytes, readSource = 
   };
 }
 
-export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+function resolveTaiwanCashPhaseIntegrity(registry, artifactBytes, readSource = read) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/premarket-tw-cash-phase-baseline-transition-20260922.json'));
   const candidate = resolveReviewedBaselineTransition({
     manifest,
@@ -156,6 +156,23 @@ export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes
     fileHash: candidate.fileHash,
     newCandidatePaths: candidate.newCandidatePaths,
     taiwanCashPhaseCandidateIntegrity: candidate,
+  };
+}
+
+export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/acceptance-readiness-window-parity-baseline-transition-20260922.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest,
+    readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_PREMARKET_TW_CASH_PHASE_20260922',
+    verifyPredecessor: predecessorRead => resolveTaiwanCashPhaseIntegrity(registry, artifactBytes, predecessorRead),
+  });
+  return {
+    ...candidate.reviewedBaselinePredecessor,
+    fileHash: candidate.fileHash,
+    newCandidatePaths: candidate.newCandidatePaths,
+    acceptanceReadinessCandidateIntegrity: candidate,
   };
 }
 

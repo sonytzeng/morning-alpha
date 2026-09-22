@@ -60,7 +60,7 @@ test('captured provider fixtures are exact, deidentified, hash-bound Production 
 test('06:50 preflight cannot trigger or write a business pipeline artifact', () => {
   assert.match(preflight, /OUTSIDE_0650_PREFLIGHT_WINDOW/);
   assert.match(preflight, /07:00_REFETCH_FROM_PROVIDERS/);
-  assert.match(preflight, /NO_PREVIOUS_DAY_DATA/);
+  assert.match(preflight, /NO_STALE_OR_ARBITRARY_SESSION_DATA/);
   assert.match(preflight, /from\('data_provider_health'\)\.upsert/);
   for (const forbidden of [
     'market_checkpoint_snapshots', 'market_data_snapshots', 'reports', 'recommendations',

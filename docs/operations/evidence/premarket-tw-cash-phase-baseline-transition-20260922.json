@@ -1,0 +1,268 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_PREMARKET_TW_CASH_PHASE_20260922",
+  "candidate_base_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+  "predecessor_integrity_id": "MORNING_ALPHA_TXF_SESSION_DATE_PARITY_20260921",
+  "approval_provenance": "Sony explicitly authorized the Morning Alpha P0 Premarket Contract Redesign through Release Candidate after retained 9/22 Production evidence proved HTTP 200 TAIEX/2330 responses were rejected only by current-business-date equality before open, while 09:00 and 09:30 passed. This successor preserves all prior lineage and historical failures and pins one additive Atomic migration, the shared phase contract, two runtime handlers, and direct phase/replay regressions.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/taiwanCashPhaseContract.test.mjs",
+    "tests/taiwanCashPhaseDatabase.integration.mjs",
+    "tests/precheckProductionParity.test.mjs",
+    "tests/premarketReadinessRetry.test.mjs",
+    "tests/txfSessionParity.test.mjs",
+    "tests/fetchCheckpointEvidence.test.mjs",
+    "tests/premarketAtomicInventory.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "e941df9f4367a7f96404a863d285fada8aa1473a1d6f4b1585708ba21b3497ef",
+      "candidate_sha256": "7f2a0fa14b82b80b5be79b2215ad0a94ef58a8a3aca44e509cd61d71dccf3def",
+      "source_lineage": "Exact merged Release workflow with one isolated PostgreSQL replay added for the sole 9/22 candidate migration.",
+      "reason": "Make GitHub Release CI verify phase parity and migration idempotency on a fresh local database.",
+      "rollback_target": "Restore only this workflow from merged main cd7f214068d75302c6e8a2d9f686039de5173aec."
+    },
+    {
+      "path": "tests/checkpointAtomicity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "b5899c4117f1ee76414d817168a4aa43df172d12be31dc7c0bbf1a281da3af39",
+      "candidate_sha256": "790be878ea7bd76552965f6a82812e1a54c4b848103d1ea5c11464096f038257",
+      "source_lineage": "Existing Atomic cardinality regression with explicit current-session TAIEX/2330 metadata required by the candidate validator.",
+      "reason": "Keep the immutable 11-row test representative of the new phase evidence contract without weakening Atomic admission.",
+      "rollback_target": "Restore only this regression from merged main after a separately approved rollback."
+    },
+    {
+      "path": "tests/fugleTaiexProvider.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "141e3e3c28c52101fd3d6c2ecbbbc6e6588e536d12435bca196b069cc82ab15d",
+      "candidate_sha256": "6397659ac1d541b4b411b3a2ca903bcdf31a66cfd98d0d6ac3808e5beed637b7",
+      "source_lineage": "Existing Fugle adapter regression corrected to use latest-completed-session evidence before open and current-session evidence after open.",
+      "reason": "Prevent the prior current-date premarket shortcut from hiding the Production contract defect again.",
+      "rollback_target": "Restore only this regression from merged main after a separately approved rollback."
+    },
+    {
+      "path": "tests/productionRealityProviderReplay.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "c8779f296569258ac880a3897f69da7810eb458205bef940500f1612f89c4691",
+      "candidate_sha256": "136564de7265de15a922595301e73625ff7e1af4fdd43dbdb32385cbc85f0ecf",
+      "source_lineage": "Existing provider replay now discloses the audited Taiwan phase fixture instead of claiming no synthetic adjustment.",
+      "reason": "Preserve Production evidence provenance while refusing to mislabel an unretained raw response as a real capture.",
+      "rollback_target": "Restore only this replay assertion from merged main after a separately approved rollback."
+    },
+    {
+      "path": "tests/productionReliabilityClosureReplay.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "75b1fe6ce65350c2846ed0c6be26439e9692b5acf6411a233e8e6db4dd4c4341",
+      "candidate_sha256": "a66160920ea315c64c3cde76d0fb8e63e686b83229eeb4d9c0cf077358795f71",
+      "source_lineage": "Existing Reliability replay updated to assert explicit synthetic phase provenance and the prior completed Taiwan session date.",
+      "reason": "Make the legacy replay fail if it returns to the invalid current-business-date premarket assumption.",
+      "rollback_target": "Restore only this replay assertion from merged main after a separately approved rollback."
+    },
+    {
+      "path": "tests/providerReliabilityClosure.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "43ed97bb637586341d2978cd24c56ac0b6a208b05b0573e9eecc9c3086507135",
+      "candidate_sha256": "5f2875ee1fbbd59c8452139520bab81b23f57f27e6cbe558d37fb372d7206996",
+      "source_lineage": "Existing Preflight safety regression updated to the reviewed no-stale-or-arbitrary-session policy label.",
+      "reason": "Retain the no-fallback guarantee without asserting the invalid blanket prohibition on previous-session data.",
+      "rollback_target": "Restore only this regression from merged main after a separately approved rollback."
+    },
+    {
+      "path": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "169d538d4cbfc9b4601aca22b86ad2d3a50d7ac6b8bccf1a8f4d0249c50056e2",
+      "candidate_sha256": "865ff27f2612647d52f033b50905b831b83daf6843202a2e8fe177acd21ddea3",
+      "source_lineage": "Merged Atomic evidence validator plus the reviewed Taiwan cash phase/session contract and unchanged TXF mapping.",
+      "reason": "Persist and revalidate exact TAIEX/2330 phase lineage before every local Atomic admission.",
+      "rollback_target": "Restore only this validator from merged main after a separately approved rollback."
+    },
+    {
+      "path": "supabase/functions/_shared/fugle-taiex-provider.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "5791abf19ed567267c47147f331f93d0133f8d4a57d2f2b5f8688e2e39a7dff8",
+      "candidate_sha256": "53db4fae12a019b2eae4f334d117783b38255e71abc9861cb912b98d268cd7ef",
+      "source_lineage": "Merged Fugle IX0001/2330 adapters with their existing identity and response-shape checks preserved.",
+      "reason": "Select the expected provider date from market phase instead of always requiring the current business date.",
+      "rollback_target": "Restore only this adapter from merged main after a separately approved rollback."
+    },
+    {
+      "path": "supabase/functions/_shared/premarket-provider-readiness.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "acd5893e4b4460552663f6c3ddf43e3e10cfc61394c96a918b7fa931a99c46df",
+      "candidate_sha256": "032d9c2521e1214cfa971983644bb10e8f926752134d22f1e123df820ba3770b",
+      "source_lineage": "Existing bounded retry constants with the obsolete previous-session WAITING classifier replaced by READY semantics.",
+      "reason": "Prevent a valid latest completed Taiwan session from entering the provider delay retry window.",
+      "rollback_target": "Restore only this readiness classifier from merged main after a separately approved rollback."
+    },
+    {
+      "path": "supabase/functions/fetch-market-data-v10/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "3cbf3c9bda8b6eea8ac5bf287db579dfcfe44ccb1cb22652f3eae0c6cabfaa5a",
+      "candidate_sha256": "ce2bd978cc74a067b39e3c694896988fd4feb10d95227eb1e7dfc98c7fdd2b0c",
+      "source_lineage": "Merged Production Fetch Handler with observation identity passed into the same phase-aware TAIEX/2330 adapter.",
+      "reason": "Allow valid completed-session premarket evidence while retaining strict 09:00 and close validation.",
+      "rollback_target": "Restore only this Function from merged main after a separately approved rollback."
+    },
+    {
+      "path": "supabase/functions/market-readiness-preflight/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "2fa626391ec8fe2993099eca8752482ee03a536d4299b2683be4142e8595634b",
+      "candidate_sha256": "09d24f76178fa281c6b36624fe2185b1a20f09fc2824189ede4e399547e974c1",
+      "source_lineage": "Merged read-only 06:50 Preflight using the same Fugle adapters and immutable provider evidence path as Fetch.",
+      "reason": "Evaluate required premarket evidence instead of waiting for Taiwan current-day data before market open.",
+      "rollback_target": "Restore only this Function from merged main after a separately approved rollback."
+    },
+    {
+      "path": "tests/fetchCheckpointEvidence.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "5fb689a04f699d245488fd918552eadfdc4dbfdc354d91ac9966a64c4f14468e",
+      "candidate_sha256": "642e7231826f15be6f164e0feaedc440bbce5fdddfe61ac4347d393465ca5c8c",
+      "source_lineage": "Existing checkpoint tests supplied with explicit provider session identity now required by Production.",
+      "reason": "Keep intraday and close evidence representative without manufacturing or omitting provider dates.",
+      "rollback_target": "Restore only this regression from merged main after a separately approved rollback."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "41b3e42a140e9b8cf2fbf611b53fe6cf9cebf682c9ae196bd97fbaac915b67e2",
+      "candidate_sha256": "e8a5bccae039acc9b5be7790d74f08a1d436e7c242ebcb3ba4f108410b7411da",
+      "source_lineage": "Exact TXF parity Integrity entrypoint reconstructed before evaluating this independent phase-contract successor.",
+      "reason": "Pin exact candidate bytes while preserving every earlier sealed Integrity transition and hash.",
+      "rollback_target": "Restore only this Integrity entrypoint from merged main after a separately approved rollback."
+    },
+    {
+      "path": "tests/helpers/productionRealityProviderReplay.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "ca7ccab9aae32a96a68b210eaa67c9885ba8bd2f615d5a269aae702d9cbc3729",
+      "candidate_sha256": "40c562bc2945d6114f2bbecebbc7d49b52e5850868bf6a6ffea4f3e71c2d72e5",
+      "source_lineage": "Existing provider replay with its nonrepresentative current-date premarket Taiwan payload replaced by an explicit audited contract fixture.",
+      "reason": "Remove the test shortcut that made pre-open TAIEX/2330 look like a current-day completed session.",
+      "rollback_target": "Restore only this replay helper from merged main after a separately approved rollback."
+    },
+    {
+      "path": "tests/precheckProductionParity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "9e3e4784ab1da7d4ffb9ff0249843c66ce5c1bef00034847125b6523c756b36a",
+      "candidate_sha256": "ac61f73713361ad9ca7adf9382fa21660a8cfc9fffa96eaa1fc56a5f60109c2a",
+      "source_lineage": "Existing 06:50/07:00 parity test now preserves real cross-day Taiwan session relationships.",
+      "reason": "Prove both handlers produce identical evidence without rewriting timestamps to the business date.",
+      "rollback_target": "Restore only this parity test from merged main after a separately approved rollback."
+    },
+    {
+      "path": "tests/premarketAtomicInventory.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "ae69de7fb6c185d82c06f0fd8301765a930cbc4c2e1766b2920c500354713211",
+      "candidate_sha256": "14b60a022325779b2796bc00ad08710efecc717f58fe1b747c4aa0155d9e01da",
+      "source_lineage": "Existing immutable successor tests extended with the independently reviewed 9/22 phase-contract transition.",
+      "reason": "Reject unknown files, renamed migrations, changed hashes, or missing predecessor lineage in this candidate.",
+      "rollback_target": "Restore only this Integrity regression from merged main after a separately approved rollback."
+    },
+    {
+      "path": "tests/premarketReadinessRetry.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "b80ab39690d236dec3bf1a2334faad09e11e7e57242e9dee122ad303401853f9",
+      "candidate_sha256": "6ab921d04f51398d475bd600999a10de33c7b45026ff27855f26eea95346c60b",
+      "source_lineage": "Existing readiness-window tests revised to distinguish valid completed-session evidence from actual retryable provider failure.",
+      "reason": "Keep bounded retry and deadline behavior while preventing daily false WAITING before Taiwan open.",
+      "rollback_target": "Restore only this readiness regression from merged main after a separately approved rollback."
+    },
+    {
+      "path": "tests/txfSessionParity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "fa65acb7195c81ae0c81df1cfdffb4a584c04da0529126a87dc3a183353421a0",
+      "candidate_sha256": "797d788165fc5a8668a752af1dad259ab0f045ccddd1eab0a3708c90ad2d9741",
+      "source_lineage": "Existing TXF replay with explicit prior-session dates added for the two Taiwan cash rows.",
+      "reason": "Preserve TXF behavior while making the surrounding 11-provider batch phase-representative.",
+      "rollback_target": "Restore only this TXF regression from merged main after a separately approved rollback."
+    },
+    {
+      "path": "supabase/functions/_shared/taiwan-cash-session-contract.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "e001b99094fae902b693ff0f226206dd05e314f779be4674940317d56dc06985",
+      "source_lineage": "Taiwan trading calendar semantics applied to PREMARKET, INTRADAY and CLOSE without accepting arbitrary old data.",
+      "reason": "Provide one fail-closed source of truth for TAIEX/2330 expected session identity across handlers.",
+      "rollback_target": "Remove only this shared contract after a separately approved rollback."
+    },
+    {
+      "path": "supabase/migrations/20260922015748_premarket_tw_cash_phase_contract_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "6360ea385390f341840efb828a0a020344c1394e556b3647392e200501643233",
+      "source_lineage": "Exact Production Atomic function MD5 8f45427f702fd8dc17fa0089089f08e8 plus isolated phase replay.",
+      "reason": "Replace only invalid Taiwan cash calendar-date admission while preserving TXF, Atomic 0-or-11 and metadata.",
+      "rollback_target": "Restore the prior Atomic function only after separate named Production rollback approval."
+    },
+    {
+      "path": "tests/fixtures/premarket-phase-v1/production-contract-20260922.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "552f1140f832a139df621c3c0e1a21c3dc3eb9e7a5768eefa6ae59b4d73673dd",
+      "source_lineage": "Deidentified retained 9/22 Production hashes, response shapes, health outcomes and immutable close/09:00 lineage.",
+      "reason": "Replay the actual contract evidence without claiming that an unretained raw premarket payload was stored.",
+      "rollback_target": "Remove only this additive evidence fixture after a separately approved rollback."
+    },
+    {
+      "path": "tests/fixtures/premarket-phase-v1/taiwan-session-20260916.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "25d543c91e9af4a10474aa1aebb682f4014d31288d5e15b2cbe38c07e78bc9c1",
+      "source_lineage": "Explicit synthetic contract fixture retaining prior-session identity instead of beautifying dates to the business day.",
+      "reason": "Keep legacy provider parity tests representative of real premarket session semantics.",
+      "rollback_target": "Remove only this additive test fixture after a separately approved rollback."
+    },
+    {
+      "path": "tests/taiwanCashPhaseContract.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "33b312ae57ebe0ec82825cde67771332606e40573f5150d83efbcb0c158d6819",
+      "source_lineage": "Direct shared-contract and 9/22 evidence replay covering weekday, Monday, holiday, stale, future and phase transition.",
+      "reason": "Permanently fail CI if premarket, 09:00 or close session semantics drift between Edge paths.",
+      "rollback_target": "Remove only this additive regression after a separately approved rollback."
+    },
+    {
+      "path": "tests/taiwanCashPhaseDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "fde9f870cdb936e1bb3647a77c7f245bca086c0241059076af0a3ff95580968e",
+      "source_lineage": "Fresh loopback PostgreSQL recreation of the exact Production predecessor and sole 9/22 migration candidate.",
+      "reason": "Prove SQL phase parity, idempotency, 0-or-11 rejection and historical row preservation.",
+      "rollback_target": "Remove only this additive isolated database test after a separately approved rollback."
+    }
+  ]
+}

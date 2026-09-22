@@ -9,7 +9,7 @@ import { readConsolidationPublicExportIntegrity } from './helpers/premarketAtomi
 const id = 'e768a334-1d1b-4191-9f10-0c6fb1f11111';
 const input = { phase: 'intraday', checkpoint: '0930', tradingDate: '2026-09-07', observedAt: '2026-09-07T09:30:00+08:00', correlationId: id };
 const config = { market: 'TW', displaySymbol: 'TAIEX', name: '加權指數' };
-const quote = { value: 21000, change: 200, changePercent: 1, capturedAt: '2026-09-07T09:27:00+08:00', provider: 'LOCAL_SYNTHETIC', sourceSymbol: 'IX0001', raw: {} };
+const quote = { value: 21000, change: 200, changePercent: 1, capturedAt: '2026-09-07T09:27:00+08:00', provider: 'LOCAL_SYNTHETIC', sourceSymbol: 'IX0001', raw: { date: '2026-09-07', response_date: '2026-09-07' } };
 const row = () => ({ ...buildCheckpointEvidence(input, quote, config).row, snapshot_version: 1 });
 
 test('09:27 quote belongs to real 09:30 collection; provider and collection times remain distinct', () => {

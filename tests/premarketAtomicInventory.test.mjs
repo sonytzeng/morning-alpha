@@ -124,7 +124,7 @@ test('9/21 TXF parity successor pins the sole named migration and exact shared c
     'tests/txfSessionDatabase.integration.mjs',
     'tests/txfSessionParity.test.mjs',
   ]);
-  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+  assert.deepEqual(result.txfSessionParityCandidateIntegrity.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
     && !result.fullDayCandidateIntegrity.newCandidatePaths.includes(path)), [
     'supabase/migrations/20260921120000_premarket_txf_session_date_parity_v1.sql',
   ]);
@@ -136,6 +136,36 @@ test('9/21 TXF parity successor pins the sole named migration and exact shared c
   ]) {
     assert.throws(() => verify(name => name === path
       ? Buffer.concat([read(name), Buffer.from('\n// unreviewed TXF drift\n')]) : read(name)),
+    /unreviewed candidate drift/);
+  }
+});
+
+test('9/22 Taiwan cash phase successor pins one additive migration and the exact phase-aware runtime surface', () => {
+  const result = readPremarketAtomicReadinessIntegrity(registry);
+  const successor = result.taiwanCashPhaseCandidateIntegrity.reviewedBaselineTransition;
+  assert.equal(successor.transition_id, 'MORNING_ALPHA_PREMARKET_TW_CASH_PHASE_20260922');
+  assert.equal(successor.predecessor_integrity_id, 'MORNING_ALPHA_TXF_SESSION_DATE_PARITY_20260921');
+  assert.deepEqual(successor.files.filter(row => row.operation === 'ADD').map(row => row.path).sort(), [
+    'supabase/functions/_shared/taiwan-cash-session-contract.mjs',
+    'supabase/migrations/20260922015748_premarket_tw_cash_phase_contract_v1.sql',
+    'tests/fixtures/premarket-phase-v1/production-contract-20260922.json',
+    'tests/fixtures/premarket-phase-v1/taiwan-session-20260916.json',
+    'tests/taiwanCashPhaseContract.test.mjs',
+    'tests/taiwanCashPhaseDatabase.integration.mjs',
+  ]);
+  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+    && !result.txfSessionParityCandidateIntegrity.newCandidatePaths.includes(path)), [
+    'supabase/migrations/20260922015748_premarket_tw_cash_phase_contract_v1.sql',
+  ]);
+  for (const path of [
+    'supabase/functions/_shared/taiwan-cash-session-contract.mjs',
+    'supabase/functions/_shared/fetch-checkpoint-evidence.mjs',
+    'supabase/functions/_shared/fugle-taiex-provider.mjs',
+    'supabase/functions/fetch-market-data-v10/index.ts',
+    'supabase/functions/market-readiness-preflight/index.ts',
+  ]) {
+    assert.throws(() => verify(name => name === path
+      ? Buffer.concat([read(name), Buffer.from('\n// unreviewed Taiwan cash phase drift\n')]) : read(name)),
     /unreviewed candidate drift/);
   }
 });

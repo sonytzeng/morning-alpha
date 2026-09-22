@@ -37,9 +37,10 @@ function fullBatch(txf = production.txf) {
       }
       : {
         value: 100 + index, change: 1, changePercent: 0.1,
-        capturedAt: market === 'TW' ? '2026-09-21T07:35:00+08:00' : '2026-09-18T16:00:00-04:00',
+        capturedAt: market === 'TW' ? '2026-09-18T00:00:00+08:00' : '2026-09-18T16:00:00-04:00',
         provider: market === 'TW' ? 'fugle' : 'finnhub', sourceSymbol: providerKey,
-        raw: { provider: market === 'TW' ? 'fugle' : 'finnhub' },
+        raw: { provider: market === 'TW' ? 'fugle' : 'finnhub',
+          ...(market === 'TW' ? { date: '2026-09-18', response_date: '2026-09-18' } : {}) },
       };
     const result = buildCheckpointEvidence(input, quote, {
       displaySymbol: providerKey, finnhubSymbol: providerKey, market, name: providerKey,

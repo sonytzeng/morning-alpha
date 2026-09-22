@@ -39,10 +39,18 @@ function evidenceRows(overrides = {}) {
       name: providerKey,
       source_symbol: providerKey,
       change: index / 10,
-      source_raw: {},
+      source_raw: ['TAIEX', '2330'].includes(providerKey)
+        ? { date: '2026-09-14', response_date: '2026-09-14' }
+        : {},
       freshness_status: providerKey === 'TAIEX' || providerKey === '2330' || providerKey === 'TXF' ? 'fresh' : 'provider_returned',
       freshness_age_minutes: 0,
       captured_session_date: '2026-09-14',
+      ...(['TAIEX', '2330'].includes(providerKey) ? {
+        tw_cash_session_contract: 'TW_CASH_INTRADAY_CURRENT_SESSION_V1',
+        tw_cash_phase: 'intraday',
+        tw_cash_expected_session_date: '2026-09-14',
+        tw_cash_provider_session_date: '2026-09-14',
+      } : {}),
       fallback_used: false,
     },
   }));

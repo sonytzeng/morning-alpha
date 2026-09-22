@@ -3,6 +3,7 @@
 import { evaluateCheckpointFreshness } from './market-runtime-stability.mjs';
 import { PREMARKET_LAST_COLLECTION_MINUTES } from './premarket-provider-readiness.mjs';
 import { evaluatePremarketTxfSession } from './txf-session-contract.mjs';
+import { evaluateTaiwanCashSession } from './taiwan-cash-session-contract.mjs';
 
 const WINDOWS = Object.freeze({
   '0900': ['intraday', 540, 555],
@@ -69,6 +70,17 @@ export function buildCheckpointEvidence(input, quote, config) {
     })
     : null;
   if (txfSession && !txfSession.valid) return { valid: false, error: txfSession.error };
+  const twCashSession = ['TAIEX', '2330'].includes(config.displaySymbol) &&
+      ['premarket', 'intraday', 'close'].includes(input.phase)
+    ? evaluateTaiwanCashSession({
+      phase: input.phase,
+      tradingDate: input.tradingDate,
+      sourceTimestamp: quote.capturedAt,
+      observedAt: input.observedAt,
+      providerSessionDate: record(quote.raw).response_date || record(quote.raw).date,
+    })
+    : null;
+  if (twCashSession && !twCashSession.valid) return { valid: false, error: twCashSession.error };
   // Existing provider freshness is deliberately preserved for US overnight data.
   // Taiwan intraday quotes additionally belong to this checkpoint, not the prior one.
   const window = WINDOWS[input.checkpoint];
@@ -90,6 +102,12 @@ export function buildCheckpointEvidence(input, quote, config) {
         txf_expected_previous_trading_date: txfSession.expected_session_date,
         txf_provider_session_date: txfSession.provider_session_date,
         txf_session_type: txfSession.session,
+      } : {}),
+      ...(twCashSession ? {
+        tw_cash_session_contract: twCashSession.contract,
+        tw_cash_phase: twCashSession.phase,
+        tw_cash_expected_session_date: twCashSession.expected_session_date,
+        tw_cash_provider_session_date: twCashSession.provider_session_date,
       } : {}),
       fallback_used: quote.sourceSymbol !== config.finnhubSymbol },
   } };
@@ -133,6 +151,23 @@ export function validateAtomicCheckpointEvidenceRows(rows) {
         raw.txf_expected_previous_trading_date !== txf.expected_session_date ||
         raw.txf_provider_session_date !== txf.provider_session_date || raw.txf_session_type !== txf.session) {
         return { valid: false, error: txf.error || 'ATOMIC_CHECKPOINT_ROW_CONTRACT_INVALID', providerKey: 'TXF' };
+      }
+    }
+    if (['TAIEX', '2330'].includes(String(row.provider_key || '')) &&
+      ['premarket', 'intraday', 'close'].includes(String(row.market_session || ''))) {
+      const sourceRaw = record(raw.source_raw);
+      const session = evaluateTaiwanCashSession({
+        phase: row.market_session,
+        tradingDate: row.trading_date,
+        sourceTimestamp: row.source_timestamp,
+        observedAt: row.captured_at,
+        providerSessionDate: sourceRaw.response_date || sourceRaw.date,
+      });
+      if (!session.valid || raw.tw_cash_session_contract !== session.contract ||
+        raw.tw_cash_phase !== session.phase ||
+        raw.tw_cash_expected_session_date !== session.expected_session_date ||
+        raw.tw_cash_provider_session_date !== session.provider_session_date) {
+        return { valid: false, error: session.error || 'ATOMIC_CHECKPOINT_ROW_CONTRACT_INVALID', providerKey: row.provider_key };
       }
     }
   }

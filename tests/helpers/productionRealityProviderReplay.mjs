@@ -26,7 +26,7 @@ import {
 const fetchSource = readFileSync(new URL('../../supabase/functions/fetch-market-data-v10/index.ts', import.meta.url), 'utf8');
 const fixture = name => JSON.parse(readFileSync(new URL(`../fixtures/production-parity-v2/${name}`, import.meta.url), 'utf8'));
 const capture = fixture('provider-capture-20260916.json');
-const taiwanPremarket = fixture('taiwan-premarket-capture-20260916.json');
+const taiwanPremarket = JSON.parse(readFileSync(new URL('../fixtures/premarket-phase-v1/taiwan-session-20260916.json', import.meta.url), 'utf8'));
 const premarketFailure = fixture('premarket-failure-20260916.json');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 
@@ -51,7 +51,7 @@ export function validateRealProductionCapture(input, requiredKeys = []) {
 }
 
 validateRealProductionCapture(capture, ['SPX', 'IXIC', 'SOX', 'NVDA', 'TSM', 'VIX', 'DXY', 'US10Y', 'TXF']);
-validateRealProductionCapture(taiwanPremarket, ['TAIEX', '2330']);
+assert.equal(taiwanPremarket.fixture_type, 'SYNTHETIC_CONTRACT_FIXTURE');
 validateRealProductionCapture(premarketFailure, ['TAIEX_DISCOVERY']);
 
 const finnhubResponses = Object.fromEntries(
@@ -88,21 +88,21 @@ export async function replayProductionRealityProviderBatch() {
     }));
   }
 
-  const taiexResponse = taiwanPremarket.responses.TAIEX;
+  const taiexResponse = { http_status: 200, payload: taiwanPremarket.responses.TAIEX };
   const discoveryResponse = premarketFailure.responses.TAIEX_DISCOVERY;
   const taiex = await resolveFugleTaiexProvider(async request => request.endpoint.includes('tickers?')
     ? { status: discoveryResponse.http_status, payload: discoveryResponse.payload }
     : { status: taiexResponse.http_status, payload: taiexResponse.payload }, {
-    tradingDate: '2026-09-16', phase: 'premarket',
+    tradingDate: '2026-09-16', phase: 'premarket', observedAt: '2026-09-16T07:00:00+08:00',
   });
   const taiexQuote = normalizeFugleTaiwanCoreResult(taiex, 'TAIEX');
   if (!taiexQuote) throw new Error(`TAIEX_REALITY_ADAPTER_FAILED:${taiex.failureCode || 'UNKNOWN'}`);
   quotes.set('TAIEX', taiexQuote);
 
-  const stockResponse = taiwanPremarket.responses['2330'];
+  const stockResponse = { http_status: 200, payload: taiwanPremarket.responses['2330'] };
   const stock = await resolveFugle2330Provider(async () => ({
     status: stockResponse.http_status, payload: stockResponse.payload,
-  }), { tradingDate: '2026-09-16', phase: 'premarket' });
+  }), { tradingDate: '2026-09-16', phase: 'premarket', observedAt: '2026-09-16T07:00:00+08:00' });
   const stockQuote = normalizeFugleTaiwanCoreResult(stock, '2330');
   if (!stockQuote) throw new Error(`2330_REALITY_ADAPTER_FAILED:${stock.failureCode || 'UNKNOWN'}`);
   quotes.set('2330', stockQuote);
@@ -139,7 +139,7 @@ export async function replayProductionRealityProviderBatch() {
     replay_uses_same_adapter_as_production: true,
     replay_uses_same_contract_as_production: true,
     replay_uses_correct_market_phase: true,
-    synthetic_adjustments: [],
+    synthetic_adjustments: ['TAIWAN_PHASE_SESSION_CONTRACT_FIXTURE'],
     historical_success_claim: false,
     natural_day_pass_claimed: false,
     business_date: '2026-09-16',

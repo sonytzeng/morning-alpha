@@ -99,6 +99,12 @@ jobs:
           MA_ISOLATED_TEST_DB: ma_txf_session_parity_test1
           MA_TEST_PGPORT: 55439
         run: node --test tests/txfSessionDatabase.integration.mjs
+      - name: Isolated 9/22 Taiwan cash phase-contract migration and replay
+        env:
+          MA_LOCAL_SCOPE: ma-tw-cash-phase-contract-20260922
+          MA_ISOLATED_TEST_DB: ma_tw_cash_phase_test1
+          MA_TEST_PGPORT: 55439
+        run: node --test tests/taiwanCashPhaseDatabase.integration.mjs
       - name: Core consolidation publication, ACL parity, replay and acceptance
         env:
           MA_LOCAL_SCOPE: ma-core-consolidation-20260909

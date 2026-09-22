@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
-import { previousTradingDay, resolveMarketStatus } from '../_shared/market-status.ts';
-import { evaluatePremarketCoreReadiness, PREMARKET_REPORT_DEADLINE_MINUTES } from '../_shared/premarket-provider-readiness.mjs';
+import { resolveMarketStatus } from '../_shared/market-status.ts';
+import { PREMARKET_REPORT_DEADLINE_MINUTES } from '../_shared/premarket-provider-readiness.mjs';
 import { normalizeProviderQuote, summarizeProviderHealth } from '../_shared/market-provider-adapter.mjs';
 import {
   resolveSnapshotCheckpoint,
@@ -67,7 +67,7 @@ const SYMBOL_DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_RETRIES = 1;
 const OVERALL_TIMEOUT_MS = 60_000;
-const VERSION = "V10.19_PRODUCTION_PARITY_TAIWAN_CORE_CONTRACT";
+const VERSION = "V10.20_PHASE_AWARE_TAIWAN_CASH_CONTRACT";
 const FUGLE_TAIEX_ADAPTER_MAPPING = validateFugleTaiexAdapterMapping();
 if (!FUGLE_TAIEX_ADAPTER_MAPPING.valid) throw new Error("FUGLE_TAIEX_ADAPTER_MAPPING_INVALID");
 const FUGLE_2330_ADAPTER_MAPPING = validateFugle2330AdapterMapping();
@@ -546,6 +546,7 @@ async function fetchFugleTaiwanCoreQuote(
   logPrefix: string,
   tradingDate: string,
   phase: MarketDataPhase,
+  observedAt: string,
   failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
   const contract = displaySymbol === "TAIEX" ? FUGLE_TAIEX_CONTRACT : FUGLE_2330_CONTRACT;
@@ -562,17 +563,9 @@ async function fetchFugleTaiwanCoreQuote(
   const resolver = displaySymbol === "TAIEX" ? resolveFugleTaiexProvider : resolveFugle2330Provider;
   const result = await resolver(async (request: { endpoint: string }) => {
     return fetchRequiredFugleResponse(request.endpoint, apiKey);
-  }, { tradingDate, phase }) as FugleCoreResolution;
+  }, { tradingDate, phase, observedAt }) as FugleCoreResolution;
 
   if (!result.ok) {
-    const clock = getTaipeiParts();
-    const readiness = phase === "premarket"
-      ? evaluatePremarketCoreReadiness({
-        key: displaySymbol, result, tradingDate,
-        previousTradingDate: previousTradingDay(tradingDate),
-        taipeiMinutes: clock.hour * 60 + clock.minute,
-      })
-      : null;
     console.warn(
       `[${logPrefix}] Fugle ${displaySymbol} ${String(result.failureCode || "PROVIDER_REQUEST_REJECTED")}` +
         `${result.status ? ` HTTP ${result.status}` : ""}: ${String(result.error || "provider_failed")}`,
@@ -584,8 +577,8 @@ async function fetchFugleTaiwanCoreQuote(
       error: result.rejectedField
         ? `${String(result.error || "provider_failed")}:${String(result.rejectedField)}`
         : String(result.error || "provider_failed"),
-      failure_code: readiness?.failure_code || String(result.failureCode || "PROVIDER_REQUEST_REJECTED"),
-      retryable: readiness?.state === 'WAITING_FOR_PROVIDER_DATA',
+      failure_code: String(result.failureCode || "PROVIDER_REQUEST_REJECTED"),
+      retryable: false,
     };
     if (Number.isFinite(Number(result.status)) && Number(result.status) > 0) failure.status = Number(result.status);
     failureDetails?.push(failure);
@@ -611,9 +604,10 @@ async function fetchFugleTaiexQuote(
   logPrefix: string,
   tradingDate: string,
   phase: MarketDataPhase,
+  observedAt: string,
   failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
-  return fetchFugleTaiwanCoreQuote("TAIEX", apiKey, logPrefix, tradingDate, phase, failureDetails);
+  return fetchFugleTaiwanCoreQuote("TAIEX", apiKey, logPrefix, tradingDate, phase, observedAt, failureDetails);
 }
 
 async function fetchFugle2330Quote(
@@ -621,9 +615,10 @@ async function fetchFugle2330Quote(
   logPrefix: string,
   tradingDate: string,
   phase: MarketDataPhase,
+  observedAt: string,
   failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
-  return fetchFugleTaiwanCoreQuote("2330", apiKey, logPrefix, tradingDate, phase, failureDetails);
+  return fetchFugleTaiwanCoreQuote("2330", apiKey, logPrefix, tradingDate, phase, observedAt, failureDetails);
 }
 
 async function fetchFugleJson(
@@ -850,10 +845,10 @@ async function fetchTaiwanCoreQuote(
   failureDetails?: ProviderFailureDetail[],
 ): Promise<MarketQuote | null> {
   if (config.displaySymbol === "2330") {
-    const fugleQuote = await fetchFugle2330Quote(fugleApiKey, logPrefix, tradingDate, phase, failureDetails);
+    const fugleQuote = await fetchFugle2330Quote(fugleApiKey, logPrefix, tradingDate, phase, observedAt, failureDetails);
     if (fugleQuote) return fugleQuote;
-    // A premarket quote must come from the current-date Fugle ticker contract;
-    // neither the prior-session quote nor TWSE MIS may masquerade as today.
+    // Premarket must come from Fugle's latest completed TW session contract;
+    // neither TWSE MIS nor an arbitrary older session may substitute for it.
     if (phase === "premarket" || phase === "manual_backfill") return null;
     return await fetchTwseQuote("tse_2330.tw", "2330", logPrefix, failureDetails) ?? null;
   }
@@ -862,7 +857,7 @@ async function fetchTaiwanCoreQuote(
     // TAIEX is exclusively the Fugle INDEX ticker discovered as IX0001. A
     // missing/invalid resource fails this provider slot; it never falls back
     // to the invalid TAIEX alias or a previous-session substitute.
-    return await fetchFugleTaiexQuote(fugleApiKey, logPrefix, tradingDate, phase, failureDetails);
+    return await fetchFugleTaiexQuote(fugleApiKey, logPrefix, tradingDate, phase, observedAt, failureDetails);
   }
 
   if (config.displaySymbol === "TXF") {

@@ -98,8 +98,14 @@ for (const [time, verdict, sla, recovered] of [
   assert.equal(result.evidence.readiness_status, verdict === 'PASS' ? 'PASS' : 'FAIL');
   assert.equal(result.evidence.delivery_sla_status, sla);
   assert.equal(result.evidence.recovered_within_readiness_window, recovered);
-  assert.equal(result.evidence.readiness_deadline_at, `${reportDate}T08:45:00+08:00`);
-  assert.equal(result.evidence.delivery_sla_deadline_at, `${reportDate}T07:30:00+08:00`);
+  assert.equal(
+    new Date(result.evidence.readiness_deadline_at).toISOString(),
+    new Date(`${reportDate}T08:45:00+08:00`).toISOString(),
+  );
+  assert.equal(
+    new Date(result.evidence.delivery_sla_deadline_at).toISOString(),
+    new Date(`${reportDate}T07:30:00+08:00`).toISOString(),
+  );
   assert.equal(result.evidence.automatic_blocking_checks.includes('REPORT_DELIVERY_NOT_ON_TIME'), sla === 'MISS');
   assert.equal(result.blocking_checks.includes('READINESS_WINDOW_DEADLINE_EXCEEDED'), verdict === 'FAIL');
   assert.equal(historical(), historicalBefore);

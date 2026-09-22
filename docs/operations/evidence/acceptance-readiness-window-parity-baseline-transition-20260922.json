@@ -76,7 +76,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "c3665e7d2a4fa8356b227d2720da6118b3bda8077654b5cc2ccb030fad87d2ea",
+      "candidate_sha256": "ba9ce07049d61cc0da873e8440dc1a207d83be870ef16a2a74d7592da1f5ce9f",
       "source_lineage": "Fresh PostgreSQL 17 schema replay followed by the exact candidate twice and actual Acceptance RPC boundary calls.",
       "reason": "Prove 07:00 through 08:44 succeed, 08:45 fails, metadata is unchanged, and historical rows remain byte-identical.",
       "rollback_target": "Remove only this additive isolated database regression after a separately authorized rollback."

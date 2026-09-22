@@ -11,6 +11,7 @@
     "tests/precheckProductionParity.test.mjs",
     "tests/premarketReadinessRetry.test.mjs",
     "tests/txfSessionParity.test.mjs",
+    "tests/txfSessionDatabase.integration.mjs",
     "tests/fetchCheckpointEvidence.test.mjs",
     "tests/premarketAtomicInventory.test.mjs"
   ],
@@ -83,6 +84,16 @@
       "source_lineage": "Existing Preflight safety regression updated to the reviewed no-stale-or-arbitrary-session policy label.",
       "reason": "Retain the no-fallback guarantee without asserting the invalid blanket prohibition on previous-session data.",
       "rollback_target": "Restore only this regression from merged main after a separately approved rollback."
+    },
+    {
+      "path": "tests/txfSessionDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "cd7f214068d75302c6e8a2d9f686039de5173aec",
+      "predecessor_sha256": "3399f9014eb3b850e3f497f39a1e803fe92c9d2cd0f3e2daa4f7bf6259e29b22",
+      "candidate_sha256": "fcb5b7d8479349e5034c509443715e304d7ec69a04a3caaad99bff31fdbe6f2c",
+      "source_lineage": "Existing isolated TXF database replay now applies the reviewed 9/22 successor and supplies valid non-target Taiwan cash session evidence.",
+      "reason": "Keep the predecessor TXF scenarios isolated after the shared candidate validator began rejecting missing TAIEX/2330 session identity first.",
+      "rollback_target": "Restore only this isolated regression from merged main after a separately approved rollback."
     },
     {
       "path": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",

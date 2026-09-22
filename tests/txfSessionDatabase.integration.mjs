@@ -9,6 +9,7 @@ import {
   buildCheckpointEvidence,
   validateAtomicCheckpointEvidenceRows,
 } from '../supabase/functions/_shared/fetch-checkpoint-evidence.mjs';
+import { taiwanCashExpectedSession } from '../supabase/functions/_shared/taiwan-cash-session-contract.mjs';
 
 const scope = 'ma-txf-session-parity-20260921';
 const database = process.env.MA_ISOLATED_TEST_DB;
@@ -82,16 +83,20 @@ const metadataBefore = sql(`select jsonb_build_object(
 
 function batch({ tradingDate, observedAt, txfSessionDate, txfSourceTimestamp, txfSession = 'afterhours' }) {
   const input = { phase: 'premarket', checkpoint: 'premarket', tradingDate, observedAt, correlationId: randomUUID() };
+  const cashSessionDate = taiwanCashExpectedSession({ phase: 'premarket', tradingDate }).expected_session_date;
   const rows = CHECKPOINT_PROVIDER_KEYS.map((providerKey, index) => {
     const market = ['TAIEX', '2330', 'TXF'].includes(providerKey) ? 'TW' : 'US';
     const sourceTimestamp = providerKey === 'TXF' ? txfSourceTimestamp
-      : market === 'TW' ? new Date(Date.parse(observedAt) - 10 * 60 * 1000).toISOString()
+      : market === 'TW' ? `${cashSessionDate}T16:00:00+08:00`
         : new Date(Date.parse(observedAt) - 24 * 60 * 60 * 1000).toISOString();
     const quote = {
       value: 100 + index, change: 1, changePercent: 0.1, capturedAt: sourceTimestamp,
       provider: providerKey === 'TXF' ? 'fugle_futopt' : market === 'TW' ? 'fugle' : 'finnhub',
       sourceSymbol: providerKey === 'TXF' ? 'TXF1!' : providerKey,
-      raw: providerKey === 'TXF' ? { date: txfSessionDate, session: txfSession } : {},
+      raw: providerKey === 'TXF' ? { date: txfSessionDate, session: txfSession }
+        : ['TAIEX', '2330'].includes(providerKey)
+          ? { date: cashSessionDate, response_date: cashSessionDate }
+          : {},
     };
     const evidence = buildCheckpointEvidence(input, quote, {
       displaySymbol: providerKey, finnhubSymbol: providerKey, market, name: providerKey,
@@ -131,6 +136,13 @@ assert.equal(sql(`select jsonb_build_object(
   'config',proconfig,'acl',proacl::text,'result',pg_get_function_result(oid))
   from pg_proc where oid='public.commit_market_checkpoint_batch_v1(date,text,text,uuid,text,jsonb)'::regprocedure;`).output, metadataBefore);
 load('supabase/migrations/20260921120000_premarket_txf_session_date_parity_v1.sql');
+load('supabase/migrations/20260922015748_premarket_tw_cash_phase_contract_v1.sql');
+assert.equal(sql(`select pg_get_functiondef('public.commit_market_checkpoint_batch_v1(date,text,text,uuid,text,jsonb)'::regprocedure) like '%TW_CASH_PREMARKET_LATEST_COMPLETED_SESSION_V1%';`).output, 't');
+assert.equal(sql(`select jsonb_build_object(
+  'owner',pg_get_userbyid(proowner),'definer',prosecdef,'volatile',provolatile,
+  'config',proconfig,'acl',proacl::text,'result',pg_get_function_result(oid))
+  from pg_proc where oid='public.commit_market_checkpoint_batch_v1(date,text,text,uuid,text,jsonb)'::regprocedure;`).output, metadataBefore);
+load('supabase/migrations/20260922015748_premarket_tw_cash_phase_contract_v1.sql');
 
 for (const scenario of [
   monday,

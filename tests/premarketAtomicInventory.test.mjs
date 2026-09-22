@@ -153,7 +153,7 @@ test('9/22 Taiwan cash phase successor pins one additive migration and the exact
     'tests/taiwanCashPhaseContract.test.mjs',
     'tests/taiwanCashPhaseDatabase.integration.mjs',
   ]);
-  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+  assert.deepEqual(result.taiwanCashPhaseCandidateIntegrity.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
     && !result.txfSessionParityCandidateIntegrity.newCandidatePaths.includes(path)), [
     'supabase/migrations/20260922015748_premarket_tw_cash_phase_contract_v1.sql',
   ]);
@@ -166,6 +166,31 @@ test('9/22 Taiwan cash phase successor pins one additive migration and the exact
   ]) {
     assert.throws(() => verify(name => name === path
       ? Buffer.concat([read(name), Buffer.from('\n// unreviewed Taiwan cash phase drift\n')]) : read(name)),
+    /unreviewed candidate drift/);
+  }
+});
+
+test('Acceptance readiness successor keeps 07:30 SLA separate from the sole 08:45 database migration', () => {
+  const result = readPremarketAtomicReadinessIntegrity(registry);
+  const successor = result.acceptanceReadinessCandidateIntegrity.reviewedBaselineTransition;
+  assert.equal(successor.transition_id, 'MORNING_ALPHA_ACCEPTANCE_READINESS_WINDOW_PARITY_20260922');
+  assert.equal(successor.predecessor_integrity_id, 'MORNING_ALPHA_PREMARKET_TW_CASH_PHASE_20260922');
+  assert.deepEqual(successor.files.filter(row => row.operation === 'ADD').map(row => row.path).sort(), [
+    'supabase/migrations/20260922153000_acceptance_readiness_window_parity_v1.sql',
+    'tests/acceptanceReadinessWindowDatabase.integration.mjs',
+    'tests/acceptanceReadinessWindowParity.test.mjs',
+  ]);
+  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+    && !result.taiwanCashPhaseCandidateIntegrity.newCandidatePaths.includes(path)), [
+    'supabase/migrations/20260922153000_acceptance_readiness_window_parity_v1.sql',
+  ]);
+  for (const path of [
+    'supabase/migrations/20260922153000_acceptance_readiness_window_parity_v1.sql',
+    'tests/acceptanceReadinessWindowParity.test.mjs',
+    'tests/acceptanceReadinessWindowDatabase.integration.mjs',
+  ]) {
+    assert.throws(() => verify(name => name === path
+      ? Buffer.concat([read(name), Buffer.from('\n// unreviewed Acceptance readiness drift\n')]) : read(name)),
     /unreviewed candidate drift/);
   }
 });

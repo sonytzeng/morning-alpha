@@ -15,7 +15,7 @@ import { CHECKPOINT_MAX_SOURCE_AGE_MS } from '../supabase/functions/_shared/mark
 
 const source = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const capture = JSON.parse(source('tests/fixtures/production-parity-v2/provider-capture-20260916.json'));
-const taiwan = JSON.parse(source('tests/fixtures/production-parity-v2/taiwan-premarket-capture-20260916.json'));
+const taiwan = JSON.parse(source('tests/fixtures/premarket-phase-v1/taiwan-session-20260916.json'));
 const discovery = JSON.parse(source('tests/fixtures/production-parity-v2/premarket-failure-20260916.json'));
 const date = '2026-09-16';
 const collection = observedAt => ({ phase: 'premarket', checkpoint: 'premarket', tradingDate: date,
@@ -29,7 +29,7 @@ async function quoteFor(slot, payload) {
     const resolver = slot.key === 'TAIEX' ? resolveFugleTaiexProvider : resolveFugle2330Provider;
     const resolved = await resolver(async request => request.endpoint.includes('/tickers?')
       ? { status: 200, payload: discovery.responses.TAIEX_DISCOVERY.payload }
-      : { status: 200, payload }, { tradingDate: date, phase: 'premarket' });
+      : { status: 200, payload }, { tradingDate: date, phase: 'premarket', observedAt: preflightInput.observedAt });
     return normalizeRequiredTaiwanCoreQuote(resolved, slot.key);
   }
   const resolved = await resolveRequiredTxfQuote(async endpoint => endpoint === capture.responses.TXF.endpoint
@@ -43,7 +43,7 @@ async function quoteFor(slot, payload) {
 
 function responseFor(slot) {
   return slot.key === 'TAIEX' || slot.key === '2330'
-    ? taiwan.responses[slot.key].payload : capture.responses[slot.key].payload;
+    ? taiwan.responses[slot.key] : capture.responses[slot.key].payload;
 }
 
 async function both(slot, payload) {
@@ -54,7 +54,7 @@ async function both(slot, payload) {
 test('PRECHECK_PRODUCTION_PARITY: 11 slots use one mapping, adapter, normalization, evidence and freshness core', async () => {
   assert.deepEqual(REQUIRED_PROVIDER_CONFIG.map(slot => slot.key), CHECKPOINT_PROVIDER_KEYS);
   assert.equal(capture.real_production_capture, true);
-  assert.equal(taiwan.real_production_capture, true);
+  assert.equal(taiwan.fixture_type, 'SYNTHETIC_CONTRACT_FIXTURE');
   const fetch = source('supabase/functions/fetch-market-data-v10/index.ts');
   const preflight = source('supabase/functions/market-readiness-preflight/index.ts');
   for (const shared of ['fetchRequiredFinnhubResponse', 'normalizeRequiredFinnhubQuote',
@@ -111,7 +111,7 @@ test('PRECHECK_PRODUCTION_PARITY: invalid and nullable-field responses fail on b
 
 test('PRECHECK_PRODUCTION_PARITY: stale, future and not-yet-formed phases never become a full batch', async () => {
   const taiex = structuredClone(responseFor(REQUIRED_PROVIDER_CONFIG.find(slot => slot.key === 'TAIEX')));
-  taiex.date = '2026-09-15';
+  taiex.date = '2026-09-12';
   const taiwanSlot = REQUIRED_PROVIDER_CONFIG.find(slot => slot.key === 'TAIEX');
   const [stalePreflight, staleProduction] = await both(taiwanSlot, taiex);
   assert.equal(stalePreflight.valid, false);

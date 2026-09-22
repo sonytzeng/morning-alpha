@@ -1,0 +1,65 @@
+{
+  "schema_version": "PREMARKET_PHASE_PRODUCTION_EVIDENCE_V1",
+  "business_date": "2026-09-22",
+  "contains_secrets": false,
+  "business_writes": [],
+  "historical_outcome": {
+    "premarket_atomic_rows": 0,
+    "report_count": 0,
+    "historical_failure_rewritten": false
+  },
+  "saved_production_evidence": {
+    "0650": {
+      "global_pass_count": 8,
+      "txf_status": "PASS",
+      "taiex_status": "WAITING",
+      "stock_2330_status": "WAITING",
+      "taiex_http_status": 200,
+      "stock_2330_http_status": 200,
+      "taiex_rejected_field": "date",
+      "stock_2330_rejected_field": "date",
+      "taiex_response_hash": "b9d95ad5bdbbd7bb26992456d8aaf35005ee81f576aa93549476df63732c7f3c",
+      "stock_2330_response_hash": "27a94efce846ae46cd0a93f4199afaf68656aae47e0d347d0fba887b57047b0c"
+    },
+    "0835": {
+      "edge_provider_failures": [],
+      "atomic_error": "ATOMIC_CHECKPOINT_ROW_CONTRACT_INVALID"
+    },
+    "0900": {
+      "provider_count": 11,
+      "taiex_provider_date": "2026-09-22",
+      "taiex_timestamp": "2026-09-22T09:00:15+08:00",
+      "taiex_previous_close": 47718.84,
+      "stock_2330_provider_date": "2026-09-22",
+      "stock_2330_timestamp": "2026-09-22T09:00:16+08:00",
+      "stock_2330_previous_close": 2480
+    }
+  },
+  "latest_completed_tw_session": {
+    "date": "2026-09-21",
+    "taiex_close": 47718.84,
+    "stock_2330_close": 2480,
+    "lineage": "immutable 2026-09-21 14:10/14:30 checkpoint plus 2026-09-22 09:00 previous_close"
+  },
+  "premarket_contract_payloads": {
+    "TAIEX": {
+      "symbol": "IX0001",
+      "type": "INDEX",
+      "exchange": "TWSE",
+      "market": "TSE",
+      "date": "2026-09-21",
+      "previousClose": 47718.84
+    },
+    "2330": {
+      "symbol": "2330",
+      "type": "EQUITY",
+      "exchange": "TWSE",
+      "market": "TSE",
+      "date": "2026-09-21",
+      "previousClose": 2480,
+      "referencePrice": 2480
+    }
+  },
+  "payload_provenance": "Contract-only reconstruction from retained Production hashes/shapes and immutable close/current-session lineage; no unretained raw response is claimed.",
+  "real_raw_premarket_payload_retained": false
+}

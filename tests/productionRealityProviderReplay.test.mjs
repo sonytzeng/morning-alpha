@@ -19,7 +19,7 @@ test('real Production 07:00 provider replay reaches one complete atomic candidat
   assert.equal(validateAtomicCheckpointEvidenceRows(replay.evidence).valid, true);
   assert.equal(replay.historical_success_claim, false);
   assert.equal(replay.natural_day_pass_claimed, false);
-  assert.deepEqual(replay.synthetic_adjustments, []);
+  assert.deepEqual(replay.synthetic_adjustments, ['TAIWAN_PHASE_SESSION_CONTRACT_FIXTURE']);
 });
 
 test('Production Replay rejects fixtures that are not marked as real Production captures', () => {

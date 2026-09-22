@@ -1,4 +1,5 @@
 import { normalizeProviderTimestamp } from './provider-normalization.mjs';
+import { evaluateTaiwanCashSession, taiwanCashExpectedSession } from './taiwan-cash-session-contract.mjs';
 
 const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const normalized = value => String(value || '').trim().toUpperCase();
@@ -209,10 +210,33 @@ async function resolveDirectProvider(request, options, contract, validators) {
   const endpoint = premarket ? contract.tickerEndpoint : contract.quoteEndpoint;
   const response = record(await request({ requestType: contract.requestType, endpoint, symbol: contract.symbol }));
   if (Number(response.status) !== 200) return providerFailure(response, contract, endpoint, 'provider_resource_failed');
+  const tradingDate = String(record(options).tradingDate || '');
+  const expectation = phase === 'manual_backfill'
+    ? { valid: true, expected_session_date: tradingDate }
+    : taiwanCashExpectedSession({ phase, tradingDate });
+  if (!expectation.valid) {
+    return contractFailure(response, contract, endpoint, {
+      failure_code: 'PROVIDER_RESPONSE_CONTRACT_INVALID', rejected_field: 'phase|tradingDate',
+    }, expectation.error || 'provider_phase_contract_invalid');
+  }
   const validation = premarket
-    ? validators.ticker(response.payload, String(record(options).tradingDate || ''))
-    : validators.quote(response.payload, String(record(options).tradingDate || ''));
+    ? validators.ticker(response.payload, expectation.expected_session_date)
+    : validators.quote(response.payload, expectation.expected_session_date);
   if (!validation.valid) return contractFailure(response, contract, endpoint, validation, 'provider_contract_invalid');
+  const sessionContract = phase === 'manual_backfill' ? null : evaluateTaiwanCashSession({
+    phase,
+    tradingDate,
+    providerSessionDate: record(response.payload).date,
+    sourceTimestamp: validation.source_timestamp,
+    observedAt: record(options).observedAt,
+  });
+  if (sessionContract && !sessionContract.valid) {
+    return contractFailure(response, contract, endpoint, {
+      failure_code: sessionContract.failure_code || 'PROVIDER_RESPONSE_CONTRACT_INVALID',
+      rejected_field: sessionContract.error || 'session',
+    }, sessionContract.error || 'provider_session_contract_invalid');
+  }
+  validation.session_contract = sessionContract;
   return {
     ok: true,
     payload: record(response.payload),
@@ -312,6 +336,10 @@ export function normalizeFugleTaiwanCoreResult(result, displaySymbol) {
       price_basis: String(resolved.priceBasis || validation.price_basis || ''),
       endpoint: String(resolved.endpoint || ''),
       discovery_status: resolved.discoveryStatus || null,
+      tw_cash_session_contract: record(validation.session_contract).contract || null,
+      tw_cash_phase: record(validation.session_contract).phase || null,
+      tw_cash_expected_session_date: record(validation.session_contract).expected_session_date || null,
+      tw_cash_provider_session_date: record(validation.session_contract).provider_session_date || null,
     },
   };
 }

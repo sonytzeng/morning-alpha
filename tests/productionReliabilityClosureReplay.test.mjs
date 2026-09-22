@@ -19,11 +19,12 @@ test('Production reality affected-path replay composes with the immutable actual
   assert.equal(providerReplay.replay_uses_same_adapter_as_production, true);
   assert.equal(providerReplay.replay_uses_same_contract_as_production, true);
   assert.equal(providerReplay.replay_uses_correct_market_phase, true);
+  assert.deepEqual(providerReplay.synthetic_adjustments, ['TAIWAN_PHASE_SESSION_CONTRACT_FIXTURE']);
   const taiex = providerReplay.evidence.find(row => row.provider_key === 'TAIEX');
   assert.equal(taiex?.source, 'fugle');
   assert.equal(taiex?.raw?.source_symbol, 'IX0001');
   assert.equal(taiex?.raw?.source_raw?.price_basis, 'CURRENT_SESSION_PREVIOUS_CLOSE_REFERENCE');
-  assert.equal(taiex?.raw?.source_raw?.response_date, '2026-09-16');
+  assert.equal(taiex?.raw?.source_raw?.response_date, '2026-09-15');
   assert.equal(taiex?.raw?.freshness_status, 'provider_returned');
 
   assert.equal(sha256(baselineBytes), '9ac767daa8e6275af75c85044bfbfc8a789c18fab75888b74cabeebce3c97743');

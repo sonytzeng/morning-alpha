@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { previousTradingDay, resolveMarketStatus } from '../_shared/market-status.ts';
-import { evaluatePremarketCoreReadiness, PREMARKET_REPORT_DEADLINE_MINUTES } from '../_shared/premarket-provider-readiness.mjs';
+import { resolveMarketStatus } from '../_shared/market-status.ts';
+import { PREMARKET_REPORT_DEADLINE_MINUTES } from '../_shared/premarket-provider-readiness.mjs';
 import {
   authorizeInternalRequest,
   constantTimeEqual,
@@ -31,7 +31,7 @@ import {
   validateRequiredProviderEvidence,
 } from '../_shared/required-provider-validation.mjs';
 
-const VERSION = 'MARKET_READINESS_PREFLIGHT_V3_SHARED_PROVIDER_EVIDENCE';
+const VERSION = 'MARKET_READINESS_PREFLIGHT_V4_TW_PHASE_CONTRACT';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -194,13 +194,7 @@ async function checkTaiwanCore(
     const response = await fetchRequiredFugleResponse(endpoint, apiKey);
     responses.set(endpoint, response);
     return response;
-  }, { tradingDate, phase }) as FugleCoreResolution;
-  const readiness = phase === 'premarket'
-    ? evaluatePremarketCoreReadiness({
-      key, result, tradingDate, previousTradingDate: previousTradingDay(tradingDate),
-      taipeiMinutes: taipeiClock().minutes,
-    })
-    : null;
+  }, { tradingDate, phase, observedAt: String(evidenceInput.observedAt || '') }) as FugleCoreResolution;
 
   const endpoint = String(result.endpoint || (phase === 'premarket' ? contract.tickerEndpoint : contract.quoteEndpoint));
   const primary = responses.get(endpoint) || {
@@ -221,13 +215,6 @@ async function checkTaiwanCore(
       ...checked,
       ...(observations.length ? { observations } : {}),
       discovery_status: key === 'TAIEX' ? String(result.discoveryStatus || '') : null,
-    };
-  }
-  if (readiness?.state === 'WAITING_FOR_PROVIDER_DATA') {
-    return {
-      ...checked, status: 'WAITING', failure_code: 'PROVIDER_DATA_NOT_READY',
-      rejected_field: result.rejectedField ? String(result.rejectedField) : null,
-      ...(observations.length ? { observations } : {}),
     };
   }
   const futureDate = tradingDate > taipeiClock().date;
@@ -359,7 +346,7 @@ Deno.serve(async (req) => {
       fugle: fugleKey ? 'CONFIGURED' : 'MISSING',
     },
     next_action: '07:00_REFETCH_FROM_PROVIDERS',
-    forbidden_fallback: 'NO_PREVIOUS_DAY_DATA',
+    forbidden_fallback: 'NO_STALE_OR_ARBITRARY_SESSION_DATA',
     business_writes: [],
     correlation_id: correlationId,
     latency_ms: Date.now() - started,

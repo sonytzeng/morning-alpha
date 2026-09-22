@@ -125,7 +125,7 @@ function resolveFullDayCounterfactualIntegrity(registry, artifactBytes, readSour
   };
 }
 
-export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+function resolveTxfSessionParityIntegrity(registry, artifactBytes, readSource = read) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/txf-session-date-parity-baseline-transition-20260921.json'));
   const candidate = resolveReviewedBaselineTransition({
     manifest,
@@ -139,6 +139,23 @@ export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes
     fileHash: candidate.fileHash,
     newCandidatePaths: candidate.newCandidatePaths,
     txfSessionParityCandidateIntegrity: candidate,
+  };
+}
+
+export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/premarket-tw-cash-phase-baseline-transition-20260922.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest,
+    readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_TXF_SESSION_DATE_PARITY_20260921',
+    verifyPredecessor: predecessorRead => resolveTxfSessionParityIntegrity(registry, artifactBytes, predecessorRead),
+  });
+  return {
+    ...candidate.reviewedBaselinePredecessor,
+    fileHash: candidate.fileHash,
+    newCandidatePaths: candidate.newCandidatePaths,
+    taiwanCashPhaseCandidateIntegrity: candidate,
   };
 }
 

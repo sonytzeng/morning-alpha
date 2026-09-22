@@ -32,6 +32,7 @@ import { summarizeProviderHealth } from '../supabase/functions/_shared/market-pr
 const fetchSource = readFileSync(new URL('../supabase/functions/fetch-market-data-v10/index.ts', import.meta.url), 'utf8');
 const capture = JSON.parse(readFileSync(new URL('./fixtures/production-parity-v2/provider-capture-20260916.json', import.meta.url), 'utf8'));
 const failureCapture = JSON.parse(readFileSync(new URL('./fixtures/production-parity-v2/premarket-failure-20260916.json', import.meta.url), 'utf8'));
+const phaseFixture = JSON.parse(readFileSync(new URL('./fixtures/premarket-phase-v1/taiwan-session-20260916.json', import.meta.url), 'utf8'));
 const responseHash = payload => createHash('sha256')
   .update(stableJson(sanitizeProductionMarketPayload(payload))).digest('hex');
 
@@ -106,14 +107,15 @@ test('official INDEX mapping is GET IX0001 and is startup-testable', () => {
   assert.equal(validateFugleTaiexTicker(officialTicker, '2026-09-14').valid, true);
 });
 
-test('official symbol discovery then current-session ticker succeeds for premarket', async () => {
+test('official symbol discovery then latest-completed-session ticker succeeds for premarket', async () => {
   const calls = [];
+  const completedSessionTicker = { ...officialTicker, date: '2026-09-11' };
   const result = await resolveFugleTaiexProvider(async request => {
     calls.push(request);
     return request.endpoint.includes('tickers?')
       ? { status: 200, payload: officialDiscovery }
-      : { status: 200, payload: officialTicker };
-  }, { tradingDate: '2026-09-14', phase: 'premarket' });
+      : { status: 200, payload: completedSessionTicker };
+  }, { tradingDate: '2026-09-14', phase: 'premarket', observedAt: '2026-09-14T07:00:00+08:00' });
   assert.equal(result.ok, true);
   assert.equal(result.symbol, 'IX0001');
   assert.equal(result.priceBasis, 'CURRENT_SESSION_REFERENCE_PRICE');
@@ -126,48 +128,59 @@ test('official symbol discovery then current-session ticker succeeds for premark
   assert.doesNotMatch(calls.map(call => call.endpoint).join(' '), /quote\/TAIEX|tse_t00|api\.twse|previous/i);
 });
 
-test('captured Production premarket ticker accepts current-date previousClose as the opening reference', async () => {
+test('premarket ticker accepts the prior completed session as the opening reference', async () => {
   const captured = {
-    date: '2026-09-15', name: '發行量加權股價指數', type: 'INDEX', market: 'TSE',
+    date: '2026-09-14', name: '發行量加權股價指數', type: 'INDEX', market: 'TSE',
     symbol: 'IX0001', exchange: 'TWSE', openTime: '0900', closeTime: '1330', previousClose: 45862.52,
   };
-  const validated = validateFugleTaiexTicker(captured, '2026-09-15');
+  const validated = validateFugleTaiexTicker(captured, '2026-09-14');
   assert.deepEqual(validated, {
     valid: true,
     reference_price: 45862.52,
     price_basis: 'CURRENT_SESSION_PREVIOUS_CLOSE_REFERENCE',
-    source_timestamp: '2026-09-14T16:00:00.000Z',
+    source_timestamp: '2026-09-13T16:00:00.000Z',
     failure_code: null,
   });
   const result = await resolveFugleTaiexProvider(async request => request.endpoint.includes('tickers?')
     ? { status: 200, payload: officialDiscovery }
-    : { status: 200, payload: captured }, { tradingDate: '2026-09-15', phase: 'premarket' });
+    : { status: 200, payload: captured }, {
+    tradingDate: '2026-09-15', phase: 'premarket', observedAt: '2026-09-15T07:00:00+08:00',
+  });
   assert.equal(result.ok, true);
   assert.equal(result.referencePrice, 45862.52);
   assert.equal(result.priceBasis, 'CURRENT_SESSION_PREVIOUS_CLOSE_REFERENCE');
 });
 
-test('9/16 real empty discovery is advisory after the direct IX0001 ticker contract passes', async () => {
+test('9/16 current-date capture is rejected while empty discovery remains advisory for a valid completed-session fixture', async () => {
   const direct = capture.responses.TAIEX;
   const discovery = failureCapture.responses.TAIEX_DISCOVERY;
   assert.equal(capture.real_production_capture, true);
   assert.equal(failureCapture.real_production_capture, true);
   assert.equal(responseHash(direct.payload), direct.source_hash);
   assert.equal(responseHash(discovery.payload), discovery.source_hash);
+  const rejected = await resolveFugleTaiexProvider(async request => request.endpoint.includes('tickers?')
+    ? { status: discovery.http_status, payload: discovery.payload }
+    : { status: direct.http_status, payload: direct.payload }, {
+    tradingDate: '2026-09-16', phase: 'premarket', observedAt: '2026-09-16T07:00:00+08:00',
+  });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.failureCode, 'STALE_PROVIDER_DATA');
+
+  assert.equal(phaseFixture.fixture_type, 'SYNTHETIC_CONTRACT_FIXTURE');
   const calls = [];
   const result = await resolveFugleTaiexProvider(async request => {
     calls.push(request.endpoint);
     return request.endpoint.includes('tickers?')
       ? { status: discovery.http_status, payload: discovery.payload }
-      : { status: direct.http_status, payload: direct.payload };
-  }, { tradingDate: '2026-09-16', phase: 'premarket' });
+      : { status: 200, payload: phaseFixture.responses.TAIEX };
+  }, { tradingDate: '2026-09-16', phase: 'premarket', observedAt: '2026-09-16T07:00:00+08:00' });
   assert.equal(result.ok, true);
   assert.equal(result.discoveryStatus, 'EMPTY_PHASE_VARIANT_DIRECT_RESOURCE_VALID');
   assert.deepEqual(calls, [FUGLE_TAIEX_CONTRACT.tickerEndpoint, FUGLE_TAIEX_CONTRACT.discoveryEndpoint]);
   const normalized = normalizeFugleTaiwanCoreResult(result, 'TAIEX');
   assert.equal(normalized.sourceSymbol, 'IX0001');
-  assert.equal(normalized.value, 45511.49);
-  assert.equal(normalized.raw.date, '2026-09-16');
+  assert.equal(normalized.value, 45000);
+  assert.equal(normalized.raw.date, '2026-09-15');
 });
 
 test('2330 uses ticker before open, quote intraday, and rejects stale or malformed contracts', async () => {
@@ -178,14 +191,14 @@ test('2330 uses ticker before open, quote intraday, and rejects stale or malform
     tickerEndpoint: 'stock/intraday/ticker/2330', quoteEndpoint: 'stock/intraday/quote/2330',
   });
   const ticker = {
-    date: '2026-09-16', type: 'EQUITY', exchange: 'TWSE', market: 'TSE',
+    date: '2026-09-15', type: 'EQUITY', exchange: 'TWSE', market: 'TSE',
     symbol: '2330', name: '台積電', previousClose: 2385, referencePrice: 2385,
   };
   const premarketCalls = [];
   const premarket = await resolveFugle2330Provider(async request => {
     premarketCalls.push(request.endpoint);
     return { status: 200, payload: ticker };
-  }, { tradingDate: '2026-09-16', phase: 'premarket' });
+  }, { tradingDate: '2026-09-16', phase: 'premarket', observedAt: '2026-09-16T07:00:00+08:00' });
   assert.equal(premarket.ok, true);
   assert.deepEqual(premarketCalls, [FUGLE_2330_CONTRACT.tickerEndpoint]);
   assert.equal(normalizeFugleTaiwanCoreResult(premarket, '2330').value, 2385);
@@ -199,7 +212,7 @@ test('2330 uses ticker before open, quote intraday, and rejects stale or malform
   assert.equal(intraday.ok, true);
   assert.equal(intraday.endpoint, FUGLE_2330_CONTRACT.quoteEndpoint);
   assert.equal(validateFugle2330Ticker({ ...ticker, date: '2026-09-15' }, '2026-09-16').failure_code, 'STALE_PROVIDER_DATA');
-  assert.equal(validateFugle2330Ticker({ ...ticker, referencePrice: 0, previousClose: null }, '2026-09-16').failure_code, 'PROVIDER_RESPONSE_CONTRACT_INVALID');
+  assert.equal(validateFugle2330Ticker({ ...ticker, referencePrice: 0, previousClose: null }, '2026-09-15').failure_code, 'PROVIDER_RESPONSE_CONTRACT_INVALID');
 });
 
 test('missing/zero current-session reference fields fail closed without stale fallback', () => {
@@ -248,11 +261,13 @@ test('legacy or unknown symbol 404 is explicit and official-resource 404 remains
   }).failure_code, 'RESOURCE_NOT_FOUND');
 });
 
-test('previous-day TAIEX ticker is rejected instead of masquerading as the current trading date', async () => {
-  const previousDay = { ...officialTicker, date: '2026-09-11' };
+test('an older-than-latest completed TAIEX session is rejected instead of masquerading as valid premarket evidence', async () => {
+  const previousDay = { ...officialTicker, date: '2026-09-10' };
   const result = await resolveFugleTaiexProvider(async request => request.endpoint.includes('tickers?')
     ? { status: 200, payload: officialDiscovery }
-    : { status: 200, payload: previousDay }, { tradingDate: '2026-09-14', phase: 'premarket' });
+    : { status: 200, payload: previousDay }, {
+    tradingDate: '2026-09-14', phase: 'premarket', observedAt: '2026-09-14T07:00:00+08:00',
+  });
   assert.deepEqual({ ok: result.ok, code: result.failureCode, error: result.error }, {
     ok: false,
     code: 'STALE_PROVIDER_DATA',

@@ -24,11 +24,11 @@ const previousDate = previousTradingDay(date);
 const correlationId = '17083116-0000-4000-8000-000000000001';
 const input = observedAt => ({ phase: 'premarket', checkpoint: 'premarket', tradingDate: date, observedAt, correlationId });
 
-async function taiwanResult(key, payload, status = 200) {
+async function taiwanResult(key, payload, status = 200, observedAt = `${date}T07:00:00+08:00`) {
   const resolve = key === 'TAIEX' ? resolveFugleTaiexProvider : resolveFugle2330Provider;
   return resolve(async request => request.endpoint.includes('/tickers?')
     ? { status: 200, payload: { type: 'INDEX', exchange: 'TWSE', data: [] } }
-    : { status, payload }, { tradingDate: date, phase: 'premarket' });
+    : { status, payload }, { tradingDate: date, phase: 'premarket', observedAt });
 }
 
 async function currentBatch(observedAt = current.capture_time) {
@@ -38,8 +38,8 @@ async function currentBatch(observedAt = current.capture_time) {
     let quote;
     if (slot.provider === 'finnhub') quote = normalizeRequiredFinnhubQuote(captured.payload, slot.sourceSymbol);
     else if (slot.key === 'TAIEX' || slot.key === '2330') {
-      const result = await taiwanResult(slot.key, captured.payload);
-      assert.equal(result.ok, true, `${slot.key} current-date adapter`);
+      const result = await taiwanResult(slot.key, previous.responses[slot.key].payload, 200, observedAt);
+      assert.equal(result.ok, true, `${slot.key} latest-completed-session adapter`);
       quote = normalizeRequiredTaiwanCoreQuote(result, slot.key);
     } else {
       const result = await resolveRequiredTxfQuote(async endpoint => endpoint === captured.endpoint
@@ -73,27 +73,24 @@ test('9/17 timeline provenance is exact: old response date was rejected, first c
   }
 });
 
-test('06:50 and 07:00 share Taiwan readiness evaluator; previous session is WAITING, never accepted', async () => {
+test('06:50 and 07:00 accept the same latest completed Taiwan session and reject current-day pre-open identity', async () => {
   for (const key of ['TAIEX', '2330']) {
     const result = await taiwanResult(key, previous.responses[key].payload);
-    assert.equal(result.ok, false);
-    assert.equal(result.failureCode, 'STALE_PROVIDER_DATA');
+    assert.equal(result.ok, true);
     for (const minute of [410, 420, 450, 515]) {
       const state = evaluatePremarketCoreReadiness({ key, result, tradingDate: date, previousTradingDate: previousDate, taipeiMinutes: minute });
-      assert.equal(state.state, 'WAITING_FOR_PROVIDER_DATA');
-      assert.equal(state.failure_code, 'PROVIDER_DATA_NOT_READY');
+      assert.equal(state.state, 'PREMARKET_BASELINE_VALID');
+      assert.equal(state.failure_code, null);
       assert.equal(state.source_business_date, previousDate);
     }
-    const expired = evaluatePremarketCoreReadiness({ key, result, tradingDate: date, previousTradingDate: previousDate, taipeiMinutes: PREMARKET_REPORT_DEADLINE_MINUTES });
-    assert.equal(expired.state, 'FAIL');
-    assert.equal(expired.failure_code, 'STALE_PROVIDER_DATA');
-    const up = await taiwanResult(key, current.responses[key].payload);
-    assert.equal(evaluatePremarketCoreReadiness({ key, result: up, tradingDate: date, previousTradingDate: previousDate, taipeiMinutes: 515 }).state, 'CURRENT_VALID');
+    const currentDay = await taiwanResult(key, current.responses[key].payload);
+    assert.equal(currentDay.ok, false);
+    assert.equal(currentDay.failureCode, 'STALE_PROVIDER_DATA');
   }
-  assert.match(preflightSource, /evaluatePremarketCoreReadiness\(/);
-  assert.match(fetchSource, /evaluatePremarketCoreReadiness\(/);
-  assert.match(preflightSource, /WAITING_FOR_MARKET_DATA/);
-  assert.match(fetchSource, /WAITING_FOR_PROVIDER_DATA/);
+  assert.match(preflightSource, /resolveFugleTaiexProvider/);
+  assert.match(fetchSource, /resolveFugleTaiexProvider/);
+  assert.match(preflightSource, /observedAt: String\(evidenceInput\.observedAt \|\| ''\)/);
+  assert.match(fetchSource, /\{ tradingDate, phase, observedAt \}/);
   const preflightReadiness = isolatedFunction(preflightSource, 'readiness');
   assert.equal(preflightReadiness([
     ...Array.from({ length: 9 }, (_, index) => ({ key: `other-${index}`, status: 'PASS' })),
@@ -110,7 +107,7 @@ test('Scenario 1: already-ready real Production capture still yields 11/11', asy
   assert.equal(replay.evidence.length, 11);
 });
 
-test('Scenario 2: 9/17 current-date Production capture permits one fresh 11/11 batch inside bounded window', async () => {
+test('Scenario 2: latest completed session permits one fresh 11/11 batch inside bounded window', async () => {
   assert.equal(PREMARKET_LAST_COLLECTION_MINUTES, 524);
   const rows = await currentBatch();
   assert.deepEqual(rows.map(row => row.provider_key), CHECKPOINT_PROVIDER_KEYS);
@@ -121,10 +118,10 @@ test('Scenario 2: 9/17 current-date Production capture permits one fresh 11/11 b
   assert.match(fetchSource, /PREMARKET_READINESS_DEADLINE_EXCEEDED/);
 });
 
-test('Scenarios 2/3: waiting retries are bounded; deadline sends one incident and never manufactures an atomic batch', async () => {
-  const stale = await Promise.all(['TAIEX', '2330'].map(async key => taiwanResult(key, previous.responses[key].payload)));
+test('Scenarios 2/3: real provider failures still use bounded retry; a valid prior session never enters it', async () => {
+  const validBaseline = await Promise.all(['TAIEX', '2330'].map(async key => taiwanResult(key, previous.responses[key].payload)));
+  assert.equal(validBaseline.every((result, index) => evaluatePremarketCoreReadiness({ key: ['TAIEX', '2330'][index], result }).state === 'PREMARKET_BASELINE_VALID'), true);
   for (const minutes of [420, 423, 450, 460, 515]) {
-    assert.equal(stale.every((result, index) => evaluatePremarketCoreReadiness({ key: ['TAIEX', '2330'][index], result, tradingDate: date, previousTradingDate: previousDate, taipeiMinutes: minutes }).state === 'WAITING_FOR_PROVIDER_DATA'), true);
     const plan = buildPremarketProviderReadinessPlan({ has_report: false, premium_eligible: false, reason_codes: [], attempt: 10, taipei_minutes: minutes, provider_not_ready: true });
     assert.equal(plan.deadline_reached, false);
     assert.equal(plan.retry_after_seconds, 300);

@@ -111,6 +111,12 @@ jobs:
           MA_ISOLATED_TEST_DB: ma_premarket_parity_test1
           MA_TEST_PGPORT: 55439
         run: node --test tests/premarketProductionParityDatabase.integration.mjs
+      - name: Isolated Production Evidence Recorder migration and retention controls
+        env:
+          MA_LOCAL_SCOPE: ma-production-evidence-recorder-20260923
+          MA_ISOLATED_TEST_DB: ma_production_evidence_recorder_test1
+          MA_TEST_PGPORT: 55439
+        run: node --test tests/productionEvidenceRecorderDatabase.integration.mjs
       - name: Core consolidation publication, ACL parity, replay and acceptance
         env:
           MA_LOCAL_SCOPE: ma-core-consolidation-20260909

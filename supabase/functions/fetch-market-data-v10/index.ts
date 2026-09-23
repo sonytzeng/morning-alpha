@@ -20,6 +20,7 @@ import {
 } from '../_shared/provider-normalization.mjs';
 import {
   CHECKPOINT_PROVIDER_KEYS,
+  CHECKPOINT_PROVIDER_CONTRACT_VERSION,
   checkpointBatchIdempotencyKey,
   checkpointCollectionContract,
   parseAtomicCheckpointCommit,
@@ -47,6 +48,9 @@ import {
   fetchRequiredFugleResponse,
   validateRequiredProviderEvidence,
 } from '../_shared/required-provider-validation.mjs';
+import {
+  scheduleProductionEvidenceRecording,
+} from '../_shared/production-evidence-recorder.mjs';
 
 // ═══════════════════════════════════════════════════════════
 // fetch-market-data-v10 V10.19 — PRODUCTION-PARITY TAIWAN CORE CONTRACT
@@ -119,6 +123,15 @@ interface ProviderFailureDetail {
   retryable?: boolean;
 }
 
+interface ProviderResponseObservation {
+  endpoint: string;
+  status: number | null;
+  payload: unknown;
+  error: string | null;
+}
+
+type ProviderResponseRecorder = (observation: ProviderResponseObservation) => void;
+
 interface SymbolConfig {
   finnhubSymbol: string;
   displaySymbol: string;
@@ -152,6 +165,9 @@ interface RequestBody {
   beneficiary_close?: boolean;
   beneficiary_close_only?: boolean;
   force_run?: boolean;
+  provider_retry_attempt?: number;
+  recovery_attempt?: number;
+  attempt?: number;
 }
 
 const SYMBOL_DETAILS: Record<string, { name: string; taiwanImpact: string }> = {
@@ -394,8 +410,15 @@ async function fetchFinnhubQuote(
   apiKey: string,
   logPrefix: string,
   failureDetails?: ProviderFailureDetail[],
+  recorder?: ProviderResponseRecorder,
 ): Promise<MarketQuote | null> {
   const response = await fetchRequiredFinnhubResponse(finnhubSymbol, apiKey);
+  recorder?.({
+    endpoint: 'quote',
+    status: Number.isFinite(Number(response.status)) ? Number(response.status) : null,
+    payload: response.payload,
+    error: response.error ? String(response.error) : null,
+  });
   if (Number(response.status) !== 200) {
     failureDetails?.push({ provider: "finnhub", symbol: finnhubSymbol, endpoint: "quote",
       ...(Number.isFinite(Number(response.status)) && Number(response.status) > 0 ? { status: Number(response.status) } : {}),
@@ -548,6 +571,7 @@ async function fetchFugleTaiwanCoreQuote(
   phase: MarketDataPhase,
   observedAt: string,
   failureDetails?: ProviderFailureDetail[],
+  recorder?: ProviderResponseRecorder,
 ): Promise<MarketQuote | null> {
   const contract = displaySymbol === "TAIEX" ? FUGLE_TAIEX_CONTRACT : FUGLE_2330_CONTRACT;
   if (!apiKey) {
@@ -564,6 +588,12 @@ async function fetchFugleTaiwanCoreQuote(
   const result = await resolver(async (request: { endpoint: string }) => {
     return fetchRequiredFugleResponse(request.endpoint, apiKey);
   }, { tradingDate, phase, observedAt }) as FugleCoreResolution;
+  recorder?.({
+    endpoint: String(result.endpoint || (phase === 'premarket' ? contract.tickerEndpoint : contract.quoteEndpoint)),
+    status: Number.isFinite(Number(result.status)) ? Number(result.status) : null,
+    payload: result.payload || null,
+    error: result.error ? String(result.error) : null,
+  });
 
   if (!result.ok) {
     console.warn(
@@ -606,8 +636,9 @@ async function fetchFugleTaiexQuote(
   phase: MarketDataPhase,
   observedAt: string,
   failureDetails?: ProviderFailureDetail[],
+  recorder?: ProviderResponseRecorder,
 ): Promise<MarketQuote | null> {
-  return fetchFugleTaiwanCoreQuote("TAIEX", apiKey, logPrefix, tradingDate, phase, observedAt, failureDetails);
+  return fetchFugleTaiwanCoreQuote("TAIEX", apiKey, logPrefix, tradingDate, phase, observedAt, failureDetails, recorder);
 }
 
 async function fetchFugle2330Quote(
@@ -617,8 +648,9 @@ async function fetchFugle2330Quote(
   phase: MarketDataPhase,
   observedAt: string,
   failureDetails?: ProviderFailureDetail[],
+  recorder?: ProviderResponseRecorder,
 ): Promise<MarketQuote | null> {
-  return fetchFugleTaiwanCoreQuote("2330", apiKey, logPrefix, tradingDate, phase, observedAt, failureDetails);
+  return fetchFugleTaiwanCoreQuote("2330", apiKey, logPrefix, tradingDate, phase, observedAt, failureDetails, recorder);
 }
 
 async function fetchFugleJson(
@@ -806,6 +838,7 @@ async function fetchTwseQuote(
   sourceSymbol: string,
   logPrefix: string,
   failureDetails?: ProviderFailureDetail[],
+  recorder?: ProviderResponseRecorder,
 ): Promise<MarketQuote | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 4_000);
@@ -825,6 +858,7 @@ async function fetchTwseQuote(
       return null;
     }
     const data = await response.json();
+    recorder?.({ endpoint: exCh, status: response.status, payload: data, error: null });
     return normalizeTwseQuote(data && typeof data === "object" && !Array.isArray(data) ? data as Record<string, unknown> : {}, sourceSymbol);
   } catch (err) {
     clearTimeout(timeoutId);
@@ -843,21 +877,22 @@ async function fetchTaiwanCoreQuote(
   tradingDate: string,
   observedAt: string,
   failureDetails?: ProviderFailureDetail[],
+  recorder?: ProviderResponseRecorder,
 ): Promise<MarketQuote | null> {
   if (config.displaySymbol === "2330") {
-    const fugleQuote = await fetchFugle2330Quote(fugleApiKey, logPrefix, tradingDate, phase, observedAt, failureDetails);
+    const fugleQuote = await fetchFugle2330Quote(fugleApiKey, logPrefix, tradingDate, phase, observedAt, failureDetails, recorder);
     if (fugleQuote) return fugleQuote;
     // Premarket must come from Fugle's latest completed TW session contract;
     // neither TWSE MIS nor an arbitrary older session may substitute for it.
     if (phase === "premarket" || phase === "manual_backfill") return null;
-    return await fetchTwseQuote("tse_2330.tw", "2330", logPrefix, failureDetails) ?? null;
+    return await fetchTwseQuote("tse_2330.tw", "2330", logPrefix, failureDetails, recorder) ?? null;
   }
 
   if (config.displaySymbol === "TAIEX") {
     // TAIEX is exclusively the Fugle INDEX ticker discovered as IX0001. A
     // missing/invalid resource fails this provider slot; it never falls back
     // to the invalid TAIEX alias or a previous-session substitute.
-    return await fetchFugleTaiexQuote(fugleApiKey, logPrefix, tradingDate, phase, observedAt, failureDetails);
+    return await fetchFugleTaiexQuote(fugleApiKey, logPrefix, tradingDate, phase, observedAt, failureDetails, recorder);
   }
 
   if (config.displaySymbol === "TXF") {
@@ -865,6 +900,13 @@ async function fetchTaiwanCoreQuote(
       (endpoint: string) => fetchRequiredFugleResponse(endpoint, fugleApiKey),
       { phase, tradingDate, observedAt },
     );
+    const selectedObservation = resolved.response || resolved.observations.at(-1) || {};
+    recorder?.({
+      endpoint: String(resolved.endpoint || selectedObservation.endpoint || REQUIRED_PROVIDER_CONFIG.find(item => item.key === 'TXF')?.endpoint || ''),
+      status: Number.isFinite(Number(selectedObservation.status)) ? Number(selectedObservation.status) : null,
+      payload: selectedObservation.payload || null,
+      error: selectedObservation.error ? String(selectedObservation.error) : null,
+    });
     for (const observation of resolved.observations) {
       if (Number(observation.status) === 200) continue;
       failureDetails?.push({
@@ -1176,6 +1218,8 @@ Deno.serve(async (req) => {
     const immutableSnapshotVersions: Array<number | string> = [];
     const immutableSymbolsSuccess: string[] = [];
     const retainedCoreEvidence = new Map<string, Record<string, unknown>>();
+    const providerResponseObservations = new Map<string, ProviderResponseObservation>();
+    const providerContractEvidence = new Map<string, Record<string, unknown>>();
     let atomicBatchId: string | null = null;
     let evidenceCorrelationId = correlationId;
     let atomicCheckpointReused = false;
@@ -1239,9 +1283,14 @@ Deno.serve(async (req) => {
 
         console.log(`[${batchTag}] [${originalIndex + 1}/${symbolConfigs.length}] Fetching ${config.displaySymbol} on ${lane.name} lane...`);
         try {
+          const recorder: ProviderResponseRecorder = (observation) => {
+            if (CHECKPOINT_PROVIDER_KEYS.includes(config.displaySymbol)) {
+              providerResponseObservations.set(config.displaySymbol, observation);
+            }
+          };
           const fetchedQuote = config.market === "TW"
-            ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, tradingDate, startedAt, providerFailureDetails)
-            : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`, providerFailureDetails);
+            ? await fetchTaiwanCoreQuote(config, fugleApiKey, `${batchTag}:${config.displaySymbol}`, phase, tradingDate, startedAt, providerFailureDetails, recorder)
+            : await fetchFinnhubQuote(config.finnhubSymbol, finnhubApiKey, `${batchTag}:${config.displaySymbol}`, providerFailureDetails, recorder);
           fetchedQuotes.set(config, fetchedQuote);
         } catch (err) {
           const message = sanitizeProviderError(err instanceof Error ? err.message : String(err));
@@ -1265,6 +1314,10 @@ Deno.serve(async (req) => {
       for (const config of coreSymbolConfigs) {
         const quote = fetchedQuotes.get(config) ?? null;
         if (!quote) {
+          providerContractEvidence.set(config.displaySymbol, {
+            valid: false,
+            error: 'ATOMIC_PROVIDER_RESULT_MISSING',
+          });
           if (!failed.includes(config.displaySymbol)) failed.push(config.displaySymbol);
           providerFailureDetails.push({ provider: config.market === "TW" ? "fugle" : "finnhub",
             symbol: config.displaySymbol, endpoint: "atomic_checkpoint_assembly",
@@ -1275,6 +1328,7 @@ Deno.serve(async (req) => {
           continue;
         }
         const evidence = validateRequiredProviderEvidence(requiredProviderSlot(config.displaySymbol), quote, evidenceInput, config.name);
+        providerContractEvidence.set(config.displaySymbol, evidence);
         if (!evidence.valid) {
           if (!failed.includes(config.displaySymbol)) failed.push(config.displaySymbol);
           providerFailureDetails.push({ provider: quote.provider, symbol: config.displaySymbol,
@@ -1286,6 +1340,46 @@ Deno.serve(async (req) => {
         }
         evidenceRows.push({ ...evidence.row, provider_key: config.displaySymbol });
       }
+
+      const recoveryAttempt = Math.max(1, Math.trunc(Number(requestBody.recovery_attempt ?? requestBody.attempt) || 1));
+      const transportAttempt = Math.max(1, Math.trunc(Number(requestBody.provider_retry_attempt) || 1));
+      const recorderInputs = coreSymbolConfigs.map((config) => {
+        const quote = fetchedQuotes.get(config) ?? null;
+        const observation = providerResponseObservations.get(config.displaySymbol);
+        const evidence = providerContractEvidence.get(config.displaySymbol) || {
+          valid: false,
+          error: 'ATOMIC_PROVIDER_RESULT_MISSING',
+        };
+        const matchingFailure = [...providerFailureDetails].reverse().find(item =>
+          item.symbol === config.displaySymbol || item.symbol === config.finnhubSymbol
+        );
+        return {
+          businessDate: tradingDate,
+          checkpoint: canonicalCheckpoint,
+          validationCheckpoint: checkpoint,
+          attempt: recoveryAttempt,
+          transportAttempt,
+          attemptKey: `${canonicalCheckpoint}:${recoveryAttempt}:${transportAttempt}:${correlationId}`,
+          providerKey: config.displaySymbol,
+          provider: quote?.provider || (config.market === 'TW' ? (config.displaySymbol === 'TXF' ? 'fugle_futopt' : 'fugle') : 'finnhub'),
+          symbol: quote?.sourceSymbol || config.finnhubSymbol,
+          endpoint: observation?.endpoint || matchingFailure?.endpoint || requiredProviderSlot(config.displaySymbol)?.endpoint || 'unknown',
+          httpStatus: observation?.status ?? matchingFailure?.status ?? null,
+          rawPayload: observation?.payload || {},
+          normalizedQuote: quote,
+          evidence,
+          error: observation?.error || matchingFailure?.error || matchingFailure?.failure_code || null,
+          contractReason: evidence.valid === true ? null : String(evidence.error || matchingFailure?.failure_code || 'PROVIDER_REQUEST_REJECTED'),
+          marketPhase: phase,
+          observedAt: startedAt,
+          correlationId,
+          adapterVersion: VERSION,
+          contractVersion: CHECKPOINT_PROVIDER_CONTRACT_VERSION,
+          sourceFunction: 'fetch-market-data-v10',
+          recordedAt: new Date().toISOString(),
+        };
+      });
+      scheduleProductionEvidenceRecording({ supabase, inputs: recorderInputs });
 
       const assembly = validateAtomicCheckpointEvidenceRows(evidenceRows);
       const commitClock = getTaipeiParts();

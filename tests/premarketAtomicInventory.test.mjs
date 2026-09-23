@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   PUBLIC_EXPORT_ARTIFACT_PATH,
   readPremarketAtomicReadinessIntegrity,
-  resolvePremarketAtomicReadinessIntegrity,
+  resolveProductionEvidenceRecorderIntegrity,
 } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url));
@@ -12,7 +12,7 @@ const registry = JSON.parse(read('docs/operations/core-stability-incident-amendm
 const artifact = read(PUBLIC_EXPORT_ARTIFACT_PATH);
 const inventoryPath = 'docs/operations/evidence/premarket-atomic-core-inventory-20260917.json';
 const migrationPath = 'supabase/migrations/20260917120000_premarket_atomic_readiness_window_v1.sql';
-const verify = source => resolvePremarketAtomicReadinessIntegrity(registry, artifact, source);
+const verify = source => resolveProductionEvidenceRecorderIntegrity(registry, artifact, source);
 const changedInventory = mutate => {
   const inventory = JSON.parse(read(inventoryPath));
   mutate(inventory);
@@ -207,7 +207,7 @@ test('9/23 Production parity successor pins the exact envelope/session fix and s
     'tests/premarketProductionParity20260923.test.mjs',
     'tests/premarketProductionParityDatabase.integration.mjs',
   ]);
-  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+  assert.deepEqual(result.premarketProductionParityCandidateIntegrity.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
     && !result.acceptanceReadinessCandidateIntegrity.newCandidatePaths.includes(path)), [
     'supabase/migrations/20260923120000_premarket_ticker_envelope_session_parity_v1.sql',
   ]);
@@ -220,6 +220,38 @@ test('9/23 Production parity successor pins the exact envelope/session fix and s
   ]) {
     assert.throws(() => verify(name => name === path
       ? Buffer.concat([read(name), Buffer.from('\n// unreviewed 9/23 parity drift\n')]) : read(name)),
+    /unreviewed candidate drift/);
+  }
+});
+
+test('Production Evidence Recorder successor pins the append-only sidecar, replay path, and sole additive migration', () => {
+  const result = readPremarketAtomicReadinessIntegrity(registry);
+  const successor = result.productionEvidenceRecorderCandidateIntegrity.reviewedBaselineTransition;
+  assert.equal(successor.transition_id, 'MORNING_ALPHA_PRODUCTION_EVIDENCE_RECORDER_20260923');
+  assert.equal(successor.predecessor_integrity_id, 'MORNING_ALPHA_PREMARKET_PRODUCTION_PARITY_20260923');
+  assert.deepEqual(successor.files.filter(row => row.operation === 'ADD').map(row => row.path).sort(), [
+    'docs/operations/evidence/production-evidence-gap-20260923.json',
+    'docs/operations/evidence/production-evidence-recorder-latency-20260923.json',
+    'docs/operations/production-incident-replay-runbook.md',
+    'scripts/replay-recorded-provider-evidence.mjs',
+    'supabase/functions/_shared/production-evidence-recorder.mjs',
+    'supabase/migrations/20260923124500_production_evidence_recorder_v1.sql',
+    'tests/productionEvidenceRecorder.test.mjs',
+    'tests/productionEvidenceRecorderDatabase.integration.mjs',
+  ]);
+  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+    && !result.premarketProductionParityCandidateIntegrity.newCandidatePaths.includes(path)), [
+    'supabase/migrations/20260923124500_production_evidence_recorder_v1.sql',
+  ]);
+  for (const path of [
+    'supabase/functions/_shared/production-evidence-recorder.mjs',
+    'supabase/functions/fetch-market-data-v10/index.ts',
+    'supabase/functions/market-readiness-preflight/index.ts',
+    'supabase/migrations/20260923124500_production_evidence_recorder_v1.sql',
+    'tests/productionEvidenceRecorder.test.mjs',
+  ]) {
+    assert.throws(() => verify(name => name === path
+      ? Buffer.concat([read(name), Buffer.from('\n// unreviewed recorder drift\n')]) : read(name)),
     /unreviewed candidate drift/);
   }
 });

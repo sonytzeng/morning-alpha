@@ -1,0 +1,179 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_PRODUCTION_EVIDENCE_RECORDER_20260923",
+  "candidate_base_git_sha": "87e8f3d27910910e35aa26d00011eb2143208eb3",
+  "predecessor_integrity_id": "MORNING_ALPHA_PREMARKET_PRODUCTION_PARITY_20260923",
+  "approval_provenance": "Sony explicitly required an append-only, deidentified, non-blocking Production Evidence Recorder candidate after the 9/23 raw-evidence gap, including deterministic provider replay, fresh isolated database validation, retained historical failure facts, and same-day read-only lifecycle checks. Production migration, deployment, Cron, Auth, RLS relaxation, secrets, member data, historical recovery, and business-data writes remain outside this candidate authorization.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/productionEvidenceRecorder.test.mjs",
+    "tests/productionEvidenceRecorderDatabase.integration.mjs",
+    "tests/precheckProductionParity.test.mjs",
+    "tests/premarketProductionParity20260923.test.mjs",
+    "tests/fetchCheckpointEvidence.test.mjs",
+    "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+    "tests/productionReliabilityBaselineTransition.test.mjs",
+    "tests/premarketAtomicInventory.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "87e8f3d27910910e35aa26d00011eb2143208eb3",
+      "predecessor_sha256": "a64338724b17b4883b56b219efdb29bedfc716c6d1f85fa1fe21b8efdcb59d5a",
+      "candidate_sha256": "a18b6d89f7bf6523996c46b566235035fbb0271a7f787798af98bf3ff2fe3d80",
+      "source_lineage": "The exact merged 9/23 Release workflow with one additional isolated recorder migration validation step.",
+      "reason": "Require GitHub Release CI to verify RLS, append-only retention, and idempotent migration replay.",
+      "rollback_target": "Restore only the workflow from the approved 9/23 predecessor commit."
+    },
+    {
+      "path": "supabase/functions/fetch-market-data-v10/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "87e8f3d27910910e35aa26d00011eb2143208eb3",
+      "predecessor_sha256": "ce2bd978cc74a067b39e3c694896988fd4feb10d95227eb1e7dfc98c7fdd2b0c",
+      "candidate_sha256": "0951a2b1fcbbe6fc9293ff99f478aacbad7caadea6645fce7e728130d131aa72",
+      "source_lineage": "Exact deployed v75 provider, normalization, phase, freshness, and Atomic path with an independent background observation schedule.",
+      "reason": "Capture all 11 provider outcomes and retry attempts without changing Atomic or business success conditions.",
+      "rollback_target": "Restore only fetch-market-data-v10 from the approved 9/23 predecessor commit."
+    },
+    {
+      "path": "supabase/functions/market-readiness-preflight/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "87e8f3d27910910e35aa26d00011eb2143208eb3",
+      "predecessor_sha256": "09d24f76178fa281c6b36624fe2185b1a20f09fc2824189ede4e399547e974c1",
+      "candidate_sha256": "c63529dad33f0738e6271e330846df8bcd85a20b0381d446d074ec2e530aef55",
+      "source_lineage": "Exact deployed preflight v10 shared provider-validation path with private recorder inputs stripped from its public response.",
+      "reason": "Retain 06:50 replay evidence while preserving zero business writes and existing readiness semantics.",
+      "rollback_target": "Restore only market-readiness-preflight from the approved 9/23 predecessor commit."
+    },
+    {
+      "path": "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "87e8f3d27910910e35aa26d00011eb2143208eb3",
+      "predecessor_sha256": "0287347ab8aaeb303357654f6b46e7e36bf10d101bd0fbeb7c4df3fcfef049ed",
+      "candidate_sha256": "c93975001d254a46a3c9a5f07919288301d0b2d5ea46d8506acd36d222adcc53",
+      "source_lineage": "The unchanged Acceptance V1 adversarial assertions routed through the latest exact-hash Integrity successor.",
+      "reason": "Ensure historical Acceptance seals validate the complete candidate chain instead of stopping at the reviewed 9/23 predecessor.",
+      "rollback_target": "Restore only this Integrity test import from the approved 9/23 predecessor commit."
+    },
+    {
+      "path": "tests/productionReliabilityBaselineTransition.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "87e8f3d27910910e35aa26d00011eb2143208eb3",
+      "predecessor_sha256": "cc480e9c91228932bad965e3c35cf78fb87f4780bc284d14480b72fa7a45254c",
+      "candidate_sha256": "ad6b01ba3c0a279f61e173e99fb2a00930ca5846f9ac7932f78b920936071b3c",
+      "source_lineage": "The unchanged Production Reliability lineage assertions routed through the latest exact-hash Integrity successor.",
+      "reason": "Keep the historical transition reconstruction fail-closed while validating the complete recorder candidate chain.",
+      "rollback_target": "Restore only this Integrity test import from the approved 9/23 predecessor commit."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "87e8f3d27910910e35aa26d00011eb2143208eb3",
+      "predecessor_sha256": "c180c2b798ee33f975ee47f37a72ab22f1082098d0ba4afa860c5a79cebe930e",
+      "candidate_sha256": "dfb62b48f8e8c2ecf7e9596ba31458b79537fd855238e91a50c948555c325c9f",
+      "source_lineage": "The complete 9/23 Production parity Integrity result reconstructed before this exact-hash successor.",
+      "reason": "Append a named recorder baseline without rewriting any predecessor transition or hash.",
+      "rollback_target": "Restore only the Integrity entrypoint from the approved 9/23 predecessor commit."
+    },
+    {
+      "path": "tests/premarketAtomicInventory.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "87e8f3d27910910e35aa26d00011eb2143208eb3",
+      "predecessor_sha256": "d246cae2c864127025137eead9a5662dd19753a38382912ca53315eb33f744e9",
+      "candidate_sha256": "5a686bc7b8f9db77e5e238e6c3e369931c51eb39bcbb8d0140940cc505970732",
+      "source_lineage": "Append-only Integrity regression extended with the named recorder successor and migration.",
+      "reason": "Reject renamed SQL, unknown source, changed runtime bytes, missing lineage, and unreviewed recorder drift.",
+      "rollback_target": "Restore only this Integrity regression from the approved 9/23 predecessor commit."
+    },
+    {
+      "path": "docs/operations/evidence/production-evidence-gap-20260923.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "b6b5d9d195abfe44f2c9aea13ad545c07c50a2a9597dd90b4623bffce81fde59",
+      "source_lineage": "Immutable disclosure derived only from retained 9/23 metadata and the confirmed absence of complete raw responses.",
+      "reason": "Permanently mark unavailable 06:50 and 07:00 raw evidence without fabricating Production payloads.",
+      "rollback_target": "Remove only this additive deidentified gap disclosure."
+    },
+    {
+      "path": "docs/operations/evidence/production-evidence-recorder-latency-20260923.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "f242a88c42081b270d8e991800946e05bce6127a39aacb7a1551cf2dc357ab74",
+      "source_lineage": "Local 1,000-run measurement of synchronous no-recorder baseline versus background recorder scheduling overhead.",
+      "reason": "Retain the measured business-path latency delta and its explicit non-Production claim limit.",
+      "rollback_target": "Remove only this additive local latency evidence artifact."
+    },
+    {
+      "path": "docs/operations/production-incident-replay-runbook.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "1d0c780de0ec6b6a937568e16f69b8f0add977d81e7b7bcc0f96bff1e1761bc1",
+      "source_lineage": "New operational documentation for the exact sanitized evidence and replay contracts in this candidate.",
+      "reason": "Provide a permanent incident ID to deterministic replay and regression workflow.",
+      "rollback_target": "Remove only this additive runbook."
+    },
+    {
+      "path": "scripts/replay-recorded-provider-evidence.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "911665f2b025869738da8c87ac8be1f0270fc8b8b746823ed40b33cbe0878226",
+      "source_lineage": "New offline CLI wrapper around the candidate shared replay implementation with no network transport.",
+      "reason": "Replay one sanitized incident export and emit the exact provider and Atomic candidate diff.",
+      "rollback_target": "Remove only this additive offline replay script."
+    },
+    {
+      "path": "supabase/functions/_shared/production-evidence-recorder.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "e43aa1e3e6ce090b2321a8f00c692c6e3d5837f6b0e38504d4baefa4cbad7376",
+      "source_lineage": "New bounded sanitizer, background insert scheduler, and offline replay adapter using existing provider contracts.",
+      "reason": "Capture replayable evidence without making observability a business dependency.",
+      "rollback_target": "Remove only this additive shared recorder module."
+    },
+    {
+      "path": "supabase/migrations/20260923124500_production_evidence_recorder_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "2b6c721b054f7139f4ad78869a4cfa0133adabf5f035dc364e318da5cd626872",
+      "source_lineage": "New additive recorder table and bounded retention function; no existing business table or function is replaced.",
+      "reason": "Persist service-role-only immutable sanitized attempts for at least 90 days.",
+      "rollback_target": "Drop only the recorder table and its two recorder-specific functions after separate rollback authorization."
+    },
+    {
+      "path": "tests/productionEvidenceRecorder.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "7e459cd1b2be0f709368653bba0af4d2fc19a1db743ee19b662b2ce4d47859b5",
+      "source_lineage": "New direct regression using existing audited provider fixtures and current shared adapters.",
+      "reason": "Verify 11/11, failed provider, retries, non-blocking failure, sanitization, and deterministic replay.",
+      "rollback_target": "Remove only this additive recorder regression."
+    },
+    {
+      "path": "tests/productionEvidenceRecorderDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "b78b441ac84160530cdb5d1dde9d68af36e637531f5295e25eaf383c960e0101",
+      "source_lineage": "New loopback-only fresh PostgreSQL 17 migration, ACL, append-only, and retention validation.",
+      "reason": "Prove the additive database contract twice without any Production connection.",
+      "rollback_target": "Remove only this additive isolated database regression."
+    }
+  ]
+}

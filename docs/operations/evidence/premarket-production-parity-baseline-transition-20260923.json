@@ -1,0 +1,191 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_PREMARKET_PRODUCTION_PARITY_20260923",
+  "candidate_base_git_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+  "predecessor_integrity_id": "MORNING_ALPHA_ACCEPTANCE_READINESS_WINDOW_PARITY_20260922",
+  "approval_provenance": "Sony explicitly required the 2026-09-23 Morning Alpha 06:50 READY to 07:00 FAIL Production parity incident to be reproduced from retained Production evidence, fixed through the shared Taiwan cash and Atomic database contract, validated in a fresh isolated database, and taken only to Release Candidate. Production migration, deployment, historical recovery, secrets, Auth, RLS, members, Cron, and historical business data remain outside this candidate authorization.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/fugleTaiexProvider.test.mjs",
+    "tests/taiwanCashPhaseContract.test.mjs",
+    "tests/premarketReadinessRetry.test.mjs",
+    "tests/precheckProductionParity.test.mjs",
+    "tests/txfSessionParity.test.mjs",
+    "tests/dailyDeliveryRecovery.test.mjs",
+    "tests/premarketProductionParity20260923.test.mjs",
+    "tests/premarketProductionParityDatabase.integration.mjs",
+    "tests/marketRuntimeStability.test.mjs",
+    "tests/checkpointAtomicity.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+      "predecessor_sha256": "0f81b0d32f0676d712f7d2f3abe6a60475c5678143bbf8afe8997300967bc63c",
+      "candidate_sha256": "a64338724b17b4883b56b219efdb29bedfc716c6d1f85fa1fe21b8efdcb59d5a",
+      "source_lineage": "Exact merged main Release workflow followed by one sequential loopback PostgreSQL 17 parity replay.",
+      "reason": "Require CI to execute the named 9/23 migration twice and verify its real Atomic boundaries.",
+      "rollback_target": "Restore only the workflow from candidate base after separate rollback authorization."
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+      "predecessor_sha256": "d74f2e668c919466409b0eec43b8a4ec165fd2a10e4b66fbb9c5ded55d97c3c1",
+      "candidate_sha256": "b6595054da8d34d3c1855a26223cc24da3d65e41840296f0763968f344fac3c3",
+      "source_lineage": "Existing bounded daily-delivery recovery state machine with one pure Atomic evidence action gate.",
+      "reason": "Prevent report generation attempts while the authoritative 11-row market batch is absent.",
+      "rollback_target": "Restore only the shared recovery helper from candidate base."
+    },
+    {
+      "path": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+      "predecessor_sha256": "865ff27f2612647d52f033b50905b831b83daf6843202a2e8fe177acd21ddea3",
+      "candidate_sha256": "cef34f328baa90a5575c0096a2c5130d7513273bf95ff4c0dc7850909c8d0925",
+      "source_lineage": "Existing exact 11-provider evidence builder with explicit Taiwan evidence-session precedence.",
+      "reason": "Keep ticker envelope lineage distinct from the completed session validated by Atomic.",
+      "rollback_target": "Restore only this shared evidence validator from candidate base."
+    },
+    {
+      "path": "supabase/functions/_shared/fugle-taiex-provider.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+      "predecessor_sha256": "53db4fae12a019b2eae4f334d117783b38255e71abc9861cb912b98d268cd7ef",
+      "candidate_sha256": "c7c2cb9ac2fec8508555d3f63a7e72da22626efc5cca09a5c734f57796b4036d",
+      "source_lineage": "Byte-matched deployed TAIEX and 2330 adapter with retained Fugle identity, endpoint, value and fail-closed guards.",
+      "reason": "Represent current/prior ticker envelope separately from the latest completed Taiwan session.",
+      "rollback_target": "Restore only the Fugle Taiwan adapter from candidate base."
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+      "predecessor_sha256": "31618208a2cbb45165dc0359033690359de65df370495f4501669a761fcf738a",
+      "candidate_sha256": "2cc449708323eb96df767969ec2f06e410f596b9c3cb51db2975c0945305d307",
+      "source_lineage": "Existing orchestrator plus a read-only authoritative premarket health lookup and durable gate output.",
+      "reason": "Do not retry research or report generation before Atomic market evidence exists.",
+      "rollback_target": "Restore only the orchestrator from candidate base."
+    },
+    {
+      "path": "tests/dailyDeliveryRecovery.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+      "predecessor_sha256": "937617f77790773b2eefd88bde43fec04cd5d1190239085fea683552c08d69d4",
+      "candidate_sha256": "7eebc7c501c953391ce06fe506415f6877fc1d865d1148ba58879ccf26eec2c2",
+      "source_lineage": "Existing retry regression extended with Atomic-incomplete and Atomic-complete action boundaries.",
+      "reason": "Permanently reject regenerate-report actions before the 11-row batch exists.",
+      "rollback_target": "Restore only this direct regression from candidate base."
+    },
+    {
+      "path": "tests/fugleTaiexProvider.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+      "predecessor_sha256": "6397659ac1d541b4b411b3a2ca903bcdf31a66cfd98d0d6ac3808e5beed637b7",
+      "candidate_sha256": "1fb6954b56e4c7157692f40b36fda6facaec4d0589272ae13f9d32f04845a7fa",
+      "source_lineage": "Existing official Fugle adapter fixtures extended with current-envelope completed-session lineage.",
+      "reason": "Lock both legal envelope states without allowing stale or malformed responses.",
+      "rollback_target": "Restore only this adapter regression from candidate base."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+      "predecessor_sha256": "6d0b2c2a927223a36a74936b7e346d6b24e95870f1a6bfda056df83260170856",
+      "candidate_sha256": "c180c2b798ee33f975ee47f37a72ab22f1082098d0ba4afa860c5a79cebe930e",
+      "source_lineage": "Exact Acceptance readiness Integrity result reconstructed before this independent 9/23 successor.",
+      "reason": "Append the exact candidate hashes without rewriting any predecessor transition.",
+      "rollback_target": "Restore only this Integrity entrypoint from candidate base."
+    },
+    {
+      "path": "tests/premarketAtomicInventory.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+      "predecessor_sha256": "4dae271038eadb5027f2134b26a6beace4ba2bb621a9b960f72ae10ef69ff8b2",
+      "candidate_sha256": "d246cae2c864127025137eead9a5662dd19753a38382912ca53315eb33f744e9",
+      "source_lineage": "Append-only Integrity regression extended with the named 9/23 parity successor.",
+      "reason": "Reject renamed migrations, unknown files, changed runtime bytes or missing lineage.",
+      "rollback_target": "Restore only this Integrity regression from candidate base."
+    },
+    {
+      "path": "tests/premarketReadinessRetry.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+      "predecessor_sha256": "6ab921d04f51398d475bd600999a10de33c7b45026ff27855f26eea95346c60b",
+      "candidate_sha256": "a3a6bd22bc7ab82167ab1743d0fc2ff3c33a0a636ca7965d5392ec5193b90feb",
+      "source_lineage": "Existing bounded readiness scenarios updated only for the canonical envelope/session split.",
+      "reason": "Prove 06:50 and 07:00 accept the same completed-session lineage.",
+      "rollback_target": "Restore only this readiness regression from candidate base."
+    },
+    {
+      "path": "tests/taiwanCashPhaseContract.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+      "predecessor_sha256": "33b312ae57ebe0ec82825cde67771332606e40573f5150d83efbcb0c158d6819",
+      "candidate_sha256": "f9fb47d0095946070df867da3bf4347312d36a16fe3cadf6db7e7bed2e84fa0e",
+      "source_lineage": "Existing phase contract boundary suite extended with prior/current premarket envelopes.",
+      "reason": "Preserve intraday and close current-session rejection while fixing premarket parity.",
+      "rollback_target": "Restore only this phase regression from candidate base."
+    },
+    {
+      "path": "docs/operations/evidence/9_23_0650_vs_0700_production_diff.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "9810b0107727ac25b71efb85f332bd9384bd4340d0ac3ba9caeea059e4eeb189",
+      "source_lineage": "Read-only deidentified 9/23 Production health, deployment and Atomic definition observations.",
+      "reason": "Retain the exact root-cause diff and explicitly disclose unavailable raw payload limits.",
+      "rollback_target": "Remove only this additive deidentified evidence artifact."
+    },
+    {
+      "path": "supabase/migrations/20260923120000_premarket_ticker_envelope_session_parity_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "cbe82c50d1774f87f8dbdc05b551c57d52d2227481db36b6f722d9f9d1281ce4",
+      "source_lineage": "Exact Production Atomic function MD5 00fcf28b4af0331b30dd2cea068dc3dc with one fail-closed guard replacement.",
+      "reason": "Separate provider envelope date from completed-session evidence in Atomic admission.",
+      "rollback_target": "Restore the predecessor function only after separate named Production rollback approval."
+    },
+    {
+      "path": "tests/fixtures/premarket-phase-v1/production-parity-20260923.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "fb3c20e52ebd19b5bb1ffd80aa2609d11aff137801bd245bfd21d3a61471d4b0",
+      "source_lineage": "Retained 9/23 Production predicate evidence plus immutable 9/22 close and 9/23 prior-close lineage.",
+      "reason": "Reproduce the real 06:50 pass to 07:00 date rejection without beautifying unavailable data.",
+      "rollback_target": "Remove only this additive regression fixture."
+    },
+    {
+      "path": "tests/premarketProductionParity20260923.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "f0dd430e91791a3e5c0c78aa064afe2323229f1959e208e7ddfacf1526f46a3f",
+      "source_lineage": "Direct 9/23 adapter, evidence, Atomic, stale and intraday parity regression.",
+      "reason": "Make the Production-proven time-sensitive contract failure permanent in CI.",
+      "rollback_target": "Remove only this additive direct regression."
+    },
+    {
+      "path": "tests/premarketProductionParityDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "cba62351db7f8496eae94285d875e1c163133371d845322ec54f83b9dd10173e",
+      "source_lineage": "Fresh PostgreSQL 17 replay of every Atomic predecessor followed by the exact candidate twice.",
+      "reason": "Prove old rejection, new row admission, future Atomic 11, metadata preservation and fail-closed negatives.",
+      "rollback_target": "Remove only this additive isolated database regression."
+    }
+  ]
+}

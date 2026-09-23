@@ -138,6 +138,7 @@ test('premarket ticker accepts the prior completed session as the opening refere
     valid: true,
     reference_price: 45862.52,
     price_basis: 'CURRENT_SESSION_PREVIOUS_CLOSE_REFERENCE',
+    provider_envelope_date: '2026-09-14',
     source_timestamp: '2026-09-13T16:00:00.000Z',
     failure_code: null,
   });
@@ -151,20 +152,22 @@ test('premarket ticker accepts the prior completed session as the opening refere
   assert.equal(result.priceBasis, 'CURRENT_SESSION_PREVIOUS_CLOSE_REFERENCE');
 });
 
-test('9/16 current-date capture is rejected while empty discovery remains advisory for a valid completed-session fixture', async () => {
+test('9/16 current-date ticker envelope maps previousClose to the latest completed session', async () => {
   const direct = capture.responses.TAIEX;
   const discovery = failureCapture.responses.TAIEX_DISCOVERY;
   assert.equal(capture.real_production_capture, true);
   assert.equal(failureCapture.real_production_capture, true);
   assert.equal(responseHash(direct.payload), direct.source_hash);
   assert.equal(responseHash(discovery.payload), discovery.source_hash);
-  const rejected = await resolveFugleTaiexProvider(async request => request.endpoint.includes('tickers?')
+  const currentEnvelope = await resolveFugleTaiexProvider(async request => request.endpoint.includes('tickers?')
     ? { status: discovery.http_status, payload: discovery.payload }
     : { status: direct.http_status, payload: direct.payload }, {
     tradingDate: '2026-09-16', phase: 'premarket', observedAt: '2026-09-16T07:00:00+08:00',
   });
-  assert.equal(rejected.ok, false);
-  assert.equal(rejected.failureCode, 'STALE_PROVIDER_DATA');
+  assert.equal(currentEnvelope.ok, true);
+  assert.equal(currentEnvelope.validation.provider_envelope_date, '2026-09-16');
+  assert.equal(currentEnvelope.validation.evidence_session_date, '2026-09-15');
+  assert.equal(currentEnvelope.validation.session_contract.provider_session_date, '2026-09-15');
 
   assert.equal(phaseFixture.fixture_type, 'SYNTHETIC_CONTRACT_FIXTURE');
   const calls = [];
@@ -181,6 +184,7 @@ test('9/16 current-date capture is rejected while empty discovery remains adviso
   assert.equal(normalized.sourceSymbol, 'IX0001');
   assert.equal(normalized.value, 45000);
   assert.equal(normalized.raw.date, '2026-09-15');
+  assert.equal(normalized.raw.evidence_session_date, '2026-09-15');
 });
 
 test('2330 uses ticker before open, quote intraday, and rejects stale or malformed contracts', async () => {

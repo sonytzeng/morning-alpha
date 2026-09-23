@@ -73,7 +73,7 @@ test('9/17 timeline provenance is exact: old response date was rejected, first c
   }
 });
 
-test('06:50 and 07:00 accept the same latest completed Taiwan session and reject current-day pre-open identity', async () => {
+test('06:50 and 07:00 accept prior/current ticker envelopes for the same latest completed Taiwan session', async () => {
   for (const key of ['TAIEX', '2330']) {
     const result = await taiwanResult(key, previous.responses[key].payload);
     assert.equal(result.ok, true);
@@ -84,8 +84,10 @@ test('06:50 and 07:00 accept the same latest completed Taiwan session and reject
       assert.equal(state.source_business_date, previousDate);
     }
     const currentDay = await taiwanResult(key, current.responses[key].payload);
-    assert.equal(currentDay.ok, false);
-    assert.equal(currentDay.failureCode, 'STALE_PROVIDER_DATA');
+    assert.equal(currentDay.ok, true);
+    assert.equal(currentDay.validation.provider_envelope_date, date);
+    assert.equal(currentDay.validation.evidence_session_date, previousDate);
+    assert.equal(currentDay.validation.session_contract.provider_session_date, previousDate);
   }
   assert.match(preflightSource, /resolveFugleTaiexProvider/);
   assert.match(fetchSource, /resolveFugleTaiexProvider/);

@@ -1,0 +1,96 @@
+{
+  "schema_version": "MORNING_ALPHA_2026_09_23_0650_VS_0700_PRODUCTION_DIFF_V1",
+  "captured_business_date": "2026-09-23",
+  "classification": "PREMARKET_PRODUCTION_PARITY_FAILURE",
+  "production_read_only": true,
+  "contains_secrets": false,
+  "production_business_writes": [],
+  "raw_0700_payload_retained": false,
+  "evidence_limit": "The retained 07:00 health row contains the exact HTTP status, endpoint, rejected field, failure code and expected session. Current-envelope values are reconstructed only from the immutable 09:00 rows and prior close lineage; no unavailable raw response is represented as retained.",
+  "root_cause": {
+    "providers": ["TAIEX", "2330"],
+    "exact_field": "Fugle ticker date",
+    "provider_meaning": "provider_envelope_date",
+    "evidence_meaning": "previousClose/referencePrice belongs to the latest completed Taiwan cash session",
+    "legacy_predicate": "provider_envelope_date = latest_completed_tw_session_date",
+    "0650_expected": "2026-09-22",
+    "0650_actual": "2026-09-22",
+    "0650_result": "PASS",
+    "0700_expected": "2026-09-22",
+    "0700_actual": "2026-09-23",
+    "0700_result": "FAIL_STALE_PROVIDER_DATA_ON_DATE",
+    "canonical_predicate": "evidence_session_date = latest_completed_tw_session_date AND provider_envelope_date IN (latest_completed_tw_session_date, business_date)",
+    "official_contract_reference": "https://developer.fugle.tw/docs/data/http-api/intraday/ticker/"
+  },
+  "provider_diff": [
+    { "provider_key": "SPX", "symbol": "SPY", "source": "finnhub", "endpoint_class": "quote", "phase": "premarket", "business_date": "2026-09-23", "0650_hash": "e6104b2e968639e7161fafbc0d6df1e866bbbd50f8924e380f3c5de73421b68b", "0700_failure": null },
+    { "provider_key": "IXIC", "symbol": "QQQ", "source": "finnhub", "endpoint_class": "quote", "phase": "premarket", "business_date": "2026-09-23", "0650_hash": "cdb2cba82c68efeb336a690878fce3e067cc4913aff521a4eeb0efaf9a4ca9f1", "0700_failure": null },
+    { "provider_key": "SOX", "symbol": "SOXX", "source": "finnhub", "endpoint_class": "quote", "phase": "premarket", "business_date": "2026-09-23", "0650_hash": "586006ac1040faf126fa9d68994a6930f3744679a0bec09338f79743ac6a11df", "0700_failure": null },
+    { "provider_key": "NVDA", "symbol": "NVDA", "source": "finnhub", "endpoint_class": "quote", "phase": "premarket", "business_date": "2026-09-23", "0650_hash": "fbffb2f570a9ceb27db1400dc5b8eadeb87fd02d8ef0640722e8d76f1e7e444d", "0700_failure": null },
+    { "provider_key": "TSM", "symbol": "TSM", "source": "finnhub", "endpoint_class": "quote", "phase": "premarket", "business_date": "2026-09-23", "0650_hash": "d598331292f6fa5ac71afa573845129fa2c56f6c9fb2b4738abca97285eb469b", "0700_failure": null },
+    { "provider_key": "VIX", "symbol": "VXX", "source": "finnhub", "endpoint_class": "quote", "phase": "premarket", "business_date": "2026-09-23", "0650_hash": "2f277049fa7134a5d91d65e19590c560c7b519105c10b538b25c86d1427e5780", "0700_failure": null },
+    { "provider_key": "DXY", "symbol": "UUP", "source": "finnhub", "endpoint_class": "quote", "phase": "premarket", "business_date": "2026-09-23", "0650_hash": "1e039d673bec315c09e6f075a140da457c97269dec410f11a251bf6c2274c04b", "0700_failure": null },
+    { "provider_key": "US10Y", "symbol": "IEF", "source": "finnhub", "endpoint_class": "quote", "phase": "premarket", "business_date": "2026-09-23", "0650_hash": "3886c4d38fd035940dc95bbf45263835bf03cbd45fb35516c29cab2bb22f73ee", "0700_failure": null },
+    { "provider_key": "TAIEX", "symbol": "IX0001", "source": "fugle", "endpoint_class": "stock/intraday/ticker/IX0001", "phase": "premarket", "business_date": "2026-09-23", "source_business_date": "2026-09-22", "normalized_session": "latest_completed_tw_session", "0650_provider_envelope_date": "2026-09-22", "0700_provider_envelope_date": "2026-09-23", "evidence_session_date": "2026-09-22", "0650_hash": "f75b4a28cbb2aa56d6e1485cc2ca877625924b2491e1aa5796f080155d9e469e", "0700_failure": "STALE_PROVIDER_DATA:date" },
+    { "provider_key": "2330", "symbol": "2330", "source": "fugle", "endpoint_class": "stock/intraday/ticker/2330", "phase": "premarket", "business_date": "2026-09-23", "source_business_date": "2026-09-22", "normalized_session": "latest_completed_tw_session", "0650_provider_envelope_date": "2026-09-22", "0700_provider_envelope_date": "2026-09-23", "evidence_session_date": "2026-09-22", "0650_hash": "522a1c38b59f3bba140935292a0fe93d17b0479f1038402f953dd5299d923bc0", "0700_failure": "STALE_PROVIDER_DATA:date" },
+    { "provider_key": "TXF", "symbol": "TXF1!", "source": "fugle_futopt", "endpoint_class": "futopt/intraday/quote/TXF1!?session=afterhours", "phase": "premarket", "business_date": "2026-09-23", "source_business_date": "2026-09-22", "normalized_session": "latest_valid_taifex_session", "0650_hash": "82f33a4517a2c58917b1e57158634d72a7274442721c8c5759448be12a323241", "0700_failure": null }
+  ],
+  "runtime_call_graphs": {
+    "0650": [
+      "market-readiness-preflight/index.ts",
+      "providerFetch / resolveFugleTaiexProvider / resolveFugle2330Provider",
+      "normalizeFugleTaiwanCoreResult",
+      "validateRequiredProviderEvidence",
+      "buildCheckpointEvidence",
+      "readiness 11/11"
+    ],
+    "0700": [
+      "fetch-market-data-v10/index.ts",
+      "fetchTaiwanCoreQuote -> resolveFugleTaiexProvider / resolveFugle2330Provider",
+      "normalizeFugleTaiwanCoreResult",
+      "validateRequiredProviderEvidence",
+      "buildCheckpointEvidence",
+      "commit_market_checkpoint_batch_v1",
+      "authoritative Atomic batch"
+    ],
+    "diff": "The deployed Edge shared files were byte-identical. The time-sensitive ticker envelope rolled between 06:50 and 07:00; the same legacy date-equality predicate therefore changed outcome. The Atomic DB repeated the same conflation and also required correction."
+  },
+  "deployment_parity": {
+    "main_sha": "1957fbe311fad3f85a78299381fdfc1c16f839d5",
+    "fetch_market_data_v10": { "version": 74, "bundle_sha256": "e582ce3a7d45029ed33d920322e511068c66cfa0187d50a0223f980c37268800", "entrypoint_matches_main": true },
+    "market_readiness_preflight": { "version": 9, "bundle_sha256": "4882a2cc92a42ace073a7ab46611ca8d045921f8920903fcf6fe09e7029b6f9a", "entrypoint_matches_main": true },
+    "shared_files_match_main": {
+      "fugle-taiex-provider.mjs": "53db4faef84e2b9e6dbc69ec2fbd480f946d7653371b6fcbf80c2590777e14ac",
+      "fetch-checkpoint-evidence.mjs": "865ff27fb2a741607013679326088317a8f6963f60936bf00db5cc5320f86c9c",
+      "taiwan-cash-session-contract.mjs": "e001b99017b78cd4164691b9ffbf0252a5ae16e3bab5b15d13bc5b4db4937b70",
+      "required-provider-validation.mjs": "0b0fa647d0d04fb46b2dd69258b53c906d9cd4e13b5b717afc21e9ac6ebcce27"
+    },
+    "deployment_parity_drift": false
+  },
+  "atomic_database": {
+    "production_function_md5": "00fcf28b4af0331b30dd2cea068dc3dc",
+    "owner": "postgres",
+    "security": "INVOKER",
+    "search_path": "",
+    "execute_role": "service_role",
+    "tw_cash_phase_contract_active": true,
+    "txf_session_contract_active": true,
+    "readiness_deadline_0845_active": true,
+    "legacy_bug": "PREMARKET source_raw.response_date/date was required to equal the prior completed session even when Fugle had rolled the ticker envelope to business_date"
+  },
+  "active_rule_classification": [
+    { "location": "_shared/fugle-taiex-provider.mjs ticker date equality", "before": "LEGACY_ACTIVE_BUG", "candidate": "CANONICAL_ACTIVE" },
+    { "location": "commit_market_checkpoint_batch_v1 premarket response_date equality", "before": "LEGACY_ACTIVE_BUG", "candidate": "CANONICAL_ACTIVE" },
+    { "location": "_shared/taiwan-cash-session-contract.mjs", "before": "CANONICAL_ACTIVE", "candidate": "CANONICAL_ACTIVE" },
+    { "location": "_shared/fetch-checkpoint-evidence.mjs", "before": "CANONICAL_ACTIVE_WITH_ENVELOPE_CONFLATION", "candidate": "CANONICAL_ACTIVE" },
+    { "location": "historical 07:35 cutoffs through 2026-09-17", "before": "CANONICAL_HISTORICAL_ONLY", "candidate": "CANONICAL_HISTORICAL_ONLY" },
+    { "location": "tests/docs legacy strings", "before": "TEST_ONLY_OR_DOCUMENTATION", "candidate": "TEST_ONLY_OR_DOCUMENTATION" }
+  ],
+  "candidate": {
+    "migration": "20260923120000_premarket_ticker_envelope_session_parity_v1.sql",
+    "functions": ["fetch-market-data-v10", "market-readiness-preflight", "daily-delivery-orchestrator"],
+    "cron_change": false,
+    "historical_2026_09_23_failure_preserved": true,
+    "production_applied": false
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "schema_version": "PRODUCTION_0650_0700_PARITY_EVIDENCE_V1",
+  "business_date": "2026-09-23",
+  "fixture_type": "REAL_PRODUCTION_PREDICATE_RECONSTRUCTION",
+  "real_raw_0700_payload_retained": false,
+  "contains_secrets": false,
+  "business_writes": [],
+  "historical_outcome": {
+    "premarket_atomic_rows": 0,
+    "premarket_report_count": 0,
+    "historical_failure_rewritten": false
+  },
+  "readiness_0650": {
+    "checked_at": "2026-09-23T06:50:02.407+08:00",
+    "status": "READY",
+    "requested_count": 11,
+    "succeeded_count": 11,
+    "failed_count": 0,
+    "contract_version": "MARKET_READINESS_PREFLIGHT_V4_TW_PHASE_CONTRACT",
+    "providers": {
+      "SPX": { "source_symbol": "SPY", "endpoint": "quote", "response_hash": "e6104b2e968639e7161fafbc0d6df1e866bbbd50f8924e380f3c5de73421b68b" },
+      "IXIC": { "source_symbol": "QQQ", "endpoint": "quote", "response_hash": "cdb2cba82c68efeb336a690878fce3e067cc4913aff521a4eeb0efaf9a4ca9f1" },
+      "SOX": { "source_symbol": "SOXX", "endpoint": "quote", "response_hash": "586006ac1040faf126fa9d68994a6930f3744679a0bec09338f79743ac6a11df" },
+      "NVDA": { "source_symbol": "NVDA", "endpoint": "quote", "response_hash": "fbffb2f570a9ceb27db1400dc5b8eadeb87fd02d8ef0640722e8d76f1e7e444d" },
+      "TSM": { "source_symbol": "TSM", "endpoint": "quote", "response_hash": "d598331292f6fa5ac71afa573845129fa2c56f6c9fb2b4738abca97285eb469b" },
+      "VIX": { "source_symbol": "VXX", "endpoint": "quote", "response_hash": "2f277049fa7134a5d91d65e19590c560c7b519105c10b538b25c86d1427e5780" },
+      "DXY": { "source_symbol": "UUP", "endpoint": "quote", "response_hash": "1e039d673bec315c09e6f075a140da457c97269dec410f11a251bf6c2274c04b" },
+      "US10Y": { "source_symbol": "IEF", "endpoint": "quote", "response_hash": "3886c4d38fd035940dc95bbf45263835bf03cbd45fb35516c29cab2bb22f73ee" },
+      "TAIEX": { "source_symbol": "IX0001", "endpoint": "stock/intraday/ticker/IX0001", "response_hash": "f75b4a28cbb2aa56d6e1485cc2ca877625924b2491e1aa5796f080155d9e469e", "provider_envelope_date": "2026-09-22", "evidence_session_date": "2026-09-22" },
+      "2330": { "source_symbol": "2330", "endpoint": "stock/intraday/ticker/2330", "response_hash": "522a1c38b59f3bba140935292a0fe93d17b0479f1038402f953dd5299d923bc0", "provider_envelope_date": "2026-09-22", "evidence_session_date": "2026-09-22" },
+      "TXF": { "source_symbol": "TXF1!", "endpoint": "futopt/intraday/quote/TXF1!?session=afterhours", "response_hash": "82f33a4517a2c58917b1e57158634d72a7274442721c8c5759448be12a323241" }
+    }
+  },
+  "fetch_0700": {
+    "first_attempt_at": "2026-09-23T07:00:02.230+08:00",
+    "last_retained_health_at": "2026-09-23T07:35:38.697+08:00",
+    "atomic_error": "ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY",
+    "atomic_row_count": 0,
+    "rejected_providers": [
+      { "provider_key": "TAIEX", "http_status": 200, "failure_code": "STALE_PROVIDER_DATA", "rejected_field": "date", "provider_envelope_date": "2026-09-23", "evidence_session_date": "2026-09-22" },
+      { "provider_key": "2330", "http_status": 200, "failure_code": "STALE_PROVIDER_DATA", "rejected_field": "date", "provider_envelope_date": "2026-09-23", "evidence_session_date": "2026-09-22" }
+    ],
+    "date_derivation": "Production retained the date-only rejection against the sole 2026-09-22 expectation; Fugle's ticker contract defines date as the current ticker envelope and previousClose as the prior-session close; the immutable 09:00 rows retain response_date=2026-09-23 and the same prior closes. No unretained raw response is claimed."
+  },
+  "immutable_session_lineage": {
+    "session_date": "2026-09-22",
+    "session_close_timestamp": "2026-09-22T13:30:00+08:00",
+    "TAIEX": { "close": 47800.17, "next_session_previous_close": 47800.17 },
+    "2330": { "close": 2460, "next_session_previous_close": 2460 }
+  },
+  "contract_payloads": {
+    "TAIEX": { "symbol": "IX0001", "type": "INDEX", "exchange": "TWSE", "market": "TSE", "date": "2026-09-23", "previousClose": 47800.17, "openTime": "0900", "closeTime": "1330" },
+    "2330": { "symbol": "2330", "type": "EQUITY", "exchange": "TWSE", "market": "TSE", "date": "2026-09-23", "previousClose": 2460, "referencePrice": 2460 }
+  }
+}

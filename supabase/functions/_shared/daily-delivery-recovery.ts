@@ -53,6 +53,17 @@ export interface DailyDeliveryCompletionInput {
   delivered: boolean;
 }
 
+export function gatePremarketActionsOnAtomicEvidence(
+  actions: DailyDeliveryAction[],
+  input: { has_report: boolean; atomic_checkpoint_complete: boolean },
+): DailyDeliveryAction[] {
+  if (input.has_report || input.atomic_checkpoint_complete) return actions;
+  // Research/report generation cannot repair a missing authoritative market
+  // batch. Refetch all 11 providers; a later invocation may generate only
+  // after the Atomic health row proves the batch is complete.
+  return ['refresh_market'];
+}
+
 export interface ClaimedPipelineSlotResolution {
   success: boolean;
   status: 'RUNNING' | 'SKIPPED' | 'DEGRADED' | 'FAILED';

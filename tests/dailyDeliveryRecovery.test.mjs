@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildDailyDeliveryRecoveryPlan,
+  gatePremarketActionsOnAtomicEvidence,
   hasFailedEvidenceDependency,
   isContentOnlyDeliveryFailure,
   resolveDailyDeliveryPhase,
@@ -132,6 +133,23 @@ test('failed evidence dependencies block regeneration and premium delivery', () 
   assert.equal(hasFailedEvidenceDependency({ refresh_news: { ok: false }, refresh_market: { ok: true } }), true);
   assert.equal(hasFailedEvidenceDependency({ regenerate_report: { ok: false } }), true);
   assert.equal(hasFailedEvidenceDependency({ deliver_incident: { ok: false } }), false);
+});
+
+test('missing Atomic evidence refetches market without entering report generation', () => {
+  for (const actions of [
+    ['regenerate_report'],
+    ['refresh_news', 'refresh_market', 'regenerate_report'],
+    ['deliver_incident', 'refresh_market', 'regenerate_report'],
+  ]) {
+    assert.deepEqual(gatePremarketActionsOnAtomicEvidence(actions, {
+      has_report: false,
+      atomic_checkpoint_complete: false,
+    }), ['refresh_market']);
+  }
+  assert.deepEqual(gatePremarketActionsOnAtomicEvidence(['regenerate_report'], {
+    has_report: false,
+    atomic_checkpoint_complete: true,
+  }), ['regenerate_report']);
 });
 
 test('content-only failures use a bounded repair budget instead of repeating the same generation indefinitely', () => {

@@ -105,6 +105,12 @@ jobs:
           MA_ISOLATED_TEST_DB: ma_tw_cash_phase_test1
           MA_TEST_PGPORT: 55439
         run: node --test tests/taiwanCashPhaseDatabase.integration.mjs
+      - name: Isolated 9/23 premarket ticker-envelope parity migration and replay
+        env:
+          MA_LOCAL_SCOPE: ma-premarket-production-parity-20260923
+          MA_ISOLATED_TEST_DB: ma_premarket_parity_test1
+          MA_TEST_PGPORT: 55439
+        run: node --test tests/premarketProductionParityDatabase.integration.mjs
       - name: Core consolidation publication, ACL parity, replay and acceptance
         env:
           MA_LOCAL_SCOPE: ma-core-consolidation-20260909

@@ -4,6 +4,7 @@ import { evaluateTaiwanCashSession, taiwanCashExpectedSession } from './taiwan-c
 const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const normalized = value => String(value || '').trim().toUpperCase();
 const positiveNumber = value => Number.isFinite(Number(value)) && Number(value) > 0;
+const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
 
 function taipeiStartOfDate(value) {
   const date = String(value || '').trim();
@@ -76,12 +77,16 @@ export function validateFugle2330AdapterMapping(mapping = FUGLE_2330_CONTRACT) {
 
 function validateTicker(payload, expectedTradingDate, contract) {
   const response = record(payload);
+  const responseDate = String(response.date || '');
   const identityValid = normalized(response.symbol) === contract.symbol &&
     normalized(response.type) === contract.type &&
     normalized(response.exchange) === contract.exchange &&
     normalized(response.market) === contract.market;
   if (!identityValid) return { valid: false, failure_code: 'PROVIDER_SYMBOL_INVALID', rejected_field: 'identity' };
-  if (expectedTradingDate && String(response.date || '') !== expectedTradingDate) {
+  if (!validDate(responseDate)) {
+    return { valid: false, failure_code: 'PROVIDER_RESPONSE_CONTRACT_INVALID', rejected_field: 'date' };
+  }
+  if (expectedTradingDate && responseDate !== expectedTradingDate) {
     return { valid: false, failure_code: 'STALE_PROVIDER_DATA', rejected_field: 'date' };
   }
   const hasReferencePrice = positiveNumber(response.referencePrice);
@@ -93,7 +98,8 @@ function validateTicker(payload, expectedTradingDate, contract) {
     valid: true,
     reference_price: Number(hasReferencePrice ? response.referencePrice : response.previousClose),
     price_basis: hasReferencePrice ? 'CURRENT_SESSION_REFERENCE_PRICE' : 'CURRENT_SESSION_PREVIOUS_CLOSE_REFERENCE',
-    source_timestamp: taipeiStartOfDate(response.date),
+    provider_envelope_date: responseDate,
+    source_timestamp: taipeiStartOfDate(responseDate),
     failure_code: null,
   };
 }
@@ -219,14 +225,28 @@ async function resolveDirectProvider(request, options, contract, validators) {
       failure_code: 'PROVIDER_RESPONSE_CONTRACT_INVALID', rejected_field: 'phase|tradingDate',
     }, expectation.error || 'provider_phase_contract_invalid');
   }
+  const providerEnvelopeDate = String(record(response.payload).date || '');
+  if (premarket && ![
+    expectation.expected_session_date,
+    tradingDate,
+  ].includes(providerEnvelopeDate)) {
+    return contractFailure(response, contract, endpoint, {
+      failure_code: 'STALE_PROVIDER_DATA', rejected_field: 'date',
+    }, 'provider_envelope_date_outside_premarket_contract');
+  }
   const validation = premarket
-    ? validators.ticker(response.payload, expectation.expected_session_date)
+    ? validators.ticker(response.payload, providerEnvelopeDate)
     : validators.quote(response.payload, expectation.expected_session_date);
   if (!validation.valid) return contractFailure(response, contract, endpoint, validation, 'provider_contract_invalid');
+  if (premarket) {
+    validation.provider_envelope_date = providerEnvelopeDate;
+    validation.evidence_session_date = expectation.expected_session_date;
+    validation.source_timestamp = taipeiStartOfDate(expectation.expected_session_date);
+  }
   const sessionContract = phase === 'manual_backfill' ? null : evaluateTaiwanCashSession({
     phase,
     tradingDate,
-    providerSessionDate: record(response.payload).date,
+    providerSessionDate: premarket ? validation.evidence_session_date : record(response.payload).date,
     sourceTimestamp: validation.source_timestamp,
     observedAt: record(options).observedAt,
   });
@@ -325,6 +345,8 @@ export function normalizeFugleTaiwanCoreResult(result, displaySymbol) {
       display_symbol: String(displaySymbol || ''),
       date: payload.date || null,
       response_date: payload.date || null,
+      provider_envelope_date: validation.provider_envelope_date || payload.date || null,
+      evidence_session_date: validation.evidence_session_date || payload.date || null,
       type: payload.type || null,
       market: payload.market || null,
       exchange: payload.exchange || null,

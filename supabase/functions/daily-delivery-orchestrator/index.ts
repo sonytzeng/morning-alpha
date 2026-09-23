@@ -7,6 +7,7 @@ import { currentResearchDateError } from '../_shared/research-pipeline-contract.
 import { authorizeInternalRequest, buildInternalFunctionHeaders, constantTimeEqual, internalCredentialsFromEnv, INTERNAL_AUTH_ERROR_CODES } from '../_shared/internal-function-auth.mjs';
 import {
   buildPremarketProviderReadinessPlan,
+  gatePremarketActionsOnAtomicEvidence,
   hasFailedEvidenceDependency,
   resolveClaimedPipelineRetry,
   resolveClaimedPipelineSlot,
@@ -379,6 +380,22 @@ async function loadProviderNotReady(supabase: SupabaseClient, reportDate: string
   if (error) throw new Error(`PROVIDER_READINESS_QUERY_FAILED:${error.message}`);
   return data?.last_error_code === 'PROVIDER_DATA_NOT_READY' &&
     asRecord(data.details).provider_readiness_state === 'WAITING_FOR_PROVIDER_DATA';
+}
+
+async function loadPremarketAtomicReady(supabase: SupabaseClient, reportDate: string): Promise<boolean> {
+  const { data, error } = await supabase.from('data_provider_health')
+    .select('details')
+    .eq('provider', 'market_fetch_v10')
+    .eq('service_date', reportDate)
+    .eq('phase', 'premarket')
+    .eq('checkpoint', 'premarket')
+    .maybeSingle();
+  if (error) throw new Error(`PREMARKET_ATOMIC_READINESS_QUERY_FAILED:${error.message}`);
+  const details = asRecord(data?.details);
+  return details.atomic_checkpoint_complete === true
+    && details.core_batch_complete === true
+    && typeof details.atomic_batch_id === 'string'
+    && details.atomic_batch_id.length > 0;
 }
 
 async function claimPipelineSlot(
@@ -863,6 +880,7 @@ Deno.serve(async (req: Request) => {
 
     let state = await loadDeliveryState(supabase, businessDate);
     let providerNotReady = await loadProviderNotReady(supabase, businessDate);
+    let premarketAtomicReady = await loadPremarketAtomicReady(supabase, businessDate);
     const providerDelayContext = body.readiness_retry === true || providerNotReady;
     let plan = buildPremarketProviderReadinessPlan({
       has_report: Boolean(state.report),
@@ -884,6 +902,10 @@ Deno.serve(async (req: Request) => {
       ? []
       : actions.filter((action) => action === 'refresh_sector_rotation' || action === 'regenerate_report');
     else if (phase === 'deliver' && state.report_eligible) actions = ['deliver_premium'];
+    actions = gatePremarketActionsOnAtomicEvidence(actions, {
+      has_report: Boolean(state.report),
+      atomic_checkpoint_complete: premarketAtomicReady,
+    });
 
     const actionResults = await executeRecoveryActions({
       actions,
@@ -906,6 +928,7 @@ Deno.serve(async (req: Request) => {
     )) {
       state = await loadDeliveryState(supabase, businessDate);
       providerNotReady = await loadProviderNotReady(supabase, businessDate);
+      premarketAtomicReady = await loadPremarketAtomicReady(supabase, businessDate);
       plan = buildPremarketProviderReadinessPlan({
         has_report: Boolean(state.report),
         premium_eligible: state.premium_eligible,
@@ -985,6 +1008,7 @@ Deno.serve(async (req: Request) => {
         orchestrator_version: VERSION,
         report_date: businessDate,
         provider_not_ready: providerNotReady,
+        premarket_atomic_ready: premarketAtomicReady,
         provider_delay_context: providerDelayContext,
         ...timing,
         report_delivery_status: reportDeliveryStatus,
@@ -1016,6 +1040,7 @@ Deno.serve(async (req: Request) => {
       report_delivery_status: reportDeliveryStatus,
       status: providerNotReady && !plan.deadline_reached ? 'WAITING_FOR_PROVIDER_DATA' : status,
       provider_readiness_state: providerNotReady ? 'WAITING_FOR_PROVIDER_DATA' : null,
+      premarket_atomic_ready: premarketAtomicReady,
       delivery_sla_status: timing.delivery_sla_status,
       readiness_recovery_status: timing.readiness_recovery_status,
       report_date: businessDate,

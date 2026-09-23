@@ -77,7 +77,8 @@ export function buildCheckpointEvidence(input, quote, config) {
       tradingDate: input.tradingDate,
       sourceTimestamp: quote.capturedAt,
       observedAt: input.observedAt,
-      providerSessionDate: record(quote.raw).response_date || record(quote.raw).date,
+      providerSessionDate: record(quote.raw).evidence_session_date ||
+        record(quote.raw).response_date || record(quote.raw).date,
     })
     : null;
   if (twCashSession && !twCashSession.valid) return { valid: false, error: twCashSession.error };
@@ -161,7 +162,7 @@ export function validateAtomicCheckpointEvidenceRows(rows) {
         tradingDate: row.trading_date,
         sourceTimestamp: row.source_timestamp,
         observedAt: row.captured_at,
-        providerSessionDate: sourceRaw.response_date || sourceRaw.date,
+        providerSessionDate: sourceRaw.evidence_session_date || sourceRaw.response_date || sourceRaw.date,
       });
       if (!session.valid || raw.tw_cash_session_contract !== session.contract ||
         raw.tw_cash_phase !== session.phase ||

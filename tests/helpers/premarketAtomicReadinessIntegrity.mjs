@@ -159,7 +159,7 @@ function resolveTaiwanCashPhaseIntegrity(registry, artifactBytes, readSource = r
   };
 }
 
-export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+function resolveAcceptanceReadinessIntegrity(registry, artifactBytes, readSource = read) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/acceptance-readiness-window-parity-baseline-transition-20260922.json'));
   const candidate = resolveReviewedBaselineTransition({
     manifest,
@@ -173,6 +173,23 @@ export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes
     fileHash: candidate.fileHash,
     newCandidatePaths: candidate.newCandidatePaths,
     acceptanceReadinessCandidateIntegrity: candidate,
+  };
+}
+
+export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/premarket-production-parity-baseline-transition-20260923.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest,
+    readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_ACCEPTANCE_READINESS_WINDOW_PARITY_20260922',
+    verifyPredecessor: predecessorRead => resolveAcceptanceReadinessIntegrity(registry, artifactBytes, predecessorRead),
+  });
+  return {
+    ...candidate.reviewedBaselinePredecessor,
+    fileHash: candidate.fileHash,
+    newCandidatePaths: candidate.newCandidatePaths,
+    premarketProductionParityCandidateIntegrity: candidate,
   };
 }
 

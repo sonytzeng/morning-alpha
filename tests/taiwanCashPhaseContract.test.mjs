@@ -71,14 +71,19 @@ test('PREMARKET: weekday, Monday and holiday return select exactly the latest co
   }
 });
 
-test('PREMARKET TAIEX/2330 adapter accepts prior completed session and rejects stale, current-day and future data', async () => {
+test('PREMARKET TAIEX/2330 adapter accepts prior/current envelopes and rejects stale or future dates', async () => {
   for (const key of ['TAIEX', '2330']) {
     const valid = await resolve(key, production.premarket_contract_payloads[key], {
       phase: 'premarket', tradingDate: '2026-09-22', observedAt: '2026-09-22T07:00:00+08:00',
     });
     assert.equal(valid.ok, true, key);
     assert.equal(valid.validation.session_contract.contract, TAIWAN_CASH_SESSION_CONTRACTS.premarket);
-    for (const date of ['2026-09-18', '2026-09-22', '2026-09-23']) {
+    const currentEnvelope = await resolve(key, ticker(key, '2026-09-22'), {
+      phase: 'premarket', tradingDate: '2026-09-22', observedAt: '2026-09-22T07:00:00+08:00',
+    });
+    assert.equal(currentEnvelope.ok, true, key);
+    assert.equal(currentEnvelope.validation.evidence_session_date, '2026-09-21', key);
+    for (const date of ['2026-09-18', '2026-09-23']) {
       const invalid = await resolve(key, ticker(key, date), {
         phase: 'premarket', tradingDate: '2026-09-22', observedAt: '2026-09-22T07:00:00+08:00',
       });

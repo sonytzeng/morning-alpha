@@ -180,7 +180,7 @@ test('Acceptance readiness successor keeps 07:30 SLA separate from the sole 08:4
     'tests/acceptanceReadinessWindowDatabase.integration.mjs',
     'tests/acceptanceReadinessWindowParity.test.mjs',
   ]);
-  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+  assert.deepEqual(result.acceptanceReadinessCandidateIntegrity.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
     && !result.taiwanCashPhaseCandidateIntegrity.newCandidatePaths.includes(path)), [
     'supabase/migrations/20260922153000_acceptance_readiness_window_parity_v1.sql',
   ]);
@@ -191,6 +191,35 @@ test('Acceptance readiness successor keeps 07:30 SLA separate from the sole 08:4
   ]) {
     assert.throws(() => verify(name => name === path
       ? Buffer.concat([read(name), Buffer.from('\n// unreviewed Acceptance readiness drift\n')]) : read(name)),
+    /unreviewed candidate drift/);
+  }
+});
+
+test('9/23 Production parity successor pins the exact envelope/session fix and sole additive migration', () => {
+  const result = readPremarketAtomicReadinessIntegrity(registry);
+  const successor = result.premarketProductionParityCandidateIntegrity.reviewedBaselineTransition;
+  assert.equal(successor.transition_id, 'MORNING_ALPHA_PREMARKET_PRODUCTION_PARITY_20260923');
+  assert.equal(successor.predecessor_integrity_id, 'MORNING_ALPHA_ACCEPTANCE_READINESS_WINDOW_PARITY_20260922');
+  assert.deepEqual(successor.files.filter(row => row.operation === 'ADD').map(row => row.path).sort(), [
+    'docs/operations/evidence/9_23_0650_vs_0700_production_diff.json',
+    'supabase/migrations/20260923120000_premarket_ticker_envelope_session_parity_v1.sql',
+    'tests/fixtures/premarket-phase-v1/production-parity-20260923.json',
+    'tests/premarketProductionParity20260923.test.mjs',
+    'tests/premarketProductionParityDatabase.integration.mjs',
+  ]);
+  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+    && !result.acceptanceReadinessCandidateIntegrity.newCandidatePaths.includes(path)), [
+    'supabase/migrations/20260923120000_premarket_ticker_envelope_session_parity_v1.sql',
+  ]);
+  for (const path of [
+    'supabase/functions/_shared/fugle-taiex-provider.mjs',
+    'supabase/functions/_shared/fetch-checkpoint-evidence.mjs',
+    'supabase/functions/daily-delivery-orchestrator/index.ts',
+    'supabase/migrations/20260923120000_premarket_ticker_envelope_session_parity_v1.sql',
+    'tests/premarketProductionParity20260923.test.mjs',
+  ]) {
+    assert.throws(() => verify(name => name === path
+      ? Buffer.concat([read(name), Buffer.from('\n// unreviewed 9/23 parity drift\n')]) : read(name)),
     /unreviewed candidate drift/);
   }
 });

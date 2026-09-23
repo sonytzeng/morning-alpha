@@ -1,0 +1,14 @@
+{
+  "schema_version": "PRODUCTION_EVIDENCE_RECORDER_LATENCY_V1",
+  "measurement_scope": "local_business_path_scheduling_only",
+  "runs": 1000,
+  "before_total_ms": 0.011,
+  "after_total_ms": 0.793,
+  "scheduling_overhead_per_fetch_ms": 0.000782,
+  "business_awaits_recorder": false,
+  "database_write_runs_in_background": true,
+  "database_write_timeout_ms": 1500,
+  "claim_limit": "This measures the synchronous Fetch-path scheduling delta, not external Provider or Production database latency.",
+  "production_requests": 0,
+  "business_writes": 0
+}

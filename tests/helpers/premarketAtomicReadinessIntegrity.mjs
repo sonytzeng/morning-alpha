@@ -193,8 +193,25 @@ export function resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes
   };
 }
 
+export function resolveProductionEvidenceRecorderIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/production-evidence-recorder-baseline-transition-20260923.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest,
+    readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_PREMARKET_PRODUCTION_PARITY_20260923',
+    verifyPredecessor: predecessorRead => resolvePremarketAtomicReadinessIntegrity(registry, artifactBytes, predecessorRead),
+  });
+  return {
+    ...candidate.reviewedBaselinePredecessor,
+    fileHash: candidate.fileHash,
+    newCandidatePaths: candidate.newCandidatePaths,
+    productionEvidenceRecorderCandidateIntegrity: candidate,
+  };
+}
+
 export const readPremarketAtomicReadinessIntegrity = registry =>
-  resolvePremarketAtomicReadinessIntegrity(registry, read(PUBLIC_EXPORT_ARTIFACT_PATH));
+  resolveProductionEvidenceRecorderIntegrity(registry, read(PUBLIC_EXPORT_ARTIFACT_PATH));
 
 export const readConsolidationPublicExportIntegrity = readPremarketAtomicReadinessIntegrity;
 export { PUBLIC_EXPORT_ARTIFACT_PATH };

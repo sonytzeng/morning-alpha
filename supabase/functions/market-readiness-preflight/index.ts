@@ -30,6 +30,12 @@ import {
   resolveRequiredTxfQuote,
   validateRequiredProviderEvidence,
 } from '../_shared/required-provider-validation.mjs';
+import {
+  CHECKPOINT_PROVIDER_CONTRACT_VERSION,
+} from '../_shared/fetch-checkpoint-evidence.mjs';
+import {
+  scheduleProductionEvidenceRecording,
+} from '../_shared/production-evidence-recorder.mjs';
 
 const VERSION = 'MARKET_READINESS_PREFLIGHT_V4_TW_PHASE_CONTRACT';
 const CORS_HEADERS = {
@@ -57,6 +63,12 @@ interface ProviderCheck {
   observations?: JsonRecord[];
   rejected_field?: string | null;
   discovery_status?: string | null;
+  recorder?: {
+    rawPayload: unknown;
+    normalizedQuote: unknown;
+    evidence: JsonRecord;
+    error: string | null;
+  };
 }
 
 interface FugleCoreResolution {
@@ -159,7 +171,15 @@ async function checkFinnhub(
   const quote = result.status === 200 ? normalizeRequiredFinnhubQuote(result.payload, slot.sourceSymbol) : null;
   const evidence = validateRequiredProviderEvidence(slot, quote, evidenceInput);
   const checked = await checkedResult(slot, slot.endpoint, result, evidence.valid, captureSample);
-  return withEvidenceStatus(checked, result, evidence, phaseExpected);
+  return {
+    ...withEvidenceStatus(checked, result, evidence, phaseExpected),
+    recorder: {
+      rawPayload: result.payload,
+      normalizedQuote: quote,
+      evidence,
+      error: result.error,
+    },
+  };
 }
 
 function withEvidenceStatus(check: ProviderCheck, response: JsonRecord, evidence: JsonRecord, phaseExpected: boolean): ProviderCheck {
@@ -215,6 +235,12 @@ async function checkTaiwanCore(
       ...checked,
       ...(observations.length ? { observations } : {}),
       discovery_status: key === 'TAIEX' ? String(result.discoveryStatus || '') : null,
+      recorder: {
+        rawPayload: primary.payload,
+        normalizedQuote,
+        evidence,
+        error: primary.error,
+      },
     };
   }
   const futureDate = tradingDate > taipeiClock().date;
@@ -225,6 +251,12 @@ async function checkTaiwanCore(
     status: phaseExpected && futureDate && result.failureCode === 'STALE_PROVIDER_DATA' ? 'EXPECTED' : checked.status,
     rejected_field: result.rejectedField ? String(result.rejectedField) : null,
     ...(observations.length ? { observations } : {}),
+    recorder: {
+      rawPayload: primary.payload,
+      normalizedQuote,
+      evidence,
+      error: primary.error,
+    },
   };
 }
 
@@ -256,7 +288,13 @@ async function checkFugleQuote(
     .filter((item: JsonRecord) => item.endpoint !== checked.endpoint)
     .map((item: JsonRecord) => providerObservation(String(item.endpoint), item as { status: number | null; payload: unknown; error: string | null }, captureSample)));
   return { ...checked, source_symbol: String(resolved.quote?.sourceSymbol || slot.sourceSymbol),
-    ...(observations.length ? { observations } : {}) };
+    ...(observations.length ? { observations } : {}),
+    recorder: {
+      rawPayload: response.payload,
+      normalizedQuote: resolved.quote,
+      evidence,
+      error: response.error ? String(response.error) : null,
+    } };
 }
 
 function readiness(checks: ProviderCheck[]): ReadinessStatus {
@@ -331,6 +369,35 @@ Deno.serve(async (req) => {
   const readinessStatus = readiness(checks);
   const succeeded = checks.filter(check => check.status === 'PASS').length;
   const correlationId = crypto.randomUUID();
+  const recorderInputs = checks.map(check => ({
+    businessDate: tradingDate,
+    checkpoint: 'readiness_0650',
+    validationCheckpoint: 'premarket',
+    attempt: 1,
+    transportAttempt: 1,
+    attemptKey: `readiness_0650:1:1:${String(evidenceInput.correlationId)}`,
+    providerKey: check.key,
+    provider: check.provider,
+    symbol: check.source_symbol,
+    endpoint: check.endpoint,
+    httpStatus: check.http_status,
+    rawPayload: check.recorder?.rawPayload || {},
+    normalizedQuote: check.recorder?.normalizedQuote || null,
+    evidence: check.recorder?.evidence || { valid: false, error: check.failure_code },
+    error: check.recorder?.error || check.failure_code,
+    contractReason: check.failure_code,
+    expected: check.status === 'EXPECTED',
+    waiting: check.status === 'WAITING',
+    marketPhase: 'premarket',
+    observedAt: evidenceInput.observedAt,
+    correlationId: evidenceInput.correlationId,
+    adapterVersion: VERSION,
+    contractVersion: CHECKPOINT_PROVIDER_CONTRACT_VERSION,
+    sourceFunction: 'market-readiness-preflight',
+    recordedAt: new Date().toISOString(),
+  }));
+  scheduleProductionEvidenceRecording({ supabase, inputs: recorderInputs });
+  const outputChecks = checks.map(({ recorder: _recorder, ...check }) => check);
   const payload = {
     success: readinessStatus === 'READY',
     version: VERSION,
@@ -340,7 +407,7 @@ Deno.serve(async (req) => {
     requested_count: REQUIRED_PROVIDER_COUNT,
     succeeded_count: succeeded,
     failed_count: REQUIRED_PROVIDER_COUNT - succeeded,
-    checks,
+    checks: outputChecks,
     credentials: {
       finnhub: finnhubKey ? 'CONFIGURED' : 'MISSING',
       fugle: fugleKey ? 'CONFIGURED' : 'MISSING',
@@ -372,7 +439,7 @@ Deno.serve(async (req) => {
       details: {
         version: VERSION,
         readiness_status: readinessStatus,
-        checks: checks.map(({ sample: _sample, ...check }) => check),
+        checks: outputChecks.map(({ sample: _sample, ...check }) => check),
         next_action: '07:00_REFETCH_FROM_PROVIDERS',
         business_writes: [],
       },

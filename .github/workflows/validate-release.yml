@@ -117,6 +117,12 @@ jobs:
           MA_ISOLATED_TEST_DB: ma_production_evidence_recorder_test1
           MA_TEST_PGPORT: 55439
         run: node --test tests/productionEvidenceRecorderDatabase.integration.mjs
+      - name: Isolated 9/24 Atomic row-contract exact rejection replay
+        env:
+          MA_LOCAL_SCOPE: ma-atomic-row-contract-20260924
+          MA_ISOLATED_TEST_DB: ma_atomic_row_contract_test1
+          MA_TEST_PGPORT: 55439
+        run: node --test tests/atomicRowContract20260924Database.integration.mjs
       - name: Core consolidation publication, ACL parity, replay and acceptance
         env:
           MA_LOCAL_SCOPE: ma-core-consolidation-20260909

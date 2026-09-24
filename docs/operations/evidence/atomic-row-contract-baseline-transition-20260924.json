@@ -1,0 +1,143 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_ATOMIC_ROW_CONTRACT_20260924",
+  "candidate_base_git_sha": "6008efd2d37ad6c75b7d60c23e2d80e4e14e41e4",
+  "predecessor_integrity_id": "MORNING_ALPHA_PRODUCTION_EVIDENCE_RECORDER_20260923",
+  "approval_provenance": "Sony required exact, evidence-led diagnosis of the 2026-09-24 Provider 11/11 PASS but Atomic 0/11 Production failure, preservation of the historical failure, a minimal candidate only after identifying the exact rejected provider and field, permanent real-evidence replay, 9/21 through 9/24 regression, and a full Release Gate. Production migration execution remains separately approval-gated.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/atomicRowContract20260924.test.mjs",
+    "tests/atomicRowContract20260924Database.integration.mjs",
+    "tests/txfSessionParity.test.mjs",
+    "tests/txfSessionDatabase.integration.mjs",
+    "tests/taiwanCashPhaseContract.test.mjs",
+    "tests/taiwanCashPhaseDatabase.integration.mjs",
+    "tests/premarketProductionParity20260923.test.mjs",
+    "tests/premarketProductionParityDatabase.integration.mjs",
+    "tests/checkpointAtomicity.test.mjs",
+    "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+    "tests/productionReliabilityBaselineTransition.test.mjs",
+    "tests/premarketAtomicInventory.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6008efd2d37ad6c75b7d60c23e2d80e4e14e41e4",
+      "predecessor_sha256": "a18b6d89f7bf6523996c46b566235035fbb0271a7f787798af98bf3ff2fe3d80",
+      "candidate_sha256": "2fc3e4ecd71a1d8d11eca8662780934f4fcba7dbe61b10c51aac542b89990f2e",
+      "source_lineage": "The exact merged Evidence Recorder Release workflow with one additional fresh isolated 9/24 Atomic row-contract replay.",
+      "reason": "Require GitHub Release CI to prove the named migration twice against exact recorded evidence and fail-closed boundaries.",
+      "rollback_target": "Restore only the Release workflow from the reviewed Evidence Recorder predecessor commit."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6008efd2d37ad6c75b7d60c23e2d80e4e14e41e4",
+      "predecessor_sha256": "dfb62b48f8e8c2ecf7e9596ba31458b79537fd855238e91a50c948555c325c9f",
+      "candidate_sha256": "d60c89064e64c3ef37fbd5b5d1d7ad79fe49d3f8b0feb99a7086a695ebd684a5",
+      "source_lineage": "The complete Production Evidence Recorder Integrity result reconstructed before this exact-hash successor.",
+      "reason": "Append the named 9/24 Atomic row-contract candidate without rewriting any predecessor baseline or hash.",
+      "rollback_target": "Restore only the Integrity entrypoint from the reviewed Evidence Recorder predecessor commit."
+    },
+    {
+      "path": "tests/premarketAtomicInventory.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6008efd2d37ad6c75b7d60c23e2d80e4e14e41e4",
+      "predecessor_sha256": "5a686bc7b8f9db77e5e238e6c3e369931c51eb39bcbb8d0140940cc505970732",
+      "candidate_sha256": "deb4b39d6a075dd0f39e3aac18be11ddef588478f500a007bd6aa5060eebbd4b",
+      "source_lineage": "The append-only Atomic Integrity regression extended after the exact Evidence Recorder predecessor.",
+      "reason": "Reject renamed SQL, changed evidence, modified regression logic, missing lineage, and any unreviewed 9/24 candidate drift.",
+      "rollback_target": "Restore only this Integrity regression from the reviewed Evidence Recorder predecessor commit."
+    },
+    {
+      "path": "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6008efd2d37ad6c75b7d60c23e2d80e4e14e41e4",
+      "predecessor_sha256": "c93975001d254a46a3c9a5f07919288301d0b2d5ea46d8506acd36d222adcc53",
+      "candidate_sha256": "6f97e104963164bace12367eb959f7bbd6204683d18a02c2df86938b237c4e41",
+      "source_lineage": "The unchanged Acceptance V1 adversarial assertions routed through the latest exact-hash Atomic row-contract successor.",
+      "reason": "Ensure historical Acceptance seals validate the complete candidate chain instead of stopping at the Recorder predecessor.",
+      "rollback_target": "Restore only this Integrity test import from the reviewed Evidence Recorder predecessor commit."
+    },
+    {
+      "path": "tests/productionReliabilityBaselineTransition.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6008efd2d37ad6c75b7d60c23e2d80e4e14e41e4",
+      "predecessor_sha256": "ad6b01ba3c0a279f61e173e99fb2a00930ca5846f9ac7932f78b920936071b3c",
+      "candidate_sha256": "b819a457fde5041a914d416a5d2bc96c8e4e6e2f49d119c28a74a7770d2ee685",
+      "source_lineage": "The unchanged Production Reliability lineage assertions routed through the latest exact-hash Atomic row-contract successor.",
+      "reason": "Keep the historical transition reconstruction fail-closed while validating the complete 9/24 candidate chain.",
+      "rollback_target": "Restore only this Integrity test import from the reviewed Evidence Recorder predecessor commit."
+    },
+    {
+      "path": "tests/premarketProductionParityDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6008efd2d37ad6c75b7d60c23e2d80e4e14e41e4",
+      "predecessor_sha256": "cba62351db7f8496eae94285d875e1c163133371d845322ec54f83b9dd10173e",
+      "candidate_sha256": "845edb43f3e13a4366593b237e4b3cbeab1c163176e4c8545268f2284025e777",
+      "source_lineage": "The exact 9/23 historical replay retained unchanged plus one generic future weekday commit-capability scenario.",
+      "reason": "Move only the generic future-capability date beyond the now-active 9/24 deadline so the test continues to exercise commit rather than expected wall-clock rejection.",
+      "rollback_target": "Restore only the generic future-capability date from the reviewed Evidence Recorder predecessor commit."
+    },
+    {
+      "path": "docs/operations/evidence/atomic-row-contract-rejection-20260924.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "d5efc896c18df7638c569b11f503a5c82568977ebd1cc2e9041a1abc2c646de3",
+      "source_lineage": "Read-only 9/24 Production Recorder predicate matrix, retry stability result, deployed function hash, and exact rejected TXF field.",
+      "reason": "Preserve the exact rejection and root-cause evidence without exporting raw provider payloads, secrets, PII, or business writes.",
+      "rollback_target": "Remove only this additive deidentified exact-rejection evidence artifact."
+    },
+    {
+      "path": "supabase/migrations/20260924004011_atomic_txf_minute_boundary_parity_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "a9691d01b9ce97e97a44b3d56575e454781bbdeacfea4d17a6a06222f87fc51e",
+      "source_lineage": "Exact-hash transformation of deployed commit_market_checkpoint_batch_v1 function md5 e6f6e3804fcfd41b811ea01a575f03e2.",
+      "reason": "Align only the database TXF upper boundaries with the existing minute-precision Edge contract while retaining all session and freshness checks.",
+      "rollback_target": "Restore only the predecessor Atomic function definition after separate Production rollback authorization."
+    },
+    {
+      "path": "tests/atomicRowContract20260924.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ce27f5a3413fac2c6352cafe1b10362777cf18f01dc020aee284153645e0ffb4",
+      "source_lineage": "Permanent public regression over exact sanitized Recorder evidence and the current Production Edge validator.",
+      "reason": "Prove 11-provider assembly, TXF minute acceptance, next-minute rejection, stable root cause, and narrowly pinned SQL scope.",
+      "rollback_target": "Remove only this additive 9/24 public regression."
+    },
+    {
+      "path": "tests/atomicRowContract20260924Database.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "b8c0bf551c51107a56d82f0abdfb9a6e31c22f341502548f75e46e4a612b67e8",
+      "source_lineage": "Fresh local PostgreSQL replay of the exact Production candidate before and after the sole migration plus negative boundary cases.",
+      "reason": "Demonstrate exact rejection before the migration, row-contract acceptance after it, 11/11 capability, idempotent migration replay, and zero historical writes.",
+      "rollback_target": "Remove only this additive isolated database regression."
+    },
+    {
+      "path": "tests/fixtures/production-parity-v4/atomic-row-20260924.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "449e7d743a327a2cc75b2fca97f39a197963651325997e1073d42c6eaa5fb0d9",
+      "source_lineage": "Exact 11-row Atomic candidate rebuilt from the first sanitized 9/24 Production Recorder attempt using deployed normalization and evidence construction.",
+      "reason": "Retain the original 05:00:00.084 timestamp and all deidentified row fields without date rewriting or synthetic replacement.",
+      "rollback_target": "Remove only this additive deidentified Production parity fixture."
+    }
+  ]
+}

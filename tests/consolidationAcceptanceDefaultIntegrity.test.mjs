@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
-import { PUBLIC_EXPORT_ARTIFACT_PATH, resolveProductionEvidenceRecorderIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
+import { PUBLIC_EXPORT_ARTIFACT_PATH, resolveAtomicRowContractIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 import { ACCEPTANCE_DEFAULT_ARTIFACT_PATH, assertAcceptanceDefaultSuccessor,
   resolveConsolidationAcceptanceDefaultIntegrity } from './helpers/consolidationAcceptanceDefaultIntegrity.mjs';
 
@@ -26,7 +26,7 @@ const read = path => readFileSync(new URL('../' + path, import.meta.url));
 const registry = JSON.parse(read(REGISTRY)), artifactBytes = read(ACCEPTANCE_DEFAULT_ARTIFACT_PATH);
 const artifact = JSON.parse(artifactBytes), eighth = read(PUBLIC_EXPORT_ARTIFACT_PATH);
 const verify = (r = registry, source = read) =>
-  resolveProductionEvidenceRecorderIntegrity(r, eighth, source).reviewedBaselinePredecessor;
+  resolveAtomicRowContractIntegrity(r, eighth, source).reviewedBaselinePredecessor;
 
 test('Acceptance V1: independent live entry/helper/artifact/registry seals and complete ten-layer reconstruction', () => {
   const result = verify();

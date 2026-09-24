@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   PUBLIC_EXPORT_ARTIFACT_PATH,
   readPremarketAtomicReadinessIntegrity,
-  resolveProductionEvidenceRecorderIntegrity,
+  resolveAtomicRowContractIntegrity,
 } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url));
@@ -12,7 +12,7 @@ const registry = JSON.parse(read('docs/operations/core-stability-incident-amendm
 const artifact = read(PUBLIC_EXPORT_ARTIFACT_PATH);
 const inventoryPath = 'docs/operations/evidence/premarket-atomic-core-inventory-20260917.json';
 const migrationPath = 'supabase/migrations/20260917120000_premarket_atomic_readiness_window_v1.sql';
-const verify = source => resolveProductionEvidenceRecorderIntegrity(registry, artifact, source);
+const verify = source => resolveAtomicRowContractIntegrity(registry, artifact, source);
 const changedInventory = mutate => {
   const inventory = JSON.parse(read(inventoryPath));
   mutate(inventory);
@@ -239,7 +239,7 @@ test('Production Evidence Recorder successor pins the append-only sidecar, repla
     'tests/productionEvidenceRecorder.test.mjs',
     'tests/productionEvidenceRecorderDatabase.integration.mjs',
   ]);
-  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+  assert.deepEqual(result.productionEvidenceRecorderCandidateIntegrity.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
     && !result.premarketProductionParityCandidateIntegrity.newCandidatePaths.includes(path)), [
     'supabase/migrations/20260923124500_production_evidence_recorder_v1.sql',
   ]);
@@ -252,6 +252,35 @@ test('Production Evidence Recorder successor pins the append-only sidecar, repla
   ]) {
     assert.throws(() => verify(name => name === path
       ? Buffer.concat([read(name), Buffer.from('\n// unreviewed recorder drift\n')]) : read(name)),
+    /unreviewed candidate drift/);
+  }
+});
+
+test('9/24 Atomic row-contract successor pins exact Production evidence and the sole minute-boundary migration', () => {
+  const result = readPremarketAtomicReadinessIntegrity(registry);
+  const successor = result.atomicRowContractCandidateIntegrity.reviewedBaselineTransition;
+  assert.equal(successor.transition_id, 'MORNING_ALPHA_ATOMIC_ROW_CONTRACT_20260924');
+  assert.equal(successor.predecessor_integrity_id, 'MORNING_ALPHA_PRODUCTION_EVIDENCE_RECORDER_20260923');
+  assert.deepEqual(successor.files.filter(row => row.operation === 'ADD').map(row => row.path).sort(), [
+    'docs/operations/evidence/atomic-row-contract-rejection-20260924.json',
+    'supabase/migrations/20260924004011_atomic_txf_minute_boundary_parity_v1.sql',
+    'tests/atomicRowContract20260924.test.mjs',
+    'tests/atomicRowContract20260924Database.integration.mjs',
+    'tests/fixtures/production-parity-v4/atomic-row-20260924.json',
+  ]);
+  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+    && !result.productionEvidenceRecorderCandidateIntegrity.newCandidatePaths.includes(path)), [
+    'supabase/migrations/20260924004011_atomic_txf_minute_boundary_parity_v1.sql',
+  ]);
+  for (const path of [
+    'supabase/migrations/20260924004011_atomic_txf_minute_boundary_parity_v1.sql',
+    'tests/fixtures/production-parity-v4/atomic-row-20260924.json',
+    'tests/atomicRowContract20260924.test.mjs',
+    'tests/atomicRowContract20260924Database.integration.mjs',
+    'tests/premarketProductionParityDatabase.integration.mjs',
+  ]) {
+    assert.throws(() => verify(name => name === path
+      ? Buffer.concat([read(name), Buffer.from('\n// unreviewed 9/24 Atomic row drift\n')]) : read(name)),
     /unreviewed candidate drift/);
   }
 });

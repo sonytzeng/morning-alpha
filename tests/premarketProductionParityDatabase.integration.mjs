@@ -133,7 +133,7 @@ for (const [name, config] of Object.entries({
 }
 
 for (const [name, config] of Object.entries({
-  weekdayCurrentEnvelope: { tradingDate: '2026-09-24', observedAt: '2026-09-24T07:00:00+08:00', twSessionDate: '2026-09-23', twEnvelopeDate: '2026-09-24', txfDate: '2026-09-23', txfTimestamp: '2026-09-24T05:00:00+08:00' },
+  weekdayCurrentEnvelope: { tradingDate: '2026-10-21', observedAt: '2026-10-21T07:00:00+08:00', twSessionDate: '2026-10-20', twEnvelopeDate: '2026-10-21', txfDate: '2026-10-20', txfTimestamp: '2026-10-21T05:00:00+08:00' },
   weekdayPriorEnvelope: { tradingDate: '2026-10-20', observedAt: '2026-10-20T06:50:00+08:00', twSessionDate: '2026-10-19', twEnvelopeDate: '2026-10-19', txfDate: '2026-10-19', txfTimestamp: '2026-10-20T05:00:00+08:00' },
   holidayReturn: { tradingDate: '2026-09-28', observedAt: '2026-09-28T07:00:00+08:00', twSessionDate: '2026-09-24', twEnvelopeDate: '2026-09-28', txfDate: '2026-09-24', txfTimestamp: '2026-09-25T05:00:00+08:00' },
 })) {

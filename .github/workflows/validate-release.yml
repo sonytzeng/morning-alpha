@@ -129,6 +129,25 @@ jobs:
           MA_ISOLATED_TEST_DB: ma_core_consolidation_test1
           MA_CONSOLIDATION_CI_SERVICE_ID: ${{ job.services.isolated-postgres.id }}
         run: node --experimental-strip-types --test tests/coreConsolidationDatabase.integration.mjs
+      - name: Exact 9/29 runtime sparse recovery in fresh clock-controlled isolation
+        env:
+          MA_LOCAL_SCOPE: ma-runtime-sparse-recovery-20260929
+          MA_ISOLATED_TEST_DB: ma_runtime_sparse_test1
+          MA_TEST_PGPORT: 5432
+          MA_TEST_DOCKER_CONTAINER: ma-runtime-sparse-ci-${{ github.run_id }}
+        run: |
+          docker build -t ma-runtime-sparse-ci - < tests/fixtures/runtime-sparse-postgres.Dockerfile
+          docker run -d --name "$MA_TEST_DOCKER_CONTAINER" --network none \
+            --env POSTGRES_PASSWORD=isolated-ci-only ma-runtime-sparse-ci
+          for attempt in $(seq 1 30); do
+            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres; then break; fi
+            sleep 1
+          done
+          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres
+          node --test tests/runtimeSparseRecoveryDatabase.integration.mjs
+      - name: Remove disposable sparse recovery isolation
+        if: always()
+        run: docker rm -f "ma-runtime-sparse-ci-${{ github.run_id }}" 2>/dev/null || true
       - name: Acceptance 07:30 SLA and 08:45 readiness-window parity
         env:
           MA_LOCAL_SCOPE: ma-core-consolidation-20260909

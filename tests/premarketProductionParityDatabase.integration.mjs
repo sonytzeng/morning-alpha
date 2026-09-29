@@ -135,7 +135,8 @@ for (const [name, config] of Object.entries({
 for (const [name, config] of Object.entries({
   weekdayCurrentEnvelope: { tradingDate: '2026-10-21', observedAt: '2026-10-21T07:00:00+08:00', twSessionDate: '2026-10-20', twEnvelopeDate: '2026-10-21', txfDate: '2026-10-20', txfTimestamp: '2026-10-21T05:00:00+08:00' },
   weekdayPriorEnvelope: { tradingDate: '2026-10-20', observedAt: '2026-10-20T06:50:00+08:00', twSessionDate: '2026-10-19', twEnvelopeDate: '2026-10-19', txfDate: '2026-10-19', txfTimestamp: '2026-10-20T05:00:00+08:00' },
-  holidayReturn: { tradingDate: '2026-09-28', observedAt: '2026-09-28T07:00:00+08:00', twSessionDate: '2026-09-24', twEnvelopeDate: '2026-09-28', txfDate: '2026-09-24', txfTimestamp: '2026-09-25T05:00:00+08:00' },
+  // Synthetic future holiday-return control only; real 9/21-9/23 remain immutable.
+  holidayReturn: { tradingDate: '2026-10-12', observedAt: '2026-10-12T07:00:00+08:00', twSessionDate: '2026-10-08', twEnvelopeDate: '2026-10-12', txfDate: '2026-10-08', txfTimestamp: '2026-10-09T05:00:00+08:00' },
 })) {
   const result = commit(config, true);
   assert.equal(result.ok, true, `${name}: ${result.output}`);

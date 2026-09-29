@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   PUBLIC_EXPORT_ARTIFACT_PATH,
   readPremarketAtomicReadinessIntegrity,
-  resolveAtomicRowContractIntegrity,
+  resolveRuntimeSparseRecoveryIntegrity,
 } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url));
@@ -12,7 +12,7 @@ const registry = JSON.parse(read('docs/operations/core-stability-incident-amendm
 const artifact = read(PUBLIC_EXPORT_ARTIFACT_PATH);
 const inventoryPath = 'docs/operations/evidence/premarket-atomic-core-inventory-20260917.json';
 const migrationPath = 'supabase/migrations/20260917120000_premarket_atomic_readiness_window_v1.sql';
-const verify = source => resolveAtomicRowContractIntegrity(registry, artifact, source);
+const verify = source => resolveRuntimeSparseRecoveryIntegrity(registry, artifact, source);
 const changedInventory = mutate => {
   const inventory = JSON.parse(read(inventoryPath));
   mutate(inventory);
@@ -268,7 +268,7 @@ test('9/24 Atomic row-contract successor pins exact Production evidence and the 
     'tests/atomicRowContract20260924Database.integration.mjs',
     'tests/fixtures/production-parity-v4/atomic-row-20260924.json',
   ]);
-  assert.deepEqual(result.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
+  assert.deepEqual(result.atomicRowContractCandidateIntegrity.newCandidatePaths.filter(path => path.startsWith('supabase/migrations/')
     && !result.productionEvidenceRecorderCandidateIntegrity.newCandidatePaths.includes(path)), [
     'supabase/migrations/20260924004011_atomic_txf_minute_boundary_parity_v1.sql',
   ]);
@@ -301,4 +301,19 @@ test('unknown file, missing predecessor, changed hash and renamed migration all 
   assert.throws(() => verify(path => path === migrationPath
     ? Buffer.concat([read(path), Buffer.from('\n-- unreviewed drift\n')]) : read(path)),
   /unreviewed candidate drift|candidate hash drift/);
+});
+
+test('9/29 sparse recovery is one exact named SQL successor, not a general lifecycle waiver', () => {
+  const result = readPremarketAtomicReadinessIntegrity(registry);
+  const successor = result.runtimeSparseRecoveryCandidateIntegrity.reviewedBaselineTransition;
+  assert.equal(successor.transition_id, 'MORNING_ALPHA_RUNTIME_SPARSE_RECOVERY_20260929');
+  assert.equal(successor.predecessor_integrity_id, 'MORNING_ALPHA_ATOMIC_ROW_CONTRACT_20260924');
+  assert.deepEqual(successor.files.filter(row => row.path.startsWith('supabase/')).map(row => row.path), [
+    'supabase/migrations/20260929145000_runtime_checkpoint_sparse_recovery_v1.sql',
+  ]);
+  for (const row of successor.files) {
+    assert.throws(() => verify(path => path === row.path
+      ? Buffer.concat([read(path), Buffer.from('\n-- unknown successor drift\n')]) : read(path)),
+    /unreviewed candidate drift/);
+  }
 });

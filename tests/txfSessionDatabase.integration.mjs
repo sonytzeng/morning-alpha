@@ -151,8 +151,9 @@ for (const scenario of [
     txfSessionDate: '2026-10-19', txfSourceTimestamp: '2026-10-20T05:00:00+08:00',
   },
   {
-    tradingDate: '2026-09-28', observedAt: '2026-09-28T08:35:00+08:00',
-    txfSessionDate: '2026-09-24', txfSourceTimestamp: '2026-09-25T05:00:00+08:00',
+    // Synthetic future holiday-return control only, not a redated real capture.
+    tradingDate: '2026-10-12', observedAt: '2026-10-12T08:35:00+08:00',
+    txfSessionDate: '2026-10-08', txfSourceTimestamp: '2026-10-09T05:00:00+08:00',
   },
 ]) {
   const result = commit(scenario, true);

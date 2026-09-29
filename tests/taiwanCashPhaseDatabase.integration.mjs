@@ -122,8 +122,9 @@ const scenarios = {
     twDate: '2026-09-21', twTimestamp: '2026-09-21T00:00:00+08:00', txfDate: '2026-09-21', txfTimestamp: '2026-09-22T05:00:00+08:00' },
   weekday: { tradingDate: '2026-10-21', phase: 'premarket', checkpoint: 'premarket', observedAt: '2026-10-21T07:00:00+08:00',
     twDate: '2026-10-20', twTimestamp: '2026-10-20T00:00:00+08:00', txfDate: '2026-10-20', txfTimestamp: '2026-10-21T05:00:00+08:00' },
-  holidayReturn: { tradingDate: '2026-09-28', phase: 'premarket', checkpoint: 'premarket', observedAt: '2026-09-28T07:00:00+08:00',
-    twDate: '2026-09-24', twTimestamp: '2026-09-24T00:00:00+08:00', txfDate: '2026-09-24', txfTimestamp: '2026-09-25T05:00:00+08:00' },
+  // Synthetic future holiday-return control; original real incident dates stay above.
+  holidayReturn: { tradingDate: '2026-10-12', phase: 'premarket', checkpoint: 'premarket', observedAt: '2026-10-12T07:00:00+08:00',
+    twDate: '2026-10-08', twTimestamp: '2026-10-08T00:00:00+08:00', txfDate: '2026-10-08', txfTimestamp: '2026-10-09T05:00:00+08:00' },
   intraday: { tradingDate: '2026-09-29', phase: 'intraday', checkpoint: '0900', observedAt: '2026-09-29T09:05:00+08:00',
     twDate: '2026-09-29', twTimestamp: '2026-09-29T09:04:00+08:00', txfDate: '2026-09-29', txfTimestamp: '2026-09-29T09:04:00+08:00', txfSession: 'regular' },
   close: { tradingDate: '2026-09-30', phase: 'close', checkpoint: '1410', observedAt: '2026-09-30T14:15:00+08:00',

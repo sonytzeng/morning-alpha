@@ -1,0 +1,169 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_RUNTIME_SPARSE_RECOVERY_20260929",
+  "candidate_base_git_sha": "2a5a8f1dd72db370a0eed787e96da5f48f9f5212",
+  "predecessor_integrity_id": "MORNING_ALPHA_ATOMIC_ROW_CONTRACT_20260924",
+  "approval_provenance": "Sony explicitly approved the sole 20260929145000_runtime_checkpoint_sparse_recovery_v1.sql candidate, isolated real 9/29 evidence replay, affected regression and GitHub Release Gate. Production execution is conditional on ALL gates including the separately verified full Shadow lifecycle. No Function/Cron/Auth/RLS/Secrets/history change is authorized. This baseline records candidate integrity, not Production release admission or full Shadow success.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/runtimeSparseRecovery.test.mjs",
+    "tests/runtimeSparseRecoveryDatabase.integration.mjs",
+    "tests/runtimeCheckpointCore.test.mjs",
+    "tests/closingLearningContract.test.mjs",
+    "tests/txfSessionParity.test.mjs",
+    "tests/taiwanCashPhaseContract.test.mjs",
+    "tests/premarketProductionParity20260923.test.mjs",
+    "tests/atomicRowContract20260924.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2a5a8f1dd72db370a0eed787e96da5f48f9f5212",
+      "predecessor_sha256": "2fc3e4ecd71a1d8d11eca8662780934f4fcba7dbe61b10c51aac542b89990f2e",
+      "candidate_sha256": "ea8ae9ed3eb89d19e70023d4ca8ecd4178ef29c05a669450cb8b1ae502ee188f",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Restore only this path from the pinned predecessor after required independent Production rollback approval."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2a5a8f1dd72db370a0eed787e96da5f48f9f5212",
+      "predecessor_sha256": "d60c89064e64c3ef37fbd5b5d1d7ad79fe49d3f8b0feb99a7086a695ebd684a5",
+      "candidate_sha256": "d3eb14338fb0a49b2870d3d67f19d3870a8085a908253efeb16ffc024a65492a",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Restore only this path from the pinned predecessor after required independent Production rollback approval."
+    },
+    {
+      "path": "tests/premarketAtomicInventory.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2a5a8f1dd72db370a0eed787e96da5f48f9f5212",
+      "predecessor_sha256": "deb4b39d6a075dd0f39e3aac18be11ddef588478f500a007bd6aa5060eebbd4b",
+      "candidate_sha256": "00b09810a1ca6d5ef3c732a91903959600b12e29016469093d79afe4abff5fe9",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Restore only this path from the pinned predecessor after required independent Production rollback approval."
+    },
+    {
+      "path": "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2a5a8f1dd72db370a0eed787e96da5f48f9f5212",
+      "predecessor_sha256": "6f97e104963164bace12367eb959f7bbd6204683d18a02c2df86938b237c4e41",
+      "candidate_sha256": "ad7529fc33125f26b6b1eb4d86f73ff77324b4b003e04f6fd3fd4fe0a6835f80",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Restore only this path from the pinned predecessor after required independent Production rollback approval."
+    },
+    {
+      "path": "tests/productionReliabilityBaselineTransition.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2a5a8f1dd72db370a0eed787e96da5f48f9f5212",
+      "predecessor_sha256": "b819a457fde5041a914d416a5d2bc96c8e4e6e2f49d119c28a74a7770d2ee685",
+      "candidate_sha256": "b7961375a51ab411ab7f9abaec394985d16c4d1693b192aa5fbf64d95809e4db",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Restore only this path from the pinned predecessor after required independent Production rollback approval."
+    },
+    {
+      "path": "tests/txfSessionDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2a5a8f1dd72db370a0eed787e96da5f48f9f5212",
+      "predecessor_sha256": "fcb5b7d8479349e5034c509443715e304d7ec69a04a3caaad99bff31fdbe6f2c",
+      "candidate_sha256": "192532ea78233d67c8ce368451a95322c10e66089c0a206f26de9e8bd127cb65",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Restore only this path from the pinned predecessor after required independent Production rollback approval."
+    },
+    {
+      "path": "tests/taiwanCashPhaseDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2a5a8f1dd72db370a0eed787e96da5f48f9f5212",
+      "predecessor_sha256": "fde9f870cdb936e1bb3647a77c7f245bca086c0241059076af0a3ff95580968e",
+      "candidate_sha256": "6991bd96b7ec0e7709bda0e199c58fcfd0760d7ffbf0c5edeb1e7e2ec9882c6c",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Restore only this path from the pinned predecessor after required independent Production rollback approval."
+    },
+    {
+      "path": "tests/premarketProductionParityDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2a5a8f1dd72db370a0eed787e96da5f48f9f5212",
+      "predecessor_sha256": "845edb43f3e13a4366593b237e4b3cbeab1c163176e4c8545268f2284025e777",
+      "candidate_sha256": "badc30ad866d1a2529bc57c029b226f15581ccc576fab0353632ed06dfbb5255",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Restore only this path from the pinned predecessor after required independent Production rollback approval."
+    },
+    {
+      "path": "supabase/migrations/20260929145000_runtime_checkpoint_sparse_recovery_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ae344940570f982f1bd3d16c3be63bff4c5238b9ad827d456e3f81190ace3861",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Remove only this additive candidate artifact; historical baselines and evidence remain unchanged."
+    },
+    {
+      "path": "tests/runtimeSparseRecovery.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "cc39b69889b6aeab0cfbbf3ece6e115038248674ae16c0741e5ee455be17f94c",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Remove only this additive candidate artifact; historical baselines and evidence remain unchanged."
+    },
+    {
+      "path": "tests/runtimeSparseRecoveryDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "0a4320df906399995b953aad7535bd4e00a4fde8596a00dfebca6ce2a4a028d4",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Remove only this additive candidate artifact; historical baselines and evidence remain unchanged."
+    },
+    {
+      "path": "tests/fixtures/runtime-sparse-postgres.Dockerfile",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "cd08cbc1a99d08beb30f20e76f5b768b3b713bdee471bb97377563dd1dad827a",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Remove only this additive candidate artifact; historical baselines and evidence remain unchanged."
+    },
+    {
+      "path": "tests/fixtures/production-parity-v4/runtime-sparse-recovery-20260929.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "713f669627f92d5f3eae6791016e352bb0b72316a87087dbe58c43dd11a510aa",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Remove only this additive candidate artifact; historical baselines and evidence remain unchanged."
+    },
+    {
+      "path": "docs/operations/evidence/runtime-sparse-recovery-20260929.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ce3170e85df84936b9a6e85e97f7eb55abb88ad883968b373f088625d7a62456",
+      "source_lineage": "Exact 9/29 sparse-recovery successor of the immutable merged 9/24 Atomic baseline; original Production Recorder dates and hashes retained.",
+      "reason": "Validate only the named evidence-backed runtime predecessor recovery and its necessary regression/Integrity/CI wiring.",
+      "rollback_target": "Remove only this additive candidate artifact; historical baselines and evidence remain unchanged."
+    }
+  ]
+}

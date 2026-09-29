@@ -227,8 +227,24 @@ export function resolveAtomicRowContractIntegrity(registry, artifactBytes, readS
   };
 }
 
+export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/runtime-sparse-recovery-baseline-transition-20260929.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest, readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_ATOMIC_ROW_CONTRACT_20260924',
+    verifyPredecessor: predecessorRead => resolveAtomicRowContractIntegrity(registry, artifactBytes, predecessorRead),
+  });
+  return {
+    ...candidate.reviewedBaselinePredecessor,
+    fileHash: candidate.fileHash,
+    newCandidatePaths: candidate.newCandidatePaths,
+    runtimeSparseRecoveryCandidateIntegrity: candidate,
+  };
+}
+
 export const readPremarketAtomicReadinessIntegrity = registry =>
-  resolveAtomicRowContractIntegrity(registry, read(PUBLIC_EXPORT_ARTIFACT_PATH));
+  resolveRuntimeSparseRecoveryIntegrity(registry, read(PUBLIC_EXPORT_ARTIFACT_PATH));
 
 export const readConsolidationPublicExportIntegrity = readPremarketAtomicReadinessIntegrity;
 export { PUBLIC_EXPORT_ARTIFACT_PATH };

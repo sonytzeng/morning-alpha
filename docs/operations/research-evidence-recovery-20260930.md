@@ -117,3 +117,14 @@ Candidate release scope is one named Migration plus
 `generate-daily-report-v7`. No other Function or Cron is required.
 GitHub Gate completion does not authorize merge/deployment/migration execution;
 Sony's final named Production approval is still required.
+
+## Release environment verification
+
+The initial local public run had 38 loopback `listen EPERM` failures; the same
+three files passed 48/48 with local networking allowed, without source/assertion
+changes. Initial GitHub public tests/Integrity and the new provenance test passed.
+The next DB gate exposed a **TEST_ENVIRONMENT** cluster-role collision: this new
+test created `service_role` before the historical fixture, without that fixture's
+`BYPASSRLS` attribute. A fresh A/B cluster reproduced 5 failures, then 9/9 passed
+when the new test created a brand-new local role with the existing baseline
+attributes. Existing roles are never altered, and Production Auth/RLS is unchanged.

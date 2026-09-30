@@ -67,7 +67,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "499ca65a26e0fa70552a1523016f2b1b7368c172b300c761994d7f62cc30811e",
+      "candidate_sha256": "7565952c23c701ddd62de63b8f00df2677d89c0345495774320d5def2c61c38c",
       "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
       "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
       "rollback_target": "Remove only this candidate artifact before deployment; historical artifacts remain unchanged."
@@ -137,7 +137,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "84ecff2165554fc07993f7ceefae55dfc69ee1b6d0d91aeb091b942888d759d3",
+      "candidate_sha256": "0c5a114805554cac38a2e277c87c81218a41624f7dac775874c3970bb4411a6b",
       "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
       "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
       "rollback_target": "Remove only this candidate artifact before deployment; historical artifacts remain unchanged."

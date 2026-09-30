@@ -14,7 +14,11 @@ const sql=(text,database=db)=>execFileSync(process.env.MA_TEST_PSQL||'psql',args
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 assert.equal(sql(`select count(*) from pg_database where datname=${q(db)}`,'postgres'),'0');
 sql('create database '+db,'postgres');
-sql("do $$begin if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role nologin; end if; end$$;");
+// Roles are cluster-scoped. Match the existing core-research-schema fixture;
+// otherwise running this test first contaminates later isolated RLS tests.
+// Only a brand-new LOCAL role may be created; never alter an existing role.
+sql("do $$begin if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role nologin bypassrls; end if; end$$;");
+assert.equal(sql("select rolbypassrls from pg_roles where rolname='service_role';"),'t','Existing isolated service-role contract must match the schema baseline');
 sql('create table runtime_quality_policies(active boolean,premium_publish_min integer);insert into runtime_quality_policies values(true,90);');
 const original=read('supabase/migrations/20260909015650_core_market_publication_contract.sql');
 const start=original.indexOf('CREATE OR REPLACE FUNCTION public.validate_core_market_publication_v1(');

@@ -75,13 +75,15 @@ function database(f, trace, failures = {}) {
       const query = {
         select(columns) { trace.push({ kind: 'select', table, columns }); return query; },
         eq(key, value) { filters.push([key, value, 'eq']); return query; },
+        lte(key, value) { filters.push([key, value, 'lte']); return query; },
         like(key, value) { filters.push([key, value, 'like']); return query; },
         order() { return query; }, limit() { return query; },
         async maybeSingle() {
           trace.push({ kind: 'read', table, filters });
           if (failures[table]) return { data: null, error: { message: 'SYNTHETIC_READ_FAILURE' } };
           const rows = tables[table].filter(row => filters.every(([key, value, mode]) => mode === 'like'
-            ? String(field(row, key)).startsWith(value.replace(/%$/, '')) : field(row, key) === value));
+            ? String(field(row, key)).startsWith(value.replace(/%$/, ''))
+            : mode === 'lte' ? field(row, key) <= value : field(row, key) === value));
           return { data: rows[0] || null, error: null };
         },
       };
@@ -96,7 +98,8 @@ function database(f, trace, failures = {}) {
   };
 }
 
-async function run(f, { headers = { authorization: 'Bearer synthetic-source-credential' }, method = 'GET', failures = {}, envPatch = {} } = {}) {
+async function run(f, { headers = { authorization: 'Bearer synthetic-source-credential' }, method = 'GET', failures = {}, envPatch = {},
+  url = 'https://function.example.invalid/content-os-morning-alpha-source' } = {}) {
   const trace = [], cache = new Map();
   const env = { SUPABASE_URL: 'https://database.example.invalid', SUPABASE_SERVICE_ROLE_KEY: 'synthetic-service-credential',
     SONY_CONTENT_OS_SOURCE_TOKEN: 'synthetic-source-credential', CRON_SECRET: 'synthetic-cron-credential', ...envPatch };
@@ -119,7 +122,7 @@ async function run(f, { headers = { authorization: 'Bearer synthetic-source-cred
   load(entry);
   assert.equal(typeof handler, 'function');
   const before = JSON.stringify(f);
-  const response = await handler(new Request('https://function.example.invalid/content-os-morning-alpha-source', { method, headers }));
+  const response = await handler(new Request(url, { method, headers }));
   assert.equal(JSON.stringify(f), before, 'Reader must not mutate business evidence');
   return { status: response.status, body: await response.json(), headers: response.headers, trace };
 }
@@ -127,6 +130,13 @@ async function run(f, { headers = { authorization: 'Bearer synthetic-source-cred
 test('actual export uses committed market authority and existing v19 market_brief wire without any stock', async () => {
   const f = fixture(), result = await run(f);
   assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.equal(result.body.schema_version, 'morning_alpha_published_content_v1');
+  assert.equal(result.body.read_mode, 'TODAY_STATUS');
+  assert.equal(result.body.publication_status, 'PUBLISHED');
+  assert.equal(result.body.business_date, f.report.report_date);
+  assert.equal(result.body.report.report_id, f.report.id);
+  assert.equal(result.body.canonical_revision, result.body.external_revision);
+  assert.equal(result.body.decision_snapshot.id, f.snapshot.id);
   assert.equal(result.body.contract_version, 'morning_alpha_public_contract_v1');
   assert.equal(result.body.public_topic.kind, 'market_brief');
   assert.equal(result.body.public_topic.symbol, undefined);
@@ -159,13 +169,33 @@ test('real admission + independent Premium retains the qualified first-stock pub
 
 test('legacy qualified publication without frozen outgoing CMS cannot emit false verified evidence', async () => {
   const f = fixture({ qualified: true });
-  delete f.report.ai_strategy_json.market_publication_contract;
   delete f.snapshot.generated_text.canonical_market_state;
   const result = await run(f);
   assert.equal(result.status, 409, JSON.stringify(result.body));
-  assert.equal(result.body.error, 'FROZEN_PUBLIC_MARKET_EVIDENCE_REQUIRED');
+  assert.equal(result.body.error, 'PUBLISHED_MARKET_CONTRACT_BLOCKED');
   assert.equal(result.body.verification, undefined);
   assert.equal(result.trace.some(row => row.name === 'resolve_content_os_incident_v1'), false);
+});
+
+test('a report row without a canonical published contract is an explicit no-report day', async () => {
+  const f = fixture();
+  delete f.report.ai_strategy_json.market_publication_contract;
+  const result = await run(f);
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.equal(result.body.publication_status, 'NO_PUBLISHED_REPORT');
+  assert.equal(result.body.business_date, f.report.report_date);
+  assert.equal(result.body.decision_snapshot.status, 'NONE');
+  assert.equal(result.trace.some(row => row.kind === 'rpc'), false);
+});
+
+test('a published report with missing decision evidence is explicit and never masquerades as route 404', async () => {
+  const f = fixture();
+  f.snapshot = null;
+  const result = await run(f);
+  assert.equal(result.status, 409, JSON.stringify(result.body));
+  assert.equal(result.body.error, 'PUBLISHED_DECISION_EVIDENCE_REQUIRED');
+  assert.equal(result.body.publication_status, 'INVALID_PUBLISHED_CONTRACT');
+  assert.equal(result.body.decision_snapshot.status, 'MISSING');
 });
 
 for (const [name, mutate] of [
@@ -192,7 +222,6 @@ const publicationNegatives = [
   ['wrong run date', f => { f.publicationRun.provider_status.result.report_date = '2026-07-13'; }],
   ['missing committed member', f => { f.member = null; }],
   ['wrong member revision', f => { f.member.decision_snapshot_version++; }],
-  ['unpublished CORE', f => { f.report.ai_strategy_json.market_publication_contract.status = 'READY'; }],
   ['wrong CORE schema', f => { f.report.ai_strategy_json.market_publication_contract.schema_version = 'UNKNOWN'; }],
   ['wrong CORE revision', f => { f.report.ai_strategy_json.market_publication_contract.revision_id = 'foreign'; }],
   ['missing frozen opening pointer', f => { delete f.report.ai_strategy_json.market_publication_contract.opening_publication_revision_id; }],
@@ -248,9 +277,48 @@ for (const [name, options, status] of [
   if (status !== 200) assert.deepEqual(result.trace, [], 'Unauthorized requests perform no business reads or incident writes');
 });
 
-test('no today report cannot export an older ready QA snapshot', async () => {
+test('no today report is an explicit 200 status and cannot export an older ready QA snapshot', async () => {
   const f = fixture(); f.now = '2026-07-15T00:05:00Z'; const result = await run(f);
-  assert.equal(result.status, 404); assert.equal(result.trace.some(row => row.kind === 'rpc'), false);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.schema_version, 'morning_alpha_published_content_v1');
+  assert.equal(result.body.publication_status, 'NO_PUBLISHED_REPORT');
+  assert.equal(result.body.business_date, '2026-07-15');
+  assert.equal(result.body.report, null);
+  assert.equal(result.body.recommendation_status, 'NONE');
+  assert.deepEqual(result.body.recommendations, []);
+  assert.equal(result.body.canonical_revision, null);
+  assert.equal(result.trace.some(row => row.kind === 'rpc'), false);
+});
+
+test('latest published is an explicit historical read and never impersonates today', async () => {
+  const f = fixture(); f.now = '2026-07-15T00:05:00Z';
+  const result = await run(f, { url: 'https://function.example.invalid/content-os-morning-alpha-source?mode=latest_published&schema=morning_alpha_published_content_v1' });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.equal(result.body.read_mode, 'LATEST_PUBLISHED');
+  assert.equal(result.body.publication_status, 'PUBLISHED');
+  assert.equal(result.body.business_date, f.report.report_date);
+  assert.equal(result.body.requested_business_date, '2026-07-15');
+  assert.notEqual(result.body.business_date, result.body.requested_business_date);
+});
+
+test('an explicit missing historical business date returns NO_PUBLISHED_REPORT, not latest', async () => {
+  const f = fixture();
+  const result = await run(f, { url: 'https://function.example.invalid/content-os-morning-alpha-source?mode=today&business_date=2026-07-13' });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.business_date, '2026-07-13');
+  assert.equal(result.body.publication_status, 'NO_PUBLISHED_REPORT');
+  assert.equal(result.body.report, null);
+});
+
+for (const [query, code] of [
+  ['mode=unknown', 'READ_MODE_INVALID'],
+  ['mode=today&business_date=not-a-date', 'BUSINESS_DATE_INVALID'],
+  ['mode=today&schema=unknown', 'REQUEST_SCHEMA_VERSION_UNSUPPORTED'],
+]) test(`invalid read request is 400: ${code}`, async () => {
+  const result = await run(fixture(), { url: `https://function.example.invalid/content-os-morning-alpha-source?${query}` });
+  assert.equal(result.status, 400);
+  assert.equal(result.body.error, code);
+  assert.deepEqual(result.trace, []);
 });
 
 for (const [failure, expected] of [

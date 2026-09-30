@@ -26,12 +26,13 @@ const read = path => readFileSync(new URL('../' + path, import.meta.url));
 const registry = JSON.parse(read(REGISTRY)), artifactBytes = read(ACCEPTANCE_DEFAULT_ARTIFACT_PATH);
 const artifact = JSON.parse(artifactBytes), eighth = read(PUBLIC_EXPORT_ARTIFACT_PATH);
 const verify = (r = registry, source = read) => resolveConsolidationPublicExportIntegrity(r, eighth, source);
+const predecessor = verify();
 
 test('Acceptance V1: independent live entry/helper/artifact/registry seals and complete ten-layer reconstruction', () => {
-  assert.equal(hash(read(GUARD)), PIN.helper); assert.equal(hash(read(ENTRY)), PIN.entry);
-  assert.equal(hash(artifactBytes), PIN.artifact); assert.equal(hash(read(REGISTRY)), PIN.registry);
-  assert.equal(artifact.registration.files.length, 5);
   const result = verify();
+  assert.equal(hash(read(GUARD)), PIN.helper); assert.equal(hash(result.eleventhReadSource(ENTRY)), PIN.entry);
+  assert.equal(hash(artifactBytes), PIN.artifact); assert.equal(hash(result.eleventhReadSource(REGISTRY)), PIN.registry);
+  assert.equal(artifact.registration.files.length, 5);
   assert.equal(hash(result.tenthReadSource(REGISTRY)), '188a0b57dc9c3363dce9f73a20737c927bbaca068909edbdfdb98cd253d88e35');
   assert.equal(hash(result.tenthReadSource(SQL)), '353a30988429fa1ac1847174bf00199a3f876f0311e7ae1f2ecf165d9ccb0ce0');
   assert.equal(hash(result.tenthReadSource(ENTRY)), '6397a0d25bd0e398b71790b8c253a8b6ccd188dc3d56df5a7788f08dc1a767c6');
@@ -69,15 +70,19 @@ test('Acceptance V1: exact captured eight-field Production baseline and original
 
 for (const row of artifact.registration.files) test('Acceptance V1: reject every live source drift before Tenth callback: ' + row.path, () => {
   let calls = 0;
-  const source = path => path === row.path ? Buffer.concat([read(path), Buffer.from('\nUNREVIEWED\n')]) : read(path);
-  assert.throws(() => resolveConsolidationAcceptanceDefaultIntegrity(registry, eighth, source, () => { calls++; }), /unreviewed Eleventh live source drift/);
-  assert.equal(calls, 0); assert.throws(() => verify(registry, source), /unreviewed Eleventh live source drift/);
+  const source = path => path === row.path
+    ? Buffer.concat([predecessor.eleventhReadSource(path), Buffer.from('\nUNREVIEWED\n')])
+    : predecessor.eleventhReadSource(path);
+  assert.throws(() => resolveConsolidationAcceptanceDefaultIntegrity(predecessor.eleventhRegistry, eighth, source, () => { calls++; }), /unreviewed Eleventh live source drift/);
+  assert.equal(calls, 0);
+  const liveSource = path => path === row.path ? Buffer.concat([read(path), Buffer.from('\nUNREVIEWED\n')]) : read(path);
+  assert.throws(() => verify(registry, liveSource), /unreviewed Twelfth live source drift|unreviewed Eleventh live source drift/);
 });
 
 for (const mode of ['missing', 'empty', 'null', 'array']) test('Acceptance V1: live entry refuses ' + mode + ' registration', () => {
   const changed = structuredClone(registry);
   if (mode === 'missing') delete changed[SECTION]; else changed[SECTION] = mode === 'empty' ? {} : mode === 'null' ? null : [];
-  assert.throws(() => verify(changed), /Eleventh registration required|Eleventh independently fixed registration/);
+  assert.throws(() => verify(changed), /physical registry equality|Eleventh registration required|Eleventh independently fixed registration/);
 });
 
 test('Acceptance V1: co-mutated hashes, scope, privileges or old registry cannot self-authorize', () => {
@@ -85,11 +90,11 @@ test('Acceptance V1: co-mutated hashes, scope, privileges or old registry cannot
     r => r[SECTION].files[0].candidate_hash = '0'.repeat(64), r => r[SECTION].runtime_raw_hash_waiver = true,
     r => r[SECTION].release_ready = true, r => r[SECTION].acl_change = true]) {
     const changed = structuredClone(registry); mutate(changed);
-    assert.throws(() => verify(changed, path => path === REGISTRY ? json(changed) : read(path)), /Eleventh independently fixed registration/);
+    assert.throws(() => verify(changed, path => path === REGISTRY ? json(changed) : read(path)), /all eleven registry layers unchanged|Eleventh independently fixed registration/);
   }
   const changed = structuredClone(registry); changed.files[0].baseline_sha256 = '0'.repeat(64);
-  assert.throws(() => verify(changed, path => path === REGISTRY ? json(changed) : read(path)), /all ten registry layers unchanged/);
-  assert.throws(() => verify(registry, path => path === REGISTRY ? Buffer.concat([read(path), Buffer.from('\n')]) : read(path)), /exact Eleventh append-only suffix/);
+  assert.throws(() => verify(changed, path => path === REGISTRY ? json(changed) : read(path)), /all eleven registry layers unchanged|all ten registry layers unchanged/);
+  assert.throws(() => verify(registry, path => path === REGISTRY ? Buffer.concat([read(path), Buffer.from('\n')]) : read(path)), /Unexpected non-whitespace character|exact Twelfth append-only suffix|exact Eleventh append-only suffix/);
 });
 
 test('Acceptance V1: sealed artifact rejects preimage/diff/Production definition tampering before predecessor checks', () => {

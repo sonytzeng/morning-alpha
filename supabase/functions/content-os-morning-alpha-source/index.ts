@@ -13,7 +13,10 @@ type AdminClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 
 const MAX_RESPONSE_BYTES = 1_000_000;
 const PUBLIC_CONTRACT_VERSION = "morning_alpha_public_contract_v1";
+const PUBLISHED_CONTENT_SCHEMA_VERSION = "morning_alpha_published_content_v1";
 const SOURCE_PROJECTION_REVISION = "content_os_source_v13_committed_market_projection";
+
+type ReadMode = "TODAY_STATUS" | "LATEST_PUBLISHED";
 
 function asObject(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -32,6 +35,105 @@ async function sha256Hex(value: unknown): Promise<string> {
 
 function optionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function parseReadRequest(request: Request, todayDate: string): {
+  mode: ReadMode;
+  businessDate: string;
+} {
+  const url = new URL(request.url);
+  const mode = (url.searchParams.get("mode") ?? "today").trim().toLowerCase();
+  const schemaVersion = url.searchParams.get("schema")?.trim() ??
+    PUBLISHED_CONTENT_SCHEMA_VERSION;
+  if (schemaVersion !== PUBLISHED_CONTENT_SCHEMA_VERSION) {
+    throw new Error("REQUEST_SCHEMA_VERSION_UNSUPPORTED");
+  }
+  if (mode !== "today" && mode !== "latest_published") {
+    throw new Error("READ_MODE_INVALID");
+  }
+  const businessDate = url.searchParams.get("business_date")?.trim() ??
+    todayDate;
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(businessDate)) {
+    throw new Error("BUSINESS_DATE_INVALID");
+  }
+  return {
+    mode: mode === "latest_published" ? "LATEST_PUBLISHED" : "TODAY_STATUS",
+    businessDate,
+  };
+}
+
+function noPublishedReport(
+  businessDate: string,
+  mode: ReadMode,
+): JsonRecord {
+  return {
+    schema_version: PUBLISHED_CONTENT_SCHEMA_VERSION,
+    read_mode: mode,
+    business_date: businessDate,
+    publication_status: "NO_PUBLISHED_REPORT",
+    report: null,
+    market_direction: null,
+    entry_environment: null,
+    one_sentence: null,
+    recommendation_status: "NONE",
+    recommendations: [],
+    canonical_revision: null,
+    published_at: null,
+    canonical_identifier: null,
+    decision_snapshot: {
+      status: "NONE",
+      business_date: businessDate,
+      canonical_revision: null,
+    },
+  };
+}
+
+function publishedContent(
+  payload: JsonRecord,
+  mode: ReadMode,
+  requestedBusinessDate: string,
+): JsonRecord {
+  const recommendations = asArray(payload.opportunities);
+  const verification = asObject(payload.verification);
+  const risk = asObject(payload.risk);
+  const reportDate = optionalString(payload.report_date) ??
+    requestedBusinessDate;
+  const canonicalRevision = optionalString(payload.external_revision);
+  return {
+    ...payload,
+    schema_version: PUBLISHED_CONTENT_SCHEMA_VERSION,
+    read_mode: mode,
+    requested_business_date: requestedBusinessDate,
+    business_date: reportDate,
+    publication_status: "PUBLISHED",
+    report: {
+      report_id: payload.report_id,
+      report_date: reportDate,
+      report_mode: payload.report_mode,
+      market_bias: payload.market_bias,
+      daily_sentence: payload.daily_sentence,
+      public_summary: payload.public_summary,
+      public_topic: payload.public_topic,
+      source_references: payload.source_references,
+    },
+    market_direction: payload.market_bias ?? null,
+    entry_environment: {
+      taiwan_mapping: payload.taiwan_mapping ?? null,
+      risk_flags: asArray(risk.risk_flags),
+    },
+    one_sentence: payload.daily_sentence ?? null,
+    recommendation_status: recommendations.length > 0 ? "READY" : "BLOCKED",
+    recommendations,
+    canonical_revision: canonicalRevision,
+    published_at: payload.published_at ?? payload.source_published_at ?? null,
+    canonical_identifier: payload.report_id ?? payload.external_object_id ?? null,
+    decision_snapshot: {
+      status: "PUBLISHED",
+      business_date: reportDate,
+      id: verification.decision_snapshot_id ?? null,
+      canonical_revision: canonicalRevision,
+    },
+  };
 }
 
 function firstArray(...values: unknown[]): unknown[] {
@@ -309,12 +411,38 @@ Deno.serve(async (request) => {
 
   const now = new Date().toISOString();
   const todayDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date(now));
-  const reportResult = await admin.from("reports")
-    .select("id,report_date,report_mode,created_at,updated_at,ai_strategy_json,important_news_json")
-    .eq("report_date", todayDate).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  let readRequest: ReturnType<typeof parseReadRequest>;
+  try {
+    readRequest = parseReadRequest(request, todayDate);
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "READ_REQUEST_INVALID";
+    return json({ error: code, error_code: code }, 400);
+  }
+  let reportQuery = admin.from("reports")
+    .select("id,report_date,report_mode,created_at,updated_at,ai_strategy_json,important_news_json");
+  reportQuery = readRequest.mode === "LATEST_PUBLISHED"
+    ? reportQuery
+      .eq("ai_strategy_json->market_publication_contract->>status", "PUBLISHED")
+      .lte("report_date", todayDate)
+      .order("report_date", { ascending: false })
+      .order("created_at", { ascending: false })
+    : reportQuery
+      .eq("report_date", readRequest.businessDate)
+      .order("created_at", { ascending: false });
+  const reportResult = await reportQuery.limit(1).maybeSingle();
   if (reportResult.error) return json({ error: "REPORT_READ_FAILED" }, 503);
-  if (!reportResult.data) return json({ error: "VERIFIED_DECISION_NOT_FOUND" }, 404);
+  if (!reportResult.data) {
+    return json(noPublishedReport(readRequest.businessDate, readRequest.mode));
+  }
   const report = asObject(reportResult.data);
+  if (
+    optionalString(
+      asObject(asObject(report.ai_strategy_json).market_publication_contract)
+        .status,
+    ) !== "PUBLISHED"
+  ) {
+    return json(noPublishedReport(readRequest.businessDate, readRequest.mode));
+  }
   let evidence: Awaited<ReturnType<typeof fetchPublishedDeliveryEvidence>>;
   try {
     evidence = await fetchPublishedDeliveryEvidence(admin, report);
@@ -322,7 +450,15 @@ Deno.serve(async (request) => {
     return json({ error: "PUBLISHED_DECISION_EVIDENCE_READ_FAILED" }, 503);
   }
   const { snapshot, member: memberRevision, publicationRun } = evidence;
-  if (!snapshot) return json({ error: "VERIFIED_DECISION_NOT_FOUND" }, 404);
+  if (!snapshot) {
+    return json({
+      error: "PUBLISHED_DECISION_EVIDENCE_REQUIRED",
+      error_code: "PUBLISHED_DECISION_EVIDENCE_REQUIRED",
+      publication_status: "INVALID_PUBLISHED_CONTRACT",
+      business_date: String(report.report_date),
+      decision_snapshot: { status: "MISSING" },
+    }, 409);
+  }
   const policyResult = await admin.from("runtime_quality_policies")
     .select("policy_version,premium_publish_min").eq("active", true)
     .order("updated_at", { ascending: false }).limit(1).maybeSingle();
@@ -339,7 +475,8 @@ Deno.serve(async (request) => {
   const delivery = evaluatePublishedMarketDelivery(report, snapshot, memberRevision, marketGate,
     { todayDate, now, premiumEligible: premiumGate.eligible && premiumPolicyAvailable
       && typeof snapshot.content_score === "number" && typeof premiumPublishMinimum === "number"
-      && snapshot.content_score >= premiumPublishMinimum, publicationRun });
+      && snapshot.content_score >= premiumPublishMinimum, publicationRun,
+      historicalRead: String(report.report_date) < todayDate });
   if (!delivery.eligible || !memberRevision) {
     return recordBlockingIncident(admin, snapshot, delivery.reason_codes, "PUBLISHED_MARKET_CONTRACT_BLOCKED");
   }
@@ -377,7 +514,11 @@ Deno.serve(async (request) => {
       { member_content_revision_id: memberRevision.id });
   }
   // A too-large or incomplete export must never close an existing incident.
-  const response = json(result.payload);
+  const response = json(publishedContent(
+    result.payload,
+    readRequest.mode,
+    readRequest.businessDate,
+  ));
   if (response.status !== 200) return response;
   const incidentKey = `content-os:${String(snapshot.report_date)}:${String(snapshot.id)}`;
   const { error: resolveIncidentError } = await admin.rpc("resolve_content_os_incident_v1", {

@@ -5803,4 +5803,89 @@
     ],
     "tenth_test_tail": "4ec486730453bfeaf0bbfda05059893a82490904b36667c0e86176c93992c748"
   }
+,
+  "content_os_read_contract_v1_registration": {
+    "approval_id": "CONTENT_OS_READ_CONTRACT_V1_APPEND_20261001",
+    "candidate_base_git_sha": "4440638fc8b680f1c6e3fff8673b0fb744b94cf6",
+    "previous_complete_registry_sha256": "0cf9db8e012607f1b057d8ed974c21354c304b342d5b3a5674b78eb927e11ad2",
+    "approval_provenance": "The user explicitly directed the Morning Alpha to Sony Content OS 404 Production incident recovery and required Root Cause, bounded contract repair, regression tests, GitHub Gate, and a separate approval stop before any Production deployment. This append-only admission authenticates only the reviewed read-contract source and tests; it does not authorize Production execution, content generation, public posting, Auth, ACL, SQL, secrets, Cron, or historical evidence changes.",
+    "production_operations": false,
+    "production_sql_execution": false,
+    "auth_change": false,
+    "acl_change": false,
+    "runtime_raw_hash_waiver": false,
+    "external_delivery_verified": false,
+    "natural_stability_claim": false,
+    "release_ready": false,
+    "content_generation": false,
+    "public_posting": false,
+    "reviewed_scope": [
+      "docs/operations/core-stability-incident-amendment-20260908.json",
+      "docs/operations/evidence/content-os-read-contract-v1-20261001.json",
+      "supabase/functions/content-os-morning-alpha-source/index.ts",
+      "tests/consolidationContentOsPublication.test.mjs",
+      "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+      "tests/helpers/consolidationPublicExportIntegrity.mjs",
+      "tests/helpers/contentOsReadContractIntegrity.mjs",
+      "tests/contentOsReadContractIntegrity.test.mjs"
+    ],
+    "files": [
+      {
+        "path": "supabase/functions/content-os-morning-alpha-source/index.ts",
+        "original_hash": "b9430383ba63262bb9b10cacd2084d9c97a95f30090aa14b81c12e56834b7e61",
+        "candidate_hash": "6a935f06fcfba758e84b4afa1e7c989c44fc0e8db7aa0d68005d41501ff96fb8",
+        "production_hash": null,
+        "original_bytes": 21155,
+        "candidate_bytes": 25801,
+        "original_ends_with_newline": true,
+        "candidate_ends_with_newline": true,
+        "diff_hash": "7cf23cd2f39542d0f4f20771b146ede0ad4f660b6b00864dea991c7f987e61bf",
+        "reason": "Replace the application-level 404 for an unpublished business date with the explicit canonical today/latest read contract while preserving authentication and every publication evidence gate.",
+        "rollback_target": "Restore the exact Eleventh source bytes from the independently pinned compressed preimage.",
+        "approval_provenance": "The user explicitly directed the Morning Alpha to Sony Content OS 404 Production incident recovery and required Root Cause, bounded contract repair, regression tests, GitHub Gate, and a separate approval stop before any Production deployment. This append-only admission authenticates only the reviewed read-contract source and tests; it does not authorize Production execution, content generation, public posting, Auth, ACL, SQL, secrets, Cron, or historical evidence changes."
+      },
+      {
+        "path": "tests/consolidationContentOsPublication.test.mjs",
+        "original_hash": "42b416b9ce728d831d88dbd94cd1e522f976ef43fd336d7e6e61daa6b396aa0a",
+        "candidate_hash": "b3d351cc7a741d67ac5e1ae89f710835248e7b1900caecb88d7a03d83e6f2b5e",
+        "production_hash": null,
+        "original_bytes": 22814,
+        "candidate_bytes": 26475,
+        "original_ends_with_newline": true,
+        "candidate_ends_with_newline": true,
+        "diff_hash": "d3791f5643129e12db1b777ee45f33f597ef4ece027deef21fb0e7370fa30fa4",
+        "reason": "Add exact regressions for published, no-report, latest-published, blocked recommendation, missing evidence, query validation, and authentication without weakening existing publication tests.",
+        "rollback_target": "Restore the exact Eleventh source bytes from the independently pinned compressed preimage.",
+        "approval_provenance": "The user explicitly directed the Morning Alpha to Sony Content OS 404 Production incident recovery and required Root Cause, bounded contract repair, regression tests, GitHub Gate, and a separate approval stop before any Production deployment. This append-only admission authenticates only the reviewed read-contract source and tests; it does not authorize Production execution, content generation, public posting, Auth, ACL, SQL, secrets, Cron, or historical evidence changes."
+      },
+      {
+        "path": "tests/consolidationAcceptanceDefaultIntegrity.test.mjs",
+        "original_hash": "3dc2cc6d07ab9f1c922115f62ec31b22a6477bd69f81813a9e1dcaa3073d0b90",
+        "candidate_hash": "5a9ecbb5e4db92bc46eb88a5c2190f1ced4bc6f0d83bcb84df23f1b921afa372",
+        "production_hash": null,
+        "original_bytes": 9503,
+        "candidate_bytes": 9990,
+        "original_ends_with_newline": true,
+        "candidate_ends_with_newline": true,
+        "diff_hash": "5982754a933fc737566f6dadfff45ab9cd23c46b11ca5a3818d77a8cce09dc83",
+        "reason": "Keep every Eleventh attack and seal assertion while reading its exact predecessor bytes through the authenticated Twelfth reconstruction.",
+        "rollback_target": "Restore the exact Eleventh source bytes from the independently pinned compressed preimage.",
+        "approval_provenance": "The user explicitly directed the Morning Alpha to Sony Content OS 404 Production incident recovery and required Root Cause, bounded contract repair, regression tests, GitHub Gate, and a separate approval stop before any Production deployment. This append-only admission authenticates only the reviewed read-contract source and tests; it does not authorize Production execution, content generation, public posting, Auth, ACL, SQL, secrets, Cron, or historical evidence changes."
+      },
+      {
+        "path": "tests/helpers/consolidationPublicExportIntegrity.mjs",
+        "original_hash": "d4cda72931e160b6e07457f83f916c5390e0123bf497e81d33de8c37b42994bc",
+        "candidate_hash": "6305d5f62957a5f6dbae64b945c5683f4db677416670a5b432e722a2f5c3e027",
+        "production_hash": null,
+        "original_bytes": 19127,
+        "candidate_bytes": 19476,
+        "original_ends_with_newline": true,
+        "candidate_ends_with_newline": true,
+        "diff_hash": "5a07118e8b3ad5045bb4a54cf2cf88e8e6d2aec52c5bc99989d15bc411145f09",
+        "reason": "Invoke the append-only Twelfth verifier first, then reconstruct and execute the exact Eleventh and every earlier immutable integrity layer.",
+        "rollback_target": "Restore the exact Eleventh source bytes from the independently pinned compressed preimage.",
+        "approval_provenance": "The user explicitly directed the Morning Alpha to Sony Content OS 404 Production incident recovery and required Root Cause, bounded contract repair, regression tests, GitHub Gate, and a separate approval stop before any Production deployment. This append-only admission authenticates only the reviewed read-contract source and tests; it does not authorize Production execution, content generation, public posting, Auth, ACL, SQL, secrets, Cron, or historical evidence changes."
+      }
+    ]
+  }
 }

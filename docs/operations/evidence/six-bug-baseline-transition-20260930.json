@@ -599,6 +599,16 @@
       "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
     },
     {
+      "path": "tests/premarketProductionParityDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "badc30ad866d1a2529bc57c029b226f15581ccc576fab0353632ed06dfbb5255",
+      "candidate_sha256": "6f3934577d3c7692eea131057c1464a327991999d9969070d5847b5869405fd9",
+      "source_lineage": "Exact merged historical integration test; real captures and historical migrations remain unchanged.",
+      "reason": "TEST_FIXTURE_DRIFT: synthetic builders require real proxy symbols, latest US sessions and valid TW weekday controls before injecting faults.",
+      "rollback_target": "Restore the exact predecessor test only when reverting the reviewed calendar and Global 8 candidate."
+    },
+    {
       "path": "tests/productionEvidenceRecorder.test.mjs",
       "operation": "MODIFY",
       "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
@@ -657,6 +667,26 @@
       "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
       "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
       "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/taiwanCashPhaseDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "6991bd96b7ec0e7709bda0e199c58fcfd0760d7ffbf0c5edeb1e7e2ec9882c6c",
+      "candidate_sha256": "fd96f38e1d9552cc79bc8fc18f6f4beb27dd9e3e83963f917e86938d5cb91a07",
+      "source_lineage": "Exact merged historical integration test; real captures and historical migrations remain unchanged.",
+      "reason": "TEST_FIXTURE_DRIFT: synthetic builders require real proxy symbols, latest US sessions and valid TW weekday controls before injecting faults.",
+      "rollback_target": "Restore the exact predecessor test only when reverting the reviewed calendar and Global 8 candidate."
+    },
+    {
+      "path": "tests/txfSessionDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "192532ea78233d67c8ce368451a95322c10e66089c0a206f26de9e8bd127cb65",
+      "candidate_sha256": "fa95ca15aa3c21f764bc84654e0b6aea5bc8c745853bfbbdd01a94e9832fa38e",
+      "source_lineage": "Exact merged historical integration test; real captures and historical migrations remain unchanged.",
+      "reason": "TEST_FIXTURE_DRIFT: synthetic builders require real proxy symbols, latest US sessions and valid TW weekday controls before injecting faults.",
+      "rollback_target": "Restore the exact predecessor test only when reverting the reviewed calendar and Global 8 candidate."
     },
     {
       "path": "tests/txfSessionParity.test.mjs",

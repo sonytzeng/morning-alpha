@@ -135,14 +135,15 @@ test('stale or future raw market source time blocks the independently assembled 
     const result = await marketCounterfactual(input => { input.quotes[0].response.t = t; });
     const beyondAtomicSourceAge = t > 0 && t * 1000 <
       Date.parse(result.vendor.collection.observedAt) - CHECKPOINT_MAX_SOURCE_AGE_MS;
-    // Premarket evidence now rejects the database-invalid source age itself;
-    // a stale quote still within that bound is rejected by premium research.
+    // The seven-day ceiling is not enough: a superseded US session now fails
+    // at the shared Provider/Atomic contract before premium research can run.
     if (t === 0 || beyondAtomicSourceAge || t > Date.parse(result.input.generatedAt) / 1000) {
       assert.equal(result.replay.observations[0].evidence.valid, false);
       if (beyondAtomicSourceAge) assert.equal(result.replay.observations[0].evidence.error, 'INVALID_CHECKPOINT_SOURCE_TIME');
     } else {
-      assert.equal(result.replay.observations[0].evidence.valid, true);
-      assert.equal(result.input.evidenceIndex[0].freshness, 'stale');
+      assert.equal(result.replay.observations[0].evidence.valid, false);
+      assert.equal(result.replay.observations[0].evidence.error, 'PROVIDER_STALE_SESSION');
+      assert.equal(result.input.evidenceIndex[0].freshness, 'invalid');
     }
     assert.equal(result.gate.eligible, false, JSON.stringify(result.gate));
   }

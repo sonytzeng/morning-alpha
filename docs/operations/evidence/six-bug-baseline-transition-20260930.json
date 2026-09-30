@@ -399,6 +399,16 @@
       "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
     },
     {
+      "path": "tests/fixtures/consolidation-v1/provider-chain.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "14164200daf8b6cee146f9415f8fe4cbfe6d21b3ab0467bff06e09bd99f0920a",
+      "candidate_sha256": "7288cee2b81b60761e7ce4c67bfeafa46f8d19df407bb348cb200c24e98a17d5",
+      "source_lineage": "Exact merged predecessor test. Immutable captured and synthetic fixture inputs are unchanged.",
+      "reason": "TEST_FIXTURE_DRIFT: superseded US session must fail at the Provider contract, not pass until downstream Research.",
+      "rollback_target": "Restore the exact predecessor test only when reverting the reviewed Global 8 contract candidate."
+    },
+    {
       "path": "tests/fixtures/six-bug-legacy-failures-20260930.json",
       "operation": "ADD",
       "predecessor_git_sha": null,

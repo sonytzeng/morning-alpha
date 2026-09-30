@@ -58,6 +58,7 @@ const ALLOWED_MARKET_FIELDS = new Set([
   'lowTime', 'closePrice', 'closeTime', 'avgPrice', 'change', 'changePercent', 'lastUpdated',
   'lastTrade', 'total', 'trade', 'price', 'time', 'session', 'product', 'contractType', 'startDate',
   'endDate', 'settlementDate', 'data', 'c', 'd', 'dp', 'h', 'l', 'o', 'pc', 't',
+  'msgArray', 'z', 'pz', 'a', 'y',
 ]);
 
 function sanitizeValue(value, depth) {

@@ -1,0 +1,4133 @@
+{
+  "evidence_type": "REAL_EVIDENCE",
+  "synthetic": false,
+  "business_writes": 0,
+  "rows": [
+    {
+      "id": "ff178f19-c2ef-4c51-913b-fa1e854e3f03",
+      "business_date": "2026-09-30",
+      "provider_key": "2330",
+      "checkpoint": "0900",
+      "recorded_at": "2026-09-30 01:00:22.547+00",
+      "http_status": 200,
+      "endpoint_class": "stock/intraday/quote/2330",
+      "replay_payload": {
+        "endpoint": "stock/intraday/quote/2330",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "2330",
+        "source_symbol": "2330",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:15.271Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "1848e3ff-da6a-4734-a817-2e6fb1680ca2"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-30T01:00:16.454Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-30",
+            "type": "EQUITY",
+            "price": 2500,
+            "change": 25,
+            "market": "TSE",
+            "endpoint": "stock/intraday/quote/2330",
+            "exchange": "TWSE",
+            "provider": "fugle",
+            "captured_at": "2026-09-30T01:00:16.454Z",
+            "price_basis": "CURRENT_SESSION_QUOTE",
+            "response_date": "2026-09-30",
+            "source_symbol": "2330",
+            "tw_cash_phase": "intraday",
+            "change_percent": 1.01,
+            "display_symbol": "2330",
+            "previous_close": 2475,
+            "discovery_status": null,
+            "discovery_symbol": null,
+            "evidence_session_date": "2026-09-30",
+            "provider_envelope_date": "2026-09-30",
+            "tw_cash_session_contract": "TW_CASH_INTRADAY_CURRENT_SESSION_V1",
+            "provider_contract_validated": true,
+            "tw_cash_expected_session_date": "2026-09-30",
+            "tw_cash_provider_session_date": "2026-09-30"
+          },
+          "value": 2500,
+          "change": 25,
+          "provider": "fugle",
+          "capturedAt": "2026-09-30T01:00:16.454Z",
+          "sourceSymbol": "2330",
+          "changePercent": 1.01
+        },
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "台積電",
+          "type": "EQUITY",
+          "total": {
+            "time": 1790730014663622
+          },
+          "change": 25,
+          "market": "TSE",
+          "symbol": "2330",
+          "lowTime": 1790730009773644,
+          "avgPrice": 2495.02,
+          "exchange": "TWSE",
+          "highTime": 1790730012124552,
+          "lowPrice": 2495,
+          "openTime": 1790730009773644,
+          "closeTime": 1790730014663622,
+          "highPrice": 2500,
+          "lastTrade": {
+            "time": 1790730014663622,
+            "price": 2500
+          },
+          "openPrice": 2495,
+          "closePrice": 2500,
+          "lastUpdated": 1790730016454166,
+          "changePercent": 1.01,
+          "previousClose": 2475,
+          "referencePrice": 2475
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "8f135b53-a37e-45d6-bd30-5467036254ef",
+      "business_date": "2026-09-30",
+      "provider_key": "DXY",
+      "checkpoint": "0900",
+      "recorded_at": "2026-09-30 01:00:10.035+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "DXY",
+        "source_symbol": "UUP",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:02.572Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7c4e57e3-2ee2-4dc0-8cfe-401c56a795a5"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 28.73,
+              "high": 28.81,
+              "open": 28.73,
+              "change": 0.05,
+              "current": 28.75,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.1742,
+              "previous_close": 28.7
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "UUP"
+          },
+          "value": 28.75,
+          "change": 0.05,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "UUP",
+          "changePercent": 0.1742
+        },
+        "provider_payload": {
+          "c": 28.75,
+          "d": 0.05,
+          "h": 28.81,
+          "l": 28.73,
+          "o": 28.73,
+          "t": 1790712000,
+          "dp": 0.1742,
+          "pc": 28.7
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "8cff7875-97af-4cfb-87f5-7c4b20ecab49",
+      "business_date": "2026-09-30",
+      "provider_key": "IXIC",
+      "checkpoint": "0900",
+      "recorded_at": "2026-09-30 01:00:10.035+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "IXIC",
+        "source_symbol": "QQQ",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:02.572Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7c4e57e3-2ee2-4dc0-8cfe-401c56a795a5"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 735.34,
+              "high": 740.5799,
+              "open": 740.145,
+              "change": 1.4,
+              "current": 737.93,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.1901,
+              "previous_close": 736.53
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "QQQ"
+          },
+          "value": 737.93,
+          "change": 1.4,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "QQQ",
+          "changePercent": 0.1901
+        },
+        "provider_payload": {
+          "c": 737.93,
+          "d": 1.4,
+          "h": 740.5799,
+          "l": 735.34,
+          "o": 740.145,
+          "t": 1790712000,
+          "dp": 0.1901,
+          "pc": 736.53
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "517daa3f-d2af-48a7-b956-59e0a99981ec",
+      "business_date": "2026-09-30",
+      "provider_key": "NVDA",
+      "checkpoint": "0900",
+      "recorded_at": "2026-09-30 01:00:10.035+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "NVDA",
+        "source_symbol": "NVDA",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:02.572Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7c4e57e3-2ee2-4dc0-8cfe-401c56a795a5"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 227.025,
+              "high": 232.82,
+              "open": 230.97,
+              "change": -1.65,
+              "current": 227.21,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.721,
+              "previous_close": 228.86
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "NVDA"
+          },
+          "value": 227.21,
+          "change": -1.65,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "NVDA",
+          "changePercent": -0.721
+        },
+        "provider_payload": {
+          "c": 227.21,
+          "d": -1.65,
+          "h": 232.82,
+          "l": 227.025,
+          "o": 230.97,
+          "t": 1790712000,
+          "dp": -0.721,
+          "pc": 228.86
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "83b24ebf-2d9d-4cf0-9a4a-b01400c201bb",
+      "business_date": "2026-09-30",
+      "provider_key": "SOX",
+      "checkpoint": "0900",
+      "recorded_at": "2026-09-30 01:00:10.035+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "SOX",
+        "source_symbol": "SOXX",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:02.572Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7c4e57e3-2ee2-4dc0-8cfe-401c56a795a5"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 565.3,
+              "high": 574.4687,
+              "open": 569.79,
+              "change": 6.65,
+              "current": 567.44,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 1.1858,
+              "previous_close": 560.79
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "SOXX"
+          },
+          "value": 567.44,
+          "change": 6.65,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "SOXX",
+          "changePercent": 1.1858
+        },
+        "provider_payload": {
+          "c": 567.44,
+          "d": 6.65,
+          "h": 574.4687,
+          "l": 565.3,
+          "o": 569.79,
+          "t": 1790712000,
+          "dp": 1.1858,
+          "pc": 560.79
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "48540e27-10fc-4fcd-abe2-6688deef1189",
+      "business_date": "2026-09-30",
+      "provider_key": "SPX",
+      "checkpoint": "0900",
+      "recorded_at": "2026-09-30 01:00:10.035+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "SPX",
+        "source_symbol": "SPY",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:02.572Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7c4e57e3-2ee2-4dc0-8cfe-401c56a795a5"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 762.35,
+              "high": 766.98,
+              "open": 766.83,
+              "change": -1.41,
+              "current": 764.2,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.1842,
+              "previous_close": 765.61
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "SPY"
+          },
+          "value": 764.2,
+          "change": -1.41,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "SPY",
+          "changePercent": -0.1842
+        },
+        "provider_payload": {
+          "c": 764.2,
+          "d": -1.41,
+          "h": 766.98,
+          "l": 762.35,
+          "o": 766.83,
+          "t": 1790712000,
+          "dp": -0.1842,
+          "pc": 765.61
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "01789283-1baa-4e58-a7c5-23980a884ef6",
+      "business_date": "2026-09-30",
+      "provider_key": "TAIEX",
+      "checkpoint": "0900",
+      "recorded_at": "2026-09-30 01:00:22.547+00",
+      "http_status": 200,
+      "endpoint_class": "stock/intraday/quote/IX0001",
+      "replay_payload": {
+        "endpoint": "stock/intraday/quote/IX0001",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "TAIEX",
+        "source_symbol": "IX0001",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:15.271Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "1848e3ff-da6a-4734-a817-2e6fb1680ca2"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-30T01:00:15.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-30",
+            "type": "INDEX",
+            "price": 48145.33,
+            "change": 513.37,
+            "market": "TSE",
+            "endpoint": "stock/intraday/quote/IX0001",
+            "exchange": "TWSE",
+            "provider": "fugle",
+            "captured_at": "2026-09-30T01:00:15.000Z",
+            "price_basis": "CURRENT_SESSION_QUOTE",
+            "response_date": "2026-09-30",
+            "source_symbol": "IX0001",
+            "tw_cash_phase": "intraday",
+            "change_percent": 1.08,
+            "display_symbol": "TAIEX",
+            "previous_close": 47631.96,
+            "discovery_status": "VALIDATED",
+            "discovery_symbol": "IX0001",
+            "evidence_session_date": "2026-09-30",
+            "provider_envelope_date": "2026-09-30",
+            "tw_cash_session_contract": "TW_CASH_INTRADAY_CURRENT_SESSION_V1",
+            "provider_contract_validated": true,
+            "tw_cash_expected_session_date": "2026-09-30",
+            "tw_cash_provider_session_date": "2026-09-30"
+          },
+          "value": 48145.33,
+          "change": 513.37,
+          "provider": "fugle",
+          "capturedAt": "2026-09-30T01:00:15.000Z",
+          "sourceSymbol": "IX0001",
+          "changePercent": 1.08
+        },
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "發行量加權股價指數",
+          "type": "INDEX",
+          "total": {
+            "time": 1790730015000000
+          },
+          "change": 513.37,
+          "market": "TSE",
+          "symbol": "IX0001",
+          "lowTime": 1790730005000000,
+          "exchange": "TWSE",
+          "highTime": 1790730015000000,
+          "lowPrice": 47767.49,
+          "openTime": 1790730005000000,
+          "closeTime": 1790730015000000,
+          "highPrice": 48145.33,
+          "openPrice": 47767.49,
+          "closePrice": 48145.33,
+          "lastUpdated": 1790730015000000,
+          "changePercent": 1.08,
+          "previousClose": 47631.96
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "104bc244-5be7-4ab6-89e2-72e920fb8f83",
+      "business_date": "2026-09-30",
+      "provider_key": "TSM",
+      "checkpoint": "0900",
+      "recorded_at": "2026-09-30 01:00:10.035+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "TSM",
+        "source_symbol": "TSM",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:02.572Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7c4e57e3-2ee2-4dc0-8cfe-401c56a795a5"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 447.07,
+              "high": 459.43,
+              "open": 452.27,
+              "change": 4.06,
+              "current": 456.94,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.8965,
+              "previous_close": 452.88
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "TSM"
+          },
+          "value": 456.94,
+          "change": 4.06,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "TSM",
+          "changePercent": 0.8965
+        },
+        "provider_payload": {
+          "c": 456.94,
+          "d": 4.06,
+          "h": 459.43,
+          "l": 447.07,
+          "o": 452.27,
+          "t": 1790712000,
+          "dp": 0.8965,
+          "pc": 452.88
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "bf41fa6c-5912-410a-875f-c83b350e352c",
+      "business_date": "2026-09-30",
+      "provider_key": "TXF",
+      "checkpoint": "0900",
+      "recorded_at": "2026-09-30 01:00:10.035+00",
+      "http_status": 200,
+      "endpoint_class": "futopt/intraday/quote/TXF1!",
+      "replay_payload": {
+        "endpoint": "futopt/intraday/quote/TXF1!",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_FUTOPT_QUOTE",
+        "provider_key": "TXF",
+        "source_symbol": "TXF1!",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:02.572Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7c4e57e3-2ee2-4dc0-8cfe-401c56a795a5"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": "regular",
+          "source_timestamp": "2026-09-30T01:00:08.034Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-30",
+            "type": "FUTURE",
+            "price": 48453,
+            "change": 672,
+            "market": null,
+            "product": "TXF",
+            "session": "regular",
+            "exchange": "TAIFEX",
+            "provider": "fugle_futopt",
+            "captured_at": "2026-09-30T01:00:08.034Z",
+            "fallback_used": false,
+            "source_symbol": "TXF1!",
+            "change_percent": 1.41,
+            "contract_resolution": "continuous_alias"
+          },
+          "value": 48453,
+          "change": 672,
+          "provider": "fugle_futopt",
+          "capturedAt": "2026-09-30T01:00:08.034Z",
+          "sourceSymbol": "TXF1!",
+          "changePercent": 1.41
+        },
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "臺股期貨106",
+          "type": "FUTURE",
+          "total": {
+            "time": 1790730008034000
+          },
+          "change": 672,
+          "symbol": "TXFJ6",
+          "lowTime": 1790729510774000,
+          "avgPrice": 48441.55,
+          "exchange": "TAIFEX",
+          "highTime": 1790729140489000,
+          "lowPrice": 48353,
+          "openTime": 1790729100048000,
+          "closeTime": 1790730008078000,
+          "highPrice": 48516,
+          "lastTrade": {
+            "time": 1790730008078000,
+            "price": 48453
+          },
+          "openPrice": 48467,
+          "closePrice": 48453,
+          "lastUpdated": 1790730008034000,
+          "changePercent": 1.41,
+          "previousClose": 47767
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "965dfb27-2e71-4952-bf2c-8d753a600a4a",
+      "business_date": "2026-09-30",
+      "provider_key": "US10Y",
+      "checkpoint": "0900",
+      "recorded_at": "2026-09-30 01:00:10.035+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "US10Y",
+        "source_symbol": "IEF",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:02.572Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7c4e57e3-2ee2-4dc0-8cfe-401c56a795a5"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 89.185,
+              "high": 89.504391,
+              "open": 89.495,
+              "change": -0.08,
+              "current": 89.45,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.0894,
+              "previous_close": 89.53
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "IEF"
+          },
+          "value": 89.45,
+          "change": -0.08,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "IEF",
+          "changePercent": -0.0894
+        },
+        "provider_payload": {
+          "c": 89.45,
+          "d": -0.08,
+          "h": 89.504391,
+          "l": 89.185,
+          "o": 89.495,
+          "t": 1790712000,
+          "dp": -0.0894,
+          "pc": 89.53
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "6910b65a-f551-4de2-9f36-42038ddd652f",
+      "business_date": "2026-09-30",
+      "provider_key": "VIX",
+      "checkpoint": "0900",
+      "recorded_at": "2026-09-30 01:00:10.035+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "VIX",
+        "source_symbol": "VXX",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:02.572Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7c4e57e3-2ee2-4dc0-8cfe-401c56a795a5"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 17.265,
+              "high": 17.59,
+              "open": 17.34,
+              "change": -0.01,
+              "current": 17.45,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.0573,
+              "previous_close": 17.46
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "VXX"
+          },
+          "value": 17.45,
+          "change": -0.01,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "VXX",
+          "changePercent": -0.0573
+        },
+        "provider_payload": {
+          "c": 17.45,
+          "d": -0.01,
+          "h": 17.59,
+          "l": 17.265,
+          "o": 17.34,
+          "t": 1790712000,
+          "dp": -0.0573,
+          "pc": 17.46
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "b81be908-c79f-4628-a9fa-2af7207d4729",
+      "business_date": "2026-09-30",
+      "provider_key": "2330",
+      "checkpoint": "0930",
+      "recorded_at": "2026-09-30 01:30:09.279+00",
+      "http_status": 200,
+      "endpoint_class": "stock/intraday/quote/2330",
+      "replay_payload": {
+        "endpoint": "stock/intraday/quote/2330",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "2330",
+        "source_symbol": "2330",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0930",
+          "observedAt": "2026-09-30T01:30:01.723Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "384ec116-901e-4aa9-972f-672584a4c2dd"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-30T01:30:04.250Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-30",
+            "type": "EQUITY",
+            "price": 2500,
+            "change": 25,
+            "market": "TSE",
+            "endpoint": "stock/intraday/quote/2330",
+            "exchange": "TWSE",
+            "provider": "fugle",
+            "captured_at": "2026-09-30T01:30:04.250Z",
+            "price_basis": "CURRENT_SESSION_QUOTE",
+            "response_date": "2026-09-30",
+            "source_symbol": "2330",
+            "tw_cash_phase": "intraday",
+            "change_percent": 1.01,
+            "display_symbol": "2330",
+            "previous_close": 2475,
+            "discovery_status": null,
+            "discovery_symbol": null,
+            "evidence_session_date": "2026-09-30",
+            "provider_envelope_date": "2026-09-30",
+            "tw_cash_session_contract": "TW_CASH_INTRADAY_CURRENT_SESSION_V1",
+            "provider_contract_validated": true,
+            "tw_cash_expected_session_date": "2026-09-30",
+            "tw_cash_provider_session_date": "2026-09-30"
+          },
+          "value": 2500,
+          "change": 25,
+          "provider": "fugle",
+          "capturedAt": "2026-09-30T01:30:04.250Z",
+          "sourceSymbol": "2330",
+          "changePercent": 1.01
+        },
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "台積電",
+          "type": "EQUITY",
+          "total": {
+            "time": 1790731794939264
+          },
+          "change": 25,
+          "market": "TSE",
+          "symbol": "2330",
+          "lowTime": 1790730263203847,
+          "avgPrice": 2497.6,
+          "exchange": "TWSE",
+          "highTime": 1790730555812175,
+          "lowPrice": 2490,
+          "openTime": 1790730009773644,
+          "closeTime": 1790731794939264,
+          "highPrice": 2505,
+          "lastTrade": {
+            "time": 1790731794939264,
+            "price": 2500
+          },
+          "openPrice": 2495,
+          "closePrice": 2500,
+          "lastUpdated": 1790731804250893,
+          "changePercent": 1.01,
+          "previousClose": 2475,
+          "referencePrice": 2475
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "b6df7373-d5ac-4b04-96d9-ce72c285bdc1",
+      "business_date": "2026-09-30",
+      "provider_key": "DXY",
+      "checkpoint": "0930",
+      "recorded_at": "2026-09-30 01:30:09.279+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "DXY",
+        "source_symbol": "UUP",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0930",
+          "observedAt": "2026-09-30T01:30:01.723Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "384ec116-901e-4aa9-972f-672584a4c2dd"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 28.73,
+              "high": 28.81,
+              "open": 28.73,
+              "change": 0.05,
+              "current": 28.75,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.1742,
+              "previous_close": 28.7
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "UUP"
+          },
+          "value": 28.75,
+          "change": 0.05,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "UUP",
+          "changePercent": 0.1742
+        },
+        "provider_payload": {
+          "c": 28.75,
+          "d": 0.05,
+          "h": 28.81,
+          "l": 28.73,
+          "o": 28.73,
+          "t": 1790712000,
+          "dp": 0.1742,
+          "pc": 28.7
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "13e68980-5993-426a-95ba-7a3ca8d670d6",
+      "business_date": "2026-09-30",
+      "provider_key": "IXIC",
+      "checkpoint": "0930",
+      "recorded_at": "2026-09-30 01:30:09.279+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "IXIC",
+        "source_symbol": "QQQ",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0930",
+          "observedAt": "2026-09-30T01:30:01.723Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "384ec116-901e-4aa9-972f-672584a4c2dd"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 735.34,
+              "high": 740.5799,
+              "open": 740.145,
+              "change": 1.4,
+              "current": 737.93,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.1901,
+              "previous_close": 736.53
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "QQQ"
+          },
+          "value": 737.93,
+          "change": 1.4,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "QQQ",
+          "changePercent": 0.1901
+        },
+        "provider_payload": {
+          "c": 737.93,
+          "d": 1.4,
+          "h": 740.5799,
+          "l": 735.34,
+          "o": 740.145,
+          "t": 1790712000,
+          "dp": 0.1901,
+          "pc": 736.53
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "79fed795-51c8-455f-8a41-c889263520ac",
+      "business_date": "2026-09-30",
+      "provider_key": "NVDA",
+      "checkpoint": "0930",
+      "recorded_at": "2026-09-30 01:30:09.279+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "NVDA",
+        "source_symbol": "NVDA",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0930",
+          "observedAt": "2026-09-30T01:30:01.723Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "384ec116-901e-4aa9-972f-672584a4c2dd"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 227.025,
+              "high": 232.82,
+              "open": 230.97,
+              "change": -1.65,
+              "current": 227.21,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.721,
+              "previous_close": 228.86
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "NVDA"
+          },
+          "value": 227.21,
+          "change": -1.65,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "NVDA",
+          "changePercent": -0.721
+        },
+        "provider_payload": {
+          "c": 227.21,
+          "d": -1.65,
+          "h": 232.82,
+          "l": 227.025,
+          "o": 230.97,
+          "t": 1790712000,
+          "dp": -0.721,
+          "pc": 228.86
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "22458114-2287-4624-b38d-29d249c0d7b7",
+      "business_date": "2026-09-30",
+      "provider_key": "SOX",
+      "checkpoint": "0930",
+      "recorded_at": "2026-09-30 01:30:09.279+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "SOX",
+        "source_symbol": "SOXX",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0930",
+          "observedAt": "2026-09-30T01:30:01.723Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "384ec116-901e-4aa9-972f-672584a4c2dd"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 565.3,
+              "high": 574.4687,
+              "open": 569.79,
+              "change": 6.65,
+              "current": 567.44,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 1.1858,
+              "previous_close": 560.79
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "SOXX"
+          },
+          "value": 567.44,
+          "change": 6.65,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "SOXX",
+          "changePercent": 1.1858
+        },
+        "provider_payload": {
+          "c": 567.44,
+          "d": 6.65,
+          "h": 574.4687,
+          "l": 565.3,
+          "o": 569.79,
+          "t": 1790712000,
+          "dp": 1.1858,
+          "pc": 560.79
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "fb4c7b6d-8015-426f-9a97-34bbab30e638",
+      "business_date": "2026-09-30",
+      "provider_key": "SPX",
+      "checkpoint": "0930",
+      "recorded_at": "2026-09-30 01:30:09.279+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "SPX",
+        "source_symbol": "SPY",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0930",
+          "observedAt": "2026-09-30T01:30:01.723Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "384ec116-901e-4aa9-972f-672584a4c2dd"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 762.35,
+              "high": 766.98,
+              "open": 766.83,
+              "change": -1.41,
+              "current": 764.2,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.1842,
+              "previous_close": 765.61
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "SPY"
+          },
+          "value": 764.2,
+          "change": -1.41,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "SPY",
+          "changePercent": -0.1842
+        },
+        "provider_payload": {
+          "c": 764.2,
+          "d": -1.41,
+          "h": 766.98,
+          "l": 762.35,
+          "o": 766.83,
+          "t": 1790712000,
+          "dp": -0.1842,
+          "pc": 765.61
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "b716d2bd-f213-4cc1-9f90-5ebbce4933fe",
+      "business_date": "2026-09-30",
+      "provider_key": "TAIEX",
+      "checkpoint": "0930",
+      "recorded_at": "2026-09-30 01:30:09.279+00",
+      "http_status": 200,
+      "endpoint_class": "stock/intraday/quote/IX0001",
+      "replay_payload": {
+        "endpoint": "stock/intraday/quote/IX0001",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "TAIEX",
+        "source_symbol": "IX0001",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0930",
+          "observedAt": "2026-09-30T01:30:01.723Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "384ec116-901e-4aa9-972f-672584a4c2dd"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-30T01:30:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-30",
+            "type": "INDEX",
+            "price": 48242.78,
+            "change": 610.82,
+            "market": "TSE",
+            "endpoint": "stock/intraday/quote/IX0001",
+            "exchange": "TWSE",
+            "provider": "fugle",
+            "captured_at": "2026-09-30T01:30:00.000Z",
+            "price_basis": "CURRENT_SESSION_QUOTE",
+            "response_date": "2026-09-30",
+            "source_symbol": "IX0001",
+            "tw_cash_phase": "intraday",
+            "change_percent": 1.28,
+            "display_symbol": "TAIEX",
+            "previous_close": 47631.96,
+            "discovery_status": "VALIDATED",
+            "discovery_symbol": "IX0001",
+            "evidence_session_date": "2026-09-30",
+            "provider_envelope_date": "2026-09-30",
+            "tw_cash_session_contract": "TW_CASH_INTRADAY_CURRENT_SESSION_V1",
+            "provider_contract_validated": true,
+            "tw_cash_expected_session_date": "2026-09-30",
+            "tw_cash_provider_session_date": "2026-09-30"
+          },
+          "value": 48242.78,
+          "change": 610.82,
+          "provider": "fugle",
+          "capturedAt": "2026-09-30T01:30:00.000Z",
+          "sourceSymbol": "IX0001",
+          "changePercent": 1.28
+        },
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "發行量加權股價指數",
+          "type": "INDEX",
+          "total": {
+            "time": 1790731800000000
+          },
+          "change": 610.82,
+          "market": "TSE",
+          "symbol": "IX0001",
+          "lowTime": 1790730005000000,
+          "exchange": "TWSE",
+          "highTime": 1790731640000000,
+          "lowPrice": 47767.49,
+          "openTime": 1790730005000000,
+          "closeTime": 1790731800000000,
+          "highPrice": 48295.21,
+          "openPrice": 47767.49,
+          "closePrice": 48242.78,
+          "lastUpdated": 1790731800000000,
+          "changePercent": 1.28,
+          "previousClose": 47631.96
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "02069ec2-7eb8-461f-9443-e942fa360ac7",
+      "business_date": "2026-09-30",
+      "provider_key": "TSM",
+      "checkpoint": "0930",
+      "recorded_at": "2026-09-30 01:30:09.279+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "TSM",
+        "source_symbol": "TSM",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0930",
+          "observedAt": "2026-09-30T01:30:01.723Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "384ec116-901e-4aa9-972f-672584a4c2dd"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 447.07,
+              "high": 459.43,
+              "open": 452.27,
+              "change": 4.06,
+              "current": 456.94,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.8965,
+              "previous_close": 452.88
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "TSM"
+          },
+          "value": 456.94,
+          "change": 4.06,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "TSM",
+          "changePercent": 0.8965
+        },
+        "provider_payload": {
+          "c": 456.94,
+          "d": 4.06,
+          "h": 459.43,
+          "l": 447.07,
+          "o": 452.27,
+          "t": 1790712000,
+          "dp": 0.8965,
+          "pc": 452.88
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "44e56150-8e1d-4167-a949-d19d8e198b89",
+      "business_date": "2026-09-30",
+      "provider_key": "TXF",
+      "checkpoint": "0930",
+      "recorded_at": "2026-09-30 01:30:09.279+00",
+      "http_status": 200,
+      "endpoint_class": "futopt/intraday/quote/TXF1!",
+      "replay_payload": {
+        "endpoint": "futopt/intraday/quote/TXF1!",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_FUTOPT_QUOTE",
+        "provider_key": "TXF",
+        "source_symbol": "TXF1!",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0930",
+          "observedAt": "2026-09-30T01:30:01.723Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "384ec116-901e-4aa9-972f-672584a4c2dd"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": "regular",
+          "source_timestamp": "2026-09-30T01:30:05.584Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-30",
+            "type": "FUTURE",
+            "price": 48489,
+            "change": 708,
+            "market": null,
+            "product": "TXF",
+            "session": "regular",
+            "exchange": "TAIFEX",
+            "provider": "fugle_futopt",
+            "captured_at": "2026-09-30T01:30:05.584Z",
+            "fallback_used": false,
+            "source_symbol": "TXF1!",
+            "change_percent": 1.48,
+            "contract_resolution": "continuous_alias"
+          },
+          "value": 48489,
+          "change": 708,
+          "provider": "fugle_futopt",
+          "capturedAt": "2026-09-30T01:30:05.584Z",
+          "sourceSymbol": "TXF1!",
+          "changePercent": 1.48
+        },
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "臺股期貨106",
+          "type": "FUTURE",
+          "total": {
+            "time": 1790731805261000
+          },
+          "change": 708,
+          "symbol": "TXFJ6",
+          "lowTime": 1790730504818000,
+          "avgPrice": 48411.98,
+          "exchange": "TAIFEX",
+          "highTime": 1790731634174000,
+          "lowPrice": 48288,
+          "openTime": 1790729100048000,
+          "closeTime": 1790731805261000,
+          "highPrice": 48577,
+          "lastTrade": {
+            "time": 1790731805261000,
+            "price": 48489
+          },
+          "openPrice": 48467,
+          "closePrice": 48489,
+          "lastUpdated": 1790731805584000,
+          "changePercent": 1.48,
+          "previousClose": 47767
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "e04887b7-8f4c-4760-a454-7a59660ac659",
+      "business_date": "2026-09-30",
+      "provider_key": "US10Y",
+      "checkpoint": "0930",
+      "recorded_at": "2026-09-30 01:30:09.279+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "US10Y",
+        "source_symbol": "IEF",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0930",
+          "observedAt": "2026-09-30T01:30:01.723Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "384ec116-901e-4aa9-972f-672584a4c2dd"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 89.185,
+              "high": 89.504391,
+              "open": 89.495,
+              "change": -0.08,
+              "current": 89.45,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.0894,
+              "previous_close": 89.53
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "IEF"
+          },
+          "value": 89.45,
+          "change": -0.08,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "IEF",
+          "changePercent": -0.0894
+        },
+        "provider_payload": {
+          "c": 89.45,
+          "d": -0.08,
+          "h": 89.504391,
+          "l": 89.185,
+          "o": 89.495,
+          "t": 1790712000,
+          "dp": -0.0894,
+          "pc": 89.53
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "4689a990-ee9a-4c10-b344-aa9ce6a35eec",
+      "business_date": "2026-09-30",
+      "provider_key": "VIX",
+      "checkpoint": "0930",
+      "recorded_at": "2026-09-30 01:30:09.279+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "VIX",
+        "source_symbol": "VXX",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0930",
+          "observedAt": "2026-09-30T01:30:01.723Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "384ec116-901e-4aa9-972f-672584a4c2dd"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 17.265,
+              "high": 17.59,
+              "open": 17.34,
+              "change": -0.01,
+              "current": 17.45,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.0573,
+              "previous_close": 17.46
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "VXX"
+          },
+          "value": 17.45,
+          "change": -0.01,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "VXX",
+          "changePercent": -0.0573
+        },
+        "provider_payload": {
+          "c": 17.45,
+          "d": -0.01,
+          "h": 17.59,
+          "l": 17.265,
+          "o": 17.34,
+          "t": 1790712000,
+          "dp": -0.0573,
+          "pc": 17.46
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "58fbac74-7b6d-462c-9cdc-5e1318288adc",
+      "business_date": "2026-09-30",
+      "provider_key": "2330",
+      "checkpoint": "1030",
+      "recorded_at": "2026-09-30 02:30:08.967+00",
+      "http_status": 200,
+      "endpoint_class": "stock/intraday/quote/2330",
+      "replay_payload": {
+        "endpoint": "stock/intraday/quote/2330",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "2330",
+        "source_symbol": "2330",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1030",
+          "observedAt": "2026-09-30T02:30:01.583Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "5f41bb47-b47e-404c-8227-5eda4bcf71df"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-30T02:30:02.159Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-30",
+            "type": "EQUITY",
+            "price": 2505,
+            "change": 30,
+            "market": "TSE",
+            "endpoint": "stock/intraday/quote/2330",
+            "exchange": "TWSE",
+            "provider": "fugle",
+            "captured_at": "2026-09-30T02:30:02.159Z",
+            "price_basis": "CURRENT_SESSION_QUOTE",
+            "response_date": "2026-09-30",
+            "source_symbol": "2330",
+            "tw_cash_phase": "intraday",
+            "change_percent": 1.21,
+            "display_symbol": "2330",
+            "previous_close": 2475,
+            "discovery_status": null,
+            "discovery_symbol": null,
+            "evidence_session_date": "2026-09-30",
+            "provider_envelope_date": "2026-09-30",
+            "tw_cash_session_contract": "TW_CASH_INTRADAY_CURRENT_SESSION_V1",
+            "provider_contract_validated": true,
+            "tw_cash_expected_session_date": "2026-09-30",
+            "tw_cash_provider_session_date": "2026-09-30"
+          },
+          "value": 2505,
+          "change": 30,
+          "provider": "fugle",
+          "capturedAt": "2026-09-30T02:30:02.159Z",
+          "sourceSymbol": "2330",
+          "changePercent": 1.21
+        },
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "台積電",
+          "type": "EQUITY",
+          "total": {
+            "time": 1790735401779803
+          },
+          "change": 30,
+          "market": "TSE",
+          "symbol": "2330",
+          "lowTime": 1790730263203847,
+          "avgPrice": 2500.59,
+          "exchange": "TWSE",
+          "highTime": 1790733472031665,
+          "lowPrice": 2490,
+          "openTime": 1790730009773644,
+          "closeTime": 1790735401779803,
+          "highPrice": 2510,
+          "lastTrade": {
+            "time": 1790735401779803,
+            "price": 2505
+          },
+          "openPrice": 2495,
+          "closePrice": 2505,
+          "lastUpdated": 1790735402159590,
+          "changePercent": 1.21,
+          "previousClose": 2475,
+          "referencePrice": 2475
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "fd26f980-d965-4260-8dd1-f9a76f845d7d",
+      "business_date": "2026-09-30",
+      "provider_key": "DXY",
+      "checkpoint": "1030",
+      "recorded_at": "2026-09-30 02:30:08.967+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "DXY",
+        "source_symbol": "UUP",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1030",
+          "observedAt": "2026-09-30T02:30:01.583Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "5f41bb47-b47e-404c-8227-5eda4bcf71df"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 28.73,
+              "high": 28.81,
+              "open": 28.73,
+              "change": 0.05,
+              "current": 28.75,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.1742,
+              "previous_close": 28.7
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "UUP"
+          },
+          "value": 28.75,
+          "change": 0.05,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "UUP",
+          "changePercent": 0.1742
+        },
+        "provider_payload": {
+          "c": 28.75,
+          "d": 0.05,
+          "h": 28.81,
+          "l": 28.73,
+          "o": 28.73,
+          "t": 1790712000,
+          "dp": 0.1742,
+          "pc": 28.7
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "eb1f7a51-171b-4bd3-90c9-a58648337ad5",
+      "business_date": "2026-09-30",
+      "provider_key": "IXIC",
+      "checkpoint": "1030",
+      "recorded_at": "2026-09-30 02:30:08.967+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "IXIC",
+        "source_symbol": "QQQ",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1030",
+          "observedAt": "2026-09-30T02:30:01.583Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "5f41bb47-b47e-404c-8227-5eda4bcf71df"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 735.34,
+              "high": 740.5799,
+              "open": 740.145,
+              "change": 1.4,
+              "current": 737.93,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.1901,
+              "previous_close": 736.53
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "QQQ"
+          },
+          "value": 737.93,
+          "change": 1.4,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "QQQ",
+          "changePercent": 0.1901
+        },
+        "provider_payload": {
+          "c": 737.93,
+          "d": 1.4,
+          "h": 740.5799,
+          "l": 735.34,
+          "o": 740.145,
+          "t": 1790712000,
+          "dp": 0.1901,
+          "pc": 736.53
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "ce9631e9-f66f-4151-9e73-25bcad87d107",
+      "business_date": "2026-09-30",
+      "provider_key": "NVDA",
+      "checkpoint": "1030",
+      "recorded_at": "2026-09-30 02:30:08.967+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "NVDA",
+        "source_symbol": "NVDA",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1030",
+          "observedAt": "2026-09-30T02:30:01.583Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "5f41bb47-b47e-404c-8227-5eda4bcf71df"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 227.025,
+              "high": 232.82,
+              "open": 230.97,
+              "change": -1.65,
+              "current": 227.21,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.721,
+              "previous_close": 228.86
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "NVDA"
+          },
+          "value": 227.21,
+          "change": -1.65,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "NVDA",
+          "changePercent": -0.721
+        },
+        "provider_payload": {
+          "c": 227.21,
+          "d": -1.65,
+          "h": 232.82,
+          "l": 227.025,
+          "o": 230.97,
+          "t": 1790712000,
+          "dp": -0.721,
+          "pc": 228.86
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "fba53833-bcda-4417-a0ac-5af819f85c2d",
+      "business_date": "2026-09-30",
+      "provider_key": "SOX",
+      "checkpoint": "1030",
+      "recorded_at": "2026-09-30 02:30:08.967+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "SOX",
+        "source_symbol": "SOXX",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1030",
+          "observedAt": "2026-09-30T02:30:01.583Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "5f41bb47-b47e-404c-8227-5eda4bcf71df"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 565.3,
+              "high": 574.4687,
+              "open": 569.79,
+              "change": 6.65,
+              "current": 567.44,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 1.1858,
+              "previous_close": 560.79
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "SOXX"
+          },
+          "value": 567.44,
+          "change": 6.65,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "SOXX",
+          "changePercent": 1.1858
+        },
+        "provider_payload": {
+          "c": 567.44,
+          "d": 6.65,
+          "h": 574.4687,
+          "l": 565.3,
+          "o": 569.79,
+          "t": 1790712000,
+          "dp": 1.1858,
+          "pc": 560.79
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "43b189bb-c9fc-443a-8e6b-748377acb6a3",
+      "business_date": "2026-09-30",
+      "provider_key": "SPX",
+      "checkpoint": "1030",
+      "recorded_at": "2026-09-30 02:30:08.967+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "SPX",
+        "source_symbol": "SPY",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1030",
+          "observedAt": "2026-09-30T02:30:01.583Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "5f41bb47-b47e-404c-8227-5eda4bcf71df"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 762.35,
+              "high": 766.98,
+              "open": 766.83,
+              "change": -1.41,
+              "current": 764.2,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.1842,
+              "previous_close": 765.61
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "SPY"
+          },
+          "value": 764.2,
+          "change": -1.41,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "SPY",
+          "changePercent": -0.1842
+        },
+        "provider_payload": {
+          "c": 764.2,
+          "d": -1.41,
+          "h": 766.98,
+          "l": 762.35,
+          "o": 766.83,
+          "t": 1790712000,
+          "dp": -0.1842,
+          "pc": 765.61
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "844da013-2d34-40a9-8796-66ee90aacff4",
+      "business_date": "2026-09-30",
+      "provider_key": "TAIEX",
+      "checkpoint": "1030",
+      "recorded_at": "2026-09-30 02:30:08.967+00",
+      "http_status": 200,
+      "endpoint_class": "stock/intraday/quote/IX0001",
+      "replay_payload": {
+        "endpoint": "stock/intraday/quote/IX0001",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "TAIEX",
+        "source_symbol": "IX0001",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1030",
+          "observedAt": "2026-09-30T02:30:01.583Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "5f41bb47-b47e-404c-8227-5eda4bcf71df"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-30T02:30:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-30",
+            "type": "INDEX",
+            "price": 48273.56,
+            "change": 641.6,
+            "market": "TSE",
+            "endpoint": "stock/intraday/quote/IX0001",
+            "exchange": "TWSE",
+            "provider": "fugle",
+            "captured_at": "2026-09-30T02:30:00.000Z",
+            "price_basis": "CURRENT_SESSION_QUOTE",
+            "response_date": "2026-09-30",
+            "source_symbol": "IX0001",
+            "tw_cash_phase": "intraday",
+            "change_percent": 1.35,
+            "display_symbol": "TAIEX",
+            "previous_close": 47631.96,
+            "discovery_status": "VALIDATED",
+            "discovery_symbol": "IX0001",
+            "evidence_session_date": "2026-09-30",
+            "provider_envelope_date": "2026-09-30",
+            "tw_cash_session_contract": "TW_CASH_INTRADAY_CURRENT_SESSION_V1",
+            "provider_contract_validated": true,
+            "tw_cash_expected_session_date": "2026-09-30",
+            "tw_cash_provider_session_date": "2026-09-30"
+          },
+          "value": 48273.56,
+          "change": 641.6,
+          "provider": "fugle",
+          "capturedAt": "2026-09-30T02:30:00.000Z",
+          "sourceSymbol": "IX0001",
+          "changePercent": 1.35
+        },
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "發行量加權股價指數",
+          "type": "INDEX",
+          "total": {
+            "time": 1790735400000000
+          },
+          "change": 641.6,
+          "market": "TSE",
+          "symbol": "IX0001",
+          "lowTime": 1790730005000000,
+          "exchange": "TWSE",
+          "highTime": 1790734235000000,
+          "lowPrice": 47767.49,
+          "openTime": 1790730005000000,
+          "closeTime": 1790735400000000,
+          "highPrice": 48379.71,
+          "openPrice": 47767.49,
+          "closePrice": 48273.56,
+          "lastUpdated": 1790735400000000,
+          "changePercent": 1.35,
+          "previousClose": 47631.96
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "b5736d2a-5922-40db-be59-4c325960cdfb",
+      "business_date": "2026-09-30",
+      "provider_key": "TSM",
+      "checkpoint": "1030",
+      "recorded_at": "2026-09-30 02:30:08.967+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "TSM",
+        "source_symbol": "TSM",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1030",
+          "observedAt": "2026-09-30T02:30:01.583Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "5f41bb47-b47e-404c-8227-5eda4bcf71df"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 447.07,
+              "high": 459.43,
+              "open": 452.27,
+              "change": 4.06,
+              "current": 456.94,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.8965,
+              "previous_close": 452.88
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "TSM"
+          },
+          "value": 456.94,
+          "change": 4.06,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "TSM",
+          "changePercent": 0.8965
+        },
+        "provider_payload": {
+          "c": 456.94,
+          "d": 4.06,
+          "h": 459.43,
+          "l": 447.07,
+          "o": 452.27,
+          "t": 1790712000,
+          "dp": 0.8965,
+          "pc": 452.88
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "894da07b-431d-456b-b036-6fb37ebad5cd",
+      "business_date": "2026-09-30",
+      "provider_key": "TXF",
+      "checkpoint": "1030",
+      "recorded_at": "2026-09-30 02:30:08.967+00",
+      "http_status": 200,
+      "endpoint_class": "futopt/intraday/quote/TXF1!",
+      "replay_payload": {
+        "endpoint": "futopt/intraday/quote/TXF1!",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_FUTOPT_QUOTE",
+        "provider_key": "TXF",
+        "source_symbol": "TXF1!",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1030",
+          "observedAt": "2026-09-30T02:30:01.583Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "5f41bb47-b47e-404c-8227-5eda4bcf71df"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": "regular",
+          "source_timestamp": "2026-09-30T02:30:04.959Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-30",
+            "type": "FUTURE",
+            "price": 48514,
+            "change": 733,
+            "market": null,
+            "product": "TXF",
+            "session": "regular",
+            "exchange": "TAIFEX",
+            "provider": "fugle_futopt",
+            "captured_at": "2026-09-30T02:30:04.959Z",
+            "fallback_used": false,
+            "source_symbol": "TXF1!",
+            "change_percent": 1.53,
+            "contract_resolution": "continuous_alias"
+          },
+          "value": 48514,
+          "change": 733,
+          "provider": "fugle_futopt",
+          "capturedAt": "2026-09-30T02:30:04.959Z",
+          "sourceSymbol": "TXF1!",
+          "changePercent": 1.53
+        },
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "臺股期貨106",
+          "type": "FUTURE",
+          "total": {
+            "time": 1790735403299000
+          },
+          "change": 733,
+          "symbol": "TXFJ6",
+          "lowTime": 1790730504818000,
+          "avgPrice": 48488.69,
+          "exchange": "TAIFEX",
+          "highTime": 1790733699352000,
+          "lowPrice": 48288,
+          "openTime": 1790729100048000,
+          "closeTime": 1790735403299000,
+          "highPrice": 48646,
+          "lastTrade": {
+            "time": 1790735403299000,
+            "price": 48514
+          },
+          "openPrice": 48467,
+          "closePrice": 48514,
+          "lastUpdated": 1790735404959000,
+          "changePercent": 1.53,
+          "previousClose": 47767
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "ffca401e-54dd-429e-afc4-c5984e5706ef",
+      "business_date": "2026-09-30",
+      "provider_key": "US10Y",
+      "checkpoint": "1030",
+      "recorded_at": "2026-09-30 02:30:08.967+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "US10Y",
+        "source_symbol": "IEF",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1030",
+          "observedAt": "2026-09-30T02:30:01.583Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "5f41bb47-b47e-404c-8227-5eda4bcf71df"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 89.185,
+              "high": 89.504391,
+              "open": 89.495,
+              "change": -0.08,
+              "current": 89.45,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.0894,
+              "previous_close": 89.53
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "IEF"
+          },
+          "value": 89.45,
+          "change": -0.08,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "IEF",
+          "changePercent": -0.0894
+        },
+        "provider_payload": {
+          "c": 89.45,
+          "d": -0.08,
+          "h": 89.504391,
+          "l": 89.185,
+          "o": 89.495,
+          "t": 1790712000,
+          "dp": -0.0894,
+          "pc": 89.53
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "c82bb84e-6cc9-4134-805b-7069105bfb1c",
+      "business_date": "2026-09-30",
+      "provider_key": "VIX",
+      "checkpoint": "1030",
+      "recorded_at": "2026-09-30 02:30:08.967+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "VIX",
+        "source_symbol": "VXX",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1030",
+          "observedAt": "2026-09-30T02:30:01.583Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "5f41bb47-b47e-404c-8227-5eda4bcf71df"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 17.265,
+              "high": 17.59,
+              "open": 17.34,
+              "change": -0.01,
+              "current": 17.45,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.0573,
+              "previous_close": 17.46
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "VXX"
+          },
+          "value": 17.45,
+          "change": -0.01,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "VXX",
+          "changePercent": -0.0573
+        },
+        "provider_payload": {
+          "c": 17.45,
+          "d": -0.01,
+          "h": 17.59,
+          "l": 17.265,
+          "o": 17.34,
+          "t": 1790712000,
+          "dp": -0.0573,
+          "pc": 17.46
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "841ceb22-3302-4a26-9d05-69aa7f48662a",
+      "business_date": "2026-09-30",
+      "provider_key": "2330",
+      "checkpoint": "1300",
+      "recorded_at": "2026-09-30 05:00:09.5+00",
+      "http_status": 200,
+      "endpoint_class": "stock/intraday/quote/2330",
+      "replay_payload": {
+        "endpoint": "stock/intraday/quote/2330",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "2330",
+        "source_symbol": "2330",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1300",
+          "observedAt": "2026-09-30T05:00:02.215Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7aa10233-770a-41f9-a395-ee71220ad232"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-30T05:00:04.224Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-30",
+            "type": "EQUITY",
+            "price": 2495,
+            "change": 20,
+            "market": "TSE",
+            "endpoint": "stock/intraday/quote/2330",
+            "exchange": "TWSE",
+            "provider": "fugle",
+            "captured_at": "2026-09-30T05:00:04.224Z",
+            "price_basis": "CURRENT_SESSION_QUOTE",
+            "response_date": "2026-09-30",
+            "source_symbol": "2330",
+            "tw_cash_phase": "intraday",
+            "change_percent": 0.81,
+            "display_symbol": "2330",
+            "previous_close": 2475,
+            "discovery_status": null,
+            "discovery_symbol": null,
+            "evidence_session_date": "2026-09-30",
+            "provider_envelope_date": "2026-09-30",
+            "tw_cash_session_contract": "TW_CASH_INTRADAY_CURRENT_SESSION_V1",
+            "provider_contract_validated": true,
+            "tw_cash_expected_session_date": "2026-09-30",
+            "tw_cash_provider_session_date": "2026-09-30"
+          },
+          "value": 2495,
+          "change": 20,
+          "provider": "fugle",
+          "capturedAt": "2026-09-30T05:00:04.224Z",
+          "sourceSymbol": "2330",
+          "changePercent": 0.81
+        },
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "台積電",
+          "type": "EQUITY",
+          "total": {
+            "time": 1790744401908844
+          },
+          "change": 20,
+          "market": "TSE",
+          "symbol": "2330",
+          "lowTime": 1790730263203847,
+          "avgPrice": 2500.35,
+          "exchange": "TWSE",
+          "highTime": 1790733472031665,
+          "lowPrice": 2490,
+          "openTime": 1790730009773644,
+          "closeTime": 1790744401908844,
+          "highPrice": 2510,
+          "lastTrade": {
+            "time": 1790744401908844,
+            "price": 2495
+          },
+          "openPrice": 2495,
+          "closePrice": 2495,
+          "lastUpdated": 1790744404224578,
+          "changePercent": 0.81,
+          "previousClose": 2475,
+          "referencePrice": 2475
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "a7107ed2-bd40-47d8-a532-27f0921f63ab",
+      "business_date": "2026-09-30",
+      "provider_key": "DXY",
+      "checkpoint": "1300",
+      "recorded_at": "2026-09-30 05:00:09.5+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "DXY",
+        "source_symbol": "UUP",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1300",
+          "observedAt": "2026-09-30T05:00:02.215Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7aa10233-770a-41f9-a395-ee71220ad232"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 28.73,
+              "high": 28.81,
+              "open": 28.73,
+              "change": 0.05,
+              "current": 28.75,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.1742,
+              "previous_close": 28.7
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "UUP"
+          },
+          "value": 28.75,
+          "change": 0.05,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "UUP",
+          "changePercent": 0.1742
+        },
+        "provider_payload": {
+          "c": 28.75,
+          "d": 0.05,
+          "h": 28.81,
+          "l": 28.73,
+          "o": 28.73,
+          "t": 1790712000,
+          "dp": 0.1742,
+          "pc": 28.7
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "5c05efcd-448b-4497-9441-329f1030114d",
+      "business_date": "2026-09-30",
+      "provider_key": "IXIC",
+      "checkpoint": "1300",
+      "recorded_at": "2026-09-30 05:00:09.5+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "IXIC",
+        "source_symbol": "QQQ",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1300",
+          "observedAt": "2026-09-30T05:00:02.215Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7aa10233-770a-41f9-a395-ee71220ad232"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 735.34,
+              "high": 740.5799,
+              "open": 740.145,
+              "change": 1.4,
+              "current": 737.93,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.1901,
+              "previous_close": 736.53
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "QQQ"
+          },
+          "value": 737.93,
+          "change": 1.4,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "QQQ",
+          "changePercent": 0.1901
+        },
+        "provider_payload": {
+          "c": 737.93,
+          "d": 1.4,
+          "h": 740.5799,
+          "l": 735.34,
+          "o": 740.145,
+          "t": 1790712000,
+          "dp": 0.1901,
+          "pc": 736.53
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "16f15a93-c4fa-43c5-88e3-25f7e04092aa",
+      "business_date": "2026-09-30",
+      "provider_key": "NVDA",
+      "checkpoint": "1300",
+      "recorded_at": "2026-09-30 05:00:09.5+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "NVDA",
+        "source_symbol": "NVDA",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1300",
+          "observedAt": "2026-09-30T05:00:02.215Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7aa10233-770a-41f9-a395-ee71220ad232"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 227.025,
+              "high": 232.82,
+              "open": 230.97,
+              "change": -1.65,
+              "current": 227.21,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.721,
+              "previous_close": 228.86
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "NVDA"
+          },
+          "value": 227.21,
+          "change": -1.65,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "NVDA",
+          "changePercent": -0.721
+        },
+        "provider_payload": {
+          "c": 227.21,
+          "d": -1.65,
+          "h": 232.82,
+          "l": 227.025,
+          "o": 230.97,
+          "t": 1790712000,
+          "dp": -0.721,
+          "pc": 228.86
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "aae4ee02-614d-4199-9f61-5e1c3ea2517e",
+      "business_date": "2026-09-30",
+      "provider_key": "SOX",
+      "checkpoint": "1300",
+      "recorded_at": "2026-09-30 05:00:09.5+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "SOX",
+        "source_symbol": "SOXX",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1300",
+          "observedAt": "2026-09-30T05:00:02.215Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7aa10233-770a-41f9-a395-ee71220ad232"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 565.3,
+              "high": 574.4687,
+              "open": 569.79,
+              "change": 6.65,
+              "current": 567.44,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 1.1858,
+              "previous_close": 560.79
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "SOXX"
+          },
+          "value": 567.44,
+          "change": 6.65,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "SOXX",
+          "changePercent": 1.1858
+        },
+        "provider_payload": {
+          "c": 567.44,
+          "d": 6.65,
+          "h": 574.4687,
+          "l": 565.3,
+          "o": 569.79,
+          "t": 1790712000,
+          "dp": 1.1858,
+          "pc": 560.79
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "658a7a0e-da59-49fb-996a-9cf2fe233e80",
+      "business_date": "2026-09-30",
+      "provider_key": "SPX",
+      "checkpoint": "1300",
+      "recorded_at": "2026-09-30 05:00:09.5+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "SPX",
+        "source_symbol": "SPY",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1300",
+          "observedAt": "2026-09-30T05:00:02.215Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7aa10233-770a-41f9-a395-ee71220ad232"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 762.35,
+              "high": 766.98,
+              "open": 766.83,
+              "change": -1.41,
+              "current": 764.2,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.1842,
+              "previous_close": 765.61
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "SPY"
+          },
+          "value": 764.2,
+          "change": -1.41,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "SPY",
+          "changePercent": -0.1842
+        },
+        "provider_payload": {
+          "c": 764.2,
+          "d": -1.41,
+          "h": 766.98,
+          "l": 762.35,
+          "o": 766.83,
+          "t": 1790712000,
+          "dp": -0.1842,
+          "pc": 765.61
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "ae40588e-c884-44f2-b8fd-8561b3cd822b",
+      "business_date": "2026-09-30",
+      "provider_key": "TAIEX",
+      "checkpoint": "1300",
+      "recorded_at": "2026-09-30 05:00:09.5+00",
+      "http_status": 200,
+      "endpoint_class": "stock/intraday/quote/IX0001",
+      "replay_payload": {
+        "endpoint": "stock/intraday/quote/IX0001",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "TAIEX",
+        "source_symbol": "IX0001",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1300",
+          "observedAt": "2026-09-30T05:00:02.215Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7aa10233-770a-41f9-a395-ee71220ad232"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-30T05:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-30",
+            "type": "INDEX",
+            "price": 48215.69,
+            "change": 583.73,
+            "market": "TSE",
+            "endpoint": "stock/intraday/quote/IX0001",
+            "exchange": "TWSE",
+            "provider": "fugle",
+            "captured_at": "2026-09-30T05:00:00.000Z",
+            "price_basis": "CURRENT_SESSION_QUOTE",
+            "response_date": "2026-09-30",
+            "source_symbol": "IX0001",
+            "tw_cash_phase": "intraday",
+            "change_percent": 1.23,
+            "display_symbol": "TAIEX",
+            "previous_close": 47631.96,
+            "discovery_status": "VALIDATED",
+            "discovery_symbol": "IX0001",
+            "evidence_session_date": "2026-09-30",
+            "provider_envelope_date": "2026-09-30",
+            "tw_cash_session_contract": "TW_CASH_INTRADAY_CURRENT_SESSION_V1",
+            "provider_contract_validated": true,
+            "tw_cash_expected_session_date": "2026-09-30",
+            "tw_cash_provider_session_date": "2026-09-30"
+          },
+          "value": 48215.69,
+          "change": 583.73,
+          "provider": "fugle",
+          "capturedAt": "2026-09-30T05:00:00.000Z",
+          "sourceSymbol": "IX0001",
+          "changePercent": 1.23
+        },
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "發行量加權股價指數",
+          "type": "INDEX",
+          "total": {
+            "time": 1790744400000000
+          },
+          "change": 583.73,
+          "market": "TSE",
+          "symbol": "IX0001",
+          "lowTime": 1790730005000000,
+          "exchange": "TWSE",
+          "highTime": 1790734235000000,
+          "lowPrice": 47767.49,
+          "openTime": 1790730005000000,
+          "closeTime": 1790744400000000,
+          "highPrice": 48379.71,
+          "openPrice": 47767.49,
+          "closePrice": 48215.69,
+          "lastUpdated": 1790744400000000,
+          "changePercent": 1.23,
+          "previousClose": 47631.96
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "e48dd4df-7499-4b88-82d0-7f390c443747",
+      "business_date": "2026-09-30",
+      "provider_key": "TSM",
+      "checkpoint": "1300",
+      "recorded_at": "2026-09-30 05:00:09.5+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "TSM",
+        "source_symbol": "TSM",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1300",
+          "observedAt": "2026-09-30T05:00:02.215Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7aa10233-770a-41f9-a395-ee71220ad232"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 447.07,
+              "high": 459.43,
+              "open": 452.27,
+              "change": 4.06,
+              "current": 456.94,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.8965,
+              "previous_close": 452.88
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "TSM"
+          },
+          "value": 456.94,
+          "change": 4.06,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "TSM",
+          "changePercent": 0.8965
+        },
+        "provider_payload": {
+          "c": 456.94,
+          "d": 4.06,
+          "h": 459.43,
+          "l": 447.07,
+          "o": 452.27,
+          "t": 1790712000,
+          "dp": 0.8965,
+          "pc": 452.88
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "b481979f-84e2-447e-848d-4d334801eb70",
+      "business_date": "2026-09-30",
+      "provider_key": "TXF",
+      "checkpoint": "1300",
+      "recorded_at": "2026-09-30 05:00:09.5+00",
+      "http_status": 200,
+      "endpoint_class": "futopt/intraday/quote/TXF1!",
+      "replay_payload": {
+        "endpoint": "futopt/intraday/quote/TXF1!",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_FUTOPT_QUOTE",
+        "provider_key": "TXF",
+        "source_symbol": "TXF1!",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1300",
+          "observedAt": "2026-09-30T05:00:02.215Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7aa10233-770a-41f9-a395-ee71220ad232"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": "regular",
+          "source_timestamp": "2026-09-30T05:00:05.584Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-30",
+            "type": "FUTURE",
+            "price": 48455,
+            "change": 674,
+            "market": null,
+            "product": "TXF",
+            "session": "regular",
+            "exchange": "TAIFEX",
+            "provider": "fugle_futopt",
+            "captured_at": "2026-09-30T05:00:05.584Z",
+            "fallback_used": false,
+            "source_symbol": "TXF1!",
+            "change_percent": 1.41,
+            "contract_resolution": "continuous_alias"
+          },
+          "value": 48455,
+          "change": 674,
+          "provider": "fugle_futopt",
+          "capturedAt": "2026-09-30T05:00:05.584Z",
+          "sourceSymbol": "TXF1!",
+          "changePercent": 1.41
+        },
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "臺股期貨106",
+          "type": "FUTURE",
+          "total": {
+            "time": 1790744405067000
+          },
+          "change": 674,
+          "symbol": "TXFJ6",
+          "lowTime": 1790730504818000,
+          "avgPrice": 48471.79,
+          "exchange": "TAIFEX",
+          "highTime": 1790733699352000,
+          "lowPrice": 48288,
+          "openTime": 1790729100048000,
+          "closeTime": 1790744405067000,
+          "highPrice": 48646,
+          "lastTrade": {
+            "time": 1790744405067000,
+            "price": 48455
+          },
+          "openPrice": 48467,
+          "closePrice": 48455,
+          "lastUpdated": 1790744405584000,
+          "changePercent": 1.41,
+          "previousClose": 47767
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "c136524f-bc7b-43c6-a815-b4a044980650",
+      "business_date": "2026-09-30",
+      "provider_key": "US10Y",
+      "checkpoint": "1300",
+      "recorded_at": "2026-09-30 05:00:09.5+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "US10Y",
+        "source_symbol": "IEF",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1300",
+          "observedAt": "2026-09-30T05:00:02.215Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7aa10233-770a-41f9-a395-ee71220ad232"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 89.185,
+              "high": 89.504391,
+              "open": 89.495,
+              "change": -0.08,
+              "current": 89.45,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.0894,
+              "previous_close": 89.53
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "IEF"
+          },
+          "value": 89.45,
+          "change": -0.08,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "IEF",
+          "changePercent": -0.0894
+        },
+        "provider_payload": {
+          "c": 89.45,
+          "d": -0.08,
+          "h": 89.504391,
+          "l": 89.185,
+          "o": 89.495,
+          "t": 1790712000,
+          "dp": -0.0894,
+          "pc": 89.53
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "22f4b422-7894-48d0-9433-b462535985a6",
+      "business_date": "2026-09-30",
+      "provider_key": "VIX",
+      "checkpoint": "1300",
+      "recorded_at": "2026-09-30 05:00:09.5+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "VIX",
+        "source_symbol": "VXX",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "1300",
+          "observedAt": "2026-09-30T05:00:02.215Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7aa10233-770a-41f9-a395-ee71220ad232"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 17.265,
+              "high": 17.59,
+              "open": 17.34,
+              "change": -0.01,
+              "current": 17.45,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.0573,
+              "previous_close": 17.46
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "VXX"
+          },
+          "value": 17.45,
+          "change": -0.01,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "VXX",
+          "changePercent": -0.0573
+        },
+        "provider_payload": {
+          "c": 17.45,
+          "d": -0.01,
+          "h": 17.59,
+          "l": 17.265,
+          "o": 17.34,
+          "t": 1790712000,
+          "dp": -0.0573,
+          "pc": 17.46
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "2f4c475c-2675-4a3c-ac78-023aa6b992a8",
+      "business_date": "2026-09-30",
+      "provider_key": "2330",
+      "checkpoint": "readiness_0650",
+      "recorded_at": "2026-09-29 22:50:01.675+00",
+      "http_status": 200,
+      "endpoint_class": "stock/intraday/ticker/2330",
+      "replay_payload": {
+        "endpoint": "stock/intraday/ticker/2330",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "2330",
+        "source_symbol": "2330",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-29T22:50:01.345Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "e6b1557a-3460-4703-ba70-4a027a3a4856"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-28T16:00:00.000Z",
+          "evidence_session_date": "2026-09-29",
+          "provider_envelope_date": "2026-09-29"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-29",
+            "type": "EQUITY",
+            "price": 2475,
+            "change": 0,
+            "market": "TSE",
+            "endpoint": "stock/intraday/ticker/2330",
+            "exchange": "TWSE",
+            "provider": "fugle",
+            "captured_at": "2026-09-28T16:00:00.000Z",
+            "price_basis": "CURRENT_SESSION_REFERENCE_PRICE",
+            "response_date": "2026-09-29",
+            "source_symbol": "2330",
+            "tw_cash_phase": "premarket",
+            "change_percent": 0,
+            "display_symbol": "2330",
+            "previous_close": 2475,
+            "discovery_status": null,
+            "discovery_symbol": null,
+            "evidence_session_date": "2026-09-29",
+            "provider_envelope_date": "2026-09-29",
+            "tw_cash_session_contract": "TW_CASH_PREMARKET_LATEST_COMPLETED_SESSION_V1",
+            "provider_contract_validated": true,
+            "tw_cash_expected_session_date": "2026-09-29",
+            "tw_cash_provider_session_date": "2026-09-29"
+          },
+          "value": 2475,
+          "change": 0,
+          "provider": "fugle",
+          "capturedAt": "2026-09-28T16:00:00.000Z",
+          "sourceSymbol": "2330",
+          "changePercent": 0
+        },
+        "provider_payload": {
+          "date": "2026-09-29",
+          "name": "台積電",
+          "type": "EQUITY",
+          "market": "TSE",
+          "symbol": "2330",
+          "exchange": "TWSE",
+          "industry": "24",
+          "securityType": "01",
+          "previousClose": 2475,
+          "referencePrice": 2475
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "23196af5-dd1f-458a-9a8a-b667fd38896c",
+      "business_date": "2026-09-30",
+      "provider_key": "DXY",
+      "checkpoint": "readiness_0650",
+      "recorded_at": "2026-09-29 22:50:01.675+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "DXY",
+        "source_symbol": "UUP",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-29T22:50:01.345Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "e6b1557a-3460-4703-ba70-4a027a3a4856"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 28.73,
+              "high": 28.81,
+              "open": 28.73,
+              "change": 0.05,
+              "current": 28.75,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.1742,
+              "previous_close": 28.7
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "UUP"
+          },
+          "value": 28.75,
+          "change": 0.05,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "UUP",
+          "changePercent": 0.1742
+        },
+        "provider_payload": {
+          "c": 28.75,
+          "d": 0.05,
+          "h": 28.81,
+          "l": 28.73,
+          "o": 28.73,
+          "t": 1790712000,
+          "dp": 0.1742,
+          "pc": 28.7
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "9dcc75e5-5966-4ba3-acde-33e9ee8c1521",
+      "business_date": "2026-09-30",
+      "provider_key": "IXIC",
+      "checkpoint": "readiness_0650",
+      "recorded_at": "2026-09-29 22:50:01.675+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "IXIC",
+        "source_symbol": "QQQ",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-29T22:50:01.345Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "e6b1557a-3460-4703-ba70-4a027a3a4856"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 735.34,
+              "high": 740.5799,
+              "open": 740.145,
+              "change": 1.4,
+              "current": 737.93,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.1901,
+              "previous_close": 736.53
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "QQQ"
+          },
+          "value": 737.93,
+          "change": 1.4,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "QQQ",
+          "changePercent": 0.1901
+        },
+        "provider_payload": {
+          "c": 737.93,
+          "d": 1.4,
+          "h": 740.5799,
+          "l": 735.34,
+          "o": 740.145,
+          "t": 1790712000,
+          "dp": 0.1901,
+          "pc": 736.53
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "1869dc0e-1654-44e1-824c-86afbc5e4d37",
+      "business_date": "2026-09-30",
+      "provider_key": "NVDA",
+      "checkpoint": "readiness_0650",
+      "recorded_at": "2026-09-29 22:50:01.675+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "NVDA",
+        "source_symbol": "NVDA",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-29T22:50:01.345Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "e6b1557a-3460-4703-ba70-4a027a3a4856"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 227.025,
+              "high": 232.82,
+              "open": 230.97,
+              "change": -1.65,
+              "current": 227.21,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.721,
+              "previous_close": 228.86
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "NVDA"
+          },
+          "value": 227.21,
+          "change": -1.65,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "NVDA",
+          "changePercent": -0.721
+        },
+        "provider_payload": {
+          "c": 227.21,
+          "d": -1.65,
+          "h": 232.82,
+          "l": 227.025,
+          "o": 230.97,
+          "t": 1790712000,
+          "dp": -0.721,
+          "pc": 228.86
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "676f8010-f225-4491-8c2b-3afec25befa6",
+      "business_date": "2026-09-30",
+      "provider_key": "SOX",
+      "checkpoint": "readiness_0650",
+      "recorded_at": "2026-09-29 22:50:01.675+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "SOX",
+        "source_symbol": "SOXX",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-29T22:50:01.345Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "e6b1557a-3460-4703-ba70-4a027a3a4856"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 565.3,
+              "high": 574.4687,
+              "open": 569.79,
+              "change": 6.65,
+              "current": 567.44,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 1.1858,
+              "previous_close": 560.79
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "SOXX"
+          },
+          "value": 567.44,
+          "change": 6.65,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "SOXX",
+          "changePercent": 1.1858
+        },
+        "provider_payload": {
+          "c": 567.44,
+          "d": 6.65,
+          "h": 574.4687,
+          "l": 565.3,
+          "o": 569.79,
+          "t": 1790712000,
+          "dp": 1.1858,
+          "pc": 560.79
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "cdaa7fcf-29c2-4f82-86cc-107b60b946a5",
+      "business_date": "2026-09-30",
+      "provider_key": "SPX",
+      "checkpoint": "readiness_0650",
+      "recorded_at": "2026-09-29 22:50:01.675+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "SPX",
+        "source_symbol": "SPY",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-29T22:50:01.345Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "e6b1557a-3460-4703-ba70-4a027a3a4856"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 762.35,
+              "high": 766.98,
+              "open": 766.83,
+              "change": -1.41,
+              "current": 764.2,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.1842,
+              "previous_close": 765.61
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "SPY"
+          },
+          "value": 764.2,
+          "change": -1.41,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "SPY",
+          "changePercent": -0.1842
+        },
+        "provider_payload": {
+          "c": 764.2,
+          "d": -1.41,
+          "h": 766.98,
+          "l": 762.35,
+          "o": 766.83,
+          "t": 1790712000,
+          "dp": -0.1842,
+          "pc": 765.61
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "abdd3005-b485-4b49-a129-8958943ca8cd",
+      "business_date": "2026-09-30",
+      "provider_key": "TAIEX",
+      "checkpoint": "readiness_0650",
+      "recorded_at": "2026-09-29 22:50:01.675+00",
+      "http_status": 200,
+      "endpoint_class": "stock/intraday/ticker/IX0001",
+      "replay_payload": {
+        "endpoint": "stock/intraday/ticker/IX0001",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "TAIEX",
+        "source_symbol": "IX0001",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-29T22:50:01.345Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "e6b1557a-3460-4703-ba70-4a027a3a4856"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-28T16:00:00.000Z",
+          "evidence_session_date": "2026-09-29",
+          "provider_envelope_date": "2026-09-29"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-29",
+            "type": "INDEX",
+            "price": 48024.6,
+            "change": 0,
+            "market": "TSE",
+            "endpoint": "stock/intraday/ticker/IX0001",
+            "exchange": "TWSE",
+            "provider": "fugle",
+            "captured_at": "2026-09-28T16:00:00.000Z",
+            "price_basis": "CURRENT_SESSION_PREVIOUS_CLOSE_REFERENCE",
+            "response_date": "2026-09-29",
+            "source_symbol": "IX0001",
+            "tw_cash_phase": "premarket",
+            "change_percent": 0,
+            "display_symbol": "TAIEX",
+            "previous_close": 48024.6,
+            "discovery_status": "EMPTY_PHASE_VARIANT_DIRECT_RESOURCE_VALID",
+            "discovery_symbol": "IX0001",
+            "evidence_session_date": "2026-09-29",
+            "provider_envelope_date": "2026-09-29",
+            "tw_cash_session_contract": "TW_CASH_PREMARKET_LATEST_COMPLETED_SESSION_V1",
+            "provider_contract_validated": true,
+            "tw_cash_expected_session_date": "2026-09-29",
+            "tw_cash_provider_session_date": "2026-09-29"
+          },
+          "value": 48024.6,
+          "change": 0,
+          "provider": "fugle",
+          "capturedAt": "2026-09-28T16:00:00.000Z",
+          "sourceSymbol": "IX0001",
+          "changePercent": 0
+        },
+        "provider_payload": {
+          "date": "2026-09-29",
+          "name": "發行量加權股價指數",
+          "type": "INDEX",
+          "market": "TSE",
+          "symbol": "IX0001",
+          "exchange": "TWSE",
+          "openTime": "0900",
+          "closeTime": "1330",
+          "previousClose": 48024.6
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "59334eba-027e-46f6-af64-cd00bccfb217",
+      "business_date": "2026-09-30",
+      "provider_key": "TSM",
+      "checkpoint": "readiness_0650",
+      "recorded_at": "2026-09-29 22:50:01.675+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "TSM",
+        "source_symbol": "TSM",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-29T22:50:01.345Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "e6b1557a-3460-4703-ba70-4a027a3a4856"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 447.07,
+              "high": 459.43,
+              "open": 452.27,
+              "change": 4.06,
+              "current": 456.94,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": 0.8965,
+              "previous_close": 452.88
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "TSM"
+          },
+          "value": 456.94,
+          "change": 4.06,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "TSM",
+          "changePercent": 0.8965
+        },
+        "provider_payload": {
+          "c": 456.94,
+          "d": 4.06,
+          "h": 459.43,
+          "l": 447.07,
+          "o": 452.27,
+          "t": 1790712000,
+          "dp": 0.8965,
+          "pc": 452.88
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "d2ac22f4-a728-4463-9abd-2c74f58a189c",
+      "business_date": "2026-09-30",
+      "provider_key": "TXF",
+      "checkpoint": "readiness_0650",
+      "recorded_at": "2026-09-29 22:50:01.675+00",
+      "http_status": 200,
+      "endpoint_class": "futopt/intraday/quote/TXF1!?session=afterhours",
+      "replay_payload": {
+        "endpoint": "futopt/intraday/quote/TXF1!?session=afterhours",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_FUTOPT_QUOTE",
+        "provider_key": "TXF",
+        "source_symbol": "TXF1!",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-29T22:50:01.345Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "e6b1557a-3460-4703-ba70-4a027a3a4856"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": "afterhours",
+          "source_timestamp": "2026-09-29T21:00:00.071Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": "2026-09-29"
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "2026-09-29",
+            "type": "FUTURE_AH",
+            "price": 48479,
+            "change": 698,
+            "market": null,
+            "product": "TXF",
+            "session": "afterhours",
+            "exchange": "TAIFEX",
+            "provider": "fugle_futopt",
+            "captured_at": "2026-09-29T21:00:00.071Z",
+            "fallback_used": false,
+            "source_symbol": "TXF1!",
+            "change_percent": 1.46,
+            "contract_resolution": "continuous_alias"
+          },
+          "value": 48479,
+          "change": 698,
+          "provider": "fugle_futopt",
+          "capturedAt": "2026-09-29T21:00:00.071Z",
+          "sourceSymbol": "TXF1!",
+          "changePercent": 1.46
+        },
+        "provider_payload": {
+          "date": "2026-09-29",
+          "name": "臺股期貨106",
+          "type": "FUTURE_AH",
+          "total": {
+            "time": 1790715598462000
+          },
+          "change": 698,
+          "symbol": "TXFJ6",
+          "lowTime": 1790665373152000,
+          "avgPrice": 48304.82,
+          "exchange": "TAIFEX",
+          "highTime": 1790693846695000,
+          "lowPrice": 47920,
+          "openTime": 1790665200065000,
+          "closeTime": 1790715598462000,
+          "highPrice": 48619,
+          "lastTrade": {
+            "time": 1790715598462000,
+            "price": 48479
+          },
+          "openPrice": 47992,
+          "closePrice": 48479,
+          "lastUpdated": 1790715600071000,
+          "changePercent": 1.46,
+          "previousClose": 47956
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "083f8b7f-32aa-4630-b236-740213f7492d",
+      "business_date": "2026-09-30",
+      "provider_key": "US10Y",
+      "checkpoint": "readiness_0650",
+      "recorded_at": "2026-09-29 22:50:01.675+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "US10Y",
+        "source_symbol": "IEF",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-29T22:50:01.345Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "e6b1557a-3460-4703-ba70-4a027a3a4856"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 89.185,
+              "high": 89.504391,
+              "open": 89.495,
+              "change": -0.08,
+              "current": 89.45,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.0894,
+              "previous_close": 89.53
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "IEF"
+          },
+          "value": 89.45,
+          "change": -0.08,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "IEF",
+          "changePercent": -0.0894
+        },
+        "provider_payload": {
+          "c": 89.45,
+          "d": -0.08,
+          "h": 89.504391,
+          "l": 89.185,
+          "o": 89.495,
+          "t": 1790712000,
+          "dp": -0.0894,
+          "pc": 89.53
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    },
+    {
+      "id": "e0aefcf2-0a5e-4d4d-8e8f-65509ad8bc6b",
+      "business_date": "2026-09-30",
+      "provider_key": "VIX",
+      "checkpoint": "readiness_0650",
+      "recorded_at": "2026-09-29 22:50:01.675+00",
+      "http_status": 200,
+      "endpoint_class": "quote",
+      "replay_payload": {
+        "endpoint": "quote",
+        "http_status": 200,
+        "adapter_kind": "FINNHUB_QUOTE",
+        "provider_key": "VIX",
+        "source_symbol": "VXX",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-29T22:50:01.345Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "e6b1557a-3460-4703-ba70-4a027a3a4856"
+        },
+        "provider_error": null,
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T20:00:00.000Z",
+          "evidence_session_date": "2026-09-30",
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "quote": {
+              "low": 17.265,
+              "high": 17.59,
+              "open": 17.34,
+              "change": -0.01,
+              "current": 17.45,
+              "timestamp": 1790712000,
+              "captured_at": "2026-09-29T20:00:00.000Z",
+              "change_percent": -0.0573,
+              "previous_close": 17.46
+            },
+            "provider": "finnhub",
+            "finnhub_symbol": "VXX"
+          },
+          "value": 17.45,
+          "change": -0.01,
+          "provider": "finnhub",
+          "capturedAt": "2026-09-29T20:00:00.000Z",
+          "sourceSymbol": "VXX",
+          "changePercent": -0.0573
+        },
+        "provider_payload": {
+          "c": 17.45,
+          "d": -0.01,
+          "h": 17.59,
+          "l": 17.265,
+          "o": 17.34,
+          "t": 1790712000,
+          "dp": -0.0573,
+          "pc": 17.46
+        },
+        "expected_contract_reason": null,
+        "expected_contract_result": "PASS"
+      },
+      "recorder_version": "PRODUCTION_EVIDENCE_RECORDER_V1",
+      "contract_result": "PASS",
+      "contract_reason": null
+    }
+  ]
+}

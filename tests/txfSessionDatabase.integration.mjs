@@ -10,6 +10,7 @@ import {
   validateAtomicCheckpointEvidenceRows,
 } from '../supabase/functions/_shared/fetch-checkpoint-evidence.mjs';
 import { taiwanCashExpectedSession } from '../supabase/functions/_shared/taiwan-cash-session-contract.mjs';
+import { GLOBAL8_SOURCE_SYMBOLS, latestCompletedUsSession } from '../supabase/functions/_shared/market-session-contract.mjs';
 
 const scope = 'ma-txf-session-parity-20260921';
 const database = process.env.MA_ISOLATED_TEST_DB;
@@ -88,18 +89,19 @@ function batch({ tradingDate, observedAt, txfSessionDate, txfSourceTimestamp, tx
     const market = ['TAIEX', '2330', 'TXF'].includes(providerKey) ? 'TW' : 'US';
     const sourceTimestamp = providerKey === 'TXF' ? txfSourceTimestamp
       : market === 'TW' ? `${cashSessionDate}T16:00:00+08:00`
-        : new Date(Date.parse(observedAt) - 24 * 60 * 60 * 1000).toISOString();
+        // Synthetic Sep/Oct controls: US daylight-time completed cash session.
+        : `${latestCompletedUsSession(Date.parse(observedAt))}T20:00:00Z`;
     const quote = {
       value: 100 + index, change: 1, changePercent: 0.1, capturedAt: sourceTimestamp,
       provider: providerKey === 'TXF' ? 'fugle_futopt' : market === 'TW' ? 'fugle' : 'finnhub',
-      sourceSymbol: providerKey === 'TXF' ? 'TXF1!' : providerKey,
+      sourceSymbol: providerKey === 'TXF' ? 'TXF1!' : GLOBAL8_SOURCE_SYMBOLS[providerKey] || providerKey,
       raw: providerKey === 'TXF' ? { date: txfSessionDate, session: txfSession }
         : ['TAIEX', '2330'].includes(providerKey)
           ? { date: cashSessionDate, response_date: cashSessionDate }
           : {},
     };
     const evidence = buildCheckpointEvidence(input, quote, {
-      displaySymbol: providerKey, finnhubSymbol: providerKey, market, name: providerKey,
+      displaySymbol: providerKey, finnhubSymbol: GLOBAL8_SOURCE_SYMBOLS[providerKey] || providerKey, market, name: providerKey,
     });
     return evidence.valid ? { provider_key: providerKey, ...evidence.row } : { provider_key: providerKey, error: evidence.error };
   });

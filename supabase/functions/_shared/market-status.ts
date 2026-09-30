@@ -1,3 +1,4 @@
+import calendar from './market-calendar-data.json' with { type: 'json' };
 export type MarketStatusCode = 'OPEN' | 'WEEKEND' | 'HOLIDAY' | 'TYPHOON' | 'EMERGENCY_CLOSE';
 export type SessionType = 'FULL_DAY' | 'HALF_DAY' | 'CLOSED';
 
@@ -12,20 +13,8 @@ export interface ResolvedMarketStatus {
   session_type: SessionType;
 }
 
-const TAIWAN_HOLIDAYS_2026: Record<string, string> = {
-  '2026-01-01': '元旦',
-  '2026-02-16': '春節休市',
-  '2026-02-17': '春節休市',
-  '2026-02-18': '春節休市',
-  '2026-02-19': '春節休市',
-  '2026-02-20': '春節休市',
-  '2026-02-27': '和平紀念日補假',
-  '2026-04-03': '兒童節補假',
-  '2026-04-06': '清明節補假',
-  '2026-06-19': '端午節',
-  '2026-09-25': '中秋節',
-  '2026-10-09': '國慶日補假',
-};
+// Generated calendar data mirror is checked byte-for-byte in CI.
+const TAIWAN_HOLIDAYS_2026: Record<string, string> = Object.fromEntries(calendar.TW.closed.map(date => [date, '官方休市日']));
 
 // Temporary canonical exceptional closure source until a DB market calendar exists.
 // Source: TWSE announced a full-day typhoon closure for 2026-07-10.
@@ -71,7 +60,7 @@ export function previousTradingDay(dateString: string): string | null {
 
 export function resolveMarketStatus(dateString: string): ResolvedMarketStatus {
   const date = dateFromString(dateString);
-  if (!date) {
+  if (!date || formatDate(date) !== dateString || dateString < calendar.TW.from || dateString > calendar.TW.through) {
     return {
       market_status: 'EMERGENCY_CLOSE',
       market_date: dateString,

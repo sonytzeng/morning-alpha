@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import calendar from '../supabase/functions/_shared/market-calendar-data.json' with {type:'json'};
 import {
   CHECKPOINT_PROVIDER_CONTRACT_VERSION,
   CHECKPOINT_PROVIDER_KEYS,
@@ -24,7 +25,9 @@ function evidenceRows(overrides = {}) {
     value: 100 + index,
     change_percent: index / 10,
     source: providerKey === 'TAIEX' ? 'TWSE' : 'LOCAL_PROVIDER',
-    source_timestamp: '2026-09-14T09:30:00+08:00',
+    // Explicit synthetic fixture: Monday Taiwan runtime consumes Friday's
+    // completed US cash session, not a fabricated Monday US quote.
+    source_timestamp: calendar.global8_source_symbols[providerKey] ? '2026-09-11T16:00:00-04:00' : '2026-09-14T09:30:00+08:00',
     captured_at: '2026-09-14T09:30:00+08:00',
     trading_date: '2026-09-14',
     checkpoint: '0930',
@@ -37,7 +40,7 @@ function evidenceRows(overrides = {}) {
       contract: 'FETCH_CHECKPOINT_EVIDENCE_V1',
       market: ['TAIEX', '2330', 'TXF'].includes(providerKey) ? 'TW' : 'US',
       name: providerKey,
-      source_symbol: providerKey,
+      source_symbol: calendar.global8_source_symbols[providerKey] || providerKey,
       change: index / 10,
       source_raw: ['TAIEX', '2330'].includes(providerKey)
         ? { date: '2026-09-14', response_date: '2026-09-14' }

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import calendar from '../supabase/functions/_shared/market-calendar-data.json' with {type:'json'};
 import {
   normalizeFugleTaiwanCoreResult,
   resolveFugle2330Provider,
@@ -136,6 +137,7 @@ test('9/23 Taiwan evidence completes one 11-row Atomic contract without changing
     correlation_id: correlationId,
     raw: {
       contract: 'FETCH_CHECKPOINT_EVIDENCE_V1',
+      source_symbol: calendar.global8_source_symbols[key] || key,
       market: ['TAIEX', '2330', 'TXF'].includes(key) ? 'TW' : 'US',
       change: 0,
       freshness_status: ['TAIEX', '2330', 'TXF'].includes(key) ? 'fresh' : 'provider_returned',

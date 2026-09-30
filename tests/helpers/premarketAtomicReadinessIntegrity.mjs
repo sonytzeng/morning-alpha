@@ -243,7 +243,7 @@ function resolveRuntimeSparseRecoveryPredecessorIntegrity(registry, artifactByte
   };
 }
 
-export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+function resolveResearchEvidenceRecoveryIntegrity(registry, artifactBytes, readSource = read) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/research-evidence-recovery-baseline-transition-20260930.json'));
   const candidate = resolveReviewedBaselineTransition({
     manifest, readSource,
@@ -257,6 +257,35 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, r
     newCandidatePaths: candidate.newCandidatePaths,
     researchEvidenceRecoveryCandidateIntegrity: candidate,
   };
+}
+
+export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/six-bug-baseline-transition-20260930.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest, readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_RESEARCH_EVIDENCE_RECOVERY_20260930',
+    verifyPredecessor: predecessorRead => resolveResearchEvidenceRecoveryIntegrity(registry, artifactBytes, predecessorRead),
+  });
+  const declarations = manifest.reviewed_calendar_declarations;
+  assert.deepEqual(declarations.map(row => [row.path, row.name]), [
+    ['supabase/functions/_shared/market-status.ts', 'TAIWAN_HOLIDAYS_2026'],
+    ['supabase/functions/_shared/market-status.ts', 'resolveMarketStatus'],
+  ], 'only the two reviewed authoritative-calendar declarations may transition');
+  const original = JSON.parse(readSource('docs/operations/core-stability-source-manifest-20260907.json'));
+  const declarationOverrides = new Map();
+  for (const row of declarations) {
+    const record = original.protected_declarations.find(value => value.path === row.path && value.name === row.name);
+    assert.ok(record, 'protected predecessor declaration must exist');
+    assert.equal(candidate.reviewedBaselinePredecessor.declarationHash(record), row.predecessor_sha256,
+      'protected calendar predecessor hash must survive');
+    assert.match(row.candidate_sha256, /^[a-f0-9]{64}$/);
+    declarationOverrides.set(row.path + ':' + row.name, row.candidate_sha256);
+  }
+  return { ...candidate.reviewedBaselinePredecessor, fileHash:candidate.fileHash,
+    declarationHash: row => declarationOverrides.get(row.path + ':' + row.name)
+      ?? candidate.reviewedBaselinePredecessor.declarationHash(row),
+    newCandidatePaths:candidate.newCandidatePaths, sixBugCandidateIntegrity:candidate };
 }
 
 export const readPremarketAtomicReadinessIntegrity = registry =>

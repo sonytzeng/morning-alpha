@@ -88,10 +88,10 @@ test('PRECHECK_PRODUCTION_PARITY: 11 slots use one mapping, adapter, normalizati
 
 test('PRECHECK_PRODUCTION_PARITY: HTTP, stale and invalid-contract failures share one classification', () => {
   for (const [response, evidenceError, expected] of [
-    [{ status: 404 }, null, 'RESOURCE_NOT_FOUND'],
-    [{ status: 429 }, null, 'RATE_LIMITED'],
-    [{ status: 200 }, 'INVALID_CHECKPOINT_SOURCE_TIME', 'STALE_PROVIDER_DATA'],
-    [{ status: 200 }, 'INCOMPLETE_CHECKPOINT_QUOTE', 'PROVIDER_RESPONSE_CONTRACT_INVALID'],
+    [{ status: 404 }, null, 'PROVIDER_INVALID_RESPONSE'],
+    [{ status: 429 }, null, 'PROVIDER_RATE_LIMIT'],
+    [{ status: 200 }, 'INVALID_CHECKPOINT_SOURCE_TIME', 'PROVIDER_STALE_SESSION'],
+    [{ status: 200 }, 'INCOMPLETE_CHECKPOINT_QUOTE', 'PROVIDER_INVALID_RESPONSE'],
   ]) {
     assert.equal(classifyRequiredProviderFailure(response, evidenceError), expected);
   }
@@ -136,7 +136,7 @@ test('PRECHECK_PRODUCTION_PARITY: all eight US slots reject a 30-day-old quote b
     if (slot.provider === 'finnhub') {
       assert.equal(preflight.error, 'INVALID_CHECKPOINT_SOURCE_TIME', `${slot.key} 06:50`);
       assert.equal(production.error, 'INVALID_CHECKPOINT_SOURCE_TIME', `${slot.key} 07:00`);
-      assert.equal(classifyRequiredProviderFailure({ status: 200 }, preflight.error), 'STALE_PROVIDER_DATA');
+      assert.equal(classifyRequiredProviderFailure({ status: 200 }, preflight.error), 'PROVIDER_STALE_SESSION');
     } else {
       assert.equal(preflight.valid, true, `${slot.key} Taiwan preflight unaffected`);
       assert.equal(production.valid, true, `${slot.key} Taiwan production unaffected`);

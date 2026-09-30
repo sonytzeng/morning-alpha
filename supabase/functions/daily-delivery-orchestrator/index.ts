@@ -1,4 +1,6 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient as createRawClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { observeCriticalClientFactory } from '../_shared/critical-rpc-observer.ts';
+const createClient = observeCriticalClientFactory(createRawClient);
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import { evaluateMarketReportGate } from '../_shared/market-report-gate.ts';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
@@ -378,8 +380,9 @@ async function loadProviderNotReady(supabase: SupabaseClient, reportDate: string
     .eq('checkpoint', 'premarket')
     .maybeSingle();
   if (error) throw new Error(`PROVIDER_READINESS_QUERY_FAILED:${error.message}`);
-  return data?.last_error_code === 'PROVIDER_DATA_NOT_READY' &&
-    asRecord(data.details).provider_readiness_state === 'WAITING_FOR_PROVIDER_DATA';
+  return asRecord(data?.details).provider_readiness_state === 'WAITING_FOR_PROVIDER_DATA' &&
+    (asRecord(data?.details).retry_entry_state === 'WAITING_FOR_PROVIDER_DATA' ||
+      data?.last_error_code === 'PROVIDER_DATA_NOT_READY');
 }
 
 async function loadPremarketAtomicReady(supabase: SupabaseClient, reportDate: string): Promise<boolean> {
@@ -929,6 +932,21 @@ Deno.serve(async (req: Request) => {
       state = await loadDeliveryState(supabase, businessDate);
       providerNotReady = await loadProviderNotReady(supabase, businessDate);
       premarketAtomicReady = await loadPremarketAtomicReady(supabase, businessDate);
+      // A successful bounded refetch must finish the already-authorized
+      // Report/LINE chain in this tick, including the final 08:35 retry. The
+      // normal Report Handler still owns News/Research/Publication gates.
+      // No earlier partial quote, synthetic report or relaxed gate is reused.
+      if (providerDelayContext && !state.report && premarketAtomicReady
+        && actions.includes('refresh_market') && !hasFailedEvidenceDependency(actionResults)
+        && clock.minutes < PREMARKET_REPORT_DEADLINE_MINUTES) {
+        const followup = await executeRecoveryActions({
+          actions:['regenerate_report'],baseUrl:`${supabaseUrl}/functions/v1`,cronSecret,
+          attempt:activeAttempt,reasonCodes:state.reason_codes,allowIncident:false,
+          reportDate:businessDate,suppressNotifications,
+        });
+        Object.assign(actionResults,followup);
+        state = await loadDeliveryState(supabase,businessDate);
+      }
       plan = buildPremarketProviderReadinessPlan({
         has_report: Boolean(state.report),
         premium_eligible: state.premium_eligible,

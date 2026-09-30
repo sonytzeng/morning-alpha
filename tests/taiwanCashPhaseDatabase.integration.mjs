@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { GLOBAL8_SOURCE_SYMBOLS, latestCompletedUsSession } from '../supabase/functions/_shared/market-session-contract.mjs';
 import {
   CHECKPOINT_PROVIDER_KEYS,
   buildCheckpointEvidence,
@@ -89,14 +90,15 @@ function batch({ tradingDate, phase, checkpoint, observedAt, twDate, twTimestamp
     const market = ['TAIEX', '2330', 'TXF'].includes(providerKey) ? 'TW' : 'US';
     const sourceTimestamp = providerKey === 'TXF' ? txfTimestamp
       : ['TAIEX', '2330'].includes(providerKey) ? twTimestamp
-        : new Date(Date.parse(observedAt) - 12 * 60 * 60 * 1000).toISOString();
+        // Synthetic Sep/Oct controls: US daylight-time completed cash session.
+        : `${latestCompletedUsSession(Date.parse(observedAt))}T20:00:00Z`;
     const raw = providerKey === 'TXF' ? { date: txfDate, session: txfSession }
       : ['TAIEX', '2330'].includes(providerKey) ? { date: twDate, response_date: twDate } : {};
     const evidence = buildCheckpointEvidence({ phase, checkpoint, tradingDate, observedAt, correlationId }, {
       value: 100 + index, change: 1, changePercent: 0.1, capturedAt: sourceTimestamp,
       provider: providerKey === 'TXF' ? 'fugle_futopt' : market === 'TW' ? 'fugle' : 'finnhub',
-      sourceSymbol: providerKey === 'TXF' ? 'TXF1!' : providerKey, raw,
-    }, { displaySymbol: providerKey, finnhubSymbol: providerKey, market, name: providerKey });
+      sourceSymbol: providerKey === 'TXF' ? 'TXF1!' : GLOBAL8_SOURCE_SYMBOLS[providerKey] || providerKey, raw,
+    }, { displaySymbol: providerKey, finnhubSymbol: GLOBAL8_SOURCE_SYMBOLS[providerKey] || providerKey, market, name: providerKey });
     return evidence.valid ? { provider_key: providerKey, ...evidence.row } : { provider_key: providerKey, error: evidence.error };
   });
   return { correlationId, rows };

@@ -125,7 +125,7 @@ test('one failed provider preserves 10 PASS plus one explicit FAIL without fabri
   assert.equal(rows.filter(row => row.contract_result === 'FAIL').length, 1);
   const replay = await replayRecordedProviderEvidence(rows[index]);
   assert.equal(replay.contract_result, 'FAIL');
-  assert.equal(replay.contract_reason, 'RESOURCE_NOT_FOUND');
+  assert.equal(replay.contract_reason, 'PROVIDER_INVALID_RESPONSE');
   assert.equal(replay.deterministic, true);
 });
 
@@ -224,4 +224,32 @@ test('06:50 and Fetch wire the same sidecar without making it a business gate', 
   assert.match(preflight, /readiness_0650/);
   assert.match(fetch, /provider_retry_attempt/);
   assert.match(fetch, /recovery_attempt/);
+});
+
+for (const [status,error,reason] of [[403,'HTTP_403','PROVIDER_ENTITLEMENT'],[401,'HTTP_401','PROVIDER_ENTITLEMENT'],
+  [429,'HTTP_429','PROVIDER_RATE_LIMIT'],[500,'HTTP_500','PROVIDER_HTTP_5XX'],
+  [null,'TIMEOUT','PROVIDER_TIMEOUT'],[200,'TEMPORARY_MALFORMED_RESPONSE','PROVIDER_INVALID_RESPONSE']]) {
+  test(`V2 actual transport ${error} preserves primary cause and rejects evidence, including WAITING presentation`,async()=>{
+    const input=await inputFor(REQUIRED_PROVIDER_CONFIG[0],{httpStatus:status,error,rawPayload:{},normalizedQuote:null,
+      evidence:{valid:false,error:'ATOMIC_PROVIDER_RESULT_MISSING'},waiting:true,sourceFunction:'market-readiness-preflight'});
+    const row=await buildProductionProviderEvidence(input),replay=await replayRecordedProviderEvidence(row);
+    assert.equal(row.contract_result,'FAIL');assert.equal(row.contract_reason,reason);
+    assert.equal(row.replay_payload.readiness_presentation,'WAITING');
+    assert.equal(row.http_status,status);assert.equal(replay.deterministic,true);
+    row.replay_payload.expected_contract_result='PASS';
+    assert.equal((await replayRecordedProviderEvidence(row)).contract_result,'FAIL');
+  });
+}
+test('V2 Fugle rejection trace re-executes adapter instead of copying its expected error',async()=>{
+  const slot=REQUIRED_PROVIDER_CONFIG.find(item=>item.key==='TAIEX');
+  const responses=[];
+  const result=await resolveFugleTaiexProvider(async({endpoint})=>{
+    const response={status:403,error:'HTTP_403',payload:null};responses.push({endpoint,...response});return response;
+  },{tradingDate:date,phase:'premarket',observedAt});
+  const input=await inputFor(slot,{httpStatus:403,error:'HTTP_403',rawPayload:{},normalizedQuote:null,
+    evidence:{valid:false,error:'ATOMIC_PROVIDER_RESULT_MISSING'},adapterFailureCode:result.failureCode,responses});
+  const row=await buildProductionProviderEvidence(input);
+  assert.equal((await replayRecordedProviderEvidence(row)).deterministic,true);
+  row.replay_payload.expected_adapter_error='FORGED_PASS';
+  assert.equal((await replayRecordedProviderEvidence(row)).deterministic,false);
 });

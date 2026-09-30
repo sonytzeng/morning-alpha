@@ -689,6 +689,13 @@ async function fetchGNews(apiKey: string, logs: string[], providerFailures: Prov
       if (!resp.ok) {
         logs.push(`GNews query "${q}" HTTP ${resp.status}`);
         providerFailures.push({ provider: "gnews", symbol: "GENERAL_NEWS", endpoint: "search", status: resp.status });
+        if (resp.status === 429) {
+          const retryAfter = Number(resp.headers.get("retry-after"));
+          const cooldownMs = Math.min(2_000, Math.max(250, Number.isFinite(retryAfter) ? retryAfter * 1_000 : 500));
+          logs.push(`GNews rate limited; bounded cooldown ${cooldownMs}ms and stop remaining queries`);
+          await new Promise((resolve) => setTimeout(resolve, cooldownMs));
+          break;
+        }
         continue;
       }
 

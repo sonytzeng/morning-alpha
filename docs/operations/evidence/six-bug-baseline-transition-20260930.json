@@ -1,0 +1,702 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_SIX_BUG_PREVENTIVE_CLOSURE_20260930",
+  "candidate_base_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+  "predecessor_integrity_id": "MORNING_ALPHA_RESEARCH_EVIDENCE_RECOVERY_20260930",
+  "approval_provenance": "Sony explicitly authorized the six-bug preventive candidate, one consolidated additive migration candidate, fresh local isolation, affected/public/Integrity/type/lint/build checks, Commit Push PR and GitHub Release CI. No Production migration, deployment, Cron, Auth/RLS, Secrets, member or historical data changes are authorized.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/sixBugContracts.test.mjs",
+    "tests/criticalContractRecorder.test.mjs",
+    "tests/productionEvidenceRecorder.test.mjs",
+    "tests/helpers/sixBugPositiveShadow.mjs",
+    "tests/helpers/sixBugNegativeShadow.mjs",
+    "tests/helpers/sixBugSqlCapsuleReplay.mjs",
+    "tests/sixBugDatabase.integration.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "reviewed_calendar_declarations": [
+    {
+      "path": "supabase/functions/_shared/market-status.ts",
+      "name": "TAIWAN_HOLIDAYS_2026",
+      "predecessor_sha256": "d108c59df7092fc65c40f7a4c815597bb2adca5a6ccebbe19618e4d5cb741d58",
+      "candidate_sha256": "3d3b18e84259f16f1364956d35fd9439b91e11edf55e8c83a40bb36ab8a3fbeb"
+    },
+    {
+      "path": "supabase/functions/_shared/market-status.ts",
+      "name": "resolveMarketStatus",
+      "predecessor_sha256": "8db599c82f9f4a14a78080ea6561f413970e55bc22957a257325a63e410a746e",
+      "candidate_sha256": "ec189c93eddd3b9a59a2a48b20d7e0e34943fd108b8033b35da7e73d10fb94a1"
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "e89f4affb389a0deeeb581087dc1be35afb3266a451dfb33042144441a32e0ad",
+      "candidate_sha256": "4bcb74bfcafdaa13d6c230320d7a7110e0aeb4d95b2bc508b3218a46bbbf8400",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "docs/operations/evidence/pre-production-failure-hunt-20260930.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "e0602b6d37563c0b693867cd246fbae6f5e0b34e0230346dbfae1f9f0aeb40ad",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "docs/operations/evidence/six-bug-contract-groups-20260930.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "42f63e4146bea76dab8eae2e5f6755b016d166201966f9f759c6701a78594ae7",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "docs/operations/evidence/six-bug-release-bundles-20260930.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "19b76ded191d7c8300d230955a32b174e89dba5316d0dce7bb26813624877560",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "docs/operations/pre-production-failure-hunt-20260930.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "3f7391c9dbfb648932274c084728cc8a93f3c598f0848f0d6bfe5752cd9aba21",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "docs/operations/six-bug-preventive-closure-20260930.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "46546ed35a9cc35708da91d675c39a6c578380cbbc331806434cbe15fa1a1612",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "src/lib/market-calendar-data.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "src/lib/market-status.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "9b1a5020c6ceda43a2af768f07f0dfb8c8fe628c9fa5253e9b4da26d9fd2f6b0",
+      "candidate_sha256": "f6f840362ee70d1ddf1a49481d78ebca8b0252807e45dca4d7c13ee5cf286bbf",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/_shared/critical-contract-recorder.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "535b5a25cfd92ca45b3a045b2b850351906f702b6373e2a7b9897d3dafefee42",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "supabase/functions/_shared/critical-rpc-observer.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "fd9dde30f65a69d19196b4e76b5db34f14178d0e49d5fa6984bfa7490af51ed0",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "supabase/functions/_shared/daily-delivery-recovery.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "b6595054da8d34d3c1855a26223cc24da3d65e41840296f0763968f344fac3c3",
+      "candidate_sha256": "b55b18fd0ab57ca839a884ed4acb9aacf7ee8b0f185e7d2f47c998642908a881",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "cef34f328baa90a5575c0096a2c5130d7513273bf95ff4c0dc7850909c8d0925",
+      "candidate_sha256": "a0eae0cf9cde35f745e724ab30b86649116e2859ea7cd3b7a160714091f4017b",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/_shared/market-calendar-data.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "supabase/functions/_shared/market-runtime-stability.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "f5de47a40d14d91c94e95ea44b56a21cf7138387a755642096cbe9b0a327f938",
+      "candidate_sha256": "cf0a0b09839cb227f7010c52f480fe902ef918806108bd6b5817bfd4c8d94783",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/_shared/market-session-contract.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "supabase/functions/_shared/market-status.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "16b8a32e01e064ea055c951e0bf60377e4c2a195d9d8ac45c3d88f1bb551ad67",
+      "candidate_sha256": "d285910516d5ae5e0f55d8ee4314da7b7e21214b766d20cda2853fa775af0737",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/_shared/production-evidence-recorder.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "e43aa1e3e6ce090b2321a8f00c692c6e3d5837f6b0e38504d4baefa4cbad7376",
+      "candidate_sha256": "77774b8d21784907698938f78516becfbeb837090055ee123361fd62dd1871f3",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/_shared/provider-failure-contract.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "aaa3037aaf708cc3f76a7d6d856c97034eb0b2f0bbe02c03cc06fb389b01b5f4",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "supabase/functions/_shared/provider-reliability-contract.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "26f7ce7a4f68037f2449098122184b42bcff982740176f3631daa85533440951",
+      "candidate_sha256": "5055b45ce48a2a79146adcb5001f478d467d479054bd932170028d54bf3a03b7",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/_shared/required-provider-validation.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "0b0fa6478ea344c239d41b3c98a4aa7c59bf360843c16ab22dc868ead1658135",
+      "candidate_sha256": "bdc25704006e5830d602496ba1c4f82c59ce7b1d521e86a08d456cdfd2c4895d",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/_shared/us-cash-session-calendar.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "dbc7b5c762cd6921385c1d38262a987a5fe82f122e3855069a2e25d6c7078e7f",
+      "candidate_sha256": "e648996b1c26b63e6f04f00ea06ca8a3cbef5ef49fb48b87c0b81d26979a9b78",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/closing-verification-engine/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "3226ee82d4de2c79ba66048b5f37c055ecc477000fd53fbee5cb56fbd6cf60e6",
+      "candidate_sha256": "b1e44ad74cd1394b886765763dbb58a7243027a4e5709ed2098a3e4d0490197a",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/continuous-learning-engine/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "9def4ea1c937a05fd77656029a54b29dd6b6f84656d8c94ac5468611ac95e34d",
+      "candidate_sha256": "acf3214cf183e2c8eb37b8c615b6742dd9e08567f8af32a33e777d491c036102",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "2cc449708323eb96df767969ec2f06e410f596b9c3cb51db2975c0945305d307",
+      "candidate_sha256": "340b2be73e5bed7780a9c3547e7d322ded0ab840f580825359d38cec5e6a2e83",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/fetch-global-market-news/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "3c501c2838ef7f1e7f3a69b361efc0581b527908bf376302dffe98106d886e55",
+      "candidate_sha256": "b7b8bac3c44091352b8902f1fd8ce712cf4fbd658f167744e8b4f90e56e6338b",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/fetch-market-data-v10/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "0951a2b1fcbbe6fc9293ff99f478aacbad7caadea6645fce7e728130d131aa72",
+      "candidate_sha256": "57f0233cbca1fbb68dc560f0f65fa0700be2cd79aa6f60a2ba1e87428ae0ee42",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "e7fe2af146344c5e52c77580ea198cd96eaa4ac2570e0d72a1909ebd2072cb6e",
+      "candidate_sha256": "5527cca7a8957577c3a06084dcd7484cd7020d987e8973d83c84d13abb2b46f1",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/line-daily-push/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "6a659df04f16b4553f2f5e18a6fb8f0a1f0b866bbc4e1a9b00d83f0bd80c695c",
+      "candidate_sha256": "036ed1586919f307828dc20c7be3836b8d2e45a9124ac4c1058b4de526a1eb3f",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/market-readiness-preflight/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "c63529dad33f0738e6271e330846df8bcd85a20b0381d446d074ec2e530aef55",
+      "candidate_sha256": "12d58db830f7ad7aece346d650b517d2b6b1e4fe1b924ada6e9469e870bcf299",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "supabase/migrations/20260930043122_six_bug_preventive_closure_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "0f712b442bc46d997590f43ad519e10e65166291fb8fe06a52c83fcc131bd012",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/checkpointAtomicity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "790be878ea7bd76552965f6a82812e1a54c4b848103d1ea5c11464096f038257",
+      "candidate_sha256": "e885b166f4dc018c3c7c24a80e666eb9b051223d20e3849f1cb654601f94cbb1",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/closingLearningContract.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "8670743ed6372358a291ee4eef3abbfadd817f70a381f72d7d011e2549c80204",
+      "candidate_sha256": "d824782add2a9a3ceb3085fd06145e0d0e20e8d1989afa0b082b8f7e2c970248",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/consolidationGeneratorEditorial.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "c6e3f003b8b9685ce416142edc4ab767d92be2c9fca39576229baf0c4c5d3adf",
+      "candidate_sha256": "1c722cd2ae692220ea3b41d8e34273a824563d5680ee1017934779967d6df4b5",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/criticalContractRecorder.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "a485f3503400f0a275328b2a032757c90545286a93bbaeee8e67ef2051d0e158",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/dailyDeliveryRecovery.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "7eebc7c501c953391ce06fe506415f6877fc1d865d1148ba58879ccf26eec2c2",
+      "candidate_sha256": "9076ce23b78839f6962b98704762ea22102c5890cd454247cd0ff764ce439f60",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/fetchCheckpointEvidence.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "642e7231826f15be6f164e0feaedc440bbce5fdddfe61ac4347d393465ca5c8c",
+      "candidate_sha256": "2890e406558f922c96381cc7c9dbc45f12241c42d7b30687fea76c2ee524ab5d",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/fixtures/consolidation-v1/provider-chain.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "14164200daf8b6cee146f9415f8fe4cbfe6d21b3ab0467bff06e09bd99f0920a",
+      "candidate_sha256": "7288cee2b81b60761e7ce4c67bfeafa46f8d19df407bb348cb200c24e98a17d5",
+      "source_lineage": "Exact merged predecessor test. Immutable captured and synthetic fixture inputs are unchanged.",
+      "reason": "TEST_FIXTURE_DRIFT: superseded US session must fail at the Provider contract, not pass until downstream Research.",
+      "rollback_target": "Restore the exact predecessor test only when reverting the reviewed Global 8 contract candidate."
+    },
+    {
+      "path": "tests/fixtures/six-bug-legacy-failures-20260930.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "bae6e1054eeef4c56a8f2224c0cbad36bab54a59c382e0be709a666363e72c51",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/fixtures/six-bug-loopback-transport.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "94f726d9688558b15adea860e99a2667fa1a7899b10aaf1aab48eff95629e446",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/fixtures/six-bug-production-intraday-20260930.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "1bbe554c7d1d3cf27a774df347c21fa0a296e2a1213e5b59d922600d908e0fd2",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/fixtures/six-bug-production-provider-20260930.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "cc689ce9a314d38f37ca96d23a229da2bd7045e855bfd9a1634330ab3fc1a37b",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/fixtures/six-bug-schema-only-20260930.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "286c71f1582f4114c9303338beafb20d647c343be83d24292a70408d2fba68c0",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/fixtures/six-bug-schema-only-20260930.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "5da9363bce62e14cf61d42cc02d3c821406936d8be414220aaca71b96326bf01",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/fugleTaiexProvider.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "1fb6954b56e4c7157692f40b36fda6facaec4d0589272ae13f9d32f04845a7fa",
+      "candidate_sha256": "bf485f6b828f5c2c9ac50d3ed646e0c5b51f13c016bf0296269ed26af170971d",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/helpers/exportSixBugIsolationBaseline.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "f2c0a90263ab270d77427f3424d486d7190acbbe12ad8845082c4e019ce59c96",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/helpers/isolatedEdgeLoader.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "fee486f3c810b99e5d584a20106ef58eefdaee0b773ae0f7d33b00104723467a",
+      "candidate_sha256": "b2b55324afd2f5a2be4cdb97d0aab9baadc88706c9cf5dd3bc382a6cd6dc03cb",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "aed6081cca43e01d38594ba8e5e496b4fa444d232065c09d9930c026401fcfae",
+      "candidate_sha256": "bbf9564037c012df756045c07b2bafb58c3105629cf586a6bdb330e8cc8f0825",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/helpers/sixBugFullHandlerShadow.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "0e11499ac346ff37cc71e24f709b436e9126d2f52b74ac9651b907e4fc681297",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/helpers/sixBugNegativeShadow.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "acd6e8bf159ca01604581051a3a07daf572b4875e5d508cc42ab20f6a8fdca1e",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/helpers/sixBugPositiveShadow.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "2fb1e56cb107a5e71f8a84f35af126e50df0147cbbdf896242bf4a9b90288dce",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/helpers/sixBugReleaseInventory.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "24f03af210dcde0978f2d9ab2a85e6e2c5ace1a803bf497ba9a437423285cd45",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/helpers/sixBugShadowInputs.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "e260fba3d6ec7465c5f2c0cd40f48ecf0db1fc0aa9d7bfe314cee67bd5881b75",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/helpers/sixBugSqlCapsuleReplay.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ab768f7c4ba1ef125f83b4b9a5b0cc435db0f328a57736511015e1d002ff4a23",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/marketRuntimeStability.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "7f19bcc31a9354a619310e22000e0870962e3865de8c75ce2442b40b98a74d16",
+      "candidate_sha256": "2fa12f015e60438f6d706db57bce2acd73738abb9a4a4bbb06c75195f30a847d",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/precheckProductionParity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "ac61f73713361ad9ca7adf9382fa21660a8cfc9fffa96eaa1fc56a5f60109c2a",
+      "candidate_sha256": "f471b030edadedf1de795e4e1c750e720fecc27a904a05518d9f3b8dece44225",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/premarketProductionParity20260923.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "f0dd430e91791a3e5c0c78aa064afe2323229f1959e208e7ddfacf1526f46a3f",
+      "candidate_sha256": "9d609e929189e831ab42f14cd4736354f0299350a3c58801a3e62ba0f889b730",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/premarketProductionParityDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "badc30ad866d1a2529bc57c029b226f15581ccc576fab0353632ed06dfbb5255",
+      "candidate_sha256": "6f3934577d3c7692eea131057c1464a327991999d9969070d5847b5869405fd9",
+      "source_lineage": "Exact merged historical integration test; real captures and historical migrations remain unchanged.",
+      "reason": "TEST_FIXTURE_DRIFT: synthetic builders require real proxy symbols, latest US sessions and valid TW weekday controls before injecting faults.",
+      "rollback_target": "Restore the exact predecessor test only when reverting the reviewed calendar and Global 8 candidate."
+    },
+    {
+      "path": "tests/productionEvidenceRecorder.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "7e459cd1b2be0f709368653bba0af4d2fc19a1db743ee19b662b2ce4d47859b5",
+      "candidate_sha256": "fbaad6bbb9eb1a95b60a31e3f50612ba1ddfda69d46c16c25d3af505cf83223c",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/sixBugContracts.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "12760bcf28ec20c68ab94887cfc819876a2df1c9cc390928dfaa094caeced755",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/sixBugDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "9af3f43412ff9be97c5a29f8a9abab531a54b0674a575c7496f51dfd553fad05",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/sixBugIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "0556d394b153699ee1665aa3309ac59fe60148adbc12200fb14b9cf9a33c9ade",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/sixBugLegacyReplay.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "3d2b93c0dcffef9efe13f511c6a9cec0f22e788a8660795c7563fdaf6cfab020",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical evidence and predecessor hashes remain intact."
+    },
+    {
+      "path": "tests/taiwanCashPhaseContract.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "f9fb47d0095946070df867da3bf4347312d36a16fe3cadf6db7e7bed2e84fa0e",
+      "candidate_sha256": "f614323a13c73bddd4a1bcfe8565e1857f610492048d36f377e5e0ad7b285ea9",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    },
+    {
+      "path": "tests/taiwanCashPhaseDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "6991bd96b7ec0e7709bda0e199c58fcfd0760d7ffbf0c5edeb1e7e2ec9882c6c",
+      "candidate_sha256": "fd96f38e1d9552cc79bc8fc18f6f4beb27dd9e3e83963f917e86938d5cb91a07",
+      "source_lineage": "Exact merged historical integration test; real captures and historical migrations remain unchanged.",
+      "reason": "TEST_FIXTURE_DRIFT: synthetic builders require real proxy symbols, latest US sessions and valid TW weekday controls before injecting faults.",
+      "rollback_target": "Restore the exact predecessor test only when reverting the reviewed calendar and Global 8 candidate."
+    },
+    {
+      "path": "tests/txfSessionDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "192532ea78233d67c8ce368451a95322c10e66089c0a206f26de9e8bd127cb65",
+      "candidate_sha256": "fa95ca15aa3c21f764bc84654e0b6aea5bc8c745853bfbbdd01a94e9832fa38e",
+      "source_lineage": "Exact merged historical integration test; real captures and historical migrations remain unchanged.",
+      "reason": "TEST_FIXTURE_DRIFT: synthetic builders require real proxy symbols, latest US sessions and valid TW weekday controls before injecting faults.",
+      "rollback_target": "Restore the exact predecessor test only when reverting the reviewed calendar and Global 8 candidate."
+    },
+    {
+      "path": "tests/txfSessionParity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2e530bc0db49bf76d6188642b79e112b339872aa",
+      "predecessor_sha256": "797d788165fc5a8668a752af1dad259ab0f045ccddd1eab0a3708c90ad2d9741",
+      "candidate_sha256": "efcbc13dbc529f9886718b71b0315d62da564ec67a4f86b19a76f490b1bafcd0",
+      "source_lineage": "Exact merged 9/30 Research predecessor and immutable retained evidence; reviewed six-bug candidate only.",
+      "reason": "Direct six-bug shared contract, bounded observability, fresh-isolation regression or exact candidate release gate.",
+      "rollback_target": "Restore the exact predecessor only with any required separate Production approval."
+    }
+  ]
+}

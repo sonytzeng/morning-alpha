@@ -1,4 +1,7 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { createClient as createRawClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { observeCriticalClientFactory } from '../_shared/critical-rpc-observer.ts';
+import { recordCriticalContract } from '../_shared/critical-contract-recorder.ts';
+const createClient = observeCriticalClientFactory(createRawClient);
 import { resolveMarketStatus } from "../_shared/market-status.ts";
 import { authorizeInternalRequest, internalCredentialsFromEnv } from "../_shared/internal-function-auth.mjs";
 import {
@@ -874,6 +877,7 @@ async function finalizeClosingReceipt(
   snapshot: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   const contract = evaluateClosingContract({ opening, closingSnapshot: snapshot, expectedSnapshotId: String(snapshot.id || "") });
+  recordCriticalContract(supabase,'CLOSING',opening.report_date,{opening,closingSnapshot:snapshot,expectedSnapshotId:String(snapshot.id || "")});
   const base = { verification_date: opening.report_date, opening_decision_snapshot_id: opening.opening_publication_revision_id,
     closing_decision_snapshot_id: snapshot.id || null, closing_contract: contract, no_fake_data: true };
   if (contract.status !== "COMPLETE") return { ...base, success: false, error: "DURABLE_CLOSING_RECEIPT_UNVERIFIED", report_updated: false };
@@ -1032,6 +1036,7 @@ Deno.serve(async (req: Request) => {
     .eq("provider_status->result->>decision_snapshot_id", openingIdentity.opening_publication_revision_id)
     .order("completed_at", { ascending: true }).limit(1).maybeSingle();
   const openingPublication = validateOpeningPublication({ report: reportRow, snapshot: morningDecisionRow, publicationRun: publicationReceipt.data });
+  recordCriticalContract(supabase,'OPENING',verificationDate,{report:reportRow,snapshot:morningDecisionRow,publicationRun:publicationReceipt.data});
   if (morningDecisionError || publicationReceipt.error || openingPublication.status !== "PUBLISHED") {
     return jsonResponse({ success: false, error: "OPENING_PUBLICATION_UNVERIFIED", verification_date: verificationDate,
       reason_codes: openingPublication.reason_codes, report_updated: false, no_fake_data: true }, 409);
@@ -1090,6 +1095,7 @@ Deno.serve(async (req: Request) => {
   if (!existingClosing.error && existingClosing.data) {
     const generated = parseJsonObject(existingClosing.data.generated_text);
     const existingContract = evaluateClosingContract({ opening: openingPublication, closingSnapshot: existingClosing.data });
+    recordCriticalContract(supabase,'CLOSING',verificationDate,{opening:openingPublication,closingSnapshot:existingClosing.data});
     if (generated.evidence_fingerprint === evidenceFingerprint && existingContract.status === "COMPLETE"
       && generated.opening_decision_snapshot_id === openingPublication.opening_publication_revision_id) {
       const finalized = await finalizeClosingReceipt(supabase, reportRow, openingPublication, existingClosing.data as Record<string, unknown>);
@@ -1159,6 +1165,7 @@ Deno.serve(async (req: Request) => {
       source: closeMarket.source,
     });
     const pendingClosingContract = evaluateClosingContract({ opening: openingPublication, closing: pendingClosingVerificationV2 });
+    recordCriticalContract(supabase,'CLOSING',verificationDate,{opening:openingPublication,closing:pendingClosingVerificationV2});
 
     const pendingClosingVerification: Record<string, unknown> = {
       version: "P20_CLOSE_WINDOW_VERIFICATION",
@@ -1376,6 +1383,7 @@ Deno.serve(async (req: Request) => {
   };
 
   const closingContract = evaluateClosingContract({ opening: openingPublication, closing: closingVerificationV2 });
+  recordCriticalContract(supabase,'CLOSING',verificationDate,{opening:openingPublication,closing:closingVerificationV2});
 
   if (!closingContract.evidence_ready) {
     return jsonResponse({ success: false, error: "CLOSING_EVIDENCE_INCOMPLETE", verification_date: verificationDate,

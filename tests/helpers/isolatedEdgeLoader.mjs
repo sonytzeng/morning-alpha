@@ -28,6 +28,10 @@ export function isolatedEdge(entry, env, extra = {}) {
   function load(path) {
     if (cache.has(path)) return cache.get(path).exports;
     const module = { exports: {} }; cache.set(path, module);
+    if (path.endsWith('.json')) {
+      module.exports = {default:JSON.parse(readFileSync(path,'utf8'))};
+      return module.exports;
+    }
     const source = ts.transpileModule(readFileSync(path, 'utf8'), {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
     }).outputText;

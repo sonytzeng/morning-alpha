@@ -1,4 +1,6 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient as createRawClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { observeCriticalClientFactory } from '../_shared/critical-rpc-observer.ts';
+const createClient = observeCriticalClientFactory(createRawClient);
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import { evaluateMarketReportGate } from '../_shared/market-report-gate.ts';

@@ -109,6 +109,7 @@ function assembleRequiredInput(rows) {
   return { ai: finalAi, manifest, marketData, researchMarketData };
 }
 const writer = isolatedFunction(source, 'writeReport', {
+  recordCriticalContract,recordPublicationContract,
   canonicalRecord, canonicalText, canonicalMarketDocument, PublicationQualityError,
   buildImportantNewsPayload: isolatedFunction(source, 'buildImportantNewsPayload', { canonicalRecord }),
   normalizePremiumMarketEvidence: row => normalizePremiumMarketEvidence(row, sourceNow),
@@ -139,6 +140,7 @@ async function guardedWrite(value, rpcCalls) {
       return query;
     },
     async rpc(name, args) {
+      if(['record_critical_contract_evidence_v1','record_publication_contract_evidence_v1','cleanup_expired_critical_contract_evidence_v1'].includes(name))return {data:null,error:null};
       assert.equal(name, 'publish_research_bundle_v1'); rpcCalls.push({ name, args }); throw reachedAtomicBoundary;
     },
   };
@@ -354,3 +356,4 @@ test('actual Generator readback rejects thin frozen editorial with stored 100 an
   assert.ok(result.publication.reason_codes.includes('FROZEN_MARKET_EDITORIAL_SCORE_MISMATCH'));
   assert.equal(result.publication.projection.analysisAvailable, false);
 });
+import {recordCriticalContract,recordPublicationContract} from '../supabase/functions/_shared/critical-contract-recorder.ts';

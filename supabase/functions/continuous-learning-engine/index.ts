@@ -1,4 +1,7 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import { createClient as createRawClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import { observeCriticalClientFactory } from '../_shared/critical-rpc-observer.ts';
+import { recordCriticalContract } from '../_shared/critical-contract-recorder.ts';
+const createClient = observeCriticalClientFactory(createRawClient);
 import {
   CLE_ENGINE_VERSION,
   buildPatternDimensions,
@@ -1483,11 +1486,13 @@ Deno.serve(async (req: Request) => {
     .eq('provider_status->result->>decision_snapshot_id', openingIdentity.opening_publication_revision_id)
     .order('completed_at', { ascending: true }).limit(1).maybeSingle();
   const openingPublication = validateOpeningPublication({ report: publishedReport, snapshot: snapshotResult.data, publicationRun: receiptResult.data });
+  recordCriticalContract(client,'OPENING',targetDate,{report:publishedReport,snapshot:snapshotResult.data,publicationRun:receiptResult.data});
   const closingReceiptId = resolveClosingReceiptPointer(publishedReport, openingPublication);
   const closingReceipt = closingReceiptId ? await client.from('decision_snapshots').select('*').eq('id', closingReceiptId)
     .eq('report_id', openingPublication.report_id).eq('report_date', targetDate).maybeSingle() : { data: null, error: null };
   const closingContract = evaluateClosingContract({ opening: openingPublication,
     closingSnapshot: closingReceipt.data, expectedSnapshotId: closingReceiptId });
+  recordCriticalContract(client,'CLOSING',targetDate,{opening:openingPublication,closingSnapshot:closingReceipt.data,expectedSnapshotId:closingReceiptId});
   if (receiptResult.error || closingReceipt.error || openingPublication.status !== 'PUBLISHED' || closingContract.status !== 'COMPLETE') {
     return jsonResponse({ success: false, error: 'CLOSING_VERIFICATION_INCOMPLETE', target_date: targetDate,
       opening_publication: openingPublication, closing_contract: closingContract }, 409);
@@ -1565,6 +1570,7 @@ Deno.serve(async (req: Request) => {
       if (outcomesResult.error) throw outcomesResult.error;
       const contract = evaluateLearningContract({ opening: openingPublication, closing: closingContract,
         predictions: currentPredictions, outcomes: outcomesResult.data });
+      recordCriticalContract(client,'LEARNING',targetDate,{opening:openingPublication,closing:closingContract,predictions:currentPredictions,outcomes:outcomesResult.data});
       if (contract.status === 'COMPLETE') {
         runId = String(existingRun.id);
         runEvidencePersisted = true;
@@ -1646,6 +1652,7 @@ Deno.serve(async (req: Request) => {
     const outcomes = outcomeResult.outcomes;
     const learningContract = evaluateLearningContract({ opening: openingPublication, closing: closingContract,
       predictions: currentPredictions, outcomes });
+    recordCriticalContract(client,'LEARNING',targetDate,{opening:openingPublication,closing:closingContract,predictions:currentPredictions,outcomes});
     if (learningContract.status !== 'COMPLETE') {
       const { error } = await client.from('learning_runs').update({ status: 'degraded', completed_at: new Date().toISOString(),
         errors: learningContract.reason_codes.map(code => ({ code })), ...counters,

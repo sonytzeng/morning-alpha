@@ -1,7 +1,10 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { createClient as createRawClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { observeCriticalClientFactory } from '../_shared/critical-rpc-observer.ts';
+const createClient = observeCriticalClientFactory(createRawClient);
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { PREMARKET_REPORT_DEADLINE_MINUTES } from '../_shared/premarket-provider-readiness.mjs';
+import { classifyCanonicalFailure, evaluateProviderRetryEntry, selectPrimaryFailure } from '../_shared/provider-failure-contract.mjs';
 import { normalizeProviderQuote, summarizeProviderHealth } from '../_shared/market-provider-adapter.mjs';
 import {
   resolveSnapshotCheckpoint,
@@ -42,6 +45,7 @@ import {
   classifyRequiredProviderFailure,
   fetchRequiredFinnhubResponse,
   normalizeRequiredFinnhubQuote,
+  normalizeRequiredTwseQuote,
   normalizeRequiredTaiwanCoreQuote,
   requiredProviderSlot,
   resolveRequiredTxfQuote,
@@ -128,6 +132,8 @@ interface ProviderResponseObservation {
   status: number | null;
   payload: unknown;
   error: string | null;
+  adapterFailureCode?: string | null;
+  responses?: Record<string, unknown>[];
 }
 
 type ProviderResponseRecorder = (observation: ProviderResponseObservation) => void;
@@ -419,7 +425,7 @@ async function fetchFinnhubQuote(
     payload: response.payload,
     error: response.error ? String(response.error) : null,
   });
-  if (Number(response.status) !== 200) {
+  if (Number(response.status) !== 200 || response.error) {
     failureDetails?.push({ provider: "finnhub", symbol: finnhubSymbol, endpoint: "quote",
       ...(Number.isFinite(Number(response.status)) && Number(response.status) > 0 ? { status: Number(response.status) } : {}),
       failure_code: classifyRequiredProviderFailure(response),
@@ -585,14 +591,19 @@ async function fetchFugleTaiwanCoreQuote(
   }
 
   const resolver = displaySymbol === "TAIEX" ? resolveFugleTaiexProvider : resolveFugle2330Provider;
+  const responses: Record<string, unknown>[] = [];
   const result = await resolver(async (request: { endpoint: string }) => {
-    return fetchRequiredFugleResponse(request.endpoint, apiKey);
+    const response = await fetchRequiredFugleResponse(request.endpoint, apiKey);
+    responses.push({ endpoint: request.endpoint, ...response });
+    return response;
   }, { tradingDate, phase, observedAt }) as FugleCoreResolution;
   recorder?.({
     endpoint: String(result.endpoint || (phase === 'premarket' ? contract.tickerEndpoint : contract.quoteEndpoint)),
     status: Number.isFinite(Number(result.status)) ? Number(result.status) : null,
     payload: result.payload || null,
     error: result.error ? String(result.error) : null,
+    adapterFailureCode: result.ok ? null : String(result.failureCode || 'PROVIDER_RESPONSE_CONTRACT_INVALID'),
+    responses,
   });
 
   if (!result.ok) {
@@ -801,37 +812,6 @@ async function fetchFugleFutOptQuote(
   return quote ? { ...quote, raw: { ...quote.raw, product: "TXF", session } } : null;
 }
 
-function normalizeTwseQuote(data: Record<string, unknown>, sourceSymbol: string): MarketQuote | null {
-  const rows = Array.isArray(data.msgArray) ? data.msgArray : [];
-  const row = rows[0] && typeof rows[0] === "object" && !Array.isArray(rows[0])
-    ? rows[0] as Record<string, unknown>
-    : {};
-  const price = extractNumber(row, ["z", "pz", "a"]);
-  const previousClose = extractNumber(row, ["y"]);
-  if (price === null || price <= 0 || previousClose === null || previousClose <= 0) return null;
-
-  const change = price - previousClose;
-  const changePercent = (change / previousClose) * 100;
-  const capturedAt = taipeiDateTimeToIso(row.d, row.t);
-  return {
-    value: price,
-    change,
-    changePercent,
-    capturedAt,
-    provider: "twse",
-    sourceSymbol,
-    raw: {
-      provider: "twse",
-      source_symbol: sourceSymbol,
-      date: row.d || null,
-      time: row.t || null,
-      price,
-      previous_close: previousClose,
-      change,
-      change_percent: changePercent,
-    },
-  };
-}
 
 async function fetchTwseQuote(
   exCh: string,
@@ -859,7 +839,7 @@ async function fetchTwseQuote(
     }
     const data = await response.json();
     recorder?.({ endpoint: exCh, status: response.status, payload: data, error: null });
-    return normalizeTwseQuote(data && typeof data === "object" && !Array.isArray(data) ? data as Record<string, unknown> : {}, sourceSymbol);
+    return normalizeRequiredTwseQuote(data && typeof data === "object" && !Array.isArray(data) ? data as Record<string, unknown> : {}, sourceSymbol);
   } catch (err) {
     clearTimeout(timeoutId);
     const message = sanitizeProviderError(err instanceof Error ? err.message : String(err));
@@ -906,6 +886,7 @@ async function fetchTaiwanCoreQuote(
       status: Number.isFinite(Number(selectedObservation.status)) ? Number(selectedObservation.status) : null,
       payload: selectedObservation.payload || null,
       error: selectedObservation.error ? String(selectedObservation.error) : null,
+      responses: resolved.observations,
     });
     for (const observation of resolved.observations) {
       if (Number(observation.status) === 200) continue;
@@ -1321,7 +1302,7 @@ Deno.serve(async (req) => {
           if (!failed.includes(config.displaySymbol)) failed.push(config.displaySymbol);
           providerFailureDetails.push({ provider: config.market === "TW" ? "fugle" : "finnhub",
             symbol: config.displaySymbol, endpoint: "atomic_checkpoint_assembly",
-            failure_code: classifyRequiredProviderFailure({ status: 200 }, "ATOMIC_PROVIDER_RESULT_MISSING") });
+            failure_code: 'ATOMIC_CARDINALITY', error: 'ATOMIC_PROVIDER_RESULT_MISSING' });
           if (config.market === "TW" && !twCoreSymbolsFailed.some((item) => item.symbol === config.displaySymbol)) {
             twCoreSymbolsFailed.push({ symbol: config.displaySymbol, reason: "ATOMIC_PROVIDER_RESULT_MISSING" });
           }
@@ -1366,6 +1347,8 @@ Deno.serve(async (req) => {
           endpoint: observation?.endpoint || matchingFailure?.endpoint || requiredProviderSlot(config.displaySymbol)?.endpoint || 'unknown',
           httpStatus: observation?.status ?? matchingFailure?.status ?? null,
           rawPayload: observation?.payload || {},
+          adapterFailureCode: observation?.adapterFailureCode || null,
+          responses: observation?.responses || [],
           normalizedQuote: quote,
           evidence,
           error: observation?.error || matchingFailure?.error || matchingFailure?.failure_code || null,
@@ -1692,15 +1675,17 @@ Deno.serve(async (req) => {
         timed_out: false,
       }
       : summarizedProviderHealth;
-    const classifiedProviderFailures = classifyProviderFailures(providerFailureDetails);
-    const waitingSymbols = new Set(classifiedProviderFailures
-      .filter((failure: Record<string, unknown>) => failure.failure_code === 'PROVIDER_DATA_NOT_READY')
-      .map((failure: Record<string, unknown>) => String(failure.symbol || '')));
-    const otherProviderFailures = classifiedProviderFailures.filter((failure: Record<string, unknown>) =>
-      failure.failure_code !== 'PROVIDER_DATA_NOT_READY' &&
-      !(failure.endpoint === 'atomic_checkpoint_assembly' && waitingSymbols.has(String(failure.symbol || ''))));
-    const waitingForProviderData = phase === 'premarket' && !atomicBatchId &&
-      waitingSymbols.size > 0 && otherProviderFailures.length === 0;
+    const classifiedProviderFailures = classifyProviderFailures(providerFailureDetails.map(failure => {
+      const slot = REQUIRED_PROVIDER_CONFIG.find(item => item.key === failure.symbol || item.sourceSymbol === failure.symbol);
+      return { ...failure, symbol: slot?.key || failure.symbol };
+    }).filter(failure => beneficiaryCloseOnly || providerContractEvidence.get(String(failure.symbol))?.valid !== true));
+    const retryEntry = evaluateProviderRetryEntry({
+      phase, atomicBatchId, failures: classifiedProviderFailures,
+      observedAt: new Date().toISOString(), tradingDate,
+    });
+    const waitingForProviderData = retryEntry.waiting;
+    const primaryFailure = selectPrimaryFailure(classifiedProviderFailures,
+      atomicCommitError ? classifyCanonicalFailure({error:atomicCommitError,endpoint:'atomic_checkpoint_commit'}).failure_code : timedOut ? 'PROVIDER_TIMEOUT' : null);
     const requiredCoreSymbols = [...CHECKPOINT_PROVIDER_KEYS];
     const atomicCheckpointComplete = !beneficiaryCloseOnly && atomicBatchId !== null &&
       retainedCoreEvidence.size === CHECKPOINT_PROVIDER_KEYS.length && atomicCommitError === null;
@@ -1742,7 +1727,7 @@ Deno.serve(async (req) => {
       "PROVIDER_DATA_NOT_READY",
     ]);
     const hasProviderDegradation = classifiedProviderFailures.some((failure: Record<string, unknown>) =>
-      providerDegradationCodes.has(String(failure.failure_code || ""))
+      providerDegradationCodes.has(String(failure.failure_code || "")) || String(failure.failure_code || '').startsWith('PROVIDER_')
     );
     const healthProvider = beneficiaryCloseOnly
       ? "market_fetch_v10_beneficiary_close"
@@ -1754,7 +1739,7 @@ Deno.serve(async (req) => {
       checkpoint,
       ...overallHealth,
       latency_ms: Date.now() - startedMs,
-      last_error_code: waitingForProviderData ? 'PROVIDER_DATA_NOT_READY' : timedOut
+      last_error_code: primaryFailure.primary || (timedOut
         ? "OVERALL_TIMEOUT"
         : atomicCommitError
           ? "ATOMIC_CHECKPOINT_COMMIT_FAILED"
@@ -1762,7 +1747,7 @@ Deno.serve(async (req) => {
           ? "CANONICAL_WRITE_FAILED"
           : beneficiaryCloseOnly && beneficiaryCloseStatus.complete !== true
             ? String(beneficiaryCloseStatus.status || "BENEFICIARY_CLOSE_INCOMPLETE")
-            : classifiedProviderFailures[0]?.failure_code || (failed.length > 0 ? "PARTIAL_PROVIDER_FAILURE" : null),
+            : classifiedProviderFailures[0]?.failure_code || (failed.length > 0 ? "PARTIAL_PROVIDER_FAILURE" : null)),
       correlation_id: beneficiaryCloseOnly ? correlationId : evidenceCorrelationId,
       details: {
         fetch_strategy: "parallel_provider_lanes",
@@ -1773,6 +1758,9 @@ Deno.serve(async (req) => {
         })),
         providers_by_symbol: providerUsedBySymbol,
         provider_failures: classifiedProviderFailures,
+        primary_failure: primaryFailure.primary,
+        secondary_consequences: primaryFailure.secondary,
+        retry_entry_state: retryEntry.state,
         provider_readiness_state: waitingForProviderData ? 'WAITING_FOR_PROVIDER_DATA' : null,
         canonical_write_errors: canonicalWriteErrors,
         beneficiary_lookup: beneficiaryLookup,

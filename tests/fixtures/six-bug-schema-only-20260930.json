@@ -1,0 +1,17 @@
+{
+  "schema_version": "SIX_BUG_ISOLATION_SCHEMA_BASELINE_V1",
+  "source": "CONTROLLED_LOCAL_FAILURE_HUNT_BASELINE",
+  "source_main": "2e530bc0db49bf76d6188642b79e112b339872aa",
+  "business_rows": 0,
+  "production_access": false,
+  "source_export_sha256": "2a4e81ff19adf4244ca1a0305d5e5ef89e16e56af285467555c9859cb391fd87",
+  "normalization": "TRAILING_WHITESPACE_ONLY; protected business function hashes are unchanged",
+  "sha256": "5da9363bce62e14cf61d42cc02d3c821406936d8be414220aaca71b96326bf01",
+  "function_predecessor_hashes": {
+    "commit_market_checkpoint_batch_v1(date,text,text,uuid,text,jsonb)": "8b73a0da9bdb1da57102f2d75da67f9c",
+    "advance_trading_day_state_v1(date,text,text,text,uuid,jsonb)": "c0f2f9a050448d6810cfdda614626529",
+    "capture_morning_alpha_acceptance_v1(date,text)": "c9c4742a389523fa900f62b20241631f",
+    "invoke_premarket_readiness_retry_v1()": "df9266768b6463755e9d90013adc0f60"
+  },
+  "required_prior_observability_migration": "20260923124500_production_evidence_recorder_v1.sql"
+}

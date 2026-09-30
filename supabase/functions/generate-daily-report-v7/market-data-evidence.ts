@@ -135,6 +135,9 @@ export function normalizeMarketDataRows(
 }
 
 export const SECTOR_RECONSTRUCTION_VERSION = 'AUTHORITATIVE_CLOSE_MARKET_CHANGE_V1';
+// Stable canonical provenance identifier already understood by deployed
+// downstream readers. Physical storage/admission are explicit lineage fields;
+// this identifier does not claim the lifecycle-filtered SQL view was queried.
 export const SECTOR_RECONSTRUCTION_SOURCE = 'authoritative_market_data_snapshots_v1';
 
 export type AuthoritativeCloseRow = {
@@ -158,6 +161,9 @@ export type SectorEvidenceLineage = {
   provider_contract_version: 'MARKET_CHECKPOINT_PROVIDER_V1';
   algorithm: typeof SECTOR_RECONSTRUCTION_VERSION;
   constituent_symbols: string[];
+  source_table?: 'market_checkpoint_snapshots';
+  authority_contract?: 'MARKET_CHECKPOINT_ATOMICITY_V1';
+  reconstruction_basis?: 'RECONSTRUCTED_FROM_AUTHORITATIVE_MARKET_EVIDENCE';
 };
 
 export type ReconstructedSectorRow = {
@@ -188,6 +194,57 @@ const SECTORS = [
 ] as const;
 
 const unavailable = (reason: string): SectorReconstructionResult => ({ status: 'UNAVAILABLE', rows: [], reason });
+
+/** Research authority is the immutable committed batch plus the unchanged DB
+ * integrity contract, NOT whether yesterday's report/lifecycle succeeded.
+ * Never advance yesterday's runtime state or persist reconstructed scores. */
+export function reconstructSectorRotationFromCommittedClose(
+  rows: readonly Record<string, unknown>[],
+  batches: readonly Record<string, unknown>[],
+  integrity: Record<string, unknown>,
+  businessDate: string,
+): SectorReconstructionResult {
+  const batch = batches[0];
+  if (batches.length !== 1 || !batch || batch.status !== 'COMMITTED'
+    || batch.business_date !== businessDate || batch.checkpoint !== '1430'
+    || batch.market_session !== 'close'
+    || batch.provider_contract_version !== 'MARKET_CHECKPOINT_PROVIDER_V1'
+    || batch.expected_provider_count !== 11 || batch.committed_provider_count !== 11) {
+    return unavailable('COMMITTED_CLOSE_BATCH_INVALID');
+  }
+  if (integrity.status !== 'PASS' || integrity.contract !== 'MARKET_CHECKPOINT_ATOMICITY_V1'
+    || integrity.business_date !== businessDate || integrity.checkpoint !== '1430'
+    || !batch.batch_id || integrity.batch_id !== batch.batch_id
+    || !batch.correlation_id || integrity.correlation_id !== batch.correlation_id
+    || !batch.idempotency_key || integrity.idempotency_key !== batch.idempotency_key
+    || !batch.payload_hash || integrity.payload_hash !== batch.payload_hash
+    || ['canonical_row_count', 'distinct_provider_count', 'compatibility_row_count',
+      'compatibility_provider_count'].some(key => integrity[key] !== 11)
+    || ['committed_batch_count', 'distinct_batch_id_count'].some(key => integrity[key] !== 1)
+    || ['unbatched_row_count', 'mixed_batch_revision_count', 'compatibility_mismatch_count',
+      'duplicate_authoritative_provider_count'].some(key => integrity[key] !== 0)) {
+    return unavailable('COMMITTED_CLOSE_INTEGRITY_INVALID');
+  }
+  if (rows.some(row => row.batch_id !== batch.batch_id || row.correlation_id !== batch.correlation_id
+    || row.idempotency_key !== batch.idempotency_key || row.symbol !== row.provider_key
+    || row.trading_date !== businessDate || row.checkpoint !== '1430' || row.market_session !== 'close')) {
+    return unavailable('COMMITTED_CLOSE_ROW_LINEAGE_INVALID');
+  }
+  const result = reconstructSectorRotationFromAuthoritativeClose(rows.map(row => ({
+    symbol: String(row.symbol), change_percent: row.change_percent as number | string | null,
+    // Session freshness uses the original provider timestamp, never ingestion.
+    captured_at: typeof row.source_timestamp === 'string' ? row.source_timestamp : null,
+    committed_at: typeof batch.committed_at === 'string' ? batch.committed_at : null,
+    trading_date: businessDate, checkpoint: '1430', phase: 'close',
+    batch_id: String(batch.batch_id), provider_contract_version: String(batch.provider_contract_version),
+  })), businessDate);
+  if (result.status !== 'RECONSTRUCTED') return result;
+  return { ...result, rows: result.rows.map(row => ({ ...row, lineage: {
+    ...row.lineage, source_table: 'market_checkpoint_snapshots',
+    authority_contract: 'MARKET_CHECKPOINT_ATOMICITY_V1',
+    reconstruction_basis: 'RECONSTRUCTED_FROM_AUTHORITATIVE_MARKET_EVIDENCE',
+  } })) };
+}
 const round = (value: number, digits = 1): number => {
   const scale = 10 ** digits;
   return Math.round(value * scale) / scale;

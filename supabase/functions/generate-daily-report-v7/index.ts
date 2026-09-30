@@ -22,10 +22,9 @@ import {
   mergeCanonicalAndLegacyMarketRows,
   normalizeMarketDataRows,
   type NormalizedMarketIndicator,
-  reconstructSectorRotationFromAuthoritativeClose,
+  reconstructSectorRotationFromCommittedClose,
   SECTOR_RECONSTRUCTION_SOURCE,
   SECTOR_RECONSTRUCTION_VERSION,
-  type AuthoritativeCloseRow,
   type SectorEvidenceLineage,
 } from './market-data-evidence.ts';
 import {
@@ -1148,13 +1147,17 @@ async function reconstructResearchSectorRotationForDate(
   scoreDate:string,
   log:(message:string)=>void,
 ):Promise<SectorRotationRow[]>{
-  const {data,error}=await supabase.from('authoritative_market_data_snapshots_v1')
-    .select('symbol,change_percent,captured_at,committed_at,trading_date,checkpoint,phase,batch_id,provider_contract_version')
-    .eq('trading_date',scoreDate).eq('checkpoint','1430').eq('phase','close').limit(12);
-  if(error){log('SECTOR_RECONSTRUCTION_SOURCE_UNAVAILABLE '+error.message);return [];}
-  const result=reconstructSectorRotationFromAuthoritativeClose(
-    (data??[]) as unknown as AuthoritativeCloseRow[],scoreDate,
-  );
+  const [integrity,batches,rows]=await Promise.all([
+    supabase.rpc('market_checkpoint_batch_integrity_v1',{p_business_date:scoreDate,p_checkpoint:'1430'}),
+    supabase.from('market_checkpoint_batches')
+      .select('batch_id,business_date,checkpoint,market_session,correlation_id,idempotency_key,provider_contract_version,status,expected_provider_count,committed_provider_count,payload_hash,committed_at')
+      .eq('business_date',scoreDate).eq('checkpoint','1430').eq('status','COMMITTED').limit(2),
+    supabase.from('market_checkpoint_snapshots')
+      .select('symbol,provider_key,change_percent,source_timestamp,trading_date,checkpoint,market_session,batch_id,correlation_id,idempotency_key')
+      .eq('trading_date',scoreDate).eq('checkpoint','1430').limit(12),
+  ]);
+  if(integrity.error||batches.error||rows.error){log('SECTOR_RECONSTRUCTION_SOURCE_UNAVAILABLE');return [];}
+  const result=reconstructSectorRotationFromCommittedClose(rows.data??[],batches.data??[],canonicalRecord(integrity.data),scoreDate);
   if(result.status!=='RECONSTRUCTED'){
     log('SECTOR_RECONSTRUCTION_REJECTED date='+scoreDate+' reason='+result.reason);
     return [];
@@ -2990,7 +2993,7 @@ Deno.serve(async (req:Request)=>{
       :await withTimeout(reconstructResearchSectorRotationForDate(supabase,sectorRotationReferenceDate,log),3000,'sector_rotation_reconstruction',log,[] as SectorRotationRow[]);
     const sectorEvidenceLineage=readSectorEvidenceLineage(sectorData[0])??null;
     const sectorSourceVersion=sectorEvidenceLineage
-      ?'market_quotes/news_events/authoritative_market_data_snapshots_v1:'+SECTOR_RECONSTRUCTION_VERSION
+      ?'market_quotes/news_events/'+SECTOR_RECONSTRUCTION_SOURCE+':'+SECTOR_RECONSTRUCTION_VERSION
       :'market_quotes/news_events/sector_rotation_scores:V1';
     const rawDataForDates=rawDatesSettled.status==='fulfilled'?rawDatesSettled.value:[];const previousReport=previousReportSettled.status==='fulfilled'?previousReportSettled.value:null;const recentReportsForUniverse=recentReportsSettled.status==='fulfilled'?recentReportsSettled.value:[];
     const marketData=marketFetch.marketData;const dataCount=marketFetch.dataCount;const newsReview=filterPremiumNewsEvidence(newsFetch.newsData);const newsData=newsReview.verified as MarketNewsItem[];

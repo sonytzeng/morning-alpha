@@ -227,7 +227,7 @@ export function resolveAtomicRowContractIntegrity(registry, artifactBytes, readS
   };
 }
 
-export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+function resolveRuntimeSparseRecoveryPredecessorIntegrity(registry, artifactBytes, readSource = read) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/runtime-sparse-recovery-baseline-transition-20260929.json'));
   const candidate = resolveReviewedBaselineTransition({
     manifest, readSource,
@@ -240,6 +240,22 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, r
     fileHash: candidate.fileHash,
     newCandidatePaths: candidate.newCandidatePaths,
     runtimeSparseRecoveryCandidateIntegrity: candidate,
+  };
+}
+
+export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/research-evidence-recovery-baseline-transition-20260930.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest, readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_RUNTIME_SPARSE_RECOVERY_20260929',
+    verifyPredecessor: predecessorRead => resolveRuntimeSparseRecoveryPredecessorIntegrity(registry, artifactBytes, predecessorRead),
+  });
+  return {
+    ...candidate.reviewedBaselinePredecessor,
+    fileHash: candidate.fileHash,
+    newCandidatePaths: candidate.newCandidatePaths,
+    researchEvidenceRecoveryCandidateIntegrity: candidate,
   };
 }
 

@@ -1,0 +1,117 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_RECORDER_RETRY_PROJECTION_20260930",
+  "candidate_base_git_sha": "f9613b3732a00cd8a229c45a1ac683bb0ecb8b09",
+  "predecessor_integrity_id": "MORNING_ALPHA_SIX_BUG_PREVENTIVE_CLOSURE_20260930",
+  "approval_provenance": "Sony explicitly authorized BUG5 Recorder 08:45 Projection candidate only: one forward-only Recorder migration candidate, fresh isolation, Recorder/Retry/historical regressions, Integrity/type/lint/build, Commit Push PR and GitHub Release CI. Production migration and any Function/Cron/Auth/RLS/Secret/business/historical change are not authorized.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/recorderRetryProjectionDatabase.integration.mjs",
+    "tests/recorderRetryProjection.test.mjs",
+    "tests/helpers/recorderRetryBusinessShadow.mjs",
+    "tests/helpers/recorderRetrySqlReplay.mjs",
+    "tests/criticalContractRecorder.test.mjs",
+    "tests/productionEvidenceRecorder.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "f9613b3732a00cd8a229c45a1ac683bb0ecb8b09",
+      "predecessor_sha256": "4bcb74bfcafdaa13d6c230320d7a7110e0aeb4d95b2bc508b3218a46bbbf8400",
+      "candidate_sha256": "f8bd35ae17533f45187d020f82d9e28fe903a43b83a49cde69868b99b062b0d0",
+      "source_lineage": "Exact merged six-bug predecessor; Recorder-only reviewed candidate with preserved immutable history and source identities.",
+      "reason": "Fix only the finite Retry state projection and its isolated replay, regression and release verification.",
+      "rollback_target": "Restore the exact predecessor only before candidate release; Production rollback requires independent approval."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "f9613b3732a00cd8a229c45a1ac683bb0ecb8b09",
+      "predecessor_sha256": "bbf9564037c012df756045c07b2bafb58c3105629cf586a6bdb330e8cc8f0825",
+      "candidate_sha256": "d2ab65f379b06d02937994232b7257d314f619706f3370428a4027b89cb74a41",
+      "source_lineage": "Exact merged six-bug predecessor; Recorder-only reviewed candidate with preserved immutable history and source identities.",
+      "reason": "Fix only the finite Retry state projection and its isolated replay, regression and release verification.",
+      "rollback_target": "Restore the exact predecessor only before candidate release; Production rollback requires independent approval."
+    },
+    {
+      "path": "supabase/migrations/20260930080719_recorder_retry_projection_parity_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "b52d32a0ebc3f82a5833baa8a3ad39376587b90d8873fadf9e1875157755e41b",
+      "source_lineage": "Exact merged six-bug predecessor; Recorder-only reviewed candidate with preserved immutable history and source identities.",
+      "reason": "Fix only the finite Retry state projection and its isolated replay, regression and release verification.",
+      "rollback_target": "Remove this candidate-only artifact before release; never alter historical Production evidence."
+    },
+    {
+      "path": "tests/helpers/recorderRetryReplayContract.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "c0dbc871d468cf409258a266a8e3e2366e495af0524eb4922994d3fb716f00d0",
+      "source_lineage": "Exact merged six-bug predecessor; Recorder-only reviewed candidate with preserved immutable history and source identities.",
+      "reason": "Fix only the finite Retry state projection and its isolated replay, regression and release verification.",
+      "rollback_target": "Remove this candidate-only artifact before release; never alter historical Production evidence."
+    },
+    {
+      "path": "tests/helpers/recorderRetrySqlReplay.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "1e411bf88ec3c495f4067d9e01104e70ba12f936f073e832a32ff84879398376",
+      "source_lineage": "Exact merged six-bug predecessor; Recorder-only reviewed candidate with preserved immutable history and source identities.",
+      "reason": "Fix only the finite Retry state projection and its isolated replay, regression and release verification.",
+      "rollback_target": "Remove this candidate-only artifact before release; never alter historical Production evidence."
+    },
+    {
+      "path": "tests/helpers/recorderRetryBusinessShadow.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "4c43fa37c0e6fae537c610f027522848696720778a8bf661c88c04c852c32dbe",
+      "source_lineage": "Exact merged six-bug predecessor; Recorder-only reviewed candidate with preserved immutable history and source identities.",
+      "reason": "Fix only the finite Retry state projection and its isolated replay, regression and release verification.",
+      "rollback_target": "Remove this candidate-only artifact before release; never alter historical Production evidence."
+    },
+    {
+      "path": "tests/recorderRetryProjection.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "956460fa5ad81e4713e8ec5986a3717985458688f865c09c3b5ceb03d838651d",
+      "source_lineage": "Exact merged six-bug predecessor; Recorder-only reviewed candidate with preserved immutable history and source identities.",
+      "reason": "Fix only the finite Retry state projection and its isolated replay, regression and release verification.",
+      "rollback_target": "Remove this candidate-only artifact before release; never alter historical Production evidence."
+    },
+    {
+      "path": "tests/recorderRetryProjectionDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "8cb7ec759a1473fbf33e92042b3b00008fccd7e92f3e857fb28702c7d07683f7",
+      "source_lineage": "Exact merged six-bug predecessor; Recorder-only reviewed candidate with preserved immutable history and source identities.",
+      "reason": "Fix only the finite Retry state projection and its isolated replay, regression and release verification.",
+      "rollback_target": "Remove this candidate-only artifact before release; never alter historical Production evidence."
+    },
+    {
+      "path": "docs/operations/recorder-retry-projection-20260930.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "e63e52da1080ab8a20ceb0e6f65bc1ddeba9d2d569421c0fd8d246167966e5b7",
+      "source_lineage": "Exact merged six-bug predecessor; Recorder-only reviewed candidate with preserved immutable history and source identities.",
+      "reason": "Fix only the finite Retry state projection and its isolated replay, regression and release verification.",
+      "rollback_target": "Remove this candidate-only artifact before release; never alter historical Production evidence."
+    }
+  ]
+}

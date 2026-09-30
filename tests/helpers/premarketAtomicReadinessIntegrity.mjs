@@ -259,7 +259,7 @@ function resolveResearchEvidenceRecoveryIntegrity(registry, artifactBytes, readS
   };
 }
 
-export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+function resolveSixBugPredecessorIntegrity(registry, artifactBytes, readSource = read) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/six-bug-baseline-transition-20260930.json'));
   const candidate = resolveReviewedBaselineTransition({
     manifest, readSource,
@@ -286,6 +286,18 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, r
     declarationHash: row => declarationOverrides.get(row.path + ':' + row.name)
       ?? candidate.reviewedBaselinePredecessor.declarationHash(row),
     newCandidatePaths:candidate.newCandidatePaths, sixBugCandidateIntegrity:candidate };
+}
+
+export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/recorder-retry-projection-baseline-20260930.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest, readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_SIX_BUG_PREVENTIVE_CLOSURE_20260930',
+    verifyPredecessor: predecessorRead => resolveSixBugPredecessorIntegrity(registry, artifactBytes, predecessorRead),
+  });
+  return { ...candidate.reviewedBaselinePredecessor, fileHash:candidate.fileHash,
+    newCandidatePaths:candidate.newCandidatePaths, recorderRetryCandidateIntegrity:candidate };
 }
 
 export const readPremarketAtomicReadinessIntegrity = registry =>

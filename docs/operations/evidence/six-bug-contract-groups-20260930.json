@@ -1,0 +1,126 @@
+[
+  {
+    "id": "C02",
+    "classification": "CONFIRMED_DRIFT",
+    "disposition": "SHARED_AUTHORITATIVE_CALENDAR",
+    "gates": [
+      "tests/sixBugContracts.test.mjs",
+      "tests/sixBugDatabase.integration.mjs"
+    ]
+  },
+  {
+    "id": "C03",
+    "classification": "SAFE_IDENTICAL_DUPLICATION",
+    "disposition": "PRESERVED",
+    "gates": [
+      "tests/taiwanCashPhaseContract.test.mjs",
+      "tests/premarketProductionParity20260923.test.mjs"
+    ]
+  },
+  {
+    "id": "C04",
+    "classification": "SAFE_IDENTICAL_DUPLICATION",
+    "disposition": "PRESERVED",
+    "gates": [
+      "tests/txfSessionParity.test.mjs",
+      "tests/atomicRowContract20260924.test.mjs"
+    ]
+  },
+  {
+    "id": "C05",
+    "classification": "CONFIRMED_DRIFT",
+    "disposition": "LATEST_COMPLETED_US_SESSION_PARITY",
+    "gates": [
+      "tests/sixBugContracts.test.mjs",
+      "tests/sixBugDatabase.integration.mjs"
+    ]
+  },
+  {
+    "id": "C06",
+    "classification": "SAFE_IDENTICAL_DUPLICATION",
+    "disposition": "PRESERVED",
+    "gates": [
+      "tests/checkpointAtomicity.test.mjs",
+      "tests/fetchCheckpointEvidence.test.mjs"
+    ]
+  },
+  {
+    "id": "C07",
+    "classification": "CONFIRMED_DRIFT",
+    "disposition": "SHARED_RETRY_CLASSIFICATION_AND_DB_ENTRY",
+    "gates": [
+      "tests/sixBugContracts.test.mjs",
+      "tests/helpers/sixBugNegativeShadow.mjs"
+    ]
+  },
+  {
+    "id": "C08",
+    "classification": "SAFE_IDENTICAL_DUPLICATION",
+    "disposition": "SLA_AND_RECOVERY_REMAIN_SEPARATE",
+    "gates": [
+      "tests/premarketReadinessRetry.test.mjs",
+      "tests/acceptanceReadinessWindowDatabase.integration.mjs"
+    ]
+  },
+  {
+    "id": "C09",
+    "classification": "CONFIRMED_DRIFT",
+    "disposition": "HASH_PINNED_SHARED_CANONICAL_BUNDLES",
+    "gates": [
+      "tests/sixBugIntegrity.test.mjs",
+      "tests/helpers/sixBugPositiveShadow.mjs"
+    ]
+  },
+  {
+    "id": "C11",
+    "classification": "DRIFT_RISK",
+    "disposition": "NON_REACHABLE_GUARDED_RISK",
+    "gates": [
+      "tests/sixBugContracts.test.mjs",
+      "tests/sixBugDatabase.integration.mjs"
+    ]
+  },
+  {
+    "id": "C12",
+    "classification": "DRIFT_RISK",
+    "disposition": "NON_REACHABLE_GUARDED_RISK",
+    "gates": [
+      "tests/runtimeSparseRecovery.test.mjs",
+      "tests/helpers/sixBugNegativeShadow.mjs"
+    ]
+  },
+  {
+    "id": "C13",
+    "classification": "SAFE_IDENTICAL_DUPLICATION",
+    "disposition": "PRESERVED",
+    "gates": [
+      "tests/researchCrossDay20260930.test.ts"
+    ]
+  },
+  {
+    "id": "C14",
+    "classification": "SAFE_IDENTICAL_DUPLICATION",
+    "disposition": "PRESERVED",
+    "gates": [
+      "tests/closingLearningContract.test.mjs",
+      "tests/helpers/sixBugSqlCapsuleReplay.mjs"
+    ]
+  },
+  {
+    "id": "C15",
+    "classification": "CONFIRMED_DRIFT",
+    "disposition": "SHARED_PROVIDER_FAILURE_V2",
+    "gates": [
+      "tests/sixBugContracts.test.mjs"
+    ]
+  },
+  {
+    "id": "C16",
+    "classification": "CONFIRMED_DRIFT",
+    "disposition": "ADAPTER_REPLAY_V2_EXPLICIT_LEGACY_LIMITATION",
+    "gates": [
+      "tests/productionEvidenceRecorder.test.mjs",
+      "tests/sixBugLegacyReplay.test.mjs"
+    ]
+  }
+]

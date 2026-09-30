@@ -1,3 +1,4 @@
+import { classifyCanonicalFailure } from './provider-failure-contract.mjs';
 function asRecord(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
@@ -171,61 +172,7 @@ export function buildBeneficiaryBatchContract(ai, options = {}) {
   };
 }
 
-export function classifyProviderFailure(detail) {
-  const failure = asRecord(detail);
-  const status = Number(failure.status);
-  const error = String(failure.error || '').toLowerCase();
-  const explicitFailureCode = String(failure.failure_code || '');
-  if (explicitFailureCode === 'PROVIDER_DATA_NOT_READY') {
-    return { ...failure, failure_code: explicitFailureCode, retryable: true };
-  }
-  if (['PROVIDER_SYMBOL_INVALID', 'RESOURCE_NOT_FOUND', 'PROVIDER_RESPONSE_CONTRACT_INVALID', 'STALE_PROVIDER_DATA'].includes(explicitFailureCode)) {
-    return {
-      ...failure,
-      failure_code: explicitFailureCode,
-      retryable: false,
-    };
-  }
-  const subscriptionSignal = status === 402 || status === 403 ||
-    /subscription|entitlement|not[ _-]?entitled|plan[ _-]?required|permission[ _-]?denied|insufficient[ _-]?scope/.test(error);
-  let failureCode = 'UNKNOWN_PROVIDER_FAILURE';
-  let retryable = false;
-
-  if (error.includes('missing_api_key') || error.includes('not configured')) {
-    failureCode = 'CONFIGURATION_MISSING';
-  } else if (subscriptionSignal) {
-    failureCode = 'BLOCKED_BY_SUBSCRIPTION';
-  } else if (status === 401) {
-    failureCode = 'AUTHENTICATION_FAILED';
-  } else if (status === 429) {
-    failureCode = 'RATE_LIMITED';
-    retryable = true;
-  } else if (status >= 500 && status <= 599) {
-    failureCode = 'PROVIDER_UNAVAILABLE';
-    retryable = true;
-  } else if (error.includes('cannot_resolve_active_txf_contract')) {
-    failureCode = 'CONTRACT_MAPPING_FAILED';
-  } else if (error.includes('provider_timestamp') || error.includes('checkpoint_stale') || error.includes('cross_session_stale')) {
-    failureCode = 'STALE_PROVIDER_DATA';
-    retryable = true;
-  } else if (error.includes('timeout') || error.includes('abort')) {
-    failureCode = 'TIMEOUT';
-    retryable = true;
-  } else if (error.includes('all_zero_quote')) {
-    failureCode = 'UNSUPPORTED_OR_EMPTY_SYMBOL';
-  } else if (Number.isFinite(status) && status >= 400) {
-    failureCode = 'PROVIDER_REQUEST_REJECTED';
-  } else if (error) {
-    failureCode = 'PROVIDER_TRANSPORT_ERROR';
-    retryable = true;
-  }
-
-  return {
-    ...failure,
-    failure_code: failureCode,
-    retryable,
-  };
-}
+export const classifyProviderFailure = classifyCanonicalFailure;
 
 export function classifyProviderFailures(details) {
   return asRows(details).map(classifyProviderFailure);

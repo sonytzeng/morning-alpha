@@ -63,6 +63,8 @@ jobs:
           supabase/functions/close-market-review/index.ts
           supabase/functions/closing-verification-engine/index.ts
           supabase/functions/continuous-learning-engine/index.ts
+          supabase/functions/opening-market-radar/index.ts
+          supabase/functions/fetch-global-market-news/index.ts
           supabase/functions/content-os-morning-alpha-source/index.ts
       - name: Core contract regressions
         run: >-
@@ -80,6 +82,12 @@ jobs:
         env:
           MA_ISOLATED_TEST_DB: ma_research_gate_test1
         run: node --test tests/researchProvenanceDatabase.integration.mjs
+      - name: Six-bug exact fresh schema, shared calendar, Global 8, boundary and Recorder gates
+        env:
+          MA_LOCAL_SCOPE: ma-six-bug-preventive-20260930
+          MA_ISOLATED_TEST_DB: ma_six_bug_test1
+          MA_TEST_PGPORT: 55439
+        run: node --test tests/sixBugDatabase.integration.mjs
       - name: Isolated PostgreSQL migration twice and atomicity tests
         env:
           MA_ISOLATED_TEST_DB: ma_core_test1

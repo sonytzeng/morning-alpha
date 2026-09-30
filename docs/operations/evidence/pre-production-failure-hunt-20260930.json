@@ -1,0 +1,1784 @@
+{
+  "schema_version": "MORNING_ALPHA_FAILURE_HUNT_INVENTORY_V1",
+  "observed_date": "2026-09-30",
+  "baseline_main": "2e530bc0db49bf76d6188642b79e112b339872aa",
+  "status": "AUDIT_SECTIONS_A_J_REVIEWED_NOT_REMEDIATED_NOT_RELEASE_READY",
+  "scope": {
+    "production_writes": 0,
+    "migrations_executed": 0,
+    "functions_deployed": 0,
+    "cron_modified": false,
+    "real_line_calls": 0,
+    "historical_recovery": 0,
+    "synthetic_disguised_as_real": false
+  },
+  "bugs": [
+    {
+      "ID": "FH-01",
+      "PATH": "Report v233 → LINE v60 / Closing v25 / close-review v29 / Learning v9 / Ops v24",
+      "REAL_REACHABLE": "YES",
+      "SEVERITY": "P0",
+      "ROOT_CAUSE": "DEPLOYED_SHARED_CANONICAL_PROVENANCE_DRIFT",
+      "PRODUCTION_IMPACT": "合法 reconstructed-sector report 被正式下游拒絕；LINE 409，Closing/Learning opening gate BLOCKED。",
+      "FIX_REQUIRED": "將同一已驗證 shared canonical provenance contract 隨五支 consumer 一致打包；新增 deployed-bundle parity gate。",
+      "EVIDENCE": [
+        "deployed-line-result",
+        "downstream-ab-results"
+      ],
+      "IMPLEMENTATION": "main 已有正確分支；Production bundles 仍舊。禁止本輪部署。"
+    },
+    {
+      "ID": "FH-02",
+      "PATH": "TW calendar → cash/TXF session → Atomic / Research / lifecycle",
+      "REAL_REACHABLE": "YES",
+      "SEVERITY": "P0",
+      "ROOT_CAUSE": "OFFICIAL_TWSE_CALENDAR_OMISSIONS",
+      "PRODUCTION_IMPACT": "漏列六個 2026 休市日；9/29 真實 ticker 09/24 被誤判 stale；10/27 會找不存在的10/26 session/close。",
+      "FIX_REQUIRED": "官方 calendar 單一版本同步 Edge、frontend date helper 與 DB predicate；不改歷史資料。",
+      "EVIDENCE": [
+        "calendar",
+        "boundary-results"
+      ],
+      "IMPLEMENTATION": "隔離最小 calendar prototype 用兩筆原始9/29 Recorder證據 PASS；DB尚未變更。"
+    },
+    {
+      "ID": "FH-03",
+      "PATH": "Finnhub 8 → required provider validation → Atomic row contract",
+      "REAL_REACHABLE": "YES",
+      "SEVERITY": "P1",
+      "ROOT_CAUSE": "LATEST_COMPLETED_US_SESSION_NOT_ENFORCED",
+      "PRODUCTION_IMPACT": "retained real response t 減24h，八組皆仍能通過Adapter/Edge/DB row guard；跳過最近合法 session 的舊資料可進Atomic。",
+      "FIX_REQUIRED": "依實際 source symbol 的交易市場判定最新完成session；Edge/DB共同限制，不能只靠7天年齡。",
+      "EVIDENCE": [
+        "adapter-results",
+        "boundary-results"
+      ],
+      "IMPLEMENTATION": "只完成受控mutation證明；尚無已驗證整合修復。"
+    },
+    {
+      "ID": "FH-04",
+      "PATH": "Provider HTTP → Preflight classifier / Fetch health summary",
+      "REAL_REACHABLE": "YES",
+      "SEVERITY": "P2",
+      "ROOT_CAUSE": "FAILURE_CLASSIFICATION_AND_SUMMARY_PRIORITY_DRIFT",
+      "PRODUCTION_IMPACT": "同一403在Preflight是AUTHENTICATION_FAILED、Fetch是BLOCKED_BY_SUBSCRIPTION；9/29真實health最上層變成ATOMIC_CHECKPOINT_COMMIT_FAILED，掩蓋供應商原因。詳細reason仍保留，並非所有證據遺失。",
+      "FIX_REQUIRED": "共用錯誤分類，真實provider failure優先，只有實際DB commit錯誤才使用Atomic commit failure。",
+      "EVIDENCE": [
+        "boundary-results",
+        "read_only_data_provider_health_20260928_20260930"
+      ],
+      "IMPLEMENTATION": "僅稽核。"
+    },
+    {
+      "ID": "FH-05",
+      "PATH": "Provider Recorder → offline replay",
+      "REAL_REACHABLE": "YES",
+      "SEVERITY": "P1",
+      "ROOT_CAUSE": "RECORDER_ADAPTER_IDENTITY_AND_FAILURE_RESULT_LOSS",
+      "PRODUCTION_IMPACT": "13筆真實FAIL樣本有5筆重播原因不相同；TWSE被選成Fugle，Fugle失敗結果被normalize null吞掉。",
+      "FIX_REQUIRED": "保留真實adapter identity與failure結果，不能用stored verdict當重播答案；RAW_NOT_RETAINED需區分normalize-contract replay與raw replay。",
+      "EVIDENCE": [
+        "recorder-replay-results",
+        "adapter-results"
+      ],
+      "IMPLEMENTATION": "三筆TWSE仅修adapter identity的隔離probe恢復相同原因；既有Recorder rows未修改。"
+    },
+    {
+      "ID": "FH-06",
+      "PATH": "Fetch readiness output → 07:40–08:35 DB retry dispatcher",
+      "REAL_REACHABLE": "YES",
+      "SEVERITY": "P1",
+      "ROOT_CAUSE": "READINESS_RETRY_TRIGGER_HAS_NO_ACTIVE_PRODUCER",
+      "PRODUCTION_IMPACT": "目前Fetch無PROVIDER_DATA_NOT_READY producer；429/500/timeout均不滿足額外Retry入口。07:35後才恢復的provider無法由這組Cron重新取得資料。",
+      "FIX_REQUIRED": "以共用、明確可retry failure state接回既有bounded slots；保留11/11、07:30 SLA MISS、08:45 terminal，不對401/403/invalid-data無限retry。",
+      "EVIDENCE": [
+        "exact_fetch_waiting_expression",
+        "Production invoke_premarket_readiness_retry_v1 md5 df9266768b6463755e9d90013adc0f60"
+      ],
+      "IMPLEMENTATION": "static reachability + actual Fetch expression；尚未完整handler驗證修復。"
+    }
+  ],
+  "contracts": [
+    {
+      "ID": "C01",
+      "PATH": "Preflight / Fetch adapters, normalization, evidence",
+      "CLASSIFICATION": "CANONICAL_SINGLE_SOURCE",
+      "DISPOSITION": "共同required-provider-validation；目前共同缺陷另列FH03/FH04。"
+    },
+    {
+      "ID": "C02",
+      "PATH": "TW holiday / previous trading day",
+      "CLASSIFICATION": "CONFIRMED_PRODUCT_BUG",
+      "DISPOSITION": "FH02；Edge、DB、frontend目前各有硬編碼。"
+    },
+    {
+      "ID": "C03",
+      "PATH": "Taiwan cash phase / envelope versus session",
+      "CLASSIFICATION": "DUPLICATED_BUT_IDENTICAL",
+      "DISPOSITION": "相同phase predicate；日曆錯誤由C02承擔。"
+    },
+    {
+      "ID": "C04",
+      "PATH": "TXF session / final minute",
+      "CLASSIFICATION": "DUPLICATED_BUT_IDENTICAL",
+      "DISPOSITION": "05:01與13:46 exclusive，±1ms一致。"
+    },
+    {
+      "ID": "C05",
+      "PATH": "Finnhub latest completed US session",
+      "CLASSIFICATION": "CONFIRMED_PRODUCT_BUG",
+      "DISPOSITION": "FH03；兩端同樣過度接受。"
+    },
+    {
+      "ID": "C06",
+      "PATH": "Checkpoint collection windows",
+      "CLASSIFICATION": "DUPLICATED_BUT_IDENTICAL",
+      "DISPOSITION": "目前minute收集窗口與DB一致。"
+    },
+    {
+      "ID": "C07",
+      "PATH": "Readiness retry classification / DB admission",
+      "CLASSIFICATION": "CONFIRMED_PRODUCT_BUG",
+      "DISPOSITION": "FH06；Cron有啟用但入口狀態沒有producer。"
+    },
+    {
+      "ID": "C08",
+      "PATH": "07:30 SLA / 08:45 deadline",
+      "CLASSIFICATION": "DUPLICATED_BUT_IDENTICAL",
+      "DISPOSITION": "SLA exact inclusive；readiness exact exclusive；不混為一談。"
+    },
+    {
+      "ID": "C09",
+      "PATH": "Reconstructed source provenance / deployed consumers",
+      "CLASSIFICATION": "CONFIRMED_PRODUCT_BUG",
+      "DISPOSITION": "FH01；main正確不代表每支正式bundle正確。"
+    },
+    {
+      "ID": "C10",
+      "PATH": "Report readiness versus Recommendation",
+      "CLASSIFICATION": "CANONICAL_SINGLE_SOURCE",
+      "DISPOSITION": "市場與個股gate分開；75項直接regression PASS；不涵蓋FH01旧bundle。"
+    },
+    {
+      "ID": "C11",
+      "PATH": "Closing upper boundary",
+      "CLASSIFICATION": "CONTRACT_DRIFT_RISK",
+      "DISPOSITION": "Edge接受18:00:00.001，Acceptance拒絕。自然14:10/14:30捕獲及<=captured的source約束使該值無法進正常鏈；不列已證實可達bug。將精度對齊列入候選guard，不放寬DB。"
+    },
+    {
+      "ID": "C12",
+      "PATH": "0900 special jump versus later sparse recovery",
+      "CLASSIFICATION": "CONTRACT_DRIFT_RISK",
+      "DISPOSITION": "直接RPC可信metadata可接受wrong-correlation；正式Fetch先驗Atomic/parse identity，無證據自然路徑可帶入錯值。需保留DB防禦gap，不冒充已確認Product Bug。"
+    },
+    {
+      "ID": "C13",
+      "PATH": "News 48h predicates",
+      "CLASSIFICATION": "DUPLICATED_BUT_IDENTICAL",
+      "DISPOSITION": "正式組合路徑filterRecentNewsRows先拒future，48h±1ms正確；不可孤立premium helper的容差當Production通過。"
+    },
+    {
+      "ID": "C14",
+      "PATH": "Closing / Learning / Acceptance identity",
+      "CLASSIFICATION": "DUPLICATED_BUT_IDENTICAL",
+      "DISPOSITION": "同opening revision、durable receipts；stock NOT_APPLICABLE不要求假股票outcomes。"
+    },
+    {
+      "ID": "C15",
+      "PATH": "Provider HTTP failure classifier",
+      "CLASSIFICATION": "CONFIRMED_PRODUCT_BUG",
+      "DISPOSITION": "FH04。"
+    },
+    {
+      "ID": "C16",
+      "PATH": "Recorder capture adapter versus replay adapter",
+      "CLASSIFICATION": "CONFIRMED_PRODUCT_BUG",
+      "DISPOSITION": "FH05。"
+    },
+    {
+      "ID": "C17",
+      "PATH": "validateClosingWindowData 14:00–14:40",
+      "CLASSIFICATION": "INACTIVE_LEGACY",
+      "DISPOSITION": "目前正式Handler未呼叫；不因搜尋字串命中擴大Patch。"
+    }
+  ],
+  "counts": {
+    "confirmed_reachable_product_root_causes": 6,
+    "independently_duplicated_rule_groups": 14,
+    "boundary_predicate_differences": 1,
+    "proven_natural_reachable_boundary_bugs": 0,
+    "calendar_cross_day_blocking_root_causes": 1,
+    "tested_later_authoritative_state_dead_ends": 0,
+    "retry_entry_dead_ends": 1,
+    "critical_replay_gap_stage_classes_at_least": 6,
+    "compared_function_bundles": 12,
+    "byte_different_bundles": 7,
+    "confirmed_provenance_drift_consumers": 5
+  },
+  "replay_gaps": [
+    {
+      "stage": "Provider",
+      "evidence": "13真實失敗樣本5個原因不一致；3個TWSE adapter identity、2個Fugle original failure被吞。",
+      "classification": "FH05"
+    },
+    {
+      "stage": "Research",
+      "evidence": "input fingerprint儲存hash與counts，不保存完整失敗時market/news tags/learning-policy/prior-revision輸入。",
+      "classification": "OBSERVABILITY_COVERAGE_GAP"
+    },
+    {
+      "stage": "Report",
+      "evidence": "成功publication有immutable receipt，生成/claim前失敗沒有完整input capsule。",
+      "classification": "OBSERVABILITY_COVERAGE_GAP"
+    },
+    {
+      "stage": "Closing",
+      "evidence": "成功receipt完整；未完成/寫入前failure只有metadata，沒有完整query selection / exact runtime dependency capsule。",
+      "classification": "OBSERVABILITY_COVERAGE_GAP"
+    },
+    {
+      "stage": "Learning",
+      "evidence": "run counters/errors不是失敗當下selected predictions/outcomes/rules的不可變copy。",
+      "classification": "OBSERVABILITY_COVERAGE_GAP"
+    },
+    {
+      "stage": "Acceptance",
+      "evidence": "保存判定與部分refs，但不是整個讀取時刻之多表一致快照；後續state變更不能保證同結果。",
+      "classification": "OBSERVABILITY_COVERAGE_GAP"
+    }
+  ],
+  "production_config": [
+    {
+      "name": "fetch-market-data-v10",
+      "version": 76,
+      "diffs": []
+    },
+    {
+      "name": "market-readiness-preflight",
+      "version": 11,
+      "diffs": []
+    },
+    {
+      "name": "generate-daily-report-v7",
+      "version": 233,
+      "diffs": []
+    },
+    {
+      "name": "daily-delivery-orchestrator",
+      "version": 34,
+      "diffs": []
+    },
+    {
+      "name": "line-daily-push",
+      "version": 60,
+      "diffs": [
+        {
+          "name": "supabase/functions/_shared/market-status.ts",
+          "deployed": "d13a66c4e1bf350faa015147ef168e8f10eb8c6e696817cc6a68a6642572942b",
+          "main": "16b8a32e01e064ea055c951e0bf60377e4c2a195d9d8ac45c3d88f1bb551ad67"
+        },
+        {
+          "name": "supabase/functions/_shared/production-architecture-core.mjs",
+          "deployed": "4999bc2a0a5d915103fdb79394c1f30491b70c64bd84867af9850db1ec4c8157",
+          "main": "3e9520f6382bf0ea47d287b157b278e9db8ee02be63a4fa75d59a44500bbbd69"
+        },
+        {
+          "name": "supabase/functions/_shared/canonical-market-state.ts",
+          "deployed": "18c2aaed96714e76a2e7633a77d1107b212026ef8a9c5735829deadd8524febd",
+          "main": "1c733f061f829447634c7365c44dd88e81a07776bc811e79aca187257a5db0d9"
+        }
+      ]
+    },
+    {
+      "name": "closing-verification-engine",
+      "version": 25,
+      "diffs": [
+        {
+          "name": "supabase/functions/_shared/market-status.ts",
+          "deployed": "d13a66c4e1bf350faa015147ef168e8f10eb8c6e696817cc6a68a6642572942b",
+          "main": "16b8a32e01e064ea055c951e0bf60377e4c2a195d9d8ac45c3d88f1bb551ad67"
+        },
+        {
+          "name": "supabase/functions/_shared/market-runtime-stability.mjs",
+          "deployed": "ef0c4a9c6836ed979545804bdc058d6af4e7936ea8740f46713d035958d3e697",
+          "main": "f5de47a40d14d91c94e95ea44b56a21cf7138387a755642096cbe9b0a327f938"
+        },
+        {
+          "name": "supabase/functions/_shared/canonical-market-state.ts",
+          "deployed": "18c2aaed96714e76a2e7633a77d1107b212026ef8a9c5735829deadd8524febd",
+          "main": "1c733f061f829447634c7365c44dd88e81a07776bc811e79aca187257a5db0d9"
+        },
+        {
+          "name": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",
+          "deployed": "b45b984740e4bc5e42ad3cce45ba8b3ea4539fa77485c5dd6a447efb87b77b35",
+          "main": "cef34f328baa90a5575c0096a2c5130d7513273bf95ff4c0dc7850909c8d0925"
+        }
+      ]
+    },
+    {
+      "name": "close-market-review",
+      "version": 29,
+      "diffs": [
+        {
+          "name": "supabase/functions/_shared/market-status.ts",
+          "deployed": "d13a66c4e1bf350faa015147ef168e8f10eb8c6e696817cc6a68a6642572942b",
+          "main": "16b8a32e01e064ea055c951e0bf60377e4c2a195d9d8ac45c3d88f1bb551ad67"
+        },
+        {
+          "name": "supabase/functions/_shared/market-runtime-stability.mjs",
+          "deployed": "ef0c4a9c6836ed979545804bdc058d6af4e7936ea8740f46713d035958d3e697",
+          "main": "f5de47a40d14d91c94e95ea44b56a21cf7138387a755642096cbe9b0a327f938"
+        },
+        {
+          "name": "supabase/functions/_shared/canonical-market-state.ts",
+          "deployed": "18c2aaed96714e76a2e7633a77d1107b212026ef8a9c5735829deadd8524febd",
+          "main": "1c733f061f829447634c7365c44dd88e81a07776bc811e79aca187257a5db0d9"
+        }
+      ]
+    },
+    {
+      "name": "continuous-learning-engine",
+      "version": 9,
+      "diffs": [
+        {
+          "name": "supabase/functions/_shared/market-status.ts",
+          "deployed": "d13a66c4e1bf350faa015147ef168e8f10eb8c6e696817cc6a68a6642572942b",
+          "main": "16b8a32e01e064ea055c951e0bf60377e4c2a195d9d8ac45c3d88f1bb551ad67"
+        },
+        {
+          "name": "supabase/functions/_shared/canonical-market-state.ts",
+          "deployed": "18c2aaed96714e76a2e7633a77d1107b212026ef8a9c5735829deadd8524febd",
+          "main": "1c733f061f829447634c7365c44dd88e81a07776bc811e79aca187257a5db0d9"
+        },
+        {
+          "name": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",
+          "deployed": "b45b984740e4bc5e42ad3cce45ba8b3ea4539fa77485c5dd6a447efb87b77b35",
+          "main": "cef34f328baa90a5575c0096a2c5130d7513273bf95ff4c0dc7850909c8d0925"
+        },
+        {
+          "name": "supabase/functions/_shared/market-runtime-stability.mjs",
+          "deployed": "ef0c4a9c6836ed979545804bdc058d6af4e7936ea8740f46713d035958d3e697",
+          "main": "f5de47a40d14d91c94e95ea44b56a21cf7138387a755642096cbe9b0a327f938"
+        }
+      ]
+    },
+    {
+      "name": "opening-market-radar",
+      "version": 56,
+      "diffs": [
+        {
+          "name": "supabase/functions/_shared/market-status.ts",
+          "deployed": "d13a66c4e1bf350faa015147ef168e8f10eb8c6e696817cc6a68a6642572942b",
+          "main": "16b8a32e01e064ea055c951e0bf60377e4c2a195d9d8ac45c3d88f1bb551ad67"
+        }
+      ]
+    },
+    {
+      "name": "fetch-global-market-news",
+      "version": 56,
+      "diffs": [
+        {
+          "name": "supabase/functions/fetch-global-market-news/index.ts",
+          "deployed": "b7b8bac3c44091352b8902f1fd8ce712cf4fbd658f167744e8b4f90e56e6338b",
+          "main": "3c501c2838ef7f1e7f3a69b361efc0581b527908bf376302dffe98106d886e55"
+        },
+        {
+          "name": "supabase/functions/_shared/market-runtime-stability.mjs",
+          "deployed": "ef0c4a9c6836ed979545804bdc058d6af4e7936ea8740f46713d035958d3e697",
+          "main": "f5de47a40d14d91c94e95ea44b56a21cf7138387a755642096cbe9b0a327f938"
+        }
+      ]
+    },
+    {
+      "name": "generate-sector-rotation",
+      "version": 19,
+      "diffs": []
+    },
+    {
+      "name": "ma-ops-health-check",
+      "version": 24,
+      "diffs": [
+        {
+          "name": "supabase/functions/_shared/production-architecture-core.mjs",
+          "deployed": "4999bc2a0a5d915103fdb79394c1f30491b70c64bd84867af9850db1ec4c8157",
+          "main": "3e9520f6382bf0ea47d287b157b278e9db8ee02be63a4fa75d59a44500bbbd69"
+        },
+        {
+          "name": "supabase/functions/_shared/canonical-market-state.ts",
+          "deployed": "18c2aaed96714e76a2e7633a77d1107b212026ef8a9c5735829deadd8524febd",
+          "main": "1c733f061f829447634c7365c44dd88e81a07776bc811e79aca187257a5db0d9"
+        },
+        {
+          "name": "supabase/functions/_shared/market-status.ts",
+          "deployed": "d13a66c4e1bf350faa015147ef168e8f10eb8c6e696817cc6a68a6642572942b",
+          "main": "16b8a32e01e064ea055c951e0bf60377e4c2a195d9d8ac45c3d88f1bb551ad67"
+        },
+        {
+          "name": "supabase/functions/_shared/market-runtime-stability.mjs",
+          "deployed": "ef0c4a9c6836ed979545804bdc058d6af4e7936ea8740f46713d035958d3e697",
+          "main": "f5de47a40d14d91c94e95ea44b56a21cf7138387a755642096cbe9b0a327f938"
+        }
+      ]
+    }
+  ],
+  "candidate": {
+    "status": "CONSOLIDATED_SCOPE_DRAFT_NOT_VALIDATED_RELEASE_CANDIDATE",
+    "new_migration_required": true,
+    "new_migration_created": false,
+    "new_migration_executed": false,
+    "commit_push_pr_authorized_this_turn": false,
+    "release_ci_not_run": true,
+    "required_core_db_changes": [
+      "官方Taiwan calendar與US session row validation",
+      "bounded retry入口共用狀態"
+    ],
+    "additional_recorder_schema_scope": "跨Research/Report/Closing/Learning/Acceptance之fail-open去識別capsule，需要另具名審查，不默認沿用Provider Recorder核准。",
+    "function_dependency_closure": [
+      "fetch-market-data-v10",
+      "market-readiness-preflight",
+      "generate-daily-report-v7",
+      "daily-delivery-orchestrator",
+      "line-daily-push",
+      "closing-verification-engine",
+      "close-market-review",
+      "continuous-learning-engine",
+      "opening-market-radar",
+      "ma-ops-health-check"
+    ],
+    "cron_schedule_change_required": false,
+    "no_auth_rls_secret_history_change": true
+  },
+  "verification": {
+    "baseline_integrity": "200/200 PASS",
+    "targeted_publication_closing_learning": "75/75 PASS",
+    "targeted_real_cross_day": "10/10 PASS",
+    "existing_0921_0924_contract_regressions": "21/21 PASS (保留各fixture原evidence_type；9/23不是原始raw)",
+    "new_state_audit": "all 16 sequential ranks + 6 recovery checkpoints; exact/controlled mutations separately labeled",
+    "boundary_and_real_evidence_results": {
+      "boundary-results": {
+        "evidence_type": "CONTROLLED_MUTATIONS_OF_RETAINED_PRODUCTION_EVIDENCE",
+        "real_dates_not_relabelled": true,
+        "results": [
+          {
+            "label": "TXF_AFTERHOURS",
+            "delta": -1,
+            "expected": true,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "TXF_AFTERHOURS",
+            "delta": 0,
+            "expected": false,
+            "edge": false,
+            "db": false
+          },
+          {
+            "label": "TXF_AFTERHOURS",
+            "delta": 1,
+            "expected": false,
+            "edge": false,
+            "db": false
+          },
+          {
+            "label": "TXF_REGULAR",
+            "delta": -1,
+            "expected": true,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "TXF_REGULAR",
+            "delta": 0,
+            "expected": false,
+            "edge": false,
+            "db": false
+          },
+          {
+            "label": "TXF_REGULAR",
+            "delta": 1,
+            "expected": false,
+            "edge": false,
+            "db": false
+          },
+          {
+            "label": "RECOVERY",
+            "delta": -1,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "RECOVERY",
+            "delta": 0,
+            "edge": false,
+            "db": false
+          },
+          {
+            "label": "RECOVERY",
+            "delta": 1,
+            "edge": false,
+            "db": false
+          },
+          {
+            "label": "OPEN",
+            "delta": -1,
+            "edge": false,
+            "db": false
+          },
+          {
+            "label": "OPEN",
+            "delta": 0,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "OPEN",
+            "delta": 1,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "SLA",
+            "delta": -1,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "SLA",
+            "delta": 0,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "SLA",
+            "delta": 1,
+            "edge": false,
+            "db": false
+          },
+          {
+            "label": "CLOSING_CUTOFF",
+            "delta": -1,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "CLOSING_CUTOFF",
+            "delta": 0,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "CLOSING_CUTOFF",
+            "delta": 1,
+            "edge": true,
+            "db": false
+          },
+          {
+            "label": "NEWS_48H",
+            "delta": -1,
+            "expected": false,
+            "edge": false
+          },
+          {
+            "label": "NEWS_48H",
+            "delta": 0,
+            "expected": true,
+            "edge": true
+          },
+          {
+            "label": "NEWS_48H",
+            "delta": 1,
+            "expected": true,
+            "edge": true
+          },
+          {
+            "label": "ACCEPTANCE_PHASE",
+            "boundary": "2026-09-30T08:00:00+08:00",
+            "delta": -1,
+            "db": "NOT_DUE"
+          },
+          {
+            "label": "ACCEPTANCE_PHASE",
+            "boundary": "2026-09-30T08:00:00+08:00",
+            "delta": 0,
+            "db": "MORNING"
+          },
+          {
+            "label": "ACCEPTANCE_PHASE",
+            "boundary": "2026-09-30T08:00:00+08:00",
+            "delta": 1,
+            "db": "MORNING"
+          },
+          {
+            "label": "ACCEPTANCE_PHASE",
+            "boundary": "2026-09-30T15:25:00+08:00",
+            "delta": -1,
+            "db": "MORNING"
+          },
+          {
+            "label": "ACCEPTANCE_PHASE",
+            "boundary": "2026-09-30T15:25:00+08:00",
+            "delta": 0,
+            "db": "FULL_DAY"
+          },
+          {
+            "label": "ACCEPTANCE_PHASE",
+            "boundary": "2026-09-30T15:25:00+08:00",
+            "delta": 1,
+            "db": "FULL_DAY"
+          },
+          {
+            "label": "ACCEPTANCE_PHASE",
+            "boundary": "2026-09-30T15:35:00+08:00",
+            "delta": -1,
+            "db": "FULL_DAY"
+          },
+          {
+            "label": "ACCEPTANCE_PHASE",
+            "boundary": "2026-09-30T15:35:00+08:00",
+            "delta": 0,
+            "db": "FULL_DAY"
+          },
+          {
+            "label": "ACCEPTANCE_PHASE",
+            "boundary": "2026-09-30T15:35:00+08:00",
+            "delta": 1,
+            "db": "FULL_DAY"
+          },
+          {
+            "label": "PREVIOUS_INVALID_US_SESSION",
+            "key": "SPX",
+            "mutation": "saved_source_timestamp minus 24h",
+            "expected": false,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "PREVIOUS_INVALID_US_SESSION",
+            "key": "IXIC",
+            "mutation": "saved_source_timestamp minus 24h",
+            "expected": false,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "PREVIOUS_INVALID_US_SESSION",
+            "key": "SOX",
+            "mutation": "saved_source_timestamp minus 24h",
+            "expected": false,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "PREVIOUS_INVALID_US_SESSION",
+            "key": "NVDA",
+            "mutation": "saved_source_timestamp minus 24h",
+            "expected": false,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "PREVIOUS_INVALID_US_SESSION",
+            "key": "TSM",
+            "mutation": "saved_source_timestamp minus 24h",
+            "expected": false,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "PREVIOUS_INVALID_US_SESSION",
+            "key": "VIX",
+            "mutation": "saved_source_timestamp minus 24h",
+            "expected": false,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "PREVIOUS_INVALID_US_SESSION",
+            "key": "DXY",
+            "mutation": "saved_source_timestamp minus 24h",
+            "expected": false,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "PREVIOUS_INVALID_US_SESSION",
+            "key": "US10Y",
+            "mutation": "saved_source_timestamp minus 24h",
+            "expected": false,
+            "edge": true,
+            "db": true
+          },
+          {
+            "label": "PROVIDER_ERROR",
+            "provider": "fugle",
+            "status": 401,
+            "classification": "AUTHENTICATION_FAILED",
+            "contract": "AUTHENTICATION_FAILED"
+          },
+          {
+            "label": "PROVIDER_ERROR",
+            "provider": "fugle",
+            "status": 403,
+            "classification": "BLOCKED_BY_SUBSCRIPTION",
+            "contract": "AUTHENTICATION_FAILED"
+          },
+          {
+            "label": "PROVIDER_ERROR",
+            "provider": "fugle",
+            "status": 429,
+            "classification": "RATE_LIMITED",
+            "contract": "RATE_LIMITED"
+          },
+          {
+            "label": "PROVIDER_ERROR",
+            "provider": "fugle",
+            "status": 500,
+            "classification": "PROVIDER_UNAVAILABLE",
+            "contract": "PROVIDER_UNAVAILABLE"
+          },
+          {
+            "label": "PROVIDER_ERROR",
+            "provider": "fugle",
+            "status": null,
+            "classification": "TIMEOUT",
+            "contract": "TIMEOUT"
+          },
+          {
+            "label": "PROVIDER_ERROR",
+            "provider": "finnhub",
+            "status": 401,
+            "classification": "AUTHENTICATION_FAILED",
+            "contract": "AUTHENTICATION_FAILED"
+          },
+          {
+            "label": "PROVIDER_ERROR",
+            "provider": "finnhub",
+            "status": 429,
+            "classification": "RATE_LIMITED",
+            "contract": "RATE_LIMITED"
+          },
+          {
+            "label": "PROVIDER_ERROR",
+            "provider": "finnhub",
+            "status": 500,
+            "classification": "PROVIDER_UNAVAILABLE",
+            "contract": "PROVIDER_UNAVAILABLE"
+          },
+          {
+            "label": "PROVIDER_ERROR",
+            "provider": "finnhub",
+            "status": null,
+            "classification": "TIMEOUT",
+            "contract": "TIMEOUT"
+          },
+          {
+            "label": "OFFICIAL_CLOSED_DAY",
+            "day": "2026-09-28",
+            "expected": false,
+            "current": true
+          },
+          {
+            "label": "OFFICIAL_CLOSED_DAY",
+            "day": "2026-10-26",
+            "expected": false,
+            "current": true
+          },
+          {
+            "label": "OFFICIAL_CLOSED_DAY",
+            "day": "2026-12-25",
+            "expected": false,
+            "current": true
+          },
+          {
+            "label": "HOLIDAY_RETURN_EXPECTED_SESSION",
+            "date": "2026-10-27",
+            "expected": "2026-10-23",
+            "actual": "2026-10-26"
+          }
+        ]
+      },
+      "state-results": {
+        "scope": "ISOLATED_DATABASE_RPC_NOT_FULL_HANDLER",
+        "migration_executed": false,
+        "production_writes": 0,
+        "result": [
+          {
+            "case": "sequential",
+            "ranks": [
+              0,
+              10,
+              20,
+              30,
+              40,
+              50,
+              60,
+              70,
+              80,
+              90,
+              100,
+              110,
+              120,
+              130,
+              140,
+              150
+            ],
+            "pass": true
+          },
+          {
+            "case": "early_fail_later_11",
+            "checkpoint": "1030",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": true,
+            "expected": true,
+            "pass": true
+          },
+          {
+            "case": "ten_providers",
+            "checkpoint": "1030",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY:10:10"
+          },
+          {
+            "case": "duplicate_provider",
+            "checkpoint": "1030",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY:11:10"
+          },
+          {
+            "case": "stale",
+            "checkpoint": "1030",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_ROW_CONTRACT_INVALID"
+          },
+          {
+            "case": "wrong_correlation",
+            "checkpoint": "1030",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  lifecycle_predecessor_not_satisfied: current=0, requested=70"
+          },
+          {
+            "case": "early_fail_later_11",
+            "checkpoint": "1300",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": true,
+            "expected": true,
+            "pass": true
+          },
+          {
+            "case": "ten_providers",
+            "checkpoint": "1300",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY:10:10"
+          },
+          {
+            "case": "duplicate_provider",
+            "checkpoint": "1300",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY:11:10"
+          },
+          {
+            "case": "stale",
+            "checkpoint": "1300",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_ROW_CONTRACT_INVALID"
+          },
+          {
+            "case": "wrong_correlation",
+            "checkpoint": "1300",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  lifecycle_predecessor_not_satisfied: current=0, requested=80"
+          },
+          {
+            "case": "early_fail_later_11",
+            "checkpoint": "1410",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": true,
+            "expected": true,
+            "pass": true
+          },
+          {
+            "case": "ten_providers",
+            "checkpoint": "1410",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY:10:10"
+          },
+          {
+            "case": "duplicate_provider",
+            "checkpoint": "1410",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY:11:10"
+          },
+          {
+            "case": "stale",
+            "checkpoint": "1410",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_ROW_CONTRACT_INVALID"
+          },
+          {
+            "case": "wrong_correlation",
+            "checkpoint": "1410",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  lifecycle_predecessor_not_satisfied: current=0, requested=90"
+          },
+          {
+            "case": "early_fail_later_11",
+            "checkpoint": "1430",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": true,
+            "expected": true,
+            "pass": true
+          },
+          {
+            "case": "ten_providers",
+            "checkpoint": "1430",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY:10:10"
+          },
+          {
+            "case": "duplicate_provider",
+            "checkpoint": "1430",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY:11:10"
+          },
+          {
+            "case": "stale",
+            "checkpoint": "1430",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_ROW_CONTRACT_INVALID"
+          },
+          {
+            "case": "wrong_correlation",
+            "checkpoint": "1430",
+            "evidence": "CONTROLLED_TIMESTAMP_SESSION_MUTATION_NOT_REAL_CAPTURE",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  lifecycle_predecessor_not_satisfied: current=0, requested=100"
+          },
+          {
+            "case": "early_fail_later_11",
+            "checkpoint": "0900",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": true,
+            "expected": true,
+            "pass": true
+          },
+          {
+            "case": "ten_providers",
+            "checkpoint": "0900",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY:10:10"
+          },
+          {
+            "case": "duplicate_provider",
+            "checkpoint": "0900",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY:11:10"
+          },
+          {
+            "case": "stale",
+            "checkpoint": "0900",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_ROW_CONTRACT_INVALID"
+          },
+          {
+            "case": "direct_0900_wrong_correlation_trusted_metadata",
+            "checkpoint": "0900",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": true,
+            "expected": true,
+            "pass": true
+          },
+          {
+            "case": "early_fail_later_11",
+            "checkpoint": "0930",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": true,
+            "expected": true,
+            "pass": true
+          },
+          {
+            "case": "ten_providers",
+            "checkpoint": "0930",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY:10:10"
+          },
+          {
+            "case": "duplicate_provider",
+            "checkpoint": "0930",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_PROVIDER_CARDINALITY:11:10"
+          },
+          {
+            "case": "stale",
+            "checkpoint": "0930",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  ATOMIC_CHECKPOINT_ROW_CONTRACT_INVALID"
+          },
+          {
+            "case": "wrong_correlation",
+            "checkpoint": "0930",
+            "evidence": "EXACT_RETAINED_0930_ROWS",
+            "accepted": false,
+            "expected": false,
+            "pass": true,
+            "message": "ERROR:  lifecycle_predecessor_not_satisfied: current=0, requested=60"
+          }
+        ]
+      },
+      "adapter-results": {
+        "results": [
+          {
+            "symbol": "DXY",
+            "source_symbol": "UUP",
+            "mutation_seconds": -86400,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": false,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "DXY",
+            "source_symbol": "UUP",
+            "mutation_seconds": -60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "DXY",
+            "source_symbol": "UUP",
+            "mutation_seconds": -0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "DXY",
+            "source_symbol": "UUP",
+            "mutation_seconds": 0,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "DXY",
+            "source_symbol": "UUP",
+            "mutation_seconds": 0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "DXY",
+            "source_symbol": "UUP",
+            "mutation_seconds": 60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "IXIC",
+            "source_symbol": "QQQ",
+            "mutation_seconds": -86400,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": false,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "IXIC",
+            "source_symbol": "QQQ",
+            "mutation_seconds": -60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "IXIC",
+            "source_symbol": "QQQ",
+            "mutation_seconds": -0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "IXIC",
+            "source_symbol": "QQQ",
+            "mutation_seconds": 0,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "IXIC",
+            "source_symbol": "QQQ",
+            "mutation_seconds": 0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "IXIC",
+            "source_symbol": "QQQ",
+            "mutation_seconds": 60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "NVDA",
+            "source_symbol": "NVDA",
+            "mutation_seconds": -86400,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": false,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "NVDA",
+            "source_symbol": "NVDA",
+            "mutation_seconds": -60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "NVDA",
+            "source_symbol": "NVDA",
+            "mutation_seconds": -0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "NVDA",
+            "source_symbol": "NVDA",
+            "mutation_seconds": 0,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "NVDA",
+            "source_symbol": "NVDA",
+            "mutation_seconds": 0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "NVDA",
+            "source_symbol": "NVDA",
+            "mutation_seconds": 60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "SOX",
+            "source_symbol": "SOXX",
+            "mutation_seconds": -86400,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": false,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "SOX",
+            "source_symbol": "SOXX",
+            "mutation_seconds": -60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "SOX",
+            "source_symbol": "SOXX",
+            "mutation_seconds": -0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "SOX",
+            "source_symbol": "SOXX",
+            "mutation_seconds": 0,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "SOX",
+            "source_symbol": "SOXX",
+            "mutation_seconds": 0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "SOX",
+            "source_symbol": "SOXX",
+            "mutation_seconds": 60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "SPX",
+            "source_symbol": "SPY",
+            "mutation_seconds": -86400,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": false,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "SPX",
+            "source_symbol": "SPY",
+            "mutation_seconds": -60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "SPX",
+            "source_symbol": "SPY",
+            "mutation_seconds": -0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "SPX",
+            "source_symbol": "SPY",
+            "mutation_seconds": 0,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "SPX",
+            "source_symbol": "SPY",
+            "mutation_seconds": 0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "SPX",
+            "source_symbol": "SPY",
+            "mutation_seconds": 60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "TSM",
+            "source_symbol": "TSM",
+            "mutation_seconds": -86400,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": false,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "TSM",
+            "source_symbol": "TSM",
+            "mutation_seconds": -60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "TSM",
+            "source_symbol": "TSM",
+            "mutation_seconds": -0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "TSM",
+            "source_symbol": "TSM",
+            "mutation_seconds": 0,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "TSM",
+            "source_symbol": "TSM",
+            "mutation_seconds": 0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "TSM",
+            "source_symbol": "TSM",
+            "mutation_seconds": 60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "US10Y",
+            "source_symbol": "IEF",
+            "mutation_seconds": -86400,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": false,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "US10Y",
+            "source_symbol": "IEF",
+            "mutation_seconds": -60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "US10Y",
+            "source_symbol": "IEF",
+            "mutation_seconds": -0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "US10Y",
+            "source_symbol": "IEF",
+            "mutation_seconds": 0,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "US10Y",
+            "source_symbol": "IEF",
+            "mutation_seconds": 0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "US10Y",
+            "source_symbol": "IEF",
+            "mutation_seconds": 60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "VIX",
+            "source_symbol": "VXX",
+            "mutation_seconds": -86400,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": false,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "VIX",
+            "source_symbol": "VXX",
+            "mutation_seconds": -60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "VIX",
+            "source_symbol": "VXX",
+            "mutation_seconds": -0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "VIX",
+            "source_symbol": "VXX",
+            "mutation_seconds": 0,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "VIX",
+            "source_symbol": "VXX",
+            "mutation_seconds": 0.001,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "symbol": "VIX",
+            "source_symbol": "VXX",
+            "mutation_seconds": 60,
+            "adapter_valid": true,
+            "contract_pass": true,
+            "expected_latest_session": true,
+            "evidence": "RETAINED_FINNHUB_FIELDS_CONTROLLED_T_MUTATION"
+          },
+          {
+            "evidence_id": "f61c9c8c-2402-4b64-ac06-7504fb6456b9",
+            "test": "ADAPTER_IDENTITY_ONLY_MUTATION",
+            "original_adapter": "FUGLE_TAIWAN_CORE",
+            "corrected_adapter": "TWSE_MIS_QUOTE",
+            "stored_reason": "INVALID_CHECKPOINT_SOURCE_TIME",
+            "derived_error": "INVALID_CHECKPOINT_SOURCE_TIME",
+            "deterministic": true
+          },
+          {
+            "evidence_id": "5ca2bbbc-47c8-4418-bb0c-79e6d9ffde3b",
+            "test": "ADAPTER_IDENTITY_ONLY_MUTATION",
+            "original_adapter": "FUGLE_TAIWAN_CORE",
+            "corrected_adapter": "TWSE_MIS_QUOTE",
+            "stored_reason": "TW_CASH_PROVIDER_SESSION_DATE_INVALID",
+            "derived_error": "TW_CASH_PROVIDER_SESSION_DATE_INVALID",
+            "deterministic": true
+          },
+          {
+            "evidence_id": "bca87b69-d0c9-4d21-bc40-877cf7c3ce9b",
+            "test": "ADAPTER_IDENTITY_ONLY_MUTATION",
+            "original_adapter": "FUGLE_TAIWAN_CORE",
+            "corrected_adapter": "TWSE_MIS_QUOTE",
+            "stored_reason": "TW_CASH_PROVIDER_SESSION_DATE_INVALID",
+            "derived_error": "TW_CASH_PROVIDER_SESSION_DATE_INVALID",
+            "deterministic": true
+          }
+        ],
+        "external_calls": 0
+      },
+      "recorder-replay-results": {
+        "result": [
+          {
+            "id": "f61c9c8c-2402-4b64-ac06-7504fb6456b9",
+            "date": "2026-09-28",
+            "provider": "2330",
+            "checkpoint": "0900",
+            "stored": "FAIL",
+            "stored_reason": "INVALID_CHECKPOINT_SOURCE_TIME",
+            "replayed": "FAIL",
+            "replay_reason": "PROVIDER_RESPONSE_CONTRACT_INVALID",
+            "deterministic": false
+          },
+          {
+            "id": "2109e5c0-3297-4ede-85e4-6d2ddcd5f72d",
+            "date": "2026-09-28",
+            "provider": "TAIEX",
+            "checkpoint": "0900",
+            "stored": "FAIL",
+            "stored_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+            "replayed": "FAIL",
+            "replay_reason": "PROVIDER_RESPONSE_CONTRACT_INVALID",
+            "deterministic": true
+          },
+          {
+            "id": "30a0a2dd-0f96-447e-82ae-4991610a67c6",
+            "date": "2026-09-28",
+            "provider": "TXF",
+            "checkpoint": "PREMARKET",
+            "stored": "FAIL",
+            "stored_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+            "replayed": "FAIL",
+            "replay_reason": "AUTHENTICATION_FAILED",
+            "deterministic": true
+          },
+          {
+            "id": "c219c333-0b2a-4f7d-aca9-8f00195f043c",
+            "date": "2026-09-28",
+            "provider": "TXF",
+            "checkpoint": "readiness_0650",
+            "stored": "FAIL",
+            "stored_reason": "AUTHENTICATION_FAILED",
+            "replayed": "FAIL",
+            "replay_reason": "AUTHENTICATION_FAILED",
+            "deterministic": true
+          },
+          {
+            "id": "0a30618e-0ddb-457a-90ee-7f38d14b7f16",
+            "date": "2026-09-29",
+            "provider": "2330",
+            "checkpoint": "PREMARKET",
+            "stored": "FAIL",
+            "stored_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+            "replayed": "FAIL",
+            "replay_reason": "PROVIDER_RESPONSE_CONTRACT_INVALID",
+            "deterministic": true
+          },
+          {
+            "id": "eff2be6f-2023-41ed-8a11-89294f14cb6a",
+            "date": "2026-09-29",
+            "provider": "2330",
+            "checkpoint": "readiness_0650",
+            "stored": "FAIL",
+            "stored_reason": "STALE_PROVIDER_DATA",
+            "replayed": "FAIL",
+            "replay_reason": "PROVIDER_RESPONSE_CONTRACT_INVALID",
+            "deterministic": false
+          },
+          {
+            "id": "5ca2bbbc-47c8-4418-bb0c-79e6d9ffde3b",
+            "date": "2026-09-29",
+            "provider": "2330",
+            "checkpoint": "0900",
+            "stored": "FAIL",
+            "stored_reason": "TW_CASH_PROVIDER_SESSION_DATE_INVALID",
+            "replayed": "FAIL",
+            "replay_reason": "PROVIDER_RESPONSE_CONTRACT_INVALID",
+            "deterministic": false
+          },
+          {
+            "id": "3bcf9ae7-c674-4ef5-a270-e81dc440d365",
+            "date": "2026-09-29",
+            "provider": "TAIEX",
+            "checkpoint": "PREMARKET",
+            "stored": "FAIL",
+            "stored_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+            "replayed": "FAIL",
+            "replay_reason": "PROVIDER_RESPONSE_CONTRACT_INVALID",
+            "deterministic": true
+          },
+          {
+            "id": "60f30b8b-92f8-49bc-85c5-dd22c4a6cfc4",
+            "date": "2026-09-29",
+            "provider": "TAIEX",
+            "checkpoint": "readiness_0650",
+            "stored": "FAIL",
+            "stored_reason": "STALE_PROVIDER_DATA",
+            "replayed": "FAIL",
+            "replay_reason": "PROVIDER_RESPONSE_CONTRACT_INVALID",
+            "deterministic": false
+          },
+          {
+            "id": "bf444b12-efc4-47d6-bd67-52845c285de2",
+            "date": "2026-09-29",
+            "provider": "TXF",
+            "checkpoint": "PREMARKET",
+            "stored": "FAIL",
+            "stored_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+            "replayed": "FAIL",
+            "replay_reason": "AUTHENTICATION_FAILED",
+            "deterministic": true
+          },
+          {
+            "id": "80eb443c-6475-4fbf-b8f6-45169b20196e",
+            "date": "2026-09-29",
+            "provider": "TXF",
+            "checkpoint": "readiness_0650",
+            "stored": "FAIL",
+            "stored_reason": "AUTHENTICATION_FAILED",
+            "replayed": "FAIL",
+            "replay_reason": "AUTHENTICATION_FAILED",
+            "deterministic": true
+          },
+          {
+            "id": "bca87b69-d0c9-4d21-bc40-877cf7c3ce9b",
+            "date": "2026-09-30",
+            "provider": "2330",
+            "checkpoint": "0900",
+            "stored": "FAIL",
+            "stored_reason": "TW_CASH_PROVIDER_SESSION_DATE_INVALID",
+            "replayed": "FAIL",
+            "replay_reason": "PROVIDER_RESPONSE_CONTRACT_INVALID",
+            "deterministic": false
+          },
+          {
+            "id": "5b7605ea-0673-472a-8db1-a4f33badeccc",
+            "date": "2026-09-30",
+            "provider": "TAIEX",
+            "checkpoint": "0900",
+            "stored": "FAIL",
+            "stored_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+            "replayed": "FAIL",
+            "replay_reason": "PROVIDER_RESPONSE_CONTRACT_INVALID",
+            "deterministic": true
+          }
+        ],
+        "external_calls": 0,
+        "payload_output": false
+      },
+      "deployed-line-result": {
+        "code_source": "EXACT_DEPLOYED_LINE_V60",
+        "evidence": "REAL_0929_0930_ISOLATED_HANDLER_REPORT",
+        "http": 409,
+        "reason": "MARKET_REPORT_NOT_ELIGIBLE",
+        "reason_codes": [
+          "FROZEN_MARKET_DOCUMENT_UNVERIFIED",
+          "PUBLISHED_MARKET_RECEIPT_NOT_ELIGIBLE",
+          "AUDITED_MARKET_SUMMARY_UNAVAILABLE",
+          "SUBSCRIBER_MARKET_PROJECTION_UNAVAILABLE",
+          "published_delivery_revision_not_eligible"
+        ],
+        "local_sink": 0,
+        "real_line_network_calls": 0
+      },
+      "downstream-ab-results": {
+        "input": "REAL_0929_0930_ISOLATED_HANDLER_OUTPUT",
+        "deployed_contract": "CLOSING_V25_SHARED_CONSUMED_BY_CLOSING_LEARNING",
+        "deployed": {
+          "status": "BLOCKED",
+          "reasons": [
+            "OPENING_FROZEN_MARKET_DOCUMENT_UNVERIFIED"
+          ]
+        },
+        "main": {
+          "status": "PUBLISHED",
+          "reasons": []
+        },
+        "recommendation": "recommendations",
+        "production_writes": 0
+      },
+      "calendar": [
+        {
+          "evidence_id": "eff2be6f-2023-41ed-8a11-89294f14cb6a",
+          "provider": "2330",
+          "original_payload_unchanged": true,
+          "official_previous_session": "2026-09-24",
+          "current": {
+            "ok": false,
+            "reason": "STALE_PROVIDER_DATA"
+          },
+          "candidate": {
+            "ok": true,
+            "session": "2026-09-24"
+          },
+          "scope": "ISOLATED_CALENDAR_PROTOTYPE_NOT_RELEASED"
+        },
+        {
+          "evidence_id": "60f30b8b-92f8-49bc-85c5-dd22c4a6cfc4",
+          "provider": "TAIEX",
+          "original_payload_unchanged": true,
+          "official_previous_session": "2026-09-24",
+          "current": {
+            "ok": false,
+            "reason": "STALE_PROVIDER_DATA"
+          },
+          "candidate": {
+            "ok": true,
+            "session": "2026-09-24"
+          },
+          "scope": "ISOLATED_CALENDAR_PROTOTYPE_NOT_RELEASED"
+        }
+      ]
+    },
+    "node": "22.23.1",
+    "type_check": "PASS",
+    "lint": "INCOMPLETE_LOCAL_TOOL_STALL",
+    "build": "INCOMPLETE_LOCAL_TOOL_STALL",
+    "github_current_candidate": "NOT_RUN",
+    "github_previous_baseline": "PR171 validate SUCCESS, main unchanged"
+  },
+  "limitations": [
+    "沒有重新跑47 Chaos、1000 Fault或5-Day。",
+    "state audit是DB RPC，不冒充完整Handler。",
+    "只有LINE是exact deployed full Handler；Closing/Learning是exact shared gate A/B。",
+    "9/23上午raw未保存，維持REAL_RAW_EVIDENCE_NOT_RETAINED；未補造。",
+    "本輪未宣稱所有可達分支已完全動態覆蓋。"
+  ]
+}

@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { webcrypto } from 'node:crypto';
+import {recordCriticalContract} from '../supabase/functions/_shared/critical-contract-recorder.ts';
 import { isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
 import {
   resolveOpeningPublicationIdentity, validateOpeningPublication,
@@ -265,7 +266,7 @@ test('real quotes without a durable receipt are pending; report aliases cannot r
 test('actual Closing finalizer retries lifecycle after persisted evidence, rejects no-op RPC and CAS races', async () => {
   const source = readFileSync(new URL('../supabase/functions/closing-verification-engine/index.ts', import.meta.url), 'utf8');
   const finalize = isolatedFunction(source, 'finalizeClosingReceipt', { parseJsonObject: object, asObject: object,
-    evaluateClosingContract: input => evaluateClosingContract({ ...input, now }), resolveOpeningPublicationIdentity, crypto: webcrypto });
+    evaluateClosingContract: input => evaluateClosingContract({ ...input, now }), recordCriticalContract, resolveOpeningPublicationIdentity, crypto: webcrypto });
   const f = openingFixture(), opening = validateOpeningPublication(f), durable = durableClosingFixture();
   let saved = { ...f.report, updated_at: `${date}T14:31:01+08:00` }, checkpoints = {}, rpcCount = 0, updates = 0, casRace = false, noOp = false;
   const db = { from(table) {
@@ -279,6 +280,7 @@ test('actual Closing finalizer retries lifecycle after persisted evidence, rejec
         saved = { ...saved, ...update }; return { data: { id: saved.id }, error: null };
       } }; return q;
   }, async rpc(name, args) {
+    if(['record_critical_contract_evidence_v1','cleanup_expired_critical_contract_evidence_v1'].includes(name))return {data:null,error:null};
     assert.equal(name, 'advance_trading_day_state_v1'); rpcCount++;
     if (rpcCount === 1) return { data: null, error: { message: 'fixture transient failure' } };
     if (!noOp) checkpoints = { closing_verification: { status: 'SUCCEEDED', metadata: args.p_metadata } };

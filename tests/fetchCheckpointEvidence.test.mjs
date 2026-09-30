@@ -57,7 +57,7 @@ test('close collection retains true official close quote, not a morning price', 
   assert.equal(buildCheckpointEvidence(close, quote, config).valid, false);
 });
 test('US prior-session timestamps are preserved, not relabelled Taiwan today', () => {
-  const q = { ...quote, capturedAt: '2026-09-05T04:00:00+08:00' };
+  const q = { ...quote, sourceSymbol:'SPY', capturedAt: '2026-09-05T04:00:00+08:00' };
   const r = buildCheckpointEvidence(input, q, { ...config, market: 'US', displaySymbol: 'SPX' });
   assert.equal(r.valid, true);
   assert.equal(r.row.source_timestamp, q.capturedAt);

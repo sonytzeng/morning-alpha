@@ -4,6 +4,7 @@ import { evaluateCheckpointFreshness } from './market-runtime-stability.mjs';
 import { PREMARKET_LAST_COLLECTION_MINUTES } from './premarket-provider-readiness.mjs';
 import { evaluatePremarketTxfSession } from './txf-session-contract.mjs';
 import { evaluateTaiwanCashSession } from './taiwan-cash-session-contract.mjs';
+import { GLOBAL8_SOURCE_SYMBOLS, validateGlobal8Session } from './market-session-contract.mjs';
 
 const WINDOWS = Object.freeze({
   '0900': ['intraday', 540, 555],
@@ -60,6 +61,10 @@ export function buildCheckpointEvidence(input, quote, config) {
     trading_date: input.tradingDate, market: config.market, phase: input.phase, symbol: config.displaySymbol,
   });
   if (!freshness.valid) return { valid: false, error: 'INVALID_CHECKPOINT_SOURCE_TIME' };
+  if (GLOBAL8_SOURCE_SYMBOLS[config.displaySymbol]) {
+    const session = validateGlobal8Session(config.displaySymbol, quote.sourceSymbol, quote.capturedAt, input.observedAt);
+    if (!session.valid) return { valid: false, error: session.error };
+  }
   const txfSession = config.displaySymbol === 'TXF' && input.phase === 'premarket'
     ? evaluatePremarketTxfSession({
       tradingDate: input.tradingDate,
@@ -130,6 +135,10 @@ export function validateAtomicCheckpointEvidenceRows(rows) {
   }
   for (const rowValue of rows) {
     const row = record(rowValue), raw = record(row.raw);
+    if (GLOBAL8_SOURCE_SYMBOLS[row.provider_key]) {
+      const session = validateGlobal8Session(row.provider_key, raw.source_symbol, row.source_timestamp, row.captured_at);
+      if (!session.valid) return { valid: false, error: session.error, providerKey: row.provider_key };
+    }
     if (String(row.provider_key || '') !== String(row.symbol || '') ||
       !presentFiniteNumber(row.value) || Number(row.value) <= 0 ||
       !presentFiniteNumber(row.change_percent) || !presentFiniteNumber(raw.change) ||

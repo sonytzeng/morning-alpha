@@ -139,7 +139,6 @@ test('missing Atomic evidence refetches market without entering report generatio
   for (const actions of [
     ['regenerate_report'],
     ['refresh_news', 'refresh_market', 'regenerate_report'],
-    ['deliver_incident', 'refresh_market', 'regenerate_report'],
   ]) {
     assert.deepEqual(gatePremarketActionsOnAtomicEvidence(actions, {
       has_report: false,
@@ -150,6 +149,9 @@ test('missing Atomic evidence refetches market without entering report generatio
     has_report: false,
     atomic_checkpoint_complete: true,
   }), ['regenerate_report']);
+  assert.deepEqual(gatePremarketActionsOnAtomicEvidence(['deliver_incident'], {
+    has_report:false,atomic_checkpoint_complete:false,
+  }), ['deliver_incident'], '08:45 incident-only must never restart market collection');
 });
 
 test('content-only failures use a bounded repair budget instead of repeating the same generation indefinitely', () => {

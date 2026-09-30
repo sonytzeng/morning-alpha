@@ -1,0 +1,630 @@
+{
+  "evidence_type": "REAL_EVIDENCE",
+  "synthetic": false,
+  "immutable_legacy": true,
+  "rows": [
+    {
+      "id": "f61c9c8c-2402-4b64-ac06-7504fb6456b9",
+      "business_date": "2026-09-28",
+      "checkpoint": "0900",
+      "provider_key": "2330",
+      "contract_result": "FAIL",
+      "contract_reason": "INVALID_CHECKPOINT_SOURCE_TIME",
+      "http_status": 200,
+      "source_function": "fetch-market-data-v10",
+      "adapter_version": "V10.20_PHASE_AWARE_TAIWAN_CASH_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "tse_2330.tw",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "2330",
+        "source_symbol": "2330",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-28T01:00:01.988Z",
+          "tradingDate": "2026-09-28",
+          "correlationId": "3c3f46fa-3c90-4087-abf2-31e2605afd0d"
+        },
+        "provider_error": "INVALID_CHECKPOINT_SOURCE_TIME",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-24T05:30:00.000Z",
+          "evidence_session_date": null,
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "20260924",
+            "time": "13:30:00",
+            "price": 2475,
+            "change": -25,
+            "provider": "twse",
+            "source_symbol": "2330",
+            "change_percent": -1,
+            "previous_close": 2500
+          },
+          "value": 2475,
+          "change": -25,
+          "provider": "twse",
+          "capturedAt": "2026-09-24T05:30:00.000Z",
+          "sourceSymbol": "2330",
+          "changePercent": -1
+        },
+        "provider_payload": {},
+        "expected_contract_reason": "INVALID_CHECKPOINT_SOURCE_TIME",
+        "expected_contract_result": "FAIL"
+      }
+    },
+    {
+      "id": "2109e5c0-3297-4ede-85e4-6d2ddcd5f72d",
+      "business_date": "2026-09-28",
+      "checkpoint": "0900",
+      "provider_key": "TAIEX",
+      "contract_result": "FAIL",
+      "contract_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+      "http_status": 200,
+      "source_function": "fetch-market-data-v10",
+      "adapter_version": "V10.20_PHASE_AWARE_TAIWAN_CASH_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "stock/intraday/quote/IX0001",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "TAIEX",
+        "source_symbol": "IX0001",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-28T01:00:01.988Z",
+          "tradingDate": "2026-09-28",
+          "correlationId": "3c3f46fa-3c90-4087-abf2-31e2605afd0d"
+        },
+        "provider_error": "previous_day_taiex_rejected",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": null,
+          "evidence_session_date": null,
+          "provider_envelope_date": "2026-09-24"
+        },
+        "normalized_quote": null,
+        "provider_payload": {
+          "date": "2026-09-24",
+          "name": "發行量加權股價指數",
+          "type": "INDEX",
+          "total": {
+            "time": 1790227800000000
+          },
+          "change": -132.69,
+          "market": "TSE",
+          "symbol": "IX0001",
+          "lowTime": 1790212115000000,
+          "exchange": "TWSE",
+          "highTime": 1790227260000000,
+          "lowPrice": 47754.72,
+          "openTime": 1790211605000000,
+          "closeTime": 1790227800000000,
+          "highPrice": 48117.54,
+          "openPrice": 48075.39,
+          "closePrice": 48024.6,
+          "lastUpdated": 1790227800000000,
+          "changePercent": -0.28,
+          "previousClose": 48157.29
+        },
+        "expected_contract_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+        "expected_contract_result": "FAIL"
+      }
+    },
+    {
+      "id": "30a0a2dd-0f96-447e-82ae-4991610a67c6",
+      "business_date": "2026-09-28",
+      "checkpoint": "PREMARKET",
+      "provider_key": "TXF",
+      "contract_result": "FAIL",
+      "contract_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+      "http_status": 403,
+      "source_function": "fetch-market-data-v10",
+      "adapter_version": "V10.20_PHASE_AWARE_TAIWAN_CASH_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "futopt/intraday/quote/TXF1!?session=afterhours",
+        "http_status": 403,
+        "adapter_kind": "FUGLE_FUTOPT_QUOTE",
+        "provider_key": "TXF",
+        "source_symbol": "TXF1!",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-27T23:00:01.961Z",
+          "tradingDate": "2026-09-28",
+          "correlationId": "d0c69127-ba39-41a7-ad14-23b5dd941806"
+        },
+        "provider_error": "HTTP_403",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": null,
+          "evidence_session_date": null,
+          "provider_envelope_date": null
+        },
+        "normalized_quote": null,
+        "provider_payload": {},
+        "expected_contract_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+        "expected_contract_result": "FAIL"
+      }
+    },
+    {
+      "id": "c219c333-0b2a-4f7d-aca9-8f00195f043c",
+      "business_date": "2026-09-28",
+      "checkpoint": "readiness_0650",
+      "provider_key": "TXF",
+      "contract_result": "FAIL",
+      "contract_reason": "AUTHENTICATION_FAILED",
+      "http_status": 403,
+      "source_function": "market-readiness-preflight",
+      "adapter_version": "MARKET_READINESS_PREFLIGHT_V4_TW_PHASE_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "futopt/intraday/quote/TXF1!?session=afterhours",
+        "http_status": 403,
+        "adapter_kind": "FUGLE_FUTOPT_QUOTE",
+        "provider_key": "TXF",
+        "source_symbol": "TXF1!",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-27T22:50:01.326Z",
+          "tradingDate": "2026-09-28",
+          "correlationId": "f7888254-6e43-42f7-aa63-5c56f1ef320b"
+        },
+        "provider_error": "HTTP_403",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": null,
+          "evidence_session_date": null,
+          "provider_envelope_date": null
+        },
+        "normalized_quote": null,
+        "provider_payload": {},
+        "expected_contract_reason": "AUTHENTICATION_FAILED",
+        "expected_contract_result": "FAIL"
+      }
+    },
+    {
+      "id": "0a30618e-0ddb-457a-90ee-7f38d14b7f16",
+      "business_date": "2026-09-29",
+      "checkpoint": "PREMARKET",
+      "provider_key": "2330",
+      "contract_result": "FAIL",
+      "contract_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+      "http_status": 200,
+      "source_function": "fetch-market-data-v10",
+      "adapter_version": "V10.20_PHASE_AWARE_TAIWAN_CASH_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "stock/intraday/ticker/2330",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "2330",
+        "source_symbol": "2330",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-28T23:00:02.742Z",
+          "tradingDate": "2026-09-29",
+          "correlationId": "e9f8d060-eeb1-40ea-b6a9-04fecdf95896"
+        },
+        "provider_error": "previous_session_payload_rejected",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": null,
+          "evidence_session_date": null,
+          "provider_envelope_date": "2026-09-24"
+        },
+        "normalized_quote": null,
+        "provider_payload": {
+          "date": "2026-09-24",
+          "name": "台積電",
+          "type": "EQUITY",
+          "market": "TSE",
+          "symbol": "2330",
+          "exchange": "TWSE",
+          "industry": "24",
+          "securityType": "01",
+          "previousClose": 2500,
+          "referencePrice": 2500
+        },
+        "expected_contract_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+        "expected_contract_result": "FAIL"
+      }
+    },
+    {
+      "id": "eff2be6f-2023-41ed-8a11-89294f14cb6a",
+      "business_date": "2026-09-29",
+      "checkpoint": "readiness_0650",
+      "provider_key": "2330",
+      "contract_result": "FAIL",
+      "contract_reason": "STALE_PROVIDER_DATA",
+      "http_status": 200,
+      "source_function": "market-readiness-preflight",
+      "adapter_version": "MARKET_READINESS_PREFLIGHT_V4_TW_PHASE_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "stock/intraday/ticker/2330",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "2330",
+        "source_symbol": "2330",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-28T22:50:01.313Z",
+          "tradingDate": "2026-09-29",
+          "correlationId": "8999abe3-9ec2-4d7d-83d4-177a487bf12a"
+        },
+        "provider_error": "STALE_PROVIDER_DATA",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": null,
+          "evidence_session_date": null,
+          "provider_envelope_date": "2026-09-24"
+        },
+        "normalized_quote": null,
+        "provider_payload": {
+          "date": "2026-09-24",
+          "name": "台積電",
+          "type": "EQUITY",
+          "market": "TSE",
+          "symbol": "2330",
+          "exchange": "TWSE",
+          "industry": "24",
+          "securityType": "01",
+          "previousClose": 2500,
+          "referencePrice": 2500
+        },
+        "expected_contract_reason": "STALE_PROVIDER_DATA",
+        "expected_contract_result": "FAIL"
+      }
+    },
+    {
+      "id": "5ca2bbbc-47c8-4418-bb0c-79e6d9ffde3b",
+      "business_date": "2026-09-29",
+      "checkpoint": "0900",
+      "provider_key": "2330",
+      "contract_result": "FAIL",
+      "contract_reason": "TW_CASH_PROVIDER_SESSION_DATE_INVALID",
+      "http_status": 200,
+      "source_function": "fetch-market-data-v10",
+      "adapter_version": "V10.20_PHASE_AWARE_TAIWAN_CASH_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "tse_2330.tw",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "2330",
+        "source_symbol": "2330",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-29T01:00:02.072Z",
+          "tradingDate": "2026-09-29",
+          "correlationId": "25e6753c-7706-42c1-8235-5450a1df6409"
+        },
+        "provider_error": "TW_CASH_PROVIDER_SESSION_DATE_INVALID",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-29T00:59:59.000Z",
+          "evidence_session_date": null,
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "20260929",
+            "time": "08:59:59",
+            "price": 2475,
+            "change": 0,
+            "provider": "twse",
+            "source_symbol": "2330",
+            "change_percent": 0,
+            "previous_close": 2475
+          },
+          "value": 2475,
+          "change": 0,
+          "provider": "twse",
+          "capturedAt": "2026-09-29T00:59:59.000Z",
+          "sourceSymbol": "2330",
+          "changePercent": 0
+        },
+        "provider_payload": {},
+        "expected_contract_reason": "TW_CASH_PROVIDER_SESSION_DATE_INVALID",
+        "expected_contract_result": "FAIL"
+      }
+    },
+    {
+      "id": "3bcf9ae7-c674-4ef5-a270-e81dc440d365",
+      "business_date": "2026-09-29",
+      "checkpoint": "PREMARKET",
+      "provider_key": "TAIEX",
+      "contract_result": "FAIL",
+      "contract_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+      "http_status": 200,
+      "source_function": "fetch-market-data-v10",
+      "adapter_version": "V10.20_PHASE_AWARE_TAIWAN_CASH_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "stock/intraday/ticker/IX0001",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "TAIEX",
+        "source_symbol": "IX0001",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-28T23:00:02.742Z",
+          "tradingDate": "2026-09-29",
+          "correlationId": "e9f8d060-eeb1-40ea-b6a9-04fecdf95896"
+        },
+        "provider_error": "previous_day_taiex_rejected",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": null,
+          "evidence_session_date": null,
+          "provider_envelope_date": "2026-09-24"
+        },
+        "normalized_quote": null,
+        "provider_payload": {
+          "date": "2026-09-24",
+          "name": "發行量加權股價指數",
+          "type": "INDEX",
+          "market": "TSE",
+          "symbol": "IX0001",
+          "exchange": "TWSE",
+          "openTime": "0900",
+          "closeTime": "1330",
+          "previousClose": 48157.29
+        },
+        "expected_contract_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+        "expected_contract_result": "FAIL"
+      }
+    },
+    {
+      "id": "60f30b8b-92f8-49bc-85c5-dd22c4a6cfc4",
+      "business_date": "2026-09-29",
+      "checkpoint": "readiness_0650",
+      "provider_key": "TAIEX",
+      "contract_result": "FAIL",
+      "contract_reason": "STALE_PROVIDER_DATA",
+      "http_status": 200,
+      "source_function": "market-readiness-preflight",
+      "adapter_version": "MARKET_READINESS_PREFLIGHT_V4_TW_PHASE_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "stock/intraday/ticker/IX0001",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "TAIEX",
+        "source_symbol": "IX0001",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-28T22:50:01.313Z",
+          "tradingDate": "2026-09-29",
+          "correlationId": "8999abe3-9ec2-4d7d-83d4-177a487bf12a"
+        },
+        "provider_error": "STALE_PROVIDER_DATA",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": null,
+          "evidence_session_date": null,
+          "provider_envelope_date": "2026-09-24"
+        },
+        "normalized_quote": null,
+        "provider_payload": {
+          "date": "2026-09-24",
+          "name": "發行量加權股價指數",
+          "type": "INDEX",
+          "market": "TSE",
+          "symbol": "IX0001",
+          "exchange": "TWSE",
+          "openTime": "0900",
+          "closeTime": "1330",
+          "previousClose": 48157.29
+        },
+        "expected_contract_reason": "STALE_PROVIDER_DATA",
+        "expected_contract_result": "FAIL"
+      }
+    },
+    {
+      "id": "bf444b12-efc4-47d6-bd67-52845c285de2",
+      "business_date": "2026-09-29",
+      "checkpoint": "PREMARKET",
+      "provider_key": "TXF",
+      "contract_result": "FAIL",
+      "contract_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+      "http_status": 403,
+      "source_function": "fetch-market-data-v10",
+      "adapter_version": "V10.20_PHASE_AWARE_TAIWAN_CASH_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "futopt/intraday/quote/TXF1!?session=afterhours",
+        "http_status": 403,
+        "adapter_kind": "FUGLE_FUTOPT_QUOTE",
+        "provider_key": "TXF",
+        "source_symbol": "TXF1!",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-28T23:00:02.742Z",
+          "tradingDate": "2026-09-29",
+          "correlationId": "e9f8d060-eeb1-40ea-b6a9-04fecdf95896"
+        },
+        "provider_error": "HTTP_403",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": null,
+          "evidence_session_date": null,
+          "provider_envelope_date": null
+        },
+        "normalized_quote": null,
+        "provider_payload": {},
+        "expected_contract_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+        "expected_contract_result": "FAIL"
+      }
+    },
+    {
+      "id": "80eb443c-6475-4fbf-b8f6-45169b20196e",
+      "business_date": "2026-09-29",
+      "checkpoint": "readiness_0650",
+      "provider_key": "TXF",
+      "contract_result": "FAIL",
+      "contract_reason": "AUTHENTICATION_FAILED",
+      "http_status": 403,
+      "source_function": "market-readiness-preflight",
+      "adapter_version": "MARKET_READINESS_PREFLIGHT_V4_TW_PHASE_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "futopt/intraday/quote/TXF1!?session=afterhours",
+        "http_status": 403,
+        "adapter_kind": "FUGLE_FUTOPT_QUOTE",
+        "provider_key": "TXF",
+        "source_symbol": "TXF1!",
+        "evidence_input": {
+          "phase": "premarket",
+          "checkpoint": "premarket",
+          "observedAt": "2026-09-28T22:50:01.313Z",
+          "tradingDate": "2026-09-29",
+          "correlationId": "8999abe3-9ec2-4d7d-83d4-177a487bf12a"
+        },
+        "provider_error": "HTTP_403",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": null,
+          "evidence_session_date": null,
+          "provider_envelope_date": null
+        },
+        "normalized_quote": null,
+        "provider_payload": {},
+        "expected_contract_reason": "AUTHENTICATION_FAILED",
+        "expected_contract_result": "FAIL"
+      }
+    },
+    {
+      "id": "bca87b69-d0c9-4d21-bc40-877cf7c3ce9b",
+      "business_date": "2026-09-30",
+      "checkpoint": "0900",
+      "provider_key": "2330",
+      "contract_result": "FAIL",
+      "contract_reason": "TW_CASH_PROVIDER_SESSION_DATE_INVALID",
+      "http_status": 200,
+      "source_function": "fetch-market-data-v10",
+      "adapter_version": "V10.20_PHASE_AWARE_TAIWAN_CASH_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "tse_2330.tw",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "2330",
+        "source_symbol": "2330",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:02.572Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7c4e57e3-2ee2-4dc0-8cfe-401c56a795a5"
+        },
+        "provider_error": "TW_CASH_PROVIDER_SESSION_DATE_INVALID",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": "2026-09-30T00:59:55.000Z",
+          "evidence_session_date": null,
+          "provider_envelope_date": null
+        },
+        "normalized_quote": {
+          "raw": {
+            "date": "20260930",
+            "time": "08:59:55",
+            "price": 2500,
+            "change": 25,
+            "provider": "twse",
+            "source_symbol": "2330",
+            "change_percent": 1.0101010101010102,
+            "previous_close": 2475
+          },
+          "value": 2500,
+          "change": 25,
+          "provider": "twse",
+          "capturedAt": "2026-09-30T00:59:55.000Z",
+          "sourceSymbol": "2330",
+          "changePercent": 1.0101010101010102
+        },
+        "provider_payload": {},
+        "expected_contract_reason": "TW_CASH_PROVIDER_SESSION_DATE_INVALID",
+        "expected_contract_result": "FAIL"
+      }
+    },
+    {
+      "id": "5b7605ea-0673-472a-8db1-a4f33badeccc",
+      "business_date": "2026-09-30",
+      "checkpoint": "0900",
+      "provider_key": "TAIEX",
+      "contract_result": "FAIL",
+      "contract_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+      "http_status": 200,
+      "source_function": "fetch-market-data-v10",
+      "adapter_version": "V10.20_PHASE_AWARE_TAIWAN_CASH_CONTRACT",
+      "contract_version": "MARKET_CHECKPOINT_PROVIDER_V1",
+      "replay_payload": {
+        "endpoint": "stock/intraday/quote/IX0001",
+        "http_status": 200,
+        "adapter_kind": "FUGLE_TAIWAN_CORE",
+        "provider_key": "TAIEX",
+        "source_symbol": "IX0001",
+        "evidence_input": {
+          "phase": "intraday",
+          "checkpoint": "0900",
+          "observedAt": "2026-09-30T01:00:02.572Z",
+          "tradingDate": "2026-09-30",
+          "correlationId": "7c4e57e3-2ee2-4dc0-8cfe-401c56a795a5"
+        },
+        "provider_error": "provider_contract_invalid",
+        "schema_version": "PRODUCTION_PROVIDER_REPLAY_V1",
+        "adapter_context": {
+          "session": null,
+          "source_timestamp": null,
+          "evidence_session_date": null,
+          "provider_envelope_date": "2026-09-30"
+        },
+        "normalized_quote": null,
+        "provider_payload": {
+          "date": "2026-09-30",
+          "name": "發行量加權股價指數",
+          "type": "INDEX",
+          "total": {
+            "time": 1790730000000000
+          },
+          "change": 0,
+          "market": "TSE",
+          "symbol": "IX0001",
+          "exchange": "TWSE",
+          "lastUpdated": 1790730000000000,
+          "changePercent": 0,
+          "previousClose": 47631.96
+        },
+        "expected_contract_reason": "ATOMIC_PROVIDER_RESULT_MISSING",
+        "expected_contract_result": "FAIL"
+      }
+    }
+  ]
+}

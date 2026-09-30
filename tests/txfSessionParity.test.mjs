@@ -13,6 +13,7 @@ import {
 import { previousTradingDay } from '../supabase/functions/_shared/market-status.ts';
 import { hasFailedEvidenceDependency } from '../supabase/functions/_shared/daily-delivery-recovery.ts';
 import { isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
+import {GLOBAL8_SOURCE_SYMBOLS} from '../supabase/functions/_shared/market-session-contract.mjs';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const production = JSON.parse(read('tests/fixtures/production-parity-v3/txf-weekend-20260921.json'));
@@ -38,7 +39,7 @@ function fullBatch(txf = production.txf) {
       : {
         value: 100 + index, change: 1, changePercent: 0.1,
         capturedAt: market === 'TW' ? '2026-09-18T00:00:00+08:00' : '2026-09-18T16:00:00-04:00',
-        provider: market === 'TW' ? 'fugle' : 'finnhub', sourceSymbol: providerKey,
+        provider: market === 'TW' ? 'fugle' : 'finnhub', sourceSymbol: GLOBAL8_SOURCE_SYMBOLS[providerKey]||providerKey,
         raw: { provider: market === 'TW' ? 'fugle' : 'finnhub',
           ...(market === 'TW' ? { date: '2026-09-18', response_date: '2026-09-18' } : {}) },
       };

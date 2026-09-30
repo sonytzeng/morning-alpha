@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import {GLOBAL8_SOURCE_SYMBOLS} from '../supabase/functions/_shared/market-session-contract.mjs';
 import {
   TAIWAN_CASH_SESSION_CONTRACTS,
   evaluateTaiwanCashSession,
@@ -131,7 +132,7 @@ test('9/22 contract replay forms exactly 11 or 0 and preserves real session date
         raw: { date: '2026-09-21', session: 'afterhours' } };
     } else {
       normalized = { value: 100 + index, change: 1, changePercent: 0.1,
-        capturedAt: '2026-09-21T16:00:00-04:00', provider: 'finnhub', sourceSymbol: providerKey, raw: {} };
+        capturedAt: '2026-09-21T16:00:00-04:00', provider: 'finnhub', sourceSymbol: GLOBAL8_SOURCE_SYMBOLS[providerKey], raw: {} };
     }
     const evidence = buildCheckpointEvidence(input, normalized, {
       displaySymbol: providerKey, finnhubSymbol: providerKey,

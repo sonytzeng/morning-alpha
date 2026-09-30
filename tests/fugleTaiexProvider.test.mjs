@@ -28,6 +28,7 @@ import {
   classifyProviderFailure,
 } from '../supabase/functions/_shared/market-runtime-stability.mjs';
 import { summarizeProviderHealth } from '../supabase/functions/_shared/market-provider-adapter.mjs';
+import {GLOBAL8_SOURCE_SYMBOLS} from '../supabase/functions/_shared/market-session-contract.mjs';
 
 const fetchSource = readFileSync(new URL('../supabase/functions/fetch-market-data-v10/index.ts', import.meta.url), 'utf8');
 const capture = JSON.parse(readFileSync(new URL('./fixtures/production-parity-v2/provider-capture-20260916.json', import.meta.url), 'utf8'));
@@ -74,11 +75,12 @@ function evidenceRows(includeTaiex) {
     value: 100 + index,
     change_percent: 0,
     source: key === 'TAIEX' ? 'fugle' : 'UNCHANGED_PROVIDER',
-    source_timestamp: '2026-09-14T09:30:00+08:00',
+    source_timestamp: GLOBAL8_SOURCE_SYMBOLS[key]?'2026-09-11T16:00:00-04:00':'2026-09-14T09:30:00+08:00',
     captured_at: '2026-09-14T09:30:00+08:00',
     raw: {
       contract: 'FETCH_CHECKPOINT_EVIDENCE_V1',
       market: ['TAIEX', '2330', 'TXF'].includes(key) ? 'TW' : 'US',
+      source_symbol:GLOBAL8_SOURCE_SYMBOLS[key]||key,
       change: 0,
       freshness_status: ['TAIEX', '2330', 'TXF'].includes(key) ? 'fresh' : 'provider_returned',
       freshness_age_minutes: 0,
@@ -262,7 +264,7 @@ test('legacy or unknown symbol 404 is explicit and official-resource 404 remains
   assert.equal(classifyProviderFailure({
     provider: 'fugle', symbol: 'TAIEX', endpoint: result.endpoint, status: result.status,
     error: result.error, failure_code: result.failureCode,
-  }).failure_code, 'RESOURCE_NOT_FOUND');
+  }).failure_code, 'PROVIDER_INVALID_RESPONSE');
 });
 
 test('an older-than-latest completed TAIEX session is rejected instead of masquerading as valid premarket evidence', async () => {
@@ -308,11 +310,11 @@ test('adapter has no stale, legacy-symbol or cross-provider fallback and leaves 
   assert.match(fetchSource, /CHECKPOINT_PROVIDER_KEYS\.length/);
   assert.equal(classifyProviderFailure({
     provider: 'finnhub', symbol: 'SPX', endpoint: 'quote', status: 404, error: 'Resource Not Found',
-  }).failure_code, 'PROVIDER_REQUEST_REJECTED');
+  }).failure_code, 'PROVIDER_INVALID_RESPONSE');
   assert.equal(classifyProviderFailure({
     provider: 'finnhub', symbol: 'NVDA', endpoint: 'quote', status: 429, error: 'rate limit',
-  }).failure_code, 'RATE_LIMITED');
+  }).failure_code, 'PROVIDER_RATE_LIMIT');
   assert.equal(classifyProviderFailure({
     provider: 'fugle', symbol: '2330', endpoint: 'quote', status: 500, error: 'upstream unavailable',
-  }).failure_code, 'PROVIDER_UNAVAILABLE');
+  }).failure_code, 'PROVIDER_HTTP_5XX');
 });

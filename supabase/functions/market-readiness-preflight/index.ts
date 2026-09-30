@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { PREMARKET_REPORT_DEADLINE_MINUTES } from '../_shared/premarket-provider-readiness.mjs';
+import { classifyCanonicalFailure } from '../_shared/provider-failure-contract.mjs';
 import {
   authorizeInternalRequest,
   constantTimeEqual,
@@ -68,6 +69,8 @@ interface ProviderCheck {
     normalizedQuote: unknown;
     evidence: JsonRecord;
     error: string | null;
+    adapterFailureCode?: string | null;
+    responses?: JsonRecord[];
   };
 }
 
@@ -187,9 +190,10 @@ function withEvidenceStatus(check: ProviderCheck, response: JsonRecord, evidence
   const error = String(evidence.error || 'ATOMIC_PROVIDER_RESULT_MISSING');
   const expected = phaseExpected && Number(response.status) === 200 &&
     ['INVALID_EVIDENCE_IDENTITY', 'OUTSIDE_REAL_CHECKPOINT_WINDOW', 'INVALID_CHECKPOINT_SOURCE_TIME', 'STALE_PROVIDER_DATA'].includes(error);
+  const failure = classifyCanonicalFailure({ ...response, evidence_error: error });
   return {
     ...check,
-    status: expected ? 'EXPECTED' : 'FAIL',
+    status: expected ? 'EXPECTED' : failure.retryable ? 'WAITING' : 'FAIL',
     failure_code: expected ? 'MARKET_PHASE_EXPECTED' : classifyRequiredProviderFailure(response, error),
   };
 }
@@ -240,6 +244,7 @@ async function checkTaiwanCore(
         normalizedQuote,
         evidence,
         error: primary.error,
+        responses: [...responses.entries()].map(([endpoint, response]) => ({ endpoint, ...response })),
       },
     };
   }
@@ -247,7 +252,7 @@ async function checkTaiwanCore(
   return {
     ...checked,
     failure_code: phaseExpected && futureDate && result.failureCode === 'STALE_PROVIDER_DATA'
-      ? 'MARKET_PHASE_EXPECTED' : String(result.failureCode || checked.failure_code),
+      ? 'MARKET_PHASE_EXPECTED' : classifyRequiredProviderFailure(primary, String(result.failureCode || evidence.error || checked.failure_code)),
     status: phaseExpected && futureDate && result.failureCode === 'STALE_PROVIDER_DATA' ? 'EXPECTED' : checked.status,
     rejected_field: result.rejectedField ? String(result.rejectedField) : null,
     ...(observations.length ? { observations } : {}),
@@ -256,6 +261,8 @@ async function checkTaiwanCore(
       normalizedQuote,
       evidence,
       error: primary.error,
+      adapterFailureCode: String(result.failureCode || ''),
+      responses: [...responses.entries()].map(([endpoint, response]) => ({ endpoint, ...response })),
     },
   };
 }
@@ -294,6 +301,7 @@ async function checkFugleQuote(
       normalizedQuote: resolved.quote,
       evidence,
       error: response.error ? String(response.error) : null,
+      responses: resolved.observations,
     } };
 }
 
@@ -303,6 +311,7 @@ function readiness(checks: ProviderCheck[]): ReadinessStatus {
   const waiting = checks.filter(check => check.status === 'WAITING');
   if (failures.length === 0) return waiting.length ? 'WAITING_FOR_MARKET_DATA' : expected.length ? 'MARKET_PHASE_EXPECTED' : 'READY';
   const blocking = new Set([
+    'PROVIDER_ENTITLEMENT', 'PROVIDER_INVALID_RESPONSE', 'PROVIDER_STALE_SESSION',
     'CONFIGURATION_MISSING', 'AUTHENTICATION_FAILED', 'BLOCKED_BY_SUBSCRIPTION',
     'PROVIDER_SYMBOL_INVALID', 'RESOURCE_NOT_FOUND', 'PROVIDER_RESPONSE_CONTRACT_INVALID',
   ]);
@@ -382,6 +391,8 @@ Deno.serve(async (req) => {
     endpoint: check.endpoint,
     httpStatus: check.http_status,
     rawPayload: check.recorder?.rawPayload || {},
+    adapterFailureCode: check.recorder?.adapterFailureCode || null,
+    responses: check.recorder?.responses || [],
     normalizedQuote: check.recorder?.normalizedQuote || null,
     evidence: check.recorder?.evidence || { valid: false, error: check.failure_code },
     error: check.recorder?.error || check.failure_code,

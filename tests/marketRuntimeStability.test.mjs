@@ -121,20 +121,20 @@ test('market-only publication closes without inventing recommendations', () => {
 });
 
 test('provider failures distinguish subscription, auth, rate, outage, and mapping failures', () => {
-  assert.equal(classifyProviderFailure({ status: 401 }).failure_code, 'AUTHENTICATION_FAILED');
+  assert.equal(classifyProviderFailure({ status: 401 }).failure_code, 'PROVIDER_ENTITLEMENT');
   assert.equal(
     classifyProviderFailure({ provider: 'fugle_futopt', status: 401, error: 'subscription entitlement expired' }).failure_code,
-    'BLOCKED_BY_SUBSCRIPTION',
+    'PROVIDER_ENTITLEMENT',
   );
-  assert.equal(classifyProviderFailure({ status: 403 }).failure_code, 'BLOCKED_BY_SUBSCRIPTION');
-  assert.equal(classifyProviderFailure({ status: 429 }).failure_code, 'RATE_LIMITED');
-  assert.equal(classifyProviderFailure({ status: 503 }).failure_code, 'PROVIDER_UNAVAILABLE');
-  assert.equal(classifyProviderFailure({ error: 'missing_api_key' }).failure_code, 'CONFIGURATION_MISSING');
+  assert.equal(classifyProviderFailure({ status: 403 }).failure_code, 'PROVIDER_ENTITLEMENT');
+  assert.equal(classifyProviderFailure({ status: 429 }).failure_code, 'PROVIDER_RATE_LIMIT');
+  assert.equal(classifyProviderFailure({ status: 503 }).failure_code, 'PROVIDER_HTTP_5XX');
+  assert.equal(classifyProviderFailure({ error: 'missing_api_key' }).failure_code, 'PROVIDER_ENTITLEMENT');
   assert.equal(
     classifyProviderFailure({ error: 'cannot_resolve_active_txf_contract' }).failure_code,
-    'CONTRACT_MAPPING_FAILED',
+    'PROVIDER_INVALID_RESPONSE',
   );
-  assert.equal(classifyProviderFailure({ error: 'provider_timestamp:cross_session_stale' }).failure_code, 'STALE_PROVIDER_DATA');
+  assert.equal(classifyProviderFailure({ error: 'provider_timestamp:cross_session_stale' }).failure_code, 'PROVIDER_STALE_SESSION');
 });
 
 test('Taiwan checkpoint freshness rejects fabricated, cross-session, and stale core timestamps', () => {

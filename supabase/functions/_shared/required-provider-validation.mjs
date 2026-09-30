@@ -1,3 +1,4 @@
+import { classifyCanonicalFailure } from './provider-failure-contract.mjs';
 import { buildCheckpointEvidence, presentFiniteNumber } from './fetch-checkpoint-evidence.mjs';
 import { normalizeConfiguredProxyQuote, normalizeProviderTimestamp } from './provider-normalization.mjs';
 import { REQUIRED_PROVIDER_SLOTS } from './provider-reliability-contract.mjs';
@@ -49,7 +50,8 @@ export async function fetchRequiredFinnhubResponse(symbol, apiKey, fetcher = fet
       if (response.status === 429 && attempt < 1) { await delay(10_000); continue; }
       if (response.status === 503 && attempt < 1) { await delay(3_000); continue; }
       if (!response.ok) return { status: response.status, payload: null, error: `HTTP_${response.status}` };
-      return { status: response.status, payload: await response.json(), error: null };
+      try { return { status: response.status, payload: await response.json(), error: null }; }
+      catch { return { status: response.status, payload: null, error: 'TEMPORARY_MALFORMED_RESPONSE' }; }
     } catch (error) {
       const failure = error instanceof DOMException && error.name === 'AbortError' ? 'TIMEOUT' : 'PROVIDER_UNAVAILABLE';
       if (attempt === 1) return { status: null, payload: null, error: failure };
@@ -110,6 +112,21 @@ export function normalizeRequiredFugleQuote(payload, symbol) {
       price, change: computedChange, change_percent: changePercent,
     },
   };
+}
+
+// The actual TWSE fallback adapter is shared with offline replay.
+export function normalizeRequiredTwseQuote(data, sourceSymbol) {
+  const row = record(Array.isArray(data?.msgArray) ? data.msgArray[0] : null);
+  const price = firstNumber(row, ['z', 'pz', 'a']), previousClose = firstNumber(row, ['y']);
+  if (price === null || price <= 0 || previousClose === null || previousClose <= 0) return null;
+  const date = String(row.d || ''), time = String(row.t || '');
+  const timestamp = /^\d{8}$/.test(date) && /^\d{2}:\d{2}:\d{2}$/.test(time)
+    ? Date.parse(`${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}T${time}+08:00`) : NaN;
+  const capturedAt = Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : '';
+  const change = price - previousClose, changePercent = change / previousClose * 100;
+  return { value:price, change, changePercent, capturedAt, provider:'twse', sourceSymbol,
+    raw:{provider:'twse',source_symbol:sourceSymbol,date:row.d || null,time:row.t || null,
+      price,previous_close:previousClose,change,change_percent:changePercent} };
 }
 
 export function normalizeRequiredTaiwanCoreQuote(result, displaySymbol) {
@@ -214,18 +231,8 @@ export function txfQuoteEndpoint(symbol, session) {
 
 /** @param {Record<string, unknown>} response @param {string | null | undefined} [evidenceError] */
 export function classifyRequiredProviderFailure(response, evidenceError = null) {
-  const status = Number(record(response).status);
-  if (status === 404) return 'RESOURCE_NOT_FOUND';
-  if (status === 401 || status === 403) return 'AUTHENTICATION_FAILED';
-  if (status === 402) return 'BLOCKED_BY_SUBSCRIPTION';
-  if (status === 429) return 'RATE_LIMITED';
-  if (status >= 500) return 'PROVIDER_UNAVAILABLE';
-  if (String(record(response).error || '') === 'TIMEOUT') return 'TIMEOUT';
-  if (evidenceError === 'INVALID_CHECKPOINT_SOURCE_TIME') return 'STALE_PROVIDER_DATA';
-  if (['TXF_SESSION_DATE_MISMATCH', 'TXF_SESSION_STALE'].includes(String(evidenceError || ''))) return 'STALE_PROVIDER_DATA';
   if (evidenceError === 'OUTSIDE_REAL_CHECKPOINT_WINDOW') return 'MARKET_PHASE_EXPECTED';
-  if (evidenceError) return 'PROVIDER_RESPONSE_CONTRACT_INVALID';
-  return String(record(response).error || 'PROVIDER_REQUEST_REJECTED');
+  return classifyCanonicalFailure({ ...record(response), evidence_error: evidenceError }).failure_code;
 }
 
 export async function fetchRequiredFugleResponse(endpoint, apiKey, fetcher = fetch) {
@@ -237,7 +244,8 @@ export async function fetchRequiredFugleResponse(endpoint, apiKey, fetcher = fet
       headers: { Accept: 'application/json', 'X-API-KEY': apiKey }, signal: controller.signal,
     });
     if (!response.ok) return { status: response.status, payload: null, error: `HTTP_${response.status}` };
-    return { status: response.status, payload: await response.json(), error: null };
+    try { return { status: response.status, payload: await response.json(), error: null }; }
+    catch { return { status: response.status, payload: null, error: 'TEMPORARY_MALFORMED_RESPONSE' }; }
   } catch (error) {
     return { status: null, payload: null, error: error instanceof DOMException && error.name === 'AbortError' ? 'TIMEOUT' : 'PROVIDER_UNAVAILABLE' };
   } finally {
@@ -294,7 +302,8 @@ export async function resolveRequiredTxfQuote(request, options = {}) {
     const endpoint = `futopt/intraday/tickers?type=FUTURE&exchange=TAIFEX&session=${session}&product=TXF`;
     const response = await request(endpoint);
     observations.push({ endpoint, ...record(response) });
-    contract = Number(response?.status) === 200 ? selectRequiredTxfContract(response.payload, options.nowMs) : null;
+    contract = Number(response?.status) === 200 ? selectRequiredTxfContract(response.payload,
+      options.nowMs ?? Date.parse(String(options.observedAt || ''))) : null;
     if (contract) break;
   }
   if (!contract) return { quote: null, endpoint: null, response: null, observations };

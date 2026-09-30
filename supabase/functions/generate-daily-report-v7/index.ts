@@ -1,8 +1,11 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient as createRawClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { observeCriticalClientFactory } from '../_shared/critical-rpc-observer.ts';
+const createClient = observeCriticalClientFactory(createRawClient);
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 import type { RuntimeDatabase } from '../_shared/runtime-database-contract.ts';
 type RuntimeClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 import { resolveMarketStatus } from '../_shared/market-status.ts';
+import { recordCriticalContract, recordPublicationContract } from '../_shared/critical-contract-recorder.ts';
 import {
   assembleResearchMasterV2,
   assembleCanonicalMarketResearch,
@@ -2731,6 +2734,8 @@ async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJso
     };
     if(tradingDayInfo.is_trading_day){
       if(!inputRun)throw new Error('RESEARCH_INPUT_LEASE_REQUIRED');
+      recordCriticalContract(supabase,'RESEARCH',todayDate,canonicalMarketDocument(aiStrategyJson));
+      recordCriticalContract(supabase,'PUBLICATION',todayDate,canonicalMarketDocument(aiStrategyJson));
       const decisionPayload=buildCanonicalDecisionPayload(aiStrategyJson,importantNews,reportMode,marketBias,confScore,tradingDayInfo,learningConfidence);
       decisionPayload.input_fingerprint=inputRun.fingerprint;
       if(decisionPayload.decision_mode==='blocked')throw new PublicationQualityError((decisionPayload.reason_codes as string[]).concat('CANONICAL_DECISION_BLOCKED'));
@@ -2749,6 +2754,7 @@ async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJso
       if(semantic.eligible!==true)throw new PublicationQualityError((semantic.reason_codes as string[])||['SEMANTIC_BLOCKED']);
       const projected=projectReviewedMarketDecision(aiStrategyJson,decisionPayload,importantNews.length);
       const sentence=canonicalRecord(decisionPayload.generated_text).daily_sentence;
+      recordPublicationContract(supabase,{p_report_date:todayDate,p_ai:projected,p_decision:decisionPayload,p_contract:contract,p_member:member,p_semantic:semantic});
       const bundle=await supabase.rpc('publish_research_bundle_v1',{
         p_run_id:inputRun.id,p_correlation_id:correlationId,
         p_report:{...insertPayload,ai_strategy_json:projected,summary:sentence,today_summary:sentence,today_quote:sentence},

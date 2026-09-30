@@ -13,6 +13,7 @@ import {
   normalizeRequiredFinnhubQuote,
   normalizeRequiredFugleQuote,
   normalizeRequiredTaiwanCoreQuote,
+  normalizeRequiredTwseQuote,
   requiredProviderSlot,
   resolveRequiredTxfQuote,
   validateRequiredProviderEvidence,
@@ -21,20 +22,22 @@ import {
   resolveFugle2330Provider,
   resolveFugleTaiexProvider,
 } from './fugle-taiex-provider.mjs';
+import { MARKET_CALENDAR_VERSION } from './market-session-contract.mjs';
+import { classifyCanonicalFailure, FAILURE_CONTRACT_VERSION } from './provider-failure-contract.mjs';
 
-export const PRODUCTION_EVIDENCE_RECORDER_VERSION = 'PRODUCTION_EVIDENCE_RECORDER_V1';
-export const PRODUCTION_EVIDENCE_REPLAY_VERSION = 'PRODUCTION_PROVIDER_REPLAY_V1';
+export const PRODUCTION_EVIDENCE_RECORDER_VERSION = 'PRODUCTION_EVIDENCE_RECORDER_V2';
+export const PRODUCTION_EVIDENCE_REPLAY_VERSION = 'PRODUCTION_PROVIDER_REPLAY_V2';
 export const PRODUCTION_EVIDENCE_RETENTION_DAYS = 90;
 export const PRODUCTION_EVIDENCE_MAX_ROWS = 11;
 export const PRODUCTION_EVIDENCE_WRITE_TIMEOUT_MS = 1_500;
 
 const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-const finite = value => Number.isFinite(Number(value));
+const finite = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
 const secretKey = /authorization|cookie|secret|token|api[-_]?key|password|service[-_]?role|recipient|email|phone|member|profile|session[-_]?token/i;
 const emailValue = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function boundedSafeValue(value, depth = 0) {
-  if (depth > 5) return '[TRUNCATED]';
+  if (depth > 16) throw new Error('PRODUCTION_EVIDENCE_DEPTH_LIMIT');
   if (value === null || typeof value === 'boolean' || typeof value === 'number') return value;
   if (typeof value === 'string') {
     if (emailValue.test(value.trim())) return '[REDACTED]';
@@ -97,7 +100,7 @@ function safeNormalizedQuote(quote) {
 function endpointAdapterKind(providerKey, provider, endpoint) {
   if (provider === 'finnhub') return 'FINNHUB_QUOTE';
   if (providerKey === 'TAIEX' || providerKey === '2330') {
-    return provider === 'twse_mis' ? 'TWSE_MIS_QUOTE' : 'FUGLE_TAIWAN_CORE';
+    return ['twse', 'twse_mis'].includes(provider) || /twse|stock\/api\/getStockInfo/.test(String(endpoint)) ? 'TWSE_MIS_QUOTE' : 'FUGLE_TAIWAN_CORE';
   }
   if (providerKey === 'TXF') return 'FUGLE_FUTOPT_QUOTE';
   return String(endpoint || '').includes('twse') ? 'TWSE_MIS_QUOTE' : 'NORMALIZED_QUOTE';
@@ -116,10 +119,13 @@ export async function buildProductionProviderEvidence(input) {
   const evidence = record(input.evidence);
   const evidenceRow = record(evidence.row);
   const evidenceRaw = record(evidenceRow.raw);
-  const contractResult = evidence.valid === true ? 'PASS'
-    : input.expected === true ? 'EXPECTED' : input.waiting === true ? 'WAITING' : 'FAIL';
-  const contractReason = evidence.valid === true ? null
-    : String(input.contractReason || evidence.error || input.error || 'PROVIDER_REQUEST_REJECTED').slice(0, 300);
+  // Readiness presentation is not the evidence contract. WAITING/EXPECTED
+  // remains diagnostic metadata; neither may turn an invalid contract into PASS.
+  const contractResult = evidence.valid === true ? 'PASS' : 'FAIL';
+  const contractReason = evidence.valid === true ? null : classifyCanonicalFailure({
+    status: input.httpStatus, error: input.error,
+    evidence_error: input.adapterFailureCode || evidence.error || input.contractReason,
+  }).failure_code;
   const providerEnvelopeDate = String(
     input.providerEnvelopeDate || normalizedRaw.provider_envelope_date || record(rawPayload).date || '',
   );
@@ -132,6 +138,8 @@ export async function buildProductionProviderEvidence(input) {
   const adapterKind = endpointAdapterKind(String(input.providerKey), provider, endpoint);
   const replayPayload = sanitizeRecordedEvidence({
     schema_version: PRODUCTION_EVIDENCE_REPLAY_VERSION,
+    calendar_version: MARKET_CALENDAR_VERSION,
+    failure_contract_version: FAILURE_CONTRACT_VERSION,
     adapter_kind: adapterKind,
     provider_key: input.providerKey,
     source_symbol: input.symbol,
@@ -139,6 +147,10 @@ export async function buildProductionProviderEvidence(input) {
     http_status: input.httpStatus ?? null,
     provider_error: input.error || null,
     provider_payload: rawPayload,
+    responses: (Array.isArray(input.responses) ? input.responses : []).slice(0, 12).map(response => ({
+      endpoint: String(response.endpoint), status: response.status, error: response.error,
+      payload: sanitizeProductionMarketPayload(record(response.payload)),
+    })),
     normalized_quote: normalizedQuote,
     adapter_context: {
       provider_envelope_date: providerEnvelopeDate || null,
@@ -154,7 +166,10 @@ export async function buildProductionProviderEvidence(input) {
       correlationId: input.correlationId,
     },
     expected_contract_result: contractResult,
+    readiness_presentation: input.expected === true ? 'EXPECTED' : input.waiting === true ? 'WAITING' : contractResult,
     expected_contract_reason: contractReason,
+    expected_evidence_error: evidence.valid === true ? null : evidence.error || null,
+    expected_adapter_error: input.adapterFailureCode || null,
   });
   if (recordedEvidenceContainsSensitiveData(replayPayload)) {
     throw new Error('PRODUCTION_EVIDENCE_SANITIZER_REJECTED_SENSITIVE_DATA');
@@ -183,7 +198,7 @@ export async function buildProductionProviderEvidence(input) {
     payload_shape: describeProductionResponseShape(rawPayload),
     raw_payload_hash: await sha256Hex(stableJson(rawPayload)),
     replay_payload: replayPayload,
-    http_status: Number.isFinite(Number(input.httpStatus)) ? Number(input.httpStatus) : null,
+    http_status: finite(input.httpStatus) && Number(input.httpStatus) >= 100 ? Number(input.httpStatus) : null,
     correlation_id: input.correlationId,
     source_function: String(input.sourceFunction),
     recorder_version: PRODUCTION_EVIDENCE_RECORDER_VERSION,
@@ -198,32 +213,39 @@ async function replayQuote(replay, row) {
   const context = record(replay.adapter_context);
   const evidenceInput = record(replay.evidence_input);
   const endpoint = String(replay.endpoint || row.endpoint_class || '');
+  const responseFor = requested => {
+    const retained = (Array.isArray(replay.responses) ? replay.responses : []).find(item => item.endpoint === requested);
+    return retained || (requested === endpoint ? {status:Number(replay.http_status),payload,error:replay.provider_error || null}
+      : {status:503,payload:null,error:'RECORDED_AUXILIARY_RESPONSE_NOT_RETAINED'});
+  };
+  if (replay.adapter_kind !== 'FUGLE_TAIWAN_CORE' &&
+    (Number(replay.http_status) !== 200 || replay.provider_error === 'TEMPORARY_MALFORMED_RESPONSE')) return {quote:null, adapter_error:null};
   if (replay.adapter_kind === 'FINNHUB_QUOTE') {
-    return normalizeRequiredFinnhubQuote(payload, String(replay.source_symbol || row.symbol || ''));
+    return {quote:normalizeRequiredFinnhubQuote(payload, String(replay.source_symbol || row.symbol || '')), adapter_error:null};
+  }
+  if (replay.adapter_kind === 'TWSE_MIS_QUOTE') {
+    return {quote:normalizeRequiredTwseQuote(payload,String(replay.source_symbol || row.symbol || '')),adapter_error:null};
   }
   if (replay.adapter_kind === 'FUGLE_TAIWAN_CORE') {
     const resolver = providerKey === 'TAIEX' ? resolveFugleTaiexProvider : resolveFugle2330Provider;
-    const result = await resolver(async ({ endpoint: requestedEndpoint }) => requestedEndpoint === endpoint
-      ? { status: Number(replay.http_status), payload, error: replay.provider_error || null }
-      : { status: 503, payload: null, error: 'RECORDED_AUXILIARY_RESPONSE_NOT_RETAINED' }, {
+    const result = await resolver(async ({ endpoint: requestedEndpoint }) => responseFor(requestedEndpoint), {
       phase: evidenceInput.phase,
       tradingDate: evidenceInput.tradingDate,
       observedAt: evidenceInput.observedAt,
     });
-    return normalizeRequiredTaiwanCoreQuote(result, providerKey);
+    return {quote:normalizeRequiredTaiwanCoreQuote(result, providerKey), adapter_error:result.ok ? null : result.failureCode || null};
   }
   if (replay.adapter_kind === 'FUGLE_FUTOPT_QUOTE') {
-    const resolved = await resolveRequiredTxfQuote(async requestedEndpoint => requestedEndpoint === endpoint
-      ? { status: Number(replay.http_status), payload, error: replay.provider_error || null }
-      : { status: 404, payload: null, error: 'RECORDED_ENDPOINT_NOT_SELECTED' }, {
+    const resolved = await resolveRequiredTxfQuote(async requestedEndpoint => responseFor(requestedEndpoint), {
       phase: evidenceInput.phase,
       tradingDate: evidenceInput.tradingDate,
       observedAt: evidenceInput.observedAt,
+      nowMs: Date.parse(String(evidenceInput.observedAt)),
     });
-    return resolved.quote || null;
+    return {quote:resolved.quote || null,adapter_error:null};
   }
   const stored = record(replay.normalized_quote);
-  return stored.provider ? { ...stored, raw: record(stored.raw) } : null;
+  return {quote:stored.provider ? { ...stored, raw: record(stored.raw) } : null,adapter_error:null};
 }
 
 /** Re-run the current adapter and provider contract without external network I/O. */
@@ -233,8 +255,11 @@ export async function replayRecordedProviderEvidence(row) {
   const providerKey = String(replay.provider_key || row.provider_key || '');
   const slot = requiredProviderSlot(providerKey);
   let quote = null;
+  let adapterError = null;
   try {
-    quote = await replayQuote(replay, row);
+    const resolved = await replayQuote(replay, row);
+    quote = resolved.quote;
+    adapterError = resolved.adapter_error;
   } catch {
     quote = null;
   }
@@ -242,17 +267,21 @@ export async function replayRecordedProviderEvidence(row) {
   const response = { status: replay.http_status, error: replay.provider_error };
   const contractResult = evidence.valid === true ? 'PASS' : 'FAIL';
   const contractReason = evidence.valid === true ? null
-    : classifyRequiredProviderFailure(response, evidence.error || null);
+    : classifyRequiredProviderFailure(response, adapterError || evidence.error || null);
+  const legacy = replay.schema_version !== PRODUCTION_EVIDENCE_REPLAY_VERSION;
+  const versionAligned = replay.calendar_version === MARKET_CALENDAR_VERSION && replay.failure_contract_version === FAILURE_CONTRACT_VERSION;
+  const exact = contractResult === row.contract_result && contractReason === row.contract_reason &&
+    (evidence.error || null) === replay.expected_evidence_error && adapterError === replay.expected_adapter_error;
   return {
     provider_key: providerKey,
     quote,
     evidence,
     contract_result: contractResult,
     contract_reason: contractReason,
-    deterministic: contractResult === row.contract_result && (
-      contractResult === 'PASS' || String(row.contract_reason || '').includes(String(evidence.error || contractReason || '')) ||
-      String(row.contract_reason || '') === String(contractReason || '')
-    ),
+    adapter_error: adapterError,
+    replay_status: legacy ? 'LEGACY_EVIDENCE_INSUFFICIENT' : !versionAligned ? 'RECORDED_CONTRACT_VERSION_UNAVAILABLE' : exact ? 'DETERMINISTIC' : 'CONTRACT_DIFF',
+    limitation: legacy ? 'V1 has no immutable calendar/taxonomy version or complete adapter response trace; current-contract result is not historical reproduction.' : null,
+    deterministic: !legacy && versionAligned && exact,
   };
 }
 

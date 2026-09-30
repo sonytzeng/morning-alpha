@@ -58,6 +58,9 @@ export function gatePremarketActionsOnAtomicEvidence(
   input: { has_report: boolean; atomic_checkpoint_complete: boolean },
 ): DailyDeliveryAction[] {
   if (input.has_report || input.atomic_checkpoint_complete) return actions;
+  // The deadline is incident-only. Never turn its final alert into another
+  // market collection attempt after the bounded window has closed.
+  if (actions.includes('deliver_incident')) return ['deliver_incident'];
   // Research/report generation cannot repair a missing authoritative market
   // batch. Refetch all 11 providers; a later invocation may generate only
   // after the Atomic health row proves the batch is complete.

@@ -71,10 +71,15 @@ jobs:
           supabase/functions/_shared/research-quality-gate.test.ts
           supabase/functions/generate-daily-report-v7/research-master-v2.test.ts
           tests/crossDaySectorReconstruction.test.ts
+          tests/researchCrossDay20260930.test.ts
           tests/consolidationPublicationReadAdapter.test.ts
           supabase/functions/_shared/intraday-runtime-contract.test.ts
           tests/runtimeDecisionTimeline.test.ts
           tests/decisionLifecycle.test.ts
+      - name: Research committed-close provenance parity
+        env:
+          MA_ISOLATED_TEST_DB: ma_research_gate_test1
+        run: node --test tests/researchProvenanceDatabase.integration.mjs
       - name: Isolated PostgreSQL migration twice and atomicity tests
         env:
           MA_ISOLATED_TEST_DB: ma_core_test1

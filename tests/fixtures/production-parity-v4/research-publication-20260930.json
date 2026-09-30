@@ -1,0 +1,717 @@
+{
+  "gate": {
+    "status": "READY",
+    "eligible": true,
+    "report_date": "2026-09-30",
+    "wait_reason": null,
+    "reason_codes": [],
+    "content_score": 97,
+    "decision_mode": "recommendations",
+    "report_status": "READY",
+    "watch_condition": null,
+    "contract_version": "MARKET_REPORT_GATE_V2",
+    "next_recheck_time": null,
+    "recommendation_gate": {
+      "status": "QUALIFIED",
+      "eligible": true,
+      "screening": {
+        "status": "INCOMPLETE",
+        "rejected": [],
+        "universe_count": null,
+        "evaluated_count": null
+      },
+      "reason_codes": [],
+      "contract_version": "STOCK_RECOMMENDATION_GATE_V1",
+      "subscriber_message": null,
+      "universe_evaluation_complete": false
+    },
+    "recommendation_status": "QUALIFIED"
+  },
+  "state": {
+    "status": "READY",
+    "document": {
+      "quality": {
+        "contradictions": [],
+        "coverage_audit": {
+          "claims": [
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "market_data",
+                  "freshness": "recent",
+                  "evidence_id": "MD001",
+                  "source_date": "2026-09-29T05:30:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "recent",
+                  "evidence_id": "MD002",
+                  "source_date": "2026-09-29T05:30:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD003",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD004",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD006",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                },
+                {
+                  "url": "https://www.tribuneindia.com/news/business/taiwan-clears-usd-44-billion-in-tsmc-investments-for-united-states-expansion/",
+                  "title": "半導體",
+                  "source": "The Tribune",
+                  "freshness": "recent",
+                  "evidence_id": "NEWS001",
+                  "source_date": "2026-09-28T11:02:46+00:00",
+                  "published_at": "2026-09-28T11:02:46+00:00"
+                },
+                {
+                  "url": "https://markets.businessinsider.com/news/stocks/tsmc-tsm-ramps-up-2nm-chip-capacity-as-apple-nvidia-orders-jump-1036577563",
+                  "title": "半導體",
+                  "source": "Markets Insider",
+                  "freshness": "recent",
+                  "evidence_id": "NEWS002",
+                  "source_date": "2026-09-28T07:56:25+00:00",
+                  "published_at": "2026-09-28T07:56:25+00:00"
+                },
+                {
+                  "source": "authoritative_market_data_snapshots_v1",
+                  "freshness": "previous_trading_day",
+                  "evidence_id": "SEC002",
+                  "source_date": "2026-09-29"
+                },
+                {
+                  "source": "authoritative_market_data_snapshots_v1",
+                  "freshness": "previous_trading_day",
+                  "evidence_id": "SEC003",
+                  "source_date": "2026-09-29"
+                },
+                {
+                  "source": "authoritative_market_data_snapshots_v1",
+                  "freshness": "previous_trading_day",
+                  "evidence_id": "SEC004",
+                  "source_date": "2026-09-29"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:executive_summary:06qcelk",
+              "statement": "半導體先傳導至電子權值；09:30 看台積電是否相對大盤轉強；若 2330 弱於 TAIEX、電子權值 沒有量價同步，今日不追價並撤回受惠假設。",
+              "supported": true,
+              "confidence": null,
+              "evidence_ids": [
+                "MD001",
+                "MD002",
+                "MD003",
+                "MD004",
+                "MD006",
+                "NEWS001",
+                "NEWS002",
+                "SEC002",
+                "SEC003",
+                "SEC004"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "market_data",
+                  "freshness": "recent",
+                  "evidence_id": "MD001",
+                  "source_date": "2026-09-29T05:30:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "recent",
+                  "evidence_id": "MD002",
+                  "source_date": "2026-09-29T05:30:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD003",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD004",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD005",
+                  "source_date": "2026-09-29T21:00:00.071+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD006",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD007",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                },
+                {
+                  "url": "https://www.tribuneindia.com/news/business/taiwan-clears-usd-44-billion-in-tsmc-investments-for-united-states-expansion/",
+                  "title": "半導體",
+                  "source": "The Tribune",
+                  "freshness": "recent",
+                  "evidence_id": "NEWS001",
+                  "source_date": "2026-09-28T11:02:46+00:00",
+                  "published_at": "2026-09-28T11:02:46+00:00"
+                },
+                {
+                  "url": "https://markets.businessinsider.com/news/stocks/tsmc-tsm-ramps-up-2nm-chip-capacity-as-apple-nvidia-orders-jump-1036577563",
+                  "title": "半導體",
+                  "source": "Markets Insider",
+                  "freshness": "recent",
+                  "evidence_id": "NEWS002",
+                  "source_date": "2026-09-28T07:56:25+00:00",
+                  "published_at": "2026-09-28T07:56:25+00:00"
+                },
+                {
+                  "source": "authoritative_market_data_snapshots_v1",
+                  "freshness": "previous_trading_day",
+                  "evidence_id": "SEC002",
+                  "source_date": "2026-09-29"
+                },
+                {
+                  "source": "authoritative_market_data_snapshots_v1",
+                  "freshness": "previous_trading_day",
+                  "evidence_id": "SEC003",
+                  "source_date": "2026-09-29"
+                },
+                {
+                  "source": "authoritative_market_data_snapshots_v1",
+                  "freshness": "previous_trading_day",
+                  "evidence_id": "SEC004",
+                  "source_date": "2026-09-29"
+                }
+              ],
+              "claim_id": "thesis:2026-09-30:primary",
+              "statement": "半導體先傳導至電子權值；09:30 看台積電是否相對大盤轉強；若 2330 弱於 TAIEX、電子權值 沒有量價同步，今日不追價並撤回受惠假設。",
+              "supported": true,
+              "confidence": null,
+              "evidence_ids": [
+                "MD001",
+                "MD002",
+                "MD003",
+                "MD004",
+                "MD005",
+                "MD006",
+                "MD007",
+                "NEWS001",
+                "NEWS002",
+                "SEC002",
+                "SEC003",
+                "SEC004"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "market_data",
+                  "freshness": "recent",
+                  "evidence_id": "MD001",
+                  "source_date": "2026-09-29T05:30:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "recent",
+                  "evidence_id": "MD002",
+                  "source_date": "2026-09-29T05:30:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD003",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD004",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                },
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD005",
+                  "source_date": "2026-09-29T21:00:00.071+00:00"
+                }
+              ],
+              "claim_id": "research:2026-09-30:v9.6.3_market_recommendation_gate_split:why_today_matters",
+              "statement": "TAIEX DOWN -0.82% 台股現貨大盤方向；2330 FLAT 0.00% 台股最大權值與半導體核心驗證股；SOX UP 1.19% 半導體族群對台股電子權值影響；TSM UP 0.90% 台積電 ADR 對 2330 與台股電子開盤情緒影響；TXF UP 1.46% 台指期與盤前/盤中風險方向",
+              "supported": true,
+              "confidence": null,
+              "evidence_ids": [
+                "MD001",
+                "MD002",
+                "MD003",
+                "MD004",
+                "MD005"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "market_data",
+                  "freshness": "recent",
+                  "evidence_id": "MD001",
+                  "source_date": "2026-09-29T05:30:00+00:00"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:supporting_evidence:1m7wxq4",
+              "statement": "TAIEX DOWN -0.82% 台股現貨大盤方向",
+              "supported": true,
+              "confidence": "strong",
+              "evidence_ids": [
+                "MD001"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "market_data",
+                  "freshness": "recent",
+                  "evidence_id": "MD002",
+                  "source_date": "2026-09-29T05:30:00+00:00"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:supporting_evidence:118ul3z",
+              "statement": "2330 FLAT 0.00% 台股最大權值與半導體核心驗證股",
+              "supported": true,
+              "confidence": "strong",
+              "evidence_ids": [
+                "MD002"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD003",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:supporting_evidence:1k8agr2",
+              "statement": "SOX UP 1.19% 半導體族群對台股電子權值影響",
+              "supported": true,
+              "confidence": "strong",
+              "evidence_ids": [
+                "MD003"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD004",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:supporting_evidence:1wxgcrc",
+              "statement": "TSM UP 0.90% 台積電 ADR 對 2330 與台股電子開盤情緒影響",
+              "supported": true,
+              "confidence": "strong",
+              "evidence_ids": [
+                "MD004"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD005",
+                  "source_date": "2026-09-29T21:00:00.071+00:00"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:supporting_evidence:1ezqaue",
+              "statement": "TXF UP 1.46% 台指期與盤前/盤中風險方向",
+              "supported": true,
+              "confidence": "strong",
+              "evidence_ids": [
+                "MD005"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD006",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:supporting_evidence:0v2ppeb",
+              "statement": "NVDA DOWN -0.72% AI server 與半導體供應鏈風向",
+              "supported": true,
+              "confidence": "strong",
+              "evidence_ids": [
+                "MD006"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "market_data",
+                  "freshness": "fresh",
+                  "evidence_id": "MD007",
+                  "source_date": "2026-09-29T20:00:00+00:00"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:supporting_evidence:0kqglqp",
+              "statement": "NASDAQ FLAT 0.19% 科技股風險偏好",
+              "supported": true,
+              "confidence": "strong",
+              "evidence_ids": [
+                "MD007"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "url": "https://www.tribuneindia.com/news/business/taiwan-clears-usd-44-billion-in-tsmc-investments-for-united-states-expansion/",
+                  "title": "半導體",
+                  "source": "The Tribune",
+                  "freshness": "recent",
+                  "evidence_id": "NEWS001",
+                  "source_date": "2026-09-28T11:02:46+00:00",
+                  "published_at": "2026-09-28T11:02:46+00:00"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:supporting_evidence:0mjrr1f",
+              "statement": "半導體：Taiwan clears USD 44 billion in TSMC investments for United States expansion",
+              "supported": true,
+              "confidence": "strong",
+              "evidence_ids": [
+                "NEWS001"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "url": "https://markets.businessinsider.com/news/stocks/tsmc-tsm-ramps-up-2nm-chip-capacity-as-apple-nvidia-orders-jump-1036577563",
+                  "title": "半導體",
+                  "source": "Markets Insider",
+                  "freshness": "recent",
+                  "evidence_id": "NEWS002",
+                  "source_date": "2026-09-28T07:56:25+00:00",
+                  "published_at": "2026-09-28T07:56:25+00:00"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:supporting_evidence:09wnjcb",
+              "statement": "半導體：TSMC (TSM) Ramps Up 2nm Chip Capacity as Apple, Nvidia Orders Jump",
+              "supported": true,
+              "confidence": "strong",
+              "evidence_ids": [
+                "NEWS002"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "authoritative_market_data_snapshots_v1",
+                  "freshness": "previous_trading_day",
+                  "evidence_id": "SEC002",
+                  "source_date": "2026-09-29"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:supporting_evidence:1czwn7m",
+              "statement": "半導體：由 2026-09-29 權威 14:30 收盤批次的 NVDA 1.68%、TSM 0.5%、2330 0%、SOX -2.08% 重建研究用族群脈絡；平均漲跌幅 0.03%，非當日正式 sector_rotation_scores。",
+              "supported": true,
+              "confidence": "medium",
+              "evidence_ids": [
+                "SEC002"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "authoritative_market_data_snapshots_v1",
+                  "freshness": "previous_trading_day",
+                  "evidence_id": "SEC003",
+                  "source_date": "2026-09-29"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:supporting_evidence:0in3yfj",
+              "statement": "電子權值：由 2026-09-29 權威 14:30 收盤批次的 2330 0% 重建研究用族群脈絡；平均漲跌幅 0%，非當日正式 sector_rotation_scores。",
+              "supported": true,
+              "confidence": "medium",
+              "evidence_ids": [
+                "SEC003"
+              ],
+              "reason_codes": []
+            },
+            {
+              "scope": "market",
+              "sources": [
+                {
+                  "source": "authoritative_market_data_snapshots_v1",
+                  "freshness": "previous_trading_day",
+                  "evidence_id": "SEC004",
+                  "source_date": "2026-09-29"
+                }
+              ],
+              "claim_id": "claim:2026-09-30:supporting_evidence:0ozxgb4",
+              "statement": "大盤：由 2026-09-29 權威 14:30 收盤批次的 TXF -0.74%、TAIEX -0.82% 重建研究用族群脈絡；平均漲跌幅 -0.78%，非當日正式 sector_rotation_scores。",
+              "supported": true,
+              "confidence": "weak",
+              "evidence_ids": [
+                "SEC004"
+              ],
+              "reason_codes": []
+            }
+          ],
+          "numerator": 15,
+          "denominator": 15,
+          "contract_version": "CLAIM_EVIDENCE_LEDGER_V1",
+          "excluded_conditional_criteria": [
+            "claim:2026-09-30:failure_scenario:1g3qq3k",
+            "claim:2026-09-30:failure_scenario:041clqo",
+            "claim:2026-09-30:failure_scenario:1v53cct",
+            "claim:2026-09-30:failure_scenario:1w9e19v",
+            "claim:2026-09-30:failure_scenario:1fyx6ad",
+            "node:2026-09-30:validation:03kzy66",
+            "node:2026-09-30:validation:0hhtx0g",
+            "node:2026-09-30:validation:0rdbil2",
+            "node:2026-09-30:validation:1s723bp",
+            "node:2026-09-30:validation:160twug"
+          ]
+        },
+        "publish_status": "ready",
+        "duplicate_claims": [],
+        "missing_sections": [],
+        "evidence_coverage": 100,
+        "unsupported_claims": []
+      },
+      "revision": 1,
+      "sections": {
+        "executive_summary": {
+          "text": "半導體先傳導至電子權值；09:30 看台積電是否相對大盤轉強；若 2330 弱於 TAIEX、電子權值 沒有量價同步，今日不追價並撤回受惠假設。",
+          "claim_id": "claim:2026-09-30:executive_summary:06qcelk",
+          "section_id": "executive_summary",
+          "evidence_refs": [
+            "MD001",
+            "MD002",
+            "MD003",
+            "MD004",
+            "MD006",
+            "NEWS001",
+            "NEWS002",
+            "SEC002",
+            "SEC003",
+            "SEC004"
+          ]
+        },
+        "representative_stocks": []
+      },
+      "timezone": "Asia/Taipei",
+      "thesis_id": "thesis:2026-09-30:primary",
+      "data_as_of": "2026-09-29T21:00:00.071Z",
+      "provenance": {
+        "generated_at": "2026-09-29T23:37:45.526Z",
+        "source_status": "complete",
+        "engine_version": "V9.6.3_MARKET_RECOMMENDATION_GATE_SPLIT",
+        "prompt_version": null,
+        "evidence_pack_version": "V10_EVIDENCE_PACK_DEBUG"
+      },
+      "today_date": "2026-09-30",
+      "report_date": "2026-09-30",
+      "report_mode": "normal_overnight",
+      "research_id": "research:2026-09-30:v9.6.3_market_recommendation_gate_split",
+      "market_status": "OPEN",
+      "is_trading_day": true,
+      "schema_version": "2.0"
+    },
+    "data_as_of": "2026-09-29T21:00:00.071Z",
+    "today_date": "2026-09-30",
+    "report_date": "2026-09-30",
+    "evidence_ids": [
+      "MD001",
+      "MD002",
+      "MD003",
+      "MD004",
+      "MD006",
+      "NEWS001",
+      "NEWS002",
+      "SEC002",
+      "SEC003",
+      "SEC004",
+      "MD005",
+      "MD007"
+    ],
+    "generated_at": "2026-09-29T23:37:45.526Z",
+    "reason_codes": [],
+    "schema_version": "CANONICAL_MARKET_STATE_V1"
+  },
+  "action": "SELECTIVE",
+  "market_bias": "震盪觀察",
+  "report_date": "2026-09-30",
+  "source_refs": [
+    {
+      "source": "market_data",
+      "freshness": "recent",
+      "evidence_id": "MD001",
+      "source_date": "2026-09-29T05:30:00+00:00"
+    },
+    {
+      "source": "market_data",
+      "freshness": "recent",
+      "evidence_id": "MD002",
+      "source_date": "2026-09-29T05:30:00+00:00"
+    },
+    {
+      "source": "market_data",
+      "freshness": "fresh",
+      "evidence_id": "MD003",
+      "source_date": "2026-09-29T20:00:00+00:00"
+    },
+    {
+      "source": "market_data",
+      "freshness": "fresh",
+      "evidence_id": "MD004",
+      "source_date": "2026-09-29T20:00:00+00:00"
+    },
+    {
+      "source": "market_data",
+      "freshness": "fresh",
+      "evidence_id": "MD006",
+      "source_date": "2026-09-29T20:00:00+00:00"
+    },
+    {
+      "url": "https://www.tribuneindia.com/news/business/taiwan-clears-usd-44-billion-in-tsmc-investments-for-united-states-expansion/",
+      "title": "半導體",
+      "source": "The Tribune",
+      "freshness": "recent",
+      "evidence_id": "NEWS001",
+      "source_date": "2026-09-28T11:02:46+00:00",
+      "published_at": "2026-09-28T11:02:46+00:00"
+    },
+    {
+      "url": "https://markets.businessinsider.com/news/stocks/tsmc-tsm-ramps-up-2nm-chip-capacity-as-apple-nvidia-orders-jump-1036577563",
+      "title": "半導體",
+      "source": "Markets Insider",
+      "freshness": "recent",
+      "evidence_id": "NEWS002",
+      "source_date": "2026-09-28T07:56:25+00:00",
+      "published_at": "2026-09-28T07:56:25+00:00"
+    },
+    {
+      "source": "authoritative_market_data_snapshots_v1",
+      "freshness": "previous_trading_day",
+      "evidence_id": "SEC002",
+      "source_date": "2026-09-29"
+    },
+    {
+      "source": "authoritative_market_data_snapshots_v1",
+      "freshness": "previous_trading_day",
+      "evidence_id": "SEC003",
+      "source_date": "2026-09-29"
+    },
+    {
+      "source": "authoritative_market_data_snapshots_v1",
+      "freshness": "previous_trading_day",
+      "evidence_id": "SEC004",
+      "source_date": "2026-09-29"
+    },
+    {
+      "source": "market_data",
+      "freshness": "fresh",
+      "evidence_id": "MD005",
+      "source_date": "2026-09-29T21:00:00.071+00:00"
+    },
+    {
+      "source": "market_data",
+      "freshness": "fresh",
+      "evidence_id": "MD007",
+      "source_date": "2026-09-29T20:00:00+00:00"
+    }
+  ],
+  "content_score": 97,
+  "decision_mode": "recommendations",
+  "evidence_type": "ISOLATED_HANDLER_VALIDATOR_PROJECTION",
+  "market_regime": "range",
+  "coverage_score": 100,
+  "daily_sentence": "半導體先傳導至電子權值；09:30 看台積電是否相對大盤轉強；若 2330 弱於 TAIEX、電子權值 沒有量價同步，今日不追價並撤回受惠假設。",
+  "stock_quality": {
+    "contradictions": [],
+    "publish_status": "ready",
+    "duplicate_claims": [],
+    "missing_sections": [],
+    "evidence_coverage": 100,
+    "unsupported_claims": []
+  },
+  "recommendations": [
+    {
+      "name": "台積電",
+      "sector": "電子權值",
+      "symbol": "2330",
+      "source_refs": [
+        "半導體｜https://www.tribuneindia.com/news/business/taiwan-clears-usd-44-billion-in-tsmc-investments-for-united-states-expansion/；半導體｜https://markets.businessinsider.com/news/stocks/tsmc-tsm-ramps-up-2nm-chip-capacity-as-apple-nvidia-orders-jump-1036577563；2330｜market_data:2330@2026-09-29T05:30:00+00:00；SOX｜market_data:SOX@2026-09-29T20:00:00+00:00",
+        "半導體｜https://www.tribuneindia.com/news/business/taiwan-clears-usd-44-billion-in-tsmc-investments-for-united-states-expansion/",
+        "半導體｜https://markets.businessinsider.com/news/stocks/tsmc-tsm-ramps-up-2nm-chip-capacity-as-apple-nvidia-orders-jump-1036577563",
+        "2330｜market_data:2330@2026-09-29T05:30:00+00:00",
+        "SOX｜market_data:SOX@2026-09-29T20:00:00+00:00"
+      ],
+      "event_source": "半導體",
+      "transmission_path": "事件來源：半導體 NVDA、SOX、TSM ADR 先改變半導體估值情緒。 台股電子權值與指數開盤會先看台積電是否抗跌。 台積電是先進製程與先進封裝核心權值股，也是台股半導體鏈的第一驗證點。 不是只因為半導體題材，而是因為 2330 同時影響 TAIEX 權重、外資配置與 AI 晶片供應鏈定價。",
+      "confirmation_condition": "09:30 前觀察 2330 是否優於 TAIEX、TXF 是否同步止穩、電子權值是否擴散。 同時確認 2330 相對 TAIEX 強弱與 電子權值 族群至少兩檔同步。",
+      "invalidation_condition": "若 2330 弱於 TAIEX、電子權值 沒有量價同步，或事件來源更新後不再支持原假設，今日受惠判斷失效。",
+      "research_evidence_admission": {
+        "status": "PASSED",
+        "report_date": "2026-09-30",
+        "contract_version": "COMPANY_EVIDENCE_ADMISSION_V1",
+        "company_evidence_ids": [
+          "NEWS001",
+          "NEWS002"
+        ]
+      },
+      "taiwan_supply_chain_relation": "台積電是先進製程與先進封裝核心權值股，也是台股半導體鏈的第一驗證點。"
+    }
+  ],
+  "stock_report_date": "2026-09-30"
+}

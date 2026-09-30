@@ -1,0 +1,156 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_RESEARCH_EVIDENCE_RECOVERY_20260930",
+  "candidate_base_git_sha": "1d18134ac1a81fead544f58df236c82edd0e9f47",
+  "predecessor_integrity_id": "MORNING_ALPHA_RUNTIME_SPARSE_RECOVERY_20260929",
+  "approval_provenance": "Sony authorized the 9/30 exact Research root-cause investigation, minimal candidate, real 9/29-to-9/30 isolated Handler replay, affected regression, Integrity, commit/push/PR and GitHub Release CI. If a Migration is required, create one candidate and validate in fresh isolation, then request final named Production approval. This transition records only the reviewed candidate; it grants no Production migration/deployment, Provider/Atomic/Retry/Cron/Auth/RLS/Secrets/history change.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/researchCrossDay20260930.test.ts",
+    "tests/crossDaySectorReconstruction.test.ts",
+    "tests/researchProvenanceDatabase.integration.mjs",
+    "tests/marketPublicationDelivery.test.mjs",
+    "tests/runtimeSparseRecovery.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1d18134ac1a81fead544f58df236c82edd0e9f47",
+      "predecessor_sha256": "ea8ae9ed3eb89d19e70023d4ca8ecd4178ef29c05a669450cb8b1ae502ee188f",
+      "candidate_sha256": "e89f4affb389a0deeeb581087dc1be35afb3266a451dfb33042144441a32e0ad",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Restore this exact predecessor path only after any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1d18134ac1a81fead544f58df236c82edd0e9f47",
+      "predecessor_sha256": "679504dfed2935bd66582a2d85a6679968d25c1729078e418a02b9b3042ec0e1",
+      "candidate_sha256": "e7fe2af146344c5e52c77580ea198cd96eaa4ac2570e0d72a1909ebd2072cb6e",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Restore this exact predecessor path only after any required separate Production approval."
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/market-data-evidence.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1d18134ac1a81fead544f58df236c82edd0e9f47",
+      "predecessor_sha256": "852d1646aa9f83b87a0a9ab18f2362f89b7e05f4174c4dcbe294919e3c03bf01",
+      "candidate_sha256": "1a7630d619f12fd7653e60e70e6ac5f3100a3da31d29b9cd571280385538997d",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Restore this exact predecessor path only after any required separate Production approval."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1d18134ac1a81fead544f58df236c82edd0e9f47",
+      "predecessor_sha256": "d3eb14338fb0a49b2870d3d67f19d3870a8085a908253efeb16ffc024a65492a",
+      "candidate_sha256": "aed6081cca43e01d38594ba8e5e496b4fa444d232065c09d9930c026401fcfae",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Restore this exact predecessor path only after any required separate Production approval."
+    },
+    {
+      "path": "docs/operations/research-evidence-recovery-20260930.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "499ca65a26e0fa70552a1523016f2b1b7368c172b300c761994d7f62cc30811e",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical artifacts remain unchanged."
+    },
+    {
+      "path": "docs/operations/evidence/research-exact-diff-20260930.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "9f8a2dde0356be935e0ae46aa9554b222c1805c23e390757663b1ffab774ecde",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical artifacts remain unchanged."
+    },
+    {
+      "path": "supabase/migrations/20260930005956_research_committed_close_provenance_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "9cb049d9bcb9b43023814cfd0e55211540f5c0cb3375466b8fb2efd81584931e",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical artifacts remain unchanged."
+    },
+    {
+      "path": "tests/fixtures/production-parity-v4/research-cross-day-20260930.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "89f4e5ef0775574dfd1e4869e41ff38cc4cae8585b437b2df8e7eebd2ce4a552",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical artifacts remain unchanged."
+    },
+    {
+      "path": "tests/fixtures/production-parity-v4/research-publication-20260930.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "01fa53ac0e921de850cebe55d94b2a4881c38bc9b671d35f850b4e4fcde5c2d0",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical artifacts remain unchanged."
+    },
+    {
+      "path": "tests/helpers/researchCrossDayHandlerReplay.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "91a31b617574a04551fde076068b7d57302066ac30b4532d29784481d8b31fdc",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical artifacts remain unchanged."
+    },
+    {
+      "path": "tests/researchCrossDay20260930.test.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "a10f5896faf4c001c216a5f6abfa82577867dcba828d5a877834acc6f57fba10",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical artifacts remain unchanged."
+    },
+    {
+      "path": "tests/researchProvenanceDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "84ecff2165554fc07993f7ceefae55dfc69ee1b6d0d91aeb091b942888d759d3",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical artifacts remain unchanged."
+    },
+    {
+      "path": "tests/researchEvidenceIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "6e00623ba6647af5978cea2e897f588a2f8f3eaa1c9b7cb234f24e5f6422296d",
+      "source_lineage": "Pinned merged 9/29 sparse-recovery predecessor plus original retained 9/29 close and 9/30 Research evidence; no historical baseline or evidence date is rewritten.",
+      "reason": "Minimal cross-day committed-close Research reconstruction and DB canonical provenance parity, with exact necessary regression, evidence and Release CI wiring.",
+      "rollback_target": "Remove only this candidate artifact before deployment; historical artifacts remain unchanged."
+    }
+  ]
+}

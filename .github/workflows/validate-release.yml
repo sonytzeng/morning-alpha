@@ -88,6 +88,12 @@ jobs:
           MA_ISOLATED_TEST_DB: ma_six_bug_test1
           MA_TEST_PGPORT: 55439
         run: node --test tests/sixBugDatabase.integration.mjs
+      - name: Recorder retry projection fresh DB and exact duplicate replay
+        env:
+          MA_RECORDER_LOCAL_SCOPE: ma-recorder-retry-projection-20260930
+          MA_ISOLATED_TEST_DB: ma_six_bug_test201
+          MA_TEST_PGPORT: 55439
+        run: node --test tests/recorderRetryProjectionDatabase.integration.mjs
       - name: Isolated PostgreSQL migration twice and atomicity tests
         env:
           MA_ISOLATED_TEST_DB: ma_core_test1

@@ -897,12 +897,16 @@ Deno.serve(async (req: Request) => {
     });
 
     let actions = plan.actions;
+    const publishedGate=asRecord(asRecord(state.report?.ai_strategy_json).market_report_gate);
+    const operational=asRecord(publishedGate.operational_market);
+    const enrichmentPending=state.report_eligible && operational.contract_version==='OPERATIONAL_MARKET_V1'
+      && operational.business_date===businessDate && operational.report_level==='DEGRADED';
     if (forceRegenerate) actions = ['regenerate_report'];
     else if (phase === 'refresh') actions = actions.filter((action) =>
       action === 'refresh_news' || action === 'refresh_market' || action === 'refresh_sector_rotation'
     );
     else if (phase === 'generate') actions = state.report_eligible
-      ? []
+      ? enrichmentPending ? ['regenerate_report'] : []
       : actions.filter((action) => action === 'refresh_sector_rotation' || action === 'regenerate_report');
     else if (phase === 'deliver' && state.report_eligible) actions = ['deliver_premium'];
     actions = gatePremarketActionsOnAtomicEvidence(actions, {

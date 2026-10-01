@@ -1,0 +1,419 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_OPERATIONAL_MARKET_20261001",
+  "candidate_base_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+  "predecessor_integrity_id": "MORNING_ALPHA_RECORDER_RETRY_PROJECTION_20260930",
+  "approval_provenance": "Sony explicitly authorized Operational Architecture candidate implementation, one necessary migration candidate, isolated verification, Commit Push PR and GitHub Release CI. Production deployment/migration/Cron/Auth/RLS/secrets and historical changes remain unauthorized; final release requires independent named approval.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/operationalMarketContract.test.mjs",
+    "tests/operationalMarketDatabase.integration.mjs",
+    "tests/helpers/operationalMarketFullLifecycle.mjs",
+    "tests/helpers/operationalMarketSqlReplay.mjs",
+    "tests/marketOnlyCanonical.test.mjs",
+    "tests/criticalContractRecorder.test.mjs",
+    "tests/marketReportGate.test.mjs",
+    "tests/marketPublicationContract.test.mjs",
+    "tests/decisionEvidencePipeline.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "f8bd35ae17533f45187d020f82d9e28fe903a43b83a49cde69868b99b062b0d0",
+      "candidate_sha256": "f462887810d801cf3adcb34568945a2ce7f45b178753d7d80c096cbd02c45756",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "docs/operations/evidence/operational-market-release-bundles-20261001.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "b9e33f6e810fea0145c2bf60a92dd28f621d487e99092581108562c60150cd90",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "docs/operations/evidence/operational-market-validation-20261001.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "98797994e1181f10ba4077cee40ecf11366f93dab2db095be916b0d20eaf1940",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "docs/operations/operational-market-architecture-v1.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "cf5a547e9551aae3499f2e82a9790e1952ec6fe11dd01ffa92091eb932de2d10",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "src/lib/subscriberReportContract.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "940e7356dbe36a7a8b066f2af695daf495fc1c2998ddb356d273e705dc60c1d8",
+      "candidate_sha256": "536e4461555ab37b629b1ea26dac7dd4cdf244e70258b7fe1a58e4a83210d925",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "src/pages/home/page.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "f7bcf35f011b6097f2fc4bc7f6e48bcbb5a10a1b20342935021e59e62746f53f",
+      "candidate_sha256": "ec275345345447bc23b18269f336f65d06370d854c5aaa674d81062de3b3e3ca",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "src/pages/reports/ReportDetail.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "4a9e9ec3d611d89fde4b7769851d89911e185b1266e1474287a99205f0bd6960",
+      "candidate_sha256": "ded54c13a090d039257868f61c97e273d73000bf4a6dfe86de144baffb1ed12f",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "supabase/functions/_shared/canonical-market-state.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "1c733f061f829447634c7365c44dd88e81a07776bc811e79aca187257a5db0d9",
+      "candidate_sha256": "be04074a69883f46bf686df769feb0ad7896a203db8590649167fa63fbab6ebb",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "supabase/functions/_shared/content-intelligence.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "d16f1282a185dd80dcbacc18538138f56b734221d9bb2445ce391237dfcd96d7",
+      "candidate_sha256": "9aca8df41ebe5edc16da1dfd942895251de2c2cd9095c7311e4eefa58c97556c",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "supabase/functions/_shared/critical-contract-recorder.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "535b5a25cfd92ca45b3a045b2b850351906f702b6373e2a7b9897d3dafefee42",
+      "candidate_sha256": "eeda652dcc8bc79c3d513eec16c632aaffae23687a7e3c4e0ec969f5316f63f7",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "supabase/functions/_shared/market-publication-contract.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "8ac709a88205190931c2c6a6ea7b0112e7d37ef21f0d12530bdf9da50cf09cf3",
+      "candidate_sha256": "acd4734223b217e3131b089fe65cff4aedeb4da856bd06f83215e3b38f2928bb",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "supabase/functions/_shared/market-report-gate.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "7a928e7fecf28a78cdc8380c01e0d0517fecd41dc58c5215abe71a6d86600993",
+      "candidate_sha256": "5287f6186715445ab5ccd066c8216adca9f3ca7491c470c95bf6e29f87a408fd",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "supabase/functions/_shared/operational-market-contract.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "8ec4d9e2e2dfe61c7aa2393433164f3aa0392fdb78237cb4a6ad3f4e806ce47b",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "supabase/functions/_shared/operational-market-quality.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "26ebde4463e15fdba46d9a5c8365902cbff9f8a09a2021ec84451b3d994c0d14",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "supabase/functions/_shared/production-architecture-core.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "3e9520f6382bf0ea47d287b157b278e9db8ee02be63a4fa75d59a44500bbbd69",
+      "candidate_sha256": "96e94d0c1c32ed3fcbd3f437d5b2449a2242e45ddbabd0a495a3628c4dab508a",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "340b2be73e5bed7780a9c3547e7d322ded0ab840f580825359d38cec5e6a2e83",
+      "candidate_sha256": "887e7d330a37040125bd0f031028a6696518e7c97339436fd1c2d4d9f732af75",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "5527cca7a8957577c3a06084dcd7484cd7020d987e8973d83c84d13abb2b46f1",
+      "candidate_sha256": "b85c23a78130a49aa33f0ce9dcaf67e5589db23c00708ee2752a9468bf410f00",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "1096ea8fb21c8e677e581815027c6f292a3003e83276500835d74ca3dda011b1",
+      "candidate_sha256": "1c24c2cf71f6f80211950e2e2f8c0839329463c2be941d9c2ecac1cac9006da0",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "supabase/functions/line-daily-push/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "036ed1586919f307828dc20c7be3836b8d2e45a9124ac4c1058b4de526a1eb3f",
+      "candidate_sha256": "1d4cdd01132d3fe61826076bcf4266c1dd8c68092de664463b4ff84e20263253",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "supabase/migrations/20261001065146_operational_market_architecture_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "8b98584c6ca382299fe1585edd5050c77769fae232c48af94e0337de88d888a1",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "One reviewed forward-only publication, dimensional acceptance and exact Recorder read-set migration candidate.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/consolidationContentOsPublication.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "42b416b9ce728d831d88dbd94cd1e522f976ef43fd336d7e6e61daa6b396aa0a",
+      "candidate_sha256": "b3daca3698f28ee22cf819ba339bc58be2b2709a212f365fff5a506edcc58927",
+      "source_lineage": "Exact retained predecessor test; operational successor uses the same actual production modules.",
+      "reason": "Keep actual module loading and exact source-shape assertion synchronized; no skipped test or lower quality assertion.",
+      "rollback_target": "Restore predecessor test together with its predecessor candidate before release."
+    },
+    {
+      "path": "tests/consolidationGeneratorEditorial.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "1c722cd2ae692220ea3b41d8e34273a824563d5680ee1017934779967d6df4b5",
+      "candidate_sha256": "6549122f7da8ac0713ce6bc7518ab0da29845c8444d50e91be41a4e284259a2e",
+      "source_lineage": "Exact retained predecessor test; operational successor uses the same actual production modules.",
+      "reason": "Keep actual module loading and exact source-shape assertion synchronized; no skipped test or lower quality assertion.",
+      "rollback_target": "Restore predecessor test together with its predecessor candidate before release."
+    },
+    {
+      "path": "tests/fixtures/operational-market-core-20261001.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "aeec6f259226c777e877291fc4f98bfc437ca275a8485b48fd2fd3b49b9cf1da",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/fixtures/operational-market-historical-20261001.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "941bc247b7f73b37f39cc5a3b6dfe0abb7359cdd6848f1f8d09c72b1f225470d",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/fixtures/operational-market-lifecycle-20261001.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "9c3eaa5d69ec294cdd364816d7864d42ec166301fe76c79597c9d7b5157e51b6",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/helpers/coreContentOsCapturedReplay.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "77a7dbeb2a36bacd07db3036be19414dbd613db5fb686e5e30be8508b4ba4a79",
+      "candidate_sha256": "eaeae6f6e8c8f23c045c4aa0cacc2ab93c9caf118eb6f95cbd8ef9385b4abb50",
+      "source_lineage": "Exact immutable predecessor test transport; current product imports its already-authoritative JSON calendar.",
+      "reason": "Support JSON module loading in the existing local SDK test VM; no test assertion or business contract is relaxed.",
+      "rollback_target": "Restore the predecessor test loader with its predecessor candidate before release."
+    },
+    {
+      "path": "tests/helpers/operationalMarketControls.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "f0b4b144802c62699f7f8a8318c6f8096e18a046d11d539bf6ad68bbca0fee68",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/helpers/operationalMarketFullLifecycle.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "dbc9c8e1f21761ce68b428d08311e98199fa09c839cde833ce69fefda36a3040",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/helpers/operationalMarketLifecycleInputs.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "74c90da5556fc45631cbc49d1adc13912069ba17ca5f3f6657b75afe08249e9d",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/helpers/operationalMarketSeed.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "052b490f84286185f489d8cc50d494ecb911c2d02d80d54b66988947f8b53f99",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/helpers/operationalMarketShadow.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "5ef0bab000a8fb2ac45122ea4ae0ad3059c8035292933e756a2b18e996a1983f",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/helpers/operationalMarketSqlReplay.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "d15bd8ac39ca1c1de72b734093f66ea0e4d071445f9e3c46e4de9e45c1ebbe2c",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "d2ab65f379b06d02937994232b7257d314f619706f3370428a4027b89cb74a41",
+      "candidate_sha256": "e940bcc0122fae234c6e8874798ba43492a91ac2ba85308d436cd0c53f89eb28",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    },
+    {
+      "path": "tests/operationalMarketContract.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "adc0f9f5eda0e66529b36e24956ea6a4604045a4504d144426f3c12d45adcaaa",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/operationalMarketDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "d14b8b93db768c051e72578de7c1b1e0f0976e6bda2ec9ac4b04ce4fbf0e10e8",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/operationalMarketIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "5d986945a9d158fe9b6de6eddfdb0e722a381e0d92907a10e43aa2f39ef156ff",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Remove the candidate-only artifact before release; never rewrite historical Production records."
+    },
+    {
+      "path": "tests/publicRelease.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "2732a201ba44db1b38477e3a1b2dc9f4f60b9f96023f16d0a937c8743b7533f4",
+      "candidate_sha256": "fae8ca80c1d674dc0ec828c95e6ea7b686d66d4ad6f1c1919b7da32f40b8f04e",
+      "source_lineage": "Exact retained predecessor test; operational successor uses the same actual production modules.",
+      "reason": "Keep actual module loading and exact source-shape assertion synchronized; no skipped test or lower quality assertion.",
+      "rollback_target": "Restore predecessor test together with its predecessor candidate before release."
+    },
+    {
+      "path": "tests/sixBugIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "7e71532d06731d00cb44a72d4e96305466d650fd",
+      "predecessor_sha256": "0556d394b153699ee1665aa3309ac59fe60148adbc12200fb14b9cf9a33c9ade",
+      "candidate_sha256": "a4e1714dfdf74d262c0eb0ebd4b21ae2d55f7ba558c8e5f21ecf91d03b4a9cdd",
+      "source_lineage": "Exact merged Recorder Retry predecessor retained; candidate-only operational market dependency and evidence transition.",
+      "reason": "Direct operational core-versus-enhancement contract, subscriber projection, isolated evidence or exact Release Gate dependency.",
+      "rollback_target": "Restore the exact predecessor before release; Production rollback requires separate named approval."
+    }
+  ],
+  "reviewed_operational_declarations": [
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "name": "attachResearchMasterV2Shadow",
+      "predecessor_sha256": "08247832599a3ac50a9529f81375e33f7f841c91386215245f75ec9c6a300b81",
+      "candidate_sha256": "c519a462c98ebdc437ba431fafd34c62794e691e97603942383b27deaed98e93",
+      "reason": "Attach the independently evaluated operational core/enhancement capsule; no AI prompts or stock-selection strategies changed."
+    }
+  ]
+}

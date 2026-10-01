@@ -1,5 +1,6 @@
 import { evaluateContentIntelligence, evaluateMarketContentIntelligence, hasDecisionGradeSourceCoverage } from './content-intelligence.ts';
 import { evaluateResearchQualityGate } from './research-quality-gate.ts';
+import { evaluateMarketResearchQuality, readOperationalMarket } from './operational-market-quality.ts';
 import { companyEvidenceSupported, presentNumber } from './research-pipeline-contract.ts';
 import { buildCanonicalMarketState, canonicalMarketDocument, marketDocumentInput } from './canonical-market-state.ts';
 
@@ -69,7 +70,7 @@ export function evaluateStockRecommendationGate(value: unknown) {
  * private generation audit, never in the published market document. */
 export function evaluateMarketReportGate(value: unknown, expectedReportDate?: string) {
   const source = record(value), ai = marketDocumentInput(source), master = canonicalMarketDocument(source);
-  const research = evaluateResearchQualityGate(master);
+  const research = evaluateMarketResearchQuality(master);
   const content = evaluateMarketContentIntelligence(ai, Array.isArray(ai.important_news) ? ai.important_news.length : 0);
   const quality = record(ai.content_evidence_quality);
   const recommendationGate = evaluateStockRecommendationGate(source);
@@ -93,6 +94,7 @@ export function evaluateMarketReportGate(value: unknown, expectedReportDate?: st
   const guide = record(record(master.sections).decision_guide);
   return {
     contract_version: 'MARKET_REPORT_GATE_V2', report_date: String(master.report_date || ''), eligible, status,
+    ...(readOperationalMarket(master) ? { operational_market:readOperationalMarket(master) } : {}),
     report_status: eligible ? 'READY' : status,
     recommendation_status: recommendationGate.status,
     recommendation_gate: recommendationGate,

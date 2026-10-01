@@ -1,0 +1,1109 @@
+{
+  "schema_version": "OPERATIONAL_MARKET_ISOLATION_EVIDENCE_V1",
+  "production_writes": 0,
+  "real_line_calls": 0,
+  "production_token_used": 0,
+  "production_recipient_used": 0,
+  "natural_day_pass_claimed": false,
+  "sql_replay": {
+    "capsules": 26,
+    "contract_diff": 0,
+    "source": "ma_six_bug_test514",
+    "target": "ma_six_bug_test515",
+    "artifact_sha256": "a6652475efa7125cb0c9d034138f5346f1bc4481a5c24f6f326a0acfb2eae39f",
+    "stages": [
+      "ACCEPTANCE",
+      "LIFECYCLE",
+      "PUBLICATION"
+    ]
+  },
+  "scenarios": {
+    "real": {
+      "result": "PASS",
+      "database": "ma_six_bug_test503",
+      "source_artifact_sha256": "c6ede102c94c9898c567b420e4fc64723e92ee2a0dffef0631510c58882cb93e",
+      "input_types": [
+        "REAL_PRODUCTION_RETAINED_PROJECTION",
+        "SYNTHETIC_NEXT_DAY_CONTROL"
+      ],
+      "report_level": "DEGRADED",
+      "next_day": "PASS",
+      "service_available": true,
+      "learning": "PASS",
+      "stages": [
+        {
+          "stage": "report",
+          "time": "2026-10-01T07:05:00+08:00",
+          "result": {
+            "stage": "report",
+            "at": "2026-10-01T07:05:00+08:00",
+            "http": 200,
+            "success": true,
+            "report_status": "READY",
+            "recommendation_status": "BLOCKED",
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-01T07:06:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-01T07:06:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 1,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-01T07:07:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-01T07:07:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "intraday_close_inputs",
+          "result": {
+            "input_type": "REAL_PRODUCTION_RETAINED_PROJECTION",
+            "results": [
+              {
+                "checkpoint": "0900",
+                "atomic": 11,
+                "state": "MARKET_OPEN_CAPTURED"
+              },
+              {
+                "checkpoint": "0930",
+                "atomic": 11,
+                "state": "CHECKPOINT_0930_CAPTURED"
+              },
+              {
+                "checkpoint": "1030",
+                "atomic": 11,
+                "state": "CHECKPOINT_1030_CAPTURED"
+              },
+              {
+                "checkpoint": "1300",
+                "atomic": 11,
+                "state": "CHECKPOINT_1300_CAPTURED"
+              },
+              {
+                "checkpoint": "1410",
+                "atomic": 11,
+                "state": "CLOSE_1410_CAPTURED"
+              },
+              {
+                "checkpoint": "1430",
+                "atomic": 11,
+                "state": "CLOSE_1430_CAPTURED"
+              }
+            ],
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "closing",
+          "time": "2026-10-01T14:35:00+08:00",
+          "result": {
+            "stage": "closing",
+            "at": "2026-10-01T14:35:00+08:00",
+            "http": 200,
+            "success": true,
+            "error_code": null,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "learning",
+          "time": "2026-10-01T15:10:00+08:00",
+          "result": {
+            "stage": "learning",
+            "at": "2026-10-01T15:10:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "acceptance",
+          "time": "2026-10-01T15:35:00+08:00",
+          "result": {
+            "stage": "acceptance",
+            "at": "2026-10-01T15:35:00+08:00",
+            "http": 200,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "dimensional_acceptance",
+          "result": {
+            "dimensions": {
+              "LINE": "PASS",
+              "CLOSING": "PASS",
+              "DATA_SLA": "PASS",
+              "LEARNING": "PASS",
+              "CORE_MARKET": "PASS",
+              "RECOMMENDATION": "BLOCKED",
+              "REPORT_PUBLICATION": "DEGRADED_PUBLISHED"
+            },
+            "diagnostics": [
+              "PREMARKET_HEALTH_UNVERIFIED",
+              "DAY_NOT_COMPLETED",
+              "CLOSING_HEALTH_UNVERIFIED"
+            ],
+            "legacy_verdict": "FAIL",
+            "service_available": true
+          }
+        },
+        {
+          "stage": "replay",
+          "time": "2026-10-01T15:36:00+08:00",
+          "result": {
+            "critical_edge_count": 9,
+            "operational_count": 1,
+            "diff": [],
+            "sql_capsules": 16,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "report",
+          "time": "2026-10-02T07:05:00+08:00",
+          "result": {
+            "stage": "report",
+            "at": "2026-10-02T07:05:00+08:00",
+            "http": 200,
+            "success": true,
+            "report_status": "READY",
+            "recommendation_status": "BLOCKED",
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-02T07:06:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-02T07:06:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 1,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-02T07:07:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-02T07:07:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "replay",
+          "time": "2026-10-02T07:08:00+08:00",
+          "result": {
+            "critical_edge_count": 12,
+            "operational_count": 2,
+            "diff": [],
+            "sql_capsules": 22,
+            "production_writes": 0
+          }
+        }
+      ],
+      "production_writes": 0,
+      "real_line_calls": 0
+    },
+    "full": {
+      "result": "PASS",
+      "database": "ma_six_bug_test514",
+      "source_artifact_sha256": "d97d139df10926f9c8a8b7a777d42efdcd826fda6e0ce6b6986207e13a498ddc",
+      "input_types": [
+        "REAL_PRODUCTION_RETAINED_PROJECTION",
+        "SYNTHETIC_AUDITED_NEWS_CONTROL",
+        "SYNTHETIC_NEXT_DAY_CONTROL"
+      ],
+      "report_level": "FULL",
+      "next_day": "PASS",
+      "service_available": true,
+      "learning": "PASS",
+      "stages": [
+        {
+          "stage": "report",
+          "time": "2026-10-01T07:05:00+08:00",
+          "result": {
+            "stage": "report",
+            "at": "2026-10-01T07:05:00+08:00",
+            "http": 200,
+            "success": true,
+            "report_status": "READY",
+            "recommendation_status": "BLOCKED",
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-01T07:06:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-01T07:06:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 1,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-01T07:07:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-01T07:07:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "orchestrator",
+          "time": "2026-10-01T07:15:00+08:00",
+          "result": {
+            "stage": "orchestrator",
+            "at": "2026-10-01T07:15:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-01T07:16:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-01T07:16:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "intraday_close_inputs",
+          "result": {
+            "input_type": "REAL_PRODUCTION_RETAINED_PROJECTION",
+            "results": [
+              {
+                "checkpoint": "0900",
+                "atomic": 11,
+                "state": "MARKET_OPEN_CAPTURED"
+              },
+              {
+                "checkpoint": "0930",
+                "atomic": 11,
+                "state": "CHECKPOINT_0930_CAPTURED"
+              },
+              {
+                "checkpoint": "1030",
+                "atomic": 11,
+                "state": "CHECKPOINT_1030_CAPTURED"
+              },
+              {
+                "checkpoint": "1300",
+                "atomic": 11,
+                "state": "CHECKPOINT_1300_CAPTURED"
+              },
+              {
+                "checkpoint": "1410",
+                "atomic": 11,
+                "state": "CLOSE_1410_CAPTURED"
+              },
+              {
+                "checkpoint": "1430",
+                "atomic": 11,
+                "state": "CLOSE_1430_CAPTURED"
+              }
+            ],
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "closing",
+          "time": "2026-10-01T14:35:00+08:00",
+          "result": {
+            "stage": "closing",
+            "at": "2026-10-01T14:35:00+08:00",
+            "http": 200,
+            "success": true,
+            "error_code": null,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "learning",
+          "time": "2026-10-01T15:10:00+08:00",
+          "result": {
+            "stage": "learning",
+            "at": "2026-10-01T15:10:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "acceptance",
+          "time": "2026-10-01T15:35:00+08:00",
+          "result": {
+            "stage": "acceptance",
+            "at": "2026-10-01T15:35:00+08:00",
+            "http": 200,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "dimensional_acceptance",
+          "result": {
+            "dimensions": {
+              "LINE": "PASS",
+              "CLOSING": "PASS",
+              "DATA_SLA": "PASS",
+              "LEARNING": "PASS",
+              "CORE_MARKET": "PASS",
+              "RECOMMENDATION": "BLOCKED",
+              "REPORT_PUBLICATION": "DEGRADED_PUBLISHED"
+            },
+            "diagnostics": [
+              "PREMARKET_HEALTH_UNVERIFIED",
+              "DAY_NOT_COMPLETED",
+              "CLOSING_HEALTH_UNVERIFIED"
+            ],
+            "legacy_verdict": "FAIL",
+            "service_available": true
+          }
+        },
+        {
+          "stage": "replay",
+          "time": "2026-10-01T15:36:00+08:00",
+          "result": {
+            "critical_edge_count": 12,
+            "operational_count": 2,
+            "diff": [],
+            "sql_capsules": 20,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "report",
+          "time": "2026-10-02T07:05:00+08:00",
+          "result": {
+            "stage": "report",
+            "at": "2026-10-02T07:05:00+08:00",
+            "http": 200,
+            "success": true,
+            "report_status": "READY",
+            "recommendation_status": "BLOCKED",
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-02T07:06:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-02T07:06:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 1,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-02T07:07:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-02T07:07:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "replay",
+          "time": "2026-10-02T07:08:00+08:00",
+          "result": {
+            "critical_edge_count": 15,
+            "operational_count": 3,
+            "diff": [],
+            "sql_capsules": 26,
+            "production_writes": 0
+          }
+        }
+      ],
+      "production_writes": 0,
+      "real_line_calls": 0
+    },
+    "sector": {
+      "result": "PASS",
+      "database": "ma_six_bug_test505",
+      "source_artifact_sha256": "83677237eb2a44e00298c82278ab0076ccbe99e766948dd004c703ead24d9da6",
+      "input_types": [
+        "REAL_PRODUCTION_RETAINED_PROJECTION",
+        "SYNTHETIC_NEXT_DAY_CONTROL"
+      ],
+      "report_level": "DEGRADED",
+      "next_day": "PASS",
+      "service_available": true,
+      "learning": "PASS",
+      "stages": [
+        {
+          "stage": "report",
+          "time": "2026-10-01T07:05:00+08:00",
+          "result": {
+            "stage": "report",
+            "at": "2026-10-01T07:05:00+08:00",
+            "http": 200,
+            "success": true,
+            "report_status": "READY",
+            "recommendation_status": "BLOCKED",
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-01T07:06:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-01T07:06:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 1,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-01T07:07:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-01T07:07:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "intraday_close_inputs",
+          "result": {
+            "input_type": "REAL_PRODUCTION_RETAINED_PROJECTION",
+            "results": [
+              {
+                "checkpoint": "0900",
+                "atomic": 11,
+                "state": "MARKET_OPEN_CAPTURED"
+              },
+              {
+                "checkpoint": "0930",
+                "atomic": 11,
+                "state": "CHECKPOINT_0930_CAPTURED"
+              },
+              {
+                "checkpoint": "1030",
+                "atomic": 11,
+                "state": "CHECKPOINT_1030_CAPTURED"
+              },
+              {
+                "checkpoint": "1300",
+                "atomic": 11,
+                "state": "CHECKPOINT_1300_CAPTURED"
+              },
+              {
+                "checkpoint": "1410",
+                "atomic": 11,
+                "state": "CLOSE_1410_CAPTURED"
+              },
+              {
+                "checkpoint": "1430",
+                "atomic": 11,
+                "state": "CLOSE_1430_CAPTURED"
+              }
+            ],
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "closing",
+          "time": "2026-10-01T14:35:00+08:00",
+          "result": {
+            "stage": "closing",
+            "at": "2026-10-01T14:35:00+08:00",
+            "http": 200,
+            "success": true,
+            "error_code": null,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "learning",
+          "time": "2026-10-01T15:10:00+08:00",
+          "result": {
+            "stage": "learning",
+            "at": "2026-10-01T15:10:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "acceptance",
+          "time": "2026-10-01T15:35:00+08:00",
+          "result": {
+            "stage": "acceptance",
+            "at": "2026-10-01T15:35:00+08:00",
+            "http": 200,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "dimensional_acceptance",
+          "result": {
+            "dimensions": {
+              "LINE": "PASS",
+              "CLOSING": "PASS",
+              "DATA_SLA": "PASS",
+              "LEARNING": "PASS",
+              "CORE_MARKET": "PASS",
+              "RECOMMENDATION": "BLOCKED",
+              "REPORT_PUBLICATION": "DEGRADED_PUBLISHED"
+            },
+            "diagnostics": [
+              "PREMARKET_HEALTH_UNVERIFIED",
+              "DAY_NOT_COMPLETED",
+              "CLOSING_HEALTH_UNVERIFIED"
+            ],
+            "legacy_verdict": "FAIL",
+            "service_available": true
+          }
+        },
+        {
+          "stage": "replay",
+          "time": "2026-10-01T15:36:00+08:00",
+          "result": {
+            "critical_edge_count": 9,
+            "operational_count": 1,
+            "diff": [],
+            "sql_capsules": 16,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "report",
+          "time": "2026-10-02T07:05:00+08:00",
+          "result": {
+            "stage": "report",
+            "at": "2026-10-02T07:05:00+08:00",
+            "http": 200,
+            "success": true,
+            "report_status": "READY",
+            "recommendation_status": "BLOCKED",
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-02T07:06:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-02T07:06:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 1,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-02T07:07:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-02T07:07:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "replay",
+          "time": "2026-10-02T07:08:00+08:00",
+          "result": {
+            "critical_edge_count": 12,
+            "operational_count": 2,
+            "diff": [],
+            "sql_capsules": 22,
+            "production_writes": 0
+          }
+        }
+      ],
+      "production_writes": 0,
+      "real_line_calls": 0
+    },
+    "learning": {
+      "result": "PASS",
+      "database": "ma_six_bug_test508",
+      "source_artifact_sha256": "9007655597a5cda543c07bc64120a9de18b58355397257ba6810cc7eeba3c6f4",
+      "input_types": [
+        "REAL_PRODUCTION_RETAINED_PROJECTION",
+        "SYNTHETIC_NEXT_DAY_CONTROL"
+      ],
+      "report_level": "DEGRADED",
+      "next_day": "PASS",
+      "service_available": true,
+      "learning": "LEARNING_DEGRADED",
+      "stages": [
+        {
+          "stage": "report",
+          "time": "2026-10-01T07:05:00+08:00",
+          "result": {
+            "stage": "report",
+            "at": "2026-10-01T07:05:00+08:00",
+            "http": 200,
+            "success": true,
+            "report_status": "READY",
+            "recommendation_status": "BLOCKED",
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-01T07:06:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-01T07:06:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 1,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-01T07:07:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-01T07:07:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "intraday_close_inputs",
+          "result": {
+            "input_type": "REAL_PRODUCTION_RETAINED_PROJECTION",
+            "results": [
+              {
+                "checkpoint": "0900",
+                "atomic": 11,
+                "state": "MARKET_OPEN_CAPTURED"
+              },
+              {
+                "checkpoint": "0930",
+                "atomic": 11,
+                "state": "CHECKPOINT_0930_CAPTURED"
+              },
+              {
+                "checkpoint": "1030",
+                "atomic": 11,
+                "state": "CHECKPOINT_1030_CAPTURED"
+              },
+              {
+                "checkpoint": "1300",
+                "atomic": 11,
+                "state": "CHECKPOINT_1300_CAPTURED"
+              },
+              {
+                "checkpoint": "1410",
+                "atomic": 11,
+                "state": "CLOSE_1410_CAPTURED"
+              },
+              {
+                "checkpoint": "1430",
+                "atomic": 11,
+                "state": "CLOSE_1430_CAPTURED"
+              }
+            ],
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "closing",
+          "time": "2026-10-01T14:35:00+08:00",
+          "result": {
+            "stage": "closing",
+            "at": "2026-10-01T14:35:00+08:00",
+            "http": 200,
+            "success": true,
+            "error_code": null,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "learning",
+          "time": "2026-10-01T15:10:00+08:00",
+          "result": {
+            "stage": "learning",
+            "at": "2026-10-01T15:10:00+08:00",
+            "http": 500,
+            "success": false,
+            "error_code": "CONTINUOUS_LEARNING_ENGINE_FAILED",
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "acceptance",
+          "time": "2026-10-01T15:35:00+08:00",
+          "result": {
+            "stage": "acceptance",
+            "at": "2026-10-01T15:35:00+08:00",
+            "http": 200,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "dimensional_acceptance",
+          "result": {
+            "dimensions": {
+              "LINE": "PASS",
+              "CLOSING": "PASS",
+              "DATA_SLA": "PASS",
+              "LEARNING": "LEARNING_DEGRADED",
+              "CORE_MARKET": "PASS",
+              "RECOMMENDATION": "BLOCKED",
+              "REPORT_PUBLICATION": "DEGRADED_PUBLISHED"
+            },
+            "diagnostics": [
+              "PREMARKET_HEALTH_UNVERIFIED",
+              "DAY_NOT_COMPLETED",
+              "LEARNING_REVISION_UNVERIFIED",
+              "CLOSING_HEALTH_UNVERIFIED"
+            ],
+            "legacy_verdict": "FAIL",
+            "service_available": true
+          }
+        },
+        {
+          "stage": "replay",
+          "time": "2026-10-01T15:36:00+08:00",
+          "result": {
+            "critical_edge_count": 8,
+            "operational_count": 1,
+            "diff": [],
+            "sql_capsules": 14,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "report",
+          "time": "2026-10-02T07:05:00+08:00",
+          "result": {
+            "stage": "report",
+            "at": "2026-10-02T07:05:00+08:00",
+            "http": 200,
+            "success": true,
+            "report_status": "READY",
+            "recommendation_status": "BLOCKED",
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-02T07:06:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-02T07:06:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 1,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-02T07:07:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-02T07:07:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "replay",
+          "time": "2026-10-02T07:08:00+08:00",
+          "result": {
+            "critical_edge_count": 11,
+            "operational_count": 2,
+            "diff": [],
+            "sql_capsules": 20,
+            "production_writes": 0
+          }
+        }
+      ],
+      "production_writes": 0,
+      "real_line_calls": 0
+    },
+    "fatal": {
+      "result": "PASS",
+      "database": "ma_six_bug_test507",
+      "source_artifact_sha256": "c9c1104872c81c914805cf5ee8db7e8cc5afc7d7e1708b2e8d8886a60759958c",
+      "input_types": [
+        "REAL_PRODUCTION_RETAINED_PROJECTION",
+        "SYNTHETIC_NEXT_DAY_CONTROL"
+      ],
+      "report_level": "CORE_FATAL",
+      "next_day": "PASS",
+      "service_available": false,
+      "learning": "NOT_RUN_CORE_FATAL",
+      "stages": [
+        {
+          "stage": "report",
+          "time": "2026-10-01T07:05:00+08:00",
+          "result": {
+            "stage": "report",
+            "at": "2026-10-01T07:05:00+08:00",
+            "http": 409,
+            "success": false,
+            "error_code": "CORE_MARKET_BLOCKED",
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "replay",
+          "time": "2026-10-01T15:36:00+08:00",
+          "result": {
+            "critical_edge_count": 1,
+            "operational_count": 1,
+            "diff": [],
+            "sql_capsules": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "report",
+          "time": "2026-10-02T07:05:00+08:00",
+          "result": {
+            "stage": "report",
+            "at": "2026-10-02T07:05:00+08:00",
+            "http": 200,
+            "success": true,
+            "report_status": "READY",
+            "recommendation_status": "BLOCKED",
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-02T07:06:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-02T07:06:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 1,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "line",
+          "time": "2026-10-02T07:07:00+08:00",
+          "result": {
+            "stage": "line",
+            "at": "2026-10-02T07:07:00+08:00",
+            "http": 200,
+            "success": true,
+            "local_line_send": 0,
+            "real_line_calls": 0,
+            "production_token_used": 0,
+            "production_recipient_used": 0,
+            "production_writes": 0
+          }
+        },
+        {
+          "stage": "replay",
+          "time": "2026-10-02T07:08:00+08:00",
+          "result": {
+            "critical_edge_count": 4,
+            "operational_count": 2,
+            "diff": [],
+            "sql_capsules": 6,
+            "production_writes": 0
+          }
+        }
+      ],
+      "production_writes": 0,
+      "real_line_calls": 0
+    }
+  }
+}

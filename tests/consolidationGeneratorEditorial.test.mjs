@@ -8,6 +8,7 @@ import { assembleCanonicalMarketResearch, assembleResearchMasterV2, admitResearc
 import { buildCanonicalMarketState, canonicalMarketDocument, canonicalMarketSourceRefs } from '../supabase/functions/_shared/canonical-market-state.ts';
 import { evaluateMarketContentIntelligence, isDecisionCriticalMissingSource } from '../supabase/functions/_shared/content-intelligence.ts';
 import { evaluateResearchQualityGate } from '../supabase/functions/_shared/research-quality-gate.ts';
+import { evaluateMarketResearchQuality, readOperationalMarket } from '../supabase/functions/_shared/operational-market-quality.ts';
 import { evaluateMarketReportGate } from '../supabase/functions/_shared/market-report-gate.ts';
 import { evaluatePremiumContentGate } from '../supabase/functions/_shared/premium-content-gate.ts';
 import { evaluatePublishedMarketDelivery, fetchPublishedDeliveryEvidence } from '../supabase/functions/_shared/market-publication-contract.ts';
@@ -29,6 +30,7 @@ const PublicationQualityError = isolatedFunction(source, 'PublicationQualityErro
 const build = isolatedFunction(source, 'buildCanonicalDecisionPayload', {
   canonicalRecord, canonicalRecords, canonicalText, canonicalMarketDocument, canonicalMarketSourceRefs,
   evaluateMarketContentIntelligence, evaluateMarketReportGate, evaluateResearchQualityGate,
+  evaluateMarketResearchQuality, readOperationalMarket,
   canonicalDecisionAction, presentNumber, RESEARCH_PIPELINE_VERSION,
   VERSION: isolatedFunction(source, 'VERSION'),
 });
@@ -120,7 +122,8 @@ const writer = isolatedFunction(source, 'writeReport', {
   evaluateMarketContentIntelligence, evaluatePremiumContentGate, isDecisionCriticalMissingSource,
   resolveAbstentionDecision, RUNTIME_QUALITY_POLICY, classifyMarketRegime, buildBullBearDebate,
   buildCanonicalDecisionPayload: build, buildCanonicalDecisionContract, buildCanonicalMemberResearchRevision,
-  canonicalMarketQualityInputs, evaluateResearchQualityGate, evaluateCanonicalSemanticCoherenceGate, projectReviewedMarketDecision: project,
+  canonicalMarketQualityInputs, evaluateResearchQualityGate, evaluateMarketResearchQuality,
+  evaluateCanonicalSemanticCoherenceGate, projectReviewedMarketDecision: project,
 });
 const failureStart = source.indexOf('    const qualityFailure=err instanceof PublicationQualityError;');
 const failureEnd = source.indexOf('\n  }\n});', failureStart);

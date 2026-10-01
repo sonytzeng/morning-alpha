@@ -61,6 +61,10 @@ export function capturedContentOsHandler(endpoint, { now = '2026-09-21T15:35:30+
     const source = readFileSync(path, 'utf8');
     loadedSources.push({ path: path.slice(repo.length), sha256: captureHash(source) });
     const module = { exports: {} }; modules.set(path, module);
+    if (path.endsWith('.json')) {
+      module.exports = { default: JSON.parse(source) };
+      return module.exports;
+    }
     const localRequire = specifier => {
       if (specifier.startsWith('.')) return load(resolve(dirname(path), specifier));
       assert.equal(specifier, 'npm:@supabase/supabase-js@2.57.4', 'Only the actual pinned SDK import may be mapped');

@@ -3,6 +3,7 @@ import {
   gradeContentScore,
 } from './production-architecture-core.mjs';
 import { evaluateResearchQualityGate } from './research-quality-gate.ts';
+import { evaluateMarketResearchQuality, readOperationalMarket } from './operational-market-quality.ts';
 import { presentNumber } from './research-pipeline-contract.ts';
 import { canonicalMarketDocument } from './canonical-market-state.ts';
 
@@ -152,6 +153,8 @@ export function hasDecisionGradeSourceCoverage(
   mode: 'recommendations' | 'no_trade',
 ): boolean {
   const ai = asRecord(aiValue);
+  const operational=readOperationalMarket(asRecord(ai.research_master_v2));
+  if(operational)return operational.market_decision==='READY';
   const missingSources = declaredMissingSources(ai);
   if (missingSources.some((source) => /sector_rotation|market_data_dates|required_tw_market|required_us_market|invalid_numeric/i.test(source))) return false;
   if (asText(ai.data_quality).toLowerCase() === 'complete') return missingSources.every((source)=>!isDecisionCriticalMissingSource(source,mode));
@@ -341,8 +344,8 @@ function hasAuditedMarketNarrative(ai: JsonRecord): boolean {
   const path = asRecords(asRecord(sections.transmission_narrative).path);
   const hasRefs = (row: JsonRecord) => Array.isArray(row.evidence_refs) && row.evidence_refs.length > 0;
   const markets = presentNumber(quality.verified_market_count), news = presentNumber(quality.verified_news_count);
-  return evaluateResearchQualityGate(master).eligible
-    && asText(asRecord(master.provenance).source_status) === 'complete'
+  return evaluateMarketResearchQuality(master).eligible
+    && (readOperationalMarket(master)?.market_decision==='READY' || asText(asRecord(master.provenance).source_status) === 'complete')
     && Array.isArray(ai.missing_sources) && ai.missing_sources.every(source => typeof source === 'string')
     && hasDecisionGradeSourceCoverage(ai, 'no_trade')
     && quality.contract_version === 'PREMIUM_EVIDENCE_V1'

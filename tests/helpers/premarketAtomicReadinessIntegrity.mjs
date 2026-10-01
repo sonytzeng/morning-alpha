@@ -288,7 +288,7 @@ function resolveSixBugPredecessorIntegrity(registry, artifactBytes, readSource =
     newCandidatePaths:candidate.newCandidatePaths, sixBugCandidateIntegrity:candidate };
 }
 
-export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+function resolveRecorderRetryPredecessorIntegrity(registry, artifactBytes, readSource = read) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/recorder-retry-projection-baseline-20260930.json'));
   const candidate = resolveReviewedBaselineTransition({
     manifest, readSource,
@@ -298,6 +298,32 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, r
   });
   return { ...candidate.reviewedBaselinePredecessor, fileHash:candidate.fileHash,
     newCandidatePaths:candidate.newCandidatePaths, recorderRetryCandidateIntegrity:candidate };
+}
+
+export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest = JSON.parse(readSource('docs/operations/evidence/operational-market-baseline-20261001.json'));
+  const candidate = resolveReviewedBaselineTransition({
+    manifest, readSource,
+    readPredecessor: row => readReviewedGitPredecessor(row, root),
+    expectedPredecessorIntegrityId: 'MORNING_ALPHA_RECORDER_RETRY_PROJECTION_20260930',
+    verifyPredecessor: predecessorRead => resolveRecorderRetryPredecessorIntegrity(registry, artifactBytes, predecessorRead),
+  });
+  const declarations=manifest.reviewed_operational_declarations;
+  assert.deepEqual(declarations.map(row=>[row.path,row.name]),[
+    ['supabase/functions/generate-daily-report-v7/index.ts','attachResearchMasterV2Shadow'],
+  ],'only the named operational capsule attachment may transition; strategy/prompt declarations stay sealed');
+  const original=JSON.parse(readSource('docs/operations/core-stability-source-manifest-20260907.json'));
+  const overrides=new Map();
+  for(const row of declarations){
+    const record=original.protected_declarations.find(value=>value.path===row.path&&value.name===row.name);
+    assert.ok(record,'protected predecessor declaration must exist');
+    assert.equal(candidate.reviewedBaselinePredecessor.declarationHash(record),row.predecessor_sha256);
+    assert.match(row.candidate_sha256,/^[a-f0-9]{64}$/);
+    overrides.set(row.path+':'+row.name,row.candidate_sha256);
+  }
+  return { ...candidate.reviewedBaselinePredecessor, fileHash:candidate.fileHash,
+    declarationHash:row=>overrides.get(row.path+':'+row.name)??candidate.reviewedBaselinePredecessor.declarationHash(row),
+    newCandidatePaths:candidate.newCandidatePaths, operationalMarketCandidateIntegrity:candidate };
 }
 
 export const readPremarketAtomicReadinessIntegrity = registry =>

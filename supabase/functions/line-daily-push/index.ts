@@ -884,7 +884,8 @@ function buildLineMessage(
   return buildLineDailyFlexMessage({
     reportDate: projection.identity.reportDate,
     bias: projection.marketDecision.bias || '方向待確認',
-    todayLine: projection.marketDecision.summary || '',
+    todayLine: [projection.researchNotice && projection.reportLevel==='DEGRADED' ? projection.researchNotice : '',
+      projection.marketDecision.summary || ''].filter(Boolean).join('\n'),
     opportunity: delivery.marketContent.opportunity || '',
     risk: delivery.marketContent.risk || '',
     avoid: delivery.marketContent.avoid || '',

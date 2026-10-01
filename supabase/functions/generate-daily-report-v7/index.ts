@@ -47,9 +47,11 @@ import {
   normalizeEvidenceLeadForChineseSentence,
 } from '../_shared/content-intelligence.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
-import { evaluateMarketReportGate } from '../_shared/market-report-gate.ts';
+import { evaluateMarketReportGate, evaluateStockRecommendationGate } from '../_shared/market-report-gate.ts';
 import { evaluatePublishedMarketDelivery, fetchPublishedDeliveryEvidence } from '../_shared/market-publication-contract.ts';
 import { evaluateResearchQualityGate } from '../_shared/research-quality-gate.ts';
+import { evaluateMarketResearchQuality, readOperationalMarket } from '../_shared/operational-market-quality.ts';
+import { evaluateOperationalCore, OPERATIONAL_MARKET_VERSION } from '../_shared/operational-market-contract.mjs';
 import { buildCanonicalMarketState, canonicalMarketDocument, canonicalMarketSourceRefs } from '../_shared/canonical-market-state.ts';
 import { RESEARCH_PIPELINE_VERSION, researchInputFingerprint, canonicalReportProjection, companyEvidenceSupported, presentNumber, currentResearchDateError } from '../_shared/research-pipeline-contract.ts';
 import {
@@ -188,6 +190,11 @@ function attachResearchMasterV2Shadow(target:Record<string,unknown>,input:Resear
     target.stock_research={schema_version:'STOCK_RESEARCH_V1',report_date:input.reportDate,document:researchDocument};
     if(input.isTradingDay){
       const marketDocument=assembleCanonicalMarketResearch(publicationInput);
+      if(target.operational_market){
+        const capsule=canonicalRecord(target.operational_market);
+        target.operational_market={...capsule,input:{...canonicalRecord(capsule.input),recommendation_gate:evaluateStockRecommendationGate(target)}};
+        Object.assign(marketDocument,{operational_market:target.operational_market});
+      }
       target.canonical_market_state=buildCanonicalMarketState(marketDocument);
       target.research_master_v2=marketDocument;
     }else target.research_master_v2=researchDocument;
@@ -2300,7 +2307,7 @@ function buildCanonicalDecisionPayload(
 ):Record<string,unknown>{
   const researchMaster=canonicalMarketDocument(ai);
   const marketSections=canonicalRecord(researchMaster.sections);
-  const researchQuality=evaluateResearchQualityGate(researchMaster);
+  const researchQuality=evaluateMarketResearchQuality(researchMaster);
   const v10Enabled=ai.v10_beneficiary_enabled===true||String(ai.v10_beneficiary_enabled).toLowerCase()==='true';
   const recommendations=(v10Enabled?canonicalRecords(ai.today_beneficiary_stocks_v10):canonicalRecords(ai.today_beneficiary_stocks)).map(function(stock){
     const stockSourceRefs=[
@@ -2342,6 +2349,14 @@ function buildCanonicalDecisionPayload(
   // recommendation gate. Its rejection cannot erase an audited market report.
   const decisionMode=publishable?marketGate.decision_mode:'blocked';
   const publishedRecommendations=publishable&&marketGate.recommendation_gate.eligible?recommendations:[];
+  const operational=readOperationalMarket(researchMaster);
+  const operationalDecision=operational?{business_date:researchMaster.report_date,
+    status:publishable?'READY':'BLOCKED',market_direction:marketBias,
+    entry_environment:canonicalRecord(marketSections.decision_guide).current_action,
+    risk_state:canonicalRecord(marketSections.failure_scenario).narrative,
+    core_evidence_revision:operational.core_market.core_evidence_revision,
+    decision_confidence:confidenceScore,evidence_completeness:{core:operational.core_market.status,
+      research:operational.report_level,missing_evidence:operational.missing_evidence}}:null;
   const publishedReasons=publishable?reasons:[
     importantNews.length===0?'盤前沒有通過時效檢查的重大新聞來源。':'可驗證新聞已有，但整體內容仍未通過發布門檻。',
     String(ai.data_quality).toLowerCase()==='complete'?'市場資料完整，但推論鏈仍不足。':'核心市場資料尚未完整。',
@@ -2401,6 +2416,7 @@ function buildCanonicalDecisionPayload(
     source_refs:sourceRefs,
     generated_text:{
       canonical_market_state:ai.canonical_market_state,
+      ...(operationalDecision?{canonical_market_decision:operationalDecision}:{}),
       // Freeze the actual measured inputs with the exact reviewed document.
       // Committed readers must not borrow subsequent private QA measurements.
       content_evidence_quality:canonicalRecord(ai.content_evidence_quality),
@@ -2744,7 +2760,7 @@ async function writeReport(supabase:RuntimeClient,todayDate:string,aiStrategyJso
       const snapshot={...decisionPayload,id:correlationId,version:1,report_date:todayDate};
       const contract=buildCanonicalDecisionContract({report_date:todayDate,snapshot,ai:aiStrategyJson}) as Record<string,unknown>;
       const member=buildCanonicalMemberResearchRevision({canonical_contract:contract,snapshot,ai:aiStrategyJson}) as Record<string,unknown>;
-      const quality=evaluateResearchQualityGate(aiStrategyJson.research_master_v2);
+      const quality=evaluateMarketResearchQuality(canonicalMarketDocument(aiStrategyJson));
       const semantic=evaluateCanonicalSemanticCoherenceGate({canonical_contract:contract,
         sections:{public_thesis:canonicalRecord(decisionPayload.generated_text).daily_sentence,member_thesis:member.today_core_thesis,line_summary:member.line_summary,taiwan_transmission:member.taiwan_transmission,content_os_topic:member.content_os_topic},
         recommendations:member.beneficiary_candidates,
@@ -2969,6 +2985,23 @@ Deno.serve(async (req:Request)=>{
     }
 
     log('TRADING_DAY');
+    // A market decision starts with the immutable same-day PREMARKET batch,
+    // never with Research completeness or a mutable quote-view count.
+    const [coreIntegrity,coreBatches,coreRows]=await Promise.all([
+      supabase.rpc('market_checkpoint_batch_integrity_v1',{p_business_date:todayDate,p_checkpoint:'PREMARKET'}),
+      supabase.from('market_checkpoint_batches').select('batch_id,business_date,checkpoint,market_session,correlation_id,idempotency_key,provider_contract_version,status,expected_provider_count,committed_provider_count,payload_hash,committed_at')
+        .eq('business_date',todayDate).eq('checkpoint','PREMARKET').eq('status','COMMITTED').limit(2),
+      supabase.from('market_checkpoint_snapshots').select('provider_key,symbol,trading_date,checkpoint,market_session,batch_id,correlation_id,idempotency_key,snapshot_version,value,change_percent,source,source_timestamp,captured_at,raw')
+        .eq('trading_date',todayDate).eq('checkpoint','PREMARKET').limit(12),
+    ]);
+    const coreInput={business_date:todayDate,observed_at:new Date().toISOString(),integrity:coreIntegrity.data,
+      batch:coreBatches.data?.length===1?coreBatches.data[0]:null,rows:coreRows.data??[]};
+    const coreGate=evaluateOperationalCore(coreInput);
+    if(coreIntegrity.error||coreBatches.error||coreRows.error||coreGate.status!=='READY'){
+      recordCriticalContract(supabase,'RESEARCH',todayDate,{schema_version:'OPERATIONAL_MARKET_REPLAY_V1',input:{core:coreInput}});
+      return corsResponse({success:false,error_code:'CORE_MARKET_BLOCKED',core_market:coreGate,
+        report_generated:false,report_eligible:false,report_date:todayDate,correlation_id:correlationId},409);
+    }
     if(!skipOpenAI){
       try{
         const budgetResult=await supabase.rpc('check_runtime_cost_budget_v1',{p_usage_date:todayDate});
@@ -2992,7 +3025,10 @@ Deno.serve(async (req:Request)=>{
       withTimeout(fetchPreviousReportForDate(supabase,sectorRotationReferenceDate,log),2500,'previous_report_query',log,null as Record<string,unknown>|null),
       withTimeout(fetchRecentReportsForV10Universe(supabase,todayDate,log),2500,'recent_reports_universe_query',log,[] as Record<string,unknown>[]),
     ]);
-    const marketFetch=marketSettled.status==='fulfilled'?marketSettled.value:{marketData:[] as MarketIndicator[],latestDataTime:null as Date|null,isStale:true,dataCount:0,rawDataCount:0,invalidNumericSources:[] as string[]};
+    const authoritativeMarketRows=(coreRows.data??[]).map(row=>({...row,
+      captured_at:row.source_timestamp,market:canonicalRecord(row.raw).market,name:canonicalRecord(row.raw).name,
+      change:canonicalRecord(row.raw).change,status:Number(row.change_percent)>0?'up':Number(row.change_percent)<0?'down':'flat'}));
+    const marketFetch=normalizeMarketDataRows(authoritativeMarketRows);
     const newsFetch=newsSettled.status==='fulfilled'?newsSettled.value:{newsData:[],latestNewsTime:null,isStale:true,newsCount:0};
     const persistedSectorData=sectorSettled.status==='fulfilled'?sectorSettled.value:[];
     const sectorData:SectorRotationRow[]=persistedSectorData.length>0?persistedSectorData
@@ -3001,7 +3037,7 @@ Deno.serve(async (req:Request)=>{
     const sectorSourceVersion=sectorEvidenceLineage
       ?'market_quotes/news_events/'+SECTOR_RECONSTRUCTION_SOURCE+':'+SECTOR_RECONSTRUCTION_VERSION
       :'market_quotes/news_events/sector_rotation_scores:V1';
-    const rawDataForDates=rawDatesSettled.status==='fulfilled'?rawDatesSettled.value:[];const previousReport=previousReportSettled.status==='fulfilled'?previousReportSettled.value:null;const recentReportsForUniverse=recentReportsSettled.status==='fulfilled'?recentReportsSettled.value:[];
+    const rawDataForDates=authoritativeMarketRows;const previousReport=previousReportSettled.status==='fulfilled'?previousReportSettled.value:null;const recentReportsForUniverse=recentReportsSettled.status==='fulfilled'?recentReportsSettled.value:[];
     const marketData=marketFetch.marketData;const dataCount=marketFetch.dataCount;const newsReview=filterPremiumNewsEvidence(newsFetch.newsData);const newsData=newsReview.verified as MarketNewsItem[];
     if(newsReview.rejected.length>0){const rejectedReasons=Array.from(new Set(newsReview.rejected.flatMap((entry)=>entry.reason_codes)));log('NEWS_EVIDENCE_REJECTED count='+newsReview.rejected.length+' reasons='+rejectedReasons.join('|'));}
     const dates=computeDatesFromMarketData(rawDataForDates);log('DATES tw_core='+dates.twCoreDate+' us_global='+dates.usGlobalDate);
@@ -3022,7 +3058,8 @@ Deno.serve(async (req:Request)=>{
       supabase.from('learning_rules').select('id,rule_key,status,condition_json,action_json').eq('status','production').order('id').limit(100),
       supabase.from('model_evaluations').select('evaluation_key,model_version,confidence_bucket,sample_size,accuracy,period_end').eq('window_days',90).order('period_end',{ascending:false}).limit(100),
     ]);
-    if(learningInputs.some((result)=>result.error))throw new Error('LEARNING_INPUT_MANIFEST_UNAVAILABLE');
+    const learningAvailable=!learningInputs.some((result)=>result.error);
+    if(!learningAvailable)log('LEARNING_DEGRADED: optional calibration unavailable; core market continues');
     const inputFingerprint=await researchInputFingerprint({
       report_date:todayDate,source_version:sectorSourceVersion,
       engine_version:VERSION+':'+RESEARCH_PIPELINE_VERSION,
@@ -3161,6 +3198,10 @@ Deno.serve(async (req:Request)=>{
     aiStrategyJson=limitBeneficiaryStockCounts(aiStrategyJson);
     aiStrategyJson=applyFinalBiasGuardrails(aiStrategyJson,todayDate,marketData,dScore,confidenceResult,dates);
     aiStrategyJson.version=VERSION;aiStrategyJson.generated_at=new Date().toISOString();
+    aiStrategyJson.operational_market={contract_version:OPERATIONAL_MARKET_VERSION,input:{
+      core:{...coreInput,observed_at:aiStrategyJson.generated_at},
+      enhancements:{news_count:newsData.length,sector_count:sectorData.length,missing_sources:missingSources,learning_available:learningAvailable},
+    }};
     aiStrategyJson.delivery_recovery={quality_retry:qualityRetry,attempt:recoveryAttempt,reason_codes:recoveryReasonCodes,requested_at:new Date().toISOString()};
     aiStrategyJson.tw_stock_filter_applied=true;aiStrategyJson.research_card_format=true;
     aiStrategyJson.fields_complete_guaranteed=true;aiStrategyJson.write_time_guarantee=true;aiStrategyJson.member_note_format='plain_text_and_v2';
@@ -3184,6 +3225,7 @@ Deno.serve(async (req:Request)=>{
       String(aiStrategyJson.market_bias||classifyMarketBias(dScore.baseScore)),
       canonicalText(priorNarrative.today_quote,canonicalRecord(priorNarrative.v8_daily_sentence).sentence));
     attachResearchMasterV2Shadow(aiStrategyJson,{reportDate:todayDate,todayDate,dataAsOf:marketFetch.latestDataTime?.toISOString()??newsFetch.latestNewsTime?.toISOString()??null,engineVersion:VERSION,promptVersion:null,generatedAt:String(aiStrategyJson.generated_at||''),reportMode,marketStatus:'OPEN',isTradingDay:true,legacy:aiStrategyJson,evidencePack:v10EvidencePack,normalizedEvidence:v10NormalizedEvidence,evidenceIndex:v10EvidenceIndex,candidateUniverse:v10CandidateUniverse,marketThesis:v10MarketThesisDebug.market_thesis},log);
+    recordCriticalContract(supabase,'RESEARCH',todayDate,{schema_version:'OPERATIONAL_MARKET_REPLAY_V1',input:canonicalRecord(aiStrategyJson.operational_market).input});
     aiStrategyJson=enforceMemberResearchIntegrity(aiStrategyJson,dataQuality,marketData,log,newsData.length);
     aiStrategyJson=applyMemberResearchNoteV2Aliases(aiStrategyJson);
     aiStrategyJson=limitBeneficiaryStockCounts(aiStrategyJson);

@@ -1,4 +1,6 @@
 import { evaluateResearchQualityGate } from './research-quality-gate.ts';
+import { evaluateMarketResearchQuality } from './operational-market-quality.ts';
+import { evaluateOperationalMarket } from './operational-market-contract.mjs';
 import { buildCanonicalMarketState } from './canonical-market-state.ts';
 import { evaluateClosingContract, evaluateLearningContract, validateOpeningPublication } from './closing-learning-contract.ts';
 
@@ -16,7 +18,9 @@ recommended_symbols predicted_at opening_decision_snapshot_id opening_decision_s
 const enumValue = /^[A-Za-z][A-Za-z0-9_:./-]{0,160}$/;
 const isoValue = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
+for(const key of `operational_market input core enhancements recommendation_gate integrity batch rows observed_at business_date checkpoint provider_key market_session batch_id correlation_id source_correlation_id idempotency_key payload_hash provider_contract_version expected_provider_count committed_provider_count committed_at canonical_row_count unbatched_row_count committed_batch_count distinct_batch_id_count distinct_provider_count duplicate_authoritative_provider_count compatibility_row_count compatibility_provider_count compatibility_mismatch_count mixed_batch_revision_count production_2026_09_11_evidence_preserved contract change source_symbol source_raw freshness_status freshness_age_minutes captured_session_date txf_session_contract txf_expected_previous_trading_date txf_provider_session_date txf_session_type tw_cash_session_contract tw_cash_phase tw_cash_expected_session_date tw_cash_provider_session_date date session evidence_session_date provider_envelope_date response_date news_count sector_count missing_sources learning_available eligible universe_evaluation_complete screening universe_count evaluated_count rejected`.split(/\s+/))keys.add(key);
 const counters = new Set(['unsupported_claims','duplicate_claims','contradictions','missing_sections']);
+keys.add('market');
 export function projectCriticalContract(value: unknown, depth = 0, key = ''): unknown {
   if (depth > 18) throw Error('CRITICAL_CAPSULE_DEPTH_EXCEEDED');
   if (value === null || typeof value === 'boolean' || typeof value === 'number') return value;
@@ -25,7 +29,8 @@ export function projectCriticalContract(value: unknown, depth = 0, key = ''): un
     if (value === '') return '';
     // Preserve syntax, identity, dates and enums; reject rather than silently
     // rewrite an unknown value that could change a contract decision.
-    if ((enumValue.test(value) || isoValue.test(value) || uuid.test(value) || /^[0-9a-f]{64}$/i.test(value) || /^-?\d{1,6}(?:\.\d{1,12})?$/.test(value)) &&
+    if ((enumValue.test(value) || isoValue.test(value) || uuid.test(value) || /^[0-9a-f]{64}$/i.test(value)
+      || (key==='payload_hash' && /^[0-9a-f]{32}$/i.test(value)) || /^-?\d{1,6}(?:\.\d{1,12})?$/.test(value)) &&
       !/bearer|@|https?:|cookie|password|secret|token/i.test(value)) return value;
     if (key === 'market_bias' || key === 'market_regime') return value.trim() ? 'MARKET_DIRECTION_PRESENT' : '';
     // This is an intentionally invalid sentinel, never synthesized evidence.
@@ -42,7 +47,9 @@ export function projectCriticalContract(value: unknown, depth = 0, key = ''): un
 export function replayCriticalContract(kind: ReplayKind, value: unknown): unknown {
   const input = object(value);
   switch (kind) {
-    case 'RESEARCH': return evaluateResearchQualityGate(input);
+    case 'RESEARCH': return input.schema_version==='OPERATIONAL_MARKET_REPLAY_V1'
+      ? evaluateOperationalMarket(object(input.input)) : Object.hasOwn(input,'operational_market')
+      ? evaluateMarketResearchQuality(input) : evaluateResearchQualityGate(input);
     case 'PUBLICATION': {
       const { document: _document, ...result } = buildCanonicalMarketState(input);
       return result;

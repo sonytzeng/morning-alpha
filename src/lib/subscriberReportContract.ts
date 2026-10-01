@@ -169,6 +169,8 @@ export type SubscriberReportProjection = {
   statusLabel: string;
   title: string;
   analysisAvailable: boolean;
+  reportLevel?: 'FULL' | 'DEGRADED';
+  researchNotice?: string;
   confidence: { value: number | null; label: string; suppressed: boolean };
   marketDecision: { action: 'ACT' | 'WAIT' | 'STOP' | 'INSUFFICIENT_DATA'; label: string; bias: string | null; summary: string | null; runtimeFailure: boolean };
   recommendation: { available: boolean; status: SubscriberState['recommendation']; message: string | null; items: unknown[] };
@@ -265,6 +267,11 @@ export function getSubscriberReportProjection(value: unknown, options: { todayDa
     : canonical.status === 'READY' && publication.overall_status === 'eligible'
       && (ai.report_status === undefined || ai.report_status === 'READY'));
   const partial = state?.analysis === 'PARTIAL' || (!hasState && canonical.status === 'PARTIAL');
+  const operational = record(ai.operational_market ?? record(ai.market_report_gate).operational_market);
+  const reportLevel = ready && operational.contract_version === 'OPERATIONAL_MARKET_V1'
+    && operational.business_date === reportDate && operational.market_decision === 'READY'
+    && ['FULL','DEGRADED'].includes(text(operational.report_level))
+    ? operational.report_level as 'FULL' | 'DEGRADED' : null;
   const confidenceValue = !ready ? null : hasState
     ? state?.confidence.status === 'AVAILABLE' ? state.confidence.value : null
     : score(canonical.confidence_score);
@@ -383,7 +390,12 @@ export function getSubscriberReportProjection(value: unknown, options: { todayDa
     summary: openingIsCurrent ? projectedSummary : null,
   } : null;
   return {
-    schemaVersion: SUBSCRIBER_PROJECTION_VERSION, identity, displayStatus, statusLabel,
+    schemaVersion: SUBSCRIBER_PROJECTION_VERSION, identity, displayStatus,
+    statusLabel:reportLevel==='DEGRADED' ? '分析已發布，部分研究資料暫缺' : reportLevel==='FULL' ? '完整分析' : statusLabel,
+    ...(reportLevel ? {reportLevel,researchNotice:reportLevel==='DEGRADED'
+      ? '今日市場資料已完成，市場判斷已發布；部分研究資料仍待補齊，因此今日分析採保守模式。暫缺：'
+        +(Array.isArray(operational.missing_evidence)?operational.missing_evidence.map(x=>x==='NEWS_CONTEXT'?'合格市場新聞':x==='SECTOR_ROTATION'?'類股輪動資料':'研究資料').join('、'):'研究資料')+'。'
+      : '完整分析'} : {}),
     title: ready ? 'Morning Alpha 市場判讀' : INCOMPLETE_ANALYSIS_MESSAGE, analysisAvailable: ready,
     confidence: { value: confidenceValue, label: confidenceValue === null ? '證據不足，暫不提供把握度' : `${confidenceValue} / 100`, suppressed: confidenceValue === null },
     marketDecision: { action, label: !ready ? INCOMPLETE_ANALYSIS_MESSAGE : nonTrading ? '等待下一個交易日'

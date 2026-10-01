@@ -66,6 +66,9 @@ jobs:
           supabase/functions/opening-market-radar/index.ts
           supabase/functions/fetch-global-market-news/index.ts
           supabase/functions/content-os-morning-alpha-source/index.ts
+          supabase/functions/ma-ops-safe-recovery/index.ts
+          supabase/functions/strategy-replay-engine/index.ts
+          supabase/functions/alpha-coach/index.ts
       - name: Core contract regressions
         run: >-
           deno test --no-lock
@@ -94,6 +97,12 @@ jobs:
           MA_ISOLATED_TEST_DB: ma_six_bug_test201
           MA_TEST_PGPORT: 55439
         run: node --test tests/recorderRetryProjectionDatabase.integration.mjs
+      - name: Operational market architecture exact fresh baseline and unchanged security
+        env:
+          MA_OPERATIONAL_SCOPE: operational-market-20261001
+          MA_ISOLATED_TEST_DB: ma_six_bug_test501
+          MA_TEST_PGPORT: 55439
+        run: node tests/operationalMarketDatabase.integration.mjs
       - name: Isolated PostgreSQL migration twice and atomicity tests
         env:
           MA_ISOLATED_TEST_DB: ma_core_test1

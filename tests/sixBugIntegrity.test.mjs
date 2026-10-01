@@ -22,16 +22,19 @@ test('six-bug successor pins one named migration and preserves the complete pred
 });
 test('release bundle dependency closure is exact and shared hashes cannot drift independently',()=>{
  const manifest=JSON.parse(read('docs/operations/evidence/six-bug-release-bundles-20260930.json'));
+ // Verify the immutable six-bug bundle against its exact reviewed predecessor,
+ // not against the separately pinned operational successor. No hash is erased.
+ const bundleRead=verify().operationalMarketCandidateIntegrity.reviewedBaselinePredecessorReadSource;
  assert.equal(manifest.production_change_authorized,false);assert.equal(manifest.cron_change,false);
  const all=new Set();
- function walk(path,seen){if(seen.has(path))return;seen.add(path);all.add(path);const source=read(path).toString();
+ function walk(path,seen){if(seen.has(path))return;seen.add(path);all.add(path);const source=bundleRead(path).toString();
   for(const match of source.matchAll(/(?:from\s*|import\s*)['"](\.[^'"]+)['"]/g))walk(normalize(dirname(path)+'/'+match[1]),seen);
  }
  for(const [name,expected]of Object.entries(manifest.functions)){
   const actual=new Set();walk('supabase/functions/'+name+'/index.ts',actual);assert.deepEqual([...actual].sort(),expected);
  }
  assert.deepEqual([...all].sort(),Object.keys(manifest.files).sort());
- for(const [path,digest]of Object.entries(manifest.files))assert.equal(createHash('sha256').update(read(path)).digest('hex'),digest,'BUNDLE_DEPENDENCY_DRIFT:'+path);
+ for(const [path,digest]of Object.entries(manifest.files))assert.equal(createHash('sha256').update(bundleRead(path)).digest('hex'),digest,'BUNDLE_DEPENDENCY_DRIFT:'+path);
  for(const name of ['line-daily-push','closing-verification-engine','continuous-learning-engine','close-market-review','ma-ops-health-check'])assert(manifest.functions[name].includes('supabase/functions/_shared/canonical-market-state.ts'));
 });
 test('all fourteen duplicated groups are explicitly dispositioned; guarded differences are not fabricated product bugs',()=>{

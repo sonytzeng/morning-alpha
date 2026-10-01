@@ -107,6 +107,10 @@ async function run(f, { headers = { authorization: 'Bearer synthetic-source-cred
   const load = path => {
     if (cache.has(path)) return cache.get(path).exports;
     const module = { exports: {} }; cache.set(path, module);
+    if (path.endsWith('.json')) {
+      module.exports = { default: JSON.parse(readFileSync(path, 'utf8')) };
+      return module.exports;
+    }
     const code = ts.transpileModule(readFileSync(path, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
     const require = spec => {
       if (spec.startsWith('.')) return load(resolve(dirname(path), spec));

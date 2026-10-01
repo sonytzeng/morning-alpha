@@ -1,6 +1,7 @@
 import type { evaluateMarketReportGate } from './market-report-gate.ts';
 import { buildCanonicalMarketState, canonicalMarketDocument, canonicalMarketSourceRefs } from './canonical-market-state.ts';
 import { evaluateMarketContentIntelligence } from './content-intelligence.ts';
+import { readOperationalMarket } from './operational-market-quality.ts';
 import { createSubscriberState, getSubscriberReportProjection } from '../../../shared/subscriber-state-contract.ts';
 type PublicationClient = { from(relation: string): unknown };
 const record = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -242,6 +243,7 @@ export function evaluatePublishedMarketDelivery(
       status: snapshot?.status, action: snapshot?.action, confidence_score: snapshot?.confidence_score,
       market_bias: marketBias, daily_sentence: summary, recommendations: committedRecommendations },
     recommendation_gate: stockGate, closing_verification_v2: ai.closing_verification_v2,
+    operational_market: coreVerified ? readOperationalMarket(document) : null,
   });
   const reasons = corePresent ? [] : [...marketGate.reason_codes];
   if (corePresent && !coreIdentity) reasons.push('MARKET_PUBLICATION_CONTRACT_INVALID');
@@ -263,6 +265,7 @@ export function evaluatePublishedMarketDelivery(
   const eligible = receiptEligible && marketDocumentVerified && Boolean(summary) && Boolean(marketBias)
     && summaryDateVerified && projection.analysisAvailable && deliveryDateEligible;
   return { eligible, reason_codes: [...new Set(reasons)], projection,
+    operational_market:coreVerified ? readOperationalMarket(document) : null,
     marketContent: {
       opportunity: marketDocumentVerified ? pointer(guide.first_watch) : null,
       confirmation: marketDocumentVerified ? pointer(guide.next_checkpoint_time) : null,

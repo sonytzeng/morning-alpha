@@ -1,3 +1,4 @@
+import { operationalDocumentResult } from './operational-market-contract.mjs';
 export const RUNTIME_QUALITY_POLICY = Object.freeze({
   version: 'MA_RUNTIME_POLICY_V1',
   premium_publish_min: 90,
@@ -396,6 +397,11 @@ export function resolveCanonicalDataQuality(values = []) {
 // guarded separately by the recommendation gate and the database validator.
 export function canonicalMarketQualityInputs(ai = {}) {
   const source = asPlainRecord(ai);
+  const document=asPlainRecord(asPlainRecord(source.canonical_market_state).document || source.research_master_v2);
+  const operational=operationalDocumentResult(document);
+  // This field denotes the quality of the canonical market decision's core.
+  // Enhancement incompleteness stays visible in operational_market, never erased.
+  if(operational)return [operational.market_decision==='READY'?'complete':'insufficient'];
   return [source.data_quality, asPlainRecord(asPlainRecord(source.research_master_v2).provenance).source_status];
 }
 

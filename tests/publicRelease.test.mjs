@@ -986,7 +986,7 @@ test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempo
   assert.match(lineDailyPush, /message\/multicast/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);
   assert.match(lineDailyPush, /customAggregationUnits/);
-  assert.match(lineDailyPush, /todayLine: projection\.marketDecision\.summary/);
+  assert.match(lineDailyPush, /todayLine: \[projection\.researchNotice && projection\.reportLevel==='DEGRADED' \? projection\.researchNotice : '',\s*projection\.marketDecision\.summary \|\| ''\]\.filter\(Boolean\)\.join\('\\n'\)/);
   const publication=read('supabase/functions/_shared/market-publication-contract.ts');
   assert.match(publication, /const document = canonicalMarketDocument\(frozenPresent \? generated : ai\)/);
   assert.match(publication, /const summary = marketDocumentVerified \? pointer\(record\(sections\.executive_summary\)\.text\)/);

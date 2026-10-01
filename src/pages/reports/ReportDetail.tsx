@@ -296,6 +296,7 @@ export default function ReportDetail() {
                 <p className="text-white/65 text-sm leading-relaxed max-w-xl">
                   {projection.marketDecision.summary ?? projection.statusLabel}
                 </p>
+                {projection.researchNotice ? <p role="status" className="text-amber-200/80 text-sm mt-3">{projection.researchNotice}</p> : null}
               </div>
               <div className="flex items-center gap-4 flex-shrink-0">
                 <div className="flex flex-col items-end gap-2">

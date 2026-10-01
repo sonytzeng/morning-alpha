@@ -670,6 +670,7 @@ function buildPublicPayload(report: ReportRow, ctx: PayloadContext): Record<stri
     closing: ai.closing_verification_v2, now: evaluatedAt,
   });
   const subscriberProjection = getSubscriberReportProjection({
+    operational_market: delivered.operational_market,
     report_date: getReportDate(report), revision_id: revisionId, generated_at: generatedAt,
     today_date: todayDate,
     subscriber_state: subscriberState, canonical_decision: originalDecision ? { ...originalDecision,

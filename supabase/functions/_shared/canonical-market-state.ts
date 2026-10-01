@@ -1,4 +1,4 @@
-import { evaluateResearchQualityGate } from './research-quality-gate.ts';
+import { evaluateMarketResearchQuality, readOperationalMarket } from './operational-market-quality.ts';
 
 type JsonRecord = Record<string, unknown>;
 const record = (value: unknown): JsonRecord => value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {};
@@ -85,7 +85,7 @@ export function canonicalMarketDocument(value: unknown): JsonRecord {
 }
 
 export function buildCanonicalMarketState(documentValue: unknown): CanonicalMarketState {
-  const document = record(documentValue), quality = evaluateResearchQualityGate(document);
+  const document = record(documentValue), quality = evaluateMarketResearchQuality(document);
   const audit = record(record(document.quality).coverage_audit);
   const claims = Array.isArray(audit.claims) ? audit.claims.map(record) : [];
   const reasons = [...quality.reason_codes];
@@ -111,12 +111,14 @@ export function buildCanonicalMarketState(documentValue: unknown): CanonicalMark
   }
   const evidenceIds = [...new Set(claims.flatMap(claim => Array.isArray(claim.evidence_ids)
     ? claim.evidence_ids.filter((id): id is string => typeof id === 'string' && Boolean(id)) : []))];
+  const operational=readOperationalMarket(document);
   return {
     schema_version: 'CANONICAL_MARKET_STATE_V1', report_date: String(document.report_date || ''),
     today_date: String(document.today_date || ''), generated_at: String(provenance.generated_at || ''),
     data_as_of: typeof document.data_as_of === 'string' ? document.data_as_of : null,
     status: reasons.length === 0 ? 'READY' : 'INSUFFICIENT_EVIDENCE', document,
     evidence_ids: evidenceIds, reason_codes: [...new Set(reasons)],
+    ...(operational ? { operational_market:operational } : {}),
   };
 }
 

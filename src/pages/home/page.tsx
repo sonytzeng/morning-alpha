@@ -726,6 +726,7 @@ function HomePageContent() {
                   <p className="ma-pixel-eyebrow"><i className="ri-focus-3-line" aria-hidden="true" />Morning Alpha 今日判斷</p>
                   <h1>{renderSafeText(heroDecisionSentence)}</h1>
                   <p className="ma-home-v2-hero-subtitle">{renderSafeText(decisionContext)}</p>
+                  {projection.researchNotice ? <p role="status" className="ma-home-v2-hero-subtitle">{projection.researchNotice}</p> : null}
                   <div className="ma-home-v2-next-line">
                     <span>下一次確認</span>
                     <strong>{renderSafeText(nextActionTime)}</strong>

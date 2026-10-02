@@ -24,6 +24,7 @@ import { selectPublicPerformanceRows } from '@/lib/performanceJournalProjection'
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import { SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
 import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
+import { PUBLIC_REGIMES } from '@/lib/publicMarketReadModel';
 
 export default function HomePage() {
   return (
@@ -347,7 +348,7 @@ function HomePageContent() {
   });
 
   const currentTimelineNode = selectNextRuntimeTimelineNode(timelineNodes)
-    || timelineNodes[timelineNodes.length - 1];
+    || { time: '', label: projection.publicMarket?.next_checkpoint === 'CLOSING' ? '等待收盤驗證' : '今日節點已完成', detail: '', status: 'completed' as const };
   const runtimeLifecycleComplete = projection.closing.complete && timelineNodes.every((node) =>
     node.status === 'completed' || node.status === 'not_applicable');
   const presentation = useMemo(() => buildDecisionPresentation({
@@ -595,6 +596,7 @@ function HomePageContent() {
   const historySummary = hasClosingOutcome ? closingOutcome.summary : latestPublicClosing?.summary || '';
   const hasHistoricalClosingOutcome = Boolean(historyResult && historyDate);
   const credibilityItems = [
+    ...(projection.publicMarket ? [{label:'市場型態',value:PUBLIC_REGIMES[projection.publicMarket.market_regime]}] : []),
     { label: '市場資料基準', value: formatTaipeiTimestamp(dataAsOf) },
     { label: '報告產生時間', value: formatTaipeiTimestamp(reportGeneratedAt) },
     { label: '分析版本', value: aiVersion },

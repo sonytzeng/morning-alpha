@@ -17,6 +17,7 @@ test('operational successor pins exact paths and hashes while retaining all pred
  assert.equal(manifest.production_destructive_migration,false);
 });
 test('operational shared contracts have an exact local bundle closure and explicit deployed release scope',()=>{
+ const read=verify().publicProjectionCandidateIntegrity.reviewedBaselinePredecessorReadSource;
  const manifest=JSON.parse(read('docs/operations/evidence/operational-market-release-bundles-20261001.json'));
  assert.equal(manifest.production_change_authorized,false);assert.equal(manifest.cron_change,false);
  assert.deepEqual(manifest.deployment_functions,[

@@ -15,6 +15,7 @@ import { renderSafeText } from '@/utils/renderSafe';
 import { trackPageView } from '@/utils/analytics';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import { SubscriberAnswer } from '@/features/decision-v1/DecisionBrief';
+import { PUBLIC_REGIMES } from '@/lib/publicMarketReadModel';
 import { SUBSCRIBER_ANALYSIS_INCOMPLETE } from '@/lib/subscriberReportContract';
 import { getSubscriberReportProjection, type SubscriberReportProjection } from '@/lib/subscriberReportProjection';
 
@@ -90,7 +91,7 @@ function buildClosingView(projection: SubscriberReportProjection): ClosingView {
   const outcomeLabel = outcome === 'complete'
     ? fullData ? '完整成立' : '方向成立（部分資料不足）'
     : outcome === 'partial'
-      ? '部分成立'
+      ? '大致一致'
       : outcome === 'failed'
         ? '未成立'
         : outcome === 'neutral'
@@ -246,7 +247,7 @@ function VerificationContent() {
               <span className="text-xs font-semibold tracking-[0.14em] text-white/45">盤前假設</span>
               <h2 className="mt-3 text-xl font-bold text-white md:text-2xl">{renderSafeText(thesis || '今日主線仍在整理')}</h2>
               <dl className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl bg-black/20 p-4"><dt className="text-xs text-white/45">盤前方向</dt><dd className="mt-1 font-semibold text-white">{renderSafeText(projection.marketDecision.bias || projection.statusLabel)}</dd></div>
+                <div className="rounded-xl bg-black/20 p-4"><dt className="text-xs text-white/45">盤前方向</dt><dd className="mt-1 font-semibold text-white">{renderSafeText(projection.marketDecision.bias || projection.statusLabel)}</dd>{projection.publicMarket ? <p className="text-white/60">市場型態：{PUBLIC_REGIMES[projection.publicMarket.market_regime]}</p> : null}</div>
                 <div className="rounded-xl bg-black/20 p-4"><dt className="text-xs text-white/45">判斷信心</dt><dd className="mt-1 font-semibold text-white">{projection.confidence.label}</dd></div>
               </dl>
             </section>
@@ -271,6 +272,13 @@ function VerificationContent() {
               <h2 className="mt-2 text-2xl font-bold">{closing.outcomeLabel}</h2>
               <p className="mt-3 text-sm leading-6 opacity-80">{renderSafeText(closing.actualSummary)}</p>
               <p className="mt-2 text-xs leading-5 opacity-65">{closing.statusNote}</p>
+              {closing.complete && <dl className="mt-4 grid gap-3 sm:grid-cols-3" aria-label="同一交易日收盤資料">
+                {([['TAIEX','actual_taiex_close'],['2330','actual_2330_close'],['TXF','actual_txf_close']] as const).map(([symbol,key]) => {
+                  const change=asRecord(projection.closing.result?.[key]).change_percent;
+                  return <div key={symbol}><dt>{symbol}</dt><dd>{typeof change==='number' && Number.isFinite(change)
+                    ? `${change>=0?'+':''}${change.toFixed(2)}%` : '資料不足'}</dd></div>;
+                })}
+              </dl>}
               {closing.complete && (
                 <dl className="mt-6 grid gap-3">
                   {closing.whatWasRight && <div className="rounded-xl bg-black/15 p-4"><dt className="text-xs opacity-60">做對了什麼</dt><dd className="mt-1 text-sm leading-6">{renderSafeText(closing.whatWasRight)}</dd></div>}

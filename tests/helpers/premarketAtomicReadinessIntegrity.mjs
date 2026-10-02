@@ -300,7 +300,7 @@ function resolveRecorderRetryPredecessorIntegrity(registry, artifactBytes, readS
     newCandidatePaths:candidate.newCandidatePaths, recorderRetryCandidateIntegrity:candidate };
 }
 
-export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+function resolveOperationalMarketIntegrity(registry, artifactBytes, readSource = read) {
   const manifest = JSON.parse(readSource('docs/operations/evidence/operational-market-baseline-20261001.json'));
   const candidate = resolveReviewedBaselineTransition({
     manifest, readSource,
@@ -331,3 +331,13 @@ export const readPremarketAtomicReadinessIntegrity = registry =>
 
 export const readConsolidationPublicExportIntegrity = readPremarketAtomicReadinessIntegrity;
 export { PUBLIC_EXPORT_ARTIFACT_PATH };
+
+export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest=JSON.parse(readSource('docs/operations/evidence/public-market-projection-baseline-20261002.json'));
+  const candidate=resolveReviewedBaselineTransition({manifest,readSource,
+    readPredecessor:row=>readReviewedGitPredecessor(row,root),
+    expectedPredecessorIntegrityId:'MORNING_ALPHA_OPERATIONAL_MARKET_20261001',
+    verifyPredecessor:predecessorRead=>resolveOperationalMarketIntegrity(registry,artifactBytes,predecessorRead)});
+  return {...candidate.reviewedBaselinePredecessor,fileHash:candidate.fileHash,
+    newCandidatePaths:candidate.newCandidatePaths,publicProjectionCandidateIntegrity:candidate};
+}

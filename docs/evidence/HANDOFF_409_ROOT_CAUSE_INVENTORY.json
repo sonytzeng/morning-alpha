@@ -1,0 +1,27 @@
+{
+  "name": "HANDOFF_409_ROOT_CAUSE_INVENTORY",
+  "producer": "Morning Alpha content-os-morning-alpha-source v21",
+  "consumer": "Sony Content OS content-os-pipeline v105 / morning_alpha_verified_report_v1",
+  "consumer_source_id": "a913c34c-023e-47cc-9004-e28ac2c90c65",
+  "endpoint": "https://cttfzgvhiewfckydcrci.supabase.co/functions/v1/content-os-morning-alpha-source",
+  "purpose": "Verified public-safe editorial export for Sony Content OS, independent from Morning Alpha website get-report-payload",
+  "table": "content_os_sync_incidents",
+  "incident_id": "321a98ec-052b-4688-b73f-84b58267af58",
+  "failed_contract": "publicHttpsSourceReferences",
+  "failed_field": [
+    "title",
+    "url",
+    "published_at"
+  ],
+  "expected": "At least one exact frozen HTTPS source reference",
+  "actual": "6 immutable canonical market ledger references; 0 HTTPS news references",
+  "source_exists": true,
+  "source_id": "06b361fa-9508-45ae-b4cc-53fd57ee4d5f",
+  "source_revision": "content_os_source_v13_committed_market_projection",
+  "projection_revision": null,
+  "member_revision": "f404175f-5eb9-4dd6-964a-a8a4279302bf",
+  "observed_attempt_count": 158,
+  "classification": "ONE_DETERMINISTIC_CONTRACT_ROOT_CAUSE_REPEATED",
+  "consumer_contract": "normalizeMorningAlpha accepts nonempty references (max5); does not require HTTP URLs",
+  "consumer_changes_authorized": false
+}

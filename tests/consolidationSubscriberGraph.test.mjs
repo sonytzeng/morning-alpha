@@ -174,6 +174,8 @@ function inventory(owner, expressions, classification) {
 }
 inventory(authority, ['ai.canonical_decision', 'ai.content_publish_gate', ['ai.report_status', 2],
   'canonical.confidence_score', 'ai.closing_verification_v2', 'ai.closing_verification'], 'central-wire-authority');
+inventory('src/lib/publicMarketReadModel.ts#parsePublicMarketReadModel', ['m.report_status'],
+  'versioned-public-wire-validator-bound-to-canonical-and-member-revision');
 inventory('src/lib/canonicalNarrative.ts#buildTodayFocus', ['ai.canonical_decision'], 'published-prose-only');
 inventory('src/lib/morningAlphaReportAdapter.ts#normalizeMorningAlphaReport', [
   '(ai as Record<string, unknown>).content_publish_gate', "grabObj(ai, 'content_publish_gate')"], 'internal-diagnostic-copy');

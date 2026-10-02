@@ -1,0 +1,80 @@
+{
+  "scope": "MORNING_ALPHA_PUBLIC_MARKET_PROJECTION_20261002",
+  "candidate_only": true,
+  "production_writes": 0,
+  "core_product_changed": false,
+  "real_evidence_date": "2026-10-02",
+  "affected_tests": {
+    "passed": 128,
+    "failed": 0
+  },
+  "fresh_db": {
+    "database": "ma_six_bug_test529",
+    "migration": "PASS",
+    "atomic_batches": 7,
+    "providers_per_batch": 11,
+    "catalog_unchanged": true,
+    "policies_unchanged": true,
+    "unrelated_functions_unchanged": true,
+    "historical_acceptance_controls_unchanged": true,
+    "recorder_read_model_replay": "PASS",
+    "recorder_handoff_replay": "PASS",
+    "duplicate_incident_attempts": 1,
+    "acceptance": "DEGRADED",
+    "dimensions": {
+      "CORE_MARKET": "PASS",
+      "REPORT": "PASS",
+      "LINE": "PASS",
+      "CLOSING": "PASS",
+      "LEARNING": "PASS",
+      "PUBLIC_PROJECTION": "FAIL"
+    },
+    "service_available": true
+  },
+  "browser": {
+    "pages": [
+      "/",
+      "/report/today",
+      "/war-room",
+      "/verification"
+    ],
+    "status": "PASS",
+    "console_errors": 0,
+    "external_dispatch": 0,
+    "source": "actual candidate bundle + actual get-report-payload handler + real canonical input; auxiliary assessment explicitly empty",
+    "regime": "range",
+    "direction": "中性偏多",
+    "action": "WAIT",
+    "latest": "1430",
+    "next": "DAY_COMPLETED",
+    "closing_changes": {
+      "2330": -0.4,
+      "TAIEX": 0.25,
+      "TXF": -0.06
+    }
+  },
+  "type_check": "PASS_WITH_LOCAL_TYPE_ROOTS",
+  "type_check_environment": "Parent workspace contains empty iCloud duplicate @types directories; local typeRoots isolates repository dependencies. GitHub uses a clean Node22 npm ci.",
+  "lint": "PASS",
+  "build": "PASS",
+  "deno_check": "PASS",
+  "historical_acceptance": "2026-10-02 15:25/15:35 remain stored FAIL; isolation cannot rewrite Production",
+  "deployment": {
+    "functions": [
+      "content-os-morning-alpha-source",
+      "get-report-payload"
+    ],
+    "migrations": [
+      "20261002130000_public_market_projection_v1.sql"
+    ],
+    "ui": true,
+    "cron": false,
+    "production_authorized": false
+  },
+  "external_boundaries": {
+    "consumer_project_changed": false,
+    "producer_conflict": "409 NON_RETRYABLE, max_attempts=1, SQL incident idempotent. Legal 10/2 market ledger now 200.",
+    "consumer_polling": "Producer cannot cancel independently scheduled Sony Content OS requests. Existing consumer providerFetch does not inspect retry_classification. No claim that an external caller's polling was changed.",
+    "ui_publisher": "Official HTML references Readdy assets; repository has no UI deployment record. Accessible Readdy project list did not expose Morning Alpha. Correct deploy project is not verified; no project guessed."
+  }
+}

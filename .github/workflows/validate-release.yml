@@ -176,6 +176,24 @@ jobs:
       - name: Remove disposable sparse recovery isolation
         if: always()
         run: docker rm -f "ma-runtime-sparse-ci-${{ github.run_id }}" 2>/dev/null || true
+      - name: Public projection real readset, Recorder and dimensional Acceptance
+        env:
+          MA_PUBLIC_PROJECTION_SCOPE: public-projection-20261002
+          MA_ISOLATED_TEST_DB: ma_six_bug_test529
+          MA_TEST_DOCKER_CONTAINER: ma-six-bug-shadow-db
+        run: |
+          docker run -d --name "$MA_TEST_DOCKER_CONTAINER" --network none \
+            --env POSTGRES_PASSWORD=isolated-ci-only \
+            --env 'FAKETIME=@2026-10-02 07:35:30' ma-runtime-sparse-ci
+          for attempt in $(seq 1 30); do
+            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres; then break; fi
+            sleep 1
+          done
+          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres
+          node --experimental-strip-types tests/publicProjectionDatabase.integration.mjs
+      - name: Remove disposable public projection isolation
+        if: always()
+        run: docker rm -f ma-six-bug-shadow-db 2>/dev/null || true
       - name: Acceptance 07:30 SLA and 08:45 readiness-window parity
         env:
           MA_LOCAL_SCOPE: ma-core-consolidation-20260909

@@ -62,9 +62,7 @@ export function runtimeTimelineStatusLabel(status: RuntimeTimelineStatus): strin
 export function selectNextRuntimeTimelineNode<T extends { status: RuntimeTimelineStatus }>(nodes: T[]): T | undefined {
   return nodes.find((node) => node.status === 'current')
     || nodes.find((node) => node.status === 'pending')
-    || [...nodes].reverse().find((node) => node.status === 'completed')
-    || [...nodes].reverse().find((node) => node.status === 'insufficient')
-    || nodes[nodes.length - 1];
+    || [...nodes].reverse().find((node) => node.status === 'insufficient');
 }
 
 type UnknownRecord = Record<string, unknown>;

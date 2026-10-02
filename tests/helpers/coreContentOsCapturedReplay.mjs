@@ -34,11 +34,11 @@ export const FIXTURE_SOURCE_TOKEN = 'LOCAL_CONTENT_OS_SOURCE_FIXTURE_NOT_A_SECRE
 
 /** This VM captures Deno.serve, retaining every actual handler/Auth/validator
  * declaration. Only the exact SDK import and process-local test Date are bound. */
-export function capturedContentOsHandler(endpoint, { now = '2026-09-21T15:35:30+08:00', env = {} } = {}) {
+export function capturedContentOsHandler(endpoint, { now = '2026-09-21T15:35:30+08:00', env = {}, entrypoint = 'content-os-morning-alpha-source' } = {}) {
   assert.equal(new URL(endpoint).hostname, '127.0.0.1');
   assert.equal(require('@supabase/supabase-js/package.json').version, '2.57.4');
   const modules = new Map(), diagnostics = [], loadedSources = [];
-  let handler;
+  let handler; const sidecars=[];
   const environment = { SUPABASE_URL: endpoint, SUPABASE_SERVICE_ROLE_KEY: FIXTURE_SERVICE_KEY,
     CRON_SECRET: FIXTURE_INTERNAL_TOKEN, SONY_CONTENT_OS_SOURCE_TOKEN: FIXTURE_SOURCE_TOKEN, ...env };
   const fixedDate = class extends Date {
@@ -52,7 +52,7 @@ export function capturedContentOsHandler(endpoint, { now = '2026-09-21T15:35:30+
   };
   const globals = { Response, Request, Headers, URL, URLSearchParams, TextEncoder, TextDecoder,
     AbortController, AbortSignal, setTimeout, clearTimeout, Date: fixedDate, crypto: webcrypto,
-    fetch: scopedFetch,
+    fetch: scopedFetch, EdgeRuntime: {waitUntil:p=>sidecars.push(p)},
     console: { log() {}, info() {}, warn: (...args) => diagnostics.push(['warn', ...args]), error: (...args) => diagnostics.push(['error', ...args]) },
     Deno: { env: { get: key => environment[key] }, serve: fn => { assert.equal(handler, undefined); handler = fn; } } };
   function load(path) {
@@ -67,7 +67,7 @@ export function capturedContentOsHandler(endpoint, { now = '2026-09-21T15:35:30+
     }
     const localRequire = specifier => {
       if (specifier.startsWith('.')) return load(resolve(dirname(path), specifier));
-      assert.equal(specifier, 'npm:@supabase/supabase-js@2.57.4', 'Only the actual pinned SDK import may be mapped');
+      assert(['npm:@supabase/supabase-js@2.57.4','https://esm.sh/@supabase/supabase-js@2'].includes(specifier), 'Only the actual SDK import may be mapped');
       const sdk = require('@supabase/supabase-js');
       return { ...sdk, createClient: (url, key, options = {}) => {
         assert.equal(url, endpoint); assert.equal(key, FIXTURE_SERVICE_KEY);
@@ -78,9 +78,10 @@ export function capturedContentOsHandler(endpoint, { now = '2026-09-21T15:35:30+
     vm.runInNewContext(js, { ...globals, module, exports: module.exports, require: localRequire }, { filename: path });
     return module.exports;
   }
-  load(resolve(repo, 'supabase/functions/content-os-morning-alpha-source/index.ts'));
+  assert(['content-os-morning-alpha-source','get-report-payload'].includes(entrypoint));
+  load(resolve(repo, 'supabase/functions/'+entrypoint+'/index.ts'));
   assert.equal(typeof handler, 'function');
-  return { handler, diagnostics, loadedSources, clock_kind: 'EXPLICIT_PROCESS_LOCAL_CAPTURE_REPLAY', sdk_version: '2.57.4' };
+  return { handler, diagnostics, loadedSources, sidecars, clock_kind: 'EXPLICIT_PROCESS_LOCAL_CAPTURE_REPLAY', sdk_version: '2.57.4' };
 }
 
 const field = (row, path) => path.split(/->>?/).reduce((value, key) => value?.[key], row);
@@ -132,6 +133,7 @@ export function selectCapturedRows(tables, table, query) {
  * No terminal/Acceptance success is ever manufactured by the HTTP double. */
 export function incidentTransport(tables, trace, now = '2026-09-21T15:35:30+08:00') {
   return async (name, body) => {
+    if(name==='record_critical_contract_evidence_v1') return null; // Explicit no-storage observation double; SQL lane verifies persistence.
     assert.ok(['record_content_os_incident_v1', 'resolve_content_os_incident_v1'].includes(name));
     const incidents = tables.content_os_sync_incidents;
     trace.push({ kind: 'SIMULATED_INCIDENT_RPC', name, body: structuredClone(body) });
@@ -183,9 +185,9 @@ export async function runCapturedContentOs(tables, options = {}) {
   const headers = options.headers ?? { 'x-cron-secret': FIXTURE_INTERNAL_TOKEN };
   try {
     const response = await loaded.handler(new Request(endpoint + '/functions/v1/content-os-morning-alpha-source', {
-      method: options.method ?? 'GET', headers,
+      method: options.method ?? 'GET', headers, ...(options.requestBody ? {body:JSON.stringify(options.requestBody)} : {}),
     }));
-    const body = await response.json(); if (transportError) throw transportError;
+    const body = await response.json(); await Promise.all(loaded.sidecars); if (transportError) throw transportError;
     return { status: response.status, body, trace, incidentTrace, diagnostics: loaded.diagnostics,
       loadedSources: loaded.loadedSources, sdk_version: loaded.sdk_version,
       method: 'ACTUAL_HANDLER_SDK_WITH_EXPLICIT_DB_TRANSPORT_DOUBLE', full_supabase_claim: false,

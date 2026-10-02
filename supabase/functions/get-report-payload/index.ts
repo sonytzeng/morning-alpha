@@ -22,6 +22,8 @@ import { resolveCanonicalDataQuality } from "../_shared/production-architecture-
 import { canonicalAdminReaderProjection } from "../_shared/research-pipeline-contract.ts";
 import { loadDecisionEvidence } from "../_shared/decision-v1-data.ts";
 import { buildEvidenceDecision, projectEvidenceDecision, sealEvidenceDecision } from "../_shared/decision-v1-evidence.ts";
+import { publicCheckpointInputs, publicMarketInput, buildPublicMarketReadModel } from "../_shared/public-market-projection.ts";
+import { recordPublicProjection } from "../_shared/public-projection-recorder.ts";
 import { createSubscriberState, getSubscriberReportProjection, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE } from "../../../shared/subscriber-state-contract.ts";
 
 type ReportRow = Record<string, unknown> & {
@@ -973,7 +975,7 @@ async function loadHistoryEvidence(client: ReturnType<typeof createServiceClient
       .select("id,report_id,report_date,version,session_type,status,decision_mode,action,market_regime,confidence_score,coverage_score,content_score,content_grade,content_score_breakdown,reason_codes,source_refs,source_freshness,created_at,valid_from,generated_text")
       .in("id", snapshotIds).limit(90) : empty,
     memberIds.length ? client.from("member_content_revisions")
-      .select("id,report_id,report_date,decision_snapshot_id,decision_snapshot_version,status,data_quality_status,member_content,canonical_contract,semantic_coherence_reviews(status,reason_codes,checked_at,canonical_snapshot_id,canonical_snapshot_version)")
+      .select("id,revision,report_id,report_date,decision_snapshot_id,decision_snapshot_version,status,data_quality_status,member_content,canonical_contract,semantic_coherence_reviews(status,reason_codes,checked_at,canonical_snapshot_id,canonical_snapshot_version)")
       .in("id", memberIds).order("checked_at", { referencedTable: "semantic_coherence_reviews", ascending: false })
       .limit(1, { referencedTable: "semantic_coherence_reviews" }).limit(30) : empty,
     publicationIds.length ? client.from("pipeline_runs")
@@ -1502,6 +1504,19 @@ Deno.serve(async (req: Request) => {
     issues: [...decisionEvidence.issues, "MARKET_ANALYSIS_UNPUBLISHED"],
   };
   payload.decision_engine_v1 = subscriberDecisionEvidence;
+  // Canonical presentation and evidence assessment are separate. Preserve the
+  // assessment unchanged; all subscriber market state uses this one read model.
+  if (asObject(publicMetadata.market_report_gate).operational_market) {
+    try {
+      const checkpointInputs = await publicCheckpointInputs(serviceClient, getReportDate(report));
+      const projectionInput = publicMarketInput(publicMetadata,
+        context.decisionSnapshot || {}, context.memberContentRevision || {}, context.learningRun || {},
+        checkpointInputs, context.evaluatedAt || new Date().toISOString());
+      payload.public_market_read_model = buildPublicMarketReadModel(projectionInput);
+      recordPublicProjection(serviceClient, projectionInput);
+    } catch { payload.public_market_read_model = null; }
+    payload.canonical_member_revision_id = context.memberContentRevision?.id || null;
+  }
   // Admin has a nested effective-AI view as well; no stale nested model may win.
   if (tier === "admin") payload.ai_strategy_json = { ...asObject(payload.ai_strategy_json), decision_engine_v1: subscriberDecisionEvidence };
   // Subscriber routes (including Owner browsing them) use one projection. The

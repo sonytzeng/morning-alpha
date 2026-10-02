@@ -7,13 +7,15 @@ import { evaluatePublishedMarketDelivery, fetchPublishedDeliveryEvidence } from 
 import { canonicalMarketDocument, canonicalMarketSourceRefs } from "../_shared/canonical-market-state.ts";
 import { authorizeInternalRequest, internalCredentialsFromEnv } from "../_shared/internal-function-auth.mjs";
 import type { RuntimeDatabase } from "../_shared/runtime-database-contract.ts";
+import { measureHandoffReferences, replayHandoffReferences, type HandoffEvidenceInput } from '../_shared/public-handoff-evidence.ts';
+import { recordPublicHandoff } from '../_shared/public-projection-recorder.ts';
 
 type JsonRecord = Record<string, unknown>;
 type AdminClient = ReturnType<typeof createClient<RuntimeDatabase>>;
 
 const MAX_RESPONSE_BYTES = 1_000_000;
 const PUBLIC_CONTRACT_VERSION = "morning_alpha_public_contract_v1";
-const SOURCE_PROJECTION_REVISION = "content_os_source_v13_committed_market_projection";
+const SOURCE_PROJECTION_REVISION = "content_os_source_v14_canonical_market_ledger_projection";
 
 function asObject(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -41,34 +43,6 @@ function firstArray(...values: unknown[]): unknown[] {
   return [];
 }
 
-/** The deployed v19 market_brief wire requires actual HTTPS references. Ledger
- * IDs are not URLs. Only committed snapshot references may supply these fields;
- * missing metadata must never be filled from mutable report/news aliases. */
-function publicHttpsSourceReferences(value: unknown, generated: JsonRecord): JsonRecord[] {
-  // canonicalMarketSourceRefs applies the producer's one metadata validator.
-  // Every outward URL must be an exact view of that frozen claim source, not an
-  // arbitrary URL attached to an otherwise valid ledger ID at read time.
-  const frozenReferences = canonicalMarketSourceRefs(generated);
-  return asArray(value).map(asObject).flatMap((reference) => {
-    const keys = ["evidence_id", "source", "source_date", "freshness"];
-    if (!keys.every((key) => optionalString(reference[key]))) return [];
-    const frozen = frozenReferences.find((row) => keys.every((key) => row[key] === reference[key]));
-    if (!frozen || !["title", "url", "published_at"].every((key) => optionalString(frozen[key]) && frozen[key] === reference[key])
-      || reference.published_at !== reference.source_date) return [];
-    const url = optionalString(reference.url);
-    const source = optionalString(reference.source);
-    const title = optionalString(reference.title);
-    const publishedAt = optionalString(reference.published_at);
-    if (!url || !source || !title || !publishedAt || !Number.isFinite(Date.parse(publishedAt))) return [];
-    try {
-      if (new URL(url).protocol !== "https:") return [];
-    } catch {
-      return [];
-    }
-    return [{ source, title, url, published_at: publishedAt }];
-  }).slice(0, 5);
-}
-
 type PublishedDelivery = ReturnType<typeof evaluatePublishedMarketDelivery>;
 
 /** Presentation of an already verified publication. It does not select a
@@ -81,7 +55,7 @@ async function buildContentOsPublicPayload(
   policy: JsonRecord,
   publicationRun: JsonRecord | null,
   delivery: PublishedDelivery,
-): Promise<{ payload: JsonRecord | null; reasonCodes: string[] }> {
+): Promise<{ payload: JsonRecord | null; reasonCodes: string[]; referenceReplay?: HandoffEvidenceInput }> {
   const projection = delivery.projection;
   if (!delivery.eligible) return { payload: null, reasonCodes: delivery.reason_codes };
   const generated = asObject(snapshot.generated_text);
@@ -107,6 +81,7 @@ async function buildContentOsPublicPayload(
   const stock = asObject(opportunities[0]);
   let publicTopic: JsonRecord;
   let references: unknown[];
+  let referenceReplay: HandoffEvidenceInput | undefined;
   if (opportunities.length > 0) {
     references = firstArray(stock.source_references, stock.supporting_evidence, stock.source_refs).slice(0, 5);
     publicTopic = {
@@ -127,8 +102,19 @@ async function buildContentOsPublicPayload(
     publicTopic.title = `${publicTopic.symbol} ${publicTopic.name}`;
     publicTopic.summary = publicTopic.reason;
   } else {
-    references = publicHttpsSourceReferences(snapshot.source_refs, generated);
-    if (!references.length) return { payload: null, reasonCodes: ["PUBLIC_MARKET_EVIDENCE_INCOMPLETE"] };
+    referenceReplay = {business_date:String(report.report_date),canonical_revision:String(snapshot.id),decision_version:Number(snapshot.version),
+      member_revision:String(memberRevision.id),source_revision:SOURCE_PROJECTION_REVISION,
+      operational_ready:delivery.operational_market?.market_decision==='READY',
+      references:measureHandoffReferences(snapshot.source_refs,canonicalMarketSourceRefs(generated))};
+    const selected = replayHandoffReferences(referenceReplay), original=asArray(snapshot.source_refs).map(asObject);
+    references = selected.selected_indexes.map(index=>{
+      const ref=original[index];
+      return selected.reference_type==='HTTPS_PUBLIC_SOURCE'
+        ? {source:ref.source,title:ref.title,url:ref.url,published_at:ref.published_at}
+        : {reference_type:'IMMUTABLE_MARKET_LEDGER',evidence_id:ref.evidence_id,source:ref.source,
+          source_date:ref.source_date,freshness:ref.freshness,decision_snapshot_id:snapshot.id,decision_snapshot_version:snapshot.version};
+    });
+    if (!references.length) return { payload: null, reasonCodes: ["PUBLIC_MARKET_EVIDENCE_INCOMPLETE"], referenceReplay };
     const firstReference = asObject(references[0]);
     publicTopic = {
       kind: "market_brief",
@@ -136,7 +122,8 @@ async function buildContentOsPublicPayload(
       name: "台股盤前市場與風險指標",
       summary: sentence,
       reason: sentence,
-      event_source: `${firstReference.source}：${firstReference.title}`,
+      event_source: firstReference.reference_type === 'IMMUTABLE_MARKET_LEDGER'
+        ? `${firstReference.source}：已提交市場證據` : `${firstReference.source}：${firstReference.title}`,
       transmission_path: optionalString(asObject(sections.transmission_narrative).narrative) ?? sentence,
       taiwan_mapping: "台股大盤與盤前風險指標",
       data_timestamp: publishedAt,
@@ -172,7 +159,11 @@ async function buildContentOsPublicPayload(
     risk: { risk_flags: delivery.marketContent.risk ? [delivery.marketContent.risk] : [] },
     opportunities: marketBrief ? [] : [publicTopic], source_references: references,
     morning_brief: { report_date: projection.identity.reportDate, current_market_summary: sentence,
-      core_thesis: sentence, data_quality: generated.data_quality, market_regime: projection.marketDecision.bias },
+      core_thesis: sentence, data_quality: generated.data_quality, market_regime: snapshot.market_regime,
+      market_direction: projection.marketDecision.bias, action: snapshot.action },
+    canonical_revision: snapshot.id, decision_version: snapshot.version,
+    member_revision: memberRevision.id, recommendation_status: projection.recommendation.status,
+    report_level: delivery.operational_market?.report_level ?? 'FULL',
     core_data_status: generated.data_quality,
     public_delivery_status: "PASS", content_os_status: "PASS", premium_locked: true, evidence_status: "verified",
     premium: { status: "BLOCKED", locked: true, reason_codes: marketBrief
@@ -196,7 +187,7 @@ async function buildContentOsPublicPayload(
   const projectedRevision = `${snapshot.snapshot_fingerprint ?? `${snapshot.version}:${review.id}`}:${memberRevision.id}:${SOURCE_PROJECTION_REVISION}:${projectionFingerprint.slice(0, 16)}`;
   payload.external_revision = projectedRevision;
   payload.revision_id = projectedRevision;
-  return { payload, reasonCodes: [] };
+  return { payload, reasonCodes: [], referenceReplay };
 }
 
 function serverSecretKey(): string {
@@ -258,7 +249,8 @@ async function recordBlockingIncident(
     p_snapshot_version: Number(snapshot.version || 0),
     p_reason_codes: Array.from(new Set(reasonCodes)),
     p_http_status: 409,
-    p_metadata: { error_code: errorCode, source_revision: SOURCE_PROJECTION_REVISION, ...metadata },
+    p_metadata: { error_code: errorCode, source_revision: SOURCE_PROJECTION_REVISION, ...metadata,
+      retry_classification: 'NON_RETRYABLE', max_attempts: 1 },
   });
   if (error) return json({ error: "CONTENT_OS_INCIDENT_WRITE_FAILED", detail: error.message }, 503);
   return json({
@@ -266,6 +258,7 @@ async function recordBlockingIncident(
     reason_codes: Array.from(new Set(reasonCodes)),
     incident_id: incidentId,
     incident_key: incidentKey,
+    retry_classification: 'NON_RETRYABLE', retryable: false, max_attempts: 1,
   }, 409);
 }
 
@@ -372,6 +365,7 @@ Deno.serve(async (request) => {
   }
 
   const result = await buildContentOsPublicPayload(report, snapshot, memberRevision, review, qualityPolicy, publicationRun, delivery);
+  if (result.referenceReplay) recordPublicHandoff(admin, result.referenceReplay);
   if (!result.payload) {
     return recordBlockingIncident(admin, snapshot, result.reasonCodes, result.reasonCodes[0] || "PUBLIC_TOPIC_INCOMPLETE",
       { member_content_revision_id: memberRevision.id });

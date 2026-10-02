@@ -3,6 +3,7 @@
  * One implementation only; do not introduce browser or server runtime imports. */
 /** The same pure wire contract is imported by the Edge reader and subscriber UI.
  * This projection does not publish data, evaluate research, or grant access. */
+import { parsePublicMarketReadModel, PUBLIC_CHECKPOINTS, type PublicMarketReadModel } from './publicMarketReadModel.ts';
 export const SUBSCRIBER_STATE_SCHEMA_VERSION = 'ma-subscriber-state-v1' as const;
 export const INCOMPLETE_ANALYSIS_MESSAGE = '今日分析尚未完成／證據不足';
 export const RECOMMENDATION_INSUFFICIENT_MESSAGE = '推薦評估證據不足，今日暫不發布正式個股推薦';
@@ -163,6 +164,7 @@ export type SubscriberCheckpoint = {
   observedAt: string | null;
 };
 export type SubscriberReportProjection = {
+  publicMarket?: PublicMarketReadModel | null;
   schemaVersion: typeof SUBSCRIBER_PROJECTION_VERSION;
   identity: { reportDate: string; revisionId: string | null; generatedAt: string | null; todayDate: string | null };
   displayStatus: 'READY' | 'PARTIAL' | 'INSUFFICIENT_EVIDENCE' | 'INVALIDATED';
@@ -255,7 +257,12 @@ export function getSubscriberReportProjection(value: unknown, options: { todayDa
     : validDate(outer.today_date) ? outer.today_date : validDate(ai.today_date) ? ai.today_date : null;
   const identity = { reportDate, revisionId, generatedAt, todayDate };
   const matches = (values: unknown[], expected: unknown) => values.every(v => v === undefined || v === null || v === '' || v === expected);
-  const mixedIdentity = !matches([outer.report_date, ai.report_date, canonical.report_date, rawState.report_date], reportDate)
+  const hasPublicModel = Object.hasOwn(ai, 'public_market_read_model');
+  const publicMarket = hasPublicModel ? parsePublicMarketReadModel(ai.public_market_read_model, {
+    report_date:reportDate, revision_id:revisionId, decision_version:canonical.version,
+    member_revision:ai.canonical_member_revision_id,
+  }) : null;
+  const mixedIdentity = (hasPublicModel && !publicMarket) || !matches([outer.report_date, ai.report_date, canonical.report_date, rawState.report_date], reportDate)
     || !matches([outer.revision_id, ai.revision_id, canonical.id, rawState.revision_id], revisionId)
     || !matches([outer.generated_at, ai.generated_at, canonical.generated_at, rawState.generated_at], generatedAt);
   const hasState = Object.prototype.hasOwnProperty.call(outer, 'subscriber_state') || Object.prototype.hasOwnProperty.call(ai, 'subscriber_state');
@@ -318,10 +325,15 @@ export function getSubscriberReportProjection(value: unknown, options: { todayDa
   else if (receipt && (!hasState || declaredClose === 'COMPLETE')) closingState = 'COMPLETE';
   else if (!ready || Object.keys(close).length || declaredClose === 'INSUFFICIENT_EVIDENCE') closingState = 'INSUFFICIENT_EVIDENCE';
   const checkpoints = projectSubscriberCheckpoints(ai, identity, ready, nonTrading, closingState, text(close.verified_at));
+  if (ready && publicMarket) for (const key of PUBLIC_CHECKPOINTS) {
+    const checkpoint = publicMarket.checkpoints[key];
+    checkpoints[key] = {status:checkpoint.status,evidenceVerified:checkpoint.status==='completed',observedAt:checkpoint.observed_at};
+  }
   const failedCheckpoint = Object.values(checkpoints).some(checkpoint => checkpoint.status === 'failed');
   const runtimeFailure = ready && (failedCheckpoint || closingState === 'COMPLETE'
     && ['miss', 'wrong'].includes(text(close.prediction_result || close.hit_or_miss).toLowerCase()));
-  if (runtimeFailure) action = 'STOP';
+  if (runtimeFailure && !publicMarket) action = 'STOP';
+  if (ready && publicMarket) action = publicMarket.action;
   const displayStatus = runtimeFailure ? 'INVALIDATED' : ready ? 'READY' : partial && !mixedIdentity ? 'PARTIAL' : 'INSUFFICIENT_EVIDENCE';
   const statusLabel = ready ? runtimeFailure ? '驗證顯示原判斷已失效' : historical ? '歷史市場分析（非今日）' : nonTrading ? '今日非交易日' : '市場分析已發布' : INCOMPLETE_ANALYSIS_MESSAGE;
   const rawSummary = text(canonical.daily_sentence || ai.daily_sentence || ai.summary);
@@ -377,7 +389,7 @@ export function getSubscriberReportProjection(value: unknown, options: { todayDa
     decisionEvidence.reason = '盤中驗證節點、驗證清單與市場快照均已到位。';
   } else if (!marketSnapshotAvailable) decisionEvidence.reason = '市場快照不足，暫不升級決策。';
   else if (!checklistAvailable) decisionEvidence.reason = '驗證清單不足，暫不升級決策。';
-  const projectedBias = ready ? text(canonical.market_bias || ai.market_bias) || null : null;
+  const projectedBias = ready ? publicMarket?.market_direction || text(canonical.market_bias || ai.market_bias) || null : null;
   const projectedSummary = ready ? summary || null : null;
   const openingIsCurrent = close.opening_decision_snapshot_id === revisionId;
   // Closing producer V2 persists opening_*; its legacy receipt uses predicted_*.
@@ -390,6 +402,7 @@ export function getSubscriberReportProjection(value: unknown, options: { todayDa
     summary: openingIsCurrent ? projectedSummary : null,
   } : null;
   return {
+    ...(hasPublicModel ? {publicMarket} : {}),
     schemaVersion: SUBSCRIBER_PROJECTION_VERSION, identity, displayStatus,
     statusLabel:reportLevel==='DEGRADED' ? '分析已發布，部分研究資料暫缺' : reportLevel==='FULL' ? '完整分析' : statusLabel,
     ...(reportLevel ? {reportLevel,researchNotice:reportLevel==='DEGRADED'

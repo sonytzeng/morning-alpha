@@ -194,8 +194,8 @@ test('every allowed canonical closing outcome is rendered consistently by actual
   const expectations = {
     hit: ['命中', '方向符合', 'complete', '完整成立'],
     correct: ['命中', '方向符合', 'complete', '完整成立'],
-    partial: ['部分命中', '部分符合', 'partial', '部分成立'],
-    mixed: ['部分命中', '部分符合', 'partial', '部分成立'],
+    partial: ['部分命中', '部分符合', 'partial', '大致一致'],
+    mixed: ['部分命中', '部分符合', 'partial', '大致一致'],
     miss: ['未命中', '方向不符', 'failed', '未成立'],
     wrong: ['未命中', '方向不符', 'failed', '未成立'],
     neutral: ['中性結果，收盤驗證已完成', '中性結果，收盤驗證已完成', 'neutral', '中性結果，收盤驗證已完成'],

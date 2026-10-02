@@ -1,0 +1,347 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_PUBLIC_MARKET_PROJECTION_20261002",
+  "candidate_base_git_sha": "646dc01baced83d34afd314506622798c2047544",
+  "predecessor_integrity_id": "MORNING_ALPHA_OPERATIONAL_MARKET_20261001",
+  "approval_provenance": "Sony explicitly authorized 10/2 Public Projection diagnosis, read/export/UI and Acceptance candidate, one necessary migration candidate, isolated verification, Commit Push PR and GitHub Release CI. Production migration/deploy/UI publication/Cron/Auth/RLS/secrets and historical changes are NOT authorized. Final production release requires separate named approval.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/publicMarketProjection.test.mjs",
+    "tests/publicProjectionDatabase.integration.mjs",
+    "tests/consolidationContentOsPublication.test.mjs",
+    "tests/consolidationContentOsCapturedReplay.test.mjs",
+    "tests/subscriberReportProjection.test.mjs",
+    "tests/browser/publicProjection.e2e.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "f462887810d801cf3adcb34568945a2ce7f45b178753d7d80c096cbd02c45756",
+      "candidate_sha256": "aece69d77de284b53a71dc9e83d211024288963e264d5fd35fe6e09a3cff34cf",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "docs/evidence/2026_10_02_PUBLIC_PROJECTION_EXACT_DIFF.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "bda97697ced3a1686da3f65634e9f8967ad7dfc7e11e2a02e9dcb21e2c3c5856",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "docs/evidence/HANDOFF_409_ROOT_CAUSE_INVENTORY.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ea391c0de945caf106c51beb6b7685cdaa651715f6ba1b5fe3881a4dc51f73f7",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "docs/operations/evidence/public-market-projection-bundles-20261002.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "45f950305ea971733327700cb7ab849b6d91492e7bd165d4b9bc339118b904df",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "docs/operations/evidence/public-market-projection-validation-20261002.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "449821f5e21712f5149b5c1c518d4c30e02d5ee5994a00013bf55c55b3fc2486",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "docs/operations/public-market-projection-20261002.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ecfc4250d0de25ef409cd17a7a03262d2c726370973d0edbcf893a1ce3f6afcf",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "shared/public-market-read-model.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "7bceed56948743e30f42ccab7c8e9ccd129e4874b0a597a820ad980ff79e41d3",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "src/features/decision-v1/DecisionBrief.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "e30e66278b6bc2158928c7214d1fcb67bdebcba44de003e96b0d626546e33319",
+      "candidate_sha256": "7ecd1a35a881b0b3faef3f5d5a917edd05fb013721dcdf679bafdce28da6d105",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "src/lib/publicMarketReadModel.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "7eb821c30d873516ebd73aee3c171352eb93af4034218f36d8f3972f140b24d0",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "src/lib/runtimeDecisionTimeline.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "3329f669b5da5e4ef937b350b0ab9400ba4249e15717cc453856dd4d8358f094",
+      "candidate_sha256": "6c79c98ba7682aec9113981a0a7d83e42fa5ebf43ac2e448b3fa1d6e75e6b1c0",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "src/lib/subscriberReportContract.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "536e4461555ab37b629b1ea26dac7dd4cdf244e70258b7fe1a58e4a83210d925",
+      "candidate_sha256": "ff522ecb9d4ed44585a974308d8e629921baded6828c3516717fbd62c567f488",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "src/pages/home/page.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "ec275345345447bc23b18269f336f65d06370d854c5aaa674d81062de3b3e3ca",
+      "candidate_sha256": "caa7c79fc292a5e81c10f7895917c71c76383b3b4c778a9d2b47ea7df6e71034",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "src/pages/report/TodayReport.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "f4ea4cad59c57d353293dc38c800ee1785d85eae7f8234ac5b1dbf09c2d70cca",
+      "candidate_sha256": "b488264dcdf08680c950b89512a93c9785903f5227b822fa129a8e33cce63556",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "src/pages/verification/page.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "7fcf33a5d89e9840246e49b59c787b8a2c987e8087166fe433293f9d457874b0",
+      "candidate_sha256": "7c800071d94cb4e1cc69521dcbf961366d20c3f7a718c09cfa4fb38376a5bde7",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "src/pages/war-room/WarRoom.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "b02138ea1078b97c36cba864256b6fe76672ee67a37c3d3c41fabdc1c6ac124e",
+      "candidate_sha256": "ccd73b0dd39ea879e59ebe79bbd8703fde182f93c9cf4da7502552c50774d295",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "supabase/functions/_shared/public-handoff-evidence.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "d8c1f79da827129d330b95342b4aaf4c89087fffef6a827a2126a7407e34ae50",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "supabase/functions/_shared/public-market-projection.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "897ef2dc2150ebb1dad3c2fa208217f6ebcb15e295750e8eba30557eff642e61",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "supabase/functions/_shared/public-projection-recorder.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "b3b6aa190b3a59c64e5de9cc2f96ca495578f350143be84dc34c4ffcb13512d0",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "supabase/functions/content-os-morning-alpha-source/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "b9430383ba63262bb9b10cacd2084d9c97a95f30090aa14b81c12e56834b7e61",
+      "candidate_sha256": "f2669d4d7c28af05bbefddd11822b67533a0ed451d347deaaef58d7a99b27781",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "1c24c2cf71f6f80211950e2e2f8c0839329463c2be941d9c2ecac1cac9006da0",
+      "candidate_sha256": "ef052ea0366bf95d5a8b5b8aa33bc251956a1c5afc165103f10c6f3969f954e8",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "supabase/migrations/20261002130000_public_market_projection_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "163644c96f39de6c58c17edec47b5cb62493925f565a9718fd9f19ab5a56e563",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "tests/browser/publicProjection.e2e.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "0dfda422dffe4aed3fb81b6abfed478a5f2c1b922acaf9fd478f2d3c6781d973",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "tests/consolidationSubscriberGraph.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "10a26b3048c6ab40edcdc3b697850bb955dcfd30bbdb39ba7d12f6ba5749f0da",
+      "candidate_sha256": "dbf82ddad26f83e0cf8c786c75cc962859bda82b8be715a62f6f928a6f84d79f",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Exact new canonical read-site inventory and requested closing display wording; no assertion, scope or gate relaxation.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "tests/fixtures/public-projection/production-20261002.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "62172386114bfcc5edd9b27dda8623afdafc961792cec55eb4db99aa56522a48",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "tests/fixtures/public-projection/sql-readset-20261002.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "1b29e23b24042e0ab8749bfd63ffba14fe65cf7fdc9089edef41dd639abe7b8a",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "tests/helpers/coreContentOsCapturedReplay.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "eaeae6f6e8c8f23c045c4aa0cacc2ab93c9caf118eb6f95cbd8ef9385b4abb50",
+      "candidate_sha256": "c8df176c67d37e73057ba3d4c8e66b7d82e6307fb6215818ea0c14bdf9754a4b",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "e940bcc0122fae234c6e8874798ba43492a91ac2ba85308d436cd0c53f89eb28",
+      "candidate_sha256": "d2f7d0fc07973ea960acbd474c84dcbe10db9206f5f2a176ed9e46777c620928",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "tests/operationalMarketIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "5d986945a9d158fe9b6de6eddfdb0e722a381e0d92907a10e43aa2f39ef156ff",
+      "candidate_sha256": "f4cf947faeca57dbf417bd699bbb0b647ecd38c7dc04bccabb2025593958d5c5",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    },
+    {
+      "path": "tests/publicMarketProjection.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "a4caf4eb4fbdc03003b368d8d87c39061f352056ea3864eb57321a460c0567f4",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "tests/publicProjectionDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "90016744732c0a55486231b0e2770b72a695f22a1907bc28e5a51ebea2e95619",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "tests/publicProjectionIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "d6946723fd2dc40ccffdfd09750786e470385cd54541f7438bbed596af288446",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Direct canonical public read/export contract, four-page projection, isolated replay or exact release gate dependency.",
+      "rollback_target": "Remove candidate-only artifact before release; never rewrite historical Production evidence."
+    },
+    {
+      "path": "tests/subscriberProjectionMapping.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "646dc01baced83d34afd314506622798c2047544",
+      "predecessor_sha256": "6a093f0aff64f89d0411b91dd8dc94db79c7aa32f225f0d877a14432b9856fd3",
+      "candidate_sha256": "cfd37e972d775265652424e70ab68420984b88f8a916aa4df2cf590b35109848",
+      "source_lineage": "Exact merged Operational Architecture predecessor retained with original hashes; 10/2 read/export evidence successor only.",
+      "reason": "Exact new canonical read-site inventory and requested closing display wording; no assertion, scope or gate relaxation.",
+      "rollback_target": "Restore exact predecessor before release; no automatic Production rollback authorized."
+    }
+  ]
+}

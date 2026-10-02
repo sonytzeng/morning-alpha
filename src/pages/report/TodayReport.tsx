@@ -331,7 +331,8 @@ function TodayReportContent() {
     hasReport: isReportForToday,
     isTradingDay: Boolean(displayState?.is_trading_day && displayState.market_status === 'OPEN'),
   });
-  const nextRuntimeNode = selectNextRuntimeTimelineNode(runtimeTimeline) || runtimeTimeline[runtimeTimeline.length - 1];
+  const nextRuntimeNode = selectNextRuntimeTimelineNode(runtimeTimeline)
+    || {time:'',label:projection.publicMarket?.next_checkpoint==='CLOSING'?'等待收盤驗證':'今日節點已完成',detail:'所有已確認市場節點均已完成',status:'completed' as const};
   const nextCheckpointFallback = `${nextRuntimeNode.time} ${nextRuntimeNode.label}`;
   const presentation = useMemo(() => buildDecisionPresentation({
     displayState,
@@ -712,7 +713,7 @@ function TodayReportContent() {
       <Navbar marketStatusLabel={nextDecisionTime} />
 
       <main className="flex-1 overflow-x-hidden" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
-        <DecisionBrief decision={productDecision} date={report.report_date} analysisUnavailable={analysisUnavailable}
+        <DecisionBrief decision={productDecision} date={report.report_date} analysisUnavailable={analysisUnavailable} publicMarket={projection.publicMarket}
           marketBias={publicTodayText(projection.marketDecision.bias || projection.statusLabel)} legacyInstruction={projection.marketDecision.label}
           legacyReason={publicTodayText(oneLineConclusion || primaryScenario)} legacyCount={focusStocks.length}
           stocksWithheld={!recommendationAccess}

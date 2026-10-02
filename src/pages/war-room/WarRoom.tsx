@@ -14,6 +14,7 @@ import { SubscriberAnswer } from '@/features/decision-v1/DecisionBrief';
 import { intradayAnswer } from '@/features/decision-v1/presentation';
 import { SUBSCRIBER_ANALYSIS_INCOMPLETE, type SubscriberCheckpointKey } from '@/lib/subscriberReportContract';
 import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
+import { PUBLIC_REGIMES } from '@/lib/publicMarketReadModel';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -185,13 +186,14 @@ function WarRoomContent() {
     const proof = projection.runtime.checkpoints[key];
     return { time, label, status: proof.status === 'failed' ? 'insufficient' as const : proof.status };
   })).map((node) => {
-    const status = node.time === '14:30' && projection.closing.state === 'NOT_DUE' ? 'pending' as const : node.status;
+    const status = !projection.publicMarket && node.time === '14:30' && projection.closing.state === 'NOT_DUE' ? 'pending' as const : node.status;
     return { ...node, status, statusLabel: runtimeTimelineStatusLabel(status) };
   });
   const currentNode = selectNextRuntimeTimelineNode(timeline);
   const nextCheckpoint = currentNode
     ? `${currentNode.time}｜${currentNode.label}`
-    : '等待下一次驗證';
+    : projection.publicMarket?.next_checkpoint === 'DAY_COMPLETED' ? '今日節點已完成'
+    : projection.publicMarket?.next_checkpoint === 'CLOSING' ? '等待收盤驗證' : '等待下一次驗證';
   const hasNewIntradayEvidence = projection.runtime.newIntradayEvidence;
   const feedTimeline = [
     ...timeline.filter((item) => item.status === 'current'),
@@ -215,7 +217,10 @@ function WarRoomContent() {
       ? '監控中'
       : currentNode?.statusLabel || '等待驗證';
 
-  const completedIntradaySteps = hasNewIntradayEvidence
+  const completedIntradaySteps = projection.publicMarket
+    ? checkpointLabels.filter(([key]) => projection.publicMarket?.checkpoints[key].status === 'completed')
+      .map(([,time,label]) => `${time} ${label}：新增市場證據，未改變目前判斷`)
+    : hasNewIntradayEvidence
     ? Array.from(new Set(canonicalNarrative.intraday_progress.completed_steps
       .map((item) => publicWarRoomText(item, ''))
       .filter(Boolean))).slice(0, 3)
@@ -250,6 +255,7 @@ function WarRoomContent() {
         <SubscriberAnswer question="早上的判斷有沒有改變？" date={projection.identity.reportDate}
           answer={answer.title} reason={decisionReason} tone={answer.tone}>
           <div className="ma-subscriber-three-answers"><div><h2>現在怎麼做</h2><strong>{action}</strong></div><div><h2>驗證狀態</h2><strong>{statusLabel}</strong></div></div>
+          {projection.publicMarket ? <p>市場型態：{PUBLIC_REGIMES[projection.publicMarket.market_regime]} · 方向：{projection.publicMarket.market_direction}</p> : null}
         </SubscriberAnswer>
 
         <div className="ma-war-room-v3-shell ma-war-room-v3-layout">

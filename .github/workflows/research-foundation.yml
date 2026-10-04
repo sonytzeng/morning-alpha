@@ -1,0 +1,42 @@
+name: Research foundation gate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  owner-shadow-foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      isolated-postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: isolated-ci-only
+        ports:
+          - 55439:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGUSER: postgres
+      PGPASSWORD: isolated-ci-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/researchFoundation.test.mjs
+      - name: New isolated database and owner access matrix
+        env:
+          MA_ISOLATED_TEST_DB: ma_10k_phase1_test1
+          MA_TEST_PGPORT: 55439
+        run: node tests/researchFoundationDatabase.integration.mjs

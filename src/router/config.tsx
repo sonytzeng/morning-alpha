@@ -14,6 +14,7 @@ const AdminSystemStatus = lazy(() => import("../pages/admin/system-check/page"))
 const AdminSystemHealth = lazy(() => import("../pages/admin/system-health/page"));
 const AdminDataHealth = lazy(() => import("../pages/admin/data-truth/page"));
 const AdminLearningCenter = lazy(() => import("../pages/admin/learning/page"));
+const OwnerAnalysis = lazy(() => import("../pages/admin/analysis/page"));
 const ReportsCenter = lazy(() => import("../pages/reports/ReportsCenter"));
 const ReportDetail = lazy(() => import("../pages/reports/ReportDetail"));
 const TodayReport = lazy(() => import("../pages/report/TodayReport"));
@@ -133,6 +134,7 @@ const routes: RouteObject[] = [
       { path: "system-health", element: <DeferredRoute><AdminSystemHealth /></DeferredRoute> },
       { path: "data-health", element: <DeferredRoute><AdminDataHealth /></DeferredRoute> },
       { path: "learning", element: <DeferredRoute><AdminLearningCenter /></DeferredRoute> },
+      { path: "analysis", element: <DeferredRoute><OwnerAnalysis /></DeferredRoute> },
       // V377: Legacy redirects
       { path: "dashboard", element: <Navigate to="/admin/today-content" replace /> },
       { path: "reports", element: <Navigate to="/admin/today-content" replace /> },

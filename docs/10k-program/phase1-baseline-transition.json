@@ -1,0 +1,53 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_RESEARCH_FOUNDATION_20261004",
+  "candidate_base_git_sha": "3b33db3688ba350da0372b50f3391da922b639ea",
+  "predecessor_integrity_id": "MORNING_ALPHA_PUBLIC_MARKET_PROJECTION_20261002",
+  "approval_provenance": "Sony explicitly authorized the 10K Product Program Phase 1 foundation/schema/Owner-only security candidate, isolated tests, Commit Push PR and GitHub CI. This exact successor registers only its named additive research migration, independent CI workflow and test-only lineage adapter. No existing core runtime, Production migration/deploy, auth configuration, policy relaxation, secrets or historical data change is authorized.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/researchFoundation.test.mjs",
+    "tests/researchFoundationDatabase.integration.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/research-foundation.yml",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "5bd2602c6682ddf475954dc8545b40a57ef1268f91c973d8eab9b41f5e3dfee9",
+      "source_lineage": "Exact merged Public Projection predecessor and all earlier sealed lineage retained; independent Owner Shadow foundation only.",
+      "reason": "Named Phase 1 schema, isolated CI or test-only baseline adapter; no product runtime modification.",
+      "rollback_target": "Remove candidate-only work before release; no automatic Production rollback or history rewrite."
+    },
+    {
+      "path": "supabase/migrations/20261004033642_intelligence_foundation_owner_shadow_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "05c434d2fc0117a21134ec53a0f6faf268361cbafa83a03dbdb6d38ded318873",
+      "source_lineage": "Exact merged Public Projection predecessor and all earlier sealed lineage retained; independent Owner Shadow foundation only.",
+      "reason": "Named Phase 1 schema, isolated CI or test-only baseline adapter; no product runtime modification.",
+      "rollback_target": "Remove candidate-only work before release; no automatic Production rollback or history rewrite."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "3b33db3688ba350da0372b50f3391da922b639ea",
+      "predecessor_sha256": "d2f7d0fc07973ea960acbd474c84dcbe10db9206f5f2a176ed9e46777c620928",
+      "candidate_sha256": "5826c0a5e789bb8168ea55e19c38acc51298fd21ba08577c10ee88bca05018ee",
+      "source_lineage": "Exact merged Public Projection predecessor and all earlier sealed lineage retained; independent Owner Shadow foundation only.",
+      "reason": "Named Phase 1 schema, isolated CI or test-only baseline adapter; no product runtime modification.",
+      "rollback_target": "Remove candidate-only work before release; no automatic Production rollback or history rewrite."
+    }
+  ]
+}

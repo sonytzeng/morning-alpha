@@ -22,4 +22,10 @@ The browser harness is serve-only: `MA_RESEARCH_PREVIEW=SYNTHETIC_ONLY node node
 
 GitHub results must be read from the PR at its exact HEAD, not inferred from this local evidence. Required candidate gates: unchanged **Validate release** and additive **Research foundation gate**. No merge or production operation is authorized by this document.
 
+First GitHub attempt at `556a88a`: research/RLS gate passed, as did the clean standard type-check and lint. Full Release CI exposed the tracked new workflow as an unregistered Core-inventory successor (32 dependent Integrity failures with the same cause). The narrow test-only successor adapter and exact three-file transition now preserve all earlier manifests/hashes and reject unknown candidate drift. No business implementation was changed to address that gate.
+
+Follow-up local candidate/lineage run: 36/36 PASS (`researchFoundation`, `researchFoundationIntegrity`, `publicProjectionIntegrity`, `operationalMarketIntegrity`, `premarketAtomicInventory`). This includes unknown-file/hash/predecessor/renamed-migration rejection and preservation of the original 109→110 inventory; no expected-count relaxation.
+
+Additional directly affected historical Integrity suites: 125/125 PASS (`consolidationAcceptanceDefaultIntegrity`, `consolidationDeliveryIntegrity`, `consolidationIntegrity`, `productionReliabilityBaselineTransition`). Original protection against co-mutated manifests, source tampering, omitted registrations and authority escalation remains active.
+
 Interpretation limits: schema lineage is not a finished evidence resolver or sealed full AnalysisGraph producer; Phase 2 must validate each referenced evidence ID and the complete graph before calculating analysis metrics. Method feature associations, complete hypothesis validation, forward collection and production promotion remain future reviewed workflows. No research row in this candidate can be consumed by an existing production strategy path.

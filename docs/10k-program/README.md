@@ -114,6 +114,7 @@ Master coverage: 0–4 core freeze; 5–12 feature/analysis foundation; 13–24 
 - `/admin/analysis` owner-gated read-only candidate; no promoted strategy, fake metric or research write UI.
 - Required candidate workflow `Research foundation gate` supplements unchanged `Validate release`. Original sealed CI hash and all predecessor baselines remain intact; **both** workflows must pass before a future release request.
 - `phase1-core-freeze.json` pins exact paths + SHA-256 for 142 existing shared/function/migration files to the base above. This is additive protection, not a replacement of existing Integrity.
+- `phase1-baseline-transition.json` registers exactly the new research migration, new isolated CI workflow and test-only successor adapter. It preserves every historical manifest and original 109→110 inventory unchanged. The first GitHub run caught the unregistered new workflow only after it became Git-tracked; the successor fixes candidate admission, not product logic, and does not waive unknown files/hashes.
 
 ### Verification and scope
 

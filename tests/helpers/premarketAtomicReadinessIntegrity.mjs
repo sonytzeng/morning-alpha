@@ -332,7 +332,7 @@ export const readPremarketAtomicReadinessIntegrity = registry =>
 export const readConsolidationPublicExportIntegrity = readPremarketAtomicReadinessIntegrity;
 export { PUBLIC_EXPORT_ARTIFACT_PATH };
 
-export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+function resolvePublicProjectionPredecessorIntegrity(registry, artifactBytes, readSource = read) {
   const manifest=JSON.parse(readSource('docs/operations/evidence/public-market-projection-baseline-20261002.json'));
   const candidate=resolveReviewedBaselineTransition({manifest,readSource,
     readPredecessor:row=>readReviewedGitPredecessor(row,root),
@@ -340,4 +340,15 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, r
     verifyPredecessor:predecessorRead=>resolveOperationalMarketIntegrity(registry,artifactBytes,predecessorRead)});
   return {...candidate.reviewedBaselinePredecessor,fileHash:candidate.fileHash,
     newCandidatePaths:candidate.newCandidatePaths,publicProjectionCandidateIntegrity:candidate};
+}
+
+export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest=JSON.parse(readSource('docs/10k-program/phase1-baseline-transition.json'));
+  const candidate=resolveReviewedBaselineTransition({manifest,readSource,
+    readPredecessor:row=>readReviewedGitPredecessor(row,root),
+    expectedPredecessorIntegrityId:'MORNING_ALPHA_PUBLIC_MARKET_PROJECTION_20261002',
+    verifyPredecessor:predecessorRead=>resolvePublicProjectionPredecessorIntegrity(registry,artifactBytes,predecessorRead)});
+  // Keep each historical result shape and seal intact; only the named successor is new.
+  return {...candidate.reviewedBaselinePredecessor,fileHash:candidate.fileHash,
+    newCandidatePaths:candidate.newCandidatePaths,researchFoundationCandidateIntegrity:candidate};
 }

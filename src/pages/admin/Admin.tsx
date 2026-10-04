@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 const NAV_ITEMS = [
   { path: '/admin/today-content', label: '今日內容', icon: 'ri-file-text-line' },
@@ -18,13 +19,40 @@ function getPageLabel(pathname: string): string {
 export default function AdminLayout() {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [researchOwner, setResearchOwner] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    let generation = 0;
+    const checkOwner = async (requestGeneration: number) => {
+      try {
+        const { data, error } = await supabase.rpc('is_research_owner_v1');
+        if (active && requestGeneration === generation) setResearchOwner(!error && data === true);
+      } catch {
+        if (active && requestGeneration === generation) setResearchOwner(false);
+      }
+    };
+    const { data: subscription } = supabase.auth.onAuthStateChange(event => {
+      if (event !== 'SIGNED_OUT' && event !== 'SIGNED_IN' && event !== 'TOKEN_REFRESHED') return;
+      const requestGeneration = ++generation;
+      setResearchOwner(false);
+      if (event !== 'SIGNED_OUT') setTimeout(() => {
+        if (active && requestGeneration === generation) void checkOwner(requestGeneration);
+      }, 0);
+    });
+    void checkOwner(generation);
+    return () => { active = false; generation += 1; subscription.subscription.unsubscribe(); };
+  }, []);
 
   // Close drawer on route change
   useEffect(() => {
     setDrawerOpen(false);
   }, [location.pathname]);
 
-  const pageLabel = getPageLabel(location.pathname);
+  const navItems = researchOwner
+    ? [...NAV_ITEMS, { path: '/admin/analysis', label: '分析中心', icon: 'ri-flask-line' }]
+    : NAV_ITEMS;
+  const pageLabel = researchOwner && location.pathname === '/admin/analysis' ? '分析中心' : getPageLabel(location.pathname);
 
   const sidebarContent = (
     <>
@@ -38,7 +66,7 @@ export default function AdminLayout() {
 
       {/* Nav items */}
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive = location.pathname === item.path ||
             (item.path !== '/admin/dashboard' && location.pathname.startsWith(item.path));
           return (

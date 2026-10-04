@@ -102,6 +102,19 @@ export default function MembershipStatusCard() {
           <button type="button" onClick={signOut} className="min-h-10 text-left text-xs text-white/35 hover:text-white/65 sm:text-right">登出</button>
         </div>
       </div>
+      {status.membership.state === 'owner' && (
+        <Link
+          to="/admin/analysis"
+          className="mt-5 flex min-h-14 items-center gap-3 rounded-xl border border-primary-400/25 bg-primary-500/10 p-4 transition-colors hover:bg-primary-500/20"
+        >
+          <i className="ri-flask-line text-xl text-primary-300" aria-hidden="true"></i>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-white">分析中心</span>
+            <span className="mt-1 block text-xs text-white/50">研究、Signal Lab與分析品質</span>
+          </span>
+          <i className="ri-arrow-right-line text-primary-300" aria-hidden="true"></i>
+        </Link>
+      )}
     </section>
   );
 }

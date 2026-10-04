@@ -16,6 +16,7 @@ export function ResearchFoundationView({ data }: { data: ResearchFoundation }) {
         {[['Feature 定義', data.features.length], ['方法版本', data.method_versions], ['Analysis Graph', data.graphs], ['Quality 觀測', data.observations]].map(([label, count]) =>
           <div key={label}><dt className="text-slate-600">{label}</dt><dd className="mt-1 text-xl font-semibold">{count}</dd></div>)}
       </dl><p className="mt-3 text-xs text-slate-500">觀測筆數不是有效交易日數；FULL／DEGRADED 分組及績效計算於 Phase 4 驗收。</p>
+      <p className="mt-2 text-sm text-slate-600">Forward Sample：{data.graphs === 0 ? '0' : '尚未驗收'} · Analysis Value：INSUFFICIENT_SAMPLE</p>
     </section>
     <section><h2 className="font-semibold">滾動品質規格</h2><div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
       {QUALITY_WINDOWS.map(days => <article key={days} className="rounded-xl border bg-white p-4"><h3>{days} 個交易日</h3>

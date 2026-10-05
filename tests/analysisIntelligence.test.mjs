@@ -63,7 +63,8 @@ test('change detection references previous VALID day and every required dimensio
     const change=a.what_changed.find(c=>c.key===key);assert(change);assert(change.evidence_ids.length);assert(change.previous_evidence_ids.length);
   }
   const x=realInput('2026-10-02');x.previous_valid_business_date='2026-09-30';
-  assert.throws(()=>analyzeIntelligence(x,realInput('2026-10-01')),/PREVIOUS_VALID_DAY/);
+  // The untrusted legacy nearest-row hint cannot override the trading calendar.
+  assert.equal(analyzeIntelligence(x,realInput('2026-10-01')).previous_comparable_evidence_day,'2026-10-01');
 });
 test('observable invalidation records cannot overwrite prediction',()=>{
   const a=analysis('2026-10-02'),original=stableJson(a),later=structuredClone(a);

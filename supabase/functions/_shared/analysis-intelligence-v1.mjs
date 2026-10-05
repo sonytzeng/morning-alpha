@@ -1,6 +1,7 @@
 // Owner-only research. No I/O, AI, production decision imports, writes or promotion.
 import { evaluateOperationalCore } from './operational-market-contract.mjs';
 import { validateAtomicCheckpointEvidenceRows } from './fetch-checkpoint-evidence.mjs';
+import { previousMarketTradingDate, MARKET_CALENDAR_VERSION } from './market-session-contract.mjs';
 
 export const ANALYSIS_VERSION = 'ANALYSIS_INTELLIGENCE_V1';
 export const PROVIDERS = Object.freeze(['TAIEX','2330','TXF','SPX','IXIC','SOX','NVDA','TSM','VIX','DXY','US10Y']);
@@ -165,12 +166,51 @@ function compute(input) {
   };
 }
 
+// One resolver for the worker and offline replay. No nearest-row/report/lifecycle
+// fallback: only the actual preceding TW trading day can be comparable in V1.
+export function resolvePreviousValidComparison(input, previousInput = null) {
+  const expected=previousMarketTradingDate('TW',input.core.business_date);
+  const metadata={contract:'PREVIOUS_VALID_COMPARISON_V1',calendar_version:MARKET_CALENDAR_VERSION,
+    previous_trading_day:expected,previous_comparable_evidence_day:null,status:'UNAVAILABLE',
+    reason:'PREVIOUS_COMPARISON_UNAVAILABLE',missing_component:'PREVIOUS_DAY_COMPARISON',detail:'EVIDENCE_MISSING'};
+  const unavailable=detail=>({metadata:{...metadata,detail},previous:null});
+  if(!expected) return unavailable('CALENDAR_COVERAGE_MISSING');
+  if(!previousInput) return unavailable('EVIDENCE_MISSING');
+  if(previousInput.core?.business_date!==expected) return unavailable('NOT_PREVIOUS_TRADING_DAY');
+  if(!Number.isFinite(time(previousInput.analysis_cutoff_at)) || time(previousInput.analysis_cutoff_at)>=time(input.analysis_cutoff_at))
+    return unavailable('COMPARISON_CUTOFF_INVALID');
+  let previous;
+  try { previous=compute(previousInput); }
+  catch(error) {
+    if(!(error instanceof Error) || !error.message.startsWith('RESEARCH_')) throw error;
+    return unavailable('PREVIOUS_EVIDENCE_CONTRACT_INVALID');
+  }
+  return {metadata:{...metadata,previous_comparable_evidence_day:expected,status:'AVAILABLE',reason:null,missing_component:null,detail:null},previous};
+}
+
 export function analyzeIntelligence(input, previousInput = null) {
+  // Current core is deliberately outside the enhancement failure boundary.
   const result=compute(input);
-  const previous=previousInput ? compute(previousInput):null;
-  if(previous && (previous.business_date>=result.business_date || time(previous.analysis_cutoff_at)>=time(result.analysis_cutoff_at)
-    || input.previous_valid_business_date!==previous.business_date)) throw new Error('RESEARCH_PREVIOUS_VALID_DAY_MISMATCH');
-  if(!previous && input.previous_valid_business_date) throw new Error('RESEARCH_PREVIOUS_INPUT_REQUIRED');
+  const {metadata,previous}=resolvePreviousValidComparison(input,previousInput);
+  result.previous_comparison=metadata;
+  result.previous_trading_day=metadata.previous_trading_day;
+  result.previous_comparable_evidence_day=metadata.previous_comparable_evidence_day;
+  result.previous_valid_business_date=metadata.previous_comparable_evidence_day;
+  result.quality.core_evidence_coverage=100;
+  result.quality.missing_components=previous?[]:['PREVIOUS_DAY_COMPARISON'];
+  result.quality.analysis_quality=previous?'CURRENT_AND_COMPARISON_VALID':'CURRENT_VALID_COMPARISON_UNAVAILABLE';
+  if(!previous) {
+    result.what_changed=[];
+    result.missing_signals=uniq([...result.missing_signals,'PREVIOUS_DAY_COMPARISON']);
+    result.quality.evidence_coverage=round(100*11/12);
+    const c=result.decision.confidence_components;
+    c.previous_comparison_penalty=5;
+    c.evidence_score=result.quality.evidence_coverage;
+    result.decision.shadow_confidence=round(clamp(result.decision.shadow_confidence-5-0.2*(100-c.evidence_score)));
+    if((result.decision.shadow_action==='ENTER' && result.decision.shadow_confidence<65)
+      || (result.decision.shadow_action==='AVOID' && result.decision.shadow_confidence<40)) result.decision.shadow_action='WAIT';
+    return result;
+  }
   const changes=[];
   for(const current of result.signals) {
     const old=previous?.signals.find(s=>s.provider===current.provider);

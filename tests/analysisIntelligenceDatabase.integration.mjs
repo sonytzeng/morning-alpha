@@ -16,6 +16,8 @@ const sql=s=>execute(db,s),read=p=>readFileSync(new URL('../'+p,import.meta.url)
 const lit=v=>"'"+String(v).replaceAll("'","''")+"'",json=v=>lit(JSON.stringify(v))+'::jsonb';
 sql(read('tests/fixtures/research-foundation-dependencies.sql'));
 sql(read('tests/fixtures/phase2-analysis/dependencies.sql'));
+// Use the exact existing Production calendar functions, not a test-only date rule.
+sql(read('supabase/migrations/20260930043122_six_bug_preventive_closure_v1.sql').split('create or replace function public.latest_completed_us_session_v1')[0]+'\ncommit;');
 sql(read('supabase/migrations/20261004033642_intelligence_foundation_owner_shadow_v1.sql'));
 const baseline=()=>sql("select md5(string_agg(pg_get_functiondef(oid),'' order by proname)) from pg_proc where pronamespace in ('auth'::regnamespace,'public'::regnamespace) and proname in ('uid','is_research_owner_v1','market_checkpoint_batch_integrity_v1')");
 const before=baseline();
@@ -33,6 +35,19 @@ for(const d of retained.days){
   if(d.batch)sql(`insert into market_checkpoint_batches select * from jsonb_populate_record(null::market_checkpoint_batches,${json(d.batch)})`);
   for(const row of d.rows)sql(`insert into market_checkpoint_snapshots select * from jsonb_populate_record(null::market_checkpoint_snapshots,${json(row)})`);
 }
+// Preserve the previously omitted, incompatible 9/18 record to exercise the real
+// old SQL resolver: nearest COMMITTED data would incorrectly choose this day.
+const exact=JSON.parse(read('tests/fixtures/phase2-analysis/previous-comparison-production.json'));
+const oldDay=exact.previous_inputs.find(x=>x.business_date==='2026-09-18').input.core;
+sql(`insert into isolated_retained_integrity values('2026-09-18','PREMARKET',${json(oldDay.integrity)});
+insert into market_checkpoint_batches select * from jsonb_populate_record(null::market_checkpoint_batches,${json(oldDay.batch)});`);
+for(const row of oldDay.rows)sql(`insert into market_checkpoint_snapshots select * from jsonb_populate_record(null::market_checkpoint_snapshots,${json(row)})`);
+assert.equal(sql("select research_analysis_input_v1('2026-09-30','2026-09-30T07:30:00+08:00','HISTORICAL_REPLAY')->>'previous_valid_business_date'"),'2026-09-18');
+const rpcMetadata=()=>sql("select jsonb_agg(jsonb_build_object('name',proname,'owner',proowner,'acl',proacl,'security',prosecdef,'config',proconfig) order by proname)::text from pg_proc where oid in ('public.research_analysis_input_v1(date,timestamptz,text)'::regprocedure,'public.store_research_analysis_v1(jsonb,jsonb,text,numeric)'::regprocedure)");
+const rpcBefore=rpcMetadata();
+const successor=read('supabase/migrations/20261005103458_analysis_previous_comparison_nonblocking_v1.sql');sql(successor);
+assert.equal(rpcMetadata(),rpcBefore);assert.throws(()=>sql(successor),/PREDECESSOR_MISMATCH/);
+assert.equal(sql("select research_analysis_input_v1('2026-09-30','2026-09-30T07:30:00+08:00','HISTORICAL_REPLAY')->>'previous_trading_day'"),'2026-09-29');
 const snap=publicDay.tables.decision_snapshots.find(s=>s.generated_text.market_report_gate);
 sql(`insert into decision_snapshots select * from jsonb_populate_record(null::decision_snapshots,${json(snap)})`);
 for(const row of researchContexts) sql(`insert into research_sessions select * from jsonb_populate_record(null::research_sessions,${json(row)})`);
@@ -101,8 +116,26 @@ denied('set role service_role;'+store(historicalForward,p,stableJson(analyzeInte
 denied("select research_analysis_input_v1('2026-10-02','2026-10-02T13:00:00+08:00','HISTORICAL_REPLAY')",/CUTOFF_INVALID/);
 const frozen=JSON.parse(sql('select jsonb_build_object(\'input\',input_snapshot,\'previous\',previous_input_snapshot,\'analysis\',analysis) from research_daily_analysis'));
 assert.equal(stableJson(analyzeIntelligence(frozen.input,frozen.previous)),stableJson(frozen.analysis));
+let currentPass=0,safeReject=0,comparisonUnavailable=0;
+for(const retainedDay of exact.inputs){
+  const day=retainedDay.business_date,i=input(day),prior=i.previous_trading_day?input(i.previous_trading_day,i.previous_trading_day+'T08:44:59+08:00'):null;
+  if(!i.core.rows.length){assert.throws(()=>analyzeIntelligence(i,prior),/RESEARCH_CORE_UNAVAILABLE/);safeReject++;continue;}
+  const a=analyzeIntelligence(i,prior);currentPass++;
+  if(day==='2026-09-30'){
+    assert.equal(a.quality.change_detection,'UNAVAILABLE');assert.deepEqual(a.what_changed,[]);comparisonUnavailable++;
+    const forged=structuredClone(a);forged.what_changed=[{type:'UNCHANGED'}];
+    denied('set role service_role;'+store(i,prior,stableJson(forged)),/COMPARISON_UNAVAILABLE_INVALID/);
+    const far=input('2026-09-18','2026-09-18T08:44:59+08:00');
+    denied('set role service_role;'+store(i,far,stableJson(analyzeIntelligence(i,far))),/PREVIOUS_READSET_MISMATCH/);
+    // Both an unavailable read and a retained invalid prior readset are legal.
+    assert.equal(JSON.parse(sql(asRole('service_role',store(i,null,stableJson(analyzeIntelligence(i,null)))))).status,'RECORDED');
+  }else assert.equal(a.quality.change_detection,'AVAILABLE');
+  assert(['RECORDED','ALREADY_RECORDED'].includes(JSON.parse(sql('set role service_role;'+store(i,prior,stableJson(a)))).status));
+}
+assert.deepEqual({currentPass,safeReject,comparisonUnavailable},{currentPass:3,safeReject:5,comparisonUnavailable:1});
+assert.equal(sql("select count(*) from research_daily_analysis where observation_kind='FORWARD'"),'0');
 assert.equal(businessHash(),businessBefore);assert.equal(baseline(),before);
 sql('update research_private.owner_access set enabled=false');
 assert.equal(sql(asRole('authenticated','select count(*) from research_daily_analysis',owner)),'0');
 assert.equal(sql("select count(*) from pg_publication_tables where tablename='research_daily_analysis'"),'0');
-console.log(JSON.stringify({fresh_db:db,owner_rls:'PASS',immutability:'PASS',source_lineage:'PASS',duplicate:'PASS',forward_backdate:'REJECTED',deterministic_replay:'PASS',business_diff:0,existing_auth_diff:0,forward_sample:0}));
+console.log(JSON.stringify({fresh_db:db,currentPass,safeReject,comparisonUnavailable,rpc_acl_security_owner_diff:0,owner_rls:'PASS',immutability:'PASS',source_lineage:'PASS',duplicate:'PASS',forward_backdate:'REJECTED',deterministic_replay:'PASS',business_diff:0,existing_auth_diff:0,forward_sample:0}));

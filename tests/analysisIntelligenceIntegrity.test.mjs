@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { PUBLIC_EXPORT_ARTIFACT_PATH, resolveRuntimeSparseRecoveryIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
+import { PUBLIC_EXPORT_ARTIFACT_PATH, resolveRuntimeSparseRecoveryIntegrity, readAnalysisIntelligencePredecessor } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url));
-const hash=p=>createHash('sha256').update(read(p)).digest('hex');
+const hash=p=>createHash('sha256').update(readAnalysisIntelligencePredecessor(p)).digest('hex');
 const manifest=JSON.parse(read('docs/10k-program/phase2-candidate-integrity.json'));
 const expected=[
   ".github/workflows/analysis-intelligence.yml",

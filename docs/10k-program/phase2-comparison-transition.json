@@ -1,0 +1,154 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_PREVIOUS_COMPARISON_20261005",
+  "candidate_base_git_sha": "2b87c2134ac2449ba93c7a54a4de20c1f5017822",
+  "predecessor_integrity_id": "MORNING_ALPHA_ANALYSIS_INTELLIGENCE_20261005",
+  "approval_provenance": "Sony explicitly approved the minimum Phase2 Previous-Day Comparison Non-Blocking P0 candidate, tests, one research Migration successor, Commit Push PR and GitHub CI. Production migration, Function release and Owner UI publish require separate final approval. No Core, Cron, Auth, RLS, Secrets or historical business changes.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/analysisIntelligencePreviousComparison.test.mjs",
+    "tests/analysisIntelligencePreviousIntegrity.test.mjs",
+    "tests/analysisIntelligenceDatabase.integration.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": "docs/10k-program/phase2-previous-comparison-candidate.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "8cc047e3546cd6ec9e872236a76a179b60754967af20a1c0631e132dd35f1a66",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    },
+    {
+      "path": "src/pages/admin/analysis/IntelligenceView.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2b87c2134ac2449ba93c7a54a4de20c1f5017822",
+      "predecessor_sha256": "31c535ff9c6de05252bf4d47d9e9737604ba8a711f02092829b7f67d659997ac",
+      "candidate_sha256": "52fe12ae9f5b35577e88d7dd9bf56e965668bdc2fb3fe781ba903cc427e5fa67",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    },
+    {
+      "path": "supabase/functions/_shared/analysis-intelligence-job.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2b87c2134ac2449ba93c7a54a4de20c1f5017822",
+      "predecessor_sha256": "dbe4acfca63149833d03bed9e6f53fa817220b34ede8563305910010294b26f8",
+      "candidate_sha256": "717568533d3fcce2678370bb1106d8e2c7301ed46d250ae1bbdce0aae7a83d9d",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    },
+    {
+      "path": "supabase/functions/_shared/analysis-intelligence-v1.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2b87c2134ac2449ba93c7a54a4de20c1f5017822",
+      "predecessor_sha256": "76e774e54a5d3be28860c9d2e4e535922ef9dc1ec0c4cb9564840bc52a2e9f3a",
+      "candidate_sha256": "7706e62f18c90bfbb264977083c60da840db838d60930d9badad0471bd6dee2e",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    },
+    {
+      "path": "supabase/migrations/20261005103458_analysis_previous_comparison_nonblocking_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "79c41d5e004702f45b7921609c24f700978359412e9cc0cac16008c7fed50872",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    },
+    {
+      "path": "tests/analysisIntelligence.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2b87c2134ac2449ba93c7a54a4de20c1f5017822",
+      "predecessor_sha256": "18d1815dd7454fcdfae761683c5ea93b2635cf2437e8358f5a980bb1a48e6d52",
+      "candidate_sha256": "a9d6772383b1770c4bb8ebafd4f2f1b242fc796482b935be823055d2cf14e782",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    },
+    {
+      "path": "tests/analysisIntelligenceDatabase.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2b87c2134ac2449ba93c7a54a4de20c1f5017822",
+      "predecessor_sha256": "56f3daf9f54617aa6e316e298fee93d278160d8ae5b4f422278f1dd95d7030d3",
+      "candidate_sha256": "0fd4c20f6c466301f95bae2e5a9366c826976f1f4c913a594328bfe5c63f3db0",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    },
+    {
+      "path": "tests/analysisIntelligenceIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2b87c2134ac2449ba93c7a54a4de20c1f5017822",
+      "predecessor_sha256": "7852fea7c3e1f5f0f300df6c5ec0e50d3d288eb400361eda42a327a1b03ced7e",
+      "candidate_sha256": "953420e3711b19bdfc7a19538581e849e441b1fdbf399c9fe4bcf385062edfde",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    },
+    {
+      "path": "tests/analysisIntelligencePreviousComparison.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "30695a79bc4a56fa951aac6b099873851d7f4b1706c05c2990ea5f83a25743d6",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    },
+    {
+      "path": "tests/analysisIntelligencePreviousIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "92b9b68b0233e58cc5991a6c66157949276dd66412023e0896b0c120f74e433b",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    },
+    {
+      "path": "tests/analysisIntelligenceUI.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2b87c2134ac2449ba93c7a54a4de20c1f5017822",
+      "predecessor_sha256": "00d0ebcf13f0e2d31b5aa7414c177edda6a86fc189056a0ffa046fdef01f0d56",
+      "candidate_sha256": "1ee09400447b7d9cbcb6a6d90927ecbc82ccc89d92d2fd55084fa16ad99744c4",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    },
+    {
+      "path": "tests/fixtures/phase2-analysis/previous-comparison-production.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ea231209704f687de4c23c22213dfdca2ff7b240f07e0139231402b94e3822bd",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "2b87c2134ac2449ba93c7a54a4de20c1f5017822",
+      "predecessor_sha256": "0ba3384b6b467a9af2bf023d6fc5689e933250cd838f0194b0817771ee0623ae",
+      "candidate_sha256": "4dd5b4188f1503ef946b775910451a839a0dd2a156827e6b15ac92d283e634d0",
+      "source_lineage": "Exact released PR191 predecessor preserved with unchanged original migration, historical evidence and142Core file hashes.",
+      "reason": "Minimum Phase2 comparison enhancement isolation and real Production query regression; no business logic change.",
+      "rollback_target": "Candidate-only revision; never overwrite historical business or research records."
+    }
+  ]
+}

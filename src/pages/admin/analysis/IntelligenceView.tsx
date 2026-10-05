@@ -35,7 +35,10 @@ export default function IntelligenceView({ data }: { data: OwnerAnalysis }) {
           <dt>來源商品</dt><dd>{f.source_instrument}</dd><dt>觀測時間</dt><dd>{f.observed_at}</dd><dt>觀測值</dt><dd>{f.value === null ? '不可用，沒有補零' : f.value}</dd>
           <dt>Feature／版本</dt><dd>{f.feature_id} / {f.feature_version}</dd><dt>Evidence lineage</dt><dd>{f.source_evidence_id}</dd><dt>計算規則</dt><dd>{f.normalization}</dd></dl>)}</details>)}</div></section>
     <section className="rounded-xl border bg-white p-4"><h3 className="font-semibold">跨訊號確認</h3><ul className="mt-3 space-y-2 text-sm">{a.cross_signals.map(s => <li key={s.signal_id}>{s.label}：{s.status === 'AVAILABLE' ? label(s.direction) : '組成訊號不足，不推論'}</li>)}</ul></section>
-    <section className="rounded-xl border bg-white p-4"><h3 className="font-semibold">今天與上一有效交易日有何變化</h3><ul className="mt-3 space-y-2 text-sm">{a.what_changed.map(c => <li key={c.key}>{c.meaning} <span className="text-xs text-slate-500">{c.previous_business_date || '無可比較日期'}</span></li>)}</ul></section>
+    <section className="rounded-xl border bg-white p-4"><h3 className="font-semibold">今天與上一有效交易日有何變化</h3>
+      {a.quality.change_detection === 'UNAVAILABLE'
+        ? <p className="mt-3 text-sm">缺少可比較的前一有效交易日證據，本日分析仍依當日完整市場證據成立。</p>
+        : <ul className="mt-3 space-y-2 text-sm">{a.what_changed.map(c => <li key={c.key}>{c.meaning} <span className="text-xs text-slate-500">{c.previous_business_date || '無可比較日期'}</span></li>)}</ul>}</section>
     <section className="rounded-xl border bg-white p-4"><h3 className="font-semibold">什麼情況會推翻今天判斷</h3><ul className="mt-3 space-y-3 text-sm">{a.invalidation_conditions.map(c => {
       const observed = data.invalidations?.find(i => i.invalidation_id === c.invalidation_id);
       return <li key={c.invalidation_id}>{c.description}<p className="mt-1 text-slate-500">{label(observed?.status || c.status)} {observed?.observed_at || ''}</p></li>;

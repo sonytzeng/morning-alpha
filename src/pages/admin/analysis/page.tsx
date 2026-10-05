@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { readFoundation, QUALITY_WINDOWS, type ResearchFoundation } from '@/features/research/foundation';
+import { readOwnerAnalysis, type OwnerAnalysis } from '@/features/research/intelligence';
+import IntelligenceView from './IntelligenceView';
 
 export function ResearchFoundationView({ data }: { data: ResearchFoundation }) {
   return <section className="space-y-6" aria-labelledby="analysis-title">
-    <header><p className="text-xs font-semibold text-amber-700">僅限 Owner · Shadow · Phase 1 候選</p>
+    <header><p className="text-xs font-semibold text-amber-700">僅限 Owner · Shadow · Phase 1 基礎</p>
       <h1 id="analysis-title" className="mt-2 text-2xl font-bold">分析研究中心</h1>
-      <p className="mt-2 text-sm text-slate-600">研究與正式策略隔離。尚未啟用訊號計算、回測、Forward 評估或 Promotion。</p></header>
+      <p className="mt-2 text-sm text-slate-600">研究與正式策略隔離。本區顯示定義與版本，不代表分析績效；未啟用 Rule Promotion。</p></header>
     <div className="grid gap-3 sm:grid-cols-3">
-      {[['資料品質', '沿用正式 Contract；本頁不重新評分'], ['分析品質', 'Phase 2 待實作，不把 Schema 當分析'], ['決策品質', '樣本尚未驗收，不顯示假勝率']].map(([title, detail]) =>
+      {[['資料品質', '沿用正式 Contract；本頁不重新評分'], ['分析品質', '請見今日分析；不把 Schema 當分析'], ['決策品質', '樣本尚未驗收，不顯示假勝率']].map(([title, detail]) =>
         <article key={title} className="rounded-xl border bg-white p-4"><h2 className="font-semibold">{title}</h2><p className="mt-2 text-sm text-slate-600">{detail}</p></article>)}
     </div>
     <section className="rounded-xl border bg-white p-4"><h2 className="font-semibold">研究基礎</h2>
@@ -34,7 +36,7 @@ export function ResearchFoundationView({ data }: { data: ResearchFoundation }) {
 }
 
 export default function OwnerAnalysisPage() {
-  const [state, setState] = useState<{ kind: 'loading' | 'denied' | 'unavailable' | 'ready'; data?: ResearchFoundation }>({ kind: 'loading' });
+  const [state, setState] = useState<{ kind: 'loading' | 'denied' | 'unavailable' | 'ready'; data?: ResearchFoundation; intelligence?: OwnerAnalysis; intelligenceUnavailable?: boolean }>({ kind: 'loading' });
   useEffect(() => {
     let active = true;
     let identityGeneration = 0;
@@ -43,15 +45,22 @@ export default function OwnerAnalysisPage() {
     void (async () => {
       const generation = identityGeneration;
       try {
-        const { data, error } = await supabase.rpc('get_research_foundation_v1');
+        const [{ data, error }, intelligence] = await Promise.all([
+          supabase.rpc('get_research_foundation_v1'), supabase.rpc('get_owner_analysis_v1'),
+        ]);
         if (!active || generation !== identityGeneration) return;
         if (error) { setState({ kind: error.code === '42501' ? 'denied' : 'unavailable' }); return; }
-        setState({ kind: 'ready', data: readFoundation(data) });
+        if (intelligence.error?.code === '42501') { setState({ kind: 'denied' }); return; }
+        setState({ kind: 'ready', data: readFoundation(data),
+          intelligence: intelligence.error ? undefined : readOwnerAnalysis(intelligence.data), intelligenceUnavailable: Boolean(intelligence.error) });
       } catch { if (active && generation === identityGeneration) setState({ kind: 'unavailable' }); }
     })();
     return () => { active = false; subscription.subscription.unsubscribe(); };
   }, []);
-  if (state.kind === 'ready' && state.data) return <ResearchFoundationView data={state.data} />;
+  if (state.kind === 'ready' && state.data) return <div className="space-y-8">
+    {state.intelligence ? <IntelligenceView data={state.intelligence} /> : <p role="status" className="rounded-xl border bg-white p-4 text-sm">Phase 2 分析候選尚未啟用或目前不可用；正式市場服務不受影響。</p>}
+    <details className="rounded-xl border p-4"><summary className="cursor-pointer font-semibold">研究基礎與版本 Registry</summary><div className="mt-4"><ResearchFoundationView data={state.data} /></div></details>
+  </div>;
   return <section className="rounded-xl border bg-white p-6" role="status" aria-live="polite">
     <h1 className="text-xl font-bold">分析研究中心</h1><p className="mt-3 text-sm text-slate-600">{state.kind === 'loading' ? '確認 Owner 存取權限中…'
       : state.kind === 'denied' ? '僅供具名授權 Owner 存取；一般管理員與會員沒有研究資料權限。'

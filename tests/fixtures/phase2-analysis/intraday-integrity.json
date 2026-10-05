@@ -1,0 +1,149 @@
+{
+  "provenance": "REAL_PRODUCTION_READ_ONLY_INTEGRITY_CAPTURE_20261005",
+  "rows": [
+    {
+      "checkpoint": "0900",
+      "integrity": {
+        "status": "PASS",
+        "batch_id": "08d7c5f4-78ae-4576-8e35-02b57a138e3d",
+        "contract": "MARKET_CHECKPOINT_ATOMICITY_V1",
+        "checkpoint": "0900",
+        "payload_hash": "cbe98b03af34ffc363b2adc761d1b405",
+        "business_date": "2026-10-02",
+        "correlation_id": "4f348f45-9563-408d-b18b-3a47a4b4e1ea",
+        "idempotency_key": "market-checkpoint:2026-10-02:0900:MARKET_CHECKPOINT_PROVIDER_V1",
+        "canonical_row_count": 11,
+        "unbatched_row_count": 0,
+        "committed_batch_count": 1,
+        "compatibility_row_count": 11,
+        "distinct_batch_id_count": 1,
+        "distinct_provider_count": 11,
+        "mixed_batch_revision_count": 0,
+        "compatibility_mismatch_count": 0,
+        "compatibility_provider_count": 11,
+        "duplicate_authoritative_provider_count": 0,
+        "production_2026_09_11_evidence_preserved": true
+      }
+    },
+    {
+      "checkpoint": "0930",
+      "integrity": {
+        "status": "PASS",
+        "batch_id": "6219228b-f28b-4347-b5d4-c267cb8b481f",
+        "contract": "MARKET_CHECKPOINT_ATOMICITY_V1",
+        "checkpoint": "0930",
+        "payload_hash": "030785df89560f743aad47dffb6198ac",
+        "business_date": "2026-10-02",
+        "correlation_id": "1d19cb61-13af-45ba-aa5b-c0288b054b62",
+        "idempotency_key": "market-checkpoint:2026-10-02:0930:MARKET_CHECKPOINT_PROVIDER_V1",
+        "canonical_row_count": 11,
+        "unbatched_row_count": 0,
+        "committed_batch_count": 1,
+        "compatibility_row_count": 11,
+        "distinct_batch_id_count": 1,
+        "distinct_provider_count": 11,
+        "mixed_batch_revision_count": 0,
+        "compatibility_mismatch_count": 0,
+        "compatibility_provider_count": 11,
+        "duplicate_authoritative_provider_count": 0,
+        "production_2026_09_11_evidence_preserved": true
+      }
+    },
+    {
+      "checkpoint": "1030",
+      "integrity": {
+        "status": "PASS",
+        "batch_id": "b580469f-e509-4e56-8092-4c0fe4fce83b",
+        "contract": "MARKET_CHECKPOINT_ATOMICITY_V1",
+        "checkpoint": "1030",
+        "payload_hash": "5919049fede43e8bd64fdcf77f9ca34e",
+        "business_date": "2026-10-02",
+        "correlation_id": "b618f117-8b80-4fc1-a9e1-dc1cfb104ded",
+        "idempotency_key": "market-checkpoint:2026-10-02:1030:MARKET_CHECKPOINT_PROVIDER_V1",
+        "canonical_row_count": 11,
+        "unbatched_row_count": 0,
+        "committed_batch_count": 1,
+        "compatibility_row_count": 11,
+        "distinct_batch_id_count": 1,
+        "distinct_provider_count": 11,
+        "mixed_batch_revision_count": 0,
+        "compatibility_mismatch_count": 0,
+        "compatibility_provider_count": 11,
+        "duplicate_authoritative_provider_count": 0,
+        "production_2026_09_11_evidence_preserved": true
+      }
+    },
+    {
+      "checkpoint": "1300",
+      "integrity": {
+        "status": "PASS",
+        "batch_id": "8670a9c8-aaeb-4337-beae-ba0582058a7b",
+        "contract": "MARKET_CHECKPOINT_ATOMICITY_V1",
+        "checkpoint": "1300",
+        "payload_hash": "02404fcbefea3fb8ff51ed2650939376",
+        "business_date": "2026-10-02",
+        "correlation_id": "5b783206-65d6-44b4-bc70-1dc5f41a5733",
+        "idempotency_key": "market-checkpoint:2026-10-02:1300:MARKET_CHECKPOINT_PROVIDER_V1",
+        "canonical_row_count": 11,
+        "unbatched_row_count": 0,
+        "committed_batch_count": 1,
+        "compatibility_row_count": 11,
+        "distinct_batch_id_count": 1,
+        "distinct_provider_count": 11,
+        "mixed_batch_revision_count": 0,
+        "compatibility_mismatch_count": 0,
+        "compatibility_provider_count": 11,
+        "duplicate_authoritative_provider_count": 0,
+        "production_2026_09_11_evidence_preserved": true
+      }
+    },
+    {
+      "checkpoint": "1410",
+      "integrity": {
+        "status": "PASS",
+        "batch_id": "57ad9b55-72ac-4c6e-b646-8030867e11c3",
+        "contract": "MARKET_CHECKPOINT_ATOMICITY_V1",
+        "checkpoint": "1410",
+        "payload_hash": "fbf5b91335d71149face0e3a4bc75086",
+        "business_date": "2026-10-02",
+        "correlation_id": "5b3657d2-61dd-4a2c-b1fc-8e20b585351d",
+        "idempotency_key": "market-checkpoint:2026-10-02:1410:MARKET_CHECKPOINT_PROVIDER_V1",
+        "canonical_row_count": 11,
+        "unbatched_row_count": 0,
+        "committed_batch_count": 1,
+        "compatibility_row_count": 11,
+        "distinct_batch_id_count": 1,
+        "distinct_provider_count": 11,
+        "mixed_batch_revision_count": 0,
+        "compatibility_mismatch_count": 0,
+        "compatibility_provider_count": 11,
+        "duplicate_authoritative_provider_count": 0,
+        "production_2026_09_11_evidence_preserved": true
+      }
+    },
+    {
+      "checkpoint": "1430",
+      "integrity": {
+        "status": "PASS",
+        "batch_id": "f5646cb3-2f62-408c-82eb-f04286dfbe83",
+        "contract": "MARKET_CHECKPOINT_ATOMICITY_V1",
+        "checkpoint": "1430",
+        "payload_hash": "e97318d7881ec3533cd8b04a8f61bcdd",
+        "business_date": "2026-10-02",
+        "correlation_id": "f20a5b69-534f-4ec3-8443-567dc0ccf3c2",
+        "idempotency_key": "market-checkpoint:2026-10-02:1430:MARKET_CHECKPOINT_PROVIDER_V1",
+        "canonical_row_count": 11,
+        "unbatched_row_count": 0,
+        "committed_batch_count": 1,
+        "compatibility_row_count": 11,
+        "distinct_batch_id_count": 1,
+        "distinct_provider_count": 11,
+        "mixed_batch_revision_count": 0,
+        "compatibility_mismatch_count": 0,
+        "compatibility_provider_count": 11,
+        "duplicate_authoritative_provider_count": 0,
+        "production_2026_09_11_evidence_preserved": true
+      }
+    }
+  ]
+}

@@ -353,7 +353,7 @@ function resolveResearchFoundationPredecessorIntegrity(registry, artifactBytes, 
     newCandidatePaths:candidate.newCandidatePaths,researchFoundationCandidateIntegrity:candidate};
 }
 
-export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+function resolveAnalysisIntelligencePredecessorIntegrity(registry, artifactBytes, readSource = read) {
   const manifest=JSON.parse(readSource('docs/10k-program/phase2-baseline-transition.json'));
   const candidate=resolveReviewedBaselineTransition({manifest,readSource,
     readPredecessor:row=>readReviewedGitPredecessor(row,root),
@@ -361,4 +361,22 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, r
     verifyPredecessor:predecessorRead=>resolveResearchFoundationPredecessorIntegrity(registry,artifactBytes,predecessorRead)});
   return {...candidate.reviewedBaselinePredecessor,fileHash:candidate.fileHash,
     newCandidatePaths:candidate.newCandidatePaths,analysisIntelligenceCandidateIntegrity:candidate};
+}
+
+// An exact successor, never a rewrite of the already-released Phase 2 seals.
+export function readAnalysisIntelligencePredecessor(path, readSource = read) {
+  const manifest=JSON.parse(readSource('docs/10k-program/phase2-comparison-transition.json'));
+  const row=manifest.files.find(row=>row.path===path);
+  if(!row) return readSource(path);
+  if(row.operation==='ADD') throw Object.assign(new Error('absent from Phase 2 predecessor'),{code:'ENOENT'});
+  return readReviewedGitPredecessor(row,root);
+}
+export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest=JSON.parse(readSource('docs/10k-program/phase2-comparison-transition.json'));
+  const candidate=resolveReviewedBaselineTransition({manifest,readSource,
+    readPredecessor:row=>readReviewedGitPredecessor(row,root),
+    expectedPredecessorIntegrityId:'MORNING_ALPHA_ANALYSIS_INTELLIGENCE_20261005',
+    verifyPredecessor:predecessorRead=>resolveAnalysisIntelligencePredecessorIntegrity(registry,artifactBytes,predecessorRead)});
+  return {...candidate.reviewedBaselinePredecessor,fileHash:candidate.fileHash,
+    newCandidatePaths:candidate.newCandidatePaths,analysisComparisonCandidateIntegrity:candidate};
 }

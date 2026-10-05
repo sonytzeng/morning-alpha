@@ -43,6 +43,12 @@ test('empty and unavailable inputs never display fabricated metrics',()=>{
   assert.throws(()=>modules.intelligence.readOwnerAnalysis({...envelope,latest:{...envelope.latest,analysis:{...real,quality:{}}}}));
   assert.throws(()=>modules.intelligence.readOwnerAnalysis({...envelope,invalidations:[{invalidation_id:'x',status:'UNKNOWN'}]}));
 });
+test('unavailable previous comparison never renders a fake unchanged or percentage result',()=>{
+  const missing=analyzeIntelligence(realInput('2026-10-02'));
+  const text=textTree(modules.view.default({data:{...envelope,latest:{...envelope.latest,analysis:missing}}}));
+  assert(text.includes('缺少可比較的前一有效交易日證據，本日分析仍依當日完整市場證據成立。'));
+  assert(!text.includes('沒有新增方向變化'));assert(!text.includes('分析失敗'));
+});
 async function harness(mode){
   let state={kind:'loading'},listener,resolve,initialized=false;const gate=new Promise(r=>resolve=r);
   const requests=[];

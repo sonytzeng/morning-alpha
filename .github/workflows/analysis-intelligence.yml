@@ -22,6 +22,8 @@ jobs:
       PGPASSWORD: isolated-ci-only
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Validate immutable predecessor hashes, not a shallow inventory.
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc

@@ -342,7 +342,7 @@ function resolvePublicProjectionPredecessorIntegrity(registry, artifactBytes, re
     newCandidatePaths:candidate.newCandidatePaths,publicProjectionCandidateIntegrity:candidate};
 }
 
-export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+function resolveResearchFoundationPredecessorIntegrity(registry, artifactBytes, readSource = read) {
   const manifest=JSON.parse(readSource('docs/10k-program/phase1-baseline-transition.json'));
   const candidate=resolveReviewedBaselineTransition({manifest,readSource,
     readPredecessor:row=>readReviewedGitPredecessor(row,root),
@@ -351,4 +351,14 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, r
   // Keep each historical result shape and seal intact; only the named successor is new.
   return {...candidate.reviewedBaselinePredecessor,fileHash:candidate.fileHash,
     newCandidatePaths:candidate.newCandidatePaths,researchFoundationCandidateIntegrity:candidate};
+}
+
+export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+  const manifest=JSON.parse(readSource('docs/10k-program/phase2-baseline-transition.json'));
+  const candidate=resolveReviewedBaselineTransition({manifest,readSource,
+    readPredecessor:row=>readReviewedGitPredecessor(row,root),
+    expectedPredecessorIntegrityId:'MORNING_ALPHA_RESEARCH_FOUNDATION_20261004',
+    verifyPredecessor:predecessorRead=>resolveResearchFoundationPredecessorIntegrity(registry,artifactBytes,predecessorRead)});
+  return {...candidate.reviewedBaselinePredecessor,fileHash:candidate.fileHash,
+    newCandidatePaths:candidate.newCandidatePaths,analysisIntelligenceCandidateIntegrity:candidate};
 }

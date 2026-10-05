@@ -1,0 +1,84 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_ANALYSIS_INTELLIGENCE_20261005",
+  "candidate_base_git_sha": "1fcf24a7a2d7d7a602e555639a200f3b002a31ce",
+  "predecessor_integrity_id": "MORNING_ALPHA_RESEARCH_FOUNDATION_20261004",
+  "approval_provenance": "Sony explicitly authorized Phase 2 Implementation Candidate, necessary independent Shadow Function and additive research Migration candidate, tests, Commit Push PR and GitHub CI. This successor names only these research additions and the necessary test-only lineage adapter. Production execution, Cron, auth configuration, policy relaxation, secrets and historical business changes remain unauthorized.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/analysisIntelligenceIntegrity.test.mjs",
+    "tests/analysisIntelligence.test.mjs",
+    "tests/analysisIntelligenceDatabase.integration.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/analysis-intelligence.yml",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "c0a6c360d6537e90e86cd54cc2a0c125098042cc4fa7d99a131304cec2483678",
+      "source_lineage": "Exact Phase 1 predecessor and complete historical seals retained; independent Owner Shadow research only.",
+      "reason": "Register the named Phase 2 research-only runtime additions and test-only lineage adapter, without changing any business contract.",
+      "rollback_target": "Candidate-only reversal before release; no Production rollback or historical evidence rewrite."
+    },
+    {
+      "path": "supabase/functions/_shared/analysis-intelligence-job.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "dbe4acfca63149833d03bed9e6f53fa817220b34ede8563305910010294b26f8",
+      "source_lineage": "Exact Phase 1 predecessor and complete historical seals retained; independent Owner Shadow research only.",
+      "reason": "Register the named Phase 2 research-only runtime additions and test-only lineage adapter, without changing any business contract.",
+      "rollback_target": "Candidate-only reversal before release; no Production rollback or historical evidence rewrite."
+    },
+    {
+      "path": "supabase/functions/_shared/analysis-intelligence-v1.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "76e774e54a5d3be28860c9d2e4e535922ef9dc1ec0c4cb9564840bc52a2e9f3a",
+      "source_lineage": "Exact Phase 1 predecessor and complete historical seals retained; independent Owner Shadow research only.",
+      "reason": "Register the named Phase 2 research-only runtime additions and test-only lineage adapter, without changing any business contract.",
+      "rollback_target": "Candidate-only reversal before release; no Production rollback or historical evidence rewrite."
+    },
+    {
+      "path": "supabase/functions/research-analysis-shadow-v1/index.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "c2c66f09253b5a87e7b81752e5b0902f46e495a4e798bc472d36ee538c1e10f3",
+      "source_lineage": "Exact Phase 1 predecessor and complete historical seals retained; independent Owner Shadow research only.",
+      "reason": "Register the named Phase 2 research-only runtime additions and test-only lineage adapter, without changing any business contract.",
+      "rollback_target": "Candidate-only reversal before release; no Production rollback or historical evidence rewrite."
+    },
+    {
+      "path": "supabase/migrations/20261005083437_analysis_intelligence_shadow_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "7cf7ef88afaedd12042a03175fde23b1019d537d6f8f3407f76b6fa40d28ca6e",
+      "source_lineage": "Exact Phase 1 predecessor and complete historical seals retained; independent Owner Shadow research only.",
+      "reason": "Register the named Phase 2 research-only runtime additions and test-only lineage adapter, without changing any business contract.",
+      "rollback_target": "Candidate-only reversal before release; no Production rollback or historical evidence rewrite."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "1fcf24a7a2d7d7a602e555639a200f3b002a31ce",
+      "predecessor_sha256": "5826c0a5e789bb8168ea55e19c38acc51298fd21ba08577c10ee88bca05018ee",
+      "candidate_sha256": "0ba3384b6b467a9af2bf023d6fc5689e933250cd838f0194b0817771ee0623ae",
+      "source_lineage": "Exact Phase 1 predecessor and complete historical seals retained; independent Owner Shadow research only.",
+      "reason": "Register the named Phase 2 research-only runtime additions and test-only lineage adapter, without changing any business contract.",
+      "rollback_target": "Candidate-only reversal before release; no Production rollback or historical evidence rewrite."
+    }
+  ]
+}

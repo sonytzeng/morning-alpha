@@ -1,0 +1,38 @@
+{
+  "schema_version": "PHASE2_CANDIDATE_INTEGRITY_V1",
+  "base_sha": "1fcf24a7a2d7d7a602e555639a200f3b002a31ce",
+  "production_changes_authorized": false,
+  "cron_changes": false,
+  "forward_sample": 0,
+  "predecessors": {
+    "docs/10k-program/phase1-baseline-transition.json": "350cbf7f7c5e8c2b0ac184cdc3d22c91403bb903fafcaefb778952385904fc7e",
+    "docs/10k-program/phase1-core-freeze.json": "91bb71e8ac53d3bca96940f85dc047f4ce5807bd7e3a89195b265062e4e767e8"
+  },
+  "files": {
+    ".github/workflows/analysis-intelligence.yml": "c0a6c360d6537e90e86cd54cc2a0c125098042cc4fa7d99a131304cec2483678",
+    "docs/10k-program/phase2-analysis-contract.md": "8de38046b7d8253e3789d610b267c3fae397035d11f48a2d4eda543221a2cba2",
+    "docs/10k-program/phase2-baseline-transition.json": "fbf8a931db93f5b6ad68d5a91bab938493699d488d49aa13437d67f82f256087",
+    "src/features/research/intelligence.ts": "21e927b86792de67d852c6ee9219ab02b11d3fe48dd632e2f90c6209a472d463",
+    "src/pages/admin/analysis/IntelligenceView.tsx": "31c535ff9c6de05252bf4d47d9e9737604ba8a711f02092829b7f67d659997ac",
+    "src/pages/admin/analysis/page.tsx": "0b6ea312d410992e89816ed8b4cfbf50aeee7d88bc1825ea13a2318240543cfe",
+    "supabase/functions/_shared/analysis-intelligence-job.mjs": "dbe4acfca63149833d03bed9e6f53fa817220b34ede8563305910010294b26f8",
+    "supabase/functions/_shared/analysis-intelligence-v1.mjs": "76e774e54a5d3be28860c9d2e4e535922ef9dc1ec0c4cb9564840bc52a2e9f3a",
+    "supabase/functions/research-analysis-shadow-v1/index.ts": "c2c66f09253b5a87e7b81752e5b0902f46e495a4e798bc472d36ee538c1e10f3",
+    "supabase/migrations/20261005083437_analysis_intelligence_shadow_v1.sql": "7cf7ef88afaedd12042a03175fde23b1019d537d6f8f3407f76b6fa40d28ca6e",
+    "tests/analysisIntelligence.test.mjs": "18d1815dd7454fcdfae761683c5ea93b2635cf2437e8358f5a980bb1a48e6d52",
+    "tests/analysisIntelligenceDatabase.integration.mjs": "56f3daf9f54617aa6e316e298fee93d278160d8ae5b4f422278f1dd95d7030d3",
+    "tests/analysisIntelligenceIntegrity.test.mjs": "7852fea7c3e1f5f0f300df6c5ec0e50d3d288eb400361eda42a327a1b03ced7e",
+    "tests/analysisIntelligenceUI.test.mjs": "00d0ebcf13f0e2d31b5aa7414c177edda6a86fc189056a0ffa046fdef01f0d56",
+    "tests/browser/analysisIntelligence.vite.ts": "bf021c79e3051bbce2d123a6ece799c689e095bdd0030029dda8f3394ae566f0",
+    "tests/browser/analysisIntelligenceHarness.tsx": "c1925dc8750f8ac148c769226f7ff814b412c005928cec139081c5f7464bed91",
+    "tests/browser/analysisIntelligenceSupabaseMock.ts": "73af56a801ebcf8ae557919b6e6d21020caeae927f933ac713157d4b1e1a61dc",
+    "tests/fixtures/phase2-analysis/cle-linkage.json": "421c779d2f9c57181cb7a57698e716201ca772f240d35f5382fc3f74b362f946",
+    "tests/fixtures/phase2-analysis/dependencies.sql": "69ddeedc62a1eeeb204b253a408d6a64a77cc6b82b83c9171b36442e00f88b21",
+    "tests/fixtures/phase2-analysis/intraday-integrity.json": "90c7e3102acdc1cdc6bb4b8013dc7f9d8ab47aaabdb78a80056cbb01894fc3e5",
+    "tests/fixtures/phase2-analysis/production-cores.json": "5a7c843423d10d385dace933230466878e6f1667df2038bee396cb3be62ab102",
+    "tests/fixtures/phase2-analysis/research-context.json": "f63339a95f172ddc51cf1ac6388e8bdd00b32696abc1f4174f3094d9529b8224",
+    "tests/helpers/phase2AnalysisFixtures.mjs": "54dd9da077c25de93af2b8891d5b24136249fd6b5e2ba74265b316aabb670165",
+    "tests/helpers/premarketAtomicReadinessIntegrity.mjs": "0ba3384b6b467a9af2bf023d6fc5689e933250cd838f0194b0817771ee0623ae",
+    "tests/ownerAccountAnalysisNavigation.test.mjs": "b181c1db448e4cc0e234614d1b3f8696a236f15f992f7b081eb337c02ef94fde"
+  }
+}

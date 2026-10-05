@@ -1,0 +1,13 @@
+{
+  "provenance": "REAL_PRODUCTION_READ_ONLY_CAPTURE_20261005_CLE_METADATA",
+  "rows": [
+    {
+      "id": "ec40dfce-a045-4fcc-aa07-3c821552a5aa",
+      "decision_snapshot_id": "06b361fa-9508-45ae-b4cc-53fd57ee4d5f",
+      "report_date": "2026-10-02",
+      "prediction_at": "2026-10-01 23:05:19.932459+00",
+      "created_at": "2026-10-02 06:40:03.54209+00",
+      "record_status": "valid"
+    }
+  ]
+}

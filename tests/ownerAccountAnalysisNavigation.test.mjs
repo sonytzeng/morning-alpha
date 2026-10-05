@@ -80,6 +80,8 @@ test('zero graphs proves zero Forward samples; nonzero graphs are not claimed as
     if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
     if (name === '@/lib/supabase') return { supabase: {} };
     if (name === '@/features/research/foundation') return { QUALITY_WINDOWS: [5, 20, 60, 90] };
+    if (name === '@/features/research/intelligence') return {};
+    if (name === './IntelligenceView') return { default: () => null };
     throw new Error(name);
   } });
   for (const graphs of [0, 1, 100]) {

@@ -1,12 +1,14 @@
 import { analyzeIntelligence, stableJson, resolvePreviousValidComparison } from './analysis-intelligence-v1.mjs';
 
-/** @type {(date: string) => Promise<{id: string, prediction_hash: string, observation_kind: string} | null>} */
-const noExisting = async (_date) => null;
+/** @type {(date: string, cutoff: string, kind: string) => Promise<{id: string, prediction_hash: string, observation_kind: string, analysis_cutoff_at?: string} | null>} */
+const noExisting = async (_date, _cutoff, _kind) => null;
 // Separate internal worker, never imported by Fetch/Report/LINE/Closing.
 // Each dependency returns data or throws. Failure terminates only this research job.
 export async function runAnalysisJob({ readInput, storeAnalysis, findExisting = noExisting, date, cutoff, kind, clock = () => performance.now() }) {
   const started=clock();
-  const existing=await findExisting(date);
+  const existing=await findExisting(date,cutoff,kind);
+  if(existing && (existing.observation_kind!==kind || !existing.analysis_cutoff_at
+    || Date.parse(existing.analysis_cutoff_at)!==Date.parse(cutoff))) throw Error('RESEARCH_AUTHORITY_MISMATCH');
   if(existing) return {status:'ALREADY_RECORDED',analysis_id:existing.id,prediction_hash:existing.prediction_hash,
     observation_kind:existing.observation_kind,mode:'SHADOW_ONLY',ai_call_count:0,token_usage:0,compute_ms:Math.max(0,clock()-started),production_writes:0};
   const input=await readInput(date,cutoff,kind);

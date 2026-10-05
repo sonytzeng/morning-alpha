@@ -84,12 +84,19 @@ test('research has no business writes, networking, AI or production imports',()=
   const engine=readFileSync(new URL('../supabase/functions/_shared/analysis-intelligence-v1.mjs',import.meta.url),'utf8');
   assert.doesNotMatch(engine,/fetch\(|\.from\(|\.rpc\(|OPENAI|generate-daily-report|line-daily-push|market-decision-engine/);
 });
-test('a locked historical artifact is reused without recomputation or Forward promotion',async()=>{
-  const result=await runAnalysisJob({date:'2026-10-02',cutoff:'2026-10-02T08:00:00+08:00',kind:'FORWARD',
-    findExisting:async()=>({id:'locked',prediction_hash:'original-hash',observation_kind:'HISTORICAL_REPLAY'}),
+test('a matching locked historical authority is reused without recomputation',async()=>{
+  const result=await runAnalysisJob({date:'2026-10-02',cutoff:'2026-10-02T08:00:00+08:00',kind:'HISTORICAL_REPLAY',
+    findExisting:async()=>({id:'locked',prediction_hash:'original-hash',observation_kind:'HISTORICAL_REPLAY',analysis_cutoff_at:'2026-10-02T08:00:00+08:00'}),
     readInput:async()=>assert.fail('must not read again'),storeAnalysis:async()=>assert.fail('must not overwrite')});
   assert.equal(result.status,'ALREADY_RECORDED');assert.equal(result.prediction_hash,'original-hash');
   assert.equal(result.observation_kind,'HISTORICAL_REPLAY');assert.equal(result.production_writes,0);
+});
+test('replay authority cannot be returned as Forward or at a different cutoff',async()=>{
+  for(const [kind,cutoff] of [['FORWARD','2026-10-02T07:30:00+08:00'],['HISTORICAL_REPLAY','2026-10-02T08:00:00+08:00']]){
+    await assert.rejects(runAnalysisJob({date:'2026-10-02',cutoff,kind,
+      findExisting:async()=>({id:'historical',prediction_hash:'original',observation_kind:'HISTORICAL_REPLAY',analysis_cutoff_at:'2026-10-02T07:30:00+08:00'}),
+      readInput:async()=>assert.fail('must reject'),storeAnalysis:async()=>assert.fail('must not promote')}),/AUTHORITY_MISMATCH/);
+  }
 });
 test('performance sanity: deterministic bounded daily graph, no per-member analysis',()=>{
   const start=performance.now();for(let i=0;i<100;i++)analysis('2026-10-02');

@@ -65,11 +65,21 @@ for(const mode of ['anonymous','normal member','paid member'])test(mode+' cannot
 });
 test('owner loads both readonly RPCs; logout immediately removes data',async()=>{
   const h=await harness('owner');await h.release();assert(h.render().includes('市场分歧')||h.render().includes('市場分歧'));
-  assert.deepEqual(h.requests.sort(),['get_owner_analysis_v1','get_research_foundation_v1']);h.logout();assert(!h.render().includes('市場分歧'));
+  assert.deepEqual(h.requests.sort(),['get_owner_analysis_v2','get_research_foundation_v1']);h.logout();assert(!h.render().includes('市場分歧'));
 });
 test('logout race rejects both late RPC replies',async()=>{
   const h=await harness('owner');h.logout();await h.release();assert(!h.render().includes('市場分歧'));assert(h.render().includes('具名授權 Owner'));
 });
 test('unavailable sidecar does not claim success or expose raw errors',async()=>{
   const h=await harness('unavailable');await h.release();assert(h.render().includes('正式市場服務不受影響'));assert(!h.render().includes('PGRST202'));
+});
+test('Owner catalogue separates historical records from Forward and rejects mixed-mode responses',()=>{
+  const replay={...envelope,selected_mode:'HISTORICAL_REPLAY',historical_replay_count:3,
+    catalog:[{business_date:'2026-10-02'},{business_date:'2026-10-01'},{business_date:'2026-09-30'}]};
+  assert.equal(modules.intelligence.readOwnerAnalysis(replay).forward_sample,0);
+  for(const patch of [{selected_mode:'FORWARD_SHADOW'},{historical_replay_count:-1},
+    {catalog:[{business_date:'invalid'}]},{catalog:Array(91).fill({business_date:'2026-10-02'})}])
+    assert.throws(()=>modules.intelligence.readOwnerAnalysis({...replay,...patch}));
+  const forward=modules.intelligence.readOwnerAnalysis({...replay,selected_mode:'FORWARD_SHADOW',latest:null,catalog:[]});
+  assert.equal(forward.forward_sample,0);assert.equal(forward.historical_replay_count,3);
 });

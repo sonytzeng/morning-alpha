@@ -34,9 +34,10 @@ Deno.serve(async (request: Request) => {
       || !['FORWARD', 'HISTORICAL_REPLAY'].includes(String(input.observation_kind))
       || typeof input.analysis_cutoff_at !== 'string') return reply(400, { error: 'INPUT_INVALID' });
     const result = await runAnalysisJob({ date: input.business_date, cutoff: input.analysis_cutoff_at, kind: input.observation_kind,
-      findExisting: async (date: string) => {
-        const { data, error } = await client.from('research_daily_analysis').select('id,prediction_hash,observation_kind')
-          .eq('business_date', date).eq('methodology_id', 'ANALYSIS_INTELLIGENCE_V1').maybeSingle();
+      findExisting: async (date: string, cutoff: string, kind: string) => {
+        const { data, error } = await client.from('research_daily_analysis').select('id,prediction_hash,observation_kind,analysis_cutoff_at')
+          .eq('business_date', date).eq('analysis_cutoff_at', cutoff).eq('observation_kind', kind)
+          .eq('methodology_id', 'ANALYSIS_INTELLIGENCE_V1').eq('methodology_version', 1).maybeSingle();
         if (error) throw new Error('RESEARCH_READ_FAILED');
         return data;
       },

@@ -1,0 +1,205 @@
+{
+  "schema_version": "REVIEWED_BASELINE_TRANSITION_V1",
+  "transition_id": "MORNING_ALPHA_SHADOW_PERSISTENCE_20261005",
+  "candidate_base_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+  "predecessor_integrity_id": "MORNING_ALPHA_PREVIOUS_COMPARISON_20261005",
+  "approval_provenance": "Sony explicitly authorized the Shadow Analysis Persistence P0 candidate, unique Migration candidate, worker and Owner UI candidate, isolated historical replay dataset, tests, Commit Push PR and GitHub CI. No Production migration, deployment, UI publication, forward activation, Cron or strategy changes are authorized.",
+  "affected_tests_status": "PASS",
+  "affected_tests": [
+    "tests/analysisIntelligence.test.mjs",
+    "tests/analysisIntelligenceUI.test.mjs",
+    "tests/analysisIntelligencePersistence.integration.mjs",
+    "tests/analysisIntelligencePersistenceIntegrity.test.mjs"
+  ],
+  "baseline_excluded_reviewed_paths": [],
+  "baseline_restored_reviewed_paths": [],
+  "production_destructive_migration": false,
+  "auth_change": false,
+  "rls_relaxation": false,
+  "secret_change": false,
+  "historical_data_change": false,
+  "member_change": false,
+  "natural_day_pass_claimed": false,
+  "files": [
+    {
+      "path": ".github/workflows/analysis-intelligence.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "c0a6c360d6537e90e86cd54cc2a0c125098042cc4fa7d99a131304cec2483678",
+      "candidate_sha256": "bad0eaf7db29de17f4b896a36886d7010e02b5464b1d8fbee229035108a316ee",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "docs/10k-program/phase2-persistence-candidate.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "eb004e4c5c385a56571eaaf1ad771cdc27554edbb164c8b8a788da5002b92c58",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "src/features/research/intelligence.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "21e927b86792de67d852c6ee9219ab02b11d3fe48dd632e2f90c6209a472d463",
+      "candidate_sha256": "ac217aba76634ec0fe32bf8353b4609ec5a374ea35c0c2dbcb774d9cfa6d17d0",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "src/pages/admin/analysis/IntelligenceView.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "52fe12ae9f5b35577e88d7dd9bf56e965668bdc2fb3fe781ba903cc427e5fa67",
+      "candidate_sha256": "086d77a073f92b05d3e6c3bf456c64a4d42c1dc7ef256ae8b04930b5450564d3",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "src/pages/admin/analysis/page.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "0b6ea312d410992e89816ed8b4cfbf50aeee7d88bc1825ea13a2318240543cfe",
+      "candidate_sha256": "5a206b27b2d8f5c881beaaf2f0289f8dff18750ba05d49a9c95f27a851ceda70",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "supabase/functions/_shared/analysis-intelligence-job.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "717568533d3fcce2678370bb1106d8e2c7301ed46d250ae1bbdce0aae7a83d9d",
+      "candidate_sha256": "9958c2f67322a672537f320474284b98b19410956bae46b0a52d7592645dfef4",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "supabase/functions/research-analysis-shadow-v1/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "c2c66f09253b5a87e7b81752e5b0902f46e495a4e798bc472d36ee538c1e10f3",
+      "candidate_sha256": "5fea53fb80a40127ee502c3a3f0e2c2ec32920f38c1f557ada6beed7775881e4",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "supabase/migrations/20261005130832_analysis_shadow_persistence_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "489f603208453791d91c71ca9ab27db75160db48018f997f60eba0346b1d1d21",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "tests/analysisIntelligence.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "a9d6772383b1770c4bb8ebafd4f2f1b242fc796482b935be823055d2cf14e782",
+      "candidate_sha256": "0f3110405296de3e6fa823c11d06756dddc34677d0651ed508fbe2ab9c4f6f38",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "tests/analysisIntelligencePersistence.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "630963a2c13d9e582918d706199bcc2e9930e65c342f5dc48a84d519b4959150",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "tests/analysisIntelligencePersistenceIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "adebb1011e76c2ded90e5009f61a68b16bf87f413a3c863561512b748de54151",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "tests/analysisIntelligenceUI.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "1ee09400447b7d9cbcb6a6d90927ecbc82ccc89d92d2fd55084fa16ad99744c4",
+      "candidate_sha256": "78401ded2eef32f50a33876520daad08231cf368c354682c234d4ce5c6f78329",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "tests/browser/analysisIntelligence.vite.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "bf021c79e3051bbce2d123a6ece799c689e095bdd0030029dda8f3394ae566f0",
+      "candidate_sha256": "153f6bb4acc80e779008b72d4df7fc95e2386e9efe1da9299810f1b5a66c30f3",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "tests/browser/analysisIntelligenceHarness.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "c1925dc8750f8ac148c769226f7ff814b412c005928cec139081c5f7464bed91",
+      "candidate_sha256": "0d804e3e5a4ceefb6126f2309296fa0626f6e6c549606015de7dcd6874c09ebb",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "tests/browser/analysisIntelligenceSupabaseMock.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "73af56a801ebcf8ae557919b6e6d21020caeae927f933ac713157d4b1e1a61dc",
+      "candidate_sha256": "68167c0ef1169698aaf9cfbaa9688e590bb9433dc654a11ff2213af0863458a6",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "tests/helpers/analysisShadowHandler.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "2ad7b90b64febaddb0bcbc7d8aa9f945670d46fdcf6c9fbe2ab46c36f3e9e2f1",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "4dd5b4188f1503ef946b775910451a839a0dd2a156827e6b15ac92d283e634d0",
+      "candidate_sha256": "7c6e78d205ef85346692d55260d6a1266bf845646a7d9e3d8e4ce0dc3115f6cf",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    },
+    {
+      "path": "tests/ownerAccountAnalysisNavigation.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "a7c06135ac6664a8d758a9ef2ce4b2ffafb67252",
+      "predecessor_sha256": "b181c1db448e4cc0e234614d1b3f8696a236f15f992f7b081eb337c02ef94fde",
+      "candidate_sha256": "752f8dc7b88225cead35dbab6d9e119186c4814e20cc686f645c3ecda278ffeb",
+      "source_lineage": "Released PR192 predecessor retained byte-for-byte through immutable lineage; all 142 Core files remain sealed.",
+      "reason": "Minimum research-only persistence, replay/Forward authority separation, Owner read catalogue and directly affected verification.",
+      "rollback_target": "Candidate revision only; never rewrite historical business or immutable research artifacts."
+    }
+  ]
+}

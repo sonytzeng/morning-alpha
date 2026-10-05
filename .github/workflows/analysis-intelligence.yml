@@ -35,6 +35,11 @@ jobs:
           MA_ISOLATED_TEST_DB: ma_phase2_analysis_test1
           MA_TEST_PGPORT: 55440
         run: node tests/analysisIntelligenceDatabase.integration.mjs
+      - name: Fresh Shadow Handler persistence and Owner catalogue
+        env:
+          MA_ISOLATED_TEST_DB: ma_phase2_analysis_test2
+          MA_TEST_PGPORT: 55440
+        run: node tests/analysisIntelligencePersistence.integration.mjs
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x

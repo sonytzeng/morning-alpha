@@ -1,0 +1,202 @@
+{
+  "schema_version": "OWNER_TRADING_LAB_TRANSITION_V1",
+  "candidate_base_git_sha": "c7a13e2ef1d3d4232617dcf4b9bc541b5a975a9d",
+  "core_change": false,
+  "existing_auth_change": false,
+  "existing_rls_change": false,
+  "secret_change": false,
+  "cron_change": false,
+  "forward_enabled": false,
+  "production_deploy": false,
+  "files": [
+    {
+      "path": ".github/workflows/owner-trading-lab.yml",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "5166a9b953323300f2bb463bef849544e7b91e718a630c9a0c08116c68a3ae37"
+    },
+    {
+      "path": "docs/10k-program/owner-trading-lab-v1-release.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "c4529a7c1575730a7991258baba5805fbeace2a187e6fb0879f1ec1ddc99dd58"
+    },
+    {
+      "path": "docs/10k-program/owner-trading-lab-validation.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "f3d2f2b946a892707265967a52eec91f246603c3583847c256cef6d8ba7a674c"
+    },
+    {
+      "path": "src/features/research/tradingLab.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ae2ccf3a4c1811972f39f935a43ec5a9c7b7a90f497179a3ac2cf2e0a5f27a1d"
+    },
+    {
+      "path": "src/pages/admin/Admin.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c7a13e2ef1d3d4232617dcf4b9bc541b5a975a9d",
+      "predecessor_sha256": "b9bd8621077d6cc04f1105394cadd6474b0a0ab0302d441c310b6d80199ecc5b",
+      "candidate_sha256": "4d6a77ffb7b03db6d0b67e9316e3616a762f06f91a0a235d94fbba7a6b28ff25"
+    },
+    {
+      "path": "src/pages/admin/analysis/IntelligenceView.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c7a13e2ef1d3d4232617dcf4b9bc541b5a975a9d",
+      "predecessor_sha256": "086d77a073f92b05d3e6c3bf456c64a4d42c1dc7ef256ae8b04930b5450564d3",
+      "candidate_sha256": "55baf9ef334a3ce3bb10800b84a2e4509300214549f25fc462df467642536486"
+    },
+    {
+      "path": "src/pages/admin/analysis/TradingLab.tsx",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "40344e151b363a56b1e569610c033ae6e2464c803f8689844c2bb5feac9eb01d"
+    },
+    {
+      "path": "src/pages/admin/analysis/analysis.css",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "79177da78836552b51832f7d1246e1ca8869aa0a8e678f5c6f30da6516114211"
+    },
+    {
+      "path": "src/pages/admin/analysis/page.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c7a13e2ef1d3d4232617dcf4b9bc541b5a975a9d",
+      "predecessor_sha256": "5a206b27b2d8f5c881beaaf2f0289f8dff18750ba05d49a9c95f27a851ceda70",
+      "candidate_sha256": "b34ee6b3187e5b687aa61a7ea9dc0042b59e3fb9ea325c51f4074275b96547e5"
+    },
+    {
+      "path": "supabase/functions/_shared/owner-trading-lab.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "9007da1e57bb81b1e57aac24460d330ae7337e9f0471c1c90f34b4965ce82da2"
+    },
+    {
+      "path": "supabase/functions/owner-trading-lab-v1/index.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "be0b3ad7a116e9b6f6f6a3852fd98bdd8abe3b6de26d7de948829ac2f2b53928"
+    },
+    {
+      "path": "supabase/migrations/20261006082157_owner_trading_lab_v1.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "6d1b701321c34b08999aa6d4eaeb89e54584d5b7bf4bf849ece031c39bf907a5"
+    },
+    {
+      "path": "tests/analysisIntelligenceUI.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c7a13e2ef1d3d4232617dcf4b9bc541b5a975a9d",
+      "predecessor_sha256": "78401ded2eef32f50a33876520daad08231cf368c354682c234d4ce5c6f78329",
+      "candidate_sha256": "a839074d9f92e9783c9a0a8540b3a18d48659aa334ef6eaee82a88e49e62a51c"
+    },
+    {
+      "path": "tests/browser/analysisIntelligenceHarness.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c7a13e2ef1d3d4232617dcf4b9bc541b5a975a9d",
+      "predecessor_sha256": "0d804e3e5a4ceefb6126f2309296fa0626f6e6c549606015de7dcd6874c09ebb",
+      "candidate_sha256": "d98da052b0346f7abb9401b885a61bd2162ca15a92dcc9415dc3ca54cb81d518"
+    },
+    {
+      "path": "tests/browser/ownerTradingLab.vite.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "c7fffe0af8c388fcee8967a7046dec39a60bddfb6fe04ae787d14a52d5cf44f3"
+    },
+    {
+      "path": "tests/browser/ownerTradingLabHarness.tsx",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "486f74d961adf890f76c492ee5f2eb6be2e863ead4daf79a3ab6d2695b205dc6"
+    },
+    {
+      "path": "tests/browser/ownerTradingLabSupabaseMock.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "85dab59b2a5b703c6448aee3983a2d117e7439e88fe03f83a4f6cf16145b2a9c"
+    },
+    {
+      "path": "tests/helpers/owner-lab-import-map.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "783e2c7112eeb244a28bf84bb2e52bd73acfc288688d2da9c0289112841e15bf"
+    },
+    {
+      "path": "tests/helpers/ownerLabDenoServer.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "f0aeb0ec1356ec3144974bb9b87655551b7b63102d4ff23ab1055da9f744c06e"
+    },
+    {
+      "path": "tests/helpers/ownerLabIsolatedSdk.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "9c53819815cf325b0ec103641545bd56c16121b50f9f636b074f45c978dca67f"
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c7a13e2ef1d3d4232617dcf4b9bc541b5a975a9d",
+      "predecessor_sha256": "d79f0fe574409baf558f0f5583c9460cb3f82a0002cab2735c5dd9e0158fc6f1",
+      "candidate_sha256": "4669e4078b9b3a65e5255797c2632f82ca3280e6d493bfb29b8dbb00f231f904"
+    },
+    {
+      "path": "tests/ownerAccountAnalysisNavigation.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "c7a13e2ef1d3d4232617dcf4b9bc541b5a975a9d",
+      "predecessor_sha256": "752f8dc7b88225cead35dbab6d9e119186c4814e20cc686f645c3ecda278ffeb",
+      "candidate_sha256": "d0c2b43dcc7c64c272b62a2702eaeda70adac30f8f9cdf51c251a54acac142ea"
+    },
+    {
+      "path": "tests/ownerTradingLab.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "a6234667c764dba927da6ab8568955a67673b1c81d670b010e608ceba57dbbbe"
+    },
+    {
+      "path": "tests/ownerTradingLabDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "765a70afd0e5f53fd5a82ce3d27629d3de9edd383abc7756309539ae0d17e4da"
+    },
+    {
+      "path": "tests/ownerTradingLabHandler.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "8e44dbc3d14e7a6decc32e37b5877faf9848f5c4d35083fe40145d347bbdfba4"
+    },
+    {
+      "path": "tests/ownerTradingLabIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "2ac6cb6d9fc55565e33f875d3150f866e5535ba675c12a9ffbe4865f8d0026ff"
+    },
+    {
+      "path": "tests/ownerTradingLabUI.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "a3a3fb54ce4907aa966fa919752b554ed2465286444ed643f5457075b6a7fa9a"
+    }
+  ]
+}

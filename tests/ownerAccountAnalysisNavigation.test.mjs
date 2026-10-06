@@ -82,6 +82,8 @@ test('foundation graph count never substitutes for the mode-separated Forward sa
     if (name === '@/features/research/foundation') return { QUALITY_WINDOWS: [5, 20, 60, 90] };
     if (name === '@/features/research/intelligence') return {};
     if (name === './IntelligenceView') return { default: () => null };
+    if (name === './TradingLab') return { default: () => null }; // Separate Handler/UI suite validates this child.
+    if (name === './analysis.css') return {};
     throw new Error(name);
   } });
   for (const graphs of [0, 1, 100]) {

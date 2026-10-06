@@ -1,0 +1,26 @@
+{
+  "classification": "ISOLATED_SYNTHETIC_NOT_PRODUCTION",
+  "recovery": {"dataless_files": 0, "placeholder_files": 0, "git_fsck": "PASS"},
+  "isolated_database": "ma_owner_lab_test2607",
+  "real_http_handler": "PASS",
+  "owner_rls": "PASS",
+  "anonymous_member_paid_expired": "DENY",
+  "paper_live_exit": "PASS",
+  "idempotency_concurrency_immutability": "PASS",
+  "future_stale_forged_lineage_rejection": "PASS",
+  "browser": {
+    "desktop_1440": "PASS",
+    "mobile_375_390_430": "PASS_NO_HORIZONTAL_OVERFLOW",
+    "paper_live_exit_forms": "PASS",
+    "logout": "PASS_DATA_CLEARED",
+    "logout_race": "PASS_LATE_RESPONSE_DISCARDED",
+    "unavailable": "PASS_HONEST_UNAVAILABLE",
+    "non_owner": "PASS_NO_RESEARCH_RENDERED"
+  },
+  "production_operations": [],
+  "core_business_diff": 0,
+  "forward_enabled": false,
+  "sony_usability": "PENDING",
+  "public_product_approval": "NO",
+  "analysis_value": "INSUFFICIENT_EVIDENCE"
+}

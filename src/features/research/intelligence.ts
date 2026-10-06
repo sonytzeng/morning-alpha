@@ -16,6 +16,7 @@ export interface IntelligenceAnalysis {
   decision: { shadow_regime: string; shadow_direction: string; shadow_risk: string; shadow_action: string; shadow_confidence: number;
     confidence_kind: string; confidence_components: Record<string, number> };
   quality: { evidence_coverage: number; signal_coverage: number; traceability: number; contradiction_coverage: number; change_detection: string };
+  previous_comparison?: { status: string; reason: string | null };
   what_changed: { key: string; type: string; meaning: string; previous_business_date: string | null }[];
   invalidation_conditions: { invalidation_id: string; description: string; status: string }[];
   production_comparison: { market_regime: string; direction: string; action: string; confidence: number } | null;
@@ -23,6 +24,9 @@ export interface IntelligenceAnalysis {
 export interface OwnerAnalysis {
   schema_version: 'OWNER_ANALYSIS_V1'; mode: 'SHADOW_ONLY'; production_eligible: false;
   forward_sample: number; analysis_value: 'INSUFFICIENT_SAMPLE';
+  selected_mode?: 'HISTORICAL_REPLAY' | 'FORWARD_SHADOW';
+  historical_replay_count?: number;
+  catalog?: { business_date: string }[];
   latest: { id: string; analysis: IntelligenceAnalysis; created_at: string; compute_ms: number } | null;
   invalidations?: { invalidation_id: string; status: string; observed_at: string }[] | null;
 }
@@ -31,6 +35,15 @@ export function readOwnerAnalysis(value: unknown): OwnerAnalysis {
   const x = object(value), latest = object(x.latest), a = object(latest.analysis);
   if (x.schema_version !== 'OWNER_ANALYSIS_V1' || x.mode !== 'SHADOW_ONLY' || x.production_eligible !== false
     || x.analysis_value !== 'INSUFFICIENT_SAMPLE' || !Number.isInteger(x.forward_sample) || Number(x.forward_sample) < 0) throw Error('OWNER_ANALYSIS_CONTRACT');
+  if (x.selected_mode !== undefined) {
+    if (!['HISTORICAL_REPLAY','FORWARD_SHADOW'].includes(String(x.selected_mode))
+      || !Number.isInteger(x.historical_replay_count) || Number(x.historical_replay_count) < 0
+      || !Array.isArray(x.catalog) || x.catalog.length > 90
+      || x.catalog.some(row => !/^\d{4}-\d{2}-\d{2}$/.test(String(object(row).business_date))))
+      throw Error('ANALYSIS_CATALOG_CONTRACT');
+    if (x.latest !== null && a.observation_kind !== (x.selected_mode === 'FORWARD_SHADOW' ? 'FORWARD' : 'HISTORICAL_REPLAY'))
+      throw Error('ANALYSIS_MODE_MISMATCH');
+  }
   if (x.latest !== null) {
     if (a.schema_version !== 'ANALYSIS_INTELLIGENCE_V1' || a.mode !== 'SHADOW_ONLY' || a.production_eligible !== false
       || typeof a.business_date !== 'string' || typeof a.analysis_cutoff_at !== 'string'

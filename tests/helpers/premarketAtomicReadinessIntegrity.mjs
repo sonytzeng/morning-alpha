@@ -367,11 +367,11 @@ function resolveAnalysisIntelligencePredecessorIntegrity(registry, artifactBytes
 export function readAnalysisIntelligencePredecessor(path, readSource = read) {
   const manifest=JSON.parse(readSource('docs/10k-program/phase2-comparison-transition.json'));
   const row=manifest.files.find(row=>row.path===path);
-  if(!row) return readSource(path);
+  if(!row) return readAnalysisComparisonPredecessor(path,readSource);
   if(row.operation==='ADD') throw Object.assign(new Error('absent from Phase 2 predecessor'),{code:'ENOENT'});
   return readReviewedGitPredecessor(row,root);
 }
-export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, readSource = read) {
+function resolveAnalysisComparisonIntegrity(registry, artifactBytes, readSource = read) {
   const manifest=JSON.parse(readSource('docs/10k-program/phase2-comparison-transition.json'));
   const candidate=resolveReviewedBaselineTransition({manifest,readSource,
     readPredecessor:row=>readReviewedGitPredecessor(row,root),
@@ -379,4 +379,21 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry, artifactBytes, r
     verifyPredecessor:predecessorRead=>resolveAnalysisIntelligencePredecessorIntegrity(registry,artifactBytes,predecessorRead)});
   return {...candidate.reviewedBaselinePredecessor,fileHash:candidate.fileHash,
     newCandidatePaths:candidate.newCandidatePaths,analysisComparisonCandidateIntegrity:candidate};
+}
+
+export function readAnalysisComparisonPredecessor(path,readSource=read) {
+  const manifest=JSON.parse(readSource('docs/10k-program/phase2-persistence-transition.json'));
+  const row=manifest.files.find(row=>row.path===path);
+  if(!row)return readSource(path);
+  if(row.operation==='ADD')throw Object.assign(new Error('absent from comparison predecessor'),{code:'ENOENT'});
+  return readReviewedGitPredecessor(row,root);
+}
+export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,readSource=read) {
+  const manifest=JSON.parse(readSource('docs/10k-program/phase2-persistence-transition.json'));
+  const candidate=resolveReviewedBaselineTransition({manifest,readSource,
+    readPredecessor:row=>readReviewedGitPredecessor(row,root),
+    expectedPredecessorIntegrityId:'MORNING_ALPHA_PREVIOUS_COMPARISON_20261005',
+    verifyPredecessor:predecessorRead=>resolveAnalysisComparisonIntegrity(registry,artifactBytes,predecessorRead)});
+  return {...candidate.reviewedBaselinePredecessor,fileHash:candidate.fileHash,
+    newCandidatePaths:candidate.newCandidatePaths,analysisPersistenceCandidateIntegrity:candidate};
 }

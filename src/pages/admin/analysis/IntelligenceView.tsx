@@ -10,13 +10,14 @@ export default function IntelligenceView({ data }: { data: OwnerAnalysis }) {
   return <section className="space-y-5" aria-labelledby="daily-analysis-title">
     <header><p className="text-xs font-semibold text-amber-700">Owner-only · SHADOW_ONLY · 不影響正式決策</p>
       <h2 id="daily-analysis-title" className="mt-1 text-2xl font-bold">今日分析</h2>
-      <p className="mt-2 text-sm">資料日期 {a.business_date} · {a.observation_kind === 'HISTORICAL_REPLAY' ? '歷史重播，不計入 Forward Sample' : '事前鎖定觀測'}</p>
+      <p className="mt-2 text-sm">資料日期 {a.business_date} · {a.observation_kind === 'HISTORICAL_REPLAY' ? 'HISTORICAL_REPLAY · 歷史重播 · NOT_FORWARD · NOT_PRODUCTION_DECISION' : 'FORWARD_SHADOW · 事前鎖定觀測'}</p>
+      {a.observation_kind === 'HISTORICAL_REPLAY' ? <p className="text-xs text-slate-500">重播建立時間：{data.latest?.created_at}</p> : null}
       <p className="text-xs text-slate-500">分析截止：{a.analysis_cutoff_at} · Report：{a.report_level}</p>
       <p className="mt-2 text-sm">Forward Sample：{data.forward_sample} · Analysis Value：INSUFFICIENT_SAMPLE</p>
     </header>
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[['市場型態',d.shadow_regime],['市場方向',d.shadow_direction],['風險',d.shadow_risk],['研究操作',d.shadow_action]].map(([key,value]) =>
       <article key={key} className="rounded-xl border bg-white p-4"><h3 className="text-sm text-slate-500">{key}</h3><p className="mt-2 font-semibold">{label(value)}</p></article>)}</div>
-    <section className="rounded-xl border bg-white p-4"><h3 className="font-semibold">證據信心 {d.shadow_confidence.toFixed(1)} / 100</h3>
+    <section className="rounded-xl border bg-white p-4"><h3 className="font-semibold">證據信心 {d.shadow_confidence.toFixed(4)} / 100</h3>
       <p className="mt-2 text-sm text-amber-800">尚未完成結果校準。這不是上漲機率，也不是勝率。</p>
       <p className="mt-2 text-sm">分歧 {a.signal_conflict_score} / 100；缺失證據 {a.missing_signals.length} 項，已反映在信心扣分。</p>
       <details className="mt-3 text-sm"><summary className="cursor-pointer">信心如何計算</summary><dl className="mt-2 grid grid-cols-2 gap-2">
@@ -37,7 +38,8 @@ export default function IntelligenceView({ data }: { data: OwnerAnalysis }) {
     <section className="rounded-xl border bg-white p-4"><h3 className="font-semibold">跨訊號確認</h3><ul className="mt-3 space-y-2 text-sm">{a.cross_signals.map(s => <li key={s.signal_id}>{s.label}：{s.status === 'AVAILABLE' ? label(s.direction) : '組成訊號不足，不推論'}</li>)}</ul></section>
     <section className="rounded-xl border bg-white p-4"><h3 className="font-semibold">今天與上一有效交易日有何變化</h3>
       {a.quality.change_detection === 'UNAVAILABLE'
-        ? <p className="mt-3 text-sm">缺少可比較的前一有效交易日證據，本日分析仍依當日完整市場證據成立。</p>
+        ? <div><p className="mt-3 text-sm">缺少可比較的前一有效交易日證據，本日分析仍依當日完整市場證據成立。</p>
+          <p className="mt-2 break-words text-xs text-slate-500">What Changed：UNAVAILABLE · Reason：{a.previous_comparison?.reason || 'UNAVAILABLE'}</p></div>
         : <ul className="mt-3 space-y-2 text-sm">{a.what_changed.map(c => <li key={c.key}>{c.meaning} <span className="text-xs text-slate-500">{c.previous_business_date || '無可比較日期'}</span></li>)}</ul>}</section>
     <section className="rounded-xl border bg-white p-4"><h3 className="font-semibold">什麼情況會推翻今天判斷</h3><ul className="mt-3 space-y-3 text-sm">{a.invalidation_conditions.map(c => {
       const observed = data.invalidations?.find(i => i.invalidation_id === c.invalidation_id);

@@ -1,0 +1,94 @@
+/* Owner Analysis Center only: reuse the existing Morning Alpha theme palette.
+   No data, authorization, or shared member-page styles are changed. */
+.owner-analysis-layout {
+  @apply bg-navy-950 text-surface-100;
+  color-scheme: dark;
+}
+
+.owner-analysis-layout main {
+  @apply text-surface-100;
+  overflow-wrap: anywhere;
+}
+
+.owner-analysis-layout main :where(section, article, details, dl, div, label) {
+  min-width: 0;
+}
+
+.owner-analysis-layout .bg-white {
+  @apply bg-navy-900;
+}
+
+.owner-analysis-layout :is(.border, .border-b, .border-r) {
+  @apply border-surface-700;
+}
+
+.owner-analysis-layout :is(h1, h2, h3, h4, .text-foreground-900) {
+  @apply text-surface-50;
+}
+
+.owner-analysis-layout :is(.text-slate-500, .text-slate-600,
+  .text-foreground-300, .text-foreground-400, .text-foreground-500,
+  .text-foreground-600) {
+  @apply text-surface-300;
+}
+
+.owner-analysis-layout :is(.text-amber-700, .text-amber-800) {
+  @apply text-amber-300;
+}
+
+.owner-analysis-layout .bg-background-100 {
+  @apply bg-navy-800 text-surface-200;
+}
+
+.owner-analysis-layout nav .bg-primary-500 {
+  @apply bg-forest-300 text-navy-950;
+}
+
+.owner-analysis-layout :where(a, button, summary, select):focus-visible {
+  @apply outline outline-2 outline-offset-2 outline-forest-300;
+}
+
+.owner-analysis-layout :where(a, button, summary, select) {
+  min-height: 44px;
+}
+
+.owner-analysis-layout summary {
+  @apply cursor-pointer text-forest-200;
+  padding-block: 12px;
+  line-height: 1.5;
+}
+
+.owner-analysis-layout :where(summary, button):hover,
+.owner-analysis-layout nav a:not(.bg-primary-500):hover {
+  @apply bg-navy-800 text-surface-50;
+}
+
+.owner-analysis-layout select {
+  @apply border-surface-400 bg-navy-800 text-surface-50;
+  max-width: 100%;
+  margin-left: 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.owner-analysis-layout :where(input, textarea) {
+  @apply border-surface-400 bg-navy-800 text-surface-50;
+  min-height: 44px;
+  font-size: 16px;
+}
+
+.owner-analysis-layout button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.owner-analysis-layout main label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.owner-analysis-layout :where(dd, dt, li, p, h1, h2, h3, h4, summary) {
+  overflow-wrap: anywhere;
+}

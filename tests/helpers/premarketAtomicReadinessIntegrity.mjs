@@ -401,14 +401,14 @@ function resolveAnalysisPersistenceIntegrity(registry,artifactBytes,readSource=r
 export function readShadowAuthPredecessor(path,readSource=read) {
   const manifest=JSON.parse(readSource('docs/10k-program/phase2-shadow-auth-transition.json'));
   const row=manifest.files.find(r=>r.path===path);
-  if(!row)return readSource(path);
+  if(!row)return readTradingLabPredecessor(path,readSource);
   if(row.operation==='ADD')throw Object.assign(new Error('absent from Shadow Auth predecessor'),{code:'ENOENT'});
   return readReviewedGitPredecessor(row,root);
 }
 
 // Separate explicitly-authorized worker Auth successor. Never pretend this is a
 // no-auth-change generic baseline or alter any predecessor seal/Core Auth behavior.
-export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,readSource=read) {
+function resolveShadowWorkerAuthIntegrity(registry,artifactBytes,readSource=read) {
   const m=JSON.parse(readSource('docs/10k-program/phase2-shadow-auth-transition.json'));
   assert.equal(m.schema_version,'SHADOW_WORKER_AUTH_TRANSITION_V1');
   assert.equal(m.candidate_base_git_sha,'8561f4cb78ccc7b5e49885dd18585a0cfe63f41c');
@@ -444,4 +444,67 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,rea
   return {...before,fileHash:row=>hashes.get(row.path)??before.fileHash(row),
     newCandidatePaths:[...new Set([...before.newCandidatePaths,...m.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
     shadowWorkerAuthCandidateIntegrity:{reviewedBaselineTransition:m}};
+}
+const tradingLabManifest='docs/10k-program/owner-trading-lab-transition.json';
+export function readTradingLabPredecessor(path,readSource=read) {
+ const m=JSON.parse(readSource(tradingLabManifest)),row=m.files.find(r=>r.path===path);
+ if(!row)return readSource(path);
+ if(row.operation==='ADD')throw Object.assign(new Error('absent from Owner Lab predecessor'),{code:'ENOENT'});
+ return readReviewedGitPredecessor(row,root);
+}
+export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,readSource=read) {
+ const m=JSON.parse(readSource(tradingLabManifest));
+ assert.equal(m.schema_version,'OWNER_TRADING_LAB_TRANSITION_V1');
+ assert.equal(m.candidate_base_git_sha,'c7a13e2ef1d3d4232617dcf4b9bc541b5a975a9d');
+ assert.deepEqual(m.files.map(r=>r.path).sort(),[
+  ".github/workflows/owner-trading-lab.yml",
+  "docs/10k-program/owner-trading-lab-v1-release.md",
+  "docs/10k-program/owner-trading-lab-validation.json",
+  "src/features/research/tradingLab.ts",
+  "src/pages/admin/Admin.tsx",
+  "src/pages/admin/analysis/IntelligenceView.tsx",
+  "src/pages/admin/analysis/TradingLab.tsx",
+  "src/pages/admin/analysis/analysis.css",
+  "src/pages/admin/analysis/page.tsx",
+  "supabase/functions/_shared/owner-trading-lab.ts",
+  "supabase/functions/owner-trading-lab-v1/index.ts",
+  "supabase/migrations/20261006082157_owner_trading_lab_v1.sql",
+  "tests/analysisIntelligenceUI.test.mjs",
+  "tests/browser/analysisIntelligenceHarness.tsx",
+  "tests/browser/ownerTradingLab.vite.ts",
+  "tests/browser/ownerTradingLabHarness.tsx",
+  "tests/browser/ownerTradingLabSupabaseMock.ts",
+  "tests/helpers/owner-lab-import-map.json",
+  "tests/helpers/ownerLabDenoServer.ts",
+  "tests/helpers/ownerLabIsolatedSdk.ts",
+  "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+  "tests/ownerAccountAnalysisNavigation.test.mjs",
+  "tests/ownerTradingLab.test.mjs",
+  "tests/ownerTradingLabDatabase.integration.mjs",
+  "tests/ownerTradingLabHandler.integration.mjs",
+  "tests/ownerTradingLabIntegrity.test.mjs",
+  "tests/ownerTradingLabUI.test.mjs"
+],'only the named Owner Trading Lab candidate files may transition');
+ for(const k of ['core_change','existing_auth_change','existing_rls_change','secret_change','cron_change','forward_enabled','production_deploy'])assert.equal(m[k],false);
+ assert.equal(new Set(m.files.map(r=>r.path)).size,m.files.length);
+ const restored=new Map(),hashes=new Map();
+ for(const row of m.files){
+  assert.match(row.candidate_sha256,/^[a-f0-9]{64}$/);
+  assert.equal(sha256(readSource(row.path)),row.candidate_sha256,`unreviewed candidate drift: ${row.path}`);
+  assert(['ADD','MODIFY'].includes(row.operation));
+  const before=readReviewedGitPredecessor(row,root);
+  if(row.operation==='ADD')assert.equal(row.predecessor_sha256,null);
+  else {assert.equal(row.predecessor_git_sha,m.candidate_base_git_sha);assert.equal(sha256(before),row.predecessor_sha256);}
+  restored.set(row.path,before);hashes.set(row.path,row.candidate_sha256);
+ }
+ const predecessorRead=path=>{
+  if(!restored.has(path))return readSource(path);
+  const bytes=restored.get(path);
+  if(bytes===null)throw Object.assign(new Error('absent from Owner Lab predecessor'),{code:'ENOENT'});
+  return bytes;
+ };
+ const before=resolveShadowWorkerAuthIntegrity(registry,artifactBytes,predecessorRead);
+ return {...before,fileHash:row=>hashes.get(row.path)??before.fileHash(row),
+  newCandidatePaths:[...new Set([...before.newCandidatePaths,...m.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
+  ownerTradingLabCandidateIntegrity:{reviewedBaselineTransition:m}};
 }

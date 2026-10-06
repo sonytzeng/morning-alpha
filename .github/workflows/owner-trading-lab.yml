@@ -1,0 +1,41 @@
+name: Owner trading lab gate
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  owner-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: isolated-ci-only
+        ports: [55441:5432]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGUSER: postgres
+      PGPASSWORD: isolated-ci-only
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: node --experimental-strip-types --test tests/ownerTradingLab*.test.mjs
+      - name: Fresh DB, real HTTP Handler, Owner RLS and immutable journal
+        env:
+          MA_ISOLATED_TEST_DB: ma_owner_lab_test1
+          MA_TEST_PGPORT: 55441
+        run: node --experimental-strip-types tests/ownerTradingLabHandler.integration.mjs
+      - run: deno check --no-lock supabase/functions/owner-trading-lab-v1/index.ts

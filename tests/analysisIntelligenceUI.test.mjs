@@ -17,6 +17,8 @@ function load(path,extra={}){
     if(name==='@/features/research/intelligence')return modules.intelligence;
     if(name==='@/features/research/foundation')return modules.foundation;
     if(name==='./IntelligenceView')return modules.view;
+    if(name==='./TradingLab')return {default:()=>null}; // independently covered by Owner Lab Handler/UI suite
+    if(name==='./analysis.css')return {};
     throw Error('UNEXPECTED_IMPORT:'+name);
   }});return exports;
 }
@@ -34,7 +36,7 @@ function textTree(node){
 }
 test('real historical analysis is honestly rendered with supporting, contradicting, proxy and missing states',()=>{
   const text=textTree(modules.view.default({data:modules.intelligence.readOwnerAnalysis(envelope)}));
-  for(const expected of ['今日分析','歷史重播','Forward Sample：','INSUFFICIENT_SAMPLE','反對主要判斷','Evidence Inspector','IEF','不可用，沒有補零','尚未完成結果校準','市場分歧','正式決策對照'])assert(text.includes(expected),expected);
+  for(const expected of ['今日分析','歷史重播','Forward Sample：','INSUFFICIENT_SAMPLE','反對主要判斷','Evidence Inspector','IEF','不可用，沒有補零','尚未完成Forward結果校準，不代表上漲機率','市場分歧','正式決策對照','WAIT／等待確認'])assert(text.includes(expected),expected);
   assert(!text.includes('[object Object]'));
 });
 test('empty and unavailable inputs never display fabricated metrics',()=>{
@@ -47,6 +49,7 @@ test('unavailable previous comparison never renders a fake unchanged or percenta
   const missing=analyzeIntelligence(realInput('2026-10-02'));
   const text=textTree(modules.view.default({data:{...envelope,latest:{...envelope.latest,analysis:missing}}}));
   assert(text.includes('缺少可比較的前一有效交易日證據，本日分析仍依當日完整市場證據成立。'));
+  assert(text.includes('無可比較前日資料'));
   assert(!text.includes('沒有新增方向變化'));assert(!text.includes('分析失敗'));
 });
 async function harness(mode){
@@ -65,6 +68,7 @@ for(const mode of ['anonymous','normal member','paid member'])test(mode+' cannot
 });
 test('owner loads both readonly RPCs; logout immediately removes data',async()=>{
   const h=await harness('owner');await h.release();assert(h.render().includes('市场分歧')||h.render().includes('市場分歧'));
+  assert(h.render().includes('Phase 2 Analysis Intelligence'));assert(h.render().includes('尚未開始Forward驗證'));
   assert.deepEqual(h.requests.sort(),['get_owner_analysis_v2','get_research_foundation_v1']);h.logout();assert(!h.render().includes('市場分歧'));
 });
 test('logout race rejects both late RPC replies',async()=>{

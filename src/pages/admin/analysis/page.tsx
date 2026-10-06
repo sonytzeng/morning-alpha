@@ -3,10 +3,12 @@ import { supabase } from '@/lib/supabase';
 import { readFoundation, QUALITY_WINDOWS, type ResearchFoundation } from '@/features/research/foundation';
 import { readOwnerAnalysis, type OwnerAnalysis } from '@/features/research/intelligence';
 import IntelligenceView from './IntelligenceView';
+import TradingLab from './TradingLab';
+import './analysis.css';
 
 export function ResearchFoundationView({ data }: { data: ResearchFoundation }) {
   return <section className="space-y-6" aria-labelledby="analysis-title">
-    <header><p className="text-xs font-semibold text-amber-700">僅限 Owner · Shadow · Phase 1 基礎</p>
+    <header><p className="text-xs font-semibold text-amber-700">僅限 Owner · Shadow · 研究基礎</p>
       <h1 id="analysis-title" className="mt-2 text-2xl font-bold">分析研究中心</h1>
       <p className="mt-2 text-sm text-slate-600">研究與正式策略隔離。本區顯示定義與版本，不代表分析績效；未啟用 Rule Promotion。</p></header>
     <div className="grid gap-3 sm:grid-cols-3">
@@ -61,6 +63,11 @@ export default function OwnerAnalysisPage() {
     return () => { active = false; subscription.subscription.unsubscribe(); };
   }, [selectedMode, selectedDate]);
   if (state.kind === 'ready' && state.data) return <div className="space-y-8">
+    <TradingLab />
+    <details className="rounded-xl border p-4"><summary className="cursor-pointer font-semibold">進階研究：歷史重播、訊號、Evidence 與版本</summary><div className="mt-4 space-y-6">
+    <header><p className="text-xs font-semibold text-amber-700">僅限 Owner · 獨立研究，不影響正式決策</p>
+      <h1 className="mt-2 text-2xl font-bold">Phase 2 Analysis Intelligence</h1>
+      <p className="mt-2 text-sm text-slate-600">從市場證據看支持、反對與變化，再核對目前研究判斷及失效條件。</p></header>
     {state.intelligence ? <section aria-label="分析資料集" className="rounded-xl border bg-white p-4">
       <div className="flex flex-wrap gap-3">
         <label className="text-sm">分析模式<select aria-label="分析模式" className="ml-2 rounded border p-2" value={selectedMode}
@@ -72,11 +79,15 @@ export default function OwnerAnalysisPage() {
           <option value="">最新一筆</option>{state.intelligence.catalog?.map(row => <option key={row.business_date} value={row.business_date}>{row.business_date}</option>)}
         </select></label>
       </div>
-      <p className="mt-3 text-sm">Historical Replay Count：{state.intelligence.historical_replay_count ?? '未提供'} · Forward Sample：{state.intelligence.forward_sample}</p>
-      <p className="mt-2 text-xs text-slate-500">歷史重播只用於檢查分析內容，不是事前預測，不計入有效 Forward 樣本。Analysis Value：INSUFFICIENT_SAMPLE</p>
+      <dl className="mt-4 grid grid-cols-2 gap-3"><div><dt className="text-sm text-slate-600">歷史重播</dt><dd className="text-2xl font-semibold">{state.intelligence.historical_replay_count ?? '未提供'}</dd></div>
+        <div><dt className="text-sm text-slate-600">Forward Shadow 樣本</dt><dd className="text-2xl font-semibold">{state.intelligence.forward_sample}</dd></div></dl>
+      {state.intelligence.forward_sample === 0 ? <p className="mt-3 text-sm">尚未開始Forward驗證</p> : null}
+      <p className="mt-2 text-sm text-slate-600">歷史重播只用於檢查分析內容，不是事前預測，不計入有效 Forward 樣本。</p>
+      <p className="mt-2 break-words text-sm">Analysis Value：INSUFFICIENT_SAMPLE（尚無足夠事前驗證樣本）</p>
     </section> : null}
     {state.intelligence ? <IntelligenceView data={state.intelligence} /> : <p role="status" className="rounded-xl border bg-white p-4 text-sm">Phase 2 分析候選尚未啟用或目前不可用；正式市場服務不受影響。</p>}
     <details className="rounded-xl border p-4"><summary className="cursor-pointer font-semibold">研究基礎與版本 Registry</summary><div className="mt-4"><ResearchFoundationView data={state.data} /></div></details>
+    </div></details>
   </div>;
   return <section className="rounded-xl border bg-white p-6" role="status" aria-live="polite">
     <h1 className="text-xl font-bold">分析研究中心</h1><p className="mt-3 text-sm text-slate-600">{state.kind === 'loading' ? '確認 Owner 存取權限中…'

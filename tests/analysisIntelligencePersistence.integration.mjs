@@ -1,5 +1,5 @@
 // Fresh DB: real Handler → Engine → SQL store → Owner RLS/read, never Production.
-import {shadowHandler} from './helpers/analysisShadowHandler.mjs';
+import {shadowHttp} from './helpers/analysisShadowHttp.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -84,13 +84,37 @@ const sdk={
   throw Error('UNAPPROVED_RPC');
  }
 };
-const call=shadowHandler(sdk);
+const http=await shadowHttp(sdk);
 const request=day=>({operation:'ANALYZE',business_date:day,analysis_cutoff_at:day+'T07:30:00+08:00',observation_kind:'HISTORICAL_REPLAY'});
-assert.equal((await call(request('2026-09-30'),false)).status,401);assert.equal(reads,0);assert.equal(writes,0);
+try {
+const authCases=[
+ ['missing',{},'AUTH_MISSING'],
+ ['wrong',{...http.headers(),'x-shadow-worker-token':'W'.repeat(43)},'AUTH_INVALID'],
+ ['cron',{'x-cron-secret':'ISOLATION_OTHER_IDENTITY'},'AUTH_MISSING'],
+ ['service-role',{'apikey':'ISOLATED_DB_ONLY'},'AUTH_MISSING'],
+ ['member',{authorization:'Bearer ISOLATED_MEMBER'},'AUTH_MISSING'],
+ ['owner-browser',{authorization:'Bearer ISOLATED_OWNER',origin:'https://owner.invalid'},'AUTH_INVALID'],
+ ['browser-dedicated',{...http.headers(),origin:'https://owner.invalid'},'AUTH_INVALID'],
+ ['version',{...http.headers(),'x-shadow-worker-version':'2'},'AUTH_VERSION_MISMATCH'],
+ ['expired',{...http.headers(),'x-shadow-worker-issued-at':String(Date.now()-600000)},'AUTH_EXPIRED'],
+];
+for(const [label,headers,reason] of authCases){
+ const response=await http.request(request('2026-09-30'),headers);
+ assert.equal(response.status,401,label);assert.equal((await response.json()).error,reason,label);
+}
+assert.equal(reads,0);assert.equal(writes,0);assert.equal(http.calls(),0);
+for(const body of [{...request('2026-09-30'),observation_kind:'FORWARD'},
+ {...request('2026-09-30'),operation:'LINK_OUTCOME'},{...request('2026-09-30'),operation:'OBSERVE_INVALIDATION'},
+ {...request('2026-09-30'),rpc:'public.reports'},{...request('2026-09-30'),business_date:'2026-10-06'}])
+ assert.equal((await http.request(body,http.headers())).status,403);
+assert.equal(http.calls(),0,'operation allowlist precedes privileged DB access');
+failWrite=true;
+const writeFailure=await http.call('2026-09-30');
+assert.equal(writeFailure.http,422);assert.equal(writeFailure.ok,false);
+assert.equal(sql('select count(*) from research_daily_analysis'),'0');failWrite=false;
 const results=[];
 for(const day of ['2026-09-30','2026-10-01','2026-10-02']){
- const response=await call(request(day));assert.equal(response.status,200);
- const receipt=await response.json();assert.equal(receipt.status,'RECORDED');assert.equal(receipt.production_writes,0);
+ const receipt=await http.call(day);assert.equal(receipt.http,200);assert.equal(receipt.status,'RECORDED');assert.equal(receipt.production_writes,0);
  const output=JSON.parse(sql(asRole('authenticated',`select get_owner_analysis_v2('HISTORICAL_REPLAY','${day}')`,owner)));
  const a=output.latest.analysis;assert.equal(a.business_date,day);assert.equal(a.observation_kind,'HISTORICAL_REPLAY');
  assert.equal(output.latest.not_forward,true);assert.equal(output.latest.not_production_decision,true);
@@ -104,12 +128,19 @@ for(const day of ['2026-09-30','2026-10-01','2026-10-02']){
  if(day==='2026-10-02'){assert.equal(a.decision.shadow_regime,'range');assert.equal(a.decision.shadow_direction,'BULLISH');assert.equal(a.decision.shadow_risk,'HIGH');assert.equal(a.decision.shadow_confidence,17.3047);}
  assert.equal(a.decision.shadow_action,'WAIT');
  const beforeReads=reads,beforeWrites=writes;
- const retry=await(await call(request(day))).json();assert.equal(retry.status,'ALREADY_RECORDED');
- assert.equal(retry.analysis_id,receipt.analysis_id);assert.equal(retry.prediction_hash,receipt.prediction_hash);
+ // The complete second pass is below; no in-loop hidden retries.
  assert.equal(reads,beforeReads);assert.equal(writes,beforeWrites);
  results.push({day,status:'PASS',confidence:a.decision.shadow_confidence});
 }
 assert.equal(sql('select count(*) from research_historical_replay_v1'),'3');
+const firstLock=sql('select md5(jsonb_agg(t order by id)::text) from research_daily_analysis t');
+for(const day of ['2026-09-30','2026-10-01','2026-10-02']){
+ const r=await http.call(day);assert.equal(r.http,200);assert.equal(r.status,'ALREADY_RECORDED');
+ const stored=JSON.parse(sql(`select jsonb_build_object('id',id,'hash',prediction_hash) from research_daily_analysis where business_date='${day}'`));
+ assert.equal(r.analysis_id,stored.id);assert.equal(r.prediction_hash,stored.hash);
+}
+assert.equal(sql('select count(*) from research_historical_replay_v1'),'3');
+assert.equal(sql('select md5(jsonb_agg(t order by id)::text) from research_daily_analysis t'),firstLock);
 assert.equal(sql('select count(*) from research_forward_shadow_v1'),'0');
 const catalogue=JSON.parse(sql(asRole('authenticated',"select get_owner_analysis_v2()",owner)));
 assert.equal(catalogue.historical_replay_count,3);assert.equal(catalogue.catalog.length,3);
@@ -132,14 +163,13 @@ for(const role of ['authenticated','service_role']){
 }
 denied('truncate research_daily_analysis cascade');
 // A historical row cannot satisfy a Forward request; actual clock rejects backdating.
-const bad=await call({...request('2026-10-02'),observation_kind:'FORWARD'});assert.equal(bad.status,422);
+const bad=await http.request({...request('2026-10-02'),observation_kind:'FORWARD'},http.headers());assert.equal(bad.status,403);
 assert.equal(sql('select count(*) from research_forward_shadow_v1'),'0');
 // Missing / write-failure controls exercise actual Handler without touching any business code.
-assert.equal((await call(request('2026-09-29'))).status,422);
-failWrite=true;
-const outage=await call({...request('2026-10-02'),analysis_cutoff_at:'2026-10-02T07:31:00+08:00'});
-assert.equal(outage.status,422);assert.equal((await outage.json()).production_affected,false);failWrite=false;
+assert.equal((await http.request(request('2026-09-29'),http.headers())).status,403);
+assert.equal((await http.request({...request('2026-10-02'),analysis_cutoff_at:'2026-10-02T07:31:00+08:00'},http.headers())).status,403);
 assert.equal(sql('select md5(jsonb_agg(t order by id)::text) from research_daily_analysis t'),locked);
 assert.equal(businessHash(),businessBefore);assert.equal(baseline(),before);
 console.log(JSON.stringify({fresh_db:db,handler_to_database_to_owner:'PASS',results,historical_replay_count:3,
- forward_sample:0,rls:'PASS',idempotency:'PASS',immutability:'PASS',deterministic_replay:'PASS',business_diff:0,external_network_calls:0}));
+ forward_sample:0,production_equivalent_auth_test:'PASS',auth_negative_cases:authCases.length,rls:'PASS',idempotency:'PASS',immutability:'PASS',deterministic_replay:'PASS',business_diff:0,external_network_calls:0}));
+} finally {await http.close();}

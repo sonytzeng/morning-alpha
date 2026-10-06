@@ -1,35 +1,25 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
-import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
+import { authorizeShadowWorker, permittedShadowReplay, SHADOW_TOKEN_ENV } from '../_shared/shadow-worker-auth.mjs';
 import { runAnalysisJob } from '../_shared/analysis-intelligence-job.mjs';
-import { observeInvalidations } from '../_shared/analysis-intelligence-v1.mjs';
 
 // Candidate only. No Cron, pipeline hooks, LINE transport, provider network or AI calls.
 Deno.serve(async (request: Request) => {
   const reply = (status: number, data: Record<string, unknown>) => Response.json(data, { status });
   if (request.method !== 'POST') return reply(405, { error: 'METHOD_NOT_ALLOWED' });
-  const auth = await authorizeInternalRequest(request.headers, internalCredentialsFromEnv());
-  if (!auth.ok) return reply(401, { error: 'INTERNAL_AUTH_REQUIRED' });
+  const auth = await authorizeShadowWorker(request.headers, Deno.env.get(SHADOW_TOKEN_ENV));
+  if (!auth.ok) {
+    // Strict allowlisted metadata only, no request/identity/token/error objects.
+    console.warn(JSON.stringify({event:'SHADOW_AUTH_REJECTED',reason:auth.reason,stage:auth.stage}));
+    return reply(401, { error: auth.reason });
+  }
   if (Number(request.headers.get('content-length') || 0) > 1024) return reply(413, { error: 'REQUEST_TOO_LARGE' });
   try {
     const body = await request.text();
     if (body.length > 1024) return reply(413, { error: 'REQUEST_TOO_LARGE' });
     const input = JSON.parse(body) as Record<string, unknown>;
+    if (!permittedShadowReplay(input)) return reply(403, {error:'SHADOW_OPERATION_DENIED'});
     const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       { auth: { persistSession: false, autoRefreshToken: false } });
-    if (input.operation === 'OBSERVE_INVALIDATION') {
-      const { data, error } = await client.rpc('research_invalidation_input_v1', { p_analysis_id: input.analysis_id,
-        p_checkpoint: input.checkpoint, p_cutoff: input.observed_at });
-      if (error || !data) throw new Error('INVALIDATION_UNAVAILABLE');
-      const result = observeInvalidations(data.analysis, data.observation);
-      const stored = await client.rpc('store_research_invalidation_v1', { p_input: data, p_result: result });
-      if (stored.error) throw new Error('INVALIDATION_STORE_FAILED');
-      return reply(200, { status: stored.data, mode: 'SHADOW_ONLY', production_writes: 0 });
-    }
-    if (input.operation === 'LINK_OUTCOME') {
-      const linked = await client.rpc('link_research_outcome_v1', { p_analysis_id: input.analysis_id, p_outcome_id: input.outcome_id });
-      if (linked.error) throw new Error('OUTCOME_UNAVAILABLE');
-      return reply(200, { status: linked.data, mode: 'SHADOW_ONLY', production_writes: 0 });
-    }
     if (input.operation !== 'ANALYZE' || !/^\d{4}-\d{2}-\d{2}$/.test(String(input.business_date))
       || !['FORWARD', 'HISTORICAL_REPLAY'].includes(String(input.observation_kind))
       || typeof input.analysis_cutoff_at !== 'string') return reply(400, { error: 'INPUT_INVALID' });

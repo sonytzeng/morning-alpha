@@ -1,0 +1,104 @@
+{
+  "schema_version": "SHADOW_WORKER_AUTH_TRANSITION_V1",
+  "candidate_base_git_sha": "8561f4cb78ccc7b5e49885dd18585a0cfe63f41c",
+  "worker_auth_change": true,
+  "core_auth_change": false,
+  "production_secret_change": false,
+  "production_deploy": false,
+  "rls_change": false,
+  "cron_change": false,
+  "forward_enabled": false,
+  "files": [
+    {
+      "path": ".github/workflows/analysis-intelligence.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "8561f4cb78ccc7b5e49885dd18585a0cfe63f41c",
+      "predecessor_sha256": "bad0eaf7db29de17f4b896a36886d7010e02b5464b1d8fbee229035108a316ee",
+      "candidate_sha256": "e795babb8dcbb41a639ddc6e083254a1dc3bfb7ed42cdd02f3541b83b9c2073f"
+    },
+    {
+      "path": "docs/10k-program/phase2-shadow-auth-candidate.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "752913641c7952f641e22723667a0d158bdddc53187dd0e9149b1348e4af298e"
+    },
+    {
+      "path": "scripts/research-shadow-caller.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "fce28adf660d3ca97a4ccbfeec5ee886a9aa87e68b950bcfa91f11321716c154"
+    },
+    {
+      "path": "supabase/functions/_shared/shadow-worker-auth.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "aba11f8e410a04fa0cec5eecdfacd7e15cc44b0306f282c6396b064fd05b2349"
+    },
+    {
+      "path": "supabase/functions/research-analysis-shadow-v1/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "8561f4cb78ccc7b5e49885dd18585a0cfe63f41c",
+      "predecessor_sha256": "5fea53fb80a40127ee502c3a3f0e2c2ec32920f38c1f557ada6beed7775881e4",
+      "candidate_sha256": "013798b5e08dc356a0a25abf75053d52946722894ba2f75aeab0d35ecefd6981"
+    },
+    {
+      "path": "tests/analysisIntelligencePersistence.integration.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "8561f4cb78ccc7b5e49885dd18585a0cfe63f41c",
+      "predecessor_sha256": "630963a2c13d9e582918d706199bcc2e9930e65c342f5dc48a84d519b4959150",
+      "candidate_sha256": "69fb4bd2c2f1f814870c13952e06527f641a893f151b7a9bca18511d035f8130"
+    },
+    {
+      "path": "tests/analysisIntelligenceShadowAuth.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "bf9d41e9a2c9aa0e5ffed891e41b68b4873d79ce2cd78a54ddee6d309938b7e7"
+    },
+    {
+      "path": "tests/analysisIntelligenceShadowAuthIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "fb3c24d3e19b579aae58b9418a715bfa8eb1ef05003509e9bfcbc9c9bc3f8b0e"
+    },
+    {
+      "path": "tests/helpers/analysisShadowHttp.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ad4ac37028570822a8565b809af9cb57111bdc945b330a5f674760d6d9c9c3f8"
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "8561f4cb78ccc7b5e49885dd18585a0cfe63f41c",
+      "predecessor_sha256": "7c6e78d205ef85346692d55260d6a1266bf845646a7d9e3d8e4ce0dc3115f6cf",
+      "candidate_sha256": "d79f0fe574409baf558f0f5583c9460cb3f82a0002cab2735c5dd9e0158fc6f1"
+    },
+    {
+      "path": "tests/helpers/shadow-http-import-map.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "4a0b96c7a2405ac66cd3720751acb43b1a2837a11006627968956cae048d0ecc"
+    },
+    {
+      "path": "tests/helpers/shadowDenoServer.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "3a2c36d3543aafd50c37dcd040f925f5fc74cea225dfbd78f536753736a0df8d"
+    },
+    {
+      "path": "tests/helpers/shadowIsolatedSdk.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "e92737cf9a553757f9f8b32e1700b716215a2fca3342e190117fc9455c2742c9"
+    }
+  ]
+}

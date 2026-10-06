@@ -29,18 +29,18 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - run: node --test tests/analysisIntelligence*.test.mjs
       - name: Fresh research-only database, immutable replay and Owner RLS
         env:
           MA_ISOLATED_TEST_DB: ma_phase2_analysis_test1
           MA_TEST_PGPORT: 55440
         run: node tests/analysisIntelligenceDatabase.integration.mjs
-      - name: Fresh Shadow Handler persistence and Owner catalogue
+      - name: PRODUCTION_EQUIVALENT_AUTH_TEST - controlled caller HTTP Deno persistence and Owner RLS
         env:
           MA_ISOLATED_TEST_DB: ma_phase2_analysis_test2
           MA_TEST_PGPORT: 55440
         run: node tests/analysisIntelligencePersistence.integration.mjs
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
       - run: deno check --no-lock supabase/functions/research-analysis-shadow-v1/index.ts

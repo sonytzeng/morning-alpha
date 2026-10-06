@@ -384,11 +384,11 @@ function resolveAnalysisComparisonIntegrity(registry, artifactBytes, readSource 
 export function readAnalysisComparisonPredecessor(path,readSource=read) {
   const manifest=JSON.parse(readSource('docs/10k-program/phase2-persistence-transition.json'));
   const row=manifest.files.find(row=>row.path===path);
-  if(!row)return readSource(path);
+  if(!row)return readShadowAuthPredecessor(path,readSource);
   if(row.operation==='ADD')throw Object.assign(new Error('absent from comparison predecessor'),{code:'ENOENT'});
   return readReviewedGitPredecessor(row,root);
 }
-export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,readSource=read) {
+function resolveAnalysisPersistenceIntegrity(registry,artifactBytes,readSource=read) {
   const manifest=JSON.parse(readSource('docs/10k-program/phase2-persistence-transition.json'));
   const candidate=resolveReviewedBaselineTransition({manifest,readSource,
     readPredecessor:row=>readReviewedGitPredecessor(row,root),
@@ -396,4 +396,52 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,rea
     verifyPredecessor:predecessorRead=>resolveAnalysisComparisonIntegrity(registry,artifactBytes,predecessorRead)});
   return {...candidate.reviewedBaselinePredecessor,fileHash:candidate.fileHash,
     newCandidatePaths:candidate.newCandidatePaths,analysisPersistenceCandidateIntegrity:candidate};
+}
+
+export function readShadowAuthPredecessor(path,readSource=read) {
+  const manifest=JSON.parse(readSource('docs/10k-program/phase2-shadow-auth-transition.json'));
+  const row=manifest.files.find(r=>r.path===path);
+  if(!row)return readSource(path);
+  if(row.operation==='ADD')throw Object.assign(new Error('absent from Shadow Auth predecessor'),{code:'ENOENT'});
+  return readReviewedGitPredecessor(row,root);
+}
+
+// Separate explicitly-authorized worker Auth successor. Never pretend this is a
+// no-auth-change generic baseline or alter any predecessor seal/Core Auth behavior.
+export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,readSource=read) {
+  const m=JSON.parse(readSource('docs/10k-program/phase2-shadow-auth-transition.json'));
+  assert.equal(m.schema_version,'SHADOW_WORKER_AUTH_TRANSITION_V1');
+  assert.equal(m.candidate_base_git_sha,'8561f4cb78ccc7b5e49885dd18585a0cfe63f41c');
+  assert.equal(m.worker_auth_change,true);
+  assert.deepEqual(m.files.map(r=>r.path).sort(),[
+    '.github/workflows/analysis-intelligence.yml','docs/10k-program/phase2-shadow-auth-candidate.md',
+    'scripts/research-shadow-caller.mjs','supabase/functions/_shared/shadow-worker-auth.mjs',
+    'supabase/functions/research-analysis-shadow-v1/index.ts','tests/analysisIntelligencePersistence.integration.mjs',
+    'tests/analysisIntelligenceShadowAuth.test.mjs','tests/analysisIntelligenceShadowAuthIntegrity.test.mjs',
+    'tests/helpers/analysisShadowHttp.mjs','tests/helpers/premarketAtomicReadinessIntegrity.mjs',
+    'tests/helpers/shadow-http-import-map.json','tests/helpers/shadowDenoServer.ts','tests/helpers/shadowIsolatedSdk.ts',
+  ].sort(),'only the named research-worker Auth candidate files may transition');
+  for(const key of ['core_auth_change','production_secret_change','production_deploy','rls_change','cron_change','forward_enabled'])assert.equal(m[key],false);
+  assert.equal(new Set(m.files.map(r=>r.path)).size,m.files.length);
+  const restored=new Map(),hashes=new Map();
+  for(const row of m.files){
+    assert.match(row.path,/^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*$/);assert(!row.path.split('/').includes('..'));
+    assert.match(row.candidate_sha256,/^[a-f0-9]{64}$/);
+    assert.equal(sha256(readSource(row.path)),row.candidate_sha256,`unreviewed candidate drift: ${row.path}`);
+    assert(['ADD','MODIFY'].includes(row.operation));
+    const before=readReviewedGitPredecessor(row,root);
+    if(row.operation==='ADD')assert.equal(row.predecessor_sha256,null);
+    else {assert.equal(row.predecessor_git_sha,m.candidate_base_git_sha);assert.equal(sha256(before),row.predecessor_sha256);}
+    restored.set(row.path,before);hashes.set(row.path,row.candidate_sha256);
+  }
+  const predecessorRead=path=>{
+    if(!restored.has(path))return readSource(path);
+    const value=restored.get(path);
+    if(value===null)throw Object.assign(new Error('absent from worker Auth predecessor'),{code:'ENOENT'});
+    return value;
+  };
+  const before=resolveAnalysisPersistenceIntegrity(registry,artifactBytes,predecessorRead);
+  return {...before,fileHash:row=>hashes.get(row.path)??before.fileHash(row),
+    newCandidatePaths:[...new Set([...before.newCandidatePaths,...m.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
+    shadowWorkerAuthCandidateIntegrity:{reviewedBaselineTransition:m}};
 }

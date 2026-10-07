@@ -1,4 +1,4 @@
-/** Shadow-only adapters. No credentials, persistence, strategy or V1 mutation.
+/** Shadow-only adapters. No credential storage, persistence, strategy or V1 mutation.
  * Public response fields are allowlisted; raw company/contact data is discarded. */
 import { isMarketTradingDate, previousMarketTradingDate } from './market-session-contract.mjs';
 import type { Row } from './decision-v1-data.ts';
@@ -12,6 +12,12 @@ export type ActualGrowth = {
  revenue_yoy:number|null; revenue_mom:number|null; actual_only:true; consensus:null;
 };
 export type V2SourceCapture<T> = {source:string; received_at:string; http:number|null; status:string; rows:T[]};
+type ShadowSource = V2SourceCapture<Shares|ActualGrowth>&{kind:string};
+export type FugleSharesCapture = V2SourceCapture<Shares>&{
+ kind:'shares'; symbol:string; requested_session:string|null; attempts:number;
+ provenance:'FUGLE_INSTITUTIONAL_SHARES';
+};
+export const V2_FUGLE_SHARES_URL='https://api.fugle.tw/marketdata/v1.0/stock/ownership/institutional-trades/';
 export type BenchmarkClose={date:string;close:number;source:string;available_at:string};
 export const V2_INDEX_URL='https://www.twse.com.tw/indicesReport/MI_5MINS_HIST';
 export function normalizeV2IndexHistory(payload:unknown,month:string,at:string):BenchmarkClose[]{
@@ -35,10 +41,10 @@ export async function acquireV2IndexHistory(options:{businessDate:string;fetcher
  const out:BenchmarkClose[]=[];let cursor=0;
  await Promise.all(Array.from({length:2},async()=>{while(cursor<months.length){const month=months[cursor++],url=V2_INDEX_URL+'?date='+month.replace('-','')+'01&response=json';
   for(let attempt=0;attempt<2;attempt++){try{
-   const response=await options.fetcher(url,{redirect:'error',signal:AbortSignal.any([options.signal,AbortSignal.timeout(8000)])});
-   if(!response.ok){await response.body?.cancel();if(![429,500,502,503,504].includes(response.status))break;throw Error('TRANSIENT');}
-   const payload=await boundedJson(response),rows=normalizeV2IndexHistory(payload,month,options.now());out.push(...rows.filter(r=>days.includes(r.date)));break;
-  }catch(e){if(options.signal.aborted||attempt===1||e instanceof Error&&e.message.startsWith('V2_INDEX_'))break;await new Promise(resolve=>setTimeout(resolve,1000));}}
+   const signal=AbortSignal.any([options.signal,AbortSignal.timeout(8000)]),response=await shadowFetch(options.fetcher,url,signal);
+   if(!response.ok){discard(response);if(![429,500,502,503,504].includes(response.status))break;throw Error('TRANSIENT');}
+   const payload=await boundedJson(response,signal),rows=normalizeV2IndexHistory(payload,month,options.now());options.signal.throwIfAborted();out.push(...rows.filter(r=>days.includes(r.date)));break;
+  }catch(e){if(options.signal.aborted||attempt===1||e instanceof Error&&e.message.startsWith('V2_INDEX_'))break;try{await pause(1000,options.signal);}catch{break;}}}
  }}));
  return out.sort((a,b)=>a.date.localeCompare(b.date));
 }
@@ -133,10 +139,11 @@ export function normalizeActualGrowth(payload:unknown,source:string,at:string,sy
  return out;
 }
 export function normalizeFugleShares(payload:unknown,source:string,at:string,symbol:string):Shares[]{
- const p=obj(payload),expected=`https://api.fugle.tw/marketdata/v1.0/stock/ownership/institutional-trades/${symbol}`;
- if(source!==expected||p.symbol!==symbol||!Array.isArray(p.data)||p.data.length>366)throw Error('V2_FUGLE_SHARES_SCHEMA_INVALID');
+ const p=obj(payload),expected=V2_FUGLE_SHARES_URL+symbol;
+ if(source!==expected||p.symbol!==symbol||p.unit!==undefined&&p.unit!=='SHARES'||!Array.isArray(p.data)||p.data.length>366)throw Error('V2_FUGLE_SHARES_SCHEMA_INVALID');
  const out:Shares[]=[];const seen=new Set<string>();
  for(const raw of p.data){const r=obj(raw),session=date(r.date);assertSession(session,at);
+  if(r.unit!==undefined&&r.unit!=='SHARES')throw Error('V2_FUGLE_SHARES_SCHEMA_INVALID');
   if(seen.has(session!))throw Error('V2_DUPLICATE_SESSION');seen.add(session!);
   const read=(k:string)=>{const x=obj(r[k]);return group(x.buy,x.sell,x.net);};
   const foreign=read('foreign'),trust=read('trust'),dealer=read('dealer');
@@ -145,12 +152,133 @@ export function normalizeFugleShares(payload:unknown,source:string,at:string,sym
  }
  return out;
 }
-async function boundedJson(response:Response){
+/** Abort must settle even if a transport/body ignores its AbortSignal. Late
+ * resolution/rejection is observed, but can never mutate a returned capture. */
+function abortable<T>(work:Promise<T>,signal:AbortSignal):Promise<T>{
+ return new Promise((resolve,reject)=>{
+  const abort=()=>{signal.removeEventListener('abort',abort);reject(Error('V2_ACQUISITION_DEADLINE'));};
+  signal.addEventListener('abort',abort,{once:true});
+  work.then(resolve,reject).finally(()=>signal.removeEventListener('abort',abort));
+  if(signal.aborted)abort();
+ });
+}
+function pause(ms:number,signal:AbortSignal):Promise<void>{
+ return new Promise((resolve,reject)=>{
+  const abort=()=>{clearTimeout(timer);signal.removeEventListener('abort',abort);reject(Error('V2_ACQUISITION_DEADLINE'));};
+  const timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},ms);
+  signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
+ });
+}
+function discard(response:Response){void response.body?.cancel().catch(()=>{});}
+async function shadowFetch(fetcher:typeof fetch,url:string,signal:AbortSignal,headers?:HeadersInit){
+ signal.throwIfAborted();
+ const work=fetcher(url,{headers,redirect:'error',signal}).then(response=>{
+  if(signal.aborted){discard(response);throw Error('V2_ACQUISITION_DEADLINE');}return response;
+ });
+ return await abortable(work,signal);
+}
+async function boundedJson(response:Response,signal?:AbortSignal,limit=8_000_000){
  const reader=response.body?.getReader();if(!reader)throw Error('V2_BODY_MISSING');
  let body='',size=0;const decoder=new TextDecoder();
- try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.length;if(size>8_000_000){await reader.cancel();throw Error('V2_RESPONSE_LIMIT');}body+=decoder.decode(part.value,{stream:true});}
+ try{while(true){const read=reader.read(),part=await(signal?abortable(read,signal):read);if(part.done)break;size+=part.value.length;if(size>limit)throw Error('V2_RESPONSE_LIMIT');body+=decoder.decode(part.value,{stream:true});}
   return JSON.parse(body+decoder.decode()) as unknown;
- }finally{reader.releaseLock();}
+ }finally{void reader.cancel().catch(()=>{});reader.releaseLock();}
+}
+/** Official ownership contract (60/min on entitled plans):
+ * https://developer.fugle.tw/docs/data/http-api/ownership/institutional-trades/
+ * https://developer.fugle.tw/docs/pricing/
+ * Only the preceding completed session; empty is unavailable, never zero/TWD.
+ * Single worker, <=8 starts/min, <=2 attempts/symbol, <=90s wall-clock.
+ * Reserve room for V1's existing <=50/min even if provider quotas share a key.
+ * Never consume/modify V1 permits; incomplete universe coverage stays explicit.
+ * This is a per-invocation bound, not a distributed account-wide quota lock. */
+export async function acquireV2FugleShares(options:{symbols:readonly string[];apiKey:string;fetcher:typeof fetch;now:()=>string;signal:AbortSignal;sleep?:(ms:number,signal:AbortSignal)=>Promise<void>}){
+ if(options.symbols.length>72||new Set(options.symbols).size!==options.symbols.length||options.symbols.some(s=>!/^\d{4,6}$/.test(s)))throw Error('V2_FUGLE_SCOPE_INVALID');
+ const start=options.now(),session=previousMarketTradingDate('TW',receipt(start).slice(0,10));
+ const symbols=options.symbols.includes('2330')?['2330',...options.symbols.filter(s=>s!=='2330')]:options.symbols;
+ const captures:FugleSharesCapture[]=symbols.map(symbol=>({kind:'shares',source:V2_FUGLE_SHARES_URL+symbol,symbol,requested_session:session,
+  provenance:'FUGLE_INSTITUTIONAL_SHARES',received_at:start,http:null,status:'NOT_ATTEMPTED',attempts:0,rows:[]}));
+ const signal=AbortSignal.any([options.signal,AbortSignal.timeout(90000)]),sleep=options.sleep??pause,deadline=Date.parse(start)+90000;
+ let nextStart=Date.parse(start),halt=!session?'V2_CALENDAR_UNAVAILABLE':!options.apiKey?'EXISTING_FUGLE_CREDENTIAL_UNAVAILABLE':'';
+ for(const capture of captures){
+  if(halt||signal.aborted){capture.status=halt||'BUDGET_NOT_ATTEMPTED';continue;}
+  const url=capture.source+'?from='+session+'&to='+session+'&sort=asc';
+  for(let attempt=0;attempt<2;attempt++){
+   let retry=false;
+   try{
+    if(nextStart>=deadline||Date.parse(options.now())>=deadline){halt='BUDGET_NOT_ATTEMPTED';capture.status=capture.attempts?'RETRY_BUDGET_EXHAUSTED':halt;break;}
+    // Cooldown is shared by all ownership requests, including the next symbol.
+    let wait=nextStart-Date.parse(options.now());
+    while(wait>0){await abortable(sleep(wait,signal),signal);wait=nextStart-Date.parse(options.now());}
+    if(Date.parse(options.now())>=deadline){halt='BUDGET_NOT_ATTEMPTED';capture.status=capture.attempts?'RETRY_BUDGET_EXHAUSTED':halt;break;}
+    signal.throwIfAborted();capture.attempts++;nextStart=Date.parse(options.now())+8000;
+    // Start the per-request timeout AFTER waiting for the pace/cooldown permit.
+    const requestSignal=AbortSignal.any([signal,AbortSignal.timeout(4000)]);
+    const response=await shadowFetch(options.fetcher,url,requestSignal,{'X-API-KEY':options.apiKey});
+    capture.http=response.status;capture.received_at=options.now();
+    if(!response.ok){
+     discard(response);
+     capture.status=response.status===401?'PROVIDER_AUTH_INVALID':response.status===403?'ENTITLEMENT_NON_RETRYABLE':`HTTP_${response.status}`;
+     if(response.status===401||response.status===403)halt=response.status===401?'AUTH_NOT_ATTEMPTED':'ENTITLEMENT_NOT_ATTEMPTED';
+     retry=[429,500,502,503,504].includes(response.status);
+     if(response.status===429){
+      const raw=response.headers.get('Retry-After'),seconds=raw!==null&&/^\d+(\.\d+)?$/.test(raw)?Number(raw):NaN,stamp=raw===null?NaN:Date.parse(raw);
+      const delay=Number.isFinite(seconds)?seconds*1000:Number.isFinite(stamp)?Math.max(0,stamp-Date.parse(options.now())):60000;
+      nextStart=Math.max(nextStart,Date.parse(options.now())+delay);
+     }
+    }else{
+     const payload=await boundedJson(response,requestSignal,250000),at=options.now();
+     let rows:Shares[];
+     try{rows=normalizeFugleShares(payload,capture.source,at,capture.symbol);}
+     catch{capture.status='FUGLE_SHARES_CONTRACT_INVALID';break;}
+     if(rows.some(r=>r.session!==session)){capture.status='FUGLE_SHARES_SESSION_MISMATCH';break;}
+     signal.throwIfAborted();capture.received_at=at;capture.rows=rows;capture.status=rows.length?'PASS':'NO_DATA';
+    }
+   }catch(error){
+    // Never expose thrown text, response bodies, URLs with credentials or headers.
+    if(signal.aborted){capture.status=capture.attempts?'ACQUISITION_DEADLINE':'BUDGET_NOT_ATTEMPTED';break;}
+    if(error instanceof SyntaxError){capture.status='PROVIDER_JSON_INVALID';break;}
+    if(error instanceof Error&&['V2_RESPONSE_LIMIT','V2_BODY_MISSING'].includes(error.message)){capture.status=error.message;break;}
+    capture.status='PROVIDER_TRANSPORT_OR_TIMEOUT';retry=true;
+   }
+   if(!retry||attempt===1)break;
+   nextStart=Math.max(nextStart,Date.parse(options.now())+1200);
+  }
+ }
+ return captures;
+}
+/** Fugle is canonical per symbol/session. Public data is only an explicit
+ * fallback, never relabelled Fugle. Do not dedupe within a provider: conflicting
+ * same-provider evidence still reaches the engine's existing fail-closed gate. */
+export function selectV2InstitutionalSources(fugle:FugleSharesCapture[],publicSources:ShadowSource[],cutoff:string):ShadowSource[]{
+ const available=(at:string)=>Number.isFinite(Date.parse(at))&&Date.parse(at)<=Date.parse(cutoff);
+ const withinCutoff=(c:ShadowSource):ShadowSource=>c.status==='PASS'&&(!available(c.received_at)||c.rows.some(r=>!available(r.available_at)))?{...c,status:'NOT_AVAILABLE_AT_CUTOFF',rows:[]}:c;
+ const canonical=fugle.map(withinCutoff),keys=new Set(canonical.filter(c=>c.status==='PASS').flatMap(c=>c.rows).filter((r):r is Shares=>'unit'in r).map(r=>r.symbol+':'+r.session));
+ return [...canonical,...publicSources.map(withinCutoff).map(c=>{
+  if(c.kind!=='shares')return c;
+  const rows=c.rows.filter(r=>!('unit'in r)||!keys.has(r.symbol+':'+r.session));
+  return {...c,rows,provenance:'OFFICIAL_PUBLIC_FALLBACK',superseded_by_fugle:c.rows.length-rows.length,
+   status:c.status==='PASS'&&c.rows.length>0&&rows.length===0?'SUPERSEDED_BY_FUGLE':c.status};
+ })];
+}
+/** Start beside V1, then stop and join when V1 finishes (including failure).
+ * No fire-and-forget assignment: all three jobs settle to evidence or an honest
+ * classification. Abort-aware fetch, body reads and sleeps make joining bounded. */
+export function startV2SourceAcquisition(options:{businessDate:string;symbols:readonly string[];apiKey:string;fetcher:typeof fetch;now:()=>string;signal:AbortSignal}){
+ const controller=new AbortController(),signal=AbortSignal.any([options.signal,controller.signal]);
+ const publicSignal=AbortSignal.any([signal,AbortSignal.timeout(30000)]);
+ const unavailable=(source:string,kind:string):ShadowSource=>({source,kind,received_at:options.now(),http:null,status:'SOURCE_UNAVAILABLE',rows:[]});
+ const publicWork=acquireV2PublicSources({symbols:options.symbols,fetcher:options.fetcher,now:options.now,signal:publicSignal}).catch(()=>[
+  unavailable(V2_SOURCE_URLS.twseShares,'shares'),unavailable(V2_SOURCE_URLS.tpexShares,'shares'),
+  unavailable(V2_SOURCE_URLS.twseGrowth,'growth'),unavailable(V2_SOURCE_URLS.tpexGrowth,'growth')]);
+ const indexWork=acquireV2IndexHistory({businessDate:options.businessDate,fetcher:options.fetcher,now:options.now,signal:publicSignal}).then(rows=>({rows,received_at:options.now(),status:rows.length?'PASS':publicSignal.aborted?'ACQUISITION_DEADLINE':'SOURCE_UNAVAILABLE'}),()=>({rows:[] as BenchmarkClose[],received_at:options.now(),status:'SOURCE_UNAVAILABLE'}));
+ const fugleWork=acquireV2FugleShares({...options,signal}).catch(()=>options.symbols.map((symbol):FugleSharesCapture=>({
+  ...unavailable(V2_FUGLE_SHARES_URL+symbol,'shares'),rows:[],kind:'shares',symbol,requested_session:null,attempts:0,provenance:'FUGLE_INSTITUTIONAL_SHARES'})));
+ const complete=Promise.all([publicWork,indexWork,fugleWork]).then(([publicSources,index,fugle])=>({
+  publicSources:[...publicSources,{source:V2_INDEX_URL,kind:'benchmark',received_at:index.received_at,http:null,status:index.status,rows:[]}],
+  benchmark_history:index.rows,fugle,
+ }));
+ return {complete,stop:()=>controller.abort()};
 }
 export async function acquireV2PublicSources(options:{symbols:readonly string[];fetcher:typeof fetch;now:()=>string;signal:AbortSignal}){
  const at=options.now(),local=receipt(at),today=local.slice(0,10);
@@ -165,12 +293,12 @@ export async function acquireV2PublicSources(options:{symbols:readonly string[];
  await Promise.all(Array.from({length:2},async()=>{while(cursor<tasks.length){const task=tasks[cursor++];
   const capture:typeof captures[number]={source:task.url,kind:task.kind,received_at:options.now(),http:null,status:'UNAVAILABLE',rows:[]};
   for(let attempt=0;attempt<2;attempt++){
-  try{const response=await options.fetcher(task.url,{redirect:'error',signal:AbortSignal.any([options.signal,AbortSignal.timeout(8000)])});capture.http=response.status;
-   if(!response.ok){await response.body?.cancel();capture.status='HTTP_'+response.status;}
-   else{const payload=await boundedJson(response);capture.received_at=options.now();capture.rows=task.normalize(payload,capture.received_at,options.symbols);capture.status='PASS';}
-  }catch(e){const message=e instanceof Error?e.message:'';capture.status=/^V2_[A-Z_]+$/.test(message)?message:'SOURCE_UNAVAILABLE';}
+  try{const signal=AbortSignal.any([options.signal,AbortSignal.timeout(8000)]),response=await shadowFetch(options.fetcher,task.url,signal);capture.http=response.status;
+   if(!response.ok){discard(response);capture.status='HTTP_'+response.status;}
+   else{const payload=await boundedJson(response,signal);options.signal.throwIfAborted();capture.received_at=options.now();capture.rows=task.normalize(payload,capture.received_at,options.symbols);capture.status=capture.rows.length?'PASS':'NO_DATA';}
+  }catch(e){const message=e instanceof Error?e.message:'';capture.status=options.signal.aborted?'ACQUISITION_DEADLINE':/^V2_[A-Z_]+$/.test(message)?message:'SOURCE_UNAVAILABLE';}
   if(options.signal.aborted||!['SOURCE_UNAVAILABLE','HTTP_429','HTTP_500','HTTP_502','HTTP_503','HTTP_504'].includes(capture.status)||attempt===1)break;
-  await new Promise(resolve=>setTimeout(resolve,1000));
+  try{await pause(1000,options.signal);}catch{capture.status='ACQUISITION_DEADLINE';break;}
   }
   captures.push(capture);
  }}));

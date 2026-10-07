@@ -33,6 +33,11 @@ jobs:
           MA_ISOLATED_TEST_DB: ma_v2_shadow_test1
           MA_TEST_DOCKER_CONTAINER: ma-recommendation-owner-ci
         run: node --experimental-strip-types tests/recommendationV2Database.integration.mjs
+      - name: Fresh database, WATCH and READY lock separation without access changes
+        env:
+          MA_ISOLATED_TEST_DB: ma_v2_watch_test1
+          MA_TEST_DOCKER_CONTAINER: ma-recommendation-owner-ci
+        run: node --experimental-strip-types tests/recommendationV2WatchLockDatabase.integration.mjs
       - name: Local-only Owner browser and deny paths
         env:
           MA_ISOLATED_TEST_DB: ma_v2_shadow_test1

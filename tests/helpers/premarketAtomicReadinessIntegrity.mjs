@@ -15,6 +15,7 @@ import { gatewayTransition } from './recommendationGatewayIntegrity.mjs';
 import { streamTransition } from './recommendationStreamIntegrity.mjs';
 import { closeTransition } from './recommendationCompletedCloseIntegrity.mjs';
 import { v2Transition } from './recommendationV2Integrity.mjs';
+import { v2RuntimeTransition } from './recommendationV2RuntimeIntegrity.mjs';
 
 const read = path => readFileSync(new URL('../../' + path, import.meta.url));
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -517,6 +518,8 @@ function resolveOwnerTradingLabIntegrity(registry,artifactBytes,readSource=read)
 }
 
 export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,readSource=read) {
+ const runtime=v2RuntimeTransition(readSource);
+ readSource=runtime.predecessorRead;
  const v2=v2Transition(readSource);
  const v2Hashes=new Map(v2.manifest.files.map(row=>[row.path,row.candidate_sha256]));
  const close=closeTransition(readSource);
@@ -531,7 +534,8 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,rea
  const hardHashes=new Map(hardGate.manifest.files.map(row=>[row.path,row.candidate_sha256]));
  const candidate=recommendationTransition(readSource);
  const before=resolveOwnerTradingLabIntegrity(registry,artifactBytes,candidate.predecessorRead);
- return {...before,fileHash:row=>v2Hashes.get(row.path)??closeHashes.get(row.path)??streamHashes.get(row.path)??gatewayHashes.get(row.path)??workerHashes.get(row.path)??hardHashes.get(row.path)??candidate.hashes.get(row.path)??before.fileHash(row),
-  newCandidatePaths:[...new Set([...before.newCandidatePaths,...v2.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...close.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...stream.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...candidate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...hardGate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...worker.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
+ return {...before,fileHash:row=>runtime.hashes.get(row.path)??v2Hashes.get(row.path)??closeHashes.get(row.path)??streamHashes.get(row.path)??gatewayHashes.get(row.path)??workerHashes.get(row.path)??hardHashes.get(row.path)??candidate.hashes.get(row.path)??before.fileHash(row),
+  newCandidatePaths:[...new Set([...before.newCandidatePaths,...runtime.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...v2.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...close.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...stream.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...candidate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...hardGate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...worker.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
+  recommendationV2RuntimeCandidateIntegrity:{reviewedBaselineTransition:runtime.manifest},
   recommendationPhaseCandidateIntegrity:{reviewedBaselineTransition:candidate.manifest}};
 }

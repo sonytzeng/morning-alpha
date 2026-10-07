@@ -6,7 +6,7 @@ import { isMarketTradingDate } from '../_shared/market-session-contract.mjs';
 import { acquireOfficialActuals } from '../_shared/recommendation-official-actuals.ts';
 import { acquireCompanyEvents } from '../_shared/recommendation-company-events.ts';
 import { recommendationJsonStream } from '../_shared/recommendation-stream.ts';
-import { acquireV2PublicSources, acquireV2IndexHistory } from '../_shared/recommendation-shadow-v2-sources.ts';
+import { startV2SourceAcquisition, selectV2InstitutionalSources } from '../_shared/recommendation-shadow-v2-sources.ts';
 import { buildV2Capsule } from '../_shared/recommendation-shadow-v2-runtime.ts';
 
 // Server-only, read-only source acquisition. Existing internal identity validator.
@@ -35,28 +35,27 @@ Deno.serve(async (request:Request)=>{
    return await query;
   },identity);
   const signal=AbortSignal.timeout(scope==='SMOKE_2330'?22000:240000);
-  // Optional Shadow sources share the acquisition window, never extend V1's
-  // critical path. Slow research sources remain unavailable for this cutoff.
-  const shadowController=new AbortController();
-  let shadowSources:Awaited<ReturnType<typeof acquireV2PublicSources>>=[];
-  let shadowIndex:Awaited<ReturnType<typeof acquireV2IndexHistory>>=[];
-  if(scope!=='SMOKE_2330')void acquireV2IndexHistory({businessDate:date,fetcher:fetch,now,signal:AbortSignal.any([signal,shadowController.signal,AbortSignal.timeout(30000)])}).then(rows=>{shadowIndex=rows;}).catch(()=>{});
-  if(scope!=='SMOKE_2330')void acquireV2PublicSources({symbols:RECOMMENDATION_UNIVERSE,fetcher:fetch,now,signal:AbortSignal.any([signal,shadowController.signal,AbortSignal.timeout(30000)])}).then(rows=>{shadowSources=rows;}).catch(()=>{});
+  // Shadow's <=8/min leaves headroom beside V1's existing <=50/min even under
+  // a shared-key quota. V1's permits/deadline remain unchanged. Edge-only secret.
+  const shadowWork=scope==='SMOKE_2330'?null:startV2SourceAcquisition({businessDate:date,symbols:RECOMMENDATION_UNIVERSE,
+   apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:fetch,now,signal});
+  let acquisitionCutoff=started;
   const [captures,officialActuals,companyEvents]=await Promise.all([
    acquireStockEvidence({businessDate:date,universe:data.universe,apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:fetch,now,signal,scope}),
    scope==='SMOKE_2330'?Promise.resolve([]):acquireOfficialActuals({symbols:RECOMMENDATION_UNIVERSE,fetcher:fetch,now,signal}),
    scope==='SMOKE_2330'?Promise.resolve([]):acquireCompanyEvents({symbols:RECOMMENDATION_UNIVERSE,fetcher:fetch,now,signal}),
-  ]);
-  shadowController.abort();
-  identity.generated_at=now();identity.data_as_of=identity.generated_at;
+  ]).finally(async()=>{shadowWork?.stop();acquisitionCutoff=now();await shadowWork?.complete;});
+  identity.generated_at=acquisitionCutoff;identity.data_as_of=identity.generated_at;
   const coverage=stockAcquisitionCoverage(captures,scope==='SMOKE_2330'?['2330']:RECOMMENDATION_UNIVERSE);
   if(scope==='SMOKE_2330')return reply(200,{scope,coverage,acquisition:{contract:'RECOMMENDATION_STOCK_EVIDENCE_V1',business_date:date,cutoff:identity.generated_at,universe_count:72,requested_count:1,captures},complete_universe_evaluation:false,business_writes:[]});
   // Factual events are a separate sourced-evidence layer, NOT fabricated V1
   // bullish catalyst mappings or consensus. The unchanged evaluator stays closed.
   const proof=await buildRecommendationProof(data,identity,captures,officialActuals);
+  const acquired=await shadowWork!.complete;
+  const shadowSources=selectV2InstitutionalSources(acquired.fugle,acquired.publicSources,identity.generated_at);
   // Calculation only. Forward persistence is deliberately absent here: the
   // same producer is used by read-only runtime smoke and real report callers.
-  const shadow=await buildV2Capsule({data,identity,captures,sources:shadowSources,benchmark_history:shadowIndex,events:companyEvents.flatMap(c=>c.events),events_complete:companyEvents.length===2&&companyEvents.every(c=>c.status==='PASS'),quarterly_actuals:officialActuals.filter(c=>c.kind==='quarterly_eps'&&c.status==='PASS').flatMap(c=>c.rows),v1:proof.decision}).catch(()=>null);
+  const shadow=await buildV2Capsule({data,identity,captures,sources:shadowSources,benchmark_history:acquired.benchmark_history,events:companyEvents.flatMap(c=>c.events),events_complete:companyEvents.length===2&&companyEvents.every(c=>c.status==='PASS'),quarterly_actuals:officialActuals.filter(c=>c.kind==='quarterly_eps'&&c.status==='PASS').flatMap(c=>c.rows),v1:proof.decision}).catch(()=>null);
   return reply(200,{...proof,company_events:companyEvents,scope,coverage,shadow_v2:shadow});
   };
   return scope==='SMOKE_2330'?await execute():recommendationJsonStream(execute,request.signal,{deadlineMs:260000});

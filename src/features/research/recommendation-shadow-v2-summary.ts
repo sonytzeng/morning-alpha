@@ -1,12 +1,14 @@
 /* Pure Owner research metrics; no network, credentials or production action. */
 export const V2_HORIZONS=[1,3,5,10,20] as const;
 const SUMMARY_METHODOLOGY='RECOMMENDATION_SHADOW_TREND_ACTUALS_2.0.0';
-export type SummaryOutcome={prediction_id:string;horizon:number;state:string;methodology_version:string;return:number|null;mfe:number|null;mae:number|null;exit_at:string|null};
+export type V2PredictionStatus='READY'|'WATCH';
+export type SummaryOutcome={prediction_id:string;prediction_status?:string;horizon:number;state:string;methodology_version:string;return:number|null;mfe:number|null;mae:number|null;exit_at:string|null};
 const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
-export function summarizeV2Outcomes(outcomes:SummaryOutcome[],forwardDates:string[]){
- const dates=[...new Set(forwardDates)].sort();
+const observed=(o:SummaryOutcome)=>o.state==='OBSERVED'&&finite(o.return)&&finite(o.mfe)&&finite(o.mae)&&typeof o.exit_at==='string';
+function statusSummary(outcomes:SummaryOutcome[],status:V2PredictionStatus,forwardDates?:string[]){
+ const dates=forwardDates?[...new Set(forwardDates)].sort():null;
  const horizons=V2_HORIZONS.map(h=>{
-  const seen=new Set<string>(),rows=outcomes.filter(o=>o.horizon===h&&o.state==='OBSERVED'&&finite(o.return)&&o.methodology_version===SUMMARY_METHODOLOGY).filter(o=>{if(seen.has(o.prediction_id))throw Error('DUPLICATE_OUTCOME');seen.add(o.prediction_id);return true;}).sort((a,b)=>String(a.exit_at).localeCompare(String(b.exit_at))||a.prediction_id.localeCompare(b.prediction_id));
+  const rows=outcomes.filter(o=>o.horizon===h&&observed(o)).sort((a,b)=>String(a.exit_at).localeCompare(String(b.exit_at))||a.prediction_id.localeCompare(b.prediction_id));
   const returns=rows.map(r=>r.return!),positive=returns.filter(r=>r>0).reduce((s,r)=>s+r,0),negative=-returns.filter(r=>r<0).reduce((s,r)=>s+r,0);
   // These are overlapping, correlated observations, not a investable portfolio.
   // A drawdown of compounded trade ordering would be false precision. Publish
@@ -19,6 +21,26 @@ export function summarizeV2Outcomes(outcomes:SummaryOutcome[],forwardDates:strin
    mean_mfe:rows.length?rows.reduce((s,r)=>s+r.mfe!,0)/rows.length:null,mean_mae:rows.length?rows.reduce((s,r)=>s+r.mae!,0)/rows.length:null,
    cohort_drawdown:rows.length?drawdown:null,drawdown_basis:'EQUAL_WEIGHT_EXIT_DAY_COHORTS_NOT_PORTFOLIO'};
  });
- return {forward_sample:dates.length,outcome_sample:new Set(outcomes.filter(o=>o.state==='OBSERVED').map(o=>o.prediction_id)).size,horizons,
-  analysis_value:'INSUFFICIENT_SAMPLE',promotion_review_eligible:dates.length>=20,promotion_allowed:false,owner_approval_required:true};
+ return {prediction_status:status,qualified_ready:status==='READY',forward_sample:dates?.length??null,
+  outcome_sample:new Set(outcomes.filter(observed).map(o=>o.prediction_id)).size,horizons};
+}
+export function summarizeV2Outcomes(outcomes:SummaryOutcome[],forwardDates:string[],forwardDatesByStatus?:Partial<Record<V2PredictionStatus,string[]>>){
+ const dates=[...new Set(forwardDates)].sort(),seen=new Set<string>(),statuses=new Map<string,string>();
+ const eligible=outcomes.filter(o=>o.methodology_version===SUMMARY_METHODOLOGY&&V2_HORIZONS.some(h=>h===o.horizon));
+ for(const o of eligible){
+  const key=o.prediction_id+':'+o.horizon;
+  if(seen.has(key))throw Error('DUPLICATE_OUTCOME');seen.add(key);
+  const status=o.prediction_status??'UNKNOWN',prior=statuses.get(o.prediction_id);
+  if(prior!==undefined&&prior!==status)throw Error('CONFLICTING_PREDICTION_STATUS');statuses.set(o.prediction_id,status);
+ }
+ // Legacy rows receive their immutable status from the owner RPC join. Never
+ // infer READY from missing status in a stale/malformed client payload.
+ const by_status={
+  READY:statusSummary(eligible.filter(o=>o.prediction_status==='READY'),'READY',forwardDatesByStatus?.READY),
+  WATCH:statusSummary(eligible.filter(o=>o.prediction_status==='WATCH'),'WATCH',forwardDatesByStatus?.WATCH),
+ };
+ return {forward_sample:dates.length,outcome_sample:by_status.READY.outcome_sample,horizons:by_status.READY.horizons,
+  performance_basis:'READY_ONLY',by_status,unclassified_outcomes:eligible.filter(o=>o.prediction_status!=='READY'&&o.prediction_status!=='WATCH').length,
+  analysis_value:'INSUFFICIENT_SAMPLE',promotion_review_eligible:(by_status.READY.forward_sample??0)>=20,
+  promotion_allowed:false,owner_approval_required:true};
 }

@@ -5,6 +5,8 @@ import {readFileSync} from 'node:fs';
 import {handleRecommendationSmoke,verifySmokeCapture} from '../supabase/functions/_shared/recommendation-smoke.ts';
 import {normalizeDailyCandles,normalizeIntradayQuote,RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
 import {previousMarketTradingDate} from '../supabase/functions/_shared/market-session-contract.mjs';
+import {v2Fixture} from './helpers/recommendationV2Fixtures.mjs';
+import {buildV2Capsule} from '../supabase/functions/_shared/recommendation-shadow-v2-runtime.ts';
 const date='2026-10-07',at='2026-10-06T23:00:00.000Z';
 const credentials={currentToken:'SYNTHETIC_INTERNAL',previousToken:'',previousExpiresAt:'',version:'v1',serviceRoleKey:'SYNTHETIC.JWT.ONLY'};
 const workerToken='a'.repeat(64);
@@ -134,9 +136,47 @@ test('response bound and date/phase transition do not produce a false smoke PASS
  const body=await result('SMOKE_2330');body.acquisition.cutoff='2026-10-07T01:00:00Z';
  assert.throws(()=>verifySmokeCapture(body,'SMOKE_2330',date,'run',at,'2026-10-07T01:00:00Z'));
 });
-test('candidate has no DB write/public caller/forward/Cron; dedicated auth is ingress only',()=>{
+test('dedicated V2 research transport cannot write business tables; auth is ingress only',()=>{
  const entry=readFileSync('supabase/functions/recommendation-stock-evidence-smoke-v1/index.ts','utf8');
  const core=readFileSync('supabase/functions/_shared/recommendation-smoke.ts','utf8');
  assert.match(entry,/internalCredentialsFromEnv/);assert.match(core,/authorizeSmokeWorker\(request.headers,runtime.workerToken/);
- assert.doesNotMatch(entry+core,/createClient|\.rpc\(|\.insert\(|\.update\(|\.upsert\(|console\.|Deno\.write|localStorage|Access-Control-Allow-Origin/);
+ assert.deepEqual([...entry.matchAll(/\.rpc\('([^']+)'/g)].map(m=>m[1]).sort(),['pending_recommendation_shadow_v2','store_recommendation_shadow_v2','store_recommendation_shadow_v2_outcome']);
+ assert.doesNotMatch(entry+core,/\.from\(|\.insert\(|\.update\(|\.upsert\(|console\.|Deno\.write|localStorage|Access-Control-Allow-Origin/);
+ assert.match(core,/lock\?runtime.shadowTransport:undefined/);
+});
+test('explicit V2 lock executes identical natural caller, requires2330+72 proof; readonly modes never store',async()=>{
+ for(const mode of ['SMOKE_2330','BOUNDED_72_ACQUISITION_VERIFY','NATURAL_CALLER_READONLY','V2_SHADOW_LOCK']){
+  let stores=0,calls=0;
+  const env=runtime(async(_url,init)=>{
+   calls++;const p=JSON.parse(init.body),scope=p.scope||'UNIVERSE_72',body=await result(scope);
+   body.decision.revision_id=p.correlation_id;body.decision.schema_version='decision-evidence-v1';
+   if(scope==='UNIVERSE_72'){
+    const input=v2Fixture(at);input.identity.revision_id=p.correlation_id;input.v1=body.decision;input.captures=body.acquisition.captures;
+    body.shadow_v2=await buildV2Capsule(input);
+   }
+   return Response.json(body);
+  });
+  env.gatewayAnonJwt='CONFIGURED.PUBLIC.JWT';env.shadowTransport={storeRun:async()=>{stores++;return {error:null};},pending:async()=>({data:[],error:null}),storeOutcome:async()=>{throw Error('no future results');}};
+  const response=await handleRecommendationSmoke(request(mode),env),body=await response.json();
+  assert.equal(response.status,200,mode);assert.equal(stores,mode==='V2_SHADOW_LOCK'?1:0);assert.equal(calls,mode==='SMOKE_2330'?1:2);
+  assert.deepEqual(body.business_writes,[]);
+  if(mode==='V2_SHADOW_LOCK'){assert.equal(body.shadow_v2.status,'PASS');assert.equal(body.research_persistence_requested,true);assert.equal(body.report_handler_invoked,false);}
+ }
+});
+test('V2 lock rejects malformed evaluation before any research persistence',async()=>{
+ let stores=0;
+ const env=runtime(async(_url,init)=>{
+  const p=JSON.parse(init.body),scope=p.scope||'UNIVERSE_72',body=await result(scope);
+  body.decision.revision_id=p.correlation_id;body.decision.schema_version='decision-evidence-v1';
+  if(scope==='UNIVERSE_72'){
+   delete body.decision.phase_evaluation.evaluation_phase;
+   const input=v2Fixture(at);input.identity.revision_id=p.correlation_id;input.v1=body.decision;input.captures=body.acquisition.captures;
+   body.shadow_v2=await buildV2Capsule(input);
+  }
+  return Response.json(body);
+ });
+ env.gatewayAnonJwt='CONFIGURED.PUBLIC.JWT';
+ env.shadowTransport={storeRun:async()=>{stores++;return {error:null};},pending:async()=>({data:[],error:null}),storeOutcome:async()=>{throw Error('must not run');}};
+ const response=await handleRecommendationSmoke(request('V2_SHADOW_LOCK'),env);
+ assert.equal(response.status,422);assert.equal((await response.json()).error,'EVALUATION_CONTRACT');assert.equal(stores,0);
 });

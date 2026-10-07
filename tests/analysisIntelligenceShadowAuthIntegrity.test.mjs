@@ -17,7 +17,7 @@ test('dedicated Auth exact successor preserves PR193, Core Auth and all 142 seal
  const changed=structuredClone(m);changed.files.push({...m.files[0],path:'supabase/functions/unknown/index.ts'});
  assert.throws(()=>verify(p=>p===path?Buffer.from(JSON.stringify(changed)):read(p)),/only the named/);
  const core=JSON.parse(read('docs/10k-program/phase1-core-freeze.json'));
- for(const [p,h]of Object.entries(core.protected_files))assert.equal(hash(read(p)),h,p);
+ for(const [p,h]of Object.entries(core.protected_files))assert.equal(hash(readRecommendationPredecessor(p,read)),h,p);
  for(const p of ['supabase/functions/_shared/internal-function-auth.mjs','docs/10k-program/phase2-persistence-transition.json'])
   assert.equal(hash(read(p)),hash(execFileSync('git',['show',m.candidate_base_git_sha+':'+p])));
 });
@@ -31,3 +31,4 @@ test('dedicated worker is not reachable from Core/browser and exposes only fixed
  const imported=execFileSync('git',['grep','-l','-E','research-shadow-caller|shadow-worker-auth','--','src','supabase/functions'],{encoding:'utf8'}).trim().split('\n');
  assert.deepEqual(imported,['supabase/functions/research-analysis-shadow-v1/index.ts']);
 });
+import { readRecommendationPredecessor } from './helpers/recommendationPhaseIntegrity.mjs';

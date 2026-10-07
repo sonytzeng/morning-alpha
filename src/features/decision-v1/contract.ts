@@ -71,6 +71,7 @@ export type Opportunity = {
   data_quality: 'complete';
 };
 export type Decision = {
+  phase_evaluation?: import('../../../supabase/functions/_shared/recommendation-phase').PhaseEvaluation;
   schema_version?: 'decision-evidence-v1';
   calibration_status?: 'INSUFFICIENT_HISTORY';
   direction_evidence_score?: Score | null;

@@ -21,12 +21,17 @@ export function TradingLabView({data,onCreate,onExit,onRefresh,busy}:{data:Tradi
   </section>
   <section className={box}><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">今天值得看哪些股票</h2><a href="#my-owner-trades" className="underline">我的交易</a></div>
    <p className="mt-2 text-sm">研究名單 {d.watchlist.length} 檔 · 實際檢查 {d.scanned} 檔已登錄股票（不是全台股）</p>
-   {!d.watchlist.length?<p className="mt-2 text-sm text-amber-700">目前沒有證據完整的觀察股。{d.first_blocked_gate?`最先卡在「${d.first_blocked_gate}」。`:'尚未完成有效篩選。'}不硬湊股票，也不代表市場沒有機會。</p>:null}
+   {d.phase_evaluation?<div className="mt-3 rounded border p-3 text-sm"><h3 className="font-semibold">{d.phase_evaluation.evaluation_phase==='PREMARKET'?'盤前評估：等待可觀測的開盤證據':'盤中評估：使用當時已存在的量價'}</h3>
+    <p className="mt-2">完整評估 {d.phase_evaluation.evaluated_count}／{d.phase_evaluation.universe_count} · 觀察 {d.phase_evaluation.watch_count} · 達標 {d.phase_evaluation.ready_count} · 評估後不採用 {d.phase_evaluation.none_count} · 真正資料缺口 {d.phase_evaluation.blocked_count}</p>
+    <p className="mt-2">事件後量價尚不可觀測：{d.phase_evaluation.not_yet_observable_count} 檔。尚未開盤不是資料故障；觀察不等於正式推薦。</p>
+    {(d.premarket_watch||[]).map(c=><p className="mt-2" key={c.symbol}>{c.symbol} {c.name}：盤前可知條件齊全，等待開盤量價確認，不提供模擬進場。</p>)}</div>:null}
+   {!d.watchlist.length&&!d.premarket_watch?.length?<p className="mt-2 text-sm text-amber-700">目前沒有證據完整的觀察股。{d.first_blocked_gate?`最先卡在「${d.first_blocked_gate}」。`:'尚未完成有效篩選。'}不硬湊股票，也不代表市場沒有機會。</p>:null}
    {d.watchlist.map(c=><article className="mt-3 rounded border p-3" key={c.symbol}><h3 className="font-semibold">{c.symbol} {c.name} · 研究觀察，不是正式推薦</h3><p className="mt-2 text-sm">{c.why}</p><p className="mt-2 text-sm">還差的確認：{c.entry_condition}</p>
     <EvidenceList items={c.invalidation} empty="缺少失效條件，不能建立模擬。"/><details><summary>評分與來源</summary><p>證據分數 {c.score.value}／100，不是勝率</p><dl>{Object.entries(c.score.inputs).map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl><p>{c.score.calculation}</p></details>
     <button type="button" className="mt-3 rounded border px-4 py-2" disabled={busy} onClick={()=>onCreate(c.symbol)}>建立模擬交易</button></article>)}
-   <p className="mt-3 text-sm">正式推薦：{({READY:'已達正式契約',NONE:'沒有合格推薦',BLOCKED:'證據不足，未發布',UNAVAILABLE:'尚無可讀狀態'} as Record<string,string>)[d.formal_status]||'尚無可讀狀態'}。{d.formal_reason}</p>
+   <p className="mt-3 text-sm">正式推薦：{({PREMARKET_WATCH:'盤前觀察，等待開盤確認（非正式推薦）',READY:'已達正式契約',NONE:'沒有合格推薦',BLOCKED:'證據不足，未發布',UNAVAILABLE:'尚無可讀狀態'} as Record<string,string>)[d.formal_status]||'尚無可讀狀態'}。{d.formal_reason}</p>
    <details className="mt-3"><summary>在哪一層被淘汰？</summary><ol className="mt-2 space-y-2 text-sm">{d.funnel.map(s=><li key={s.key}>{s.label}：{s.before} → {s.passed}，淘汰 {s.excluded}<details><summary>查看缺失</summary>{s.reasons.map(r=><p key={r}>{r}</p>)}</details></li>)}</ol>
+    {d.phase_funnel?<div className="mt-3"><h3>階段完整漏斗</h3><dl className="grid grid-cols-2 gap-2">{Object.entries(d.phase_evaluation?.evaluation_phase==='PREMARKET'?d.phase_funnel.premarket:d.phase_funnel.intraday).map(([key,value])=><div key={key}><dt>{({universe:'已登錄股票',scanned:'已掃描',liquidity:'量價資料完整',market_fit:'市場配合',sector_fit:'產業配合',evidence:'證據完整',watch:'盤前觀察',ready:'達標',none:'評估後不採用',blocked:'資料／系統缺口',not_yet_observable:'尚不可觀測',watch_input:'原盤前觀察名單',price_confirmed:'價格確認',volume_confirmed:'成交量確認',relative_strength:'相對強弱',risk:'風險通過',entry:'進場通過',drop:'盤中移除'} as Record<string,string>)[key]||key}</dt><dd>{value===null?'缺少原盤前名單，不推定':value}</dd></div>)}</dl></div>:null}
     <p className="mt-3 text-sm">未取得資料不當成零分；後續層的 0 表示沒有股票到達該層，不表示該層已完成驗證。</p></details>
   </section>
   <section className="grid gap-3 sm:grid-cols-2"><article className={box}><h2 className="font-semibold">支持判斷</h2><EvidenceList items={m.supporting} empty="當日尚無可投影的支持訊號；不沿用歷史分析。"/></article>

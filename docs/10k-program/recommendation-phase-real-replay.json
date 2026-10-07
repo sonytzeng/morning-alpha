@@ -1,0 +1,4006 @@
+{
+  "version": 1,
+  "productionModified": false,
+  "projection": "Only evaluator-consumed quote fields retained; no tokens/PII",
+  "results": [
+    {
+      "date": "2026-10-02",
+      "cutoff": "2026-10-01T23:05:19.521Z",
+      "scope": "OFFLINE_READ_MODEL_REPLAY_NOT_A_PRODUCTION_EXECUTION",
+      "productionFormalGate": {
+        "status": "BLOCKED",
+        "eligible": false,
+        "screening": {
+          "status": "INCOMPLETE",
+          "rejected": [],
+          "universe_count": null,
+          "evaluated_count": null
+        },
+        "reason_codes": [
+          "recommendation_evaluation_evidence_insufficient"
+        ],
+        "contract_version": "STOCK_RECOMMENDATION_GATE_V1",
+        "subscriber_message": "推薦評估證據不足，今日暫不發布正式個股推薦",
+        "universe_evaluation_complete": false
+      },
+      "loadedCounts": {
+        "quotes": 1146,
+        "news": 7,
+        "flows": 0,
+        "earnings": 0,
+        "universe": 72,
+        "mappings": 0,
+        "catalysts": 0,
+        "evaluations": 38,
+        "failures": 0
+      },
+      "universe": 72,
+      "evaluated": 0,
+      "evaluatorAction": "INSUFFICIENT_DATA",
+      "firstGateCounts": {
+        "FRESH_QUOTE_MISSING": 71,
+        "20_DAILY_CLOSES_MISSING": 71,
+        "20_DAILY_VOLUMES_MISSING": 72,
+        "THREE_INSTITUTIONS_MISSING": 72,
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING": 72,
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING": 72,
+        "SECTOR_REACTION_MISSING": 72,
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING": 72
+      },
+      "funnel": [
+        {
+          "key": "LIQUIDITY",
+          "label": "流動性",
+          "before": 72,
+          "passed": 0,
+          "excluded": 72,
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_VOLUMES_MISSING"
+          ]
+        },
+        {
+          "key": "MARKET_FIT",
+          "label": "市場配合",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "SECTOR_FIT",
+          "label": "產業配合",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "RELATIVE_MOMENTUM",
+          "label": "相對強弱／動能",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "EVIDENCE",
+          "label": "公司證據完整",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "RISK",
+          "label": "風險通過",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "ENTRY",
+          "label": "進場確認",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        }
+      ],
+      "watchlist": 0,
+      "perStock": [
+        {
+          "symbol": "1504",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1513",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1514",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1519",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1590",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1605",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1760",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2049",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2208",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2303",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2308",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2317",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2330",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "20_DAILY_VOLUMES_MISSING",
+          "reasons": [
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 25
+        },
+        {
+          "symbol": "2337",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2344",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2356",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2357",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2368",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 3
+        },
+        {
+          "symbol": "2376",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2377",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2379",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2382",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2383",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 4
+        },
+        {
+          "symbol": "2408",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2421",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2454",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2520",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2539",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2542",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2548",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2603",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2609",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2610",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2615",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2618",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2634",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2881",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2882",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2884",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2885",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2886",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2891",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2892",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3006",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3017",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3034",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 3
+        },
+        {
+          "symbol": "3037",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 4
+        },
+        {
+          "symbol": "3081",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3189",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3231",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3324",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3363",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3443",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3450",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3529",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 2
+        },
+        {
+          "symbol": "3653",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3661",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3711",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "4566",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "4743",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "4908",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "4979",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6213",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6230",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6274",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6446",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6488",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6547",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6669",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "8033",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "8046",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "8299",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        }
+      ],
+      "noLookahead": true,
+      "deterministic": true
+    },
+    {
+      "date": "2026-10-05",
+      "cutoff": "2026-10-04T23:05:25.164Z",
+      "scope": "OFFLINE_READ_MODEL_REPLAY_NOT_A_PRODUCTION_EXECUTION",
+      "productionFormalGate": {
+        "status": "BLOCKED",
+        "eligible": false,
+        "screening": {
+          "status": "INCOMPLETE",
+          "rejected": [],
+          "universe_count": null,
+          "evaluated_count": null
+        },
+        "reason_codes": [
+          "recommendation_evaluation_evidence_insufficient"
+        ],
+        "contract_version": "STOCK_RECOMMENDATION_GATE_V1",
+        "subscriber_message": "推薦評估證據不足，今日暫不發布正式個股推薦",
+        "universe_evaluation_complete": false
+      },
+      "loadedCounts": {
+        "quotes": 1188,
+        "news": 0,
+        "flows": 0,
+        "earnings": 0,
+        "universe": 72,
+        "mappings": 0,
+        "catalysts": 0,
+        "evaluations": 40,
+        "failures": 0
+      },
+      "universe": 72,
+      "evaluated": 0,
+      "evaluatorAction": "INSUFFICIENT_DATA",
+      "firstGateCounts": {
+        "FRESH_QUOTE_MISSING": 71,
+        "20_DAILY_CLOSES_MISSING": 71,
+        "20_DAILY_VOLUMES_MISSING": 72,
+        "THREE_INSTITUTIONS_MISSING": 72,
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING": 72,
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING": 72,
+        "SECTOR_REACTION_MISSING": 72,
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING": 72
+      },
+      "funnel": [
+        {
+          "key": "LIQUIDITY",
+          "label": "流動性",
+          "before": 72,
+          "passed": 0,
+          "excluded": 72,
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_VOLUMES_MISSING"
+          ]
+        },
+        {
+          "key": "MARKET_FIT",
+          "label": "市場配合",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "SECTOR_FIT",
+          "label": "產業配合",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "RELATIVE_MOMENTUM",
+          "label": "相對強弱／動能",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "EVIDENCE",
+          "label": "公司證據完整",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "RISK",
+          "label": "風險通過",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "ENTRY",
+          "label": "進場確認",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        }
+      ],
+      "watchlist": 0,
+      "perStock": [
+        {
+          "symbol": "1504",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1513",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1514",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1519",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1590",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1605",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1760",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2049",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2208",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2303",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2308",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2317",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2330",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "20_DAILY_VOLUMES_MISSING",
+          "reasons": [
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 26
+        },
+        {
+          "symbol": "2337",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2344",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2356",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2357",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2368",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 3
+        },
+        {
+          "symbol": "2376",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2377",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2379",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2382",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2383",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 4
+        },
+        {
+          "symbol": "2408",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2421",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2454",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2520",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2539",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2542",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2548",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2603",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2609",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2610",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2615",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2618",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2634",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2881",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2882",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2884",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2885",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2886",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2891",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2892",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3006",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3017",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3034",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 3
+        },
+        {
+          "symbol": "3037",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 4
+        },
+        {
+          "symbol": "3081",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3189",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3231",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3324",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3363",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3443",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3450",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3529",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 2
+        },
+        {
+          "symbol": "3653",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3661",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3711",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "4566",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "4743",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "4908",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "4979",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6213",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6230",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6274",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6446",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6488",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6547",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6669",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "8033",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "8046",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "8299",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        }
+      ],
+      "noLookahead": true,
+      "deterministic": true
+    },
+    {
+      "date": "2026-10-06",
+      "cutoff": "2026-10-05T23:05:13.729Z",
+      "scope": "OFFLINE_READ_MODEL_REPLAY_NOT_A_PRODUCTION_EXECUTION",
+      "productionFormalGate": {
+        "status": "BLOCKED",
+        "eligible": false,
+        "screening": {
+          "status": "INCOMPLETE",
+          "rejected": [],
+          "universe_count": null,
+          "evaluated_count": null
+        },
+        "reason_codes": [
+          "recommendation_evaluation_evidence_insufficient"
+        ],
+        "contract_version": "STOCK_RECOMMENDATION_GATE_V1",
+        "subscriber_message": "推薦評估證據不足，今日暫不發布正式個股推薦",
+        "universe_evaluation_complete": false
+      },
+      "loadedCounts": {
+        "quotes": 1230,
+        "news": 0,
+        "flows": 0,
+        "earnings": 0,
+        "universe": 72,
+        "mappings": 0,
+        "catalysts": 0,
+        "evaluations": 42,
+        "failures": 0
+      },
+      "universe": 72,
+      "evaluated": 0,
+      "evaluatorAction": "INSUFFICIENT_DATA",
+      "firstGateCounts": {
+        "FRESH_QUOTE_MISSING": 71,
+        "20_DAILY_CLOSES_MISSING": 71,
+        "20_DAILY_VOLUMES_MISSING": 72,
+        "THREE_INSTITUTIONS_MISSING": 72,
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING": 72,
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING": 72,
+        "SECTOR_REACTION_MISSING": 72,
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING": 72
+      },
+      "funnel": [
+        {
+          "key": "LIQUIDITY",
+          "label": "流動性",
+          "before": 72,
+          "passed": 0,
+          "excluded": 72,
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_VOLUMES_MISSING"
+          ]
+        },
+        {
+          "key": "MARKET_FIT",
+          "label": "市場配合",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "SECTOR_FIT",
+          "label": "產業配合",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "RELATIVE_MOMENTUM",
+          "label": "相對強弱／動能",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "EVIDENCE",
+          "label": "公司證據完整",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "RISK",
+          "label": "風險通過",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        },
+        {
+          "key": "ENTRY",
+          "label": "進場確認",
+          "before": 0,
+          "passed": 0,
+          "excluded": 0,
+          "reasons": []
+        }
+      ],
+      "watchlist": 0,
+      "perStock": [
+        {
+          "symbol": "1504",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1513",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1514",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1519",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1590",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1605",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "1760",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2049",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2208",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2303",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2308",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2317",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2330",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "20_DAILY_VOLUMES_MISSING",
+          "reasons": [
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 27
+        },
+        {
+          "symbol": "2337",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2344",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2356",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2357",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2368",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 3
+        },
+        {
+          "symbol": "2376",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2377",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2379",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2382",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2383",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 4
+        },
+        {
+          "symbol": "2408",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2421",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2454",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2520",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2539",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2542",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2548",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2603",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2609",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2610",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2615",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2618",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2634",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2881",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2882",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 1
+        },
+        {
+          "symbol": "2884",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2885",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2886",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2891",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "2892",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3006",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3017",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3034",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 3
+        },
+        {
+          "symbol": "3037",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 4
+        },
+        {
+          "symbol": "3081",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3189",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3231",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3324",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3363",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3443",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3450",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3529",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 2
+        },
+        {
+          "symbol": "3653",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3661",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "3711",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "4566",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "4743",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "4908",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "4979",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6213",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6230",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6274",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6446",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6488",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6547",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "6669",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "8033",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "8046",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        },
+        {
+          "symbol": "8299",
+          "firstGate": "LIQUIDITY",
+          "firstReason": "FRESH_QUOTE_MISSING",
+          "reasons": [
+            "FRESH_QUOTE_MISSING",
+            "20_DAILY_CLOSES_MISSING",
+            "20_DAILY_VOLUMES_MISSING",
+            "THREE_INSTITUTIONS_MISSING",
+            "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+            "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+            "SECTOR_REACTION_MISSING",
+            "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+            "ENTRY_NOT_CONFIRMED"
+          ],
+          "closeSessions": 0
+        }
+      ],
+      "noLookahead": true,
+      "deterministic": true
+    }
+  ]
+}

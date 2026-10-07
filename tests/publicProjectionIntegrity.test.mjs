@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {dirname,normalize} from 'node:path';
 import {PUBLIC_EXPORT_ARTIFACT_PATH,resolveRuntimeSparseRecoveryIntegrity} from './helpers/premarketAtomicReadinessIntegrity.mjs';
+import {recommendationTransition} from './helpers/recommendationPhaseIntegrity.mjs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url));
 test('public projection successor preserves exact predecessor hashes and freezes the core release scope',()=>{
  const result=resolveRuntimeSparseRecoveryIntegrity(JSON.parse(read('docs/operations/core-stability-incident-amendment-20260908.json')),read(PUBLIC_EXPORT_ARTIFACT_PATH),read);
@@ -18,6 +19,7 @@ test('public projection successor preserves exact predecessor hashes and freezes
   assert(!m.files.some(x=>x.path.startsWith('supabase/functions/'+forbidden)));
 });
 test('only two public read/export bundles are candidates; no inferred deployment of core consumers',()=>{
+ const read=recommendationTransition().predecessorRead;
  const m=JSON.parse(read('docs/operations/evidence/public-market-projection-bundles-20261002.json'));
  assert.deepEqual(m.deployment_functions,['content-os-morning-alpha-source','get-report-payload']);
  assert.equal(m.production_change_authorized,false);assert.equal(m.cron_change,false);

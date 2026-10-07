@@ -1,6 +1,7 @@
 /** Owner research adapter. Reuses the sealed evaluator; never publishes a decision. */
 import { buildEvidenceDecision } from './decision-v1-evidence.ts';
 import type { EvidenceData, DecisionIdentity, Row } from './decision-v1-data.ts';
+import { phaseFunnel } from './recommendation-phase.ts';
 
 export const LAB_VERSION = 'OWNER_TRADING_LAB_V1';
 export const object = (v: unknown): Row => v && typeof v === 'object' && !Array.isArray(v) ? v as Row : {};
@@ -39,7 +40,7 @@ export const rejectionLabel = (v: string) => ({
   RISK_REJECTED:'風險或追價條件不合格',ENTRY_NOT_CONFIRMED:'尚未確認正式進場條件',
 } as Record<string,string>)[v] || '證據不足，請查看詳細原因';
 
-export function discoverCandidates(data: EvidenceData, identity: DecisionIdentity, canonical: Row | null) {
+export function discoverCandidates(data: EvidenceData, identity: DecisionIdentity, canonical: Row | null, priorWatch:string[]|null=null) {
   const evaluation = buildEvidenceDecision(data, identity);
   const symbols = [...new Set(data.universe.filter(r => r.is_active === true && /^\d{4,6}$/.test(String(r.symbol))
     && Date.parse(String(r.created_at)) <= Date.parse(identity.generated_at) && Date.parse(String(r.updated_at)) <= Date.parse(identity.generated_at)).map(r=>String(r.symbol)))].sort();
@@ -74,6 +75,10 @@ export function discoverCandidates(data: EvidenceData, identity: DecisionIdentit
         invalidation:o.invalidation_conditions,evidence:o.evidence})) : [];
   const gate=object(object(canonical?.generated_text).market_report_gate);
   return {version:LAB_VERSION,scope:'EXPLICIT_ACTIVE_UNIVERSE_NOT_ALL_TW_STOCKS',scanned:symbols.length,
+    phase_evaluation:evaluation.phase_evaluation || null,
+    phase_funnel:evaluation.phase_evaluation?phaseFunnel(evaluation.phase_evaluation,priorWatch):null,
+    premarket_watch:(evaluation.phase_evaluation?.status==='PREMARKET_WATCH'?evaluation.phase_evaluation.candidates.filter(c=>c.status==='WATCH'):[]).map(c=>({symbol:c.symbol,name:String(data.universe.find(r=>r.symbol===c.symbol)?.stock_name||c.symbol),
+      status:'PREMARKET_WATCH',entry_pending:true,formal_recommendation:false,post_event_price:c.post_event_price,post_event_volume:c.post_event_volume,reasons:c.reasons})),
     universe_complete:data.failures.length===0,failures:data.failures,funnel,details,watchlist,
     formal_status:typeof gate.recommendation_status==='string'?gate.recommendation_status:'UNAVAILABLE',
     formal_reason:typeof gate.wait_reason==='string'?gate.wait_reason:'尚無可讀取的正式推薦診斷',

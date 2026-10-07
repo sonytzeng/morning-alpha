@@ -54,6 +54,8 @@ jobs:
         run: >-
           deno check --no-lock
           supabase/functions/generate-daily-report-v7/index.ts
+          supabase/functions/recommendation-stock-evidence-v1/index.ts
+          supabase/functions/owner-trading-lab-v1/index.ts
           supabase/functions/daily-delivery-orchestrator/index.ts
           supabase/functions/get-report-payload/index.ts
           supabase/functions/fetch-market-data-v10/index.ts
@@ -103,6 +105,12 @@ jobs:
           MA_ISOLATED_TEST_DB: ma_six_bug_test501
           MA_TEST_PGPORT: 55439
         run: node tests/operationalMarketDatabase.integration.mjs
+      - name: Recommendation phase exact fresh schema and publication parity
+        env:
+          MA_RECOMMENDATION_SCOPE: recommendation-phase-20261007
+          MA_ISOLATED_TEST_DB: ma_six_bug_test583
+          MA_TEST_PGPORT: 55439
+        run: node --experimental-strip-types tests/recommendationPhaseDatabase.integration.mjs
       - name: Isolated PostgreSQL migration twice and atomicity tests
         env:
           MA_ISOLATED_TEST_DB: ma_core_test1

@@ -14,5 +14,6 @@ test('Owner Lab exact successor preserves all predecessor seals and 142 Core has
  for(const row of m.files)assert.throws(()=>verify(p=>p===row.path?Buffer.concat([read(p),Buffer.from('DRIFT')]):read(p)),/unreviewed candidate drift/);
  const bad=structuredClone(m);bad.files.push({...m.files[0],path:'supabase/functions/unapproved/index.ts'});
  assert.throws(()=>verify(p=>p===path?Buffer.from(JSON.stringify(bad)):read(p)),/only the named/);
- for(const [p,h]of Object.entries(JSON.parse(read('docs/10k-program/phase1-core-freeze.json')).protected_files))assert.equal(createHash('sha256').update(read(p)).digest('hex'),h,p);
+ for(const [p,h]of Object.entries(JSON.parse(read('docs/10k-program/phase1-core-freeze.json')).protected_files))assert.equal(createHash('sha256').update(readRecommendationPredecessor(p,read)).digest('hex'),h,p);
 });
+import { readRecommendationPredecessor } from './helpers/recommendationPhaseIntegrity.mjs';

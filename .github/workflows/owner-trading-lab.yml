@@ -33,9 +33,24 @@ jobs:
         with:
           deno-version: v2.x
       - run: node --experimental-strip-types --test tests/ownerTradingLab*.test.mjs
+      - name: Exact intraday clock for synthetic Handler and isolated PostgreSQL
+        run: |
+          docker build -t ma-owner-clock-ci - < tests/fixtures/runtime-sparse-postgres.Dockerfile
+          docker run -d --name ma-recommendation-owner-ci --network none \
+            --env POSTGRES_PASSWORD=isolated-ci-only \
+            --env 'FAKETIME=@2026-09-07 02:00:00' ma-owner-clock-ci
+          for attempt in $(seq 1 30); do
+            if docker exec ma-recommendation-owner-ci pg_isready -U postgres; then break; fi
+            sleep 1
+          done
+          docker exec ma-recommendation-owner-ci pg_isready -U postgres
       - name: Fresh DB, real HTTP Handler, Owner RLS and immutable journal
         env:
           MA_ISOLATED_TEST_DB: ma_owner_lab_test1
           MA_TEST_PGPORT: 55441
+          MA_TEST_DOCKER_CONTAINER: ma-recommendation-owner-ci
         run: node --experimental-strip-types tests/ownerTradingLabHandler.integration.mjs
+      - name: Remove disposable Owner Handler isolation
+        if: always()
+        run: docker rm -f ma-recommendation-owner-ci 2>/dev/null || true
       - run: deno check --no-lock supabase/functions/owner-trading-lab-v1/index.ts

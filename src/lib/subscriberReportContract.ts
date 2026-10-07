@@ -16,7 +16,7 @@ export type SubscriberState = {
   publication: 'PUBLISHED' | 'UNPUBLISHED';
   analysis: 'READY' | 'PARTIAL' | 'INSUFFICIENT_EVIDENCE';
   closing: 'NOT_DUE' | 'PENDING' | 'COMPLETE' | 'INSUFFICIENT_EVIDENCE' | 'NOT_APPLICABLE';
-  recommendation: 'QUALIFIED' | 'BLOCKED' | 'NO_QUALIFIED_OPPORTUNITY';
+  recommendation: 'QUALIFIED' | 'BLOCKED' | 'NO_QUALIFIED_OPPORTUNITY' | 'PREMARKET_WATCH';
   confidence: { status: 'AVAILABLE' | 'UNAVAILABLE'; value: number | null };
   reason_codes: string[];
 };
@@ -44,7 +44,7 @@ export function parseSubscriberState(value: unknown, identity: Identity = {}): S
     || !['PUBLISHED', 'UNPUBLISHED'].includes(String(s.publication))
     || !['READY', 'PARTIAL', 'INSUFFICIENT_EVIDENCE'].includes(String(s.analysis))
     || !['NOT_DUE', 'PENDING', 'COMPLETE', 'INSUFFICIENT_EVIDENCE', 'NOT_APPLICABLE'].includes(String(s.closing))
-    || !['QUALIFIED', 'BLOCKED', 'NO_QUALIFIED_OPPORTUNITY'].includes(String(s.recommendation))
+    || !['QUALIFIED', 'BLOCKED', 'NO_QUALIFIED_OPPORTUNITY', 'PREMARKET_WATCH'].includes(String(s.recommendation))
     || !Array.isArray(s.reason_codes) || !s.reason_codes.every(v => typeof v === 'string')
     || !['AVAILABLE', 'UNAVAILABLE'].includes(String(confidence.status))) return null;
   for (const key of ['report_date', 'revision_id', 'generated_at'] as const) {
@@ -125,6 +125,7 @@ export function createSubscriberState(input: {
     && screening.evaluated_count === screening.universe_count
     && Array.isArray(screening.rejected) && screening.rejected.length === 0;
   const recommendation = published && gate.status === 'QUALIFIED' && gate.eligible === true ? 'QUALIFIED'
+    : published && gate.status === 'PREMARKET_WATCH' && gate.eligible === false && completeUniverse && record(gate.phase_evaluation).status === 'PREMARKET_WATCH' ? 'PREMARKET_WATCH'
     : published && gate.status === 'NO_QUALIFIED_OPPORTUNITY' && completeUniverse ? 'NO_QUALIFIED_OPPORTUNITY' : 'BLOCKED';
 
   const close = record(input.closing), status = text(close.status).toUpperCase();
@@ -292,6 +293,9 @@ export function getSubscriberReportProjection(value: unknown, options: { todayDa
   const screening = gate.screening || record(ai.decision_engine_v1).screening;
   const noQualified = ready && recommendationStatus === 'NO_QUALIFIED_OPPORTUNITY'
     && gate.universe_evaluation_complete === true && hasCompleteUniverseAssessment(screening);
+  const preWatch = ready && recommendationStatus === 'PREMARKET_WATCH' && gate.eligible === false
+    && gate.universe_evaluation_complete === true && hasCompleteUniverseAssessment(screening)
+    && record(gate.phase_evaluation).status === 'PREMARKET_WATCH';
   const hasCanonicalCandidates = Object.hasOwn(canonical, 'recommendations');
   const candidates = hasCanonicalCandidates ? canonical.recommendations
     : ai.today_beneficiary_stocks_v10 ?? ai.today_beneficiary_stocks
@@ -307,8 +311,8 @@ export function getSubscriberReportProjection(value: unknown, options: { todayDa
     && (hasState ? state?.recommendation === 'QUALIFIED' : gate.eligible === true);
   const items = qualified && Array.isArray(candidates) ? candidates : [];
   const recommendation: SubscriberReportProjection['recommendation'] = {
-    available: qualified, status: qualified ? 'QUALIFIED' : noQualified ? 'NO_QUALIFIED_OPPORTUNITY' : 'BLOCKED',
-    message: qualified ? null : noQualified ? '今天沒有符合標準的新增機會' : RECOMMENDATION_INSUFFICIENT_MESSAGE, items,
+    available: qualified, status: qualified ? 'QUALIFIED' : preWatch ? 'PREMARKET_WATCH' : noQualified ? 'NO_QUALIFIED_OPPORTUNITY' : 'BLOCKED',
+    message: qualified ? null : preWatch ? '盤前觀察條件完整，等待開盤確認；不是正式推薦' : noQualified ? '今天沒有符合標準的新增機會' : RECOMMENDATION_INSUFFICIENT_MESSAGE, items,
   };
   // Priority is deterministic. No fallback from an explicit NOT_DUE or invalid
   // v2 receipt to a legacy completed claim from another revision.

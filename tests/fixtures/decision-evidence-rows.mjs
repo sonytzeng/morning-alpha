@@ -11,7 +11,10 @@ export function evidenceRows({ crash = false, damaged = false, extended = false 
   for (const symbol of [...stocks,'TAIEX','TXF','SOX','SPX']) {
     dates.forEach((at,i)=>d.quotes.push(quote(symbol,at,100+i*.1,1,1000)));
     const price=crash?90:extended?130:102.3;
-    d.quotes.push(quote(symbol,'2026-09-07T01:59:00Z',price,crash?-5:extended?8:1.5,1500,'intraday'));
+    // US markets have not opened on Monday Taipei; use the actual last
+    // completed US session instead of a fabricated TW-clock intraday quote.
+    const at=['SOX','SPX'].includes(symbol)?'2026-09-04T20:00:00Z':'2026-09-07T01:59:00Z';
+    d.quotes.push(quote(symbol,at,price,crash?-5:extended?8:1.5,1500,'intraday'));
   }
   d.news.push({id:'event-1',title:'Synthetic manufacturer results reported',source_name:'Fixture official filing',source_url:'https://example.test/filing',published_at:'2026-09-07T00:00:00Z',created_at:'2026-09-07T00:01:00Z',event_type:'earnings',symbols:stocks,sectors:['electronic']});
   d.catalysts.push({id:'catalyst-1',title:'Fixture filing',event_at:d.news[0].published_at,created_at:d.news[0].created_at,source_refs:['event-1']});
@@ -27,5 +30,7 @@ export function evidenceRows({ crash = false, damaged = false, extended = false 
   // Give stocks modest positive relative return versus benchmark for confirmation.
   for(const institution_type of ['foreign','investment_trust','dealer']) d.flows.push({id:`market-flow-${institution_type}`,provider:'fixture-official',market:'TW',symbol:'TAIEX',trading_date:'2026-09-07',institution_type,buy_amount:200,sell_amount:100,net_amount:100,currency:'TWD',captured_at:'2026-09-07T01:50:00Z',created_at:'2026-09-07T01:50:00Z',source_ref:'https://example.test/flows'});
   if (!crash && !extended) d.quotes.filter(q=>q.phase==='intraday'&&stocks.includes(q.symbol)).forEach(q=>{q.value=102.5;});
+  // Institutional daily totals are observable only after the completed session.
+  for(const r of d.flows){r.trading_date='2026-09-04';r.captured_at='2026-09-04T08:00:00Z';r.created_at=r.captured_at;}
   return d;
 }

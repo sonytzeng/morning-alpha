@@ -76,7 +76,7 @@
       "operation": "MODIFY",
       "predecessor_git_sha": "6c5ae5a5a760d8c3135cd7ccc94ce17e1cd394c6",
       "predecessor_sha256": "5287f6186715445ab5ccd066c8216adca9f3ca7491c470c95bf6e29f87a408fd",
-      "candidate_sha256": "57664e9231d23a50827f0c541ef2c604dc9fa10bd41070bcf72db9584342c40e"
+      "candidate_sha256": "59b5a98558bdd7a3390fa5bc3fbc90d1956693cd8035ce8278d8f3c44606efa1"
     },
     {
       "path": "supabase/functions/_shared/owner-trading-lab.ts",
@@ -244,7 +244,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "2cf9514d92d6e22fe0f7c78f227e6100ad80a07eb9e29e2766fa3ec08a260b38"
+      "candidate_sha256": "2f3a06c3a31e8ffe33958bc4e7823b7e77ff21c003396f2c8325afe51c94df8f"
     },
     {
       "path": "tests/recommendationPhaseIntegrity.test.mjs",
@@ -258,7 +258,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "a88c54a170be0db116a12efc462ac49f393deb5f4f518ad2698d425dae5ef702"
+      "candidate_sha256": "6065f18ea43e0af8ded5a43ba971fb27595adfaac04023d3ec032fb895ee5d9e"
     },
     {
       "path": "tests/recommendationRetainedReplay.test.mjs",

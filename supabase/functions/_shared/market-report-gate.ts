@@ -53,9 +53,13 @@ export function evaluateStockRecommendationGate(value: unknown) {
     && evaluated === universe && Array.isArray(screening.rejected) && screening.rejected.length === 0
     && decision.evidence_quality === 'complete' && decision.data_freshness === 'valid_at_assessment'
     && Array.isArray(decision.evidence) && decision.evidence.length > 0;
-  const noQualified = rows.length === 0 && complete && decision.action === 'NO_QUALIFIED_OPPORTUNITY'
-    && Array.isArray(decision.stock_opportunities) && decision.stock_opportunities.length === 0;
   const phase=record(decision.phase_evaluation);
+  const phaseNone=['NONE','PREMARKET_NONE'].includes(String(phase.status)) && phase.ready_count===0 && phase.watch_count===0 && phase.blocked_count===0
+    && phase.none_count===universe && records(phase.candidates).length===universe && records(phase.candidates).every(c=>['NONE','DROP'].includes(String(c.status)));
+  // Complete risk exclusions may retain private AVOID cards. Those cards are
+  // not missing evidence and cannot turn a proven NONE back into BLOCKED.
+  const noQualified = rows.length === 0 && complete && (phaseNone || decision.action === 'NO_QUALIFIED_OPPORTUNITY'
+    && Array.isArray(decision.stock_opportunities) && decision.stock_opportunities.length === 0);
   const preWatch=complete && rows.length===0 && phase.status==='PREMARKET_WATCH' && phase.evaluation_phase==='PREMARKET' && Number(phase.watch_count)>0 && phase.blocked_count===0;
   // Legacy stored reports retain their original contract. New phase-aware
   // reports cannot bypass complete evaluation or entry by using narrative rows.

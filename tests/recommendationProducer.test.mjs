@@ -6,8 +6,17 @@ import {authorizeInternalRequest} from '../supabase/functions/_shared/internal-f
 import {evidenceRows,IDENTITY} from './fixtures/decision-evidence-rows.mjs';
 import {buildEvidenceDecision} from '../supabase/functions/_shared/decision-v1-evidence.ts';
 import {phaseFunnel} from '../supabase/functions/_shared/recommendation-phase.ts';
+import {evaluateStockRecommendationGate} from '../supabase/functions/_shared/market-report-gate.ts';
 import {persistedRecommendationInput} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
 const base={identity:IDENTITY,url:'https://isolated.invalid',cronSecret:'SYNTHETIC_INTERNAL_ONLY',serviceRoleKey:'SYNTHETIC.JWT.ONLY'};
+test('complete intraday risk DROP/NONE stays healthy NONE through the actual publication gate',()=>{
+ const decision=buildEvidenceDecision(evidenceRows({damaged:true}),IDENTITY);
+ assert.equal(decision.phase_evaluation.status,'NONE');assert.equal(decision.action,'AVOID');
+ const ai={decision_v1:decision,today_beneficiary_stocks_v10:[],research_master_v2:{report_date:IDENTITY.report_date,today_date:IDENTITY.today_date,provenance:{generated_at:IDENTITY.generated_at}}};
+ const gate=evaluateStockRecommendationGate(ai);assert.equal(gate.status,'NO_QUALIFIED_OPPORTUNITY');assert.equal(gate.eligible,false);assert.equal(gate.universe_evaluation_complete,true);
+ const incomplete=structuredClone(ai);incomplete.decision_v1.phase_evaluation.candidates[0].status='BLOCKED';
+ assert.equal(evaluateStockRecommendationGate(incomplete).status,'BLOCKED');
+});
 test('producer uses separate existing gateway JWT and internal guard; response lineage binds exact date/revision',async()=>{
  const decision=buildEvidenceDecision(evidenceRows(),IDENTITY);let calls=0;
  const result=await requestRecommendationProof({...base,fetcher:async(url,init)=>{

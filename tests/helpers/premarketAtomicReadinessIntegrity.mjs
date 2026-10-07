@@ -526,6 +526,6 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,rea
  const candidate=recommendationTransition(readSource);
  const before=resolveOwnerTradingLabIntegrity(registry,artifactBytes,candidate.predecessorRead);
  return {...before,fileHash:row=>streamHashes.get(row.path)??gatewayHashes.get(row.path)??workerHashes.get(row.path)??hardHashes.get(row.path)??candidate.hashes.get(row.path)??before.fileHash(row),
-  newCandidatePaths:[...new Set([...before.newCandidatePaths,...candidate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...hardGate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...worker.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
+  newCandidatePaths:[...new Set([...before.newCandidatePaths,...stream.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...candidate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...hardGate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...worker.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
   recommendationPhaseCandidateIntegrity:{reviewedBaselineTransition:candidate.manifest}};
 }

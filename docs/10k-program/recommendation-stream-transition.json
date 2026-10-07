@@ -64,7 +64,7 @@
       "operation": "MODIFY",
       "predecessor_git_sha": "eb0286320c7874744ab5b3bc74d77b22f6e17c85",
       "predecessor_sha256": "ba873efe49a5170e4aeadad789782e3fc9ce730a919c65814a438f59f1d46627",
-      "candidate_sha256": "1cb7afa50cadc7a91e5594e598dae3a250dc9ceeb21bf8e279c5f2f058ece97e"
+      "candidate_sha256": "3d1590d07fa77f1e7e876b16cd93c620d46ab34df1f53f314367f52c4a8b1354"
     },
     {
       "path": "tests/helpers/recommendationGatewayIntegrity.mjs",

@@ -8,9 +8,9 @@ const content = card => card.sections.flatMap(s=>s.lines.map(l=>l.text)).join('\
 test('canonical direction + action, ordered copy, signed numbers and complete conditions; no delivery',()=>{
  const input=lineDecisionFixture(),before=structuredClone(input),card=composeDecisionCard(input);
  assert.equal(card.headline,'偏多觀察｜先等，不追價');assert.equal(card.deliveryEnabled,false);
- assert.deepEqual(card.sections.map(s=>s.title),['今天怎麼做？','為什麼？','今天先看這些','什麼情況可以開始考慮？','什麼情況今天就不要做？','今天有推薦股票嗎？']);
- assert(content(card).includes('下跌 -0.70%'));assert(content(card).includes('09:00：候選族群多數站上平盤且成交量放大。'));
- assert(content(card).includes('超過 1% 或 台積電（2330）/台指期同步轉弱。'));
+ assert.deepEqual(card.sections.map(s=>s.title),['今天怎麼做？','為什麼？','開盤後只看 3 件事','什麼時候可以開始找機會？','什麼情況今天先不要做？','今天有推薦股票嗎？']);
+ assert(content(card).includes('費半走弱，需留意開盤壓力（-0.70%）'));assert(content(card).includes('09:00 起，候選族群多數站上平盤且成交量放大，才開始找機會。'));
+ assert(content(card).includes('超過 1%，或台積電與台指期同步轉弱'));
  assert(card.sections.every(s=>s.lines.every(l=>l.path)));assert.deepEqual(input,before);
  assert.equal(card.notice,'今日市場判斷以核心市場資料為主，新聞證據較少。');
  assert(!/Atomic|Provider|Revision|DEGRADED|BLOCKED|WAIT|Gate/.test(content(card)));
@@ -26,14 +26,14 @@ test('unpublished, non-Owner, mixed revision/date, invalid canonical or unknown 
   const r=lineDecisionFixture();mutate(r);assert.throws(()=>composeDecisionCard(r));
  }
 });
-test('unknown/missing/long/engineering facts omitted, not fabricated or chopped; reasons max 4, observation max 3',()=>{
+test('unknown/missing/long/engineering facts omitted, not fabricated or chopped; reasons max 3, exactly 3 observations when mapped',()=>{
  const r=lineDecisionFixture(),s=r.payload.admin_source_report.ai_strategy_json.canonical_market_state.document.sections;
  s.supporting_evidence.push({statement:'沒有來源的故事',evidence_refs:['FAKE']},{statement:'如果'+'長'.repeat(181)+'才進',evidence_refs:['MD001']},
   {statement:'Provider Contract PASS',evidence_refs:['MD001']});
  const c=composeDecisionCard(r);assert(!content(c).includes('故事'));assert(!content(c).includes('…'));assert(!content(c).includes('Provider'));
- assert(c.sections.find(s=>s.title==='為什麼？').lines.length<=4);assert(c.sections.find(s=>s.title==='今天先看這些').lines.length<=3);
+ assert(c.sections.find(s=>s.title==='為什麼？').lines.length<=3);assert.equal(c.sections.find(s=>s.title==='開盤後只看 3 件事').lines.length,3);
  delete s.executive_summary;delete s.timeline;delete s.failure_scenario;
- const missing=composeDecisionCard(r);assert(!missing.sections.some(s=>s.title==='什麼情況可以開始考慮？'));
+ const missing=composeDecisionCard(r);assert(!missing.sections.some(s=>s.title==='什麼時候可以開始找機會？'));
 });
 function complete(r,status){r.subscriber_projection.recommendation.status=status;Object.assign(r.payload.recommendation_gate,{status,universe_evaluation_complete:true,screening:{status:'COMPLETE',universe_count:72,evaluated_count:72,rejected:[]}});}
 test('NONE requires full V1 evaluation; partial/unknown remains BLOCKED, not no opportunity',()=>{
@@ -46,9 +46,11 @@ test('NONE requires full V1 evaluation; partial/unknown remains BLOCKED, not no 
 });
 test('BLOCKED exact stored reason, no invented institutional or consensus diagnosis',()=>{
  const r=lineDecisionFixture(),c=composeDecisionCard(r);assert.equal(c.recommendation,'BLOCKED');
- assert(content(c).includes('原報告未逐項列出缺失資料'));assert(content(c).includes('不是')||content(c).includes('不代表今天市場沒有機會'));
+ assert(content(c).includes('今天的正式個股評估資料尚未完整'));assert(content(c).includes('這是評估限制，不代表市場沒有機會'));
+ assert.deepEqual(c.recommendationReasons,['recommendation_evaluation_evidence_insufficient']);
  assert(!content(c).includes('法人'));assert(!content(c).includes('共識'));
- r.payload.recommendation_gate.reason_codes=['UNKNOWN_CODE'];assert(content(composeDecisionCard(r)).includes('沒有可白話對照的詳細原因'));
+ r.payload.recommendation_gate.reason_codes=['UNKNOWN_CODE'];assert(content(composeDecisionCard(r)).includes('詳細原因請見完整分析'));
+ assert(!content(composeDecisionCard(r)).includes('資料尚未完整'),'unknown reason must not invent a data diagnosis');
 });
 test('formal WATCH separate from READY; qualified V1 identities/reasons/entry/risk/invalidation retained',()=>{
  const r=lineDecisionFixture();complete(r,'PREMARKET_WATCH');assert.equal(composeDecisionCard(r).recommendation,'WATCH');

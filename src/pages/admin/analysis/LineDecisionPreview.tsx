@@ -68,14 +68,16 @@ export default function LineDecisionPreview() {
         </article>
         <details className="rounded-lg border p-3"><summary className="cursor-pointer text-sm">來源與技術詳情（不放入會員卡片）</summary>
           <p className="mt-3 break-all text-xs">正式 V1 推薦：{loaded.card.recommendation} · Action：{loaded.card.action} · Revision：{loaded.card.revision}</p>
+          <p className="mt-2 break-words text-xs">原始評估原因：{loaded.card.recommendationReasons.join(' / ') || '未提供'}。{loaded.card.notice}</p>
           <p className="mt-2 text-xs">同一純函式產生 Flex Payload 與此預覽；尚未進行真實 LINE App 發送驗收。</p>
           <ul className="mt-3 space-y-2 text-xs">{loaded.card.sections.flatMap(s => s.lines).map((l, i) => <li key={i} className="break-words">{l.text}<br/>{l.path}{l.evidence.length ? ` · ${l.evidence.join(' / ')}` : ''}</li>)}</ul>
         </details>
         <section aria-label="Owner V2 研究預覽" className="rounded-lg border border-amber-500/50 p-4">
-          <h3 className="font-semibold text-amber-700">V2研究觀察｜尚未對會員發布</h3>
+          <h3 className="font-semibold text-amber-700">V2研究預覽｜僅 Owner 研究，尚未對會員發布</h3>
           <p className="mt-2 text-sm">這一區獨立於上方會員卡片，不是正式推薦，也不會進入 LINE Payload。</p>
           {loaded.shadow ? <>
             <p className="mt-3 text-sm">研究達標 {loaded.shadow.counts.READY} · 待確認 {loaded.shadow.counts.WATCH} · 評估後不採用 {loaded.shadow.counts.NONE} · 資料缺口 {loaded.shadow.counts.BLOCKED}</p>
+            <p className="mt-2 text-sm">Forward Sample（研究日期）：{loaded.shadow.forwardSample ?? '尚無可驗證數量'}。不是勝率或成功率。</p>
             {loaded.shadow.candidates.map(c => <p key={c.symbol} className="mt-2 text-sm">{c.symbol}：{c.state}</p>)}
             {loaded.shadow.nearMiss.length ? <div className="mt-3"><h4 className="font-semibold">最接近條件（不是推薦）</h4>
               {loaded.shadow.nearMiss.map(c => <div key={c.symbol} className="mt-3 text-sm"><p className="font-semibold">{c.symbol}</p><p>已通過：{c.passed.join('、') || '沒有已確認條件'}</p><p>還差：{c.missing.join('、')}</p></div>)}</div> : null}

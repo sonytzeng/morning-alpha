@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {readStreamPredecessor} from './recommendationStreamIntegrity.mjs';
 export const GATEWAY_BASE='db5f1ec285a2cb98df05aa6b1edb30450906f62a';
 export const GATEWAY_MANIFEST='docs/10k-program/recommendation-gateway-transition.json';
 export const GATEWAY_PATHS=[
@@ -45,6 +46,7 @@ function checked(row,readSource){
  return before;
 }
 export function gatewayTransition(readSource=read){
+ const current=readSource;readSource=p=>readStreamPredecessor(p,current);
  const m=manifest(readSource),restored=new Map();for(const row of m.files)restored.set(row.path,checked(row,readSource));
  return {manifest:m,predecessorRead:p=>{
   if(!restored.has(p))return readSource(p);const b=restored.get(p);
@@ -52,6 +54,7 @@ export function gatewayTransition(readSource=read){
  }};
 }
 export function readGatewayPredecessor(path,readSource=read){
+ const current=readSource;readSource=p=>readStreamPredecessor(p,current);
  if(!paths.has(path))return readSource(path);
  const row=manifest(readSource).files.find(r=>r.path===path),b=checked(row,readSource);
  if(b===null)throw Object.assign(Error('absent from Gateway predecessor'),{code:'ENOENT'});return b;

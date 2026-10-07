@@ -18,6 +18,7 @@ export async function requestRecommendationProof(options:{identity:DecisionIdent
   });
   if(!response.ok)return unavailable();
   const body=await response.json() as Row,decision=body.decision as Row|undefined;
+  if(body.transport_result_status!==undefined&&body.transport_result_status!==200)return unavailable();
   if(!decision||decision.schema_version!=='decision-evidence-v1'||decision.report_date!==options.identity.report_date||decision.revision_id!==options.identity.revision_id||!Number.isFinite(Date.parse(String(decision.generated_at)))||Date.parse(String(decision.generated_at))<Date.parse(options.identity.generated_at)||Date.parse(String(decision.generated_at))>Date.now()||!Array.isArray(body.business_writes)||body.business_writes.length)return unavailable();
   options.onVerifiedProof?.(body);
   return {decision,acquisition:body.acquisition};

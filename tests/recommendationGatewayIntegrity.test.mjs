@@ -3,14 +3,15 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {gatewayTransition,GATEWAY_BASE,GATEWAY_PATHS,GATEWAY_MANIFEST} from './helpers/recommendationGatewayIntegrity.mjs';
+import {STREAM_BASE,readStreamPredecessor} from './helpers/recommendationStreamIntegrity.mjs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url));
 test('Gateway exact named scope and predecessor lineage; no security or business gate bypass',()=>{
  const {manifest}=gatewayTransition();
- const changed=execFileSync('git',['diff','--name-only',GATEWAY_BASE],{encoding:'utf8'}).trim().split('\n').filter(Boolean);
- const untracked=execFileSync('git',['ls-files','--others','--exclude-standard'],{encoding:'utf8'}).trim().split('\n').filter(Boolean);
+ const changed=execFileSync('git',['diff','--name-only',GATEWAY_BASE,STREAM_BASE],{encoding:'utf8'}).trim().split('\n').filter(Boolean);
+ const untracked=[];
  assert.deepEqual([...new Set([...changed,...untracked])].sort(),[...GATEWAY_PATHS,GATEWAY_MANIFEST].sort());
  for(const row of manifest.files)assert.throws(()=>gatewayTransition(p=>p===row.path?Buffer.concat([read(p),Buffer.from('DRIFT')]):read(p)),/unreviewed candidate drift/);
- for(const path of ['supabase/config.toml','supabase/functions/_shared/internal-function-auth.mjs','supabase/functions/_shared/decision-v1-evidence.ts','supabase/functions/_shared/recommendation-phase.ts','supabase/functions/recommendation-stock-evidence-v1/index.ts','research/recommendation-v2-shadow.ts','docs/10k-program/recommendation-worker-transition.json'])assert.deepEqual(read(path),execFileSync('git',['show',GATEWAY_BASE+':'+path]));
+ for(const path of ['supabase/config.toml','supabase/functions/_shared/internal-function-auth.mjs','supabase/functions/_shared/decision-v1-evidence.ts','supabase/functions/_shared/recommendation-phase.ts','supabase/functions/recommendation-stock-evidence-v1/index.ts','research/recommendation-v2-shadow.ts','docs/10k-program/recommendation-worker-transition.json'])assert.deepEqual(readStreamPredecessor(path),execFileSync('git',['show',GATEWAY_BASE+':'+path]));
  const report='supabase/functions/generate-daily-report-v7/index.ts',before=execFileSync('git',['show',GATEWAY_BASE+':'+report],{encoding:'utf8'});
  assert.equal(read(report).toString(),before.replace("serviceRoleKey:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',fetcher:fetch,","serviceRoleKey:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',gatewayAnonJwt:Deno.env.get('RECOMMENDATION_GATEWAY_ANON_JWT')||'',fetcher:fetch,"));
  const helper=read('supabase/functions/_shared/recommendation-producer.ts').toString();

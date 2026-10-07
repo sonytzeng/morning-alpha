@@ -58,7 +58,11 @@ test('candidate wiring does not add scheduler, gateway bypass, provider/Atomic m
  const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
  const worker=read('supabase/functions/recommendation-stock-evidence-v1/index.ts');
  assert.match(worker,/authorizeInternalRequest/);assert.match(worker,/loadDecisionEvidence/);
- assert.doesNotMatch(worker,/\.insert\(|\.update\(|\.upsert\(|\.rpc\(/);
+ assert.doesNotMatch(worker,/\.insert\(|\.update\(|\.upsert\(/);
+ // The reviewed shared research lease/cache is the only producer RPC write;
+ // formal tables and arbitrary new RPCs remain forbidden.
+ assert.deepEqual([...worker.matchAll(/\.rpc\('([^']+)'/g)].map(m=>m[1]).sort(),['claim_recommendation_v2_acquisition','finish_recommendation_v2_acquisition']);
+ assert.equal((worker.match(/\.rpc\(/g)||[]).length,2);
  assert.doesNotMatch(read('supabase/config.toml'),/functions\.recommendation-stock-evidence-v1/);
  const owner=read('supabase/functions/owner-trading-lab-v1/index.ts');
  assert.match(owner,/persistedRecommendationInput\(input,identity,saved\)/);assert.doesNotMatch(owner,/acquireStockEvidence\(/);

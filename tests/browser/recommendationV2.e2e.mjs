@@ -9,7 +9,7 @@ try{
  for(const width of [1440,375,390,430]){
   await page.setViewportSize({width,height:900});await page.goto('http://127.0.0.1:3195/__v2_owner?role=owner');await page.getByText('查看股票').waitFor();
   await page.locator('select').selectOption('2330');for(const s of ['哪些訊號支持','哪些反對','INSUFFICIENT_SAMPLE','研究達標不是正式推薦'])assert((await page.locator('body').innerText()).includes(s));
-  await page.locator('summary').filter({hasText:'證據狀態'}).click();await page.locator('summary').filter({hasText:'各觀察期間'}).click();
+  await page.locator('summary').filter({hasText:'證據狀態'}).click();await page.locator('summary').filter({hasText:'全期 WATCH'}).click();
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'horizontal overflow '+width);
   if(process.env.MA_V2_SCREENSHOTS==='YES')await page.screenshot({path:'/private/tmp/ma-v2-shadow-'+width+'.png',fullPage:true});
  }

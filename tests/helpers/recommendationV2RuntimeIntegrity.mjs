@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {forwardAwareReader} from './recommendationV2ForwardIntegrity.mjs';
 
 export const V2_RUNTIME_BASE='4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7';
 export const V2_RUNTIME_MANIFEST='docs/10k-program/recommendation-v2-runtime-transition.json';
@@ -71,6 +72,7 @@ export function assertV2SealedManifest(readSource=read){
 }
 
 export function v2RuntimeManifest(readSource=read){
+ readSource=forwardAwareReader(readSource);
  const m=JSON.parse(readSource(V2_RUNTIME_MANIFEST));
  assert.equal(m.schema_version,'RECOMMENDATION_V2_RUNTIME_TRANSITION_V1');
  assert.equal(m.candidate_base_git_sha,V2_RUNTIME_BASE);
@@ -108,6 +110,7 @@ function checked(row,readSource){
 }
 
 export function v2RuntimeTransition(readSource=read){
+ readSource=forwardAwareReader(readSource);
  const manifest=sealedManifest(readSource),restored=new Map(),hashes=new Map();
  for(const row of manifest.files){restored.set(row.path,checked(row,readSource));hashes.set(row.path,row.candidate_sha256);}
  const predecessorRead=path=>{
@@ -122,6 +125,7 @@ export function v2RuntimeTransition(readSource=read){
 }
 
 export function readV2RuntimePredecessor(path,readSource=read){
+ readSource=forwardAwareReader(readSource);
  if(restoredReaders.has(readSource))return readSource(path);
  if(path===V2_SEALED_MANIFEST){assertV2SealedManifest(readSource);return readSource(path);}
  if(!paths.has(path))return readSource(path);

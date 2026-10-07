@@ -5,7 +5,7 @@ import { currentMarket, labObject, labText, readTradingLab, type TradingLabData,
 
 const box='rounded-xl border bg-white p-4';
 const metric=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)?v.toFixed(2):'樣本／證據不足';
-const kindLabel=(v:unknown)=>v==='SYSTEM_SIMULATION'?'系統模擬':'Sony 實際交易（自行記錄）';
+const kindLabel=(v:unknown)=>v==='SYSTEM_SIMULATION'?'系統模擬':v==='OWNER_EXPERIMENT'?'Owner 自選紙上實驗（非系統推薦）':'Sony 實際交易（自行記錄）';
 const taipeiTime=(v:unknown)=>Number.isFinite(Date.parse(String(v)))?new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',dateStyle:'short',timeStyle:'short',hour12:false}).format(new Date(String(v)))+'（台北）':'時間不可用';
 function EvidenceList({items,empty}:{items:string[];empty:string}) {
  return items.length?<ul className="mt-2 space-y-2 text-sm">{items.slice(0,5).map((x,i)=><li key={i}>{x}</li>)}</ul>:<p className="mt-2 text-sm text-slate-500">{empty}</p>;
@@ -51,12 +51,12 @@ export function TradingLabView({data,onCreate,onExit,onRefresh,busy}:{data:Tradi
     {t.kind==='SONY_LIVE_TRADE'&&!data.events.some(e=>e.trade_id===t.id&&e.event_key==='EXIT')?<button type="button" className="mt-2 rounded border px-4 py-2" disabled={busy} onClick={()=>onExit(t)}>記錄整筆賣出</button>:null}
     <details><summary>原始條件與快照</summary><p>{String(t.entry_condition)}</p><p>停損 {t.stop_price==null?'未提供':String(t.stop_price)} · 觀察期間 {String(t.horizon)}</p><p>快照時間 {labText(labObject(t.system_snapshot).as_of)}</p></details></article>)}
   </section>
-  <section className={box}><h2 className="font-semibold">最近驗證結果</h2><p className="mt-2 text-sm">本候選未啟用前瞻 Trigger。已保存前瞻樣本：{data.performance.market.forward_shadow_sample}。模擬與實盤分開計算；樣本不足不宣稱有效。</p>
+  <section className={box}><h2 className="font-semibold">最近驗證結果</h2><p className="mt-2 text-sm">市場分析前瞻樣本：{data.performance.market.forward_shadow_sample}。V2 選股的 WATCH／READY 樣本另列於每日研究摘要；不和市場、紙上實驗或實盤混算。</p>
    <div className="mt-3 grid gap-3 md:grid-cols-3"><article><h3>市場判斷品質</h3><p className="text-sm">既有 CLE 收盤樣本 {data.performance.market.sample}</p><p className="text-sm">方向命中 {metric(data.performance.market.direction_accuracy)}{data.performance.market.direction_accuracy===null?'':'%'}</p><p className="text-xs">不是交易報酬；不是 Shadow Forward 驗證。</p></article>
-    {(['system','sony'] as const).map(k=><article key={k}><h3>{k==='system'?'系統模擬結果':'Sony 自填交易結果'}</h3><p>{data.performance[k].sample} 筆 · {data.performance[k].sample_label}</p><dl className="mt-2 text-sm">{[['勝率','win_rate'],['平均獲利','average_win'],['平均虧損','average_loss'],['期望值','expectancy'],['獲利因子','profit_factor'],['等權報酬最大回撤','max_drawdown'],['最大有利變動','mfe'],['最大不利變動','mae']].map(([l,key])=><div className="flex flex-wrap justify-between gap-2" key={key}><dt>{l}</dt><dd>{metric(labObject(data.performance[k])[key])}</dd></div>)}</dl></article>)}</div>
+    {(['system','experiment','sony'] as const).map(k=>{const value=data.performance[k];return value?<article key={k}><h3>{k==='system'?'系統模擬結果':k==='experiment'?'Owner 自選紙上實驗':'Sony 自填交易結果'}</h3><p>{value.sample} 筆 · {value.sample_label}</p><dl className="mt-2 text-sm">{[['勝率','win_rate'],['平均獲利','average_win'],['平均虧損','average_loss'],['期望值','expectancy'],['獲利因子','profit_factor'],['等權報酬最大回撤','max_drawdown'],['最大有利變動','mfe'],['最大不利變動','mae']].map(([l,key])=><div className="flex flex-wrap justify-between gap-2" key={key}><dt>{l}</dt><dd>{metric(labObject(value)[key])}</dd></div>)}</dl></article>:null;})}</div>
    <p className="mt-3 text-xs">未計手續費、稅與滑價。等權報酬序列不是帳戶淨值；沒有期內高低點，不填 MFE／MAE。樣本至少五筆才顯示比率，不代表策略已有效。</p>
   </section>
-  <details className={box}><summary>資料缺口、研究界線與驗收</summary><dl>{Object.entries(d.availability).map(([k,v])=><div key={k}>{({price:'價格',volume:'成交量',industry:'產業',institutional:'法人',chips:'籌碼',fundamentals:'基本面',revenue:'營收',news:'新聞',catalyst:'公司催化'} as Record<string,string>)[k]}：{({AVAILABLE:'已有',PARTIAL:'部分可用',MISSING:'缺失'} as Record<string,string>)[v]}</div>)}</dl><p>分析價值：樣本不足（INSUFFICIENT_SAMPLE）。Sony 操作驗收：待本人測試。會員公開：未批准。Forward Trigger：未啟用。</p></details>
+  <details className={box}><summary>資料缺口、研究界線與驗收</summary><dl>{Object.entries(d.availability).map(([k,v])=><div key={k}>{({price:'價格',volume:'成交量',industry:'產業',institutional:'法人',chips:'籌碼',fundamentals:'基本面',revenue:'營收',news:'新聞',catalyst:'公司催化'} as Record<string,string>)[k]}：{({AVAILABLE:'已有',PARTIAL:'部分可用',MISSING:'缺失'} as Record<string,string>)[v]}</div>)}</dl><p>分析價值：樣本不足（INSUFFICIENT_SAMPLE）。Sony 操作驗收：待本人測試。會員公開：未批准。個股 V2 自然追蹤與市場分析樣本分開計算，請至「個股新方法研究」查看實際鎖定與到期結果；本頁不會觸發 Forward。</p></details>
  </div>;
 }
 
@@ -68,8 +68,7 @@ export default function TradingLab() {
  const refresh=async()=>{const g=generation.current;const next=readTradingLab(await invoke({operation:'READ'}));if(alive.current&&g===generation.current)setData(next);};
  useEffect(()=>{alive.current=true;const g=++generation.current;const {data:auth}=supabase.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'){generation.current++;setData(null);setForm(null);setError('身分已變更，請重新進入分析中心。');}});
   void invoke({operation:'READ'}).then(async r=>{if(!alive.current||g!==generation.current)return;const initial=readTradingLab(r);setData(initial);
-   // Bounded Owner-side outcome catch-up, not a background Cron or Core dependency.
-   if(initial.trades.length){try{await invoke({operation:'REFRESH_OUTCOMES'});if(alive.current&&g===generation.current){const next=readTradingLab(await invoke({operation:'READ'}));if(alive.current&&g===generation.current)setData(next);}}catch{if(alive.current&&g===generation.current)setError('後續結果尚未完成核對；保留已保存資料，沒有補造結果。');}}
+   // Opening the journal is read-only; explicit user action performs catch-up.
   }).catch(()=>{if(alive.current&&g===generation.current)setError('交易研究室候選尚未啟用或目前無法讀取；既有研究仍可在下方查看。');});
   return()=>{alive.current=false;auth.subscription.unsubscribe();};},[]);
  useEffect(()=>{if(form){formNode.current?.scrollIntoView({block:'start'});formNode.current?.focus();}},[form]);

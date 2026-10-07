@@ -1,5 +1,6 @@
 import { createClient as createRawClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { observeCriticalClientFactory } from '../_shared/critical-rpc-observer.ts';
+import { scheduleV2ForwardTrigger } from '../_shared/recommendation-v2-forward-trigger.ts';
 const createClient = observeCriticalClientFactory(createRawClient);
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
@@ -1010,6 +1011,13 @@ Deno.serve(async (req) => {
       ? "RECOVERY"
       : checkpoint;
     const atomicIdempotencyKey = checkpointBatchIdempotencyKey(tradingDate, canonicalCheckpoint);
+    const notifyForwardResearch = (batchId:string,complete:boolean) => {
+      const runtime=(globalThis as unknown as {EdgeRuntime?:{waitUntil:(p:Promise<unknown>)=>void}}).EdgeRuntime;
+      scheduleV2ForwardTrigger({business_date:tradingDate,checkpoint:canonicalCheckpoint,batch_id:batchId,
+        core_complete:complete,force_run:requestBody.force_run===true,beneficiary_close_only:beneficiaryCloseOnly},
+        {url:supabaseUrl,cronSecret:Deno.env.get('CRON_SECRET')||'',serviceRoleKey,
+         gatewayAnonJwt:Deno.env.get('RECOMMENDATION_GATEWAY_ANON_JWT')||'',fetcher:fetch,waitUntil:runtime?p=>runtime.waitUntil(p):undefined});
+    };
     let committedRecoveryRows: Record<string, unknown>[] = [];
 
     // A completed checkpoint is an immutable point-in-time observation. Backup
@@ -1057,6 +1065,7 @@ Deno.serve(async (req) => {
               return config && validRetainedCheckpointRow(row, { ...evidenceInput, correlationId: originalCorrelation }, config);
             }));
           if (snapshotContractComplete) {
+            notifyForwardResearch(terminalBatchId,true);
             console.log(`[${batchTag}] CHECKPOINT_REUSED checkpoint=${checkpoint} symbols=${requiredSymbols.join(",")}`);
             return new Response(JSON.stringify({
               success: true,
@@ -1888,6 +1897,10 @@ Deno.serve(async (req) => {
     }
     const operationSucceeded = !timedOut && providerHealthWriteErrors.length === 0 && !tradingDayStateError &&
       (beneficiaryCloseOnly ? checkpointEvidenceComplete : coreBatchComplete);
+
+    // Core success is unchanged even if the Owner-only sidecar is unavailable.
+    // The worker separately checks the authoritative batch and current phase.
+    if(atomicBatchId)notifyForwardResearch(atomicBatchId,coreBatchComplete);
 
     console.log(`[${batchTag}] DONE in ${elapsed}s | inserted=${inserted.length} failed=${failed.length} healthy=${healthy}${timedOut ? " (timed out)" : ""}`);
 

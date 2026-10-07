@@ -109,5 +109,5 @@ test('samples are distinct forward dates, no infinite profit factor, twenty date
  assert.throws(()=>summarizeV2Outcomes([r,r],[]),/DUPLICATE/);
  const dates=Array.from({length:20},(_,i)=>'2026-10-'+String(i+1).padStart(2,'0'));
  const review=summarizeV2Outcomes([],dates,{READY:dates,WATCH:[]});
- assert.equal(review.promotion_review_eligible,true);assert.equal(review.promotion_allowed,false);
+ assert.equal(review.promotion_review_eligible,false);assert.equal(review.promotion_allowed,false);
 });

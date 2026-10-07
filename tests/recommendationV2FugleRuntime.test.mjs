@@ -6,6 +6,7 @@ import {acquireV2FugleShares,selectV2InstitutionalSources,startV2SourceAcquisiti
 import {evaluateV2Shadow} from '../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
 import {RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
 import {recommendationJsonStream} from '../supabase/functions/_shared/recommendation-stream.ts';
+import {sharedV2Acquisition} from '../supabase/functions/_shared/recommendation-v2-acquisition-cache.ts';
 import {v2Fixture} from './helpers/recommendationV2Fixtures.mjs';
 
 const at='2026-10-06T23:30:00.000Z',session='2026-10-06',key='SYNTHETIC_KEY_NEVER_REAL';
@@ -170,7 +171,10 @@ test('Edge integration starts Shadow beside unchanged V1 and stops/joins on V1 f
  const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
  const fixture=v2Fixture(),events=[];let handler,done,successful=false,authorized=true,capsuleInput;
  const modules={
-  'https://esm.sh/@supabase/supabase-js@2.57.4':{createClient:()=>({})},
+  'https://esm.sh/@supabase/supabase-js@2.57.4':{createClient:()=>({rpc:async(name)=>{
+   assert(['claim_recommendation_v2_acquisition','finish_recommendation_v2_acquisition'].includes(name));
+   return {data:name==='claim_recommendation_v2_acquisition'?{status:'ACQUIRED',lease_id:'SYNTHETIC_LEASE'}:'STORED',error:null};
+  }})},
   '../_shared/internal-function-auth.mjs':{authorizeInternalRequest:async()=>({ok:authorized,error_code:'DENIED'}),internalCredentialsFromEnv:()=>({})},
   '../_shared/decision-v1-data.ts':{loadDecisionEvidence:async()=>fixture.data},
   '../_shared/recommendation-stock-evidence.ts':{RECOMMENDATION_UNIVERSE,acquireStockEvidence:async()=>{events.push('V1');if(successful)return fixture.captures;throw Error('synthetic V1 failure');},
@@ -179,6 +183,7 @@ test('Edge integration starts Shadow beside unchanged V1 and stops/joins on V1 f
   '../_shared/recommendation-official-actuals.ts':{acquireOfficialActuals:async()=>[]},
   '../_shared/recommendation-company-events.ts':{acquireCompanyEvents:async()=>[]},
   '../_shared/recommendation-stream.ts':{recommendationJsonStream},
+  '../_shared/recommendation-v2-acquisition-cache.ts':{sharedV2Acquisition},
   '../_shared/recommendation-shadow-v2-runtime.ts':{buildV2Capsule:async input=>{capsuleInput=input;return {synthetic:true};}},
   '../_shared/recommendation-shadow-v2-sources.ts':{startV2SourceAcquisition:()=>{
    events.push('SHADOW_START');return {complete:new Promise(resolve=>{done=resolve;}),stop:()=>{events.push('STOP');done({fugle:[],publicSources:fixture.sources,benchmark_history:[]});}};},selectV2InstitutionalSources},
@@ -202,6 +207,7 @@ test('Edge integration starts Shadow beside unchanged V1 and stops/joins on V1 f
  assert.equal((await handler(request())).status,401);assert.deepEqual(events,[]);
  assert.equal((await handler(new Request('https://synthetic.invalid'))).status,405);assert.deepEqual(events,[]);
  assert.match(source,/timeout\(scope==='SMOKE_2330'\?22000:240000\)/);assert.match(source,/deadlineMs:260000/);
- assert.match(source,/finally\(async\(\)=>\{shadowWork\?\.stop\(\);acquisitionCutoff=now\(\);await shadowWork\?\.complete;/);
+ assert.match(source,/finally\(async\(\)=>\{shadowWork\?\.stop\(\);cutoff=now\(\);await shadowWork\?\.complete;/);
+ assert.match(source,/identity\.data_as_of=bundle\.acquisition_cutoff/);
  assert.doesNotMatch(source,/void acquireV2|console\./);
 });

@@ -113,7 +113,10 @@ export async function evaluateV2Shadow(input:V2Input){
   const pressure=flow&&!conflict&&gross>0?[flow.foreign,flow.trust,flow.dealer].reduce((s,f)=>s+f.net,0)/gross:null;
   const net=flow&&!conflict?[flow.foreign,flow.trust,flow.dealer].reduce((s,f)=>s+f.net,0):null;
   const flowBar=flow?bars.find(b=>b.date===flow.session):undefined;
-  metrics.institutional=evidence(pressure!==null?'AVAILABLE':'PARTIAL',pressure===null?null:{normalized_pressure:pressure,net_shares:net,relative_to_daily_volume:flowBar&&flowBar.volume>0?Number(net)/flowBar.volume:null,unit:'SHARES',session:flow.session},'SHARES_NOT_TWD; RELATIVE_VOLUME_REQUIRES_SAME_SESSION',flow?[flow.source]:[]);
+  const direction=(net:number)=>net>0?'NET_BUY':net<0?'NET_SELL':'NEUTRAL';
+  metrics.institutional=evidence(pressure!==null?'AVAILABLE':'PARTIAL',pressure===null?null:{normalized_pressure:pressure,net_shares:net,
+   foreign:{...flow.foreign,direction:direction(flow.foreign.net)},trust:{...flow.trust,direction:direction(flow.trust.net)},dealer:{...flow.dealer,direction:direction(flow.dealer.net)},
+   relative_to_daily_volume:flowBar&&flowBar.volume>0?Number(net)/flowBar.volume:null,unit:'SHARES',session:flow.session},'SHARES_NOT_TWD; RELATIVE_VOLUME_REQUIRES_SAME_SESSION',flow?[flow.source]:[]);
   if(conflict)blocked.push('INSTITUTIONAL_SOURCE_CONFLICT');else if(pressure===null)pending.push('INSTITUTIONAL_DIRECTION_UNAVAILABLE');else if(pressure<=0)rejected.push('INSTITUTIONAL_SELLING_PRESSURE');
   const growths=input.sources.filter(c=>c.kind==='growth'&&c.status==='PASS'&&stamp(c.received_at)<=cutoff).flatMap(c=>c.rows).filter((r):r is ActualGrowth=>'actual_only'in r&&r.symbol===symbol&&stamp(r.available_at)<=cutoff);
   const growth=growths.length===1?growths[0]:null;

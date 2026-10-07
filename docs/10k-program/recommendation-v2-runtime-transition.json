@@ -1,0 +1,208 @@
+{
+  "schema_version": "RECOMMENDATION_V2_RUNTIME_TRANSITION_V1",
+  "seal_status": "SEALED",
+  "candidate_base_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+  "predecessor_manifest": "docs/10k-program/recommendation-v2-shadow-transition.json",
+  "predecessor_manifest_sha256": "8b926738bf49167054e2cb38ab3552fdea0c58ac5a71bc81ca8e97cb5c98f0e3",
+  "functions": [
+    "generate-daily-report-v7",
+    "recommendation-stock-evidence-smoke-v1",
+    "recommendation-stock-evidence-v1"
+  ],
+  "migrations": [
+    "20261007113746_recommendation_v2_watch_prospective_lock.sql"
+  ],
+  "new_secret_names": [],
+  "core_auth_change": false,
+  "core_rls_change": false,
+  "cron_change": false,
+  "v1_threshold_change": false,
+  "business_strategy_change": false,
+  "methodology_promotion": false,
+  "member_access": false,
+  "production_deploy": false,
+  "production_deploy_note": "Candidate artifact only: production_deploy=false is not live deployment telemetry or deployment authorization. The three-function inventory includes generate-daily-report-v7 compiled-only dependencies; each deployment requires separate explicit approval.",
+  "owner_shadow_only": true,
+  "forward_lock_prospective_only": true,
+  "watch_lock_forward_only": true,
+  "fugle_shares_acquisition": true,
+  "authorized_research_only_persistence": true,
+  "readonly_smoke_preserved": true,
+  "files": [
+    {
+      "path": ".github/workflows/recommendation-v2-shadow.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "8ca373078a8d58ecb63038433e2d469d56b272a56b6f447f632b51ef35930b8d",
+      "candidate_sha256": "6affa6c757df9df31a4cf13d4afb26f58023b92c2355995f3d64495b1c419d1c"
+    },
+    {
+      "path": "src/features/research/recommendation-shadow-v2-summary.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "d9f0f436fa540f3a44395cc7dd07aa80fa908b1efb5bdef6904a98d84d54c64d",
+      "candidate_sha256": "ed73dd87257b1fb8358919b7f5dfa033bf6048cf611691d4cb7840ecfbdabda1"
+    },
+    {
+      "path": "src/pages/admin/analysis/RecommendationShadow.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "9c88c2aa013d44bfb020fe7d5bd52d27716e2253f4c13735abc8d2ee1dca599f",
+      "candidate_sha256": "20ee4e93e51d0cbed33bf473c945987b2afba4426286b2b5a82a12edb9487e12"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "7599eb208075ef8515139c39b77ee906b6d7e749fadc2d0cbd822b95f58d04fb",
+      "candidate_sha256": "5d934bb7c2be21ff66a0043a945b0d91edcbeb2a57166882715e8813da31766e"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "8929751ed034b9b42ed2c28dccac42fdce2046251935c158e3749e3dc3cd1d45",
+      "candidate_sha256": "528f41ef339a9d69708514738b10c889149b16f67c35fd8ad3d19a357d19298a"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-smoke.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": null,
+      "candidate_sha256": "e4508fa5533122b76b414d1bc2ac4e8d5f312b8b9d31a0743e1915adb9c9c44f"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-sources.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "9cb331f2151f7479880620895889a04c4d70ac79f2c3c5850e7627783f2b6895",
+      "candidate_sha256": "98475003460d215e764bf011aba5fae7a603ba3455e54be547dba75e79e23708"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-smoke.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "6e9c5d976af06df879ad8a684ead838a798f99e08eb049cdee698995bc684ac4",
+      "candidate_sha256": "c627810cf6173c99931dd176d5e5a1d20f24b864ef248c2273df3fff32c4d886"
+    },
+    {
+      "path": "supabase/functions/recommendation-stock-evidence-smoke-v1/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "0f67a132560efbcda7aaf12a64eb452b3d02cfc08a0e4a7bc6648d161761c809",
+      "candidate_sha256": "9536264a2be9e4584e77b4d4df886058b89090177fbfcc8dab645f40c6478990"
+    },
+    {
+      "path": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "023b5e8dd051f84bac2f8b1bd1fa117d4faba9441454a1c384f71a7e623faeca",
+      "candidate_sha256": "e0e6a3778543a94922ad74bbe4d1a1179c9f72d6d4f2ee58ceaf09afd4defae8"
+    },
+    {
+      "path": "supabase/migrations/20261007113746_recommendation_v2_watch_prospective_lock.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": null,
+      "candidate_sha256": "3dcfb8415567abd72b158b86046a3d056bd450de3d0052e94e8bca53a3509ce0"
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "728062e6a55f79a236308397ace7093586ae14212a585052aa5d7af64ae1243d",
+      "candidate_sha256": "f9e79fe094b41dd74a192b94e591b2430631f66eecd4ad94d89fc2d763bb57b6"
+    },
+    {
+      "path": "tests/helpers/recommendationV2Integrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "2ddd155d767c58ddfcdb1cae1f30208276ad6dde0158e434de9150a5f50bd233",
+      "candidate_sha256": "c422bdb25f372fe074e38e4d0a7073ea07e2d8a2b1404e4166f7cbbe3d451525"
+    },
+    {
+      "path": "tests/helpers/recommendationV2RuntimeIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": null,
+      "candidate_sha256": "ae4789d9be813beb079060ce293e03647e0463aa49a1084049936d4ec1bd3512"
+    },
+    {
+      "path": "tests/recommendationRuntimeSmoke.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "f9cf02040f5d21572d16dafd76948846009f40383278dba29b3522dcfd57bcb3",
+      "candidate_sha256": "10bb9578bdb215d6b6516ab06c3d1e02b4f57cc9aa28f715ae4ec99de3c6bd96"
+    },
+    {
+      "path": "tests/recommendationV2FugleRuntime.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": null,
+      "candidate_sha256": "9b44b366f9a4a31709bf1d6837daff6b32d073cc9dd6dc93dd503f57a4d6a29e"
+    },
+    {
+      "path": "tests/recommendationV2Integrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "4c24630037b02c8d9ca479ca431399a88e17108c8fa68b10c09da0385600fdb6",
+      "candidate_sha256": "2c6e5c882a71c38c7dbd66c4833430e532fd748087a387425055b8b665f4846b"
+    },
+    {
+      "path": "tests/recommendationV2Prospective.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "671bda7b21889657f6627e35fd95f4de96ff998695260277dd2daafd5675aed8",
+      "candidate_sha256": "9fab6ccaf6e1ffee097fdf97263dad65d7f7a842e556ee605c10e39a0b4dbe61"
+    },
+    {
+      "path": "tests/recommendationV2RuntimeIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": null,
+      "candidate_sha256": "a693eb437d0270cffe58eed2c27d446d4df58e02c3374a66d7c53070b04b1e50"
+    },
+    {
+      "path": "tests/recommendationV2Smoke.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": null,
+      "candidate_sha256": "e9abff36dc41756e0b1db002ffe6a724c1480533dccda37577f82a11ba677c94"
+    },
+    {
+      "path": "tests/recommendationV2UI.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": "2e05c6ba9428954df1a119c6eeea214c43f2676f83d27dd2d111b19a365c47b5",
+      "candidate_sha256": "afd6ab6f330309aac1783fa326dffe1075455b88959d316e056ff2e022f965df"
+    },
+    {
+      "path": "tests/recommendationV2WatchLock.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": null,
+      "candidate_sha256": "412705d211f09b6f2243279e1123458abebb7be0a9108d791165d2b836c411a1"
+    },
+    {
+      "path": "tests/recommendationV2WatchLockDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "4f8884ddf4b08c5cbb124c2d48acb31ed31e40f7",
+      "predecessor_sha256": null,
+      "candidate_sha256": "3edc7a1cf2d559070ee012140f784b5323d422c8b27e2c65c7eaf4f055aefba9"
+    }
+  ],
+  "compiled_only_dependencies": [
+    {
+      "function": "generate-daily-report-v7",
+      "entrypoint": "supabase/functions/generate-daily-report-v7/index.ts",
+      "via": "supabase/functions/_shared/recommendation-shadow-v2-runtime.ts",
+      "changed_dependencies": [
+        "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+        "supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts"
+      ],
+      "entrypoint_changed": false,
+      "formal_behavior_change": false,
+      "reason": "Existing natural V2 Shadow sidecar bundles the WATCH outcome evaluator and institutional evidence output. Compiled dependencies only; no report index, V1 gates, selection or formal report behavior change. Function inventory is not deployment authorization."
+    }
+  ]
+}

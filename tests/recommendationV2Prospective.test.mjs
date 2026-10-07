@@ -100,8 +100,14 @@ test('duplicate/missing bars reject; no entry is not a win; same-bar stop conser
  const stop=structuredClone(bars);stop[0].low=94;const r=evaluateV2Outcome(p,stop,1,now);assert.equal(r.win_loss,'LOSS');assert(Math.abs(r.return+.05)<1e-10);
 });
 test('samples are distinct forward dates, no infinite profit factor, twenty dates never promotes',()=>{
- const r=evaluateV2Outcome(prediction(),outcomeBars(),1,'2026-12-01T00:00:00Z'),s=summarizeV2Outcomes([r],['2026-10-07','2026-10-07']);
+ const r=evaluateV2Outcome(prediction(),outcomeBars(),1,'2026-12-01T00:00:00Z');
+ assert.equal(r.prediction_status,'READY');
+ const s=summarizeV2Outcomes([r],['2026-10-07','2026-10-07'],{READY:['2026-10-07'],WATCH:[]});
+ assert.equal(s.outcome_sample,1);assert.equal(s.horizons[0].entered_samples,1);assert.equal(s.horizons[0].expectancy,r.return);
+ assert.equal(s.by_status.READY.forward_sample,1);assert.equal(s.by_status.WATCH.outcome_sample,0);
  assert.equal(s.forward_sample,1);assert.equal(s.horizons[0].profit_factor,null);assert.equal(s.promotion_allowed,false);
  assert.throws(()=>summarizeV2Outcomes([r,r],[]),/DUPLICATE/);
- assert.equal(summarizeV2Outcomes([],Array.from({length:20},(_,i)=>'2026-10-'+String(i+1).padStart(2,'0'))).promotion_allowed,false);
+ const dates=Array.from({length:20},(_,i)=>'2026-10-'+String(i+1).padStart(2,'0'));
+ const review=summarizeV2Outcomes([],dates,{READY:dates,WATCH:[]});
+ assert.equal(review.promotion_review_eligible,true);assert.equal(review.promotion_allowed,false);
 });

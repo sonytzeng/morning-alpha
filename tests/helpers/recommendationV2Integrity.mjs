@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {readV2RuntimePredecessor} from './recommendationV2RuntimeIntegrity.mjs';
 export const V2_BASE='b00856329d8edd5467c9470cb147c85b8819908c';
 export const V2_MANIFEST='docs/10k-program/recommendation-v2-shadow-transition.json';
 export const V2_PATHS=[
@@ -53,5 +54,5 @@ function checked(row,readSource){
  assert.equal(hash(readSource(row.path)),row.candidate_sha256,'unreviewed candidate drift (V2): '+row.path);const before=prior(row.path);
  if(row.operation==='ADD'){assert.equal(before,null);assert.equal(row.predecessor_sha256,null);}else{assert.equal(row.operation,'MODIFY');assert(before);assert.equal(row.predecessor_git_sha,V2_BASE);assert.equal(hash(before),row.predecessor_sha256);}return before;
 }
-export function v2Transition(readSource=read){const m=manifest(readSource),restored=new Map();for(const row of m.files)restored.set(row.path,checked(row,readSource));return {manifest:m,predecessorRead:p=>{if(!restored.has(p))return readSource(p);const b=restored.get(p);if(b===null)throw Object.assign(Error('absent from V2 predecessor'),{code:'ENOENT'});return b;}};}
-export function readV2Predecessor(path,readSource=read){if(!paths.has(path))return readSource(path);const row=manifest(readSource).files.find(r=>r.path===path),b=checked(row,readSource);if(b===null)throw Object.assign(Error('absent from V2 predecessor'),{code:'ENOENT'});return b;}
+export function v2Transition(readSource=read){const current=readSource;readSource=p=>readV2RuntimePredecessor(p,current);const m=manifest(readSource),restored=new Map();for(const row of m.files)restored.set(row.path,checked(row,readSource));return {manifest:m,predecessorRead:p=>{if(!restored.has(p))return readSource(p);const b=restored.get(p);if(b===null)throw Object.assign(Error('absent from V2 predecessor'),{code:'ENOENT'});return b;}};}
+export function readV2Predecessor(path,readSource=read){const current=readSource;readSource=p=>readV2RuntimePredecessor(p,current);if(!paths.has(path))return readSource(path);const row=manifest(readSource).files.find(r=>r.path===path),b=checked(row,readSource);if(b===null)throw Object.assign(Error('absent from V2 predecessor'),{code:'ENOENT'});return b;}

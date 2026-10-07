@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {readClosePredecessor} from './recommendationCompletedCloseIntegrity.mjs';
 export const STREAM_BASE='eb0286320c7874744ab5b3bc74d77b22f6e17c85';
 export const STREAM_MANIFEST='docs/10k-program/recommendation-stream-transition.json';
 export const STREAM_PATHS=[
@@ -45,6 +46,7 @@ function checked(row,readSource){
  return before;
 }
 export function streamTransition(readSource=read){
+ const current=readSource;readSource=p=>readClosePredecessor(p,current);
  const m=manifest(readSource),restored=new Map();for(const row of m.files)restored.set(row.path,checked(row,readSource));
  return {manifest:m,predecessorRead:p=>{
   if(!restored.has(p))return readSource(p);const b=restored.get(p);
@@ -52,6 +54,7 @@ export function streamTransition(readSource=read){
  }};
 }
 export function readStreamPredecessor(path,readSource=read){
+ const current=readSource;readSource=p=>readClosePredecessor(p,current);
  if(!paths.has(path))return readSource(path);
  const row=manifest(readSource).files.find(r=>r.path===path),b=checked(row,readSource);
  if(b===null)throw Object.assign(Error('absent from Stream predecessor'),{code:'ENOENT'});return b;

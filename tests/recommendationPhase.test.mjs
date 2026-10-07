@@ -84,7 +84,8 @@ for(const phase of ['PREMARKET','INTRADAY'])test(`SYNTHETIC 72-stock ${phase} co
 });
 test('acquisition is bounded, exact72, never writes; 403 is explicit and no token/error body captured',async()=>{
  const calls=[];const u=RECOMMENDATION_UNIVERSE.map(symbol=>({symbol,is_active:true}));
- const result=await acquireStockEvidence({businessDate:PRE.report_date,universe:u,apiKey:'SYNTHETIC_TEST_ONLY',now:()=>PRE.generated_at,signal:AbortSignal.timeout(5000),fetcher:async(url,options)=>{
+ let clock=Date.parse(PRE.generated_at);
+ const result=await acquireStockEvidence({businessDate:PRE.report_date,universe:u,apiKey:'SYNTHETIC_TEST_ONLY',now:()=>new Date(clock).toISOString(),sleep:async ms=>{clock+=ms;},signal:AbortSignal.timeout(5000),fetcher:async(url,options)=>{
   calls.push(String(url));assert.equal(options.redirect,'error');assert.equal(new URL(url).hostname,'api.fugle.tw');return new Response('PRIVATE_ERROR_BODY',{status:403});
  }});
  assert.equal(calls.length,72);assert.equal(result.length,72);assert.ok(result.every(c=>c.status==='ENTITLEMENT_NON_RETRYABLE'));assert.doesNotMatch(JSON.stringify(result),/PRIVATE_ERROR_BODY|SYNTHETIC_TEST_ONLY/);

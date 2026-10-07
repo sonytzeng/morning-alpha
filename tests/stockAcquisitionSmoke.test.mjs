@@ -71,3 +71,14 @@ test('daily success cannot pretend current intraday quote is available',async()=
  const coverage=stockAcquisitionCoverage([daily,{symbol:'2330',endpoint:'intraday/quote',status:'PROVIDER_TIMEOUT',rows:[],received_at:start,payload_hash:null}],['2330']);
  assert.equal(coverage.latest_price,0);assert.equal(coverage.partial,1);assert.equal(coverage.ohlc_20d,1);
 });
+test('universe acquisition paces provider requests below the basic60/minute ceiling',async()=>{
+ const starts=[];let options;
+ ({options}=setup(async url=>{
+  starts.push(Date.parse(options.now()));
+  return Response.json(payload(new URL(url).pathname.split('/').at(-1)));
+ },{scope:'UNIVERSE_72'}));
+ await acquireStockEvidence(options);
+ assert.equal(starts.length,72);
+ for(const at of starts)assert.ok(starts.filter(t=>t>=at&&t<at+60000).length<=50);
+ assert.ok(starts.at(-1)-starts[0]>=60000);
+});

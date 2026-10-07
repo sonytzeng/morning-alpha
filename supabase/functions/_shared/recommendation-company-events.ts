@@ -1,4 +1,4 @@
-/** Official-source integration CANDIDATE, not imported by a Production handler.
+/** Official-source factual acquisition; no inference of event impact.
  * An announcement is an event fact, never automatically a positive catalyst.
  * Deliberately excludes raw free-text/contacts from retained metadata. */
 import type { Row } from './decision-v1-data.ts';
@@ -6,7 +6,7 @@ export const COMPANY_EVENT_SOURCES=Object.freeze([
  {exchange:'TWSE',url:'https://openapi.twse.com.tw/v1/opendata/t187ap04_L'},
  {exchange:'TPEX',url:'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap04_O'},
 ] as const);
-export type CompanyEvent={symbol:string;exchange:'TWSE'|'TPEX';source_ref:string;source_hash:string;published_at:string;available_at:string;event_fact:true;bullishness:null;impact_review:'REQUIRED';raw_retained:false};
+export type CompanyEvent={symbol:string;exchange:'TWSE'|'TPEX';source_ref:string;source_hash:string;published_at:string;available_at:string;event_type:'OFFICIAL_MATERIAL_ANNOUNCEMENT';event_fact:true;bullishness:null;impact_review:'REQUIRED';raw_retained:false};
 const obj=(v:unknown):Row=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
 const text=(v:unknown)=>typeof v==='string'?v.trim():typeof v==='number'?String(v):'';
 const sha=async(v:unknown)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(v)))),b=>b.toString(16).padStart(2,'0')).join('');
@@ -26,7 +26,7 @@ export async function normalizeCompanyEvents(source:typeof COMPANY_EVENT_SOURCES
   // Hash only the identifying official fields. Never retain raw explanation,
   // named speaker, phone, email or member identity. Subject is not surfaced.
   const digest=await sha([source.url,symbol,at,subject]);if(seen.has(digest))continue;seen.add(digest);
-  events.push({symbol,exchange:source.exchange,source_ref:source.url,source_hash:digest,published_at:at,available_at:receivedAt,event_fact:true,bullishness:null,impact_review:'REQUIRED',raw_retained:false});
+  events.push({symbol,exchange:source.exchange,source_ref:source.url,source_hash:digest,published_at:at,available_at:receivedAt,event_type:'OFFICIAL_MATERIAL_ANNOUNCEMENT',event_fact:true,bullishness:null,impact_review:'REQUIRED',raw_retained:false});
  }
  return events.sort((a,b)=>a.symbol.localeCompare(b.symbol)||a.published_at.localeCompare(b.published_at)||a.source_hash.localeCompare(b.source_hash));
 }

@@ -13,7 +13,7 @@ test('Gateway exact named scope and predecessor lineage; no security or business
  for(const row of manifest.files)assert.throws(()=>gatewayTransition(p=>p===row.path?Buffer.concat([read(p),Buffer.from('DRIFT')]):read(p)),/unreviewed candidate drift/);
  for(const path of ['supabase/config.toml','supabase/functions/_shared/internal-function-auth.mjs','supabase/functions/_shared/decision-v1-evidence.ts','supabase/functions/_shared/recommendation-phase.ts','supabase/functions/recommendation-stock-evidence-v1/index.ts','research/recommendation-v2-shadow.ts','docs/10k-program/recommendation-worker-transition.json'])assert.deepEqual(readStreamPredecessor(path),execFileSync('git',['show',GATEWAY_BASE+':'+path]));
  const report='supabase/functions/generate-daily-report-v7/index.ts',before=execFileSync('git',['show',GATEWAY_BASE+':'+report],{encoding:'utf8'});
- assert.equal(read(report).toString(),before.replace("serviceRoleKey:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',fetcher:fetch,","serviceRoleKey:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',gatewayAnonJwt:Deno.env.get('RECOMMENDATION_GATEWAY_ANON_JWT')||'',fetcher:fetch,"));
+ assert.equal(readStreamPredecessor(report).toString(),before.replace("serviceRoleKey:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',fetcher:fetch,","serviceRoleKey:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',gatewayAnonJwt:Deno.env.get('RECOMMENDATION_GATEWAY_ANON_JWT')||'',fetcher:fetch,"));
  const helper=read('supabase/functions/_shared/recommendation-producer.ts').toString();
  assert.match(helper,/Authorization:`Bearer \$\{options.gatewayAnonJwt\}`/);assert.doesNotMatch(helper,/Authorization:`Bearer \$\{options.serviceRoleKey\}`/);
  assert.match(helper,/AbortSignal.timeout\(255000\)/);

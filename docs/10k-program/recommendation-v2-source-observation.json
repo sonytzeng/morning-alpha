@@ -1,0 +1,18 @@
+{
+  "observation_kind": "LIVE_PUBLIC_SOURCE_READ_ONLY",
+  "observed_on": "2026-10-07",
+  "production_modified": false,
+  "credential_used": false,
+  "sources": [
+    {"source":"https://openapi.twse.com.tw/v1/opendata/t187ap05_L","http":200,"status":"PASS","symbols":61,"period":"2026-08"},
+    {"source":"https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap05_O","http":200,"status":"PASS","symbols":11,"period":"2026-08"},
+    {"source":"https://www.tpex.org.tw/openapi/v1/tpex_3insti_daily_trading","http":200,"status":"PASS","symbols":11,"session":"2026-10-07"},
+    {"source":"https://www.twse.com.tw/rwd/zh/fund/T86?date=20261006&selectType=ALL&response=json","http":200,"status":"PASS","symbols":61,"session":"2026-10-06"}
+  ],
+  "institutional_unit": "SHARES_NOT_TWD",
+  "fundamental": "ACTUAL_MONTHLY_REVENUE_YOY_MOM_NOT_CONSENSUS",
+  "same_session_relative_volume": "REQUIRED; latest TPEx response after close must not be divided by yesterday volume",
+  "raw_response_retained": false,
+  "v2_full_funnel": "NOT_YET_EXECUTED_AGAINST_LIVE_STOCK_CAPSULE",
+  "forward_sample_created": 0
+}

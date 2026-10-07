@@ -1,0 +1,52 @@
+name: Recommendation V2 Shadow gate
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  v2-shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: node --experimental-strip-types --test tests/recommendationV2*.test.mjs
+      - name: Disposable clocked database, no Production connection
+        run: |
+          docker build -t ma-v2-clock-ci - < tests/fixtures/runtime-sparse-postgres.Dockerfile
+          docker run -d --name ma-recommendation-owner-ci --network none --env POSTGRES_PASSWORD=isolated-ci-only --env 'FAKETIME=@2026-09-07 02:00:00' ma-v2-clock-ci
+          for attempt in $(seq 1 30); do
+            if docker exec ma-recommendation-owner-ci pg_isready -U postgres; then break; fi
+            sleep 1
+          done
+          docker exec ma-recommendation-owner-ci pg_isready -U postgres
+      - name: Fresh database, immutable Forward and outcome parity
+        env:
+          MA_ISOLATED_TEST_DB: ma_v2_shadow_test1
+          MA_TEST_DOCKER_CONTAINER: ma-recommendation-owner-ci
+        run: node --experimental-strip-types tests/recommendationV2Database.integration.mjs
+      - name: Local-only Owner browser and deny paths
+        env:
+          MA_ISOLATED_TEST_DB: ma_v2_shadow_test1
+          MA_V2_UI_SCOPE: LOCAL_ONLY
+          MA_PLAYWRIGHT_MODULE: /tmp/v2-browser-tools/node_modules/playwright/index.mjs
+          MA_CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          npm install --prefix /tmp/v2-browser-tools --no-save playwright@1.62.1
+          npm exec vite -- --config tests/browser/recommendationV2.vite.ts > /tmp/v2-preview.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3195/__v2_owner > /dev/null; then break; fi
+            sleep 1
+          done
+          node tests/browser/recommendationV2.e2e.mjs
+      - name: Remove disposable isolation
+        if: always()
+        run: docker rm -f ma-recommendation-owner-ci 2>/dev/null || true

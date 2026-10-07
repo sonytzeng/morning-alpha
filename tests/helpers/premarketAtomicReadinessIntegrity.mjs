@@ -13,6 +13,7 @@ import { hardGateTransition } from './recommendationHardGateIntegrity.mjs';
 import { workerTransition } from './recommendationWorkerIntegrity.mjs';
 import { gatewayTransition } from './recommendationGatewayIntegrity.mjs';
 import { streamTransition } from './recommendationStreamIntegrity.mjs';
+import { closeTransition } from './recommendationCompletedCloseIntegrity.mjs';
 
 const read = path => readFileSync(new URL('../../' + path, import.meta.url));
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -515,6 +516,8 @@ function resolveOwnerTradingLabIntegrity(registry,artifactBytes,readSource=read)
 }
 
 export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,readSource=read) {
+ const close=closeTransition(readSource);
+ const closeHashes=new Map(close.manifest.files.map(row=>[row.path,row.candidate_sha256]));
  const stream=streamTransition(readSource);
  const streamHashes=new Map(stream.manifest.files.map(row=>[row.path,row.candidate_sha256]));
  const gateway=gatewayTransition(readSource);
@@ -525,7 +528,7 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,rea
  const hardHashes=new Map(hardGate.manifest.files.map(row=>[row.path,row.candidate_sha256]));
  const candidate=recommendationTransition(readSource);
  const before=resolveOwnerTradingLabIntegrity(registry,artifactBytes,candidate.predecessorRead);
- return {...before,fileHash:row=>streamHashes.get(row.path)??gatewayHashes.get(row.path)??workerHashes.get(row.path)??hardHashes.get(row.path)??candidate.hashes.get(row.path)??before.fileHash(row),
-  newCandidatePaths:[...new Set([...before.newCandidatePaths,...stream.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...candidate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...hardGate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...worker.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
+ return {...before,fileHash:row=>closeHashes.get(row.path)??streamHashes.get(row.path)??gatewayHashes.get(row.path)??workerHashes.get(row.path)??hardHashes.get(row.path)??candidate.hashes.get(row.path)??before.fileHash(row),
+  newCandidatePaths:[...new Set([...before.newCandidatePaths,...close.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...stream.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...candidate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...hardGate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...worker.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
   recommendationPhaseCandidateIntegrity:{reviewedBaselineTransition:candidate.manifest}};
 }

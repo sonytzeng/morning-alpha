@@ -21,7 +21,17 @@ export function recommendationQuoteCurrent(row:Row, identity:DecisionIdentity):b
   const session=String(raw.evidence_session_date||native.evidence_session_date||row.trading_date);
   if(session!==expected||local.slice(0,10)!==expected)return false;
   const minute=Number(local.slice(11,13))*60+Number(local.slice(14,16));
-  const completedClose = row.phase==='close' && minute>=13*60+25 && minute<=13*60+30;
+  // Fugle isClose identifies a completed session; lastTrade.time is the last
+  // actual execution, which need not occur during the final five minutes.
+  // Keep that timestamp intact and require explicit, same-session close proof.
+  const acquiredQuote=raw.contract==='RECOMMENDATION_STOCK_EVIDENCE_V1'&&raw.endpoint==='intraday/quote';
+  const received=Date.parse(String(row.ingested_at));
+  const receipt=Number.isFinite(received)?new Date(received+8*3600000).toISOString():'';
+  const completedClose = acquiredQuote
+   ? row.provider==='fugle'&&row.phase==='close'&&row.session==='REGULAR_COMPLETED'&&raw.provider_is_close===true&&
+     receipt.slice(0,10)===expected&&receipt.slice(11,16)>='13:30'&&received<=now&&received>=at&&
+     minute>=9*60&&minute<=13*60+30
+   : row.phase==='close' && minute>=13*60+25 && minute<=13*60+30;
   return phase==='PREMARKET'?completedClose:completedClose || minute>=9*60 && minute<=13*60+30 && now-at<=20*60000;
  }
  if(symbol==='TXF'){

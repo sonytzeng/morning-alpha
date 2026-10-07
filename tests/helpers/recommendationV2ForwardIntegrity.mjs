@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {lineCardAwareReader} from './lineDecisionIntegrity.mjs';
 export const V2_FORWARD_BASE='10208c0817718d29f9f86284c32cff5c3ffb39e6';
 export const V2_FORWARD_MANIFEST='docs/10k-program/recommendation-v2-forward-transition.json';
 export const V2_FORWARD_PATHS=[
@@ -52,6 +53,7 @@ const read=p=>readFileSync(new URL('../../'+p,import.meta.url));
 const hash=b=>createHash('sha256').update(b).digest('hex'),priorCache=new Map(),restored=new WeakSet();
 export function forwardPrior(p){if(!priorCache.has(p)){const exists=execFileSync('git',['ls-tree','--name-only',V2_FORWARD_BASE,'--',p],{cwd:root,encoding:'utf8'}).trim();priorCache.set(p,exists?execFileSync('git',['show',V2_FORWARD_BASE+':'+p],{cwd:root,maxBuffer:16*1024*1024}):null);}return priorCache.get(p);}
 export function v2ForwardTransition(source=read){
+ source=lineCardAwareReader(source);
  const m=JSON.parse(source(V2_FORWARD_MANIFEST));
  assert.equal(m.schema_version,'RECOMMENDATION_V2_FORWARD_TRANSITION_V1');assert.equal(m.base,V2_FORWARD_BASE);
  assert.deepEqual(m.files.map(r=>r.path).sort(),V2_FORWARD_PATHS,'exact named Forward candidate set');

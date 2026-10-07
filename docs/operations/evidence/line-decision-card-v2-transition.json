@@ -1,0 +1,115 @@
+{
+  "schema_version": "LINE_DECISION_CARD_OWNER_PREVIEW_V1",
+  "base": "9fba2d6ea5caa06046b76ba10eaab79d5a3f5088",
+  "predecessor_sha256": "e9b8e040be5ef0934f29216fb4f0b955e848c052afc152bbcef7fdcf807ae947",
+  "recommendation_source": "PRODUCTION_V1",
+  "sony_line_usability": "PENDING",
+  "function_deploy": false,
+  "migration": false,
+  "cron": false,
+  "auth_change": false,
+  "rls_change": false,
+  "secret_change": false,
+  "member_template_promotion": false,
+  "v2_promotion": false,
+  "production_data_write": false,
+  "line_send": false,
+  "files": [
+    {
+      "path": "docs/operations/line-decision-card-v2.md",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "9fa3b7f0294ae409184901751b92776e27a036e1f0b900ecfa54af1630674aa9"
+    },
+    {
+      "path": "src/features/line/decisionCard.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "95969714f1baff689760405b76c2970c00b541a41bfa8e712a185785036fd157"
+    },
+    {
+      "path": "src/pages/admin/analysis/LineDecisionPreview.tsx",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "816685c52462c16cdd4ac16a0aaf928774a54499f38aae3017873a56103e0b08"
+    },
+    {
+      "path": "src/pages/admin/analysis/page.tsx",
+      "operation": "MODIFY",
+      "predecessor_sha256": "06038296da412aece51bc3f6a4cddc61ad8e9aa3ff23e0fef1760b03bdae52d2",
+      "candidate_sha256": "9a4301c02517cb6b7b861579230d58f2b442d71dcfdf46758319c3c4b30c5710"
+    },
+    {
+      "path": "tests/analysisIntelligenceUI.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "c2a24901f5b96953677ff8d060bcf3237c0109dcd0f493ae2099951d2157b63d",
+      "candidate_sha256": "85c0720c46da8d443625f83cc1c085010c5d9c89863583af92a7d7497914e7b7"
+    },
+    {
+      "path": "tests/browser/lineDecision.vite.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "30a668a8783a4b51698e51e29b13376dd2ed579d02cc42f43257afa3be45bd6d"
+    },
+    {
+      "path": "tests/browser/lineDecisionHarness.tsx",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "74f8ffda13a937338199d467becb0f79c321faa35a19563551278be483eb7246"
+    },
+    {
+      "path": "tests/browser/lineDecisionMock.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "33d93c6aaa7d04366a539944822af4f9dc3d98511dc9b7f8d1a17db2449777d5"
+    },
+    {
+      "path": "tests/helpers/lineDecisionFixture.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "f296b6f5f0edc96075893d00ff788b18c56553235a905672f7d3631c08cd89ea"
+    },
+    {
+      "path": "tests/helpers/lineDecisionIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "64f4428f3ba8d6d1f9c4d2f48d3ba4bcce9eb68f6104f5c5742c8bf5050c3ebd"
+    },
+    {
+      "path": "tests/helpers/lineDecisionReplay.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "4c2cf7ff8ab4a3a230b2f8b4169612b1665b16b3ff77019e73d9891bba4ae0f4"
+    },
+    {
+      "path": "tests/helpers/recommendationV2ForwardIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "840445a6472be1d8a95aaa8946046ecb29dfb70c6351dff23ddeaeef684227c7",
+      "candidate_sha256": "22a04033400ddca2e4ba7dd4f20cb3d353ac794127b0333bd78bc42b12770c2d"
+    },
+    {
+      "path": "tests/lineDecisionCardV2.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "fff2fe793088d4250ac2b2e9935c4536ff214d622b57386007bd64a556a6f3bd"
+    },
+    {
+      "path": "tests/lineDecisionIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "f3cd7ed2b7ed69d9faa750a36538b37d8610717b244b9c9822f253842beaad07"
+    },
+    {
+      "path": "tests/ownerAccountAnalysisNavigation.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "d2ceafd6ed25b4b3ee732444fb97a2923cc88ceed12330290f2dbcc639d708bc",
+      "candidate_sha256": "4879e2d9fa77a7a13c07f4682f25023ea643d29ef61f3bdf655a977f4e1817f1"
+    },
+    {
+      "path": "tests/recommendationV2ForwardIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "fda1ab99f8d4c7884efa7baeea7caae7e68aae55d44bb1651af7967a99851916",
+      "candidate_sha256": "43c8ea9d0734f2205ebe3a77caef06ab44bd48650c1e8390c5db7fa266984fd5"
+    }
+  ]
+}

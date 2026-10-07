@@ -1,4 +1,4 @@
-/** Only the report handler schedules persistence. The read-only acquisition and
+/** The natural post-Atomic worker owns phase persistence. Acquisition and
  * smoke callers may calculate a comparison but cannot manufacture Forward rows.
  * A sidecar failure never changes formal V1, Report, Atomic or LINE outcomes. */
 import { emptyEvidenceData, type Row } from './decision-v1-data.ts';
@@ -28,7 +28,7 @@ export type V2Transport={
  pending:()=>PromiseLike<{data:unknown;error:unknown}>;
  storeOutcome:(result:Row,text:string)=>PromiseLike<{error:unknown}>;
 };
-export async function persistV2Sidecar(capsule:unknown,transport:V2Transport,now:()=>string=()=>new Date().toISOString()){
+export async function persistV2Sidecar(capsule:unknown,transport:V2Transport,now:()=>string=()=>new Date().toISOString(),processOutcomes=true){
  try{
   const c=obj(capsule);if(typeof c.evidence_text!=='string'||c.evidence_text.length>6_000_000)return {status:'SHADOW_NOT_AVAILABLE'};
   const input=JSON.parse(c.evidence_text) as V2Input;
@@ -37,6 +37,7 @@ export async function persistV2Sidecar(capsule:unknown,transport:V2Transport,now
   const result=await evaluateV2Shadow(input);
   if(v2Canonical(result)!==v2Canonical(c.result))return {status:'SHADOW_RESULT_MISMATCH'};
   const saved=await transport.storeRun(c.evidence_text,result);if(saved.error)return {status:'SHADOW_STORE_UNAVAILABLE'};
+  if(!processOutcomes)return {status:'SHADOW_STORED',outcomes_observed:0};
   const pending=await transport.pending();if(pending.error)return {status:'SHADOW_OUTCOMES_UNAVAILABLE'};
   // 72*25 sessions covers all current horizons, capped by the server query.
   // Overflow is explicit, never silently treated as a complete outcome pass.

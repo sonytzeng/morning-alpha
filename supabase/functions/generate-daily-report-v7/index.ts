@@ -3,7 +3,6 @@ import { observeCriticalClientFactory } from '../_shared/critical-rpc-observer.t
 const createClient = observeCriticalClientFactory(createRawClient);
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 import { requestRecommendationProof } from '../_shared/recommendation-producer.ts';
-import { scheduleV2Sidecar } from '../_shared/recommendation-shadow-v2-runtime.ts';
 import { RECOMMENDATION_UNIVERSE } from '../_shared/recommendation-stock-evidence.ts';
 import { recommendationServiceSla } from '../_shared/recommendation-phase.ts';
 import type { RuntimeDatabase } from '../_shared/runtime-database-contract.ts';
@@ -3204,22 +3203,8 @@ Deno.serve(async (req:Request)=>{
     const recommendationProof=await requestRecommendationProof({
       identity:{report_date:todayDate,today_date:todayDate,revision_id:correlationId,generated_at:new Date().toISOString(),data_as_of:new Date().toISOString(),is_trading_day:true},
       url:Deno.env.get('SUPABASE_URL')||'',cronSecret:Deno.env.get('CRON_SECRET')||'',serviceRoleKey:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',gatewayAnonJwt:Deno.env.get('RECOMMENDATION_GATEWAY_ANON_JWT')||'',fetcher:fetch,
-      onVerifiedProof:body=>{
-        // Owner-only asynchronous research. Nothing is attached to aiStrategyJson,
-        // recommendation V1, publication, or LINE. Smoke callers do not run this.
-        try {
-          const runtime=(globalThis as unknown as {EdgeRuntime?:{waitUntil:(p:Promise<unknown>)=>void}}).EdgeRuntime;
-          if(!runtime||!body.shadow_v2)return;
-          // Separate raw client: research must not enter the Core Critical
-          // Recorder dependency graph or become a business replay prerequisite.
-          const shadowDb=createRawClient(Deno.env.get('SUPABASE_URL')||'',Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:(url,init)=>fetch(url,{...init,signal:AbortSignal.timeout(5000)})}});
-          scheduleV2Sidecar(body.shadow_v2,{
-            storeRun:(text,result)=>shadowDb.rpc('store_recommendation_shadow_v2',{p_evidence_text:text,p_result:result}),
-            pending:()=>shadowDb.rpc('pending_recommendation_shadow_v2'),
-            storeOutcome:(result,text)=>shadowDb.rpc('store_recommendation_shadow_v2_outcome',{p_result:result,p_evidence_text:text}),
-          },p=>runtime.waitUntil(p));
-        } catch { /* Owner research unavailable; formal V1 proof unchanged. */ }
-      },
+      // Forward persistence has one natural post-Atomic owner. Report retries
+      // do not create a duplicate LEGACY prediction cohort or gate V2 execution.
     });
     aiStrategyJson.decision_v1=recommendationProof.decision;
     aiStrategyJson.recommendation_stock_evidence=recommendationProof.acquisition;

@@ -1,4 +1,5 @@
 /* Pure Owner research metrics; no network, credentials or production action. */
+import { v2SampleStatus } from './recommendation-v2-forward.ts';
 export const V2_HORIZONS=[1,3,5,10,20] as const;
 const SUMMARY_METHODOLOGY='RECOMMENDATION_SHADOW_TREND_ACTUALS_2.0.0';
 export type V2PredictionStatus='READY'|'WATCH';
@@ -24,7 +25,7 @@ function statusSummary(outcomes:SummaryOutcome[],status:V2PredictionStatus,forwa
  return {prediction_status:status,qualified_ready:status==='READY',forward_sample:dates?.length??null,
   outcome_sample:new Set(outcomes.filter(observed).map(o=>o.prediction_id)).size,horizons};
 }
-export function summarizeV2Outcomes(outcomes:SummaryOutcome[],forwardDates:string[],forwardDatesByStatus?:Partial<Record<V2PredictionStatus,string[]>>){
+export function summarizeV2Outcomes(outcomes:SummaryOutcome[],forwardDates:string[],forwardDatesByStatus?:Partial<Record<V2PredictionStatus,string[]>>,audit?:{prediction_ids:string[];no_lookahead:boolean;no_methodology_drift:boolean;no_contamination:boolean;complete_inventory:boolean}){
  const dates=[...new Set(forwardDates)].sort(),seen=new Set<string>(),statuses=new Map<string,string>();
  const eligible=outcomes.filter(o=>o.methodology_version===SUMMARY_METHODOLOGY&&V2_HORIZONS.some(h=>h===o.horizon));
  for(const o of eligible){
@@ -39,8 +40,9 @@ export function summarizeV2Outcomes(outcomes:SummaryOutcome[],forwardDates:strin
   READY:statusSummary(eligible.filter(o=>o.prediction_status==='READY'),'READY',forwardDatesByStatus?.READY),
   WATCH:statusSummary(eligible.filter(o=>o.prediction_status==='WATCH'),'WATCH',forwardDatesByStatus?.WATCH),
  };
+ const fullOutcomes=Boolean(audit?.complete_inventory&&audit.prediction_ids.length&&audit.prediction_ids.every(id=>V2_HORIZONS.every(h=>eligible.some(o=>o.prediction_id===id&&o.horizon===h&&['OBSERVED','NOT_ENTERED'].includes(o.state)))));
  return {forward_sample:dates.length,outcome_sample:by_status.READY.outcome_sample,horizons:by_status.READY.horizons,
   performance_basis:'READY_ONLY',by_status,unclassified_outcomes:eligible.filter(o=>o.prediction_status!=='READY'&&o.prediction_status!=='WATCH').length,
-  analysis_value:'INSUFFICIENT_SAMPLE',promotion_review_eligible:(by_status.READY.forward_sample??0)>=20,
+  analysis_value:v2SampleStatus(dates.length),promotion_review_eligible:dates.length>=20&&fullOutcomes&&audit?.no_lookahead===true&&audit.no_methodology_drift===true&&audit.no_contamination===true,
   promotion_allowed:false,owner_approval_required:true};
 }

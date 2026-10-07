@@ -20,11 +20,11 @@ function harness(mode='owner',data=fixture){
  const render=()=>{cursor=0;return text(exports.default());};render();return {render,calls,view:exports.TradingLabView,logout:()=>listener('SIGNED_OUT'),async release(){release();await new Promise(r=>setImmediate(r));}};
 }
 test('Owner view exposes decisions/reasons/funnel and separates journals from Forward',async()=>{
- const h=harness();await h.release();const t=h.render();for(const s of ['今天怎麼看','SYNTHETIC正式結論','不是全台股','支持判斷','反對／風險訊號','今天怎麼做','什麼情況代表看錯','我的交易','INSUFFICIENT_SAMPLE','未啟用','不是勝率'])assert(t.includes(s),s);
+ const h=harness();await h.release();const t=h.render();for(const s of ['今天怎麼看','SYNTHETIC正式結論','不是全台股','支持判斷','反對／風險訊號','今天怎麼做','什麼情況代表看錯','我的交易','INSUFFICIENT_SAMPLE','本頁不會觸發 Forward','不是勝率'])assert(t.includes(s),s);
  assert.equal(h.calls.length,1);assert.equal(h.calls[0].body.operation,'READ');
  h.logout();assert(!h.render().includes('SYNTHETIC正式結論'));assert(h.render().includes('身分已變更'));
 });
 for(const mode of ['anonymous','member','paid','expired','unavailable'])test(mode+' cannot display Owner data',async()=>{const h=harness(mode);await h.release();assert(h.render().includes('無法讀取'));assert(!h.render().includes('SYNTHETIC正式結論'));assert(!h.render().includes('PRIVATE_RAW_ERROR'));});
 test('late response after logout is discarded, not rendered',async()=>{const h=harness();h.logout();await h.release();assert(!h.render().includes('SYNTHETIC正式結論'));});
-test('opening an existing journal performs one bounded outcome catch-up, never a Forward trigger',async()=>{const h=harness('owner',{...fixture,trades:[{id:'synthetic',symbol:'2330',kind:'SONY_LIVE_TRADE'}]});await h.release();assert.deepEqual(h.calls.map(c=>c.body.operation),['READ','REFRESH_OUTCOMES','READ']);h.render();assert.equal(h.calls.length,3);});
+test('opening an existing journal is read-only, never catches up or triggers Forward implicitly',async()=>{const h=harness('owner',{...fixture,trades:[{id:'synthetic',symbol:'2330',kind:'SONY_LIVE_TRADE'}]});await h.release();assert.deepEqual(h.calls.map(c=>c.body.operation),['READ']);h.render();assert.equal(h.calls.length,1);});
 test('zero watchlist and samples remain honest, not fabricated success',()=>{const h=harness();const f=structuredClone(fixture);f.discovery.watchlist=[];f.discovery.first_blocked_gate='流動性';const t=text(h.view({data:f,busy:false,onCreate(){},onExit(){},onRefresh(){}}));assert(t.includes('目前沒有證據完整'));assert(t.includes('流動性'));assert(t.includes('樣本／證據不足'));assert(t.includes('不是帳戶淨值'));});

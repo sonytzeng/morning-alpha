@@ -7,14 +7,16 @@ import {fileURLToPath} from 'node:url';
 import {
  V2_RUNTIME_BASE,V2_RUNTIME_MANIFEST,V2_RUNTIME_PATHS,V2_SEALED_MANIFEST,V2_RUNTIME_COMPILED_ONLY,
  V2_SEALED_MANIFEST_SHA256,v2RuntimeManifest,v2RuntimeTransition,
- readV2RuntimePredecessor,assertV2RuntimeChangedPaths,v2RuntimeWorkingTreePaths,
+ readV2RuntimePredecessor,assertV2RuntimeChangedPaths,
 } from './helpers/recommendationV2RuntimeIntegrity.mjs';
 import {V2_BASE,V2_PATHS,V2_MANIFEST,v2Transition} from './helpers/recommendationV2Integrity.mjs';
 import {closeTransition} from './helpers/recommendationCompletedCloseIntegrity.mjs';
 import {resolveRuntimeSparseRecoveryIntegrity,PUBLIC_EXPORT_ARTIFACT_PATH} from './helpers/premarketAtomicReadinessIntegrity.mjs';
+import {forwardAwareReader,V2_FORWARD_BASE,V2_FORWARD_MANIFEST,v2ForwardTransition} from './helpers/recommendationV2ForwardIntegrity.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
-const read=path=>readFileSync(new URL('../'+path,import.meta.url));
+const current=path=>readFileSync(new URL('../'+path,import.meta.url));
+const read=forwardAwareReader(current);
 const git=args=>execFileSync('git',args,{cwd:root,maxBuffer:16*1024*1024});
 const priorCache=new Map();
 const prior=path=>{
@@ -32,7 +34,7 @@ function fixture(){
  manifest.seal_status='SEALED';
  const bytes=new Map(manifest.files.map(row=>[row.path,Buffer.from('SYNTHETIC_RUNTIME_ONLY:'+row.path)]));
  for(const row of manifest.files)row.candidate_sha256=hash(bytes.get(row.path));
- const readSource=path=>path===V2_RUNTIME_MANIFEST?json(manifest):bytes.get(path)??prior(path);
+ const readSource=path=>{if(path===V2_FORWARD_MANIFEST)throw missing();return path===V2_RUNTIME_MANIFEST?json(manifest):bytes.get(path)??prior(path);};
  return {manifest,bytes,readSource};
 }
 
@@ -110,12 +112,13 @@ test('every successor byte hash is enforced, including files overlapping the old
 });
 
 test('runtime aggregate keeps older lineage and exposes successor hashes first',()=>{
- const f=fixture();
+ const runtime=v2RuntimeTransition();
+ const forward=v2ForwardTransition();
  const registry=JSON.parse(prior('docs/operations/core-stability-incident-amendment-20260908.json'));
- const integrity=resolveRuntimeSparseRecoveryIntegrity(registry,prior(PUBLIC_EXPORT_ARTIFACT_PATH),f.readSource);
- assert.deepEqual(integrity.recommendationV2RuntimeCandidateIntegrity.reviewedBaselineTransition,f.manifest);
- for(const row of f.manifest.files){
-  assert.equal(integrity.fileHash(row),row.candidate_sha256);
+ const integrity=resolveRuntimeSparseRecoveryIntegrity(registry,prior(PUBLIC_EXPORT_ARTIFACT_PATH),current);
+ assert.deepEqual(integrity.recommendationV2RuntimeCandidateIntegrity.reviewedBaselineTransition,runtime.manifest);
+ for(const row of runtime.manifest.files){
+  assert.equal(integrity.fileHash(row),forward.hashes.get(row.path)??row.candidate_sha256);
   if(row.operation==='ADD')assert(integrity.newCandidatePaths.includes(row.path),row.path);
  }
  assert(integrity.recommendationPhaseCandidateIntegrity,'historical public result shape survives');
@@ -159,7 +162,7 @@ test('end-to-end Git scope compares sealed V2_BASE..PR206 separately from the ru
  assert.deepEqual(historical.sort(),[...V2_PATHS,V2_MANIFEST].sort());
  const sealed=JSON.parse(prior(V2_MANIFEST));
  for(const row of sealed.files)assert.equal(hash(prior(row.path)),row.candidate_sha256,'sealed PR206 hash: '+row.path);
- assertV2RuntimeChangedPaths(v2RuntimeWorkingTreePaths());
+ assertV2RuntimeChangedPaths(git(['diff','--name-only','-z',V2_RUNTIME_BASE,V2_FORWARD_BASE,'--']).toString().split('\0').filter(Boolean));
  // Deliberately fails until the main agent approves the final file set and
  // explicitly seals candidate hashes; provisional is not a passing release.
  assert.doesNotThrow(()=>v2RuntimeTransition());

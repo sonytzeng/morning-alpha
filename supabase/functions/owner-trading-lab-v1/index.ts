@@ -37,6 +37,12 @@ export async function handleOwnerTradingLab(request:Request) {
    const existing=trades.find(t=>t.request_id===body.request_id);
    if(existing)return requestIdentity(object(existing.system_snapshot).client_request)===requestIdentity(object(body.trade))
     ?reply(200,{status:'ALREADY_RECORDED',id:existing.id}):reply(409,{error:'IDEMPOTENCY_CONFLICT'});
+   if(object(body.trade).kind==='OWNER_EXPERIMENT'){
+    // Same verified Owner, separate DB-verified prospective quote/plan. No
+    // browser-supplied price, prediction lock or formal recommendation write.
+    const result=must(await db.rpc('owner_lab_record_experiment_v1',{p_owner:ownerId,p_request:body.request_id,p_trade:body.trade}));
+    return reply(200,result);
+   }
   }
   if(operation==='RECORD_EXIT') {
    const e=object(body.event),id=String(body.trade_id);
@@ -103,7 +109,7 @@ export async function handleOwnerTradingLab(request:Request) {
   }
   const events=records(must(eventsResult));if(events.length>1000)throw Error('EVENT_LIMIT');
   const returns=(kind:string)=>trades.filter(t=>t.kind===kind).flatMap(t=>{
-   const e=events.find(e=>e.trade_id===t.id&&e.event_key===(kind==='SYSTEM_SIMULATION'?t.horizon:'EXIT'));
+   const e=events.find(e=>e.trade_id===t.id&&e.event_key===(kind==='SONY_LIVE_TRADE'?'EXIT':t.horizon));
    return e?[{id:String(t.id),at:String(e.occurred_at),value:Number(object(e.payload).return_percent)}]:[];
   });
   const qualityRows=records(must(qualityResult));
@@ -113,7 +119,7 @@ export async function handleOwnerTradingLab(request:Request) {
   const forwardSample=object(must(ownerAnalysisResult)).forward_sample;
   if(!Number.isInteger(forwardSample)||Number(forwardSample)<0)throw Error('FORWARD_SAMPLE_UNAVAILABLE');
   return reply(200,{version:LAB_VERSION,public_product_approval:false,forward_enabled:false,as_of:now,business_date:date,canonical,shadow,
-   discovery,trades,events,performance:{system:performance(returns('SYSTEM_SIMULATION')),sony:performance(returns('SONY_LIVE_TRADE')),
+   discovery,trades,events,performance:{system:performance(returns('SYSTEM_SIMULATION')),sony:performance(returns('SONY_LIVE_TRADE')),experiment:performance(returns('OWNER_EXPERIMENT')),
     market:{sample:marketQuality.length,direction_accuracy:qualityRows.length<=200&&marketQuality.length>=5?marketQuality.filter(r=>r.direction_correct).length/marketQuality.length*100:null,
      source:'CLE_CLOSE_DIRECTION_NOT_TRADING_RETURNS',coverage:qualityRows.length>200?'TRUNCATED_NOT_COMPLETE':'BOUNDED_LATEST_200',forward_shadow_sample:forwardSample}}});
  } catch { return reply(422,{error:'OWNER_LAB_UNAVAILABLE',message:'研究資料或交易條件驗證未通過；正式服務未受影響。'}); }

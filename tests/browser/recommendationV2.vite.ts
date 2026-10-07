@@ -10,6 +10,11 @@ export default defineConfig(({command})=>{
   res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://127.0.0.1:3195; img-src 'self' data:; frame-src 'none'; object-src 'none'");res.setHeader('Cache-Control','no-store');
   if(req.url?.startsWith('/__v2_read')){
    const role=new URL(req.url,'http://127.0.0.1:3195').searchParams.get('role');
+   if(process.env.MA_V2_FORWARD_UI==='LOCAL_ONLY'){
+    void fetch('http://127.0.0.1:3199/?role='+encodeURIComponent(role||'anonymous'),{signal:AbortSignal.timeout(5000)})
+     .then(async r=>{res.statusCode=r.status;res.setHeader('Content-Type','application/json');res.end(await r.text());})
+     .catch(()=>{res.statusCode=503;res.end('{}');});return;
+   }
    const ids:Record<string,string>={owner:'10000000-0000-4000-8000-000000000001',member:'10000000-0000-4000-8000-000000000002',paid:'10000000-0000-4000-8000-000000000003'};
    const identity=role&&ids[role]?`set local role authenticated;set local request.jwt.claim.sub='${ids[role]}';`:'set local role anon;';
    try{const data=execFileSync('docker',['exec','-i','ma-recommendation-owner-ci','psql','-X','-q','-U','postgres','-d',db,'-At','-v','ON_ERROR_STOP=1'],{input:`begin;${identity}select get_owner_recommendation_shadow_v2();rollback;`,encoding:'utf8',stdio:['pipe','pipe','pipe']}).trim();res.setHeader('Content-Type','application/json');res.end(data);}catch{res.statusCode=403;res.end('{}');}return;

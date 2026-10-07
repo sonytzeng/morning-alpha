@@ -12,6 +12,7 @@ export const STOCK_ACQUISITION_PATHS=[
  'supabase/functions/recommendation-stock-evidence-v1/index.ts',
  'tests/helpers/recommendationPhaseIntegrity.mjs',
  'tests/helpers/stockAcquisitionIntegrity.mjs',
+ 'tests/productContract.test.mjs',
  'tests/recommendationPhaseIntegrity.test.mjs',
  'tests/stockAcquisitionIntegrity.test.mjs',
  'tests/stockAcquisitionSmoke.test.mjs',

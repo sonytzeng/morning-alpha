@@ -5,6 +5,7 @@ import { acquireStockEvidence, buildRecommendationProof, stockAcquisitionCoverag
 import { isMarketTradingDate } from '../_shared/market-session-contract.mjs';
 import { acquireOfficialActuals } from '../_shared/recommendation-official-actuals.ts';
 import { acquireCompanyEvents } from '../_shared/recommendation-company-events.ts';
+import { recommendationJsonStream } from '../_shared/recommendation-stream.ts';
 
 // Server-only, read-only source acquisition. Existing internal identity validator.
 // No Cron, RLS changes, Core writes, LINE, strategy promotion or historical backfill.
@@ -24,6 +25,7 @@ Deno.serve(async (request:Request)=>{
   const now=()=>new Date().toISOString(),started=now(),date=new Date(Date.parse(started)+8*3600000).toISOString().slice(0,10);
   if(input.business_date!==date||!isMarketTradingDate('TW',date)||typeof input.correlation_id!=='string'||!/^[-a-zA-Z0-9_:]{1,128}$/.test(input.correlation_id))return reply(422,{error:'LIVE_ACQUISITION_IDENTITY_INVALID'});
   const identity={report_date:date,today_date:date,revision_id:input.correlation_id,generated_at:started,data_as_of:started,is_trading_day:true};
+  const execute=async()=>{
   const db=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});
   const data=await loadDecisionEvidence(async q=>{
    let query=db.from(q.table).select(q.columns).order(q.order,{ascending:false}).limit(q.limit);
@@ -42,6 +44,8 @@ Deno.serve(async (request:Request)=>{
   // Factual events are a separate sourced-evidence layer, NOT fabricated V1
   // bullish catalyst mappings or consensus. The unchanged evaluator stays closed.
   return reply(200,{...await buildRecommendationProof(data,identity,captures,officialActuals),company_events:companyEvents,scope,coverage});
+  };
+  return scope==='SMOKE_2330'?await execute():recommendationJsonStream(execute,request.signal,{deadlineMs:260000});
  }catch{
   return reply(422,{error:'RECOMMENDATION_EVIDENCE_UNAVAILABLE',business_writes:[]});
  }

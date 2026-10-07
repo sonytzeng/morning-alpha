@@ -8,6 +8,7 @@ Deno.serve(request=>handleRecommendationSmoke(request,{
  url:Deno.env.get('SUPABASE_URL')||'',
  credentials:internalCredentialsFromEnv(),
  workerToken:Deno.env.get(SMOKE_TOKEN_ENV)||'',
+ streaming:true,
  gatewayAnonJwt:Deno.env.get('RECOMMENDATION_GATEWAY_ANON_JWT')||'',
  gatewayKeyClass:!Deno.env.get('SUPABASE_ANON_KEY')?'MISSING':/^[^.\s]+\.[^.\s]+\.[^.\s]+$/.test(Deno.env.get('SUPABASE_ANON_KEY')||'')?'LEGACY_JWT':'NON_JWT',
  fetcher:fetch,

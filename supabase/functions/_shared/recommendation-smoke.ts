@@ -9,10 +9,11 @@ import { RECOMMENDATION_UNIVERSE, stockAcquisitionCoverage, type Capture } from 
 import type { Row } from './decision-v1-data.ts';
 import { runtimeEvaluationSummary } from './recommendation-runtime-summary.ts';
 import { requestRecommendationProof } from './recommendation-producer.ts';
+import { recommendationJsonStream } from './recommendation-stream.ts';
 
 type Runtime = {
  url:string; credentials:{currentToken:string;previousToken:string;previousExpiresAt:string;version:string;serviceRoleKey:string};
- workerToken:string; gatewayKeyClass?:string; gatewayAnonJwt?:string; fetcher:typeof fetch; now:()=>string;
+ workerToken:string; gatewayKeyClass?:string; gatewayAnonJwt?:string; streaming?:boolean; fetcher:typeof fetch; now:()=>string;
 };
 const object=(v:unknown):Row=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
 const stamp=(v:unknown)=>Date.parse(String(v));
@@ -34,7 +35,7 @@ export function verifySmokeCapture(body:unknown,scope:'SMOKE_2330'|'UNIVERSE_72'
  const root=object(body),a=object(root.acquisition),decision=object(root.decision);
  const symbols=scope==='SMOKE_2330'?['2330']:RECOMMENDATION_UNIVERSE;
  const cutoff=String(a.cutoff),phase=evaluationPhase(start);
- if(root.scope!==scope||a.contract!=='RECOMMENDATION_STOCK_EVIDENCE_V1'||a.business_date!==date||a.universe_count!==72||
+ if(root.transport_result_status!==undefined&&root.transport_result_status!==200||root.scope!==scope||a.contract!=='RECOMMENDATION_STOCK_EVIDENCE_V1'||a.business_date!==date||a.universe_count!==72||
   !Number.isFinite(stamp(cutoff))||stamp(cutoff)<stamp(start)||stamp(cutoff)>stamp(end)||day(cutoff)!==date||evaluationPhase(cutoff)!==phase||
   !Array.isArray(root.business_writes)||root.business_writes.length||!Array.isArray(a.captures))throw Error('PRODUCER_CONTRACT');
  if(scope==='SMOKE_2330'&&(a.requested_count!==1||root.complete_universe_evaluation!==false))throw Error('SMOKE_SCOPE');
@@ -118,7 +119,7 @@ export async function handleRecommendationSmoke(request:Request,runtime:Runtime)
   return {http:response.status,verification:verifySmokeCapture(data,scope,date,revision,began,runtime.now()),
    ...(scope==='UNIVERSE_72'?{evaluation:runtimeEvaluationSummary(data)}:{})};
  };
- try{
+ const execute=async()=>{try{
   const smoke=await run('SMOKE_2330');
   if(!smoke.verification?.pass)return reply(422,{smoke_2330:smoke,universe_72:'NOT_RUN',business_writes:[]});
   if(input.mode==='SMOKE_2330')return reply(200,{smoke_2330:smoke,universe_72:'NOT_RUN',runtime_gateway_class:runtime.gatewayKeyClass??'UNINSPECTED',business_writes:[]});
@@ -143,5 +144,6 @@ export async function handleRecommendationSmoke(request:Request,runtime:Runtime)
   const code=error instanceof Error?error.message:'';
   const known=['PRODUCER_CONTRACT','SMOKE_SCOPE','PRODUCER_IDENTITY','CAPTURE_SET','CAPTURE_TIME','CAPTURE_SUCCESS_PROOF','CAPTURE_ROW','DAILY_SESSIONS','DAILY_OHLC','LATEST_FRESHNESS','BODY_LIMIT','EMPTY_BODY','EVALUATION_CONTRACT'];
   return reply(422,{error:known.includes(code)?code:error instanceof SyntaxError?'PRODUCER_JSON_INVALID':'SMOKE_TRANSPORT_OR_CONTRACT_REJECTED',business_writes:[]});
- }
+ }};
+ return runtime.streaming&&input.mode!=='SMOKE_2330'?recommendationJsonStream(execute,request.signal):execute();
 }

@@ -55,6 +55,9 @@ jobs:
           deno check --no-lock
           supabase/functions/generate-daily-report-v7/index.ts
           supabase/functions/recommendation-stock-evidence-v1/index.ts
+          supabase/functions/recommendation-stock-evidence-smoke-v1/index.ts
+          supabase/functions/_shared/recommendation-company-events.ts
+          research/recommendation-v2-shadow.ts
           supabase/functions/owner-trading-lab-v1/index.ts
           supabase/functions/daily-delivery-orchestrator/index.ts
           supabase/functions/get-report-payload/index.ts

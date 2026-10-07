@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {readHardGatePredecessor} from './recommendationHardGateIntegrity.mjs';
 export const STOCK_ACQUISITION_BASE='63e1a167a03bc39fa2cce3b4979f7e6a398a81b0';
 export const STOCK_ACQUISITION_MANIFEST='docs/10k-program/stock-acquisition-transition.json';
 export const STOCK_ACQUISITION_PATHS=[
@@ -50,6 +51,7 @@ function verifiedPredecessor(row,readSource){
  return before;
 }
 export function stockAcquisitionTransition(readSource=read){
+ const candidateRead=readSource;readSource=p=>readHardGatePredecessor(p,candidateRead);
  const m=manifest(readSource),restored=new Map();
  for(const row of m.files)restored.set(row.path,verifiedPredecessor(row,readSource));
  return {manifest:m,predecessorRead:p=>{
@@ -62,6 +64,7 @@ export function stockAcquisitionTransition(readSource=read){
 // Older seals continue to validate the exact released bytes. The successor
 // validates every current byte first; no historical hash is replaced.
 export function readStockAcquisitionPredecessor(path,readSource=read){
+ const candidateRead=readSource;readSource=p=>readHardGatePredecessor(p,candidateRead);
  if(!candidatePaths.has(path))return readSource(path);
  const row=manifest(readSource).files.find(r=>r.path===path);
  if(!row)return readSource(path);

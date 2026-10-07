@@ -9,6 +9,7 @@ import {
 } from './consolidationPublicExportIntegrity.mjs';
 import { readReviewedGitPredecessor, resolveReviewedBaselineTransition } from './reviewedBaselineTransition.mjs';
 import { recommendationTransition, readRecommendationPredecessor } from './recommendationPhaseIntegrity.mjs';
+import { hardGateTransition } from './recommendationHardGateIntegrity.mjs';
 
 const read = path => readFileSync(new URL('../../' + path, import.meta.url));
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -511,9 +512,11 @@ function resolveOwnerTradingLabIntegrity(registry,artifactBytes,readSource=read)
 }
 
 export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,readSource=read) {
+ const hardGate=hardGateTransition(readSource);
+ const hardHashes=new Map(hardGate.manifest.files.map(row=>[row.path,row.candidate_sha256]));
  const candidate=recommendationTransition(readSource);
  const before=resolveOwnerTradingLabIntegrity(registry,artifactBytes,candidate.predecessorRead);
- return {...before,fileHash:row=>candidate.hashes.get(row.path)??before.fileHash(row),
-  newCandidatePaths:[...new Set([...before.newCandidatePaths,...candidate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
+ return {...before,fileHash:row=>hardHashes.get(row.path)??candidate.hashes.get(row.path)??before.fileHash(row),
+  newCandidatePaths:[...new Set([...before.newCandidatePaths,...candidate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...hardGate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
   recommendationPhaseCandidateIntegrity:{reviewedBaselineTransition:candidate.manifest}};
 }

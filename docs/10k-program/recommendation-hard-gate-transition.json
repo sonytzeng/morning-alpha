@@ -1,0 +1,117 @@
+{
+  "schema_version": "RECOMMENDATION_HARD_GATE_TRANSITION_V1",
+  "candidate_base_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+  "functions": [
+    "recommendation-stock-evidence-smoke-v1"
+  ],
+  "migrations": [],
+  "auth_change": false,
+  "rls_change": false,
+  "secret_change": false,
+  "cron_change": false,
+  "threshold_change": false,
+  "core_change": false,
+  "production_deploy": false,
+  "forward_enabled": false,
+  "methodology_promotion": false,
+  "files": [
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": "501f3db103843d5a6454ac0dfdbfc99854b241309abaa0be9b849db1d4252007",
+      "candidate_sha256": "03a05ab22e0b755794cc3078fb39e982d7a333e4f56ae12204f06b7ca5f8d262"
+    },
+    {
+      "path": "docs/10k-program/recommendation-hard-gate-audit.md",
+      "operation": "ADD",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": null,
+      "candidate_sha256": "49b20ff4f17d61612701ca069ad2f9280d9621234d9eeb87abc65bbaf73167f7"
+    },
+    {
+      "path": "research/recommendation-v2-shadow.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": null,
+      "candidate_sha256": "b9cf41970a1fa2d41845b997b5bc2471643e9f62fd101f632061f0365ded3ca1"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-company-events.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": null,
+      "candidate_sha256": "c3ec0591ba53adb04788bff97ab19db28abdb3c66eb0a382e37855ff215aebd9"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-smoke.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": null,
+      "candidate_sha256": "a6da310f3067869179f8e23a781cbeaf2235200c68aaad4f726ab911a844deb2"
+    },
+    {
+      "path": "supabase/functions/recommendation-stock-evidence-smoke-v1/index.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": null,
+      "candidate_sha256": "48d263e805a33efb8ffb380e4e5064ad0a20da319375cffb73320192c505e591"
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": "ff516dcef67b554c7ebfa6cb9d6dc681e39fe0b89231848476fca22a7af0d433",
+      "candidate_sha256": "1ffb4854562b0c4805c5861194f0a9116256c16d68fae2d79d554f65ddb6168a"
+    },
+    {
+      "path": "tests/helpers/recommendationHardGateIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": null,
+      "candidate_sha256": "50f24438bc53037088e7ad576bf7070525d07aad9177bce7a2cff46929392e56"
+    },
+    {
+      "path": "tests/helpers/stockAcquisitionIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": "05ac832bbaabefa8a9b13c1048fb919c33dd42cbda15fc859b04df6da681d09d",
+      "candidate_sha256": "61c32967c1022680d3f7d292b8931b1286f2ce968455dfed28205bf107c4c39a"
+    },
+    {
+      "path": "tests/productContract.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": "7fc0abc1f59fd344162cd011ff877389ed7ae8be933bd0038eb01a33d000b089",
+      "candidate_sha256": "6e2527e8724dd70b9c0a679aebb3073f0d6d1aa9629995d2a0b1f90582a7d6a8"
+    },
+    {
+      "path": "tests/recommendationHardGateAudit.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": null,
+      "candidate_sha256": "ef8ef64bb9a89a184dc99bb0300e7a2660352d64d31f5e4ea6634ff147389b94"
+    },
+    {
+      "path": "tests/recommendationHardGateIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": null,
+      "candidate_sha256": "1448c70f09e018ea753020cd1828706a8e71280005bd72ba7d4c069fdea5255e"
+    },
+    {
+      "path": "tests/recommendationRuntimeSmoke.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": null,
+      "candidate_sha256": "13bedeb66e8d31025becb1f35f97d6cbccd9e9d95ba829e450312298e87b3e16"
+    },
+    {
+      "path": "tests/stockAcquisitionIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "82600edeef0fbc37fbfa64c939ade72315458e1b",
+      "predecessor_sha256": "0a5bce5199ac55bab62c928474d63817a305542ca70fea37bf43dda58309a778",
+      "candidate_sha256": "6ce044794ba41b2df8054f7a78b226087ef050742628a944443f6bef834f01b5"
+    }
+  ]
+}

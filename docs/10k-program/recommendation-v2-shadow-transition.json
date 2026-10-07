@@ -1,0 +1,233 @@
+{
+  "schema_version": "RECOMMENDATION_V2_SHADOW_TRANSITION_V1",
+  "candidate_base_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+  "functions": [
+    "generate-daily-report-v7",
+    "recommendation-stock-evidence-v1"
+  ],
+  "migrations": [
+    "20261007092045_recommendation_v2_owner_shadow.sql"
+  ],
+  "new_secret_names": [],
+  "core_auth_change": false,
+  "core_rls_change": false,
+  "cron_change": false,
+  "v1_threshold_change": false,
+  "business_strategy_change": false,
+  "methodology_promotion": false,
+  "member_access": false,
+  "owner_shadow_only": true,
+  "forward_lock_prospective_only": true,
+  "files": [
+    {
+      "path": ".github/workflows/recommendation-v2-shadow.yml",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "8ca373078a8d58ecb63038433e2d469d56b272a56b6f447f632b51ef35930b8d"
+    },
+    {
+      "path": "docs/10k-program/recommendation-v2-shadow-design.md",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "8ec98d2472851d00775ef5ee0b4e4a507b01f265c379a0f9f279f1f7558e0d0b"
+    },
+    {
+      "path": "docs/10k-program/recommendation-v2-source-observation.json",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "8d980c2c72dc1a3a9d49e7a6c59d61d9894cfea15cf23758b5d4d721f4b035d0"
+    },
+    {
+      "path": "src/pages/admin/analysis/RecommendationShadow.tsx",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "9c88c2aa013d44bfb020fe7d5bd52d27716e2253f4c13735abc8d2ee1dca599f"
+    },
+    {
+      "path": "src/pages/admin/analysis/page.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": "b34ee6b3187e5b687aa61a7ea9dc0042b59e3fb9ea325c51f4074275b96547e5",
+      "candidate_sha256": "06038296da412aece51bc3f6a4cddc61ad8e9aa3ff23e0fef1760b03bdae52d2"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "7599eb208075ef8515139c39b77ee906b6d7e749fadc2d0cbd822b95f58d04fb"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "8929751ed034b9b42ed2c28dccac42fdce2046251935c158e3749e3dc3cd1d45"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-runtime.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "c45ad460bc54f5c8228f3e8e9d015d7af04753788e87802943c86d76e1b240c1"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-sources.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "9cb331f2151f7479880620895889a04c4d70ac79f2c3c5850e7627783f2b6895"
+    },
+    {
+      "path": "src/features/research/recommendation-shadow-v2-summary.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "d9f0f436fa540f3a44395cc7dd07aa80fa908b1efb5bdef6904a98d84d54c64d"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": "14813e996008f91964f918a97403a2820ca3cc8ed2b6f1b757a734a06913c9ea",
+      "candidate_sha256": "035c42987faca4c99fce6cdfa838e2dc7b7e0654040e55b6b829578e3a7c45ac"
+    },
+    {
+      "path": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": "389e348e365770f75e334a1066558c131cace2cd2fb13af529726e2b493ef467",
+      "candidate_sha256": "023b5e8dd051f84bac2f8b1bd1fa117d4faba9441454a1c384f71a7e623faeca"
+    },
+    {
+      "path": "supabase/migrations/20261007092045_recommendation_v2_owner_shadow.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "05fba1e45e383f442510f58e435a46ab83f1dc50f93f8cdb01374acbd619b680"
+    },
+    {
+      "path": "tests/analysisIntelligenceUI.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": "a839074d9f92e9783c9a0a8540b3a18d48659aa334ef6eaee82a88e49e62a51c",
+      "candidate_sha256": "c2a24901f5b96953677ff8d060bcf3237c0109dcd0f493ae2099951d2157b63d"
+    },
+    {
+      "path": "tests/browser/recommendationV2.e2e.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "7e4ca263809d6aecbef9d08539604ccc59811b261e08e0d9bd1b98fde61cf41b"
+    },
+    {
+      "path": "tests/browser/recommendationV2.vite.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "da226891a9bf6ac6262b3f17b338902a40243117c55df40bba35b0aea09b574e"
+    },
+    {
+      "path": "tests/browser/recommendationV2Harness.tsx",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "cceaf1ee0a7fa5e4b1d80d61d3493939db90567ea40254ee526e72beae9d042c"
+    },
+    {
+      "path": "tests/browser/recommendationV2SupabaseMock.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "a206d4d1ab674283e2663c12ce6f4e6fb30bc9a8a709b054fd37461eff35ce46"
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": "8554e02d4144106202e43d62d1991dc835431f1303bdff2dadba291a7adce68e",
+      "candidate_sha256": "728062e6a55f79a236308397ace7093586ae14212a585052aa5d7af64ae1243d"
+    },
+    {
+      "path": "tests/helpers/recommendationCompletedCloseIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": "f086fdb4c52a0dc6371631b9c19acea40e1c5a486b5ba3ac6fb252e0a8df7aba",
+      "candidate_sha256": "1d0ef5fe29ce2ea46e96f800034900d23c404a16d36f0f637a8f5d26c7ddb40a"
+    },
+    {
+      "path": "tests/helpers/recommendationV2Fixtures.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "fb4e2d334955446e52db83b1f1a867dbddb186bbe0dec084f5f3d3d39ad02291"
+    },
+    {
+      "path": "tests/helpers/recommendationV2Integrity.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "2ddd155d767c58ddfcdb1cae1f30208276ad6dde0158e434de9150a5f50bd233"
+    },
+    {
+      "path": "tests/ownerAccountAnalysisNavigation.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": "d0c2b43dcc7c64c272b62a2702eaeda70adac30f8f9cdf51c251a54acac142ea",
+      "candidate_sha256": "d2ceafd6ed25b4b3ee732444fb97a2923cc88ceed12330290f2dbcc639d708bc"
+    },
+    {
+      "path": "tests/recommendationCompletedCloseIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": "b1ee0be0297339a783c86adb7ec2d3b2ee53a2336aaf0f86eb436791631f34a2",
+      "candidate_sha256": "be7dc2815bd6d99a533ec52d2eee1df5ea13a1390113cbe4453b329ac1b030db"
+    },
+    {
+      "path": "tests/recommendationGatewayIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": "732bdd522cb766e7d596878a3a7f923ade2798808265ee63fb8e009422d533df",
+      "candidate_sha256": "e72fcef56689426f172b3eea7ddf196bbd1360f71ddff7c17be4259b5407e3f1"
+    },
+    {
+      "path": "tests/recommendationV2Database.integration.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "7ad2a1520df87c022969a12a948a7f9055fef7ef35e704e663bf93149b8ccfa9"
+    },
+    {
+      "path": "tests/recommendationV2Integrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "4c24630037b02c8d9ca479ca431399a88e17108c8fa68b10c09da0385600fdb6"
+    },
+    {
+      "path": "tests/recommendationV2Prospective.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "671bda7b21889657f6627e35fd95f4de96ff998695260277dd2daafd5675aed8"
+    },
+    {
+      "path": "tests/recommendationV2Runtime.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "dc69e5511738f2168fb668a43bd2ab92f7c9372bdd243ab4240e15281cabfb80"
+    },
+    {
+      "path": "tests/recommendationV2UI.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
+      "predecessor_sha256": null,
+      "candidate_sha256": "2e05c6ba9428954df1a119c6eeea214c43f2676f83d27dd2d111b19a365c47b5"
+    }
+  ]
+}

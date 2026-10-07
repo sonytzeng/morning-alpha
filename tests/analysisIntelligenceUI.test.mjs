@@ -18,6 +18,7 @@ function load(path,extra={}){
     if(name==='@/features/research/foundation')return modules.foundation;
     if(name==='./IntelligenceView')return modules.view;
     if(name==='./TradingLab')return {default:()=>null}; // independently covered by Owner Lab Handler/UI suite
+    if(name==='./RecommendationShadow')return {default:()=>null}; // separately exercised with real isolated RLS, UI states and browser tests
     if(name==='./analysis.css')return {};
     throw Error('UNEXPECTED_IMPORT:'+name);
   }});return exports;

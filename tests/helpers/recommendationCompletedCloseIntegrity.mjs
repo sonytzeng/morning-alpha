@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {readV2Predecessor} from './recommendationV2Integrity.mjs';
 export const CLOSE_BASE='f7f9cc7bfdf6e6adec65aca11f234af0339293e5';
 export const CLOSE_MANIFEST='docs/10k-program/recommendation-completed-close-transition.json';
 export const CLOSE_PATHS=[
@@ -42,6 +43,7 @@ function checked(row,readSource){
  return before;
 }
 export function closeTransition(readSource=read){
+ const current=readSource;readSource=p=>readV2Predecessor(p,current);
  const m=manifest(readSource),restored=new Map();for(const row of m.files)restored.set(row.path,checked(row,readSource));
  return {manifest:m,predecessorRead:p=>{
   if(!restored.has(p))return readSource(p);const b=restored.get(p);
@@ -49,6 +51,7 @@ export function closeTransition(readSource=read){
  }};
 }
 export function readClosePredecessor(path,readSource=read){
+ const current=readSource;readSource=p=>readV2Predecessor(p,current);
  if(!paths.has(path))return readSource(path);
  const row=manifest(readSource).files.find(r=>r.path===path),b=checked(row,readSource);
  if(b===null)throw Object.assign(Error('absent from Close predecessor'),{code:'ENOENT'});return b;

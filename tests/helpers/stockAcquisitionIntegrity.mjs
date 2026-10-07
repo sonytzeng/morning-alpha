@@ -7,6 +7,7 @@ export const STOCK_ACQUISITION_BASE='63e1a167a03bc39fa2cce3b4979f7e6a398a81b0';
 export const STOCK_ACQUISITION_MANIFEST='docs/10k-program/stock-acquisition-transition.json';
 export const STOCK_ACQUISITION_PATHS=[
  'docs/10k-program/stock-acquisition-candidate.md',
+ 'supabase/functions/_shared/recommendation-official-actuals.ts',
  'supabase/functions/_shared/recommendation-stock-evidence.ts',
  'supabase/functions/recommendation-stock-evidence-v1/index.ts',
  'tests/helpers/recommendationPhaseIntegrity.mjs',
@@ -14,6 +15,7 @@ export const STOCK_ACQUISITION_PATHS=[
  'tests/recommendationPhaseIntegrity.test.mjs',
  'tests/stockAcquisitionIntegrity.test.mjs',
  'tests/stockAcquisitionSmoke.test.mjs',
+ 'tests/stockOfficialActuals.test.mjs',
 ].sort();
 const candidatePaths=new Set(STOCK_ACQUISITION_PATHS);
 const root=fileURLToPath(new URL('../../',import.meta.url));

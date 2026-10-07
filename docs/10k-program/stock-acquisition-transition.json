@@ -19,21 +19,28 @@
       "operation": "ADD",
       "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
       "predecessor_sha256": null,
-      "candidate_sha256": "0f5fd835770ef0c46673961d7d7c2f9fa18eed60d2880fe5744d041f3a9b1d7f"
+      "candidate_sha256": "0f6758673839644b35c12762611fa13169d7e20145df1be2e8a20d1d868053a6"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-official-actuals.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
+      "predecessor_sha256": null,
+      "candidate_sha256": "ac1457eb889466931f14f4e9c5a44c3a6000a54a6657cd1c977cb4916714eea5"
     },
     {
       "path": "supabase/functions/_shared/recommendation-stock-evidence.ts",
       "operation": "MODIFY",
       "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
       "predecessor_sha256": "98ead781e6b6b617fc28bea3d63d6e28b69083d1e1c1a8b28c3193289589db70",
-      "candidate_sha256": "dfb3b19dff6ae62de2c35a016fb100d6b57966e2e443518ad28e8f033e4bc114"
+      "candidate_sha256": "0d897fbebb6c000b5e45372fc42da0f5bc7dd3218a6e2ec035089b0a9e77bb55"
     },
     {
       "path": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
       "operation": "MODIFY",
       "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
       "predecessor_sha256": "9d374ec8c8b1c10995a52d05d78f40c8f8ed69ff777a48b583525ce832b777df",
-      "candidate_sha256": "83119ebb512aae8f5e4c807c63a5f6869396905e57e83538dbff4a470de4eb13"
+      "candidate_sha256": "ab189526d1d2838fc60f96855d45f2109b1fba54a793246f3c9e8f0bd3fb2ee6"
     },
     {
       "path": "tests/helpers/recommendationPhaseIntegrity.mjs",
@@ -47,7 +54,7 @@
       "operation": "ADD",
       "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
       "predecessor_sha256": null,
-      "candidate_sha256": "f6a016bd2ff99438c8e34263f0593281c63ca6e15e63b68e696c79e8a42ecfac"
+      "candidate_sha256": "ea87f18f667a2182dfafe8293cdbe81d2216e32ab6d76654a0ab4c7e6d9ef39e"
     },
     {
       "path": "tests/recommendationPhaseIntegrity.test.mjs",
@@ -69,6 +76,13 @@
       "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
       "predecessor_sha256": null,
       "candidate_sha256": "d090cf3c86041ec531f285a254bfb1ef66e6f14bd0b25dcae753a8fe00b17258"
+    },
+    {
+      "path": "tests/stockOfficialActuals.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
+      "predecessor_sha256": null,
+      "candidate_sha256": "1b5caef446dbc000ee32785ec2a9fb6228ccd9699df48b36cb6b7392ef35b6f8"
     }
   ]
 }

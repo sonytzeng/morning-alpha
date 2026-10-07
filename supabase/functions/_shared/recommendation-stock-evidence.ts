@@ -5,6 +5,7 @@ import type { Row, EvidenceData, DecisionIdentity } from './decision-v1-data.ts'
 import { buildEvidenceDecision, sealEvidenceDecision } from './decision-v1-evidence.ts';
 import { isMarketTradingDate, previousMarketTradingDate } from './market-session-contract.mjs';
 import { evaluationPhase } from './recommendation-phase.ts';
+import { officialActualCoverage, type OfficialCapture } from './recommendation-official-actuals.ts';
 
 export const RECOMMENDATION_UNIVERSE = Object.freeze('1504 1513 1514 1519 1590 1605 1760 2049 2208 2303 2308 2317 2330 2337 2344 2356 2357 2368 2376 2377 2379 2382 2383 2408 2421 2454 2520 2539 2542 2548 2603 2609 2610 2615 2618 2634 2881 2882 2884 2885 2886 2891 2892 3006 3017 3034 3037 3081 3189 3231 3324 3363 3443 3450 3529 3653 3661 3711 4566 4743 4908 4979 6213 6230 6274 6446 6488 6547 6669 8033 8046 8299'.split(' '));
 const obj=(v:unknown):Row=>v&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
@@ -125,13 +126,21 @@ export async function acquireStockEvidence(options:{businessDate:string;universe
  }));
  return captures.sort((a,b)=>a.symbol.localeCompare(b.symbol)||a.endpoint.localeCompare(b.endpoint));
 }
-export async function buildRecommendationProof(data:EvidenceData,identity:DecisionIdentity,captures:Capture[]=[]) {
+export async function buildRecommendationProof(data:EvidenceData,identity:DecisionIdentity,captures:Capture[]=[],officialActuals:OfficialCapture[]=[]) {
+ const cutoff=Date.parse(identity.generated_at);
+ const availableActuals=officialActuals.map(c=>{
+  const available=Date.parse(c.received_at);
+  return Number.isFinite(available)&&available<=cutoff&&c.rows.every(r=>{
+   const stamp=Date.parse(String(r.available_at));return Number.isFinite(stamp)&&stamp<=cutoff;
+  })?c:{...c,status:'OFFICIAL_NOT_AVAILABLE_AT_CUTOFF',rows:[]};
+ });
  const merged:EvidenceData={...data,quotes:[...data.quotes,...captures.flatMap(c=>c.rows)],failures:[...data.failures]};
  try{assertRecommendationUniverse(data.universe);}catch{merged.failures.push('RECOMMENDATION_UNIVERSE_DRIFT');}
  for(const c of captures)if(c.status!=='PASS')merged.failures.push(`stock:${c.symbol}:${c.endpoint}:${c.status}`);
  merged.failures.sort();
  const decision=await sealEvidenceDecision(buildEvidenceDecision(merged,identity));
- return {decision,acquisition:{contract:'RECOMMENDATION_STOCK_EVIDENCE_V1',business_date:identity.report_date,cutoff:identity.generated_at,universe_count:RECOMMENDATION_UNIVERSE.length,captures},business_writes:[]};
+ return {decision,acquisition:{contract:'RECOMMENDATION_STOCK_EVIDENCE_V1',business_date:identity.report_date,cutoff:identity.generated_at,universe_count:RECOMMENDATION_UNIVERSE.length,captures,
+  official_actuals:{captures:availableActuals,coverage:officialActualCoverage(availableActuals,RECOMMENDATION_UNIVERSE)}},business_writes:[]};
 }
 /** Reuse only the persisted producer capture available at this read cutoff.
  * No acquisition from the Owner browser, and never refresh its receipt time. */

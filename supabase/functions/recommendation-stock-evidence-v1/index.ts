@@ -3,6 +3,7 @@ import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared
 import { loadDecisionEvidence } from '../_shared/decision-v1-data.ts';
 import { acquireStockEvidence, buildRecommendationProof, stockAcquisitionCoverage, RECOMMENDATION_UNIVERSE } from '../_shared/recommendation-stock-evidence.ts';
 import { isMarketTradingDate } from '../_shared/market-session-contract.mjs';
+import { acquireOfficialActuals } from '../_shared/recommendation-official-actuals.ts';
 
 // Server-only, read-only source acquisition. Existing internal identity validator.
 // No Cron, RLS changes, Core writes, LINE, strategy promotion or historical backfill.
@@ -28,11 +29,15 @@ Deno.serve(async (request:Request)=>{
    for(const f of q.filters)query=f.operator==='lte'?query.lte(f.column,f.value):query.gte(f.column,f.value);
    return await query;
   },identity);
-  const captures=await acquireStockEvidence({businessDate:date,universe:data.universe,apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:fetch,now,signal:AbortSignal.timeout(22000),scope});
+  const signal=AbortSignal.timeout(22000);
+  const [captures,officialActuals]=await Promise.all([
+   acquireStockEvidence({businessDate:date,universe:data.universe,apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:fetch,now,signal,scope}),
+   scope==='SMOKE_2330'?Promise.resolve([]):acquireOfficialActuals({symbols:RECOMMENDATION_UNIVERSE,fetcher:fetch,now,signal}),
+  ]);
   identity.generated_at=now();identity.data_as_of=identity.generated_at;
   const coverage=stockAcquisitionCoverage(captures,scope==='SMOKE_2330'?['2330']:RECOMMENDATION_UNIVERSE);
   if(scope==='SMOKE_2330')return reply(200,{scope,coverage,acquisition:{contract:'RECOMMENDATION_STOCK_EVIDENCE_V1',business_date:date,cutoff:identity.generated_at,universe_count:72,requested_count:1,captures},complete_universe_evaluation:false,business_writes:[]});
-  return reply(200,{...await buildRecommendationProof(data,identity,captures),scope,coverage});
+  return reply(200,{...await buildRecommendationProof(data,identity,captures,officialActuals),scope,coverage});
  }catch{
   return reply(422,{error:'RECOMMENDATION_EVIDENCE_UNAVAILABLE',business_writes:[]});
  }

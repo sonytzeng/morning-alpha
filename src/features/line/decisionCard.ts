@@ -123,7 +123,7 @@ export function composeDecisionCard(response: ServerReportPayloadResponse): Deci
     else if (/TAIEX|加權指數/.test(text(first.question))) observations.push(line('② 開盤同看：加權指數與台積電、候選族群是否同向？', `${firstPath}.question`));
     observations.push(second
       ? line(`③ ${second.time}｜再確認：${second.question}？`, 'sections.executive_summary.text', texts(summary.evidence_refs))
-      : line(`③ 開盤風險：${linePlainText(first.failure_condition)}`, `${firstPath}.failure_condition`));
+      : line(`③ 開盤風險：${text(first.failure_condition)}`, `${firstPath}.failure_condition`));
   }
   add('今天怎麼做？', [line(`${actions[action]}。`, 'payload.canonical_decision.action'),
     confirmsVolume && action !== 'AVOID' ? line(second ? '先觀察，再確認；條件沒齊就不追。' : '開盤先看族群有沒有站上平盤並放量，沒有就不追。', `${firstPath}.success_condition${second ? '+sections.executive_summary.text' : ''}`) : null]);

@@ -25,7 +25,7 @@
       "path": "src/features/line/decisionCard.ts",
       "operation": "MODIFY",
       "predecessor_sha256": "a077ef619871de2b5960ba0a0b10fcb663fc0afe136093c77eb8240063aceb4c",
-      "candidate_sha256": "7de46fac8976a47b92d8b243275eacb7615662ce99da688b4cb7c3e00ca5caf7"
+      "candidate_sha256": "472cfe117fea8a14a272993e42b27d4330966244703b7c51585d019ab4ddd0d9"
     },
     {
       "path": "src/pages/admin/analysis/LineDecisionPreview.tsx",
@@ -55,7 +55,7 @@
       "path": "tests/lineFinalUsability.test.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "0775d8e2cec29880bd128ef1dfff5de67c68e2e7d06319f557e7c540e77bc0f7"
+      "candidate_sha256": "a7ad9290928e626506a51c4b1f0aa16b51fc9a3002dd4a27214d3d9438e2e866"
     },
     {
       "path": "tests/lineFinalUsabilityIntegrity.test.mjs",

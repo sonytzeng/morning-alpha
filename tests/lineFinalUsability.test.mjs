@@ -25,6 +25,7 @@ test('no invented second time, no dropped clause, no unverified or out-of-order 
  for(const rule of ['先看2330 是否相對加權指數抗跌且電子成交量同步','08:30 先看2330 是否相對加權指數抗跌且電子成交量同步',
   '09:30 先看2330 是否相對加權指數抗跌且電子成交量同步且其他條件成立']){
   const c=composeDecisionCard(input(rule));assert(!copy(c).includes('｜再確認'));assert(!copy(c).includes('先觀察，再確認'));
+  assert(!copy(c).includes('台積電（台積電'));assert(copy(c).includes('台積電（2330）/台指期'));
  }
  const r=input('09:30 先看2330 是否相對加權指數抗跌且電子成交量同步');
  r.payload.admin_source_report.ai_strategy_json.canonical_market_state.document.sections.executive_summary.evidence_refs=['UNVERIFIED'];

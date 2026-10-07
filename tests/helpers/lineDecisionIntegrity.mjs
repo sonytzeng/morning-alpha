@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {LINE_COPY_BASE,lineCopyAwareReader} from './lineFinalCopyIntegrity.mjs';
 export const LINE_CARD_BASE='9fba2d6ea5caa06046b76ba10eaab79d5a3f5088';
 export const LINE_CARD_MANIFEST='docs/operations/evidence/line-decision-card-v2-transition.json';
 export const LINE_CARD_PATHS=[
@@ -33,6 +34,7 @@ export function lineCardPrior(p){
  return cache.get(p);
 }
 export function lineCardTransition(source=read){
+ source=lineCopyAwareReader(source);
  const m=JSON.parse(source(LINE_CARD_MANIFEST));assert.equal(m.schema_version,'LINE_DECISION_CARD_OWNER_PREVIEW_V1');
  assert.equal(m.base,LINE_CARD_BASE);assert.deepEqual(m.files.map(r=>r.path).sort(),LINE_CARD_PATHS);
  for(const k of ['function_deploy','migration','cron','auth_change','rls_change','secret_change','member_template_promotion','v2_promotion','production_data_write','line_send'])assert.equal(m[k],false,k);
@@ -51,4 +53,4 @@ export function lineCardAwareReader(source=read){
  try{source(LINE_CARD_MANIFEST);}catch(e){if(e.code==='ENOENT')return source;throw e;}
  return lineCardTransition(source).predecessorRead;
 }
-export function lineCardChangedPaths(){const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean);return [...new Set([...git(['diff','--name-only','-z',LINE_CARD_BASE,'--']),...git(['ls-files','--others','--exclude-standard','-z'])])].sort();}
+export function lineCardChangedPaths(){return execFileSync('git',['diff','--name-only','-z',LINE_CARD_BASE,LINE_COPY_BASE],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean).sort();}

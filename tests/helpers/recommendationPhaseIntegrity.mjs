@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {readStockAcquisitionPredecessor} from './stockAcquisitionIntegrity.mjs';
 export const RECOMMENDATION_BASE='6c5ae5a5a760d8c3135cd7ccc94ce17e1cd394c6';
 export const RECOMMENDATION_MANIFEST='docs/10k-program/recommendation-phase-transition.json';
 const root=fileURLToPath(new URL('../../',import.meta.url));
@@ -60,6 +61,8 @@ export const RECOMMENDATION_PATHS=[
  'tsconfig.app.json',
 ].sort();
 export function recommendationTransition(readSource=read){
+ const candidateRead=readSource;
+ readSource=p=>readStockAcquisitionPredecessor(p,candidateRead);
  const m=JSON.parse(readSource(RECOMMENDATION_MANIFEST));
  assert.equal(m.schema_version,'RECOMMENDATION_PHASE_TRANSITION_V1');assert.equal(m.candidate_base_git_sha,RECOMMENDATION_BASE);
  assert.deepEqual(m.files.map(r=>r.path).sort(),RECOMMENDATION_PATHS,'only the named Recommendation candidate paths');
@@ -81,6 +84,8 @@ export function recommendationTransition(readSource=read){
 /** Historical freeze is still checked byte-for-byte against its exact released
  * predecessor; the separate successor gate verifies every new candidate byte. */
 export function readRecommendationPredecessor(path,readSource=read){
+ const candidateRead=readSource;
+ readSource=p=>readStockAcquisitionPredecessor(p,candidateRead);
  const m=JSON.parse(readSource(RECOMMENDATION_MANIFEST)),row=m.files.find(r=>r.path===path);
  if(!row)return readSource(path);
  assert.equal(hash(readSource(path)),row.candidate_sha256,`unreviewed candidate drift: ${path}`);

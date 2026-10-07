@@ -1,0 +1,74 @@
+{
+  "schema_version": "STOCK_ACQUISITION_TRANSITION_V1",
+  "candidate_base_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
+  "functions": [
+    "recommendation-stock-evidence-v1"
+  ],
+  "migrations": [],
+  "auth_change": false,
+  "rls_change": false,
+  "secret_change": false,
+  "cron_change": false,
+  "threshold_change": false,
+  "core_change": false,
+  "production_deploy": false,
+  "forward_enabled": false,
+  "files": [
+    {
+      "path": "docs/10k-program/stock-acquisition-candidate.md",
+      "operation": "ADD",
+      "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
+      "predecessor_sha256": null,
+      "candidate_sha256": "0f5fd835770ef0c46673961d7d7c2f9fa18eed60d2880fe5744d041f3a9b1d7f"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-stock-evidence.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
+      "predecessor_sha256": "98ead781e6b6b617fc28bea3d63d6e28b69083d1e1c1a8b28c3193289589db70",
+      "candidate_sha256": "dfb3b19dff6ae62de2c35a016fb100d6b57966e2e443518ad28e8f033e4bc114"
+    },
+    {
+      "path": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
+      "predecessor_sha256": "9d374ec8c8b1c10995a52d05d78f40c8f8ed69ff777a48b583525ce832b777df",
+      "candidate_sha256": "83119ebb512aae8f5e4c807c63a5f6869396905e57e83538dbff4a470de4eb13"
+    },
+    {
+      "path": "tests/helpers/recommendationPhaseIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
+      "predecessor_sha256": "c36a89b40a6cbc95d9631ea2e699734a74f548f8364ee8f0ed7845b3f2ead0eb",
+      "candidate_sha256": "d5543e061c8f1d28504c8ce4694b316113befa05b1aa28b271405cea7fd64512"
+    },
+    {
+      "path": "tests/helpers/stockAcquisitionIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
+      "predecessor_sha256": null,
+      "candidate_sha256": "f6a016bd2ff99438c8e34263f0593281c63ca6e15e63b68e696c79e8a42ecfac"
+    },
+    {
+      "path": "tests/recommendationPhaseIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
+      "predecessor_sha256": "c142916e9557438997270e5de2748e1654b8bb72dcf0988d9f861bbebaf0052b",
+      "candidate_sha256": "b4ffbc3a616a63ca0774b7ce34c42dbd66340ad935db69cbbf010339980dcd47"
+    },
+    {
+      "path": "tests/stockAcquisitionIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
+      "predecessor_sha256": null,
+      "candidate_sha256": "0a5bce5199ac55bab62c928474d63817a305542ca70fea37bf43dda58309a778"
+    },
+    {
+      "path": "tests/stockAcquisitionSmoke.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": "63e1a167a03bc39fa2cce3b4979f7e6a398a81b0",
+      "predecessor_sha256": null,
+      "candidate_sha256": "d090cf3c86041ec531f285a254bfb1ef66e6f14bd0b25dcae753a8fe00b17258"
+    }
+  ]
+}

@@ -6,6 +6,24 @@ import {previousMarketTradingDate} from '../supabase/functions/_shared/market-se
 import {evaluateV2Shadow,V2_METHODOLOGY,v2Hash,nextV2Session} from '../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
 import {normalizeActualGrowth,normalizeFugleShares,normalizeTwseShares,normalizeTpexShares,V2_SOURCE_URLS,acquireV2PublicSources} from '../supabase/functions/_shared/recommendation-shadow-v2-sources.ts';
 import {evaluateV2Outcome,summarizeV2Outcomes} from '../supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts';
+import {normalizeV2IndexHistory,acquireV2IndexHistory,V2_INDEX_URL} from '../supabase/functions/_shared/recommendation-shadow-v2-sources.ts';
+
+test('official index history covers a missing local close without backdating or changing V1',async()=>{
+ const input=fixture(),before=structuredClone(input.v1),missing=input.data.quotes.shift();
+ input.benchmark_history=[{date:missing.trading_date,close:missing.value,available_at:at,source:V2_INDEX_URL+'?date='+missing.trading_date.slice(0,7).replace('-','')+'01&response=json#'+missing.trading_date}];
+ assert.equal((await evaluateV2Shadow(input)).counts.BLOCKED,0);assert.deepEqual(input.v1,before);
+ for(const mutate of [x=>x.benchmark_history[0].available_at='2026-10-08T00:00:00Z',x=>x.benchmark_history.push(x.benchmark_history[0]),x=>x.benchmark_history[0].source='UNTRUSTED',x=>x.benchmark_history[0].date='2026-10-08']){
+  const copy=structuredClone(input);mutate(copy);assert.equal((await evaluateV2Shadow(copy)).counts.BLOCKED,72);
+ }
+ input.data.quotes.unshift({...missing,value:1});assert.equal((await evaluateV2Shadow(input)).counts.BLOCKED,72);
+});
+test('official index adapter accepts only observed complete exchange sessions and bounded no-credential reads',async()=>{
+ const p={stat:'OK',date:'20261001',fields:['日期','開盤指數','最高指數','最低指數','收盤指數'],data:[['115/10/06','20,000','20,010','19,999','20,000']]};
+ assert.equal(normalizeV2IndexHistory(p,'2026-10',at)[0].close,20000);
+ for(const q of [{...p,date:'20260901'},{...p,data:[...p.data,...p.data]},{...p,data:[['115/10/07','20,000','20,010','19,999','20,000']]},{...p,fields:['日期','wrong']}])assert.throws(()=>normalizeV2IndexHistory(q,'2026-10',at));
+ let calls=0;const result=await acquireV2IndexHistory({businessDate:'2026-10-07',now:()=>at,signal:AbortSignal.timeout(5000),fetcher:async(url,init)=>{calls++;assert.equal(init.headers,undefined);assert.equal(init.redirect,'error');const month=new URL(url).searchParams.get('date');return Response.json(month==='20261001'?p:{...p,date:month,data:[]});}});
+ assert.equal(calls,2);assert.equal(result.length,1);
+});
 
 const at='2026-10-06T23:30:00.000Z';
 function fixture(){

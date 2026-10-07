@@ -31,7 +31,7 @@
       "operation": "ADD",
       "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
       "predecessor_sha256": null,
-      "candidate_sha256": "536c230750405b5ddbf97a99896d7e0fbbb647d30e6d0303c569501520e84378"
+      "candidate_sha256": "8ec98d2472851d00775ef5ee0b4e4a507b01f265c379a0f9f279f1f7558e0d0b"
     },
     {
       "path": "docs/10k-program/recommendation-v2-source-observation.json",
@@ -59,7 +59,7 @@
       "operation": "ADD",
       "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
       "predecessor_sha256": null,
-      "candidate_sha256": "2d0bfd4362dd231d16a0c5eabc08bdbf135e4cf3d8387d380900f47aff078605"
+      "candidate_sha256": "7599eb208075ef8515139c39b77ee906b6d7e749fadc2d0cbd822b95f58d04fb"
     },
     {
       "path": "supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts",
@@ -80,7 +80,7 @@
       "operation": "ADD",
       "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
       "predecessor_sha256": null,
-      "candidate_sha256": "27f3b88571737bd978ce9748057f8f8cacf040d805b8412074aa5c69e98dba9a"
+      "candidate_sha256": "9cb331f2151f7479880620895889a04c4d70ac79f2c3c5850e7627783f2b6895"
     },
     {
       "path": "src/features/research/recommendation-shadow-v2-summary.ts",
@@ -101,7 +101,7 @@
       "operation": "MODIFY",
       "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
       "predecessor_sha256": "389e348e365770f75e334a1066558c131cace2cd2fb13af529726e2b493ef467",
-      "candidate_sha256": "58466b5be3e7ef2f55e303ab48a0f4409cff664ad167ffcf134f5d203932300f"
+      "candidate_sha256": "023b5e8dd051f84bac2f8b1bd1fa117d4faba9441454a1c384f71a7e623faeca"
     },
     {
       "path": "supabase/migrations/20261007092045_recommendation_v2_owner_shadow.sql",
@@ -213,7 +213,7 @@
       "operation": "ADD",
       "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
       "predecessor_sha256": null,
-      "candidate_sha256": "d16884f99ea9cdd9296416c583a89f6c875563b7819996cb1432a625574ebb28"
+      "candidate_sha256": "671bda7b21889657f6627e35fd95f4de96ff998695260277dd2daafd5675aed8"
     },
     {
       "path": "tests/recommendationV2Runtime.test.mjs",

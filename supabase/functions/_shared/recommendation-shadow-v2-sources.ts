@@ -12,6 +12,36 @@ export type ActualGrowth = {
  revenue_yoy:number|null; revenue_mom:number|null; actual_only:true; consensus:null;
 };
 export type V2SourceCapture<T> = {source:string; received_at:string; http:number|null; status:string; rows:T[]};
+export type BenchmarkClose={date:string;close:number;source:string;available_at:string};
+export const V2_INDEX_URL='https://www.twse.com.tw/indicesReport/MI_5MINS_HIST';
+export function normalizeV2IndexHistory(payload:unknown,month:string,at:string):BenchmarkClose[]{
+ const p=obj(payload),today=receipt(at).slice(0,10);
+ if(p.stat!=='OK'||String(p.date).slice(0,6)!==month.replace('-','')||JSON.stringify(p.fields)!==JSON.stringify(['日期','開盤指數','最高指數','最低指數','收盤指數'])||!Array.isArray(p.data)||p.data.length>31)throw Error('V2_INDEX_SCHEMA_INVALID');
+ const seen=new Set<string>();
+ return p.data.map(raw=>{
+  if(!Array.isArray(raw)||raw.length!==5)throw Error('V2_INDEX_ROW_INVALID');
+  const day=date(raw[0]),values=raw.slice(1).map(number),[open,high,low,close]=values;
+  if(!day||!day.startsWith(month)||day>today||!isMarketTradingDate('TW',day)||seen.has(day)||values.some(v=>v===null||v<=0)||high!<Math.max(open!,close!)||low!>Math.min(open!,close!))throw Error('V2_INDEX_ROW_INVALID');
+  if(day===today&&receipt(at).slice(11,16)<'13:30')throw Error('V2_INDEX_FUTURE_CLOSE');
+  seen.add(day);return {date:day,close:close!,source:V2_INDEX_URL+'?date='+month.replace('-','')+'01&response=json#'+day,available_at:at};
+ });
+}
+/** Shadow-only history: acquisition now never claims historical availability,
+ * never backfills market_quotes, and never changes formal V1 evidence. */
+export async function acquireV2IndexHistory(options:{businessDate:string;fetcher:typeof fetch;now:()=>string;signal:AbortSignal}){
+ const days:string[]=[];let day=previousMarketTradingDate('TW',options.businessDate);
+ for(let i=0;i<20&&day;i++){days.push(day);day=previousMarketTradingDate('TW',day);}
+ const months=[...new Set(days.map(d=>d.slice(0,7)))];if(days.length!==20||months.length>3)return [];
+ const out:BenchmarkClose[]=[];let cursor=0;
+ await Promise.all(Array.from({length:2},async()=>{while(cursor<months.length){const month=months[cursor++],url=V2_INDEX_URL+'?date='+month.replace('-','')+'01&response=json';
+  for(let attempt=0;attempt<2;attempt++){try{
+   const response=await options.fetcher(url,{redirect:'error',signal:AbortSignal.any([options.signal,AbortSignal.timeout(8000)])});
+   if(!response.ok){await response.body?.cancel();if(![429,500,502,503,504].includes(response.status))break;throw Error('TRANSIENT');}
+   const payload=await boundedJson(response),rows=normalizeV2IndexHistory(payload,month,options.now());out.push(...rows.filter(r=>days.includes(r.date)));break;
+  }catch(e){if(options.signal.aborted||attempt===1||e instanceof Error&&e.message.startsWith('V2_INDEX_'))break;await new Promise(resolve=>setTimeout(resolve,1000));}}
+ }}));
+ return out.sort((a,b)=>a.date.localeCompare(b.date));
+}
 export const V2_SOURCE_URLS=Object.freeze({
  twseShares:'https://www.twse.com.tw/rwd/zh/fund/T86',
  tpexShares:'https://www.tpex.org.tw/openapi/v1/tpex_3insti_daily_trading',

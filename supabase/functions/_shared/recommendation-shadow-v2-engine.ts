@@ -7,6 +7,7 @@ import { recommendationQuoteCurrent } from './recommendation-phase.ts';
 import { previousMarketTradingDate, isMarketTradingDate } from './market-session-contract.mjs';
 import type { CompanyEvent } from './recommendation-company-events.ts';
 import type { Shares, ActualGrowth, V2SourceCapture } from './recommendation-shadow-v2-sources.ts';
+import { V2_INDEX_URL, type BenchmarkClose } from './recommendation-shadow-v2-sources.ts';
 import { V2_HORIZONS } from '../../../src/features/research/recommendation-shadow-v2-summary.ts';
 
 export const V2_METHODOLOGY='RECOMMENDATION_SHADOW_TREND_ACTUALS_2.0.0';
@@ -15,7 +16,7 @@ export const V2_POLICY=Object.freeze({min_average_amount_twd:50_000_000,max_stop
 export type Availability='AVAILABLE'|'PARTIAL'|'UNAVAILABLE';
 export type V2Evidence={status:Availability;value:unknown;reason:string;source_refs:string[]};
 export type Bar={date:string;open:number;high:number;low:number;close:number;volume:number;amount:number;source_ref:string;available_at:string};
-export type V2Input={identity:DecisionIdentity;data:EvidenceData;captures:Capture[];sources:(V2SourceCapture<Shares|ActualGrowth>&{kind:string})[];events:CompanyEvent[];events_complete:boolean;quarterly_actuals?:Row[];v1:Row};
+export type V2Input={identity:DecisionIdentity;data:EvidenceData;captures:Capture[];sources:(V2SourceCapture<Shares|ActualGrowth>&{kind:string})[];events:CompanyEvent[];events_complete:boolean;quarterly_actuals?:Row[];benchmark_history?:BenchmarkClose[];v1:Row};
 const obj=(v:unknown):Row=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
 const finite=(v:unknown):v is number=>typeof v==='number'&&Number.isFinite(v);
 const mean=(x:number[])=>x.reduce((a,b)=>a+b,0)/x.length;
@@ -58,8 +59,13 @@ function benchmark(input:V2Input,dates:string[]):number[]|null{
   // completed-close contract, evaluated before the following open.
   const id={...input.identity,report_date:nextV2Session(date),generated_at:nextV2Session(date)+'T08:30:00+08:00'};
   const valid=rows.filter(r=>recommendationQuoteCurrent(r,id));
-  if(!valid.length||new Set(valid.map(r=>r.value)).size!==1)return null;
-  result.push(Number(valid[0].value));
+  const official=(input.benchmark_history||[]).filter(r=>r.date===date);
+  if(official.length>1||official.some(r=>r.source!==V2_INDEX_URL+'?date='+date.slice(0,7).replace('-','')+'01&response=json#'+date||!finite(r.close)||r.close<=0||!Number.isFinite(stamp(r.available_at))||stamp(r.available_at)>cutoff||stamp(r.available_at)<stamp(date+'T13:30:00+08:00')))return null;
+  if(new Set(valid.map(r=>r.value)).size>1)return null;
+  if(valid.length&&official.length&&Math.abs(Number(valid[0].value)-official[0].close)>.011)return null;
+  if(valid.length)result.push(Number(valid[0].value));
+  else if(official.length===1)result.push(official[0].close);
+  else return null;
  }return result;
 }
 export async function evaluateV2Shadow(input:V2Input){
@@ -87,7 +93,7 @@ export async function evaluateV2Shadow(input:V2Input){
   if(momentum!==null&&momentum<V2_POLICY.min_momentum)rejected.push('NEGATIVE_MOMENTUM');
   const index=availableBars?benchmark(input,bars.map(b=>b.date)):null;
   const relative=index&&momentum!==null?momentum-(index.at(-1)!/index[0]-1):null;
-  metrics.relative_strength=evidence(relative!==null?'AVAILABLE':'UNAVAILABLE',relative,'SAME_SESSION_STOCK_MINUS_TAIEX_RETURN',refs);
+  metrics.relative_strength=evidence(relative!==null?'AVAILABLE':'UNAVAILABLE',relative,'SAME_SESSION_STOCK_MINUS_TAIEX_RETURN',[...refs,...(input.benchmark_history||[]).map(r=>r.source)]);
   if(relative===null)blocked.push('BENCHMARK_SESSION_HISTORY_MISSING');else if(relative<V2_POLICY.min_relative_strength)rejected.push('UNDERPERFORMING_MARKET');
   const sector=String(input.data.universe.find(r=>r.symbol===symbol)?.sector||'');
   const peers=input.data.universe.filter(r=>r.is_active===true&&r.sector===sector&&r.symbol!==symbol).map(r=>bySymbol.get(String(r.symbol))||[]).filter(b=>b.length===20&&b[0].date===bars[0]?.date&&b[19].date===last?.date);

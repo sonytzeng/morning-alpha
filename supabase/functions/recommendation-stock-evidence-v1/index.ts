@@ -6,7 +6,7 @@ import { isMarketTradingDate } from '../_shared/market-session-contract.mjs';
 import { acquireOfficialActuals } from '../_shared/recommendation-official-actuals.ts';
 import { acquireCompanyEvents } from '../_shared/recommendation-company-events.ts';
 import { recommendationJsonStream } from '../_shared/recommendation-stream.ts';
-import { acquireV2PublicSources } from '../_shared/recommendation-shadow-v2-sources.ts';
+import { acquireV2PublicSources, acquireV2IndexHistory } from '../_shared/recommendation-shadow-v2-sources.ts';
 import { buildV2Capsule } from '../_shared/recommendation-shadow-v2-runtime.ts';
 
 // Server-only, read-only source acquisition. Existing internal identity validator.
@@ -39,6 +39,8 @@ Deno.serve(async (request:Request)=>{
   // critical path. Slow research sources remain unavailable for this cutoff.
   const shadowController=new AbortController();
   let shadowSources:Awaited<ReturnType<typeof acquireV2PublicSources>>=[];
+  let shadowIndex:Awaited<ReturnType<typeof acquireV2IndexHistory>>=[];
+  if(scope!=='SMOKE_2330')void acquireV2IndexHistory({businessDate:date,fetcher:fetch,now,signal:AbortSignal.any([signal,shadowController.signal,AbortSignal.timeout(30000)])}).then(rows=>{shadowIndex=rows;}).catch(()=>{});
   if(scope!=='SMOKE_2330')void acquireV2PublicSources({symbols:RECOMMENDATION_UNIVERSE,fetcher:fetch,now,signal:AbortSignal.any([signal,shadowController.signal,AbortSignal.timeout(30000)])}).then(rows=>{shadowSources=rows;}).catch(()=>{});
   const [captures,officialActuals,companyEvents]=await Promise.all([
    acquireStockEvidence({businessDate:date,universe:data.universe,apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:fetch,now,signal,scope}),
@@ -54,7 +56,7 @@ Deno.serve(async (request:Request)=>{
   const proof=await buildRecommendationProof(data,identity,captures,officialActuals);
   // Calculation only. Forward persistence is deliberately absent here: the
   // same producer is used by read-only runtime smoke and real report callers.
-  const shadow=await buildV2Capsule({data,identity,captures,sources:shadowSources,events:companyEvents.flatMap(c=>c.events),events_complete:companyEvents.length===2&&companyEvents.every(c=>c.status==='PASS'),quarterly_actuals:officialActuals.filter(c=>c.kind==='quarterly_eps'&&c.status==='PASS').flatMap(c=>c.rows),v1:proof.decision}).catch(()=>null);
+  const shadow=await buildV2Capsule({data,identity,captures,sources:shadowSources,benchmark_history:shadowIndex,events:companyEvents.flatMap(c=>c.events),events_complete:companyEvents.length===2&&companyEvents.every(c=>c.status==='PASS'),quarterly_actuals:officialActuals.filter(c=>c.kind==='quarterly_eps'&&c.status==='PASS').flatMap(c=>c.rows),v1:proof.decision}).catch(()=>null);
   return reply(200,{...proof,company_events:companyEvents,scope,coverage,shadow_v2:shadow});
   };
   return scope==='SMOKE_2330'?await execute():recommendationJsonStream(execute,request.signal,{deadlineMs:260000});

@@ -28,6 +28,12 @@ No success probability, performance claim or automatic promotion is permitted.
 * An official company event is context requiring review, never a bullish score.
 * Every observation has source, source session/period and actual availability.
   Retrieval now does not establish historical availability.
+* Production read-only audit found missing local TAIEX closes on 9/11 and 9/16.
+  Shadow alone can acquire the matching 20 completed sessions from TWSE's
+  official MI_5MINS_HIST monthly history (at most three months, two readers,
+  bounded retries). Actual retrieval time is retained. Conflicting local/official
+  values fail closed. This does not backfill market_quotes or alter V1 inputs.
+  Contract: https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?response=html
 
 ## Isolation and natural execution design
 

@@ -8,7 +8,7 @@ import {buildEvidenceDecision} from '../supabase/functions/_shared/decision-v1-e
 import {phaseFunnel} from '../supabase/functions/_shared/recommendation-phase.ts';
 import {evaluateStockRecommendationGate} from '../supabase/functions/_shared/market-report-gate.ts';
 import {persistedRecommendationInput} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
-const base={identity:IDENTITY,url:'https://isolated.invalid',cronSecret:'SYNTHETIC_INTERNAL_ONLY',serviceRoleKey:'SYNTHETIC.JWT.ONLY'};
+const base={identity:IDENTITY,url:'https://isolated.invalid',cronSecret:'SYNTHETIC_INTERNAL_ONLY',serviceRoleKey:'SYNTHETIC_OPAQUE_SERVICE',gatewayAnonJwt:'SYNTHETIC.ANON.JWT'};
 test('complete intraday risk DROP/NONE stays healthy NONE through the actual publication gate',()=>{
  const decision=buildEvidenceDecision(evidenceRows({damaged:true}),IDENTITY);
  assert.equal(decision.phase_evaluation.status,'NONE');assert.equal(decision.action,'AVOID');
@@ -22,7 +22,7 @@ test('producer uses separate existing gateway JWT and internal guard; response l
  const result=await requestRecommendationProof({...base,fetcher:async(url,init)=>{
   calls++;assert.equal(url,'https://isolated.invalid/functions/v1/recommendation-stock-evidence-v1');
   assert.equal(init.method,'POST');assert.equal(init.redirect,'error');
-  const h=new Headers(init.headers);assert.equal(h.get('Authorization'),`Bearer ${base.serviceRoleKey}`);
+  const h=new Headers(init.headers);assert.equal(h.get('Authorization'),`Bearer ${base.gatewayAnonJwt}`);assert.equal(h.get('apikey'),base.serviceRoleKey);
   assert.equal((await authorizeInternalRequest(h,{currentToken:base.cronSecret,serviceRoleKey:base.serviceRoleKey})).ok,true);
   return Response.json({decision,acquisition:{captures:[]},business_writes:[]});
  }});
@@ -30,7 +30,7 @@ test('producer uses separate existing gateway JWT and internal guard; response l
 });
 test('negative internal identities fail; no credentials copied to decision result',async()=>{
  for(const h of [new Headers(),new Headers({Authorization:'Bearer WRONG'}),new Headers({'x-cron-secret':'WRONG'}),new Headers({'x-cron-secret':base.cronSecret,'x-internal-auth-version':'v999'})])assert.equal((await authorizeInternalRequest(h,{currentToken:base.cronSecret,serviceRoleKey:base.serviceRoleKey})).ok,false);
- let calls=0;const result=await requestRecommendationProof({...base,serviceRoleKey:'OPAQUE_NOT_A_GATEWAY_JWT',fetcher:async()=>{calls++;throw Error('must not call');}});
+ let calls=0;const result=await requestRecommendationProof({...base,gatewayAnonJwt:undefined,fetcher:async()=>{calls++;throw Error('must not call');}});
  assert.equal(calls,0);assert.equal(result.acquisition,null);assert.equal(result.decision.evidence_quality,'insufficient');
  assert.doesNotMatch(JSON.stringify(result),/SYNTHETIC|OPAQUE|Bearer/);
 });

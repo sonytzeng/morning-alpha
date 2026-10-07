@@ -8,10 +8,11 @@ import { evaluationPhase, recommendationQuoteCurrent } from './recommendation-ph
 import { RECOMMENDATION_UNIVERSE, stockAcquisitionCoverage, type Capture } from './recommendation-stock-evidence.ts';
 import type { Row } from './decision-v1-data.ts';
 import { runtimeEvaluationSummary } from './recommendation-runtime-summary.ts';
+import { requestRecommendationProof } from './recommendation-producer.ts';
 
 type Runtime = {
  url:string; credentials:{currentToken:string;previousToken:string;previousExpiresAt:string;version:string;serviceRoleKey:string};
- workerToken:string; gatewayKeyClass?:string; fetcher:typeof fetch; now:()=>string;
+ workerToken:string; gatewayKeyClass?:string; gatewayAnonJwt?:string; fetcher:typeof fetch; now:()=>string;
 };
 const object=(v:unknown):Row=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
 const stamp=(v:unknown)=>Date.parse(String(v));
@@ -95,7 +96,7 @@ export async function handleRecommendationSmoke(request:Request,runtime:Runtime)
  try{
   input=object(await boundedJson(request.body,1024));start=runtime.now();date=day(start);
   if(Object.keys(input).some(k=>!['mode','business_date','correlation_id'].includes(k))||
-   !['SMOKE_2330','BOUNDED_72_ACQUISITION_VERIFY'].includes(String(input.mode))||input.business_date!==date||!isMarketTradingDate('TW',date)||
+   !['SMOKE_2330','BOUNDED_72_ACQUISITION_VERIFY','NATURAL_CALLER_READONLY'].includes(String(input.mode))||input.business_date!==date||!isMarketTradingDate('TW',date)||
    typeof input.correlation_id!=='string'||!/^[-a-zA-Z0-9_:]{1,110}$/.test(input.correlation_id))throw Error('INPUT');
  }catch{return reply(422,{error:'SMOKE_INPUT_INVALID'});}
  // No alternative credential guesses. Match the existing target's JWT gateway
@@ -121,6 +122,19 @@ export async function handleRecommendationSmoke(request:Request,runtime:Runtime)
   const smoke=await run('SMOKE_2330');
   if(!smoke.verification?.pass)return reply(422,{smoke_2330:smoke,universe_72:'NOT_RUN',business_writes:[]});
   if(input.mode==='SMOKE_2330')return reply(200,{smoke_2330:smoke,universe_72:'NOT_RUN',runtime_gateway_class:runtime.gatewayKeyClass??'UNINSPECTED',business_writes:[]});
+  if(input.mode==='NATURAL_CALLER_READONLY'){
+   // Execute the identical deployed report caller in Runtime, without invoking
+   // the report handler or its publication/persistence/LINE paths.
+   const began=runtime.now(),revision=`${input.correlation_id}:NATURAL`;
+   let observed:Row|null=null;
+   await requestRecommendationProof({identity:{report_date:date,today_date:date,revision_id:revision,generated_at:began,data_as_of:began,is_trading_day:true},
+    url:runtime.url,cronSecret:runtime.credentials.currentToken,serviceRoleKey:runtime.credentials.serviceRoleKey,gatewayAnonJwt:runtime.gatewayAnonJwt,fetcher:runtime.fetcher,
+    onVerifiedProof:body=>{observed=body;}});
+   if(!observed)return reply(422,{natural_caller_runtime:'FAIL',business_writes:[]});
+   const verification=verifySmokeCapture(observed,'UNIVERSE_72',date,revision,began,runtime.now());
+   return reply(verification.pass?200:422,{natural_caller_runtime:'PASS',coverage:verification,evaluation:runtimeEvaluationSummary(observed),
+    report_handler_invoked:false,business_writes:[]});
+  }
   // Every72 request gets its own successful2330 first; no caller-controlled
   // prior-pass flag, cache, cross-date token or parallel race can skip it.
   const all=await run('UNIVERSE_72');

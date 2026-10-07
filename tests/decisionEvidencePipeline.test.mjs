@@ -102,7 +102,7 @@ test('query truncation/partial failure never produces an apparently complete scr
 });
 test('missing valuation remains explicit; missing required market flow disallows ACTIVE_WATCH',()=>{
   const d=evidenceRows();d.flows=d.flows.filter(r=>r.symbol!=='TAIEX');const r=run(d);
-  assert.equal(r.entry_environment_score,null);assert.equal(r.action,'WAIT_FOR_CONFIRMATION');assert.ok(r.stock_opportunities.every(o=>o.action!=='ACTIVE_WATCH'));
+  assert.equal(r.entry_environment_score,null);assert.equal(r.action,'INSUFFICIENT_DATA');assert.equal(r.phase_evaluation.status,'BLOCKED');assert.equal(r.phase_evaluation.blocked_count,3);assert.ok(r.stock_opportunities.every(o=>o.action!=='ACTIVE_WATCH'));
 });
 test('only a COMPLETE low-score screen may say NO_QUALIFIED_OPPORTUNITY',()=>{
   const d=evidenceRows();d.flows.forEach(r=>{r.buy_amount=1;r.sell_amount=1000;r.net_amount=-999;});

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 import { loadDecisionEvidence } from '../_shared/decision-v1-data.ts';
+import { persistedRecommendationInput } from '../_shared/recommendation-stock-evidence.ts';
 import { discoverCandidates, object, records, LAB_VERSION, performance, outcomeFromCloses, taipeiDate, requestIdentity, paperQuote } from '../_shared/owner-trading-lab.ts';
 
 // New Owner-only boundary, not a modification of Core or the dedicated Shadow worker.
@@ -77,7 +78,12 @@ export async function handleOwnerTradingLab(request:Request) {
    for(const f of q.filters)query=f.operator==='lte'?query.lte(f.column,f.value):query.gte(f.column,f.value);
    return await query;
   },identity);
-  const discovery=discoverCandidates(input,identity,canonical);
+  // Owner READ consumes the saved server producer capture, not new provider
+  // calls or a second evaluation contract. Existing Auth/RLS remain unchanged.
+  const reportResult=await db.from('reports').select('ai_strategy_json').eq('report_date',date).lte('created_at',now).order('created_at',{ascending:false}).limit(1);
+  const saved=reportResult.error?{}:object(records(reportResult.data)[0]?.ai_strategy_json);
+  const recommendationInput=persistedRecommendationInput(input,identity,saved);
+  const discovery=discoverCandidates(recommendationInput.data,identity,canonical,recommendationInput.priorWatch);
   if(operation==='RECORD_TRADE') {
    const requestId=String(body.request_id),draft=object(body.trade);
    const candidate=discovery.watchlist.find(c=>c.symbol===draft.symbol)||null;

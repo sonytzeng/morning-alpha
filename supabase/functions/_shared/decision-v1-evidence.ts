@@ -3,6 +3,8 @@
  * LLM tags, confidence_score and narrative sentences are not numerical inputs. */
 import type { Decision, Evidence, Score, Opportunity, Action } from '../../../src/features/decision-v1/contract.ts';
 import type { DecisionIdentity, EvidenceData, Row } from './decision-v1-data.ts';
+import { evaluationPhase, recommendationQuoteCurrent, summarizePhase, type PhaseCandidate } from './recommendation-phase.ts';
+import { previousMarketTradingDate } from './market-session-contract.mjs';
 
 const VERSION = 'ma-decision-v1.0' as const;
 const DAY = 86400000;
@@ -40,6 +42,7 @@ export function unavailableDecision(identity: DecisionIdentity, issue = 'INSUFFI
 export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIdentity): Decision {
   const out = unavailableDecision(identity); out.issues = [...data.failures, 'CALIBRATION_INSUFFICIENT_HISTORY'];
   const asOf = time(identity.generated_at), dataAt = time(identity.data_as_of);
+  const phase = evaluationPhase(identity.generated_at), phaseCandidates: PhaseCandidate[] = [];
   if (!identity.revision_id || !Number.isFinite(asOf) || !Number.isFinite(dataAt) || dataAt > asOf
     || day(asOf) !== identity.report_date || identity.today_date !== identity.report_date) {
     out.issues.push('MISSING_OR_STALE_IDENTITY'); return out;
@@ -63,7 +66,10 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
     // Only the documented Fugle quote total.tradeVolume field. Never infer volume
     // from price movement; today's persisted trimmed quote generally lacks it.
     const raw = obj(row.raw_payload), native = obj(raw.source_raw);
-    const volume = finite(obj(native.total).tradeVolume);
+    // Canonical stock-evidence candles use shares; Fugle quote total uses lots.
+    // Normalize BOTH into shares before comparing historical and intraday bars.
+    const volume = raw.volume_unit === 'SHARES' ? finite(raw.volume_shares)
+      : finite(obj(native.total).tradeVolume) === null ? null : Number(obj(native.total).tradeVolume) * 1000;
     const id = add('market_quotes', row, str(row.provider), str(row.captured_at), str(row.ingested_at), 'market',
       `${symbol} 報價 ${price}，相對前收 ${change}%`, { symbol, price, change_percent: change, ...(volume === null ? {} : { volume }) });
     return id ? [{ row, symbol, price, change, volume, at: time(row.captured_at), id }] : [];
@@ -71,7 +77,7 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
   const conflictSymbols = new Set<string>();
   const latest = (symbol: string): Quote | undefined => {
     const rows = quotes.filter(q => q.symbol === symbol), q = rows[0];
-    if (!q || asOf - q.at > (symbol.match(/^\d|TAIEX|TXF/) ? 20 : 80) * 3600000) return undefined;
+    if (!q || !recommendationQuoteCurrent(q.row, identity)) return undefined;
     // Production provider quotes can disagree: do not pick a bullish provider.
     const sameInstant = rows.filter(r => Math.abs(r.at - q.at) < 60000);
     if (sameInstant.some(r => Math.abs(r.price / q.price - 1) > .005 || Math.abs(r.change - q.change) > .5)) {
@@ -82,7 +88,7 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
   const marketSymbols = ['TAIEX', 'TXF', '2330', 'SOX', 'SPX'];
   const market = marketSymbols.flatMap(s => { const q = latest(s); return q ? [q] : []; });
   const taiwan = market.filter(q => ['TAIEX', 'TXF'].includes(q.symbol));
-  const direction = market.length === 5 && taiwan.every(q => asOf - q.at <= 20 * 3600000)
+  const direction = market.length === 5
     ? factor(mean(market.map(q => (Math.tanh(q.change / 2) + 1) / 2)), refs(market), 'mean((tanh(change_percent/2)+1)/2), five fixed markets; deterministic directional pressure, NOT probability') : missing('Five fresh canonical market quotes required');
   out.direction_evidence_score = direction.value === null ? null : score(direction.value, Object.fromEntries(market.map(q => [q.symbol, q.change])), direction.evidence_ids, direction.calculation);
   if (direction.value !== null) {
@@ -111,11 +117,12 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
   const uniqueUniverse = [...new Map(universe.map(r => [sym(r.symbol), r])).values()].sort((a, b) => sym(a.symbol).localeCompare(sym(b.symbol)));
   const bars = (symbol: string): Quote[] => [...new Map(quotes.filter(q => q.symbol === symbol && q.row.phase === 'close').map(q => [str(q.row.trading_date), q] as const).reverse()).values()].sort((a, b) => a.at - b.at);
   const benchmark = bars('TAIEX');
-  const coverage = uniqueUniverse.length ? uniqueUniverse.flatMap(r => { const q = latest(sym(r.symbol)); return q && asOf - q.at <= 20 * 3600000 ? [q] : []; }) : [];
+  const coverage = uniqueUniverse.length ? uniqueUniverse.flatMap(r => { const q = latest(sym(r.symbol)); return q ? [q] : []; }) : [];
   const breadth = uniqueUniverse.length && coverage.length === uniqueUniverse.length
     ? factor(coverage.filter(q => q.change > 0).length / coverage.length, refs(coverage), 'advancing/all stocks in the explicit active universe; NOT exchange-wide market breadth') : missing('Complete active-universe quotes missing; no index proxy for breadth');
   const flowsFor = (symbol: string, date: string) => {
-    const rs = data.flows.filter(r => sym(r.symbol) === symbol && r.trading_date === date && known(r, 'captured_at', 'created_at') && asOf - time(r.captured_at) <= 4 * DAY
+    const expectedDate = phase === 'INTRADAY' ? previousMarketTradingDate('TW',identity.report_date) : date;
+    const rs = data.flows.filter(r => sym(r.symbol) === symbol && r.trading_date === expectedDate && known(r, 'captured_at', 'created_at') && asOf - time(r.captured_at) <= 14 * DAY
       && str(r.provider) && str(r.source_ref) && r.currency === 'TWD' && [r.buy_amount, r.sell_amount, r.net_amount].every(v => finite(v) !== null));
     const types = ['foreign', 'investment_trust', 'dealer'];
     if (!types.every(t => rs.filter(r => r.institution_type === t).length === 1)) return null;
@@ -168,14 +175,29 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
     if (peers.length < 2) reasons.push('SECTOR_REACTION_MISSING');
     const pre = event && series.filter(p => p.at < time(event.row.published_at)).slice(-6);
     const post = event && q && q.at > time(event.row.published_at) ? q : undefined;
+    const pending = phase === 'PREMARKET' && !!event && !!q && q.at < time(event.row.published_at) && time(event.row.published_at) <= asOf;
     const preBase = pre?.[0], preLast = pre?.at(-1);
     const benchPre = preBase && benchmark.find(b => b.row.trading_date === preBase.row.trading_date);
     const benchNow = latest('TAIEX');
-    if (!pre || pre.length < 6 || !preBase || !preLast || !post || !benchPre || !benchNow || post.volume === null || post.volume <= 0) reasons.push('EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING');
+    if (!pre || pre.length < 6 || !preBase || !preLast || !benchPre || !benchNow || (!pending && (!post || post.volume === null || post.volume <= 0))) reasons.push('EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING');
+    const phaseRow: PhaseCandidate = {symbol,status:'BLOCKED',reasons:[...new Set(reasons)],post_event_price:pending?'NOT_YET_OBSERVABLE':post?'PASS':'MISSING',post_event_volume:pending?'NOT_YET_OBSERVABLE':post&&post.volume!==null&&post.volume>0?'PASS':'MISSING',evidence_ids:q?[q.id]:[]};
+    phaseCandidates.push(phaseRow);
+    if (pending && !reasons.length && f && inst && event && mapping && q && pre && benchPre && benchNow) {
+      screen.evaluated_count++;
+      // No event-response score, probability, entry or formal recommendation is invented.
+      // Pre-open WATCH retains all knowable core prerequisites and explicit risk exclusions.
+      const preExtended = pre.at(-1)!.price / pre[0].price - 1 >= .1;
+      const excluded = f.damaged || inst.value! <= .5 || preExtended || out.market_regime==='RISK_OFF';
+      phaseRow.status=excluded?'NONE':'WATCH';
+      phaseRow.reasons=f.damaged?['FUNDAMENTAL_DAMAGE']:inst.value!<=.5?['INSTITUTIONAL_CONFIRMATION_FAILED']:preExtended?['PRE_EVENT_EXTENSION_REJECTED']:out.market_regime==='RISK_OFF'?['MARKET_RISK_REJECTED']:['ENTRY_PENDING_MARKET_OPEN'];
+      phaseRow.evidence_ids=[...refs([...pre,q,benchPre,benchNow,...peers]),...f.ids,...inst.evidence_ids,event.id];
+      continue;
+    }
     if (reasons.length || !q || !f || !inst || !mapping || !event || !preBase || !preLast || !post || !benchPre || !benchNow || !pre) {
       screen.rejected.push({ symbol, reasons: [...new Set(reasons)] }); continue;
     }
     screen.evaluated_count++;
+    phaseRow.status='NONE';
     const priorReturn = preLast.price / preBase.price - 1, reaction = post.price / preLast.price - 1;
     const relative = post.price / preBase.price - benchNow.price / benchPre.price;
     const volumeRatio = post.volume! / mean(pre.map(p => p.volume!));
@@ -201,7 +223,16 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
       'equal-weight: not_priced_in, four-quarter earnings agreement, institutional net/gross, clamp(volume_ratio/2), clamp((relative+.10)/.20); evidence score, NOT expected return');
     // Complete, evidenced screening can legitimately exclude a low-scoring
     // candidate. Missing data never reaches this point. Keep explicit risk cards.
-    if (opportunity.value < 50 && !['AVOID', 'DO_NOT_CHASE'].includes(action) && !mispricing) continue;
+    phaseRow.post_event_price=reaction>0&&relative>0?'PASS':'FAIL';
+    phaseRow.post_event_volume=volumeRatio>=1?'PASS':'FAIL';
+    phaseRow.relative_strength=relative>0;
+    phaseRow.risk_pass=!f.damaged&&!extended&&!mispricing&&out.market_regime!=='RISK_OFF';
+    phaseRow.evidence_ids=allRefs.filter(Boolean);
+    if (opportunity.value < 50 && !['AVOID', 'DO_NOT_CHASE'].includes(action) && !mispricing) {phaseRow.status='DROP';phaseRow.reasons=['QUALITY_THRESHOLD_NOT_MET'];continue;}
+    phaseRow.status=action==='ACTIVE_WATCH'?'READY':phase==='INTRADAY'||['AVOID','DO_NOT_CHASE'].includes(action)?'DROP':'WATCH';
+    phaseRow.reasons=phaseRow.status==='DROP'?[f.damaged?'FUNDAMENTAL_DAMAGE':'RISK_OR_EXTENSION_REJECTED']:phaseRow.status==='WATCH'?['ENTRY_NOT_CONFIRMED']:[];
+    phaseRow.post_event_price=reaction>0&&relative>0?'PASS':'FAIL';
+    phaseRow.post_event_volume=volumeRatio>=1?'PASS':'FAIL';
     checked.push({ symbol, company_name: str(member.stock_name), action, classification: f.damaged ? 'FUNDAMENTAL_DAMAGE' : mispricing ? 'MISPRICING_CANDIDATE' : 'CATALYST_WATCH',
       thesis: `${str(event.row.title)}；${str(mapping.transmission_path)}`, transmission: { catalyst: str(event.row.title), cause: str(mapping.transmission_path), market_impact: `加權相對前收 ${benchNow.change}%`, sector: str(member.sector), company_exposure: str(mapping.taiwan_supply_chain_relation),
         fundamental_impact: f.damaged ? 'DAMAGED' : 'INTACT', fundamental_explanation: f.damaged ? '最近財報低於預期或下修展望；不將跌幅當成錯殺。' : '最近四季營收及 EPS 未低於有來源的預期；這是已觀察財報檢查，不代表未來保證。',
@@ -222,7 +253,7 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
   const available = Object.values(factors).filter(f => f.status === 'AVAILABLE');
   const completeness = available.length / Object.keys(factors).length;
   factors.evidence_quality = market.length ? factor(completeness, available.flatMap(f => f.evidence_ids), 'available audited factors / all audited factors; unavailable factors are explicitly counted') : missing('No usable market evidence');
-  const fresh = market.length ? mean(market.map(q => clamp(1 - (asOf - q.at) / (['SOX', 'SPX'].includes(q.symbol) ? 80 : 20) / 3600000))) : 0;
+  const fresh = market.length ? mean(market.map(q => recommendationQuoteCurrent(q.row,identity)?1:0)) : 0;
   const signalAgreement = market.length ? Math.max(market.filter(q => q.change > 0).length, market.filter(q => q.change < 0).length) / marketSymbols.length : 0;
   const crossSource = market.flatMap(q => quotes.filter(r => r.symbol === q.symbol && r.row.provider !== q.row.provider && Math.abs(r.at - q.at) < 60000));
   const sourceAgreement = crossSource.length && !conflictSymbols.size ? new Set(crossSource.map(q => q.symbol)).size / marketSymbols.length : 0;
@@ -247,13 +278,27 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
   if (out.action === 'ACTIVE_WATCH' && (!out.entry_environment_score || !out.model_confidence || out.model_confidence.value < 50)) out.action = 'WAIT_FOR_CONFIRMATION';
   else if (out.action === 'ACTIVE_WATCH' && out.entry_environment_score!.value < 50) out.action = 'WAIT_FOR_PULLBACK';
   if (['WAIT_FOR_CONFIRMATION', 'WAIT_FOR_PULLBACK'].includes(out.action)) out.stock_opportunities = out.stock_opportunities.map(o => o.action === 'ACTIVE_WATCH' ? { ...o, action: out.action } : o);
+  // Only the post-event response is unknowable before the open. Every other
+  // existing entry prerequisite remains required for a premarket WATCH.
+  const knowableMissing = entryKeys.filter(k => k !== 'priced_in' && factors[k].value === null);
+  if (knowableMissing.length) {
+    for (const c of phaseCandidates) {
+      c.status='BLOCKED';c.reasons=[...new Set([...c.reasons,...knowableMissing.map(k=>'MARKET_REQUIRED_'+k.toUpperCase())])];
+      const rejection=screen.rejected.find(r=>r.symbol===c.symbol);
+      if(rejection)rejection.reasons=c.reasons;else screen.rejected.push({symbol:c.symbol,reasons:c.reasons});
+    }
+    screen.evaluated_count=0;screen.status='INCOMPLETE';out.action='INSUFFICIENT_DATA';
+  }
+  for (const c of phaseCandidates) if(c.status==='READY' && (out.action!=='ACTIVE_WATCH'||out.entry_environment_score===null)) {c.status=phase==='INTRADAY'?'DROP':'WATCH';c.reasons=['ENTRY_NOT_CONFIRMED'];}
+  out.phase_evaluation=summarizePhase(phase,phaseCandidates,screen.status==='INCOMPLETE'||!out.market_direction);
+  if(out.phase_evaluation.status==='PREMARKET_WATCH')out.action='WAIT_FOR_CONFIRMATION';
   // An incomplete universe is not a green light for its one well-covered stock.
   if (out.action === 'INSUFFICIENT_DATA') out.stock_opportunities = [];
   out.reason_summary = out.action === 'INSUFFICIENT_DATA' ? '市場與個股證據尚未齊全；缺少資料不代表今天沒有機會。' : '判斷依有時間與來源的市場、事件及財報紀錄；品質分數不是經校準的獲利機率。';
   out.evidence_quality = screen.status === 'COMPLETE' ? 'complete' : 'insufficient';
   out.data_freshness = market.length ? 'valid_at_assessment' : 'unavailable';
   // Return only referenced evidence, not every historical quote fetched.
-  const used = new Set([...available.flatMap(f => f.evidence_ids), ...news.map(n => n.id), ...(out.model_confidence?.evidence_ids ?? []), ...out.stock_opportunities.flatMap(o => o.evidence.map(e => e.id))]);
+  const used = new Set([...available.flatMap(f => f.evidence_ids), ...news.map(n => n.id), ...phaseCandidates.flatMap(c=>c.evidence_ids), ...(out.model_confidence?.evidence_ids ?? []), ...out.stock_opportunities.flatMap(o => o.evidence.map(e => e.id))]);
   out.evidence = [...evidence.values()].filter(e => used.has(e.id)).sort((a, b) => a.id.localeCompare(b.id));
   out.confidence_evidence = out.evidence.filter(e => out.model_confidence?.evidence_ids.includes(e.id));
   if (market.length) out.data_as_of = new Date(Math.max(...market.map(q => q.at))).toISOString();
@@ -266,6 +311,9 @@ export function projectEvidenceDecision(decision: Decision, access: { companyCon
   const permitted = new Set(access.publishedSymbols.map(sym));
   const companies = access.companyContentAllowed && ['ACT', 'SELECTIVE', 'TRADE'].includes(access.canonicalAction);
   const out = { ...decision, stock_opportunities: companies ? decision.stock_opportunities.filter(o => permitted.has(o.symbol)) : [] };
+  // Detailed phase diagnostics are Owner-only; this member projection only
+  // retains counts. Never leak WATCH symbols absent from published entitlements.
+  out.phase_evaluation = out.phase_evaluation && {...out.phase_evaluation,candidates:[]};
   if (access.canonicalAction === 'STOP' && out.action !== 'NOT_APPLICABLE' && out.action !== 'INSUFFICIENT_DATA') { out.action = 'DEFENSIVE'; out.reason_summary = '已發布決策停止進場，新評估不得覆蓋風險限制。'; }
   if (access.canonicalAction !== 'ACT' && out.action === 'ACTIVE_WATCH') out.action = 'WAIT_FOR_CONFIRMATION';
   // SELECTIVE/TRADE are the existing publisher enums, not proof of a completed
@@ -278,6 +326,7 @@ export function projectEvidenceDecision(decision: Decision, access: { companyCon
     return true;
   });
   if (!companies) {
+    out.phase_evaluation = out.phase_evaluation && {...out.phase_evaluation,candidates:[]};
     out.screening = out.screening && { ...out.screening, rejected: [] };
     out.primary_catalysts = []; out.sector_impacts = [];
   }

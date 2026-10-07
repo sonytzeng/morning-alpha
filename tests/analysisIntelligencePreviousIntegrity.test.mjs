@@ -33,7 +33,7 @@ test('comparison successor pins exact files, all hashes and released predecessor
    const old=execFileSync('git',['show',manifest.candidate_base_git_sha+':'+p]);assert.equal(createHash('sha256').update(old).digest('hex'),createHash('sha256').update(read(p)).digest('hex'));
  }
  const core=JSON.parse(read('docs/10k-program/phase1-core-freeze.json'));
- for(const [p,hash] of Object.entries(core.protected_files))assert.equal(createHash('sha256').update(read(p)).digest('hex'),hash,p);
+ for(const [p,hash] of Object.entries(core.protected_files))assert.equal(createHash('sha256').update(readRecommendationPredecessor(p,read)).digest('hex'),hash,p);
 });
 test('only two research RPCs can change; calendar, current guards and security preserved',()=>{
  const sql=read(expected.find(p=>p.startsWith('supabase/migrations/'))).toString();
@@ -44,3 +44,4 @@ test('only two research RPCs can change; calendar, current guards and security p
  assert.match(sql,/RESEARCH_TRUSTED_ASOF_CORE_REQUIRED/);assert.match(sql,/RESEARCH_FORWARD_CANNOT_BE_BACKDATED/);
  assert.match(sql,/RESEARCH_PREVIOUS_READSET_MISMATCH/);assert.match(sql,/RESEARCH_COMPARISON_UNAVAILABLE_INVALID/);
 });
+import { readRecommendationPredecessor } from './helpers/recommendationPhaseIntegrity.mjs';

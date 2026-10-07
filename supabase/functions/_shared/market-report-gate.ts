@@ -53,15 +53,25 @@ export function evaluateStockRecommendationGate(value: unknown) {
     && evaluated === universe && Array.isArray(screening.rejected) && screening.rejected.length === 0
     && decision.evidence_quality === 'complete' && decision.data_freshness === 'valid_at_assessment'
     && Array.isArray(decision.evidence) && decision.evidence.length > 0;
-  const noQualified = rows.length === 0 && complete && decision.action === 'NO_QUALIFIED_OPPORTUNITY'
-    && Array.isArray(decision.stock_opportunities) && decision.stock_opportunities.length === 0;
+  const phase=record(decision.phase_evaluation);
+  const phaseNone=['NONE','PREMARKET_NONE'].includes(String(phase.status)) && phase.ready_count===0 && phase.watch_count===0 && phase.blocked_count===0
+    && phase.none_count===universe && records(phase.candidates).length===universe && records(phase.candidates).every(c=>['NONE','DROP'].includes(String(c.status)));
+  // Complete risk exclusions may retain private AVOID cards. Those cards are
+  // not missing evidence and cannot turn a proven NONE back into BLOCKED.
+  const noQualified = rows.length === 0 && complete && (phaseNone || decision.action === 'NO_QUALIFIED_OPPORTUNITY'
+    && Array.isArray(decision.stock_opportunities) && decision.stock_opportunities.length === 0);
+  const preWatch=complete && rows.length===0 && phase.status==='PREMARKET_WATCH' && phase.evaluation_phase==='PREMARKET' && Number(phase.watch_count)>0 && phase.blocked_count===0;
+  // Legacy stored reports retain their original contract. New phase-aware
+  // reports cannot bypass complete evaluation or entry by using narrative rows.
+  if(Object.keys(phase).length && rows.length && (!complete || !['READY','PREMARKET_READY'].includes(String(phase.status)) || rows.some(r=>!records(phase.candidates).some(c=>c.symbol===symbol(r.symbol||r.stock_code||r.stock_id)&&c.status==='READY'))))reasons.push('phase_recommendation_entry_not_ready');
   const eligible = rows.length > 0 && reasons.length === 0;
-  if (!eligible && !noQualified && !rows.length) reasons.push('recommendation_evaluation_evidence_insufficient');
-  const status: 'QUALIFIED' | 'BLOCKED' | 'NO_QUALIFIED_OPPORTUNITY' = eligible ? 'QUALIFIED' : noQualified ? 'NO_QUALIFIED_OPPORTUNITY' : 'BLOCKED';
+  if (!eligible && !noQualified && !preWatch && !rows.length) reasons.push('recommendation_evaluation_evidence_insufficient');
+  const status: 'QUALIFIED' | 'BLOCKED' | 'NO_QUALIFIED_OPPORTUNITY' | 'PREMARKET_WATCH' = eligible ? 'QUALIFIED' : preWatch ? 'PREMARKET_WATCH' : noQualified ? 'NO_QUALIFIED_OPPORTUNITY' : 'BLOCKED';
   return { contract_version: 'STOCK_RECOMMENDATION_GATE_V1', eligible, status,
     reason_codes: [...new Set(reasons)], universe_evaluation_complete: complete,
     screening: complete ? { status: 'COMPLETE', universe_count: universe, evaluated_count: evaluated, rejected: [] } : { status: 'INCOMPLETE', universe_count: universe, evaluated_count: evaluated, rejected: [] },
-    subscriber_message: status === 'BLOCKED' ? RECOMMENDATION_EVIDENCE_INSUFFICIENT_MESSAGE : noQualified ? '今天沒有符合標準的標的' : null };
+    phase_evaluation:Object.keys(phase).length?{...phase,candidates:[]}:null,
+    subscriber_message: status === 'BLOCKED' ? RECOMMENDATION_EVIDENCE_INSUFFICIENT_MESSAGE : preWatch ? '盤前觀察條件已完成，等待開盤後量價確認；不是正式推薦' : noQualified ? '今天沒有符合標準的標的' : null };
 }
 
 /** Public research quality is independent of paid-note depth and entitlement.

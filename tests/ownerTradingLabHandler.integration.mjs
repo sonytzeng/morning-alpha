@@ -1,4 +1,5 @@
 // SYNTHETIC ISOLATION ONLY. Real Handler, real candidate SQL/RLS, loopback SDK transport.
+import './helpers/ownerLabFixedClock.mjs';
 import './ownerTradingLabDatabase.integration.mjs';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -8,6 +9,7 @@ import {randomUUID} from 'node:crypto';
 import {evidenceRows,IDENTITY} from './fixtures/decision-evidence-rows.mjs';
 import {DATA_QUERIES} from '../supabase/functions/_shared/decision-v1-data.ts';
 const db=process.env.MA_ISOLATED_TEST_DB,container=process.env.MA_TEST_DOCKER_CONTAINER,port=process.env.MA_TEST_PGPORT||'55441';
+assert.equal(container,'ma-recommendation-owner-ci','Handler uses the dedicated clock-controlled isolation');
 const args=container?['exec','-i',container,'psql','-X','-q','-U','postgres','-d',db,'-At','-v','ON_ERROR_STOP=1']:['-X','-q','-h','127.0.0.1','-p',port,'-U','postgres','-d',db,'-At','-v','ON_ERROR_STOP=1'];
 const sql=input=>execFileSync(container?'docker':'psql',args,{input,encoding:'utf8',stdio:['pipe','pipe','pipe']}).trim();
 const literal=v=>"'"+JSON.stringify(v).replaceAll("'","''")+"'::jsonb";
@@ -44,7 +46,7 @@ const bridge=createServer(async(req,res)=>{
     else throw Error('UNEXPECTED_RPC');
    } else {
     assert.equal(b.kind,'query');
-    assert(['owner_lab_trades','owner_lab_trade_events','decision_snapshots','research_daily_analysis','prediction_outcomes',...Object.keys(byTable)].includes(b.table));
+    assert(['owner_lab_trades','owner_lab_trade_events','decision_snapshots','research_daily_analysis','prediction_outcomes','reports',...Object.keys(byTable)].includes(b.table));
     if(unavailable&&b.table==='decision_snapshots')throw Error('SYNTHETIC_DEPENDENCY_FAILURE');
     data=['owner_lab_trades','owner_lab_trade_events','decision_snapshots'].includes(b.table)||(b.table==='market_quotes'&&!b.columns.includes('raw_payload'))?read(b.table):byTable[b.table]||[];
     for(const [op,k,v]of b.filters)data=data.filter(r=>op==='eq'?r[k]===v:op==='in'?v.includes(r[k]):op==='lte'?r[k]<=v:r[k]>=v);

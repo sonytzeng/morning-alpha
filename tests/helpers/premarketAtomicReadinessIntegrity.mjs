@@ -8,6 +8,7 @@ import {
   resolveConsolidationPublicExportIntegrity,
 } from './consolidationPublicExportIntegrity.mjs';
 import { readReviewedGitPredecessor, resolveReviewedBaselineTransition } from './reviewedBaselineTransition.mjs';
+import { recommendationTransition, readRecommendationPredecessor } from './recommendationPhaseIntegrity.mjs';
 
 const read = path => readFileSync(new URL('../../' + path, import.meta.url));
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -448,11 +449,11 @@ function resolveShadowWorkerAuthIntegrity(registry,artifactBytes,readSource=read
 const tradingLabManifest='docs/10k-program/owner-trading-lab-transition.json';
 export function readTradingLabPredecessor(path,readSource=read) {
  const m=JSON.parse(readSource(tradingLabManifest)),row=m.files.find(r=>r.path===path);
- if(!row)return readSource(path);
+ if(!row)return readRecommendationPredecessor(path,readSource);
  if(row.operation==='ADD')throw Object.assign(new Error('absent from Owner Lab predecessor'),{code:'ENOENT'});
  return readReviewedGitPredecessor(row,root);
 }
-export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,readSource=read) {
+function resolveOwnerTradingLabIntegrity(registry,artifactBytes,readSource=read) {
  const m=JSON.parse(readSource(tradingLabManifest));
  assert.equal(m.schema_version,'OWNER_TRADING_LAB_TRANSITION_V1');
  assert.equal(m.candidate_base_git_sha,'c7a13e2ef1d3d4232617dcf4b9bc541b5a975a9d');
@@ -507,4 +508,12 @@ export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,rea
  return {...before,fileHash:row=>hashes.get(row.path)??before.fileHash(row),
   newCandidatePaths:[...new Set([...before.newCandidatePaths,...m.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
   ownerTradingLabCandidateIntegrity:{reviewedBaselineTransition:m}};
+}
+
+export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,readSource=read) {
+ const candidate=recommendationTransition(readSource);
+ const before=resolveOwnerTradingLabIntegrity(registry,artifactBytes,candidate.predecessorRead);
+ return {...before,fileHash:row=>candidate.hashes.get(row.path)??before.fileHash(row),
+  newCandidatePaths:[...new Set([...before.newCandidatePaths,...candidate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
+  recommendationPhaseCandidateIntegrity:{reviewedBaselineTransition:candidate.manifest}};
 }

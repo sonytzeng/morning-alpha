@@ -54,8 +54,9 @@ test('core freeze: exact existing provider/atomic/retry/research/report/LINE/sha
   const manifest=JSON.parse(read('docs/10k-program/phase1-core-freeze.json'));
   assert.equal(manifest.base_sha,'3b33db3688ba350da0372b50f3391da922b639ea');
   assert.equal(Object.keys(manifest.protected_files).length,142);
-  for(const [path,hash] of Object.entries(manifest.protected_files)) assert.equal(createHash('sha256').update(read(path)).digest('hex'),hash,path);
+  for(const [path,hash] of Object.entries(manifest.protected_files)) assert.equal(createHash('sha256').update(readRecommendationPredecessor(path,read)).digest('hex'),hash,path);
 });
 test('fresh DB/RLS is a required Release CI step, not an optional skipped test',()=>{
   assert.match(read('.github/workflows/research-foundation.yml'),/run: node tests\/researchFoundationDatabase\.integration\.mjs/);
 });
+import { readRecommendationPredecessor } from './helpers/recommendationPhaseIntegrity.mjs';

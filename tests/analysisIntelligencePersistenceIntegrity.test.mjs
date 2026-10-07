@@ -40,7 +40,7 @@ test('Shadow persistence preserves exact predecessor lineage and 142 Core files'
   assert.equal(digest(read(p)),digest(execFileSync('git',['show',m.candidate_base_git_sha+':'+p])));
  const core=JSON.parse(read('docs/10k-program/phase1-core-freeze.json'));
  assert.equal(Object.keys(core.protected_files).length,142);
- for(const [p,h]of Object.entries(core.protected_files))assert.equal(digest(read(p)),h,p);
+ for(const [p,h]of Object.entries(core.protected_files))assert.equal(digest(readRecommendationPredecessor(p,read)),h,p);
 });
 test('the only migration is research-only with existing RLS and no activation or business backfill',()=>{
  const sql=read(expected.find(p=>p.startsWith('supabase/migrations/'))).toString();
@@ -52,3 +52,4 @@ test('the only migration is research-only with existing RLS and no activation or
   'RESEARCH_FORWARD_OUTCOME_ALREADY_KNOWN','RESEARCH_FORWARD_CANNOT_BE_BACKDATED','RESEARCH_SOURCE_READSET_MISMATCH',
   'RESEARCH_CANONICAL_ALREADY_LOCKED','analysis_cutoff_at=v_cutoff','observation_kind=v_kind'])assert(sql.includes(token),token);
 });
+import { readRecommendationPredecessor } from './helpers/recommendationPhaseIntegrity.mjs';

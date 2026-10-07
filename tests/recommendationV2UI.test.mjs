@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
-import * as metrics from '../supabase/functions/_shared/recommendation-shadow-v2-summary.ts';
+import * as metrics from '../src/features/research/recommendation-shadow-v2-summary.ts';
 import {buildV2Capsule} from '../supabase/functions/_shared/recommendation-shadow-v2-runtime.ts';
 import {v2Fixture} from './helpers/recommendationV2Fixtures.mjs';
 const result=(await buildV2Capsule(v2Fixture())).result;

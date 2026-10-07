@@ -7,7 +7,7 @@ import { recommendationQuoteCurrent } from './recommendation-phase.ts';
 import { previousMarketTradingDate, isMarketTradingDate } from './market-session-contract.mjs';
 import type { CompanyEvent } from './recommendation-company-events.ts';
 import type { Shares, ActualGrowth, V2SourceCapture } from './recommendation-shadow-v2-sources.ts';
-import { V2_HORIZONS } from './recommendation-shadow-v2-summary.ts';
+import { V2_HORIZONS } from '../../../src/features/research/recommendation-shadow-v2-summary.ts';
 
 export const V2_METHODOLOGY='RECOMMENDATION_SHADOW_TREND_ACTUALS_2.0.0';
 export const V2_POLICY=Object.freeze({min_average_amount_twd:50_000_000,max_stop_distance:.08,min_sector_peers:3,min_relative_strength:0,min_momentum:0,max_market_daily_change:3,

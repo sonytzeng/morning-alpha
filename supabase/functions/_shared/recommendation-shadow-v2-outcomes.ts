@@ -42,4 +42,4 @@ export function evaluateV2Outcome(p:LockedV2,bars:Bar[],horizon:typeof V2_POLICY
  const ret=exit/entry-1;
  return {...output,state:'OBSERVED',reason:'GROSS_OHLC_CONSERVATIVE_RESEARCH_OUTCOME',entry_at:first.date,exit_at:exitDate,return:ret,mfe:max/entry-1,mae:min/entry-1,win_loss:ret>0?'WIN':ret<0?'LOSS':'FLAT'};
 }
-export { summarizeV2Outcomes } from './recommendation-shadow-v2-summary.ts';
+export { summarizeV2Outcomes } from '../../../src/features/research/recommendation-shadow-v2-summary.ts';

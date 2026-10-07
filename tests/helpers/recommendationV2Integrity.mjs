@@ -15,7 +15,7 @@ export const V2_PATHS=[
  'supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts',
  'supabase/functions/_shared/recommendation-shadow-v2-runtime.ts',
  'supabase/functions/_shared/recommendation-shadow-v2-sources.ts',
- 'supabase/functions/_shared/recommendation-shadow-v2-summary.ts',
+ 'src/features/research/recommendation-shadow-v2-summary.ts',
  'supabase/functions/generate-daily-report-v7/index.ts',
  'supabase/functions/recommendation-stock-evidence-v1/index.ts',
  'supabase/migrations/20261007092045_recommendation_v2_owner_shadow.sql',

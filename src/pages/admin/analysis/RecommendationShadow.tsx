@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { summarizeV2Outcomes, type SummaryOutcome } from '../../../../supabase/functions/_shared/recommendation-shadow-v2-summary';
+import { summarizeV2Outcomes, type SummaryOutcome } from '../../../features/research/recommendation-shadow-v2-summary';
 
 type RecordValue = Record<string, unknown>;
 const object = (x: unknown): RecordValue => x !== null && typeof x === 'object' && !Array.isArray(x) ? x as RecordValue : {};

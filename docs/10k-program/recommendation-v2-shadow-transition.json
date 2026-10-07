@@ -45,7 +45,7 @@
       "operation": "ADD",
       "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
       "predecessor_sha256": null,
-      "candidate_sha256": "823264c3cb269103df1c172fdfc704d35495ab32ed7ee3e4e9fea96b09f5de18"
+      "candidate_sha256": "9c88c2aa013d44bfb020fe7d5bd52d27716e2253f4c13735abc8d2ee1dca599f"
     },
     {
       "path": "src/pages/admin/analysis/page.tsx",
@@ -59,14 +59,14 @@
       "operation": "ADD",
       "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
       "predecessor_sha256": null,
-      "candidate_sha256": "80bc77b8b2314e3a52c82ee5fca741017e45ceaba28d1c9bde60632a6ee8609c"
+      "candidate_sha256": "2d0bfd4362dd231d16a0c5eabc08bdbf135e4cf3d8387d380900f47aff078605"
     },
     {
       "path": "supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts",
       "operation": "ADD",
       "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
       "predecessor_sha256": null,
-      "candidate_sha256": "905d681c94c775361595898516db0ac2eec57beda9700a3d710c41984d2fd1f5"
+      "candidate_sha256": "8929751ed034b9b42ed2c28dccac42fdce2046251935c158e3749e3dc3cd1d45"
     },
     {
       "path": "supabase/functions/_shared/recommendation-shadow-v2-runtime.ts",
@@ -83,7 +83,7 @@
       "candidate_sha256": "27f3b88571737bd978ce9748057f8f8cacf040d805b8412074aa5c69e98dba9a"
     },
     {
-      "path": "supabase/functions/_shared/recommendation-shadow-v2-summary.ts",
+      "path": "src/features/research/recommendation-shadow-v2-summary.ts",
       "operation": "ADD",
       "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
       "predecessor_sha256": null,
@@ -171,7 +171,7 @@
       "operation": "ADD",
       "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
       "predecessor_sha256": null,
-      "candidate_sha256": "df9a7999dc8027fb863fb99878870c46d6c71d3c13ae307728bb588724139d07"
+      "candidate_sha256": "2ddd155d767c58ddfcdb1cae1f30208276ad6dde0158e434de9150a5f50bd233"
     },
     {
       "path": "tests/ownerAccountAnalysisNavigation.test.mjs",
@@ -227,7 +227,7 @@
       "operation": "ADD",
       "predecessor_git_sha": "b00856329d8edd5467c9470cb147c85b8819908c",
       "predecessor_sha256": null,
-      "candidate_sha256": "73f0d11e43b49169181ec490d3596b578cae7938d91c1f580e9b879f6dfcde9b"
+      "candidate_sha256": "2e05c6ba9428954df1a119c6eeea214c43f2676f83d27dd2d111b19a365c47b5"
     }
   ]
 }

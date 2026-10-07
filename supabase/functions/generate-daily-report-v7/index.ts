@@ -3202,7 +3202,7 @@ Deno.serve(async (req:Request)=>{
     aiStrategyJson=applyFinalBiasGuardrails(aiStrategyJson,todayDate,marketData,dScore,confidenceResult,dates);
     const recommendationProof=await requestRecommendationProof({
       identity:{report_date:todayDate,today_date:todayDate,revision_id:correlationId,generated_at:new Date().toISOString(),data_as_of:new Date().toISOString(),is_trading_day:true},
-      url:Deno.env.get('SUPABASE_URL')||'',cronSecret:Deno.env.get('CRON_SECRET')||'',serviceRoleKey:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',fetcher:fetch,
+      url:Deno.env.get('SUPABASE_URL')||'',cronSecret:Deno.env.get('CRON_SECRET')||'',serviceRoleKey:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',gatewayAnonJwt:Deno.env.get('RECOMMENDATION_GATEWAY_ANON_JWT')||'',fetcher:fetch,
     });
     aiStrategyJson.decision_v1=recommendationProof.decision;
     aiStrategyJson.recommendation_stock_evidence=recommendationProof.acquisition;

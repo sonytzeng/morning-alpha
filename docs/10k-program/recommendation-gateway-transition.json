@@ -1,0 +1,106 @@
+{
+  "schema_version": "RECOMMENDATION_GATEWAY_TRANSITION_V1",
+  "candidate_base_git_sha": "db5f1ec285a2cb98df05aa6b1edb30450906f62a",
+  "functions": [
+    "generate-daily-report-v7",
+    "recommendation-stock-evidence-smoke-v1"
+  ],
+  "migrations": [],
+  "new_secret_names": [
+    "RECOMMENDATION_GATEWAY_ANON_JWT"
+  ],
+  "jwt_gateway_disabled": false,
+  "downstream_auth_change": false,
+  "rls_change": false,
+  "cron_change": false,
+  "threshold_change": false,
+  "business_strategy_change": false,
+  "forward_enabled": false,
+  "methodology_promotion": false,
+  "files": [
+    {
+      "path": "docs/10k-program/recommendation-gateway-runtime.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "e458c87222266d45a881d7473642f60db381b2d5456916abdffd16180542f512"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-producer.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "db5f1ec285a2cb98df05aa6b1edb30450906f62a",
+      "predecessor_sha256": "6b4eeb52629aaf590c034af548a6d9370d17f07db14abc9e4acbea655f6d7e08",
+      "candidate_sha256": "42bc0870314ed7226d406b95250b7d858cef3ebc84ce58b191bd13ee631ac030"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-smoke.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "db5f1ec285a2cb98df05aa6b1edb30450906f62a",
+      "predecessor_sha256": "b5b5e585d26d84e2a2e0047fbd52e128d0de4ca51ddea4b135f0d32f398ee8ab",
+      "candidate_sha256": "3d11c1197bb2b20a1572230cffce93ecb2cce95337fa89f0da0ada94c6fb77d7"
+    },
+    {
+      "path": "supabase/functions/generate-daily-report-v7/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "db5f1ec285a2cb98df05aa6b1edb30450906f62a",
+      "predecessor_sha256": "94087e3ad89320ab0d0e2587e77aa4ad8dce62b975703e6d1ad13b511dd7f5de",
+      "candidate_sha256": "14813e996008f91964f918a97403a2820ca3cc8ed2b6f1b757a734a06913c9ea"
+    },
+    {
+      "path": "supabase/functions/recommendation-stock-evidence-smoke-v1/index.ts",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "db5f1ec285a2cb98df05aa6b1edb30450906f62a",
+      "predecessor_sha256": "592a06f39197446deba4d16310927caeda0a9d9d8c1df62df404f4682822824b",
+      "candidate_sha256": "d641e03d9a0947b179388ecc31b49fb9d779bd00e23c227c7c31f5a26e04827a"
+    },
+    {
+      "path": "tests/helpers/premarketAtomicReadinessIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "db5f1ec285a2cb98df05aa6b1edb30450906f62a",
+      "predecessor_sha256": "8734b45e5efa58c6513a317c313c711380a6ea5009cdb1161ff23db8a4911668",
+      "candidate_sha256": "ba873efe49a5170e4aeadad789782e3fc9ce730a919c65814a438f59f1d46627"
+    },
+    {
+      "path": "tests/helpers/recommendationGatewayIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "3ab4de85baaf425ded95b5c7d38e4f20fedd43dc3b5e04571775993854f42f11"
+    },
+    {
+      "path": "tests/helpers/recommendationWorkerIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "db5f1ec285a2cb98df05aa6b1edb30450906f62a",
+      "predecessor_sha256": "740c505b1efc0f3f0a651fb721eefb136fd5b28d6d4ccc4ee6b901bfe1c00a95",
+      "candidate_sha256": "e79948598f49f4e9870be24e085cd30d897c97e2ff5d84ba7873991d077438ab"
+    },
+    {
+      "path": "tests/recommendationGatewayIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "d18524af4a810b2e5d91b2a46c512c139816ae7a4d73efd643bb1f30715bef01"
+    },
+    {
+      "path": "tests/recommendationProducer.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "db5f1ec285a2cb98df05aa6b1edb30450906f62a",
+      "predecessor_sha256": "6065f18ea43e0af8ded5a43ba971fb27595adfaac04023d3ec032fb895ee5d9e",
+      "candidate_sha256": "74b61862ff781c6bf677a7d61181ec2dd539eeabea2632a0b31ea77aa7002374"
+    },
+    {
+      "path": "tests/recommendationRuntimeSmoke.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "db5f1ec285a2cb98df05aa6b1edb30450906f62a",
+      "predecessor_sha256": "2b506408f2aa85af82f6089228443eeb9b2a78f56a0fa9327fc49ef00c325120",
+      "candidate_sha256": "f9cf02040f5d21572d16dafd76948846009f40383278dba29b3522dcfd57bcb3"
+    },
+    {
+      "path": "tests/recommendationWorkerIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "db5f1ec285a2cb98df05aa6b1edb30450906f62a",
+      "predecessor_sha256": "e80f3a4823b26940cb0c34332c697864a1cba4ee438c99698b6349431defe287",
+      "candidate_sha256": "4a59d1b64ac8b1d46d13b60a4febd459d96077b7747a8e0b2fe9fc13e4f62eeb"
+    }
+  ]
+}

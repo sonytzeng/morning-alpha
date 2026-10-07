@@ -11,6 +11,7 @@ import { readReviewedGitPredecessor, resolveReviewedBaselineTransition } from '.
 import { recommendationTransition, readRecommendationPredecessor } from './recommendationPhaseIntegrity.mjs';
 import { hardGateTransition } from './recommendationHardGateIntegrity.mjs';
 import { workerTransition } from './recommendationWorkerIntegrity.mjs';
+import { gatewayTransition } from './recommendationGatewayIntegrity.mjs';
 
 const read = path => readFileSync(new URL('../../' + path, import.meta.url));
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -513,13 +514,15 @@ function resolveOwnerTradingLabIntegrity(registry,artifactBytes,readSource=read)
 }
 
 export function resolveRuntimeSparseRecoveryIntegrity(registry,artifactBytes,readSource=read) {
+ const gateway=gatewayTransition(readSource);
+ const gatewayHashes=new Map(gateway.manifest.files.map(row=>[row.path,row.candidate_sha256]));
  const worker=workerTransition(readSource);
  const workerHashes=new Map(worker.manifest.files.map(row=>[row.path,row.candidate_sha256]));
  const hardGate=hardGateTransition(readSource);
  const hardHashes=new Map(hardGate.manifest.files.map(row=>[row.path,row.candidate_sha256]));
  const candidate=recommendationTransition(readSource);
  const before=resolveOwnerTradingLabIntegrity(registry,artifactBytes,candidate.predecessorRead);
- return {...before,fileHash:row=>workerHashes.get(row.path)??hardHashes.get(row.path)??candidate.hashes.get(row.path)??before.fileHash(row),
+ return {...before,fileHash:row=>gatewayHashes.get(row.path)??workerHashes.get(row.path)??hardHashes.get(row.path)??candidate.hashes.get(row.path)??before.fileHash(row),
   newCandidatePaths:[...new Set([...before.newCandidatePaths,...candidate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...hardGate.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path),...worker.manifest.files.filter(r=>r.operation==='ADD').map(r=>r.path)])],
   recommendationPhaseCandidateIntegrity:{reviewedBaselineTransition:candidate.manifest}};
 }

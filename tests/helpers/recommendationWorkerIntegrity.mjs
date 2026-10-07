@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {readGatewayPredecessor} from './recommendationGatewayIntegrity.mjs';
 export const WORKER_BASE='f4c2542f5917f73d9d31eb0bf1170a3e31c061f4';
 export const WORKER_MANIFEST='docs/10k-program/recommendation-worker-transition.json';
 export const WORKER_PATHS=[
@@ -54,6 +55,7 @@ function checked(row,readSource){
  return before;
 }
 export function workerTransition(readSource=read){
+ const current=readSource;readSource=p=>readGatewayPredecessor(p,current);
  const m=manifest(readSource),restored=new Map();for(const row of m.files)restored.set(row.path,checked(row,readSource));
  return {manifest:m,predecessorRead:p=>{
   if(!restored.has(p))return readSource(p);const b=restored.get(p);
@@ -61,6 +63,7 @@ export function workerTransition(readSource=read){
  }};
 }
 export function readWorkerPredecessor(path,readSource=read){
+ const current=readSource;readSource=p=>readGatewayPredecessor(p,current);
  if(!paths.has(path))return readSource(path);
  const row=manifest(readSource).files.find(r=>r.path===path),b=checked(row,readSource);
  if(b===null)throw Object.assign(Error('absent from Worker predecessor'),{code:'ENOENT'});return b;

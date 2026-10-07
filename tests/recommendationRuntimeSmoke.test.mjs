@@ -50,6 +50,23 @@ test('bounded72 is strictly sequential after independently passing2330; no claim
  assert.equal(response.status,200);assert.deepEqual(scopes,['SMOKE_2330','UNIVERSE_72']);assert.equal(body.universe_72.verification.amount_20d,72);
  assert.equal((await handleRecommendationSmoke(request('BOUNDED_72_ACQUISITION_VERIFY',{smoke_pass:true}),env)).status,422);assert.equal(scopes.length,2);
 });
+test('natural caller Runtime uses configured gateway plus unchanged internal identity; never calls report handler',async()=>{
+ const calls=[];const env=runtime(async(url,init)=>{
+  calls.push(url);const p=JSON.parse(init.body),scope=p.scope||'UNIVERSE_72',body=await result(scope);
+  if(!p.scope){assert.equal(init.headers.Authorization,'Bearer CONFIGURED.PUBLIC.JWT');assert.equal(init.headers['x-internal-call-source'],'generate-daily-report-v7');
+   body.decision.schema_version='decision-evidence-v1';body.decision.revision_id=p.correlation_id;}
+  return Response.json(body);
+ });env.gatewayAnonJwt='CONFIGURED.PUBLIC.JWT';
+ const response=await handleRecommendationSmoke(request('NATURAL_CALLER_READONLY'),env),body=await response.json();
+ assert.equal(response.status,200);assert.equal(body.natural_caller_runtime,'PASS');assert.equal(body.coverage.requested,72);
+ assert.equal(body.report_handler_invoked,false);assert.deepEqual(body.business_writes,[]);assert.equal(calls.length,2);
+ assert.ok(calls.every(u=>u.endsWith('/recommendation-stock-evidence-v1')));assert.doesNotMatch(JSON.stringify(body),/CONFIGURED|SYNTHETIC_INTERNAL|Bearer/);
+});
+test('natural caller missing gateway config stays failed, never falls back to service key or incoming Owner JWT',async()=>{
+ let calls=0;const env=runtime(async()=>{calls++;return Response.json(await result('SMOKE_2330'));});
+ const response=await handleRecommendationSmoke(request('NATURAL_CALLER_READONLY'),env);
+ assert.equal(response.status,422);assert.equal((await response.json()).natural_caller_runtime,'FAIL');assert.equal(calls,1);
+});
 test('opaque Runtime service key remains in apikey; verified gateway JWT stays separate',async()=>{
  const env=runtime(async(_url,init)=>{
   assert.equal(init.headers.apikey,'SYNTHETIC_OPAQUE_KEY');assert.equal(init.headers.Authorization,workerHeaders.Authorization);

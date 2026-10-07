@@ -107,27 +107,38 @@ export function composeDecisionCard(response: ServerReportPayloadResponse): Deci
   const first = timeline.find(c => readable(c.success_condition) && !/資料不足|尚未|未提供/.test(text(c.success_condition)));
   const firstPath = `sections.timeline[${timeline.indexOf(first || {})}]`;
   const confirmsVolume = first && text(first.success_condition) === '候選族群多數站上平盤且成交量放大。';
+  // A second stage exists only when the cited canonical summary supplies its
+  // time AND complete condition. Keep conjunctions; never move futures to 09:30.
+  const summaryRule = cited(summary.text, 'sections.executive_summary.text', summary.evidence_refs)
+    && text(summary.text).match(/；(\d{2}:\d{2}) 先看2330 (是否相對加權指數抗跌且電子成交量同步|與半導體族群是否同向)，未確認前不追價。$/);
+  const second = first && summaryRule && summaryRule[1] > text(first.time) ? {
+    time: summaryRule[1],
+    question: summaryRule[2].startsWith('是否') ? '台積電是否比大盤抗跌、電子成交量是否同步' : '台積電與半導體族群是否同向',
+    condition: summaryRule[2].startsWith('是否') ? '台積電抗跌且電子成交量同步' : '台積電與半導體族群同向',
+  } : null;
   const observations: (CardLine | null)[] = [];
   if (first && confirmsVolume && /2330/.test(text(first.question)) && /是否同向/.test(text(first.question))) {
-    const relative = cited(summary.text, 'sections.executive_summary.text', summary.evidence_refs)
-      && text(summary.text).match(/(\d{2}:\d{2}) 先看2330 是否相對加權指數抗跌/);
-    observations.push(line(relative ? `① ${relative[1]} 看台積電是否比大盤抗跌。` : '① 台積電是否與候選族群同向。',
-      relative ? 'sections.executive_summary.text' : `${firstPath}.question`, relative ? texts(summary.evidence_refs) : []));
-    if (/台指期|TXF/.test(text(first.question))) observations.push(line('② 台指期是否與台積電、候選族群同向。', `${firstPath}.question`));
-    else if (/TAIEX|加權指數/.test(text(first.question))) observations.push(line('② 加權指數是否與台積電、候選族群同向。', `${firstPath}.question`));
-    observations.push(line('③ 候選族群是否多數站上平盤並放量。', `${firstPath}.success_condition`));
+    observations.push(line(`① ${text(first.time)}｜先觀察：候選族群有沒有多數站上平盤並放量？`, `${firstPath}.success_condition`));
+    if (/台指期|TXF/.test(text(first.question))) observations.push(line('② 開盤同看：台指期與台積電、候選族群是否同向？', `${firstPath}.question`));
+    else if (/TAIEX|加權指數/.test(text(first.question))) observations.push(line('② 開盤同看：加權指數與台積電、候選族群是否同向？', `${firstPath}.question`));
+    observations.push(second
+      ? line(`③ ${second.time}｜再確認：${second.question}？`, 'sections.executive_summary.text', texts(summary.evidence_refs))
+      : line(`③ 開盤風險：${linePlainText(first.failure_condition)}`, `${firstPath}.failure_condition`));
   }
   add('今天怎麼做？', [line(`${actions[action]}。`, 'payload.canonical_decision.action'),
-    confirmsVolume ? line(`${text(first.time)} 起，先等族群多數站上平盤並放量。`, `${firstPath}.success_condition`) : null]);
-  if (confirmsVolume && action === 'WAIT') why.push(line('台股方向仍待開盤量價確認。', `${firstPath}.question+success_condition`)!);
+    confirmsVolume && action !== 'AVOID' ? line(second ? '先觀察，再確認；條件沒齊就不追。' : '開盤先看族群有沒有站上平盤並放量，沒有就不追。', `${firstPath}.success_condition${second ? '+sections.executive_summary.text' : ''}`) : null]);
+  if (confirmsVolume && action === 'WAIT' && why.length < 2) why.push(line('台股方向仍待開盤量價確認。', `${firstPath}.question+success_condition`)!);
   add('為什麼？', why.slice(0, 3).map(l => ({ ...l, text: `• ${l.text}` })));
   if (first) {
     if (observations.filter(present).length === 3) add('開盤後只看 3 件事', observations);
     // AVOID cannot be turned into permission to enter by a copy template.
     add('什麼時候可以開始找機會？', [line(action === 'AVOID'
       ? '今天先不增加曝險，等待正式市場判斷更新。'
-      : `${text(first.time) ? `${text(first.time)} 起，` : ''}${text(first.success_condition).replace(/。$/, '')}，才開始找機會。`,
-    `${firstPath}.success_condition+payload.canonical_decision.action`)]);
+      : second && confirmsVolume
+        ? `${text(first.time)} 後，候選族群多數站上平盤並放量、走勢同向；${second.time} 再確認${second.condition}，才開始找機會。`
+        : `${text(first.time) ? `${text(first.time)} 起，` : ''}${text(first.success_condition).replace(/。$/, '')}，才開始找機會。`,
+    `${firstPath}.success_condition+payload.canonical_decision.action${second ? '+sections.executive_summary.text' : ''}`,
+    second ? texts(summary.evidence_refs) : [])]);
   }
   const failure = row(sections.failure_scenario);
   const primaryFailure = first && text(first.failure_condition).match(/^開盤反向跳空超過 (\d+(?:\.\d+)?)% 或 2330\/(台指期|TXF|TAIEX 現貨)同步轉弱。$/);

@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {LINE_USABILITY_BASE,lineUsabilityAwareReader} from './lineFinalUsabilityIntegrity.mjs';
 export const LINE_COPY_BASE='09b0d96052c6ba698b8a69eb9a5112f93e300385';
 export const LINE_COPY_MANIFEST='docs/operations/evidence/line-final-copy-transition.json';
 export const LINE_COPY_PATHS=[
@@ -25,6 +26,7 @@ export function lineCopyPrior(p){
  return cache.get(p);
 }
 export function lineCopyTransition(source=read){
+ source=lineUsabilityAwareReader(source);
  const m=JSON.parse(source(LINE_COPY_MANIFEST));assert.equal(m.schema_version,'LINE_FINAL_COPY_OWNER_PREVIEW_V1');
  assert.equal(m.base,LINE_COPY_BASE);assert.deepEqual(m.files.map(r=>r.path).sort(),LINE_COPY_PATHS);
  for(const k of ['function_deploy','migration','cron','auth_change','rls_change','secret_change','member_template_promotion','v2_promotion','production_data_write','line_send'])assert.equal(m[k],false,k);
@@ -43,4 +45,4 @@ export function lineCopyAwareReader(source=read){
  try{source(LINE_COPY_MANIFEST);}catch(e){if(e.code==='ENOENT')return source;throw e;}
  return lineCopyTransition(source).predecessorRead;
 }
-export function lineCopyChangedPaths(){const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean);return [...new Set([...git(['diff','--name-only','-z',LINE_COPY_BASE,'--']),...git(['ls-files','--others','--exclude-standard','-z'])])].sort();}
+export function lineCopyChangedPaths(){return execFileSync('git',['diff','--name-only','-z',LINE_COPY_BASE,LINE_USABILITY_BASE,'--'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean).sort();}

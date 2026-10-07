@@ -19,6 +19,8 @@ export const LINE_CARD_PATHS=[
  'tests/helpers/recommendationV2ForwardIntegrity.mjs',
  'tests/lineDecisionCardV2.test.mjs',
  'tests/lineDecisionIntegrity.test.mjs',
+ 'tests/analysisIntelligenceUI.test.mjs',
+ 'tests/ownerAccountAnalysisNavigation.test.mjs',
  'tests/recommendationV2ForwardIntegrity.test.mjs',
 ].sort();
 const root=fileURLToPath(new URL('../../',import.meta.url)),read=p=>readFileSync(new URL('../../'+p,import.meta.url));

@@ -40,6 +40,12 @@
       "candidate_sha256": "9a4301c02517cb6b7b861579230d58f2b442d71dcfdf46758319c3c4b30c5710"
     },
     {
+      "path": "tests/analysisIntelligenceUI.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "c2a24901f5b96953677ff8d060bcf3237c0109dcd0f493ae2099951d2157b63d",
+      "candidate_sha256": "85c0720c46da8d443625f83cc1c085010c5d9c89863583af92a7d7497914e7b7"
+    },
+    {
       "path": "tests/browser/lineDecision.vite.ts",
       "operation": "ADD",
       "predecessor_sha256": null,
@@ -67,7 +73,7 @@
       "path": "tests/helpers/lineDecisionIntegrity.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "b2a664ec2103fac5f54f10890380e0808313a57ca07a7734678651b812d04d44"
+      "candidate_sha256": "64f4428f3ba8d6d1f9c4d2f48d3ba4bcce9eb68f6104f5c5742c8bf5050c3ebd"
     },
     {
       "path": "tests/helpers/lineDecisionReplay.mjs",
@@ -92,6 +98,12 @@
       "operation": "ADD",
       "predecessor_sha256": null,
       "candidate_sha256": "f3cd7ed2b7ed69d9faa750a36538b37d8610717b244b9c9822f253842beaad07"
+    },
+    {
+      "path": "tests/ownerAccountAnalysisNavigation.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "d2ceafd6ed25b4b3ee732444fb97a2923cc88ceed12330290f2dbcc639d708bc",
+      "candidate_sha256": "4879e2d9fa77a7a13c07f4682f25023ea643d29ef61f3bdf655a977f4e1817f1"
     },
     {
       "path": "tests/recommendationV2ForwardIntegrity.test.mjs",

@@ -84,6 +84,7 @@ test('foundation graph count never substitutes for the mode-separated Forward sa
     if (name === './IntelligenceView') return { default: () => null };
     if (name === './TradingLab') return { default: () => null }; // Separate Handler/UI suite validates this child.
     if (name === './RecommendationShadow') return { default: () => null }; // Separate V2 real-RLS/browser suite validates this child.
+    if (name === './LineDecisionPreview') return { default: () => null }; // Separate canonical card/browser suite; foundation sample accounting is unchanged.
     if (name === './analysis.css') return {};
     throw new Error(name);
   } });

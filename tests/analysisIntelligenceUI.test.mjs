@@ -19,6 +19,7 @@ function load(path,extra={}){
     if(name==='./IntelligenceView')return modules.view;
     if(name==='./TradingLab')return {default:()=>null}; // independently covered by Owner Lab Handler/UI suite
     if(name==='./RecommendationShadow')return {default:()=>null}; // separately exercised with real isolated RLS, UI states and browser tests
+    if(name==='./LineDecisionPreview')return {default:()=>null}; // independent preview copy and browser auth/race suite; this harness tests the parent Owner guard
     if(name==='./analysis.css')return {};
     throw Error('UNEXPECTED_IMPORT:'+name);
   }});return exports;

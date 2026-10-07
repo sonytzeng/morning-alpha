@@ -73,7 +73,7 @@ export default function LineDecisionPreview() {
           <ul className="mt-3 space-y-2 text-xs">{loaded.card.sections.flatMap(s => s.lines).map((l, i) => <li key={i} className="break-words">{l.text}<br/>{l.path}{l.evidence.length ? ` · ${l.evidence.join(' / ')}` : ''}</li>)}</ul>
         </details>
         <section aria-label="Owner V2 研究預覽" className="rounded-lg border border-amber-500/50 p-4">
-          <h3 className="font-semibold text-amber-700">V2研究預覽｜僅 Owner 研究，尚未對會員發布</h3>
+          <h3 className="font-semibold text-amber-700">Owner研究預覽｜尚未對會員發布</h3>
           <p className="mt-2 text-sm">這一區獨立於上方會員卡片，不是正式推薦，也不會進入 LINE Payload。</p>
           {loaded.shadow ? <>
             <p className="mt-3 text-sm">研究達標 {loaded.shadow.counts.READY} · 待確認 {loaded.shadow.counts.WATCH} · 評估後不採用 {loaded.shadow.counts.NONE} · 資料缺口 {loaded.shadow.counts.BLOCKED}</p>

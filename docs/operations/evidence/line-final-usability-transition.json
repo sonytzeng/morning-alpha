@@ -1,0 +1,67 @@
+{
+  "schema_version": "LINE_FINAL_USABILITY_OWNER_PREVIEW_V1",
+  "base": "d849c28893371dd7e07de597123de569f45fc7c3",
+  "predecessor_sha256": "6b395edfb079ffe063925efa196653d00d34b4df89df6708d43723ffa2d72822",
+  "recommendation_source": "PRODUCTION_V1",
+  "sony_line_usability": "PENDING",
+  "function_deploy": false,
+  "migration": false,
+  "cron": false,
+  "auth_change": false,
+  "rls_change": false,
+  "secret_change": false,
+  "member_template_promotion": false,
+  "v2_promotion": false,
+  "production_data_write": false,
+  "line_send": false,
+  "files": [
+    {
+      "path": "docs/operations/line-final-usability.md",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "d896620451af36354507123b7bb493bc91d59f4a52d263b3a66d4a592e6317a2"
+    },
+    {
+      "path": "src/features/line/decisionCard.ts",
+      "operation": "MODIFY",
+      "predecessor_sha256": "a077ef619871de2b5960ba0a0b10fcb663fc0afe136093c77eb8240063aceb4c",
+      "candidate_sha256": "472cfe117fea8a14a272993e42b27d4330966244703b7c51585d019ab4ddd0d9"
+    },
+    {
+      "path": "src/pages/admin/analysis/LineDecisionPreview.tsx",
+      "operation": "MODIFY",
+      "predecessor_sha256": "b7b8f56a5f44f546338a55a37f7ea3ccdd47e545e6c75e888dfccec3bc21de2c",
+      "candidate_sha256": "aebe365f953f138ade5a749f70defe6c8e3c0bd1f027a7c7c46346eee77ab379"
+    },
+    {
+      "path": "tests/helpers/lineFinalCopyIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "ecc5af7fe85a44338e0f9f55c58d89c39f2ffeb8787851d28fc70d5f8c1f8c44",
+      "candidate_sha256": "6f45816fc5b54c2574fea7eca229adbe93ee025e37da1ef8703520868436d847"
+    },
+    {
+      "path": "tests/helpers/lineFinalUsabilityIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "4f24efe48ec365e3f563453956d9add498a08935007feb27030b0890597bd1c7"
+    },
+    {
+      "path": "tests/lineDecisionFinalCopy.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "7eda5cede23629778f2f25a4c8b137591a3d2c5fe84599c8b7f8b80eacd27a83",
+      "candidate_sha256": "98df35cd568240a91bb97acbc479173aea2d3040a80e75cb3906bd4c41e783fb"
+    },
+    {
+      "path": "tests/lineFinalUsability.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "a7ad9290928e626506a51c4b1f0aa16b51fc9a3002dd4a27214d3d9438e2e866"
+    },
+    {
+      "path": "tests/lineFinalUsabilityIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "332b64bce5ab7c0e063feab26796538ada87e3b551fa9622058564a03b47a414"
+    }
+  ]
+}

@@ -7,7 +7,9 @@ import {normalizeDailyCandles,normalizeIntradayQuote,RECOMMENDATION_UNIVERSE} fr
 import {previousMarketTradingDate} from '../supabase/functions/_shared/market-session-contract.mjs';
 const date='2026-10-07',at='2026-10-06T23:00:00.000Z';
 const credentials={currentToken:'SYNTHETIC_INTERNAL',previousToken:'',previousExpiresAt:'',version:'v1',serviceRoleKey:'SYNTHETIC.JWT.ONLY'};
-function request(mode='SMOKE_2330',extra={},headers={'x-cron-secret':credentials.currentToken}){
+const workerToken='a'.repeat(64);
+const workerHeaders={Authorization:'Bearer SYNTHETIC.GATEWAY.JWT','x-recommendation-smoke-token':workerToken,'x-recommendation-smoke-version':'1','x-recommendation-smoke-issued-at':String(Date.parse(at))};
+function request(mode='SMOKE_2330',extra={},headers=workerHeaders){
  return new Request('https://example.test/smoke',{method:'POST',headers,body:JSON.stringify({business_date:date,correlation_id:'synthetic-run',mode,...extra})});
 }
 async function capture(symbol,now=at){
@@ -22,20 +24,20 @@ async function result(scope,now=at){
   const rows=await normalizeIntradayQuote(symbol,{symbol,date,lastTrade:{time:Date.parse(now)*1000,price:102},changePercent:1,total:{tradeVolume:1000,tradeValue:102000000}},now,date);
   captures.push({symbol,endpoint:'intraday/quote',received_at:now,status:'PASS',http_status:200,payload_hash:'SYNTHETIC_DIGEST',rows});
  }
- return {scope,acquisition:{contract:'RECOMMENDATION_STOCK_EVIDENCE_V1',business_date:date,cutoff:now,universe_count:72,requested_count:symbols.length,captures},complete_universe_evaluation:false,business_writes:[],decision:{report_date:date,revision_id:`synthetic-run:${scope}`,generated_at:now}};
+ return {scope,acquisition:{contract:'RECOMMENDATION_STOCK_EVIDENCE_V1',business_date:date,cutoff:now,universe_count:72,requested_count:symbols.length,captures},complete_universe_evaluation:false,business_writes:[],decision:{report_date:date,revision_id:`synthetic-run:${scope}`,generated_at:now,phase_evaluation:{evaluation_phase:'PREMARKET',status:'BLOCKED',candidates:symbols.map(symbol=>({symbol,status:'BLOCKED',reasons:['THREE_INSTITUTIONS_MISSING'],evidence_ids:[],post_event_price:'MISSING',post_event_volume:'MISSING'}))}}};
 }
-function runtime(fetcher,now=()=>at){return {url:'https://cttfzgvhiewfckydcrci.supabase.co',credentials,fetcher,now};}
-test('real internal validator denies anonymous, Owner/member/paid JWT, wrong identity and browser before dispatch',async()=>{
+function runtime(fetcher,now=()=>at){return {url:'https://cttfzgvhiewfckydcrci.supabase.co',credentials,workerToken,fetcher,now};}
+test('dedicated validator denies anonymous, Owner/member/paid JWT, Core identity and browser before dispatch',async()=>{
  let calls=0;const env=runtime(async()=>{calls++;throw Error('NEVER');});
  for(const headers of [{},{Authorization:'Bearer OWNER.JWT.ONLY'},{Authorization:'Bearer MEMBER.JWT.ONLY'},{Authorization:'Bearer PAID.JWT.ONLY'},{'x-cron-secret':'wrong'},{'x-cron-secret':credentials.currentToken,'x-internal-auth-version':'v2'}])assert.equal((await handleRecommendationSmoke(request('SMOKE_2330',{},headers),env)).status,401);
- assert.equal((await handleRecommendationSmoke(request('SMOKE_2330',{}, {'x-cron-secret':credentials.currentToken,Origin:'https://owner.test'}),env)).status,403);
+ assert.equal((await handleRecommendationSmoke(request('SMOKE_2330',{}, {...workerHeaders,Origin:'https://owner.test'}),env)).status,403);
  assert.equal((await handleRecommendationSmoke(new Request('https://example.test'),env)).status,405);
  assert.equal(calls,0);
 });
 test('2330 only, Runtime credentials sent only to fixed target; output excludes rows, secrets and decisions',async()=>{
  const calls=[];const env=runtime(async(url,init)=>{
   calls.push(JSON.parse(init.body));assert.equal(url,'https://cttfzgvhiewfckydcrci.supabase.co/functions/v1/recommendation-stock-evidence-v1');
-  assert.equal(init.headers['x-cron-secret'],credentials.currentToken);assert.equal(init.headers.Authorization,`Bearer ${credentials.serviceRoleKey}`);assert.equal(init.redirect,'error');
+  assert.equal(init.headers['x-cron-secret'],credentials.currentToken);assert.equal(init.headers.Authorization,workerHeaders.Authorization);assert.equal(init.headers.apikey,credentials.serviceRoleKey);assert.equal(init.headers['x-recommendation-smoke-token'],undefined);assert.equal(init.redirect,'error');
   const body=await result('SMOKE_2330');body.private='DO_NOT_ECHO';return Response.json(body);
  });
  const response=await handleRecommendationSmoke(request(),env),body=await response.json();assert.equal(response.status,200);
@@ -47,6 +49,14 @@ test('bounded72 is strictly sequential after independently passing2330; no claim
  const response=await handleRecommendationSmoke(request('BOUNDED_72_ACQUISITION_VERIFY'),env),body=await response.json();
  assert.equal(response.status,200);assert.deepEqual(scopes,['SMOKE_2330','UNIVERSE_72']);assert.equal(body.universe_72.verification.amount_20d,72);
  assert.equal((await handleRecommendationSmoke(request('BOUNDED_72_ACQUISITION_VERIFY',{smoke_pass:true}),env)).status,422);assert.equal(scopes.length,2);
+});
+test('opaque Runtime service key remains in apikey; verified gateway JWT stays separate',async()=>{
+ const env=runtime(async(_url,init)=>{
+  assert.equal(init.headers.apikey,'SYNTHETIC_OPAQUE_KEY');assert.equal(init.headers.Authorization,workerHeaders.Authorization);
+  assert.equal(init.headers['x-cron-secret'],credentials.currentToken);assert.equal(init.headers['x-recommendation-smoke-token'],undefined);
+  return Response.json(await result('SMOKE_2330'));
+ });env.credentials={...credentials,serviceRoleKey:'SYNTHETIC_OPAQUE_KEY'};
+ assert.equal((await handleRecommendationSmoke(request(),env)).status,200);
 });
 test('2330 HTTP, contract, missing amount or provider failure forbids72 and sanitizes failure',async()=>{
  for(const kind of ['401','403','500','malformed','amount','provider','throw']){
@@ -71,10 +81,9 @@ test('partial72 coverage is measured, never zero-filled or silently marked compl
 test('date, arbitrary symbol/URL, extra payload, missing Runtime credentials fail closed before network',async()=>{
  let calls=0;const env=runtime(async()=>{calls++;throw Error('NEVER');});
  for(const extra of [{business_date:'2026-10-06'},{symbol:'2317'},{url:'https://attacker.test'},{correlation_id:'x'.repeat(2000)}])assert.equal((await handleRecommendationSmoke(request('SMOKE_2330',extra),env)).status,422);
- for(const change of [{url:'https://attacker.test'},{credentials:{...credentials,serviceRoleKey:'opaque'}},{credentials:{...credentials,currentToken:''}}]){
-  // Use existing legacy API-key branch solely to authenticate this synthetic
-  // negative control; absence of target Runtime identity must still reject.
-  const req=request('SMOKE_2330',{}, {apikey:change.credentials?.serviceRoleKey??credentials.serviceRoleKey});
+ for(const change of [{url:'https://attacker.test'},{credentials:{...credentials,serviceRoleKey:''}},{credentials:{...credentials,currentToken:''}}]){
+  // Dedicated ingress succeeds; absence of the separate target identity rejects.
+  const req=request();
   assert.equal((await handleRecommendationSmoke(req,{...env,...change})).status,503);
  }
  assert.equal(calls,0);
@@ -98,7 +107,8 @@ test('intraday uses the same Production freshness predicate; daily-only cannot p
  const now='2026-10-07T02:00:00.000Z',body=await result('SMOKE_2330',now);
  assert.equal(verifySmokeCapture(body,'SMOKE_2330',date,'run',now,now).pass,true);
  const stale=structuredClone(body),r=stale.acquisition.captures[1].rows[0];r.captured_at='2026-10-07T01:00:00.000Z';r.source_timestamp=r.captured_at;
- assert.throws(()=>verifySmokeCapture(stale,'SMOKE_2330',date,'run',now,now),/LATEST_FRESHNESS/);
+ assert.equal(verifySmokeCapture(stale,'SMOKE_2330',date,'run',now,now).pass,false);
+ assert.equal(verifySmokeCapture(stale,'SMOKE_2330',date,'run',now,now).latest_price,0);
  body.acquisition.captures.pop();assert.throws(()=>verifySmokeCapture(body,'SMOKE_2330',date,'run',now,now),/CAPTURE_SET/);
 });
 test('response bound and date/phase transition do not produce a false smoke PASS',async()=>{
@@ -107,9 +117,9 @@ test('response bound and date/phase transition do not produce a false smoke PASS
  const body=await result('SMOKE_2330');body.acquisition.cutoff='2026-10-07T01:00:00Z';
  assert.throws(()=>verifySmokeCapture(body,'SMOKE_2330',date,'run',at,'2026-10-07T01:00:00Z'));
 });
-test('candidate has no DB write/public caller/forward/Cron and existing auth is reused',()=>{
+test('candidate has no DB write/public caller/forward/Cron; dedicated auth is ingress only',()=>{
  const entry=readFileSync('supabase/functions/recommendation-stock-evidence-smoke-v1/index.ts','utf8');
  const core=readFileSync('supabase/functions/_shared/recommendation-smoke.ts','utf8');
- assert.match(entry,/internalCredentialsFromEnv/);assert.match(core,/authorizeInternalRequest\(request.headers,runtime.credentials\)/);
+ assert.match(entry,/internalCredentialsFromEnv/);assert.match(core,/authorizeSmokeWorker\(request.headers,runtime.workerToken/);
  assert.doesNotMatch(entry+core,/createClient|\.rpc\(|\.insert\(|\.update\(|\.upsert\(|console\.|Deno\.write|localStorage|Access-Control-Allow-Origin/);
 });

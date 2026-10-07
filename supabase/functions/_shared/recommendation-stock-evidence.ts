@@ -79,7 +79,23 @@ export async function acquireStockEvidence(options:{businessDate:string;universe
   const timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},ms);
   signal.addEventListener('abort',abort,{once:true});
  }));
- let rateLimitedUntil=0;
+ // Conservative50 requests/minute leaves room below the documented basic60
+ // limit. This is acquisition pacing, not a change to the Core Retry Window.
+ let rateLimitedUntil=0,nextPermit=Date.parse(start),permitTail=Promise.resolve();
+ const throttledFetch=async(url:URL,init:RequestInit)=>{
+  const before=permitTail;let release=()=>{};
+  permitTail=new Promise<void>(resolve=>{release=resolve;});
+  await before;
+  try{
+   let wait=Math.max(nextPermit,rateLimitedUntil)-Date.parse(options.now());
+   while(wait>0){await sleep(wait,options.signal);wait=Math.max(nextPermit,rateLimitedUntil)-Date.parse(options.now());}
+   options.signal.throwIfAborted();
+   nextPermit=Date.parse(options.now())+1200;
+   // Start before releasing the permit. Awaiting the response is outside the
+   // permit, preserving bounded concurrency without a post-cooldown burst.
+   return options.fetcher(url,{...init,signal:AbortSignal.any([options.signal,AbortSignal.timeout(4000)])});
+  }finally{release();}
+ };
  let cursor=0;const captures:Capture[]=[];
  await Promise.all(Array.from({length:6},async()=>{
   while(cursor<tasks.length){
@@ -89,11 +105,9 @@ export async function acquireStockEvidence(options:{businessDate:string;universe
    const url=new URL(`https://api.fugle.tw/marketdata/v1.0/stock/${task.endpoint}/${task.symbol}`);
    if(task.endpoint==='historical/candles')for(const[k,v]of Object.entries({from,to:String(to),timeframe:'D',fields:'open,high,low,close,volume,turnover,change',sort:'asc'}))url.searchParams.set(k,v);
    for(let attempt=0;attempt<3;attempt++)try{
-    const pause=rateLimitedUntil-Date.parse(options.now());
-    if(pause>0)await sleep(pause,options.signal);
     if(options.signal.aborted){capture.status='ACQUISITION_DEADLINE';capture.failure_stage='DEADLINE';break;}
     capture.attempts=attempt+1;
-    const response=await options.fetcher(url,{headers:{'X-API-KEY':options.apiKey},redirect:'error',signal:AbortSignal.any([options.signal,AbortSignal.timeout(4000)])});
+    const response=await throttledFetch(url,{headers:{'X-API-KEY':options.apiKey},redirect:'error',signal:options.signal});
     capture.http_status=response.status;
     capture.received_at=options.now();
     if(!response.ok){

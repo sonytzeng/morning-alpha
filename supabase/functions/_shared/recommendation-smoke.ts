@@ -1,15 +1,17 @@
 /** Candidate only. No DB client, storage, publication, scheduler or user auth.
  * Credentials are supplied by Edge Runtime, never by request body or output.
- * The existing internal validator is mandatory at BOTH function boundaries. */
-import { authorizeInternalRequest, buildInternalFunctionHeaders } from './internal-function-auth.mjs';
+ * Dedicated identity at ingress; existing internal identity at downstream. */
+import { buildInternalFunctionHeaders } from './internal-function-auth.mjs';
+import { authorizeSmokeWorker } from '../recommendation-stock-evidence-smoke-v1/auth.ts';
 import { isMarketTradingDate, previousMarketTradingDate } from './market-session-contract.mjs';
 import { evaluationPhase, recommendationQuoteCurrent } from './recommendation-phase.ts';
 import { RECOMMENDATION_UNIVERSE, stockAcquisitionCoverage, type Capture } from './recommendation-stock-evidence.ts';
 import type { Row } from './decision-v1-data.ts';
+import { runtimeEvaluationSummary } from './recommendation-runtime-summary.ts';
 
 type Runtime = {
  url:string; credentials:{currentToken:string;previousToken:string;previousExpiresAt:string;version:string;serviceRoleKey:string};
- fetcher:typeof fetch; now:()=>string;
+ workerToken:string; gatewayKeyClass?:string; fetcher:typeof fetch; now:()=>string;
 };
 const object=(v:unknown):Row=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
 const stamp=(v:unknown)=>Date.parse(String(v));
@@ -37,7 +39,7 @@ export function verifySmokeCapture(body:unknown,scope:'SMOKE_2330'|'UNIVERSE_72'
  if(scope==='SMOKE_2330'&&(a.requested_count!==1||root.complete_universe_evaluation!==false))throw Error('SMOKE_SCOPE');
  if(scope==='UNIVERSE_72'&&(decision.report_date!==date||decision.revision_id!==revision||decision.generated_at!==cutoff))throw Error('PRODUCER_IDENTITY');
  const endpoints=phase==='PREMARKET'?['historical/candles']:['historical/candles','intraday/quote'];
- const captures=a.captures as Capture[],seen=new Set<string>(),bad:string[]=[];
+ const captures=a.captures as Capture[],seen=new Set<string>(),bad:string[]=[],freshnessFailures:Row[]=[];
  if(captures.length!==symbols.length*endpoints.length)throw Error('CAPTURE_SET');
  for(const c of captures){
   const key=`${c.symbol}:${c.endpoint}`;
@@ -65,23 +67,29 @@ export function verifySmokeCapture(body:unknown,scope:'SMOKE_2330'|'UNIVERSE_72'
   if(c.endpoint==='intraday/quote'||phase==='PREMARKET'){
    const latest=[...c.rows].sort((x,y)=>stamp(y.captured_at)-stamp(x.captured_at))[0];
    const identity={report_date:date,today_date:date,revision_id:revision,generated_at:cutoff,data_as_of:cutoff,is_trading_day:true};
-   if(!recommendationQuoteCurrent(latest,identity))throw Error('LATEST_FRESHNESS');
+   if(!recommendationQuoteCurrent(latest,identity)){
+    bad.push(key);freshnessFailures.push({symbol:c.symbol,endpoint:c.endpoint,stage:'FRESHNESS',reason:'LATEST_FRESHNESS',source_timestamp:latest.captured_at,session_date:latest.trading_date,phase:latest.phase,observed_at:c.received_at});
+   }
   }
  }
- const coverage=stockAcquisitionCoverage(captures,symbols);
+ const staleKeys=new Set(freshnessFailures.map(f=>`${f.symbol}:${f.endpoint}`));
+ const coverage=stockAcquisitionCoverage(captures.map(c=>staleKeys.has(`${c.symbol}:${c.endpoint}`)?{...c,status:'LATEST_FRESHNESS'}:c),symbols);
  // Only bounded non-sensitive metadata. Do not return arbitrary provider errors,
  // captured rows, decision text, response headers or credentials.
  return {pass:bad.length===0&&[coverage.latest_price,coverage.ohlc_20d,coverage.volume_20d,coverage.amount_20d].every(n=>n===symbols.length),
   requested:symbols.length,success:coverage.success,partial:coverage.partial,failed:coverage.failed,
   latest_price:coverage.latest_price,ohlc_20d:coverage.ohlc_20d,volume_20d:coverage.volume_20d,amount_20d:coverage.amount_20d,
-  failures:captures.filter(c=>c.status!=='PASS').map(c=>({symbol:c.symbol,endpoint:c.endpoint,http_status:Number.isInteger(c.http_status)&&Number(c.http_status)>=100&&Number(c.http_status)<=599?c.http_status:null})),
+  freshness_failures:freshnessFailures,
+  failures:captures.filter(c=>c.status!=='PASS').map(c=>({symbol:c.symbol,endpoint:c.endpoint,http_status:Number.isInteger(c.http_status)&&Number(c.http_status)>=100&&Number(c.http_status)<=599?c.http_status:null,
+   stage:['AUTH','ENTITLEMENT','RATE_LIMIT','PROVIDER_HTTP','SESSION','RESPONSE_CONTRACT','PARSER','TRANSPORT','DEADLINE'].includes(String(c.failure_stage))?c.failure_stage:'UNKNOWN',
+   reason:['PROVIDER_AUTH_INVALID','ENTITLEMENT_NON_RETRYABLE','PROVIDER_SYMBOL_OR_ENDPOINT_NOT_FOUND','PROVIDER_REQUEST_INVALID','RATE_LIMIT_RETRYABLE','PROVIDER_JSON_INVALID','STOCK_CANDLE_CONTRACT_INVALID','STOCK_CANDLE_LIMIT','STOCK_CANDLE_SESSION_INVALID','STOCK_OHLCV_AMOUNT_INVALID','STOCK_FUTURE_EVIDENCE','STOCK_COMPLETED_SESSIONS_INCOMPLETE','STOCK_INTRADAY_CONTRACT_INVALID','STOCK_INTRADAY_SESSION_INVALID','PROVIDER_TIMEOUT','PROVIDER_TRANSPORT_FAILURE','ACQUISITION_DEADLINE','RESPONSE_LIMIT'].includes(c.status)?c.status:'PROVIDER_FAILURE'})),
   session:bad.length?'INCOMPLETE':'PASS',freshness:bad.length?'INCOMPLETE':'PASS'};
 }
 
 export async function handleRecommendationSmoke(request:Request,runtime:Runtime):Promise<Response>{
  if(request.method!=='POST')return reply(405,{error:'METHOD_NOT_ALLOWED'});
  if(request.headers.has('origin'))return reply(403,{error:'SERVER_ONLY'});
- const auth=await authorizeInternalRequest(request.headers,runtime.credentials);
+ const auth=await authorizeSmokeWorker(request.headers,runtime.workerToken,Date.parse(runtime.now()));
  if(!auth.ok)return reply(401,{error:auth.error_code});
  let input:Row,start:string,date:string;
  try{
@@ -92,23 +100,34 @@ export async function handleRecommendationSmoke(request:Request,runtime:Runtime)
  }catch{return reply(422,{error:'SMOKE_INPUT_INVALID'});}
  // No alternative credential guesses. Match the existing target's JWT gateway
  // plus internal-token path exactly. No credential ever leaves this project.
- if(runtime.url!=='https://cttfzgvhiewfckydcrci.supabase.co'||!runtime.credentials.currentToken||!/^\S+\.\S+\.\S+$/.test(runtime.credentials.serviceRoleKey))return reply(503,{error:'RUNTIME_IDENTITY_UNAVAILABLE'});
- const deadline=AbortSignal.any([request.signal,AbortSignal.timeout(55000)]);
- const headers={...buildInternalFunctionHeaders({cronSecret:runtime.credentials.currentToken,serviceRoleKey:runtime.credentials.serviceRoleKey,version:runtime.credentials.version,source:'recommendation-stock-evidence-smoke-v1'}),Authorization:`Bearer ${runtime.credentials.serviceRoleKey}`};
+ const gatewayAuthorization=request.headers.get('authorization')||'';
+ if(runtime.url!=='https://cttfzgvhiewfckydcrci.supabase.co'||!runtime.credentials.currentToken||!runtime.credentials.serviceRoleKey||!/^Bearer [^.\s]+\.[^.\s]+\.[^.\s]+$/.test(gatewayAuthorization))return reply(503,{error:'RUNTIME_IDENTITY_UNAVAILABLE',
+  project_url_matches:runtime.url==='https://cttfzgvhiewfckydcrci.supabase.co',internal_identity_configured:!!runtime.credentials.currentToken,
+  downstream_identity_class:!runtime.credentials.serviceRoleKey?'MISSING':/^\S+\.\S+\.\S+$/.test(runtime.credentials.serviceRoleKey)?'LEGACY_JWT':'NON_JWT'});
+ const deadline=AbortSignal.any([request.signal,AbortSignal.timeout(285000)]);
+ // Gateway already verified this JWT; it grants no internal-worker access by
+ // itself. Keep Runtime API key in apikey and the distinct internal token in
+ // x-cron-secret. Never put opaque service keys in a Bearer JWT slot.
+ const headers={...buildInternalFunctionHeaders({cronSecret:runtime.credentials.currentToken,serviceRoleKey:runtime.credentials.serviceRoleKey,version:runtime.credentials.version,source:'recommendation-stock-evidence-smoke-v1'}),Authorization:gatewayAuthorization};
  const run=async(scope:'SMOKE_2330'|'UNIVERSE_72')=>{
   const began=runtime.now(),revision=`${input.correlation_id}:${scope}`;
-  const response=await runtime.fetcher(`${runtime.url}/functions/v1/recommendation-stock-evidence-v1`,{method:'POST',headers,redirect:'error',signal:AbortSignal.any([deadline,AbortSignal.timeout(26000)]),body:JSON.stringify({business_date:date,correlation_id:revision,scope})});
+  const response=await runtime.fetcher(`${runtime.url}/functions/v1/recommendation-stock-evidence-v1`,{method:'POST',headers,redirect:'error',signal:AbortSignal.any([deadline,AbortSignal.timeout(scope==='SMOKE_2330'?26000:255000)]),body:JSON.stringify({business_date:date,correlation_id:revision,scope})});
   if(!response.ok){await response.body?.cancel();return {http:response.status,verification:null};}
   const data=await boundedJson(response.body,8_000_000);
-  return {http:response.status,verification:verifySmokeCapture(data,scope,date,revision,began,runtime.now())};
+  return {http:response.status,verification:verifySmokeCapture(data,scope,date,revision,began,runtime.now()),
+   ...(scope==='UNIVERSE_72'?{evaluation:runtimeEvaluationSummary(data)}:{})};
  };
  try{
   const smoke=await run('SMOKE_2330');
   if(!smoke.verification?.pass)return reply(422,{smoke_2330:smoke,universe_72:'NOT_RUN',business_writes:[]});
-  if(input.mode==='SMOKE_2330')return reply(200,{smoke_2330:smoke,universe_72:'NOT_RUN',business_writes:[]});
+  if(input.mode==='SMOKE_2330')return reply(200,{smoke_2330:smoke,universe_72:'NOT_RUN',runtime_gateway_class:runtime.gatewayKeyClass??'UNINSPECTED',business_writes:[]});
   // Every72 request gets its own successful2330 first; no caller-controlled
   // prior-pass flag, cache, cross-date token or parallel race can skip it.
   const all=await run('UNIVERSE_72');
   return reply(all.verification?.pass?200:422,{smoke_2330:smoke,universe_72:all,business_writes:[]});
- }catch{return reply(422,{error:'SMOKE_TRANSPORT_OR_CONTRACT_REJECTED',business_writes:[]});}
+ }catch(error){
+  const code=error instanceof Error?error.message:'';
+  const known=['PRODUCER_CONTRACT','SMOKE_SCOPE','PRODUCER_IDENTITY','CAPTURE_SET','CAPTURE_TIME','CAPTURE_SUCCESS_PROOF','CAPTURE_ROW','DAILY_SESSIONS','DAILY_OHLC','LATEST_FRESHNESS','BODY_LIMIT','EMPTY_BODY','EVALUATION_CONTRACT'];
+  return reply(422,{error:known.includes(code)?code:error instanceof SyntaxError?'PRODUCER_JSON_INVALID':'SMOKE_TRANSPORT_OR_CONTRACT_REJECTED',business_writes:[]});
+ }
 }

@@ -65,10 +65,11 @@ test('current retained Production evidence stays BLOCKED in BOTH versions; no sy
  assert.equal(r.candidates.length,72);assert.equal(r.v1_status,'BLOCKED');assert.equal(r.candidates.filter(c=>c.v2_status==='BLOCKED').length,72);
  assert.equal(data.earnings.length,0);assert.equal(data.flows.length,0);assert.equal(data.catalysts.length,0);assert.equal(data.mappings.length,0);
 });
-test('V2 and official integration candidate have no Production handler import or activation',()=>{
+test('V2 has no Production activation; official factual events have only the named stock producer',()=>{
  for(const dir of readdirSync('supabase/functions',{withFileTypes:true}).filter(d=>d.isDirectory()&&d.name!=='_shared')){
   let content;try{content=readFileSync(`supabase/functions/${dir.name}/index.ts`,'utf8');}catch{continue;}
-  assert.doesNotMatch(content,/recommendation-v2-shadow|recommendation-company-events/);
+  assert.doesNotMatch(content,/recommendation-v2-shadow/);
+  if(dir.name!=='recommendation-stock-evidence-v1')assert.doesNotMatch(content,/recommendation-company-events/);
  }
  const source=readFileSync('research/recommendation-v2-shadow.ts','utf8');assert.doesNotMatch(source,/fetch\(|createClient|\.rpc\(|\.insert\(|Deno\.env|process\.env/);
 });

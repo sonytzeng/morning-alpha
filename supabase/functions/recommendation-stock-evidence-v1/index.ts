@@ -4,6 +4,7 @@ import { loadDecisionEvidence } from '../_shared/decision-v1-data.ts';
 import { acquireStockEvidence, buildRecommendationProof, stockAcquisitionCoverage, RECOMMENDATION_UNIVERSE } from '../_shared/recommendation-stock-evidence.ts';
 import { isMarketTradingDate } from '../_shared/market-session-contract.mjs';
 import { acquireOfficialActuals } from '../_shared/recommendation-official-actuals.ts';
+import { acquireCompanyEvents } from '../_shared/recommendation-company-events.ts';
 
 // Server-only, read-only source acquisition. Existing internal identity validator.
 // No Cron, RLS changes, Core writes, LINE, strategy promotion or historical backfill.
@@ -29,15 +30,18 @@ Deno.serve(async (request:Request)=>{
    for(const f of q.filters)query=f.operator==='lte'?query.lte(f.column,f.value):query.gte(f.column,f.value);
    return await query;
   },identity);
-  const signal=AbortSignal.timeout(22000);
-  const [captures,officialActuals]=await Promise.all([
+  const signal=AbortSignal.timeout(scope==='SMOKE_2330'?22000:240000);
+  const [captures,officialActuals,companyEvents]=await Promise.all([
    acquireStockEvidence({businessDate:date,universe:data.universe,apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:fetch,now,signal,scope}),
    scope==='SMOKE_2330'?Promise.resolve([]):acquireOfficialActuals({symbols:RECOMMENDATION_UNIVERSE,fetcher:fetch,now,signal}),
+   scope==='SMOKE_2330'?Promise.resolve([]):acquireCompanyEvents({symbols:RECOMMENDATION_UNIVERSE,fetcher:fetch,now,signal}),
   ]);
   identity.generated_at=now();identity.data_as_of=identity.generated_at;
   const coverage=stockAcquisitionCoverage(captures,scope==='SMOKE_2330'?['2330']:RECOMMENDATION_UNIVERSE);
   if(scope==='SMOKE_2330')return reply(200,{scope,coverage,acquisition:{contract:'RECOMMENDATION_STOCK_EVIDENCE_V1',business_date:date,cutoff:identity.generated_at,universe_count:72,requested_count:1,captures},complete_universe_evaluation:false,business_writes:[]});
-  return reply(200,{...await buildRecommendationProof(data,identity,captures,officialActuals),scope,coverage});
+  // Factual events are a separate sourced-evidence layer, NOT fabricated V1
+  // bullish catalyst mappings or consensus. The unchanged evaluator stays closed.
+  return reply(200,{...await buildRecommendationProof(data,identity,captures,officialActuals),company_events:companyEvents,scope,coverage});
  }catch{
   return reply(422,{error:'RECOMMENDATION_EVIDENCE_UNAVAILABLE',business_writes:[]});
  }

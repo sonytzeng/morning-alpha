@@ -17,6 +17,7 @@ export const MARKET_NEWS_PATHS=[
  'tests/marketNewsAcquisition.test.mjs',
  'tests/marketNewsIntegrity.test.mjs',
  'tests/ownerBackendIntegrity.test.mjs',
+ 'tests/productContract.test.mjs',
 ].sort();
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const read=p=>readFileSync(new URL('../../'+p,import.meta.url));

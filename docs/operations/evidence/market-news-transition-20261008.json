@@ -50,7 +50,7 @@
       "path": "tests/helpers/marketNewsIntegrity.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "bc7ab9a5a111d3888bbdf3a3b6e751b5f516c568cf7c7c7abc2f72cd24939133"
+      "candidate_sha256": "648ee580eb746580215be1182ba2bf1435331d612d2007a7fe106f9ef5189159"
     },
     {
       "path": "tests/helpers/ownerBackendIntegrity.mjs",
@@ -81,6 +81,12 @@
       "operation": "MODIFY",
       "predecessor_sha256": "7007f9cddc0082fc2bd0186b16801325996667b089e9736ffc9a923d1b1065f7",
       "candidate_sha256": "b3fff76f2f11b23890dff94ddb48cc1d18df3b507f0c8d848b39e5071682c2c0"
+    },
+    {
+      "path": "tests/productContract.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "71631a9f8332c85ce6d64009e2720893d5fae9d9ae1a551001bef8db5891eef5",
+      "candidate_sha256": "84297baa327abd9608781e36b428a77c9ae9888b8c4d7a985910e8b3a17b9721"
     }
   ]
 }

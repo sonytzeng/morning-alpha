@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 const {chromium}=await import(process.env.MA_PLAYWRIGHT_MODULE||'playwright');
 assert.equal(process.env.MA_ENTRY_UI_SCOPE,'LOCAL_ONLY');
 const browser=await chromium.launch({executablePath:process.env.MA_CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
@@ -21,7 +23,7 @@ try{
     return ratio<(large?3:4.5)?[{tag:e.tagName,ratio}]:[];
    });
   });assert.deepEqual(low,[],'WCAG AA visible text '+width);
-  await page.screenshot({path:'/private/tmp/entry-opportunity-'+width+'.png',fullPage:true,animations:'disabled'});
+  await page.screenshot({path:join(process.env.MA_ENTRY_SCREENSHOT_DIR||tmpdir(),'entry-opportunity-'+width+'.png'),fullPage:true,animations:'disabled'});
  }
  await page.getByRole('button',{name:'模擬登出'}).click();await page.getByText('只有具名 Owner 可讀取').waitFor();assert.equal(await page.locator('select').count(),0);
  for(const role of ['anonymous','member','paid']){await page.goto('http://127.0.0.1:3204/__entry_owner?role='+role);await page.getByText('只有具名 Owner 可讀取').waitFor();assert.equal(await page.locator('select').count(),0);}

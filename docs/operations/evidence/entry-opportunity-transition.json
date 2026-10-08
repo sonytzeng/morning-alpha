@@ -93,7 +93,7 @@
       "path": "tests/browser/entryOpportunity.e2e.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "339777b36c9e129f406d3e2819a4b4b89e59568ca30ccf03a5b067ebf59238e8"
+      "candidate_sha256": "4f2f2f0d718b6544c2a8dd6b2e1bd3b243c7f4de3f4b025a5318422c1ea556dd"
     },
     {
       "path": "tests/browser/entryOpportunity.vite.ts",

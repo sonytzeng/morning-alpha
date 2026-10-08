@@ -33,7 +33,7 @@
       "path": "docs/10k-program/entry-opportunity-v1.md",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "6ecef2b929448fc753b9b0bb811ea6cdc2430dfdc628fa005868301347f325ff"
+      "candidate_sha256": "8e35dda87f0e19b5779662b57fce8f1a914b0636a34585ca895e817c6dada920"
     },
     {
       "path": "research/entry-opportunity.ts",
@@ -93,25 +93,25 @@
       "path": "tests/browser/entryOpportunity.e2e.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "4f2f2f0d718b6544c2a8dd6b2e1bd3b243c7f4de3f4b025a5318422c1ea556dd"
+      "candidate_sha256": "ee8b77c61e20015b73d8ba7510bd677150fc20061acac42b380ee9f4a5e37b00"
     },
     {
       "path": "tests/browser/entryOpportunity.vite.ts",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "5cd5ccef9935de1fbc8ae1fdbd5193829d6b3138aa7fdd2d94362bfc738941e5"
+      "candidate_sha256": "e542f1904cb9341f40e4476f1123d64e911e6a8da867fe2f972d86aecf717cff"
     },
     {
       "path": "tests/browser/entryOpportunityHarness.tsx",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "dd0a8f027d6bc18b2a8f9cdae41ee46c9c8600d47ae43d5aada67969ceeb4798"
+      "candidate_sha256": "aa394a2160ea0be1030cb5efce96de0ae07c6c260871b88d79cd20b52f3a591a"
     },
     {
       "path": "tests/browser/entryOpportunitySupabaseMock.ts",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "f0d844f4bbce565393d908a55d902736515f287217d2d89391d162bbf1c7ace3"
+      "candidate_sha256": "6091a92448af448ab0c79a49d4632664aacf060673047027aea54b98e3d64123"
     },
     {
       "path": "tests/entryOpportunity.test.mjs",
@@ -132,6 +132,18 @@
       "candidate_sha256": "9f68a624b674fdd8665153bb1232c1cf03536d24d5c5e4c291e305a31594f2c5"
     },
     {
+      "path": "tests/entryOpportunityProjection.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "eb4eb0a9568644b08afcd914df43ca71795876b728a2d5fe91c0ce168509e84d"
+    },
+    {
+      "path": "tests/entryOpportunityRealReplay.integration.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "d16e1375d8d814205ca24ffd45ecaa40bb29abee3f7b65c7a510135ae76859d6"
+    },
+    {
       "path": "tests/entryOpportunityWorker.test.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
@@ -147,7 +159,13 @@
       "path": "tests/helpers/entryOpportunityIntegrity.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "4098b72263713552de6a317f5f82f97da8148d2211244cd85c223a7b15429cae"
+      "candidate_sha256": "fc902574373e985c29cd666e6d9612b2abe04036ec65ea933a83c625f6885f90"
+    },
+    {
+      "path": "tests/helpers/entryRetainedProjection.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "e0ec58bc2c502fdd079a45b5849369bf6ffe4523c8635512b24f50d27f3e08f7"
     },
     {
       "path": "tests/helpers/marketNewsIntegrity.mjs",

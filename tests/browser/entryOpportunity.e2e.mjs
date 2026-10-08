@@ -8,9 +8,13 @@ const context=await browser.newContext({serviceWorkers:'block',reducedMotion:'re
 await context.route('**/*',r=>{if(new URL(r.request().url()).origin==='http://127.0.0.1:3204')return r.continue();external++;return r.abort();});
 const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
 try{
+ const real=process.env.MA_ENTRY_REAL_UI==='1';
+ for(const date of real?['2026-10-07','2026-10-08']:['']){
  for(const width of [1440,375,390,430]){
-  await page.setViewportSize({width,height:900});await page.goto('http://127.0.0.1:3204/__entry_owner?role=owner');await page.getByLabel('進場研究股票').waitFor();
+  await page.setViewportSize({width,height:900});await page.goto('http://127.0.0.1:3204/__entry_owner?role=owner&date='+date);await page.getByLabel('進場研究股票').waitFor();
+  if(real){assert((await page.locator('body').innerText()).includes('真實保存資料重播'));assert((await page.locator('body').innerText()).includes(date));assert((await page.locator('body').innerText()).includes('歷史研究 2 · Forward 日期 0 · Outcome 0'));}
   for(const name of ['超跌反轉','趨勢回檔','突破延續']){await page.getByRole('button',{name,exact:true}).click();assert((await page.locator('body').innerText()).includes('什麼情況看錯'));}
+  if(real){const option=page.locator('option').filter({hasText:'等待確認'}).first();await page.getByLabel('進場研究股票').selectOption(await option.getAttribute('value'));}
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'overflow '+width);
   assert.equal(await page.locator('details[open]').count(),0);assert((await page.locator('body').innerText()).includes('INSUFFICIENT_SAMPLE'));
   const low=await page.locator('section[aria-labelledby="entry-title"]').evaluate(root=>{
@@ -23,7 +27,8 @@ try{
     return ratio<(large?3:4.5)?[{tag:e.tagName,ratio}]:[];
    });
   });assert.deepEqual(low,[],'WCAG AA visible text '+width);
-  await page.screenshot({path:join(process.env.MA_ENTRY_SCREENSHOT_DIR||tmpdir(),'entry-opportunity-'+width+'.png'),fullPage:true,animations:'disabled'});
+  await page.screenshot({path:join(process.env.MA_ENTRY_SCREENSHOT_DIR||tmpdir(),'entry-opportunity-'+(real?date+'-':'')+width+'.png'),fullPage:true,animations:'disabled'});
+ }
  }
  await page.getByRole('button',{name:'模擬登出'}).click();await page.getByText('只有具名 Owner 可讀取').waitFor();assert.equal(await page.locator('select').count(),0);
  for(const role of ['anonymous','member','paid']){await page.goto('http://127.0.0.1:3204/__entry_owner?role='+role);await page.getByText('只有具名 Owner 可讀取').waitFor();assert.equal(await page.locator('select').count(),0);}

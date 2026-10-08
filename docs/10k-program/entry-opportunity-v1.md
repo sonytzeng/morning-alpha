@@ -96,9 +96,61 @@ calculator tests modeled costs/maturity/stop ordering, not a Production producer
 ## Evidence and acceptance ledger
 
 Production read-only metadata: retained V2 runs cover 10/7 (one) and 10/8 (seven).
-Security review denied copying full Production evidence/result JSON. No such
-copy was made. Sony was asked separately for minimal deidentified fixture
-export permission; pending at this candidate checkpoint.
+Sony subsequently authorized a minimized, deidentified **private** export for
+these two dates. The repository is public, so no Production fixture, per-stock
+result, screenshot or raw capsule is committed or uploaded to public CI.
+Database-side explicit field projection excludes contacts, users, Owner trades,
+credentials, news text and unneeded Provider payload. Strict nested field/URL
+allowlists and credential/PII scanning precede use. Local directory is 0700,
+fixtures/screenshots 0600, outside Git; no Production writes were performed.
+
+Selection is the latest immutable retained run per authorized date, not a
+retrospectively invented premarket run. 10/7 cutoff is **20:28:24.170 Taipei**;
+10/8 cutoff is **14:33:01.624 Taipei**. Earlier 10/8 checkpoints are not claimed
+as replayed. Both contain 72 symbols, 45 retained normalized daily bars each;
+the frozen validator requires the final twenty consecutive completed sessions.
+No bar, source publication or acquisition timestamp is moved backward.
+
+The original full-input hash is retained-ledger attestation only. A separately
+pinned projection hash is recomputed locally; a projection never masquerades
+as the full capsule or enters the Production persistence RPC. Both dates
+reproduce all 72 original V2 statuses **and** market/liquidity/relative/sector/
+fundamental/institutional facts exactly. Original V2 is not modified.
+
+| Date | Strategy | Ready | Wait | Avoid | Insufficient |
+|---|---|---:|---:|---:|---:|
+| 10/7 | Oversold reversal | 0 | 3 | 63 | 6 |
+| 10/7 | Pullback | 0 | 1 | 65 | 6 |
+| 10/7 | Breakout | 0 | 7 | 59 | 6 |
+| 10/8 | Oversold reversal | 0 | 7 | 59 | 6 |
+| 10/8 | Pullback | 0 | 3 | 63 | 6 |
+| 10/8 | Breakout | 0 | 5 | 61 | 6 |
+
+Totals: 432 strategy-symbol evaluations, Ready 0 / Wait 26 / Avoid 370 /
+Insufficient 36. Six symbols per date have only two mapped same-sector peers
+instead of the existing three required for sector comparison; this is a saved
+universe coverage limitation, not missing OHLC or a reason to lower a gate.
+Eight symbols per date retain official events requiring impact review. No
+announcement is automatically bullish. Exact private per-symbol missing fields
+are returned by the local replay tool, not uploaded to GitHub.
+
+Run locally with `MA_ENTRY_PRIVATE_FIXTURE_DIR=<private directory>` and
+`node --experimental-strip-types tests/entryOpportunityRealReplay.integration.mjs`.
+The gate refuses public CI, fixtures inside the repo, symlinks, broad filesystem
+permissions, unexpected fields, altered hashes or saved V2 result drift.
+Missing/future market, future candles and missing fundamentals are explicitly
+labelled counterfactual negative controls; all reject, and direction-label-only
+changes do not authorize entry. CI runs the same projection/privacy machinery
+with **SYNTHETIC_TEST** inputs; its green status does NOT claim access to private
+Production evidence. Private local real replay and public CI are separate gates.
+
+Owner UI candidate was rendered with these real outputs at 1440/375/390/430,
+through the existing network-none isolation DB Owner check, with all external
+browser requests blocked. Both dates, all three strategy tabs, contrast,
+overflow, collapsed details, anonymous/member/paid/logout denial passed.
+This is an isolated research view, NOT Production deployment or Sony's personal
+usability acceptance. Two local historical replays are not two saved Production
+Entry runs and never count as Forward or Outcome samples.
 
 Existing repository retained 10/2, 10/5, 10/6 source replay demonstrates missing
 twenty-session stock candles and correctly rejects evaluation. It does not
@@ -108,8 +160,8 @@ validate a profitable strategy. No synthetic bars are relabelled real.
 |---|---|---|
 | Rising market / overextension | isolated test | UNVERIFIED |
 | Falling market / reversal independence | isolated test | UNVERIFIED |
-| Range | isolated test | UNVERIFIED |
-| False breakout | isolated test | UNVERIFIED |
+| Range | isolated + both real as-of cutoffs | Decision replay PASS; investment outcome UNVERIFIED |
+| False breakout | isolated + retained price-pattern risk flags | Risk detection replay only; outcome UNVERIFIED |
 | Sharp decline then bounce | isolated test | UNVERIFIED |
 | Trend pullback then continuation | isolated test | UNVERIFIED |
 
@@ -126,9 +178,13 @@ and direct research/tests/CI/Integrity documentation. No Production writes,
 no existing Forward mutation, no Methodology promotion, no Paper Trade creation.
 New Owner policies are limited to the three new tables and reuse the current
 Owner truth; they still require Sony's explicit Production Migration approval.
-Real same-cutoff replay coverage, executable-source lineage and complete
-outcome persistence/runtime verification remain required before engineering
-can honestly be called COMPLETE. No investment validity claim is authorized.
+Real same-cutoff replay for the two authorized dates is complete. Neither date
+proves a major crash reversal or subsequent profitable trend continuation.
+Executable/adjustment-source lineage, broader scenario coverage and complete
+outcome persistence/runtime verification remain required before the full
+engineering program can honestly be called COMPLETE. No new candidate Product
+Bug was demonstrated by these two real replays; no strategy threshold was
+changed to force READY. No investment validity claim is authorized.
 
 `ENTRY_INTELLIGENCE_ENGINEERING = INCOMPLETE`
 `ENTRY_INTELLIGENCE_ANALYSIS_VALUE = INSUFFICIENT_SAMPLE`

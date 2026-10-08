@@ -16,6 +16,7 @@ export const ENTRY_PATHS=[
  'tests/browser/entryOpportunityHarness.tsx','tests/browser/entryOpportunitySupabaseMock.ts',
  'tests/entryOpportunity.test.mjs','tests/entryOpportunityDatabase.integration.mjs','tests/entryOpportunityIntegrity.test.mjs',
  'tests/entryOpportunityWorker.test.mjs','tests/helpers/entryFixtures.mjs','tests/helpers/entryOpportunityIntegrity.mjs',
+ 'tests/entryOpportunityProjection.test.mjs','tests/entryOpportunityRealReplay.integration.mjs','tests/helpers/entryRetainedProjection.mjs',
  'tests/analysisIntelligenceUI.test.mjs',
  'tests/ownerAccountAnalysisNavigation.test.mjs',
  'tests/helpers/marketNewsIntegrity.mjs','tests/marketNewsIntegrity.test.mjs','tests/productContract.test.mjs',

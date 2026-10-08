@@ -1,0 +1,6 @@
+let out=false;
+const read=async(kind:string)=>{const role=out?'anonymous':new URLSearchParams(location.search).get('role')||'anonymous';const r=await fetch('/__cockpit_read?kind='+kind+'&role='+encodeURIComponent(role));return r.ok?{data:await r.json(),error:null}:{data:null,error:{code:'42501'}};};
+export const supabase={auth:{onAuthStateChange(fn:(event:string)=>void){const listener=()=>{out=true;fn('SIGNED_OUT');};window.addEventListener('synthetic-logout',listener);return {data:{subscription:{unsubscribe(){window.removeEventListener('synthetic-logout',listener);}}}};}},
+ functions:{invoke:async(_name:string,{body}:{body:{operation:string}})=>body.operation==='COCKPIT_READ'?read('journal'):{data:null,error:{code:'LOCAL_WRITE_OR_MARKET_UNAVAILABLE'}}},
+ rpc:async(name:string)=>{if(name!=='get_owner_entry_opportunity_v1')throw Error('UNEXPECTED_RPC');return read('research');},
+ from(name:string){if(name!=='entry_opportunity_runs')throw Error('UNEXPECTED_TABLE');const q={select(){return q;},eq(){return q;},order(){return q;},limit:async()=>{const r=await read('research');return {data:r.data?.history.map((result:{business_date:string;mode:string})=>({business_date:result.business_date,mode:result.mode,result})),error:r.error};}};return q;}};

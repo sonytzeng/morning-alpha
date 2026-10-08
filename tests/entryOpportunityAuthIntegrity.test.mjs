@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {ENTRY_AUTH_BASE,ENTRY_AUTH_PATHS,ENTRY_AUTH_MANIFEST,entryAuthPrior,entryAuthTransition,entryAuthChangedPaths} from './helpers/entryWorkerAuthIntegrity.mjs';
-const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+import {cockpitAwareReader} from './helpers/ownerCockpitIntegrity.mjs';
+const read=cockpitAwareReader(p=>readFileSync(new URL('../'+p,import.meta.url)));
 test('Entry Auth exact file/hash/lineage manifest preserves every other product file',()=>{
  entryAuthTransition();assert.deepEqual(entryAuthChangedPaths(),[...ENTRY_AUTH_PATHS,ENTRY_AUTH_MANIFEST].sort());
  for(const p of execFileSync('git',['ls-tree','-r','--name-only',ENTRY_AUTH_BASE,'--','supabase','src','research','.github'],{encoding:'utf8'}).trim().split('\n')){

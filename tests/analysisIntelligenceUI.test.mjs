@@ -18,6 +18,7 @@ function load(path,extra={}){
     if(name==='@/features/research/foundation')return modules.foundation;
     if(name==='./IntelligenceView')return modules.view;
     if(name==='./TradingLab')return {default:()=>null}; // independently covered by Owner Lab Handler/UI suite
+    if(name==='./OwnerCockpit')return {default:({children})=>children}; // separate cockpit interaction suite; retain the unchanged parent Owner guard assertions
     if(name==='./RecommendationShadow')return {default:()=>null}; // separately exercised with real isolated RLS, UI states and browser tests
     if(name==='./LineDecisionPreview')return {default:()=>null}; // independent preview copy and browser auth/race suite; this harness tests the parent Owner guard
     if(name==='./EntryOpportunity')return {default:()=>null}; // actual new component/RLS exercised in entryOpportunity local browser tests; this suite retains parent guard coverage

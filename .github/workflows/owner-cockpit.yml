@@ -1,0 +1,37 @@
+name: Owner cockpit ledger gate
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cockpit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/ownerCockpit*.test.mjs
+      - name: Network-isolated fresh PostgreSQL
+        run: |
+          docker run -d --name ma-entry-ci-20261009 --network none -e POSTGRES_PASSWORD=isolated-ci-only postgres:17
+          for attempt in $(seq 1 30); do
+            if docker exec ma-entry-ci-20261009 pg_isready -U postgres; then break; fi
+            sleep 1
+          done
+          docker exec ma-entry-ci-20261009 pg_isready -U postgres
+      - name: Fresh migration, real Handler, accounting, concurrency and security
+        env:
+          MA_ISOLATED_TEST_DB: ma_cockpit_test1
+          MA_TEST_DOCKER_CONTAINER: ma-entry-ci-20261009
+        run: node tests/ownerCockpitDatabase.integration.mjs
+      - name: Remove disposable isolation
+        if: always()
+        run: docker rm -f ma-entry-ci-20261009 2>/dev/null || true

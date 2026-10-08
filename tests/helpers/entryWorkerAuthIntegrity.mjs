@@ -12,6 +12,7 @@ export const ENTRY_AUTH_PATHS=[
  'tests/helpers/entryWorkerAuthIntegrity.mjs','tests/helpers/entryOpportunityIntegrity.mjs','tests/entryOpportunityIntegrity.test.mjs',
  'tests/browser/entryOpportunitySupabaseMock.ts','tests/browser/entryOpportunity.e2e.mjs',
  'tests/recommendationV2ForwardHandler.test.mjs',
+ 'tests/productContract.test.mjs',
  'docs/10k-program/entry-worker-auth-release.md',
 ].sort();
 const root=fileURLToPath(new URL('../../',import.meta.url)),read=p=>readFileSync(new URL('../../'+p,import.meta.url));

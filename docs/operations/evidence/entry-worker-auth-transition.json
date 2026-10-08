@@ -94,7 +94,13 @@
       "path": "tests/helpers/entryWorkerAuthIntegrity.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "747ae7454d8d721491775fbb6d84ca93725bd46d53bc5acc367513efd7cee2e3"
+      "candidate_sha256": "50808b5d0e9d205a84608b53b17ba4bd781dba76109a8e767060ade0e79e8cb2"
+    },
+    {
+      "path": "tests/productContract.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "386d567ad49f9fae95b4852bea2db0ffd022eb89e45b7bb2d7964af889619e47",
+      "candidate_sha256": "9ec8c7a25cf8aa4bf6927b8bedbaacb05de05ae1ead52d7ecd61f2d1ff57742d"
     },
     {
       "path": "tests/recommendationV2ForwardHandler.test.mjs",

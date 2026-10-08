@@ -6,6 +6,7 @@ import IntelligenceView from './IntelligenceView';
 import TradingLab from './TradingLab';
 import RecommendationShadow from './RecommendationShadow';
 import LineDecisionPreview from './LineDecisionPreview';
+import EntryOpportunity from './EntryOpportunity';
 import './analysis.css';
 
 export function ResearchFoundationView({ data }: { data: ResearchFoundation }) {
@@ -66,6 +67,7 @@ export default function OwnerAnalysisPage() {
   }, [selectedMode, selectedDate]);
   if (state.kind === 'ready' && state.data) return <div className="space-y-8">
     <LineDecisionPreview />
+    <EntryOpportunity />
     <RecommendationShadow />
     <TradingLab />
     <details className="rounded-xl border p-4"><summary className="cursor-pointer font-semibold">進階研究：歷史重播、訊號、Evidence 與版本</summary><div className="mt-4 space-y-6">

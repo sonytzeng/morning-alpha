@@ -1,0 +1,177 @@
+{
+  "schema_version": "ENTRY_OPPORTUNITY_CANDIDATE_TRANSITION_V1",
+  "base": "97d219ddf75a7edd788de5272533e17ffcaaf686",
+  "owner_only": true,
+  "shadow_only": true,
+  "functions": [
+    "entry-opportunity-shadow-v1"
+  ],
+  "migrations": [
+    "supabase/migrations/20261008081315_entry_opportunity_owner_shadow_v1.sql"
+  ],
+  "production_release_authorized": false,
+  "production_data_write": false,
+  "existing_auth_change": false,
+  "existing_rls_change": false,
+  "secret_change": false,
+  "cron_change": false,
+  "core_change": false,
+  "v1_change": false,
+  "v2_change": false,
+  "line_change": false,
+  "report_change": false,
+  "member_access": false,
+  "predecessor_sha256": "aaffd32a7a5b39d36acc7e37eecef782e2d67c9ffe0e89cc9797957dd8d6c3ff",
+  "files": [
+    {
+      "path": ".github/workflows/entry-opportunity.yml",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "053afe967406ab8cd6f5906a3a48d63ee83b6caaeb5aa1235444c2c4a0837194"
+    },
+    {
+      "path": "docs/10k-program/entry-opportunity-v1.md",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "6ecef2b929448fc753b9b0bb811ea6cdc2430dfdc628fa005868301347f325ff"
+    },
+    {
+      "path": "research/entry-opportunity.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "c52ed2ce4f2d31010e295765eecea765a03856183e9a3db66854bacc47fde95a"
+    },
+    {
+      "path": "research/entry-outcomes.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "34dd54d6621dedb5cb599fd3be45ee622d74a6b4c0ff81bdfd1c5f4904b0e8f9"
+    },
+    {
+      "path": "research/entry-v2-adapter.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "0f984a7610533fca1b1b266ce0e0888457174b68ba3609881ed3234ef834c041"
+    },
+    {
+      "path": "research/entry-worker.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "ea0b6b52c19add225b0a799b0aa61d2b2b66b6d26a44b966433b2e6129063b81"
+    },
+    {
+      "path": "src/pages/admin/analysis/EntryOpportunity.tsx",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "86451b4d56abb577a6135613a18ca799f82c109a09ff7a32cc89acbddcfcfa20"
+    },
+    {
+      "path": "src/pages/admin/analysis/page.tsx",
+      "operation": "MODIFY",
+      "predecessor_sha256": "9a4301c02517cb6b7b861579230d58f2b442d71dcfdf46758319c3c4b30c5710",
+      "candidate_sha256": "98a12f1e18f606fc5dfafb66e3387b7ff5392c4662c8259e3508b3c95bce4f2e"
+    },
+    {
+      "path": "supabase/functions/entry-opportunity-shadow-v1/index.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "0becba0a5035673fcb8b575f6c88e763fb7d059346f65598b4147c02918b3f97"
+    },
+    {
+      "path": "supabase/migrations/20261008081315_entry_opportunity_owner_shadow_v1.sql",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "e9c8d251746836769446691a8ef9cf0ae81a14737b5ce8fdabaff50b44a13161"
+    },
+    {
+      "path": "tests/analysisIntelligenceUI.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "85c0720c46da8d443625f83cc1c085010c5d9c89863583af92a7d7497914e7b7",
+      "candidate_sha256": "8746bd46e51b25ef437ea4a1eb752af7259060a597bef3d5648ab9a04affc71c"
+    },
+    {
+      "path": "tests/browser/entryOpportunity.e2e.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "339777b36c9e129f406d3e2819a4b4b89e59568ca30ccf03a5b067ebf59238e8"
+    },
+    {
+      "path": "tests/browser/entryOpportunity.vite.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "5cd5ccef9935de1fbc8ae1fdbd5193829d6b3138aa7fdd2d94362bfc738941e5"
+    },
+    {
+      "path": "tests/browser/entryOpportunityHarness.tsx",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "dd0a8f027d6bc18b2a8f9cdae41ee46c9c8600d47ae43d5aada67969ceeb4798"
+    },
+    {
+      "path": "tests/browser/entryOpportunitySupabaseMock.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "f0d844f4bbce565393d908a55d902736515f287217d2d89391d162bbf1c7ace3"
+    },
+    {
+      "path": "tests/entryOpportunity.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "b18fe3dcbfb1829f993ef70d590b49597baa8657480574922d83edb28fc7f586"
+    },
+    {
+      "path": "tests/entryOpportunityDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "f4f8f63a9111711564f3e9bf7ceb8f1a1bdebb0b0b7969256941643cd30501dd"
+    },
+    {
+      "path": "tests/entryOpportunityIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "9f68a624b674fdd8665153bb1232c1cf03536d24d5c5e4c291e305a31594f2c5"
+    },
+    {
+      "path": "tests/entryOpportunityWorker.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "162e6ab716dd0906755640b12a54806288465c5d46396cfc3280337878cfe99c"
+    },
+    {
+      "path": "tests/helpers/entryFixtures.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "acaa1cc4dc8ea7bdcc54a3d558998c133e92f0edf01e1de660ec76f4bf764829"
+    },
+    {
+      "path": "tests/helpers/entryOpportunityIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "4098b72263713552de6a317f5f82f97da8148d2211244cd85c223a7b15429cae"
+    },
+    {
+      "path": "tests/helpers/marketNewsIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "648ee580eb746580215be1182ba2bf1435331d612d2007a7fe106f9ef5189159",
+      "candidate_sha256": "9aea9069abd1dc0bfcc7cfd49daa0ef7ec96858b736daf1765e0d7ae06c003b4"
+    },
+    {
+      "path": "tests/marketNewsIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "cc842cb5ce4cbebb1f69fa72150c0aa2f6651442a2d4eb3418aeea697d8c0bd8",
+      "candidate_sha256": "23c0848d0234d2d2f3d47408d80acf461320eecd7c588b205f82ecb6216d5d0b"
+    },
+    {
+      "path": "tests/ownerAccountAnalysisNavigation.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "4879e2d9fa77a7a13c07f4682f25023ea643d29ef61f3bdf655a977f4e1817f1",
+      "candidate_sha256": "9ec412b80565f79ab1c6c8239e7c8199bb678c82200d62f0924b794cf0b6ceb9"
+    },
+    {
+      "path": "tests/productContract.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "84297baa327abd9608781e36b428a77c9ae9888b8c4d7a985910e8b3a17b9721",
+      "candidate_sha256": "386d567ad49f9fae95b4852bea2db0ffd022eb89e45b7bb2d7964af889619e47"
+    }
+  ]
+}

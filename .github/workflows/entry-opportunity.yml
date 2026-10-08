@@ -1,0 +1,56 @@
+name: Entry Opportunity candidate
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  entry-opportunity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno check --no-lock supabase/functions/entry-opportunity-shadow-v1/index.ts research/entry-outcomes.ts
+      - run: node --experimental-strip-types --test tests/entryOpportunity*.test.mjs
+      - name: Fresh network-isolated DB and actual Owner authorization
+        env:
+          MA_TEST_DOCKER_CONTAINER: ma-entry-ci-1
+          MA_ISOLATED_TEST_DB: ma_entry_test1
+        run: |
+          docker run -d --name ma-entry-ci-1 --network none --env POSTGRES_PASSWORD=isolated-entry-only postgres:17
+          for attempt in $(seq 1 30); do
+            if docker exec ma-entry-ci-1 pg_isready -U postgres; then break; fi
+            sleep 1
+          done
+          node --experimental-strip-types tests/entryOpportunityDatabase.integration.mjs
+      - name: Local-only desktop, mobile, Owner and deny paths
+        env:
+          MA_TEST_DOCKER_CONTAINER: ma-entry-ci-1
+          MA_ISOLATED_TEST_DB: ma_entry_test1
+          MA_ENTRY_UI_SCOPE: LOCAL_ONLY
+          MA_PLAYWRIGHT_MODULE: /tmp/entry-browser/node_modules/playwright/index.mjs
+          MA_CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          npm install --prefix /tmp/entry-browser playwright@1.56.1
+          npm exec vite -- --config tests/browser/entryOpportunity.vite.ts > /tmp/entry-vite.log 2>&1 &
+          preview_pid=$!
+          trap 'kill -TERM "$preview_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail 'http://127.0.0.1:3204/__entry_owner?role=owner' > /dev/null; then break; fi
+            sleep 1
+          done
+          node tests/browser/entryOpportunity.e2e.mjs
+      - name: Cleanup disposable isolation
+        if: always()
+        run: docker rm -f ma-entry-ci-1

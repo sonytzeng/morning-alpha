@@ -45,7 +45,7 @@
       "operation": "MODIFY",
       "predecessor_git_sha": "16b0f6b0206844a6a537379199bef007717b9b3b",
       "predecessor_sha256": "4d6a77ffb7b03db6d0b67e9316e3616a762f06f91a0a235d94fbba7a6b28ff25",
-      "candidate_sha256": "6901c653bc9cd6ec08e08e20a3525b246878ef0ffa4a3241e026b32ff2c7632a"
+      "candidate_sha256": "f604ec10c89157664adf8b862f362a5924b0ea2ef66317315a497c2e3d0074a5"
     },
     {
       "path": "src/pages/admin/data-truth/page.tsx",
@@ -73,7 +73,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "a574af069cc5e4180203a3f3ff9722263195ada368b30826b2857c10959a779c"
+      "candidate_sha256": "c69a7c9ffd8b54ded3767febac0ea9a64ee4cae02b5fe53799a2a70aae049e6e"
     },
     {
       "path": "src/pages/admin/system-check/page.tsx",
@@ -150,7 +150,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "157e107e0a35754f8727ded543c9682658e7620cfe5d008b6abd5d567c2b6614"
+      "candidate_sha256": "1f7e792d19b99a0c57a20b38907d291a07648db48b51eacfd96ea8d2a6dc5abf"
     },
     {
       "path": "tests/ownerBackendDatabase.integration.mjs",

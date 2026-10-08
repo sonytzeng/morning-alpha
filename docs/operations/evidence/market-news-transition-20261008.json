@@ -1,0 +1,86 @@
+{
+  "schema_version": "MARKET_NEWS_ACQUISITION_TRANSITION_V1",
+  "base": "8500f0ec050cff4f948c43ae9e6236aa4d2a58ea",
+  "predecessor_sha256": "ba1ced7ac4273154acc58a615b2e81cadbf601b481253845677b6a2cdd18a942",
+  "functions": [
+    "daily-delivery-orchestrator"
+  ],
+  "migrations": [],
+  "production_deploy_authorized": false,
+  "cron_change": false,
+  "secret_change": false,
+  "auth_change": false,
+  "rls_change": false,
+  "quality_threshold_change": false,
+  "business_logic_change": false,
+  "historical_data_write": false,
+  "manual_line_send": false,
+  "files": [
+    {
+      "path": "docs/operations/market-news-persistent-degradation-20261008.md",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "380a1c26802815727df341ba0a4cea8f6bb0935d2fee7397855e5a80d89dcc1c"
+    },
+    {
+      "path": "supabase/functions/_shared/market-news-acquisition.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "8e76394b675117b3b404f809ed55c533836d8d7d97204c2ca84bdf3983d30e79"
+    },
+    {
+      "path": "supabase/functions/daily-delivery-orchestrator/index.ts",
+      "operation": "MODIFY",
+      "predecessor_sha256": "887e7d330a37040125bd0f031028a6696518e7c97339436fd1c2d4d9f732af75",
+      "candidate_sha256": "7432033feb0476ba95495341731809e14e58307407c9853524feb2ebde8fedd4"
+    },
+    {
+      "path": "tests/coreProductionPreservation.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "5318d8587e2157386e45ca72b0457b2285fa8b0d8cf45e508996532502dbdccb",
+      "candidate_sha256": "9286ce36d34d7451333120affc4b492a8b098047fff23790de6946c5665f35db"
+    },
+    {
+      "path": "tests/fixtures/market-news-20261008.json",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "a39012c415c402afb203aabf4280dbd0efd5d3b020bda956375b0d88fb2e7e27"
+    },
+    {
+      "path": "tests/helpers/marketNewsIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "bc7ab9a5a111d3888bbdf3a3b6e751b5f516c568cf7c7c7abc2f72cd24939133"
+    },
+    {
+      "path": "tests/helpers/ownerBackendIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "50fcd61440df48f16703d0964ebca8137b314c7cd40086ad1f3359c79c1a26ab",
+      "candidate_sha256": "e28a0a82abf3d6e6ac7c1769e546cf2e669baad61c49981486f112b14db08188"
+    },
+    {
+      "path": "tests/lineProductionPromotionIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "689e818b48ff4fc71ab0ee46cc9898e4f2e335b9b20e298058c37e8d93ddd1ba",
+      "candidate_sha256": "2e0f5496f8518d5b67ffb6c2afed60ec17a757b5e36c21f0b5c7ea7ab3a46916"
+    },
+    {
+      "path": "tests/marketNewsAcquisition.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "299998f164729cb9dd143c578c85f192cd6267e308c59553ea06613ea7ce2d20"
+    },
+    {
+      "path": "tests/marketNewsIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "cc842cb5ce4cbebb1f69fa72150c0aa2f6651442a2d4eb3418aeea697d8c0bd8"
+    },
+    {
+      "path": "tests/ownerBackendIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "7007f9cddc0082fc2bd0186b16801325996667b089e9736ffc9a923d1b1065f7",
+      "candidate_sha256": "b3fff76f2f11b23890dff94ddb48cc1d18df3b507f0c8d848b39e5071682c2c0"
+    }
+  ]
+}

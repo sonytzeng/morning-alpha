@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import ts from 'typescript';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { marketNewsAwareReader } from './helpers/marketNewsIntegrity.mjs';
 import { readConsolidationPublicExportIntegrity as readSubscriberProjectionIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
 const root=new URL('../',import.meta.url);
 const manifest=JSON.parse(readFileSync(new URL('docs/operations/core-stability-source-manifest-20260907.json',root),'utf8'));
@@ -14,7 +15,7 @@ test('trusted deployed generator/orchestrator dependencies: protected AI setting
   assert.ok(manifest.protected_declarations.length>100);
   for(const deployment of manifest.production){
     for(const file of deployment.files){
-      let bytes=readFileSync(new URL(file.path,root),'utf8');
+      let bytes=marketNewsAwareReader(p=>readFileSync(new URL(p,root)))(file.path).toString('utf8');
       const amendment=incident.files.find(row=>row.path===file.path);
       if(amendment){
         assert.equal(hash(bytes),subscriberApproval.fileHash(amendment),`incident artifact drift: ${file.path}`);

@@ -3,12 +3,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const NAV_ITEMS = [
-  { path: '/admin/today-content', label: '今日內容', icon: 'ri-file-text-line' },
+  { path: '/admin/today-content', label: '今日狀況', icon: 'ri-file-text-line' },
   { path: '/admin/publish', label: '發布素材', icon: 'ri-film-line' },
-  { path: '/admin/system-status', label: '系統狀態', icon: 'ri-shield-check-line' },
-  { path: '/admin/system-health', label: 'P4 健康儀表板', icon: 'ri-pulse-line' },
-  { path: '/admin/data-health', label: '資料健康檢查', icon: 'ri-search-eye-line' },
-  { path: '/admin/learning', label: '學習中心', icon: 'ri-brain-line' },
+  { path: '/admin/system-status', label: '系統檢查', icon: 'ri-shield-check-line' },
+  { path: '/admin/system-health', label: '系統健康', icon: 'ri-pulse-line' },
+  { path: '/admin/data-health', label: '資料檢查', icon: 'ri-search-eye-line' },
+  { path: '/admin/learning', label: '分析成效', icon: 'ri-brain-line' },
 ];
 
 function getPageLabel(pathname: string): string {
@@ -51,7 +51,7 @@ export default function AdminLayout() {
 
   const navItems = researchOwner
     ? [...NAV_ITEMS, { path: '/admin/analysis', label: '分析中心', icon: 'ri-flask-line' }]
-    : NAV_ITEMS;
+    : NAV_ITEMS.filter(item => item.path === '/admin/publish');
   const pageLabel = researchOwner && location.pathname === '/admin/analysis' ? '分析中心' : getPageLabel(location.pathname);
 
   const sidebarContent = (

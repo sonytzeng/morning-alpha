@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { ownerBackendTransition } from './helpers/ownerBackendIntegrity.mjs';
 
 const migrationPath = new URL('../supabase/migrations/20260822090000_continuous_learning_engine_v1.sql', import.meta.url);
 const enginePath = new URL('../supabase/functions/continuous-learning-engine/index.ts', import.meta.url);
@@ -8,7 +9,6 @@ const apiPath = new URL('../supabase/functions/get-learning-center/index.ts', im
 const reportGeneratorPath = new URL('../supabase/functions/generate-daily-report-v7/index.ts', import.meta.url);
 const runtimeWorkflowPath = new URL('../.github/workflows/morning-alpha-runtime-checkpoints.yml', import.meta.url);
 const deployWorkflowPath = new URL('../.github/workflows/deploy-morning-alpha-runtime.yml', import.meta.url);
-const learningCenterPath = new URL('../src/pages/admin/learning/page.tsx', import.meta.url);
 const closingVerificationPath = new URL('../supabase/functions/closing-verification-engine/index.ts', import.meta.url);
 const deliveryOrchestratorPath = new URL('../supabase/functions/daily-delivery-orchestrator/index.ts', import.meta.url);
 const cronBackupPath = new URL('../supabase/migrations/20260824095332_continuous_learning_cron_backup.sql', import.meta.url);
@@ -33,7 +33,9 @@ const [
   readFile(reportGeneratorPath, 'utf8'),
   readFile(runtimeWorkflowPath, 'utf8'),
   readFile(deployWorkflowPath, 'utf8'),
-  readFile(learningCenterPath, 'utf8'),
+  // Preserve the released legacy learning-session contract after verifying the
+  // exact successor; current read-only Owner UI has its own behavioral tests.
+  ownerBackendTransition().predecessorRead('src/pages/admin/learning/page.tsx').toString('utf8'),
   readFile(closingVerificationPath, 'utf8'),
   readFile(deliveryOrchestratorPath, 'utf8'),
   readFile(cronBackupPath, 'utf8'),

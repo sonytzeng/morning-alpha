@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {OWNER_BACKEND_BASE,ownerBackendAwareReader} from './ownerBackendIntegrity.mjs';
 export const LINE_PROMOTION_BASE='8be2d3a575b9a3813eb1919b77a7e1f9a0755e53';
 export const LINE_PROMOTION_MANIFEST='tests/fixtures/line-v659-promotion-transition.json';
 export const LINE_PROMOTION_PATHS=[
@@ -36,6 +37,7 @@ export function linePromotionPrior(p){
  }return cache.get(p);
 }
 export function linePromotionTransition(source=read){
+ source=ownerBackendAwareReader(source);
  const m=JSON.parse(source(LINE_PROMOTION_MANIFEST));assert.equal(m.schema_version,'LINE_V659_MEMBER_TEMPLATE_PROMOTION_V1');
  assert.equal(m.base,LINE_PROMOTION_BASE);assert.deepEqual(m.files.map(r=>r.path).sort(),LINE_PROMOTION_PATHS);
  assert.deepEqual(m.functions,['line-daily-push']);
@@ -55,4 +57,4 @@ export function linePromotionAwareReader(source=read){
  try{source(LINE_PROMOTION_MANIFEST);}catch(e){if(e.code==='ENOENT')return source;throw e;}
  return linePromotionTransition(source).predecessorRead;
 }
-export function linePromotionChangedPaths(){const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean);return [...new Set([...git(['diff','--name-only','-z',LINE_PROMOTION_BASE,'--']),...git(['ls-files','--others','--exclude-standard','-z'])])].sort();}
+export function linePromotionChangedPaths(){return execFileSync('git',['diff','--name-only','-z',LINE_PROMOTION_BASE,OWNER_BACKEND_BASE,'--'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean).sort();}

@@ -12,6 +12,9 @@ try{
  for(const date of real?['2026-10-07','2026-10-08']:['']){
  for(const width of [1440,375,390,430]){
   await page.setViewportSize({width,height:900});await page.goto('http://127.0.0.1:3204/__entry_owner?role=owner&date='+date);await page.getByLabel('進場研究股票').waitFor();
+  const dates=await page.getByLabel('進場研究日期').locator('option').all();assert(dates.length>=2);
+  const historicalDate=await dates[1].getAttribute('value');await page.getByLabel('進場研究日期').selectOption(historicalDate);
+  assert((await page.locator('body').innerText()).includes(historicalDate));
   if(real){assert((await page.locator('body').innerText()).includes('真實保存資料重播'));assert((await page.locator('body').innerText()).includes(date));assert((await page.locator('body').innerText()).includes('歷史研究 2 · Forward 日期 0 · Outcome 0'));}
   for(const name of ['超跌反轉','趨勢回檔','突破延續']){await page.getByRole('button',{name,exact:true}).click();assert((await page.locator('body').innerText()).includes('什麼情況看錯'));}
   if(real){const option=page.locator('option').filter({hasText:'等待確認'}).first();await page.getByLabel('進場研究股票').selectOption(await option.getAttribute('value'));}

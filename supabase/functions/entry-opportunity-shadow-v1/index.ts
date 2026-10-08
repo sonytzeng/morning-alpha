@@ -1,18 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
-import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
+import { authorizeEntryWorker, ENTRY_WORKER_SECRET } from './worker-auth.mjs';
 import { runEntryResearch, type EntrySource } from '../../../research/entry-worker.ts';
 import type { V2Input } from '../_shared/recommendation-shadow-v2-engine.ts';
 
-// Candidate only. Existing internal CRON identity + Gateway JWT; no browser
+// Entry-only signed worker identity + unchanged Gateway JWT; no browser
 // write access. No acquisition, Core caller, schedule, or automatic promotion.
 export async function handleEntryOpportunity(request:Request){
   const reply=(status:number,body:unknown)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
   if(request.method!=='POST')return reply(405,{error:'METHOD_NOT_ALLOWED'});
   if(request.headers.has('origin'))return reply(403,{error:'SERVER_ONLY'});
-  const auth=await authorizeInternalRequest(request.headers,{...internalCredentialsFromEnv(),serviceRoleKey:''});
-  if(!auth.ok)return reply(401,{error:auth.error_code});
   try{
     const text=await request.text();if(text.length>512)return reply(413,{error:'INPUT_LIMIT'});
+    const auth=await authorizeEntryWorker(request.headers,text,Deno.env.get(ENTRY_WORKER_SECRET));
+    if(!auth.ok)return reply(auth.reason==='ENTRY_SERVER_ONLY'?403:401,{error:auth.reason});
     const body=JSON.parse(text);
     if(!body||typeof body!=='object'||Object.keys(body).some(k=>!['source_run_id','mode'].includes(k))||
       !/^[a-f0-9-]{36}$/.test(body.source_run_id)||!['FORWARD','HISTORICAL_REPLAY'].includes(body.mode))return reply(422,{error:'ENTRY_SCOPE_INVALID'});

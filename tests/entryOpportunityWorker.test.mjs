@@ -9,6 +9,8 @@ import ts from 'typescript';
 import {v2Fixture} from './helpers/recommendationV2Fixtures.mjs';
 import {v2Hash} from '../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
 import {entryInputFromV2} from '../research/entry-v2-adapter.ts';
+import {entryWorkerHeaders} from '../supabase/functions/entry-opportunity-shadow-v1/worker-auth.mjs';
+const TEST_TOKEN='SYNTHETIC_ENTRY_WORKER_ONLY_NOT_A_REAL_SECRET_123456789';
 const root=fileURLToPath(new URL('../',import.meta.url));
 async function harness({persistenceError=false}={}){
  const evidence=v2Fixture(),hash=await v2Hash(evidence),cutoff=evidence.identity.generated_at;
@@ -25,11 +27,13 @@ async function harness({persistenceError=false}={}){
    {module,exports:module.exports,require,Request,Response,Headers,URL,TextEncoder,crypto:webcrypto,AbortSignal,
     Date:class extends Date{constructor(...a){super(...(a.length?a:[cutoff]));}static now(){return Date.parse(cutoff);}},
     fetch(){throw Error('EXTERNAL_NETWORK_FORBIDDEN');},
-    Deno:{env:{get:k=>({CRON_SECRET:'SYNTHETIC_INTERNAL',SUPABASE_SERVICE_ROLE_KEY:'SYNTHETIC_SERVICE',SUPABASE_URL:'http://127.0.0.1:59999'})[k]},serve:fn=>{handler=fn;}}},{filename:path});return module.exports;
+    Deno:{env:{get:k=>({ENTRY_OPPORTUNITY_WORKER_TOKEN:TEST_TOKEN,SUPABASE_SERVICE_ROLE_KEY:'SYNTHETIC_SERVICE',SUPABASE_URL:'http://127.0.0.1:59999'})[k]},serve:fn=>{handler=fn;}}},{filename:path});return module.exports;
  }load(resolve(root,'supabase/functions/entry-opportunity-shadow-v1/index.ts'));
- return {calls,writes,request:(headers={},body={source_run_id:'30000000-0000-4000-8000-000000000001',mode:'HISTORICAL_REPLAY'},method='POST')=>handler(new Request('http://127.0.0.1/entry',{method,headers,body:method==='POST'?JSON.stringify(body):undefined}))};
+ const defaultBody={source_run_id:'30000000-0000-4000-8000-000000000001',mode:'HISTORICAL_REPLAY'};
+ const request=(headers={},body=defaultBody,method='POST')=>handler(new Request('http://127.0.0.1/entry',{method,headers,body:method==='POST'?JSON.stringify(body):undefined}));
+ return {calls,writes,request,signedRequest:async(body=defaultBody)=>request(await entryWorkerHeaders(TEST_TOKEN,JSON.stringify(body),Date.parse(cutoff)),body)};
 }
-test('actual handler and unchanged internal validator deny missing, member, owner, service-only and browser identities before reads',async()=>{
+test('actual handler dedicated validator denies missing, member, owner, service-only and legacy Core identities before reads',async()=>{
  const h=await harness();
  for(const headers of [{},{authorization:'Bearer SYNTHETIC_OWNER'},{authorization:'Bearer SYNTHETIC_MEMBER'},{apikey:'SYNTHETIC_SERVICE'},
   {'x-cron-secret':'WRONG'},{'x-cron-secret':'SYNTHETIC_INTERNAL','x-internal-auth-version':'WRONG'}])assert.equal((await h.request(headers)).status,401);
@@ -37,18 +41,18 @@ test('actual handler and unchanged internal validator deny missing, member, owne
  assert.equal((await h.request({},null,'GET')).status,405);assert.equal(h.calls.length,0);assert.equal(h.writes.length,0);
 });
 test('actual handler uses only retained source plus Canonical as-of lookup and new research persistence',async()=>{
- const h=await harness(),r=await h.request({'x-cron-secret':'SYNTHETIC_INTERNAL'});assert.equal(r.status,200);
+ const h=await harness(),r=await h.signedRequest();assert.equal(r.status,200);
  const result=await r.json();assert.equal(result.shadow_only,true);assert.deepEqual(result.business_writes,[]);assert.equal(h.writes.length,1);
  assert.deepEqual(h.calls,['recommendation_shadow_v2_runs','decision_snapshots']);
  const saved=h.writes[0].args.p_result;assert.equal(saved.production_eligible,false);assert.equal(saved.forward_sample,0);assert.equal(saved.mode,'HISTORICAL_REPLAY');
- const no=await harness({persistenceError:true});const rejected=await no.request({'x-cron-secret':'SYNTHETIC_INTERNAL'});assert.equal(rejected.status,422);
+ const no=await harness({persistenceError:true});const rejected=await no.signedRequest();assert.equal(rejected.status,422);
  assert(!(await rejected.text()).includes('PRIVATE_ERROR'));
 });
 test('unknown fields, invalid mode, oversized body and changed saved source hash fail closed',async()=>{
  const h=await harness();for(const body of [{mode:'LIVE',source_run_id:'30000000-0000-4000-8000-000000000001'},
   {mode:'FORWARD',source_run_id:'bad'},{mode:'HISTORICAL_REPLAY',source_run_id:'30000000-0000-4000-8000-000000000001',production:true}])
-  assert.equal((await h.request({'x-cron-secret':'SYNTHETIC_INTERNAL'},body)).status,422);
- assert.equal((await h.request({'x-cron-secret':'SYNTHETIC_INTERNAL'},{padding:'x'.repeat(513)})).status,413);assert.equal(h.writes.length,0);
+  assert.equal((await h.signedRequest(body)).status,422);
+ assert.equal((await h.signedRequest({padding:'x'.repeat(513)})).status,413);assert.equal(h.writes.length,0);
  await assert.rejects(entryInputFromV2(v2Fixture(),'f'.repeat(64),null,'HISTORICAL_REPLAY','SYNTHETIC_TEST'),/HASH_MISMATCH/);
 });
 test('adapter never substitutes future, wrong-session or conflicting market quotes for V2 validated evidence',async()=>{

@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {ENTRY_BASE,ENTRY_MANIFEST,ENTRY_PATHS,entryPrior,entryTransition,entryChangedPaths} from './helpers/entryOpportunityIntegrity.mjs';
-const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+import {entryAuthAwareReader} from './helpers/entryWorkerAuthIntegrity.mjs';
+const read=entryAuthAwareReader(p=>readFileSync(new URL('../'+p,import.meta.url)));
 test('Entry research exact candidate inventory, immutable predecessor and unchanged business producers',()=>{
  entryTransition();assert.deepEqual(entryChangedPaths(),[...ENTRY_PATHS,ENTRY_MANIFEST].sort());
  const paths=execFileSync('git',['ls-tree','-r','--name-only',ENTRY_BASE,'--','supabase','src','research','.github'],{encoding:'utf8'}).trim().split('\n');

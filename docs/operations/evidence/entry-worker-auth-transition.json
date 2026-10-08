@@ -1,0 +1,112 @@
+{
+  "schema_version": "ENTRY_WORKER_AUTH_TRANSITION_V1",
+  "base": "039250b0601eb731e4f4dac03c55b43ba3b4aba3",
+  "functions": [
+    "entry-opportunity-shadow-v1"
+  ],
+  "new_secret_names": [
+    "ENTRY_OPPORTUNITY_WORKER_TOKEN"
+  ],
+  "migrations": [],
+  "gateway_change": false,
+  "core_auth_change": false,
+  "rls_change": false,
+  "cron_change": false,
+  "core_change": false,
+  "strategy_change": false,
+  "outcome_enabled": false,
+  "natural_forward_enabled": false,
+  "predecessor_sha256": "13a023678f1193f19974b3a81849f07f414b2d6ad8f698538332ca0fc024971a",
+  "files": [
+    {
+      "path": "docs/10k-program/entry-worker-auth-release.md",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "1a60b16dc0584ce0f44dfbc9d12a16d07c509b67881ef34ec3eb67bc766333d1"
+    },
+    {
+      "path": "scripts/entry-worker-caller.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "edfa3297f8c25f2dbe8bb19885bc7490717f2b43881b5ffd903a574f889c3253"
+    },
+    {
+      "path": "src/pages/admin/analysis/EntryOpportunity.tsx",
+      "operation": "MODIFY",
+      "predecessor_sha256": "7bd2a1c1fb9a321d57b3187289663010849456cf9e5b93098c8350bba1fdfd65",
+      "candidate_sha256": "fa778b147cfeb578f400e0a28075a771f8b88f9f80c7dab0f5fd75e3206d99d0"
+    },
+    {
+      "path": "supabase/functions/entry-opportunity-shadow-v1/index.ts",
+      "operation": "MODIFY",
+      "predecessor_sha256": "0becba0a5035673fcb8b575f6c88e763fb7d059346f65598b4147c02918b3f97",
+      "candidate_sha256": "baf6c14976c5e4e0b53ec880e6180805fb66009429075bbff0da0ca0ac9df3dd"
+    },
+    {
+      "path": "supabase/functions/entry-opportunity-shadow-v1/worker-auth.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "78393514cb9f39d1228578a21eda1b1b34782d52da07c088730049621068bf8f"
+    },
+    {
+      "path": "tests/browser/entryOpportunity.e2e.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "ee8b77c61e20015b73d8ba7510bd677150fc20061acac42b380ee9f4a5e37b00",
+      "candidate_sha256": "1896955065449ff2896559f87e755a233654838b28e1ed349bba94f660ca4841"
+    },
+    {
+      "path": "tests/browser/entryOpportunitySupabaseMock.ts",
+      "operation": "MODIFY",
+      "predecessor_sha256": "6091a92448af448ab0c79a49d4632664aacf060673047027aea54b98e3d64123",
+      "candidate_sha256": "d9ac3f1f20f24a00bd5d1bfff9c23329244ac10ea51759490f2862974e7c55b0"
+    },
+    {
+      "path": "tests/entryOpportunityAuth.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "ee92c6caa128678e74e4d244b321da200b62905c29511279fb616171533c55b9"
+    },
+    {
+      "path": "tests/entryOpportunityAuthIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "fa82dc18286372af2f2b6263f0c61f6dbb29caf30a9f27a5c458468ad73619b1"
+    },
+    {
+      "path": "tests/entryOpportunityIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "9f68a624b674fdd8665153bb1232c1cf03536d24d5c5e4c291e305a31594f2c5",
+      "candidate_sha256": "6a78e6873a514c699b8c4f944b2a4d4b5dd3562dccca744409f61be29e045a81"
+    },
+    {
+      "path": "tests/entryOpportunityWorker.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "162e6ab716dd0906755640b12a54806288465c5d46396cfc3280337878cfe99c",
+      "candidate_sha256": "c2107ac4693678507b5088288565203884def23aca4023971bb0305b47004760"
+    },
+    {
+      "path": "tests/helpers/entryOpportunityIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "ede91d2379bd47f36e9cf16b46fb023558a19b358a173bb2fe9d2530c3448290",
+      "candidate_sha256": "c4c2d4d95e11a9c71ecb30f08e897ade44ed72c296bc1042c698d59a6ea058fc"
+    },
+    {
+      "path": "tests/helpers/entryWorkerAuthIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "50808b5d0e9d205a84608b53b17ba4bd781dba76109a8e767060ade0e79e8cb2"
+    },
+    {
+      "path": "tests/productContract.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "386d567ad49f9fae95b4852bea2db0ffd022eb89e45b7bb2d7964af889619e47",
+      "candidate_sha256": "9ec8c7a25cf8aa4bf6927b8bedbaacb05de05ae1ead52d7ecd61f2d1ff57742d"
+    },
+    {
+      "path": "tests/recommendationV2ForwardHandler.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "f5e4e2d1d583a2d37d40252f9d3dc7e4585c310a367d8172992ea49bfa5be735",
+      "candidate_sha256": "46dd124ab1cc8a37548e552472a4f34bc578ef3e32834d4b551b4142f1a0b064"
+    }
+  ]
+}

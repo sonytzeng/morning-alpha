@@ -6,7 +6,7 @@ const names: Record<Strategy, string> = { OVERSOLD_REVERSAL: '超跌反轉', PUL
 const states = { ENTRY_READY: '可以研究進場', WAIT_CONFIRMATION: '等待確認', AVOID_ENTRY: '不建議進場', INSUFFICIENT_EVIDENCE: '暫時無法可靠判斷' };
 const stateColors = { ENTRY_READY:'text-forest-200', WAIT_CONFIRMATION:'text-amber-300', AVOID_ENTRY:'text-rose-300', INSUFFICIENT_EVIDENCE:'text-surface-300' };
 type OwnerEntryData = { owner_only: true; shadow_only: true; production_eligible: false; latest: EntryEvaluation | null;
-  today_date: string; forward_sample: number; outcome_sample: number; historical_replay_count: number };
+  today_date: string; forward_sample: number; outcome_sample: number; historical_replay_count: number; history?: EntryEvaluation[] };
 function read(v: unknown): OwnerEntryData {
   const r = v as OwnerEntryData;
   if (!r || r.owner_only !== true || r.shadow_only !== true || r.production_eligible !== false ||
@@ -18,8 +18,8 @@ function read(v: unknown): OwnerEntryData {
 const box='rounded-xl border border-surface-700 bg-navy-900 p-4 text-surface-100';
 const price=(n:number)=>n.toLocaleString('zh-TW',{maximumFractionDigits:2});
 export function EntryOpportunityView({ data }: { data: OwnerEntryData }) {
-  const [strategy,setStrategy]=useState<Strategy>('OVERSOLD_REVERSAL'),[symbol,setSymbol]=useState('');
-  const latest=data.latest;
+  const [strategy,setStrategy]=useState<Strategy>('OVERSOLD_REVERSAL'),[symbol,setSymbol]=useState(''),[date,setDate]=useState('');
+  const latest=date?data.history?.find(r=>r.business_date===date)||null:data.latest;
   const candidates=(latest?.candidates||[]).filter(c=>c.strategy===strategy);
   const c=candidates.find(x=>x.symbol===symbol)||candidates[0];
   return <section aria-labelledby="entry-title" className="space-y-4 min-w-0">
@@ -29,6 +29,8 @@ export function EntryOpportunityView({ data }: { data: OwnerEntryData }) {
       {!latest?<p className="mt-3" role="status">尚無已保存的進場研究，不能說今天沒有機會。此頁不會補跑、建立預測或交易。</p>:
         <p className="mt-3 text-amber-800">{latest.business_date} · {latest.mode==='HISTORICAL_REPLAY'?'歷史重播，不是事前預測':'事前鎖定研究'} · {latest.business_date!==data.today_date?'較早研究，不代表今天的新判斷':'今日資料截點'} · 掃描 {latest.scanned}/{latest.universe} 檔，非全市場</p>}
     </header>
+    {Boolean(data.history?.length)&&<label className="block font-medium">研究日期<select aria-label="進場研究日期" className="mt-2 block w-full min-h-11 rounded border border-surface-400 bg-navy-800 p-2 text-surface-100" value={date} onChange={e=>{setDate(e.target.value);setSymbol('');}}>
+      <option value="">最新研究</option>{data.history?.map(r=><option key={r.business_date} value={r.business_date}>{r.business_date} · 歷史重播（非 Forward）</option>)}</select></label>}
     <div className="flex flex-wrap gap-2" aria-label="進場研究策略">{Object.entries(names).map(([k,v])=><button key={k} type="button" aria-pressed={strategy===k}
       className={`min-h-11 rounded-lg border px-4 py-2 font-semibold ${strategy===k?'bg-teal-800 text-white':'bg-navy-900 text-surface-100'}`}
       onClick={()=>setStrategy(k as Strategy)}>{v}</button>)}</div>
@@ -59,7 +61,20 @@ function Details({c}:{c:EntryResult}){return <div className="space-y-2 break-wor
 export default function EntryOpportunity(){
   const [state,setState]=useState<{kind:'loading'|'ready'|'denied'|'unavailable';data?:OwnerEntryData}>({kind:'loading'});
   useEffect(()=>{let active=true,generation=0;const {data:sub}=supabase.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'){generation++;if(active)setState({kind:'denied'});}});const g=generation;
-    void supabase.rpc('get_owner_entry_opportunity_v1').then(({data,error})=>{if(!active||g!==generation)return;if(error){setState({kind:error.code==='42501'?'denied':'unavailable'});return;}try{setState({kind:'ready',data:read(data)});}catch{setState({kind:'unavailable'});}},()=>{if(active&&g===generation)setState({kind:'unavailable'});});
+    void (async()=>{try{
+      const {data,error}=await supabase.rpc('get_owner_entry_opportunity_v1');if(!active||g!==generation)return;
+      if(error){setState({kind:error.code==='42501'?'denied':'unavailable'});return;}
+      const parsed=read(data);
+      // Existing Owner-only SELECT policy remains the authority; no new RPC or bypass.
+      const history=await supabase.from('entry_opportunity_runs').select('business_date,mode,result').eq('mode','HISTORICAL_REPLAY')
+        .order('evaluation_time',{ascending:false}).order('locked_at',{ascending:false}).limit(20);
+      if(!active||g!==generation)return;if(history.error){setState({kind:history.error.code==='42501'?'denied':'unavailable'});return;}
+      const dates=new Set<string>();const rows:EntryEvaluation[]=[];
+      for(const row of history.data||[]){const r=read({...parsed,latest:row.result}).latest;
+        if(!r||r.mode!=='HISTORICAL_REPLAY'||r.business_date!==row.business_date)throw Error('ENTRY_HISTORY_INVALID');
+        if(!dates.has(r.business_date)){dates.add(r.business_date);rows.push(r);}}
+      setState({kind:'ready',data:{...parsed,history:rows}});
+    }catch{if(active&&g===generation)setState({kind:'unavailable'});}})();
     return()=>{active=false;sub.subscription.unsubscribe();};},[]);
   if(state.kind==='ready'&&state.data)return <EntryOpportunityView data={state.data}/>;
   return <section className={box} role="status"><h2 className="text-xl font-semibold">進場機會研究</h2><p className="mt-2">{state.kind==='loading'?'確認 Owner 權限中…':state.kind==='denied'?'只有具名 Owner 可讀取，未提供研究資料。':'研究候選尚未發布或暫時無法讀取；正式市場服務不受影響。'}</p></section>;

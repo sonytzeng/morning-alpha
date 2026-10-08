@@ -1,0 +1,83 @@
+{
+  "schema_version": "LINE_V659_LOCAL_REAL_REPLAY_RECEIPT_V1",
+  "capture_class": "REAL_SAVED_PRODUCTION_PUBLICATION",
+  "raw_capture_location": "LOCAL_ONLY_NOT_COMMITTED",
+  "raw_capture_sha256": "63687b9d4110b9450035887fde427da3ff4be1ea6d765afbca062e3dff98e2ca",
+  "approved_base": "8be2d3a575b9a3813eb1919b77a7e1f9a0755e53",
+  "sources": [
+    {
+      "path": "supabase/functions/line-daily-push/index.ts",
+      "sha256": "e4c334cfc8a8b4071c43ef5b381507f95d75e4a7afe7106de1f25af77c67ac40"
+    },
+    {
+      "path": "supabase/functions/_shared/line-decision-card-v659.ts",
+      "sha256": "e33a3617f04b9429c0654fab5363a8c6f80890b9e30306452e923140361cfeff"
+    },
+    {
+      "path": "supabase/functions/_shared/line-production-template.ts",
+      "sha256": "a5fd4655d333a2b5fe288ef7e9a133eeab0e56a9a6b79f397551b8f4b96681ab"
+    },
+    {
+      "path": "src/features/line/decisionCard.ts",
+      "sha256": "eb743878da181e98afaea6ee1b3f11ccaa808e8dc34861114864bbdc50ba1b06"
+    },
+    {
+      "path": "tests/lineProductionRealReplay.mjs",
+      "sha256": "9005eb61828685e5501fc66363723901cc3956cefd46b0069516297d7c5f4e15"
+    }
+  ],
+  "captures": [
+    {
+      "business_date": "2026-10-05",
+      "publication_gate": "PASS",
+      "flex_sha256": "bcd9132b63ca40c5e1ba7ce4f99b3cb2f3786864e1f0854c7961556c157daa8d",
+      "flex_bytes": 3595,
+      "approved_v659_parity": "PASS",
+      "v1_only": true,
+      "business_writes": 0,
+      "line_sends": 0
+    },
+    {
+      "business_date": "2026-10-06",
+      "publication_gate": "PASS",
+      "flex_sha256": "91e84728a67fca6f8c83fcc678f36438ac38c10d14ea1ad2b82210bbb50d47ee",
+      "flex_bytes": 3616,
+      "approved_v659_parity": "PASS",
+      "v1_only": true,
+      "business_writes": 0,
+      "line_sends": 0
+    },
+    {
+      "business_date": "2026-10-07",
+      "publication_gate": "PASS",
+      "flex_sha256": "4f235ef5a3b46caa972a194169dbd4957841ad756d33203d0253eaeb782ee88b",
+      "flex_bytes": 3619,
+      "approved_v659_parity": "PASS",
+      "v1_only": true,
+      "business_writes": 0,
+      "line_sends": 0
+    },
+    {
+      "business_date": "2026-10-08",
+      "publication_gate": "PASS",
+      "flex_sha256": "a04e063e8bc282c004eae221b39aae3421410ea290587e103f88723059dc6ffd",
+      "flex_bytes": 3584,
+      "approved_v659_parity": "PASS",
+      "v1_only": true,
+      "business_writes": 0,
+      "line_sends": 0
+    }
+  ],
+  "layout": {
+    "desktop": 1440,
+    "mobile": [
+      375,
+      390,
+      430
+    ],
+    "dates": 4,
+    "overflow": 0,
+    "cta_per_card": 1
+  },
+  "line_app_delivery": "NOT_OBSERVED_YET"
+}

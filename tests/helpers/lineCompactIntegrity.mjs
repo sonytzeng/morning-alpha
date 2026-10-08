@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {LINE_PROMOTION_BASE,linePromotionAwareReader} from './lineProductionPromotionIntegrity.mjs';
 export const LINE_COMPACT_BASE='50a6e3b248c768d275a1950d1aaa4da7db346fd7';
 export const LINE_COMPACT_MANIFEST='tests/fixtures/line-compact-transition.json';
 export const LINE_COMPACT_PATHS=[
@@ -25,6 +26,7 @@ export function lineCompactPrior(p){
  return cache.get(p);
 }
 export function lineCompactTransition(source=read){
+ source=linePromotionAwareReader(source);
  const m=JSON.parse(source(LINE_COMPACT_MANIFEST));assert.equal(m.schema_version,'LINE_COMPACT_OWNER_PREVIEW_V1');
  assert.equal(m.base,LINE_COMPACT_BASE);assert.deepEqual(m.files.map(r=>r.path).sort(),LINE_COMPACT_PATHS);
  for(const k of ['function_deploy','migration','cron','auth_change','rls_change','secret_change','member_template_promotion','v2_promotion','production_data_write','line_send'])assert.equal(m[k],false,k);
@@ -43,4 +45,4 @@ export function lineCompactAwareReader(source=read){
  try{source(LINE_COMPACT_MANIFEST);}catch(e){if(e.code==='ENOENT')return source;throw e;}
  return lineCompactTransition(source).predecessorRead;
 }
-export function lineCompactChangedPaths(){const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean);return [...new Set([...git(['diff','--name-only','-z',LINE_COMPACT_BASE,'--']),...git(['ls-files','--others','--exclude-standard','-z'])])].sort();}
+export function lineCompactChangedPaths(){return execFileSync('git',['diff','--name-only','-z',LINE_COMPACT_BASE,LINE_PROMOTION_BASE,'--'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean).sort();}

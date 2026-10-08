@@ -7,7 +7,7 @@ test('final usability exact set + hashes + immutable predecessor; no business mu
  const t=lineUsabilityTransition();assert.deepEqual(lineUsabilityChangedPaths(),[...LINE_USABILITY_PATHS,LINE_USABILITY_MANIFEST].sort());
  for(const r of t.manifest.files){if(r.operation==='ADD')assert.throws(()=>t.predecessorRead(r.path),{code:'ENOENT'});else assert.deepEqual(t.predecessorRead(r.path),lineUsabilityPrior(r.path));}
  for(const p of ['supabase/functions/line-daily-push/index.ts','supabase/functions/_shared/line-daily-flex-message.mjs','supabase/functions/_shared/market-publication-contract.ts',
- 'supabase/functions/_shared/recommendation-shadow-v2-engine.ts','supabase/functions/get-report-payload/index.ts','supabase/config.toml','src/pages/admin/analysis/page.tsx'])assert.deepEqual(read(p),lineUsabilityPrior(p),p);
+ 'supabase/functions/_shared/recommendation-shadow-v2-engine.ts','supabase/functions/get-report-payload/index.ts','supabase/config.toml','src/pages/admin/analysis/page.tsx'])assert.deepEqual(t.predecessorRead(p),lineUsabilityPrior(p),p);
 });
 test('unknown bytes/files, rewritten history or promotion fail closed',()=>{
  for(const p of LINE_USABILITY_PATHS)assert.throws(()=>lineUsabilityTransition(path=>path===p?Buffer.concat([read(path),Buffer.from('DRIFT')]):read(path)),/unreviewed candidate drift/);

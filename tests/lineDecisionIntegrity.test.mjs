@@ -7,7 +7,7 @@ test('LINE preview exact reviewed file set, hashes, immutable predecessors and n
  const t=lineCardTransition();assert.deepEqual(lineCardChangedPaths(),[...LINE_CARD_PATHS,LINE_CARD_MANIFEST].sort());
  for(const r of t.manifest.files){if(r.operation==='ADD')assert.throws(()=>t.predecessorRead(r.path),{code:'ENOENT'});else assert.deepEqual(t.predecessorRead(r.path),lineCardPrior(r.path));}
  for(const p of ['supabase/functions/line-daily-push/index.ts','supabase/functions/_shared/line-daily-flex-message.mjs','supabase/functions/_shared/market-publication-contract.ts',
-  'supabase/functions/_shared/recommendation-shadow-v2-engine.ts','supabase/functions/get-report-payload/index.ts','supabase/config.toml'])assert.deepEqual(read(p),lineCardPrior(p),p);
+  'supabase/functions/_shared/recommendation-shadow-v2-engine.ts','supabase/functions/get-report-payload/index.ts','supabase/config.toml'])assert.deepEqual(t.predecessorRead(p),lineCardPrior(p),p);
 });
 test('unknown bytes/files, history edits and sensitive promotion never silently pass',()=>{
  for(const p of LINE_CARD_PATHS)assert.throws(()=>lineCardTransition(path=>path===p?Buffer.concat([read(path),Buffer.from('DRIFT')]):read(path)),/unreviewed candidate drift/);

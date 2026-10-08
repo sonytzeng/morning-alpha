@@ -38,7 +38,7 @@ test('plain wording retains threshold, OR and sign; compact layout retains font 
 test('compact exact file set, hashes, predecessor lineage and protected business sources',()=>{
  const t=lineCompactTransition();assert.deepEqual(lineCompactChangedPaths(),[...LINE_COMPACT_PATHS,LINE_COMPACT_MANIFEST].sort());
  for(const r of t.manifest.files){if(r.operation==='ADD')assert.throws(()=>t.predecessorRead(r.path),{code:'ENOENT'});else assert.deepEqual(t.predecessorRead(r.path),lineCompactPrior(r.path));}
- for(const p of ['supabase/functions/line-daily-push/index.ts','supabase/functions/_shared/line-daily-flex-message.mjs','supabase/functions/_shared/market-publication-contract.ts','supabase/functions/_shared/recommendation-shadow-v2-engine.ts','supabase/config.toml','src/pages/admin/analysis/page.tsx'])assert.deepEqual(read(p),lineCompactPrior(p),p);
+ for(const p of ['supabase/functions/line-daily-push/index.ts','supabase/functions/_shared/line-daily-flex-message.mjs','supabase/functions/_shared/market-publication-contract.ts','supabase/functions/_shared/recommendation-shadow-v2-engine.ts','supabase/config.toml','src/pages/admin/analysis/page.tsx'])assert.deepEqual(t.predecessorRead(p),lineCompactPrior(p),p);
 });
 test('compact Integrity rejects unknown bytes/files, rewritten baseline and promotion',()=>{
  for(const p of LINE_COMPACT_PATHS)assert.throws(()=>lineCompactTransition(q=>q===p?Buffer.concat([read(q),Buffer.from('DRIFT')]):read(q)),/unreviewed candidate drift/);

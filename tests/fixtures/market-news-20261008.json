@@ -1,0 +1,4957 @@
+{
+  "type": "RETAINED_PRODUCTION_COUNTERS_NOT_RAW_PROVIDER_RESPONSES",
+  "collected_on": "2026-10-08",
+  "base": "8500f0ec050cff4f948c43ae9e6236aa4d2a58ea",
+  "deployed": {
+    "orchestrator": 42,
+    "news": 62,
+    "source_parity": true
+  },
+  "rows": [
+    {
+      "date": "2026-09-09",
+      "started_at": "2026-09-08 23:00:02.348+00",
+      "phase": "refresh",
+      "status": "SUCCEEDED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 192,
+        "after_dedup": 192,
+        "selected_count": 11,
+        "canonical_upserted_count": 11,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 22,
+          "relevance_ge70": 9,
+          "final_score_ge60": 25,
+          "taiwan_relevance_ge50": 42
+        }
+      }
+    },
+    {
+      "date": "2026-09-09",
+      "started_at": "2026-09-08 23:05:00.834+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-09",
+      "started_at": "2026-09-08 23:08:00.607+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-09",
+      "started_at": "2026-09-08 23:15:01.216+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-09",
+      "started_at": "2026-09-08 23:23:00.398+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-09",
+      "started_at": "2026-09-08 23:27:00.549+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-09",
+      "started_at": "2026-09-08 23:30:01.87+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-09",
+      "started_at": "2026-09-08 23:35:00.833+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-10",
+      "started_at": "2026-09-09 23:00:01.584+00",
+      "phase": "refresh",
+      "status": "SUCCEEDED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 176,
+        "after_dedup": 176,
+        "selected_count": 12,
+        "canonical_upserted_count": 12,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 24,
+          "relevance_ge70": 8,
+          "final_score_ge60": 23,
+          "taiwan_relevance_ge50": 34
+        }
+      }
+    },
+    {
+      "date": "2026-09-10",
+      "started_at": "2026-09-09 23:05:00.887+00",
+      "phase": "generate",
+      "status": "SUCCEEDED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-10",
+      "started_at": "2026-09-09 23:15:00.577+00",
+      "phase": "repair",
+      "status": "SUCCEEDED",
+      "actions": [],
+      "news": null
+    },
+    {
+      "date": "2026-09-10",
+      "started_at": "2026-09-09 23:23:00.665+00",
+      "phase": "deliver",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-10",
+      "started_at": "2026-09-09 23:30:00.542+00",
+      "phase": "watchdog",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-11",
+      "started_at": "2026-09-10 23:00:02.649+00",
+      "phase": "refresh",
+      "status": "SUCCEEDED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 173,
+        "after_dedup": 173,
+        "selected_count": 12,
+        "canonical_upserted_count": 12,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 21,
+          "relevance_ge70": 13,
+          "final_score_ge60": 24,
+          "taiwan_relevance_ge50": 35
+        }
+      }
+    },
+    {
+      "date": "2026-09-11",
+      "started_at": "2026-09-10 23:05:01.05+00",
+      "phase": "generate",
+      "status": "SUCCEEDED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-11",
+      "started_at": "2026-09-10 23:15:00.974+00",
+      "phase": "repair",
+      "status": "SUCCEEDED",
+      "actions": [],
+      "news": null
+    },
+    {
+      "date": "2026-09-11",
+      "started_at": "2026-09-10 23:23:00.65+00",
+      "phase": "deliver",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-11",
+      "started_at": "2026-09-10 23:30:02.069+00",
+      "phase": "watchdog",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-14",
+      "started_at": "2026-09-13 23:00:03.024+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 179,
+        "after_dedup": 179,
+        "selected_count": 5,
+        "canonical_upserted_count": 5,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 23,
+          "relevance_ge70": 14,
+          "final_score_ge60": 28,
+          "taiwan_relevance_ge50": 33
+        }
+      }
+    },
+    {
+      "date": "2026-09-14",
+      "started_at": "2026-09-13 23:03:00.837+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 165,
+        "after_dedup": 165,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 13,
+          "relevance_ge70": 5,
+          "final_score_ge60": 14,
+          "taiwan_relevance_ge50": 19
+        }
+      }
+    },
+    {
+      "date": "2026-09-14",
+      "started_at": "2026-09-13 23:05:00.542+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-14",
+      "started_at": "2026-09-13 23:08:01.075+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-14",
+      "started_at": "2026-09-13 23:15:01.862+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 165,
+        "after_dedup": 165,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 13,
+          "relevance_ge70": 5,
+          "final_score_ge60": 14,
+          "taiwan_relevance_ge50": 19
+        }
+      }
+    },
+    {
+      "date": "2026-09-14",
+      "started_at": "2026-09-13 23:23:00.831+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 165,
+        "after_dedup": 165,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 13,
+          "relevance_ge70": 5,
+          "final_score_ge60": 14,
+          "taiwan_relevance_ge50": 19
+        }
+      }
+    },
+    {
+      "date": "2026-09-14",
+      "started_at": "2026-09-13 23:27:00.635+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 165,
+        "after_dedup": 165,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 13,
+          "relevance_ge70": 5,
+          "final_score_ge60": 14,
+          "taiwan_relevance_ge50": 19
+        }
+      }
+    },
+    {
+      "date": "2026-09-14",
+      "started_at": "2026-09-13 23:30:01.926+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 169,
+        "after_dedup": 169,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 13,
+          "relevance_ge70": 7,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 23
+        }
+      }
+    },
+    {
+      "date": "2026-09-14",
+      "started_at": "2026-09-13 23:35:01+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 165,
+        "after_dedup": 165,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 13,
+          "relevance_ge70": 5,
+          "final_score_ge60": 14,
+          "taiwan_relevance_ge50": 19
+        }
+      }
+    },
+    {
+      "date": "2026-09-15",
+      "started_at": "2026-09-14 23:00:02.212+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 184,
+        "after_dedup": 184,
+        "selected_count": 12,
+        "canonical_upserted_count": 12,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 27,
+          "relevance_ge70": 15,
+          "final_score_ge60": 30,
+          "taiwan_relevance_ge50": 38
+        }
+      }
+    },
+    {
+      "date": "2026-09-15",
+      "started_at": "2026-09-14 23:03:00.853+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 171,
+        "after_dedup": 171,
+        "selected_count": 4,
+        "canonical_upserted_count": 4,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 5,
+          "final_score_ge60": 17,
+          "taiwan_relevance_ge50": 24
+        }
+      }
+    },
+    {
+      "date": "2026-09-15",
+      "started_at": "2026-09-14 23:05:00.634+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-15",
+      "started_at": "2026-09-14 23:08:00.942+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-15",
+      "started_at": "2026-09-14 23:15:01.321+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 170,
+        "after_dedup": 170,
+        "selected_count": 4,
+        "canonical_upserted_count": 4,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 5,
+          "final_score_ge60": 17,
+          "taiwan_relevance_ge50": 24
+        }
+      }
+    },
+    {
+      "date": "2026-09-15",
+      "started_at": "2026-09-14 23:23:00.794+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 170,
+        "after_dedup": 170,
+        "selected_count": 4,
+        "canonical_upserted_count": 4,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 5,
+          "final_score_ge60": 17,
+          "taiwan_relevance_ge50": 24
+        }
+      }
+    },
+    {
+      "date": "2026-09-15",
+      "started_at": "2026-09-14 23:27:00.624+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 170,
+        "after_dedup": 170,
+        "selected_count": 4,
+        "canonical_upserted_count": 4,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 5,
+          "final_score_ge60": 17,
+          "taiwan_relevance_ge50": 24
+        }
+      }
+    },
+    {
+      "date": "2026-09-15",
+      "started_at": "2026-09-14 23:30:01.89+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 170,
+        "after_dedup": 170,
+        "selected_count": 4,
+        "canonical_upserted_count": 4,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 5,
+          "final_score_ge60": 17,
+          "taiwan_relevance_ge50": 24
+        }
+      }
+    },
+    {
+      "date": "2026-09-15",
+      "started_at": "2026-09-14 23:35:01.251+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 170,
+        "after_dedup": 170,
+        "selected_count": 4,
+        "canonical_upserted_count": 4,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 5,
+          "final_score_ge60": 17,
+          "taiwan_relevance_ge50": 24
+        }
+      }
+    },
+    {
+      "date": "2026-09-16",
+      "started_at": "2026-09-15 23:00:01.517+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 190,
+        "after_dedup": 190,
+        "selected_count": 12,
+        "canonical_upserted_count": 12,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 40,
+          "relevance_ge70": 16,
+          "final_score_ge60": 31,
+          "taiwan_relevance_ge50": 42
+        }
+      }
+    },
+    {
+      "date": "2026-09-16",
+      "started_at": "2026-09-15 23:03:00.889+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 175,
+        "after_dedup": 175,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 31,
+          "relevance_ge70": 7,
+          "final_score_ge60": 16,
+          "taiwan_relevance_ge50": 26
+        }
+      }
+    },
+    {
+      "date": "2026-09-16",
+      "started_at": "2026-09-15 23:05:00.536+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-16",
+      "started_at": "2026-09-15 23:08:01.109+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-16",
+      "started_at": "2026-09-15 23:15:01.383+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 175,
+        "after_dedup": 175,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 31,
+          "relevance_ge70": 7,
+          "final_score_ge60": 16,
+          "taiwan_relevance_ge50": 26
+        }
+      }
+    },
+    {
+      "date": "2026-09-16",
+      "started_at": "2026-09-15 23:23:00.755+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 175,
+        "after_dedup": 175,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 31,
+          "relevance_ge70": 7,
+          "final_score_ge60": 16,
+          "taiwan_relevance_ge50": 26
+        }
+      }
+    },
+    {
+      "date": "2026-09-16",
+      "started_at": "2026-09-15 23:27:00.578+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 175,
+        "after_dedup": 175,
+        "selected_count": 9,
+        "canonical_upserted_count": 9,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 31,
+          "relevance_ge70": 8,
+          "final_score_ge60": 16,
+          "taiwan_relevance_ge50": 26
+        }
+      }
+    },
+    {
+      "date": "2026-09-16",
+      "started_at": "2026-09-15 23:30:01.464+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 175,
+        "after_dedup": 175,
+        "selected_count": 9,
+        "canonical_upserted_count": 9,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 31,
+          "relevance_ge70": 8,
+          "final_score_ge60": 16,
+          "taiwan_relevance_ge50": 26
+        }
+      }
+    },
+    {
+      "date": "2026-09-16",
+      "started_at": "2026-09-15 23:35:01.223+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 177,
+        "after_dedup": 177,
+        "selected_count": 9,
+        "canonical_upserted_count": 9,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 31,
+          "relevance_ge70": 8,
+          "final_score_ge60": 16,
+          "taiwan_relevance_ge50": 26
+        }
+      }
+    },
+    {
+      "date": "2026-09-17",
+      "started_at": "2026-09-16 23:00:01.068+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 186,
+        "after_dedup": 186,
+        "selected_count": 12,
+        "canonical_upserted_count": 12,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 35,
+          "relevance_ge70": 17,
+          "final_score_ge60": 32,
+          "taiwan_relevance_ge50": 42
+        }
+      }
+    },
+    {
+      "date": "2026-09-17",
+      "started_at": "2026-09-16 23:03:00.827+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 172,
+        "after_dedup": 172,
+        "selected_count": 9,
+        "canonical_upserted_count": 9,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 31,
+          "relevance_ge70": 8,
+          "final_score_ge60": 20,
+          "taiwan_relevance_ge50": 28
+        }
+      }
+    },
+    {
+      "date": "2026-09-17",
+      "started_at": "2026-09-16 23:05:00.48+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-17",
+      "started_at": "2026-09-16 23:08:00.914+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-17",
+      "started_at": "2026-09-16 23:15:01.495+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 171,
+        "after_dedup": 171,
+        "selected_count": 9,
+        "canonical_upserted_count": 9,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 31,
+          "relevance_ge70": 8,
+          "final_score_ge60": 20,
+          "taiwan_relevance_ge50": 28
+        }
+      }
+    },
+    {
+      "date": "2026-09-17",
+      "started_at": "2026-09-16 23:23:00.654+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 171,
+        "after_dedup": 171,
+        "selected_count": 9,
+        "canonical_upserted_count": 9,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 31,
+          "relevance_ge70": 8,
+          "final_score_ge60": 20,
+          "taiwan_relevance_ge50": 28
+        }
+      }
+    },
+    {
+      "date": "2026-09-17",
+      "started_at": "2026-09-16 23:27:00.436+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 171,
+        "after_dedup": 171,
+        "selected_count": 9,
+        "canonical_upserted_count": 9,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 31,
+          "relevance_ge70": 8,
+          "final_score_ge60": 20,
+          "taiwan_relevance_ge50": 28
+        }
+      }
+    },
+    {
+      "date": "2026-09-17",
+      "started_at": "2026-09-16 23:30:01.265+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 171,
+        "after_dedup": 171,
+        "selected_count": 9,
+        "canonical_upserted_count": 9,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 31,
+          "relevance_ge70": 8,
+          "final_score_ge60": 20,
+          "taiwan_relevance_ge50": 28
+        }
+      }
+    },
+    {
+      "date": "2026-09-17",
+      "started_at": "2026-09-16 23:35:00.888+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 171,
+        "after_dedup": 171,
+        "selected_count": 9,
+        "canonical_upserted_count": 9,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 31,
+          "relevance_ge70": 8,
+          "final_score_ge60": 20,
+          "taiwan_relevance_ge50": 28
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-17 23:00:01.459+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 192,
+        "after_dedup": 192,
+        "selected_count": 12,
+        "canonical_upserted_count": 12,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 28,
+          "relevance_ge70": 18,
+          "final_score_ge60": 32,
+          "taiwan_relevance_ge50": 45
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-17 23:03:00.744+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 168,
+        "after_dedup": 168,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-17 23:05:00.516+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-17 23:15:01.192+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 167,
+        "after_dedup": 167,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-17 23:23:00.672+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 167,
+        "after_dedup": 167,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-17 23:27:00.596+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 167,
+        "after_dedup": 167,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-17 23:30:01.353+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 182,
+        "selected_count": 12,
+        "canonical_upserted_count": 12,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 27,
+          "relevance_ge70": 16,
+          "final_score_ge60": 32,
+          "taiwan_relevance_ge50": 45
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-17 23:35:01.036+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 168,
+        "after_dedup": 168,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-17 23:40:01.033+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 167,
+        "after_dedup": 167,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-17 23:45:00.946+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 167,
+        "after_dedup": 167,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-17 23:50:01.375+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 167,
+        "after_dedup": 167,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-17 23:55:01.032+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 166,
+        "after_dedup": 166,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-18 00:00:01.997+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 167,
+        "after_dedup": 167,
+        "selected_count": 12,
+        "canonical_upserted_count": 12,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 28,
+          "relevance_ge70": 5,
+          "final_score_ge60": 19,
+          "taiwan_relevance_ge50": 31
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-18 00:05:00.731+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 166,
+        "after_dedup": 166,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-18 00:10:01.42+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 166,
+        "after_dedup": 166,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-18 00:15:01.065+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 166,
+        "after_dedup": 166,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-18 00:20:01.133+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 166,
+        "after_dedup": 166,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-18 00:25:01.102+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 166,
+        "after_dedup": 166,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-18 00:30:01.65+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 182,
+        "selected_count": 12,
+        "canonical_upserted_count": 12,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 29,
+          "relevance_ge70": 16,
+          "final_score_ge60": 34,
+          "taiwan_relevance_ge50": 46
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-18 00:35:00.79+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 168,
+        "after_dedup": 168,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 20,
+          "relevance_ge70": 8,
+          "final_score_ge60": 18,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "started_at": "2026-09-18 00:45:03.325+00",
+      "phase": "watchdog",
+      "status": "FAILED",
+      "actions": [
+        "deliver_incident"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-20 23:00:02.743+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 191,
+        "after_dedup": 190,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 4,
+        "filter_stats": {
+          "impact_ge50": 26,
+          "relevance_ge70": 11,
+          "final_score_ge60": 26,
+          "taiwan_relevance_ge50": 37
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-20 23:03:00.89+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 175,
+        "after_dedup": 174,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 23
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-20 23:05:00.493+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-20 23:15:01.172+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-20 23:23:00.621+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-20 23:27:00.56+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-20 23:30:01.203+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-20 23:35:00.872+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 176,
+        "after_dedup": 175,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-20 23:40:01.581+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-20 23:45:00.965+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-20 23:50:00.977+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-20 23:55:01.022+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-21 00:00:00.939+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 185,
+        "after_dedup": 184,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 4,
+        "filter_stats": {
+          "impact_ge50": 25,
+          "relevance_ge70": 9,
+          "final_score_ge60": 20,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-21 00:05:00.813+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-21 00:10:01.195+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-21 00:15:01+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-21 00:20:01.608+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-21 00:25:00.804+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-21 00:30:01.205+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-21 00:35:00.799+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 174,
+        "after_dedup": 173,
+        "selected_count": 0,
+        "canonical_upserted_count": 0,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 1,
+        "filter_stats": {
+          "impact_ge50": 18,
+          "relevance_ge70": 7,
+          "final_score_ge60": 13,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "started_at": "2026-09-21 00:45:01.669+00",
+      "phase": "watchdog",
+      "status": "FAILED",
+      "actions": [
+        "deliver_incident"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-21 23:00:01.368+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 199,
+        "after_dedup": 198,
+        "selected_count": 9,
+        "canonical_upserted_count": 9,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 22,
+          "relevance_ge70": 15,
+          "final_score_ge60": 25,
+          "taiwan_relevance_ge50": 37
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-21 23:03:00.826+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-21 23:05:00.431+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-21 23:15:00.857+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-21 23:23:00.691+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-21 23:27:00.576+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-21 23:30:00.984+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-21 23:35:00.749+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-21 23:40:01.318+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-21 23:45:01.12+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-21 23:50:01.133+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-21 23:55:00.841+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-22 00:00:02.518+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 199,
+        "after_dedup": 198,
+        "selected_count": 9,
+        "canonical_upserted_count": 9,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 22,
+          "relevance_ge70": 15,
+          "final_score_ge60": 25,
+          "taiwan_relevance_ge50": 37
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-22 00:05:00.84+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-22 00:10:01.282+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-22 00:15:00.809+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-22 00:20:01.232+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-22 00:25:00.714+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-22 00:30:01.158+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 99,
+        "after_dedup": 98,
+        "selected_count": 8,
+        "canonical_upserted_count": 8,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 19,
+          "relevance_ge70": 15,
+          "final_score_ge60": 23,
+          "taiwan_relevance_ge50": 30
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-22 00:35:00.742+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 182,
+        "after_dedup": 181,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 14,
+          "relevance_ge70": 7,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 20
+        }
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "started_at": "2026-09-22 00:45:01.052+00",
+      "phase": "watchdog",
+      "status": "FAILED",
+      "actions": [
+        "deliver_incident"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-23",
+      "started_at": "2026-09-22 23:00:02.23+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 186,
+        "after_dedup": 186,
+        "selected_count": 12,
+        "canonical_upserted_count": 12,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 22,
+          "relevance_ge70": 13,
+          "final_score_ge60": 28,
+          "taiwan_relevance_ge50": 39
+        }
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "started_at": "2026-09-22 23:03:00.783+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market"
+      ],
+      "news": {
+        "total_raw": 171,
+        "after_dedup": 171,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 12,
+          "relevance_ge70": 5,
+          "final_score_ge60": 12,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "started_at": "2026-09-22 23:05:00.549+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-23",
+      "started_at": "2026-09-22 23:08:00.801+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-23",
+      "started_at": "2026-09-22 23:15:01.006+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 168,
+        "after_dedup": 168,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 12,
+          "relevance_ge70": 5,
+          "final_score_ge60": 12,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "started_at": "2026-09-22 23:23:00.624+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 168,
+        "after_dedup": 168,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 12,
+          "relevance_ge70": 5,
+          "final_score_ge60": 12,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "started_at": "2026-09-22 23:27:00.587+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 168,
+        "after_dedup": 168,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 12,
+          "relevance_ge70": 5,
+          "final_score_ge60": 12,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "started_at": "2026-09-22 23:30:01.311+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 168,
+        "after_dedup": 168,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 12,
+          "relevance_ge70": 5,
+          "final_score_ge60": 12,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "started_at": "2026-09-22 23:35:00.836+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 168,
+        "after_dedup": 168,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 12,
+          "relevance_ge70": 5,
+          "final_score_ge60": 12,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-09-24",
+      "started_at": "2026-09-23 23:00:01.425+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-24",
+      "started_at": "2026-09-23 23:03:00.864+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-24",
+      "started_at": "2026-09-23 23:05:00.659+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-24",
+      "started_at": "2026-09-23 23:08:00.854+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-24",
+      "started_at": "2026-09-23 23:15:00.882+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-24",
+      "started_at": "2026-09-23 23:23:00.671+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-24",
+      "started_at": "2026-09-23 23:27:00.505+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-24",
+      "started_at": "2026-09-23 23:30:01.303+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-24",
+      "started_at": "2026-09-23 23:35:00.942+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-29",
+      "started_at": "2026-09-28 23:00:01.921+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-29",
+      "started_at": "2026-09-28 23:03:00.844+00",
+      "phase": "refresh",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-29",
+      "started_at": "2026-09-28 23:05:00.519+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-29",
+      "started_at": "2026-09-28 23:08:00.765+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-29",
+      "started_at": "2026-09-28 23:15:00.908+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-29",
+      "started_at": "2026-09-28 23:23:00.768+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-29",
+      "started_at": "2026-09-28 23:27:00.459+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-29",
+      "started_at": "2026-09-28 23:30:01.166+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-29",
+      "started_at": "2026-09-28 23:35:00.821+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-30",
+      "started_at": "2026-09-29 23:00:01.428+00",
+      "phase": "refresh",
+      "status": "SUCCEEDED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-30",
+      "started_at": "2026-09-29 23:05:01.236+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-30",
+      "started_at": "2026-09-29 23:08:00.922+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-09-30",
+      "started_at": "2026-09-29 23:15:01.17+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 171,
+        "after_dedup": 171,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 16,
+          "relevance_ge70": 6,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 25
+        }
+      }
+    },
+    {
+      "date": "2026-09-30",
+      "started_at": "2026-09-29 23:23:00.643+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 171,
+        "after_dedup": 171,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 16,
+          "relevance_ge70": 6,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 25
+        }
+      }
+    },
+    {
+      "date": "2026-09-30",
+      "started_at": "2026-09-29 23:27:00.755+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 171,
+        "after_dedup": 171,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 16,
+          "relevance_ge70": 6,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 25
+        }
+      }
+    },
+    {
+      "date": "2026-09-30",
+      "started_at": "2026-09-29 23:30:01.236+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 171,
+        "after_dedup": 171,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 16,
+          "relevance_ge70": 6,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 25
+        }
+      }
+    },
+    {
+      "date": "2026-09-30",
+      "started_at": "2026-09-29 23:35:01.012+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 172,
+        "after_dedup": 172,
+        "selected_count": 6,
+        "canonical_upserted_count": 6,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 16,
+          "relevance_ge70": 6,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 25
+        }
+      }
+    },
+    {
+      "date": "2026-10-01",
+      "started_at": "2026-09-30 23:00:02.87+00",
+      "phase": "refresh",
+      "status": "SUCCEEDED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-01",
+      "started_at": "2026-09-30 23:05:01.193+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-01",
+      "started_at": "2026-09-30 23:08:00.998+00",
+      "phase": "generate",
+      "status": "DEGRADED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-01",
+      "started_at": "2026-09-30 23:15:01.034+00",
+      "phase": "repair",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 177,
+        "after_dedup": 177,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 9,
+          "relevance_ge70": 6,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 23
+        }
+      }
+    },
+    {
+      "date": "2026-10-01",
+      "started_at": "2026-09-30 23:23:00.882+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 177,
+        "after_dedup": 177,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 9,
+          "relevance_ge70": 6,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 23
+        }
+      }
+    },
+    {
+      "date": "2026-10-01",
+      "started_at": "2026-09-30 23:27:00.621+00",
+      "phase": "deliver",
+      "status": "DEGRADED",
+      "actions": [
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 177,
+        "after_dedup": 177,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 9,
+          "relevance_ge70": 6,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 23
+        }
+      }
+    },
+    {
+      "date": "2026-10-01",
+      "started_at": "2026-09-30 23:30:01.514+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 177,
+        "after_dedup": 177,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 9,
+          "relevance_ge70": 6,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 23
+        }
+      }
+    },
+    {
+      "date": "2026-10-01",
+      "started_at": "2026-09-30 23:35:01.005+00",
+      "phase": "watchdog",
+      "status": "DEGRADED",
+      "actions": [
+        "deliver_incident",
+        "refresh_news",
+        "refresh_market",
+        "regenerate_report"
+      ],
+      "news": {
+        "total_raw": 177,
+        "after_dedup": 177,
+        "selected_count": 1,
+        "canonical_upserted_count": 1,
+        "canonical_complete": true,
+        "invalid_published_at_count": 0,
+        "blacklisted": 0,
+        "filter_stats": {
+          "impact_ge50": 9,
+          "relevance_ge70": 6,
+          "final_score_ge60": 10,
+          "taiwan_relevance_ge50": 22
+        }
+      }
+    },
+    {
+      "date": "2026-10-02",
+      "started_at": "2026-10-01 23:00:02.793+00",
+      "phase": "refresh",
+      "status": "SUCCEEDED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-02",
+      "started_at": "2026-10-01 23:05:01.17+00",
+      "phase": "generate",
+      "status": "SUCCEEDED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-02",
+      "started_at": "2026-10-01 23:15:01.619+00",
+      "phase": "repair",
+      "status": "SUCCEEDED",
+      "actions": [],
+      "news": null
+    },
+    {
+      "date": "2026-10-02",
+      "started_at": "2026-10-01 23:23:01.006+00",
+      "phase": "deliver",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-02",
+      "started_at": "2026-10-01 23:30:01.715+00",
+      "phase": "watchdog",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-05",
+      "started_at": "2026-10-04 23:00:01.877+00",
+      "phase": "refresh",
+      "status": "SUCCEEDED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-05",
+      "started_at": "2026-10-04 23:05:01.335+00",
+      "phase": "generate",
+      "status": "SUCCEEDED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-05",
+      "started_at": "2026-10-04 23:15:01.98+00",
+      "phase": "repair",
+      "status": "SUCCEEDED",
+      "actions": [],
+      "news": null
+    },
+    {
+      "date": "2026-10-05",
+      "started_at": "2026-10-04 23:23:01.058+00",
+      "phase": "deliver",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-05",
+      "started_at": "2026-10-04 23:30:01.813+00",
+      "phase": "watchdog",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-06",
+      "started_at": "2026-10-05 23:00:01.745+00",
+      "phase": "refresh",
+      "status": "SUCCEEDED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-06",
+      "started_at": "2026-10-05 23:05:01.069+00",
+      "phase": "generate",
+      "status": "SUCCEEDED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-06",
+      "started_at": "2026-10-05 23:15:02.128+00",
+      "phase": "repair",
+      "status": "SUCCEEDED",
+      "actions": [],
+      "news": null
+    },
+    {
+      "date": "2026-10-06",
+      "started_at": "2026-10-05 23:23:01.079+00",
+      "phase": "deliver",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-06",
+      "started_at": "2026-10-05 23:30:02.317+00",
+      "phase": "watchdog",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-07",
+      "started_at": "2026-10-06 23:00:01.535+00",
+      "phase": "refresh",
+      "status": "SUCCEEDED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-07",
+      "started_at": "2026-10-06 23:05:01.304+00",
+      "phase": "generate",
+      "status": "SUCCEEDED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-07",
+      "started_at": "2026-10-06 23:15:01.75+00",
+      "phase": "repair",
+      "status": "SUCCEEDED",
+      "actions": [],
+      "news": null
+    },
+    {
+      "date": "2026-10-07",
+      "started_at": "2026-10-06 23:23:01.065+00",
+      "phase": "deliver",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-07",
+      "started_at": "2026-10-06 23:30:02.617+00",
+      "phase": "watchdog",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-08",
+      "started_at": "2026-10-07 23:00:02.858+00",
+      "phase": "refresh",
+      "status": "SUCCEEDED",
+      "actions": [
+        "refresh_market"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-08",
+      "started_at": "2026-10-07 23:05:01.194+00",
+      "phase": "generate",
+      "status": "SUCCEEDED",
+      "actions": [
+        "regenerate_report"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-08",
+      "started_at": "2026-10-07 23:15:01.664+00",
+      "phase": "repair",
+      "status": "SUCCEEDED",
+      "actions": [],
+      "news": null
+    },
+    {
+      "date": "2026-10-08",
+      "started_at": "2026-10-07 23:23:01.311+00",
+      "phase": "deliver",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    },
+    {
+      "date": "2026-10-08",
+      "started_at": "2026-10-07 23:30:02.188+00",
+      "phase": "watchdog",
+      "status": "SUCCEEDED",
+      "actions": [
+        "deliver_premium"
+      ],
+      "news": null
+    }
+  ],
+  "retained_news": [
+    {
+      "title": "Fed minutes July 2026: Officials saw need for rate hike if inflation doesn't cool",
+      "source": "EUROPE SAYS",
+      "url": "https://www.europesays.com/3235785/",
+      "published_at": "2026-09-06 06:06:50+00",
+      "created_at": "2026-09-06 23:00:14.638714+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "885ecb57cd7fc7df06509c9dcc6cfc946375df4c64a337aabe7be76285811b47",
+      "has_tag": true
+    },
+    {
+      "title": "US labour market resilience may keep Fed cautious on September rate decision",
+      "source": "ANI (Asian News International)",
+      "url": "https://www.aninews.in/news/business/us-labour-market-resilience-may-keep-fed-cautious-on-september-rate-decision20260906144231/",
+      "published_at": "2026-09-06 09:12:31+00",
+      "created_at": "2026-09-06 23:00:14.638714+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "209fe48536fdaba0d33f3a20c62bf106f898734fce548142236cdc8ec6027da3",
+      "has_tag": true
+    },
+    {
+      "title": "US labour market resilience may keep Fed cautious on September rate decision",
+      "source": "The Tribune",
+      "url": "https://www.tribuneindia.com/news/business/us-labour-market-resilience-may-keep-fed-cautious-on-september-rate-decision/",
+      "published_at": "2026-09-06 09:17:54+00",
+      "created_at": "2026-09-06 23:00:14.638714+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "e95e9cdb0f9d66855df5079448c0a4cd5106505e3903c57d482ff7eb6fea3141",
+      "has_tag": true
+    },
+    {
+      "title": "Bitcoin drops below $80,000 as hot jobs data spurs US Federal Reserve hike bets",
+      "source": "The Straits Times",
+      "url": "https://www.straitstimes.com/business/bitcoin-drops-below-80000-as-hot-jobs-data-spurs-us-federal-reserve-hike-bets",
+      "published_at": "2026-09-07 00:52:00+00",
+      "created_at": "2026-09-07 23:00:09.595598+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "0542b2d49ce0c27319f2dee7537e78f12f5595b364cf1d7b09ee195d331b4dd2",
+      "has_tag": true
+    },
+    {
+      "title": "Global Market Today: Asian stocks open higher, oil rises after attacks",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/us-stocks/news/global-market-today-asian-stocks-open-higher-oil-rises-after-attacks/articleshow/133857975.cms",
+      "published_at": "2026-09-07 00:58:00+00",
+      "created_at": "2026-09-07 23:00:09.595598+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "a3817dbecf37349298d763eba9c32ee7a0942361f1b7e4b0adbc465e8d2de770",
+      "has_tag": true
+    },
+    {
+      "title": "Sensex Today | Stock Market LIVE Updates: GIFT Nifty suggests a flat start; US markets fall, Asia rises",
+      "source": "Moneycontrol",
+      "url": "https://www.moneycontrol.com/news/business/markets/stock-market-live-updates-nifty50-share-price-sensex-share-price-crude-fii-gift-nifty-rupee-latest-updates-07-09-2026-alpha-liveblog-14023857.html",
+      "published_at": "2026-09-07 01:30:00+00",
+      "created_at": "2026-09-07 23:00:09.595598+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "286cbe7c96a60065c380532a237c06b1dbb006b69007e311db2db55f44a7c846",
+      "has_tag": true
+    },
+    {
+      "title": "Gold Silver Rate Today Live Updates: Bullion prices slip as strong US jobs data boosts rate hike bets",
+      "source": "Times of India",
+      "url": "https://timesofindia.indiatimes.com/business/india-business/gold-silver-rate-today-live-updates-18k-22-carat-24k-gold-price-10g-silver-cost-per-kg-mcx-comex-etf-stock-precious-metal-gold-prediction-city-wise-cost-latest-gold-news/liveblog/133861573.cms",
+      "published_at": "2026-09-07 03:20:49+00",
+      "created_at": "2026-09-07 23:00:09.595598+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "7a976103a33466093abc0e7511992847bbdecb4fd33e803487d15f9723a34914",
+      "has_tag": true
+    },
+    {
+      "title": "Gold eases as robust US payrolls boost rate-hike bets; inflation data in focus",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/commodities/news/gold-eases-as-robust-us-payrolls-boost-rate-hike-bets-inflation-data-in-focus/articleshow/133861644.cms",
+      "published_at": "2026-09-07 03:23:00+00",
+      "created_at": "2026-09-07 23:00:09.595598+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "37f5cc6203e5ef224c405894d5a6ce5a839b37019ad2e10b5ba97b834a52198a",
+      "has_tag": true
+    },
+    {
+      "title": "Bitcoin drops below $80,000 as US jobs data spurs Fed-hike bets",
+      "source": "Bloomberg",
+      "url": "https://www.bloomberg.com/news/articles/2026-09-04/bitcoin-drops-below-80-000-as-hot-jobs-data-spurs-fed-hike-bets",
+      "published_at": "2026-09-07 03:29:51+00",
+      "created_at": "2026-09-08 23:00:12.097383+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "37e8ed14df47ee715220ac04ae60ce1b90cd524a3cc53a300bff223a08b21ee2",
+      "has_tag": true
+    },
+    {
+      "title": "UBS forecasts two US Fed rate hikes in 2026 after strong jobs report",
+      "source": "Reuters",
+      "url": "https://www.reuters.com/business/ubs-forecasts-two-us-fed-rate-hikes-2026-after-strong-jobs-report-2026-09-07/",
+      "published_at": "2026-09-07 09:07:14+00",
+      "created_at": "2026-09-07 23:00:09.595598+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "5c4cd20eccb5274722e6bab885fdeb5916880a73381e00b45778d300632dc371",
+      "has_tag": true
+    },
+    {
+      "title": "FTSE 100 Dips Amidst Oil Price Surge and US Rate Hike Concerns",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3973674-ftse-100-dips-amidst-oil-price-surge-and-us-rate-hike-concerns",
+      "published_at": "2026-09-07 09:34:54+00",
+      "created_at": "2026-09-07 23:00:09.595598+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "9e48acd3b7090d313be0b64de0bcf4d50e14634692582a44969ca8f2cc97b25a",
+      "has_tag": true
+    },
+    {
+      "title": "Stocks dented by inflation risk from rising oil, dicey geopolitics - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMigwFBVV95cUxQa0pobHhGSWlxLVNZa2htLURrNldPaHUyOGVyQXVBeGtJOWJDUXpqMXFSTDBCaHNkeFI5Q0Y2NUdFNlJoWUZlVGQwR2pGZk5oc1R5TzFLbUdFMU1aY3NGTXVhOGFTeFZOenRpbUlNc0ZiTjQtMnNaRVUtTVNrWEpLeGprbw?oc=5",
+      "published_at": "2026-09-07 14:47:23+00",
+      "created_at": "2026-09-07 23:00:09.595598+00",
+      "taiwan_impact_summary": "直接影響 台塑、南亞、台化、萬海 等台股",
+      "fingerprint": "67a0a8956714e36d079a3820910b3de465a9c58ba53b9986ed660876fa8f39cd",
+      "has_tag": true
+    },
+    {
+      "title": "Banking giant names 2 assets to buy ahead of Fed next rates decision",
+      "source": "Finbold",
+      "url": "https://finbold.com/banking-giant-names-2-assets-to-buy-ahead-of-fed-next-rates-decision/",
+      "published_at": "2026-09-07 15:05:23+00",
+      "created_at": "2026-09-08 23:00:12.097383+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "05856a61a45458f9bc81c170ae82f8a142360f514fcd17e9a3b2716872d6ecbc",
+      "has_tag": true
+    },
+    {
+      "title": "FTSE 100 Dips Amid Rising Oil Prices and Fed Rate Hike Concerns",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3973853-ftse-100-dips-amid-rising-oil-prices-and-fed-rate-hike-concerns",
+      "published_at": "2026-09-07 16:18:18+00",
+      "created_at": "2026-09-08 23:00:12.097383+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "71f22b07336497b3fa72890e1d76b2caf532ed8e7d93af097fc5ee404553b238",
+      "has_tag": true
+    },
+    {
+      "title": "Oil prices rise to six-week highs on worsening Middle East conflict - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMinAFBVV95cUxNN2l5blJOWGZlTWtiTzJFdl80Vm9jb3QxSHp5YUpRR0l6THd2RmZ6cDd2OUtFakRhYkRXbWdSdUxUU0tYSVl1YTRTS1RzYTVQem1OOVFDR01ZRXNEeDBuWEwweHd0RDZnS1B0dE1PbFhXb3JMWjNGY1JLMHpvUkpGRDE0ZUtXZk10akVNOUhSVklQYjdHZ1JCS25ReUc?oc=5",
+      "published_at": "2026-09-07 23:08:47+00",
+      "created_at": "2026-09-07 23:00:09.595598+00",
+      "taiwan_impact_summary": "直接影響 台塑、南亞、台化、萬海 等台股",
+      "fingerprint": "7df9ef622087fb9e828659521b5ce495f03b425ebffd636fcd2e795c2db80f90",
+      "has_tag": true
+    },
+    {
+      "title": "Yen Soars to New Heights: Bank of Japan's Potential Rate Hike Spurs Currency Surge",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3973938-yen-soars-to-new-heights-bank-of-japans-potential-rate-hike-spurs-currency-surge",
+      "published_at": "2026-09-08 00:54:55+00",
+      "created_at": "2026-09-08 23:00:12.097383+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "8c0cc12ff7a19c8c4d2bd2c098702e8170184713042cccb41fb9540c6dd7f73a",
+      "has_tag": true
+    },
+    {
+      "title": "Trump's Interest Rate Rhetoric: A Fed Dilemma",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/politics/3974064-trumps-interest-rate-rhetoric-a-fed-dilemma",
+      "published_at": "2026-09-08 06:02:23+00",
+      "created_at": "2026-09-08 23:00:12.097383+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "ee6b6400cea481a7e46ea621415733793f219d15719f240e9c8e470e790ecc40",
+      "has_tag": true
+    },
+    {
+      "title": "ASML, TSMC join hands for 12-inch photomasks, target pilot line by 2031 for next-gen chipmaking",
+      "source": "ANI (Asian News International)",
+      "url": "https://www.aninews.in/news/business/asml-tsmc-join-hands-for-12-inch-photomasks-target-pilot-line-by-2031-for-next-gen-chipmaking20260908181527/",
+      "published_at": "2026-09-08 12:45:27+00",
+      "created_at": "2026-09-09 23:00:09.041555+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "a49d17814ec438c94cd0325cdbe5be0b72b43d72b695e297db660644d5d8db39",
+      "has_tag": true
+    },
+    {
+      "title": "inch photomasks, target pilot line by 2031 for next",
+      "source": "The Tribune",
+      "url": "https://www.tribuneindia.com/news/business/asml-tsmc-join-hands-for-12-inch-photomasks-target-pilot-line-by-2031-for-next-gen-chipmaking/",
+      "published_at": "2026-09-08 12:52:25+00",
+      "created_at": "2026-09-09 23:00:09.041555+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "733f31908589633e1bb45073fb490b14e159e3a227e821b830549a359bbb26b2",
+      "has_tag": true
+    },
+    {
+      "title": "ASML, TSMC, And Samsung Team Up To Solve Next-Gen Chip Bottleneck",
+      "source": "Hot Hardware",
+      "url": "https://hothardware.com/news/asml-tsmc-and-samsung-team-up-to-solve-next-gen-chip-bottleneck",
+      "published_at": "2026-09-08 14:17:00+00",
+      "created_at": "2026-09-09 23:00:09.041555+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "9410cccbace02a45d8e8d88a67852b7763e0dc6ae172a8e101e4cc1b3a902dc5",
+      "has_tag": true
+    },
+    {
+      "title": "US Treasury ratchets up pressure on Iran with sweeping new aviation sanctions - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMiwgFBVV95cUxOaGdHdXJpOEljWVdDWlBhWFFpS2w2YmtsSm5hUmkyanBIUWV2eWdEX0trcFpIRU1abHpTNjdTcHlNYWNOMWFQTjBvUDdscjVKc2k4a0hWSmxvZ0c1UWo4YWtkaFF5alY3UXFuOUZpZHByRHFQVkdCU2ZZT29kRTBMcGZ4aFN2b1Z5b2FNQk56bjJrVGxFMzBEMk9kTGhxOG5EWU9lRlVfclhQTFgyMFh5cU5CdzVYaE1BelF0WEw4LU5GZw?oc=5",
+      "published_at": "2026-09-08 14:53:00+00",
+      "created_at": "2026-09-08 23:00:12.097383+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "a4c7beba5b835aea2e18800f4802443dcaeb250abafab189b914d3484ab9a4ad",
+      "has_tag": true
+    },
+    {
+      "title": "US stocks today: US stocks slip as AI fears weigh on software, while oil and rate bets add pressure",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/us-stocks/wall-street-guide/us-stocks-today-us-stocks-slip-as-ai-fears-weigh-on-software-while-oil-and-rate-bets-add-pressure/articleshow/133940798.cms",
+      "published_at": "2026-09-08 20:14:00+00",
+      "created_at": "2026-09-09 23:00:09.041555+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "7190ba8c7d1a4bf31b9504f05e228876fd515dda57af32d64851cb3c2a69d6b3",
+      "has_tag": true
+    },
+    {
+      "title": "Wall Street slides, oil surges amid worries over inflation, Middle East - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMie0FVX3lxTE82VU5LOUdHSU5uLWxoeWs1bi16RTM3dUozczYtZXhPUF9RRFEtUVNTQmphRjloY2k5dkxodEZ1eTZnRjF4NU90clpNZGZJTnk1SEJXME44NDIxT1JNNW5rWW80VGlNbDJXNDdjMHN4YXd4eTRLb3RJLW5Ybw?oc=5",
+      "published_at": "2026-09-08 20:17:40+00",
+      "created_at": "2026-09-08 23:00:12.097383+00",
+      "taiwan_impact_summary": "直接影響 台塑、南亞、台化、萬海 等台股",
+      "fingerprint": "88450c321f7921f9bfbddecb24d4059b5b7035c0e8a9e1b4550e40ef58973116",
+      "has_tag": true
+    },
+    {
+      "title": "US military says it destroyed five Iranian oil carriers after attempted missile attacks - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMiywFBVV95cUxNYkRzd0JMdW1lbUtzRVk1dFpYWGFpVEYwZkVnaVBYd0hINnRNSVdiUXlrVHBBbkExXzNpZTdTT1NFaHpMSVA1Slk1aUl0bFZPc3VhbUVyUE9rZFkzOFZqU0VoQ2ZaZ2lwNm1rNmZEUTU5REZ6WWJmSEp3TWlGLXliZTU4S2pQMVFFY0V0MHQzS1BSa3FJUlJ3RzlqaV9GLVluYzd4MTQ5Yms1eDg5aWM1Mmp1bi1aNk0tS2lJSW40dlJ5cmhkeVd6bWxERQ?oc=5",
+      "published_at": "2026-09-08 23:03:00+00",
+      "created_at": "2026-09-09 23:00:09.041555+00",
+      "taiwan_impact_summary": "直接影響 台塑、南亞、台化、萬海 等台股",
+      "fingerprint": "cd65607d65df93efcd4317cc4d85c387e485ee4d6bb1208de76eda02c56e0ecc",
+      "has_tag": true
+    },
+    {
+      "title": "Global Market Today: Asian chip stocks rise, oil climbs towards $100",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/us-stocks/news/global-market-today-asian-chip-stocks-rise-oil-climbs-towards-100/articleshow/133947565.cms",
+      "published_at": "2026-09-09 00:50:00+00",
+      "created_at": "2026-09-09 23:00:09.041555+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "b21877116362786f7002ffb311a425e4db6f0680e4530140dea8ddcee6b76306",
+      "has_tag": true
+    },
+    {
+      "title": "Gold subdued on inflation worries, rate hike expectations",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/commodities/news/gold-subdued-on-inflation-worries-rate-hike-expectations/articleshow/133948976.cms",
+      "published_at": "2026-09-09 02:05:00+00",
+      "created_at": "2026-09-09 23:00:09.041555+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "5181ae12d7f196a5f1ee992b964c80ca992912a21623567381cc1f4f902c7b11",
+      "has_tag": true
+    },
+    {
+      "title": "Indian stocks fall to three-month low as Brent oil surges past $100 - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMiugFBVV95cUxQUTJ5YTBDcXdScFdqQUJJNmpuSC1YYmZtQUJEbDdlV3dEazhPNWtIb3MwV2lqQTdqakNBZDhlZ21uMHMzNWp4ZFF2djRtZ3hnQnlnRnhzel9CbzJsXzJnSHg3aUlCUGZzZDc1RnpENVBQMEtUUXVYcThYUG1pU1dPdVpqR1BPWjlJSWYwRW02MU9nOVNxV3h5UTFRTHVaSnVPQmU1QW5mZGRWci1oZ2FqUG1TYU9fSGhzS1E?oc=5",
+      "published_at": "2026-09-09 02:20:00+00",
+      "created_at": "2026-09-09 23:00:09.041555+00",
+      "taiwan_impact_summary": "直接影響 台塑、南亞、台化、萬海 等台股",
+      "fingerprint": "7c0f687d8590b4630110b4ac4c021cd1ed852ef0c840069d00ba2c2b2b62d196",
+      "has_tag": true
+    },
+    {
+      "title": "Treasuries Weaken as Soaring Oil Prices Revive Rate Hike Worries",
+      "source": "Spokane Spokesman-Review",
+      "url": "https://www.spokesman.com/stories/2026/sep/09/treasuries-weaken-as-soaring-oil-prices-revive-rat/",
+      "published_at": "2026-09-09 12:02:00+00",
+      "created_at": "2026-09-10 23:00:10.051153+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "0b9a77818a8f8d4b726bed5696d8bc3b15e7abdc8a3ebb9cc9dbc3441ceb5443",
+      "has_tag": true
+    },
+    {
+      "title": "Bessent bond plan details to be revealed as Treasury secretary warns FX traders he's 'the house now'",
+      "source": "CNBC",
+      "url": "https://www.cnbc.com/2026/09/09/bessent-bond-plan-details-to-be-revealed-as-treasury-secretary-warns-fx-traders-hes-the-house-now.html",
+      "published_at": "2026-09-09 12:25:50+00",
+      "created_at": "2026-09-09 23:00:09.041555+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY 等台股",
+      "fingerprint": "42fb78dd9495020b446a361164ca7a7e8680609fbc6935801856677d78b2457f",
+      "has_tag": true
+    },
+    {
+      "title": "Gold little changed with US inflation data in sight",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/commodities/news/gold-little-changed-with-us-inflation-data-in-sight/articleshow/133990880.cms",
+      "published_at": "2026-09-10 02:21:00+00",
+      "created_at": "2026-09-10 23:00:10.051153+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "fd5bf4ac5982eb84604d7eeb80debd014b40445422f0bc29b4e6281c44602200",
+      "has_tag": true
+    },
+    {
+      "title": "EXCLUSIVE: How a billion-dollar sanctions dodge kept Chinese goods flowing to Iran - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMivgFBVV95cUxPQXdBWlltZS1pUU8wZnFqc21wUDExNGZub0prbEtxYTNwS2J3UU91eTQ4aXZTUGNwWjdGZGxVZUNiY2dHbXVNbl9tNE4zSlVqVDJaZFlmMkZ6Slo3RndJczlqMTlsYlVGOEEteGNreDFjR0JabWhJaTNCTHNtUUozWDFVSm56QldwaXFjbnBQZWlxdGtsVFdmcDFDTHNjMzBaN2NkNlNzUGV0MXhZR3hBdmFUMV9LLU9ZYWxBTW5n?oc=5",
+      "published_at": "2026-09-10 06:05:00+00",
+      "created_at": "2026-09-10 23:00:10.051153+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "cdcdd2f7886ee648dcca4b146c1d5b12328cae6a24269305f5292c041fc5d7dd",
+      "has_tag": true
+    },
+    {
+      "title": "US Treasury yields hit highest level since 2023 as buyback disappoints",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/us-stocks/wall-street-guide/us-treasury-yields-hit-highest-level-since-2023-as-buyback-disappoints/articleshow/133996569.cms",
+      "published_at": "2026-09-10 06:25:00+00",
+      "created_at": "2026-09-10 23:00:10.051153+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "3049104d99679e817b22196d21b244532823b76098aa3d2b665a7955e04af9db",
+      "has_tag": true
+    },
+    {
+      "title": "TSMC August revenue hits USD 16.3 billion, up 53.3% YoY",
+      "source": "ANI (Asian News International)",
+      "url": "https://www.aninews.in/news/business/tsmc-august-revenue-hits-usd-163-billion-up-533-yoy20260910125350/",
+      "published_at": "2026-09-10 07:23:50+00",
+      "created_at": "2026-09-10 23:00:10.051153+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "27408bd91671f010bb7a242be03a45dae6196546bc1371f2b79e50f3cc0b063d",
+      "has_tag": true
+    },
+    {
+      "title": "TSMC August revenue hits USD 16.3 billion, up 53.3% YoY",
+      "source": "The Tribune",
+      "url": "https://www.tribuneindia.com/news/business/tsmc-august-revenue-hits-usd-16-3-billion-up-53-3-yoy/",
+      "published_at": "2026-09-10 07:27:25+00",
+      "created_at": "2026-09-10 23:00:10.051153+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "ebc8772fb288be3b0cd988f750eb9c234e6fd93a5d1fdfb71dd0afc52b2e45e9",
+      "has_tag": true
+    },
+    {
+      "title": "TSMC Reports Record Revenue Surge Amidst Capacity Expansion",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3975242-tsmc-reports-record-revenue-surge-amidst-capacity-expansion",
+      "published_at": "2026-09-10 07:29:10+00",
+      "created_at": "2026-09-10 23:00:10.051153+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "2057fe3b5e036e58312bc965f9bba5a72d6d339d9d77a614c25961d6d1bfbbff",
+      "has_tag": true
+    },
+    {
+      "title": "TSMC's global foundry market share hits record 72.5% in Q2",
+      "source": "ANI (Asian News International)",
+      "url": "https://www.aninews.in/news/business/tsmcs-global-foundry-market-share-hits-record-725-in-q220260910135624/",
+      "published_at": "2026-09-10 08:26:24+00",
+      "created_at": "2026-09-10 23:00:10.051153+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "0d3d6995116d810361961be1dc727f58df8813d046d6166d376a87dd0fc2641e",
+      "has_tag": true
+    },
+    {
+      "title": "TSMC's global foundry market share hits record 72.5% in Q2",
+      "source": "The Tribune",
+      "url": "https://www.tribuneindia.com/news/business/tsmcs-global-foundry-market-share-hits-record-72-5-in-q2/",
+      "published_at": "2026-09-10 08:37:43+00",
+      "created_at": "2026-09-10 23:00:10.051153+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "c4089327e9a585c218f018223f3c197655ceaa78abe91aa0446ca0719526bc45",
+      "has_tag": true
+    },
+    {
+      "title": "Currency Tug-of-War: Pound's Battle Amid Rate Speculations",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3975358-currency-tug-of-war-pounds-battle-amid-rate-speculations",
+      "published_at": "2026-09-10 10:37:45+00",
+      "created_at": "2026-09-10 23:00:10.051153+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "afb9f2e33fbaa2103fe86f0d76a9a90b9506b7dfed5fd8afcfbf22f5b711555e",
+      "has_tag": true
+    },
+    {
+      "title": "Wall St Week Ahead: Investors brace for possible rate hike at uncertain Fed meeting",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/us-stocks/wall-street-guide/wall-st-week-ahead-investors-brace-for-possible-rate-hike-at-uncertain-fed-meeting/articleshow/134107285.cms",
+      "published_at": "2026-09-12 04:03:00+00",
+      "created_at": "2026-09-13 23:00:12.243204+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "06fd1838df7e96149b38bc5c33ac91efe9093bf091d4738dfe891420196ba6a8",
+      "has_tag": true
+    },
+    {
+      "title": "5 world market themes for the week ahead",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/us-stocks/wall-street-guide/5-world-market-themes-for-the-week-ahead/articleshow/134107158.cms",
+      "published_at": "2026-09-12 04:08:00+00",
+      "created_at": "2026-09-13 23:00:12.243204+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "e2a3267dced590643dba4b6a0cc491ed3c9556a89c1c515fbc77012422f3f887",
+      "has_tag": true
+    },
+    {
+      "title": "Wall Street week ahead: Federal Reserve decision on interest rates, retail sales update",
+      "source": "The Atlanta Journal-Constitution",
+      "url": "https://www.ajc.com/news/2026/09/wall-street-week-ahead-federal-reserve-decision-on-interest-rates-retail-sales-update/",
+      "published_at": "2026-09-12 08:02:19+00",
+      "created_at": "2026-09-13 23:00:12.243204+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "94b4b9dfb087885c9f405e0cca6899bcdbcad6d399d5d1eaf17cf80fae9f05d8",
+      "has_tag": true
+    },
+    {
+      "title": "Wall Street week ahead: Federal Reserve decision on interest rates, retail sales update",
+      "source": "WTOP",
+      "url": "https://wtop.com/national/2026/09/wall-street-week-ahead-federal-reserve-decision-on-interest-rates-retail-sales-update/",
+      "published_at": "2026-09-12 08:08:41+00",
+      "created_at": "2026-09-13 23:00:12.243204+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "ca8e98d49068fbb5db8d4ab5c5127916ea00e253eadcb512424b933615f149d6",
+      "has_tag": true
+    },
+    {
+      "title": "'This is the test': All eyes on US Fed to tackle high inflation",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/us-stocks/wall-street-guide/this-is-the-test-all-eyes-on-us-fed-to-tackle-high-inflation/articleshow/134177098.cms",
+      "published_at": "2026-09-13 04:27:00+00",
+      "created_at": "2026-09-13 23:00:12.243204+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "8a55db8d67338642b2c792a544930f6b76ce10a3ca964c7451ecf1962221bde3",
+      "has_tag": true
+    },
+    {
+      "title": "All eyes on Warsh as rate-hike fever spreads across G7 central banks",
+      "source": "Bloomberg",
+      "url": "https://www.bloomberg.com/news/articles/2026-09-12/all-eyes-on-warsh-as-rate-hike-fever-spreads-across-g7-central-banks",
+      "published_at": "2026-09-13 08:25:01+00",
+      "created_at": "2026-09-14 23:03:02.658894+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "b515cda0ee1315cea891ef07a4784e4a11347bc54cb7021b358a444983a6a375",
+      "has_tag": true
+    },
+    {
+      "title": "Wall Street Banks Urge Fed Rate Hike Amid Inflation Alarm",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3976700-wall-street-banks-urge-fed-rate-hike-amid-inflation-alarm",
+      "published_at": "2026-09-14 04:23:53+00",
+      "created_at": "2026-09-14 23:00:10.103339+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "12e2403f4a1808b910c196568b8474d9b0bf8a915efc345df48a7d201cb47312",
+      "has_tag": true
+    },
+    {
+      "title": "Global Markets Brace for Oil Surge Amidst Geopolitical Tensions and Economic Shifts",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3976702-global-markets-brace-for-oil-surge-amidst-geopolitical-tensions-and-economic-shifts",
+      "published_at": "2026-09-14 04:30:36+00",
+      "created_at": "2026-09-14 23:00:10.103339+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "274d6806f5fd0b8331ab4c8164ae9c6590ae5466676c3602fb9cdfcec71cf258",
+      "has_tag": true
+    },
+    {
+      "title": "Market Turmoil: AI Stocks Plunge, Oil Prices Surge Amid Middle East Tension",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3976714-market-turmoil-ai-stocks-plunge-oil-prices-surge-amid-middle-east-tension",
+      "published_at": "2026-09-14 05:28:30+00",
+      "created_at": "2026-09-14 23:00:10.103339+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "c7aa23010c02f289e6600ccbf59d7149643657fba9afb1bad570b931b2330195",
+      "has_tag": true
+    },
+    {
+      "title": "Some up, some down! What's happening in Nikkei, Kospi, Taiwan? Oil on boil, rude crude impacting gold - Latest update",
+      "source": "Livemint",
+      "url": "https://www.livemint.com/market/stock-market-news/some-up-some-down-whats-happening-in-nikkei-kospi-taiwan-oil-on-boil-rude-crude-impacting-gold-latest-update-11789360541093.html",
+      "published_at": "2026-09-14 05:30:18+00",
+      "created_at": "2026-09-14 23:00:10.103339+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "351366020140488fcd45fff638c85855014f4266d4a94273d7192f899f05eee6",
+      "has_tag": true
+    },
+    {
+      "title": "Global Market: 5 key events to watch out for this week",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/us-stocks/news/global-market-5-key-events-to-watch-out-for-this-week/slideshow/134233828.cms",
+      "published_at": "2026-09-14 05:53:00+00",
+      "created_at": "2026-09-14 23:00:10.103339+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "32de428c24993ac57a6090820c1c77a321940e4abdb9d72ee8ca98fed08df7bb",
+      "has_tag": true
+    },
+    {
+      "title": "Soaring Oil Prices Put Fed on Track for September Rate Hike",
+      "source": "OilPrice",
+      "url": "https://oilprice.com/Latest-Energy-News/World-News/Soaring-Oil-Prices-Put-Fed-on-Track-for-September-Rate-Hike.html",
+      "published_at": "2026-09-14 08:00:00+00",
+      "created_at": "2026-09-14 23:00:10.103339+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "32faa7d921917394dae7715f4eb90a674ed9565020f6a39935046763b28d168b",
+      "has_tag": true
+    },
+    {
+      "title": "The US Federal Reserve's policy meeting due on Wednesday, September 16; how will it impact your stocks, gold, and rupee?",
+      "source": "Livemint",
+      "url": "https://www.livemint.com/market/stock-market-news/the-us-federal-reserves-policy-meeting-due-on-wednesday-september-16-how-will-it-impact-your-stocks-gold-and-rupee-11789368302533.html",
+      "published_at": "2026-09-14 08:13:28+00",
+      "created_at": "2026-09-14 23:00:10.103339+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "89e2a2ba70cb829e8f7a3dcca475e0c6ab747bfa2a806b828f9c6ff78c2ff5b9",
+      "has_tag": true
+    },
+    {
+      "title": "The Fed is preparing to raise rates. What if it doesn’t work?",
+      "source": "Cable News Network",
+      "url": "https://edition.cnn.com/2026/09/14/economy/federal-reserve-ai-inflation-rate-hike",
+      "published_at": "2026-09-14 09:00:30+00",
+      "created_at": "2026-09-14 23:00:10.103339+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "b51c3722795f1b2dff3e9bd6fadbb3f54318349c9f3e89f41b491d267a4520c5",
+      "has_tag": true
+    },
+    {
+      "title": "Fed's Tightrope: Navigating Inflation and Interest Rates",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3976888-feds-tightrope-navigating-inflation-and-interest-rates",
+      "published_at": "2026-09-14 10:01:09+00",
+      "created_at": "2026-09-14 23:00:10.103339+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "3573ca815ef881e3c11a56bd0a35da7ad475f2585afa0a6d511b18cf192cb669",
+      "has_tag": true
+    },
+    {
+      "title": "Oil surges on report Saudi pipeline will take weeks to reopen",
+      "source": "Bloomberg",
+      "url": "https://www.bloomberg.com/news/articles/2026-09-13/latest-oil-market-news-and-analysis-for-sept-14",
+      "published_at": "2026-09-14 14:00:49+00",
+      "created_at": "2026-09-15 23:03:03.072458+00",
+      "taiwan_impact_summary": "直接影響 台塑、南亞、台化、萬海 等台股",
+      "fingerprint": "af99994eac9edcbba61cdab3f9bf59fae679a721cc8db04315503ba55885aa08",
+      "has_tag": true
+    },
+    {
+      "title": "TSMC's 2-Nanometer Push Outpaces 3-Nanometer Growth, With Capacity Aimed At 110,000 Wafers Per Month By H2 2027",
+      "source": "Wccftech",
+      "url": "https://wccftech.com/report-tsmcs-2-nanometer-push-outpaces-3-nanometer-growth-with-capacity-aimed-at-110000-wafers-per-month-by-h2-2027/",
+      "published_at": "2026-09-14 15:35:05+00",
+      "created_at": "2026-09-15 23:00:12.084989+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "ef90e0b910e1a93f7ac97a0ddb67b74744db31949d97305a7391c86064fd1443",
+      "has_tag": true
+    },
+    {
+      "title": "As the oil surge continues, trader Mike Khouw sees more upside in this surging name",
+      "source": "CNBC",
+      "url": "https://www.cnbc.com/2026/09/14/as-the-oil-surge-continues-trader-mike-khouw-sees-more-upside-in-this-surging-name.html",
+      "published_at": "2026-09-14 17:16:23+00",
+      "created_at": "2026-09-14 23:00:10.103339+00",
+      "taiwan_impact_summary": "直接影響 台塑、南亞、台化、萬海 等台股",
+      "fingerprint": "60f7f801dfaa43aa2178fbdae670cf069d4c3a206d503f4fd96fd13b24e8d11d",
+      "has_tag": true
+    },
+    {
+      "title": "Counting the votes: Warsh faces a tough battle as the Fed girds for expected interest rate hike",
+      "source": "CNBC",
+      "url": "https://www.cnbc.com/2026/09/14/counting-the-votes-warsh-faces-tough-battle-as-fed-girds-for-expected-rate-hike.html",
+      "published_at": "2026-09-14 18:50:32+00",
+      "created_at": "2026-09-14 23:00:10.103339+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "49998c08f13730d50c420e8c0b0d472892e731ec40cb9863a5599aa328eba6b7",
+      "has_tag": true
+    },
+    {
+      "title": "Billionaire Dangote launches oil refinery 'people's IPO', Africa's biggest - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMixwFBVV95cUxNNm15SzdOekVDNV9rUTlPanJOckRvYlVjbzNtRU1BVFlWLV9DUVFBRHIxQWwzbzZJNHNuUWt4VXpyM0piZVZCTjRXelNxMUN3ZHB4WXNuZmdoeTJvZkI5Mmp5azBwVGxRNU1qdEEwelJ4c3lCUGxORXRGUFkxckEwZFkwMjRIR3pUbnZhQnllUXp6ZVN2QllZeEg5LUhuVm9tdDhHZmhlTEt5RV8temxtSTJqb0RYWENfckZLTVV1RmlzNjQwdjBj?oc=5",
+      "published_at": "2026-09-14 19:34:10+00",
+      "created_at": "2026-09-14 23:00:10.103339+00",
+      "taiwan_impact_summary": "直接影響 台塑、南亞、台化、萬海 等台股",
+      "fingerprint": "0f793903aeb56052311f4a4caa74160021fe1a13b5ba7a6426ba8046fdd5e499",
+      "has_tag": true
+    },
+    {
+      "title": "Dollar ticks up as oil prices climb, Fed rate hike chances firm - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMisAFBVV95cUxOeGtqRlJ4LWF3TVM5VklxS09fMU16eHE3bWRLZ3lRS3NuS18wWGcyY3cwRWg2eEtzS3dFRVZGWHB6Z21NNGpzUUcydm10VXpIU29Ca3RnRDRrRUxsVWlNbE5yV0x6ejVQUTZXR1FHRHgtTUExOC1VazhaaGo0b3p0dTNVcDJ5YWdjeWkyQVZRRlhOUUZYUkpmdWsyeHJjNTF6QjlYdEtRcy1NVUg2RWNmOA?oc=5",
+      "published_at": "2026-09-15 01:58:00+00",
+      "created_at": "2026-09-15 23:03:03.072458+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "308376c4e2e2de3d91e2814c706be0289e358dbdd05666d821cc3d8ea543135f",
+      "has_tag": true
+    },
+    {
+      "title": "Federal Reserve is expected to raise its benchmark rate, defying Trump's demands",
+      "source": "SFGATE",
+      "url": "https://www.sfgate.com/news/politics/article/federal-reserve-is-expected-to-raise-its-22432294.php",
+      "published_at": "2026-09-15 04:04:35+00",
+      "created_at": "2026-09-15 23:00:12.084989+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "7edc2a3fb7dac26d7af3e381d5bb3ee821ecdf90f213902003b8c301542b35e7",
+      "has_tag": true
+    },
+    {
+      "title": "Federal Reserve is expected to raise its benchmark rate, defying Trump's demands",
+      "source": "The Dallas Morning News",
+      "url": "https://www.dallasnews.com/news/politics/article/federal-reserve-is-expected-to-raise-its-22432294.php",
+      "published_at": "2026-09-15 04:04:35+00",
+      "created_at": "2026-09-15 23:00:12.084989+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "aa3c0cca9ebb6c71b92342a793d4ce6c92c614531e2df0ffa4d5b126392fbb44",
+      "has_tag": true
+    },
+    {
+      "title": "Federal Reserve is expected to raise its benchmark rate, defying Trump's demands",
+      "source": "The Atlanta Journal-Constitution",
+      "url": "https://www.ajc.com/news/2026/09/federal-reserve-is-expected-to-raise-its-benchmark-rate-defying-trumps-demands/",
+      "published_at": "2026-09-15 04:13:40+00",
+      "created_at": "2026-09-15 23:00:12.084989+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "1724313669287ac2c2b026f58f225a20cf63aacba4a663183db1705bb7d6f412",
+      "has_tag": true
+    },
+    {
+      "title": "Indian bonds sink as RBI plans ₹1 lakh crore sales to drain liquidity",
+      "source": "Bloomberg",
+      "url": "https://www.bloomberg.com/news/articles/2026-09-15/indian-bonds-fall-as-rbi-debt-sale-plan-worsens-supply-pressures",
+      "published_at": "2026-09-15 04:47:32+00",
+      "created_at": "2026-09-16 23:03:02.691384+00",
+      "taiwan_impact_summary": "直接影響 台塑、南亞、台化、萬海 等台股",
+      "fingerprint": "86f973a0cd736c4fa091bb882bc1b85f7a256c3640944adaf42d47339e366675",
+      "has_tag": true
+    },
+    {
+      "title": "US Market: Fed rate hike looms as hotter inflation clouds policy outlook",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/us-stocks/wall-street-guide/us-market-fed-rate-hike-looms-as-hotter-inflation-clouds-policy-outlook/articleshow/134253724.cms",
+      "published_at": "2026-09-15 06:09:00+00",
+      "created_at": "2026-09-15 23:00:12.084989+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "6605179702fd9e13f7b115096885249b1eadf4a4f8fec7ba0f6f3e12d455b7e5",
+      "has_tag": true
+    },
+    {
+      "title": "Morgan Stanley's Hawkish Turn on Rate Hikes",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3977318-morgan-stanleys-hawkish-turn-on-rate-hikes",
+      "published_at": "2026-09-15 07:33:43+00",
+      "created_at": "2026-09-15 23:00:12.084989+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "052f59ccd5b6a7c35bc4ff8e9739db5650befbb83d848b556e9b89789aecde85",
+      "has_tag": true
+    },
+    {
+      "title": "Broadening inflation, Fed prompts traders to ramp up October India rate hike bets",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/broadening-inflation-fed-prompts-traders-to-ramp-up-october-india-rate-hike-bets/articleshow/134255510.cms",
+      "published_at": "2026-09-15 07:42:00+00",
+      "created_at": "2026-09-15 23:00:12.084989+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "4972b281c6c7f3285f4191bda5df7abc3ad23d9d2a459cb32b65e8bc5334a304",
+      "has_tag": true
+    },
+    {
+      "title": "Market Turbulence: Stocks Decline Amid Rising Yields and Oil Prices",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3977327-market-turbulence-stocks-decline-amid-rising-yields-and-oil-prices",
+      "published_at": "2026-09-15 08:02:20+00",
+      "created_at": "2026-09-15 23:00:12.084989+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "81d148ea15b16a0f07a538899aed71fb86b0b89c62f807b0fdd70279dd428d93",
+      "has_tag": true
+    },
+    {
+      "title": "MediaTek Launches New Mobile Chip Using TSMC's Most Advanced Technology",
+      "source": "Deccan Chronicle",
+      "url": "https://www.deccanchronicle.com/technology/mediatek-launches-new-mobile-chip-using-tsmcs-most-advanced-technology-1987573",
+      "published_at": "2026-09-15 09:28:11+00",
+      "created_at": "2026-09-15 23:00:12.084989+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "e6ad1a67406398c366f43a1df729db87e2b3e597065ad163edf8bcb4dee97aa0",
+      "has_tag": true
+    },
+    {
+      "title": "Global Market: Morgan Stanley turns hawkish, sees two Fed rate hikes in 2026",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/us-stocks/wall-street-guide/global-market-morgan-stanley-turns-hawkish-sees-two-fed-rate-hikes-in-2026/articleshow/134257695.cms",
+      "published_at": "2026-09-15 09:34:00+00",
+      "created_at": "2026-09-15 23:00:12.084989+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "04b1869a4fe5dbfb7287c3c131347d3317dd2bf7eedecfd4459c0751135989f7",
+      "has_tag": true
+    },
+    {
+      "title": "European Markets Tumble Amid Oil Price Surge and Bond Yield Spike",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3977367-european-markets-tumble-amid-oil-price-surge-and-bond-yield-spike",
+      "published_at": "2026-09-15 09:46:45+00",
+      "created_at": "2026-09-15 23:00:12.084989+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "680222438866671db60e775a839387ab15bddb68d1273c4233e4a68cbb4bfbe6",
+      "has_tag": true
+    },
+    {
+      "title": "RBI may hike repo rate 25 bps each in October, December, analysts say",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/news/economy/policy/rbi-may-hike-repo-rate-25-bps-each-in-october-december-analysts-say/articleshow/134258973.cms",
+      "published_at": "2026-09-15 10:32:00+00",
+      "created_at": "2026-09-15 23:00:12.084989+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "bbf3d419f86253b7afb731049e0b81dff302539c45a0ae7ab4545a29ba28d045",
+      "has_tag": true
+    },
+    {
+      "title": "MediaTek launches new mobile chip using TSMC's most advanced technology",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/tech/technology/mediatek-launches-new-mobile-chip-using-tsmcs-most-advanced-technology/articleshow/134260399.cms",
+      "published_at": "2026-09-15 11:23:15+00",
+      "created_at": "2026-09-15 23:27:02.497686+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "3b52e74611a230fc07345afb2ce02d825335a602782b3e99c4f36abc78dfe070",
+      "has_tag": true
+    },
+    {
+      "title": "Cheetah Net Supply Chain Service Inc. Enters into Agreement to Acquire JoyPak Supply LLC",
+      "source": "GlobalNewswire",
+      "url": "https://www.globenewswire.com/news-release/2026/09/15/3361970/0/en/cheetah-net-supply-chain-service-inc-enters-into-agreement-to-acquire-joypak-supply-llc.html",
+      "published_at": "2026-09-15 11:55:00+00",
+      "created_at": "2026-09-15 23:03:03.072458+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY 等台股",
+      "fingerprint": "e4aa012ffc2dd38e4d536456fa6a935057b9657e643e861fbb4de301f2a869eb",
+      "has_tag": true
+    },
+    {
+      "title": "Bitcoin comes under renewed pressure as looming Fed hike adds to woes",
+      "source": "Bloomberg",
+      "url": "https://www.bloomberg.com/news/articles/2026-09-16/bitcoin-under-renewed-pressure-as-looming-fed-hike-adds-to-woes",
+      "published_at": "2026-09-16 05:04:09+00",
+      "created_at": "2026-09-17 23:03:02.556655+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "ee0732980ead975be42f30739a02a7e0a23c974c4414276967656ba32e9ebe3c",
+      "has_tag": true
+    },
+    {
+      "title": "Stocks edge higher ahead of US Fed rate call",
+      "source": "Breitbart News Network",
+      "url": "https://www.breitbart.com/news/stocks-edge-higher-ahead-of-us-fed-rate-call/",
+      "published_at": "2026-09-16 07:49:34+00",
+      "created_at": "2026-09-16 23:00:10.939188+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "413df8321b9c8f82ce21ff22e5d8493d1a36bee71028c1c74ae01a49d5e91747",
+      "has_tag": true
+    },
+    {
+      "title": "Dollar edges lower before expected Fed hike",
+      "source": "The Star",
+      "url": "https://www.thestar.com.my/business/business-news/2026/09/16/dollar-edges-lower-before-expected-fed-hike",
+      "published_at": "2026-09-16 08:18:00+00",
+      "created_at": "2026-09-16 23:00:10.939188+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "4a8283941576f9e7a8703a0669b9f86a43a1dbc0b466cf080229d36984bd61af",
+      "has_tag": true
+    },
+    {
+      "title": "Yield on 10-year Treasury hovers above 5% as investors await Fed decision",
+      "source": "CNBC",
+      "url": "https://www.cnbc.com/2026/09/16/treasury-yield-bond-market-fed-decision.html",
+      "published_at": "2026-09-16 08:58:16+00",
+      "created_at": "2026-09-16 23:00:10.939188+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "215c43a985935e2a619a6e958e1e7febe6328c556e248bea457ba4373928ccb3",
+      "has_tag": true
+    },
+    {
+      "title": "Market Jitters: Federal Reserve's Crucial Rate Decision Looms",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3977865-market-jitters-federal-reserves-crucial-rate-decision-looms",
+      "published_at": "2026-09-16 09:06:44+00",
+      "created_at": "2026-09-16 23:00:10.939188+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "883de15cbb3f86dbec7652afa688c4362a12dff5e8713b628b029f78f0810d8b",
+      "has_tag": true
+    },
+    {
+      "title": "Global Markets Steady as Traders Anticipate Fed Decision",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3977870-global-markets-steady-as-traders-anticipate-fed-decision",
+      "published_at": "2026-09-16 09:11:24+00",
+      "created_at": "2026-09-16 23:00:10.939188+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "16838771c9bd84743f0dda3753a0e1c2e198ec77325bfa0597e88560a448aee3",
+      "has_tag": true
+    },
+    {
+      "title": "London Stock Market Nudges Up as Oil Prices Dip",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3977890-london-stock-market-nudges-up-as-oil-prices-dip",
+      "published_at": "2026-09-16 09:51:57+00",
+      "created_at": "2026-09-16 23:00:10.939188+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "2713627b2047ab48852c2d5d8b0d76fce5a2581b82acfda96103c9ea349d1635",
+      "has_tag": true
+    },
+    {
+      "title": "Rupee languishes at six-week low ahead of Fed outcome, RBI limits losses",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/forex/rupee-languishes-at-six-week-low-ahead-of-fed-outcome-rbi-limits-losses/articleshow/134284941.cms",
+      "published_at": "2026-09-16 10:22:00+00",
+      "created_at": "2026-09-16 23:00:10.939188+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "e7e109aa4f7e0acbd536fd2cf02047933c62eade678f193a9c3d46331d521f1a",
+      "has_tag": true
+    },
+    {
+      "title": "Nifty ends 0.43% higher, Sensex gains 333 points amid expectations of US Fed rate hike",
+      "source": "ANI (Asian News International)",
+      "url": "https://www.aninews.in/news/business/nifty-ends-043-higher-sensex-gains-333-points-amid-expectations-of-us-fed-rate-hike16020260916155316/",
+      "published_at": "2026-09-16 10:23:16+00",
+      "created_at": "2026-09-16 23:00:10.939188+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "a59a8fe9732d7449a8039e08c4424941dfa2c27cf2e255a672276ba267427e9b",
+      "has_tag": true
+    },
+    {
+      "title": "Nifty ends 0.43% higher, Sensex gains 333 points amid expectations of US Fed rate hike",
+      "source": "The Tribune",
+      "url": "https://www.tribuneindia.com/news/business/nifty-ends-0-43-higher-sensex-gains-333-points-amid-expectations-of-us-fed-rate-hike/",
+      "published_at": "2026-09-16 10:27:42+00",
+      "created_at": "2026-09-16 23:00:10.939188+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "64087c4332a8ab9d88958d3e02375bd4d6afa51ed6a2fac7cd3ad98154df149d",
+      "has_tag": true
+    },
+    {
+      "title": "PEDEVCO Corp. Acquires 5,678 Net Acres in Wyoming BLM Lease Sale, Expanding Mowry Shale Position",
+      "source": "GlobalNewswire",
+      "url": "https://www.globenewswire.com/news-release/2026/09/16/3363118/0/en/pedevco-corp-acquires-5-678-net-acres-in-wyoming-blm-lease-sale-expanding-mowry-shale-position.html",
+      "published_at": "2026-09-16 12:00:00+00",
+      "created_at": "2026-09-16 23:03:02.691384+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、台塑 等台股",
+      "fingerprint": "5d0d9bee56ebba1159b565e1663bd7aafea84a57cc65107aca508d069bb944d0",
+      "has_tag": true
+    },
+    {
+      "title": "Jim Cramer's top 10 things to watch in the stock market Wednesday",
+      "source": "CNBC",
+      "url": "https://www.cnbc.com/2026/09/16/jim-cramers-top-10-things-to-watch-in-the-stock-market-wednesday.html",
+      "published_at": "2026-09-16 13:19:14+00",
+      "created_at": "2026-09-16 23:03:02.691384+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "192015a0d10be80a791dd31d309f4e64b8f94aee4a0c35e471ce7b565236d655",
+      "has_tag": true
+    },
+    {
+      "title": "South African rand dips as markets brace for Fed decision - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQNXBvdVEyendYdFZKSm1jWm8wSTBCWU9GdkRCNE1ZZkhNbGY3LVZqTVJxNzJvcTEzWV85RHBuZUFKb2lhRm14OGFFOEdGcHl6OG1mbVY4R1gtVXZNWmkxakY4bnFWMXprR1d2emRuOW5TSE9Qc3RlQ1dfbGtHaHYyOHUyQ0N1X2xFNzltYU5GN1JnNWZNY0NqS0FRRmhjbkNRVUdPa0lqYnBGMlF4OHBpNXZWZw?oc=5",
+      "published_at": "2026-09-16 15:06:23+00",
+      "created_at": "2026-09-17 23:03:02.556655+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "5068fdd4ed2260b6f073a2b0c04a8ad49869b2a82b36f5545ab65fb59683df95",
+      "has_tag": true
+    },
+    {
+      "title": "US Treasury gathers global financial institutions to advance Iran sanctions - reuters.com",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMixAFBVV95cUxPXzUwU0VnMDVwQm1aTmZIQ25odU1FYXpWRkM4R2ZTMjdwalhFVDJ3dGtWV0szd1hYRVdJY1VlRmdPemJDOG9ONy1FZXUzbWhZRkFiTVVSRkdLX19Za3h2c0RneVpmbjhVdzhiZXRmYTJtc2JwYmFUU085RXBvclZoNkM1Y1AyUGF0RjhoTFRwaHF5WFNNbFlzdEMzSTZNNnhzTHB0N0p1aXdRYjY5SUpXVHhRVEtsclZPUkNGZEpCdzBvLVJu?oc=5",
+      "published_at": "2026-09-16 17:42:29+00",
+      "created_at": "2026-09-18 00:05:02.575676+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "4cf9e1cb74d15af366f31fbe2ae3053c8677fe46f37b8c93d4193b0d69cd65df",
+      "has_tag": true
+    },
+    {
+      "title": "US Treasury gathers global financial institutions to advance Iran sanctions - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMixAFBVV95cUxPXzUwU0VnMDVwQm1aTmZIQ25odU1FYXpWRkM4R2ZTMjdwalhFVDJ3dGtWV0szd1hYRVdJY1VlRmdPemJDOG9ONy1FZXUzbWhZRkFiTVVSRkdLX19Za3h2c0RneVpmbjhVdzhiZXRmYTJtc2JwYmFUU085RXBvclZoNkM1Y1AyUGF0RjhoTFRwaHF5WFNNbFlzdEMzSTZNNnhzTHB0N0p1aXdRYjY5SUpXVHhRVEtsclZPUkNGZEpCdzBvLVJu?oc=5",
+      "published_at": "2026-09-16 17:42:29+00",
+      "created_at": "2026-09-16 23:03:02.691384+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "8d5c304e47abb1909b1fa95d4b53fc6a793c7898a10f7f6f1f852446efce939a",
+      "has_tag": true
+    },
+    {
+      "title": "Bank of England set to defy Fed’s rate-hike lead, despite rising inflation",
+      "source": "CNBC",
+      "url": "https://www.cnbc.com/2026/09/17/bank-of-england-interest-rate-decision-fed-rate-hike-uk-inflation.html",
+      "published_at": "2026-09-17 05:20:23+00",
+      "created_at": "2026-09-17 23:00:13.304986+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "0b0f6aa536a91b2587863bb755b773345c4e00f90a60767f8c573112c0111fa4",
+      "has_tag": true
+    },
+    {
+      "title": "Benchmark rate raised by Fed 1st time since 2023",
+      "source": "Arkansas Online",
+      "url": "https://www.arkansasonline.com/news/2026/sep/17/benchmark-rate-raised-by-fed-1st-time-since-2023/",
+      "published_at": "2026-09-17 09:11:00+00",
+      "created_at": "2026-09-17 23:00:13.304986+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "49986e99e613d008f0b7b4c432773654b883ea0f8e1453fa77b5d4e6dfba3ec3",
+      "has_tag": true
+    },
+    {
+      "title": "European Markets Surge Amid Oil Price Dip and Stabilizing Bond Market",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3978377-european-markets-surge-amid-oil-price-dip-and-stabilizing-bond-market",
+      "published_at": "2026-09-17 09:15:33+00",
+      "created_at": "2026-09-17 23:00:13.304986+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "1e012a06119262421e59c5f895a48451a64af5dd4b571a887592f1450247f648",
+      "has_tag": true
+    },
+    {
+      "title": "Kospi Index vs Taiwan Index: Which Asian stock market remained unimpacted after US Fed FOMC rate hike decision?",
+      "source": "Livemint",
+      "url": "https://www.livemint.com/market/stock-market-news/kospi-index-vs-taiwan-index-which-asian-stock-market-remained-unimpacted-after-us-fed-fomc-rate-hike-decision-11789636149840.html",
+      "published_at": "2026-09-17 09:17:36+00",
+      "created_at": "2026-09-17 23:00:13.304986+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "e5a9b234ac709c84188172652d4b12f045d40fb31d3ce91aed2df18b10653549",
+      "has_tag": true
+    },
+    {
+      "title": "Fed's Rate Hike Sparks Market Surge Despite Persistent Inflation Concerns",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3978379-feds-rate-hike-sparks-market-surge-despite-persistent-inflation-concerns",
+      "published_at": "2026-09-17 09:18:26+00",
+      "created_at": "2026-09-17 23:00:13.304986+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "d049136617fff586f060046f1c7a46a6f8441e91010d0000ab43e58998bc9f82",
+      "has_tag": true
+    },
+    {
+      "title": "Wall St rebounds after Fed's first rate hike in years as oil, Treasury yields dip",
+      "source": "Reuters",
+      "url": "https://www.reuters.com/business/wall-st-futures-rise-fed-rate-hike-lifts-long-standing-overhang-2026-09-17/",
+      "published_at": "2026-09-17 09:22:37+00",
+      "created_at": "2026-09-17 23:00:13.304986+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "9d92620d5ad6a407f0314d487ad9b89464fc65bd9ad84e7591e166e5899fc82b",
+      "has_tag": true
+    },
+    {
+      "title": "US Federal Reserve raises rates after 3 years: Is RBI rate hike coming? October MPC meet in focus",
+      "source": "Livemint",
+      "url": "https://www.livemint.com/market/stock-market-news/us-federal-reserve-raises-rates-after-3-years-is-rbi-rate-hike-coming-october-rbi-mpc-meet-in-focus-11789628735095.html",
+      "published_at": "2026-09-17 09:32:06+00",
+      "created_at": "2026-09-17 23:00:13.304986+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "0637a09d5d5246bea743e8d1fc3c42c948d5016da138ce4b88c293139ac085b8",
+      "has_tag": true
+    },
+    {
+      "title": "World shares mostly advance after Wall Street slips following Fed's rate hike decision",
+      "source": "The Atlanta Journal-Constitution",
+      "url": "https://www.ajc.com/news/2026/09/world-shares-mostly-advance-after-wall-street-slips-following-feds-rate-hike-decision/",
+      "published_at": "2026-09-17 10:01:20+00",
+      "created_at": "2026-09-17 23:00:13.304986+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "006e6164887b4f9224ba82ede7118b10ab31626f8e87e4e14fb08841a9ed8a8e",
+      "has_tag": true
+    },
+    {
+      "title": "Rupee ends flat as RBI intervention, portfolio flows blunt Fed hike impact",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/forex/forex-news/rupee-ends-flat-as-rbi-intervention-portfolio-flows-blunt-fed-hike-impact/articleshow/134308940.cms",
+      "published_at": "2026-09-17 10:32:00+00",
+      "created_at": "2026-09-17 23:00:13.304986+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "2b9059289add8fa6cda49a15c5191e9d3b8c779de401cbe1acfd9db56d4d889a",
+      "has_tag": true
+    },
+    {
+      "title": "Morning Bid: A timely hike",
+      "source": "Reuters",
+      "url": "https://www.reuters.com/commentary/reuters-open-interest/global-markets-view-usa-2026-09-17/",
+      "published_at": "2026-09-17 10:32:35+00",
+      "created_at": "2026-09-17 23:00:13.304986+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "53b978d3cc7d859ed27045f29d020ca7de3b7725071bff52ca11ae0eb785ba77",
+      "has_tag": true
+    },
+    {
+      "title": "Ringgit ends mostly higher against major currencies, but weakens vs US dollar",
+      "source": "The Star",
+      "url": "https://www.thestar.com.my/business/business-news/2026/09/17/ringgit-ends-mostly-higher-against-major-currencies-but-weakens-vs-us-dollar",
+      "published_at": "2026-09-17 11:00:00+00",
+      "created_at": "2026-09-17 23:00:13.304986+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "26fe9c6c937ea19908ec571772d9a0f920016a9a15b58a336f8ff4edf4be22a9",
+      "has_tag": true
+    },
+    {
+      "title": "World shares mostly up despite slip",
+      "source": "Bnn Bloomberg",
+      "url": "https://www.bnnbloomberg.ca/markets/2026/09/17/world-shares-mostly-advance-after-wall-street-slips-following-feds-rate-hike-decision/",
+      "published_at": "2026-09-17 11:15:25+00",
+      "created_at": "2026-09-17 23:30:06.143397+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "1b0652b0ba0401458875829572dc97d4fe8ffafed833e0e159129970f4621bd8",
+      "has_tag": true
+    },
+    {
+      "title": "World shares mostly up despite slip",
+      "source": "CP24 Toronto",
+      "url": "https://www.cp24.com/news/money/2026/09/17/world-shares-mostly-advance-after-wall-street-slips-following-feds-rate-hike-decision/",
+      "published_at": "2026-09-17 11:15:25+00",
+      "created_at": "2026-09-17 23:30:06.143397+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "4cb058e514c09d7548a64722efa3581d653216c64be1d620ea55a887890f2d16",
+      "has_tag": true
+    },
+    {
+      "title": "Stock markets close flat after US Fed rate hike; NSE IPO in focus",
+      "source": "ThePrint",
+      "url": "https://theprint.in/economy/stock-markets-close-flat-after-us-fed-rate-hike-nse-ipo-in-focus/3045556/",
+      "published_at": "2026-09-17 11:19:10+00",
+      "created_at": "2026-09-17 23:30:06.143397+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "af625b1a35b8c2ae79740b123d88faeb6f6479b81163aa965b13b02264278587",
+      "has_tag": true
+    },
+    {
+      "title": "Stock markets close flat after US Fed rate hike; NSE IPO in focus",
+      "source": "The Tribune",
+      "url": "https://www.tribuneindia.com/news/business/stock-markets-close-flat-after-us-fed-rate-hike-nse-ipo-in-focus/",
+      "published_at": "2026-09-17 11:21:37+00",
+      "created_at": "2026-09-17 23:30:06.143397+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "43ab1054c44a0a8540ee9730d640eda638cf56b917f7d3deefc054be8c9cd88c",
+      "has_tag": true
+    },
+    {
+      "title": "Bank of England holds rates but appears ready to hike soon",
+      "source": "The Atlanta Journal-Constitution",
+      "url": "https://www.ajc.com/news/2026/09/bank-of-england-is-keeping-its-main-interest-rate-at-375-despite-higher-inflation/",
+      "published_at": "2026-09-17 11:32:14+00",
+      "created_at": "2026-09-18 00:00:30.224048+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "f78e4fcefb13fd77b842915f4b490ddd727363c00232449079db4e556624aaf1",
+      "has_tag": true
+    },
+    {
+      "title": "US market prediction today: S&P 500, Nasdaq futures jump up to 1% as Treasury yields ease, oil falls",
+      "source": "Livemint",
+      "url": "https://www.livemint.com/market/stock-market-news/us-market-today-s-p-500-nasdaq-futures-jump-up-to-1-as-treasury-yields-ease-oil-falls-11789641691386.html",
+      "published_at": "2026-09-17 12:16:41+00",
+      "created_at": "2026-09-18 00:30:09.827768+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "1d8942243e4704d97a5c0859ca791265b9cdf7e73dc9ea7c1d02a3e52fe3ae7b",
+      "has_tag": true
+    },
+    {
+      "title": "JP Morgan says it has no clear oil market endgame as Iran conflict drags on - reuters.com",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMivgFBVV95cUxOSzYzNHdWWVhKTktiSDh6Vi0yOTdmYWZpUlBtUlAwWFNNZjNCdnNkdkxmUWFsUEFuZUl3LWRmTzd4UEdBRVFlODRqenMwUlVya1dNMjY0VkozQVo5VTJNMF9uc1lWRnZlU0pTczdHejBmX2pzWEZiWDhXaWpMZ3FvMm1YS09vVVJKdWo0bWJ1eFZwem5seElGMEFqbjhVQk5zZ1NtblRiT0NFS0dGYUVvQVlhLWtack9OdzROdGxn?oc=5",
+      "published_at": "2026-09-17 19:32:00+00",
+      "created_at": "2026-09-18 00:05:02.575676+00",
+      "taiwan_impact_summary": "直接影響 台塑、南亞、台化、萬海 等台股",
+      "fingerprint": "bc88e11a50b221e8c34890c35b722e32881d4d806ad24e25dee2e3f0b1f81f8c",
+      "has_tag": true
+    },
+    {
+      "title": "JP Morgan says it has no clear oil market endgame as Iran conflict drags on - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMivgFBVV95cUxOSzYzNHdWWVhKTktiSDh6Vi0yOTdmYWZpUlBtUlAwWFNNZjNCdnNkdkxmUWFsUEFuZUl3LWRmTzd4UEdBRVFlODRqenMwUlVya1dNMjY0VkozQVo5VTJNMF9uc1lWRnZlU0pTczdHejBmX2pzWEZiWDhXaWpMZ3FvMm1YS09vVVJKdWo0bWJ1eFZwem5seElGMEFqbjhVQk5zZ1NtblRiT0NFS0dGYUVvQVlhLWtack9OdzROdGxn?oc=5",
+      "published_at": "2026-09-17 19:32:00+00",
+      "created_at": "2026-09-17 23:03:02.556655+00",
+      "taiwan_impact_summary": "直接影響 台塑、南亞、台化、萬海 等台股",
+      "fingerprint": "cd0ad80c17500cf6bac38a3236d7389b68bd6d6bc2cd7d2f3d0f4e1c411c4209",
+      "has_tag": true
+    },
+    {
+      "title": "Two-year yield hits highest since 2024 as investors weigh outlook for rate hikes",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/bonds/two-year-yield-hits-highest-since-2024-as-investors-weigh-outlook-for-rate-hikes/articleshow/134347703.cms",
+      "published_at": "2026-09-19 04:21:00+00",
+      "created_at": "2026-09-20 23:00:12.553569+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "e1bffd9c89c1bc6fe2b32a241e1516fe9afa47e3f64d742edcfef86d9148bbfc",
+      "has_tag": true
+    },
+    {
+      "title": "Dollar advances vs yen as BOJ dissent clouds rate-hike outlook",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/forex/forex-news/dollar-advances-vs-yen-as-boj-dissent-clouds-rate-hike-outlook/articleshow/134347750.cms",
+      "published_at": "2026-09-19 04:25:00+00",
+      "created_at": "2026-09-20 23:00:12.553569+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "919e68c0ae451f0014ff8ef0b7ed773413d3107ba915a04502fcf501dbe49b00",
+      "has_tag": true
+    },
+    {
+      "title": "RBI may face higher pressure to hike rates in October as hawkish Fed narrows rate gap: Report",
+      "source": "ANI (Asian News International)",
+      "url": "https://www.aninews.in/news/business/rbi-may-face-higher-pressure-to-hike-rates-in-october-as-hawkish-fed-narrows-rate-gap-report20260919205333/",
+      "published_at": "2026-09-19 15:23:33+00",
+      "created_at": "2026-09-20 23:00:12.553569+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "39f42cb5ce13a0765be3c1e7003e24bfbbe4cccd5d0b6b06994e36556923d4de",
+      "has_tag": true
+    },
+    {
+      "title": "RBI may face higher pressure to hike rates in October as hawkish Fed narrows rate gap: Report",
+      "source": "The Tribune",
+      "url": "https://www.tribuneindia.com/news/business/rbi-may-face-higher-pressure-to-hike-rates-in-october-as-hawkish-fed-narrows-rate-gap-report/",
+      "published_at": "2026-09-19 15:27:26+00",
+      "created_at": "2026-09-20 23:00:12.553569+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "688ab05037ead2705895a78a54c990323f2e015a892ed6f5bc187ae3af68514a",
+      "has_tag": true
+    },
+    {
+      "title": "RBI may face higher pressure to hike rates in October as hawkish Fed narrows rate gap: Report",
+      "source": "Devdiscourse",
+      "url": "https://www.devdiscourse.com/article/business/3979440-rbi-may-face-higher-pressure-to-hike-rates-in-october-as-hawkish-fed-narrows-rate-gap-report",
+      "published_at": "2026-09-19 15:29:04+00",
+      "created_at": "2026-09-20 23:00:12.553569+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "7266311514360258fd79267c81331feea973c45608d232890d960c429a369959",
+      "has_tag": true
+    },
+    {
+      "title": "Federal Reserve rate hike reflects new world of sticky inflation and faster growth",
+      "source": "Breitbart News Network",
+      "url": "https://www.breitbart.com/news/federal-reserve-rate-hike-reflects-new-world-of-sticky-inflation-and-faster-growth/",
+      "published_at": "2026-09-20 05:05:48+00",
+      "created_at": "2026-09-20 23:00:12.553569+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "10fe6654fdd0325283e1b0fb47480e9b59200a87c372f73aa808048b8159e94d",
+      "has_tag": true
+    },
+    {
+      "title": "Federal Reserve rate hike reflects new world of sticky inflation and faster growth",
+      "source": "WDIV ClickOnDetroit",
+      "url": "https://www.clickondetroit.com/business/2026/09/20/federal-reserve-rate-hike-reflects-new-world-of-sticky-inflation-and-faster-growth/",
+      "published_at": "2026-09-20 11:59:42+00",
+      "created_at": "2026-09-21 00:00:27.094688+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "776ad34a9c9adca1ea4b8da46462030ecaef9ca4c5c343f8c543a1bd0db3af3a",
+      "has_tag": true
+    },
+    {
+      "title": "Federal Reserve rate hike reflects new world of sticky inflation and faster growth",
+      "source": "The Atlanta Journal-Constitution",
+      "url": "https://www.ajc.com/news/2026/09/federal-reserve-rate-hike-reflects-new-world-of-sticky-inflation-and-faster-growth/",
+      "published_at": "2026-09-20 12:21:25+00",
+      "created_at": "2026-09-21 23:00:10.170393+00",
+      "taiwan_impact_summary": "直接影響 台積電、鴻海、廣達、緯創 等台股",
+      "fingerprint": "c2b481dbbf8f059eda1d9d5fa48d582df2af24eb34cc4933d7df86faf1a5ef0e",
+      "has_tag": true
+    },
+    {
+      "title": "Federal Reserve rate hike reflects new world of sticky inflation and faster growth",
+      "source": "PBS News",
+      "url": "https://www.pbs.org/newshour/economy/federal-reserve-rate-hike-reflects-new-world-of-sticky-inflation-and-faster-growth",
+      "published_at": "2026-09-20 12:28:25+00",
+      "created_at": "2026-09-21 23:00:10.170393+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "6d2f316fe65658ba2ddb6d0df5dc169a5ed18fda6ef84138dd47300c2bcbbac3",
+      "has_tag": true
+    },
+    {
+      "title": "Federal Reserve rate hike reflects inflation and faster growth",
+      "source": "Chicago Tribune",
+      "url": "https://www.chicagotribune.com/2026/09/20/federal-reserve-rate-hike/",
+      "published_at": "2026-09-20 14:00:15+00",
+      "created_at": "2026-09-21 23:00:10.170393+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "314b77b6bed9aeb128134fd579ed6544305c3439321fab4485b00c3797407070",
+      "has_tag": true
+    },
+    {
+      "title": "Volatile yen draws intervention watch, other currencies subdued",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/forex/forex-news/volatile-yen-draws-intervention-watch-other-currencies-subdued/articleshow/134378010.cms",
+      "published_at": "2026-09-21 02:02:00+00",
+      "created_at": "2026-09-21 23:00:10.170393+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "6d7b1f6858e553063e00b78a37b62612f4fc2d1b228d7d4770d45915079ba475",
+      "has_tag": true
+    },
+    {
+      "title": "Commodity Corner: Oil prices slip, gold holds steady amid inflation, rate concerns",
+      "source": "Moneycontrol",
+      "url": "https://www.moneycontrol.com/news/business/commodities/commodity-corner-oil-prices-slip-gold-holds-steady-amid-inflation-rate-concerns-14033985.html",
+      "published_at": "2026-09-21 02:07:19+00",
+      "created_at": "2026-09-21 23:00:10.170393+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "f82e6971ddd4cf1995cc51ae9562608cbb407fa2611598944da8e171d4e10504",
+      "has_tag": true
+    },
+    {
+      "title": "Federal Reserve rate hike: sticky inflation, faster growth",
+      "source": "EUROPE SAYS",
+      "url": "https://www.europesays.com/3263337/",
+      "published_at": "2026-09-21 02:11:27+00",
+      "created_at": "2026-09-21 23:00:10.170393+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "a509c56340c6efcb431e575873470ab5adc8f13d0d62d2b607cfbddcadfae5bc",
+      "has_tag": true
+    },
+    {
+      "title": "US economy enters higher-rate era as inflation, AI boom persist",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/us-stocks/wall-street-guide/us-economy-enters-higher-rate-era-as-inflation-ai-boom-persist/articleshow/134380268.cms",
+      "published_at": "2026-09-21 05:05:00+00",
+      "created_at": "2026-09-21 23:00:10.170393+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "81d67047a3e540bbdc5f8f5f7fdbd5fbb55491c424a69ef4b4a4c1063332ceb9",
+      "has_tag": true
+    },
+    {
+      "title": "Federal Reserve rate hike reflects new world of sticky inflation and faster growth",
+      "source": "EUROPE SAYS",
+      "url": "https://www.europesays.com/3263583/",
+      "published_at": "2026-09-21 05:15:27+00",
+      "created_at": "2026-09-21 23:00:10.170393+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "6f8ce80e2fc9f4ecfbecf9f17a31dca8032320337ec157b30a8d796c2e66798b",
+      "has_tag": true
+    },
+    {
+      "title": "Chicago Fed President Goolsbee rejects calls for Fed rate cuts to ease US debt burden",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/us-stocks/wall-street-guide/chicago-fed-president-goolsbee-rejects-calls-for-fed-rate-cuts-to-ease-us-debt-burden/articleshow/134391617.cms",
+      "published_at": "2026-09-21 14:15:00+00",
+      "created_at": "2026-09-22 23:00:11.856201+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "c02b32c9273be4f5174c06909fc08e7ade92e68f6001f0bf9b985ad7fe8648aa",
+      "has_tag": true
+    },
+    {
+      "title": "Federal Reserve official says fighting inflation likely to be 'painful'",
+      "source": "The Atlanta Journal-Constitution",
+      "url": "https://www.ajc.com/news/2026/09/federal-reserve-official-says-fighting-inflation-likely-to-be-painful/",
+      "published_at": "2026-09-21 15:12:36+00",
+      "created_at": "2026-09-22 23:00:11.856201+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、富邦金 等台股",
+      "fingerprint": "8c1e6b8e0fc82af1e6aadf8612a99ec9d1a7ff21d233604237b5ec41243b2b51",
+      "has_tag": true
+    },
+    {
+      "title": "AMD joins $1 trillion club as shares surge over 180% in 2026 - what’s driving the chipmaker’s massive rally?",
+      "source": "Livemint",
+      "url": "https://www.livemint.com/market/stock-market-news/amd-joins-1-trillion-club-as-shares-surge-over-180-in-2026-what-s-driving-the-chipmaker-s-massive-rally-11790003392477.html",
+      "published_at": "2026-09-21 15:45:56+00",
+      "created_at": "2026-09-22 23:00:11.856201+00",
+      "taiwan_impact_summary": "直接影響 台積電、鴻海、廣達、緯創 等台股",
+      "fingerprint": "c41ec6d3224fb8a22afd07e9ff8762b7f287ad69bd9f81305b2002577570ac7e",
+      "has_tag": true
+    },
+    {
+      "title": "Europe's STOXX 600 rallies on tech, banks strength as oil prices retreat - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMisgFBVV95cUxNYWF0aU9mWUM0TjNtekhpT0I0NTM1RXoydldTZDlzNVM4Q0FnRXFCLTlaLUQxdEZfMS1qeU1XV0lsNHhvc09zMTBUQV9xVFhaakdCU196dW5sQ212UHdLVjVySHo5UWczV0dVS2dnY3d2Q2dTbWRkOWFRZ0g5aTlGaEtnQkFQcno2ZjdfdndQdGdSR1c3MjdEXzNCZlhRM216di1sdllQSl9OT3pkcWRSd3p3?oc=5",
+      "published_at": "2026-09-21 16:40:56+00",
+      "created_at": "2026-09-21 23:00:10.170393+00",
+      "taiwan_impact_summary": "直接影響 台塑、南亞、台化、萬海 等台股",
+      "fingerprint": "ad6abb15831914f76c73ee10c1e71ffd119f6d11c66bc1ea70a309552ca43e33",
+      "has_tag": true
+    },
+    {
+      "title": "Fed's Musalem says more rate hikes likely needed to quell inflation",
+      "source": "Reuters",
+      "url": "https://www.reuters.com/business/feds-musalem-says-more-rate-hikes-likely-needed-quell-inflation-2026-09-21/",
+      "published_at": "2026-09-21 18:23:36+00",
+      "created_at": "2026-09-22 23:00:11.856201+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "3a705ec0f87931e55de94a6323be659aed046e6e8f30c8f862a301de04c13a71",
+      "has_tag": true
+    },
+    {
+      "title": "Federal Reserve official says inflation persistence led her to support interest rate hike",
+      "source": "EUROPE SAYS",
+      "url": "https://www.europesays.com/3265087/",
+      "published_at": "2026-09-21 23:03:24+00",
+      "created_at": "2026-09-22 23:00:11.856201+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "12352308c6bc1dc27e21c6aeef06e49e6efb93902a1f359eceee0b1594a9b278",
+      "has_tag": true
+    },
+    {
+      "title": "Gold Edges Higher as Lower Oil Prices Damp Chance of Rate Hikes",
+      "source": "Livemint",
+      "url": "https://www.livemint.com/market/gold-edges-higher-as-lower-oil-prices-damp-chance-of-rate-hikes-11790039506795.html",
+      "published_at": "2026-09-22 01:11:46+00",
+      "created_at": "2026-09-22 23:00:11.856201+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "1fae373b1f030b259d106fdaf341aeeeb624b9af88f10ce637fb5bd2ba6236f1",
+      "has_tag": true
+    },
+    {
+      "title": "Yen squeezed as hawkish turn grips central banks",
+      "source": "The Economic Times",
+      "url": "https://economictimes.indiatimes.com/markets/forex/forex-news/yen-squeezed-as-hawkish-turn-grips-central-banks/articleshow/134400339.cms",
+      "published_at": "2026-09-22 02:05:00+00",
+      "created_at": "2026-09-22 23:00:11.856201+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "799933442ff38be62b896906a30ce2454a3e09861db9b042ea54f8d51d4cb872",
+      "has_tag": true
+    },
+    {
+      "title": "Gold slips as Fed officials signal rate hikes - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMinAFBVV95cUxQbVA2UjFJM3dkZnhldzYxTHFKc3JKUndzZmw3LUZhR1dUOUQxYWRQanA0bHVPOEhuMk9XWk1uSXFyQXdvWnVXU2Q0ZUtjUktnb2tnLWhCa1ZRS3Vqemt3cFNEMXRqbTU3TnFUM0loWUJxUTc3Z0NOb0tHc09zOVZMOUFEOElkVUVrS3lzdHRib1g2YTJOdjZqYTVWWFk?oc=5",
+      "published_at": "2026-09-22 02:19:00+00",
+      "created_at": "2026-09-22 23:03:02.583674+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "e64940b1b9c0bf9cd4aacb162cfce9c164d5d4db54b7a56be21fc9b2108f0f09",
+      "has_tag": true
+    },
+    {
+      "title": "Qualcomm may tap Samsung to co-produce 2nm chips with TSMC",
+      "source": "Bangkok Post",
+      "url": "https://www.bangkokpost.com/life/tech/3324118/qualcomm-may-tap-samsung-to-coproduce-2nm-chips-with-tsmc",
+      "published_at": "2026-09-22 04:35:00+00",
+      "created_at": "2026-09-22 23:00:11.856201+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "39406554f2af99f705b7694d301bdcd061e27546dc5c412b59737e61ed0f2f50",
+      "has_tag": true
+    },
+    {
+      "title": "Gold slips as oil gains and Fed officials signal rate hikes",
+      "source": "The Star",
+      "url": "https://www.thestar.com.my/business/business-news/2026/09/22/gold-slips-as-oil-gains-and-fed-officials-signal-rate-hikes",
+      "published_at": "2026-09-22 09:01:00+00",
+      "created_at": "2026-09-22 23:00:11.856201+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "792b883cf16ac8c050c4069697155665217e12e3797ede74bebae76006ecbea7",
+      "has_tag": true
+    },
+    {
+      "title": "FactSet Marks a New Era in Enterprise Real-Time Market Data as It Acquires BCC Group International",
+      "source": "GlobalNewswire",
+      "url": "https://www.globenewswire.com/news-release/2026/09/22/3366285/7768/en/factset-marks-a-new-era-in-enterprise-real-time-market-data-as-it-acquires-bcc-group-international.html",
+      "published_at": "2026-09-22 12:00:00+00",
+      "created_at": "2026-09-22 23:03:02.583674+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY 等台股",
+      "fingerprint": "304e68975397f9648bf1a51128921be4a74f78bbf839f5b3ebc8605d80fe08dd",
+      "has_tag": true
+    },
+    {
+      "title": "September surge or October offload? Jobs experts weigh in on this fall’s hiring trends",
+      "source": "CNBC",
+      "url": "https://www.cnbc.com/2026/09/22/september-surge-october-offload-jobs-experts-on-fall-2026-hiring-trends.html",
+      "published_at": "2026-09-22 13:47:12+00",
+      "created_at": "2026-09-22 23:00:11.856201+00",
+      "taiwan_impact_summary": "直接影響 富邦金、國泰金、開發金、玉山金 等台股",
+      "fingerprint": "99d7dbd5004e8541efd1c5334cc76fcaea76174d3b366dd62c8d7abedb67ce59",
+      "has_tag": true
+    },
+    {
+      "title": "A top chip stock analyst sees big things for Nvidia, Broadcom. How his case aligns with ours",
+      "source": "CNBC",
+      "url": "https://www.cnbc.com/2026/09/22/a-top-chip-stock-analyst-sees-big-things-for-nvidia-broadcom-how-his-case-aligns-with-ours.html",
+      "published_at": "2026-09-22 20:43:48+00",
+      "created_at": "2026-09-22 23:00:11.856201+00",
+      "taiwan_impact_summary": "直接影響 台積電、鴻海、廣達、緯創 等台股",
+      "fingerprint": "21d6238311c2c248d83dbe04ee53772da6a7a9e7e17044c3653b290f4f23380f",
+      "has_tag": true
+    },
+    {
+      "title": "Gold hits seven-week low as oil surge fuels rate hike bets - Reuters",
+      "source": "Reuters",
+      "url": "https://news.google.com/rss/articles/CBMikgFBVV95cUxQenE0aVBHOTNMeURZcVZjN3J0S1RMZ2kzakFJYklBMXhZckhuTGxLVnVaa2pmZjg0MzJHMU1fOGwwY3pfWjBXYmZUcGYtUjMzOFB4UW9ydUdKZDNOU2JrTHotMk9qa1ZGNkZXdGs3b0NKcGhveU11cmZGOC0wbzM1WWVJSzk3bDAxLWs3QUxVSy02QQ?oc=5",
+      "published_at": "2026-09-28 01:41:00+00",
+      "created_at": "2026-09-29 23:15:03.505377+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、台塑 等台股",
+      "fingerprint": "b0bfcbb1405e72c3f8745dbe10985756490fda838dd062e3f5da71b25d2c5ddd",
+      "has_tag": true
+    },
+    {
+      "title": "TSMC: Set For All-Time Highs On Surging AI Chip Demand",
+      "source": "Seeking Alpha",
+      "url": "https://seekingalpha.com/article/4950088-taiwan-semiconductor-stock-tsmc-all-time-highs-surging-ai-chip-demand",
+      "published_at": "2026-09-28 02:28:09+00",
+      "created_at": "2026-09-29 23:15:03.505377+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "37881347e4b0c0e251293d69d09c0bb68105f6974b3114f6a01cab6e8e4d2176",
+      "has_tag": true
+    },
+    {
+      "title": "TSMC (TSM) Ramps Up 2nm Chip Capacity as Apple, Nvidia Orders Jump",
+      "source": "Markets Insider",
+      "url": "https://markets.businessinsider.com/news/stocks/tsmc-tsm-ramps-up-2nm-chip-capacity-as-apple-nvidia-orders-jump-1036577563",
+      "published_at": "2026-09-28 07:56:25+00",
+      "created_at": "2026-09-29 23:15:03.505377+00",
+      "taiwan_impact_summary": "直接影響 台積電、鴻海、廣達、緯創 等台股",
+      "fingerprint": "df5b46990a46a92ed6dc196177dfd60b8c4353f438a1598bf9f9ff20f3d8fcd4",
+      "has_tag": true
+    },
+    {
+      "title": "Taiwan clears USD 44 billion in TSMC investments for United States expansion",
+      "source": "ANI (Asian News International)",
+      "url": "https://www.aninews.in/news/business/taiwan-clears-usd-44-billion-in-tsmc-investments-for-united-states-expansion20260928162949/",
+      "published_at": "2026-09-28 10:59:49+00",
+      "created_at": "2026-09-29 23:15:03.505377+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "6352da11dd2aebb50d4b5f49f8a6ce5d665942791bcc0a93210720861f3f382d",
+      "has_tag": true
+    },
+    {
+      "title": "Taiwan clears USD 44 billion in TSMC investments for United States expansion",
+      "source": "The Tribune",
+      "url": "https://www.tribuneindia.com/news/business/taiwan-clears-usd-44-billion-in-tsmc-investments-for-united-states-expansion/",
+      "published_at": "2026-09-28 11:02:46+00",
+      "created_at": "2026-09-29 23:15:03.505377+00",
+      "taiwan_impact_summary": "直接影響 台積電、創意、世芯-KY、日月光投控 等台股",
+      "fingerprint": "f98ab661f7a0b0f17e4334942d437ec65e6452bef42c1875f8348fc9a08afe75",
+      "has_tag": true
+    },
+    {
+      "title": "Jim Cramer's top 10 things to watch in the stock market Monday",
+      "source": "CNBC",
+      "url": "https://www.cnbc.com/2026/09/28/jim-cramers-top-10-things-to-watch-in-the-stock-market-monday.html",
+      "published_at": "2026-09-28 12:50:24+00",
+      "created_at": "2026-09-29 23:15:03.505377+00",
+      "taiwan_impact_summary": "直接影響 台積電、鴻海、廣達、緯創 等台股",
+      "fingerprint": "42bcf98b115344a8a0d87a7d30142a2b4d3e8cb21b6fd7b236dc4674e6a1dfd6",
+      "has_tag": true
+    },
+    {
+      "title": "Top Ships Inc. Announces Closing of the Acquisition of three High Specification Newbuilding MR Tankers",
+      "source": "GlobalNewswire",
+      "url": "https://www.globenewswire.com/news-release/2026/09/30/3372135/14465/en/top-ships-inc-announces-closing-of-the-acquisition-of-three-high-specification-newbuilding-mr-tankers.html",
+      "published_at": "2026-09-30 14:45:00+00",
+      "created_at": "2026-09-30 23:15:04.223786+00",
+      "taiwan_impact_summary": "直接影響 台達電、和大、貿聯-KY、台塑 等台股",
+      "fingerprint": "100621092163b50a7c17f7523a93e64b5a2e1bdc85f95666610915595f39746a",
+      "has_tag": true
+    }
+  ]
+}

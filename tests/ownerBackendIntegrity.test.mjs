@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import {marketNewsAwareReader} from './helpers/marketNewsIntegrity.mjs';
 import {
  OWNER_BACKEND_BASE,OWNER_BACKEND_MANIFEST,OWNER_BACKEND_PATHS,OWNER_BACKEND_MIGRATION,
  OWNER_BACKEND_PREDECESSOR,ownerBackendPrior,ownerBackendTransition,ownerBackendChangedPaths,
 } from './helpers/ownerBackendIntegrity.mjs';
 import {linePromotionTransition,linePromotionChangedPaths,LINE_PROMOTION_PATHS,LINE_PROMOTION_MANIFEST} from './helpers/lineProductionPromotionIntegrity.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
-const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+const read=marketNewsAwareReader(p=>readFileSync(new URL('../'+p,import.meta.url)));
 
 test('Owner Backend release requires an exact sealed file set and exactly one named read-model migration',()=>{
  const t=ownerBackendTransition(); // Missing/unsealed manifest must fail, never skip.

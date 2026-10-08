@@ -10,6 +10,7 @@ import { hardGateTransition } from './helpers/recommendationHardGateIntegrity.mj
 import { workerTransition } from './helpers/recommendationWorkerIntegrity.mjs';
 import { linePromotionTransition } from './helpers/lineProductionPromotionIntegrity.mjs';
 import { ownerBackendTransition } from './helpers/ownerBackendIntegrity.mjs';
+import { marketNewsTransition } from './helpers/marketNewsIntegrity.mjs';
 
 test('Core freeze plus explicitly authorized 9/8 incident: unapproved producers, Cron and canonical readers unchanged', () => {
   // Read-side get-report-payload and exactly two new evidence modules are the
@@ -26,7 +27,8 @@ test('Core freeze plus explicitly authorized 9/8 incident: unapproved producers,
   const worker=workerTransition();
   const promotion=linePromotionTransition();
   const ownerBackend=ownerBackendTransition();
-  const successorAdditions=new Set([...successor.manifest.files,...hardGate.manifest.files,...worker.manifest.files,...promotion.manifest.files,...ownerBackend.manifest.files].filter(r=>r.operation==='ADD').map(r=>r.path));
+  const marketNews=marketNewsTransition();
+  const successorAdditions=new Set([...successor.manifest.files,...hardGate.manifest.files,...worker.manifest.files,...promotion.manifest.files,...ownerBackend.manifest.files,...marketNews.manifest.files].filter(r=>r.operation==='ADD').map(r=>r.path));
   const files = execFileSync('git',['ls-files','supabase','.github/workflows','src/lib/decisionEvidence.ts','src/lib/runtimeDecisionTimeline.ts','src/services/resolveActiveReport.ts'],{encoding:'utf8'}).trim().split('\n').filter(f=>!approved.has(f)&&!subscriberApproval.newCandidatePaths.includes(f)&&!successorAdditions.has(f));
   const hash = createHash('sha256');
   for(const row of incident.files)assert.equal(createHash('sha256').update(promotion.predecessorRead(row.path)).digest('hex'),subscriberApproval.fileHash(row),row.path);

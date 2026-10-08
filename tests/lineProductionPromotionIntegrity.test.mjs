@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {marketNewsAwareReader} from './helpers/marketNewsIntegrity.mjs';
 import {LINE_PROMOTION_PATHS,LINE_PROMOTION_MANIFEST,linePromotionTransition,linePromotionChangedPaths,linePromotionPrior} from './helpers/lineProductionPromotionIntegrity.mjs';
 import {ownerBackendTransition} from './helpers/ownerBackendIntegrity.mjs';
-const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+const read=marketNewsAwareReader(p=>readFileSync(new URL('../'+p,import.meta.url)));
 test('promotion exact file set/hash/lineage and single allowed Function',()=>{
  ownerBackendTransition(); // Validate every successor byte before historical restoration.
  const t=linePromotionTransition();

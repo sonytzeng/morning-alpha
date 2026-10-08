@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {MARKET_NEWS_BASE,marketNewsAwareReader} from './marketNewsIntegrity.mjs';
 
 export const OWNER_BACKEND_BASE='16b0f6b0206844a6a537379199bef007717b9b3b';
 export const OWNER_BACKEND_MANIFEST='docs/operations/evidence/owner-backend-simple-mode-transition.json';
@@ -54,6 +55,7 @@ export function ownerBackendPrior(p){
  return priorCache.get(p);
 }
 export function ownerBackendTransition(source=read){
+ source=marketNewsAwareReader(source);
  const m=JSON.parse(source(OWNER_BACKEND_MANIFEST));
  assert.equal(m.schema_version,'OWNER_BACKEND_SIMPLE_MODE_TRANSITION_V1');
  assert.equal(m.base,OWNER_BACKEND_BASE);
@@ -95,6 +97,5 @@ export function ownerBackendAwareReader(source=read){
  return ownerBackendTransition(source).predecessorRead;
 }
 export function ownerBackendChangedPaths(){
- return [...new Set([...git(['diff','--name-only','-z',OWNER_BACKEND_BASE,'--']).split('\0'),
-  ...git(['ls-files','--others','--exclude-standard','-z']).split('\0')].filter(Boolean))].sort();
+ return git(['diff','--name-only','-z',OWNER_BACKEND_BASE,MARKET_NEWS_BASE,'--']).split('\0').filter(Boolean).sort();
 }

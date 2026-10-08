@@ -5,6 +5,7 @@ import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import { evaluateMarketReportGate } from '../_shared/market-report-gate.ts';
 import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { PREMARKET_REPORT_DEADLINE_MINUTES } from '../_shared/premarket-provider-readiness.mjs';
+import { collectOptionalPremarketNews, NEWS_ACQUISITION_BUDGET, shouldAcquirePremarketNews } from '../_shared/market-news-acquisition.ts';
 import { currentResearchDateError } from '../_shared/research-pipeline-contract.ts';
 import { authorizeInternalRequest, buildInternalFunctionHeaders, constantTimeEqual, internalCredentialsFromEnv, INTERNAL_AUTH_ERROR_CODES } from '../_shared/internal-function-auth.mjs';
 import {
@@ -914,7 +915,19 @@ Deno.serve(async (req: Request) => {
       atomic_checkpoint_complete: premarketAtomicReady,
     });
 
-    const actionResults = await executeRecoveryActions({
+    // The Atomic gate deliberately removes research actions until 11/11. News
+    // acquisition must not disappear with them. Run it beside the unchanged
+    // core actions in the existing refresh slot, never as a delivery dependency.
+    // 2 x 60s + existing 5s retry pause stays inside the 07:00 -> 07:05 interval.
+    const newsAcquisition = shouldAcquirePremarketNews({
+      phase, taipeiMinutes: clock.minutes, hasReport: Boolean(state.report), forceRegenerate, actions,
+    }) ? collectOptionalPremarketNews(() => invokeFunctionWithRetry(
+      `${supabaseUrl}/functions/v1`, 'fetch-global-market-news', cronSecret,
+      { recovery_attempt: activeAttempt },
+      NEWS_ACQUISITION_BUDGET.timeoutMs, NEWS_ACQUISITION_BUDGET.maxAttempts,
+    )) : Promise.resolve(null);
+
+    const [actionResults, newsObservation] = await Promise.all([executeRecoveryActions({
       actions,
       baseUrl: `${supabaseUrl}/functions/v1`,
       cronSecret,
@@ -925,7 +938,7 @@ Deno.serve(async (req: Request) => {
       allowIncident: clock.minutes >= (providerDelayContext ? PREMARKET_REPORT_DEADLINE_MINUTES : 7 * 60 + 30),
       reportDate: businessDate,
       suppressNotifications,
-    });
+    }), newsAcquisition]);
 
     if (actions.some((action) =>
       action === 'refresh_news'
@@ -1037,6 +1050,7 @@ Deno.serve(async (req: Request) => {
         phase,
         actions,
         action_results: actionResults,
+        news_acquisition: newsObservation,
         action_failures: actionFailures,
         delivery_blocked_by_evidence_failure: deliveryBlockedByEvidenceFailure,
         premium_eligible: state.premium_eligible,

@@ -8,8 +8,8 @@ const fontSize = { xs: 12, sm: 14, lg: 20 };
 /** Browser view of the SAME Flex tree, not a separately authored mock card. */
 function FlexView({ node }: { node: FlexBox | FlexText }) {
   if (node.type === 'text') return <p style={{ margin: 0, color: node.color, fontSize: fontSize[node.size],
-    fontWeight: node.weight === 'bold' ? 700 : 400, lineHeight: 1.65, overflowWrap: 'anywhere' }}>{node.text}</p>;
-  return <div style={{ display: 'flex', flexDirection: 'column', gap: node.spacing === 'md' ? 16 : 8,
+    fontWeight: node.weight === 'bold' ? 700 : 400, lineHeight: 1.6, overflowWrap: 'anywhere' }}>{node.text}</p>;
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: node.spacing === 'md' ? 12 : 6,
     padding: node.paddingAll, background: node.backgroundColor }}>{node.contents.map((child, i) => <FlexView key={i} node={child}/>)}</div>;
 }
 
@@ -63,7 +63,7 @@ export default function LineDecisionPreview() {
         <article aria-label={`${loaded.card.date} LINE 決策卡預覽`} style={{ width: '100%', maxWidth: 340, margin: '0 auto',
           borderRadius: 16, overflow: 'hidden', background: '#FFFFFF', boxShadow: '0 8px 30px #00000026' }}>
           <FlexView node={flex.contents.header}/><FlexView node={flex.contents.body}/>
-          <div style={{ padding: '0 20px 20px', background: '#FFFFFF' }}><a href={loaded.card.cta.url} target="_blank" rel="noopener noreferrer"
+          <div style={{ padding: '0 16px 16px', background: '#FFFFFF' }}><a href={loaded.card.cta.url} target="_blank" rel="noopener noreferrer"
             style={{ display: 'block', textAlign: 'center', background: '#087A68', color: '#FFFFFF', padding: '12px 10px', borderRadius: 8, fontWeight: 700, fontSize: 14 }}>{loaded.card.cta.label}</a></div>
         </article>
         <details className="rounded-lg border p-3"><summary className="cursor-pointer text-sm">來源與技術詳情（不放入會員卡片）</summary>

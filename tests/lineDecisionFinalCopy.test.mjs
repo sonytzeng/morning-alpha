@@ -16,11 +16,11 @@ test('copy gives action first, two non-redundant conclusions, three confirmation
  const r=fixture(),before=structuredClone(r),c=composeDecisionCard(r),why=c.sections.find(s=>s.title==='為什麼？');
  assert.equal(c.sections[0].lines[0].text,'先等，不追價。');assert.equal(why.lines.length,2);
  assert(all(c).includes('電子權值承壓：台積電 ADR -0.72%'));
- assert(all(c).includes('費半與 NVIDIA 大致持平'));assert(all(c).includes('09:30｜再確認：台積電是否比大盤抗跌、電子成交量是否同步'));
+ assert(all(c).includes('費半與 NVIDIA 大致持平'));assert(all(c).includes('09:30 再確認：台積電是否跌得比大盤少，且電子成交量同步'));
  assert(!/0\.00%|-0\.01%|0\.14%|核心驗證股|供應鏈風向|Provider|Evidence|BLOCKED|Gate/.test(all(c)));
  assert.equal(c.sections.find(s=>s.title==='開盤後只看 3 件事').lines.length,3);
  assert.equal(c.sections.find(s=>s.title==='什麼情況今天先不要做？').lines.length,1);
- assert(all(c).includes('超過 1%，或台積電與台指期同步轉弱'));
+ assert(all(c).includes('超過 1%，或台積電與台指期一起轉弱'));
  const flex=decisionCardFlex(c);assert(flex.contents.header.contents[0].text.includes(r.report_date));
  assert.deepEqual(r,before);assert.equal(c.recommendationSource,'PRODUCTION_V1');
 });

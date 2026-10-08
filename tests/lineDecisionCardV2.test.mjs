@@ -9,8 +9,8 @@ test('canonical direction + action, ordered copy, signed numbers and complete co
  const input=lineDecisionFixture(),before=structuredClone(input),card=composeDecisionCard(input);
  assert.equal(card.headline,'偏多觀察｜先等，不追價');assert.equal(card.deliveryEnabled,false);
  assert.deepEqual(card.sections.map(s=>s.title),['今天怎麼做？','為什麼？','開盤後只看 3 件事','什麼時候可以開始找機會？','什麼情況今天先不要做？','今天有推薦股票嗎？']);
- assert(content(card).includes('費半走弱，需留意開盤壓力（-0.70%）'));assert(content(card).includes('09:00 起，候選族群多數站上平盤且成交量放大，才開始找機會。'));
- assert(content(card).includes('超過 1%，或台積電與台指期同步轉弱'));
+ assert(content(card).includes('費半走弱，需留意開盤壓力（-0.70%）'));assert(content(card).includes('09:00 起，今天觀察的族群多數站上平盤且成交量放大，才開始找機會。'));
+ assert(content(card).includes('超過 1%，或台積電與台指期一起轉弱'));
  assert(card.sections.every(s=>s.lines.every(l=>l.path)));assert.deepEqual(input,before);
  assert.equal(card.notice,'今日市場判斷以核心市場資料為主，新聞證據較少。');
  assert(!/Atomic|Provider|Revision|DEGRADED|BLOCKED|WAIT|Gate/.test(content(card)));

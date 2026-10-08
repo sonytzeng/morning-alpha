@@ -22,7 +22,7 @@
       "path": "docs/10k-program/entry-worker-auth-release.md",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "d1d12a479b22551b774f8bd69c55c1a69c36c2c094a16813bbeebf36c4516f27"
+      "candidate_sha256": "1a60b16dc0584ce0f44dfbc9d12a16d07c509b67881ef34ec3eb67bc766333d1"
     },
     {
       "path": "scripts/entry-worker-caller.mjs",
@@ -94,7 +94,13 @@
       "path": "tests/helpers/entryWorkerAuthIntegrity.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "bdcc2818deaa444336a81cfbd509b5617250c7625a835f72d6d52976b6510d3d"
+      "candidate_sha256": "747ae7454d8d721491775fbb6d84ca93725bd46d53bc5acc367513efd7cee2e3"
+    },
+    {
+      "path": "tests/recommendationV2ForwardHandler.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "f5e4e2d1d583a2d37d40252f9d3dc7e4585c310a367d8172992ea49bfa5be735",
+      "candidate_sha256": "46dd124ab1cc8a37548e552472a4f34bc578ef3e32834d4b551b4142f1a0b064"
     }
   ]
 }

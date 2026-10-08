@@ -17,3 +17,5 @@ Proposed next gate: a fail-open async Entry dispatch after a successfully commit
 Outcome is NOT_ENABLED: the Entry outcome table intentionally has no writer or INSERT grant. The V2 outcome logic cannot establish Entry-specific trigger/fill/stop-target ordering, corporate-action clearance, costs, and 1/3/5/10/20-session horizons. A future writer requires a separately approved migration/function manifest and trustworthy executable-price/adjustment evidence. Daily OHLC ambiguity remains unverified, never best-case performance.
 
 Historical Replay is not Forward. Analysis value remains INSUFFICIENT_SAMPLE. No strategy effectiveness or natural execution claim follows from CI/deployment.
+
+CI fixture correction: the unchanged pre-existing V2 handler test built a synthetic trading day from wall-clock time. CI on the 2026-10-09 Taiwan holiday correctly failed V2_COMPARISON_IDENTITY_INVALID. Pin only the test clock and fixture to the existing legal 2026-10-07 premaket session; no calendar, production Handler, strategy, or assertion change.

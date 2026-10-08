@@ -26,10 +26,38 @@ export async function handleOwnerTradingLab(request:Request) {
   const ownerId=user.data.user.id;
   const raw=await request.text();if(raw.length>8192)return reply(413,{error:'INPUT_TOO_LARGE'});
   const body=object(JSON.parse(raw)), operation=body.operation;
-  if(!['READ','RECORD_TRADE','RECORD_EXIT','REFRESH_OUTCOMES'].includes(String(operation)))return reply(400,{error:'OPERATION_INVALID'});
+  if(!['READ','RECORD_TRADE','RECORD_EXIT','REFRESH_OUTCOMES','COCKPIT_READ','COCKPIT_RECORD'].includes(String(operation)))return reply(400,{error:'OPERATION_INVALID'});
   const db=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});
   const now=new Date().toISOString(),date=taipeiDate(now);
   const must=<T>(r:{data:T;error:unknown})=>{if(r.error)throw Error('DEPENDENCY_UNAVAILABLE');return r.data;};
+  // Separate additive journal. Every request has already passed the SAME Owner
+  // authentication above. Never call research, reports, LINE or outcome writers.
+  if(operation==='COCKPIT_RECORD') {
+   if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(String(body.request_id)))return reply(400,{error:'REQUEST_ID_REQUIRED'});
+   const r=await db.rpc('owner_cockpit_record_v1',{p_owner:ownerId,p_request:body.request_id,p_fill:body.fill});
+   if(r.error){const code=['OVERSELL','IDEMPOTENCY_CONFLICT','CORRECTION_INVALID','FUTURE_OR_MISSING_TIME','DECIMAL_INVALID','JOURNAL_LIMIT'].find(c=>r.error.message?.includes(c));
+    return reply(422,{error:code||'JOURNAL_INPUT_INVALID'});}
+   return reply(200,r.data);
+  }
+  if(operation==='COCKPIT_READ') {
+   const journal=object(must(await db.rpc('owner_cockpit_read_v1',{p_owner:ownerId})));
+   const positions=records(journal.positions),symbols=[...new Set(positions.filter(p=>Number(p.quantity)>0).map(p=>String(p.symbol)))];
+   // A valuation is a time-stamped saved quote, never a fictional current price.
+   let session=date;let covered=false;
+   for(let i=0;i<32;i++){
+    const r=await db.rpc('market_calendar_session_v1',{p_market:'TW',p_date:session});
+    if(r.error)break;if(r.data===true){covered=true;break;}
+    session=new Date(Date.parse(session+'T00:00:00Z')-86400000).toISOString().slice(0,10);
+   }
+   const quotes=symbols.length&&covered?await db.from('market_quotes').select('id,symbol,value,trading_date,phase,quality_status,freshness_status,captured_at,ingested_at')
+    .in('symbol',symbols).eq('trading_date',session).eq('quality_status','verified').in('freshness_status',['fresh','provider_returned'])
+    .lte('captured_at',now).lte('ingested_at',now).order('captured_at',{ascending:false}).limit(1001):{data:[],error:null};
+   const rows=quotes.error||quotes.data?.length===1001?[]:records(quotes.data);
+   return reply(200,{...journal,positions:positions.map(p=>{const q=rows.find(q=>q.symbol===p.symbol&&Number(q.value)>0&&['intraday','close'].includes(String(q.phase)));
+    const conflict=q&&rows.some(x=>x.symbol===q.symbol&&x.captured_at===q.captured_at&&x.value!==q.value);
+    const valid=q&&!conflict;return {...p,mark:valid?{price:q.value,at:q.captured_at,business_date:q.trading_date,source:'market_quotes',phase:q.phase}:null,
+     unrealized:Number(p.quantity)===0?0:valid&&p.cost!==null?Number(q.value)*Number(p.quantity)-Number(p.cost):null};})});
+  }
   const trades=records(must(await db.from('owner_lab_trades').select('*').eq('owner_id',ownerId).order('created_at',{ascending:false}).limit(201)));
   if(trades.length>200)return reply(409,{error:'JOURNAL_PAGE_LIMIT','message':'目前超過兩百筆；不把截斷資料當成完整績效。'});
   if(operation==='RECORD_TRADE') {
@@ -118,7 +146,9 @@ export async function handleOwnerTradingLab(request:Request) {
     &&Date.parse(String(object(r.learning_predictions).prediction_at))<Date.parse(String(r.evaluated_at))).map(r=>[r.prediction_id,r])).values()];
   const forwardSample=object(must(ownerAnalysisResult)).forward_sample;
   if(!Number.isInteger(forwardSample)||Number(forwardSample)<0)throw Error('FORWARD_SAMPLE_UNAVAILABLE');
-  return reply(200,{version:LAB_VERSION,public_product_approval:false,forward_enabled:false,as_of:now,business_date:date,canonical,shadow,
+  const symbolNames=Object.fromEntries(input.universe.flatMap(r=>typeof r.symbol==='string'&&typeof r.stock_name==='string'&&r.stock_name.trim()
+   &&!input.universe.some(x=>x.symbol===r.symbol&&x.stock_name!==r.stock_name)?[[r.symbol,r.stock_name]]:[]));
+  return reply(200,{version:LAB_VERSION,public_product_approval:false,forward_enabled:false,as_of:now,business_date:date,canonical,shadow,symbol_names:symbolNames,
    discovery,trades,events,performance:{system:performance(returns('SYSTEM_SIMULATION')),sony:performance(returns('SONY_LIVE_TRADE')),experiment:performance(returns('OWNER_EXPERIMENT')),
     market:{sample:marketQuality.length,direction_accuracy:qualityRows.length<=200&&marketQuality.length>=5?marketQuality.filter(r=>r.direction_correct).length/marketQuality.length*100:null,
      source:'CLE_CLOSE_DIRECTION_NOT_TRADING_RETURNS',coverage:qualityRows.length>200?'TRUNCATED_NOT_COMPLETE':'BOUNDED_LATEST_200',forward_shadow_sample:forwardSample}}});

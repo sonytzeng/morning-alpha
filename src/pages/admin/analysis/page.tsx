@@ -3,10 +3,9 @@ import { supabase } from '@/lib/supabase';
 import { readFoundation, QUALITY_WINDOWS, type ResearchFoundation } from '@/features/research/foundation';
 import { readOwnerAnalysis, type OwnerAnalysis } from '@/features/research/intelligence';
 import IntelligenceView from './IntelligenceView';
-import TradingLab from './TradingLab';
+import OwnerCockpit from './OwnerCockpit';
 import RecommendationShadow from './RecommendationShadow';
 import LineDecisionPreview from './LineDecisionPreview';
-import EntryOpportunity from './EntryOpportunity';
 import './analysis.css';
 
 export function ResearchFoundationView({ data }: { data: ResearchFoundation }) {
@@ -65,11 +64,9 @@ export default function OwnerAnalysisPage() {
     })();
     return () => { active = false; subscription.subscription.unsubscribe(); };
   }, [selectedMode, selectedDate]);
-  if (state.kind === 'ready' && state.data) return <div className="space-y-8">
-    <LineDecisionPreview />
-    <EntryOpportunity />
-    <RecommendationShadow />
-    <TradingLab />
+  if (state.kind === 'ready' && state.data) return <OwnerCockpit>
+    <details className="rounded-xl border p-4"><summary>LINE 卡片預覽</summary><LineDecisionPreview /></details>
+    <details className="rounded-xl border p-4"><summary>個股研究方法與事前驗證</summary><RecommendationShadow /></details>
     <details className="rounded-xl border p-4"><summary className="cursor-pointer font-semibold">進階研究：歷史重播、訊號、Evidence 與版本</summary><div className="mt-4 space-y-6">
     <header><p className="text-xs font-semibold text-amber-700">僅限 Owner · 獨立研究，不影響正式決策</p>
       <h1 className="mt-2 text-2xl font-bold">Phase 2 Analysis Intelligence</h1>
@@ -94,7 +91,7 @@ export default function OwnerAnalysisPage() {
     {state.intelligence ? <IntelligenceView data={state.intelligence} /> : <p role="status" className="rounded-xl border bg-white p-4 text-sm">Phase 2 分析候選尚未啟用或目前不可用；正式市場服務不受影響。</p>}
     <details className="rounded-xl border p-4"><summary className="cursor-pointer font-semibold">研究基礎與版本 Registry</summary><div className="mt-4"><ResearchFoundationView data={state.data} /></div></details>
     </div></details>
-  </div>;
+  </OwnerCockpit>;
   return <section className="rounded-xl border bg-white p-6" role="status" aria-live="polite">
     <h1 className="text-xl font-bold">分析研究中心</h1><p className="mt-3 text-sm text-slate-600">{state.kind === 'loading' ? '確認 Owner 存取權限中…'
       : state.kind === 'denied' ? '僅供具名授權 Owner 存取；一般管理員與會員沒有研究資料權限。'

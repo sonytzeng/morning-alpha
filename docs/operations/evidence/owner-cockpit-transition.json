@@ -1,0 +1,151 @@
+{
+  "schema_version": "OWNER_COCKPIT_TRANSITION_V1",
+  "base": "8ec42145fb196df448af0242ff125d64d8a83163",
+  "functions": [
+    "owner-trading-lab-v1"
+  ],
+  "migrations": [
+    "supabase/migrations/20261008213105_owner_trading_cockpit_ledger_v1.sql"
+  ],
+  "secret_change": false,
+  "cron_change": false,
+  "existing_auth_change": false,
+  "existing_rls_change": false,
+  "core_change": false,
+  "strategy_change": false,
+  "line_change": false,
+  "report_change": false,
+  "forward_enabled": false,
+  "outcome_enabled": false,
+  "legacy_backfill": false,
+  "member_access": false,
+  "predecessor_sha256": "52704b65d394afc6f1089199e208c62a4bd2dcb03a3d010f8176ea3be9d2f331",
+  "files": [
+    {
+      "path": ".github/workflows/owner-cockpit.yml",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "669b52922c1b5bcec3b70fb443205a4a8a8c5214a6a779fadee5c9e1668f757b"
+    },
+    {
+      "path": "docs/10k-program/owner-cockpit-release.md",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "c96b6ef07403d34e4a946164690cd88522599e617fb3beef070597ed5dfd7fd2"
+    },
+    {
+      "path": "src/features/research/cockpit.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "aae61981f1ea61f584a926d79f53c0dd3a1b3074338cd7d11124627df0ec48d2"
+    },
+    {
+      "path": "src/pages/admin/analysis/CockpitJournal.tsx",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "ab8c10e06d86ce1b443f6ff42e85cb2fadef2bcab545861c86392e98bc3d96dd"
+    },
+    {
+      "path": "src/pages/admin/analysis/OwnerCockpit.tsx",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "6685bdd823b0ee7f1c7f73e457894de03643ae6d2da9ac369488fdacbede0b9b"
+    },
+    {
+      "path": "src/pages/admin/analysis/cockpit.css",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "d9b830332b601ca5a026d36497d51b67f452540b7035441b00eed44feca89d0e"
+    },
+    {
+      "path": "src/pages/admin/analysis/page.tsx",
+      "operation": "MODIFY",
+      "predecessor_sha256": "98a12f1e18f606fc5dfafb66e3387b7ff5392c4662c8259e3508b3c95bce4f2e",
+      "candidate_sha256": "d43574243fbd1f25c750c29baa0b16bee42a9304e26cce97513919ab3e446add"
+    },
+    {
+      "path": "supabase/functions/owner-trading-lab-v1/index.ts",
+      "operation": "MODIFY",
+      "predecessor_sha256": "d752ba34d138ef0252388f956bf6d74d0b582a53bbb5812f0c789b50749e43d1",
+      "candidate_sha256": "8a36027bc76052aa264dbb6843809c062865141ea676a0ace1a0f06ad4b9e30d"
+    },
+    {
+      "path": "supabase/migrations/20261008213105_owner_trading_cockpit_ledger_v1.sql",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "1fb8d6325ec1b1eaa417af9470131646ffeb335fbd735ee0e6fc39f078e64008"
+    },
+    {
+      "path": "tests/analysisIntelligenceUI.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "8746bd46e51b25ef437ea4a1eb752af7259060a597bef3d5648ab9a04affc71c",
+      "candidate_sha256": "a455dcb145f59abff972b1c3e02782bd0b935efcdf509d595fbac54d62a14606"
+    },
+    {
+      "path": "tests/browser/ownerCockpit.vite.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "95763b33dd3ad320e120b12aa59e4485b9209db5c9841637f92c0f9d90a1ef8a"
+    },
+    {
+      "path": "tests/browser/ownerCockpitHarness.tsx",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "387d4dbbb60b3edc2171d2f5f9b31cdbc0055a0718b4da55e94ec611862b75f9"
+    },
+    {
+      "path": "tests/browser/ownerCockpitSupabaseMock.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "8d7aeff2c25fe152a5b169da50d4f6aea6a341061e9fd3de0abadb5d14e4029e"
+    },
+    {
+      "path": "tests/entryOpportunityAuthIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "fa82dc18286372af2f2b6263f0c61f6dbb29caf30a9f27a5c458468ad73619b1",
+      "candidate_sha256": "9cd06f43abe14b7cdcb4e6a31223d1864737028cbc5847fe99908eb12a0c1acf"
+    },
+    {
+      "path": "tests/helpers/entryWorkerAuthIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "50808b5d0e9d205a84608b53b17ba4bd781dba76109a8e767060ade0e79e8cb2",
+      "candidate_sha256": "0bd05a2969adc642cd4bf60310b1be675ca2c8010b7032afdd0d147d88cbc580"
+    },
+    {
+      "path": "tests/helpers/ownerCockpitIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "04cce263a0a26bbced8e5f1632f89682eb93de1cdca617d6e340a565dcd712b5"
+    },
+    {
+      "path": "tests/ownerAccountAnalysisNavigation.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "9ec412b80565f79ab1c6c8239e7c8199bb678c82200d62f0924b794cf0b6ceb9",
+      "candidate_sha256": "3ee3e6994e732e0e48050be3d8d86985d50a50b14b7cc72cec93c436c725c9db"
+    },
+    {
+      "path": "tests/ownerCockpit.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "5bbdfa2ef0ea85ef5e0eb25f8df1bf1dd033f7658507bcd04c95ef0b1a1bf85c"
+    },
+    {
+      "path": "tests/ownerCockpitDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "a8e596dbfaa1bb51478a6413f7fe9d9ea6c615259771f6d57ca6b5c284e9bd12"
+    },
+    {
+      "path": "tests/ownerCockpitIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "c8e269de56072ba6bc1ca71f8ac6b36fac8210d9affa6dd64e8a858e7a29de3a"
+    },
+    {
+      "path": "tests/productContract.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "9ec8c7a25cf8aa4bf6927b8bedbaacb05de05ae1ead52d7ecd61f2d1ff57742d",
+      "candidate_sha256": "544fc6f8028e74271611639fdb287b89e56017f5613914839413bbce1e8c80af"
+    }
+  ]
+}

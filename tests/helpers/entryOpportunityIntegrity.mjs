@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {ENTRY_AUTH_BASE,entryAuthAwareReader,entryAuthTransition} from './entryWorkerAuthIntegrity.mjs';
 export const ENTRY_BASE='97d219ddf75a7edd788de5272533e17ffcaaf686';
 export const ENTRY_MANIFEST='docs/operations/evidence/entry-opportunity-transition.json';
 export const ENTRY_MIGRATION='supabase/migrations/20261008081315_entry_opportunity_owner_shadow_v1.sql';
@@ -32,6 +33,7 @@ export function entryPrior(p){
  }return cache.get(p);
 }
 export function entryTransition(source=read){
+ source=entryAuthAwareReader(source);
  const m=JSON.parse(source(ENTRY_MANIFEST));
  assert.equal(m.schema_version,'ENTRY_OPPORTUNITY_CANDIDATE_TRANSITION_V1');assert.equal(m.base,ENTRY_BASE);
  assert.deepEqual(m.files.map(r=>r.path).sort(),ENTRY_PATHS,'exact named Entry candidate scope');
@@ -52,10 +54,8 @@ export function entryTransition(source=read){
 }
 export function entryAwareReader(source=read){
  if(restored.has(source))return source;
+ source=entryAuthAwareReader(source);
  try{source(ENTRY_MANIFEST);}catch(e){if(e.code==='ENOENT')return source;throw e;}
  return entryTransition(source).predecessorRead;
 }
-export function entryChangedPaths(){return [...new Set([
- ...execFileSync('git',['diff','--name-only','-z',ENTRY_BASE,'--'],{cwd:root,encoding:'utf8'}).split('\0'),
- ...execFileSync('git',['ls-files','--others','--exclude-standard','-z'],{cwd:root,encoding:'utf8'}).split('\0'),
- ].filter(Boolean))].sort();}
+export function entryChangedPaths(){entryAuthTransition();return execFileSync('git',['diff','--name-only','-z',ENTRY_BASE,ENTRY_AUTH_BASE,'--'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean).sort();}

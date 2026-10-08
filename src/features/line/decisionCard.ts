@@ -24,6 +24,9 @@ const actions: Record<string, string> = { ENTER: '可以開始找進場機會', 
  * Never truncate a condition mid-sentence or invent a missing market cause. */
 export function linePlainText(value: unknown): string {
   return text(value).replace(/\s+/g, ' ')
+    .replace(/候選族群/g, '今天觀察的族群').replace(/未放量/g, '成交量未明顯增加').replace(/放量/g, '成交量明顯增加')
+    .replace(/(?:開盤)?反向跳空/g, '開盤突然朝預期相反方向大幅變動')
+    .replace(/相對抗跌/g, '跌得比大盤少')
     .replace(/\bTSMC?\s*ADR\b/g, '台積電 ADR').replace(/\bTSM\b/g, '台積電 ADR')
     .replace(/\bSOX\b/g, '費城半導體指數').replace(/\bNVDA\b/g, 'NVIDIA')
     .replace(/\bNASDAQ\b/g, '那斯達克指數').replace(/\bSPX\b/g, '標普 500 指數')
@@ -113,20 +116,25 @@ export function composeDecisionCard(response: ServerReportPayloadResponse): Deci
     && text(summary.text).match(/；(\d{2}:\d{2}) 先看2330 (是否相對加權指數抗跌且電子成交量同步|與半導體族群是否同向)，未確認前不追價。$/);
   const second = first && summaryRule && summaryRule[1] > text(first.time) ? {
     time: summaryRule[1],
-    question: summaryRule[2].startsWith('是否') ? '台積電是否比大盤抗跌、電子成交量是否同步' : '台積電與半導體族群是否同向',
-    condition: summaryRule[2].startsWith('是否') ? '台積電抗跌且電子成交量同步' : '台積電與半導體族群同向',
+    question: summaryRule[2].startsWith('是否') ? '台積電是否跌得比大盤少，且電子成交量同步' : '台積電與半導體族群是否同方向',
   } : null;
+  // "Candidate" alone does not prove strength. Only use the requested stronger
+  // label when ALL cited sector classifications explicitly say strengthening.
+  const sectorSignals = supported.filter(c => /^[^：:]+[：:](?:轉強|觀察|轉弱)$/.test(text(c.statement)));
+  const strongSectors = sectorSignals.length > 0 && sectorSignals.every(c => /[：:]轉強$/.test(text(c.statement))
+    && cited(c.statement, 'sections.supporting_evidence', c.evidence_refs));
+  const observedGroup = strongSectors ? '今天觀察的強勢族群' : '今天觀察的族群';
+  const groupRefs = strongSectors ? sectorSignals.flatMap(c => texts(c.evidence_refs)) : [];
   const observations: (CardLine | null)[] = [];
   if (first && confirmsVolume && /2330/.test(text(first.question)) && /是否同向/.test(text(first.question))) {
-    observations.push(line(`① ${text(first.time)}｜先觀察：候選族群有沒有多數站上平盤並放量？`, `${firstPath}.success_condition`));
-    if (/台指期|TXF/.test(text(first.question))) observations.push(line('② 開盤同看：台指期與台積電、候選族群是否同向？', `${firstPath}.question`));
-    else if (/TAIEX|加權指數/.test(text(first.question))) observations.push(line('② 開盤同看：加權指數與台積電、候選族群是否同向？', `${firstPath}.question`));
+    observations.push(line(`① ${text(first.time)} 先觀察：${observedGroup}多數是否站上平盤，且成交量明顯增加？`, `${firstPath}.success_condition${strongSectors ? '+sections.supporting_evidence' : ''}`, groupRefs));
+    if (/台指期|TXF/.test(text(first.question))) observations.push(line('② 同時看：台指期、台積電與這些族群是否同方向？', `${firstPath}.question`));
+    else if (/TAIEX|加權指數/.test(text(first.question))) observations.push(line('② 同時看：加權指數、台積電與這些族群是否同方向？', `${firstPath}.question`));
     observations.push(second
-      ? line(`③ ${second.time}｜再確認：${second.question}？`, 'sections.executive_summary.text', texts(summary.evidence_refs))
+      ? line(`③ ${second.time} 再確認：${second.question}？`, 'sections.executive_summary.text', texts(summary.evidence_refs))
       : line(`③ 開盤風險：${text(first.failure_condition)}`, `${firstPath}.failure_condition`));
   }
-  add('今天怎麼做？', [line(`${actions[action]}。`, 'payload.canonical_decision.action'),
-    confirmsVolume && action !== 'AVOID' ? line(second ? '先觀察，再確認；條件沒齊就不追。' : '開盤先看族群有沒有站上平盤並放量，沒有就不追。', `${firstPath}.success_condition${second ? '+sections.executive_summary.text' : ''}`) : null]);
+  add('今天怎麼做？', [line(`${actions[action]}。`, 'payload.canonical_decision.action')]);
   if (confirmsVolume && action === 'WAIT' && why.length < 2) why.push(line('台股方向仍待開盤量價確認。', `${firstPath}.question+success_condition`)!);
   add('為什麼？', why.slice(0, 3).map(l => ({ ...l, text: `• ${l.text}` })));
   if (first) {
@@ -134,8 +142,8 @@ export function composeDecisionCard(response: ServerReportPayloadResponse): Deci
     // AVOID cannot be turned into permission to enter by a copy template.
     add('什麼時候可以開始找機會？', [line(action === 'AVOID'
       ? '今天先不增加曝險，等待正式市場判斷更新。'
-      : second && confirmsVolume
-        ? `${text(first.time)} 後，候選族群多數站上平盤並放量、走勢同向；${second.time} 再確認${second.condition}，才開始找機會。`
+      : second && confirmsVolume && observations.filter(present).length === 3
+        ? `${second.time} 確認以上三項都成立，才開始找機會；未齊就等。`
         : `${text(first.time) ? `${text(first.time)} 起，` : ''}${text(first.success_condition).replace(/。$/, '')}，才開始找機會。`,
     `${firstPath}.success_condition+payload.canonical_decision.action${second ? '+sections.executive_summary.text' : ''}`,
     second ? texts(summary.evidence_refs) : [])]);
@@ -144,7 +152,7 @@ export function composeDecisionCard(response: ServerReportPayloadResponse): Deci
   const primaryFailure = first && text(first.failure_condition).match(/^開盤反向跳空超過 (\d+(?:\.\d+)?)% 或 2330\/(台指期|TXF|TAIEX 現貨)同步轉弱。$/);
   add('什麼情況今天先不要做？', [
     ...(first ? [line(primaryFailure
-      ? `反向跳空超過 ${primaryFailure[1]}%，或台積電與${primaryFailure[2].startsWith('TAIEX') ? '加權指數' : '台指期'}同步轉弱，就取消今天計畫、先觀望。`
+      ? `開盤突然朝預期相反方向變動超過 ${primaryFailure[1]}%，或台積電與${primaryFailure[2].startsWith('TAIEX') ? '加權指數' : '台指期'}一起轉弱，今天就先不做。`
       : first.failure_condition, `${firstPath}.failure_condition`)] : []),
     ...rows(failure.triggers).map((t, i) => cited(t.condition, `sections.failure_scenario.triggers[${i}].condition`, t.evidence_required)),
   ].filter(present).slice(0, 1));
@@ -216,12 +224,12 @@ export type FlexText = { type: 'text'; text: string; size: 'xs' | 'sm' | 'lg'; c
 export type FlexBox = { type: 'box'; layout: 'vertical'; paddingAll: string; spacing: 'sm' | 'md'; backgroundColor: string; contents: (FlexText | FlexBox)[] };
 export function decisionCardFlex(card: DecisionCard) {
   const t = (s: string, color = '#263746', size: FlexText['size'] = 'sm', bold = false): FlexText => ({ type: 'text', text: s, color, size, wrap: true, ...(bold ? { weight: 'bold' as const } : {}) });
-  const body: FlexBox = { type: 'box', layout: 'vertical', paddingAll: '20px', spacing: 'md', backgroundColor: '#FFFFFF',
+  const body: FlexBox = { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: 'md', backgroundColor: '#FFFFFF',
     contents: card.sections.map(section => ({ type: 'box', layout: 'vertical', paddingAll: '0px', spacing: 'sm', backgroundColor: '#FFFFFF',
       contents: [t(section.title, '#087A68', 'sm', true), ...section.lines.map(l => t(l.text, l.secondary ? '#425466' : '#263746', l.secondary ? 'xs' : 'sm'))] })) };
   return { type: 'flex' as const, altText: `Morning Alpha｜${card.headline}`,
     contents: { type: 'bubble' as const, size: 'mega' as const,
-      header: { type: 'box', layout: 'vertical', paddingAll: '20px', spacing: 'sm', backgroundColor: '#071D33',
+      header: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: 'sm', backgroundColor: '#071D33',
         contents: [t(`Morning Alpha｜${card.date}`, '#70E1CF', 'xs', true), t('今日策略', '#FFFFFF', 'sm', true), t(card.headline, '#FFFFFF', 'lg', true)] } as FlexBox,
       body, footer: { type: 'box', layout: 'vertical', contents: [{ type: 'button', style: 'primary', color: '#087A68',
         action: { type: 'uri', label: card.cta.label, uri: card.cta.url } }] } } };

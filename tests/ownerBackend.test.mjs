@@ -18,6 +18,18 @@ function fixture(time='00:27:00'){
 const item=(r,key)=>status.ownerSummary(r).flow.concat(status.ownerSummary(r).items).find(x=>x.key===key);
 const currentReport=(recommendation_status='BLOCKED')=>({business_date:TODAY,publication_status:'PUBLISHED',publication_date:TODAY,recommendation_status});
 
+test('Owner footer and white navigation keep AA text contrast without touching member styles',()=>{
+ const css=readFileSync(new URL('../src/pages/admin/simple/owner-simple.css',import.meta.url),'utf8');
+ const admin=readFileSync(new URL('../src/pages/admin/Admin.tsx',import.meta.url),'utf8');
+ assert.match(css,/\.owner-simple footer \{ color:#cbd5e1; background:var\(--owner-navy\)/);
+ assert.match(css,/\.owner-backend-layout nav a\.bg-primary-500 \{ background:#0f766e; color:#fff;/);
+ assert.match(admin,/item\.path !== '\/admin\/publish' && item\.path === location\.pathname/);
+ const luminance=hex=>{const c=hex.match(/[a-f0-9]{2}/gi).map(x=>parseInt(x,16)/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return .2126*c[0]+.7152*c[1]+.0722*c[2];};
+ for(const [foreground,background] of [['cbd5e1','0b182b'],['172033','ffffff'],['334155','ffffff'],['ffffff','0f766e']]){
+  const a=luminance(foreground),b=luminance(background);assert((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5);
+ }
+});
+
 test('00:27 Taipei: prior report remains visibly prior; today is WAITING, not late or failed',()=>{
  const r=fixture(),s=status.ownerSummary(status.readOwnerStatus(r));
  assert.equal(status.taipeiDate(r.as_of),TODAY);

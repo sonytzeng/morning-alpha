@@ -100,7 +100,7 @@ export default function AdminLayout() {
   );
 
   return (
-    <div className={`min-h-screen bg-background-50 flex${location.pathname === '/admin/analysis' ? ' owner-analysis-layout' : ''}`}>
+    <div className={`min-h-screen bg-background-50 flex${location.pathname === '/admin/analysis' ? ' owner-analysis-layout' : ''}${NAV_ITEMS.some(item => item.path !== '/admin/publish' && item.path === location.pathname) ? ' owner-backend-layout' : ''}`}>
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-56 flex-shrink-0 bg-white border-r border-background-200 flex-col min-h-screen sticky top-0">
         {sidebarContent}

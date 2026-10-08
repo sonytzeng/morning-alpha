@@ -27,19 +27,43 @@
       "path": ".github/workflows/entry-opportunity.yml",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "94ed6fad8b9be8c73245d41813a4cbc4580e0bdbccc266fc2efa182a8ddf24fb"
+      "candidate_sha256": "ff3f4fffedf222a07fc4b79067f7a8b43435b095cf74d101dc2fa4c84c32f190"
     },
     {
       "path": "docs/10k-program/entry-opportunity-v1.md",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "79dd57e3d77c7f32c41cc5cf871e053a8b8a17527283a333b64cf92c9300ccc0"
+      "candidate_sha256": "8cbf1c7f6d81ab0f04db677a1c6fe240b8598587e077a04aef683b50c729203f"
+    },
+    {
+      "path": "research/entry-corporate-actions.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "51c8e189de1a3c06283964e5f45291bf3d3c74735806f7fc8cf368e01daf4b89"
+    },
+    {
+      "path": "research/entry-history-acquire.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "c0e342438a3d136292b12fd6239f27dd4c42cd3e918d972d5092d95861703b0e"
+    },
+    {
+      "path": "research/entry-history-review.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "0b66d9381ee5aba47261fcd8406720d3c668fce57950b84d2806c39593b74629"
     },
     {
       "path": "research/entry-history.ts",
       "operation": "ADD",
       "predecessor_sha256": null,
       "candidate_sha256": "b18f6179782f7a718617ecfb5931d4a8d796d5173c06469db34a3bee54a2cac8"
+    },
+    {
+      "path": "research/entry-official-history.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "b0dd603063b1e5487cbad4ff4feb98859445903f1381c8ea20dc00d566819e38"
     },
     {
       "path": "research/entry-opportunity.ts",
@@ -144,6 +168,12 @@
       "candidate_sha256": "9f68a624b674fdd8665153bb1232c1cf03536d24d5c5e4c291e305a31594f2c5"
     },
     {
+      "path": "tests/entryOpportunityOfficialHistory.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "3ceddfd45e35488dab202c00abf3634a80f4c39cd0ee9b8376425af0e039ed3d"
+    },
+    {
       "path": "tests/entryOpportunityOutcome.test.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
@@ -177,7 +207,7 @@
       "path": "tests/helpers/entryOpportunityIntegrity.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "1019ad242eef71813af16e58ba15add6c9318df1baf07035d30213a20f775b3a"
+      "candidate_sha256": "ede91d2379bd47f36e9cf16b46fb023558a19b358a173bb2fe9d2530c3448290"
     },
     {
       "path": "tests/helpers/entryRetainedProjection.mjs",

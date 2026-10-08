@@ -110,10 +110,11 @@ newly acquired data relabelled as available at the old cutoff.
 
 Each symbol has 45 retained bars. The existing acquisition requests **65 calendar
 days**, not 60 trading sessions (`recommendation-stock-evidence.ts`). It is not
-changed in this candidate. A new research-only request manifest uses the existing
+changed in this candidate. The prior research-only request manifest uses the existing
 TW calendar to derive exact 20/60/120-session bounds, raw daily candles, bounded
 attempts/timeouts/pacing, no credentials, no live calls and no Production writes.
-It does not claim those requests have executed or that missing coverage is fixed.
+That earlier manifest did not execute requests. The subsequent public-exchange
+acquisition below is separate; it does not change these retained-cutoff counts.
 
 Lookback inventory of the frozen models, not new thresholds:
 
@@ -147,8 +148,8 @@ tables in `public`. The 10/7–10/8 Provider Recorder endpoint inventory contain
 market quotes/tickers, not a corporate-action feed. The immutable V2 capsules
 retain stock daily histories but no complete action coverage or ordered trade
 path. These are distinct stores; do not infer an action-free window from an empty
-Recorder lookup. Historical source acquisition/entitlement and as-of adjustment
-proof remain **NOT VERIFIED**, not SOURCE_EMPTY or paid-source-required.
+Recorder lookup. At that inventory checkpoint, source acquisition/entitlement and
+as-of adjustment proof were **NOT VERIFIED**, not SOURCE_EMPTY or paid-source-required.
 
 ### Outcome contract v2 (not Entry strategy v2)
 
@@ -291,6 +292,131 @@ duplicate application rejection, append-only, duplicate research idempotency,
 source/hash mismatch and backdated Forward rejection. Browser 1440/375/390/430
 uses that isolated DB/RLS and blocks external network. Its synthetic Owner is
 NOT Sony Production Owner proof. Production Session not used.
+
+## Historical Evidence P0 — executed public-source research acquisition
+
+Continued from approved `93a8ff77f0259780049922761802f6cc9bcc88d2`.
+No Production credential, Function invocation, SQL write, deployment, Migration,
+existing Prediction update or official Universe expansion was used.
+
+The local research CLI now acquires existing lawful public exchange data, with
+one global in-process 1.5-second request interval, concurrency one, 20-second
+request timeout, at most three attempts and capped Retry-After/backoff. Monthly
+TWSE requests and date-batched TPEx requests are normalized before writing an
+immutable hash-checked private cache outside this public repository. Company
+directory responses are whitelisted to symbol/industry/exchange/listing date;
+officers, contacts and all other fields are discarded in memory. Files are 0600,
+directories 0700. No raw Production fixture or provider/company payload is added
+to Git. Cache failures/duplicates/schema drift are explicit, never zero-filled.
+
+| Final raw-price research coverage, ending 2026-10-07 | OHLC | Volume (shares) | Amount (TWD) |
+|---|---:|---:|---:|
+| 20 completed TW sessions | 72/72 | 72/72 | 72/72 |
+| 60 completed TW sessions | 72/72 | 72/72 | 72/72 |
+| 120 completed TW sessions | 72/72 | 72/72 | 72/72 |
+
+All 8,640 symbol-session rows in the final 120-session window satisfy the current
+calendar, date uniqueness, positive values and OHLC consistency. This is
+**RETROSPECTIVE_PUBLIC_ACQUISITION**, with actual receipt timestamps on October8,
+not evidence available at either previously locked October7/8 cutoff. Original
+capsules remain 45 bars and are neither extended nor relabelled. A cache-only
+repeat required zero network requests (549 cache hits), with unchanged coverage.
+
+### Exact source reconciliation and adapter correction
+
+- [TWSE stock history](https://www.twse.com.tw/zh/trading/historical/stock-day.html): daily stock/month API supplies shares and TWD.
+- [TPEx individual history](https://www.tpex.org.tw/zh-tw/mainboard/trading/info/stock-pricing.html): rounded lots/thousands of TWD, explicitly **excluding block trades**. Multiplying by 1,000 does not restore precision or missing trades. It is retained for diagnosis only, never silently substituted into the final exact series.
+- [TPEx stock quotes](https://www.tpex.org.tw/zh-tw/mainboard/trading/info/pricing.html): exact shares/TWD including odd-lot, afterhours and block trades; one request/date serves all eleven in-scope TPEx stocks, filtered before caching. Date, schema and units are pinned; no fallback to the rounded monthly source.
+
+Initial monthly-source comparison exposed 1,978 field differences across 22
+date/symbol pairs, all TPEx volume/amount; OHLC matched. Switching the research
+adapter to the exact all-trade daily source yielded **6,480 overlapping retained
+bars / 144 date-symbol comparisons / zero field differences** across all six
+OHLCV/amount fields. Original Fugle evidence was not changed. This is a fixed
+research source-scope integration issue, not a Production Provider patch.
+Both acquisition passes had zero 429, timeout, exhausted retry or missing-symbol
+failures. Tests pin both unit/scoping contracts and reject wrong symbol/date,
+duplicate rows, partial sessions, changed units and unavailable prices.
+
+### Six missing peers: research expansion proposal, not a remap
+
+The original thematic groups still contain only two other peers each. Current
+exchange company classifications identify broader potential research pools:
+
+| Symbols | Official industry code | Other listed/OTC ordinary symbols in that current industry |
+|---|---|---:|
+| 1590 / 2049 / 4566 | 05 | 100 |
+| 2208 / 2634 | 15 | 33 |
+| 8033 | 20 | 93 |
+
+These public industry codes are **not equivalent** to the saved robotics or
+defense/aerospace themes; current listing status is not historical tradability.
+The private audit contains source-linked proposed peers and marks which are in
+the72. Proposal: separately curate economically comparable research peers using
+issuer business evidence, effective membership dates, same-cutoff candles and
+suspension/tradability checks; compare the broader industry baseline alongside
+the existing theme. Do not substitute it for the original required three peers,
+change official Recommendation Universe, or backdate classification. Saved
+sector coverage remains 66/72; six gaps are honestly unresolved.
+
+### Corporate actions and adjustment safety
+
+The same date range was checked against six official feeds: TWSE/TPEx ex-right,
+capital reduction and par-value-change results. Relevant results: 60 TWSE plus8
+TPEx ex-right events; zero in-scope reduction or par-value events in these queried
+feeds/windows. All60 TWSE dividend detail records were additionally fetched;
+TPEx exposes cash/bonus data directly. All68 events have sourced cash-per-share
+values, eight have positive bonus-share allocations, one TWSE event has cash
+subscription shares. Reference values, effective dates, receipt times and source
+URLs are retained without applying an adjustment. Combined rights/dividend
+value is never treated as cash; a price ratio is never invented as a split ratio.
+
+Sources: [TWSE ex-right](https://www.twse.com.tw/zh/announcement/ex-right/twt49u.html),
+[TWSE reduction](https://www.twse.com.tw/zh/announcement/reduction/twtauu.html),
+[TWSE par value](https://www.twse.com.tw/zh/announcement/change/twtb8u.html),
+[TPEx ex-right](https://www.tpex.org.tw/zh-tw/announce/market/ex/cal.html),
+[TPEx reduction](https://www.tpex.org.tw/zh-tw/announce/market/reduction/reference.html),
+[TPEx par value](https://www.tpex.org.tw/zh-tw/announce/market/change/reference.html).
+
+This inventory is **not COMPLETE_ACTION_CLEARANCE**. A complete rights/demerger/
+other-action feed, cash/payment/share-entitlement ledger, benchmark adjustment
+and prelocked trigger/stop adjustment policy remain absent. Therefore adjusted
+returns remain ineligible. No estimated factor or zero dividend fills the gap.
+Existing paid Fugle action entitlement was not read or assumed; a new paid source
+has not been shown necessary by this task.
+
+### Historical shapes versus executable investment outcomes
+
+An explicitly ex-post price-shape index finds crash/bounce, pullback/rise,
+breakout continuation, false breakouts, gap failures and high-volatility windows
+in these real public prices. It uses later bars **only to label the subsequent
+shape**, not as model input or locked evidence. Search predicates are separate
+diagnostic labels, not modified strategy thresholds. Windows carry known-action
+or incomplete-action warnings. The index is not a backtest, has no returns or
+win rate, and never writes a Prediction. Real as-of validation of those six
+strategy/outcome scenarios remains **UNVERIFIED** without contemporaneous
+fundamental/sector/event evidence and execution-order proof.
+
+The two approved real retained replays still reproduce 432 decisions exactly:
+READY0 / WAIT26 / AVOID370 / INSUFFICIENT36. They remain historical only.
+Forward Sample0; observed Outcome Sample0. Outcome regression continues to
+verify next legal session, no chase/gap invalidation, trigger expiry, suspension,
+costs/slippage, 1/3/5/10/20 maturity, missing benchmark and ambiguous same-bar
+stop/target. Daily OHLC never proves an actual fill or precise MFE/MAE/drawdown.
+No Paper Trade or synthetic performance is generated.
+
+Local commands (both environment paths must be private directories outside Git):
+
+```sh
+node --experimental-strip-types research/entry-history-acquire.mjs
+node --experimental-strip-types research/entry-corporate-actions.mjs
+node --experimental-strip-types research/entry-history-review.mjs
+```
+
+Use `MA_ENTRY_PRIVATE_FIXTURE_DIR` for the authorized existing minimized capsules
+and `MA_ENTRY_HISTORY_CACHE_DIR` for private public-source cache/reports. Defaults
+target the approved October8 study; acquisition is not a scheduled Producer.
+No new Production release permission is requested for these local-only tools.
 
 ## Release manifest / current limits
 

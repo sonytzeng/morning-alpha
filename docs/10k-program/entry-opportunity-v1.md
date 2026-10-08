@@ -51,17 +51,19 @@ prior range. No valid geometry means no fabricated prices. Net reward/risk >=2,
 maximum model risk 8%, and average twenty-session amount >=TWD50m are frozen
 research assumptions. They never change V1/V2.
 
-Costs: explicit illustrative buy/sell fee 0.1425% each, sell tax 0.3%, and
-0.1% slippage each side. Not actual account charges; minimum commissions and
-dividends are excluded. Prices are reference observations, not rounded order
+Entry screening costs: explicit illustrative buy/sell fee 0.1425% each, sell tax
+0.3%, and 0.1% slippage each side. Not actual account charges; the unchanged
+screening model excludes minimum commissions and dividends. Outcome models now
+separately lock quantity and minimum commissions before evaluation. Prices are reference observations, not rounded order
 instructions. Entry can only occur next legal session, strictly above trigger
 and inside the locked range; gap-chasing is NOT_ENTERED. One-session expiry.
 
 1/3/5/10/20 count TW trading sessions from the entry session. No result before
-maturity/availability. Same-bar stop and target use conservative stop-first;
-daily MFE/MAE are bounds, not tick accuracy. `close_or_exit_drawdown` uses daily
-closes and model exits, NOT intraday maximum drawdown or a capital-weighted
-account equity curve. Unverified adjustment/executability,
+maturity/availability. **Same-bar stop and target are UNCONFIRMED, with null
+return, not stop-first or favorable-first.** Daily MFE/MAE are bounds, not tick
+accuracy; exact MFE, MAE and maximum drawdown stay null. `close_or_exit_drawdown`
+is available only for a complete no-early-exit daily close model, NOT intraday
+maximum drawdown or a capital-weighted account equity curve. Unverified adjustment/executability,
 missing benchmark/session, suspended/zero-volume bars are unavailable, never
 zero-return wins. Historical, synthetic and missing-provenance records are
 excluded from Forward statistics.
@@ -91,7 +93,126 @@ a caller-provided true flag. The current saved V2 source contract has no such
 proof. The attempted write RPC was removed before sealing this draft; this is
 an explicit data integration gap. **Do not activate automatic outcome recording
 or pretend the complete Forward lifecycle is ready.** The isolated pure outcome
-calculator tests modeled costs/maturity/stop ordering, not a Production producer.
+calculator tests modeled costs/maturity/unknown ordering, not a Production producer.
+
+## Final Research Closure — data inventory (2026-10-08)
+
+The two private approved capsules are still the only exported real fixtures.
+`auditRetainedHistory` binds their input hashes, reuses the frozen V2 normalized
+SHARES/TWD adapter, and checks every required TW trading date, positive OHLCV /
+amount, duplicate session and original availability. No older bar is padded or
+newly acquired data relabelled as available at the old cutoff.
+
+| Retained cutoff | 20-session coverage | 60-session coverage | 120-session coverage | Valid sector comparison |
+|---|---:|---:|---:|---:|
+| 10/7 20:28 Taipei | 72/72 | 0/72 | 0/72 | 66/72 |
+| 10/8 14:33 Taipei | 72/72 | 0/72 | 0/72 | 66/72 |
+
+Each symbol has 45 retained bars. The existing acquisition requests **65 calendar
+days**, not 60 trading sessions (`recommendation-stock-evidence.ts`). It is not
+changed in this candidate. A new research-only request manifest uses the existing
+TW calendar to derive exact 20/60/120-session bounds, raw daily candles, bounded
+attempts/timeouts/pacing, no credentials, no live calls and no Production writes.
+It does not claim those requests have executed or that missing coverage is fixed.
+
+Lookback inventory of the frozen models, not new thresholds:
+
+| Model | Actual dependencies | 60/120 use in frozen V1 |
+|---|---|---|
+| Oversold reversal | ATR/drawdown 20; support 5; selling-pressure 6; confirmation 2 | Not consumed; long-cycle context unverified |
+| Pullback | SMA20/SMA10; support 5; volume comparison 6; confirmation 2 | Not consumed; **not** a proven medium-term trend |
+| Breakout | resistance/volume 20; extension SMA5; confirmation 2 | Not consumed; long-base breakout unverified |
+
+Their maximum currently happens to be 20; this is verified formula inventory,
+not an assumption that all future models need the same lookback. Adding 60/120
+as a decision requirement is a separately versioned methodology change, not a
+test fix. Historical completeness is audited even where the model does not use it.
+
+The six stocks belong to two saved sectors with three total symbols each, hence
+only two peers after excluding self, versus the unchanged three-peer requirement.
+Read-only Production `sector_stock_map` counts confirm each sector has three
+mapped and three active symbols: this is **UNIVERSE_COVERAGE_GAP**, not a parser
+failure. There are no additional mapped peers to borrow. Exact symbol-level
+details stay in the private local replay; no paid-data purchase is proven necessary.
+
+### Existing lawful sources and limits
+
+- [Fugle historical candles](https://developer.fugle.tw/docs/data/http-api/historical/candles/): daily candles supply volume in shares and turnover in TWD. A research query can request a longer date range. Vendor-adjusted histories may reflect subsequent actions; a response fetched now is not an as-of historical input.
+- [Fugle dividends](https://developer.fugle.tw/docs/data/http-api/corporate-actions/dividends/) and [capital changes](https://developer.fugle.tw/docs/data/http-api/corporate-actions/capital-changes/): documented event sources for dividends, rights, splits and capital reductions. These APIs have plan restrictions; this task did not read credentials or claim Production entitlement. Combined rights/dividend value is not cash alone. Split direction/ratio and cash entitlement need source-specific interpretation.
+- [TWSE daily history](https://wwwc.twse.com.tw/zh/trading/historical/stock-day.html) and [ex-right results](https://wwwc.twse.com.tw/zh/announcement/ex-right/twt49u.html): existing official alternatives, not a new paid vendor. The ex-right table excludes certain combined reduction/demerger cases and is not alone proof of complete company actions.
+- [TPEx ex-right results](https://www.tpex.org.tw/zh-tw/announce/market/ex/cal.html) and [capital-reduction reference](https://www.tpex.org.tw/en-us/announce/market/reduction/reference.html): exchange-specific official sources; reference-price changes must not be treated as trading gains or substituted for cash entitlement.
+
+Read-only schema inventory found no dedicated corporate-action/dividend/split
+tables in `public`. The 10/7–10/8 Provider Recorder endpoint inventory contains
+market quotes/tickers, not a corporate-action feed. The immutable V2 capsules
+retain stock daily histories but no complete action coverage or ordered trade
+path. These are distinct stores; do not infer an action-free window from an empty
+Recorder lookup. Historical source acquisition/entitlement and as-of adjustment
+proof remain **NOT VERIFIED**, not SOURCE_EMPTY or paid-source-required.
+
+### Outcome contract v2 (not Entry strategy v2)
+
+`ENTRY_OUTCOME_2.0.0` supersedes the draft stop-first calculator without changing
+any Entry strategy, threshold, Prediction, Production record or existing V2.
+
+1. A prospective lock digest binds symbol, strategy version, evidence hash,
+   evidence cutoff, evaluation/lock times, full prediction (including horizons,
+   trigger/invalidation/expiry) and cost assumptions. Cutoff <= evaluation <=
+   lock < the next eligible open. The one-session entry window remains frozen.
+   First tradable session after the signal is reported separately from that
+   locked strategy window: pre-open, intraday-next-trade and holiday/after-close
+   paths differ. The actual first executable tick always remains unconfirmed.
+   A hash is an integrity check, not proof of database immutability; no new
+   Outcome store RPC is enabled and the existing candidate triggers remain.
+2. An intraday daily-bar crossing cannot prove the first executable price or
+   whether an earlier low preceded entry: UNCONFIRMED, no reported return.
+   No crossing before expiry, opening invalidation, opening above the range,
+   or slippage outside the range have separate NOT_ENTERED reasons. Missing /
+   zero-volume sessions are unavailable, not a fabricated no-trade or flat return.
+3. An eligible opening observation can yield only **MODELLED**, never OBSERVED.
+   Queue priority, limit locks, suspension and trade capacity are not proved by
+   positive daily volume. Opening-gap exits are conservative hypotheses. If both
+   stop and target occur in a day without opening-order evidence, no path is
+   assumed. A minute bar with both levels would have the same ambiguity.
+4. Stock and benchmark require separate complete-window action coverage, source
+   reference, availability and content hash. Later adjusted candles are rejected.
+   An action in the window yields `CORPORATE_ACTION_TOTAL_RETURN_LEDGER_REQUIRED`:
+   cash/rights entitlements, split share ratios and the stop-adjustment policy
+   cannot be invented. **The candidate does not yet calculate adjusted outcomes
+   across these events.** Caller boolean `adjustment_verified/executable` removed.
+5. Model costs bind quantity, minimum commissions, two-sided fees/slippage and
+   sell tax. Conservative CEIL_TWD rounding and 0.3% tax are research assumptions,
+   not Sony account charges or a day-trade tax claim. Actual broker fees differ;
+   see [TWSE trading mechanism](https://www.twse.com.tw/en/products/system/trading.html).
+   No change to entry-screening thresholds or risk/reward policy.
+6. Five horizon maturities use trading sessions, not calendar days. Benchmarks
+   must have the same sessions and known availability. An index close cannot
+   stand for the benchmark at an intraday stop/target exit;
+   such benchmark/excess returns remain null. Daily excursion bounds
+   are separate from exact MFE/MAE; an exit-day partial path is not used to credit
+   unseen extrema. Intraday maximum drawdown is unavailable without ordered data.
+7. Model returns never enter observed Forward win-rate/expectancy/drawdown
+   summaries. Historical/synthetic rows remain excluded; duplicate IDs/horizons
+   must agree exactly. Forward Sample = 0, observed Outcome Sample = 0.
+
+The actual retained two-date replay still yields 432 judgments: READY 0, WAIT 26,
+AVOID 370, INSUFFICIENT 36; original V2 fact/status diff = 0. There is no real
+ENTRY_READY lock or matured fill in these fixtures to manufacture an Outcome.
+This task closes the unsafe draft **assumptions**, not the missing real evidence.
+Daily-path ambiguity, long-lookback coverage, action/entitlement lineage and
+ordered executable Outcome evidence remain explicit research gaps. No claim of
+crash-bottom, pullback-continuation or breakout profitability is made.
+
+### Exact release boundary
+
+The only existing release candidates remain the additive
+`20261008081315_entry_opportunity_owner_shadow_v1.sql`,
+`entry-opportunity-shadow-v1` and the Owner UI mount/component, all **not deployed**.
+No additional migration/function/secret/Cron/Auth/RLS change is introduced here.
+The new audit and Outcome modules run offline only. Production acquisition of
+longer/action histories and a verified Outcome persistence producer are not
+silently enabled by this PR; a concrete runtime manifest and Sony approval are
+required before those Production changes. Existing Forward records are untouched.
 
 ## Evidence and acceptance ledger
 

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {v2Hash,evaluateV2Shadow} from '../../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
 import {entryInputFromV2} from '../../research/entry-v2-adapter.ts';
 import {evaluateEntry,STRATEGIES} from '../../research/entry-opportunity.ts';
+import {auditRetainedHistory} from '../../research/entry-history.ts';
 
 // Offline research only. Never import this fixture adapter into a Production
 // writer: the projection digest is NOT the full retained input digest.
@@ -78,7 +79,8 @@ export async function replayEntryProjection(p,{projectionSha256,provenance}){
  const missing=normalized.stocks.filter(s=>s.sector_return===null).map(s=>({symbol:s.symbol,field:'sector_return',
   source:'AS_OF_V2_UNIVERSE_AND_COMPLETED_PEER_CANDLES',required_valid_peers:3,
   mapped_peers:p.input.data.universe.filter(x=>x.symbol!==s.symbol&&x.sector===p.input.data.universe.find(x=>x.symbol===s.symbol)?.sector).length}));
- return {result,normalized,summary:{date:result.business_date,cutoff:result.evaluation_time,source_locked_at:p.locked_at,
+ const history=await auditRetainedHistory(p.input,await v2Hash(p.input));
+ return {result,normalized,history,summary:{date:result.business_date,cutoff:result.evaluation_time,source_locked_at:p.locked_at,
   original_input_sha256:p.original_input_sha256,original_hash_verification:'RETAINED_LEDGER_ATTESTATION_NOT_RECOMPUTED_FROM_PROJECTION',
   projection_sha256:projectionSha256,projection_input_sha256:await v2Hash(p.input),provenance,
   saved_v2_diff:0,universe:result.universe,scanned:result.scanned,counts:result.counts,

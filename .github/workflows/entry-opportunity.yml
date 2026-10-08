@@ -21,7 +21,7 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno check --no-lock supabase/functions/entry-opportunity-shadow-v1/index.ts research/entry-outcomes.ts
+      - run: deno check --no-lock supabase/functions/entry-opportunity-shadow-v1/index.ts research/entry-outcomes.ts research/entry-history.ts
       - run: node --experimental-strip-types --test tests/entryOpportunity*.test.mjs
       - name: Fresh network-isolated DB and actual Owner authorization
         env:

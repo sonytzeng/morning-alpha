@@ -27,13 +27,19 @@
       "path": ".github/workflows/entry-opportunity.yml",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "053afe967406ab8cd6f5906a3a48d63ee83b6caaeb5aa1235444c2c4a0837194"
+      "candidate_sha256": "94ed6fad8b9be8c73245d41813a4cbc4580e0bdbccc266fc2efa182a8ddf24fb"
     },
     {
       "path": "docs/10k-program/entry-opportunity-v1.md",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "8e35dda87f0e19b5779662b57fce8f1a914b0636a34585ca895e817c6dada920"
+      "candidate_sha256": "79dd57e3d77c7f32c41cc5cf871e053a8b8a17527283a333b64cf92c9300ccc0"
+    },
+    {
+      "path": "research/entry-history.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "b18f6179782f7a718617ecfb5931d4a8d796d5173c06469db34a3bee54a2cac8"
     },
     {
       "path": "research/entry-opportunity.ts",
@@ -45,7 +51,7 @@
       "path": "research/entry-outcomes.ts",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "34dd54d6621dedb5cb599fd3be45ee622d74a6b4c0ff81bdfd1c5f4904b0e8f9"
+      "candidate_sha256": "f97184375f4b088f32518c2db6137ac46ebc149c1837c923bbb86d6136c7015b"
     },
     {
       "path": "research/entry-v2-adapter.ts",
@@ -63,7 +69,7 @@
       "path": "src/pages/admin/analysis/EntryOpportunity.tsx",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "86451b4d56abb577a6135613a18ca799f82c109a09ff7a32cc89acbddcfcfa20"
+      "candidate_sha256": "7bd2a1c1fb9a321d57b3187289663010849456cf9e5b93098c8350bba1fdfd65"
     },
     {
       "path": "src/pages/admin/analysis/page.tsx",
@@ -117,7 +123,7 @@
       "path": "tests/entryOpportunity.test.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "b18fe3dcbfb1829f993ef70d590b49597baa8657480574922d83edb28fc7f586"
+      "candidate_sha256": "a2a51b3a2cb9352b5b24e2eadbb278a164dd5a2203c7cb14e31793e0285e513d"
     },
     {
       "path": "tests/entryOpportunityDatabase.integration.mjs",
@@ -126,10 +132,22 @@
       "candidate_sha256": "f4f8f63a9111711564f3e9bf7ceb8f1a1bdebb0b0b7969256941643cd30501dd"
     },
     {
+      "path": "tests/entryOpportunityHistory.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "30b903568ad5eebd1292d9b3be1f1a217d42bdb3732284fe18b3b9aad1764d4a"
+    },
+    {
       "path": "tests/entryOpportunityIntegrity.test.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
       "candidate_sha256": "9f68a624b674fdd8665153bb1232c1cf03536d24d5c5e4c291e305a31594f2c5"
+    },
+    {
+      "path": "tests/entryOpportunityOutcome.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "b18cfb076e632b3622a91a0d0af987568797c544de05ac16594bc06ab31cb49b"
     },
     {
       "path": "tests/entryOpportunityProjection.test.mjs",
@@ -141,7 +159,7 @@
       "path": "tests/entryOpportunityRealReplay.integration.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "d16e1375d8d814205ca24ffd45ecaa40bb29abee3f7b65c7a510135ae76859d6"
+      "candidate_sha256": "91ee34f6d02abb6a2992e6011a05e8c68acb7e0a90fae69a4e87f0c7cd267126"
     },
     {
       "path": "tests/entryOpportunityWorker.test.mjs",
@@ -159,13 +177,13 @@
       "path": "tests/helpers/entryOpportunityIntegrity.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "fc902574373e985c29cd666e6d9612b2abe04036ec65ea933a83c625f6885f90"
+      "candidate_sha256": "1019ad242eef71813af16e58ba15add6c9318df1baf07035d30213a20f775b3a"
     },
     {
       "path": "tests/helpers/entryRetainedProjection.mjs",
       "operation": "ADD",
       "predecessor_sha256": null,
-      "candidate_sha256": "e0ec58bc2c502fdd079a45b5849369bf6ffe4523c8635512b24f50d27f3e08f7"
+      "candidate_sha256": "36f8fc6d21d224e7a3e63d4e1e2ba2d734d70034f06c46f99008799fed746efe"
     },
     {
       "path": "tests/helpers/marketNewsIntegrity.mjs",

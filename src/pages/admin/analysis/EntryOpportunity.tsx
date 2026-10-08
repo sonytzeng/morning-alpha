@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import type { EntryEvaluation, EntryResult, Strategy } from '../../../../research/entry-opportunity';
 
 const names: Record<Strategy, string> = { OVERSOLD_REVERSAL: '超跌反轉', PULLBACK_ENTRY: '趨勢回檔', BREAKOUT_CONTINUATION: '突破延續' };
-const states = { ENTRY_READY: '可以研究進場', WAIT_CONFIRMATION: '等待確認', AVOID_ENTRY: '不建議進場', INSUFFICIENT_EVIDENCE: '資料不足，暫不判斷' };
+const states = { ENTRY_READY: '可以研究進場', WAIT_CONFIRMATION: '等待確認', AVOID_ENTRY: '不建議進場', INSUFFICIENT_EVIDENCE: '暫時無法可靠判斷' };
 const stateColors = { ENTRY_READY:'text-forest-200', WAIT_CONFIRMATION:'text-amber-300', AVOID_ENTRY:'text-rose-300', INSUFFICIENT_EVIDENCE:'text-surface-300' };
 type OwnerEntryData = { owner_only: true; shadow_only: true; production_eligible: false; latest: EntryEvaluation | null;
   today_date: string; forward_sample: number; outcome_sample: number; historical_replay_count: number };
@@ -50,6 +50,8 @@ export function EntryOpportunityView({ data }: { data: OwnerEntryData }) {
     </article>:null}
     <section className={box}><h3 className="font-semibold">後來有沒有驗證？</h3><p className="mt-2">歷史研究 {data.historical_replay_count} · Forward 日期 {data.forward_sample} · Outcome {data.outcome_sample}</p>
       <p className="mt-2">目前樣本不足，尚不能判定投資策略有效。三種方法按 1／3／5／10／20 交易日分開驗證，未到期不補造績效。</p>
+      <p className="mt-2">只有每日最高、最低價時，不能確認是否成交，也不能判定同一天先停損還是先到目標。這類結果會保留為無法確認，不算勝率。</p>
+      <p className="mt-2">除權息或分割資料不完整時，暫時無法可靠判斷報酬。歷史重播不會計入事前驗證樣本。</p>
       <p className="mt-2 text-sm">Analysis Value：INSUFFICIENT_SAMPLE。研究、模擬交易與 Sony 實際交易績效各自獨立。</p></section>
   </section>;
 }

@@ -30,7 +30,11 @@ async function main(){
  assert(process.env.MA_ENTRY_PRIVATE_FIXTURE_DIR,'EXPLICIT_PRIVATE_FIXTURE_DIR_REQUIRED');
  globalThis.fetch=()=>{throw Error('OFFLINE_REPLAY_NETWORK_FORBIDDEN');};
  for(const date of Object.keys(APPROVED_PROJECTIONS)){
-  const {result,normalized,summary}=await readPrivateEntryReplay(process.env.MA_ENTRY_PRIVATE_FIXTURE_DIR,date);
+  const {result,normalized,summary,history}=await readPrivateEntryReplay(process.env.MA_ENTRY_PRIVATE_FIXTURE_DIR,date);
+  assert.deepEqual(history.coverage,{'20':72,'60':0,'120':0});
+  assert.equal(history.valid_sector_comparison,66);
+  assert(history.stocks.every(s=>s.retained_bars===45));
+  assert(history.stocks.filter(s=>s.sector_peers.reason==='UNIVERSE_COVERAGE_GAP').every(s=>s.sector_peers.mapped===2));
   assert.equal(result.scanned,72);assert.equal(result.candidates.length,216);
   assert.equal(result.counts.ENTRY_READY,0);assert.equal(result.counts.INSUFFICIENT_EVIDENCE,18);
   const expected=date==='2026-10-07'?[11,187]:[15,183];
@@ -45,7 +49,7 @@ async function main(){
   const labelControl=structuredClone(normalized);labelControl.provenance='SYNTHETIC_TEST';labelControl.market.value.direction='偏多';
   assert.deepEqual((await evaluateEntry(labelControl)).candidates.map(c=>c.status),result.candidates.map(c=>c.status),'DIRECTION_LABEL_MUST_NOT_AUTHORIZE_ENTRY');
   const {missing,...publicSummary}=summary;
-  console.log(JSON.stringify({...publicSummary,missing_symbols:missing.length,private_fixture_exported_to_git:false,negative_controls:'PASS'}));
+  console.log(JSON.stringify({...publicSummary,history_coverage:history.coverage,valid_sector_comparison:history.valid_sector_comparison,missing_symbols:missing.length,private_fixture_exported_to_git:false,negative_controls:'PASS'}));
  }
 }
 if(process.argv[1]&&realpathSync(process.argv[1])===fileURLToPath(import.meta.url))await main();

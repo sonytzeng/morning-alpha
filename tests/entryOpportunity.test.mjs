@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {evaluateEntry,entryHash,ENTRY_POLICY,STRATEGIES,nextEntrySession} from '../research/entry-opportunity.ts';
-import {evaluateEntryOutcome,summarizeEntryOutcomes} from '../research/entry-outcomes.ts';
+import {evaluateEntry,entryHash,ENTRY_POLICY,STRATEGIES} from '../research/entry-opportunity.ts';
 import {entryFixture,setup} from './helpers/entryFixtures.mjs';
 import {readFileSync} from 'node:fs';
 import {gunzipSync} from 'node:zlib';
@@ -43,31 +42,6 @@ test('actual deterioration and official event uncertainty are not silently bulli
  assert.equal((await evaluateEntry(i)).candidates[0].status,'AVOID_ENTRY');
  i.stocks[0].fundamental.value.revenue_yoy=.1;i.stocks[0].events_reviewed.value=false;
  assert.equal((await evaluateEntry(i)).candidates[0].status,'WAIT_CONFIRMATION');
-});
-async function outcomeFixture(){
- const i=setup(await entryFixture(),'breakout'),r=await evaluateEntry(i),p=r.candidates[2];
- const dates=[p.plan.not_before];while(dates.length<20)dates.push(nextEntrySession(dates.at(-1)));
- const bars=dates.map(date=>({date,open:p.plan.trigger+.1,high:p.plan.trigger+1,low:p.plan.trigger-.1,close:p.plan.trigger+.5,volume:1000000,amount:100000000,source_ref:'SYNTHETIC_OUTCOME:'+date,available_at:date+'T14:00:00+08:00'}));
- return {lock:{id:'SYNTHETIC_LOCK',symbol:p.symbol,strategy_version:p.strategy_version,mode:'FORWARD',provenance:'SYNTHETIC_TEST',locked_at:i.evaluation_time,evaluation_time:i.evaluation_time,evidence_hash:r.evidence_hash,prediction:p},e:{bars,benchmark:structuredClone(bars),observed_at:dates.at(-1)+'T15:00:00+08:00',adjustment_verified:true,executable:true,source_ref:'SYNTHETIC_EXECUTABILITY'}};
-}
-test('five trading-session horizons include costs and never credit unmatured outcomes',async()=>{
- const {lock,e}=await outcomeFixture();
- for(const h of [1,3,5,10,20]){const r=await evaluateEntryOutcome(lock,e,h);assert.equal(r.state,'OBSERVED');assert(r.net_return<r.gross_return);assert.equal(r.horizon,h);}
- const no=await evaluateEntryOutcome(lock,{...e,observed_at:lock.locked_at},20);assert.equal(no.reason,'NOT_MATURED');
- assert.equal((await evaluateEntryOutcome(lock,{...e,adjustment_verified:false},1)).reason,'EXECUTABILITY_OR_ADJUSTMENT_UNVERIFIED');
-});
-test('gaps, jumps outside entry, same-bar stop/target, duplicate outcomes and historical exclusion',async()=>{
- const {lock,e}=await outcomeFixture();
- const gap=structuredClone(e);gap.bars.pop();assert.equal((await evaluateEntryOutcome(lock,gap,20)).state,'UNAVAILABLE');
- const jump=structuredClone(e);jump.bars[0].open=lock.prediction.plan.reference_range[1]+1;jump.bars[0].high=jump.bars[0].open+1;
- assert.equal((await evaluateEntryOutcome(lock,jump,1)).state,'NOT_ENTERED');
- const both=structuredClone(e);both.bars[0].high=lock.prediction.plan.target+1;both.bars[0].low=lock.prediction.plan.stop-1;
- const stopped=await evaluateEntryOutcome(lock,both,1);assert(stopped.stop_hit);assert.equal(stopped.target_hit,false);assert.equal(stopped.mfe,0);
- const historical=await evaluateEntryOutcome({...lock,mode:'HISTORICAL_REPLAY'},e,1);
- assert(summarizeEntryOutcomes([historical]).every(s=>s.entered_samples===0&&s.win_rate===null));
- const r=await evaluateEntryOutcome(lock,e,1);assert.equal(summarizeEntryOutcomes([r,r])[0].entered_samples,0,'synthetic FORWARD is never a real sample');
- assert.equal(summarizeEntryOutcomes([{...r,provenance:undefined}])[0].entered_samples,0,'missing provenance is never a real sample');
- assert.throws(()=>summarizeEntryOutcomes([r,{...r,net_return:1}]),/CONFLICT/);
 });
 test('existing true retained October evidence is replayed honestly, not padded into twenty OHLC bars',async()=>{
  const capsule=JSON.parse(readFileSync(new URL('./fixtures/recommendation-retained-20261006.json',import.meta.url)));

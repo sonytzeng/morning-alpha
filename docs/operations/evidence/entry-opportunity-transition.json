@@ -1,0 +1,243 @@
+{
+  "schema_version": "ENTRY_OPPORTUNITY_CANDIDATE_TRANSITION_V1",
+  "base": "97d219ddf75a7edd788de5272533e17ffcaaf686",
+  "owner_only": true,
+  "shadow_only": true,
+  "functions": [
+    "entry-opportunity-shadow-v1"
+  ],
+  "migrations": [
+    "supabase/migrations/20261008081315_entry_opportunity_owner_shadow_v1.sql"
+  ],
+  "production_release_authorized": false,
+  "production_data_write": false,
+  "existing_auth_change": false,
+  "existing_rls_change": false,
+  "secret_change": false,
+  "cron_change": false,
+  "core_change": false,
+  "v1_change": false,
+  "v2_change": false,
+  "line_change": false,
+  "report_change": false,
+  "member_access": false,
+  "predecessor_sha256": "aaffd32a7a5b39d36acc7e37eecef782e2d67c9ffe0e89cc9797957dd8d6c3ff",
+  "files": [
+    {
+      "path": ".github/workflows/entry-opportunity.yml",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "ff3f4fffedf222a07fc4b79067f7a8b43435b095cf74d101dc2fa4c84c32f190"
+    },
+    {
+      "path": "docs/10k-program/entry-opportunity-v1.md",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "8cbf1c7f6d81ab0f04db677a1c6fe240b8598587e077a04aef683b50c729203f"
+    },
+    {
+      "path": "research/entry-corporate-actions.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "51c8e189de1a3c06283964e5f45291bf3d3c74735806f7fc8cf368e01daf4b89"
+    },
+    {
+      "path": "research/entry-history-acquire.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "c0e342438a3d136292b12fd6239f27dd4c42cd3e918d972d5092d95861703b0e"
+    },
+    {
+      "path": "research/entry-history-review.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "0b66d9381ee5aba47261fcd8406720d3c668fce57950b84d2806c39593b74629"
+    },
+    {
+      "path": "research/entry-history.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "b18f6179782f7a718617ecfb5931d4a8d796d5173c06469db34a3bee54a2cac8"
+    },
+    {
+      "path": "research/entry-official-history.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "b0dd603063b1e5487cbad4ff4feb98859445903f1381c8ea20dc00d566819e38"
+    },
+    {
+      "path": "research/entry-opportunity.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "c52ed2ce4f2d31010e295765eecea765a03856183e9a3db66854bacc47fde95a"
+    },
+    {
+      "path": "research/entry-outcomes.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "f97184375f4b088f32518c2db6137ac46ebc149c1837c923bbb86d6136c7015b"
+    },
+    {
+      "path": "research/entry-v2-adapter.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "0f984a7610533fca1b1b266ce0e0888457174b68ba3609881ed3234ef834c041"
+    },
+    {
+      "path": "research/entry-worker.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "ea0b6b52c19add225b0a799b0aa61d2b2b66b6d26a44b966433b2e6129063b81"
+    },
+    {
+      "path": "src/pages/admin/analysis/EntryOpportunity.tsx",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "7bd2a1c1fb9a321d57b3187289663010849456cf9e5b93098c8350bba1fdfd65"
+    },
+    {
+      "path": "src/pages/admin/analysis/page.tsx",
+      "operation": "MODIFY",
+      "predecessor_sha256": "9a4301c02517cb6b7b861579230d58f2b442d71dcfdf46758319c3c4b30c5710",
+      "candidate_sha256": "98a12f1e18f606fc5dfafb66e3387b7ff5392c4662c8259e3508b3c95bce4f2e"
+    },
+    {
+      "path": "supabase/functions/entry-opportunity-shadow-v1/index.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "0becba0a5035673fcb8b575f6c88e763fb7d059346f65598b4147c02918b3f97"
+    },
+    {
+      "path": "supabase/migrations/20261008081315_entry_opportunity_owner_shadow_v1.sql",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "e9c8d251746836769446691a8ef9cf0ae81a14737b5ce8fdabaff50b44a13161"
+    },
+    {
+      "path": "tests/analysisIntelligenceUI.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "85c0720c46da8d443625f83cc1c085010c5d9c89863583af92a7d7497914e7b7",
+      "candidate_sha256": "8746bd46e51b25ef437ea4a1eb752af7259060a597bef3d5648ab9a04affc71c"
+    },
+    {
+      "path": "tests/browser/entryOpportunity.e2e.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "ee8b77c61e20015b73d8ba7510bd677150fc20061acac42b380ee9f4a5e37b00"
+    },
+    {
+      "path": "tests/browser/entryOpportunity.vite.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "e542f1904cb9341f40e4476f1123d64e911e6a8da867fe2f972d86aecf717cff"
+    },
+    {
+      "path": "tests/browser/entryOpportunityHarness.tsx",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "aa394a2160ea0be1030cb5efce96de0ae07c6c260871b88d79cd20b52f3a591a"
+    },
+    {
+      "path": "tests/browser/entryOpportunitySupabaseMock.ts",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "6091a92448af448ab0c79a49d4632664aacf060673047027aea54b98e3d64123"
+    },
+    {
+      "path": "tests/entryOpportunity.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "a2a51b3a2cb9352b5b24e2eadbb278a164dd5a2203c7cb14e31793e0285e513d"
+    },
+    {
+      "path": "tests/entryOpportunityDatabase.integration.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "f4f8f63a9111711564f3e9bf7ceb8f1a1bdebb0b0b7969256941643cd30501dd"
+    },
+    {
+      "path": "tests/entryOpportunityHistory.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "30b903568ad5eebd1292d9b3be1f1a217d42bdb3732284fe18b3b9aad1764d4a"
+    },
+    {
+      "path": "tests/entryOpportunityIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "9f68a624b674fdd8665153bb1232c1cf03536d24d5c5e4c291e305a31594f2c5"
+    },
+    {
+      "path": "tests/entryOpportunityOfficialHistory.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "3ceddfd45e35488dab202c00abf3634a80f4c39cd0ee9b8376425af0e039ed3d"
+    },
+    {
+      "path": "tests/entryOpportunityOutcome.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "b18cfb076e632b3622a91a0d0af987568797c544de05ac16594bc06ab31cb49b"
+    },
+    {
+      "path": "tests/entryOpportunityProjection.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "eb4eb0a9568644b08afcd914df43ca71795876b728a2d5fe91c0ce168509e84d"
+    },
+    {
+      "path": "tests/entryOpportunityRealReplay.integration.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "91ee34f6d02abb6a2992e6011a05e8c68acb7e0a90fae69a4e87f0c7cd267126"
+    },
+    {
+      "path": "tests/entryOpportunityWorker.test.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "162e6ab716dd0906755640b12a54806288465c5d46396cfc3280337878cfe99c"
+    },
+    {
+      "path": "tests/helpers/entryFixtures.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "acaa1cc4dc8ea7bdcc54a3d558998c133e92f0edf01e1de660ec76f4bf764829"
+    },
+    {
+      "path": "tests/helpers/entryOpportunityIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "ede91d2379bd47f36e9cf16b46fb023558a19b358a173bb2fe9d2530c3448290"
+    },
+    {
+      "path": "tests/helpers/entryRetainedProjection.mjs",
+      "operation": "ADD",
+      "predecessor_sha256": null,
+      "candidate_sha256": "36f8fc6d21d224e7a3e63d4e1e2ba2d734d70034f06c46f99008799fed746efe"
+    },
+    {
+      "path": "tests/helpers/marketNewsIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "648ee580eb746580215be1182ba2bf1435331d612d2007a7fe106f9ef5189159",
+      "candidate_sha256": "9aea9069abd1dc0bfcc7cfd49daa0ef7ec96858b736daf1765e0d7ae06c003b4"
+    },
+    {
+      "path": "tests/marketNewsIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "cc842cb5ce4cbebb1f69fa72150c0aa2f6651442a2d4eb3418aeea697d8c0bd8",
+      "candidate_sha256": "23c0848d0234d2d2f3d47408d80acf461320eecd7c588b205f82ecb6216d5d0b"
+    },
+    {
+      "path": "tests/ownerAccountAnalysisNavigation.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "4879e2d9fa77a7a13c07f4682f25023ea643d29ef61f3bdf655a977f4e1817f1",
+      "candidate_sha256": "9ec412b80565f79ab1c6c8239e7c8199bb678c82200d62f0924b794cf0b6ceb9"
+    },
+    {
+      "path": "tests/productContract.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_sha256": "84297baa327abd9608781e36b428a77c9ae9888b8c4d7a985910e8b3a17b9721",
+      "candidate_sha256": "386d567ad49f9fae95b4852bea2db0ffd022eb89e45b7bb2d7964af889619e47"
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {ENTRY_BASE,entryAwareReader,entryTransition} from './entryOpportunityIntegrity.mjs';
 export const MARKET_NEWS_BASE='8500f0ec050cff4f948c43ae9e6236aa4d2a58ea';
 export const MARKET_NEWS_MANIFEST='docs/operations/evidence/market-news-transition-20261008.json';
 export const MARKET_NEWS_PATHS=[
@@ -30,6 +31,7 @@ export function marketNewsPrior(p){
  }return cache.get(p);
 }
 export function marketNewsTransition(source=read){
+ source=entryAwareReader(source);
  const m=JSON.parse(source(MARKET_NEWS_MANIFEST));
  assert.equal(m.schema_version,'MARKET_NEWS_ACQUISITION_TRANSITION_V1');assert.equal(m.base,MARKET_NEWS_BASE);
  assert.deepEqual(m.files.map(r=>r.path).sort(),MARKET_NEWS_PATHS,'exact named news scope');
@@ -52,10 +54,8 @@ export function marketNewsTransition(source=read){
 }
 export function marketNewsAwareReader(source=read){
  if(restored.has(source))return source;
+ source=entryAwareReader(source);
  try{source(MARKET_NEWS_MANIFEST);}catch(e){if(e.code==='ENOENT')return source;throw e;}
  return marketNewsTransition(source).predecessorRead;
 }
-export function marketNewsChangedPaths(){return [...new Set([
- ...execFileSync('git',['diff','--name-only','-z',MARKET_NEWS_BASE,'--'],{cwd:root,encoding:'utf8'}).split('\0'),
- ...execFileSync('git',['ls-files','--others','--exclude-standard','-z'],{cwd:root,encoding:'utf8'}).split('\0'),
- ].filter(Boolean))].sort();}
+export function marketNewsChangedPaths(){entryTransition();return execFileSync('git',['diff','--name-only','-z',MARKET_NEWS_BASE,ENTRY_BASE,'--'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean).sort();}

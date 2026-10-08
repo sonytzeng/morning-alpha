@@ -4,7 +4,8 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {MARKET_NEWS_BASE,MARKET_NEWS_MANIFEST,MARKET_NEWS_PATHS,marketNewsPrior,marketNewsTransition,marketNewsChangedPaths} from './helpers/marketNewsIntegrity.mjs';
 import {ownerBackendTransition} from './helpers/ownerBackendIntegrity.mjs';
-const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+import {entryAwareReader} from './helpers/entryOpportunityIntegrity.mjs';
+const read=entryAwareReader(p=>readFileSync(new URL('../'+p,import.meta.url)));
 test('news candidate preserves exact predecessor and has only one deployable Function, no Production authorization',()=>{
  const t=marketNewsTransition();ownerBackendTransition(t.predecessorRead);
  assert.deepEqual(marketNewsChangedPaths(),[...MARKET_NEWS_PATHS,MARKET_NEWS_MANIFEST].sort());

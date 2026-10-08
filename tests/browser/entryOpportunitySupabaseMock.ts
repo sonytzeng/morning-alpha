@@ -1,0 +1,3 @@
+let loggedOut=false;
+export const supabase={auth:{onAuthStateChange(fn:(event:string)=>void){const listener=()=>{loggedOut=true;fn('SIGNED_OUT');};window.addEventListener('synthetic-logout',listener);return {data:{subscription:{unsubscribe(){window.removeEventListener('synthetic-logout',listener);}}}};}},
+ rpc:async(name:string)=>{if(name!=='get_owner_entry_opportunity_v1')throw Error('UNEXPECTED_RPC');const params=new URLSearchParams(location.search),role=loggedOut?'anonymous':params.get('role')||'anonymous';const r=await fetch('/__entry_read?role='+encodeURIComponent(role)+'&date='+encodeURIComponent(params.get('date')||'2026-10-08'));return r.ok?{data:await r.json(),error:null}:{data:null,error:{code:'42501'}};}};

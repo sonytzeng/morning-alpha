@@ -28,6 +28,6 @@ test('Forward authorization does not silently permit production methodology or s
  for(const key of ['new_secrets','cron_changes','core_auth_changes','rls_policy_changes','v1_threshold_changes','promotion','member_access','business_backfill'])
   assert.throws(()=>v2ForwardTransition(changedManifest(m=>{m[key]=true;})));
  for(const path of ['supabase/config.toml','supabase/functions/_shared/internal-function-auth.mjs','supabase/functions/_shared/recommendation-shadow-v2-engine.ts','supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts','supabase/functions/_shared/decision-v1-evidence.ts','supabase/functions/line-daily-push/index.ts'])
-  assert.deepEqual(read(path),forwardPrior(path),path);
+  assert.deepEqual(lineCardTransition().predecessorRead(path),forwardPrior(path),path);
  for(const change of [m=>m.functions.push('unreviewed-function'),m=>m.migrations.push('unreviewed.sql')])assert.throws(()=>v2ForwardTransition(changedManifest(change)));
 });

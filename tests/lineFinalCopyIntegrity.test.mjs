@@ -7,7 +7,7 @@ test('final copy exact approved file set, hashes and predecessor, business sourc
  const t=lineCopyTransition();assert.deepEqual(lineCopyChangedPaths(),[...LINE_COPY_PATHS,LINE_COPY_MANIFEST].sort());
  for(const r of t.manifest.files){if(r.operation==='ADD')assert.throws(()=>t.predecessorRead(r.path),{code:'ENOENT'});else assert.deepEqual(t.predecessorRead(r.path),lineCopyPrior(r.path));}
  for(const p of ['supabase/functions/line-daily-push/index.ts','supabase/functions/_shared/line-daily-flex-message.mjs','supabase/functions/_shared/market-publication-contract.ts',
-  'supabase/functions/_shared/recommendation-shadow-v2-engine.ts','supabase/functions/get-report-payload/index.ts','supabase/config.toml','src/pages/admin/analysis/page.tsx'])assert.deepEqual(read(p),lineCopyPrior(p),p);
+  'supabase/functions/_shared/recommendation-shadow-v2-engine.ts','supabase/functions/get-report-payload/index.ts','supabase/config.toml','src/pages/admin/analysis/page.tsx'])assert.deepEqual(t.predecessorRead(p),lineCopyPrior(p),p);
 });
 test('unknown bytes/files, rewritten history and sensitive promotion fail closed',()=>{
  for(const p of LINE_COPY_PATHS)assert.throws(()=>lineCopyTransition(path=>path===p?Buffer.concat([read(path),Buffer.from('DRIFT')]):read(path)),/unreviewed candidate drift/);

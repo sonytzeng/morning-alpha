@@ -9,11 +9,11 @@ import { assembleCanonicalMarketResearch } from '../supabase/functions/generate-
 import { buildCanonicalMarketState, canonicalMarketSourceRefs } from '../supabase/functions/_shared/canonical-market-state.ts';
 import { evaluateMarketReportGate } from '../supabase/functions/_shared/market-report-gate.ts';
 import { evaluatePublishedMarketDelivery, fetchPublishedDeliveryEvidence } from '../supabase/functions/_shared/market-publication-contract.ts';
-import { buildLineDailyFlexMessage } from '../supabase/functions/_shared/line-daily-flex-message.mjs';
+import { buildPublishedLineDecision } from '../supabase/functions/_shared/line-production-template.ts';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const lineSource = read('supabase/functions/line-daily-push/index.ts');
-const buildLineMessage = isolatedFunction(lineSource, 'buildLineMessage', { buildLineDailyFlexMessage });
+const buildLineMessage = isolatedFunction(lineSource, 'buildLineMessage', { buildPublishedLineDecision });
 const PRIVATE = 'SYNTHETIC_PRIVATE_STOCK_8999';
 const PRIVATE_COPY = 'UNREVIEWED_STOCK_COPY_987654';
 const NOW = '2026-09-09T04:00:00.000Z';
@@ -86,13 +86,13 @@ async function delivery(f, options = {}, trace = []) {
     evaluateMarketReportGate(f.report.ai_strategy_json, f.report.report_date),
     { now: NOW, todayDate: f.report.report_date, publicationRun: persisted.publicationRun, ...options });
 }
-function assertMarketOnly(result) {
+function assertMarketOnly(result, f) {
   assert.equal(result.eligible, true, JSON.stringify(result.reason_codes));
   assert.equal(result.projection.recommendation.available, false);
   assert.deepEqual(result.projection.recommendation.items, []);
-  const rendered = JSON.stringify(buildLineMessage(result, 'https://example.invalid'));
-  assert.match(rendered, /推薦評估證據不足，今日暫不發布正式個股推薦/);
-  assert.match(rendered, /完整市場證據與盤中驗證/);
+  const rendered = JSON.stringify(buildLineMessage(result, 'https://example.invalid', f.report, f.snapshot, f.gate));
+  assert.match(rendered, /今天的正式個股評估資料尚未完整/);
+  assert.match(rendered, /查看今日完整分析/);
   assert.doesNotMatch(rendered, /SYNTHETIC_PRIVATE_STOCK|UNREVIEWED_STOCK_COPY|987654|5 檔排序|無強受惠股|待驗證\/100/);
   return rendered;
 }
@@ -106,7 +106,7 @@ for (const core of [false, true]) test((core ? 'CORE' : 'legacy') + ': committed
   // its current market editorial prerequisites. Both run the actual evaluator.
   if (core) { ai.today_quote = PRIVATE_COPY; ai.v8_daily_sentence = { sentence: PRIVATE_COPY }; }
   const before = JSON.stringify(f), result = await delivery(f);
-  assertMarketOnly(result);
+  assertMarketOnly(result, f);
   assert.equal(JSON.stringify(f), before, 'Projection never mutates persisted mode/action/identity/confidence or research');
   assert.equal(f.snapshot.decision_mode, 'recommendations');
   assert.equal(result.projection.marketDecision.summary,
@@ -122,7 +122,7 @@ test('CORE frozen proof survives failed current market/member/stock QA and never
   f.member.status = 'BLOCKED'; f.member.semantic_coherence_reviews[0].status = 'BLOCKED';
   assert.equal(evaluateMarketReportGate(ai, f.report.report_date).eligible, false);
   const before = JSON.stringify(f), result = await delivery(f);
-  assertMarketOnly(result); assert.deepEqual(result.reason_codes, []);
+  assertMarketOnly(result, f); assert.deepEqual(result.reason_codes, []);
   assert.equal(JSON.stringify(f), before);
 });
 
@@ -133,14 +133,14 @@ test('explicit empty committed recommendations never revive qualified raw aliase
   const result = evaluatePublishedMarketDelivery(f.report, f.snapshot, f.member, gate,
     { now: NOW, todayDate: f.report.report_date, publicationRun: f.publicationRun, premiumEligible: true });
   assert.equal(result.eligible, true); assert.deepEqual(result.projection.recommendation.items, []);
-  assert.doesNotMatch(JSON.stringify(buildLineMessage(result, 'https://example.invalid')), /SYNTHETIC_PRIVATE_STOCK|987654|UNREVIEWED_STOCK_COPY/);
+  assert.doesNotMatch(JSON.stringify(buildLineMessage(result, 'https://example.invalid', f.report, f.snapshot, f.gate)), /SYNTHETIC_PRIVATE_STOCK|987654|UNREVIEWED_STOCK_COPY/);
 });
 
 test('Premium unavailable suppresses a qualified recommendation projection without revoking market receipt', () => {
   const f = fixture(), gate = { ...f.gate, recommendation_gate: { ...f.gate.recommendation_gate, status: 'QUALIFIED', eligible: true } };
   const result = evaluatePublishedMarketDelivery(f.report, f.snapshot, f.member, gate,
     { now: NOW, todayDate: f.report.report_date, publicationRun: f.publicationRun, premiumEligible: false });
-  assertMarketOnly(result);
+  assertMarketOnly(result, f);
 });
 
 for (const mode of ['market_only', 'no_trade']) test('current stock QA cannot promote committed ' + mode + ' to recommendations', () => {
@@ -149,7 +149,7 @@ for (const mode of ['market_only', 'no_trade']) test('current stock QA cannot pr
   const gate = { ...f.gate, recommendation_gate: { ...f.gate.recommendation_gate, status: 'QUALIFIED', eligible: true } };
   const result = evaluatePublishedMarketDelivery(f.report, f.snapshot, f.member, gate,
     { now: NOW, todayDate: f.report.report_date, publicationRun: f.publicationRun, premiumEligible: true });
-  assertMarketOnly(result); assert.equal(f.snapshot.decision_mode, mode);
+  assertMarketOnly(result, f); assert.equal(f.snapshot.decision_mode, mode);
 });
 
 test('qualification of different current symbols does not expose frozen unadmitted recommendations', () => {
@@ -157,21 +157,22 @@ test('qualification of different current symbols does not expose frozen unadmitt
   const gate = { ...f.gate, recommendation_gate: { ...f.gate.recommendation_gate, status: 'QUALIFIED', eligible: true } };
   const result = evaluatePublishedMarketDelivery(f.report, f.snapshot, f.member, gate,
     { now: NOW, todayDate: f.report.report_date, publicationRun: f.publicationRun, premiumEligible: true });
-  assertMarketOnly(result);
+  assertMarketOnly(result, f);
 });
 
 test('same-symbol qualified committed recommendations remain available through the actual formatter', () => {
-  const f = fixture(); f.report.ai_strategy_json.today_beneficiary_stocks_v10 = [{ symbol: PRIVATE }];
+  const f = fixture(); f.report.ai_strategy_json.today_beneficiary_stocks_v10 = [{ symbol: '2330' }];
+  f.snapshot.generated_text.recommendations = [{ symbol: '2330', name: '台積電', reason: '合成測試：量價條件一致' }];
   const gate = { ...f.gate, recommendation_gate: { ...f.gate.recommendation_gate, status: 'QUALIFIED', eligible: true } };
   const result = evaluatePublishedMarketDelivery(f.report, f.snapshot, f.member, gate,
     { now: NOW, todayDate: f.report.report_date, publicationRun: f.publicationRun, premiumEligible: true });
   assert.equal(result.eligible, true); assert.equal(result.projection.recommendation.available, true);
-  assert.equal(result.projection.recommendation.items[0].symbol, PRIVATE);
-  assert.match(JSON.stringify(buildLineMessage(result, 'https://example.invalid')), /SYNTHETIC_PRIVATE_STOCK_8999/);
+  assert.equal(result.projection.recommendation.items[0].symbol, '2330');
+  assert.match(JSON.stringify(buildLineMessage(result, 'https://example.invalid', f.report, f.snapshot, gate)), /台積電（2330）/);
 });
 
 test('actual reader pins report/snapshot/member/run identities and ignores newer private QA', async () => {
-  const f = fixture(), trace = []; assertMarketOnly(await delivery(f, {}, trace));
+  const f = fixture(), trace = []; assertMarketOnly(await delivery(f, {}, trace), f);
   const receipt = trace.find(row => row.table === 'pipeline_runs');
   for (const [key, value] of [['id', f.publicationRun.id], ['provider_status->result->>report_id', f.report.id],
     ['provider_status->result->>report_date', f.report.report_date], ['provider_status->result->>decision_snapshot_id', f.snapshot.id],
@@ -208,10 +209,10 @@ const negatives = [
   ['wrong frozen ledger source', f => { f.snapshot.source_refs[0].source = 'unbound-source'; }],
 ];
 for (const [name, mutate] of negatives) test('CORE refuses ' + name, async () => {
-  assertMarketOnly(await delivery(fixture()));
+  const valid = fixture(); assertMarketOnly(await delivery(valid), valid);
   const f = fixture(); mutate(f); const result = await delivery(f);
   assert.equal(result.eligible, false, name);
-  assert.throws(() => buildLineMessage(result, 'https://example.invalid'), /MARKET_DELIVERY_PROJECTION_UNAVAILABLE/);
+  assert.throws(() => buildLineMessage(result, 'https://example.invalid', f.report, f.snapshot, f.gate), /LINE_TEMPLATE_PUBLICATION_IDENTITY_INVALID/);
 });
 
 for (const mode of ['recommendations', 'market_only', 'no_trade']) test('legacy ' + mode + ' never allows absent publication pointers', async () => {
@@ -224,7 +225,7 @@ for (const mode of ['recommendations', 'market_only', 'no_trade']) test('legacy 
 test('legacy retains committed member/semantic PASSED and strict editorial proof', async () => {
   for (const mutate of [f => { f.member.status = 'BLOCKED'; }, f => { f.member.semantic_coherence_reviews[0].status = 'BLOCKED'; },
     f => { f.member.semantic_coherence_reviews[0].reason_codes = ['unreviewed']; }, f => { f.snapshot.content_score = 89; }]) {
-    assertMarketOnly(await delivery(fixture({ core: false })));
+    const valid = fixture({ core: false }); assertMarketOnly(await delivery(valid), valid);
     const f = fixture({ core: false }); mutate(f); assert.equal((await delivery(f)).eligible, false);
   }
 });

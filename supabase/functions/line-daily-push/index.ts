@@ -5,7 +5,7 @@ import { resolveMarketStatus } from '../_shared/market-status.ts';
 import { evaluatePremiumContentGate } from '../_shared/premium-content-gate.ts';
 import { evaluateMarketReportGate } from '../_shared/market-report-gate.ts';
 import { buildDeliveryIncidentLineMessage } from '../_shared/line-incident-message.ts';
-import { buildLineDailyFlexMessage } from '../_shared/line-daily-flex-message.mjs';
+import { buildPublishedLineDecision } from '../_shared/line-production-template.ts';
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 import type { RuntimeDatabase } from '../_shared/runtime-database-contract.ts';
 import { evaluatePublishedMarketDelivery } from '../_shared/market-publication-contract.ts';
@@ -324,7 +324,7 @@ Deno.serve(async (req) => {
   }
 
   // 4. 組成 LINE push message
-  const message = buildLineMessage(deliveryState, siteUrl);
+  const message = buildLineMessage(deliveryState, siteUrl, report, decisionSnapshot!, marketGate);
   let delivery: DeliverySummary;
   try {
     delivery = await deliverOutboxMessage({
@@ -873,26 +873,11 @@ function buildMarketClosedLineMessage(siteUrl: string) {
 function buildLineMessage(
   delivery: ReturnType<typeof evaluatePublishedMarketDelivery>,
   siteUrl: string,
+  report: Record<string, unknown>,
+  snapshot: Record<string, unknown>,
+  gate: ReturnType<typeof evaluateMarketReportGate>,
 ) {
-  if (!delivery.eligible || !delivery.projection.analysisAvailable) throw new Error('MARKET_DELIVERY_PROJECTION_UNAVAILABLE');
-  const projection = delivery.projection;
-  const recommendations = projection.recommendation.available ? projection.recommendation.items : [];
-  // Renderer mode is presentation-only. Never rewrite the persisted publication
-  // mode/action/revision merely because today's stock evidence became unavailable.
-  const displayMode = projection.recommendation.available ? 'recommendations'
-    : projection.recommendation.status === 'NO_QUALIFIED_OPPORTUNITY' ? 'no_trade' : 'market_only';
-  return buildLineDailyFlexMessage({
-    reportDate: projection.identity.reportDate,
-    bias: projection.marketDecision.bias || '方向待確認',
-    todayLine: [projection.researchNotice && projection.reportLevel==='DEGRADED' ? projection.researchNotice : '',
-      projection.marketDecision.summary || ''].filter(Boolean).join('\n'),
-    opportunity: delivery.marketContent.opportunity || '',
-    risk: delivery.marketContent.risk || '',
-    avoid: delivery.marketContent.avoid || '',
-    confirmation: delivery.marketContent.confirmation || '',
-    decisionMode: displayMode, recommendations, siteUrl,
-    recommendationMessage: projection.recommendation.message,
-  });
+  return buildPublishedLineDecision(delivery, report, snapshot, gate, siteUrl);
 }
 
 function parseAiStrategy(value: unknown): Record<string, unknown> {

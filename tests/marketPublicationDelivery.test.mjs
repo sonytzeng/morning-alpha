@@ -1,3 +1,4 @@
+import { buildPublishedLineDecision } from '../supabase/functions/_shared/line-production-template.ts';
 // Isolated read/payload tests only: no external request, outbox or notification.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -153,14 +154,14 @@ test('actual orchestrator state treats valid market publication independently of
 test('LINE market-only payload does not reuse private recommendation aliases or imply no-qualified universe',()=>{
   const source=entries[0].source,functions={};
   const names=['parseRecord','parseAiStrategy','firstText','firstArrayText','clipLine','inferOpportunity','buildLineMessage'];
-  const deps={evaluatePremiumContentGate,buildLineDailyFlexMessage,Date,Intl,...Object.fromEntries(names.map(name=>[name,(...args)=>functions[name](...args)]))};
+  const deps={evaluatePremiumContentGate,buildPublishedLineDecision,Date,Intl,...Object.fromEntries(names.map(name=>[name,(...args)=>functions[name](...args)]))};
   for(const name of names)functions[name]=isolatedFunction(source,name,deps);
   const f=fixture();f.report.ai_strategy_json.line_push_copy={opportunity:'SYNTHETIC_PRIVATE_STOCK',do_not_do:'SYNTHETIC_PRIVATE_STOCK',risk:'SYNTHETIC_PRIVATE_STOCK'};
   const delivery=evaluatePublishedMarketDelivery(f.report,f.snapshot,f.member,f.gate);
-  const message=functions.buildLineMessage(delivery,'https://example.invalid');
+  const message=functions.buildLineMessage(delivery,'https://example.invalid',f.report,f.snapshot,f.gate);
   const rendered=JSON.stringify(message);assert.equal(message.type,'flex');
-  assert.match(rendered,/推薦評估證據不足，今日暫不發布正式個股推薦/);
-  assert.match(rendered,new RegExp(delivery.marketContent.confirmation));assert.doesNotMatch(rendered,/SYNTHETIC_PRIVATE_STOCK|無強受惠股|NO_QUALIFIED_OPPORTUNITY|待驗證\/100|5 檔排序/);
+  assert.match(rendered,/今天的正式個股評估資料尚未完整/);
+  assert.match(rendered,/查看今日完整分析/);assert.doesNotMatch(rendered,/SYNTHETIC_PRIVATE_STOCK|無強受惠股|NO_QUALIFIED_OPPORTUNITY|待驗證\/100|5 檔排序/);
 });
 
 test('verified Production v59 recommendation/no_trade Flex output is preserved byte-for-byte',()=>{

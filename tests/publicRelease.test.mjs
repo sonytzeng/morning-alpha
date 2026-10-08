@@ -1,3 +1,4 @@
+import {linePromotionPrior} from './helpers/lineProductionPromotionIntegrity.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
@@ -478,7 +479,8 @@ test('runtime deployment and missing checkpoint schedules are reproducible', () 
   assert.doesNotMatch(runtimeCheckpointWorkflow, /^\s*schedule:/m);
 });
 
-test('LINE retains verified Production v59 Flex layout and refuses evidence-blocked stock delivery', () => {
+test('rollback baseline retains verified Production v59 Flex layout and refuses evidence-blocked stock delivery', () => {
+  const lineDailyPush=linePromotionPrior('supabase/functions/line-daily-push/index.ts').toString();
   const flex=read('supabase/functions/_shared/line-daily-flex-message.mjs');
   assert.match(lineDailyPush, /return buildLineDailyFlexMessage\(/);
   for(const label of ['今日盤前決策','今日主線','成立條件','失效條件']) assert.match(flex,new RegExp(label));
@@ -950,7 +952,7 @@ test('report, site payload, and LINE converge on the same immutable decision sna
   const publication = read('supabase/functions/_shared/market-publication-contract.ts');
   assert.match(publication, /generated = record\(snapshot\?\.generated_text\)/);
   assert.match(publication, /\.eq\('report_date', String\(report\.report_date\)\)\.eq\('report_id', String\(report\.id\)\)\.eq\('id', revision\)/);
-  assert.match(lineDailyPush, /buildLineMessage\(deliveryState, siteUrl\)/);
+  assert.match(lineDailyPush, /buildLineMessage\(deliveryState, siteUrl, report, decisionSnapshot!, marketGate\)/);
   assert.doesNotMatch(lineDailyPush, /canonicalText = parseRecord\(decisionSnapshot\?\.generated_text\)/);
   assert.match(closingVerification, /opening_decision_snapshot_id/);
   assert.match(closingVerification, /p_session_type:\s*"CLOSING"/);
@@ -986,7 +988,9 @@ test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempo
   assert.match(lineDailyPush, /message\/multicast/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);
   assert.match(lineDailyPush, /customAggregationUnits/);
-  assert.match(lineDailyPush, /todayLine: \[projection\.researchNotice && projection\.reportLevel==='DEGRADED' \? projection\.researchNotice : '',\s*projection\.marketDecision\.summary \|\| ''\]\.filter\(Boolean\)\.join\('\\n'\)/);
+  assert.match(lineDailyPush, /return buildPublishedLineDecision\(delivery, report, snapshot, gate, siteUrl\)/);
+  const composition=read('supabase/functions/_shared/line-production-template.ts');
+  assert.match(composition,/operationalMarket:delivery\.operational_market,reportLevel:p\.reportLevel/);
   const publication=read('supabase/functions/_shared/market-publication-contract.ts');
   assert.match(publication, /const document = canonicalMarketDocument\(frozenPresent \? generated : ai\)/);
   assert.match(publication, /const summary = marketDocumentVerified \? pointer\(record\(sections\.executive_summary\)\.text\)/);

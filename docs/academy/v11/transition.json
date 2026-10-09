@@ -63,7 +63,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "9b9824f5090deea87b9e844fcd53589ee32e46efe76d6ab2c9c5170a5dd59cc5"
+      "candidate_sha256": "3d8b28dd473fd07ae3a3d2468da4017e3b54b4417beffca6778a895ef75d6d56"
     },
     {
       "path": "scripts/academy-v11/auth-preview.mjs",

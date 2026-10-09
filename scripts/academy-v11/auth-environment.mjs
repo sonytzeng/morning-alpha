@@ -22,7 +22,9 @@ export async function startAuthEnvironment(){
  const secret=randomBytes(48).toString('hex'),password=randomBytes(24).toString('hex');
  const env={...process.env,POSTGRES_PASSWORD:password,GOTRUE_DB_DATABASE_URL:`postgres://postgres:${password}@${db}:5432/postgres?search_path=auth`,GOTRUE_JWT_SECRET:secret,PGRST_DB_URI:`postgres://authenticator:${password}@${db}:5432/postgres`,PGRST_JWT_SECRET:secret};
  const cleanup=()=>{for(const id of [rest,auth,db]){try{run(['rm','-f','-v',id]);}catch{/* only our disposable containers */}}try{run(['network','rm',name]);}catch{/* already gone */}};
- const sql=s=>run(['exec','-i',db,'psql','-XqAt','-U','postgres','-v','ON_ERROR_STOP=1'],{input:s});
+ // TCP excludes the image's temporary socket-only init server, which stops
+ // before the final server starts. A socket probe can race that shutdown in CI.
+ const sql=s=>run(['exec','-i',db,'psql','-h','127.0.0.1','-XqAt','-U','postgres','-v','ON_ERROR_STOP=1'],{input:s});
  const jwt=claims=>{const h=Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url'),p=Buffer.from(JSON.stringify(claims)).toString('base64url');return h+'.'+p+'.'+createHmac('sha256',secret).update(h+'.'+p).digest('base64url');};
  const anon=jwt({role:'anon',iss:'supabase',iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+86400});
  try{

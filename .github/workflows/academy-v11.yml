@@ -28,3 +28,5 @@ jobs:
           MA_ACADEMY_TEST_USER: postgres
           PGPASSWORD: isolated-academy-only
         run: node --experimental-strip-types scripts/academy-v11/fresh-db.mjs
+      - name: Real local Supabase Auth password login and PostgREST RLS
+        run: node scripts/academy-v11/auth-environment.mjs

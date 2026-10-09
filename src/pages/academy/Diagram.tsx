@@ -10,7 +10,7 @@ const DEMO_CANDLES = [
 const DEFAULT_ZONES = [{ label: '支撐區', low: 98, high: 100 }, { label: '壓力區', low: 108, high: 110 }];
 const format = (value: number) => Number(value.toFixed(2)).toString();
 
-export default function Diagram({ diagram }: { diagram: AcademyDiagram }) {
+export default function Diagram({ diagram, member = false }: { diagram: AcademyDiagram; member?: boolean }) {
   const { kind, caption } = diagram;
   const titleId = useId();
   const [selected, setSelected] = useState(0), [step, setStep] = useState(0), [zone, setZone] = useState(0);
@@ -38,7 +38,7 @@ export default function Diagram({ diagram }: { diagram: AcademyDiagram }) {
   const missing = kind === 'volume' && !hasVolume || kind === 'trend' && values.length === 0 || kind === 'steps' && !diagram.labels;
   const labelText = candlePlot ? `第 ${selected + 1} 根 K 線：開 ${candle.open}、高 ${candle.high}、低 ${candle.low}、收 ${candle.close}` : staged ? `第 ${step + 1} 階段：${labels[step]}` : kind === 'risk' ? `示例：進場 ${risk.entry}，停止 ${risk.stop}，目標 ${risk.target}` : caption;
   return <figure className="academy-diagram">
-    <div className="academy-diagram-heading"><span>INTERACTIVE STUDY</span><span>{dataProvided ? '依匯入資料繪製 · 教學示意' : '原創通用示意 · 非真實行情'}</span></div>
+    <div className="academy-diagram-heading"><span>{member ? '動手看圖' : 'INTERACTIVE STUDY'}</span><span>{member ? '原創教學示意 · 非真實行情' : dataProvided ? '依匯入資料繪製 · 教學示意' : '原創通用示意 · 非真實行情'}</span></div>
     {missing ? <p className="academy-diagram-missing" role="status">此圖所需的{kind === 'volume' ? '成交量資料' : kind === 'steps' ? '步驟標籤' : '數值序列'}尚未提供，未代填其他圖形。</p> : kind === 'steps' || kind === 'cycle' ? <div className={`academy-stage-flow ${kind === 'cycle' ? 'is-cycle' : ''}`} aria-label={kind === 'cycle' ? '循環階段' : '流程步驟'}>
       {labels.slice(0, step + 1).map((label, i) => <div key={i} className={i === step ? 'is-current' : ''}><span>{String(i + 1).padStart(2, '0')}</span><strong>{label}</strong>{i < step && <span aria-hidden="true">↓</span>}</div>)}
       <p role="status">已揭露 {step + 1}／{labels.length} 階段{kind === 'cycle' && step === labels.length - 1 ? ' · 循環示意，不保證重複發生' : ''}</p>
@@ -70,6 +70,6 @@ export default function Diagram({ diagram }: { diagram: AcademyDiagram }) {
     {kind === 'zones' && <div className="academy-segments" role="group" aria-label="選擇區域">{levels.map((level, i) => <button type="button" key={i} aria-pressed={zone === i} onClick={() => setZone(i)}>觀察{level.label}</button>)}</div>}
     {kind === 'risk' && <dl className="academy-risk-math"><div><dt>每單位風險</dt><dd>{format(Math.abs(risk.entry - risk.stop))}</dd></div><div><dt>示例潛在報酬</dt><dd>{format(Math.abs(risk.target - risk.entry))}</dd></div><div><dt>示例報酬／風險</dt><dd>{format(Math.abs(risk.target - risk.entry) / Math.abs(risk.entry - risk.stop))} : 1</dd></div></dl>}
     {staged && !missing && <><div className="academy-segments" role="group" aria-label="分步圖解">{labels.map((label, i) => <button type="button" key={i} aria-pressed={step === i} onClick={() => setStep(i)}>{i + 1}. {label}</button>)}</div><div className="academy-step-controls"><button type="button" disabled={step === 0} onClick={() => setStep(s => s - 1)}>上一步</button><span role="status">步驟 {step + 1}／{labels.length} · {labels[step]}</span><button type="button" disabled={step === labels.length - 1} onClick={() => setStep(s => s + 1)}>下一步</button></div></>}
-    <figcaption>{caption}<small>{dataProvided ? '圖解由本機課程資料驅動；不是即時行情或投資建議。' : '通用操作示意；私人章節可提供數值、標籤及步驟界線覆寫。'}</small></figcaption>
+    <figcaption>{caption}<small>{member ? '點選圖形或下方按鈕，逐步觀察。示意價格不是即時行情，也不是投資建議。' : dataProvided ? '圖解由本機課程資料驅動；不是即時行情或投資建議。' : '通用操作示意；私人章節可提供數值、標籤及步驟界線覆寫。'}</small></figcaption>
   </figure>;
 }

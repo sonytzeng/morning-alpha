@@ -35,14 +35,14 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "13fb7ab7e72400c0bf718aa4c26e5746e3001e8cbc7c6d7b20fddcd67dd09a4d"
+      "candidate_sha256": "44e8f2f5e5d0d21ec8ae86e2f09f1285e792f36a1605f69a115db5c917575681"
     },
     {
       "path": "docs/academy/v11/ACCEPTANCE.md",
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "5421cc388977153d14d42d632932a42a5ee979e1b5fa4823147f27ff6d223a17"
+      "candidate_sha256": "23bb77e07c5ec5899f9b6947ef71ad7abf821591c3d8cb813e15434d6f5df3d4"
     },
     {
       "path": "docs/academy/v11/RIGHTS.md",
@@ -57,6 +57,20 @@
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
       "candidate_sha256": "710fb24b411d632920019b25ff9436f167dad69d5403cc20af633b958b7819ca"
+    },
+    {
+      "path": "scripts/academy-v11/auth-environment.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "9b9824f5090deea87b9e844fcd53589ee32e46efe76d6ab2c9c5170a5dd59cc5"
+    },
+    {
+      "path": "scripts/academy-v11/auth-preview.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "184ce8cfff341b45d068378de3924377bddd2e817473e52f9f5d7ea59bac0921"
     },
     {
       "path": "scripts/academy-v11/build-pdf.py",
@@ -87,11 +101,18 @@
       "candidate_sha256": "62ac4bae6a958124a0be7ef2cd7fc5f319129359975ac9c970240f18dc599c75"
     },
     {
+      "path": "src/pages/academy/Diagram.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6ad78d0fdd23c0bcc4470351b3c74612b60f4404",
+      "predecessor_sha256": "82c04e725dcc3bc186867a60ef0a615f88e82e665f285a2096b92e1af48d4214",
+      "candidate_sha256": "3d548fd151df00ae977e1ffac759eb18483a17a604d825464bc8932ce30326de"
+    },
+    {
       "path": "src/pages/academy/MemberAcademy.tsx",
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "35cec191d3f6fbf228eee033322cbfb8b48b9c1d841ccb30f7ee07cee5074625"
+      "candidate_sha256": "a59a916fe4a96127e27defd92679896ead1909ea382da046e976383bd7390731"
     },
     {
       "path": "src/pages/academy/member.css",
@@ -129,6 +150,13 @@
       "candidate_sha256": "7ee94151c69eab608e6f62d59a1ea563d7b4dbbc25195d74ec19eeb814713116"
     },
     {
+      "path": "tests/academyV11Copy.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "51b20d448c8e51f8fed28f5529c3a501c70bb645d6fd15c1c954a9c46792696b"
+    },
+    {
       "path": "tests/academyV11Database.test.mjs",
       "operation": "ADD",
       "predecessor_git_sha": null,
@@ -148,6 +176,27 @@
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
       "candidate_sha256": "59f139ca3367ddce937c6c7a7b505cea719e8917d0cbbf9b2bb55e4aa40eae5b"
+    },
+    {
+      "path": "tests/browser/academy-auth.client.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "52f2fb77c9a90c03c307e49ebaa11df8bfbc9ff45fad81570cdf762eab3876d4"
+    },
+    {
+      "path": "tests/browser/academy-auth.harness.tsx",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "53eb4f6d478b995354dec0dd6831a6b7b2afb8f0b83d1058e7579ee307c50c58"
+    },
+    {
+      "path": "tests/browser/academy-auth.vite.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "9ff64985d8e1be3f8847cf44cd31a3614c02ce847fea2d1c62889446f44f2813"
     },
     {
       "path": "tests/browser/academy-v11.e2e.mjs",
@@ -203,7 +252,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "155b17f33e206e48205a8b7f7f3bb99e42384e01d816f615809304c8f52f99f3"
+      "candidate_sha256": "f9dbff000c0772cd47113dbe6c62608631f44c8321db96e4d63df97ca6d4986e"
     },
     {
       "path": "tests/productContract.test.mjs",

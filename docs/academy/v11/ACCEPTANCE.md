@@ -44,11 +44,49 @@ server harness, never in the production app. Sony may explore free and Premium
 flows here. This is NOT a real Owner/member authentication or Production E2E
 claim. Nothing from the harness is imported by the production build.
 
-`OWNER_BROWSER_E2E = NOT_RUN`: the new RPC/content are intentionally not deployed,
-and no authorized staging environment with a real Sony identity is available.
-Existing Production Owner access to other pages cannot prove this new flow.
-Do not recommend Production release until this remaining gate is completed in
-an approved environment. Production changes, merge and deploy remain prohibited.
+The original synthetic preview remains a test tool, NOT a login acceptance result.
+
+## Real Auth final acceptance (2026-10-09)
+
+An independent, loopback-only environment now runs the actual Supabase Auth
+v2.194.0, PostgREST v14.13 and PostgreSQL 17. No hosted project, paid environment,
+Production account copy, Production credential, new Production Secret or existing
+Auth/RLS change is involved. Accounts register through GoTrue and log in with
+passwords; PostgREST verifies their signed JWTs before the candidate RPC/RLS runs.
+Owner access uses the exact existing `is_research_owner_v1` SQL predicate against
+isolated account records. There is no client role selector or custom auth mock.
+
+- Owner, Free, Premium and second Free account: real Auth password login PASS.
+- Free 7 chapters / 14 questions; Premium and Owner 10 chapters / 23 questions,
+  using the unchanged reviewed original curriculum and PDFs in the local DB.
+- Free direct Premium lesson/PDF request DENY; anonymous DENY; changed user_metadata
+  cannot elevate access; forged JWT rejected by PostgREST.
+- Real browser: answer and complete stock-basics, reload retains completion;
+  logout clears lesson/progress; second account sees zero completion; first
+  account logs in again and sees its saved completion. API regression also tests
+  revoked refresh token, database row isolation and independent re-login.
+- Direct Premium URL with `role=owner` remains locked for Free.
+- All ten original lessons at 1440 / 375 / 390 / 430: 40 checks, zero horizontal
+  overflow or first-layer engineering copy. Screenshots reviewed at all four
+  widths; browser error/warning logs empty.
+- Member headings and instructions are Traditional Chinese. The separate local
+  acceptance login disclosure is collapsed by default and is not production UI.
+- The private V1 diagram defaults and private importer remain unchanged; member
+  diagrams opt into separate plain-language captions.
+
+`ISOLATED_REAL_AUTH_E2E = PASS`; `PRODUCTION_OWNER_BROWSER_E2E = NOT_RUN`.
+The test Owner is a legitimate local Auth account, not Sony's Production account.
+Production migration and public member launch still require Sony's separate
+approval. No Production E2E or Sony usability PASS is claimed.
+
+Reproduce API/DB acceptance: `node scripts/academy-v11/auth-environment.mjs`.
+The script owns and cleans only its new disposable containers/network. CI uses
+synthetic lesson content; local reviewed-material acceptance supplies the existing
+hash-pinned private course/PDF directory. Start the latter with
+`node scripts/academy-v11/auth-preview.mjs`; Preview is
+`http://127.0.0.1:3219/academy`. It uses Supabase JS password login and real HTTP
+Auth/REST, not the older 3218 role-selector harness. No teacher materials are
+included in either public test code or the member content.
 
 ## Future release manifest — NOT executed
 
@@ -57,7 +95,8 @@ an approved environment. Production changes, merge and deploy remain prohibited.
 2. Reviewed original course/PDF content load into those new academy tables;
    exact hashes pinned in content-manifest.json, no teacher-source upload.
 3. Member Academy UI plus the report educational link.
-4. Real authenticated free/Premium/Owner acceptance, logout and cross-user checks.
+4. Controlled post-release real authenticated free/Premium/Owner acceptance,
+   logout and cross-user checks; preserve the pre-release isolated Auth evidence.
 
 No new Function, Secret, Cron, paid service, business-data backfill, existing
 policy change or Signal Lab promotion is proposed. Production execution needs

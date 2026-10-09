@@ -18,6 +18,21 @@ test('search name or symbol and exact state without promoting waiting',()=>{
  assert.equal(m.filterResearch(rows,'台積','ALL').length,1);assert.equal(m.filterResearch(rows,'2330','ENTRY_READY').length,0);
  assert.equal(m.entryNames.WAIT_CONFIRMATION,'值得觀察，等待確認');
 });
+test('holiday stock labels are bounded display metadata, never fabricated or conflicting',()=>{
+ const rows=[{symbol:'2330',stock_name:' 台積電 '},{symbol:'2330',stock_name:'台積電'},{symbol:'2317',stock_name:'甲'},{symbol:'2317',stock_name:'乙'},{symbol:'9999',stock_name:'不在研究內'},{symbol:'1101',stock_name:''}];
+ const names=m.researchStockNames(rows,['2330','2317','1101']);
+ assert.deepEqual(JSON.parse(JSON.stringify(names)),{'2330':'台積電'});
+ assert.equal(Object.keys(m.researchStockNames(null,['2330'])).length,0);
+ const original={symbol:'2330',status:'WAIT_CONFIRMATION',name:undefined};
+ const display={...original,name:names[original.symbol]};
+ assert.equal(m.filterResearch([display],'台積','ALL').length,1);
+ assert.equal(original.name,undefined);assert.equal(display.status,original.status);
+ const ui=read('src/pages/admin/analysis/OwnerCockpit.tsx');
+ assert(ui.includes(".select('symbol,stock_name').in('symbol',symbols).limit(1000)"));
+ assert(ui.includes('symbols.length<=72'));assert(ui.includes('setCatalogNames({})'));
+ assert(ui.includes('active&&g===generation&&!names.error'));
+ assert(ui.indexOf('const names=await supabase.from')>ui.indexOf('setEntry(parsed)'));
+});
 test('insufficient evidence suppresses even an accidentally attached price plan',()=>{
  const plan={reference_range:[100,101],stop:90,target:120,risk_distance:10,reward_space:20,reward_risk:2};
  assert.equal(m.safePlan({status:'INSUFFICIENT_EVIDENCE',plan}),null);

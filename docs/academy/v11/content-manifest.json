@@ -1,0 +1,91 @@
+{
+  "version": "ACADEMY_MEMBER_V11",
+  "rights": "ORIGINAL_MEMBER_EDUCATION",
+  "curriculum_sha256": "4166269a55f7dc185f2b2d989a575934e13335dae140f8ba479e5c0c4e9253e1",
+  "pdf_sha256": {
+    "free": "be8cd3463872d57d9a46a9a0fe1dac338a698eb9caeb2a53c05d9dc9ac7ff554",
+    "premium": "8dd8f3d3b5d6a5b2fe12e0399345b702595623565473ed9233f767fc8ddcd2b3"
+  },
+  "chapters": [
+    {
+      "id": "stock-basics",
+      "tier": "free",
+      "title": "股票是什麼：先懂風險，再看價格",
+      "position": 1,
+      "questions": 2,
+      "sha256": "99ad9a86147f679e0cf555551e0040454c1c050c43fa3d8d634387e932372ba0"
+    },
+    {
+      "id": "candles",
+      "tier": "free",
+      "title": "一根 K 線：開、高、低、收",
+      "position": 2,
+      "questions": 2,
+      "sha256": "09eb897dd0b2ae24a268926cc94a993b69029c182695ba43db91a234540c4209"
+    },
+    {
+      "id": "volume",
+      "tier": "free",
+      "title": "成交量：價格之外的參與程度",
+      "position": 3,
+      "questions": 2,
+      "sha256": "771cd4e1a4b3b73aebfca66df5ec22805d5231b8f39fcdfcaafe2066ad0daf9a"
+    },
+    {
+      "id": "support-basic",
+      "tier": "free",
+      "title": "支撐與壓力：用區域，不用神奇價位",
+      "position": 4,
+      "questions": 2,
+      "sha256": "1a4a0d3a30ab4ba90b0711f662a66ef43c48a7d99649192f2f7b1ace8bdd24b2"
+    },
+    {
+      "id": "candles-basic",
+      "tier": "free",
+      "title": "六種常見 K 線外觀：先描述，不預言",
+      "position": 5,
+      "questions": 2,
+      "sha256": "63c1821410644b5e4b12f04fe4bcdb95e3d1892d0355f018584181dd8993b5fc"
+    },
+    {
+      "id": "trend-basic",
+      "tier": "free",
+      "title": "起漲與起跌：分清觀察與確認",
+      "position": 6,
+      "questions": 2,
+      "sha256": "9adb5f0cb8e070ceb78a7ebc6235eb749d28ff292846d9773ed468d2a70d5bf0"
+    },
+    {
+      "id": "practice-basic",
+      "tier": "free",
+      "title": "把報告名詞變成自己的觀察清單",
+      "position": 7,
+      "questions": 2,
+      "sha256": "628c42839c2ec7cb198de55b8d01ed5854a8af74c1f579157c1d7dad16cff5a2"
+    },
+    {
+      "id": "support-advanced",
+      "tier": "premium",
+      "title": "支撐壓力完整練習：區域、時間與失效",
+      "position": 8,
+      "questions": 3,
+      "sha256": "82930c845569f9c2c9853e73855b274fbe678e6ae794ac95fb3cc6a18610370f"
+    },
+    {
+      "id": "candles-advanced",
+      "tier": "premium",
+      "title": "六種外觀完整練習：放回位置與量能",
+      "position": 9,
+      "questions": 3,
+      "sha256": "717bff1183b29f03544922b6a4af94f5ed1542bc1de64f42d6e42093bc170625"
+    },
+    {
+      "id": "trend-advanced",
+      "tier": "premium",
+      "title": "轉折與延續完整練習：假設、確認、回顧",
+      "position": 10,
+      "questions": 3,
+      "sha256": "3d577aa86b868b8c576b452e2449c0fe5b7dc87c2ea9115aca1e5b2335b1b45f"
+    }
+  ]
+}

@@ -33,8 +33,13 @@ const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
 const AuthCallbackPage = lazy(() => import("../pages/auth/AuthCallbackPage"));
 const LearnPage = lazy(() => import("../pages/learn/page"));
 const AlphaCoachPage = lazy(() => import("../pages/alpha-coach/page"));
+const AcademyPage = lazy(() => import("../pages/academy/page"));
 
 const routes: RouteObject[] = [
+  {
+    path: "/academy",
+    element: <DeferredRoute><AcademyPage /></DeferredRoute>,
+  },
   {
     path: "/",
     element: <Home />,

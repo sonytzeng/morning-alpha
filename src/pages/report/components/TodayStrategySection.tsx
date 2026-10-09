@@ -129,6 +129,9 @@ export default function TodayStrategySection({ report }: TodayStrategySectionPro
       <p className="text-white/25 text-[10px] text-center">
         以上為 AI 市場觀察，不構成投資建議。所有決策請自行判斷。
       </p>
+      <a href="/academy?lesson=support-basic" className="inline-flex min-h-11 items-center gap-1 text-xs text-teal-300/80 underline underline-offset-4 hover:text-teal-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4">
+        想先理解支撐與壓力？前往學院基礎課程 →
+      </a>
     </div>
   );
 }

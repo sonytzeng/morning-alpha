@@ -1,0 +1,205 @@
+{
+  "schema_version": "ACADEMY_CANDIDATE_TRANSITION_V1",
+  "base": "e2a99f6677a5a31f3c7f403dfa5180fb46498c97",
+  "predecessor_manifest": "docs/operations/evidence/owner-cockpit-transition.json",
+  "predecessor_sha256": "3297a2702103dd1bc5e06f5b482331272660b6f6bbada59f785019b37128265a",
+  "functions": [],
+  "migrations": [],
+  "new_secret_names": [],
+  "owner_only": true,
+  "production_deploy_authorized": false,
+  "production_release_authorized": false,
+  "production_data_write": false,
+  "existing_auth_change": false,
+  "existing_rls_change": false,
+  "secret_change": false,
+  "cron_change": false,
+  "core_change": false,
+  "strategy_change": false,
+  "line_change": false,
+  "report_change": false,
+  "member_access": false,
+  "forward_enabled": false,
+  "outcome_enabled": false,
+  "legacy_backfill": false,
+  "private_material_in_repo": false,
+  "ai_enabled": false,
+  "paid_api_enabled": false,
+  "files": [
+    {
+      "path": "docs/academy/README.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "7639278b98cad0824cb01d862ca0b47b9f56abb3e107d4b9b10e0f90f9cc51ef"
+    },
+    {
+      "path": "src/features/academy/model.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "a9281a5b31e910985423b60861515011449e58b607080bcc8cfebada3942c62f"
+    },
+    {
+      "path": "src/pages/academy/Diagram.tsx",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "82c04e725dcc3bc186867a60ef0a615f88e82e665f285a2096b92e1af48d4214"
+    },
+    {
+      "path": "src/pages/academy/Quiz.tsx",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "c6291a1ed1e727b5e129116a6432c56a81c421dfd9cd9f1d0c6895ded58b6d31"
+    },
+    {
+      "path": "src/pages/academy/academy.css",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "eff1f2c1c34c552921725dbd7b2558533b9e4334a32d17ea4f89cac08ed34a43"
+    },
+    {
+      "path": "src/pages/academy/content.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "9994490d514e90e464cf26474dce57c3fd436d2fe85a5d4352477ae8704abeab"
+    },
+    {
+      "path": "src/pages/academy/page.tsx",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "b779049de372be63e0b93dea743c30bef7dea2426639c012d7ca0ef41072f2ff"
+    },
+    {
+      "path": "src/pages/academy/progress.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "5dbe2480cc5ef7a0562470ac20d03b72973b907decb82c3c6006b50873071ce8"
+    },
+    {
+      "path": "src/pages/academy/useOwnerAccess.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "72a57c7ea90de24bc28cc465a093848a949385ea0469b6bd0b8e47dc60d54e73"
+    },
+    {
+      "path": "src/router/config.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "e2a99f6677a5a31f3c7f403dfa5180fb46498c97",
+      "predecessor_sha256": "9d4036a3da6111758bd226468b84de6e80e6f194577b5354327a8716b0f43641",
+      "candidate_sha256": "991db4bfe3c2ed88a81dc2909c7292ff327da90e59e20c10e785d434c89a7b21"
+    },
+    {
+      "path": "tests/academyCandidateTransition.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "83f33b526244fe9488579b11777955b8d464bf50ea882f8f12714a405682f9b2"
+    },
+    {
+      "path": "tests/academyIntegrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "7b54e0f5a91cfab86b64b39068ced5231e72b24182a876a0174c94a06dfeb20d"
+    },
+    {
+      "path": "tests/academyModel.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "afcb45eec1be352d6f85d947b24468d816deb3e81cb1de47fb6e05a4821fae65"
+    },
+    {
+      "path": "tests/browser/academy.e2e.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "df2761e6c060f1895379f3ae4a180dc8433a49069e19a1a21d1bffa31ba2c2b3"
+    },
+    {
+      "path": "tests/browser/academy.html",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "78f2903a5d6b2c740798dcb34450152405885b5e0e45dce16ecdbfb53e0dc646"
+    },
+    {
+      "path": "tests/browser/academy.private.e2e.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "461ce6346a12b66a77ee66c041adb4711f9d226498bab364b61d26b2589b3e68"
+    },
+    {
+      "path": "tests/browser/academy.production.e2e.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "ba54bd99e16bf77b3d48c39ae67a2727ea8d7d99e14263f5971b13d8344cd5fc"
+    },
+    {
+      "path": "tests/browser/academy.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "209a8838a9e3e7a69818f1a52196fbe2f6af2219200bd58420607fc603e8da67"
+    },
+    {
+      "path": "tests/browser/academy.vite.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "7c65ca572605cbfd196c5321ae6e600a5f8ae6efe0718e43eb21b53b8e77894b"
+    },
+    {
+      "path": "tests/browser/academyFixture.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "68df77ed7100c070da5801c148438ec2cf8be1d789fafecb4d05ba62a01587d2"
+    },
+    {
+      "path": "tests/browser/academyHarness.tsx",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "78b6f73f524867630779c9b603c79ace7e6b730b4ff717cde49053a1feb1b416"
+    },
+    {
+      "path": "tests/browser/academySupabaseMock.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "3c3bd5dbb1e82cffff3cd87c29555aa0e83401760d50e07875556440a8a0ce15"
+    },
+    {
+      "path": "tests/helpers/academyCandidateIntegrity.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "5269b91e532a3402d1e6aaabb149563c54d543ec7bf34b9efc8ad5fd96202489"
+    },
+    {
+      "path": "tests/helpers/ownerCockpitIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "e2a99f6677a5a31f3c7f403dfa5180fb46498c97",
+      "predecessor_sha256": "04cce263a0a26bbced8e5f1632f89682eb93de1cdca617d6e340a565dcd712b5",
+      "candidate_sha256": "03c83b2426072ae2a5885ae512ffeb16f1e839b55de5d5f22b1b64b602989e65"
+    },
+    {
+      "path": "tests/ownerCockpitIntegrity.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "e2a99f6677a5a31f3c7f403dfa5180fb46498c97",
+      "predecessor_sha256": "c8e269de56072ba6bc1ca71f8ac6b36fac8210d9affa6dd64e8a858e7a29de3a",
+      "candidate_sha256": "a90d129c6af1cc7ad1982e1ec960cdb8d2d35eb86bf99edf4e941efd95e047a0"
+    }
+  ]
+}

@@ -15,7 +15,7 @@ const read=p=>readFileSync(new URL('../../'+p,import.meta.url),'utf8');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 const run=(args,options={})=>{
  try{return execFileSync('docker',args,{encoding:'utf8',stdio:['pipe','pipe','pipe'],maxBuffer:8e6,...options}).trim();}
- catch(error){const detail=String(error.stderr||'').split('\n').filter(line=>/^(ERROR|FATAL|HINT):/.test(line)).join(' ').replace(/[a-f0-9]{32,}/g,'[redacted]');throw Error('LOCAL_ACADEMY_DOCKER_OPERATION_FAILED: '+args[0]+' '+detail);}
+ catch(error){const detail=String(error.stderr||'').replace(/postgres:\/\/[^@\s]+@/g,'postgres://[redacted]@').replace(/[a-f0-9]{32,}/g,'[redacted]').replace(/eyJ[\w.-]+/g,'[redacted]').split('\n').slice(-8).join(' ').slice(0,2000);throw Error('LOCAL_ACADEMY_DOCKER_OPERATION_FAILED: '+args[0]+' '+detail);}
 };
 export async function startAuthEnvironment(){
  const name='ma-academy-auth-'+process.pid,db=name+'-db',auth=name+'-auth',rest=name+'-rest';

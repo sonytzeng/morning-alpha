@@ -118,6 +118,24 @@ export function academyV11Transition(source = read, changedPaths = academyV11Cha
 }
 
 function restoreV11(source, changedPaths, verifyHistoricalView) {
+  const candidate = restoreV11Candidate(source, changedPaths);
+  for (const [path, bytes] of baselineBytes()) {
+    if (candidate.before.has(path)) continue;
+    // Always read actual raw bytes afresh. The default source IS this exact
+    // reader, so a second call would only repeat the same filesystem check.
+    assert.deepEqual(read(path), bytes, 'protected V1.1 working-tree bytes: ' + path);
+    if (verifyHistoricalView && source !== read) {
+      const actual = source(path);
+      assert.deepEqual(actual, typeof actual === 'string' ? bytes.toString('utf8') : bytes,
+        'protected V1.1 historical view: ' + path);
+    }
+  }
+  return { manifest: candidate.manifest, predecessorRead: candidate.predecessorRead };
+}
+
+// Candidate admission alone is private and is NEVER a release gate. Both
+// callers below independently perform the mandatory live baseline check.
+function restoreV11Candidate(source, changedPaths) {
   const m = JSON.parse(source(ACADEMY_V11_MANIFEST));
   assert.deepEqual(Object.keys(m).sort(), [
     'schema_version', 'base', 'predecessor_manifest', 'predecessor_sha256',
@@ -152,17 +170,6 @@ function restoreV11(source, changedPaths, verifyHistoricalView) {
     assert.notEqual(row.candidate_sha256, row.predecessor_sha256, 'unchanged V1.1 candidate row: ' + row.path);
     before.set(row.path, bytes);
   }
-  for (const [path, bytes] of baselineBytes()) {
-    if (before.has(path)) continue;
-    // Verify actual raw bytes regardless of whether source is a historical or
-    // adversarial reader. UTF-8 view equivalence cannot replace binary protection.
-    assert.deepEqual(read(path), bytes, 'protected V1.1 working-tree bytes: ' + path);
-    if (verifyHistoricalView) {
-      const actual = source(path);
-      assert.deepEqual(actual, typeof actual === 'string' ? bytes.toString('utf8') : bytes,
-        'protected V1.1 historical view: ' + path);
-    }
-  }
   const predecessorRead = path => {
     if (path === ACADEMY_V11_MANIFEST) throw absent(path);
     if (!before.has(path)) return source(path); // Preserve unrelated injected errors.
@@ -171,20 +178,40 @@ function restoreV11(source, changedPaths, verifyHistoricalView) {
     return Buffer.from(bytes);
   };
   restored.add(predecessorRead);
-  return { manifest: m, predecessorRead };
+  return { manifest: m, predecessorRead, before };
 }
 
 /** Only fixture content outside the V1.1 candidate is delegated. Candidate
  * hashes/scope/lineage/flags and real unrelated bytes are checked identically.
  * Historical absence is not release approval: the mandatory gate above fails.
  */
-export function academyV11AwareReader(source = read, changedPaths = academyV11ChangedPaths()) {
+export function academyV11AwareReader(source = read, changedPaths) {
   if (restored.has(source)) return source;
   try { source(ACADEMY_V11_MANIFEST); } catch (error) {
     if (error.code === 'ENOENT' && source !== read) return source;
     throw error;
   }
-  return restoreV11(source, changedPaths, false).predecessorRead;
+  return restoreV11(source, changedPaths ?? academyV11ChangedPaths(), false).predecessorRead;
+}
+
+/** Two views for ONE V1 invocation, not a reusable validation cache.
+ * Admit a custom historical candidate without scanning real bytes twice, then
+ * unconditionally validate the REAL current inventory, hashes and every raw
+ * baseline byte. Running the live gate LAST also catches mutations performed
+ * by a custom source callback. No caller supplies or reuses a live proof.
+ */
+export function academyV11PredecessorViews(source) {
+  let historical = source;
+  if (source !== undefined && !restored.has(source)) {
+    let present = true;
+    try { source(ACADEMY_V11_MANIFEST); } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      present = false;
+    }
+    if (present) historical = restoreV11Candidate(source, academyV11ChangedPaths()).predecessorRead;
+  }
+  const actualPredecessorRead = academyV11ActualPredecessorReader();
+  return { predecessorRead: historical ?? actualPredecessorRead, actualPredecessorRead };
 }
 
 /** The only reader V1 should use in place of its direct real-filesystem check.

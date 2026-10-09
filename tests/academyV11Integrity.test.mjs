@@ -5,12 +5,13 @@ import childProcess from 'node:child_process';
 import { syncBuiltinESMExports } from 'node:module';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { academyTransition, academyAwareReader, academyPrior } from './helpers/academyCandidateIntegrity.mjs';
+import { academyTransition, academyAwareReader, academyPrior, academyChangedPaths } from './helpers/academyCandidateIntegrity.mjs';
 import {
   ACADEMY_V11_BASE, ACADEMY_V11_MANIFEST, ACADEMY_V11_PREDECESSOR,
   ACADEMY_V11_PREDECESSOR_SHA256, ACADEMY_V11_MIGRATION, ACADEMY_V11_PATHS,
   ACADEMY_V11_TRUE_FLAGS, ACADEMY_V11_FALSE_FLAGS, academyV11Prior,
   academyV11Transition, academyV11AwareReader, academyV11ActualPredecessorReader,
+  academyV11PredecessorViews,
 } from './helpers/academyV11Integrity.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -180,10 +181,13 @@ test('V1 integration verifies the real successor before restoring historical byt
     return value.startsWith(root) ? value.slice(root.length) : value;
   };
   const actualDrift = new Map();
+  const sentinel = 'src/lib/subscriberReportContract.ts';
+  let sentinelReads = 0, inventoryReads = 0;
   // A process-local virtual live candidate exercises the NO-OVERRIDE release
   // APIs without writing a seal, changing files, or blessing the unfinished UI.
   t.mock.method(fs, 'readFileSync', function(path, ...args) {
     const p = relative(path);
+    if (p === sentinel) sentinelReads++;
     const b = actualDrift.get(p) ?? (p === ACADEMY_V11_MANIFEST || f.bytes.has(p) ? f.source(p) : null);
     if (b === null) return realRead.call(this, path, ...args);
     const encoding = typeof args[0] === 'string' ? args[0] : args[0]?.encoding;
@@ -194,13 +198,31 @@ test('V1 integration verifies the real successor before restoring historical byt
     return p === ACADEMY_V11_MANIFEST || f.bytes.has(p) ? { isFile: () => true } : realStat.call(this, path, ...args);
   });
   t.mock.method(childProcess, 'execFileSync', function(command, args, ...options) {
-    if (command === 'git' && args[0] === 'diff' && args.length === 6 && args[4] === ACADEMY_V11_BASE)
+    if (command === 'git' && args[0] === 'diff' && args.length === 6 && args[4] === ACADEMY_V11_BASE) {
+      inventoryReads++;
       return f.inventory.join('\0') + '\0';
+    }
     if (command === 'git' && args[0] === 'ls-files' && args.includes('--others')) return '';
     return realExec.call(this, command, args, ...options);
   });
   syncBuiltinESMExports();
   try {
+    const liveText = p => fs.readFileSync(new URL(p, 'file://' + root), 'utf8');
+    for (const [verify, expectedReads] of [
+      [() => academyV11Transition(), 1],
+      [() => academyChangedPaths(), 1],
+      [() => academyTransition(), 2],
+      [() => academyAwareReader(), 2],
+      [() => academyAwareReader(liveText), 2],
+      [() => academyTransition(liveText), 3],
+    ]) {
+      for (let repeat = 0; repeat < 2; repeat++) {
+        sentinelReads = inventoryReads = 0;
+        verify();
+        assert.equal(sentinelReads, expectedReads, 'fresh complete scans without redundant baseline reads');
+        assert.ok(inventoryReads >= 1, 'real inventory is never cached between calls');
+      }
+    }
     const v1 = academyTransition();
     assert.equal(v1.manifest.owner_only, true);
     assert.equal(v1.manifest.member_access, false);
@@ -221,8 +243,30 @@ test('V1 integration verifies the real successor before restoring historical byt
     actualDrift.set(member, Buffer.from('REAL_CANDIDATE_DRIFT'));
     assert.throws(() => academyTransition(priorRead), /unreviewed candidate drift \(Academy V1.1\)/);
     actualDrift.clear();
+    // A historical callback can mutate the live filesystem view; the live gate
+    // must execute AFTER custom admission, not reuse an earlier successful scan.
+    const mutatingSource = p => {
+      if (p === ACADEMY_V11_PATHS.at(-1)) actualDrift.set(sentinel, Buffer.from('CALLBACK_DRIFT'));
+      return f.source(p);
+    };
+    assert.throws(() => academyV11PredecessorViews(mutatingSource), /protected V1.1 working-tree bytes/);
+    actualDrift.clear();
+    // Reusing an already restored historical reader must not cache LIVE proof.
+    const historical = academyV11Transition().predecessorRead;
+    academyV11PredecessorViews(historical);
+    actualDrift.set(sentinel, Buffer.from('LATER_RAW_DRIFT'));
+    assert.throws(() => academyV11PredecessorViews(historical), /protected V1.1 working-tree bytes/);
+    actualDrift.clear();
+    const badManifest = { ...f.manifest, production_deploy_authorized: true };
+    actualDrift.set(ACADEMY_V11_MANIFEST, Buffer.from(JSON.stringify(badManifest)));
+    assert.throws(() => academyTransition(priorRead), /production_deploy_authorized/);
+    actualDrift.clear();
+    // The cached two-commit diff must not be mutable through the exported API.
+    const changed = academyChangedPaths(); changed.push('caller-poison');
+    assert.ok(!academyChangedPaths().includes('caller-poison'));
     f.inventory.push('unknown-live-file');
     assert.throws(() => academyTransition(priorRead), /exact Academy V1.1 changed paths/);
+    assert.throws(() => academyChangedPaths(), /exact Academy V1.1 changed paths/);
   } finally {
     t.mock.restoreAll();
     syncBuiltinESMExports();

@@ -140,7 +140,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "f069bad17edf72d3ea5a0c6fd452d911699696a285400ea97d5442a4e10fcb24"
+      "candidate_sha256": "c4e354e4ddf3841e5766b03a09833744c2c38b2dcf2377ab943759a39d25ca9d"
     },
     {
       "path": "tests/academyV11Member.test.mjs",
@@ -196,14 +196,14 @@
       "operation": "MODIFY",
       "predecessor_git_sha": "6ad78d0fdd23c0bcc4470351b3c74612b60f4404",
       "predecessor_sha256": "5269b91e532a3402d1e6aaabb149563c54d543ec7bf34b9efc8ad5fd96202489",
-      "candidate_sha256": "850a6e320404159ab2854165658e20e1282e2fdb69bc92e2495da6d084b417ad"
+      "candidate_sha256": "abd6e389f2d6d62e799a63657bcdb223afea11bc5267fb7d78ad8c2ff4700a8a"
     },
     {
       "path": "tests/helpers/academyV11Integrity.mjs",
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "dc2f80a016a12754fd2e5e686e4b5d9d2315ef36ea6cb71c79da3bc3f29afd6d"
+      "candidate_sha256": "2da2eeae70dbeb94641467cf23c3caeb8044d1d0ebf486e57b1031326c1bf250"
     }
   ]
 }

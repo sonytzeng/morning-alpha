@@ -4,8 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import {
-  ACADEMY_V11_BASE, academyV11Transition, academyV11AwareReader,
-  academyV11ActualPredecessorReader,
+  ACADEMY_V11_BASE, academyV11Transition, academyV11PredecessorViews,
 } from './academyV11Integrity.mjs';
 
 export const ACADEMY_BASE = 'e2a99f6677a5a31f3c7f403dfa5180fb46498c97';
@@ -61,6 +60,7 @@ const read = path => {
 };
 const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 let baseline;
+let historicalChangedPaths;
 const restored = new WeakSet();
 
 // Cache only immutable Git objects, not working-tree bytes or validation results.
@@ -104,20 +104,27 @@ export function academyPrior(path) {
 
 export function academyChangedPaths() {
   academyV11Transition(); // Mandatory real successor gate, never fixture approval.
-  return git(['diff', '--no-renames', '--name-only', '-z', ACADEMY_BASE, ACADEMY_V11_BASE, '--'])
+  return immutableChangedPaths();
+}
+
+function immutableChangedPaths() {
+  // Only the diff between two fixed Git objects is cached, never a worktree
+  // inventory, file content, or successful live validation.
+  historicalChangedPaths ??= git(['diff', '--no-renames', '--name-only', '-z', ACADEMY_BASE, ACADEMY_V11_BASE, '--'])
     .split('\0').filter(Boolean).sort();
+  return [...historicalChangedPaths];
 }
 
 /** Mandatory candidate gate: missing manifest, extra paths or bytes always fail.
  * Explicit source/inventory arguments are for in-memory adversarial fixtures;
  * production entrypoints use the real, freshly enumerated working tree.
  */
-export function academyTransition(source = read, changedPaths = academyChangedPaths()) {
-  return restoreAcademy(source, changedPaths, true);
+export function academyTransition(source = read, changedPaths) {
+  const views = academyV11PredecessorViews(source === read ? undefined : source);
+  return restoreAcademy(views.predecessorRead, changedPaths ?? immutableChangedPaths(), true, views.actualPredecessorRead);
 }
 
-function restoreAcademy(source, changedPaths, verifyHistoricalView) {
-  source = academyV11AwareReader(source);
+function restoreAcademy(source, changedPaths, verifyHistoricalView, actualPredecessorRead) {
   const m = JSON.parse(source(ACADEMY_MANIFEST));
   assert.deepEqual(Object.keys(m).sort(), [
     'schema_version', 'base', 'predecessor_manifest', 'predecessor_sha256',
@@ -153,14 +160,13 @@ function restoreAcademy(source, changedPaths, verifyHistoricalView) {
   }
   // Preserve all tracked predecessor bytes, not just a subset of production
   // directories. This also protects every historical manifest and old test pin.
-  const actualPredecessorRead = academyV11ActualPredecessorReader();
   for (const [path, bytes] of baselineBytes()) {
     if (before.has(path)) continue;
     const message = 'unreviewed candidate drift; protected Academy predecessor path: ' + path;
     // V1.1 validates actual raw working-tree bytes first, then restores only its
     // exact sealed rows. No injected reader can replace that independent gate.
     assert.deepEqual(actualPredecessorRead(path), bytes, message);
-    if (verifyHistoricalView) {
+    if (verifyHistoricalView && source !== actualPredecessorRead) {
       const actual = source(path);
       assert.deepEqual(actual, typeof actual === 'string' ? bytes.toString('utf8') : bytes, message);
     }
@@ -182,7 +188,8 @@ function restoreAcademy(source, changedPaths, verifyHistoricalView) {
  */
 export function academyAwareReader(source = read) {
   if (restored.has(source)) return source;
-  source = academyV11AwareReader(source);
+  const views = academyV11PredecessorViews(source === read ? undefined : source);
+  source = views.predecessorRead;
   try { source(ACADEMY_MANIFEST); } catch (error) {
     if (error.code === 'ENOENT' && source !== read) return source;
     throw error;
@@ -190,5 +197,5 @@ export function academyAwareReader(source = read) {
   // Let the original verifier classify mutations injected into its historical
   // fixture. The real working tree, Academy scope and candidate hashes are still
   // checked above; only unrelated fixture bytes pass through to that verifier.
-  return restoreAcademy(source, academyChangedPaths(), false).predecessorRead;
+  return restoreAcademy(source, immutableChangedPaths(), false, views.actualPredecessorRead).predecessorRead;
 }

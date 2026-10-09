@@ -128,6 +128,27 @@ test('mandatory Academy gate fails for missing manifest; historical fixtures are
   assert.equal(academyAwareReader(priorRead), priorRead);
 });
 
+test('legacy UTF-8 readers preserve binary predecessor protection and drift diagnostics', () => {
+  const f = fixture();
+  const textRead = path => f.source(path).toString('utf8');
+  assert.doesNotThrow(() => academyTransition(textRead, f.inventory));
+  for (const path of ['.DS_Store', '.github/workflows/recommendation-v2-shadow.yml']) {
+    assert.throws(() => academyTransition(p => textRead(p) + (p === path ? 'DRIFT' : ''), f.inventory),
+      /unreviewed candidate drift; protected Academy predecessor path/);
+  }
+});
+
+test('historical adapter delegates injected legacy errors without blessing live file changes', () => {
+  const f = fixture();
+  const path = 'docs/10k-program/phase2-shadow-auth-transition.json';
+  const injected = Buffer.concat([priorRead(path), Buffer.from('DRIFT')]);
+  const source = p => p === path ? injected : f.source(p);
+  assert.throws(() => academyTransition(source, f.inventory), /protected Academy predecessor path/);
+  const historical = academyAwareReader(source);
+  assert.deepEqual(historical(path), injected);
+  assert.deepEqual(academyPrior(path), priorRead(path));
+});
+
 test('Academy restoration retains Cockpit and the Entry Auth/Entry/News/Owner predecessor chain', () => {
   const f = fixture(), t = academyTransition(f.source, f.inventory);
   const cockpit = cockpitTransition(t.predecessorRead);

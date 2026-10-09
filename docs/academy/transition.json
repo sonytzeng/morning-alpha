@@ -101,7 +101,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "179fa556e4a1c9fb74299d4f6632f3cd1834c9873112d4d8e6c77de5d391f35b"
+      "candidate_sha256": "83f33b526244fe9488579b11777955b8d464bf50ea882f8f12714a405682f9b2"
     },
     {
       "path": "tests/academyIntegrity.test.mjs",
@@ -185,7 +185,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "300c9b08f8a64663983bd9cb25288485d46b9601d617cb3a3a3a0770356f8548"
+      "candidate_sha256": "5269b91e532a3402d1e6aaabb149563c54d543ec7bf34b9efc8ad5fd96202489"
     },
     {
       "path": "tests/helpers/ownerCockpitIntegrity.mjs",

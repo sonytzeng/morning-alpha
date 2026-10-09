@@ -110,6 +110,10 @@ export function academyChangedPaths() {
  * production entrypoints use the real, freshly enumerated working tree.
  */
 export function academyTransition(source = read, changedPaths = academyChangedPaths()) {
+  return restoreAcademy(source, changedPaths, true);
+}
+
+function restoreAcademy(source, changedPaths, verifyHistoricalView) {
   const m = JSON.parse(source(ACADEMY_MANIFEST));
   assert.deepEqual(Object.keys(m).sort(), [
     'schema_version', 'base', 'predecessor_manifest', 'predecessor_sha256',
@@ -146,7 +150,15 @@ export function academyTransition(source = read, changedPaths = academyChangedPa
   // Preserve all tracked predecessor bytes, not just a subset of production
   // directories. This also protects every historical manifest and old test pin.
   for (const [path, bytes] of baselineBytes()) {
-    if (!before.has(path)) assert.deepEqual(source(path), bytes, 'protected Academy predecessor path: ' + path);
+    if (before.has(path)) continue;
+    const message = 'unreviewed candidate drift; protected Academy predecessor path: ' + path;
+    // Always verify actual working-tree bytes, including for historical text
+    // readers and adversarial fixtures. No caller can opt out of this gate.
+    assert.deepEqual(read(path), bytes, message);
+    if (verifyHistoricalView) {
+      const actual = source(path);
+      assert.deepEqual(actual, typeof actual === 'string' ? bytes.toString('utf8') : bytes, message);
+    }
   }
   const predecessorRead = path => {
     if (path === ACADEMY_MANIFEST) throw absent(path);
@@ -169,5 +181,8 @@ export function academyAwareReader(source = read) {
     if (error.code === 'ENOENT' && source !== read) return source;
     throw error;
   }
-  return academyTransition(source).predecessorRead;
+  // Let the original verifier classify mutations injected into its historical
+  // fixture. The real working tree, Academy scope and candidate hashes are still
+  // checked above; only unrelated fixture bytes pass through to that verifier.
+  return restoreAcademy(source, academyChangedPaths(), false).predecessorRead;
 }

@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {execFileSync} from 'node:child_process';
 import {COCKPIT_BASE,COCKPIT_MANIFEST,COCKPIT_PATHS,cockpitTransition,cockpitChangedPaths,cockpitPrior} from './helpers/ownerCockpitIntegrity.mjs';
-const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+import {academyAwareReader} from './helpers/academyCandidateIntegrity.mjs';
+const read=academyAwareReader(p=>readFileSync(new URL('../'+p,import.meta.url)));
 test('Cockpit exact hashes and scope preserve every unrelated production byte',()=>{
  cockpitTransition();assert.deepEqual(cockpitChangedPaths(),[...COCKPIT_PATHS,COCKPIT_MANIFEST].sort());
  for(const p of execFileSync('git',['ls-tree','-r','--name-only',COCKPIT_BASE,'--','supabase','src','research','.github'],{encoding:'utf8'}).trim().split('\n'))if(!COCKPIT_PATHS.includes(p))assert.deepEqual(read(p),cockpitPrior(p),p);

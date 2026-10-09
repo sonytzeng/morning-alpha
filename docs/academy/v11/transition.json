@@ -1,0 +1,209 @@
+{
+  "schema_version": "ACADEMY_V11_CANDIDATE_TRANSITION_V1",
+  "base": "6ad78d0fdd23c0bcc4470351b3c74612b60f4404",
+  "predecessor_manifest": "docs/academy/transition.json",
+  "predecessor_sha256": "76faf15dca7df157e42609c9abca428185dd55c630b7497c64de358f32774394",
+  "functions": [],
+  "migrations": [
+    "supabase/migrations/20261009053655_academy_member_learning_v11.sql"
+  ],
+  "new_secret_names": [],
+  "member_access_candidate": true,
+  "additive_migration_candidate": true,
+  "report_learning_links_candidate": true,
+  "production_deploy_authorized": false,
+  "production_release_authorized": false,
+  "production_migration_authorized": false,
+  "production_data_write": false,
+  "existing_auth_change": false,
+  "existing_rls_change": false,
+  "secret_change": false,
+  "cron_change": false,
+  "core_change": false,
+  "strategy_change": false,
+  "line_change": false,
+  "report_engine_change": false,
+  "forward_enabled": false,
+  "outcome_enabled": false,
+  "legacy_backfill": false,
+  "private_material_in_repo": false,
+  "ai_enabled": false,
+  "paid_api_enabled": false,
+  "files": [
+    {
+      "path": ".github/workflows/academy-v11.yml",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "13fb7ab7e72400c0bf718aa4c26e5746e3001e8cbc7c6d7b20fddcd67dd09a4d"
+    },
+    {
+      "path": "docs/academy/v11/ACCEPTANCE.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "5421cc388977153d14d42d632932a42a5ee979e1b5fa4823147f27ff6d223a17"
+    },
+    {
+      "path": "docs/academy/v11/RIGHTS.md",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "4bcb2996690f273116d9c124ec4191f393651b6a6f8f59b71a229feafd48df5c"
+    },
+    {
+      "path": "docs/academy/v11/content-manifest.json",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "710fb24b411d632920019b25ff9436f167dad69d5403cc20af633b958b7819ca"
+    },
+    {
+      "path": "scripts/academy-v11/build-pdf.py",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "6919556bbd6d02a2b9f2bceb54965a019f5ad4cf5c70f6deffa957150f6e9ab7"
+    },
+    {
+      "path": "scripts/academy-v11/fresh-db.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "24d35c85072ad27bfaf0248c7d867f70ccc81c4cde1c6e1b5d72c39e99b1cd94"
+    },
+    {
+      "path": "scripts/academy-v11/load-content.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "9eee74dc98db5eebf7d5e120f1903457cc1307265783150898027f5dbb468c28"
+    },
+    {
+      "path": "src/features/academy/member.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "62ac4bae6a958124a0be7ef2cd7fc5f319129359975ac9c970240f18dc599c75"
+    },
+    {
+      "path": "src/pages/academy/MemberAcademy.tsx",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "35cec191d3f6fbf228eee033322cbfb8b48b9c1d841ccb30f7ee07cee5074625"
+    },
+    {
+      "path": "src/pages/academy/member.css",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "a51d98ad684aac10bc69b99716feb8cf933cd8fca14fe07b091b33bdf3576bd9"
+    },
+    {
+      "path": "src/pages/academy/page.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6ad78d0fdd23c0bcc4470351b3c74612b60f4404",
+      "predecessor_sha256": "b779049de372be63e0b93dea743c30bef7dea2426639c012d7ca0ef41072f2ff",
+      "candidate_sha256": "6c682d9979d8f3bafb094ae7eb18ce15b87b6803552d98d297ce5e78e26f46e2"
+    },
+    {
+      "path": "src/pages/academy/useAcademyAccess.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "b56eee4b1a6d6d2052f1ee2f2d171a34633e59cc7c2fa9dc6987fad5b2798998"
+    },
+    {
+      "path": "src/pages/report/components/TodayStrategySection.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6ad78d0fdd23c0bcc4470351b3c74612b60f4404",
+      "predecessor_sha256": "cd3bc4d00a174a9e093be811d6268a6d7a4ff7b47911e4a667d65c5a81998fc3",
+      "candidate_sha256": "efe0c2ca3715a0ca0a73f822ba4abd36202f441eb95af556d4f5777fae8e5f04"
+    },
+    {
+      "path": "supabase/migrations/20261009053655_academy_member_learning_v11.sql",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "7ee94151c69eab608e6f62d59a1ea563d7b4dbbc25195d74ec19eeb814713116"
+    },
+    {
+      "path": "tests/academyV11Database.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "d26fc83ebf0f1ed89ca71b0bfa822fb6429c70b398c15b62f85ab34a292f4255"
+    },
+    {
+      "path": "tests/academyV11Integrity.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "f069bad17edf72d3ea5a0c6fd452d911699696a285400ea97d5442a4e10fcb24"
+    },
+    {
+      "path": "tests/academyV11Member.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "59f139ca3367ddce937c6c7a7b505cea719e8917d0cbbf9b2bb55e4aa40eae5b"
+    },
+    {
+      "path": "tests/browser/academy-v11.e2e.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "c832c9f5a55b831a74403a4a4e38403c35383a44863e5ef01b320b4139efc67d"
+    },
+    {
+      "path": "tests/browser/academy-v11.harness.tsx",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "e068be5d984c4fea98762c3eea0b31798667bdd67358a0ed8245ba3c0c12ca4c"
+    },
+    {
+      "path": "tests/browser/academy-v11.html",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "aedd941ae1ac66dfa17a897c2f1114cf5c836d3eb602b7ace0f65bba26a47ff6"
+    },
+    {
+      "path": "tests/browser/academy-v11.mock.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "88f15d10ad85468db3545f05e5e349873e3e908cb083bd94ae81d05a39122fe0"
+    },
+    {
+      "path": "tests/browser/academy-v11.vite.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "61aa68ea0e5e2c9fcbbbfebffe6484f2efa3e420e5130ba6d7f64e09032be2b2"
+    },
+    {
+      "path": "tests/fixtures/academy-v11-lessons.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "1f1543bedc1f9b5fe9c57feacec366499531d5e8121fdbb29a52cbb7cbd85158"
+    },
+    {
+      "path": "tests/helpers/academyCandidateIntegrity.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6ad78d0fdd23c0bcc4470351b3c74612b60f4404",
+      "predecessor_sha256": "5269b91e532a3402d1e6aaabb149563c54d543ec7bf34b9efc8ad5fd96202489",
+      "candidate_sha256": "850a6e320404159ab2854165658e20e1282e2fdb69bc92e2495da6d084b417ad"
+    },
+    {
+      "path": "tests/helpers/academyV11Integrity.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "dc2f80a016a12754fd2e5e686e4b5d9d2315ef36ea6cb71c79da3bc3f29afd6d"
+    }
+  ]
+}

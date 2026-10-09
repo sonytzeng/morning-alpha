@@ -3,6 +3,10 @@ import { readFileSync, lstatSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import {
+  ACADEMY_V11_BASE, academyV11Transition, academyV11AwareReader,
+  academyV11ActualPredecessorReader,
+} from './academyV11Integrity.mjs';
 
 export const ACADEMY_BASE = 'e2a99f6677a5a31f3c7f403dfa5180fb46498c97';
 export const ACADEMY_MANIFEST = 'docs/academy/transition.json';
@@ -99,10 +103,9 @@ export function academyPrior(path) {
 }
 
 export function academyChangedPaths() {
-  return [...new Set([
-    ...git(['diff', '--no-renames', '--name-only', '-z', ACADEMY_BASE, '--']).split('\0'),
-    ...git(['ls-files', '--others', '--exclude-standard', '-z']).split('\0'),
-  ].filter(Boolean))].sort();
+  academyV11Transition(); // Mandatory real successor gate, never fixture approval.
+  return git(['diff', '--no-renames', '--name-only', '-z', ACADEMY_BASE, ACADEMY_V11_BASE, '--'])
+    .split('\0').filter(Boolean).sort();
 }
 
 /** Mandatory candidate gate: missing manifest, extra paths or bytes always fail.
@@ -114,6 +117,7 @@ export function academyTransition(source = read, changedPaths = academyChangedPa
 }
 
 function restoreAcademy(source, changedPaths, verifyHistoricalView) {
+  source = academyV11AwareReader(source);
   const m = JSON.parse(source(ACADEMY_MANIFEST));
   assert.deepEqual(Object.keys(m).sort(), [
     'schema_version', 'base', 'predecessor_manifest', 'predecessor_sha256',
@@ -149,12 +153,13 @@ function restoreAcademy(source, changedPaths, verifyHistoricalView) {
   }
   // Preserve all tracked predecessor bytes, not just a subset of production
   // directories. This also protects every historical manifest and old test pin.
+  const actualPredecessorRead = academyV11ActualPredecessorReader();
   for (const [path, bytes] of baselineBytes()) {
     if (before.has(path)) continue;
     const message = 'unreviewed candidate drift; protected Academy predecessor path: ' + path;
-    // Always verify actual working-tree bytes, including for historical text
-    // readers and adversarial fixtures. No caller can opt out of this gate.
-    assert.deepEqual(read(path), bytes, message);
+    // V1.1 validates actual raw working-tree bytes first, then restores only its
+    // exact sealed rows. No injected reader can replace that independent gate.
+    assert.deepEqual(actualPredecessorRead(path), bytes, message);
     if (verifyHistoricalView) {
       const actual = source(path);
       assert.deepEqual(actual, typeof actual === 'string' ? bytes.toString('utf8') : bytes, message);
@@ -177,6 +182,7 @@ function restoreAcademy(source, changedPaths, verifyHistoricalView) {
  */
 export function academyAwareReader(source = read) {
   if (restored.has(source)) return source;
+  source = academyV11AwareReader(source);
   try { source(ACADEMY_MANIFEST); } catch (error) {
     if (error.code === 'ENOENT' && source !== read) return source;
     throw error;

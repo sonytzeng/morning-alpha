@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { ArrowDownToLine, ArrowLeft, BookOpen, Check, FileUp, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react';
 import { useOwnerAccess } from './useOwnerAccess';
 import { MAX_COURSE_BYTES, parseCourse, type AcademyChapter, type AcademyCourse } from './content';
@@ -7,6 +7,8 @@ import { DEFAULT_AI_COACH, loadProgress, saveProgress as persistProgress, type P
 import Diagram from './Diagram';
 import Quiz from './Quiz';
 import './academy.css';
+
+const MemberAcademy = lazy(() => import('./MemberAcademy'));
 
 // Only the isolated serve config defines this. URL/storage flags cannot enable it.
 declare const __ACADEMY_LOCAL_ISOLATED__: boolean;
@@ -116,10 +118,14 @@ function Workspace({ identity, signal }: { identity: string; signal: AbortSignal
   </>;
 }
 
-export default function AcademyPage() {
+function LocalAcademyPage() {
   const access = useOwnerAccess();
   return <div className="academy"><a href="#academy-main" className="academy-skip">跳至主要內容</a><div className="academy-topbar"><a href="/account"><ArrowLeft size={16} aria-hidden="true" />返回帳戶</a><span>MORNING ALPHA <b>ACADEMY</b></span><span><LockKeyhole size={14} aria-hidden="true" />私人學習預覽</span></div>
     <main id="academy-main" className="academy-main">{access.kind === 'owner' && localPreview() ? <Workspace key={`${access.id}:${access.generation}`} identity={access.id} signal={access.signal} /> : <section className="academy-access" role="status"><LockKeyhole size={36} aria-hidden="true" /><p className="academy-eyebrow">OWNER ACCESS / PRIVATE MATERIALS</p><h1>{access.kind === 'loading' ? '確認 Owner 權限中…' : access.kind === 'denied' ? '這是一個私人學習空間' : '私人課程目前不可用'}</h1><p>{access.kind === 'loading' ? '在權限確認前，不讀取或顯示任何教材。' : access.kind === 'denied' ? '僅限具名授權 Owner。一般管理員、會員及付費會員不會自動取得權限。' : access.kind === 'owner' ? '教材匯入只開放於本機隔離開發預覽。正式環境沒有私有教材、下載端點或 AI 服務。' : '目前無法確認 Owner 存取權限，請稍後再試。未讀取任何教材。'}</p><a href="/account">返回帳戶</a></section>}</main>
     <footer className="academy-footer"><span>MORNING ALPHA · 理解先於判斷</span><span>教育與介面預覽，不構成投資建議。</span></footer>
   </div>;
+}
+
+export default function AcademyPage() {
+  return localPreview() ? <LocalAcademyPage /> : <Suspense fallback={<div className="academy"><main className="academy-main"><p role="status">正在載入學習空間…</p></main></div>}><MemberAcademy /></Suspense>;
 }

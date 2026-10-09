@@ -18,6 +18,19 @@ export const plainRegime=(s:string)=>({range:'震盪／盤整',trending:'趨勢�
 export function filterResearch(candidates:EntryResult[],query:string,status:string){
  const q=query.trim().toLocaleLowerCase();return candidates.filter(c=>(status==='ALL'||c.status===status)&&(!q||`${c.symbol} ${c.name||''}`.toLocaleLowerCase().includes(q)));
 }
+// Display metadata only: never changes an immutable research result or its evidence.
+export function researchStockNames(rows:unknown,symbols:string[]):Record<string,string>{
+ const allowed=new Set(symbols),names:Record<string,string>={},conflicts=new Set<string>();
+ if(!Array.isArray(rows))return names;
+ for(const row of rows){
+  if(!row||typeof row.symbol!=='string'||!allowed.has(row.symbol)||typeof row.stock_name!=='string')continue;
+  const name=row.stock_name.trim();if(!name||name.length>80)continue;
+  if(names[row.symbol]&&names[row.symbol]!==name)conflicts.add(row.symbol);
+  names[row.symbol]=name;
+ }
+ for(const symbol of conflicts)delete names[symbol];
+ return names;
+}
 export function safePlan(c:EntryResult){const p=c.plan;if(c.status==='INSUFFICIENT_EVIDENCE'||!p)return null;
  return [p.reference_range[0],p.reference_range[1],p.stop,p.target,p.risk_distance,p.reward_space,p.reward_risk].every(n=>typeof n==='number'&&Number.isFinite(n)&&n>0)?p:null;}
 export type JournalRow={id:string;sequence:number;book:'LIVE'|'PAPER';symbol:string;action:'BUY'|'SELL'|'VOID';quantity:number|null;price:number|null;fee:number|null;tax:number|null;other_cost:number|null;occurred_at:string;reason:string;replaces:string|null;superseded?:boolean};

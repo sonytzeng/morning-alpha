@@ -1,7 +1,7 @@
 import {useEffect,useState,type ReactNode} from 'react';
 import {supabase} from '@/lib/supabase';
 import {readTradingLab,type TradingLabData} from '@/features/research/tradingLab';
-import {cockpitToday,taipeiToday,plainAction,plainRegime,strategyNames,entryNames,filterResearch,safePlan,money} from '@/features/research/cockpit';
+import {cockpitToday,taipeiToday,plainAction,plainRegime,strategyNames,entryNames,filterResearch,researchStockNames,safePlan,money} from '@/features/research/cockpit';
 import type {EntryEvaluation,EntryResult} from '../../../../research/entry-opportunity';
 import CockpitJournal from './CockpitJournal';
 import './cockpit.css';
@@ -11,9 +11,10 @@ function parseEntry(v:unknown):ReadData{const r=v as ReadData&{owner_only:boolea
  if(r.latest&&(!Array.isArray(r.latest.candidates)||r.latest.candidates.some(c=>!(c.strategy in strategyNames)||!(c.status in entryNames))))throw Error('ENTRY_CONTRACT');return {...r,history:[]};}
 export default function OwnerCockpit({children}:{children:ReactNode}){
  const [tab,setTab]=useState('today'),[lab,setLab]=useState<TradingLabData|null>(null),[entry,setEntry]=useState<ReadData|null>(null);
+ const [catalogNames,setCatalogNames]=useState<Record<string,string>>({});
  const [error,setError]=useState(''),[loading,setLoading]=useState(true),[clock,setClock]=useState(()=>taipeiToday()),[denied,setDenied]=useState(false);
  useEffect(()=>{let active=true,generation=0;const timer=setInterval(()=>setClock(taipeiToday()),60000);
-  const {data:auth}=supabase.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'){generation++;if(active){setLab(null);setEntry(null);setDenied(true);}}});const g=generation;
+  const {data:auth}=supabase.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'){generation++;if(active){setLab(null);setEntry(null);setCatalogNames({});setDenied(true);}}});const g=generation;
   void(async()=>{try{const [l,e]=await Promise.all([supabase.functions.invoke('owner-trading-lab-v1',{body:{operation:'READ'}}),supabase.rpc('get_owner_entry_opportunity_v1')]);
    if(!active||g!==generation)return;
    if(e.error?.code==='42501'){setDenied(true);return;}
@@ -23,6 +24,15 @@ export default function OwnerCockpit({children}:{children:ReactNode}){
    if(!active||g!==generation)return;if(h.error){setError('歷史研究目前無法讀取。');return;}
    const dates=new Set<string>();for(const x of h.data||[]){const r=parseEntry({...e.data,latest:x.result}).latest;if(!r||r.business_date!==x.business_date||r.mode!=='HISTORICAL_REPLAY')throw Error('ENTRY_HISTORY');if(!dates.has(r.business_date)){parsed.history.push(r);dates.add(r.business_date);}}
    setEntry(parsed);
+   // Holiday market reads intentionally contain no current universe. Load public labels
+   // independently, only for already-authorized saved research; never acquire new evidence.
+   const symbols=[...new Set([...(parsed.latest?.candidates||[]),...parsed.history.flatMap(r=>r.candidates)].map(c=>c.symbol))];
+   if(symbols.length&&symbols.length<=72){
+    void(async()=>{try{
+     const names=await supabase.from('sector_stock_map').select('symbol,stock_name').in('symbol',symbols).limit(1000);
+     if(active&&g===generation&&!names.error)setCatalogNames(researchStockNames(names.data,symbols));
+    }catch{/* Optional labels cannot block research or accounting reads. */}})();
+   }
   }catch{if(active&&g===generation)setError('資料格式或連線未完成確認；暫時不提供研究判斷。');}finally{if(active&&g===generation)setLoading(false);}})();
   return()=>{active=false;clearInterval(timer);auth.subscription.unsubscribe();};},[]);
  if(denied)return <section className="cockpit" role="status"><h1>請重新登入</h1><p>只有具名授權的本人可讀取研究與交易資料。</p></section>;
@@ -41,7 +51,7 @@ export default function OwnerCockpit({children}:{children:ReactNode}){
   </article><div className="cockpit-two"><article className="cockpit-card"><h3>哪些訊號支持？</h3><ReasonList rows={today.market?.supporting||[]} empty="尚無當日可核對的支持理由。"/></article><article className="cockpit-card"><h3>哪些訊號提醒我小心？</h3><ReasonList rows={today.market?.contradicting||[]} empty="尚無當日可核對的風險理由，不代表沒有風險。"/></article></div>
    <details className="cockpit-card"><summary>查看完整分析依據與研究工具</summary>{children}</details>
   </div>}
-  {tab==='research'&&<Research data={entry} today={clock} names={(lab as TradingLabData&{symbol_names?:Record<string,string>}|null)?.symbol_names||{}} onJournal={()=>setTab('trades')}/>}
+  {tab==='research'&&<Research data={entry} today={clock} names={{...catalogNames,...((lab as TradingLabData&{symbol_names?:Record<string,string>}|null)?.symbol_names||{})}} onJournal={()=>setTab('trades')}/>}
   {tab==='trades'&&<CockpitJournal legacy={lab}/>}
  </section>;
 }

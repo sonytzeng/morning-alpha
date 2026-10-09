@@ -203,7 +203,14 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "2da2eeae70dbeb94641467cf23c3caeb8044d1d0ebf486e57b1031326c1bf250"
+      "candidate_sha256": "155b17f33e206e48205a8b7f7f3bb99e42384e01d816f615809304c8f52f99f3"
+    },
+    {
+      "path": "tests/productContract.test.mjs",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6ad78d0fdd23c0bcc4470351b3c74612b60f4404",
+      "predecessor_sha256": "544fc6f8028e74271611639fdb287b89e56017f5613914839413bbce1e8c80af",
+      "candidate_sha256": "a5da4b1d69114b31ca317a5c31426be273cb86d1accac74baa3feb5cf4072367"
     }
   ]
 }

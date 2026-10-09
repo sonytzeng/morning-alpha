@@ -40,6 +40,7 @@ export const ACADEMY_V11_PATHS = Object.freeze([
   'tests/fixtures/academy-v11-lessons.mjs',
   'tests/helpers/academyCandidateIntegrity.mjs',
   'tests/helpers/academyV11Integrity.mjs',
+  'tests/productContract.test.mjs',
 ].sort());
 
 // Candidate authorization is distinct from applying a migration, publishing to

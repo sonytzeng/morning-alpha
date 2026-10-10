@@ -119,7 +119,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "a51d98ad684aac10bc69b99716feb8cf933cd8fca14fe07b091b33bdf3576bd9"
+      "candidate_sha256": "680f6731f7a5af534645024138b00777d3cdc7eaeac85ceea94f4ef155337d5c"
     },
     {
       "path": "src/pages/academy/page.tsx",
@@ -148,6 +148,13 @@
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
       "candidate_sha256": "7ee94151c69eab608e6f62d59a1ea563d7b4dbbc25195d74ec19eeb814713116"
+    },
+    {
+      "path": "tests/academyMemberContrast.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "d99312ad017a9525ac61ec23d48a68822d14fb2ad650d6daa7dfc2359676cfa5"
     },
     {
       "path": "tests/academyV11Copy.test.mjs",
@@ -252,7 +259,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "f9dbff000c0772cd47113dbe6c62608631f44c8321db96e4d63df97ca6d4986e"
+      "candidate_sha256": "6fc463fa5d282d2fc6838c531187416bf94bee903f627ab25e958108ff7495ea"
     },
     {
       "path": "tests/productContract.test.mjs",

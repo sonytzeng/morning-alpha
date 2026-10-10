@@ -36,6 +36,7 @@ export const ACADEMY_V11_PATHS = Object.freeze([
   'tests/academyV11Integrity.test.mjs',
   'tests/academyV11Member.test.mjs',
   'tests/academyV11Copy.test.mjs',
+  'tests/academyMemberContrast.test.mjs',
   'tests/browser/academy-auth.client.ts',
   'tests/browser/academy-auth.harness.tsx',
   'tests/browser/academy-auth.vite.ts',

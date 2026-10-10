@@ -7,7 +7,7 @@
 |5 events|dedupe/version/PIT tests|自然ingestion未啟用|
 |6 graph|relation/PIT/revenueexposure tests|真實關係未核准|
 |7 licenses|官方條款+既有rights缺口|Fugle商用/再散布待證|
-|8 schemaRLS|candidateSQL+isolatedAuth DB suite 16組PASS；8表forcedRLS；原始PostgreSQL response前端解析PASS|僅本機真實Auth測試身分，非ProductionOwner|
+|8 schemaRLS|candidateSQL+isolatedAuth DB suite 17組PASS；8表forcedRLS；原始PostgreSQL response前端解析PASS；Historical/expired正確分類|僅本機真實Auth測試身分，非ProductionOwner|
 |9 FrozenV1|精確PR103pin+dependencyadapter|未merge，不改老師threshold|
 |10 validation|cohortcompare/split gate|no realOOS/forwardresults|
 |11 academy|PR225/228/229已完成成果沿用|Free/Premium正式E2E pending|

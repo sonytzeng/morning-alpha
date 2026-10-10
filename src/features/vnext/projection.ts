@@ -23,11 +23,14 @@ export function parseProjection(value: unknown): VNextProjection {
   for (const o of value.observations) {
     if (!object(o) || !['id', 'symbol', 'company', 'reason'].every(k => typeof o[k] === 'string' && (o[k] as string).length > 0)
       || !Object.hasOwn(HORIZONS, String(o.horizon)) || !['WATCHING', 'CONDITION_MET', 'INVALIDATED', 'EXPIRED'].includes(String(o.status))
+      || !['HISTORICAL_REPLAY','FORWARD_SHADOW'].includes(String(o.mode)) || !validProjectionTime(o.created_at) || !validProjectionTime(o.as_of)
+      || (value.tier!=='owner'&&o.mode!=='FORWARD_SHADOW')
       || !validProjectionTime(o.next_review_at) || ![o.confirmation, o.invalidation].every(a => Array.isArray(a) && a.length > 0 && a.every(s => typeof s === 'string' && s.length > 0))
       || !Array.isArray(o.evidence) || !o.evidence.every(e => object(e) && typeof e.summary === 'string' && typeof e.source === 'string'
         && sourceSafe(String(e.source_ref)) && validProjectionTime(e.available_at) && ['CONFIRMED_FACT','REPORTED_CLAIM','INFERENCE','UNVERIFIED'].includes(String(e.classification)))) throw Error('PROJECTION_ROW_INVALID');
     // Construct a whitelist. No unknown/raw payload can leak through a cast.
     rows.push({ id: String(o.id), symbol: String(o.symbol), company: String(o.company), horizon: o.horizon as Projection['horizon'], status: o.status as Projection['status'],
+      mode:o.mode as Projection['mode'],created_at:o.created_at as string,as_of:o.as_of as string,
       reason: String(o.reason), next_review_at: String(o.next_review_at), confirmation: o.confirmation as string[], invalidation: o.invalidation as string[],
       evidence: o.evidence.map(e => ({summary:e.summary,source:e.source,source_ref:e.source_ref,available_at:e.available_at,classification:e.classification})) });
   }

@@ -25,6 +25,15 @@ test('industry read model cannot expose unreviewed Owner research to members or 
  assert.throws(()=>parseProjection({...p,industry:{...p.industry,member_publication:true}}),/INDUSTRY/);
 });
 
+test('Owner historical cards retain original dates and cannot become member forward observations',()=>{
+ const f=fixture(),row=projectObservation({...f.observation,mode:'HISTORICAL_REPLAY'},f.evidence,'EXPIRED');
+ const p={schema:'VNEXT_PROJECTION_V1',research_only:true,tier:'owner',observations:[row],industry:{events:[],relations:[],member_publication:false}};
+ assert.equal(parseProjection(p).observations[0].mode,'HISTORICAL_REPLAY');
+ assert.equal(parseProjection(p).observations[0].as_of,f.observation.as_of);
+ for(const tier of ['free','premium'])assert.throws(()=>parseProjection({...p,tier}),/PROJECTION_ROW_INVALID/);
+ assert.throws(()=>parseProjection({...p,observations:[{...row,mode:undefined}]}),/PROJECTION_ROW_INVALID/);
+});
+
 test('separate evidence families and locked outcome horizons, never one technical score',()=>{
  assert.deepEqual(Object.values(HORIZONS).map(h=>h.outcomes),[[1,5,10],[20,40,60],[120,180,250]]);
  const f=fixture();for(const horizon of Object.keys(HORIZONS)){

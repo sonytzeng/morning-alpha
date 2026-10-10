@@ -13,6 +13,7 @@ function ObservationCard({ row }: {row: Projection}) {
   return <article className="vnext-card">
     <div className="vnext-card-top"><span>{HORIZONS[row.horizon].label}</span><span className="vnext-status">{labels[row.status]}</span></div>
     <h3>{row.company}<small>{row.symbol}</small></h3><p className="vnext-reason">{row.reason}</p>
+    <p className="vnext-disclaimer">{row.mode==='HISTORICAL_REPLAY'?'歷史重播 · 不是當時的事前預測':'事前研究 · 尚未驗證成效'}<br/>資料截至 {date(row.as_of)} · 研究建立於 {date(row.created_at)}（台北時間）</p>
     <dl><div><dt>觀察多久</dt><dd>{HORIZONS[row.horizon].duration}</dd></div><div><dt>什麼時候再確認</dt><dd>{date(row.next_review_at)}（台北時間）</dd></div></dl>
     <section><h4>等什麼條件？</h4><ul>{row.confirmation.map((text,i)=><li key={i}>{text}</li>)}</ul></section>
     <section className="vnext-risk"><h4>什麼情況代表看錯？</h4><ul>{row.invalidation.map((text,i)=><li key={i}>{text}</li>)}</ul></section>

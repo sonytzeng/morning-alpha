@@ -96,6 +96,15 @@ export async function verifyCandidate(runtime){
    set local role authenticated;set local request.jwt.claims='{"sub":"${id}"}';
    do $$begin if jsonb_array_length(public.get_vnext_observations_v1()->'observations')<>0 then raise exception 'PUBLICATION_BYPASS';end if;end$$;rollback;`);
  }checks.push('hash mismatch/revocation/audience fail closed');
+ runtime.sql(`begin;
+ insert into vnext_private.stock_horizon_observations(id,symbol,company,horizon,created_at,as_of,available_at,last_verified_at,next_review_at,expires_at,reason,strategy_version,mode,snapshot_hash,status,confirmation_conditions,invalidation_conditions)
+ select 'test-history',symbol,company,horizon,created_at,as_of,available_at,last_verified_at,next_review_at,created_at+interval '1 microsecond',reason,'SYNTHETIC_HISTORY_ONLY','HISTORICAL_REPLAY',snapshot_hash,status,confirmation_conditions,invalidation_conditions
+ from vnext_private.stock_horizon_observations where id='test-SHORT';
+ set local role authenticated;set local request.jwt.claims='{"sub":"${sessions.owner.user.id}"}';
+ do $$begin if not exists(select from jsonb_array_elements(public.get_vnext_observations_v1()->'observations') x where x->>'id'='test-history' and x->>'mode'='HISTORICAL_REPLAY' and x->>'status'='EXPIRED') then raise exception 'HISTORY_OR_EXPIRY_LABEL_MISSING';end if;end$$;
+ set local request.jwt.claims='{"sub":"${id}"}';
+ do $$begin if exists(select from jsonb_array_elements(public.get_vnext_observations_v1()->'observations') x where x->>'id'='test-history') then raise exception 'HISTORY_LEAK';end if;end$$;rollback;`);
+ checks.push('historical mode and expired state remain explicit, never member forward');
  // DB function/Owner predicate fingerprints, not Production data, for regression.
  checks.push('no Production endpoint or source imported');
  return {identity:'ISOLATED_SUPABASE_AUTH_NOT_SONY',checks,production_changed:false};

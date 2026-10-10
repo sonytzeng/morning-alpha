@@ -46,6 +46,7 @@ export type Observation = {
 };
 export type Projection = {
   id: string; symbol: string; company: string; horizon: Horizon; status: ObservationState;
+  mode: Observation['mode']; created_at: string; as_of: string;
   reason: string; confirmation: string[]; invalidation: string[]; next_review_at: string;
   evidence: { summary: string; source: string; source_ref: string; available_at: string; classification: ClaimClass }[];
 };

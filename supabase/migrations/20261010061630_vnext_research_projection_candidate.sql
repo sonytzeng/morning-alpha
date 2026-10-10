@@ -206,7 +206,9 @@ begin
  tier:=academy_private.access_v11();
  if tier not in ('owner','free','premium') then raise exception 'MEMBER_REQUIRED' using errcode='42501'; end if;
  select coalesce(jsonb_agg(to_jsonb(row)), '[]'::jsonb) into answer from (
-  select o.id,o.symbol,o.company,o.horizon,o.status,o.reason,o.next_review_at,
+  select o.id,o.symbol,o.company,o.horizon,
+    case when o.expires_at<=now() then 'EXPIRED' else o.status end as status,
+    o.mode,o.created_at,o.as_of,o.reason,o.next_review_at,
     (select jsonb_agg(c->>'text') from jsonb_array_elements(o.confirmation_conditions)c) as confirmation,
     (select jsonb_agg(c->>'text') from jsonb_array_elements(o.invalidation_conditions)c) as invalidation,
     (select coalesce(jsonb_agg(jsonb_build_object('summary',e.summary,'source',e.source,'source_ref',e.source_ref,

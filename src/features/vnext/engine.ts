@@ -111,6 +111,7 @@ export function publicationGate(o: Observation, evidence: Evidence[], licenses: 
 
 export function projectObservation(o: Observation, evidence: Evidence[], state: ObservationState): Projection {
   return { id: o.id, symbol: o.symbol, company: o.company, horizon: o.horizon, status: state, reason: o.reason,
+    mode:o.mode, created_at:o.created_at, as_of:o.as_of,
     confirmation: o.confirmation_conditions.map(c => c.text), invalidation: o.invalidation_conditions.map(c => c.text), next_review_at: o.next_review_at,
     evidence: o.evidence_ids.flatMap(id => { const e = evidence.find(row => row.id === id); return e ? [{ summary: e.summary, source: e.source,
       source_ref: e.source_ref, available_at: e.available_at, classification: e.classification }] : []; }) };

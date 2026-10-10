@@ -3,17 +3,21 @@ import {createRoot} from 'react-dom/client';
 import {supabase} from './vnext.client';
 import VNextPage from '../../src/pages/vnext/page';
 import RealResearchPage from '../../src/pages/vnext/RealResearch';
+import MemberPage from '../../src/pages/vnext/MemberPage';
 const MemberAcademy=lazy(()=>import('../../src/pages/academy/MemberAcademy'));
 function Preview(){
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[message,setMessage]=useState('');
  const real=window.location.pathname==='/vnext/research'||window.location.pathname==='/login'&&import.meta.env.VNEXT_REAL_PREVIEW==='true';
  return <><aside style={{padding:12,background:'#fff0ce',color:'#503610',font:'14px system-ui'}}><strong>{real?'Owner隔離預覽 · 10/7、10/8真實保存證據的歷史研究，非今日即時訊號':'隔離研究預覽 · 所有示範股票與資料均為測試，不是真實行情'}</strong>
  <details open={window.location.pathname==='/login'}><summary style={{padding:'10px 0',cursor:'pointer'}}>驗收環境登入</summary><p>使用本機 Supabase 真實登入，不是 Sony 正式帳號。沒有前端角色切換器。</p>
- <form style={{display:'flex',gap:12,flexWrap:'wrap'}} onSubmit={async e=>{e.preventDefault();const {error}=await supabase.auth.signInWithPassword({email,password});setPassword('');setMessage(error?'登入失敗':'登入成功');}}>
+ <form style={{display:'flex',gap:12,flexWrap:'wrap'}} onSubmit={async e=>{e.preventDefault();const {error}=await supabase.auth.signInWithPassword({email,password});setPassword('');setMessage(error?'登入失敗':'登入成功');if(!error&&window.location.pathname==='/login'){const next=new URLSearchParams(window.location.search).get('next');window.location.assign(next&&['/stocks','/academy','/vnext/research'].includes(next)?next:'/stocks');}}}>
  <label>電子郵件<input style={{display:'block',maxWidth:'100%',padding:8}} type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label>
  <label>密碼<input style={{display:'block',maxWidth:'100%',padding:8}} type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label>
  <button>登入</button><button type="button" onClick={async()=>{await supabase.auth.signOut();setPassword('');setMessage('已登出');}}>登出</button><p role="status">{message}</p></form></details></aside>
- {window.location.pathname==='/academy'?<Suspense fallback={<p role="status">正在開啟股票學院</p>}><MemberAcademy/></Suspense>:real?<RealResearchPage/>:<VNextPage/>}</>;
+ {window.location.pathname==='/login'?<main style={{padding:32}}><h1>登入後繼續閱讀</h1><p>完成上方登入後，會返回原本要閱讀的內容。</p></main>:
+ ['/report/today','/pricing'].includes(window.location.pathname)?<main style={{padding:32}}><h1>既有正式功能保持不變</h1><p>本隔離環境不連線正式報告或付款服務，不提供假的市場摘要或會員方案。</p><a href="/stocks">返回股票觀察</a></main>:
+ ['/stocks','/account'].includes(window.location.pathname)?<MemberPage account={window.location.pathname==='/account'}/>:
+ window.location.pathname==='/academy'?<Suspense fallback={<p role="status">正在開啟股票學院</p>}><MemberAcademy/></Suspense>:real?<RealResearchPage/>:<VNextPage/>}</>;
 }
 const root=createRoot(document.getElementById('root')!);
 root.render(<Preview/>);

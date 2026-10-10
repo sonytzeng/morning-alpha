@@ -16,5 +16,10 @@ Cron/Secrets/existingAuth/RLS：NO CHANGE
 UI：src/pages/vnext，暫不改production router；既有Academy與Today入口不修改。
 Public trade/Recommendation/Report/LINE：NO CHANGE
 
+## Member Experience V1 候選
+本輪新增會員最小projection、固定每日三檔免費清單、Premium完整依據／watchlist／歷史及/stocks候選UI，詳MEMBER_EXPERIENCE.md。
+同一未發布migration擴充至11個私有表；沿用既有server entitlement，不修改正式權益、Auth或既有RLS。
+即使未來UI獲准部署，尚無逐筆合法再散布與研究審查的資料仍不能公開。正式route/navigation掛載與Production身分驗收須列入精確發布候選；本輪維持Draft與本機Preview。
+
 ## Rollback
 候選目前未接Production，停止Preview即可。未来批准上线后，UI回復原版本/關閉新入口；新表保留只讀隔離、不刪研究或會員紀錄。撤回發布用追加audit，不能改历史Prediction。任何数据泄漏停止ReleaseB，不修改Core消除告警。

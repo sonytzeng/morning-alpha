@@ -42,3 +42,16 @@ Owner摘要重用真實隔離Supabase Auth，非Owner/偽造/跨來源/寫入拒
 本輪本機iCloud產生17個node_modules/@types/* 2空目錄，僅rmdir已確認空目錄後Type-check/Lint/Build恢復；依賴與lockfile未改。
 Owner Preview仍http://127.0.0.1:3220/vnext/research，MA_VNEXT_FOUNDATION_DIR啟用新摘要；既有DB指紋核對後重用，不重做Migration。
 原RLS/Migration/Function/Production router不變。本輪新增16項unitnegative及私有offline real audit；最終CI須取本次HEAD，不沿用舊9項PASS。
+
+## Member Experience V1（2026-10-10）
+續接2af00e1094304a6f8c624ea93ccffe8b4b56238b；起始branch乾淨、PR230 Draft、9項GitHub Gate成功。沒有重做Engine／資料取得／Academy／Entry／Cockpit。
+新增範圍及唯一未執行Release Manifest見MEMBER_EXPERIENCE.md。仍使用原唯一候選migration，擴充11個私有RLS表及會員最小projection／個人watch RPC；沒有套用Production或修改既有Auth/RLS。
+新Fresh DB本機Postgres17＋真正Supabase Auth＋PostgREST：原17項驗證及會員13組契約PASS。新增每日固定3檔、metadata／query／direct API否決、跨帳號清單隔離／重登持久化、降級、撤回、事件revision鎖定與過期歷史負向測試。合成測試結果不代表投資價值或Production身分驗收。
+瀏覽器：本機Free只見3檔且無Premium details DOM；切換中期無合格資料如實空狀態。Premium短4／中1／長1（全為具名示範資料），完整支持／反對／事件／直接關係可展開；歷史1筆到期示範只顯示尚未成熟，不顯示報酬。清單加入→Reload→登出→重登保留；另一Owner帳號清單0，無跨帳號洩漏。匿名／登出顯示登入入口，私人卡片清除。URL tier=premium 無法提升Free。
+Desktop/Mobile共用導覽與Account入口點擊PASS。Free與Premium各於375／390／430／768／1440實際量測innerWidth等於指定寬度，document scrollWidth一致、水平溢出0；Premium details預設收合。修正驗收工具只對當前選中頁生效的視窗設定後重新截圖，未將手機截圖冒充桌機。乾淨Premium頁console error=0。
+Preview：Free http://127.0.0.1:3221/stocks；Premium http://127.0.0.1:3222/stocks；Owner私有研究 http://127.0.0.1:3220/vnext/research。不同origin隔離本機Session，頁首永久標示測試公司／非真實行情。截圖在/private/tmp/ma-vnext-member-qa/{free,premium}-{desktop,mobile}.png，不含憑證／會員資料。
+市場摘要只解析既有canonical envelope；保存10/2真實契約單元驗證保留原report日期。隔離站沒有Production Core連線，顯示「未取得」而不是假市場判斷。
+目前可公開真實研究仍0筆：再散布權利／逐筆審查未核准。既有真實250日缺口與Forward=0／Outcome=0不變。正向合成UI fixtures只證明產品流程與隔離安全，不會进入正式會員資料。
+本輪新增15項member unit／negative，加原66項為81項PASS；原與新Integrity共15項PASS。Type-check／Lint／主bundle及獨立candidate bundle已通過，最終封存後重驗。CI必須以本次最終HEAD為準，不沿用起始9項PASS。
+正式Router/Navbar/Account未改，會員导航只存在候選；未Merge／未Deploy／未執行Production Migration／未公開會員。Production Decision／Recommendation／Report／LINE受保護位元組未變，Production業務寫入0；本輪沒有以新的線上DB指紋冒充比較證據。
+VNEXT_MEMBER_PRODUCTION=NOT_DEPLOYED；SONY_USABILITY=PENDING；PUBLIC_PRODUCT_APPROVAL=NO。

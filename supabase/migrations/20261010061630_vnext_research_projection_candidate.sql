@@ -204,7 +204,9 @@ language plpgsql stable security definer set search_path='' as $$
 declare tier text; answer jsonb; events jsonb:='[]'; relations jsonb:='[]';
 begin
  tier:=academy_private.access_v11();
- if tier not in ('owner','free','premium') then raise exception 'MEMBER_REQUIRED' using errcode='42501'; end if;
+ -- Private predecessor is now Owner-only. Members use the independently
+ -- whitelisted member RPC below, never a second, less restrictive read path.
+ if tier <> 'owner' or tier is null then raise exception 'OWNER_REQUIRED' using errcode='42501'; end if;
  select coalesce(jsonb_agg(to_jsonb(row)), '[]'::jsonb) into answer from (
   select o.id,o.symbol,o.company,o.horizon,
     case when o.expires_at<=now() then 'EXPIRED' else o.status end as status,
@@ -249,5 +251,165 @@ begin
 end $$;
 revoke all on function public.get_vnext_observations_v1() from public,anon,authenticated,service_role;
 grant execute on function public.get_vnext_observations_v1() to authenticated;
+-- Member publication is a separate, immutable editorial artifact. Existing
+-- research, predictions, licenses and Production entitlement are not rewritten.
+create table vnext_private.member_copy(
+ observation_id text primary key references vnext_private.stock_horizon_observations(id),
+ publication_id bigint not null references vnext_private.publication_audit(id),
+ reviewed_at timestamptz not null default transaction_timestamp(),
+ primary_risk text not null check(length(primary_risk) between 1 and 600),
+ supporting_ids text[] not null default '{}', contradicting_ids text[] not null default '{}',
+ event_ids text[] not null default '{}', relation_ids text[] not null default '{}',
+ event_versions jsonb not null default '{}'
+);
+create table vnext_private.member_daily_edition(
+ business_date date not null, slot integer not null check(slot between 1 and 3),
+ symbol text not null, created_at timestamptz not null default transaction_timestamp(),
+ primary key(business_date,slot), unique(business_date,symbol),
+ check(business_date=(created_at at time zone 'Asia/Taipei')::date)
+);
+create table vnext_private.member_watch_events(
+ id bigint generated always as identity primary key,
+ user_id uuid not null references auth.users(id),
+ observation_id text not null references vnext_private.member_copy(observation_id),
+ watching boolean not null, created_at timestamptz not null default clock_timestamp()
+);
+create index vnext_watch_latest on vnext_private.member_watch_events(user_id,observation_id,id desc);
+do $$ declare n text; begin
+ foreach n in array array['member_copy','member_daily_edition','member_watch_events'] loop
+  execute format('alter table vnext_private.%I enable row level security',n);
+  execute format('alter table vnext_private.%I force row level security',n);
+  execute format('revoke all on vnext_private.%I from public,anon,authenticated,service_role',n);
+  execute format('create trigger immutable before update or delete on vnext_private.%I for each row execute function vnext_private.immutable_record()',n);
+ end loop;
+end $$;
+grant select,insert on vnext_private.member_copy,vnext_private.member_daily_edition to service_role;
+-- No raw authenticated grants, including Owner. Narrow definer RPCs only.
+create policy own_watch_read on vnext_private.member_watch_events for select to authenticated using(user_id=(select auth.uid()));
+
+create function vnext_private.validate_member_copy() returns trigger language plpgsql security definer set search_path='' as $$
+declare o vnext_private.stock_horizon_observations; a vnext_private.publication_audit;
+begin
+ select * into strict o from vnext_private.stock_horizon_observations where id=new.observation_id;
+ select * into strict a from vnext_private.publication_audit where observation_id=o.id order by id desc limit 1;
+ if new.reviewed_at<>transaction_timestamp() or new.publication_id<>a.id
+  or not vnext_private.publication_allowed(o.id,clock_timestamp())
+  or new.primary_risk ~ '(保證|穩賺|必漲|必賺|高勝率|正式推薦|買進訊號)'
+  or new.supporting_ids && new.contradicting_ids
+  or exists(select from unnest(new.supporting_ids||new.contradicting_ids) eid where not exists(
+   select from vnext_private.observation_evidence x where x.observation_id=o.id and x.evidence_id=eid))
+ then raise exception 'MEMBER_COPY_NOT_APPROVED'; end if;
+ -- Every linked event must be a verified, symbol-specific, same-cutoff fact.
+ if exists(select from unnest(new.event_ids) eid where not exists(
+  select from vnext_private.market_events e where e.event_id=eid and e.classification='CONFIRMED_FACT'
+  and o.symbol=any(e.affected_companies) and o.horizon=any(e.expected_horizons)
+  and e.available_at<=o.created_at and e.last_verified_at<=o.created_at
+  and e.revision=(select max(m.revision) from vnext_private.market_events m where m.event_id=eid and m.available_at<=o.created_at)
+  and not exists(select from unnest(e.evidence_ids) x where not exists(
+    select from vnext_private.observation_evidence oe join vnext_private.event_sources s on s.id=oe.evidence_id
+    where oe.observation_id=o.id and oe.evidence_id=x and s.classification='CONFIRMED_FACT' and s.source=e.source))))
+ then raise exception 'MEMBER_EVENT_UNVERIFIED'; end if;
+ if exists(select from unnest(new.relation_ids) rid where not exists(
+  select from vnext_private.supply_chain_relations r where r.id=rid and r.verification_status='VERIFIED' and r.confidence='DOCUMENTED'
+  and r.relation_type<>'INDUSTRY' and (o.symbol in(r.from_entity,r.to_entity) or o.company in(r.from_entity,r.to_entity))
+  and r.available_at<=o.created_at and r.valid_from<=o.created_at and (r.valid_to is null or r.valid_to>o.created_at)
+  and not exists(select from unnest(r.evidence_ids) x where not exists(
+    select from vnext_private.observation_evidence oe join vnext_private.event_sources s on s.id=oe.evidence_id
+    where oe.observation_id=o.id and oe.evidence_id=x and s.kind='SUPPLY_CHAIN' and s.source=r.source and s.classification='CONFIRMED_FACT'))))
+ then raise exception 'MEMBER_RELATION_UNVERIFIED'; end if;
+ -- Pin exactly what was reviewed; a later backdated event revision must not
+ -- replace the title/claim under an older member approval.
+ select coalesce(jsonb_object_agg(m.event_id,m.revision),'{}') into new.event_versions
+ from vnext_private.market_events m where m.event_id=any(new.event_ids)
+ and m.revision=(select max(x.revision) from vnext_private.market_events x where x.event_id=m.event_id and x.available_at<=o.created_at);
+ return new;
+end $$;
+revoke all on function vnext_private.validate_member_copy() from public,anon,authenticated,service_role;
+create trigger validate_member_copy before insert on vnext_private.member_copy for each row execute function vnext_private.validate_member_copy();
+
+-- A historical card is readable only if it passed the full gate while current,
+-- retains its immutable approval identity, and still has valid display rights.
+create function vnext_private.member_allowed(p_id text,p_history boolean default false) returns boolean
+language sql stable security definer set search_path='' as $$
+ select exists(select from vnext_private.member_copy c join vnext_private.stock_horizon_observations o on o.id=c.observation_id
+ cross join lateral(select * from vnext_private.publication_audit a where a.observation_id=o.id order by id desc limit 1) a
+ where o.id=p_id and a.approved and a.id=c.publication_id and a.snapshot_hash=o.snapshot_hash and a.reviewed_at<=now()
+ and ((vnext_private.publication_allowed(o.id,now()) and not exists(
+   select from vnext_private.observation_evidence x join vnext_private.event_sources e on e.id=x.evidence_id where x.observation_id=o.id and e.valid_until<=now())
+   and not exists(select from vnext_private.supply_chain_relations r where r.id=any(c.relation_ids) and r.valid_to<=now()))
+  or (p_history and o.mode='FORWARD_SHADOW' and o.created_at<=now()
+   and (o.expires_at<=now() or o.next_review_at<=now() or o.status in('INVALIDATED','EXPIRED'))))
+ and not exists(select from vnext_private.observation_evidence x join vnext_private.event_sources e on e.id=x.evidence_id
+ join vnext_private.source_licenses l on l.id=e.license_id where x.observation_id=o.id and
+ (not l.storage_allowed or not l.derived_allowed or not l.commercial_allowed or not l.redistribution_allowed
+  or l.reviewed_at>now() or (l.expires_at is not null and l.expires_at<=now()))));
+$$;
+revoke all on function vnext_private.member_allowed(text,boolean) from public,anon,authenticated,service_role;
+
+create function vnext_private.member_card(p_id text,p_full boolean) returns jsonb
+language sql stable security definer set search_path='' as $$
+ select jsonb_build_object('id',o.id,'symbol',o.symbol,'company',o.company,'horizon',o.horizon,
+ 'status',case when o.expires_at<=now() then 'EXPIRED' when o.next_review_at<=now() then 'REVIEW_DUE' else o.status end,
+ 'reason',o.reason,'risk',c.primary_risk,'created_at',o.created_at,'as_of',o.as_of,'next_review_at',o.next_review_at,
+ 'confirmation',(select jsonb_agg(x->>'text') from jsonb_array_elements(o.confirmation_conditions)x),
+ 'invalidation',(select jsonb_agg(x->>'text') from jsonb_array_elements(o.invalidation_conditions)x),
+ 'details',case when not p_full then null else jsonb_build_object(
+  'evidence',(select coalesce(jsonb_agg(jsonb_build_object('summary',e.summary,'source',e.source,'url',e.source_ref,
+   'available_at',e.available_at,'classification',e.classification,'stance',case when e.id=any(c.supporting_ids) then 'SUPPORTS'
+     when e.id=any(c.contradicting_ids) then 'CONTRADICTS' else 'CONTEXT' end) order by e.id),'[]')
+   from vnext_private.observation_evidence x join vnext_private.event_sources e on e.id=x.evidence_id where x.observation_id=o.id),
+  'events',(select coalesce(jsonb_agg(jsonb_build_object('title',m.title,'source',m.source,'available_at',m.available_at,
+    'invalidation',m.invalidation,'urls',(select jsonb_agg(e.source_ref) from vnext_private.event_sources e where e.id=any(m.evidence_ids)))),'[]')
+    from vnext_private.market_events m where m.event_id=any(c.event_ids) and m.revision=(c.event_versions->>m.event_id)::integer),
+  'relations',(select coalesce(jsonb_agg(jsonb_build_object('from',r.from_entity,'to',r.to_entity,'type',r.relation_type,'source',r.source,
+    'available_at',r.available_at,'urls',(select jsonb_agg(e.source_ref) from vnext_private.event_sources e where e.id=any(r.evidence_ids)))),'[]')
+    from vnext_private.supply_chain_relations r where r.id=any(c.relation_ids)),
+  'outcomes',(select coalesce(jsonb_agg(to_jsonb(x)),'[]') from (select distinct on(horizon_days) horizon_days,state,observed_at
+    from vnext_private.observation_outcomes where observation_id=o.id and observed_at<=now() order by horizon_days,revision desc)x)) end)
+ from vnext_private.stock_horizon_observations o join vnext_private.member_copy c on c.observation_id=o.id where o.id=p_id;
+$$;
+revoke all on function vnext_private.member_card(text,boolean) from public,anon,authenticated,service_role;
+
+create function public.get_vnext_member_v1() returns jsonb
+language plpgsql stable security definer set search_path='' as $$
+declare tier text; cards jsonb; history jsonb:='[]'; watches jsonb:='[]'; day date:=(now() at time zone 'Asia/Taipei')::date;
+begin
+ tier:=academy_private.access_v11();
+ if tier is null or tier not in('free','premium','owner') then raise exception 'MEMBER_REQUIRED' using errcode='42501'; end if;
+ select coalesce(jsonb_agg(vnext_private.member_card(o.id,tier<>'free') order by o.created_at desc,o.id),'[]') into cards
+ from vnext_private.stock_horizon_observations o where vnext_private.member_allowed(o.id,false)
+ and (tier<>'free' or (exists(select from vnext_private.member_daily_edition d where d.business_date=day and d.symbol=o.symbol)
+  and (select a.audience from vnext_private.publication_audit a where a.observation_id=o.id order by a.id desc limit 1)='free'));
+ if tier<>'free' then
+  select coalesce(jsonb_agg(vnext_private.member_card(o.id,true) order by o.created_at desc,o.id),'[]') into history
+  from vnext_private.stock_horizon_observations o where not vnext_private.member_allowed(o.id,false) and vnext_private.member_allowed(o.id,true);
+  select coalesce(jsonb_agg(observation_id order by observation_id),'[]') into watches from (
+   select distinct on(observation_id) observation_id,watching from vnext_private.member_watch_events
+   where user_id=auth.uid() order by observation_id,id desc)x where watching and vnext_private.member_allowed(observation_id,true);
+ end if;
+ return jsonb_build_object('schema','VNEXT_MEMBER_V1','tier',tier,'business_date',day,'observations',cards,
+  'history',history,'watchlist',watches,'research_only',true);
+end $$;
+revoke all on function public.get_vnext_member_v1() from public,anon,authenticated,service_role;
+grant execute on function public.get_vnext_member_v1() to authenticated;
+
+create function public.set_vnext_watch_v1(p_observation_id text,p_watching boolean) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare tier text; previous boolean; n integer;
+begin
+ tier:=academy_private.access_v11();
+ if auth.uid() is null or tier is null or tier not in('premium','owner') then raise exception 'PREMIUM_REQUIRED' using errcode='42501'; end if;
+ if p_watching is null or not vnext_private.member_allowed(p_observation_id,true) then raise exception 'OBSERVATION_UNAVAILABLE' using errcode='42501'; end if;
+ perform pg_advisory_xact_lock(hashtextextended('vnext-watch:'||auth.uid()::text,0));
+ select watching into previous from vnext_private.member_watch_events where user_id=auth.uid() and observation_id=p_observation_id order by id desc limit 1;
+ if coalesce(previous,false)<>p_watching then
+  select count(*) into n from (select distinct on(observation_id) watching from vnext_private.member_watch_events where user_id=auth.uid() order by observation_id,id desc)x where watching;
+  if p_watching and n>=200 then raise exception 'WATCHLIST_LIMIT'; end if;
+  insert into vnext_private.member_watch_events(user_id,observation_id,watching) values(auth.uid(),p_observation_id,p_watching);
+ end if;
+ return jsonb_build_object('saved',p_watching);
+end $$;
+revoke all on function public.set_vnext_watch_v1(text,boolean) from public,anon,authenticated,service_role;
+grant execute on function public.set_vnext_watch_v1(text,boolean) to authenticated;
 comment on schema vnext_private is 'Unreleased VNext research candidate. No Production writers, Cron, or automatic publication.';
 commit;

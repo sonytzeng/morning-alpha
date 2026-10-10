@@ -59,9 +59,10 @@ export async function verifyCandidate(runtime){
  const checks=[],sessions={};
  const rpc=async(token)=>{const r=await fetch(localRestBase+'/rpc/get_vnext_observations_v1',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:'{}'});return {status:r.status,body:await r.json()};};
  const login=async(role)=>{const r=await fetch(localAuthBase+'/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:role+'@academy.test',password:localTestPassword})});assert.equal(r.status,200);return r.json();};
- for(const [role,count] of [['owner',3],['free',1],['premium',2],['other',1]]){
+ for(const [role,count] of [['owner',3],['free',0],['premium',0],['other',0]]){
   sessions[role]=await login(role);
   let result;for(let i=0;i<10;i++){result=await rpc(sessions[role].access_token);if(result.status!==404)break;await new Promise(r=>setTimeout(r,100));}
+  if(role!=='owner'){assert.equal(result.status,403,'old private read path is Owner-only');checks.push(role+' private predecessor denied');continue;}
   assert.equal(result.status,200,role+' projection');assert.equal(result.body.observations.length,count,role+' approved content');
   assert.equal(parseProjection(result.body).observations.length,count,'actual PostgreSQL JSON accepted by browser read model');
   assert.equal(result.body.industry.events.length,role==='owner'?2:0,'independent industry publication approval required');
@@ -78,7 +79,7 @@ export async function verifyCandidate(runtime){
  const forged=sessions.free.access_token.split('.');forged[1]=Buffer.from(JSON.stringify({role:'authenticated',sub:sessions.owner.user.id})).toString('base64url');
  assert.equal((await rpc(forged.join('.'))).status,401);checks.push('forged JWT denied');
  await fetch(localAuthBase+'/user',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+sessions.free.access_token},body:JSON.stringify({data:{owner:true,tier:'premium'}})});
- assert.equal((await rpc(sessions.free.access_token)).body.observations.length,1);checks.push('user metadata cannot elevate');
+ assert.equal((await rpc(sessions.free.access_token)).status,403);checks.push('user metadata cannot elevate');
  assert.throws(()=>runtime.sql("update vnext_private.stock_horizon_observations set reason='tamper' where id='test-SHORT'"));
  assert.throws(()=>runtime.sql("delete from vnext_private.stock_horizon_observations where id='test-SHORT'"));
  assert.throws(()=>runtime.sql("insert into vnext_private.stock_horizon_observations select * from vnext_private.stock_horizon_observations limit 1"));checks.push('immutable prediction and duplicate lock denied');
@@ -88,13 +89,12 @@ export async function verifyCandidate(runtime){
  assert.throws(()=>runtime.sql(`${outcome}values('test-SHORT',1,clock_timestamp(),repeat('a',64),'UNCONFIRMED','SYNTHETIC',2)`));
  assert.throws(()=>runtime.sql(`${outcome}values('test-SHORT',20,clock_timestamp(),repeat('a',64),'UNCONFIRMED','SYNTHETIC',1)`));checks.push('append-only outcome revisions and per-horizon boundaries');
  checks.push('Owner industry timeline, unknown relation and member non-publication');
- assert.equal(runtime.sql("select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='vnext_private' and c.relkind='r' and c.relrowsecurity and c.relforcerowsecurity"),'8');checks.push('eight private tables forced RLS');
+ assert.equal(runtime.sql("select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='vnext_private' and c.relkind='r' and c.relrowsecurity and c.relforcerowsecurity"),'11');checks.push('eleven private tables forced RLS');
  for(const mutation of ["snapshot_hash=repeat('b',64)","approved=false","audience='premium'"]){
   // Append a new review only inside rollback, never alter original audit.
   runtime.sql(`begin;insert into vnext_private.publication_audit(observation_id,snapshot_hash,audience,approved,content_kind,reviewer_ref,license_review_ref,gate_version)
    select observation_id,${mutation.startsWith('snapshot')?"repeat('b',64)":"snapshot_hash"},${mutation.startsWith('audience')?"'premium'":"audience"},${mutation.startsWith('approved')?'false':'approved'},content_kind,reviewer_ref,license_review_ref,gate_version from vnext_private.publication_audit where observation_id='test-SHORT' order by id desc limit 1;
-   set local role authenticated;set local request.jwt.claims='{"sub":"${id}"}';
-   do $$begin if jsonb_array_length(public.get_vnext_observations_v1()->'observations')<>0 then raise exception 'PUBLICATION_BYPASS';end if;end$$;rollback;`);
+   do $$begin if ${mutation.startsWith('audience')?"false":"vnext_private.publication_allowed('test-SHORT',clock_timestamp())"} then raise exception 'PUBLICATION_BYPASS';end if;end$$;rollback;`);
  }checks.push('hash mismatch/revocation/audience fail closed');
  runtime.sql(`begin;
  insert into vnext_private.stock_horizon_observations(id,symbol,company,horizon,created_at,as_of,available_at,last_verified_at,next_review_at,expires_at,reason,strategy_version,mode,snapshot_hash,status,confirmation_conditions,invalidation_conditions)
@@ -102,8 +102,8 @@ export async function verifyCandidate(runtime){
  from vnext_private.stock_horizon_observations where id='test-SHORT';
  set local role authenticated;set local request.jwt.claims='{"sub":"${sessions.owner.user.id}"}';
  do $$begin if not exists(select from jsonb_array_elements(public.get_vnext_observations_v1()->'observations') x where x->>'id'='test-history' and x->>'mode'='HISTORICAL_REPLAY' and x->>'status'='EXPIRED') then raise exception 'HISTORY_OR_EXPIRY_LABEL_MISSING';end if;end$$;
- set local request.jwt.claims='{"sub":"${id}"}';
- do $$begin if exists(select from jsonb_array_elements(public.get_vnext_observations_v1()->'observations') x where x->>'id'='test-history') then raise exception 'HISTORY_LEAK';end if;end$$;rollback;`);
+ reset role;
+ do $$begin if vnext_private.publication_allowed('test-history',clock_timestamp()) then raise exception 'HISTORY_LEAK';end if;end$$;rollback;`);
  checks.push('historical mode and expired state remain explicit, never member forward');
  // DB function/Owner predicate fingerprints, not Production data, for regression.
  checks.push('no Production endpoint or source imported');

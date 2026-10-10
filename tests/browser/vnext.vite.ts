@@ -3,10 +3,12 @@ import react from '@vitejs/plugin-react';
 import {resolve} from 'node:path';
 import {loadRetainedResearch} from '../../scripts/vnext/real-evidence.mjs';
 import {readOwnerResearch} from '../../scripts/vnext/owner-research-server.mjs';
+import {foundationSummary} from '../../scripts/vnext/foundation-validation.mjs';
 const root=resolve(import.meta.dirname,'../..'),origin='http://127.0.0.1:3220';
 export default defineConfig(async({command})=>{
  if(command!=='serve'||process.env.MA_VNEXT_LOCAL!=='ISOLATED_ONLY'||!process.env.MA_VNEXT_ANON)throw Error('LOCAL_ONLY');
  const reports=process.env.MA_VNEXT_REAL_PREVIEW==='ISOLATED_OWNER_ONLY'?await loadRetainedResearch(process.env.MA_ENTRY_PRIVATE_FIXTURE_DIR,process.env.MA_VNEXT_DISPLAY_NAMES):null;
+ const foundation=reports&&process.env.MA_VNEXT_FOUNDATION_DIR?foundationSummary(process.env.MA_VNEXT_FOUNDATION_DIR):null;
  return {root,envDir:false,envPrefix:'VNEXT_UNUSED_',publicDir:false,cacheDir:'/private/tmp/ma-vnext-vite',define:{'import.meta.env.VNEXT_REAL_PREVIEW':JSON.stringify(reports?'true':'false')},
  optimizeDeps:{noDiscovery:true,include:['react','react-dom/client','react/jsx-runtime','@supabase/supabase-js','lucide-react']},
  css:{postcss:{plugins:[]}},
@@ -16,7 +18,7 @@ export default defineConfig(async({command})=>{
   const path=req.url?.split('?')[0];
   if(path==='/__vnext_owner_research'){
    if(!reports){res.statusCode=404;res.end();return;}
-   const result=await readOwnerResearch({method:req.method,authorization:req.headers.authorization},reports);
+   const result=await readOwnerResearch({method:req.method,authorization:req.headers.authorization},reports,fetch,foundation);
    res.statusCode=result.status;res.setHeader('Content-Type','application/json');res.end(JSON.stringify(result.body));return;
   }
   if(path==='/__vnext_public_config'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({anon:process.env.MA_VNEXT_ANON}));return;}

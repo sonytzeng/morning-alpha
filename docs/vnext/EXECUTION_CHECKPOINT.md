@@ -30,3 +30,15 @@ Owner/free/premium/other使用真正本機Supabase Auth；真實研究僅Owner A
 Browser已實測10/7、10/8、三期間、9/12事件、公司關係未知、搜尋排序、details收合／展開、登入／登出、375/390/430/768/1440無水平溢出。PDF/Academy既有PASS工作未重做。
 本輪18項新增unit/negative，加原31核心契約；私有真實replay不進公開CI。僅更新白名單與精確SHA successor，必須以最終候選再跑Integrity/Type-check/Lint/Build/GitHub CI。
 原唯一Migration內容未變、新Function=0；不Merge/Deploy/Production寫入。Forward/Outcome=0、Analysis Value=INSUFFICIENT_SAMPLE。
+
+## Evidence Foundation P0（2026-10-10）
+續接ebcbb4a；原PR230 Draft9項CI成功，workingtree乾淨。新增官方250日資料與來源候選，詳EVIDENCE_FOUNDATION.md。
+快取：/private/tmp/morning-alpha-vnext-foundation-20261010（0700）；真實資料不進Git/CI/Readdy。上市61、上櫃11，初次620個量價GET含2次有界重試、重用486舊快取。重播快取618 hits／486 reuse／0 requests。
+市場250日71/72；2884 2025-11-05官方停牌OHLC缺失，保留249/250。額外原官方9/24紀錄作warmup後，250筆真實成交日觀測72/72；不混用兩種coverage。
+81筆除權息、6類官方來源成功；完整權益未證明，adjusted returns禁用。當期月營收/EPS各72；重訊來源6+4筆，本72檔當期命中0，不能宣稱完整歷史事件。
+1條已核對關係3653→2330（2025supplier award），來源為官方公司網頁工具人工核對+TWSE英文名驗證，不聲稱現在訂單/產品/獲利。自動GET403如實記錄，沒有繞過。
+歷史兩日原snapshot不變，新資料舊cutoff admissible=[0,0]。Forward=0、Outcome=0。純daily incremental planner，不新增排程或Production caller。
+Owner摘要重用真實隔離Supabase Auth，非Owner/偽造/跨來源/寫入拒絕；Browser Owner讀取PASS，375/390/430/768/1440無overflow、技術預設收合、登出立即清除、0consoleerrors。這不是Sony正式Owner驗收。
+本輪本機iCloud產生17個node_modules/@types/* 2空目錄，僅rmdir已確認空目錄後Type-check/Lint/Build恢復；依賴與lockfile未改。
+Owner Preview仍http://127.0.0.1:3220/vnext/research，MA_VNEXT_FOUNDATION_DIR啟用新摘要；既有DB指紋核對後重用，不重做Migration。
+原RLS/Migration/Function/Production router不變。本輪新增16項unitnegative及私有offline real audit；最終CI須取本次HEAD，不沿用舊9項PASS。

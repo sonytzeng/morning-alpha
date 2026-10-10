@@ -16,7 +16,7 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: npm ci
-      - run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs tests/vnextRealEvidence.test.mjs tests/vnextFoundation.test.mjs tests/vnextMember.test.mjs
+      - run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs tests/vnextRealEvidence.test.mjs tests/vnextFoundation.test.mjs tests/vnextMember.test.mjs tests/vnextPublication.test.mjs
       - name: Build unmounted member UI candidate (no Production bundle changes)
         run: MA_VNEXT_BUILD_DIR=/tmp/ma-vnext-member-build node scripts/vnext/member-build.mjs
       - name: Disposable Auth, publication and RLS (not Production Owner proof)

@@ -8,7 +8,7 @@ const MemberAcademy=lazy(()=>import('../../src/pages/academy/MemberAcademy'));
 function Preview(){
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[message,setMessage]=useState('');
  const real=window.location.pathname==='/vnext/research'||window.location.pathname==='/login'&&import.meta.env.VNEXT_REAL_PREVIEW==='true';
- return <><aside style={{padding:12,background:'#fff0ce',color:'#503610',font:'14px system-ui'}}><strong>{real?'Owner隔離預覽 · 10/7、10/8真實保存證據的歷史研究，非今日即時訊號':'隔離研究預覽 · 所有示範股票與資料均為測試，不是真實行情'}</strong>
+ return <><aside style={{padding:12,background:'#fff0ce',color:'#503610',font:'14px system-ui'}}><strong>{import.meta.env.VNEXT_PUBLICATION_PREVIEW==='true'?'發布準備隔離預覽 · 真實研究尚未通過公開條件，不提供示範股票':real?'Owner隔離預覽 · 10/7、10/8真實保存證據的歷史研究，非今日即時訊號':'隔離研究預覽 · 所有示範股票與資料均為測試，不是真實行情'}</strong>
  <details open={window.location.pathname==='/login'}><summary style={{padding:'10px 0',cursor:'pointer'}}>驗收環境登入</summary><p>使用本機 Supabase 真實登入，不是 Sony 正式帳號。沒有前端角色切換器。</p>
  <form style={{display:'flex',gap:12,flexWrap:'wrap'}} onSubmit={async e=>{e.preventDefault();const {error}=await supabase.auth.signInWithPassword({email,password});setPassword('');setMessage(error?'登入失敗':'登入成功');if(!error&&window.location.pathname==='/login'){const next=new URLSearchParams(window.location.search).get('next');window.location.assign(next&&['/stocks','/academy','/vnext/research'].includes(next)?next:'/stocks');}}}>
  <label>電子郵件<input style={{display:'block',maxWidth:'100%',padding:8}} type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label>

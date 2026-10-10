@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import {environment,installCandidate,verifyCandidate} from './isolation.mjs';
 import {parseMemberResearch} from '../../src/features/vnext/member.ts';
+import {revokeSyntheticPublications,verifyEmptyPublication} from './publication-isolation.mjs';
 const base='http://127.0.0.1:55633',auth='http://127.0.0.1:55632';
 export function installMemberFixtures(runtime){
  runtime.sql(`begin;
@@ -122,6 +123,9 @@ if(process.argv[1]===new URL(import.meta.url).pathname){
  const runtime=await environment();try{
   installCandidate(runtime);console.log(JSON.stringify(await verifyCandidate(runtime)));
   installMemberFixtures(runtime);console.log(JSON.stringify(await verifyMember(runtime)));
+  if(process.env.MA_VNEXT_KEEP_PREVIEW!=='ISOLATED_ONLY'){
+   revokeSyntheticPublications(runtime);console.log(JSON.stringify(await verifyEmptyPublication()));
+  }
   if(process.env.MA_VNEXT_KEEP_PREVIEW==='ISOLATED_ONLY'){
    process.env.MA_VNEXT_LOCAL='ISOLATED_ONLY';process.env.MA_VNEXT_ANON=runtime.anon;
    const {createServer}=await import('vite');

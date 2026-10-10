@@ -16,6 +16,6 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: npm ci
-      - run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs
+      - run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs tests/vnextRealEvidence.test.mjs
       - name: Disposable Auth, publication and RLS (not Production Owner proof)
         run: node scripts/vnext/isolation.mjs

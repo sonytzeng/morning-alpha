@@ -10,11 +10,12 @@ export const VNEXT_PATHS=Object.freeze([
  '.github/workflows/vnext-candidate.yml',
  '.github/workflows/validate-release.yml',
  ...['BASELINE_INVENTORY','PRODUCTION_BASELINE_AUDIT','ARCHITECTURE','DATA_LICENSE_AUDIT','EVENT_INTELLIGENCE_SPEC','SUPPLY_CHAIN_SPEC','MULTI_HORIZON_SPEC','SIGNAL_LAB_INTEGRATION_PLAN','PUBLICATION_GATE','RELEASE_PLAN','EXECUTION_CHECKPOINT','ACCEPTANCE_MATRIX'].map(n=>'docs/vnext/'+n+'.md'),
- 'scripts/vnext/isolation.mjs','scripts/vnext/preview.mjs',
- ...['contracts','engine','projection','validation'].map(n=>'src/features/vnext/'+n+'.ts'),
- 'src/pages/vnext/Workspace.tsx','src/pages/vnext/page.tsx','src/pages/vnext/vnext.css',VNEXT_MIGRATION,
+ 'docs/vnext/RELEASE_B_REAL_EVIDENCE.md',
+ 'scripts/vnext/isolation.mjs','scripts/vnext/preview.mjs','scripts/vnext/real-evidence.mjs','scripts/vnext/owner-research-server.mjs',
+ ...['contracts','engine','projection','validation','realResearch'].map(n=>'src/features/vnext/'+n+'.ts'),
+ 'src/pages/vnext/Workspace.tsx','src/pages/vnext/page.tsx','src/pages/vnext/RealResearch.tsx','src/pages/vnext/vnext.css',VNEXT_MIGRATION,
  'tests/browser/vnext.client.ts','tests/browser/vnext.harness.tsx','tests/browser/vnext.vite.ts','tests/fixtures/vnext.mjs',
- 'tests/vnextContracts.test.mjs','tests/vnextValidation.test.mjs','tests/vnextIntegrity.test.mjs',
+ 'tests/vnextContracts.test.mjs','tests/vnextValidation.test.mjs','tests/vnextIntegrity.test.mjs','tests/vnextRealEvidence.test.mjs','tests/vnextRealReplay.integration.mjs',
  'tests/helpers/vnextIntegrity.mjs','tests/helpers/academyV11Integrity.mjs','tests/academyV11Integrity.test.mjs','tests/productContract.test.mjs',
 ].sort());
 const root=fileURLToPath(new URL('../../',import.meta.url));

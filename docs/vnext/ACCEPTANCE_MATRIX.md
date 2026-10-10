@@ -29,3 +29,11 @@
 
 ## 尚未成立的最高Gate
 DATA_QUALITY（真實多週期/PIT）、BACKTEST_VALIDITY、FORWARD_VALIDATION、OWNER_ACCEPTANCE、正式MEMBER_EXPERIENCE仍未PASS。Production metadata ACTIVE不能取代自然穩定性驗證；本輪未執行正式業務操作或匯出完整業務快照。CONTINUOUS_IMPROVEMENT=NOT_OPERATIONAL。
+
+## Release B 真實保存資料增量
+
+以RELEASE_B_REAL_EVIDENCE.md為本輪資料／UI證據，前述合成contract驗證不升格為真實投資成效。
+兩日72檔×3期間共432項真實重播PASS（正確拒絕缺失資料），不是432筆Forward；Forward=0、Outcome=0。
+Owner-only實際API與Browser採同一隔離Auth／伺服器Owner truth；Free/Premium/anonymous/logout拒絕。來源最小化、hash、immutable local lock、跨Origin拒絕均已驗證。
+Desktop1440／Mobile375/390/430／768的真實卡片與技術展開無水平溢出，私有payload未入Git或公開CI。
+工程整合不代表完整資料Gate通過：250D、公司行動完整性、公司事件影響及中長期證據仍不足；Supply Chain=UNKNOWN、商用再散布未核准。最高分析／Forward／Sony正式Owner驗收Gate仍未成立。

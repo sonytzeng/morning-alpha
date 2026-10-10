@@ -20,3 +20,13 @@ Production Migration/部署/合併/會員公開/正式推薦/LINE/Cron均未執�
 CI預算修復：run38035354393/job114164533153於20m14s被取消；GitHub annotation明確為「exceeded the maximum execution time of 20m0s」，當時已进入後續隔離PostgreSQL測試。只將原Validate工作timeout從20延長至40分鐘，新增逐byte測試證明其餘steps、permissions、觸發條件完全不變。不刪測試、不降低門檻。Academy官方映像Registry限流經有界重試恢復PASS。最終HEAD仍須完整重跑。
 本機完整回歸的38項loopback測試被sandbox listen EPERM阻擋；使用合法本機綁定復驗相關3檔48/48 PASS。舊完整run為避免混合版本已停止，不能宣稱單次全量PASS；完整證據以最後HEAD GitHub Validate為準。
 本頁是可恢復進度，不是Production完成證明。Draft候選可供CI檢查，但Release A/B/C均不得據此發布。CONSOLE修正熱更新dispose後乾淨頁面0 error/0 warning；API正反HTTP由17組隔離套件驗證，瀏覽器不匯出Token或原始流量。
+
+## Release B 真實資料續跑（2026-10-10）
+核對原HEAD9f993568與PR230 Draft、9項CI成功；原成果保留，不重做Academy或原Schema。
+本輪新增細節見RELEASE_B_REAL_EVIDENCE.md。兩日私有最小膠囊先審核hash與敏感欄位，原截止20D72/72；後來官方快取20/60/120D72/72但拒絕回灌原截止，250D0/72。
+432項三期間研究全部資料不足，沒有製造合格標的；能閱讀真實量價、法人股數、月營收與報表EPS，尚缺原發布／首次取得等時間、事件內文與中長期證據。EPS單季／累計口徑未知，未代猜。
+Preview更新為http://127.0.0.1:3220/vnext/research（Owner-only、真實保存歷史）；舊/vnext保留明確合成的原候選驗收頁。
+Owner/free/premium/other使用真正本機Supabase Auth；真實研究僅Owner ALLOW，其他全部DENY，query role與偽造JWT也拒絕。Production Owner仍PENDING，不能混稱。
+Browser已實測10/7、10/8、三期間、9/12事件、公司關係未知、搜尋排序、details收合／展開、登入／登出、375/390/430/768/1440無水平溢出。PDF/Academy既有PASS工作未重做。
+本輪18項新增unit/negative，加原31核心契約；私有真實replay不進公開CI。僅更新白名單與精確SHA successor，必須以最終候選再跑Integrity/Type-check/Lint/Build/GitHub CI。
+原唯一Migration內容未變、新Function=0；不Merge/Deploy/Production寫入。Forward/Outcome=0、Analysis Value=INSUFFICIENT_SAMPLE。

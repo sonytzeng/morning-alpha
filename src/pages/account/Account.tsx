@@ -7,6 +7,7 @@ import MorningReminderCard from './components/MorningReminderCard';
 import { useAccountDashboard } from '@/hooks/useAccountDashboard';
 import VisualPageHero from '@/components/feature/VisualPageHero';
 import MembershipStatusCard from '@/components/membership/MembershipStatusCard';
+import AcademyEntry from './components/AcademyEntry';
 
 function isTaipeiWeekend(): boolean {
   const now = new Date();
@@ -94,6 +95,7 @@ export default function Account() {
         <div className="w-full px-4 md:px-6 py-6 md:py-10">
           <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
             <MembershipStatusCard />
+            <AcademyEntry />
 
             <section aria-labelledby="member-daily-path-title">
               <div className="mb-4">

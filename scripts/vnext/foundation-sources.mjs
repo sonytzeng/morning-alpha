@@ -20,6 +20,14 @@ export function publicationTime(date,time){
  if(h>23||m>59||sec>59)return null;return `${d}T${p.slice(0,2)}:${p.slice(2,4)}:${p.slice(4)}+08:00`;
 }
 const eventType=title=>/法說|法人說明|說明會/.test(title)?'EARNINGS_CALL':/營收/.test(title)?'REVENUE_ANNOUNCEMENT':/財務報告|財報|財務報表/.test(title)?'FINANCIAL_REPORT':/股利|除權|除息/.test(title)?'DIVIDEND_ANNOUNCEMENT':'MATERIAL_ANNOUNCEMENT';
+export function completedActualPeriod(kind,period,sourceDate){
+ const match=kind==='REVENUE'?/^(\d{3,4})(\d{2})$/.exec(period):/^(\d{3,4})-Q([1-4])$/.exec(period);
+ if(!match||!sourceDate)return false;
+ const year=Number(match[1])+(match[1].length===3?1911:0),month=Number(match[2])*(kind==='EPS'?3:1);
+ if(year<1900||month<1||month>12)return false;
+ const end=new Date(Date.UTC(year,month,0)).toISOString().slice(0,10);
+ return end<=sourceDate;
+}
 export function parseOfficialFacts(spec,p,symbols,at){
  if(!OFFICIAL_SOURCES.includes(spec)||!Array.isArray(p)||!Number.isFinite(Date.parse(at)))throw Error('SOURCE_SCHEMA_INVALID');
  const rows=[],rejected=[],seen=new Set();for(const raw of p){
@@ -39,7 +47,7 @@ export function parseOfficialFacts(spec,p,symbols,at){
    const period=spec.kind==='REVENUE'?String(r['資料年月']??''):`${r['年度']??r.Year??''}-Q${r['季別']??''}`;
    const values=spec.kind==='REVENUE'?{revenue_yoy:officialNumber(r['營業收入-去年同月增減(%)']),revenue_mom:officialNumber(r['營業收入-上月比較增減(%)'])}:{eps_as_reported:officialNumber(r['基本每股盈餘(元)']??r['基本每股盈餘'])};
    const taipeiDate=new Date(Date.parse(at)+8*3600000).toISOString().slice(0,10);
-   if(!sourceDate||sourceDate>taipeiDate||!period||Object.values(values).some(v=>v===null)){rejected.push({symbol,reason:'ACTUAL_PERIOD_OR_VALUE_UNVERIFIABLE'});continue;}
+   if(!sourceDate||sourceDate>taipeiDate||!completedActualPeriod(spec.kind,period,sourceDate)||Object.values(values).some(v=>v===null)){rejected.push({symbol,reason:'ACTUAL_PERIOD_OR_VALUE_UNVERIFIABLE'});continue;}
    rows.push({...base,period,values,publication_precision:'DATE_ONLY_NOT_EXACT_TIMESTAMP',period_basis:spec.kind==='EPS'?'AS_REPORTED_CUMULATIVE_BASIS_NOT_INFERRED':'MONTHLY',consensus:false});
   }
  }

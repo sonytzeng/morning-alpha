@@ -1,6 +1,7 @@
 import {resolve} from 'node:path';
 import {readdirSync} from 'node:fs';
 import {sha,readPrivate,privateDirectory,auditBars,foundationSessions} from './foundation-history.mjs';
+import {completedActualPeriod} from './foundation-sources.mjs';
 
 /** Availability is local recorded knowledge, never the historical period label. */
 export function availableAt(fact,cutoff){
@@ -49,7 +50,7 @@ export function auditFoundation(directory){
   if(b.evidence_hash!==sha(original)||!availableAt(b,history.observed_at)||b.first_seen_at!==b.available_at||b.price_basis!=='RAW_UNADJUSTED')throw Error('BAR_PROVENANCE');
  }
  for(const row of history.rows){const expected=[...(row.warmup??[]),...row.bars].sort((a,b)=>a.date.localeCompare(b.date)).slice(-250);if(sha(expected.map(b=>b.date))!==sha(row.traded250_dates))throw Error('TRADED_OBSERVATION_MISMATCH');if(row.warmup?.some(b=>b.date>=dates[0]))throw Error('WARMUP_SESSION_INVALID');}
- for(const f of sources.facts)if(!availableAt(f,sources.observed_at)||f.impact!=='UNKNOWN')throw Error('FACT_PROVENANCE');
+ for(const f of sources.facts)if(!availableAt(f,sources.observed_at)||f.impact!=='UNKNOWN'||(['REVENUE','EPS'].includes(f.kind)&&!completedActualPeriod(f.kind,f.period,f.source_date)))throw Error('FACT_PROVENANCE');
  for(const r of sources.relations)if(!availableAt(r,sources.observed_at)||r.inferred!==false||r.impact!=='UNKNOWN')throw Error('RELATION_PROVENANCE');
  const replay_cutoffs=['2026-10-07T12:28:24.170Z','2026-10-08T06:33:01.624Z'];
  const leakage=replay_cutoffs.map(c=>history.rows.flatMap(r=>[...r.bars,...(r.warmup??[])]).filter(b=>availableAt(b,c)).length+sources.facts.filter(f=>availableAt(f,c)).length+sources.relations.filter(r=>availableAt(r,c)).length);

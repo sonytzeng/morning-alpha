@@ -40,7 +40,7 @@
     {
       "path": "docs/vnext/EVIDENCE_FOUNDATION.md",
       "before_sha256": null,
-      "after_sha256": "7207c4770961fcee272ff63b6c0a06ea2933988463da4b609b27260242ba0272"
+      "after_sha256": "427fddbc9236ba01319adacecf4549625ed4ab9a8a22532450ed45664616c2b7"
     },
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
@@ -90,12 +90,12 @@
     {
       "path": "scripts/vnext/foundation-sources.mjs",
       "before_sha256": null,
-      "after_sha256": "86210c02bbbb01ab16dc935e9bf0965a33c0f3ce2f661021025c706810cbee40"
+      "after_sha256": "c7eedb52d7b4109b9335c1ed7fc495add854dcde4f3e5fc642410833beef7fc8"
     },
     {
       "path": "scripts/vnext/foundation-validation.mjs",
       "before_sha256": null,
-      "after_sha256": "d38c7cbfbea964cdeef6f78131256494250f0852e032a2a1d47ca94ad87e5b42"
+      "after_sha256": "b4b701b5178c8c84ede9e29a23e416c234addd0226d3ca0413b5ebe4ca4d706b"
     },
     {
       "path": "scripts/vnext/isolation.mjs",
@@ -225,7 +225,7 @@
     {
       "path": "tests/vnextFoundation.test.mjs",
       "before_sha256": null,
-      "after_sha256": "6900b1e79a0b06e7ada1d0cc264478d9a72be9dd9d7baf9fa210733b6342afac"
+      "after_sha256": "e00f80f476b47c1b48ea487948ce55d88116608238a3ded040932c5fc2b98edb"
     },
     {
       "path": "tests/vnextFoundationReal.integration.mjs",

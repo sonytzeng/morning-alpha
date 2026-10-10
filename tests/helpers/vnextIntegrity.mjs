@@ -8,6 +8,7 @@ export const VNEXT_MANIFEST='docs/vnext/transition.json';
 export const VNEXT_MIGRATION='supabase/migrations/20261010061630_vnext_research_projection_candidate.sql';
 export const VNEXT_PATHS=Object.freeze([
  '.github/workflows/vnext-candidate.yml',
+ '.github/workflows/validate-release.yml',
  ...['BASELINE_INVENTORY','PRODUCTION_BASELINE_AUDIT','ARCHITECTURE','DATA_LICENSE_AUDIT','EVENT_INTELLIGENCE_SPEC','SUPPLY_CHAIN_SPEC','MULTI_HORIZON_SPEC','SIGNAL_LAB_INTEGRATION_PLAN','PUBLICATION_GATE','RELEASE_PLAN','EXECUTION_CHECKPOINT','ACCEPTANCE_MATRIX'].map(n=>'docs/vnext/'+n+'.md'),
  'scripts/vnext/isolation.mjs','scripts/vnext/preview.mjs',
  ...['contracts','engine','projection','validation'].map(n=>'src/features/vnext/'+n+'.ts'),

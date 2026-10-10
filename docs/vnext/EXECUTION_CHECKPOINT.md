@@ -17,4 +17,6 @@ Hard stops：禁止merge/deploy/productionmigration/secret/cron/officialstrategy
 External gaps：無ProductionOwner目前session證據；正式Free/Premium帳號未提供；缺250D/PITUniverse/action/execution/rightsclearance；PR103未合併。
 Production Migration/部署/合併/會員公開/正式推薦/LINE/Cron均未執行。Outcome正式producer與自然資料取得尚未啟用；MEASURED outcome在DB拒絕，不能用字串聲稱已成交。
 新的Integrity successor只接受列名檔案及SHA，驗證全部實際baseline後才提供舊Academy gate的歷史view。只快取immutable Git blob；live baseline與candidate每次重讀；縮減重複全樹掃描不省略實際檢查。
+CI預算修復：run38035354393/job114164533153於20m14s被取消；GitHub annotation明確為「exceeded the maximum execution time of 20m0s」，當時已进入後續隔離PostgreSQL測試。只將原Validate工作timeout從20延長至40分鐘，新增逐byte測試證明其餘steps、permissions、觸發條件完全不變。不刪測試、不降低門檻。Academy官方映像Registry限流經有界重試恢復PASS。最終HEAD仍須完整重跑。
+本機完整回歸的38項loopback測試被sandbox listen EPERM阻擋；使用合法本機綁定復驗相關3檔48/48 PASS。舊完整run為避免混合版本已停止，不能宣稱單次全量PASS；完整證據以最後HEAD GitHub Validate為準。
 本頁是可恢復進度，不是Production完成證明。Draft候選可供CI檢查，但Release A/B/C均不得據此發布。CONSOLE修正熱更新dispose後乾淨頁面0 error/0 warning；API正反HTTP由17組隔離套件驗證，瀏覽器不匯出Token或原始流量。

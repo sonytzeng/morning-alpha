@@ -8,6 +8,11 @@ test('VNext exact candidate preserves every Production byte and previous release
  assert.deepEqual(result.predecessorRead('tests/helpers/academyV11Integrity.mjs'),vnextPrior('tests/helpers/academyV11Integrity.mjs'));
  assert.throws(()=>result.predecessorRead('src/features/vnext/engine.ts'),{code:'ENOENT'});
 });
+test('existing Validate workflow changes only execution budget, never steps or permissions',()=>{
+ const path='.github/workflows/validate-release.yml',prior=vnextPrior(path).toString();
+ const expected=prior.replace('    timeout-minutes: 20','    # Full protected-baseline integrity plus all existing fresh-DB incident\n    # regressions exceed the former 20-minute budget. No steps are skipped.\n    timeout-minutes: 40');
+ assert.notEqual(expected,prior);assert.equal(read(path).toString(),expected);
+});
 test('unknown paths, changed evidence policy and deployment flags cannot enter through successor view',()=>{
  assert.throws(()=>vnextTransition(read,[...vnextChangedPaths(),'src/rogue.ts']));
  for(const path of ['src/features/vnext/engine.ts','src/router/config.tsx'])assert.throws(()=>vnextTransition(p=>p===path?Buffer.concat([read(p),Buffer.from('\n// drift')]):read(p)));

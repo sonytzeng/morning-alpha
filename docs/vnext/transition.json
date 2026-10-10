@@ -3,6 +3,11 @@
   "base": "fff51d76a8e6c90768772023c37afbb112761a3a",
   "files": [
     {
+      "path": ".github/workflows/validate-release.yml",
+      "before_sha256": "2eaa49e58067a7e7d3a29dbf3d134c1de96c41d2e43784e1a22ce426752ec83a",
+      "after_sha256": "9b5ea2009dcabb193f66037640beea99f443e9d3c9b47a38b0fe658251069870"
+    },
+    {
       "path": ".github/workflows/vnext-candidate.yml",
       "before_sha256": null,
       "after_sha256": "f9b885afcd118d722e0026e312e86d3ba2fb8d2d27169a8c64a81fc31638635d"
@@ -35,7 +40,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "4d98ba7657e4c09d8be4de0d7cacee57a2853de79623d8d0189c43d8f04aa763"
+      "after_sha256": "715665f67b035054203bb0d0fd71274188d85af9223b46b27f07fcd46b0123b2"
     },
     {
       "path": "docs/vnext/MULTI_HORIZON_SPEC.md",
@@ -150,7 +155,7 @@
     {
       "path": "tests/helpers/vnextIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "5130f810ad738f52396eae7be981de664930c0357cfaad722e4a5124609818f2"
+      "after_sha256": "2918f743c5c7cc57f5e150c758f7f9f643a7c9d5a5b353fbfcb2b09589441e5a"
     },
     {
       "path": "tests/productContract.test.mjs",
@@ -165,7 +170,7 @@
     {
       "path": "tests/vnextIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "76cebd29b6b9210a5dc978c202a61c538237f833e4a112ccfc8157043a9bf34c"
+      "after_sha256": "5e31cf8eb41d0968c144c94188bca07c63071ab9b544509b0706a0293955024a"
     },
     {
       "path": "tests/vnextValidation.test.mjs",

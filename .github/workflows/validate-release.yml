@@ -11,7 +11,9 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Full protected-baseline integrity plus all existing fresh-DB incident
+    # regressions exceed the former 20-minute budget. No steps are skipped.
+    timeout-minutes: 40
     services:
       isolated-postgres:
         image: postgres:17

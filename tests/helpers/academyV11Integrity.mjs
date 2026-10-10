@@ -3,6 +3,7 @@ import { readFileSync, lstatSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { vnextPredecessorViews, vnextBaselineChangedPaths } from './vnextIntegrity.mjs';
 
 export const ACADEMY_V11_BASE = '6ad78d0fdd23c0bcc4470351b3c74612b60f4404';
 export const ACADEMY_V11_MANIFEST = 'docs/academy/v11/transition.json';
@@ -118,26 +119,25 @@ export function academyV11Prior(path) {
 }
 
 export function academyV11ChangedPaths() {
-  return [...new Set([
-    ...git(['diff', '--no-renames', '--name-only', '-z', ACADEMY_V11_BASE, '--']).split('\0'),
-    ...git(['ls-files', '--others', '--exclude-standard', '-z']).split('\0'),
-  ].filter(Boolean))].sort();
+  return vnextBaselineChangedPaths(ACADEMY_V11_BASE);
 }
 
 /** Mandatory release gate. Explicit arguments support adversarial fixtures,
  * not release approval. Live approval must call this with no overrides.
  */
-export function academyV11Transition(source = read, changedPaths = academyV11ChangedPaths()) {
-  return restoreV11(source, changedPaths, true);
+export function academyV11Transition(source = read, changedPaths) {
+  const views=vnextPredecessorViews(source===read?undefined:source);
+  const result=restoreV11(views.predecessorRead, changedPaths ?? views.changedPaths(ACADEMY_V11_BASE), true,views.actualPredecessorRead);
+  views.verify();return result;
 }
 
-function restoreV11(source, changedPaths, verifyHistoricalView) {
+function restoreV11(source, changedPaths, verifyHistoricalView,actualRead=read) {
   const candidate = restoreV11Candidate(source, changedPaths);
   for (const [path, bytes] of baselineBytes()) {
     if (candidate.before.has(path)) continue;
     // Always read actual raw bytes afresh. The default source IS this exact
     // reader, so a second call would only repeat the same filesystem check.
-    assert.deepEqual(read(path), bytes, 'protected V1.1 working-tree bytes: ' + path);
+    assert.deepEqual(actualRead(path), bytes, 'protected V1.1 working-tree bytes: ' + path);
     if (verifyHistoricalView && source !== read) {
       const actual = source(path);
       assert.deepEqual(actual, typeof actual === 'string' ? bytes.toString('utf8') : bytes,
@@ -205,7 +205,9 @@ export function academyV11AwareReader(source = read, changedPaths) {
     if (error.code === 'ENOENT' && source !== read) return source;
     throw error;
   }
-  return restoreV11(source, changedPaths ?? academyV11ChangedPaths(), false).predecessorRead;
+  const views=vnextPredecessorViews(source===read?undefined:source);
+  const result=restoreV11(views.predecessorRead, changedPaths ?? views.changedPaths(ACADEMY_V11_BASE), false,views.actualPredecessorRead).predecessorRead;
+  views.verify();return result;
 }
 
 /** Two views for ONE V1 invocation, not a reusable validation cache.
@@ -222,7 +224,11 @@ export function academyV11PredecessorViews(source) {
       if (error.code !== 'ENOENT') throw error;
       present = false;
     }
-    if (present) historical = restoreV11Candidate(source, academyV11ChangedPaths()).predecessorRead;
+    if (present) {
+      const views=vnextPredecessorViews(source);
+      historical = restoreV11Candidate(views.predecessorRead, views.changedPaths(ACADEMY_V11_BASE)).predecessorRead;
+      views.verify();
+    }
   }
   const actualPredecessorRead = academyV11ActualPredecessorReader();
   return { predecessorRead: historical ?? actualPredecessorRead, actualPredecessorRead };

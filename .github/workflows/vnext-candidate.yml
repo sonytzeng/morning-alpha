@@ -1,0 +1,23 @@
+name: VNext research candidate
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  vnext-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      - run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs tests/vnextRealEvidence.test.mjs tests/vnextFoundation.test.mjs tests/vnextMember.test.mjs tests/vnextPublication.test.mjs tests/vnextResearchFunnel.test.mjs
+      - name: Build unmounted member UI candidate (no Production bundle changes)
+        run: MA_VNEXT_BUILD_DIR=/tmp/ma-vnext-member-build node scripts/vnext/member-build.mjs
+      - name: Disposable Auth, publication and RLS (not Production Owner proof)
+        run: node scripts/vnext/member-isolation.mjs

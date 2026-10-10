@@ -1,0 +1,22 @@
+// Reuses the already tested local runtime; no new environment or Production auth.
+import {execFileSync} from 'node:child_process';
+import assert from 'node:assert/strict';
+import {createServer} from 'vite';
+import {verifyInstalledCandidate} from './isolation.mjs';
+import {auditPublication} from './publication-readiness.mjs';
+import {revokeSyntheticPublications,verifyEmptyPublication} from './publication-isolation.mjs';
+const name=process.env.MA_VNEXT_REUSE_LOCAL_DB;
+assert.match(name??'',/^ma-academy-auth-\d+-db$/);
+const source=process.env.MA_VNEXT_EXISTING_PREVIEW;
+assert(['http://127.0.0.1:3221','http://127.0.0.1:3222'].includes(source));
+const sql=q=>execFileSync('docker',['exec','-i',name,'psql','-XqAt','-U','postgres','-v','ON_ERROR_STOP=1'],{input:q,encoding:'utf8',stdio:['pipe','pipe','pipe']}).trim();
+const runtime={sql};verifyInstalledCandidate(runtime);
+const readiness=auditPublication(process.env.MA_VNEXT_FOUNDATION_DIR,process.env.MA_VNEXT_DISPLAY_NAMES);
+assert.equal(readiness.cards.filter(c=>c.member_eligible).length,0,'NONEMPTY_REQUIRES_REVIEWED_PROJECTION');
+revokeSyntheticPublications(runtime);console.log(JSON.stringify(await verifyEmptyPublication(readiness)));
+const config=await fetch(source+'/__vnext_public_config').then(r=>r.json());
+assert.equal(typeof config.anon,'string');process.env.MA_VNEXT_ANON=config.anon;
+process.env.MA_VNEXT_LOCAL='ISOLATED_ONLY';process.env.MA_VNEXT_REAL_PREVIEW='ISOLATED_OWNER_ONLY';process.env.MA_VNEXT_PUBLICATION_PREVIEW='REAL_EMPTY';
+const server=await createServer({configFile:new URL('../../tests/browser/vnext.vite.ts',import.meta.url).pathname});
+await server.listen();console.log('PUBLICATION_PREVIEW=http://127.0.0.1:'+process.env.MA_VNEXT_PORT+'/stocks');
+const stop=async()=>{await server.close();process.exit(0);};process.once('SIGINT',stop);process.once('SIGTERM',stop);

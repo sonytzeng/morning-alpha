@@ -3,6 +3,7 @@ import { ArrowDownToLine, ArrowLeft, ArrowRight, BookOpen, Check, LockKeyhole, R
 import { supabase } from '@/lib/supabase';
 import { memberChapterPassed, parseMemberLesson, parseMemberPdf, parseMemberProgress, type AcademyMemberAnswer, type AcademyMemberCatalog, type AcademyMemberProgress } from '@/features/academy/member';
 import { useAcademyAccess } from './useAcademyAccess';
+import { ACADEMY_LOGIN_PATH } from '@/features/academy/navigation';
 import type { AcademyChapter, AcademyQuestion } from './content';
 import Diagram from './Diagram';
 import './academy.css';
@@ -188,6 +189,6 @@ function MemberWorkspace({ catalog, signal }: { catalog: AcademyMemberCatalog; s
 export default function MemberAcademy() {
   const { access, retry } = useAcademyAccess();
   return <div className="academy academy-member"><a href="#member-academy-main" className="academy-skip">跳至主要內容</a><header className="member-topbar"><a href="/account"><ArrowLeft size={16} aria-hidden="true" />返回帳戶</a><span>MORNING ALPHA <b>股票學院</b></span><span className="member-topbar-label">會員學習空間</span></header><main id="member-academy-main" className="member-main">
-    {access.kind === 'member' && !access.signal.aborted ? <MemberWorkspace key={`${access.id}:${access.generation}`} catalog={access.catalog} signal={access.signal} /> : <section className="member-access" role="status"><BookOpen size={38} aria-hidden="true" /><p className="academy-eyebrow">按照自己的節奏學習</p><h1>{access.kind === 'loading' ? '正在確認會員身份' : access.kind === 'denied' ? '登入後，開始你的學習旅程' : '課程目前無法載入'}</h1><p>{access.kind === 'loading' ? '確認身份與課程權限前，不會讀取教材。' : access.kind === 'denied' ? '請登入可使用課程的帳戶。免費會員可學習基礎章節，進階章節依 Premium 權限開放。' : '無法確認身份或取得課程目錄；可能是服務尚未開放或連線異常。請稍後再試。'}</p><div><a href="/account">前往帳戶</a>{access.kind !== 'loading' && <button type="button" onClick={retry}>重新確認</button>}</div></section>}
+    {access.kind === 'member' && !access.signal.aborted ? <MemberWorkspace key={`${access.id}:${access.generation}`} catalog={access.catalog} signal={access.signal} /> : <section className="member-access" role="status"><BookOpen size={38} aria-hidden="true" /><p className="academy-eyebrow">按照自己的節奏學習</p><h1>{access.kind === 'loading' ? '正在確認會員身份' : access.kind === 'denied' ? '登入後，開始你的學習旅程' : '課程目前無法載入'}</h1><p>{access.kind === 'loading' ? '確認身份與課程權限前，不會讀取教材。' : access.kind === 'denied' ? '請登入可使用課程的帳戶。免費會員可學習基礎章節，進階章節依 Premium 權限開放。' : '無法確認身份或取得課程目錄；可能是服務尚未開放或連線異常。請稍後再試。'}</p><div><a href={access.kind === 'denied' ? ACADEMY_LOGIN_PATH : '/account'}>{access.kind === 'denied' ? '登入並開始學習' : '前往帳戶'}</a>{access.kind !== 'loading' && <button type="button" onClick={retry}>重新確認</button>}</div></section>}
   </main><footer className="member-footer"><span>MORNING ALPHA · 理解先於判斷</span><span>教育用途 · 不構成投資建議</span></footer></div>;
 }

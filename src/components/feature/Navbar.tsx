@@ -6,6 +6,7 @@ import type { MarketState } from '@/services/marketStateEngine';
 import { supabase } from '@/lib/supabase';
 import { PRODUCT_FEATURE_FLAGS } from '@/config/productFeatures';
 import { trackEvent } from '@/utils/analytics';
+import { ACADEMY_NAVIGATION } from '@/features/academy/navigation';
 import '@/features/decision-v1/subscriber.css';
 
 interface NavbarProps {
@@ -51,6 +52,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
     { to: '/verification', label: '收盤驗證' },
     { to: '/performance', label: '歷史績效' },
     ...(PRODUCT_FEATURE_FLAGS.beginner_learning.enabled ? [{ to: '/learn', label: '小白學堂' }] : []),
+    ACADEMY_NAVIGATION,
     { to: isLoggedIn ? '/account' : '/login', label: isLoggedIn ? '會員中心' : '登入' },
   ];
 
@@ -58,7 +60,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-background-200/70 bg-background-50">
-      <div className="mx-auto w-full max-w-5xl px-4 md:px-6">
+      <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
         <div className="flex h-14 items-center justify-between md:h-16">
           {/* Logo */}
           <Link to="/" className="flex min-h-11 items-center gap-2 flex-shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/40">
@@ -78,7 +80,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
           {/* Keep the decision journey usable on narrow tablets too. */}
           <div className="hidden lg:flex items-center gap-1">
             {/* Market Status Light in navbar — V25: powered by marketState */}
-            <div className="mr-2 hidden lg:block">
+            <div className="mr-2 hidden xl:block">
               <MarketStatusLight compact marketState={marketState} displayLabelOverride={marketStatusLabel} />
             </div>
 

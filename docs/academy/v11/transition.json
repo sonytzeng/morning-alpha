@@ -94,11 +94,25 @@
       "candidate_sha256": "9eee74dc98db5eebf7d5e120f1903457cc1307265783150898027f5dbb468c28"
     },
     {
+      "path": "src/components/feature/Navbar.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6ad78d0fdd23c0bcc4470351b3c74612b60f4404",
+      "predecessor_sha256": "9dea50fd11630c03395aff158c4db2fcb5567f9da3c2d25bb00793f7b8279883",
+      "candidate_sha256": "31a791bd6a6b0f5b8fa41d6b4fb939e3970c19cd2cd62c093876d81b4b3bff8c"
+    },
+    {
       "path": "src/features/academy/member.ts",
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
       "candidate_sha256": "62ac4bae6a958124a0be7ef2cd7fc5f319129359975ac9c970240f18dc599c75"
+    },
+    {
+      "path": "src/features/academy/navigation.ts",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "a07db8a51243d3f01fdda68c3dd70bf257702412096b5dba931a9fa382f6eefb"
     },
     {
       "path": "src/pages/academy/Diagram.tsx",
@@ -112,7 +126,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "a59a916fe4a96127e27defd92679896ead1909ea382da046e976383bd7390731"
+      "candidate_sha256": "4e003d198568cebd5c8cc53b739fa91faa227b06c5e8db93414f7a8d63bd9599"
     },
     {
       "path": "src/pages/academy/member.css",
@@ -136,6 +150,20 @@
       "candidate_sha256": "b56eee4b1a6d6d2052f1ee2f2d171a34633e59cc7c2fa9dc6987fad5b2798998"
     },
     {
+      "path": "src/pages/account/Account.tsx",
+      "operation": "MODIFY",
+      "predecessor_git_sha": "6ad78d0fdd23c0bcc4470351b3c74612b60f4404",
+      "predecessor_sha256": "497e5345fb1ce51e249333c021706f158a1aa22c9a5a869ba41fb69a1d994eb4",
+      "candidate_sha256": "edbfa30b6dd10caeb04d39718e35046650066f38c231676998f0300f42b7e4ea"
+    },
+    {
+      "path": "src/pages/account/components/AcademyEntry.tsx",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "83ad85412c739ded767b7093a068e66e79580b66b5cae2c0639b86e46f7d4b71"
+    },
+    {
       "path": "src/pages/report/components/TodayStrategySection.tsx",
       "operation": "MODIFY",
       "predecessor_git_sha": "6ad78d0fdd23c0bcc4470351b3c74612b60f4404",
@@ -155,6 +183,13 @@
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
       "candidate_sha256": "d99312ad017a9525ac61ec23d48a68822d14fb2ad650d6daa7dfc2359676cfa5"
+    },
+    {
+      "path": "tests/academyNavigation.test.mjs",
+      "operation": "ADD",
+      "predecessor_git_sha": null,
+      "predecessor_sha256": null,
+      "candidate_sha256": "aba5b1ac2b8eaaae3b535ae4a3bb8f5eb34329d2bf29d3697effd622384848ba"
     },
     {
       "path": "tests/academyV11Copy.test.mjs",
@@ -259,7 +294,7 @@
       "operation": "ADD",
       "predecessor_git_sha": null,
       "predecessor_sha256": null,
-      "candidate_sha256": "6fc463fa5d282d2fc6838c531187416bf94bee903f627ab25e958108ff7495ea"
+      "candidate_sha256": "b81269117436df9362832302505729f76ba14502f036ab0f177645f72cbd1667"
     },
     {
       "path": "tests/productContract.test.mjs",

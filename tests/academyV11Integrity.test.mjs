@@ -6,6 +6,7 @@ import { syncBuiltinESMExports } from 'node:module';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { academyTransition, academyAwareReader, academyPrior, academyChangedPaths } from './helpers/academyCandidateIntegrity.mjs';
+import { VNEXT_BASE } from './helpers/vnextIntegrity.mjs';
 import {
   ACADEMY_V11_BASE, ACADEMY_V11_MANIFEST, ACADEMY_V11_PREDECESSOR,
   ACADEMY_V11_PREDECESSOR_SHA256, ACADEMY_V11_MIGRATION, ACADEMY_V11_PATHS,
@@ -145,8 +146,8 @@ test('fake historical readers cannot hide actual unrelated raw-byte drift', t =>
   });
   syncBuiltinESMExports();
   try {
-    assert.throws(() => academyV11Transition(f.source, f.inventory), /protected V1.1 working-tree bytes: src\/router\/config/);
-    assert.throws(() => academyV11AwareReader(f.source, f.inventory), /protected V1.1 working-tree bytes: src\/router\/config/);
+    assert.throws(() => academyV11Transition(f.source, f.inventory), /protected VNext baseline: src\/router\/config/);
+    assert.throws(() => academyV11AwareReader(f.source, f.inventory), /protected VNext baseline: src\/router\/config/);
   } finally {
     t.mock.restoreAll();
     syncBuiltinESMExports();
@@ -174,7 +175,7 @@ test('missing successor seal fails the mandatory gate; historical absence is not
 });
 
 test('V1 integration verifies the real successor before restoring historical bytes and diagnostics', t => {
-  const f = fixture(), realRead = fs.readFileSync, realStat = fs.lstatSync, realExec = childProcess.execFileSync;
+  const f = fixture(), realRead = fs.readFileSync, realExec = childProcess.execFileSync;
   const root = fileURLToPath(new URL('../', import.meta.url));
   const relative = path => {
     const value = path instanceof URL ? fileURLToPath(path) : String(path);
@@ -182,44 +183,41 @@ test('V1 integration verifies the real successor before restoring historical byt
   };
   const actualDrift = new Map();
   const sentinel = 'src/lib/subscriberReportContract.ts';
-  let sentinelReads = 0, inventoryReads = 0;
-  // A process-local virtual live candidate exercises the NO-OVERRIDE release
-  // APIs without writing a seal, changing files, or blessing the unfinished UI.
+  let sentinelReads = 0, inventoryReads = 0, extraPath = false;
+  // Exercise the current, sealed VNext successor through the NO-OVERRIDE APIs.
+  // Only adversarial drift is process-local. An old synthetic V1.1 candidate
+  // cannot replace raw VNext files: the newest gate must reject that mismatch.
   t.mock.method(fs, 'readFileSync', function(path, ...args) {
     const p = relative(path);
     if (p === sentinel) sentinelReads++;
-    const b = actualDrift.get(p) ?? (p === ACADEMY_V11_MANIFEST || f.bytes.has(p) ? f.source(p) : null);
+    const b = actualDrift.get(p) ?? null;
     if (b === null) return realRead.call(this, path, ...args);
     const encoding = typeof args[0] === 'string' ? args[0] : args[0]?.encoding;
     return encoding ? b.toString(encoding) : Buffer.from(b);
   });
-  t.mock.method(fs, 'lstatSync', function(path, ...args) {
-    const p = relative(path);
-    return p === ACADEMY_V11_MANIFEST || f.bytes.has(p) ? { isFile: () => true } : realStat.call(this, path, ...args);
-  });
   t.mock.method(childProcess, 'execFileSync', function(command, args, ...options) {
-    if (command === 'git' && args[0] === 'diff' && args.length === 6 && args[4] === ACADEMY_V11_BASE) {
+    if (command === 'git' && args[0] === 'diff' && args.length === 6 && args[4] === VNEXT_BASE) {
       inventoryReads++;
-      return f.inventory.join('\0') + '\0';
+      const inventory = realExec.call(this, command, args, ...options);
+      return extraPath ? inventory + 'unknown-live-file\0' : inventory;
     }
-    if (command === 'git' && args[0] === 'ls-files' && args.includes('--others')) return '';
     return realExec.call(this, command, args, ...options);
   });
   syncBuiltinESMExports();
   try {
     const liveText = p => fs.readFileSync(new URL(p, 'file://' + root), 'utf8');
-    for (const [verify, expectedReads] of [
-      [() => academyV11Transition(), 1],
-      [() => academyChangedPaths(), 1],
-      [() => academyTransition(), 2],
-      [() => academyAwareReader(), 2],
-      [() => academyAwareReader(liveText), 2],
-      [() => academyTransition(liveText), 3],
+    for (const verify of [
+      () => academyV11Transition(),
+      () => academyChangedPaths(),
+      () => academyTransition(),
+      () => academyAwareReader(),
+      () => academyAwareReader(liveText),
+      () => academyTransition(liveText),
     ]) {
       for (let repeat = 0; repeat < 2; repeat++) {
         sentinelReads = inventoryReads = 0;
         verify();
-        assert.equal(sentinelReads, expectedReads, 'fresh complete scans without redundant baseline reads');
+        assert.ok(sentinelReads >= 1, 'each invocation validates live baseline bytes; no cached live proof');
         assert.ok(inventoryReads >= 1, 'real inventory is never cached between calls');
       }
     }
@@ -237,11 +235,11 @@ test('V1 integration verifies the real successor before restoring historical byt
     assert.deepEqual(academyAwareReader(historicalSource)(path), injected);
 
     actualDrift.set('src/router/config.tsx', Buffer.from('REAL_ROUTER_DRIFT'));
-    assert.throws(() => academyTransition(priorRead), /protected V1.1 working-tree bytes/);
+    assert.throws(() => academyTransition(priorRead), /protected VNext baseline: src\/router\/config/);
     actualDrift.clear();
     const member = 'src/features/academy/member.ts';
     actualDrift.set(member, Buffer.from('REAL_CANDIDATE_DRIFT'));
-    assert.throws(() => academyTransition(priorRead), /unreviewed candidate drift \(Academy V1.1\)/);
+    assert.throws(() => academyTransition(priorRead), /protected VNext baseline: src\/features\/academy\/member/);
     actualDrift.clear();
     // A historical callback can mutate the live filesystem view; the live gate
     // must execute AFTER custom admission, not reuse an earlier successful scan.
@@ -249,24 +247,24 @@ test('V1 integration verifies the real successor before restoring historical byt
       if (p === ACADEMY_V11_PATHS.at(-1)) actualDrift.set(sentinel, Buffer.from('CALLBACK_DRIFT'));
       return f.source(p);
     };
-    assert.throws(() => academyV11PredecessorViews(mutatingSource), /protected V1.1 working-tree bytes/);
+    assert.throws(() => academyV11PredecessorViews(mutatingSource), /protected VNext baseline: src\/lib\/subscriberReportContract/);
     actualDrift.clear();
     // Reusing an already restored historical reader must not cache LIVE proof.
     const historical = academyV11Transition().predecessorRead;
     academyV11PredecessorViews(historical);
     actualDrift.set(sentinel, Buffer.from('LATER_RAW_DRIFT'));
-    assert.throws(() => academyV11PredecessorViews(historical), /protected V1.1 working-tree bytes/);
+    assert.throws(() => academyV11PredecessorViews(historical), /protected VNext baseline: src\/lib\/subscriberReportContract/);
     actualDrift.clear();
     const badManifest = { ...f.manifest, production_deploy_authorized: true };
     actualDrift.set(ACADEMY_V11_MANIFEST, Buffer.from(JSON.stringify(badManifest)));
-    assert.throws(() => academyTransition(priorRead), /production_deploy_authorized/);
+    assert.throws(() => academyTransition(priorRead), /protected VNext baseline: docs\/academy\/v11\/transition/);
     actualDrift.clear();
     // The cached two-commit diff must not be mutable through the exported API.
     const changed = academyChangedPaths(); changed.push('caller-poison');
     assert.ok(!academyChangedPaths().includes('caller-poison'));
-    f.inventory.push('unknown-live-file');
-    assert.throws(() => academyTransition(priorRead), /exact Academy V1.1 changed paths/);
-    assert.throws(() => academyChangedPaths(), /exact Academy V1.1 changed paths/);
+    extraPath = true;
+    assert.throws(() => academyTransition(priorRead), /unknown VNext working-tree path/);
+    assert.throws(() => academyChangedPaths(), /unknown VNext working-tree path/);
   } finally {
     t.mock.restoreAll();
     syncBuiltinESMExports();

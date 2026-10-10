@@ -125,9 +125,9 @@ export function academyV11ChangedPaths() {
 /** Mandatory release gate. Explicit arguments support adversarial fixtures,
  * not release approval. Live approval must call this with no overrides.
  */
-export function academyV11Transition(source = read, changedPaths = academyV11ChangedPaths()) {
+export function academyV11Transition(source = read, changedPaths) {
   const views=vnextPredecessorViews(source===read?undefined:source);
-  const result=restoreV11(views.predecessorRead, changedPaths, true,views.actualPredecessorRead);
+  const result=restoreV11(views.predecessorRead, changedPaths ?? views.changedPaths(ACADEMY_V11_BASE), true,views.actualPredecessorRead);
   views.verify();return result;
 }
 
@@ -206,7 +206,7 @@ export function academyV11AwareReader(source = read, changedPaths) {
     throw error;
   }
   const views=vnextPredecessorViews(source===read?undefined:source);
-  const result=restoreV11(views.predecessorRead, changedPaths ?? academyV11ChangedPaths(), false,views.actualPredecessorRead).predecessorRead;
+  const result=restoreV11(views.predecessorRead, changedPaths ?? views.changedPaths(ACADEMY_V11_BASE), false,views.actualPredecessorRead).predecessorRead;
   views.verify();return result;
 }
 
@@ -224,7 +224,11 @@ export function academyV11PredecessorViews(source) {
       if (error.code !== 'ENOENT') throw error;
       present = false;
     }
-    if (present) historical = restoreV11Candidate(vnextPredecessorViews(source).predecessorRead, academyV11ChangedPaths()).predecessorRead;
+    if (present) {
+      const views=vnextPredecessorViews(source);
+      historical = restoreV11Candidate(views.predecessorRead, views.changedPaths(ACADEMY_V11_BASE)).predecessorRead;
+      views.verify();
+    }
   }
   const actualPredecessorRead = academyV11ActualPredecessorReader();
   return { predecessorRead: historical ?? actualPredecessorRead, actualPredecessorRead };

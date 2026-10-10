@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
+import {parseProjection} from '../../src/features/vnext/projection.ts';
 // Reusing an already verified local runtime must not initialize another Auth
 // environment or eagerly load unrelated original Academy material.
 const localAuthBase='http://127.0.0.1:55632',localRestBase='http://127.0.0.1:55633';
@@ -37,13 +38,20 @@ export function installCandidate(runtime){
  select 'test-'||h,'TEST','測試公司（非真實標的）',h,now(),now()-interval '1 hour',now()-interval '1 hour',now()-interval '30 minutes',now()+interval '1 day',now()+interval '7 days',
  case h when 'SHORT' then '示範：先觀察量價與消息，等待條件確認。' when 'MEDIUM' then '示範：訂單需要營收驗證，不用短期漲幅代替。' else '示範：需求與獲利尚待持續驗證，不急著下結論。' end,
  'SYNTHETIC_TEST_ONLY','FORWARD_SHADOW',repeat('a',64),'WATCHING',
- '[{"text":"示範條件：價格與成交量共同確認後，再重新評估。","state":"UNKNOWN","evidence_ids":["test-PRICE_VOLUME"]}]',
- '[{"text":"示範失效：原本的需求假設不成立，就停止觀察。","state":"NOT_MET","evidence_ids":["test-PRICE_VOLUME"]}]'
+ jsonb_build_array(jsonb_build_object('text',case h when 'SHORT' then '示範條件：價格與成交量共同確認後，再重新評估。' when 'MEDIUM' then '示範條件：已公布的訂單由後續月營收驗證，再重新評估。' else '示範條件：需求、毛利與獲利持續驗證，且估值仍有合理依據。' end,'state','UNKNOWN','evidence_ids',jsonb_build_array(case h when 'SHORT' then 'test-PRICE_VOLUME' when 'MEDIUM' then 'test-REVENUE' else 'test-EPS' end))),
+ jsonb_build_array(jsonb_build_object('text',case h when 'SHORT' then '示範失效：價格跌破已確認支撐，停止短期觀察。' when 'MEDIUM' then '示範失效：訂單取消或月營收未驗證原假設，停止觀察。' else '示範失效：長期需求或競爭優勢的證據不再成立，停止觀察。' end,'state','NOT_MET','evidence_ids',jsonb_build_array(case h when 'SHORT' then 'test-TECHNICAL_STRUCTURE' when 'MEDIUM' then 'test-ORDERS' else 'test-DEMAND' end)))
  from unnest(array['SHORT','MEDIUM','LONG']) h;
  insert into vnext_private.observation_evidence select o.id,e.id from vnext_private.stock_horizon_observations o cross join vnext_private.event_sources e;
  insert into vnext_private.publication_audit(observation_id,snapshot_hash,audience,approved,content_kind,reviewer_ref,license_review_ref,gate_version)
  values('test-SHORT',repeat('a',64),'free',true,'RESEARCH_OBSERVATION','SYNTHETIC','SYNTHETIC','VNEXT_PUBLICATION_1'),
- ('test-MEDIUM',repeat('a',64),'premium',true,'RESEARCH_OBSERVATION','SYNTHETIC','SYNTHETIC','VNEXT_PUBLICATION_1');
+  ('test-MEDIUM',repeat('a',64),'premium',true,'RESEARCH_OBSERVATION','SYNTHETIC','SYNTHETIC','VNEXT_PUBLICATION_1');
+ insert into vnext_private.market_events(event_id,revision,source,source_event_id,published_at,first_seen_at,available_at,last_verified_at,title,affected_companies,expected_horizons,invalidation,evidence_ids,classification,snapshot_hash)
+ values('test-event',1,'SYNTHETIC','test-announcement',now()-interval '2 hours',now()-interval '1 hour',now()-interval '20 minutes',now()-interval '10 minutes',
+ '示範：公司公布需求展望，仍需營收驗證',array['TEST'],array['MEDIUM'],'若後續營收未驗證，撤回原本推論',array['test-INDUSTRY_EVENT'],'REPORTED_CLAIM',repeat('a',64)),
+ ('test-event',2,'SYNTHETIC','test-announcement',now()-interval '2 hours',now()-interval '1 hour',now()-interval '5 minutes',now()-interval '1 minute',
+ '示範更新：展望已修正，不能重複當成新利多',array['TEST'],array['MEDIUM'],'以後續更正公告重新驗證',array['test-INDUSTRY_EVENT'],'REPORTED_CLAIM',repeat('b',64));
+ insert into vnext_private.supply_chain_relations(id,from_entity,to_entity,relation_type,source,evidence_ids,valid_from,valid_to,observed_at,available_at,confidence,revenue_exposure,verification_status)
+ values('test-relation','測試公司（非真實標的）','測試產業','INDUSTRY','SYNTHETIC',array['test-SUPPLY_CHAIN'],now()-interval '1 day',null,now()-interval '1 hour',now()-interval '10 minutes','UNKNOWN',null,'UNVERIFIED');
  commit;notify pgrst,'reload schema';`);
  runtime.sql("comment on schema vnext_private is 'ISOLATED_CANDIDATE_SHA256:"+candidateFingerprint()+"'");
 }
@@ -55,6 +63,10 @@ export async function verifyCandidate(runtime){
   sessions[role]=await login(role);
   let result;for(let i=0;i<10;i++){result=await rpc(sessions[role].access_token);if(result.status!==404)break;await new Promise(r=>setTimeout(r,100));}
   assert.equal(result.status,200,role+' projection');assert.equal(result.body.observations.length,count,role+' approved content');
+  assert.equal(parseProjection(result.body).observations.length,count,'actual PostgreSQL JSON accepted by browser read model');
+  assert.equal(result.body.industry.events.length,role==='owner'?2:0,'independent industry publication approval required');
+  assert.equal(result.body.industry.relations.length,role==='owner'?1:0);
+  if(role==='owner')assert.equal(result.body.industry.relations[0].evidence_status,'UNKNOWN');
   assert.equal(result.body.tier,role==='other'?'free':role);checks.push(role+' real local Auth + publication/entitlement');
  }
  const anonymous=await rpc(null);assert.ok([401,403].includes(anonymous.status));checks.push('anonymous denied');
@@ -70,6 +82,12 @@ export async function verifyCandidate(runtime){
  assert.throws(()=>runtime.sql("update vnext_private.stock_horizon_observations set reason='tamper' where id='test-SHORT'"));
  assert.throws(()=>runtime.sql("delete from vnext_private.stock_horizon_observations where id='test-SHORT'"));
  assert.throws(()=>runtime.sql("insert into vnext_private.stock_horizon_observations select * from vnext_private.stock_horizon_observations limit 1"));checks.push('immutable prediction and duplicate lock denied');
+ assert.throws(()=>runtime.sql("insert into vnext_private.observation_evidence values('test-SHORT','test-PRICE_VOLUME')"));checks.push('later evidence membership cannot rewrite locked snapshot');
+ const outcome="insert into vnext_private.observation_outcomes(observation_id,horizon_days,observed_at,evidence_hash,state,cost_model_version,revision) ";
+ runtime.sql(`begin;${outcome}select 'test-SHORT',1,created_at,repeat('a',64),'NOT_MATURED','SYNTHETIC',1 from vnext_private.stock_horizon_observations where id='test-SHORT';${outcome}values('test-SHORT',1,clock_timestamp(),repeat('a',64),'UNCONFIRMED','SYNTHETIC',2);rollback;`);
+ assert.throws(()=>runtime.sql(`${outcome}values('test-SHORT',1,clock_timestamp(),repeat('a',64),'UNCONFIRMED','SYNTHETIC',2)`));
+ assert.throws(()=>runtime.sql(`${outcome}values('test-SHORT',20,clock_timestamp(),repeat('a',64),'UNCONFIRMED','SYNTHETIC',1)`));checks.push('append-only outcome revisions and per-horizon boundaries');
+ checks.push('Owner industry timeline, unknown relation and member non-publication');
  assert.equal(runtime.sql("select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='vnext_private' and c.relkind='r' and c.relrowsecurity and c.relforcerowsecurity"),'8');checks.push('eight private tables forced RLS');
  for(const mutation of ["snapshot_hash=repeat('b',64)","approved=false","audience='premium'"]){
   // Append a new review only inside rollback, never alter original audit.

@@ -12,6 +12,9 @@ source licenses/evidence/events/relations/observations/outcomes/publication audi
 public RPC 沒有 tier/user_id 引數；使用 academy_private.access_v11()，不讀 client metadata。
 沒有公開寫入 RPC。研究寫入與 publication approval producer 尚未啟用；不造假把表存在當成自然執行。
 
+事件與公司關係已接Owner只讀projection；會員在獨立內容核准契約建立前固定不提供這兩類內部研究資料。每個事件更新保留原ID與順序revision，UI只展示一條更新線。關係只有對應SUPPLY_CHAIN來源、當時可得時間、驗證與有效期全部成立才為SUPPORTED，否則UNKNOWN。
+Outcome採每筆observation/horizon的append-only revision：可以保存NOT_MATURED、UNCONFIRMED後續狀態，不覆寫先前結果。未具備真實交易日曆、價格調整與可成交producer前，DB拒絕MEASURED，不能宣稱已計算績效。
+
 ## 依賴
 Release A：既有 main Academy（PR225/228/229）及既有每日服務。
 Release B：本分支新增契約＋候選 migration＋隔離 UI。

@@ -56,7 +56,7 @@ export function supplyRelationStatus(row: SupplyRelation, evidence: Evidence[], 
   if (row.revenue_exposure !== null && (!Number.isFinite(row.revenue_exposure) || row.revenue_exposure < 0 || row.revenue_exposure > 1)) return 'UNKNOWN';
   return row.evidence_ids.every(id => {
     const matches = evidence.filter(e => e.id === id);
-    return matches.length === 1 && matches[0].source === row.source && [row.from, row.to].includes(matches[0].symbol)
+    return matches.length === 1 && matches[0].kind === 'SUPPLY_CHAIN' && matches[0].source === row.source && [row.from, row.to].includes(matches[0].symbol)
       && matches[0].classification === 'CONFIRMED_FACT' && evidenceIssues(matches[0], cutoff).length === 0;
   }) ? 'SUPPORTED_RELATION_NOT_PRICE_FORECAST' : 'UNKNOWN';
 }

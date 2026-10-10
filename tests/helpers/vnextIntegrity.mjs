@@ -14,7 +14,7 @@ export const VNEXT_PATHS=Object.freeze([
  'src/pages/vnext/Workspace.tsx','src/pages/vnext/page.tsx','src/pages/vnext/vnext.css',VNEXT_MIGRATION,
  'tests/browser/vnext.client.ts','tests/browser/vnext.harness.tsx','tests/browser/vnext.vite.ts','tests/fixtures/vnext.mjs',
  'tests/vnextContracts.test.mjs','tests/vnextValidation.test.mjs','tests/vnextIntegrity.test.mjs',
- 'tests/helpers/vnextIntegrity.mjs','tests/helpers/academyV11Integrity.mjs',
+ 'tests/helpers/vnextIntegrity.mjs','tests/helpers/academyV11Integrity.mjs','tests/academyV11Integrity.test.mjs','tests/productContract.test.mjs',
 ].sort());
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8',maxBuffer:64*1024*1024});
@@ -76,9 +76,10 @@ export function vnextPredecessorViews(source){
   if(row){const bytes=source(path);if(hash(bytes)===row.after_sha256)return current.predecessorRead(path);return bytes;}
   return source(path);
  }:current.predecessorRead;
- return {predecessorRead:historical,actualPredecessorRead:current.predecessorRead,verify:()=>vnextTransition()};
+ return {predecessorRead:historical,actualPredecessorRead:current.predecessorRead,verify:()=>vnextTransition(),changedPaths:immutableChangedPaths};
 }
+function immutableChangedPaths(prior){return git(['diff','--no-renames','--name-only','-z',prior,VNEXT_BASE,'--']).split('\0').filter(Boolean).sort();}
 export function vnextBaselineChangedPaths(prior){
  vnextTransition();
- return git(['diff','--no-renames','--name-only','-z',prior,VNEXT_BASE,'--']).split('\0').filter(Boolean).sort();
+ return immutableChangedPaths(prior);
 }

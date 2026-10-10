@@ -3,6 +3,27 @@ import assert from 'node:assert/strict';
 import {HORIZONS,FROZEN_V1_REF,snapshotHash,validTime} from '../src/features/vnext/contracts.ts';
 import {evidenceIssues,eventTimeline,supplyRelationStatus,evaluateObservation,publicationGate,projectObservation,lockObservation,validationReadiness} from '../src/features/vnext/engine.ts';
 import {fixture,fixtureHash,cutoff} from './fixtures/vnext.mjs';
+import {parseProjection,validProjectionTime} from '../src/features/vnext/projection.ts';
+
+test('PostgreSQL microsecond read timestamps retain precision without changing engine cutoffs',()=>{
+ const f=fixture(),row=projectObservation(f.observation,f.evidence,'WATCHING');
+ const stamp='2026-10-11T06:45:26.420367+00:00';row.next_review_at=stamp;row.evidence[0].available_at=stamp;
+ const parsed=parseProjection({schema:'VNEXT_PROJECTION_V1',research_only:true,tier:'owner',observations:[row],industry:{events:[],relations:[],member_publication:false}});
+ assert.equal(parsed.observations[0].next_review_at,stamp);assert.equal(parsed.observations[0].evidence[0].available_at,stamp);
+ assert.equal(validTime(stamp),false,'engine precision contract unchanged');
+ for(const bad of ['2026-02-30T01:00:00.123456Z','2026-10-10T24:00:00.123456Z','2026-10-10T01:00:00.1234567Z'])assert.equal(validProjectionTime(bad),false);
+});
+
+test('industry read model cannot expose unreviewed Owner research to members or arbitrary URLs',()=>{
+ const e={event_id:'test',revision:1,title:'測試事件',classification:'INFERENCE',source:'SYNTHETIC',available_at:cutoff,last_verified_at:cutoff,
+   affected_companies:['TEST'],expected_horizons:['SHORT'],invalidation:'測試條件失效',source_refs:['https://example.com/evidence']};
+ const p={schema:'VNEXT_PROJECTION_V1',research_only:true,tier:'owner',observations:[],industry:{events:[e],relations:[],member_publication:false}};
+ assert.equal(parseProjection(p).industry.events[0].classification,'INFERENCE');
+ for(const tier of ['free','premium'])assert.throws(()=>parseProjection({...p,tier}),/UNAPPROVED/);
+ assert.throws(()=>parseProjection({...p,industry:{...p.industry,events:[{...e,source_refs:['javascript:alert(1)']} ]}}),/EVENT_PROJECTION/);
+ assert.throws(()=>parseProjection({...p,industry:{...p.industry,events:[e,e]}}),/DUPLICATE/);
+ assert.throws(()=>parseProjection({...p,industry:{...p.industry,member_publication:true}}),/INDUSTRY/);
+});
 
 test('separate evidence families and locked outcome horizons, never one technical score',()=>{
  assert.deepEqual(Object.values(HORIZONS).map(h=>h.outcomes),[[1,5,10],[20,40,60],[120,180,250]]);
@@ -50,10 +71,10 @@ test('event identity, update timeline and idempotency do not multiply catalysts'
  assert.throws(()=>eventTimeline([a,{...b,source_event_id:'collision'}],cutoff),/COLLISION/);
 });
 test('supply relation requires time-valid evidence and never promises price benefit',()=>{
- const f=fixture(),r={id:'relation',from:'TEST',to:'OTHER',type:'SUPPLIER',source:'TEST',evidence_ids:['synthetic-0'],valid_from:'2026-10-01T00:00:00Z',valid_to:null,observed_at:'2026-10-07T22:00:00Z',available_at:'2026-10-07T22:00:00Z',confidence:'DOCUMENTED',revenue_exposure:null,verification_status:'VERIFIED'};
+ const f=fixture(),r={id:'relation',from:'TEST',to:'OTHER',type:'SUPPLIER',source:'TEST',evidence_ids:[f.evidence.find(e=>e.kind==='SUPPLY_CHAIN').id],valid_from:'2026-10-01T00:00:00Z',valid_to:null,observed_at:'2026-10-07T22:00:00Z',available_at:'2026-10-07T22:00:00Z',confidence:'DOCUMENTED',revenue_exposure:null,verification_status:'VERIFIED'};
  r.source=f.evidence[0].source;
  assert.equal(supplyRelationStatus(r,f.evidence,cutoff),'SUPPORTED_RELATION_NOT_PRICE_FORECAST');
- for(const patch of [{evidence_ids:[]},{revenue_exposure:2},{verification_status:'UNVERIFIED'},{available_at:'2026-10-09T00:00:00Z'}])assert.equal(supplyRelationStatus({...r,...patch},f.evidence,cutoff),'UNKNOWN');
+ for(const patch of [{evidence_ids:[]},{evidence_ids:['synthetic-0']},{revenue_exposure:2},{verification_status:'UNVERIFIED'},{available_at:'2026-10-09T00:00:00Z'}])assert.equal(supplyRelationStatus({...r,...patch},f.evidence,cutoff),'UNKNOWN');
 });
 test('publication includes specific commercial and redistribution rights, immutable approval, no historical promotion',()=>{
  const f=fixture(),gate=()=>publicationGate(f.observation,f.evidence,f.licenses,f.policy);

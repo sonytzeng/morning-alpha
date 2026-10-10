@@ -14,7 +14,7 @@ create table vnext_private.source_licenses(
  check(expires_at is null or expires_at>reviewed_at)
 );
 create table vnext_private.event_sources(
- id text primary key, symbol text not null, kind text not null, source text not null, source_ref text not null,
+ id text primary key, symbol text not null, kind text not null check(kind in ('PRICE_VOLUME','INSTITUTIONAL','NEWS','TECHNICAL_STRUCTURE','REVENUE','ORDERS','GUIDANCE','INDUSTRY_EVENT','DEMAND','MOAT','SUPPLY_CHAIN','EPS','MARGIN','CAPEX','VALUATION')), source text not null, source_ref text not null,
  license_id text not null, published_at timestamptz not null, first_seen_at timestamptz not null,
  available_at timestamptz not null, as_of timestamptz not null, last_verified_at timestamptz not null,
  valid_until timestamptz not null, snapshot_hash text not null check(snapshot_hash ~ '^[a-f0-9]{64}$'),
@@ -22,7 +22,8 @@ create table vnext_private.event_sources(
  quality text not null check(quality in ('PASS','INSUFFICIENT','REJECTED')), relevant boolean not null,
  summary text not null, foreign key(license_id,source) references vnext_private.source_licenses(id,source),
  check(as_of<=published_at and published_at<=available_at and first_seen_at<=available_at and available_at<=last_verified_at and last_verified_at<valid_until),
- check(source_ref ~ '^https://' and source_ref !~* '(token|secret|api_key|authorization|email)=')
+ check(source_ref ~ '^https://[^/?#@[:space:]]+([/?]|$)' and source_ref !~ '[#[:space:]]'
+   and source_ref !~* '[?&][^=]*(token|secret|key|auth|email)[^=]*=')
 );
 create table vnext_private.market_events(
  event_id text not null, revision integer not null check(revision>0), source text not null, source_event_id text not null,
@@ -72,7 +73,8 @@ create table vnext_private.observation_outcomes(
  state text not null check(state in ('NOT_MATURED','NOT_ENTERED','UNCONFIRMED','MEASURED')),
  cost_model_version text not null, adjustment_source text, executable_price_source text,
  net_return numeric, benchmark_return numeric, mfe numeric, mae numeric, maximum_drawdown numeric,
- primary key(observation_id,horizon_days),
+ revision integer not null check(revision>0),
+ primary key(observation_id,horizon_days,revision),
  check((state='MEASURED' and adjustment_source is not null and executable_price_source is not null
    and net_return is not null and benchmark_return is not null and mfe is not null and mae is not null and maximum_drawdown is not null)
    or (state<>'MEASURED' and net_return is null and benchmark_return is null and mfe is null and mae is null and maximum_drawdown is null))
@@ -114,9 +116,17 @@ grant usage,select on all sequences in schema vnext_private to service_role;
 create function vnext_private.validate_append() returns trigger
 language plpgsql set search_path='' as $$
 declare o vnext_private.stock_horizon_observations; e vnext_private.event_sources; prior vnext_private.market_events;
+ previous_outcome vnext_private.observation_outcomes; condition jsonb;
 begin
  if tg_table_name='stock_horizon_observations' then
   if new.locked_at<>transaction_timestamp() or new.lock_transaction<>txid_current() then raise exception 'LOCK_IDENTITY_INVALID'; end if;
+  for condition in select * from jsonb_array_elements(new.confirmation_conditions||new.invalidation_conditions) loop
+   if jsonb_typeof(condition)<>'object' or coalesce(condition->>'text','')=''
+      or coalesce(condition->>'state','') not in('CONFIRMED','NOT_MET','UNKNOWN')
+      or jsonb_typeof(condition->'evidence_ids') is distinct from 'array' then raise exception 'CONDITION_INVALID'; end if;
+   if jsonb_array_length(condition->'evidence_ids')=0 or exists(select from jsonb_array_elements(condition->'evidence_ids') x where jsonb_typeof(x)<>'string' or x='""'::jsonb)
+      then raise exception 'CONDITION_EVIDENCE_INVALID'; end if;
+  end loop;
  elsif tg_table_name='observation_evidence' then
   select * into strict o from vnext_private.stock_horizon_observations where id=new.observation_id;
   select * into strict e from vnext_private.event_sources where id=new.evidence_id;
@@ -131,6 +141,11 @@ begin
     or cardinality(new.expected_horizons)=0 or cardinality(new.affected_companies)=0
     or exists(select from unnest(new.evidence_ids) x where not exists(select from vnext_private.event_sources s where s.id=x and s.available_at<=new.available_at)) then raise exception 'EVENT_LINEAGE_INVALID'; end if;
  elsif tg_table_name='observation_outcomes' then
+  perform pg_advisory_xact_lock(hashtextextended(new.observation_id||':'||new.horizon_days::text,0));
+  select * into previous_outcome from vnext_private.observation_outcomes where observation_id=new.observation_id
+    and horizon_days=new.horizon_days order by revision desc limit 1;
+  if (found and (new.revision<>previous_outcome.revision+1 or new.observed_at<=previous_outcome.observed_at))
+    or (not found and new.revision<>1) then raise exception 'OUTCOME_REVISION_INVALID'; end if;
   select * into strict o from vnext_private.stock_horizon_observations where id=new.observation_id;
   if new.horizon_days<>all(case o.horizon when 'SHORT' then array[1,5,10] when 'MEDIUM' then array[20,40,60] else array[120,180,250] end)
     or new.observed_at<o.created_at or new.observed_at>clock_timestamp() then raise exception 'OUTCOME_HORIZON_OR_TIME_INVALID'; end if;
@@ -186,7 +201,7 @@ revoke all on function vnext_private.publication_allowed(text,timestamptz) from 
 -- comes from the existing server resolver, never a tier supplied in the request.
 create function public.get_vnext_observations_v1() returns jsonb
 language plpgsql stable security definer set search_path='' as $$
-declare tier text; answer jsonb;
+declare tier text; answer jsonb; events jsonb:='[]'; relations jsonb:='[]';
 begin
  tier:=academy_private.access_v11();
  if tier not in ('owner','free','premium') then raise exception 'MEMBER_REQUIRED' using errcode='42501'; end if;
@@ -202,7 +217,33 @@ begin
     (tier='premium' or (select a.audience from vnext_private.publication_audit a where a.observation_id=o.id order by a.id desc limit 1)='free')))
   order by o.created_at desc,o.id limit case when tier='free' then 3 else 100 end
  ) row;
- return jsonb_build_object('schema','VNEXT_PROJECTION_V1','tier',tier,'observations',answer,'research_only',true);
+ -- Industry research has not received an independent publication review. It is
+ -- Owner-only even if one of its input facts also supports an approved card.
+ if tier='owner' then
+  select coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) into events from (
+   select event_id,revision,title,classification,source,available_at,last_verified_at,
+     affected_companies,expected_horizons,invalidation,
+     (select coalesce(jsonb_agg(e.source_ref),'[]'::jsonb) from vnext_private.event_sources e where e.id=any(m.evidence_ids)) as source_refs
+   from vnext_private.market_events m where available_at<=now() and last_verified_at<=now()
+   order by available_at desc,event_id,revision desc limit 50
+  )x;
+  select coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) into relations from (
+   select r.id,r.from_entity,r.to_entity,r.relation_type,r.source,r.available_at,r.valid_from,r.valid_to,
+     r.revenue_exposure,
+     (select coalesce(jsonb_agg(e.source_ref),'[]'::jsonb) from vnext_private.event_sources e where e.id=any(r.evidence_ids)) as source_refs,
+     case when r.verification_status='VERIFIED' and r.confidence='DOCUMENTED'
+       and r.valid_from<=now() and (r.valid_to is null or r.valid_to>now())
+       and not exists(select from unnest(r.evidence_ids) eid where not exists(
+        select from vnext_private.event_sources e where e.id=eid and e.kind='SUPPLY_CHAIN'
+          and e.source=r.source and e.symbol in(r.from_entity,r.to_entity) and e.quality='PASS' and e.relevant
+          and e.classification='CONFIRMED_FACT' and e.available_at<=r.available_at and e.last_verified_at<=r.available_at
+          and e.valid_until>now())) then 'SUPPORTED' else 'UNKNOWN' end as evidence_status
+   from vnext_private.supply_chain_relations r where r.available_at<=now()
+   order by r.available_at desc,r.id limit 50
+  )x;
+ end if;
+ return jsonb_build_object('schema','VNEXT_PROJECTION_V1','tier',tier,'observations',answer,
+   'industry',jsonb_build_object('events',events,'relations',relations,'member_publication',false),'research_only',true);
 end $$;
 revoke all on function public.get_vnext_observations_v1() from public,anon,authenticated,service_role;
 grant execute on function public.get_vnext_observations_v1() to authenticated;

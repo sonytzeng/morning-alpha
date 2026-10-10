@@ -9,7 +9,7 @@ export function revokeSyntheticPublications(runtime){
  select distinct on(observation_id) observation_id,snapshot_hash,audience,false,content_kind,'ISOLATED_REAL_READINESS_EMPTY','NOT_A_PUBLICATION_APPROVAL',gate_version
  from vnext_private.publication_audit order by observation_id,id desc;`);
 }
-export async function verifyEmptyPublication(readiness=null){
+export async function verifyEmptyPublication(readiness=null,funnel=null){
  const checks=[];
  for(const role of ['owner','free','premium','other']){
   const login=await fetch('http://127.0.0.1:55632/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -18,9 +18,10 @@ export async function verifyEmptyPublication(readiness=null){
   const r=await fetch('http://127.0.0.1:55633/rpc/get_vnext_member_v1',{method:'POST',headers,body:'{}'});assert.equal(r.status,200);
   const data=parseMemberResearch(await r.json());assert.equal(data.tier,role==='other'?'free':role);
   assert.deepEqual(data.observations,[]);assert.deepEqual(data.history,[]);assert.deepEqual(data.watchlist,[]);
-  const owner=await readOwnerResearch({method:'GET',authorization:headers.Authorization},[],fetch,null,readiness);
+  const owner=await readOwnerResearch({method:'GET',authorization:headers.Authorization},[],fetch,null,readiness,funnel);
   assert.equal(owner.status,role==='owner'?200:403);
-  if(role!=='owner')assert(!JSON.stringify(owner.body).includes('source_rights'));
+  if(role!=='owner'){assert(!JSON.stringify(owner.body).includes('source_rights'));assert(!Object.hasOwn(owner.body,'funnel'));}
+  else if(funnel)assert.equal(owner.body.funnel.snapshot_hash,funnel.snapshot_hash);
   for(const body of [{tier:'owner'},{p_tier:'premium'}])assert.equal((await fetch('http://127.0.0.1:55633/rpc/get_vnext_member_v1',{method:'POST',headers,body:JSON.stringify(body)})).status,404);
   assert.equal((await fetch('http://127.0.0.1:55632/logout',{method:'POST',headers})).status,204);
   assert.equal((await fetch('http://127.0.0.1:55633/rpc/get_vnext_member_v1',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status,401);

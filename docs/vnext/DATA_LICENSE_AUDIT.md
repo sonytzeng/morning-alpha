@@ -1,4 +1,12 @@
 # 資料與授權
+## 2026-10-11 用途分離（Research & Publication P0）
+
+保留來源稽核結論，但**不將原始資料再散布權利直接當成自行分析的唯一判斷**。
+新增未Promotion用途別候選：RAW_DATA／OFFICIAL_FACT／OWN_ANALYSIS，各自核對精確來源、授權文件、儲存、商用、用途許可、來源標示、審核時間与期限。
+明確允許衍生分析而禁止raw再散布的書面授權，可以只通過分析用途；反方向亦不推定。只有合成協定控制有此種grant，真實來源未新增grant、未購買、未接受契約。
+六個具名OGL資源仍可有條件使用公開事實及原創分析；Fugle／历史行情精確resource／公司官網用途未知仍LICENSING_UNVERIFIED。這是尚未證明權利，不等於已證明所有獨立分析都侵權。
+官方條款本輪重新唯讀核對：下列OGL、Fugle、TWSE及TPEx連結。完整方法與未執行整合邊界見RESEARCH_PUBLICATION_FUNNEL.md。
+
 ## 2026-10-10 Publication P0 精確覆核（優先於下方早期盤點）
 
 本節是工程用途的來源/授權稽核，不是對整個商業產品的法律保證。

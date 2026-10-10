@@ -17,6 +17,8 @@ export const VNEXT_PATHS=Object.freeze([
  'src/features/vnext/publicationReadiness.ts','src/pages/vnext/PublicationReadiness.tsx',
  'scripts/vnext/publication-readiness.mjs','scripts/vnext/publication-isolation.mjs','scripts/vnext/publication-preview.mjs',
  'tests/vnextPublication.test.mjs','tests/vnextPublicationReal.integration.mjs',
+ 'src/features/vnext/researchFunnel.ts','src/pages/vnext/ResearchFunnel.tsx','scripts/vnext/research-funnel.mjs',
+ 'tests/vnextResearchFunnel.test.mjs','tests/vnextResearchFunnelReal.integration.mjs','docs/vnext/RESEARCH_PUBLICATION_FUNNEL.md',
  'scripts/vnext/isolation.mjs','scripts/vnext/preview.mjs','scripts/vnext/real-evidence.mjs','scripts/vnext/owner-research-server.mjs',
  'scripts/vnext/foundation-history.mjs','scripts/vnext/foundation-sources.mjs','scripts/vnext/foundation-validation.mjs',
  'scripts/vnext/member-isolation.mjs','scripts/vnext/member-build.mjs',

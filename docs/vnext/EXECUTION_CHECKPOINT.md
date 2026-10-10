@@ -56,6 +56,16 @@ Preview：Free http://127.0.0.1:3221/stocks；Premium http://127.0.0.1:3222/stoc
 正式Router/Navbar/Account未改，會員导航只存在候選；未Merge／未Deploy／未執行Production Migration／未公開會員。Production Decision／Recommendation／Report／LINE受保護位元組未變，Production業務寫入0；本輪沒有以新的線上DB指紋冒充比較證據。
 VNEXT_MEMBER_PRODUCTION=NOT_DEPLOYED；SONY_USABILITY=PENDING；PUBLIC_PRODUCT_APPROVAL=NO。
 
+## Research & Publication P0（2026-10-11）
+續接aae3b490551e2ce99e7bd08b7f64be7ca7077cf0，PR230 Draft、9項CI成功、工作樹乾淨、origin/main仍fff51d76。
+研究與公開審查已分離；新細節見RESEARCH_PUBLICATION_FUNNEL.md。保留V1原契約、DB admission及歷史鎖。新增未Promotion的VNEXT_OBSERVATION_HYPOTHESIS_2.0.0：短期原始成交參與／當日形狀、中期營收／法人連續性、長期財務／公司證據。不是Recommendation V2或策略有效性證明。
+真實資料hash不變、離線讀取0網路。10/8行情、10/10實際取得截止：短期掃描72／評估72／符合1／不符71／不足0；中長期各掃描72／評估0／不足72。短期符合1仍因用途授權、發布時間與研究／逐筆公開審核被擋。Free/Premium真實公開0，不建立假approval。
+舊TWSE快取session_scope缺值只在精確官方STOCK_DAY＋symbol＋month映射，無原始資料修改。未知published_at仍null；只允許after-receipt觀察、不回填歷史。舊10/7與10/8鎖不改，Forward0／Outcome0。
+新的用途授權候選區分原始行情、官方事實與自行分析；衍生許可不等於raw許可，raw許可也不推定衍生；實際權利未知仍拒絕。現有DB V1 policy未自動改成V2，日後需精確整合Manifest及重新安全驗證。
+Owner Preview沿用http://127.0.0.1:3223/vnext/research，新增中文漏斗；既有會員頁面/正式Router不變。這是隔離真實Auth驗收，不是Production Owner或會員E2E。
+最終HEAD須重新通過CI；本輪不Merge/Deploy/Migration/Cron/Secret/Production寫入。Production受保護原碼全部逐byte Integrity核對。
+RESEARCH_FUNNEL/PUBLICATION_FUNNEL是候選診斷Gate；VNEXT_MEMBER_RELEASE_READY=NO，PUBLIC_PRODUCT_APPROVAL=NO。
+
 ## Member Publication Readiness P0（2026-10-10～11）
 續接6ddff21058ae59bd83ecbaf0ba51211d195b0f1f；起始PR230 Draft、9項CI成功、工作樹乾淨。本輪未修改SQL或Production。
 新增離線來源授權及公開準備審查，詳MEMBER_PUBLICATION_READINESS.md與DATA_LICENSE_AUDIT.md。六個官方OGL資料集精確綁定資源/API，而非全站授權；歷史行情查詢、Fugle契約及公司官網再散布仍未釐清。沒有採購或自行接受新契約。

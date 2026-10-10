@@ -9,6 +9,8 @@ import {validFoundation} from '@/features/vnext/foundation';
 import type {FoundationSummary} from '@/features/vnext/foundation';
 import Foundation from './Foundation';
 import PublicationReadiness from './PublicationReadiness';
+import ResearchFunnel from './ResearchFunnel';
+import {verifyFunnel,type ResearchFunnel as Funnel} from '@/features/vnext/researchFunnel';
 import {validPublicationReadiness,type PublicationReadiness as Readiness} from '@/features/vnext/publicationReadiness';
 import './vnext.css';
 
@@ -29,14 +31,14 @@ function RealCard({card}:{card:ResearchCard}){
   <p className="vnext-disclaimer">歷史研究，不是正式推薦。證據不足時，不應把參考位置當成買賣指令。</p>
  </article>;
 }
-export function RealResearchWorkspace({reports,foundation,publication}:{reports:RealResearchReport[];foundation?:FoundationSummary;publication?:Readiness}){
+export function RealResearchWorkspace({reports,foundation,publication,funnel}:{reports:RealResearchReport[];foundation?:FoundationSummary;publication?:Readiness;funnel?:Funnel}){
  const [date,setDate]=useState(reports.at(-1)!.business_date),[horizon,setHorizon]=useState<Horizon>('SHORT'),[query,setQuery]=useState(''),[limit,setLimit]=useState(6),[area,setArea]=useState('stocks');
  const report=reports.find(r=>r.business_date===date)!,all=report.cards.filter(c=>c.horizon===horizon).sort((a,b)=>a.symbol.localeCompare(b.symbol)),cards=all.filter(c=>c.symbol.includes(query.trim())||c.company.includes(query.trim()));
  const events=[...new Map(report.events.map(e=>[e.id+':'+e.symbol,e])).values()];
  return <main className="vnext"><a className="vnext-skip" href="#real-research">跳至主要內容</a>
   <header className="vnext-header"><a className="vnext-brand" href="/vnext">MORNING ALPHA<span>有依據，才有判斷</span></a><span>僅供 Owner 研究 · 不提供會員</span></header>
   <nav className="vnext-navigation" aria-label="研究頁面"><button aria-current={area==='stocks'?'page':undefined} onClick={()=>setArea('stocks')}>股票觀察</button><button aria-current={area==='events'?'page':undefined} onClick={()=>setArea('events')}>事件與公司關係</button></nav>
-  <div id="real-research" className="vnext-content">{publication?<PublicationReadiness data={publication}/>:null}<div className="vnext-intro"><p className="vnext-eyebrow">真實保存資料 · 尚未證明投資成效</p><h1>今天有哪些股票值得觀察？</h1>
+  <div id="real-research" className="vnext-content">{funnel?<ResearchFunnel data={funnel}/>:publication?<PublicationReadiness data={publication}/>:null}<div className="vnext-intro"><p className="vnext-eyebrow">以下保留舊版歷史研究 · 尚未證明投資成效</p><h2>查看原截止時間的研究紀錄</h2>
    <p>目前查看 {date} 的歷史研究，不是今天的即時買點。先分清楚已知事實、等待條件與缺失資料。</p>{foundation?<a href="#foundation">查看本次新取得資料與剩餘缺口</a>:null}</div>
    <div className="vnext-real-controls"><label>查看保存日期<select value={date} onChange={e=>{setDate(e.target.value);setLimit(6);}}>{reports.map(r=><option key={r.business_date}>{r.business_date}</option>)}</select></label><p>只使用當時已取得的資料<br/>原始截止：{stamp(report.cutoff)}（台北時間）</p></div>
    {area==='stocks'?<><div className="vnext-horizons" role="group" aria-label="研究期間">{(Object.keys(HORIZONS) as Horizon[]).map(h=><button key={h} aria-pressed={horizon===h} onClick={()=>{setHorizon(h);setLimit(6);}}><strong>{labels[h]}</strong><span>{HORIZONS[h].duration}</span></button>)}</div>
@@ -55,7 +57,7 @@ export function RealResearchWorkspace({reports,foundation,publication}:{reports:
 }
 export default function RealResearchPage(){
  const {access,retry}=useAcademyAccess();
- const [state,setState]=useState<{id:string;generation:number;reports?:RealResearchReport[];foundation?:FoundationSummary;publication?:Readiness;error?:boolean}|null>(null);
+ const [state,setState]=useState<{id:string;generation:number;reports?:RealResearchReport[];foundation?:FoundationSummary;publication?:Readiness;funnel?:Funnel;error?:boolean}|null>(null);
  useEffect(()=>{
   setState(null);if(access.kind!=='member'||access.catalog.tier!=='owner')return;
   let live=true;const controller=new AbortController(),abort=()=>controller.abort();access.signal.addEventListener('abort',abort);
@@ -68,11 +70,12 @@ export default function RealResearchPage(){
    for(const report of body.reports)if(report.owner_only!==true||report.mode!=='HISTORICAL_REPLAY'||!await verifyResearchLock(report))throw Error('LOCK_INVALID');
    if(body.foundation&&!validFoundation(body.foundation))throw Error('FOUNDATION_INVALID');
    if(body.publication&&!validPublicationReadiness(body.publication))throw Error('PUBLICATION_INVALID');
-   if(live&&!controller.signal.aborted&&!access.signal.aborted)setState({id:access.id,generation:access.generation,reports:body.reports,foundation:body.foundation,publication:body.publication});
+   if(body.funnel&&!await verifyFunnel(body.funnel))throw Error('FUNNEL_INVALID');
+   if(live&&!controller.signal.aborted&&!access.signal.aborted)setState({id:access.id,generation:access.generation,reports:body.reports,foundation:body.foundation,publication:body.publication,funnel:body.funnel});
   }catch{if(live&&!controller.signal.aborted&&!access.signal.aborted)setState({id:access.id,generation:access.generation,error:true});}finally{clearTimeout(timer);}})();
   return()=>{live=false;clearTimeout(timer);controller.abort();access.signal.removeEventListener('abort',abort);};
  },[access]);
- if(access.kind==='member'&&access.catalog.tier==='owner'&&state?.id===access.id&&state.generation===access.generation&&state.reports&&!access.signal.aborted)return <RealResearchWorkspace reports={state.reports} foundation={state.foundation} publication={state.publication}/>;
+ if(access.kind==='member'&&access.catalog.tier==='owner'&&state?.id===access.id&&state.generation===access.generation&&state.reports&&!access.signal.aborted)return <RealResearchWorkspace reports={state.reports} foundation={state.foundation} publication={state.publication} funnel={state.funnel}/>;
  const denied=access.kind==='denied'||access.kind==='member'&&access.catalog.tier!=='owner',failed=state?.error||access.kind==='unavailable';
  return <main className="vnext"><section className="vnext-content vnext-empty" role="status"><h1>{denied?'此頁僅供 Owner 研究':failed?'暫時無法讀取保存證據':'正在確認研究閱讀權限'}</h1><p>{denied?'一般會員與進階會員不能讀取本輪尚未核准的研究資料。':'未讀取成功不會顯示範例或假成功結果。'}</p>{denied?<a className="vnext-primary" href="/login">登入研究帳號</a>:failed?<button className="vnext-primary" onClick={retry}>重新讀取</button>:null}</section></main>;
 }

@@ -25,6 +25,7 @@
 ## Publication候選與權限
 
 新增離線審查把**被渲染層拒絕的未來/缺時間證據也列入稽核**，不讓缺失輸入消失後看似完整。
+中期的EPS／長期的營收補充背景也必須稽核，不因不是必要證據就跳過授權。無法安全核對的網址保留拒絕原因，但不能點擊。
 精確來源綁定開放資料集；同hostname、相似名稱、歷史查詢、query參數與Fugle訂閱均不繼承授權。
 原Publication Gate、不可變approval/hash與DB server entitlement保持不變；審查清單不能自動建立approval。
 尚未證明rights的輸入、受限制衍生內容都不能提供Free/Premium。
@@ -63,5 +64,5 @@ Free/Premium仍由正式候選SQL投影讀取，不以UI隱藏Owner資料。
 - Premium直接Owner route拒絕；Owner登入可查72檔×3期間來源與缺口。登出立即清除私人資料，Reload仍拒絕；API驗證另涵蓋匿名、另一Free、錯tier參數、Owner-only資料拒絕與撤回後零投影。
 - Free／Premium／Owner各於1440／768／430／390／375px量測實際innerWidth；水平溢出0。Owner長來源與拒絕原因展開後375px也無溢出，技術資料預設收合，Console error/warning=0。
 - 截圖：`/private/tmp/ma-vnext-publication-qa/`，只保存本機驗收畫面，不含登入憑證。歷史Owner研究沒有對會員開放。
-- 新增7項unit/negative與216份真實離線資料核對；離線期間網路呼叫0，沒有重新向Provider大量取得資料。
+- 新增9項unit/negative與216份真實離線資料核對；離線期間網路呼叫0，沒有重新向Provider大量取得資料。
 - 最終HEAD的CI必須重新完成；不可沿用起始HEAD的9項PASS。此文件不是Production身分或策略有效性證明。

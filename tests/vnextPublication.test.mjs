@@ -1,4 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {OPEN_DATA_RIGHTS,sourceRights,publicationDossier} from '../src/features/vnext/publicationReadiness.ts';
 import {readOwnerResearch} from '../scripts/vnext/owner-research-server.mjs';
 import {incrementalPlan} from '../scripts/vnext/foundation-validation.mjs';
@@ -25,6 +26,16 @@ test('unknown/future timestamps stay in audit although rejected from display; no
 test('dossiers never manufacture a forward prediction or public approval',()=>{
  for(const c of publicationDossier(stock,at)){assert.equal(c.mode,'REVIEW_DOSSIER_NOT_PREDICTION');assert(c.blockers.includes('PREDICTION_NOT_CREATED'));assert(c.blockers.includes('PUBLICATION_REVIEW_REQUIRED'));assert(c.confirmation&&c.invalidation&&c.next_review);}
  assert.throws(()=>publicationDossier({...stock,facts:[fact,fact]},at));assert.throws(()=>publicationDossier(stock,'invalid'));
+});
+test('optional EPS/revenue context is audited, even when its time or redistribution rights fail',()=>{
+ for(const [horizon,kind] of [['MEDIUM','EPS'],['LONG','REVENUE']]){
+  const cards=publicationDossier({...stock,facts:[{...fact,id:'context',kind,source:'https://api.fugle.tw/data',published_at:null}]},at);
+  const c=cards.find(c=>c.horizon===horizon);assert.equal(c.rights.length,1);assert(c.blockers.includes('RESTRICTED_CONTRACT_REQUIRED'));assert(c.evidence_issues.some(i=>i.reason==='MISSING_PUBLISHED_AT'));assert.equal(c.evidence_ready,false);
+ }
+});
+test('unsafe source remains a rejection reason, never a clickable Owner link',()=>{
+ const c=publicationDossier({...stock,facts:[{...fact,source:'javascript:alert(1)'}]},at)[1];assert(c.blockers.includes('LICENSING_UNVERIFIED'));
+ const ui=readFileSync(new URL('../src/pages/vnext/PublicationReadiness.tsx',import.meta.url),'utf8');assert(ui.includes('sourceSafe(r.source)?<a href={r.source}'));assert(ui.includes('來源網址無法安全開啟'));
 });
 test('Owner audit cannot leak to free, premium, anonymous or failed identity service',async()=>{
  const payload={secret_free_research:'SYNTHETIC_PRIVATE_AUDIT'};

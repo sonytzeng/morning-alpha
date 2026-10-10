@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {HORIZONS,type Horizon} from '@/features/vnext/contracts';
+import {HORIZONS,sourceSafe,type Horizon} from '@/features/vnext/contracts';
 import type {PublicationReadiness as Readiness} from '@/features/vnext/publicationReadiness';
 
 export default function PublicationReadiness({data}:{data:Readiness}){
@@ -19,7 +19,7 @@ export default function PublicationReadiness({data}:{data:Readiness}){
    {c.rights.some(r=>r.status!=='OPEN_DATA_WITH_ATTRIBUTION')?<p className="vnext-risk">部分來源的會員使用權利尚未確認；改寫成摘要也不會自動取得授權。</p>:null}
    <h4>什麼條件成立才開始考慮？</h4><p>{c.confirmation}</p><h4>什麼情況需要重新檢查？</h4><p>{c.invalidation}</p>
    <h4>下次何時再檢查？</h4><p>{c.next_review}</p>
-   <details><summary>查看來源、授權與精確拒絕原因</summary>{c.rights.map(r=><section key={r.id}><a href={r.source} target="_blank" rel="noopener noreferrer">原始資料來源</a><p>{r.reason}</p>{r.grant?<><a href={r.grant.dataset} target="_blank" rel="noopener noreferrer">開放資料集授權說明</a><p>{r.grant.attribution}</p></>:null}</section>)}<p>資料核對截止：{c.cutoff}</p><p>{c.blockers.join('、')}</p></details>
+   <details><summary>查看來源、授權與精確拒絕原因</summary>{c.rights.map(r=><section key={r.id}>{sourceSafe(r.source)?<a href={r.source} target="_blank" rel="noopener noreferrer">原始資料來源</a>:<span>來源網址無法安全開啟</span>}<p>{r.reason}</p>{r.grant?<><a href={r.grant.dataset} target="_blank" rel="noopener noreferrer">開放資料集授權說明</a><p>{r.grant.attribution}</p></>:null}</section>)}<p>資料核對截止：{c.cutoff}</p><p>{c.blockers.join('、')}</p></details>
   </article>)}</div>
   {!cards.length?<p className="vnext-empty">核對範圍沒有符合查詢的股票，不會補造候選。</p>:limit<cards.length?<button className="vnext-primary" onClick={()=>setLimit(v=>v+6)}>再看6檔</button>:null}
   <p className="vnext-footnote">事前驗證樣本 0，已完成成效 0。自然更新尚未啟用；研究內容沒有提供正式會員。</p>

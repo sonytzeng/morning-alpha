@@ -30,7 +30,7 @@
     {
       "path": "docs/vnext/DATA_LICENSE_AUDIT.md",
       "before_sha256": null,
-      "after_sha256": "141ddcc844629c5661cc365d808f1ab986118663746e166d1e505e2d0ade94a4"
+      "after_sha256": "adc69a3a8a45895842da30da6e60402334c3d4d6b0cc463701a34edf6cb8b3d3"
     },
     {
       "path": "docs/vnext/EVENT_INTELLIGENCE_SPEC.md",
@@ -45,7 +45,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "3a9010739e27cb381b8f7a99db4bf3d1d9e2dc7d32977f21aaf76c8309c8bb62"
+      "after_sha256": "e3215986dc80df4f396464a96df9ef7bdafaed5524db80601f866712b5e13205"
     },
     {
       "path": "docs/vnext/MEMBER_EXPERIENCE.md",
@@ -55,7 +55,7 @@
     {
       "path": "docs/vnext/MEMBER_PUBLICATION_READINESS.md",
       "before_sha256": null,
-      "after_sha256": "969fc54d7e0e8e401332e35c5a32598ee9f41a599a092886bd9be6fabb13436a"
+      "after_sha256": "c2deaa187d7acc2be70ead2bd087547e98ee2ecc494a1e2752bf4729d63f2e32"
     },
     {
       "path": "docs/vnext/MULTI_HORIZON_SPEC.md",
@@ -180,7 +180,7 @@
     {
       "path": "src/features/vnext/publicationReadiness.ts",
       "before_sha256": null,
-      "after_sha256": "699ed9ac4bd6601af0b0f33c11fa47992a048a544f324d61b7bfc1fb2fb0c157"
+      "after_sha256": "76f8d26b07c92e84cef82459b8c94bc9dbcabfbaaa6e86b67036b351c6a67058"
     },
     {
       "path": "src/features/vnext/realResearch.ts",
@@ -215,7 +215,7 @@
     {
       "path": "src/pages/vnext/PublicationReadiness.tsx",
       "before_sha256": null,
-      "after_sha256": "440dabe75138927290e2c31b13b5ae84f87e37f893d02bd04081342df0e1b546"
+      "after_sha256": "78edb40173bf51f91a56001d240b690b4e74e7877e94967729d038cb7a1d02e2"
     },
     {
       "path": "src/pages/vnext/RealResearch.tsx",
@@ -315,7 +315,7 @@
     {
       "path": "tests/vnextPublication.test.mjs",
       "before_sha256": null,
-      "after_sha256": "77595c63b9739bddb0dca41a804c4d8292190b11f5cc1ccc5f5c857b75408bf7"
+      "after_sha256": "0aadfb93d4e9dd5d58a6215b45c67efd13b5e6c76a697e10b5990d8dda07059b"
     },
     {
       "path": "tests/vnextPublicationReal.integration.mjs",

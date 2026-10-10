@@ -57,10 +57,10 @@ Preview：Free http://127.0.0.1:3221/stocks；Premium http://127.0.0.1:3222/stoc
 VNEXT_MEMBER_PRODUCTION=NOT_DEPLOYED；SONY_USABILITY=PENDING；PUBLIC_PRODUCT_APPROVAL=NO。
 
 ## Member Publication Readiness P0（2026-10-10～11）
-續接6ddff21058ae59bd83ecbaf0ba51211d195b0f1f；起始PR230 Draft、9項CI成功、工作樹乾淨。本轮未修改SQL或Production。
+續接6ddff21058ae59bd83ecbaf0ba51211d195b0f1f；起始PR230 Draft、9項CI成功、工作樹乾淨。本輪未修改SQL或Production。
 新增離線來源授權及公開準備審查，詳MEMBER_PUBLICATION_READINESS.md與DATA_LICENSE_AUDIT.md。六個官方OGL資料集精確綁定資源/API，而非全站授權；歷史行情查詢、Fugle契約及公司官網再散布仍未釐清。沒有採購或自行接受新契約。
 既有history/sources hash不變，72×3=216份真實清單，三期間evidence_ready=0、member_eligible=0。缺時間保留null，單期營收/EPS不冒充趨勢或Consensus；查詢新增資料不回填舊截止。Forward/Outcome均0。
-新增7項negative/unit及私有real audit，原Publication Gate、candidate migration與既有core受保護內容未變。隔離append-only撤回示範approval，會員不再看到合成正向測試股票。
+新增9項negative/unit及私有real audit，原Publication Gate、candidate migration與既有core受保護內容未變。隔離append-only撤回示範approval，會員不再看到合成正向測試股票。最終檢查補入非必要EPS／營收背景的授權與時間稽核，未知網址不能成為可點擊連結。
 新的Preview http://127.0.0.1:3223/stocks 與 /vnext/research；重用原隔離Auth/DB，不重做Production Migration。本機真實Free/Premium/Owner登入、非Owner拒絕、Logout清除、Reload拒絕、1440/768/430/390/375無溢出PASS；不是正式會員E2E。
 自然更新只驗證現有bounded incremental planner：Core未完就延後、固定cursor、單併發、timeout/retry有界。Production沒有VNext Caller，NATURAL_UPDATE_RUNTIME=NOT_ENABLED。
 本輪普通工程驗證完成後依授權Commit/Push；PR維持Draft，最終CI結果以新HEAD Checks為準。禁止Merge/Deploy/ProductionMigration/會員公開；VNEXT_MEMBER_RELEASE_READY=NO、PUBLIC_PRODUCT_APPROVAL=NO。

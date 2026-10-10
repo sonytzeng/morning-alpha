@@ -38,7 +38,11 @@ export function publicationDossier(stock:RealStock,cutoff:string){
   const card=researchCard(stock,horizon,cutoff);
   // Audit ALL inputs, including missing/future timestamps rejected by rendering.
   // Rejected evidence must not disappear from the publication audit.
-  const facts=stock.facts.filter(f=>(HORIZONS[horizon].required as readonly string[]).includes(f.kind));
+  // Optional descriptive context (EPS in medium / revenue in long) is still
+  // source-derived content: it needs the same rights and PIT audit. It cannot
+  // substitute for any required family or disappear when rendering rejects it.
+  const contextKinds=horizon==='MEDIUM'?['EPS']:horizon==='LONG'?['REVENUE']:[];
+  const facts=stock.facts.filter(f=>(HORIZONS[horizon].required as readonly string[]).includes(f.kind)||contextKinds.includes(f.kind));
   const rights=facts.map(f=>({id:f.id,source:f.source,...sourceRights(f.source)}));
   const evidence_issues=facts.flatMap(f=>factIssues(f,cutoff).map(reason=>({id:f.id,reason})));
   const missing=HORIZONS[horizon].required.filter(k=>!facts.some(f=>f.kind===k&&factIssues(f,cutoff).length===0));

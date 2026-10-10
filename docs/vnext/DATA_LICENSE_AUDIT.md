@@ -16,7 +16,7 @@
 |TPEx日行情開放集|[11370](https://data.gov.tw/dataset/11370)列舊`stk_quote_result.php?l=zh-tw&o=data`，Swagger列`/tpex_mainboard_daily_close_quotes`|本機歷史cache為`/www/zh-tw/afterTrading/dailyQuotes?date=...`；未證明歷史範圍等價，維持LICENSING_UNVERIFIED|
 |Fugle|[API規範](https://developer.fugle.tw/docs/data/intro/)要求遵守交易資訊管理與再傳輸限制|RESTRICTED_CONTRACT_REQUIRED；目前帳戶的第三方/商用衍生合約未提供。不能用付費訂閱當會員許可|
 |公司官網公告/供應鏈|[TSMC網站條款](https://www.tsmc.com/english/legal_and_trademark)一般授予個人非商用瀏覽|官方關係可作私人核對；原文/圖形再散布與商用衍生範圍未核准，LICENSING_UNVERIFIED。事實與受保護表達分開，不宣稱事實本身由其專有|
-|產業事件分析|以具名OGL公告事實重新撰寫，逐聲明保留來源|原創推論須標示推論與可驗證条件；不能用相同行業推造公司關係；目前72檔snapshot命中0|
+|產業事件分析|以具名OGL公告事實重新撰寫，逐聲明保留來源|原創推論須標示推論與可驗證條件；不能用相同行業推造公司關係；目前72檔snapshot命中0|
 |私人老師素材|既有私人來源|不得再散布；本輪完全不納入會員內容|
 
 2026-10-10T15:51:54Z 前完成官方網頁、dataset下載URL及TWSE/TPEx Swagger metadata核對。六個具名API標題與CSV識別一致；目前僅註冊這六個精確API/CSV，不自動套用domain/prefix。

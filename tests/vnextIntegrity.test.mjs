@@ -8,10 +8,15 @@ test('VNext exact candidate preserves every Production byte and previous release
  assert.deepEqual(result.predecessorRead('tests/helpers/academyV11Integrity.mjs'),vnextPrior('tests/helpers/academyV11Integrity.mjs'));
  assert.throws(()=>result.predecessorRead('src/features/vnext/engine.ts'),{code:'ENOENT'});
 });
-test('existing Validate workflow changes only execution budget, never steps or permissions',()=>{
+test('Validate only extends execution budget and prebuilds before parallel integrity; no gates or permissions removed',()=>{
  const path='.github/workflows/validate-release.yml',prior=vnextPrior(path).toString();
- const expected=prior.replace('    timeout-minutes: 20','    # Full protected-baseline integrity plus all existing fresh-DB incident\n    # regressions exceed the former 20-minute budget. No steps are skipped.\n    timeout-minutes: 40');
+ const expected=prior.replace('    timeout-minutes: 20','    # Full protected-baseline integrity plus all existing fresh-DB incident\n    # regressions exceed the former 20-minute budget. No steps are skipped.\n    timeout-minutes: 40')
+  .replace('      - run: npm run build\n','')
+  .replace('      - run: npm run test:public','      # Prebuild before parallel tests: the artifact safety test must not start\n      # Vite while protected-file integrity is reading generated declarations.\n      - run: npm run build\n      - run: npm run test:public');
  assert.notEqual(expected,prior);assert.equal(read(path).toString(),expected);
+ const commands=s=>[...s.matchAll(/^      - run: (.+)$/gm)].map(m=>m[1]).sort();
+ assert.deepEqual(commands(expected),commands(prior));
+ assert.ok(expected.indexOf('- run: npm run build')<expected.indexOf('- run: npm run test:public'));
 });
 test('unknown paths, changed evidence policy and deployment flags cannot enter through successor view',()=>{
  assert.throws(()=>vnextTransition(read,[...vnextChangedPaths(),'src/rogue.ts']));

@@ -85,3 +85,7 @@ RESEARCH_FUNNEL/PUBLICATION_FUNNEL是候選診斷Gate；VNEXT_MEMBER_RELEASE_REA
 新的Preview http://127.0.0.1:3223/stocks 與 /vnext/research；重用原隔離Auth/DB，不重做Production Migration。本機真實Free/Premium/Owner登入、非Owner拒絕、Logout清除、Reload拒絕、1440/768/430/390/375無溢出PASS；不是正式會員E2E。
 自然更新只驗證現有bounded incremental planner：Core未完就延後、固定cursor、單併發、timeout/retry有界。Production沒有VNext Caller，NATURAL_UPDATE_RUNTIME=NOT_ENABLED。
 本輪普通工程驗證完成後依授權Commit/Push；PR維持Draft，最終CI結果以新HEAD Checks為準。禁止Merge/Deploy/ProductionMigration/會員公開；VNEXT_MEMBER_RELEASE_READY=NO、PUBLIC_PRODUCT_APPROVAL=NO。
+
+## Real Stock P0 最終 CI 競爭修復
+44c3c363 的八項 Gate 通過，Validate run38104636136 的3048項公開測試僅1失敗：dedicated Auth Integrity讀取auto-imports.d.ts時得到0 bytes，預期2276 bytes。實際路徑為beginnerOwnerE2EContract匯入networkObserver.test，在缺out時啟動Vite Build；AutoImport使用非原子writeFile重寫dts，與平行全樹Integrity競爭。不是研究或Production原碼變更。
+只把既有Validate Build移到test:public之前；不增刪Gate、不放寬Integrity、不改產品Vite設定。精確baseline測試核對只有原預算變更與此步驟重排，原commands多重集合相同。最終修復HEAD重新跑九項CI，不將44c3失敗宣稱PASS。

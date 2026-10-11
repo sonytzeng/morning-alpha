@@ -63,8 +63,8 @@ export async function inspectPublication(card:ReviewCard,registry:ReviewRegistry
  const timeValid=receipt&&missingTime.length===0&&current;
  const ready=quality==='PASS'&&timeValid&&license&&card.research_state==='QUALIFIED';
  const matrix=[
-  result('DATA_MISSING',eventReviewed?'PASS':'UNVERIFIED',eventReviewed?'公司事件內容查核文件已具備':checks.find(c=>c.key==='EVENT_CONTEXT')!.reason,events.map(e=>e.id),'合法取得對應內文及影響查核紀錄；新取得內容不倒填原研究時間。'),
-  result('DATA_INTEGRATION',linked?'PASS':'FAIL',linked?'本卡引用的量價、法人、營收與同期財務均已接入保存來源':'卡片存在找不到的來源或版本差異',card.evidence.map(e=>e.id),linked?'既有資料不用重新抓取；事件內文屬另一項缺口。':'修復來源映射，不補造不存在的欄位。'),
+  result('DATA_MISSING',eventReviewed?'PASS':'UNVERIFIED',eventReviewed?'公司事件內容查核文件已具備':checks.find(c=>c.key==='EVENT_CONTEXT')!.reason,events.map(e=>e.id),eventReviewed?'本項已完成，不需重新查閱。':'依上列個別原因補齊風險分析或未披露資料；已讀原文不必重抓，新證據不得倒填原研究時間。'),
+  result('DATA_INTEGRATION',linked?'PASS':'FAIL',linked?'本卡引用的量價、法人、營收與同期財務均已接入保存來源':'卡片存在找不到的來源或版本差異',card.evidence.map(e=>e.id),linked?'既有資料不用重新抓取；事件影響是否完成，另看個別查核結果。':'修復來源映射，不補造不存在的欄位。'),
   result('TIME_METADATA',timeValid?'PASS':receipt&&current?'UNVERIFIED':'FAIL',!receipt?'取得時間或研究截止不一致':!current?'已到重新檢查時間，不能沿用舊版本':missingTime.length?`${missingTime.length}筆原發布時間未確認；首次取得時間已保存`:'原發布時間、取得時間、研究截止與效期均通過',missingTime.map(e=>e.id),'追索原始發布證明；不得以first_seen代填；到期則建立新研究。'),
   result('METHODOLOGY_QUALITY',quality==='INCOMPLETE'?'UNVERIFIED':quality,quality==='PASS'?'獨立品質審核通過':checks.filter(c=>c.state!=='PASS').map(c=>c.reason).join('；'),checks.filter(c=>c.state!=='PASS').flatMap(c=>c.evidence_ids),'依個別查核項目補齊文件，不改正式推薦或降低研究門檻。'),
   result('RAW_REDISTRIBUTION',rawUnknown.length?'UNVERIFIED':'PASS',rawUnknown.length?`${rawUnknown.length}個精確來源的原始再散布權利未確認；會員投影不輸出原始資料`:'原始資料用途有對應證明',rawUnknown,'保持原始Provider payload與圖表不公開；此項不自動否決自行分析用途。'),

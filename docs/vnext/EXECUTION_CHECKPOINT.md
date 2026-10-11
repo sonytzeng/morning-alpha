@@ -89,3 +89,7 @@ RESEARCH_FUNNEL/PUBLICATION_FUNNEL是候選診斷Gate；VNEXT_MEMBER_RELEASE_REA
 ## Real Stock P0 最終 CI 競爭修復
 44c3c363 的八項 Gate 通過，Validate run38104636136 的3048項公開測試僅1失敗：dedicated Auth Integrity讀取auto-imports.d.ts時得到0 bytes，預期2276 bytes。實際路徑為beginnerOwnerE2EContract匯入networkObserver.test，在缺out時啟動Vite Build；AutoImport使用非原子writeFile重寫dts，與平行全樹Integrity競爭。不是研究或Production原碼變更。
 只把既有Validate Build移到test:public之前；不增刪Gate、不放寬Integrity、不改產品Vite設定。精確baseline測試核對只有原預算變更與此步驟重排，原commands多重集合相同。最終修復HEAD重新跑九項CI，不將44c3失敗宣稱PASS。
+
+f776292 的公開測試與incident captures已全部通過；run38106378293在後續Owner隔離Postgres啟動探測失敗（socket accepting→rejecting），與Cockpit run38106378329第一次socket accepting→no response同型。Cockpit同HEAD有界重跑PASS，但不把暫態重跑當永久修復。
+官方docker-library/postgres/docker-entrypoint.sh的docker_temp_server_start設定listen_addresses=''，初始化暫用伺服器只有Unix socket；初始化完成即stop，再啟動正式伺服器。因此只將上述兩個已證實受影響CI的docker exec pg_isready指定-h 127.0.0.1，仍在--network none容器內，不開host port、不改Auth、不改SQL／帳務。Validate六處與Cockpit兩處精確替換，新增byte-exact negative guard，不增刪任何既有測試。
+來源：https://github.com/docker-library/postgres/blob/master/docker-entrypoint.sh 。最終HEAD重新執行Gate；Production仍0操作。

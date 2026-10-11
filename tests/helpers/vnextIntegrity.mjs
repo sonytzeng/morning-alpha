@@ -9,6 +9,7 @@ export const VNEXT_MIGRATION='supabase/migrations/20261010061630_vnext_research_
 export const VNEXT_PATHS=Object.freeze([
  '.github/workflows/vnext-candidate.yml',
  '.github/workflows/validate-release.yml',
+ '.github/workflows/owner-cockpit.yml',
  ...['BASELINE_INVENTORY','PRODUCTION_BASELINE_AUDIT','ARCHITECTURE','DATA_LICENSE_AUDIT','EVENT_INTELLIGENCE_SPEC','SUPPLY_CHAIN_SPEC','MULTI_HORIZON_SPEC','SIGNAL_LAB_INTEGRATION_PLAN','PUBLICATION_GATE','RELEASE_PLAN','EXECUTION_CHECKPOINT','ACCEPTANCE_MATRIX'].map(n=>'docs/vnext/'+n+'.md'),
  'docs/vnext/RELEASE_B_REAL_EVIDENCE.md',
  'docs/vnext/EVIDENCE_FOUNDATION.md',

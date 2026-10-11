@@ -3,9 +3,14 @@
   "base": "fff51d76a8e6c90768772023c37afbb112761a3a",
   "files": [
     {
+      "path": ".github/workflows/owner-cockpit.yml",
+      "before_sha256": "669b52922c1b5bcec3b70fb443205a4a8a8c5214a6a779fadee5c9e1668f757b",
+      "after_sha256": "6dbe50806e4dd7316d264bb59aeb7165511e6f7ccf9075a3b40ae73c3fb1912c"
+    },
+    {
       "path": ".github/workflows/validate-release.yml",
       "before_sha256": "2eaa49e58067a7e7d3a29dbf3d134c1de96c41d2e43784e1a22ce426752ec83a",
-      "after_sha256": "4759f2d01f86b70a6a631dce6268d5c81e2185de259051b7930b8d2330cb15e2"
+      "after_sha256": "16f230b4b12e03575cbdfead84f9efefc584ffdf68fd540c01c5b8cce67ac002"
     },
     {
       "path": ".github/workflows/vnext-candidate.yml",
@@ -45,7 +50,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "fc7a03891688de82f385610366c1d0003921f92c2658850e468ee58955cc08cb"
+      "after_sha256": "aecbbdd73d69f9df81b014d811350982e93ff617e77dfb6568c36d84bab0b007"
     },
     {
       "path": "docs/vnext/MEMBER_EXPERIENCE.md",
@@ -325,7 +330,7 @@
     {
       "path": "tests/helpers/vnextIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "e90917272cdd86bafcd4feb483b69d95887e6f160799e8b6de340c816432673a"
+      "after_sha256": "b25bab492596f3d2a0a45327dfd9625a4687faea3f9377d1a7c22ce4472f2a85"
     },
     {
       "path": "tests/productContract.test.mjs",
@@ -350,7 +355,7 @@
     {
       "path": "tests/vnextIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "48fa8253dbf66117d9d1556747fc4bc0e8d8ad115b62dc182da2230daeef6f6b"
+      "after_sha256": "9fd7c942ff4bd97b5a1748846aa42cd42b3503f9f5d736eabb815474ece8f9d7"
     },
     {
       "path": "tests/vnextMember.test.mjs",

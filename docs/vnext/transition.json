@@ -50,7 +50,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "fbcd00a122f460c5a7d9a34d29ba9593aad28e4cd3e6ee7cceb810afd98a4183"
+      "after_sha256": "a6ae43a33545d965f7cc79688f55df0952b3f469b9742e472c8d273af2a23f7e"
     },
     {
       "path": "docs/vnext/FIRST_MEMBER_RESEARCH.md",
@@ -380,7 +380,7 @@
     {
       "path": "tests/vnextAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "1110d4cc31bca329136cca968ac93d2d7a5e3cf11af1d48e8e3f8cf7450a2f34"
+      "after_sha256": "84cf8366fc109b85d4c165c43b3c0ced0c84d3be48fdf21d6560d3891595999f"
     },
     {
       "path": "tests/vnextAdmissionAuth.integration.mjs",

@@ -1,6 +1,8 @@
 # VNext 執行 Checkpoint
 ## First Member Research Closure candidate（2026-10-11，最新續跑點）
 
+eba0548 的VNext CI三項journal測試因Linux無/private/tmp而ENOENT，屬測試路徑錯誤。只將新測試mkdtemp根改為macOS/Linux皆有的/tmp，保留隔離前綴／權限／防重等全部assertions，重新seal並跑完整新HEAD CI。不把該失敗HEAD宣稱PASS。
+
 從8c7e0c4續跑，PR230 Draft、原9CI PASS、origin/main fff51d76，工作樹原乾淨。詳FIRST_MEMBER_RESEARCH.md：新增獨立來源查核、七類阻擋矩陣、Owner前置檢查、只限loopback的append-only核准候選，以及讀取時重新驗證用途／撤回／效期的會員白名單投影。沒有改選股引擎、正式策略或SQL。
 真實29項：9機械查核每項PASS（261），2独立事件／方法審核每項待補（58）；完整品質PASS0、明確FAIL0、待補29。取得時間PIT29通過；原發布時間29待補；用途授權29待確認；Owner ready0／Approved0／Free0／Premium0。原始再散布限制與自行分析用途分開，不把所有缺項叫研究失敗。
 原funnel805cfbb8未改；新review656dee43、admission4cfa4fb5，固定時間08:13:04Z；私有目錄/private/tmp/morning-alpha-vnext-member-admission-20261011，舊資料不覆寫。3653相對大盤+6.31pp與成交金額1.53倍獨立重算PASS，不是機率。28中期保留逐公司證據／反證與累計財報口徑。

@@ -1,4 +1,15 @@
 # VNext 執行 Checkpoint
+## Real Stock Research P0（2026-10-11，最新續跑點）
+
+從5dfcb9f續接，PR230 Draft，origin/main fff51d76，原9CI PASS、working tree乾淨。細節與缺口見REAL_STOCK_RESEARCH.md。本輪不重做已PASS Academy／Entry／Cockpit／既有會員架構。
+新增官方歷史營收37月份窗口、法人20日、財報及現金流10期、事件2月份。私有最小快取不進Git：stock `/private/tmp/morning-alpha-vnext-real-stock-20261011`，context `/private/tmp/morning-alpha-vnext-stock-context-20261011`。最後snapshot hash見真實離線測試。
+短期72=1合格+71不符；中期72=28合格+44不符；長期72全不足；沿用既有未Promotion研究假設，不改參數。29筆觀察全部尚不能公開（授權、原發布時間、方法品質及逐筆核准）。Free/Premium真實公開0，Forward0/Outcome0。最新月份不同：9月58檔，其餘14檔8月；各自最新往回36月72/72，不冒充9月完整。
+本輪修復官方舊路徑404、事件必要日期參數、金融負淨營收整批誤拒、累計財報口徑映射。28筆同比基期不適用保留null，不當抓取失敗；HTTP失敗0。長期可比較單季EPS、Capex、估值／需求／競爭優勢與事件內容審核仍不足，不捏造。
+Owner Preview沿用http://127.0.0.1:3223/vnext/research；Free/Premium真實空內容預覽可用/stocks。以既有本機Supabase Auth/PostgREST驗證owner/free/premium/other、Owner-only、直接API提高tier拒絕及Logout；本次有傳入實際新funnel核對hash。非Production身份。
+Owner實機：1440/768/430/390/375無水平溢出，技術details預設收合，可展開來源；三期間數量與支持／反對內容核對、登出即清除私有資料、Console error/warn=0。截圖/private/tmp/ma-vnext-real-stock-qa。Sony usability仍PENDING。
+候選新增16項合成negative controls及獨立私有真實離線測試；舊history/sources hash未變，新事實回灌舊cutoff=0。最終工程與9項GitHub Gate以新HEAD為準，不沿用旧結果。
+Production操作0、業務程式逐byte受Integrity保護；本輪未重新擷取Production DB指紋。未Merge／Deploy／Migration／Cron／Secret／Auth/RLS／會員公開。自然研究只有有界、不可變、防重且不阻塞Core的純計畫；正式caller/outcome均未啟用。
+
 2026-10-10 Asia/Taipei。
 Branch feat/morning-alpha-vnext-integration；基線fff51d76a8e6c90768772023c37afbb112761a3a。
 完整讀取Master0–22；已重新核對PR103/225、dirtytree、remote、schema和Functionmetadata。

@@ -3,6 +3,7 @@
 import {HORIZONS,hashValid,sourceSafe,snapshotHash,type Horizon} from './contracts.ts';
 import {validProjectionTime} from './projection.ts';
 import {sourceRights} from './publicationReadiness.ts';
+import {validDossier,type StockDossier} from './stockResearch.ts';
 
 export const RESEARCH_FUNNEL_VERSION='VNEXT_OBSERVATION_HYPOTHESIS_2.0.0';
 export const RESEARCH_RULES=Object.freeze({short_amount_ratio:1.5,short_close_location:.7,short_max_range:.10,
@@ -17,7 +18,7 @@ export type ResearchState='QUALIFIED'|'REJECTED'|'INSUFFICIENT';
 export type ResearchEvaluation={symbol:string;company:string;horizon:Horizon;version:string;state:ResearchState;
  evaluated:boolean;reasons:string[];warnings:string[];used:Trace[];cutoff:string;through:string;next_review_at:string;
  reason:string;confirmation:string;invalidation:string;risk:string;metrics:Record<string,number>;
- mode:'RETAINED_SNAPSHOT_REVIEW_NOT_FORWARD';v1:{state:'CONTRACT_READY_NOT_EVALUATED'|'INSUFFICIENT';missing:string[]}};
+ dossier?:StockDossier;mode:'RETAINED_SNAPSHOT_REVIEW_NOT_FORWARD';v1:{state:'CONTRACT_READY_NOT_EVALUATED'|'INSUFFICIENT';missing:string[]}};
 const unique=(v:string[])=>[...new Set(v)];
 const time=(v:string|null):v is string=>v!==null&&validProjectionTime(v);
 const day=(v:string)=>/^\d{4}-\d\d-\d\d$/.test(v)&&Number.isFinite(Date.parse(v+'T00:00:00Z'))&&new Date(v+'T00:00:00Z').toISOString().startsWith(v);
@@ -177,10 +178,12 @@ export async function projectQualifiedResearch(rows:FunnelRow[],policyFor:(row:F
  });
 }
 export type ResearchFunnel={schema:'VNEXT_RESEARCH_PUBLICATION_FUNNEL_V2';version:string;through:string;cutoff:string;history_hash:string;sources_hash:string;
+ enrichment?:{evidence_hash:string;context_hash:string;collected_at:string;coverage:Record<string,number>;source_failures:number;normalization_warnings:number;new_facts_at_old_cutoff:number;natural_enabled:false};
  rows:FunnelRow[];counts:Record<Horizon,ReturnType<typeof summarizeFunnel>>;member_publication:false;forward_sample:0;outcome_sample:0;promotion:false;snapshot_hash:string};
 export async function verifyFunnel(f:ResearchFunnel){
  const {snapshot_hash,...payload}=f;
  return f.schema==='VNEXT_RESEARCH_PUBLICATION_FUNNEL_V2'&&f.version===RESEARCH_FUNNEL_VERSION&&f.rows.length===216&&new Set(f.rows.map(r=>r.research.symbol+':'+r.research.horizon)).size===216
   &&f.member_publication===false&&f.promotion===false&&f.forward_sample===0&&f.outcome_sample===0&&hashValid(f.history_hash)&&hashValid(f.sources_hash)
+  &&f.rows.every(r=>!r.research.dossier||validDossier(r.research.dossier))&&(!f.enrichment||hashValid(f.enrichment.evidence_hash)&&hashValid(f.enrichment.context_hash)&&f.enrichment.new_facts_at_old_cutoff===0&&f.enrichment.natural_enabled===false)
   &&snapshot_hash===await snapshotHash(payload)&&(Object.keys(HORIZONS) as Horizon[]).every(h=>JSON.stringify(summarizeFunnel(f.rows.filter(r=>r.research.horizon===h)))===JSON.stringify(f.counts[h]));
 }

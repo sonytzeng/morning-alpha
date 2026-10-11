@@ -4,16 +4,20 @@ import type {ResearchFunnel as Funnel} from '@/features/vnext/researchFunnel';
 const categories:Record<string,string>={LICENSING:'用途授權仍未確認',TIME:'來源發布時間仍不完整',EXPIRED:'已過重新檢查時間',QUALITY:'研究方法與內容尚待審核',APPROVAL:'尚無逐筆公開核准',PERMISSION:'缺少合法會員閱讀權限'};
 const reasons:Record<string,string>={PARTICIPATION_NOT_ELEVATED:'成交參與未明顯增加',CLOSE_NOT_SUPPORTED:'當日收盤表現未確認',INTRADAY_RANGE_TOO_WIDE:'當日價格波動過大',
  MISSING_REVENUE_3:'缺少連續三個月營收',MISSING_INSTITUTIONAL_10:'缺少連續十個交易日法人方向',MISSING_EPS_4:'缺少四季可比獲利',MISSING_MARGIN_4:'缺少四季毛利資料',MISSING_CAPEX_4:'缺少四季資本支出',MISSING_DEMAND_1:'缺少持續需求證據',MISSING_MOAT_1:'缺少競爭優勢證據',MISSING_VALUATION_1:'缺少估值基礎'};
+Object.assign(reasons,{INSTITUTIONAL_DIRECTION_NOT_SUPPORTED:'最近十日法人合計沒有買超',REVENUE_TREND_NOT_SUPPORTED:'最近三個月未全部呈現營收年增'});
 const label=(r:string)=>reasons[r]??(r.includes('TIME')||r.includes('FUTURE')?'資料時間尚不能可靠核對':r.includes('BASIS')?'資料口徑仍待核對':'必要證據仍待核對');
 export default function ResearchFunnel({data}:{data:Funnel}){
  const [horizon,setHorizon]=useState<Horizon>('SHORT'),[filter,setFilter]=useState('ALL'),[query,setQuery]=useState(''),[limit,setLimit]=useState(6);
- const c=data.counts[horizon],rows=data.rows.filter(r=>r.research.horizon===horizon&&(filter==='ALL'||r.research.state===filter)&&(r.research.symbol.includes(query)||r.research.company.includes(query)))
+ const c=data.counts[horizon],qualified=data.rows.filter(r=>r.research.horizon===horizon&&r.research.state==='QUALIFIED'),rows=data.rows.filter(r=>r.research.horizon===horizon&&(filter==='ALL'||r.research.state===filter)&&(r.research.symbol.includes(query)||r.research.company.includes(query)))
   .sort((a,b)=>['QUALIFIED','INSUFFICIENT','REJECTED'].indexOf(a.research.state)-['QUALIFIED','INSUFFICIENT','REJECTED'].indexOf(b.research.state)||a.research.symbol.localeCompare(b.research.symbol));
  return <section id="research-funnel" aria-label="研究與公開資格分開檢查">
-  <div className="vnext-intro"><p className="vnext-eyebrow">真實保存資料 · 新版研究假設，尚未正式採用</p><h1>72檔裡，哪些值得繼續研究？</h1>
+  <div className="vnext-intro"><p className="vnext-eyebrow">真實保存資料 · 新版研究假設，尚未正式採用</p><h1>今天有哪些值得觀察的股票？</h1>
+   <p><strong>{qualified.length?`${HORIZONS[horizon].label}：${qualified.slice(0,3).map(r=>`${r.research.company}（${r.research.symbol}）`).join('、')}${qualified.length>3?`等${qualified.length}檔`:''}。先看依據與風險，不代表現在買進。`:`${HORIZONS[horizon].label}：目前沒有足夠證據成立的觀察，先不要勉強選股。`}</strong></p>
    <p>先判斷研究是否成立，再檢查可不可以提供會員。資料不足不是「股票不好」，研究成立也不等於已能公開。</p>
-   <p>行情截至 {data.through}；本次以後來實際取得的資料檢查，不冒充當日事前判斷。尚未證明投資成效。</p></div>
-  <div className="vnext-horizons" aria-label="研究漏斗期間">{(Object.keys(HORIZONS) as Horizon[]).map(h=><button key={h} aria-pressed={h===horizon} onClick={()=>{setHorizon(h);setLimit(6);setFilter('ALL');}}><strong>{HORIZONS[h].label}</strong><span>{HORIZONS[h].duration}</span></button>)}</div>
+   <p>目前是截至 {data.through} 行情的研究回顧，不是今天即時推薦。本次以後來實際取得的資料檢查，不冒充當日事前判斷；尚未證明投資成效。</p></div>
+  {data.enrichment?<details><summary>這次補到了哪些真實資料？</summary><p>連續12個月營收 {data.enrichment.coverage.revenue_12}/72；36個月營收 {data.enrichment.coverage.revenue_36}/72；20日法人股數 {data.enrichment.coverage.institutional_20}/72。</p><p>10期累計財報 {data.enrichment.coverage.financial_10}/72；現金流 {data.enrichment.coverage.cashflow_10}/72。累計EPS不是單季EPS，投資現金流不是資本支出。</p><p>官方事件索引 {data.enrichment.coverage.event_records} 筆，涵蓋 {data.enrichment.coverage.event_symbols} 檔；內容影響仍待審核，不自動視為利多。</p><p>資料取得截止：{new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',dateStyle:'short',timeStyle:'short',hour12:false}).format(new Date(data.enrichment.collected_at))}（台北時間）。不計入事前樣本。</p></details>:null}
+  {data.enrichment?<p>營收以各公司最新已取得月份往回核對；9月資料目前 {data.enrichment.coverage.revenue_202609}/72 檔，其餘最新為8月，不冒充9月已完整。</p>:null}
+  <div className="vnext-horizons" aria-label="研究漏斗期間">{(Object.keys(HORIZONS) as Horizon[]).map(h=><button key={h} aria-pressed={h===horizon} onClick={()=>{setHorizon(h);setLimit(6);setFilter('ALL');setQuery('');}}><strong>{HORIZONS[h].label}</strong><span>{HORIZONS[h].duration}</span></button>)}</div>
   <div className="vnext-chain" aria-label="研究結果"><section><h2>{c.qualified} 檔值得觀察</h2><p>符合本版研究假設；不是買進推薦。</p></section><section><h2>{c.rejected} 檔未符合</h2><p>資料足以評估，但本模型條件未成立。</p></section><section><h2>{c.insufficient} 檔資料不足</h2><p>尚不能可靠評估，不能當成不合格股票。</p></section></div>
   <p>已掃描 {c.scanned} 檔，完整評估 {c.evaluated} 檔。舊版必要證據齊全 {c.v1_contract_ready} 檔／不足 {c.v1_insufficient} 檔；舊版只做完整性檢查，沒有真正區分合格與不合格。</p>
   <section className="vnext-risk"><h2>符合研究，但能公開嗎？</h2><p>只審查符合研究的 {c.publication_checked} 檔：可公開 {c.publication_eligible} 檔，仍不能公開 {c.publication_checked-c.publication_eligible} 檔。</p>
@@ -24,10 +28,13 @@ export default function ResearchFunnel({data}:{data:Funnel}){
   <div className="vnext-grid">{rows.slice(0,limit).map(({research:r,publication:p,input_hash})=><article className="vnext-card" key={r.symbol+r.horizon}>
    <div className="vnext-card-top"><span>{HORIZONS[r.horizon].duration}</span><span className="vnext-status">{r.state==='QUALIFIED'?'值得觀察，尚待確認':r.state==='REJECTED'?'目前未符合條件':'暫時無法可靠判斷'}</span></div><h3>{r.company}<small>{r.symbol}</small></h3><p>{r.reason}</p>
    {r.reasons.length?<ul>{[...new Set(r.reasons.map(label))].slice(0,4).map(s=><li key={s}>{s}</li>)}</ul>:null}
+   {r.dossier?<><h4>支持或可核對的事實</h4>{r.dossier.supporting.length?<ul>{r.dossier.supporting.map(s=><li key={s}>{s}</li>)}</ul>:<p>目前沒有足以支持本模型的完整證據。</p>}{r.horizon!=='SHORT'?<p>最新可核對營收：{r.dossier.latest_revenue_month??'尚未取得'}；不代表今天已公布新月份。</p>:null}<h4>反對證據與仍要小心的事</h4><ul>{r.dossier.opposing.slice(0,4).map(s=><li key={s}>{s}</li>)}</ul></>:null}
    <h4>什麼條件成立才開始考慮？</h4><p>{r.confirmation}</p><h4>什麼情況代表原判斷失效？</h4><p>{r.invalidation}</p>
    <h4>主要風險</h4><p>{r.risk}</p><h4>下次何時重新檢查？</h4><p>{r.next_review_at.slice(0,10)} 完整交易資料取得後；沒有啟用自動更新。</p>
    <p>{p.checked?`會員公開：${p.eligible?'符合候選審查，仍未發布':'尚未通過'}`:'尚未進入會員公開審查'}</p>
-   <details><summary>查看來源、方法與技術詳細資料</summary><p>{r.version}／未採用／不是事前預測</p><p>核對截止：{r.cutoff}</p><p>研究原因：{r.reasons.join('、')||'本版條件成立'}</p><p>公開原因：{p.reasons.join('、')||'未評估或無拒絕原因'}</p><p>限制：{r.warnings.join('、')}</p><p>證據封存：{input_hash}</p>{[...new Set(r.used.map(e=>e.source))].map(source=>sourceSafe(source)?<p key={source}><a href={source} target="_blank" rel="noreferrer">原始資料來源</a></p>:null)}</details>
+   <details><summary>查看完整數值、來源與技術詳細資料</summary><p>{r.version}／未採用／不是事前預測</p><p>核對截止：{r.cutoff}</p><p>研究原因：{r.reasons.join('、')||'本版條件成立'}</p><p>公開原因：{p.reasons.join('、')||'未評估或無拒絕原因'}</p><p>限制：{r.warnings.join('、')}</p><p>證據封存：{input_hash}</p>
+    {r.dossier?<><p>營收 {r.dossier.coverage.revenue_months} 個月／法人 {r.dossier.coverage.institutional_sessions} 日／累計財報 {r.dossier.coverage.financial_periods} 期。</p>{r.dossier.prices?<p>{r.dossier.prices.date}：開 {r.dossier.prices.open}／高 {r.dossier.prices.high}／低 {r.dossier.prices.low}／收 {r.dossier.prices.close}；成交 {r.dossier.prices.volume.toLocaleString('zh-TW')} 股／{r.dossier.prices.amount.toLocaleString('zh-TW')} 元。</p>:null}<ul>{r.dossier.data_gaps.map(g=><li key={g}>{g}</li>)}</ul>{r.dossier.sources.map((e,i)=><p key={e.evidence_hash+i}><a href={e.source} target="_blank" rel="noreferrer">{e.kind} 官方來源</a><br/>發布：{e.published_at??'未證明，不能代填'}<br/>首次取得：{e.first_seen_at}<br/>可取得：{e.available_at}<br/>資料期間：{e.as_of}<br/>指紋：{e.evidence_hash}</p>)}</>:null}
+    {[...new Set(r.used.map(e=>e.source))].map(source=>sourceSafe(source)?<p key={source}><a href={source} target="_blank" rel="noreferrer">原始資料來源</a></p>:null)}</details>
   </article>)}</div>
   {!rows.length?<p className="vnext-empty">沒有符合條件的保存資料，不會補造股票。</p>:limit<rows.length?<button className="vnext-primary" onClick={()=>setLimit(v=>v+6)}>再看6檔</button>:null}
   <p className="vnext-footnote">會員內容仍未公開，事前研究樣本 0，已完成成效 0。<a href="/stocks">查看會員空狀態</a></p>

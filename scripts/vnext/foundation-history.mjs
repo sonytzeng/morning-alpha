@@ -19,16 +19,19 @@ export function auditBars(bars,dates,cutoff){const at=Date.parse(cutoff);if(!Num
 export function createPublicCache(directory,{minimumInterval=1600,maxRequests=1800,fetcher=fetch}={}){
  const dir=privateDirectory(directory),stats={requests:0,hits:0,retries:0};let last=0;
  const pause=ms=>new Promise(r=>setTimeout(r,ms));
- async function get(url,scope,normalize,format='json'){
+ async function get(url,scope,normalize,format='json',form=null,encoding='form'){
   if(!['json','text'].includes(format))throw Error('FORMAT_INVALID');
-  const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password||!['www.twse.com.tw','openapi.twse.com.tw','www.tpex.org.tw','pr.tsmc.com'].includes(u.hostname))throw Error('SOURCE_NOT_ALLOWED');
-  const path=resolve(dir,sha({url,scope})+'.json');try{const c=readPrivate(path);if(c.url!==url||c.scope!==scope||c.digest!==sha(c.data))throw Error('CACHE_HASH_MISMATCH');stats.hits++;return c;}catch(e){if(e.code!=='ENOENT')throw e;}
+  const u=new URL(url),mops=u.hostname==='mopsov.twse.com.tw'&&(/^\/nas\/t21\/(sii|otc)\/t21sc03_\d{3}_\d{1,2}\.csv$/.test(u.pathname)||/^\/mops\/web\/ajax_t163sb(04|06|20)$/.test(u.pathname));
+  const events=u.hostname==='mops.twse.com.tw'&&u.pathname==='/mops/api/t05st01';
+  if(u.protocol!=='https:'||u.username||u.password||!mops&&!events&&!['www.twse.com.tw','openapi.twse.com.tw','www.tpex.org.tw','pr.tsmc.com'].includes(u.hostname))throw Error('SOURCE_NOT_ALLOWED');
+  if(!['form','json'].includes(encoding)||form&&(events?encoding!=='json'||Object.keys(form).some(k=>!['companyId','year','month','firstDay','lastDay'].includes(k)):!mops||encoding!=='form'||!u.pathname.startsWith('/mops/web/')||Object.keys(form).some(k=>!['encodeURIComponent','firstin','off','step','isQuery','TYPEK','year','season'].includes(k))))throw Error('PUBLIC_READ_FORM_INVALID');
+  const key=form?{url,scope,form}:{url,scope},path=resolve(dir,sha(key)+'.json');try{const c=readPrivate(path);if(c.url!==url||c.scope!==scope||c.digest!==sha(c.data)||JSON.stringify(c.form??null)!==JSON.stringify(form))throw Error('CACHE_HASH_MISMATCH');stats.hits++;return c;}catch(e){if(e.code!=='ENOENT')throw e;}
   for(let attempt=0;attempt<3;attempt++){
    if(stats.requests>=maxRequests)throw Error('REQUEST_BUDGET_EXHAUSTED');await pause(Math.max(0,minimumInterval-(Date.now()-last)));last=Date.now();stats.requests++;
-   try{const r=await fetcher(url,{redirect:'error',signal:AbortSignal.timeout(20000),headers:{Accept:'application/json'}});
+   try{const r=await fetcher(url,{redirect:'error',signal:AbortSignal.timeout(20000),headers:{Accept:format==='text'?'text/html,text/csv':'application/json',...(form&&encoding==='json'?{'Content-Type':'application/json'}:{})},...(form?{method:'POST',body:encoding==='json'?JSON.stringify(form):new URLSearchParams(form)}:{})});
     if(r.status===429||r.status>=500){await r.body?.cancel();if(attempt===2)throw Error('HTTP_'+r.status);stats.retries++;const retry=r.headers.get('retry-after'),seconds=Number(retry),delay=retry===null?0:Number.isFinite(seconds)?seconds*1000:Date.parse(retry)-Date.now();if(delay>60000)throw Error('RETRY_AFTER_OUTSIDE_BUDGET');await pause(Math.max(2000*2**attempt,Number.isFinite(delay)?delay:0));continue;}
     if(!r.ok){await r.body?.cancel();throw Error('HTTP_'+r.status);}const reader=r.body.getReader(),parts=[];let size=0;try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>8_000_000){await reader.cancel();throw Error('RESPONSE_TOO_LARGE');}parts.push(value);}}finally{reader.releaseLock();}
-    const raw=Buffer.concat(parts),at=new Date().toISOString(),data=normalize(format==='text'?raw.toString('utf8'):JSON.parse(raw.toString('utf8')),at),c={schema:'VNEXT_PUBLIC_CACHE_V1',url,scope,first_seen_at:at,available_at:at,raw_response_hash:createHash('sha256').update(raw).digest('hex'),source_version:'OFFICIAL_AS_RETRIEVED_V1',data,digest:sha(data)};immutable(path,c);return c;
+    const raw=Buffer.concat(parts),at=new Date().toISOString(),data=normalize(format==='text'?raw.toString('utf8'):JSON.parse(raw.toString('utf8')),at),c={schema:'VNEXT_PUBLIC_CACHE_V1',url,scope,...(form?{form}:{}),first_seen_at:at,available_at:at,raw_response_hash:createHash('sha256').update(raw).digest('hex'),source_version:'OFFICIAL_AS_RETRIEVED_V1',data,digest:sha(data)};immutable(path,c);return c;
    }catch(e){if(!['TimeoutError','AbortError'].includes(e.name)&&e.message!=='fetch failed'||attempt===2)throw e;stats.retries++;await pause(2000*2**attempt);}
   }throw Error('RETRY_EXHAUSTED');
  }

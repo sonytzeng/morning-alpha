@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {createServer} from 'vite';
 import {verifyInstalledCandidate} from './isolation.mjs';
 import {auditPublication} from './publication-readiness.mjs';
+import {auditResearchFunnel} from './research-funnel.mjs';
 import {revokeSyntheticPublications,verifyEmptyPublication} from './publication-isolation.mjs';
 const name=process.env.MA_VNEXT_REUSE_LOCAL_DB;
 assert.match(name??'',/^ma-academy-auth-\d+-db$/);
@@ -13,7 +14,8 @@ const sql=q=>execFileSync('docker',['exec','-i',name,'psql','-XqAt','-U','postgr
 const runtime={sql};verifyInstalledCandidate(runtime);
 const readiness=auditPublication(process.env.MA_VNEXT_FOUNDATION_DIR,process.env.MA_VNEXT_DISPLAY_NAMES);
 assert.equal(readiness.cards.filter(c=>c.member_eligible).length,0,'NONEMPTY_REQUIRES_REVIEWED_PROJECTION');
-revokeSyntheticPublications(runtime);console.log(JSON.stringify(await verifyEmptyPublication(readiness)));
+const funnel=process.env.MA_VNEXT_STOCK_DIR?await auditResearchFunnel(process.env.MA_VNEXT_FOUNDATION_DIR,process.env.MA_VNEXT_DISPLAY_NAMES,process.env.MA_VNEXT_STOCK_DIR,process.env.MA_VNEXT_CONTEXT_DIR):null;
+revokeSyntheticPublications(runtime);console.log(JSON.stringify(await verifyEmptyPublication(readiness,funnel)));
 const config=await fetch(source+'/__vnext_public_config').then(r=>r.json());
 assert.equal(typeof config.anon,'string');process.env.MA_VNEXT_ANON=config.anon;
 process.env.MA_VNEXT_LOCAL='ISOLATED_ONLY';process.env.MA_VNEXT_REAL_PREVIEW='ISOLATED_OWNER_ONLY';process.env.MA_VNEXT_PUBLICATION_PREVIEW='REAL_EMPTY';

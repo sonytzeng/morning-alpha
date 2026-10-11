@@ -12,7 +12,7 @@ export default defineConfig(async({command})=>{
  const reports=process.env.MA_VNEXT_REAL_PREVIEW==='ISOLATED_OWNER_ONLY'?await loadRetainedResearch(process.env.MA_ENTRY_PRIVATE_FIXTURE_DIR,process.env.MA_VNEXT_DISPLAY_NAMES):null;
  const foundation=reports&&process.env.MA_VNEXT_FOUNDATION_DIR?foundationSummary(process.env.MA_VNEXT_FOUNDATION_DIR):null;
  const publication=foundation&&process.env.MA_VNEXT_PUBLICATION_PREVIEW==='REAL_EMPTY'?auditPublication(process.env.MA_VNEXT_FOUNDATION_DIR,process.env.MA_VNEXT_DISPLAY_NAMES):null;
- const funnel=publication?await auditResearchFunnel(process.env.MA_VNEXT_FOUNDATION_DIR,process.env.MA_VNEXT_DISPLAY_NAMES):null;
+ const funnel=publication?await auditResearchFunnel(process.env.MA_VNEXT_FOUNDATION_DIR,process.env.MA_VNEXT_DISPLAY_NAMES,process.env.MA_VNEXT_STOCK_DIR,process.env.MA_VNEXT_CONTEXT_DIR):null;
  return {root,envDir:false,envPrefix:'VNEXT_UNUSED_',publicDir:false,cacheDir:'/private/tmp/ma-vnext-vite',define:{'import.meta.env.VNEXT_REAL_PREVIEW':JSON.stringify(reports?'true':'false'),'import.meta.env.VNEXT_PUBLICATION_PREVIEW':JSON.stringify(publication?'true':'false')},
  optimizeDeps:{noDiscovery:true,include:['react','react-dom/client','react/jsx-runtime','@supabase/supabase-js','lucide-react']},
  css:{postcss:{plugins:[]}},

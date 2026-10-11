@@ -55,3 +55,8 @@
 公司行動68筆不等於完整adjustment/rights ledger；保留不計可調整報酬。
 LONG250D超過120D覆蓋；PIT universe與可成交證據仍不足。
 未重新抓 Provider、未購買資料、未把私有 cache 上傳 GitHub。
+# 2026-10-11 新增歷史來源用途核對
+
+本輪MOPS歷史營收 `/nas/t21/{sii,otc}`、歷史財務 `ajax_t163sb04/20`、公司重訊 `t05st01`、TWSE T86及MI_5MINS_HIST、TPEx三大法人歷史查詢只用於私有研究候選。既有OGL證明只適用精確匹配的已核對資料集，不自動延伸到這些歷史資源。新來源之原始再散布與衍生研究用途未完成權利審核，維持LICENSING_UNVERIFIED。
+
+沒有推定「原始資料不可再散布→所有自行分析均禁止」，也没有推定「自行分析→當然可公開」。29筆本版合格觀察各自仍被Publication Gate擋下。待來源／用途／版本證明及逐筆審核完整才能再申請會員發布。沒有購買服務、接受新契約或傳送資料給Readdy。詳REAL_STOCK_RESEARCH.md。

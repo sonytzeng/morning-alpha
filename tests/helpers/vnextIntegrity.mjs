@@ -22,6 +22,7 @@ export const VNEXT_PATHS=Object.freeze([
  'tests/vnextPublicationReview.test.mjs','tests/vnextPublicationReviewReal.integration.mjs','docs/vnext/FIRST_PUBLICATION_REVIEW.md',
  'src/features/vnext/publicationAdmission.ts','scripts/vnext/member-admission.mjs','scripts/vnext/approval-server.mjs',
  'tests/vnextAdmission.test.mjs','tests/vnextAdmissionReal.integration.mjs','tests/vnextAdmissionAuth.integration.mjs','docs/vnext/FIRST_MEMBER_RESEARCH.md',
+ 'src/features/vnext/publicationBlockers.ts','scripts/vnext/publication-blockers.mjs','docs/vnext/publication-review-20261011.json','docs/vnext/PUBLICATION_BLOCKERS.md','tests/vnextBlockers.test.mjs','tests/vnextBlockersReal.integration.mjs',
  'src/features/vnext/researchFunnel.ts','src/pages/vnext/ResearchFunnel.tsx','scripts/vnext/research-funnel.mjs',
  'tests/vnextResearchFunnel.test.mjs','tests/vnextResearchFunnelReal.integration.mjs','docs/vnext/RESEARCH_PUBLICATION_FUNNEL.md',
  'src/features/vnext/stockResearch.ts','scripts/vnext/stock-evidence.mjs','scripts/vnext/stock-context.mjs','scripts/vnext/stock-audit.mjs','tests/vnextStockResearch.test.mjs','tests/vnextStockResearchReal.integration.mjs','docs/vnext/REAL_STOCK_RESEARCH.md',

@@ -1,4 +1,15 @@
 # VNext 執行 Checkpoint
+## Publication Blocker Closure candidate（2026-10-11，最新續跑點）
+
+從b2ad239233c0873da0e01297b9178a2c8b5fed48原地續跑，PR230保持Draft，origin/main仍fff51d76；nested repo工作樹原乾淨，未觸碰外層工作樹。詳PUBLICATION_BLOCKERS.md與publication-review-20261011.json。
+29項原研究、cutoff、門檻及原review/funnel hash不變。另存29筆獨立方法內容查核與13則官方公告原文閱讀收據（10家公司；只存公司／發布／實際取得時間／hash，不存原文或聯絡個資）。內容品質PASS7、FAIL0、PENDING22；時間PASS0／PENDING29；用途授權Approved0／PENDING29。Owner ready0、Publication0、Free0、Premium0。Short1／Medium28／Long0、Forward0／Outcome0未改。新admission固定離線hash8ed32312352c6c237a267271e0c5b6e71b41cfddf1a2c735d3ae9f820a353882，原review仍656dee43。
+官方MOPS詳細資料實際開在新視窗，原tab不變不是拒絕證據。本輪讀到13/211則；198仍未讀，不能宣稱原文審核完成。繼續查閱時瀏覽器安全檢查把操作指向已被切換的無關分頁而拒絕；沒有讀取無關頁面、沒有繞過或改用隱藏API。這是工具安全中斷，不是MOPS服務故障。官方公司3034索引可讀，但兩則原文未讀，仍PENDING。
+Owner首屏四類：可以核准／尚待補資料／使用權待確認／品質未通過；分類可重疊且明示不能相加。個股details收合、核准不得繞過前置條件。新PENDING保留獨立reason，不當FAIL；原始資料用途與自行分析權利分開。資料或外部授權未完成時不宣告發布完成。
+本機既有隔離Supabase Auth：Owner讀取200但未完成研究核准409，Free/Premium/other私有讀取與核准403、匿名401、client tier拒絕、logout refresh拒絕、會員真實投影0。非Sony Production E2E。未更動SQL、Function、Auth/RLS。桌機1440與375/390/430實測無水平溢出，截圖/private/tmp/ma-vnext-publication-blockers-qa。Preview仍3223/vnext/research、3224/stocks、3222/stocks。
+新增17項控制，admission/blocker43項PASS；真實29離線審核PASS（只是資料／分類正確，不代表29品質全通過）。Type/Lint/Build已通過；最終Integrity、scoped回歸及9CI必須以本輪commit確認。Production操作0、受保護業務原碼不變；未重查線上DB，不冒充新Production指紋比較。
+剩餘：198則原文、三家重大风险（1504/2357/2618）、兩家窗口無索引（1513/2049）、29份原發布時間證明與精確會員用途授權。Sony一次決策清單：先核對既有TWSE/TPEx等精確用途合約，若缺書面範圍則確認詢問方式；尚未證明需要新付費，未簽約／未購買。Owner單方核准不能替代第三方權利。
+PUBLICATION_BLOCKER_CLOSURE=INCOMPLETE；VNEXT_MEMBER_RELEASE_READY=NO；PUBLIC_PRODUCT_APPROVAL=NO。未Merge／Deploy／Production Migration／Cron／Secret／會員公開。
+
 ## First Member Research Closure candidate（2026-10-11，最新續跑點）
 
 eba0548 的VNext CI三項journal測試因Linux無/private/tmp而ENOENT，屬測試路徑錯誤。只將新測試mkdtemp根改為macOS/Linux皆有的/tmp，保留隔離前綴／權限／防重等全部assertions，重新seal並跑完整新HEAD CI。不把該失敗HEAD宣稱PASS。

@@ -8,7 +8,7 @@ import {validProjectionTime} from './projection.ts';
 export const ADMISSION_VERSION='VNEXT_INDEPENDENT_PUBLICATION_REVIEW_1';
 export type FindingState='PASS'|'FAIL'|'UNVERIFIED';
 export type Finding={key:string;state:FindingState;reason:string;evidence_ids:string[];remedy:string};
-export type IndependentRecord={review_hash:string;kind:'EVENT_CONTEXT'|'METHODOLOGY';result:'PASS'|'FAIL';
+export type IndependentRecord={review_hash:string;kind:'EVENT_CONTEXT'|'METHODOLOGY';result:'PASS'|'FAIL'|'PENDING';
  reviewer_ref:string;reviewed_at:string;document_hash:string;document_ref:string;reason:string};
 export type SourceRecord=Trace&{symbol:string;kind:string};
 export type Admission={symbol:string;horizon:ReviewCard['horizon'];review_hash:string;research_hash:string;
@@ -36,9 +36,9 @@ export async function inspectPublication(card:ReviewCard,registry:ReviewRegistry
  const independent=(kind:IndependentRecord['kind'])=>{
   const entries=registry.independent.filter(r=>r.review_hash===card.review_hash&&r.kind===kind);
   const r=entries.length===1?entries[0]:null;
-  if(r&&!['PASS','FAIL'].includes(r.result))return result(kind,'UNVERIFIED','審核結果格式不明，不能視為通過',[],'修復審核檔案格式並重新驗證；不得轉成核准。');
+  if(r&&!['PASS','FAIL','PENDING'].includes(r.result))return result(kind,'UNVERIFIED','審核結果格式不明，不能視為通過',[],'修復審核檔案格式並重新驗證；不得轉成核准。');
   if(!r||!r.reviewer_ref||r.reviewer_ref===card.research_version||!r.reason||!r.document_ref||!hashValid(r.document_hash)||!validProjectionTime(r.reviewed_at)||Date.parse(r.reviewed_at)<Date.parse(card.reviewed_at)||Date.parse(r.reviewed_at)>Date.parse(now))return result(kind,'UNVERIFIED',kind==='EVENT_CONTEXT'?'公司公告內文及影響尚未完成獨立查核':'探索方法尚未取得獨立品質審核',[],kind==='EVENT_CONTEXT'?'取得可合法使用的原公告內文，逐項查核公司關聯與反證，另存審查文件。':'獨立覆核研究方法及適用期間；保留版本、審核人與文件指紋。');
-  return result(kind,r.result,r.reason,[r.document_hash],r.result==='PASS'?'無需處理':'保留拒絕結果；建立修正版及新審查，不由選股引擎自行核准。');
+  return result(kind,r.result==='PENDING'?'UNVERIFIED':r.result,r.reason,[r.document_hash],r.result==='PASS'?'無需處理':r.result==='PENDING'?'補齊本項查核證據；待確認不代表品質不合格。':'保留拒絕結果；建立修正版及新審查，不由選股引擎自行核准。');
  };
  const checks=[
   check('SOURCE_LOCK',linked&&card.evidence.length>0,'所有使用證據均對回獨立載入的保存來源與指紋',card.evidence.map(e=>e.id)),
@@ -63,10 +63,10 @@ export async function inspectPublication(card:ReviewCard,registry:ReviewRegistry
  const timeValid=receipt&&missingTime.length===0&&current;
  const ready=quality==='PASS'&&timeValid&&license&&card.research_state==='QUALIFIED';
  const matrix=[
-  result('DATA_MISSING',eventReviewed?'PASS':'UNVERIFIED',eventReviewed?'公司事件內容查核文件已具備':events.length?`已保存${events.length}筆公司公告索引，但未保存經審核內文`:'目前查詢範圍未取得公司事件索引，不能推論沒有事件',events.map(e=>e.id),'合法取得對應內文及查核紀錄；晚取得資料只能用於新的研究版本。'),
+  result('DATA_MISSING',eventReviewed?'PASS':'UNVERIFIED',eventReviewed?'公司事件內容查核文件已具備':checks.find(c=>c.key==='EVENT_CONTEXT')!.reason,events.map(e=>e.id),'合法取得對應內文及影響查核紀錄；新取得內容不倒填原研究時間。'),
   result('DATA_INTEGRATION',linked?'PASS':'FAIL',linked?'本卡引用的量價、法人、營收與同期財務均已接入保存來源':'卡片存在找不到的來源或版本差異',card.evidence.map(e=>e.id),linked?'既有資料不用重新抓取；事件內文屬另一項缺口。':'修復來源映射，不補造不存在的欄位。'),
   result('TIME_METADATA',timeValid?'PASS':receipt&&current?'UNVERIFIED':'FAIL',!receipt?'取得時間或研究截止不一致':!current?'已到重新檢查時間，不能沿用舊版本':missingTime.length?`${missingTime.length}筆原發布時間未確認；首次取得時間已保存`:'原發布時間、取得時間、研究截止與效期均通過',missingTime.map(e=>e.id),'追索原始發布證明；不得以first_seen代填；到期則建立新研究。'),
-  result('METHODOLOGY_QUALITY',quality==='INCOMPLETE'?'UNVERIFIED':quality,quality==='PASS'?'獨立品質審核通過':quality==='FAIL'?'發現明確內容不符合，保留拒絕':'可機械查核項目已分開檢查；事件影響及方法審核待補',checks.filter(c=>c.state!=='PASS').flatMap(c=>c.evidence_ids),'依個別查核項目補齊文件，不改正式推薦或降低研究門檻。'),
+  result('METHODOLOGY_QUALITY',quality==='INCOMPLETE'?'UNVERIFIED':quality,quality==='PASS'?'獨立品質審核通過':checks.filter(c=>c.state!=='PASS').map(c=>c.reason).join('；'),checks.filter(c=>c.state!=='PASS').flatMap(c=>c.evidence_ids),'依個別查核項目補齊文件，不改正式推薦或降低研究門檻。'),
   result('RAW_REDISTRIBUTION',rawUnknown.length?'UNVERIFIED':'PASS',rawUnknown.length?`${rawUnknown.length}個精確來源的原始再散布權利未確認；會員投影不輸出原始資料`:'原始資料用途有對應證明',rawUnknown,'保持原始Provider payload與圖表不公開；此項不自動否決自行分析用途。'),
   result('ANALYSIS_COMMERCIAL_RIGHTS',license?'PASS':'UNVERIFIED',license?'事實揭露與自行研究用途各自有明確依據':`事實揭露${factUnknown.length}個、自行分析${derivedUnknown.length}個來源用途待確認`,[...new Set([...factUnknown,...derivedUnknown])],'取得精確資源、商用、衍生與顯名條款；未知不等於已禁止，也不等於已允許。'),
   result('OWNER_APPROVAL','UNVERIFIED',ready?'前置條件已通過，等待Sony逐筆核准':'等待前置條件，不是Owner審核拒絕',[],'前置檢查全部通過後才可提交；此審查不會自動核准。'),

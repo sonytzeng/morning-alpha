@@ -1,0 +1,85 @@
+# Publication blocker review — 2026-10-11
+
+## Scope and truthful stopping point
+
+Draft PR230 continues b2ad2392. No selector, threshold, evidence cutoff, original research card, prediction, SQL, Function, Production router or business data changed.
+The immutable review remains `656dee4368d7eb2dcffc697235ca8bf8eee69542acad1f578ca3300eab2227fd`; funnel remains `805cfbb8ae94f0bda75a43535ceb57d314b3f1aa7fed4af12cedc0f82bcf93c3`.
+Short1 / Medium28 / Long0; Forward0 / Outcome0.
+
+29 company-specific methodology reviews are now explicit, hash-bound records outside the selector. These assess whether the *limited exploratory statement* matches the preserved facts and caveats, not whether the method earns money. Reviewer is explicitly Codex, not Sony, legal counsel or an independent professional investment committee.
+
+Content-quality PASS7 / FAIL0 / PENDING22. The seven are 1605、2421、3653、3661、4566、6274、8046. Original publication-time proof is separately PENDING29; after-receipt point-in-time integrity PASS29. Licensing PENDING29, ready for Owner approval0, publication eligible0, free0, premium0. Quality PASS does not override either time or licensing.
+
+This is **not final publication closure**. It does not claim every announcement has been read: 13 official bodies / 211 retained announcement indices, covering10 companies;198 bodies remain unreviewed. Three reviewed companies (1504、2357、2618) still require material-risk assessment. 1513/2049 have no index in the saved window, which is not proof that no relevant event exists. The other17 companies' original bodies remain open research work, not a fabricated external-access denial.
+
+## What was actually retrieved
+
+The MOPS index was accessible through the ordinary historical-announcement form. Detail opens a separate `about:blank` window populated by the official page; the original tab does not change. An unchanged original tab was not proof of access denial. No CAPTCHA, access restriction, proxy or credential was bypassed.
+
+Official navigation: https://mops.twse.com.tw/mops/#/web/t05st01 ; company, ROC115, September1–30 / October1–8, announced timestamp identifies the exact record. The private existing card keeps the exact API/query source and index hash. New review receipt keeps company, public timestamp, actual retrieval timestamp and hash of the selected visible date/time/subject/body rows. It contains no contact information or raw body.
+
+Further body reading stopped at a browser safety boundary: the previously bound tab had been navigated to an unrelated private site. The new official index page could be read, but the body action was still rejected as targeting that unrelated site. No unrelated content was read and no alternate hidden endpoint was used.3034's two official index entries were visible; their bodies remain unreviewed. This is a tool-target safety interruption, not proof that MOPS denied access or that the198 remaining bodies are unavailable.
+
+|Company|Bodies read|What the original body establishes|Unresolved meaning|
+|---|---:|---|---|
+|1504 東元|3|Penang factory, capital injection, Singapore JV / Indonesia transformer project|Capital commitments, later terms and execution risk need a new risk review; not automatic benefit|
+|1605 華新|1|R&D executive role change, effective10/1|Not evidence of orders, technology success or zero impact|
+|2357 華碩|2|Convertible financing and media forecast clarification|0% coupon is not zero redemption cost; dilution/financing risk must be reviewed; media forecasts not company guidance|
+|2421 建準|1|Subsidiary cash-management product disposal|Not core revenue, cooling orders or operating-mode evidence|
+|2618 長榮航|1|Cybersecurity incident; company then assessed no business impact|Company self-assessment is not independent proof of recovery or no subsequent loss|
+|3653 健策|1|9/29 attention-trading financial disclosure; distinct monthly, quarterly and four-quarter periods|Not bullish catalyst, forecast or probability of a rise|
+|3661 世芯-KY|1|Dividend currency conversion and payment date|Payment date is not ex-dividend date; no adjusted return is certified|
+|4566 時碩工業|1|Media orders/revenue forecast not a company-issued forecast|Cannot cite the media assertion as confirmed order or supply-chain proof|
+|6274 台燿|1|Correction of related-party checkbox for Thai subsidiary construction|Not a new revenue/earnings catalyst or verified customer relationship|
+|8046 南電|1|Attention-trading financial disclosure with separate periods|Not a substitute for comparable YTD EPS or future earnings|
+
+Receipt metadata and each of the29 distinct reviewer explanations are in `publication-review-20261011.json`. Newly read content is **after** the research cutoff; it is only a retrospective audit artifact. Neither `first_seen_at` nor `available_at` of any original input is changed. No newly read amount is injected into the original score/card.
+
+## Source/use licensing matrix
+
+These are evidence-based permission statuses, not a legal conclusion that all original analysis is prohibited. No new agreement has been accepted or purchased. No permission is inferred from a successful API response.
+
+|Exact source family used by the29|Raw data redistribution|Official-fact citation|Original prose analysis|Derived numbers/charts|Free / paid member delivery|
+|---|---|---|---|---|---|
+|TWSE historical STOCK_DAY and FMTQIK query resources|PENDING|PENDING for these exact resources|PENDING scope clarification|PENDING|PENDING both; free is not an automatic exception|
+|TWSE T86 historical institutional-share query|PENDING|PENDING exact resource grant|PENDING|PENDING|PENDING|
+|TPEx historical institutional-share resource|PENDING|PENDING exact resource grant|PENDING|PENDING|PENDING|
+|MOPS historical monthly-revenue HTML files and quarterly financial queries|PENDING|PENDING exact resource grant|PENDING|PENDING|PENDING|
+|MOPS historical company announcement index/body|PENDING protected expression; no full text in projection|PENDING scope of attributed fact extraction|PENDING|PENDING if based on restricted inputs|PENDING|
+|Fugle|Not used by these29; not a blocker for them|Not used|Not used|Not used|Future use requires the actual subscription contract; no blanket assumption|
+
+Each private generated matrix row includes its own complete `source_use_review` (exact URLs, actual use, applicable reviewed reference and next action); it does not substitute a domain-level permission for a resource grant.
+
+Primary references verified this turn:
+
+- [TWSE website terms](https://www.twse.com.tw/zh/terms/use.html): approved automated access methods and content-use terms; explicitly distinguished government-open-data authorization. A website-wide content clause is not a resource-level commercial grant.
+- [TWSE trading-information use](https://www.twse.com.tw/zh/products/information/use.html) and its linked rules: trading-information usage, derivative/value-added use, third-party and non-display conditions require exact scope review.
+- [TPEx trading-information rules](https://www.selaw.com.tw/Chinese/RegulatoryInformationResult/Article?releaseDate=2024-01-23&sysNumber=LW10813063): derivative, third-party and non-display uses need the relevant contract/scope. This does not prove Sony lacks an existing agreement.
+- [Government Open Data License1.0](https://data.gov.tw/license) and [listed-company monthly revenue dataset18420](https://data.gov.tw/dataset/18420): the identified dataset is marked free/OGL. Its grant is not automatically attached to a different historical HTML/API resource. Commercial/derivative use may be lawful for covered resources under its conditions; this needs exact resource mapping.
+- [Jentech website terms](https://www.jentech.com.tw/zh/website-terms-of-use): protected company website materials have reproduction/use restrictions. No inference that every separately written statement of fact is prohibited. Its shareholder page links to MOPS, not an independently licensed archive.
+
+## Single Sony decision packet — no repeated approvals
+
+1. **Existing agreements first, not a request to buy data:** provide/authorize review of the relevant TWSE/TPEx information-use agreement or written permission scope already held by Morning Alpha. Needed scope: private non-display research, original prose conclusions, named factual/statistical derivatives, free and paid member display, attribution, caching and historical use. No credential values are needed.
+2. **If the scope is not documented:** choose whether Sony will seek written scope confirmation (or authorize a specifically addressed inquiry) from TWSE/TPEx / the actual licensor. Include representative exact source resources and the5 output-use categories above. This turn has **not** contacted them, accepted a contract, or committed to fees.
+3. **If they require a paid license:** bring back a single named proposal, pricing and precise use rights before purchase. A paid license is **not yet proven necessary**. Open-data resource substitution is a possible separately versioned research path, not permission to relabel current data or overwrite the29.
+
+Owner approval alone cannot replace a third-party grant. The pending original timestamps and outstanding event/risk reviews also remain necessary even if Sony supplies a license tomorrow.
+
+## Engineering and research work that remains (not all commercial)
+
+-198 official announcement bodies still require individual reading/materiality assessment. Do not report them as a completed review or an MOPS outage.
+-1504/2357/2618 need versioned risk follow-up from the newly obtained evidence. No original conclusion is overwritten in this task.
+-Original publication timestamps missing from old market/financial receipts cannot be manufactured. Obtain official release proof and create a hash-bound retrospective certificate or a new contemporaneous research snapshot; never replace the old receipt.
+-The29 retain missing precise member-use grants. Permission is not created by a hash, a reviewer note or a frontend flag.
+-Existing candidate approval server remains isolated loopback Auth/RLS; no Production natural caller/persistence adapter is deployed, and no member publication is authorized.
+
+## UI and verification
+
+First screen:「目前有幾項研究可以發布？」. Four native button filters: 可以核准／尚待補資料／使用權待確認／品質未通過. Counts overlap intentionally and are labelled non-additive. Individual stock evidence and approval panel start collapsed. All seven content passes still have disabled approval because time and licensing are unresolved.
+
+Candidate tests cover explicit pending, preserved failure, overlapping reasons, stale/future/forged review metadata, grant injection, body coverage and timestamps, unchanged research hash, all29 blocked approvals, and empty free/premium projections. Synthetic protocol controls are labelled and do not stand in for the separate real29 offline audit.
+
+Real29 offline admission hash: `8ed32312352c6c237a267271e0c5b6e71b41cfddf1a2c735d3ae9f820a353882`. Existing isolated Supabase Auth verified Owner read200 / unresolved approval409, Free/Premium/other private read403, anonymous401, no client-tier elevation, logout refresh denial. This is not Production Owner evidence. Desktop1440 / Mobile375/390/430 actual DOM measurements show no horizontal overflow; per-stock details start collapsed and the unresolved approval button is disabled. Local screenshots: `/private/tmp/ma-vnext-publication-blockers-qa`.
+
+No Production DB query/write, Merge, Migration, Function deployment, Cron, Secret, Auth/RLS edit, member publish or official business operation performed.

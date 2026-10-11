@@ -17,7 +17,7 @@ export default defineConfig(async({command})=>{
  const publication=foundation&&process.env.MA_VNEXT_PUBLICATION_PREVIEW==='REAL_EMPTY'?auditPublication(process.env.MA_VNEXT_FOUNDATION_DIR,process.env.MA_VNEXT_DISPLAY_NAMES):null;
  const funnel=publication?await auditResearchFunnel(process.env.MA_VNEXT_FOUNDATION_DIR,process.env.MA_VNEXT_DISPLAY_NAMES,process.env.MA_VNEXT_STOCK_DIR,process.env.MA_VNEXT_CONTEXT_DIR):null;
  const review=funnel&&process.env.MA_VNEXT_STOCK_DIR?await auditFirstPublication(funnel,process.env.MA_VNEXT_STOCK_DIR,process.env.MA_VNEXT_CONTEXT_DIR,process.env.MA_VNEXT_REVIEW_AT||new Date().toISOString()):null;
- const inspected=review?await auditMemberAdmission(funnel,review,{foundation:process.env.MA_VNEXT_FOUNDATION_DIR,stock:process.env.MA_VNEXT_STOCK_DIR,context:process.env.MA_VNEXT_CONTEXT_DIR},review.reviewed_at):null;
+ const inspected=review?await auditMemberAdmission(funnel,review,{foundation:process.env.MA_VNEXT_FOUNDATION_DIR,stock:process.env.MA_VNEXT_STOCK_DIR,context:process.env.MA_VNEXT_CONTEXT_DIR,reviewed:true},process.env.MA_VNEXT_ADMISSION_AT||new Date().toISOString()):null;
  const approval=inspected?createApprovalService({review,admission:inspected.admission,registry:inspected.registry,directory:`/private/tmp/ma-vnext-approval-${port}`}):null;
  return {root,envDir:false,envPrefix:'VNEXT_UNUSED_',publicDir:false,cacheDir:'/private/tmp/ma-vnext-vite',define:{'import.meta.env.VNEXT_REAL_PREVIEW':JSON.stringify(reports?'true':'false'),'import.meta.env.VNEXT_PUBLICATION_PREVIEW':JSON.stringify(publication?'true':'false')},
  optimizeDeps:{noDiscovery:true,include:['react','react-dom/client','react/jsx-runtime','@supabase/supabase-js','lucide-react']},

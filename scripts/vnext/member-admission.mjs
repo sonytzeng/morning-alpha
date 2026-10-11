@@ -6,6 +6,7 @@ import {auditFirstPublication} from './first-publication-review.mjs';
 import {admissionBundle,admissionSummary} from '../../src/features/vnext/publicationAdmission.ts';
 import {privateDirectory,immutable} from './foundation-history.mjs';
 import {resolve} from 'node:path';
+import {reviewedRecords} from './publication-blockers.mjs';
 
 export function retainedAdmissionRegistry(funnel,foundationDir,stockDir,contextDir){
  const {history}=auditFoundation(foundationDir);
@@ -17,6 +18,7 @@ export function retainedAdmissionRegistry(funnel,foundationDir,stockDir,contextD
 }
 export async function auditMemberAdmission(funnel,review,paths,now){
  const registry=retainedAdmissionRegistry(funnel,paths.foundation,paths.stock,paths.context);
+ if(paths.reviewed===true)registry.independent=await reviewedRecords(review,now);
  return {registry,admission:await admissionBundle(review,registry,now)};
 }
 if(process.argv[1]===new URL(import.meta.url).pathname){

@@ -1,4 +1,16 @@
 # VNext 執行 Checkpoint
+## 16 Research source/time closure（2026-10-11，最新續跑點）
+
+續接83260adf31bc25193edef7c052c4fc2f02d67515；PR230 Draft、起始9CI PASS，origin/main fff51d76未變。未動外層工作樹。
+原29研究／cutoff／funnel805cfbb8／review656dee43／admission14f5634b全部不变；不重抓211公告或重新評估引擎。16品質PASS／13PENDING／0FAIL，Forward0／Outcome0。
+新增read-only publicationClearance來源用途／時間 dossier，逐來源列資料集、精確URL、使用角色、商用／衍生／再散布／顯名、相關開放資源及時間缺口。7個官方OGL資料集可依條款使用，但不是本批历史端點的自動授權；目前8個實際來源族群均仍待確認精確會員用途。Fugle未出現在本批，不列為這29項阻擋。
+16項共有301筆證據引用：40筆公告時間存在／261筆原發布時間缺失。健策缺36筆，15中期各缺15筆。29項取得後PIT均PASS不等於原發布時間PASS。出表日／交易日／法定期限不得代填原發布時間。TimePASS0／Pending29，License0／29，OwnerReady0／Eligible0／Free0／Premium0。
+私有source-time dossier hash67d8ab2bfb192f5c8fff37914f8947a5e64a1837c8f9fc1be07e28c9f81d03b4；只保存在/private/tmp/morning-alpha-vnext-member-admission-20261011，不提交原始量價／原文／個資。
+Owner第一屏四指標品質16／時間0／授權0／可交Sony0；Desktop四欄、手機兩欄。逐股展開角色與缺少時間、精確授權查核連結；舊原文與後續獨立查核明確分開。品質篩選短1／中15，核准按鈕仍拒絕。1440／375／390／430實際innerWidth=scrollWidth，Console產品error0，截圖/private/tmp/ma-vnext-clearance-qa。
+新增13項來源／時間／獨立准入控制，全scoped222PASS；Integrity16PASS；真實29私有auditPASS；Type-check/Lint/主Build/隔離BuildPASS。重用既有本機Supabase真實Auth：Owner200、未通過核准409，Free/Premium/other403、anonymous401、tier偽造與登出refresh拒絕。不是Production Owner E2E。
+13項後續風險逐檔補正條件、7開放資料集精確對照、261時間缺口與Sony一次決策包見PUBLICATION_BLOCKERS.md最新章節。沒有新證據就不硬改品質結果；不是重複要求工程核准。Paid license是否必要仍未證明；未聯絡、購買或接受條款。自然更新候選有界／防重／不阻塞／不繼承核准不變，正式Runtime仍NOT_ENABLED。
+依授權Commit/Push，最終GitHub CI必須綁定本輪HEAD。未Merge/Deploy/Migration/Cron/Secret/AuthRLS/會員公開；Production操作0，核心保護位元組不變，未宣稱做新Production DB指紋比對。PUBLIC_PRODUCT_APPROVAL=NO；SONY_USABILITY=PENDING。完整發布資格仍INCOMPLETE。
+
 ## Publication Blocker Closure candidate（2026-10-11，最新續跑點）
 
 從b2ad239233c0873da0e01297b9178a2c8b5fed48原地續跑，PR230保持Draft，origin/main仍fff51d76；nested repo原工作樹乾淨，未觸碰外層既有修改。詳PUBLICATION_BLOCKERS.md與publication-review-20261011.json。

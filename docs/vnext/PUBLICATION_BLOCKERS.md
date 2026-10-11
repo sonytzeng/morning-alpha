@@ -63,7 +63,7 @@ These are evidence-based permission statuses, not a legal conclusion that all or
 
 |Exact source family used by the29|Raw data redistribution|Official-fact citation|Original prose analysis|Derived numbers/charts|Free / paid member delivery|
 |---|---|---|---|---|---|
-|TWSE historical STOCK_DAY and FMTQIK query resources|PENDING|PENDING for these exact resources|PENDING scope clarification|PENDING|PENDING both; free is not an automatic exception|
+|TWSE historical STOCK_DAY and MI_5MINS_HIST query resources|PENDING|PENDING for these exact resources|PENDING scope clarification|PENDING|PENDING both; free is not an automatic exception|
 |TWSE T86 historical institutional-share query|PENDING|PENDING exact resource grant|PENDING|PENDING|PENDING|
 |TPEx historical institutional-share resource|PENDING|PENDING exact resource grant|PENDING|PENDING|PENDING|
 |MOPS historical monthly-revenue HTML files and quarterly financial queries|PENDING|PENDING exact resource grant|PENDING|PENDING|PENDING|
@@ -104,3 +104,95 @@ Candidate tests cover explicit pending, preserved failure, overlapping reasons, 
 Real29 offline admission hash: `14f5634b1cd8cc045085af58b3482ac94855149c7e91513703c6c259340f22c9`. Existing isolated Supabase Auth verified Owner read200 / unresolved approval409, Free/Premium/other private read403, anonymous401, no client-tier elevation, logout refresh denial. This is not Production Owner evidence. Desktop1440 / Mobile375/390/430 actual DOM measurements show no horizontal overflow; per-stock details start collapsed and the unresolved approval button is disabled. Local screenshots: `/private/tmp/ma-vnext-publication-blockers-qa`. Final code/CI checks must reference the final commit, not the earlier13-body checkpoint.
 
 No Production DB query/write, Merge, Migration, Function deployment, Cron, Secret, Auth/RLS edit, member publish or official business operation performed.
+
+## 16-item exact resource and timestamp closure (2026-10-11)
+
+Continues `83260adf31bc25193edef7c052c4fc2f02d67515`, not a new research run. The source-name correction above is documentation only: the actual retained market benchmark is `indicesReport/MI_5MINS_HIST`, not `FMTQIK`. No receipt, number, cutoff, research conclusion, review hash or source payload was rewritten.
+
+### What is proven, separately
+
+- Quality PASS16, PENDING13, FAIL0. This is exploratory content quality, **not strategy validity**.
+- The16 use301 evidence references:40 company-event timestamps are present;261 original publication timestamps remain unproven. These are per-card references, not261 unique requests or companies. All29 have valid receipt-before-research chronology; that is a different claim from original-publication proof.
+- License review found7 explicitly open government datasets. Their exact registered resources permit commercial/derivative/redistribution uses subject to OGL1 attribution and other applicable conditions. They are **not7 licensed research cards** and do not cover neighboring historical endpoints by inference.
+- Existing29 actual source groups are8: TWSE historical prices, TWSE index history, TWSE institutional shares, TPEx institutional shares, listed/OTC historical revenue, historical YTD financials, MOPS historical event queries. No Fugle trace is used by these29; missing Fugle contract therefore must not block them.
+- No source-specific member-use grant has been established for all sources used by any card. Licensing approved0; pending29. This is **uncertainty about actual scope**, not a finding that independent prose is categorically prohibited.
+- TimePASS0/PENDING29, Owner-ready0, publication-eligible0, approved0, free0, premium0. No event-positive spin, owner approval or public grant was invented.
+
+### Exact-source license evidence
+
+Reviewed official metadata and terms on2026-10-11; the machine-readable catalog is `src/features/vnext/publicationClearance.ts`. It carries Source ID, dataset, exact resource, license type, permitted/commercial/derivative/redistribution use, attribution, evidence URL and review status. It cannot mint a publication grant.
+
+|Official dataset and license evidence|Registered resource|Why it does not silently clear this historical batch|
+|---|---|---|
+|[11549](https://data.gov.tw/dataset/11549), OGL1|TWSE STOCK_DAY_ALL, response=open_data|Used STOCK_DAY historical symbol/month query instead|
+|[18420](https://data.gov.tw/dataset/18420), OGL1|mopsfin opendata/t187ap05_L.csv|Used mopsov nas/t21/sii historical monthly files|
+|[56510](https://data.gov.tw/dataset/56510), OGL1|mopsfin opendata/t187ap05_O.csv|Used mopsov nas/t21/otc historical monthly files|
+|[11856](https://data.gov.tw/dataset/11856), OGL1|TPEx daily institutional CSV, o=data|Used dated historical JSON, o=json; historical/encoding variant scope needs confirmation|
+|[91998](https://data.gov.tw/dataset/91998), OGL1|mopsfin opendata/t187ap06_L_ci.csv|Used historical ajax_t163sb04; original financial vintage not demonstrated|
+|[20762](https://data.gov.tw/dataset/20762), OGL1|mopsfin opendata/t187ap17_L.csv|Profitability summary is not an interchangeable historical YTD statement|
+|[18418](https://data.gov.tw/dataset/18418), OGL1|mopsfin opendata/t187ap04_O.csv|OTC daily material information is not all listed/OTC historical indices and full articles|
+
+[OGL1](https://data.gov.tw/license) allows covered open resources and derivatives for commercial use with proper attribution; no extra written offer is required for those covered resources. [TWSE website terms](https://www.twse.com.tw/zh/terms/use.html) and [information-use rules](https://www.twse.com.tw/zh/products/information/use.html) must be read with the open-data exception, not used to erase an express dataset grant. [TPEx rules](https://www.selaw.com.tw/Chinese/RegulatoryInformationResult/Article?releaseDate=2024-01-23&sysNumber=LW10813063) likewise require exact resource/use analysis. Free member delivery is not assumed exempt from applicable restrictions. Raw data, fact quotation, original prose, derived statistics/charts and paid display remain distinct uses.
+
+[Fugle's published rules](https://developer.fugle.tw/docs/data/intro/) require compliance with upstream information-use restrictions. The user's actual existing contract was not supplied or inspected; no conclusion about its additional rights is made. This is only relevant if a future candidate actually uses Fugle data.
+
+### Per-priority-card evidence/time matrix
+
+`R`=three monthly revenues; `I`=ten institutional-share days; `F`=two comparable YTD statements. Medium engine input R+I; F and events supply support/counterevidence. Short engine input20 bars; R/I/F/event/index supplement the review. Counts below are read from the immutable real snapshots, not manually generated market evidence.
+
+|Stock|Engine / review evidence|Event publication times present|Original times missing|Quality / time / member-use|
+|---|---|---:|---:|---|
+|1513 中興電|R+I / F; verified empty event windows|0|15|PASS / PENDING / PENDING|
+|1605 華新|R+I / F+events|1|15|PASS / PENDING / PENDING|
+|2049 上銀|R+I / F; verified empty event windows|0|15|PASS / PENDING / PENDING|
+|2379 瑞昱|R+I / F+events|3|15|PASS / PENDING / PENDING|
+|2383 台光電|R+I / F+events|4|15|PASS / PENDING / PENDING|
+|2421 建準|R+I / F+events|1|15|PASS / PENDING / PENDING|
+|2609 陽明|R+I / F+events|3|15|PASS / PENDING / PENDING|
+|2610 華航|R+I / F+events|3|15|PASS / PENDING / PENDING|
+|3034 聯詠|R+I / F+events|2|15|PASS / PENDING / PENDING|
+|3443 創意|R+I / F+events|6|15|PASS / PENDING / PENDING|
+|3653 健策|20bars / R+I+F+event+index|1|36|PASS / PENDING / PENDING|
+|3661 世芯-KY|R+I / F+events|1|15|PASS / PENDING / PENDING|
+|4566 時碩工業|R+I / F+events|1|15|PASS / PENDING / PENDING|
+|6213 聯茂|R+I / F+events|12|15|PASS / PENDING / PENDING|
+|6274 台燿|OTC R+I / F+events|1|15|PASS / PENDING / PENDING|
+|8046 南電|R+I / F+events|1|15|PASS / PENDING / PENDING|
+
+All are historical exploratory research through2026-10-08, evaluated2026-10-11T02:03:23.964Z, review snapshot08:13:04Z, with independent body review recorded separately. Existing expiry/next-check2026-10-12T13:30+08 remains unchanged. Each expanded Owner card now lists actual source URLs, evidence IDs in the private audit, receipt ranges, original-publication ranges/missing counts, role in the conclusion, reviewed-at and expiry. New legal-metadata review is not backdated into original evidence.
+
+Neither source `出表日期`, exchange session/date nor statutory filing deadline proves the actual publication time of the particular archived record. The [current reporting procedure](https://twse-regulation.twse.com.tw/TW/law/DOC01_print.aspx?FLCODE=FL007250&FLNO=3) describes deadlines, not a version-specific publication receipt. Original financial vintage/restatements remain unproven. A valid alternate proof must identify the exact company/period/version or content hash and an authoritative publication timestamp. HTTP receipt or Last-Modified alone must not be relabelled as publication. No such missing certificate was established in this turn.
+
+### The13: specific evidence to close, not another bulk download
+
+211 original bodies were already reviewed; they were not fetched again. No new official fact was found here that resolves the following material contingencies. Each remains QUALITY_PENDING (not FAIL). The immutable card is retained; a risk-aware follow-up would be a new version with a new cutoff and independent review.
+
+|Stock|Needed confirmation / cancellation evidence|
+|---|---|
+|1504|Final JV/factory financing terms and capital commitments; do not carry forward if funding or economics contradict the revenue premise|
+|2308|Quantified product replacement exposure, subsidiary financing/control impact; stop using growth-only narrative if costs materially reverse it|
+|2344|Acquisition approval, funding and integration disclosures; incomplete closing is not completed earnings contribution|
+|2357|Convertible dilution/redemption economics and comparable results; media forecast cannot confirm company guidance|
+|2408|Separate nonrecurring disposal gains from operating profit and reconcile capital commitments; do not add cumulative purchase notices|
+|2618|Verifiable post-incident operating/financial impact; issuer no-impact assertion alone does not prove recovery|
+|2884|Comparable post-acquisition consolidation scope and insurance-capital exposure; pre-acquisition August profit is not confirmation|
+|2886|Disclosed credit-sale losses reconciled to financial period and asset quality; do not omit downside|
+|2892|Official sale-price/loss disclosure or explicit documented uncertainty analysis; undisclosed loss is not zero|
+|3037|Capex and convertible financing/dilution versus cash generation; no unsupported capacity-return assumption|
+|3189|Comparable EPS period plus land/factory commitment and funding reconciliation; distinguish trading-attention disclosure from sustainable earnings|
+|3231|GDR dilution/funding and subsidiary merger scope reconciled to results; existing revenue is not post-merger proof|
+|3711|Parent/subsidiary capex reconciliation without duplicate cumulative amounts; verify cash-flow/earnings implications, not assumed new orders|
+
+### One external decision packet
+
+1. Existing TWSE/TPEx/MOPS source-specific permission evidence: supply the non-secret terms already held, or authorize a **named written scope inquiry** covering the8 actual source groups, historical variants, private computation, free/paid original prose, quoted facts, derived ratios, attribution and caching. Include3653's turnover multiple/relative percentage-point comparison and medium revenue/institutional summaries as output categories, not raw bulk data. No inquiry was sent in this task.
+2. Request official original-release/version evidence for historical revenue, YTD statements, institutional data and stock/index history. If not obtainable, retain old cards as historical-only and build **new** contemporaneous source snapshots; do not backfill original publication timestamps. A fresh receipt improves chronology but does not by itself satisfy the original-publication contract.
+3. No purchase is requested now. The7 express open datasets are a possible lawful input path for **new** versioned research, with their own actual receipt/cutoff and attribution; they do not retroactively clear these16. Paid rights necessity remains unproven. If a licensor requires payment, present one exact quote/use-scope decision before accepting anything.
+
+Sony approval cannot replace provider rights or missing source proof. These are not all commercial blockers: publication-time evidence and13 substantive company-risk reviews remain independent. Ordinary UI/mapping work cannot honestly clear them.
+
+### Natural update and isolation
+
+Existing bounded incremental planner and `nextReviewAction` remain candidate-only: Core-busy defers, bounded retries, append-only hash-bound observations, no inherited publication approval, no rewrite, no Forward sample creation. New receipts must preserve actual first-seen/available timestamps and explicit unknown original publication timestamps. The existing locked-record mechanism can be reused after an exact release is authorized; **NATURAL_UPDATE_RUNTIME=NOT_ENABLED**. No10/12 execution is promised; no Cron/Function was added.
+
+Real dossier fingerprint: `67d8ab2bfb192f5c8fff37914f8947a5e64a1837c8f9fc1be07e28c9f81d03b4`, kept locally under the private admission directory, not committed raw evidence. Owner first screen now shows 品質通過16／時間證明通過0／授權確認0／可以提交Sony核准0. Missing-time and license facts are expanded per stock. Each ready card remains independent of other pending cards; tests preserve that property. Production writes and protected business-code changes remain0. No Production database fingerprint comparison was performed or claimed.

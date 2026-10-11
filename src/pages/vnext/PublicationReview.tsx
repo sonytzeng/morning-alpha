@@ -3,6 +3,7 @@ import {HORIZONS,type Horizon} from '@/features/vnext/contracts';
 import {reviewSummary,type ReviewBundle,type ReviewCard,type ReviewClaim} from '@/features/vnext/publicationReview';
 import {admissionSummary,type Admission,type AdmissionBundle} from '@/features/vnext/publicationAdmission';
 import {BLOCKER_LABELS,blockerCategories,blockerCounts,type BlockerCategory} from '@/features/vnext/publicationBlockers';
+import {clearanceDossier,clearanceCounts,CLEARANCE_LABELS,metricPass,type ClearanceMetric} from '@/features/vnext/publicationClearance';
 const time=(s:string)=>new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',dateStyle:'short',timeStyle:'short',hour12:false}).format(new Date(s));
 const horizonLabels={SHORT:'短期',MEDIUM:'中期',LONG:'長期'};
 function Claims({items}:{items:ReviewClaim[]}){return <ul>{items.map((c,i)=><li key={i}>{c.text}</li>)}</ul>;}
@@ -25,6 +26,7 @@ function ApprovalPanel({audit,submit}:{audit:Admission;submit?:ApprovalSubmit}){
  </section>;
 }
 function Card({card,audit,submit}:{card:ReviewCard;audit?:Admission;submit?:ApprovalSubmit}){
+ const dossier=audit?clearanceDossier(card,audit):null;
  return <article className="vnext-card" data-review-symbol={card.symbol}>
   <div className="vnext-card-top"><span>{horizonLabels[card.horizon]} · {HORIZONS[card.horizon].duration}</span><span className="vnext-status">研究合格，未核准公開</span></div>
   <h3>{card.company}<small>{card.symbol}</small></h3><p>{card.reason}</p>
@@ -35,8 +37,21 @@ function Card({card,audit,submit}:{card:ReviewCard;audit?:Admission;submit?:Appr
   <h4>能不能給會員看？</h4><p>{audit?.owner_approval_ready?'前置條件通過，仍須Sony逐筆核准；尚未發布會員。':'目前不行。時間、內容與使用權分開查核，任一項待確認都不能公開。'}</p>
   <p>下次檢查：{time(card.next_review_at)}（台北時間）完整資料取得後，不是自動下單時間。</p>
   {audit?<ApprovalPanel audit={audit} submit={submit}/>:null}
-  <details><summary>查看支持與反對理由</summary><h4>支持觀察的事實</h4><Claims items={card.supporting}/><h4>反對訊號與限制</h4><Claims items={card.opposing}/></details>
-  <details><summary>查看同期財務與公司事件</summary><h4>財務核對</h4><Claims items={card.financial}/><h4>公司事件</h4><Claims items={card.events}/></details>
+  {dossier?<details><summary>查看資料用途與原始時間證明</summary>
+   <p>這是歷史研究，不是當時已產生的事前預測。資料取得時間可核對，不等於原發布時間已證明。</p>
+   <p>研究產生：{time(dossier.research_at)}；最後查核：{time(dossier.last_checked_at)}；有效至：{time(dossier.expires_at)}。仍缺原始發布時間 {dossier.missing_published} 筆。</p>
+   <ul>{dossier.groups.map(g=><li key={g.kind}>{g.label} {g.count} 筆：{g.roles.includes('ENGINE_INPUT')?'影響原研究篩選':'用來支持或反證'}；原發布時間待確認 {g.missing_published} 筆。</li>)}</ul>
+   <p>交易日期、報表出表日與法定申報期限，都不能代填發布時間。新取得的證明只做後續查核，不修改舊研究。</p>
+   {dossier.sources.map(s=><details key={s.source}><summary>{s.dataset} · {s.evidence_count}筆來源</summary>
+    <a href={s.source} target="_blank" rel="noreferrer">實際使用來源</a><p>{s.permitted_usage}</p>
+    <p>{s.review_status==='EXACT_OPEN_RESOURCE_VERIFIED'?'此精確開放資源可依條款商用及衍生利用，仍須顯名與逐筆發布審核。':'免費與付費會員用途都尚待確認；不代表所有自行撰寫分析一律禁止。原始資料暫不展示。'}</p>
+    <p>首次取得：{s.first_seen_at.first?time(s.first_seen_at.first):'未證明'}；原發布時間：{s.missing_published?`${s.missing_published}筆未證明`:s.published_at.first?time(s.published_at.first):'未證明'}。</p>
+    <ul>{s.evidence_urls.map(url=><li key={url}><a href={url} target="_blank" rel="noreferrer">查核條款</a></li>)}</ul>
+    {s.related_open_resources.length?<><p>可替未來新研究評估的開放資源，不自動替代這次歷史來源：</p><ul>{s.related_open_resources.map(r=><li key={r.source_id}><a href={r.evidence_url} target="_blank" rel="noreferrer">{r.dataset}</a>：可依政府開放授權及顯名條件利用；必須重新保存取得時間。</li>)}</ul></>:null}
+   </details>)}
+  </details>:null}
+  <details><summary>查看支持與反對理由</summary><p>以下保留原研究文字；後續公告查核以本頁獨立審核紀錄為準，不倒填或改寫原卡片。</p><h4>支持觀察的事實</h4><Claims items={card.supporting}/><h4>反對訊號與限制</h4><Claims items={card.opposing}/></details>
+  <details><summary>查看同期財務與公司事件</summary><p>這是原截止時間的紀錄；後來完成的內文審查另列，不冒充當時已知資訊。</p><h4>財務核對</h4><Claims items={card.financial}/><h4>公司事件</h4><Claims items={card.events}/></details>
   <details><summary>查看技術詳細資料與授權紀錄</summary>
    <p>行情截至：{card.through}<br/>研究截止：{time(card.cutoff)}<br/>本次審查：{time(card.reviewed_at)}</p>
    <p>歷史探索研究，不是盤前預測。原研究判定：{card.research_state}</p>
@@ -50,14 +65,16 @@ function Card({card,audit,submit}:{card:ReviewCard;audit?:Admission;submit?:Appr
 }
 export default function PublicationReview({data,admission,submit}:{data:ReviewBundle;admission?:AdmissionBundle;submit?:ApprovalSubmit}){
  const [horizon,setHorizon]=useState<Horizon>('SHORT'),[query,setQuery]=useState(''),[limit,setLimit]=useState(6),[category,setCategory]=useState<BlockerCategory|'ALL'>('ALL');
- const stats=reviewSummary(data.cards),auditStats=admission?admissionSummary(admission):null,counts=admission?blockerCounts(admission):null,audits=new Map(admission?.cards.map(a=>[a.review_hash,a]));
- const cards=data.cards.filter(c=>c.horizon===horizon&&(c.symbol.includes(query.trim())||c.company.includes(query.trim()))&&(category==='ALL'||audits.has(c.review_hash)&&blockerCategories(audits.get(c.review_hash)!).includes(category)));
+ const [metric,setMetric]=useState<ClearanceMetric|null>(null);
+ const stats=reviewSummary(data.cards),auditStats=admission?admissionSummary(admission):null,counts=admission?blockerCounts(admission):null,clearance=admission?clearanceCounts(admission):null,audits=new Map(admission?.cards.map(a=>[a.review_hash,a]));
+ const cards=data.cards.filter(c=>c.horizon===horizon&&(c.symbol.includes(query.trim())||c.company.includes(query.trim()))&&(category==='ALL'||audits.has(c.review_hash)&&blockerCategories(audits.get(c.review_hash)!).includes(category))&&(!metric||audits.has(c.review_hash)&&metricPass(audits.get(c.review_hash)!,metric)));
  return <section aria-labelledby="first-review-title" className="vnext-review">
   <div className="vnext-intro"><p className="vnext-eyebrow">僅供內部研究 · 還不能提供會員</p><h1 id="first-review-title">目前有幾項研究可以發布？</h1><p>{counts?`目前${counts.READY}項已備齊前置條件，可交Sony核准。`:'尚未取得完整審核結果，不能當作通過。'}品質通過不等於有發布權，也不代表未來會上漲。</p><p>原有{stats.qualified}項研究保留：短期{stats.short}項、中期{stats.medium}項。行情截至{data.cards[0]?.through??'未取得'}，於{data.cards[0]?time(data.cards[0].cutoff):'未取得'}（台北時間）取得資料後評估，不是當時盤前預測。</p></div>
-  {counts?<><div className="vnext-grid vnext-blocker-grid" aria-label="研究發布狀況">{(Object.keys(BLOCKER_LABELS) as BlockerCategory[]).map(k=><button className="vnext-card" key={k} aria-pressed={category===k} onClick={()=>{setCategory(k);setLimit(6);}}><span>{BLOCKER_LABELS[k]}</span><strong>{counts[k]} 項</strong><span>查看這類研究</span></button>)}</div><p>同一研究可能同時缺資料與使用權；分類數量不能相加。「待確認」不等於品質不合格。</p></>:null}
-  {auditStats?<section className="vnext-card" aria-label="獨立審核進度"><h2>逐項審核進度</h2><p>{auditStats.receipt_pit_valid}項的實際取得時間可核對。內容查核通過{auditStats.quality_pass}項、明確不符合{auditStats.quality_fail}項、待補查核{auditStats.quality_pending}項；用途確認{auditStats.licensing_approved}項，可交Sony核准{auditStats.owner_approval_ready}項。</p><p>原始資料的再散布權利，與自行研究的商用用途分開判斷。缺時間或授權，不會改寫原研究合格結果。</p></section>:null}
+  {clearance?<div className="vnext-grid vnext-blocker-grid vnext-clearance-grid" aria-label="四項發布前置進度">{(Object.keys(CLEARANCE_LABELS) as ClearanceMetric[]).map(k=><button className="vnext-card" key={k} aria-pressed={metric===k} onClick={()=>{setMetric(k);setCategory('ALL');setLimit(6);}}><span>{CLEARANCE_LABELS[k]}</span><strong>{clearance[k]} 項</strong><span>查看這類研究</span></button>)}</div>:null}
+  {auditStats?<details><summary>查看待辦分類與審核進度</summary><p>{auditStats.receipt_pit_valid}項的實際取得時間可核對。品質待確認{auditStats.quality_pending}項、未通過{auditStats.quality_fail}項。缺時間或授權，不會改寫原研究結論。</p>{counts?<div className="vnext-grid" aria-label="研究發布狀況">{(Object.keys(BLOCKER_LABELS) as BlockerCategory[]).map(k=><button className="vnext-card" key={k} aria-pressed={category===k} onClick={()=>{setCategory(k);setMetric(null);setLimit(6);}}><span>{BLOCKER_LABELS[k]}</span><strong>{counts[k]} 項</strong></button>)}</div>:null}<p>同一研究可能有多項待辦，不能把分類數量相加；待確認不是品質失敗。</p></details>:null}
   <div className="vnext-horizons" role="group" aria-label="逐筆審查期間">{(Object.keys(HORIZONS) as Horizon[]).map(h=><button key={h} aria-pressed={h===horizon} onClick={()=>{setHorizon(h);setLimit(6);}}><strong>{horizonLabels[h]}</strong><span>{HORIZONS[h].duration}</span></button>)}</div>
   {category!=='ALL'?<p role="status">正在查看：{BLOCKER_LABELS[category]} <button className="vnext-primary" onClick={()=>{setCategory('ALL');setLimit(6);}}>顯示全部研究</button></p>:null}
+  {metric?<p role="status">正在查看：{CLEARANCE_LABELS[metric]} <button className="vnext-primary" onClick={()=>{setMetric(null);setLimit(6);}}>顯示全部研究</button></p>:null}
   <div className="vnext-real-controls"><label>找股票<input value={query} placeholder="例如：健策或3653" onChange={e=>{setQuery(e.target.value);setLimit(6);}}/></label><p>依代號排列，不是推薦順位；每家公司使用自己的保存證據。</p></div>
   <div className="vnext-grid">{cards.slice(0,limit).map(c=><Card key={c.review_hash} card={c} audit={audits.get(c.review_hash)} submit={submit}/>)}</div>
   {!cards.length&&<section className="vnext-empty"><h2>{horizon==='LONG'?'長期：暫時無法可靠判斷':'沒有符合查詢的研究'}</h2><p>{horizon==='LONG'?'72檔仍缺必要的可比較財務、資本支出、需求、競爭優勢與估值審查，不代表這些公司沒有投資價值。':'沒有用範例股票填補結果。'}</p></section>}

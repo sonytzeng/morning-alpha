@@ -1,0 +1,26 @@
+/** Reuse locked real snapshots: no provider request, research rewrite or Production. */
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {snapshotHash} from '../src/features/vnext/contracts.ts';
+import {clearanceDossier,clearanceCounts} from '../src/features/vnext/publicationClearance.ts';
+import {verifyReviewBundle} from '../src/features/vnext/publicationReview.ts';
+import {privateDirectory,immutable} from '../scripts/vnext/foundation-history.mjs';
+assert(!process.env.CI);globalThis.fetch=()=>{throw Error('OFFLINE_ONLY');};
+const dir=process.env.MA_VNEXT_ADMISSION_DIR;assert(dir);
+const review=JSON.parse(readFileSync(resolve(dir,'review-656dee4368d7eb2dcffc697235ca8bf8eee69542acad1f578ca3300eab2227fd.json'),'utf8'));
+const a=JSON.parse(readFileSync(resolve(dir,'blocker-admission-14f5634b1cd8cc045085af58b3482ac94855149c7e91513703c6c259340f22c9.json'),'utf8'));
+assert(await verifyReviewBundle(review,'805cfbb8ae94f0bda75a43535ceb57d314b3f1aa7fed4af12cedc0f82bcf93c3'));
+const {snapshot_hash,...payload}=a;assert.equal(snapshot_hash,await snapshotHash(payload));
+const before=JSON.stringify({review,a}),rows=review.cards.map(c=>clearanceDossier(c,a.cards.find(x=>x.review_hash===c.review_hash)));
+assert.deepEqual(clearanceCounts(a),{quality:16,time:0,license:0,ready:0});assert.equal(rows.length,29);
+const good=rows.filter(r=>r.quality==='PASS');assert.equal(good.length,16);assert.equal(good.reduce((n,r)=>n+r.missing_published,0),261);
+assert.equal(rows.filter(r=>r.quality==='INCOMPLETE').length,13);
+assert(rows.every(r=>r.sources.every(s=>s.review_status==='LICENSING_PENDING')));
+assert(rows.every(r=>r.receipt_pit_pass&&r.grants_created===0));
+assert(!rows.some(r=>r.sources.some(s=>s.source_id==='FUGLE_CONTRACT_REQUIRED')));
+assert.equal(JSON.stringify({review,a}),before);
+const dossier={schema:'VNEXT_PRIVATE_SOURCE_TIME_AUDIT_1',review_hash:review.snapshot_hash,admission_hash:a.snapshot_hash,rows,production_operations:0};
+const hash=await snapshotHash(dossier);
+immutable(resolve(privateDirectory(dir),'source-time-'+hash+'.json'),dossier);
+console.log(JSON.stringify({real_retained:rows.length,quality_pass:good.length,quality_pending:13,priority_missing_publication:261,priority_event_times:good.flatMap(r=>r.groups).filter(g=>g.kind==='EVENT').reduce((n,g)=>n+g.count-g.missing_published,0),counts:clearanceCounts(a),sources:[...new Set(rows.flatMap(r=>r.sources.map(s=>s.source_id)))],rows:rows.map(r=>({symbol:r.symbol,quality:r.quality,missing_published:r.missing_published,time_pass:r.time_pass,license_pass:r.licensing_approved})),dossier_hash:hash,forward:0,outcome:0,production_operations:0}));

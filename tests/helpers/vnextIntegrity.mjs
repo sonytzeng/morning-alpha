@@ -18,6 +18,8 @@ export const VNEXT_PATHS=Object.freeze([
  'src/features/vnext/publicationReadiness.ts','src/pages/vnext/PublicationReadiness.tsx',
  'scripts/vnext/publication-readiness.mjs','scripts/vnext/publication-isolation.mjs','scripts/vnext/publication-preview.mjs',
  'tests/vnextPublication.test.mjs','tests/vnextPublicationReal.integration.mjs',
+ 'src/features/vnext/publicationReview.ts','src/pages/vnext/PublicationReview.tsx','scripts/vnext/first-publication-review.mjs',
+ 'tests/vnextPublicationReview.test.mjs','tests/vnextPublicationReviewReal.integration.mjs','docs/vnext/FIRST_PUBLICATION_REVIEW.md',
  'src/features/vnext/researchFunnel.ts','src/pages/vnext/ResearchFunnel.tsx','scripts/vnext/research-funnel.mjs',
  'tests/vnextResearchFunnel.test.mjs','tests/vnextResearchFunnelReal.integration.mjs','docs/vnext/RESEARCH_PUBLICATION_FUNNEL.md',
  'src/features/vnext/stockResearch.ts','scripts/vnext/stock-evidence.mjs','scripts/vnext/stock-context.mjs','scripts/vnext/stock-audit.mjs','tests/vnextStockResearch.test.mjs','tests/vnextStockResearchReal.integration.mjs','docs/vnext/REAL_STOCK_RESEARCH.md',

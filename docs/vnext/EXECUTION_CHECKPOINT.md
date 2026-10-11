@@ -1,4 +1,14 @@
 # VNext 執行 Checkpoint
+## First Publishable Research P0（2026-10-11，最新續跑點）
+
+從e7eb499e續跑，PR230 Draft、原9CI PASS、工作樹乾淨。原216筆研究snapshot仍805cfbb8ae94f0bda75a43535ceb57d314b3f1aa7fed4af12cedc0f82bcf93c3，沒有改探索方法或正式推薦。新增29筆不可變Quality/用途授權/時間審查；短1、中28、長0。完整公開品質0、用途未確認29、時間待補29、公開核准0；Free/Premium真實可見0。不是股票沒有價值，而是未具備可公開證明。
+私有固定06:51:33Z審查hash42007620154ca26707fcaf8c8f38d8be02472a0ec7755a147430cba49aad13aa，存放/private/tmp/morning-alpha-vnext-first-publication-20261011；原始快取與歷史鎖未修改。詳FIRST_PUBLICATION_REVIEW.md逐公司清單與具體剩餘清單。
+3653雙來源相對表現、法人分歧與注意交易待查分開呈現。28家公司依自己的營收、法人和同期累計財報顯示反證，不將YTD當單季EPS。公告只有索引；官方MOPS入口實際回覆存取限制，未繞過、未假裝完成內文查核。
+Owner Preview http://127.0.0.1:3223/vnext/research 新增「值得研究／還不能公開／已核准會員內容」。會員Preview仍3224/stocks（Free）、3222/stocks（Premium），真實空狀態。技術詳細資料收合，全部28中期卡可逐批查看。
+新增25項synthetic protocol controls與私有29筆real offline audit PASS；本機既有Supabase真實Auth owner/free/premium/other驗證新reviewpayload boundary、DB空投影、direct-tier拒絕與logout PASS。不冒充Production E2E。Desktop1440與Mobile375/390/430已實際檢查無橫向溢出，來源展開亦無溢出。乾淨Owner登入→登出→Reload拒絕、Free/Premium三期間真實空狀態PASS；截圖/private/tmp/ma-vnext-first-review-qa。最終Type/Lint/Build/Integrity及9CI以本次HEAD為準。
+新增審查投影只接受可信server policy，研究hash與審查hash雙綁定；真實未核准，正向路徑只有清楚標記的合成控制。自然更新僅有界append-only計畫，不啟用排程，不繼承前一公開核准；Forward0/Outcome0。無新SQL、Function、Auth/RLS、Secret、Cron或Production操作。
+FIRST_PUBLISHABLE_RESEARCH=INCOMPLETE；VNEXT_MEMBER_RELEASE_READY=NO；SONY_USABILITY=PENDING；PUBLIC_PRODUCT_APPROVAL=NO。
+
 ## Real Stock Research P0（2026-10-11，最新續跑點）
 
 從5dfcb9f續接，PR230 Draft，origin/main fff51d76，原9CI PASS、working tree乾淨。細節與缺口見REAL_STOCK_RESEARCH.md。本輪不重做已PASS Academy／Entry／Cockpit／既有會員架構。

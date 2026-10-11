@@ -36,6 +36,7 @@ export async function inspectPublication(card:ReviewCard,registry:ReviewRegistry
  const independent=(kind:IndependentRecord['kind'])=>{
   const entries=registry.independent.filter(r=>r.review_hash===card.review_hash&&r.kind===kind);
   const r=entries.length===1?entries[0]:null;
+  if(r&&!['PASS','FAIL'].includes(r.result))return result(kind,'UNVERIFIED','審核結果格式不明，不能視為通過',[],'修復審核檔案格式並重新驗證；不得轉成核准。');
   if(!r||!r.reviewer_ref||r.reviewer_ref===card.research_version||!r.reason||!r.document_ref||!hashValid(r.document_hash)||!validProjectionTime(r.reviewed_at)||Date.parse(r.reviewed_at)<Date.parse(card.reviewed_at)||Date.parse(r.reviewed_at)>Date.parse(now))return result(kind,'UNVERIFIED',kind==='EVENT_CONTEXT'?'公司公告內文及影響尚未完成獨立查核':'探索方法尚未取得獨立品質審核',[],kind==='EVENT_CONTEXT'?'取得可合法使用的原公告內文，逐項查核公司關聯與反證，另存審查文件。':'獨立覆核研究方法及適用期間；保留版本、審核人與文件指紋。');
   return result(kind,r.result,r.reason,[r.document_hash],r.result==='PASS'?'無需處理':'保留拒絕結果；建立修正版及新審查，不由選股引擎自行核准。');
  };
@@ -51,7 +52,7 @@ export async function inspectPublication(card:ReviewCard,registry:ReviewRegistry
   check('CLASSIFICATION',card.classification==='HISTORICAL_RESEARCH_NOT_RECOMMENDATION','保留研究評估時間；不是當時盤前預測或正式推薦'),
   independent('EVENT_CONTEXT'),independent('METHODOLOGY'),
  ];
- const quality:Admission['quality']=checks.some(c=>c.state==='FAIL')?'FAIL':checks.some(c=>c.state==='UNVERIFIED')?'INCOMPLETE':'PASS';
+ const quality:Admission['quality']=checks.some(c=>c.state==='FAIL')?'FAIL':checks.every(c=>c.state==='PASS')?'PASS':'INCOMPLETE';
  const sourceUrls=[...new Set(card.evidence.map(e=>e.source))];
  const rawUnknown=sourceUrls.filter(s=>!usageRights(s,'RAW_DATA',now,registry.grants).allowed);
  const factUnknown=sourceUrls.filter(s=>!usageRights(s,'OFFICIAL_FACT',now,registry.grants).allowed);

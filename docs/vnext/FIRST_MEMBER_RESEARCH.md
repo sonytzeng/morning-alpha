@@ -100,7 +100,7 @@ No purchase, accepted contract, private account agreement lookup, source restric
 - Review bundle `656dee4368d7eb2dcffc697235ca8bf8eee69542acad1f578ca3300eab2227fd`.
 - Admission bundle `4cfa4fb59a4ab673c4b44f8283e67659b8515e327f453e6af5b3acde1ccc53a8`, fixed review timestamp `2026-10-11T08:13:04.000Z`.
 - Immutable private artifacts: `/private/tmp/morning-alpha-vnext-member-admission-20261011`. Earlier review artifacts retained separately. No private fixture in repository.
-- 25 new synthetic protocol controls, total scoped 183 tests PASS; real 29-row offline audit PASS, no external requests. Synthetic positive grants are visibly labelled controls and never put in real preview.
+- 26 new synthetic protocol controls, total scoped 184 tests PASS; real 29-row offline audit PASS, no external requests. Synthetic positive grants are visibly labelled controls and never put in real preview. Unknown/malformed independent-review results remain incomplete, never implicitly PASS.
 - Existing local GoTrue/PostgREST real Owner/Free/Premium/other logins: Owner read 200 / actual blocked approval 409; non-owner read/approval 403; anonymous 401; forged client policy denied; logout refresh denied. No Production identities or service-role copied.
 - Browser Owner fresh login and logout clearing PASS; 28 medium cards reachable. 1440/375/390/430 no horizontal overflow; details closed by default; expanded checks readable; all real approval buttons disabled. Member pages show true zero content and separate server tier. Preview captures: `/private/tmp/ma-vnext-admission-qa`.
 - Type-check, lint, main build and isolated candidate build PASS. Integrity and nine GitHub gates are verified against the final commit, not inherited from baseline.

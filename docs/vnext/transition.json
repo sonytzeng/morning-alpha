@@ -50,12 +50,12 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "a6ae43a33545d965f7cc79688f55df0952b3f469b9742e472c8d273af2a23f7e"
+      "after_sha256": "be4fff6723273a051f545c429c13726b523da3c7d1a2bb08909a3e4b41cd2798"
     },
     {
       "path": "docs/vnext/FIRST_MEMBER_RESEARCH.md",
       "before_sha256": null,
-      "after_sha256": "50d70ba88e02433dea347b2f4d39af71819ce78cad7459491ac543f5317d83a8"
+      "after_sha256": "94425e479550170eaf8bcbc91685313a8f3ffdaffaaaf215896fc71f82babf51"
     },
     {
       "path": "docs/vnext/FIRST_PUBLICATION_REVIEW.md",
@@ -240,7 +240,7 @@
     {
       "path": "src/features/vnext/publicationAdmission.ts",
       "before_sha256": null,
-      "after_sha256": "1526d6471de9311dfc79e8acccc622e5793e850fa6d7a25208d8393bcbc966e2"
+      "after_sha256": "ba792ac81a5e65860e65329154afac7f57d7e99e752660beb435506f3e517591"
     },
     {
       "path": "src/features/vnext/publicationReadiness.ts",
@@ -380,7 +380,7 @@
     {
       "path": "tests/vnextAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "84cf8366fc109b85d4c165c43b3c0ced0c84d3be48fdf21d6560d3891595999f"
+      "after_sha256": "fdc360c8cbcddeca16cd8c50c35d005acafd2ddb397fdb4ad205cb59749cf81a"
     },
     {
       "path": "tests/vnextAdmissionAuth.integration.mjs",

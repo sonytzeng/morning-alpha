@@ -1,4 +1,13 @@
 # VNext 執行 Checkpoint
+## First Member Research Closure candidate（2026-10-11，最新續跑點）
+
+從8c7e0c4續跑，PR230 Draft、原9CI PASS、origin/main fff51d76，工作樹原乾淨。詳FIRST_MEMBER_RESEARCH.md：新增獨立來源查核、七類阻擋矩陣、Owner前置檢查、只限loopback的append-only核准候選，以及讀取時重新驗證用途／撤回／效期的會員白名單投影。沒有改選股引擎、正式策略或SQL。
+真實29項：9機械查核每項PASS（261），2独立事件／方法審核每項待補（58）；完整品質PASS0、明確FAIL0、待補29。取得時間PIT29通過；原發布時間29待補；用途授權29待確認；Owner ready0／Approved0／Free0／Premium0。原始再散布限制與自行分析用途分開，不把所有缺項叫研究失敗。
+原funnel805cfbb8未改；新review656dee43、admission4cfa4fb5，固定時間08:13:04Z；私有目錄/private/tmp/morning-alpha-vnext-member-admission-20261011，舊資料不覆寫。3653相對大盤+6.31pp與成交金額1.53倍獨立重算PASS，不是機率。28中期保留逐公司證據／反證與累計財報口徑。
+新25項合成安全控制（授權正向只是synthetic），總scoped183PASS；29真實離線PASS。本機現有GoTrue/PostgREST真實隔離身分與Owner/Free/Premium/anonymous、伺服器拒絕核准／logout驗證PASS，不冒充Sony Production。Owner桌機1440與375/390/430無溢出，全部卡片可讀，技術細節收合；截圖/private/tmp/ma-vnext-admission-qa。Preview仍3223研究／3224 Free／3222 Premium。
+下一發布阻擋：精確資源用途證明、原發布時間證明、公司事件內文與獨立方法文件、Sony逐筆核准、正式transaction approval/published projection adapter。現有SQL候選不含新審核hash鏈，不能盲目部署；唯一下一manifest設計見新文件，尚未新增Migration。Natural Runtime未啟用，Forward0／Outcome0。Production0操作；正式保護檔案位元組不變。
+本輪Type/Lint/Build已PASS，最後Integrity及9CI以本次最終HEAD為準。PR維持Draft；不Merge、Deploy、Migration、Cron、Secret、Auth/RLS或會員公開。FIRST_MEMBER_RESEARCH_ENGINEERING=INCOMPLETE、FIRST_PUBLISHABLE_RESEARCH=INCOMPLETE、VNEXT_MEMBER_RELEASE_READY=NO；不是候選工程測試通過即可公開。
+
 ## First Publishable Research P0（2026-10-11，最新續跑點）
 
 從e7eb499e續跑，PR230 Draft、原9CI PASS、工作樹乾淨。原216筆研究snapshot仍805cfbb8ae94f0bda75a43535ceb57d314b3f1aa7fed4af12cedc0f82bcf93c3，沒有改探索方法或正式推薦。新增29筆不可變Quality/用途授權/時間審查；短1、中28、長0。完整公開品質0、用途未確認29、時間待補29、公開核准0；Free/Premium真實可見0。不是股票沒有價值，而是未具備可公開證明。

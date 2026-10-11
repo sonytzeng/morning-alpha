@@ -50,7 +50,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "78295aceb0f0ba0cfdff732b8ed3d78ded8c2316be847f5cf6ecc11475ab6c0d"
+      "after_sha256": "bf6cb00bd9946d884122b2c64b5190016fbaf3948dc68d96c7ff67af8429d3c7"
     },
     {
       "path": "docs/vnext/FIRST_MEMBER_RESEARCH.md",
@@ -85,7 +85,7 @@
     {
       "path": "docs/vnext/PUBLICATION_BLOCKERS.md",
       "before_sha256": null,
-      "after_sha256": "918c3c4e21d694961e0ea85c75d32f78200bfc9e2033d736c4e85c7753e6c004"
+      "after_sha256": "cfd4ee9b6dbaf460c65b29719b8292520e9e4964065cf1779def4e02dfc4de81"
     },
     {
       "path": "docs/vnext/PUBLICATION_GATE.md",
@@ -125,7 +125,7 @@
     {
       "path": "docs/vnext/publication-review-20261011.json",
       "before_sha256": null,
-      "after_sha256": "2a24dbced3839dec62532e47a3898ab784e58123fb78d70a6f657e87c275f342"
+      "after_sha256": "d97d85deb2b3de82fb324e07f4da37ed4e7183b6697123c4671cd8815eaf915b"
     },
     {
       "path": "scripts/vnext/approval-server.mjs",
@@ -185,7 +185,7 @@
     {
       "path": "scripts/vnext/publication-blockers.mjs",
       "before_sha256": null,
-      "after_sha256": "5159d37b7fdc3dc7d685d8f609d4c721ba744d0186971a6b5b2bfc097151394e"
+      "after_sha256": "47b89ac41be66f826cf0145c8dd9748692cc85ced31d11d1007d28aa5fdb3099"
     },
     {
       "path": "scripts/vnext/publication-isolation.mjs",
@@ -415,12 +415,12 @@
     {
       "path": "tests/vnextBlockers.test.mjs",
       "before_sha256": null,
-      "after_sha256": "a5cb368b7d7a63ead5d28b3c91873e5b28d25dffcbac3d5de143f5285aff1afe"
+      "after_sha256": "2f13bc58d83d938543b9f7f44e93e706b96107f842ccfe0c9d0320a734bf2b3a"
     },
     {
       "path": "tests/vnextBlockersReal.integration.mjs",
       "before_sha256": null,
-      "after_sha256": "604c1c03c5488f573fe660c2687287045860e60ac04d325cfde48b2664327a50"
+      "after_sha256": "d4aed3255feb0f5c0d30f146c560b48e97090599eaa3473c84a879591fa19ad4"
     },
     {
       "path": "tests/vnextContracts.test.mjs",

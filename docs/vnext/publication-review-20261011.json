@@ -1,55 +1,545 @@
 {
   "schema": "VNEXT_PUBLICATION_BLOCKER_REVIEW_1",
   "review_bundle_hash": "656dee4368d7eb2dcffc697235ca8bf8eee69542acad1f578ca3300eab2227fd",
-  "reviewed_at": "2026-10-11T10:31:41.000Z",
+  "reviewed_at": "2026-10-11T11:09:40.000Z",
   "reviewer": "CODEX_CONTENT_REVIEW_NOT_SONY_OR_LEGAL_COUNSEL",
   "scope": "逐筆閱讀保存研究與反證，檢查探索性觀察方法的適用範圍；不是策略有效性、投資建議、法律意見或Sony核准。新讀公告僅作本次事後內容審核，不進原截止時間的模型。未知原發布時間仍獨立阻擋，授權不由本文授予。",
   "grants": [],
-  "event_access": "官方MOPS歷史查詢正常；詳細資料另開about:blank視窗。以正常瀏覽器操作取得13則原文，未繞過限制。僅保留內容指紋與獨立摘要，不把原文、聯絡資料或Provider payload複製進Repository。其餘198則尚未完成內文查核，不宣稱被MOPS拒絕或已完成。",
+  "event_access": "官方MOPS歷史查詢及詳細資料正常；以正常瀏覽器逐筆讀完保存索引211則原文（27家公司），另核對1513／2049兩家公司9月及10/1–10/8四次查詢均無項目。未繞過限制。只保留公司、時間、完整索引集合指紋、內文收據集合指紋及獨立摘要，不存原文／聯絡資料。查閱時間是本次實際時間，不回填原研究截止。",
   "rows": [
-    {"symbol":"1504","review_hash":"a692240d2023280c7dab64d4f77a00e053034c8a6471a076477ec0eafbdc2718","methodology":"三個月營收年增均為正；法人合計買超不掩蓋投信賣超。毛利改善僅作同期實績背景，不推論新增訂單或保證成長。","event_result":"PENDING","event_reason":"三則官方內文已核對：檳城建廠、投資公司增資及新加坡合資／印尼變壓器工廠。部分交易條件尚待公司另行公告；原觀察未量化資本承諾與執行風險。需另立新研究版本評估，不覆寫原結論。"},
-    {"symbol":"1513","review_hash":"5d51b1a5a81555cca5537f286484cadf8c7968dd2e53ceb06479c695a8eea957","methodology":"營收年增逐步增加、法人合計買超支持探索；月減3.42%保留反證。沒有公告索引不能推論沒有重大風險。","event_result":"PENDING","event_reason":"保存的9月及10/1–10/8查詢無事件索引。原假設不是事件選股，但仍需證明查詢涵蓋範圍與重要事件查核，不能以0筆直接核准。"},
-    {"symbol":"1605","review_hash":"0a92d2a186a7bb05fe0d14841a66b58a4dfffbff200ba1678e4d4e8bc4ed8dba","methodology":"營收年增與法人方向作數週觀察，不以三個月直接證明長期競爭優勢；毛利率下降0.18個百分點已列反證。","event_result":"PASS","event_reason":"保存範圍唯一公告內文為研發主管職務調整，10/1生效；公司關聯及9/30發布時間已對回。原卡沒有宣稱新技術、訂單或人事異動利多，該公告不作成長證據，亦不推定對獲利零影響。"},
-    {"symbol":"2049","review_hash":"7bc3b22935a745e16b3ca7ba5279fe3363f459886722f5e14917b4380f4a8cd4","methodology":"三月營收年增正值與合計買超支持探索，但投信賣超接近抵銷外資買超，不能寫成法人一致看好。","event_result":"PENDING","event_reason":"保存查詢範圍無事件索引；重要公司事件完整性未證明。不捏造公司催化事件，也不把缺事件當研究方法不合格。"},
-    {"symbol":"2308","review_hash":"ccc2ebf4459201d7e1a78fbb85faa85a37b3855932964d318c2e3c4b36a649b3","methodology":"使用6–8月營收，不冒充已有9月；年增55.43%降至34.95%、月減3.71%均需與法人方向一起看，不宣稱加速成長。","event_result":"PENDING","event_reason":"15則保存索引（含法說分類）仍需逐則內文與公司／子公司關聯；出席法說不代表已證實需求或訂單。"},
-    {"symbol":"2344","review_hash":"ebc531cb8b1d63d09c5aab7264caa57c54fc0a66669a6a016956af322bc42ac9","methodology":"高營收年增不能忽略前期虧損低基期；外資買超與投信賣超分開，累計EPS不當單季或預估。","event_result":"PENDING","event_reason":"8則保存索引尚未逐則讀原文，不能認定所有公告均無重大風險或自動視為產業復甦證據。"},
-    {"symbol":"2357","review_hash":"f8731bea078f8e1af17626758474967b2aab45a0de80c39a07cb3350d751aba1","methodology":"營收年增由53.33%降至17.73%及投信賣超皆保留，不把仍成長寫成成長加速。","event_result":"PENDING","event_reason":"兩則內文已核對：海外可轉債及媒體預測澄清。票面0%不等於沒有1.7%贖回收益負擔；公司揭露全數轉換稀釋約4.40%。媒體季增預估非公司財測。需補融資／稀釋風險審查，不能僅沿用營收與法人理由通過。"},
-    {"symbol":"2379","review_hash":"f38be056b6652db490dcfe2a5972cba3f586ac67ab88f84bb1a04690551db403","methodology":"營收仍正成長、法人三類買超不掩蓋淨利較低與毛利率下降2.42個百分點；不能推論獲利同步改善。","event_result":"PENDING","event_reason":"3則公告索引含公司行動分類；未核對內文、生效日及價格權益，不能用未驗證調整後報酬支撐研究。"},
-    {"symbol":"2383","review_hash":"587448c1ab8112b0724d4644dcc3a1db1e4952ef0a63aeca7f8a1f53121a51aa","methodology":"連續營收年增與法人同向支持探索；目前缺少經核對公司事件，不得把沒有量化反向訊號寫成沒有風險。","event_result":"PENDING","event_reason":"4則保存索引含財報與法說；需先核對是否修正既有財務基礎，不能以索引分類代替財報內容。"},
-    {"symbol":"2408","review_hash":"92f10fccb44987dc3f2227a483ac35c4f78aa3605e2a56d0fe3b1fde2eccf67c","methodology":"數百百分比年增存在低基期，前期EPS虧損與投信賣超已分開；不能用成長率推算未來報酬。","event_result":"PENDING","event_reason":"14則保存事件需查原文及與記憶體景氣假設的關聯；未查核部分保留未知，不當利多。"},
-    {"symbol":"2421","review_hash":"edd3e0236e3c9747aa306692673880c5896263be62296d13fa4c4b54ca38b813","methodology":"營收年增由31.65%降至16.54%，投信與自營商賣超保留；合計買超不是所有法人一致。","event_result":"PASS","event_reason":"唯一保存公告為子公司貨幣理財商品處分；原文說明用途為理財投資、未涉及營運模式變更。這是資金運用，不是散熱訂單或本業營收利多；原研究沒有使用此錯誤推論。"},
-    {"symbol":"2609","review_hash":"a54e8da7102f81083995c0a70b259a39d6b4a155072d6c8297c24d7c2bd0e1e6","methodology":"營收年增上升與法人合計買超不抹除淨利下降、毛利率降5.61個百分點及投信賣超；營收與獲利方向分開。","event_result":"PENDING","event_reason":"3則公司事件尚未核對原文；不能將航運產業題材或價格上升當成公司已證實的需求。"},
-    {"symbol":"2610","review_hash":"cbfa0f2bfaf6fdab23ad678508332ceefdf15ec2b6c3497cd9ee6c9d73b43ead","methodology":"法人合計方向主要由投信支持，外資與自營商相反；月減4.62%、淨利下降與毛利率降3.48個百分點保留。","event_result":"PENDING","event_reason":"3則事件索引未完成原文審查，運力、成本或營運影響不能靠產業名稱推論。"},
-    {"symbol":"2618","review_hash":"ed46e7bd76bf5fccfe573806f41623ced278af0f9539f1b8aa9ad60c25dfa622","methodology":"法人買超與營收年增不抵銷月減9.36%、淨利及毛利率下降；只能當探索條件，不當獲利有效性。","event_result":"PENDING","event_reason":"唯一保存公告原文確認資安事件；公司當時自評業務未受影響，不等於獨立驗證已恢復或沒有後續損失。需將該風險及後續查核列入新審查，不覆寫原研究。"},
-    {"symbol":"2884","review_hash":"6356a78f89856558a884051720653c6cbe051450752931d425da54809b4ba9ce","methodology":"金融業營收使用6–8月，缺一般製造業毛利率保留未知而非0；投信買超與外資賣超分開，不能作銀行估值或資產品質結論。","event_result":"PENDING","event_reason":"27則保存事件需核對公司／子公司、投資及業務範圍；金融業風險不能只由營收年增概括。"},
-    {"symbol":"2886","review_hash":"acebc69ac6157b0837c7f0c7866bb453d021ceb1111b51f249bfbfd368ecb27b","methodology":"6–8月年增為正，月減9.81%與投信賣超不能省略；金融業無一般毛利率不補零，不宣稱金融資產品質改善。","event_result":"PENDING","event_reason":"6則公司事件原文未完成審核；對金融業資本、子公司與營運風險的影響仍未知。"},
-    {"symbol":"2892","review_hash":"a527b2b38bf722eee9da9e18b64ad6139e5a40b21db3afd4f3fc89e9518c144d","methodology":"營收6–8月與法人累積股數只支持追蹤；外資賣超、月減2.36%為反證，金融業毛利缺值不假設成0。","event_result":"PENDING","event_reason":"5則保存公司事件未讀完整內文，不能用合計法人方向取代金融資產及資本風險查核。"},
-    {"symbol":"3034","review_hash":"8d1a605591b67dba1ed012790c6e6fb55ed68e7bc2a2c3d900be37a67eef8fa3","methodology":"營收年增26.80%至24.99%為正但稍緩；法人同向支持觀察，不代表未來獲利保證。事件未知保留為限制。","event_result":"PENDING","event_reason":"2則保存公告未完成內文審查；沒有已知反向數值不能等於沒有公司風險。"},
-    {"symbol":"3037","review_hash":"d1c33f8fafa9322d7064ae4c48bdea94a84ddb6e940335519d85ab55aed404ef","methodology":"連續營收年增上升，合計買超保留投信及自營商賣超；不將法人股數冒充資金金額。","event_result":"PENDING","event_reason":"12則保存事件包含注意交易資訊，需核對異常交易與財務揭露；該公告不是利多證明。"},
-    {"symbol":"3189","review_hash":"ead3ba0d52dd6d77b5a4fb0d727e1b800dbd3bc9c60a120c125914efe607d5ec","methodology":"營收年增趨勢與合計買超支持追蹤，自營商賣超保留，未推定價格趨勢已確認或合理買價。","event_result":"PENDING","event_reason":"7則保存索引含9/23注意交易資訊，原文與風險影響未核對；不能視作公司受惠。"},
-    {"symbol":"3231","review_hash":"f3627563e9d7ba571d6b9a6523f13dfbed98c53b022695646e349af0df92ce2f","methodology":"年增數值大幅波動，月減17.23%與投信賣超為明確反證；不寫成月月加速或法人全面支持。","event_result":"PENDING","event_reason":"13則保存公司事件未完成內文與合併範圍核對；營收變化不能直接推定AI訂單。"},
-    {"symbol":"3443","review_hash":"3af789405bd7d82269598c5925178b7886d2993574abe92f36e0f30f6cd84d12","methodology":"營收年增放緩及毛利率下降1.71個百分點、投信賣超保留；不由高年增推出需求可持續。","event_result":"PENDING","event_reason":"6則保存公司事件尚未核對原文，不能以公司產業分類推定客戶關係或訂單。"},
-    {"symbol":"3653","review_hash":"9fb9a030840a58beb13f4f8e92651facfcdf8f3e3d967ae13558e28b81b792f8","methodology":"獨立重算1.53倍成交金額與同日開收相對大盤6.31個百分點。兩者不是報酬預測或上漲機率；投信52,932股、自營商49,437股賣超保留。只研究同日量價形狀，不冒充調整後趨勢。","event_result":"PASS","event_reason":"9/29 15:57:43官方原文已核對，為注意交易資訊財務揭露，月自結、季核閱及最近四季期間分開；不當利多、財測或突破證明。原卡保留異常交易風險與下一完整交易日確認，不需要把公告改寫成買進理由。"},
-    {"symbol":"3661","review_hash":"548e6c5d9acb6acc67f2cef88d5c01f2246ba9ca7c33e76fd588938e4bc7102d","methodology":"6–8月營收與法人股數支持探索，不把中期研究變成未驗證價格報酬；公司行動與回測權益分開。","event_result":"PASS","event_reason":"唯一保存公告為除息結匯：原文區分股利換算與10/8付款，不能把付款日當除息日。此研究不計算調整後報酬，公告不作利多；價格調整仍缺完整權益證明，另行保留缺口。"},
-    {"symbol":"3711","review_hash":"03799ae6f489c7c83479956f4fbae6725606d69f70d901a30f4079088ff59c01","methodology":"6–8月營收正成長與法人合計買超保留投信大量賣超；母公司與子公司不混為同一供應鏈或獲利主體。","event_result":"PENDING","event_reason":"58則保存事件尚未逐則原文審查；涉及多家子公司，不可用相同關鍵字一律連成母公司營收利多。"},
-    {"symbol":"4566","review_hash":"415bda3a45c52cf7db8f6df75416e4af1ab41df24d869745e4b9a1e2015e7b8c","methodology":"三月正營收年增與法人股數支持探索，累計EPS由負轉正有低基期，不把成長率當未來勝率。","event_result":"PASS","event_reason":"10/2官方澄清原文已讀；媒體所稱AI液冷訂單及全年營收不是公司發布財測。原卡未採這些預測或供應鏈敘事，不能把澄清當訂單證明；該排除已另記錄。"},
-    {"symbol":"6213","review_hash":"647ef0eb6cdf54a3c48cc91b64ce02d2154c04a9d0eb9d4eee02d023f813f289","methodology":"三月營收年增擴大與合計買超不掩蓋自營商賣超；沒有逐家公司事件，就不宣稱新增訂單。","event_result":"PENDING","event_reason":"12則事件含9/23注意交易資訊，仍缺逐則原文及影響判斷，不能把有公告當品質通過。"},
-    {"symbol":"6274","review_hash":"e5a3bd7f6230cf6118428c18d5d25911ed8e638d9040f4b04d4b9e674f6ca60c","methodology":"營收年增仍正但幅度變化，投信買超與外資賣超各自揭露；不由高成長直接推論需求與估值合理。","event_result":"PASS","event_reason":"10/1更正公告原文已讀，重點是泰國子公司機電工程非關係人交易的勾選更正，不是新增營收或獲利保證。原研究不引用該工程推估收益；不能由建廠推定供應鏈訂單。"},
-    {"symbol":"8046","review_hash":"af3b69be9648f77ffceb443f1bf8c89d912e44f640c832fe3832df778496f28d","methodology":"營收年增與法人同向只支持探索，去年累計EPS接近零的低基期不能省略，不以漲幅代替長期價值。","event_result":"PASS","event_reason":"10/2注意交易資訊原文已核對；月自結、第二季核閱、最近四季累計各自列示，不將季度／月數混為累計EPS或財測。注意交易仍是風險，非利多或未來上漲機率。"}
+    {
+      "symbol": "1504",
+      "review_hash": "a692240d2023280c7dab64d4f77a00e053034c8a6471a076477ec0eafbdc2718",
+      "methodology": "三個月營收年增均為正；法人合計買超不掩蓋投信賣超。毛利改善僅作同期實績背景，不推論新增訂單或保證成長。",
+      "event_result": "PENDING",
+      "event_reason": "三則官方內文已核對：檳城建廠、投資公司增資及新加坡合資／印尼變壓器工廠。部分交易條件尚待公司另行公告；原觀察未量化資本承諾與執行風險。需另立新研究版本評估，不覆寫原結論。"
+    },
+    {
+      "symbol": "1513",
+      "review_hash": "5d51b1a5a81555cca5537f286484cadf8c7968dd2e53ceb06479c695a8eea957",
+      "methodology": "營收年增逐步增加、法人合計買超支持探索；月減3.42%保留反證。沒有公告索引不能推論沒有重大風險。",
+      "event_result": "PASS",
+      "event_reason": "正常官方查詢9/1–9/30及10/1–10/8均回覆無項目，與保存索引一致，不是抓取失敗。原假設僅為營收／法人觀察，不需要虛構催化事件；此範圍無公告不證明所有時期無重大風險。",
+      "event_necessity": "NOT_REQUIRED_FOR_REVENUE_FLOW_OBSERVATION"
+    },
+    {
+      "symbol": "1605",
+      "review_hash": "0a92d2a186a7bb05fe0d14841a66b58a4dfffbff200ba1678e4d4e8bc4ed8dba",
+      "methodology": "營收年增與法人方向作數週觀察，不以三個月直接證明長期競爭優勢；毛利率下降0.18個百分點已列反證。",
+      "event_result": "PASS",
+      "event_reason": "保存範圍唯一公告內文為研發主管職務調整，10/1生效；公司關聯及9/30發布時間已對回。原卡沒有宣稱新技術、訂單或人事異動利多，該公告不作成長證據，亦不推定對獲利零影響。"
+    },
+    {
+      "symbol": "2049",
+      "review_hash": "7bc3b22935a745e16b3ca7ba5279fe3363f459886722f5e14917b4380f4a8cd4",
+      "methodology": "三月營收年增正值與合計買超支持探索，但投信賣超接近抵銷外資買超，不能寫成法人一致看好。",
+      "event_result": "PASS",
+      "event_reason": "兩個保存窗口經官方查詢均無項目，留存時間與查詢範圍。原觀察未使用事件催化或客戶推論，因此不以不存在的事件作必要支持；超出窗口的風險仍未知。",
+      "event_necessity": "NOT_REQUIRED_FOR_REVENUE_FLOW_OBSERVATION"
+    },
+    {
+      "symbol": "2308",
+      "review_hash": "ccc2ebf4459201d7e1a78fbb85faa85a37b3855932964d318c2e3c4b36a649b3",
+      "methodology": "使用6–8月營收，不冒充已有9月；年增55.43%降至34.95%、月減3.71%均需與法人方向一起看，不宣稱加速成長。",
+      "event_result": "PENDING",
+      "event_reason": "15則原文完成。公司自評產品品質替換不影響整體營運，不能替代獨立風險驗證；子公司15億美元交換債交換的是泰國DET股，不是母公司增資，另有泰國廠重建與各地資本支出。需新版本處理品質、控制權與資金風險；媒體季增預測非財測。"
+    },
+    {
+      "symbol": "2344",
+      "review_hash": "ebc531cb8b1d63d09c5aab7264caa57c54fc0a66669a6a016956af322bc42ac9",
+      "methodology": "高營收年增不能忽略前期虧損低基期；外資買超與投信賣超分開，累計EPS不當單季或預估。",
+      "event_result": "PENDING",
+      "event_reason": "8則原文完成。11.2億美元Infineon NOR／F-RAM併購尚待監管核准，公司揭露投資占資產44.5%、淨值69.7%；另有合計上限180億元可轉債及子公司資本／租賃事項。原營收法人觀察不能取代重大融資、整合及完成風險，保留待補，不宣稱交易已完成。"
+    },
+    {
+      "symbol": "2357",
+      "review_hash": "f8731bea078f8e1af17626758474967b2aab45a0de80c39a07cb3350d751aba1",
+      "methodology": "營收年增由53.33%降至17.73%及投信賣超皆保留，不把仍成長寫成成長加速。",
+      "event_result": "PENDING",
+      "event_reason": "兩則內文已核對：海外可轉債及媒體預測澄清。票面0%不等於沒有1.7%贖回收益負擔；公司揭露全數轉換稀釋約4.40%。媒體季增預估非公司財測。需補融資／稀釋風險審查，不能僅沿用營收與法人理由通過。"
+    },
+    {
+      "symbol": "2379",
+      "review_hash": "f38be056b6652db490dcfe2a5972cba3f586ac67ab88f84bb1a04690551db403",
+      "methodology": "營收仍正成長、法人三類買超不掩蓋淨利較低與毛利率下降2.42個百分點；不能推論獲利同步改善。",
+      "event_result": "PASS",
+      "event_reason": "3則原文完成：兩場營運概況論壇及新加坡子公司1億美元現金股利。子公司分配不等於母公司除息或新增本業獲利；原觀察不計調整後報酬，已保留毛利下滑，沒有以論壇或股利推論新訂單。"
+    },
+    {
+      "symbol": "2383",
+      "review_hash": "587448c1ab8112b0724d4644dcc3a1db1e4952ef0a63aeca7f8a1f53121a51aa",
+      "methodology": "連續營收年增與法人同向支持探索；目前缺少經核對公司事件，不得把沒有量化反向訊號寫成沒有風險。",
+      "event_result": "PASS",
+      "event_reason": "4則原文完成：子公司股利、論壇、既有廠房拆除後面積更正及第三季財報董事會預告。更正未改原交易總額；10/28預定董事會不是已公布第三季結果，均不作未來成長證明。原營收／法人觀察未依賴這些事件作正向催化。"
+    },
+    {
+      "symbol": "2408",
+      "review_hash": "92f10fccb44987dc3f2227a483ac35c4f78aa3605e2a56d0fe3b1fde2eccf67c",
+      "methodology": "數百百分比年增存在低基期，前期EPS虧損與投信賣超已分開；不能用成長率推算未來報酬。",
+      "event_result": "PENDING",
+      "event_reason": "14則原文完成：多筆累計設備採購不可相加冒充單日支出；處分股票獲利不是經常營運獲利；21億美元境外子公司增資與外幣避險安排需核對資金用途。原低基期營收觀察仍缺資本配置與非經常損益風險分析。"
+    },
+    {
+      "symbol": "2421",
+      "review_hash": "edd3e0236e3c9747aa306692673880c5896263be62296d13fa4c4b54ca38b813",
+      "methodology": "營收年增由31.65%降至16.54%，投信與自營商賣超保留；合計買超不是所有法人一致。",
+      "event_result": "PASS",
+      "event_reason": "唯一保存公告為子公司貨幣理財商品處分；原文說明用途為理財投資、未涉及營運模式變更。這是資金運用，不是散熱訂單或本業營收利多；原研究沒有使用此錯誤推論。"
+    },
+    {
+      "symbol": "2609",
+      "review_hash": "a54e8da7102f81083995c0a70b259a39d6b4a155072d6c8297c24d7c2bd0e1e6",
+      "methodology": "營收年增上升與法人合計買超不抹除淨利下降、毛利率降5.61個百分點及投信賣超；營收與獲利方向分開。",
+      "event_result": "PASS",
+      "event_reason": "3則原文完成：子公司代表人、與前期相同租金的辦公室租賃及法說。沒有運價、運量或新增客戶證明；原卡已保留獲利／毛利下降，不將租賃、人事與法說當景氣改善。"
+    },
+    {
+      "symbol": "2610",
+      "review_hash": "cbfa0f2bfaf6fdab23ad678508332ceefdf15ec2b6c3497cd9ee6c9d73b43ead",
+      "methodology": "法人合計方向主要由投信支持，外資與自營商相反；月減4.62%、淨利下降與毛利率降3.48個百分點保留。",
+      "event_result": "PASS",
+      "event_reason": "3則原文均為公司或子公司的辦公室關係人租賃，租期與金額已區分；不能推出旅運需求、票價或獲利改善。原卡保留外資賣超及毛利下滑，有限營收法人觀察未用這些租約證明利多。"
+    },
+    {
+      "symbol": "2618",
+      "review_hash": "ed46e7bd76bf5fccfe573806f41623ced278af0f9539f1b8aa9ad60c25dfa622",
+      "methodology": "法人買超與營收年增不抵銷月減9.36%、淨利及毛利率下降；只能當探索條件，不當獲利有效性。",
+      "event_result": "PENDING",
+      "event_reason": "唯一保存公告原文確認資安事件；公司當時自評業務未受影響，不等於獨立驗證已恢復或沒有後續損失。需將該風險及後續查核列入新審查，不覆寫原研究。"
+    },
+    {
+      "symbol": "2884",
+      "review_hash": "6356a78f89856558a884051720653c6cbe051450752931d425da54809b4ba9ce",
+      "methodology": "金融業營收使用6–8月，缺一般製造業毛利率保留未知而非0；投信買超與外資賣超分開，不能作銀行估值或資產品質結論。",
+      "event_result": "PENDING",
+      "event_reason": "27則原文完成。9/1取得三商壽後新增治理與資本事項，9/29完成160億元增資；8月自結獲利不能當取得後合併範圍的可比結果，另有投信／保代持股及不動產。需新版本處理合併範圍、保險資本及風險，不把營收成長直接當金融資產品質改善。"
+    },
+    {
+      "symbol": "2886",
+      "review_hash": "acebc69ac6157b0837c7f0c7866bb453d021ceb1111b51f249bfbfd368ecb27b",
+      "methodology": "6–8月年增為正，月減9.81%與投信賣超不能省略；金融業無一般毛利率不補零，不宣稱金融資產品質改善。",
+      "event_result": "PENDING",
+      "event_reason": "6則原文完成。8月自結、子公司增資與綠色金融債用途各自保留；10/2債權出售揭露美元及歐元損失。營收法人觀察尚未評估信用資產與損失影響，不能把綠色用途自動視為收益利多。"
+    },
+    {
+      "symbol": "2892",
+      "review_hash": "a527b2b38bf722eee9da9e18b64ad6139e5a40b21db3afd4f3fc89e9518c144d",
+      "methodology": "營收6–8月與法人累積股數只支持追蹤；外資賣超、月減2.36%為反證，金融業毛利缺值不假設成0。",
+      "event_result": "PENDING",
+      "event_reason": "5則原文完成。8月自結獲利與人事／法遵調整分開；10/2不良聯貸債權出售的交易金額、損失等原文未揭露。這是真實證據缺失，不是Parser錯誤；不得補零或宣稱資產品質改善。"
+    },
+    {
+      "symbol": "3034",
+      "review_hash": "8d1a605591b67dba1ed012790c6e6fb55ed68e7bc2a2c3d900be37a67eef8fa3",
+      "methodology": "營收年增26.80%至24.99%為正但稍緩；法人同向支持觀察，不代表未來獲利保證。事件未知保留為限制。",
+      "event_result": "PASS",
+      "event_reason": "2則原文完成：營運概況論壇及300萬股限制員工權利新股，基準日9/24。原卡僅營收法人探索，不引用新增訂單、EPS成長或調整後報酬；股數稀釋是限制而不是利多，並未由論壇推論需求。"
+    },
+    {
+      "symbol": "3037",
+      "review_hash": "d1c33f8fafa9322d7064ae4c48bdea94a84ddb6e940335519d85ab55aed404ef",
+      "methodology": "連續營收年增上升，合計買超保留投信及自營商賣超；不將法人股數冒充資金金額。",
+      "event_result": "PENDING",
+      "event_reason": "12則原文完成：多場論壇、員工股註銷、可轉債注意資訊、設備及廠房。9/30公告之土地廠房100.8888億元與鑑價需區分；資本承諾、可轉債及新產能回收風險尚未納入原卡，不以公司稱高階需求當已驗證訂單。"
+    },
+    {
+      "symbol": "3189",
+      "review_hash": "ead3ba0d52dd6d77b5a4fb0d727e1b800dbd3bc9c60a120c125914efe607d5ec",
+      "methodology": "營收年增趨勢與合計買超支持追蹤，自營商賣超保留，未推定價格趨勢已確認或合理買價。",
+      "event_result": "PENDING",
+      "event_reason": "7則原文完成。媒體兩位數季成長不是公司財測；注意資訊的月／季／四季EPS不能混用。另有13.742億元廠房及60億元土地交易，需資本投入與回收風險審核；不能僅靠營收法人數值關閉風險。"
+    },
+    {
+      "symbol": "3231",
+      "review_hash": "f3627563e9d7ba571d6b9a6523f13dfbed98c53b022695646e349af0df92ce2f",
+      "methodology": "年增數值大幅波動，月減17.23%與投信賣超為明確反證；不寫成月月加速或法人全面支持。",
+      "event_result": "PENDING",
+      "event_reason": "13則原文完成。GDR新增2.5億股、稀釋約7.29%，另有美國與越南投資、設備及租賃；子公司年底合併尚非已發生。4兆營收媒體說法非公司財測。原研究需補稀釋、資本支出與合併範圍風險，不回寫原結論。"
+    },
+    {
+      "symbol": "3443",
+      "review_hash": "3af789405bd7d82269598c5925178b7886d2993574abe92f36e0f30f6cd84d12",
+      "methodology": "營收年增放緩及毛利率下降1.71個百分點、投信賣超保留；不由高年增推出需求可持續。",
+      "event_result": "PASS",
+      "event_reason": "6則原文均是論壇／法說營運概況，並非新訂單或具名客戶驗證。原卡已有毛利下降及法人分歧，不採用未證實客戶／供應鏈故事，因此在有限營收法人探索範圍通過，不代表長期競爭優勢成立。"
+    },
+    {
+      "symbol": "3653",
+      "review_hash": "9fb9a030840a58beb13f4f8e92651facfcdf8f3e3d967ae13558e28b81b792f8",
+      "methodology": "獨立重算1.53倍成交金額與同日開收相對大盤6.31個百分點。兩者不是報酬預測或上漲機率；投信52,932股、自營商49,437股賣超保留。只研究同日量價形狀，不冒充調整後趨勢。",
+      "event_result": "PASS",
+      "event_reason": "9/29 15:57:43官方原文已核對，為注意交易資訊財務揭露，月自結、季核閱及最近四季期間分開；不當利多、財測或突破證明。原卡保留異常交易風險與下一完整交易日確認，不需要把公告改寫成買進理由。"
+    },
+    {
+      "symbol": "3661",
+      "review_hash": "548e6c5d9acb6acc67f2cef88d5c01f2246ba9ca7c33e76fd588938e4bc7102d",
+      "methodology": "6–8月營收與法人股數支持探索，不把中期研究變成未驗證價格報酬；公司行動與回測權益分開。",
+      "event_result": "PASS",
+      "event_reason": "唯一保存公告為除息結匯：原文區分股利換算與10/8付款，不能把付款日當除息日。此研究不計算調整後報酬，公告不作利多；價格調整仍缺完整權益證明，另行保留缺口。"
+    },
+    {
+      "symbol": "3711",
+      "review_hash": "03799ae6f489c7c83479956f4fbae6725606d69f70d901a30f4079088ff59c01",
+      "methodology": "6–8月營收正成長與法人合計買超保留投信大量賣超；母公司與子公司不混為同一供應鏈或獲利主體。",
+      "event_result": "PENDING",
+      "event_reason": "58則原文完成，逐公司／子公司與累計設備金額分開。資本支出、廠房、租賃及員工權益跨多主體與未來工程期；媒體105億美元資本支出不是公司財測。原卡尚未處理資金／執行風險，不將58則公告全當母公司營收利多。"
+    },
+    {
+      "symbol": "4566",
+      "review_hash": "415bda3a45c52cf7db8f6df75416e4af1ab41df24d869745e4b9a1e2015e7b8c",
+      "methodology": "三月正營收年增與法人股數支持探索，累計EPS由負轉正有低基期，不把成長率當未來勝率。",
+      "event_result": "PASS",
+      "event_reason": "10/2官方澄清原文已讀；媒體所稱AI液冷訂單及全年營收不是公司發布財測。原卡未採這些預測或供應鏈敘事，不能把澄清當訂單證明；該排除已另記錄。"
+    },
+    {
+      "symbol": "6213",
+      "review_hash": "647ef0eb6cdf54a3c48cc91b64ce02d2154c04a9d0eb9d4eee02d023f813f289",
+      "methodology": "三月營收年增擴大與合計買超不掩蓋自營商賣超；沒有逐家公司事件，就不宣稱新增訂單。",
+      "event_result": "PASS",
+      "event_reason": "12則原文完成：論壇、子公司資金分配、設備與注意交易資訊。三筆人民幣1億元子公司股利不能重複算母公司獲利；9/7公司否認1股拆10股傳聞，原卡未採拆股或調整後報酬。月／季／四季自結口徑分開；設備不當新增訂單，原法人分歧保留。"
+    },
+    {
+      "symbol": "6274",
+      "review_hash": "e5a3bd7f6230cf6118428c18d5d25911ed8e638d9040f4b04d4b9e674f6ca60c",
+      "methodology": "營收年增仍正但幅度變化，投信買超與外資賣超各自揭露；不由高成長直接推論需求與估值合理。",
+      "event_result": "PASS",
+      "event_reason": "10/1更正公告原文已讀，重點是泰國子公司機電工程非關係人交易的勾選更正，不是新增營收或獲利保證。原研究不引用該工程推估收益；不能由建廠推定供應鏈訂單。"
+    },
+    {
+      "symbol": "8046",
+      "review_hash": "af3b69be9648f77ffceb443f1bf8c89d912e44f640c832fe3832df778496f28d",
+      "methodology": "營收年增與法人同向只支持探索，去年累計EPS接近零的低基期不能省略，不以漲幅代替長期價值。",
+      "event_result": "PASS",
+      "event_reason": "10/2注意交易資訊原文已核對；月自結、第二季核閱、最近四季累計各自列示，不將季度／月數混為累計EPS或財測。注意交易仍是風險，非利多或未來上漲機率。"
+    }
   ],
   "receipts": [
-    {"symbol":"1504","published_at":"2026-10-02T19:38:01+08:00","first_seen_at":"2026-10-11T10:25:34.105Z","body_hash":"108985cf7044edbee5b684d90f0fc2f5a02fdbb8915bfdba0aa29a6d444149fd"},
-    {"symbol":"1504","published_at":"2026-10-02T19:41:04+08:00","first_seen_at":"2026-10-11T10:25:34.591Z","body_hash":"33f2057e19e2bc8e55a9cb343d2cfb425dc279b077c382209abeefe6422f6f14"},
-    {"symbol":"1504","published_at":"2026-10-02T19:42:15+08:00","first_seen_at":"2026-10-11T10:25:35.043Z","body_hash":"19040d1d0e09df4f052b02631dedf86ba5f3af727c190bd33dcf156fdc55f8b5"},
-    {"symbol":"4566","published_at":"2026-10-02T11:31:14+08:00","first_seen_at":"2026-10-11T10:26:47.730Z","body_hash":"16db4af869a6b4ed25537b275b78ccbd5caf36144b6bdbe13b6061ca3ffb5dd6"},
-    {"symbol":"6274","published_at":"2026-10-01T16:19:55+08:00","first_seen_at":"2026-10-11T10:26:59.338Z","body_hash":"ec88327434b71af7d1a449f8173ae4f9f67a6f26d7ad97734fa6867a5a3d2ae0"},
-    {"symbol":"8046","published_at":"2026-10-02T15:41:15+08:00","first_seen_at":"2026-10-11T10:27:10.482Z","body_hash":"a9b62a0447b8a7ad00a2e8997ce8ad649099edd496ad0f27ece12dcc5dfccfb7"},
-    {"symbol":"1605","published_at":"2026-09-30T16:10:12+08:00","first_seen_at":"2026-10-11T10:27:45.549Z","body_hash":"03ec6448b824c4458610ffb0729d52a004e534d1084a74ec4b1d497e9aec4638"},
-    {"symbol":"2421","published_at":"2026-09-17T14:58:33+08:00","first_seen_at":"2026-10-11T10:27:56.017Z","body_hash":"1e9886de131941ab68bfdbd741ab8e51ce0636ecbc9ab033ee310a9c27944048"},
-    {"symbol":"2618","published_at":"2026-09-15T21:26:32+08:00","first_seen_at":"2026-10-11T10:28:08.331Z","body_hash":"7f26ba90fe4a66bb4023ada2f1a6c6e8c0362b2609e5a584c5f0d96b6f820d75"},
-    {"symbol":"3661","published_at":"2026-09-17T18:11:38+08:00","first_seen_at":"2026-10-11T10:28:32.461Z","body_hash":"97ef1fa4b2fd6c06f5da2ba5a07513b44c2fde107250f3454cf29551dc360ff2"},
-    {"symbol":"3653","published_at":"2026-09-29T15:57:43+08:00","first_seen_at":"2026-10-11T10:28:45.334Z","body_hash":"c04d7678e79309f9d69bd496290e26f5f0b76ae4ca81c43a3bea8fc6ccc5f656"},
-    {"symbol":"2357","published_at":"2026-09-10T22:51:08+08:00","first_seen_at":"2026-10-11T10:30:21.351Z","body_hash":"ab7de18519493442c016f0a0ccb8bb9dbd20f97ff889ed456df51810c25c9ee0"},
-    {"symbol":"2357","published_at":"2026-09-29T11:17:40+08:00","first_seen_at":"2026-10-11T10:30:34.535Z","body_hash":"a736d94150b0c7c56233da1cf9a28ee16ea71bccfab1efdff8654099548947ba"}
+    {
+      "symbol": "1504",
+      "published_at": "2026-10-02T19:38:01+08:00",
+      "first_seen_at": "2026-10-11T10:25:34.105Z",
+      "body_hash": "108985cf7044edbee5b684d90f0fc2f5a02fdbb8915bfdba0aa29a6d444149fd"
+    },
+    {
+      "symbol": "1504",
+      "published_at": "2026-10-02T19:41:04+08:00",
+      "first_seen_at": "2026-10-11T10:25:34.591Z",
+      "body_hash": "33f2057e19e2bc8e55a9cb343d2cfb425dc279b077c382209abeefe6422f6f14"
+    },
+    {
+      "symbol": "1504",
+      "published_at": "2026-10-02T19:42:15+08:00",
+      "first_seen_at": "2026-10-11T10:25:35.043Z",
+      "body_hash": "19040d1d0e09df4f052b02631dedf86ba5f3af727c190bd33dcf156fdc55f8b5"
+    },
+    {
+      "symbol": "4566",
+      "published_at": "2026-10-02T11:31:14+08:00",
+      "first_seen_at": "2026-10-11T10:26:47.730Z",
+      "body_hash": "16db4af869a6b4ed25537b275b78ccbd5caf36144b6bdbe13b6061ca3ffb5dd6"
+    },
+    {
+      "symbol": "6274",
+      "published_at": "2026-10-01T16:19:55+08:00",
+      "first_seen_at": "2026-10-11T10:26:59.338Z",
+      "body_hash": "ec88327434b71af7d1a449f8173ae4f9f67a6f26d7ad97734fa6867a5a3d2ae0"
+    },
+    {
+      "symbol": "8046",
+      "published_at": "2026-10-02T15:41:15+08:00",
+      "first_seen_at": "2026-10-11T10:27:10.482Z",
+      "body_hash": "a9b62a0447b8a7ad00a2e8997ce8ad649099edd496ad0f27ece12dcc5dfccfb7"
+    },
+    {
+      "symbol": "1605",
+      "published_at": "2026-09-30T16:10:12+08:00",
+      "first_seen_at": "2026-10-11T10:27:45.549Z",
+      "body_hash": "03ec6448b824c4458610ffb0729d52a004e534d1084a74ec4b1d497e9aec4638"
+    },
+    {
+      "symbol": "2421",
+      "published_at": "2026-09-17T14:58:33+08:00",
+      "first_seen_at": "2026-10-11T10:27:56.017Z",
+      "body_hash": "1e9886de131941ab68bfdbd741ab8e51ce0636ecbc9ab033ee310a9c27944048"
+    },
+    {
+      "symbol": "2618",
+      "published_at": "2026-09-15T21:26:32+08:00",
+      "first_seen_at": "2026-10-11T10:28:08.331Z",
+      "body_hash": "7f26ba90fe4a66bb4023ada2f1a6c6e8c0362b2609e5a584c5f0d96b6f820d75"
+    },
+    {
+      "symbol": "3661",
+      "published_at": "2026-09-17T18:11:38+08:00",
+      "first_seen_at": "2026-10-11T10:28:32.461Z",
+      "body_hash": "97ef1fa4b2fd6c06f5da2ba5a07513b44c2fde107250f3454cf29551dc360ff2"
+    },
+    {
+      "symbol": "3653",
+      "published_at": "2026-09-29T15:57:43+08:00",
+      "first_seen_at": "2026-10-11T10:28:45.334Z",
+      "body_hash": "c04d7678e79309f9d69bd496290e26f5f0b76ae4ca81c43a3bea8fc6ccc5f656"
+    },
+    {
+      "symbol": "2357",
+      "published_at": "2026-09-10T22:51:08+08:00",
+      "first_seen_at": "2026-10-11T10:30:21.351Z",
+      "body_hash": "ab7de18519493442c016f0a0ccb8bb9dbd20f97ff889ed456df51810c25c9ee0"
+    },
+    {
+      "symbol": "2357",
+      "published_at": "2026-09-29T11:17:40+08:00",
+      "first_seen_at": "2026-10-11T10:30:34.535Z",
+      "body_hash": "a736d94150b0c7c56233da1cf9a28ee16ea71bccfab1efdff8654099548947ba"
+    }
+  ],
+  "source": "https://mops.twse.com.tw/mops/#/web/t05st01",
+  "body_sets": [
+    {
+      "symbol": "1504",
+      "count": 3,
+      "published_times_hash": "05a78ebe33a2f72507d36ea3b35b93cde504b72107a547950effea5cb8176e64",
+      "body_set_hash": "e1c18a300082db820ad431e8fcf4f2234df26b0acab1ef129fc0890b03793a47",
+      "first_seen_at": "2026-10-11T10:25:34.105Z",
+      "last_seen_at": "2026-10-11T10:25:35.043Z"
+    },
+    {
+      "symbol": "1605",
+      "count": 1,
+      "published_times_hash": "da495c866af2ee4adcd21162a0d845c1f930232c76dfae7b912053f0406a4231",
+      "body_set_hash": "b743b7b71b8f2743e63eb6ea9f82ec72003e8ea89a21d0808d856eddb00feff2",
+      "first_seen_at": "2026-10-11T10:27:45.549Z",
+      "last_seen_at": "2026-10-11T10:27:45.549Z"
+    },
+    {
+      "symbol": "2308",
+      "count": 15,
+      "published_times_hash": "67d6bdecfab2abb7d9d5fb738716f8eb64a391ef572633501237ab2b656a2537",
+      "body_set_hash": "78d355aed70251d52c2acb142d91ce60ec705f45b4ae92ee3de5247e9b159201",
+      "first_seen_at": "2026-10-11T10:58:10.039Z",
+      "last_seen_at": "2026-10-11T10:58:28.385Z"
+    },
+    {
+      "symbol": "2344",
+      "count": 8,
+      "published_times_hash": "bfc2777cd2e7ee7a4733f620ac89b0b733ad051f72dc9f3ca4517870eca777df",
+      "body_set_hash": "4b5ba42b683a79e97a0c6e1df5f573fffe00fa0e27853d45c2737ea6b6d6a61e",
+      "first_seen_at": "2026-10-11T10:54:40.388Z",
+      "last_seen_at": "2026-10-11T10:57:58.509Z"
+    },
+    {
+      "symbol": "2357",
+      "count": 2,
+      "published_times_hash": "5d66518d7ea4ba2a40441ac706acd0756b2348ff5fc7b9f7819fc544b1819b46",
+      "body_set_hash": "4a98eb234bc9580298098564d1d589bb1a8a0326ec1671770b3b047c9f6718cc",
+      "first_seen_at": "2026-10-11T10:30:21.351Z",
+      "last_seen_at": "2026-10-11T10:30:34.535Z"
+    },
+    {
+      "symbol": "2379",
+      "count": 3,
+      "published_times_hash": "97cb282025a35dec54617f6feb906c64c8b051d34fe958a648b6262d2d1f67a4",
+      "body_set_hash": "2aaa9b79e1fc9b6bcb34ad53495d44513890ea560e784822ab87e0c097097f54",
+      "first_seen_at": "2026-10-11T10:52:51.148Z",
+      "last_seen_at": "2026-10-11T10:52:52.092Z"
+    },
+    {
+      "symbol": "2383",
+      "count": 4,
+      "published_times_hash": "bafe40e876fe0bd4000e5ea452c3ddef3def77ef9ed2ae92b7f1bfa60f78cd87",
+      "body_set_hash": "2de8e25250ae32d2e97a234353f0c1a0c196fbc9263357c92a585e72f9d0442d",
+      "first_seen_at": "2026-10-11T10:52:58.112Z",
+      "last_seen_at": "2026-10-11T10:52:59.748Z"
+    },
+    {
+      "symbol": "2408",
+      "count": 14,
+      "published_times_hash": "869d734337bcb5720089b29f5d1c72a538e02aacf56eb6109f8c75e474678906",
+      "body_set_hash": "48c0fd9f00bf0d92f8f319676c7e8473bb45546ba274f0f442980a12748edd48",
+      "first_seen_at": "2026-10-11T10:58:46.526Z",
+      "last_seen_at": "2026-10-11T10:59:13.669Z"
+    },
+    {
+      "symbol": "2421",
+      "count": 1,
+      "published_times_hash": "02f2ebf90fe464099af2ef3aa5d51c4b80521c2bfb7b1067137ca5daa4e4de30",
+      "body_set_hash": "33d1cff936e375a7702adbe34c2e0c553903bdbde42e12da29c76160391bf9cf",
+      "first_seen_at": "2026-10-11T10:27:56.017Z",
+      "last_seen_at": "2026-10-11T10:27:56.017Z"
+    },
+    {
+      "symbol": "2609",
+      "count": 3,
+      "published_times_hash": "8df0f43f8bb2bf4e7af898a340f93aecf4035910bcc36c2ec42f02b3ff9b0168",
+      "body_set_hash": "a07ae004d81b8d12385c3d55caf46d2e33361223a30f66d1bba4a172afcc7121",
+      "first_seen_at": "2026-10-11T10:53:07.247Z",
+      "last_seen_at": "2026-10-11T10:53:08.083Z"
+    },
+    {
+      "symbol": "2610",
+      "count": 3,
+      "published_times_hash": "e3b60e6fc351a7b000c2a4692d8de21087994be64ffd9681cea925ad693c75f6",
+      "body_set_hash": "f7226f3a5600629e04e31930649f54d6f3095eb0a2fbca3b8753c766f61df2e0",
+      "first_seen_at": "2026-10-11T10:53:25.310Z",
+      "last_seen_at": "2026-10-11T10:53:26.180Z"
+    },
+    {
+      "symbol": "2618",
+      "count": 1,
+      "published_times_hash": "c3e5f6799812111843641e8d6af28a49494376b209b5b0495dad4d9d736da8bc",
+      "body_set_hash": "81ea7e2262e22df20c432bada5e4fcd03ff345e93e81388de1448ffc29ddf98b",
+      "first_seen_at": "2026-10-11T10:28:08.331Z",
+      "last_seen_at": "2026-10-11T10:28:08.331Z"
+    },
+    {
+      "symbol": "2884",
+      "count": 27,
+      "published_times_hash": "450f16688774303a228542640ae7aa66e12db3c87b826d1e649ab49e4566ae2b",
+      "body_set_hash": "7787605ada5fafa0ce310d0765630f5c8b9b583504a58855d25a7ad3efab9a1b",
+      "first_seen_at": "2026-10-11T11:00:28.952Z",
+      "last_seen_at": "2026-10-11T11:01:02.758Z"
+    },
+    {
+      "symbol": "2886",
+      "count": 6,
+      "published_times_hash": "86444d7d0e9e47d7a14b6f4cb17c59f5b10d84e9de92bbc990085cb3b3b23134",
+      "body_set_hash": "d0c83749d08f7c63c47e1ce11c44d8754c44c50d7ae2d323b5ad7a9394665150",
+      "first_seen_at": "2026-10-11T10:53:32.504Z",
+      "last_seen_at": "2026-10-11T10:53:38.653Z"
+    },
+    {
+      "symbol": "2892",
+      "count": 5,
+      "published_times_hash": "5b8bb794be7ce062bfca356c6b3ff3179c4a310b826937b84b1edf82aa7e4777",
+      "body_set_hash": "eac2f5a5018887822799480c882f9ee1df140ec748b960a9f87e8f4f61eefb4d",
+      "first_seen_at": "2026-10-11T10:53:47.204Z",
+      "last_seen_at": "2026-10-11T10:53:53.057Z"
+    },
+    {
+      "symbol": "3034",
+      "count": 2,
+      "published_times_hash": "4026dba16606358c8705917eaae3e2048119c54d676e826fd188f64c64c266e0",
+      "body_set_hash": "243bd47eedff1cc1620c985fbf1b401d3867ec677b16ebe69e494c5461fab693",
+      "first_seen_at": "2026-10-11T10:52:16.314Z",
+      "last_seen_at": "2026-10-11T10:52:29.073Z"
+    },
+    {
+      "symbol": "3037",
+      "count": 12,
+      "published_times_hash": "2552c804a8ed2dd20878a6041a2a69794a4d4e9a6a014ef8cb081acf0ac63b43",
+      "body_set_hash": "42f75e7be8da8d69cfaa0b77fecba9e66cbca05a23b8806c5df28a802222042d",
+      "first_seen_at": "2026-10-11T10:59:22.710Z",
+      "last_seen_at": "2026-10-11T10:59:45.026Z"
+    },
+    {
+      "symbol": "3189",
+      "count": 7,
+      "published_times_hash": "4bef4201c1bc764072e00410c4b7f4e6c816734d9006fd91b5b23660d9486e64",
+      "body_set_hash": "781bc91b2d2f403d76f8950df5c901538967cc63e0b4154c700f6e35ec209436",
+      "first_seen_at": "2026-10-11T10:54:15.338Z",
+      "last_seen_at": "2026-10-11T10:54:32.891Z"
+    },
+    {
+      "symbol": "3231",
+      "count": 13,
+      "published_times_hash": "e64f61764a959f8dfbb459ae149a10f39665b3ad0b1b915ff0f46453a2a33e82",
+      "body_set_hash": "22e484aac97b90b726e5adf2c6120c953a59f80dd8f228d621efd33e737c70ea",
+      "first_seen_at": "2026-10-11T10:59:50.782Z",
+      "last_seen_at": "2026-10-11T11:00:04.557Z"
+    },
+    {
+      "symbol": "3443",
+      "count": 6,
+      "published_times_hash": "130bed423e9fb629cc9d687c69c0a536241c23088aa557ef6f30e53ed3551595",
+      "body_set_hash": "c70ddf8070ba1f5864c29e534556bdb3d687f1273a6301bc93ebdbb7024fabb7",
+      "first_seen_at": "2026-10-11T10:54:06.028Z",
+      "last_seen_at": "2026-10-11T10:54:08.450Z"
+    },
+    {
+      "symbol": "3653",
+      "count": 1,
+      "published_times_hash": "9980bdd1c6569500291e0cf2fb31c5c65afe2c573f92e6f20707cf387ba8c140",
+      "body_set_hash": "2a5c426da321b72c896caf70f751a0c9436f9c813455f2ccf31b05a033f1b658",
+      "first_seen_at": "2026-10-11T10:28:45.334Z",
+      "last_seen_at": "2026-10-11T10:28:45.334Z"
+    },
+    {
+      "symbol": "3661",
+      "count": 1,
+      "published_times_hash": "dc7355dc48a3b2cac75daa8e97d61a9f562fa32ab90fa2322d3f79f3b77f8a89",
+      "body_set_hash": "1b3e7d2307adf3c88113a2b00e209e0cec4d68cb6c4c5e7236d5ecdfeb7248db",
+      "first_seen_at": "2026-10-11T10:28:32.461Z",
+      "last_seen_at": "2026-10-11T10:28:32.461Z"
+    },
+    {
+      "symbol": "3711",
+      "count": 58,
+      "published_times_hash": "525422f21ec9693c636a38b13d25d7732da98c66f612eafa28477c69dd2e2eaa",
+      "body_set_hash": "a99f19aa514a76acc277ec62076be63b2582adf63a1ea041c9b840563bb557a7",
+      "first_seen_at": "2026-10-11T11:01:08.874Z",
+      "last_seen_at": "2026-10-11T11:02:31.634Z"
+    },
+    {
+      "symbol": "4566",
+      "count": 1,
+      "published_times_hash": "910ba23b191b0ff5a171d2a719dc82668b6e1db9a3684fce4368312b88a1f987",
+      "body_set_hash": "9934e68bf2b7765a6f48f5092fb89dcfea9a4dcf2ce7d8fb980ca8711cb65e92",
+      "first_seen_at": "2026-10-11T10:26:47.730Z",
+      "last_seen_at": "2026-10-11T10:26:47.730Z"
+    },
+    {
+      "symbol": "6213",
+      "count": 12,
+      "published_times_hash": "e3abce8c92f1f36bb4a84fe25e156b7db35cb6267c73c48dd258ed31cc1f2ad8",
+      "body_set_hash": "5f084a46df83f418cf5fd3b0ad976c528d91ab5b5f6678132aff0eba41e25ffb",
+      "first_seen_at": "2026-10-11T11:00:12.550Z",
+      "last_seen_at": "2026-10-11T11:00:21.378Z"
+    },
+    {
+      "symbol": "6274",
+      "count": 1,
+      "published_times_hash": "7b014c18c4471e0ed9c0f3d8df9ec19c52bae00287357e02669d3f66e22c5a67",
+      "body_set_hash": "c1e7c908513cd231592696030ad3898d46026582eab0f65ed2f84cf1350bdfcf",
+      "first_seen_at": "2026-10-11T10:26:59.338Z",
+      "last_seen_at": "2026-10-11T10:26:59.338Z"
+    },
+    {
+      "symbol": "8046",
+      "count": 1,
+      "published_times_hash": "55c2d6ebc3785771cc0aa3f189d07c6225c43899b0b115545f3ea871167e7f0d",
+      "body_set_hash": "2c89539f0026e34c06e87ebe2cfb85dc2bacf71b9fd2f959f3f141a4e5ef1fa6",
+      "first_seen_at": "2026-10-11T10:27:10.482Z",
+      "last_seen_at": "2026-10-11T10:27:10.482Z"
+    }
+  ],
+  "empty_queries": [
+    {
+      "symbol": "1513",
+      "from": "2026-09-01",
+      "through": "2026-09-30",
+      "observed_at": "2026-10-11T11:03:45.363Z",
+      "result": "抱歉，我們搜尋不到符合的項目"
+    },
+    {
+      "symbol": "1513",
+      "from": "2026-10-01",
+      "through": "2026-10-08",
+      "observed_at": "2026-10-11T11:04:03.194Z",
+      "result": "抱歉，我們搜尋不到符合的項目"
+    },
+    {
+      "symbol": "2049",
+      "from": "2026-10-01",
+      "through": "2026-10-08",
+      "observed_at": "2026-10-11T11:04:28.643Z",
+      "result": "抱歉，我們搜尋不到符合的項目"
+    },
+    {
+      "symbol": "2049",
+      "from": "2026-09-01",
+      "through": "2026-09-30",
+      "observed_at": "2026-10-11T11:04:45.671Z",
+      "result": "抱歉，我們搜尋不到符合的項目"
+    }
   ]
 }

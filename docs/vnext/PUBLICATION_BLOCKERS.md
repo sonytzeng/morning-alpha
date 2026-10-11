@@ -8,9 +8,9 @@ Short1 / Medium28 / Long0; Forward0 / Outcome0.
 
 29 company-specific methodology reviews are now explicit, hash-bound records outside the selector. These assess whether the *limited exploratory statement* matches the preserved facts and caveats, not whether the method earns money. Reviewer is explicitly Codex, not Sony, legal counsel or an independent professional investment committee.
 
-Content-quality PASS7 / FAIL0 / PENDING22. The seven are 1605、2421、3653、3661、4566、6274、8046. Original publication-time proof is separately PENDING29; after-receipt point-in-time integrity PASS29. Licensing PENDING29, ready for Owner approval0, publication eligible0, free0, premium0. Quality PASS does not override either time or licensing.
+Content-quality PASS16 / FAIL0 / PENDING13. Pass: 1513、1605、2049、2379、2383、2421、2609、2610、3034、3443、3653、3661、4566、6213、6274、8046. Original publication-time proof is separately PENDING29; after-receipt point-in-time integrity PASS29. Licensing PENDING29, ready for Owner approval0, publication eligible0, free0, premium0. Quality PASS means the bounded exploratory content review passed, not performance validation, time clearance or licensing.
 
-This is **not final publication closure**. It does not claim every announcement has been read: 13 official bodies / 211 retained announcement indices, covering10 companies;198 bodies remain unreviewed. Three reviewed companies (1504、2357、2618) still require material-risk assessment. 1513/2049 have no index in the saved window, which is not proof that no relevant event exists. The other17 companies' original bodies remain open research work, not a fabricated external-access denial.
+This is **not final publication closure**. All211 retained official announcement bodies across27 companies have now been read. 1513/2049 each returned no item for both saved windows (four separately observed queries); this is scoped absence, not a fetch failure or proof of no risk in all history. Thirteen material-risk reviews remain pending. No pending state is relabelled failure and no original research conclusion is changed.
 
 ## What was actually retrieved
 
@@ -18,7 +18,7 @@ The MOPS index was accessible through the ordinary historical-announcement form.
 
 Official navigation: https://mops.twse.com.tw/mops/#/web/t05st01 ; company, ROC115, September1–30 / October1–8, announced timestamp identifies the exact record. The private existing card keeps the exact API/query source and index hash. New review receipt keeps company, public timestamp, actual retrieval timestamp and hash of the selected visible date/time/subject/body rows. It contains no contact information or raw body.
 
-Further body reading stopped at a browser safety boundary: the previously bound tab had been navigated to an unrelated private site. The new official index page could be read, but the body action was still rejected as targeting that unrelated site. No unrelated content was read and no alternate hidden endpoint was used.3034's two official index entries were visible; their bodies remain unreviewed. This is a tool-target safety interruption, not proof that MOPS denied access or that the198 remaining bodies are unavailable.
+An earlier browser-target safety interruption was resolved by binding subsequent normal UI actions to the newly opened official tab. No unrelated page was read and no hidden endpoint or access bypass was used. The remaining198 bodies were then read normally. The old13-body checkpoint is superseded, not the final count.
 
 |Company|Bodies read|What the original body establishes|Unresolved meaning|
 |---|---:|---|---|
@@ -34,6 +34,28 @@ Further body reading stopped at a browser safety boundary: the previously bound 
 |8046 南電|1|Attention-trading financial disclosure with separate periods|Not a substitute for comparable YTD EPS or future earnings|
 
 Receipt metadata and each of the29 distinct reviewer explanations are in `publication-review-20261011.json`. Newly read content is **after** the research cutoff; it is only a retrospective audit artifact. Neither `first_seen_at` nor `available_at` of any original input is changed. No newly read amount is injected into the original score/card.
+
+The table above records the initial13; the sealed sidecar now includes all27 company body sets (211). Each set binds the complete original published-time index and the hash of ordered body receipts, with actual first/last retrieval times. The validator compares count and published-time fingerprint against the unchanged real card, refuses missing sets and verifies the four empty-window receipts separately. A fingerprint is an audit anchor, not proof of legal rights or a replacement for the official source. No raw article/contact payload is committed.
+
+### Thirteen pending material-risk decisions (not unread articles)
+
+|Company|Evidence now read|What cannot honestly be closed on the old card|
+|---|---|---|
+|1504|3 bodies; factory/JV/capital projects|Some terms deferred; capital/execution risk unresolved|
+|2308|15; product-quality replacement, subsidiary exchange bonds, capex|Independent impact, subsidiary control and funding exposure|
+|2344|8; large acquisition and convertible financing|Regulatory completion, funding and integration risk|
+|2357|2; convertible terms and forecast clarification|Dilution/redemption cost; media forecast not company guidance|
+|2408|14; equipment, share-sale gain, offshore capital|Nonrecurring versus operating profit; capital allocation|
+|2618|1; cybersecurity incident|Company no-impact statement is not independent recovery proof|
+|2884|27; life-insurance acquisition and capital injection|Changed consolidation scope and insurance capital risk|
+|2886|6; credit-asset sale with losses|Credit quality and loss impact|
+|2892|5; nonperforming syndicated-loan sale|Price/loss not disclosed: genuine missing evidence, never zero-filled|
+|3037|12; property/capex/convertible matters|Funding, dilution and capacity-return assumptions|
+|3189|7; land/factory commitments and attention disclosure|Capital recovery, period comparability and execution|
+|3231|13; GDR dilution and subsidiary investments|Dilution, funding and future merger scope|
+|3711|58; multiple subsidiaries and cumulative capex|Avoid double-counting, assess cash flow/execution; no inferred new orders|
+
+These are research/content gaps, not reasons to change the original engine, thresholds or the29 immutable cards. A follow-up would require a separately versioned risk-aware research snapshot, not retrospective alteration or forced approval.
 
 ## Source/use licensing matrix
 
@@ -68,18 +90,17 @@ Owner approval alone cannot replace a third-party grant. The pending original ti
 
 ## Engineering and research work that remains (not all commercial)
 
--198 official announcement bodies still require individual reading/materiality assessment. Do not report them as a completed review or an MOPS outage.
--1504/2357/2618 need versioned risk follow-up from the newly obtained evidence. No original conclusion is overwritten in this task.
+-Official indexed body retrieval is complete211/211. The13 companies above still need versioned risk follow-up from the newly obtained evidence; several source facts are undisclosed or forward contingencies. No original conclusion is overwritten in this task.
 -Original publication timestamps missing from old market/financial receipts cannot be manufactured. Obtain official release proof and create a hash-bound retrospective certificate or a new contemporaneous research snapshot; never replace the old receipt.
 -The29 retain missing precise member-use grants. Permission is not created by a hash, a reviewer note or a frontend flag.
 -Existing candidate approval server remains isolated loopback Auth/RLS; no Production natural caller/persistence adapter is deployed, and no member publication is authorized.
 
 ## UI and verification
 
-First screen:「目前有幾項研究可以發布？」. Four native button filters: 可以核准／尚待補資料／使用權待確認／品質未通過. Counts overlap intentionally and are labelled non-additive. Individual stock evidence and approval panel start collapsed. All seven content passes still have disabled approval because time and licensing are unresolved.
+First screen:「目前有幾項研究可以發布？」. Four native button filters: 可以核准／尚待補資料／使用權待確認／品質未通過. Counts overlap intentionally and are labelled non-additive. Individual stock evidence and approval panel start collapsed. All16 content passes still have disabled approval because time and licensing are unresolved.
 
 Candidate tests cover explicit pending, preserved failure, overlapping reasons, stale/future/forged review metadata, grant injection, body coverage and timestamps, unchanged research hash, all29 blocked approvals, and empty free/premium projections. Synthetic protocol controls are labelled and do not stand in for the separate real29 offline audit.
 
-Real29 offline admission hash: `8ed32312352c6c237a267271e0c5b6e71b41cfddf1a2c735d3ae9f820a353882`. Existing isolated Supabase Auth verified Owner read200 / unresolved approval409, Free/Premium/other private read403, anonymous401, no client-tier elevation, logout refresh denial. This is not Production Owner evidence. Desktop1440 / Mobile375/390/430 actual DOM measurements show no horizontal overflow; per-stock details start collapsed and the unresolved approval button is disabled. Local screenshots: `/private/tmp/ma-vnext-publication-blockers-qa`.
+Real29 offline admission hash: `be7c81937a2bfc39f77894dd7d4c9f328765e57c504fab57a73e11bd336b6f07`. Existing isolated Supabase Auth verified Owner read200 / unresolved approval409, Free/Premium/other private read403, anonymous401, no client-tier elevation, logout refresh denial. This is not Production Owner evidence. Desktop1440 / Mobile375/390/430 actual DOM measurements show no horizontal overflow; per-stock details start collapsed and the unresolved approval button is disabled. Local screenshots: `/private/tmp/ma-vnext-publication-blockers-qa`. Final code/CI checks must reference the final commit, not the earlier13-body checkpoint.
 
 No Production DB query/write, Merge, Migration, Function deployment, Cron, Secret, Auth/RLS edit, member publish or official business operation performed.

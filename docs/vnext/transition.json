@@ -15,7 +15,7 @@
     {
       "path": ".github/workflows/vnext-candidate.yml",
       "before_sha256": null,
-      "after_sha256": "e49f323ee322dec4f5d3c027dc440be2ffde6324bf7014376debe123ffc92055"
+      "after_sha256": "6cb3d40459e03637cd1317d7009f2487e535f7c2ad54b5435630d0d9e73a231c"
     },
     {
       "path": "docs/vnext/ACCEPTANCE_MATRIX.md",
@@ -31,6 +31,11 @@
       "path": "docs/vnext/BASELINE_INVENTORY.md",
       "before_sha256": null,
       "after_sha256": "922310892a230108288797888e6447a73e42a595c41ae706e965f11df8e25ac8"
+    },
+    {
+      "path": "docs/vnext/DAILY_STOCK_INTELLIGENCE.md",
+      "before_sha256": null,
+      "after_sha256": "89cf96f198131e09c5bc3d96caba1d47591973d08900a47ec06408eafb0184e0"
     },
     {
       "path": "docs/vnext/DATA_LICENSE_AUDIT.md",
@@ -50,7 +55,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "c6b9493887802e1f4c1e74e1a880338c10cc75860182538fd2e3f1b13fc95f39"
+      "after_sha256": "064d1f58410e4b695f686615e1eec2619e184f76c283b9dd556b2b1410ad02b6"
     },
     {
       "path": "docs/vnext/FIRST_MEMBER_RESEARCH.md",
@@ -133,6 +138,16 @@
       "after_sha256": "f71156b49f6b1b52d854ab1c03cdfc7497a770547c37307963299c9b3dfa68e8"
     },
     {
+      "path": "scripts/vnext/daily-retained.mjs",
+      "before_sha256": null,
+      "after_sha256": "852cb82deb4c08cc1de535c2a190164c7838dc1c1d07b4ca71fc20ca3ca46dc3"
+    },
+    {
+      "path": "scripts/vnext/daily-store.mjs",
+      "before_sha256": null,
+      "after_sha256": "3e229d32b20a849ab1a76a74e9901e7dd9ff2afb6cc1d0e1c85b1ecf61c6ea2f"
+    },
+    {
       "path": "scripts/vnext/first-publication-review.mjs",
       "before_sha256": null,
       "after_sha256": "0b4d6b164d91a95a7a313a257815ab712ebf2f28cdc59691ff336818e2275ff6"
@@ -175,7 +190,7 @@
     {
       "path": "scripts/vnext/owner-research-server.mjs",
       "before_sha256": null,
-      "after_sha256": "88ebde860287d8f2a4a65143b29e0d0db675028a6eca2e3c26b285353e19e556"
+      "after_sha256": "4469f6b63cb0fef303a17b0df498520e409244df48ae286fc8d80f89b9ea6370"
     },
     {
       "path": "scripts/vnext/preview.mjs",
@@ -210,7 +225,7 @@
     {
       "path": "scripts/vnext/research-funnel.mjs",
       "before_sha256": null,
-      "after_sha256": "0a855046673cb0b04d88df9345b469bac6a017f1cae19d1e3d3d407b6bab1946"
+      "after_sha256": "dbe0d0b16cc7e6f746b939b441cf88040daa521219da0cace0793e8d26e86ccc"
     },
     {
       "path": "scripts/vnext/stock-audit.mjs",
@@ -231,6 +246,21 @@
       "path": "src/features/vnext/contracts.ts",
       "before_sha256": null,
       "after_sha256": "0a89f96f209c9c235416a4b060c85b38bb6d6799ad3234ef16156537fd50d579"
+    },
+    {
+      "path": "src/features/vnext/dailyIntelligence.ts",
+      "before_sha256": null,
+      "after_sha256": "22bdb3d495ec6c06fd6b2382524ef1727d6078d457fec3a2f724f15a6fc8528b"
+    },
+    {
+      "path": "src/features/vnext/dailyOutcome.ts",
+      "before_sha256": null,
+      "after_sha256": "9cadb241bf73ed54e09dd8df9504c8d1798068c5bcf0ae38bc256548169fa373"
+    },
+    {
+      "path": "src/features/vnext/dailyPreview.ts",
+      "before_sha256": null,
+      "after_sha256": "4c18e2e0f07b6e6a4c3931fa9ed40fe47bbc2b9726363f2b2d6d4ac6e7d4bd78"
     },
     {
       "path": "src/features/vnext/engine.ts",
@@ -298,6 +328,11 @@
       "after_sha256": "e6556b61e882bb41a8f9da9cf11eb70838362839aed5db0576fd4b17f617be70"
     },
     {
+      "path": "src/pages/vnext/DailyIntelligence.tsx",
+      "before_sha256": null,
+      "after_sha256": "0559880ef40f2a8d1c6ebcd57d0bef481088da1a63a2a84ee42afb4af4a5a22d"
+    },
+    {
       "path": "src/pages/vnext/Foundation.tsx",
       "before_sha256": null,
       "after_sha256": "278e96449c041357ff9d571a6e5614acb824170c5a077f9af60fe9361a1cec46"
@@ -330,7 +365,7 @@
     {
       "path": "src/pages/vnext/RealResearch.tsx",
       "before_sha256": null,
-      "after_sha256": "26629d8d8b9ff5119450ea5b99bce4b07a108bd48f2b349a1b952c1d12744417"
+      "after_sha256": "7395c6c3efa4e7e2e39fb891fbbdd814967fad45571d2aaa33fd2579ac23df1b"
     },
     {
       "path": "src/pages/vnext/ResearchFunnel.tsx",
@@ -380,7 +415,12 @@
     {
       "path": "tests/browser/vnext.vite.ts",
       "before_sha256": null,
-      "after_sha256": "a7300eccf32b16966beb7ccab8fb663648dc833d581463363b117f910640e730"
+      "after_sha256": "f1243f7c8b23fa8de5604bb504e3a891df81125e09be4e1128a79d6ac13b2e59"
+    },
+    {
+      "path": "tests/browser/vnextDaily.e2e.mjs",
+      "before_sha256": null,
+      "after_sha256": "eec746b128159b2b5e81c8183d74cbb6e6d5dffdb5cea9f4023f3aa13f83fe41"
     },
     {
       "path": "tests/fixtures/vnext.mjs",
@@ -395,7 +435,7 @@
     {
       "path": "tests/helpers/vnextIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "2b5edbd9c965f297decfb254b2e3dfe1c9774684f192cd187b4aeee70d83da44"
+      "after_sha256": "493bb284af6c5431b7cfa24e160163caf018b8bd9f345a2a830b4d6701121d9a"
     },
     {
       "path": "tests/productContract.test.mjs",
@@ -441,6 +481,21 @@
       "path": "tests/vnextContracts.test.mjs",
       "before_sha256": null,
       "after_sha256": "cbca9c8a6c1d21e86d45d6e654456a116f1171ed8c816011051efe1b7a15a8dd"
+    },
+    {
+      "path": "tests/vnextDailyAuth.integration.mjs",
+      "before_sha256": null,
+      "after_sha256": "7cc0b1b50aefc432e036218d14a2da07041aa8229aa5aa5b40774cff361a4bc5"
+    },
+    {
+      "path": "tests/vnextDailyIntelligence.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "cd10b666ffa6b5efab8a7c1d6a18deb66efa12b6a86b41d578bdfb56c81508c6"
+    },
+    {
+      "path": "tests/vnextDailyReal.integration.mjs",
+      "before_sha256": null,
+      "after_sha256": "45508ab53fe7cb66e787c6f591a555031e8a0b6c58a61db4994642415e1d4e96"
     },
     {
       "path": "tests/vnextFoundation.test.mjs",

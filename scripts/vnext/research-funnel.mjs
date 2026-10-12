@@ -17,7 +17,7 @@ export function retainedSessionScope(bar,symbol){
  return '';
 }
 
-export async function auditResearchFunnel(directory,namesPath,stockDirectory=null,contextDirectory=null){
+export async function auditResearchFunnel(directory,namesPath,stockDirectory=null,contextDirectory=null,captureInput=null){
  const {history:h,sources:s}=auditFoundation(directory),v1=auditPublication(directory,namesPath),names=readPrivate(namesPath);
  const stock=stockDirectory?readStockSnapshot(stockDirectory,'stock-evidence','VNEXT_REAL_STOCK_EVIDENCE_V1',sha(h)):null,context=contextDirectory?readStockSnapshot(contextDirectory,'stock-context','VNEXT_STOCK_CONTEXT_V1',sha(h)):null;
  if(Boolean(stock)!==Boolean(context))throw Error('ENRICHMENT_PAIR_REQUIRED');
@@ -32,6 +32,7 @@ export async function auditResearchFunnel(directory,namesPath,stockDirectory=nul
     basis:f.period_basis??null,values:f.kind==='REVENUE'?{yoy_percent:f.values.revenue_yoy,mom_percent:f.values.revenue_mom}:f.values??{}})),
    v1_missing:Object.fromEntries(Object.keys(HORIZONS).map(horizon=>[horizon,v1.cards.find(c=>c.symbol===row.symbol&&c.horizon===horizon).blockers.filter(b=>b.startsWith('MISSING_'))]))};
   if(stock)input.facts=[...input.facts.filter(f=>f.kind!=='REVENUE'),...stock.rows.filter(f=>f.symbol===row.symbol)];
+  if(captureInput)captureInput(structuredClone(input));
   for(const horizon of Object.keys(HORIZONS)){
    const research=evaluateResearch(input,horizon);
    if(stock)research.dossier=stockDossier({research,bars:input.bars,facts:stock.rows,events:context.events,benchmark:context.benchmarks,expectedSessions:input.expected_sessions,lastMonth:'2026-09'});

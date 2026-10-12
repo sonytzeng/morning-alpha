@@ -1,4 +1,16 @@
 # VNext 執行 Checkpoint
+## Daily Stock Intelligence P0（2026-10-12，最新續跑點）
+
+從9443a7c續跑；PR230 Draft，起始9CI PASS。nested工作樹原乾淨；外層舊repo未動。fetch後origin/main為2a5d461ec3d98bfc8bc3177a295c95e299b7bda2，候選原ahead22/behind5，未合併或rebase正式main。
+新增隔離可執行pipeline、6-stage checkpoint、有界重試、不可變216筆鎖、到期648追蹤狀態及Owner每日研究首屏，詳DAILY_STOCK_INTELLIGENCE.md。不改研究假設、既有Entry三策略或品質門檻。
+保存真實資料重播source805cfbb8未變：Short72=1/71/0；Medium72=28/44/0；Long72=0/0/72（合格/不符/不足）。216判斷＝29/115/72。取得日期與原cutoff保留，全部HISTORICAL_REPLAY，第二次ALREADY_COMPLETE。
+這批缺同cutoff Canonical/V2 Entry capsule72檔，不借用其他日期。Entry整合216項不足反例為合成控制，不冒充真實判斷。Forward0、Outcome0、會員可見0。648追蹤＝360待到期／288未知，不是648績效樣本。
+新增23個隔離控制（含同步enqueue/background失敗與實際鎖定檔完整性保護）；私有real replay/hash/防重PASS；沿用本機真實GoTrue/PostgREST：Owner200、Free/Premium/other403、anonymous401、direct-tier拒絕、logout refresh拒絕。沒有Production身份冒充。
+Chrome全新隔離context實測1440/375/390/430無溢出，三期間數量正確、技術詳情收合、reload與logout PASS、product error0、外部network0。CUA request-header policy載入失敗，改用本機新context測試，不接Sony正式browser。截圖/private/tmp/ma-daily-qa-20261012；Preview http://127.0.0.1:3225/vnext/research。
+Production只讀Function metadata：V2forward V2、Entry V3 ACTIVE；沒有VNext自然Worker。既有source acquisition是固定研究窗口，仍需正式逐日adapter、持久化transaction及Owner read接線。唯一下一manifest（未核准/未執行）列於新文件：private transactional migration、新vnext-daily-research-v1、既有V2worker非阻塞enqueue、新Owner read投影，Cron/正式業務不變。無新SQL或Function檔，不假裝它們已完成部署驗證。
+正式保護檔案逐byte不變、Production writes/invocations0；沒有冒充新Production DB前後指紋。未Merge/Deploy/Migration/Cron/Secret/AuthRLS/會員公開。DAILY_STOCK_INTELLIGENCE_ENGINEERING=INCOMPLETE、NATURAL_FORWARD_EXECUTION=NOT_ENABLED、RESEARCH_ANALYSIS_VALUE=INSUFFICIENT_SAMPLE、PUBLIC_PRODUCT_APPROVAL=NO、SONY_USABILITY=PENDING。
+最終Type/Lint/主Build/隔離Build/Integrity/完整scoped regression與GitHub CI須以本輪最終HEAD記錄，不沿用舊HEAD PASS。
+
 ## 16 Research source/time closure（2026-10-11，最新續跑點）
 
 續接83260adf31bc25193edef7c052c4fc2f02d67515；PR230 Draft、起始9CI PASS，origin/main fff51d76未變。未動外層工作樹。

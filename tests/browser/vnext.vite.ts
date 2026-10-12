@@ -9,9 +9,10 @@ import {auditResearchFunnel} from '../../scripts/vnext/research-funnel.mjs';
 import {auditFirstPublication} from '../../scripts/vnext/first-publication-review.mjs';
 import {auditMemberAdmission} from '../../scripts/vnext/member-admission.mjs';
 import {createApprovalService} from '../../scripts/vnext/approval-server.mjs';
+import {retainedDailyCandidate} from '../../scripts/vnext/daily-retained.mjs';
 const root=resolve(import.meta.dirname,'../..'),port=Number(process.env.MA_VNEXT_PORT||3220),origin=`http://127.0.0.1:${port}`;
 export default defineConfig(async({command})=>{
- if(command!=='serve'||process.env.MA_VNEXT_LOCAL!=='ISOLATED_ONLY'||!process.env.MA_VNEXT_ANON||![3220,3221,3222,3223,3224].includes(port))throw Error('LOCAL_ONLY');
+ if(command!=='serve'||process.env.MA_VNEXT_LOCAL!=='ISOLATED_ONLY'||!process.env.MA_VNEXT_ANON||![3220,3221,3222,3223,3224,3225].includes(port))throw Error('LOCAL_ONLY');
  const reports=process.env.MA_VNEXT_REAL_PREVIEW==='ISOLATED_OWNER_ONLY'?await loadRetainedResearch(process.env.MA_ENTRY_PRIVATE_FIXTURE_DIR,process.env.MA_VNEXT_DISPLAY_NAMES):null;
  const foundation=reports&&process.env.MA_VNEXT_FOUNDATION_DIR?foundationSummary(process.env.MA_VNEXT_FOUNDATION_DIR):null;
  const publication=foundation&&process.env.MA_VNEXT_PUBLICATION_PREVIEW==='REAL_EMPTY'?auditPublication(process.env.MA_VNEXT_FOUNDATION_DIR,process.env.MA_VNEXT_DISPLAY_NAMES):null;
@@ -19,6 +20,7 @@ export default defineConfig(async({command})=>{
  const review=funnel&&process.env.MA_VNEXT_STOCK_DIR?await auditFirstPublication(funnel,process.env.MA_VNEXT_STOCK_DIR,process.env.MA_VNEXT_CONTEXT_DIR,process.env.MA_VNEXT_REVIEW_AT||new Date().toISOString()):null;
  const inspected=review?await auditMemberAdmission(funnel,review,{foundation:process.env.MA_VNEXT_FOUNDATION_DIR,stock:process.env.MA_VNEXT_STOCK_DIR,context:process.env.MA_VNEXT_CONTEXT_DIR,reviewed:true},process.env.MA_VNEXT_ADMISSION_AT||new Date().toISOString()):null;
  const approval=inspected?createApprovalService({review,admission:inspected.admission,registry:inspected.registry,directory:`/private/tmp/ma-vnext-approval-${port}`}):null;
+ const daily=process.env.MA_VNEXT_DAILY_DIR&&funnel?(await retainedDailyCandidate({foundation:process.env.MA_VNEXT_FOUNDATION_DIR,names:process.env.MA_VNEXT_DISPLAY_NAMES,stock:process.env.MA_VNEXT_STOCK_DIR,context:process.env.MA_VNEXT_CONTEXT_DIR,directory:process.env.MA_VNEXT_DAILY_DIR,now:new Date().toISOString()})).preview:null;
  return {root,envDir:false,envPrefix:'VNEXT_UNUSED_',publicDir:false,cacheDir:'/private/tmp/ma-vnext-vite',define:{'import.meta.env.VNEXT_REAL_PREVIEW':JSON.stringify(reports?'true':'false'),'import.meta.env.VNEXT_PUBLICATION_PREVIEW':JSON.stringify(publication?'true':'false')},
  optimizeDeps:{noDiscovery:true,include:['react','react-dom/client','react/jsx-runtime','@supabase/supabase-js','lucide-react']},
  css:{postcss:{plugins:[]}},
@@ -36,7 +38,7 @@ export default defineConfig(async({command})=>{
   }
   if(path==='/__vnext_owner_research'){
    if(!reports){res.statusCode=404;res.end();return;}
-   const result=await readOwnerResearch({method:req.method,authorization:req.headers.authorization},reports,fetch,foundation,publication,funnel,review,inspected?.admission);
+   const result=await readOwnerResearch({method:req.method,authorization:req.headers.authorization},reports,fetch,foundation,publication,funnel,review,inspected?.admission,daily);
    res.statusCode=result.status;res.setHeader('Content-Type','application/json');res.end(JSON.stringify(result.body));return;
   }
   if(path==='/__vnext_public_config'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({anon:process.env.MA_VNEXT_ANON}));return;}

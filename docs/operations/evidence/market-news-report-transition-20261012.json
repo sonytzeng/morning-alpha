@@ -1,0 +1,71 @@
+{
+  "schema": "NEWS_REPORT_INTEGRATION_CANDIDATE_V1",
+  "base": "fff51d76a8e6c90768772023c37afbb112761a3a",
+  "files": [
+    {
+      "path": "docs/operations/market-news-report-integration-20261012.md",
+      "before_sha256": null,
+      "after_sha256": "b8a00b13ab414ca8eee9ea2ccbac949214be9d708a3060b9fb2bbfbcc2f0b77b"
+    },
+    {
+      "path": "supabase/functions/_shared/market-news-acquisition.ts",
+      "before_sha256": "8e76394b675117b3b404f809ed55c533836d8d7d97204c2ca84bdf3983d30e79",
+      "after_sha256": "67c6921f46b2b5ebcf9927a47c7bebff5fe5ebb917c4faa5d55dcda561d2090b"
+    },
+    {
+      "path": "supabase/functions/_shared/market-news-retention.ts",
+      "before_sha256": null,
+      "after_sha256": "c58020ede1ef5371ccb6ca6053733986f22c1e6778e74bafadca41e59344b6bb"
+    },
+    {
+      "path": "supabase/functions/fetch-global-market-news/index.ts",
+      "before_sha256": "b7b8bac3c44091352b8902f1fd8ce712cf4fbd658f167744e8b4f90e56e6338b",
+      "after_sha256": "5c347f81d2e6d7dd0525807833c31ac512594c818000484fefcc1403e4cdf2fc"
+    },
+    {
+      "path": "tests/academyV11Integrity.test.mjs",
+      "before_sha256": "c4e354e4ddf3841e5766b03a09833744c2c38b2dcf2377ab943759a39d25ca9d",
+      "after_sha256": "93766884fc91af19293c91a0aa15c9db278fdf920f45f96b96c9cdca42802e43"
+    },
+    {
+      "path": "tests/fixtures/market-news-integration-20261012.json",
+      "before_sha256": null,
+      "after_sha256": "f68d5e5bd4b71e343ba78432654d185ae341199ff33e1f4777023998a038fdf9"
+    },
+    {
+      "path": "tests/helpers/academyV11Integrity.mjs",
+      "before_sha256": "b81269117436df9362832302505729f76ba14502f036ab0f177645f72cbd1667",
+      "after_sha256": "0938d97588f531040582f9ef79f9d379b269a5fc34c341be3a26a0693b0d0b61"
+    },
+    {
+      "path": "tests/helpers/marketNewsReportIntegrity.mjs",
+      "before_sha256": null,
+      "after_sha256": "19ddddc76d6d21fc0b1d8fcc20ab04562d4e6fd99af33d2f7801360f050b73ad"
+    },
+    {
+      "path": "tests/marketNewsReportIntegration.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "0eec2f8529bdcbfd411393aa713bac844dd807526e8a720176a3b8310d4a6384"
+    },
+    {
+      "path": "tests/marketNewsReportIntegrity.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "50547433f560efca490be5ed01700d86a2d512f4d4c2ad660cdfa3b32cfa2112"
+    },
+    {
+      "path": "tests/productContract.test.mjs",
+      "before_sha256": "a5da4b1d69114b31ca317a5c31426be273cb86d1accac74baa3feb5cf4072367",
+      "after_sha256": "57c667f0dc0ad5556212cb285d132c6c4b8d219a08b8bfd567143473a6df8d54"
+    }
+  ],
+  "migrations": [],
+  "functions": [
+    "fetch-global-market-news",
+    "daily-delivery-orchestrator"
+  ],
+  "production_authorized": false,
+  "member_publication_authorized": false,
+  "strategy_change": false,
+  "secret_change": false,
+  "cron_change": false
+}

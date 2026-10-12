@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 export const NEWS_REPORT_BASE='fff51d76a8e6c90768772023c37afbb112761a3a';
 export const NEWS_REPORT_MANIFEST='docs/operations/evidence/market-news-report-transition-20261012.json';
 export const NEWS_REPORT_PATHS=Object.freeze([
+ ".github/workflows/validate-release.yml",
  "docs/operations/market-news-report-integration-20261012.md",
  "supabase/functions/_shared/market-news-acquisition.ts",
  "supabase/functions/_shared/market-news-retention.ts",

@@ -112,6 +112,10 @@ news. No need for a new paid source has been established.
 - Byte parity of Report, LINE, Atomic, Recommendation, all news scoring/provider
   functions and quality policy; strict new transition gate before all previous
   immutable integrity gates (no old seal rewritten).
+- The complete release workflow timeout is 45 minutes (previously 20). The
+  immutable predecessor chain and isolated database replay are retained in full;
+  no check, assertion or acceptance condition is removed. This is CI capacity,
+  not a Production timeout or schedule change.
 
 ## Exact release manifest — NOT AUTHORIZED TO EXECUTE
 

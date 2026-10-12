@@ -1,6 +1,8 @@
 # VNext 執行 Checkpoint
 ## Public Free Premium Release Candidate（2026-10-12，最新續跑點）
 
+本輪全站CI發現4個舊測試接線不相容：Navbar新增共用股票觀察依賴，Academy封閉loader未接；Router已是具名候選，兩項反例仍預期「未修改基線」錯誤。僅載入真實共用navigation常數並驗證雙入口與手機關閉行為，更新Router漂移的精確拒絕訊息；不移除任何負向控制、不改產品或Academy權限。必須以此修正後HEAD重新完成CI，不沿用c5337ee或更早結果。
+
 從84b62df、乾淨工作樹及9/9 CI續跑，origin/main仍2a5d461。唯讀確認正式get-report-payload V54、V2 forward V2、LINE V70、Report V248、News64／Orchestrator45，VNext Worker與schema均未部署。正式membership設定beta_full／billing disabled／trial14，不能擅自改免費與付費邊界。匿名公開摘要10/12 HTTP200與canonical身份驗證PASS，無私有VNext資料，僅保留指紋。
 
 候選新增Public頁面、最小Router/Navbar/Account接線、會員focus/30秒清除重驗，以及20261012080628發布審核SQL候選。Owner審核與私有research分開，獨立registry、交易式approval／revocation、8併發防重、會員投影再檢查；舊29項不公開。詳細精確Manifest及尚存商業／權限／資料前提見MEMBER_RELEASE_MANIFEST.md。

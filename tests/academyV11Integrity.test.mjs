@@ -137,7 +137,7 @@ test('UTF-8 fixture views preserve raw baseline protection and Buffer views rema
   assert.notDeepEqual(b, academyV11Prior('src/router/config.tsx'), 'callers cannot mutate cached predecessor bytes');
 });
 
-test('fake historical readers cannot hide actual unrelated raw-byte drift', t => {
+test('fake historical readers cannot hide actual named-candidate raw-byte drift', t => {
   const f = fixture(), originalRead = fs.readFileSync;
   // Process-local mock only; no on-disk mutation in the shared workspace.
   t.mock.method(fs, 'readFileSync', function(path, ...args) {
@@ -146,8 +146,8 @@ test('fake historical readers cannot hide actual unrelated raw-byte drift', t =>
   });
   syncBuiltinESMExports();
   try {
-    assert.throws(() => academyV11Transition(f.source, f.inventory), /protected VNext baseline: src\/router\/config/);
-    assert.throws(() => academyV11AwareReader(f.source, f.inventory), /protected VNext baseline: src\/router\/config/);
+    assert.throws(() => academyV11Transition(f.source, f.inventory), /unreviewed VNext candidate: src\/router\/config/);
+    assert.throws(() => academyV11AwareReader(f.source, f.inventory), /unreviewed VNext candidate: src\/router\/config/);
   } finally {
     t.mock.restoreAll();
     syncBuiltinESMExports();
@@ -235,7 +235,7 @@ test('V1 integration verifies the real successor before restoring historical byt
     assert.deepEqual(academyAwareReader(historicalSource)(path), injected);
 
     actualDrift.set('src/router/config.tsx', Buffer.from('REAL_ROUTER_DRIFT'));
-    assert.throws(() => academyTransition(priorRead), /protected VNext baseline: src\/router\/config/);
+    assert.throws(() => academyTransition(priorRead), /unreviewed VNext candidate: src\/router\/config/);
     actualDrift.clear();
     const member = 'src/features/academy/member.ts';
     actualDrift.set(member, Buffer.from('REAL_CANDIDATE_DRIFT'));

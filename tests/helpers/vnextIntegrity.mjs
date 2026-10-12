@@ -12,6 +12,7 @@ export const VNEXT_PATHS=Object.freeze([
  'src/router/config.tsx','src/components/feature/Navbar.tsx','src/pages/account/Account.tsx',
  'src/pages/vnext/PublicExperience.tsx','src/pages/vnext/OwnerPublication.tsx',
  'tests/vnextMemberRelease.integration.mjs','tests/browser/vnextMemberRelease.e2e.mjs',
+ 'tests/academyNavigation.test.mjs',
  'docs/vnext/MEMBER_RELEASE_MANIFEST.md',VNEXT_PUBLICATION_MIGRATION,
  '.github/workflows/analysis-intelligence.yml',
  '.github/workflows/vnext-candidate.yml',

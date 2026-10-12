@@ -91,6 +91,7 @@ V2 worker 有既有 claim/finish 與 Outcome lifecycle；它不等於 VNext 的�
 - `tests/vnextDailyAuth.integration.mjs`：本機真實Auth四身份，無Production。
 - `tests/browser/vnextDaily.e2e.mjs`：真實本機Auth、尺寸、三期間、reload/logout；不使用tier選擇器。
 - type-check/lint/build、VNext regression/integrity、GitHub CI必須以最終HEAD為準，結果記錄在Checkpoint及交付回報。
+- GitHub run `38202788062` 的 Shadow Analysis 被原10分鐘上限取消（官方 annotation：maximum execution time），沒有斷言失敗；候選只將該job上限調至20分鐘。新增精確差異測試，保留全部測試、Fresh DB、Auth與隔離步驟，不延長Production timeout。
 - 本輪新增SQL=0，Fresh DB不重跑已通過的原Schema；沿用相同隔離Schema指紋並驗證實際讀權限。
 - Production writes/invocations/deploy/migrations=0；所有正式業務檔案仍受Integrity逐位元保護。**未重新做Production DB前後指紋，因此不虛稱新的一次線上業務資料比對。**
 

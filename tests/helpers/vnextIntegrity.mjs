@@ -7,6 +7,7 @@ export const VNEXT_BASE='2a5d461ec3d98bfc8bc3177a295c95e299b7bda2';
 export const VNEXT_MANIFEST='docs/vnext/transition.json';
 export const VNEXT_MIGRATION='supabase/migrations/20261010061630_vnext_research_projection_candidate.sql';
 export const VNEXT_PATHS=Object.freeze([
+ '.github/workflows/analysis-intelligence.yml',
  '.github/workflows/vnext-candidate.yml',
  '.github/workflows/validate-release.yml',
  '.github/workflows/owner-cockpit.yml',

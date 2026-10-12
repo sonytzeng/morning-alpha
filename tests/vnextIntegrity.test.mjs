@@ -26,6 +26,13 @@ test('Cockpit CI only checks final TCP server, not the socket-only bootstrap; pr
  assert.equal((current.match(/pg_isready -h 127\.0\.0\.1 -U postgres/g)||[]).length,2);
  assert.match(current,/--network none/);assert.doesNotMatch(current,/pg_isready -U postgres/);
 });
+test('Shadow analysis CI only extends the proven runtime budget, preserving every test and isolation control',()=>{
+ const path='.github/workflows/analysis-intelligence.yml',prior=vnextPrior(path).toString(),current=read(path).toString();
+ assert.equal(current,prior.replace('timeout-minutes: 10','timeout-minutes: 20'));
+ assert.equal((prior.match(/timeout-minutes: 10/g)||[]).length,1);
+ assert.match(current,/PRODUCTION_EQUIVALENT_AUTH_TEST/);
+ assert.match(current,/analysisIntelligenceDatabase\.integration\.mjs/);
+});
 test('unknown paths, changed evidence policy and deployment flags cannot enter through successor view',()=>{
  assert.throws(()=>vnextTransition(read,[...vnextChangedPaths(),'src/rogue.ts']));
  for(const path of ['src/features/vnext/engine.ts','src/router/config.tsx'])assert.throws(()=>vnextTransition(p=>p===path?Buffer.concat([read(p),Buffer.from('\n// drift')]):read(p)));

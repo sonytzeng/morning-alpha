@@ -3,6 +3,11 @@
   "base": "2a5d461ec3d98bfc8bc3177a295c95e299b7bda2",
   "files": [
     {
+      "path": ".github/workflows/analysis-intelligence.yml",
+      "before_sha256": "e795babb8dcbb41a639ddc6e083254a1dc3bfb7ed42cdd02f3541b83b9c2073f",
+      "after_sha256": "59f5190242a722021bacc4f8e7c0c86605e3c1ca3319de52d5986ecf3cfb5f0d"
+    },
+    {
       "path": ".github/workflows/owner-cockpit.yml",
       "before_sha256": "669b52922c1b5bcec3b70fb443205a4a8a8c5214a6a779fadee5c9e1668f757b",
       "after_sha256": "6dbe50806e4dd7316d264bb59aeb7165511e6f7ccf9075a3b40ae73c3fb1912c"
@@ -35,7 +40,7 @@
     {
       "path": "docs/vnext/DAILY_STOCK_INTELLIGENCE.md",
       "before_sha256": null,
-      "after_sha256": "84c824a6d6c17f6286d983314a3e01ae75fb0cbbc0e6117e0be0e8c5ac0422e7"
+      "after_sha256": "b83ceafa9f7ef8fd99227b95bf78e66a30de9ebf67d0cc601df7de8898e59a78"
     },
     {
       "path": "docs/vnext/DATA_LICENSE_AUDIT.md",
@@ -435,7 +440,7 @@
     {
       "path": "tests/helpers/vnextIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "cd9daef707047a8bf6dffbbc17810e64aa265fabb19472eb00ce7b194c32e776"
+      "after_sha256": "a9b7e01d2dea4535dfcee1d02bfe622f31e56f159a0180b4a735734c4055e2d2"
     },
     {
       "path": "tests/productContract.test.mjs",
@@ -510,7 +515,7 @@
     {
       "path": "tests/vnextIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "5b757be3ece3536a7502ef14ce9a7cf8715f287a5ac10befefa311c1b3fe3095"
+      "after_sha256": "615767e92fdda7f42061e63030d931090690ed0788afd400d965edfe0c5b10fc"
     },
     {
       "path": "tests/vnextMember.test.mjs",

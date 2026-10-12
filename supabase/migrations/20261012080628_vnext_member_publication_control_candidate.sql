@@ -176,9 +176,12 @@ begin
   select o.id,o.symbol,o.company,o.horizon,o.reason,o.created_at,o.next_review_at,
    r.id as review_id,r.quality,r.time_status,r.licensing,r.reason as review_reason,r.primary_risk,
    coalesce(r.quality='PASS' and r.time_status='PASS' and r.licensing='PASS' and r.expires_at>now() and o.next_review_at>now() and o.expires_at>now()
-    and o.mode='FORWARD_SHADOW' and r.premium_allowed and vnext_private.publication_preflight(o.id,now()),false) as prerequisites_ready,
+    and o.mode='FORWARD_SHADOW' and r.premium_allowed and vnext_private.publication_preflight(o.id,now())
+    and not exists(select from vnext_private.member_copy c where c.observation_id=o.id),false) as prerequisites_ready,
+   exists(select from vnext_private.member_copy c where c.observation_id=o.id) and not vnext_private.member_allowed(o.id,true) as requires_new_version,
    coalesce(r.free_allowed,false) as free_allowed,
-   vnext_private.member_allowed(o.id,false) as published
+   vnext_private.member_allowed(o.id,true) as published,
+   vnext_private.member_allowed(o.id,false) as current
   from vnext_private.stock_horizon_observations o left join lateral(
    select * from vnext_private.publication_reviews where observation_id=o.id order by recorded_at desc,id desc limit 1)r on true
   order by o.created_at desc,o.id limit 216

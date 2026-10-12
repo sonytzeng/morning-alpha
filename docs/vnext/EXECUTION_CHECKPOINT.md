@@ -7,6 +7,8 @@
 
 最終逐項核對補齊Free基本歷史：獨立唯讀get_vnext_free_history_v1只讀原免費版次、已核准而且權利仍有效的摘要，最多100筆；不回Premium-only或Evidence。真實隔離Auth／SQL短效紀錄驗證到期分類、免費／Premium分離、撤回立即隱藏；舊會員RPC回應保持相容。Owner股票觀察頁提供正式權限判定後的審核入口。只修改未發布SQL候選與VNext UI／測試。
 
+Owner審核狀態追加回歸：撤回版本不能再次顯示「可核准」；已到期但合法的歷史內容仍可撤回，明確標示僅供歷史查閱。已核准／尚待完成計數互斥；不改不可變發布契約或會員權益。
+
 重用本機隔離Auth資料庫完成新SQL/RPC驗收；fresh完整Migration由最終CI驗證。四身份1440／375／390／430實測無overflow，private資料登出清除、reload正確、pageerror0。Preview http://127.0.0.1:3221/stocks；Owner審核 /vnext/publication；不是Production身分。截圖/private/tmp/ma-vnext-member-release-qa。原公開研究數仍0，Forward0／Outcome0。
 
 Type/Lint/Build初次通過；最終Integrity與GitHub CI以新HEAD記錄。PR仍Draft。無Production write、Merge、Deploy、Migration、Cron、Secret、Auth/RLS或訂閱修改；Production Business不能用「本輪未寫入」冒充新前後全站資料指紋。MEMBER_PRODUCT_ENGINEERING=INCOMPLETE、PRODUCTION_RELEASE_READY=NO，正式三身份E2E與自然研究PENDING。

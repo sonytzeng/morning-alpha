@@ -60,6 +60,8 @@ export async function verifyMemberRelease(runtime){
  assert.equal((await rpc('premium','set_vnext_watch_v1',watch)).status,200);
  assert.equal((await rpc('other','get_vnext_member_v1')).data.watchlist.length,0);
  assert.equal((await rpc('owner','review_vnext_publication_candidate_v1',request('REVOKE'))).status,200);
+ const revoked=(await rpc('owner','get_owner_vnext_publication_review_v1')).data.rows.find(x=>x.id===prefix);
+ assert.equal(revoked.published,false);assert.equal(revoked.prerequisites_ready,false);assert.equal(revoked.requires_new_version,true);
  for(const role of ['owner','premium','free']){const r=await rpc(role,'get_vnext_member_v1');assert(![...r.data.observations,...r.data.history].some(x=>x.id===prefix));assert(!r.data.watchlist.includes(prefix));}
  checks.push('immutable review/audit, cross-account isolation, revocation removes card/history/watchlist');
  // Brief history must come from the exact original free edition; merely being
@@ -87,6 +89,8 @@ export async function verifyMemberRelease(runtime){
  assert.equal((await rpc('free','get_vnext_free_history_v1',{tier:'premium'})).status,404);
  const full=(await rpc('premium','get_vnext_member_v1')).data.history;
  for(const h of histories)assert(full.some(x=>x.id===h.id&&x.details!==null));
+ const historicalReview=(await rpc('owner','get_owner_vnext_publication_review_v1')).data.rows;
+ for(const h of histories){const row=historicalReview.find(x=>x.id===h.id);assert.equal(row.published,true);assert.equal(row.current,false);assert.equal(row.prerequisites_ready,false);}
  assert.deepEqual((await rpc('free','get_vnext_member_v1')).data.history,[],'legacy response unchanged');
  for(const h of histories)assert.equal((await rpc('owner','review_vnext_publication_candidate_v1',{...h.payload,p_action:'REVOKE',p_request_key:randomUUID()})).status,200);
  assert(!(await rpc('free','get_vnext_free_history_v1')).data.history.some(x=>histories.some(h=>h.id===x.id)));

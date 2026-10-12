@@ -4,7 +4,7 @@ import {useAcademyAccess} from '@/pages/academy/useAcademyAccess';
 import MemberNavigation from './MemberNavigation';
 import './vnext.css';
 import './member.css';
-type ReviewRow={id:string;symbol:string;company:string;reason:string;review_id:string|null;review_reason:string|null;primary_risk:string|null;prerequisites_ready:boolean;published:boolean;free_allowed:boolean;quality:string|null;licensing:string|null;time_status:string|null};
+type ReviewRow={id:string;symbol:string;company:string;reason:string;review_id:string|null;review_reason:string|null;primary_risk:string|null;prerequisites_ready:boolean;published:boolean;current:boolean;requires_new_version:boolean;free_allowed:boolean;quality:string|null;licensing:string|null;time_status:string|null};
 export default function OwnerPublication(){
  const {access,retry}=useAcademyAccess(),[revision,setRevision]=useState(0),[rows,setRows]=useState<{identity:string;generation:number;data:ReviewRow[]}|null>(null),[error,setError]=useState(false),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
  const owner=access.kind==='member'&&access.catalog.tier==='owner';
@@ -29,9 +29,11 @@ export default function OwnerPublication(){
  const label=(s:string|null)=>s==='PASS'?'通過':s==='FAIL'?'未通過':'待確認';
  return <div className="vnext vm"><MemberNavigation/><main className="vnext-content"><h1>目前有幾項研究可以發布？</h1><p>只有資料、品質、時效與使用權都通過，才能提交逐筆核准。研究不是正式推薦。</p>
   {!owner?<p role="status">{access.kind==='loading'?'正在確認管理權限。':'此頁僅供正式 Owner 使用。'}</p>:error?<><p role="status">目前無法取得審查結果，不代表沒有研究。</p><button onClick={retry}>重新讀取</button></>:!data?<p role="status">正在讀取審查。</p>:<>
-   <p>前置審查完成 {data.filter(x=>x.prerequisites_ready&&!x.published).length} 項 · 已核准且有效 {data.filter(x=>x.published).length} 項 · 尚待完成 {data.filter(x=>!x.prerequisites_ready).length} 項</p>
+   <p>前置審查完成 {data.filter(x=>x.prerequisites_ready&&!x.published).length} 項 · 已核准可閱讀 {data.filter(x=>x.published).length} 項 · 尚待完成 {data.filter(x=>!x.prerequisites_ready&&!x.published).length} 項</p>
    <p role="status">{notice}</p>{!data.length?<section className="vnext-empty"><h2>目前沒有送入發布審查的新研究</h2><p>每日研究與公開發布是兩個獨立步驟。私人研究不會自動出現在會員頁面。</p></section>:<div className="vnext-grid">{data.map(row=><article className="vnext-card" key={row.id}><h2>{row.company} {row.symbol}</h2><p>{row.reason}</p><p>主要風險：{row.primary_risk||'尚待完整審核'}</p><p>品質：{label(row.quality)} · 時間：{label(row.time_status)} · 使用權：{label(row.licensing)}</p>
     <details><summary>查看審核說明</summary><p>{row.review_reason||'尚未取得獨立審核結果。'}</p></details>
+    {row.published&&!row.current&&<p>僅供歷史查閱，不是目前有效的股票觀察。你仍可以撤回會員閱讀權限。</p>}
+    {row.requires_new_version&&<p>這份已發布紀錄目前已停止提供；如需再次發布，必須建立並審核新的研究版本，不能覆寫原紀錄。</p>}
     {row.published?<button disabled={busy} onClick={()=>submit(row,'REVOKE')}>撤回會員內容</button>:<button disabled={busy||!row.prerequisites_ready} onClick={()=>submit(row,'APPROVE')}>提交完整檢查並核准{row.free_allowed?'免費及Premium':'Premium'}閱讀</button>}
    </article>)}</div>}
   </>}

@@ -3,7 +3,7 @@ import {readFileSync,lstatSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-export const VNEXT_BASE='fff51d76a8e6c90768772023c37afbb112761a3a';
+export const VNEXT_BASE='2a5d461ec3d98bfc8bc3177a295c95e299b7bda2';
 export const VNEXT_MANIFEST='docs/vnext/transition.json';
 export const VNEXT_MIGRATION='supabase/migrations/20261010061630_vnext_research_projection_candidate.sql';
 export const VNEXT_PATHS=Object.freeze([
@@ -40,7 +40,7 @@ export const VNEXT_PATHS=Object.freeze([
  'src/features/vnext/foundation.ts','src/pages/vnext/Foundation.tsx','tests/vnextFoundation.test.mjs','tests/vnextFoundationReal.integration.mjs',
  'tests/browser/vnext.client.ts','tests/browser/vnext.harness.tsx','tests/browser/vnext.vite.ts','tests/fixtures/vnext.mjs',
  'tests/vnextContracts.test.mjs','tests/vnextValidation.test.mjs','tests/vnextIntegrity.test.mjs','tests/vnextRealEvidence.test.mjs','tests/vnextRealReplay.integration.mjs',
- 'tests/helpers/vnextIntegrity.mjs','tests/helpers/academyV11Integrity.mjs','tests/academyV11Integrity.test.mjs','tests/productContract.test.mjs',
+ 'tests/helpers/vnextIntegrity.mjs','tests/helpers/marketNewsReportIntegrity.mjs','tests/academyV11Integrity.test.mjs','tests/productContract.test.mjs',
 ].sort());
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8',maxBuffer:64*1024*1024});

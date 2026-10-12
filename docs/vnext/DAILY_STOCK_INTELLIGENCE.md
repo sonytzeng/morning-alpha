@@ -22,6 +22,7 @@
 V2 worker 有既有 claim/finish 與 Outcome lifecycle；它不等於 VNext 的正式 Caller。Entry V3 可接受專用 worker 身分，不能因此推論 VNext 已自然產生事前研究。
 本輪只讀部署 metadata，未讀取 Secret、未呼叫研究／Report／LINE Production endpoint、未執行業務 SQL。
 遠端 main 為 `2a5d461ec3d98bfc8bc3177a295c95e299b7bda2`，候選起點相對 main 為 ahead22/behind5；沒有把候選舊版全包部署或重設分支。
+首次push因4個測試／CI檔與已发布PR235衝突而不觸發Actions；後續僅同步main到Draft候選，保留新聞修復原字節，完整性驗證鏈為VNext→NewsReport→Academy。沒有Merge PR230到main，沒有Production變更。
 
 ## 候選契約與反例
 

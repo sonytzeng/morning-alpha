@@ -1,0 +1,39 @@
+{
+  "kind": "PRODUCTION_READ_ONLY_PREDICATE_COUNTS_NOT_RAW_ARTICLE_REPLAY",
+  "date": "2026-10-12",
+  "producer_version": 63,
+  "report_version": 248,
+  "deployed_matches_main": true,
+  "raw_observations": 188,
+  "after_existing_dedup": 188,
+  "blacklisted": 2,
+  "raw_retained": 80,
+  "raw_not_retained": 108,
+  "raw_retained_fresh": 8,
+  "raw_retained_stale": 72,
+  "entire_batch_freshness": null,
+  "canonical_upserted": 2,
+  "canonical_tagged_before_reader": 2,
+  "canonical_fresh": 2,
+  "canonical_direct_market_relevance_pass": 0,
+  "canonical_quality_pass": 0,
+  "report_accepted": 0,
+  "news_context": "UNAVAILABLE_RELEVANCE_QUALITY_REJECTED",
+  "evidence_index_news": 0,
+  "canonical_created_at": "2026-10-11T23:00:11.793721Z",
+  "retained_last_observed_at": "2026-10-11T23:00:03.956Z",
+  "report_generation_started_at": "2026-10-11T23:05:04.368563Z",
+  "report_created_at": "2026-10-11T23:06:49.528704Z",
+  "available_at_strict_0700": 0,
+  "canonical_predicates": [
+    {"fingerprint":"3fe234d5d78346583c7b3cda3551fa78","published_at":"2026-10-10T04:18:00Z","direct_market_anchor":false,"taiwan_transmission":true,"decision_catalyst":true,"editorial_excluded":false,"title_valid":true,"source_valid":true,"url_valid":true},
+    {"fingerprint":"ae405d3ba641176e23a266c0bba5eb7f","published_at":"2026-10-10T14:03:09Z","direct_market_anchor":false,"taiwan_transmission":true,"decision_catalyst":true,"editorial_excluded":false,"title_valid":true,"source_valid":true,"url_valid":true}
+  ],
+  "retained_fresh_predicate_groups": [
+    {"count":2,"producer_selected":true,"direct_market_anchor":false,"decision_catalyst":true},
+    {"count":2,"producer_selected":false,"direct_market_anchor":true,"decision_catalyst":false},
+    {"count":2,"producer_selected":false,"direct_market_anchor":false,"decision_catalyst":false},
+    {"count":2,"producer_selected":false,"direct_market_anchor":false,"decision_catalyst":true}
+  ],
+  "limitations": ["No original article text exported", "108 discarded observations cannot be retrospectively reconstructed", "188 is a per-invocation count, not proven unique events", "No post-cutoff news may repair this report"]
+}

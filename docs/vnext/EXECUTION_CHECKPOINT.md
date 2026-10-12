@@ -11,6 +11,8 @@ Production只讀Function metadata：V2forward V2、Entry V3 ACTIVE；沒有VNext
 正式保護檔案逐byte不變、Production writes/invocations0；沒有冒充新Production DB前後指紋。未Merge/Deploy/Migration/Cron/Secret/AuthRLS/會員公開。DAILY_STOCK_INTELLIGENCE_ENGINEERING=INCOMPLETE、NATURAL_FORWARD_EXECUTION=NOT_ENABLED、RESEARCH_ANALYSIS_VALUE=INSUFFICIENT_SAMPLE、PUBLIC_PRODUCT_APPROVAL=NO、SONY_USABILITY=PENDING。
 最終Type/Lint/主Build/隔離Build/Integrity/完整scoped regression與GitHub CI須以本輪最終HEAD記錄，不沿用舊HEAD PASS。
 
+5ba7176首次Push後CI沒有啟動：GitHub標示CONFLICTING/DIRTY。原因是main已發布PR235新聞修復也改了validate與三個完整性橋接檔。僅在Draft候選同步origin/main 2a5d461，不把PR230合併進main、不部署；新聞三個Production source與已發布seal逐byte保留。完整性鏈改為VNext→NewsReport→Academy，保留兩套全部負向控制；VNext基線升至2a5d461，validate保留main45分鐘與historical-clock測試，只保留原prebuild/TCP修正。舊日誌的ahead22/behind5是同步前狀態。
+
 ## 16 Research source/time closure（2026-10-11，最新續跑點）
 
 續接83260adf31bc25193edef7c052c4fc2f02d67515；PR230 Draft、起始9CI PASS，origin/main fff51d76未變。未動外層工作樹。

@@ -3,7 +3,7 @@ import { readFileSync, lstatSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { vnextPredecessorViews, vnextBaselineChangedPaths } from './vnextIntegrity.mjs';
+import { newsReportPredecessorViews, newsReportBaselineChangedPaths } from './marketNewsReportIntegrity.mjs';
 
 export const ACADEMY_V11_BASE = '6ad78d0fdd23c0bcc4470351b3c74612b60f4404';
 export const ACADEMY_V11_MANIFEST = 'docs/academy/v11/transition.json';
@@ -119,14 +119,14 @@ export function academyV11Prior(path) {
 }
 
 export function academyV11ChangedPaths() {
-  return vnextBaselineChangedPaths(ACADEMY_V11_BASE);
+  return newsReportBaselineChangedPaths(ACADEMY_V11_BASE);
 }
 
 /** Mandatory release gate. Explicit arguments support adversarial fixtures,
  * not release approval. Live approval must call this with no overrides.
  */
 export function academyV11Transition(source = read, changedPaths) {
-  const views=vnextPredecessorViews(source===read?undefined:source);
+  const views=newsReportPredecessorViews(source===read?undefined:source);
   const result=restoreV11(views.predecessorRead, changedPaths ?? views.changedPaths(ACADEMY_V11_BASE), true,views.actualPredecessorRead);
   views.verify();return result;
 }
@@ -205,7 +205,7 @@ export function academyV11AwareReader(source = read, changedPaths) {
     if (error.code === 'ENOENT' && source !== read) return source;
     throw error;
   }
-  const views=vnextPredecessorViews(source===read?undefined:source);
+  const views=newsReportPredecessorViews(source===read?undefined:source);
   const result=restoreV11(views.predecessorRead, changedPaths ?? views.changedPaths(ACADEMY_V11_BASE), false,views.actualPredecessorRead).predecessorRead;
   views.verify();return result;
 }
@@ -225,7 +225,7 @@ export function academyV11PredecessorViews(source) {
       present = false;
     }
     if (present) {
-      const views=vnextPredecessorViews(source);
+      const views=newsReportPredecessorViews(source);
       historical = restoreV11Candidate(views.predecessorRead, views.changedPaths(ACADEMY_V11_BASE)).predecessorRead;
       views.verify();
     }

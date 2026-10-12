@@ -1,6 +1,6 @@
 {
   "schema": "VNEXT_RESEARCH_CANDIDATE_V1",
-  "base": "fff51d76a8e6c90768772023c37afbb112761a3a",
+  "base": "2a5d461ec3d98bfc8bc3177a295c95e299b7bda2",
   "files": [
     {
       "path": ".github/workflows/owner-cockpit.yml",
@@ -9,8 +9,8 @@
     },
     {
       "path": ".github/workflows/validate-release.yml",
-      "before_sha256": "2eaa49e58067a7e7d3a29dbf3d134c1de96c41d2e43784e1a22ce426752ec83a",
-      "after_sha256": "16f230b4b12e03575cbdfead84f9efefc584ffdf68fd540c01c5b8cce67ac002"
+      "before_sha256": "18080e6a079c2c9a4732ba63a9d22c892ae050546d7e64ef03b1d2f4318c6e8e",
+      "after_sha256": "d7cab541cdc2cc95a198ab4eb94a8944c9160cb0c1064ab2c3fdb10435624abc"
     },
     {
       "path": ".github/workflows/vnext-candidate.yml",
@@ -35,7 +35,7 @@
     {
       "path": "docs/vnext/DAILY_STOCK_INTELLIGENCE.md",
       "before_sha256": null,
-      "after_sha256": "89cf96f198131e09c5bc3d96caba1d47591973d08900a47ec06408eafb0184e0"
+      "after_sha256": "84c824a6d6c17f6286d983314a3e01ae75fb0cbbc0e6117e0be0e8c5ac0422e7"
     },
     {
       "path": "docs/vnext/DATA_LICENSE_AUDIT.md",
@@ -55,7 +55,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "064d1f58410e4b695f686615e1eec2619e184f76c283b9dd556b2b1410ad02b6"
+      "after_sha256": "c1939bc32b397aebd2167a9ef2f6397326828ac3ac63c060b60a8739a53d4142"
     },
     {
       "path": "docs/vnext/FIRST_MEMBER_RESEARCH.md",
@@ -399,7 +399,7 @@
     },
     {
       "path": "tests/academyV11Integrity.test.mjs",
-      "before_sha256": "c4e354e4ddf3841e5766b03a09833744c2c38b2dcf2377ab943759a39d25ca9d",
+      "before_sha256": "93766884fc91af19293c91a0aa15c9db278fdf920f45f96b96c9cdca42802e43",
       "after_sha256": "127dc01ac539c42d6701ef3b0fc8f6c72d89b535517982ca0c1367ea43c6590d"
     },
     {
@@ -428,19 +428,19 @@
       "after_sha256": "996cb34aaf64382571f04e494e44ee17941faa7052a91f5dcf29c12a8a9b66ed"
     },
     {
-      "path": "tests/helpers/academyV11Integrity.mjs",
-      "before_sha256": "b81269117436df9362832302505729f76ba14502f036ab0f177645f72cbd1667",
-      "after_sha256": "d782c67180f5153ab8770b9f3d7356f6910e174144e4e1c9bdd01e3e358fa578"
+      "path": "tests/helpers/marketNewsReportIntegrity.mjs",
+      "before_sha256": "83a9e27a226ec72b199201d8d8e1062503188972b9bf4d39f41361edacbda574",
+      "after_sha256": "5f52aac65d2af7d8a09e0a2d7defacd94825edca8c6291bdc09a9eb8b8705da9"
     },
     {
       "path": "tests/helpers/vnextIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "493bb284af6c5431b7cfa24e160163caf018b8bd9f345a2a830b4d6701121d9a"
+      "after_sha256": "cd9daef707047a8bf6dffbbc17810e64aa265fabb19472eb00ce7b194c32e776"
     },
     {
       "path": "tests/productContract.test.mjs",
-      "before_sha256": "a5da4b1d69114b31ca317a5c31426be273cb86d1accac74baa3feb5cf4072367",
-      "after_sha256": "61571a91efb4770e94fd66cd4639fa464417d968bdff9364afe819d754be7baa"
+      "before_sha256": "57c667f0dc0ad5556212cb285d132c6c4b8d219a08b8bfd567143473a6df8d54",
+      "after_sha256": "04372d65109e49c7b58336574eb1627c851b051b8cd2991539f145efefd6f420"
     },
     {
       "path": "tests/vnextAdmission.test.mjs",
@@ -510,7 +510,7 @@
     {
       "path": "tests/vnextIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "9fd7c942ff4bd97b5a1748846aa42cd42b3503f9f5d736eabb815474ece8f9d7"
+      "after_sha256": "5b757be3ece3536a7502ef14ce9a7cf8715f287a5ac10befefa311c1b3fe3095"
     },
     {
       "path": "tests/vnextMember.test.mjs",

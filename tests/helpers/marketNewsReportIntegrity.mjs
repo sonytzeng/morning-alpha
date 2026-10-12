@@ -14,6 +14,7 @@ export const NEWS_REPORT_PATHS=Object.freeze([
  "tests/academyV11Integrity.test.mjs",
  "tests/fixtures/market-news-integration-20261012.json",
  "tests/helpers/academyV11Integrity.mjs",
+ "tests/helpers/clockedPsql.mjs",
  "tests/helpers/marketNewsReportIntegrity.mjs",
  "tests/marketNewsReportIntegration.test.mjs",
  "tests/marketNewsReportIntegrity.test.mjs",

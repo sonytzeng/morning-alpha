@@ -116,6 +116,11 @@ news. No need for a new paid source has been established.
   immutable predecessor chain and isolated database replay are retained in full;
   no check, assertion or acceptance condition is removed. This is CI capacity,
   not a Production timeout or schedule change.
+- The original fresh-DB TXF replay hit `PREMARKET_READINESS_DEADLINE_EXCEEDED`
+  when the real CI clock crossed 10/12 08:45. Three existing fixed-date session
+  replays now use the existing network-none clock-pinned PostgreSQL image at
+  10/12 08:35 Taipei through a test-only psql transport. All production SQL,
+  row contracts, ACL checks and negative assertions remain byte-identical.
 
 ## Exact release manifest — NOT AUTHORIZED TO EXECUTE
 

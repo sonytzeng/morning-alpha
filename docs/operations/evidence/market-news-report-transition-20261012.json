@@ -5,12 +5,12 @@
     {
       "path": ".github/workflows/validate-release.yml",
       "before_sha256": "2eaa49e58067a7e7d3a29dbf3d134c1de96c41d2e43784e1a22ce426752ec83a",
-      "after_sha256": "b9888a84dbd5219a95cad7b89f9884f8c0ea70ecfdcf4a0bdf3e07914ce69b13"
+      "after_sha256": "18080e6a079c2c9a4732ba63a9d22c892ae050546d7e64ef03b1d2f4318c6e8e"
     },
     {
       "path": "docs/operations/market-news-report-integration-20261012.md",
       "before_sha256": null,
-      "after_sha256": "4a8cbd987db673eace0b47afdfdc87433dcc138b0dc64ab494e3959c29007837"
+      "after_sha256": "ec11fa5d58eb79dd958d96cce7b0a7fab7fb532a7baf47902412af2e99380e0e"
     },
     {
       "path": "supabase/functions/_shared/market-news-acquisition.ts",
@@ -43,9 +43,14 @@
       "after_sha256": "0938d97588f531040582f9ef79f9d379b269a5fc34c341be3a26a0693b0d0b61"
     },
     {
+      "path": "tests/helpers/clockedPsql.mjs",
+      "before_sha256": null,
+      "after_sha256": "116a3f403e05790efa88838ac97790a3e5e79020616cbfde18720531023a63a8"
+    },
+    {
       "path": "tests/helpers/marketNewsReportIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "d2620364a9095ab22a6ff5ad8e067437b56c579ec2dfc4367782a19314d8689b"
+      "after_sha256": "83a9e27a226ec72b199201d8d8e1062503188972b9bf4d39f41361edacbda574"
     },
     {
       "path": "tests/marketNewsReportIntegration.test.mjs",

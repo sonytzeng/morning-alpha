@@ -150,24 +150,44 @@ jobs:
           node --test tests/researchPipelineDatabase.integration.mjs
           MA_LOCAL_SCOPE=ma-core-final-20260907 MA_ISOLATED_TEST_DB=ma_market_publication_test1 \
             node --test tests/marketPublicationDatabase.integration.mjs
+      - name: Pin historical session replay database clock without altering production SQL
+        run: |
+          docker build -t ma-runtime-sparse-ci - < tests/fixtures/runtime-sparse-postgres.Dockerfile
+          docker run -d --name "ma-news-clock-ci-${{ github.run_id }}" --network none \
+            --env POSTGRES_PASSWORD=isolated-ci-only \
+            --env 'FAKETIME=@2026-10-12 00:35:00' ma-runtime-sparse-ci
+          for attempt in $(seq 1 30); do
+            if docker exec "ma-news-clock-ci-${{ github.run_id }}" pg_isready -U postgres; then break; fi
+            sleep 1
+          done
+          docker exec "ma-news-clock-ci-${{ github.run_id }}" pg_isready -U postgres
       - name: Isolated 9/21 TXF session-date parity migration and replay
         env:
           MA_LOCAL_SCOPE: ma-txf-session-parity-20260921
           MA_ISOLATED_TEST_DB: ma_txf_session_parity_test1
           MA_TEST_PGPORT: 55439
+          MA_TEST_DOCKER_CONTAINER: ma-news-clock-ci-${{ github.run_id }}
+          MA_TEST_PSQL: ${{ github.workspace }}/tests/helpers/clockedPsql.mjs
         run: node --test tests/txfSessionDatabase.integration.mjs
       - name: Isolated 9/22 Taiwan cash phase-contract migration and replay
         env:
           MA_LOCAL_SCOPE: ma-tw-cash-phase-contract-20260922
           MA_ISOLATED_TEST_DB: ma_tw_cash_phase_test1
           MA_TEST_PGPORT: 55439
+          MA_TEST_DOCKER_CONTAINER: ma-news-clock-ci-${{ github.run_id }}
+          MA_TEST_PSQL: ${{ github.workspace }}/tests/helpers/clockedPsql.mjs
         run: node --test tests/taiwanCashPhaseDatabase.integration.mjs
       - name: Isolated 9/23 premarket ticker-envelope parity migration and replay
         env:
           MA_LOCAL_SCOPE: ma-premarket-production-parity-20260923
           MA_ISOLATED_TEST_DB: ma_premarket_parity_test1
           MA_TEST_PGPORT: 55439
+          MA_TEST_DOCKER_CONTAINER: ma-news-clock-ci-${{ github.run_id }}
+          MA_TEST_PSQL: ${{ github.workspace }}/tests/helpers/clockedPsql.mjs
         run: node --test tests/premarketProductionParityDatabase.integration.mjs
+      - name: Remove disposable historical session replay isolation
+        if: always()
+        run: docker rm -f "ma-news-clock-ci-${{ github.run_id }}" 2>/dev/null || true
       - name: Isolated Production Evidence Recorder migration and retention controls
         env:
           MA_LOCAL_SCOPE: ma-production-evidence-recorder-20260923

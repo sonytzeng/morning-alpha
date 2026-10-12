@@ -21,3 +21,12 @@ jobs:
         run: MA_VNEXT_BUILD_DIR=/tmp/ma-vnext-member-build node scripts/vnext/member-build.mjs
       - name: Disposable Auth, publication and RLS (not Production Owner proof)
         run: node scripts/vnext/member-isolation.mjs
+      - name: Daily production wiring controls and real SQL HTTP worker (isolated only)
+        run: |
+          node --experimental-strip-types --test tests/vnextDailyWiring.test.mjs
+          node --experimental-strip-types tests/vnextDailyDatabase.integration.mjs
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: New worker and exact nonblocking hook type checks
+        run: deno check --no-lock supabase/functions/vnext-daily-research-v1/index.ts supabase/functions/recommendation-v2-forward-worker-v1/index.ts

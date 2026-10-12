@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 export const VNEXT_BASE='2a5d461ec3d98bfc8bc3177a295c95e299b7bda2';
 export const VNEXT_MANIFEST='docs/vnext/transition.json';
 export const VNEXT_MIGRATION='supabase/migrations/20261010061630_vnext_research_projection_candidate.sql';
+export const VNEXT_RUNTIME_MIGRATION='supabase/migrations/20261012054120_vnext_daily_research_runtime_candidate.sql';
 export const VNEXT_PATHS=Object.freeze([
  '.github/workflows/analysis-intelligence.yml',
  '.github/workflows/vnext-candidate.yml',
@@ -17,6 +18,11 @@ export const VNEXT_PATHS=Object.freeze([
  'docs/vnext/MEMBER_EXPERIENCE.md',
  'docs/vnext/MEMBER_PUBLICATION_READINESS.md',
  'docs/vnext/DAILY_STOCK_INTELLIGENCE.md',
+ 'docs/vnext/DAILY_PRODUCTION_WIRING.md',
+ 'src/features/vnext/dailyAdapter.ts','src/features/vnext/dailyParsers.mjs','src/features/vnext/dailyRuntime.ts',
+ 'supabase/functions/vnext-daily-research-v1/index.ts','supabase/functions/vnext-daily-research-v1/handler.ts',
+ 'supabase/functions/_shared/vnext-daily-hook.ts','supabase/functions/recommendation-v2-forward-worker-v1/index.ts',VNEXT_RUNTIME_MIGRATION,
+ 'tests/vnextDailyWiring.test.mjs','tests/vnextDailyDatabase.integration.mjs',
  'src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyOutcome.ts','src/features/vnext/dailyPreview.ts','src/pages/vnext/DailyIntelligence.tsx',
  'scripts/vnext/daily-store.mjs','scripts/vnext/daily-retained.mjs',
  'tests/vnextDailyIntelligence.test.mjs','tests/vnextDailyReal.integration.mjs','tests/vnextDailyAuth.integration.mjs','tests/browser/vnextDaily.e2e.mjs',
@@ -69,7 +75,7 @@ export function vnextTransition(source=raw,paths=vnextChangedPaths()){
  assert.deepEqual(Object.keys(m).sort(),['schema','base','files','migrations','functions','production_authorized','member_publication_authorized','strategy_change','secret_change','cron_change'].sort());
  assert.equal(m.schema,'VNEXT_RESEARCH_CANDIDATE_V1');assert.equal(m.base,VNEXT_BASE);
  for(const key of ['production_authorized','member_publication_authorized','strategy_change','secret_change','cron_change'])assert.equal(m[key],false,key);
- assert.deepEqual(m.functions,[]);assert.deepEqual(m.migrations,[VNEXT_MIGRATION]);
+ assert.deepEqual(m.functions,['vnext-daily-research-v1','recommendation-v2-forward-worker-v1']);assert.deepEqual(m.migrations,[VNEXT_MIGRATION,VNEXT_RUNTIME_MIGRATION]);
  assert.deepEqual(m.files.map(f=>f.path).sort(),VNEXT_PATHS,'exact named VNext scope');
  assert.deepEqual([...paths].sort(),[...VNEXT_PATHS,VNEXT_MANIFEST].sort(),'unknown VNext working-tree path');
  const candidates=new Map();

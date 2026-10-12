@@ -8,6 +8,12 @@ test('VNext exact candidate preserves every Production byte and previous release
  assert.deepEqual(result.predecessorRead('tests/helpers/academyV11Integrity.mjs'),vnextPrior('tests/helpers/academyV11Integrity.mjs'));
  assert.throws(()=>result.predecessorRead('src/features/vnext/engine.ts'),{code:'ENOENT'});
 });
+test('V2 worker adds only a detached VNext enqueue after successful natural checkpoint admission',()=>{
+ const path='supabase/functions/recommendation-v2-forward-worker-v1/index.ts',prior=vnextPrior(path).toString();
+ const expected=prior.replace("import type { Capture } from '../_shared/recommendation-stock-evidence.ts';","import type { Capture } from '../_shared/recommendation-stock-evidence.ts';\nimport { enqueueVnextAfterCheckpoint } from '../_shared/vnext-daily-hook.ts';")
+  .replace('  const receipt=object(claim.data);',"  const receipt=object(claim.data);\n  if(['ACQUIRED','COMPLETE','SKIPPED_NO_WATCH'].includes(String(receipt.status)))enqueueVnextAfterCheckpoint(input,{url,gatewayJwt:Deno.env.get('SUPABASE_ANON_KEY')||'',cronSecret:Deno.env.get('CRON_SECRET')||'',background:p=>runtime.waitUntil(p),fetcher:fetch});");
+ assert.equal(read(path).toString(),expected);assert.equal((expected.match(/enqueueVnextAfterCheckpoint\(input/g)||[]).length,1);
+});
 test('Validate preserves main news replay and budget, only changes prebuild order and TCP readiness',()=>{
  const path='.github/workflows/validate-release.yml',prior=vnextPrior(path).toString();
  const expected=prior.replace('      - run: npm run build\n','')

@@ -93,6 +93,10 @@ schedule decision. No later news is used to repair the historical report.
    `evidence_index` and `report_accepted` remain null in the producer receipt.
    Canonical write success, tags and actual Report acceptance remain separately
    verified. No provider prose or arbitrary error key is retained.
+4. An HTTP-success receipt with explicitly audited all-invalid input is recorded
+   as filter rejection, not fetch failure. A genuinely empty batch is distinguished
+   only when the receipt proves no provider failure. The original success flag,
+   retries and optional-enrichment business behavior remain unchanged.
 
 No modification to Report reader, prompts, market direction, recommendation,
 LINE, Atomic, news quality regexes, minimum scores or provider acquisition APIs.

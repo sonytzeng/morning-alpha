@@ -67,6 +67,19 @@ test('counters-only observation sanitizes unknown keys and cannot relabel prefli
  assert.equal(newsAcquisitionObservation({...rejected,payload:{...rejected.payload,funnel:f}}).classification,'FILTER_REJECTED');
 });
 
+test('audited all-invalid input is not a fetch failure; empty source, transport and write failures stay distinct',()=>{
+ const funnel={...marketNewsFunnel([],[],now),raw:3,invalid_record:1,invalid_timestamp:2,duplicates:0};
+ const payload={success:false,error:'NO_VALID_NEWS_FETCHED',total_raw:3,after_dedup:0,funnel,provider_failures:[]};
+ const rejected=newsAcquisitionObservation({ok:false,status:200,payload});
+ assert.equal(rejected.classification,'FILTER_REJECTED');assert.equal(rejected.success,false);
+ assert.equal(rejected.funnel.invalid_timestamp,2);assert.equal(rejected.report_accepted,null);
+ assert.equal(newsAcquisitionObservation({ok:false,status:401,payload}).classification,'FETCH_FAILED');
+ assert.equal(newsAcquisitionObservation({ok:false,status:200,payload:{...payload,funnel:null}}).classification,'FETCH_FAILED');
+ assert.equal(newsAcquisitionObservation({ok:false,status:200,payload:{...payload,total_raw:0}}).classification,'SOURCE_EMPTY');
+ assert.equal(newsAcquisitionObservation({ok:false,status:200,payload:{...payload,total_raw:0,provider_failures:[{}]}}).classification,'FETCH_FAILED');
+ assert.equal(newsAcquisitionObservation({ok:false,status:200,payload:{canonical_complete:false}}).classification,'INTEGRATION_FAILED');
+});
+
 test('unchanged actual Report reader: tag, freshness and independent relevance are required',async()=>{
  const source=read('supabase/functions/generate-daily-report-v7/index.ts');
  const clock=class extends Date {static now(){return now;}};

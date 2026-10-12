@@ -10,12 +10,12 @@
     {
       "path": "docs/operations/market-news-report-integration-20261012.md",
       "before_sha256": null,
-      "after_sha256": "ec11fa5d58eb79dd958d96cce7b0a7fab7fb532a7baf47902412af2e99380e0e"
+      "after_sha256": "0a04dffb5b37731ea9ae7f092318aedb6a440286be2c0d00c8f84f9964543ebd"
     },
     {
       "path": "supabase/functions/_shared/market-news-acquisition.ts",
       "before_sha256": "8e76394b675117b3b404f809ed55c533836d8d7d97204c2ca84bdf3983d30e79",
-      "after_sha256": "67c6921f46b2b5ebcf9927a47c7bebff5fe5ebb917c4faa5d55dcda561d2090b"
+      "after_sha256": "840eac6db38bdaa630bce570d5adba2d6197052fb22756fdda46f9947342c804"
     },
     {
       "path": "supabase/functions/_shared/market-news-retention.ts",
@@ -55,7 +55,7 @@
     {
       "path": "tests/marketNewsReportIntegration.test.mjs",
       "before_sha256": null,
-      "after_sha256": "0eec2f8529bdcbfd411393aa713bac844dd807526e8a720176a3b8310d4a6384"
+      "after_sha256": "c93ccde664c8485fb67a708ec45ff706854dcc366872c54d806671147cdfc3e8"
     },
     {
       "path": "tests/marketNewsReportIntegrity.test.mjs",

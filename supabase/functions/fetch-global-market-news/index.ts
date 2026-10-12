@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { classifyProviderFailures, sanitizeProviderError } from "../_shared/market-runtime-stability.mjs";
 import { applySystemicCatalystFloors } from "../_shared/news-catalyst-scoring.mjs";
+import { retainMarketNews, marketNewsFunnel } from "../_shared/market-news-retention.ts";
 
 // ===== fetch-global-market-news V8.5 =====
 // V8.5: Fresh canonical news/events plus evidence-backed systemic macro catalyst mapping.
@@ -966,9 +967,11 @@ Deno.serve(async (req) => {
     const seenKeys = new Set();
     const deduped: RawNewsItem[] = [];
     let invalidPublishedAtCount = 0;
+    let invalidRecordCount = 0;
+    let duplicateCount = 0;
     const fetchedAtMs = Date.parse(now);
     for (const item of rawItems) {
-      if (!item.url || !item.title || item.title.trim().length < 10) continue;
+      if (!item.url || !item.title || item.title.trim().length < 10) { invalidRecordCount++; continue; }
       const publishedAtMs = Date.parse(item.publishedAt);
       if (!Number.isFinite(publishedAtMs) || publishedAtMs > fetchedAtMs + MAX_FUTURE_CLOCK_SKEW_MS) {
         invalidPublishedAtCount++;
@@ -976,7 +979,7 @@ Deno.serve(async (req) => {
       }
       const normalized = normalizeTitle(item.title);
       const key = `${normalized}|${item.source}`;
-      if (seenKeys.has(key)) continue;
+      if (seenKeys.has(key)) { duplicateCount++; continue; }
       seenKeys.add(key);
       deduped.push(item);
     }
@@ -990,6 +993,10 @@ Deno.serve(async (req) => {
           error: "NO_VALID_NEWS_FETCHED",
           reason: "No source-timestamped news items were available.",
           invalid_published_at_count: invalidPublishedAtCount,
+          total_raw: rawItems.length,
+          after_dedup: 0,
+          funnel: { ...marketNewsFunnel([], [], fetchedAtMs), raw: rawItems.length,
+            invalid_record: invalidRecordCount, invalid_timestamp: invalidPublishedAtCount, duplicates: duplicateCount },
           provider_failures: classifyProviderFailures(providerFailureDetails),
           logs,
         }),
@@ -1025,24 +1032,15 @@ Deno.serve(async (req) => {
     logs.push(`Blacklisted: ${blacklistedCount}`);
     logs.push(`Before cap: is_selected=true: ${scored.filter((s) => s.isSelected).length}`);
 
-    // CAP: max 80 raw news written
-    let toUpsert = scored.slice(0, 80);
+    // Keep current evidence ahead of stale audit rows; all admission thresholds
+    // and the existing 80 raw / 12 selected bounds remain unchanged.
+    const toUpsert = retainMarketNews(scored, fetchedAtMs);
     logs.push(`After raw cap (max 80): ${toUpsert.length}`);
 
     // CAP: max 12 is_selected = true
-    let selectedCount = toUpsert.filter((s) => s.isSelected).length;
-    if (selectedCount > 12) {
-      let selectedSoFar = 0;
-      toUpsert = toUpsert.map((item) => {
-        if (item.isSelected && selectedSoFar >= 12) {
-          return { ...item, isSelected: false };
-        }
-        if (item.isSelected) selectedSoFar++;
-        return item;
-      });
-      logs.push(`Capped is_selected to 12 (was ${selectedCount})`);
-      selectedCount = 12;
-    }
+    const selectedCount = toUpsert.filter((s) => s.isSelected).length;
+    const funnel = { ...marketNewsFunnel(scored, toUpsert, fetchedAtMs), raw: rawItems.length,
+      invalid_record: invalidRecordCount, invalid_timestamp: invalidPublishedAtCount, duplicates: duplicateCount };
 
     logs.push(`Final is_selected=true: ${toUpsert.filter((s) => s.isSelected).length}`);
     logs.push(`Final is_selected=false: ${toUpsert.filter((s) => !s.isSelected).length}`);
@@ -1240,6 +1238,7 @@ Deno.serve(async (req) => {
         fetched_at: now,
         total_raw: rawItems.length,
         after_dedup: deduped.length,
+        funnel,
         invalid_published_at_count: invalidPublishedAtCount,
         blacklisted: blacklistedCount,
         to_upsert: toUpsert.length,

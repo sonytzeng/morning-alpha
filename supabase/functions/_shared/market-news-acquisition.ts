@@ -1,3 +1,5 @@
+import { sanitizeMarketNewsFunnel } from './market-news-retention.ts';
+
 /** News collection is optional enrichment, not an Atomic dependency.
  * The existing refresh checkpoint/lease owns scheduling; no new Cron or write path.
  */
@@ -29,10 +31,19 @@ export function newsAcquisitionObservation(result: NewsAcquisitionResult): Recor
     && Number.isSafeInteger(p[key]) && Number(p[key]) >= 0 ? Number(p[key]) : null;
   const raw = count('total_raw');
   const canonical = count('canonical_upserted_count');
-  const classification = !result.ok
+  const funnel = sanitizeMarketNewsFunnel(p.funnel);
+  // HTTP success with an explicitly audited empty valid set is a data/filter
+  // outcome, not a transport failure. Keep the original success/retry result.
+  const auditedEmpty = result.status >= 200 && result.status < 300
+    && p.error === 'NO_VALID_NEWS_FETCHED' && count('after_dedup') === 0 && funnel !== null;
+  const emptyWithoutProviderFailure = auditedEmpty && raw === 0
+    && Array.isArray(p.provider_failures) && p.provider_failures.length === 0;
+  const classification = auditedEmpty && raw !== null && raw > 0 ? 'FILTER_REJECTED'
+    : emptyWithoutProviderFailure ? 'SOURCE_EMPTY'
+    : !result.ok
     ? p.canonical_complete === false ? 'INTEGRATION_FAILED' : 'FETCH_FAILED'
     : raw === 0 ? 'SOURCE_EMPTY'
-    : canonical === 0 ? 'FILTER_REJECTION_BREAKDOWN_NOT_RETAINED'
+    : canonical === 0 ? funnel ? 'FILTER_REJECTED' : 'FILTER_REJECTION_BREAKDOWN_NOT_RETAINED'
     : 'CAPTURED_PENDING_REPORT_QUALITY';
   return {
     schema_version: 'MARKET_NEWS_ACQUISITION_V1',
@@ -40,9 +51,13 @@ export function newsAcquisitionObservation(result: NewsAcquisitionResult): Recor
     classification, total_raw: raw, after_dedup: count('after_dedup'),
     invalid_published_at_count: count('invalid_published_at_count'),
     blacklisted: count('blacklisted'), selected_count: count('selected_count'),
+    raw_upserted_count: count('total_upserted'),
+    canonical_requested_count: count('canonical_requested_count'),
     canonical_upserted_count: canonical, canonical_complete: p.canonical_complete === true,
+    catalyst_tag_upserted_count: count('catalyst_tag_upserted_count'),
     // Captured does not mean the independent Report relevance/quality gate passed.
     report_accepted: null, business_dependency: false,
+    funnel,
   };
 }
 

@@ -21,7 +21,11 @@ export async function environment(){
  assert.match(name,/^ma-academy-auth-[0-9]+-db$/);
  const sql=s=>execFileSync('docker',['exec','-i',name,'psql','-XqAt','-U','postgres','-v','ON_ERROR_STOP=1'],{input:s,encoding:'utf8',stdio:['pipe','pipe','pipe']}).trim();
  assert.equal(sql("select count(*) from auth.users where email in ('owner@academy.test','free@academy.test','premium@academy.test','other@academy.test')"),'4');
- const c=await fetch('http://127.0.0.1:3219/__academy_public_config',{signal:AbortSignal.timeout(5000)}).then(r=>r.json());
+ // The earlier Academy preview may be stopped while its isolated Auth/DB is
+ // still alive. This local PostgREST has no API-key gateway; real signed-in JWTs
+ // remain mandatory. A non-credential placeholder cannot authorize private RPCs.
+ const c=await fetch('http://127.0.0.1:3219/__academy_public_config',{signal:AbortSignal.timeout(5000)}).then(r=>r.json())
+  .catch(()=>({anon:'isolated-preview-no-service-credential'}));
  assert.equal(typeof c.anon,'string');
  return {sql,anon:c.anon,cleanup:()=>{}};
 }

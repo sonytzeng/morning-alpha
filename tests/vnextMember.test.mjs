@@ -69,8 +69,8 @@ test('retained public canonical fixture preserves original date/direction, never
  assert.deepEqual(memberMarketSummary(value),{date:'2026-10-02',direction:'中性偏多',regime:'震盪／盤整',action:'先等確認'});
  assert.equal(memberMarketSummary({...value,report_date:'2026-10-10'}),null);
 });
-test('candidate remains disconnected from Production router and preserves protected features',()=>{
- const router=readFileSync(new URL('../src/router/config.tsx',import.meta.url),'utf8');assert(!router.includes('MemberPage'));assert(!router.includes("path: '/stocks'"));
+test('release candidate mounts one shared stocks route without changing existing entitlement',()=>{
+ const router=readFileSync(new URL('../src/router/config.tsx',import.meta.url),'utf8');assert(router.includes('../pages/vnext/MemberPage'));assert.equal((router.match(/path: "\/stocks"/g)||[]).length,1);
  const sql=readFileSync(new URL('../supabase/migrations/20261010061630_vnext_research_projection_candidate.sql',import.meta.url),'utf8');
  assert(sql.includes('tier:=academy_private.access_v11()'));assert(!sql.includes('user_metadata'));assert(sql.includes("if tier <> 'owner' or tier is null"));assert(sql.includes('member_daily_edition'));assert(sql.includes('p_history'));
  assert(!/alter table public\.|update public\.|insert into public\.|cron\./i.test(sql));

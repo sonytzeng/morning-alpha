@@ -7,7 +7,12 @@ export const VNEXT_BASE='2a5d461ec3d98bfc8bc3177a295c95e299b7bda2';
 export const VNEXT_MANIFEST='docs/vnext/transition.json';
 export const VNEXT_MIGRATION='supabase/migrations/20261010061630_vnext_research_projection_candidate.sql';
 export const VNEXT_RUNTIME_MIGRATION='supabase/migrations/20261012054120_vnext_daily_research_runtime_candidate.sql';
+export const VNEXT_PUBLICATION_MIGRATION='supabase/migrations/20261012080628_vnext_member_publication_control_candidate.sql';
 export const VNEXT_PATHS=Object.freeze([
+ 'src/router/config.tsx','src/components/feature/Navbar.tsx','src/pages/account/Account.tsx',
+ 'src/pages/vnext/PublicExperience.tsx','src/pages/vnext/OwnerPublication.tsx',
+ 'tests/vnextMemberRelease.integration.mjs','tests/browser/vnextMemberRelease.e2e.mjs',
+ 'docs/vnext/MEMBER_RELEASE_MANIFEST.md',VNEXT_PUBLICATION_MIGRATION,
  '.github/workflows/analysis-intelligence.yml',
  '.github/workflows/vnext-candidate.yml',
  '.github/workflows/validate-release.yml',
@@ -76,7 +81,7 @@ export function vnextTransition(source=raw,paths=vnextChangedPaths()){
  assert.deepEqual(Object.keys(m).sort(),['schema','base','files','migrations','functions','production_authorized','member_publication_authorized','strategy_change','secret_change','cron_change'].sort());
  assert.equal(m.schema,'VNEXT_RESEARCH_CANDIDATE_V1');assert.equal(m.base,VNEXT_BASE);
  for(const key of ['production_authorized','member_publication_authorized','strategy_change','secret_change','cron_change'])assert.equal(m[key],false,key);
- assert.deepEqual(m.functions,['vnext-daily-research-v1','recommendation-v2-forward-worker-v1']);assert.deepEqual(m.migrations,[VNEXT_MIGRATION,VNEXT_RUNTIME_MIGRATION]);
+ assert.deepEqual(m.functions,['vnext-daily-research-v1','recommendation-v2-forward-worker-v1']);assert.deepEqual(m.migrations,[VNEXT_MIGRATION,VNEXT_RUNTIME_MIGRATION,VNEXT_PUBLICATION_MIGRATION]);
  assert.deepEqual(m.files.map(f=>f.path).sort(),VNEXT_PATHS,'exact named VNext scope');
  assert.deepEqual([...paths].sort(),[...VNEXT_PATHS,VNEXT_MANIFEST].sort(),'unknown VNext working-tree path');
  const candidates=new Map();

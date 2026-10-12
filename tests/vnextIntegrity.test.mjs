@@ -3,6 +3,19 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {vnextTransition,vnextChangedPaths,vnextPrior,VNEXT_MANIFEST,VNEXT_PATHS} from './helpers/vnextIntegrity.mjs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+test('member release changes only named route/navigation mounts, not existing product logic',()=>{
+ const navbar='src/components/feature/Navbar.tsx',account='src/pages/account/Account.tsx',router='src/router/config.tsx';
+ assert.equal(read(navbar).toString(),vnextPrior(navbar).toString()
+  .replace("import { ACADEMY_NAVIGATION } from '@/features/academy/navigation';","import { ACADEMY_NAVIGATION } from '@/features/academy/navigation';\nimport { STOCK_OBSERVATION_NAV } from '@/features/vnext/member';")
+  .replace('    ACADEMY_NAVIGATION,','    ACADEMY_NAVIGATION,\n    STOCK_OBSERVATION_NAV,'));
+ assert.equal(read(account).toString(),vnextPrior(account).toString()
+  .replace("import AcademyEntry from './components/AcademyEntry';","import AcademyEntry from './components/AcademyEntry';\nimport { STOCK_OBSERVATION_NAV } from '@/features/vnext/member';")
+  .replace('            <AcademyEntry />','            <AcademyEntry />\n            <section className="ma-card-compact"><h2 className="text-lg font-bold text-white">{STOCK_OBSERVATION_NAV.label}</h2><p className="mt-2 text-sm text-white/70">依短、中、長期查看已核准的研究理由與風險；研究不等於正式推薦。</p><Link className="mt-3 inline-flex min-h-11 items-center text-primary-300" to={STOCK_OBSERVATION_NAV.to}>查看股票觀察</Link></section>'));
+ assert.equal(read(router).toString(),vnextPrior(router).toString()
+  .replace('const routes: RouteObject[] = [','const StockObservations = lazy(() => import("../pages/vnext/MemberPage"));\nconst OwnerPublication = lazy(() => import("../pages/vnext/OwnerPublication"));\n\nconst routes: RouteObject[] = [')
+  .replace('const routes: RouteObject[] = [','const routes: RouteObject[] = [\n  {\n    path: "/vnext/publication",\n    element: <DeferredRoute><OwnerPublication /></DeferredRoute>,\n  },\n  {\n    path: "/stocks",\n    element: <DeferredRoute><StockObservations /></DeferredRoute>,\n  },')
+  .replace('\n\nconst StockObservations','\nconst StockObservations'));
+});
 test('VNext exact candidate preserves every Production byte and previous release seal',()=>{
  const result=vnextTransition();assert.equal(result.manifest.production_authorized,false);
  assert.deepEqual(result.predecessorRead('tests/helpers/academyV11Integrity.mjs'),vnextPrior('tests/helpers/academyV11Integrity.mjs'));

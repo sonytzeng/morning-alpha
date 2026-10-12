@@ -4,12 +4,33 @@ import {useAcademyAccess} from '@/pages/academy/useAcademyAccess';
 import {parseMemberResearch,memberMarketSummary,type MemberResearch} from '@/features/vnext/member';
 import MemberNavigation,{MemberObservationEntry} from './MemberNavigation';
 import MemberExperience from './MemberExperience';
+import PublicExperience from './PublicExperience';
 import './vnext.css';
 import './member.css';
 export default function MemberPage({account=false}:{account?:boolean}){
  const {access,retry}=useAcademyAccess(),[revision,setRevision]=useState(0),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
  const [state,setState]=useState<{identity:string;generation:number;data?:MemberResearch;error?:boolean;market?:ReturnType<typeof memberMarketSummary>}|null>(null);
  const current=useRef(access);current.current=access;
+ const retryRef=useRef(retry);retryRef.current=retry;
+ const [publicMarket,setPublicMarket]=useState<ReturnType<typeof memberMarketSummary>>(null),[marketLoading,setMarketLoading]=useState(true);
+ useEffect(()=>{
+  let live=true;
+  // Explicitly anonymous transport: even a signed-in browser requests only the
+  // existing public report projection. Never cache a Premium report payload.
+  void Promise.race([supabase.functions.invoke('get-report-payload',{headers:{Authorization:''},body:{report_date:null}}),
+   new Promise<{data:null;error:true}>(resolve=>setTimeout(()=>resolve({data:null,error:true}),8000))])
+   .catch(()=>({data:null,error:true})).then(result=>{if(live){setPublicMarket(result.error?null:memberMarketSummary(result.data));setMarketLoading(false);}});
+  return()=>{live=false;};
+ },[]);
+ useEffect(()=>{
+  // API always rechecks entitlement. Clear the rendered private state on focus,
+  // visibility loss and bounded refresh, including expiry without a JWT change.
+  const refresh=()=>{setState(null);retryRef.current();};
+  const visibility=()=>{setState(null);if(document.visibilityState==='visible')retryRef.current();};
+  const timer=setInterval(refresh,30000);
+  window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',visibility);
+  return()=>{clearInterval(timer);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',visibility);};
+ },[]);
  useEffect(()=>{
   setState(null);setNotice('');setBusy(false);
   if(access.kind!=='member')return;
@@ -24,11 +45,6 @@ export default function MemberPage({account=false}:{account?:boolean}){
    const data=parseMemberResearch(response.data);
    if(data.tier!==access.catalog.tier)throw Error('ENTITLEMENT_CHANGED');
    setState({identity:access.id,generation:access.generation,data});clearTimeout(timer);
-   // Read-only existing payload producer. A missing public summary must not
-   // invent a market direction or block the independently authorized cards.
-   const market=await Promise.race([supabase.functions.invoke('get-report-payload',{body:{report_date:null}}),
-    new Promise<{data:null;error:true}>(resolve=>setTimeout(()=>resolve({data:null,error:true}),8000))]).catch(()=>({data:null,error:true}));
-   if(valid())setState({identity:access.id,generation:access.generation,data,market:market.error?null:memberMarketSummary(market.data)});
   }catch{if(valid())setState({identity:access.id,generation:access.generation,error:true});}finally{clearTimeout(timer);}})();
   return()=>{live=false;clearTimeout(timer);controller.abort();access.signal.removeEventListener('abort',abort);};
  },[access,revision]);
@@ -46,7 +62,7 @@ export default function MemberPage({account=false}:{account?:boolean}){
  };
  const denied=access.kind==='denied',failed=access.kind==='unavailable'||state?.error;
  return <div className="vnext vm"><a className="vnext-skip" href="#stock-observations">跳到股票觀察</a><MemberNavigation/>
- {data?account?<main className="vnext-content"><h1>會員中心</h1><MemberObservationEntry/><p>既有會員權益與股票學院不變。</p><a href="/academy">前往股票學院</a></main>:<MemberExperience key={access.kind==='member'?access.id:''} data={data} market={state?.market||null} onWatch={watch} busy={busy} notice={notice}/>
+ {denied?<PublicExperience market={publicMarket} loading={marketLoading}/>:data?account?<main className="vnext-content"><h1>會員中心</h1><MemberObservationEntry/><p>既有會員權益與股票學院不變。</p><a href="/academy">前往股票學院</a></main>:<MemberExperience key={access.kind==='member'?access.id:''} data={data} market={publicMarket} onWatch={watch} busy={busy} notice={notice}/>
  :<main className="vnext-content vnext-empty" role="status"><h1>{denied?'登入後，閱讀股票觀察':failed?'目前無法讀取股票觀察':'正在確認可閱讀的內容'}</h1><p>{denied?'免費會員可閱讀每日精選摘要；Premium 可查看完整已核准研究。研究不是正式推薦。':failed?'尚未取得資料，不代表今天沒有候選。請稍後再試。':'請稍候。'}</p>{denied?<a href="/login?next=%2Fstocks" className="vnext-primary">登入帳號</a>:failed?<button className="vnext-primary" onClick={()=>{retry();setRevision(r=>r+1);}}>重新讀取</button>:null}</main>}
  </div>;
 }

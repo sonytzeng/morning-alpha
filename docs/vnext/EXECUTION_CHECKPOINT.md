@@ -1,4 +1,14 @@
 # VNext 執行 Checkpoint
+## Public Free Premium Release Candidate（2026-10-12，最新續跑點）
+
+從84b62df、乾淨工作樹及9/9 CI續跑，origin/main仍2a5d461。唯讀確認正式get-report-payload V54、V2 forward V2、LINE V70、Report V248、News64／Orchestrator45，VNext Worker與schema均未部署。正式membership設定beta_full／billing disabled／trial14，不能擅自改免費與付費邊界。匿名公開摘要10/12 HTTP200與canonical身份驗證PASS，無私有VNext資料，僅保留指紋。
+
+候選新增Public頁面、最小Router/Navbar/Account接線、會員focus/30秒清除重驗，以及20261012080628發布審核SQL候選。Owner審核與私有research分開，獨立registry、交易式approval／revocation、8併發防重、會員投影再檢查；舊29項不公開。詳細精確Manifest及尚存商業／權限／資料前提見MEMBER_RELEASE_MANIFEST.md。
+
+重用本機隔離Auth資料庫完成新SQL/RPC驗收；fresh完整Migration由最終CI驗證。四身份1440／375／390／430實測無overflow，private資料登出清除、reload正確、pageerror0。Preview http://127.0.0.1:3221/stocks；Owner審核 /vnext/publication；不是Production身分。截圖/private/tmp/ma-vnext-member-release-qa。原公開研究數仍0，Forward0／Outcome0。
+
+Type/Lint/Build初次通過；最終Integrity與GitHub CI以新HEAD記錄。PR仍Draft。無Production write、Merge、Deploy、Migration、Cron、Secret、Auth/RLS或訂閱修改；Production Business不能用「本輪未寫入」冒充新前後全站資料指紋。MEMBER_PRODUCT_ENGINEERING=INCOMPLETE、PRODUCTION_RELEASE_READY=NO，正式三身份E2E與自然研究PENDING。
+
 ## Daily Production Wiring P1（2026-10-12，最新續跑點）
 
 從d7606a7、Draft PR230、9/9起始CI續跑；main為2a5d461，已保留PR235新聞修復。本輪新增runtime SQL／RPC、日期驅動official adapter、vnext-daily-research-v1及既有V2worker僅2行非阻塞hook。具名範圍與未啟用限制見DAILY_PRODUCTION_WIRING.md，不再以重跑10/8作完成標準。

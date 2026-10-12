@@ -4,6 +4,7 @@ import {supabase} from './vnext.client';
 import VNextPage from '../../src/pages/vnext/page';
 import RealResearchPage from '../../src/pages/vnext/RealResearch';
 import MemberPage from '../../src/pages/vnext/MemberPage';
+import OwnerPublication from '../../src/pages/vnext/OwnerPublication';
 const MemberAcademy=lazy(()=>import('../../src/pages/academy/MemberAcademy'));
 function Preview(){
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[message,setMessage]=useState('');
@@ -16,7 +17,7 @@ function Preview(){
  <button>登入</button><button type="button" onClick={async()=>{await supabase.auth.signOut();setPassword('');setMessage('已登出');}}>登出</button><p role="status">{message}</p></form></details></aside>
  {window.location.pathname==='/login'?<main style={{padding:32}}><h1>登入後繼續閱讀</h1><p>完成上方登入後，會返回原本要閱讀的內容。</p></main>:
  ['/report/today','/pricing'].includes(window.location.pathname)?<main style={{padding:32}}><h1>既有正式功能保持不變</h1><p>本隔離環境不連線正式報告或付款服務，不提供假的市場摘要或會員方案。</p><a href="/stocks">返回股票觀察</a></main>:
- ['/stocks','/account'].includes(window.location.pathname)?<MemberPage account={window.location.pathname==='/account'}/>:
+ window.location.pathname==='/vnext/publication'?<OwnerPublication/>:['/stocks','/account'].includes(window.location.pathname)?<MemberPage account={window.location.pathname==='/account'}/>:
  window.location.pathname==='/academy'?<Suspense fallback={<p role="status">正在開啟股票學院</p>}><MemberAcademy/></Suspense>:real?<RealResearchPage/>:<VNextPage/>}</>;
 }
 const root=createRoot(document.getElementById('root')!);

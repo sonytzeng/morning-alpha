@@ -49,4 +49,14 @@ test('server role rejects free, premium and forged client role; owner accepted o
  const r=await readOwnerResearch({method:'GET',authorization:'Bearer SYNTHETIC_TOKEN',tier:'owner'},['PRIVATE_TEST_DATA'],call);assert.equal(r.status,tier==='owner'?200:403);if(tier!=='owner')assert(!JSON.stringify(r).includes('PRIVATE_TEST_DATA'));}
 });
 test('expired, wrong identity and unavailable verifier fail closed',async()=>{for(const code of [401,403,500])assert.notEqual((await readOwnerResearch({method:'GET',authorization:'Bearer SYNTHETIC_TOKEN'},[],async()=>new Response('{}',{status:code}))).status,200);assert.equal((await readOwnerResearch({method:'GET',authorization:'Bearer SYNTHETIC_TOKEN'},[],async()=>{throw Error('offline');})).status,503);});
-test('real private source never appears in client bundle or Production router',()=>{const router=readFileSync(new URL('../src/router/config.tsx',import.meta.url),'utf8');assert(!router.includes('vnext'));const page=readFileSync(new URL('../src/pages/vnext/RealResearch.tsx',import.meta.url),'utf8');assert(!page.includes('service_role'));assert(page.includes('access.signal.aborted'));assert(page.includes('verifyResearchLock'));});
+test('private replay remains unmounted when authorized member and Owner approval routes are added',()=>{
+ const router=readFileSync(new URL('../src/router/config.tsx',import.meta.url),'utf8');
+ const vnextImports=[...router.matchAll(/import\(['"]([^'"]*vnext[^'"]*)['"]\)/g)].map(x=>x[1]).sort();
+ assert.deepEqual(vnextImports,['../pages/vnext/MemberPage','../pages/vnext/OwnerPublication']);
+ assert(!router.includes('RealResearch'));assert(!router.includes('real-evidence'));assert(!router.includes('owner-research-server'));
+ for(const component of ['MemberPage','OwnerPublication','PublicExperience']){
+  const source=readFileSync(new URL(`../src/pages/vnext/${component}.tsx`,import.meta.url),'utf8');
+  assert(!source.includes('RealResearch'));assert(!source.includes('real-evidence'));assert(!source.includes('service_role'));
+ }
+ const page=readFileSync(new URL('../src/pages/vnext/RealResearch.tsx',import.meta.url),'utf8');assert(!page.includes('service_role'));assert(page.includes('access.signal.aborted'));assert(page.includes('verifyResearchLock'));
+});

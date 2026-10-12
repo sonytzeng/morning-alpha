@@ -7,6 +7,8 @@ Fresh DB真實SQL＋PostgREST／HTTP Worker已通過216項證據不足控制、�
 
 既有Preview3225可用；1440／375／390／430真實本機Auth回歸PASS，details收合／無overflow／Logout清除，截圖/private/tmp/ma-daily-qa-p1。Production操作0、Forward0、Outcome0、會員公開0。本轮未Merge／Deploy／Production Migration／Cron／Secret變更，最終HEAD需完整GitHub CI通過後才交付候選。
 
+P1首次CI bede872：新增VNext SQL/HTTP及Auth Gate PASS。V2 Gate的5項Handler測試因封閉依賴載入器未識別新hook而於import失敗（UNEXPECTED_IMPORT）。修正只讓隔離harness載入真實hook，新增單獨enqueue計數、原Auth拒絕無enqueue及enqueue失敗不影響V2完成／Outcome；不刪既有測試、不改產品方法論。最終修正HEAD重新驗CI。
+
 ## Daily Stock Intelligence P0（2026-10-12，最新續跑點）
 
 從9443a7c續跑；PR230 Draft，起始9CI PASS。nested工作樹原乾淨；外層舊repo未動。fetch後origin/main為2a5d461ec3d98bfc8bc3177a295c95e299b7bda2，候選原ahead22/behind5，未合併或rebase正式main。

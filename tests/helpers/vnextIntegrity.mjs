@@ -23,6 +23,7 @@ export const VNEXT_PATHS=Object.freeze([
  'supabase/functions/vnext-daily-research-v1/index.ts','supabase/functions/vnext-daily-research-v1/handler.ts',
  'supabase/functions/_shared/vnext-daily-hook.ts','supabase/functions/recommendation-v2-forward-worker-v1/index.ts',VNEXT_RUNTIME_MIGRATION,
  'tests/vnextDailyWiring.test.mjs','tests/vnextDailyDatabase.integration.mjs',
+ 'tests/recommendationV2ForwardHandler.test.mjs',
  'src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyOutcome.ts','src/features/vnext/dailyPreview.ts','src/pages/vnext/DailyIntelligence.tsx',
  'scripts/vnext/daily-store.mjs','scripts/vnext/daily-retained.mjs',
  'tests/vnextDailyIntelligence.test.mjs','tests/vnextDailyReal.integration.mjs','tests/vnextDailyAuth.integration.mjs','tests/browser/vnextDaily.e2e.mjs',

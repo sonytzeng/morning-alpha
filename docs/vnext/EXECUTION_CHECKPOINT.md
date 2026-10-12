@@ -1,6 +1,8 @@
 # VNext 執行 Checkpoint
 ## Public Free Premium Release Candidate（2026-10-12，最新續跑點）
 
+全站3186項回歸的舊run38228577569於45分鐘上限取消；只把Validate有限預算改為60分鐘，完整保留所有測試、Fresh DB及main新聞回歸。精確Integrity逐位元比對限定此單一預算差異。停止本輪重複本機全量程序以免封存更新競態，不將取消視為PASS；先前27項受影響控制及Type/Lint/Build已PASS，完整驗收必須以最終HEAD的全套GitHub結果成立。
+
 本輪全站CI發現4個舊測試接線不相容：Navbar新增共用股票觀察依賴，Academy封閉loader未接；Router已是具名候選，兩項反例仍預期「未修改基線」錯誤。僅載入真實共用navigation常數並驗證雙入口與手機關閉行為，更新Router漂移的精確拒絕訊息；不移除任何負向控制、不改產品或Academy權限。必須以此修正後HEAD重新完成CI，不沿用c5337ee或更早結果。
 
 從84b62df、乾淨工作樹及9/9 CI續跑，origin/main仍2a5d461。唯讀確認正式get-report-payload V54、V2 forward V2、LINE V70、Report V248、News64／Orchestrator45，VNext Worker與schema均未部署。正式membership設定beta_full／billing disabled／trial14，不能擅自改免費與付費邊界。匿名公開摘要10/12 HTTP200與canonical身份驗證PASS，無私有VNext資料，僅保留指紋。

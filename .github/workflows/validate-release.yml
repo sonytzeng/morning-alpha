@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     # Full immutable predecessor-chain validation plus isolated database replay.
     # Keep every assertion; cap runtime without cutting the acceptance suite.
-    timeout-minutes: 45
+    timeout-minutes: 60
     services:
       isolated-postgres:
         image: postgres:17

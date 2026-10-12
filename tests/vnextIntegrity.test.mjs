@@ -27,9 +27,9 @@ test('V2 worker adds only a detached VNext enqueue after successful natural chec
   .replace('  const receipt=object(claim.data);',"  const receipt=object(claim.data);\n  if(['ACQUIRED','COMPLETE','SKIPPED_NO_WATCH'].includes(String(receipt.status)))enqueueVnextAfterCheckpoint(input,{url,gatewayJwt:Deno.env.get('SUPABASE_ANON_KEY')||'',cronSecret:Deno.env.get('CRON_SECRET')||'',background:p=>runtime.waitUntil(p),fetcher:fetch});");
  assert.equal(read(path).toString(),expected);assert.equal((expected.match(/enqueueVnextAfterCheckpoint\(input/g)||[]).length,1);
 });
-test('Validate preserves main news replay and budget, only changes prebuild order and TCP readiness',()=>{
+test('Validate preserves every check with bounded runtime, prebuild order and TCP readiness',()=>{
  const path='.github/workflows/validate-release.yml',prior=vnextPrior(path).toString();
- const expected=prior.replace('      - run: npm run build\n','')
+ const expected=prior.replace('timeout-minutes: 45','timeout-minutes: 60').replace('      - run: npm run build\n','')
   .replace('      - run: npm run test:public','      # Prebuild before parallel tests: preserve generated-file integrity.\n      - run: npm run build\n      - run: npm run test:public')
   .replaceAll('pg_isready -U postgres','pg_isready -h 127.0.0.1 -U postgres');
  assert.notEqual(expected,prior);assert.equal(read(path).toString(),expected);
@@ -37,7 +37,8 @@ test('Validate preserves main news replay and budget, only changes prebuild orde
  assert.deepEqual(commands(expected),commands(prior));
  assert.ok(expected.indexOf('- run: npm run build')<expected.indexOf('- run: npm run test:public'));
  assert.equal((expected.match(/pg_isready -h 127\.0\.0\.1 -U postgres/g)||[]).length,8);
- assert.match(expected,/timeout-minutes: 45/);assert.match(expected,/MA_TEST_PSQL/);
+ assert.equal((prior.match(/timeout-minutes: 45/g)||[]).length,1);
+ assert.match(expected,/timeout-minutes: 60/);assert.match(expected,/MA_TEST_PSQL/);
 });
 test('Cockpit CI only checks final TCP server, not the socket-only bootstrap; product and security unchanged',()=>{
  const path='.github/workflows/owner-cockpit.yml',prior=vnextPrior(path).toString(),current=read(path).toString();

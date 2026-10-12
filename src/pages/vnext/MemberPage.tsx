@@ -42,8 +42,14 @@ export default function MemberPage({account=false}:{account?:boolean}){
    // Research access is checked independently by its RPC. No browser tier is sent.
    const response=await supabase.rpc('get_vnext_member_v1').abortSignal(controller.signal);
    if(!valid())return;if(response.error)throw Error('MEMBER_READ');
-   const data=parseMemberResearch(response.data);
+   let data=parseMemberResearch(response.data);
    if(data.tier!==access.catalog.tier)throw Error('ENTITLEMENT_CHANGED');
+   if(data.tier==='free'){
+    const history=await supabase.rpc('get_vnext_free_history_v1').abortSignal(controller.signal);
+    if(!valid())return;
+    if(history.error||history.data?.schema!=='VNEXT_FREE_HISTORY_V1')throw Error('HISTORY_UNAVAILABLE');
+    data=parseMemberResearch({...response.data,history:history.data.history});
+   }
    setState({identity:access.id,generation:access.generation,data});clearTimeout(timer);
   }catch{if(valid())setState({identity:access.id,generation:access.generation,error:true});}finally{clearTimeout(timer);}})();
   return()=>{live=false;clearTimeout(timer);controller.abort();access.signal.removeEventListener('abort',abort);};

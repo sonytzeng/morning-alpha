@@ -5,6 +5,8 @@
 
 候選新增Public頁面、最小Router/Navbar/Account接線、會員focus/30秒清除重驗，以及20261012080628發布審核SQL候選。Owner審核與私有research分開，獨立registry、交易式approval／revocation、8併發防重、會員投影再檢查；舊29項不公開。詳細精確Manifest及尚存商業／權限／資料前提見MEMBER_RELEASE_MANIFEST.md。
 
+最終逐項核對補齊Free基本歷史：獨立唯讀get_vnext_free_history_v1只讀原免費版次、已核准而且權利仍有效的摘要，最多100筆；不回Premium-only或Evidence。真實隔離Auth／SQL短效紀錄驗證到期分類、免費／Premium分離、撤回立即隱藏；舊會員RPC回應保持相容。Owner股票觀察頁提供正式權限判定後的審核入口。只修改未發布SQL候選與VNext UI／測試。
+
 重用本機隔離Auth資料庫完成新SQL/RPC驗收；fresh完整Migration由最終CI驗證。四身份1440／375／390／430實測無overflow，private資料登出清除、reload正確、pageerror0。Preview http://127.0.0.1:3221/stocks；Owner審核 /vnext/publication；不是Production身分。截圖/private/tmp/ma-vnext-member-release-qa。原公開研究數仍0，Forward0／Outcome0。
 
 Type/Lint/Build初次通過；最終Integrity與GitHub CI以新HEAD記錄。PR仍Draft。無Production write、Merge、Deploy、Migration、Cron、Secret、Auth/RLS或訂閱修改；Production Business不能用「本輪未寫入」冒充新前後全站資料指紋。MEMBER_PRODUCT_ENGINEERING=INCOMPLETE、PRODUCTION_RELEASE_READY=NO，正式三身份E2E與自然研究PENDING。

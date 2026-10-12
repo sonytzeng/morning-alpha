@@ -21,6 +21,10 @@ try{
    assert.match(await page.locator('#stock-observations').innerText(),/今天沒有符合公開研究條件的股票/);
    assert.equal(await page.locator('.vm-card').count(),0,'unapproved or synthetic records not member content');
    assert.equal(await page.getByRole('button',{name:'我的觀察清單',exact:true}).count(),role==='free'?0:1);
+   assert.equal(await page.getByRole('link',{name:'審核會員可讀內容',exact:true}).count(),role==='owner'?1:0);
+   await page.getByRole('button',{name:role==='free'?'已核准歷史摘要':'歷史追蹤',exact:true}).click();
+   await page.getByRole('heading',{name:'目前沒有可公開的歷史追蹤',exact:true}).waitFor();
+   await page.getByRole('button',{name:'目前觀察',exact:true}).click();
   }
   for(const width of [1440,375,390,430]){
    await page.setViewportSize({width,height:1000});

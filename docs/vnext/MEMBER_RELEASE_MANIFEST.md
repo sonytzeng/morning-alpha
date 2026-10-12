@@ -7,7 +7,7 @@
 | 身份 | 候選內容 | 目前真實股票研究 |
 | --- | --- | --- |
 | 未登入 | 既有 canonical 公開市場摘要、日期、原市場分析與風險連結、期間介紹、註冊與現有方案、學院介紹 | 0，不讀研究 RPC |
-| 免費會員 | 伺服器核准且固定每日最多三檔的摘要、主要風險、免費學院 | 0；真實空狀態 |
+| 免費會員 | 伺服器核准且固定每日最多三檔的摘要、主要風險、原免費版次的基本歷史摘要、免費學院 | 0；真實空狀態 |
 | Premium 或既有完整體驗權益 | 完整已核准研究、支持／反對、條件、風險、來源、個人清單與已核准歷史 | 0；不得把29項歷史探索研究公開 |
 | Owner | 上述會員視角及獨立的逐筆發布審查頁 | 未完成品質、時間、授權者不能核准 |
 
@@ -38,7 +38,7 @@ Function 部署僅兩支及其確切 import dependencies：
 
 UI：`src/pages/vnext/MemberPage.tsx`、`MemberExperience.tsx`、`MemberNavigation.tsx`、`PublicExperience.tsx`、`OwnerPublication.tsx`、兩份 VNext CSS 及其 feature 依賴。`src/router/config.tsx` 僅掛載 `/stocks` 與 `/vnext/publication`；Navbar／Account 僅加同一股票觀察入口。不是重做首頁或會員付款頁。Readdy 必須以核准 HEAD 做精確同步；本輪沒有 Readdy Update 或 Production Publish。
 
-新公開面只有 `/stocks` 公開服務介紹與既有公開市場摘要。匿名不能讀 `get_vnext_member_v1`。Free 不收到 Premium details/history/watchlist。Owner 的會員視角也不能繞過 publication gate。Owner 審核 RPC 重用既有 `is_research_owner_v1` 所映射的 Academy server entitlement，不信任 URL、metadata 或瀏覽器 tier。
+新公開面只有 `/stocks` 公開服務介紹與既有公開市場摘要。匿名不能讀 `get_vnext_member_v1`。Free 不收到 Premium details／完整歷史／watchlist；新增 `get_vnext_free_history_v1` 只回傳原本免費版次中仍有合法權利、未撤回的歷史摘要，最多100筆，絕不包含完整證據。既有會員 RPC 回應不變。Owner 的會員視角也不能繞過 publication gate。Owner 審核 RPC 重用既有 `is_research_owner_v1` 所映射的 Academy server entitlement，不信任 URL、metadata 或瀏覽器 tier。
 
 ## 逐筆發布資料治理
 

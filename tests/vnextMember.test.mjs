@@ -17,8 +17,14 @@ test('max 3 distinct symbols, not merely 3 horizon cards',()=>{
  const p=data();p.observations=['SHORT','MEDIUM','LONG'].map(h=>({...card(),horizon:h,id:h}));assert.equal(parseMemberResearch(p).observations.length,3);
  p.observations=Array.from({length:4},(_,i)=>({...card(),id:String(i),symbol:String(i)}));assert.throws(()=>parseMemberResearch(p),/FREE_SCOPE/);
 });
-test('free direct data leakage rejected, including history and watchlist',()=>{
- for(const mutate of [p=>p.observations[0].details=detail(),p=>p.history=[{...card(),id:'past'}],p=>p.watchlist=['SYNTHETIC']]){const p=data();mutate(p);assert.throws(()=>parseMemberResearch(p));}
+test('free direct data leakage rejected, including Premium history and watchlist',()=>{
+ for(const mutate of [p=>p.observations[0].details=detail(),p=>p.history=[{...card(),id:'past',status:'EXPIRED',details:detail()}],p=>p.watchlist=['SYNTHETIC']]){const p=data();mutate(p);assert.throws(()=>parseMemberResearch(p));}
+});
+test('free approved historical brief stays bounded, expired, and without full evidence',()=>{
+ const p=data();p.history=[{...card(),id:'past',status:'EXPIRED'}];
+ assert.equal(parseMemberResearch(p).history.length,1);assert.equal(parseMemberResearch(p).history[0].details,null);
+ p.history[0].status='WATCHING';assert.throws(()=>parseMemberResearch(p),/FREE_SCOPE/);
+ p.history=Array.from({length:101},(_,i)=>({...card(),id:'past-'+i,status:'EXPIRED'}));assert.throws(()=>parseMemberResearch(p),/FREE_SCOPE/);
 });
 test('premium details do not leak unexpected source fields',()=>{
  const p=data();p.tier='premium';p.observations[0].details=detail();p.observations[0].details.evidence[0].raw='NOT_ALLOWED';

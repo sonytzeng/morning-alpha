@@ -187,4 +187,30 @@ begin
 end $$;
 revoke all on function public.get_owner_vnext_publication_review_v1() from public,anon,authenticated,service_role;
 grant execute on function public.get_owner_vnext_publication_review_v1() to authenticated;
+
+-- Additive endpoint: older member readers keep their original response shape.
+-- Free history is only the brief from the exact originally approved free
+-- edition, not all old research or Premium evidence. Rights/revocation are
+-- checked again on every read, including after subscription changes.
+create function public.get_vnext_free_history_v1() returns jsonb
+language plpgsql stable security definer set search_path='' as $$
+declare history jsonb;
+begin
+ if auth.uid() is null or academy_private.access_v11() is distinct from 'free' then
+  raise exception 'FREE_MEMBER_REQUIRED' using errcode='42501';
+ end if;
+ select coalesce(jsonb_agg(vnext_private.member_card(x.id,false) order by x.created_at desc,x.id),'[]') into history
+ from (
+  select o.id,o.created_at from vnext_private.stock_horizon_observations o
+  join vnext_private.member_copy c on c.observation_id=o.id
+  where not vnext_private.member_allowed(o.id,false) and vnext_private.member_allowed(o.id,true)
+  and exists(select from vnext_private.owner_publication_events a
+   join vnext_private.member_daily_edition d on d.business_date=(a.occurred_at at time zone 'Asia/Taipei')::date and d.symbol=o.symbol
+   where a.observation_id=o.id and a.publication_id=c.publication_id and a.action='APPROVE' and a.audience='free')
+  order by o.created_at desc,o.id limit 100
+ )x;
+ return jsonb_build_object('schema','VNEXT_FREE_HISTORY_V1','history',history);
+end $$;
+revoke all on function public.get_vnext_free_history_v1() from public,anon,authenticated,service_role;
+grant execute on function public.get_vnext_free_history_v1() to authenticated;
 commit;

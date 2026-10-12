@@ -49,7 +49,8 @@ export function parseMemberResearch(value:unknown):MemberResearch{
  const observations=array(p.observations).map(read),history=array(p.history).map(read),watchlist=array(p.watchlist,200).map(text);
  const ids=[...observations,...history].map(o=>o.id);
  if(new Set(ids).size!==ids.length||new Set(watchlist).size!==watchlist.length||watchlist.some(id=>!ids.includes(id)))throw Error('MEMBER_IDENTITY');
- if(tier==='free'&&(new Set(observations.map(o=>o.symbol)).size>3||history.length||watchlist.length))throw Error('FREE_SCOPE');
+ if(tier==='free'&&(new Set(observations.map(o=>o.symbol)).size>3||history.length>100||watchlist.length
+  ||history.some(o=>!['INVALIDATED','EXPIRED','REVIEW_DUE'].includes(o.status))))throw Error('FREE_SCOPE');
  return {tier,business_date:p.business_date,observations,history,watchlist};
 }
 

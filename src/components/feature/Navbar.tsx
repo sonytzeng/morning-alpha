@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { PRODUCT_FEATURE_FLAGS } from '@/config/productFeatures';
 import { trackEvent } from '@/utils/analytics';
 import { ACADEMY_NAVIGATION } from '@/features/academy/navigation';
+import { STOCK_OBSERVATION_NAV } from '@/features/vnext/member';
 import '@/features/decision-v1/subscriber.css';
 
 interface NavbarProps {
@@ -53,6 +54,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
     { to: '/performance', label: '歷史績效' },
     ...(PRODUCT_FEATURE_FLAGS.beginner_learning.enabled ? [{ to: '/learn', label: '小白學堂' }] : []),
     ACADEMY_NAVIGATION,
+    STOCK_OBSERVATION_NAV,
     { to: isLoggedIn ? '/account' : '/login', label: isLoggedIn ? '會員中心' : '登入' },
   ];
 
@@ -103,7 +105,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
                 onClick={() => trackEvent('trial_cta_clicked', { source: 'navbar_desktop' })}
                 className="ml-1 inline-flex min-h-10 items-center rounded-lg bg-primary-500 px-3 text-xs font-bold text-background-50 transition-colors hover:bg-primary-400"
               >
-                14 天完整試用
+                會員方案
               </Link>
             )}
           </div>
@@ -152,7 +154,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
                 }}
                 className="mt-2 flex min-h-11 items-center justify-center rounded-lg bg-primary-500 px-4 text-sm font-bold text-background-50"
               >
-                14 天完整試用
+                會員方案
               </Link>
             )}
             <div className="mt-3 border-t border-background-200/70 pt-3">

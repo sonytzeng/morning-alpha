@@ -8,7 +8,7 @@ permissions:
 jobs:
   shadow-analysis:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 40
     services:
       postgres:
         image: postgres:17

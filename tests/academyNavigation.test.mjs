@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
+import { STOCK_OBSERVATION_NAV } from '../src/features/vnext/member.ts';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const jsx = (type, props) => ({ type, props });
@@ -52,13 +53,21 @@ for (const loggedIn of [false, true]) test(`desktop/mobile share Academy entry, 
     '@/config/productFeatures': { PRODUCT_FEATURE_FLAGS: { beginner_learning: { enabled: true } } },
     '@/utils/analytics': { trackEvent() {} },
     '@/features/academy/navigation': navigation,
+    '@/features/vnext/member': { STOCK_OBSERVATION_NAV },
     '@/features/decision-v1/subscriber.css': {},
   });
-  const links = nodes(nav.default({}), row => row.type === 'Link' && row.props.to === '/academy');
+  const tree = nav.default({});
+  const links = nodes(tree, row => row.type === 'Link' && row.props.to === '/academy');
   assert.equal(links.length, 2);
   assert.ok(links.every(row => row.props.children === '股票學院'));
   links.find(row => row.props.onClick).props.onClick();
   assert.equal(mobile, false, 'mobile navigation closes after choosing Academy');
+  const stocks = nodes(tree, row => row.type === 'Link' && row.props.to === STOCK_OBSERVATION_NAV.to);
+  assert.equal(stocks.length, 2, 'both shared menus retain the authorized stock-observation entry');
+  assert.ok(stocks.every(row => row.props.children === STOCK_OBSERVATION_NAV.label));
+  mobile = true;
+  stocks.find(row => row.props.onClick).props.onClick();
+  assert.equal(mobile, false, 'stock observations use the same mobile close behavior');
 });
 for (const [kind, aborted, progress, expected] of [
   ['denied', false, [], '開始學習'], ['loading', false, [], '查看課程'],

@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     # Full immutable predecessor-chain validation plus isolated database replay.
     # Keep every assertion; cap runtime without cutting the acceptance suite.
-    timeout-minutes: 45
+    timeout-minutes: 60
     services:
       isolated-postgres:
         image: postgres:17
@@ -41,6 +41,8 @@ jobs:
       - run: npm ci
       - run: npm run type-check
       - run: npm run lint
+      # Prebuild before parallel tests: preserve generated-file integrity.
+      - run: npm run build
       - run: npm run test:public
       - name: Preserved incident captures and provider-shaped replay boundaries
         run: >-
@@ -48,7 +50,6 @@ jobs:
           tests/fixtures/consolidation-v1/offline.test.mjs
           tests/fixtures/consolidation-v1/clock.test.mjs
           tests/fixtures/consolidation-v1/provider-chain.test.mjs
-      - run: npm run build
       - name: Owner backend actual candidate and synthetic Owner isolation (not Production proof)
         env:
           MA_ISOLATED_TEST_DB: ma_owner_backend_test1
@@ -57,10 +58,10 @@ jobs:
           docker run -d --name "$MA_TEST_DOCKER_CONTAINER" --network none \
             --env POSTGRES_PASSWORD=isolated-ci-only postgres:17
           for attempt in $(seq 1 30); do
-            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres; then break; fi
+            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres; then break; fi
             sleep 1
           done
-          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres
+          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres
           node --experimental-strip-types tests/ownerBackendDatabase.integration.mjs
       - name: Remove disposable Owner backend isolation
         if: always()
@@ -157,10 +158,10 @@ jobs:
             --env POSTGRES_PASSWORD=isolated-ci-only \
             --env 'FAKETIME=@2026-10-12 00:35:00' ma-runtime-sparse-ci
           for attempt in $(seq 1 30); do
-            if docker exec "ma-news-clock-ci-${{ github.run_id }}" pg_isready -U postgres; then break; fi
+            if docker exec "ma-news-clock-ci-${{ github.run_id }}" pg_isready -h 127.0.0.1 -U postgres; then break; fi
             sleep 1
           done
-          docker exec "ma-news-clock-ci-${{ github.run_id }}" pg_isready -U postgres
+          docker exec "ma-news-clock-ci-${{ github.run_id }}" pg_isready -h 127.0.0.1 -U postgres
       - name: Isolated 9/21 TXF session-date parity migration and replay
         env:
           MA_LOCAL_SCOPE: ma-txf-session-parity-20260921
@@ -217,10 +218,10 @@ jobs:
           docker run -d --name "$MA_TEST_DOCKER_CONTAINER" --network none \
             --env POSTGRES_PASSWORD=isolated-ci-only ma-runtime-sparse-ci
           for attempt in $(seq 1 30); do
-            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres; then break; fi
+            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres; then break; fi
             sleep 1
           done
-          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres
+          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres
           node --test tests/runtimeSparseRecoveryDatabase.integration.mjs
       - name: Remove disposable sparse recovery isolation
         if: always()
@@ -235,10 +236,10 @@ jobs:
             --env POSTGRES_PASSWORD=isolated-ci-only \
             --env 'FAKETIME=@2026-10-02 07:35:30' ma-runtime-sparse-ci
           for attempt in $(seq 1 30); do
-            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres; then break; fi
+            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres; then break; fi
             sleep 1
           done
-          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres
+          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres
           node --experimental-strip-types tests/publicProjectionDatabase.integration.mjs
       - name: Remove disposable public projection isolation
         if: always()

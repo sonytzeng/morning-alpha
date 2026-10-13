@@ -129,7 +129,8 @@ test('primary navigation follows the subscriber decision journey', () => {
     assert.match(navbar, new RegExp(`to:\\s*['"]${destination.replaceAll('/', '\\/')}['"]`), `missing primary journey destination: ${destination}`);
   }
   assert.doesNotMatch(navbar, /to:\s*['"]\/opportunities['"]/, 'candidate radar must remain a secondary drill-down');
-  assert.match(navbar, /14 天完整試用/);
+  assert.match(navbar, /會員方案/);
+  assert.doesNotMatch(navbar, /14 天完整試用/, 'disabled payment must not advertise an active trial');
   assert.match(footer, /to="\/verification"/);
 });
 
@@ -633,7 +634,7 @@ test('today report keeps runtime state and technical copy out of the public UI',
 
 test('today answers the subscriber first and keeps runtime details behind a drill-down', () => {
   const brief = read('src/features/decision-v1/DecisionBrief.tsx');
-  for (const label of ['今天市場怎麼看', '現在該怎麼做', '有沒有值得關注的機會', '方向機率', '模型信心', '進場環境']) {
+  for (const label of ['今天市場怎麼看', '現在該怎麼做', '有沒有值得關注的機會', '方向機率', '判斷信心', '資料支持程度', '進場環境']) {
     assert.match(brief, new RegExp(label), `today decision brief is missing: ${label}`);
   }
   assert.match(today, /<DecisionBrief/);
@@ -759,7 +760,7 @@ test('membership conversion route is public, honest, and records a real submissi
   assert.match(membershipService, /signInWithOtp/);
   assert.match(membershipService, /shouldCreateUser: true/);
   assert.match(pricing, /document\.getElementById\(location\.hash\.slice\(1\)\)/);
-  for (const label of ['免費與會員差在哪裡', '14 天怎麼判斷值不值得', '盤前決策', '收盤驗證']) {
+  for (const label of ['免費與會員差在哪裡', '先用兩週觀察是否適合自己', '盤前決策', '收盤驗證']) {
     assert.match(pricing, new RegExp(label), `pricing is missing concrete member value: ${label}`);
   }
 });

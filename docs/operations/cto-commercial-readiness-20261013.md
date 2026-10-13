@@ -1,0 +1,82 @@
+# Morning Alpha CTO 商業就緒候選（Issue #238／#240）
+
+## 驗收分層
+
+此文件不是正式全產品完成證明。工程候選不等於正式上線；隔離負載不是正式 Supabase 容量保證。
+
+|功能|可追溯結果|分層／剩餘阻擋|
+|---|---|---|
+|10/13核心市場／Atomic／盤前|11/11；六個盤中節點各11/11|PRODUCTION_VERIFIED：僅該日|
+|Report／市場新聞|FULL；原始187、去黑名單185、時效71、保留80、Producer7、Preflight6、Report6|PRODUCTION_VERIFIED：不能以抓取量代替報告採用量|
+|LINE V659／現有Sender V70|3/3 SENT；failed/dead-letter/duplicate0|PRODUCTION_VERIFIED：不重送、不改Sender；既有V659內容保持原樣|
+|Closing／Learning|完成；重要缺失0；市場樣本1、股票0合法不適用|PRODUCTION_VERIFIED：不證明股票策略勝率|
+|Operational Acceptance V2|10/13 15:25／15:35 PASS|PRODUCTION_VERIFIED；10/9休市誤報FAIL的修復為PR#239待核准SQL|
+|跨頁判斷信心|同一10/13正式revision aacc53d4-ba31-4594-acb0-61161a64b973：首頁65；Today原顯示48|已確認缺陷；本候選ENGINEERING_PASS，尚未正式更新|
+|正式V1推薦|72檔、評估0、BLOCKED72|NOT_READY：不能當成單純無合格股票；Reader未接72檔證據、量覆蓋及Hard Gate缺口另案|
+|V2 Shadow|該日盤前READY1/WATCH3/NONE68；最終WATCH4/NONE68|Owner-only；41鎖定研究、7個1D Outcome不是交易獲利證明|
+|Entry Opportunity|歷史432項：READY0/WAIT26/AVOID370/INSUFFICIENT36|研究可讀；自然Forward／Outcome尚未啟用|
+|VNext短／中／長研究|歷史1／28／0；品質PASS16、PENDING13|29項時間／授權仍待確認；會員可發布0；Forward／Outcome0|
+|Daily VNext Worker|PR#230已有資料Adapter、SQL、非阻塞Hook候選|OWNER_APPROVAL_REQUIRED：新Worker與持久化SQL尚未部署|
+|Academy|隔離真實GoTrue登入、Free7章14題、Premium10章23題、跨帳號／登出已通過|ISOLATED_E2E_PASS；正式Owner可讀，正式Free/Premium缺合法驗收帳號|
+|Owner Trading Cockpit|PR#223 merged／Function V9，正式Owner唯讀可用|未建立正式測試交易；Paper／Live帳務隔離回歸已完成，不等於策略有效|
+|金流|Lemon Squeezy TEST；Production DISABLED|暫停，不修改既有價格或權益|
+|五日商業穩定|獨立純判定候選已建立，08:15／15:40 Asia/Taipei|NOT_READY：目前0日；10/13不得计入，修復正式發布後才能啟動|
+
+證據包：本機 `cto-240` 與 `issue238-owner-qa` 目錄；Production查詢只保留非敏感計數及指紋。沒有把網頁暫時載入中當成故障。
+
+## 本候選修復
+
+1. Today第一層沿用既有正式 `projection.confidence`，不再把 `productDecision.model_confidence` 的資料品質48冒充市場判斷信心65。品質與校準資訊預設收合；原計算完全保留。缺失不借值，0仍為0，新分數82亦可正確顯示。
+2. Pricing清楚標明未開放付款；Navbar「14天完整試用」改為「會員方案」。NT$199與14天只保留為既有規劃，不產生試用、不改權益。
+3. 新增獨立商業穩定判定，不改Operational Acceptance V2。正式發布SHA／Owner核准／驗證時間、自然只讀AM/PM、官方交易日、不可計未來觀測或歷史重播、任一天失敗重算。合法BLOCKED只有在評估完成且無管線缺陷時可計入。
+4. 新增隔離容量腳本及CI。完整旧Integrity鏈逐層驗證真實候選後，才還原不可變前一層；保留未知路徑、未封存修改、核心漂移及授權升級拒絕測試。
+5. 正式匿名績效頁10/13顯示英文 `down`、10/12 `flat`：只翻譯既有方向為收盤偏空／震盪，不改結果或樣本統計；會員中心重複h1改為區塊h2，保留原外觀。
+6. 今日節點全部完成後沒有下一個時間時，不再顯示孤立的「｜」；已有時間的節點仍保留原時間，不推算新排程。
+
+## 真實容量測試與限制
+
+PostgreSQL17.11，ARM64，Docker主機4CPU／約7.74GiB；容器network=none。10,000隔離合成帳號、100,000進度資料；實際SQL/RLS/RPC，不是正式登入身分。
+
+|持續連線併發|20秒實際交易樣本|P95毫秒|每秒交易|失敗率|
+|---|---:|---:|---:|---:|
+|10|190331|1.932|9516.30|0%|
+|30|150184|6.685|7508.03|0%|
+|50|123557|13.472|6177.61|0%|
+
+每筆交易包含會員目錄、Premium教材與自身進度RPC。自身查詢以主鍵Bitmap Index Scan讀10列，100k資料下實際EXPLAIN執行0.843ms。跨帳號0列、Premium到期拒絕、Legacy未知到期保留均經真實SQL測試。
+
+補充既有隔離GoTrue／PostgREST真實登入與唯讀HTTP短負載：3個合法隔離帳號（非10k帳號情境），Free7章、Premium與Owner10章，Free直接要求Premium教材403。併發10／30／50分別60／180／300次目錄請求，P95 23.503／39.921／43.909ms，Throughput1285.52／1913.51／2164.65 RPS，error0。僅短突發，不是持續HTTP容量保證。3次登入最大182.984ms，樣本太少不宣告Auth P95。全程無Production憑證、權益或學習進度寫入。
+
+**尚未量測**：正式Supabase硬體、10k帳號HTTP端到端、Auth尖峰、Edge冷啟動、CDN、長期研究Worker、LINE真實10k收件者。不能將本表宣告成整個平台可服務10k付費會員。
+
+建議下一隔離情境：10k帳號、每日2次登入、5分鐘晨間尖峰中10%帳號讀8個頁面（約26.7HTTP RPS），分別測30/100/300活動Session；每人活動不等於每人持續DB連線。驗收目標：一般讀取HTTP P95<500ms、錯誤率<0.5%；登入P95<1500ms、無越權；該目標尚未達正式量測證明。
+
+### 成本與營運風險
+
+官方來源查核於2026-10-13：
+
+- [Supabase官方價目](https://supabase.com/pricing)：Pro由USD25/月起；10kMAU低於含100kMAU，但CPU、Egress與Function呼叫仍依實際需求。不能把起價當平台總費用，未確認現有Production方案／帳單。
+- 10k人×22交易日×每天1則 = 220,000 LINE收件訊息，不是20個multicast請求只算20則。現Sender每批500、每輪claim1000、最多10輪，正常無錯的上界恰為10k；沒有剩餘容量餘裕，重試與timeout仍需隔離完整Outbox壓測，禁止直接改Dispatch。
+- [LINE官方2026年11月調價公告](https://tw.linebiz.com/column/LINEOA-2026-Price-Plan/)：11/1起高用量NT1400、含6000則，加購前50k每則0.20、其後0.15。上述220k假設的新制估計NT36,000/月未稅（1400+10000+24600），不是目前實際帳单或現行10月份價格；亦非購買核准。
+- Provider、Readdy、LLM與現有LINE方案／未稅成本尚待合法帳單證據，未承諾新付款。
+
+### 容量審查矩陣
+
+|層|已有證據|未完成／下一驗收|
+|---|---|---|
+|DB/index/RLS|上述真實隔離SQL、範圍主鍵查詢、跨帳號拒絕|Production EXPLAIN與方案資源、研究批次熱點仍待只讀量測|
+|Auth/Entitlement|既有隔離GoTrue真登入及本次到期/Legacy SQL|正式Free/Premium E2E與隔離Auth負載|
+|Edge/API|正式單次只讀頁面可用；隔離PostgREST50併發P95 43.909ms|正式Edge端到端峰值、429退避、冷啟動尚未量測|
+|Cache/CDN|Vite分包，不能共用私人教材快取|正式Cache headers／命中率／私有回應cache隔離|
+|Worker/Recovery|VNext Lease／Idempotency／immutable候選與隔離測試|未部署，自然恢復NOT_ENABLED|
+|LINE|正式3人自然SENT；500batch/1000claim/10pass|10k隔離Outbox+transport/time budget量測；不發LINE|
+|Webhook|付款停用|依Owner要求暫停，不新增測試或支付服務|
+|Observability|pipeline/status/funnel/dispatch已有彙總|商業AM/PM採集器與連續5日不可偽造證據尚未接入|
+
+## 五日穩定啟動前置
+
+先修复并經Owner核准發布全部重大缺陷（含Today顯示、PR#239日曆、推薦資料Reader與受保護證據整合），正式Free/Premium權限驗收與自然VNext接線另具名核准。保留發佈SHA與時間，以現有正式台股日曆為准，AM08:15與PM15:40只讀記錄證據。現在沒有啟動Cron、沒有把10/13算成穩定日、沒有宣告COMMERCIAL_STABILITY_GATE PASS。
+
+## 回復與公開界線
+
+所有本輪變更仅為獨立UI／測試候選；不改Market Decision、正式推薦、Report、LINE、Provider／Atomic、Academy、Entry、Cockpit、Auth/RLS、Secrets或Cron。正式Free/Premium研究維持真實空狀態，等待授權與Owner逐筆審核。實際逐頁截图與最新CI狀態在交付證據包另列，不以Build PASS取代產品驗收。

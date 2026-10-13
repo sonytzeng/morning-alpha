@@ -1,0 +1,31 @@
+name: CTO commercial candidate isolation
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capacity-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MA_CTO_CAPACITY: ISOLATED_ONLY
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Network-isolated synthetic load fixture and real PostgreSQL/RLS/RPC
+        run: |
+          docker run -d --name ma-cto-capacity-240 --network none --env POSTGRES_PASSWORD=isolated-ci-only postgres:17
+          for attempt in $(seq 1 30); do
+            if docker exec ma-cto-capacity-240 pg_isready -U postgres; then break; fi
+            sleep 1
+          done
+          docker exec ma-cto-capacity-240 pg_isready -U postgres
+          docker cp scripts/cto/capacity-workload.sql ma-cto-capacity-240:/tmp/capacity-workload.sql
+          node scripts/cto/capacity-isolation.mjs
+      - name: Remove only this disposable container
+        if: always()
+        run: docker rm -f ma-cto-capacity-240

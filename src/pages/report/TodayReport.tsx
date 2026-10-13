@@ -348,7 +348,7 @@ function TodayReportContent() {
   const oneLineConclusion = publicTodayText(presentation.mission.explanation);
   const successConditions = presentation.confirmationItems;
   const flowConditions = successConditions;
-  const nextDecisionTime = `${nextRuntimeNode.time}｜${nextRuntimeNode.label}`;
+  const nextDecisionTime = nextRuntimeNode.time ? `${nextRuntimeNode.time}｜${nextRuntimeNode.label}` : nextRuntimeNode.label;
   const validationSteps = canonicalNarrative.decision_lifecycle.validation_plan.steps.slice(0, 5);
   const matchingValidationStep = validationSteps.find((step) =>
     [step.time, step.title, step.detail].some((value) => String(value ?? '').includes(nextRuntimeNode.time)),
@@ -713,7 +713,7 @@ function TodayReportContent() {
       <Navbar marketStatusLabel={nextDecisionTime} />
 
       <main className="flex-1 overflow-x-hidden" data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
-        <DecisionBrief decision={productDecision} date={report.report_date} analysisUnavailable={analysisUnavailable} publicMarket={projection.publicMarket}
+        <DecisionBrief decision={productDecision} date={report.report_date} analysisUnavailable={analysisUnavailable} publicMarket={projection.publicMarket} marketConfidence={projection.confidence}
           marketBias={publicTodayText(projection.marketDecision.bias || projection.statusLabel)} legacyInstruction={projection.marketDecision.label}
           legacyReason={publicTodayText(oneLineConclusion || primaryScenario)} legacyCount={focusStocks.length}
           stocksWithheld={!recommendationAccess}
@@ -792,7 +792,7 @@ function TodayReportContent() {
               {decisionMilestones.map((item) => (
                 <article key={item.time} className={`is-${item.state}`}>
                   <p>{item.kicker}</p>
-                  <div><i aria-hidden="true" /><strong>{item.time}｜{item.label}</strong></div>
+                  <div><i aria-hidden="true" /><strong>{item.time ? `${item.time}｜${item.label}` : item.label}</strong></div>
                   <span>{runtimeTimelineStatusLabel(item.status)}</span>
                 </article>
               ))}

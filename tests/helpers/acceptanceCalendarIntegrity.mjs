@@ -90,4 +90,3 @@ export function calendarBaselineChangedPaths(prior){
  calendarTransition();
  return immutableChangedPaths(prior);
 }
-

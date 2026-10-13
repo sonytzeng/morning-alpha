@@ -69,7 +69,7 @@
     {
       "path": "tests/helpers/acceptanceCalendarIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "d19a5f15cac24d753960c8b249c2ac70a04a0b11ccf55c316cee833c79ed181f"
+      "after_sha256": "8fe28a22a9447f42a9ca02e2d0712f96f99bc5c24b61c6c44e4a493e93bbc461"
     },
     {
       "path": "tests/helpers/marketNewsReportIntegrity.mjs",

@@ -40,12 +40,12 @@
     {
       "path": "docs/operations/cto-commercial-readiness-20261013.md",
       "before_sha256": null,
-      "after_sha256": "f87c8dd5a099b6be8734129384cac3555c805d14039ffc6e728bf270e8a4322e"
+      "after_sha256": "3f2ce4ea92e3446f4768dd1492b6e231133ddeac21a0c712d798e7e44af6c926"
     },
     {
       "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
       "before_sha256": null,
-      "after_sha256": "54a05cc23f2074838f4c91945fe5818ea5f7fd8087e60efbaf181272d2ea3dcd"
+      "after_sha256": "a627165b422d4f09a65a8aaa9e96421e088897bbda68bb9e13878e129105c54a"
     },
     {
       "path": "scripts/cto/capacity-isolation.mjs",
@@ -61,6 +61,11 @@
       "path": "scripts/cto/public-regression-shard.mjs",
       "before_sha256": null,
       "after_sha256": "3214243602cbe184fddc0ac4b66b9f8b63afa76dca908b1f35758ac3966df0c0"
+    },
+    {
+      "path": "src/components/feature/Footer.tsx",
+      "before_sha256": "47e73db25341214964adfd99b39e0b78755f0304e6facdfef13cfa92a5813622",
+      "after_sha256": "c9634e8072c983d598f0b652d9ccaa7e122068524861f539403703dfa24372f6"
     },
     {
       "path": "src/components/feature/Navbar.tsx",
@@ -175,7 +180,7 @@
     {
       "path": "tests/ctoPerformancePresentation.test.mjs",
       "before_sha256": null,
-      "after_sha256": "d477c0c1c7e6f440fe6821f08412e540c3c5765dfeb2103d1d58894a58a14665"
+      "after_sha256": "169532f4dc94d7fb0529affc63571b6fa9fb17a7a57777068f5236082fbf4905"
     },
     {
       "path": "tests/ctoPricingPresentation.test.mjs",
@@ -195,7 +200,7 @@
     {
       "path": "tests/helpers/ctoCommercialIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "d4618349460a765eb66b735fc81d69ef6f72552463294cf256216bfa89528913"
+      "after_sha256": "725806235227ff70c15dfaeb535bb5a23ee5f881d2165e1cb5778a4371212367"
     },
     {
       "path": "tests/productContract.test.mjs",

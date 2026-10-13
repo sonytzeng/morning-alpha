@@ -19,6 +19,7 @@ export const CTO_PATHS=Object.freeze([
  'scripts/cto/capacity-isolation.mjs',
  'scripts/cto/capacity-workload.sql',
  'scripts/cto/public-regression-shard.mjs',
+ 'src/components/feature/Footer.tsx',
  'src/components/feature/Navbar.tsx',
  'src/features/decision-v1/DecisionBrief.tsx',
  'src/features/decision-v1/subscriber.css',

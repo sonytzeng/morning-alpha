@@ -12,6 +12,7 @@ Runtime檔案只有：
 - `src/features/decision-v1/subscriber.css`：三指標布局、收合詳細資訊44px操作目標。
 - `src/pages/report/TodayReport.tsx`：傳入正式confidence。
 - `src/components/feature/Navbar.tsx`：會員方案入口，不假宣告試用已開始。
+- `src/components/feature/Footer.tsx`：只提高既有白字透明度，讓公司資訊與風險聲明可讀；文案、連結、功能與字體大小完全不變。
 - `src/pages/pricing/Pricing.tsx`：付款停用與預定方案說明。
 - `src/lib/performanceDirectionPresentation.ts`、`src/pages/performance/page.tsx`：只翻譯既有收盤方向，不改統計。
 - `src/pages/account/components/MorningHeroCard.tsx`：重複頁面標題改為區塊標題，外觀不變。

@@ -21,7 +21,7 @@ export default function Footer() {
               />
               <span className="text-white/80 font-semibold text-sm">{BRAND_NAME}</span>
             </div>
-            <p className="text-white/45 text-xs leading-relaxed">
+            <p className="text-white/60 text-xs leading-relaxed">
               每天早上 30 秒，分開看市場方向與進場風險，再用盤中與收盤證據核對判斷。
             </p>
           </div>
@@ -69,7 +69,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-5 flex flex-col items-center justify-between gap-3 border-t border-background-200/70 pt-4 sm:flex-row">
           <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-            <p className="text-white/25 text-[11px]">
+            <p className="text-white/60 text-[11px]">
               &copy; 2026 {BRAND_NAME}. 愛吉網路資訊有限公司｜統編 60374105
             </p>
           </div>
@@ -78,7 +78,7 @@ export default function Footer() {
               <span className="w-1.5 h-1.5 rounded-full bg-forest-400"></span>
               公開測試階段
             </span>
-            <p className="text-white/20 text-[11px] text-center sm:text-right">
+            <p className="text-white/60 text-[11px] text-center sm:text-right">
               本平台提供市場資訊整理與情緒判讀參考，不構成投資建議。
             </p>
           </div>

@@ -9,7 +9,32 @@ permissions:
   contents: read
 
 jobs:
+  public-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Exhaustive public regression partition (no omitted or skipped tests)
+        env:
+          MA_PUBLIC_REGRESSION_SHARD: ${{ matrix.shard }}
+        run: node scripts/cto/public-regression-shard.mjs
   validate:
+    needs: public-regression
+    # Required aggregate must FAIL, not become an apparently successful skipped
+    # check when one of its prerequisite partitions fails or is cancelled.
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     # Full immutable predecessor-chain validation plus isolated database replay.
     # Keep every assertion; cap runtime without cutting the acceptance suite.
@@ -33,6 +58,8 @@ jobs:
       PGUSER: postgres
       PGPASSWORD: isolated-ci-only
     steps:
+      - name: Require every public regression partition to pass
+        run: test '${{ needs.public-regression.result }}' = success
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Verify incident changes against the immutable approved baseline.
@@ -46,7 +73,6 @@ jobs:
       # networkObserver's cold-build fallback otherwise writes auto-imports.d.ts
       # while parallel integrity tests are validating its immutable bytes.
       - run: npm run build
-      - run: npm run test:public
       - name: Preserved incident captures and provider-shaped replay boundaries
         run: >-
           node --test

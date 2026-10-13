@@ -28,16 +28,25 @@ test('confirmed timeout budgets preserve all commands, steps, permissions and as
   assert.equal(normalize(raw(path)),normalize(ctoPrior(path)));assert.match(raw(path).toString(),/timeout-minutes: 30\n/);
  }
 });
-test('full release CI retains every check and builds before parallel immutable-byte readers',()=>{
+test('full release CI retains every downstream check and requires all exhaustive public partitions',()=>{
  const path='.github/workflows/validate-release.yml';
  const strip=bytes=>bytes.toString().split('\n').filter(line=>!line.trimStart().startsWith('#')).join('\n');
- const before=strip(ctoPrior(path)),after=strip(raw(path));
+ const before=strip(ctoPrior(path)).slice(strip(ctoPrior(path)).indexOf('  validate:'));
+ const workflow=raw(path).toString(),after=strip(raw(path)).slice(strip(raw(path)).indexOf('  validate:'));
  const expected=before.replace('timeout-minutes: 60','timeout-minutes: 120')
   .replace('      - run: npm run build\n','')
-  .replace('      - run: npm run test:public','      - run: npm run build\n      - run: npm run test:public');
- assert.equal(after,expected,'only the proven time budget and build ordering may change');
+  .replace('      - run: npm run test:public\n','')
+  .replace('      - run: npm run lint','      - run: npm run lint\n      - run: npm run build')
+  .replace('  validate:\n','  validate:\n    needs: public-regression\n    if: ${{ always() }}\n')
+  .replace('    steps:\n','    steps:\n      - name: Require every public regression partition to pass\n        run: test \'${{ needs.public-regression.result }}\' = success\n');
+ assert.equal(after,expected,'every original downstream SQL/Edge/RLS command and permission remains exact');
  assert.equal((after.match(/- run: npm run build/g)||[]).length,1);
- assert.ok(after.indexOf('- run: npm run build')<after.indexOf('- run: npm run test:public'));
+ const partition=workflow.slice(workflow.indexOf('  public-regression:'),workflow.indexOf('  validate:'));
+ assert.match(partition,/fail-fast: false/);assert.match(partition,/shard: \[0, 1, 2, 3\]/);
+ assert.match(partition,/timeout-minutes: 120/);assert.match(partition,/fetch-depth: 0/);
+ assert.match(partition,/run: node scripts\/cto\/public-regression-shard\.mjs/);
+ assert.ok(partition.indexOf('npm run build')<partition.indexOf('node scripts/cto/public-regression-shard.mjs'));
+ assert.doesNotMatch(partition,/continue-on-error|secrets\.|\sif:|test-name-pattern|test-skip-pattern/);
 });
 test('existing empty untracked directories never hide a later deeply nested unknown file',()=>{
  let paths=['known.ts'],calls=0,nonce=0;

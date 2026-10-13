@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {spawn} from 'node:child_process';
+import {freemem,totalmem} from 'node:os';
 import {fileURLToPath} from 'node:url';
 export const PUBLIC_SHARDS=4;
 const root=fileURLToPath(new URL('../../',import.meta.url));
@@ -35,7 +36,7 @@ if(process.argv[1]===fileURLToPath(import.meta.url)){
  console.log(JSON.stringify({scope:'FULL_PUBLIC_SUITE_PARTITION',shard:index,total_files:all.length,selected_files:args.length-3,concurrency:1,test_filtering:false}));
  const child=spawn(process.execPath,args,{cwd:root,stdio:'inherit'}),started=Date.now();
  const resource=()=>{
-  const result={scope:'CI_RUNNER_RESOURCE_SAMPLE',shard:index,elapsed_seconds:Math.round((Date.now()-started)/1000)};
+  const result={scope:'CI_RUNNER_RESOURCE_SAMPLE',shard:index,elapsed_seconds:Math.round((Date.now()-started)/1000),os_total_memory_bytes:totalmem(),os_free_memory_bytes:freemem()};
   for(const [name,path] of [['memory_current','/sys/fs/cgroup/memory.current'],['memory_limit','/sys/fs/cgroup/memory.max'],['memory_events','/sys/fs/cgroup/memory.events']]){
    try{result[name]=readFileSync(path,'utf8').trim();}catch{result[name]='NOT_AVAILABLE';}
   }

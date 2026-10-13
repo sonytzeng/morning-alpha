@@ -60,3 +60,9 @@ test('entry isolation waits for final TCP daemon and retains every original SQL,
  assert.equal(normalized,before);assert.match(after,/for attempt in \$\(seq 1 30\)/);
  assert.match(after,/done\n          docker exec ma-entry-ci-1 pg_isready -h 127\.0\.0\.1 -U postgres\n          node --experimental-strip-types tests\/entryOpportunityDatabase\.integration\.mjs/);
 });
+test('official Auth image retry is bounded and cannot bypass the original real Auth/RLS checks',()=>{
+ const path='.github/workflows/academy-v11.yml',before=ctoPrior(path).toString(),after=raw(path).toString();
+ const block=`      - name: Bounded official Auth image acquisition\n        timeout-minutes: 3\n        run: |\n          acquired=false\n          for attempt in 1 2 3; do\n            if docker pull public.ecr.aws/supabase/gotrue:v2.194.0; then\n              acquired=true\n              break\n            fi\n            if [ "$attempt" -lt 3 ]; then sleep 20; fi\n          done\n          test "$acquired" = true\n`;
+ assert.ok(after.includes(block));assert.equal(after.replace(block,''),before);
+ assert.match(after,/run: node scripts\/academy-v11\/auth-environment\.mjs/);
+});

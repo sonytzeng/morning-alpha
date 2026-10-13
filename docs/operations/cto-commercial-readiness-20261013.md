@@ -41,6 +41,7 @@
 12. 完整CI run38419954873有六項實際失敗且60分鐘逾時，不隱藏為「單純逾時」：兩项舊Academy控制仍預期Calendar層錯誤／舊diff參數；兩項完整性控制碰上networkObserver首次Build暫時清空auto-imports.d.ts；Performance隔離loader未注入真實顯示helper；新歷史prose版本綁定read-site尚未列入精確圖譜。修正直接測試依賴與最新CTO層級，所有原拒絕控制保留；新增該唯一symbol/read-site的用途分類，沒有整檔豁免。將既有Build移至公開並行測試前，保留每一個SQL／Edge／RLS命令與權限；完整release有界時限120分鐘。新增逐字比較回歸確認只有時限與Build順序改變。該舊run不得列PASS，後續以新HEAD全套終態為準。
 13. 精確HEAD6f987ec的完整release兩次在約7／8分鐘被取消，官方註記只有operation canceled，沒有斷言或OOM原因證據；不得先推定記憶體問題。Academy另遭官方映像Rate exceeded，同HEAD第二次通過。完整公開回歸改成四份獨立runner、每份單一測試程序、各120分鐘有界時限。清單仍由未改的package.json原glob與實際tests目錄產生；聯集、無重複、無遗漏與非法參數皆經獨立負面控制。所有四份成功才執行原SQL／Edge／RLS工作，不使用skip/filter/continue-on-error，不移除既有業務／安全斷言，僅更新必要測試接線並新增分片負面控制。每30秒只輸出非敏感runner記憶體統計，協助辨識未知平台取消；新的候選另綁HEAD及完整CI結果。
 14. 10/14跨日實機驗證Today已有保護：今天判斷尚未產生時，不展示10/13行情；不另改既有跨日契約。靜態資料流另證明所有節點完成的空時間會以includes('')匹配第一個09:30盤前條件。本候選只在時間非空時匹配正式條件；空值／未匹配不借第一筆，真實09:30仍保留。另有10add26分片3官方runner shutdown證據，不能歸因為OOM或測試失敗；歷史失敗照實保留。
+15. Academy官方固定GoTrue映像多次下載限速，未開始Auth測試；增加同一來源、同一tag的三次下載重試、20秒間隔、3分鐘step上限，全部失敗即拒絕，不換Registry或憑證。逐字比較保留所有原Auth／RLS步驟。分片另外記錄Node實際可讀的OS總／可用記憶體；cgroup資料不可取得時仍明示未知，不把shutdown當OOM。Sony已確認目前無合法正式Free／Premium驗收身分，維持PENDING，不建立Production測試帳號、不改權益。
 
 另案：舊 `/admin/publish` 對匿名可見空素材框架；正式Reader仍裁切權限，本次未觀察私人內容洩露。是否保留一般管理員既有素材權限、或改為具名Owner-only，需先確認安全／Legacy權益規則，不自行修改正式Auth或RLS。Chrome新分頁已恢復Sony正式Owner；五頁後台、交易中心三分頁與Academy已完成四尺寸唯讀截圖，無溢出、技術詳細資料收合，Console error/warn0。既有研究顯示的DOWN/FLAT翻譯已在PR#239，不重做；正式未發布前不冒稱已修好。
 

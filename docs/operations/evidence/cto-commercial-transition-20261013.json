@@ -40,7 +40,7 @@
     {
       "path": "docs/operations/cto-commercial-readiness-20261013.md",
       "before_sha256": null,
-      "after_sha256": "b9b15d4abf6f89007d63585946c98321007433b4263f529018730844ae02f92c"
+      "after_sha256": "f87c8dd5a099b6be8734129384cac3555c805d14039ffc6e728bf270e8a4322e"
     },
     {
       "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
@@ -140,7 +140,7 @@
     {
       "path": "tests/academyV11Integrity.test.mjs",
       "before_sha256": "112e597475c5014cc396c79f7243203c0c84ded07af5252e4dc4c81469e94b95",
-      "after_sha256": "2022b69badfebc1542d50348f22fadc2c899b62e74cc551d088c0cced7c3a1e5"
+      "after_sha256": "12c00e7b7cc45c991a4321de546981740cc5369c90cc3438f87a3e4368d898de"
     },
     {
       "path": "tests/commercialStability.test.mjs",
@@ -160,7 +160,7 @@
     {
       "path": "tests/ctoCommercialIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "e6ef874cdbbc706d2fb21d4632202de7623aa680d6f4b4b97becfeafa394e9b5"
+      "after_sha256": "047555282fd7aba283666511b229df5bbba4d083cd854f99577b96a1f92bb662"
     },
     {
       "path": "tests/ctoConfidencePresentation.test.mjs",

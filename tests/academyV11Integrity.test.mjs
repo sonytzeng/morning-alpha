@@ -187,22 +187,26 @@ test('V1 integration verifies the real successor before restoring historical byt
   // Exercise the current, sealed Calendar successor through the NO-OVERRIDE APIs.
   // Only adversarial drift is process-local. An old synthetic V1.1 candidate
   // cannot replace raw Calendar files: the newest gate must reject that mismatch.
-  t.mock.method(fs, 'readFileSync', function(path, ...args) {
+  // These counters, not MockFunctionContext.calls, are the asserted evidence.
+  // A tracking Proxy retains every returned raw Buffer throughout the deep
+  // baseline scans. Use the same process-local behavior without that unused
+  // history, restoring both builtins unconditionally below.
+  fs.readFileSync = function(path, ...args) {
     const p = relative(path);
     if (p === sentinel) sentinelReads++;
     const b = actualDrift.get(p) ?? null;
     if (b === null) return realRead.call(this, path, ...args);
     const encoding = typeof args[0] === 'string' ? args[0] : args[0]?.encoding;
     return encoding ? b.toString(encoding) : Buffer.from(b);
-  });
-  t.mock.method(childProcess, 'execFileSync', function(command, args, ...options) {
+  };
+  childProcess.execFileSync = function(command, args, ...options) {
     if (command === 'git' && args[0] === 'diff' && args.length === 7 && args[5] === CTO_BASE) {
       inventoryReads++;
       const inventory = realExec.call(this, command, args, ...options);
       return extraPath ? inventory + 'unknown-live-file\0' : inventory;
     }
     return realExec.call(this, command, args, ...options);
-  });
+  };
   syncBuiltinESMExports();
   try {
     const liveText = p => fs.readFileSync(new URL(p, 'file://' + root), 'utf8');
@@ -266,7 +270,8 @@ test('V1 integration verifies the real successor before restoring historical byt
     assert.throws(() => academyTransition(priorRead), /unknown Calendar working-tree path/);
     assert.throws(() => academyChangedPaths(), /unknown Calendar working-tree path/);
   } finally {
-    t.mock.restoreAll();
+    fs.readFileSync = realRead;
+    childProcess.execFileSync = realExec;
     syncBuiltinESMExports();
   }
 });

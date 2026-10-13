@@ -1,4 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
 import {ctoTransition,ctoPrior,ctoChangedPaths,CTO_PATHS,CTO_MANIFEST,memoizedScopeInventory,scopeInventorySignature} from './helpers/ctoCommercialIntegrity.mjs';
 const raw=path=>readFileSync(new URL('../'+path,import.meta.url));
 test('CTO exact UI/test candidate preserves every other byte and has no Production authority',()=>{
@@ -65,4 +66,16 @@ test('official Auth image retry is bounded and cannot bypass the original real A
  const block=`      - name: Bounded official Auth image acquisition\n        timeout-minutes: 3\n        run: |\n          acquired=false\n          for attempt in 1 2 3; do\n            if docker pull public.ecr.aws/supabase/gotrue:v2.194.0; then\n              acquired=true\n              break\n            fi\n            if [ "$attempt" -lt 3 ]; then sleep 20; fi\n          done\n          test "$acquired" = true\n`;
  assert.ok(after.includes(block));assert.equal(after.replace(block,''),before);
  assert.match(after,/run: node scripts\/academy-v11\/auth-environment\.mjs/);
+});
+test('large Academy spy retains every original counter, mutation, denial and restoration assertion',()=>{
+ const path='tests/academyV11Integrity.test.mjs',marker="test('V1 integration verifies the real successor before restoring historical bytes and diagnostics'";
+ const before=execFileSync('git',['show','3ee7339ad7f65b3f4b15f9763c9961d715603379:'+path],{encoding:'utf8'});
+ const after=raw(path).toString();let restored=after.slice(after.indexOf(marker));
+ restored=restored.replace('  // These counters, not MockFunctionContext.calls, are the asserted evidence.\n  // A tracking Proxy retains every returned raw Buffer throughout the deep\n  // baseline scans. Use the same process-local behavior without that unused\n  // history, restoring both builtins unconditionally below.\n','')
+  .replace("  fs.readFileSync = function(path, ...args) {","  t.mock.method(fs, 'readFileSync', function(path, ...args) {")
+  .replace("  };\n  childProcess.execFileSync = function(command, args, ...options) {","  });\n  t.mock.method(childProcess, 'execFileSync', function(command, args, ...options) {")
+  .replace('  };\n  syncBuiltinESMExports();','  });\n  syncBuiltinESMExports();')
+  .replace('    fs.readFileSync = realRead;\n    childProcess.execFileSync = realExec;','    t.mock.restoreAll();');
+ assert.equal(restored,before.slice(before.indexOf(marker)),'all original control branches, repetitions and assertions stay exact');
+ assert.equal(after.slice(0,after.indexOf(marker)),before.slice(0,before.indexOf(marker)),'all other eight Academy tests stay exact');
 });

@@ -8,6 +8,7 @@ export const CTO_BASE='4348efaff4514a43473d111950083799a23c79c2';
 export const CTO_MANIFEST='docs/operations/evidence/cto-commercial-transition-20261013.json';
 export const CTO_PATHS=Object.freeze([
  '.github/workflows/cto-commercial.yml',
+ '.github/workflows/entry-opportunity.yml',
  '.github/workflows/research-foundation.yml',
  '.github/workflows/owner-trading-lab.yml',
  '.github/workflows/recommendation-v2-shadow.yml',

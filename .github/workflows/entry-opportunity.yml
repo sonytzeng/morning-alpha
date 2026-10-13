@@ -30,9 +30,12 @@ jobs:
         run: |
           docker run -d --name ma-entry-ci-1 --network none --env POSTGRES_PASSWORD=isolated-entry-only postgres:17
           for attempt in $(seq 1 30); do
-            if docker exec ma-entry-ci-1 pg_isready -U postgres; then break; fi
+            # initdb's temporary daemon accepts Unix sockets before shutdown.
+            # Only the final daemon listens on TCP; retain the bounded wait.
+            if docker exec ma-entry-ci-1 pg_isready -h 127.0.0.1 -U postgres; then break; fi
             sleep 1
           done
+          docker exec ma-entry-ci-1 pg_isready -h 127.0.0.1 -U postgres
           node --experimental-strip-types tests/entryOpportunityDatabase.integration.mjs
       - name: Local-only desktop, mobile, Owner and deny paths
         env:

@@ -14,7 +14,15 @@ export function historicalReportEvidencePresentation(value: unknown, projection:
     || source.identity.revisionId !== projection.identity.revisionId) return empty;
   const row = record(value);
   const ai = { ...record(row.ai_strategy_json), ...row };
-  const narrative = buildCanonicalNarrative({ displayState: null, ai, memberResearchNoteV2: record(ai.member_research_note_v2) });
+  const note = record(ai.member_research_note_v2), contract = record(note.canonical_contract);
+  // The public reader deliberately supplies a generic validation skeleton.
+  // Without the saved contract's identity it is NOT historical evidence.
+  const version = record(ai.canonical_decision).version;
+  if (contract.report_date !== source.identity.reportDate || contract.snapshot_id !== source.identity.revisionId
+    || note.report_date !== undefined && note.report_date !== source.identity.reportDate
+    || !Number.isInteger(contract.snapshot_version) || Number(contract.snapshot_version) < 1
+    || !Number.isInteger(version) || version !== contract.snapshot_version) return empty;
+  const narrative = buildCanonicalNarrative({ displayState: null, ai, memberResearchNoteV2: note });
   const steps = narrative.today_script.steps;
   return {
     steps,

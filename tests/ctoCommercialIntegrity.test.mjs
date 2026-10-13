@@ -34,3 +34,9 @@ test('existing empty untracked directories never hide a later deeply nested unkn
  assert.deepEqual(read(),['known.ts']);paths=['known.ts','empty/deep/unknown.sql'];assert.deepEqual(read(),paths);assert.equal(calls,2);
  assert.equal(scopeInventorySignature('metadata',[],()=>{throw Error('must not use nonce');}),'metadata');
 });
+test('entry isolation waits for final TCP daemon and retains every original SQL, RLS and UI check',()=>{
+ const path='.github/workflows/entry-opportunity.yml',before=ctoPrior(path).toString(),after=raw(path).toString();
+ const normalized=after.split('\n').filter(line=>!line.trimStart().startsWith('#')&&!/^          docker exec ma-entry-ci-1 pg_isready -h 127\.0\.0\.1 -U postgres$/.test(line)).join('\n').replace('pg_isready -h 127.0.0.1 -U postgres','pg_isready -U postgres');
+ assert.equal(normalized,before);assert.match(after,/for attempt in \$\(seq 1 30\)/);
+ assert.match(after,/done\n          docker exec ma-entry-ci-1 pg_isready -h 127\.0\.0\.1 -U postgres\n          node --experimental-strip-types tests\/entryOpportunityDatabase\.integration\.mjs/);
+});

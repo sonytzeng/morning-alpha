@@ -8,6 +8,11 @@
       "after_sha256": "aebc88609a1430df154ed3e6c5480f0bb1ab45e09732eb99d23e1c8474ad5c79"
     },
     {
+      "path": ".github/workflows/entry-opportunity.yml",
+      "before_sha256": "ff3f4fffedf222a07fc4b79067f7a8b43435b095cf74d101dc2fa4c84c32f190",
+      "after_sha256": "b855f5a7f9f2d240bebdefac821cfeaad61cef6bf41846922e8d7fb779fa1487"
+    },
+    {
       "path": ".github/workflows/owner-trading-lab.yml",
       "before_sha256": "f5b7ba360f9c80687c27abbecf5cd9f415292eb448d5eddced70edf8e6b87a31",
       "after_sha256": "b1e1fa7f268dc898aa1ecd3219d7f99506c4efb8a449a750a94218ac526a2978"
@@ -25,12 +30,12 @@
     {
       "path": "docs/operations/cto-commercial-readiness-20261013.md",
       "before_sha256": null,
-      "after_sha256": "5e229723d837c08a655e50f13ecaf2dad86f379262738cbe00812413bdc111f8"
+      "after_sha256": "2507e09d06bf953c2202043055c6b9a5b73d466b077978fe7b6eadd34d32d0c3"
     },
     {
       "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
       "before_sha256": null,
-      "after_sha256": "2dae548f7c63c35fddaec62ea6b9367958482b9af7a0072b8d5c4ade27dc6245"
+      "after_sha256": "54a05cc23f2074838f4c91945fe5818ea5f7fd8087e60efbaf181272d2ea3dcd"
     },
     {
       "path": "scripts/cto/capacity-isolation.mjs",
@@ -70,7 +75,7 @@
     {
       "path": "src/lib/historicalReportEvidencePresentation.ts",
       "before_sha256": null,
-      "after_sha256": "c4835c3ee2337f522130f243336503cb0d4841347401d36037ad0b20d326a3eb"
+      "after_sha256": "4982f59111364ce70f8e535f8e3b421eaf7a7183a25f672cf9ac224e953b354e"
     },
     {
       "path": "src/lib/performanceDirectionPresentation.ts",
@@ -125,7 +130,7 @@
     {
       "path": "tests/ctoCommercialIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "1e60db04487e2fb1118bf9abe36cb72f137fcfaa8280befbb640ce36c3c58134"
+      "after_sha256": "b3fd5ae4151d6685167ea36a1b00715d4c0f2d4a7b5ae14125249547bb1bd99c"
     },
     {
       "path": "tests/ctoConfidencePresentation.test.mjs",
@@ -135,7 +140,7 @@
     {
       "path": "tests/ctoHistoricalEvidencePresentation.test.mjs",
       "before_sha256": null,
-      "after_sha256": "8253e29275b1eb9bbd271cf1dc2b1faee7f9c71f517d88b6b35d44e1b6dcfb90"
+      "after_sha256": "db4cc5a31d429d2d6087ad3476424d03c7977ff7d8c0086480167d793653e912"
     },
     {
       "path": "tests/ctoPerformancePresentation.test.mjs",
@@ -155,7 +160,7 @@
     {
       "path": "tests/helpers/ctoCommercialIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "508d073b02984ef2859a9271a9da0f578f597863ab07e47501284c6d6cf04b75"
+      "after_sha256": "b2a481660dc0a6a792215edb03d9c747d7f377a4ab969a26d77b8545adbb2847"
     },
     {
       "path": "tests/productContract.test.mjs",

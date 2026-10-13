@@ -10,7 +10,7 @@
     {
       "path": ".github/workflows/cto-commercial.yml",
       "before_sha256": null,
-      "after_sha256": "aebc88609a1430df154ed3e6c5480f0bb1ab45e09732eb99d23e1c8474ad5c79"
+      "after_sha256": "989277074003781ad76aab65e4476cede98befeddf01dd0e3a64f35b307d120c"
     },
     {
       "path": ".github/workflows/entry-opportunity.yml",
@@ -40,7 +40,7 @@
     {
       "path": "docs/operations/cto-commercial-readiness-20261013.md",
       "before_sha256": null,
-      "after_sha256": "7c2060816513e8943ce5aae10cb3dd6608425a0652d2df37c4f057ebe88b06a3"
+      "after_sha256": "d15ad4ff68af3590507a669b8e05c783116046599b40644da5285593b3097ca3"
     },
     {
       "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
@@ -50,7 +50,7 @@
     {
       "path": "scripts/cto/capacity-isolation.mjs",
       "before_sha256": null,
-      "after_sha256": "2eca2231e15402eded13093411d64550dd813753d186b84221101f6fb7fa26c4"
+      "after_sha256": "f48518da468fffbbaea616c9c89f850c1ee364ef81e835085fd6c6f009820e6c"
     },
     {
       "path": "scripts/cto/capacity-workload.sql",
@@ -170,7 +170,7 @@
     {
       "path": "tests/ctoCommercialIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "537e6cf64e3664c98b410a7c452e29804f8e41c02d9554e4bc7f1676835727e2"
+      "after_sha256": "3abc59abecb1b4b1cc36da886e44890d06e1d2f93b6d80a7c9c8bb46e33ed738"
     },
     {
       "path": "tests/ctoConfidencePresentation.test.mjs",

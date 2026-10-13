@@ -9,7 +9,7 @@ assert.equal(process.env.MA_CTO_CAPACITY,'ISOLATED_ONLY');
 const container='ma-cto-capacity-240';
 const docker=args=>execFileSync('docker',args,{encoding:'utf8',maxBuffer:64e6,stdio:['pipe','pipe','pipe']}).trim();
 assert.equal(docker(['inspect','--format','{{.HostConfig.NetworkMode}}',container]),'none');
-const sql=s=>execFileSync('docker',['exec','-i',container,'psql','-XqAt','-U','postgres','-v','ON_ERROR_STOP=1'],{input:s,encoding:'utf8',maxBuffer:8e6,stdio:['pipe','pipe','pipe']}).trim();
+const sql=s=>execFileSync('docker',['exec','-i',container,'psql','-h','127.0.0.1','-XqAt','-U','postgres','-v','ON_ERROR_STOP=1'],{input:s,encoding:'utf8',maxBuffer:8e6,stdio:['pipe','pipe','pipe']}).trim();
 const read=p=>readFileSync(new URL('../../'+p,import.meta.url),'utf8');
 sql(`create schema auth;create role anon nologin;create role authenticated nologin;create role service_role nologin bypassrls;
  create table auth.users(id uuid primary key,is_anonymous boolean not null default false);
@@ -41,7 +41,7 @@ sql("update public.member_entitlements set state='paid_active',access_ends_at=nu
 const plans=JSON.parse(sql("begin;set local role authenticated;select set_config('request.jwt.claim.sub',md5('cto-member-1')::uuid::text,true);explain(analyze,buffers,format json) select * from public.academy_progress_v11 where user_id=auth.uid();commit;").split('\n').slice(1).join('\n'));
 const results=[];
 for(const clients of [10,30,50]){
- const output=docker(['exec',container,'pgbench','-U','postgres','-n','-c',String(clients),'-j','4','-T','20','-r','-l','--log-prefix=/tmp/cto-'+clients,'-f','/tmp/capacity-workload.sql','postgres']);
+ const output=docker(['exec',container,'pgbench','-h','127.0.0.1','-U','postgres','-n','-c',String(clients),'-j','4','-T','20','-r','-l','--log-prefix=/tmp/cto-'+clients,'-f','/tmp/capacity-workload.sql','postgres']);
  const logs=docker(['exec',container,'sh','-c','cat /tmp/cto-'+clients+'.*']);
  const latencies=logs.split('\n').filter(Boolean).map(line=>Number(line.trim().split(/\s+/)[2])/1000).filter(Number.isFinite).sort((a,b)=>a-b);
  assert.ok(latencies.length>0,'real pgbench samples');

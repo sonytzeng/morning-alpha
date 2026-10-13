@@ -46,6 +46,7 @@
 17. 3ee7339的同分片仍SIGKILL／runner shutdown，MemAvailable最後207572992bytes，不假稱有kernel OOM事件；本機512MiB診斷則確實在141.8秒出現V8 heap out-of-memory。大型Academy第九項以Node mock追蹤readFileSync／execFileSync，追蹤歷史持有每次原始Buffer／字串，實際斷言卻只依獨立sentinelReads／inventoryReads。隔離256次1MiB回傳的最小控制證明mock保留268435456bytes，清除不使用的history後外部記憶體降回2232634bytes，而完成計數仍256。本候選只把此兩個tracking Proxy換成同樣process-local行為、finally強制還原的普通函式；所有原重複次數、來源檢查、變異及拒絕斷言逐字保留，其他八項測試完全相同。新增與3ee7339不可變來源的完整案例正規化比較，不能用降低斷言解決記憶體問題。[Node mock文件](https://nodejs.org/download/release/v22.13.0/docs/api/test.html#ctxresetcalls)說明呼叫歷史的管理；這是測試追蹤修復，不修改Academy、Auth／RLS、資料或產品驗證標準。
 18. 最後375px實機截圖確認共用Footer公司資訊／風險聲明僅25%／20%白字，深色背景難以辨識。只提高三段既有白字透明度至60%，不縮字、不改文案或任何連結／互動／功能。測試逐字比對只允許三個opacity替換，並以實際Dark Theme背景token驗算一般文字至少4.5:1；不用任意新顏色，也不更改市場分析或法律聲明內容。
 19. 精確HEAD2423efb完整分片1在33分54秒完成後因一項Calendar舊budget控制失敗而拒絕；它仍把最新四分片工作流直接與Calendar單工作流前版比較，其他三項Calendar安全控制通過。只將該歷史budget斷言接到「先驗全部實際CTO位元、再讀不可變Calendar前版」的既有完整性鏈；原60／40分鐘前版預期、每一項斷言與其他三個案例逐字保留。最新工作流的每個原SQL／Edge／RLS命令與四分片無遺漏契約仍由獨立CTO控制驗證，另新增整檔前後正規化比较，不能以更新budget常數或跳過失敗解決。
+20. 精確HEADd3a38de容量CI run38453745697：19:18:33暫時Unix socket兩次回報ready，19:18:33.744則psql明確回報socket不存在，容量SQL／RLS尚未執行。只把該隔離job等待及本機psql／pgbench統一到容器內127.0.0.1；30次有限等待及最後ready拒絕仍保留。逐字正規化比較2423efb的完整工作流／腳本，原10000帳號、100000進度、10/30/50併發、20秒、250ms P95目標及所有權限斷言不變。沒有修改DB設定或正式容量門檻。
 
 另案：舊 `/admin/publish` 對匿名可見空素材框架；正式Reader仍裁切權限，本次未觀察私人內容洩露。是否保留一般管理員既有素材權限、或改為具名Owner-only，需先確認安全／Legacy權益規則，不自行修改正式Auth或RLS。Chrome新分頁已恢復Sony正式Owner；五頁後台、交易中心三分頁與Academy已完成四尺寸唯讀截圖，無溢出、技術詳細資料收合，Console error/warn0。既有研究顯示的DOWN/FLAT翻譯已在PR#239，不重做；正式未發布前不冒稱已修好。
 

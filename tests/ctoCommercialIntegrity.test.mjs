@@ -70,6 +70,17 @@ test('entry isolation waits for final TCP daemon and retains every original SQL,
  assert.equal(normalized,before);assert.match(after,/for attempt in \$\(seq 1 30\)/);
  assert.match(after,/done\n          docker exec ma-entry-ci-1 pg_isready -h 127\.0\.0\.1 -U postgres\n          node --experimental-strip-types tests\/entryOpportunityDatabase\.integration\.mjs/);
 });
+test('capacity isolation uses the final TCP daemon and preserves every original workload and RLS assertion',()=>{
+ for(const path of ['.github/workflows/cto-commercial.yml','scripts/cto/capacity-isolation.mjs']){
+  const before=execFileSync('git',['show','2423efbf03a38c9be5fe8447ad93bf472b232b5c:'+path],{encoding:'utf8'});
+  const actual=raw(path).toString();
+  const restored=actual.replaceAll('pg_isready -h 127.0.0.1 -U postgres','pg_isready -U postgres')
+   .replaceAll("'psql','-h','127.0.0.1','-XqAt'","'psql','-XqAt'")
+   .replaceAll("'pgbench','-h','127.0.0.1','-U'","'pgbench','-U'");
+  assert.equal(restored,before,'only the loopback transport may change');
+ }
+ assert.match(raw('.github/workflows/cto-commercial.yml').toString(),/for attempt in \$\(seq 1 30\)/);
+});
 test('official Auth image retry is bounded and cannot bypass the original real Auth/RLS checks',()=>{
  const path='.github/workflows/academy-v11.yml',before=ctoPrior(path).toString(),after=raw(path).toString();
  const block=`      - name: Bounded official Auth image acquisition\n        timeout-minutes: 3\n        run: |\n          acquired=false\n          for attempt in 1 2 3; do\n            if docker pull public.ecr.aws/supabase/gotrue:v2.194.0; then\n              acquired=true\n              break\n            fi\n            if [ "$attempt" -lt 3 ]; then sleep 20; fi\n          done\n          test "$acquired" = true\n`;

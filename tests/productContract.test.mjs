@@ -16,6 +16,8 @@ import { entryAuthTransition } from './helpers/entryWorkerAuthIntegrity.mjs';
 import { cockpitTransition } from './helpers/ownerCockpitIntegrity.mjs';
 import { academyV11Transition } from './helpers/academyV11Integrity.mjs';
 import { newsReportTransition } from './helpers/marketNewsReportIntegrity.mjs';
+import { calendarTransition } from './helpers/acceptanceCalendarIntegrity.mjs';
+import { ctoTransition } from './helpers/ctoCommercialIntegrity.mjs';
 
 test('Core freeze plus explicitly authorized 9/8 incident: unapproved producers, Cron and canonical readers unchanged', () => {
   // Read-side get-report-payload and exactly two new evidence modules are the
@@ -38,7 +40,11 @@ test('Core freeze plus explicitly authorized 9/8 incident: unapproved producers,
   const cockpit=cockpitTransition();
   const academyV11=academyV11Transition();
   const newsReport=newsReportTransition();
+  const calendar=calendarTransition(); // All exact live hashes checked before ADD exclusion.
+  const cto=ctoTransition();
   const successorAdditions=new Set([...successor.manifest.files,...hardGate.manifest.files,...worker.manifest.files,...promotion.manifest.files,...ownerBackend.manifest.files,...marketNews.manifest.files,...entry.manifest.files,...entryAuth.manifest.files,...cockpit.manifest.files,...academyV11.manifest.files,...newsReport.manifest.files.map(r=>({...r,operation:r.before_sha256===null?'ADD':'MODIFY'}))].filter(r=>r.operation==='ADD').map(r=>r.path));
+  for(const row of calendar.manifest.files)if(row.before_sha256===null)successorAdditions.add(row.path);
+  for(const row of cto.manifest.files)if(row.before_sha256===null)successorAdditions.add(row.path);
   const files = execFileSync('git',['ls-files','supabase','.github/workflows','src/lib/decisionEvidence.ts','src/lib/runtimeDecisionTimeline.ts','src/services/resolveActiveReport.ts'],{encoding:'utf8'}).trim().split('\n').filter(f=>!approved.has(f)&&!subscriberApproval.newCandidatePaths.includes(f)&&!successorAdditions.has(f));
   const hash = createHash('sha256');
   for(const row of incident.files)assert.equal(createHash('sha256').update(promotion.predecessorRead(row.path)).digest('hex'),subscriberApproval.fileHash(row),row.path);

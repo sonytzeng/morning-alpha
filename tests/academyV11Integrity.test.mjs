@@ -6,7 +6,7 @@ import { syncBuiltinESMExports } from 'node:module';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { academyTransition, academyAwareReader, academyPrior, academyChangedPaths } from './helpers/academyCandidateIntegrity.mjs';
-import { NEWS_REPORT_BASE } from './helpers/marketNewsReportIntegrity.mjs';
+import { CTO_BASE } from './helpers/ctoCommercialIntegrity.mjs';
 import {
   ACADEMY_V11_BASE, ACADEMY_V11_MANIFEST, ACADEMY_V11_PREDECESSOR,
   ACADEMY_V11_PREDECESSOR_SHA256, ACADEMY_V11_MIGRATION, ACADEMY_V11_PATHS,
@@ -146,8 +146,8 @@ test('fake historical readers cannot hide actual unrelated raw-byte drift', t =>
   });
   syncBuiltinESMExports();
   try {
-    assert.throws(() => academyV11Transition(f.source, f.inventory), /protected News Report baseline: src\/router\/config/);
-    assert.throws(() => academyV11AwareReader(f.source, f.inventory), /protected News Report baseline: src\/router\/config/);
+    assert.throws(() => academyV11Transition(f.source, f.inventory), /protected CTO baseline: src\/router\/config/);
+    assert.throws(() => academyV11AwareReader(f.source, f.inventory), /protected CTO baseline: src\/router\/config/);
   } finally {
     t.mock.restoreAll();
     syncBuiltinESMExports();
@@ -184,25 +184,29 @@ test('V1 integration verifies the real successor before restoring historical byt
   const actualDrift = new Map();
   const sentinel = 'src/lib/subscriberReportContract.ts';
   let sentinelReads = 0, inventoryReads = 0, extraPath = false;
-  // Exercise the current, sealed News Report successor through the NO-OVERRIDE APIs.
+  // Exercise the current, sealed Calendar successor through the NO-OVERRIDE APIs.
   // Only adversarial drift is process-local. An old synthetic V1.1 candidate
-  // cannot replace raw News Report files: the newest gate must reject that mismatch.
-  t.mock.method(fs, 'readFileSync', function(path, ...args) {
+  // cannot replace raw Calendar files: the newest gate must reject that mismatch.
+  // These counters, not MockFunctionContext.calls, are the asserted evidence.
+  // A tracking Proxy retains every returned raw Buffer throughout the deep
+  // baseline scans. Use the same process-local behavior without that unused
+  // history, restoring both builtins unconditionally below.
+  fs.readFileSync = function(path, ...args) {
     const p = relative(path);
     if (p === sentinel) sentinelReads++;
     const b = actualDrift.get(p) ?? null;
     if (b === null) return realRead.call(this, path, ...args);
     const encoding = typeof args[0] === 'string' ? args[0] : args[0]?.encoding;
     return encoding ? b.toString(encoding) : Buffer.from(b);
-  });
-  t.mock.method(childProcess, 'execFileSync', function(command, args, ...options) {
-    if (command === 'git' && args[0] === 'diff' && args.length === 6 && args[4] === NEWS_REPORT_BASE) {
+  };
+  childProcess.execFileSync = function(command, args, ...options) {
+    if (command === 'git' && args[0] === 'diff' && args.length === 7 && args[5] === CTO_BASE) {
       inventoryReads++;
       const inventory = realExec.call(this, command, args, ...options);
       return extraPath ? inventory + 'unknown-live-file\0' : inventory;
     }
     return realExec.call(this, command, args, ...options);
-  });
+  };
   syncBuiltinESMExports();
   try {
     const liveText = p => fs.readFileSync(new URL(p, 'file://' + root), 'utf8');
@@ -235,11 +239,11 @@ test('V1 integration verifies the real successor before restoring historical byt
     assert.deepEqual(academyAwareReader(historicalSource)(path), injected);
 
     actualDrift.set('src/router/config.tsx', Buffer.from('REAL_ROUTER_DRIFT'));
-    assert.throws(() => academyTransition(priorRead), /protected News Report baseline: src\/router\/config/);
+    assert.throws(() => academyTransition(priorRead), /protected CTO baseline: src\/router\/config/);
     actualDrift.clear();
     const member = 'src/features/academy/member.ts';
     actualDrift.set(member, Buffer.from('REAL_CANDIDATE_DRIFT'));
-    assert.throws(() => academyTransition(priorRead), /protected News Report baseline: src\/features\/academy\/member/);
+    assert.throws(() => academyTransition(priorRead), /protected CTO baseline: src\/features\/academy\/member/);
     actualDrift.clear();
     // A historical callback can mutate the live filesystem view; the live gate
     // must execute AFTER custom admission, not reuse an earlier successful scan.
@@ -247,26 +251,27 @@ test('V1 integration verifies the real successor before restoring historical byt
       if (p === ACADEMY_V11_PATHS.at(-1)) actualDrift.set(sentinel, Buffer.from('CALLBACK_DRIFT'));
       return f.source(p);
     };
-    assert.throws(() => academyV11PredecessorViews(mutatingSource), /protected News Report baseline: src\/lib\/subscriberReportContract/);
+    assert.throws(() => academyV11PredecessorViews(mutatingSource), /protected CTO baseline: src\/lib\/subscriberReportContract/);
     actualDrift.clear();
     // Reusing an already restored historical reader must not cache LIVE proof.
     const historical = academyV11Transition().predecessorRead;
     academyV11PredecessorViews(historical);
     actualDrift.set(sentinel, Buffer.from('LATER_RAW_DRIFT'));
-    assert.throws(() => academyV11PredecessorViews(historical), /protected News Report baseline: src\/lib\/subscriberReportContract/);
+    assert.throws(() => academyV11PredecessorViews(historical), /protected CTO baseline: src\/lib\/subscriberReportContract/);
     actualDrift.clear();
     const badManifest = { ...f.manifest, production_deploy_authorized: true };
     actualDrift.set(ACADEMY_V11_MANIFEST, Buffer.from(JSON.stringify(badManifest)));
-    assert.throws(() => academyTransition(priorRead), /protected News Report baseline: docs\/academy\/v11\/transition/);
+    assert.throws(() => academyTransition(priorRead), /protected CTO baseline: docs\/academy\/v11\/transition/);
     actualDrift.clear();
     // The cached two-commit diff must not be mutable through the exported API.
     const changed = academyChangedPaths(); changed.push('caller-poison');
     assert.ok(!academyChangedPaths().includes('caller-poison'));
     extraPath = true;
-    assert.throws(() => academyTransition(priorRead), /unknown News Report working-tree path/);
-    assert.throws(() => academyChangedPaths(), /unknown News Report working-tree path/);
+    assert.throws(() => academyTransition(priorRead), /unknown Calendar working-tree path/);
+    assert.throws(() => academyChangedPaths(), /unknown Calendar working-tree path/);
   } finally {
-    t.mock.restoreAll();
+    fs.readFileSync = realRead;
+    childProcess.execFileSync = realExec;
     syncBuiltinESMExports();
   }
 });

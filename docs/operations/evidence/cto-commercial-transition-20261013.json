@@ -1,0 +1,228 @@
+{
+  "schema": "CTO_COMMERCIAL_CANDIDATE_V1",
+  "base": "4348efaff4514a43473d111950083799a23c79c2",
+  "files": [
+    {
+      "path": ".github/workflows/academy-v11.yml",
+      "before_sha256": "44e8f2f5e5d0d21ec8ae86e2f09f1285e792f36a1605f69a115db5c917575681",
+      "after_sha256": "bd9052bb9853708b0ad98a48ab55b88fa38ad7dcce646ef5187e7143ecb23dc6"
+    },
+    {
+      "path": ".github/workflows/cto-commercial.yml",
+      "before_sha256": null,
+      "after_sha256": "989277074003781ad76aab65e4476cede98befeddf01dd0e3a64f35b307d120c"
+    },
+    {
+      "path": ".github/workflows/entry-opportunity.yml",
+      "before_sha256": "ff3f4fffedf222a07fc4b79067f7a8b43435b095cf74d101dc2fa4c84c32f190",
+      "after_sha256": "b855f5a7f9f2d240bebdefac821cfeaad61cef6bf41846922e8d7fb779fa1487"
+    },
+    {
+      "path": ".github/workflows/owner-trading-lab.yml",
+      "before_sha256": "f5b7ba360f9c80687c27abbecf5cd9f415292eb448d5eddced70edf8e6b87a31",
+      "after_sha256": "1986b864fcbb8b85e53d3f0763701fd0126b1f3738c4677c3f10fa914bdcd2ea"
+    },
+    {
+      "path": ".github/workflows/recommendation-v2-shadow.yml",
+      "before_sha256": "1575a863b8e8519ab8287618adc4069b6d196bdfaefaf5541ec4c26828174456",
+      "after_sha256": "190ca47b8b035557ba1abd9ecdccf9c7b4409f1a13605e7c44993556ab2c6209"
+    },
+    {
+      "path": ".github/workflows/research-foundation.yml",
+      "before_sha256": "871c740881461627981efbbe89e0e01d0a345c4cb22df9c8098ab6eb62ad2689",
+      "after_sha256": "7e9e03ba2728dd780e81a0ea71189376c5b7a3818a523b2addf3e947136590d0"
+    },
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "before_sha256": "a7456794b7d37f732f6b24e33b7951e47f3c522688a67a0d9329539e93b53eb6",
+      "after_sha256": "b107b99e0d62260c9e0e65e3e068ec6107096ebe6d799ba8ca2287e4dd2f3458"
+    },
+    {
+      "path": "docs/operations/cto-commercial-readiness-20261013.md",
+      "before_sha256": null,
+      "after_sha256": "bbff4230922b0507694c32dfbd0fc7022c2025977339cc016b54854fe072eda2"
+    },
+    {
+      "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
+      "before_sha256": null,
+      "after_sha256": "a627165b422d4f09a65a8aaa9e96421e088897bbda68bb9e13878e129105c54a"
+    },
+    {
+      "path": "scripts/cto/capacity-isolation.mjs",
+      "before_sha256": null,
+      "after_sha256": "1ebd5279be1a1d044e3bf0388f474dd18caaa60e488a03ac30abe501325f659a"
+    },
+    {
+      "path": "scripts/cto/capacity-workload.sql",
+      "before_sha256": null,
+      "after_sha256": "84855a668c4aca5fa1362ed52440fc992dd80f67c74c09a15ff1b901b73ea244"
+    },
+    {
+      "path": "scripts/cto/public-regression-shard.mjs",
+      "before_sha256": null,
+      "after_sha256": "3214243602cbe184fddc0ac4b66b9f8b63afa76dca908b1f35758ac3966df0c0"
+    },
+    {
+      "path": "src/components/feature/Footer.tsx",
+      "before_sha256": "47e73db25341214964adfd99b39e0b78755f0304e6facdfef13cfa92a5813622",
+      "after_sha256": "c9634e8072c983d598f0b652d9ccaa7e122068524861f539403703dfa24372f6"
+    },
+    {
+      "path": "src/components/feature/Navbar.tsx",
+      "before_sha256": "31a791bd6a6b0f5b8fa41d6b4fb939e3970c19cd2cd62c093876d81b4b3bff8c",
+      "after_sha256": "a70fef7d3e750189f182a15b332462f9b0dae240b4ccd6729b91ea253c7d4a00"
+    },
+    {
+      "path": "src/features/decision-v1/DecisionBrief.tsx",
+      "before_sha256": "7ecd1a35a881b0b3faef3f5d5a917edd05fb013721dcdf679bafdce28da6d105",
+      "after_sha256": "d856e5faa36b2f8923c221beccd5e3317b812178efc32bd14482f70316d6de7e"
+    },
+    {
+      "path": "src/features/decision-v1/subscriber.css",
+      "before_sha256": "b07d8b358d80078cf8642463df148e100989efefd7d0056eb814c2ed96dbd182",
+      "after_sha256": "449062502d0884e0b1cacef02f081a0907d9e2e08353f3537cf45d8afff32b62"
+    },
+    {
+      "path": "src/features/operations/commercialStability.mjs",
+      "before_sha256": null,
+      "after_sha256": "5aabfe84a585afbfa9db0f5316e7a6c54498787cabfa17a14607badfb9e5d99a"
+    },
+    {
+      "path": "src/lib/historicalReportCardPresentation.ts",
+      "before_sha256": null,
+      "after_sha256": "4fd37c4af4e1d5d8f6de234ca52388e11f2355d7253498f4b09276a37f3a72a6"
+    },
+    {
+      "path": "src/lib/historicalReportEvidencePresentation.ts",
+      "before_sha256": null,
+      "after_sha256": "4982f59111364ce70f8e535f8e3b421eaf7a7183a25f672cf9ac224e953b354e"
+    },
+    {
+      "path": "src/lib/performanceDirectionPresentation.ts",
+      "before_sha256": null,
+      "after_sha256": "ca77a4c370cfcb113461c63623b194e6f30ef797d5adff9099a8e38d2d3a52c4"
+    },
+    {
+      "path": "src/pages/account/components/MorningHeroCard.tsx",
+      "before_sha256": "db29ea04c30df2cf1891043ebd39ec4581c060b315351d2fda08e42f9fc4007e",
+      "after_sha256": "6457935f9117a27758a8ca65f158f2c259f875c0376a0eef80772d73587a7472"
+    },
+    {
+      "path": "src/pages/admin/scripts/page.tsx",
+      "before_sha256": "4e67e8081db3490a6a01d4ed96f06d08a869dee61c158064d796e6e455bc9f07",
+      "after_sha256": "cc41df1adaa22524f1c90d564af561899b38e1b833fa52c95163fae61e640b49"
+    },
+    {
+      "path": "src/pages/home/page.tsx",
+      "before_sha256": "caa7c79fc292a5e81c10f7895917c71c76383b3b4c778a9d2b47ea7df6e71034",
+      "after_sha256": "01e0102570435fd9dd81bc2be635bf51f2dda7ccd738596b1b58df3a1e456fa6"
+    },
+    {
+      "path": "src/pages/performance/page.tsx",
+      "before_sha256": "31ed72ef34f9801104b4235d6ca8a3617322334dbb8539736a6b9e76cff028e6",
+      "after_sha256": "3d01ba9cbfd96cd2e42b1cfbd1423bb800f3ea8e989659a08f1329e4870e2975"
+    },
+    {
+      "path": "src/pages/pricing/Pricing.tsx",
+      "before_sha256": "ebec2208acc1c596d41c986c1f8eea8a056450e80cd7b1b09972767591e5e4bf",
+      "after_sha256": "e4050cbe3289e91564a4f1b2135440171299b15c28b07555a0e6aac1af0d7f23"
+    },
+    {
+      "path": "src/pages/report/TodayReport.tsx",
+      "before_sha256": "b488264dcdf08680c950b89512a93c9785903f5227b822fa129a8e33cce63556",
+      "after_sha256": "dcc11ebf664674d8f04c42e1d4098cd601242c6ddf44b8a19a373ad7f978a6ef"
+    },
+    {
+      "path": "src/pages/reports/ReportDetail.tsx",
+      "before_sha256": "ded54c13a090d039257868f61c97e273d73000bf4a6dfe86de144baffb1ed12f",
+      "after_sha256": "8fe59ab61c2268d2dc0e2229d5b2b7d3944455efcddedc61ec082b7403db80d3"
+    },
+    {
+      "path": "src/pages/reports/ReportsCenter.tsx",
+      "before_sha256": "c7ac4c1a88f8d4e9b735e5f5e6221bbf0e5addcd7183e6970e1344a7ee8cbdaa",
+      "after_sha256": "2a0ff2456d2b0753b3cd5a27f3394080eae8888be3500695f651d4714c0a494c"
+    },
+    {
+      "path": "tests/acceptanceCalendarIntegrity.test.mjs",
+      "before_sha256": "6db41b1c56f962ac28a40fd4821d97ab142b56cda3cd7513cbc4fdd7e5404166",
+      "after_sha256": "062eb7de8d69713f243facf8b15eabbcdace1dbe9d7a90b5d25a546d1c9ccb0d"
+    },
+    {
+      "path": "tests/academyV11Integrity.test.mjs",
+      "before_sha256": "112e597475c5014cc396c79f7243203c0c84ded07af5252e4dc4c81469e94b95",
+      "after_sha256": "12c00e7b7cc45c991a4321de546981740cc5369c90cc3438f87a3e4368d898de"
+    },
+    {
+      "path": "tests/commercialStability.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "e996117c5b0f314937c59ab94b9309e5807057c2ffb480aa71b2ee0c408047a2"
+    },
+    {
+      "path": "tests/consolidationSubscriberEligibility.test.mjs",
+      "before_sha256": "4505212d68e73fb1c16f7c0b7ef75d59e70c2a3f0985a0a4645ea245f2a73e34",
+      "after_sha256": "ba00de6daf5b9b9c64e924f3f488ee06a3b05f4ad3c337df946166b73544625d"
+    },
+    {
+      "path": "tests/consolidationSubscriberGraph.test.mjs",
+      "before_sha256": "dbf82ddad26f83e0cf8c786c75cc962859bda82b8be715a62f6f928a6f84d79f",
+      "after_sha256": "454c4146c305dccb19598c334fb4a516d0cad427de44a195799902617c91d25f"
+    },
+    {
+      "path": "tests/ctoCommercialIntegrity.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "ef84afba2a5f3f1c9c6b5620317da38d71a3d4773f6e4eeeec98790aa8159e52"
+    },
+    {
+      "path": "tests/ctoConfidencePresentation.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "f252aac4eea7787746df2adb01f8ee76fe6cee75ed90065f48c351753f184d41"
+    },
+    {
+      "path": "tests/ctoHistoricalEvidencePresentation.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "db4cc5a31d429d2d6087ad3476424d03c7977ff7d8c0086480167d793653e912"
+    },
+    {
+      "path": "tests/ctoPerformancePresentation.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "169532f4dc94d7fb0529affc63571b6fa9fb17a7a57777068f5236082fbf4905"
+    },
+    {
+      "path": "tests/ctoPricingPresentation.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "da366b6b655bbb0d3da6cbae457218d71f6fb9931952196450e665204307853b"
+    },
+    {
+      "path": "tests/ctoPublicShard.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "24206365416628404f8d692dfbce6591dd9b987e076bb46a48c73ebd294c962c"
+    },
+    {
+      "path": "tests/helpers/acceptanceCalendarIntegrity.mjs",
+      "before_sha256": "fba38a4b9e9ef58317dcaef2cae5f5d3e11591b3bd7e0476191aa0e4caf6d461",
+      "after_sha256": "7e8a33464236e269f3f47a90dff9361102f4258c2e9a497214bd7cfb95fb8fc7"
+    },
+    {
+      "path": "tests/helpers/ctoCommercialIntegrity.mjs",
+      "before_sha256": null,
+      "after_sha256": "3d4cef8db54190b96d9b9668664a6bb4fb805fac3330d2d74fc5fa8ab32b7f59"
+    },
+    {
+      "path": "tests/productContract.test.mjs",
+      "before_sha256": "2b5bc53b47f21aebeb6b0d1f08c0ae93999160b9922e2f496b1da6cdfcb59a70",
+      "after_sha256": "b79f7df92c064b484e5c9c408257e04af8cf971ed513968dd42e23f2ce0c1d61"
+    },
+    {
+      "path": "tests/publicRelease.test.mjs",
+      "before_sha256": "275691f21465b66991baa5c9c6166e88acfdf224e71518498afd082381eb0863",
+      "after_sha256": "9b624bffe7a44acdacb3aaa01446f34a752246f20ceb0317d81305a5d706adf0"
+    }
+  ],
+  "migrations": [],
+  "functions": [],
+  "production_authorized": false,
+  "member_publication_authorized": false,
+  "strategy_change": false,
+  "secret_change": false,
+  "cron_change": false
+}

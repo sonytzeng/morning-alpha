@@ -50,13 +50,17 @@ export default function AdminPublish() {
     return (
       <div className="max-w-4xl space-y-5">
         <div>
-          <h1 className="text-foreground-900 font-bold text-lg">發布素材</h1>
-          <p className="text-foreground-500 text-sm mt-0.5">{displayDate}{isWeekend ? '（非交易日）' : ''}</p>
+          <h1 className="text-white font-bold text-lg">發布素材</h1>
+          <p className="text-white/70 text-sm mt-0.5">查詢日期：{displayDate}{isWeekend ? '（週末）' : ''}</p>
         </div>
         <div className="bg-white border border-red-200 rounded-xl p-6 text-center">
           <i className="ri-error-warning-line text-red-400 text-xl mb-2 block"></i>
           <p className="text-red-600 text-sm font-medium">讀取失敗</p>
-          <p className="text-foreground-500 text-xs mb-3">{error}</p>
+          <p className="text-foreground-600 text-sm mb-3">暫時無法讀取社群素材。每日報告與 LINE 發送請至今日狀況查看。</p>
+          <details className="mb-3 text-left text-foreground-600 text-sm">
+            <summary className="min-h-11 cursor-pointer py-3">查看技術詳細資料</summary>
+            <p className="break-words">{error}</p>
+          </details>
           <button onClick={load} className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm rounded-lg whitespace-nowrap">重新載入</button>
         </div>
       </div>
@@ -74,9 +78,9 @@ export default function AdminPublish() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-foreground-900 font-bold text-lg">發布素材</h1>
-          <p className="text-foreground-500 text-sm mt-0.5">
-            {displayDate}{isWeekend ? '（非交易日）' : ''}｜複製即可發布
+          <h1 className="text-white font-bold text-lg">發布素材</h1>
+          <p className="text-white/70 text-sm mt-0.5">
+            {ma.reportId ? `素材所屬報告：${ma.reportDate}` : '尚無可讀取的報告素材'}
           </p>
         </div>
         {copied && (
@@ -116,7 +120,7 @@ export default function AdminPublish() {
             <ScriptRow label="收尾 CTA" time="55–60 秒" value={ma.reelsScript.cta_55_60_sec as string} icon="ri-thumb-up-line" tone="accent" copyFn={copyToClipboard} />
           </div>
         ) : (
-          <p className="text-foreground-400 text-xs py-4 text-center">Reels 腳本尚未產生，請確認今日報告已生成完整 ai_strategy_json。</p>
+          <p className="text-foreground-600 text-sm py-4 text-center">目前沒有可用的短影音素材。這不代表每日市場報告沒有完成。</p>
         )}
       </div>
 
@@ -161,7 +165,7 @@ export default function AdminPublish() {
             <ScriptRow label="CTA" value={ma.socialPost.cta as string} icon="ri-thumb-up-line" tone="accent" copyFn={copyToClipboard} />
           </div>
         ) : (
-          <p className="text-foreground-400 text-xs py-4 text-center">社群貼文尚未產生，請確認今日報告已生成完整 ai_strategy_json。</p>
+          <p className="text-foreground-600 text-sm py-4 text-center">目前沒有可用的社群貼文素材。每日市場報告與社群素材分開處理。</p>
         )}
       </div>
 
@@ -170,15 +174,15 @@ export default function AdminPublish() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-foreground-900 font-semibold text-sm">LINE 推播文案</h3>
+              <h3 className="text-foreground-900 font-semibold text-sm">LINE 社群素材</h3>
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${
                 hasLine ? 'bg-emerald-500/5 text-emerald-600 border-emerald-500/15' : 'bg-background-50 text-foreground-400 border-background-200'
               }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${hasLine ? 'bg-emerald-500' : 'bg-foreground-300'}`}></span>
-                {hasLine ? '可用' : 'LINE 尚未接入'}
+                {hasLine ? '可用' : '尚無素材'}
               </span>
             </div>
-            {!hasLine && <p className="text-foreground-400 text-[10px] mt-0.5">LINE 推播模組尚未接入，不影響每日內容公開。</p>}
+            <p className="text-foreground-600 text-sm mt-0.5">這裡是可複製的社群素材，不是正式會員 LINE 每日發送狀態。</p>
           </div>
           {hasLine && ma.lineCopy && (
             <button onClick={() => copyToClipboard(buildLineFullText(ma), '已複製 LINE 文案')} className="px-3 py-1.5 bg-foreground-900 hover:bg-foreground-800 text-white text-xs rounded-lg transition-colors whitespace-nowrap cursor-pointer">
@@ -195,7 +199,7 @@ export default function AdminPublish() {
             <ScriptRow label="CTA" value={ma.lineCopy.cta as string} icon="ri-thumb-up-line" tone="accent" copyFn={copyToClipboard} />
           </div>
         ) : (
-          <p className="text-foreground-400 text-xs py-4 text-center">LINE 推播文案尚未接入，不影響今日內容公開。</p>
+          <p className="text-foreground-600 text-sm py-4 text-center">目前沒有獨立社群素材；請在今日狀況查看正式 LINE 發送結果。</p>
         )}
       </div>
 

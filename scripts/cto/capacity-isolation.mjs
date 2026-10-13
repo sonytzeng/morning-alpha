@@ -1,0 +1,70 @@
+// Capacity fixtures are synthetic local accounts. SQL/RLS/RPC execution is real;
+// no Production identity, provider, endpoint, credential or billing is involved.
+import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
+import {readFileSync} from 'node:fs';
+import {contentSql} from '../academy-v11/load-content.mjs';
+import {syntheticLessons} from '../../tests/fixtures/academy-v11-lessons.mjs';
+assert.equal(process.env.MA_CTO_CAPACITY,'ISOLATED_ONLY');
+const container='ma-cto-capacity-240';
+const docker=args=>execFileSync('docker',args,{encoding:'utf8',maxBuffer:64e6,stdio:['pipe','pipe','pipe']}).trim();
+assert.equal(docker(['inspect','--format','{{.HostConfig.NetworkMode}}',container]),'none');
+const sql=s=>execFileSync('docker',['exec','-i',container,'psql','-h','127.0.0.1','-XqAt','-U','postgres','-v','ON_ERROR_STOP=1'],{input:s,encoding:'utf8',maxBuffer:8e6,stdio:['pipe','pipe','pipe']}).trim();
+const read=p=>readFileSync(new URL('../../'+p,import.meta.url),'utf8');
+sql(`create schema auth;create role anon nologin;create role authenticated nologin;create role service_role nologin bypassrls;
+ create table auth.users(id uuid primary key,is_anonymous boolean not null default false);
+ create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+ grant usage on schema public,auth to authenticated,anon,service_role;
+ create table public.profiles(id uuid primary key references auth.users(id),role text,subscription_status text,membership_tier text,paid_until timestamptz);
+ create table public.member_entitlements(user_id uuid primary key references auth.users(id),state text,tier text,source text,access_started_at timestamptz,access_ends_at timestamptz,trial_started_at timestamptz,trial_ends_at timestamptz,current_period_end timestamptz,cancel_at_period_end boolean);
+ revoke all on public.profiles,public.member_entitlements from public,anon,authenticated;
+ create schema research_private;create table research_private.owner_access(principal_id uuid primary key,enabled boolean);
+ revoke all on schema research_private from public,anon,authenticated;
+ insert into auth.users select md5('cto-member-'||i)::uuid,false from generate_series(1,10000)i;
+ insert into public.profiles select id,'free',null,null,null from auth.users;
+ insert into public.member_entitlements(user_id,state,tier,source) select id,'paid_active','member','ISOLATED_CAPACITY_FIXTURE' from auth.users;`);
+const owner=read('supabase/migrations/20261004033642_intelligence_foundation_owner_shadow_v1.sql');
+sql(owner.slice(owner.indexOf('create function public.is_research_owner_v1()'),owner.indexOf('create table public.research_feature_versions')));
+sql(read('supabase/migrations/20261009053655_academy_member_learning_v11.sql'));
+sql(contentSql(syntheticLessons));
+sql(`insert into public.academy_progress_v11(user_id,chapter_id,version,completed,last_position)
+ select u.id,l.id,'ACADEMY_MEMBER_V11',false,1 from auth.users u cross join public.academy_lessons_v11 l;analyze;`);
+const as=(i,s)=>sql(`begin;set local role authenticated;select set_config('request.jwt.claim.sub',md5('cto-member-${i}')::uuid::text,true);${s};commit;`).split('\n').at(-1);
+assert.equal(as(1,'select count(*) from public.academy_progress_v11'),'10');
+assert.equal(as(1,"select count(*) from public.academy_progress_v11 where user_id=md5('cto-member-2')::uuid"),'0');
+const tier=()=>JSON.parse(as(1,'select public.get_academy_catalog_v11()')).tier;
+assert.equal(tier(),'premium');
+sql("update public.member_entitlements set state='beta_full',access_ends_at=null,current_period_end=null where user_id=md5('cto-member-1')::uuid");assert.equal(tier(),'premium');
+sql("update public.member_entitlements set state='paid_active',access_ends_at=now()-interval '1 day' where user_id=md5('cto-member-1')::uuid");assert.equal(tier(),'free');
+assert.throws(()=>as(1,"select public.get_academy_lesson_v11('trend-advanced')"));
+sql("update public.member_entitlements set state='paid_active',access_ends_at=null where user_id=md5('cto-member-1')::uuid");
+const plans=JSON.parse(sql("begin;set local role authenticated;select set_config('request.jwt.claim.sub',md5('cto-member-1')::uuid::text,true);explain(analyze,buffers,format json) select * from public.academy_progress_v11 where user_id=auth.uid();commit;").split('\n').slice(1).join('\n'));
+const results=[];
+function assertCapacityResults(rows){
+ assert.ok(Array.isArray(rows));assert.equal(rows.map(row=>row.clients).join(','),'10,30,50');
+ for(const row of rows){
+  assert.ok(Number.isSafeInteger(row.transactions)&&row.transactions>0,'measured transactions required');
+  assert.ok(Number.isFinite(row.throughput_tps)&&row.throughput_tps>0,'measured throughput required');
+  assert.equal(row.failed,0,'failed transactions reject capacity acceptance');
+  assert.equal(row.error_rate,0,'nonzero or unknown error rate rejects capacity acceptance');
+  assert.equal(row.target_p95_ms,250,'existing capacity target is unchanged');
+  assert.ok(Number.isFinite(row.p95_ms)&&row.p95_ms>=0&&row.p95_ms<250,'capacity P95 must remain below the existing 250ms target');
+  assert.equal(row.pass,true,'a printed false result must fail the CI gate');
+ }
+}
+for(const clients of [10,30,50]){
+ const output=docker(['exec',container,'pgbench','-h','127.0.0.1','-U','postgres','-n','-c',String(clients),'-j','4','-T','20','-r','-l','--log-prefix=/tmp/cto-'+clients,'-f','/tmp/capacity-workload.sql','postgres']);
+ const logs=docker(['exec',container,'sh','-c','cat /tmp/cto-'+clients+'.*']);
+ const latencies=logs.split('\n').filter(Boolean).map(line=>Number(line.trim().split(/\s+/)[2])/1000).sort((a,b)=>a-b);
+ assert.ok(latencies.length>0,'real pgbench samples');
+ assert.ok(latencies.every(value=>Number.isFinite(value)&&value>=0),'invalid latency sample cannot be silently omitted');
+ const failures=Number(output.match(/number of failed transactions:\s*(\d+)/)?.[1]??NaN);
+ const tps=Number(output.match(/tps = ([\d.]+)/)?.[1]);
+ assert.ok(Number.isSafeInteger(failures)&&failures>=0,'pgbench failure count unavailable');
+ assert.ok(Number.isFinite(tps)&&tps>0,'pgbench throughput unavailable');
+ const p95=latencies[Math.min(latencies.length-1,Math.floor(latencies.length*.95))];
+ results.push({clients,transactions:latencies.length,p95_ms:p95,throughput_tps:tps,failed:failures,error_rate:failures/(latencies.length+failures),target_p95_ms:250,pass:failures===0&&p95<250});
+ console.log(JSON.stringify(results.at(-1)));
+}
+assertCapacityResults(results);
+console.log(JSON.stringify({scope:'ISOLATED_POSTGRES17_REAL_SQL_RLS_RPC',accounts:10000,progress_rows:100000,account_identity:'SYNTHETIC_LOAD_FIXTURE_NOT_PRODUCTION_AUTH',rls_cross_account:'DENY',unknown_legacy_end_preserved:true,subscription_expiry:'DENY',plans,results,production_capacity_verified:false}));

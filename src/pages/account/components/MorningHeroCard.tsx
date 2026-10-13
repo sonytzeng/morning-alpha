@@ -132,9 +132,9 @@ export default function MorningHeroCard({ todayReport, hasTodayReport: reportedT
         </div>
 
         {/* Title */}
-        <h1 className="text-white font-bold text-xl md:text-2xl lg:text-3xl mb-2 leading-tight">
+        <h2 className="text-white font-bold text-xl md:text-2xl lg:text-3xl mb-2 leading-tight">
           Morning Alpha 觀察中心
-        </h1>
+        </h2>
         <p className="text-white/40 text-sm md:text-base mb-5 md:mb-6 max-w-xl">
           每天 07:30，AI 幫你整理今日盤前狀態、市場資料新鮮度與風險提醒。
         </p>

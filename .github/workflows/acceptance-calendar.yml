@@ -1,0 +1,32 @@
+name: Operational acceptance calendar
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  acceptance-calendar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MA_ACCEPTANCE_CALENDAR_SCOPE: issue-238-calendar
+      MA_TEST_DOCKER_CONTAINER: ma-acceptance-calendar-238
+      MA_ISOLATED_TEST_DB: ma_six_bug_test538
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Start fresh network-isolated PostgreSQL
+        run: |
+          docker run -d --name "$MA_TEST_DOCKER_CONTAINER" --network none --env POSTGRES_PASSWORD=isolated-ci-only postgres:17
+          for attempt in $(seq 1 30); do
+            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres; then break; fi
+            sleep 1
+          done
+          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres
+      - run: node tests/acceptanceCalendarDatabase.integration.mjs
+      - name: Remove disposable test container
+        if: always()
+        run: docker rm -f "$MA_TEST_DOCKER_CONTAINER"

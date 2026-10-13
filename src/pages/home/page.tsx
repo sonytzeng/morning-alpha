@@ -597,7 +597,7 @@ function HomePageContent() {
   const hasHistoricalClosingOutcome = Boolean(historyResult && historyDate);
   const credibilityItems = [
     ...(projection.publicMarket ? [{label:'市場型態',value:PUBLIC_REGIMES[projection.publicMarket.market_regime]}] : []),
-    { label: '市場資料基準', value: formatTaipeiTimestamp(dataAsOf) },
+    { label: '最新市場資料時間', value: formatTaipeiTimestamp(dataAsOf) },
     { label: '報告產生時間', value: formatTaipeiTimestamp(reportGeneratedAt) },
     { label: '分析版本', value: aiVersion },
     { label: '資料狀態', value: projection.statusLabel },
@@ -775,7 +775,7 @@ function HomePageContent() {
                   <article className="ma-home-v2-metric">
                     <p>報告產生</p>
                     <strong>{formatTaipeiTimestamp(reportGeneratedAt)}</strong>
-                    <span>市場資料基準 {formatTaipeiTimestamp(dataAsOf)}</span>
+                    <span>最新市場資料時間 {formatTaipeiTimestamp(dataAsOf)}</span>
                   </article>
                 </div>
               </div>
@@ -785,7 +785,7 @@ function HomePageContent() {
               <section className="ma-home-v2-brief" aria-labelledby="morning-brief-title">
                 <div>
                   <p className="ma-pixel-eyebrow"><i className="ri-sun-line" aria-hidden="true" />盤前摘要</p>
-                  <h2 id="morning-brief-title">{renderSafeText(morningBrief)}</h2>
+                  <h2 id="morning-brief-title">{renderSafeText(morningBrief === heroDecisionSentence ? '報告來源與資料時間' : morningBrief)}</h2>
                 </div>
                 <dl className="ma-home-v2-credibility">
                   {credibilityItems.map((item) => (

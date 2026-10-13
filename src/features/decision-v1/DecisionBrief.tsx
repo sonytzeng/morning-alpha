@@ -21,9 +21,9 @@ export function SubscriberAnswer({ question, answer, reason, tone = 'blue', date
   </header>;
 }
 
-export function DecisionBrief({ decision, date, marketBias, legacyInstruction, legacyReason, legacyCount, stocksWithheld = false, recommendationNotice = null, analysisUnavailable = false, publicMarket, actions }: {
+export function DecisionBrief({ decision, date, marketBias, marketConfidence, legacyInstruction, legacyReason, legacyCount, stocksWithheld = false, recommendationNotice = null, analysisUnavailable = false, publicMarket, actions }: {
   publicMarket?: PublicMarketReadModel | null;
-  decision: Decision; date: string; marketBias: string; legacyInstruction: string; legacyReason: string; legacyCount: number; stocksWithheld?: boolean; recommendationNotice?: string | null; analysisUnavailable?: boolean; actions?: ReactNode;
+  decision: Decision; date: string; marketBias: string; marketConfidence?: { value: number | null; label: string }; legacyInstruction: string; legacyReason: string; legacyCount: number; stocksWithheld?: boolean; recommendationNotice?: string | null; analysisUnavailable?: boolean; actions?: ReactNode;
 }) {
   const [term, setTerm] = useState<string | null>(null);
   const hasAssessment = !analysisUnavailable && decision.action !== 'INSUFFICIENT_DATA';
@@ -38,12 +38,15 @@ export function DecisionBrief({ decision, date, marketBias, legacyInstruction, l
         <div><h2>有沒有值得關注的機會？</h2><strong>{opportunitySummary(decision, legacyCount, stocksWithheld, recommendationNotice)}</strong></div>
       </div>
       <dl className="ma-subscriber-metrics" aria-label="方向與進場分開評估">
-        <div><dt>方向機率</dt><dd>{scoreText(analysisUnavailable ? null : decision.direction_probability, '尚無校準結果')}</dd></div>
-        <div><dt>模型信心</dt><dd>{scoreText(analysisUnavailable ? null : decision.model_confidence, '證據尚未齊全')}</dd></div>
+        <div><dt>判斷信心</dt><dd>{!analysisUnavailable && marketConfidence ? marketConfidence.label : '證據不足，暫不提供把握度'}</dd></div>
         <div><dt>進場環境</dt><dd>{scoreText(analysisUnavailable ? null : decision.entry_environment_score, '尚未完成評估')}</dd></div>
         <div><dt>市場型態</dt><dd>{analysisUnavailable ? '尚未完成分類' : publicMarket ? PUBLIC_REGIMES[publicMarket.market_regime] : decision.market_regime ? REGIMES[decision.market_regime] : '尚未完成分類'}</dd></div>
       </dl>
-      <p className="ma-subscriber-caption">{decision.calibration_status === 'INSUFFICIENT_HISTORY' ? '校準歷史不足；目前僅有可追溯的證據品質指標，不是獲利機率。' : '方向機率不等於買進勝率；信心與進場分數是不同的評估。'}<button type="button" onClick={() => setTerm('chasing-price')}>為什麼看多還不追？</button></p>
+      <p className="ma-subscriber-caption">判斷信心沿用這份正式市場報告，不代表上漲機率或買進勝率。<button type="button" onClick={() => setTerm('chasing-price')}>如何避免追價？</button></p>
+      <details className="ma-subscriber-caption"><summary>查看證據品質與校準說明</summary>
+        <p>資料支持程度：{scoreText(analysisUnavailable ? null : decision.model_confidence, '證據尚未齊全')}。這是資料完整度、時效與來源一致性的品質指標，與正式市場判斷信心不同。</p>
+        <p>方向機率：{scoreText(analysisUnavailable ? null : decision.direction_probability, '尚無校準結果')}。尚未完成結果校準時，不提供上漲機率。</p>
+      </details>
       {actions && <div className="ma-subscriber-actions">{actions}</div>}
     </SubscriberAnswer>
     <GlossarySheet term={term} source="decision_brief" onClose={() => setTerm(null)} />

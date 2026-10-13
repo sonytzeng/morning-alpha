@@ -1,0 +1,100 @@
+{
+  "schema": "CALENDAR_ACCEPTANCE_CANDIDATE_V1",
+  "base": "2a5d461ec3d98bfc8bc3177a295c95e299b7bda2",
+  "functions": [],
+  "migrations": [
+    "supabase/migrations/20261013073004_operational_acceptance_calendar_guard_v1.sql"
+  ],
+  "production_authorized": false,
+  "member_publication_authorized": false,
+  "strategy_change": false,
+  "secret_change": false,
+  "cron_change": false,
+  "files": [
+    {
+      "path": ".github/workflows/acceptance-calendar.yml",
+      "before_sha256": null,
+      "after_sha256": "c7b4b53587bf38e739e54f31c8af01e108618c189d49906a52284ff2e9f8f879"
+    },
+    {
+      "path": ".github/workflows/analysis-intelligence.yml",
+      "before_sha256": "e795babb8dcbb41a639ddc6e083254a1dc3bfb7ed42cdd02f3541b83b9c2073f",
+      "after_sha256": "51dd841a0149206d86882d850f938e65932a0fcf457b5446563991e7d88a163b"
+    },
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "before_sha256": "18080e6a079c2c9a4732ba63a9d22c892ae050546d7e64ef03b1d2f4318c6e8e",
+      "after_sha256": "a7456794b7d37f732f6b24e33b7951e47f3c522688a67a0d9329539e93b53eb6"
+    },
+    {
+      "path": "docs/operations/core-product-acceptance-20261013.md",
+      "before_sha256": null,
+      "after_sha256": "6d169e51b161800a90840262762eb170cdeaac134232db198212e239aecdaacf"
+    },
+    {
+      "path": "src/features/research/cockpit.ts",
+      "before_sha256": "544bb7235241ba3fae0b8067c6b4362f02eff41c620828fcd8d17f59d2da150b",
+      "after_sha256": "1e18dab897e2b56ee434dc31c1d2e6cf4e93a0988cdf82f68e07e4ec2804e961"
+    },
+    {
+      "path": "src/lib/reportNewsPresentation.ts",
+      "before_sha256": null,
+      "after_sha256": "dc478808ae1729c72f980e7b1a278732c8591b75f1d3eaa87dc281d07ab0fde5"
+    },
+    {
+      "path": "src/pages/account/components/TodayInfoCards.tsx",
+      "before_sha256": "1a0c61ddbef3891bf0a2fcf7dac65e2283ff03cbc1aa7b456127416f2a3e8037",
+      "after_sha256": "6f18e980d62f4840c8364d800776f719040ce099cc8b4a29a83f6a86fd96f2cc"
+    },
+    {
+      "path": "src/pages/admin/analysis/OwnerCockpit.tsx",
+      "before_sha256": "4f5e5c2346c786e40a661fb0f07e03313340e6f720fca7fc91cfbf5243d80fd1",
+      "after_sha256": "68637a4827c5d13b0216d46191ac516c5bdf6e4eebd6b7141718b857c2cc7020"
+    },
+    {
+      "path": "supabase/migrations/20261013073004_operational_acceptance_calendar_guard_v1.sql",
+      "before_sha256": null,
+      "after_sha256": "ab375e0e172734dbca6d54064261bb111b7ba993c903aee17ee6a810adca140d"
+    },
+    {
+      "path": "tests/academyV11Integrity.test.mjs",
+      "before_sha256": "93766884fc91af19293c91a0aa15c9db278fdf920f45f96b96c9cdca42802e43",
+      "after_sha256": "112e597475c5014cc396c79f7243203c0c84ded07af5252e4dc4c81469e94b95"
+    },
+    {
+      "path": "tests/acceptanceCalendarDatabase.integration.mjs",
+      "before_sha256": null,
+      "after_sha256": "7dd38f072b3e0e8f5baeecfa721b99f2af1bd3c1aba014191aec1f8c71028628"
+    },
+    {
+      "path": "tests/acceptanceCalendarIntegrity.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "6db41b1c56f962ac28a40fd4821d97ab142b56cda3cd7513cbc4fdd7e5404166"
+    },
+    {
+      "path": "tests/accountSubscriberProjection.test.mjs",
+      "before_sha256": "68e7618483b99751fdc3a76ef7c5d772b0de002ea91945f297a8f853f8f4ec31",
+      "after_sha256": "d1d1469011c0bb7367dce0cbb2741a06a56ebe86550673c22260c9dc5dc054fa"
+    },
+    {
+      "path": "tests/helpers/acceptanceCalendarIntegrity.mjs",
+      "before_sha256": null,
+      "after_sha256": "fba38a4b9e9ef58317dcaef2cae5f5d3e11591b3bd7e0476191aa0e4caf6d461"
+    },
+    {
+      "path": "tests/helpers/marketNewsReportIntegrity.mjs",
+      "before_sha256": "83a9e27a226ec72b199201d8d8e1062503188972b9bf4d39f41361edacbda574",
+      "after_sha256": "ef2677f3b38b18d53fee59730b8c90860fe62e36137bf31009b6f1321cbf019a"
+    },
+    {
+      "path": "tests/ownerCockpit.test.mjs",
+      "before_sha256": "7cc0c78576ba6e885a482ef291ff3df45dfb657842ba8546da3237e4784ebbd7",
+      "after_sha256": "b1367752d55f9a88af86a637b0272ec0cae9c5cc53252df8467d6482b470438f"
+    },
+    {
+      "path": "tests/productContract.test.mjs",
+      "before_sha256": "57c667f0dc0ad5556212cb285d132c6c4b8d219a08b8bfd567143473a6df8d54",
+      "after_sha256": "2b5bc53b47f21aebeb6b0d1f08c0ae93999160b9922e2f496b1da6cdfcb59a70"
+    }
+  ]
+}

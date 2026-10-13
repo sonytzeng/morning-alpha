@@ -177,6 +177,10 @@ inventory(authority, ['ai.canonical_decision', 'ai.content_publish_gate', ['ai.r
 inventory('src/lib/publicMarketReadModel.ts#parsePublicMarketReadModel', ['m.report_status'],
   'versioned-public-wire-validator-bound-to-canonical-and-member-revision');
 inventory('src/lib/canonicalNarrative.ts#buildTodayFocus', ['ai.canonical_decision'], 'published-prose-only');
+// This reads ONLY the version to bind saved display prose to the already
+// resolved report/snapshot. It cannot select an action or authorize publication.
+inventory('src/lib/historicalReportEvidencePresentation.ts#historicalReportEvidencePresentation',
+  ['ai.canonical_decision'], 'saved-prose-version-binding-not-market-state-authority');
 inventory('src/lib/morningAlphaReportAdapter.ts#normalizeMorningAlphaReport', [
   '(ai as Record<string, unknown>).content_publish_gate', "grabObj(ai, 'content_publish_gate')"], 'internal-diagnostic-copy');
 inventory('src/lib/premiumContentAvailability.ts#resolvePremiumContentAvailability',

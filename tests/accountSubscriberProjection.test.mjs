@@ -14,6 +14,7 @@ import { getSubscriberOpportunityList } from '../src/lib/subscriberOpportunities
 import { normalizeDecisionSymbol } from '../src/features/decision-v1/engine.ts';
 import { renderSafeText } from '../src/utils/renderSafe.ts';
 import { subscriberProjectionFixture } from './fixtures/subscriber-projection-v1.mjs';
+import { reportNewsPresentation } from '../src/lib/reportNewsPresentation.ts';
 
 const require = createRequire(import.meta.url);
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -51,6 +52,7 @@ function loadComponent(path, exportedName = 'default') {
   const dependencies = {
     '@/utils/renderSafe': { renderSafeText },
     '@/lib/subscriberReportProjection': { getSubscriberReportProjection },
+    '@/lib/reportNewsPresentation': { reportNewsPresentation },
     '@/services/marketSourceHealthService': { isTaipeiToday: () => day },
     '@/hooks/useAccountDashboard': { formatTaipeiTimeShort: helperDependencies.formatTaipeiTimeShort,
       getAccountIntradayView: helperDependencies.getAccountIntradayView },
@@ -64,6 +66,22 @@ function loadComponent(path, exportedName = 'default') {
 }
 const Hero = loadComponent('src/pages/account/components/MorningHeroCard.tsx');
 const Info = loadComponent('src/pages/account/components/TodayInfoCards.tsx');
+
+test('accepted report news can predate Taipei midnight; acquisition and publication are not interchangeable',()=>{
+  // Constructed regression control using 10/13 receipt count/publication bounds;
+  // not a full real-news replay or an invented Production acceptance result.
+  const payload={fresh_news_count:6,important_news:Array.from({length:6},()=>({published_at:'2026-10-12T05:35:00Z'}))};
+  assert.deepEqual(reportNewsPresentation(payload,true,'2026-10-12T23:06:43Z'),{accepted:true,count:6});
+  assert.deepEqual(reportNewsPresentation({...payload,important_news:payload.important_news.slice(0,3)},true,'2026-10-12T23:06:43Z'),{accepted:true,count:6});
+  for(const [body,current,cutoff] of [
+    [payload,false,'2026-10-12T23:06:43Z'],[payload,true,null],
+    [{...payload,fresh_news_count:5},true,'2026-10-12T23:06:43Z'],
+    [{...payload,fresh_news_count:NaN},true,'2026-10-12T23:06:43Z'],
+    [{important_news:[]},true,'2026-10-12T23:06:43Z'],
+    [{important_news:[{published_at:'2026-10-13T02:00:00Z'}]},true,'2026-10-12T23:06:43Z'],
+    [{important_news:[{created_at:'2026-10-12T05:35:00Z'}]},true,'2026-10-12T23:06:43Z'],
+  ])assert.deepEqual(reportNewsPresentation(body,current,cutoff),{accepted:false,count:null});
+});
 const render = (Component, data, overrides = {}) => renderToStaticMarkup(React.createElement(MemoryRouter, null,
   React.createElement(Component, { ...data, isWeekend: false, hasAnyReport: true, fallbackReportDate: data.todayReport?.report_date ?? null, ...overrides })));
 

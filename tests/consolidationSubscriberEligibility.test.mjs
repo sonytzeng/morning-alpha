@@ -8,6 +8,7 @@ import { selectPublicPerformanceRows } from '../src/lib/performanceJournalProjec
 import { canShowBeginnerRecommendations } from '../src/features/learning/beginnerReportContract.ts';
 import { subscriberProjectionFixture } from './fixtures/subscriber-projection-v1.mjs';
 import { isolatedFunction } from './helpers/isolatedEdgeLoader.mjs';
+import { performanceClosingDirection } from '../src/lib/performanceDirectionPresentation.ts';
 
 // Synthetic read contracts exercise real production projection/formatters.
 // They are not publisher, entitlement, durable DB or full-E2E verification.
@@ -151,7 +152,7 @@ test('legacy flat performance values cannot manufacture a publication identity o
 
 test('Performance entry builder counts valid real projection outcomes but excludes flat/conflicting rows', () => {
   const source = readFileSync(new URL('../src/pages/performance/page.tsx', import.meta.url), 'utf8');
-  const deps = { getSubscriberReportProjection, isFutureReportDate: () => false };
+  const deps = { getSubscriberReportProjection, performanceClosingDirection, isFutureReportDate: () => false };
   for (const name of ['asRecord', 'text', 'firstText', 'publicPerformanceText', 'numberOrNull',
     'listFromUnknown', 'listFromAdjustment', 'normalizeOutcome', 'directionFromChange', 'buildEntry', 'calculateStats']) {
     deps[name] = isolatedFunction(source, name, deps);

@@ -8,9 +8,24 @@
       "after_sha256": "aebc88609a1430df154ed3e6c5480f0bb1ab45e09732eb99d23e1c8474ad5c79"
     },
     {
+      "path": ".github/workflows/owner-trading-lab.yml",
+      "before_sha256": "f5b7ba360f9c80687c27abbecf5cd9f415292eb448d5eddced70edf8e6b87a31",
+      "after_sha256": "b1e1fa7f268dc898aa1ecd3219d7f99506c4efb8a449a750a94218ac526a2978"
+    },
+    {
+      "path": ".github/workflows/recommendation-v2-shadow.yml",
+      "before_sha256": "1575a863b8e8519ab8287618adc4069b6d196bdfaefaf5541ec4c26828174456",
+      "after_sha256": "79cfea362a3ce82bb730d679cc64103852d6150edaf73a5aebe0bd1e4f384970"
+    },
+    {
+      "path": ".github/workflows/research-foundation.yml",
+      "before_sha256": "871c740881461627981efbbe89e0e01d0a345c4cb22df9c8098ab6eb62ad2689",
+      "after_sha256": "7e9e03ba2728dd780e81a0ea71189376c5b7a3818a523b2addf3e947136590d0"
+    },
+    {
       "path": "docs/operations/cto-commercial-readiness-20261013.md",
       "before_sha256": null,
-      "after_sha256": "6f8e314804f08c4354aba744a8699afecddb3074a9f5aa50547065d28e0e4ceb"
+      "after_sha256": "a720a49ab207d4ee19f4bffc3abbf37d643f04f8c3135bb5bc027bbec761fbd4"
     },
     {
       "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
@@ -100,7 +115,7 @@
     {
       "path": "tests/ctoCommercialIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "2f72246dde7d6d2e6ee0a43210d98c0832826d1408b2e096e3e3ff34c8502284"
+      "after_sha256": "1e60db04487e2fb1118bf9abe36cb72f137fcfaa8280befbb640ce36c3c58134"
     },
     {
       "path": "tests/ctoConfidencePresentation.test.mjs",
@@ -125,7 +140,7 @@
     {
       "path": "tests/helpers/ctoCommercialIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "edf95b443f671d1b8cba52b1fa445ef4fb688b65d73a9dc2824556646e688956"
+      "after_sha256": "49d81203ae1c31ca23ab11e1311f1b8e11a26c2d78cc11770058151a5ed49936"
     },
     {
       "path": "tests/productContract.test.mjs",

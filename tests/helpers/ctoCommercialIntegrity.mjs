@@ -3,10 +3,14 @@ import {readFileSync,lstatSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
 export const CTO_BASE='4348efaff4514a43473d111950083799a23c79c2';
 export const CTO_MANIFEST='docs/operations/evidence/cto-commercial-transition-20261013.json';
 export const CTO_PATHS=Object.freeze([
  '.github/workflows/cto-commercial.yml',
+ '.github/workflows/research-foundation.yml',
+ '.github/workflows/owner-trading-lab.yml',
+ '.github/workflows/recommendation-v2-shadow.yml',
  'docs/operations/cto-commercial-readiness-20261013.md',
  'docs/operations/cto-commercial-release-manifest-20261013.md',
  'scripts/cto/capacity-isolation.mjs',
@@ -48,7 +52,32 @@ function baseline(){
  assert.equal(offset,bytes.length);immutable=map;return map;
 }
 export const ctoPrior=path=>{const bytes=baseline().get(path);return bytes===undefined?null:Buffer.from(bytes);};
-export const ctoChangedPaths=()=>[...new Set([...git(['diff','--no-renames','--name-only','-z',CTO_BASE,'--']).split('\0'),...git(['ls-files','--others','--exclude-standard','-z']).split('\0')].filter(Boolean))].sort();
+// Cache only the path inventory, NEVER a source hash or admission result.
+// A new/deleted directory entry or Git index/HEAD change invalidates inventory.
+// Modifications to any existing file are still byte-checked below every time.
+export function memoizedScopeInventory(signature,readPaths){
+ let key,paths;
+ return ()=>{const next=signature();if(next!==key||!paths){paths=readPaths();key=next;}return [...paths];};
+}
+// An empty untracked directory is not part of ls-files' ordinary file list.
+// Its deeper entries may change without changing a tracked ancestor's stamp.
+// Therefore ANY non-ignored untracked directory disables inventory reuse.
+export const scopeInventorySignature=(stamp,entries,nonce)=>entries.some(path=>path.endsWith('/'))?stamp+'|UNTRACKED_DIRECTORY:'+nonce():stamp;
+let scopeDirectories,gitMetadata,scopeNonce=0;
+function scopeSignature(){
+ if(!scopeDirectories){
+  const dirs=new Set(['.']);
+  for(const path of [...baseline().keys(),...CTO_PATHS,CTO_MANIFEST]){let dir=dirname(path);while(dir!=='.'){dirs.add(dir);dir=dirname(dir);}}
+  scopeDirectories=[...dirs].sort();
+  gitMetadata=['index','HEAD'].map(name=>git(['rev-parse','--path-format=absolute','--git-path',name]).trim());
+ }
+ const stamp=(path,directory=false)=>{const s=lstatSync(path,{bigint:true});if(directory)assert.ok(s.isDirectory(),'regular scope directory: '+String(path));return [s.dev,s.ino,s.mode,s.size,s.mtimeNs,s.ctimeNs].join(':');};
+ const metadata=[...scopeDirectories.map(path=>stamp(new URL('../../'+path+'/',import.meta.url),true)),...gitMetadata.map(path=>stamp(path))].join('|');
+ const entries=git(['ls-files','--others','--exclude-standard','--directory','-z']).split('\0').filter(Boolean);
+ return scopeInventorySignature(metadata,entries,()=>++scopeNonce);
+}
+const actualScope=memoizedScopeInventory(scopeSignature,()=>[...new Set([...git(['diff','--no-renames','--name-only','-z',CTO_BASE,'--']).split('\0'),...git(['ls-files','--others','--exclude-standard','-z']).split('\0')].filter(Boolean))].sort());
+export const ctoChangedPaths=()=>actualScope();
 export function ctoTransition(source=raw,paths=ctoChangedPaths()){
  const m=JSON.parse(source(CTO_MANIFEST));
  assert.deepEqual(Object.keys(m).sort(),['schema','base','files','migrations','functions','production_authorized','member_publication_authorized','strategy_change','secret_change','cron_change'].sort());

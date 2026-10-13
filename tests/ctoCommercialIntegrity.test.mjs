@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
-import {ctoTransition,ctoPrior,ctoChangedPaths,CTO_PATHS,CTO_MANIFEST} from './helpers/ctoCommercialIntegrity.mjs';
+import {ctoTransition,ctoPrior,ctoChangedPaths,CTO_PATHS,CTO_MANIFEST,memoizedScopeInventory,scopeInventorySignature} from './helpers/ctoCommercialIntegrity.mjs';
 const raw=path=>readFileSync(new URL('../'+path,import.meta.url));
 test('CTO exact UI/test candidate preserves every other byte and has no Production authority',()=>{
  const t=ctoTransition();assert.deepEqual(t.manifest.migrations,[]);assert.deepEqual(t.manifest.functions,[]);
@@ -12,4 +12,25 @@ test('unknown file, omitted file, changed candidate or protected business source
 });
 test('manifest cannot authorize a migration, worker, strategy, secret or publication',()=>{
  const m=JSON.parse(raw(CTO_MANIFEST));for(const patch of [{production_authorized:true},{migrations:['new.sql']},{functions:['worker']},{strategy_change:true},{secret_change:true},{cron_change:true},{member_publication_authorized:true}])assert.throws(()=>ctoTransition(p=>p===CTO_MANIFEST?Buffer.from(JSON.stringify({...m,...patch})):raw(p)));
+});
+test('inventory memoization is invalidated by directory or index stamps and cannot hide a new path',()=>{
+ let stamp='directory1:index1',paths=['known.ts'],calls=0;
+ const read=memoizedScopeInventory(()=>stamp,()=>{calls++;return paths;});
+ assert.deepEqual(read(),['known.ts']);read().push('caller-mutation');assert.deepEqual(read(),['known.ts']);assert.equal(calls,1);
+ paths=['known.ts','unknown.sql'];stamp='directory2:index1';assert.deepEqual(read(),paths);assert.equal(calls,2);
+ paths=['known.ts'];stamp='directory2:index2';assert.deepEqual(read(),paths);assert.equal(calls,3);
+ // The existing drift tests above still exercise EVERY real candidate hash and
+ // every protected source byte on each admission; no admission is memoized.
+});
+test('confirmed timeout budgets preserve all commands, steps, permissions and assertions',()=>{
+ const normalize=bytes=>bytes.toString().split('\n').filter(line=>!line.trimStart().startsWith('#')).join('\n').replace(/timeout-minutes: \d+/g,'timeout-minutes: BOUNDED');
+ for(const path of ['.github/workflows/research-foundation.yml','.github/workflows/owner-trading-lab.yml','.github/workflows/recommendation-v2-shadow.yml']){
+  assert.equal(normalize(raw(path)),normalize(ctoPrior(path)));assert.match(raw(path).toString(),/timeout-minutes: 30\n/);
+ }
+});
+test('existing empty untracked directories never hide a later deeply nested unknown file',()=>{
+ let paths=['known.ts'],calls=0,nonce=0;
+ const read=memoizedScopeInventory(()=>scopeInventorySignature('unchanged-tracked-stamps',['empty/'],()=>++nonce),()=>{calls++;return paths;});
+ assert.deepEqual(read(),['known.ts']);paths=['known.ts','empty/deep/unknown.sql'];assert.deepEqual(read(),paths);assert.equal(calls,2);
+ assert.equal(scopeInventorySignature('metadata',[],()=>{throw Error('must not use nonce');}),'metadata');
 });

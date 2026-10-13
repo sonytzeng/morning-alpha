@@ -36,7 +36,7 @@
 | 免費／Premium研究 | PR230 server entitlement + publication projection候選 | 已核准公開股票研究0，不能硬湊3檔 | TWSE/TPEx書面答覆仍待確認；不得由已寄信推定授權。真實Free/Premium E2E PENDING |
 | Academy | PR225/228等已發布；既有教材與進度 | Sony真實Owner：10章可讀、免費／進階分級、兩PDF入口、既有進度恢復可見；1440/375/390/430無水平溢出 | 本輪唯讀，未作答或改進度；Free/Premium真實帳號與跨帳號持久化PENDING。不重做教材／Migration |
 | Owner Backend / Cockpit | 已發布，owner-trading-lab-v1 V9 | Sony已親自登入；五頁可讀、技術資料收合；三個Cockpit畫面可讀，歷史Entry明確分類，Paper/Live分頁分離 | 不新增正式測試交易；寫入/併發帳務不重跑。Owner實機唯讀PASS不等於Sony使用體驗PASS |
-| 桌機／手機 | 原UI已實作 | 正式Owner五頁、交易頁、Academy於1440/375/390/430無水平溢出；截圖保存在本機驗收包 | Free/Premium完整流程仍需合法Session。不把Owner視為一般會員、不以候選測試代替Production |
+| 桌機／手機 | 原UI已實作 | 正式Owner五頁、Cockpit三個畫面、Academy於1440/375/390/430無水平溢出；截圖保存在本機驗收包 | Free/Premium完整流程仍需合法Session。不把Owner視為一般會員、不以候選測試代替Production |
 | 支付／Legacy權益 | 舊候選保留不動 | 正式付款停用；Lemon Squeezy工作已通知暫緩 | 本輪不整合／啟用／建立測試訂閱，Legacy權益完全不改 |
 
 ## Exact root cause：休市被誤報核心故障
@@ -83,9 +83,9 @@ Issue #238禁止未另行核准修改受保護Recommendation邏輯。本輪只�
 
 以PR230精確HEAD為候選來源，保留Draft。研究接線與付款／Legacy政策必須拆開：
 
-1. 研究Projection SQL：`20261010061630_vnext_research_projection_candidate.sql`。
-2. Runtime SQL：`20261012054120_vnext_daily_research_runtime_candidate.sql`；vnext_runtime獨立Run/Checkpoint/Lease/SourceRevision/Prediction/Outcome/Audit/Publication結構及transactional RPC。
-3. 如要Owner逐筆發布候選，另列`20261012080628_vnext_member_publication_control_candidate.sql`；尚無合法內容，不能隨研究Worker自動公開。
+1. 唯一最小Runtime SQL：`20261012054120_vnext_daily_research_runtime_candidate.sql`；vnext_runtime獨立Run/Checkpoint/Lease/SourceRevision/Prediction/Outcome/Audit/Publication結構及transactional RPC。
+2. Runtime-only不需要一起執行研究會員Projection `20261010061630_vnext_research_projection_candidate.sql`；本最小包不公開會員研究。
+3. Owner逐筆發布候選SQL `20261012080628_vnext_member_publication_control_candidate.sql`亦排除；尚無合法內容，不能隨研究Worker自動公開。
 4. 新Worker `vnext-daily-research-v1`，既有`recommendation-v2-forward-worker-v1`只加detached enqueue及精確shared dependency；使用既有合法身份，不新增Secret/Cron。
 5. **排除**`20261013045054_membership_legacy_policy_candidate.sql`與`member-access`會員政策／付款改動。不得直接整包合併PR230當部署。
 6. 前置：逐檔fingerprint、正式schema/ACL差異、退回caller原版的rollback、部署後Production-like readonly確認，再觀察新交易日Forward，不回填歷史。
@@ -95,6 +95,8 @@ Issue #238禁止未另行核准修改受保護Recommendation邏輯。本輪只�
 ## 驗收與Git回報
 
 本候選保留完整舊版Integrity gate，新增精確sealed transition；每個候選檔案hash、保護路徑、未知新增、manifest權限提升及歷史reader掩蓋修改均有負向測試。沒有降低測試標準。
+
+PR239的83079b4版本shadow-analysis CI（run38369646940/job115203161111）因10分鐘上限被取消，沒有斷言失敗證據。只將該job有界時限調整為40分鐘，完整validate調整為60分鐘，沿用PR230已通過的時限；所有測試、資料庫、Auth與Deno步驟保持不變。最終結果必須以新HEAD的完整CI為準，不能把逾時當作通過。
 
 本輪沒有Production寫入／部署／Migration／Cron／Secret修改；業務邏輯code diff為0。自然系統持續產生資料，**不宣稱全資料庫筆數或fingerprint在整輪期間靜止**。
 

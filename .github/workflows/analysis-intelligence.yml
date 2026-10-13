@@ -8,7 +8,9 @@ permissions:
 jobs:
   shadow-analysis:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # The complete immutable predecessor chain exceeded the old ten-minute cap.
+    # Keep all assertions and database/Auth replays; use the existing candidate budget.
+    timeout-minutes: 40
     services:
       postgres:
         image: postgres:17

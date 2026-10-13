@@ -8,6 +8,8 @@ export const CALENDAR_MANIFEST='docs/operations/evidence/acceptance-calendar-tra
 export const CALENDAR_MIGRATION='supabase/migrations/20261013073004_operational_acceptance_calendar_guard_v1.sql';
 export const CALENDAR_PATHS=Object.freeze([
  '.github/workflows/acceptance-calendar.yml',
+ '.github/workflows/analysis-intelligence.yml',
+ '.github/workflows/validate-release.yml',
  'docs/operations/core-product-acceptance-20261013.md',
  CALENDAR_MIGRATION,
  'src/lib/reportNewsPresentation.ts',

@@ -17,9 +17,19 @@
       "after_sha256": "c7b4b53587bf38e739e54f31c8af01e108618c189d49906a52284ff2e9f8f879"
     },
     {
+      "path": ".github/workflows/analysis-intelligence.yml",
+      "before_sha256": "e795babb8dcbb41a639ddc6e083254a1dc3bfb7ed42cdd02f3541b83b9c2073f",
+      "after_sha256": "51dd841a0149206d86882d850f938e65932a0fcf457b5446563991e7d88a163b"
+    },
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "before_sha256": "18080e6a079c2c9a4732ba63a9d22c892ae050546d7e64ef03b1d2f4318c6e8e",
+      "after_sha256": "a7456794b7d37f732f6b24e33b7951e47f3c522688a67a0d9329539e93b53eb6"
+    },
+    {
       "path": "docs/operations/core-product-acceptance-20261013.md",
       "before_sha256": null,
-      "after_sha256": "b8a98a41d5aad09310a3adcb7f942af6893a39762f29de46dfb1c1d01f1d5034"
+      "after_sha256": "6d169e51b161800a90840262762eb170cdeaac134232db198212e239aecdaacf"
     },
     {
       "path": "src/features/research/cockpit.ts",
@@ -59,7 +69,7 @@
     {
       "path": "tests/acceptanceCalendarIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "3a5324c3a8f1293e455ac9df07a77661b2c64320968ed86b3ccb91963508e1e2"
+      "after_sha256": "6db41b1c56f962ac28a40fd4821d97ab142b56cda3cd7513cbc4fdd7e5404166"
     },
     {
       "path": "tests/accountSubscriberProjection.test.mjs",
@@ -69,7 +79,7 @@
     {
       "path": "tests/helpers/acceptanceCalendarIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "8fe28a22a9447f42a9ca02e2d0712f96f99bc5c24b61c6c44e4a493e93bbc461"
+      "after_sha256": "fba38a4b9e9ef58317dcaef2cae5f5d3e11591b3bd7e0476191aa0e4caf6d461"
     },
     {
       "path": "tests/helpers/marketNewsReportIntegrity.mjs",

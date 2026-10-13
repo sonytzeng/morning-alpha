@@ -15,7 +15,9 @@ export async function installMembershipCandidate(runtime){
  runtime.sql(read('supabase/migrations/20260822183421_member_access_trial_state_machine.sql'));
  runtime.sql(`insert into public.member_entitlements(user_id,state,tier,source,access_ends_at) values('${runtime.accounts.premium.id}','paid_active','member','manual',now()+interval '2 days');`);
  const before=runtime.sql("select jsonb_build_object('config',(select to_jsonb(c) from public.membership_access_config c),'entitlements',(select jsonb_agg(e order by user_id) from public.member_entitlements e))::text");
+ const originalActivationBody=runtime.sql("select prosrc from pg_proc where oid='public.ensure_member_entitlement_v1(uuid)'::regprocedure");
  runtime.sql(read(migration));
+ assert.equal(runtime.sql("select prosrc from pg_proc where oid='membership_private.ensure_member_entitlement_pre_policy_v1(uuid)'::regprocedure"),originalActivationBody,'legacy implementation preserved exactly, only private location changed');
  // Match the read-only Production profile RLS shape verified on 2026-10-13:
  // table privileges exist, but there is no INSERT/UPDATE policy.
  runtime.sql(`alter table public.profiles enable row level security;grant select,insert,update on public.profiles to anon,authenticated;
@@ -40,12 +42,13 @@ export async function verifyMembershipPolicy(runtime){
   const id=await signup(name);runtime.sql(`insert into public.member_entitlements(user_id,state,tier,source,access_ends_at,trial_started_at,trial_ends_at,metadata) values('${id}','${state}','member','manual',${extra})`);
  }
  const original=runtime.sql('select jsonb_agg(e order by user_id)::text from public.member_entitlements e');
- runtime.sql(`begin;select public.ensure_member_entitlement_v2('${accounts.free.id}');do $$begin if not exists(select 1 from public.member_entitlements where user_id='${accounts.free.id}' and state='beta_full') then raise exception 'PRE_ACTIVATION_DRIFT';end if;end$$;rollback;`);
+ for(const fn of ['ensure_member_entitlement_v1','ensure_member_entitlement_v2'])runtime.sql(`begin;select public.${fn}('${accounts.free.id}');do $$begin if not exists(select 1 from public.member_entitlements where user_id='${accounts.free.id}' and state='beta_full') then raise exception 'PRE_ACTIVATION_DRIFT';end if;end$$;rollback;`);
  assert.equal(runtime.sql('select count(*) from membership_private.policy_versions'),'0');
  for(const role of ['free','premium','owner','other'])await login(role);
  for(const role of [null,'free','premium','owner'])for(const [fn,body] of [
   ['activate_membership_policy_candidate_v1',{p_approval_reference:'NOT_AUTHORIZED'}],
   ['ensure_member_entitlement_v2',{p_user_id:accounts.other.id}],
+  ['ensure_member_entitlement_v1',{p_user_id:accounts.other.id}],
   ['get_member_policy_receipt_v1',{p_user_id:accounts.other.id}],
   ['apply_membership_billing_event_v1',{p_provider:'TEST',p_provider_event_id:'TEST',p_event_type:'TEST',p_user_id:accounts.free.id,p_subscription_status:'active',p_tier:'member',p_current_period_end:new Date(Date.now()+60000).toISOString()}]]){
    assert.ok([401,403].includes((await rpc(role,fn,body)).status),role+' cannot mutate entitlement / inspect private policy');
@@ -72,6 +75,8 @@ export async function verifyMembershipPolicy(runtime){
  await Promise.all(Array.from({length:8},()=>concurrent(`set role service_role;select public.ensure_member_entitlement_v2('${accounts.beta.id}')`)));
  runtime.sql(`begin;update public.membership_access_config set signup_mode='trialing';select public.ensure_member_entitlement_v2('${accounts.beta.id}');rollback;`);
  assert.equal(runtime.sql('select jsonb_agg(e order by user_id)::text from public.member_entitlements e'),stable);
+ await Promise.all(Array.from({length:8},()=>concurrent(`set role service_role;select public.ensure_member_entitlement_v1('${accounts.beta.id}');select public.ensure_member_entitlement_v1('${accounts.owner.id}')`)));
+ assert.equal(runtime.sql('select jsonb_agg(e order by user_id)::text from public.member_entitlements e'),stable,'unchanged Report caller also preserves all versions and dates');
  for(const who of ['other','owner','finite']){
   assert.throws(()=>runtime.sql(`select public.apply_membership_billing_event_v1('ISOLATED_SQL_CONTROL','unsafe-${who}','payment_failed','${accounts[who].id}','past_due','member',now())`));
  }
@@ -80,6 +85,9 @@ export async function verifyMembershipPolicy(runtime){
  checks.push('billing update cannot shorten active legacy term, erase unknown-expiry grant or replace Owner; failed transaction rolls back entirely');
  const newId=await signup('newfree');await login('newfree');
  assert.equal(runtime.sql(`select public.ensure_member_entitlement_v2('${newId}') is null`),'t');
+ assert.equal(runtime.sql(`set role service_role;select public.ensure_member_entitlement_v1('${newId}') is null`),'t','existing Report caller cannot auto-grant Beta');
+ assert.equal(runtime.sql(`select count(*) from public.member_entitlements where user_id='${newId}'`),'0');
+ assert.throws(()=>runtime.sql(`begin;set role service_role;select membership_private.ensure_member_entitlement_pre_policy_v1('${newId}');rollback;`));
  assert.equal(runtime.sql(`select created_at > '${cutoff}' from auth.users where id='${newId}'`),'t');
  for(const [name,tier] of [['owner','owner'],['free','free'],['other','premium'],['newfree','free'],['premium','premium'],['beta','premium'],['finite','premium'],['trial','premium'],['cancelled','premium'],['expired','free']]){
   await login(name);const c=await rpc(name,'get_academy_catalog_v11');assert.equal(c.status,200);assert.equal(c.body.tier,tier,name);assert.equal(c.body.chapters.filter(x=>x.allowed).length,tier==='free'?7:10);

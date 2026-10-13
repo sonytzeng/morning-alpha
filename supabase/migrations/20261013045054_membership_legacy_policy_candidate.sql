@@ -39,6 +39,13 @@ alter table public.membership_access_config drop constraint membership_access_co
 alter table public.membership_access_config add constraint membership_access_config_signup_mode_check
 check (signup_mode in ('closed','beta_full','trialing','free'));
 
+-- Keep the exact legacy implementation private. Existing callers such as
+-- get-report-payload keep the same public RPC contract, but cannot accidentally
+-- grant Beta to new Free accounts after policy activation. No Report code edit.
+alter function public.ensure_member_entitlement_v1(uuid) set schema membership_private;
+alter function membership_private.ensure_member_entitlement_v1(uuid) rename to ensure_member_entitlement_pre_policy_v1;
+revoke all on function membership_private.ensure_member_entitlement_pre_policy_v1(uuid) from public,anon,authenticated,service_role;
+
 create function public.activate_membership_policy_candidate_v1(p_approval_reference text)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
@@ -140,18 +147,24 @@ declare v_row public.member_entitlements%rowtype;v_role text;
 begin
   perform pg_catalog.pg_advisory_xact_lock_shared(67230130);
   if not exists(select 1 from membership_private.policy_versions) then
-    return public.ensure_member_entitlement_v1(p_user_id);
+    return membership_private.ensure_member_entitlement_pre_policy_v1(p_user_id);
   end if;
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user_id::text,0));
   select role into v_role from public.profiles where id=p_user_id;
   if not found then raise exception 'profile not found';end if;
   select * into v_row from public.member_entitlements where user_id=p_user_id;
   if found then return v_row;end if;
-  if lower(coalesce(v_role,''))='admin' then return public.ensure_member_entitlement_v1(p_user_id);end if;
+  if lower(coalesce(v_role,''))='admin' then return membership_private.ensure_member_entitlement_pre_policy_v1(p_user_id);end if;
   return null;
 end$$;
 revoke all on function public.ensure_member_entitlement_v2(uuid) from public,anon,authenticated;
 grant execute on function public.ensure_member_entitlement_v2(uuid) to service_role;
+create function public.ensure_member_entitlement_v1(p_user_id uuid)
+returns public.member_entitlements language sql security definer set search_path = '' as $$
+  select public.ensure_member_entitlement_v2(p_user_id)
+$$;
+revoke all on function public.ensure_member_entitlement_v1(uuid) from public,anon,authenticated;
+grant execute on function public.ensure_member_entitlement_v1(uuid) to service_role;
 create function public.get_member_policy_receipt_v1(p_user_id uuid)
 returns jsonb language sql stable security definer set search_path = '' as $$
   select jsonb_build_object('legacy_review_required',exists(select 1 from membership_private.legacy_snapshots

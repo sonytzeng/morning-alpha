@@ -65,7 +65,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "836d40091457aa25d464483080b5930d59e7e1f098da4cf8abdc46bcb4101ad5"
+      "after_sha256": "850b8c2db5205ef19e51cdcf39364de21f3ed25876936d9451ac7fe53705dc38"
     },
     {
       "path": "docs/vnext/FIRST_MEMBER_RESEARCH.md",
@@ -80,7 +80,7 @@
     {
       "path": "docs/vnext/MEMBERSHIP_PAYMENT_READINESS.md",
       "before_sha256": null,
-      "after_sha256": "7cb521ec83680634de8b8960cb742e1ad665319160699d08b09dae17b994c9f9"
+      "after_sha256": "47d044eeaeb33ed0726333951ab9a9e8d48f66c519739dc738315d4722688111"
     },
     {
       "path": "docs/vnext/MEMBER_EXPERIENCE.md",
@@ -95,7 +95,7 @@
     {
       "path": "docs/vnext/MEMBER_RELEASE_MANIFEST.md",
       "before_sha256": null,
-      "after_sha256": "9a0c7a9917debccd293b31ff16c11d2267728cc2951c23f125de5fdeb79082ad"
+      "after_sha256": "51d6a8784c551e5979958ecb3549ee1d2120d8a9dfbfd9a0bf23b26665da2952"
     },
     {
       "path": "docs/vnext/MULTI_HORIZON_SPEC.md",
@@ -520,7 +520,7 @@
     {
       "path": "supabase/migrations/20261013045054_membership_legacy_policy_candidate.sql",
       "before_sha256": null,
-      "after_sha256": "1e7d960a8a7836383485064bb840ef650c90d0e6cabb26e90d85130ab3c19561"
+      "after_sha256": "91b9ff79c15f4337d7e20631da58998f0cd21d2761fd874964a9a78e84b5ced3"
     },
     {
       "path": "tests/academyNavigation.test.mjs",
@@ -595,12 +595,12 @@
     {
       "path": "tests/membershipPolicy.integration.mjs",
       "before_sha256": null,
-      "after_sha256": "c96f00d722c40148049b6965bad9edc1526a125b97805c223b2f0ed522ce8fa3"
+      "after_sha256": "2ba33bb2f95ecca9ac4785ba222886e7b22b9631e7f410ab58ba78f9a745f526"
     },
     {
       "path": "tests/membershipPolicy.test.mjs",
       "before_sha256": null,
-      "after_sha256": "ffbba2428df75303977becd91e143a6d2a48c37541d8cfa85cc938944cd52aeb"
+      "after_sha256": "96f92439bdc3086f9672750e86976e23675dfb9847b400bb054b0384142539ea"
     },
     {
       "path": "tests/productContract.test.mjs",

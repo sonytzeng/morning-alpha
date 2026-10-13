@@ -32,6 +32,8 @@ Production 唯讀設定為 `signup_mode=beta_full`、`billing_mode=disabled`、t
 3. `20261012080628_vnext_member_publication_control_candidate.sql`：獨立審核 registry、Owner approval/revocation append-only event、防重與交易式發布。無資料授權或核准種子。
 4. `20261013045054_membership_legacy_policy_candidate.sql`：新增 private policy/snapshot、`activate_membership_policy_candidate_v1`、`ensure_member_entitlement_v2`、`get_member_policy_receipt_v1` 與 Legacy縮權保護trigger；擴充既有config CHECK允許free。安裝不生效、不改既有會員資料；受控activation才快照／接軌既有profile grant，最後切signup_mode=free。此操作會更新config及為缺canonical的有效舊權益新增row，必須獨立列入精確部署核准，絕不偷偷執行。
 
+第4份SQL另有必要的**既有RPC相容路由調整**：將原 `ensure_member_entitlement_v1` 原文移至private且撤銷直接執行，再用同名service-only入口轉至v2。這避免未改動的 `get-report-payload` 在signup_mode=free時誤開Beta；不是改Report生成或品質邏輯。不新增第4支Function部署、不改Auth/RLS，RPC安裝前後已持有權益與政策生效前行為保持一致。它不是純新增table的SQL，核准時必須包含此既有RPC路由調整。
+
 Function 部署僅三支及其確切 import dependencies：
 
 - 新 `vnext-daily-research-v1`：沿用現有 Gateway JWT 與 CRON_SECRET，不新增 Secret。私有 RPC、70秒工作切片／100秒 lease、有界重試，無公開研究寫入。

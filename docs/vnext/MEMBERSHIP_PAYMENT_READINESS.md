@@ -31,6 +31,7 @@
 - 舊來源、原狀態、原期限、版本與雜湊保存在不可變 private snapshot。未知期限不設新期限，也不寫成永久付款授權。
 - 單憑註冊日期不升級：以前無已取得有效權益的 Free 仍是 Free。新帳號不會自動開 Beta／14日試用；有效付費、既有試用及核准特殊權益仍走同一 canonical table。
 - `ensure_member_entitlement_v2` 在生效前沿用舊函式；生效後不再因登入把 Beta 轉試用、不重算期限或版本。原 server resolver、Academy／VNext 權限讀取邏輯不改。
+- 最後交叉檢查發現 `get-report-payload` 仍呼叫舊 `ensure_member_entitlement_v1`；舊函式把未知signup_mode當Beta，單改member-access不足以防止新Free被升級。候選在同一SQL保留舊函式原文、移至private，再建立同名service-only相容入口導向v2。報告來源程式不變，既有RPC名稱／回應／權限不變；政策生效前行為相同，生效後Report reader不再另開Beta。這是既有RPC路由變更，必須包含於精確Migration核准，不能只稱新增資料表。
 - `preserve_legacy_grant_v1` 防止未來 billing update 意外取消／縮短仍有效的獨立舊權益或降級 Owner。確有退費／取消可撤銷舊權益的契約時，必須另行提出明確政策，不能猜。正常原期限屆滿仍由既有 reader 判定失效。
 - 新 private tables 不對 browser 授權；所有 mutation/receipt RPC 僅 service_role EXECUTE，固定 search_path。Owner Browser 也不能直接啟用政策／讀別人的政策紀錄。既有 Auth/RLS policy 沒有修改。
 
@@ -41,6 +42,7 @@
 - 安裝前後 config／canonical 資料相同；8次同時 activation 僅1筆政策與固定 cutoff。
 - 原 canonical 的到期、永久、試用、取消、已到期資料不被改寫；active legacy profile 保留且標待審核；Free 不因帳號較舊升級。
 - 8次登入 activation、不正確試用設定、重跑政策都不造成權益漂移。
+- 既有Report使用的v1入口與v2皆測試：生效前沿用原Beta行為、生效後新Free維持無完整權益；8次併發舊入口不改舊會員／Owner版本或日期，private原始函式不讓service_role直接繞過政策。
 - 不可變快照、匿名／會員／Owner 直接 API 操作拒絕、service_role 不能直接讀新 private tables。
 - 真實隔離 Free 可讀7章，Premium／Legacy完整權益10章，Owner仍10章；user_metadata偽造tier無效，直接讀Premium章節拒絕。
 - 新會員與 VNext projection tier 一致；有效權益不能公開未審核研究。實際股票可見0。

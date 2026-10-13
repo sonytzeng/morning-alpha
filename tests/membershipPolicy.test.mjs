@@ -25,6 +25,15 @@ test('member endpoint retains exactly the same authenticated user derivation and
  .replace('    membership: access,','    membership: { ...access, legacyReviewRequired: policy.legacy_review_required === true },');
  assert.equal(read(path),expected);
 });
+test('unchanged Report caller reaches the same policy through its existing service-only RPC',()=>{
+ const sql=read(membershipMigration);
+ assert.match(read('supabase/functions/get-report-payload/index.ts'),/rpc\("ensure_member_entitlement_v1"/);
+ assert.match(sql,/alter function public\.ensure_member_entitlement_v1\(uuid\) set schema membership_private/);
+ assert.match(sql,/select public\.ensure_member_entitlement_v2\(p_user_id\)/);
+ assert.match(sql,/return membership_private\.ensure_member_entitlement_pre_policy_v1\(p_user_id\)/);
+ assert.match(sql,/revoke all on function public\.ensure_member_entitlement_v1\(uuid\) from public,anon,authenticated/);
+ assert.match(sql,/revoke all on function membership_private\.ensure_member_entitlement_pre_policy_v1\(uuid\) from public,anon,authenticated,service_role/);
+});
 test('materializing an unknown-expiry legacy grant preserves access, not a verified payment claim',()=>{
  const before=resolveEffectiveMemberAccess({role:'member',subscription_status:'active',paid_until:null},null);
  const after=resolveEffectiveMemberAccess({role:'member'}, {state:'beta_full',tier:'member',source:'manual',access_ends_at:null});

@@ -38,6 +38,7 @@
 
 10. 真實歷史報告詳細頁會依方向標籤生成固定09:15、0.5%與1%條件，與當日正式09:30條件不一致；本候選移除這些UI推定，重用Canonical解釋的已保存條件，原數值不改、缺失不補。個股未發布與市場報告FULL分開標示，沒有逐項缺失原因時不猜品質失敗；診斷分數預設收合。
 11. 獨立風險審查補強內層Canonical的報告日期、snapshot ID及正整數版本綁定。正式Reader的匿名泛用觀察骨架沒有這些識別，不能冒充「當時保存的條件」；保留真實空狀態。另一個CI實證競態run38418097840：pg_isready接到initdb暫時Unix socket，隨後重啟造成psql socket不存在，SQL/RLS尚未開始。只把Entry隔離等待改為容器內TCP、30次上限與最後fail-closed確認，所有Deno/SQL/RLS/UI命令保留。依據：[官方Postgres容器entrypoint](https://github.com/docker-library/postgres/blob/master/docker-entrypoint.sh)，暫時daemon使用空listen_addresses。
+12. 完整CI run38419954873有六項實際失敗且60分鐘逾時，不隱藏為「單純逾時」：兩项舊Academy控制仍預期Calendar層錯誤／舊diff參數；兩項完整性控制碰上networkObserver首次Build暫時清空auto-imports.d.ts；Performance隔離loader未注入真實顯示helper；新歷史prose版本綁定read-site尚未列入精確圖譜。修正直接測試依賴與最新CTO層級，所有原拒絕控制保留；新增該唯一symbol/read-site的用途分類，沒有整檔豁免。將既有Build移至公開並行測試前，保留每一個SQL／Edge／RLS命令與權限；完整release有界時限120分鐘。新增逐字比較回歸確認只有時限與Build順序改變。該舊run不得列PASS，後續以新HEAD全套終態為準。
 
 另案：舊 `/admin/publish` 對匿名可見空素材框架；正式Reader仍裁切權限，本次未觀察私人內容洩露。是否保留一般管理員既有素材權限、或改為具名Owner-only，需先確認安全／Legacy權益規則，不自行修改正式Auth或RLS。Chrome新分頁已恢復Sony正式Owner；五頁後台、交易中心三分頁與Academy已完成四尺寸唯讀截圖，無溢出、技術詳細資料收合，Console error/warn0。既有研究顯示的DOWN/FLAT翻譯已在PR#239，不重做；正式未發布前不冒稱已修好。
 

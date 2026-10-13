@@ -28,9 +28,14 @@
       "after_sha256": "7e9e03ba2728dd780e81a0ea71189376c5b7a3818a523b2addf3e947136590d0"
     },
     {
+      "path": ".github/workflows/validate-release.yml",
+      "before_sha256": "a7456794b7d37f732f6b24e33b7951e47f3c522688a67a0d9329539e93b53eb6",
+      "after_sha256": "0945e371f12a38ff27b941aeba87a1f822c270459c1bcf44dfadf2c40c273ceb"
+    },
+    {
       "path": "docs/operations/cto-commercial-readiness-20261013.md",
       "before_sha256": null,
-      "after_sha256": "2507e09d06bf953c2202043055c6b9a5b73d466b077978fe7b6eadd34d32d0c3"
+      "after_sha256": "ab2311dcc12d8a451e5444344f514447b5dfebfcf90732a5a3595365bfda9632"
     },
     {
       "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
@@ -123,14 +128,29 @@
       "after_sha256": "2a0ff2456d2b0753b3cd5a27f3394080eae8888be3500695f651d4714c0a494c"
     },
     {
+      "path": "tests/academyV11Integrity.test.mjs",
+      "before_sha256": "112e597475c5014cc396c79f7243203c0c84ded07af5252e4dc4c81469e94b95",
+      "after_sha256": "2022b69badfebc1542d50348f22fadc2c899b62e74cc551d088c0cced7c3a1e5"
+    },
+    {
       "path": "tests/commercialStability.test.mjs",
       "before_sha256": null,
       "after_sha256": "e996117c5b0f314937c59ab94b9309e5807057c2ffb480aa71b2ee0c408047a2"
     },
     {
+      "path": "tests/consolidationSubscriberEligibility.test.mjs",
+      "before_sha256": "4505212d68e73fb1c16f7c0b7ef75d59e70c2a3f0985a0a4645ea245f2a73e34",
+      "after_sha256": "ba00de6daf5b9b9c64e924f3f488ee06a3b05f4ad3c337df946166b73544625d"
+    },
+    {
+      "path": "tests/consolidationSubscriberGraph.test.mjs",
+      "before_sha256": "dbf82ddad26f83e0cf8c786c75cc962859bda82b8be715a62f6f928a6f84d79f",
+      "after_sha256": "454c4146c305dccb19598c334fb4a516d0cad427de44a195799902617c91d25f"
+    },
+    {
       "path": "tests/ctoCommercialIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "b3fd5ae4151d6685167ea36a1b00715d4c0f2d4a7b5ae14125249547bb1bd99c"
+      "after_sha256": "c3890aca587956b68558eea04eb34ff171b3711a3ff62cda918ba1630199cf8e"
     },
     {
       "path": "tests/ctoConfidencePresentation.test.mjs",
@@ -160,7 +180,7 @@
     {
       "path": "tests/helpers/ctoCommercialIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "b2a481660dc0a6a792215edb03d9c747d7f377a4ab969a26d77b8545adbb2847"
+      "after_sha256": "70d34e69a367f9219b85782d5df906ee5da846f5c5c82d7e1cb7679a22163204"
     },
     {
       "path": "tests/productContract.test.mjs",

@@ -28,6 +28,17 @@ test('confirmed timeout budgets preserve all commands, steps, permissions and as
   assert.equal(normalize(raw(path)),normalize(ctoPrior(path)));assert.match(raw(path).toString(),/timeout-minutes: 30\n/);
  }
 });
+test('full release CI retains every check and builds before parallel immutable-byte readers',()=>{
+ const path='.github/workflows/validate-release.yml';
+ const strip=bytes=>bytes.toString().split('\n').filter(line=>!line.trimStart().startsWith('#')).join('\n');
+ const before=strip(ctoPrior(path)),after=strip(raw(path));
+ const expected=before.replace('timeout-minutes: 60','timeout-minutes: 120')
+  .replace('      - run: npm run build\n','')
+  .replace('      - run: npm run test:public','      - run: npm run build\n      - run: npm run test:public');
+ assert.equal(after,expected,'only the proven time budget and build ordering may change');
+ assert.equal((after.match(/- run: npm run build/g)||[]).length,1);
+ assert.ok(after.indexOf('- run: npm run build')<after.indexOf('- run: npm run test:public'));
+});
 test('existing empty untracked directories never hide a later deeply nested unknown file',()=>{
  let paths=['known.ts'],calls=0,nonce=0;
  const read=memoizedScopeInventory(()=>scopeInventorySignature('unchanged-tracked-stamps',['empty/'],()=>++nonce),()=>{calls++;return paths;});

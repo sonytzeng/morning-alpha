@@ -15,6 +15,9 @@ Runtime檔案只有：
 - `src/pages/pricing/Pricing.tsx`：付款停用與預定方案說明。
 - `src/lib/performanceDirectionPresentation.ts`、`src/pages/performance/page.tsx`：只翻譯既有收盤方向，不改統計。
 - `src/pages/account/components/MorningHeroCard.tsx`：重複頁面標題改為區塊標題，外觀不變。
+- `src/lib/historicalReportCardPresentation.ts`、`src/pages/reports/ReportsCenter.tsx`：歷史卡正確使用市場方向，不以行動缺失誤標資料不足；不改共享正式projection。
+- `src/pages/home/page.tsx`：相同正式句子去重、最新資料與報告產生時間標示分開。
+- `src/pages/admin/scripts/page.tsx`：舊社群素材缺失不誤標正式LINE未接入；僅UI說明和標題對比，不改生成／Copy內容或Sender。
 - `src/features/operations/commercialStability.mjs`：純候選驗收規則，沒有排程或Production寫入。
 
 其他僅為直接測試、CI、隔離負載腳本、文件與精確完整性封存；SHA256見 `evidence/cto-commercial-transition-20261013.json`。不得以封存文件中的false變更為true代替Owner授權。

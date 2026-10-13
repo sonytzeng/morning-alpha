@@ -10,12 +10,12 @@
     {
       "path": "docs/operations/cto-commercial-readiness-20261013.md",
       "before_sha256": null,
-      "after_sha256": "6bfdcad9eadea20d93859db6a053c123ef497238f9faf84e7fcc80e893ac7f6f"
+      "after_sha256": "6f8e314804f08c4354aba744a8699afecddb3074a9f5aa50547065d28e0e4ceb"
     },
     {
       "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
       "before_sha256": null,
-      "after_sha256": "e684a8d89f1d66d2c69280e3b743fe93a3bc41d81bc2c6f703e9953bb2d3be0d"
+      "after_sha256": "fffca82cc1b7525269f397e3822d21b6a7725d55ae4628cc510defcbefc1e62c"
     },
     {
       "path": "scripts/cto/capacity-isolation.mjs",
@@ -48,6 +48,11 @@
       "after_sha256": "5aabfe84a585afbfa9db0f5316e7a6c54498787cabfa17a14607badfb9e5d99a"
     },
     {
+      "path": "src/lib/historicalReportCardPresentation.ts",
+      "before_sha256": null,
+      "after_sha256": "4fd37c4af4e1d5d8f6de234ca52388e11f2355d7253498f4b09276a37f3a72a6"
+    },
+    {
       "path": "src/lib/performanceDirectionPresentation.ts",
       "before_sha256": null,
       "after_sha256": "ca77a4c370cfcb113461c63623b194e6f30ef797d5adff9099a8e38d2d3a52c4"
@@ -56,6 +61,16 @@
       "path": "src/pages/account/components/MorningHeroCard.tsx",
       "before_sha256": "db29ea04c30df2cf1891043ebd39ec4581c060b315351d2fda08e42f9fc4007e",
       "after_sha256": "6457935f9117a27758a8ca65f158f2c259f875c0376a0eef80772d73587a7472"
+    },
+    {
+      "path": "src/pages/admin/scripts/page.tsx",
+      "before_sha256": "4e67e8081db3490a6a01d4ed96f06d08a869dee61c158064d796e6e455bc9f07",
+      "after_sha256": "cc41df1adaa22524f1c90d564af561899b38e1b833fa52c95163fae61e640b49"
+    },
+    {
+      "path": "src/pages/home/page.tsx",
+      "before_sha256": "caa7c79fc292a5e81c10f7895917c71c76383b3b4c778a9d2b47ea7df6e71034",
+      "after_sha256": "01e0102570435fd9dd81bc2be635bf51f2dda7ccd738596b1b58df3a1e456fa6"
     },
     {
       "path": "src/pages/performance/page.tsx",
@@ -71,6 +86,11 @@
       "path": "src/pages/report/TodayReport.tsx",
       "before_sha256": "b488264dcdf08680c950b89512a93c9785903f5227b822fa129a8e33cce63556",
       "after_sha256": "7c8e3a5901d6de0480fe5cf34c45a39bc496854684a5c6c940396b9320672ab2"
+    },
+    {
+      "path": "src/pages/reports/ReportsCenter.tsx",
+      "before_sha256": "c7ac4c1a88f8d4e9b735e5f5e6221bbf0e5addcd7183e6970e1344a7ee8cbdaa",
+      "after_sha256": "2a0ff2456d2b0753b3cd5a27f3394080eae8888be3500695f651d4714c0a494c"
     },
     {
       "path": "tests/commercialStability.test.mjs",
@@ -90,7 +110,7 @@
     {
       "path": "tests/ctoPerformancePresentation.test.mjs",
       "before_sha256": null,
-      "after_sha256": "5faa3cf8f27cb9430f98069660fbaf24712d744f956fada3dd11a8c23f096d5c"
+      "after_sha256": "d477c0c1c7e6f440fe6821f08412e540c3c5765dfeb2103d1d58894a58a14665"
     },
     {
       "path": "tests/ctoPricingPresentation.test.mjs",
@@ -105,7 +125,7 @@
     {
       "path": "tests/helpers/ctoCommercialIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "2de4d78ae222dee0f9edcc4c8d426dd55129c4c45a07f7804411710a26bfc112"
+      "after_sha256": "edf95b443f671d1b8cba52b1fa445ef4fb688b65d73a9dc2824556646e688956"
     },
     {
       "path": "tests/productContract.test.mjs",

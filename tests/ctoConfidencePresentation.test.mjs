@@ -58,3 +58,12 @@ test('completed timeline does not prefix a missing time, while a real checkpoint
  assert.equal(vm.runInNewContext(expression,{nextRuntimeNode:{time:'09:30',label:'開盤確認'}}),'09:30｜開盤確認');
  assert.match(file,/marketConfidence=\{projection\.confidence\}/);
 });
+test('completed empty-time node does not borrow the first saved morning condition',()=>{
+ const file=readFileSync(new URL('../src/pages/report/TodayReport.tsx',import.meta.url),'utf8');
+ const ast=ts.createSourceFile('TodayReport.tsx',file,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let expression;
+ const visit=node=>{if(ts.isVariableDeclaration(node)&&node.name.getText(ast)==='matchingValidationStep')expression=node.initializer.getText(ast);ts.forEachChild(node,visit);};visit(ast);assert.ok(expression);
+ const validationSteps=[{time:'09:30',title:'已保存的盤前條件',detail:'不推定完成後仍待確認'}];
+ assert.equal(vm.runInNewContext(expression,{nextRuntimeNode:{time:''},validationSteps}),undefined);
+ assert.equal(vm.runInNewContext(expression,{nextRuntimeNode:{time:'09:30'},validationSteps}),validationSteps[0]);
+ assert.equal(vm.runInNewContext(expression,{nextRuntimeNode:{time:'10:30'},validationSteps}),undefined);
+});

@@ -35,7 +35,7 @@
     {
       "path": "docs/operations/cto-commercial-readiness-20261013.md",
       "before_sha256": null,
-      "after_sha256": "cdd484f4b850ff7aaa0cb4812eb0be99c296a0fd3f6c50264ebadeed85cbda4a"
+      "after_sha256": "731d068faabd1cbbbc12156bb7f0815c15f3f7741bf1f3e204c50c841c330d10"
     },
     {
       "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
@@ -120,7 +120,7 @@
     {
       "path": "src/pages/report/TodayReport.tsx",
       "before_sha256": "b488264dcdf08680c950b89512a93c9785903f5227b822fa129a8e33cce63556",
-      "after_sha256": "7c8e3a5901d6de0480fe5cf34c45a39bc496854684a5c6c940396b9320672ab2"
+      "after_sha256": "dcc11ebf664674d8f04c42e1d4098cd601242c6ddf44b8a19a373ad7f978a6ef"
     },
     {
       "path": "src/pages/reports/ReportDetail.tsx",
@@ -160,7 +160,7 @@
     {
       "path": "tests/ctoConfidencePresentation.test.mjs",
       "before_sha256": null,
-      "after_sha256": "88802732fb4168edb943c8ebfe5f0cf1e9dcfbbca3819809f1d4fc6e04a8c49c"
+      "after_sha256": "f252aac4eea7787746df2adb01f8ee76fe6cee75ed90065f48c351753f184d41"
     },
     {
       "path": "tests/ctoHistoricalEvidencePresentation.test.mjs",

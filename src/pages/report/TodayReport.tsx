@@ -350,9 +350,9 @@ function TodayReportContent() {
   const flowConditions = successConditions;
   const nextDecisionTime = nextRuntimeNode.time ? `${nextRuntimeNode.time}｜${nextRuntimeNode.label}` : nextRuntimeNode.label;
   const validationSteps = canonicalNarrative.decision_lifecycle.validation_plan.steps.slice(0, 5);
-  const matchingValidationStep = validationSteps.find((step) =>
+  const matchingValidationStep = nextRuntimeNode.time ? validationSteps.find((step) =>
     [step.time, step.title, step.detail].some((value) => String(value ?? '').includes(nextRuntimeNode.time)),
-  );
+  ) : undefined;
   const runtimeValidationStatus: TodayValidationStatus = nextRuntimeNode.status === 'completed'
     ? 'confirmed'
     : nextRuntimeNode.status === 'current'

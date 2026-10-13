@@ -1,7 +1,7 @@
 import {useEffect,useState,type ReactNode} from 'react';
 import {supabase} from '@/lib/supabase';
 import {readTradingLab,type TradingLabData} from '@/features/research/tradingLab';
-import {cockpitToday,taipeiToday,plainAction,plainRegime,strategyNames,entryNames,filterResearch,researchStockNames,safePlan,money} from '@/features/research/cockpit';
+import {cockpitToday,taipeiToday,plainAction,plainRegime,plainEvidence,strategyNames,entryNames,filterResearch,researchStockNames,safePlan,money} from '@/features/research/cockpit';
 import type {EntryEvaluation,EntryResult} from '../../../../research/entry-opportunity';
 import CockpitJournal from './CockpitJournal';
 import './cockpit.css';
@@ -55,7 +55,7 @@ export default function OwnerCockpit({children}:{children:ReactNode}){
   {tab==='trades'&&<CockpitJournal legacy={lab}/>}
  </section>;
 }
-function ReasonList({rows,empty}:{rows:string[];empty:string}){return rows.length?<ul>{rows.slice(0,3).map((r,i)=><li key={i}>{r}</li>)}</ul>:<p>{empty}</p>;}
+function ReasonList({rows,empty}:{rows:string[];empty:string}){return rows.length?<ul>{rows.slice(0,3).map((r,i)=><li key={i}>{plainEvidence(r)}</li>)}</ul>:<p>{empty}</p>;}
 function Research({data,today,names,onJournal}:{data:ReadData|null;today:string;names:Record<string,string>;onJournal:()=>void}){
  const [date,setDate]=useState(''),[query,setQuery]=useState(''),[status,setStatus]=useState('ALL'),[selected,setSelected]=useState('');
  const catalog=[...(data?.latest?[data.latest]:[]),...(data?.history||[])].filter((r,i,a)=>a.findIndex(x=>x.business_date===r.business_date)===i);

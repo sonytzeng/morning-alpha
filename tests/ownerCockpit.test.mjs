@@ -2,6 +2,12 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 function module(p,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(read(p),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,Intl,Date,require:n=>{if(n in extra)return extra[n];throw Error(n);}});return exports;}
 const lab=module('src/features/research/tradingLab.ts'),m=module('src/features/research/cockpit.ts',{'./tradingLab':lab});
+test('first-layer direction vocabulary is Chinese without changing evidence or numbers',()=>{
+ const source='SOX DOWN -2.60%；2330 FLAT 0.00%；NVDA UP 1.23%';
+ assert.equal(m.plainEvidence(source),'費城半導體指數 下跌 -2.60%；2330 持平 0.00%；輝達 上漲 1.23%');
+ assert.equal(m.plainEvidence('UNKNOWN_GAP setup 尚未確認'),'UNKNOWN_GAP setup 尚未確認');
+ assert.equal(source,'SOX DOWN -2.60%；2330 FLAT 0.00%；NVDA UP 1.23%');
+});
 test('historical, stale and future research cannot become today opportunities',()=>{
  const row={mode:'HISTORICAL_REPLAY',business_date:'2026-10-08',evaluation_time:'2026-10-08T02:00:00Z',candidates:[{symbol:'2330',status:'ENTRY_READY'}]};
  assert.equal(m.isCurrentResearch(row,'2026-10-08'),false);assert.equal(m.cockpitToday(null,row,'2026-10-08').ready,null);

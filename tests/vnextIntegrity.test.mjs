@@ -7,7 +7,7 @@ test('member release changes only named route/navigation mounts, not existing pr
  const navbar='src/components/feature/Navbar.tsx',account='src/pages/account/Account.tsx',router='src/router/config.tsx';
  assert.equal(read(navbar).toString(),vnextPrior(navbar).toString()
   .replace("import { ACADEMY_NAVIGATION } from '@/features/academy/navigation';","import { ACADEMY_NAVIGATION } from '@/features/academy/navigation';\nimport { STOCK_OBSERVATION_NAV } from '@/features/vnext/member';")
-  .replace('    ACADEMY_NAVIGATION,','    ACADEMY_NAVIGATION,\n    STOCK_OBSERVATION_NAV,'));
+  .replace('    ACADEMY_NAVIGATION,','    ACADEMY_NAVIGATION,\n    STOCK_OBSERVATION_NAV,').replaceAll('14 天完整試用','會員方案'));
  assert.equal(read(account).toString(),vnextPrior(account).toString()
   .replace("import AcademyEntry from './components/AcademyEntry';","import AcademyEntry from './components/AcademyEntry';\nimport { STOCK_OBSERVATION_NAV } from '@/features/vnext/member';")
   .replace('            <AcademyEntry />','            <AcademyEntry />\n            <section className="ma-card-compact"><h2 className="text-lg font-bold text-white">{STOCK_OBSERVATION_NAV.label}</h2><p className="mt-2 text-sm text-white/70">依短、中、長期查看已核准的研究理由與風險；研究不等於正式推薦。</p><Link className="mt-3 inline-flex min-h-11 items-center text-primary-300" to={STOCK_OBSERVATION_NAV.to}>查看股票觀察</Link></section>'));
@@ -48,7 +48,7 @@ test('Cockpit CI only checks final TCP server, not the socket-only bootstrap; pr
 });
 test('Shadow analysis CI only extends the proven runtime budget, preserving every test and isolation control',()=>{
  const path='.github/workflows/analysis-intelligence.yml',prior=vnextPrior(path).toString(),current=read(path).toString();
- assert.equal(current,prior.replace('timeout-minutes: 10','timeout-minutes: 20'));
+ assert.equal(current,prior.replace('timeout-minutes: 10','timeout-minutes: 40'));
  assert.equal((prior.match(/timeout-minutes: 10/g)||[]).length,1);
  assert.match(current,/PRODUCTION_EQUIVALENT_AUTH_TEST/);
  assert.match(current,/analysisIntelligenceDatabase\.integration\.mjs/);

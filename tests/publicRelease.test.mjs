@@ -129,7 +129,8 @@ test('primary navigation follows the subscriber decision journey', () => {
     assert.match(navbar, new RegExp(`to:\\s*['"]${destination.replaceAll('/', '\\/')}['"]`), `missing primary journey destination: ${destination}`);
   }
   assert.doesNotMatch(navbar, /to:\s*['"]\/opportunities['"]/, 'candidate radar must remain a secondary drill-down');
-  assert.match(navbar, /14 天完整試用/);
+  assert.match(navbar, /會員方案/);
+  assert.doesNotMatch(navbar, /14 天完整試用/);
   assert.match(footer, /to="\/verification"/);
 });
 
@@ -755,11 +756,12 @@ test('membership conversion route is public, honest, and records a real submissi
   assert.doesNotMatch(paywallCard, /window\.location|window\.open|target=["']_blank/);
   assert.match(routeConfig, /path: "\/login"/);
   assert.match(routeConfig, /path: "\/auth\/callback"/);
-  assert.match(loginPage, /創始測試期間不扣款/);
+  assert.match(loginPage, /既有權益保留，登入不會自動扣款/);
+  assert.match(loginPage, /也不會自動開始新的試用/);
   assert.match(membershipService, /signInWithOtp/);
   assert.match(membershipService, /shouldCreateUser: true/);
   assert.match(pricing, /document\.getElementById\(location\.hash\.slice\(1\)\)/);
-  for (const label of ['免費與會員差在哪裡', '14 天怎麼判斷值不值得', '盤前決策', '收盤驗證']) {
+  for (const label of ['免費與會員差在哪裡', '兩週閱讀建議，不代表自動試用', '盤前決策', '收盤驗證']) {
     assert.match(pricing, new RegExp(label), `pricing is missing concrete member value: ${label}`);
   }
 });

@@ -105,7 +105,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
                 onClick={() => trackEvent('trial_cta_clicked', { source: 'navbar_desktop' })}
                 className="ml-1 inline-flex min-h-10 items-center rounded-lg bg-primary-500 px-3 text-xs font-bold text-background-50 transition-colors hover:bg-primary-400"
               >
-                14 天完整試用
+                會員方案
               </Link>
             )}
           </div>
@@ -154,7 +154,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
                 }}
                 className="mt-2 flex min-h-11 items-center justify-center rounded-lg bg-primary-500 px-4 text-sm font-bold text-background-50"
               >
-                14 天完整試用
+                會員方案
               </Link>
             )}
             <div className="mt-3 border-t border-background-200/70 pt-3">

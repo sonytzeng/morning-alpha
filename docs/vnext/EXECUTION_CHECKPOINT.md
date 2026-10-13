@@ -183,3 +183,16 @@ RESEARCH_FUNNEL/PUBLICATION_FUNNEL是候選診斷Gate；VNEXT_MEMBER_RELEASE_REA
 f776292 的公開測試與incident captures已全部通過；run38106378293在後續Owner隔離Postgres啟動探測失敗（socket accepting→rejecting），與Cockpit run38106378329第一次socket accepting→no response同型。Cockpit同HEAD有界重跑PASS，但不把暫態重跑當永久修復。
 官方docker-library/postgres/docker-entrypoint.sh的docker_temp_server_start設定listen_addresses=''，初始化暫用伺服器只有Unix socket；初始化完成即stop，再啟動正式伺服器。因此只將上述兩個已證實受影響CI的docker exec pg_isready指定-h 127.0.0.1，仍在--network none容器內，不開host port、不改Auth、不改SQL／帳務。Validate六處與Cockpit兩處精確替換，新增byte-exact negative guard，不增刪任何既有測試。
 來源：https://github.com/docker-library/postgres/blob/master/docker-entrypoint.sh 。最終HEAD重新執行Gate；Production仍0操作。
+# 2026-10-13 會員政策／付款 P0
+
+從 `da6bb56` 續跑；PR230仍Draft，origin/main=`2a5d461`。正式只讀確認2帳號、1Owner永久、1非Owner active profile無期限且無canonical；payment disabled、billing events0、provider/customer/subscription綁定0。沒有可驗證Merchant/Checkout/簽章Webhook；Stripe SDK不等於接線。member-access V8來源與main相同。
+
+新增 `20261013045054_membership_legacy_policy_candidate.sql`，安裝不生效；另核准activation才採DB現在時間、不可變快照、保留既有權益，新會員Free。新member-access只換service-only activation RPC及policy receipt，Auth/resolver不改。未執行Production SQL。四SQL／三Function精確候選與回復見 `MEMBER_RELEASE_MANIFEST.md`；完整稽核／決策見 `MEMBERSHIP_PAYMENT_READINESS.md`。
+
+真實本機GoTrue+PostgREST+FreshDB驗證：八併發防重、未知期限保留、原期限／永久／trial不漂移、metadata拒絕、Free7章與完整10章、VNext一致且未核准研究不可見、Logout/relogin。付款狀態只有既有SQL控制測試，Provider Sandbox/簽章/退款仍PENDING，不能宣告正式收款可用。
+
+隔離Preview `http://127.0.0.1:3225/membership`，另`/pricing`、`/stocks`；五身份1440/375/390/430截圖 `/private/tmp/ma-membership-policy-qa`。會員卡、登入及方案copy不再承諾自動14日試用。沒有新正式價格、權益縮期、Secrets、Cron或付款服務。
+
+原 Analysis CI run38237299118 在相同HEAD同條件有限重跑一次仍20min超時；40個已完成斷言PASS，單個歷史完整性檢查716082ms。候選僅budget改40min，所有測試原樣保留；新HEAD實際CI以PR Checks為準，不沿用取消結果。
+
+不要重開其他已結案工程或心跳。下一步是最新HEAD CI、精確Manifest與既有付款商合法測試設定；Merge/Production部署/切換仍須具名核准。29項舊研究未公開，Forward0、Outcome0。

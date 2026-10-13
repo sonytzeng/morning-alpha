@@ -64,7 +64,7 @@ export default function Pricing() {
             <h1>每天不用猜方向，<br />先知道什麼證據值得等</h1>
             <p>Morning Alpha 專為沒有時間盯盤的上班族整理：盤前先定判斷、盤中只更新變化、收盤公開驗證。不是報明牌，而是幫你少做一次情緒決策。</p>
             <div className="ma-pricing-v2-hero-actions">
-              <Link to="/login?next=/member-note">立即開始完整體驗<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
+              <Link to="/login?next=/member-note">免費註冊／登入<i className="ri-arrow-right-line" aria-hidden="true" /></Link>
               <Link to="/report/today">先看今天怎麼判斷</Link>
             </div>
           </div>
@@ -74,8 +74,8 @@ export default function Pricing() {
           <section aria-labelledby="pricing-plan-title">
             <div className="ma-pricing-v2-heading">
               <span>方案現況</span>
-              <h2 id="pricing-plan-title">先完整試用 14 天，再決定值不值得留下</h2>
-              <p>創始測試期間登入即可完整查看所有已通過品質閘門的會員內容，而且不扣款。支付系統正式啟用後，才開始計算完整 14 天試用，之後由你決定是否以每月 NT$199 繼續。</p>
+              <h2 id="pricing-plan-title">先了解免費內容，再確認自己的完整會員權益</h2>
+              <p>既有會員保留已取得的有效權益。新會員制度正式生效後，註冊預設為免費會員；完整內容依有效訂閱、已核准試用或特殊權益提供。目前收款尚未啟用，登入不代表開始試用或同意付款。</p>
             </div>
             <div className="ma-pricing-v2-plans">
               <article>
@@ -86,9 +86,9 @@ export default function Pricing() {
               </article>
               <article className="is-member">
                 <header><div><span>預定正式方案</span><h3>創始會員</h3></div><strong>NT$199<small>/月</small></strong></header>
-                <p>前 14 天完整試用。適合想減少資訊焦慮、又需要每天有一套固定判斷流程的上班族。</p>
+                <p>這是既有預定方案，尚未開放付款。實際開通、試用與取消規則，會在啟用前說明並由你確認。</p>
                 <ul>{memberFeatures.map((feature) => <li key={feature}><i className="ri-check-line" aria-hidden="true" />{feature}</li>)}</ul>
-                <Link to="/login?next=/member-note">開始完整體驗</Link>
+                <Link to="/login?next=/member-note">登入查看現有權益</Link>
               </article>
             </div>
           </section>
@@ -121,7 +121,7 @@ export default function Pricing() {
 
           <section className="ma-pricing-v2-trial" aria-labelledby="pricing-trial-title">
             <div className="ma-pricing-v2-heading">
-              <span>14 天怎麼判斷值不值得</span>
+              <span>兩週閱讀建議，不代表自動試用</span>
               <h2 id="pricing-trial-title">不是試看兩篇文章，而是跑完兩週真實決策循環</h2>
             </div>
             <ol>
@@ -148,7 +148,7 @@ export default function Pricing() {
             <div>
               <span>早鳥通知</span>
               <h2 id="early-access-title">不登入也可以先加入早鳥名單</h2>
-              <p>早鳥登記不等於購買，也不會扣款。想立即查看完整內容，請使用上方 Email 登入；支付系統上線時會再通知 14 天正式試用、NT$199 方案與取消規則。</p>
+              <p>早鳥登記不等於購買，也不會扣款。可先登入查看免費內容與現有權益；付款、試用及取消規則確認後，會再公開說明。</p>
             </div>
             <EarlyAccessForm sourcePage="/pricing" />
           </section>

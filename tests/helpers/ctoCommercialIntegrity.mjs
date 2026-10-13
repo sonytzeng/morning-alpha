@@ -36,6 +36,7 @@ export const CTO_PATHS=Object.freeze([
  'src/pages/pricing/Pricing.tsx',
  'src/pages/report/TodayReport.tsx',
  'tests/commercialStability.test.mjs',
+ 'tests/acceptanceCalendarIntegrity.test.mjs',
  'tests/academyV11Integrity.test.mjs',
  'tests/consolidationSubscriberEligibility.test.mjs',
  'tests/consolidationSubscriberGraph.test.mjs',

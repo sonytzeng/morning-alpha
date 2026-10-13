@@ -40,7 +40,7 @@
     {
       "path": "docs/operations/cto-commercial-readiness-20261013.md",
       "before_sha256": null,
-      "after_sha256": "3f2ce4ea92e3446f4768dd1492b6e231133ddeac21a0c712d798e7e44af6c926"
+      "after_sha256": "7c2060816513e8943ce5aae10cb3dd6608425a0652d2df37c4f057ebe88b06a3"
     },
     {
       "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
@@ -143,6 +143,11 @@
       "after_sha256": "2a0ff2456d2b0753b3cd5a27f3394080eae8888be3500695f651d4714c0a494c"
     },
     {
+      "path": "tests/acceptanceCalendarIntegrity.test.mjs",
+      "before_sha256": "6db41b1c56f962ac28a40fd4821d97ab142b56cda3cd7513cbc4fdd7e5404166",
+      "after_sha256": "062eb7de8d69713f243facf8b15eabbcdace1dbe9d7a90b5d25a546d1c9ccb0d"
+    },
+    {
       "path": "tests/academyV11Integrity.test.mjs",
       "before_sha256": "112e597475c5014cc396c79f7243203c0c84ded07af5252e4dc4c81469e94b95",
       "after_sha256": "12c00e7b7cc45c991a4321de546981740cc5369c90cc3438f87a3e4368d898de"
@@ -165,7 +170,7 @@
     {
       "path": "tests/ctoCommercialIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "047555282fd7aba283666511b229df5bbba4d083cd854f99577b96a1f92bb662"
+      "after_sha256": "537e6cf64e3664c98b410a7c452e29804f8e41c02d9554e4bc7f1676835727e2"
     },
     {
       "path": "tests/ctoConfidencePresentation.test.mjs",
@@ -200,7 +205,7 @@
     {
       "path": "tests/helpers/ctoCommercialIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "725806235227ff70c15dfaeb535bb5a23ee5f881d2165e1cb5778a4371212367"
+      "after_sha256": "3d4cef8db54190b96d9b9668664a6bb4fb805fac3330d2d74fc5fa8ab32b7f59"
     },
     {
       "path": "tests/productContract.test.mjs",

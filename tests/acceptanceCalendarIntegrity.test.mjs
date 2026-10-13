@@ -2,12 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {calendarTransition,calendarPrior,calendarChangedPaths,CALENDAR_MANIFEST,CALENDAR_PATHS,CALENDAR_MIGRATION} from './helpers/acceptanceCalendarIntegrity.mjs';
+import {ctoTransition} from './helpers/ctoCommercialIntegrity.mjs';
 const raw=p=>readFileSync(new URL('../'+p,import.meta.url));
 test('CI budget changes retain every original step, assertion and permission',()=>{
+ const candidate=ctoTransition();
  const normalize=bytes=>bytes.toString().split('\n').filter(line=>!line.trimStart().startsWith('#')).join('\n').replace(/timeout-minutes: \d+/g,'timeout-minutes: BOUNDED');
  for(const [path,budget] of [['.github/workflows/analysis-intelligence.yml',40],['.github/workflows/validate-release.yml',60]]){
-  assert.equal(normalize(raw(path)),normalize(calendarPrior(path)));
-  assert.match(raw(path).toString(),new RegExp('timeout-minutes: '+budget+'\\n'));
+  assert.equal(normalize(candidate.predecessorRead(path)),normalize(calendarPrior(path)));
+  assert.match(candidate.predecessorRead(path).toString(),new RegExp('timeout-minutes: '+budget+'\\n'));
  }
 });
 test('Issue 238 exact acceptance and display patch preserves every other baseline byte',()=>{

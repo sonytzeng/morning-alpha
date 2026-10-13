@@ -49,6 +49,15 @@ test('full release CI retains every downstream check and requires all exhaustive
  assert.ok(partition.indexOf('npm run build')<partition.indexOf('node scripts/cto/public-regression-shard.mjs'));
  assert.doesNotMatch(partition,/continue-on-error|secrets\.|\sif:|test-name-pattern|test-skip-pattern/);
 });
+test('Calendar budget controls verify the exact live successor before checking the unchanged predecessor assertions',()=>{
+ const path='tests/acceptanceCalendarIntegrity.test.mjs';
+ const actual=raw(path).toString();
+ assert.match(actual,/const candidate=ctoTransition\(\);/);
+ const restored=actual.replace("import {ctoTransition} from './helpers/ctoCommercialIntegrity.mjs';\n",'')
+  .replace(' const candidate=ctoTransition();\n','')
+  .replaceAll('candidate.predecessorRead(path)','raw(path)');
+ assert.equal(restored,ctoPrior(path).toString(),'all original budget, schema, permission, scope and denial assertions remain exact');
+});
 test('existing empty untracked directories never hide a later deeply nested unknown file',()=>{
  let paths=['known.ts'],calls=0,nonce=0;
  const read=memoizedScopeInventory(()=>scopeInventorySignature('unchanged-tracked-stamps',['empty/'],()=>++nonce),()=>{calls++;return paths;});

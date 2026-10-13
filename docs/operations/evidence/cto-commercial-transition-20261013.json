@@ -40,7 +40,7 @@
     {
       "path": "docs/operations/cto-commercial-readiness-20261013.md",
       "before_sha256": null,
-      "after_sha256": "961e1fca7e44d5cef9818da159e165841097fac6903029f1cc25ef1b50a40ac9"
+      "after_sha256": "b9b15d4abf6f89007d63585946c98321007433b4263f529018730844ae02f92c"
     },
     {
       "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
@@ -60,7 +60,7 @@
     {
       "path": "scripts/cto/public-regression-shard.mjs",
       "before_sha256": null,
-      "after_sha256": "3eebcf1844df949bfa5a1e475057f0c1f5c57347963fdccd229cdf83a8b10aa6"
+      "after_sha256": "3214243602cbe184fddc0ac4b66b9f8b63afa76dca908b1f35758ac3966df0c0"
     },
     {
       "path": "src/components/feature/Navbar.tsx",
@@ -185,7 +185,7 @@
     {
       "path": "tests/ctoPublicShard.test.mjs",
       "before_sha256": null,
-      "after_sha256": "5115f5864dadcc5854f30ac8c8c701c4b320bc557ff9cf5e5ee0a02655d6981b"
+      "after_sha256": "24206365416628404f8d692dfbce6591dd9b987e076bb46a48c73ebd294c962c"
     },
     {
       "path": "tests/helpers/acceptanceCalendarIntegrity.mjs",

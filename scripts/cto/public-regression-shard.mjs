@@ -5,6 +5,7 @@ import {spawn} from 'node:child_process';
 import {freemem,totalmem} from 'node:os';
 import {fileURLToPath} from 'node:url';
 export const PUBLIC_SHARDS=4;
+export const PUBLIC_OLD_SPACE_MIB=2048;
 const root=fileURLToPath(new URL('../../',import.meta.url));
 export function publicTestInventory(){
  const pkg=JSON.parse(readFileSync(new URL('../../package.json',import.meta.url),'utf8'));
@@ -27,19 +28,21 @@ export function publicPartitions(all){
 }
 export function publicShardArgs(all,index){
  assert.ok(Number.isInteger(index)&&index>=0&&index<PUBLIC_SHARDS,'valid explicit shard');
- return ['--test','--test-concurrency=1','--test-reporter=tap',...publicPartitions(all)[index]];
+ return ['--max-old-space-size='+PUBLIC_OLD_SPACE_MIB,'--test','--test-concurrency=1','--test-reporter=tap',...publicPartitions(all)[index]];
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
  const all=publicTestInventory(),index=Number(process.env.MA_PUBLIC_REGRESSION_SHARD);
  assert.match(process.env.MA_PUBLIC_REGRESSION_SHARD||'',/^[0-3]$/);
  const args=publicShardArgs(all,index);
- console.log(JSON.stringify({scope:'FULL_PUBLIC_SUITE_PARTITION',shard:index,total_files:all.length,selected_files:args.length-3,concurrency:1,test_filtering:false}));
+ console.log(JSON.stringify({scope:'FULL_PUBLIC_SUITE_PARTITION',shard:index,total_files:all.length,selected_files:args.length-4,concurrency:1,v8_old_space_mib:PUBLIC_OLD_SPACE_MIB,test_filtering:false}));
  const child=spawn(process.execPath,args,{cwd:root,stdio:'inherit'}),started=Date.now();
  const resource=()=>{
   const result={scope:'CI_RUNNER_RESOURCE_SAMPLE',shard:index,elapsed_seconds:Math.round((Date.now()-started)/1000),os_total_memory_bytes:totalmem(),os_free_memory_bytes:freemem()};
   for(const [name,path] of [['memory_current','/sys/fs/cgroup/memory.current'],['memory_limit','/sys/fs/cgroup/memory.max'],['memory_events','/sys/fs/cgroup/memory.events']]){
    try{result[name]=readFileSync(path,'utf8').trim();}catch{result[name]='NOT_AVAILABLE';}
   }
+  // MemFree is not MemAvailable on Linux; page cache alone can lower the former.
+  try{const value=readFileSync('/proc/meminfo','utf8').match(/^MemAvailable:\s+(\d+)\s+kB$/m);result.os_memory_available_bytes=value?Number(value[1])*1024:'NOT_AVAILABLE';}catch{result.os_memory_available_bytes='NOT_AVAILABLE';}
   console.log(JSON.stringify(result));
  };
  resource();const monitor=setInterval(resource,30000);

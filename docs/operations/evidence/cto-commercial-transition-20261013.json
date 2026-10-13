@@ -20,12 +20,12 @@
     {
       "path": ".github/workflows/owner-trading-lab.yml",
       "before_sha256": "f5b7ba360f9c80687c27abbecf5cd9f415292eb448d5eddced70edf8e6b87a31",
-      "after_sha256": "b1e1fa7f268dc898aa1ecd3219d7f99506c4efb8a449a750a94218ac526a2978"
+      "after_sha256": "1986b864fcbb8b85e53d3f0763701fd0126b1f3738c4677c3f10fa914bdcd2ea"
     },
     {
       "path": ".github/workflows/recommendation-v2-shadow.yml",
       "before_sha256": "1575a863b8e8519ab8287618adc4069b6d196bdfaefaf5541ec4c26828174456",
-      "after_sha256": "79cfea362a3ce82bb730d679cc64103852d6150edaf73a5aebe0bd1e4f384970"
+      "after_sha256": "190ca47b8b035557ba1abd9ecdccf9c7b4409f1a13605e7c44993556ab2c6209"
     },
     {
       "path": ".github/workflows/research-foundation.yml",
@@ -35,12 +35,12 @@
     {
       "path": ".github/workflows/validate-release.yml",
       "before_sha256": "a7456794b7d37f732f6b24e33b7951e47f3c522688a67a0d9329539e93b53eb6",
-      "after_sha256": "ad98afe808beb0b67fbf907322ac05f9f0db0974f446b6a34034e1af4a424f93"
+      "after_sha256": "b107b99e0d62260c9e0e65e3e068ec6107096ebe6d799ba8ca2287e4dd2f3458"
     },
     {
       "path": "docs/operations/cto-commercial-readiness-20261013.md",
       "before_sha256": null,
-      "after_sha256": "d15ad4ff68af3590507a669b8e05c783116046599b40644da5285593b3097ca3"
+      "after_sha256": "bbff4230922b0507694c32dfbd0fc7022c2025977339cc016b54854fe072eda2"
     },
     {
       "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
@@ -50,7 +50,7 @@
     {
       "path": "scripts/cto/capacity-isolation.mjs",
       "before_sha256": null,
-      "after_sha256": "f48518da468fffbbaea616c9c89f850c1ee364ef81e835085fd6c6f009820e6c"
+      "after_sha256": "1ebd5279be1a1d044e3bf0388f474dd18caaa60e488a03ac30abe501325f659a"
     },
     {
       "path": "scripts/cto/capacity-workload.sql",
@@ -170,7 +170,7 @@
     {
       "path": "tests/ctoCommercialIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "3abc59abecb1b4b1cc36da886e44890d06e1d2f93b6d80a7c9c8bb46e33ed738"
+      "after_sha256": "ef84afba2a5f3f1c9c6b5620317da38d71a3d4773f6e4eeeec98790aa8159e52"
     },
     {
       "path": "tests/ctoConfidencePresentation.test.mjs",

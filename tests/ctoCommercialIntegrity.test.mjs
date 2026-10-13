@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
+import {isolatedFunction,declaration} from './helpers/isolatedEdgeLoader.mjs';
 import {ctoTransition,ctoPrior,ctoChangedPaths,CTO_PATHS,CTO_MANIFEST,memoizedScopeInventory,scopeInventorySignature} from './helpers/ctoCommercialIntegrity.mjs';
 const raw=path=>readFileSync(new URL('../'+path,import.meta.url));
 test('CTO exact UI/test candidate preserves every other byte and has no Production authority',()=>{
@@ -24,7 +25,7 @@ test('inventory memoization is invalidated by directory or index stamps and cann
  // every protected source byte on each admission; no admission is memoized.
 });
 test('confirmed timeout budgets preserve all commands, steps, permissions and assertions',()=>{
- const normalize=bytes=>bytes.toString().split('\n').filter(line=>!line.trimStart().startsWith('#')).join('\n').replace(/timeout-minutes: \d+/g,'timeout-minutes: BOUNDED');
+ const normalize=bytes=>bytes.toString().split('\n').filter(line=>!line.trimStart().startsWith('#')).join('\n').replace(/timeout-minutes: \d+/g,'timeout-minutes: BOUNDED').replaceAll('pg_isready -h 127.0.0.1 -U postgres','pg_isready -U postgres');
  for(const path of ['.github/workflows/research-foundation.yml','.github/workflows/owner-trading-lab.yml','.github/workflows/recommendation-v2-shadow.yml']){
   assert.equal(normalize(raw(path)),normalize(ctoPrior(path)));assert.match(raw(path).toString(),/timeout-minutes: 30\n/);
  }
@@ -38,6 +39,7 @@ test('full release CI retains every downstream check and requires all exhaustive
   .replace('      - run: npm run build\n','')
   .replace('      - run: npm run test:public\n','')
   .replace('      - run: npm run lint','      - run: npm run lint\n      - run: npm run build')
+  .replaceAll('pg_isready -U postgres','pg_isready -h 127.0.0.1 -U postgres')
   .replace('  validate:\n','  validate:\n    needs: public-regression\n    if: ${{ always() }}\n')
   .replace('    steps:\n','    steps:\n      - name: Require every public regression partition to pass\n        run: test \'${{ needs.public-regression.result }}\' = success\n');
  assert.equal(after,expected,'every original downstream SQL/Edge/RLS command and permission remains exact');
@@ -74,12 +76,40 @@ test('capacity isolation uses the final TCP daemon and preserves every original 
  for(const path of ['.github/workflows/cto-commercial.yml','scripts/cto/capacity-isolation.mjs']){
   const before=execFileSync('git',['show','2423efbf03a38c9be5fe8447ad93bf472b232b5c:'+path],{encoding:'utf8'});
   const actual=raw(path).toString();
-  const restored=actual.replaceAll('pg_isready -h 127.0.0.1 -U postgres','pg_isready -U postgres')
+  let restored=actual.replaceAll('pg_isready -h 127.0.0.1 -U postgres','pg_isready -U postgres')
    .replaceAll("'psql','-h','127.0.0.1','-XqAt'","'psql','-XqAt'")
    .replaceAll("'pgbench','-h','127.0.0.1','-U'","'pgbench','-U'");
-  assert.equal(restored,before,'only the loopback transport may change');
+  if(path.endsWith('capacity-isolation.mjs'))restored=restored.replace(declaration(actual,'assertCapacityResults')+'\n','')
+   .replace('assertCapacityResults(results);\n','')
+   .replace(" assert.ok(latencies.every(value=>Number.isFinite(value)&&value>=0),'invalid latency sample cannot be silently omitted');\n",'')
+   .replace(" assert.ok(Number.isSafeInteger(failures)&&failures>=0,'pgbench failure count unavailable');\n",'')
+   .replace(" assert.ok(Number.isFinite(tps)&&tps>0,'pgbench throughput unavailable');\n",'')
+   .replace('?.[1]??NaN','?.[1]??0')
+   .replace("/1000).sort((a,b)=>a-b)","/1000).filter(Number.isFinite).sort((a,b)=>a-b)");
+  assert.equal(restored,before,'only loopback transport and additional stricter metric acceptance may change');
  }
  assert.match(raw('.github/workflows/cto-commercial.yml').toString(),/for attempt in \$\(seq 1 30\)/);
+});
+test('capacity acceptance fails on exceeded targets, missing metrics, errors, false flags or omitted concurrency',()=>{
+ const source=raw('scripts/cto/capacity-isolation.mjs').toString();
+ const verify=isolatedFunction(source,'assertCapacityResults',{assert});
+ const rows=()=>[10,30,50].map(clients=>({clients,transactions:100,p95_ms:20,throughput_tps:500,failed:0,error_rate:0,target_p95_ms:250,pass:true}));
+ verify(rows());
+ for(const patch of [{p95_ms:250},{p95_ms:251},{p95_ms:NaN},{p95_ms:-1},{throughput_tps:0},{throughput_tps:NaN},{transactions:0},{failed:1},{failed:NaN},{error_rate:0.01},{error_rate:NaN},{pass:false},{target_p95_ms:1000}]){
+  const changed=rows();Object.assign(changed[1],patch);assert.throws(()=>verify(changed));
+ }
+ assert.throws(()=>verify(rows().slice(0,2)));assert.throws(()=>verify([...rows(),rows()[0]]));
+ assert.ok(source.indexOf('assertCapacityResults(results);')<source.indexOf("console.log(JSON.stringify({scope:'ISOLATED_POSTGRES17_REAL_SQL_RLS_RPC'"));
+ assert.match(source,/\?\.\[1\]\?\?NaN/);assert.doesNotMatch(source,/\.filter\(Number\.isFinite\)/);
+});
+test('every explicit isolated PostgreSQL readiness loop retains its bound and waits for the final TCP daemon',()=>{
+ for(const [path,loops] of [['.github/workflows/cto-commercial.yml',1],['.github/workflows/entry-opportunity.yml',1],['.github/workflows/owner-trading-lab.yml',1],['.github/workflows/recommendation-v2-shadow.yml',1],['.github/workflows/validate-release.yml',4]]){
+  const source=raw(path).toString();
+  const databaseLoops=[...source.matchAll(/for attempt in \$\(seq 1 30\); do([\s\S]*?)\n\s*done/g)].filter(match=>match[1].includes('pg_isready'));
+  assert.equal(databaseLoops.length,loops,'HTTP readiness loops are not database checks');
+  assert.equal((source.match(/pg_isready -h 127\.0\.0\.1 -U postgres/g)||[]).length,loops*2,'bounded loop and final fail-closed confirmation both retained');
+  assert.doesNotMatch(source,/pg_isready -U postgres/);
+ }
 });
 test('official Auth image retry is bounded and cannot bypass the original real Auth/RLS checks',()=>{
  const path='.github/workflows/academy-v11.yml',before=ctoPrior(path).toString(),after=raw(path).toString();

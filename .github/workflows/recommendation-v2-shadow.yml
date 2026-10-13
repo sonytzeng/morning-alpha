@@ -29,10 +29,10 @@ jobs:
           docker build -t ma-v2-clock-ci - < tests/fixtures/runtime-sparse-postgres.Dockerfile
           docker run -d --name ma-recommendation-owner-ci --network none --env POSTGRES_PASSWORD=isolated-ci-only --env 'FAKETIME=@2026-09-07 02:00:00' ma-v2-clock-ci
           for attempt in $(seq 1 30); do
-            if docker exec ma-recommendation-owner-ci pg_isready -U postgres; then break; fi
+            if docker exec ma-recommendation-owner-ci pg_isready -h 127.0.0.1 -U postgres; then break; fi
             sleep 1
           done
-          docker exec ma-recommendation-owner-ci pg_isready -U postgres
+          docker exec ma-recommendation-owner-ci pg_isready -h 127.0.0.1 -U postgres
       - name: Fresh database, immutable Forward and outcome parity
         env:
           MA_ISOLATED_TEST_DB: ma_v2_shadow_test1

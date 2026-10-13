@@ -40,15 +40,31 @@ assert.throws(()=>as(1,"select public.get_academy_lesson_v11('trend-advanced')")
 sql("update public.member_entitlements set state='paid_active',access_ends_at=null where user_id=md5('cto-member-1')::uuid");
 const plans=JSON.parse(sql("begin;set local role authenticated;select set_config('request.jwt.claim.sub',md5('cto-member-1')::uuid::text,true);explain(analyze,buffers,format json) select * from public.academy_progress_v11 where user_id=auth.uid();commit;").split('\n').slice(1).join('\n'));
 const results=[];
+function assertCapacityResults(rows){
+ assert.ok(Array.isArray(rows));assert.equal(rows.map(row=>row.clients).join(','),'10,30,50');
+ for(const row of rows){
+  assert.ok(Number.isSafeInteger(row.transactions)&&row.transactions>0,'measured transactions required');
+  assert.ok(Number.isFinite(row.throughput_tps)&&row.throughput_tps>0,'measured throughput required');
+  assert.equal(row.failed,0,'failed transactions reject capacity acceptance');
+  assert.equal(row.error_rate,0,'nonzero or unknown error rate rejects capacity acceptance');
+  assert.equal(row.target_p95_ms,250,'existing capacity target is unchanged');
+  assert.ok(Number.isFinite(row.p95_ms)&&row.p95_ms>=0&&row.p95_ms<250,'capacity P95 must remain below the existing 250ms target');
+  assert.equal(row.pass,true,'a printed false result must fail the CI gate');
+ }
+}
 for(const clients of [10,30,50]){
  const output=docker(['exec',container,'pgbench','-h','127.0.0.1','-U','postgres','-n','-c',String(clients),'-j','4','-T','20','-r','-l','--log-prefix=/tmp/cto-'+clients,'-f','/tmp/capacity-workload.sql','postgres']);
  const logs=docker(['exec',container,'sh','-c','cat /tmp/cto-'+clients+'.*']);
- const latencies=logs.split('\n').filter(Boolean).map(line=>Number(line.trim().split(/\s+/)[2])/1000).filter(Number.isFinite).sort((a,b)=>a-b);
+ const latencies=logs.split('\n').filter(Boolean).map(line=>Number(line.trim().split(/\s+/)[2])/1000).sort((a,b)=>a-b);
  assert.ok(latencies.length>0,'real pgbench samples');
- const failures=Number(output.match(/number of failed transactions:\s*(\d+)/)?.[1]??0);
+ assert.ok(latencies.every(value=>Number.isFinite(value)&&value>=0),'invalid latency sample cannot be silently omitted');
+ const failures=Number(output.match(/number of failed transactions:\s*(\d+)/)?.[1]??NaN);
  const tps=Number(output.match(/tps = ([\d.]+)/)?.[1]);
+ assert.ok(Number.isSafeInteger(failures)&&failures>=0,'pgbench failure count unavailable');
+ assert.ok(Number.isFinite(tps)&&tps>0,'pgbench throughput unavailable');
  const p95=latencies[Math.min(latencies.length-1,Math.floor(latencies.length*.95))];
  results.push({clients,transactions:latencies.length,p95_ms:p95,throughput_tps:tps,failed:failures,error_rate:failures/(latencies.length+failures),target_p95_ms:250,pass:failures===0&&p95<250});
  console.log(JSON.stringify(results.at(-1)));
 }
+assertCapacityResults(results);
 console.log(JSON.stringify({scope:'ISOLATED_POSTGRES17_REAL_SQL_RLS_RPC',accounts:10000,progress_rows:100000,account_identity:'SYNTHETIC_LOAD_FIXTURE_NOT_PRODUCTION_AUTH',rls_cross_account:'DENY',unknown_legacy_end_preserved:true,subscription_expiry:'DENY',plans,results,production_capacity_verified:false}));

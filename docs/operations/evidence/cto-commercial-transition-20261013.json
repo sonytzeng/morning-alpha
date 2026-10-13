@@ -25,12 +25,12 @@
     {
       "path": "docs/operations/cto-commercial-readiness-20261013.md",
       "before_sha256": null,
-      "after_sha256": "a720a49ab207d4ee19f4bffc3abbf37d643f04f8c3135bb5bc027bbec761fbd4"
+      "after_sha256": "5e229723d837c08a655e50f13ecaf2dad86f379262738cbe00812413bdc111f8"
     },
     {
       "path": "docs/operations/cto-commercial-release-manifest-20261013.md",
       "before_sha256": null,
-      "after_sha256": "fffca82cc1b7525269f397e3822d21b6a7725d55ae4628cc510defcbefc1e62c"
+      "after_sha256": "2dae548f7c63c35fddaec62ea6b9367958482b9af7a0072b8d5c4ade27dc6245"
     },
     {
       "path": "scripts/cto/capacity-isolation.mjs",
@@ -68,6 +68,11 @@
       "after_sha256": "4fd37c4af4e1d5d8f6de234ca52388e11f2355d7253498f4b09276a37f3a72a6"
     },
     {
+      "path": "src/lib/historicalReportEvidencePresentation.ts",
+      "before_sha256": null,
+      "after_sha256": "c4835c3ee2337f522130f243336503cb0d4841347401d36037ad0b20d326a3eb"
+    },
+    {
       "path": "src/lib/performanceDirectionPresentation.ts",
       "before_sha256": null,
       "after_sha256": "ca77a4c370cfcb113461c63623b194e6f30ef797d5adff9099a8e38d2d3a52c4"
@@ -103,6 +108,11 @@
       "after_sha256": "7c8e3a5901d6de0480fe5cf34c45a39bc496854684a5c6c940396b9320672ab2"
     },
     {
+      "path": "src/pages/reports/ReportDetail.tsx",
+      "before_sha256": "ded54c13a090d039257868f61c97e273d73000bf4a6dfe86de144baffb1ed12f",
+      "after_sha256": "8fe59ab61c2268d2dc0e2229d5b2b7d3944455efcddedc61ec082b7403db80d3"
+    },
+    {
       "path": "src/pages/reports/ReportsCenter.tsx",
       "before_sha256": "c7ac4c1a88f8d4e9b735e5f5e6221bbf0e5addcd7183e6970e1344a7ee8cbdaa",
       "after_sha256": "2a0ff2456d2b0753b3cd5a27f3394080eae8888be3500695f651d4714c0a494c"
@@ -123,6 +133,11 @@
       "after_sha256": "88802732fb4168edb943c8ebfe5f0cf1e9dcfbbca3819809f1d4fc6e04a8c49c"
     },
     {
+      "path": "tests/ctoHistoricalEvidencePresentation.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "8253e29275b1eb9bbd271cf1dc2b1faee7f9c71f517d88b6b35d44e1b6dcfb90"
+    },
+    {
       "path": "tests/ctoPerformancePresentation.test.mjs",
       "before_sha256": null,
       "after_sha256": "d477c0c1c7e6f440fe6821f08412e540c3c5765dfeb2103d1d58894a58a14665"
@@ -140,7 +155,7 @@
     {
       "path": "tests/helpers/ctoCommercialIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "49d81203ae1c31ca23ab11e1311f1b8e11a26c2d78cc11770058151a5ed49936"
+      "after_sha256": "508d073b02984ef2859a9271a9da0f578f597863ab07e47501284c6d6cf04b75"
     },
     {
       "path": "tests/productContract.test.mjs",

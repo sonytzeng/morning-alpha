@@ -16,6 +16,7 @@ Runtime檔案只有：
 - `src/lib/performanceDirectionPresentation.ts`、`src/pages/performance/page.tsx`：只翻譯既有收盤方向，不改統計。
 - `src/pages/account/components/MorningHeroCard.tsx`：重複頁面標題改為區塊標題，外觀不變。
 - `src/lib/historicalReportCardPresentation.ts`、`src/pages/reports/ReportsCenter.tsx`：歷史卡正確使用市場方向，不以行動缺失誤標資料不足；不改共享正式projection。
+- `src/lib/historicalReportEvidencePresentation.ts`、`src/pages/reports/ReportDetail.tsx`：只讀已保存Canonical確認／失效條件；移除依市場方向自行生成的09:15及固定門檻。缺失不補造，個股未發布不等於市場報告未完成，技術分數收合。不改正式Report或其發布規則。
 - `src/pages/home/page.tsx`：相同正式句子去重、最新資料與報告產生時間標示分開。
 - `src/pages/admin/scripts/page.tsx`：舊社群素材缺失不誤標正式LINE未接入；僅UI說明和標題對比，不改生成／Copy內容或Sender。
 - `src/features/operations/commercialStability.mjs`：純候選驗收規則，沒有排程或Production寫入。
@@ -45,4 +46,4 @@ Runtime檔案只有：
 
 ## 未核准內容
 
-不含資料購買、TWSE／TPEx商業授權決定、29項會員研究公開、修改推薦門檻、金流啟用或真實交易。正式Free/Premium合法帳號未提供的驗收項目保留PENDING；Chrome Owner連線不穩的未完成畫面不能以匿名或隔離測試補成PASS。
+不含資料購買、TWSE／TPEx商業授權決定、29項會員研究公開、修改推薦門檻、金流啟用或真實交易。正式Free/Premium合法帳號未提供的驗收項目保留PENDING。Chrome新分頁已恢復Sony正式Owner，五頁後台、Cockpit三分頁及Academy完成1440/375/390/430唯讀驗收；沒有提交交易或學習資料，畫面證據在交付包。

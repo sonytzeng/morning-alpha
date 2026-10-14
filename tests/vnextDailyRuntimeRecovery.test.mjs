@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {acquisitionPlan,directoryPlan,outcomePlan,assembleDaily} from '../src/features/vnext/dailyAdapter.ts';
 import {workDailyRun} from '../src/features/vnext/dailyRuntime.ts';
+import {handleVnextDaily} from '../supabase/functions/vnext-daily-research-v1/handler.ts';
 import {runDailyIntelligence,verifyDailyLock} from '../src/features/vnext/dailyIntelligence.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
@@ -20,14 +21,14 @@ async function checkpoint(){
  {acquire:async()=>acquired,clock:()=>before,outcomes:async()=>({}),publication:async()=>[]});
  assert.equal(state.locks.length,216);assert(await verifyDailyLock(state.locks[0]));return state;
 }
-async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false}={}){
+async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,lockError=null,throughHandler=false,providerWaitSeconds=0}={}){
  const dirs=await directoryPlan(date),cache=new Map(await Promise.all(dirs.map(async t=>[t.key,await receipt(t,at,{rows:t.exchange==='TWSE'?companies:[]})])));
  const calls=[],http=[],stored=[],locked=[],sources=[...cache.values()];let pending=due,checkpointState=saved,run={id:'isolated-run',business_date:date,
   actionable_at:date+'T09:00:00+08:00',lease:'isolated-lease',fence:2,plan,cursor,checkpoint:checkpointState};
  const rpc=async(name,args)=>{
   if(name==='claim_vnext_daily_research_v1')return {status:'ACQUIRED',run};
   const op=args.p_op,data=args.p_data;calls.push({op,data});
-  if(op==='SOURCE_BEGIN')return cache.has(data.key)?{status:'CACHE',receipt:cache.get(data.key)}:cold?{status:'FETCH'}:{status:'CACHE',receipt:await receipt(data,at)};
+  if(op==='SOURCE_BEGIN')return cache.has(data.key)?{status:'CACHE',receipt:cache.get(data.key)}:providerWaitSeconds?{status:'WAIT_RETRY',retry_at:new Date(Date.parse(at)+providerWaitSeconds*1000).toISOString()}:cold?{status:'FETCH'}:{status:'CACHE',receipt:await receipt(data,at)};
   if(op==='PLAN'){run.plan=data;return {};}
   if(op==='SOURCE_SAVE'){const r=JSON.parse(data.text);sources.push(r);stored.push(r);return {};}
   if(op==='SOURCE_FAIL')return {};
@@ -36,7 +37,7 @@ async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false}={}
   if(op==='SOURCES')return sources;
   if(op==='ENTRY_SOURCE')return {};
   if(op==='CHECKPOINT'){checkpointState=structuredClone(data);return {};}
-  if(op==='PREDICTIONS'){locked.push(...data);return {};}
+  if(op==='PREDICTIONS'){if(lockError)throw Error(lockError);locked.push(...data);return {};}
   if(op==='OUTCOME')return {};
   if(op==='OUTCOME_CHECKED'){pending=pending.filter(p=>p.prediction.id!==data.id);return {};}
   if(op==='FINISH')return {};
@@ -47,8 +48,16 @@ async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false}={}
   return Response.json({stat:'OK',date:month+'01',title:' '+symbol+' 合成隔離控制',fields:symbol?
    ['日期','成交股數','成交金額','開盤價','最高價','最低價','收盤價']:['日期','開盤指數','最高指數','最低指數','收盤指數'],data:[]});
  };
- const result=await workDailyRun(run.id,{rpc,fetcher,clock:()=>at,sleep:async()=>{}});
- return {result,calls,http,stored,locked,run,checkpoint:checkpointState};
+ const ports={rpc,fetcher,clock:()=>at,sleep:async()=>{}};
+ const sleeps=[],continuations=[];let result;
+ if(throughHandler){
+  run.id='11111111-1111-4111-8111-111111111111';const tasks=[];
+  const response=await handleVnextDaily(new Request('https://isolated.test',{method:'POST',headers:{'x-vnext-internal':'isolated-control-not-production-token'},body:JSON.stringify({run_id:run.id})}),
+   {...ports,cronSecret:'isolated-control-not-production-token',background:p=>tasks.push(p),sleep:async ms=>sleeps.push(ms),continueRun:async id=>continuations.push(id)});
+  assert.equal(response.status,202);await Promise.all(tasks);
+  result=calls.findLast(c=>c.op==='FINISH').data;
+ }else result=await workDailyRun(run.id,ports);
+ return {result,calls,http,stored,locked,run,sleeps,continuations,checkpoint:checkpointState};
 }
 test('cold acquisition prioritizes latest prices across all 72 before older history, without discarding tasks',async()=>{
  const plan=await acquisitionPlan(date,companies),price=plan.filter(t=>t.kind==='PRICE');
@@ -77,10 +86,26 @@ test('warm prices wait boundedly for the independently published Canonical, not 
  const plan=(await acquisitionPlan(date,companies)).slice(0,1),a=await runner({at:'2026-10-12T00:02:00Z',plan,cursor:1});
  assert.equal(a.result.reason,'CANONICAL_PUBLICATION_PENDING');assert.equal(a.result.retry_after_seconds,30);assert.equal(a.locked.length,0);
 });
+test('HTTP handler actually continues the 30s Canonical wait once, outside the Core request',async()=>{
+ const plan=(await acquisitionPlan(date,companies)).slice(0,1),a=await runner({at:'2026-10-12T00:02:00Z',plan,cursor:1,throughHandler:true});
+ assert.equal(a.result.reason,'CANONICAL_PUBLICATION_PENDING');assert.deepEqual(a.sleeps,[30000]);assert.deepEqual(a.continuations,[a.run.id]);assert.equal(a.locked.length,0);
+});
+test('allowing Canonical30 does not shorten a longer provider backoff or create immediate retry loops',async()=>{
+ const plan=(await acquisitionPlan(date,companies)).slice(0,1),a=await runner({at:'2026-10-12T00:02:00Z',plan,throughHandler:true,providerWaitSeconds:60});
+ assert.equal(a.result.reason,'SOURCE_RETRY_PENDING');assert.deepEqual(a.sleeps,[]);assert.deepEqual(a.continuations,[]);assert.equal(a.http.length,0);assert.equal(a.locked.length,0);
+});
 test('prepared immutable locks survive recovery, corrupted checkpoint fails closed',async()=>{
  const saved=await checkpoint(),plan=(await acquisitionPlan(date,companies)).slice(0,1),a=await runner({saved,plan,cursor:1});
- assert.equal(a.result.status,'COMPLETE');assert.equal(a.locked.length,0);assert.deepEqual(a.checkpoint,saved);
+ assert.equal(a.result.status,'COMPLETE');assert.equal(a.locked.length,216);assert.deepEqual(a.locked.map(r=>r.body),saved.locks);assert.deepEqual(a.checkpoint,saved);
+ assert.equal(a.calls[0].op,'PREDICTIONS','commit replay must precede any acquisition or completion');
  saved.locks[0].symbol='FAKE';const b=await runner({saved,plan,cursor:1});assert.equal(b.result.reason,'CHECKPOINT_LOCK_INVALID');assert.equal(b.http.length,0);
+});
+test('failed prepared commit cannot complete or run outcomes; explicit SQL late rejection is EXPIRED, not a false system failure',async()=>{
+ const saved=await checkpoint(),plan=(await acquisitionPlan(date,companies)).slice(0,1);
+ for(const [at,lockError] of [[before,'DATABASE_RPC_REJECTED'],['2026-10-12T01:01:00Z','FORWARD_TIME_INVALID']]){
+  const a=await runner({at,saved,plan,cursor:1,lockError});assert.equal(a.result.status,lockError==='FORWARD_TIME_INVALID'?'EXPIRED':'BLOCKED');assert.equal(a.result.reason,lockError);
+  assert.equal(a.http.length,0);assert.equal(a.locked.length,0);assert(!a.calls.some(c=>c.op==='DUE_OUTCOMES'));assert.deepEqual(a.checkpoint,saved);
+ }
 });
 test('matured prior outcome sources have an independent close revision, never reuse frozen premarket prices',async()=>{
  const saved=await checkpoint(),prediction=saved.locks.find(p=>p.horizon==='SHORT'),at='2026-10-12T06:00:00Z';
@@ -92,5 +117,5 @@ test('matured prior outcome sources have an independent close revision, never re
  assert.equal(a.calls.filter(c=>c.op==='CURSOR').length,0,'cold history cannot starve matured outcome');
  const outcomes=a.calls.filter(c=>c.op==='OUTCOME');assert.equal(outcomes.length,1);
  assert.equal(outcomes[0].data.result.state,'UNKNOWN');assert.equal(outcomes[0].data.result.performance_eligible,false);
- assert.equal(outcomes[0].data.result.net_return,null);assert.equal(a.locked.length,0);assert.deepEqual(a.checkpoint,saved);
+ assert.equal(outcomes[0].data.result.net_return,null);assert.equal(a.locked.length,216);assert.deepEqual(a.checkpoint,saved);
 });

@@ -14,9 +14,10 @@ const object=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&
 const failure=(e:unknown)=>{const msg=e instanceof Error?e.message:'';return /^[A-Z0-9_]{1,100}$/.test(msg)?msg:'INTEGRATION_FAILED';};
 export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
  const claim=object(await p.rpc('claim_vnext_daily_research_v1',{p_run:id}));if(claim.status!=='ACQUIRED')return {status:String(claim.status),continue:false};
- const r=claim.run as ClaimedRun,deadline=Date.now()+Math.min(70000,budgetMs);let fetched=0,lastFetch=0,hasLock='locks' in r.checkpoint,retryAfter=3;
+ const r=claim.run as ClaimedRun,deadline=Date.now()+Math.min(70000,budgetMs);let fetched=0,lastFetch=0,hasLock=false,retryAfter=3;
  const rpc=(op:string,data:unknown={})=>p.rpc('vnext_daily_runtime_v1',{p_run:r.id,p_lease:r.lease,p_fence:r.fence,p_op:op,p_data:data});
  const finish=async(status:string,reason:string|null=null)=>{await rpc('FINISH',{status,reason});return {status,continue:status==='QUEUED',reason,retry_after_seconds:retryAfter};};
+ const commitLocks=(rows:DailyLock[])=>rpc('PREDICTIONS',rows.map(body=>{const {lock_hash,...rest}=body;return {body,canonical:canonical(rest),hash:lock_hash};}));
  const collect=async(task:SourceTask):Promise<SourceReceipt|null|false>=>{
   if(Date.now()+14000>=deadline||fetched>=8)return false;
   const reserved=object(await rpc('SOURCE_BEGIN',task));
@@ -31,7 +32,14 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   }catch(e){retryAfter=Math.min(300,Math.max(3,Number(object(e).retryAfter)||3));await rpc('SOURCE_FAIL',{key:task.key,reason:failure(e),retry_seconds:retryAfter});return false;}
  };
  try{
-  if(hasLock&&(!('locks' in r.checkpoint)||r.checkpoint.locks?.length!==216||(await Promise.all(r.checkpoint.locks.map(verifyDailyLock))).some(ok=>!ok)))throw Error('CHECKPOINT_LOCK_INVALID');
+  if('locks' in r.checkpoint){
+   if(r.checkpoint.locks?.length!==216||(await Promise.all(r.checkpoint.locks.map(verifyDailyLock))).some(ok=>!ok))throw Error('CHECKPOINT_LOCK_INVALID');
+   // Checkpoint locks are PREPARED, not proof of a committed transaction.
+   // Replay identical bytes before any acquisition/outcome/completion. SQL
+   // fences the lease, permits exact committed retries even after the cutoff,
+   // and rejects new late inserts without backdating a Forward prediction.
+   await commitLocks(r.checkpoint.locks);hasLock=true;
+  }
   const dirs:SourceReceipt[]=[];for(const t of await directoryPlan(r.business_date)){const receipt=await collect(t);if(!receipt)return finish(receipt===null?'BLOCKED':'QUEUED','UNIVERSE_DIRECTORY_UNAVAILABLE');dirs.push(receipt);}
   const companies=classifyCompanies(dirs),plan=r.plan.length?r.plan:await acquisitionPlan(r.business_date,companies);
   if(!r.plan.length)await rpc('PLAN',plan);
@@ -63,7 +71,7 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   if(!hasLock&&Date.parse(p.clock())<Date.parse(r.actionable_at)){
    let state='key' in r.checkpoint?r.checkpoint as RunState:null;
    const store:DailyStore={exclusive:async(_key,work)=>work(),load:async()=>state,save:async s=>{await rpc('CHECKPOINT',s);state=s;},
-    lock:async rows=>{await rpc('PREDICTIONS',rows.map(body=>{const {lock_hash,...rest}=body;return {body,canonical:canonical(rest),hash:lock_hash};}));}};
+    lock:async rows=>{await commitLocks(rows);}};
    const result=await runDailyIntelligence({business_date:r.business_date,checkpoint:'NATURAL_MARKET_READY',mode:'FORWARD_SHADOW',provenance:'RETAINED_REAL_EVIDENCE',
     core_ready:true,core_busy:false,source_revision:acquired.snapshot_hash,source_hash:acquired.snapshot_hash,actionable_at:r.actionable_at},store,{
     acquire:async()=>acquired,clock:p.clock,outcomes:async()=>({state:'DURABLE_OUTCOME_QUEUE'}),
@@ -90,5 +98,10 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   if((await rpc('DUE_OUTCOMES') as unknown[]).length)return finish('QUEUED','OUTCOME_CONTINUATION');
   if(cursor<plan.length)return finish('QUEUED',hasLock?'COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK':'COLD_BOOTSTRAP_NO_LATE_FORWARD');
   return finish(hasLock?'COMPLETE':'EXPIRED',hasLock?null:'LATE_ACQUISITION_NOT_FORWARD');
- }catch(e){return finish('BLOCKED',failure(e));}
+ }catch(e){
+  const reason=failure(e);
+  // Only an explicit SQL time rejection of a missing prepared commit is expiry;
+  // transport errors, corrupt checkpoints and other denials stay BLOCKED.
+  return finish(reason==='FORWARD_TIME_INVALID'&&'locks' in r.checkpoint&&Date.parse(p.clock())>=Date.parse(r.actionable_at)?'EXPIRED':'BLOCKED',reason);
+ }
 }

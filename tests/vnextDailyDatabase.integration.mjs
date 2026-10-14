@@ -38,8 +38,14 @@ const request=async(role,name,args,sub)=>{
  const r=await localFetch(base+'/rpc/'+name,{method:'POST',headers:{Authorization:'Bearer '+token(role,sub),'Content-Type':'application/json'},body:JSON.stringify(args)});const data=await r.json();return {status:r.status,data};
 };
 const sqlErrors=[];
-let verifyLockBatch;
-const rpc=async(name,args)=>{if(args.p_op==='PREDICTIONS'&&verifyLockBatch){const verify=verifyLockBatch;verifyLockBatch=null;await verify(name,args);}const r=await request('service_role',name,args);if(r.status!==200){sqlErrors.push({operation:args.p_op??name,code:r.data.code,message:r.data.message});throw Error(String(r.data.message));}return r.data;};
+let verifyLockBatch,interruptFinish=false,dropCommitReply=false,preparedBatch;
+const rpc=async(name,args)=>{
+ if(args.p_op==='FINISH'&&interruptFinish){interruptFinish=false;throw Error('ISOLATED_PROCESS_INTERRUPTED');}
+ if(args.p_op==='PREDICTIONS'&&verifyLockBatch){const verify=verifyLockBatch;verifyLockBatch=null;await verify(name,args);}
+ const r=await request('service_role',name,args);if(r.status!==200){sqlErrors.push({operation:args.p_op??name,code:r.data.code,message:r.data.message});throw Error(String(r.data.message));}
+ if(args.p_op==='PREDICTIONS'&&dropCommitReply){dropCommitReply=false;interruptFinish=true;throw Error('ISOLATED_COMMIT_RESPONSE_LOST');}
+ return r.data;
+};
 try{
  run(['network','create',name]);run(['run','-d','--name',db,'--network',name,'-e','POSTGRES_PASSWORD','postgres:17']);
  let ready=false;for(let i=0;i<60;i++){try{sql('select 1');ready=true;break;}catch{await sleep(300);}}assert(ready);
@@ -99,12 +105,13 @@ try{
   assert.equal((await op('SOURCE_BEGIN',task)).status,'FETCH');await op('SOURCE_SAVE',{text:canonical(receipt)});return receipt;
  };
  const receipts=[];for(const t of dirTasks)receipts.push(await cacheReceipt(t));
- // This end-to-end control deliberately has no market evidence: every symbol
- // must remain insufficient, never synthetic buy points or a claimed real run.
+ // This end-to-end control has no price evidence: every symbol remains
+ // insufficient, never synthetic buy points or a claimed real run.
  await op('PLAN',[dirTasks[0]]);await op('CURSOR',{cursor:1});await op('CHECKPOINT',{});await op('FINISH',{status:'QUEUED'});
- // Explicit deadline control, not fake early Canonical availability.
- advance('2026-10-12T00:59:15.000Z');
+ advance('2026-10-12T00:57:50.000Z');
+ sql(`insert into public.decision_snapshots values('${'a'.repeat(8)}-1111-4111-8111-${'a'.repeat(12)}','2026-10-12','PREMARKET','READY','2026-10-12T00:57:49Z','{"market_bias":"RANGE"}','RANGE');`);
  verifyLockBatch=async(name,args)=>{
+  preparedBatch=structuredClone(args.p_data);
   const malformed=structuredClone(args);malformed.p_data.at(-1).canonical='{}';
   const bad=await request('service_role',name,malformed);assert.match(bad.data.message,/PREDICTION_HASH/);
   assert.equal(sql('select count(*) from vnext_runtime.predictions'),'0');assert.equal(sql('select count(*) from vnext_runtime.publication_status'),'0');
@@ -114,10 +121,13 @@ try{
   sql("update vnext_runtime.runs set lease_until='2026-10-12T01:02:00Z'");
   const late=await request('service_role',name,args);assert.match(late.data.message,/FORWARD_TIME_INVALID/);
   assert.equal(sql('select count(*) from vnext_runtime.predictions'),'0');
-  advance('2026-10-12T00:59:15.000Z');sql("update vnext_runtime.runs set lease_until='2026-10-12T01:00:55Z'");
+  advance('2026-10-12T00:57:50.000Z');sql("update vnext_runtime.runs set lease_until='2026-10-12T00:59:30Z'");
   const altered=await request('service_role',name,{...args,p_op:'CHECKPOINT',p_data:{locks:[],acquired:{snapshot_hash:'f'.repeat(64)}}});
   assert.match(altered.data.message,/PREPARED_LOCKS_IMMUTABLE/);
   checks.push('Last-row failure rolls back entire batch; no late forward lock; prepared checkpoint immutable');
+  // Fault-inject process loss between CHECKPOINT and the SQL commit. Refuse
+  // FINISH too, leaving the actual fenced lease for crash recovery to claim.
+  interruptFinish=true;throw Error('ISOLATED_CRASH_BEFORE_COMMIT');
  };
  const pending=[];const workerSecret=randomBytes(40).toString('hex');
  server=createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=chunk;const result=await handleVnextDaily(new Request('http://127.0.0.1:'+workerPort,{method:req.method,headers:req.headers,body}),{
@@ -126,6 +136,24 @@ try{
  await new Promise(resolve=>server.listen(workerPort,'127.0.0.1',resolve));
  const invoke=()=>fetch('http://127.0.0.1:'+workerPort,{method:'POST',headers:{'x-vnext-internal':workerSecret,'Content-Type':'application/json'},body:JSON.stringify({run_id:r.run_id})});
  assert.equal((await invoke()).status,202);await Promise.all(pending);
+ assert.equal(sql('select count(*) from vnext_runtime.predictions'),'0');
+ assert.equal(sql("select jsonb_array_length(checkpoint->'locks') from vnext_runtime.runs"),'216');
+ const preparedFingerprint=sql("select md5((checkpoint->'locks')::text) from vnext_runtime.runs");
+ assert.notEqual(sql('select state from vnext_runtime.runs'),'COMPLETE');
+ advance('2026-10-12T00:59:31.000Z');
+ // Recovery must submit the checkpoint bytes. The database commits, but the
+ // caller loses that response: another retry must reconcile, not duplicate.
+ verifyLockBatch=async(_name,args)=>assert.deepEqual(args.p_data,preparedBatch);dropCommitReply=true;
+ assert.equal((await invoke()).status,202);await Promise.all(pending);
+ assert.equal(sql('select count(*) from vnext_runtime.predictions'),'216');
+ assert.equal(sql("select md5((checkpoint->'locks')::text) from vnext_runtime.runs"),preparedFingerprint);
+ assert.notEqual(sql('select state from vnext_runtime.runs'),'COMPLETE');
+ const committedFingerprint=sql("select jsonb_build_object('predictions',count(*),'payload',md5(string_agg(payload_text,E'\\n' order by id)),'queue',(select count(*) from vnext_runtime.outcome_queue),'publication',(select count(*) from vnext_runtime.publication_status)) from vnext_runtime.predictions");
+ advance('2026-10-12T01:01:12.000Z');
+ assert.equal((await invoke()).status,202);await Promise.all(pending);
+ assert.equal(sql("select md5((checkpoint->'locks')::text) from vnext_runtime.runs"),preparedFingerprint);
+ assert.equal(sql("select jsonb_build_object('predictions',count(*),'payload',md5(string_agg(payload_text,E'\\n' order by id)),'queue',(select count(*) from vnext_runtime.outcome_queue),'publication',(select count(*) from vnext_runtime.publication_status)) from vnext_runtime.predictions"),committedFingerprint);
+ checks.push('Real SQL crash before commit -> 0 rows; actual 100s lease expiry -> exact 216 rows; response lost -> next actual lease expiry after cutoff reconciles unchanged Prediction/queue/publication fingerprints');
  assert.equal(sql('select count(*) from vnext_runtime.predictions'),'216',JSON.stringify(sqlErrors)+sql("select jsonb_build_object('state',state,'reason',reason,'failure',checkpoint->'failure') from vnext_runtime.runs"));assert.equal(sql("select count(*) from vnext_runtime.predictions where payload->'research'->>'state'='INSUFFICIENT'"),'216');
  assert.equal(sql("select count(*) from vnext_runtime.publication_status where approved"),'0');
  assert.equal(sql("select state from vnext_runtime.runs"),'COMPLETE');

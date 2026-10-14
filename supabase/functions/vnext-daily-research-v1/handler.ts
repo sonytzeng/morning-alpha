@@ -19,14 +19,18 @@ export async function handleVnextDaily(req:Request,env:WorkerEnvironment){
    const receipt=await env.rpc('enqueue_vnext_daily_research_v1',{p_date:input.business_date,p_phase:input.phase,p_batch:input.source_batch_id}) as {run_id?:string;status:string};
    if(!receipt.run_id)return reply(200,{status:receipt.status});id=receipt.run_id;
   }
+  const backgroundDeadline=Date.now()+120000;
   env.background(workDailyRun(id,env).then(async r=>{
    if(!r.continue)return;
-   // Short retries fit the current background budget. Longer Retry-After is
-   // durably recorded and resumed by the next existing lifecycle checkpoint;
-   // never burn hundreds of immediate invocations while a provider is gated.
+   // A Canonical wait is a bounded 30s continuation, not a provider backoff.
+   // Keep it inside the background budget and hand off once, without blocking
+   // Core. Longer provider delays remain durable for the existing lifecycle.
    const delay='retry_after_seconds' in r?Number(r.retry_after_seconds):3;
-   if(delay>20)return;
-   await env.sleep(Math.max(3,delay)*1000);await env.continueRun(id);
+   const canonicalWait='reason' in r&&r.reason==='CANONICAL_PUBLICATION_PENDING'&&delay===30;
+   if(!Number.isFinite(delay)||delay<0||(!canonicalWait&&delay>20)||Date.now()+Math.max(3,delay)*1000+5000>backgroundDeadline)return;
+   await env.sleep(Math.max(3,delay)*1000);
+   if(Date.now()+5000>backgroundDeadline)return;
+   await env.continueRun(id);
   }).catch(e=>{
    const message=e instanceof Error?e.message:'';
    console.warn('VNEXT_BACKGROUND_NOT_COMPLETED',/^[A-Z0-9_]{1,100}$/.test(message)?message:'INTEGRATION_FAILED');

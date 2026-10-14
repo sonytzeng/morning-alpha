@@ -16,7 +16,7 @@
     {
       "path": "docs/operations/release-c-20261014.md",
       "before_sha256": null,
-      "after_sha256": "2488f5c3176dff2d5b31c32feaac4711ccca53736647b42da5b25a7003823923"
+      "after_sha256": "cccf80a7c01c0a7ab258f35e348f65887dcecb7d6d5ecac1ec50c971bd895f1a"
     },
     {
       "path": "scripts/releases/staged-regression.mjs",
@@ -61,7 +61,7 @@
     {
       "path": "src/features/vnext/dailyRuntime.ts",
       "before_sha256": null,
-      "after_sha256": "3cd5f9ca0fedd1dce57848d4f3ecfed352159d992f761b679c47d88b83d4625e"
+      "after_sha256": "7c0ed09d5a7f3d8a6af3a402649b485c5ce079c77da280d634ef652e0b17ad09"
     },
     {
       "path": "src/features/vnext/projection.ts",
@@ -106,12 +106,12 @@
     {
       "path": "supabase/functions/vnext-daily-research-v1/handler.ts",
       "before_sha256": null,
-      "after_sha256": "f17e517249d2412fc0acf4abb415693489ea3ba5445d2aa301e7e06659e95490"
+      "after_sha256": "ff721bc0a848b5e8cc4e089b440b0d3e179a124c13e8acd7054512047b0a4466"
     },
     {
       "path": "supabase/functions/vnext-daily-research-v1/index.ts",
       "before_sha256": null,
-      "after_sha256": "a273dfa171564af58dbf73cd605dc5cb1442654758f6695fda827a343c1e0421"
+      "after_sha256": "4fcada158ef706c7a08b665ad1d7e3d2da9faa58aba9887ef5c6bb9d198ea939"
     },
     {
       "path": "supabase/migrations/20261012054120_vnext_daily_research_runtime_candidate.sql",
@@ -146,12 +146,12 @@
     {
       "path": "tests/vnextDailyDatabase.integration.mjs",
       "before_sha256": null,
-      "after_sha256": "f3f7673e1ef6afdf5dd683cd7015f0b995c3e4fdfd2f65a7b02c045eee6816aa"
+      "after_sha256": "78a0a3bb8a54bf396e8b1a137ddfa746b13052ad33ab0f754f305297af4e698c"
     },
     {
       "path": "tests/vnextDailyRuntimeRecovery.test.mjs",
       "before_sha256": null,
-      "after_sha256": "f101c0b90647abb838e103252b2dc6e505554ffa4312e105e5e5a94c2cd5b0c4"
+      "after_sha256": "a7e2e3c7851fabaa1742ccae67e73c942e14de2408286ae965019610b9fa0408"
     },
     {
       "path": "tests/vnextDailyWiring.test.mjs",

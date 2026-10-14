@@ -87,6 +87,20 @@ try{
  const execute=promisify(execFile),q="set role service_role;select public.claim_line_transport_request_v1('2026-01-14',null,'daily_report',1000,180)";
  const parallel=await Promise.all(Array.from({length:2},()=>execute('docker',['exec',container,'psql','-h','127.0.0.1','-XqAt','-U','postgres','-v','ON_ERROR_STOP=1','-c',q])));
  const groups=parallel.flatMap(v=>JSON.parse(v.stdout));assert.equal(groups.length,1);assert.equal(groups[0].members.length,4);
+ // Preserve opt-out eligibility before first send. An uncertain immutable group
+ // must stop as a whole; removing one recipient would change the retry body.
+ const reviewBefore=sql("select body_text||retry_key::text from line_transport_private.requests where report_date='2026-01-09'");
+ sql("update public.line_subscribers set is_active=false where id=(select subscriber_id from line_transport_private.members m join line_transport_private.requests r on r.id=m.request_id where r.report_date='2026-01-09'order by m.ordinal limit 1)");
+ due=false;for(let n=0;n<17;n++){due=Number(sql("select count(*)from line_transport_private.requests where report_date='2026-01-09'and next_retry_at<=clock_timestamp()"))===1;if(due)break;await new Promise(r=>setTimeout(r,5000));}assert(due);
+ const optoutCalls=requests.length;assert.equal((await claim('2026-01-09')).length,0);assert.equal(requests.length,optoutCalls);
+ assert.equal(sql("select state from line_transport_private.requests where report_date='2026-01-09'"),'REVIEW_REQUIRED');
+ assert.equal(sql("select body_text||retry_key::text from line_transport_private.requests where report_date='2026-01-09'"),reviewBefore);
+ assert.equal(sql("select count(*)from public.line_delivery_outbox where report_date='2026-01-09'and status='SENT'"),'0');
+ enqueue('2026-01-15');const firstEligible=await claim('2026-01-15');assert.equal(firstEligible.length,1);
+ assert.equal(sql("select count(*)from public.line_delivery_outbox o join public.line_subscribers s on s.id=o.line_subscriber_id where o.report_date='2026-01-15'and not s.is_active and o.attempt_count=0"),'1');
+ sql("update public.line_subscribers set is_active=true");
+ assert.equal((await claim('2026-01-09')).length,0,'reactivation cannot silently resend an uncertain group');
+ checks.push('Inactive subscribers excluded before binding; changed member stops whole uncertain group without new body/key or fake SENT');
  const beforeAudit=sql("select md5(string_agg(row_to_json(o)::text,E'\n'order by id))from public.line_delivery_outbox o");
  const priorDef=sql("select pg_get_functiondef('public.claim_line_delivery_outbox_v1(date,uuid,text,integer,integer)'::regprocedure)");
  // Exact recovery rollback: stop the new caller, revoke only new entrypoints,

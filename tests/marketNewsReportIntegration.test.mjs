@@ -11,6 +11,7 @@ import {newsAcquisitionObservation} from '../supabase/functions/_shared/market-n
 import {filterPremiumNewsEvidence} from '../supabase/functions/_shared/premium-evidence.ts';
 import {filterRecentNewsRows} from '../supabase/functions/generate-daily-report-v7/market-freshness.ts';
 import {isolatedFunction,declaration} from './helpers/isolatedEdgeLoader.mjs';
+import {stagedViews} from './helpers/stagedReleaseIntegrity.mjs';
 const base='fff51d76a8e6c90768772023c37afbb112761a3a';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const now=Date.parse('2026-10-12T07:00:03.956+08:00');
@@ -97,12 +98,13 @@ test('unchanged actual Report reader: tag, freshness and independent relevance a
  assert.equal(unrelated.newsData.length,1);assert.equal(filterPremiumNewsEvidence(unrelated.newsData,now).verified.length,0);
 });
 
-test('real deployed policies, Report, LINE, Atomic and recommendation sources remain byte-identical',()=>{
+test('immutable News predecessor policies and business sources remain exact after admitted staged successor',()=>{
+ const predecessorRead=stagedViews().actualPredecessorRead;
  const protectedPaths=['supabase/functions/generate-daily-report-v7/index.ts','supabase/functions/_shared/premium-evidence.ts',
   'supabase/functions/_shared/market-report-gate.ts','supabase/functions/line-daily-push/index.ts',
   'supabase/functions/fetch-market-data-v10/index.ts','supabase/functions/recommendation-stock-evidence-v1/index.ts',
   'supabase/functions/_shared/news-catalyst-scoring.mjs','supabase/functions/daily-delivery-orchestrator/index.ts'];
- for(const p of protectedPaths)assert.equal(read(p),execFileSync('git',['show',base+':'+p],{encoding:'utf8',maxBuffer:8*1024*1024}),p);
+ for(const p of protectedPaths)assert.equal(predecessorRead(p).toString('utf8'),execFileSync('git',['show',base+':'+p],{encoding:'utf8',maxBuffer:8*1024*1024}),p);
  const p='supabase/functions/fetch-global-market-news/index.ts',before=execFileSync('git',['show',base+':'+p],{encoding:'utf8'});
  for(const name of ['scoreNewsItem','detectTaiwanMapping','fetchGNews','fetchNewsAPI','fetchFinnhubNews'])
   assert.equal(declaration(read(p),name),declaration(before,name),name);

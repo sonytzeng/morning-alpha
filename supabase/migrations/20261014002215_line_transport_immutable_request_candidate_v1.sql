@@ -8,7 +8,7 @@ create table line_transport_private.requests(
  body_text text not null,payload_sha256 text not null,message_preview text not null,
  created_at timestamptz not null default clock_timestamp(),
  retry_expires_at timestamptz not null default clock_timestamp()+interval '24 hours',
- state text not null default 'PENDING' check(state in('PENDING','PROCESSING','ACCEPTED','FAILED','EXPIRED')),
+ state text not null default 'PENDING' check(state in('PENDING','PROCESSING','ACCEPTED','FAILED','EXPIRED','REVIEW_REQUIRED')),
  lease_token uuid,lease_expires_at timestamptz,next_retry_at timestamptz not null default clock_timestamp(),
  accepted_request_id text,last_error text,
  check(payload_sha256=encode(sha256(convert_to(body_text,'UTF8')),'hex'))
@@ -74,6 +74,16 @@ begin
   end if;
   select array_agg(m.outbox_id order by m.ordinal),count(*) into ids,n from line_transport_private.members m where m.request_id=r.id;
   if total+n>p_limit then continue;end if;
+  -- Do not resend an immutable group after any member opts out or changes identity.
+  -- Keep its body/key and uncertain outbox history; never split or claim acceptance.
+  if exists(select 1 from line_transport_private.members m
+   left join public.line_subscribers s on s.id=m.subscriber_id
+   where m.request_id=r.id and(s.id is null or s.is_active is distinct from true or s.line_user_id is distinct from m.line_user_id))
+  then
+   update line_transport_private.requests set state='REVIEW_REQUIRED',lease_token=null,lease_expires_at=null,
+    last_error='RECIPIENT_STATUS_CHANGED_NO_RESEND_REQUIRES_REVIEW' where id=r.id;
+   continue;
+  end if;
   -- Uncertain legacy/externally changed queue state must not generate a new key.
   if exists(select 1 from public.line_delivery_outbox o where o.id=any(ids)
     and(o.status not in('PENDING','PROCESSING') or o.attempt_count>=o.max_attempts))
@@ -91,6 +101,7 @@ begin
   select o.payload->'message' into messages from public.line_delivery_outbox o
    where o.report_date=p_report_date and o.push_type=p_push_type and o.decision_snapshot_id is not distinct from p_decision_snapshot_id
    and o.status='PENDING' and o.attempt_count=0 and o.next_retry_at<=clock_timestamp()
+   and exists(select 1 from public.line_subscribers s where s.id=o.line_subscriber_id and s.is_active=true and s.line_user_id=o.line_user_id)
    and not exists(select 1 from line_transport_private.members m where m.outbox_id=o.id)
    order by o.created_at,o.id limit 1 for update;
   if not found then exit;end if;
@@ -99,6 +110,7 @@ begin
    select o.id from public.line_delivery_outbox o where o.report_date=p_report_date and o.push_type=p_push_type
    and o.decision_snapshot_id is not distinct from p_decision_snapshot_id and o.status='PENDING' and o.attempt_count=0
    and o.next_retry_at<=clock_timestamp() and o.payload->'message'=messages
+   and exists(select 1 from public.line_subscribers s where s.id=o.line_subscriber_id and s.is_active=true and s.line_user_id=o.line_user_id)
    and not exists(select 1 from line_transport_private.members m where m.outbox_id=o.id)
    order by o.id limit least(500,p_limit-total) for update skip locked)q;
   if ids is null then exit;end if;n=cardinality(ids);

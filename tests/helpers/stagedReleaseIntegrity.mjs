@@ -75,6 +75,7 @@ export const STAGED_SCOPES=Object.freeze({
   ],
   "C": [
     ".github/workflows/analysis-intelligence.yml",
+    ".github/workflows/research-foundation.yml",
     ".github/workflows/staged-release-240.yml",
     ".github/workflows/validate-release.yml",
     "docs/operations/release-c-20261014.md",

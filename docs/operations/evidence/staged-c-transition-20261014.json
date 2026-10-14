@@ -4,6 +4,11 @@
   "base": "f41e117ea109e09ae083ef2c692946a18aca2dcc",
   "files": [
     {
+      "path": ".github/workflows/research-foundation.yml",
+      "before_sha256": "871c740881461627981efbbe89e0e01d0a345c4cb22df9c8098ab6eb62ad2689",
+      "after_sha256": "8a094a34c5dca403eaed0d43fce0ea5c2b1648a58cce382e69689b66ab32f5b2"
+    },
+    {
       "path": ".github/workflows/staged-release-240.yml",
       "before_sha256": "85ed69d20b5d7ab1798036e3ae5065d414c91d3e5cb316b763d4a3e36f14dcb0",
       "after_sha256": "57bdeeecc1fe69b8247600f3956a2605240a22cf04c7a6d7aa42b638c69950e2"
@@ -11,7 +16,7 @@
     {
       "path": "docs/operations/release-c-20261014.md",
       "before_sha256": null,
-      "after_sha256": "166f8176f53ddd4a6f20a8adb2ad3fad7a4844b61c17d03fbc7f9f320abc3977"
+      "after_sha256": "2488f5c3176dff2d5b31c32feaac4711ccca53736647b42da5b25a7003823923"
     },
     {
       "path": "scripts/releases/staged-regression.mjs",
@@ -126,7 +131,7 @@
     {
       "path": "tests/helpers/stagedReleaseIntegrity.mjs",
       "before_sha256": "78694b7f1023a0d37ed94cf1f11f28f09eb31fe38b4107e446a031267bd6ca48",
-      "after_sha256": "d560beeccdc4f79e2f1f1a9e9cf5e21d3120a28058046ae109b4b0d3793030aa"
+      "after_sha256": "f7a4af6e5875f0faf27aeb0a66fff3b24636c6774e536940914d0d985c8d508e"
     },
     {
       "path": "tests/recommendationV2ForwardHandler.test.mjs",

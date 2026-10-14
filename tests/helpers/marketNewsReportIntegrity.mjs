@@ -3,7 +3,7 @@ import {readFileSync,lstatSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-import {stagedViews} from './stagedReleaseIntegrity.mjs';
+import {historicalStagedViews as stagedViews} from './stagedReleaseIntegrity.mjs';
 export const NEWS_REPORT_BASE='fff51d76a8e6c90768772023c37afbb112761a3a';
 export const NEWS_REPORT_MANIFEST='docs/operations/evidence/market-news-report-transition-20261012.json';
 export const NEWS_REPORT_PATHS=Object.freeze([

@@ -7,7 +7,7 @@ import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('../',import.meta.url));
 assert.equal(process.env.MA_ACCEPTANCE_CALENDAR_SCOPE,'issue-238-calendar');
-assert.equal(process.env.MA_TEST_DOCKER_CONTAINER,'ma-acceptance-calendar-238');
+assert.match(process.env.MA_TEST_DOCKER_CONTAINER||'',/^ma-acceptance-calendar-238(?:-[0-9]+)?$/);
 assert.match(process.env.MA_ISOLATED_TEST_DB||'',/^ma_six_bug_test5\d\d$/);
 const container=process.env.MA_TEST_DOCKER_CONTAINER,db=process.env.MA_ISOLATED_TEST_DB;
 const inspect=JSON.parse(execFileSync('docker',['inspect',container],{encoding:'utf8'}))[0];

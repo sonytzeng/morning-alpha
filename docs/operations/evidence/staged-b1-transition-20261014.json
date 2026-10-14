@@ -1,0 +1,79 @@
+{
+  "schema": "STAGED_RELEASE_240_V1",
+  "batch": "B1",
+  "base": "2a5d461ec3d98bfc8bc3177a295c95e299b7bda2",
+  "files": [
+    {
+      "path": ".github/workflows/analysis-intelligence.yml",
+      "before_sha256": "e795babb8dcbb41a639ddc6e083254a1dc3bfb7ed42cdd02f3541b83b9c2073f",
+      "after_sha256": "63bf70c71c6715f53ae2f8bdca62624d54c8bb0c6dfc5d96ca1f044051abf806"
+    },
+    {
+      "path": ".github/workflows/staged-release-240.yml",
+      "before_sha256": null,
+      "after_sha256": "85ed69d20b5d7ab1798036e3ae5065d414c91d3e5cb316b763d4a3e36f14dcb0"
+    },
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "before_sha256": "18080e6a079c2c9a4732ba63a9d22c892ae050546d7e64ef03b1d2f4318c6e8e",
+      "after_sha256": "e3105a1ba7f6a7980acf68a14a1032c8a18f42ef3c04145194d4f9a6e1b2213b"
+    },
+    {
+      "path": "docs/operations/release-b1-20261014.md",
+      "before_sha256": null,
+      "after_sha256": "570662bcee0cefd291ec3720bf8ec5ae14be6179975df27e762b9619c53032ce"
+    },
+    {
+      "path": "scripts/releases/staged-regression.mjs",
+      "before_sha256": null,
+      "after_sha256": "66a5b805006ee7a0901f734ee39903295f6faec3bb5cffb7ba1e4eae374c1614"
+    },
+    {
+      "path": "supabase/functions/_shared/decision-v1-evidence.ts",
+      "before_sha256": "43bd97d3ae40a453a57c6dc070c6effb6bf152c8d4baf7dd72a85645cb354d81",
+      "after_sha256": "2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-stock-evidence.ts",
+      "before_sha256": "5bed905f5db389b0e44db3bf86e11964ca7fa61282ed8d67f24f9d27a7d5311d",
+      "after_sha256": "86be1e626de3bf5c746aa10d5abcfb99dbb8b86c7ab2e6dbb7151335170c47d1"
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "before_sha256": "ef052ea0366bf95d5a8b5b8aa33bc251956a1c5afc165103f10c6f3969f954e8",
+      "after_sha256": "eb3008ceb7e72cc007680f9885ca56e02e1feb7e85a16c8758a0542c75e92d79"
+    },
+    {
+      "path": "tests/helpers/marketNewsReportIntegrity.mjs",
+      "before_sha256": "83a9e27a226ec72b199201d8d8e1062503188972b9bf4d39f41361edacbda574",
+      "after_sha256": "6d6ae0a0c4126e5157f88dba1d3e7c7e41bb4a8df63b2c24dc59212fb57ac9d1"
+    },
+    {
+      "path": "tests/helpers/stagedReleaseIntegrity.mjs",
+      "before_sha256": null,
+      "after_sha256": "78694b7f1023a0d37ed94cf1f11f28f09eb31fe38b4107e446a031267bd6ca48"
+    },
+    {
+      "path": "tests/recommendationReaderBinding.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "f76f6ea35f2df79e47100202932435a442c8ab226acb191e2b4ac132d204f146"
+    },
+    {
+      "path": "tests/recommendationReaderFreshDatabase.integration.mjs",
+      "before_sha256": null,
+      "after_sha256": "09409f71f3b0ce72b89fdfee7d074181bbbf2d9004cd54fc20d49ae151013e1d"
+    },
+    {
+      "path": "tests/stagedReleaseIntegrity.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "b1edc2f18dccd98f402a54ce60aabe25ec89c68b4964835289efea55bf798660"
+    }
+  ],
+  "production_authorized": false,
+  "member_publication_authorized": false,
+  "secret_change": false,
+  "cron_change": false,
+  "auth_model_change": false,
+  "recommendation_threshold_change": false,
+  "historical_data_change": false
+}

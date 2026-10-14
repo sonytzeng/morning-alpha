@@ -3,7 +3,7 @@ import {readFileSync,lstatSync,existsSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-export const STAGED_BASE='2a5d461ec3d98bfc8bc3177a295c95e299b7bda2';
+export const STAGED_BASE='f41e117ea109e09ae083ef2c692946a18aca2dcc';
 export const STAGED_SCOPES=Object.freeze({
   "A": [
     ".github/workflows/analysis-intelligence.yml",
@@ -104,6 +104,7 @@ export const STAGED_SCOPES=Object.freeze({
     "tests/recommendationV2ForwardHandler.test.mjs",
     "tests/stagedReleaseIntegrity.test.mjs",
     "tests/vnextDailyDatabase.integration.mjs",
+    "tests/vnextDailyRuntimeRecovery.test.mjs",
     "tests/vnextDailyWiring.test.mjs",
     "tests/vnextRuntimeOfficialRead.mjs"
   ]
@@ -126,13 +127,23 @@ export function stagedChangedPaths(){
  return [...new Set([...git(['diff','--no-renames','--name-only','-z',STAGED_BASE,'--']).split('\0'),...git(['ls-files','--others','--exclude-standard','-z']).split('\0')].filter(Boolean))].sort();
 }
 export function stagedTransition(source=raw,paths=stagedChangedPaths()){
- const ids=Object.keys(STAGED_SCOPES).filter(id=>existsSync(new URL('../../'+stagedManifestPath(id),import.meta.url)));
+ const present=Object.keys(STAGED_SCOPES).filter(id=>existsSync(new URL('../../'+stagedManifestPath(id),import.meta.url)));
+ const ids=present.filter(id=>{
+  const path=stagedManifestPath(id),m=JSON.parse(source(path));
+  if(m.base===STAGED_BASE)return true;
+  // Preserve merged receipts byte-for-byte; they are dependencies, not work to
+  // redevelop/retest. An unmerged or modified obsolete receipt is never skipped.
+  const prior=stagedPrior(path);
+  assert(prior&&raw(path).equals(prior)&&Buffer.from(source(path)).equals(prior),'STAGED_UNMERGED_OR_CHANGED_OLD_RECEIPT:'+id);
+  return false;
+ });
  if(!ids.length)return null;
  const files=new Map(),manifests=[];
  for(const id of ids){
   const m=JSON.parse(source(stagedManifestPath(id)));assert.equal(m.schema,'STAGED_RELEASE_240_V1');assert.equal(m.batch,id);assert.equal(m.base,STAGED_BASE);
   for(const flag of ['production_authorized','member_publication_authorized','secret_change','cron_change','auth_model_change','recommendation_threshold_change','historical_data_change'])assert.equal(m[flag],false,flag);
-  assert.deepEqual(m.files.map(r=>r.path).sort(),STAGED_SCOPES[id],'STAGED_EXACT_NAMED_SCOPE:'+id);
+  const changed=STAGED_SCOPES[id].filter(path=>{const prior=stagedPrior(path);return !prior||!raw(path).equals(prior);});
+  assert.deepEqual(m.files.map(r=>r.path).sort(),changed,'STAGED_EXACT_NAMED_SCOPE:'+id);
   for(const row of m.files){
    assert.deepEqual(Object.keys(row).sort(),['path','before_sha256','after_sha256'].sort());
    const prior=stagedPrior(row.path);assert.equal(row.before_sha256,prior===null?null:hash(prior));assert.notEqual(row.before_sha256,row.after_sha256);
@@ -154,4 +165,30 @@ export function stagedViews(source){
  const restore=path=>{if(current.files.has(path)){const before=stagedPrior(path);if(before===null)throw Object.assign(Error('STAGED_PREDECESSOR_ABSENT:'+path),{code:'ENOENT'});return before;}return raw(path);};
  const historical=source?path=>{if(current.files.has(path)){const bytes=source(path);if(hash(bytes)===current.files.get(path).after_sha256)return restore(path);return bytes;}return source(path);}:restore;
  return {predecessorRead:historical,actualPredecessorRead:restore,verify:()=>stagedTransition(),changedPaths:prior=>git(['diff','--no-renames','--name-only','-z',prior,STAGED_BASE,'--']).split('\0').filter(Boolean).sort()};
+}
+
+/** Older release receipts are validated at their own exact historical base.
+ * This does NOT alter current runtime admission or permit changed B1 bytes. */
+export function historicalStagedViews(source){
+ const outer=stagedViews(source),path=stagedManifestPath('B1'),bytes=stagedPrior(path);
+ if(!bytes)return outer;
+ const receipt=JSON.parse(bytes),priorBase='2a5d461ec3d98bfc8bc3177a295c95e299b7bda2';
+ assert.equal(receipt.base,priorBase,'STAGED_UNKNOWN_INHERITED_BASE');
+ assert(raw(path).equals(bytes),'STAGED_INHERITED_RECEIPT_DRIFT');
+ const files=new Map(receipt.files.map(f=>[f.path,f]));
+ assert.deepEqual([...files.keys()].sort(),STAGED_SCOPES.B1,'STAGED_INHERITED_EXACT_SCOPE');
+ const priors=new Map();
+ for(const f of files.values()){
+  assert.equal(hash(outer.actualPredecessorRead(f.path)),f.after_sha256,'STAGED_MERGED_B1_DRIFT');
+  const prior=f.before_sha256===null?null:execFileSync('git',['show',priorBase+':'+f.path],{cwd:root,maxBuffer:64e6});
+  assert.equal(prior===null?null:hash(prior),f.before_sha256,'STAGED_INHERITED_BEFORE_DRIFT');priors.set(f.path,prior);
+ }
+ const restore=(reader,path)=>{
+  const value=reader(path),f=files.get(path);
+  if(path===stagedManifestPath('B1'))throw Object.assign(Error('STAGED_PREDECESSOR_ABSENT:'+path),{code:'ENOENT'});
+  if(!f||hash(value)!==f.after_sha256)return value;
+  const prior=priors.get(path);if(prior===null)throw Object.assign(Error('STAGED_PREDECESSOR_ABSENT:'+path),{code:'ENOENT'});return Buffer.from(prior);
+ };
+ return {predecessorRead:path=>restore(outer.predecessorRead,path),actualPredecessorRead:path=>restore(outer.actualPredecessorRead,path),
+  verify:()=>outer.verify(),changedPaths:prior=>git(['diff','--no-renames','--name-only','-z',prior,priorBase,'--']).split('\0').filter(Boolean).sort()};
 }

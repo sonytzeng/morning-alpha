@@ -1,32 +1,22 @@
 {
   "schema": "STAGED_RELEASE_240_V1",
   "batch": "A",
-  "base": "2a5d461ec3d98bfc8bc3177a295c95e299b7bda2",
+  "base": "f41e117ea109e09ae083ef2c692946a18aca2dcc",
   "files": [
     {
-      "path": ".github/workflows/analysis-intelligence.yml",
-      "before_sha256": "e795babb8dcbb41a639ddc6e083254a1dc3bfb7ed42cdd02f3541b83b9c2073f",
-      "after_sha256": "63bf70c71c6715f53ae2f8bdca62624d54c8bb0c6dfc5d96ca1f044051abf806"
-    },
-    {
       "path": ".github/workflows/staged-release-240.yml",
-      "before_sha256": null,
-      "after_sha256": "85ed69d20b5d7ab1798036e3ae5065d414c91d3e5cb316b763d4a3e36f14dcb0"
-    },
-    {
-      "path": ".github/workflows/validate-release.yml",
-      "before_sha256": "18080e6a079c2c9a4732ba63a9d22c892ae050546d7e64ef03b1d2f4318c6e8e",
-      "after_sha256": "e3105a1ba7f6a7980acf68a14a1032c8a18f42ef3c04145194d4f9a6e1b2213b"
+      "before_sha256": "85ed69d20b5d7ab1798036e3ae5065d414c91d3e5cb316b763d4a3e36f14dcb0",
+      "after_sha256": "57bdeeecc1fe69b8247600f3956a2605240a22cf04c7a6d7aa42b638c69950e2"
     },
     {
       "path": "docs/operations/release-a-20261014.md",
       "before_sha256": null,
-      "after_sha256": "88a7525f67a836de7cd7ee4a76b3459d9130809e75c99d98f93cd120dc49232e"
+      "after_sha256": "b3bce0f23ff98f35f01af8b46d3d1b2483af23fb8bfd697a13911b1de157f607"
     },
     {
       "path": "scripts/releases/staged-regression.mjs",
-      "before_sha256": null,
-      "after_sha256": "66a5b805006ee7a0901f734ee39903295f6faec3bb5cffb7ba1e4eae374c1614"
+      "before_sha256": "66a5b805006ee7a0901f734ee39903295f6faec3bb5cffb7ba1e4eae374c1614",
+      "after_sha256": "60782e7adc9981afc03ca5449a0f985d42ce0727619e4145f1293d63e0c081de"
     },
     {
       "path": "src/components/feature/Footer.tsx",
@@ -131,7 +121,7 @@
     {
       "path": "tests/acceptanceCalendarDatabase.integration.mjs",
       "before_sha256": null,
-      "after_sha256": "7dd38f072b3e0e8f5baeecfa721b99f2af1bd3c1aba014191aec1f8c71028628"
+      "after_sha256": "ed2a85859b5d73a1e7cd802e4a0ecde8ed23e180cea3bcdfec963b65ae7e2034"
     },
     {
       "path": "tests/accountSubscriberProjection.test.mjs",
@@ -160,13 +150,13 @@
     },
     {
       "path": "tests/helpers/marketNewsReportIntegrity.mjs",
-      "before_sha256": "83a9e27a226ec72b199201d8d8e1062503188972b9bf4d39f41361edacbda574",
-      "after_sha256": "6d6ae0a0c4126e5157f88dba1d3e7c7e41bb4a8df63b2c24dc59212fb57ac9d1"
+      "before_sha256": "6d6ae0a0c4126e5157f88dba1d3e7c7e41bb4a8df63b2c24dc59212fb57ac9d1",
+      "after_sha256": "1909f3e51c3d810e91fa4a3b06ab86095726eca4256fa23178cff9eaaf76a5ad"
     },
     {
       "path": "tests/helpers/stagedReleaseIntegrity.mjs",
-      "before_sha256": null,
-      "after_sha256": "78694b7f1023a0d37ed94cf1f11f28f09eb31fe38b4107e446a031267bd6ca48"
+      "before_sha256": "78694b7f1023a0d37ed94cf1f11f28f09eb31fe38b4107e446a031267bd6ca48",
+      "after_sha256": "d560beeccdc4f79e2f1f1a9e9cf5e21d3120a28058046ae109b4b0d3793030aa"
     },
     {
       "path": "tests/marketNewsReportIntegration.test.mjs",
@@ -180,8 +170,8 @@
     },
     {
       "path": "tests/stagedReleaseIntegrity.test.mjs",
-      "before_sha256": null,
-      "after_sha256": "b1edc2f18dccd98f402a54ce60aabe25ec89c68b4964835289efea55bf798660"
+      "before_sha256": "b1edc2f18dccd98f402a54ce60aabe25ec89c68b4964835289efea55bf798660",
+      "after_sha256": "3d3f17bb4b825f2224b8bab8e5c67e2fdd75c2a7e18aa792c18a0d113a86f09a"
     }
   ],
   "production_authorized": false,

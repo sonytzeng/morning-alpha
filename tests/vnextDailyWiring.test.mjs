@@ -6,6 +6,7 @@ import {RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendat
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {handleVnextDaily} from '../supabase/functions/vnext-daily-research-v1/handler.ts';
 import {enqueueVnextAfterCheckpoint,continueVnextRun} from '../supabase/functions/_shared/vnext-daily-hook.ts';
+import {csvRows,parseRevenue,parseFinancial,financialRows} from '../src/features/vnext/dailyParsers.mjs';
 const companies=RECOMMENDATION_UNIVERSE.map(symbol=>({symbol,company:'隔離合成控制',exchange:'TWSE',industry:'24'}));
 test('dynamic official date plan rolls month, year and current revisions, not 10/8 snapshot',async()=>{
  const a=await acquisitionPlan('2026-10-12',companies),b=await acquisitionPlan('2026-11-02',companies);
@@ -60,12 +61,31 @@ test('lifecycle hook never awaits research, failure cannot escape and no core re
  enqueueVnextAfterCheckpoint({business_date:'2026-10-12',evaluation_phase:'PREMARKET',source_batch_id:'synthetic'},opts);await task;assert.equal(n,1);
  assert.doesNotThrow(()=>enqueueVnextAfterCheckpoint({}, {...opts,background:()=>{throw Error('runtime');}}));
 });
+test('provider parser structure is bounded before allocation; malformed HTML cannot amplify suffix scanning',()=>{
+ assert.deepEqual(csvRows('a,b\n"comma,value","quote""value"'),[['a','b'],['comma,value','quote"value']]);
+ assert.throws(()=>csvRows(Array.from({length:129},(_,i)=>'h'+i).join(',')),/CSV_COLUMN_LIMIT/);
+ assert.throws(()=>csvRows('x'.repeat(32769)),/CSV_CELL_LIMIT/);
+ assert.throws(()=>csvRows('x\n'.repeat(25001)),/CSV_ROW_LIMIT/);
+ assert.throws(()=>parseRevenue(['公司代號,資料年月,'+Array.from({length:10000},(_,i)=>'h'+i).join(','),...Array.from({length:10000},()=> '9999')].join('\n'),{period:'2026-09',symbols:['2330'],url:'https://mopsov.twse.com.tw'},'2026-10-14T01:00:00Z'),/CSV_COLUMN_LIMIT/);
+ assert.throws(()=>parseFinancial('公開資訊觀測站上市公司'+'<tr>'.repeat(20000),{kind:'FINANCIAL_YTD',year:2026,quarter:2,symbols:['2330'],url:'https://mopsov.twse.com.tw',exchange:'TWSE'},'2026-10-14T01:00:00Z'),/FINANCIAL_NESTED_ROW/);
+ assert.throws(()=>[...financialRows('<tr><td>'+'x'.repeat(32769)+'</td></tr>')],/FINANCIAL_CELL_LIMIT/);
+ assert.throws(()=>[...financialRows('<tr><td>x</tr>')],/FINANCIAL_UNCLOSED_CELL/);
+ assert.deepEqual([...financialRows('<table><tr><th>公司代號</th><th>營業收入</th></tr><tr><td>2330</td><td><b>123</b></td></tr></table>')],[['公司代號','營業收入'],['2330','123']]);
+ const data=parseFinancial('公開資訊觀測站上市公司<table><tr><th>公司代號</th><th>營業收入</th><th>基本每股盈餘（元）</th></tr><tr><td>2330</td><td>123</td><td>2.5</td></tr></table>',{kind:'FINANCIAL_YTD',year:2026,quarter:2,symbols:['2330'],url:'https://mopsov.twse.com.tw',exchange:'TWSE'},'2026-10-14T01:00:00Z');
+ assert.equal(data.rows[0].values.revenue,123);assert.equal(data.rows[0].values.eps,2.5);assert.equal(data.rows[0].published_at,null);
+});
 test('portable parser copies stay byte-equivalent to reviewed sources; no filesystem dependency',()=>{
  const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8'),target=read('src/features/vnext/dailyParsers.mjs');
  for(const [path,from,to] of [['scripts/vnext/stock-evidence.mjs','const n=','export async function acquireStockEvidence'],['scripts/vnext/stock-context.mjs','export function parseEventIndex','export async function acquireContext'],['research/entry-corporate-actions.mjs','export const ACTION_SOURCES','export function parseTwseDividendDetail']]){const s=read(path);assert(target.includes(s.slice(s.indexOf(from),s.indexOf(to))));}
  assert.doesNotMatch(target,/node:fs|writeFile|readFile/);
 });
 test('continuation validates gateway status and preserves explicit server identity without fallback',async()=>{
+ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+ for(const path of ['supabase/functions/vnext-daily-research-v1/index.ts','supabase/functions/recommendation-v2-forward-worker-v1/index.ts']){
+  assert(read(path).includes("gatewayJwt:Deno.env.get('RECOMMENDATION_GATEWAY_ANON_JWT')"));
+  assert(!read(path).includes("gatewayJwt:Deno.env.get('SUPABASE_ANON_KEY')"));
+ }
+ assert.match(read('supabase/config.toml'),/\[functions\.vnext-daily-research-v1\]\s+verify_jwt = true/);
  const calls=[],options={url:'https://local.test',gatewayJwt:'SYNTHETIC_GATEWAY',cronSecret:'SYNTHETIC_INTERNAL',fetcher:async(u,i)=>{calls.push({u,i});return new Response('{}',{status:401});}};
  await assert.rejects(()=>continueVnextRun('11111111-1111-4111-8111-111111111111',options),/VNEXT_CONTINUATION_HTTP_401/);
  assert.equal(calls.length,1);assert.equal(calls[0].i.headers.Authorization,'Bearer SYNTHETIC_GATEWAY');assert.equal(calls[0].i.headers['x-vnext-internal'],'SYNTHETIC_INTERNAL');

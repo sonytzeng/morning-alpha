@@ -72,7 +72,7 @@ export async function handleV2Forward(request:Request){
   const claim=await db.rpc('claim_recommendation_v2_forward',{p_date:input.business_date,p_phase:input.evaluation_phase,p_batch:input.source_batch_id});
   if(claim.error)return reply(409,{error:'FORWARD_TRIGGER_CONTRACT_REJECTED'});
   const receipt=object(claim.data);
-  if(['ACQUIRED','COMPLETE','SKIPPED_NO_WATCH'].includes(String(receipt.status)))enqueueVnextAfterCheckpoint(input,{url,gatewayJwt:Deno.env.get('SUPABASE_ANON_KEY')||'',cronSecret:Deno.env.get('CRON_SECRET')||'',background:p=>runtime.waitUntil(p),fetcher:fetch});
+  if(['ACQUIRED','COMPLETE','SKIPPED_NO_WATCH'].includes(String(receipt.status)))enqueueVnextAfterCheckpoint(input,{url,gatewayJwt:Deno.env.get('RECOMMENDATION_GATEWAY_ANON_JWT')||'',cronSecret:Deno.env.get('CRON_SECRET')||'',background:p=>runtime.waitUntil(p),fetcher:fetch});
   if(receipt.status!=='ACQUIRED'){
    if(['COMPLETE','SKIPPED_NO_WATCH'].includes(String(receipt.status)))runtime.waitUntil(dispatchOutcomes(receipt));
    return reply(200,{status:receipt.status,business_writes:[]});

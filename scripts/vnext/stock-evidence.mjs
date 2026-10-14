@@ -5,20 +5,24 @@ import {createPublicCache,privateDirectory,immutable,sha,foundationSessions} fro
 import {auditFoundation} from './foundation-validation.mjs';
 import {officialNumber,officialDate} from '../../research/entry-official-history.ts';
 const n=officialNumber;
-const clean=s=>s.replace(/<[^>]*>/g,'').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim();
+const clean=s=>s.replace(/<[^<>]*>/g,'').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim();
 const end=(y,m)=>new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);
 const receipt=(at,asof)=>{if(!Number.isFinite(Date.parse(at))||Date.parse(asof)>Date.parse(at))throw Error('FUTURE_PERIOD');};
 function trace(symbol,kind,period,source,at,asof,raw,basis,values){receipt(at,asof);return {symbol,kind,period,source,published_at:null,first_seen_at:at,available_at:at,as_of:asof,evidence_hash:sha(raw),id:kind+'-'+sha({symbol,period,source,raw}),basis,values,data_quality_status:'OBSERVED_AFTER_RECEIPT_PUBLICATION_TIME_UNKNOWN',source_version:'OFFICIAL_ARCHIVE_RETRIEVED_V1',historical_knowledge:false};}
 export function csvRows(text){
+ if(text.length>8_000_000)throw Error('CSV_SIZE_LIMIT');
  const rows=[];let row=[],cell='',quoted=false;
- for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}else if(c===','&&!quoted){row.push(cell);cell='';}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(Boolean))rows.push(row);row=[];cell='';}else cell+=c;}
- if(quoted)throw Error('CSV_UNCLOSED');if(cell||row.length){row.push(cell);rows.push(row);}return rows;
+ const push=()=>{row.push(cell);cell='';if(row.length>128)throw Error('CSV_COLUMN_LIMIT');};
+ const finish=()=>{push();if(row.some(Boolean))rows.push(row);if(rows.length>25_000)throw Error('CSV_ROW_LIMIT');row=[];};
+ for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}else if(c===','&&!quoted)push();else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;finish();}else cell+=c;if(cell.length>32768)throw Error('CSV_CELL_LIMIT');}
+ if(quoted)throw Error('CSV_UNCLOSED');if(cell||row.length)finish();return rows;
 }
 export function parseRevenue(text,{period,symbols,url},at){
  const [fields,...data]=csvRows(text.replace(/^\uFEFF/,''));if(!fields?.includes('公司代號')||!fields.includes('資料年月')||new Set(fields).size!==fields.length)throw Error('REVENUE_SCHEMA');
  const out=[],rejected=[],seen=new Set(),[year,month]=period.split('-').map(Number);
- for(const cells of data){const r=Object.fromEntries(fields.map((f,i)=>[f,cells[i]])),symbol=r['公司代號'];if(!symbols.includes(symbol))continue;
+ for(const cells of data){const symbol=cells[fields.indexOf('公司代號')];if(!symbols.includes(symbol))continue;
   if(cells.length!==fields.length||seen.has(symbol))throw Error('REVENUE_DUPLICATE_OR_COLUMNS');seen.add(symbol);
+  const r=Object.fromEntries(fields.map((f,i)=>[f,cells[i]]));
   const m=/^(\d{3,4})[/-](\d{1,2})$/.exec(r['資料年月']),current=n(r['營業收入-當月營收']),prior=n(r['營業收入-上月營收']),lastyear=n(r['營業收入-去年當月營收']);
   if(!m||Number(m[1])+(m[1].length===3?1911:0)!==year||Number(m[2])!==month||current===null)throw Error('REVENUE_PERIOD_OR_VALUE');
   const ratio=(base,key)=>{const v=n(r[key]);if(base===null||base<=0)return null;if(v===null||Math.abs((current/base-1)*100-v)>.03)throw Error('REVENUE_RATIO_MISMATCH');return v;};
@@ -42,11 +46,26 @@ export function parseInstitutional(p,{exchange,date,symbols,url},at){
  }return {rows,source_rows:data.length,rejected:[]};
 }
 /** Each industry has a different header. Never position-map one industry's figures onto another. */
+export function* financialRows(text){
+ if(text.length>8_000_000)throw Error('FINANCIAL_SIZE_LIMIT');
+ let row=null,cell=null,count=0;
+ // One linear tag scan. Never retry an unterminated row regex at every opener.
+ for(const token of text.matchAll(/<\/?(tr|td|th)\b[^<>]*>/gi)){
+  const name=token[1].toLowerCase(),closing=token[0][1]==='/';
+  if(name==='tr'){
+   if(!closing){if(row!==null)throw Error('FINANCIAL_NESTED_ROW');row=[];}
+   else if(row!==null){if(cell!==null)throw Error('FINANCIAL_UNCLOSED_CELL');if(++count>5000)throw Error('FINANCIAL_ROW_LIMIT');yield row;row=null;}
+  }else if(row!==null){
+   if(!closing){if(cell!==null)throw Error('FINANCIAL_NESTED_CELL');cell={name,start:token.index+token[0].length};}
+   else{if(cell===null||cell.name!==name)throw Error('FINANCIAL_CELL_MISMATCH');if(token.index-cell.start>32768)throw Error('FINANCIAL_CELL_LIMIT');row.push(clean(text.slice(cell.start,token.index)));if(row.length>128)throw Error('FINANCIAL_COLUMN_LIMIT');cell=null;}
+  }
+ }
+ if(row!==null||cell!==null)throw Error('FINANCIAL_UNCLOSED_ROW');
+}
 export function parseFinancial(text,{kind,year,quarter,symbols,url,exchange},at){
  if(!text.includes('公開資訊觀測站')||!text.includes(exchange==='TWSE'?'上市公司':'上櫃公司'))throw Error('FINANCIAL_SCHEMA');
  const rows=[],seen=new Set();let fields=[];
- for(const match of text.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)){
-  const cells=[...match[1].matchAll(/<t[hd]\b[^>]*>([\s\S]*?)<\/t[hd]>/gi)].map(m=>clean(m[1]));
+ for(const cells of financialRows(text)){
   if(cells[0]==='公司代號'){fields=cells;continue;}const symbol=cells[0];if(!symbols.includes(symbol))continue;
   if(!fields.length||cells.length!==fields.length||seen.has(symbol))throw Error('FINANCIAL_COLUMNS_OR_DUPLICATE');seen.add(symbol);
   const r=Object.fromEntries(fields.map((f,i)=>[f,cells[i]]));const get=(...keys)=>{for(const key of keys)if(Object.hasOwn(r,key))return n(r[key]);return null;};

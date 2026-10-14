@@ -4,6 +4,11 @@
   "base": "2a5d461ec3d98bfc8bc3177a295c95e299b7bda2",
   "files": [
     {
+      "path": ".github/workflows/analysis-intelligence.yml",
+      "before_sha256": "e795babb8dcbb41a639ddc6e083254a1dc3bfb7ed42cdd02f3541b83b9c2073f",
+      "after_sha256": "63bf70c71c6715f53ae2f8bdca62624d54c8bb0c6dfc5d96ca1f044051abf806"
+    },
+    {
       "path": ".github/workflows/staged-release-240.yml",
       "before_sha256": null,
       "after_sha256": "85ed69d20b5d7ab1798036e3ae5065d414c91d3e5cb316b763d4a3e36f14dcb0"
@@ -16,7 +21,7 @@
     {
       "path": "docs/operations/release-c-20261014.md",
       "before_sha256": null,
-      "after_sha256": "622451f0c1ad652bf23fe064c480da5fd218e9639f9a87f2ae6df19749054aa4"
+      "after_sha256": "fbed69c368190ce832e4614e1d0309b3b554b94f9c027e26d333e0ee9659250c"
     },
     {
       "path": "scripts/releases/staged-regression.mjs",
@@ -31,7 +36,7 @@
     {
       "path": "scripts/vnext/stock-evidence.mjs",
       "before_sha256": null,
-      "after_sha256": "85fbf0f9e461ade63d49e42b8ab47c373afc9f0f5448aadea8adfa8fd27d9566"
+      "after_sha256": "731e7e53fc6700b48ea713e167f8de53c04e3ee5ad122e0aa6b72d9608af5e95"
     },
     {
       "path": "src/features/vnext/contracts.ts",
@@ -56,7 +61,7 @@
     {
       "path": "src/features/vnext/dailyParsers.mjs",
       "before_sha256": null,
-      "after_sha256": "b31419ac080da593ab7664a29b24986109fb7f7db49f887ce5e014837fdcdffa"
+      "after_sha256": "e6b1ad234ab7b0036223416776eba2809588ad7adb2f8255e9472003abd3e6f5"
     },
     {
       "path": "src/features/vnext/dailyRuntime.ts",
@@ -89,6 +94,11 @@
       "after_sha256": "7583c0edca56aa4c225173ab5657ce894529df34efb63d745cab28c73dc887c5"
     },
     {
+      "path": "supabase/config.toml",
+      "before_sha256": "48d26772f94be632f94c0ce15ead5d6621f1e05df45e3f14dc618ff298e9e191",
+      "after_sha256": "cbd1a9f8bf6843e38611f9d481d47cf9faa338b6003af9f4954063f9bbc3fdb5"
+    },
+    {
       "path": "supabase/functions/_shared/vnext-daily-hook.ts",
       "before_sha256": null,
       "after_sha256": "3903460c835d9fb0df749ebf050409bff56144aafbc6423bf1ac58dfc2a6bea0"
@@ -96,7 +106,7 @@
     {
       "path": "supabase/functions/recommendation-v2-forward-worker-v1/index.ts",
       "before_sha256": "f7d2b71038d713b579463e97ea585740b796740c566f21fa6b9270128b7c9677",
-      "after_sha256": "190c91e59b5434bb9f81953955414f66151592211c08cf1bb1360d8d62c61663"
+      "after_sha256": "e8c39bb557400b8dbabf76ce841984be4c9ee60b2867bb6602e4dd2260f42c58"
     },
     {
       "path": "supabase/functions/vnext-daily-research-v1/handler.ts",
@@ -106,7 +116,7 @@
     {
       "path": "supabase/functions/vnext-daily-research-v1/index.ts",
       "before_sha256": null,
-      "after_sha256": "a7fe93ff2648ae18264f8f47b14c832e40e8ec8ccf89f3d46cae6358dec2cc1d"
+      "after_sha256": "a273dfa171564af58dbf73cd605dc5cb1442654758f6695fda827a343c1e0421"
     },
     {
       "path": "supabase/migrations/20261012054120_vnext_daily_research_runtime_candidate.sql",
@@ -126,7 +136,7 @@
     {
       "path": "tests/helpers/stagedReleaseIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "e40c7b112f2b74028cdf37c59f828a3cd5f39594f012dc6a744c39e85489a4b1"
+      "after_sha256": "e8ee9501eaec013c05b06850c7cd2cf79855fbce5091a56f4cef57f6d5659bf5"
     },
     {
       "path": "tests/stagedReleaseIntegrity.test.mjs",
@@ -141,7 +151,7 @@
     {
       "path": "tests/vnextDailyWiring.test.mjs",
       "before_sha256": null,
-      "after_sha256": "4c67728778857ef3b528d8406884bce0426c0d10e720218cedd46c6915973884"
+      "after_sha256": "449026381b1dd1e1d1e07d508b1bec29642902621d61ff4effacb42a943f0d67"
     },
     {
       "path": "tests/vnextRuntimeOfficialRead.mjs",

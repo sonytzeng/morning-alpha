@@ -2,6 +2,7 @@ import { formatTaipeiTimeShort, getAccountIntradayView } from '@/hooks/useAccoun
 import type { Report } from '@/types/report';
 import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 import { isTaipeiToday } from '@/services/marketSourceHealthService';
+import { reportNewsPresentation } from '@/lib/reportNewsPresentation';
 
 interface TodayInfoCardsProps {
   todayReport: Report | null;
@@ -32,9 +33,6 @@ export default function TodayInfoCards({
   marketDataLatestAt,
   isMarketDataToday,
   marketNewsLatestAt,
-  selectedNewsCount,
-  totalNewsCount,
-  isMarketNewsToday,
   isWeekend,
   fallbackReportDate,
   isTXFAvailable,
@@ -44,6 +42,7 @@ export default function TodayInfoCards({
   const { intradayLatestAt, intradayCheckDate, hasIntradayData, isIntradayToday,
     intradayRadarStatus, intradayRadarBias } = getAccountIntradayView(projection);
   const hasTodayReport = reportedToday && projection.analysisAvailable && !projection.historical;
+  const reportNews = reportNewsPresentation(todayReport?.ai_strategy_json, hasTodayReport, projection.identity.generatedAt);
   if (todayReport && !projection.analysisAvailable) return (
     <div data-subscriber-state={projection.displayStatus} data-report-date={projection.identity.reportDate} data-revision-id={projection.identity.revisionId || ''}>
       <div className="mb-4 md:mb-5"><h2 className="text-white font-bold text-base md:text-lg mb-1">今日情報狀態</h2></div>
@@ -209,40 +208,28 @@ export default function TodayInfoCards({
         {/* Card 3: Market News */}
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
           <div className="flex items-center gap-2 mb-3">
-            <div className={`w-8 h-8 ${getFreshnessIcon(isMarketNewsToday, !!marketNewsLatestAt)} rounded-lg flex items-center justify-center border`}>
-              <i className={`ri-newspaper-line ${getFreshnessIconClass(isMarketNewsToday, !!marketNewsLatestAt)} text-sm`}></i>
+            <div className={`w-8 h-8 ${getFreshnessIcon(reportNews.accepted, !!marketNewsLatestAt)} rounded-lg flex items-center justify-center border`}>
+              <i className={`ri-newspaper-line ${getFreshnessIconClass(reportNews.accepted, !!marketNewsLatestAt)} text-sm`}></i>
             </div>
             <div>
-              <p className="text-white text-sm font-semibold">最新新聞</p>
-              <p className="text-white/30 text-[10px]">全球市場快訊</p>
+              <p className="text-white text-sm font-semibold">報告新聞</p>
+              <p className="text-white/30 text-[10px]">本份報告採用的市場背景</p>
             </div>
-            {getDataStatusLabel(isMarketNewsToday)}
+            <span className={`ml-auto text-xs font-medium ${reportNews.accepted ? 'text-forest-400' : 'text-amber-400'}`}>{reportNews.accepted ? '本報告已採用' : '採用狀態待確認'}</span>
           </div>
           {marketNewsLatestAt ? (
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
-                <span className="text-white/40 text-xs">最新時間</span>
-                <span className={`text-xs font-medium ${isMarketNewsToday ? 'text-white' : 'text-amber-400'}`}>
+                <span className="text-white/40 text-xs">最近新聞發布時間</span>
+                <span className="text-white text-xs font-medium">
                   {formatTaipeiTimeShort(marketNewsLatestAt)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-white/40 text-xs">精選新聞</span>
-                <span className="text-white text-xs font-medium">{selectedNewsCount} 則</span>
+                <span className="text-white/40 text-xs">本報告採用</span>
+                <span className="text-white text-xs font-medium">{reportNews.count === null ? '尚未確認' : `${reportNews.count} 則`}</span>
               </div>
-              {totalNewsCount > 0 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-white/40 text-xs">今日總新聞</span>
-                  <span className="text-white/50 text-xs">{totalNewsCount} 則</span>
-                </div>
-              )}
-              {!isMarketNewsToday && (
-                <p className="text-sky-400/80 text-[11px]">
-                  {isWeekend
-                    ? '目前顯示最近可用新聞；週末與非交易時段新聞量可能較少'
-                    : '最新新聞尚未更新至今日'}
-                </p>
-              )}
+              <p className="text-white/60 text-xs">新聞發布時間與報告產生時間不同；是否採用以本份正式報告為準。</p>
             </div>
           ) : (
             <p className="text-white/30 text-xs">
@@ -323,20 +310,15 @@ export default function TodayInfoCards({
 
       {/* Global status */}
       <div className="mt-4">
-        {hasTodayReport && isMarketDataToday && isMarketNewsToday && isIntradayToday && isTXFAvailable ? (
+        {hasTodayReport && isMarketDataToday && reportNews.accepted && isIntradayToday && isTXFAvailable ? (
           <div className="flex items-center gap-2 p-3 rounded-xl border border-forest-500/20 bg-forest-500/10">
             <i className="ri-checkbox-circle-line text-forest-400 text-sm"></i>
-            <span className="text-forest-300 text-xs font-medium">資料完整 — 所有來源皆已更新至今日</span>
+            <span className="text-forest-300 text-xs font-medium">今日市場與盤中資料已更新，報告已採用可核對的新聞。</span>
           </div>
-        ) : hasTodayReport && isMarketDataToday && isMarketNewsToday && isIntradayToday && !isTXFAvailable ? (
+        ) : hasTodayReport && isMarketDataToday && reportNews.accepted && isIntradayToday && !isTXFAvailable ? (
           <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-500/20 bg-amber-500/10">
             <i className="ri-error-warning-line text-amber-400 text-sm"></i>
             <span className="text-amber-300 text-xs font-medium">TXF 暫缺，不影響大盤方向，但降低期貨確認度</span>
-          </div>
-        ) : hasTodayReport && totalNewsCount >= 30 && selectedNewsCount < 3 ? (
-          <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-500/20 bg-amber-500/10">
-            <i className="ri-error-warning-line text-amber-400 text-sm"></i>
-            <span className="text-amber-300 text-xs font-medium">今日新聞已更新（{totalNewsCount} 則），但 AI 精選較少（{selectedNewsCount} 則），目前以最新新聞輔助判斷</span>
           </div>
         ) : hasTodayReport ? (
           <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-500/20 bg-amber-500/10">

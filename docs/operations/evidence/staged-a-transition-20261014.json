@@ -1,0 +1,184 @@
+{
+  "schema": "STAGED_RELEASE_240_V1",
+  "batch": "A",
+  "base": "f41e117ea109e09ae083ef2c692946a18aca2dcc",
+  "files": [
+    {
+      "path": ".github/workflows/staged-release-240.yml",
+      "before_sha256": "85ed69d20b5d7ab1798036e3ae5065d414c91d3e5cb316b763d4a3e36f14dcb0",
+      "after_sha256": "57bdeeecc1fe69b8247600f3956a2605240a22cf04c7a6d7aa42b638c69950e2"
+    },
+    {
+      "path": "docs/operations/release-a-20261014.md",
+      "before_sha256": null,
+      "after_sha256": "b3bce0f23ff98f35f01af8b46d3d1b2483af23fb8bfd697a13911b1de157f607"
+    },
+    {
+      "path": "scripts/releases/staged-regression.mjs",
+      "before_sha256": "66a5b805006ee7a0901f734ee39903295f6faec3bb5cffb7ba1e4eae374c1614",
+      "after_sha256": "60782e7adc9981afc03ca5449a0f985d42ce0727619e4145f1293d63e0c081de"
+    },
+    {
+      "path": "src/components/feature/Footer.tsx",
+      "before_sha256": "47e73db25341214964adfd99b39e0b78755f0304e6facdfef13cfa92a5813622",
+      "after_sha256": "c9634e8072c983d598f0b652d9ccaa7e122068524861f539403703dfa24372f6"
+    },
+    {
+      "path": "src/components/feature/Navbar.tsx",
+      "before_sha256": "31a791bd6a6b0f5b8fa41d6b4fb939e3970c19cd2cd62c093876d81b4b3bff8c",
+      "after_sha256": "a70fef7d3e750189f182a15b332462f9b0dae240b4ccd6729b91ea253c7d4a00"
+    },
+    {
+      "path": "src/features/decision-v1/DecisionBrief.tsx",
+      "before_sha256": "7ecd1a35a881b0b3faef3f5d5a917edd05fb013721dcdf679bafdce28da6d105",
+      "after_sha256": "d856e5faa36b2f8923c221beccd5e3317b812178efc32bd14482f70316d6de7e"
+    },
+    {
+      "path": "src/features/decision-v1/subscriber.css",
+      "before_sha256": "b07d8b358d80078cf8642463df148e100989efefd7d0056eb814c2ed96dbd182",
+      "after_sha256": "449062502d0884e0b1cacef02f081a0907d9e2e08353f3537cf45d8afff32b62"
+    },
+    {
+      "path": "src/features/research/cockpit.ts",
+      "before_sha256": "544bb7235241ba3fae0b8067c6b4362f02eff41c620828fcd8d17f59d2da150b",
+      "after_sha256": "1e18dab897e2b56ee434dc31c1d2e6cf4e93a0988cdf82f68e07e4ec2804e961"
+    },
+    {
+      "path": "src/lib/historicalReportCardPresentation.ts",
+      "before_sha256": null,
+      "after_sha256": "4fd37c4af4e1d5d8f6de234ca52388e11f2355d7253498f4b09276a37f3a72a6"
+    },
+    {
+      "path": "src/lib/historicalReportEvidencePresentation.ts",
+      "before_sha256": null,
+      "after_sha256": "4982f59111364ce70f8e535f8e3b421eaf7a7183a25f672cf9ac224e953b354e"
+    },
+    {
+      "path": "src/lib/performanceDirectionPresentation.ts",
+      "before_sha256": null,
+      "after_sha256": "ca77a4c370cfcb113461c63623b194e6f30ef797d5adff9099a8e38d2d3a52c4"
+    },
+    {
+      "path": "src/lib/reportNewsPresentation.ts",
+      "before_sha256": null,
+      "after_sha256": "dc478808ae1729c72f980e7b1a278732c8591b75f1d3eaa87dc281d07ab0fde5"
+    },
+    {
+      "path": "src/pages/account/components/MorningHeroCard.tsx",
+      "before_sha256": "db29ea04c30df2cf1891043ebd39ec4581c060b315351d2fda08e42f9fc4007e",
+      "after_sha256": "6457935f9117a27758a8ca65f158f2c259f875c0376a0eef80772d73587a7472"
+    },
+    {
+      "path": "src/pages/account/components/TodayInfoCards.tsx",
+      "before_sha256": "1a0c61ddbef3891bf0a2fcf7dac65e2283ff03cbc1aa7b456127416f2a3e8037",
+      "after_sha256": "6f18e980d62f4840c8364d800776f719040ce099cc8b4a29a83f6a86fd96f2cc"
+    },
+    {
+      "path": "src/pages/admin/analysis/OwnerCockpit.tsx",
+      "before_sha256": "4f5e5c2346c786e40a661fb0f07e03313340e6f720fca7fc91cfbf5243d80fd1",
+      "after_sha256": "68637a4827c5d13b0216d46191ac516c5bdf6e4eebd6b7141718b857c2cc7020"
+    },
+    {
+      "path": "src/pages/admin/scripts/page.tsx",
+      "before_sha256": "4e67e8081db3490a6a01d4ed96f06d08a869dee61c158064d796e6e455bc9f07",
+      "after_sha256": "cc41df1adaa22524f1c90d564af561899b38e1b833fa52c95163fae61e640b49"
+    },
+    {
+      "path": "src/pages/home/page.tsx",
+      "before_sha256": "caa7c79fc292a5e81c10f7895917c71c76383b3b4c778a9d2b47ea7df6e71034",
+      "after_sha256": "01e0102570435fd9dd81bc2be635bf51f2dda7ccd738596b1b58df3a1e456fa6"
+    },
+    {
+      "path": "src/pages/performance/page.tsx",
+      "before_sha256": "31ed72ef34f9801104b4235d6ca8a3617322334dbb8539736a6b9e76cff028e6",
+      "after_sha256": "3d01ba9cbfd96cd2e42b1cfbd1423bb800f3ea8e989659a08f1329e4870e2975"
+    },
+    {
+      "path": "src/pages/pricing/Pricing.tsx",
+      "before_sha256": "ebec2208acc1c596d41c986c1f8eea8a056450e80cd7b1b09972767591e5e4bf",
+      "after_sha256": "e4050cbe3289e91564a4f1b2135440171299b15c28b07555a0e6aac1af0d7f23"
+    },
+    {
+      "path": "src/pages/report/TodayReport.tsx",
+      "before_sha256": "b488264dcdf08680c950b89512a93c9785903f5227b822fa129a8e33cce63556",
+      "after_sha256": "dcc11ebf664674d8f04c42e1d4098cd601242c6ddf44b8a19a373ad7f978a6ef"
+    },
+    {
+      "path": "src/pages/reports/ReportDetail.tsx",
+      "before_sha256": "ded54c13a090d039257868f61c97e273d73000bf4a6dfe86de144baffb1ed12f",
+      "after_sha256": "8fe59ab61c2268d2dc0e2229d5b2b7d3944455efcddedc61ec082b7403db80d3"
+    },
+    {
+      "path": "src/pages/reports/ReportsCenter.tsx",
+      "before_sha256": "c7ac4c1a88f8d4e9b735e5f5e6221bbf0e5addcd7183e6970e1344a7ee8cbdaa",
+      "after_sha256": "2a0ff2456d2b0753b3cd5a27f3394080eae8888be3500695f651d4714c0a494c"
+    },
+    {
+      "path": "supabase/migrations/20261013073004_operational_acceptance_calendar_guard_v1.sql",
+      "before_sha256": null,
+      "after_sha256": "ab375e0e172734dbca6d54064261bb111b7ba993c903aee17ee6a810adca140d"
+    },
+    {
+      "path": "tests/acceptanceCalendarDatabase.integration.mjs",
+      "before_sha256": null,
+      "after_sha256": "ed2a85859b5d73a1e7cd802e4a0ecde8ed23e180cea3bcdfec963b65ae7e2034"
+    },
+    {
+      "path": "tests/accountSubscriberProjection.test.mjs",
+      "before_sha256": "68e7618483b99751fdc3a76ef7c5d772b0de002ea91945f297a8f853f8f4ec31",
+      "after_sha256": "d1d1469011c0bb7367dce0cbb2741a06a56ebe86550673c22260c9dc5dc054fa"
+    },
+    {
+      "path": "tests/ctoConfidencePresentation.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "f252aac4eea7787746df2adb01f8ee76fe6cee75ed90065f48c351753f184d41"
+    },
+    {
+      "path": "tests/ctoHistoricalEvidencePresentation.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "db4cc5a31d429d2d6087ad3476424d03c7977ff7d8c0086480167d793653e912"
+    },
+    {
+      "path": "tests/ctoPerformancePresentation.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "90affee781f8561ee269c853d7138149dd11ba566459b2cf6332dfa0487af468"
+    },
+    {
+      "path": "tests/ctoPricingPresentation.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "da366b6b655bbb0d3da6cbae457218d71f6fb9931952196450e665204307853b"
+    },
+    {
+      "path": "tests/helpers/marketNewsReportIntegrity.mjs",
+      "before_sha256": "6d6ae0a0c4126e5157f88dba1d3e7c7e41bb4a8df63b2c24dc59212fb57ac9d1",
+      "after_sha256": "1909f3e51c3d810e91fa4a3b06ab86095726eca4256fa23178cff9eaaf76a5ad"
+    },
+    {
+      "path": "tests/helpers/stagedReleaseIntegrity.mjs",
+      "before_sha256": "78694b7f1023a0d37ed94cf1f11f28f09eb31fe38b4107e446a031267bd6ca48",
+      "after_sha256": "d560beeccdc4f79e2f1f1a9e9cf5e21d3120a28058046ae109b4b0d3793030aa"
+    },
+    {
+      "path": "tests/marketNewsReportIntegration.test.mjs",
+      "before_sha256": "c93ccde664c8485fb67a708ec45ff706854dcc366872c54d806671147cdfc3e8",
+      "after_sha256": "560bd20f986a11c2717bfe6f0cfea0d5bcb8481d1308806e62a2aa3ab66a352d"
+    },
+    {
+      "path": "tests/ownerCockpit.test.mjs",
+      "before_sha256": "7cc0c78576ba6e885a482ef291ff3df45dfb657842ba8546da3237e4784ebbd7",
+      "after_sha256": "b1367752d55f9a88af86a637b0272ec0cae9c5cc53252df8467d6482b470438f"
+    },
+    {
+      "path": "tests/stagedReleaseIntegrity.test.mjs",
+      "before_sha256": "b1edc2f18dccd98f402a54ce60aabe25ec89c68b4964835289efea55bf798660",
+      "after_sha256": "3d3f17bb4b825f2224b8bab8e5c67e2fdd75c2a7e18aa792c18a0d113a86f09a"
+    }
+  ],
+  "production_authorized": false,
+  "member_publication_authorized": false,
+  "secret_change": false,
+  "cron_change": false,
+  "auth_model_change": false,
+  "recommendation_threshold_change": false,
+  "historical_data_change": false
+}

@@ -30,6 +30,7 @@ const targets={
   ],
   "C": [
     "tests/vnextDailyWiring.test.mjs",
+    "tests/recommendationV2ForwardHandler.test.mjs",
     "tests/entryOpportunity.test.mjs",
     "tests/recommendationV2Forward.test.mjs"
   ]

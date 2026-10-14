@@ -101,6 +101,7 @@ export const STAGED_SCOPES=Object.freeze({
     "tests/fixtures/vnext.mjs",
     "tests/helpers/marketNewsReportIntegrity.mjs",
     "tests/helpers/stagedReleaseIntegrity.mjs",
+    "tests/recommendationV2ForwardHandler.test.mjs",
     "tests/stagedReleaseIntegrity.test.mjs",
     "tests/vnextDailyDatabase.integration.mjs",
     "tests/vnextDailyWiring.test.mjs",

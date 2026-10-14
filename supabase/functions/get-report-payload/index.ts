@@ -22,6 +22,7 @@ import { resolveCanonicalDataQuality } from "../_shared/production-architecture-
 import { canonicalAdminReaderProjection } from "../_shared/research-pipeline-contract.ts";
 import { loadDecisionEvidence } from "../_shared/decision-v1-data.ts";
 import { buildEvidenceDecision, projectEvidenceDecision, sealEvidenceDecision } from "../_shared/decision-v1-evidence.ts";
+import { persistedRecommendationReaderInput } from "../_shared/recommendation-stock-evidence.ts";
 import { publicCheckpointInputs, publicMarketInput, buildPublicMarketReadModel } from "../_shared/public-market-projection.ts";
 import { recordPublicProjection } from "../_shared/public-projection-recorder.ts";
 import { createSubscriberState, getSubscriberReportProjection, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE } from "../../../shared/subscriber-state-contract.ts";
@@ -1488,7 +1489,8 @@ Deno.serve(async (req: Request) => {
   }, decisionIdentity);
   const payload = buildPayload(report, tier, context);
   const memberRows = asArray(payload.today_beneficiary_stocks);
-  const decisionEvidence = projectEvidenceDecision(await sealEvidenceDecision(buildEvidenceDecision(realEvidence, decisionIdentity)), {
+  const persistedEvidence = await persistedRecommendationReaderInput(realEvidence, decisionIdentity, parseAi(report.ai_strategy_json));
+  const decisionEvidence = projectEvidenceDecision(await sealEvidenceDecision(buildEvidenceDecision(persistedEvidence.data, decisionIdentity)), {
     companyContentAllowed: tier !== "free" && publicMetadata.premium_content_status === "eligible"
       && asObject(publicMetadata.recommendation_gate).eligible === true
       && isCanonicalMemberRevisionEligible(context),

@@ -8,7 +8,9 @@ permissions:
 jobs:
   shadow-analysis:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Exact live predecessor-chain checks plus two fresh DB/Auth replays.
+    # Preserve every assertion; a scoped successor must not be canceled at 10m.
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:17

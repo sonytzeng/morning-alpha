@@ -1,0 +1,74 @@
+{
+  "schema": "STAGED_RELEASE_240_V1",
+  "batch": "B1",
+  "base": "2a5d461ec3d98bfc8bc3177a295c95e299b7bda2",
+  "files": [
+    {
+      "path": ".github/workflows/staged-release-240.yml",
+      "before_sha256": null,
+      "after_sha256": "85ed69d20b5d7ab1798036e3ae5065d414c91d3e5cb316b763d4a3e36f14dcb0"
+    },
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "before_sha256": "18080e6a079c2c9a4732ba63a9d22c892ae050546d7e64ef03b1d2f4318c6e8e",
+      "after_sha256": "e3105a1ba7f6a7980acf68a14a1032c8a18f42ef3c04145194d4f9a6e1b2213b"
+    },
+    {
+      "path": "docs/operations/release-b1-20261014.md",
+      "before_sha256": null,
+      "after_sha256": "0e15ee4ce339273a1d7532c89499f1d1ed79c7a4daa67213e3aa8a8c540c2c04"
+    },
+    {
+      "path": "scripts/releases/staged-regression.mjs",
+      "before_sha256": null,
+      "after_sha256": "9fcc0da569d5269c99f431929fa5c47619bf6f61601a0c96d4d64839aef80cb6"
+    },
+    {
+      "path": "supabase/functions/_shared/decision-v1-evidence.ts",
+      "before_sha256": "43bd97d3ae40a453a57c6dc070c6effb6bf152c8d4baf7dd72a85645cb354d81",
+      "after_sha256": "2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-stock-evidence.ts",
+      "before_sha256": "5bed905f5db389b0e44db3bf86e11964ca7fa61282ed8d67f24f9d27a7d5311d",
+      "after_sha256": "67e90e451c26265136fd947964170dde253cdd97f9e287d17040f04c61d17a42"
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "before_sha256": "ef052ea0366bf95d5a8b5b8aa33bc251956a1c5afc165103f10c6f3969f954e8",
+      "after_sha256": "eb3008ceb7e72cc007680f9885ca56e02e1feb7e85a16c8758a0542c75e92d79"
+    },
+    {
+      "path": "tests/helpers/marketNewsReportIntegrity.mjs",
+      "before_sha256": "83a9e27a226ec72b199201d8d8e1062503188972b9bf4d39f41361edacbda574",
+      "after_sha256": "6d6ae0a0c4126e5157f88dba1d3e7c7e41bb4a8df63b2c24dc59212fb57ac9d1"
+    },
+    {
+      "path": "tests/helpers/stagedReleaseIntegrity.mjs",
+      "before_sha256": null,
+      "after_sha256": "e40c7b112f2b74028cdf37c59f828a3cd5f39594f012dc6a744c39e85489a4b1"
+    },
+    {
+      "path": "tests/recommendationReaderBinding.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "76d51302e783351f334465dd8ec62cbe1e3009c0beaaedc6aa2c55fede2d1cde"
+    },
+    {
+      "path": "tests/recommendationReaderFreshDatabase.integration.mjs",
+      "before_sha256": null,
+      "after_sha256": "09409f71f3b0ce72b89fdfee7d074181bbbf2d9004cd54fc20d49ae151013e1d"
+    },
+    {
+      "path": "tests/stagedReleaseIntegrity.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "b1edc2f18dccd98f402a54ce60aabe25ec89c68b4964835289efea55bf798660"
+    }
+  ],
+  "production_authorized": false,
+  "member_publication_authorized": false,
+  "secret_change": false,
+  "cron_change": false,
+  "auth_model_change": false,
+  "recommendation_threshold_change": false,
+  "historical_data_change": false
+}

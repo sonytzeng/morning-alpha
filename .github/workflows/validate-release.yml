@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     # Full immutable predecessor-chain validation plus isolated database replay.
     # Keep every assertion; cap runtime without cutting the acceptance suite.
-    timeout-minutes: 45
+    timeout-minutes: 90
     services:
       isolated-postgres:
         image: postgres:17
@@ -41,7 +41,11 @@ jobs:
       - run: npm ci
       - run: npm run type-check
       - run: npm run lint
-      - run: npm run test:public
+      # Owner requested affected regression, not another five-hour whole-site audit.
+      # Exact manifest admission precedes selection; dispatch still runs full suite.
+      - run: node scripts/releases/staged-regression.mjs
+        env:
+          MA_FULL_REGRESSION: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
       - name: Preserved incident captures and provider-shaped replay boundaries
         run: >-
           node --test

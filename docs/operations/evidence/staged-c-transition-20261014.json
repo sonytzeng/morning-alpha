@@ -1,0 +1,159 @@
+{
+  "schema": "STAGED_RELEASE_240_V1",
+  "batch": "C",
+  "base": "2a5d461ec3d98bfc8bc3177a295c95e299b7bda2",
+  "files": [
+    {
+      "path": ".github/workflows/staged-release-240.yml",
+      "before_sha256": null,
+      "after_sha256": "85ed69d20b5d7ab1798036e3ae5065d414c91d3e5cb316b763d4a3e36f14dcb0"
+    },
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "before_sha256": "18080e6a079c2c9a4732ba63a9d22c892ae050546d7e64ef03b1d2f4318c6e8e",
+      "after_sha256": "e3105a1ba7f6a7980acf68a14a1032c8a18f42ef3c04145194d4f9a6e1b2213b"
+    },
+    {
+      "path": "docs/operations/release-c-20261014.md",
+      "before_sha256": null,
+      "after_sha256": "622451f0c1ad652bf23fe064c480da5fd218e9639f9a87f2ae6df19749054aa4"
+    },
+    {
+      "path": "scripts/releases/staged-regression.mjs",
+      "before_sha256": null,
+      "after_sha256": "9fcc0da569d5269c99f431929fa5c47619bf6f61601a0c96d4d64839aef80cb6"
+    },
+    {
+      "path": "scripts/vnext/stock-context.mjs",
+      "before_sha256": null,
+      "after_sha256": "2235685c154329df15d608126efa5915cbfa83e60834cb7dbcb268f39bc21d77"
+    },
+    {
+      "path": "scripts/vnext/stock-evidence.mjs",
+      "before_sha256": null,
+      "after_sha256": "85fbf0f9e461ade63d49e42b8ab47c373afc9f0f5448aadea8adfa8fd27d9566"
+    },
+    {
+      "path": "src/features/vnext/contracts.ts",
+      "before_sha256": null,
+      "after_sha256": "0a89f96f209c9c235416a4b060c85b38bb6d6799ad3234ef16156537fd50d579"
+    },
+    {
+      "path": "src/features/vnext/dailyAdapter.ts",
+      "before_sha256": null,
+      "after_sha256": "11031a21752ccb6133ad7d1b2100b31cf0ba619236843a50a95d39a91a1697b8"
+    },
+    {
+      "path": "src/features/vnext/dailyIntelligence.ts",
+      "before_sha256": null,
+      "after_sha256": "22bdb3d495ec6c06fd6b2382524ef1727d6078d457fec3a2f724f15a6fc8528b"
+    },
+    {
+      "path": "src/features/vnext/dailyOutcome.ts",
+      "before_sha256": null,
+      "after_sha256": "9cadb241bf73ed54e09dd8df9504c8d1798068c5bcf0ae38bc256548169fa373"
+    },
+    {
+      "path": "src/features/vnext/dailyParsers.mjs",
+      "before_sha256": null,
+      "after_sha256": "b31419ac080da593ab7664a29b24986109fb7f7db49f887ce5e014837fdcdffa"
+    },
+    {
+      "path": "src/features/vnext/dailyRuntime.ts",
+      "before_sha256": null,
+      "after_sha256": "83d04315e319abf3a45ffed944c5f7da0482cad4dc02e32abd2f35a1e2adef65"
+    },
+    {
+      "path": "src/features/vnext/projection.ts",
+      "before_sha256": null,
+      "after_sha256": "8a238c6eacc3972f0f3927346c4081d9e2dcb4c8613bcc4cb1825a3abaf688ae"
+    },
+    {
+      "path": "src/features/vnext/publicationReadiness.ts",
+      "before_sha256": null,
+      "after_sha256": "76f8d26b07c92e84cef82459b8c94bc9dbcabfbaaa6e86b67036b351c6a67058"
+    },
+    {
+      "path": "src/features/vnext/realResearch.ts",
+      "before_sha256": null,
+      "after_sha256": "adc05e968bce6c840c132d14bec7df076d4002b031471e0175c3a9e13346125f"
+    },
+    {
+      "path": "src/features/vnext/researchFunnel.ts",
+      "before_sha256": null,
+      "after_sha256": "26e0e7e06002834bf7a853d0971147e7e1de40b3daae0cd9c8c10911e1c524c5"
+    },
+    {
+      "path": "src/features/vnext/stockResearch.ts",
+      "before_sha256": null,
+      "after_sha256": "7583c0edca56aa4c225173ab5657ce894529df34efb63d745cab28c73dc887c5"
+    },
+    {
+      "path": "supabase/functions/_shared/vnext-daily-hook.ts",
+      "before_sha256": null,
+      "after_sha256": "3903460c835d9fb0df749ebf050409bff56144aafbc6423bf1ac58dfc2a6bea0"
+    },
+    {
+      "path": "supabase/functions/recommendation-v2-forward-worker-v1/index.ts",
+      "before_sha256": "f7d2b71038d713b579463e97ea585740b796740c566f21fa6b9270128b7c9677",
+      "after_sha256": "190c91e59b5434bb9f81953955414f66151592211c08cf1bb1360d8d62c61663"
+    },
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/handler.ts",
+      "before_sha256": null,
+      "after_sha256": "f17e517249d2412fc0acf4abb415693489ea3ba5445d2aa301e7e06659e95490"
+    },
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/index.ts",
+      "before_sha256": null,
+      "after_sha256": "a7fe93ff2648ae18264f8f47b14c832e40e8ec8ccf89f3d46cae6358dec2cc1d"
+    },
+    {
+      "path": "supabase/migrations/20261012054120_vnext_daily_research_runtime_candidate.sql",
+      "before_sha256": null,
+      "after_sha256": "a3e8a7e88702bc6fdd858b1bfcdf236563f4a20b06e85d1eed5ef99016eeaac5"
+    },
+    {
+      "path": "tests/fixtures/vnext.mjs",
+      "before_sha256": null,
+      "after_sha256": "996cb34aaf64382571f04e494e44ee17941faa7052a91f5dcf29c12a8a9b66ed"
+    },
+    {
+      "path": "tests/helpers/marketNewsReportIntegrity.mjs",
+      "before_sha256": "83a9e27a226ec72b199201d8d8e1062503188972b9bf4d39f41361edacbda574",
+      "after_sha256": "6d6ae0a0c4126e5157f88dba1d3e7c7e41bb4a8df63b2c24dc59212fb57ac9d1"
+    },
+    {
+      "path": "tests/helpers/stagedReleaseIntegrity.mjs",
+      "before_sha256": null,
+      "after_sha256": "e40c7b112f2b74028cdf37c59f828a3cd5f39594f012dc6a744c39e85489a4b1"
+    },
+    {
+      "path": "tests/stagedReleaseIntegrity.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "b1edc2f18dccd98f402a54ce60aabe25ec89c68b4964835289efea55bf798660"
+    },
+    {
+      "path": "tests/vnextDailyDatabase.integration.mjs",
+      "before_sha256": null,
+      "after_sha256": "be2d517b3cb7b549929696715e168cdfe27e142f8e017ff5d6f974a02fd0ea69"
+    },
+    {
+      "path": "tests/vnextDailyWiring.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "4c67728778857ef3b528d8406884bce0426c0d10e720218cedd46c6915973884"
+    },
+    {
+      "path": "tests/vnextRuntimeOfficialRead.mjs",
+      "before_sha256": null,
+      "after_sha256": "cc7a5fda7f4995f2427544f84a08b9aaaa992d509eed346786ac107b61805cf8"
+    }
+  ],
+  "production_authorized": false,
+  "member_publication_authorized": false,
+  "secret_change": false,
+  "cron_change": false,
+  "auth_model_change": false,
+  "recommendation_threshold_change": false,
+  "historical_data_change": false
+}

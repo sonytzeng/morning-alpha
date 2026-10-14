@@ -27,6 +27,17 @@ test('same-revision saved capture restores whole candle volume; partial Core quo
  assert(!fixed.screening.rejected.some(r=>r.symbol==='2330'&&r.reasons.includes('20_DAILY_VOLUMES_MISSING')));
  assert.equal(fixed.schema_version,old.schema_version);assert.equal(fixed.direction_probability,null);
 });
+test('producer cutoff may precede commit receipt; it cannot exceed publication or change its saved clock',async()=>{
+ const {data,ai,rows}=await fixture(),published={...IDENTITY,generated_at:new Date(Date.parse(IDENTITY.generated_at)+1640).toISOString()};
+ const result=await persistedRecommendationReaderInput(data,published,ai);
+ assert.equal(result.data.quotes.length,data.quotes.length+rows.length);
+ assert(!result.data.failures.includes('PERSISTED_RECOMMENDATION_REVISION_MISMATCH'));
+ for(const clock of ['invalid',new Date(Date.parse(IDENTITY.generated_at)-1).toISOString()]){
+  const denied=await persistedRecommendationReaderInput(data,{...IDENTITY,generated_at:clock},ai);
+  assert.equal(denied.data.quotes.length,data.quotes.length);
+  assert(denied.data.failures.includes('PERSISTED_RECOMMENDATION_REVISION_MISMATCH'));
+ }
+});
 test('revision/date/cutoff/generated-at mismatches never reuse producer data',async()=>{
  for(const mutate of [x=>x.revision_id='other',x=>x.correlation_id='other',x=>x.decision_v1.revision_id='other',x=>x.decision_v1.report_date='2026-09-08',x=>x.recommendation_stock_evidence.cutoff='2026-09-07T02:01:00Z',x=>x.decision_v1.generated_at='2026-09-07T02:01:00Z']){
   const {data,ai}=await fixture();mutate(ai);const r=await persistedRecommendationReaderInput(data,IDENTITY,ai);assert.equal(r.data.quotes.length,data.quotes.length);assert(r.data.failures.includes('PERSISTED_RECOMMENDATION_REVISION_MISMATCH'));

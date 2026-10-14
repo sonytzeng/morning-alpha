@@ -4,6 +4,11 @@
   "base": "2a5d461ec3d98bfc8bc3177a295c95e299b7bda2",
   "files": [
     {
+      "path": ".github/workflows/analysis-intelligence.yml",
+      "before_sha256": "e795babb8dcbb41a639ddc6e083254a1dc3bfb7ed42cdd02f3541b83b9c2073f",
+      "after_sha256": "63bf70c71c6715f53ae2f8bdca62624d54c8bb0c6dfc5d96ca1f044051abf806"
+    },
+    {
       "path": ".github/workflows/staged-release-240.yml",
       "before_sha256": null,
       "after_sha256": "85ed69d20b5d7ab1798036e3ae5065d414c91d3e5cb316b763d4a3e36f14dcb0"
@@ -16,7 +21,7 @@
     {
       "path": "docs/operations/release-b1-20261014.md",
       "before_sha256": null,
-      "after_sha256": "0e15ee4ce339273a1d7532c89499f1d1ed79c7a4daa67213e3aa8a8c540c2c04"
+      "after_sha256": "570662bcee0cefd291ec3720bf8ec5ae14be6179975df27e762b9619c53032ce"
     },
     {
       "path": "scripts/releases/staged-regression.mjs",
@@ -31,7 +36,7 @@
     {
       "path": "supabase/functions/_shared/recommendation-stock-evidence.ts",
       "before_sha256": "5bed905f5db389b0e44db3bf86e11964ca7fa61282ed8d67f24f9d27a7d5311d",
-      "after_sha256": "67e90e451c26265136fd947964170dde253cdd97f9e287d17040f04c61d17a42"
+      "after_sha256": "86be1e626de3bf5c746aa10d5abcfb99dbb8b86c7ab2e6dbb7151335170c47d1"
     },
     {
       "path": "supabase/functions/get-report-payload/index.ts",
@@ -46,12 +51,12 @@
     {
       "path": "tests/helpers/stagedReleaseIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "e40c7b112f2b74028cdf37c59f828a3cd5f39594f012dc6a744c39e85489a4b1"
+      "after_sha256": "e8ee9501eaec013c05b06850c7cd2cf79855fbce5091a56f4cef57f6d5659bf5"
     },
     {
       "path": "tests/recommendationReaderBinding.test.mjs",
       "before_sha256": null,
-      "after_sha256": "76d51302e783351f334465dd8ec62cbe1e3009c0beaaedc6aa2c55fede2d1cde"
+      "after_sha256": "f76f6ea35f2df79e47100202932435a442c8ab226acb191e2b4ac132d204f146"
     },
     {
       "path": "tests/recommendationReaderFreshDatabase.integration.mjs",

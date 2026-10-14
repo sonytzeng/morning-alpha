@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 export const STAGED_BASE='2a5d461ec3d98bfc8bc3177a295c95e299b7bda2';
 export const STAGED_SCOPES=Object.freeze({
   "A": [
+    ".github/workflows/analysis-intelligence.yml",
     ".github/workflows/staged-release-240.yml",
     ".github/workflows/validate-release.yml",
     "docs/operations/release-a-20261014.md",
@@ -38,10 +39,12 @@ export const STAGED_SCOPES=Object.freeze({
     "tests/ctoPricingPresentation.test.mjs",
     "tests/helpers/marketNewsReportIntegrity.mjs",
     "tests/helpers/stagedReleaseIntegrity.mjs",
+    "tests/marketNewsReportIntegration.test.mjs",
     "tests/ownerCockpit.test.mjs",
     "tests/stagedReleaseIntegrity.test.mjs"
   ],
   "B1": [
+    ".github/workflows/analysis-intelligence.yml",
     ".github/workflows/staged-release-240.yml",
     ".github/workflows/validate-release.yml",
     "docs/operations/release-b1-20261014.md",
@@ -56,6 +59,7 @@ export const STAGED_SCOPES=Object.freeze({
     "tests/stagedReleaseIntegrity.test.mjs"
   ],
   "B2": [
+    ".github/workflows/analysis-intelligence.yml",
     ".github/workflows/staged-release-240.yml",
     ".github/workflows/validate-release.yml",
     "docs/operations/release-b2-20261014.md",
@@ -66,9 +70,11 @@ export const STAGED_SCOPES=Object.freeze({
     "tests/helpers/stagedReleaseIntegrity.mjs",
     "tests/lineProductionPromotion.test.mjs",
     "tests/lineTransportRecoveryDatabase.integration.mjs",
+    "tests/marketNewsReportIntegration.test.mjs",
     "tests/stagedReleaseIntegrity.test.mjs"
   ],
   "C": [
+    ".github/workflows/analysis-intelligence.yml",
     ".github/workflows/staged-release-240.yml",
     ".github/workflows/validate-release.yml",
     "docs/operations/release-c-20261014.md",
@@ -86,6 +92,7 @@ export const STAGED_SCOPES=Object.freeze({
     "src/features/vnext/realResearch.ts",
     "src/features/vnext/researchFunnel.ts",
     "src/features/vnext/stockResearch.ts",
+    "supabase/config.toml",
     "supabase/functions/_shared/vnext-daily-hook.ts",
     "supabase/functions/recommendation-v2-forward-worker-v1/index.ts",
     "supabase/functions/vnext-daily-research-v1/handler.ts",

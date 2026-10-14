@@ -182,14 +182,15 @@ export async function persistedRecommendationReaderInput(data:EvidenceData,ident
  const capture=obj(ai.recommendation_stock_evidence),decision=obj(ai.decision_v1);
  const fail=(reason:string)=>({data:{...data,failures:[...data.failures,reason]},priorWatch:null});
  if(capture.contract!=='RECOMMENDATION_STOCK_EVIDENCE_V1')return fail('PERSISTED_RECOMMENDATION_UNAVAILABLE');
+ const savedCutoff=Date.parse(String(capture.cutoff)),publishedCutoff=Date.parse(identity.generated_at);
  // Producer revision is its correlation/run ID, NOT the canonical snapshot ID.
  // Bind BOTH namespaces through the same saved report; never equate them.
  if(decision.schema_version!=='decision-evidence-v1'||ai.revision_id!==identity.revision_id
   ||typeof ai.correlation_id!=='string'||!ai.correlation_id||decision.revision_id!==ai.correlation_id
   ||decision.report_date!==identity.report_date||capture.business_date!==identity.report_date
-  ||Date.parse(String(capture.cutoff))!==Date.parse(identity.generated_at)
-  ||Date.parse(String(ai.generated_at))!==Date.parse(identity.generated_at)
-  ||Date.parse(String(decision.generated_at))!==Date.parse(identity.generated_at))return fail('PERSISTED_RECOMMENDATION_REVISION_MISMATCH');
+  ||!Number.isFinite(savedCutoff)||!Number.isFinite(publishedCutoff)||savedCutoff>publishedCutoff
+  ||Date.parse(String(ai.generated_at))!==savedCutoff
+  ||Date.parse(String(decision.generated_at))!==savedCutoff)return fail('PERSISTED_RECOMMENDATION_REVISION_MISMATCH');
  if(!Array.isArray(capture.captures)||capture.captures.length>RECOMMENDATION_UNIVERSE.length*2)return fail('PERSISTED_RECOMMENDATION_CAPTURE_LIMIT');
  const valid:Row[]=[],seen=new Set<string>();
  for(const value of capture.captures){
@@ -197,7 +198,7 @@ export async function persistedRecommendationReaderInput(data:EvidenceData,ident
   if(seen.has(key))return fail('PERSISTED_RECOMMENDATION_DUPLICATE_CAPTURE');seen.add(key);
   if(c.status!=='PASS'){valid.push(c);continue;}
   if(!['historical/candles','intraday/quote'].includes(String(c.endpoint))||!Array.isArray(c.rows)||c.rows.length===0||c.rows.length>250
-    ||!Number.isFinite(Date.parse(String(c.received_at)))||Date.parse(String(c.received_at))>Date.parse(identity.generated_at)
+    ||!Number.isFinite(Date.parse(String(c.received_at)))||Date.parse(String(c.received_at))>savedCutoff
     ||!c.rows.every(value=>{const row=obj(value),raw=obj(row.raw_payload);return raw.endpoint===c.endpoint
       &&typeof raw.source_hash==='string'&&/^[a-f0-9]{64}$/.test(raw.source_hash)
       &&Number.isFinite(Date.parse(String(row.available_at)))&&Date.parse(String(row.available_at))===Date.parse(String(c.received_at))

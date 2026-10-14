@@ -6,6 +6,7 @@ import { callGetReportHistory } from '@/services/entitlementService';
 import { SubscriberAnswer } from '@/features/decision-v1/DecisionBrief';
 import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 import { selectPublicPerformanceRows, type PublicPerformanceSelection } from '@/lib/performanceJournalProjection';
+import { performanceClosingDirection } from '@/lib/performanceDirectionPresentation';
 
 type JournalOutcome = 'complete' | 'partial' | 'failed' | 'insufficient';
 
@@ -184,7 +185,7 @@ function buildEntry(selection: PublicPerformanceSelection): DecisionJournalEntry
     hasClosingVerification,
     hasCompleteVerification,
     marketBias: publicPerformanceText(projection.marketDecision.bias || projection.statusLabel),
-    closingSummary: projection.closing.complete ? publicPerformanceText(firstText(closing?.actual_direction, closing?.verdict_label, directionFromChange(taiexChange))) : '尚未完成收盤驗證',
+    closingSummary: projection.closing.complete ? publicPerformanceText(firstText(performanceClosingDirection(closing?.actual_direction), closing?.verdict_label, directionFromChange(taiexChange))) : '尚未完成收盤驗證',
     correctionSummary: publicPerformanceText(firstText(wrong[0], adjustment[0], '本日尚未留下結構化修正')),
     confidence: projection.confidence.value,
     statusNote,

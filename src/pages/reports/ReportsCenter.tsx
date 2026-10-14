@@ -10,6 +10,7 @@ import type { Report } from '@/types/report';
 import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/V11ObservationSection';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
 import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
+import { historicalReportCardPresentation } from '@/lib/historicalReportCardPresentation';
 
 const publicReportText = (value: unknown) => humanizePublicRuntimeText(value);
 
@@ -98,7 +99,8 @@ export default function ReportsCenter() {
 
   const renderReportCard = (r: Report, emphasis: 'featured' | 'compact' = 'compact') => {
     const projection = getSubscriberReportProjection(r, { historical: true });
-    const displayBias = projection.marketDecision.label;
+    const cardPresentation = historicalReportCardPresentation(projection);
+    const displayBias = cardPresentation.direction;
     const color = getSentimentColor(projection.marketDecision.bias ?? '');
     const vLabel = projectedClosingLabel(projection.closing);
     const summary = previewText(r);
@@ -134,7 +136,7 @@ export default function ReportsCenter() {
 
               <div className="min-w-0">
                 <h3 className="ma-card-title text-white group-hover:text-amber-200 transition-colors">
-                  Morning Alpha {projection.title}｜{projection.identity.reportDate}
+                  {cardPresentation.title}｜{projection.identity.reportDate}
                 </h3>
                 {summary && (
                   <p className={`ma-body mt-2 text-white/65 ${emphasis === 'featured' ? 'line-clamp-3' : 'line-clamp-2'}`}>

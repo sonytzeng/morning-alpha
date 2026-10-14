@@ -15,6 +15,11 @@ export function cockpitToday(lab:TradingLabData|null,entry:EntryEvaluation|null,
 }
 export const plainAction=(s:string)=>({WAIT:'先等條件確認，不急著進場',AVOID:'先避開風險，暫不進場',ENTER:'依正式條件研究機會，不代表直接買入'}[s]||'操作條件尚未確認，先不推定');
 export const plainRegime=(s:string)=>({range:'震盪／盤整',trending:'趨勢行情',volatile:'波動較大',risk_off:'風險偏高'}[s]||'市場型態尚未確認');
+// Display vocabulary only: preserve direction, signs, numbers and research meaning.
+export function plainEvidence(text:string){
+ const labels:Record<string,string>={UP:'上漲',DOWN:'下跌',FLAT:'持平',SOX:'費城半導體指數',SPX:'標普500指數',TSM:'台積電ADR',NVDA:'輝達'};
+ return text.replace(/\b(?:UP|DOWN|FLAT|SOX|SPX|TSM|NVDA)\b/g,key=>labels[key]);
+}
 export function filterResearch(candidates:EntryResult[],query:string,status:string){
  const q=query.trim().toLocaleLowerCase();return candidates.filter(c=>(status==='ALL'||c.status===status)&&(!q||`${c.symbol} ${c.name||''}`.toLocaleLowerCase().includes(q)));
 }

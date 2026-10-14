@@ -24,13 +24,14 @@
 .ma-subscriber-three-answers h2 { font-size: 13px; color: #a9b6c5; margin-bottom: 6px; }
 .ma-subscriber-three-answers strong { font-size: 19px; line-height: 1.55; }
 .ma-subscriber-three-answers p { font-size: 13px; line-height: 1.7; color: #a9b6c5; }
-.ma-subscriber-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block: 1px solid #20364a; padding: 16px 0; gap: 16px; }
+.ma-subscriber-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid #20364a; padding: 16px 0; gap: 16px; }
 .ma-subscriber-metrics dt { font-size: 13px; color: #a9b6c5; }
 .ma-subscriber-metrics dd { margin: 6px 0 0; font-size: 18px; color: #dbeafe; font-variant-numeric: tabular-nums; }
 .ma-subscriber-market { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; border-block: 1px solid #20364a; padding: 18px 0; }
 .ma-subscriber-market dt { font-size: 13px; color: #a9b6c5; }
 .ma-subscriber-market dd { font-size: 22px; color: #dbeafe; margin-top: 8px; font-variant-numeric: tabular-nums; }
 .ma-subscriber-caption { margin-top: 12px; font-size: 13px; line-height: 1.7; color: #a9b6c5; }
+.ma-subscriber-caption summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
 .ma-subscriber-caption button { min-height: 44px; padding: 8px 12px; color: #93c5fd; text-decoration: underline; text-underline-offset: 4px; }
 .ma-subscriber-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
 .ma-subscriber-actions button { min-height: 44px; padding: 8px 12px; color: #93c5fd; border: 1px solid #20364a; border-radius: 10px; text-decoration: none; }

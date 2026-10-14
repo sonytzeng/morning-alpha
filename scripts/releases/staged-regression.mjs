@@ -1,6 +1,8 @@
 import {spawnSync} from 'node:child_process';
+import {appendFileSync} from 'node:fs';
 import {stagedTransition} from '../../tests/helpers/stagedReleaseIntegrity.mjs';
 const release=stagedTransition();
+if(process.env.GITHUB_OUTPUT&&release)for(const batch of ['A','B1','B2','C'])appendFileSync(process.env.GITHUB_OUTPUT,batch+'='+release.manifests.some(m=>m.batch===batch)+'\n');
 if(!release||process.env.MA_FULL_REGRESSION==='1'){
  const r=spawnSync('npm',['run','test:public'],{stdio:'inherit'});if(r.error)throw r.error;process.exit(r.status??1);
 }
@@ -29,6 +31,7 @@ const targets={
     "tests/lineFinalUsability.test.mjs"
   ],
   "C": [
+    "tests/vnextDailyRuntimeRecovery.test.mjs",
     "tests/vnextDailyWiring.test.mjs",
     "tests/recommendationV2ForwardHandler.test.mjs",
     "tests/entryOpportunity.test.mjs",

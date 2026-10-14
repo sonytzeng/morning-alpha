@@ -38,10 +38,11 @@ try{
  checks.push('Fresh exact schema; original functions/ACL/policies unchanged; replay safely refused; anon/member raw/RPC DENY');
  sql("insert into public.line_subscribers(id,line_user_id,source)select md5('ISOLATED-LINE-'||i)::uuid,'ISOLATED-LINE-'||i,'ISOLATED'from generate_series(1,4)i;");
  const enqueue=(date,count=2)=>sql("insert into public.line_delivery_outbox(report_date,line_subscriber_id,line_user_id,push_type,idempotency_key,payload)select '"+date+"',id,line_user_id,'daily_report','"+date+":'||id,'{\"message\":{\"type\":\"text\",\"text\":\"ISOLATED_ONLY\"},\"message_preview\":\"ISOLATED_ONLY\"}'from public.line_subscribers order by id limit "+count);
- const database={async rpc(name,p){
+ const database={rpc(name,p){
   assert(['claim_line_transport_request_v1','complete_line_transport_request_v1'].includes(name));
   const args=name.startsWith('claim')?[p.p_report_date,p.p_decision_snapshot_id,p.p_push_type,p.p_limit,p.p_lease_seconds]:[p.p_request,p.p_lease,p.p_status,p.p_error,p.p_accepted_request_id];
-  try{return {data:JSON.parse(sql('set role service_role;select public.'+name+'('+args.map(literal).join(',')+')')),error:null};}catch{return {data:null,error:{message:'ISOLATED_RPC_DENIED'}};}
+  const promise=Promise.resolve().then(()=>{try{return {data:JSON.parse(sql('set role service_role;select public.'+name+'('+args.map(literal).join(',')+')')),error:null};}catch{return {data:null,error:{message:'ISOLATED_RPC_DENIED'}};}});
+  promise.abortSignal=signal=>{assert(signal instanceof AbortSignal);return promise;};return promise;
  }};
  const source=read('supabase/functions/line-daily-push/index.ts');
  const accepted=new Map(),requests=[];let mode='200';
@@ -101,6 +102,37 @@ try{
  sql("update public.line_subscribers set is_active=true");
  assert.equal((await claim('2026-01-09')).length,0,'reactivation cannot silently resend an uncertain group');
  checks.push('Inactive subscribers excluded before binding; changed member stops whole uncertain group without new body/key or fake SENT');
+ // Lease capacity is HTTP groups, not merely recipient count. Distinct payloads
+ // could otherwise reserve hundreds of sequential requests under one 180s lease.
+ sql("insert into public.line_subscribers(id,line_user_id,source)select md5('ISOLATED-LINE-CAPACITY-'||i)::uuid,'ISOLATED-LINE-CAPACITY-'||i,'ISOLATED'from generate_series(1,1000)i;");
+ enqueue('2026-01-16',1000);
+ let capacity=await claim('2026-01-16');assert.equal(capacity.length,1000);assert.equal(new Set(capacity.map(t=>t.transport.request_id)).size,2);
+ for(const t of capacity)assert(Date.parse(t.transport.lease_expires_at)-Date.now()>120000);
+ const expiring=structuredClone(capacity);for(const t of expiring)t.transport.lease_expires_at=new Date(Date.now()+20000).toISOString();
+ const callsBeforeLeaseCheck=requests.length;await assert.rejects(()=>send('2026-01-16',expiring),/LEASE_UNSAFE_NO_SEND/);assert.equal(requests.length,callsBeforeLeaseCheck);
+ mode='200';await send('2026-01-16',capacity);assert.equal((await claim('2026-01-16')).length,0);
+ enqueue('2026-01-19',50);sql("update public.line_delivery_outbox set payload=jsonb_build_object('message',jsonb_build_object('type','text','text',id::text),'message_preview','ISOLATED_ONLY')where report_date='2026-01-19'");
+ capacity=await claim('2026-01-19');assert.equal(capacity.length,2);assert.equal(new Set(capacity.map(t=>t.transport.request_id)).size,2);
+ assert.equal(sql("select count(*)from public.line_delivery_outbox where report_date='2026-01-19'and attempt_count=0"),'48');
+ checks.push('1000 recipients remain two full groups; fragmented payload claim capped at two HTTP groups; unsafe remaining lease prevents any send');
+ // Isolated crash state: claim the eighth attempt, then lose the process without
+ // completion. The next claimant quarantines only that group and serves new work.
+ enqueue('2026-01-20',2);const first=await claim('2026-01-20'),transport=first[0].transport;
+ const fixed=sql("select body_text||retry_key::text from line_transport_private.requests where id='"+transport.request_id+"'");
+ sql("select set_config('ma.line_transport_request','"+transport.request_id+"',false);update public.line_delivery_outbox set attempt_count=7,lease_expires_at=clock_timestamp()-interval '1 second' where report_date='2026-01-20';update line_transport_private.requests set lease_expires_at=clock_timestamp()-interval '1 second'where id='"+transport.request_id+"'");
+ const eighth=await claim('2026-01-20');assert.equal(sql("select distinct attempt_count from public.line_delivery_outbox where report_date='2026-01-20'"),'8');
+ sql("update line_transport_private.requests set lease_expires_at=clock_timestamp()-interval '1 second'where id='"+transport.request_id+"'");
+ sql("insert into public.line_delivery_outbox(report_date,line_subscriber_id,line_user_id,push_type,idempotency_key,payload)select '2026-01-20',id,line_user_id,'daily_report','2026-01-20:new:'||id,'{\"message\":{\"type\":\"text\",\"text\":\"ISOLATED_NEW_WORK\"}}'from public.line_subscribers where id not in(select line_subscriber_id from public.line_delivery_outbox where report_date='2026-01-20')order by id limit 1");
+ const recovered=await claim('2026-01-20');assert.equal(recovered.length,1);assert.notEqual(recovered[0].transport.request_id,transport.request_id);
+ assert.equal(sql("select state from line_transport_private.requests where id='"+transport.request_id+"'"),'REVIEW_REQUIRED');
+ assert.equal(sql("select count(*)from public.line_delivery_outbox o join line_transport_private.members m on m.outbox_id=o.id where m.request_id='"+transport.request_id+"'and o.status='DEAD_LETTERED'and o.attempt_count=8"),'2');
+ assert.equal(sql("select body_text||retry_key::text from line_transport_private.requests where id='"+transport.request_id+"'"),fixed);
+ const staleCalls=requests.length;
+ const stale=await database.rpc('complete_line_transport_request_v1',{p_request:eighth[0].transport.request_id,p_lease:eighth[0].transport.lease_token,p_status:'SENT',p_error:null,p_accepted_request_id:null});
+ assert(stale.error);assert.equal(requests.length,staleCalls); // no ninth HTTP attempt, even in the memory control.
+ assert.equal(sql("select count(*)from public.line_push_logs where report_date='2026-01-20'and status='success'"),'0');
+ mode='200';await send('2026-01-20',recovered);assert.equal((await claim('2026-01-20')).length,0);
+ checks.push('Eighth-attempt crash quarantined without ninth claim/key rewrite/false SENT; unrelated fresh work completes; stale completion fenced');
  const beforeAudit=sql("select md5(string_agg(row_to_json(o)::text,E'\n'order by id))from public.line_delivery_outbox o");
  const priorDef=sql("select pg_get_functiondef('public.claim_line_delivery_outbox_v1(date,uuid,text,integer,integer)'::regprocedure)");
  // Exact recovery rollback: stop the new caller, revoke only new entrypoints,

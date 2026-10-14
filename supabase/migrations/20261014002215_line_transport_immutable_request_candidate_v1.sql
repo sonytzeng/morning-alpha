@@ -68,7 +68,10 @@ begin
  for r in select * from line_transport_private.requests t where t.report_date=p_report_date and t.push_type=p_push_type
  and t.snapshot_id is not distinct from p_decision_snapshot_id
  and ((t.state='PENDING' and t.next_retry_at<=clock_timestamp()) or(t.state='PROCESSING' and t.lease_expires_at<=clock_timestamp()))
- order by t.created_at,t.id for update skip locked loop
+ order by t.created_at,t.id limit p_limit for update skip locked loop
+  -- At most two sequential HTTP groups per lease (15s transport + 15s RPC
+  -- per group, well below 180s). Recipient capacity alone is not a time bound.
+  if jsonb_array_length(result)>=2 then exit;end if;
   if r.retry_expires_at<=clock_timestamp() then
    update line_transport_private.requests set state='EXPIRED',last_error='RETRY_KEY_WINDOW_EXPIRED_NO_RESEND' where id=r.id;continue;
   end if;
@@ -86,17 +89,28 @@ begin
   end if;
   -- Uncertain legacy/externally changed queue state must not generate a new key.
   if exists(select 1 from public.line_delivery_outbox o where o.id=any(ids)
-    and(o.status not in('PENDING','PROCESSING') or o.attempt_count>=o.max_attempts))
-  then raise exception 'TRANSPORT_QUEUE_STATE_REQUIRES_REVIEW';end if;
+    and o.status not in('PENDING','PROCESSING')) then
+   update line_transport_private.requests set state='REVIEW_REQUIRED',lease_token=null,lease_expires_at=null,
+    last_error='TRANSPORT_QUEUE_STATE_REQUIRES_REVIEW' where id=r.id;continue;
+  end if;
+  if exists(select 1 from public.line_delivery_outbox o where o.id=any(ids) and o.attempt_count>=o.max_attempts) then
+   -- The eighth send may have reached LINE before its caller crashed. Never
+   -- claim success or a ninth attempt; quarantine just this immutable group.
+   perform set_config('ma.line_transport_request',r.id::text,true);
+   update public.line_delivery_outbox set status='DEAD_LETTERED',lease_expires_at=null,
+    last_error='ATTEMPT_LIMIT_ACK_UNKNOWN_REQUIRES_REVIEW',updated_at=clock_timestamp() where id=any(ids);
+   update line_transport_private.requests set state='REVIEW_REQUIRED',lease_token=null,lease_expires_at=null,
+    last_error='ATTEMPT_LIMIT_ACK_UNKNOWN_REQUIRES_REVIEW' where id=r.id;continue;
+  end if;
   lease=gen_random_uuid();
   perform set_config('ma.line_transport_request',r.id::text,true);
-  update line_transport_private.requests set state='PROCESSING',lease_token=lease,lease_expires_at=clock_timestamp()+interval '180 seconds' where id=r.id;
+  update line_transport_private.requests set state='PROCESSING',lease_token=lease,lease_expires_at=clock_timestamp()+interval '180 seconds' where id=r.id returning * into r;
   update public.line_delivery_outbox set status='PROCESSING',attempt_count=attempt_count+1,lease_expires_at=clock_timestamp()+interval '180 seconds',updated_at=clock_timestamp() where id=any(ids);
-  result=result||jsonb_build_array(jsonb_build_object('request_id',r.id,'lease_token',lease,'retry_key',r.retry_key,'body_text',r.body_text,'payload_sha256',r.payload_sha256,'message_preview',r.message_preview,
+  result=result||jsonb_build_array(jsonb_build_object('request_id',r.id,'lease_token',lease,'lease_expires_at',r.lease_expires_at,'retry_key',r.retry_key,'body_text',r.body_text,'payload_sha256',r.payload_sha256,'message_preview',r.message_preview,
     'members',(select jsonb_agg(jsonb_build_object('id',m.subscriber_id,'line_user_id',m.line_user_id,'outbox_id',m.outbox_id,'idempotency_key',m.idempotency_key) order by m.ordinal) from line_transport_private.members m where m.request_id=r.id)));
   total=total+n;
  end loop;
- while total<p_limit loop
+ while total<p_limit and jsonb_array_length(result)<2 loop
   -- Never migrate an already-attempted legacy request into a fresh retry identity.
   select o.payload->'message' into messages from public.line_delivery_outbox o
    where o.report_date=p_report_date and o.push_type=p_push_type and o.decision_snapshot_id is not distinct from p_decision_snapshot_id
@@ -124,7 +138,7 @@ begin
    from public.line_delivery_outbox o where o.id=any(ids);
   perform set_config('ma.line_transport_request',r.id::text,true);
   update public.line_delivery_outbox set status='PROCESSING',attempt_count=attempt_count+1,lease_expires_at=clock_timestamp()+interval '180 seconds',updated_at=clock_timestamp() where id=any(ids);
-  result=result||jsonb_build_array(jsonb_build_object('request_id',r.id,'lease_token',lease,'retry_key',r.retry_key,'body_text',r.body_text,'payload_sha256',r.payload_sha256,'message_preview',r.message_preview,
+  result=result||jsonb_build_array(jsonb_build_object('request_id',r.id,'lease_token',lease,'lease_expires_at',r.lease_expires_at,'retry_key',r.retry_key,'body_text',r.body_text,'payload_sha256',r.payload_sha256,'message_preview',r.message_preview,
     'members',(select jsonb_agg(jsonb_build_object('id',m.subscriber_id,'line_user_id',m.line_user_id,'outbox_id',m.outbox_id,'idempotency_key',m.idempotency_key) order by m.ordinal) from line_transport_private.members m where m.request_id=r.id)));
   total=total+n;
  end loop;

@@ -107,7 +107,8 @@ test('extracting pure composition preserves approved code and all non-template S
  const promotedSource=stagedViews().predecessorRead('supabase/functions/line-daily-push/index.ts').toString();
  assert.equal(normalize(promotedSource),normalize(oldSender),'Historical V659 promotion preserved all non-template Sender bytes');
  const approvedMain=execFileSync('git',['show','2a5d461ec3d98bfc8bc3177a295c95e299b7bda2:supabase/functions/line-daily-push/index.ts'],{encoding:'utf8'});
- const recoveryOnly=s=>['DeliveryTarget','claimDeliveryOutbox','sendMulticastBatches'].reduce((text,name)=>text.replace(declaration(s,name),'REVIEWED_TRANSPORT_'+name),s).replace("\n      .eq('attempt_count', 0)",'');
+ assert(source.includes("from 'https://esm.sh/@supabase/supabase-js@2.115.0'"));
+ const recoveryOnly=s=>['DeliveryTarget','claimDeliveryOutbox','sendMulticastBatches'].reduce((text,name)=>text.replace(declaration(s,name),'REVIEWED_TRANSPORT_'+name),s).replace("\n      .eq('attempt_count', 0)",'').replace("from 'https://esm.sh/@supabase/supabase-js@2.115.0'","from 'https://esm.sh/@supabase/supabase-js@2'");
  assert.equal(recoveryOnly(source),recoveryOnly(approvedMain),'Auth, Token, Recipient selection, Canonical, Template and all other code remain exact main bytes outside named recovery changes');
  assert.equal(declaration(source,'buildLineMessage'),declaration(approvedMain,'buildLineMessage'));
  assert(source.includes(".eq('attempt_count', 0)"));

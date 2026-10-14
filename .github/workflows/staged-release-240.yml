@@ -21,9 +21,10 @@ jobs:
         with:
           deno-version: v2.x
       - name: Exact scoped source admission and affected regression
+        id: admitted
         run: node scripts/releases/staged-regression.mjs
       - name: A exact schema, RLS and two-function rollback
-        if: hashFiles('docs/operations/evidence/staged-a-transition-20261014.json') != ''
+        if: steps.admitted.outputs.A == 'true'
         env:
           MA_ACCEPTANCE_CALENDAR_SCOPE: issue-238-calendar
           MA_TEST_DOCKER_CONTAINER: ma-acceptance-calendar-238
@@ -37,17 +38,17 @@ jobs:
           docker exec ma-acceptance-calendar-238 pg_isready -h 127.0.0.1 -U postgres
           node tests/acceptanceCalendarDatabase.integration.mjs
       - name: B1 real fresh RLS and exact source rollback
-        if: hashFiles('docs/operations/evidence/staged-b1-transition-20261014.json') != ''
+        if: steps.admitted.outputs.B1 == 'true'
         run: |
           deno check --no-lock supabase/functions/get-report-payload/index.ts
           node --experimental-strip-types tests/recommendationReaderFreshDatabase.integration.mjs
       - name: B2 immutable request, lost response, accepted proof and rollback
-        if: hashFiles('docs/operations/evidence/staged-b2-transition-20261014.json') != ''
+        if: steps.admitted.outputs.B2 == 'true'
         run: |
           deno check --no-lock supabase/functions/line-daily-push/index.ts
           node --experimental-strip-types tests/lineTransportRecoveryDatabase.integration.mjs
       - name: C real SQL HTTP worker, lease, immutable lock, Outcome and rollback
-        if: hashFiles('docs/operations/evidence/staged-c-transition-20261014.json') != ''
+        if: steps.admitted.outputs.C == 'true'
         run: |
           deno check --no-lock supabase/functions/vnext-daily-research-v1/index.ts supabase/functions/recommendation-v2-forward-worker-v1/index.ts
           node --experimental-strip-types tests/vnextDailyDatabase.integration.mjs

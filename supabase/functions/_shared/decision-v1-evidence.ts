@@ -115,7 +115,30 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
   // as proven beneficiary relationships; link canonical mappings below instead.
   const universe = data.universe.filter(r => r.is_active === true && known(r, 'updated_at', 'created_at') && /^\d{4,6}$/.test(sym(r.symbol)));
   const uniqueUniverse = [...new Map(universe.map(r => [sym(r.symbol), r])).values()].sort((a, b) => sym(a.symbol).localeCompare(sym(b.symbol)));
-  const bars = (symbol: string): Quote[] => [...new Map(quotes.filter(q => q.symbol === symbol && q.row.phase === 'close').map(q => [str(q.row.trading_date), q] as const).reverse()).values()].sort((a, b) => a.at - b.at);
+  const bars = (symbol: string): Quote[] => {
+    const dates = new Map<string, Quote[]>();
+    for (const q of quotes.filter(q => q.symbol === symbol && q.row.phase === 'close')) {
+      const date = str(q.row.trading_date); dates.set(date, [...(dates.get(date) ?? []), q]);
+    }
+    return [...dates.values()].flatMap(rows => {
+      // Never splice a partial Core quote's price into a stock candle's volume.
+      // Prefer one complete, source-traceable saved candle as an entire row.
+      const ordered = [...rows].sort((a,b) => {
+        const complete = (q: Quote) => {
+          const raw=obj(q.row.raw_payload);
+          return raw.contract==='RECOMMENDATION_STOCK_EVIDENCE_V1' && raw.endpoint==='historical/candles'
+            && raw.volume_unit==='SHARES' && q.volume!==null && q.volume>0
+            && raw.amount_unit==='TWD' && (finite(raw.amount_twd)??0)>0;
+        };
+        return Number(complete(b))-Number(complete(a)) || b.at-a.at || a.id.localeCompare(b.id);
+      });
+      const q=ordered[0];
+      if(rows.some(r=>Math.abs(r.price/q.price-1)>.005||Math.abs(r.change-q.change)>.5)){
+        conflictSymbols.add(symbol); return [];
+      }
+      return [q];
+    }).sort((a,b)=>a.at-b.at);
+  };
   const benchmark = bars('TAIEX');
   const coverage = uniqueUniverse.length ? uniqueUniverse.flatMap(r => { const q = latest(sym(r.symbol)); return q ? [q] : []; }) : [];
   const breadth = uniqueUniverse.length && coverage.length === uniqueUniverse.length

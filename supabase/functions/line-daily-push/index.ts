@@ -1,4 +1,4 @@
-import { createClient as createRawClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient as createRawClient } from 'https://esm.sh/@supabase/supabase-js@2.115.0';
 import { observeCriticalClientFactory } from '../_shared/critical-rpc-observer.ts';
 const createClient = observeCriticalClientFactory(createRawClient);
 import { resolveMarketStatus } from '../_shared/market-status.ts';
@@ -23,7 +23,7 @@ type LineSubscriber = {
 type DeliveryTarget = LineSubscriber & {
   outbox_id: string;
   idempotency_key: string;
-  transport: {request_id:string;lease_token:string;retry_key:string;body_text:string;payload_sha256:string;message_preview:string};
+  transport: {request_id:string;lease_token:string;lease_expires_at:string;retry_key:string;body_text:string;payload_sha256:string;message_preview:string};
 };
 
 type DeliverySummary = {
@@ -562,11 +562,11 @@ async function claimDeliveryOutbox(
     p_push_type: pushType,
     p_limit: 1000,
     p_lease_seconds: 180,
-  });
+  }).abortSignal(AbortSignal.timeout(15000));
   if (error) throw new Error(`Failed to claim LINE delivery outbox: ${error.message}`);
   if(!Array.isArray(data))throw new Error('TRANSPORT_CLAIM_CONTRACT');
   return data.flatMap((value:Record<string,unknown>)=>{
-    const transport={request_id:String(value.request_id||''),lease_token:String(value.lease_token||''),retry_key:String(value.retry_key||''),
+    const transport={request_id:String(value.request_id||''),lease_token:String(value.lease_token||''),lease_expires_at:String(value.lease_expires_at||''),retry_key:String(value.retry_key||''),
       body_text:String(value.body_text||''),payload_sha256:String(value.payload_sha256||''),message_preview:String(value.message_preview||'')};
     if(!Array.isArray(value.members)||value.members.length===0||value.members.length>500)throw new Error('TRANSPORT_MEMBERS_CONTRACT');
     return value.members.map((member:Record<string,unknown>)=>({
@@ -681,6 +681,7 @@ async function sendMulticastBatches(args: {
   }
   for (const batch of groups.values()) {
     const transport=batch[0].transport,userIds=batch.map(s=>String(s.line_user_id));
+    if(!Number.isFinite(Date.parse(transport.lease_expires_at))||Date.now()+30000>=Date.parse(transport.lease_expires_at))throw new Error('TRANSPORT_LEASE_UNSAFE_NO_SEND');
     const body=JSON.parse(transport.body_text);
     const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(transport.body_text))),n=>n.toString(16).padStart(2,'0')).join('');
     if(batch.length===0||batch.length>500||new Set(userIds).size!==batch.length
@@ -691,7 +692,7 @@ async function sendMulticastBatches(args: {
     const complete=async(status:'SENT'|'RETRY'|'FAILED',error:string|null,accepted:string|null=null)=>{
       const result=await args.supabase.rpc('complete_line_transport_request_v1',{
         p_request:transport.request_id,p_lease:transport.lease_token,p_status:status,p_error:error,p_accepted_request_id:accepted,
-      });
+      }).abortSignal(AbortSignal.timeout(15000));
       if(result.error)throw new Error('TRANSPORT_COMPLETION_REJECTED');
     };
 

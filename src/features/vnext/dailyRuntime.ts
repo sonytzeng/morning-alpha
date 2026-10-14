@@ -1,7 +1,7 @@
 /** Production-like runner. Persistence is exclusively transactional RPC, never files. */
 import {snapshotHash} from './contracts.ts';
-import {directoryPlan,classifyCompanies,acquisitionPlan,fetchSource,assembleDaily,type SourceReceipt,type SourceTask} from './dailyAdapter.ts';
-import {runDailyIntelligence,dailyPublication,type DailyLock,type RunState,type DailyStore} from './dailyIntelligence.ts';
+import {directoryPlan,classifyCompanies,acquisitionPlan,outcomePlan,fetchSource,assembleDaily,type SourceReceipt,type SourceTask} from './dailyAdapter.ts';
+import {runDailyIntelligence,dailyPublication,verifyDailyLock,type DailyLock,type RunState,type DailyStore} from './dailyIntelligence.ts';
 import {researchOutcome,type OutcomeSource} from './dailyOutcome.ts';
 import {canonical} from '../../../research/entry-opportunity.ts';
 import type {DailyBar} from './researchFunnel.ts';
@@ -18,7 +18,7 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
  const rpc=(op:string,data:unknown={})=>p.rpc('vnext_daily_runtime_v1',{p_run:r.id,p_lease:r.lease,p_fence:r.fence,p_op:op,p_data:data});
  const finish=async(status:string,reason:string|null=null)=>{await rpc('FINISH',{status,reason});return {status,continue:status==='QUEUED',reason,retry_after_seconds:retryAfter};};
  const collect=async(task:SourceTask):Promise<SourceReceipt|null|false>=>{
-  if(Date.now()+14000>=deadline)return false;
+  if(Date.now()+14000>=deadline||fetched>=8)return false;
   const reserved=object(await rpc('SOURCE_BEGIN',task));
   if(reserved.status==='CACHE')return reserved.receipt as SourceReceipt;
   if(reserved.status==='EXHAUSTED')return null;
@@ -31,19 +31,27 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   }catch(e){retryAfter=Math.min(300,Math.max(3,Number(object(e).retryAfter)||3));await rpc('SOURCE_FAIL',{key:task.key,reason:failure(e),retry_seconds:retryAfter});return false;}
  };
  try{
+  if(hasLock&&(!('locks' in r.checkpoint)||r.checkpoint.locks?.length!==216||(await Promise.all(r.checkpoint.locks.map(verifyDailyLock))).some(ok=>!ok)))throw Error('CHECKPOINT_LOCK_INVALID');
   const dirs:SourceReceipt[]=[];for(const t of await directoryPlan(r.business_date)){const receipt=await collect(t);if(!receipt)return finish(receipt===null?'BLOCKED':'QUEUED','UNIVERSE_DIRECTORY_UNAVAILABLE');dirs.push(receipt);}
   const companies=classifyCompanies(dirs),plan=r.plan.length?r.plan:await acquisitionPlan(r.business_date,companies);
   if(!r.plan.length)await rpc('PLAN',plan);
-  for(let i=r.cursor;i<plan.length;i++){
+  const due=await rpc('DUE_OUTCOMES') as {prediction:DailyLock;horizons:number[]}[];
+  let cursor=r.cursor;
+  for(let i=r.cursor;i<plan.length&&due.length===0;i++){
+   // Lock a truthful partial-evidence evaluation before the existing 09:00
+   // deadline. Long-history bootstrap may continue; never backdate its receipts.
+   if(!hasLock&&Date.parse(p.clock())>=Date.parse(r.actionable_at)-60000)break;
    if(Date.now()+14000>=deadline||fetched>=8)return finish('QUEUED','ACQUISITION_CONTINUATION');
    const receipt=await collect(plan[i]);if(receipt===false)return finish('QUEUED','SOURCE_RETRY_PENDING');
-   await rpc('CURSOR',{cursor:i+1});
+   await rpc('CURSOR',{cursor:i+1});cursor=i+1;
   }
   const sources=await rpc('SOURCES') as SourceReceipt[];
   if(Date.now()+30000>=deadline)return finish('QUEUED','EVALUATION_CONTINUATION');
   // Only actual same-cutoff retained market/Entry capsules may enrich this run.
-  const lineage=object(await rpc('ENTRY_SOURCE'));const market=lineage.market??null;
-  const acquired='acquired' in r.checkpoint&&r.checkpoint.acquired?r.checkpoint.acquired:await assembleDaily(r.business_date,companies,sources,p.clock(),market as Parameters<typeof assembleDaily>[4]);
+  const evaluationCutoff=p.clock();
+  const lineage=hasLock?{}:object(await rpc('ENTRY_SOURCE',{cutoff:evaluationCutoff}));const market=lineage.market??null;
+  if(!hasLock&&!market&&Date.parse(p.clock())<Date.parse(r.actionable_at)-60000){retryAfter=30;return finish('QUEUED','CANONICAL_PUBLICATION_PENDING');}
+  const acquired='acquired' in r.checkpoint&&r.checkpoint.acquired?r.checkpoint.acquired:await assembleDaily(r.business_date,companies,sources,evaluationCutoff,market as Parameters<typeof assembleDaily>[4]);
   if(!('acquired' in r.checkpoint)&&lineage.evidence&&typeof lineage.hash==='string'&&acquired.entry){
    const capsule=lineage.evidence as V2Input;
    if(capsule.identity.report_date!==r.business_date||Date.parse(capsule.identity.generated_at)>Date.parse(acquired.evidence_cutoff))throw Error('ENTRY_CUTOFF_MISMATCH');
@@ -52,7 +60,7 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    for(const stock of acquired.entry.stocks){const prior=entry.stocks.find(s=>s.symbol===stock.symbol);if(prior){stock.relative_strength=prior.relative_strength;stock.sector_return=prior.sector_return;stock.events_reviewed=prior.events_reviewed;stock.v2_status=prior.v2_status;}}
    const {snapshot_hash,...body}=acquired;void snapshot_hash;acquired.snapshot_hash=await snapshotHash(body);
   }
-  if(Date.parse(p.clock())<Date.parse(r.actionable_at)){
+  if(!hasLock&&Date.parse(p.clock())<Date.parse(r.actionable_at)){
    let state='key' in r.checkpoint?r.checkpoint as RunState:null;
    const store:DailyStore={exclusive:async(_key,work)=>work(),load:async()=>state,save:async s=>{await rpc('CHECKPOINT',s);state=s;},
     lock:async rows=>{await rpc('PREDICTIONS',rows.map(body=>{const {lock_hash,...rest}=body;return {body,canonical:canonical(rest),hash:lock_hash};}));}};
@@ -65,8 +73,12 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   }
   // Sweep PRIOR locked predictions, not just the freshly created run. This is
   // independently repeatable across subsequent natural checkpoints/dates.
-  const due=await rpc('DUE_OUTCOMES') as {prediction:DailyLock;horizons:number[]}[];
-  const rows=(kind:string)=>sources.filter(s=>s.task.kind===kind&&s.status==='OK').flatMap(s=>s.payload.rows as Record<string,unknown>[]??[]);
+  const outcomeReceipts:SourceReceipt[]=[];
+  for(const task of await outcomePlan(r.business_date,due,companies,p.clock())){
+   const receipt=await collect(task);if(receipt===false)return finish('QUEUED','OUTCOME_SOURCE_CONTINUATION');
+   if(receipt)outcomeReceipts.push(receipt);
+  }
+  const rows=(kind:string)=>outcomeReceipts.filter(s=>s.task.kind===kind&&s.status==='OK').flatMap(s=>s.payload.rows as Record<string,unknown>[]??[]);
   for(const pending of due){
    const lock=pending.prediction;
    if(Date.now()+5000>=deadline)return finish('QUEUED','OUTCOME_CONTINUATION');
@@ -76,6 +88,7 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    await rpc('OUTCOME_CHECKED',{id:lock.id});
   }
   if((await rpc('DUE_OUTCOMES') as unknown[]).length)return finish('QUEUED','OUTCOME_CONTINUATION');
+  if(cursor<plan.length)return finish('QUEUED',hasLock?'COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK':'COLD_BOOTSTRAP_NO_LATE_FORWARD');
   return finish(hasLock?'COMPLETE':'EXPIRED',hasLock?null:'LATE_ACQUISITION_NOT_FORWARD');
  }catch(e){return finish('BLOCKED',failure(e));}
 }

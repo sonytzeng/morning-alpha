@@ -50,6 +50,7 @@ try{
  insert into public.profiles values('${owner}','admin'),('${free}','free'),('${paid}','premium');insert into research_private.owner_access values('${owner}',true);
  create table public.vnext_test_clock(at timestamptz not null);insert into public.vnext_test_clock values('${at}');
  create function public.vnext_test_now() returns timestamptz language sql volatile as $$select at from public.vnext_test_clock$$;
+ create function public.authoritative_market_calendar_v1() returns jsonb language sql stable as $$select '{"TW":{"from":"2026-10-01","through":"2026-10-31"}}'::jsonb$$;
  create function public.market_calendar_session_v1(text,date) returns boolean language sql stable as $$select $2 between '2026-10-01' and '2026-10-31' and extract(isodow from $2)<6 and $2<>'2026-10-09'$$;
  create table public.market_checkpoint_batches(batch_id uuid primary key,business_date date,checkpoint text,status text,expected_provider_count integer,committed_provider_count integer,committed_at timestamptz);
  insert into public.market_checkpoint_batches values('${batch}','2026-10-12','PREMARKET','COMMITTED',11,11,'2026-10-11T23:59:00Z');
@@ -81,6 +82,17 @@ try{
  const op=(name,data={})=>rpc('vnext_daily_runtime_v1',{p_run:r.run_id,p_lease:active.lease,p_fence:active.fence,p_op:name,p_data:data});
  const old={...active};advance('2026-10-12T00:02:00.000Z');active=(await rpc('claim_vnext_daily_research_v1',{p_run:r.run_id})).run;assert.equal(active.fence,old.fence+1);
  await assert.rejects(()=>rpc('vnext_daily_runtime_v1',{p_run:r.run_id,p_lease:old.lease,p_fence:old.fence,p_op:'CHECKPOINT',p_data:{}}),/LEASE_FENCED/);checks.push('Concurrent claim + expired lease recovery + stale writer fencing');
+ // Synthetic chronology control: canonical publication is later than the V2
+ // producer, but already known at the independent VNext evaluation cutoff.
+ sql(`insert into public.recommendation_shadow_v2_runs values('2026-10-12','${batch}','2026-10-11T23:59:00Z','{}','${'e'.repeat(64)}');
+ insert into public.decision_snapshots values('${'a'.repeat(8)}-1111-4111-8111-${'a'.repeat(12)}','2026-10-12','PREMARKET','READY','2026-10-12T00:00:02Z','{"market_bias":"RANGE"}','RANGE');`);
+ assert.equal((await op('ENTRY_SOURCE',{cutoff:at})).market.value.direction,'RANGE');
+ assert.equal((await op('ENTRY_SOURCE',{cutoff:'2026-10-11T23:59:00Z'})).market,null);
+ assert.deepEqual(await op('ENTRY_SOURCE',{cutoff:'2026-10-12T00:03:00Z'}),{});
+ sql('delete from public.recommendation_shadow_v2_runs');
+ assert.equal((await op('ENTRY_SOURCE',{cutoff:at})).market.value.direction,'RANGE','Canonical must not depend on optional V2 capsule');
+ sql('delete from public.recommendation_shadow_v2_runs;delete from public.decision_snapshots');
+ checks.push('Canonical publication between producer and VNext cutoff admitted; future canonical/cutoff denied; original V2 cutoff untouched');
  const dirTasks=await directoryPlan('2026-10-12');
  const cacheReceipt=async task=>{const raw=task.exchange==='TWSE'?RECOMMENDATION_UNIVERSE.map(symbol=>({'公司代號':symbol,'公司名稱':'合成控制 '+symbol,'產業別':'24','上市日期':'0830905'})):[];
   const payload=await normalizeSource(task,raw,at),receipt={task,first_seen_at:at,available_at:at,published_at:null,as_of:at,version:ADAPTER_VERSION,raw_hash:await snapshotHash(raw),payload_hash:await snapshotHash(payload),payload,status:'OK',reason:null};
@@ -90,6 +102,8 @@ try{
  // This end-to-end control deliberately has no market evidence: every symbol
  // must remain insufficient, never synthetic buy points or a claimed real run.
  await op('PLAN',[dirTasks[0]]);await op('CURSOR',{cursor:1});await op('CHECKPOINT',{});await op('FINISH',{status:'QUEUED'});
+ // Explicit deadline control, not fake early Canonical availability.
+ advance('2026-10-12T00:59:15.000Z');
  verifyLockBatch=async(name,args)=>{
   const malformed=structuredClone(args);malformed.p_data.at(-1).canonical='{}';
   const bad=await request('service_role',name,malformed);assert.match(bad.data.message,/PREDICTION_HASH/);
@@ -100,7 +114,7 @@ try{
   sql("update vnext_runtime.runs set lease_until='2026-10-12T01:02:00Z'");
   const late=await request('service_role',name,args);assert.match(late.data.message,/FORWARD_TIME_INVALID/);
   assert.equal(sql('select count(*) from vnext_runtime.predictions'),'0');
-  advance('2026-10-12T00:02:00.000Z');sql("update vnext_runtime.runs set lease_until='2026-10-12T00:03:40Z'");
+  advance('2026-10-12T00:59:15.000Z');sql("update vnext_runtime.runs set lease_until='2026-10-12T01:00:55Z'");
   const altered=await request('service_role',name,{...args,p_op:'CHECKPOINT',p_data:{locks:[],acquired:{snapshot_hash:'f'.repeat(64)}}});
   assert.match(altered.data.message,/PREPARED_LOCKS_IMMUTABLE/);
   checks.push('Last-row failure rolls back entire batch; no late forward lock; prepared checkpoint immutable');
@@ -138,14 +152,27 @@ try{
  const retryTask={...dirTasks[0],key:'9'.repeat(64)};
  for(let i=0;i<3;i++){assert.equal((await op('SOURCE_BEGIN',retryTask)).status,'FETCH');await op('SOURCE_FAIL',{key:retryTask.key,reason:'RATE_LIMITED',retry_seconds:3});if(i<2){assert.equal((await op('SOURCE_BEGIN',retryTask)).status,'WAIT_RETRY');advance(new Date(Date.parse(at)+4000).toISOString());}}
  assert.equal((await op('SOURCE_BEGIN',retryTask)).status,'EXHAUSTED');
- advance('2026-10-12T06:00:00.000Z');active=(await rpc('claim_vnext_daily_research_v1',{p_run:r.run_id})).run;
+ advance('2026-10-12T06:00:00.000Z');
+ sql("update vnext_runtime.runs set state='COMPLETE',lease=null,lease_until=null");
+ const closeClaim=await rpc('claim_vnext_daily_research_v1',{p_run:r.run_id});assert.equal(closeClaim.status,'ACQUIRED');active=closeClaim.run;
+ checks.push('Previously COMPLETE run wakes at an existing post-close checkpoint for matured outcomes only');
  const matured={...outcome,observed_at:at,state:'OBSERVED_NOT_PERFORMANCE',outcome_source_hash:'e'.repeat(64),observations:{label:'SYNTHETIC SQL CONTRACT CONTROL'}};
  await op('OUTCOME',{id:'e'.repeat(64),result:matured});await op('OUTCOME_CHECKED',{id:lock.id});
  assert.equal(sql(`select completed_horizons::text from vnext_runtime.outcome_queue where prediction_id='${lock.id}'`),'{1}');
  sql(`update vnext_runtime.outcome_queue set last_checked=null where prediction_id='${lock.id}'`);
  // Bound the query to this control without changing any immutable prediction.
  sql(`update vnext_runtime.outcome_queue set last_checked='2026-10-12' where prediction_id<>'${lock.id}'`);
- assert.deepEqual((await op('DUE_OUTCOMES'))[0].horizons,[5,10]);
+ assert.equal((await op('DUE_OUTCOMES')).length,0,'future horizons must not occupy the due queue');
+ advance('2026-10-16T06:00:00.000Z');
+ // A new legal day resumes outcomes via its own natural run, never rewrites the
+ // old prediction. This fixture extends only the current run's lease to inspect
+ // maturity directly; old-date worker admission remains separately denied.
+ sql("update vnext_runtime.runs set lease_until='2026-10-16T06:02:00Z'");
+ sql(`update vnext_runtime.outcome_queue set last_checked='2026-10-16' where prediction_id<>'${lock.id}'`);
+ const laterDue=await op('DUE_OUTCOMES');
+ assert.deepEqual(laterDue.find(p=>p.prediction.id===lock.id).horizons,[5]);
+ assert(laterDue.every(p=>p.prediction.horizon!=='LONG'),'unknown future calendar must not be mistaken for matured long outcomes');
+ checks.push('Matured horizons only; future long work cannot starve 1D/5D outcomes; next due advances after completion');
  checks.push('Outcome maturity / no fake P&L / append idempotency; persisted three-attempt rate limit');
  // Preserve immutable evidence across actual DB transactions and API retries.
  assert.equal(sql("select count(*) from vnext_runtime.outcomes where payload->>'performance_eligible'='true'"),'0');

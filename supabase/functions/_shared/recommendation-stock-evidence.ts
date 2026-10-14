@@ -175,3 +175,37 @@ export function persistedRecommendationInput(data:EvidenceData,identity:Decision
  const priorWatch=phase.evaluation_phase==='PREMARKET'&&Array.isArray(phase.candidates)?phase.candidates.map(obj).filter(c=>c.status==='WATCH').map(c=>String(c.symbol)):null;
  return {data:{...data,quotes:[...data.quotes,...quotes],failures},priorWatch};
 }
+
+/** Member Reader: bind the saved producer to this exact published revision.
+ * This reads already saved evidence only; it never fetches or writes business data. */
+export async function persistedRecommendationReaderInput(data:EvidenceData,identity:DecisionIdentity,ai:Row):Promise<{data:EvidenceData;priorWatch:string[]|null}>{
+ const capture=obj(ai.recommendation_stock_evidence),decision=obj(ai.decision_v1);
+ const fail=(reason:string)=>({data:{...data,failures:[...data.failures,reason]},priorWatch:null});
+ if(capture.contract!=='RECOMMENDATION_STOCK_EVIDENCE_V1')return fail('PERSISTED_RECOMMENDATION_UNAVAILABLE');
+ const savedCutoff=Date.parse(String(capture.cutoff)),publishedCutoff=Date.parse(identity.generated_at);
+ // Producer revision is its correlation/run ID, NOT the canonical snapshot ID.
+ // Bind BOTH namespaces through the same saved report; never equate them.
+ if(decision.schema_version!=='decision-evidence-v1'||ai.revision_id!==identity.revision_id
+  ||typeof ai.correlation_id!=='string'||!ai.correlation_id||decision.revision_id!==ai.correlation_id
+  ||decision.report_date!==identity.report_date||capture.business_date!==identity.report_date
+  ||!Number.isFinite(savedCutoff)||!Number.isFinite(publishedCutoff)||savedCutoff>publishedCutoff
+  ||Date.parse(String(ai.generated_at))!==savedCutoff
+  ||Date.parse(String(decision.generated_at))!==savedCutoff)return fail('PERSISTED_RECOMMENDATION_REVISION_MISMATCH');
+ if(!Array.isArray(capture.captures)||capture.captures.length>RECOMMENDATION_UNIVERSE.length*2)return fail('PERSISTED_RECOMMENDATION_CAPTURE_LIMIT');
+ const valid:Row[]=[],seen=new Set<string>();
+ for(const value of capture.captures){
+  const c=obj(value),key=String(c.symbol)+':'+String(c.endpoint);
+  if(seen.has(key))return fail('PERSISTED_RECOMMENDATION_DUPLICATE_CAPTURE');seen.add(key);
+  if(c.status!=='PASS'){valid.push(c);continue;}
+  if(!['historical/candles','intraday/quote'].includes(String(c.endpoint))||!Array.isArray(c.rows)||c.rows.length===0||c.rows.length>250
+    ||!Number.isFinite(Date.parse(String(c.received_at)))||Date.parse(String(c.received_at))>savedCutoff
+    ||!c.rows.every(value=>{const row=obj(value),raw=obj(row.raw_payload);return raw.endpoint===c.endpoint
+      &&typeof raw.source_hash==='string'&&/^[a-f0-9]{64}$/.test(raw.source_hash)
+      &&Number.isFinite(Date.parse(String(row.available_at)))&&Date.parse(String(row.available_at))===Date.parse(String(c.received_at))
+      &&(row.session==='REGULAR_COMPLETED'&&row.phase==='close'||row.session==='REGULAR_INTRADAY'&&row.phase==='intraday')
+      &&raw.evidence_session_date===row.trading_date;}))return fail('PERSISTED_RECOMMENDATION_PROVENANCE_INVALID');
+  if(await hash(c.rows.map(value=>obj(obj(value).raw_payload).source_hash))!==c.payload_hash)return fail('PERSISTED_RECOMMENDATION_HASH_MISMATCH');
+  valid.push(c);
+ }
+ return persistedRecommendationInput(data,identity,{...ai,recommendation_stock_evidence:{...capture,captures:valid}});
+}

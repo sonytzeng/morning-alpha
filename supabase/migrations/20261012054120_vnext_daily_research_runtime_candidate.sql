@@ -65,6 +65,22 @@ declare r vnext_runtime.runs;at_time timestamptz:=clock_timestamp();begin
  return jsonb_build_object('status',r.state,'run_id',r.id,'business_date',r.business_date);
 end$$;
 
+-- Private deterministic maturity calculation; unknown calendar coverage stays
+-- unknown, rather than selecting every long-horizon prediction every morning.
+create function vnext_runtime.outcome_due_v1(p_lock jsonb,p_horizon integer) returns date
+language plpgsql stable set search_path='' as $$
+declare due date:=(p_lock->>'business_date')::date;n integer:=0;steps integer:=0;calendar jsonb:=public.authoritative_market_calendar_v1()->'TW';
+begin
+ if p_horizon not between 1 and 250 then raise exception 'OUTCOME_HORIZON_INVALID';end if;
+ while n<p_horizon and steps<600 loop
+  if calendar->>'from' is null or calendar->>'through' is null or due<(calendar->>'from')::date or due>(calendar->>'through')::date then return null;end if;
+  if public.market_calendar_session_v1('TW',due) then n:=n+1;end if;
+  if n<p_horizon then due:=due+1;end if;steps:=steps+1;
+ end loop;
+ return case when n=p_horizon then due else null end;
+end$$;
+revoke all on function vnext_runtime.outcome_due_v1(jsonb,integer) from public,anon,authenticated,service_role;
+
 create function public.claim_vnext_daily_research_v1(p_run uuid) returns jsonb
 language plpgsql security definer set search_path='' as $$declare r vnext_runtime.runs;begin
  -- Global finite worker lease keeps provider pacing across concurrent invocations.
@@ -77,7 +93,12 @@ language plpgsql security definer set search_path='' as $$declare r vnext_runtim
   update vnext_runtime.runs set state='BLOCKED',reason='INVOCATION_BUDGET_EXHAUSTED',lease=null,lease_until=null where id=r.id;
   return '{"status":"BUDGET_EXHAUSTED"}'::jsonb;
  end if;
- if r.state in('COMPLETE','EXPIRED') then return jsonb_build_object('status',r.state);end if;
+ if r.state in('COMPLETE','EXPIRED') and not exists(select from vnext_runtime.outcome_queue q join vnext_runtime.predictions p on p.id=q.prediction_id
+  where (q.next_due::text||' 13:30 Asia/Taipei')::timestamptz<=clock_timestamp()
+   and(q.last_checked is null or q.last_checked<(clock_timestamp() at time zone 'Asia/Taipei')::date)
+   and exists(select from jsonb_array_elements(p.payload->'target_sessions') h where not(h.value::text::integer=any(q.completed_horizons))
+    and(vnext_runtime.outcome_due_v1(p.payload,h.value::text::integer)::text||' 13:30 Asia/Taipei')::timestamptz<=clock_timestamp()))
+ then return jsonb_build_object('status',r.state);end if;
  update vnext_runtime.runs set state='RUNNING',lease=gen_random_uuid(),lease_until=clock_timestamp()+interval '100 seconds',
  fence=fence+1,invocations=invocations+1,updated_at=clock_timestamp() where id=r.id returning * into r;
  insert into vnext_runtime.audit(run_id,operation,details) values(r.id,'CLAIM',jsonb_build_object('fence',r.fence));
@@ -125,13 +146,18 @@ declare r vnext_runtime.runs;v_source vnext_runtime.source_revisions;v_task vnex
   if (p_data->>'cursor')::integer<r.cursor or (p_data->>'cursor')::integer>jsonb_array_length(r.plan) then raise exception 'CURSOR_SCOPE';end if;
   update vnext_runtime.runs set cursor=(p_data->>'cursor')::integer where id=r.id;return '{"status":"STORED"}';
  elsif p_op='ENTRY_SOURCE' then
+  if p_data->>'cutoff' is null or ((p_data->>'cutoff')::timestamptz at time zone 'Asia/Taipei')::date<>r.business_date
+   or (p_data->>'cutoff')::timestamptz>clock_timestamp() then return '{}';end if;
   select jsonb_build_object('evidence',s.evidence,'hash',s.input_sha256,'market',
    case when c.id is not null and jsonb_typeof(c.generated_text->'market_bias')='string' and c.market_regime is not null then
     jsonb_build_object('value',jsonb_build_object('direction',c.generated_text->>'market_bias','regime',c.market_regime),
      'source_ref',c.id::text,'observed_at',c.created_at,'available_at',c.created_at) else null end) into result
-  from public.recommendation_shadow_v2_runs s left join lateral(select d.* from public.decision_snapshots d
-   where d.report_date=r.business_date and d.session_type='PREMARKET' and d.status='READY' and d.created_at<=s.cutoff order by d.created_at desc limit 1)c on true
-  where s.business_date=r.business_date and s.source_batch_id=r.upstream_batch and s.cutoff<=clock_timestamp() order by s.cutoff desc limit 1;
+  from (select 1) anchor left join lateral(select d.* from public.decision_snapshots d
+   where d.report_date=r.business_date and d.session_type='PREMARKET' and d.status='READY'
+    and d.created_at<=(p_data->>'cutoff')::timestamptz order by d.created_at desc limit 1)c on true
+  left join lateral(select v.* from public.recommendation_shadow_v2_runs v
+   where v.business_date=r.business_date and v.source_batch_id=r.upstream_batch and v.cutoff<=(p_data->>'cutoff')::timestamptz
+   order by v.cutoff desc limit 1)s on true;
   return coalesce(result,'{}');
  elsif p_op='SOURCES' then
   select coalesce(jsonb_agg(s.receipt order by s.task_key),'[]') into result from vnext_runtime.run_sources t join vnext_runtime.source_revisions s on s.id=t.source_id where t.run_id=r.id;
@@ -164,15 +190,18 @@ declare r vnext_runtime.runs;v_source vnext_runtime.source_revisions;v_task vnex
    if v->'target_sessions' is distinct from (case v->>'horizon' when 'SHORT' then '[1,5,10]'::jsonb when 'MEDIUM' then '[20,40,60]'::jsonb when 'LONG' then '[120,180,250]'::jsonb else '[]'::jsonb end)
     or v->>'evidence_cutoff' is distinct from r.checkpoint->'acquired'->>'evidence_cutoff' then raise exception 'PREDICTION_HORIZON_OR_CUTOFF';end if;
    insert into vnext_runtime.predictions(id,run_id,symbol,horizon,lock_hash,payload_text,payload) values(v->>'id',r.id,v->>'symbol',v->>'horizon',id_hash,txt,v);
-   insert into vnext_runtime.outcome_queue(prediction_id,next_due) values(v->>'id',r.business_date);
+   insert into vnext_runtime.outcome_queue(prediction_id,next_due) values(v->>'id',coalesce(vnext_runtime.outcome_due_v1(v,(v->'target_sessions'->>0)::integer),r.business_date));
    insert into vnext_runtime.publication_status(prediction_id) values(v->>'id');
   end loop;
   insert into vnext_runtime.audit(run_id,operation,details) values(r.id,'PREDICTION_LOCK',jsonb_build_object('count',216));return '{"status":"LOCKED"}';
  elsif p_op='DUE_OUTCOMES' then
-  select coalesce(jsonb_agg(x.work),'[]') into result from(select jsonb_build_object('prediction',p.payload,'horizons',
-   (select jsonb_agg(h.value) from jsonb_array_elements(p.payload->'target_sessions') h where not (h.value::text::integer=any(q.completed_horizons)))) as work
+  select coalesce(jsonb_agg(x.work),'[]') into result from(select jsonb_build_object('prediction',p.payload,'horizons',m.horizons) as work
    from vnext_runtime.outcome_queue q join vnext_runtime.predictions p on p.id=q.prediction_id
+   cross join lateral(select jsonb_agg(h.value) as horizons from jsonb_array_elements(p.payload->'target_sessions') h
+     where not (h.value::text::integer=any(q.completed_horizons))
+      and(vnext_runtime.outcome_due_v1(p.payload,h.value::text::integer)::text||' 13:30 Asia/Taipei')::timestamptz<=clock_timestamp()) m
    where (q.next_due::text||' 13:30 Asia/Taipei')::timestamptz<=clock_timestamp() and (q.last_checked is null or q.last_checked<(clock_timestamp() at time zone 'Asia/Taipei')::date)
+   and m.horizons is not null
    and cardinality(q.completed_horizons)<jsonb_array_length(p.payload->'target_sessions')
    order by q.next_due,p.id limit 24) x;return result;
  elsif p_op='OUTCOME' then
@@ -184,12 +213,8 @@ declare r vnext_runtime.runs;v_source vnext_runtime.source_revisions;v_task vnex
    or (v->>'observed_at')::timestamptz<old.locked_at or not (old.payload->'target_sessions' @> jsonb_build_array((v->>'horizon')::integer))
    or v->>'state' not in('UNKNOWN','NOT_MATURED','OBSERVED_NOT_PERFORMANCE') then raise exception 'OUTCOME_CONTRACT';end if;
   if v->>'state'='OBSERVED_NOT_PERFORMANCE' then
-   due:=(old.payload->>'business_date')::date;steps:=0;n:=0;
-   while n<(v->>'horizon')::integer and steps<600 loop
-    if public.market_calendar_session_v1('TW',due) then n:=n+1;end if;
-    if n<(v->>'horizon')::integer then due:=due+1;end if;steps:=steps+1;
-   end loop;
-   if n<(v->>'horizon')::integer or (v->>'observed_at')::timestamptz<(due::text||' 13:30 Asia/Taipei')::timestamptz then raise exception 'OUTCOME_NOT_MATURED';end if;
+   due:=vnext_runtime.outcome_due_v1(old.payload,(v->>'horizon')::integer);
+   if due is null or (v->>'observed_at')::timestamptz<(due::text||' 13:30 Asia/Taipei')::timestamptz then raise exception 'OUTCOME_NOT_MATURED';end if;
   end if;
   if exists(select from vnext_runtime.outcomes where id=p_data->>'id' and payload is distinct from v) then raise exception 'OUTCOME_IDEMPOTENCY_CONFLICT';end if;
   insert into vnext_runtime.outcomes(id,prediction_id,horizon,observed_at,source_revision,payload) values(p_data->>'id',old.id,(v->>'horizon')::integer,(v->>'observed_at')::timestamptz,v->>'outcome_source_hash',v) on conflict(id) do nothing;
@@ -197,6 +222,10 @@ declare r vnext_runtime.runs;v_source vnext_runtime.source_revisions;v_task vnex
  elsif p_op='OUTCOME_CHECKED' then
   update vnext_runtime.outcome_queue q set last_checked=(clock_timestamp() at time zone 'Asia/Taipei')::date,
    completed_horizons=array(select distinct o.horizon from vnext_runtime.outcomes o where o.prediction_id=q.prediction_id and o.payload->>'state'='OBSERVED_NOT_PERFORMANCE')
+   where q.prediction_id=p_data->>'id';
+  update vnext_runtime.outcome_queue q set next_due=coalesce((select min(vnext_runtime.outcome_due_v1(p.payload,h.value::text::integer))
+   from vnext_runtime.predictions p cross join lateral jsonb_array_elements(p.payload->'target_sessions') h
+   where p.id=q.prediction_id and not(h.value::text::integer=any(q.completed_horizons))),q.next_due)
    where q.prediction_id=p_data->>'id';return '{"status":"STORED"}';
  elsif p_op='FINISH' then
   if p_data->>'status' not in('QUEUED','COMPLETE','BLOCKED','EXPIRED') then raise exception 'FINISH_STATE';end if;

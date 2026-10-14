@@ -7,6 +7,8 @@ import {parseRevenue, parseInstitutional, parseFinancial, parseIndex, parseEvent
 import type {AcquiredResearch} from './dailyIntelligence.ts';
 import type {DailyBar, ResearchFact, FunnelInput} from './researchFunnel.ts';
 import type {EntryInput} from '../../../research/entry-opportunity.ts';
+import {targetSessions} from './dailyOutcome.ts';
+import type {DailyLock} from './dailyIntelligence.ts';
 
 export const ADAPTER_VERSION='VNEXT_DAILY_OFFICIAL_1';
 export type Company={symbol:string;company:string;exchange:Exchange;industry:string};
@@ -53,7 +55,36 @@ export async function acquisitionPlan(date:string,companies:Company[]):Promise<S
   add({kind:'EVENT',url:'https://mops.twse.com.tw/mops/api/t05st01',format:'json',symbols:[c.symbol],year,month:String(month),from,through:to,form:{companyId:c.symbol,year:String(year-1911),month:String(month),firstDay:'1',lastDay:String(Number(to.slice(8)))}});}
  for(const [action_index,s] of ACTION_SOURCES.entries()){const u=new URL(s.base),fmt=(d:string)=>s.exchange==='TPEX'?d.replaceAll('-','/'):d.replaceAll('-','');u.searchParams.set('startDate',fmt(dates[0]));u.searchParams.set('endDate',fmt(through));u.searchParams.set('response','json');
   add({kind:'ACTION',action_index,url:u.href,format:'json',symbols:companies.filter(c=>c.exchange===s.exchange).map(c=>c.symbol),from:dates[0],through});}
+ // Newest prices first for ALL stocks, not one stock's oldest year first.
+ // Historical bootstrap remains intact; partial coverage never becomes QUALIFIED.
+ tasks.sort((a,b)=>{
+  const prices=new Set(['PRICE','OTC_PRICE','BENCHMARK']);
+  const ap=prices.has(a.kind),bp=prices.has(b.kind);if(ap!==bp)return ap?-1:1;
+  return String(b.date??b.month??b.period??'').localeCompare(String(a.date??a.month??a.period??''))||a.url.localeCompare(b.url);
+ });
  return Promise.all(tasks.map(async t=>({...t,key:await snapshotHash(t)})));
+}
+/** Outcome receipts have their own availability/phase and are NEVER substituted
+ * into a locked prediction. In-progress month/day is refreshed after the close. */
+export async function outcomePlan(date:string,pending:{prediction:DailyLock;horizons:number[]}[],companies:Company[],observedAt:string):Promise<SourceTask[]>{
+ if(day(observedAt)!==date||pending.length>24)throw Error('OUTCOME_SOURCE_SCOPE');
+ const tasks=new Map<string,Omit<SourceTask,'key'>>(),postClose=Date.parse(observedAt)>=Date.parse(date+'T13:30:00+08:00');
+ for(const {prediction:lock,horizons} of pending){
+  const company=companies.find(c=>c.symbol===lock.symbol);if(!company)throw Error('OUTCOME_COMPANY_UNKNOWN');
+  const dates=[...new Set(horizons.flatMap(h=>targetSessions(lock.actionable_at,h)??[]))].filter(d=>d<date||(d===date&&postClose));
+  const months=[...new Set(dates.map(d=>d.slice(0,7)))];
+  const add=(task:Omit<SourceTask,'key'|'scope'|'max_age_days'>,current:boolean)=>{
+   const t={...task,scope:ADAPTER_VERSION+':OUTCOME:'+(current?date+':'+(postClose?'CLOSE':'PREMARKET'):'HISTORY'),max_age_days:current?0:7};
+   tasks.set(JSON.stringify(t),t);
+  };
+  for(const month of months){
+   if(company.exchange==='TWSE')add({kind:'PRICE',url:historyUrl('TWSE',lock.symbol,month),format:'json',symbols:[lock.symbol],exchange:'TWSE',month},month===date.slice(0,7));
+   add({kind:'BENCHMARK',url:`https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?date=${month.replace('-','')}01&response=json`,format:'json',symbols:[],month},month===date.slice(0,7));
+  }
+  if(company.exchange==='TPEX')for(const d of dates)add({kind:'OTC_PRICE',url:tpexDailyUrl(d),format:'json',symbols:companies.filter(c=>c.exchange==='TPEX').map(c=>c.symbol),date:d,exchange:'TPEX'},d===date);
+ }
+ if(tasks.size>1600)throw Error('OUTCOME_SOURCE_BUDGET');
+ return Promise.all([...tasks.values()].sort((a,b)=>a.url.localeCompare(b.url)).map(async t=>({...t,key:await snapshotHash(t)})));
 }
 const object=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 export async function normalizeSource(task:SourceTask,raw:unknown,at:string):Promise<Record<string,unknown>>{

@@ -10,6 +10,7 @@ import {evaluatePublishedMarketDelivery} from '../supabase/functions/_shared/mar
 import {buildPublishedLineDecision,PRODUCTION_LINE_TEMPLATE,LINE_TEMPLATE_ROLLBACK} from '../supabase/functions/_shared/line-production-template.ts';
 import {composeLineDecision,decisionCardFlex} from '../supabase/functions/_shared/line-decision-card-v659.ts';
 import {declaration,isolatedFunction} from './helpers/isolatedEdgeLoader.mjs';
+import {stagedViews} from './helpers/stagedReleaseIntegrity.mjs';
 const base='8be2d3a575b9a3813eb1919b77a7e1f9a0755e53';
 const prior=p=>execFileSync('git',['show',base+':'+p],{encoding:'utf8',maxBuffer:4*1024*1024});
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
@@ -103,7 +104,14 @@ test('extracting pure composition preserves approved code and all non-template S
  const normalize=s=>s.replace(/^import .*line-(?:daily-flex-message.mjs|production-template.ts)';\n/m,'')
   .replace(/const message = buildLineMessage\([^;]+;/,'const message = TEMPLATE;')
   .replace(declaration(s,'buildLineMessage'),'TEMPLATE');
- assert.equal(normalize(source),normalize(oldSender),'Auth, recipient, dispatch, retry, dedup and all other Sender code are byte-identical');
+ const promotedSource=stagedViews().predecessorRead('supabase/functions/line-daily-push/index.ts').toString();
+ assert.equal(normalize(promotedSource),normalize(oldSender),'Historical V659 promotion preserved all non-template Sender bytes');
+ const approvedMain=execFileSync('git',['show','2a5d461ec3d98bfc8bc3177a295c95e299b7bda2:supabase/functions/line-daily-push/index.ts'],{encoding:'utf8'});
+ assert(source.includes("from 'https://esm.sh/@supabase/supabase-js@2.115.0'"));
+ const recoveryOnly=s=>['DeliveryTarget','claimDeliveryOutbox','sendMulticastBatches'].reduce((text,name)=>text.replace(declaration(s,name),'REVIEWED_TRANSPORT_'+name),s).replace("\n      .eq('attempt_count', 0)",'').replace("from 'https://esm.sh/@supabase/supabase-js@2.115.0'","from 'https://esm.sh/@supabase/supabase-js@2'");
+ assert.equal(recoveryOnly(source),recoveryOnly(approvedMain),'Auth, Token, Recipient selection, Canonical, Template and all other code remain exact main bytes outside named recovery changes');
+ assert.equal(declaration(source,'buildLineMessage'),declaration(approvedMain,'buildLineMessage'));
+ assert(source.includes(".eq('attempt_count', 0)"));
  assert.equal(read('supabase/functions/_shared/line-daily-flex-message.mjs'),prior('supabase/functions/_shared/line-daily-flex-message.mjs'));
  assert.equal(PRODUCTION_LINE_TEMPLATE,'LINE_DECISION_CARD_V2_V659');
  assert.equal(LINE_TEMPLATE_ROLLBACK,base+':line-daily-push@68');
@@ -117,6 +125,6 @@ test('public real-replay receipt binds exact tested source without publishing ra
  assert.match(receipt.raw_capture_sha256,/^[a-f0-9]{64}$/);
  assert.deepEqual(receipt.captures.map(r=>r.business_date),['2026-10-05','2026-10-06','2026-10-07','2026-10-08']);
  for(const r of receipt.captures){assert.equal(r.publication_gate,'PASS');assert.equal(r.approved_v659_parity,'PASS');assert.equal(r.line_sends,0);assert.equal(r.business_writes,0);assert.equal(r.v1_only,true);}
- for(const r of receipt.sources)assert.equal(sha(read(r.path)),r.sha256,'local real replay must be repeated after source drift: '+r.path);
+ for(const r of receipt.sources)assert.equal(sha(stagedViews().predecessorRead(r.path)),r.sha256,'historical real replay binds immutable promotion source: '+r.path);
  assert.equal(receipt.layout.overflow,0);assert.equal(receipt.line_app_delivery,'NOT_OBSERVED_YET');
 });

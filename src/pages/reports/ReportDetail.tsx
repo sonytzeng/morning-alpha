@@ -12,6 +12,7 @@ import V11ObservationSection, { mapV11ObservationItems } from '@/components/v11/
 import { resolvePremiumContentAvailability } from '@/lib/premiumContentAvailability';
 import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 import { humanizePublicRuntimeText } from '@/utils/publicRuntimeCopy';
+import { historicalReportEvidencePresentation } from '@/lib/historicalReportEvidencePresentation';
 
 // ═══ Constants ═══
 const SECTOR_NAME_MAP: Record<string, string> = {
@@ -88,28 +89,6 @@ function translateSector(raw: string): string | null {
 }
 function hasValidSectors(list: string[]): boolean {
   return list.map(translateSector).filter(Boolean).length > 0;
-}
-
-function deriveCheckpoints(bias: string): { check0915: string; check1030: string; check1300: string } {
-  if (bias.includes('偏多')) {
-    return {
-      check0915: '確認加權指數、台積電與台指期開盤方向是否與盤前偏多假設一致。若開盤漲幅超過 0.5%，劇本初步成立。',
-      check1030: '觀察半導體、AI、金融等主流族群是否延續強勢。若主流族群轉弱，偏多判斷需下修。',
-      check1300: '確認今日漲勢是否由量能支撐，避免只有開高後轉弱。若指數回到開盤價以下，改為中性觀察。',
-    };
-  }
-  if (bias.includes('偏空')) {
-    return {
-      check0915: '確認加權指數、台積電與台指期開盤是否與盤前偏空方向一致。若開盤跌幅超過 0.5%，劇本初步成立。',
-      check1030: '觀察是否有族群逆勢轉強。若有族群帶量上攻，偏空判斷需重新評估。',
-      check1300: '確認今日跌勢是否有實質賣壓，還是僅為短線獲利了結。若有明顯拉回，改為中性觀察。',
-    };
-  }
-  return {
-    check0915: '確認加權指數、台積電與台指期開盤方向是否明確。若開盤後方向混沌，今日宜觀望。',
-    check1030: '觀察半導體、AI、金融等主流族群是否有明確方向。若無明確主流帶動，維持保守判斷。',
-    check1300: '觀察尾盤是否有方向性變化。若維持震盪，今日中性判斷成立。',
-  };
 }
 
 // ═══ Main Component ═══
@@ -205,7 +184,7 @@ export default function ReportDetail() {
   const canWatchRaw = safeArray(report.can_watch);
   const avoidRaw = safeArray(report.avoid_today);
   const keyDrivers = safeArray(report.key_drivers).map(publicReportText);
-  const checkpoints = deriveCheckpoints(projection.marketDecision.bias ?? '');
+  const savedConditions = historicalReportEvidencePresentation(report, projection);
   const rawAI = (strategy.raw || {}) as Record<string, unknown>;
   const v10BeneficiaryEnabled = rawAI.v10_beneficiary_enabled === true || rawAI.v10_beneficiary_enabled === 'true';
   const v11ObservationScripts = mapV11ObservationItems(projection.recommendation.items, 5);
@@ -236,17 +215,8 @@ export default function ReportDetail() {
 
   // Script reasons
   const scriptWhy = publicReportText(projection.marketDecision.summary ?? projection.statusLabel);
-  const scriptValidate = [
-    keyDrivers.length > 0 ? `盤前主線 ${keyDrivers.slice(0, 3).join('、')} 開盤後是否延續` : null,
-    watchSectors.length > 0 ? `受惠族群 ${watchSectors.slice(0, 2).join('、')} 是否有資金流入` : null,
-    '開盤 15 分鐘內指數方向是否與盤前判斷一致',
-  ].filter(Boolean) as string[];
-
-  const scriptInvalid = [
-    avoidSectors.length > 0 ? `${avoidSectors.slice(0, 2).join('、')} 意外轉強，劇本前提改變` : null,
-    '若開盤後 30 分鐘內加權指數反向波動超過 1%，劇本下修',
-    '若國際盤中出現重大利空，今日觀察轉為保守',
-  ].filter(Boolean) as string[];
+  const scriptValidate = savedConditions.confirmations.map(publicReportText);
+  const scriptInvalid = savedConditions.invalidations.map(publicReportText);
   const closingRight = closingTextItems(closing.what_was_right);
   const closingWrong = closingTextItems(closing.what_was_wrong);
   const closingAdjustments = closingTextItems(closing.tomorrow_adjustment);
@@ -451,6 +421,7 @@ export default function ReportDetail() {
               {/* 需要驗證的條件 */}
               <div className="mb-4">
                 <h3 className="text-amber-300 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="ri-search-eye-line" /> 需要驗證的條件</h3>
+                {scriptValidate.length === 0 ? <p className="text-white/65 text-sm">這份報告未提供可核對的確認條件，不自行推定。</p> : null}
                 <div className="space-y-2">
                   {scriptValidate.map((c, idx) => (
                     <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/[0.04] border border-amber-500/15">
@@ -475,7 +446,7 @@ export default function ReportDetail() {
                   </div>
                 ) : (
                   <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-white/65 text-sm leading-relaxed">目前沒有額外失效條件，主要觀察加權指數、台積電與台指期是否同步轉弱。</p>
+                    <p className="text-white/65 text-sm leading-relaxed">這份報告未提供可核對的失效條件，不自行推定價格或門檻。</p>
                   </div>
                 )}
               </div>
@@ -493,12 +464,15 @@ export default function ReportDetail() {
               <section className="ma-card-elevated border border-amber-500/20">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-6 h-6 rounded-md bg-amber-500/15 flex items-center justify-center"><i className="ri-shield-check-line text-amber-300 text-xs" /></div>
-                  <p className="ma-eyebrow text-amber-300/75">會員研究品質閘門</p>
+                  <p className="ma-eyebrow text-amber-300/75">正式個股推薦狀態</p>
                 </div>
-                <h2 className="ma-section-title text-white mb-3">今日研究資料尚未達付費發布標準</h2>
+                <h2 className="ma-section-title text-white mb-3">尚未發布正式個股推薦</h2>
                 <p className="text-white/65 text-sm leading-relaxed mb-4">
                   {projection.recommendation.message}
                 </p>
+                <p className="text-white/65 text-sm mb-3">市場報告與個股推薦分開驗證；沒有推薦不代表市場報告未完成。</p>
+                <details><summary className="text-white/75 text-sm py-3 cursor-pointer">查看個股研究資料限制</summary>
+                {!premiumAvailability.eligible ? <p className="text-white/65 text-sm mb-3">今日研究資料尚未達付費發布標準</p> : null}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     <p className="text-white/35 text-[10px] mb-1">會員價值分數</p>
@@ -510,9 +484,10 @@ export default function ReportDetail() {
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     <p className="text-white/35 text-[10px] mb-1">缺少資料</p>
-                    <p className="text-white/75 text-sm font-semibold">{missingSources.length > 0 ? missingSources.slice(0, 3).join('、') : '內容完整度未過門檻'}</p>
+                    <p className="text-white/75 text-sm font-semibold">{missingSources.length > 0 ? missingSources.slice(0, 3).map(publicReportText).join('、') : '未提供逐項缺失原因，不自行推定'}</p>
                   </div>
                 </div>
+                </details>
               </section>
             )}
 
@@ -645,32 +620,20 @@ export default function ReportDetail() {
             <section className="ma-card-elevated">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-6 h-6 rounded-md bg-amber-500/15 flex items-center justify-center"><i className="ri-time-line text-amber-400 text-xs" /></div>
-                <p className="ma-eyebrow text-white/45">盤中檢查點</p>
+                <p className="ma-eyebrow text-white/45">當時保存的觀察條件</p>
               </div>
-              <h2 className="ma-section-title text-white mb-4">盤中檢查點</h2>
+              <h2 className="ma-section-title text-white mb-4">當時保存的觀察條件</h2>
 
               <div className="space-y-4">
-                <div className="relative pl-6 border-l-2 border-emerald-500/20">
+                {savedConditions.steps.map((step, index) => <div key={`${step.time}-${index}`} className="relative pl-6 border-l-2 border-emerald-500/20">
                   <div className="absolute left-0 top-0 -translate-x-1/2 w-3 h-3 rounded-full bg-emerald-500/30 border-2 border-emerald-500/20" />
                   <div className="pb-4">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 text-[10px] font-medium border border-emerald-500/20 mb-2"><i className="ri-sun-line" /> 09:15 開盤確認</span>
-                    <p className="text-white/65 text-sm leading-relaxed">{checkpoints.check0915}</p>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 text-[10px] font-medium border border-emerald-500/20 mb-2"><i className="ri-time-line" /> {publicReportText(step.time) || '未提供時間'}</span>
+                    {step.title ? <p className="text-white/75 text-sm leading-relaxed">{publicReportText(step.title)}</p> : null}
+                    {step.detail && step.detail !== step.title ? <p className="text-white/65 text-sm leading-relaxed">{publicReportText(step.detail)}</p> : null}
                   </div>
-                </div>
-                <div className="relative pl-6 border-l-2 border-amber-500/20">
-                  <div className="absolute left-0 top-0 -translate-x-1/2 w-3 h-3 rounded-full bg-amber-500/30 border-2 border-amber-500/20" />
-                  <div className="pb-4">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 text-[10px] font-medium border border-amber-500/20 mb-2"><i className="ri-radar-line" /> 10:30 主流確認</span>
-                    <p className="text-white/65 text-sm leading-relaxed">{checkpoints.check1030}</p>
-                  </div>
-                </div>
-                <div className="relative pl-6">
-                  <div className="absolute left-0 top-0 -translate-x-1/2 w-3 h-3 rounded-full bg-red-500/20 border-2 border-red-500/10" />
-                  <div>
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-medium border border-red-500/20 mb-2"><i className="ri-timer-line" /> 13:00 收盤前確認</span>
-                    <p className="text-white/65 text-sm leading-relaxed">{checkpoints.check1300}</p>
-                  </div>
-                </div>
+                </div>)}
+                {!savedConditions.steps.length ? <p className="text-white/65 text-sm">未保存可核對的盤中觀察條件；不補上固定時間或市場理由。</p> : null}
               </div>
             </section>
 

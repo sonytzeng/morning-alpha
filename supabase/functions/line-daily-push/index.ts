@@ -23,6 +23,7 @@ type LineSubscriber = {
 type DeliveryTarget = LineSubscriber & {
   outbox_id: string;
   idempotency_key: string;
+  transport: {request_id:string;lease_token:string;retry_key:string;body_text:string;payload_sha256:string;message_preview:string};
 };
 
 type DeliverySummary = {
@@ -543,6 +544,7 @@ async function enqueueDeliveryOutbox(args: {
       .eq('report_date', args.reportDate)
       .eq('push_type', args.pushType)
       .eq('status', 'PENDING')
+      .eq('attempt_count', 0)
       .in('line_subscriber_id', subscriberIds);
     if (refreshError) throw new Error(`Failed to refresh pending LINE delivery: ${refreshError.message}`);
   }
@@ -554,7 +556,7 @@ async function claimDeliveryOutbox(
   decisionSnapshotId: string | null,
   pushType: string,
 ): Promise<DeliveryTarget[]> {
-  const { data, error } = await supabase.rpc('claim_line_delivery_outbox_v1', {
+  const { data, error } = await supabase.rpc('claim_line_transport_request_v1', {
     p_report_date: reportDate,
     p_decision_snapshot_id: decisionSnapshotId,
     p_push_type: pushType,
@@ -562,13 +564,16 @@ async function claimDeliveryOutbox(
     p_lease_seconds: 180,
   });
   if (error) throw new Error(`Failed to claim LINE delivery outbox: ${error.message}`);
-  return ((data || []) as Array<Record<string, unknown>>).map((row) => ({
-    id: String(row.line_subscriber_id || ''),
-    line_user_id: String(row.line_user_id || ''),
-    display_name: null,
-    outbox_id: String(row.id || ''),
-    idempotency_key: String(row.idempotency_key || ''),
-  })).filter((row) => row.id && row.line_user_id && row.outbox_id && row.idempotency_key);
+  if(!Array.isArray(data))throw new Error('TRANSPORT_CLAIM_CONTRACT');
+  return data.flatMap((value:Record<string,unknown>)=>{
+    const transport={request_id:String(value.request_id||''),lease_token:String(value.lease_token||''),retry_key:String(value.retry_key||''),
+      body_text:String(value.body_text||''),payload_sha256:String(value.payload_sha256||''),message_preview:String(value.message_preview||'')};
+    if(!Array.isArray(value.members)||value.members.length===0||value.members.length>500)throw new Error('TRANSPORT_MEMBERS_CONTRACT');
+    return value.members.map((member:Record<string,unknown>)=>({
+      id:String(member.id||''),line_user_id:String(member.line_user_id||''),display_name:null,
+      outbox_id:String(member.outbox_id||''),idempotency_key:String(member.idempotency_key||''),transport,
+    }));
+  });
 }
 
 async function markDeliveryOutbox(
@@ -669,15 +674,26 @@ async function sendMulticastBatches(args: {
   let sentCount = 0;
   let failedCount = 0;
   let pendingCount = 0;
-  const now = new Date().toISOString();
-
-  for (let from = 0; from < args.subscribers.length; from += LINE_MULTICAST_BATCH_SIZE) {
-    const batch = args.subscribers.slice(from, from + LINE_MULTICAST_BATCH_SIZE);
-    const userIds = batch.map((subscriber) => String(subscriber.line_user_id)).filter(Boolean);
-    const outboxIds = batch.map((subscriber) => subscriber.outbox_id);
-    const retryKey = await createRetryKey(
-      batch.map((subscriber) => subscriber.idempotency_key).sort().join('|'),
-    );
+  const groups=new Map<string,DeliveryTarget[]>();
+  for(const member of args.subscribers){
+    if(!member.transport?.request_id)throw new Error('TRANSPORT_BINDING_REQUIRED');
+    groups.set(member.transport.request_id,[...(groups.get(member.transport.request_id)??[]),member]);
+  }
+  for (const batch of groups.values()) {
+    const transport=batch[0].transport,userIds=batch.map(s=>String(s.line_user_id));
+    const body=JSON.parse(transport.body_text);
+    const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(transport.body_text))),n=>n.toString(16).padStart(2,'0')).join('');
+    if(batch.length===0||batch.length>500||new Set(userIds).size!==batch.length
+      ||batch.some(m=>JSON.stringify(m.transport)!==JSON.stringify(transport))
+      ||digest!==transport.payload_sha256||JSON.stringify(body.to)!==JSON.stringify(userIds)
+      ||!/^[a-f0-9-]{36}$/.test(transport.retry_key)||!/^[a-f0-9-]{36}$/.test(transport.lease_token)
+      ||!Array.isArray(body.messages)||body.messages.length!==1)throw new Error('TRANSPORT_IMMUTABLE_REQUEST_MISMATCH');
+    const complete=async(status:'SENT'|'RETRY'|'FAILED',error:string|null,accepted:string|null=null)=>{
+      const result=await args.supabase.rpc('complete_line_transport_request_v1',{
+        p_request:transport.request_id,p_lease:transport.lease_token,p_status:status,p_error:error,p_accepted_request_id:accepted,
+      });
+      if(result.error)throw new Error('TRANSPORT_COMPLETION_REJECTED');
+    };
 
     let response: Response;
     try {
@@ -686,56 +702,33 @@ async function sendMulticastBatches(args: {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${args.channelAccessToken}`,
-          'X-Line-Retry-Key': retryKey,
+          'X-Line-Retry-Key': transport.retry_key,
         },
-        body: JSON.stringify({
-          to: userIds,
-          messages: [args.message],
-          customAggregationUnits: [`ma_daily_${args.reportDate.replaceAll('-', '')}`],
-        }),
+        body: transport.body_text,
+        signal: AbortSignal.timeout(15000),
       });
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
+      void error; const detail='TRANSPORT_RESPONSE_UNKNOWN';
       failedCount += userIds.length;
       pendingCount += userIds.length;
-      await markDeliveryOutbox(args.supabase, outboxIds, 'RETRY', detail.slice(0, 500));
-      await insertPushLogs(args.supabase, userIds.map((lineUserId) => ({
-        line_user_id: lineUserId,
-        push_type: args.pushType,
-        report_date: args.reportDate,
-        status: 'failed',
-        message_preview: args.messagePreview,
-        error_message: detail.slice(0, 500),
-      })));
+      await complete('RETRY',detail);
       continue;
     }
 
-    if (!response.ok) {
-      const detail = (await response.text()).slice(0, 500);
+    const acceptedId=response.headers.get('x-line-accepted-request-id');
+    const alreadyAccepted=response.status===409&&typeof acceptedId==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(acceptedId);
+    if (!response.ok&&!alreadyAccepted) {
+      const detail = response.status===409?'TRANSPORT_ACCEPTANCE_UNPROVEN':'LINE_HTTP_'+response.status;
       failedCount += userIds.length;
-      const retryable = response.status === 429 || response.status >= 500;
+      const retryable = response.status === 409 || response.status === 429 || response.status >= 500;
       if (retryable) pendingCount += userIds.length;
-      await markDeliveryOutbox(args.supabase, outboxIds, retryable ? 'RETRY' : 'FAILED', detail);
-      await insertPushLogs(args.supabase, userIds.map((lineUserId) => ({
-        line_user_id: lineUserId,
-        push_type: args.pushType,
-        report_date: args.reportDate,
-        status: 'failed',
-        message_preview: args.messagePreview,
-        error_message: detail,
-      })));
+      await response.body?.cancel();
+      await complete(retryable?'RETRY':'FAILED',detail);
       continue;
     }
 
-    await markDeliveryOutbox(args.supabase, outboxIds, 'SENT', null);
-    await insertPushLogs(args.supabase, userIds.map((lineUserId) => ({
-      line_user_id: lineUserId,
-      push_type: args.pushType,
-      report_date: args.reportDate,
-      status: 'success',
-      message_preview: args.messagePreview,
-    })));
-    await markSubscribersPushed(args.supabase, userIds, now);
+    await response.body?.cancel();
+    await complete('SENT',null,alreadyAccepted?acceptedId:null);
     sentCount += userIds.length;
   }
 

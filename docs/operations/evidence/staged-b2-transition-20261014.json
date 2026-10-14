@@ -1,0 +1,69 @@
+{
+  "schema": "STAGED_RELEASE_240_V1",
+  "batch": "B2",
+  "base": "2a5d461ec3d98bfc8bc3177a295c95e299b7bda2",
+  "files": [
+    {
+      "path": ".github/workflows/staged-release-240.yml",
+      "before_sha256": null,
+      "after_sha256": "85ed69d20b5d7ab1798036e3ae5065d414c91d3e5cb316b763d4a3e36f14dcb0"
+    },
+    {
+      "path": ".github/workflows/validate-release.yml",
+      "before_sha256": "18080e6a079c2c9a4732ba63a9d22c892ae050546d7e64ef03b1d2f4318c6e8e",
+      "after_sha256": "e3105a1ba7f6a7980acf68a14a1032c8a18f42ef3c04145194d4f9a6e1b2213b"
+    },
+    {
+      "path": "docs/operations/release-b2-20261014.md",
+      "before_sha256": null,
+      "after_sha256": "17d8ec477adf02022ac5938cfa8a297e31e96e693e29945d0936a371168861c9"
+    },
+    {
+      "path": "scripts/releases/staged-regression.mjs",
+      "before_sha256": null,
+      "after_sha256": "9fcc0da569d5269c99f431929fa5c47619bf6f61601a0c96d4d64839aef80cb6"
+    },
+    {
+      "path": "supabase/functions/line-daily-push/index.ts",
+      "before_sha256": "e4c334cfc8a8b4071c43ef5b381507f95d75e4a7afe7106de1f25af77c67ac40",
+      "after_sha256": "183832e3c74988f41d0b288ac874ada458a51555928ba06bdd93153c470852d0"
+    },
+    {
+      "path": "supabase/migrations/20261014002215_line_transport_immutable_request_candidate_v1.sql",
+      "before_sha256": null,
+      "after_sha256": "d29879ad32a0dc30e650dc902d5d0079c10a7ff119dc715a9877e543f2bce60e"
+    },
+    {
+      "path": "tests/helpers/marketNewsReportIntegrity.mjs",
+      "before_sha256": "83a9e27a226ec72b199201d8d8e1062503188972b9bf4d39f41361edacbda574",
+      "after_sha256": "6d6ae0a0c4126e5157f88dba1d3e7c7e41bb4a8df63b2c24dc59212fb57ac9d1"
+    },
+    {
+      "path": "tests/helpers/stagedReleaseIntegrity.mjs",
+      "before_sha256": null,
+      "after_sha256": "e40c7b112f2b74028cdf37c59f828a3cd5f39594f012dc6a744c39e85489a4b1"
+    },
+    {
+      "path": "tests/lineProductionPromotion.test.mjs",
+      "before_sha256": "439498ea4602b8ff1050a53c795f9d8853aaaa7f98ee13a1a1ece78c9364cb14",
+      "after_sha256": "3fc7df476405eab01a7d527fc4c472a578874dec5eab2ae0b349d5759d343a25"
+    },
+    {
+      "path": "tests/lineTransportRecoveryDatabase.integration.mjs",
+      "before_sha256": null,
+      "after_sha256": "4de035ccf480ed9e1d70cb4920deb6acd3ed8499ca4d90c90ef282764562e4e4"
+    },
+    {
+      "path": "tests/stagedReleaseIntegrity.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "b1edc2f18dccd98f402a54ce60aabe25ec89c68b4964835289efea55bf798660"
+    }
+  ],
+  "production_authorized": false,
+  "member_publication_authorized": false,
+  "secret_change": false,
+  "cron_change": false,
+  "auth_model_change": false,
+  "recommendation_threshold_change": false,
+  "historical_data_change": false
+}

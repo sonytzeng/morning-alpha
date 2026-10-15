@@ -111,17 +111,18 @@ const CORE_RUNTIME_PATHS=Object.freeze([
  "supabase/migrations/20261012054120_vnext_daily_research_runtime_candidate.sql"
 ]);
 let immutable;
+const baselineModes=new Map();
 function baseline(){
  if(immutable)return immutable;
  const rows=git(['ls-tree','-r','-z',VNEXT_BASE]).split('\0').filter(Boolean).map(row=>{
   const [meta,path]=row.split('\t'),[mode,type,oid]=meta.split(' ');
-  assert.equal(type,'blob');assert.match(mode,/^100[0-7]{3}$/);return {path,oid};
+  assert.equal(type,'blob');assert.match(mode,/^100[0-7]{3}$/);return {path,oid,mode};
  });
  const bytes=execFileSync('git',['cat-file','--batch'],{cwd:root,input:rows.map(r=>r.oid).join('\n')+'\n',maxBuffer:64*1024*1024});
  const map=new Map();let offset=0;
  for(const row of rows){const end=bytes.indexOf(10,offset);assert.notEqual(end,-1);const [oid,type,sizeText]=bytes.subarray(offset,end).toString().split(' '),size=Number(sizeText);
   assert.equal(oid,row.oid);assert.equal(type,'blob');assert.ok(Number.isSafeInteger(size)&&size>=0);offset=end+1;
-  assert.equal(bytes[offset+size],10);map.set(row.path,Buffer.from(bytes.subarray(offset,offset+size)));offset+=size+1;
+  assert.equal(bytes[offset+size],10);map.set(row.path,Buffer.from(bytes.subarray(offset,offset+size)));baselineModes.set(row.path,row.mode);offset+=size+1;
  }assert.equal(offset,bytes.length);immutable=map;return map;
 }
 export function vnextPrior(path){const b=baseline().get(path);return b===undefined?null:Buffer.from(b);}
@@ -129,6 +130,10 @@ export function vnextPrior(path){const b=baseline().get(path);return b===undefin
 // remain protected baseline; no duplicate Runtime patch or migration replay.
 export const VNEXT_PATHS=Object.freeze(VNEXT_CATALOG.filter(path=>{const prior=vnextPrior(path);return prior===null||!raw(path).equals(prior);}));
 const committedRanges=new Map();
+export function vnextFileDiffers(before,current,beforeMode,currentMode,claimedUntracked=false){
+ if(claimedUntracked&&current===undefined)return true;
+ return current===undefined?before!==null:before===null||!current.equals(before)||beforeMode!==currentMode;
+}
 export function vnextChangedPaths(){
  // One fresh status snapshot includes the actual HEAD and every dirty/untracked
  // path. Only immutable base..HEAD names are cached, never working-tree state.
@@ -136,13 +141,15 @@ export function vnextChangedPaths(){
  const oid=rows.find(r=>r.startsWith('# branch.oid '))?.slice('# branch.oid '.length);
  assert.match(oid??'',/^[a-f0-9]{40}$/,'IMMUTABLE_GIT_REVISION_REQUIRED');
  if(!committedRanges.has(oid))committedRanges.set(oid,git(['diff','--no-renames','--name-only','-z',VNEXT_BASE,oid,'--']).split('\0').filter(Boolean));
+ const untracked=new Set();
  const dirty=rows.filter(r=>!r.startsWith('#')).map(r=>{
-  if(r.startsWith('? '))return r.slice(2);
+  if(r.startsWith('? ')){const path=r.slice(2);untracked.add(path);return path;}
   assert(r.startsWith('1 '),'VNEXT_UNMERGED_OR_UNSUPPORTED_STATUS');return r.split(' ').slice(8).join(' ');
  });
  return [...new Set([...committedRanges.get(oid),...dirty])].filter(path=>{
   const before=vnextPrior(path);let current;try{current=raw(path);}catch(error){if(error.code!=='ENOENT'&&error.code!=='ENOTDIR')throw error;}
-  return current===undefined?before!==null:before===null||!current.equals(before);
+  const mode=current===undefined?undefined:(lstatSync(new URL('../../'+path,import.meta.url)).mode&0o111?'100755':'100644');
+  return vnextFileDiffers(before,current,baselineModes.get(path),mode,untracked.has(path));
  }).sort();
 }
 export function vnextTransition(source=raw,paths=vnextChangedPaths()){

@@ -20,7 +20,7 @@ test('candidate migration never activates a policy or rewrites existing canonica
 test('member endpoint retains exactly the same authenticated user derivation and existing resolver',()=>{
  const path='supabase/functions/member-access/index.ts';
  const base=execFileSync('git',['show','2a5d461ec3d98bfc8bc3177a295c95e299b7bda2:'+path],{encoding:'utf8'});
- const expected=base.replace('rpc("ensure_member_entitlement_v1"','rpc("ensure_member_entitlement_v2"')
+ const expected=base.replace('supabase-js@2"','supabase-js@2.115.0"').replace('rpc("ensure_member_entitlement_v1"','rpc("ensure_member_entitlement_v2"')
  .replace('  return jsonResponse({\n    success: true,','  const policyResult = await serviceClient.rpc("get_member_policy_receipt_v1", { p_user_id: userData.user.id });\n  if (policyResult.error) {\n    return jsonResponse({ success: false, error: "ACCESS_POLICY_UNAVAILABLE" }, 503);\n  }\n  const policy = asObject(policyResult.data);\n\n  return jsonResponse({\n    success: true,')
  .replace('    membership: access,','    membership: { ...access, legacyReviewRequired: policy.legacy_review_required === true },');
  assert.equal(read(path),expected);
@@ -48,6 +48,7 @@ test('new Free has no automatic trial; canonical expiry and cancellation remain 
  }
 });
 test('member copy does not promise automatic trial or a live checkout',()=>{
+ assert.match(read('supabase/functions/member-access/index.ts'),/^import \{ createClient \} from "https:\/\/esm\.sh\/@supabase\/supabase-js@2\.115\.0";/);
  const card=read('src/components/membership/MembershipStatusCard.tsx'),pricing=read('src/pages/pricing/Pricing.tsx');
  assert.match(card,/原有權益不變/);assert.match(card,/legacyReviewRequired/);assert.match(card,/SIGNED_OUT/);
  assert.doesNotMatch(pricing,/正式啟用後，才開始計算完整 14 天試用|前 14 天完整試用。/);

@@ -10,7 +10,7 @@
     {
       "path": ".github/workflows/vnext-candidate.yml",
       "before_sha256": null,
-      "after_sha256": "1325111f1440bd4d8a2279a92b306bf24b4e1db0eaccfbf500ad62dfa0d4922f"
+      "after_sha256": "7abd8b708ce51810b05f1b12b2b917f9786c322a9b053e8b314918234865a2a0"
     },
     {
       "path": "docs/vnext/ACCEPTANCE_MATRIX.md",
@@ -55,7 +55,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "920bd58131e5bf9885e2fe387a219f2fbbbe60aee368d92a27e5c139845ffa6f"
+      "after_sha256": "0c6b9185198ad578633e74f025f74cf847dee81ea39d168c37c3855b0f5f5e37"
     },
     {
       "path": "docs/vnext/FIRST_MEMBER_RESEARCH.md",
@@ -85,7 +85,7 @@
     {
       "path": "docs/vnext/MEMBER_RELEASE_MANIFEST.md",
       "before_sha256": null,
-      "after_sha256": "50ce5f44729365ec32ba587294d75f86376f4b5c2a961e5bac9c798ec50dd3b7"
+      "after_sha256": "ecd84ecf00f0b8c491c93709616e21fdf830aa86ea84229fab9065c759217e95"
     },
     {
       "path": "docs/vnext/MULTI_HORIZON_SPEC.md",
@@ -415,7 +415,7 @@
     {
       "path": "supabase/functions/member-access/index.ts",
       "before_sha256": "1ef5b823c3bb82fb4d0d52b7b02fdd1ca31f41a7622fbdb56fd0b82d9142d90b",
-      "after_sha256": "4395c7e6ec8d0b7251338b29fde5c3ed73c2c7962f478c1d3a4216e008767bb0"
+      "after_sha256": "16957484310d4fba4c42353360eea531827c3c8f1d4f3bb69f53e52fe0b72385"
     },
     {
       "path": "supabase/migrations/20261010061630_vnext_research_projection_candidate.sql",
@@ -440,7 +440,7 @@
     {
       "path": "tests/academyV11Integrity.test.mjs",
       "before_sha256": "93766884fc91af19293c91a0aa15c9db278fdf920f45f96b96c9cdca42802e43",
-      "after_sha256": "acdc01bdcb0675e80f3ca62246787f8f06bb75054ee7e6954856d5e7970b385a"
+      "after_sha256": "7168c0bf4bdc6b915fd550224b907c46ba91c249d1e2f28bc8abcffcdd2e844f"
     },
     {
       "path": "tests/browser/membership.client.ts",
@@ -500,7 +500,7 @@
     {
       "path": "tests/helpers/vnextIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "3f6de28004d2b84340e71d04f6c8421112bd2513b81b2e506af3fdb3d58d95d0"
+      "after_sha256": "1f5d86a22fa314752215f1c17f6eae6723b15a8f6f2033d41a34cece1ab14dfe"
     },
     {
       "path": "tests/membershipPolicy.integration.mjs",
@@ -510,7 +510,7 @@
     {
       "path": "tests/membershipPolicy.test.mjs",
       "before_sha256": null,
-      "after_sha256": "74e938eaeaae916ec470021bb7d8e50587dac5732bf895965d668fa73afc148d"
+      "after_sha256": "206f7b8ac677941af78e16520043ed062fba06967dbc1269ca8a734ad2d0b035"
     },
     {
       "path": "tests/productContract.test.mjs",
@@ -590,7 +590,7 @@
     {
       "path": "tests/vnextIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "89c4b805da40d06ef62423dc72714e9a576053f8965761dca47be6a8af27d8ac"
+      "after_sha256": "ec0912ad0912ec235dd3ba1aa01bb0f796f2b0b79225a62cd4b5e82b289b1485"
     },
     {
       "path": "tests/vnextMember.test.mjs",

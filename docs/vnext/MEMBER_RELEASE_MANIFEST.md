@@ -16,6 +16,8 @@
 
 本次唯讀取得member-access V8的兩檔來源及verify_jwt=false／部署ESZIP `24bcb2d7c047e453d3974f629a3b2a323c856a927da5fe43b3237fd02db39954`。root來源使用浮動`@supabase/supabase-js@2`，並非固定版本；因此不能宣稱來源備份可重建逐位元相同Runtime。正式會員發布維持NO-GO，需取得已部署Artifact依賴證據，或另建立固定版本、隔離實測的功能等效回復候選後，才能提出部署GO。不能借用B1的2.115.0作為member-access實際版本。
 
+後續已完成此回復前置的功能等效替代方案：V8原文只把SDK固定為2.115.0，共用entitlement來源不變，Deno遠端依賴鎖定。實際Deno Handler接真實一次性GoTrue／PostgREST／PostgreSQL，Free／Premium／Owner的status、activate及相同呼叫防重、缺失／錯誤401與GET405通過，既有權益／日期／version差異0；已啟用的本機Legacy政策仍保留v1→v2相容路由。這不是原V8實際SDK版本證明，也不是Production Gateway E2E。新會員候選本身同步固定2.115.0，另以真實本機Legacy未知期限驗證review旗標，不回推或改寫正式權益。精確root hash以最終transition為準；舊版／替代版原始碼、共用來源及lock hash在本輪私有回復收據。正式發布仍須合法Free／Premium身分、政策精確部署與activation核准，且研究不能繞過授權。
+
 回復以**目前已發布main／Readdy674**與已部署member-access V8封存為基準，不得把全站退回2a5d461。C先回復既有caller、撤銷新增writer執行並保留Prediction／Outcome／Audit。會員UI先撤入口、關閉新發布投影／approval，不DROP或DELETE新資料；不回復LINE／Reader／A。政策未activation可回復V8；政策已activation時，必須保留v1→v2相容路由與Legacy防縮權，不把signup_mode改回beta_full。隔離真實SQL已驗證舊v1 caller在activation後仍保留全部既有權益、日期與version，與8個併發呼叫相容；未執行正式回復演練。
 
 本輪Fresh GoTrue／PostgREST／PostgreSQL使用獨立loopback測試埠，不停止既有Preview。真實本機Owner／Free／Premium／Legacy登入、7／10章權限、metadata／JWT拒絕、跨帳號RLS、進度重登、撤回／到期、8併發防重均通過。SQL訂閱與研究fixture只是安全反例，並非真實付款或股票成效。正式Sony Owner Academy已讀取；正式Free／Premium無合法驗收帳號，仍PENDING。新候選沒有沿用舊Browser寬度數值冒充新正式響應式PASS。

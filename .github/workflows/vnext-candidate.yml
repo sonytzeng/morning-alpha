@@ -17,6 +17,8 @@ jobs:
           node-version-file: .nvmrc
       - run: npm ci
       - run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs tests/vnextRealEvidence.test.mjs tests/vnextFoundation.test.mjs tests/vnextMember.test.mjs tests/vnextPublication.test.mjs tests/vnextResearchFunnel.test.mjs tests/vnextStockResearch.test.mjs tests/vnextPublicationReview.test.mjs tests/vnextAdmission.test.mjs tests/vnextBlockers.test.mjs tests/vnextClearance.test.mjs tests/vnextDailyIntelligence.test.mjs
+      - name: Current source and live inventory negative controls (no build race)
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/marketNewsReportIntegrity.test.mjs tests/academyV11Integrity.test.mjs
       - name: Build member UI candidate (no Production deployment)
         run: MA_VNEXT_BUILD_DIR=/tmp/ma-vnext-member-build node scripts/vnext/member-build.mjs
       - name: Disposable Auth, publication and RLS (not Production Owner proof)

@@ -3,8 +3,18 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
-import {vnextTransition,vnextChangedPaths,vnextPrior,vnextBaselineChangedPaths,VNEXT_MANIFEST,VNEXT_PATHS} from './helpers/vnextIntegrity.mjs';
+import {vnextTransition,vnextChangedPaths,vnextPrior,vnextBaselineChangedPaths,vnextFileDiffers,VNEXT_MANIFEST,VNEXT_PATHS} from './helpers/vnextIntegrity.mjs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+test('status projection preserves mode-only, delete, add and reverted-file distinctions',()=>{
+ const b=Buffer.from('unchanged');
+ assert.equal(vnextFileDiffers(b,b,'100644','100755'),true);
+ assert.equal(vnextFileDiffers(b,b,'100755','100644'),true);
+ assert.equal(vnextFileDiffers(b,b,'100644','100644'),false);
+ assert.equal(vnextFileDiffers(b,undefined,'100644',undefined),true);
+ assert.equal(vnextFileDiffers(null,b,undefined,'100644'),true);
+ assert.equal(vnextFileDiffers(null,undefined,undefined,undefined),false);
+ assert.equal(vnextFileDiffers(null,undefined,undefined,undefined,true),true,'unknown inventory claim cannot disappear between status and read');
+});
 test('fresh status admission equals the uncached Git worktree diff and untracked inventory',()=>{
  const git=args=>execFileSync('git',args,{encoding:'utf8'}).split('\0').filter(Boolean);
  const expected=[...new Set([...git(['diff','--no-renames','--name-only','-z','9da487db73055eb983379ca2879822ebeb8f8906','--']),...git(['ls-files','--others','--exclude-standard','-z'])])].sort();

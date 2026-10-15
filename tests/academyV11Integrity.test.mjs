@@ -196,10 +196,10 @@ test('V1 integration verifies the real successor before restoring historical byt
     return encoding ? b.toString(encoding) : Buffer.from(b);
   });
   t.mock.method(childProcess, 'execFileSync', function(command, args, ...options) {
-    if (command === 'git' && args[0] === 'diff' && args.length === 6 && args[4] === VNEXT_BASE) {
+    if (command === 'git' && args[0] === 'status' && args.includes('--porcelain=v2')) {
       inventoryReads++;
       const inventory = realExec.call(this, command, args, ...options);
-      return extraPath ? inventory + 'unknown-live-file\0' : inventory;
+      return extraPath ? inventory + '? unknown-live-file\0' : inventory;
     }
     return realExec.call(this, command, args, ...options);
   });

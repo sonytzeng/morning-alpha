@@ -18,6 +18,8 @@ ff1b239第一輪新增會員Gate遇ECR映像資料量限流，單次重跑後通
 
 CPU profile顯示重複Git child-process與檔案開啟為主要成本。再將同一次view構造的重複outer admission合併，但每個公開gate返回前仍重新驗證live source；改成單次fresh porcelain-v2 status讀取實際HEAD與dirty／untracked路徑，只快取base..完整HEAD的不可變區間，逐次比較檔案bytes處理revert／delete，不快取工作樹結果。另與原兩個uncached Git命令做完全相同集合的反例檢查。這不是跨呼叫的live驗證快取；所有既有negative controls仍執行。Type／Lint／Build及Production Runtime38／SQL均不改，原ff1b239安全封存保留，新增修正另封存。
 
+後續補足mode-only變更／刪除／新增／revert區分；unknown untracked inventory即使讀取時消失仍拒絕，不讓新路徑被過濾掉。Academy舊mock原先攔截六參數diff，已精確改攔fresh status，保留每次讀取次數、後續raw drift、callback mutation、歷史reader再用與unknown-path全部負向控制，不刪assert。會員候選固定SDK2.115.0；替代V8及新Handler都走真實本機Auth／SQL，沒有修改正式Auth或放寬JWT。首次本機service JWT時鐘落差只改用後端真實clock，不修改產品時效條件。
+
 
 ## Public Free Premium Release Candidate（2026-10-12，最新續跑點）
 

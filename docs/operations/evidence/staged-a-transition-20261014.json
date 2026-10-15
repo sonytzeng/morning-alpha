@@ -16,7 +16,7 @@
     {
       "path": "scripts/releases/staged-regression.mjs",
       "before_sha256": "66a5b805006ee7a0901f734ee39903295f6faec3bb5cffb7ba1e4eae374c1614",
-      "after_sha256": "60782e7adc9981afc03ca5449a0f985d42ce0727619e4145f1293d63e0c081de"
+      "after_sha256": "b43f542e1632bf307e8a2c1c6b8be9d5df01b2c9191e24359fd94d460569e5dd"
     },
     {
       "path": "src/components/feature/Footer.tsx",
@@ -156,7 +156,7 @@
     {
       "path": "tests/helpers/stagedReleaseIntegrity.mjs",
       "before_sha256": "78694b7f1023a0d37ed94cf1f11f28f09eb31fe38b4107e446a031267bd6ca48",
-      "after_sha256": "d560beeccdc4f79e2f1f1a9e9cf5e21d3120a28058046ae109b4b0d3793030aa"
+      "after_sha256": "bbd6192d54f2be63a0e9f64606ea47081b6d228e0f82f30f2f95afb1213a3b38"
     },
     {
       "path": "tests/marketNewsReportIntegration.test.mjs",

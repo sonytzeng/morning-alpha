@@ -1,0 +1,132 @@
+{
+  "schema": "RECOMMENDATION_V1_PRODUCER_RELEASE_ADMISSION_1",
+  "production_authorized": false,
+  "source_commit": "069e392eea326f6b02fa557e68103715a10b99ba",
+  "functions": [
+    "recommendation-stock-evidence-v1"
+  ],
+  "migrations": [],
+  "production_baseline": {
+    "slug": "recommendation-stock-evidence-v1",
+    "version": 14,
+    "eszip_sha256": "ed268b666e33b60d2b0d0ee4e5e807e8454a7e67dc5dff2a6561d7fba7c8c3fd"
+  },
+  "verify_jwt": true,
+  "gateway_auth_change": false,
+  "secret_change": false,
+  "cron_change": false,
+  "rls_change": false,
+  "threshold_change": false,
+  "historical_report_rewrite": false,
+  "line_send": false,
+  "member_publication": false,
+  "files": [
+    {
+      "path": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "before_sha256": "70352af5ec86ca94f4cc00d9c59f3483d1114bc455ca253601e2679f0bf03755",
+      "after_sha256": "70352af5ec86ca94f4cc00d9c59f3483d1114bc455ca253601e2679f0bf03755"
+    },
+    {
+      "path": "supabase/functions/_shared/internal-function-auth.mjs",
+      "before_sha256": "2a15efde1117cf2f8c1ef3adf376de95c930254902c57f2ec5dbf74ce0f930be",
+      "after_sha256": "2a15efde1117cf2f8c1ef3adf376de95c930254902c57f2ec5dbf74ce0f930be"
+    },
+    {
+      "path": "supabase/functions/_shared/decision-v1-data.ts",
+      "before_sha256": "7c0ba14f39a52ab216e662ce0cfce80a5c5c64cfdf7a719f4b103be3439a8082",
+      "after_sha256": "7c0ba14f39a52ab216e662ce0cfce80a5c5c64cfdf7a719f4b103be3439a8082"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-stock-evidence.ts",
+      "before_sha256": "5bed905f5db389b0e44db3bf86e11964ca7fa61282ed8d67f24f9d27a7d5311d",
+      "after_sha256": "86be1e626de3bf5c746aa10d5abcfb99dbb8b86c7ab2e6dbb7151335170c47d1"
+    },
+    {
+      "path": "supabase/functions/_shared/decision-v1-evidence.ts",
+      "before_sha256": "43bd97d3ae40a453a57c6dc070c6effb6bf152c8d4baf7dd72a85645cb354d81",
+      "after_sha256": "2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-phase.ts",
+      "before_sha256": "d517fb094ea41a8e70c16c132ca7dc9d48bb5c63efc7d7f36760502697a8e5d6",
+      "after_sha256": "d517fb094ea41a8e70c16c132ca7dc9d48bb5c63efc7d7f36760502697a8e5d6"
+    },
+    {
+      "path": "supabase/functions/_shared/market-session-contract.mjs",
+      "before_sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44",
+      "after_sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44"
+    },
+    {
+      "path": "supabase/functions/_shared/market-calendar-data.json",
+      "before_sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232",
+      "after_sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232"
+    },
+    {
+      "path": "supabase/functions/_shared/txf-session-contract.mjs",
+      "before_sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e",
+      "after_sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e"
+    },
+    {
+      "path": "supabase/functions/_shared/market-status.ts",
+      "before_sha256": "d285910516d5ae5e0f55d8ee4314da7b7e21214b766d20cda2853fa775af0737",
+      "after_sha256": "d285910516d5ae5e0f55d8ee4314da7b7e21214b766d20cda2853fa775af0737"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-official-actuals.ts",
+      "before_sha256": "ac1457eb889466931f14f4e9c5a44c3a6000a54a6657cd1c977cb4916714eea5",
+      "after_sha256": "ac1457eb889466931f14f4e9c5a44c3a6000a54a6657cd1c977cb4916714eea5"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-company-events.ts",
+      "before_sha256": "4b756d518e88d6d3f7e4cfce9944bcc6a2f3f51577a92b9408fee7618b3713b1",
+      "after_sha256": "4b756d518e88d6d3f7e4cfce9944bcc6a2f3f51577a92b9408fee7618b3713b1"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-stream.ts",
+      "before_sha256": "5a97379ed1dc8ddd0440e9189e70b1f764b170718a6e85b9726ec3ffc5e61983",
+      "after_sha256": "5a97379ed1dc8ddd0440e9189e70b1f764b170718a6e85b9726ec3ffc5e61983"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-sources.ts",
+      "before_sha256": "98475003460d215e764bf011aba5fae7a603ba3455e54be547dba75e79e23708",
+      "after_sha256": "98475003460d215e764bf011aba5fae7a603ba3455e54be547dba75e79e23708"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-runtime.ts",
+      "before_sha256": "ec562918f999fe07ce4ed7aa682300dbf2957cd24990f3339b1bf4243f7ce1ef",
+      "after_sha256": "ec562918f999fe07ce4ed7aa682300dbf2957cd24990f3339b1bf4243f7ce1ef"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+      "before_sha256": "5d934bb7c2be21ff66a0043a945b0d91edcbeb2a57166882715e8813da31766e",
+      "after_sha256": "5d934bb7c2be21ff66a0043a945b0d91edcbeb2a57166882715e8813da31766e"
+    },
+    {
+      "path": "src/features/research/recommendation-shadow-v2-summary.ts",
+      "before_sha256": "8ff6744d5b456fbef51191186b87a88b30ccd970e35bf2e11574766560cb3d2d",
+      "after_sha256": "8ff6744d5b456fbef51191186b87a88b30ccd970e35bf2e11574766560cb3d2d"
+    },
+    {
+      "path": "src/features/research/recommendation-v2-forward.ts",
+      "before_sha256": "cc56810a11ce5f09ba82418a9079457abadee8ee9147cb204ffccec3fe7ac1ee",
+      "after_sha256": "cc56810a11ce5f09ba82418a9079457abadee8ee9147cb204ffccec3fe7ac1ee"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts",
+      "before_sha256": "528f41ef339a9d69708514738b10c889149b16f67c35fd8ad3d19a357d19298a",
+      "after_sha256": "528f41ef339a9d69708514738b10c889149b16f67c35fd8ad3d19a357d19298a"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-v2-acquisition-cache.ts",
+      "before_sha256": "a5e5c84e4ef33c8ddf584e6b3e675f03e808086653f92c1bc881c909f61eab6b",
+      "after_sha256": "a5e5c84e4ef33c8ddf584e6b3e675f03e808086653f92c1bc881c909f61eab6b"
+    }
+  ],
+  "rollback": "Exact V14 source/settings package retained outside Git; SDK2.57.4 pinned; original behavior reproduced against minimized real 2330 evidence. Never re-run historical Report/LINE.",
+  "stop_conditions": [
+    "Production metadata/source fingerprints differ from V14 sealed baseline",
+    "More than the two B1 dependencies change",
+    "Recommendation source/methodology/rights or business data changes",
+    "Read-only smoke cannot prove no unrelated writes"
+  ]
+}

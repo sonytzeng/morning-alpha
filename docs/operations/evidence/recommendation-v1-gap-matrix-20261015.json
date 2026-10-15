@@ -1,0 +1,1188 @@
+{
+  "schema": "V1_REAL_SAVED_GAP_MATRIX_20261015",
+  "business_date": "2026-10-15",
+  "cutoff": "2026-10-14T23:06:45.587Z",
+  "source_revision_fingerprint": "57608f75e06ebe3eab4a9e15243f290b86a8dc92febb225e6bf76da273614729",
+  "funnel": {
+    "status": "BLOCKED",
+    "none_count": 0,
+    "ready_count": 0,
+    "watch_count": 0,
+    "blocked_count": 72,
+    "universe_count": 72,
+    "evaluated_count": 0,
+    "evaluation_phase": "PREMARKET",
+    "reason_distribution": {
+      "20_DAILY_VOLUMES_MISSING": 1,
+      "THREE_INSTITUTIONS_MISSING": 72,
+      "MARKET_REQUIRED_INSTITUTIONAL": 72,
+      "SOURCED_COMPANY_CATALYST_MAPPING_MISSING": 72,
+      "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING": 72,
+      "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING": 72
+    },
+    "not_yet_observable_count": 0
+  },
+  "counts": {
+    "flows": 0,
+    "earnings": 0,
+    "mappings": 0,
+    "catalysts": 0
+  },
+  "formal_outcome_changed": false,
+  "hypothetical_replay_not_forward": true,
+  "rows": [
+    {
+      "status": "BLOCKED",
+      "symbol": "1504",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "1513",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "1514",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "1519",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "1590",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "1605",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "1760",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2049",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2208",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2303",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2308",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2317",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2330",
+      "reasons": [
+        "20_DAILY_VOLUMES_MISSING",
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "PRODUCER_COMPILED_DEPENDENCY_DRIFT",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2337",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2344",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2356",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2357",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2368",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2376",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2377",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2379",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2382",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2383",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2408",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2421",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2454",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2520",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2539",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2542",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2548",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2603",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2609",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2610",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2615",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2618",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2634",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2881",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2882",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2884",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2885",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2886",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2891",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "2892",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3006",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3017",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3034",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3037",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3081",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3189",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3231",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3324",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3363",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3443",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3450",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3529",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3653",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3661",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "3711",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "4566",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "4743",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "4908",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "4979",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6213",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6230",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6274",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6446",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6488",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6547",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "6669",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "8033",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "8046",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    },
+    {
+      "status": "BLOCKED",
+      "symbol": "8299",
+      "reasons": [
+        "THREE_INSTITUTIONS_MISSING",
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+        "MARKET_REQUIRED_INSTITUTIONAL"
+      ],
+      "data_pipe_class": "NO_PRICE_PIPE_GAP_OBSERVED",
+      "institutional_class": "REQUIRED_TWD_PRODUCER_ABSENT",
+      "fundamental_class": "CONSENSUS_GUIDANCE_FOUR_QUARTER_CONTRACT_UNSATISFIED",
+      "event_class": "FACT_NOT_REVIEWED_CAUSAL_MAPPING",
+      "investment_risk": "NOT_EVALUATED_DO_NOT_INFER_REJECTION"
+    }
+  ]
+}

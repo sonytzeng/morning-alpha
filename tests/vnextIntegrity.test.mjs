@@ -17,7 +17,7 @@ test('status projection preserves mode-only, delete, add and reverted-file disti
 });
 test('fresh status admission equals the uncached Git worktree diff and untracked inventory',()=>{
  const git=args=>execFileSync('git',args,{encoding:'utf8'}).split('\0').filter(Boolean);
- const expected=[...new Set([...git(['diff','--no-renames','--name-only','-z','9da487db73055eb983379ca2879822ebeb8f8906','--']),...git(['ls-files','--others','--exclude-standard','-z'])])].sort();
+ const expected=[...new Set([...git(['diff','--no-renames','--name-only','-z','49baeba1facf9b591c17d3356420db0d01881126','--']),...git(['ls-files','--others','--exclude-standard','-z'])])].sort();
  assert.deepEqual(vnextChangedPaths(),expected);
 });
 test('immutable interval cache cannot hide a mutable ref or consumer array mutation',()=>{
@@ -45,7 +45,7 @@ test('VNext exact candidate preserves every Production byte and previous release
 });
 test('sealed C runtime and SQL are inherited exactly, never restored from the older PR230 copy',()=>{
  const reference=JSON.parse(read('docs/vnext/core-runtime-reference-20261015.json'));
- assert.equal(reference.c_head,'9da487db73055eb983379ca2879822ebeb8f8906');assert.equal(reference.local_files.length,38);
+ assert.equal(reference.c_head,'49baeba1facf9b591c17d3356420db0d01881126');assert.equal(reference.local_files.length,38);
  for(const row of reference.local_files){assert.equal(createHash('sha256').update(read(row.path)).digest('hex'),row.sha256);assert(read(row.path).equals(vnextPrior(row.path)));}
  assert.equal(createHash('sha256').update(read(reference.migration.path)).digest('hex'),reference.migration.sha256);
  assert(read(reference.migration.path).equals(vnextPrior(reference.migration.path)));

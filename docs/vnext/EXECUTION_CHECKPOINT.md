@@ -23,6 +23,10 @@ CPU profile顯示重複Git child-process與檔案開啟為主要成本。再將�
 
 ## Public Free Premium Release Candidate（2026-10-12，最新續跑點）
 
+### 2026-10-15 C永久403容量修復同步
+
+接收C49baeba，不重做研究算法或UI，沒有新衝突。舊版在真實隔離SQL的兩筆403控制只處理第一筆、cursor0；新C將精確SOURCE_ACCESS_RESTRICTED記錄為缺資料並前進，不繞過限制、不製造成功來源。184項事件／財務拒絕控制23次分片、每次8筆；429／503的持久化重試保持不變。唯一C SQL逐位元不變，38檔中僅C自身dailyRuntime新hash；會員候選全部繼承，不能重新封存舊Runtime。a88ec51已完成10/10CI及7檔安全封存作為上一有效checkpoint；新整合HEAD必須再核對自己的受影響測試與CI，不能借用舊HEAD通過。
+
 ### 2026-10-15 Runner shutdown受控診斷
 
 正式版本與main未漂移。b2d729b最終9/10 CI通過，VNext兩次收到runner shutdown signal，並非測試斷言；GitHub當日無已公告Actions事故，不推定原因。以CI相同Node22.23.1重新執行原四檔，24項斷言全部通過、0skip、175182ms；這不同於此前其他組合30項的紀錄。取樣RSS約190–280MB，不足以證明OOM；本機/usr/bin/time因sandbox不允許sysctl取得完整資源統計而exit1，不把它冒充整個命令exit0。新增只讀CI觀測wrapper，每20秒記錄資源及signal，保留原測試／10分鐘timeout／實際退出碼，不自動重試、不輸出args或env；撤銷取消不會轉成成功。這是觀測缺口修正，不宣稱已證明GitHub關閉根因。

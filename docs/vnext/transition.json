@@ -1,6 +1,6 @@
 {
   "schema": "VNEXT_RESEARCH_CANDIDATE_V1",
-  "base": "9da487db73055eb983379ca2879822ebeb8f8906",
+  "base": "49baeba1facf9b591c17d3356420db0d01881126",
   "files": [
     {
       "path": ".github/workflows/owner-cockpit.yml",
@@ -55,7 +55,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "b3cbd3430b36a238466703a9734d9e33fd0e99192669c4fb88610630d3a598fb"
+      "after_sha256": "687ec2dca3b4d9cc7508a2c2727ea85fb64c4829109f6376420f328098d65369"
     },
     {
       "path": "docs/vnext/FIRST_MEMBER_RESEARCH.md",
@@ -85,7 +85,7 @@
     {
       "path": "docs/vnext/MEMBER_RELEASE_MANIFEST.md",
       "before_sha256": null,
-      "after_sha256": "ecd84ecf00f0b8c491c93709616e21fdf830aa86ea84229fab9065c759217e95"
+      "after_sha256": "8747179c763eb0218160f8df0162488bdf51b21b5b6811961b1e1be884b83071"
     },
     {
       "path": "docs/vnext/MULTI_HORIZON_SPEC.md",
@@ -140,7 +140,7 @@
     {
       "path": "docs/vnext/core-runtime-reference-20261015.json",
       "before_sha256": null,
-      "after_sha256": "427d758ced93b741c800739339aff39715907ad75479949bcae87fc6840dd125"
+      "after_sha256": "2d79715dbf96f25cb13e2dfa6536de006e994838c162dd59c31650c5f10a13e5"
     },
     {
       "path": "docs/vnext/publication-review-20261011.json",
@@ -510,7 +510,7 @@
     {
       "path": "tests/helpers/vnextIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "d64e8d2a26602dd3e75c8e5d48222135d54b006cf43b2b45ebe6349de1291ba3"
+      "after_sha256": "7fbca158fb3087514957ce9f77ea9881891c0f8f69b8be3156d0998f95a036a4"
     },
     {
       "path": "tests/membershipPolicy.integration.mjs",
@@ -600,7 +600,7 @@
     {
       "path": "tests/vnextIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "ec0912ad0912ec235dd3ba1aa01bb0f796f2b0b79225a62cd4b5e82b289b1485"
+      "after_sha256": "0f518148e6ce8e3fc73c5b8228082199397dd9ea5c91c9cafc3a32fe7fce2b81"
     },
     {
       "path": "tests/vnextMember.test.mjs",

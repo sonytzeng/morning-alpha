@@ -16,7 +16,7 @@
     {
       "path": "docs/operations/release-c-20261014.md",
       "before_sha256": null,
-      "after_sha256": "cccf80a7c01c0a7ab258f35e348f65887dcecb7d6d5ecac1ec50c971bd895f1a"
+      "after_sha256": "6ef202c0326222989328e5af1dcd3d7d6aee00056d52d7693d93432d78fffbf5"
     },
     {
       "path": "scripts/releases/staged-regression.mjs",
@@ -61,7 +61,7 @@
     {
       "path": "src/features/vnext/dailyRuntime.ts",
       "before_sha256": null,
-      "after_sha256": "7c0ed09d5a7f3d8a6af3a402649b485c5ce079c77da280d634ef652e0b17ad09"
+      "after_sha256": "b2ee9bfd1618b6eb7f85494ae55a1d6dc14693f48571e007d9d6a019f861ae91"
     },
     {
       "path": "src/features/vnext/projection.ts",
@@ -146,12 +146,12 @@
     {
       "path": "tests/vnextDailyDatabase.integration.mjs",
       "before_sha256": null,
-      "after_sha256": "78a0a3bb8a54bf396e8b1a137ddfa746b13052ad33ab0f754f305297af4e698c"
+      "after_sha256": "67698a4f0f223dc8bbf33ea1c6672a89d7045eacb1591587606ba478ec6844ae"
     },
     {
       "path": "tests/vnextDailyRuntimeRecovery.test.mjs",
       "before_sha256": null,
-      "after_sha256": "a7e2e3c7851fabaa1742ccae67e73c942e14de2408286ae965019610b9fa0408"
+      "after_sha256": "465bf2c8124a8febd4249c62db91a987d5797ad69a3d051d27780a08cc85f5fa"
     },
     {
       "path": "tests/vnextDailyWiring.test.mjs",

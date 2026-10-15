@@ -1,6 +1,6 @@
 {
   "schema": "INHERITED_CORE_RUNTIME_20261015",
-  "c_head": "9da487db73055eb983379ca2879822ebeb8f8906",
+  "c_head": "49baeba1facf9b591c17d3356420db0d01881126",
   "production_main": "069e392eea326f6b02fa557e68103715a10b99ba",
   "production_operations": false,
   "local_files": [
@@ -50,7 +50,7 @@
     },
     {
       "path": "src/features/vnext/dailyRuntime.ts",
-      "sha256": "7c0ed09d5a7f3d8a6af3a402649b485c5ce079c77da280d634ef652e0b17ad09"
+      "sha256": "b2ee9bfd1618b6eb7f85494ae55a1d6dc14693f48571e007d9d6a019f861ae91"
     },
     {
       "path": "src/features/vnext/projection.ts",

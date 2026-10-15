@@ -238,3 +238,12 @@ f776292 的公開測試與incident captures已全部通過；run38106378293在�
 最後交叉檢查補正：既有get-report-payload呼叫ensure_member_entitlement_v1，unknown config=free會落入舊Beta分支。相同候選SQL將舊實作原文移private，保留v1同名同權限wrapper導向v2；Report Function檔案不改、不增加部署。測試兩入口生效前後、8併發與新Free，避免只驗會員頁漏掉報告路徑。
 
 不要重開其他已結案工程或心跳。下一步是最新HEAD CI、精確Manifest與既有付款商合法測試設定；Merge/Production部署/切換仍須具名核准。29項舊研究未公開，Forward0、Outcome0。
+# 2026-10-15 staged receipt view correction
+
+After the six TCP-only isolated PostgreSQL readiness changes, CI correctly
+detected that the staged receipt test compared live VNext workflow bytes with
+the older staged receipt. The admission implementation was already restoring
+and validating the exact predecessor. The test now uses that same admitted
+predecessor for the historical comparison, retains live admission and all
+tamper-denial checks, and adds an explicit newer-workflow tamper negative
+control. No product runtime, SQL, permission, threshold or timeout changed.

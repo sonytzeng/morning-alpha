@@ -13,6 +13,7 @@ const VNEXT_CATALOG=Object.freeze([
  'scripts/releases/observe-ci-node.mjs','tests/ciNodeObserver.test.mjs',
  'scripts/academy-v11/auth-environment.mjs','scripts/academy-v11/local-auth-endpoints.mjs',
  'docs/vnext/core-runtime-reference-20261015.json','tests/helpers/stagedReleaseIntegrity.mjs',
+ 'tests/stagedReleaseIntegrity.test.mjs',
  VNEXT_MEMBERSHIP_MIGRATION,'supabase/functions/member-access/index.ts',
  'src/types/membership.ts','src/components/membership/MembershipStatusCard.tsx','src/pages/pricing/Pricing.tsx','src/pages/auth/LoginPage.tsx',
  'tests/membershipPolicy.test.mjs','tests/membershipPolicy.integration.mjs','tests/publicRelease.test.mjs',

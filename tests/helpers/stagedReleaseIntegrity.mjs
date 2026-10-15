@@ -124,6 +124,13 @@ const hash=b=>createHash('sha256').update(b).digest('hex');
 const raw=p=>{const url=new URL('../../'+p,import.meta.url);assert(lstatSync(url).isFile(),'STAGED_REGULAR_FILE:'+p);return readFileSync(url);};
 export const stagedManifestPath=id=>'docs/operations/evidence/staged-'+id.toLowerCase()+'-transition-20261014.json';
 let baseline;
+// Cache only immutable Git blobs, never live candidate bytes or guard results.
+const inheritedBlobs=new Map();
+function inheritedBefore(base,path){
+ const key=base+':'+path;
+ if(!inheritedBlobs.has(key))inheritedBlobs.set(key,execFileSync('git',['show',key],{cwd:root,maxBuffer:64e6}));
+ return Buffer.from(inheritedBlobs.get(key));
+}
 export function stagedPrior(path){
  if(!baseline){
   const entries=git(['ls-tree','-r','-z',STAGED_BASE]).split('\0').filter(Boolean).map(r=>{const [meta,path]=r.split('\t'),[mode,type,oid]=meta.split(' ');assert.equal(type,'blob');assert.match(mode,/^100[0-7]{3}$/);return {path,oid};});
@@ -189,7 +196,7 @@ export function historicalStagedViews(source){
  const priors=new Map();
  for(const f of files.values()){
   assert.equal(hash(outer.actualPredecessorRead(f.path)),f.after_sha256,'STAGED_MERGED_B1_DRIFT');
-  const prior=f.before_sha256===null?null:execFileSync('git',['show',priorBase+':'+f.path],{cwd:root,maxBuffer:64e6});
+  const prior=f.before_sha256===null?null:inheritedBefore(priorBase,f.path);
   assert.equal(prior===null?null:hash(prior),f.before_sha256,'STAGED_INHERITED_BEFORE_DRIFT');priors.set(f.path,prior);
  }
  const restore=(reader,path)=>{

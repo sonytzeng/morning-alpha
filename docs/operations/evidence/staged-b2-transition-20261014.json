@@ -36,7 +36,7 @@
     {
       "path": "tests/helpers/stagedReleaseIntegrity.mjs",
       "before_sha256": "78694b7f1023a0d37ed94cf1f11f28f09eb31fe38b4107e446a031267bd6ca48",
-      "after_sha256": "bbd6192d54f2be63a0e9f64606ea47081b6d228e0f82f30f2f95afb1213a3b38"
+      "after_sha256": "c3f8f842ba9fb57201710c78b2e33cecec1d401684ca649fc7521b3ab7f6d031"
     },
     {
       "path": "tests/lineProductionPromotion.test.mjs",

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {acquisitionPlan,directoryPlan,sessionsBefore,assembleDaily,normalizeSource,fetchSource} from '../src/features/vnext/dailyAdapter.ts';
 import {RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
@@ -8,6 +9,29 @@ import {handleVnextDaily} from '../supabase/functions/vnext-daily-research-v1/ha
 import {enqueueVnextAfterCheckpoint,continueVnextRun} from '../supabase/functions/_shared/vnext-daily-hook.ts';
 import {csvRows,parseRevenue,parseFinancial,financialRows} from '../src/features/vnext/dailyParsers.mjs';
 const companies=RECOMMENDATION_UNIVERSE.map(symbol=>({symbol,company:'隔離合成控制',exchange:'TWSE',industry:'24'}));
+test('C admission preserves the deployed Producer V15 and the complete sealed runtime; stale helpers fail closed',()=>{
+ const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+ const manifest=JSON.parse(read('docs/operations/evidence/staged-c-transition-20261014.json'));
+ const guard=manifest.production_dependency_guard;
+ assert.equal(guard.main,'5c616bfeeebf9fc45890130948e21293de7a5d72');
+ assert.equal(guard.producer.version,15);
+ assert.equal(guard.producer.ezbr_sha256,'95bfde704134302f46b48520d56ec31cf0d74b1c90b1d974d6660c28968152b7');
+ assert.equal(guard.producer.verify_jwt,true);assert.equal(guard.producer.import_map,false);
+ assert.equal(guard.producer.files.length,20);assert.equal(guard.runtime.length,38);
+ const verify=source=>{
+  for(const row of [...guard.producer.files,...guard.runtime,guard.migration]){
+   assert.match(row.sha256,/^[a-f0-9]{64}$/);
+   assert.equal(createHash('sha256').update(source(row.path)).digest('hex'),row.sha256,'C_PROTECTED_DEPENDENCY:'+row.path);
+  }
+ };
+ verify(read);
+ for(const changed of ['supabase/functions/_shared/decision-v1-evidence.ts','supabase/functions/_shared/recommendation-stock-evidence.ts','supabase/functions/vnext-daily-research-v1/handler.ts',guard.migration.path]){
+  assert.throws(()=>verify(p=>p===changed?Buffer.concat([read(p),Buffer.from('\nSTALE_DEPENDENCY')]):read(p)),/C_PROTECTED_DEPENDENCY/);
+ }
+ assert.deepEqual(guard.deploy_functions,['vnext-daily-research-v1','recommendation-v2-forward-worker-v1']);
+ assert(!guard.deploy_functions.includes('recommendation-stock-evidence-v1'));
+ for(const flag of ['production_authorized','secret_change','cron_change','member_publication','threshold_change'])assert.equal(guard[flag],false);
+});
 test('dynamic official date plan rolls month, year and current revisions, not 10/8 snapshot',async()=>{
  const a=await acquisitionPlan('2026-10-12',companies),b=await acquisitionPlan('2026-11-02',companies);
  assert(a.length<=1600);assert(b.some(t=>t.period==='2026-10'));assert(!a.some(t=>t.period==='2026-10'));

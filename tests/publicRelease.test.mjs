@@ -129,7 +129,8 @@ test('primary navigation follows the subscriber decision journey', () => {
     assert.match(navbar, new RegExp(`to:\\s*['"]${destination.replaceAll('/', '\\/')}['"]`), `missing primary journey destination: ${destination}`);
   }
   assert.doesNotMatch(navbar, /to:\s*['"]\/opportunities['"]/, 'candidate radar must remain a secondary drill-down');
-  assert.match(navbar, /14 天完整試用/);
+  assert.match(navbar, /會員方案/);
+  assert.doesNotMatch(navbar, /14 天完整試用/);
   assert.match(footer, /to="\/verification"/);
 });
 
@@ -309,8 +310,11 @@ test('LINE delivery is fail-closed and persists per-subscriber retries', () => {
   assert.match(publication, /snapshot\.status !== 'READY'/);
   assert.match(publication, /snapshot\.content_score < 90/);
   assert.match(publication, /member\.semantic_status !== 'PASSED'/);
-  assert.match(lineDailyPush, /claim_line_delivery_outbox_v1/);
-  assert.match(lineDailyPush, /mark_line_delivery_outbox_v1/);
+  assert.match(lineDailyPush, /claim_line_transport_request_v1/);
+  assert.match(lineDailyPush, /complete_line_transport_request_v1/);
+  const immutableTransport=read('supabase/migrations/20261014002215_line_transport_immutable_request_candidate_v1.sql');
+  assert.match(immutableTransport,/ATTEMPT_LIMIT_ACK_UNKNOWN_REQUIRES_REVIEW/);
+  assert.match(immutableTransport,/TRANSPORT_BOUND_OUTBOX_IMMUTABLE/);
   assert.match(lineDailyPush, /delivery_mode === 'incident'/);
   assert.match(deliveryGuaranteeMigration, /create table if not exists public\.line_delivery_outbox/);
   assert.match(deliveryGuaranteeMigration, /for update skip locked/);
@@ -633,7 +637,7 @@ test('today report keeps runtime state and technical copy out of the public UI',
 
 test('today answers the subscriber first and keeps runtime details behind a drill-down', () => {
   const brief = read('src/features/decision-v1/DecisionBrief.tsx');
-  for (const label of ['今天市場怎麼看', '現在該怎麼做', '有沒有值得關注的機會', '方向機率', '模型信心', '進場環境']) {
+  for (const label of ['今天市場怎麼看', '現在該怎麼做', '有沒有值得關注的機會', '方向機率', '資料支持程度', '進場環境']) {
     assert.match(brief, new RegExp(label), `today decision brief is missing: ${label}`);
   }
   assert.match(today, /<DecisionBrief/);
@@ -755,11 +759,12 @@ test('membership conversion route is public, honest, and records a real submissi
   assert.doesNotMatch(paywallCard, /window\.location|window\.open|target=["']_blank/);
   assert.match(routeConfig, /path: "\/login"/);
   assert.match(routeConfig, /path: "\/auth\/callback"/);
-  assert.match(loginPage, /創始測試期間不扣款/);
+  assert.match(loginPage, /既有權益保留，登入不會自動扣款/);
+  assert.match(loginPage, /也不會自動開始新的試用/);
   assert.match(membershipService, /signInWithOtp/);
   assert.match(membershipService, /shouldCreateUser: true/);
   assert.match(pricing, /document\.getElementById\(location\.hash\.slice\(1\)\)/);
-  for (const label of ['免費與會員差在哪裡', '14 天怎麼判斷值不值得', '盤前決策', '收盤驗證']) {
+  for (const label of ['免費與會員差在哪裡', '尚未開放付款', '盤前決策', '收盤驗證']) {
     assert.match(pricing, new RegExp(label), `pricing is missing concrete member value: ${label}`);
   }
 });
@@ -987,7 +992,9 @@ test('LINE daily push is paginated, multicast, retry-safe, and subscriber-idempo
   assert.match(lineDailyPush, /'ALREADY_SENT'/);
   assert.match(lineDailyPush, /message\/multicast/);
   assert.match(lineDailyPush, /X-Line-Retry-Key/);
-  assert.match(lineDailyPush, /customAggregationUnits/);
+  assert.match(read('supabase/migrations/20261014002215_line_transport_immutable_request_candidate_v1.sql'),/customAggregationUnits/);
+  assert.match(lineDailyPush,/body: transport\.body_text/);
+  assert.match(lineDailyPush,/complete_line_transport_request_v1/);
   assert.match(lineDailyPush, /return buildPublishedLineDecision\(delivery, report, snapshot, gate, siteUrl\)/);
   const composition=read('supabase/functions/_shared/line-production-template.ts');
   assert.match(composition,/operationalMarket:delivery\.operational_market,reportLevel:p\.reportLevel/);

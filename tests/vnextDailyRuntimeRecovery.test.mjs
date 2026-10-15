@@ -21,7 +21,7 @@ async function checkpoint(){
  {acquire:async()=>acquired,clock:()=>before,outcomes:async()=>({}),publication:async()=>[]});
  assert.equal(state.locks.length,216);assert(await verifyDailyLock(state.locks[0]));return state;
 }
-async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,lockError=null,throughHandler=false,providerWaitSeconds=0}={}){
+async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,lockError=null,throughHandler=false,providerWaitSeconds=0,providerStatus=200}={}){
  const dirs=await directoryPlan(date),cache=new Map(await Promise.all(dirs.map(async t=>[t.key,await receipt(t,at,{rows:t.exchange==='TWSE'?companies:[]})])));
  const calls=[],http=[],stored=[],locked=[],sources=[...cache.values()];let pending=due,checkpointState=saved,run={id:'isolated-run',business_date:date,
   actionable_at:date+'T09:00:00+08:00',lease:'isolated-lease',fence:2,plan,cursor,checkpoint:checkpointState};
@@ -44,7 +44,8 @@ async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,loc
   throw Error('UNEXPECTED_TEST_RPC');
  };
  const fetcher=async url=>{
-  http.push(String(url));const u=new URL(url),month=u.searchParams.get('date').slice(0,6),symbol=u.searchParams.get('stockNo');
+  http.push(String(url));if(providerStatus!==200)return new Response('',{status:providerStatus});
+  const u=new URL(url),month=u.searchParams.get('date').slice(0,6),symbol=u.searchParams.get('stockNo');
   return Response.json({stat:'OK',date:month+'01',title:' '+symbol+' 合成隔離控制',fields:symbol?
    ['日期','成交股數','成交金額','開盤價','最高價','最低價','收盤價']:['日期','開盤指數','最高指數','最低指數','收盤指數'],data:[]});
  };
@@ -71,6 +72,22 @@ test('cold worker fetches at most eight, commits cursor and yields; no partial e
  assert.equal(a.http.length,8);assert.equal(a.run.cursor,8);assert.equal(a.result.reason,'ACQUISITION_CONTINUATION');assert.equal(a.locked.length,0);
  const b=await runner({at:'2026-10-12T00:01:00Z',plan,cursor:a.run.cursor,cold:true});
  assert.equal(b.http.length,8);assert.equal(b.run.cursor,16);assert(!b.http.some(url=>a.http.includes(url)));
+});
+test('permanent official403 cannot starve184 event/financial tasks or turn absent evidence into success',async()=>{
+ const plan=(await acquisitionPlan(date,companies)).filter(t=>['EVENT','FINANCIAL_YTD','CASHFLOW_YTD'].includes(t.kind));
+ assert.equal(plan.length,184);let cursor=0,invocations=0,requests=0;
+ while(cursor<plan.length){
+  assert(invocations<24,'permanent source denials must drain within the eight-request invocation bound');
+  const a=await runner({at:'2026-10-12T00:00:00Z',plan,cursor,cold:true,providerStatus:403});
+  assert(a.http.length<=8);assert(a.run.cursor>cursor);assert.equal(a.stored.length,0);assert.equal(a.locked.length,0);
+  assert(a.calls.filter(c=>c.op==='SOURCE_FAIL').every(c=>c.data.reason==='SOURCE_ACCESS_RESTRICTED'));
+  requests+=a.http.length;cursor=a.run.cursor;invocations++;
+ }
+ assert.equal(invocations,23);assert.equal(requests,184);
+ for(const providerStatus of [429,503]){
+  const a=await runner({at:'2026-10-12T00:00:00Z',plan,cold:true,providerStatus});
+  assert.equal(a.http.length,1);assert.equal(a.run.cursor,0);assert.equal(a.result.reason,'SOURCE_RETRY_PENDING');
+ }
 });
 test('deadline produces immutable truthful insufficient judgments while cold bootstrap continues',async()=>{
  const a=await runner({at:'2026-10-12T00:59:15Z',plan:await acquisitionPlan(date,companies),cold:true});

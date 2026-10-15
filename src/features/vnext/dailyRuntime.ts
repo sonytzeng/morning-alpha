@@ -29,7 +29,15 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
    await p.sleep(Math.max(0,2500-(Date.now()-lastFetch)));lastFetch=Date.now();fetched++;
    const receipt=await fetchSource(task,p.fetcher,p.clock,AbortSignal.timeout(Math.max(1,deadline-Date.now())));
    await rpc('SOURCE_SAVE',{text:canonical(receipt)});return receipt;
-  }catch(e){retryAfter=Math.min(300,Math.max(3,Number(object(e).retryAfter)||3));await rpc('SOURCE_FAIL',{key:task.key,reason:failure(e),retry_seconds:retryAfter});return false;}
+  }catch(e){
+   const reason=failure(e);retryAfter=Math.min(300,Math.max(3,Number(object(e).retryAfter)||3));
+   await rpc('SOURCE_FAIL',{key:task.key,reason,retry_seconds:retryAfter});
+   // A denied official endpoint is not a transient rate limit. Preserve the
+   // exact missing-source reason and advance; never retry/bypass its access
+   // restriction or let hundreds of denied event tasks starve later evidence.
+   // Transient failures keep the existing durable three-attempt backoff.
+   return reason==='SOURCE_ACCESS_RESTRICTED'?null:false;
+  }
  };
  try{
   if('locks' in r.checkpoint){

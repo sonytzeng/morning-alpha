@@ -6,7 +6,8 @@ import {readFileSync} from 'node:fs';
 import {randomBytes,createHmac} from 'node:crypto';
 import {createServer} from 'node:http';
 import {handleVnextDaily} from '../supabase/functions/vnext-daily-research-v1/handler.ts';
-import {directoryPlan,normalizeSource,ADAPTER_VERSION} from '../src/features/vnext/dailyAdapter.ts';
+import {directoryPlan,normalizeSource,ADAPTER_VERSION,acquisitionPlan,classifyCompanies} from '../src/features/vnext/dailyAdapter.ts';
+import {workDailyRun} from '../src/features/vnext/dailyRuntime.ts';
 import {RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {canonical} from '../research/entry-opportunity.ts';
@@ -105,6 +106,25 @@ try{
   assert.equal((await op('SOURCE_BEGIN',task)).status,'FETCH');await op('SOURCE_SAVE',{text:canonical(receipt)});return receipt;
  };
  const receipts=[];for(const t of dirTasks)receipts.push(await cacheReceipt(t));
+ // Controlled permanent-denial response; real SQL, no MOPS network access.
+ // A denied optional source must stay missing, not consume three invocations
+ // per task and starve later evidence. Actual source/lock rows stay untouched.
+ const deniedPlan=(await acquisitionPlan('2026-10-12',classifyCompanies(receipts))).filter(t=>t.kind==='EVENT').slice(0,2);
+ await op('PLAN',deniedPlan);await op('FINISH',{status:'QUEUED'});
+ let deniedRequests=0;
+ const deniedResult=await workDailyRun(r.run_id,{rpc,clock:()=>at,sleep:async()=>{},fetcher:async url=>{
+  assert(deniedPlan.some(t=>t.url===url));deniedRequests++;return new Response('',{status:403});
+ }});
+ assert.equal(deniedRequests,2,'permanent denial must advance to the next source, not retry the first');
+ assert.equal(sql('select cursor from vnext_runtime.runs'),'2');
+ assert.equal(sql("select count(*) from vnext_runtime.run_sources where reason='SOURCE_ACCESS_RESTRICTED' and attempts=1 and source_id is null"),'2');
+ assert.equal(sql('select count(*) from vnext_runtime.predictions'),'0');
+ assert.equal(deniedResult.status,'QUEUED');
+ checks.push('Real SQL permanent403 source classification: one bounded attempt per source, cursor advances, no fake receipt/prediction or source-access bypass');
+ // Restore only the disposable fixture plan before the independent existing
+ // crash/lock/outcome tests below; no Production plan can be reset this way.
+ sql("update vnext_runtime.runs set plan='[]',cursor=0");
+ active=(await rpc('claim_vnext_daily_research_v1',{p_run:r.run_id})).run;
  // This end-to-end control has no price evidence: every symbol remains
  // insufficient, never synthetic buy points or a claimed real run.
  await op('PLAN',[dirTasks[0]]);await op('CURSOR',{cursor:1});await op('CHECKPOINT',{});await op('FINISH',{status:'QUEUED'});

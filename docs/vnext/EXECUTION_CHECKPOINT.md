@@ -247,3 +247,15 @@ and validating the exact predecessor. The test now uses that same admitted
 predecessor for the historical comparison, retains live admission and all
 tamper-denial checks, and adds an explicit newer-workflow tamper negative
 control. No product runtime, SQL, permission, threshold or timeout changed.
+
+## 2026-10-15 exact official Auth image, no Auth version change
+
+The f96ef92 VNext gate and its sole bounded retry both stopped before Auth
+tests because public.ecr.aws returned Data limit exceeded / Rate exceeded.
+The official Supabase Auth publish workflow lists ECR and GHCR together:
+https://github.com/supabase/auth/blob/master/.github/workflows/publish.yml .
+The existing ECR v2.194.0 RepoDigest and the official GHCR package both equal
+sha256:2b352c02adf11a2025cd5993c246ef85db73743553c39194d2b1862d1cc4d1fd.
+Use that exact official GHCR digest only in disposable Auth tests. No new
+credential, Auth version, configuration, role, RLS, assertion or Production
+dependency changed. A byte-exact test limits this delta to one image reference.

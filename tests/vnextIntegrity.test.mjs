@@ -52,6 +52,13 @@ test('sealed C runtime and SQL are inherited exactly, never restored from the ol
  const caller=read('supabase/functions/recommendation-v2-forward-worker-v1/index.ts').toString();
  assert.equal((caller.match(/enqueueVnextAfterCheckpoint\(input/g)||[]).length,1);assert.match(caller,/RECOMMENDATION_GATEWAY_ANON_JWT/);
 });
+test('isolated Auth uses the identical official v2.194.0 digest without changing its configuration or tests',()=>{
+ const path='scripts/academy-v11/auth-environment.mjs';
+ const previous=execFileSync('git',['show','f96ef92b3e70d02ee6dcd5d52500483da65f3d18:'+path],{encoding:'utf8'});
+ const old='public.ecr.aws/supabase/gotrue:v2.194.0',pinned='ghcr.io/supabase/gotrue@sha256:2b352c02adf11a2025cd5993c246ef85db73743553c39194d2b1862d1cc4d1fd';
+ assert.equal(previous.split(old).length-1,1);
+ assert.equal(read(path).toString(),previous.replace(old,pinned));
+});
 test('Validate preserves every accepted C check and waits only for three final isolated TCP servers',()=>{
  const path='.github/workflows/validate-release.yml',prior=vnextPrior(path).toString(),current=read(path);
  const socket='docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres';

@@ -65,7 +65,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "815de64c4d51a3d66afecc7544e74d86292f18512ea668af87572275e3b14fbb"
+      "after_sha256": "3fe060b0b4ded3fcacfb5e5273719366fc5c92fd05bb6ac58fbc38f9535bebfc"
     },
     {
       "path": "docs/vnext/FIRST_MEMBER_RESEARCH.md",
@@ -155,7 +155,7 @@
     {
       "path": "scripts/academy-v11/auth-environment.mjs",
       "before_sha256": "e5b00545b090386c25170dd784968815acf69d08ae49dd9a281d26fdebb845c6",
-      "after_sha256": "9985aa898eae09b3804f7047d2e1fe776d0eab15c230abc67df0af0049bda8fc"
+      "after_sha256": "fbe1c4c756cca7f00db1dc473b3d39ee86fb20f13a3101f4e0dc1f6a2a990164"
     },
     {
       "path": "scripts/academy-v11/local-auth-endpoints.mjs",
@@ -610,7 +610,7 @@
     {
       "path": "tests/vnextIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "0cd19307aecf89d54c619db1d4dff9cd3767814425ba83d66bdbbdd6f68e9966"
+      "after_sha256": "7cc5325403c0a00d1f93060d8c7ed9dfef738a8d8770545403d505392b3071d4"
     },
     {
       "path": "tests/vnextMember.test.mjs",

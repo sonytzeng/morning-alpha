@@ -4,6 +4,8 @@
 
 PR250維持精確4219c7c不變；C更新cf3b6b2只接收P0准入及解除兩個收據hash衝突，38Runtime與SQL不變。會員接收新C，保留原固定SHA區間快取及live逐次讀取，不能用C版覆蓋掉已通過的資源控制；不新增會員功能或改政策。新C和會員HEAD各自重新核對必要Integrity／CI，前序真實SQL、Auth、RLS、回復與Responsive證據因相同產品來源而保留；不重做五小時全站驗收。此為候選本機整合，不是Production Merge／Deploy／Migration或activation。
 
+0dd5b1a的Validate作業真實記錄先socket accepting、隨後rejecting，測試尚未開始即exit1，根因是官方Postgres image在初始化期間的socket-only bootstrap重啟，不是Owner RLS失敗。Owner backend與同workflow另外兩個衍生Postgres隔離環境使用相同啟動模式；只將這三個區塊共六個pg_isready改為-h127.0.0.1，等待最後TCP server。保留每個30次上限、network none、原Fresh DB／Owner／Clock／RLS測試及所有其他步驟。新增精確整份workflow對照斷言，只容許這六處變動，不增加timeout／retry或跳過檢查，產品Runtime／Schema不變。新無網路／無公開埠Postgres17已實測TCP第二次就緒、原Owner SQL gate全部通過，僅合成身分，不是正式會員證據。
+
 ## 核心 P0 會員整合候選（2026-10-15，最新續跑點）
 
 本候選在獨立Worktree接合PR230 a5c0ae5與C 9da487d；不是Merge main或Production發布。PR230與main原有4個衝突，與C合併時16個來源衝突，皆保留最新C／已發布B1、A、B2的實際產品來源。38個本機Runtime與唯一C SQL逐位元保持不變，資料見core-runtime-reference-20261015.json。舊PR230不得直接覆蓋C。

@@ -52,8 +52,13 @@ test('sealed C runtime and SQL are inherited exactly, never restored from the ol
  const caller=read('supabase/functions/recommendation-v2-forward-worker-v1/index.ts').toString();
  assert.equal((caller.match(/enqueueVnextAfterCheckpoint\(input/g)||[]).length,1);assert.match(caller,/RECOMMENDATION_GATEWAY_ANON_JWT/);
 });
-test('Validate retains the exact accepted C workflow and all previous safety checks',()=>{
- const path='.github/workflows/validate-release.yml',prior=vnextPrior(path),current=read(path);assert(current.equals(prior));
+test('Validate preserves every accepted C check and waits only for three final isolated TCP servers',()=>{
+ const path='.github/workflows/validate-release.yml',prior=vnextPrior(path).toString(),current=read(path);
+ const socket='docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres';
+ assert.equal(current.toString(),prior.replaceAll(socket,'docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres'));
+ assert.equal(prior.split(socket).length-1,6);
+ assert.equal((current.toString().match(/docker exec "\$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127\.0\.0\.1 -U postgres/g)||[]).length,6);
+ assert.match(current.toString(),/for attempt in \$\(seq 1 30\)/);assert.match(current.toString(),/--network none/);
  assert.match(current.toString(),/staged-regression\.mjs/);assert.match(current.toString(),/MA_TEST_PSQL/);
  assert.match(read('.github/workflows/vnext-candidate.yml').toString(),/membershipPolicy\.integration\.mjs/);
  assert.match(read('.github/workflows/vnext-candidate.yml').toString(),/vnextDailyDatabase\.integration\.mjs/);

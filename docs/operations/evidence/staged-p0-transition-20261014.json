@@ -1,0 +1,49 @@
+{
+  "schema": "STAGED_RELEASE_240_V1",
+  "batch": "P0",
+  "base": "f41e117ea109e09ae083ef2c692946a18aca2dcc",
+  "files": [
+    {
+      "path": "docs/operations/core-p0-final-20261015.md",
+      "before_sha256": null,
+      "after_sha256": "7ee44699f8b3992d0ae3d8480b6e2d3af7345995171be43b78b766b4bd926181"
+    },
+    {
+      "path": "docs/operations/evidence/recommendation-v1-gap-matrix-20261015.json",
+      "before_sha256": null,
+      "after_sha256": "61d0cddb923305f7bbbc957eb73cbe26d66b36269e015d1e1753f0b0408c9e27"
+    },
+    {
+      "path": "docs/operations/evidence/recommendation-v1-producer-release-20261015.json",
+      "before_sha256": null,
+      "after_sha256": "e09d83f4476f3d3d4bebc8c932b5252fda16cf98634e26dfc6766dbeb5dc2049"
+    },
+    {
+      "path": "scripts/releases/recommendation-v1-preflight.mjs",
+      "before_sha256": null,
+      "after_sha256": "e4446b60db8deb14abcfdbe5e9b6a3ef06b34ee233844df0e90ea96709886913"
+    },
+    {
+      "path": "scripts/releases/staged-regression.mjs",
+      "before_sha256": "66a5b805006ee7a0901f734ee39903295f6faec3bb5cffb7ba1e4eae374c1614",
+      "after_sha256": "b43f542e1632bf307e8a2c1c6b8be9d5df01b2c9191e24359fd94d460569e5dd"
+    },
+    {
+      "path": "tests/helpers/stagedReleaseIntegrity.mjs",
+      "before_sha256": "78694b7f1023a0d37ed94cf1f11f28f09eb31fe38b4107e446a031267bd6ca48",
+      "after_sha256": "c3f8f842ba9fb57201710c78b2e33cecec1d401684ca649fc7521b3ab7f6d031"
+    },
+    {
+      "path": "tests/recommendationProducerAdmission.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "319e7ef8f6f3e02a91f137a29d34e2707245859f1605dd092cde48b4a625d457"
+    }
+  ],
+  "production_authorized": false,
+  "member_publication_authorized": false,
+  "secret_change": false,
+  "cron_change": false,
+  "auth_model_change": false,
+  "recommendation_threshold_change": false,
+  "historical_data_change": false
+}

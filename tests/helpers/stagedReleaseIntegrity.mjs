@@ -6,6 +6,15 @@ import {fileURLToPath} from 'node:url';
 import {vnextPredecessorViews,vnextBaselineChangedPaths} from './vnextIntegrity.mjs';
 export const STAGED_BASE='f41e117ea109e09ae083ef2c692946a18aca2dcc';
 export const STAGED_SCOPES=Object.freeze({
+  "P0": [
+    "docs/operations/core-p0-final-20261015.md",
+    "docs/operations/evidence/recommendation-v1-gap-matrix-20261015.json",
+    "docs/operations/evidence/recommendation-v1-producer-release-20261015.json",
+    "scripts/releases/recommendation-v1-preflight.mjs",
+    "scripts/releases/staged-regression.mjs",
+    "tests/helpers/stagedReleaseIntegrity.mjs",
+    "tests/recommendationProducerAdmission.test.mjs"
+  ],
   "A": [
     ".github/workflows/analysis-intelligence.yml",
     ".github/workflows/staged-release-240.yml",

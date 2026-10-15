@@ -7,6 +7,13 @@ if(!release||process.env.MA_FULL_REGRESSION==='1'){
  const r=spawnSync('npm',['run','test:public'],{stdio:'inherit'});if(r.error)throw r.error;process.exit(r.status??1);
 }
 const targets={
+  "P0": [
+    "tests/recommendationProducerAdmission.test.mjs",
+    "tests/recommendationReaderBinding.test.mjs",
+    "tests/recommendationProducer.test.mjs",
+    "tests/recommendationRetainedReplay.test.mjs",
+    "tests/recommendationHardGateAudit.test.mjs"
+  ],
   "A": [
     "tests/ctoConfidencePresentation.test.mjs",
     "tests/ctoHistoricalEvidencePresentation.test.mjs",

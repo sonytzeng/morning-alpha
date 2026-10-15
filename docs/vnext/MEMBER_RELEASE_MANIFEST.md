@@ -2,7 +2,7 @@
 
 ## 2026-10-15 核心 P0 整合補正（本節優先於下方歷史發布方案）
 
-本次以C `49baeba1facf9b591c17d3356420db0d01881126`接合PR230 `a5c0ae5fc81661de87cb32e9ad9ebced2f394170`。10/15增量僅接收C官方永久403來源容量修復，沒有新合併衝突；相對該C基線的38個Runtime及唯一SQL仍逐位元相同。main為`069e392eea326f6b02fa557e68103715a10b99ba`；A674、Reader55與Sender71已發布，不重做。下方2a5d461、70秒、兩行hook及付款商unknown等文字只保留歷史稽核，不能作為本次部署或回復指令。
+本次以C `cf3b6b21c9e3d022a8132ed3b566b544d290a48f`接合PR230 `a5c0ae5fc81661de87cb32e9ad9ebced2f394170`。新增收斂PR250精確4219c7c的發布准入封存：C已解決A／B2收據hash衝突，會員保留原不可變Git range快取並接收P0白名單；未改任何Runtime或UI。相對新C基線的38個Runtime及唯一SQL仍逐位元相同。main為`069e392eea326f6b02fa557e68103715a10b99ba`；A674、Reader55與Sender71已發布，不重做。下方2a5d461、70秒、兩行hook及付款商unknown等文字只保留歷史稽核，不能作為本次部署或回復指令。
 
 38個C Runtime檔案及其唯一SQL與C候選逐位元相同，另以固定的不可變C基線保護；會員候選不能靠重寫自己的transition封存倒退C。見`core-runtime-reference-20261015.json`。16個合併衝突只保留已發布main與已封存C來源；會員UI、三層權限及原創Academy內容未重做。付款商已確認為Lemon Squeezy但Owner已暫緩整合，Test mode／Production Payment DISABLED，不要求付款商設定作為本輪工程驗收前提。
 

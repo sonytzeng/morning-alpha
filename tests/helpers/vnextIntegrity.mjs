@@ -3,7 +3,7 @@ import {readFileSync,lstatSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-export const VNEXT_BASE='49baeba1facf9b591c17d3356420db0d01881126';
+export const VNEXT_BASE='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const VNEXT_MANIFEST='docs/vnext/transition.json';
 export const VNEXT_MIGRATION='supabase/migrations/20261010061630_vnext_research_projection_candidate.sql';
 export const VNEXT_RUNTIME_MIGRATION='supabase/migrations/20261012054120_vnext_daily_research_runtime_candidate.sql';

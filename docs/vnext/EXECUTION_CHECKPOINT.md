@@ -1,5 +1,9 @@
 # VNext 執行 Checkpoint
 
+## 2026-10-15 核心交付發布順序相容補正（本節優先）
+
+PR250維持精確4219c7c不變；C更新cf3b6b2只接收P0准入及解除兩個收據hash衝突，38Runtime與SQL不變。會員接收新C，保留原固定SHA區間快取及live逐次讀取，不能用C版覆蓋掉已通過的資源控制；不新增會員功能或改政策。新C和會員HEAD各自重新核對必要Integrity／CI，前序真實SQL、Auth、RLS、回復與Responsive證據因相同產品來源而保留；不重做五小時全站驗收。此為候選本機整合，不是Production Merge／Deploy／Migration或activation。
+
 ## 核心 P0 會員整合候選（2026-10-15，最新續跑點）
 
 本候選在獨立Worktree接合PR230 a5c0ae5與C 9da487d；不是Merge main或Production發布。PR230與main原有4個衝突，與C合併時16個來源衝突，皆保留最新C／已發布B1、A、B2的實際產品來源。38個本機Runtime與唯一C SQL逐位元保持不變，資料見core-runtime-reference-20261015.json。舊PR230不得直接覆蓋C。

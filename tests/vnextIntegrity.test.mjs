@@ -2,8 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {vnextTransition,vnextChangedPaths,vnextPrior,VNEXT_MANIFEST,VNEXT_PATHS} from './helpers/vnextIntegrity.mjs';
+import {execFileSync} from 'node:child_process';
+import {vnextTransition,vnextChangedPaths,vnextPrior,vnextBaselineChangedPaths,VNEXT_MANIFEST,VNEXT_PATHS} from './helpers/vnextIntegrity.mjs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+test('fresh status admission equals the uncached Git worktree diff and untracked inventory',()=>{
+ const git=args=>execFileSync('git',args,{encoding:'utf8'}).split('\0').filter(Boolean);
+ const expected=[...new Set([...git(['diff','--no-renames','--name-only','-z','9da487db73055eb983379ca2879822ebeb8f8906','--']),...git(['ls-files','--others','--exclude-standard','-z'])])].sort();
+ assert.deepEqual(vnextChangedPaths(),expected);
+});
+test('immutable interval cache cannot hide a mutable ref or consumer array mutation',()=>{
+ const prior='069e392eea326f6b02fa557e68103715a10b99ba',before=vnextBaselineChangedPaths(prior),copy=[...before];
+ before.push('poisoned-consumer-path');assert.deepEqual(vnextBaselineChangedPaths(prior),copy);
+ assert.throws(()=>vnextBaselineChangedPaths('main'),/IMMUTABLE_GIT_REVISION_REQUIRED/);
+});
 test('member release changes only named route/navigation mounts, not existing product logic',()=>{
  const navbar='src/components/feature/Navbar.tsx',account='src/pages/account/Account.tsx',router='src/router/config.tsx';
  assert.equal(read(navbar).toString(),vnextPrior(navbar).toString()

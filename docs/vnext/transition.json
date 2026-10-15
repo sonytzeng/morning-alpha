@@ -55,7 +55,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "e6d22c6f2dbfe153ea6fbbbe64ab56e8969e6b48f148e735299495d4a43a05be"
+      "after_sha256": "920bd58131e5bf9885e2fe387a219f2fbbbe60aee368d92a27e5c139845ffa6f"
     },
     {
       "path": "docs/vnext/FIRST_MEMBER_RESEARCH.md",
@@ -488,14 +488,19 @@
       "after_sha256": "e804546842fccde0dec257ccfcf862314050950a7842d92daf3f1d34d532d837"
     },
     {
+      "path": "tests/helpers/marketNewsReportIntegrity.mjs",
+      "before_sha256": "1909f3e51c3d810e91fa4a3b06ab86095726eca4256fa23178cff9eaaf76a5ad",
+      "after_sha256": "8ee1f126c5a162c4f1a703039b6f1d8e6a0816aebec1069188193141564a50ea"
+    },
+    {
       "path": "tests/helpers/stagedReleaseIntegrity.mjs",
       "before_sha256": "f7a4af6e5875f0faf27aeb0a66fff3b24636c6774e536940914d0d985c8d508e",
-      "after_sha256": "371dd2a1d3bb38cc14bdceec8ba78c2df349066a89ef143a0c3ffd820f07ba55"
+      "after_sha256": "1c319db6643b4273b7d5d001e716cc6645bfb41ed9e2df65f49e34892fd76720"
     },
     {
       "path": "tests/helpers/vnextIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "a69c681fd8a5c2e131c83cc9c84a4fc04161016c49eb8e96274e05847a8d7507"
+      "after_sha256": "3f6de28004d2b84340e71d04f6c8421112bd2513b81b2e506af3fdb3d58d95d0"
     },
     {
       "path": "tests/membershipPolicy.integration.mjs",
@@ -585,7 +590,7 @@
     {
       "path": "tests/vnextIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "79395bf3c9548ecd3a68263e558b8cdb3595051e34531d90b4e9eeb1dfbfe694"
+      "after_sha256": "89c4b805da40d06ef62423dc72714e9a576053f8965761dca47be6a8af27d8ac"
     },
     {
       "path": "tests/vnextMember.test.mjs",

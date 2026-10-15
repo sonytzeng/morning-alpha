@@ -128,7 +128,23 @@ export function vnextPrior(path){const b=baseline().get(path);return b===undefin
 // Only the pre-existing named catalogue is eligible. Inherited C/main bytes
 // remain protected baseline; no duplicate Runtime patch or migration replay.
 export const VNEXT_PATHS=Object.freeze(VNEXT_CATALOG.filter(path=>{const prior=vnextPrior(path);return prior===null||!raw(path).equals(prior);}));
-export function vnextChangedPaths(){return [...new Set([...git(['diff','--no-renames','--name-only','-z',VNEXT_BASE,'--']).split('\0'),...git(['ls-files','--others','--exclude-standard','-z']).split('\0')].filter(Boolean))].sort();}
+const committedRanges=new Map();
+export function vnextChangedPaths(){
+ // One fresh status snapshot includes the actual HEAD and every dirty/untracked
+ // path. Only immutable base..HEAD names are cached, never working-tree state.
+ const rows=git(['status','--porcelain=v2','--branch','-z','--untracked-files=all','--no-renames']).split('\0').filter(Boolean);
+ const oid=rows.find(r=>r.startsWith('# branch.oid '))?.slice('# branch.oid '.length);
+ assert.match(oid??'',/^[a-f0-9]{40}$/,'IMMUTABLE_GIT_REVISION_REQUIRED');
+ if(!committedRanges.has(oid))committedRanges.set(oid,git(['diff','--no-renames','--name-only','-z',VNEXT_BASE,oid,'--']).split('\0').filter(Boolean));
+ const dirty=rows.filter(r=>!r.startsWith('#')).map(r=>{
+  if(r.startsWith('? '))return r.slice(2);
+  assert(r.startsWith('1 '),'VNEXT_UNMERGED_OR_UNSUPPORTED_STATUS');return r.split(' ').slice(8).join(' ');
+ });
+ return [...new Set([...committedRanges.get(oid),...dirty])].filter(path=>{
+  const before=vnextPrior(path);let current;try{current=raw(path);}catch(error){if(error.code!=='ENOENT'&&error.code!=='ENOTDIR')throw error;}
+  return current===undefined?before!==null:before===null||!current.equals(before);
+ }).sort();
+}
 export function vnextTransition(source=raw,paths=vnextChangedPaths()){
  const m=JSON.parse(source(VNEXT_MANIFEST));
  assert.deepEqual(Object.keys(m).sort(),['schema','base','files','migrations','functions','production_authorized','member_publication_authorized','strategy_change','secret_change','cron_change'].sort());
@@ -173,7 +189,12 @@ export function vnextPredecessorViews(source){
  }:current.predecessorRead;
  return {predecessorRead:historical,actualPredecessorRead:current.predecessorRead,verify:()=>vnextTransition(),changedPaths:immutableChangedPaths};
 }
-function immutableChangedPaths(prior){return git(['diff','--no-renames','--name-only','-z',prior,VNEXT_BASE,'--']).split('\0').filter(Boolean).sort();}
+const immutableRanges=new Map();
+function immutableChangedPaths(prior){
+ assert.match(prior,/^[a-f0-9]{40}$/,'IMMUTABLE_GIT_REVISION_REQUIRED');
+ if(!immutableRanges.has(prior))immutableRanges.set(prior,git(['diff','--no-renames','--name-only','-z',prior,VNEXT_BASE,'--']).split('\0').filter(Boolean).sort());
+ return [...immutableRanges.get(prior)];
+}
 export function vnextBaselineChangedPaths(prior){
  vnextTransition();
  return immutableChangedPaths(prior);

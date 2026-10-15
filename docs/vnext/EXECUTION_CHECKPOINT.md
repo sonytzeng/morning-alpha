@@ -14,6 +14,10 @@ P0推薦缺口矩陣與Producer兩個已合併B1依賴的部署准入，獨立�
 
 本整合候選最終HEAD需自己的Type／Lint／Build、Fresh DB／RLS、安全封存及CI，不沿用PR230或PR250的結果。沒有Production Merge、Migration、Deploy、Cron、Secret、正式LINE、付款或會員權益操作。整體商業READY=NO、穩定0/5。
 
+ff1b239第一輪新增會員Gate遇ECR映像資料量限流，單次重跑後通過；兩個舊Gate在15分鐘上限取消，原因是完整性鏈重複讀取相同不可變Git區間。後續僅快取完整40位SHA區間的歷史差異清單並回傳陣列副本；所有live檔案／source／guard逐次重驗，工作樹diff不快取，拒絕main等可變ref。沒有移除測試或延長timeout。另以獨立真實Auth／SQL完成固定SDK2.115.0的V8 Handler功能等效回復status Smoke，三身分200、缺失／錯誤401、GET405、權益差異0；這不證明原V8實際SDK版本或正式activation安全，原正式版本仍不修改。
+
+CPU profile顯示重複Git child-process與檔案開啟為主要成本。再將同一次view構造的重複outer admission合併，但每個公開gate返回前仍重新驗證live source；改成單次fresh porcelain-v2 status讀取實際HEAD與dirty／untracked路徑，只快取base..完整HEAD的不可變區間，逐次比較檔案bytes處理revert／delete，不快取工作樹結果。另與原兩個uncached Git命令做完全相同集合的反例檢查。這不是跨呼叫的live驗證快取；所有既有negative controls仍執行。Type／Lint／Build及Production Runtime38／SQL均不改，原ff1b239安全封存保留，新增修正另封存。
+
 
 ## Public Free Premium Release Candidate（2026-10-12，最新續跑點）
 

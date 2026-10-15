@@ -10,7 +10,7 @@
     {
       "path": ".github/workflows/vnext-candidate.yml",
       "before_sha256": null,
-      "after_sha256": "7abd8b708ce51810b05f1b12b2b917f9786c322a9b053e8b314918234865a2a0"
+      "after_sha256": "2085ef41feb5db1784c0434ccabd1f483bc56d8a662142c7f2707e8fa0fc3626"
     },
     {
       "path": "docs/vnext/ACCEPTANCE_MATRIX.md",
@@ -55,7 +55,7 @@
     {
       "path": "docs/vnext/EXECUTION_CHECKPOINT.md",
       "before_sha256": null,
-      "after_sha256": "0c6b9185198ad578633e74f025f74cf847dee81ea39d168c37c3855b0f5f5e37"
+      "after_sha256": "b3cbd3430b36a238466703a9734d9e33fd0e99192669c4fb88610630d3a598fb"
     },
     {
       "path": "docs/vnext/FIRST_MEMBER_RESEARCH.md",
@@ -156,6 +156,11 @@
       "path": "scripts/academy-v11/local-auth-endpoints.mjs",
       "before_sha256": null,
       "after_sha256": "b1901b16ca869a01c3b3ee1635f6ba05531de8da69ac99478424b143c87d3d58"
+    },
+    {
+      "path": "scripts/releases/observe-ci-node.mjs",
+      "before_sha256": null,
+      "after_sha256": "bda11a5b5fbf3a6e388933fb7a9b771416beac8096b4eb32f96c77a9546e480e"
     },
     {
       "path": "scripts/vnext/approval-server.mjs",
@@ -440,7 +445,7 @@
     {
       "path": "tests/academyV11Integrity.test.mjs",
       "before_sha256": "93766884fc91af19293c91a0aa15c9db278fdf920f45f96b96c9cdca42802e43",
-      "after_sha256": "7168c0bf4bdc6b915fd550224b907c46ba91c249d1e2f28bc8abcffcdd2e844f"
+      "after_sha256": "377be896adfcdc78a8d725aa2fe31ec6bb5d5bb2cfbff2cdfbb14769f6994ef6"
     },
     {
       "path": "tests/browser/membership.client.ts",
@@ -488,6 +493,11 @@
       "after_sha256": "e804546842fccde0dec257ccfcf862314050950a7842d92daf3f1d34d532d837"
     },
     {
+      "path": "tests/ciNodeObserver.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "c18fefc11ef0888e2bdf7bafdfee6734c6b58a68dbc86a160645fd758c63fe6a"
+    },
+    {
       "path": "tests/helpers/marketNewsReportIntegrity.mjs",
       "before_sha256": "1909f3e51c3d810e91fa4a3b06ab86095726eca4256fa23178cff9eaaf76a5ad",
       "after_sha256": "8ee1f126c5a162c4f1a703039b6f1d8e6a0816aebec1069188193141564a50ea"
@@ -500,7 +510,7 @@
     {
       "path": "tests/helpers/vnextIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "1f5d86a22fa314752215f1c17f6eae6723b15a8f6f2033d41a34cece1ab14dfe"
+      "after_sha256": "d64e8d2a26602dd3e75c8e5d48222135d54b006cf43b2b45ebe6349de1291ba3"
     },
     {
       "path": "tests/membershipPolicy.integration.mjs",

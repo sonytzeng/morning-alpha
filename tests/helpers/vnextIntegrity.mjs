@@ -10,6 +10,7 @@ export const VNEXT_RUNTIME_MIGRATION='supabase/migrations/20261012054120_vnext_d
 export const VNEXT_PUBLICATION_MIGRATION='supabase/migrations/20261012080628_vnext_member_publication_control_candidate.sql';
 export const VNEXT_MEMBERSHIP_MIGRATION='supabase/migrations/20261013045054_membership_legacy_policy_candidate.sql';
 const VNEXT_CATALOG=Object.freeze([
+ 'scripts/releases/observe-ci-node.mjs','tests/ciNodeObserver.test.mjs',
  'scripts/academy-v11/auth-environment.mjs','scripts/academy-v11/local-auth-endpoints.mjs',
  'docs/vnext/core-runtime-reference-20261015.json','tests/helpers/stagedReleaseIntegrity.mjs',
  VNEXT_MEMBERSHIP_MIGRATION,'supabase/functions/member-access/index.ts',

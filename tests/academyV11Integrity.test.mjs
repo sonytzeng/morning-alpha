@@ -187,7 +187,11 @@ test('V1 integration verifies the real successor before restoring historical byt
   // Exercise the current, sealed VNext successor through the NO-OVERRIDE APIs.
   // Only adversarial drift is process-local. An old synthetic V1.1 candidate
   // cannot replace raw VNext files: the newest gate must reject that mismatch.
-  t.mock.method(fs, 'readFileSync', function(path, ...args) {
+  const readMock = t.mock.method(fs, 'readFileSync', function(path, ...args) {
+    // The tracker otherwise retains every full Buffer returned by the many
+    // live baseline scans. Counters below are independent; no assertion uses
+    // the tracker history. Keep at most this call, not gigabytes of old bytes.
+    readMock.mock.resetCalls();
     const p = relative(path);
     if (p === sentinel) sentinelReads++;
     const b = actualDrift.get(p) ?? null;
@@ -195,7 +199,8 @@ test('V1 integration verifies the real successor before restoring historical byt
     const encoding = typeof args[0] === 'string' ? args[0] : args[0]?.encoding;
     return encoding ? b.toString(encoding) : Buffer.from(b);
   });
-  t.mock.method(childProcess, 'execFileSync', function(command, args, ...options) {
+  const execMock = t.mock.method(childProcess, 'execFileSync', function(command, args, ...options) {
+    execMock.mock.resetCalls();
     if (command === 'git' && args[0] === 'status' && args.includes('--porcelain=v2')) {
       inventoryReads++;
       const inventory = realExec.call(this, command, args, ...options);
@@ -219,6 +224,8 @@ test('V1 integration verifies the real successor before restoring historical byt
         verify();
         assert.ok(sentinelReads >= 1, 'each invocation validates live baseline bytes; no cached live proof');
         assert.ok(inventoryReads >= 1, 'real inventory is never cached between calls');
+        assert.ok(readMock.mock.callCount() <= 1, 'unused Buffer call history is bounded, not the actual reads');
+        assert.ok(execMock.mock.callCount() <= 1, 'unused Git result history is bounded, not inventory verification');
       }
     }
     const v1 = academyTransition();

@@ -23,6 +23,14 @@ CPU profile顯示重複Git child-process與檔案開啟為主要成本。再將�
 
 ## Public Free Premium Release Candidate（2026-10-12，最新續跑點）
 
+### 2026-10-15 Runner shutdown受控診斷
+
+正式版本與main未漂移。b2d729b最終9/10 CI通過，VNext兩次收到runner shutdown signal，並非測試斷言；GitHub當日無已公告Actions事故，不推定原因。以CI相同Node22.23.1重新執行原四檔，24項斷言全部通過、0skip、175182ms；這不同於此前其他組合30項的紀錄。取樣RSS約190–280MB，不足以證明OOM；本機/usr/bin/time因sandbox不允許sysctl取得完整資源統計而exit1，不把它冒充整個命令exit0。新增只讀CI觀測wrapper，每20秒記錄資源及signal，保留原測試／10分鐘timeout／實際退出碼，不自動重試、不輸出args或env；撤銷取消不會轉成成功。這是觀測缺口修正，不宣稱已證明GitHub關閉根因。
+
+後段受控觀測補充：Node test worker曾到3939488KiB RSS，主機available memory降到約85MB，初期低RSS不是全程上限。完整樹觀測最多32個本程序後代，避免只量到約34MB的Node --test父程序；不讀取args／env。候選只為此完整性命令設定512MiB V8 old-space預算，讓GC有界；不增加CI時間、不刪測試，任何OOM／signal／非0退出仍失敗。實際是否排除Runner shutdown必須以新HEAD自己的CI與資源紀錄判斷，不能把macOS記憶體壓力當GitHub已證明的OOM。
+
+同Node22＋512MiB的未修復控制已真實重現`Reached heap limit / JavaScript heap out of memory`，observer正確回傳1。根因定位到V1 integration負向測試：Node MockTracker把每次同步readFileSync返回的完整Buffer與execFileSync結果持續保留，並非產品live gate需要這些歷史；原assertions使用獨立sentinelReads／inventoryReads，未讀取mock history。修復僅在這兩個mock每次呼叫清除先前未使用的追蹤紀錄，保留當次真實讀取、所有漂移注入、所有原assertions與finally restore；新增callCount<=1控制。不是快取live驗證或刪除反例。需同512MiB完整原四檔PASS及新HEAD CI才能關閉此工程阻擋，GitHub主機的實際OOM仍以其可得紀錄區分。
+
 全站3186項回歸的舊run38228577569於45分鐘上限取消；只把Validate有限預算改為60分鐘，完整保留所有測試、Fresh DB及main新聞回歸。精確Integrity逐位元比對限定此單一預算差異。停止本輪重複本機全量程序以免封存更新競態，不將取消視為PASS；先前27項受影響控制及Type/Lint/Build已PASS，完整驗收必須以最終HEAD的全套GitHub結果成立。
 
 本輪全站CI發現4個舊測試接線不相容：Navbar新增共用股票觀察依賴，Academy封閉loader未接；Router已是具名候選，兩項反例仍預期「未修改基線」錯誤。僅載入真實共用navigation常數並驗證雙入口與手機關閉行為，更新Router漂移的精確拒絕訊息；不移除任何負向控制、不改產品或Academy權限。必須以此修正後HEAD重新完成CI，不沿用c5337ee或更早結果。

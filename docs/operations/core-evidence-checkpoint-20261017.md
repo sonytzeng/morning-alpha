@@ -67,4 +67,6 @@ Fresh SQL首次因本機Docker磁碟已滿失敗（initdb No space left on devic
 
 首次PR254 CI發現舊Owner／Shadow Gate直接使用自訂reader，繞過新候選的歷史view，將兩個新helper與新workflow誤認成9月Core inventory的一部分。只對精確已驗新增bytes提供ENOENT歷史視圖，並在stagedViews套用相同外層；任意注入drift仍保留並由舊Gate拒絕。新增逐檔反例；不修改9月封存名單、SHA、原Owner／Shadow斷言或正式Runtime。後續以修正HEAD的CI為準，不把首次部分CI通過當全部完成。
 
+d16a9d4的Academy CI在任何真實Auth驗收前被ECR `Data limit exceeded` 擋住，SQL角色／RLS已通過。只沿用#251已驗證的同版官方GoTrue v2.194.0 GHCR digest，整份helper逐字比對只容許這一個映像字串替換。沒有改Auth設定、端點、SQL、斷言、重試／timeout，也不是修改Production Auth。新精確HEAD仍須自己的CI；不重試不可用的舊registry或將該失敗算作產品PASS。
+
 本次受影響回歸160/160通過。乾淨單分支clone起初缺少原測試引用、但不在main祖先鏈的固定commit `4348efaff4514a43473d111950083799a23c79c2`，因此Footer歷史對照先失敗；唯讀補取此精確Git物件後通過，沒有替換baseline或刪除斷言。首次安全審查封存保留；修正cutoff後的新精確HEAD須增量重審，不拿前一快照封存冒充。

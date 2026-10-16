@@ -18,12 +18,17 @@
     {
       "path": "docs/operations/core-evidence-checkpoint-20261017.md",
       "before_sha256": null,
-      "after_sha256": "1c04fe98ec7ebeeb771e6a263c39dbc5caf335dceaaf70ae82d1d003438fb705"
+      "after_sha256": "98b18fcc2af4ec6124848d83c300492b48a5336ea27af7ff63de20ad6a9e3b73"
     },
     {
       "path": "docs/operations/evidence/core-evidence-status-20261017.json",
       "before_sha256": null,
       "after_sha256": "b81f972cfb9a8b586d5ad4e6686c954ccc11d51674c5100b78924df855a3fb63"
+    },
+    {
+      "path": "scripts/academy-v11/auth-environment.mjs",
+      "before_sha256": "e5b00545b090386c25170dd784968815acf69d08ae49dd9a281d26fdebb845c6",
+      "after_sha256": "cad0aeb8f9ac762ea5beef5aa72ab0625ab87ac0b7c7c957d8759d3cb3d8019f"
     },
     {
       "path": "supabase/functions/_shared/recommendation-foundation-candidate.ts",
@@ -48,12 +53,12 @@
     {
       "path": "tests/coreEvidenceCandidateIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "2bc57188db57a3ab5ed42497953aec481262577a002fb97500033edaf55fe54b"
+      "after_sha256": "495f2f0a4b6a153d0c57b36a04ab9ef661037c2e2d2414320bf39d7ee78b670d"
     },
     {
       "path": "tests/helpers/coreEvidenceCandidateIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "439f2a4e28b4d72320fb07ab15ea038497e6f7ad20afca308f34509844ceb134"
+      "after_sha256": "1891ac34b3b23f25d981f50b259ac8f60b304319c7b4de100733607f5124e3e0"
     },
     {
       "path": "tests/helpers/stagedReleaseIntegrity.mjs",

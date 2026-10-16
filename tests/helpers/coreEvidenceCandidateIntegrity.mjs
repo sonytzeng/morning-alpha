@@ -11,6 +11,7 @@ export const CORE_EVIDENCE_SCOPE=Object.freeze([
  '.github/workflows/core-evidence-candidate.yml',
  'docs/operations/core-evidence-checkpoint-20261017.md',
  'docs/operations/evidence/core-evidence-status-20261017.json',
+ 'scripts/academy-v11/auth-environment.mjs',
  'supabase/functions/_shared/recommendation-foundation-candidate.ts',
  'supabase/functions/_shared/recommendation-market-institutional-candidate.ts',
  'supabase/functions/recommendation-stock-evidence-v1/index.ts',
@@ -31,7 +32,7 @@ let trackedAtBase;const predecessors=new Map();
 function baseFiles(){return trackedAtBase??=new Set(git(['ls-tree','-r','--name-only',CORE_EVIDENCE_BASE]).trim().split('\n'));}
 function before(path){
  if(!baseFiles().has(path))return null;
- assert(['tests/helpers/stagedReleaseIntegrity.mjs','supabase/functions/recommendation-stock-evidence-v1/index.ts','supabase/functions/get-report-payload/index.ts','tests/recommendationProducerAdmission.test.mjs','tests/stagedReleaseIntegrity.test.mjs','tests/vnextDailyWiring.test.mjs'].includes(path),'CORE_EVIDENCE_PROTECTED_CHANGE');
+ assert(['tests/helpers/stagedReleaseIntegrity.mjs','supabase/functions/recommendation-stock-evidence-v1/index.ts','supabase/functions/get-report-payload/index.ts','tests/recommendationProducerAdmission.test.mjs','tests/stagedReleaseIntegrity.test.mjs','tests/vnextDailyWiring.test.mjs','scripts/academy-v11/auth-environment.mjs'].includes(path),'CORE_EVIDENCE_PROTECTED_CHANGE');
  if(!predecessors.has(path))predecessors.set(path,Buffer.from(git(['show',CORE_EVIDENCE_BASE+':'+path])));
  return Buffer.from(predecessors.get(path));
 }

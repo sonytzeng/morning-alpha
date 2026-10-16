@@ -3,6 +3,7 @@ import {readFileSync,lstatSync,existsSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {coreEvidenceHistoricalPaths,coreEvidenceHistoricalRead} from './coreEvidenceCandidateIntegrity.mjs';
 export const STAGED_BASE='f41e117ea109e09ae083ef2c692946a18aca2dcc';
 export const STAGED_SCOPES=Object.freeze({
   "P0": [
@@ -122,7 +123,7 @@ export const STAGED_SCOPES=Object.freeze({
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8',maxBuffer:64e6});
 const hash=b=>createHash('sha256').update(b).digest('hex');
-const raw=p=>{const url=new URL('../../'+p,import.meta.url);assert(lstatSync(url).isFile(),'STAGED_REGULAR_FILE:'+p);return readFileSync(url);};
+const raw=p=>{const url=new URL('../../'+p,import.meta.url);assert(lstatSync(url).isFile(),'STAGED_REGULAR_FILE:'+p);return coreEvidenceHistoricalRead(p,readFileSync(url));};
 export const stagedManifestPath=id=>'docs/operations/evidence/staged-'+id.toLowerCase()+'-transition-20261014.json';
 let baseline;
 // Cache only immutable Git blobs, never live candidate bytes or guard results.
@@ -141,9 +142,11 @@ export function stagedPrior(path){
  const bytes=baseline.get(path);return bytes===undefined?null:Buffer.from(bytes);
 }
 export function stagedChangedPaths(){
+ const inherited=coreEvidenceHistoricalPaths();if(inherited)return inherited;
  return [...new Set([...git(['diff','--no-renames','--name-only','-z',STAGED_BASE,'--']).split('\0'),...git(['ls-files','--others','--exclude-standard','-z']).split('\0')].filter(Boolean))].sort();
 }
 export function stagedTransition(source=raw,paths=stagedChangedPaths()){
+ const liveSource=source;source=path=>coreEvidenceHistoricalRead(path,liveSource(path));
  const present=Object.keys(STAGED_SCOPES).filter(id=>existsSync(new URL('../../'+stagedManifestPath(id),import.meta.url)));
  const ids=present.filter(id=>{
   const path=stagedManifestPath(id),m=JSON.parse(source(path));
@@ -177,6 +180,7 @@ export function stagedTransition(source=raw,paths=stagedChangedPaths()){
  return {files,manifests};
 }
 export function stagedViews(source){
+ if(source){const live=source;source=path=>coreEvidenceHistoricalRead(path,live(path));}
  const current=stagedTransition();
  if(!current)return {predecessorRead:source??raw,actualPredecessorRead:raw,verify:()=>{},changedPaths:prior=>git(['diff','--no-renames','--name-only','-z',prior,'--']).split('\0').filter(Boolean).sort()};
  const restore=path=>{if(current.files.has(path)){const before=stagedPrior(path);if(before===null)throw Object.assign(Error('STAGED_PREDECESSOR_ABSENT:'+path),{code:'ENOENT'});return before;}return raw(path);};

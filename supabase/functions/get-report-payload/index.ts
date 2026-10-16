@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.115.0";
 import {
   contentLengthExceedsLimit,
   readBoundedText,
@@ -23,6 +23,7 @@ import { canonicalAdminReaderProjection } from "../_shared/research-pipeline-con
 import { loadDecisionEvidence } from "../_shared/decision-v1-data.ts";
 import { buildEvidenceDecision, projectEvidenceDecision, sealEvidenceDecision } from "../_shared/decision-v1-evidence.ts";
 import { persistedRecommendationReaderInput } from "../_shared/recommendation-stock-evidence.ts";
+import { persistedFoundationCandidateInput } from "../_shared/recommendation-foundation-candidate.ts";
 import { publicCheckpointInputs, publicMarketInput, buildPublicMarketReadModel } from "../_shared/public-market-projection.ts";
 import { recordPublicProjection } from "../_shared/public-projection-recorder.ts";
 import { createSubscriberState, getSubscriberReportProjection, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE } from "../../../shared/subscriber-state-contract.ts";
@@ -1521,6 +1522,15 @@ Deno.serve(async (req: Request) => {
   }
   // Admin has a nested effective-AI view as well; no stale nested model may win.
   if (tier === "admin") payload.ai_strategy_json = { ...asObject(payload.ai_strategy_json), decision_engine_v1: subscriberDecisionEvidence };
+  // Unapproved new source evidence must never alter formal/member decisions.
+  // Existing server-side Owner authorization alone exposes this separate study.
+  if (tier === "admin") {
+    const ownerStudy = await persistedFoundationCandidateInput(realEvidence, decisionIdentity, parseAi(report.ai_strategy_json), { ownerAuthorized: true });
+    payload.owner_market_foundation_candidate = {
+      candidate_only: true, member_publication_approved: false,
+      decision_engine_v1: await sealEvidenceDecision(buildEvidenceDecision(ownerStudy.data, decisionIdentity)),
+    };
+  }
   // Subscriber routes (including Owner browsing them) use one projection. The
   // existing admin nested raw document remains an explicitly internal QA view.
   const subscriberProjection = getSubscriberReportProjection({ ...payload, today_date: todayDate });

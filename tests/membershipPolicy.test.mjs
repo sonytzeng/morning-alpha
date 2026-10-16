@@ -55,3 +55,21 @@ test('member copy does not promise automatic trial or a live checkout',()=>{
  assert.equal(pricing,execFileSync('git',['show','9da487db73055eb983379ca2879822ebeb8f8906:src/pages/pricing/Pricing.tsx'],{encoding:'utf8'}));
  assert.match(pricing,/目前尚未啟用付款/);assert.match(pricing,/NT\$199/);
 });
+test('isolated Preview uses the runtime loopback endpoints, never a stale hardcoded Auth or REST port',()=>{
+ const preview=read('scripts/vnext/membership-preview.mjs');
+ assert.match(preview,/import \{startAuthEnvironment,localAuthBase,localRestBase\} from '\.\.\/academy-v11\/auth-environment\.mjs'/);
+ assert.match(preview,/fetch\(localAuthBase\+'\/user'/);
+ assert.match(preview,/'\/auth\/v1':\{target:localAuthBase/);
+ assert.match(preview,/'\/rest\/v1':\{target:localRestBase/);
+ assert.doesNotMatch(preview,/55632|55633|https:\/\//);
+ const script="const m=await import('./scripts/academy-v11/local-auth-endpoints.mjs');console.log(JSON.stringify([m.localAuthBase,m.localRestBase]));";
+ const run=(auth,rest)=>JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',script],{cwd:new URL('../',import.meta.url),env:{...process.env,MA_ISOLATED_AUTH_PORT:auth,MA_ISOLATED_REST_PORT:rest},encoding:'utf8',stdio:['ignore','pipe','pipe']}));
+ assert.deepEqual(run('56832','56833'),['http://127.0.0.1:56832','http://127.0.0.1:56833']);
+ for(const [auth,rest] of [['56832','56832'],['0','56833'],['https://example.com','56833']])assert.throws(()=>run(auth,rest));
+});
+test('fresh isolated Auth may explicitly use bounded disposable tmpfs without pruning other data',()=>{
+ const environment=read('scripts/academy-v11/auth-environment.mjs');
+ assert.match(environment,/MA_ISOLATED_DB_TMPFS==='1'\?\['--tmpfs','\/var\/lib\/postgresql\/data:rw,size=268435456'\]:\[\]/);
+ assert.match(environment,/ISOLATED_DB_TMPFS_INVALID/);
+ assert.doesNotMatch(environment,/docker (?:system|volume) prune|Production.*(?:password|token)=/);
+});

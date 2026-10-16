@@ -18,7 +18,7 @@
     {
       "path": "docs/operations/core-evidence-checkpoint-20261017.md",
       "before_sha256": null,
-      "after_sha256": "f66f3bde7f14607499a09c8302edc99a69c6983a3e1d52e1d1a3be59abc6bc6a"
+      "after_sha256": "a603b0030859dcb9b30ad4726755c1863d28976070e77d01ac6bde0963de5bd7"
     },
     {
       "path": "docs/operations/evidence/core-evidence-status-20261017.json",
@@ -38,17 +38,17 @@
     {
       "path": "tests/coreEvidenceCandidateIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "9dbb55baa6300d7ee83ad7bfa665f2797271beb0cf8a4b8a7264f4a6d0fb59aa"
+      "after_sha256": "8c163eb49d6570ab5e47dca4ebf938ba5228a304116259c264818f47b5fd5765"
     },
     {
       "path": "tests/helpers/coreEvidenceCandidateIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "638e1bbc13d3a98368a41e167aab0a29a381149699f46f98b88e9416f709867e"
+      "after_sha256": "91b51b0fbe05eda6f1163d52aa077f26a7ecdc1e3907a97362af2523c13206f2"
     },
     {
       "path": "tests/helpers/stagedReleaseIntegrity.mjs",
       "before_sha256": "9afc60f18154bc68cbcaeea167a9e7f0982bff3ba8dd3446d09d1cc2d58aed99",
-      "after_sha256": "db4cf3dc08f2e73ba4a6d4ea1b40d72c4aad95575ce4f0f9e7bab5291369cce7"
+      "after_sha256": "7f1929adaf57e7c09cea324b38d2ebeb9e5d86aa68614dc239af6064b418c0e0"
     },
     {
       "path": "tests/recommendationMarketInstitutionalCandidate.test.mjs",

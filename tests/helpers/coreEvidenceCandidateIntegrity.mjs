@@ -49,9 +49,18 @@ export function coreEvidenceHistoricalPaths(){
  return git(['diff','--no-renames','--name-only','-z','f41e117ea109e09ae083ef2c692946a18aca2dcc',CORE_EVIDENCE_BASE,'--']).split('\0').filter(Boolean).sort();
 }
 export function coreEvidenceHistoricalRead(path,bytes){
- if(path!=='tests/helpers/stagedReleaseIntegrity.mjs'||!existsSync(new URL(coreEvidenceManifest,root)))return bytes;
- const m=JSON.parse(raw(coreEvidenceManifest)),row=m.files.find(r=>r.path===path),old=before(path);
- assert(row&&old,'CORE_EVIDENCE_RECEIPT_MISSING');
+ // Unlisted files are never translated. Avoid reparsing this outer receipt
+ // for every historical Core byte; the full live admission is still mandatory.
+ if(!CORE_EVIDENCE_SCOPE.includes(path)||!existsSync(new URL(coreEvidenceManifest,root)))return bytes;
+ const m=JSON.parse(raw(coreEvidenceManifest)),row=m.files.find(r=>r.path===path);
+ if(!row)return bytes;
+ // A newly admitted file did not exist at the historical layer. Preserve
+ // injected bytes instead of hiding an old gate's negative-control drift.
+ if(row.before_sha256===null){
+  if(hash(bytes)===row.after_sha256)throw Object.assign(Error('absent from Core Evidence predecessor: '+path),{code:'ENOENT'});
+  return bytes;
+ }
+ const old=before(path);assert(old,'CORE_EVIDENCE_RECEIPT_MISSING');
  // Custom legacy negative readers retain their drift, rather than being
  // silently replaced with good baseline bytes.
  return hash(bytes)===row.after_sha256?old:bytes;

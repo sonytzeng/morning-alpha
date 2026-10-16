@@ -180,6 +180,7 @@ export function stagedTransition(source=raw,paths=stagedChangedPaths()){
  return {files,manifests};
 }
 export function stagedViews(source){
+ if(source){const live=source;source=path=>coreEvidenceHistoricalRead(path,live(path));}
  const current=stagedTransition();
  if(!current)return {predecessorRead:source??raw,actualPredecessorRead:raw,verify:()=>{},changedPaths:prior=>git(['diff','--no-renames','--name-only','-z',prior,'--']).split('\0').filter(Boolean).sort()};
  const restore=path=>{if(current.files.has(path)){const before=stagedPrior(path);if(before===null)throw Object.assign(Error('STAGED_PREDECESSOR_ABSENT:'+path),{code:'ENOENT'});return before;}return raw(path);};

@@ -61,4 +61,6 @@ Fresh SQL首次因本機Docker磁碟已滿失敗（initdb No space left on devic
 
 新HEAD必須自己的 CI／安全封存；舊#246 9/9及#251 10/10只證明各自精確版本。未Merge、Deploy、Migration、改Cron／Secret／Auth／RLS／會員權益；未發LINE或啟用付款。新候選實作／測試／Git交付不代表全產品完成。
 
+首次PR254 CI發現舊Owner／Shadow Gate直接使用自訂reader，繞過新候選的歷史view，將兩個新helper與新workflow誤認成9月Core inventory的一部分。只對精確已驗新增bytes提供ENOENT歷史視圖，並在stagedViews套用相同外層；任意注入drift仍保留並由舊Gate拒絕。新增逐檔反例；不修改9月封存名單、SHA、原Owner／Shadow斷言或正式Runtime。後續以修正HEAD的CI為準，不把首次部分CI通過當全部完成。
+
 本次受影響回歸160/160通過。乾淨單分支clone起初缺少原測試引用、但不在main祖先鏈的固定commit `4348efaff4514a43473d111950083799a23c79c2`，因此Footer歷史對照先失敗；唯讀補取此精確Git物件後通過，沒有替換baseline或刪除斷言。首次安全審查封存保留；修正cutoff後的新精確HEAD須增量重審，不拿前一快照封存冒充。

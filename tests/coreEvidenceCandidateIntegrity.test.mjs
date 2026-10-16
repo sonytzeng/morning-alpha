@@ -21,3 +21,11 @@ test('historical reader peels only exact current helper bytes; injected drift is
  assert.deepEqual(coreEvidenceHistoricalRead(p,bad),bad);
  assert.deepEqual(coreEvidenceHistoricalRead('package.json',read('package.json')),read('package.json'));
 });
+test('historical Core inventory cannot mistake newly admitted files for old runtime dependencies',()=>{
+ const m=JSON.parse(read(coreEvidenceManifest));
+ for(const row of m.files.filter(r=>r.before_sha256===null)){
+  assert.throws(()=>coreEvidenceHistoricalRead(row.path,read(row.path)),{code:'ENOENT'});
+  const drift=Buffer.concat([read(row.path),Buffer.from('DRIFT')]);
+  assert.deepEqual(coreEvidenceHistoricalRead(row.path,drift),drift);
+ }
+});

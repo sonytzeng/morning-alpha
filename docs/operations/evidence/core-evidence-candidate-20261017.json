@@ -13,22 +13,22 @@
     {
       "path": ".github/workflows/core-evidence-candidate.yml",
       "before_sha256": null,
-      "after_sha256": "a01967e1e9c050c173bad9d661aae35e3a5259c4f1817788e12e8db6ffc17a85"
+      "after_sha256": "7ca807e22cb107580d89fc49258f59d8e16ac08025fe67fc2a914b14aae57815"
     },
     {
       "path": "docs/operations/core-evidence-checkpoint-20261017.md",
       "before_sha256": null,
-      "after_sha256": "a603b0030859dcb9b30ad4726755c1863d28976070e77d01ac6bde0963de5bd7"
+      "after_sha256": "1c04fe98ec7ebeeb771e6a263c39dbc5caf335dceaaf70ae82d1d003438fb705"
     },
     {
       "path": "docs/operations/evidence/core-evidence-status-20261017.json",
       "before_sha256": null,
-      "after_sha256": "eac1cbe017fdef2629a174d6d3fb8598bf08642ae2923724ea30187dba4041cf"
+      "after_sha256": "b81f972cfb9a8b586d5ad4e6686c954ccc11d51674c5100b78924df855a3fb63"
     },
     {
       "path": "supabase/functions/_shared/recommendation-foundation-candidate.ts",
       "before_sha256": null,
-      "after_sha256": "8046e1b4365a4b73b5788b66fd5842913c2e93e2e03ef9acc4e184c0bf57e5c7"
+      "after_sha256": "0be41e72c01f2da55656658d35201bcc653dfeb1cdf55eaad5632c707d7d7aca"
     },
     {
       "path": "supabase/functions/_shared/recommendation-market-institutional-candidate.ts",
@@ -36,14 +36,24 @@
       "after_sha256": "22714b1bfa6694e4df44dfcddcc461afc49d01f0af60e1939017009ed33df108"
     },
     {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "before_sha256": "eb3008ceb7e72cc007680f9885ca56e02e1feb7e85a16c8758a0542c75e92d79",
+      "after_sha256": "217f2c3b09d327803583b58cb3c8aa47687fc648afa17a560dea5d130436e083"
+    },
+    {
+      "path": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "before_sha256": "70352af5ec86ca94f4cc00d9c59f3483d1114bc455ca253601e2679f0bf03755",
+      "after_sha256": "2b4dc7ce5f76f0b1fe0b847590261fb9239a839c4a82404e614bd69dfa625d41"
+    },
+    {
       "path": "tests/coreEvidenceCandidateIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "8c163eb49d6570ab5e47dca4ebf938ba5228a304116259c264818f47b5fd5765"
+      "after_sha256": "2bc57188db57a3ab5ed42497953aec481262577a002fb97500033edaf55fe54b"
     },
     {
       "path": "tests/helpers/coreEvidenceCandidateIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "91b51b0fbe05eda6f1163d52aa077f26a7ecdc1e3907a97362af2523c13206f2"
+      "after_sha256": "439f2a4e28b4d72320fb07ab15ea038497e6f7ad20afca308f34509844ceb134"
     },
     {
       "path": "tests/helpers/stagedReleaseIntegrity.mjs",
@@ -53,12 +63,27 @@
     {
       "path": "tests/recommendationMarketInstitutionalCandidate.test.mjs",
       "before_sha256": null,
-      "after_sha256": "b24bfca69a2ee78a07733a98bf5a07138e58dd4c2f8f45448ff440c1664de407"
+      "after_sha256": "17a12673a04ff659a6031e6e9c0878b5b70b5a71e0393045fd23a50a7037a44c"
     },
     {
       "path": "tests/recommendationMarketInstitutionalDatabase.integration.mjs",
       "before_sha256": null,
-      "after_sha256": "cde829cf6558d030b6c7fbc7516261210704dc32b0c8b19833656a70a2873727"
+      "after_sha256": "25198d29fd0a9325c3cca582994f751638b40a6e2795d60a6dcb5a3b8aaef142"
+    },
+    {
+      "path": "tests/recommendationProducerAdmission.test.mjs",
+      "before_sha256": "319e7ef8f6f3e02a91f137a29d34e2707245859f1605dd092cde48b4a625d457",
+      "after_sha256": "8ea211460c8a2cc538059eb0690e970bb910ab66ecc0bbfb48e6f8a27cdf23a5"
+    },
+    {
+      "path": "tests/stagedReleaseIntegrity.test.mjs",
+      "before_sha256": "3d3f17bb4b825f2224b8bab8e5c67e2fdd75c2a7e18aa792c18a0d113a86f09a",
+      "after_sha256": "6c4567cd0550f5947aaa86948c68fa53de214a23f0ae4c70f65e57660fc6e625"
+    },
+    {
+      "path": "tests/vnextDailyWiring.test.mjs",
+      "before_sha256": "a58b078dac334ee89698730484c5be00783b0f8a7700f03153393031ba2e0c39",
+      "after_sha256": "bbac197fa1a7b82e04efd0357f8026706ec52c7bbaeb5c2487aacc5c67656145"
     }
   ]
 }

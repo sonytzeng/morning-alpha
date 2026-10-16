@@ -1,9 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { normalizeMarketInstitutionalTwd, acquireMarketInstitutionalTwd, withMarketInstitutionalEvidence, marketFlowSource } from '../supabase/functions/_shared/recommendation-market-institutional-candidate.ts';
 import { buildEvidenceDecision } from '../supabase/functions/_shared/decision-v1-evidence.ts';
 import { evidenceRows } from './fixtures/decision-evidence-rows.mjs';
 import { buildRecommendationFoundationCandidate, persistedFoundationCandidateInput } from '../supabase/functions/_shared/recommendation-foundation-candidate.ts';
+import { persistedRecommendationReaderInput } from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
+import { sharedV2Acquisition } from '../supabase/functions/_shared/recommendation-v2-acquisition-cache.ts';
 // Explicitly SYNTHETIC controls, not official flows or investing performance.
 const DATE='2026-09-04', RECEIVED='2026-09-06T22:50:00Z';
 const identity={report_date:'2026-09-07',today_date:'2026-09-07',generated_at:'2026-09-06T23:00:00Z',data_as_of:'2026-09-06T23:00:00Z',revision_id:'synthetic-candidate',is_trading_day:true};
@@ -80,8 +84,39 @@ test('candidate proof and saved Reader preserve lineage; no promotion or silent 
  const deniedLate=await persistedFoundationCandidateInput(data,laterReader,late);
  assert.equal(deniedLate.data.flows.length,0);assert(deniedLate.data.failures.includes('MARKET_FLOW_NOT_ADMISSIBLE'));
  for(const mutate of [a=>a.correlation_id='other',a=>a.recommendation_stock_evidence.foundation_candidate.market_flow.rows[0].net_amount++,
-  a=>delete a.recommendation_stock_evidence.foundation_candidate,a=>a.recommendation_stock_evidence.foundation_candidate.market_flow.available_at='2099-01-01T00:00:00Z']){
+  a=>a.recommendation_stock_evidence.foundation_candidate.contract='WRONG',a=>a.recommendation_stock_evidence.foundation_candidate.market_flow.available_at='2099-01-01T00:00:00Z']){
   const bad=structuredClone(ai);mutate(bad);const denied=await persistedFoundationCandidateInput(data,identity,bad);
   assert.equal(denied.data.flows.length,0);assert(denied.data.failures.length);
  }
+});
+test('shared cache carries one immutable market capture; legacy caches never trigger a late fetch',async()=>{
+ const flow=await normalizeMarketInstitutionalTwd(payload(),DATE,RECEIVED),data=evidenceRows();data.flows=[];
+ let acquired=0,finished=0,saved;
+ const options={signal:AbortSignal.timeout(2000),shadowOnly:false,
+  claim:async()=>({data:saved?{status:'CACHED',payload:saved}:{status:'ACQUIRED',lease_id:'isolated-lease'},error:null}),
+  finish:async(_lease,value)=>{finished++;saved=structuredClone(value);return {error:null};},
+  acquire:async()=>{acquired++;return {business_date:identity.report_date,acquisition_cutoff:identity.generated_at,marketFlow:flow,captures:[]};}};
+ const first=await sharedV2Acquisition(options),second=await sharedV2Acquisition(options);
+ assert.deepEqual(second,first);assert.equal(acquired,1);assert.equal(finished,1);
+ const proof=await buildRecommendationFoundationCandidate({data,identity,captures:[],officialActuals:[],marketFlow:second.marketFlow,evidenceCutoff:second.acquisition_cutoff});
+ const ai={revision_id:identity.revision_id,correlation_id:identity.revision_id,generated_at:identity.generated_at,decision_v1:proof.decision,recommendation_stock_evidence:proof.acquisition};
+ assert.equal((await persistedFoundationCandidateInput(data,identity,ai)).data.flows.length,3);
+ const legacy=structuredClone(ai);delete legacy.recommendation_stock_evidence.foundation_candidate;
+ assert.deepEqual(await persistedFoundationCandidateInput(data,identity,legacy),await persistedRecommendationReaderInput(data,identity,legacy));
+ const invalid=structuredClone(ai);invalid.recommendation_stock_evidence.foundation_candidate.evidence_cutoff='2099-01-01T00:00:00Z';
+ assert((await persistedFoundationCandidateInput(data,identity,invalid)).data.failures.includes('MARKET_FLOW_ACQUISITION_CUTOFF_INVALID'));
+ const late=await buildRecommendationFoundationCandidate({data,identity,captures:[],officialActuals:[],marketFlow:flow,evidenceCutoff:'2026-09-06T22:49:59Z'});
+ assert(late.decision.phase_evaluation.candidates.every(c=>c.reasons.includes('MARKET_REQUIRED_INSTITUTIONAL')));
+});
+test('candidate entrypoints preserve all auth, cache, Report/publication and member gates outside the exact source wiring',()=>{
+ const root=new URL('../',import.meta.url),read=p=>readFileSync(new URL(p,root),'utf8');
+ const reader='supabase/functions/get-report-payload/index.ts';
+ const base=execFileSync('git',['show','754850ba1c66329d12eac8e98ab799e0a0c9123e:'+reader],{cwd:root,encoding:'utf8'});
+ assert.equal(read(reader),base.replace('supabase-js@2"','supabase-js@2.115.0"').replace('import { persistedRecommendationReaderInput } from "../_shared/recommendation-stock-evidence.ts";','import { persistedFoundationCandidateInput as persistedRecommendationReaderInput } from "../_shared/recommendation-foundation-candidate.ts";'));
+ const producer=read('supabase/functions/recommendation-stock-evidence-v1/index.ts');
+ assert.match(producer,/scope==='SMOKE_2330'\|\|!marketDate\|\|evaluationPhase\(started\)!=='PREMARKET'\?Promise\.resolve\(null\):acquireMarketInstitutionalTwd/);
+ assert.match(producer,/const proof=bundle\.marketFlow&&evaluationPhase\(identity\.generated_at\)==='PREMARKET'/);
+ assert.match(producer,/marketFlow:bundle\.marketFlow,evidenceCutoff:bundle\.acquisition_cutoff/);
+ assert.match(producer,/sharedV2Acquisition/);assert.match(producer,/authorizeInternalRequest/);
+ assert.doesNotMatch(producer,/from\('institutional_flows'\)\.insert|\.upsert\(|create function|\.rpc\('.*publication/);
 });

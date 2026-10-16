@@ -13,21 +13,27 @@ export const CORE_EVIDENCE_SCOPE=Object.freeze([
  'docs/operations/evidence/core-evidence-status-20261017.json',
  'supabase/functions/_shared/recommendation-foundation-candidate.ts',
  'supabase/functions/_shared/recommendation-market-institutional-candidate.ts',
+ 'supabase/functions/recommendation-stock-evidence-v1/index.ts',
+ 'supabase/functions/get-report-payload/index.ts',
  'tests/coreEvidenceCandidateIntegrity.test.mjs',
  'tests/helpers/coreEvidenceCandidateIntegrity.mjs',
  'tests/helpers/stagedReleaseIntegrity.mjs',
  'tests/recommendationMarketInstitutionalCandidate.test.mjs',
  'tests/recommendationMarketInstitutionalDatabase.integration.mjs',
+ 'tests/recommendationProducerAdmission.test.mjs',
+ 'tests/stagedReleaseIntegrity.test.mjs',
+ 'tests/vnextDailyWiring.test.mjs',
 ]);
 const raw=p=>readFileSync(new URL(p,root));
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8',maxBuffer:16e6});
-let trackedAtBase,predecessor;
+let trackedAtBase;const predecessors=new Map();
 function baseFiles(){return trackedAtBase??=new Set(git(['ls-tree','-r','--name-only',CORE_EVIDENCE_BASE]).trim().split('\n'));}
 function before(path){
  if(!baseFiles().has(path))return null;
- assert.equal(path,'tests/helpers/stagedReleaseIntegrity.mjs','CORE_EVIDENCE_PROTECTED_CHANGE');
- predecessor??=Buffer.from(git(['show',CORE_EVIDENCE_BASE+':'+path]));return Buffer.from(predecessor);
+ assert(['tests/helpers/stagedReleaseIntegrity.mjs','supabase/functions/recommendation-stock-evidence-v1/index.ts','supabase/functions/get-report-payload/index.ts','tests/recommendationProducerAdmission.test.mjs','tests/stagedReleaseIntegrity.test.mjs','tests/vnextDailyWiring.test.mjs'].includes(path),'CORE_EVIDENCE_PROTECTED_CHANGE');
+ if(!predecessors.has(path))predecessors.set(path,Buffer.from(git(['show',CORE_EVIDENCE_BASE+':'+path])));
+ return Buffer.from(predecessors.get(path));
 }
 function inventory(){return [...new Set([...git(['diff','--no-renames','--name-only','-z',CORE_EVIDENCE_BASE,'--']).split('\0'),...git(['ls-files','--others','--exclude-standard','-z']).split('\0')].filter(Boolean))].sort();}
 export function verifyCoreEvidenceCandidate(read=raw,paths=inventory()){

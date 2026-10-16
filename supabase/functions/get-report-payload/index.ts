@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.115.0";
 import {
   contentLengthExceedsLimit,
   readBoundedText,
@@ -22,7 +22,7 @@ import { resolveCanonicalDataQuality } from "../_shared/production-architecture-
 import { canonicalAdminReaderProjection } from "../_shared/research-pipeline-contract.ts";
 import { loadDecisionEvidence } from "../_shared/decision-v1-data.ts";
 import { buildEvidenceDecision, projectEvidenceDecision, sealEvidenceDecision } from "../_shared/decision-v1-evidence.ts";
-import { persistedRecommendationReaderInput } from "../_shared/recommendation-stock-evidence.ts";
+import { persistedFoundationCandidateInput as persistedRecommendationReaderInput } from "../_shared/recommendation-foundation-candidate.ts";
 import { publicCheckpointInputs, publicMarketInput, buildPublicMarketReadModel } from "../_shared/public-market-projection.ts";
 import { recordPublicProjection } from "../_shared/public-projection-recorder.ts";
 import { createSubscriberState, getSubscriberReportProjection, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE } from "../../../shared/subscriber-state-contract.ts";

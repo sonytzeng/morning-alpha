@@ -33,3 +33,5 @@ jobs:
           deno check --no-lock
           supabase/functions/_shared/recommendation-market-institutional-candidate.ts
           supabase/functions/_shared/recommendation-foundation-candidate.ts
+          supabase/functions/recommendation-stock-evidence-v1/index.ts
+          supabase/functions/get-report-payload/index.ts

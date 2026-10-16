@@ -2,9 +2,9 @@ import test from 'node:test';import assert from 'node:assert/strict';import{read
 import{verifyCoreEvidenceCandidate,coreEvidenceManifest,CORE_EVIDENCE_SCOPE,coreEvidenceHistoricalRead}from'./helpers/coreEvidenceCandidateIntegrity.mjs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url));
 const paths=[...CORE_EVIDENCE_SCOPE,coreEvidenceManifest].sort();
-test('new candidate is exact and cannot mutate existing Runtime, SQL, rights or thresholds',()=>{
- const m=verifyCoreEvidenceCandidate(read,paths);assert.equal(m.files.length,10);
- assert.equal(m.files.filter(r=>r.before_sha256!==null).length,1);
+test('candidate admits only exact Producer/Reader wiring; SQL, rights and thresholds stay frozen',()=>{
+ const m=verifyCoreEvidenceCandidate(read,paths);assert.equal(m.files.length,15);
+ assert.equal(m.files.filter(r=>r.before_sha256!==null).length,6);
 });
 test('all new files, unknown paths and forbidden operation changes fail closed',()=>{
  const m=JSON.parse(read(coreEvidenceManifest));

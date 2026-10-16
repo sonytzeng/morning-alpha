@@ -17,17 +17,21 @@
 
 保存實際 first_seen／available_at、來源與內容雜湊；原公告時刻未知仍 null。新下載的舊日期資料不能進入原盤前 cutoff。固定一次請求、4秒網路期限、64KB串流上限、不帶憑證、不重試或寫正式資料；未知、不一致與衝突一律維持缺資料。
 
-這兩個模組**尚未由已部署 Producer／Reader 入口匯入**，也沒有接正式排程。候選連接器已接至未改動的 V1 evaluator 與精確 saved-revision Reader；不得把它稱為 Production 修好。真正發布前還要審查 Producer acquisition／cache、保存 capture 與 Reader／Owner 的入口接合，不只部署一個未被使用的 helper。外部必要資料及方法論未決前，不單獨提案將此局部接合宣稱為推薦完整修復。
+這兩個模組**已接候選 Producer／Reader 入口，但尚未部署**。完整UNIVERSE acquisition在既有共用日快取／Lease內只取得一次市場金額，SMOKE_2330不增加這次讀取；既有Report序列化保存新增capture，不新增SQL或直接寫法人表。Reader只讀同一Report／correlation／revision的已保存capture，不會即時Fetch。舊快取或舊Report沒有capture時保持原行為，不補抓、不回填。原V1 evaluator及會員／Canonical／Publication gate未修改。外部必要資料及方法論未決前，不把局部市場接線宣稱為推薦完整修復。
 
 新增獨立 source-admission 層與負向測試：只允許精確列名的新檔與此層必要修改，舊 staged 收據不重寫；歷史檢查讀取已驗前序 bytes，當前新檔仍逐次核對完整指紋／未知路徑。原品質、會員、Reader 與 Publication gate 未刪除或放寬。
 
 候選保存 Reader 另補正毫秒級 cutoff 邊界：報告提交晚於 Producer 評估，不代表可附加這段期間才取得的市場資料。固定用已驗證的原 Producer cutoff 再驗市場 capture；原有 capture 在較晚 Reader 時間仍可讀，但只晚於 Producer 0.5秒、即使早於 Reader 的資料也必須拒絕。這不是修改正式 Reader V55。
 
+Runtime接線再固定 acquisition_cutoff，不把較晚的proof產生時間當成新資料取得窗口；Reader只接受這個保存時間。新來源只適用盤前：開始及完成評估時均檢查PREMARKET，跨09:00或盤中仍用原方法，不讓前日市場金額誤擋健康的盤中評估。日曆未知及舊cache缺欄位均不補抓。Reader SDK固定2.115.0、Producer固定2.57.4；沒有更改既有Auth設定。Producer／B1／C舊封存測試先驗新具名候選，再讀精確歷史bytes，所有注入漂移仍拒絕；舊Production preflight CLI保持原樣，不能用它將新來源冒充V15。
+
+Fresh DB實際安裝既有cache SQL／RPC後，第一筆STORED、第二筆ALREADY_STORED、不同payload拒絕覆寫，匿名／會員Writer拒絕；新增capture經PostgreSQL JSON roundtrip後可由同版Reader重建。原法人表0筆與ACL不變。回復舊Reader會忽略新增欄位且不改快取／歷史，這是隔離回復證據，不是已正式Deploy。所有正式Recommendation／Report／LINE與歷史仍未改。
+
 ## 單一 P0 Blocker Register
 
 | ID／主要批次 | 根因、影響 | 本次處置與證據 | 狀態／下一步 |
 | --- | --- | --- | --- |
-| V1-MARKET-TWD／V1 Evidence | 市場金額有官方 Producer 來源，但 V1 read path 未接；不是所有法人資料都無法取得 | 新 Adapter、候選 Proof／Reader、真來源 parser 與晚到拒絕、合成控制及隔離 SQL | CODE_ONLY；入口／cache 接合與新 Artifact 需另形成完整發布 diff |
+| V1-MARKET-TWD／V1 Evidence | 市場金額有官方來源，原Producer／Reader未接；不是所有法人資料都無法取得 | 新Adapter→共用日快取→未改Evaluator→既有Report保存→精確Reader；真來源parser、晚到拒絕、舊快取相容與隔離SQL | WIRED_CANDIDATE；精確Producer／Reader diff待獨立發布核准，不能修好其餘4類個股缺口 |
 | V1-STOCK-TWD／V1 Evidence | 個股三法人需要實際 TWD buy/sell/net，現有 T86／Fugle 是 SHARES | 保留72檔缺口；不以股數乘收盤價、不將市場金額複製給個股 | BLOCKED；查已購具體資料合約／欄位，或另核准版本化方法；未證明必須購買 |
 | V1-FOUR-QUARTER／V1 Evidence | 四個連續季度 actual＋consensus 及最新 guidance；實際值不能補預期 | 正式 earnings 表與550日窗均0；原 EPS Actual coverage 不等於完整契約 | BLOCKED；合法可得預期／guidance能力與方法論決策，價格 UNKNOWN，不自行購買 |
 | V1-EVENT／V1 Evidence | 公告取得不是因果映射；缺公司關聯、傳導、反證及失效條件 | mapping 表與7日窗均0；不自動判利多、不從未來補事件反應 | BLOCKED；補有來源且經審查的關聯，未完成前維持拒絕 |

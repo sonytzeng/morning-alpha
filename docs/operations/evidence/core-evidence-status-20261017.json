@@ -826,7 +826,7 @@
   },
   "source_candidate": {
     "scope": "MARKET_TWD_ONLY",
-    "status": "CODE_ONLY_NOT_WIRED_TO_DEPLOYED_ENTRYPOINT",
+    "status": "CANDIDATE_PRODUCER_CACHE_REPORT_READER_WIRED_NOT_DEPLOYED",
     "real_source_validation": "PASS",
     "real_first_seen_at": "2026-10-16T15:55:40.387Z",
     "source_revision": "fcabdf9dc469cf46891c5db3d33e17600195525d00f9ab2a2cfa8db914799f6c",

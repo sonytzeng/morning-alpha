@@ -6,6 +6,7 @@ import { v2DailySnapshot, v2WatchTransitions } from '../../../src/features/resea
 import { acquireForwardOutcomeBars, persistForwardOutcomes } from '../_shared/recommendation-v2-forward-outcomes.ts';
 import { v2Canonical } from '../_shared/recommendation-shadow-v2-engine.ts';
 import type { Capture } from '../_shared/recommendation-stock-evidence.ts';
+import { enqueueVnextAfterCheckpoint } from '../_shared/vnext-daily-hook.ts';
 
 const object=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 
@@ -71,6 +72,7 @@ export async function handleV2Forward(request:Request){
   const claim=await db.rpc('claim_recommendation_v2_forward',{p_date:input.business_date,p_phase:input.evaluation_phase,p_batch:input.source_batch_id});
   if(claim.error)return reply(409,{error:'FORWARD_TRIGGER_CONTRACT_REJECTED'});
   const receipt=object(claim.data);
+  if(['ACQUIRED','COMPLETE','SKIPPED_NO_WATCH'].includes(String(receipt.status)))enqueueVnextAfterCheckpoint(input,{url,gatewayJwt:Deno.env.get('RECOMMENDATION_GATEWAY_ANON_JWT')||'',cronSecret:Deno.env.get('CRON_SECRET')||'',background:p=>runtime.waitUntil(p),fetcher:fetch});
   if(receipt.status!=='ACQUIRED'){
    if(['COMPLETE','SKIPPED_NO_WATCH'].includes(String(receipt.status)))runtime.waitUntil(dispatchOutcomes(receipt));
    return reply(200,{status:receipt.status,business_writes:[]});

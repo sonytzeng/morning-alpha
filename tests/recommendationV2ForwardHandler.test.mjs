@@ -10,20 +10,31 @@ import * as runtime from '../supabase/functions/_shared/recommendation-shadow-v2
 import * as forward from '../src/features/research/recommendation-v2-forward.ts';
 import * as engine from '../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
 import * as outcomes from '../supabase/functions/_shared/recommendation-v2-forward-outcomes.ts';
+import * as vnextHook from '../supabase/functions/_shared/vnext-daily-hook.ts';
 import {v2Fixture} from './helpers/recommendationV2Fixtures.mjs';
 const code=ts.transpileModule(readFileSync(new URL('../supabase/functions/recommendation-v2-forward-worker-v1/index.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 // Deterministic legal TW session, independent of CI running on weekends/holidays.
 const fixtureTime='2026-10-06T23:30:00.000Z';
 class FixtureDate extends Date {constructor(...args){super(...(args.length?args:[fixtureTime]));}static now(){return Date.parse(fixtureTime);}}
 async function harness({state='ACQUIRED',prior=null,fail=false}={}){
- const calls=[],background=[],dispatch=[],env={CRON_SECRET:'SYNTHETIC_INTERNAL_ONLY',SUPABASE_URL:'http://127.0.0.1:1',SUPABASE_SERVICE_ROLE_KEY:'SYNTHETIC_SERVICE_ONLY',RECOMMENDATION_GATEWAY_ANON_JWT:'SYNTHETIC_GATEWAY_ONLY'};
+ const calls=[],background=[],dispatch=[],enqueued=[],env={CRON_SECRET:'SYNTHETIC_INTERNAL_ONLY',SUPABASE_URL:'http://127.0.0.1:1',SUPABASE_SERVICE_ROLE_KEY:'SYNTHETIC_SERVICE_ONLY',RECOMMENDATION_GATEWAY_ANON_JWT:'SYNTHETIC_GATEWAY_ONLY'};
  const fixture=v2Fixture(fixtureTime);const capsule=await runtime.buildV2Capsule(fixture);
  const db={rpc:async(name,args)=>{calls.push({name,args});if(name==='claim_recommendation_v2_forward')return {data:{status:state,job_id:'fixture-job',lease_id:'fixture-lease',source_revision:fixture.identity.revision_id},error:null};
   if(name==='claim_recommendation_v2_outcome_work')return {data:{status:'ACQUIRED'},error:null};
   if(name==='pending_recommendation_shadow_v2'||name==='pending_owner_v2_experiments')return {data:[],error:null};
   return {data:{status:'COMPLETE'},error:fail&&name==='store_recommendation_shadow_v2'?true:null};},from(){const q={select(){return q;},eq(){return q;},order(){return q;},async limit(){return {data:prior?[{result:prior}]:[],error:null};}};return q;}};
  let handler;const exports={};
- const denyFetch=async(url,init)=>{assert.equal(url,env.SUPABASE_URL+'/functions/v1/recommendation-v2-forward-worker-v1');const b=JSON.parse(init.body);assert.equal(b.operation,'OUTCOMES');dispatch.push(b);return new Response('{}',{status:202});};
+ const denyFetch=async(url,init)=>{
+  const b=JSON.parse(init.body);
+  if(url===env.SUPABASE_URL+'/functions/v1/vnext-daily-research-v1'){
+   assert.equal(init.headers.Authorization,'Bearer '+env.RECOMMENDATION_GATEWAY_ANON_JWT);
+   assert.equal(init.headers['x-vnext-internal'],env.CRON_SECRET);
+   assert.equal(init.redirect,'error');assert(init.signal instanceof AbortSignal);
+   assert.deepEqual(Object.keys(b).sort(),['business_date','phase','source_batch_id']);
+   enqueued.push(b);return new Response('{}',{status:202});
+  }
+  assert.equal(url,env.SUPABASE_URL+'/functions/v1/recommendation-v2-forward-worker-v1');assert.equal(b.operation,'OUTCOMES');dispatch.push(b);return new Response('{}',{status:202});
+ };
  vm.runInNewContext(code,{exports,Request,Response,AbortSignal,Date:FixtureDate,JSON,fetch:denyFetch,console:{log(){throw Error('NO_LOGGING');}},
   Deno:{env:{get:k=>env[k]},serve:fn=>{handler=fn;}},EdgeRuntime:{waitUntil:p=>background.push(p)},require:n=>{
    if(n.startsWith('https://esm.sh'))return {createClient:()=>db};
@@ -33,15 +44,16 @@ async function harness({state='ACQUIRED',prior=null,fail=false}={}){
    if(n.endsWith('recommendation-v2-forward.ts'))return forward;
    if(n.endsWith('recommendation-v2-forward-outcomes.ts'))return outcomes;
    if(n.endsWith('recommendation-shadow-v2-engine.ts'))return engine;
+   if(n.endsWith('vnext-daily-hook.ts'))return vnextHook;
    throw Error('UNEXPECTED_IMPORT:'+n);
   }});
  const invoke=async(body,headers={'x-cron-secret':env.CRON_SECRET})=>{const response=await handler(new Request('http://127.0.0.1:1',{method:'POST',headers,body:JSON.stringify(body)}));await Promise.all(background);return {status:response.status,data:await response.json()};};
- return {invoke,calls,dispatch,fixture};
+ return {invoke,calls,dispatch,enqueued,fixture};
 }
 test('real internal auth rejects anonymous, wrong, browser and member identity before DB',async()=>{
  const h=await harness();for(const headers of [{},{authorization:'Bearer fixture-member'},{'x-cron-secret':'wrong'}])assert.equal((await h.invoke({},headers)).status,401);
  assert.equal((await h.invoke({},{origin:'https://morningalphatw.com','x-cron-secret':'SYNTHETIC_INTERNAL_ONLY'})).status,403);
- assert.equal(h.calls.length,0);assert.equal(h.dispatch.length,0);
+ assert.equal(h.calls.length,0);assert.equal(h.dispatch.length,0);assert.equal(h.enqueued.length,0);
 });
 test('complete natural core dependency routes one shared acquisition, immutable store and separate outcome dispatch',async()=>{
  const h=await harness();const r=await h.invoke({business_date:h.fixture.identity.report_date,evaluation_phase:'PREMARKET',source_batch_id:'fixture'});
@@ -49,6 +61,7 @@ test('complete natural core dependency routes one shared acquisition, immutable 
  assert.equal(h.calls.filter(c=>c.name==='SOURCE_ACQUISITION').length,1);assert.equal(h.calls.find(c=>c.name==='SOURCE_ACQUISITION').caller,'recommendation-v2-forward-worker-v1');
  const store=h.calls.find(c=>c.name==='store_recommendation_shadow_v2');assert.equal(store.args.p_phase,'PREMARKET');assert.equal(store.args.p_snapshot.scanned,72);
  assert.equal(h.calls.find(c=>c.name==='finish_recommendation_v2_forward').args.p_status,'COMPLETE');assert.equal(h.dispatch.length,1);
+ assert.equal(h.enqueued.length,1);assert.equal(h.enqueued[0].business_date,h.fixture.identity.report_date);assert.equal(h.enqueued[0].phase,'PREMARKET');
 });
 test('research DB failure never calls Core, Report or LINE and leaves retryable job failure',async()=>{
  const h=await harness({fail:true});await h.invoke({business_date:h.fixture.identity.report_date,evaluation_phase:'PREMARKET',source_batch_id:'fixture'});

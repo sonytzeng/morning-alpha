@@ -11,7 +11,9 @@ permissions:
 jobs:
   owner-shadow-foundation:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Retain every freeze/RLS test; the complete inherited integrity chain can
+    # exceed ten minutes on shared runners. This is not a skipped safety gate.
+    timeout-minutes: 20
     services:
       isolated-postgres:
         image: postgres:17

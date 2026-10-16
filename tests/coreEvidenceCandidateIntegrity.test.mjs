@@ -4,8 +4,8 @@ import{verifyCoreEvidenceCandidate,coreEvidenceManifest,CORE_EVIDENCE_SCOPE,core
 const read=p=>readFileSync(new URL('../'+p,import.meta.url));
 const paths=[...CORE_EVIDENCE_SCOPE,coreEvidenceManifest].sort();
 test('candidate admits only exact Producer/Reader wiring; SQL, rights and thresholds stay frozen',()=>{
- const m=verifyCoreEvidenceCandidate(read,paths);assert.equal(m.files.length,16);
- assert.equal(m.files.filter(r=>r.before_sha256!==null).length,7);
+ const m=verifyCoreEvidenceCandidate(read,paths);assert.equal(m.files.length,17);
+ assert.equal(m.files.filter(r=>r.before_sha256!==null).length,8);
 });
 test('rate-limited Auth registry replacement changes only the already-verified official image identity',()=>{
  const path='scripts/academy-v11/auth-environment.mjs';

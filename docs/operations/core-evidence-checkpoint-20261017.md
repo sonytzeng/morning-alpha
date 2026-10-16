@@ -17,7 +17,7 @@
 
 保存實際 first_seen／available_at、來源與內容雜湊；原公告時刻未知仍 null。新下載的舊日期資料不能進入原盤前 cutoff。固定一次請求、4秒網路期限、64KB串流上限、不帶憑證、不重試或寫正式資料；未知、不一致與衝突一律維持缺資料。
 
-這兩個模組**已接候選 Producer／Reader 入口，但尚未部署**。完整UNIVERSE acquisition在既有共用日快取／Lease內只取得一次市場金額，SMOKE_2330不增加這次讀取；既有Report序列化保存新增capture，不新增SQL或直接寫法人表。Reader只讀同一Report／correlation／revision的已保存capture，不會即時Fetch。舊快取或舊Report沒有capture時保持原行為，不補抓、不回填。原V1 evaluator及會員／Canonical／Publication gate未修改。外部必要資料及方法論未決前，不把局部市場接線宣稱為推薦完整修復。
+這兩個模組已接候選 Producer／Owner Reader，尚未部署。完整UNIVERSE acquisition在既有日快取／Lease內取得一次市場金額，SMOKE_2330不增加此讀取；既有Report序列化保存私有capture，不新增SQL或直接寫法人表。正式proof及會員decision仍使用原資料，不Promotion未核准來源。只有既有伺服器Owner分支可讀獨立、明確未公開的研究欄位；Reader不Fetch。舊快取／Report缺capture維持原行為、不補抓、不回填。原evaluator及品質／權益gate不變。
 
 新增獨立 source-admission 層與負向測試：只允許精確列名的新檔與此層必要修改，舊 staged 收據不重寫；歷史檢查讀取已驗前序 bytes，當前新檔仍逐次核對完整指紋／未知路徑。原品質、會員、Reader 與 Publication gate 未刪除或放寬。
 
@@ -31,7 +31,7 @@ Fresh DB實際安裝既有cache SQL／RPC後，第一筆STORED、第二筆ALREAD
 
 | ID／主要批次 | 根因、影響 | 本次處置與證據 | 狀態／下一步 |
 | --- | --- | --- | --- |
-| V1-MARKET-TWD／V1 Evidence | 市場金額有官方來源，原Producer／Reader未接；不是所有法人資料都無法取得 | 新Adapter→共用日快取→未改Evaluator→既有Report保存→精確Reader；真來源parser、晚到拒絕、舊快取相容與隔離SQL | WIRED_CANDIDATE；精確Producer／Reader diff待獨立發布核准，不能修好其餘4類個股缺口 |
+| V1-MARKET-TWD／V1 Evidence | 市場有官方金額來源但尚未接入；用途待確認 | 新Adapter→私有快取／Report→獨立Owner研究；正式proof不Promotion；來源、時間、SQL與回復驗證 | PRIVATE_CANDIDATE；待用途及精確發布核准，不能消除其他個股缺口 |
 | V1-STOCK-TWD／V1 Evidence | 個股三法人需要實際 TWD buy/sell/net，現有 T86／Fugle 是 SHARES | 保留72檔缺口；不以股數乘收盤價、不將市場金額複製給個股 | BLOCKED；查已購具體資料合約／欄位，或另核准版本化方法；未證明必須購買 |
 | V1-FOUR-QUARTER／V1 Evidence | 四個連續季度 actual＋consensus 及最新 guidance；實際值不能補預期 | 正式 earnings 表與550日窗均0；原 EPS Actual coverage 不等於完整契約 | BLOCKED；合法可得預期／guidance能力與方法論決策，價格 UNKNOWN，不自行購買 |
 | V1-EVENT／V1 Evidence | 公告取得不是因果映射；缺公司關聯、傳導、反證及失效條件 | mapping 表與7日窗均0；不自動判利多、不從未來補事件反應 | BLOCKED；補有來源且經審查的關聯，未完成前維持拒絕 |
@@ -70,3 +70,11 @@ Fresh SQL首次因本機Docker磁碟已滿失敗（initdb No space left on devic
 d16a9d4的Academy CI在任何真實Auth驗收前被ECR `Data limit exceeded` 擋住，SQL角色／RLS已通過。只沿用#251已驗證的同版官方GoTrue v2.194.0 GHCR digest，整份helper逐字比對只容許這一個映像字串替換。沒有改Auth設定、端點、SQL、斷言、重試／timeout，也不是修改Production Auth。新精確HEAD仍須自己的CI；不重試不可用的舊registry或將該失敗算作產品PASS。
 
 本次受影響回歸160/160通過。乾淨單分支clone起初缺少原測試引用、但不在main祖先鏈的固定commit `4348efaff4514a43473d111950083799a23c79c2`，因此Footer歷史對照先失敗；唯讀補取此精確Git物件後通過，沒有替換baseline或刪除斷言。首次安全審查封存保留；修正cutoff後的新精確HEAD須增量重審，不拿前一快照封存冒充。
+
+## 最後安全修正
+
+未部署d16候選確認1項中風險：Reader把未核准TAIEX金額送入各tier市場投影，既有股票Gate不會過濾市場列。已保留此精確快照的Finding封存，不記成0風險。修正後Producer正式proof與原方法deepEqual；預設Reader不合併私有capture，只有既有server-resolved admin分支可讀獨立owner_market_foundation_candidate，標示candidate_only及member_publication_approved:false。另修正非安全性時間契約：Owner保存快照跨09:00拒絕盤前capture；稍晚讀取同一盤前revision仍相容。合成反例使用實際Projector，驗證會員無新TAIEX金額；不冒充正式洩漏或Production會員E2E。最新HEAD須自己的安全及CI。
+
+V2 CI原HTTP整合harness未列新增三個import，因此在require階段失敗，不是Shadow演算法出錯。保留原斷言及原測試對實際Producer入口的執行，只補明確的market-source缺失fallback、phase與日期mock；正向capture及禁止公開由另11項實際helper測試覆蓋。Source admission逐檔納入此測試，17筆檔案hash加Manifest，共18檔；不刪除原Gate。
+
+本輪唯讀兩個已授權授權詢問thread：TWSE仍只有原寄件；TPEx已有10/13 19:36:31 +0800官方答覆，message ID 1a1350cd6a7fef93，寄件domain tpex.org.tw且DKIM／SPF／DMARC通過。答覆要求依政府資料開放授權範圍使用，未涵蓋資料不在授權範圍，另注意資料更改及免責／標示要求；未逐項確認歷史API、衍生數值、圖表與付費會員用途，不當作29項全部核准或必須付費。沒有回信、購買或擴大來源。市場BFI82U是本次獨立新私有來源，不假裝包含於原8類歷史詢問。合法可確認的來源用途才可另送Owner發布審核。

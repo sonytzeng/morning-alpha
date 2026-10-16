@@ -18,7 +18,7 @@
     {
       "path": "docs/operations/core-evidence-checkpoint-20261017.md",
       "before_sha256": null,
-      "after_sha256": "98b18fcc2af4ec6124848d83c300492b48a5336ea27af7ff63de20ad6a9e3b73"
+      "after_sha256": "b7a1721a8360738aae1e2ef2bb16cb43882ef221e790d7a6944d84355b6c0036"
     },
     {
       "path": "docs/operations/evidence/core-evidence-status-20261017.json",
@@ -33,7 +33,7 @@
     {
       "path": "supabase/functions/_shared/recommendation-foundation-candidate.ts",
       "before_sha256": null,
-      "after_sha256": "0be41e72c01f2da55656658d35201bcc653dfeb1cdf55eaad5632c707d7d7aca"
+      "after_sha256": "f4584ce25280c51ca66ef06b0d9bc7deb6b077de88b5e8b1a3543d3dad398395"
     },
     {
       "path": "supabase/functions/_shared/recommendation-market-institutional-candidate.ts",
@@ -43,7 +43,7 @@
     {
       "path": "supabase/functions/get-report-payload/index.ts",
       "before_sha256": "eb3008ceb7e72cc007680f9885ca56e02e1feb7e85a16c8758a0542c75e92d79",
-      "after_sha256": "217f2c3b09d327803583b58cb3c8aa47687fc648afa17a560dea5d130436e083"
+      "after_sha256": "be2fed4bd1707048b1cb3dbd39a832e205a07fea25ac848ea39fe8007551dd50"
     },
     {
       "path": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
@@ -53,12 +53,12 @@
     {
       "path": "tests/coreEvidenceCandidateIntegrity.test.mjs",
       "before_sha256": null,
-      "after_sha256": "495f2f0a4b6a153d0c57b36a04ab9ef661037c2e2d2414320bf39d7ee78b670d"
+      "after_sha256": "b51f7766ce7791b1987f55f491954a229c662828d18c3e747acf7c5a5276931b"
     },
     {
       "path": "tests/helpers/coreEvidenceCandidateIntegrity.mjs",
       "before_sha256": null,
-      "after_sha256": "1891ac34b3b23f25d981f50b259ac8f60b304319c7b4de100733607f5124e3e0"
+      "after_sha256": "f4a57cbba382478e7aa1cdd8f71cd280cbab054ee9e2fce91ba2119045dfa72d"
     },
     {
       "path": "tests/helpers/stagedReleaseIntegrity.mjs",
@@ -68,17 +68,22 @@
     {
       "path": "tests/recommendationMarketInstitutionalCandidate.test.mjs",
       "before_sha256": null,
-      "after_sha256": "17a12673a04ff659a6031e6e9c0878b5b70b5a71e0393045fd23a50a7037a44c"
+      "after_sha256": "34b681078de2a362b9996e9b99b6875d47ce7b202c993b401adb96b856e87705"
     },
     {
       "path": "tests/recommendationMarketInstitutionalDatabase.integration.mjs",
       "before_sha256": null,
-      "after_sha256": "25198d29fd0a9325c3cca582994f751638b40a6e2795d60a6dcb5a3b8aaef142"
+      "after_sha256": "62aaa1f653698e3a03083fe8f043c744e59cfa0fa1ba8a015e44c106503d5282"
     },
     {
       "path": "tests/recommendationProducerAdmission.test.mjs",
       "before_sha256": "319e7ef8f6f3e02a91f137a29d34e2707245859f1605dd092cde48b4a625d457",
       "after_sha256": "8ea211460c8a2cc538059eb0690e970bb910ab66ecc0bbfb48e6f8a27cdf23a5"
+    },
+    {
+      "path": "tests/recommendationV2FugleRuntime.test.mjs",
+      "before_sha256": "15970d61b11cc3e254d0e66e87ffa804df30b8f5eecc6a62ad02c3bb9ca581b5",
+      "after_sha256": "46510466a011b1978749206f24038da51386ee85c81ce900ae823538056dd725"
     },
     {
       "path": "tests/stagedReleaseIntegrity.test.mjs",

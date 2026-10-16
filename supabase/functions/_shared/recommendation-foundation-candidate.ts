@@ -5,6 +5,7 @@ import type { EvidenceData, DecisionIdentity, Row } from './decision-v1-data.ts'
 import { buildRecommendationProof, persistedRecommendationReaderInput, type Capture } from './recommendation-stock-evidence.ts';
 import type { OfficialCapture } from './recommendation-official-actuals.ts';
 import { withMarketInstitutionalEvidence, type MarketFlowCapture } from './recommendation-market-institutional-candidate.ts';
+import { evaluationPhase } from './recommendation-phase.ts';
 
 export async function buildRecommendationFoundationCandidate(options: {
   data: EvidenceData; identity: DecisionIdentity; captures: Capture[];
@@ -16,7 +17,10 @@ export async function buildRecommendationFoundationCandidate(options: {
   const data = validCutoff
     ? await withMarketInstitutionalEvidence(options.data, { ...options.identity, generated_at: evidenceCutoff }, options.marketFlow)
     : { ...options.data, failures: [...options.data.failures, 'MARKET_FLOW_ACQUISITION_CUTOFF_INVALID'] };
-  const proof = await buildRecommendationProof(data, options.identity, options.captures, options.officialActuals);
+  // A verified capture is not a publication approval. Keep the formal proof
+  // byte-equivalent to the original inputs until separately authorized. The
+  // additive acquisition receipt is private and may only power Owner research.
+  const proof = await buildRecommendationProof(options.data, options.identity, options.captures, options.officialActuals);
   return { ...proof, acquisition: { ...proof.acquisition, foundation_candidate: {
     contract: 'RECOMMENDATION_FOUNDATION_CANDIDATE_V1', evidence_cutoff: evidenceCutoff, market_flow: options.marketFlow,
     status: data.failures.some(f => f.startsWith('MARKET_FLOW_')) ? 'BLOCKED' : 'MARKET_INPUT_VERIFIED',
@@ -26,14 +30,20 @@ export async function buildRecommendationFoundationCandidate(options: {
 
 /** Reader binding is still the existing exact saved Report/correlation/cutoff
  * contract. Unbound or newly downloaded flows cannot be attached by a client. */
-export async function persistedFoundationCandidateInput(data: EvidenceData, identity: DecisionIdentity, ai: Row) {
+export async function persistedFoundationCandidateInput(data: EvidenceData, identity: DecisionIdentity, ai: Row, access: { ownerAuthorized: boolean } = { ownerAuthorized: false }) {
   const base = await persistedRecommendationReaderInput(data, identity, ai);
+  // This flag comes only from the existing server-resolved Owner branch. It is
+  // never read from request/query/body/user metadata or used by member output.
+  if (access.ownerAuthorized !== true) return base;
   if (base.data.failures.length > data.failures.length) return base;
   const capture = ai.recommendation_stock_evidence as Row | undefined;
   const candidate = capture?.foundation_candidate as Row | undefined;
   // Old saved Reports/caches keep the exact existing Reader behavior. Never
   // fetch a missing market capture later or mutate a historical Report.
   if (candidate === undefined) return base;
+  if (evaluationPhase(identity.generated_at) !== 'PREMARKET') {
+    return { ...base, data: { ...base.data, failures: [...base.data.failures, 'MARKET_FLOW_READER_PHASE_MISMATCH'] } };
+  }
   if (candidate?.contract !== 'RECOMMENDATION_FOUNDATION_CANDIDATE_V1' || !candidate.market_flow || typeof candidate.market_flow !== 'object') {
     return { ...base, data: { ...base.data, failures: [...base.data.failures, 'MARKET_FLOW_SAVED_CAPTURE_MISSING'] } };
   }

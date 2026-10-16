@@ -50,7 +50,8 @@ try {
  const savedReport={revision_id:id.revision_id,correlation_id:id.revision_id,generated_at:id.generated_at,decision_v1:proof.decision,recommendation_stock_evidence:proof.acquisition};
  // Report's unchanged JSON serialization preserves this additive field.
  const report=JSON.parse(sql(`select ${quote(savedReport)}`));
- assert.equal((await persistedFoundationCandidateInput(source,id,report)).data.flows.length,3);
+ assert.equal((await persistedFoundationCandidateInput(source,id,report,{ownerAuthorized:true})).data.flows.length,3);
+ assert.equal((await persistedFoundationCandidateInput(source,id,report)).data.flows.length,0);
  const cacheBefore=sql(`select md5(payload::text) from research_private.recommendation_v2_acquisition_cache where id='${lease}'`);
  const oldReader=await persistedRecommendationReaderInput(source,id,report);assert.equal(oldReader.data.flows.length,0);
  assert.equal(sql(`select md5(payload::text) from research_private.recommendation_v2_acquisition_cache where id='${lease}'`),cacheBefore,'rollback Reader is read-only and keeps the additive receipt');

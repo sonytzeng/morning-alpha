@@ -18,6 +18,7 @@ const run=(args,options={})=>{
  catch(error){const detail=String(error.stderr||'').replace(/postgres:\/\/[^@\s]+@/g,'postgres://[redacted]@').replace(/[a-f0-9]{32,}/g,'[redacted]').replace(/eyJ[\w.-]+/g,'[redacted]').split('\n').slice(-8).join(' ').slice(0,2000);throw Error('LOCAL_ACADEMY_DOCKER_OPERATION_FAILED: '+args[0]+' '+detail);}
 };
 export async function startAuthEnvironment(){
+ assert.ok(process.env.MA_ISOLATED_DB_TMPFS===undefined||['0','1'].includes(process.env.MA_ISOLATED_DB_TMPFS),'ISOLATED_DB_TMPFS_INVALID');
  const name='ma-academy-auth-'+process.pid,db=name+'-db',auth=name+'-auth',rest=name+'-rest';
  const secret=randomBytes(48).toString('hex'),password=randomBytes(24).toString('hex');
  const env={...process.env,POSTGRES_PASSWORD:password,GOTRUE_DB_DATABASE_URL:`postgres://postgres:${password}@${db}:5432/postgres?search_path=auth`,GOTRUE_JWT_SECRET:secret,PGRST_DB_URI:`postgres://authenticator:${password}@${db}:5432/postgres`,PGRST_JWT_SECRET:secret};
@@ -29,7 +30,8 @@ export async function startAuthEnvironment(){
  const anon=jwt({role:'anon',iss:'supabase',iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+86400});
  try{
   run(['network','create',name]);
-  run(['run','-d','--name',db,'--network',name,'-e','POSTGRES_PASSWORD','postgres:17'],{env});
+  const ephemeralStorage=process.env.MA_ISOLATED_DB_TMPFS==='1'?['--tmpfs','/var/lib/postgresql/data:rw,size=268435456']:[];
+  run(['run','-d','--name',db,'--network',name,...ephemeralStorage,'-e','POSTGRES_PASSWORD','postgres:17'],{env});
   let ready=false;for(let i=0;i<40;i++){try{sql('select 1');ready=true;break;}catch{await delay(500);}}assert.ok(ready,'LOCAL_DB_READY');
   sql(`create schema auth;create extension if not exists pgcrypto;create role anon nologin;create role authenticated nologin;create role service_role nologin bypassrls;create role authenticator login password '${password}' noinherit;grant anon,authenticated to authenticator;grant usage on schema public,auth to anon,authenticated,service_role;
   create function auth.uid() returns uuid language sql stable as $$select (nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub')::uuid$$;`);

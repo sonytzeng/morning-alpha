@@ -52,12 +52,17 @@ test('sealed C runtime and SQL are inherited exactly, never restored from the ol
  const caller=read('supabase/functions/recommendation-v2-forward-worker-v1/index.ts').toString();
  assert.equal((caller.match(/enqueueVnextAfterCheckpoint\(input/g)||[]).length,1);assert.match(caller,/RECOMMENDATION_GATEWAY_ANON_JWT/);
 });
-test('isolated Auth uses the identical official v2.194.0 digest without changing its configuration or tests',()=>{
+test('isolated Auth retains the exact official digest and configuration; only explicit disposable tmpfs differs',()=>{
  const path='scripts/academy-v11/auth-environment.mjs';
  const previous=execFileSync('git',['show','f96ef92b3e70d02ee6dcd5d52500483da65f3d18:'+path],{encoding:'utf8'});
  const old='public.ecr.aws/supabase/gotrue:v2.194.0',pinned='ghcr.io/supabase/gotrue@sha256:2b352c02adf11a2025cd5993c246ef85db73743553c39194d2b1862d1cc4d1fd';
  assert.equal(previous.split(old).length-1,1);
- assert.equal(read(path).toString(),previous.replace(old,pinned));
+ const originalRun="  run(['run','-d','--name',db,'--network',name,'-e','POSTGRES_PASSWORD','postgres:17'],{env});";
+ assert.equal(previous.split(originalRun).length-1,1);
+ const expected=previous.replace(old,pinned)
+ .replace('export async function startAuthEnvironment(){',"export async function startAuthEnvironment(){\n assert.ok(process.env.MA_ISOLATED_DB_TMPFS===undefined||['0','1'].includes(process.env.MA_ISOLATED_DB_TMPFS),'ISOLATED_DB_TMPFS_INVALID');")
+ .replace(originalRun,"  const ephemeralStorage=process.env.MA_ISOLATED_DB_TMPFS==='1'?['--tmpfs','/var/lib/postgresql/data:rw,size=268435456']:[];\n  run(['run','-d','--name',db,'--network',name,...ephemeralStorage,'-e','POSTGRES_PASSWORD','postgres:17'],{env});");
+ assert.equal(read(path).toString(),expected);
 });
 test('Validate preserves every accepted C check and waits only for three final isolated TCP servers',()=>{
  const path='.github/workflows/validate-release.yml',prior=vnextPrior(path).toString(),current=read(path);

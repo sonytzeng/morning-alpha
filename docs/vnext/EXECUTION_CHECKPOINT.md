@@ -1,5 +1,15 @@
 # VNext 執行 Checkpoint
 
+## 2026-10-17 隔離會員預覽接線修復（不變更正式政策）
+
+從 PR251 精確 fe87551b08153061dbb07ac2b8d5307a9058a757 建立獨立分支，沒有覆寫原分支。發現 membership-preview 寫死55632／55633，但既有 Auth runtime 允許以環境指定其他 loopback 埠，造成 Session 與 SQL 可能屬於不同隔離環境。現在身分查詢及兩個 proxy 全部重用同一 localAuthBase／localRestBase；沒有新增 tier selector、修改驗證或正式權益。
+
+本機 Docker 磁碟已滿，未 Prune 或移除其他容器。新增明確 opt-in 的256MiB tmpfs，僅限新建立的可拋棄驗收 DB，預設行為不變。使用未占用56932／56933啟動新官方 Supabase Auth＋PostgREST，Fresh SQL／RLS、政策未啟用、legacy未知期限保護、並發activation防重、Free7章／Premium10章、metadata不能升權、登出重新登入已實測。Production帳號與付款供應商 E2E 未執行。
+
+Chrome實際操作匿名、Free、Premium、legacy與Owner的本機真實密碼登入；Free／Premium重整後 Session 正確、登出後私人內容消失、legacy未知期限不變且不冒充永久付費。1440／375／390／430的Free與Premium寬度均無水平溢出，Console error／warn 0。未核准研究維持0筆。畫面及本機環境僅為隔離候選，不是正式會員 E2E。
+
+精確原Auth映像及全部配置逐字比對仍保留，只列出本次明確tmpfs差異；原負向控制未移除。既有 VNext workflow 增加此唯一堆疊 PR 的 base branch 觸發，所有測試、安全限制與Production禁止事項保留。新HEAD須取得自己的 CI；原#251正式Free／Premium／Legacy仍PENDING。無Production Merge、Deploy、Migration、政策activation、Secret、Cron、Auth/RLS修改或付款。
+
 ## 2026-10-15 核心交付發布順序相容補正（本節優先）
 
 PR250維持精確4219c7c不變；C更新cf3b6b2只接收P0准入及解除兩個收據hash衝突，38Runtime與SQL不變。會員接收新C，保留原固定SHA區間快取及live逐次讀取，不能用C版覆蓋掉已通過的資源控制；不新增會員功能或改政策。新C和會員HEAD各自重新核對必要Integrity／CI，前序真實SQL、Auth、RLS、回復與Responsive證據因相同產品來源而保留；不重做五小時全站驗收。此為候選本機整合，不是Production Merge／Deploy／Migration或activation。

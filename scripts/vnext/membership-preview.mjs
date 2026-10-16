@@ -2,7 +2,7 @@
 import {createServer} from 'vite';
 import react from '@vitejs/plugin-react';
 import {resolve} from 'node:path';
-import {startAuthEnvironment} from '../academy-v11/auth-environment.mjs';
+import {startAuthEnvironment,localAuthBase,localRestBase} from '../academy-v11/auth-environment.mjs';
 import {installMembershipCandidate,verifyMembershipPolicy} from '../../tests/membershipPolicy.integration.mjs';
 import {resolveEffectiveMemberAccess} from '../../supabase/functions/_shared/member-entitlement.ts';
 const runtime=await startAuthEnvironment(),root=new URL('../../',import.meta.url).pathname,port=3225,origin='http://127.0.0.1:'+port;
@@ -17,7 +17,7 @@ try{
    if(path==='/__membership_access'){
     if(req.method!=='POST'){json(405,{});return;}
     try{
-     const response=await fetch('http://127.0.0.1:55632/user',{headers:{Authorization:req.headers.authorization||''},signal:AbortSignal.timeout(3000)});
+     const response=await fetch(localAuthBase+'/user',{headers:{Authorization:req.headers.authorization||''},signal:AbortSignal.timeout(3000)});
      if(!response.ok){json(401,{});return;}const user=await response.json();
      if(!/^[a-f0-9-]{36}$/.test(user.id)){json(401,{});return;}
      const row=JSON.parse(runtime.sql(`select to_jsonb(public.ensure_member_entitlement_v2('${user.id}'))::text`)||'null');
@@ -32,7 +32,7 @@ try{
     res.setHeader('Content-Type','text/html;charset=utf-8');res.end(await vite.transformIndexHtml('/membership','<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Morning Alpha 會員政策候選</title></head><body style="margin:0"><div id="root"></div><script type="module" src="/tests/browser/membership.harness.tsx"></script></body></html>'));return;
    }next();
   });}}],resolve:{alias:[{find:'@/lib/supabase',replacement:resolve(root,'tests/browser/vnext.client.ts')},{find:'@/services/membershipService',replacement:resolve(root,'tests/browser/membership.client.ts')},{find:'@/components/base/MarketStatusLight',replacement:resolve(root,'tests/browser/membership.market.tsx')},{find:'@',replacement:resolve(root,'src')}]},
-  server:{host:'127.0.0.1',port,strictPort:true,cors:false,fs:{strict:true,allow:[root],deny:['**/.env*','**/.git/**','**/*.pem','**/*.key']},proxy:{'/auth/v1':{target:'http://127.0.0.1:55632',rewrite:p=>p.replace(/^\/auth\/v1/,'')},'/rest/v1':{target:'http://127.0.0.1:55633',rewrite:p=>p.replace(/^\/rest\/v1/,'')}}}});
+  server:{host:'127.0.0.1',port,strictPort:true,cors:false,fs:{strict:true,allow:[root],deny:['**/.env*','**/.git/**','**/*.pem','**/*.key']},proxy:{'/auth/v1':{target:localAuthBase,rewrite:p=>p.replace(/^\/auth\/v1/,'')},'/rest/v1':{target:localRestBase,rewrite:p=>p.replace(/^\/rest\/v1/,'')}}}});
  await server.listen();console.log('MEMBERSHIP_PREVIEW='+origin+'/membership');
  await new Promise(resolve=>{process.once('SIGINT',resolve);process.once('SIGTERM',resolve);});await server.close();
 }finally{runtime.cleanup();}

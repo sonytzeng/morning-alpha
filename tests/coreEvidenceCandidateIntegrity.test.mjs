@@ -1,0 +1,23 @@
+import test from 'node:test';import assert from 'node:assert/strict';import{readFileSync}from'node:fs';
+import{verifyCoreEvidenceCandidate,coreEvidenceManifest,CORE_EVIDENCE_SCOPE,coreEvidenceHistoricalRead}from'./helpers/coreEvidenceCandidateIntegrity.mjs';
+const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+const paths=[...CORE_EVIDENCE_SCOPE,coreEvidenceManifest].sort();
+test('new candidate is exact and cannot mutate existing Runtime, SQL, rights or thresholds',()=>{
+ const m=verifyCoreEvidenceCandidate(read,paths);assert.equal(m.files.length,10);
+ assert.equal(m.files.filter(r=>r.before_sha256!==null).length,1);
+});
+test('all new files, unknown paths and forbidden operation changes fail closed',()=>{
+ const m=JSON.parse(read(coreEvidenceManifest));
+ for(const row of m.files)assert.throws(()=>verifyCoreEvidenceCandidate(p=>p===row.path?Buffer.concat([read(p),Buffer.from('DRIFT')]):read(p),paths));
+ assert.throws(()=>verifyCoreEvidenceCandidate(read,[...paths,'supabase/functions/line-daily-push/index.ts']));
+ for(const key of ['production_authorized','migration','secret_change','cron_change','auth_rls_change','member_rights_change','threshold_change','member_publication']){
+  const copy=structuredClone(m);copy[key]=true;
+  assert.throws(()=>verifyCoreEvidenceCandidate(p=>p===coreEvidenceManifest?Buffer.from(JSON.stringify(copy)):read(p),paths));
+ }
+});
+test('historical reader peels only exact current helper bytes; injected drift is retained',()=>{
+ const p='tests/helpers/stagedReleaseIntegrity.mjs',good=read(p),bad=Buffer.concat([good,Buffer.from('DRIFT')]);
+ assert.notDeepEqual(coreEvidenceHistoricalRead(p,good),good);
+ assert.deepEqual(coreEvidenceHistoricalRead(p,bad),bad);
+ assert.deepEqual(coreEvidenceHistoricalRead('package.json',read('package.json')),read('package.json'));
+});

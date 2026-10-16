@@ -1,0 +1,64 @@
+{
+  "schema": "CORE_EVIDENCE_CANDIDATE_1",
+  "base": "754850ba1c66329d12eac8e98ab799e0a0c9123e",
+  "production_authorized": false,
+  "migration": false,
+  "secret_change": false,
+  "cron_change": false,
+  "auth_rls_change": false,
+  "member_rights_change": false,
+  "threshold_change": false,
+  "member_publication": false,
+  "files": [
+    {
+      "path": ".github/workflows/core-evidence-candidate.yml",
+      "before_sha256": null,
+      "after_sha256": "a01967e1e9c050c173bad9d661aae35e3a5259c4f1817788e12e8db6ffc17a85"
+    },
+    {
+      "path": "docs/operations/core-evidence-checkpoint-20261017.md",
+      "before_sha256": null,
+      "after_sha256": "f66f3bde7f14607499a09c8302edc99a69c6983a3e1d52e1d1a3be59abc6bc6a"
+    },
+    {
+      "path": "docs/operations/evidence/core-evidence-status-20261017.json",
+      "before_sha256": null,
+      "after_sha256": "eac1cbe017fdef2629a174d6d3fb8598bf08642ae2923724ea30187dba4041cf"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-foundation-candidate.ts",
+      "before_sha256": null,
+      "after_sha256": "8046e1b4365a4b73b5788b66fd5842913c2e93e2e03ef9acc4e184c0bf57e5c7"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-market-institutional-candidate.ts",
+      "before_sha256": null,
+      "after_sha256": "22714b1bfa6694e4df44dfcddcc461afc49d01f0af60e1939017009ed33df108"
+    },
+    {
+      "path": "tests/coreEvidenceCandidateIntegrity.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "9dbb55baa6300d7ee83ad7bfa665f2797271beb0cf8a4b8a7264f4a6d0fb59aa"
+    },
+    {
+      "path": "tests/helpers/coreEvidenceCandidateIntegrity.mjs",
+      "before_sha256": null,
+      "after_sha256": "638e1bbc13d3a98368a41e167aab0a29a381149699f46f98b88e9416f709867e"
+    },
+    {
+      "path": "tests/helpers/stagedReleaseIntegrity.mjs",
+      "before_sha256": "9afc60f18154bc68cbcaeea167a9e7f0982bff3ba8dd3446d09d1cc2d58aed99",
+      "after_sha256": "db4cf3dc08f2e73ba4a6d4ea1b40d72c4aad95575ce4f0f9e7bab5291369cce7"
+    },
+    {
+      "path": "tests/recommendationMarketInstitutionalCandidate.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "b24bfca69a2ee78a07733a98bf5a07138e58dd4c2f8f45448ff440c1664de407"
+    },
+    {
+      "path": "tests/recommendationMarketInstitutionalDatabase.integration.mjs",
+      "before_sha256": null,
+      "after_sha256": "cde829cf6558d030b6c7fbc7516261210704dc32b0c8b19833656a70a2873727"
+    }
+  ]
+}

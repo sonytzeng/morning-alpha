@@ -61,10 +61,10 @@ jobs:
           docker run -d --name "$MA_TEST_DOCKER_CONTAINER" --network none \
             --env POSTGRES_PASSWORD=isolated-ci-only postgres:17
           for attempt in $(seq 1 30); do
-            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres; then break; fi
+            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres; then break; fi
             sleep 1
           done
-          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres
+          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres
           node --experimental-strip-types tests/ownerBackendDatabase.integration.mjs
       - name: Remove disposable Owner backend isolation
         if: always()
@@ -221,10 +221,10 @@ jobs:
           docker run -d --name "$MA_TEST_DOCKER_CONTAINER" --network none \
             --env POSTGRES_PASSWORD=isolated-ci-only ma-runtime-sparse-ci
           for attempt in $(seq 1 30); do
-            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres; then break; fi
+            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres; then break; fi
             sleep 1
           done
-          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres
+          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres
           node --test tests/runtimeSparseRecoveryDatabase.integration.mjs
       - name: Remove disposable sparse recovery isolation
         if: always()
@@ -239,10 +239,10 @@ jobs:
             --env POSTGRES_PASSWORD=isolated-ci-only \
             --env 'FAKETIME=@2026-10-02 07:35:30' ma-runtime-sparse-ci
           for attempt in $(seq 1 30); do
-            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres; then break; fi
+            if docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres; then break; fi
             sleep 1
           done
-          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -U postgres
+          docker exec "$MA_TEST_DOCKER_CONTAINER" pg_isready -h 127.0.0.1 -U postgres
           node --experimental-strip-types tests/publicProjectionDatabase.integration.mjs
       - name: Remove disposable public projection isolation
         if: always()

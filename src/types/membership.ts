@@ -18,10 +18,11 @@ export interface MembershipAccess {
   trialEndsAt: string | null;
   cancelAtPeriodEnd: boolean;
   source: string | null;
+  legacyReviewRequired?: boolean;
 }
 
 export interface MembershipOffer {
-  signup_mode: 'closed' | 'beta_full' | 'trialing';
+  signup_mode: 'closed' | 'beta_full' | 'trialing' | 'free';
   trial_days: number;
   billing_mode: 'disabled' | 'manual' | 'provider';
   beta_access_ends_at: string | null;

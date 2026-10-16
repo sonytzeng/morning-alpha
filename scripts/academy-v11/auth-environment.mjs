@@ -6,9 +6,9 @@ import {randomBytes,createHmac} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {contentSql,loadReviewedCourse} from './load-content.mjs';
 import {syntheticLessons} from '../../tests/fixtures/academy-v11-lessons.mjs';
+import {localAuthBase,localRestBase,localAuthPort,localRestPort} from './local-auth-endpoints.mjs';
 
-export const localAuthBase='http://127.0.0.1:55632';
-export const localRestBase='http://127.0.0.1:55633';
+export {localAuthBase,localRestBase};
 // Public disposable-test password, never a Production credential.
 export const localTestPassword='Academy-local-only-2026!';
 const read=p=>readFileSync(new URL('../../'+p,import.meta.url),'utf8');
@@ -33,7 +33,7 @@ export async function startAuthEnvironment(){
   let ready=false;for(let i=0;i<40;i++){try{sql('select 1');ready=true;break;}catch{await delay(500);}}assert.ok(ready,'LOCAL_DB_READY');
   sql(`create schema auth;create extension if not exists pgcrypto;create role anon nologin;create role authenticated nologin;create role service_role nologin bypassrls;create role authenticator login password '${password}' noinherit;grant anon,authenticated to authenticator;grant usage on schema public,auth to anon,authenticated,service_role;
   create function auth.uid() returns uuid language sql stable as $$select (nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub')::uuid$$;`);
-  run(['run','-d','--name',auth,'--network',name,'-p','127.0.0.1:55632:9999','-e','GOTRUE_DB_DATABASE_URL','-e','GOTRUE_JWT_SECRET','-e','GOTRUE_DB_DRIVER=postgres','-e','GOTRUE_API_HOST=0.0.0.0','-e','PORT=9999','-e','GOTRUE_API_PORT=9999','-e','API_EXTERNAL_URL='+localAuthBase,'-e','GOTRUE_SITE_URL=http://127.0.0.1:3219','-e','GOTRUE_JWT_AUD=authenticated','-e','GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated','-e','GOTRUE_JWT_ADMIN_ROLES=service_role','-e','GOTRUE_JWT_EXP=3600','-e','GOTRUE_EXTERNAL_EMAIL_ENABLED=true','-e','GOTRUE_MAILER_AUTOCONFIRM=true','-e','GOTRUE_LOG_LEVEL=error','public.ecr.aws/supabase/gotrue:v2.194.0'],{env});
+  run(['run','-d','--name',auth,'--network',name,'-p',`127.0.0.1:${localAuthPort}:9999`,'-e','GOTRUE_DB_DATABASE_URL','-e','GOTRUE_JWT_SECRET','-e','GOTRUE_DB_DRIVER=postgres','-e','GOTRUE_API_HOST=0.0.0.0','-e','PORT=9999','-e','GOTRUE_API_PORT=9999','-e','API_EXTERNAL_URL='+localAuthBase,'-e','GOTRUE_SITE_URL=http://127.0.0.1:3219','-e','GOTRUE_JWT_AUD=authenticated','-e','GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated','-e','GOTRUE_JWT_ADMIN_ROLES=service_role','-e','GOTRUE_JWT_EXP=3600','-e','GOTRUE_EXTERNAL_EMAIL_ENABLED=true','-e','GOTRUE_MAILER_AUTOCONFIRM=true','-e','GOTRUE_LOG_LEVEL=error','ghcr.io/supabase/gotrue@sha256:2b352c02adf11a2025cd5993c246ef85db73743553c39194d2b1862d1cc4d1fd'],{env});
   console.log('LOCAL_AUTH_CONTAINER='+auth);
   ready=false;for(let i=0;i<240;i++){try{if((await fetch(localAuthBase+'/health',{signal:AbortSignal.timeout(1000)})).ok){ready=true;break;}}catch{}await delay(500);}
   if(!ready){const log=run(['logs','--tail','8',auth]).replaceAll(password,'[redacted]').replaceAll(secret,'[redacted]');throw Error('LOCAL_AUTH_READY: '+log);}
@@ -56,7 +56,7 @@ export async function startAuthEnvironment(){
    if(role==='owner')sql(`insert into research_private.owner_access values('${id}',true)`);
    if(role==='premium')sql(`insert into public.member_entitlements(user_id,state,tier,source) values('${id}','paid_active','member','manual')`);
   }
-  run(['run','-d','--name',rest,'--network',name,'-p','127.0.0.1:55633:3000','-e','PGRST_DB_URI','-e','PGRST_JWT_SECRET','-e','PGRST_DB_ANON_ROLE=anon','-e','PGRST_DB_SCHEMAS=public','-e','PGRST_JWT_AUD=authenticated','-e','PGRST_LOG_LEVEL=crit','postgrest/postgrest:v14.13'],{env});
+  run(['run','-d','--name',rest,'--network',name,'-p',`127.0.0.1:${localRestPort}:3000`,'-e','PGRST_DB_URI','-e','PGRST_JWT_SECRET','-e','PGRST_DB_ANON_ROLE=anon','-e','PGRST_DB_SCHEMAS=public','-e','PGRST_JWT_AUD=authenticated','-e','PGRST_LOG_LEVEL=crit','postgrest/postgrest:v14.13'],{env});
   ready=false;for(let i=0;i<40;i++){try{if((await fetch(localRestBase+'/')).ok){ready=true;break;}}catch{}await delay(500);}assert.ok(ready,'LOCAL_REST_READY');
   return {accounts,anon,cleanup,sql};
  }catch(error){cleanup();throw error;}

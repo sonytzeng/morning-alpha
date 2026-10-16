@@ -8,6 +8,7 @@ import { useAccountDashboard } from '@/hooks/useAccountDashboard';
 import VisualPageHero from '@/components/feature/VisualPageHero';
 import MembershipStatusCard from '@/components/membership/MembershipStatusCard';
 import AcademyEntry from './components/AcademyEntry';
+import { STOCK_OBSERVATION_NAV } from '@/features/vnext/member';
 
 function isTaipeiWeekend(): boolean {
   const now = new Date();
@@ -96,6 +97,7 @@ export default function Account() {
           <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
             <MembershipStatusCard />
             <AcademyEntry />
+            <section className="ma-card-compact"><h2 className="text-lg font-bold text-white">{STOCK_OBSERVATION_NAV.label}</h2><p className="mt-2 text-sm text-white/70">依短、中、長期查看已核准的研究理由與風險；研究不等於正式推薦。</p><Link className="mt-3 inline-flex min-h-11 items-center text-primary-300" to={STOCK_OBSERVATION_NAV.to}>查看股票觀察</Link></section>
 
             <section aria-labelledby="member-daily-path-title">
               <div className="mb-4">

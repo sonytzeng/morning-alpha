@@ -34,8 +34,18 @@ const AuthCallbackPage = lazy(() => import("../pages/auth/AuthCallbackPage"));
 const LearnPage = lazy(() => import("../pages/learn/page"));
 const AlphaCoachPage = lazy(() => import("../pages/alpha-coach/page"));
 const AcademyPage = lazy(() => import("../pages/academy/page"));
+const StockObservations = lazy(() => import("../pages/vnext/MemberPage"));
+const OwnerPublication = lazy(() => import("../pages/vnext/OwnerPublication"));
 
 const routes: RouteObject[] = [
+  {
+    path: "/vnext/publication",
+    element: <DeferredRoute><OwnerPublication /></DeferredRoute>,
+  },
+  {
+    path: "/stocks",
+    element: <DeferredRoute><StockObservations /></DeferredRoute>,
+  },
   {
     path: "/academy",
     element: <DeferredRoute><AcademyPage /></DeferredRoute>,

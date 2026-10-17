@@ -23,8 +23,7 @@ import { canonicalAdminReaderProjection } from "../_shared/research-pipeline-con
 import { loadDecisionEvidence } from "../_shared/decision-v1-data.ts";
 import { buildEvidenceDecision, projectEvidenceDecision, sealEvidenceDecision } from "../_shared/decision-v1-evidence.ts";
 import { persistedRecommendationReaderInput } from "../_shared/recommendation-stock-evidence.ts";
-import { persistedFoundationCandidateInput } from "../_shared/recommendation-foundation-candidate.ts";
-import { canReadResearchOwnerFields, withoutResearchOwnerReceipt } from "../_shared/research-owner-field-access.ts";
+import { withoutResearchOwnerReceipt } from "../_shared/research-owner-field-access.ts";
 import { publicCheckpointInputs, publicMarketInput, buildPublicMarketReadModel } from "../_shared/public-market-projection.ts";
 import { recordPublicProjection } from "../_shared/public-projection-recorder.ts";
 import { createSubscriberState, getSubscriberReportProjection, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE } from "../../../shared/subscriber-state-contract.ts";
@@ -1490,11 +1489,7 @@ Deno.serve(async (req: Request) => {
     return await read.order(request.order, { ascending: false }).limit(request.limit)
       .abortSignal(AbortSignal.timeout(4000));
   }, decisionIdentity);
-  const researchOwnerFieldsAllowed = await canReadResearchOwnerFields({
-    request: req, tier, userId, supabaseUrl,
-    anonKey: Deno.env.get("SUPABASE_ANON_KEY") || "", createClient,
-  });
-  const payload = buildPayload(researchOwnerFieldsAllowed ? report : withoutResearchOwnerReceipt(report), tier, context);
+  const payload = buildPayload(withoutResearchOwnerReceipt(report), tier, context);
   const memberRows = asArray(payload.today_beneficiary_stocks);
   const persistedEvidence = await persistedRecommendationReaderInput(realEvidence, decisionIdentity, parseAi(report.ai_strategy_json));
   const decisionEvidence = projectEvidenceDecision(await sealEvidenceDecision(buildEvidenceDecision(persistedEvidence.data, decisionIdentity)), {
@@ -1528,15 +1523,6 @@ Deno.serve(async (req: Request) => {
   }
   // Admin has a nested effective-AI view as well; no stale nested model may win.
   if (tier === "admin") payload.ai_strategy_json = { ...asObject(payload.ai_strategy_json), decision_engine_v1: subscriberDecisionEvidence };
-  // Unapproved new source evidence must never alter formal/member decisions.
-  // Admin alone is insufficient: same-request Auth identity + Owner predicate.
-  if (researchOwnerFieldsAllowed) {
-    const ownerStudy = await persistedFoundationCandidateInput(realEvidence, decisionIdentity, parseAi(report.ai_strategy_json), { ownerAuthorized: true });
-    payload.owner_market_foundation_candidate = {
-      candidate_only: true, member_publication_approved: false,
-      decision_engine_v1: await sealEvidenceDecision(buildEvidenceDecision(ownerStudy.data, decisionIdentity)),
-    };
-  }
   // Subscriber routes (including Owner browsing them) use one projection. The
   // existing admin nested raw document remains an explicitly internal QA view.
   const subscriberProjection = getSubscriberReportProjection({ ...payload, today_date: todayDate });

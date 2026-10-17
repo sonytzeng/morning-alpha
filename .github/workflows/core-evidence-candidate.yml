@@ -1,0 +1,43 @@
+name: Core evidence candidate
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  evidence-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci
+      - name: Exact candidate and original quality gates
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: >-
+          node --experimental-strip-types --test
+          tests/coreEvidenceCandidateIntegrity.test.mjs
+          tests/recommendationMarketInstitutionalCandidate.test.mjs
+          tests/decisionEvidencePipeline.test.mjs
+          tests/recommendationProducer.test.mjs
+          tests/recommendationReaderBinding.test.mjs
+      - name: Disposable SQL and RLS, no Production connectivity
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types tests/recommendationMarketInstitutionalDatabase.integration.mjs
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: >-
+          deno check --no-lock
+          supabase/functions/_shared/recommendation-market-institutional-candidate.ts
+          supabase/functions/_shared/recommendation-foundation-candidate.ts
+          supabase/functions/recommendation-stock-evidence-v1/index.ts
+          supabase/functions/get-report-payload/index.ts

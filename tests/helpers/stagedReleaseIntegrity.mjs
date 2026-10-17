@@ -3,6 +3,7 @@ import {readFileSync,lstatSync,existsSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {vnextPredecessorViews,vnextBaselineChangedPaths} from './vnextIntegrity.mjs';
 export const STAGED_BASE='f41e117ea109e09ae083ef2c692946a18aca2dcc';
 export const STAGED_SCOPES=Object.freeze({
   "P0": [
@@ -125,13 +126,15 @@ const hash=b=>createHash('sha256').update(b).digest('hex');
 const raw=p=>{const url=new URL('../../'+p,import.meta.url);assert(lstatSync(url).isFile(),'STAGED_REGULAR_FILE:'+p);return readFileSync(url);};
 export const stagedManifestPath=id=>'docs/operations/evidence/staged-'+id.toLowerCase()+'-transition-20261014.json';
 let baseline;
-// Cache only immutable Git blobs, never live candidate bytes or guard results.
 const inheritedBlobs=new Map();
-function inheritedBefore(base,path){
- const key=base+':'+path;
- if(!inheritedBlobs.has(key))inheritedBlobs.set(key,execFileSync('git',['show',key],{cwd:root,maxBuffer:64e6}));
- return Buffer.from(inheritedBlobs.get(key));
-}
+const immutableRanges=new Map();
+const rangePaths=(from,to)=>{
+ assert.match(from,/^[a-f0-9]{40}$/,'IMMUTABLE_GIT_REVISION_REQUIRED');assert.match(to,/^[a-f0-9]{40}$/,'IMMUTABLE_GIT_REVISION_REQUIRED');
+ const key=from+':'+to;
+ if(!immutableRanges.has(key))immutableRanges.set(key,git(['diff','--no-renames','--name-only','-z',from,to,'--']).split('\0').filter(Boolean).sort());
+ return [...immutableRanges.get(key)];
+};
+function inheritedBefore(base,path){const key=base+':'+path;if(!inheritedBlobs.has(key))inheritedBlobs.set(key,execFileSync('git',['show',key],{cwd:root,maxBuffer:64e6}));return Buffer.from(inheritedBlobs.get(key));}
 export function stagedPrior(path){
  if(!baseline){
   const entries=git(['ls-tree','-r','-z',STAGED_BASE]).split('\0').filter(Boolean).map(r=>{const [meta,path]=r.split('\t'),[mode,type,oid]=meta.split(' ');assert.equal(type,'blob');assert.match(mode,/^100[0-7]{3}$/);return {path,oid};});
@@ -141,9 +144,17 @@ export function stagedPrior(path){
  const bytes=baseline.get(path);return bytes===undefined?null:Buffer.from(bytes);
 }
 export function stagedChangedPaths(){
- return [...new Set([...git(['diff','--no-renames','--name-only','-z',STAGED_BASE,'--']).split('\0'),...git(['ls-files','--others','--exclude-standard','-z']).split('\0')].filter(Boolean))].sort();
+ return vnextBaselineChangedPaths(STAGED_BASE);
 }
-export function stagedTransition(source=raw,paths=stagedChangedPaths()){
+export function stagedTransition(source=raw,paths){
+ const outer=vnextPredecessorViews(source===raw?undefined:source),actual=outer.actualPredecessorRead;
+ const result=restoreStaged(outer.predecessorRead,paths??outer.changedPaths(STAGED_BASE),actual);
+ outer.verify();return result;
+}
+// Construct the actual historical view from this invocation's already-admitted
+// outer reader, not by recursively opening a second identical live admission.
+// Public gates still perform a fresh live revalidation before returning.
+function restoreStaged(source,paths,actual){
  const present=Object.keys(STAGED_SCOPES).filter(id=>existsSync(new URL('../../'+stagedManifestPath(id),import.meta.url)));
  const ids=present.filter(id=>{
   const path=stagedManifestPath(id),m=JSON.parse(source(path));
@@ -151,7 +162,7 @@ export function stagedTransition(source=raw,paths=stagedChangedPaths()){
   // Preserve merged receipts byte-for-byte; they are dependencies, not work to
   // redevelop/retest. An unmerged or modified obsolete receipt is never skipped.
   const prior=stagedPrior(path);
-  assert(prior&&raw(path).equals(prior)&&Buffer.from(source(path)).equals(prior),'STAGED_UNMERGED_OR_CHANGED_OLD_RECEIPT:'+id);
+  assert(prior&&actual(path).equals(prior)&&Buffer.from(source(path)).equals(prior),'STAGED_UNMERGED_OR_CHANGED_OLD_RECEIPT:'+id);
   return false;
  });
  if(!ids.length)return null;
@@ -159,13 +170,13 @@ export function stagedTransition(source=raw,paths=stagedChangedPaths()){
  for(const id of ids){
   const m=JSON.parse(source(stagedManifestPath(id)));assert.equal(m.schema,'STAGED_RELEASE_240_V1');assert.equal(m.batch,id);assert.equal(m.base,STAGED_BASE);
   for(const flag of ['production_authorized','member_publication_authorized','secret_change','cron_change','auth_model_change','recommendation_threshold_change','historical_data_change'])assert.equal(m[flag],false,flag);
-  const changed=STAGED_SCOPES[id].filter(path=>{const prior=stagedPrior(path);return !prior||!raw(path).equals(prior);});
+  const changed=STAGED_SCOPES[id].filter(path=>{const prior=stagedPrior(path);return !prior||!actual(path).equals(prior);});
   assert.deepEqual(m.files.map(r=>r.path).sort(),changed,'STAGED_EXACT_NAMED_SCOPE:'+id);
   for(const row of m.files){
    assert.deepEqual(Object.keys(row).sort(),['path','before_sha256','after_sha256'].sort());
    const prior=stagedPrior(row.path);assert.equal(row.before_sha256,prior===null?null:hash(prior));assert.notEqual(row.before_sha256,row.after_sha256);
    assert.match(row.after_sha256,/^[a-f0-9]{64}$/);
-   assert.equal(hash(raw(row.path)),row.after_sha256,'STAGED_LIVE_DRIFT:'+row.path);
+   assert.equal(hash(actual(row.path)),row.after_sha256,'STAGED_LIVE_DRIFT:'+row.path);
    assert.equal(hash(source(row.path)),row.after_sha256,'STAGED_SOURCE_DRIFT:'+row.path);
    if(files.has(row.path))assert.deepEqual(files.get(row.path),row,'STAGED_SHARED_SOURCE_CONFLICT');files.set(row.path,row);
   }
@@ -173,15 +184,17 @@ export function stagedTransition(source=raw,paths=stagedChangedPaths()){
  }
  assert.deepEqual([...paths].sort(),[...files.keys(),...ids.map(stagedManifestPath)].sort(),'STAGED_UNKNOWN_WORKTREE_PATH');
  stagedPrior('package.json');
- for(const [path,bytes]of baseline)if(!files.has(path))assert.deepEqual(raw(path),bytes,'STAGED_PROTECTED_BASELINE:'+path);
+ for(const [path,bytes]of baseline)if(!files.has(path))assert.deepEqual(actual(path),bytes,'STAGED_PROTECTED_BASELINE:'+path);
  return {files,manifests};
 }
 export function stagedViews(source){
- const current=stagedTransition();
+ const outer=vnextPredecessorViews(source);
+ const current=restoreStaged(outer.actualPredecessorRead,outer.changedPaths(STAGED_BASE),outer.actualPredecessorRead);
+ outer.verify();
  if(!current)return {predecessorRead:source??raw,actualPredecessorRead:raw,verify:()=>{},changedPaths:prior=>git(['diff','--no-renames','--name-only','-z',prior,'--']).split('\0').filter(Boolean).sort()};
- const restore=path=>{if(current.files.has(path)){const before=stagedPrior(path);if(before===null)throw Object.assign(Error('STAGED_PREDECESSOR_ABSENT:'+path),{code:'ENOENT'});return before;}return raw(path);};
- const historical=source?path=>{if(current.files.has(path)){const bytes=source(path);if(hash(bytes)===current.files.get(path).after_sha256)return restore(path);return bytes;}return source(path);}:restore;
- return {predecessorRead:historical,actualPredecessorRead:restore,verify:()=>stagedTransition(),changedPaths:prior=>git(['diff','--no-renames','--name-only','-z',prior,STAGED_BASE,'--']).split('\0').filter(Boolean).sort()};
+ const restore=path=>{if(current.files.has(path)){const before=stagedPrior(path);if(before===null)throw Object.assign(Error('STAGED_PREDECESSOR_ABSENT:'+path),{code:'ENOENT'});return before;}return outer.actualPredecessorRead(path);};
+ const historical=source?path=>{if(current.files.has(path)){const bytes=outer.predecessorRead(path);if(hash(bytes)===current.files.get(path).after_sha256)return restore(path);return bytes;}return outer.predecessorRead(path);}:restore;
+ return {predecessorRead:historical,actualPredecessorRead:restore,verify:()=>stagedTransition(),changedPaths:prior=>rangePaths(prior,STAGED_BASE)};
 }
 
 /** Older release receipts are validated at their own exact historical base.
@@ -207,5 +220,5 @@ export function historicalStagedViews(source){
   const prior=priors.get(path);if(prior===null)throw Object.assign(Error('STAGED_PREDECESSOR_ABSENT:'+path),{code:'ENOENT'});return Buffer.from(prior);
  };
  return {predecessorRead:path=>restore(outer.predecessorRead,path),actualPredecessorRead:path=>restore(outer.actualPredecessorRead,path),
-  verify:()=>outer.verify(),changedPaths:prior=>git(['diff','--no-renames','--name-only','-z',prior,priorBase,'--']).split('\0').filter(Boolean).sort()};
+  verify:()=>outer.verify(),changedPaths:prior=>rangePaths(prior,priorBase)};
 }

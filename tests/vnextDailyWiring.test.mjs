@@ -8,9 +8,11 @@ import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {handleVnextDaily} from '../supabase/functions/vnext-daily-research-v1/handler.ts';
 import {enqueueVnextAfterCheckpoint,continueVnextRun} from '../supabase/functions/_shared/vnext-daily-hook.ts';
 import {csvRows,parseRevenue,parseFinancial,financialRows} from '../src/features/vnext/dailyParsers.mjs';
+import {coreEvidenceHistoricalRead,verifyCoreEvidenceCandidate} from './helpers/coreEvidenceCandidateIntegrity.mjs';
 const companies=RECOMMENDATION_UNIVERSE.map(symbol=>({symbol,company:'隔離合成控制',exchange:'TWSE',industry:'24'}));
 test('C admission preserves the deployed Producer V15 and the complete sealed runtime; stale helpers fail closed',()=>{
- const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+ verifyCoreEvidenceCandidate();
+ const read=p=>coreEvidenceHistoricalRead(p,readFileSync(new URL('../'+p,import.meta.url)));
  const manifest=JSON.parse(read('docs/operations/evidence/staged-c-transition-20261014.json'));
  const guard=manifest.production_dependency_guard;
  assert.equal(guard.main,'5c616bfeeebf9fc45890130948e21293de7a5d72');

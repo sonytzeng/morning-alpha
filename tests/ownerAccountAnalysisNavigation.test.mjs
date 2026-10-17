@@ -86,6 +86,7 @@ test('foundation graph count never substitutes for the mode-separated Forward sa
     if (name === './OwnerCockpit') return { default: ({children}) => children }; // Cockpit has separate UI/ledger tests; parent Owner guard stays under test.
     if (name === './RecommendationShadow') return { default: () => null }; // Separate V2 real-RLS/browser suite validates this child.
     if (name === './LineDecisionPreview') return { default: () => null }; // Separate canonical card/browser suite; foundation sample accounting is unchanged.
+    if (name === './ProviderCapabilityReview') return { default: () => null }; // Separately tested diagnostic UI; no execution on parent render.
     if (name === './EntryOpportunity') return { default: () => null }; // Separate isolated actual-RPC/UI suite validates this independent child.
     if (name === './analysis.css') return {};
     throw new Error(name);

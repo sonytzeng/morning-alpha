@@ -56,10 +56,18 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
-      - run: npm run type-check
-      - run: npm run lint
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm run type-check
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm run lint
       - name: Affected Node contract regressions
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: >-
           node --test
           tests/checkpointAtomicity.test.mjs
@@ -86,7 +94,10 @@ jobs:
           supabase/functions/strategy-replay-engine/index.ts
       - name: PostgreSQL atomicity, retry, concurrency and 1000-run fault matrix
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_LOCAL_SCOPE: ma-checkpoint-atomicity-20260911
           MA_ISOLATED_TEST_DB: ma_checkpoint_atomicity_test1
         run: node --test tests/checkpointAtomicityDatabase.integration.mjs
-      - run: npm run build
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm run build

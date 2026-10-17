@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { PRODUCT_FEATURE_FLAGS } from '@/config/productFeatures';
 import { trackEvent } from '@/utils/analytics';
 import { ACADEMY_NAVIGATION } from '@/features/academy/navigation';
+import { STOCK_OBSERVATION_NAV } from '@/features/vnext/member';
 import '@/features/decision-v1/subscriber.css';
 
 interface NavbarProps {
@@ -53,6 +54,7 @@ export default function Navbar({ marketState, marketStatusLabel }: NavbarProps) 
     { to: '/performance', label: '歷史績效' },
     ...(PRODUCT_FEATURE_FLAGS.beginner_learning.enabled ? [{ to: '/learn', label: '小白學堂' }] : []),
     ACADEMY_NAVIGATION,
+    STOCK_OBSERVATION_NAV,
     { to: isLoggedIn ? '/account' : '/login', label: isLoggedIn ? '會員中心' : '登入' },
   ];
 

@@ -6,6 +6,7 @@ import IntelligenceView from './IntelligenceView';
 import OwnerCockpit from './OwnerCockpit';
 import RecommendationShadow from './RecommendationShadow';
 import LineDecisionPreview from './LineDecisionPreview';
+import ProviderCapabilityReview from './ProviderCapabilityReview';
 import './analysis.css';
 
 export function ResearchFoundationView({ data }: { data: ResearchFoundation }) {
@@ -65,6 +66,7 @@ export default function OwnerAnalysisPage() {
     return () => { active = false; subscription.subscription.unsubscribe(); };
   }, [selectedMode, selectedDate]);
   if (state.kind === 'ready' && state.data) return <OwnerCockpit>
+    <details className="rounded-xl border p-4"><summary>資料能力檢查候選｜僅限 Owner</summary><ProviderCapabilityReview /></details>
     <details className="rounded-xl border p-4"><summary>LINE 卡片預覽</summary><LineDecisionPreview /></details>
     <details className="rounded-xl border p-4"><summary>個股研究方法與事前驗證</summary><RecommendationShadow /></details>
     <details className="rounded-xl border p-4"><summary className="cursor-pointer font-semibold">進階研究：歷史重播、訊號、Evidence 與版本</summary><div className="mt-4 space-y-6">

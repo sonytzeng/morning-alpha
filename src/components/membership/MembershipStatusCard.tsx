@@ -30,24 +30,48 @@ function formatMembershipDate(value: string | null): string | null {
 export default function MembershipStatusCard() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<MemberAccessResponse | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    let active = true;
-    void supabase.auth.getSession().then(async ({ data }) => {
-      if (!active) return;
-      if (!data.session) {
-        setLoading(false);
-        return;
-      }
+    let disposed = false;
+    let generation = 0;
+    const load = async () => {
+      const current = ++generation;
+      const valid = () => !disposed && current === generation;
+      setStatus(null);
+      setFailed(false);
+      setLoading(true);
       try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!valid()) return;
+        if (error) throw error;
+        if (!data.session) return;
         const response = await fetchMemberAccess('activate');
-        if (active) setStatus(response);
+        if (valid()) setStatus(response);
+      } catch {
+        if (valid()) setFailed(true);
       } finally {
-        if (active) setLoading(false);
+        if (valid()) setLoading(false);
+      }
+    };
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        generation++;
+        setStatus(null);
+        setFailed(false);
+        setLoading(false);
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        generation++;
+        setStatus(null);
+        // Do not call Auth while its callback holds the session lock.
+        queueMicrotask(() => { if (!disposed) void load(); });
       }
     });
+    void load();
     return () => {
-      active = false;
+      disposed = true;
+      generation++;
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
@@ -63,10 +87,10 @@ export default function MembershipStatusCard() {
   if (!status) {
     return (
       <section className="ma-card border-primary-400/20">
-        <span className="text-xs font-bold tracking-[0.14em] text-primary-300">會員權限</span>
-        <h2 className="mt-2 text-xl font-bold text-white">登入後查看完整會員內容</h2>
-        <p className="mt-2 text-sm leading-6 text-white/50">創始測試期間不扣款；正式訂閱啟用後才開始計算 14 天試用。</p>
-        <Link to="/login?next=/member-note" className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-primary-500 px-4 text-sm font-bold text-background-50">登入並開始完整體驗</Link>
+        <span className="text-xs font-bold tracking-[0.14em] text-forest-300">會員權限</span>
+        <h2 className="mt-2 text-xl font-bold text-white">{failed ? '暫時無法確認會員權益' : '登入後確認自己的會員權益'}</h2>
+        <p className="mt-2 text-sm leading-6 text-white/50">{failed ? '目前沒有取得權益結果，不代表權益已失效。請稍後重新載入。' : '免費內容與完整內容依有效權益提供；登入不會自動扣款。'}</p>
+        <Link to="/login?next=/member-note" className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-primary-500 px-4 text-sm font-bold text-background-50">免費註冊／登入</Link>
       </section>
     );
   }
@@ -91,15 +115,17 @@ export default function MembershipStatusCard() {
     <section className="ma-card border-primary-400/20">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <span className="text-xs font-bold tracking-[0.14em] text-primary-300">會員權限</span>
-          <h2 className="mt-2 text-xl font-bold text-white">{STATUS_LABEL[status.membership.state] || status.membership.state}</h2>
-          <p className="mt-1 break-all text-xs text-white/40">{status.user.email}</p>
+          <span className="text-xs font-bold tracking-[0.14em] text-forest-300">會員權限</span>
+          <h2 className="mt-2 text-xl font-bold text-white">{status.membership.legacyReviewRequired ? '既有會員權益保留中' : STATUS_LABEL[status.membership.state] || '會員權益待確認'}</h2>
+          <p className="mt-1 break-all text-xs text-white/65">{status.user.email}</p>
           <p className="mt-3 text-sm font-medium text-white/70">{accessPeriodLabel}</p>
-          <p className="mt-1 text-xs text-white/40">{billingLabel}</p>
+          <p className="mt-1 text-xs text-white/65">{billingLabel}</p>
+          {status.membership.legacyReviewRequired && <p className="mt-2 text-sm leading-6 text-white/70">原有權益不變，期限與授權依據待確認；這不代表永久付費訂閱。</p>}
+          {status.offer.signup_mode === 'free' && !status.membership.active && <p className="mt-2 text-sm leading-6 text-white/70">可以先閱讀免費摘要與股票學院入門課程。完整內容需有效的完整會員權益。</p>}
         </div>
         <div className="flex flex-col gap-2 sm:items-end">
-          <strong className={status.membership.active ? 'text-primary-300' : 'text-amber-300'}>{status.membership.active ? '完整內容已開通' : '目前僅限免費內容'}</strong>
-          <button type="button" onClick={signOut} className="min-h-10 text-left text-xs text-white/35 hover:text-white/65 sm:text-right">登出</button>
+          <strong className={status.membership.active ? 'text-forest-300' : 'text-amber-300'}>{status.membership.active ? '完整內容已開通' : '目前僅限免費內容'}</strong>
+          <button type="button" onClick={signOut} className="min-h-10 text-left text-xs text-white/70 hover:text-white/65 sm:text-right">登出</button>
         </div>
       </div>
       {status.membership.state === 'owner' && (
@@ -107,12 +133,12 @@ export default function MembershipStatusCard() {
           to="/admin/analysis"
           className="mt-5 flex min-h-14 items-center gap-3 rounded-xl border border-primary-400/25 bg-primary-500/10 p-4 transition-colors hover:bg-primary-500/20"
         >
-          <i className="ri-flask-line text-xl text-primary-300" aria-hidden="true"></i>
+          <i className="ri-flask-line text-xl text-forest-300" aria-hidden="true"></i>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-bold text-white">分析中心</span>
             <span className="mt-1 block text-xs text-white/50">研究、Signal Lab與分析品質</span>
           </span>
-          <i className="ri-arrow-right-line text-primary-300" aria-hidden="true"></i>
+          <i className="ri-arrow-right-line text-forest-300" aria-hidden="true"></i>
         </Link>
       )}
     </section>

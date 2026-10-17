@@ -1,0 +1,141 @@
+{
+  "notice": "Non-sensitive manually observed numeric facts and original research paraphrases only. No raw PDF/HTML, contacts, transcript, copyrighted article or source archive. Not an issuer signature, license grant, Owner approval or production evidence admission.",
+  "limitations": [
+    "As observed on 2026-10-17, latest reported quarter is 2026-Q3, not 2026-Q2; window is 2025-Q4 through 2026-Q3.",
+    "Quarterly earnings releases were directly read. Revenue preserves their 0.01 NT$ billion reporting precision; no exact-to-dollar claim and no YTD/EPS subtraction.",
+    "Q3 management report directly labels EPS per common share, including the Q2 comparative column. Q4 and Q1 common-share basis was available only in official indexed management-report excerpts; direct PDF fetches failed and no live document equivalence is claimed.",
+    "Published dates are document date labels, not verified first-publication instants or immutable original versions. All original published_at/version fields remain null.",
+    "First-seen times are conservative completion checkpoints from this research session, never the old document dates. Source response bytes/digests were not retained.",
+    "Source semantic accuracy, complete revision history, commercial/member reuse and retention rights are not established by a projection hash. Rights unknown does not establish a purchase requirement.",
+    "Guidance is next-quarter issuer outlook in USD, separate from TWD actuals. No stable/raised/cut classification or consensus is produced.",
+    "Source fact summaries are research paraphrases. Draft transmission, confirmation and cancellation are hypotheses/tests for Owner review, never issuer promises or approved causality."
+  ],
+  "policy": {
+    "symbol": "2330",
+    "latest_reported_period": "2026-Q3",
+    "allowed_source_urls": [
+      "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-01/3e49621566a3ca53bdf8aee2586929b666c17fd6/4Q25EarningsRelease.pdf",
+      "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-04/e85216eea8dccd8ca75d7e040e8d57be3ccd618b/1Q26%20EarningsRelease.pdf",
+      "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-07/a80d7933be643644081584087731f73b22ea5a2c/2Q26%20EarningsRelease.pdf",
+      "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-10/526b65af7305df2dde6b9ece6812b1fdf1e49f9b/3Q26%20EarningsRelease.pdf",
+      "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-10/f83780000ddc0c3b48e57a87eab6814c4ab35058/3Q26%20ManagementReport.pdf",
+      "https://investor.tsmc.com/english/encrypt/files/encrypt_file/qr/phase4_reports/2026-04/9f060092ba29ff3630cfdaefd67774026195e135/1Q26ManagementReport.pdf",
+      "https://investor.tsmc.com/english/encrypt/files/encrypt_file/qr/phase4_reports/2026-01/a920e9c2e3879f198dc700d041344229e7ffb438/4Q25%20Management%20Report.pdf",
+      "https://investor.tsmc.com/english/quarterly-results/2026/q3"
+    ]
+  },
+  "facts": {
+    "schema": "ISSUER_ALLOWLIST_FACTS_V1",
+    "symbol": "2330",
+    "observed_at": "2026-10-17T08:48:35Z",
+    "latest_reported_period": "2026-Q3",
+    "latest_source_id": "ir-q3-2026",
+    "sources": [
+      {
+        "id": "release-q4-2025", "symbol": "2330", "kind": "EARNINGS_RELEASE", "access": "DIRECT_DOCUMENT",
+        "url": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-01/3e49621566a3ca53bdf8aee2586929b666c17fd6/4Q25EarningsRelease.pdf",
+        "first_seen_at": "2026-10-17T08:45:13Z", "published_date": "2026-01-15", "published_at": null, "version": null
+      },
+      {
+        "id": "release-q1-2026", "symbol": "2330", "kind": "EARNINGS_RELEASE", "access": "DIRECT_DOCUMENT",
+        "url": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-04/e85216eea8dccd8ca75d7e040e8d57be3ccd618b/1Q26%20EarningsRelease.pdf",
+        "first_seen_at": "2026-10-17T08:45:13Z", "published_date": "2026-04-16", "published_at": null, "version": null
+      },
+      {
+        "id": "release-q2-2026", "symbol": "2330", "kind": "EARNINGS_RELEASE", "access": "DIRECT_DOCUMENT",
+        "url": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-07/a80d7933be643644081584087731f73b22ea5a2c/2Q26%20EarningsRelease.pdf",
+        "first_seen_at": "2026-10-17T08:45:13Z", "published_date": "2026-07-16", "published_at": null, "version": null
+      },
+      {
+        "id": "release-q3-2026", "symbol": "2330", "kind": "EARNINGS_RELEASE", "access": "DIRECT_DOCUMENT",
+        "url": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-10/526b65af7305df2dde6b9ece6812b1fdf1e49f9b/3Q26%20EarningsRelease.pdf",
+        "first_seen_at": "2026-10-17T08:45:13Z", "published_date": "2026-10-15", "published_at": null, "version": null
+      },
+      {
+        "id": "management-q3-2026", "symbol": "2330", "kind": "MANAGEMENT_REPORT", "access": "DIRECT_DOCUMENT",
+        "url": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/reports/2026-10/f83780000ddc0c3b48e57a87eab6814c4ab35058/3Q26%20ManagementReport.pdf",
+        "first_seen_at": "2026-10-17T08:46:36Z", "published_date": "2026-10-15", "published_at": null, "version": null
+      },
+      {
+        "id": "management-q1-2026-indexed", "symbol": "2330", "kind": "MANAGEMENT_REPORT", "access": "OFFICIAL_INDEXED_EXCERPT",
+        "url": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/qr/phase4_reports/2026-04/9f060092ba29ff3630cfdaefd67774026195e135/1Q26ManagementReport.pdf",
+        "first_seen_at": "2026-10-17T08:48:35Z", "published_date": "2026-04-16", "published_at": null, "version": null
+      },
+      {
+        "id": "management-q4-2025-indexed", "symbol": "2330", "kind": "MANAGEMENT_REPORT", "access": "OFFICIAL_INDEXED_EXCERPT",
+        "url": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/qr/phase4_reports/2026-01/a920e9c2e3879f198dc700d041344229e7ffb438/4Q25%20Management%20Report.pdf",
+        "first_seen_at": "2026-10-17T08:48:35Z", "published_date": "2026-01-15", "published_at": null, "version": null
+      },
+      {
+        "id": "ir-q3-2026", "symbol": "2330", "kind": "IR_RESULTS_INDEX", "access": "DIRECT_DOCUMENT",
+        "url": "https://investor.tsmc.com/english/quarterly-results/2026/q3",
+        "first_seen_at": "2026-10-17T08:48:35Z", "published_date": null, "published_at": null, "version": null
+      }
+    ],
+    "actuals": [
+      {
+        "period": "2025-Q4", "period_start": "2025-10-01", "period_end": "2025-12-31",
+        "source_id": "release-q4-2025", "basis_source_id": "management-q4-2025-indexed",
+        "revenue_twd_billion": 1046.09, "revenue_precision_twd_billion": 0.01, "eps_twd": 19.50, "currency": "TWD",
+        "period_basis": "STANDALONE_QUARTER_AS_REPORTED", "accounting_basis": "CONSOLIDATED_TIFRS", "eps_basis": "DILUTED_PER_COMMON_SHARE",
+        "locator": "Earnings release p1, opening paragraph: fourth quarter ended December 31, 2025; TIFRS consolidated; NT$ revenue/diluted EPS distinct from USD ADR.",
+        "basis_locator": "Official indexed management-report Summary: 4Q25 column, EPS NT$ per common share 19.50; diluted weighted average shares 25,931mn. Direct document fetch failed."
+      },
+      {
+        "period": "2026-Q1", "period_start": "2026-01-01", "period_end": "2026-03-31",
+        "source_id": "release-q1-2026", "basis_source_id": "management-q1-2026-indexed",
+        "revenue_twd_billion": 1134.10, "revenue_precision_twd_billion": 0.01, "eps_twd": 22.08, "currency": "TWD",
+        "period_basis": "STANDALONE_QUARTER_AS_REPORTED", "accounting_basis": "CONSOLIDATED_TIFRS", "eps_basis": "DILUTED_PER_COMMON_SHARE",
+        "locator": "Earnings release p1, opening paragraph: first quarter ended March 31, 2026; TIFRS consolidated; NT$ revenue/diluted EPS distinct from USD ADR.",
+        "basis_locator": "Official indexed management-report Summary: 1Q26 column, EPS NT$ per common share 22.08; diluted weighted average shares 25,931mn. Direct document fetch failed."
+      },
+      {
+        "period": "2026-Q2", "period_start": "2026-04-01", "period_end": "2026-06-30",
+        "source_id": "release-q2-2026", "basis_source_id": "management-q3-2026",
+        "revenue_twd_billion": 1270.38, "revenue_precision_twd_billion": 0.01, "eps_twd": 27.25, "currency": "TWD",
+        "period_basis": "STANDALONE_QUARTER_AS_REPORTED", "accounting_basis": "CONSOLIDATED_TIFRS", "eps_basis": "DILUTED_PER_COMMON_SHARE",
+        "locator": "Earnings release p1, opening paragraph: second quarter ended June 30, 2026; TIFRS consolidated; NT$ revenue/diluted EPS distinct from USD ADR.",
+        "basis_locator": "3Q26 management report p1 Summary and p3 II-4, 2Q26 comparative column: EPS NT$ per common share 27.25; not the ADR row."
+      },
+      {
+        "period": "2026-Q3", "period_start": "2026-07-01", "period_end": "2026-09-30",
+        "source_id": "release-q3-2026", "basis_source_id": "management-q3-2026",
+        "revenue_twd_billion": 1494.24, "revenue_precision_twd_billion": 0.01, "eps_twd": 29.43, "currency": "TWD",
+        "period_basis": "STANDALONE_QUARTER_AS_REPORTED", "accounting_basis": "CONSOLIDATED_TIFRS", "eps_basis": "DILUTED_PER_COMMON_SHARE",
+        "locator": "Earnings release p1, opening paragraph: third quarter ended September 30, 2026; TIFRS consolidated; NT$ revenue/diluted EPS distinct from USD ADR.",
+        "basis_locator": "3Q26 management report p1 Summary: EPS NT$ per common share 29.43; diluted weighted average shares 25,932mn; also p3 II-4."
+      }
+    ],
+    "guidance": [
+      {
+        "source_id": "release-q3-2026", "target_period": "2026-Q4", "revenue_usd_billion": [52.3, 54.3],
+        "gross_margin_pct": [65, 67], "operating_margin_pct": [56.5, 58.5], "fx_twd_per_usd": 31.8,
+        "direction": null, "locator": "Earnings release p1: management outlook explicitly targets fourth quarter 2026; separate revenue, FX assumption and margin ranges."
+      }
+    ],
+    "facts": [
+      {"id": "issuer-self", "source_id": "release-q3-2026", "kind": "COMPANY_RELATION", "summary": "台積電自行公布本公司晶圓代工季度結果與次季營運展望；不是第三方供應鏈受惠名單。", "locator": "p1 opening issuer identity, process revenue discussion and CFO outlook; p2 company profile."},
+      {"id": "leading-edge-demand", "source_id": "release-q3-2026", "kind": "BUSINESS_DRIVER", "summary": "公司將當季業務與先進製程需求連結，並在次季展望提及2nm爬坡；此為issuer陳述，不是獨立因果驗證。", "locator": "p1 CFO business/outlook paragraph immediately before numerical Q4 guidance."},
+      {"id": "n2-margin-dilution", "source_id": "management-q3-2026", "kind": "COUNTEREVIDENCE", "summary": "公司稱初期N2爬坡稀釋毛利；Q3毛利率66.4%，比Q2低1.3個百分點。營收增加不等於毛利同步改善。", "locator": "p2 II-1 Gross Profit Analysis: N2 initial ramp-up and sequential margin dilution."},
+      {"id": "demand-order-fx-risk", "source_id": "release-q3-2026", "kind": "COUNTEREVIDENCE", "summary": "公司列示景氣循環、需求與產能、重要客戶訂單及匯率等不確定性；實際結果可能與前瞻陳述不同。", "locator": "p2 Safe Harbor Notice, demand/supply, significant customer orders and exchange-rate risk paragraphs."},
+      {"id": "outlook-not-guarantee", "source_id": "release-q3-2026", "kind": "LIMITATION", "summary": "Q4是有匯率假設的前瞻區間，非已發生actual；公司未承諾預測必然實現，不能把跨季區間上升直接標成stable或upgraded。", "locator": "p1 Q4 outlook ranges and FX assumption; p2 Safe Harbor Notice."}
+    ]
+  },
+  "draft": {
+    "id": "2330-20261015-q3-results-q4-outlook-review-draft",
+    "symbol": "2330", "title": "2330：Q3實績與Q4先進製程／2nm展望之待審研究假設",
+    "event_source_id": "release-q3-2026", "proposed_at": "2026-10-17T08:50:10Z",
+    "company_relation": {"text": "直接issuer-self關係：證據針對2330本身的晶圓代工業務與製程組合，不擴張成其他股票的受惠或供應鏈因果。", "fact_ids": ["issuer-self"]},
+    "transmission_path": {"text": "有限假設：先進製程需求與2nm爬坡可能經由晶圓出貨／製程組合影響2330營收，但初期成本可能抵銷毛利；不推論股價必漲或已證明因果。", "fact_ids": ["leading-edge-demand", "n2-margin-dilution"]},
+    "counterevidence": [
+      {"text": "已觀察反證：Q3營收增加但毛利率季減；N2爬坡本身存在毛利稀釋，不宜只取需求正面敘述。", "fact_ids": ["n2-margin-dilution"]},
+      {"text": "待觀察風險：重要客戶訂單、景氣／產能與匯率變動可使Q4結果偏離展望；這些不是已發生訂單取消的證據。", "fact_ids": ["demand-order-fx-risk"]}
+    ],
+    "confirmation_condition": {"text": "Owner另查同一2026Q4期間的後續issuer修訂及正式季度結果，在一致幣別／假設下核對營收、製程組合與毛利；取得前不得說已確認。", "fact_ids": ["leading-edge-demand", "outlook-not-guarantee"]},
+    "invalidation_condition": {"text": "若issuer明確撤回／下修同一Q4需求或爬坡敘述，或公布可比基礎的實績反駁該路徑，交Owner判斷是否否定此研究假設；不自動改決策。", "fact_ids": ["leading-edge-demand", "demand-order-fx-risk", "outlook-not-guarantee"]},
+    "cancellation_conditions": [
+      {"text": "若來源被更正／取代、無法核對原文定位或事件發布精度仍不足，停止將草案送入事件時序評分，保留待審狀態。", "fact_ids": ["outlook-not-guarantee"]},
+      {"text": "若只剩營收成長敘述而無可比毛利／製程與後續來源，取消該確認主張，不用它補足事件反應或因果缺口。", "fact_ids": ["n2-margin-dilution", "outlook-not-guarantee"]}
+    ]
+  }
+}

@@ -2,9 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {verifyRecommendationProducerBundle,manifestPath} from '../scripts/releases/recommendation-v1-preflight.mjs';
-const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+import {coreEvidenceHistoricalRead,verifyCoreEvidenceCandidate} from './helpers/coreEvidenceCandidateIntegrity.mjs';
+const current=p=>readFileSync(new URL('../'+p,import.meta.url));
+const read=p=>coreEvidenceHistoricalRead(p,current(p));
 test('Producer admission retains V14 root/SDK/Auth and only already-merged B1 dependency corrections',()=>{
- const result=verifyRecommendationProducerBundle();assert.equal(result.files,20);assert.equal(result.unchanged,18);
+ verifyCoreEvidenceCandidate();
+ const result=verifyRecommendationProducerBundle(read);assert.equal(result.files,20);assert.equal(result.unchanged,18);
  const m=JSON.parse(read(manifestPath));assert.equal(m.production_baseline.eszip_sha256,'ed268b666e33b60d2b0d0ee4e5e807e8454a7e67dc5dff2a6561d7fba7c8c3fd');
 });
 test('bundle drift, widened runtime set and any unauthorized operation fail closed',()=>{

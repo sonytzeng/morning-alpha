@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r7.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r8.json';
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
 const PRIOR_R2='cc167304814b2223977a36802b2666ea8203ff36';
@@ -21,6 +21,8 @@ const PRIOR_R5='bfc2bcc482f961124c1c89265f89254de910428e';
 const FROZEN_R5_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r5.json';
 const PRIOR_R6='1a3b8c902a9b08b69525aea5a280bf546295ffe4';
 const FROZEN_R6_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r6.json';
+const PRIOR_R7='b29ee8a80f798c20d8ae5e9234ade8544852d10f';
+const FROZEN_R7_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r7.json';
 // Explicitly reviewed composition deltas. No patterns, glob, deployment flags,
 // automatic inventory admission or addition to any previous release catalogue.
 export const INTEGRATION_DELTAS=Object.freeze([
@@ -31,7 +33,25 @@ export const INTEGRATION_DELTAS=Object.freeze([
  '.github/workflows/recommendation-v2-shadow.yml','.github/workflows/research-foundation.yml',
  '.github/workflows/staged-release-240.yml','.github/workflows/validate-release.yml',
  '.github/workflows/vnext-candidate.yml','.github/workflows/core-evidence-candidate.yml',
- FROZEN_INTEGRATION_MANIFEST,FROZEN_R2_MANIFEST,FROZEN_R3_MANIFEST,FROZEN_R4_MANIFEST,FROZEN_R5_MANIFEST,FROZEN_R6_MANIFEST,
+ FROZEN_INTEGRATION_MANIFEST,FROZEN_R2_MANIFEST,FROZEN_R3_MANIFEST,FROZEN_R4_MANIFEST,FROZEN_R5_MANIFEST,FROZEN_R6_MANIFEST,FROZEN_R7_MANIFEST,
+ 'docs/operations/evidence/owner-release-review-r8-20261017.json',
+ 'docs/operations/evidence/v1-source-gap-detail-r8-20261017.json',
+ 'docs/operations/evidence/v1-provider-capability-exact-manifest-r8-20261017.json',
+ 'docs/operations/owner-release-decisions-r8-20261017.md',
+ 'docs/operations/v1-provider-capability-evidence-20261017.md',
+ 'scripts/capability/finnhub-quarterly-probe.mjs',
+ 'tests/finnhubQuarterlyProbe.test.mjs','tests/ownerReleaseReviewPackage.test.mjs',
+ 'supabase/functions/v1-provider-capability-review-v1/handler.ts',
+ 'supabase/functions/v1-provider-capability-review-v1/index.ts',
+ 'tests/providerCapabilityOwnerBoundary.test.mjs',
+ 'src/pages/account/components/MorningHeroCard.tsx',
+ 'tests/accountSubscriberProjection.test.mjs','tests/accountReportSchedule.test.mjs',
+ 'scripts/vnext/membership-preview.mjs','tests/browser/membership.harness.tsx',
+ 'tests/providerCapabilityClaimDatabase.integration.mjs',
+ 'tests/providerCapabilityEntry.sdk.test.ts',
+ 'src/pages/admin/analysis/ProviderCapabilityReview.tsx',
+ 'src/pages/admin/analysis/page.tsx','tests/providerCapabilityReviewUi.test.mjs',
+ 'tests/ownerAccountAnalysisNavigation.test.mjs','tests/analysisIntelligenceUI.test.mjs',
  'docs/operations/core-member-integration-20261017.md',
  'docs/operations/v1-source-capability-20261017.md',
  'scripts/academy-v11/auth-environment.mjs',
@@ -116,6 +136,7 @@ export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=in
  assert.deepEqual(Buffer.from(read(FROZEN_R4_MANIFEST)),frozenReceipt(PRIOR_R4,FROZEN_R4_MANIFEST),'INTEGRATION_R4_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_R5_MANIFEST)),frozenReceipt(PRIOR_R5,FROZEN_R5_MANIFEST),'INTEGRATION_R5_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_R6_MANIFEST)),frozenReceipt(PRIOR_R6,FROZEN_R6_MANIFEST),'INTEGRATION_R6_RECEIPT_DRIFT');
+ assert.deepEqual(Buffer.from(read(FROZEN_R7_MANIFEST)),frozenReceipt(PRIOR_R7,FROZEN_R7_MANIFEST),'INTEGRATION_R7_RECEIPT_DRIFT');
  for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false,'INTEGRATION_FORBIDDEN:'+flag);
  const scope=integrationScope();
  assert.deepEqual(m.files.map(r=>r.path),scope,'INTEGRATION_EXACT_SCOPE');

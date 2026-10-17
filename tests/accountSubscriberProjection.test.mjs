@@ -15,6 +15,7 @@ import { normalizeDecisionSymbol } from '../src/features/decision-v1/engine.ts';
 import { renderSafeText } from '../src/utils/renderSafe.ts';
 import { subscriberProjectionFixture } from './fixtures/subscriber-projection-v1.mjs';
 import { reportNewsPresentation } from '../src/lib/reportNewsPresentation.ts';
+import { resolveMarketStatus } from '../src/lib/market-status.ts';
 
 const require = createRequire(import.meta.url);
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -53,6 +54,7 @@ function loadComponent(path, exportedName = 'default') {
     '@/utils/renderSafe': { renderSafeText },
     '@/lib/subscriberReportProjection': { getSubscriberReportProjection },
     '@/lib/reportNewsPresentation': { reportNewsPresentation },
+    '@/lib/market-status': { resolveMarketStatus },
     '@/services/marketSourceHealthService': { isTaipeiToday: () => day },
     '@/hooks/useAccountDashboard': { formatTaipeiTimeShort: helperDependencies.formatTaipeiTimeShort,
       getAccountIntradayView: helperDependencies.getAccountIntradayView },

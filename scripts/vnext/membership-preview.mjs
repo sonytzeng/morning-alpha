@@ -5,7 +5,9 @@ import {resolve} from 'node:path';
 import {startAuthEnvironment,localAuthBase,localRestBase} from '../academy-v11/auth-environment.mjs';
 import {installMembershipCandidate,verifyMembershipPolicy} from '../../tests/membershipPolicy.integration.mjs';
 import {resolveEffectiveMemberAccess} from '../../supabase/functions/_shared/member-entitlement.ts';
-const runtime=await startAuthEnvironment(),root=new URL('../../',import.meta.url).pathname,port=3225,origin='http://127.0.0.1:'+port;
+const port=Number(process.env.MA_MEMBERSHIP_PREVIEW_PORT||3225);
+if(![3225,3226].includes(port))throw Error('ISOLATED_MEMBERSHIP_PREVIEW_PORT_DENIED');
+const runtime=await startAuthEnvironment(),root=new URL('../../',import.meta.url).pathname,origin='http://127.0.0.1:'+port;
 try{
  await installMembershipCandidate(runtime);const results=await verifyMembershipPolicy(runtime);delete results.accounts;console.log(JSON.stringify(results));
  const server=await createServer({configFile:false,root,envDir:false,envPrefix:'LOCAL_UNUSED_',publicDir:false,cacheDir:'/private/tmp/ma-membership-vite',
@@ -28,7 +30,7 @@ try{
     }catch{json(503,{error:'LOCAL_POLICY_UNAVAILABLE'});return;}
    }
    if(path==='/functions/v1/get-report-payload'){json(200,{payload:null,report_date:null});return;}
-   if(['/membership','/pricing','/stocks'].includes(path)){
+   if(['/membership','/pricing','/stocks','/schedule-review'].includes(path)){
     res.setHeader('Content-Type','text/html;charset=utf-8');res.end(await vite.transformIndexHtml('/membership','<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Morning Alpha 會員政策候選</title></head><body style="margin:0"><div id="root"></div><script type="module" src="/tests/browser/membership.harness.tsx"></script></body></html>'));return;
    }next();
   });}}],resolve:{alias:[{find:'@/lib/supabase',replacement:resolve(root,'tests/browser/vnext.client.ts')},{find:'@/services/membershipService',replacement:resolve(root,'tests/browser/membership.client.ts')},{find:'@/components/base/MarketStatusLight',replacement:resolve(root,'tests/browser/membership.market.tsx')},{find:'@',replacement:resolve(root,'src')}]},

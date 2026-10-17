@@ -20,7 +20,7 @@ jobs:
         run: npm ci
       - env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs
+        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs tests/finnhubQuarterlyProbe.test.mjs tests/ownerReleaseReviewPackage.test.mjs tests/providerCapabilityOwnerBoundary.test.mjs tests/accountReportSchedule.test.mjs tests/accountSubscriberProjection.test.mjs tests/providerCapabilityReviewUi.test.mjs tests/ownerAccountAnalysisNavigation.test.mjs tests/analysisIntelligenceUI.test.mjs
       - env:
           NODE_OPTIONS: --experimental-strip-types
         run: npm run type-check
@@ -33,9 +33,13 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno test --no-lock --allow-read tests/researchOwnerFieldAccess.sdk.test.ts
-      - run: deno check --no-lock supabase/functions/get-report-payload/index.ts supabase/functions/recommendation-stock-evidence-v1/index.ts
+      - run: deno test --no-lock --allow-read tests/researchOwnerFieldAccess.sdk.test.ts tests/providerCapabilityEntry.sdk.test.ts
+      - run: deno check --no-lock supabase/functions/get-report-payload/index.ts supabase/functions/recommendation-stock-evidence-v1/index.ts supabase/functions/v1-provider-capability-review-v1/index.ts
       - run: node --experimental-strip-types tests/membershipPolicy.integration.mjs
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+          MA_ISOLATED_DB_TMPFS: '1'
+      - run: node --experimental-strip-types tests/providerCapabilityClaimDatabase.integration.mjs
         env:
           NODE_OPTIONS: --experimental-strip-types
           MA_ISOLATED_DB_TMPFS: '1'

@@ -5,6 +5,7 @@ import {supabase} from './vnext.client';
 import MembershipStatusCard from '../../src/components/membership/MembershipStatusCard';
 import Pricing from '../../src/pages/pricing/Pricing';
 import MemberPage from '../../src/pages/vnext/MemberPage';
+import MorningHeroCard from '../../src/pages/account/components/MorningHeroCard';
 import '../../src/index.css';
 function Preview(){
  const [id,setId]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[message,setMessage]=useState('');
@@ -14,7 +15,7 @@ function Preview(){
  <label>電子郵件<input style={{display:'block',maxWidth:'100%',color:'#111'}} type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label>
  <label>密碼<input style={{display:'block',maxWidth:'100%',color:'#111'}} type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button>登入</button>
  <button type="button" onClick={()=>void supabase.auth.signOut()}>結束驗收登入</button><p role="status">{message}</p></form></details>
- <nav style={{display:'flex',gap:16,flexWrap:'wrap'}}><a href="/membership">我的權益</a><a href="/pricing">會員方案</a><a href="/stocks">股票觀察</a></nav></aside>
- {location.pathname==='/pricing'?<Pricing/>:location.pathname==='/stocks'?<MemberPage/>:<main style={{minHeight:'90vh',padding:20,background:'#020812'}}><div style={{maxWidth:1100,margin:'auto'}}><h1 style={{color:'white',fontSize:28,marginBottom:20}}>我的會員權益</h1><MembershipStatusCard key={id}/></div></main>}</BrowserRouter>;
+ <nav style={{display:'flex',gap:16,flexWrap:'wrap'}}><a href="/membership">我的權益</a><a href="/pricing">會員方案</a><a href="/stocks">股票觀察</a><a href="/schedule-review">排程顯示驗收</a></nav></aside>
+ {location.pathname==='/pricing'?<Pricing/>:location.pathname==='/stocks'?<MemberPage/>:location.pathname==='/schedule-review'?<main style={{minHeight:'90vh',padding:20,background:'#020812'}}><h1 style={{color:'white',fontSize:24}}>排程元件隔離驗收｜沒有報告或投資結果</h1><MorningHeroCard todayReport={null} hasTodayReport={false} streak={0} isWeekend={false} hasAnyReport={false}/></main>:<main style={{minHeight:'90vh',padding:20,background:'#020812'}}><div style={{maxWidth:1100,margin:'auto'}}><h1 style={{color:'white',fontSize:28,marginBottom:20}}>我的會員權益</h1><MembershipStatusCard key={id}/></div></main>}</BrowserRouter>;
 }
 createRoot(document.getElementById('root')!).render(<Preview/>);

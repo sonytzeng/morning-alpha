@@ -15,6 +15,7 @@ test('complete composition is independently admitted against fixed parents and o
  assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017.json').toString(),git(['show','8146eb4be02acd1a8ccf55e9b47c48cae762dc5e:docs/operations/evidence/core-member-integration-20261017.json']));
  assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r2.json').toString(),git(['show','cc167304814b2223977a36802b2666ea8203ff36:docs/operations/evidence/core-member-integration-20261017-r2.json']));
  assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r3.json').toString(),git(['show','8320a544726ee3f5e4be47d53288416e091b6211:docs/operations/evidence/core-member-integration-20261017-r3.json']));
+ assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r4.json').toString(),git(['show','6a06ea7fd35265a3be39463dd1b68698ca1a9c22:docs/operations/evidence/core-member-integration-20261017-r4.json']));
 });
 test('new tree preserves dynamic loopback, bounded opt-in tmpfs and exact official Auth digest',()=>{
  const p='scripts/academy-v11/auth-environment.mjs',bytes=integrationPhysicalRead(p);
@@ -87,6 +88,14 @@ test('decode-only cache follows text revisions and never masks invalid or change
  const bad=Buffer.concat([integrationPhysicalRead(row.path),Buffer.from('LATE_DRIFT')]);
  assert.deepEqual(integrationHistoricalRead('core',row.path,bad),bad);
  assert.throws(()=>verifyIntegrationCandidate(p=>p===row.path?bad:integrationPhysicalRead(p)),/SOURCE_DRIFT|PRIOR_RECEIPT|R2_RECEIPT/);
+});
+test('legacy lineage jobs retain every run command and memory bound with finite integration time budgets',()=>{
+ for(const name of ['vnext-candidate','analysis-intelligence','owner-trading-lab','recommendation-v2-shadow','research-foundation']){
+  const path='.github/workflows/'+name+'.yml',current=integrationPhysicalRead(path).toString();
+  const prior=git(['show','6a06ea7fd35265a3be39463dd1b68698ca1a9c22:'+path]);
+  assert.equal(current.replace(/timeout-minutes: 45/,'timeout-minutes: ORIGINAL'),prior.replace(/timeout-minutes: \d+/,'timeout-minutes: ORIGINAL'));
+  assert.equal((current.match(/timeout-minutes: 45/g)||[]).length,1);
+ }
 });
 test('warm decode cache still detects fresh physical bytes, mode, deletion and symlink changes',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'ma-live-seal-')),path='supabase/functions/get-report-payload/index.ts';

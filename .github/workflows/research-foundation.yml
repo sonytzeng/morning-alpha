@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     # Retain every freeze/RLS test; the complete inherited integrity chain can
     # exceed ten minutes on shared runners. This is not a skipped safety gate.
-    timeout-minutes: 20
+    timeout-minutes: 45
     services:
       isolated-postgres:
         image: postgres:17

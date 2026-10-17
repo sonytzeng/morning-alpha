@@ -27,6 +27,8 @@ Node 固定 22.14.0；原 package-lock 不變。未取得另一份未提交 patc
 
 ## 發布邊界
 
+R4 的 VNext CI run 38996610486 在 10 分鐘上限取消；來源觀測仍運算，沒有 OOM 或已保存的斷言失敗。R5 將五個共用深層來源鏈工作的時間預算統一設為有界 45 分鐘；不改任何 run 指令、512MiB 子程序限制、拒絕控制或驗收條件。新增逐位元對照測試，確保除 timeout 外整份工作流程不變。舊收據原本為讀一個檔案而保留整棵歷史 Git tree；R5 僅快取固定 revision/path 的單一 immutable blob，核對 regular blob 模式，停用 Git replacement，保存每次 live read 與逐位元比對，不快取成功判定。R4 收據原值固定保留；取消／未執行項目不計 PASS。
+
 獨立複核發現 R3 的隔離檔案測試誤把 `.git` 永遠視為 gitfile。R4 以 Git 回報的 absolute gitdir 建立測試指標，同時支援一般 clone 與 linked worktree；R3 收據原值固定保留。這是測試可攜性修正，不改來源准入條件。
 
 本整合只有候選程式與隔離驗證授權。尚不得 Merge、部署、執行 Migration、啟用 Caller、切換會員政策、公開研究或發送 LINE。精確來源、完整依賴、測試、安全審查與回復方案需附最終決策包；Production E2E、自然 Prediction／Outcome、正式會員身分與五日穩定分開列示。

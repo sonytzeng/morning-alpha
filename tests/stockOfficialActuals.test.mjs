@@ -2,7 +2,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {OFFICIAL_ACTUAL_SOURCES as sources,normalizeOfficialActuals,acquireOfficialActuals,officialActualCoverage} from '../supabase/functions/_shared/recommendation-official-actuals.ts';
+import {OFFICIAL_ACTUAL_SOURCES as sources,OFFICIAL_FINANCIAL_HOLDING_SOURCE,normalizeOfficialActuals,acquireOfficialActuals,officialActualCoverage} from '../supabase/functions/_shared/recommendation-official-actuals.ts';
+import {createHash} from 'node:crypto';
 import {buildRecommendationProof,RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
 import {evidenceRows,IDENTITY} from './fixtures/decision-evidence-rows.mjs';
 const now='2026-10-07T03:00:00.000Z';
@@ -89,4 +90,74 @@ test('2330 handler scope never starts six full-universe official reads; public a
  const handler=readFileSync(new URL('../supabase/functions/recommendation-stock-evidence-v1/index.ts',import.meta.url),'utf8');
  assert.match(handler,/scope==='SMOKE_2330'\?Promise.resolve\(\[\]\):acquireOfficialActuals/);
  assert.doesNotMatch(handler,/\.insert\(|\.upsert\(|\.update\(/);
+});
+
+const financialFixture=JSON.parse(readFileSync(new URL('./fixtures/financial-actuals-official-candidate.json',import.meta.url),'utf8'));
+const financialSymbols=['2881','2882','2884','2885','2891'];
+const financialNow='2026-10-17T07:17:00Z';
+test('existing normalizer accepts real financial monthly rows and the dataset-specific full-width EPS field',()=>{
+ const monthly=financialFixture.captures[0],fh=financialFixture.captures[2];
+ const revenue=normalizeOfficialActuals(sources[1],monthly.rows,financialNow,financialSymbols);
+ assert.equal(revenue.length,5);assert.deepEqual(revenue.map(r=>r.revenue_actual_as_reported),[19467727,20405136,8591317,14927852,21331939]);
+ const eps=normalizeOfficialActuals(OFFICIAL_FINANCIAL_HOLDING_SOURCE,fh.rows,financialNow,financialSymbols);
+ assert.deepEqual(eps.map(r=>r.eps_actual_as_reported),[6.67,4.95,1.32,2.64,1.96]);
+ for(const r of [...revenue,...eps]){
+  assert.equal(r.first_seen_at,financialNow);assert.equal(r.available_at,financialNow);assert.equal(r.observed_at,financialNow);
+  assert.equal(r.original_publication_time,null);assert.equal(r.source_timestamp,null);assert.equal(r.source_vintage,null);
+  assert.equal(r.amount_unit,'SOURCE_REPORTED_NOT_CONVERTED');assert.equal(r.contract_twd_amount,null);
+ }
+ for(const r of eps){
+  assert.equal(r.source,OFFICIAL_FINANCIAL_HOLDING_SOURCE.url);assert.equal(r.revenue_actual_as_reported,null);
+  assert.equal(r.period_basis,'UNPROVEN_SINGLE_QUARTER_VS_YTD');assert.equal(r.standalone_quarter_eps,null);assert.equal(r.standalone_quarter_revenue,null);
+  assert.equal(Object.hasOwn(r.reported_fields_as_reported,'營業收入'),false);
+ }
+ assert.equal(eps[0].reported_fields_as_reported['基本每股盈餘（元）'],6.67);
+ assert.equal(eps[0].reported_fields_as_reported['淨收益'],5446990);
+ assert.equal(revenue[0].reported_fields_as_reported['累計營業收入-當月累計營收'],243092976);
+});
+test('existing acquire financial profile hashes exact response bytes and distinguishes missing row from missing value',async()=>{
+ let calls=0;const bodies=new Map(),before=JSON.stringify(financialFixture);
+ const captures=await acquireOfficialActuals({profile:'financial_candidate',symbols:financialSymbols,now:()=>financialNow,
+  signal:AbortSignal.timeout(2000),fetcher:async(url,init)=>{
+   calls++;assert.equal(init.credentials,'omit');assert.equal(init.method,'GET');assert.equal(init.cache,'no-store');
+   const sample=financialFixture.captures.find(c=>c.source===url);assert.ok(sample);
+   const rows=structuredClone(sample.rows);
+   if(sample.kind==='monthly_revenue'){rows.pop();rows[0]['營業收入-當月營收']='--';}
+   rows.push({...rows[1],'公司代號':'9999',EmailAddress:'PRIVATE_CONTACT'});
+   const body=JSON.stringify(rows);bodies.set(url,body);return new Response(body,{headers:{'Content-Type':'application/json'}});
+  }});
+ assert.equal(calls,3);assert.equal(sources.length,6);assert.ok(!sources.some(s=>s.url===OFFICIAL_FINANCIAL_HOLDING_SOURCE.url));
+ for(const c of captures){
+  assert.equal(c.status,'PASS');assert.equal(c.first_seen_at,financialNow);
+  assert.equal(c.source_response_sha256,createHash('sha256').update(bodies.get(c.source)).digest('hex'));
+  assert.equal(c.response_bytes,Buffer.byteLength(bodies.get(c.source)));
+ }
+ const monthly=captures.find(c=>c.kind==='monthly_revenue');
+ assert.equal(monthly.source_row_count,5);assert.equal(monthly.target_row_count,4);
+ assert.deepEqual(monthly.missing_symbols,['2891']);assert.deepEqual(monthly.null_actual_symbols,['2881']);
+ assert.equal(monthly.rows.find(r=>r.symbol==='2881').revenue_actual_as_reported,null);
+ assert.doesNotMatch(JSON.stringify(captures),/PRIVATE_CONTACT|EmailAddress|9999/);
+ assert.equal(JSON.stringify(financialFixture),before); // No amendment to prior receipts/cutoffs.
+});
+test('unknown acquisition profile, malformed numbers and ambiguous acquisition time fail closed',async()=>{
+ let calls=0;await assert.rejects(acquireOfficialActuals({profile:'arbitrary_url',symbols:financialSymbols,now:()=>financialNow,
+  signal:AbortSignal.timeout(2000),fetcher:async()=>{calls++;}}),/PROFILE_INVALID/);assert.equal(calls,0);
+ const raw=financialFixture.captures[0].rows[0];
+ for(const value of ['1,2','9007199254740992','--'])assert.equal(normalizeOfficialActuals(sources[1],[{...raw,'營業收入-當月營收':value}],financialNow,financialSymbols)[0].revenue_actual_as_reported,null);
+ for(const stamp of ['2026-10-17','2026-10-17T07:17:00'])assert.throws(()=>normalizeOfficialActuals(sources[1],[raw],stamp,financialSymbols),/RESPONSE_CONTRACT_INVALID/);
+ assert.throws(()=>normalizeOfficialActuals(sources[1],[null],financialNow,financialSymbols),/RESPONSE_CONTRACT_INVALID/);
+});
+
+test('synchronous transport abort owns late resolve/reject Promises in both profiles without unhandled rejection',async()=>{
+ const unhandled=[];const observe=()=>unhandled.push(true);process.on('unhandledRejection',observe);
+ try{
+  for(const profile of ['default','financial_candidate'])for(const rejected of [false,true]){
+   const controller=new AbortController();let calls=0;
+   const result=await acquireOfficialActuals({profile,symbols:['2330'],now:()=>financialNow,signal:controller.signal,
+    fetcher:()=>{calls++;controller.abort();return rejected?Promise.reject(Error('SYNTHETIC_ONLY')):Promise.resolve(Response.json([]));}});
+   await new Promise(resolve=>setImmediate(resolve));
+   assert.equal(calls,1);assert.ok(result.every(c=>c.status==='OFFICIAL_DEADLINE'&&c.rows.length===0));
+  }
+  assert.deepEqual(unhandled,[]);
+ }finally{process.removeListener('unhandledRejection',observe);}
 });

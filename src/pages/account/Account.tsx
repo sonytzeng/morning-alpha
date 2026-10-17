@@ -9,11 +9,14 @@ import VisualPageHero from '@/components/feature/VisualPageHero';
 import MembershipStatusCard from '@/components/membership/MembershipStatusCard';
 import AcademyEntry from './components/AcademyEntry';
 import { STOCK_OBSERVATION_NAV } from '@/features/vnext/member';
+import { resolveMarketStatus } from '@/lib/market-status';
+import { isTaipeiToday } from '@/services/marketSourceHealthService';
 
 function isTaipeiWeekend(): boolean {
-  const now = new Date();
-  const tw = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-  return tw.getDay() === 0 || tw.getDay() === 6;
+  // Legacy prop name retained; weekday holidays/exceptional closures are also
+  // non-trading days. Never infer an open market from weekday alone.
+  const status = resolveMarketStatus(isTaipeiToday());
+  return status.closed_reason !== '日期解析異常' && !status.is_trading_day;
 }
 
 export default function Account() {

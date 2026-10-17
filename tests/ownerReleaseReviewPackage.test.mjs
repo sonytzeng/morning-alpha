@@ -3,13 +3,25 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
+import {verifyIntegrationCandidate} from './helpers/integrationAdmission.mjs';
 
 const root=new URL('../',import.meta.url);
 const path='docs/operations/evidence/owner-release-review-r8-20261017.json';
 const bytes=readFileSync(new URL(path,root));
 const p=JSON.parse(bytes);
 const hash=b=>createHash('sha256').update(b).digest('hex');
-const read=name=>readFileSync(new URL(name,root));
+const rawRead=name=>readFileSync(new URL(name,root));
+// This is the frozen R8 release package, not the R9 installation payload.
+// R9 changes two of its source paths. Validate the COMPLETE live R9 tree first,
+// then retain R8's original assertions against its immutable source bytes.
+// Current R9 operations/hashes are checked independently by the R9 package test.
+const read=name=>{
+ if(['src/pages/account/Account.tsx','supabase/functions/_shared/recommendation-official-actuals.ts'].includes(name)){
+  verifyIntegrationCandidate();
+  return execFileSync('git',['--no-replace-objects','show','d04de5da23fea367b7eab23d6c5cc42c3b25b3d5:'+name],{cwd:root,maxBuffer:1024*1024});
+ }
+ return rawRead(name);
+};
 const revision='b29ee8a80f798c20d8ae5e9234ade8544852d10f';
 const before=name=>execFileSync('git',['--no-replace-objects','show',revision+':'+name],{cwd:root,maxBuffer:1024*1024});
 

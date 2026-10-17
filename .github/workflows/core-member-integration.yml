@@ -20,7 +20,7 @@ jobs:
         run: npm ci
       - env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs tests/finnhubQuarterlyProbe.test.mjs tests/ownerReleaseReviewPackage.test.mjs tests/providerCapabilityOwnerBoundary.test.mjs tests/accountReportSchedule.test.mjs tests/accountSubscriberProjection.test.mjs tests/providerCapabilityReviewUi.test.mjs tests/ownerAccountAnalysisNavigation.test.mjs tests/analysisIntelligenceUI.test.mjs
+        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs tests/finnhubQuarterlyProbe.test.mjs tests/ownerReleaseReviewPackage.test.mjs tests/providerCapabilityOwnerBoundary.test.mjs tests/accountReportSchedule.test.mjs tests/accountSubscriberProjection.test.mjs tests/providerCapabilityReviewUi.test.mjs tests/ownerAccountAnalysisNavigation.test.mjs tests/analysisIntelligenceUI.test.mjs tests/accountDashboardIdentity.test.mjs tests/accountHistoricalFallback.test.mjs tests/stockOfficialActuals.test.mjs tests/recommendationFinancialActualsCandidate.test.mjs tests/recommendationEventAlignment.test.mjs tests/r9FunctionalSourceClosure.test.mjs
       - env:
           NODE_OPTIONS: --experimental-strip-types
         run: npm run type-check
@@ -35,6 +35,7 @@ jobs:
           deno-version: v2.x
       - run: deno test --no-lock --allow-read tests/researchOwnerFieldAccess.sdk.test.ts tests/providerCapabilityEntry.sdk.test.ts
       - run: deno check --no-lock supabase/functions/get-report-payload/index.ts supabase/functions/recommendation-stock-evidence-v1/index.ts supabase/functions/v1-provider-capability-review-v1/index.ts
+      - run: deno check --no-lock supabase/functions/_shared/recommendation-financial-actuals-candidate.ts research/recommendation-event-alignment-candidate.ts
       - run: node --experimental-strip-types tests/membershipPolicy.integration.mjs
         env:
           NODE_OPTIONS: --experimental-strip-types
@@ -43,3 +44,36 @@ jobs:
         env:
           NODE_OPTIONS: --experimental-strip-types
           MA_ISOLATED_DB_TMPFS: '1'
+      - name: Package only the24 approved-for-review member website source operations
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+          R9_ARTIFACT_DIR: ${{ runner.temp }}/morning-alpha-r9-member-ui
+          R9_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFileSync,mkdirSync,writeFileSync,existsSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          import {execFileSync} from 'node:child_process';
+          import {join} from 'node:path';
+          const sha=b=>createHash('sha256').update(b).digest('hex');
+          const p=JSON.parse(readFileSync('docs/operations/evidence/r9-functional-source-closure-20261017.json'));
+          const files=p.release.B.operations;
+          if(p.production_authorized!==false||files.length!==24||new Set(files.map(f=>f.path)).size!==24)throw Error('R9_SCOPE');
+          for(const f of files){
+            if(!/^(src|research|supabase)\/[A-Za-z0-9_./-]+$/.test(f.path)||f.path.split('/').includes('..')||f.path.includes('.env')||sha(readFileSync(f.path))!==f.target_sha256)throw Error('R9_SOURCE');
+          }
+          const dir=process.env.R9_ARTIFACT_DIR,head=process.env.R9_HEAD;
+          if(!dir||!/^\/[A-Za-z0-9_./-]+$/.test(dir)||!/^[a-f0-9]{40}$/.test(head))throw Error('R9_ARTIFACT_TARGET');
+          const archive=join(dir,'member-ui24-source.zip');
+          if(existsSync(archive))throw Error('R9_ARTIFACT_EXISTS');
+          mkdirSync(dir,{recursive:true,mode:0o700});
+          execFileSync('zip',['-X','-q',archive,...files.map(f=>f.path)]);
+          const receipt={head,source_operations:24,archive_sha256:sha(readFileSync(archive)),production_authorized:false,files};
+          writeFileSync(join(dir,'receipt.json'),JSON.stringify(receipt,null,2)+'\n',{flag:'wx',mode:0o600});
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: morning-alpha-r9-member-ui-source-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/morning-alpha-r9-member-ui/
+          if-no-files-found: error
+          retention-days: 14

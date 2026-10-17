@@ -38,23 +38,35 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
-      - run: npm run type-check
-      - run: npm run lint
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm run type-check
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm run lint
       # Owner requested affected regression, not another five-hour whole-site audit.
       # Exact manifest admission precedes selection; dispatch still runs full suite.
       - run: node scripts/releases/staged-regression.mjs
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_FULL_REGRESSION: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
       - name: Preserved incident captures and provider-shaped replay boundaries
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: >-
           node --test
           tests/fixtures/consolidation-v1/offline.test.mjs
           tests/fixtures/consolidation-v1/clock.test.mjs
           tests/fixtures/consolidation-v1/provider-chain.test.mjs
-      - run: npm run build
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm run build
       - name: Owner backend actual candidate and synthetic Owner isolation (not Production proof)
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_ISOLATED_TEST_DB: ma_owner_backend_test1
           MA_TEST_DOCKER_CONTAINER: ma-owner-backend-ci-${{ github.run_id }}
         run: |
@@ -110,34 +122,40 @@ jobs:
           tests/decisionLifecycle.test.ts
       - name: Research committed-close provenance parity
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_ISOLATED_TEST_DB: ma_research_gate_test1
         run: node --test tests/researchProvenanceDatabase.integration.mjs
       - name: Six-bug exact fresh schema, shared calendar, Global 8, boundary and Recorder gates
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_LOCAL_SCOPE: ma-six-bug-preventive-20260930
           MA_ISOLATED_TEST_DB: ma_six_bug_test1
           MA_TEST_PGPORT: 55439
         run: node --test tests/sixBugDatabase.integration.mjs
       - name: Recorder retry projection fresh DB and exact duplicate replay
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_RECORDER_LOCAL_SCOPE: ma-recorder-retry-projection-20260930
           MA_ISOLATED_TEST_DB: ma_six_bug_test201
           MA_TEST_PGPORT: 55439
         run: node --test tests/recorderRetryProjectionDatabase.integration.mjs
       - name: Operational market architecture exact fresh baseline and unchanged security
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_OPERATIONAL_SCOPE: operational-market-20261001
           MA_ISOLATED_TEST_DB: ma_six_bug_test501
           MA_TEST_PGPORT: 55439
         run: node tests/operationalMarketDatabase.integration.mjs
       - name: Recommendation phase exact fresh schema and publication parity
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_RECOMMENDATION_SCOPE: recommendation-phase-20261007
           MA_ISOLATED_TEST_DB: ma_six_bug_test583
           MA_TEST_PGPORT: 55439
         run: node --experimental-strip-types tests/recommendationPhaseDatabase.integration.mjs
       - name: Isolated PostgreSQL migration twice and atomicity tests
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_ISOLATED_TEST_DB: ma_core_test1
         run: |
           psql -X -h 127.0.0.1 -p 55439 -d "$MA_ISOLATED_TEST_DB" -v ON_ERROR_STOP=1 -q \
@@ -167,6 +185,7 @@ jobs:
           docker exec "ma-news-clock-ci-${{ github.run_id }}" pg_isready -U postgres
       - name: Isolated 9/21 TXF session-date parity migration and replay
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_LOCAL_SCOPE: ma-txf-session-parity-20260921
           MA_ISOLATED_TEST_DB: ma_txf_session_parity_test1
           MA_TEST_PGPORT: 55439
@@ -175,6 +194,7 @@ jobs:
         run: node --test tests/txfSessionDatabase.integration.mjs
       - name: Isolated 9/22 Taiwan cash phase-contract migration and replay
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_LOCAL_SCOPE: ma-tw-cash-phase-contract-20260922
           MA_ISOLATED_TEST_DB: ma_tw_cash_phase_test1
           MA_TEST_PGPORT: 55439
@@ -183,6 +203,7 @@ jobs:
         run: node --test tests/taiwanCashPhaseDatabase.integration.mjs
       - name: Isolated 9/23 premarket ticker-envelope parity migration and replay
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_LOCAL_SCOPE: ma-premarket-production-parity-20260923
           MA_ISOLATED_TEST_DB: ma_premarket_parity_test1
           MA_TEST_PGPORT: 55439
@@ -194,24 +215,28 @@ jobs:
         run: docker rm -f "ma-news-clock-ci-${{ github.run_id }}" 2>/dev/null || true
       - name: Isolated Production Evidence Recorder migration and retention controls
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_LOCAL_SCOPE: ma-production-evidence-recorder-20260923
           MA_ISOLATED_TEST_DB: ma_production_evidence_recorder_test1
           MA_TEST_PGPORT: 55439
         run: node --test tests/productionEvidenceRecorderDatabase.integration.mjs
       - name: Isolated 9/24 Atomic row-contract exact rejection replay
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_LOCAL_SCOPE: ma-atomic-row-contract-20260924
           MA_ISOLATED_TEST_DB: ma_atomic_row_contract_test1
           MA_TEST_PGPORT: 55439
         run: node --test tests/atomicRowContract20260924Database.integration.mjs
       - name: Core consolidation publication, ACL parity, replay and acceptance
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_LOCAL_SCOPE: ma-core-consolidation-20260909
           MA_ISOLATED_TEST_DB: ma_core_consolidation_test1
           MA_CONSOLIDATION_CI_SERVICE_ID: ${{ job.services.isolated-postgres.id }}
         run: node --experimental-strip-types --test tests/coreConsolidationDatabase.integration.mjs
       - name: Exact 9/29 runtime sparse recovery in fresh clock-controlled isolation
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_LOCAL_SCOPE: ma-runtime-sparse-recovery-20260929
           MA_ISOLATED_TEST_DB: ma_runtime_sparse_test1
           MA_TEST_PGPORT: 5432
@@ -231,6 +256,7 @@ jobs:
         run: docker rm -f "ma-runtime-sparse-ci-${{ github.run_id }}" 2>/dev/null || true
       - name: Public projection real readset, Recorder and dimensional Acceptance
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_PUBLIC_PROJECTION_SCOPE: public-projection-20261002
           MA_ISOLATED_TEST_DB: ma_six_bug_test529
           MA_TEST_DOCKER_CONTAINER: ma-six-bug-shadow-db
@@ -249,6 +275,7 @@ jobs:
         run: docker rm -f ma-six-bug-shadow-db 2>/dev/null || true
       - name: Acceptance 07:30 SLA and 08:45 readiness-window parity
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_LOCAL_SCOPE: ma-core-consolidation-20260909
           MA_ACCEPTANCE_LOCAL_SCOPE: ma-acceptance-readiness-parity-20260922
           MA_ISOLATED_TEST_DB: ma_core_consolidation_test1

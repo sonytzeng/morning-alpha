@@ -15,23 +15,39 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - run: npm ci
-      - run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs tests/vnextRealEvidence.test.mjs tests/vnextFoundation.test.mjs tests/vnextMember.test.mjs tests/vnextPublication.test.mjs tests/vnextResearchFunnel.test.mjs tests/vnextStockResearch.test.mjs tests/vnextPublicationReview.test.mjs tests/vnextAdmission.test.mjs tests/vnextBlockers.test.mjs tests/vnextClearance.test.mjs tests/vnextDailyIntelligence.test.mjs
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test tests/vnextContracts.test.mjs tests/vnextValidation.test.mjs tests/vnextRealEvidence.test.mjs tests/vnextFoundation.test.mjs tests/vnextMember.test.mjs tests/vnextPublication.test.mjs tests/vnextResearchFunnel.test.mjs tests/vnextStockResearch.test.mjs tests/vnextPublicationReview.test.mjs tests/vnextAdmission.test.mjs tests/vnextBlockers.test.mjs tests/vnextClearance.test.mjs tests/vnextDailyIntelligence.test.mjs
       - name: Current source and live inventory negative controls (no build race)
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: |
           node --test tests/ciNodeObserver.test.mjs
           node scripts/releases/observe-ci-node.mjs --max-old-space-size=512 --experimental-strip-types --test --test-concurrency=1 tests/vnextIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/marketNewsReportIntegrity.test.mjs tests/academyV11Integrity.test.mjs
       - name: Build member UI candidate (no Production deployment)
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: MA_VNEXT_BUILD_DIR=/tmp/ma-vnext-member-build node scripts/vnext/member-build.mjs
       - name: Disposable Auth, publication and RLS (not Production Owner proof)
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: node scripts/vnext/member-isolation.mjs
       - name: Owner approval transactions and current subscription entitlement (isolated only)
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: node --experimental-strip-types tests/vnextMemberRelease.integration.mjs
       - name: Legacy protection and new Free policy (real isolated Auth, NOT payment-provider E2E)
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: |
           node --experimental-strip-types --test tests/membershipPolicy.test.mjs
           node --experimental-strip-types tests/membershipPolicy.integration.mjs
       - name: Daily production wiring controls and real SQL HTTP worker (isolated only)
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: |
           node --experimental-strip-types --test tests/vnextDailyWiring.test.mjs
           node --experimental-strip-types tests/vnextDailyDatabase.integration.mjs

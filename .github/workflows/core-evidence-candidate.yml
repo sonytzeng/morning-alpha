@@ -15,8 +15,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - run: npm ci
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci
       - name: Exact candidate and original quality gates
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: >-
           node --experimental-strip-types --test
           tests/coreEvidenceCandidateIntegrity.test.mjs
@@ -25,6 +29,8 @@ jobs:
           tests/recommendationProducer.test.mjs
           tests/recommendationReaderBinding.test.mjs
       - name: Disposable SQL and RLS, no Production connectivity
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: node --experimental-strip-types tests/recommendationMarketInstitutionalDatabase.integration.mjs
       - uses: denoland/setup-deno@v2
         with:

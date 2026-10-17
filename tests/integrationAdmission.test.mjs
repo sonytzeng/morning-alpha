@@ -2,6 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,symlinkSync,mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
+import {vnextPredecessorViews,vnextPrior}from'./helpers/vnextIntegrity.mjs';
 import {INTEGRATION_BASE,INTEGRATION_PARENTS,INTEGRATION_MANIFEST,integrationHash,integrationScope,integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHistoricalRead,integrationParentRead,verifyIntegrationCandidate,readRegularIntegrationFile} from './helpers/integrationAdmission.mjs';
 const git=args=>execFileSync('git',args,{encoding:'utf8',maxBuffer:64e6});
 test('complete composition is independently admitted against fixed parents and original receipts',()=>{
@@ -11,6 +12,7 @@ test('complete composition is independently admitted against fixed parents and o
  for(const p of ['docs/operations/evidence/staged-a-transition-20261014.json','docs/operations/evidence/staged-b2-transition-20261014.json','docs/operations/evidence/staged-c-transition-20261014.json'])assert.equal(integrationPhysicalRead(p).toString(),git(['show',INTEGRATION_BASE+':'+p]));
  assert.equal(integrationPhysicalRead('package-lock.json').toString(),git(['show',INTEGRATION_BASE+':package-lock.json']));
  assert.equal(integrationPhysicalRead('.nvmrc').toString().trim(),'22.14.0');
+ assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017.json').toString(),git(['show','8146eb4be02acd1a8ccf55e9b47c48cae762dc5e:docs/operations/evidence/core-member-integration-20261017.json']));
 });
 test('new tree preserves dynamic loopback, bounded opt-in tmpfs and exact official Auth digest',()=>{
  const p='scripts/academy-v11/auth-environment.mjs',bytes=integrationPhysicalRead(p);
@@ -52,4 +54,22 @@ test('real filesystem symlink, directory and removed file are rejected, not foll
   assert.equal(readRegularIntegrationFile(target).toString(),'fixture');assert.throws(()=>readRegularIntegrationFile(link),/REGULAR/);assert.throws(()=>readRegularIntegrationFile(dir),/REGULAR/);
   rmSync(target);assert.throws(()=>readRegularIntegrationFile(target),{code:'ENOENT'});
  }finally{rmSync(dir,{recursive:true,force:true});}
+});
+test('actual custom-reader chain restores Core-only Producer bytes without erasing injected drift',()=>{
+ const path='supabase/functions/recommendation-stock-evidence-v1/index.ts';
+ const views=vnextPredecessorViews(integrationPhysicalRead);
+ assert.deepEqual(views.predecessorRead(path),vnextPrior(path));views.verify();
+ const bad=Buffer.concat([integrationPhysicalRead(path),Buffer.from('NEGATIVE_OUTER_READER')]);
+ const injected=vnextPredecessorViews(p=>p===path?bad:integrationPhysicalRead(p));
+ assert.deepEqual(injected.predecessorRead(path),bad);
+});
+test('Node22.14 plain-node steps get strip support without passing unsupported flags to action runtimes',()=>{
+ for(const name of ['analysis-intelligence','academy-v11','checkpoint-atomicity-validation','entry-opportunity','owner-cockpit','owner-trading-lab','recommendation-v2-shadow','research-foundation','staged-release-240','validate-release','vnext-candidate','core-evidence-candidate','core-member-integration']){
+  const text=integrationPhysicalRead('.github/workflows/'+name+'.yml').toString();
+  assert.doesNotMatch(text,/^env:/m,'no global NODE_OPTIONS for bundled action runtimes');
+  for(const block of text.split(/(?=^      - )/m)){
+   if(/^\s*(?:-\s*)?run:/m.test(block)&&/\b(?:node|npm)\b/.test(block))assert.match(block,/NODE_OPTIONS: --experimental-strip-types/);
+   if(/uses:/.test(block))assert.doesNotMatch(block,/NODE_OPTIONS/);
+  }
+ }
 });

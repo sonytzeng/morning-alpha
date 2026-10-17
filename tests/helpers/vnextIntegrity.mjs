@@ -193,6 +193,9 @@ export function vnextTransition(source=raw,paths){
 /** Every older release gate first checks the real VNext patch, then sees only
  * its immutable predecessor. Custom old test errors are never silently erased. */
 export function vnextPredecessorViews(source){
+ // Custom consumers also need the admitted composition view for Core-only
+ // paths outside VNEXT_PATHS. Preserve injected differing bytes unchanged.
+ if(source)source=integrationHistoricalReader('member',source);
  const current=vnextTransition(),files=new Map(current.manifest.files.map(f=>[f.path,f]));
  const historical=source?path=>{
   const row=files.get(path);

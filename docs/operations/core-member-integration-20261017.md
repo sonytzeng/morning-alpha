@@ -19,4 +19,8 @@ Node 固定 22.14.0；原 package-lock 不變。未取得另一份未提交 patc
 
 ## 發布邊界
 
+## 2026-10-17 增量收斂（R2）
+
+第一次整合 HEAD 8146eb4 的 CI 保留失敗結果：Node 22.14.0 的舊 plain-node 指令需要明確啟用實驗性 TypeScript strip；VNext 自訂 reader 在非 VNext 路徑漏傳外層已驗證視圖，讓 Core-only Producer 新位元漏進較舊 Forward 收據驗證。修復只補完整視圖傳遞與 CI runtime 選項，不改舊預期 hash、來源目錄、斷言或正式業務邏輯。原整合收據逐位元保留，新封存另存 `core-member-integration-20261017-r2.json`，並固定原 8146eb4 收據不可被改寫。所有型別檢查繼續執行，不把 strip 當作 Type-check。
+
 本整合只有候選程式與隔離驗證授權。尚不得 Merge、部署、執行 Migration、啟用 Caller、切換會員政策、公開研究或發送 LINE。精確來源、完整依賴、測試、安全審查與回復方案需附最終決策包；Production E2E、自然 Prediction／Outcome、正式會員身分與五日穩定分開列示。

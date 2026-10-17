@@ -35,7 +35,10 @@ jobs:
           deno-version: v2.x
       - run: deno test --no-lock --allow-read tests/researchOwnerFieldAccess.sdk.test.ts tests/providerCapabilityEntry.sdk.test.ts
       - run: deno check --no-lock supabase/functions/get-report-payload/index.ts supabase/functions/recommendation-stock-evidence-v1/index.ts supabase/functions/v1-provider-capability-review-v1/index.ts
-      - run: deno check --no-lock supabase/functions/_shared/recommendation-financial-actuals-candidate.ts research/recommendation-event-alignment-candidate.ts
+      - run: node --experimental-strip-types --test tests/eventAlignmentRefresh.test.mjs tests/recommendationIssuerEventReview.test.mjs tests/r10FunctionalSourceClosure.test.mjs
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+      - run: deno check --no-lock supabase/functions/_shared/recommendation-financial-actuals-candidate.ts research/recommendation-event-alignment-candidate.ts research/recommendation-issuer-event-review-candidate.ts
       - run: node --experimental-strip-types tests/membershipPolicy.integration.mjs
         env:
           NODE_OPTIONS: --experimental-strip-types

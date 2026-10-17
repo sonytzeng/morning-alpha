@@ -3,7 +3,7 @@ import {readFileSync,writeFileSync,symlinkSync,mkdtempSync,rmSync,mkdirSync,chmo
 import {tmpdir} from 'node:os';import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {vnextPredecessorViews,vnextPrior}from'./helpers/vnextIntegrity.mjs';
-import {INTEGRATION_BASE,INTEGRATION_PARENTS,INTEGRATION_MANIFEST,integrationHash,integrationScope,integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHistoricalRead,integrationParentRead,verifyIntegrationCandidate,readRegularIntegrationFile,integrationSealRow} from './helpers/integrationAdmission.mjs';
+import {INTEGRATION_BASE,INTEGRATION_PARENTS,INTEGRATION_MANIFEST,integrationHash,integrationScope,integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHistoricalRead,integrationHistoricalReader,integrationParentRead,integrationParentPaths,verifyIntegrationCandidate,readRegularIntegrationFile,integrationSealRow} from './helpers/integrationAdmission.mjs';
 const git=args=>execFileSync('git',args,{encoding:'utf8',maxBuffer:64e6});
 test('complete composition is independently admitted against fixed parents and original receipts',()=>{
  const m=verifyIntegrationCandidate();assert.equal(m.production_authorized,false);
@@ -16,6 +16,18 @@ test('complete composition is independently admitted against fixed parents and o
  assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r2.json').toString(),git(['show','cc167304814b2223977a36802b2666ea8203ff36:docs/operations/evidence/core-member-integration-20261017-r2.json']));
  assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r3.json').toString(),git(['show','8320a544726ee3f5e4be47d53288416e091b6211:docs/operations/evidence/core-member-integration-20261017-r3.json']));
  assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r4.json').toString(),git(['show','6a06ea7fd35265a3be39463dd1b68698ca1a9c22:docs/operations/evidence/core-member-integration-20261017-r4.json']));
+ assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r5.json').toString(),git(['show','bfc2bcc482f961124c1c89265f89254de910428e:docs/operations/evidence/core-member-integration-20261017-r5.json']));
+});
+test('immutable facts return copies while warm admission keeps checking live input and inventory',()=>{
+ const expected=integrationScope(),copy=integrationScope();copy.pop();copy.push('rogue.ts');assert.deepEqual(integrationScope(),expected);
+ const paths=integrationParentPaths('core',INTEGRATION_BASE),changed=integrationParentPaths('core',INTEGRATION_BASE);changed.length=0;assert.deepEqual(integrationParentPaths('core',INTEGRATION_BASE),paths);
+ assert.throws(()=>integrationParentPaths('__proto__',INTEGRATION_BASE),/UNKNOWN_PARENT/);
+ assert.throws(()=>integrationParentPaths('core','HEAD'),/IMMUTABLE/);
+ const path='supabase/functions/get-report-payload/index.ts',good=integrationParentRead('core',path),mutated=integrationParentRead('core',path);mutated.fill(0);assert.deepEqual(integrationParentRead('core',path),good);
+ verifyIntegrationCandidate();let reads=0;const bad=Buffer.concat([integrationPhysicalRead(path),Buffer.from('WARM_DRIFT')]);
+ assert.throws(()=>verifyIntegrationCandidate(p=>{reads++;return p===path?bad:integrationPhysicalRead(p);}),/SOURCE_DRIFT/);assert(reads>1);
+ assert.throws(()=>verifyIntegrationCandidate(integrationPhysicalRead,[...integrationInventory(),'rogue.ts']),/UNKNOWN/);
+ verifyIntegrationCandidate();
 });
 test('new tree preserves dynamic loopback, bounded opt-in tmpfs and exact official Auth digest',()=>{
  const p='scripts/academy-v11/auth-environment.mjs',bytes=integrationPhysicalRead(p);
@@ -23,6 +35,18 @@ test('new tree preserves dynamic loopback, bounded opt-in tmpfs and exact offici
  assert.match(bytes.toString(),/127\.0\.0\.1:\$\{localAuthPort\}:9999/);
  assert.match(bytes.toString(),/MA_ISOLATED_DB_TMPFS==='1'/);assert.match(bytes.toString(),/size=268435456/);
  assert.match(bytes.toString(),/ghcr\.io\/supabase\/gotrue@sha256:2b352c02adf11a2025cd5993c246ef85db73743553c39194d2b1862d1cc4d1fd/);
+});
+test('historical readers preserve text and Buffer representations including binary UTF-8 views and injected drift',()=>{
+ const binary='.DS_Store',bytes=integrationPhysicalRead(binary),text=bytes.toString('utf8');assert(!Buffer.from(text).equals(bytes));
+ assert.equal(integrationHistoricalReader('member',p=>integrationPhysicalRead(p).toString('utf8'))(binary),text);
+ const surrogate=text.replace('\uFFFD','\uD800');assert.notEqual(surrogate,text);assert.equal(Buffer.from(surrogate).toString('utf8'),text);
+ for(const view of ['core','member']){
+  const injected=integrationHistoricalReader(view,p=>p===binary?surrogate:integrationPhysicalRead(p).toString('utf8'));
+  assert.equal(injected(binary),surrogate);assert.notEqual(injected(binary),text);
+ }
+ assert.deepEqual(integrationHistoricalReader('member')(binary),integrationParentRead('member',binary));
+ const path='supabase/functions/get-report-payload/index.ts',bad=integrationPhysicalRead(path).toString('utf8')+'NEGATIVE_TEXT_READER';
+ assert.equal(integrationHistoricalReader('member',p=>p===path?bad:integrationPhysicalRead(p).toString('utf8'))(path),bad);
 });
 test('every admitted byte, exact mode, deleted path and unknown inventory remain fail closed',()=>{
  const m=verifyIntegrationCandidate(),paths=integrationInventory();

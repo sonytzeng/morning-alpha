@@ -27,6 +27,10 @@ Node 固定 22.14.0；原 package-lock 不變。未取得另一份未提交 patc
 
 ## 發布邊界
 
+R6 只快取固定 commit 的 tree SHA256、diff／scope 事實，回傳陣列與 Buffer 都是副本，Git replacement objects 不參與固定版本讀取。同一次 verifier 重用一份 scope。所有現行 manifest、實體 bytes 的 hash／模式、inventory、注入 reader 與前後完整驗證仍逐次執行，不快取成功結果、不省略任何既有斷言或獨立負向案例。R5 原收據另行固定保留。此優化不是放寬來源准入，也未修改 Runtime、SQL、前端、package 或 lockfile。
+
+R5 的 VNext 真實 CI 失敗另行保留：歷史 UTF-8 fixture 經新外層 reader 被強轉 Buffer，讓 tracked 二進位 `.DS_Store` 的有損文字視圖失去原型態；R6 保留注入文字 reader 的字串型態，正式實體准入仍檢查原始 bytes。歷史負向測試仍要求拒絕相同路徑，只額外接受最外層精確 reason/path 的較早拒絕，並追蹤現行 diff＋untracked inventory，而非假設一定經過舊 status 指令。News baseline 保留逐位元相等條件，以 Buffer.equals 的同值布林斷言取代大型 Buffer 差異格式化，避免錯誤診斷本身耗盡512MiB heap；不刪除斷言、不提高記憶體或跳過案例。
+
 R4 的 VNext CI run 38996610486 在 10 分鐘上限取消；來源觀測仍運算，沒有 OOM 或已保存的斷言失敗。R5 將五個共用深層來源鏈工作的時間預算統一設為有界 45 分鐘；不改任何 run 指令、512MiB 子程序限制、拒絕控制或驗收條件。新增逐位元對照測試，確保除 timeout 外整份工作流程不變。舊收據原本為讀一個檔案而保留整棵歷史 Git tree；R5 僅快取固定 revision/path 的單一 immutable blob，核對 regular blob 模式，停用 Git replacement，保存每次 live read 與逐位元比對，不快取成功判定。R4 收據原值固定保留；取消／未執行項目不計 PASS。
 
 獨立複核發現 R3 的隔離檔案測試誤把 `.git` 永遠視為 gitfile。R4 以 Git 回報的 absolute gitdir 建立測試指標，同時支援一般 clone 與 linked worktree；R3 收據原值固定保留。這是測試可攜性修正，不改來源准入條件。

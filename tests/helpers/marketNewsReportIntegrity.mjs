@@ -65,8 +65,9 @@ function restoreNewsReport(source,paths,actualRead){
  }
  // Candidate admission is never a bypass for an unrelated baseline change.
  for(const [path,bytes] of baseline())if(!candidates.has(path)){
-  assert.deepEqual(actualRead(path),bytes,'protected News Report baseline: '+path);
-  if(source!==actualRead)assert.deepEqual(Buffer.from(source(path)),bytes,'historical News Report baseline: '+path);
+  const actual=actualRead(path);
+  assert(Buffer.isBuffer(actual)&&actual.equals(bytes),'protected News Report baseline: '+path);
+  if(source!==actualRead)assert(Buffer.from(source(path)).equals(bytes),'historical News Report baseline: '+path);
  }
  const before=path=>{
   if(path===NEWS_REPORT_MANIFEST)throw absent(path);

@@ -1,9 +1,9 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync,symlinkSync,mkdtempSync,rmSync} from 'node:fs';
+import {readFileSync,writeFileSync,symlinkSync,mkdtempSync,rmSync,mkdirSync,chmodSync} from 'node:fs';
 import {tmpdir} from 'node:os';import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {vnextPredecessorViews,vnextPrior}from'./helpers/vnextIntegrity.mjs';
-import {INTEGRATION_BASE,INTEGRATION_PARENTS,INTEGRATION_MANIFEST,integrationHash,integrationScope,integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHistoricalRead,integrationParentRead,verifyIntegrationCandidate,readRegularIntegrationFile} from './helpers/integrationAdmission.mjs';
+import {INTEGRATION_BASE,INTEGRATION_PARENTS,INTEGRATION_MANIFEST,integrationHash,integrationScope,integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHistoricalRead,integrationParentRead,verifyIntegrationCandidate,readRegularIntegrationFile,integrationSealRow} from './helpers/integrationAdmission.mjs';
 const git=args=>execFileSync('git',args,{encoding:'utf8',maxBuffer:64e6});
 test('complete composition is independently admitted against fixed parents and original receipts',()=>{
  const m=verifyIntegrationCandidate();assert.equal(m.production_authorized,false);
@@ -13,6 +13,7 @@ test('complete composition is independently admitted against fixed parents and o
  assert.equal(integrationPhysicalRead('package-lock.json').toString(),git(['show',INTEGRATION_BASE+':package-lock.json']));
  assert.equal(integrationPhysicalRead('.nvmrc').toString().trim(),'22.14.0');
  assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017.json').toString(),git(['show','8146eb4be02acd1a8ccf55e9b47c48cae762dc5e:docs/operations/evidence/core-member-integration-20261017.json']));
+ assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r2.json').toString(),git(['show','cc167304814b2223977a36802b2666ea8203ff36:docs/operations/evidence/core-member-integration-20261017-r2.json']));
 });
 test('new tree preserves dynamic loopback, bounded opt-in tmpfs and exact official Auth digest',()=>{
  const p='scripts/academy-v11/auth-environment.mjs',bytes=integrationPhysicalRead(p);
@@ -72,4 +73,48 @@ test('Node22.14 plain-node steps get strip support without passing unsupported f
    if(/uses:/.test(block))assert.doesNotMatch(block,/NODE_OPTIONS/);
   }
  }
+});
+test('decode-only cache follows text revisions and never masks invalid or changed input',()=>{
+ const bytes=integrationPhysicalRead(INTEGRATION_MANIFEST),m=JSON.parse(bytes),row=m.files[0];
+ assert.deepEqual(integrationSealRow(row.path,bytes),row);
+ assert(Object.isFrozen(integrationSealRow(row.path,bytes)));
+ const changed=structuredClone(m);changed.files[0].after_sha256='0'.repeat(64);
+ assert.equal(integrationSealRow(row.path,Buffer.from(JSON.stringify(changed))).after_sha256,'0'.repeat(64));
+ assert.throws(()=>integrationSealRow(row.path,Buffer.from('{invalid')));
+ assert.deepEqual(integrationSealRow(row.path,bytes),row);
+ assert.equal(integrationSealRow('unknown.ts',bytes),undefined);
+ const bad=Buffer.concat([integrationPhysicalRead(row.path),Buffer.from('LATE_DRIFT')]);
+ assert.deepEqual(integrationHistoricalRead('core',row.path,bad),bad);
+ assert.throws(()=>verifyIntegrationCandidate(p=>p===row.path?bad:integrationPhysicalRead(p)),/SOURCE_DRIFT|PRIOR_RECEIPT|R2_RECEIPT/);
+});
+test('warm decode cache still detects fresh physical bytes, mode, deletion and symlink changes',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'ma-live-seal-')),path='supabase/functions/get-report-payload/index.ts';
+ const root=new URL('../',import.meta.url),seal=integrationPhysicalRead(INTEGRATION_MANIFEST),good=integrationPhysicalRead(path);
+ const put=(p,bytes)=>{mkdirSync(join(dir,p,'..'),{recursive:true});writeFileSync(join(dir,p),bytes);};
+ try{
+  // Minimal isolated filesystem fixture; Git is used only for immutable parent
+  // objects. No product worktree or receipt is modified by this test.
+  put('.git',readFileSync(new URL('.git',root)));
+  put('tests/helpers/integrationAdmission.mjs',readFileSync(new URL('tests/helpers/integrationAdmission.mjs',root)));
+  put(INTEGRATION_MANIFEST,seal);put(path,good);
+  const live=await import('file://'+join(dir,'tests/helpers/integrationAdmission.mjs'));
+  assert.deepEqual(live.integrationHistoricalRead('core',path,good),integrationParentRead('core',path));
+  put(path,Buffer.concat([good,Buffer.from('LATE_PHYSICAL_DRIFT')]));
+  assert.throws(()=>live.integrationHistoricalRead('core',path,good),/CHANGED_AFTER_ADMISSION/);
+  put(path,good);chmodSync(join(dir,path),0o755);
+  assert.throws(()=>live.integrationHistoricalRead('member',path,good),/CHANGED_MODE/);
+  chmodSync(join(dir,path),0o644);rmSync(join(dir,path));
+  assert.throws(()=>live.integrationHistoricalRead('core',path,good),{code:'ENOENT'});
+  put('link-target.ts',good);symlinkSync(join(dir,'link-target.ts'),join(dir,path));
+  assert.throws(()=>live.integrationHistoricalRead('core',path,good),/REGULAR/);
+  rmSync(join(dir,path));mkdirSync(join(dir,path));
+  assert.throws(()=>live.integrationHistoricalRead('core',path,good),/REGULAR/);
+  rmSync(join(dir,path),{recursive:true});put(path,good);
+  put(INTEGRATION_MANIFEST,Buffer.from('{invalid'));
+  assert.throws(()=>live.integrationHistoricalRead('member',path,good));
+  put(INTEGRATION_MANIFEST,seal);
+  assert.deepEqual(live.integrationHistoricalRead('member',path,good),integrationParentRead('member',path));
+  const bad=Buffer.concat([good,Buffer.from('INJECTED')]);
+  for(const view of ['core','member'])assert.deepEqual(live.integrationHistoricalRead(view,path,bad),bad);
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });

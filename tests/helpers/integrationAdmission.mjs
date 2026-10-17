@@ -8,9 +8,11 @@ import {createHash} from 'node:crypto';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r2.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r3.json';
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
+const PRIOR_R2='cc167304814b2223977a36802b2666ea8203ff36';
+const FROZEN_R2_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r2.json';
 // Explicitly reviewed composition deltas. No patterns, glob, deployment flags,
 // automatic inventory admission or addition to any previous release catalogue.
 export const INTEGRATION_DELTAS=Object.freeze([
@@ -21,7 +23,7 @@ export const INTEGRATION_DELTAS=Object.freeze([
  '.github/workflows/recommendation-v2-shadow.yml','.github/workflows/research-foundation.yml',
  '.github/workflows/staged-release-240.yml','.github/workflows/validate-release.yml',
  '.github/workflows/vnext-candidate.yml','.github/workflows/core-evidence-candidate.yml',
- FROZEN_INTEGRATION_MANIFEST,
+ FROZEN_INTEGRATION_MANIFEST,FROZEN_R2_MANIFEST,
  'docs/operations/core-member-integration-20261017.md',
  'docs/operations/v1-source-capability-20261017.md',
  'scripts/academy-v11/auth-environment.mjs',
@@ -69,6 +71,7 @@ export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=in
  assert.deepEqual(Object.keys(m).sort(),['schema','base','parents','files','production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'].sort());
  assert.equal(m.schema,'CORE_MEMBER_COMPOSITION_V1');assert.equal(m.base,INTEGRATION_BASE);assert.deepEqual(m.parents,INTEGRATION_PARENTS);
  assert.deepEqual(Buffer.from(read(FROZEN_INTEGRATION_MANIFEST)),tree(PRIOR_INTEGRATION).get(FROZEN_INTEGRATION_MANIFEST).bytes,'INTEGRATION_PRIOR_RECEIPT_DRIFT');
+ assert.deepEqual(Buffer.from(read(FROZEN_R2_MANIFEST)),tree(PRIOR_R2).get(FROZEN_R2_MANIFEST).bytes,'INTEGRATION_R2_RECEIPT_DRIFT');
  for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false,'INTEGRATION_FORBIDDEN:'+flag);
  assert.deepEqual(m.files.map(r=>r.path),integrationScope(),'INTEGRATION_EXACT_SCOPE');
  assert.deepEqual([...paths].sort(),[...integrationScope(),INTEGRATION_MANIFEST].sort(),'INTEGRATION_UNKNOWN_PATH');
@@ -94,8 +97,19 @@ export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=in
 // Translation never erases injected consumer bytes. The caller must run full
 // admission at its public boundary, then reread/validate again before return.
 // Every translated byte must equal the current exact seal, not a filename.
+// Decode only: a single cache entry keyed by the complete freshly-read JSON
+// bytes. It never caches filesystem reads, hashes, modes, status, admission or
+// validation outcomes. Malformed replacement text throws, never falls back.
+let decodedBytes,decodedRows;
+export function integrationSealRow(path,bytes){
+ if(!decodedBytes||!decodedBytes.equals(bytes)){
+  const m=JSON.parse(bytes),rows=m.files.map(row=>Object.freeze({...row}));
+  decodedRows=rows;decodedBytes=Buffer.from(bytes);
+ }
+ return decodedRows.find(row=>row.path===path);
+}
 export function integrationHistoricalRead(view,path,bytes){
- const m=JSON.parse(integrationPhysicalRead(INTEGRATION_MANIFEST)),row=m.files.find(r=>r.path===path);
+ const row=integrationSealRow(path,integrationPhysicalRead(INTEGRATION_MANIFEST));
  const base=tree(INTEGRATION_BASE).get(path),expected=row?.after_sha256??(base?integrationHash(base.bytes):null),mode=row?.mode??base?.mode;
  if(!expected||integrationHash(bytes)!==expected)return bytes;
  assert.equal(integrationHash(integrationPhysicalRead(path)),expected,'INTEGRATION_CHANGED_AFTER_ADMISSION:'+path);

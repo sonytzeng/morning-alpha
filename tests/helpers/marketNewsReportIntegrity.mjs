@@ -81,7 +81,9 @@ function restoreNewsReport(source,paths,actualRead){
  * its immutable predecessor. Custom old test errors are never silently erased. */
 export function newsReportPredecessorViews(source){
  const outer=stagedViews(source);
- const current=newsReportTransition(),files=new Map(current.manifest.files.map(f=>[f.path,f]));
+ const current=restoreNewsReport(outer.actualPredecessorRead,outer.changedPaths(NEWS_REPORT_BASE),outer.actualPredecessorRead);
+ outer.verify();
+ const files=new Map(current.manifest.files.map(f=>[f.path,f]));
  const historical=source?path=>{
       const row=files.get(path);
   if(row){const bytes=outer.predecessorRead(path);if(hash(bytes)===row.after_sha256)return current.predecessorRead(path);return bytes;}
@@ -89,7 +91,12 @@ export function newsReportPredecessorViews(source){
  }:current.predecessorRead;
  return {predecessorRead:historical,actualPredecessorRead:current.predecessorRead,verify:()=>newsReportTransition(),changedPaths:immutableChangedPaths};
 }
-function immutableChangedPaths(prior){return git(['diff','--no-renames','--name-only','-z',prior,NEWS_REPORT_BASE,'--']).split('\0').filter(Boolean).sort();}
+const immutableRanges=new Map();
+function immutableChangedPaths(prior){
+ assert.match(prior,/^[a-f0-9]{40}$/,'IMMUTABLE_GIT_REVISION_REQUIRED');
+ if(!immutableRanges.has(prior))immutableRanges.set(prior,git(['diff','--no-renames','--name-only','-z',prior,NEWS_REPORT_BASE,'--']).split('\0').filter(Boolean).sort());
+ return [...immutableRanges.get(prior)];
+}
 export function newsReportBaselineChangedPaths(prior){
  newsReportTransition();
  return immutableChangedPaths(prior);

@@ -1,7 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';import{readFileSync}from'node:fs';
 import {execFileSync} from 'node:child_process';
+import {integrationHistoricalReader} from './helpers/integrationAdmission.mjs';
 import{verifyCoreEvidenceCandidate,coreEvidenceManifest,CORE_EVIDENCE_SCOPE,coreEvidenceHistoricalRead}from'./helpers/coreEvidenceCandidateIntegrity.mjs';
-const read=p=>readFileSync(new URL('../'+p,import.meta.url));
+// Preserve original Core assertions at their fixed parent; the complete live
+// tree is independently admitted before this historical view can be used.
+const read=integrationHistoricalReader('core',p=>readFileSync(new URL('../'+p,import.meta.url)));
 const paths=[...CORE_EVIDENCE_SCOPE,coreEvidenceManifest].sort();
 test('candidate admits only exact Producer/Reader wiring; SQL, rights and thresholds stay frozen',()=>{
  const m=verifyCoreEvidenceCandidate(read,paths);assert.equal(m.files.length,17);

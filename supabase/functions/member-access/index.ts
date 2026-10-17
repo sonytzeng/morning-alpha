@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.115.0";
 import {
   resolveEffectiveMemberAccess,
   type MemberEntitlementRow,
@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
 
   let entitlement: MemberEntitlementRow | null = null;
   if (action === "activate") {
-    const activationResult = await serviceClient.rpc("ensure_member_entitlement_v1", {
+    const activationResult = await serviceClient.rpc("ensure_member_entitlement_v2", {
       p_user_id: userData.user.id,
     });
     if (activationResult.error) {
@@ -109,6 +109,12 @@ Deno.serve(async (req: Request) => {
     entitlement,
   );
 
+  const policyResult = await serviceClient.rpc("get_member_policy_receipt_v1", { p_user_id: userData.user.id });
+  if (policyResult.error) {
+    return jsonResponse({ success: false, error: "ACCESS_POLICY_UNAVAILABLE" }, 503);
+  }
+  const policy = asObject(policyResult.data);
+
   return jsonResponse({
     success: true,
     authenticated: true,
@@ -116,7 +122,7 @@ Deno.serve(async (req: Request) => {
       id: userData.user.id,
       email: userData.user.email || null,
     },
-    membership: access,
+    membership: { ...access, legacyReviewRequired: policy.legacy_review_required === true },
     offer: {
       signup_mode: configResult.data.signup_mode,
       trial_days: configResult.data.trial_days,

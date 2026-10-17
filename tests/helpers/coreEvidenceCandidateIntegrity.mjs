@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
+import {verifyIntegrationCandidate,integrationHistoricalReader,integrationHistoricalRead,integrationParentPaths} from './integrationAdmission.mjs';
 const root=new URL('../../',import.meta.url);
 export const CORE_EVIDENCE_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 export const coreEvidenceManifest='docs/operations/evidence/core-evidence-candidate-20261017.json';
@@ -26,7 +27,7 @@ export const CORE_EVIDENCE_SCOPE=Object.freeze([
  'tests/stagedReleaseIntegrity.test.mjs',
  'tests/vnextDailyWiring.test.mjs',
 ]);
-const raw=p=>readFileSync(new URL(p,root));
+const raw=integrationHistoricalReader('core',p=>readFileSync(new URL(p,root)));
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8',maxBuffer:16e6});
 let trackedAtBase;const predecessors=new Map();
@@ -37,8 +38,9 @@ function before(path){
  if(!predecessors.has(path))predecessors.set(path,Buffer.from(git(['show',CORE_EVIDENCE_BASE+':'+path])));
  return Buffer.from(predecessors.get(path));
 }
-function inventory(){return [...new Set([...git(['diff','--no-renames','--name-only','-z',CORE_EVIDENCE_BASE,'--']).split('\0'),...git(['ls-files','--others','--exclude-standard','-z']).split('\0')].filter(Boolean))].sort();}
+function inventory(){verifyIntegrationCandidate();return integrationParentPaths('core',CORE_EVIDENCE_BASE);}
 export function verifyCoreEvidenceCandidate(read=raw,paths=inventory()){
+ verifyIntegrationCandidate();read=integrationHistoricalReader('core',read);
  const m=JSON.parse(read(coreEvidenceManifest));
  assert.equal(m.schema,'CORE_EVIDENCE_CANDIDATE_1');assert.equal(m.base,CORE_EVIDENCE_BASE);
  for(const key of ['production_authorized','migration','secret_change','cron_change','auth_rls_change','member_rights_change','threshold_change','member_publication'])assert.equal(m[key],false,'CORE_EVIDENCE_FORBIDDEN_OPERATION:'+key);
@@ -49,7 +51,7 @@ export function verifyCoreEvidenceCandidate(read=raw,paths=inventory()){
   const old=before(row.path);assert.equal(row.before_sha256,old===null?null:hash(old));
   assert.match(row.after_sha256,/^[a-f0-9]{64}$/);assert.equal(hash(read(row.path)),row.after_sha256,'CORE_EVIDENCE_SOURCE_DRIFT:'+row.path);
  }
- return m;
+ verifyIntegrationCandidate();return m;
 }
 export function coreEvidenceHistoricalPaths(){
  if(!existsSync(new URL(coreEvidenceManifest,root)))return null;
@@ -57,6 +59,7 @@ export function coreEvidenceHistoricalPaths(){
  return git(['diff','--no-renames','--name-only','-z','f41e117ea109e09ae083ef2c692946a18aca2dcc',CORE_EVIDENCE_BASE,'--']).split('\0').filter(Boolean).sort();
 }
 export function coreEvidenceHistoricalRead(path,bytes){
+ bytes=integrationHistoricalRead('core',path,Buffer.from(bytes));
  // Unlisted files are never translated. Avoid reparsing this outer receipt
  // for every historical Core byte; the full live admission is still mandatory.
  if(!CORE_EVIDENCE_SCOPE.includes(path)||!existsSync(new URL(coreEvidenceManifest,root)))return bytes;

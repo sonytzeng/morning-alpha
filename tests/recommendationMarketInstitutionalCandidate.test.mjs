@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import {integrationHistoricalReader} from './helpers/integrationAdmission.mjs';
 import { normalizeMarketInstitutionalTwd, acquireMarketInstitutionalTwd, withMarketInstitutionalEvidence, marketFlowSource } from '../supabase/functions/_shared/recommendation-market-institutional-candidate.ts';
 import { buildEvidenceDecision, projectEvidenceDecision } from '../supabase/functions/_shared/decision-v1-evidence.ts';
 import { evidenceRows } from './fixtures/decision-evidence-rows.mjs';
@@ -111,7 +112,7 @@ test('shared cache carries one immutable market capture; legacy caches never tri
  assert(late.decision.phase_evaluation.candidates.every(c=>c.reasons.includes('MARKET_REQUIRED_INSTITUTIONAL')));
 });
 test('candidate entrypoints preserve all auth, cache, Report/publication and member gates outside the exact source wiring',()=>{
- const root=new URL('../',import.meta.url),read=p=>readFileSync(new URL(p,root),'utf8');
+ const root=new URL('../',import.meta.url),historical=integrationHistoricalReader('core',p=>readFileSync(new URL(p,root))),read=p=>historical(p).toString();
  const reader='supabase/functions/get-report-payload/index.ts';
  const base=execFileSync('git',['show','754850ba1c66329d12eac8e98ab799e0a0c9123e:'+reader],{cwd:root,encoding:'utf8'});
  const extraImport='import { persistedFoundationCandidateInput } from "../_shared/recommendation-foundation-candidate.ts";\n';

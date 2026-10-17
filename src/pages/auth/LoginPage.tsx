@@ -105,16 +105,16 @@ export default function LoginPage() {
         <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
           <section className="rounded-2xl border border-background-200/70 bg-background-100 p-6 md:p-9">
             <span className="text-xs font-bold tracking-[0.18em] text-primary-300">MORNING ALPHA 會員</span>
-            <h1 className="mt-4 text-3xl font-bold leading-tight text-white md:text-4xl">登入後，完整走完每天的決策循環</h1>
+            <h1 className="mt-4 text-3xl font-bold leading-tight text-white md:text-4xl">登入後，依自己的會員權益閱讀</h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/55 md:text-base">
-              創始測試期間不扣款，登入後可查看所有已通過內容品質閘門的會員研究、盤中追蹤與收盤驗證。正式訂閱啟用後，才開始計算完整 14 天試用。
+              免費會員可以先讀市場摘要與股票學院入門；完整內容依有效會員權益提供。既有權益保留，登入不會自動扣款，也不會自動開始新的試用。
             </p>
             <ul className="mt-7 grid gap-3 text-sm text-white/70 sm:grid-cols-2">
               {[
-                '完整事件與台股傳導鏈',
-                '代表股成立與取消條件',
-                '09:00～14:30 盤中更新',
-                '收盤驗證與隔日修正',
+                '每日市場摘要',
+                '股票學院基礎課程',
+                '已核准研究才提供會員',
+                '依現有有效權益閱讀完整內容',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2 rounded-xl border border-white/5 bg-white/[0.025] p-3">
                   <i className="ri-check-line mt-0.5 text-primary-300" aria-hidden="true" />
@@ -132,7 +132,7 @@ export default function LoginPage() {
             ) : access ? (
               <div>
                 <span className="text-xs font-bold tracking-[0.16em] text-primary-300">已登入</span>
-                <h2 className="mt-3 text-2xl font-bold text-white">{STATE_LABELS[access.membership.state]}</h2>
+                <h2 className="mt-3 text-2xl font-bold text-white">{access.membership.legacyReviewRequired ? '既有會員權益保留中' : STATE_LABELS[access.membership.state]}</h2>
                 <p className="mt-2 break-all text-sm text-white/50">{access.user.email}</p>
                 <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="flex items-center justify-between gap-4">
@@ -146,7 +146,7 @@ export default function LoginPage() {
                 </div>
                 <div className="mt-6 grid gap-3">
                   <Link to={nextPath} className="flex min-h-12 items-center justify-center rounded-xl bg-primary-500 px-4 font-bold text-background-50 hover:bg-primary-400">
-                    進入完整會員內容<i className="ri-arrow-right-line ml-2" aria-hidden="true" />
+                    繼續閱讀<i className="ri-arrow-right-line ml-2" aria-hidden="true" />
                   </Link>
                   <Link to="/account" className="flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-semibold text-white/70 hover:border-white/20 hover:text-white">
                     查看會員中心

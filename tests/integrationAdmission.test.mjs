@@ -14,6 +14,7 @@ test('complete composition is independently admitted against fixed parents and o
  assert.equal(integrationPhysicalRead('.nvmrc').toString().trim(),'22.14.0');
  assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017.json').toString(),git(['show','8146eb4be02acd1a8ccf55e9b47c48cae762dc5e:docs/operations/evidence/core-member-integration-20261017.json']));
  assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r2.json').toString(),git(['show','cc167304814b2223977a36802b2666ea8203ff36:docs/operations/evidence/core-member-integration-20261017-r2.json']));
+ assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r3.json').toString(),git(['show','8320a544726ee3f5e4be47d53288416e091b6211:docs/operations/evidence/core-member-integration-20261017-r3.json']));
 });
 test('new tree preserves dynamic loopback, bounded opt-in tmpfs and exact official Auth digest',()=>{
  const p='scripts/academy-v11/auth-environment.mjs',bytes=integrationPhysicalRead(p);
@@ -94,7 +95,7 @@ test('warm decode cache still detects fresh physical bytes, mode, deletion and s
  try{
   // Minimal isolated filesystem fixture; Git is used only for immutable parent
   // objects. No product worktree or receipt is modified by this test.
-  put('.git',readFileSync(new URL('.git',root)));
+  put('.git',Buffer.from('gitdir: '+git(['rev-parse','--absolute-git-dir']).trim()+'\n'));
   put('tests/helpers/integrationAdmission.mjs',readFileSync(new URL('tests/helpers/integrationAdmission.mjs',root)));
   put(INTEGRATION_MANIFEST,seal);put(path,good);
   const live=await import('file://'+join(dir,'tests/helpers/integrationAdmission.mjs'));

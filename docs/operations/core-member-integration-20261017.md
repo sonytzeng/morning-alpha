@@ -27,4 +27,6 @@ Node 固定 22.14.0；原 package-lock 不變。未取得另一份未提交 patc
 
 ## 發布邊界
 
+獨立複核發現 R3 的隔離檔案測試誤把 `.git` 永遠視為 gitfile。R4 以 Git 回報的 absolute gitdir 建立測試指標，同時支援一般 clone 與 linked worktree；R3 收據原值固定保留。這是測試可攜性修正，不改來源准入條件。
+
 本整合只有候選程式與隔離驗證授權。尚不得 Merge、部署、執行 Migration、啟用 Caller、切換會員政策、公開研究或發送 LINE。精確來源、完整依賴、測試、安全審查與回復方案需附最終決策包；Production E2E、自然 Prediction／Outcome、正式會員身分與五日穩定分開列示。

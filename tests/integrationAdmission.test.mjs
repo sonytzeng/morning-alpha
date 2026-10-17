@@ -17,6 +17,7 @@ test('complete composition is independently admitted against fixed parents and o
  assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r3.json').toString(),git(['show','8320a544726ee3f5e4be47d53288416e091b6211:docs/operations/evidence/core-member-integration-20261017-r3.json']));
  assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r4.json').toString(),git(['show','6a06ea7fd35265a3be39463dd1b68698ca1a9c22:docs/operations/evidence/core-member-integration-20261017-r4.json']));
  assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r5.json').toString(),git(['show','bfc2bcc482f961124c1c89265f89254de910428e:docs/operations/evidence/core-member-integration-20261017-r5.json']));
+ assert.equal(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261017-r6.json').toString(),git(['show','1a3b8c902a9b08b69525aea5a280bf546295ffe4:docs/operations/evidence/core-member-integration-20261017-r6.json']));
 });
 test('immutable facts return copies while warm admission keeps checking live input and inventory',()=>{
  const expected=integrationScope(),copy=integrationScope();copy.pop();copy.push('rogue.ts');assert.deepEqual(integrationScope(),expected);

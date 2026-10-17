@@ -20,7 +20,7 @@ jobs:
         run: npm ci
       - env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs
+        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs
       - env:
           NODE_OPTIONS: --experimental-strip-types
         run: npm run type-check

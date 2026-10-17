@@ -36,3 +36,13 @@ R4 的 VNext CI run 38996610486 在 10 分鐘上限取消；來源觀測仍運�
 獨立複核發現 R3 的隔離檔案測試誤把 `.git` 永遠視為 gitfile。R4 以 Git 回報的 absolute gitdir 建立測試指標，同時支援一般 clone 與 linked worktree；R3 收據原值固定保留。這是測試可攜性修正，不改來源准入條件。
 
 本整合只有候選程式與隔離驗證授權。尚不得 Merge、部署、執行 Migration、啟用 Caller、切換會員政策、公開研究或發送 LINE。精確來源、完整依賴、測試、安全審查與回復方案需附最終決策包；Production E2E、自然 Prediction／Outcome、正式會員身分與五日穩定分開列示。
+
+## R7 有界批次歷史驗證候選（尚待驗收）
+
+R6 本機六套來源檢查44 PASS、VNext CI四套來源檢查26 PASS，但四項舊版 CI 於45分鐘取消，不能稱為完整通過。固定Node22.14.0的兩次單一路徑量測為46.192／44.169秒；暖快取仍有大量重建lineage成本，不能只再增加timeout。
+
+R7僅調整測試來源讀取的同步批次邊界，保留原逐檔hash斷言、舊收據與負向案例。每個批次仍須全工作樹及完整注入來源前後准入、逐次實體bytes／mode／receipt檢查；未知路徑、symlink、晚到修改及注入值不得被歷史資料抹除。Reader不得逃出同步callback或跨批次重用；既有transition工廠仍驗證完整歷史鏈，不以任意Git資料取代原驗證。完整安全複核及精確HEAD的CI未完成前保持NO-GO。R6收據固定於1a3b8c9原值，不改寫舊hash；不修改Runtime、SQL、付款、會員權益或正式資料。
+
+批次契約明確限制為可信測試的同步呼叫：不是每個路徑都重跑完整工作樹准入，也不宣稱可偵測任意瞬間修改後復原的所有交錯。完整前後准入、每次 requested path 的實體來源／收據檢查與原本142／169逐檔斷言仍保留，公開release gate不改；原30／39逐列注入案例每項建立新context，不能重用clean proof。新增focused控制明列於CI，不增加timeout或記憶體額度。
+
+R7審查中另確認尚未發布的測試工具可把偽造source錯誤誤映射成既有drift拒絕；修復以module-private WeakSet識別真正mismatch，再核對完整path／representation／hash tuple。source拋錯一律轉成不帶原message／cause的固定失敗，舊genuine錯誤重放及Buffer自訂hook均不得變成有效負向證據；callback失敗不能被finally的後續mismatch覆蓋。保留該候選缺陷與中止測試收據，加入偽造、重放及清理覆蓋反例後重新驗證，不將中止run或合成控制當成Production驗收。

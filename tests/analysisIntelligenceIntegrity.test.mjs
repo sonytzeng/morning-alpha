@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { PUBLIC_EXPORT_ARTIFACT_PATH, resolveRuntimeSparseRecoveryIntegrity, readAnalysisIntelligencePredecessor } from './helpers/premarketAtomicReadinessIntegrity.mjs';
+import { PUBLIC_EXPORT_ARTIFACT_PATH, resolveRuntimeSparseRecoveryIntegrity } from './helpers/premarketAtomicReadinessIntegrity.mjs';
+import { withAnalysisHistoricalBatch } from './helpers/recommendationHistoricalBatch.mjs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url));
-const hash=p=>createHash('sha256').update(readAnalysisIntelligencePredecessor(p)).digest('hex');
 const manifest=JSON.parse(read('docs/10k-program/phase2-candidate-integrity.json'));
 const expected=[
   ".github/workflows/analysis-intelligence.yml",
@@ -34,6 +34,8 @@ const expected=[
   "tests/ownerAccountAnalysisNavigation.test.mjs"
 ];
 test('Phase 2 pins the exact reviewed candidate and immutable Phase 1 predecessor',()=>{
+ withAnalysisHistoricalBatch(read,predecessor=>{
+ const hash=p=>createHash('sha256').update(predecessor(p)).digest('hex');
   assert.equal(manifest.base_sha,'1fcf24a7a2d7d7a602e555639a200f3b002a31ce');
   assert.deepEqual(Object.keys(manifest.files).sort(),expected);
   for(const [path,digest] of Object.entries(manifest.files))assert.equal(hash(path),digest,path);
@@ -47,6 +49,7 @@ test('Phase 2 pins the exact reviewed candidate and immutable Phase 1 predecesso
   assert.equal(manifest.production_changes_authorized,false);
   assert.equal(manifest.cron_changes,false);
   assert.equal(manifest.forward_sample,0);
+ });
 });
 
 test('Phase 2 joins the sealed lineage without admitting unknown runtime files or altering predecessor hashes',()=>{

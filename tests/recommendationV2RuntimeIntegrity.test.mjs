@@ -12,7 +12,8 @@ import {
 import {V2_BASE,V2_PATHS,V2_MANIFEST,v2Transition} from './helpers/recommendationV2Integrity.mjs';
 import {closeTransition} from './helpers/recommendationCompletedCloseIntegrity.mjs';
 import {resolveRuntimeSparseRecoveryIntegrity,PUBLIC_EXPORT_ARTIFACT_PATH} from './helpers/premarketAtomicReadinessIntegrity.mjs';
-import {forwardAwareReader,V2_FORWARD_BASE,V2_FORWARD_MANIFEST,v2ForwardTransition} from './helpers/recommendationV2ForwardIntegrity.mjs';
+import {forwardAwareReader,V2_FORWARD_BASE,V2_FORWARD_MANIFEST} from './helpers/recommendationV2ForwardIntegrity.mjs';
+import {withV2HistoricalBatch} from './helpers/v2HistoricalBatch.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
 const current=path=>readFileSync(new URL('../'+path,import.meta.url));
@@ -39,10 +40,12 @@ function fixture(){
 }
 
 test('runtime manifest structure pins predecessor hash, research boundaries and exact named set',()=>{
- const manifest=v2RuntimeManifest();
+ withV2HistoricalBatch(current,view=>{
+ const manifest=view.v2RuntimeManifest();
  assert.equal(manifest.files.length,V2_RUNTIME_PATHS.length);
  assert.equal(hash(prior(V2_SEALED_MANIFEST)),V2_SEALED_MANIFEST_SHA256);
  assert.deepEqual(read(V2_SEALED_MANIFEST),prior(V2_SEALED_MANIFEST));
+ });
 });
 
 test('provisional or missing seals never become valid runtime integrity',()=>{
@@ -57,7 +60,8 @@ test('provisional or missing seals never become valid runtime integrity',()=>{
 });
 
 test('report function impact is compiled-only through its unchanged natural Shadow sidecar',()=>{
- const manifest=v2RuntimeManifest(),impact=manifest.compiled_only_dependencies[0];
+ withV2HistoricalBatch(current,view=>{
+ const manifest=view.v2RuntimeManifest(),impact=manifest.compiled_only_dependencies[0];
  assert.deepEqual(manifest.compiled_only_dependencies,V2_RUNTIME_COMPILED_ONLY);
  assert.deepEqual(manifest.functions,['generate-daily-report-v7','recommendation-stock-evidence-smoke-v1','recommendation-stock-evidence-v1']);
  assert(!V2_RUNTIME_PATHS.includes(impact.entrypoint));
@@ -76,6 +80,7 @@ test('report function impact is compiled-only through its unchanged natural Shad
   m=>{m.compiled_only_dependencies[0].formal_behavior_change=true;},
   m=>{m.compiled_only_dependencies[0].changed_dependencies.push('supabase/functions/_shared/decision-v1-evidence.ts');},
  ]){const f=fixture();change(f.manifest);assert.throws(()=>v2RuntimeTransition(f.readSource));}
+ });
 });
 
 test('successor restores exact PR206 bytes before PR206 and completed-close hash checks',()=>{
@@ -112,8 +117,9 @@ test('every successor byte hash is enforced, including files overlapping the old
 });
 
 test('runtime aggregate keeps older lineage and exposes successor hashes first',()=>{
- const runtime=v2RuntimeTransition();
- const forward=v2ForwardTransition();
+ withV2HistoricalBatch(current,view=>{
+ const runtime=view.v2RuntimeTransition();
+ const forward=view.v2ForwardTransition();
  const registry=JSON.parse(prior('docs/operations/core-stability-incident-amendment-20260908.json'));
  const integrity=resolveRuntimeSparseRecoveryIntegrity(registry,prior(PUBLIC_EXPORT_ARTIFACT_PATH),current);
  assert.deepEqual(integrity.recommendationV2RuntimeCandidateIntegrity.reviewedBaselineTransition,runtime.manifest);
@@ -122,6 +128,7 @@ test('runtime aggregate keeps older lineage and exposes successor hashes first',
   if(row.operation==='ADD')assert(integrity.newCandidatePaths.includes(row.path),row.path);
  }
  assert(integrity.recommendationPhaseCandidateIntegrity,'historical public result shape survives');
+ });
 });
 
 test('unknown, missing, duplicate and renamed manifest paths fail closed',()=>{
@@ -165,7 +172,9 @@ test('end-to-end Git scope compares sealed V2_BASE..PR206 separately from the ru
  assertV2RuntimeChangedPaths(git(['diff','--name-only','-z',V2_RUNTIME_BASE,V2_FORWARD_BASE,'--']).toString().split('\0').filter(Boolean));
  // Deliberately fails until the main agent approves the final file set and
  // explicitly seals candidate hashes; provisional is not a passing release.
- assert.doesNotThrow(()=>v2RuntimeTransition());
+ withV2HistoricalBatch(current,view=>{
+ assert.doesNotThrow(()=>view.v2RuntimeTransition());
+ });
 });
 
 test('runtime keeps V1, Auth, RLS baseline, Cron and predecessor migrations unchanged',()=>{

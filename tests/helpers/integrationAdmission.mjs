@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r6.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r7.json';
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
 const PRIOR_R2='cc167304814b2223977a36802b2666ea8203ff36';
@@ -19,6 +19,8 @@ const PRIOR_R4='6a06ea7fd35265a3be39463dd1b68698ca1a9c22';
 const FROZEN_R4_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r4.json';
 const PRIOR_R5='bfc2bcc482f961124c1c89265f89254de910428e';
 const FROZEN_R5_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r5.json';
+const PRIOR_R6='1a3b8c902a9b08b69525aea5a280bf546295ffe4';
+const FROZEN_R6_MANIFEST='docs/operations/evidence/core-member-integration-20261017-r6.json';
 // Explicitly reviewed composition deltas. No patterns, glob, deployment flags,
 // automatic inventory admission or addition to any previous release catalogue.
 export const INTEGRATION_DELTAS=Object.freeze([
@@ -29,7 +31,7 @@ export const INTEGRATION_DELTAS=Object.freeze([
  '.github/workflows/recommendation-v2-shadow.yml','.github/workflows/research-foundation.yml',
  '.github/workflows/staged-release-240.yml','.github/workflows/validate-release.yml',
  '.github/workflows/vnext-candidate.yml','.github/workflows/core-evidence-candidate.yml',
- FROZEN_INTEGRATION_MANIFEST,FROZEN_R2_MANIFEST,FROZEN_R3_MANIFEST,FROZEN_R4_MANIFEST,FROZEN_R5_MANIFEST,
+ FROZEN_INTEGRATION_MANIFEST,FROZEN_R2_MANIFEST,FROZEN_R3_MANIFEST,FROZEN_R4_MANIFEST,FROZEN_R5_MANIFEST,FROZEN_R6_MANIFEST,
  'docs/operations/core-member-integration-20261017.md',
  'docs/operations/v1-source-capability-20261017.md',
  'scripts/academy-v11/auth-environment.mjs',
@@ -44,6 +46,15 @@ export const INTEGRATION_DELTAS=Object.freeze([
  'tests/researchOwnerFieldAccess.test.mjs','tests/researchOwnerFieldAccess.sdk.test.ts',
  'tests/recommendationConsensusCapability.test.mjs',
  'tests/academyV11Integrity.test.mjs','tests/helpers/marketNewsReportIntegrity.mjs',
+ 'tests/helpers/recommendationHistoricalBatch.mjs','tests/recommendationHistoricalBatch.test.mjs',
+ 'tests/analysisIntelligencePersistenceIntegrity.test.mjs',
+ 'tests/analysisIntelligenceIntegrity.test.mjs',
+ 'tests/analysisIntelligencePreviousIntegrity.test.mjs',
+ 'tests/analysisIntelligenceShadowAuthIntegrity.test.mjs',
+ 'tests/ownerTradingLabIntegrity.test.mjs','tests/researchFoundation.test.mjs',
+ 'tests/helpers/v2HistoricalBatch.mjs',
+ 'tests/recommendationV2Integrity.test.mjs','tests/recommendationV2ForwardIntegrity.test.mjs',
+ 'tests/recommendationV2RuntimeIntegrity.test.mjs',
 ].sort());
 const root=new URL('../../',import.meta.url);
 const git=args=>execFileSync('git',['--no-replace-objects',...args],{cwd:root,encoding:'utf8',maxBuffer:64e6});
@@ -104,6 +115,7 @@ export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=in
  assert.deepEqual(Buffer.from(read(FROZEN_R3_MANIFEST)),frozenReceipt(PRIOR_R3,FROZEN_R3_MANIFEST),'INTEGRATION_R3_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_R4_MANIFEST)),frozenReceipt(PRIOR_R4,FROZEN_R4_MANIFEST),'INTEGRATION_R4_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_R5_MANIFEST)),frozenReceipt(PRIOR_R5,FROZEN_R5_MANIFEST),'INTEGRATION_R5_RECEIPT_DRIFT');
+ assert.deepEqual(Buffer.from(read(FROZEN_R6_MANIFEST)),frozenReceipt(PRIOR_R6,FROZEN_R6_MANIFEST),'INTEGRATION_R6_RECEIPT_DRIFT');
  for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false,'INTEGRATION_FORBIDDEN:'+flag);
  const scope=integrationScope();
  assert.deepEqual(m.files.map(r=>r.path),scope,'INTEGRATION_EXACT_SCOPE');

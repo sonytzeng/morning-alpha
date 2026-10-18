@@ -1,0 +1,103 @@
+{
+  "schema": "VNEXT_FINISH_UNCERTAINTY_LEASE_HANDOFF_REVIEW_V1",
+  "base": "106bc79f69677c778d4cf237c9d06daadd9c6f21",
+  "production_source": {
+    "version": 1,
+    "verify_jwt": true,
+    "ezbr_sha256": "be2db01038b6b8df2c8dca004b224ada9f0b0784b1c5bc2fa18939b1a86bcb6f",
+    "approved_source_head": "5f33777836778e3600e4e377fcb3cf4de690fe80",
+    "source_sha256": {
+      "src/features/vnext/dailyRuntime.ts": "b2ee9bfd1618b6eb7f85494ae55a1d6dc14693f48571e007d9d6a019f861ae91",
+      "src/features/vnext/dailyAdapter.ts": "08556661bf9739c947278a3153486c412083eab241fba187bb2b9968d61e622a",
+      "supabase/functions/vnext-daily-research-v1/handler.ts": "ff721bc0a848b5e8cc4e089b440b0d3e179a124c13e8acd7054512047b0a4466",
+      "supabase/functions/vnext-daily-research-v1/index.ts": "4fcada158ef706c7a08b665ad1d7e3d2da9faa58aba9887ef5c6bb9d198ea939",
+      "supabase/functions/_shared/vnext-daily-hook.ts": "3903460c835d9fb0df749ebf050409bff56144aafbc6423bf1ac58dfc2a6bea0"
+    },
+    "comparison": "All five deployed sources independently matched approved 5f337778 and main936 before candidate edits. No production source changed."
+  },
+  "candidate_sources": {
+    "src/features/vnext/dailyRuntime.ts": "af7f3e84bf279d1d49adc13a56fc06a9029a39a4b42f6a75adaba3c4701f6f9e",
+    "supabase/functions/vnext-daily-research-v1/handler.ts": "ea4ceab840aac823ad130e052477dce346a455ce700606c4f80db990c05a4954",
+    "tests/vnextDailyRuntimeRecovery.test.mjs": "e7558669ea275c6962277c6104a003dd93a9768775a254c178d8b3a90e09bd40"
+  },
+  "actual_observation": {
+    "observed_taipei": "2026-10-19 07:29:22.255226",
+    "business_date": "2026-10-19",
+    "state": "RUNNING",
+    "cursor": 284,
+    "plan_count": 1358,
+    "invocations": 39,
+    "lease_until_taipei": "2026-10-19 07:15:44.488996",
+    "lease_expired": true,
+    "last_claim_taipei": "2026-10-19 07:14:04.489110",
+    "last_finish_taipei": "2026-10-19 07:14:01.294515",
+    "started": 287,
+    "saved": 286,
+    "pending_kind": "PRICE",
+    "pending_attempts": 1,
+    "pending_saved": false,
+    "pending_failure": null,
+    "reason_note": "ACQUISITION_CONTINUATION is the preceding FINISH reason retained during the current CLAIM, not proof of a live continuation."
+  },
+  "safe_fixed_log_code": {
+    "at_utc": "2026-10-18T23:14:41.488Z",
+    "event": "VNEXT_BACKGROUND_NOT_COMPLETED",
+    "classification": "DATABASE_RPC_REJECTED",
+    "limit": "Root supplied this classified record. This agent did not read logs, headers or payloads. The exact failed RPC is not established."
+  },
+  "change": {
+    "trigger": "Only FINISH RPC rejection after a successfully acquired run containing a valid SQL-issued lease_until.",
+    "result": "LEASE_RECOVERY_PENDING / FINISH_COMMIT_UNCONFIRMED; never claims requested QUEUED/COMPLETE/BLOCKED state committed.",
+    "write_retry": "NONE; FINISH attempted exactly once; no reset or uncertain-write replay.",
+    "recovery_not_before": "max(SQL lease expiry + 1s, claim response completed + 101s, current wall time + existing provider retry delay).",
+    "handler": "One same-run handoff only after not_before and within original 120s background budget with 5s reserve; rechecks clock and budget after sleep.",
+    "preserved": [
+      "Existing Auth and request contract",
+      "SQL global lease/fence, 512 invocation budget, three source attempts",
+      "Provider backoff and original non-recovery >20s policy",
+      "Forward cutoff and immutable predictions",
+      "All SQL, index, hook and source admission seals"
+    ]
+  },
+  "validation": {
+    "candidate_report": {
+      "path": "/workspace/scratch/866fb527950e/research-lease-handoff-20261019/build/lease-handoff-checks/RUNTIME_LEASE_HANDOFF_CANDIDATE_SAFE.json",
+      "sha256": "b5b4dc37410e1d61cfad3b1fc15b53916cb170ce8d402fd3d9d2457a8a4d207e",
+      "bytes": 8079
+    },
+    "unit_tests": {
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0
+    },
+    "independent_limited_review": {
+      "path": "/workspace/scratch/866fb527950e/r18-v1-capability-rootcause-20261019/RUNTIME_LEASE_HANDOFF_LIMITED_REVIEW_SAFE.json",
+      "sha256": "190584fbbdcd8431a23c4d0aeb8bbf3f5a79def6d8e30e9d44cbda653bf85a62",
+      "bytes": 5155
+    },
+    "independent_counterexamples": 38,
+    "type_check": "PASS",
+    "lint": "PASS",
+    "build": "PASS",
+    "handler_type_check": "PASS"
+  },
+  "limitations": [
+    "This code-only candidate does not recover or change the currently stalled Production run.",
+    "Hard isolate termination, failures before a usable claim response, and a failed handoff are not made durable by this patch; later natural checkpoints remain the fallback.",
+    "The existing SDK still masks transport and SQL errors under DATABASE_RPC_REJECTED; this patch does not claim a new classifier.",
+    "If FINISH succeeds after an earlier error, the existing normal result remains unchanged; recovery applies only when FINISH itself rejects.",
+    "C source admission must be resealed and independently reviewed before any deployment. No old seal was edited."
+  ],
+  "rollback": "Reverse this exact source patch. No business data deletion, SQL, Auth, RLS or Cron changes. Any future Worker promotion needs an exact dependency closure and separate Production validation.",
+  "production_deployed": false,
+  "production_recovered": false,
+  "manual_invoke": false,
+  "production_authorized": false,
+  "migration_execution": false,
+  "auth_rls_change": false,
+  "member_rights_activation": false,
+  "caller_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false
+}

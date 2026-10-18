@@ -9,14 +9,33 @@ import {entryInputFromV2} from '../../../research/entry-v2-adapter.ts';
 import type {V2Input} from '../../../supabase/functions/_shared/recommendation-shadow-v2-engine.ts';
 export type Rpc=(name:string,args:Record<string,unknown>)=>Promise<unknown>;
 export type RuntimePorts={rpc:Rpc;fetcher:typeof fetch;clock:()=>string;sleep:(ms:number)=>Promise<void>};
-type ClaimedRun={id:string;business_date:string;actionable_at:string;lease:string;fence:number;plan:SourceTask[];checkpoint:RunState|Record<string,never>;cursor:number};
+type ClaimedRun={id:string;business_date:string;actionable_at:string;lease:string;lease_until?:string;fence:number;plan:SourceTask[];checkpoint:RunState|Record<string,never>;cursor:number};
+export type LeaseRecoveryPending={status:'LEASE_RECOVERY_PENDING';continue:true;reason:'FINISH_COMMIT_UNCONFIRMED';lease_until:string;not_before:string};
 const object=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 const failure=(e:unknown)=>{const msg=e instanceof Error?e.message:'';return /^[A-Z0-9_]{1,100}$/.test(msg)?msg:'INTEGRATION_FAILED';};
 export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
+ const claimStarted=Date.now();
  const claim=object(await p.rpc('claim_vnext_daily_research_v1',{p_run:id}));if(claim.status!=='ACQUIRED')return {status:String(claim.status),continue:false};
- const r=claim.run as ClaimedRun,deadline=Date.now()+Math.min(70000,budgetMs);let fetched=0,lastFetch=0,hasLock=false,retryAfter=3;
+ const claimCompleted=Date.now(),r=claim.run as ClaimedRun,deadline=claimCompleted+Math.min(70000,budgetMs);let fetched=0,lastFetch=0,hasLock=false,retryAfter=3;
+ // Only the SQL-issued 100s lease can authorize a delayed recovery attempt.
+ // Keep lease/budget time on the wall clock; p.clock remains the evidence cutoff.
+ const leaseUntil=typeof r.lease_until==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?(?:Z|[+-]\d\d:\d\d)$/.test(r.lease_until)?Date.parse(r.lease_until):NaN;
+ const recoverableLease=Number.isFinite(leaseUntil)&&leaseUntil>claimStarted&&leaseUntil<=claimCompleted+100000;
  const rpc=(op:string,data:unknown={})=>p.rpc('vnext_daily_runtime_v1',{p_run:r.id,p_lease:r.lease,p_fence:r.fence,p_op:op,p_data:data});
- const finish=async(status:string,reason:string|null=null)=>{await rpc('FINISH',{status,reason});return {status,continue:status==='QUEUED',reason,retry_after_seconds:retryAfter};};
+ const finish=async(status:string,reason:string|null=null)=>{
+  try{await rpc('FINISH',{status,reason});}
+  catch(error){
+   if(!recoverableLease)throw error;
+   // The commit may have succeeded before its response was lost. Do not retry
+   // FINISH or claim that the requested terminal/queued state was committed.
+   // Waiting a full lease after the claim response also covers a worker clock
+   // ahead of the DB clock. A malformed/future lease still fails closed above.
+   const recovery:LeaseRecoveryPending={status:'LEASE_RECOVERY_PENDING',continue:true,reason:'FINISH_COMMIT_UNCONFIRMED',
+    lease_until:r.lease_until!,not_before:new Date(Math.max(leaseUntil+1000,claimCompleted+101000,Date.now()+Math.max(3,retryAfter)*1000)).toISOString()};
+   return recovery;
+  }
+  return {status,continue:status==='QUEUED',reason,retry_after_seconds:retryAfter};
+ };
  const commitLocks=(rows:DailyLock[])=>rpc('PREDICTIONS',rows.map(body=>{const {lock_hash,...rest}=body;return {body,canonical:canonical(rest),hash:lock_hash};}));
  const collect=async(task:SourceTask):Promise<SourceReceipt|null|false>=>{
   if(Date.now()+14000>=deadline||fetched>=8)return false;

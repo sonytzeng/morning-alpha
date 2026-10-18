@@ -22,6 +22,18 @@ export async function handleVnextDaily(req:Request,env:WorkerEnvironment){
   const backgroundDeadline=Date.now()+120000;
   env.background(workDailyRun(id,env).then(async r=>{
    if(!r.continue)return;
+   if(r.status==='LEASE_RECOVERY_PENDING'){
+    if(!('lease_until' in r)||!('not_before' in r)||typeof r.lease_until!=='string'||typeof r.not_before!=='string')return;
+    const leaseUntil=Date.parse(r.lease_until),notBefore=Date.parse(r.not_before);
+    if(!Number.isFinite(leaseUntil)||!Number.isFinite(notBefore)||notBefore<leaseUntil+1000)return;
+    const wait=Math.max(0,notBefore-Date.now());
+    if(Date.now()+wait+5000>backgroundDeadline)return;
+    await env.sleep(wait);
+    if(Date.now()<notBefore||Date.now()+5000>backgroundDeadline)return;
+    // One fenced reclaim attempt after expiry. SQL owns the actual state,
+    // attempt budget and cutoff; this is not proof of a completed FINISH.
+    await env.continueRun(id);return;
+   }
    // A Canonical wait is a bounded 30s continuation, not a provider backoff.
    // Keep it inside the background budget and hand off once, without blocking
    // Core. Longer provider delays remain durable for the existing lifecycle.

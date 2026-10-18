@@ -1,3 +1,4 @@
+import type {PhaseEvaluation} from '../../types/research-source-contracts';
 /** Product-only, side-effect-free contract. Never imports a producer or writes a report. */
 export const DECISION_SCORE_VERSION = 'ma-decision-v1.0' as const;
 export type Action = 'ACTIVE_WATCH' | 'WAIT_FOR_PULLBACK' | 'WAIT_FOR_CONFIRMATION'
@@ -71,7 +72,7 @@ export type Opportunity = {
   data_quality: 'complete';
 };
 export type Decision = {
-  phase_evaluation?: import('../../../supabase/functions/_shared/recommendation-phase').PhaseEvaluation;
+  phase_evaluation?: PhaseEvaluation;
   schema_version?: 'decision-evidence-v1';
   calibration_status?: 'INSUFFICIENT_HISTORY';
   direction_evidence_score?: Score | null;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { EntryEvaluation, EntryResult, Strategy } from '../../../../research/entry-opportunity';
+import type { EntryEvaluation, EntryResult, Strategy } from '../../../types/research-source-contracts';
 
 const names: Record<Strategy, string> = { OVERSOLD_REVERSAL: '超跌反轉', PULLBACK_ENTRY: '趨勢回檔', BREAKOUT_CONTINUATION: '突破延續' };
 const states = { ENTRY_READY: '可以研究進場', WAIT_CONFIRMATION: '等待確認', AVOID_ENTRY: '不建議進場', INSUFFICIENT_EVIDENCE: '暫時無法可靠判斷' };

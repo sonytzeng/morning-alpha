@@ -2,7 +2,7 @@ import {useEffect,useState,type ReactNode} from 'react';
 import {supabase} from '@/lib/supabase';
 import {readTradingLab,type TradingLabData} from '@/features/research/tradingLab';
 import {cockpitToday,taipeiToday,plainAction,plainRegime,plainEvidence,strategyNames,entryNames,filterResearch,researchStockNames,safePlan,money} from '@/features/research/cockpit';
-import type {EntryEvaluation,EntryResult} from '../../../../research/entry-opportunity';
+import type {EntryEvaluation,EntryResult} from '../../../types/research-source-contracts';
 import CockpitJournal from './CockpitJournal';
 import './cockpit.css';
 type ReadData={today_date:string;latest:EntryEvaluation|null;history:EntryEvaluation[];forward_sample:number;outcome_sample:number};

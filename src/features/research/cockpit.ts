@@ -1,4 +1,4 @@
-import type { EntryEvaluation, EntryResult, Strategy } from '../../../research/entry-opportunity';
+import type { EntryEvaluation, EntryResult, Strategy } from '../../types/research-source-contracts';
 import { currentMarket, type TradingLabData } from './tradingLab';
 export const strategyNames:Record<Strategy,string>={OVERSOLD_REVERSAL:'大跌後是否出現反彈機會',PULLBACK_ENTRY:'上漲趨勢中的回檔買點',BREAKOUT_CONTINUATION:'突破後是否還值得跟進'};
 export const entryNames:Record<EntryResult['status'],string>={ENTRY_READY:'符合研究進場條件',WAIT_CONFIRMATION:'值得觀察，等待確認',AVOID_ENTRY:'目前不建議進場',INSUFFICIENT_EVIDENCE:'資料不足，暫時無法判斷'};

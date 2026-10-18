@@ -4,10 +4,13 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {verifyMemberContinuity,memberContinuityHistoricalReader} from './helpers/memberContinuityAdmission.mjs';
+import {verifyFrontendTypeClosure,frontendTypeClosureHistoricalReader} from './helpers/frontendTypeClosureAdmission.mjs';
+verifyFrontendTypeClosure();
 // Old evidence keeps its exact two admitted member-source preimages. The new
 // live tree and two replacements are verified before this narrow view exists.
 verifyMemberContinuity();
-const historicalMemberRead=memberContinuityHistoricalReader();
+const historicalFrontendRead=frontendTypeClosureHistoricalReader();
+const historicalMemberRead=memberContinuityHistoricalReader(historicalFrontendRead);
 const path='docs/operations/evidence/r9-functional-source-closure-20261017.json';
 const bytes=readFileSync(path),p=JSON.parse(bytes),old=JSON.parse(readFileSync(p.r8_package.path));
 const hash=b=>createHash('sha256').update(b).digest('hex');
@@ -28,7 +31,9 @@ test('Caller deploy closure stays immutable5f: new financial shared code is expl
  for(const row of original.local_sources)assert.equal(hash(gitBlob(a.source_head,row.path)),row.sha256,row.path);
  assert.equal(a.local_match,22);assert.equal(a.remote_cache_source_match,63);
  assert.equal(a.sdk,'2.57.4');assert.equal(a.verify_jwt,true);
- const collisions=original.local_sources.filter(r=>hash(readFileSync(r.path))!==r.sha256).map(r=>r.path);
+ // This is R9's saved candidate collision set, before the separately sealed
+ // frontend type-only import change; A still deploys its immutable5f source.
+ const collisions=original.local_sources.filter(r=>hash(historicalFrontendRead(r.path))!==r.sha256).map(r=>r.path);
  assert.deepEqual(collisions,a.working_tree_collision);
  assert.deepEqual(collisions,['supabase/functions/_shared/recommendation-official-actuals.ts']);
  assert.match(a.payload_policy,/IMMUTABLE.*NOT_CURRENT/);

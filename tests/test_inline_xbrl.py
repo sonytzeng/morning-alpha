@@ -1,8 +1,11 @@
 """Synthetic protocol controls, never a real issuer filing or saved raw fixture."""
 import importlib.util
 import hashlib
+import json
 from pathlib import Path
 import sys
+import subprocess
+import tempfile
 import unittest
 from dataclasses import replace
 
@@ -45,6 +48,21 @@ def extract(text=None, *, changes=None, **kwargs):
 
 def rows(result):
     return {row["metric"]: row for row in result["rows"]}
+
+
+def opaque_fixture(*, body="PRIVATE_NOTE_BODY_NEVER_OUTPUT OPAQUE_BYTE note", namespace=None,
+                   note_attrs=None, extra=""):
+    note_attrs = note_attrs or 'contextRef="c" escape="true"'
+    note = (f'<ix:nonNumeric xmlns:notes="{namespace or sorted(M.OPAQUE_NOTE_NAMESPACES)[0]}" '
+            f'name="notes:{M.OPAQUE_NOTE_LOCAL}" {note_attrs}>{body}</ix:nonNumeric>')
+    return fixture(extra=note + extra).encode("cp950").replace(b"OPAQUE_BYTE", b"\x84")
+
+
+def extract_opaque(data=None, **kwargs):
+    data = data if data is not None else opaque_fixture()
+    return M.extract_actuals(data, receipt(data), entity="2330", year=2026, quarter=2,
+                             encoding="cp950", revenue_mode="ifrs-revenue",
+                             decode_profile=M.OPAQUE_NOTE_PROFILE, **kwargs)
 
 
 class OfficialInlineXbrlActuals(unittest.TestCase):
@@ -226,6 +244,191 @@ class OfficialInlineXbrlActuals(unittest.TestCase):
         bad = data + b"\x81"
         with self.assertRaisesRegex(M.ExtractionError, "SOURCE_DECODING_INVALID"):
             M.extract_actuals(bad, receipt(bad), entity="2330", year=2026, quarter=2, encoding="cp950")
+
+    def test_opaque_note_profile_is_explicit_and_excludes_only_approved_note_body(self):
+        data = opaque_fixture()
+        with self.assertRaisesRegex(M.ExtractionError, "SOURCE_DECODING_INVALID"):
+            M.extract_actuals(data, receipt(data), entity="2330", year=2026, quarter=2, encoding="cp950")
+        result = extract_opaque(data)
+        self.assertEqual(len(result["rows"]), 3)
+        self.assertEqual(result["source_sha256"], receipt(data)["sha256"])
+        self.assertEqual(result["received_at"], receipt(data)["received_at"])
+        self.assertEqual(result["source_decoding"]["opaque_invalid_bytes"], 1)
+        self.assertEqual(result["source_decoding"]["opaque_notes"], 1)
+        self.assertFalse(result["source_decoding"]["whole_source_strict"])
+        self.assertTrue(result["source_decoding"]["full_document_scanned"])
+        encoded = M.json.dumps(result, ensure_ascii=False).encode("utf-8", errors="strict")
+        self.assertNotIn(b"PRIVATE_NOTE_BODY_NEVER_OUTPUT", encoded)
+        self.assertFalse(result["source_admitted"])
+        self.assertFalse(result["production_evaluation"])
+        for encoding in ("big5", "utf-8"):
+            with self.subTest(encoding=encoding), self.assertRaisesRegex(M.ExtractionError, "DECODE_PROFILE_ENCODING_MISMATCH"):
+                M.extract_actuals(data, receipt(data), entity="2330", year=2026, quarter=2,
+                                  encoding=encoding, decode_profile=M.OPAQUE_NOTE_PROFILE)
+        with self.assertRaisesRegex(M.ExtractionError, "DECODE_PROFILE_UNSUPPORTED"):
+            extract(decode_profile="auto")
+
+    def test_opaque_note_requires_exact_namespace_escape_and_verified_context(self):
+        rejected = [
+            opaque_fixture(namespace="urn:unapproved"),
+            opaque_fixture(namespace="http://www.xbrl.org/tifrs/notes/2020-06-30"),
+            opaque_fixture(namespace=sorted(M.OPAQUE_NOTE_NAMESPACES)[0] + "/fake"),
+            opaque_fixture(note_attrs='contextRef="c" escape="false"'),
+            opaque_fixture(note_attrs='contextRef="c" escape="true" continuedAt="suffix"'),
+            opaque_fixture().replace(M.OPAQUE_NOTE_LOCAL.encode(), b"OtherNote"),
+        ]
+        for data in rejected:
+            with self.subTest(source=hashlib.sha256(data).hexdigest()), self.assertRaisesRegex(M.ExtractionError, "OPAQUE_UNDECODABLE_OUTSIDE_APPROVED_NOTE"):
+                extract_opaque(data)
+        for data, code in [
+            (opaque_fixture(note_attrs='contextRef="missing" escape="true"'), "OPAQUE_NOTE_CONTEXT_INVALID"),
+            (opaque_fixture().replace(b">2330</x:identifier>", b">2882</x:identifier>"), "OPAQUE_NOTE_ENTITY_MISMATCH"),
+            (opaque_fixture().replace(b"2026-04-01", b"2026-44-01"), "OPAQUE_NOTE_PERIOD_INVALID"),
+            (opaque_fixture().replace(b"2026-04-01", b"2025-04-01"), "OPAQUE_NOTE_PERIOD_INVALID"),
+            (opaque_fixture().replace(b'<x:period>', b'<x:period xsi:nil="true">'), "OPAQUE_NOTE_CONTEXT_INVALID"),
+        ]:
+            with self.subTest(code=code), self.assertRaisesRegex(M.ExtractionError, code):
+                extract_opaque(data)
+
+    def test_opaque_byte_cannot_enter_finance_resources_attributes_or_other_text(self):
+        clean = fixture().encode("cp950")
+        rejected = [
+            clean.replace(b">1.25</ix:nonFraction>", b">1.\x8425</ix:nonFraction>"),
+            clean.replace(b">2330</x:identifier>", b">23\x8430</x:identifier>"),
+            clean.replace(b">iso:TWD</x:measure>", b">iso:TW\x84D</x:measure>"),
+            clean.replace(b'contextRef="c"', b'contextRef="c\x84"', 1),
+            clean.replace(b'xmlns:ifrs="', b'xmlns:ifrs="\x84', 1),
+            clean.replace(b'ifrs:BasicEarningsLossPerShare', b'ifrs:BasicEarnings\x84LossPerShare', 1),
+            clean.replace(b'</body>', b'<p>\x84</p></body>'),
+            opaque_fixture().replace(b"\x84", b"\x81"),
+            opaque_fixture().replace(b'notes:', b'other:', 1),
+        ]
+        for data in rejected:
+            with self.subTest(source=hashlib.sha256(data).hexdigest()), self.assertRaises(M.ExtractionError):
+                extract_opaque(data)
+        other_fact = '<ix:nonFraction name="ifrs:OtherMetric" contextRef="c" unitRef="eps">OPAQUE_BYTE</ix:nonFraction>'
+        with self.assertRaisesRegex(M.ExtractionError, "OPAQUE_UNDECODABLE_OUTSIDE_APPROVED_NOTE"):
+            extract_opaque(fixture(extra=other_fact).encode("cp950").replace(b"OPAQUE_BYTE", b"\x84"))
+
+    def test_opaque_note_does_not_crop_suffix_conflicts_resource_ids_or_rebindings(self):
+        fact = '<ix:nonFraction name="ifrs:BasicEarningsLossPerShare" contextRef="c" unitRef="eps" decimals="2" format="ixt:numdotdecimal">2.25</ix:nonFraction>'
+        result = extract_opaque(opaque_fixture(extra=fact))
+        self.assertNotIn("basic_eps", rows(result))
+        self.assertIn({"metric": "basic_eps", "reason": "DUPLICATE_FACT_CONFLICT"}, result["missing"])
+        with self.assertRaisesRegex(M.ExtractionError, "DUPLICATE_RESOURCE_ID"):
+            extract_opaque(opaque_fixture(extra='<x:context id="c"/>'))
+        rebound = opaque_fixture(namespace="urn:wrong").replace(b'<ix:nonNumeric ', b'<ix:nonNumeric xmlns:notes="urn:wrong" ', 1)
+        with self.assertRaisesRegex(M.ExtractionError, "DUPLICATE_ATTRIBUTE"):
+            extract_opaque(rebound)
+        # Rebinding a finance prefix in a later, well-formed fact remains an
+        # explicit rejected candidate; it never replaces an approved concept.
+        rebound_fact = fact.replace('<ix:nonFraction ', '<ix:nonFraction xmlns:ifrs="urn:wrong" ')
+        result = extract_opaque(opaque_fixture(extra=rebound_fact))
+        self.assertEqual(rows(result)["basic_eps"]["value_decimal"], "1.25")
+        self.assertEqual(result["rejections"]["CONCEPT_NAMESPACE_NOT_APPROVED"], 1)
+
+    def test_opaque_note_cannot_hide_markup_nested_facts_or_boundary_damage(self):
+        bad = [
+            opaque_fixture(body="<span>OPAQUE_BYTE</span>"),
+            opaque_fixture(body="OPAQUE_BYTE<span>later</span>"),
+            opaque_fixture(body='<ix:nonFraction name="ifrs:Other" contextRef="c">OPAQUE_BYTE</ix:nonFraction>'),
+            opaque_fixture().replace(b'</ix:nonNumeric>', b'</ix:non\x84Numeric>'),
+            opaque_fixture().replace(b'</ix:nonNumeric>', b'</ix:nonNumeri>'),
+            opaque_fixture().replace(b'</ix:nonNumeric>', b''),
+            opaque_fixture().replace(b'<ix:nonNumeric ', b'<ix:non\x84Numeric '),
+            opaque_fixture().replace(b'</ix:nonNumeric>', b'<!--\x84--></ix:nonNumeric>'),
+        ]
+        for data in bad:
+            with self.subTest(source=hashlib.sha256(data).hexdigest()), self.assertRaises(M.ExtractionError):
+                extract_opaque(data)
+        nested = opaque_fixture().replace(b'<ix:nonNumeric ', b'<ix:nonFraction name="ifrs:Other"><ix:nonNumeric ', 1).replace(b'</ix:nonNumeric>', b'</ix:nonNumeric></ix:nonFraction>', 1)
+        with self.assertRaises(M.ExtractionError):
+            extract_opaque(nested)
+
+    def test_opaque_profile_limits_and_receipt_binding_cover_complete_source(self):
+        with self.assertRaisesRegex(M.ExtractionError, "OPAQUE_BYTE_LIMIT"):
+            extract_opaque(opaque_fixture(body="OPAQUE_BYTE" * (M.MAX_OPAQUE_INVALID_BYTES + 1)))
+        data = opaque_fixture(extra="<span></span>" * 20)
+        with self.assertRaisesRegex(M.ExtractionError, "TAG_LIMIT"):
+            extract_opaque(data, limits=replace(M.Limits(), max_tags=35))
+        for limits in [replace(M.Limits(), max_bytes=10), replace(M.Limits(), max_depth=2),
+                       replace(M.Limits(), max_capture_chars=2), replace(M.Limits(), seconds=1e-12)]:
+            with self.subTest(limits=limits), self.assertRaises(M.ExtractionError):
+                extract_opaque(limits=limits)
+        with self.assertRaisesRegex(M.ExtractionError, "RECEIPT_BYTES_MISMATCH"):
+            M.extract_actuals(data + b"suffix", receipt(data), entity="2330", year=2026, quarter=2,
+                              encoding="cp950", decode_profile=M.OPAQUE_NOTE_PROFILE)
+
+    def test_individual_statement_profile_is_explicit_mutually_exclusive_and_provenance_limited(self):
+        data = fixture().encode()
+        individual = {**receipt(data), "url": receipt(data)["url"].replace("REPORT_ID=C", "REPORT_ID=A")}
+        with self.assertRaisesRegex(M.ExtractionError, "SOURCE_QUERY_NOT_APPROVED"):
+            M.extract_actuals(data, individual, entity="2330", year=2026, quarter=2, encoding="utf-8")
+        result = M.extract_actuals(data, individual, entity="2330", year=2026, quarter=2,
+                                  encoding="utf-8", statement_profile="individual", revenue_mode="ifrs-revenue")
+        self.assertEqual(len(result["rows"]), 3)
+        self.assertEqual(result["statement_profile"], "individual")
+        self.assertEqual(result["statement_basis"], "REQUESTED_INDIVIDUAL_A_WITH_ENTITY_CONTEXT_VERIFIED")
+        for row in result["rows"]:
+            self.assertEqual(row["source_report_period"]["report_id"], "A")
+            self.assertEqual(row["statement_basis"], result["statement_basis"])
+            self.assertEqual(row["ordinary_share_basis"], "NOT_PROVEN_BY_UNIT")
+            self.assertEqual(row["consolidation_basis"], "NOT_PROVEN_BY_CONTEXT_OR_QUERY")
+        self.assertFalse(result["source_admitted"])
+        for source_report_id in ("B", "C", "a", "A "):
+            changed = {**individual, "url": individual["url"].replace("REPORT_ID=A", "REPORT_ID=" + source_report_id)}
+            with self.subTest(report_id=source_report_id), self.assertRaisesRegex(M.ExtractionError, "SOURCE_QUERY_NOT_APPROVED"):
+                M.extract_actuals(data, changed, entity="2330", year=2026, quarter=2,
+                                  encoding="utf-8", statement_profile="individual")
+        with self.assertRaisesRegex(M.ExtractionError, "SOURCE_QUERY_NOT_APPROVED"):
+            M.extract_actuals(data, {**individual, "url": individual["url"].replace("CO_ID=2330", "CO_ID=4908")},
+                              entity="2330", year=2026, quarter=2, encoding="utf-8", statement_profile="individual")
+        for profile in ("auto", "A", None, 1):
+            with self.subTest(profile=profile), self.assertRaisesRegex(M.ExtractionError, "STATEMENT_PROFILE_UNSUPPORTED"):
+                extract(statement_profile=profile)
+
+    def test_individual_profile_keeps_entity_quarter_unit_and_capture_type_controls(self):
+        for text, reason in [
+            (fixture().replace(">2330</x:identifier>", ">4908</x:identifier>"), "OTHER_ENTITY"),
+            (fixture().replace("2026-04-01", "2026-01-01"), "NOT_EXACT_QUARTER"),
+            (fixture().replace('unitRef="eps"', 'unitRef="twd"'), "METRIC_UNIT_MISMATCH"),
+        ]:
+            data = text.encode()
+            r = {**receipt(data), "url": receipt(data)["url"].replace("REPORT_ID=C", "REPORT_ID=A")}
+            result = M.extract_actuals(data, r, entity="2330", year=2026, quarter=2,
+                                      encoding="utf-8", statement_profile="individual")
+            self.assertNotIn("basic_eps", rows(result))
+            self.assertGreater(result["rejections"][reason], 0)
+        data = fixture().encode()
+        for not_bytes in (bytearray(data), data.decode()):
+            with self.subTest(value_type=type(not_bytes).__name__), self.assertRaisesRegex(M.ExtractionError, "BYTE_LIMIT"):
+                M.extract_actuals(not_bytes, receipt(data), entity="2330", year=2026, quarter=2,
+                                  encoding="utf-8", statement_profile="individual")
+        with self.assertRaisesRegex(M.ExtractionError, "RECEIPT_SCHEMA_INVALID"):
+            M.extract_actuals(data, [], entity="2330", year=2026, quarter=2,
+                              encoding="utf-8", statement_profile="individual")
+
+    def test_cli_profiles_are_explicit_and_invalid_choices_or_default_individual_are_refused(self):
+        data = fixture().encode()
+        r = {**receipt(data), "url": receipt(data)["url"].replace("REPORT_ID=C", "REPORT_ID=A")}
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            html, captured = directory / "source.html", directory / "receipt.json"
+            html.write_bytes(data)
+            captured.write_text(json.dumps(r))
+            args = [sys.executable, "-B", str(ROOT / "scripts/official-actuals/inline_xbrl.py"),
+                    "--html", str(html), "--receipt", str(captured), "--entity", "2330",
+                    "--year", "2026", "--quarter", "2", "--encoding", "utf-8"]
+            default = subprocess.run(args, capture_output=True, text=True, check=False)
+            self.assertEqual(default.returncode, 2)
+            self.assertEqual(json.loads(default.stdout)["error"], "SOURCE_QUERY_NOT_APPROVED")
+            explicit = subprocess.run(args + ["--statement-profile", "individual"], capture_output=True, text=True, check=False)
+            self.assertEqual(explicit.returncode, 0)
+            self.assertEqual(json.loads(explicit.stdout)["statement_profile"], "individual")
+            for switches in (["--statement-profile", "auto"], ["--decode-profile", "auto"],
+                             ["--decode-profile", M.OPAQUE_NOTE_PROFILE, "--statement-profile", "individual"]):
+                refused = subprocess.run(args + switches, capture_output=True, text=True, check=False)
+                self.assertEqual(refused.returncode, 2)
 
     def test_byte_tags_depth_resources_text_and_time_limits(self):
         controls = [replace(M.Limits(), max_bytes=10), replace(M.Limits(), max_tags=3),

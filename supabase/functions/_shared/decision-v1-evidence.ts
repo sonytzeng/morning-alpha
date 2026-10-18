@@ -184,7 +184,7 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
     if (series.slice(-20).some(p => p.volume === null || p.volume <= 0) || series.length < 20) reasons.push('20_DAILY_VOLUMES_MISSING');
     const inst = flowsFor(symbol, str(q?.row.trading_date));
     if (!inst) reasons.push('THREE_INSTITUTIONS_MISSING');
-    if (!f || !f.intact && !f.damaged) reasons.push('FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING');
+    if (!f) reasons.push('FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING');
     const mapping = data.mappings.filter(m => sym(m.stock_symbol) === symbol && known(m, 'created_at', 'created_at')).find(m => {
       const c = data.catalysts.find(c => c.id === m.catalyst_id && known(c, 'event_at', 'created_at'));
       return c && news.some(n => referenceValues(c.source_refs).some(ref => ref === n.row.id || ref === n.row.source_url))
@@ -205,6 +205,17 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
     if (!pre || pre.length < 6 || !preBase || !preLast || !benchPre || !benchNow || (!pending && (!post || post.volume === null || post.volume <= 0))) reasons.push('EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING');
     const phaseRow: PhaseCandidate = {symbol,status:'BLOCKED',reasons:[...new Set(reasons)],post_event_price:pending?'NOT_YET_OBSERVABLE':post?'PASS':'MISSING',post_event_volume:pending?'NOT_YET_OBSERVABLE':post&&post.volume!==null&&post.volume>0?'PASS':'MISSING',evidence_ids:q?[q.id]:[]};
     phaseCandidates.push(phaseRow);
+    // A complete mixed beat/miss history does not satisfy the existing intact
+    // thesis. Count the assessment, but do not create WATCH/READY, an intact
+    // explanation, or a missing-data claim. Every other prerequisite remains
+    // mandatory, including event-aligned evidence appropriate to this phase.
+    if (!reasons.length && f && !f.intact && !f.damaged) {
+      screen.evaluated_count++;
+      phaseRow.status='NONE';
+      phaseRow.reasons=['FOUR_QUARTER_FUNDAMENTAL_CRITERIA_NOT_MET'];
+      phaseRow.evidence_ids=[...f.ids,...(q?[q.id]:[])];
+      continue;
+    }
     if (pending && !reasons.length && f && inst && event && mapping && q && pre && benchPre && benchNow) {
       screen.evaluated_count++;
       // No event-response score, probability, entry or formal recommendation is invented.
@@ -304,9 +315,15 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
   // Only the post-event response is unknowable before the open. Every other
   // existing entry prerequisite remains required for a premarket WATCH.
   const knowableMissing = entryKeys.filter(k => k !== 'priced_in' && factors[k].value === null);
-  if (knowableMissing.length) {
+  // Conflicts can be discovered while later stocks' histories are inspected.
+  // Reconcile the whole universe after that pass; neither earlier NONE rows
+  // nor intact rows may retain a successful assessment count on partial input.
+  const requiredFailures=[...knowableMissing.map(k=>'MARKET_REQUIRED_'+k.toUpperCase()),
+    ...(data.failures.length?['SOURCE_QUERY_INCOMPLETE']:[]),
+    ...(conflictSymbols.size?['CONFLICTING_QUOTES']:[])];
+  if (requiredFailures.length) {
     for (const c of phaseCandidates) {
-      c.status='BLOCKED';c.reasons=[...new Set([...c.reasons,...knowableMissing.map(k=>'MARKET_REQUIRED_'+k.toUpperCase())])];
+      c.status='BLOCKED';c.reasons=[...new Set([...c.reasons.filter(r=>r!=='FOUR_QUARTER_FUNDAMENTAL_CRITERIA_NOT_MET'),...requiredFailures])];
       const rejection=screen.rejected.find(r=>r.symbol===c.symbol);
       if(rejection)rejection.reasons=c.reasons;else screen.rejected.push({symbol:c.symbol,reasons:c.reasons});
     }

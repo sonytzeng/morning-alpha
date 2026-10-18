@@ -112,6 +112,48 @@ test('only a COMPLETE low-score screen may say NO_QUALIFIED_OPPORTUNITY',()=>{
 test('nonconsecutive or undocumented fiscal quarters cannot claim fundamental intact',()=>{
   const d=evidenceRows();d.earnings[0].fiscal_period='unknown';assert.equal(run(d).stock_opportunities.length,0);
 });
+test('complete mixed quarterly results are assessed NONE, never missing data or an intact opportunity',()=>{
+  const d=evidenceRows();
+  d.earnings.filter(r=>r.fiscal_period==='2026-Q1').forEach(r=>{r.eps_actual=3;});
+  const r=run(d),p=r.phase_evaluation;
+  assert.equal(r.screening.status,'COMPLETE');assert.equal(r.screening.evaluated_count,3);
+  assert.equal(r.action,'NO_QUALIFIED_OPPORTUNITY');assert.deepEqual(r.stock_opportunities,[]);
+  assert.equal(p.evaluated_count,3);assert.equal(p.none_count,3);assert.equal(p.blocked_count,0);
+  assert.equal(p.ready_count,0);assert.equal(p.watch_count,0);
+  for(const c of p.candidates){
+    assert.deepEqual(c.reasons,['FOUR_QUARTER_FUNDAMENTAL_CRITERIA_NOT_MET']);
+    assert.equal(c.evidence_ids.filter(id=>id.startsWith('earnings_events:')).length,4);
+  }
+  assert.doesNotMatch(JSON.stringify(r.stock_opportunities),/INTACT|ACTIVE_WATCH/);
+});
+test('a mixed result does not suppress genuinely missing data or late earnings',()=>{
+  for(const mutate of [
+    d=>{d.earnings.find(r=>r.symbol==='2330'&&r.fiscal_period==='2026-Q1').eps_actual=null;},
+    d=>{d.earnings.find(r=>r.symbol==='2330'&&r.fiscal_period==='2026-Q1').created_at='2026-09-07T03:00:00Z';},
+    d=>{d.earnings.find(r=>r.symbol==='2330'&&r.fiscal_period==='2026-Q2').guidance_direction=null;},
+    d=>{d.flows=d.flows.filter(r=>r.symbol!=='2330');},
+    d=>{d.mappings=d.mappings.filter(r=>r.stock_symbol!=='2330');},
+  ]){
+    const d=evidenceRows();d.earnings.find(r=>r.symbol==='2330'&&r.fiscal_period==='2026-Q1').eps_actual=3;
+    mutate(d);const r=run(d),c=r.phase_evaluation.candidates.find(c=>c.symbol==='2330');
+    assert.equal(c.status,'BLOCKED');assert.equal(r.screening.status,'INCOMPLETE');
+    assert.equal(r.screening.evaluated_count,2);assert.deepEqual(r.stock_opportunities,[]);
+    assert(!c.reasons.includes('FOUR_QUARTER_FUNDAMENTAL_CRITERIA_NOT_MET'));
+  }
+});
+test('query truncation or any conflicting source blocks counts as well as outputs, including mixed earnings',()=>{
+  for(const mixed of [false,true])for(const problem of ['query','conflict']){
+    const d=evidenceRows();if(mixed)d.earnings.filter(r=>r.fiscal_period==='2026-Q1').forEach(r=>{r.eps_actual=3;});
+    if(problem==='query')d.failures=['quotes:TRUNCATED'];
+    else {const q=d.quotes.find(r=>r.symbol==='2330'&&r.phase==='close');d.quotes.push({...q,id:'conflicting-old-close',provider:'other-fixture',value:q.value*.8});}
+    const r=run(d),p=r.phase_evaluation;
+    assert.equal(r.screening.status,'INCOMPLETE');assert.equal(r.screening.evaluated_count,0);
+    assert.equal(r.action,'INSUFFICIENT_DATA');assert.deepEqual(r.stock_opportunities,[]);
+    assert.equal(p.status,'BLOCKED');assert.equal(p.evaluated_count,0);assert.equal(p.blocked_count,3);
+    assert.equal(p.none_count,0);assert.equal(p.watch_count,0);assert.equal(p.ready_count,0);
+    assert(p.candidates.every(c=>c.status==='BLOCKED'&&c.reasons.includes(problem==='query'?'SOURCE_QUERY_INCOMPLETE':'CONFLICTING_QUOTES')));
+  }
+});
 test('assessment hash is repeatable, changes with real evidence, and is identical across entitlement projections',async()=>{
   const data=evidenceRows(),a=await sealEvidenceDecision(run(data)),b=await sealEvidenceDecision(run(data));assert.equal(a.assessment_id,b.assessment_id);
   data.news[0].title='Changed filing';assert.notEqual((await sealEvidenceDecision(run(data))).assessment_id,a.assessment_id);

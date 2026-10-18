@@ -38,6 +38,15 @@ METRICS = {"BasicEarningsLossPerShare": "basic_eps",
 VOID = frozenset("area base br col embed hr img input link meta param source track wbr".split())
 NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_.:-]*")
 QNAME = re.compile(r"([A-Za-z_][A-Za-z0-9_.-]*):([A-Za-z_][A-Za-z0-9_.-]*)\Z")
+# Explicit, non-default transport for three retained CP950 documents. Their
+# isolated 0x84 bytes occur only inside this nonnumeric standards note. This
+# never decodes, returns, or admits that note, or repairs the received bytes.
+OPAQUE_NOTE_PROFILE = "cp950-opaque-standards-note-v1"
+OPAQUE_NOTE_LOCAL = "ApplicationOfNewlyIssuedOrAmendedStandardsAndInterpretations"
+OPAQUE_NOTE_NAMESPACES = frozenset({"http://www.xbrl.org/tifrs/notes/2025-06-30",
+                                    "http://www.xbrl.org/tifrs/notes/2026-03-31"})
+MAX_OPAQUE_INVALID_BYTES = 32
+UNDECODABLE = re.compile(r"[\udc80-\udcff]")
 
 
 class ExtractionError(ValueError):
@@ -81,6 +90,52 @@ class Node:
 
     def lexical(self) -> str:
         return "".join(self.text).strip()
+
+
+@dataclass
+class OpaqueNote:
+    context_ref: str
+    namespace: str
+    invalid_bytes: int = 0
+    has_child_markup: bool = False
+    closed: bool = False
+
+
+def strict_transport_markup(document: str, limits: Limits, started: float) -> None:
+    """Reject undecodable bytes in *all* markup, even unrecognised HTML.
+
+    HTMLParser may treat a damaged tag name as data. A separate bounded,
+    quote-aware lexical pass prevents that damaged markup from being mistaken
+    for an allowed note body. It neither edits nor truncates the document.
+    """
+    at = 0
+    while True:
+        require(time.monotonic() - started <= limits.seconds, "PARSE_DEADLINE")
+        start = document.find("<", at)
+        if start < 0:
+            return
+        if document.startswith("<!--", start):
+            close = document.find("-->", start + 4)
+            require(close >= 0, "OPAQUE_MARKUP_UNCLOSED")
+            end = close + 3
+        else:
+            quote, end = "", start + 1
+            while end < len(document):
+                require(end - start <= limits.max_tag_chars, "TAG_SIZE_LIMIT")
+                char = document[end]
+                if quote:
+                    if char == quote:
+                        quote = ""
+                elif char in "\"'":
+                    quote = char
+                elif char == ">":
+                    break
+                end += 1
+            require(end < len(document), "OPAQUE_MARKUP_UNCLOSED")
+            end += 1
+        require(UNDECODABLE.search(document, start, end) is None,
+                "OPAQUE_UNDECODABLE_MARKUP")
+        at = end
 
 
 def raw_attributes(raw: str) -> tuple[str, dict[str, str]]:
@@ -127,7 +182,7 @@ def expanded(value: str, namespaces: dict[str, str]) -> tuple[str, str]:
 
 
 class InstanceParser(HTMLParser):
-    def __init__(self, document: str, limits: Limits):
+    def __init__(self, document: str, limits: Limits, *, opaque_notes: bool = False):
         super().__init__(convert_charrefs=False)
         self.document, self.limits, self.started = document, limits, time.monotonic()
         self.offsets, total = [0], 0
@@ -137,6 +192,10 @@ class InstanceParser(HTMLParser):
         self.stack: list[tuple[str, dict[str, str], Node | None]] = []
         self.captures: list[Node] = []
         self.tags = self.contexts = self.units = self.facts = 0
+        self.opaque_enabled = opaque_notes
+        self.opaque_frames: dict[int, OpaqueNote] = {}
+        self.opaque_notes: list[OpaqueNote] = []
+        self.opaque_invalid_bytes = 0
 
     def check(self) -> None:
         require(time.monotonic() - self.started <= self.limits.seconds, "PARSE_DEADLINE")
@@ -160,6 +219,10 @@ class InstanceParser(HTMLParser):
         require(len(self.stack) < self.limits.max_depth, "DEPTH_LIMIT")
         raw = self.get_starttag_text()
         require(len(raw) <= self.limits.max_tag_chars, "TAG_SIZE_LIMIT")
+        if self.opaque_enabled:
+            require(UNDECODABLE.search(raw) is None, "OPAQUE_UNDECODABLE_MARKUP")
+            for note in self.opaque_frames.values():
+                note.has_child_markup = True
         original, attributes = raw_attributes(raw)
         require(len(attributes) <= 128, "ATTRIBUTE_COUNT_LIMIT")
         namespaces = dict(self.stack[-1][1]) if self.stack else {"xml": "http://www.w3.org/XML/1998/namespace"}
@@ -183,6 +246,16 @@ class InstanceParser(HTMLParser):
         attributes = {key: value for key, value in attributes.items()
                       if key != "xmlns" and not key.startswith("xmlns:")}
         name = expanded(original, namespaces) if ":" in original else (namespaces.get("", ""), original)
+        opaque_note = None
+        if self.opaque_enabled and name == (IX, "nonNumeric"):
+            concept = attributes.get("name", "")
+            if QNAME.fullmatch(concept) and concept.split(":")[0] in namespaces:
+                concept_name = expanded(concept, namespaces)
+                if (concept_name[0] in OPAQUE_NOTE_NAMESPACES and
+                        concept_name[1] == OPAQUE_NOTE_LOCAL and
+                        set(attributes) == {"name", "contextRef", "escape"} and
+                        attributes["escape"] == "true" and attributes["contextRef"]):
+                    opaque_note = OpaqueNote(attributes["contextRef"], concept_name[0])
         if ":" not in original and original.lower() in VOID:
             parent = next((frame[2] for frame in reversed(self.stack) if frame[2] is not None), None)
             if parent is not None:
@@ -210,11 +283,17 @@ class InstanceParser(HTMLParser):
             else:
                 self.captures.append(node)
         self.stack.append((original, namespaces, node))
+        if opaque_note is not None:
+            self.opaque_frames[len(self.stack)] = opaque_note
+            self.opaque_notes.append(opaque_note)
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         before = len(self.stack)
         self.handle_starttag(tag, attrs)
         if len(self.stack) > before:
+            note = self.opaque_frames.pop(len(self.stack), None)
+            if note is not None:
+                note.closed = True
             self.stack.pop()
 
     def handle_endtag(self, tag: str) -> None:
@@ -228,11 +307,33 @@ class InstanceParser(HTMLParser):
                       if self.stack[i][0] == original), None)
         if ":" in original or any(frame[2] is not None for frame in self.stack):
             require(found == len(self.stack) - 1, "CAPTURE_TAG_STRUCTURE_INVALID")
+        if self.opaque_enabled and self.opaque_frames:
+            require(found == len(self.stack) - 1, "OPAQUE_NOTE_STRUCTURE_INVALID")
         if found is not None:
+            for depth in list(self.opaque_frames):
+                if depth > found:
+                    note = self.opaque_frames.pop(depth)
+                    note.closed = True
             del self.stack[found:]
 
     def handle_data(self, data: str) -> None:
         self.check()
+        if self.opaque_enabled and UNDECODABLE.search(data):
+            note = self.opaque_frames.get(len(self.stack))
+            require(note is not None and not note.has_child_markup and
+                    not any(frame[2] is not None for frame in self.stack) and
+                    not any((namespaces.get(original.split(":")[0], "") if ":" in original
+                             else namespaces.get("", "")) in (IX, XBRLI)
+                            for original, namespaces, _ in self.stack[:-1]),
+                    "OPAQUE_UNDECODABLE_OUTSIDE_APPROVED_NOTE")
+            invalid = UNDECODABLE.findall(data)
+            require(all(char == "\udc84" for char in invalid), "OPAQUE_BYTE_NOT_APPROVED")
+            self.opaque_invalid_bytes += len(invalid)
+            require(self.opaque_invalid_bytes <= MAX_OPAQUE_INVALID_BYTES, "OPAQUE_BYTE_LIMIT")
+            note.invalid_bytes += len(invalid)
+            # No note text is captured. The original complete bytes, including
+            # each invalid byte at its original offset, remain receipt-bound.
+            return
         # Propagate text in document order, including nested spans, to captured
         # ancestors. Resource subtrees are small and bounded independently.
         for _, _, node in self.stack:
@@ -257,6 +358,10 @@ class InstanceParser(HTMLParser):
 
     def finish(self) -> None:
         require(not any(frame[2] is not None for frame in self.stack), "CAPTURE_UNCLOSED")
+        for note in self.opaque_notes:
+            if note.invalid_bytes:
+                require(note.closed and not note.has_child_markup,
+                        "OPAQUE_NOTE_STRUCTURE_INVALID")
         self.check()
 
 
@@ -357,6 +462,8 @@ def quarter_dates(year: int, quarter: int) -> tuple[str, str]:
 
 def extract_actuals(data: bytes, receipt: dict[str, Any], *, entity: str, year: int,
                     quarter: int, revenue_mode: str = "none", encoding: str = "big5",
+                    decode_profile: str = "strict",
+                    statement_profile: str = "consolidated",
                     limits: Limits | None = None) -> dict[str, Any]:
     limits = limits or Limits()
     ceilings = Limits()
@@ -368,6 +475,9 @@ def extract_actuals(data: bytes, receipt: dict[str, Any], *, entity: str, year: 
     require(re.fullmatch(r"[0-9]{4,6}", entity) is not None, "ENTITY_INVALID")
     require(revenue_mode in ("none", "ifrs-revenue"), "REVENUE_PROFILE_INVALID")
     require(encoding in ("big5", "cp950", "utf-8"), "ENCODING_UNSUPPORTED")
+    require(decode_profile in ("strict", OPAQUE_NOTE_PROFILE), "DECODE_PROFILE_UNSUPPORTED")
+    require(decode_profile == "strict" or encoding == "cp950", "DECODE_PROFILE_ENCODING_MISMATCH")
+    require(statement_profile in ("consolidated", "individual"), "STATEMENT_PROFILE_UNSUPPORTED")
     digest = hashlib.sha256(data).hexdigest()
     # Two observed capture schemas, with no preference that could hide a
     # conflicting alias. Every supplied hash/length must match the same bytes.
@@ -395,7 +505,9 @@ def extract_actuals(data: bytes, receipt: dict[str, Any], *, entity: str, year: 
         require(len(query) == len(pairs) == 5 and set(query) == {"step", "CO_ID", "SYEAR", "SSEASON", "REPORT_ID"} and
                 query["step"] == "1" and query["CO_ID"] == entity and
                 re.fullmatch(r"20[0-9]{2}", query["SYEAR"]) is not None and
-                query["SSEASON"] in ("1", "2", "3", "4") and query["REPORT_ID"] == "C", "SOURCE_QUERY_NOT_APPROVED")
+                query["SSEASON"] in ("1", "2", "3", "4") and
+                query["REPORT_ID"] == ("C" if statement_profile == "consolidated" else "A"),
+                "SOURCE_QUERY_NOT_APPROVED")
     except ValueError as exc:
         if isinstance(exc, ExtractionError):
             raise
@@ -403,11 +515,15 @@ def extract_actuals(data: bytes, receipt: dict[str, Any], *, entity: str, year: 
     start, end = quarter_dates(year, quarter)
     require(parsed >= datetime.fromisoformat(end + "T00:00:00+08:00"), "RECEIPT_PRECEDES_ACTUAL_PERIOD")
     try:
-        text = data.decode(encoding, errors="strict")
+        text = data.decode(encoding, errors="strict" if decode_profile == "strict" else "surrogateescape")
     except UnicodeDecodeError as exc:
         raise ExtractionError("SOURCE_DECODING_INVALID") from exc
     require("\x00" not in text, "SOURCE_NUL")
-    parser = InstanceParser(text, limits)
+    if decode_profile != "strict":
+        require(text.encode("cp950", errors="surrogateescape") == data, "OPAQUE_TRANSPORT_NOT_REVERSIBLE")
+    parser = InstanceParser(text, limits, opaque_notes=decode_profile != "strict")
+    if decode_profile != "strict":
+        strict_transport_markup(text, limits, parser.started)
     parser.feed(text)
     parser.close()
     parser.finish()
@@ -427,6 +543,23 @@ def extract_actuals(data: bytes, receipt: dict[str, Any], *, entity: str, year: 
             target[identifier] = decoder(node)
         except ExtractionError as exc:
             invalid[identifier] = str(exc)
+    for note in parser.opaque_notes:
+        if note.invalid_bytes:
+            require(note.context_ref in contexts, "OPAQUE_NOTE_CONTEXT_INVALID")
+            scope = contexts[note.context_ref]
+            require(scope["entity"] == entity, "OPAQUE_NOTE_ENTITY_MISMATCH")
+            try:
+                require(all(re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", scope[key])
+                            for key in ("start", "end")), "OPAQUE_NOTE_PERIOD_INVALID")
+                note_start, note_end = (datetime.fromisoformat(scope[key]) for key in ("start", "end"))
+                require(note_start <= note_end and note_start.year == int(query["SYEAR"]) and
+                        note_end.year == int(query["SYEAR"]) and
+                        note_end.date().isoformat() <= quarter_dates(int(query["SYEAR"]), int(query["SSEASON"]))[1],
+                        "OPAQUE_NOTE_PERIOD_INVALID")
+            except ValueError as exc:
+                if isinstance(exc, ExtractionError):
+                    raise
+                raise ExtractionError("OPAQUE_NOTE_PERIOD_INVALID") from exc
     candidates: dict[str, list[dict[str, Any]]] = {metric: [] for metric in METRICS.values()}
     blocked: dict[str, list[str]] = {metric: [] for metric in METRICS.values()}
     rejected: dict[str, int] = {}
@@ -490,14 +623,32 @@ def extract_actuals(data: bytes, receipt: dict[str, Any], *, entity: str, year: 
             row["announced_at"] = None
             row["ordinary_share_basis"] = "NOT_PROVEN_BY_UNIT"
             row["consolidation_basis"] = "NOT_PROVEN_BY_CONTEXT_OR_QUERY"
+            if statement_profile == "individual":
+                row["statement_basis"] = "REQUESTED_INDIVIDUAL_A_WITH_ENTITY_CONTEXT_VERIFIED"
             rows.append(row)
-    return {"schema": "OFFICIAL_INLINE_XBRL_DIRECT_ACTUAL_CANDIDATE_V1", "entity": entity,
+    result = {"schema": "OFFICIAL_INLINE_XBRL_DIRECT_ACTUAL_CANDIDATE_V1", "entity": entity,
             "quarter": f"{year}Q{quarter}", "source_sha256": digest, "received_at": received_at,
             "encoding": encoding, "rows": rows, "missing": missing, "rejections": rejected,
             "counts": {"tags": parser.tags, "contexts": parser.contexts, "units": parser.units,
                        "numeric_facts": parser.facts, "rows": len(rows), "missing": len(missing)},
             "source_admitted": False, "production_evaluation": False,
             "announcement_time_inferred": False, "revenue_profile": revenue_mode}
+    if statement_profile == "individual":
+        result["statement_profile"] = "individual"
+        result["statement_basis"] = "REQUESTED_INDIVIDUAL_A_WITH_ENTITY_CONTEXT_VERIFIED"
+    if decode_profile != "strict":
+        result["source_decoding"] = {
+            "profile": decode_profile, "transport": "CP950_SURROGATEESCAPE_REVERSIBLE",
+            "whole_source_strict": parser.opaque_invalid_bytes == 0,
+            "opaque_invalid_bytes": parser.opaque_invalid_bytes,
+            "opaque_notes": sum(note.invalid_bytes > 0 for note in parser.opaque_notes),
+            "excluded_note_local_name": OPAQUE_NOTE_LOCAL,
+            "excluded_note_namespaces": sorted({note.namespace for note in parser.opaque_notes if note.invalid_bytes}),
+            "note_bodies": "EXCLUDED_NOT_DECODED_OR_OUTPUT",
+            "selected_facts_and_resources": "STRICT_CP950_BYTES_ONLY",
+            "full_document_scanned": True,
+        }
+    return result
 
 
 def main() -> int:
@@ -508,13 +659,16 @@ def main() -> int:
     ap.add_argument("--year", type=int, required=True)
     ap.add_argument("--quarter", type=int, required=True)
     ap.add_argument("--encoding", choices=("big5", "cp950", "utf-8"), default="big5")
+    ap.add_argument("--decode-profile", choices=("strict", OPAQUE_NOTE_PROFILE), default="strict")
+    ap.add_argument("--statement-profile", choices=("consolidated", "individual"), default="consolidated")
     ap.add_argument("--revenue-mode", choices=("none", "ifrs-revenue"), default="none")
     args = ap.parse_args()
     require(args.html.stat().st_size <= Limits().max_bytes, "BYTE_LIMIT")
     require(args.receipt.stat().st_size <= 65_536, "RECEIPT_SIZE_LIMIT")
     result = extract_actuals(args.html.read_bytes(), json.loads(args.receipt.read_text()),
         entity=args.entity, year=args.year, quarter=args.quarter, encoding=args.encoding,
-        revenue_mode=args.revenue_mode)
+        revenue_mode=args.revenue_mode, decode_profile=args.decode_profile,
+        statement_profile=args.statement_profile)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 

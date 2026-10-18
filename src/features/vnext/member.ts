@@ -33,9 +33,20 @@ function details(v:unknown):MemberDetails{
  relations:array(d.relations,50).map(v=>{const r=object(v);return {from:text(r.from),to:text(r.to),type:one(r.type,['CUSTOMER','SUPPLIER','COMPETITOR','PRODUCT']),source:text(r.source),available_at:time(r.available_at),urls:urls(r.urls)};}),
  outcomes:array(d.outcomes,10).map(v=>{const o=object(v);if(!Number.isInteger(o.horizon_days)||Number(o.horizon_days)<1)throw Error('MEMBER_OUTCOME');return {horizon_days:Number(o.horizon_days),state:one(o.state,['NOT_MATURED','NOT_ENTERED','UNCONFIRMED']),observed_at:time(o.observed_at)};})};
 }
-export function parseMemberResearch(value:unknown):MemberResearch{
+/** The browser's local zone must never select the member edition. */
+export function memberTaipeiDate(now=Date.now()):string{
+ try{
+  if(!Number.isFinite(now))return '';
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
+  const part=(type:string)=>parts.find(p=>p.type===type)?.value||'';
+  const date=`${part('year')}-${part('month')}-${part('day')}`;
+  return /^\d{4}-\d{2}-\d{2}$/.test(date)?date:'';
+ }catch{return '';}
+}
+export function parseMemberResearch(value:unknown,expectedBusinessDate?:string):MemberResearch{
  const p=object(value),tier=one(p.tier,['free','premium','owner']);
  if(p.schema!=='VNEXT_MEMBER_V1'||p.research_only!==true||typeof p.business_date!=='string'||!validProjectionTime(p.business_date+'T00:00:00Z'))throw Error('MEMBER_CONTRACT');
+ if(expectedBusinessDate!==undefined&&p.business_date!==expectedBusinessDate)throw Error('MEMBER_DATE');
  const read=(value:unknown):MemberObservation=>{const o=object(value);
   if(tier==='free'&&o.details!==null)throw Error('FREE_DETAIL_LEAK');
   if(tier!=='free'&&o.details===null)throw Error('PREMIUM_DETAILS_MISSING');

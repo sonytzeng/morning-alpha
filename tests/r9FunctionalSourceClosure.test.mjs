@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
+import {verifyMemberContinuity,memberContinuityHistoricalReader} from './helpers/memberContinuityAdmission.mjs';
+// Old evidence keeps its exact two admitted member-source preimages. The new
+// live tree and two replacements are verified before this narrow view exists.
+verifyMemberContinuity();
+const historicalMemberRead=memberContinuityHistoricalReader();
 const path='docs/operations/evidence/r9-functional-source-closure-20261017.json';
 const bytes=readFileSync(path),p=JSON.parse(bytes),old=JSON.parse(readFileSync(p.r8_package.path));
 const hash=b=>createHash('sha256').update(b).digest('hex');
@@ -15,7 +20,7 @@ test('R9 binds actual changed runtime paths and preserves immutable R8 evidence 
  assert.deepEqual(readFileSync(p.r8_package.path),gitBlob(p.parent_head,p.r8_package.path));
  assert.equal(p.production_authorized,false);assert.equal(p.payment,'DISABLED');
  assert.equal(p.sources.length,6);
- for(const row of p.sources)assert.equal(hash(readFileSync(row.path)),row.sha256,row.path);
+ for(const row of p.sources)assert.equal(hash(historicalMemberRead(row.path)),row.sha256,row.path);
  assert.equal(p.production.blanket_business_diff_zero_claim,false);
 });
 test('Caller deploy closure stays immutable5f: new financial shared code is explicitly excluded, not mixed into A',()=>{
@@ -33,7 +38,7 @@ test('B is exactly24 explicit website operations, unchanged3SQL and fixed SDK, n
  assert.equal(new Set(b.operations.map(r=>r.path)).size,24);
  assert.deepEqual(b.operations.map(r=>r.path).sort(),[...old.decisions[1].website.operations.map(r=>r.path),
   'src/pages/account/components/MorningHeroCard.tsx','src/hooks/useAccountDashboard.ts'].sort());
- for(const row of b.operations){assert.equal(hash(readFileSync(row.path)),row.target_sha256,row.path);assert.equal(row.mode,'100644');}
+ for(const row of b.operations){assert.equal(hash(historicalMemberRead(row.path)),row.target_sha256,row.path);assert.equal(row.mode,'100644');}
  assert(!b.operations.some(r=>r.path.includes('ProviderCapabilityReview')||r.path.includes('financial-actuals')));
  assert.equal(b.baseline.version,674);assert.equal(b.baseline.archive_sha256,'71f36b8103622901c8bb03a97f6c2e485fb7a1d9768eb25cf81a0bd327af2d7f');
  assert.deepEqual(b.sql,old.decisions[1].sql.map(({path,sha256})=>({path,sha256})));

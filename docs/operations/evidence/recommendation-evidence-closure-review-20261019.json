@@ -1,0 +1,515 @@
+{
+  "schema": "MORNING_ALPHA_EVIDENCE_CLOSURE_SOURCE_REVIEW_V1",
+  "base_head": "1a26d3d69e768da6fea8d3115aa5b9cd5327451c",
+  "scope": "OFFLINE_PARSER_AND_V1_COMPLETENESS_CLASSIFICATION_ONLY",
+  "v1_independent_limited_review": {
+    "schema": "MORNING_ALPHA_V1_MIXED_SEMANTICS_LIMITED_REVIEW_V2",
+    "result": "PASS_LIMITED_SOURCE_REVIEW",
+    "scope": "LOCAL_PURE_SYNTHETIC_REPRODUCTION_NOT_FORMAL_SECURITY_SCAN_NOT_PRODUCTION_E2E",
+    "repository_head": "1a26d3d69e768da6fea8d3115aa5b9cd5327451c",
+    "reviewed_files": [
+      {
+        "path": "supabase/functions/_shared/decision-v1-evidence.ts",
+        "sha256": "3346acbbac5437ae83db6b1aeb12b4a42600704d5490c3b154ed9ea26e3bec57"
+      },
+      {
+        "path": "tests/decisionEvidencePipeline.test.mjs",
+        "sha256": "408a7af8183cb3c146a217001eaf1598fab7b0daf10d782ebb819739c0cc0a79"
+      },
+      {
+        "path": "tests/recommendationPhase.test.mjs",
+        "sha256": "ae8f22c891d118c4b99888b578985850702429c2618a721ba6cfafe5966979ea"
+      }
+    ],
+    "independent_controls": {
+      "cases_passed": 33,
+      "cases_failed": 0,
+      "row_order_checks_passed": 24,
+      "input_nonmutation_checks_passed": 24,
+      "mixed_member_projection_checks_passed": 32,
+      "network_calls": 0
+    },
+    "matrix": {
+      "phases": [
+        "PREMARKET",
+        "INTRADAY"
+      ],
+      "fundamental_modes": [
+        "INTACT",
+        "MIXED_EARLIER_QUARTER",
+        "MIXED_LATEST_QUARTER"
+      ],
+      "problems": [
+        "NONE",
+        "QUERY_TRUNCATED",
+        "HISTORICAL_QUOTE_CONFLICT_FIRST_SYMBOL",
+        "HISTORICAL_QUOTE_CONFLICT_LAST_SYMBOL"
+      ],
+      "additional_negative_controls": [
+        "MISSING_EPS",
+        "LATE_EARNINGS",
+        "STALE_EARNINGS",
+        "MISSING_GUIDANCE",
+        "MISSING_INDIVIDUAL_FLOW",
+        "MISSING_MAPPING",
+        "MISSING_GLOBAL_INDEX",
+        "MISSING_MARKET_FLOW",
+        "STALE_STOCK_QUOTE"
+      ]
+    },
+    "findings": [
+      {
+        "id": "PREVIOUS_QUERY_COUNT_CONTRADICTION",
+        "status": "RESOLVED_IN_REVIEWED_SOURCE",
+        "expected": "Every global required failure yields screening/phase evaluated0, all candidates BLOCKED, NONE/WATCH/READY0 and no stock opportunity."
+      },
+      {
+        "id": "PREVIOUS_LATE_DISCOVERED_SOURCE_CONFLICT_COUNT_CONTRADICTION",
+        "status": "RESOLVED_IN_REVIEWED_SOURCE",
+        "expected": "Historical conflicts discovered on either first or last symbol reconcile the whole universe; row ordering does not change result."
+      },
+      {
+        "id": "COMPLETE_MIXED_NOT_INTACT",
+        "status": "PASS_IN_REVIEWED_SOURCE",
+        "expected": "Mixed complete data becomes NONE only when other knowable prerequisites are satisfied. No mixed WATCH/READY/INTACT opportunity, fabricated reaction or missing-data reason."
+      },
+      {
+        "id": "MEMBER_PROJECTION",
+        "status": "PASS_LIMITED",
+        "expected": "Mixed phase candidates and fundamental evidence remain stripped from member projection; both companyContentAllowed false and true with existing published-symbol filter were checked."
+      }
+    ],
+    "boundaries": [
+      "No Production execution, deployment, stored snapshot replacement, source admission, method promotion or member rights change.",
+      "No claim that the saved 72-stock Production result becomes evaluated or that unavailable TWD/Consensus inputs are supplied.",
+      "Review is bound to exact source fingerprints above; additional changes require corresponding review.",
+      "Root-reported 39/39 existing tests were not redundantly rerun by reviewer; independent pure controls were executed instead."
+    ],
+    "code_changed_by_reviewer": false,
+    "production_touched": false,
+    "secrets_read": false
+  },
+  "parser_independent_limited_review": {
+    "schema": "MORNING_ALPHA_INLINE_XBRL_OPAQUE_AND_INDIVIDUAL_LIMITED_REVIEW_V2",
+    "scope": "INDEPENDENT_EXACT_NAMESPACE_INCREMENTAL_OFFLINE_REVIEW_NOT_FORMAL_SECURITY_SCAN_NOT_PRODUCTION_E2E",
+    "supersedes_for_current_source_only": {
+      "previous_report": "PARSER_TRANSPORT_AND_INDIVIDUAL_LIMITED_REVIEW_SAFE.json",
+      "previous_sha256": "60b730c8f8de0ef9470aa7708fc0b92882626621e962986eee9fa5247b828528",
+      "previous_evidence_preserved": true
+    },
+    "result": "PASS_LIMITED_INCREMENTAL_REVIEW",
+    "synthetic_controls_passed": 48,
+    "synthetic_controls_failed": 0,
+    "parent_commit": "9a5241a",
+    "exact_added_namespace": "http://www.xbrl.org/tifrs/notes/2020-06-30",
+    "retained_source_check": {
+      "sha256": "99d41d27506a417f1b41c590becd02d7714df4db095c8be3c42f5dc8f3226294",
+      "bytes": 650292,
+      "entity": "2368",
+      "quarter": "2025Q3",
+      "rows": 3,
+      "source_decoding": {
+        "profile": "cp950-opaque-standards-note-v1",
+        "transport": "CP950_SURROGATEESCAPE_REVERSIBLE",
+        "whole_source_strict": false,
+        "opaque_invalid_bytes": 9,
+        "opaque_notes": 1,
+        "excluded_note_local_name": "ApplicationOfNewlyIssuedOrAmendedStandardsAndInterpretations",
+        "excluded_note_namespaces": [
+          "http://www.xbrl.org/tifrs/notes/2020-06-30"
+        ],
+        "note_bodies": "EXCLUDED_NOT_DECODED_OR_OUTPUT",
+        "selected_facts_and_resources": "STRICT_CP950_BYTES_ONLY",
+        "full_document_scanned": true
+      },
+      "source_admitted": false,
+      "production_evaluation": false,
+      "strict_old_and_new_refuse": true,
+      "old_explicit_refuses_new_namespace": true,
+      "selected_numeric_lexemes_strict_cp950": true,
+      "note_body_output": false
+    },
+    "hashes": {
+      "scripts/official-actuals/inline_xbrl.py": "b9d9a465680e135970c43139ada7b6880ce7dd9c7baf0b09bcc77cdcc926c76b",
+      "tests/test_inline_xbrl.py": "27dac7a0eeafae2f27004c411990317857c1249318e13cfb8ca8f71e896996e0"
+    },
+    "network_calls": 0,
+    "production_calls": 0,
+    "executed_unittest": {
+      "command": "python -B -m unittest discover -s tests -p test_inline_xbrl.py -v",
+      "passed": 32,
+      "failed": 0
+    },
+    "delta_scope": "Compared with Git parent 9a5241a, parser adds only exact observed notes namespace http://www.xbrl.org/tifrs/notes/2020-06-30 to the prior two-entry allowlist, plus comment clarification. Tests add the exact three allowed URIs and explicit unapproved URI controls. Existing bounds, QName, note context, permitted byte, structure and financial extraction controls remain unchanged.",
+    "findings": [],
+    "limitations": [
+      "This review does not authenticate third-party retrieval or convert supplied receipts into independently signed provenance.",
+      "whole_source_strict is false for the retained 2368 source. Only selected financial facts/resources and their numeric lexemes satisfy strict CP950; nine invalid bytes in one approved unused note are explicitly excluded.",
+      "A-profile remains explicit and distinct from C; no consolidation/ordinary-share basis, consensus, source admission or Production recommendation is granted.",
+      "The exact added URI is not permission to admit other years, schemes, paths or local names.",
+      "Synthetic controls and one retained-source offline replay are finite review evidence, not a formal exhaustive security scan."
+    ],
+    "reviewer_actions": {
+      "code_modified": false,
+      "raw_provider_payload_written": false,
+      "raw_note_body_printed": false,
+      "network_calls": 0,
+      "production_calls": 0,
+      "secrets_read": false
+    }
+  },
+  "capability_review": {
+    "schema": "MORNING_ALPHA_V1_SOURCE_CAPABILITY_ROOTCAUSE_REVIEW_V1",
+    "scope": "PUBLIC_OFFICIAL_DOCUMENTS_AND_READONLY_LOCAL_CONTRACT_REVIEW",
+    "checked_at": "2026-10-19",
+    "production_touched": false,
+    "credentials_read": false,
+    "provider_authenticated_requests": 0,
+    "purchases": 0,
+    "code_changed": false,
+    "local_contract_head": "8c13ed18636ca3382f88a635f1404192ebbc74d1",
+    "conclusions": [
+      {
+        "id": "PER_STOCK_TWD_EXISTING_SOURCE_CONTRACT_MISMATCH",
+        "classification": "CONFIRMED_FOR_INSPECTED_SOURCES_NOT_GLOBAL_NONEXISTENCE",
+        "explanation": "Fugle institutional-trades and official TWSE per-security TWT86UC/TWTAIUC expose shares; BFI82U/BFIBGU expose institutional-category market totals. None of these inspected sources provides the per-security actual institutional TWD required by V1. Source normalization, re-fetching or multiplying shares by close cannot supply that missing measurement.",
+        "source_ids": [
+          "FUGLE_INST",
+          "TWSE_INST_SHARES_PRODUCT",
+          "TWSE_INST_MARKET_AMOUNT_PRODUCT"
+        ]
+      },
+      {
+        "id": "HISTORICAL_CONSENSUS_VINTAGE_NOT_PROVEN",
+        "classification": "EXISTING_ENDPOINT_INSUFFICIENT_EVIDENCE_NOT_PRODUCT_GLOBAL_UNAVAILABLE",
+        "explanation": "Official Finnhub EPS/revenue model averages include provider proprietary estimates and inspected model fields do not establish revision vintage, currency or share-class measurement. A current retrieval cannot establish pre-announcement first-seen availability. Dedicated PIT products exist, but TW72 coverage, account entitlement, comparable accounting and reuse rights remain unverified.",
+        "source_ids": [
+          "FINNHUB_EPS_DOC",
+          "FINNHUB_REVENUE_DOC",
+          "FINNHUB_EPS_RAW_MODEL",
+          "FINNHUB_REVENUE_RAW_MODEL",
+          "FACTSET_PIT",
+          "LSEG_IBES_ACTUALS"
+        ]
+      },
+      {
+        "id": "ORDINARY_ADR_MAPPING_NOT_INTERCHANGEABLE",
+        "classification": "CONFIRMED_DIMENSION_RISK_TSMC_EXAMPLE_ONLY",
+        "explanation": "The local frozen Universe contains domestic numeric symbols. TSMC issuer disclosures distinguish local-currency ordinary-share EPS from USD ADR EPS and a five-ordinary-shares-per-ADR ratio. No general mapping or currency/scale conversion for all 72 issuers is proved by this example.",
+        "source_ids": [
+          "TSMC_Q3_2026_SEC",
+          "TSMC_Q4_2024_PDF"
+        ]
+      },
+      {
+        "id": "V1_COMPLETE_MIXED_HISTORY_MISLABELLED_MISSING",
+        "classification": "REPRODUCED_PREPATCH_PURE_CALCULATION_SYNTHETIC_ONLY",
+        "explanation": "On unchanged prepatch evaluator, a complete four-quarter mixed beat/miss fixture is reported as missing fundamental evidence. The criterion-completeness distinction can be fixed without declaring mixed history intact or weakening selection thresholds. This synthetic reproduction does not establish the reason for the saved Production 72-stock snapshot.",
+        "local_sources": [
+          "supabase/functions/_shared/decision-v1-evidence.ts",
+          "tests/fixtures/decision-evidence-rows.mjs"
+        ]
+      },
+      {
+        "id": "V2_ENTRY_FEASIBLE_SEPARATE_METHODS",
+        "classification": "EXISTING_VERSIONED_METHODS_NOT_FORMAL_V1_OR_PUBLIC_APPROVAL",
+        "explanation": "V2 uses institutional SHARES, actual revenue and measured price/relative strength with consensus_required=false; complete NONE is a valid evaluation. Entry defines independent reversal/pullback/breakout research hypotheses. Neither constitutes V1 input repair, guaranteed daily READY, research promotion or public publication approval.",
+        "local_sources": [
+          "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+          "docs/10k-program/recommendation-v2-shadow-design.md",
+          "docs/10k-program/recommendation-v2-forward-design.md",
+          "docs/10k-program/entry-opportunity-v1.md"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "FUGLE_INST",
+        "url": "https://developer.fugle.tw/docs/data/http-api/ownership/institutional-trades/",
+        "web_ref": "turn92view0",
+        "access": "OPENED_PUBLIC_PAGE",
+        "supports": "Per-security foreign/trust/dealer buy/sell/net are shares; underlying source is TWSE/TPEx daily reports."
+      },
+      {
+        "id": "TWSE_INST_SHARES_PRODUCT",
+        "url": "https://eshop.twse.com.tw/zh/product/detail/c4c87ac184e44896a05fcab5a9d544ec",
+        "web_ref": "turn94view3",
+        "access": "OPENED_PUBLIC_PAGE",
+        "supports": "Official TWT86UC/TWTAIUC per-security product fields are shares, including the paid product."
+      },
+      {
+        "id": "TWSE_INST_MARKET_AMOUNT_PRODUCT",
+        "url": "https://eshop.twse.com.tw/zh/product/detail/d31c1b9570ae47058ec83a0bb1ffa419",
+        "web_ref": "turn94view4",
+        "access": "OPENED_PUBLIC_PAGE",
+        "supports": "BFI82U/BFIBGU consists of institution-category total buy/sell/net amount, not per-security amount."
+      },
+      {
+        "id": "TWSE_T86",
+        "url": "https://www.twse.com.tw/zh/trading/foreign/t86.html",
+        "web_ref": "turn91search1",
+        "open_ref": "turn92view1",
+        "access": "SEARCH_INDEX_CONTENT_AND_OPENED_DYNAMIC_PAGE",
+        "supports": "Search index exposes shares column headings; open page dynamic table omitted. Paid official product provides independently opened field proof."
+      },
+      {
+        "id": "TPEX_INST_DETAIL",
+        "url": "https://www.tpex.org.tw/zh-tw/mainboard/trading/major-institutional/detail/day.html",
+        "web_ref": "turn105search1",
+        "failed_open_ref": "turn108view2",
+        "access": "OFFICIAL_SEARCH_INDEX_ONLY_OPEN_403",
+        "supports": "Public indexed description mentions institution net shares; open blocked. Do not claim full page inspected."
+      },
+      {
+        "id": "FINNHUB_EPS_DOC",
+        "url": "https://finnhub.io/docs/api/company-eps-estimates",
+        "web_ref": "turn95view0",
+        "access": "OPENED_DYNAMIC_PAGE_NO_EXTRACTED_BODY",
+        "supports": "Endpoint identity only; not independent field/vintage proof."
+      },
+      {
+        "id": "FINNHUB_REVENUE_DOC",
+        "url": "https://finnhub.io/docs/api/company-revenue-estimates",
+        "web_ref": "turn95view1",
+        "access": "OPENED_DYNAMIC_PAGE_NO_EXTRACTED_BODY",
+        "supports": "Endpoint identity only; not independent field/vintage proof."
+      },
+      {
+        "id": "FINNHUB_EPS_RAW_MODEL",
+        "url": "https://raw.githubusercontent.com/Finnhub-Stock-API/finnhub-go/master/docs/EarningsEstimatesInfo.md",
+        "web_ref": null,
+        "failed_web_ref": "turn94view0",
+        "access": "PUBLIC_HTTPS_RAW_SOURCE_READ_SUCCESS_IN_EXEC_32431",
+        "supports": "Official EpsAvg includes proprietary estimates; inspected properties: EpsAvg/EpsHigh/EpsLow/NumberAnalysts/Period/Year/Quarter.",
+        "limitations": "No claim about account entitlement, all Finnhub products, target-security coverage or absent undocumented capability."
+      },
+      {
+        "id": "FINNHUB_REVENUE_RAW_MODEL",
+        "url": "https://raw.githubusercontent.com/Finnhub-Stock-API/finnhub-go/master/docs/RevenueEstimatesInfo.md",
+        "web_ref": null,
+        "failed_web_ref": "turn94view1",
+        "access": "PUBLIC_HTTPS_RAW_SOURCE_READ_SUCCESS_IN_EXEC_32431",
+        "supports": "Official RevenueAvg includes proprietary estimates; inspected properties: RevenueAvg/RevenueHigh/RevenueLow/NumberAnalysts/Period/Year/Quarter.",
+        "limitations": "No claim about account entitlement, all Finnhub products, target-security coverage or absent undocumented capability."
+      },
+      {
+        "id": "FACTSET_PIT",
+        "url": "https://insight.factset.com/resources/at-a-glance-factset-estimates-point-in-time-consensus",
+        "web_ref": "turn108view0",
+        "access": "OPENED_PUBLIC_PAGE",
+        "supports": "A separate point-in-time consensus product exists; documented snapshot timing prevents later-input inclusion.",
+        "limitations": "Page says its detailed overview is as of December 2019. Current specific 72-stock coverage, account rights and pricing are not established."
+      },
+      {
+        "id": "LSEG_IBES_ACTUALS",
+        "url": "https://www.lseg.com/en/data-catalogue/company-data/ibes-estimates/actuals",
+        "web_ref": "turn108view1",
+        "access": "OPENED_PUBLIC_PAGE",
+        "supports": "Comparable actuals, currency/unit-scale fields and announcement/effective/activation dates support PIT earnings analysis.",
+        "limitations": "Exact TW72 estimates coverage, current account entitlement and commercial reuse are not established."
+      },
+      {
+        "id": "TSMC_Q3_2026_SEC",
+        "url": "https://www.sec.gov/Archives/edgar/data/1046179/000104617926000726/a3q26e_withguidancexfinal.htm",
+        "web_ref": "turn97view0",
+        "access": "OPENED_PUBLIC_ISSUER_FILING",
+        "supports": "Same quarter distinguishes NT$29.43 ordinary diluted EPS and US$4.60 ADR EPS; issuer guidance is separately disclosed."
+      },
+      {
+        "id": "TSMC_Q4_2024_PDF",
+        "url": "https://investor.tsmc.com/schinese/encrypt/files/encrypt_file/qr/phase4_reports/2025-01/c6f5b0347c3f05e8fa8ead6c16821127936fe92d/FS.pdf",
+        "web_ref": "turn108view4",
+        "access": "OPENED_PUBLIC_ISSUER_PDF_TEXT",
+        "supports": "Ordinary-share and ADR EPS rows, issuer FX rate, and five ordinary shares per ADR.",
+        "limitations": "This historical issuer example does not prove all 72 security mappings or current feed metadata."
+      }
+    ],
+    "privacy": "Safe conclusions and public URLs only; no raw provider payload, identities, tokens, credentials, query auth parameters or private research records."
+  },
+  "production_effect": {
+    "website": "Live696_ALREADY_RELEASED_PRIOR_PHASE_NO_FRONTEND_DELTA_HERE",
+    "worker": "NOT_DEPLOYED_BY_THIS_CHANGE",
+    "source_admission": false,
+    "historical_cutoff_backfill": false,
+    "canonical_business_write": false,
+    "research_publication": false,
+    "policy_activation": false,
+    "payment_enabled": false
+  },
+  "observed_production_counts": {
+    "observed_at": "2026-10-18T17:37:59.781898Z",
+    "institutional_flows": 0,
+    "earnings_events": 0,
+    "research_catalysts": 0,
+    "catalyst_tw_mappings": 0,
+    "vnext_runs": 0,
+    "predictions": 0,
+    "outcomes": 0,
+    "query": "READ_ONLY_AGGREGATES_ONLY"
+  },
+  "coverage_claim": "New offline facts do not establish complete four-quarter admission, pre-announcement consensus, actual institutional TWD, source acceptance or Production recommendation completion.",
+  "parser_prior_limited_review": {
+    "schema": "MORNING_ALPHA_INLINE_XBRL_OPAQUE_AND_INDIVIDUAL_LIMITED_REVIEW_V1",
+    "result": "PASS_LIMITED_OFFLINE_REVIEW_NO_REPORTABLE_FINDING",
+    "scope": "INDEPENDENT_FINITE_SOURCE_REVIEW_AND_SYNTHETIC_PROTOCOL_CONTROLS_NOT_FORMAL_SECURITY_SCAN_NOT_PRODUCTION_E2E",
+    "reviewed_files": [
+      {
+        "path": "scripts/official-actuals/inline_xbrl.py",
+        "sha256": "8eed96ecec70a8abe300bf991bbdea202c292c11eecb14e0f0b7b361cbd69423"
+      },
+      {
+        "path": "tests/test_inline_xbrl.py",
+        "sha256": "e865293c851b3cdb90bb02b0782cdc51b13dbc37b0951ff2c41b3d9a1a91dfa9"
+      }
+    ],
+    "executed": {
+      "unittest_command": "python -B -m unittest discover -s tests -p test_inline_xbrl.py -v",
+      "unittest_passed": 31,
+      "unittest_failed": 0,
+      "independent_controls_passed": 43,
+      "independent_controls_failed": 0,
+      "network_calls": 0,
+      "production_calls": 0
+    },
+    "controls": {
+      "strict_default_parity": {
+        "method": "Load original HEAD parser via git show into a separate in-memory Python module; compare full outputs or typed refusal codes with current default on seven synthetic valid/invalid fixtures.",
+        "cases": 7,
+        "result": "PASS"
+      },
+      "opaque_clean_parity": "Clean CP950 source using explicit opaque profile has identical financial output to original parser, except explicit source_decoding metadata.",
+      "allowance": "Only reversible CP950 surrogate transport; exact allowed standards-note namespace and local name; exact name/contextRef/escape=true attributes; matching valid entity/context period; only isolated invalid 0x84 bytes; global maximum32. Note body never becomes output.",
+      "refusals": [
+        "Undecodable namespace/attribute/starttag/endtag/comment markup",
+        "Unbound or wrong QName/namespace, extra attributes or non-exact escape",
+        "Opaque note nested under ix:header/ix:hidden/ix:resources/selected or unselected IX numeric/nonNumeric ancestors or XBRLI resources",
+        "Any child markup before or after invalid bytes; unclosed note",
+        "Invalid bytes outside approved body or wrong undecodable byte",
+        "Invalid bytes inside unselected numeric suffix; later duplicate resource ID",
+        "Byte33; tighter tag/depth/deadline limits"
+      ],
+      "individual_profile": "Explicit individual profile accepts only matching REPORT_ID=A, with source report id A and limited statement_basis; consolidation remains NOT_PROVEN_BY_CONTEXT_OR_QUERY. Default consolidated profile refuses A, individual profile refuses C, and entity mismatch yields no financial facts.",
+      "existing_unittest_coverage": "31 executed tests also cover later duplicate numerical conflicts and namespace rebindings, whole-receipt hash/size binding, CLI explicit choices, selected-fact/resource strictness, nil/sign/scale/unit/YTD rejection and source admission false."
+    },
+    "limits": [
+      "Synthetic protocol verification does not establish trust in arbitrary supplied receipt metadata or authenticate source retrieval.",
+      "No announcement time, ordinary-share basis, consolidation proof, four-quarter consensus or V1 source admission is granted.",
+      "A-profile source must remain distinct from C; individual output is not consolidated financial evidence.",
+      "The 32-byte bounded opaque-note transport is explicit opt-in and not a replacement or fallback decoder.",
+      "Review is bound to the exact two file fingerprints above; no formal exhaustive security scan was performed."
+    ],
+    "reviewer_mutations": {
+      "repository_code": false,
+      "network": false,
+      "raw_provider_payload_written": false,
+      "raw_note_body_printed": false,
+      "production": false,
+      "secrets": false,
+      "auth": false,
+      "rls": false,
+      "cron": false,
+      "payment": false
+    }
+  },
+  "first_head_ci_failure_and_resolution": {
+    "head": "9a5241a2c9a6ee7af6e5e3d295b0822fb8c35b4b",
+    "integration": "FAIL_PRESERVED",
+    "reason": "Prior release tests compared frozen R8/R9/R10 evaluator hashes with separately changed live V1 bytes. Old assertions and original receipts remain intact; use existing exact Core historical primitive only after fresh full current-tree admission. Current evaluator behavior is tested independently.",
+    "changed_test_paths": [
+      "tests/ownerReleaseReviewPackage.test.mjs",
+      "tests/r9FunctionalSourceClosure.test.mjs",
+      "tests/r10FunctionalSourceClosure.test.mjs",
+      "tests/recommendationIssuerEventReview.test.mjs"
+    ],
+    "targeted_immutable_package_regressions": {
+      "passed": 39,
+      "failed": 0,
+      "skipped": 0
+    },
+    "new_exact_head_ci": "PENDING"
+  },
+  "historical_test_wiring_independent_limited_review": {
+    "schema": "MORNING_ALPHA_FROZEN_V1_TEST_WIRING_LIMITED_REVIEW_V1",
+    "created_at": "2026-10-18T18:00:57.495789+00:00",
+    "result": "PASS_LIMITED_STATIC_DIFF_REVIEW_NO_REPORTABLE_FINDING",
+    "review_scope": "EXACT_FOUR_TEST_WIRING_CHANGES_ONLY_NOT_FORMAL_SECURITY_SCAN_NOT_PRODUCTION_E2E",
+    "base_head": "9a5241a2c9a6ee7af6e5e3d295b0822fb8c35b4b",
+    "files": [
+      {
+        "path": "tests/ownerReleaseReviewPackage.test.mjs",
+        "before_sha256": "4187e9e995c76bad1a1156ab1d61b5e24a156189c7891bbc6d4aedea7dd999c4",
+        "after_sha256": "c9d20590ba233965f303a06a71b97605bdeb69c7f6f70382fb6899bcd62e67c6",
+        "mode": "100644",
+        "assertion_call_count_before": 115,
+        "assertion_call_count_after": 115
+      },
+      {
+        "path": "tests/r9FunctionalSourceClosure.test.mjs",
+        "before_sha256": "4494701eb66acb755b539f4a5306f950015120968b468f0633d6ccc8f7eca40b",
+        "after_sha256": "5ce50e05181e5591d8b804597766eeb377522072dad81e4159885ea805454be6",
+        "mode": "100644",
+        "assertion_call_count_before": 89,
+        "assertion_call_count_after": 89
+      },
+      {
+        "path": "tests/r10FunctionalSourceClosure.test.mjs",
+        "before_sha256": "e00088c79c3e5f9ee605d5e38e087d4ef80da194f6d9fc78b1cf6746d1afa151",
+        "after_sha256": "e11c59ee77a16e28b55c2b0c0ab2aadf84599d72e8cdcb848f0d76f2b8004f69",
+        "mode": "100644",
+        "assertion_call_count_before": 84,
+        "assertion_call_count_after": 84
+      },
+      {
+        "path": "tests/recommendationIssuerEventReview.test.mjs",
+        "before_sha256": "3e514dbd8f6ab43e0824a939c5a9cacb6e997571d99aa6c1b8a5b90165d2b7e2",
+        "after_sha256": "ba531707c69cad01edcf5706af28e15a04accc523ee674543e94e3e3fc78d225",
+        "mode": "100644",
+        "assertion_call_count_before": 54,
+        "assertion_call_count_after": 54
+      }
+    ],
+    "primitive_dependency": {
+      "path": "tests/helpers/integrationAdmission.mjs",
+      "sha256": "ae5a80bf75a36e683268f9d54f127c7726d3f49b5d0ff6bd36ac166bcef0258c",
+      "body_changed_by_this_four_file_patch": false
+    },
+    "v1_identity": {
+      "current_source_sha256": "3346acbbac5437ae83db6b1aeb12b4a42600704d5490c3b154ed9ea26e3bec57",
+      "historical_core_sha256": "2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848",
+      "immutable_core_revision": "bc48d784487fd5ae63ac2bb9c28d9343de41034f",
+      "immutable_caller_revision": "5f33777836778e3600e4e377fcb3cf4de690fe80",
+      "historical_r8_revision": "d04de5da23fea367b7eab23d6c5cc42c3b25b3d5",
+      "all_three_historical_evaluator_blobs_independently_hash_matched": true
+    },
+    "reviewed_properties": [
+      "Only the exact supabase/functions/_shared/decision-v1-evidence.ts path receives the historical Core view; all other source readers retain their existing path.",
+      "Each historical evaluator translation is preceded by verifyIntegrationCandidate() over the complete current physical inventory and latest seal.",
+      "The existing integrationHistoricalRead primitive only translates bytes equal to the current sealed fingerprint, rereads current physical source and checks its mode; injected or drifted current bytes are not silently normalized into the frozen source.",
+      "Historical expected SHA256 assertions, frozen release receipts and original Caller payload closure are not changed.",
+      "New V1 current behavior remains directly imported and separately exercised by the current 39-test behavior gate; these four tests bind historical release provenance.",
+      "The issuer candidate test explicitly labels its old-byte assertion as an admitted historical view; it still imports the current evaluator for actual behavior comparisons.",
+      "All old assertion calls remain present with equal per-file counts; manual diff inspection confirms only source view wiring/imports/comments/test label change.",
+      "Existing composition delta allowlist already includes these four files; no extra runtime, migration, Auth, RLS, member rights or deployment authority is introduced."
+    ],
+    "executed_readonly_checks": [
+      "Exact four-file git diff inspection",
+      "Current/before source hash and regular mode readback",
+      "Three immutable historical evaluator git blob SHA256 comparison",
+      "git diff --check"
+    ],
+    "not_executed": [
+      "No duplicate full behavior suite or composition test run; Root runs those after final seal rebuild.",
+      "No formal Codex Security scan.",
+      "No network, browser or Production operations."
+    ],
+    "final_binding_boundary": "The final rebuilt cumulative source manifest and JSON receipt must bind these exact four after hashes and all final parser sources; this report does not claim final overall CI PASS.",
+    "findings": [],
+    "reviewer_mutations": {
+      "git_or_code": false,
+      "network": false,
+      "database_or_production": false,
+      "secrets": false,
+      "own_scratch_report_only": true
+    }
+  }
+}

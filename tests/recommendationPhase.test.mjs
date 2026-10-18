@@ -28,6 +28,16 @@ test('complete rejected premarket quality is NONE, never DATA MISSING',()=>{
  const d=prem();for(const f of d.earnings)f.guidance_direction='down';
  const p=buildEvidenceDecision(d,PRE).phase_evaluation;assert.equal(p.status,'PREMARKET_NONE');assert.equal(p.none_count,3);assert.equal(p.blocked_count,0);
 });
+test('complete mixed earnings before the open are NONE without fabricated reaction or WATCH',()=>{
+ for(const fiscal_period of ['2026-Q2','2026-Q1']){
+  const d=prem();for(const f of d.earnings.filter(f=>f.fiscal_period===fiscal_period))f.eps_actual=3;
+  const r=buildEvidenceDecision(d,PRE),p=r.phase_evaluation;
+  assert.equal(r.screening.status,'COMPLETE');assert.equal(r.screening.evaluated_count,3);
+  assert.equal(p.status,'PREMARKET_NONE');assert.equal(p.none_count,3);assert.equal(p.blocked_count,0);
+  assert.equal(p.watch_count,0);assert.equal(p.ready_count,0);assert.deepEqual(r.stock_opportunities,[]);
+  assert(p.candidates.every(c=>c.reasons.includes('FOUR_QUARTER_FUNDAMENTAL_CRITERIA_NOT_MET')&&c.post_event_price==='NOT_YET_OBSERVABLE'&&c.post_event_volume==='NOT_YET_OBSERVABLE'));
+ }
+});
 test('intraday evidence confirmation promotes READY; failed confirmation drops, no hanging WATCH',()=>{
  const ready=buildEvidenceDecision(evidenceRows(),IDENTITY).phase_evaluation;
  assert.equal(ready.status,'READY');assert.equal(ready.ready_count,3);

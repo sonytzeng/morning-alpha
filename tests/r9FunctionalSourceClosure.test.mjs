@@ -5,6 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {verifyMemberContinuity,memberContinuityHistoricalReader} from './helpers/memberContinuityAdmission.mjs';
 import {verifyFrontendTypeClosure,frontendTypeClosureHistoricalReader} from './helpers/frontendTypeClosureAdmission.mjs';
+import {verifyIntegrationCandidate,integrationHistoricalRead} from './helpers/integrationAdmission.mjs';
 verifyFrontendTypeClosure();
 // Old evidence keeps its exact two admitted member-source preimages. The new
 // live tree and two replacements are verified before this narrow view exists.
@@ -15,6 +16,12 @@ const path='docs/operations/evidence/r9-functional-source-closure-20261017.json'
 const bytes=readFileSync(path),p=JSON.parse(bytes),old=JSON.parse(readFileSync(p.r8_package.path));
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const gitBlob=(revision,path)=>execFileSync('git',['--no-replace-objects','show',revision+':'+path],{maxBuffer:2000000});
+// R9's immutable evaluator is tested only after full current-tree admission;
+// this historical view never updates its original Caller or evidence receipt.
+const historicalV1Read=name=>{
+ if(name!=='supabase/functions/_shared/decision-v1-evidence.ts')return historicalFrontendRead(name);
+ verifyIntegrationCandidate();return integrationHistoricalRead('core',name,readFileSync(name));
+};
 
 test('R9 binds actual changed runtime paths and preserves immutable R8 evidence without authorizing Production',()=>{
  assert.equal(p.parent_head,'d04de5da23fea367b7eab23d6c5cc42c3b25b3d5');
@@ -33,7 +40,7 @@ test('Caller deploy closure stays immutable5f: new financial shared code is expl
  assert.equal(a.sdk,'2.57.4');assert.equal(a.verify_jwt,true);
  // This is R9's saved candidate collision set, before the separately sealed
  // frontend type-only import change; A still deploys its immutable5f source.
- const collisions=original.local_sources.filter(r=>hash(historicalFrontendRead(r.path))!==r.sha256).map(r=>r.path);
+ const collisions=original.local_sources.filter(r=>hash(historicalV1Read(r.path))!==r.sha256).map(r=>r.path);
  assert.deepEqual(collisions,a.working_tree_collision);
  assert.deepEqual(collisions,['supabase/functions/_shared/recommendation-official-actuals.ts']);
  assert.match(a.payload_policy,/IMMUTABLE.*NOT_CURRENT/);
@@ -75,7 +82,7 @@ test('real source join preserves denominators, canonical taxonomy, unchanged eva
  const e=p.event;assert.equal(e.totals.symbols,3);assert.equal(e.totals.denominator,60);assert.equal(e.totals.stock_ohlcv_and_taiex,60);
  assert.deepEqual(e.canonical_peer_counts.map(r=>[r.symbol,r.peers]),[['2330',1],['2303',1],['2344',0]]);
  assert.equal(e.reviewed_causal_events,0);assert.equal(e.historical_cutoff_rejected,true);
- assert.equal(e.formal_v1_evaluator_sha256,hash(readFileSync('supabase/functions/_shared/decision-v1-evidence.ts')));
+ assert.equal(e.formal_v1_evaluator_sha256,hash(historicalV1Read('supabase/functions/_shared/decision-v1-evidence.ts')));
  assert.equal(e.formal_v1_evaluator_sha256,hash(gitBlob(p.parent_head,'supabase/functions/_shared/decision-v1-evidence.ts')));
  assert(e.retained_runs.every(r=>r.unchanged_v1_equivalent&&r.totals.denominator===1440&&r.totals.stock_ohlcv_and_taiex===0));
  assert.equal(e.forward_sample,0);assert.equal(e.outcome_sample,0);assert.equal(e.production_pass,false);

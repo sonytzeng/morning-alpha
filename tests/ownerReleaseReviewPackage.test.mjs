@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
-import {verifyIntegrationCandidate} from './helpers/integrationAdmission.mjs';
+import {verifyIntegrationCandidate,integrationHistoricalRead} from './helpers/integrationAdmission.mjs';
 import {verifyMemberContinuity,memberContinuityHistoricalReader} from './helpers/memberContinuityAdmission.mjs';
 import {verifyFrontendTypeClosure,frontendTypeClosureHistoricalReader} from './helpers/frontendTypeClosureAdmission.mjs';
 verifyFrontendTypeClosure();
@@ -22,6 +22,12 @@ const rawRead=memberContinuityHistoricalReader(frontendTypeClosureHistoricalRead
 // then retain R8's original assertions against its immutable source bytes.
 // Current R9 operations/hashes are checked independently by the R9 package test.
 const read=name=>{
+ // The separately admitted 2026-10-19 evaluator fix never replaces the frozen
+ // Caller/R8 release payload. Live bytes must match the new exact seal first.
+ if(name==='supabase/functions/_shared/decision-v1-evidence.ts'){
+  verifyIntegrationCandidate();
+  return integrationHistoricalRead('core',name,rawRead(name));
+ }
  if(['src/pages/account/Account.tsx','supabase/functions/_shared/recommendation-official-actuals.ts'].includes(name)){
   verifyIntegrationCandidate();
   return execFileSync('git',['--no-replace-objects','show','d04de5da23fea367b7eab23d6c5cc42c3b25b3d5:'+name],{cwd:root,maxBuffer:1024*1024});

@@ -6,6 +6,7 @@ import { snapshotHash } from '../src/features/vnext/contracts.ts';
 import { emptyEvidenceData } from '../supabase/functions/_shared/decision-v1-data.ts';
 import { buildEvidenceDecision } from '../supabase/functions/_shared/decision-v1-evidence.ts';
 import { prepareIssuerEventReview, previewIssuerEventReview } from '../research/recommendation-issuer-event-review-candidate.ts';
+import { verifyIntegrationCandidate, integrationHistoricalRead } from './helpers/integrationAdmission.mjs';
 
 // This pins the reviewed fact projection, not original issuer response bytes.
 const HASH = '65eaa00f1d741ae4decffd567ff35e41156d01116eef9ba3bb21c12fde20e121';
@@ -191,12 +192,20 @@ test('preview snapshots cutoff, canonical data and receipt array together before
   }
 });
 
-test('candidate is detached and original R9 evaluator/event adapter bytes remain unchanged', () => {
+test('candidate is detached and original R9 evaluator/event adapter bytes remain fixed in their admitted historical view', () => {
   const path = p => new URL(p, import.meta.url);
   const source = readFileSync(path('../research/recommendation-issuer-event-review-candidate.ts'), 'utf8');
   assert.doesNotMatch(source, /\bfetch\s*\(|Deno\.env|process\.env|createClient|node:fs|node:child_process/);
   for (const [file, expected] of [
     ['../supabase/functions/_shared/decision-v1-evidence.ts', '2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848'],
     ['../research/recommendation-event-alignment-candidate.ts', '9e6513ed982f1f6aa6fd158af37344e0a3978cceab23c1d7e93f70ec4ca7be28'],
-  ]) assert.equal(createHash('sha256').update(readFileSync(path(file))).digest('hex'), expected);
+  ]) {
+    const bytes = readFileSync(path(file));
+    // Current evaluator behavior is tested independently. This assertion binds
+    // the older candidate's source, after fresh complete current admission.
+    verifyIntegrationCandidate();
+    const original = file === '../supabase/functions/_shared/decision-v1-evidence.ts'
+      ? integrationHistoricalRead('core', file.slice(3), bytes) : bytes;
+    assert.equal(createHash('sha256').update(original).digest('hex'), expected);
+  }
 });

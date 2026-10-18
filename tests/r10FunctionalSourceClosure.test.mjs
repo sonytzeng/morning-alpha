@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {verifyMemberContinuity,memberContinuityHistoricalReader} from './helpers/memberContinuityAdmission.mjs';
+import {verifyIntegrationCandidate,integrationHistoricalRead} from './helpers/integrationAdmission.mjs';
 // Old evidence keeps its exact two admitted member-source preimages. The new
 // live tree and two replacements are verified before this narrow view exists.
 verifyMemberContinuity();
@@ -18,7 +19,11 @@ test('R10 source closure preserves R9 and immutable V1, never grants Production 
  assert.equal(hash(readFileSync(p.prior_r9.path)),p.prior_r9.sha256);
  assert.deepEqual(readFileSync(p.prior_r9.path),execFileSync('git',['show',p.parent_head+':'+p.prior_r9.path]));
  for(const s of p.sources)assert.equal(hash(historicalMemberRead(s.path)),s.sha256,s.path);
- assert.equal(p.price.formal_v1_evaluator_unchanged,hash(readFileSync('supabase/functions/_shared/decision-v1-evidence.ts')));
+ // Preserve R10's saved evaluator; the new fix must pass current exact-tree
+ // admission before an immutable Core source view can be returned.
+ verifyIntegrationCandidate();
+ const evaluator='supabase/functions/_shared/decision-v1-evidence.ts';
+ assert.equal(p.price.formal_v1_evaluator_unchanged,hash(integrationHistoricalRead('core',evaluator,readFileSync(evaluator))));
  assert.equal(p.production_authorized,false);assert.equal(p.production.explicit_mutation_actions,0);
 });
 test('real price coverage keeps 72x20, independent old and overlay results, full same-cutoff peers and original cutoff refusal',()=>{

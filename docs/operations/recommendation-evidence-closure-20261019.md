@@ -14,7 +14,7 @@
 
 預設 CP950/Big5 全檔嚴格解碼維持原行為。明確 opt-in 的 opaque profile 只允許精確附註 namespace/QName、`escape=true` 及已驗證 context 的孤立不可解碼正文；所有 markup、屬性、namespace、resource 及 numeric 內容仍嚴格驗證，完整文件及後段衝突仍會檢查。未列入的 namespace 維持拒絕，沒有 ignore、replace 或截斷資料。
 
-另一明確 opt-in 的 individual profile 接受真實 `REPORT_ID=A` 與正確 entity/context，保留個別報表基礎，不冒充 `C` 合併報表、普通股口徑完整准入或同口徑四季完成。離線測試共31項（新增9項），原預設有效輸出逐字典相同。
+另一明確 opt-in 的 individual profile 接受真實 `REPORT_ID=A` 與正確 entity/context，保留個別報表基礎，不冒充 `C` 合併報表、普通股口徑完整准入或同口徑四季完成。離線測試共32項（新增10項），原預設有效輸出逐字典相同。
 
 ## 尚未解決的資料能力
 
@@ -29,3 +29,5 @@ V2 與 Entry 是既有不同版本研究方法，不是偷偷修補 V1 的資料
 本 PR 僅供合併來源修復；Production Worker 發布、正式來源准入、會員政策啟用、私有捕捉、研究公開、付款與 LINE 不由這份組合來源封存授權。既有 Auth/RLS/Cron/權益不變，沒有讀取 Secret。可用反向提交回復這次來源變更；沒有 Migration 或業務資料需要刪除。
 
 舊來源封存逐位元保留，新封存新增一層對原 `8c13ed18636ca3382f88a635f1404192ebbc74d1` 收據的固定檢查。既有測試、反例與來源約束全部保留。
+
+新觀測的 `notes/2020-06-30` 僅在獨立增量驗證後加入精確 opaque 附註 namespace 清單；不推導其他年份、不更改預設嚴格解碼。R8/R9/R10 舊 evaluator 指紋斷言仍保留，先完整驗證當前來源封存，再使用既有逐位元受限的 Core 歷史視圖；不把新 evaluator 混入原 Caller 發布閉包。

@@ -38,12 +38,13 @@ METRICS = {"BasicEarningsLossPerShare": "basic_eps",
 VOID = frozenset("area base br col embed hr img input link meta param source track wbr".split())
 NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_.:-]*")
 QNAME = re.compile(r"([A-Za-z_][A-Za-z0-9_.-]*):([A-Za-z_][A-Za-z0-9_.-]*)\Z")
-# Explicit, non-default transport for three retained CP950 documents. Their
+# Explicit, non-default transport for the retained CP950 documents. Their
 # isolated 0x84 bytes occur only inside this nonnumeric standards note. This
 # never decodes, returns, or admits that note, or repairs the received bytes.
 OPAQUE_NOTE_PROFILE = "cp950-opaque-standards-note-v1"
 OPAQUE_NOTE_LOCAL = "ApplicationOfNewlyIssuedOrAmendedStandardsAndInterpretations"
-OPAQUE_NOTE_NAMESPACES = frozenset({"http://www.xbrl.org/tifrs/notes/2025-06-30",
+OPAQUE_NOTE_NAMESPACES = frozenset({"http://www.xbrl.org/tifrs/notes/2020-06-30",
+                                    "http://www.xbrl.org/tifrs/notes/2025-06-30",
                                     "http://www.xbrl.org/tifrs/notes/2026-03-31"})
 MAX_OPAQUE_INVALID_BYTES = 32
 UNDECODABLE = re.compile(r"[\udc80-\udcff]")

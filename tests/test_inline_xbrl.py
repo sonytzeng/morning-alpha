@@ -271,7 +271,7 @@ class OfficialInlineXbrlActuals(unittest.TestCase):
     def test_opaque_note_requires_exact_namespace_escape_and_verified_context(self):
         rejected = [
             opaque_fixture(namespace="urn:unapproved"),
-            opaque_fixture(namespace="http://www.xbrl.org/tifrs/notes/2020-06-30"),
+            opaque_fixture(namespace="http://www.xbrl.org/tifrs/notes/2019-06-30"),
             opaque_fixture(namespace=sorted(M.OPAQUE_NOTE_NAMESPACES)[0] + "/fake"),
             opaque_fixture(note_attrs='contextRef="c" escape="false"'),
             opaque_fixture(note_attrs='contextRef="c" escape="true" continuedAt="suffix"'),
@@ -289,6 +289,25 @@ class OfficialInlineXbrlActuals(unittest.TestCase):
         ]:
             with self.subTest(code=code), self.assertRaisesRegex(M.ExtractionError, code):
                 extract_opaque(data)
+
+    def test_opaque_note_observed_namespaces_are_exact_and_never_year_or_scheme_guesses(self):
+        approved = {"http://www.xbrl.org/tifrs/notes/2020-06-30",
+                    "http://www.xbrl.org/tifrs/notes/2025-06-30",
+                    "http://www.xbrl.org/tifrs/notes/2026-03-31"}
+        self.assertEqual(M.OPAQUE_NOTE_NAMESPACES, approved)
+        for namespace in sorted(approved):
+            with self.subTest(namespace=namespace):
+                result = extract_opaque(opaque_fixture(namespace=namespace))
+                self.assertEqual(len(result["rows"]), 3)
+                self.assertEqual(result["source_decoding"]["opaque_invalid_bytes"], 1)
+                self.assertEqual(result["source_decoding"]["excluded_note_namespaces"], [namespace])
+        unapproved = ["http://www.xbrl.org/tifrs/notes/2020-06-30/fake",
+                      "https://www.xbrl.org/tifrs/notes/2020-06-30",
+                      "http://www.xbrl.org/tifrs/notes/2019-06-30",
+                      "urn:fake:ApplicationOfNewlyIssuedOrAmendedStandardsAndInterpretations"]
+        for namespace in unapproved:
+            with self.subTest(namespace=namespace), self.assertRaisesRegex(M.ExtractionError, "OPAQUE_UNDECODABLE_OUTSIDE_APPROVED_NOTE"):
+                extract_opaque(opaque_fixture(namespace=namespace))
 
     def test_opaque_byte_cannot_enter_finance_resources_attributes_or_other_text(self):
         clean = fixture().encode("cp950")

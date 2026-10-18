@@ -1,0 +1,285 @@
+{
+  "schema": "MORNING_ALPHA_FRONTEND_TYPE_CLOSURE_V1",
+  "base": "588e83f3012a31469d5c58b6874ec49c98a2e4b9",
+  "production_authorized": false,
+  "migration_execution": false,
+  "auth_rls_change": false,
+  "member_rights_activation": false,
+  "caller_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false,
+  "files": [
+    {
+      "path": "src/features/decision-v1/contract.ts",
+      "before_sha256": "26f4b8efed797c86616614bdc63136619b5f3112cc0dad9b66bf6c650cfc3715",
+      "after_sha256": "62825572f33225fef2e585b972dc4b5879272e1a8812d67ed2d347b01eaec2cc",
+      "mode": "100644"
+    },
+    {
+      "path": "src/features/research/cockpit.ts",
+      "before_sha256": "1e18dab897e2b56ee434dc31c1d2e6cf4e93a0988cdf82f68e07e4ec2804e961",
+      "after_sha256": "0a7045339e65a1b4784a5c8351b37768a240dd08aac76f979002dc0c1be7b3a3",
+      "mode": "100644"
+    },
+    {
+      "path": "src/features/research/tradingLab.ts",
+      "before_sha256": "a4b969cd37e44a0a6d27b260ea4555b3aba93e9f28a3cdba90ce414c04be6d55",
+      "after_sha256": "0a6a721502129394ed9d80ee8573b6cae32c22d6014e438b4b25c594ea03198f",
+      "mode": "100644"
+    },
+    {
+      "path": "src/pages/admin/analysis/EntryOpportunity.tsx",
+      "before_sha256": "fa778b147cfeb578f400e0a28075a771f8b88f9f80c7dab0f5fd75e3206d99d0",
+      "after_sha256": "590dfa2f7bb4523f48ab5447d6b197fb9083ba83e2a304f17813e5dcc3c9a2f3",
+      "mode": "100644"
+    },
+    {
+      "path": "src/pages/admin/analysis/OwnerCockpit.tsx",
+      "before_sha256": "68637a4827c5d13b0216d46191ac516c5bdf6e4eebd6b7141718b857c2cc7020",
+      "after_sha256": "d795ce150a851b6e8985858f052cc47b9b896dd7a7cbcb7c0781fef34521baed",
+      "mode": "100644"
+    },
+    {
+      "path": "src/types/research-source-contracts.ts",
+      "before_sha256": null,
+      "after_sha256": "9ca87d9cac9520f7c622355748a502255006fcac26cb0b8938121fa47e32d21d",
+      "mode": "100644"
+    }
+  ],
+  "website": {
+    "predecessor_path": "docs/operations/evidence/member-continuity-20261018.json",
+    "predecessor_sha256": "065eee16dff4fcb7562dd2250ac58d71220b6faec2b1585c695490991cd90952",
+    "operation_count": 24,
+    "removed_build_only_paths": [
+      "research/entry-opportunity.ts",
+      "supabase/functions/_shared/market-calendar-data.json",
+      "supabase/functions/_shared/market-session-contract.mjs",
+      "supabase/functions/_shared/owner-trading-lab.ts",
+      "supabase/functions/_shared/recommendation-phase.ts",
+      "supabase/functions/_shared/txf-session-contract.mjs"
+    ],
+    "operations": [
+      {
+        "path": "src/components/feature/Navbar.tsx",
+        "mode": "100644",
+        "live_before_sha256": "a70fef7d3e750189f182a15b332462f9b0dae240b4ccd6729b91ea253c7d4a00",
+        "target_sha256": "a6c44781d0efdf111dfbf0acb8102930c91bbfaf5dc608faeab506e07e51baa7",
+        "operation": "MODIFY",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 7000
+      },
+      {
+        "path": "src/components/membership/MembershipStatusCard.tsx",
+        "mode": "100644",
+        "live_before_sha256": "20c8d58dbbe7870528a96a45b3e4c95d1d12a91a71e9fc2b3bf17e2fcf450e6e",
+        "target_sha256": "6149034a28902c2e4fc3b3b13ac9f66ece7d09bc3d7956c99b9d450d0ddf8d6a",
+        "operation": "MODIFY",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 6613
+      },
+      {
+        "path": "src/features/decision-v1/contract.ts",
+        "mode": "100644",
+        "live_before_sha256": "26f4b8efed797c86616614bdc63136619b5f3112cc0dad9b66bf6c650cfc3715",
+        "target_sha256": "62825572f33225fef2e585b972dc4b5879272e1a8812d67ed2d347b01eaec2cc",
+        "operation": "MODIFY",
+        "classification": "CLIENT_UI_TYPE_IMPORT_ONLY_SOURCE",
+        "source_bytes": 5436
+      },
+      {
+        "path": "src/features/research/cockpit.ts",
+        "mode": "100644",
+        "live_before_sha256": "1e18dab897e2b56ee434dc31c1d2e6cf4e93a0988cdf82f68e07e4ec2804e961",
+        "target_sha256": "0a7045339e65a1b4784a5c8351b37768a240dd08aac76f979002dc0c1be7b3a3",
+        "operation": "MODIFY",
+        "classification": "CLIENT_UI_TYPE_IMPORT_ONLY_SOURCE",
+        "source_bytes": 4859
+      },
+      {
+        "path": "src/features/research/tradingLab.ts",
+        "mode": "100644",
+        "live_before_sha256": "5da4512226097294ca891fb55621a5656679ec5439d93610fae287a421f8fec3",
+        "target_sha256": "0a6a721502129394ed9d80ee8573b6cae32c22d6014e438b4b25c594ea03198f",
+        "operation": "MODIFY",
+        "classification": "CLIENT_UI_TYPE_IMPORT_ONLY_SOURCE",
+        "source_bytes": 4777
+      },
+      {
+        "path": "src/features/vnext/contracts.ts",
+        "mode": "100644",
+        "live_before_sha256": null,
+        "target_sha256": "0a89f96f209c9c235416a4b060c85b38bb6d6799ad3234ef16156537fd50d579",
+        "operation": "ADD",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 5344
+      },
+      {
+        "path": "src/features/vnext/member.ts",
+        "mode": "100644",
+        "live_before_sha256": null,
+        "target_sha256": "1a147e2aa972a91f50a7afe542986092aa8665fe8ac5589cc5ed5a7ee0ac6690",
+        "operation": "ADD",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 7147
+      },
+      {
+        "path": "src/features/vnext/projection.ts",
+        "mode": "100644",
+        "live_before_sha256": null,
+        "target_sha256": "8a238c6eacc3972f0f3927346c4081d9e2dcb4c8613bcc4cb1825a3abaf688ae",
+        "operation": "ADD",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 6768
+      },
+      {
+        "path": "src/hooks/useAccountDashboard.ts",
+        "operation": "MODIFY",
+        "mode": "100644",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "live_before_sha256": "dd0b8f6789b9c7431f05613e3edf3b2fd4d7c17c4b860f04a53cddf6114dec11",
+        "target_sha256": "9cd4e24328a23a9aceee9aebd2c3adfced9309cdbd153d0a1ec97ec3ab36285f",
+        "source_bytes": 12086
+      },
+      {
+        "path": "src/pages/account/Account.tsx",
+        "mode": "100644",
+        "live_before_sha256": "60fac54f24ecc062d4cbb16aa93e5611aed14c61bd1bd60b4b81387a995f2066",
+        "target_sha256": "5f5142147f24d1841e50418147a9ceac2cf4b0951fd37c19a68ea867d15a090b",
+        "operation": "MODIFY",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 9710
+      },
+      {
+        "path": "src/pages/account/components/MorningHeroCard.tsx",
+        "operation": "MODIFY",
+        "mode": "100644",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "live_before_sha256": "6457935f9117a27758a8ca65f158f2c259f875c0376a0eef80772d73587a7472",
+        "target_sha256": "951e1c0c977399cb557710ff96bf2ab04c277d2d56575d5ea0cb675d7b63c385",
+        "source_bytes": 11780
+      },
+      {
+        "path": "src/pages/admin/analysis/EntryOpportunity.tsx",
+        "mode": "100644",
+        "live_before_sha256": "fa778b147cfeb578f400e0a28075a771f8b88f9f80c7dab0f5fd75e3206d99d0",
+        "target_sha256": "590dfa2f7bb4523f48ab5447d6b197fb9083ba83e2a304f17813e5dcc3c9a2f3",
+        "operation": "MODIFY",
+        "classification": "CLIENT_UI_TYPE_IMPORT_ONLY_SOURCE",
+        "source_bytes": 10289
+      },
+      {
+        "path": "src/pages/admin/analysis/OwnerCockpit.tsx",
+        "mode": "100644",
+        "live_before_sha256": "68637a4827c5d13b0216d46191ac516c5bdf6e4eebd6b7141718b857c2cc7020",
+        "target_sha256": "d795ce150a851b6e8985858f052cc47b9b896dd7a7cbcb7c0781fef34521baed",
+        "operation": "MODIFY",
+        "classification": "CLIENT_UI_TYPE_IMPORT_ONLY_SOURCE",
+        "source_bytes": 12897
+      },
+      {
+        "path": "src/pages/auth/LoginPage.tsx",
+        "mode": "100644",
+        "live_before_sha256": "2fb647cd4c8ea2fbdadfc650dc30d47807926ca214320fe6aaefba16fb581a41",
+        "target_sha256": "239282f79310c17a54ccba6f9a4ae17ace26562d3adc6197625c8b5633bb8285",
+        "operation": "MODIFY",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 9786
+      },
+      {
+        "path": "src/pages/vnext/MemberExperience.tsx",
+        "mode": "100644",
+        "live_before_sha256": null,
+        "target_sha256": "b86ae1e45fac57299e4693ca8b20d67746741e4fee478b29d983d3aba81c8a8d",
+        "operation": "ADD",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 7328
+      },
+      {
+        "path": "src/pages/vnext/MemberNavigation.tsx",
+        "mode": "100644",
+        "live_before_sha256": null,
+        "target_sha256": "20a91ed12b5066a9b0b5d249050f3615dfd970283c0f05be150e9b43ed9e36bf",
+        "operation": "ADD",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 1260
+      },
+      {
+        "path": "src/pages/vnext/MemberPage.tsx",
+        "mode": "100644",
+        "live_before_sha256": null,
+        "target_sha256": "217f7cde888206908f8f0dca6a7266e3c48f725dd2ba8a4ecd7d703828f5b28b",
+        "operation": "ADD",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 9833
+      },
+      {
+        "path": "src/pages/vnext/OwnerPublication.tsx",
+        "mode": "100644",
+        "live_before_sha256": null,
+        "target_sha256": "9aeb5be727608a3eff5a64b5d5de5a74ba948faaa14061ea292c7add411f03ce",
+        "operation": "ADD",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 4731
+      },
+      {
+        "path": "src/pages/vnext/PublicExperience.tsx",
+        "mode": "100644",
+        "live_before_sha256": null,
+        "target_sha256": "71418bed0c25b5e346637e4af2af37006210e7af969d49a8a4a86810b984bdc4",
+        "operation": "ADD",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 2423
+      },
+      {
+        "path": "src/pages/vnext/member.css",
+        "mode": "100644",
+        "live_before_sha256": null,
+        "target_sha256": "386ba0220118b02225c71d2f5c265281274546cb343cec109f333d1006cde27c",
+        "operation": "ADD",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 2213
+      },
+      {
+        "path": "src/pages/vnext/vnext.css",
+        "mode": "100644",
+        "live_before_sha256": null,
+        "target_sha256": "0a14d5d053e18349a1d15268b43b177372ba24c0af34c0e2c1837167dc27bb21",
+        "operation": "ADD",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 7749
+      },
+      {
+        "path": "src/router/config.tsx",
+        "mode": "100644",
+        "live_before_sha256": "e105ab33ed255ec587ad6eb8048d976744f52db077f82d7e499d6a08b9c42d71",
+        "target_sha256": "48b220408680f7c6d54202e17f200495f52cabde7fa7ef4503a3088ab96b4229",
+        "operation": "MODIFY",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 6706
+      },
+      {
+        "path": "src/types/membership.ts",
+        "mode": "100644",
+        "live_before_sha256": "db467e8f61b3d6548d2badccb5a3216470685e01fdd512688444442e7e337d2d",
+        "target_sha256": "b302ad9a3c7dcdb62c0e8209d1677456c30fde6a2cfbac2477382d94772d61a1",
+        "operation": "MODIFY",
+        "classification": "CLIENT_UI_RUNTIME_SOURCE",
+        "source_bytes": 947
+      },
+      {
+        "path": "src/types/research-source-contracts.ts",
+        "mode": "100644",
+        "live_before_sha256": null,
+        "target_sha256": "9ca87d9cac9520f7c622355748a502255006fcac26cb0b8938121fa47e32d21d",
+        "operation": "ADD",
+        "classification": "CLIENT_UI_TYPE_CONTRACT_SOURCE",
+        "source_bytes": 5223
+      }
+    ]
+  },
+  "type_equivalence": {
+    "fixture_path": "tests/researchSourceContracts.types.ts",
+    "runner_path": "tests/researchSourceContracts.test.mjs"
+  }
+}

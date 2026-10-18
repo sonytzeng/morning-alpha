@@ -20,7 +20,7 @@ jobs:
         run: npm ci
       - env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/memberContinuityAdmission.test.mjs tests/vnextMemberContinuity.test.mjs tests/vnextMember.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs tests/finnhubQuarterlyProbe.test.mjs tests/ownerReleaseReviewPackage.test.mjs tests/providerCapabilityOwnerBoundary.test.mjs tests/accountReportSchedule.test.mjs tests/accountSubscriberProjection.test.mjs tests/providerCapabilityReviewUi.test.mjs tests/ownerAccountAnalysisNavigation.test.mjs tests/analysisIntelligenceUI.test.mjs tests/accountDashboardIdentity.test.mjs tests/accountHistoricalFallback.test.mjs tests/stockOfficialActuals.test.mjs tests/recommendationFinancialActualsCandidate.test.mjs tests/recommendationEventAlignment.test.mjs tests/r9FunctionalSourceClosure.test.mjs
+        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/memberContinuityAdmission.test.mjs tests/frontendTypeClosureAdmission.test.mjs tests/researchSourceContracts.test.mjs tests/ownerTradingLab.test.mjs tests/ownerTradingLabUI.test.mjs tests/ownerCockpit.test.mjs tests/recommendationV2UI.test.mjs tests/vnextMemberContinuity.test.mjs tests/vnextMember.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs tests/finnhubQuarterlyProbe.test.mjs tests/ownerReleaseReviewPackage.test.mjs tests/providerCapabilityOwnerBoundary.test.mjs tests/accountReportSchedule.test.mjs tests/accountSubscriberProjection.test.mjs tests/providerCapabilityReviewUi.test.mjs tests/ownerAccountAnalysisNavigation.test.mjs tests/analysisIntelligenceUI.test.mjs tests/accountDashboardIdentity.test.mjs tests/accountHistoricalFallback.test.mjs tests/stockOfficialActuals.test.mjs tests/recommendationFinancialActualsCandidate.test.mjs tests/recommendationEventAlignment.test.mjs tests/r9FunctionalSourceClosure.test.mjs
       - env:
           NODE_OPTIONS: --experimental-strip-types
         run: npm run type-check
@@ -47,10 +47,10 @@ jobs:
         env:
           NODE_OPTIONS: --experimental-strip-types
           MA_ISOLATED_DB_TMPFS: '1'
-      - name: Package the24 member website sources with the exact two-file continuity overlay
+      - name: Package the24 frontend-only website sources with the reviewed DTO type closure
         env:
           NODE_OPTIONS: --experimental-strip-types
-          MEMBER_UI_ARTIFACT_DIR: ${{ runner.temp }}/morning-alpha-continuity-member-ui
+          MEMBER_UI_ARTIFACT_DIR: ${{ runner.temp }}/morning-alpha-frontend-type-closure-ui
           MEMBER_UI_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
           node --input-type=module <<'NODE'
@@ -59,12 +59,12 @@ jobs:
           import {execFileSync} from 'node:child_process';
           import {join} from 'node:path';
           const sha=b=>createHash('sha256').update(b).digest('hex');
-          import {verifyMemberContinuity,memberContinuityWebsiteOperations} from './tests/helpers/memberContinuityAdmission.mjs';
-          const continuity=verifyMemberContinuity();
-          const files=memberContinuityWebsiteOperations();
-          if(continuity.production_authorized!==false||files.length!==24||new Set(files.map(f=>f.path)).size!==24)throw Error('MEMBER_CONTINUITY_SCOPE');
+          import {verifyFrontendTypeClosure,frontendTypeClosureWebsiteOperations} from './tests/helpers/frontendTypeClosureAdmission.mjs';
+          const closure=verifyFrontendTypeClosure();
+          const files=frontendTypeClosureWebsiteOperations();
+          if(closure.production_authorized!==false||files.length!==24||new Set(files.map(f=>f.path)).size!==24)throw Error('FRONTEND_TYPE_CLOSURE_SCOPE');
           for(const f of files){
-            if(!/^(src|research|supabase)\/[A-Za-z0-9_./-]+$/.test(f.path)||f.path.split('/').includes('..')||f.path.includes('.env')||sha(readFileSync(f.path))!==f.target_sha256)throw Error('R9_SOURCE');
+            if(!/^src\/[A-Za-z0-9_./-]+$/.test(f.path)||f.path.split('/').includes('..')||f.path.includes('.env')||sha(readFileSync(f.path))!==f.target_sha256)throw Error('R9_SOURCE');
           }
           const dir=process.env.MEMBER_UI_ARTIFACT_DIR,head=process.env.MEMBER_UI_HEAD;
           if(!dir||!/^\/[A-Za-z0-9_./-]+$/.test(dir)||!/^[a-f0-9]{40}$/.test(head))throw Error('R9_ARTIFACT_TARGET');
@@ -72,12 +72,12 @@ jobs:
           if(existsSync(archive))throw Error('R9_ARTIFACT_EXISTS');
           mkdirSync(dir,{recursive:true,mode:0o700});
           execFileSync('zip',['-X','-q',archive,...files.map(f=>f.path)]);
-          const receipt={head,source_operations:24,archive_sha256:sha(readFileSync(archive)),production_authorized:false,continuity_receipt:{path:'docs/operations/evidence/member-continuity-20261018.json',sha256:sha(readFileSync('docs/operations/evidence/member-continuity-20261018.json'))},prior_website_receipt:continuity.website,files};
+          const receipt={head,source_operations:24,archive_sha256:sha(readFileSync(archive)),production_authorized:false,frontend_closure_receipt:{path:'docs/operations/evidence/frontend-type-closure-20261018.json',sha256:sha(readFileSync('docs/operations/evidence/frontend-type-closure-20261018.json'))},prior_member_receipt:{path:closure.website.predecessor_path,sha256:closure.website.predecessor_sha256},excluded_non_frontend_build_sources:closure.website.removed_build_only_paths,files};
           writeFileSync(join(dir,'receipt.json'),JSON.stringify(receipt,null,2)+'\n',{flag:'wx',mode:0o600});
           NODE
       - uses: actions/upload-artifact@v4
         with:
-          name: morning-alpha-continuity-member-ui-source-${{ github.event.pull_request.head.sha }}
-          path: ${{ runner.temp }}/morning-alpha-continuity-member-ui/
+          name: morning-alpha-frontend-type-closure-ui-source-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/morning-alpha-frontend-type-closure-ui/
           if-no-files-found: error
           retention-days: 14

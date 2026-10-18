@@ -1,12 +1,12 @@
-import type { discoverCandidates, performance } from '../../../supabase/functions/_shared/owner-trading-lab';
+import type { LabDiscovery, LabPerformance } from '../../types/research-source-contracts';
 import type { IntelligenceAnalysis } from './intelligence';
 export type LabRow = Record<string, unknown>;
 export interface TradingLabData {
  version:'OWNER_TRADING_LAB_V1';public_product_approval:false;forward_enabled:false;
  as_of:string;business_date:string;canonical:LabRow|null;
  shadow:{id:string;analysis:IntelligenceAnalysis;prediction_hash:string}|null;
- discovery:ReturnType<typeof discoverCandidates>;trades:LabRow[];events:LabRow[];
- performance:{system:ReturnType<typeof performance>;sony:ReturnType<typeof performance>;experiment?:ReturnType<typeof performance>;
+ discovery:LabDiscovery;trades:LabRow[];events:LabRow[];
+ performance:{system:LabPerformance;sony:LabPerformance;experiment?:LabPerformance;
  market:{sample:number;direction_accuracy:number|null;source:string;coverage:string;forward_shadow_sample:number}};
 }
 export const labObject=(v:unknown):LabRow=>v&&typeof v==='object'&&!Array.isArray(v)?v as LabRow:{};

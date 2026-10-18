@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Report } from '@/types/report';
-import { getLatestReports, getTodayReport } from '@/services/reportService';
+import { getLatestReports, getTodayReport, getReportByDate } from '@/services/reportService';
 import { isDateTaipeiToday, isTaipeiToday } from '@/services/marketSourceHealthService';
 import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
+import { resolveMarketStatus } from '@/lib/market-status';
+import { supabase } from '@/lib/supabase';
 
 export interface AccountDashboardData {
-  // Today report
+  // Selected server-trimmed report; may be an explicitly historical fallback.
   todayReport: Report | null;
   hasTodayReport: boolean;
 
@@ -98,6 +100,14 @@ export function getAccountIntradayView(projection: ReturnType<typeof getSubscrib
   };
 }
 
+/** History is an index only: never promote a summary into a report payload. */
+function accountFallbackDate(history: Report[], today: string): string | null {
+  return history.map(report => report.report_date)
+    .filter(date => typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)
+      && date < today && resolveMarketStatus(date).is_trading_day)
+    .sort().reverse()[0] ?? null;
+}
+
 async function loadAccountDashboard(): Promise<AccountDashboardData> {
   const result: AccountDashboardData = {
     todayReport: null,
@@ -125,11 +135,26 @@ async function loadAccountDashboard(): Promise<AccountDashboardData> {
   };
 
   try {
-    const [todayReport, history] = await Promise.all([
+    const [currentReport, history] = await Promise.all([
       getTodayReport(),
       getLatestReports(30),
     ]);
-    const projection = getSubscriberReportProjection(todayReport, { todayDate: isTaipeiToday() });
+    const todayDate = isTaipeiToday();
+    let todayReport = currentReport;
+    // A missing current report must not erase an existing previous report on
+    // weekends/holidays. Read exactly one indexed date through the SAME Reader
+    // and entitlement path. A current PARTIAL report remains visible as PARTIAL.
+    if (!currentReport) {
+      const fallbackDate = accountFallbackDate(history, todayDate);
+      if (fallbackDate) {
+        const fallback = await getReportByDate(fallbackDate);
+        const view = getSubscriberReportProjection(fallback, { todayDate });
+        if (fallback?.report_date === fallbackDate && view.analysisAvailable && view.historical) {
+          todayReport = fallback;
+        }
+      }
+    }
+    const projection = getSubscriberReportProjection(todayReport, { todayDate });
     if (todayReport) {
       result.todayReport = todayReport;
       result.hasTodayReport = projection.analysisAvailable && !projection.historical;
@@ -203,8 +228,8 @@ function computeStreakFromReports(reports: Report[]): number {
   return streak;
 }
 
-export function useAccountDashboard() {
-  const [data, setData] = useState<AccountDashboardData>({
+function initialAccountDashboard(): AccountDashboardData {
+  return {
     todayReport: null,
     hasTodayReport: false,
     marketDataLatestAt: null,
@@ -227,15 +252,67 @@ export function useAccountDashboard() {
     loading: true,
     error: null,
     refreshedAt: null,
-  });
+  };
+}
+
+export function useAccountDashboard() {
+  const [data, setData] = useState<AccountDashboardData>(initialAccountDashboard);
+  const generation = useRef(0);
+  const active = useRef(false);
 
   const load = useCallback(async () => {
+    const request = ++generation.current;
+    const requestDate = isTaipeiToday();
     const d = await loadAccountDashboard();
-    setData(d);
+    // Neither a previous account nor an unmounted request may restore data.
+    if (active.current && request === generation.current && requestDate === isTaipeiToday()) setData(d);
   }, []);
 
   useEffect(() => {
-    load();
+    active.current = true;
+    let observedDate = isTaipeiToday();
+    let dayTimer: ReturnType<typeof setTimeout> | undefined;
+    const checkDate = () => {
+      const today = isTaipeiToday();
+      if (today === observedDate) return;
+      observedDate = today;
+      generation.current++;
+      setData(initialAccountDashboard());
+      void load();
+    };
+    const scheduleDateCheck = () => {
+      clearTimeout(dayTimer);
+      const next = Date.parse(`${observedDate}T00:00:00+08:00`) + 86_400_000;
+      if (!Number.isFinite(next)) return;
+      dayTimer = setTimeout(() => {
+        checkDate();
+        if (active.current) scheduleDateCheck();
+      }, Math.max(1000, Math.min(86_400_000, next - Date.now())));
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      checkDate();
+      scheduleDateCheck();
+    };
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    scheduleDateCheck();
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (!active.current) return;
+      if (!['SIGNED_OUT', 'SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) return;
+      generation.current++;
+      setData(initialAccountDashboard());
+      // Defer SDK reads until the Auth callback has released its session lock.
+      queueMicrotask(() => { if (active.current) void load(); });
+    });
+    void load();
+    return () => {
+      active.current = false;
+      // Inactive requests cannot commit; a remount synchronously issues a new
+      // generation before awaiting its load. Do not read a mutable ref in cleanup.
+      clearTimeout(dayTimer);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      listener.subscription.unsubscribe();
+    };
   }, [load]);
 
   return {

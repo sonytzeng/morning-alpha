@@ -1,0 +1,465 @@
+{
+  "schema": "morning-alpha.provider-capability-research.v1",
+  "review_id": "R10_PROVIDER_CAPABILITY_REVIEW_20261017",
+  "classification": "RESEARCH_ONLY_NOT_SOURCE_ADMISSION",
+  "public_document_review_completed_at": "2026-10-17T08:51:17Z",
+  "language": "zh-TW",
+  "scope": [
+    "逐股、每日、三法人實際成交 TWD 的既有產品能力",
+    "公告前 EPS / revenue consensus 的歷史版本產品",
+    "有公司、季別、來源與修訂脈絡的 issuer guidance"
+  ],
+  "authority": {
+    "production_pass_claimed": false,
+    "source_admission_changed": false,
+    "purchase_recommended_or_authorized": false,
+    "deployment_or_release_authorized": false,
+    "existing_plan_ownership_inferred": false,
+    "F_rebuilt_or_invoked": false,
+    "note": "公開產品說明證明產品能力方向，不證明本帳號權限、逐列覆蓋或會員用途授權。"
+  },
+  "input_evidence": [
+    {
+      "path": "docs/operations/v1-provider-capability-evidence-20261017.md",
+      "sha256": "e57d81b099fb2cf7a484d71c0a66cfb7571f2a75c6061195952a1c8f2fe0ec32"
+    },
+    {
+      "path": "docs/operations/core-delivery-r9-20261017.md",
+      "sha256": "4119fc042fdc2f30bc2a7de9a1a21658d8b171653669cc929bb08836a26cea64"
+    },
+    {
+      "path": "docs/operations/evidence/r9-functional-source-closure-20261017.json",
+      "sha256": "cc99eba18cd0853fbf4291eda4dfd27d21b7a47179763a3b42b08275907ba375"
+    },
+    {
+      "path": "docs/vnext/DATA_LICENSE_AUDIT.md",
+      "sha256": "e1b7728a834dcc066d561670370f990c422757e2d19ab1cad60187d633a66c98"
+    }
+  ],
+  "primary_sources": [
+    {
+      "id": "S01",
+      "title": "TEJ TQuant Lab 資料集",
+      "url": "https://tquant.tejwin.com/%E8%B3%87%E6%96%99%E9%9B%86/",
+      "locator": "TWN/APISHRACT：資料期間、單位及法人金額欄位公式"
+    },
+    {
+      "id": "S02",
+      "title": "LSEG Optimise your quant research and modelling",
+      "url": "https://www.lseg.com/content/dam/data-analytics/en_us/documents/brochures/lseg-data-for-quant-research-brochure.pdf",
+      "locator": "印刷頁 7：Estimates 各 package；印刷頁 8：Guidance 各 package",
+      "document_code": "LDA3760696_DA_Quants_Brochure"
+    },
+    {
+      "id": "S03",
+      "title": "LSEG I/B/E/S Broker Estimates",
+      "url": "https://www.lseg.com/en/data-catalogue/company-data/ibes-estimates/broker-estimates",
+      "locator": "資料語意、表名及 delivery platform"
+    },
+    {
+      "id": "S04",
+      "title": "LSEG I/B/E/S Guidance",
+      "url": "https://www.lseg.com/en/data-catalogue/company-data/ibes-estimates/guidance",
+      "locator": "guidance measure / event / activation metadata 與表名"
+    },
+    {
+      "id": "S05",
+      "title": "FactSet Accurately Backtesting Financial Models Through Point-in-Time Consensus Estimates",
+      "url": "https://insight.factset.com/hubfs/Resources%20Section/White%20Papers/ID11996_point_in_time.pdf",
+      "locator": "印刷頁 3–8：方法、時區、QA / 刪除、FX 限制；印刷頁 9：FQL codes",
+      "version_caution": "舊版方法白皮書仍由官方提供；不是 2026 合約、現行完整字典或帳號 entitlement。"
+    },
+    {
+      "id": "S06",
+      "title": "FactSet official enterprise-sdk: Estimates Python README",
+      "url": "https://raw.githubusercontent.com/factset/enterprise-sdk/main/code/python/FactSetEstimates/v2/README.md",
+      "observed_api_version": "2.11.1",
+      "observed_python_sdk_version": "4.2.0",
+      "version_caution": "main URL 可變；只記錄本輪公開文件觀察版本，未安裝或執行 SDK。"
+    },
+    {
+      "id": "S07",
+      "title": "FactSet FixedConsensusRequest model",
+      "url": "https://raw.githubusercontent.com/factset/enterprise-sdk/main/code/python/FactSetEstimates/v2/docs/FixedConsensusRequest.md"
+    },
+    {
+      "id": "S08",
+      "title": "FactSet ConsensusEstimate model",
+      "url": "https://raw.githubusercontent.com/factset/enterprise-sdk/main/code/python/FactSetEstimates/v2/docs/ConsensusEstimate.md"
+    },
+    {
+      "id": "S09",
+      "title": "FactSet DetailEstimate model",
+      "url": "https://raw.githubusercontent.com/factset/enterprise-sdk/main/code/python/FactSetEstimates/v2/docs/DetailEstimate.md"
+    },
+    {
+      "id": "S10",
+      "title": "FactSet Guidance API documentation",
+      "url": "https://raw.githubusercontent.com/factset/enterprise-sdk/main/code/python/FactSetEstimates/v2/docs/GuidanceApi.md"
+    },
+    {
+      "id": "S11",
+      "title": "FactSet Guidance model",
+      "url": "https://raw.githubusercontent.com/factset/enterprise-sdk/main/code/python/FactSetEstimates/v2/docs/Guidance.md"
+    },
+    {
+      "id": "S12",
+      "title": "FactSet Consensus Estimates DataFeed",
+      "url": "https://insight.factset.com/resources/factset-consensus-estimates-datafeed"
+    },
+    {
+      "id": "S13",
+      "title": "LSEG Data Redistribution Solutions",
+      "url": "https://www.lseg.com/en/data-analytics/market-data/data-redistribution",
+      "limitation": "一般 redistribution 框架，非本帳號 I/B/E/S grant。"
+    },
+    {
+      "id": "S14",
+      "title": "FactSet legal portal",
+      "url": "https://www.factset.com/legal",
+      "limitation": "公開入口不含本帳號 Estimates schedule；本輪頁面本文擷取不完整，不能據此補出授權。"
+    },
+    {
+      "id": "S15",
+      "title": "TWSE 資訊商店：三大法人買賣金額統計表",
+      "url": "https://eshop.twse.com.tw/zh/product/detail/d31c1b9570ae47058ec83a0bb1ffa419",
+      "locator": "商品粒度、內外部用途區別；未下載範例、未下單"
+    }
+  ],
+  "source_receipt_limits": {
+    "access_date_utc": "2026-10-17",
+    "method": "官方公開 HTML、官方 SDK 文件及 PDF 文字／表格閱讀；未取得任何付費或登入後資料。",
+    "pdf_visual_verification": "NOT_CLAIMED；截圖工具回應未提供可檢視像素，產品判讀依可讀文字與表格。",
+    "raw_document_bytes_archived": false,
+    "individual_page_first_seen_timestamp_claimed": false,
+    "document_retrieval_is_not_financial_data_first_seen": true,
+    "sensitive_or_licensed_financial_payload_in_this_file": false
+  },
+  "institutional_actual_twd": {
+    "conclusion": "NO_QUALIFYING_PER_STOCK_ACTUAL_TWD_PRODUCT_PROVEN_IN_REVIEWED_CATALOGUES",
+    "not_a_universal_nonexistence_claim": true,
+    "required_grain": "證券 × 台灣交易日 × 外資／投信／自營商；buy / sell 為真正成交價金，net 可由同範圍實際 buy 減 sell。",
+    "excluded_candidate": {
+      "product": "TEJ TQuant Lab TWN/APISHRACT",
+      "source_ids": [
+        "S01"
+      ],
+      "identity_fields": [
+        "coid",
+        "mdate",
+        "mkt"
+      ],
+      "amount_fields": [
+        "qfii_bamt",
+        "qfii_samt",
+        "qfii_examt",
+        "fund_bamt",
+        "fund_samt",
+        "fund_examt",
+        "dlrp_bamt",
+        "dlrp_samt",
+        "dlrp_examt",
+        "dlrh_bamt",
+        "dlrh_samt",
+        "dlrh_examt"
+      ],
+      "unit": "千元",
+      "method": "官方欄位字典以當日收盤價乘相應買賣股數，再相減取得淨額；不是逐筆實際成交價金加總。",
+      "classification": "DERIVED_PRICE_TIMES_QUANTITY_NOT_ACTUAL_TWD",
+      "published_scope": "台灣上市櫃及退市股票、日頻；方案歷史窗為近 5 年／近 10 年／2005 年起。",
+      "cost": "UNKNOWN",
+      "account_entitlement": "UNKNOWN",
+      "consequence": "即使已有該方案或擴充歷史年限，仍不能以此欄位通過 actual TWD gate。"
+    },
+    "different_grain_counterexample": {
+      "product": "TWSE BFI82U / BFIBGU",
+      "source_ids": [
+        "S15"
+      ],
+      "classification": "MARKET_TOTAL_NOT_PER_SECURITY",
+      "note": "商品欄位只有法人類別與金額，沒有股票鍵；市場總額不能分配成逐股真實成交價金。此輪只核對商品頁，未重取金額樣本。",
+      "published_monthly_price_twd": {
+        "internal_use": 1000,
+        "external_use": 1500
+      },
+      "price_limitation": "只是此市場商品頁公開標價，不是逐股能力報價、既有權利證明或購買建議。",
+      "rights_limitation": "商品頁區分內部使用與向資訊用戶傳輸；仍須適用訂購條款，不是 OGL blanket grant。"
+    },
+    "precise_remaining_question_not_sent": "是否另有具名商品／資料表，逐股逐日分外資、投信、自營商提供由實際成交紀錄加總的買入／賣出／淨 TWD，而非收盤價或均價乘股數？請提供商品代碼、欄位與計價方法、普通／零股／鉅額／盤後及自營避險範圍、2330 與 6488 的同日合成格式示意或經授權小樣、版本時間及非展示／會員衍生用途條款；若不存在請明確答覆，不用同類股數商品替代。"
+  },
+  "consensus_options": [
+    {
+      "id": "LSEG_IBES_PIT",
+      "classification": "DOCUMENTED_DISTINCT_PRODUCT_ROW_AND_RIGHTS_PROOF_MISSING",
+      "source_ids": [
+        "S02",
+        "S03"
+      ],
+      "product": "I/B/E/S Point-in-Time",
+      "delivery": "FTP；日快照、日期／時間戳陣列、每週交付；30 measures。",
+      "published_history": "美國最早 1976、非美最早 1987；不是每家台股每個指標的起日保證。",
+      "must_not_substitute": "一般 Historical 的月交付、Daily Means 或 V2 即時／15 分鐘資料，均不能僅憑同品牌推成同一 PIT entitlement。",
+      "table_candidates": [
+        "Estimate",
+        "ProductEstimate",
+        "PeriodOfInterest",
+        "EarningsSeasonCalendar"
+      ],
+      "documented_semantics": "估值、來源、公告日、財務期間、幣別、單位與正規化資訊；完整 PIT 檔案與欄位字典尚未取得。",
+      "unproven": [
+        "台灣普通股識別映射",
+        "2330 / 6488 各指定季 EPS 與 sales",
+        "共識類別及有效 broker 集合",
+        "activation / correction / deletion 與檔案版本",
+        "原始與調整後 EPS 口徑"
+      ],
+      "model_exclusion": "StarMine SmartEstimates 等加權模型不自動等同原條件所需 broker consensus。",
+      "cost": "UNKNOWN",
+      "existing_entitlement": "UNKNOWN",
+      "readiness": "可具名確認既有方案是否包含 PIT，不能直接接入或聲稱取得了公告前快照。"
+    },
+    {
+      "id": "FACTSET_PIT",
+      "classification": "DOCUMENTED_DISTINCT_PRODUCT_ROW_AND_RIGHTS_PROOF_MISSING",
+      "source_ids": [
+        "S05"
+      ],
+      "product": "FactSet Point-in-Time Consensus Estimates",
+      "specific_access_candidates": [
+        "FE_PIT_ESTIMATE_45D(item,stat,rbasis,period,date)",
+        "FE_PIT_ESTIMATE_100D(item,stat,rbasis,period,date)",
+        "FE_PIT_ESTIMATE_DATE(stat,item,rbasis,period,date)"
+      ],
+      "delivery_surface": "FQL / Screening，非本輪執行過的 API。",
+      "published_limits": "2009-12 起、consensus only、100 日或 45 日 post-event 窗；快照依主要上市市場當地午夜。",
+      "important_time_limit": "亞洲／歐洲先跑的快照可能於當日 Americas 最終 FX 更新再變動；日期相同不保證某一盤中時點可得的相同數值。",
+      "why_separate_product_matters": "標準 FE 的 research date / input date 歷史仍可能受後來 QA、刪除、類別、幣別或稀釋調整影響。",
+      "method_version_limit": "白皮書載明 2017-09-09 前之方法非完全重現當時歷史方法；2025–26 仍須記錄當前共識窗與方法版本。",
+      "unproven": [
+        "現行產品規格與合約",
+        "兩家台股四季逐格覆蓋",
+        "資料 release/run/FX version 與實際可得時刻",
+        "普通股及 EPS / sales 口徑映射"
+      ],
+      "cost": "UNKNOWN",
+      "existing_entitlement": "UNKNOWN"
+    },
+    {
+      "id": "FACTSET_ESTIMATES_API_NOT_AUTOMATIC_PIT",
+      "classification": "DOCUMENTED_DATED_ESTIMATES_API_NOT_SUFFICIENT_PIT_PROOF",
+      "source_ids": [
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S12"
+      ],
+      "documented_paths_not_called": [
+        "/factset-estimates/v2/fixed-consensus",
+        "/factset-estimates/v2/fixed-detail",
+        "/factset-estimates/v2/metrics"
+      ],
+      "api_version": "2.11.1",
+      "python_sdk_version": "4.2.0",
+      "date_axis": "start_date / end_date 為查詢日期軸；不填預設前一收盤。fiscal_period_start / fiscal_period_end 才是目標財季軸，例如 2025/3F；需另設 QTR。",
+      "response_fields": [
+        "fsym_id",
+        "metric",
+        "periodicity",
+        "fiscal_period",
+        "fiscal_year",
+        "fiscal_end_date",
+        "estimate_date",
+        "currency",
+        "estimate_currency",
+        "mean",
+        "median",
+        "estimate_count"
+      ],
+      "detail_audit_fields": [
+        "input_date_time",
+        "estimate_date",
+        "last_modified_date",
+        "doc_id",
+        "broker_id",
+        "section",
+        "status_code",
+        "broker_estimate_currency"
+      ],
+      "detail_caution": "source 可得時間與 broker research 日期不同；有這些欄位仍未證明歷史 QA / deletion / revision 全部可回放。",
+      "published_limits": "每用戶 10 requests/s、10 concurrent；除 company-reports 與 metrics 外每分鐘 400 萬 datapoints。服務 timeout 30s；長歷史建議每 metric / ID 不超過 10 年。",
+      "actuals_caution": "DataFeed 區分公司公告 actual 與 broker actual，後者可於公告後持續更新；不得拿其當公告前 consensus 或 Carson 的 issuer actual receipt。",
+      "license_caution": "SDK Apache-2.0 為程式碼授權，不是 Estimates 資料或會員再利用授權。",
+      "cost": "UNKNOWN",
+      "existing_entitlement": "UNKNOWN"
+    }
+  ],
+  "guidance_options": [
+    {
+      "id": "LSEG_IBES_GUIDANCE",
+      "classification": "DOCUMENTED_PRODUCT_COMPANY_PERIOD_VERSION_AND_RIGHTS_PROOF_MISSING",
+      "source_ids": [
+        "S04",
+        "S02"
+      ],
+      "product": "I/B/E/S Guidance",
+      "tables": [
+        "GuidanceCollectedData",
+        "GuidanceComparableData",
+        "GuidanceCompanySegment",
+        "GuidanceCollectedText"
+      ],
+      "documented_semantics": "公司管理層 quantitative / qualitative outlook；含來源、effective date、event ID / type、measure、estimate period、activation date、scale 與 normalization。",
+      "package_difference": "HTML 為 110 as-reported / 20 comparable；brochure real-time 為 110 / 21。Brochure 另列 14-measure current/historical package，current 每日四次、history 週五一次；不可合併當同一方案。",
+      "unproven": [
+        "現行 package 與精確 measure 字典",
+        "2330 / 6488 目標季度實際記錄",
+        "原公告對應、撤回與 supersession chain",
+        "issuer 時刻、activation 與實際交付時刻",
+        "會員衍生呈現權利"
+      ],
+      "cost": "UNKNOWN",
+      "existing_entitlement": "UNKNOWN"
+    },
+    {
+      "id": "FACTSET_GUIDANCE",
+      "classification": "DOCUMENTED_API_COMPANY_PERIOD_VERSION_AND_RIGHTS_PROOF_MISSING",
+      "source_ids": [
+        "S06",
+        "S10",
+        "S11",
+        "S12"
+      ],
+      "documented_path_not_called": "/factset-estimates/v2/guidance",
+      "documented_scope_limit": "API 說明聚焦 requested date 的 current unreported period；不能據此承諾任意四季完整修訂歷史。DataFeed 另列 historical company guidance，仍須對應實際交付與字典。",
+      "useful_fields": [
+        "guidance_date",
+        "input_date_high",
+        "input_date_low",
+        "input_date_high_time",
+        "input_date_low_time",
+        "guidance_midpoint",
+        "guidance_low",
+        "guidance_high",
+        "guidance_range"
+      ],
+      "not_direction_proof": "prev_midpoint / prev_low / prev_high 文件指 previous period；不等於同一目標季度的上個版本。mean_before / mean_surprise_amt 是對共識差異，也不是 issuer 同季上修／下修。",
+      "unproven": [
+        "台灣普通股與季度覆蓋",
+        "原公告來源與版本 ID",
+        "withdrawal / supersession",
+        "同季度同口徑比較規則",
+        "可保存的歷史及會員用途權利"
+      ],
+      "cost": "UNKNOWN",
+      "existing_entitlement": "UNKNOWN"
+    },
+    {
+      "id": "ISSUER_ORIGINAL_MANUAL_CURATED",
+      "classification": "BOUNDED_METHOD_OPTION_NOT_NEW_VENDOR_ENTITLEMENT",
+      "evidence": "沿用 R9 Carson 所存 2330 issuer outlook 能力摘要，未重新讀取公告；不宣稱 6488 或 72 家均提供 guidance。",
+      "method": "人工核對公司、目標季、指標、幣別、low/high 或文字條件、發布與撤回版本，再保存真正取得時刻。",
+      "direction_rule": "只比較同一財季、同一指標／口徑的有效 issuer 版本；缺前版、range 交錯、撤回或語意不足均 UNCLASSIFIED；未提供不當 stable。",
+      "rights": "公開可讀不等於可轉載全文／圖表；純事實擷取、來源連結、表達內容與會員衍生用途仍需逐資源區分。",
+      "cost": "UNKNOWN",
+      "formal_admission": false
+    }
+  ],
+  "exact_company_period_gaps": {
+    "classification": "REQUESTED_PROOF_MATRIX_NOT_OBSERVED_PROVIDER_DATA",
+    "symbols": [
+      "2330",
+      "6488"
+    ],
+    "security_mapping": "台灣普通股；不得以 ADR / 美國上市證券或未驗證 ticker 後綴替代。兩 provider 的正式 ID 均未取得。",
+    "quarter_sequence": [
+      "2025Q3",
+      "2025Q4",
+      "2026Q1",
+      "2026Q2"
+    ],
+    "sequence_limitation": "沿用 R9 的四季比較序列，非斷言每家目前最新四季；最新已公告季及實際公告時刻由 Carson Actual/events 確認。",
+    "metrics_each_case": [
+      "EPS",
+      "REVENUE"
+    ],
+    "requested_metric_cells": 16,
+    "observed_provider_data_cells": 0,
+    "eligible_metric_cell_count": null,
+    "eligible_symbol_count_of_72": null,
+    "why_null": "本輪只看官方產品文件，未查資料；UNKNOWN 不記成有覆蓋，也不記成 provider 沒資料。",
+    "per_case_required_not_yet_proven": [
+      "普通股 provider ID、fiscal_year / quarter / end_date、single quarter 而非 YTD／annual",
+      "EPS basic / diluted、IFRS / adjusted；revenue 必須為相同財務定義，不用任意 sales 標籤兜底",
+      "原幣、單位、ADR ratio / split / dilution、broker consensus class 與 analyst count",
+      "每個 metric 的 perspective / effective / source-available / activation 時間與修訂／刪除版本",
+      "相應 actual 的首次公告時刻；候選快照須嚴格早於該公告與要評估的 cutoff",
+      "guidance 目標季度、原始來源、同季版本鏈、撤回／取代狀態與分類方法版本",
+      "取得此 package、保存快照與對特定 Free / Premium 用途使用的權利"
+    ],
+    "Carson_actual_boundary": "R9 已有 2330 指定四季的 issuer actual 能力；本輪不覆寫其數值、時間或覆蓋結果。"
+  },
+  "time_and_version_acceptance": [
+    "每日 PIT 不是任意盤中時點版本；公告當日收盤／午夜快照可能含公告資訊，應用嚴格公告前且已完成發布的快照。",
+    "provider perspective date、source availability、delivery release/run、our first_seen 各自記錄，不互相冒充。",
+    "新取得的歷史檔不得回填成過去已持有；若既有正式規則要求 first_seen <= 當時 cutoff，只可另做研究回放，不能追溯修好舊正式 receipt。",
+    "保留檔案／批次與方法版本、修訂／撤回鏈及幣別換算版本；不得以最新重算值取代已封存的公告前快照。"
+  ],
+  "rights_and_cost": {
+    "source_ids": [
+      "S13",
+      "S14",
+      "S06"
+    ],
+    "existing_private_entitlement_proof_found_in_allowed_inputs": false,
+    "cost_for_qualifying_per_stock_actual_twd": "UNKNOWN",
+    "cost_for_LSEG_PIT_and_Guidance": "UNKNOWN",
+    "cost_for_FactSet_PIT_and_Guidance": "UNKNOWN",
+    "purchase_needed_is_not_established": true,
+    "resource_specific_checks": [
+      "合約是否已涵蓋具名 package / API / feed，而非只有 Workspace、桌面登入或其他資料方案",
+      "伺服器自動化及 non-display analytics；本地快照、稽核保存與終止後保留範圍",
+      "內部 Owner / Shadow 分析、Free / Premium 衍生文字／分數／圖表、原值展示及 raw redistribution 分開確認",
+      "broker / exchange 第三方條款、attribution、用戶數或流量限制、刪除義務"
+    ],
+    "boundary": "LSEG 有 redistribution 管道不等於本案已獲准；FactSet SDK license 不授資料權。已精確獲 OGL 的其他資源不因本輪而變 PENDING，也不轉授這些商業產品。"
+  },
+  "minimum_questions_for_future_authorized_coordination_not_sent": [
+    {
+      "topic": "真正逐股 actual TWD",
+      "question_ref": "institutional_actual_twd.precise_remaining_question_not_sent"
+    },
+    {
+      "topic": "PIT 不是一般 historical",
+      "question": "請先確認現有帳號是否已含具名 PIT package；只需 2330 / 6488 台灣普通股、2025Q3–2026Q2 的 EPS / revenue 共 16 格覆蓋清單及可合法提供的小樣。逐格附原幣／單位、口徑、財季、共識類別／人數、公告前 snapshot 與 availability / release / revision 字典；請明示 QA 刪除、後續 FX 是否會重寫歷史。不要用 current estimate、SmartEstimate 或 ADR 補齊。"
+    },
+    {
+      "topic": "Guidance 原公告與同季版本",
+      "question": "所選 package 能否提供這兩家公司目標季度 guidance 的 issuer 原始來源 ID、發佈／activation 時刻、同季修訂及撤回／取代鏈？請附精確 measure 字典和缺季清單，區分 previous period 與 previous revision；LSEG 請澄清 14／20／21 comparable measure 分屬何方案版本。另請分別確認內部保存與會員衍生呈現權利；費用可標 UNKNOWN，不假定必須新購。"
+    }
+  ],
+  "actionable_method_options_not_approved_operations": [
+    {
+      "id": "M0",
+      "option": "維持現有 fail-closed gate；本輪產品目錄證據不改 R9 已封存的正式結果。"
+    },
+    {
+      "id": "M1",
+      "option": "先以非敏感合約摘要確認現有權利；具名選一個 PIT 與 guidance package，再經獨立授權做兩股四季有限樣本驗證。不是先買、不是先寫 adapter。"
+    },
+    {
+      "id": "M2",
+      "option": "歷史版本無法取得時，可另提 forward-only immutable snapshots 研究方案，從真正取得日累積；不假裝能重建先前公告前共識，不追溯改舊 receipt。"
+    },
+    {
+      "id": "M3",
+      "option": "若供應商明確沒有逐股 actual TWD，或 issuer 不提供可比較 guidance，提交具名方法／產品條件決策：保留缺失並維持 gate，或另立不同名稱及版本的研究指標；股數乘價與無 guidance=stable 均不得偷渡原條件。"
+    }
+  ],
+  "decision_summary": [
+    "逐股 actual TWD：APISHRACT 已具體排除為股數乘收盤價；市場金額產品粒度不符。本輪未證得合格逐股商品，不宣稱市場上絕不存在。",
+    "公告前 consensus：LSEG I/B/E/S PIT 與 FactSet PIT 是可具名查核的方案，不是泛泛外部 PENDING；逐股四季、版本、既有 entitlement 與會員用途尚無證明。",
+    "可靠 guidance：兩家均有具體產品與時間欄位，但不等於同季修訂方向或全台股覆蓋；issuer 原公告人工核對可作有限研究途徑。",
+    "最小下一步是具名 package / 16 格覆蓋 / 版本字典 / 用途權利的有限確認；不重建 F，不推定購買，不執行正式操作。"
+  ]
+}

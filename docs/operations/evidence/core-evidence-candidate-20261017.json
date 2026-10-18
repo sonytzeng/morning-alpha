@@ -1,0 +1,99 @@
+{
+  "schema": "CORE_EVIDENCE_CANDIDATE_1",
+  "base": "754850ba1c66329d12eac8e98ab799e0a0c9123e",
+  "production_authorized": false,
+  "migration": false,
+  "secret_change": false,
+  "cron_change": false,
+  "auth_rls_change": false,
+  "member_rights_change": false,
+  "threshold_change": false,
+  "member_publication": false,
+  "files": [
+    {
+      "path": ".github/workflows/core-evidence-candidate.yml",
+      "before_sha256": null,
+      "after_sha256": "7ca807e22cb107580d89fc49258f59d8e16ac08025fe67fc2a914b14aae57815"
+    },
+    {
+      "path": "docs/operations/core-evidence-checkpoint-20261017.md",
+      "before_sha256": null,
+      "after_sha256": "b7a1721a8360738aae1e2ef2bb16cb43882ef221e790d7a6944d84355b6c0036"
+    },
+    {
+      "path": "docs/operations/evidence/core-evidence-status-20261017.json",
+      "before_sha256": null,
+      "after_sha256": "b81f972cfb9a8b586d5ad4e6686c954ccc11d51674c5100b78924df855a3fb63"
+    },
+    {
+      "path": "scripts/academy-v11/auth-environment.mjs",
+      "before_sha256": "e5b00545b090386c25170dd784968815acf69d08ae49dd9a281d26fdebb845c6",
+      "after_sha256": "cad0aeb8f9ac762ea5beef5aa72ab0625ab87ac0b7c7c957d8759d3cb3d8019f"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-foundation-candidate.ts",
+      "before_sha256": null,
+      "after_sha256": "f4584ce25280c51ca66ef06b0d9bc7deb6b077de88b5e8b1a3543d3dad398395"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-market-institutional-candidate.ts",
+      "before_sha256": null,
+      "after_sha256": "22714b1bfa6694e4df44dfcddcc461afc49d01f0af60e1939017009ed33df108"
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "before_sha256": "eb3008ceb7e72cc007680f9885ca56e02e1feb7e85a16c8758a0542c75e92d79",
+      "after_sha256": "be2fed4bd1707048b1cb3dbd39a832e205a07fea25ac848ea39fe8007551dd50"
+    },
+    {
+      "path": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "before_sha256": "70352af5ec86ca94f4cc00d9c59f3483d1114bc455ca253601e2679f0bf03755",
+      "after_sha256": "2b4dc7ce5f76f0b1fe0b847590261fb9239a839c4a82404e614bd69dfa625d41"
+    },
+    {
+      "path": "tests/coreEvidenceCandidateIntegrity.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "b51f7766ce7791b1987f55f491954a229c662828d18c3e747acf7c5a5276931b"
+    },
+    {
+      "path": "tests/helpers/coreEvidenceCandidateIntegrity.mjs",
+      "before_sha256": null,
+      "after_sha256": "f4a57cbba382478e7aa1cdd8f71cd280cbab054ee9e2fce91ba2119045dfa72d"
+    },
+    {
+      "path": "tests/helpers/stagedReleaseIntegrity.mjs",
+      "before_sha256": "9afc60f18154bc68cbcaeea167a9e7f0982bff3ba8dd3446d09d1cc2d58aed99",
+      "after_sha256": "7f1929adaf57e7c09cea324b38d2ebeb9e5d86aa68614dc239af6064b418c0e0"
+    },
+    {
+      "path": "tests/recommendationMarketInstitutionalCandidate.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "34b681078de2a362b9996e9b99b6875d47ce7b202c993b401adb96b856e87705"
+    },
+    {
+      "path": "tests/recommendationMarketInstitutionalDatabase.integration.mjs",
+      "before_sha256": null,
+      "after_sha256": "62aaa1f653698e3a03083fe8f043c744e59cfa0fa1ba8a015e44c106503d5282"
+    },
+    {
+      "path": "tests/recommendationProducerAdmission.test.mjs",
+      "before_sha256": "319e7ef8f6f3e02a91f137a29d34e2707245859f1605dd092cde48b4a625d457",
+      "after_sha256": "8ea211460c8a2cc538059eb0690e970bb910ab66ecc0bbfb48e6f8a27cdf23a5"
+    },
+    {
+      "path": "tests/recommendationV2FugleRuntime.test.mjs",
+      "before_sha256": "15970d61b11cc3e254d0e66e87ffa804df30b8f5eecc6a62ad02c3bb9ca581b5",
+      "after_sha256": "46510466a011b1978749206f24038da51386ee85c81ce900ae823538056dd725"
+    },
+    {
+      "path": "tests/stagedReleaseIntegrity.test.mjs",
+      "before_sha256": "3d3f17bb4b825f2224b8bab8e5c67e2fdd75c2a7e18aa792c18a0d113a86f09a",
+      "after_sha256": "6c4567cd0550f5947aaa86948c68fa53de214a23f0ae4c70f65e57660fc6e625"
+    },
+    {
+      "path": "tests/vnextDailyWiring.test.mjs",
+      "before_sha256": "a58b078dac334ee89698730484c5be00783b0f8a7700f03153393031ba2e0c39",
+      "after_sha256": "bbac197fa1a7b82e04efd0357f8026706ec52c7bbaeb5c2487aacc5c67656145"
+    }
+  ]
+}

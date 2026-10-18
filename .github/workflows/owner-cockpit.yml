@@ -17,18 +17,23 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
-      - run: node --test tests/ownerCockpit*.test.mjs
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --test tests/ownerCockpit*.test.mjs
       - name: Network-isolated fresh PostgreSQL
         run: |
           docker run -d --name ma-entry-ci-20261009 --network none -e POSTGRES_PASSWORD=isolated-ci-only postgres:17
           for attempt in $(seq 1 30); do
-            if docker exec ma-entry-ci-20261009 pg_isready -U postgres; then break; fi
+            if docker exec ma-entry-ci-20261009 pg_isready -h 127.0.0.1 -U postgres; then break; fi
             sleep 1
           done
-          docker exec ma-entry-ci-20261009 pg_isready -U postgres
+          docker exec ma-entry-ci-20261009 pg_isready -h 127.0.0.1 -U postgres
       - name: Fresh migration, real Handler, accounting, concurrency and security
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_ISOLATED_TEST_DB: ma_cockpit_test1
           MA_TEST_DOCKER_CONTAINER: ma-entry-ci-20261009
         run: node tests/ownerCockpitDatabase.integration.mjs

@@ -2,13 +2,16 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
 import { loadDecisionEvidence } from '../_shared/decision-v1-data.ts';
 import { acquireStockEvidence, buildRecommendationProof, stockAcquisitionCoverage, RECOMMENDATION_UNIVERSE } from '../_shared/recommendation-stock-evidence.ts';
-import { isMarketTradingDate } from '../_shared/market-session-contract.mjs';
+import { isMarketTradingDate, previousMarketTradingDate } from '../_shared/market-session-contract.mjs';
 import { acquireOfficialActuals } from '../_shared/recommendation-official-actuals.ts';
 import { acquireCompanyEvents } from '../_shared/recommendation-company-events.ts';
 import { recommendationJsonStream } from '../_shared/recommendation-stream.ts';
 import { startV2SourceAcquisition, selectV2InstitutionalSources } from '../_shared/recommendation-shadow-v2-sources.ts';
 import { buildV2Capsule } from '../_shared/recommendation-shadow-v2-runtime.ts';
 import { sharedV2Acquisition } from '../_shared/recommendation-v2-acquisition-cache.ts';
+import { acquireMarketInstitutionalTwd } from '../_shared/recommendation-market-institutional-candidate.ts';
+import { buildRecommendationFoundationCandidate } from '../_shared/recommendation-foundation-candidate.ts';
+import { evaluationPhase } from '../_shared/recommendation-phase.ts';
 
 // Server-only acquisition with a short research cache/lease; no formal business writes.
 // Existing internal identity validator remains unchanged.
@@ -38,17 +41,21 @@ Deno.serve(async (request:Request)=>{
   },identity);
   const signal=AbortSignal.timeout(scope==='SMOKE_2330'?22000:240000);
   const acquireBundle=async()=>{
+   const marketDate=previousMarketTradingDate('TW',date);
    // One bounded source stream for concurrent formal and Shadow consumers.
    // <=50/min + Shadow sources <=8/min; no duplicate full-universe fan-out.
    const shadowWork=scope==='SMOKE_2330'?null:startV2SourceAcquisition({businessDate:date,symbols:RECOMMENDATION_UNIVERSE,
     apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:fetch,now,signal});
    let cutoff=started;
-   const [captures,officialActuals,companyEvents]=await Promise.all([
+   const [captures,officialActuals,companyEvents,marketFlow]=await Promise.all([
     acquireStockEvidence({businessDate:date,universe:data.universe,apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:fetch,now,signal,scope}),
     scope==='SMOKE_2330'?Promise.resolve([]):acquireOfficialActuals({symbols:RECOMMENDATION_UNIVERSE,fetcher:fetch,now,signal}),
     scope==='SMOKE_2330'?Promise.resolve([]):acquireCompanyEvents({symbols:RECOMMENDATION_UNIVERSE,fetcher:fetch,now,signal}),
+    // One bounded public market-amount read, shared by the SAME daily lease.
+    // Never substitute these TAIEX amounts for individual-stock evidence.
+    scope==='SMOKE_2330'||!marketDate||evaluationPhase(started)!=='PREMARKET'?Promise.resolve(null):acquireMarketInstitutionalTwd({date:marketDate,fetcher:fetch,now,signal}),
    ]).finally(async()=>{shadowWork?.stop();cutoff=now();await shadowWork?.complete;});
-   return {business_date:date,acquisition_cutoff:cutoff,captures,officialActuals,companyEvents,acquired:await shadowWork?.complete??null};
+   return {business_date:date,acquisition_cutoff:cutoff,captures,officialActuals,companyEvents,marketFlow,acquired:await shadowWork?.complete??null};
   };
   const bundle=scope==='SMOKE_2330'?await acquireBundle():await sharedV2Acquisition({
    claim:()=>db.rpc('claim_recommendation_v2_acquisition',{p_date:date}),
@@ -63,7 +70,10 @@ Deno.serve(async (request:Request)=>{
   if(scope==='SMOKE_2330')return reply(200,{scope,coverage,acquisition:{contract:'RECOMMENDATION_STOCK_EVIDENCE_V1',business_date:date,cutoff:identity.generated_at,universe_count:72,requested_count:1,captures},complete_universe_evaluation:false,business_writes:[]});
   // Factual events are a separate sourced-evidence layer, NOT fabricated V1
   // bullish catalyst mappings or consensus. The unchanged evaluator stays closed.
-  const proof=await buildRecommendationProof(data,identity,captures,officialActuals);
+  // Old immutable cache payloads remain readable without a second late fetch.
+  const proof=bundle.marketFlow&&evaluationPhase(identity.generated_at)==='PREMARKET'
+   ?await buildRecommendationFoundationCandidate({data,identity,captures,officialActuals,marketFlow:bundle.marketFlow,evidenceCutoff:bundle.acquisition_cutoff})
+   :await buildRecommendationProof(data,identity,captures,officialActuals);
   const acquired=bundle.acquired!;
   const shadowSources=selectV2InstitutionalSources(acquired.fugle,acquired.publicSources,identity.generated_at);
   // Calculation only. Forward persistence is deliberately absent here: the

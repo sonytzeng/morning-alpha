@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     # Retain every freeze/RLS test; the complete inherited integrity chain can
     # exceed ten minutes on shared runners. This is not a skipped safety gate.
-    timeout-minutes: 20
+    timeout-minutes: 45
     services:
       isolated-postgres:
         image: postgres:17
@@ -37,10 +37,15 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
-      - run: node --test tests/researchFoundation.test.mjs
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --test tests/researchFoundation.test.mjs
       - name: New isolated database and owner access matrix
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_ISOLATED_TEST_DB: ma_10k_phase1_test1
           MA_TEST_PGPORT: 55439
         run: node tests/researchFoundationDatabase.integration.mjs

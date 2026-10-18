@@ -16,16 +16,21 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
       - name: Exact scoped source admission and affected regression
         id: admitted
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: node scripts/releases/staged-regression.mjs
       - name: A exact schema, RLS and two-function rollback
         if: steps.admitted.outputs.A == 'true'
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_ACCEPTANCE_CALENDAR_SCOPE: issue-238-calendar
           MA_TEST_DOCKER_CONTAINER: ma-acceptance-calendar-238
           MA_ISOLATED_TEST_DB: ma_six_bug_test591
@@ -39,16 +44,22 @@ jobs:
           node tests/acceptanceCalendarDatabase.integration.mjs
       - name: B1 real fresh RLS and exact source rollback
         if: steps.admitted.outputs.B1 == 'true'
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: |
           deno check --no-lock supabase/functions/get-report-payload/index.ts
           node --experimental-strip-types tests/recommendationReaderFreshDatabase.integration.mjs
       - name: B2 immutable request, lost response, accepted proof and rollback
         if: steps.admitted.outputs.B2 == 'true'
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: |
           deno check --no-lock supabase/functions/line-daily-push/index.ts
           node --experimental-strip-types tests/lineTransportRecoveryDatabase.integration.mjs
       - name: C real SQL HTTP worker, lease, immutable lock, Outcome and rollback
         if: steps.admitted.outputs.C == 'true'
+        env:
+          NODE_OPTIONS: --experimental-strip-types
         run: |
           deno check --no-lock supabase/functions/vnext-daily-research-v1/index.ts supabase/functions/recommendation-v2-forward-worker-v1/index.ts
           node --experimental-strip-types tests/vnextDailyDatabase.integration.mjs

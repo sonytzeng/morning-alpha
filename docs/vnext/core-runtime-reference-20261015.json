@@ -1,0 +1,165 @@
+{
+  "schema": "INHERITED_CORE_RUNTIME_20261015",
+  "c_head": "cf3b6b21c9e3d022a8132ed3b566b544d290a48f",
+  "production_main": "069e392eea326f6b02fa557e68103715a10b99ba",
+  "production_operations": false,
+  "local_files": [
+    {
+      "path": "research/entry-official-history.ts",
+      "sha256": "b0dd603063b1e5487cbad4ff4feb98859445903f1381c8ea20dc00d566819e38"
+    },
+    {
+      "path": "research/entry-opportunity.ts",
+      "sha256": "c52ed2ce4f2d31010e295765eecea765a03856183e9a3db66854bacc47fde95a"
+    },
+    {
+      "path": "research/entry-v2-adapter.ts",
+      "sha256": "0f984a7610533fca1b1b266ce0e0888457174b68ba3609881ed3234ef834c041"
+    },
+    {
+      "path": "src/features/decision-v1/contract.ts",
+      "sha256": "26f4b8efed797c86616614bdc63136619b5f3112cc0dad9b66bf6c650cfc3715"
+    },
+    {
+      "path": "src/features/research/recommendation-shadow-v2-summary.ts",
+      "sha256": "8ff6744d5b456fbef51191186b87a88b30ccd970e35bf2e11574766560cb3d2d"
+    },
+    {
+      "path": "src/features/research/recommendation-v2-forward.ts",
+      "sha256": "cc56810a11ce5f09ba82418a9079457abadee8ee9147cb204ffccec3fe7ac1ee"
+    },
+    {
+      "path": "src/features/vnext/contracts.ts",
+      "sha256": "0a89f96f209c9c235416a4b060c85b38bb6d6799ad3234ef16156537fd50d579"
+    },
+    {
+      "path": "src/features/vnext/dailyAdapter.ts",
+      "sha256": "08556661bf9739c947278a3153486c412083eab241fba187bb2b9968d61e622a"
+    },
+    {
+      "path": "src/features/vnext/dailyIntelligence.ts",
+      "sha256": "22bdb3d495ec6c06fd6b2382524ef1727d6078d457fec3a2f724f15a6fc8528b"
+    },
+    {
+      "path": "src/features/vnext/dailyOutcome.ts",
+      "sha256": "9cadb241bf73ed54e09dd8df9504c8d1798068c5bcf0ae38bc256548169fa373"
+    },
+    {
+      "path": "src/features/vnext/dailyParsers.mjs",
+      "sha256": "e6b1ad234ab7b0036223416776eba2809588ad7adb2f8255e9472003abd3e6f5"
+    },
+    {
+      "path": "src/features/vnext/dailyRuntime.ts",
+      "sha256": "b2ee9bfd1618b6eb7f85494ae55a1d6dc14693f48571e007d9d6a019f861ae91"
+    },
+    {
+      "path": "src/features/vnext/projection.ts",
+      "sha256": "8a238c6eacc3972f0f3927346c4081d9e2dcb4c8613bcc4cb1825a3abaf688ae"
+    },
+    {
+      "path": "src/features/vnext/publicationReadiness.ts",
+      "sha256": "76f8d26b07c92e84cef82459b8c94bc9dbcabfbaaa6e86b67036b351c6a67058"
+    },
+    {
+      "path": "src/features/vnext/realResearch.ts",
+      "sha256": "adc05e968bce6c840c132d14bec7df076d4002b031471e0175c3a9e13346125f"
+    },
+    {
+      "path": "src/features/vnext/researchFunnel.ts",
+      "sha256": "26e0e7e06002834bf7a853d0971147e7e1de40b3daae0cd9c8c10911e1c524c5"
+    },
+    {
+      "path": "src/features/vnext/stockResearch.ts",
+      "sha256": "7583c0edca56aa4c225173ab5657ce894529df34efb63d745cab28c73dc887c5"
+    },
+    {
+      "path": "supabase/functions/_shared/decision-v1-data.ts",
+      "sha256": "7c0ba14f39a52ab216e662ce0cfce80a5c5c64cfdf7a719f4b103be3439a8082"
+    },
+    {
+      "path": "supabase/functions/_shared/decision-v1-evidence.ts",
+      "sha256": "2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848"
+    },
+    {
+      "path": "supabase/functions/_shared/market-calendar-data.json",
+      "sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232"
+    },
+    {
+      "path": "supabase/functions/_shared/market-session-contract.mjs",
+      "sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44"
+    },
+    {
+      "path": "supabase/functions/_shared/market-status.ts",
+      "sha256": "d285910516d5ae5e0f55d8ee4314da7b7e21214b766d20cda2853fa775af0737"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-company-events.ts",
+      "sha256": "4b756d518e88d6d3f7e4cfce9944bcc6a2f3f51577a92b9408fee7618b3713b1"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-official-actuals.ts",
+      "sha256": "ac1457eb889466931f14f4e9c5a44c3a6000a54a6657cd1c977cb4916714eea5"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-phase.ts",
+      "sha256": "d517fb094ea41a8e70c16c132ca7dc9d48bb5c63efc7d7f36760502697a8e5d6"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+      "sha256": "5d934bb7c2be21ff66a0043a945b0d91edcbeb2a57166882715e8813da31766e"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-sources.ts",
+      "sha256": "98475003460d215e764bf011aba5fae7a603ba3455e54be547dba75e79e23708"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-stock-evidence.ts",
+      "sha256": "86be1e626de3bf5c746aa10d5abcfb99dbb8b86c7ab2e6dbb7151335170c47d1"
+    },
+    {
+      "path": "supabase/functions/_shared/txf-session-contract.mjs",
+      "sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e"
+    },
+    {
+      "path": "supabase/functions/_shared/vnext-daily-hook.ts",
+      "sha256": "3903460c835d9fb0df749ebf050409bff56144aafbc6423bf1ac58dfc2a6bea0"
+    },
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/handler.ts",
+      "sha256": "ff721bc0a848b5e8cc4e089b440b0d3e179a124c13e8acd7054512047b0a4466"
+    },
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/index.ts",
+      "sha256": "4fcada158ef706c7a08b665ad1d7e3d2da9faa58aba9887ef5c6bb9d198ea939"
+    },
+    {
+      "path": "supabase/functions/_shared/internal-function-auth.mjs",
+      "sha256": "2a15efde1117cf2f8c1ef3adf376de95c930254902c57f2ec5dbf74ce0f930be"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-producer.ts",
+      "sha256": "7e8146ddfdfc56d494f31d85450e565e0a51b45453f0401cc303cbd672f8e89b"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts",
+      "sha256": "528f41ef339a9d69708514738b10c889149b16f67c35fd8ad3d19a357d19298a"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-runtime.ts",
+      "sha256": "ec562918f999fe07ce4ed7aa682300dbf2957cd24990f3339b1bf4243f7ce1ef"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-v2-forward-outcomes.ts",
+      "sha256": "6b6f8d16bb9bf66739512674a84c375695f3bc03d1d92d98cc7f1f8e043f83c7"
+    },
+    {
+      "path": "supabase/functions/recommendation-v2-forward-worker-v1/index.ts",
+      "sha256": "e8c39bb557400b8dbabf76ce841984be4c9ee60b2867bb6602e4dd2260f42c58"
+    }
+  ],
+  "migration": {
+    "path": "supabase/migrations/20261012054120_vnext_daily_research_runtime_candidate.sql",
+    "sha256": "8f483318e8e6ac0867ddee4cdd2282df13f045c6a6235c2213e15ad9f77fd86f",
+    "production_applied": false
+  }
+}

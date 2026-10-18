@@ -1,0 +1,508 @@
+{
+  "schema": "MORNING_ALPHA_R10_FUNCTIONAL_SOURCE_CLOSURE_20261017",
+  "parent_head": "882d6799e4646c7917621843a65b960f7a7666ed",
+  "base": "754850ba1c66329d12eac8e98ab799e0a0c9123e",
+  "production_authorized": false,
+  "prior_r9": {
+    "path": "docs/operations/evidence/r9-functional-source-closure-20261017.json",
+    "sha256": "cc99eba18cd0853fbf4291eda4dfd27d21b7a47179763a3b42b08275907ba375",
+    "preserved": true
+  },
+  "sources": [
+    {
+      "path": "scripts/vnext/event-alignment-refresh.mjs",
+      "sha256": "dbeed19f046ed21af055176234d7c7abde19c101b2d92535c654e95eb42f6e94",
+      "mode": "100644"
+    },
+    {
+      "path": "research/recommendation-issuer-event-review-candidate.ts",
+      "sha256": "ecfed04a1c54c2132ae294338d8914ff6746beef09e2f37876d28073f762dbe5",
+      "mode": "100644"
+    },
+    {
+      "path": "tests/fixtures/issuer-event-review-official-facts-20261017.json",
+      "sha256": "1d7269016ac2669b858fedc1817190e1f8d3ac64349be3fd184f24b044937125",
+      "mode": "100644"
+    }
+  ],
+  "price": {
+    "schema": "R10_REAL_72_PRICE_WINDOW_AND_PEERS",
+    "candidate_parent": "882d6799e4646c7917621843a65b960f7a7666ed",
+    "node": "v22.14.0",
+    "cutoff": "2026-10-17T08:55:36.500Z",
+    "started_at": "2026-10-17T08:54:01.172Z",
+    "bundle_sha256": "b2293acd8208eb455a45e31623032268e81772ed0d9eace53905849fb9d0e310",
+    "input_sha256": "30bc561ff7729eb4fb1581116612f1d85162904850f48e5a445ccf161de66a7d",
+    "script_sha256": "dbeed19f046ed21af055176234d7c7abde19c101b2d92535c654e95eb42f6e94",
+    "source_hash": "3752e3c3c029135a6111ba6f7ad3ded4f48c84fbd6a554a9ad25d867cd62ee2b",
+    "independent_offline_replay": "PASS",
+    "requests": 60,
+    "new_receipts": 60,
+    "response_bytes": 3892850,
+    "elapsed_ms": 95735,
+    "halted": null,
+    "original": {
+      "symbols": 72,
+      "denominator": 1440,
+      "stock_close": 1296,
+      "stock_ohlcv_amount": 1296,
+      "stock_and_taiex": 1296,
+      "stock_ohlcv_and_taiex": 1296
+    },
+    "before": {
+      "symbols": 72,
+      "denominator": 1440,
+      "stock_close": 1302,
+      "stock_ohlcv_amount": 1302,
+      "stock_and_taiex": 1302,
+      "stock_ohlcv_and_taiex": 1302
+    },
+    "after": {
+      "symbols": 72,
+      "denominator": 1440,
+      "stock_close": 1440,
+      "stock_ohlcv_amount": 1440,
+      "stock_and_taiex": 1440,
+      "stock_ohlcv_and_taiex": 1440
+    },
+    "remaining_stock_dates": [],
+    "filled_stock_days": 138,
+    "taiex_sessions": 20,
+    "expected_sessions": [
+      "2026-09-16",
+      "2026-09-17",
+      "2026-09-18",
+      "2026-09-21",
+      "2026-09-22",
+      "2026-09-23",
+      "2026-09-24",
+      "2026-09-29",
+      "2026-09-30",
+      "2026-10-01",
+      "2026-10-02",
+      "2026-10-05",
+      "2026-10-06",
+      "2026-10-07",
+      "2026-10-08",
+      "2026-10-12",
+      "2026-10-13",
+      "2026-10-14",
+      "2026-10-15",
+      "2026-10-16"
+    ],
+    "availability": {
+      "first": "2026-10-15T03:59:26.489Z",
+      "last": "2026-10-17T08:55:36.497Z"
+    },
+    "canonical_observation_sha256": "d0e824dfe68a1086681ea7ecad31f6f63e110e3998e563b8d41f12d7ab7fb635",
+    "canonical_symbols": 72,
+    "canonical_min_peers": 2,
+    "full_peer_windows": 72,
+    "receipt_files_hash_checked": 60,
+    "new_at_saved_1016_cutoff_quotes": 0,
+    "old_cutoff_rejected": true,
+    "reviewed_causal_events": 0,
+    "formal_v1_evaluator_unchanged": "2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848",
+    "source_rights": "PRIVATE_RESEARCH_ONLY_MEMBER_RIGHTS_UNVERIFIED",
+    "raw_prices_exported": false,
+    "production_operations": 0,
+    "forward_sample": 0,
+    "outcome_sample": 0,
+    "assessment_session": "NOT_A_TRADING_SESSION",
+    "private_proof_sha256": "3dd4d90305c5ca14cb84d133ad62620341cdf5e9981ae51e1324f82754c15177",
+    "private_receipts_retained": true,
+    "raw_values_in_repository": false,
+    "source_sha256_is_source_set_not_official_signature": true,
+    "existing_db_inventory": {
+      "date": "2026-10-15",
+      "complete_symbols": 72,
+      "unit": "ACTUAL_TWD_AND_SHARES",
+      "first_available": "2026-10-15T23:00:12.347Z",
+      "last_available": "2026-10-15T23:06:47.442Z",
+      "date_20261016_symbols": 0,
+      "read_only": true,
+      "db_rows_recast_as_source_receipts": false
+    },
+    "formal_source_admission": false
+  },
+  "issuer_actuals": {
+    "symbol": "2330",
+    "observed_quarters": [
+      "2025-Q4",
+      "2026-Q1",
+      "2026-Q2",
+      "2026-Q3"
+    ],
+    "standalone_releases_directly_observed": 4,
+    "common_share_basis_direct": 2,
+    "common_share_basis_indexed_only": 2,
+    "revenue_precision_twd": 10000000,
+    "source_response_bytes_retained": false,
+    "source_projection_hash_not_raw_document_hash": "65eaa00f1d741ae4decffd567ff35e41156d01116eef9ba3bb21c12fde20e121",
+    "original_publication_instant": null,
+    "original_version": null,
+    "consensus_before_announcement": 0,
+    "latest_guidance_observed": 1,
+    "guidance_direction": null,
+    "formal_complete_v1_symbols": 0,
+    "member_publication": false
+  },
+  "event": {
+    "reviewable_drafts": 1,
+    "symbols": [
+      "2330"
+    ],
+    "reviewed_causal_events": 0,
+    "approved_causal_reviews_passed_to_existing_adapter": 0,
+    "canonical_rows_created": 0,
+    "source_based_relation": "ISSUER_SELF_NOT_EXTERNAL_CUSTOMER_OR_SUPPLIER",
+    "transmission_counterevidence_confirmation_invalidation_cancellation": true,
+    "quality_owner_approval": false,
+    "member_publication": false
+  },
+  "capability": {
+    "path": "docs/operations/evidence/r10-provider-capability-review-20261017.json",
+    "sha256": "eb390ce4ebf0d8a159d98fa2f20c2f238c1e63da2680a8829ef303f58794974c",
+    "per_stock_actual_twd": "NOT_PROVEN_REVIEWED_TEJ_PRODUCT_USES_SHARES_TIMES_CLOSE",
+    "consensus_options": [
+      "LSEG_IBES_PIT",
+      "FACTSET_PIT"
+    ],
+    "guidance_options": [
+      "LSEG_IBES_GUIDANCE",
+      "FACTSET_GUIDANCE",
+      "ISSUER_ORIGINAL_MANUAL_CURATED"
+    ],
+    "current_account_entitlement": "UNKNOWN",
+    "cost": "UNKNOWN",
+    "purchase_necessary": "NOT_ESTABLISHED",
+    "new_authenticated_provider_calls": 0
+  },
+  "release": {
+    "A": {
+      "status": "READY_FOR_SEPARATE_NAMED_APPROVAL",
+      "source_head": "5f33777836778e3600e4e377fcb3cf4de690fe80",
+      "local_match": 22,
+      "remote_cache_source_match": 63,
+      "sdk": "2.57.4",
+      "verify_jwt": true,
+      "working_tree_collision": [
+        "supabase/functions/_shared/recommendation-official-actuals.ts"
+      ],
+      "payload_policy": "ORIGINAL_IMMUTABLE_5f337778_COMPLETE22_LOCAL63_REMOTE_NOT_CURRENT_TREE",
+      "rollback": "SEALED_FIXED_SDK_CALLER_V2_FUNCTIONAL_EQUIVALENT_NOT_IDENTICAL_ESZIP",
+      "production_authorized": false,
+      "rollback_preflight": "SEE_FINAL_PR_BINDING_RECHECK_BEFORE_APPROVAL"
+    },
+    "B": {
+      "sql": [
+        {
+          "path": "supabase/migrations/20261010061630_vnext_research_projection_candidate.sql",
+          "sha256": "c22d4adb3527326f816627f371327ed7fb00170699f9416efba9f797fdfe31dc"
+        },
+        {
+          "path": "supabase/migrations/20261012080628_vnext_member_publication_control_candidate.sql",
+          "sha256": "93166bb789de1c5d2d093c533ee7fc57afed90bd44abc4ae2e6b5a6d72ba2fcd"
+        },
+        {
+          "path": "supabase/migrations/20261013045054_membership_legacy_policy_candidate.sql",
+          "sha256": "91b9ff79c15f4337d7e20631da58998f0cd21d2761fd874964a9a78e84b5ced3"
+        }
+      ],
+      "edge": "member-access",
+      "sdk": "2.115.0",
+      "verify_jwt": false,
+      "website_operation_count": 24,
+      "website_source_package_unchanged_from_r9": true,
+      "operations": [
+        {
+          "path": "research/entry-opportunity.ts",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "c52ed2ce4f2d31010e295765eecea765a03856183e9a3db66854bacc47fde95a",
+          "operation": "ADD",
+          "classification": "EXISTING_MAIN_BUILD_TYPE_SOURCE_NOT_EDGE_FUNCTION_DEPLOYMENT",
+          "source_bytes": 13799
+        },
+        {
+          "path": "src/components/feature/Navbar.tsx",
+          "mode": "100644",
+          "live_before_sha256": "a70fef7d3e750189f182a15b332462f9b0dae240b4ccd6729b91ea253c7d4a00",
+          "target_sha256": "a6c44781d0efdf111dfbf0acb8102930c91bbfaf5dc608faeab506e07e51baa7",
+          "operation": "MODIFY",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 7000
+        },
+        {
+          "path": "src/components/membership/MembershipStatusCard.tsx",
+          "mode": "100644",
+          "live_before_sha256": "20c8d58dbbe7870528a96a45b3e4c95d1d12a91a71e9fc2b3bf17e2fcf450e6e",
+          "target_sha256": "6149034a28902c2e4fc3b3b13ac9f66ece7d09bc3d7956c99b9d450d0ddf8d6a",
+          "operation": "MODIFY",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 6613
+        },
+        {
+          "path": "src/features/vnext/contracts.ts",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "0a89f96f209c9c235416a4b060c85b38bb6d6799ad3234ef16156537fd50d579",
+          "operation": "ADD",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 5344
+        },
+        {
+          "path": "src/features/vnext/member.ts",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "5fcf87bef6287f8effd15db4431d966751d57bd4be1d6f3dc5bcf2ef86bce28e",
+          "operation": "ADD",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 6499
+        },
+        {
+          "path": "src/features/vnext/projection.ts",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "8a238c6eacc3972f0f3927346c4081d9e2dcb4c8613bcc4cb1825a3abaf688ae",
+          "operation": "ADD",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 6768
+        },
+        {
+          "path": "src/pages/account/Account.tsx",
+          "mode": "100644",
+          "live_before_sha256": "60fac54f24ecc062d4cbb16aa93e5611aed14c61bd1bd60b4b81387a995f2066",
+          "target_sha256": "5f5142147f24d1841e50418147a9ceac2cf4b0951fd37c19a68ea867d15a090b",
+          "operation": "MODIFY",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 9710
+        },
+        {
+          "path": "src/pages/auth/LoginPage.tsx",
+          "mode": "100644",
+          "live_before_sha256": "2fb647cd4c8ea2fbdadfc650dc30d47807926ca214320fe6aaefba16fb581a41",
+          "target_sha256": "239282f79310c17a54ccba6f9a4ae17ace26562d3adc6197625c8b5633bb8285",
+          "operation": "MODIFY",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 9786
+        },
+        {
+          "path": "src/pages/vnext/member.css",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "386ba0220118b02225c71d2f5c265281274546cb343cec109f333d1006cde27c",
+          "operation": "ADD",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 2213
+        },
+        {
+          "path": "src/pages/vnext/MemberExperience.tsx",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "b86ae1e45fac57299e4693ca8b20d67746741e4fee478b29d983d3aba81c8a8d",
+          "operation": "ADD",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 7328
+        },
+        {
+          "path": "src/pages/vnext/MemberNavigation.tsx",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "20a91ed12b5066a9b0b5d249050f3615dfd970283c0f05be150e9b43ed9e36bf",
+          "operation": "ADD",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 1260
+        },
+        {
+          "path": "src/pages/vnext/MemberPage.tsx",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "cf1f8a8f94101440628f7ba8b1151887da13045e380cd401514b94c7122f2058",
+          "operation": "ADD",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 6347
+        },
+        {
+          "path": "src/pages/vnext/OwnerPublication.tsx",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "9aeb5be727608a3eff5a64b5d5de5a74ba948faaa14061ea292c7add411f03ce",
+          "operation": "ADD",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 4731
+        },
+        {
+          "path": "src/pages/vnext/PublicExperience.tsx",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "71418bed0c25b5e346637e4af2af37006210e7af969d49a8a4a86810b984bdc4",
+          "operation": "ADD",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 2423
+        },
+        {
+          "path": "src/pages/vnext/vnext.css",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "0a14d5d053e18349a1d15268b43b177372ba24c0af34c0e2c1837167dc27bb21",
+          "operation": "ADD",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 7749
+        },
+        {
+          "path": "src/router/config.tsx",
+          "mode": "100644",
+          "live_before_sha256": "e105ab33ed255ec587ad6eb8048d976744f52db077f82d7e499d6a08b9c42d71",
+          "target_sha256": "48b220408680f7c6d54202e17f200495f52cabde7fa7ef4503a3088ab96b4229",
+          "operation": "MODIFY",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 6706
+        },
+        {
+          "path": "src/types/membership.ts",
+          "mode": "100644",
+          "live_before_sha256": "db467e8f61b3d6548d2badccb5a3216470685e01fdd512688444442e7e337d2d",
+          "target_sha256": "b302ad9a3c7dcdb62c0e8209d1677456c30fde6a2cfbac2477382d94772d61a1",
+          "operation": "MODIFY",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "source_bytes": 947
+        },
+        {
+          "path": "supabase/functions/_shared/market-calendar-data.json",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232",
+          "operation": "ADD",
+          "classification": "EXISTING_MAIN_BUILD_TYPE_SOURCE_NOT_EDGE_FUNCTION_DEPLOYMENT",
+          "source_bytes": 1671
+        },
+        {
+          "path": "supabase/functions/_shared/market-session-contract.mjs",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44",
+          "operation": "ADD",
+          "classification": "EXISTING_MAIN_BUILD_TYPE_SOURCE_NOT_EDGE_FUNCTION_DEPLOYMENT",
+          "source_bytes": 2994
+        },
+        {
+          "path": "supabase/functions/_shared/owner-trading-lab.ts",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "f31f48321eadb9f0845f028da6586035c40a543eee52331f6f4f8343754701e9",
+          "operation": "ADD",
+          "classification": "EXISTING_MAIN_BUILD_TYPE_SOURCE_NOT_EDGE_FUNCTION_DEPLOYMENT",
+          "source_bytes": 11027
+        },
+        {
+          "path": "supabase/functions/_shared/recommendation-phase.ts",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "d517fb094ea41a8e70c16c132ca7dc9d48bb5c63efc7d7f36760502697a8e5d6",
+          "operation": "ADD",
+          "classification": "EXISTING_MAIN_BUILD_TYPE_SOURCE_NOT_EDGE_FUNCTION_DEPLOYMENT",
+          "source_bytes": 8256
+        },
+        {
+          "path": "supabase/functions/_shared/txf-session-contract.mjs",
+          "mode": "100644",
+          "live_before_sha256": null,
+          "target_sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e",
+          "operation": "ADD",
+          "classification": "EXISTING_MAIN_BUILD_TYPE_SOURCE_NOT_EDGE_FUNCTION_DEPLOYMENT",
+          "source_bytes": 2857
+        },
+        {
+          "path": "src/pages/account/components/MorningHeroCard.tsx",
+          "operation": "MODIFY",
+          "mode": "100644",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "live_before_sha256": "6457935f9117a27758a8ca65f158f2c259f875c0376a0eef80772d73587a7472",
+          "target_sha256": "951e1c0c977399cb557710ff96bf2ab04c277d2d56575d5ea0cb675d7b63c385",
+          "source_bytes": 11780
+        },
+        {
+          "path": "src/hooks/useAccountDashboard.ts",
+          "operation": "MODIFY",
+          "mode": "100644",
+          "classification": "CLIENT_UI_RUNTIME_SOURCE",
+          "live_before_sha256": "dd0b8f6789b9c7431f05613e3edf3b2fd4d7c17c4b860f04a53cddf6114dec11",
+          "target_sha256": "9cd4e24328a23a9aceee9aebd2c3adfced9309cdbd153d0a1ec97ec3ab36285f",
+          "source_bytes": 12086
+        }
+      ],
+      "baseline": {
+        "record": 14836408,
+        "version": 674,
+        "read_only_live_version_observed_date": "2026-10-17 Asia/Taipei",
+        "fresh_source_export_verified_at": "2026-10-17T06:12:57Z",
+        "fresh_export_matches_sealed_baseline": true,
+        "archive_sha256": "71f36b8103622901c8bb03a97f6c2e485fb7a1d9768eb25cf81a0bd327af2d7f"
+      },
+      "policy_activation": false,
+      "research_publication": false,
+      "production_authorized": false
+    },
+    "C": {
+      "rpc": "public.activate_membership_policy_candidate_v1(text)",
+      "installed": false,
+      "activation": false,
+      "named_reference_required": true,
+      "maintenance_window_required": true,
+      "legal_formal_sessions_observed": {
+        "owner": 1,
+        "free": 0,
+        "premium": 0,
+        "legacy": 0
+      },
+      "owner_not_substituted_for_other_tiers": true
+    },
+    "D": {
+      "status": "HOLD",
+      "reader_rollback_commit": "cd3e49cb6e60908346ccb04ed5c07ee5e89412ad",
+      "direct_v55_rollback_after_private_capture": false
+    },
+    "E": {
+      "status": "HOLD",
+      "historical_research_publication": 0
+    }
+  },
+  "production": {
+    "explicit_mutation_actions": 0,
+    "versions": {
+      "site": 674,
+      "reader": 55,
+      "producer": 15,
+      "sender": 71,
+      "worker": 1,
+      "caller": 2,
+      "member_access": 8
+    },
+    "caller_hook_enabled": false,
+    "natural_runs": 0,
+    "predictions": 0,
+    "outcomes": 0,
+    "runtime_rls_and_force_rls_tables": 8,
+    "member_policy_activation_rpc_exists": false,
+    "formal_v1": {
+      "universe": 72,
+      "evaluated": 0,
+      "blocked": 72,
+      "ready": 0,
+      "watch": 0,
+      "none": 0,
+      "source": "UNCHANGED_SAVED_20261016_NOT_R10_PRICE_COMPLETION"
+    },
+    "free_premium_legacy_formal_e2e": "NO_AUTHORIZED_LEGAL_SESSIONS_OBSERVED",
+    "commercial_stability": "0/5",
+    "payment": "DISABLED",
+    "blanket_business_diff_zero_claim": false
+  },
+  "reused_verification": {
+    "r9_ci_success": 13,
+    "head": "882d6799e4646c7917621843a65b960f7a7666ed",
+    "scope": "UNCHANGED_RUNTIME_SQL_AUTH_RLS_UI_ONLY_NOT_NEW_HEAD_CI_OR_PRODUCTION_E2E"
+  },
+  "next_objective_milestone": "Exact A approval and caller-only deploy then first legal natural run; B and C separately approved with lawful formal identities; V1 still requires real per-stock flows, quarter estimates/guidance and reviewed causal/time evidence. No guarantee of date or investment performance."
+}

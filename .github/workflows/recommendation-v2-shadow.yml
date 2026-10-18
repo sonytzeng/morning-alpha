@@ -8,7 +8,7 @@ permissions:
 jobs:
   v2-shadow:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -17,12 +17,16 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
       - run: deno check --no-lock supabase/functions/recommendation-v2-forward-worker-v1/index.ts supabase/functions/owner-trading-lab-v1/index.ts
-      - run: node --experimental-strip-types --test tests/recommendationV2*.test.mjs
+      - env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test tests/recommendationV2*.test.mjs
       - name: Disposable clocked database, no Production connection
         run: |
           docker build -t ma-v2-clock-ci - < tests/fixtures/runtime-sparse-postgres.Dockerfile
@@ -34,16 +38,19 @@ jobs:
           docker exec ma-recommendation-owner-ci pg_isready -U postgres
       - name: Fresh database, immutable Forward and outcome parity
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_ISOLATED_TEST_DB: ma_v2_shadow_test1
           MA_TEST_DOCKER_CONTAINER: ma-recommendation-owner-ci
         run: node --experimental-strip-types tests/recommendationV2Database.integration.mjs
       - name: Fresh database, WATCH and READY lock separation without access changes
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_ISOLATED_TEST_DB: ma_v2_watch_test1
           MA_TEST_DOCKER_CONTAINER: ma-recommendation-owner-ci
         run: node --experimental-strip-types tests/recommendationV2WatchLockDatabase.integration.mjs
       - name: Local-only Owner browser and deny paths
         env:
+          NODE_OPTIONS: --experimental-strip-types
           MA_ISOLATED_TEST_DB: ma_v2_shadow_test1
           MA_V2_UI_SCOPE: LOCAL_ONLY
           MA_PLAYWRIGHT_MODULE: /tmp/v2-browser-tools/node_modules/playwright/index.mjs

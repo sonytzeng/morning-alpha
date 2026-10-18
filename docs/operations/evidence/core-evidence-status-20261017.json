@@ -1,0 +1,890 @@
+{
+  "schema": "CORE_EVIDENCE_STATUS_20261017",
+  "base": "754850ba1c66329d12eac8e98ab799e0a0c9123e",
+  "observed_at": "2026-10-16T15:48:29.29105+00:00",
+  "classification": "SAVED_PRODUCTION_READ_ONLY_NOT_REPLAY",
+  "v1": {
+    "flows_total": 0,
+    "observed_at": "2026-10-16T15:48:29.29105+00:00",
+    "formal_funnel": {
+      "status": "BLOCKED",
+      "none_count": 0,
+      "ready_count": 0,
+      "watch_count": 0,
+      "blocked_count": 72,
+      "universe_count": 72,
+      "evaluated_count": 0,
+      "evaluation_phase": "PREMARKET",
+      "reason_distribution": {
+        "THREE_INSTITUTIONS_MISSING": 72,
+        "MARKET_REQUIRED_INSTITUTIONAL": 72,
+        "SOURCED_COMPANY_CATALYST_MAPPING_MISSING": 72,
+        "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING": 72,
+        "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING": 72
+      },
+      "not_yet_observable_count": 0
+    },
+    "candidate_rows": [
+      {
+        "status": "BLOCKED",
+        "symbol": "1504",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "1513",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "1514",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "1519",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "1590",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "1605",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "1760",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2049",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2208",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2303",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2308",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2317",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2330",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2337",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2344",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2356",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2357",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2368",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2376",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2377",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2379",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2382",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2383",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2408",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2421",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2454",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2520",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2539",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2542",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2548",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2603",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2609",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2610",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2615",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2618",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2634",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2881",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2882",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2884",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2885",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2886",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2891",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "2892",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3006",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3017",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3034",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3037",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3081",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3189",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3231",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3324",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3363",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3443",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3450",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3529",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3653",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3661",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "3711",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "4566",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "4743",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "4908",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "4979",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "6213",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "6230",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "6274",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "6446",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "6488",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "6547",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "6669",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "8033",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "8046",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      },
+      {
+        "status": "BLOCKED",
+        "symbol": "8299",
+        "reasons": [
+          "THREE_INSTITUTIONS_MISSING",
+          "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING",
+          "SOURCED_COMPANY_CATALYST_MAPPING_MISSING",
+          "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING",
+          "MARKET_REQUIRED_INSTITUTIONAL"
+        ]
+      }
+    ],
+    "earnings_total": 0,
+    "flows_last_10d": 0,
+    "mappings_total": 0,
+    "mappings_last_7d": 0,
+    "earnings_last_550d": 0
+  },
+  "source_candidate": {
+    "scope": "MARKET_TWD_ONLY",
+    "status": "CANDIDATE_PRODUCER_CACHE_REPORT_READER_WIRED_NOT_DEPLOYED",
+    "real_source_validation": "PASS",
+    "real_first_seen_at": "2026-10-16T15:55:40.387Z",
+    "source_revision": "fcabdf9dc469cf46891c5db3d33e17600195525d00f9ab2a2cfa8db914799f6c",
+    "late_historical_input_rejected": true,
+    "published_at": null,
+    "free_premium_usage_rights": "PENDING"
+  },
+  "caller": {
+    "production_version": 2,
+    "natural_hook_enabled": false,
+    "candidate_source_head": "5f33777836778e3600e4e377fcb3cf4de690fe80",
+    "candidate_entry_sha256": "e8c39bb557400b8dbabf76ce841984be4c9ee60b2867bb6602e4dd2260f42c58",
+    "local_sources": 22,
+    "remote_sources": 63,
+    "source_drift": 0,
+    "compared_at": "2026-10-16T15:49:52.877Z",
+    "closure_differences_from_live_v2": 6,
+    "requires_named_deployment_approval": true
+  },
+  "auth": {
+    "result": "PASS_AUTH_ONLY",
+    "checks": [
+      401,
+      401,
+      422
+    ],
+    "expected_valid_scope_rejection": true,
+    "repeated_probe": false,
+    "temporary_helper_absent": true,
+    "temporary_bucket_count": 0,
+    "temporary_objects": 0,
+    "business_fingerprints_unchanged": 8,
+    "cleanup_order_evidence": "OWNER_HANDOFF_HISTORY_NOT_REEXECUTED"
+  },
+  "member": {
+    "pr": 251,
+    "head": "fe87551b08153061dbb07ac2b8d5307a9058a757",
+    "ci": "10_OF_10_PASS_AT_OWN_HEAD",
+    "draft": true,
+    "main_merge_tree": "0c3fe83364e79d74601f971533045a749f54c60f",
+    "merge_conflicts": 0,
+    "production_free_e2e": "PENDING",
+    "production_premium_e2e": "PENDING",
+    "production_owner_badge": "PERMANENT_OWNER_OBSERVED",
+    "published_research": 0
+  },
+  "production_operations": {
+    "merge": 0,
+    "deploy": 0,
+    "migration": 0,
+    "cron": 0,
+    "secrets": 0,
+    "auth_rls": 0,
+    "member_rights": 0,
+    "line_send": 0,
+    "payment": "DISABLED"
+  },
+  "five_trading_days": "0/5",
+  "core_release_ready": false,
+  "all_requested_functions_ready": false
+}

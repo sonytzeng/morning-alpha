@@ -8,11 +8,15 @@ import { useAccountDashboard } from '@/hooks/useAccountDashboard';
 import VisualPageHero from '@/components/feature/VisualPageHero';
 import MembershipStatusCard from '@/components/membership/MembershipStatusCard';
 import AcademyEntry from './components/AcademyEntry';
+import { STOCK_OBSERVATION_NAV } from '@/features/vnext/member';
+import { resolveMarketStatus } from '@/lib/market-status';
+import { isTaipeiToday } from '@/services/marketSourceHealthService';
 
 function isTaipeiWeekend(): boolean {
-  const now = new Date();
-  const tw = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-  return tw.getDay() === 0 || tw.getDay() === 6;
+  // Legacy prop name retained; weekday holidays/exceptional closures are also
+  // non-trading days. Never infer an open market from weekday alone.
+  const status = resolveMarketStatus(isTaipeiToday());
+  return status.closed_reason !== '日期解析異常' && !status.is_trading_day;
 }
 
 export default function Account() {
@@ -96,6 +100,7 @@ export default function Account() {
           <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
             <MembershipStatusCard />
             <AcademyEntry />
+            <section className="ma-card-compact"><h2 className="text-lg font-bold text-white">{STOCK_OBSERVATION_NAV.label}</h2><p className="mt-2 text-sm text-white/70">依短、中、長期查看已核准的研究理由與風險；研究不等於正式推薦。</p><Link className="mt-3 inline-flex min-h-11 items-center text-primary-300" to={STOCK_OBSERVATION_NAV.to}>查看股票觀察</Link></section>
 
             <section aria-labelledby="member-daily-path-title">
               <div className="mb-4">

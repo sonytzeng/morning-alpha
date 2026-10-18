@@ -3,6 +3,28 @@ import type { Report } from '@/types/report';
 import { formatTaipeiTimeShort } from '@/hooks/useAccountDashboard';
 import { getSubscriberReportProjection } from '@/lib/subscriberReportProjection';
 import { isTaipeiToday } from '@/services/marketSourceHealthService';
+import { resolveMarketStatus } from '@/lib/market-status';
+
+/** Scheduled time only, not a promise that a future report is already ready. */
+function nextScheduledReportLabel(now: Date): string {
+  if (!Number.isFinite(now.getTime())) return '交易日待確認';
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(now);
+  const part = (type: string) => parts.find(p => p.type === type)?.value || '';
+  const today = `${part('year')}-${part('month')}-${part('day')}`;
+  const minutes = Number(part('hour')) * 60 + Number(part('minute'));
+  const date = new Date(`${today}T00:00:00Z`);
+  for (let offset = 0; offset <= 30; offset++) {
+    const candidate = date.toISOString().slice(0, 10);
+    const status = resolveMarketStatus(candidate);
+    if (status.market_status === 'EMERGENCY_CLOSE') return '交易日待確認';
+    if (status.is_trading_day && (offset > 0 || minutes < 450)) return `${candidate} 07:30`;
+    date.setUTCDate(date.getUTCDate() + 1);
+  }
+  return '交易日待確認';
+}
 
 interface MorningHeroCardProps {
   todayReport: Report | null;
@@ -192,8 +214,8 @@ export default function MorningHeroCard({ todayReport, hasTodayReport: reportedT
               </div>
               <span className="text-white/40 text-xs font-medium">下次更新</span>
             </div>
-            <p className="text-white font-bold text-sm">{unpublished ? '等待有效市場資料' : '明日 07:30'}</p>
-            <p className="text-white/30 text-[11px] mt-0.5">AI 盤前自動生成</p>
+            <p className="text-white font-bold text-sm">{unpublished ? '等待有效市場資料' : nextScheduledReportLabel(new Date())}</p>
+            <p className="text-white/30 text-[11px] mt-0.5">依台灣交易日排程更新</p>
           </div>
 
           {/* Streak */}

@@ -7,6 +7,7 @@ import {evaluateV2Shadow} from '../supabase/functions/_shared/recommendation-sha
 import {RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
 import {recommendationJsonStream} from '../supabase/functions/_shared/recommendation-stream.ts';
 import {sharedV2Acquisition} from '../supabase/functions/_shared/recommendation-v2-acquisition-cache.ts';
+import {evaluationPhase} from '../supabase/functions/_shared/recommendation-phase.ts';
 import {v2Fixture} from './helpers/recommendationV2Fixtures.mjs';
 
 const at='2026-10-06T23:30:00.000Z',session='2026-10-06',key='SYNTHETIC_KEY_NEVER_REAL';
@@ -179,7 +180,12 @@ test('Edge integration starts Shadow beside unchanged V1 and stops/joins on V1 f
   '../_shared/decision-v1-data.ts':{loadDecisionEvidence:async()=>fixture.data},
   '../_shared/recommendation-stock-evidence.ts':{RECOMMENDATION_UNIVERSE,acquireStockEvidence:async()=>{events.push('V1');if(successful)return fixture.captures;throw Error('synthetic V1 failure');},
    stockAcquisitionCoverage:()=>({synthetic:true}),buildRecommendationProof:async(_data,_identity,captures)=>{assert.equal(captures,fixture.captures);return {decision:fixture.v1,business_writes:[]};}},
-  '../_shared/market-session-contract.mjs':{isMarketTradingDate:()=>true},
+  '../_shared/market-session-contract.mjs':{isMarketTradingDate:()=>true,previousMarketTradingDate:()=>session},
+  // This original V2 test exercises missing market-source fallback. Positive
+  // market capture / private-only proof controls are in the candidate suite.
+  '../_shared/recommendation-market-institutional-candidate.ts':{acquireMarketInstitutionalTwd:async()=>null},
+  '../_shared/recommendation-foundation-candidate.ts':{buildRecommendationFoundationCandidate:()=>{throw Error('missing capture cannot enter candidate proof');}},
+  '../_shared/recommendation-phase.ts':{evaluationPhase},
   '../_shared/recommendation-official-actuals.ts':{acquireOfficialActuals:async()=>[]},
   '../_shared/recommendation-company-events.ts':{acquireCompanyEvents:async()=>[]},
   '../_shared/recommendation-stream.ts':{recommendationJsonStream},

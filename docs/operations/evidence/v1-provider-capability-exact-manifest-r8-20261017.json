@@ -1,0 +1,1726 @@
+{
+  "schema": "MORNING_ALPHA_V1_PROVIDER_CAPABILITY_EXACT_MANIFEST_R8_20261017",
+  "classification": "SOURCE_CAPABILITY_TEST_CANDIDATE_NOT_SECURITY_SCAN_ARTIFACT",
+  "status": "FROZEN_LOCAL_CONTENT_SNAPSHOT_HOLD_NAMED_APPROVAL_ACCOUNT_FEE_RIGHTS_AND_VALIDATION",
+  "manifest_write_set": [
+    "docs/operations/evidence/v1-provider-capability-exact-manifest-r8-20261017.json"
+  ],
+  "source_provenance": {
+    "source_release_head": "b29ee8a80f798c20d8ae5e9234ade8544852d10f",
+    "recorded_origin_main": "754850ba1c66329d12eac8e98ab799e0a0c9123e",
+    "candidate_commit": null,
+    "candidate_sources": "UNCOMMITTED_LOCAL_CONTENT_SNAPSHOT_NOT_ASSERTED_PRESENT_IN_R7_HEAD",
+    "exact_candidate_commit_required_before_approval": true,
+    "r7_ci": "HISTORICAL_R7_ONLY_NOT_NEW_CANDIDATE_CI",
+    "new_candidate_ci": "NOT_ATTESTED_BY_THIS_MANIFEST",
+    "new_candidate_source_or_config_drift": "STOP_RESEAL_AND_REAPPROVE",
+    "original_r7_and_private_package_rewritten": false
+  },
+  "approvals": {
+    "production_authorized": false,
+    "function_deployment_authorized": false,
+    "private_bucket_provision_authorized": false,
+    "single_owner_invocation_authorized": false,
+    "provider_requests_authorized": false,
+    "temporary_ui_publication_authorized": false,
+    "cleanup_execution_authorized": false,
+    "candidate_branch_commit_authorized": true,
+    "candidate_branch_push_authorized": true,
+    "main_merge_authorized": false,
+    "named_approval_reference": null,
+    "independent_named_items": [
+      "F_BACKEND_EXACT_NEW_FUNCTION_AND_PRIVATE_EMPTY_CONTROL_BUCKET",
+      "F_ONE_OWNER_POST_AND_UP_TO_SIX_FIXED_PROVIDER_GETS_AFTER_ACCOUNT_FEE_RIGHTS_PROOF",
+      "F_UI_EXACT_TWO_RUNTIME_OPERATIONS_WITH_BUILD_ONLY_CLOSURE",
+      "F_EXACT_TEMPORARY_RESOURCE_AND_UI_CLEANUP"
+    ],
+    "not_implicitly_included_in": [
+      "A_CALLER_ONLY",
+      "B_MEMBER_22_OPERATIONS",
+      "B_UI_SCHEDULE_ADDENDUM_23_OPERATIONS",
+      "C_POLICY_ACTIVATION",
+      "D_PRIVATE_PRODUCER_READER"
+    ],
+    "account_interface_entitlement": "UNPROVEN",
+    "fees_and_request_cost": "UNPROVEN_NOT_ASSUMED_FREE_OR_NEW_PURCHASE_REQUIRED",
+    "permitted_diagnostic_use_and_storage_rights": "UNPROVEN",
+    "execute_only_if": [
+      "Named approval binds this manifest SHA256, final candidate commit, entry/config/dependency hashes, fixed request plan, control writes, expiry and cleanup.",
+      "Existing account interface entitlement, fees or applicable approved budget, and permitted diagnostic use are evidenced; absence of proof means DO_NOT_EXECUTE.",
+      "At release time protected Production fingerprints and absent temporary function/bucket are independently checked without modifying existing resources.",
+      "Exact current backend/UI validation and required independent checks complete; historical R7 results do not substitute.",
+      "Wall time is strictly before the sealed expiry; no automatic extension."
+    ]
+  },
+  "function_candidate": {
+    "name": "v1-provider-capability-review-v1",
+    "entrypoint": "supabase/functions/v1-provider-capability-review-v1/index.ts",
+    "entry_sha256": "a6487d579db5eca8ef69962e0bad41f32b9e8f0ebd99634f1de7b22b5104e7d5",
+    "sdk": "2.115.0",
+    "verify_jwt": true,
+    "import_map": false,
+    "migration": "NONE",
+    "new_cron": false,
+    "new_secret": false,
+    "existing_auth_rls_secret_cron_changes": false,
+    "original_function_deployments": [],
+    "request": {
+      "method": "POST",
+      "body_utf8": "{}",
+      "body_bytes": 2,
+      "query_parameters": false,
+      "configurable_symbols": false,
+      "configurable_urls": false,
+      "client_tier_authority": false
+    },
+    "allowed_origin": "https://morningalphatw.com",
+    "auth_order": [
+      "Gateway verify_jwt=true; exact allowed Origin and fixed two-byte request body.",
+      "Same-request authorization identity is verified by pinned SDK getUser; no local token extraction or transfer.",
+      "Existing is_research_owner_v1 RPC on the same Authorization must return strict boolean true; user_metadata or client tier is never authority.",
+      "Only after successful Auth and Owner check construct privileged Storage claim client.",
+      "Only after confirmed durable once marker construct probe and look up existing runtime provider credential."
+    ],
+    "supabase_transport_allowlist": [
+      "GET /auth/v1/user",
+      "POST /rest/v1/rpc/is_research_owner_v1",
+      "GET /storage/v1/bucket/v1-provider-capability-review-20261017",
+      "POST /storage/v1/object/list/v1-provider-capability-review-20261017",
+      "POST /storage/v1/object/v1-provider-capability-review-20261017/once.json"
+    ],
+    "supabase_transport_constraints": "Only the exact sealed origin/configuration in index.ts; no query/hash/userinfo, no redirect, and each permitted method/path at most once. No business table or other RPC.",
+    "builtin_production_runtime_equivalence": "NOT_ATTESTED"
+  },
+  "source_and_import_closure": {
+    "collection_command": "deno info --no-lock --no-config --deny-import --json supabase/functions/v1-provider-capability-review-v1/index.ts",
+    "collection": "CACHED_RESOLUTION_WITH_IMPORT_PERMISSION_DENIED_NO_MODULE_EXECUTION",
+    "cached_only_flag": "UNSUPPORTED_BY_THIS_DENO_INFO_VERSION; no network-enabled fallback used",
+    "deno_version": "2.9.2",
+    "v8_version": "14.9.207.2-rusty",
+    "typescript_version": "6.0.3",
+    "graph_tool_binary_sha256": "e047f70e36f9468186be3deb2d19a08632dadb29376b18668eac5d706d258855",
+    "expected_counts": {
+      "local": 3,
+      "remote": 54,
+      "builtin": 2,
+      "total": 59
+    },
+    "graph_resolution_errors": 0,
+    "sha256_basis": "Source body is the first Deno-info size bytes; trailing denoCacheMetadata is excluded. Complete cached-file SHA256 is also retained for remote modules.",
+    "cache_format_checked": "Every nonempty cache suffix begins with newline plus // denoCacheMetadata=.",
+    "local_sources": [
+      {
+        "path": "scripts/capability/finnhub-quarterly-probe.mjs",
+        "media_type": "Mjs",
+        "source_bytes": 15467,
+        "sha256": "8f3bc575821111f25ea0f0604f7f998b64b5cc47fceaba15808ab4d407f78ad8",
+        "dependencies": []
+      },
+      {
+        "path": "supabase/functions/v1-provider-capability-review-v1/handler.ts",
+        "media_type": "TypeScript",
+        "source_bytes": 13538,
+        "sha256": "36c4971f9c751ff3856ce2e74fd71698eefb7a5d0db04c69d5a2075b45263280",
+        "dependencies": []
+      },
+      {
+        "path": "supabase/functions/v1-provider-capability-review-v1/index.ts",
+        "media_type": "TypeScript",
+        "source_bytes": 5423,
+        "sha256": "a6487d579db5eca8ef69962e0bad41f32b9e8f0ebd99634f1de7b22b5104e7d5",
+        "dependencies": [
+          {
+            "kind": "code",
+            "requested": "https://esm.sh/@supabase/supabase-js@2.115.0",
+            "resolved": "https://esm.sh/@supabase/supabase-js@2.115.0"
+          },
+          {
+            "kind": "code",
+            "requested": "../../../scripts/capability/finnhub-quarterly-probe.mjs",
+            "resolved": "scripts/capability/finnhub-quarterly-probe.mjs"
+          },
+          {
+            "kind": "code",
+            "requested": "./handler.ts",
+            "resolved": "supabase/functions/v1-provider-capability-review-v1/handler.ts"
+          }
+        ]
+      }
+    ],
+    "remote_sources": [
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/denonext/auth-js.mjs",
+        "media_type": "Mjs",
+        "source_bytes": 105161,
+        "cache_file_bytes": 105796,
+        "sha256": "ee695fb5271cd20891151acb8f7b7dccd7a3d2cddcf7ea22707ed847c6310068",
+        "cache_file_sha256": "c379139bd8f88c506a0f17fff17683dc634b164292f018dda33dfdd5b868e4d1",
+        "cache_suffix_bytes": 635,
+        "dependencies": [
+          {
+            "kind": "code",
+            "requested": "/tslib@2.8.1/denonext/tslib.mjs",
+            "resolved": "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs"
+          },
+          {
+            "kind": "types",
+            "requested": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/index.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/index.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/AuthAdminApi.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 175,
+        "cache_file_bytes": 677,
+        "sha256": "19a5d3f42489d005a53d67ae649f9fef9bf6dd651fc3de5095996df9cbebdca9",
+        "cache_file_sha256": "ae538bd5bf87a868e54c8aaed9461bddbf73a3a043da84e8e948376afd316527",
+        "cache_suffix_bytes": 502,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./GoTrueAdminApi.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/GoTrueAdminApi.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/AuthClient.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 163,
+        "cache_file_bytes": 663,
+        "sha256": "cf0e07748570a1c3b096171cbfbe0acc49b6135d7d618f1ebff4ddfcced1db11",
+        "cache_file_sha256": "e5dfbd4e90b35310d702896429514b9ea0f22e209dd9e4275b0b369ffabb5592",
+        "cache_suffix_bytes": 500,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./GoTrueClient.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/GoTrueClient.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/GoTrueAdminApi.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 26312,
+        "cache_file_bytes": 26818,
+        "sha256": "b5fb62bf3f804ab8da486e83c2b31ea65b4959df9d8eaf0fb505973efc8c53ee",
+        "cache_file_sha256": "6c68dbe93c93453590b1d149718e0b125be88321c5aae7944c0e53e08d1ec26c",
+        "cache_suffix_bytes": 506,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./lib/fetch.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/fetch.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./lib/types.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/types.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./lib/errors.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/errors.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/GoTrueClient.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 109159,
+        "cache_file_bytes": 109663,
+        "sha256": "288ca4a86514802a76299884f01f6474b2c09cf1b6eb06f6835e55ce0d30c63f",
+        "cache_file_sha256": "63090f0c5175e3ce39907eb8f2de61b2c43ec6068d1577ca0a4e43d85c51d82e",
+        "cache_suffix_bytes": 504,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./GoTrueAdminApi.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/GoTrueAdminApi.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./lib/errors.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/errors.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./lib/fetch.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/fetch.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./lib/helpers.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/helpers.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./lib/types.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/types.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/index.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 490,
+        "cache_file_bytes": 985,
+        "sha256": "017098a784457600a525f787e6a85b574d04c345135af3d9836d99c45db849b9",
+        "cache_file_sha256": "78d09d0864b1807b831b5bef153e079cdb99a79ea1a79f4c27389b947bd77d2c",
+        "cache_suffix_bytes": 495,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./GoTrueAdminApi.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/GoTrueAdminApi.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./GoTrueClient.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/GoTrueClient.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./AuthAdminApi.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/AuthAdminApi.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./AuthClient.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/AuthClient.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./lib/types.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/types.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./lib/errors.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/errors.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./lib/locks.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/locks.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/error-codes.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 2397,
+        "cache_file_bytes": 2951,
+        "sha256": "641a3bbdd7fd417d55f0af9b3b9c3b274c0bd9113a2dccb647805a6e669cd5df",
+        "cache_file_sha256": "318c5460ebe8750a4aa13596981efb82b0187d8e0815bd10a4e0da995bffce83",
+        "cache_suffix_bytes": 554,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/errors.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 8513,
+        "cache_file_bytes": 9015,
+        "sha256": "1aed9c841d3573303c967b1dfeec1f0943b10155ccc3f8cbaf9e0f4ab5539171",
+        "cache_file_sha256": "a455e72032cc59c44f233c481a94519c04026469ed43bcbf769335dea1e84da7",
+        "cache_suffix_bytes": 502,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/types.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./error-codes.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/error-codes.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/fetch.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 2259,
+        "cache_file_bytes": 2807,
+        "sha256": "36e5e3ad0f5589e05bb7290f6e4a1798dfc6e88159fd6429d7891064b6cf0532",
+        "cache_file_sha256": "25dd4528e54a43c23272d6b8d3ec53845b3e7a8db3d966a2342aa5631b824d43",
+        "cache_suffix_bytes": 548,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/types.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/helpers.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 7402,
+        "cache_file_bytes": 7905,
+        "sha256": "ce0fb9e16845c8ba634b033abf2c591d7a7580626e72d08ded93c8dad12c8d46",
+        "cache_file_sha256": "6383986650cb1a70e3dff06d05f504ba529c4224fd81bce4f64a8cdef8ef6874",
+        "cache_suffix_bytes": 503,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/types.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./webauthn.dom.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/webauthn.dom.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/locks.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 4567,
+        "cache_file_bytes": 5116,
+        "sha256": "5282cb7115fe0f98f37c4fb31654666616df77b1955d64da2055f77ce7dbbe0d",
+        "cache_file_sha256": "f62e899dffae0eb342cfbf793a95f9d45d7b1d7a715702353b3fc9b5766a638c",
+        "cache_suffix_bytes": 549,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/types.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 98523,
+        "cache_file_bytes": 99024,
+        "sha256": "1ea1a9b345a9c980afc5f9a85b68ccc562ed5934902b9776bc133870c98d5c18",
+        "cache_file_sha256": "8322f261ce4ca9fa449c6d2928c9cc6a9821a4642de1f42b054e3917d7fe6125",
+        "cache_suffix_bytes": 501,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./errors.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/errors.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./fetch.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/fetch.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./web3/ethereum.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/web3/ethereum.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./web3/solana.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/web3/solana.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./webauthn.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/webauthn.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./webauthn.dom.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/webauthn.dom.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/web3/ethereum.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 3105,
+        "cache_file_bytes": 3662,
+        "sha256": "e5018dc354343818c5728501f5f12831d529747d2e55572ad9032c101803186d",
+        "cache_file_sha256": "82470a2f180a2f7c0847ae33df187e70394345ef171eda1fb8ec4e62b2ecec96",
+        "cache_suffix_bytes": 557,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/web3/solana.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 5510,
+        "cache_file_bytes": 6065,
+        "sha256": "126fecd2009606a76835756b3a2e83b1bcbde622f1bda04ceacf4d2c33d4742e",
+        "cache_file_sha256": "52c57d74c95950fd21dbb045cafe6c796d4f1ec56cffdeee9335404ac0233383",
+        "cache_suffix_bytes": 555,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/webauthn.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 17573,
+        "cache_file_bytes": 18077,
+        "sha256": "8f94ae13c85031f6babcb511f96f15b1a32bf3d8f1c8ff562887a8dc5770f392",
+        "cache_file_sha256": "c800e3ce0aacb1ecb691f87470e58f2137d2bf47030cec26e9c1da9d91014951",
+        "cache_suffix_bytes": 504,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "../GoTrueClient.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/GoTrueClient.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./errors.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/errors.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/types.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./webauthn.dom.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/webauthn.dom.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./webauthn.errors.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/webauthn.errors.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/webauthn.dom.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 29410,
+        "cache_file_bytes": 29918,
+        "sha256": "834ec2497427b8286fec4eb3061d521e2d6f30709d9be287083782143dee1713",
+        "cache_file_sha256": "b7b9051522865b7891fdc888b24f42708d73fbf820b955202b6291f0d53c43da",
+        "cache_suffix_bytes": 508,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/types.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/webauthn.errors.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 4089,
+        "cache_file_bytes": 4648,
+        "sha256": "09e6dadfe0ef533f780ed655cd178b8aaaaab892e68b546f111b315535e0eb1b",
+        "cache_file_sha256": "7453ea693c450856774c4a862d5f83ac1bf053be070dd7419c73d6a3ce89c33d",
+        "cache_suffix_bytes": 559,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/types.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./webauthn.dom.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/lib/webauthn.dom.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/functions-js@2.115.0/denonext/functions-js.mjs",
+        "media_type": "Mjs",
+        "source_bytes": 3167,
+        "cache_file_bytes": 3720,
+        "sha256": "45dbef89b45252297c8088c37f5085fddf14f56e9d662efe9cf6fe928249b76a",
+        "cache_file_sha256": "3e93c3a05aa65315ca9d849e9738f9d02b2050ecd5b30657159ef06fe519a8c5",
+        "cache_suffix_bytes": 553,
+        "dependencies": [
+          {
+            "kind": "code",
+            "requested": "/tslib@2.8.1/denonext/tslib.mjs",
+            "resolved": "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/functions-js@2.115.0/dist/module/FunctionsClient.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 7031,
+        "cache_file_bytes": 7543,
+        "sha256": "cd34c98ffae9c74e409ef37b5ffa3e01b9a7674a0c5128874ccad40d139603a4",
+        "cache_file_sha256": "88f7c24ac164cac5e55cc1f350b4e24160bb6e5fdf4bcf3743b6268b37bd64b7",
+        "cache_suffix_bytes": 512,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/functions-js@2.115.0/dist/module/types.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/functions-js@2.115.0/dist/module/index.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 272,
+        "cache_file_bytes": 772,
+        "sha256": "48e129b111f5984ce0b9360f7e150a449c7e108f506266a76c66f60b9c10284c",
+        "cache_file_sha256": "c5216901a98518ee76c0aea7f589c414b4d22a6f0c384bdfb4457a73a8994456",
+        "cache_suffix_bytes": 500,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./FunctionsClient.d.ts",
+            "resolved": "https://esm.sh/@supabase/functions-js@2.115.0/dist/module/FunctionsClient.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/functions-js@2.115.0/dist/module/types.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/functions-js@2.115.0/dist/module/types.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 3163,
+        "cache_file_bytes": 3713,
+        "sha256": "3dc7011192f8700b38942a73daab85665006a6df314bd0ccde139c96cfe12634",
+        "cache_file_sha256": "c2a8a3045a2cf4b49c8e7042f7928a6bd82901b5da9a53e0a14e02d59066a2f7",
+        "cache_suffix_bytes": 550,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/phoenix@0.4.5/denonext/phoenix.mjs",
+        "media_type": "Mjs",
+        "source_bytes": 25916,
+        "cache_file_bytes": 26410,
+        "sha256": "40bd2a70829cd847848baac58e635bacd83fd62188f6624b44e2c295341004eb",
+        "cache_file_sha256": "e5463c9ee1b3a7cfa27bbf7db903b949f4176587ac01b3f0dcefe38f309ce9c5",
+        "cache_suffix_bytes": 494,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/channel.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 5288,
+        "cache_file_bytes": 5791,
+        "sha256": "91dd84153ab0cd56b37dbf1e11d1fc5d4b8eaf3e33c6e9c13305eaa8f0c62502",
+        "cache_file_sha256": "7082512c4193df6af4651a14f01c5d8fd9dc0c6d552e7e9923dd1e647e7a1c5b",
+        "cache_suffix_bytes": 503,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/types.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./socket.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/socket.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./push.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/push.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./timer.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/timer.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/constants.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 1083,
+        "cache_file_bytes": 1588,
+        "sha256": "9a593a3e78e440dc371e6af28ab546c0feece343df290f51104119ddf536f5d0",
+        "cache_file_sha256": "a63759ebca14cea721adc92156a75dee60d313f335f1252ebb02434b99ea03f8",
+        "cache_suffix_bytes": 505,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/index.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 403,
+        "cache_file_bytes": 902,
+        "sha256": "d8c3e50a3eadfda6aaf7c1ac8649dc7e48e01a1fcf378b52c82de90c90cf114e",
+        "cache_file_sha256": "dc4d222452e83342432efb3dc0ca033224878b5b399ffcc0b73e1cac6f29f2e3",
+        "cache_suffix_bytes": 499,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/types.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./channel.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/channel.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./longpoll.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/longpoll.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./presence.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/presence.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./push.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/push.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./serializer.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/serializer.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./socket.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/socket.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./timer.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/timer.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/longpoll.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 939,
+        "cache_file_bytes": 1442,
+        "sha256": "0b052701865060b099e36cfaaf24878b87523a06140f6178e775c2242f2e0672",
+        "cache_file_sha256": "084fe826e3fef092c57f30da6f425a52219509bac0a25561c31985946c69f27c",
+        "cache_suffix_bytes": 503,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/presence.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 4163,
+        "cache_file_bytes": 4667,
+        "sha256": "91b0f001b2ab459eacc6716f89f90fc7e7d30bf77b750aa458da64d622d5b89f",
+        "cache_file_sha256": "b19f37bd26d389c1e18d58addb55d0e6051c08211e6e6eaa67c257171bf761ad",
+        "cache_suffix_bytes": 504,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/types.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./channel.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/channel.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/push.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 2016,
+        "cache_file_bytes": 2516,
+        "sha256": "7d9f2a60de24cf8cc64097e608d84a7cefb523223dc73d53132a145044991843",
+        "cache_file_sha256": "60d15995c3f63a43204829efa122b8c2e33844a0c6f7fce22bcf5272ed0981d8",
+        "cache_suffix_bytes": 500,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./channel.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/channel.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/types.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/serializer.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 1992,
+        "cache_file_bytes": 2498,
+        "sha256": "a561dfe7465d05d6acd1bd42b7d7feb4cec3a7969a1314a54330fdd8a043a261",
+        "cache_file_sha256": "9d8da0f5d5f4c66b3df7c66b38778c9479e0b43b5d0641e52eab93ec3577a894",
+        "cache_suffix_bytes": 506,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/types.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/socket.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 9919,
+        "cache_file_bytes": 10421,
+        "sha256": "d7e595701d3bad0c568436b015e834d13cba312889a8bb8cbcd521290a60cfa0",
+        "cache_file_sha256": "d7d9cb2c4328276fd7f10b99d5e7b372f718e8b82e800317fce500adeb8100a2",
+        "cache_suffix_bytes": 502,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./types.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/types.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./channel.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/channel.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./timer.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/timer.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./longpoll.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/longpoll.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/timer.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 1159,
+        "cache_file_bytes": 1660,
+        "sha256": "44f84527d6b089382f8888ebe7fd05aa05b6c8810de44f661e08b2a27d66a687",
+        "cache_file_sha256": "319b2c254422d2e1813fa7cfeb9a50a34d9fcdf7c0bd75831d4d52dfa2a523ab",
+        "cache_suffix_bytes": 501,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/types.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 7642,
+        "cache_file_bytes": 8143,
+        "sha256": "d2414b3200520cd2bbdcae5a03d8efaa6053bdbedc7fac20b069d47e796de77c",
+        "cache_file_sha256": "76038ed2b71e639623f309b26f01d7be0fbcc9d926705cc9a700f0bc23686193",
+        "cache_suffix_bytes": 501,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./constants.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/constants.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./longpoll.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/longpoll.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/postgrest-js@2.115.0/denonext/postgrest-js.mjs",
+        "media_type": "Mjs",
+        "source_bytes": 17678,
+        "cache_file_bytes": 18322,
+        "sha256": "be07c08a0221f3cc021ce179f3f3865899e7118a499a873609d35313cb6a0338",
+        "cache_file_sha256": "e9acc3a12c184154cdf224eb180553691fcf18f54da974c80ef2520429ef894a",
+        "cache_suffix_bytes": 644,
+        "dependencies": [
+          {
+            "kind": "types",
+            "requested": "https://esm.sh/@supabase/postgrest-js@2.115.0/dist/index.d.mts",
+            "resolved": "https://esm.sh/@supabase/postgrest-js@2.115.0/dist/index.d.mts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/postgrest-js@2.115.0/dist/index.d.mts",
+        "media_type": "Dmts",
+        "source_bytes": 198552,
+        "cache_file_bytes": 199048,
+        "sha256": "11dd951918f506d4f57f095a6acdb21ce72477b37b6f0f339d37e1a8fad412fb",
+        "cache_file_sha256": "728f2d144686b54a083120e63758091ab0c5080755d50a201f8cc13d0c9ff6c5",
+        "cache_suffix_bytes": 496,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/realtime-js@2.115.0/denonext/realtime-js.mjs",
+        "media_type": "Mjs",
+        "source_bytes": 33215,
+        "cache_file_bytes": 33718,
+        "sha256": "3032ecc022da4d8ad7a973ac9c7d3efb4d5d140940b32351ffe7753b2a656ae3",
+        "cache_file_sha256": "b9b8e4dd5bb4679b4c2289143bf7b6075fc03eb2841e601f03e77c0385fbdd98",
+        "cache_suffix_bytes": 503,
+        "dependencies": [
+          {
+            "kind": "code",
+            "requested": "node:process",
+            "resolved": "node:process"
+          },
+          {
+            "kind": "code",
+            "requested": "/@supabase/phoenix@0.4.5/denonext/phoenix.mjs",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/denonext/phoenix.mjs"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/RealtimeChannel.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 24648,
+        "cache_file_bytes": 25159,
+        "sha256": "b6516186fa9525d9f529f27d88de212cdd68184dc2d1e609189a0a682c994ebe",
+        "cache_file_sha256": "dc26b93251dc3a29d59dd0ece72bee2889c5f62a0ba16daf966883f911b80e2c",
+        "cache_suffix_bytes": 511,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./lib/constants.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/lib/constants.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./RealtimeClient.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/RealtimeClient.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./RealtimePresence.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/RealtimePresence.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./phoenix/types.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/phoenix/types.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./RealtimePostgresFilterBuilder.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/RealtimePostgresFilterBuilder.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/index.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/index.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/RealtimeClient.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 10962,
+        "cache_file_bytes": 11472,
+        "sha256": "f2cf461d3df24754a246f3ab0b3d6c6d580cdb4dd0aec8e34a3d7e04ab23bacc",
+        "cache_file_sha256": "284c042483dbe68f1432807efcfab779703a44dc63fd8aeecd6753cc40624b48",
+        "cache_suffix_bytes": 510,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./lib/websocket-factory.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/lib/websocket-factory.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./lib/serializer.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/lib/serializer.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./RealtimeChannel.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/RealtimeChannel.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./phoenix/types.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/phoenix/types.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./lib/constants.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/lib/constants.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/RealtimePostgresFilterBuilder.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 7114,
+        "cache_file_bytes": 7639,
+        "sha256": "fd55880e5226e05ca2930ebe63939e22c096fa832167bf5cc380d0dd68ea145f",
+        "cache_file_sha256": "bd9cfd76eb2a2c4ec6dec70704bb91a0ea60fd14aae0a191b8163ff6aad4211c",
+        "cache_suffix_bytes": 525,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/RealtimePresence.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 1787,
+        "cache_file_bytes": 2346,
+        "sha256": "b840436e422af6e58ec348f3017b7334d4db5725dc2b237a4d50a3dcf2ccbf9f",
+        "cache_file_sha256": "de7bcfcd07107921cceb1d07afb0d6490c8412623fffc603406060bfd5891559",
+        "cache_suffix_bytes": 559,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./RealtimeChannel.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/RealtimeChannel.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/index.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 1690,
+        "cache_file_bytes": 2238,
+        "sha256": "99e68da84ef35dc759daf8c733d6448e5e7069edb3c93161bad645a7ebd1b1d9",
+        "cache_file_sha256": "fc902cb47caf1cd1c24e0d91d5b976b8b8a1eda15223fa980d0ed3798e888880",
+        "cache_suffix_bytes": 548,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "./RealtimeClient.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/RealtimeClient.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./RealtimeChannel.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/RealtimeChannel.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./RealtimePresence.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/RealtimePresence.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "./lib/websocket-factory.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/lib/websocket-factory.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/lib/constants.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 1979,
+        "cache_file_bytes": 2535,
+        "sha256": "d6e6f5bf7175a2b42464e71a6396b78bab1fd411d39dcb8ca0f4d45c006a3d0b",
+        "cache_file_sha256": "98e9269ecc0ee61e32e3b8979ec9d083c6ecfb7af2092d1b4d486d6daeee6357",
+        "cache_suffix_bytes": 556,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "../phoenix/types.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/phoenix/types.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/lib/serializer.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 1006,
+        "cache_file_bytes": 1515,
+        "sha256": "0d205fcd3908e0f73b2f19c36ce88539482979f9d1f6434e1e9a29e35010fa00",
+        "cache_file_sha256": "09d2dd90bf31f011d40aa2a705550bfd4a206fa868b619a6fa7d8f6a30ec05e0",
+        "cache_suffix_bytes": 509,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/lib/websocket-factory.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 2692,
+        "cache_file_bytes": 3257,
+        "sha256": "c1c3abe399fd21977b5edac770e4ce0d27d89c94775df424e811729e56d7c4b3",
+        "cache_file_sha256": "dc0296748ffebb36f60f1c5698806438b2d6e20b2c8ffb4b3a69d63299fd277f",
+        "cache_suffix_bytes": 565,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/phoenix/types.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 709,
+        "cache_file_bytes": 1216,
+        "sha256": "959cc64f7fb3df108b2b182a7f3652157318b0a0c09ed6adca66927e0f34d901",
+        "cache_file_sha256": "fc21ab1194f6a95aba24d9a387a39bb37a020ca6cfee0796636dbe5797d06925",
+        "cache_suffix_bytes": 507,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/index.d.ts",
+            "resolved": "https://esm.sh/@supabase/phoenix@0.4.5/priv/static/types/index.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/storage-js@2.115.0/denonext/storage-js.mjs",
+        "media_type": "Mjs",
+        "source_bytes": 23218,
+        "cache_file_bytes": 23719,
+        "sha256": "a79c4f054784fbc837b2ab250c3eaba8bcd8b7e7b001d8303dc6bc0a3ddaddf3",
+        "cache_file_sha256": "ad94f11d3db12584ecf5510ce1f14c423054f94507ee62bb0e67af416bf5ffa8",
+        "cache_suffix_bytes": 501,
+        "dependencies": [
+          {
+            "kind": "code",
+            "requested": "node:buffer",
+            "resolved": "node:buffer"
+          },
+          {
+            "kind": "code",
+            "requested": "/iceberg-js@^0.8.1?target=denonext",
+            "resolved": "https://esm.sh/iceberg-js@^0.8.1?target=denonext"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/storage-js@2.115.0/dist/index.d.mts",
+        "media_type": "Dmts",
+        "source_bytes": 108139,
+        "cache_file_bytes": 108633,
+        "sha256": "90f70ec87ff6c61b2d5174f66c6ab8b7ae703785f63582cf02d9ccae16509dbc",
+        "cache_file_sha256": "3da0066e3f5b836bd73f58e05385a952ce870103ec03f9e77122e000fa511754",
+        "cache_suffix_bytes": 494,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "https://esm.sh/iceberg-js@0.8.1/dist/index.d.ts",
+            "resolved": "https://esm.sh/iceberg-js@0.8.1/dist/index.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/supabase-js@2.115.0",
+        "media_type": "JavaScript",
+        "source_bytes": 517,
+        "cache_file_bytes": 1152,
+        "sha256": "f4e488ef8059a64be766b58feb4d6a18aa812038fdcf9c7c916efbdf26ab9585",
+        "cache_file_sha256": "1386ea759260d235e3a8b932f95a02131e5967cb8e12c6efe0a7c7838bc8e444",
+        "cache_suffix_bytes": 635,
+        "dependencies": [
+          {
+            "kind": "code",
+            "requested": "/@supabase/auth-js@2.115.0/denonext/auth-js.mjs",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/denonext/auth-js.mjs"
+          },
+          {
+            "kind": "code",
+            "requested": "/@supabase/functions-js@2.115.0/denonext/functions-js.mjs",
+            "resolved": "https://esm.sh/@supabase/functions-js@2.115.0/denonext/functions-js.mjs"
+          },
+          {
+            "kind": "code",
+            "requested": "/@supabase/postgrest-js@2.115.0/denonext/postgrest-js.mjs",
+            "resolved": "https://esm.sh/@supabase/postgrest-js@2.115.0/denonext/postgrest-js.mjs"
+          },
+          {
+            "kind": "code",
+            "requested": "/@supabase/realtime-js@2.115.0/denonext/realtime-js.mjs",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/denonext/realtime-js.mjs"
+          },
+          {
+            "kind": "code",
+            "requested": "/@supabase/storage-js@2.115.0/denonext/storage-js.mjs",
+            "resolved": "https://esm.sh/@supabase/storage-js@2.115.0/denonext/storage-js.mjs"
+          },
+          {
+            "kind": "code",
+            "requested": "/@supabase/supabase-js@2.115.0/denonext/dist/tracingRegistry.mjs",
+            "resolved": "https://esm.sh/@supabase/supabase-js@2.115.0/denonext/dist/tracingRegistry.mjs"
+          },
+          {
+            "kind": "code",
+            "requested": "/@supabase/supabase-js@2.115.0/denonext/supabase-js.mjs",
+            "resolved": "https://esm.sh/@supabase/supabase-js@2.115.0/denonext/supabase-js.mjs"
+          },
+          {
+            "kind": "types",
+            "requested": "https://esm.sh/@supabase/supabase-js@2.115.0/dist/index.d.mts",
+            "resolved": "https://esm.sh/@supabase/supabase-js@2.115.0/dist/index.d.mts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/supabase-js@2.115.0/denonext/dist/tracingRegistry.mjs",
+        "media_type": "Mjs",
+        "source_bytes": 261,
+        "cache_file_bytes": 748,
+        "sha256": "5c7f16d4b145f80bc9b76e3c657854a91a8ef36df29558b35733ebc179d5ca47",
+        "cache_file_sha256": "bd13e766b2c64f54d1c627f6828183d85d5610dfaf320dd41596d6109269a350",
+        "cache_suffix_bytes": 487,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/supabase-js@2.115.0/denonext/supabase-js.mjs",
+        "media_type": "Mjs",
+        "source_bytes": 11741,
+        "cache_file_bytes": 12244,
+        "sha256": "6e4d33a86264c0c0505b514a2b748d184a0836d3f501f33d0c533731726c63db",
+        "cache_file_sha256": "4aa78a8ad3a6770c605cbebf456ce91fbaf35f3e6e552ebe52a6bbcc552e957f",
+        "cache_suffix_bytes": 503,
+        "dependencies": [
+          {
+            "kind": "code",
+            "requested": "node:process",
+            "resolved": "node:process"
+          },
+          {
+            "kind": "code",
+            "requested": "./dist/tracingRegistry.mjs",
+            "resolved": "https://esm.sh/@supabase/supabase-js@2.115.0/denonext/dist/tracingRegistry.mjs"
+          },
+          {
+            "kind": "code",
+            "requested": "/@supabase/functions-js@2.115.0/denonext/functions-js.mjs",
+            "resolved": "https://esm.sh/@supabase/functions-js@2.115.0/denonext/functions-js.mjs"
+          },
+          {
+            "kind": "code",
+            "requested": "/@supabase/postgrest-js@2.115.0/denonext/postgrest-js.mjs",
+            "resolved": "https://esm.sh/@supabase/postgrest-js@2.115.0/denonext/postgrest-js.mjs"
+          },
+          {
+            "kind": "code",
+            "requested": "/@supabase/realtime-js@2.115.0/denonext/realtime-js.mjs",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/denonext/realtime-js.mjs"
+          },
+          {
+            "kind": "code",
+            "requested": "/@supabase/storage-js@2.115.0/denonext/storage-js.mjs",
+            "resolved": "https://esm.sh/@supabase/storage-js@2.115.0/denonext/storage-js.mjs"
+          },
+          {
+            "kind": "code",
+            "requested": "/@supabase/auth-js@2.115.0/denonext/auth-js.mjs",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/denonext/auth-js.mjs"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/@supabase/supabase-js@2.115.0/dist/index.d.mts",
+        "media_type": "Dmts",
+        "source_bytes": 38744,
+        "cache_file_bytes": 39239,
+        "sha256": "1ff2d9df3c55b41014fafe6f3e78d120ef1187ddae610e07e8016956b76d9c35",
+        "cache_file_sha256": "3a8c6830dbcc05276f864657fe09b12353ad602e1c26c4562d8d65db4a85cea0",
+        "cache_suffix_bytes": 495,
+        "dependencies": [
+          {
+            "kind": "type",
+            "requested": "https://esm.sh/@supabase/functions-js@2.115.0/dist/module/index.d.ts",
+            "resolved": "https://esm.sh/@supabase/functions-js@2.115.0/dist/module/index.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "https://esm.sh/@supabase/postgrest-js@2.115.0/dist/index.d.mts",
+            "resolved": "https://esm.sh/@supabase/postgrest-js@2.115.0/dist/index.d.mts"
+          },
+          {
+            "kind": "type",
+            "requested": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/index.d.ts",
+            "resolved": "https://esm.sh/@supabase/realtime-js@2.115.0/dist/module/index.d.ts"
+          },
+          {
+            "kind": "type",
+            "requested": "https://esm.sh/@supabase/storage-js@2.115.0/dist/index.d.mts",
+            "resolved": "https://esm.sh/@supabase/storage-js@2.115.0/dist/index.d.mts"
+          },
+          {
+            "kind": "type",
+            "requested": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/index.d.ts",
+            "resolved": "https://esm.sh/@supabase/auth-js@2.115.0/dist/module/index.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/iceberg-js@0.8.1/denonext/iceberg-js.mjs",
+        "media_type": "Mjs",
+        "source_bytes": 6122,
+        "cache_file_bytes": 6612,
+        "sha256": "d839d81a2e3966500ca2cdd0c1cb458e9608bacfc91f7bb67a69b2e878dcdb4f",
+        "cache_file_sha256": "2d60ed21dabb78bb0ab3c5107d0fb53aa5908b76d1bda46d62b78834727de335",
+        "cache_suffix_bytes": 490,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/iceberg-js@0.8.1/dist/index.d.ts",
+        "media_type": "Dts",
+        "source_bytes": 17646,
+        "cache_file_bytes": 18128,
+        "sha256": "447b6a80636a59c918ed18af1019de1efa94109a086e8fd8f3d20eb9b9a6937b",
+        "cache_file_sha256": "d6f5c9154f0e5a0cef82d024685d72a5d24008e37e7e0d7bb627aecf08be8e55",
+        "cache_suffix_bytes": 482,
+        "dependencies": []
+      },
+      {
+        "specifier": "https://esm.sh/iceberg-js@0.8.1?target=denonext",
+        "media_type": "JavaScript",
+        "source_bytes": 91,
+        "cache_file_bytes": 741,
+        "sha256": "58c849d7fe2bf4eca4a84eb501e83c161a7d8c34ca1bec15a962b3bec3062633",
+        "cache_file_sha256": "7d09a3c949ae0bb81b76fd6ff7b6f1ec9894c00364644bf1a1e7bd07ccbed779",
+        "cache_suffix_bytes": 650,
+        "dependencies": [
+          {
+            "kind": "code",
+            "requested": "/iceberg-js@0.8.1/denonext/iceberg-js.mjs",
+            "resolved": "https://esm.sh/iceberg-js@0.8.1/denonext/iceberg-js.mjs"
+          },
+          {
+            "kind": "types",
+            "requested": "https://esm.sh/iceberg-js@0.8.1/dist/index.d.ts",
+            "resolved": "https://esm.sh/iceberg-js@0.8.1/dist/index.d.ts"
+          }
+        ]
+      },
+      {
+        "specifier": "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs",
+        "media_type": "Mjs",
+        "source_bytes": 11226,
+        "cache_file_bytes": 11706,
+        "sha256": "c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9",
+        "cache_file_sha256": "564ac8117223016d822b9abbfc8d0d5e082170e1c5a167dabaef1aabf9c2da0f",
+        "cache_suffix_bytes": 480,
+        "dependencies": []
+      }
+    ],
+    "builtin_modules": [
+      {
+        "specifier": "node:buffer",
+        "module_name": "buffer",
+        "source_sha256": null,
+        "source_body_file": false,
+        "identity_basis": "DENO_EMBEDDED_BUILTIN_SPECIFIER_AND_LOCAL_GRAPH_TOOL_FINGERPRINT_NOT_A_SEPARATE_FETCHED_BODY",
+        "graph_tool_binary_sha256": "e047f70e36f9468186be3deb2d19a08632dadb29376b18668eac5d706d258855",
+        "production_runtime_implementation_equivalence": "UNPROVEN_NOT_ASSERTED"
+      },
+      {
+        "specifier": "node:process",
+        "module_name": "process",
+        "source_sha256": null,
+        "source_body_file": false,
+        "identity_basis": "DENO_EMBEDDED_BUILTIN_SPECIFIER_AND_LOCAL_GRAPH_TOOL_FINGERPRINT_NOT_A_SEPARATE_FETCHED_BODY",
+        "graph_tool_binary_sha256": "e047f70e36f9468186be3deb2d19a08632dadb29376b18668eac5d706d258855",
+        "production_runtime_implementation_equivalence": "UNPROVEN_NOT_ASSERTED"
+      }
+    ],
+    "redirects": {
+      "https://esm.sh/iceberg-js@^0.8.1?target=denonext": "https://esm.sh/iceberg-js@0.8.1?target=denonext"
+    },
+    "all_code_type_and_x_typescript_types_edges_included": true,
+    "source_maps": "Not Deno dependency edges; not fetched or included as consumed runtime/type modules.",
+    "redeployment_stop": "Any entry, local body, remote source body, import edge, redirect target, SDK or deployment config mismatch requires resealing and renewed approval."
+  },
+  "fixed_provider_plan": {
+    "provider": "Finnhub",
+    "actual_provider_calls_this_authoring_run": 0,
+    "maximum_provider_requests": 6,
+    "execution_order": "SEQUENTIAL_FIXED_PREFIX_STOP_ON_FIRST_FAILURE",
+    "retries": 0,
+    "concurrent_provider_requests": 1,
+    "additional_discovery_calls": false,
+    "request_plan": [
+      {
+        "order": 1,
+        "local_symbol": "2330",
+        "provider_symbol_hypothesis": "2330.TW",
+        "endpoint": "search",
+        "method": "GET",
+        "url": "https://finnhub.io/api/v1/search?q=2330"
+      },
+      {
+        "order": 2,
+        "local_symbol": "2330",
+        "provider_symbol_hypothesis": "2330.TW",
+        "endpoint": "eps",
+        "method": "GET",
+        "url": "https://finnhub.io/api/v1/stock/eps-estimate?symbol=2330.TW&freq=quarterly"
+      },
+      {
+        "order": 3,
+        "local_symbol": "2330",
+        "provider_symbol_hypothesis": "2330.TW",
+        "endpoint": "revenue",
+        "method": "GET",
+        "url": "https://finnhub.io/api/v1/stock/revenue-estimate?symbol=2330.TW&freq=quarterly"
+      },
+      {
+        "order": 4,
+        "local_symbol": "6488",
+        "provider_symbol_hypothesis": "6488.TWO",
+        "endpoint": "search",
+        "method": "GET",
+        "url": "https://finnhub.io/api/v1/search?q=6488"
+      },
+      {
+        "order": 5,
+        "local_symbol": "6488",
+        "provider_symbol_hypothesis": "6488.TWO",
+        "endpoint": "eps",
+        "method": "GET",
+        "url": "https://finnhub.io/api/v1/stock/eps-estimate?symbol=6488.TWO&freq=quarterly"
+      },
+      {
+        "order": 6,
+        "local_symbol": "6488",
+        "provider_symbol_hypothesis": "6488.TWO",
+        "endpoint": "revenue",
+        "method": "GET",
+        "url": "https://finnhub.io/api/v1/stock/revenue-estimate?symbol=6488.TWO&freq=quarterly"
+      }
+    ],
+    "hypotheses": "UNVERIFIED_EVEN_IF_SEARCH_RETURNS_ONE_EXACT_MATCH",
+    "redirects": "ERROR",
+    "request_cache": "NO_STORE",
+    "credential_query_parameter": false,
+    "credential_header_name": "X-Finnhub-Token",
+    "limits": {
+      "whole_request_deadline_ms": 15000,
+      "deadline_includes": "INPUT_BODY_AUTH_OWNER_STORAGE_AND_PROVIDER_WORK",
+      "per_provider_request_ms": 2000,
+      "max_accepted_response_bytes_per_call": 65536,
+      "max_json_rows_per_response": 64,
+      "max_stream_chunks_per_response": 1024,
+      "expires_at": "2026-10-18T06:00:00Z",
+      "expiry_comparison": "NOW_GREATER_THAN_OR_EQUAL_DENY",
+      "shared_outer_abort_signal": true,
+      "size_limit_qualification": "Accepted body bytes only; an oversized delivered chunk is discarded/cancelled, not proof of a 64KiB wire-allocation ceiling.",
+      "expired_candidate": "STOP_NO_AUTO_EXTENSION_RESEAL_SOURCE_EXPIRY_HASH_AND_APPROVAL"
+    }
+  },
+  "credentials_and_output": {
+    "existing_runtime_only": [
+      "SUPABASE_URL",
+      "SUPABASE_ANON_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "FINNHUB_API_KEY"
+    ],
+    "values_in_manifest": false,
+    "local_secret_or_env_reads": false,
+    "new_secret_or_key_rotation": false,
+    "key_export_or_transfer": false,
+    "provider_credential_lifetime": "Existing runtime lookup only after authorized durable claim; in-memory header use only; no request-supplied credential.",
+    "owner_session": "Existing authorized Owner browser SDK session; no copy/paste token or Owner-as-Free/Premium substitution.",
+    "raw_provider_storage": false,
+    "raw_provider_logs": false,
+    "raw_provider_output": false,
+    "safe_response": "Fixed plan identities, enumerated statuses/shapes, HTTP status and bounded counts only; no provider values/descriptions/errors/text are spread into response.",
+    "frontend": "Whitelists exact safe response keys and counts; no browser provider key access; ignores late/invalidated results and clears on identity change/expiry."
+  },
+  "control_writes": {
+    "zero_write_claim": false,
+    "business_writes_allowed": 0,
+    "only_allowed_persistence": "NEW_PRIVATE_BUCKET_METADATA_AND_ONE_NONBUSINESS_ONCE_CONTROL_OBJECT_PLUS_EXACT_APPROVED_CLEANUP",
+    "bucket": "v1-provider-capability-review-20261017",
+    "public": false,
+    "marker": "once.json",
+    "marker_utf8": "{\"used\":true}",
+    "marker_bytes": 13,
+    "marker_sha256": "2c48c83a41b2bef20827fee75e5f3f6d9deba18f70b64f0791d52c8503192f0c",
+    "upload": {
+      "upsert": false,
+      "contentType": "application/json",
+      "cacheControl": "0"
+    },
+    "claim_sequence": "Verify exact private bucket; list empty root (limit2); attempt upload of unique once.json with upsert=false before provider credential lookup.",
+    "single_owner_post_limit": 1,
+    "cross_isolate_claim": "Unique Storage object path is the authority; in-isolate attempted latch is supplementary.",
+    "uncertainty": "Upload failure/timeout/ambiguous response may have consumed control state. STOP; no retry, marker reset, replacement bucket or second Owner invocation.",
+    "prohibited_targets": [
+      "reports",
+      "CanonicalDecision",
+      "Recommendation",
+      "member_entitlements",
+      "membership_access_events",
+      "profiles",
+      "subscriptions",
+      "AuthUsersOrClaims",
+      "existing RLS/ACL/policies",
+      "LINE outbox/logs",
+      "provider health persistence",
+      "critical contract evidence sidecars",
+      "payments",
+      "research publication",
+      "existing business buckets/objects"
+    ]
+  },
+  "temporary_ui": {
+    "id": "F_UI_TWO_OPERATIONS_SEPARATE_FROM_B22_AND_SCHEDULE_B23",
+    "status": "HOLD_SEPARATE_NAMED_APPROVAL_FINAL_HEAD_AND_VALIDATION",
+    "runtime_operation_count": 2,
+    "runtime_operations": [
+      {
+        "path": "src/pages/admin/analysis/ProviderCapabilityReview.tsx",
+        "operation": "ADD",
+        "mode": "100644",
+        "live_before_sha256": null,
+        "target_sha256": "11bc0a024145d0d9a3043ce4048a7756ee2f6b51380bc91167c56c0a41a769e7",
+        "source_bytes": 12230,
+        "baseline_absent_in_verified_live674_archive": true
+      },
+      {
+        "path": "src/pages/admin/analysis/page.tsx",
+        "operation": "MODIFY",
+        "mode": "100644",
+        "live_before_sha256": "1ce30ec572f78d429b9c6275e7a3611f116fdde3e8d6f75854249e7a05c256d3",
+        "target_sha256": "7414f3fbdd085054e17ab7de78b0e270d18026284034e3291242998554753639",
+        "source_bytes": 9366,
+        "live_and_target_end_with_lf": false,
+        "exact_delta_from_verified_live674": {
+          "insertions": 2,
+          "deletions": 0,
+          "removing_exact_new_import_and_component_mount_reconstructs_original_bytes": true
+        }
+      }
+    ],
+    "baseline": {
+      "version": 674,
+      "archive_sha256": "71f36b8103622901c8bb03a97f6c2e485fb7a1d9768eb25cf81a0bd327af2d7f",
+      "new_download_confirmation": "MAIN_OBSERVED_20261017_1412_ASIA_TAIPEI_FRESH_SOURCE_EXPORT_AND_LIVE674_INFO_MENU; downloaded archive SHA256 matches sealed baseline. No Update, Save or Restore."
+    },
+    "artifact": {
+      "filename": "LIVE674_OWNER_CAPABILITY_UI_2_FILES_R8_CANDIDATE.zip",
+      "sha256": "ff5dc080a26fc1b68638c7cab613c9c7520e9911109fe8ae9850052d0e0daa36",
+      "entries": [
+        "src/pages/admin/analysis/ProviderCapabilityReview.tsx",
+        "src/pages/admin/analysis/page.tsx"
+      ],
+      "entry_hashes_match_frozen_ui_sources": true,
+      "upload_authorized": false,
+      "raw_zip_in_manifest": false
+    },
+    "build_only_type_closure": {
+      "receipt_filename": "LIVE674_MEMBER_UI_BUILD_TYPE_CLOSURE.json",
+      "receipt_sha256": "7534d4902379f11896acf22ed37f6480f7e8b008fd2eaa46be730fb7fb210905",
+      "historical_receipt_head": "1a3b8c902a9b08b69525aea5a280bf546295ffe4",
+      "sealed_r7_head": "b29ee8a80f798c20d8ae5e9234ade8544852d10f",
+      "new_build_only_source_count": 6,
+      "preserve_existing_archive_source_count": 3,
+      "added": [
+        {
+          "path": "research/entry-opportunity.ts",
+          "sha256": "c52ed2ce4f2d31010e295765eecea765a03856183e9a3db66854bacc47fde95a",
+          "live_before_sha256": null,
+          "classification": "BUILD_TYPE_CLOSURE_NOT_EDGE_FUNCTION_DEPLOYMENT",
+          "verified_against_r7_blob": true,
+          "source_bytes": 13799
+        },
+        {
+          "path": "supabase/functions/_shared/market-calendar-data.json",
+          "sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232",
+          "live_before_sha256": null,
+          "classification": "BUILD_TYPE_CLOSURE_NOT_EDGE_FUNCTION_DEPLOYMENT",
+          "verified_against_r7_blob": true,
+          "source_bytes": 1671
+        },
+        {
+          "path": "supabase/functions/_shared/market-session-contract.mjs",
+          "sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44",
+          "live_before_sha256": null,
+          "classification": "BUILD_TYPE_CLOSURE_NOT_EDGE_FUNCTION_DEPLOYMENT",
+          "verified_against_r7_blob": true,
+          "source_bytes": 2994
+        },
+        {
+          "path": "supabase/functions/_shared/owner-trading-lab.ts",
+          "sha256": "f31f48321eadb9f0845f028da6586035c40a543eee52331f6f4f8343754701e9",
+          "live_before_sha256": null,
+          "classification": "BUILD_TYPE_CLOSURE_NOT_EDGE_FUNCTION_DEPLOYMENT",
+          "verified_against_r7_blob": true,
+          "source_bytes": 11027
+        },
+        {
+          "path": "supabase/functions/_shared/recommendation-phase.ts",
+          "sha256": "d517fb094ea41a8e70c16c132ca7dc9d48bb5c63efc7d7f36760502697a8e5d6",
+          "live_before_sha256": null,
+          "classification": "BUILD_TYPE_CLOSURE_NOT_EDGE_FUNCTION_DEPLOYMENT",
+          "verified_against_r7_blob": true,
+          "source_bytes": 8256
+        },
+        {
+          "path": "supabase/functions/_shared/txf-session-contract.mjs",
+          "sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e",
+          "live_before_sha256": null,
+          "classification": "BUILD_TYPE_CLOSURE_NOT_EDGE_FUNCTION_DEPLOYMENT",
+          "verified_against_r7_blob": true,
+          "source_bytes": 2857
+        }
+      ],
+      "preserved": [
+        {
+          "path": "supabase/functions/_shared/decision-v1-data.ts",
+          "live_before_sha256": "7c0ba14f39a52ab216e662ce0cfce80a5c5c64cfdf7a719f4b103be3439a8082",
+          "target_sha256": "7c0ba14f39a52ab216e662ce0cfce80a5c5c64cfdf7a719f4b103be3439a8082",
+          "operation": "PRESERVE_EXACT_ARCHIVE_BYTES",
+          "verified_against_live674_archive": true,
+          "source_bytes": 4569
+        },
+        {
+          "path": "supabase/functions/_shared/decision-v1-evidence.ts",
+          "live_before_sha256": "e19f5aebe41cbd2b8fd91a444d2fe301a28ff429cffbc9b571685dedc4a33675",
+          "target_sha256": "e19f5aebe41cbd2b8fd91a444d2fe301a28ff429cffbc9b571685dedc4a33675",
+          "operation": "PRESERVE_EXACT_ARCHIVE_BYTES",
+          "verified_against_live674_archive": true,
+          "source_bytes": 31772
+        },
+        {
+          "path": "supabase/functions/_shared/market-status.ts",
+          "live_before_sha256": "d13a66c4e1bf350faa015147ef168e8f10eb8c6e696817cc6a68a6642572942b",
+          "target_sha256": "d13a66c4e1bf350faa015147ef168e8f10eb8c6e696817cc6a68a6642572942b",
+          "operation": "PRESERVE_EXACT_ARCHIVE_BYTES",
+          "verified_against_live674_archive": true,
+          "source_bytes": 4485
+        }
+      ],
+      "original_function_deployments": [],
+      "edge_runtime_deployment_authorized": false,
+      "interpretation": "These six sources support the isolated tsc composition only. They are not six UI runtime operations and do not authorize deploying any original Edge Function or replacing the three existing strategy source bodies.",
+      "no_stubs_or_source_transformation": true,
+      "preserve_policy": "Keep all three existing dependencies at exact Live674 archive bytes; never copy their newer Git variants."
+    },
+    "validation": {
+      "initial_type_check": "MAIN_OBSERVED_FAILED_MISSING_TRANSITIVE_BUILD_TYPE_DEPENDENCIES_PRESERVED_NOT_PASS",
+      "corrected_type_check": "MAIN_EXECUTED_PASS_NODE22_14_WITH_SIX_ADDED_PLUS_THREE_PRESERVED_NO_STUBS",
+      "build": "MAIN_EXECUTED_PASS_FUI_COMPOSITION_ONLY_NOT_PRODUCTION",
+      "lint": "MAIN_EXECUTED_PASS_ZERO_WARNINGS",
+      "old_type_closure_receipt_pass_is_not_new_fui_pass": true,
+      "production_e2e": false,
+      "bundle_runtime_leak_audit": "MAIN_VERIFIED_EXACT_SOURCE_MAP_BYTES_FOR_BOTH_UI_TSX; BACKEND_PROBE_NOT_BUNDLED"
+    },
+    "interaction": "Manual click only after independent backend/UI/invocation approval; no auto-run or retry. Existing Owner page is not authorization; backend Auth and strict Owner RPC remain authoritative.",
+    "rollback": "Stop new function first under cleanup protocol. Restore page.tsx exact Live674 bytes only if the deployed/current baseline matches this manifest; remove only the newly added component when unused. Any intervening UI drift means STOP, not whole-site overwrite.",
+    "not_silently_combined_with_original_b22_or_b23": true
+  },
+  "existing_evidence_and_limits": {
+    "storage_catalog": {
+      "basis": "MAIN_READONLY_PRODUCTION_CATALOG_OBSERVED_20261017T060128Z; MANIFEST_REVIEWER_DID_NOT_REQUERY",
+      "tables": [
+        "storage.buckets",
+        "storage.objects"
+      ],
+      "rls_enabled": true,
+      "force_rls": false,
+      "policies": 0,
+      "anon_authenticated_semantics": "DEFAULT_DENY_NON_BYPASS_ROLES",
+      "existing_policy_or_force_rls_change_authorized": false,
+      "not_a_gateway_or_storage_http_production_pass": true
+    },
+    "atomic_claim_sql": {
+      "basis": "MAIN_EXECUTED_COMPLETED_FRESH_SQL_RESULT_PLUS_REVIEWED_TEST_DEFINITION; MANIFEST_REVIEWER_DID_NOT_RERUN",
+      "test_definition": {
+        "path": "tests/providerCapabilityClaimDatabase.integration.mjs",
+        "sha256": "829c19c489aa9b333dd79a022e7126e177b8a42162c1bd1ddb761b720150292a",
+        "bytes": 4387
+      },
+      "concurrent_claims": 8,
+      "accepted": 1,
+      "unique_conflict_rejections": 7,
+      "one_control_object": true,
+      "anon_member_delete_effect": 0,
+      "scope": "DISPOSABLE_POSTGRES_RLS_AND_UNIQUE_CONSTRAINT_CONTRACT_ONLY",
+      "storage_http_validation": false,
+      "production_validation": false
+    },
+    "evidence_does_not_prove": [
+      "Actual Storage HTTP upload atomicity/end-to-end behavior",
+      "Production gateway/Auth/Storage deployment",
+      "Account estimate entitlement or fees",
+      "TW72 ordinary-share coverage",
+      "Hypothesis symbol correctness",
+      "Four consecutive standalone actual quarters",
+      "Pre-announcement consensus vintages or latest sourced guidance",
+      "Pure broker consensus",
+      "Commercial/member redistribution rights",
+      "Formal V1 admission or research publication"
+    ]
+  },
+  "preflight_required_before_any_future_execution": {
+    "results": "NOT_EXECUTED_NOT_ATTESTED",
+    "function_absent_before_creation_required": true,
+    "bucket_absent_before_creation_required": true,
+    "existing_resource_collision": "STOP_DO_NOT_REUSE_REPLACE_OR_DELETE",
+    "protected_existing_business_fingerprints": "RECORD_AND_RECHECK_WITH_SEPARATE_AUTHORITY; DO_NOT_WRITE_TO_ESTABLISH_BASELINE",
+    "private_empty_bucket_and_unique_claim_semantics": "MUST_VALIDATE_WITHIN_APPROVED_SCOPE; SQL_FIXTURE_ALONE_IS_NOT_STORAGE_HTTP_PROOF",
+    "current_account_fee_rights_proof_required": true,
+    "exact_candidate_commit_and_named_approval_required": true
+  },
+  "strict_cleanup": {
+    "authorized": false,
+    "automatic": false,
+    "order": [
+      {
+        "step": 1,
+        "action": "Remove only the newly created, preflight-proven-absent-before-release v1-provider-capability-review-v1 Function under the exact approved cleanup scope."
+      },
+      {
+        "step": 2,
+        "action": "Verify that Function is absent. If deletion or absence is uncertain, STOP before any bucket/object deletion."
+      },
+      {
+        "step": 3,
+        "action": "Wait at least15000ms after verified Function absence AND establish no in-flight requests. Elapsed time alone is not proof of quiescence; uncertainty means STOP."
+      },
+      {
+        "step": 4,
+        "action": "Check the exact candidate bucket is private and enumerate the complete object inventory. Allowed states are empty or exactly expected once.json; any unexpected name/prefix/version/content/bucket configuration means STOP without deleting objects."
+      },
+      {
+        "step": 5,
+        "action": "If present, validate the expected once.json control marker identity/13-byte body/hash and remove only that object. Do not remove provider/business data or use wildcard/recursive/emptyBucket deletion."
+      },
+      {
+        "step": 6,
+        "action": "Verify bucket empty and still the exact candidate-created bucket; remove only that bucket. Unexpected object appearing or race/uncertain state means STOP."
+      },
+      {
+        "step": 7,
+        "action": "Verify Function, marker and bucket absent, no in-flight work, and protected business/Auth/RLS/Secret/Cron fingerprints unchanged. Record only sanitized status/count/hash evidence."
+      },
+      {
+        "step": 8,
+        "action": "Restore only the two approved temporary UI operations using exact frozen baseline bytes and collision checks; no unrelated Readdy source overwrite."
+      }
+    ],
+    "wait_after_verified_function_absence_ms": 15000,
+    "any_unexpected_object": "STOP_NO_DELETE",
+    "cleanup_failure": "HOLD_RETAIN_SANITIZED_INCIDENT_EVIDENCE_NO_SCOPE_ESCALATION_NO_RETRY_OF_PROVIDER_CALL",
+    "marker_removal_to_rearm_probe": false
+  },
+  "stop_conditions": [
+    "Missing or ambiguous named approval, account interface entitlement, fee/budget or permitted-use evidence.",
+    "At/after expiry, clock rollback/invalid clock, overall deadline, per-call timeout, request abort or uncertain result.",
+    "Source/config/SDK/import/redirect/archive/UI/baseline hash drift, or missing candidate-HEAD checks.",
+    "Function or bucket already exists before release; expected private bucket is public/nonempty; claim missing/conflicting/ambiguous.",
+    "Any authentication or strict Owner result not proven; user/client metadata offered as authority.",
+    "Any request outside the fixed six-GET plan, redirect, retry, unexpected URL/body/content-type, non200, oversized/chunk/row limit, invalid/ambiguous shape or nonunique search match.",
+    "Any business persistence, existing Auth/RLS/ACL/Secret/Cron change, member exposure, formal source promotion, payment activation or original Function deployment.",
+    "Unproven cleanup quiescence, unexpected object/prefix/version, inability to verify function absence, bucket identity or protected business fingerprint preservation."
+  ],
+  "non_claims": {
+    "provider_mapping": "HYPOTHESIS_UNVERIFIED",
+    "tw72_coverage": "UNKNOWN",
+    "current_entitlement": "UNPROVEN",
+    "historical_vintage": "UNPROVEN",
+    "commercial_member_reuse_rights": "UNPROVEN",
+    "average_provenance": "FINNHUB_AVERAGE_INCLUDING_PROPRIETARY",
+    "pure_broker_consensus": false,
+    "formal_threshold_changes": false,
+    "formal_source_admission": false,
+    "member_publication": false,
+    "new_purchase_requirement": "NOT_ESTABLISHED",
+    "production_pass": false
+  },
+  "authoring_validation": {
+    "scope": "LOCAL_READONLY_SOURCE_AND_HASH_CLOSURE_CHECK_PLUS_THIS_SINGLE_JSON_WRITE",
+    "source_files_written": 0,
+    "provider_calls": 0,
+    "production_operations": 0,
+    "local_secret_reads": 0,
+    "source_and_ui_hashes_rechecked_before_manifest_creation": true,
+    "ui_zip_inventory_and_entry_hashes_checked": true,
+    "live674_baseline_archive_hash_checked": true,
+    "six_type_sources_match_r7_blobs": true,
+    "three_preserved_types_match_live674_archive": true,
+    "tests_executed": false,
+    "r7_ci_rerun": false,
+    "production_or_storage_http_queries_executed": false,
+    "inherited_user_changes": "PRESERVED_UNTOUCHED"
+  }
+}

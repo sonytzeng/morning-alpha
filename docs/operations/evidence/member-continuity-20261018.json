@@ -1,0 +1,35 @@
+{
+  "schema": "MORNING_ALPHA_MEMBER_CONTINUITY_V1",
+  "base": "cb678aeee5601c71f9b943cddff861763effc753",
+  "production_authorized": false,
+  "migration_execution": false,
+  "auth_rls_change": false,
+  "member_rights_activation": false,
+  "caller_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false,
+  "files": [
+    {
+      "path": "src/features/vnext/member.ts",
+      "before_sha256": "5fcf87bef6287f8effd15db4431d966751d57bd4be1d6f3dc5bcf2ef86bce28e",
+      "after_sha256": "1a147e2aa972a91f50a7afe542986092aa8665fe8ac5589cc5ed5a7ee0ac6690",
+      "mode": "100644"
+    },
+    {
+      "path": "src/pages/vnext/MemberPage.tsx",
+      "before_sha256": "cf1f8a8f94101440628f7ba8b1151887da13045e380cd401514b94c7122f2058",
+      "after_sha256": "217f7cde888206908f8f0dca6a7266e3c48f725dd2ba8a4ecd7d703828f5b28b",
+      "mode": "100644"
+    }
+  ],
+  "test": {
+    "path": "tests/vnextMemberContinuity.test.mjs",
+    "sha256": "b1308678a760b10a64a60db7b5347d3857fbd5810b164b2b5301e40837117de6"
+  },
+  "website": {
+    "predecessor_path": "docs/operations/evidence/r9-functional-source-closure-20261017.json",
+    "predecessor_sha256": "cc99eba18cd0853fbf4291eda4dfd27d21b7a47179763a3b42b08275907ba375",
+    "operation_count": 24
+  }
+}

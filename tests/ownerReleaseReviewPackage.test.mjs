@@ -4,13 +4,15 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {verifyIntegrationCandidate} from './helpers/integrationAdmission.mjs';
+import {verifyMemberContinuity,memberContinuityHistoricalReader} from './helpers/memberContinuityAdmission.mjs';
+verifyMemberContinuity();
 
 const root=new URL('../',import.meta.url);
 const path='docs/operations/evidence/owner-release-review-r8-20261017.json';
 const bytes=readFileSync(new URL(path,root));
 const p=JSON.parse(bytes);
 const hash=b=>createHash('sha256').update(b).digest('hex');
-const rawRead=name=>readFileSync(new URL(name,root));
+const rawRead=memberContinuityHistoricalReader(name=>readFileSync(new URL(name,root)));
 // This is the frozen R8 release package, not the R9 installation payload.
 // R9 changes two of its source paths. Validate the COMPLETE live R9 tree first,
 // then retain R8's original assertions against its immutable source bytes.

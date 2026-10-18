@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
+import {verifyMemberContinuity,memberContinuityHistoricalReader} from './helpers/memberContinuityAdmission.mjs';
+// Old evidence keeps its exact two admitted member-source preimages. The new
+// live tree and two replacements are verified before this narrow view exists.
+verifyMemberContinuity();
+const historicalMemberRead=memberContinuityHistoricalReader();
 const file='docs/operations/evidence/r10-functional-source-closure-20261017.json';
 const bytes=readFileSync(file),p=JSON.parse(bytes);
 const hash=b=>createHash('sha256').update(b).digest('hex');
@@ -12,7 +17,7 @@ test('R10 source closure preserves R9 and immutable V1, never grants Production 
  assert.equal(p.base,'754850ba1c66329d12eac8e98ab799e0a0c9123e');
  assert.equal(hash(readFileSync(p.prior_r9.path)),p.prior_r9.sha256);
  assert.deepEqual(readFileSync(p.prior_r9.path),execFileSync('git',['show',p.parent_head+':'+p.prior_r9.path]));
- for(const s of p.sources)assert.equal(hash(readFileSync(s.path)),s.sha256,s.path);
+ for(const s of p.sources)assert.equal(hash(historicalMemberRead(s.path)),s.sha256,s.path);
  assert.equal(p.price.formal_v1_evaluator_unchanged,hash(readFileSync('supabase/functions/_shared/decision-v1-evidence.ts')));
  assert.equal(p.production_authorized,false);assert.equal(p.production.explicit_mutation_actions,0);
 });
@@ -49,7 +54,7 @@ test('A immutable payload, B24 exact operations and policy separation remain fai
  assert.equal(p.release.A.source_head,'5f33777836778e3600e4e377fcb3cf4de690fe80');
  assert.equal(p.release.A.local_match,22);assert.equal(p.release.A.remote_cache_source_match,63);
  assert.deepEqual(p.release.B.operations,old.release.B.operations);assert.equal(p.release.B.operations.length,24);
- for(const o of p.release.B.operations)assert.equal(hash(readFileSync(o.path)),o.target_sha256,o.path);
+ for(const o of p.release.B.operations)assert.equal(hash(historicalMemberRead(o.path)),o.target_sha256,o.path);
  assert.deepEqual(p.release.B.sql,old.release.B.sql);
  for(const s of p.release.B.sql)assert.equal(hash(readFileSync(s.path)),s.sha256);
  assert.equal(p.release.B.verify_jwt,false);assert.equal(p.release.B.policy_activation,false);

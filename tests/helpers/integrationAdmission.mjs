@@ -10,7 +10,7 @@ import {URL} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-c-worker-rpc-diagnostics.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-retained-quarter-family.json';
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
 const PRIOR_R2='cc167304814b2223977a36802b2666ea8203ff36';
@@ -63,9 +63,18 @@ const PRIOR_OWNER_REGIME_DISPLAY='6b7017fcbb9fa2fd085f9658eca4d6ce382c32a3';
 const FROZEN_OWNER_REGIME_DISPLAY_MANIFEST='docs/operations/evidence/core-member-integration-20261019-owner-regime-display.json';
 const PRIOR_SOURCE_ACQUISITION='965263fe15dc672cac6c61af06bfd14d69044dd3';
 const FROZEN_SOURCE_ACQUISITION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-source-acquisition.json';
+const PRIOR_C_WORKER_RPC_DIAGNOSTICS='9de380f6d8473e920e19d955d0782950ed4cae2f';
+const FROZEN_C_WORKER_RPC_DIAGNOSTICS_MANIFEST='docs/operations/evidence/core-member-integration-20261019-c-worker-rpc-diagnostics.json';
 // Explicitly reviewed composition deltas. No patterns, glob, deployment flags,
 // automatic inventory admission or addition to any previous release catalogue.
 export const INTEGRATION_DELTAS=Object.freeze([
+ FROZEN_C_WORKER_RPC_DIAGNOSTICS_MANIFEST,
+ 'docs/operations/evidence/retained-quarter-family-20261019.json',
+ 'docs/operations/retained-quarter-family-20261019.md',
+ 'tests/retainedQuarterFamilyAdmission.test.mjs',
+ 'scripts/vnext/research-funnel.mjs',
+ 'research/retained-quarter-financials.ts',
+ 'tests/vnextRetainedQuarterFinancials.test.mjs',
  FROZEN_SOURCE_ACQUISITION_MANIFEST,
  'docs/operations/evidence/c-worker-rpc-diagnostics-20261019.json',
  'docs/operations/c-worker-rpc-diagnostics-20261019.md',
@@ -374,6 +383,7 @@ export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=in
  assert.deepEqual(Buffer.from(read(FROZEN_PRICED_IN_COVERAGE_MANIFEST)),frozenReceipt(PRIOR_PRICED_IN_COVERAGE,FROZEN_PRICED_IN_COVERAGE_MANIFEST),'INTEGRATION_PRICED_IN_COVERAGE_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_OWNER_REGIME_DISPLAY_MANIFEST)),frozenReceipt(PRIOR_OWNER_REGIME_DISPLAY,FROZEN_OWNER_REGIME_DISPLAY_MANIFEST),'INTEGRATION_OWNER_REGIME_DISPLAY_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_SOURCE_ACQUISITION_MANIFEST)),frozenReceipt(PRIOR_SOURCE_ACQUISITION,FROZEN_SOURCE_ACQUISITION_MANIFEST),'INTEGRATION_SOURCE_ACQUISITION_RECEIPT_DRIFT');
+ assert.deepEqual(Buffer.from(read(FROZEN_C_WORKER_RPC_DIAGNOSTICS_MANIFEST)),frozenReceipt(PRIOR_C_WORKER_RPC_DIAGNOSTICS,FROZEN_C_WORKER_RPC_DIAGNOSTICS_MANIFEST),'INTEGRATION_C_WORKER_RPC_DIAGNOSTICS_RECEIPT_DRIFT');
  for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false,'INTEGRATION_FORBIDDEN:'+flag);
  const scope=integrationScope();
  assert.deepEqual(m.files.map(r=>r.path),scope,'INTEGRATION_EXACT_SCOPE');

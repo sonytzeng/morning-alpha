@@ -6,6 +6,7 @@ import {HORIZONS,snapshotHash} from '../../src/features/vnext/contracts.ts';
 import {evaluateResearch,publicationEligibility,summarizeFunnel,RESEARCH_FUNNEL_VERSION,verifyFunnel} from '../../src/features/vnext/researchFunnel.ts';
 import {stockDossier} from '../../src/features/vnext/stockResearch.ts';
 import {readStockSnapshot} from './stock-audit.mjs';
+import {withRetainedQuarterFinancials,retainedQuarterFinancialFacts,retainedQuarterFinancialDossier} from '../../research/retained-quarter-financials.ts';
 
 export function retainedSessionScope(bar,symbol){
  // Earlier cache adapter lacked the additive label. Only the same exact
@@ -17,13 +18,14 @@ export function retainedSessionScope(bar,symbol){
  return '';
 }
 
-export async function auditResearchFunnel(directory,namesPath,stockDirectory=null,contextDirectory=null,captureInput=null){
+export async function auditResearchFunnel(directory,namesPath,stockDirectory=null,contextDirectory=null,captureInput=null,quarterFinancialPack=null){
  const {history:h,sources:s}=auditFoundation(directory),v1=auditPublication(directory,namesPath),names=readPrivate(namesPath);
  const stock=stockDirectory?readStockSnapshot(stockDirectory,'stock-evidence','VNEXT_REAL_STOCK_EVIDENCE_V1',sha(h)):null,context=contextDirectory?readStockSnapshot(contextDirectory,'stock-context','VNEXT_STOCK_CONTEXT_V1',sha(h)):null;
  if(Boolean(stock)!==Boolean(context))throw Error('ENRICHMENT_PAIR_REQUIRED');
- const cutoff=[h.observed_at,s.observed_at,...(stock?[stock.collected_at,context.collected_at]:[])].sort().at(-1),rows=[];
+ const cutoff=[h.observed_at,s.observed_at,...(stock?[stock.collected_at,context.collected_at]:[]),...(quarterFinancialPack?[quarterFinancialPack.pack.created_at]:[])].sort().at(-1),rows=[];
+ if(quarterFinancialPack)await retainedQuarterFinancialFacts(cutoff,quarterFinancialPack.pack,quarterFinancialPack.seal);
  for(const row of h.rows){
-  const input={symbol:row.symbol,company:names.rows.find(n=>n.symbol===row.symbol)?.stock_name,
+  let input={symbol:row.symbol,company:names.rows.find(n=>n.symbol===row.symbol)?.stock_name,
    cutoff,through:h.through,next_session:h.before,expected_sessions:foundationSessions(h.before),
    bars:row.bars.map(b=>({...b,id:'bar-'+row.symbol+'-'+b.date,source:b.source_ref,session_scope:retainedSessionScope(b,row.symbol)})),
    // Actual timestamps and units stay exact. Do not fill missing published/as_of
@@ -32,10 +34,12 @@ export async function auditResearchFunnel(directory,namesPath,stockDirectory=nul
     basis:f.period_basis??null,values:f.kind==='REVENUE'?{yoy_percent:f.values.revenue_yoy,mom_percent:f.values.revenue_mom}:f.values??{}})),
    v1_missing:Object.fromEntries(Object.keys(HORIZONS).map(horizon=>[horizon,v1.cards.find(c=>c.symbol===row.symbol&&c.horizon===horizon).blockers.filter(b=>b.startsWith('MISSING_'))]))};
   if(stock)input.facts=[...input.facts.filter(f=>f.kind!=='REVENUE'),...stock.rows.filter(f=>f.symbol===row.symbol)];
+  if(quarterFinancialPack)input=(await withRetainedQuarterFinancials(input,quarterFinancialPack.pack,quarterFinancialPack.seal)).input;
   if(captureInput)captureInput(structuredClone(input));
   for(const horizon of Object.keys(HORIZONS)){
    const research=evaluateResearch(input,horizon);
-   if(stock)research.dossier=stockDossier({research,bars:input.bars,facts:stock.rows,events:context.events,benchmark:context.benchmarks,expectedSessions:input.expected_sessions,lastMonth:'2026-09'});
+   if(stock){research.dossier=stockDossier({research,bars:input.bars,facts:stock.rows,events:context.events,benchmark:context.benchmarks,expectedSessions:input.expected_sessions,lastMonth:'2026-09'});
+    if(quarterFinancialPack)research.dossier=await retainedQuarterFinancialDossier(research.dossier,input,quarterFinancialPack.pack,quarterFinancialPack.seal);}
    const input_hash=await snapshotHash({version:RESEARCH_FUNNEL_VERSION,research});
    // No human approval, method promotion, server member identity or grant is
    // invented. Diagnostic checks qualified research only; never writes an RPC.

@@ -23,7 +23,23 @@ jobs:
           NODE_OPTIONS: --experimental-strip-types
         run: |
           node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
-          node --experimental-strip-types --test tests/cWorkerRpcDiagnosticsAdmission.test.mjs
+          node --experimental-strip-types --test tests/retainedQuarterFamilyAdmission.test.mjs
+      - name: Current retained-quarter adapter and unchanged research funnel refusal controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextRetainedQuarterFinancials.test.mjs tests/vnextResearchFunnel.test.mjs tests/vnextStockResearch.test.mjs
+      - name: Check out the immutable pre-quarter-family C source proofs only
+        uses: actions/checkout@v4
+        with:
+          ref: 9de380f6d8473e920e19d955d0782950ed4cae2f
+          path: build/retained-quarter-family-historical-base
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Historical 9de C diagnostic source and workflow proofs unchanged
+        working-directory: build/retained-quarter-family-historical-base
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test tests/cWorkerRpcDiagnosticsAdmission.test.mjs
       - name: Current C Worker fixed-SDK diagnostic protocol with denied network ports
         env:
           NODE_OPTIONS: --experimental-strip-types
@@ -127,7 +143,7 @@ jobs:
         with:
           deno-version: v2.x
       - run: deno test --no-lock --allow-read tests/researchOwnerFieldAccess.sdk.test.ts tests/providerCapabilityEntry.sdk.test.ts
-      - run: deno check --no-lock supabase/functions/vnext-daily-research-v1/index.ts supabase/functions/get-report-payload/index.ts supabase/functions/recommendation-stock-evidence-v1/index.ts supabase/functions/v1-provider-capability-review-v1/index.ts
+      - run: deno check --no-lock research/retained-quarter-financials.ts supabase/functions/vnext-daily-research-v1/index.ts supabase/functions/get-report-payload/index.ts supabase/functions/recommendation-stock-evidence-v1/index.ts supabase/functions/v1-provider-capability-review-v1/index.ts
       - run: node --experimental-strip-types --test tests/eventAlignmentRefresh.test.mjs tests/recommendationIssuerEventReview.test.mjs tests/r10FunctionalSourceClosure.test.mjs
         env:
           NODE_OPTIONS: --experimental-strip-types

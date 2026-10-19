@@ -42,6 +42,10 @@ jobs:
         env:
           NODE_OPTIONS: --experimental-strip-types
         run: node --experimental-strip-types --test tests/decisionEvidencePipeline.test.mjs tests/recommendationPhase.test.mjs
+      - name: Retained four-quarter Owner earnings and source view without formal or member admission
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/recommendationQuarterActualsCandidate.test.mjs tests/ownerQuarterActualsView.test.mjs tests/recommendationReaderBinding.test.mjs tests/stockOfficialActuals.test.mjs tests/lineDecisionCardV2.test.mjs
       - env:
           NODE_OPTIONS: --experimental-strip-types
         run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/ownerStatusCopyAdmission.test.mjs tests/memberContinuityAdmission.test.mjs tests/frontendTypeClosureAdmission.test.mjs tests/researchSourceContracts.test.mjs tests/ownerTradingLab.test.mjs tests/ownerTradingLabUI.test.mjs tests/ownerCockpit.test.mjs tests/recommendationV2UI.test.mjs tests/vnextMemberContinuity.test.mjs tests/vnextMember.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs tests/finnhubQuarterlyProbe.test.mjs tests/ownerReleaseReviewPackage.test.mjs tests/providerCapabilityOwnerBoundary.test.mjs tests/accountReportSchedule.test.mjs tests/accountSubscriberProjection.test.mjs tests/providerCapabilityReviewUi.test.mjs tests/ownerAccountAnalysisNavigation.test.mjs tests/analysisIntelligenceUI.test.mjs tests/accountDashboardIdentity.test.mjs tests/accountHistoricalFallback.test.mjs tests/stockOfficialActuals.test.mjs tests/recommendationFinancialActualsCandidate.test.mjs tests/recommendationEventAlignment.test.mjs tests/r9FunctionalSourceClosure.test.mjs

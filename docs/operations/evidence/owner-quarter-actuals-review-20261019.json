@@ -1,0 +1,282 @@
+{
+  "schema": "OWNER_RETAINED_QUARTER_ACTUALS_REVIEW_V1",
+  "base_head": "ff88a4ed7ce10116a6fad84110770953941fcd08",
+  "scope": "ENGINEERING_CANDIDATE_OWNER_ONLY_NOT_PRODUCTION",
+  "source_admission": false,
+  "production_authorized": false,
+  "formal_evaluator_changed": false,
+  "member_inputs_changed": false,
+  "sources": [
+    {
+      "path": "src/pages/admin/analysis/LineDecisionPreview.tsx",
+      "bytes": 7783,
+      "sha256": "e4867405f1462c2fd9908eccf56f8a53c020cc84a8639ececf3912f773fd9a69"
+    },
+    {
+      "path": "src/pages/admin/analysis/OwnerQuarterActualsView.tsx",
+      "bytes": 8496,
+      "sha256": "02e677b8cc5550f8db63fe352191454f86ea084e30fe4a571eb67db4fe4e4db8"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-foundation-candidate.ts",
+      "bytes": 5074,
+      "sha256": "b86ba8d46a17e086540d185a46d8f2c01df69cbe8efe855a23e7ef51deed7431"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-quarter-actuals-candidate.ts",
+      "bytes": 6544,
+      "sha256": "de3e57887f8f4fa51b8180b35dc14d54522f9c63059acc9525b1aa47c58de180"
+    },
+    {
+      "path": "supabase/functions/_shared/retained-2330-quarter-actuals-20261019.json",
+      "bytes": 5769,
+      "sha256": "6b2775376d09849c27523248c27cde889c49b1aaaac8a9e535fb91282e276dc7"
+    },
+    {
+      "path": "supabase/functions/get-report-payload/index.ts",
+      "bytes": 83381,
+      "sha256": "0e1ee98314a8d1df4edc6ef0f0d000002496ad5a669e2ae46b4822ecf82fd72d"
+    },
+    {
+      "path": "tests/ownerQuarterActualsView.test.mjs",
+      "bytes": 15423,
+      "sha256": "18dad9f0db2b53b5acada260b1ca07dd70e1bddae5df6f8cf53c4391faa8e943"
+    },
+    {
+      "path": "tests/recommendationQuarterActualsCandidate.test.mjs",
+      "bytes": 10019,
+      "sha256": "2de13eff640a80ef276853e07f5be9f822ec4ddabfd056dace5946235877c54d"
+    },
+    {
+      "path": "tests/ownerReleaseReviewPackage.test.mjs",
+      "bytes": 12584,
+      "sha256": "34c5961c7242bbbcf70bd8272495f283651ce4424cbdf4f1ccf3726bf5708f92"
+    }
+  ],
+  "original_fact_receipt": {
+    "path": "/workspace/scratch/866fb527950e/2330-four-quarter-originals-review-20261018/TSMC_2330_FOUR_QUARTER_ORIGINALS_FACTS_SAFE.json",
+    "bytes": 23126,
+    "sha256": "6ee2c8856d8a44afc31fba969a3eca2ecd21146a1ac39fd9a86767bedb3da138"
+  },
+  "actual_owner_earnings_replay": {
+    "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-wiring-evidence-20261019/ACTUAL_OWNER_EARNINGS_WIRING_REPLAY_SAFE.json",
+    "bytes": 10209,
+    "sha256": "68321d4241ec871f63e142742953bc4e1423821b8f16623512ce0fce24266519"
+  },
+  "retained_source_pack": {
+    "raw_sha256": "6b2775376d09849c27523248c27cde889c49b1aaaac8a9e535fb91282e276dc7",
+    "canonical_sha256": "cf8a3700217d9652d9d293b73c2addf19c151556fcfe21daf7299a70884b686d",
+    "created_at": "2026-10-19T01:12:04.643Z",
+    "quarters": [
+      "2025-Q4",
+      "2026-Q1",
+      "2026-Q2",
+      "2026-Q3"
+    ],
+    "eps_actual": [
+      19.5,
+      22.08,
+      27.25,
+      29.43
+    ],
+    "revenue_twd_as_scaled_reported": [
+      1046090000000,
+      1134100000000,
+      1270380000000,
+      1494240000000
+    ],
+    "revenue_resolution_twd": 10000000,
+    "eps_basis": "DILUTED_COMMON_SHARE",
+    "announced_at": null,
+    "original_source_version": null,
+    "consensus": null,
+    "guidance": null
+  },
+  "accepted_coverage": {
+    "symbol": "2330",
+    "owner_earnings_rows": 4,
+    "formal_valid_evaluation_claim": false,
+    "full_v1_evaluation_ready": false,
+    "offline_synthetic_universe_evaluated": 0,
+    "offline_synthetic_universe_blocked": 72
+  },
+  "runtime_contract": {
+    "existing_owner_predicate_only": true,
+    "private_ancestor": "foundation_candidate",
+    "report_revision_correlation_cutoff_binding": true,
+    "max_capsule_bytes": 16000,
+    "stable_row_ids": true,
+    "join_existing_expectation_rows": false,
+    "overwrite_canonical_rows": false,
+    "reader_late_injection": false,
+    "runtime_source_fetch": false,
+    "new_request_or_route": false,
+    "original_pdf_hash_check": "OFFLINE_ONLY_FIXED_FOUR_FILES",
+    "supported_report_dates": {
+      "from": "2026-10-19",
+      "through": "2026-12-31"
+    }
+  },
+  "production_dependency_warning": {
+    "live_producer": 15,
+    "live_reader": 56,
+    "git_foundation_ancestor_deployed": false,
+    "actual_only_live_release_closure_prepared": false,
+    "forbidden": "Do not deploy whole Git Reader/Producer as an Actual-only patch or silently enable private market-flow capture/source admission. A future live15/56 exact increment and saved-capsule proof are required.",
+    "live_owner_four_rows_proven": false
+  },
+  "validation": {
+    "backend_tests": {
+      "pass": 28,
+      "fail": 0,
+      "skip": 0
+    },
+    "ui_and_line_tests": {
+      "pass": 16,
+      "fail": 0,
+      "skip": 0
+    },
+    "fresh_deno_check": "NOT_EXECUTED_LOCAL_TOOL_UNAVAILABLE_REMOTE_REQUIRED",
+    "logs": {
+      "backend_and_formal_regression": {
+        "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-wiring-20261019/build/retained-quarter-actuals-checks/candidate-and-formal-regression.log",
+        "bytes": 7473,
+        "sha256": "0407fda988b11119cdee1e9d3006824e1fa13fddfcbb86c7a44ab6d96d2335f4",
+        "exit_code": 0
+      },
+      "frontend_type_check": {
+        "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-wiring-20261019/build/retained-quarter-actuals-checks/type-check-final.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "exit_code": 0
+      },
+      "lint": {
+        "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-wiring-20261019/build/retained-quarter-actuals-checks/lint-final.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "exit_code": 0
+      },
+      "build": {
+        "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-wiring-20261019/build/retained-quarter-actuals-checks/build-final.log",
+        "bytes": 5737,
+        "sha256": "1639f1a803e1ed33325ff1cc86c0efdbf0817d3ec999f9bed23a55d921330ee6",
+        "exit_code": 0
+      },
+      "backend_strict_type_check_allow_js": {
+        "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-wiring-20261019/build/retained-quarter-actuals-checks/backend-strict-type-final.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "exit_code": 0
+      },
+      "initial_new_fixture_failure": {
+        "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-wiring-20261019/build/retained-quarter-actuals-checks/initial-fixture-27-of-28.log",
+        "bytes": 8146,
+        "sha256": "9596e436ddff78eee9f1d193a7112bab30647a87f74aaa9184601552ad62e665",
+        "exit_code": 1
+      },
+      "initial_strict_cli_missing_existing_js_declarations": {
+        "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-wiring-20261019/build/retained-quarter-actuals-checks/backend-strict-initial-missing-js-declarations.log",
+        "bytes": 1564,
+        "sha256": "46b651c46f207e8dcd86813ebd53fa9dbd1f1c98c2f055c44657b5a0e8352a18",
+        "exit_code": 2
+      },
+      "ui_and_line_tests": {
+        "path": "/workspace/scratch/866fb527950e/actuals-ui-review-20261019/owner-actuals-ui-16-tests.log",
+        "bytes": 2008,
+        "sha256": "ccad8d6e23e89ebb26a8418432e5280315ca8178dfc8805b03c58df6dd5ff07c",
+        "exit_code": 0
+      },
+      "ui_compact_import_before_composition": {
+        "path": "/workspace/scratch/866fb527950e/actuals-ui-review-20261019/owner-actuals-ui-compact3-tests.log",
+        "bytes": 1975,
+        "sha256": "06ebe43383122c7c740bcfd267155fefc1c6bd4f81284d52d9c4cf8795b75209",
+        "exit_code": 1,
+        "reason": "New composition top did not yet exist; no compact test ran."
+      }
+    },
+    "final_composition_guards": {
+      "initial": {
+        "pass": 102,
+        "fail": 1,
+        "log": {
+          "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-wiring-20261019/build/retained-quarter-actuals-checks/initial-guards-102-of-103.log",
+          "bytes": 24103,
+          "sha256": "540e4d8b5e786ab7f389e32066a40ccfe7324f1c2263c169653f5f2dfdefca6d"
+        }
+      },
+      "intermediate_package_and_admission": {
+        "pass": 19,
+        "fail": 1,
+        "log": {
+          "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-wiring-20261019/build/retained-quarter-actuals-checks/intermediate-package-and-admission-19-of-20.log",
+          "bytes": 6124,
+          "sha256": "22d606f1e373bbeadd1739d7963a7222b1c3848db8fc78bc2107d2dbbeb338bd"
+        }
+      },
+      "final_package_and_admission": {
+        "pass": 20,
+        "fail": 0,
+        "skip": 0,
+        "log": {
+          "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-wiring-20261019/build/retained-quarter-actuals-checks/final-package-and-admission.log",
+          "bytes": 4950,
+          "sha256": "0abfad9a6ceb775d83a9bcfeb4cbc0fd95d4a8c3213b1cb690dae7ce1a8c92ad"
+        }
+      },
+      "original_non_package_controls_passed": 96,
+      "repeated_subset_for_final_admission": 13,
+      "other_original_controls_not_repeated": 83,
+      "compact_five_historical_and_functional_checks_passed_in_initial_run": true,
+      "final_metadata_only_seal_readback": "SAVED_SEPARATELY_AFTER_METADATA_AT_build/retained-quarter-actuals-checks/final-composition-readback.log_TO_AVOID_SELF_HASH"
+    }
+  },
+  "historical_package_adapter": {
+    "path": "tests/ownerReleaseReviewPackage.test.mjs",
+    "new_exact_historical_paths": [
+      "supabase/functions/_shared/recommendation-foundation-candidate.ts",
+      "supabase/functions/get-report-payload/index.ts"
+    ],
+    "reader_historical_parent": "ff88a4ed7ce10116a6fad84110770953941fcd08",
+    "reader_historical_sha256": "c36a5d412ce7d3447121c777cf8da8d24b8c87c8d231aba9ea7421fc96a56f92",
+    "reader_guard": "full current admission then exact primitive physical hash/mode; original input object means drift and is returned unchanged",
+    "historical_parent": "bc48d784487fd5ae63ac2bb9c28d9343de41034f",
+    "historical_sha256": "f4584ce25280c51ca66ef06b0d9bc7deb6b077de88b5e8b1a3543d3dad398395",
+    "assertions_changed": false,
+    "full_current_admission_first": true,
+    "injected_drift_translation": false
+  },
+  "review_limits": [
+    "Final eight product/test sources are covered by R8 receipt 6da65266. The foundation test adapter supplement binds intermediate test 9abda814. The later fixed Reader test branch (final test 34c5961c) passed the necessary20 controls; R8 could not issue its final supplement because its selected model was at capacity. Parent root readback is separate; do not claim the older supplement covered this final branch."
+  ],
+  "limited_reviews": [
+    {
+      "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-independent-review-20261019/RETAINED_SOURCE_AND_BOUNDARY_REVIEW_SAFE.json",
+      "bytes": 12358,
+      "sha256": "5d81efac5c02ad423aa2d4731e7e8364d970bea2368fc5023d196152147e9caa"
+    },
+    {
+      "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-r8-review-20261019/LIMITED_ACTUALS_EARNINGS_REVIEW_SAFE.json",
+      "bytes": 9351,
+      "sha256": "6da6526638458100cf65861b843d102ca6ea4fc04b220f816f9730c9b161ccbc"
+    },
+    {
+      "path": "/workspace/scratch/866fb527950e/actuals-earnings-pack-r8-review-20261019/HISTORICAL_PACKAGE_ADAPTER_SUPPLEMENT_SAFE.json",
+      "bytes": 2163,
+      "sha256": "446ea9713c56cb8c6d76828882352675fb4fbf2610f4a0d0c921e97029aeb463"
+    }
+  ],
+  "not_changed": [
+    "Auth",
+    "RLS",
+    "Cron",
+    "Secrets",
+    "Caller",
+    "LINE sending",
+    "member rights",
+    "payment",
+    "existing saved Report",
+    "formal source admission"
+  ],
+  "network_requests": 0,
+  "production_writes": 0
+}

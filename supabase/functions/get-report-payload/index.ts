@@ -1535,6 +1535,7 @@ Deno.serve(async (req: Request) => {
     payload.owner_market_foundation_candidate = {
       candidate_only: true, member_publication_approved: false,
       decision_engine_v1: await sealEvidenceDecision(buildEvidenceDecision(ownerStudy.data, decisionIdentity)),
+      ...(ownerStudy.quarterActuals ? { quarter_actuals: ownerStudy.quarterActuals } : {}),
     };
   }
   // Subscriber routes (including Owner browsing them) use one projection. The

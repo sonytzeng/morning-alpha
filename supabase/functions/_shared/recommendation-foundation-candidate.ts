@@ -6,6 +6,7 @@ import { buildRecommendationProof, persistedRecommendationReaderInput, type Capt
 import type { OfficialCapture } from './recommendation-official-actuals.ts';
 import { withMarketInstitutionalEvidence, type MarketFlowCapture } from './recommendation-market-institutional-candidate.ts';
 import { evaluationPhase } from './recommendation-phase.ts';
+import { createRetainedQuarterActuals, withRetainedQuarterActuals, type OwnerQuarterActualsView } from './recommendation-quarter-actuals-candidate.ts';
 
 export async function buildRecommendationFoundationCandidate(options: {
   data: EvidenceData; identity: DecisionIdentity; captures: Capture[];
@@ -21,16 +22,18 @@ export async function buildRecommendationFoundationCandidate(options: {
   // byte-equivalent to the original inputs until separately authorized. The
   // additive acquisition receipt is private and may only power Owner research.
   const proof = await buildRecommendationProof(options.data, options.identity, options.captures, options.officialActuals);
+  const quarterActuals = await createRetainedQuarterActuals(options.identity, evidenceCutoff);
   return { ...proof, acquisition: { ...proof.acquisition, foundation_candidate: {
     contract: 'RECOMMENDATION_FOUNDATION_CANDIDATE_V1', evidence_cutoff: evidenceCutoff, market_flow: options.marketFlow,
     status: data.failures.some(f => f.startsWith('MARKET_FLOW_')) ? 'BLOCKED' : 'MARKET_INPUT_VERIFIED',
     formal_evaluator_changed: false, member_publication_approved: false,
+    ...(quarterActuals ? { quarter_actuals: quarterActuals } : {}),
   } }, candidate_only: true as const };
 }
 
 /** Reader binding is still the existing exact saved Report/correlation/cutoff
  * contract. Unbound or newly downloaded flows cannot be attached by a client. */
-export async function persistedFoundationCandidateInput(data: EvidenceData, identity: DecisionIdentity, ai: Row, access: { ownerAuthorized: boolean } = { ownerAuthorized: false }) {
+export async function persistedFoundationCandidateInput(data: EvidenceData, identity: DecisionIdentity, ai: Row, access: { ownerAuthorized: boolean } = { ownerAuthorized: false }):Promise<{data:EvidenceData;priorWatch:string[]|null;quarterActuals?:OwnerQuarterActualsView}> {
   const base = await persistedRecommendationReaderInput(data, identity, ai);
   // This flag comes only from the existing server-resolved Owner branch. It is
   // never read from request/query/body/user metadata or used by member output.
@@ -54,5 +57,10 @@ export async function persistedFoundationCandidateInput(data: EvidenceData, iden
     return { ...base, data: { ...base.data, failures: [...base.data.failures, 'MARKET_FLOW_ACQUISITION_CUTOFF_INVALID'] } };
   }
   const producerIdentity = { ...identity, generated_at: savedCutoff };
-  return { ...base, data: await withMarketInstitutionalEvidence(base.data, producerIdentity, candidate.market_flow as MarketFlowCapture) };
+  const marketData = await withMarketInstitutionalEvidence(base.data, producerIdentity, candidate.market_flow as MarketFlowCapture);
+  const actuals = await withRetainedQuarterActuals(marketData, {
+    report_date: identity.report_date, producer_revision_id: String(ai.correlation_id),
+    producer_cutoff: String(capture!.cutoff), evidence_cutoff: savedCutoff,
+  }, candidate.quarter_actuals);
+  return { ...base, ...actuals };
 }

@@ -15,27 +15,51 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22.14.0
-      - run: npm ci --ignore-scripts
-      - name: Exact actual-source packaging and runtime with denied network ports
+      - name: Admit the complete current source before checking historical quarter artifacts
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: |
+          node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
+          node --experimental-strip-types --test tests/integrationAdmission.test.mjs
+      - name: Check out the immutable quarter packaging baseline only
+        uses: actions/checkout@v4
+        with:
+          ref: 6c89db33ade7b8f3a57e00da6708afe1958ed8f6
+          path: build/priced-in-historical-base
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the fixed historical artifact test dependencies without lifecycle scripts
+        working-directory: build/priced-in-historical-base
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci --ignore-scripts
+      - name: Historical 6c89 quarter packaging and runtime with denied network ports
+        working-directory: build/priced-in-historical-base
         env:
           NODE_OPTIONS: --experimental-strip-types
         run: node --experimental-vm-modules --require ./tests/helpers/cWorkerLocalSdkNetworkDenied.cjs --test --test-concurrency=1 tests/ownerQuarterLiveRelease.test.mjs tests/ownerQuarterLiveRuntime.integration.mjs
-      - name: Prepare actual artifacts and the separate compiler-only true-type map
+      - name: Prepare historical 6c89 quarter artifacts and their compiler-only true-type map
+        working-directory: build/priced-in-historical-base
         run: node scripts/operations/owner-quarter-live-release-20261019/prepare-check-sources.mjs
-      - name: Strict TypeScript on the four actual artifacts, each in its own program
+      - name: Strict TypeScript on the four historical 6c89 quarter artifacts
+        working-directory: build/priced-in-historical-base
         run: node scripts/operations/owner-quarter-live-release-20261019/check-typescript.mjs
       - uses: denoland/setup-deno@v2
         id: deno_setup
         with:
           deno-version: v2.9.7
-      - name: Actual Producer candidate Deno check without remote fetching
+      - name: Historical 6c89 Producer candidate Deno check without remote fetching
+        working-directory: build/priced-in-historical-base
         run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/producer/deno.json build/owner-quarter-live-typecheck/producer/supabase/functions/recommendation-stock-evidence-v1/index.ts
-      - name: Actual Producer recovery Deno check without remote fetching
+      - name: Historical 6c89 Producer recovery Deno check without remote fetching
+        working-directory: build/priced-in-historical-base
         if: ${{ !cancelled() && steps.deno_setup.outcome == 'success' }}
         run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/producer-recovery/deno.json build/owner-quarter-live-typecheck/producer-recovery/supabase/functions/recommendation-stock-evidence-v1/index.ts
-      - name: Actual Reader candidate Deno check without remote fetching
+      - name: Historical 6c89 Reader candidate Deno check without remote fetching
+        working-directory: build/priced-in-historical-base
         if: ${{ !cancelled() && steps.deno_setup.outcome == 'success' }}
         run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/reader/deno.json build/owner-quarter-live-typecheck/reader/supabase/functions/get-report-payload/index.ts
-      - name: Actual Reader privacy recovery Deno check without remote fetching
+      - name: Historical 6c89 Reader privacy recovery Deno check without remote fetching
+        working-directory: build/priced-in-historical-base
         if: ${{ !cancelled() && steps.deno_setup.outcome == 'success' }}
         run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/reader-recovery/deno.json build/owner-quarter-live-typecheck/reader-recovery/supabase/functions/get-report-payload/index.ts

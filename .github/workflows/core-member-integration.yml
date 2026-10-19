@@ -18,13 +18,33 @@ jobs:
       - env:
           NODE_OPTIONS: --experimental-strip-types
         run: npm ci
-      - name: Materialize the exact Worker local-SDK repair and functional recovery (no HTTP)
+      - name: Admit the complete current source before checking historical Worker artifacts
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: |
+          node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
+          node --experimental-strip-types --test tests/integrationAdmission.test.mjs
+      - name: Check out the immutable Worker packaging baseline only
+        uses: actions/checkout@v4
+        with:
+          ref: 6c89db33ade7b8f3a57e00da6708afe1958ed8f6
+          path: build/priced-in-historical-base
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the fixed historical artifact test dependencies without lifecycle scripts
+        working-directory: build/priced-in-historical-base
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci --ignore-scripts
+      - name: Historical 6c89 Worker local-SDK repair and recovery packaging (no HTTP)
+        working-directory: build/priced-in-historical-base
         env:
           NODE_OPTIONS: --experimental-strip-types
         run: |
           node --require ./tests/helpers/cWorkerLocalSdkNetworkDenied.cjs scripts/operations/c-worker-local-sdk-release-20261019/materialize.mjs repair
           node --require ./tests/helpers/cWorkerLocalSdkNetworkDenied.cjs scripts/operations/c-worker-local-sdk-release-20261019/materialize.mjs recovery
-      - name: Real fixed SDK, source packaging and lease handoff under denied network ports
+      - name: Historical 6c89 Worker fixed SDK and lease handoff under denied network ports
+        working-directory: build/priced-in-historical-base
         env:
           NODE_OPTIONS: --experimental-strip-types
         run: node --experimental-vm-modules --require ./tests/helpers/cWorkerLocalSdkNetworkDenied.cjs --test --test-concurrency=1 tests/cWorkerLocalSdkRelease.test.mjs tests/cWorkerLocalSdkRuntime.integration.mjs
@@ -38,10 +58,10 @@ jobs:
         run: node --experimental-strip-types --test tests/publicMarketProjection.test.mjs
       - name: Offline official Actuals parser (isolated fixtures only)
         run: python3 -B -m unittest discover -s tests -p test_inline_xbrl.py -v
-      - name: V1 complete mixed fundamentals and global refusal regressions
+      - name: V1 mixed fundamentals, measured price coverage and global refusal regressions
         env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/decisionEvidencePipeline.test.mjs tests/recommendationPhase.test.mjs
+        run: node --experimental-strip-types --test tests/decisionEvidencePipeline.test.mjs tests/recommendationPhase.test.mjs tests/decisionPricedInCoverage.test.mjs
       - name: Retained four-quarter Owner earnings and source view without formal or member admission
         env:
           NODE_OPTIONS: --experimental-strip-types

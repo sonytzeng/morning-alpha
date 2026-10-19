@@ -176,6 +176,7 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
   };
   const screen = out.screening!; screen.universe_count = uniqueUniverse.length;
   const checked: Opportunity[] = [];
+  const measuredPriceResponses: Score[] = [];
   for (const member of uniqueUniverse) {
     const symbol = sym(member.symbol), q = latest(symbol), series = bars(symbol), f = fundamentals(symbol);
     const reasons: string[] = [];
@@ -205,6 +206,21 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
     if (!pre || pre.length < 6 || !preBase || !preLast || !benchPre || !benchNow || (!pending && (!post || post.volume === null || post.volume <= 0))) reasons.push('EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING');
     const phaseRow: PhaseCandidate = {symbol,status:'BLOCKED',reasons:[...new Set(reasons)],post_event_price:pending?'NOT_YET_OBSERVABLE':post?'PASS':'MISSING',post_event_volume:pending?'NOT_YET_OBSERVABLE':post&&post.volume!==null&&post.volume>0?'PASS':'MISSING',evidence_ids:q?[q.id]:[]};
     phaseCandidates.push(phaseRow);
+    // Coverage describes measured inputs, independently of whether this stock
+    // passes selection. A complete NONE/DROP must not erase observed prices.
+    const measured = !reasons.length && !pending && q && pre && preBase && preLast && post && benchPre && benchNow ? (() => {
+      const priorReturn = preLast.price / preBase.price - 1, reaction = post.price / preLast.price - 1;
+      const relative = post.price / preBase.price - benchNow.price / benchPre.price;
+      const volumeRatio = post.volume! / mean(pre.map(p => p.volume!));
+      const pricePosition = (q.price - Math.min(...series.slice(-20).map(p => p.price))) / Math.max(.000001, Math.max(...series.slice(-20).map(p => p.price)) - Math.min(...series.slice(-20).map(p => p.price)));
+      const sectorReaction = mean(peers.map(p => p.change)) / 100;
+      const pricedInputs = { pre_event_return: priorReturn, post_event_return: reaction, relative_return: relative, volume_ratio: volumeRatio, price_position_20d: pricePosition, sector_reaction: sectorReaction };
+      const priceRefs = refs([...pre, post, benchPre, benchNow, ...peers, ...series.slice(-20)]);
+      const priced = score(mean([clamp(priorReturn / .1), clamp(reaction / .05), clamp(relative / .1), clamp((volumeRatio - 1) / 2), clamp(pricePosition), clamp(sectorReaction / .05)]), pricedInputs, priceRefs,
+        'mean(clamp(pre/.10),clamp(post/.05),clamp(relative/.10),clamp((volume_ratio-1)/2),clamp(20d_price_position),clamp(sector/.05)); prospective price-response index, not event causality or probability');
+      return { priorReturn, reaction, relative, volumeRatio, pricePosition, priceRefs, priced };
+    })() : null;
+    if (measured) measuredPriceResponses.push(measured.priced);
     // A complete mixed beat/miss history does not satisfy the existing intact
     // thesis. Count the assessment, but do not create WATCH/READY, an intact
     // explanation, or a missing-data claim. Every other prerequisite remains
@@ -227,20 +243,12 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
       phaseRow.evidence_ids=[...refs([...pre,q,benchPre,benchNow,...peers]),...f.ids,...inst.evidence_ids,event.id];
       continue;
     }
-    if (reasons.length || !q || !f || !inst || !mapping || !event || !preBase || !preLast || !post || !benchPre || !benchNow || !pre) {
+    if (reasons.length || !q || !f || !inst || !mapping || !event || !preBase || !preLast || !post || !benchPre || !benchNow || !pre || !measured) {
       screen.rejected.push({ symbol, reasons: [...new Set(reasons)] }); continue;
     }
     screen.evaluated_count++;
     phaseRow.status='NONE';
-    const priorReturn = preLast.price / preBase.price - 1, reaction = post.price / preLast.price - 1;
-    const relative = post.price / preBase.price - benchNow.price / benchPre.price;
-    const volumeRatio = post.volume! / mean(pre.map(p => p.volume!));
-    const pricePosition = (q.price - Math.min(...series.slice(-20).map(p => p.price))) / Math.max(.000001, Math.max(...series.slice(-20).map(p => p.price)) - Math.min(...series.slice(-20).map(p => p.price)));
-    const sectorReaction = mean(peers.map(p => p.change)) / 100;
-    const pricedInputs = { pre_event_return: priorReturn, post_event_return: reaction, relative_return: relative, volume_ratio: volumeRatio, price_position_20d: pricePosition, sector_reaction: sectorReaction };
-    const priceRefs = refs([...pre, post, benchPre, benchNow, ...peers, ...series.slice(-20)]);
-    const priced = score(mean([clamp(priorReturn / .1), clamp(reaction / .05), clamp(relative / .1), clamp((volumeRatio - 1) / 2), clamp(pricePosition), clamp(sectorReaction / .05)]), pricedInputs, priceRefs,
-      'mean(clamp(pre/.10),clamp(post/.05),clamp(relative/.10),clamp((volume_ratio-1)/2),clamp(20d_price_position),clamp(sector/.05)); prospective price-response index, not event causality or probability');
+    const { priorReturn, reaction, relative, volumeRatio, pricePosition, priceRefs, priced } = measured;
     const extended = priorReturn + reaction >= .1 || pricePosition >= .95 && reaction >= .03 || priced.value >= 80;
     const crash = benchNow.change <= -3 && q.change <= -3;
     const mispricing = crash && f.intact && inst.value! >= .5 && !extended;
@@ -280,7 +288,7 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
     price_position: benchmark.length >= 20 && taiwan[0] ? factor(clamp((taiwan[0].price - Math.min(...benchmark.slice(-20).map(q => q.price))) / Math.max(.000001, Math.max(...benchmark.slice(-20).map(q => q.price)) - Math.min(...benchmark.slice(-20).map(q => q.price)))), refs(benchmark.slice(-20)), 'TAIEX position within 20 daily closing prices') : missing('20 TAIEX daily closes required'),
     valuation: missing('No persisted valuation dataset'), breadth, institutional: totalFlow ?? missing('Three same-date TAIEX institutional flows missing'),
     catalyst: news.length ? factor(1, news.map(n => n.id), 'Fresh sourced overnight events present; presence only, not bullishness') : missing('No fresh sourced overnight event'),
-    priced_in: checked.length && checked.length === uniqueUniverse.length ? factor(mean(checked.map(o => o.priced_in_score!.value / 100)), checked.flatMap(o => o.priced_in_score!.evidence_ids), 'mean(event-aligned price response for every covered universe member); not valuation') : missing('Incomplete universe event-aligned price/volume/sector series'),
+    priced_in: measuredPriceResponses.length && measuredPriceResponses.length === uniqueUniverse.length ? factor(mean(measuredPriceResponses.map(response => response.value / 100)), measuredPriceResponses.flatMap(response => response.evidence_ids), 'mean(event-aligned price response for every covered universe member); not valuation') : missing('Incomplete universe event-aligned price/volume/sector series'),
     historical_calibration: missing('No point-in-time out-of-sample directional calibration; CLE accuracy is a different target'),
   };
   if (conflictSymbols.size) { factors.direction = { ...missing('Conflicting canonical quotes'), status: 'CONFLICTING' }; out.issues.push('CONFLICTING_QUOTES'); out.direction_evidence_score = null; out.market_direction = null; out.market_regime = null; }

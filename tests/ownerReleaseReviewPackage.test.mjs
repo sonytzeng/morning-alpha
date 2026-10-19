@@ -26,10 +26,19 @@ const rawRead=memberContinuityHistoricalReader(frontendTypeClosureHistoricalRead
 const read=name=>{
  // The separately admitted 2026-10-19 evaluator fix never replaces the frozen
  // Caller/R8 release payload. The canonical-regime DTO repair likewise stays
- // outside that frozen Reader payload. Live bytes must match the exact seal first.
- if(['supabase/functions/_shared/decision-v1-evidence.ts','src/lib/publicMarketReadModel.ts'].includes(name)){
+ // outside that frozen Reader payload, as does the Owner-only retained Actual
+ // adapter. Live bytes must match the exact seal before this historical view.
+ if(['supabase/functions/_shared/decision-v1-evidence.ts','src/lib/publicMarketReadModel.ts','supabase/functions/_shared/recommendation-foundation-candidate.ts'].includes(name)){
   verifyIntegrationCandidate();
   return integrationHistoricalRead('core',name,rawRead(name));
+ }
+ if(name==='supabase/functions/get-report-payload/index.ts'){
+  verifyIntegrationCandidate();
+  const live=rawRead(name),guarded=integrationHistoricalRead('core',name,live);
+  // The primitive returns the original object for injected bytes. Only an
+  // exact freshly admitted source returns its distinct historical Buffer.
+  if(guarded===live)return live;
+  return execFileSync('git',['--no-replace-objects','show','ff88a4ed7ce10116a6fad84110770953941fcd08:'+name],{cwd:root,maxBuffer:1024*1024});
  }
  if(['src/pages/account/Account.tsx','supabase/functions/_shared/recommendation-official-actuals.ts'].includes(name)){
   verifyIntegrationCandidate();

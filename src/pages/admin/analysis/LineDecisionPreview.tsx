@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { callGetReportHistory, callGetReportPayload } from '@/services/entitlementService';
 import { composeDecisionCard, decisionCardFlex, ownerV2Copy, type DecisionCard, type FlexBox, type FlexText } from '@/features/line/decisionCard';
+import OwnerQuarterActualsView from './OwnerQuarterActualsView';
 
-type Loaded = { card: DecisionCard; shadow: ReturnType<typeof ownerV2Copy> };
+type Loaded = { card: DecisionCard; shadow: ReturnType<typeof ownerV2Copy>; actualsCandidate: unknown };
 const fontSize = { xs: 12, sm: 14, lg: 20 };
 /** Browser view of the SAME Flex tree, not a separately authored mock card. */
 function FlexView({ node }: { node: FlexBox | FlexText }) {
@@ -42,7 +43,8 @@ export default function LineDecisionPreview() {
         let v2: ReturnType<typeof ownerV2Copy> = null;
         try { if (!shadow.error) v2 = ownerV2Copy(shadow.data, card.date); } catch { /* Invalid Shadow never alters V1. */ }
         setDates([...new Set(history.reports.map(r => r.report_date).filter((d): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort().reverse());
-        setLoaded({ card, shadow: v2 }); setStatus('');
+        setLoaded({ card, shadow: v2, actualsCandidate: report.authenticated === true && report.tier === 'admin'
+          ? report.payload?.owner_market_foundation_candidate : null }); setStatus('');
       } catch { if (active) { setLoaded(null); setStatus('此日期的正式來源尚無法驗證，或沒有 Owner 權限；不以舊資料、研究結果或假文案代替。'); } }
     })();
     return () => { active = false; auth.subscription.unsubscribe(); };
@@ -71,6 +73,7 @@ export default function LineDecisionPreview() {
           <p className="mt-2 break-words text-xs">原始評估原因：{loaded.card.recommendationReasons.join(' / ') || '未提供'}。{loaded.card.notice}</p>
           <p className="mt-2 text-xs">同一純函式產生 Flex Payload 與此預覽；尚未進行真實 LINE App 發送驗收。</p>
           <ul className="mt-3 space-y-2 text-xs">{loaded.card.sections.flatMap(s => s.lines).map((l, i) => <li key={i} className="break-words">{l.text}<br/>{l.path}{l.evidence.length ? ` · ${l.evidence.join(' / ')}` : ''}</li>)}</ul>
+          <OwnerQuarterActualsView candidate={loaded.actualsCandidate}/>
         </details>
         <section aria-label="Owner V2 研究預覽" className="rounded-lg border border-amber-500/50 p-4">
           <h3 className="font-semibold text-amber-700">Owner研究預覽｜尚未對會員發布</h3>

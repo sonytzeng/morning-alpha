@@ -27,7 +27,7 @@
     },
     {
       "old": "import { persistedRecommendationReaderInput } from \"../_shared/recommendation-stock-evidence.ts\";",
-      "new": "import { persistedRecommendationReaderInput } from \"../_shared/recommendation-stock-evidence.ts\";\nimport { persistedOwnerQuarterInput } from \"../_shared/recommendation-owner-quarter-capsule.ts\";\nimport { canReadResearchOwnerFields, withoutResearchOwnerReceipt } from \"../_shared/research-owner-field-access.ts\";"
+      "new": "import { persistedRecommendationReaderInput } from \"../_shared/recommendation-stock-evidence.ts\";\nimport { persistedOwnerQuarterInput } from \"../_shared/recommendation-owner-quarter-capsule.ts\";\nimport { canReadResearchOwnerFields, withoutResearchOwnerReceipt } from \"../_shared/research-owner-quarter-field-access.ts\";"
     },
     {
       "old": "reports: rows.map(row => buildHistorySummary(row,",
@@ -49,7 +49,7 @@
     },
     {
       "old": "import { persistedRecommendationReaderInput } from \"../_shared/recommendation-stock-evidence.ts\";",
-      "new": "import { persistedRecommendationReaderInput } from \"../_shared/recommendation-stock-evidence.ts\";\nimport { withoutResearchOwnerReceipt } from \"../_shared/research-owner-field-access.ts\";"
+      "new": "import { persistedRecommendationReaderInput } from \"../_shared/recommendation-stock-evidence.ts\";\nimport { withoutResearchOwnerReceipt } from \"../_shared/research-owner-quarter-field-access.ts\";"
     },
     {
       "old": "reports: rows.map(row => buildHistorySummary(row,",

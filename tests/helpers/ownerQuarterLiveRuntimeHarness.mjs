@@ -41,6 +41,9 @@ export function syntheticSavedReport(proof,{mutate}={}){
  ai.correlation_id=CORRELATION;ai.generated_at=proof.decision.generated_at;
  ai.decision_v1=plain(proof.decision);ai.recommendation_stock_evidence=plain(proof.acquisition);
  ai.legacy_diagnostic={keep:'SYNTHETIC_UNRELATED_DIAGNOSTIC'};
+ // Actual Generator248 saves the original AI document as well as its canonical
+ // projection. Every route assertion must exercise both saved JSON copies.
+ report.raw_ai_json=plain(ai);
  if(mutate)mutate(report);
  for(const table of evidenceTables)tables[table]=[];
  // Universe fixtures are taken from the actual materialized Producer below;

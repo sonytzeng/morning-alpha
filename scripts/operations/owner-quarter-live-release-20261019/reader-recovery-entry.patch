@@ -1,34 +1,13 @@
---- actual-baseline/supabase/functions/get-report-payload/index.ts
+--- actual-reader56/supabase/functions/get-report-payload/index.ts
 +++ reader-recovery/supabase/functions/get-report-payload/index.ts
-@@ -1,4 +1,4 @@
+@@ -1 +1 @@
 -// @deno-types="../_shared/_fixed_reader_sdk/0f74ad419de662a8f6127fe99b6396fbf54ef22ca064b55f2cc2b3bd819c70c6.d.mts"
 +// @deno-types="../_shared/_fixed_reader_sdk/83a913f210c2e9de5b06514e2a349a50e1f054af950bd1331cc4bb5d577b099e.d.mts"
- import { createClient } from "../_shared/_fixed_reader_sdk/83a913f210c2e9de5b06514e2a349a50e1f054af950bd1331cc4bb5d577b099e.mjs";
- import {
-   contentLengthExceedsLimit,
-@@ -24,6 +24,7 @@
- import { loadDecisionEvidence } from "../_shared/decision-v1-data.ts";
- import { buildEvidenceDecision, projectEvidenceDecision, sealEvidenceDecision } from "../_shared/decision-v1-evidence.ts";
- import { persistedRecommendationReaderInput } from "../_shared/recommendation-stock-evidence.ts";
-+import { withoutResearchOwnerReceipt } from "../_shared/research-owner-field-access.ts";
- import { publicCheckpointInputs, publicMarketInput, buildPublicMarketReadModel } from "../_shared/public-market-projection.ts";
- import { recordPublicProjection } from "../_shared/public-projection-recorder.ts";
- import { createSubscriberState, getSubscriberReportProjection, INCOMPLETE_ANALYSIS_MESSAGE, RECOMMENDATION_INSUFFICIENT_MESSAGE } from "../../../shared/subscriber-state-contract.ts";
-@@ -1395,7 +1396,7 @@
-       today_date: todayDate,
-       report_date: null,
-       payload: null,
+@@ -26,0 +27 @@
++import { withoutResearchOwnerReceipt } from "../_shared/research-owner-quarter-field-access.ts";
+@@ -1398 +1399 @@
 -      reports: rows.map(row => buildHistorySummary(row,
 +      reports: rows.map(row => buildHistorySummary(withoutResearchOwnerReceipt(row),
-         historyEvidence.snapshots.get(toStringValue(getAi(row).revision_id) || "") || null,
-         evaluatedAt, historyEvidence, todayDate)),
-       locked_sections: getLockedSections(tier),
-@@ -1488,7 +1489,7 @@
-     return await read.order(request.order, { ascending: false }).limit(request.limit)
-       .abortSignal(AbortSignal.timeout(4000));
-   }, decisionIdentity);
+@@ -1491 +1492 @@
 -  const payload = buildPayload(report, tier, context);
 +  const payload = buildPayload(withoutResearchOwnerReceipt(report), tier, context);
-   const memberRows = asArray(payload.today_beneficiary_stocks);
-   const persistedEvidence = await persistedRecommendationReaderInput(realEvidence, decisionIdentity, parseAi(report.ai_strategy_json));
-   const decisionEvidence = projectEvidenceDecision(await sealEvidenceDecision(buildEvidenceDecision(persistedEvidence.data, decisionIdentity)), {

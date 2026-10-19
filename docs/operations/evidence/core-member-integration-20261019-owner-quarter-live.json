@@ -387,7 +387,7 @@
     {
       "path": "docs/operations/evidence/owner-quarter-live-review-20261019.json",
       "before_sha256": null,
-      "after_sha256": "ff34a6ca63fb3ba0ec7df6d87a23a705301817a2b6e296def16acbe819161a21",
+      "after_sha256": "db2727c969147ed7cf70be25718647acd9a342d321e5be67893ddf0683e7b745",
       "mode": "100644",
       "origin": "composition"
     },
@@ -485,7 +485,7 @@
     {
       "path": "docs/operations/owner-quarter-live-closure-20261019.md",
       "before_sha256": null,
-      "after_sha256": "85e73a57851663027010731c9682cec97e8d002fd069bcb1bceac544ef6259a0",
+      "after_sha256": "ba3f8f5a5b05e32759a55b9e510ff57ea67880c736ed5eb732c4f6b1c700ce06",
       "mode": "100644",
       "origin": "composition"
     },
@@ -891,14 +891,14 @@
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/entry-edits.json",
       "before_sha256": null,
-      "after_sha256": "266fe37eed1f0e399411f5901de5e4b13ea8313620bf7329289112b7417e4a3b",
+      "after_sha256": "7a38bdfc508814d20e5ad73329ad7f9709987f7d7bee6bc017c71ef97a9fa7f4",
       "mode": "100644",
       "origin": "composition"
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/materialize.mjs",
       "before_sha256": null,
-      "after_sha256": "046f2aed4c5331f0857c29d25b3d18b95fcce682a08f9c18265468d60c21d9d3",
+      "after_sha256": "f5d88a22d699733b1ada16d319b5f9563f68d3a3427e82e34794933260649e81",
       "mode": "100644",
       "origin": "composition"
     },
@@ -926,21 +926,21 @@
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/reader-entry.patch",
       "before_sha256": null,
-      "after_sha256": "badce6b76759b2f214e225a229009cdaf48eb097434a8fd863fbbcbd2f96c8ec",
+      "after_sha256": "4755d0f06b3b55c8426b8152288c55a05446d10763912b54c777bc0abcb3d789",
       "mode": "100644",
       "origin": "composition"
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/reader-recovery-entry.patch",
       "before_sha256": null,
-      "after_sha256": "edf36b4f9b8fb2b5d51f671310d30e37d59cc0c6f87093d6370a483a0e75c43b",
+      "after_sha256": "2e1a5ab0199e248bafbb4bdd6e4ad2e84c015a820727af2b09016a0fc9148006",
       "mode": "100644",
       "origin": "composition"
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/release-catalog.json",
       "before_sha256": null,
-      "after_sha256": "7d24db0bf2ae516c5bb6d6559128d778383feae77f9ad71c98d15672c2e2034c",
+      "after_sha256": "5d8995c7bb690ec7877d096a1fbe261d4c4273115728c7678a6cc679d42070a6",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1820,6 +1820,13 @@
       "origin": "composition"
     },
     {
+      "path": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+      "before_sha256": null,
+      "after_sha256": "2d548e147f95607dddea3357cb6fe1f8f0f04d2b3ce3ab4d61de9fdc08938831",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "supabase/functions/_shared/retained-2330-quarter-actuals-20261019.json",
       "before_sha256": null,
       "after_sha256": "6b2775376d09849c27523248c27cde889c49b1aaaac8a9e535fb91282e276dc7",
@@ -2137,7 +2144,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "b69b285259b21f0c1c11eedd12f274d9791b1284871c037e032bfdaaaa20d9cc",
+      "after_sha256": "8cbd2bc7f8e37a8991e65db6871df3bb1c3947ca8f43545b6c6b15c2be6ea863",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2158,7 +2165,7 @@
     {
       "path": "tests/helpers/ownerQuarterLiveRuntimeHarness.mjs",
       "before_sha256": null,
-      "after_sha256": "4027aafacdbd0580de1bee971c460a0e9b88da0b6fe4177842c0613f8f26409e",
+      "after_sha256": "3ab6d0a7ec31e543fbd3c00f70a83ef6320ec1c199c3e95d5c013eaed664da11",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2249,14 +2256,14 @@
     {
       "path": "tests/ownerQuarterLiveRelease.test.mjs",
       "before_sha256": null,
-      "after_sha256": "db4d0e308bc02c9a62079ca7907246e48ff1f522f7c831291e4a3cc374b3f01f",
+      "after_sha256": "6803411d5392dcafe98279201c361e5df3b5e77aabec961d9a881c1ef9fa134f",
       "mode": "100644",
       "origin": "composition"
     },
     {
       "path": "tests/ownerQuarterLiveRuntime.integration.mjs",
       "before_sha256": null,
-      "after_sha256": "cb5013a950f2cd7f130e3197347ee0068c7f1c41b9d5ae77679e460563bd56e1",
+      "after_sha256": "618f28da5af309135f4146b4dbdd3f0b9676ca4b17151a5ef05d5b2aab15b6a8",
       "mode": "100644",
       "origin": "composition"
     },

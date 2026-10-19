@@ -23,7 +23,7 @@ async function readProof(proof,options={}){
 }
 test('the required preload blocks real fetch and all four materialized graphs retain their actual SDK',async()=>{
  assert.throws(()=>globalThis.fetch('https://must-not-open.invalid'),/C_WORKER_TEST_NETWORK_DENIED/);
- for(const[variant,count]of [['producer',251],['producer-recovery',247],['reader',245],['reader-recovery',241]]){
+ for(const[variant,count]of [['producer',251],['producer-recovery',247],['reader',246],['reader-recovery',242]]){
   const h=await materializedRuntime(variant);try{
    assert.equal(h.payload.files.length,count);assert.equal(h.payload.verify_jwt,variant.startsWith('producer'));assert(!Object.hasOwn(h.payload,'import_map_path'));
    const graph=h.graph();assert.deepEqual(graph.remote,[]);assert(graph.local.includes(h.payload.entrypoint_path));
@@ -102,6 +102,24 @@ test('strip-only Reader recovery removes private raw evidence even for Owner wit
  assert.equal(recovered.body.payload.admin_source_report.ai_strategy_json.legacy_diagnostic.keep,'SYNTHETIC_UNRELATED_DIAGNOSTIC');
  assert.deepEqual(recovered.body.payload.decision_engine_v1,normal.body.payload.decision_engine_v1);
  assert(!recovered.trace.some(call=>call.path.endsWith('/is_research_owner_v1')||call.key==='ANON'));
+});
+test('both stored Report JSON copies strip the private capsule for nonOwner admin and privacy recovery',async()=>{
+ const proof=await freshProof();
+ for(const stringValue of [false,true]){
+  const mutate=report=>{
+   const raw={...plain(report.ai_strategy_json),raw_diagnostic:'SYNTHETIC_UNRELATED_RAW_DIAGNOSTIC'};
+   report.raw_ai_json=stringValue?JSON.stringify(raw):raw;
+  };
+  for(const options of [{owner:false},{variant:'reader-recovery'}]){
+   const result=await readProof(proof,{...options,mutate});
+   assert(!JSON.stringify(result.body).includes(receipt),'BOTH_STORED_JSON_PRIVATE_ANCESTORS_MUST_BE_STRIPPED');
+   const raw=result.body.payload.admin_source_report.raw_ai_json,document=typeof raw==='string'?JSON.parse(raw):raw;
+   assert.equal(document.raw_diagnostic,'SYNTHETIC_UNRELATED_RAW_DIAGNOSTIC');
+   assert.equal(document.recommendation_stock_evidence.foundation_candidate,undefined);
+  }
+  const owner=await readProof(proof,{mutate}),raw=owner.body.payload.admin_source_report.raw_ai_json;
+  assert.equal((typeof raw==='string'?JSON.parse(raw):raw).recommendation_stock_evidence.foundation_candidate.contract,receipt);
+ }
 });
 test('actual Reader method, malformed body and content limit fail before SQL transport; history skips Owner check',async()=>{
  const proof=await freshProof(),fixture=syntheticSavedReport(proof),h=await materializedRuntime('reader',{fixture});try{

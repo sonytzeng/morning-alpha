@@ -85,6 +85,7 @@ export const INTEGRATION_DELTAS=Object.freeze([
  'scripts/operations/owner-quarter-live-release-20261019/reader-recovery-entry.patch',
  'scripts/operations/owner-quarter-live-release-20261019/release-catalog.json',
  'supabase/functions/_shared/recommendation-owner-quarter-capsule.ts',
+ 'supabase/functions/_shared/research-owner-quarter-field-access.ts',
  'tests/helpers/ownerQuarterLiveRuntimeHarness.mjs',
  'tests/ownerQuarterLiveRelease.test.mjs',
  'tests/ownerQuarterLiveRuntime.integration.mjs',

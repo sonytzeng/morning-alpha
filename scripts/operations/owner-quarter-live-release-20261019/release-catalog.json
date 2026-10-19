@@ -368,8 +368,8 @@
   },
   "entry_edits": {
     "name": "scripts/operations/owner-quarter-live-release-20261019/entry-edits.json",
-    "sha256": "266fe37eed1f0e399411f5901de5e4b13ea8313620bf7329289112b7417e4a3b",
-    "bytes": 4610
+    "sha256": "7a38bdfc508814d20e5ad73329ad7f9709987f7d7bee6bc017c71ef97a9fa7f4",
+    "bytes": 4626
   },
   "preserved_global_sources": [
     {
@@ -5968,6 +5968,11 @@
           "name": "supabase/functions/_shared/research-owner-field-access.ts",
           "sha256": "5c2d0530fb07970fcdc648da9f7f8013b853b175361aca07f86e007f27789683",
           "bytes": 4083
+        },
+        {
+          "name": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+          "sha256": "2d548e147f95607dddea3357cb6fe1f8f0f04d2b3ce3ab4d61de9fdc08938831",
+          "bytes": 651
         }
       ],
       "files": [
@@ -6218,8 +6223,8 @@
         },
         {
           "name": "supabase/functions/get-report-payload/index.ts",
-          "sha256": "1fb1fb86d3f7b5e8f1bd45ab88ee94a4aa390fbc76392ffc6144171cd0f1a18b",
-          "bytes": 83384
+          "sha256": "7c6ad27521d86a88a8a470e52dcae90733b934bef80a62cfa70c888101b3f888",
+          "bytes": 83392
         },
         {
           "name": "supabase/functions/_shared/recommendation-owner-quarter-capsule.ts",
@@ -6245,6 +6250,11 @@
           "name": "supabase/functions/_shared/research-owner-field-access.ts",
           "sha256": "5c2d0530fb07970fcdc648da9f7f8013b853b175361aca07f86e007f27789683",
           "bytes": 4083
+        },
+        {
+          "name": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+          "sha256": "2d548e147f95607dddea3357cb6fe1f8f0f04d2b3ce3ab4d61de9fdc08938831",
+          "bytes": 651
         },
         {
           "name": "src/features/decision-v1/contract.ts",
@@ -7197,8 +7207,8 @@
           "bytes": 4711
         }
       ],
-      "payload_sha256": "6a9bec45f7b2be1211ce1f8a5c577a3c2e5659aa71ec2a523edd34cc1f3fd41a",
-      "payload_bytes": 4131510,
+      "payload_sha256": "4fc09a67a1cf8821e7a279638c52fa63010e7cb87032957268ab37ec7c47629f",
+      "payload_bytes": 4132296,
       "runtime_files": 55,
       "static_files": 0,
       "type_files": [
@@ -8344,16 +8354,33 @@
         }
       ],
       "file_roles": {
-        "runtime": 55,
+        "runtime": 56,
         "type_only": 170,
         "static": 20
       },
       "runtime_emission": {
-        "snapshot_payload_sha256": "4b9988d23ccb4d0865f64f9bd30302e31e2b598edc974938cb8a4b7ae0b0c794",
+        "parent_payload_sha256": "6a9bec45f7b2be1211ce1f8a5c577a3c2e5659aa71ec2a523edd34cc1f3fd41a",
+        "comparison": "INTENTIONAL_ENTRY_AND_DUAL_JSON_WRAPPER_DELTA; ALL_OTHER_RUNTIME_JS_UNCHANGED",
         "typescript": "5.8.3",
         "target": "ES2022",
         "module": "ESNext",
         "remove_comments": true,
+        "changed_or_added_runtime": [
+          {
+            "name": "supabase/functions/get-report-payload/index.ts",
+            "before_emitted_sha256": "5305faf3ac75fd02ff56955c576b0d2695996fac9358602c3b4b1b305b2ad555",
+            "after_emitted_sha256": "ca755f44f1fa5f15031d0b841761cf3c5d27a0789945a49de420d23b86989525",
+            "reason": "DUAL_JSON_PRIVATE_CAPSULE_STRIP"
+          },
+          {
+            "name": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+            "before_emitted_sha256": null,
+            "after_emitted_sha256": "d1a99ccefcfe632cff08a3e548393f1832e034d92d42315c78343af07ad97004",
+            "reason": "DUAL_JSON_PRIVATE_CAPSULE_STRIP"
+          }
+        ],
+        "unchanged_runtime_files": 54,
+        "sdk_runtime_bytes_unchanged": true,
         "files": [
           {
             "name": "shared/public-market-read-model.ts",
@@ -8553,7 +8580,7 @@
           },
           {
             "name": "supabase/functions/get-report-payload/index.ts",
-            "emitted_sha256": "5305faf3ac75fd02ff56955c576b0d2695996fac9358602c3b4b1b305b2ad555"
+            "emitted_sha256": "ca755f44f1fa5f15031d0b841761cf3c5d27a0789945a49de420d23b86989525"
           },
           {
             "name": "supabase/functions/_shared/recommendation-owner-quarter-capsule.ts",
@@ -8574,6 +8601,10 @@
           {
             "name": "supabase/functions/_shared/research-owner-field-access.ts",
             "emitted_sha256": "0afc488e68e29ad5c7bb730686edf08cd390716524d24d0f9e2320e9b0341fb7"
+          },
+          {
+            "name": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+            "emitted_sha256": "d1a99ccefcfe632cff08a3e548393f1832e034d92d42315c78343af07ad97004"
           }
         ]
       }
@@ -8590,6 +8621,11 @@
           "name": "supabase/functions/_shared/research-owner-field-access.ts",
           "sha256": "5c2d0530fb07970fcdc648da9f7f8013b853b175361aca07f86e007f27789683",
           "bytes": 4083
+        },
+        {
+          "name": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+          "sha256": "2d548e147f95607dddea3357cb6fe1f8f0f04d2b3ce3ab4d61de9fdc08938831",
+          "bytes": 651
         }
       ],
       "files": [
@@ -8840,13 +8876,18 @@
         },
         {
           "name": "supabase/functions/get-report-payload/index.ts",
-          "sha256": "11b4298827a2f0683b2ae188568261249138578a9c2c4e1cb146746a580232e0",
-          "bytes": 82430
+          "sha256": "cf751d5f08b3bd78b759942fa6f1e9cfaed0e96d4eff0834937c27627e4da207",
+          "bytes": 82438
         },
         {
           "name": "supabase/functions/_shared/research-owner-field-access.ts",
           "sha256": "5c2d0530fb07970fcdc648da9f7f8013b853b175361aca07f86e007f27789683",
           "bytes": 4083
+        },
+        {
+          "name": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+          "sha256": "2d548e147f95607dddea3357cb6fe1f8f0f04d2b3ce3ab4d61de9fdc08938831",
+          "bytes": 651
         },
         {
           "name": "src/features/decision-v1/contract.ts",
@@ -9799,8 +9840,8 @@
           "bytes": 4711
         }
       ],
-      "payload_sha256": "70845e5af1d9d60418cd9c2ce4d0a8d359e1a3c4633e0c62cb26ad908236efe9",
-      "payload_bytes": 4107190,
+      "payload_sha256": "7d7c1541002aef5e265b30fea9c14153664cbe4599022bce8a62f81c33e3cf8b",
+      "payload_bytes": 4107976,
       "runtime_files": 51,
       "static_files": 0,
       "type_files": [
@@ -10946,16 +10987,33 @@
         }
       ],
       "file_roles": {
-        "runtime": 51,
+        "runtime": 52,
         "type_only": 170,
         "static": 20
       },
       "runtime_emission": {
-        "snapshot_payload_sha256": "c9f944815b57ac55aed87a549052dea1b66b9a1b1c99f4a2b57cc3107412a270",
+        "parent_payload_sha256": "70845e5af1d9d60418cd9c2ce4d0a8d359e1a3c4633e0c62cb26ad908236efe9",
+        "comparison": "INTENTIONAL_ENTRY_AND_DUAL_JSON_WRAPPER_DELTA; ALL_OTHER_RUNTIME_JS_UNCHANGED",
         "typescript": "5.8.3",
         "target": "ES2022",
         "module": "ESNext",
         "remove_comments": true,
+        "changed_or_added_runtime": [
+          {
+            "name": "supabase/functions/get-report-payload/index.ts",
+            "before_emitted_sha256": "6dcc837d8d6c76ea0f816c2844688336ecd5a38f9b00ca63021716d898ab8223",
+            "after_emitted_sha256": "cc2ae560865adbf4f8f5f80ef1ec7e2d26ff9a3d999bcd835be6eef60f36b4cc",
+            "reason": "DUAL_JSON_PRIVATE_CAPSULE_STRIP"
+          },
+          {
+            "name": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+            "before_emitted_sha256": null,
+            "after_emitted_sha256": "d1a99ccefcfe632cff08a3e548393f1832e034d92d42315c78343af07ad97004",
+            "reason": "DUAL_JSON_PRIVATE_CAPSULE_STRIP"
+          }
+        ],
+        "unchanged_runtime_files": 50,
+        "sdk_runtime_bytes_unchanged": true,
         "files": [
           {
             "name": "shared/public-market-read-model.ts",
@@ -11155,11 +11213,15 @@
           },
           {
             "name": "supabase/functions/get-report-payload/index.ts",
-            "emitted_sha256": "6dcc837d8d6c76ea0f816c2844688336ecd5a38f9b00ca63021716d898ab8223"
+            "emitted_sha256": "cc2ae560865adbf4f8f5f80ef1ec7e2d26ff9a3d999bcd835be6eef60f36b4cc"
           },
           {
             "name": "supabase/functions/_shared/research-owner-field-access.ts",
             "emitted_sha256": "0afc488e68e29ad5c7bb730686edf08cd390716524d24d0f9e2320e9b0341fb7"
+          },
+          {
+            "name": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+            "emitted_sha256": "d1a99ccefcfe632cff08a3e548393f1832e034d92d42315c78343af07ad97004"
           }
         ]
       }

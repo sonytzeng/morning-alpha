@@ -1,6 +1,6 @@
 {
   "schema": "OWNER_QUARTER_ACTUAL15_READER56_SOURCE_REVIEW_V1",
-  "status": "OFFLINE_SOURCE_CANDIDATE_DENO_AND_PRODUCTION_PENDING",
+  "status": "OFFLINE_PRIVACY_FIX_VALIDATED_NEW_HEAD_DENO_AND_PRODUCTION_PENDING",
   "base": "bd941dc3ead8eb66eeaf2b21ca13acf1c90f98e4",
   "base_tree": "d14f50b638269749a2286d77f330129208e240e6",
   "composition_manifest": "docs/operations/evidence/core-member-integration-20261019-owner-quarter-live.json",
@@ -12,8 +12,8 @@
   },
   "release_catalog": {
     "path": "scripts/operations/owner-quarter-live-release-20261019/release-catalog.json",
-    "sha256": "7d24db0bf2ae516c5bb6d6559128d778383feae77f9ad71c98d15672c2e2034c",
-    "bytes": 551145,
+    "sha256": "5d8995c7bb690ec7877d096a1fbe261d4c4273115728c7678a6cc679d42070a6",
+    "bytes": 554263,
     "mode": "100644"
   },
   "sources": [
@@ -25,8 +25,8 @@
     },
     {
       "path": "docs/operations/owner-quarter-live-closure-20261019.md",
-      "sha256": "85e73a57851663027010731c9682cec97e8d002fd069bcb1bceac544ef6259a0",
-      "bytes": 11088,
+      "sha256": "ba3f8f5a5b05e32759a55b9e510ff57ea67880c736ed5eb732c4f6b1c700ce06",
+      "bytes": 13432,
       "mode": "100644"
     },
     {
@@ -97,31 +97,31 @@
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/compiler-typescript-LICENSE.txt",
-      "mode": "100644",
       "sha256": "527adf9d4c760f7367c2aeffed6a89afba8ba40ea1b0efbc8f56496ad30ea9cf",
-      "bytes": 9141
+      "bytes": 9141,
+      "mode": "100644"
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/compiler-webauthn-dom-5.8.3.d.ts",
-      "mode": "100644",
       "sha256": "a0573b238f6cd00ddb43a0f11f6e7d9de0af038ea11c2b0d0573f9901a7e621d",
-      "bytes": 6779
+      "bytes": 6779,
+      "mode": "100644"
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/compiler-webauthn-dom-5.8.3.provenance.json",
-      "mode": "100644",
       "sha256": "ae3c03982dbb092603e8cb4290277310c9db333896ea4357bbdce2b01b58d31b",
-      "bytes": 7422
+      "bytes": 7422,
+      "mode": "100644"
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/entry-edits.json",
-      "sha256": "266fe37eed1f0e399411f5901de5e4b13ea8313620bf7329289112b7417e4a3b",
-      "bytes": 4610,
+      "sha256": "7a38bdfc508814d20e5ad73329ad7f9709987f7d7bee6bc017c71ef97a9fa7f4",
+      "bytes": 4626,
       "mode": "100644"
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/materialize.mjs",
-      "sha256": "046f2aed4c5331f0857c29d25b3d18b95fcce682a08f9c18265468d60c21d9d3",
+      "sha256": "f5d88a22d699733b1ada16d319b5f9563f68d3a3427e82e34794933260649e81",
       "bytes": 8076,
       "mode": "100644"
     },
@@ -145,20 +145,20 @@
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/reader-entry.patch",
-      "sha256": "badce6b76759b2f214e225a229009cdaf48eb097434a8fd863fbbcbd2f96c8ec",
-      "bytes": 3943,
+      "sha256": "4755d0f06b3b55c8426b8152288c55a05446d10763912b54c777bc0abcb3d789",
+      "bytes": 1801,
       "mode": "100644"
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/reader-recovery-entry.patch",
-      "sha256": "edf36b4f9b8fb2b5d51f671310d30e37d59cc0c6f87093d6370a483a0e75c43b",
-      "bytes": 2466,
+      "sha256": "2e1a5ab0199e248bafbb4bdd6e4ad2e84c015a820727af2b09016a0fc9148006",
+      "bytes": 816,
       "mode": "100644"
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/release-catalog.json",
-      "sha256": "7d24db0bf2ae516c5bb6d6559128d778383feae77f9ad71c98d15672c2e2034c",
-      "bytes": 551145,
+      "sha256": "5d8995c7bb690ec7877d096a1fbe261d4c4273115728c7678a6cc679d42070a6",
+      "bytes": 554263,
       "mode": "100644"
     },
     {
@@ -168,27 +168,33 @@
       "mode": "100644"
     },
     {
+      "path": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+      "sha256": "2d548e147f95607dddea3357cb6fe1f8f0f04d2b3ce3ab4d61de9fdc08938831",
+      "bytes": 651,
+      "mode": "100644"
+    },
+    {
       "path": "tests/helpers/integrationAdmission.mjs",
-      "sha256": "b69b285259b21f0c1c11eedd12f274d9791b1284871c037e032bfdaaaa20d9cc",
-      "bytes": 33284,
+      "sha256": "8cbd2bc7f8e37a8991e65db6871df3bb1c3947ca8f43545b6c6b15c2be6ea863",
+      "bytes": 33354,
       "mode": "100644"
     },
     {
       "path": "tests/helpers/ownerQuarterLiveRuntimeHarness.mjs",
-      "sha256": "4027aafacdbd0580de1bee971c460a0e9b88da0b6fe4177842c0613f8f26409e",
-      "bytes": 14295,
+      "sha256": "3ab6d0a7ec31e543fbd3c00f70a83ef6320ec1c199c3e95d5c013eaed664da11",
+      "bytes": 14482,
       "mode": "100644"
     },
     {
       "path": "tests/ownerQuarterLiveRelease.test.mjs",
-      "sha256": "db4d0e308bc02c9a62079ca7907246e48ff1f522f7c831291e4a3cc374b3f01f",
+      "sha256": "6803411d5392dcafe98279201c361e5df3b5e77aabec961d9a881c1ef9fa134f",
       "bytes": 8354,
       "mode": "100644"
     },
     {
       "path": "tests/ownerQuarterLiveRuntime.integration.mjs",
-      "sha256": "cb5013a950f2cd7f130e3197347ee0068c7f1c41b9d5ae77679e460563bd56e1",
-      "bytes": 13848,
+      "sha256": "618f28da5af309135f4146b4dbdd3f0b9676ca4b17151a5ef05d5b2aab15b6a8",
+      "bytes": 14996,
       "mode": "100644"
     }
   ],
@@ -205,7 +211,10 @@
       },
       "payload_sha256": "dd5240c35bd6ebd2bd98d24d3f87086bde62293fea30fa1bc203dd1051f9e69a",
       "payload_bytes": 3613538,
-      "runtime_js_matches_review_snapshot": true
+      "runtime_js_matches_review_snapshot": true,
+      "runtime_comparison": "UNCHANGED_ENTIRE_PRODUCER_PAYLOAD",
+      "changed_or_added_runtime": [],
+      "sdk_runtime_bytes_unchanged": true
     },
     {
       "variant": "producer-recovery",
@@ -219,7 +228,10 @@
       },
       "payload_sha256": "1df4876799e6140538cc7f98b4a5a7f94c1b1612ede8392d83c9e93f95f0f1b9",
       "payload_bytes": 3590027,
-      "runtime_js_matches_review_snapshot": true
+      "runtime_js_matches_review_snapshot": true,
+      "runtime_comparison": "UNCHANGED_ENTIRE_PRODUCER_PAYLOAD",
+      "changed_or_added_runtime": [],
+      "sdk_runtime_bytes_unchanged": true
     },
     {
       "variant": "reader",
@@ -227,13 +239,29 @@
       "verify_jwt": false,
       "import_map": false,
       "counts": {
-        "runtime": 55,
+        "runtime": 56,
         "type_only": 170,
         "static": 20
       },
-      "payload_sha256": "6a9bec45f7b2be1211ce1f8a5c577a3c2e5659aa71ec2a523edd34cc1f3fd41a",
-      "payload_bytes": 4131510,
-      "runtime_js_matches_review_snapshot": true
+      "payload_sha256": "4fc09a67a1cf8821e7a279638c52fa63010e7cb87032957268ab37ec7c47629f",
+      "payload_bytes": 4132296,
+      "runtime_js_matches_review_snapshot": false,
+      "runtime_comparison": "INTENTIONAL_ENTRY_AND_DUAL_JSON_WRAPPER_DELTA; ALL_OTHER_RUNTIME_JS_UNCHANGED",
+      "changed_or_added_runtime": [
+        {
+          "name": "supabase/functions/get-report-payload/index.ts",
+          "before_emitted_sha256": "5305faf3ac75fd02ff56955c576b0d2695996fac9358602c3b4b1b305b2ad555",
+          "after_emitted_sha256": "ca755f44f1fa5f15031d0b841761cf3c5d27a0789945a49de420d23b86989525",
+          "reason": "DUAL_JSON_PRIVATE_CAPSULE_STRIP"
+        },
+        {
+          "name": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+          "before_emitted_sha256": null,
+          "after_emitted_sha256": "d1a99ccefcfe632cff08a3e548393f1832e034d92d42315c78343af07ad97004",
+          "reason": "DUAL_JSON_PRIVATE_CAPSULE_STRIP"
+        }
+      ],
+      "sdk_runtime_bytes_unchanged": true
     },
     {
       "variant": "reader-recovery",
@@ -241,13 +269,29 @@
       "verify_jwt": false,
       "import_map": false,
       "counts": {
-        "runtime": 51,
+        "runtime": 52,
         "type_only": 170,
         "static": 20
       },
-      "payload_sha256": "70845e5af1d9d60418cd9c2ce4d0a8d359e1a3c4633e0c62cb26ad908236efe9",
-      "payload_bytes": 4107190,
-      "runtime_js_matches_review_snapshot": true
+      "payload_sha256": "7d7c1541002aef5e265b30fea9c14153664cbe4599022bce8a62f81c33e3cf8b",
+      "payload_bytes": 4107976,
+      "runtime_js_matches_review_snapshot": false,
+      "runtime_comparison": "INTENTIONAL_ENTRY_AND_DUAL_JSON_WRAPPER_DELTA; ALL_OTHER_RUNTIME_JS_UNCHANGED",
+      "changed_or_added_runtime": [
+        {
+          "name": "supabase/functions/get-report-payload/index.ts",
+          "before_emitted_sha256": "6dcc837d8d6c76ea0f816c2844688336ecd5a38f9b00ca63021716d898ab8223",
+          "after_emitted_sha256": "cc2ae560865adbf4f8f5f80ef1ec7e2d26ff9a3d999bcd835be6eef60f36b4cc",
+          "reason": "DUAL_JSON_PRIVATE_CAPSULE_STRIP"
+        },
+        {
+          "name": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+          "before_emitted_sha256": null,
+          "after_emitted_sha256": "d1a99ccefcfe632cff08a3e548393f1832e034d92d42315c78343af07ad97004",
+          "reason": "DUAL_JSON_PRIVATE_CAPSULE_STRIP"
+        }
+      ],
+      "sdk_runtime_bytes_unchanged": true
     }
   ],
   "baseline": {
@@ -289,7 +333,7 @@
     "no_fake_sdk_types": true,
     "no_skip_lib_check": true,
     "deno_pending": true,
-    "node26_deno_compatibility": "SECOND_NODE26_AMBIENT_INCOMPATIBLE_NOT_LOADED_IN_DENO;OFFICIAL_NODE26_UNCHANGED_IN_TSC",
+    "node26_deno_compatibility": "SUPPLEMENTARY_TSC_ONLY; DENO_USES_VERIFIED_BUILTIN_NODE_PORT_AND_COMPILER_ONLY_OFFICIAL_DOM; NEW_HEAD_PENDING",
     "deno_node_type_strategy": "DENO2_9_7_BUNDLED_LIB_NODE;NO_SECOND_NODE26_AMBIENT;SUPPLEMENTARY_TSC_STILL_ARCHIVED_NODE26",
     "reader_web_authn": {
       "schema": "OFFICIAL_TYPESCRIPT_WEB_AUTHN_COMPILER_TYPES_V1",
@@ -532,16 +576,18 @@
   },
   "validation": {
     "tests": {
-      "passed": 17,
+      "passed": 18,
       "failed": 0,
       "skipped": 0,
       "materializer": 6,
-      "actual_runtime": 11
+      "actual_runtime": 12,
+      "all_synthetic_saved_report_fixtures_have_both_json_columns": true
     },
     "successor_admission": {
       "passed": 13,
       "failed": 0,
-      "skipped": 0
+      "skipped": 0,
+      "rows": 388
     },
     "strict_typescript": {
       "scope": "STRICT_TYPESCRIPT_ACTUAL_MATERIALIZED_ENTRIES_WITH_TRUE_ARCHIVED_DECLARATIONS_NOT_DENO",
@@ -564,57 +610,57 @@
           "variant": "reader",
           "diagnostics": 0,
           "codes": [],
-          "source_files": 274,
+          "source_files": 275,
           "external_node_modules_types": []
         },
         {
           "variant": "reader-recovery",
           "diagnostics": 0,
           "codes": [],
-          "source_files": 270,
+          "source_files": 271,
           "external_node_modules_types": []
         }
       ]
     },
     "lint": "PASS_SCOPED",
-    "deno": "PENDING_LOCAL_DENO_UNAVAILABLE_NO_INSTALL_OR_RETRY",
-    "security": "LIMITED_INDEPENDENT_RUNTIME_REVIEW_NO_CONCRETE_FINDING_NOT_FORMAL_SECURITY_SCAN",
+    "deno": "FOUR_PARENT_ARTIFACTS_PASS_AT_E3D421E; TWO_READERS_MODIFIED_NOW_REQUIRING_NEW_EXACT_HEAD_CI",
+    "security": "VALIDATED_DUAL_JSON_PRIVACY_FINDING_FIXED_IN_SOURCE; INDEPENDENT_FINAL_BINDING_PENDING; NO_FORMAL_SECURITY_SCAN",
     "evidence": [
       {
-        "kind": "runtime",
-        "path": "build/owner-quarter-candidate/FINAL_17_TESTS.log",
-        "sha256": "1acb2940555a2b0ac49db4cc240681c2c1635fc129bbfaccbd0b0179859d841d",
-        "bytes": 4888
+        "kind": "actual_runtime",
+        "path": "build/owner-quarter-dual-json-fix-20261019/FINAL_18_TESTS.log",
+        "sha256": "58b942204b0b7fdbdcbf869a1812e22a59e791235319a8092a077f2dddf85364",
+        "bytes": 5139
       },
       {
         "kind": "strict_types",
-        "path": "build/owner-quarter-candidate/FINAL_CLOSED_TYPES_SAFE.json",
-        "sha256": "12fcee92a733d8b0e7e8691526cb2682f317d1fcff2fdd4f80cf66a1ec59ca92",
+        "path": "build/owner-quarter-dual-json-fix-20261019/FINAL_CLOSED_TYPES_SAFE.json",
+        "sha256": "8c83cbb7b6d43f4e2b3b409d330fde90c29cbd86ac45d012e582c0c41f896b80",
         "bytes": 533
       },
       {
-        "kind": "successor",
-        "path": "build/owner-quarter-candidate/FINAL_SUCCESSOR_ADMISSION_TESTS.log",
-        "sha256": "d53a8dc66994222e479f4dd5151a3d7f7ec8f11e365137adf391caf32ff71f78",
-        "bytes": 3216
-      },
-      {
         "kind": "lint",
-        "path": "build/owner-quarter-candidate/FINAL_LINT.log",
-        "sha256": "1b69d96ae9257c5843c018095830cc69e96b451b5cc53e8c8487ccb53465677b",
-        "bytes": 1770
+        "path": "build/owner-quarter-dual-json-fix-20261019/FINAL_LINT.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
       },
       {
-        "kind": "baseline_fresh",
-        "path": "/workspace/scratch/866fb527950e/r19-natural-research-20261019/ACTUAL15_READER56_BASELINE_FRESH_MATCH_SAFE.json",
-        "sha256": "b5a2aac2e8f690acfb16d15b86ed16318649c991829643cadaac618bf511a6d3",
-        "bytes": 17826
+        "kind": "actual_reader_red",
+        "path": "build/owner-quarter-candidate/RAW_JSON_PRIVACY_RED.log",
+        "sha256": "128d4a9205fcce2f5afce1a98fb2cd66a50025b2fe442f7a09b9976b0d246678",
+        "bytes": 1265
       },
       {
-        "kind": "independent_runtime",
-        "path": "/workspace/scratch/866fb527950e/owner-quarter-runtime-independent-review-20261019/LIMITED_OWNER_QUARTER_RUNTIME_REVIEW_SAFE.json",
-        "sha256": "4444df88dbe17ee1789f4583f22ef001e8f272015cc55e39e6a6a1dbfaed4d7f",
-        "bytes": 14781
+        "kind": "actual_reader_targeted_green",
+        "path": "build/owner-quarter-dual-json-fix-20261019/RAW_JSON_PRIVACY_GREEN.log",
+        "sha256": "55540f7d2bf72937636fea42c2e35c42e857330939f4f062e47af1e3ecc9ebb6",
+        "bytes": 667
+      },
+      {
+        "kind": "successor_admission",
+        "path": "build/owner-quarter-dual-json-fix-20261019/FINAL_SUCCESSOR_ADMISSION_TESTS.log",
+        "sha256": "a528396e6268cc7300b229e85438c2fbcced5140a69b8896c67e5a578db1e805",
+        "bytes": 3218
       }
     ],
     "root_application_checks": {
@@ -691,7 +737,62 @@
       "first_preflight": "FAIL_UPSTREAM_LICENSE_CRLF_TRAILING_SPACE",
       "fix": "LF_AND_TRAILING_WHITESPACE_NORMALIZED_WITH_ORIGINAL_AND_RETAINED_SHA",
       "license_words_changed": false
-    }
+    },
+    "historical_evidence": [
+      {
+        "kind": "runtime",
+        "path": "build/owner-quarter-candidate/FINAL_17_TESTS.log",
+        "sha256": "1acb2940555a2b0ac49db4cc240681c2c1635fc129bbfaccbd0b0179859d841d",
+        "bytes": 4888
+      },
+      {
+        "kind": "strict_types",
+        "path": "build/owner-quarter-candidate/FINAL_CLOSED_TYPES_SAFE.json",
+        "sha256": "12fcee92a733d8b0e7e8691526cb2682f317d1fcff2fdd4f80cf66a1ec59ca92",
+        "bytes": 533
+      },
+      {
+        "kind": "successor",
+        "path": "build/owner-quarter-candidate/FINAL_SUCCESSOR_ADMISSION_TESTS.log",
+        "sha256": "d53a8dc66994222e479f4dd5151a3d7f7ec8f11e365137adf391caf32ff71f78",
+        "bytes": 3216
+      },
+      {
+        "kind": "lint",
+        "path": "build/owner-quarter-candidate/FINAL_LINT.log",
+        "sha256": "1b69d96ae9257c5843c018095830cc69e96b451b5cc53e8c8487ccb53465677b",
+        "bytes": 1770
+      },
+      {
+        "kind": "baseline_fresh",
+        "path": "/workspace/scratch/866fb527950e/r19-natural-research-20261019/ACTUAL15_READER56_BASELINE_FRESH_MATCH_SAFE.json",
+        "sha256": "b5a2aac2e8f690acfb16d15b86ed16318649c991829643cadaac618bf511a6d3",
+        "bytes": 17826
+      },
+      {
+        "kind": "independent_runtime",
+        "path": "/workspace/scratch/866fb527950e/owner-quarter-runtime-independent-review-20261019/LIMITED_OWNER_QUARTER_RUNTIME_REVIEW_SAFE.json",
+        "sha256": "4444df88dbe17ee1789f4583f22ef001e8f272015cc55e39e6a6a1dbfaed4d7f",
+        "bytes": 14781
+      }
+    ],
+    "final_product_test_sources": [
+      {
+        "path": "tests/helpers/ownerQuarterLiveRuntimeHarness.mjs",
+        "sha256": "3ab6d0a7ec31e543fbd3c00f70a83ef6320ec1c199c3e95d5c013eaed664da11",
+        "bytes": 14482
+      },
+      {
+        "path": "tests/ownerQuarterLiveRuntime.integration.mjs",
+        "sha256": "618f28da5af309135f4146b4dbdd3f0b9676ca4b17151a5ef05d5b2aab15b6a8",
+        "bytes": 14996
+      },
+      {
+        "path": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+        "sha256": "2d548e147f95607dddea3357cb6fe1f8f0f04d2b3ce3ab4d61de9fdc08938831",
+        "bytes": 651
+      }
+    ]
   },
   "binding": {
     "phase": "PREMARKET_ONLY",
@@ -704,7 +805,12 @@
     "nonowner_raw_admin_history_strip": true,
     "no_new_report_first_existence_or_db_exactly_once_guarantee": true,
     "existing_idempotency_preserved": true,
-    "database_admin_trust": "EXISTING_PRIVILEGED_ADMIN_BOUNDARY; CURRENT_ADMIN_IS_ENABLED_OWNER; FUTURE_ADMIN_CHANGE_REQUIRES_REVIEW"
+    "database_admin_trust": "EXISTING_PRIVILEGED_ADMIN_BOUNDARY; CURRENT_ADMIN_IS_ENABLED_OWNER; FUTURE_ADMIN_CHANGE_REQUIRES_REVIEW",
+    "report_json_columns": [
+      "ai_strategy_json",
+      "raw_ai_json"
+    ],
+    "dual_object_or_json_string_privacy_strip": true
   },
   "recovery": {
     "producer": "producer-recovery",
@@ -712,7 +818,9 @@
     "after_private_save_never_return_to_unmodified_reader56": true,
     "preserve_saved_reports": true,
     "bit_identical_original_eszip": false,
-    "functional_recovery_offline_proven": true
+    "functional_recovery_offline_proven": true,
+    "dual_json_strip_required": true,
+    "prior_candidate_single_ai_strip_is_unsafe_after_dual_json_private_save": true
   },
   "holds": {
     "production_authorized": false,
@@ -731,5 +839,47 @@
     "Exact-source production release decision for Reader strip before Producer private save",
     "Real saved natural Report passthrough and real Owner/nonowner E2E after separately authorized activation",
     "Formal V1 evidence and commercial source admission remain incomplete; no recommendation threshold change"
-  ]
+  ],
+  "privacy_fix_parent": {
+    "head": "e3d421e6397f712c90ec7565ae1ca2200bb2264f",
+    "tree": "ccae238923062b7641b616ac037f7280c413e5e2",
+    "prior_four_artifact_deno": "PASS_REPORTED_BY_ROOT_FOR_EXACT_PARENT; MODIFIED_READERS_REQUIRE_NEW_HEAD_CHECK"
+  },
+  "privacy_finding": {
+    "validated": true,
+    "trigger": "Generator248/Atomic save same document into both Report JSON columns; admin_source_report returns full row",
+    "before": "SINGLE_AI_STRIP_LEAKED_RAW_JSON_CAPSULE_TO_NONOWNER_ADMIN",
+    "fix": "CANDIDATE_SPECIFIC_WRAPPER_REUSES_ORIGINAL_STRIP_ON_BOTH_COLUMNS; AUTH_REEXPORTED_UNCHANGED",
+    "actual_route_red": "FAIL_1_OF_1_CONFIRMED",
+    "actual_route_new_green": "PASS_1_OF_1",
+    "coverage": [
+      "object",
+      "JSON string",
+      "nonOwner admin",
+      "Owner check failure/mismatch/nonboolean via dual JSON default fixture",
+      "privacy recovery",
+      "allowed Owner preserves saved private fields",
+      "unrelated diagnostics preserved",
+      "saved Report object unchanged"
+    ],
+    "original_17_tests_were_not_full_privacy_assurance": true,
+    "source_wrapper": {
+      "path": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+      "sha256": "2d548e147f95607dddea3357cb6fe1f8f0f04d2b3ce3ab4d61de9fdc08938831",
+      "bytes": 651,
+      "mode": "100644"
+    },
+    "formal_security_scan_pass": false,
+    "fix_scope": {
+      "reader_variants": [
+        "reader",
+        "reader-recovery"
+      ],
+      "exact_candidate_entry_to_wrapper_only": true,
+      "original_global_single_column_helper_unchanged": true,
+      "whole_git_reader_and_D_E": "HOLD",
+      "future_private_capture_using_old_global_path": "MUST_ADD_DUAL_JSON_OR_EXPLICITLY_ADMIT_THIS_WRAPPER_AND_REVIEW",
+      "repository_wide_zero_findings_claim": false
+    }
+  }
 }

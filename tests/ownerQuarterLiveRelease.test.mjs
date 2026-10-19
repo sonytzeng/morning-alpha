@@ -15,7 +15,7 @@ const entry=name=>'supabase/functions/'+name+'/index.ts';
 const actualProducer=()=>execFileSync('git',['--no-replace-objects','show','5f33777836778e3600e4e377fcb3cf4de690fe80:'+entry('recommendation-stock-evidence-v1')],{cwd:root,env:{PATH:'/usr/bin:/bin',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0'}}).toString();
 
 test('four fixed artifacts reproduce independent byte catalogs and preserve JWT, SDK and actual business baselines',()=>{
- const c=readReleaseCatalog(),counts={producer:251,'producer-recovery':247,reader:245,'reader-recovery':241};
+ const c=readReleaseCatalog(),counts={producer:251,'producer-recovery':247,reader:246,'reader-recovery':242};
  for(const variant of VARIANTS){
   const a=assembleRelease(variant),b=assembleRelease(variant);assert(a.bytes.equals(b.bytes));assert.equal(a.payload.files.length,counts[variant]);
   assert.equal(a.sha256,c.variants[variant].payload_sha256);

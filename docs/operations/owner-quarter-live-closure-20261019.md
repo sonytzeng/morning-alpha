@@ -44,3 +44,7 @@ Reader 先沿用 `persistedRecommendationReaderInput`，核對同份 Report 的 
 本機沒有 Deno，不安裝猜測版本、不重啟已停止安裝。CI 新增步驟只 materialize 同一閉包，再以 `deno check --no-remote --cached-only` 驗四個實際入口；未拿本機 TypeScript PASS 冒稱 Deno PASS。本機4份actual artifacts各自嚴格TypeScript檢查0 diagnostics，型別只來自artifact保留來源（無外部node_modules types），不等於Deno編譯通過。原98項缺型別與後續type-port／多program預檢失敗log仍保留；沒有刪錯誤證據。新獨立workflow不修改原357列封存內的CI檔；實際Deno編譯與精確HEAD CI仍待Root Commit／Push後取得，不盲稱PASS。
 
 Root於2026-10-19 02:21Z fresh唯讀核對actual15／56來源，Producer20＋Reader50共70/70與基線bytes相同：`ACTUAL15_READER56_BASELINE_FRESH_MATCH_SAFE.json`。獨立有限runtime覆核無具體finding（`LIMITED_OWNER_QUARTER_RUNTIME_REVIEW_SAFE.json`，SHA4444df88…），不等於正式安全scan或Production E2E。最終standalone review inventory綁定本候選每個新檔與immutable bd941來源，原357列seal保持原文；唯一current top successor逐列加入本候選，原guard保留unknown拒絕及注入drift驗證。
+
+首次精確HEAD CI（3fb6546e，run39190275844）已執行實際Deno check，Producer報80項TS2307：官方Node index內bare triple-slash path未經Deno解析，後三份未執行；不是PASS。修正只在compiler-only config按原宣告所在目錄建立80個精確scoped local aliases，所有target必須已封存在相同artifact，官方type與runtime bytes不改。四個Deno步驟在setup成功後各自執行，任一失敗仍令job失敗，不跳過後續錯誤診斷。
+
+另已唯讀核對實際Generator248的來源與Atomic／sidecar函式。acquisition可保存至Report的ai_strategy_json與raw_ai_json；member／LINE白名單未選該祖先。既有sidecar先作DB白名單投影，已用純合成SELECT證實移除該祖先；未執行記錄RPC或任何業務寫入。此資料流驗證不取代自然保存、Owner E2E或D範圍發布核准。

@@ -65,7 +65,7 @@
     {
       "path": ".github/workflows/owner-quarter-live-candidate.yml",
       "before_sha256": null,
-      "after_sha256": "2eee79795e35476f42d1054a397354539cb4f548d76a107cb6c740531c834dca",
+      "after_sha256": "cc128da47d5bd17ffb224a10655c39b9e8ad7e64acd89e6527a846e00405ccd3",
       "mode": "100644",
       "origin": "composition"
     },
@@ -387,7 +387,7 @@
     {
       "path": "docs/operations/evidence/owner-quarter-live-review-20261019.json",
       "before_sha256": null,
-      "after_sha256": "8729878e751f6c84d06c6da6a118d44346f087730a607a291b419cf3c424521a",
+      "after_sha256": "33248e43525062891a10113ab00eaa5a78751a183d893864365e6068bc6d1179",
       "mode": "100644",
       "origin": "composition"
     },
@@ -485,7 +485,7 @@
     {
       "path": "docs/operations/owner-quarter-live-closure-20261019.md",
       "before_sha256": null,
-      "after_sha256": "e591046ffe6e237efce5bd5c66a5db7d47c20d10341a74d2496b046137561de7",
+      "after_sha256": "037c2ffc817c2e060e59dc4062c4f9b794c7ec08ee5b54ed8a38d789157ed30a",
       "mode": "100644",
       "origin": "composition"
     },
@@ -884,7 +884,7 @@
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/prepare-check-sources.mjs",
       "before_sha256": null,
-      "after_sha256": "a4543f0e7f5a81f55c24035eeb7f837ee860ead070918b1bd2cb08d053a594f1",
+      "after_sha256": "d020dca5e19ddbe46d91fae9b0987de70cb84bc0c1d05b128fb9d48a0096134a",
       "mode": "100644",
       "origin": "composition"
     },

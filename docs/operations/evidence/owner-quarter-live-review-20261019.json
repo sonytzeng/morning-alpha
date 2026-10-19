@@ -19,14 +19,14 @@
   "sources": [
     {
       "path": ".github/workflows/owner-quarter-live-candidate.yml",
-      "sha256": "2eee79795e35476f42d1054a397354539cb4f548d76a107cb6c740531c834dca",
-      "bytes": 2420,
+      "sha256": "cc128da47d5bd17ffb224a10655c39b9e8ad7e64acd89e6527a846e00405ccd3",
+      "bytes": 2662,
       "mode": "100644"
     },
     {
       "path": "docs/operations/owner-quarter-live-closure-20261019.md",
-      "sha256": "e591046ffe6e237efce5bd5c66a5db7d47c20d10341a74d2496b046137561de7",
-      "bytes": 8472,
+      "sha256": "037c2ffc817c2e060e59dc4062c4f9b794c7ec08ee5b54ed8a38d789157ed30a",
+      "bytes": 9339,
       "mode": "100644"
     },
     {
@@ -109,8 +109,8 @@
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/prepare-check-sources.mjs",
-      "sha256": "a4543f0e7f5a81f55c24035eeb7f837ee860ead070918b1bd2cb08d053a594f1",
-      "bytes": 2226,
+      "sha256": "d020dca5e19ddbe46d91fae9b0987de70cb84bc0c1d05b128fb9d48a0096134a",
+      "bytes": 3453,
       "mode": "100644"
     },
     {
@@ -371,6 +371,26 @@
       "correction": "ZERO_CONTEXT_PATCH_SAME_EXACT_ENTRY_EDITS",
       "independent_patch_roundtrip": "PASS",
       "runtime_source_changed": false
+    },
+    "initial_actual_deno": {
+      "head": "3fb6546e8ce2135a52ce13294982d0f674886800",
+      "run_id": 39190275844,
+      "job_id": 117861339753,
+      "result": "FAIL_PRODUCER_TS2307_80_OFFICIAL_BARE_REFERENCE_PATHS",
+      "remaining_three": "NOT_EXECUTED",
+      "fix": "EXACT_COMPILE_ONLY_SCOPED_MAP_TO_EXISTING_SEALED_DECLARATIONS",
+      "declaration_and_runtime_bytes_changed": false,
+      "next_head_deno": "PENDING"
+    },
+    "generator_passthrough": {
+      "scope": "READ_ONLY_ACTUAL_GENERATOR248_AND_DB_SOURCE_PLUS5_OFFLINE_PURE_PROJECTION_GROUPS_NOT_PRODUCTION_E2E",
+      "safe_receipt_sha256": "f3081c54891e9ee31a012316786db86f8c305b7157a75f51fde4225ccb0159c9",
+      "reports_json_fields": [
+        "ai_strategy_json",
+        "raw_ai_json"
+      ],
+      "sidecar_private_ancestor_stripped_by_db_projection": true,
+      "writes": 0
     }
   },
   "binding": {

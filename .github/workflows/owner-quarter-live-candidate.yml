@@ -25,13 +25,17 @@ jobs:
       - name: Strict TypeScript on the four actual artifacts, each in its own program
         run: node scripts/operations/owner-quarter-live-release-20261019/check-typescript.mjs
       - uses: denoland/setup-deno@v2
+        id: deno_setup
         with:
           deno-version: v2.x
       - name: Actual Producer candidate Deno check without remote fetching
         run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/producer/deno.json build/owner-quarter-live-typecheck/producer/supabase/functions/recommendation-stock-evidence-v1/index.ts
       - name: Actual Producer recovery Deno check without remote fetching
+        if: ${{ !cancelled() && steps.deno_setup.outcome == 'success' }}
         run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/producer-recovery/deno.json build/owner-quarter-live-typecheck/producer-recovery/supabase/functions/recommendation-stock-evidence-v1/index.ts
       - name: Actual Reader candidate Deno check without remote fetching
+        if: ${{ !cancelled() && steps.deno_setup.outcome == 'success' }}
         run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/reader/deno.json build/owner-quarter-live-typecheck/reader/supabase/functions/get-report-payload/index.ts
       - name: Actual Reader privacy recovery Deno check without remote fetching
+        if: ${{ !cancelled() && steps.deno_setup.outcome == 'success' }}
         run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/reader-recovery/deno.json build/owner-quarter-live-typecheck/reader-recovery/supabase/functions/get-report-payload/index.ts

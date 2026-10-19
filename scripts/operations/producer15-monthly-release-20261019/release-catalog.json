@@ -1,0 +1,487 @@
+{
+  "schema": "PRODUCER15_MONTHLY_EXACT_DELIVERY_V1",
+  "base_head": "a1f4abb2d73ee6495fc1c212f774c2f2dd627771",
+  "production_authorized": false,
+  "metadata": {
+    "project_id": "cttfzgvhiewfckydcrci",
+    "name": "recommendation-stock-evidence-v1",
+    "entrypoint_path": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+    "verify_jwt": true
+  },
+  "import_map": false,
+  "scope": {
+    "sdk_change": false,
+    "current_main_producer_replacement": false,
+    "quarter_capsule": false,
+    "private_capture": false,
+    "source_admission": false,
+    "business_backfill": false,
+    "core_writes": false,
+    "member_rights": false,
+    "auth_rls_cron": false,
+    "line": false,
+    "payment": false
+  },
+  "baseline_fresh_proof": {
+    "checked_at": "2026-10-19T09:28:47.492986+00:00",
+    "version": 15,
+    "status": "ACTIVE",
+    "matched_runtime_sources": 20,
+    "ezbr_sha256": "95bfde704134302f46b48520d56ec31cf0d74b1c90b1d974d6660c28968152b7",
+    "sdk_entry": "https://esm.sh/@supabase/supabase-js@2.57.4",
+    "sdk_remote_eszip_bodies_proven": false,
+    "remote_freshness": "Existing63-source retained graph only, not new freshSDKHTTPproof. No observed SDK/runtime defect and noSDK change."
+  },
+  "baseline_archive": {
+    "name": "scripts/operations/owner-quarter-live-release-20261019/baseline/producer15-source-files.json.gz",
+    "bytes": 52426,
+    "sha256": "5c72657fdfdf84668d5a968f268a75fd2fd5cb2e6ac307dbcf99fc6ee33b043e",
+    "uncompressed_bytes": 176484,
+    "uncompressed_sha256": "20d95fd8e938457ccf0017caa3382f65aa7b6759b3748774b4affdddb5401b85"
+  },
+  "baseline_files": [
+    {
+      "name": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "bytes": 6743,
+      "sha256": "70352af5ec86ca94f4cc00d9c59f3483d1114bc455ca253601e2679f0bf03755"
+    },
+    {
+      "name": "supabase/functions/_shared/internal-function-auth.mjs",
+      "bytes": 4761,
+      "sha256": "2a15efde1117cf2f8c1ef3adf376de95c930254902c57f2ec5dbf74ce0f930be"
+    },
+    {
+      "name": "supabase/functions/_shared/decision-v1-data.ts",
+      "bytes": 4569,
+      "sha256": "7c0ba14f39a52ab216e662ce0cfce80a5c5c64cfdf7a719f4b103be3439a8082"
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-stock-evidence.ts",
+      "bytes": 20000,
+      "sha256": "86be1e626de3bf5c746aa10d5abcfb99dbb8b86c7ab2e6dbb7151335170c47d1"
+    },
+    {
+      "name": "supabase/functions/_shared/decision-v1-evidence.ts",
+      "bytes": 37102,
+      "sha256": "2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848"
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-phase.ts",
+      "bytes": 8256,
+      "sha256": "d517fb094ea41a8e70c16c132ca7dc9d48bb5c63efc7d7f36760502697a8e5d6"
+    },
+    {
+      "name": "supabase/functions/_shared/market-session-contract.mjs",
+      "bytes": 2994,
+      "sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44"
+    },
+    {
+      "name": "supabase/functions/_shared/market-calendar-data.json",
+      "bytes": 1671,
+      "sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232"
+    },
+    {
+      "name": "supabase/functions/_shared/txf-session-contract.mjs",
+      "bytes": 2857,
+      "sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e"
+    },
+    {
+      "name": "supabase/functions/_shared/market-status.ts",
+      "bytes": 4766,
+      "sha256": "d285910516d5ae5e0f55d8ee4314da7b7e21214b766d20cda2853fa775af0737"
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-official-actuals.ts",
+      "bytes": 7627,
+      "sha256": "ac1457eb889466931f14f4e9c5a44c3a6000a54a6657cd1c977cb4916714eea5"
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-company-events.ts",
+      "bytes": 4369,
+      "sha256": "4b756d518e88d6d3f7e4cfce9944bcc6a2f3f51577a92b9408fee7618b3713b1"
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-stream.ts",
+      "bytes": 1954,
+      "sha256": "5a97379ed1dc8ddd0440e9189e70b1f764b170718a6e85b9726ec3ffc5e61983"
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-shadow-v2-sources.ts",
+      "bytes": 24276,
+      "sha256": "98475003460d215e764bf011aba5fae7a603ba3455e54be547dba75e79e23708"
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-shadow-v2-runtime.ts",
+      "bytes": 5883,
+      "sha256": "ec562918f999fe07ce4ed7aa682300dbf2957cd24990f3339b1bf4243f7ce1ef"
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+      "bytes": 16267,
+      "sha256": "5d934bb7c2be21ff66a0043a945b0d91edcbeb2a57166882715e8813da31766e"
+    },
+    {
+      "name": "src/features/research/recommendation-shadow-v2-summary.ts",
+      "bytes": 4680,
+      "sha256": "8ff6744d5b456fbef51191186b87a88b30ccd970e35bf2e11574766560cb3d2d"
+    },
+    {
+      "name": "src/features/research/recommendation-v2-forward.ts",
+      "bytes": 7132,
+      "sha256": "cc56810a11ce5f09ba82418a9079457abadee8ee9147cb204ffccec3fe7ac1ee"
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts",
+      "bytes": 4368,
+      "sha256": "528f41ef339a9d69708514738b10c889149b16f67c35fd8ad3d19a357d19298a"
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-v2-acquisition-cache.ts",
+      "bytes": 1888,
+      "sha256": "a5e5c84e4ef33c8ddf584e6b3e675f03e808086653f92c1bc881c909f61eab6b"
+    }
+  ],
+  "type_contract": {
+    "name": "src/features/decision-v1/contract.ts",
+    "ref": "5f33777836778e3600e4e377fcb3cf4de690fe80",
+    "bytes": 5427,
+    "sha256": "26f4b8efed797c86616614bdc63136619b5f3112cc0dad9b66bf6c650cfc3715",
+    "fixed_sha256": "0fe33c4d4abe8fb29269de0ad676c19325e16cec1bc4e4b7f74421b51f37a4e7",
+    "edit": {
+      "old": "import('../../../supabase/functions/_shared/recommendation-phase')",
+      "new": "import('../../../supabase/functions/_shared/recommendation-phase.ts')"
+    },
+    "runtime_meaning": "Type-only import extension repair; erasedJS mustremainidentical. Originaltypeandoriginalrollbackpayloadpreserved separately."
+  },
+  "monthly_helper": {
+    "name": "supabase/functions/_shared/recommendation-monthly-response-sharing.ts",
+    "bytes": 5762,
+    "sha256": "f4db375a05303478d5639f958f7b7b6b61739eb025833e88ab95983b61caa7b9",
+    "source_head": "965263fe15dc672cac6c61af06bfd14d69044dd3"
+  },
+  "entry_edits": [
+    {
+      "old": "import { sharedV2Acquisition } from '../_shared/recommendation-v2-acquisition-cache.ts';",
+      "new": "import { sharedV2Acquisition } from '../_shared/recommendation-v2-acquisition-cache.ts';\nimport { createMonthlyResponseSharing } from '../_shared/recommendation-monthly-response-sharing.ts';"
+    },
+    {
+      "old": "  const acquireBundle=async()=>{",
+      "new": "  const acquireBundle=async()=>{\n   const monthly=createMonthlyResponseSharing({fetcher:fetch,signal});"
+    },
+    {
+      "old": "apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:fetch,now,signal});",
+      "new": "apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:monthly.fetcher,now,signal});"
+    },
+    {
+      "old": "acquireOfficialActuals({symbols:RECOMMENDATION_UNIVERSE,fetcher:fetch,now,signal})",
+      "new": "acquireOfficialActuals({symbols:RECOMMENDATION_UNIVERSE,fetcher:monthly.fetcher,now,signal})"
+    },
+    {
+      "old": "   ]).finally(async()=>{shadowWork?.stop();cutoff=now();await shadowWork?.complete;});",
+      "new": "   ]).finally(async()=>{try{shadowWork?.stop();cutoff=now();await shadowWork?.complete;}finally{monthly.dispose();}});"
+    }
+  ],
+  "original_rollback_payload_sha256": "80998b0fd69daa0d281c06857b9da1b4f2354894bf75b26a121f14b808a73031",
+  "variants": {
+    "candidate": {
+      "runtime_files": 21,
+      "type_only_files": 1,
+      "files": [
+        {
+          "name": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+          "sha256": "4369c29fa49d06d50fa2ff40e45c9466427911e9b097fbd8904ff52d0c5421f6",
+          "bytes": 6968,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/internal-function-auth.mjs",
+          "sha256": "2a15efde1117cf2f8c1ef3adf376de95c930254902c57f2ec5dbf74ce0f930be",
+          "bytes": 4761,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/decision-v1-data.ts",
+          "sha256": "7c0ba14f39a52ab216e662ce0cfce80a5c5c64cfdf7a719f4b103be3439a8082",
+          "bytes": 4569,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-stock-evidence.ts",
+          "sha256": "86be1e626de3bf5c746aa10d5abcfb99dbb8b86c7ab2e6dbb7151335170c47d1",
+          "bytes": 20000,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/decision-v1-evidence.ts",
+          "sha256": "2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848",
+          "bytes": 37102,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-phase.ts",
+          "sha256": "d517fb094ea41a8e70c16c132ca7dc9d48bb5c63efc7d7f36760502697a8e5d6",
+          "bytes": 8256,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/market-session-contract.mjs",
+          "sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44",
+          "bytes": 2994,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/market-calendar-data.json",
+          "sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232",
+          "bytes": 1671,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/txf-session-contract.mjs",
+          "sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e",
+          "bytes": 2857,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/market-status.ts",
+          "sha256": "d285910516d5ae5e0f55d8ee4314da7b7e21214b766d20cda2853fa775af0737",
+          "bytes": 4766,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-official-actuals.ts",
+          "sha256": "ac1457eb889466931f14f4e9c5a44c3a6000a54a6657cd1c977cb4916714eea5",
+          "bytes": 7627,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-company-events.ts",
+          "sha256": "4b756d518e88d6d3f7e4cfce9944bcc6a2f3f51577a92b9408fee7618b3713b1",
+          "bytes": 4369,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-stream.ts",
+          "sha256": "5a97379ed1dc8ddd0440e9189e70b1f764b170718a6e85b9726ec3ffc5e61983",
+          "bytes": 1954,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-shadow-v2-sources.ts",
+          "sha256": "98475003460d215e764bf011aba5fae7a603ba3455e54be547dba75e79e23708",
+          "bytes": 24276,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-shadow-v2-runtime.ts",
+          "sha256": "ec562918f999fe07ce4ed7aa682300dbf2957cd24990f3339b1bf4243f7ce1ef",
+          "bytes": 5883,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+          "sha256": "5d934bb7c2be21ff66a0043a945b0d91edcbeb2a57166882715e8813da31766e",
+          "bytes": 16267,
+          "role": "runtime"
+        },
+        {
+          "name": "src/features/research/recommendation-shadow-v2-summary.ts",
+          "sha256": "8ff6744d5b456fbef51191186b87a88b30ccd970e35bf2e11574766560cb3d2d",
+          "bytes": 4680,
+          "role": "runtime"
+        },
+        {
+          "name": "src/features/research/recommendation-v2-forward.ts",
+          "sha256": "cc56810a11ce5f09ba82418a9079457abadee8ee9147cb204ffccec3fe7ac1ee",
+          "bytes": 7132,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts",
+          "sha256": "528f41ef339a9d69708514738b10c889149b16f67c35fd8ad3d19a357d19298a",
+          "bytes": 4368,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-v2-acquisition-cache.ts",
+          "sha256": "a5e5c84e4ef33c8ddf584e6b3e675f03e808086653f92c1bc881c909f61eab6b",
+          "bytes": 1888,
+          "role": "runtime"
+        },
+        {
+          "name": "src/features/decision-v1/contract.ts",
+          "sha256": "0fe33c4d4abe8fb29269de0ad676c19325e16cec1bc4e4b7f74421b51f37a4e7",
+          "bytes": 5430,
+          "role": "type_only"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-monthly-response-sharing.ts",
+          "sha256": "f4db375a05303478d5639f958f7b7b6b61739eb025833e88ab95983b61caa7b9",
+          "bytes": 5762,
+          "role": "runtime"
+        }
+      ],
+      "payload_bytes": 188652,
+      "payload_sha256": "1ce72754fdfe0e63460d8cf0091f649d9dcd8b030f08d5693a086a6d08eff991"
+    },
+    "recovery": {
+      "runtime_files": 20,
+      "type_only_files": 1,
+      "files": [
+        {
+          "name": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+          "sha256": "70352af5ec86ca94f4cc00d9c59f3483d1114bc455ca253601e2679f0bf03755",
+          "bytes": 6743,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/internal-function-auth.mjs",
+          "sha256": "2a15efde1117cf2f8c1ef3adf376de95c930254902c57f2ec5dbf74ce0f930be",
+          "bytes": 4761,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/decision-v1-data.ts",
+          "sha256": "7c0ba14f39a52ab216e662ce0cfce80a5c5c64cfdf7a719f4b103be3439a8082",
+          "bytes": 4569,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-stock-evidence.ts",
+          "sha256": "86be1e626de3bf5c746aa10d5abcfb99dbb8b86c7ab2e6dbb7151335170c47d1",
+          "bytes": 20000,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/decision-v1-evidence.ts",
+          "sha256": "2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848",
+          "bytes": 37102,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-phase.ts",
+          "sha256": "d517fb094ea41a8e70c16c132ca7dc9d48bb5c63efc7d7f36760502697a8e5d6",
+          "bytes": 8256,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/market-session-contract.mjs",
+          "sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44",
+          "bytes": 2994,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/market-calendar-data.json",
+          "sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232",
+          "bytes": 1671,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/txf-session-contract.mjs",
+          "sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e",
+          "bytes": 2857,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/market-status.ts",
+          "sha256": "d285910516d5ae5e0f55d8ee4314da7b7e21214b766d20cda2853fa775af0737",
+          "bytes": 4766,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-official-actuals.ts",
+          "sha256": "ac1457eb889466931f14f4e9c5a44c3a6000a54a6657cd1c977cb4916714eea5",
+          "bytes": 7627,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-company-events.ts",
+          "sha256": "4b756d518e88d6d3f7e4cfce9944bcc6a2f3f51577a92b9408fee7618b3713b1",
+          "bytes": 4369,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-stream.ts",
+          "sha256": "5a97379ed1dc8ddd0440e9189e70b1f764b170718a6e85b9726ec3ffc5e61983",
+          "bytes": 1954,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-shadow-v2-sources.ts",
+          "sha256": "98475003460d215e764bf011aba5fae7a603ba3455e54be547dba75e79e23708",
+          "bytes": 24276,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-shadow-v2-runtime.ts",
+          "sha256": "ec562918f999fe07ce4ed7aa682300dbf2957cd24990f3339b1bf4243f7ce1ef",
+          "bytes": 5883,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+          "sha256": "5d934bb7c2be21ff66a0043a945b0d91edcbeb2a57166882715e8813da31766e",
+          "bytes": 16267,
+          "role": "runtime"
+        },
+        {
+          "name": "src/features/research/recommendation-shadow-v2-summary.ts",
+          "sha256": "8ff6744d5b456fbef51191186b87a88b30ccd970e35bf2e11574766560cb3d2d",
+          "bytes": 4680,
+          "role": "runtime"
+        },
+        {
+          "name": "src/features/research/recommendation-v2-forward.ts",
+          "sha256": "cc56810a11ce5f09ba82418a9079457abadee8ee9147cb204ffccec3fe7ac1ee",
+          "bytes": 7132,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts",
+          "sha256": "528f41ef339a9d69708514738b10c889149b16f67c35fd8ad3d19a357d19298a",
+          "bytes": 4368,
+          "role": "runtime"
+        },
+        {
+          "name": "supabase/functions/_shared/recommendation-v2-acquisition-cache.ts",
+          "sha256": "a5e5c84e4ef33c8ddf584e6b3e675f03e808086653f92c1bc881c909f61eab6b",
+          "bytes": 1888,
+          "role": "runtime"
+        },
+        {
+          "name": "src/features/decision-v1/contract.ts",
+          "sha256": "0fe33c4d4abe8fb29269de0ad676c19325e16cec1bc4e4b7f74421b51f37a4e7",
+          "bytes": 5430,
+          "role": "type_only"
+        }
+      ],
+      "payload_bytes": 182462,
+      "payload_sha256": "abc82c50b6b47a65c49671c03f6a25fa34f50c6a3d1781fb1bad763bd4848488"
+    }
+  },
+  "preserved_inapplicable_main_parser_run": {
+    "command": "node --test candidate/tests/recommendationV2MonthlyResponseSharing.test.mjs",
+    "passed": 2,
+    "failed": 3,
+    "skipped": 0,
+    "status": "INAPPLICABLE_NEW_MAIN_PARSER_ASSERTIONS_PRESERVED_NOT_WEAKENED",
+    "failure_details": [
+      {
+        "assertion": "source_response_sha256 equals raw hash",
+        "expected": "newmain rawbytesSHA256 string",
+        "actual": "undefined; original15 has no field"
+      },
+      {
+        "assertion": "delayed4.5sbody timeout classification",
+        "expected": "newmain OFFICIAL_DEADLINE",
+        "actual": "original15 OFFICIAL_TRANSPORT_FAILURE"
+      },
+      {
+        "assertion": "4096originalchunk read cap",
+        "expected": "newmain OFFICIAL_RESPONSE_LIMIT",
+        "actual": "original15 PASS; original15has3MBbytecap butno4096readcap"
+      }
+    ],
+    "interpretation": "These are differences between two parser versions, not evidence that the old15parsers gained newer protection. No existing test assertion or production parser was modified to turn this intoPASS."
+  },
+  "production_e2e": "PENDING_NEXT_LEGAL_NATURAL_ACQUISITION; no manualretry/cacheclear/providerprobe/sourceadmission/READYguarantee"
+}

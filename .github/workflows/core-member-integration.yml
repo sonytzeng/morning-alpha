@@ -23,7 +23,23 @@ jobs:
           NODE_OPTIONS: --experimental-strip-types
         run: |
           node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
-          node --experimental-strip-types --test tests/retainedQuarterFamilyAdmission.test.mjs
+          node --experimental-strip-types --test tests/producer15MonthlyAdmission.test.mjs
+      - name: Current exact Producer15 monthly delivery and original parser refusal controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test tests/producer15MonthlyRelease.test.mjs
+      - name: Check out the immutable pre-Producer15-delivery LONG source proofs only
+        uses: actions/checkout@v4
+        with:
+          ref: a1f4abb2d73ee6495fc1c212f774c2f2dd627771
+          path: build/producer15-monthly-historical-base
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Historical a1 LONG source and workflow proofs unchanged
+        working-directory: build/producer15-monthly-historical-base
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test tests/retainedQuarterFamilyAdmission.test.mjs
       - name: Current retained-quarter adapter and unchanged research funnel refusal controls
         env:
           NODE_OPTIONS: --experimental-strip-types
@@ -143,6 +159,11 @@ jobs:
         with:
           deno-version: v2.x
       - run: deno test --no-lock --allow-read tests/researchOwnerFieldAccess.sdk.test.ts tests/providerCapabilityEntry.sdk.test.ts
+      - name: Materialize and type-check the exact current Producer15 candidate and recovery
+        run: |
+          node scripts/operations/producer15-monthly-release-20261019/materialize.mjs candidate
+          node scripts/operations/producer15-monthly-release-20261019/materialize.mjs recovery
+          deno check --no-lock build/producer15-monthly-release-20261019/candidate/supabase/functions/recommendation-stock-evidence-v1/index.ts build/producer15-monthly-release-20261019/recovery/supabase/functions/recommendation-stock-evidence-v1/index.ts
       - run: deno check --no-lock research/retained-quarter-financials.ts supabase/functions/vnext-daily-research-v1/index.ts supabase/functions/get-report-payload/index.ts supabase/functions/recommendation-stock-evidence-v1/index.ts supabase/functions/v1-provider-capability-review-v1/index.ts
       - run: node --experimental-strip-types --test tests/eventAlignmentRefresh.test.mjs tests/recommendationIssuerEventReview.test.mjs tests/r10FunctionalSourceClosure.test.mjs
         env:

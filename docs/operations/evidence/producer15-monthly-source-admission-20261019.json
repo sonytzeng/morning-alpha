@@ -1,0 +1,168 @@
+{
+  "schema": "PRODUCER15_MONTHLY_DELIVERY_SOURCE_ADMISSION_V1",
+  "base": "a1f4abb2d73ee6495fc1c212f774c2f2dd627771",
+  "files": [
+    {
+      "path": "scripts/operations/producer15-monthly-release-20261019/release-catalog.json",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "8f2d0a6c7ed0f9f203d2a446f0e617fd77439808602a9fd1f561407e43ee0227"
+    },
+    {
+      "path": "scripts/operations/producer15-monthly-release-20261019/materialize.mjs",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "7570a29761ea2f075d59e98303ee27ee8bd1cd59eeda7d65e592fa82661af06d"
+    },
+    {
+      "path": "scripts/operations/producer15-monthly-release-20261019/README.md",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "f602980e5539c8cdc0e3fed419d8f35c4805d4664022c4928557dbece1bf0fa4"
+    },
+    {
+      "path": "tests/producer15MonthlyRelease.test.mjs",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "62cbcea269fb119d7659247443989df1452ca99d71143f88a156a814eab57903"
+    }
+  ],
+  "protected_sources": [
+    {
+      "path": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "mode": "100644",
+      "sha256": "41d64e5fa4faaa9c930ce96f7f216f0321c01475e32aa666cd2cd75ed6ffd97e"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-monthly-response-sharing.ts",
+      "mode": "100644",
+      "sha256": "f4db375a05303478d5639f958f7b7b6b61739eb025833e88ab95983b61caa7b9"
+    },
+    {
+      "path": "src/features/decision-v1/contract.ts",
+      "mode": "100644",
+      "sha256": "62825572f33225fef2e585b972dc4b5879272e1a8812d67ed2d347b01eaec2cc"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/baseline/producer15-source-files.json.gz",
+      "mode": "100644",
+      "sha256": "5c72657fdfdf84668d5a968f268a75fd2fd5cb2e6ac307dbcf99fc6ee33b043e"
+    },
+    {
+      "path": "scripts/vnext/research-funnel.mjs",
+      "mode": "100644",
+      "sha256": "9e34803f12f8d02c3dd8858a92985818fa16af348423a067af020049f8ca23ba"
+    },
+    {
+      "path": "research/retained-quarter-financials.ts",
+      "mode": "100644",
+      "sha256": "3577cd5ac6e4b7300b2dde022d453fa663134b5e513503df6616fca87fe6d9ba"
+    },
+    {
+      "path": "tests/vnextRetainedQuarterFinancials.test.mjs",
+      "mode": "100644",
+      "sha256": "14b78b0e766b5d2a50ae1c3b13595822a671ee4496ca7d2525442dcfce017bec"
+    },
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/index.ts",
+      "mode": "100644",
+      "sha256": "fbc591c736dbc15913feeec381c14433b96004c4f03cce38ae21673af4c6c89d"
+    },
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/handler.ts",
+      "mode": "100644",
+      "sha256": "ea4ceab840aac823ad130e052477dce346a455ce700606c4f80db990c05a4954"
+    },
+    {
+      "path": "scripts/operations/c-worker-local-sdk-release-20261019/release-catalog-r2.json",
+      "mode": "100644",
+      "sha256": "8ce62c1b492dd6aaf0dd797e5bbe384b241a9e206e930e7f1eccc2e0cdaefb81"
+    },
+    {
+      "path": "src/features/vnext/contracts.ts",
+      "mode": "100644",
+      "sha256": "0a89f96f209c9c235416a4b060c85b38bb6d6799ad3234ef16156537fd50d579"
+    },
+    {
+      "path": "src/features/vnext/stockResearch.ts",
+      "mode": "100644",
+      "sha256": "7583c0edca56aa4c225173ab5657ce894529df34efb63d745cab28c73dc887c5"
+    }
+  ],
+  "prior_rules": [
+    {
+      "path": "tests/retainedQuarterFamilyAdmission.test.mjs",
+      "mode": "100644",
+      "sha256": "0c09ba35a4569ce0d5aeaac75c286bab7dd3dbc845408376e1f22008f043ce1a"
+    },
+    {
+      "path": "tests/cWorkerRpcDiagnosticsAdmission.test.mjs",
+      "mode": "100644",
+      "sha256": "e797c8faf40c2e377af4d4482a2edfed9b649d24c91c59766ab6cfb40263d82b"
+    },
+    {
+      "path": "tests/cWorkerRpcFailureDiagnostics.integration.mjs",
+      "mode": "100644",
+      "sha256": "7ddec97080ef7597f83915e1ee6f81fbaf257ec00db3e710babed3e31b492c34"
+    },
+    {
+      "path": "tests/integrationAdmission.test.mjs",
+      "mode": "100644",
+      "sha256": "539e44ccda3168a0b0fdb13ef8fb700b93e994d763f8f0a8a981c720a56cdcbf"
+    },
+    {
+      "path": "tests/recommendationV2SourceAcquisitionAdmission.test.mjs",
+      "mode": "100644",
+      "sha256": "939b9f852ee703e8304ae220123a205cd04d09814ab6fbf01caf09c2a8255ede"
+    },
+    {
+      "path": "tests/helpers/sourceAcquisitionCloseAdmission.mjs",
+      "mode": "100644",
+      "sha256": "431dff1600f8f7e881e68b901bc5a2c5fe715ec231c0976bf04b4eb939d511b2"
+    }
+  ],
+  "predecessor": {
+    "path": "docs/operations/evidence/core-member-integration-20261019-retained-quarter-family.json",
+    "sha256": "5dd3b89bd28fbfa2eb2b38ae6e2bc5b7dfba8b288b3272d89d052c8a25937678"
+  },
+  "scope": {
+    "mode": "EXISTING_PRODUCER15_DELIVERY_CLOSURE",
+    "new_product": false,
+    "main_producer_replaced": false,
+    "sdk_change": false,
+    "original_runtime_files": 20,
+    "unchanged_original_runtime_files": 19,
+    "fixed_entry_edits": 5,
+    "type_only_import_extension_bytes": 3,
+    "type_erasure_equivalent": true,
+    "fresh_sdk_http_proof": false,
+    "private_capture": false,
+    "quarter_capsule": false,
+    "new_data_acquisition": false,
+    "quality_threshold_change": false,
+    "formal_recommendation_e2e": false
+  },
+  "payload": {
+    "candidate": {
+      "files": 22,
+      "runtime": 21,
+      "type_only": 1,
+      "sha256": "1ce72754fdfe0e63460d8cf0091f649d9dcd8b030f08d5693a086a6d08eff991"
+    },
+    "recovery": {
+      "files": 21,
+      "runtime": 20,
+      "type_only": 1,
+      "sha256": "abc82c50b6b47a65c49671c03f6a25fa34f50c6a3d1781fb1bad763bd4848488"
+    },
+    "exact_original_rollback_sha256": "80998b0fd69daa0d281c06857b9da1b4f2354894bf75b26a121f14b808a73031"
+  },
+  "production_authorized": false,
+  "migration_execution": false,
+  "auth_rls_change": false,
+  "member_rights_activation": false,
+  "caller_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false
+}

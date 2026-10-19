@@ -471,7 +471,7 @@
     {
       "path": "docs/operations/evidence/source-acquisition-close-20261019.json",
       "before_sha256": null,
-      "after_sha256": "0773ac051c07d2967b66c780fff0412949fe126663f37c289092256906e3ab80",
+      "after_sha256": "bc021045c095efcc7676e3ed4dbf5c7c63aa4c19023aeebd5cb1adce2760d407",
       "mode": "100644",
       "origin": "composition"
     },
@@ -562,7 +562,7 @@
     {
       "path": "docs/operations/source-acquisition-close-20261019.md",
       "before_sha256": null,
-      "after_sha256": "992859d40cd80cca9c6587e6044442e1c04e791a377ea972642a96a01d41ff09",
+      "after_sha256": "afc98f0bf2295e9d2eafdd21e895d41bee722678b092b4bfdc34fad18afdbdf0",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2270,7 +2270,7 @@
     {
       "path": "tests/helpers/sourceAcquisitionCloseAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "6bf05832152b4d169e37d49ce03f1f314863606ec05180a1ce50d0dcb200e564",
+      "after_sha256": "431dff1600f8f7e881e68b901bc5a2c5fe715ec231c0976bf04b4eb939d511b2",
       "mode": "100644",
       "origin": "composition"
     },

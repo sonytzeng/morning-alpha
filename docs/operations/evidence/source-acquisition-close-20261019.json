@@ -108,7 +108,8 @@
   },
   "scope": {
     "monthly_requests": "TWO_FIXED_OFFICIAL_URLS_ONE_ANONYMOUS_GET_EACH_PER_BUNDLE",
-    "outcome_bars": "OBSERVED_AT_CLOCK_WITH_HORIZON_CUTOFF_ENFORCED",
+    "outcome_diagnostics": "FIXED_SAFE_CLASSIFICATIONS_METADATA_AND_PARSER_CONTRACT_FAILURE_NO_RETRY",
+    "outcome_bar_validation": "UNCHANGED_COMPLETE_DAILY_BAR_AND_OBSERVED_AT_HORIZON_REFUSAL",
     "source_fallback": false,
     "methodology_change": false,
     "reset_or_replay": false,

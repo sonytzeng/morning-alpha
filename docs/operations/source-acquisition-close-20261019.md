@@ -1,10 +1,10 @@
 # Same-batch source acquisition repair
 
-This candidate reduces duplicate anonymous monthly-source requests and repairs outcome-bar normalization against the actual observation clock. It preserves the original V1/V2 evaluators, source rights, cutoffs, calendars, risk gates, publication and membership rules. It does not imply that the real 14:30 source incident recovered or that a stock became READY.
+This candidate reduces duplicate anonymous monthly-source requests and adds fixed safe failure classifications and metadata to existing outcome-bar acquisition. It does not change the outcome date range, normalization date or normalization logic. It preserves the original V1/V2 evaluators, source rights, cutoffs, calendars, risk gates, publication and membership rules. It does not imply that the real 14:30 source incident recovered or that a stock became READY.
 
 The source base is the fixed main commit `6b7017fcbb9fa2fd085f9658eca4d6ce382c32a3`. The prior five-file candidate is `7cd552903e7c08234f8728aecdf99d495087bc3c`; the new outer manifest records exact before/after hashes for its runtime/test scope and the necessary synthetic Producer module-map repair. No old receipt is edited.
 
-The monthly helper is local to one acquisition bundle and two exact public URLs, with one anonymous GET each, raw-byte hash preservation, independent consumer deadlines, bounded memory and cleanup. Outcome normalization uses the real available clock; prediction/horizon cutoffs still refuse lookahead. No source calls, resets or replay are authorized here.
+The monthly helper is local to one acquisition bundle and two exact public URLs, with one anonymous GET each, raw-byte hash preservation, independent consumer deadlines, bounded memory and cleanup. Outcome diagnostics distinguish transport, body, parser, session and response-contract failures without exporting exception text or raw responses; parser and normalization-contract refusals are not retried. The existing complete daily-bar and observed-at/horizon validation rules remain unchanged, including their lookahead refusals. No source calls, resets or replay are authorized here.
 
 The old Owner-regime admission assertions run unchanged in CI at the fixed6b source view. Full current integration admission, current Owner regressions, new source tests and Deno checks still run in the current checkout. The original synthetic Fugle harness assertions are preserved; it now includes the real new helper in its module catalogue and checks disposal on failure, success, SMOKE and authorization refusal.
 

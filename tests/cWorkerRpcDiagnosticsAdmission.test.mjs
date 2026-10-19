@@ -86,6 +86,17 @@ test('fixed965 historical source assertions and current C protocol use explicit 
  const check=steps.find(block=>block.includes('deno check --no-lock supabase/functions/vnext-daily-research-v1/index.ts'));assert(check);assert.doesNotMatch(check,/working-directory:/);
  for(const command of ['npm run type-check','npm run lint','npm run build']){const step=steps.find(block=>block.includes('run: '+command));assert(step);assert.doesNotMatch(step,/working-directory:/);}
  for(const legacy of ['tests/integrationAdmission.test.mjs','tests/recommendationV2SourceAcquisitionAdmission.test.mjs','tests/helpers/sourceAcquisitionCloseAdmission.mjs'])assert.deepEqual(readFileSync(legacy),prior(legacy));
+ // The independent quarter-artifact job also starts from the current source.
+ // Its old integration proof already runs unchanged at fixed965 above.
+ const quarterPath='.github/workflows/owner-quarter-live-candidate.yml',quarter=readFileSync(quarterPath,'utf8');
+ const expectedQuarter=prior(quarterPath).toString().replace('node --experimental-strip-types --test tests/integrationAdmission.test.mjs',
+  'node --experimental-strip-types --test tests/cWorkerRpcDiagnosticsAdmission.test.mjs');
+ assert.equal(quarter,expectedQuarter,'only the current admission test selector changes; every historical quarter artifact command stays intact');
+ const quarterSteps=quarter.split(/(?=^      - )/m).filter(block=>/^      - /.test(block));
+ const quarterAdmission=quarterSteps.find(block=>block.includes('verifyIntegrationCandidate();'));
+ const quarterCheckout=quarterSteps.find(block=>block.includes('path: build/priced-in-historical-base'));
+ assert(quarterAdmission&&quarterCheckout);assert(quarterAdmission.includes('tests/cWorkerRpcDiagnosticsAdmission.test.mjs'));
+ assert.doesNotMatch(quarterAdmission,/working-directory:/);assert(quarterSteps.indexOf(quarterAdmission)<quarterSteps.indexOf(quarterCheckout));
 });
 test('V2 behavior glob preserves every current behavior file and moves only one exact source proof to fixed965',()=>{
  const path='.github/workflows/recommendation-v2-shadow.yml',current=readFileSync(path,'utf8'),original=prior(path).toString();

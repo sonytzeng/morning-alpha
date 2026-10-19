@@ -65,7 +65,7 @@
     {
       "path": ".github/workflows/owner-quarter-live-candidate.yml",
       "before_sha256": null,
-      "after_sha256": "df7a6d74ad1992646355e7893f8112597e8e840f39fcfe2fcc3f97cc3f0aaea9",
+      "after_sha256": "ce70f1e69a0d6d433db03797a9f90e89050ae0a1c5f4ff50ffd5c13fe090441e",
       "mode": "100644",
       "origin": "composition"
     },
@@ -135,7 +135,7 @@
     {
       "path": "docs/operations/c-worker-rpc-diagnostics-20261019.md",
       "before_sha256": null,
-      "after_sha256": "13bd2edbab0d7afb35e81b1acf0124271c1b8cfbbd42f28666d9843360b71d32",
+      "after_sha256": "b0f38e22b9546a8beacd87c430a4b723c7e3df400b324b4ec8d74b9f1176f155",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2151,7 +2151,7 @@
     {
       "path": "tests/cWorkerRpcDiagnosticsAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "b1f79a6866958af6856b9b95020000d09459953b7e346c51eeb31fd4293df5b1",
+      "after_sha256": "e797c8faf40c2e377af4d4482a2edfed9b649d24c91c59766ab6cfb40263d82b",
       "mode": "100644",
       "origin": "composition"
     },

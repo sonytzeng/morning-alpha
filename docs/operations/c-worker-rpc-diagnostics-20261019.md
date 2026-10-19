@@ -15,3 +15,5 @@ V2 job只將唯一精確檔名 `recommendationV2SourceAcquisitionAdmission.test.
 原public SDK freshness workflow、plan、checker及offline assertions保持原bytes。雖然workflow名稱仍寫single opened，965中的實際條件是 `synchronize`、固定 `codex/market-regime-compatibility-20261019` 分支、首次workflow run及首次attempt；新C分支不符合，沒有重啟它的公共來源取得。SKIPPED不記PASS。原63個canonical／5個alias檢查只對原SDK計畫，不檢查新C入口，其早期remote-SDK repair包指紋也不是本候選fixed-SDK包；當前入口仍由新VM協定及Deno直接驗證。
 
 這個修復讓下一個合法自然工作失敗時可定位RPC界線，不證明原07:14根因已修復或下一日研究已通過。當日已耗盡工作不重設、不重跑、不倒填。PR合併、CI或此診斷發布都不代表正式短中長推薦及會員端到端驗收完成。無Migration、Cron、Secret、Auth/RLS、權益、研究公開、付款或LINE操作。
+
+PR277第一輪真實CI另發現Owner quarter workflow仍在當前checkout執行舊integration assertions，其中原workflow完整位元斷言與這次合法CI分離不相容。此增量只將該job的當前precheck改為C當前來源負控；原15項integration與3項source-acquisition assertions繼續在Core固定965原封執行。新負控逐字核對Owner quarter workflow只更換這個測試selector，其餘歷史封裝、TypeScript、Deno、拒絕與執行順序全部保留。第一輪失敗保留，不以這項修正冒稱新CI已通過。

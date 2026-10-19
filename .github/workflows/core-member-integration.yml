@@ -18,6 +18,16 @@ jobs:
       - env:
           NODE_OPTIONS: --experimental-strip-types
         run: npm ci
+      - name: Materialize the exact Worker local-SDK repair and functional recovery (no HTTP)
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: |
+          node --require ./tests/helpers/cWorkerLocalSdkNetworkDenied.cjs scripts/operations/c-worker-local-sdk-release-20261019/materialize.mjs repair
+          node --require ./tests/helpers/cWorkerLocalSdkNetworkDenied.cjs scripts/operations/c-worker-local-sdk-release-20261019/materialize.mjs recovery
+      - name: Real fixed SDK, source packaging and lease handoff under denied network ports
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-vm-modules --require ./tests/helpers/cWorkerLocalSdkNetworkDenied.cjs --test --test-concurrency=1 tests/cWorkerLocalSdkRelease.test.mjs tests/cWorkerLocalSdkRuntime.integration.mjs
       - name: Install the exact current Reader SDK separately from the historical frontend SDK
         env:
           NODE_OPTIONS: --experimental-strip-types

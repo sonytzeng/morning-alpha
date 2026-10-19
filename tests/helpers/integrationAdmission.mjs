@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-market-regime-r2.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-c-worker-local-sdk.json';
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
 const PRIOR_R2='cc167304814b2223977a36802b2666ea8203ff36';
@@ -43,9 +43,65 @@ const PRIOR_LEASE_HANDOFF='2976f752679263aaaf8b03e2a9474be63b0c1c86';
 const FROZEN_LEASE_HANDOFF_MANIFEST='docs/operations/evidence/core-member-integration-20261019-lease-handoff.json';
 const PRIOR_MARKET_REGIME='77888f0ed88648790179d00bd511682721fae67f';
 const FROZEN_MARKET_REGIME_MANIFEST='docs/operations/evidence/core-member-integration-20261019-market-regime.json';
+const PRIOR_MARKET_REGIME_R2='2e2027ba731b3b77eebd9bb9255be25d4708738b';
+const FROZEN_MARKET_REGIME_R2_MANIFEST='docs/operations/evidence/core-member-integration-20261019-market-regime-r2.json';
 // Explicitly reviewed composition deltas. No patterns, glob, deployment flags,
 // automatic inventory admission or addition to any previous release catalogue.
 export const INTEGRATION_DELTAS=Object.freeze([
+ FROZEN_MARKET_REGIME_R2_MANIFEST,
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/8474f19a1f21e74abb020fc7894da0ae847ad881f5684adafe32f7d0262077cf.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/855779118b7c638eea0976ec4b331a7e741f69dd35c7e97b5be927345723dc04.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/9135c3f83ea833d80bfd11156d394d0ba84f2442e97e084887e406bff42f4456.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/98f2f4377da15fb84145ccb88d0745c482475b7004afef619afec387d83b2653.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/9be86b9f10fafb9db714e142be218b2876d16f7a228c1cc0cd8403239abd8da3.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/a0943b39916396be354a3d6b9a13dcd2b7eb9fae6d00629f2b409e518f1663dd.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/a67bcb8e00c067cc250bc24dd01da1277ed6452066387425b7b2cc11732e8867.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/b77ee1984adac5aca840baa3f11d3265a040c49f1ada99afefad72df1c43e353.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/bb93fdafb91b4dd70fa236164dbf6ce27358fe93c4c9297643576dbce326a1c8.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/c4510bd92ebd6222ba56cabdd658d09feeb964f64a728107a089635edd6bf7de.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/c769f61979cd626fc8d202ae9955a3a810ae59bd552c56e138fb1daeb7e2c99b.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/ccf2406bf8d2b9519c34c0c07dc74130ef4f7b3df582408b597e8078b222f45e.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/d6476eb760b326c6efa9534e2de942be23983f472c9b8459c0effa4c263980e9.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/NOTICE.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/PROVENANCE.json',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/jsdom-tr46/package.json',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/jsdom-webidl-conversions/LICENSE.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/jsdom-webidl-conversions/README.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/jsdom-webidl-conversions/package.json',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/jsdom-whatwg-url/LICENSE.txt',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/jsdom-whatwg-url/README.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/jsdom-whatwg-url/package.json',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-auth-js/LICENSE',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-auth-js/README.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-auth-js/package.json',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-functions-js/LICENSE',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-functions-js/README.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-functions-js/package.json',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-node-fetch/LICENSE.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-node-fetch/README.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-node-fetch/package.json',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-postgrest-js/LICENSE',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-postgrest-js/README.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-postgrest-js/package.json',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-realtime-js/LICENSE.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-realtime-js/README.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-realtime-js/package.json',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-storage-js/LICENSE',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-storage-js/README.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-storage-js/package.json',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-supabase-js/LICENSE',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-supabase-js/README.md',
+ 'supabase/functions/_shared/_fixed_c_worker_sdk/licenses/supabase-supabase-js/package.json',
+ 'supabase/functions/vnext-daily-research-v1/index.ts',
+ 'scripts/operations/c-worker-local-sdk-release-20261019/release-catalog.json',
+ 'scripts/operations/c-worker-local-sdk-release-20261019/materialize.mjs',
+ 'tests/cWorkerLocalSdkRelease.test.mjs',
+ 'tests/cWorkerLocalSdkRuntime.integration.mjs',
+ 'tests/helpers/cWorkerLocalSdkNetworkDenied.cjs',
+ 'docs/operations/c-worker-local-sdk-release-20261019.md',
+ 'docs/operations/evidence/c-worker-local-sdk-release-review-20261019.json',
  FROZEN_MARKET_REGIME_MANIFEST,
  'docs/operations/market-regime-historical-review-20261019.md',
  'docs/operations/evidence/market-regime-historical-review-20261019.json',
@@ -219,6 +275,7 @@ export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=in
  assert.deepEqual(Buffer.from(read(FROZEN_FINANCIAL_PROFILE_MANIFEST)),frozenReceipt(PRIOR_FINANCIAL_PROFILE,FROZEN_FINANCIAL_PROFILE_MANIFEST),'INTEGRATION_FINANCIAL_PROFILE_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_LEASE_HANDOFF_MANIFEST)),frozenReceipt(PRIOR_LEASE_HANDOFF,FROZEN_LEASE_HANDOFF_MANIFEST),'INTEGRATION_LEASE_HANDOFF_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_MARKET_REGIME_MANIFEST)),frozenReceipt(PRIOR_MARKET_REGIME,FROZEN_MARKET_REGIME_MANIFEST),'INTEGRATION_MARKET_REGIME_RECEIPT_DRIFT');
+ assert.deepEqual(Buffer.from(read(FROZEN_MARKET_REGIME_R2_MANIFEST)),frozenReceipt(PRIOR_MARKET_REGIME_R2,FROZEN_MARKET_REGIME_R2_MANIFEST),'INTEGRATION_MARKET_REGIME_R2_RECEIPT_DRIFT');
  for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false,'INTEGRATION_FORBIDDEN:'+flag);
  const scope=integrationScope();
  assert.deepEqual(m.files.map(r=>r.path),scope,'INTEGRATION_EXACT_SCOPE');

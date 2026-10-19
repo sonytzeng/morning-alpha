@@ -48,8 +48,12 @@ test('resealing cannot authorize unrelated historical source, workflow or catalo
   const f=fixture();f.bytes.set(path,Buffer.concat([f.read(path),Buffer.from('UNREVIEWED')]));
   const row=f.manifest.files.find(row=>row.path===path);assert(row);row.after_sha256=integrationHash(f.read(path));
   f.bytes.set(INTEGRATION_MANIFEST,Buffer.from(JSON.stringify(f.manifest)));
-  assert.throws(()=>f.verify(),/ORIGINAL_BASE_DRIFT/);
-  assert.throws(()=>createOriginalIngressComposition(f.read,f.paths,f.mode),/ORIGINAL_BASE_DRIFT/);
+  const exactSourceRejection=error=>{
+   assert.equal(String(error.message).split('\n')[0],'INTEGRATION_SOURCE_DRIFT:'+path);
+   assert.match(error.message,/INTEGRATION_ORIGINAL_BASE_DRIFT/);return true;
+  };
+  assert.throws(()=>f.verify(),exactSourceRejection);
+  assert.throws(()=>createOriginalIngressComposition(f.read,f.paths,f.mode),exactSourceRejection);
  }
 });
 test('entire retained receipt, authorization flags and incomplete seals fail closed',()=>{

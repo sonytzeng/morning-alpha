@@ -400,7 +400,9 @@ function verifyOriginalIngressBoundary(read,mode){
  // A newly rehashed composition must not admit unrelated historical drift.
  // In particular, old catalogues, workflows and authorization receipts stay exact.
  for(const [path,row] of tree(ORIGINAL_INGRESS_BASE))if(!allowed.has(path)){
-  assert.equal(integrationHash(read(path)),row.sha256,'INTEGRATION_ORIGINAL_BASE_DRIFT:SOURCE_DRIFT:'+path);
+  // Keep the established exact first-line diagnostic contract. The earlier
+  // full-tree guard adds context, but must not masquerade as a legacy failure.
+  assert.equal(integrationHash(read(path)),row.sha256,'INTEGRATION_SOURCE_DRIFT:'+path+'\nINTEGRATION_ORIGINAL_BASE_DRIFT');
   assert.equal(mode(path),row.mode,'INTEGRATION_ORIGINAL_BASE_MODE:'+path);
  }
 }
@@ -414,7 +416,7 @@ export function createOriginalIngressComposition(read=integrationPhysicalRead,pa
  const old=JSON.parse(frozenReceipt(ORIGINAL_INGRESS_BASE,FROZEN_COLD_SOURCE_MANIFEST)),oldRows=new Map(old.files.map(row=>[row.path,row]));
  const files=scope.map(path=>{
   const after_sha256=integrationHash(read(path)),fileMode=mode(path);assert.match(fileMode,/^100(644|755)$/);
-  if(!allowed.has(path)){const frozen=prior.get(path);assert(frozen,'INTEGRATION_UNREVIEWED_PATH:'+path);assert.equal(after_sha256,frozen.sha256,'INTEGRATION_ORIGINAL_BASE_DRIFT:SOURCE_DRIFT:'+path);assert.equal(fileMode,frozen.mode);}
+  if(!allowed.has(path)){const frozen=prior.get(path);assert(frozen,'INTEGRATION_UNREVIEWED_PATH:'+path);assert.equal(after_sha256,frozen.sha256,'INTEGRATION_SOURCE_DRIFT:'+path+'\nINTEGRATION_ORIGINAL_BASE_DRIFT');assert.equal(fileMode,frozen.mode);}
   return {path,before_sha256:baseline.get(path)?.sha256??null,after_sha256,mode:fileMode,
    origin:INTEGRATION_DELTAS.includes(path)?'composition':oldRows.get(path).origin};
  });

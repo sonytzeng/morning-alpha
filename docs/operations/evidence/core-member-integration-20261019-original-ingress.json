@@ -2410,7 +2410,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "95ba34365871342c9982f7dbc27e570b073a2e5541c0d0261b38ef03dacdb7c4",
+      "after_sha256": "810f56d623e8a6271b5c4e7695bac88883175aa7ed4746b65c116b2dba0bec54",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2515,7 +2515,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "2eb5ad894cf15e669da24250fd6eeaabdd4ae71eb7e498e2f83784725e737e55",
+      "after_sha256": "616f83f5ba51e4a06576c91155d10b56bc7aaf7bc852b4bb5d57fb511aa86870",
       "mode": "100644",
       "origin": "composition"
     },

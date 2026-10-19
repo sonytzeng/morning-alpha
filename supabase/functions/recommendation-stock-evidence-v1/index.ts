@@ -12,6 +12,7 @@ import { sharedV2Acquisition } from '../_shared/recommendation-v2-acquisition-ca
 import { acquireMarketInstitutionalTwd } from '../_shared/recommendation-market-institutional-candidate.ts';
 import { buildRecommendationFoundationCandidate } from '../_shared/recommendation-foundation-candidate.ts';
 import { evaluationPhase } from '../_shared/recommendation-phase.ts';
+import { createMonthlyResponseSharing } from '../_shared/recommendation-monthly-response-sharing.ts';
 
 // Server-only acquisition with a short research cache/lease; no formal business writes.
 // Existing internal identity validator remains unchanged.
@@ -42,19 +43,20 @@ Deno.serve(async (request:Request)=>{
   const signal=AbortSignal.timeout(scope==='SMOKE_2330'?22000:240000);
   const acquireBundle=async()=>{
    const marketDate=previousMarketTradingDate('TW',date);
+   const monthly=createMonthlyResponseSharing({fetcher:fetch,signal});
    // One bounded source stream for concurrent formal and Shadow consumers.
    // <=50/min + Shadow sources <=8/min; no duplicate full-universe fan-out.
    const shadowWork=scope==='SMOKE_2330'?null:startV2SourceAcquisition({businessDate:date,symbols:RECOMMENDATION_UNIVERSE,
-    apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:fetch,now,signal});
+    apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:monthly.fetcher,now,signal});
    let cutoff=started;
    const [captures,officialActuals,companyEvents,marketFlow]=await Promise.all([
     acquireStockEvidence({businessDate:date,universe:data.universe,apiKey:Deno.env.get('FUGLE_API_KEY')||'',fetcher:fetch,now,signal,scope}),
-    scope==='SMOKE_2330'?Promise.resolve([]):acquireOfficialActuals({symbols:RECOMMENDATION_UNIVERSE,fetcher:fetch,now,signal}),
+    scope==='SMOKE_2330'?Promise.resolve([]):acquireOfficialActuals({symbols:RECOMMENDATION_UNIVERSE,fetcher:monthly.fetcher,now,signal}),
     scope==='SMOKE_2330'?Promise.resolve([]):acquireCompanyEvents({symbols:RECOMMENDATION_UNIVERSE,fetcher:fetch,now,signal}),
     // One bounded public market-amount read, shared by the SAME daily lease.
     // Never substitute these TAIEX amounts for individual-stock evidence.
     scope==='SMOKE_2330'||!marketDate||evaluationPhase(started)!=='PREMARKET'?Promise.resolve(null):acquireMarketInstitutionalTwd({date:marketDate,fetcher:fetch,now,signal}),
-   ]).finally(async()=>{shadowWork?.stop();cutoff=now();await shadowWork?.complete;});
+   ]).finally(async()=>{shadowWork?.stop();cutoff=now();await shadowWork?.complete;}).finally(()=>{monthly.dispose();});
    return {business_date:date,acquisition_cutoff:cutoff,captures,officialActuals,companyEvents,marketFlow,acquired:await shadowWork?.complete??null};
   };
   const bundle=scope==='SMOKE_2330'?await acquireBundle():await sharedV2Acquisition({

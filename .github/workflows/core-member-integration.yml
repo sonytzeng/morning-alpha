@@ -24,6 +24,18 @@ jobs:
         run: |
           node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
           node --experimental-strip-types --test tests/integrationAdmission.test.mjs
+      - name: Check out the immutable pre-source-acquisition Owner admission proofs only
+        uses: actions/checkout@v4
+        with:
+          ref: 6b7017fcbb9fa2fd085f9658eca4d6ce382c32a3
+          path: build/source-acquisition-historical-base
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Historical 6b7017 Owner regime source and negative admission controls
+        working-directory: build/source-acquisition-historical-base
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test tests/ownerRegimeDisplayAdmission.test.mjs
       - name: Check out the immutable pre-regime Owner source proofs only
         uses: actions/checkout@v4
         with:
@@ -85,7 +97,7 @@ jobs:
         run: node --experimental-strip-types --test --test-concurrency=1 tests/recommendationQuarterActualsCandidate.test.mjs tests/ownerQuarterActualsView.test.mjs tests/recommendationReaderBinding.test.mjs tests/stockOfficialActuals.test.mjs tests/lineDecisionCardV2.test.mjs
       - env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/ownerRegimeDisplayAdmission.test.mjs tests/memberContinuityAdmission.test.mjs tests/ownerTradingLab.test.mjs tests/ownerTradingLabUI.test.mjs tests/ownerCockpit.test.mjs tests/recommendationV2UI.test.mjs tests/vnextMemberContinuity.test.mjs tests/vnextMember.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs tests/finnhubQuarterlyProbe.test.mjs tests/providerCapabilityOwnerBoundary.test.mjs tests/accountReportSchedule.test.mjs tests/accountSubscriberProjection.test.mjs tests/providerCapabilityReviewUi.test.mjs tests/ownerAccountAnalysisNavigation.test.mjs tests/analysisIntelligenceUI.test.mjs tests/accountDashboardIdentity.test.mjs tests/accountHistoricalFallback.test.mjs tests/stockOfficialActuals.test.mjs tests/recommendationFinancialActualsCandidate.test.mjs tests/recommendationEventAlignment.test.mjs
+        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/recommendationV2SourceAcquisitionAdmission.test.mjs tests/memberContinuityAdmission.test.mjs tests/ownerTradingLab.test.mjs tests/ownerTradingLabUI.test.mjs tests/ownerCockpit.test.mjs tests/recommendationV2UI.test.mjs tests/vnextMemberContinuity.test.mjs tests/vnextMember.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs tests/finnhubQuarterlyProbe.test.mjs tests/providerCapabilityOwnerBoundary.test.mjs tests/accountReportSchedule.test.mjs tests/accountSubscriberProjection.test.mjs tests/providerCapabilityReviewUi.test.mjs tests/ownerAccountAnalysisNavigation.test.mjs tests/analysisIntelligenceUI.test.mjs tests/accountDashboardIdentity.test.mjs tests/accountHistoricalFallback.test.mjs tests/stockOfficialActuals.test.mjs tests/recommendationFinancialActualsCandidate.test.mjs tests/recommendationEventAlignment.test.mjs
       - env:
           NODE_OPTIONS: --experimental-strip-types
         run: npm run type-check

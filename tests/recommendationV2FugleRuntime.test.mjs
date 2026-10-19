@@ -7,6 +7,7 @@ import {evaluateV2Shadow} from '../supabase/functions/_shared/recommendation-sha
 import {RECOMMENDATION_UNIVERSE} from '../supabase/functions/_shared/recommendation-stock-evidence.ts';
 import {recommendationJsonStream} from '../supabase/functions/_shared/recommendation-stream.ts';
 import {sharedV2Acquisition} from '../supabase/functions/_shared/recommendation-v2-acquisition-cache.ts';
+import {createMonthlyResponseSharing} from '../supabase/functions/_shared/recommendation-monthly-response-sharing.ts';
 import {evaluationPhase} from '../supabase/functions/_shared/recommendation-phase.ts';
 import {v2Fixture} from './helpers/recommendationV2Fixtures.mjs';
 
@@ -170,7 +171,7 @@ test('Shadow coordinator joins hung public/index/Fugle jobs and preserves classi
 test('Edge integration starts Shadow beside unchanged V1 and stops/joins on V1 failure; smoke does not start Shadow',async()=>{
  const source=readFileSync(new URL('../supabase/functions/recommendation-stock-evidence-v1/index.ts',import.meta.url),'utf8');
  const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
- const fixture=v2Fixture(),events=[];let handler,done,successful=false,authorized=true,capsuleInput;
+ const fixture=v2Fixture(),events=[];let handler,done,successful=false,authorized=true,capsuleInput,monthlyDisposed=0;
  const modules={
   'https://esm.sh/@supabase/supabase-js@2.57.4':{createClient:()=>({rpc:async(name)=>{
    assert(['claim_recommendation_v2_acquisition','finish_recommendation_v2_acquisition'].includes(name));
@@ -190,6 +191,9 @@ test('Edge integration starts Shadow beside unchanged V1 and stops/joins on V1 f
   '../_shared/recommendation-company-events.ts':{acquireCompanyEvents:async()=>[]},
   '../_shared/recommendation-stream.ts':{recommendationJsonStream},
   '../_shared/recommendation-v2-acquisition-cache.ts':{sharedV2Acquisition},
+  '../_shared/recommendation-monthly-response-sharing.ts':{createMonthlyResponseSharing:options=>{
+   const monthly=createMonthlyResponseSharing(options);return {...monthly,dispose(){monthly.dispose();monthlyDisposed++;}};
+  }},
   '../_shared/recommendation-shadow-v2-runtime.ts':{buildV2Capsule:async input=>{capsuleInput=input;return {synthetic:true};}},
   '../_shared/recommendation-shadow-v2-sources.ts':{startV2SourceAcquisition:()=>{
    events.push('SHADOW_START');return {complete:new Promise(resolve=>{done=resolve;}),stop:()=>{events.push('STOP');done({fugle:[],publicSources:fixture.sources,benchmark_history:[]});}};},selectV2InstitutionalSources},
@@ -204,14 +208,17 @@ test('Edge integration starts Shadow beside unchanged V1 and stops/joins on V1 f
   if(scope!=='SMOKE_2330')assert.equal(body.transport_result_status,502);
   assert.deepEqual(events,scope==='SMOKE_2330'?['V1']:['SHADOW_START','V1','STOP']);
  }
+ assert.equal(monthlyDisposed,2,'failed full acquisition and SMOKE both dispose their own bundle');
  successful=true;events.length=0;
  const request=()=>new Request('https://synthetic.invalid',{method:'POST',body:JSON.stringify({business_date,correlation_id:'TEST',scope:'UNIVERSE_72'})});
  const completed=await(await handler(request())).json();
  assert.equal(completed.transport_result_status,200);assert.deepEqual(completed.decision,fixture.v1);assert.equal(capsuleInput.captures,fixture.captures);
  assert.equal(capsuleInput.sources[0].provenance,'OFFICIAL_PUBLIC_FALLBACK');assert.deepEqual(events,['SHADOW_START','V1','STOP']);
+ assert.equal(monthlyDisposed,3,'successful full acquisition disposes before returning normalized evidence');
  authorized=false;events.length=0;
  assert.equal((await handler(request())).status,401);assert.deepEqual(events,[]);
  assert.equal((await handler(new Request('https://synthetic.invalid'))).status,405);assert.deepEqual(events,[]);
+ assert.equal(monthlyDisposed,3,'authorization/method refusal never starts a monthly bundle');
  assert.match(source,/timeout\(scope==='SMOKE_2330'\?22000:240000\)/);assert.match(source,/deadlineMs:260000/);
  assert.match(source,/finally\(async\(\)=>\{shadowWork\?\.stop\(\);cutoff=now\(\);await shadowWork\?\.complete;/);
  assert.match(source,/identity\.data_as_of=bundle\.acquisition_cutoff/);

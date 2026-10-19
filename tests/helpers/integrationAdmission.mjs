@@ -10,7 +10,7 @@ import {URL} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-priced-in-coverage.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-owner-regime-display.json';
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
 const PRIOR_R2='cc167304814b2223977a36802b2666ea8203ff36';
@@ -57,9 +57,16 @@ const PRIOR_OWNER_QUARTER_ACTUALS='bd941dc3ead8eb66eeaf2b21ca13acf1c90f98e4';
 const FROZEN_OWNER_QUARTER_ACTUALS_MANIFEST='docs/operations/evidence/core-member-integration-20261019-owner-quarter-actuals.json';
 const PRIOR_OWNER_QUARTER_LIVE='6c89db33ade7b8f3a57e00da6708afe1958ed8f6';
 const FROZEN_OWNER_QUARTER_LIVE_MANIFEST='docs/operations/evidence/core-member-integration-20261019-owner-quarter-live.json';
+const PRIOR_PRICED_IN_COVERAGE='a3602de17198dd9b769a16671ed97c4763e21cd8';
+const FROZEN_PRICED_IN_COVERAGE_MANIFEST='docs/operations/evidence/core-member-integration-20261019-priced-in-coverage.json';
 // Explicitly reviewed composition deltas. No patterns, glob, deployment flags,
 // automatic inventory admission or addition to any previous release catalogue.
 export const INTEGRATION_DELTAS=Object.freeze([
+ FROZEN_PRICED_IN_COVERAGE_MANIFEST,
+ 'docs/operations/evidence/owner-regime-display-20261019.json',
+ 'tests/helpers/ownerRegimeDisplayAdmission.mjs',
+ 'tests/ownerRegimeDisplayAdmission.test.mjs',
+ 'docs/operations/owner-regime-display-20261019.md',
  FROZEN_OWNER_QUARTER_LIVE_MANIFEST,
  'tests/decisionPricedInCoverage.test.mjs',
  'docs/operations/v1-priced-in-coverage-20261019.md',
@@ -344,6 +351,7 @@ export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=in
  assert.deepEqual(Buffer.from(read(FROZEN_OWNER_STATUS_COPY_MANIFEST)),frozenReceipt(PRIOR_OWNER_STATUS_COPY,FROZEN_OWNER_STATUS_COPY_MANIFEST),'INTEGRATION_OWNER_STATUS_COPY_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_OWNER_QUARTER_ACTUALS_MANIFEST)),frozenReceipt(PRIOR_OWNER_QUARTER_ACTUALS,FROZEN_OWNER_QUARTER_ACTUALS_MANIFEST),'INTEGRATION_OWNER_QUARTER_ACTUALS_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_OWNER_QUARTER_LIVE_MANIFEST)),frozenReceipt(PRIOR_OWNER_QUARTER_LIVE,FROZEN_OWNER_QUARTER_LIVE_MANIFEST),'INTEGRATION_OWNER_QUARTER_LIVE_RECEIPT_DRIFT');
+ assert.deepEqual(Buffer.from(read(FROZEN_PRICED_IN_COVERAGE_MANIFEST)),frozenReceipt(PRIOR_PRICED_IN_COVERAGE,FROZEN_PRICED_IN_COVERAGE_MANIFEST),'INTEGRATION_PRICED_IN_COVERAGE_RECEIPT_DRIFT');
  for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false,'INTEGRATION_FORBIDDEN:'+flag);
  const scope=integrationScope();
  assert.deepEqual(m.files.map(r=>r.path),scope,'INTEGRATION_EXACT_SCOPE');

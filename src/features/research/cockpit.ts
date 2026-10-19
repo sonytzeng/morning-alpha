@@ -1,5 +1,6 @@
 import type { EntryEvaluation, EntryResult, Strategy } from '../../types/research-source-contracts';
 import { currentMarket, type TradingLabData } from './tradingLab';
+import { PUBLIC_REGIMES } from '../../lib/publicMarketReadModel';
 export const strategyNames:Record<Strategy,string>={OVERSOLD_REVERSAL:'大跌後是否出現反彈機會',PULLBACK_ENTRY:'上漲趨勢中的回檔買點',BREAKOUT_CONTINUATION:'突破後是否還值得跟進'};
 export const entryNames:Record<EntryResult['status'],string>={ENTRY_READY:'符合研究進場條件',WAIT_CONFIRMATION:'值得觀察，等待確認',AVOID_ENTRY:'目前不建議進場',INSUFFICIENT_EVIDENCE:'資料不足，暫時無法判斷'};
 export function taipeiToday(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
@@ -14,7 +15,8 @@ export function cockpitToday(lab:TradingLabData|null,entry:EntryEvaluation|null,
  return {market,watch:count('WAIT_CONFIRMATION'),ready:count('ENTRY_READY'),currentResearch:current};
 }
 export const plainAction=(s:string)=>({WAIT:'先等條件確認，不急著進場',AVOID:'先避開風險，暫不進場',ENTER:'依正式條件研究機會，不代表直接買入'}[s]||'操作條件尚未確認，先不推定');
-export const plainRegime=(s:string)=>({range:'震盪／盤整',trending:'趨勢行情',volatile:'波動較大',risk_off:'風險偏高'}[s]||'市場型態尚未確認');
+const regimeLabels:Record<string,string>={...PUBLIC_REGIMES,trending:'趨勢行情',volatile:'波動較大'};
+export const plainRegime=(s:string)=>Object.hasOwn(regimeLabels,s)?regimeLabels[s]:'市場型態尚未確認';
 // Display vocabulary only: preserve direction, signs, numbers and research meaning.
 export function plainEvidence(text:string){
  const labels:Record<string,string>={UP:'上漲',DOWN:'下跌',FLAT:'持平',SOX:'費城半導體指數',SPX:'標普500指數',TSM:'台積電ADR',NVDA:'輝達'};

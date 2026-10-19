@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 import React from 'react';import * as jsxRuntime from 'react/jsx-runtime';import {renderToStaticMarkup} from 'react-dom/server';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 function module(p,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(read(p),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,Intl,Date,require:n=>{if(n in extra)return extra[n];throw Error(n);}});return exports;}
-const lab=module('src/features/research/tradingLab.ts'),m=module('src/features/research/cockpit.ts',{'./tradingLab':lab});
+const lab=module('src/features/research/tradingLab.ts'),publicMarket=module('src/lib/publicMarketReadModel.ts'),m=module('src/features/research/cockpit.ts',{'./tradingLab':lab,'../../lib/publicMarketReadModel':publicMarket});
 // Render the actual component with explicit saved-state fixtures. Effects are
 // deliberately not executed: this verifies display, not Production/Auth E2E.
 function renderCockpit({market=null,entry=null,tab='today',today='2026-10-19'}={}){
@@ -24,6 +24,26 @@ test('first-layer direction vocabulary is Chinese without changing evidence or n
  assert.equal(m.plainEvidence(source),'費城半導體指數 下跌 -2.60%；2330 持平 0.00%；輝達 上漲 1.23%');
  assert.equal(m.plainEvidence('UNKNOWN_GAP setup 尚未確認'),'UNKNOWN_GAP setup 尚未確認');
  assert.equal(source,'SOX DOWN -2.60%；2330 FLAT 0.00%；NVDA UP 1.23%');
+});
+for(const [regime,label] of Object.entries({stress:'壓力市場',volatile_range:'高波動盤整',risk_on_trend:'風險偏好多頭趨勢',risk_off_trend:'風險退避空頭趨勢'}))test(`actual Owner cockpit renders current producer regime ${regime} with the shared market label`,()=>{
+ const market={business_date:'2026-10-19',canonical:{status:'READY',report_date:'2026-10-19',action:'WAIT',market_regime:regime,
+  generated_text:{market_bias:'偏弱觀察',daily_sentence:'SYNTHETIC 已發布市場結論'}}};
+ const before=JSON.stringify(market),html=renderCockpit({market});
+ assert.equal(publicMarket.PUBLIC_REGIMES[regime],label);
+ assert.match(html,new RegExp(`偏弱觀察 · ${label}`));
+ assert.doesNotMatch(html,/市場型態尚未確認/);
+ assert.match(html,/先等條件確認，不急著進場/);
+ assert.match(html,/尚未取得今日進場研究結果/);
+ assert.equal(JSON.stringify(market),before);
+});
+test('unknown regime stays unconfirmed without suppressing the saved market conclusion or creating recommendations',()=>{
+ const market={business_date:'2026-10-19',canonical:{status:'READY',report_date:'2026-10-19',action:'WAIT',market_regime:'unreviewed_regime',
+  generated_text:{market_bias:'偏弱觀察',daily_sentence:'SYNTHETIC 已發布市場結論'}}};
+ const html=renderCockpit({market});
+ assert.match(html,/偏弱觀察 · 市場型態尚未確認/);
+ assert.match(html,/SYNTHETIC 已發布市場結論/);
+ assert.match(html,/尚未取得今日進場研究結果/);
+ assert.equal(m.cockpitToday(market,null,'2026-10-19').ready,null);
 });
 test('historical, stale and future research cannot become today opportunities',()=>{
  const row={mode:'HISTORICAL_REPLAY',business_date:'2026-10-08',evaluation_time:'2026-10-08T02:00:00Z',candidates:[{symbol:'2330',status:'ENTRY_READY'}]};

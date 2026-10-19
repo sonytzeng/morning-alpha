@@ -155,8 +155,9 @@ test('warm decode cache still detects fresh physical bytes, mode, deletion and s
 });
 test('priced-in outer layer preserves its immutable predecessor and rejects new, unknown and baseline drift',()=>{
  const prior='docs/operations/evidence/core-member-integration-20261019-owner-quarter-live.json';
- const m=verifyIntegrationCandidate(),paths=integrationInventory();
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261019-priced-in-coverage.json');
+ const m=JSON.parse(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261019-priced-in-coverage.json')),paths=integrationInventory();
+ verifyIntegrationCandidate();
+ assert.deepEqual(integrationPhysicalRead('docs/operations/evidence/core-member-integration-20261019-priced-in-coverage.json'),Buffer.from(git(['show','a3602de17198dd9b769a16671ed97c4763e21cd8:docs/operations/evidence/core-member-integration-20261019-priced-in-coverage.json'])));
  assert.deepEqual(integrationPhysicalRead(prior),Buffer.from(git(['show','6c89db33ade7b8f3a57e00da6708afe1958ed8f6:'+prior])));
  const old=JSON.parse(integrationPhysicalRead(prior));
  assert.equal(m.files.length,old.files.length+3);
@@ -190,7 +191,7 @@ test('historical artifact CI first admits current source and keeps new V1 regres
    assert(steps.indexOf(admission)<steps.indexOf(checkout),'current source must pass before historical checkout');
    assert.doesNotMatch(admission,/working-directory:/);assert.match(admission,/from '\.\/tests\/helpers\/integrationAdmission\.mjs'/);
    assert.match(admission,/node --experimental-strip-types --test tests\/integrationAdmission\.test\.mjs/);
-   const dependencies=steps.filter(block=>/run: npm ci --ignore-scripts/.test(block));assert.equal(dependencies.length,1);assert(historical(dependencies[0]));
+   const dependencies=steps.filter(block=>/run: npm ci --ignore-scripts/.test(block)&&historical(block));assert.equal(dependencies.length,1);assert(historical(dependencies[0]));
   }
   const coreSteps=blocks(coreText),quarterSteps=blocks(quarterText);
   const worker=coreSteps.filter(block=>/c-worker-local-sdk-release-20261019\/materialize\.mjs|tests\/cWorkerLocalSdkRelease\.test\.mjs/.test(block));

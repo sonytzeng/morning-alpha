@@ -24,6 +24,23 @@ jobs:
         run: |
           node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
           node --experimental-strip-types --test tests/integrationAdmission.test.mjs
+      - name: Check out the immutable pre-regime Owner source proofs only
+        uses: actions/checkout@v4
+        with:
+          ref: a3602de17198dd9b769a16671ed97c4763e21cd8
+          path: build/owner-regime-historical-base
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the immutable Owner source proof dependencies without lifecycle scripts
+        working-directory: build/owner-regime-historical-base
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm ci --ignore-scripts
+      - name: Historical a360 B24 and Owner-copy source assertions including type-only runtime equivalence
+        working-directory: build/owner-regime-historical-base
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test tests/ownerStatusCopyAdmission.test.mjs tests/frontendTypeClosureAdmission.test.mjs tests/researchSourceContracts.test.mjs tests/ownerReleaseReviewPackage.test.mjs tests/r9FunctionalSourceClosure.test.mjs
       - name: Check out the immutable Worker packaging baseline only
         uses: actions/checkout@v4
         with:
@@ -68,7 +85,7 @@ jobs:
         run: node --experimental-strip-types --test --test-concurrency=1 tests/recommendationQuarterActualsCandidate.test.mjs tests/ownerQuarterActualsView.test.mjs tests/recommendationReaderBinding.test.mjs tests/stockOfficialActuals.test.mjs tests/lineDecisionCardV2.test.mjs
       - env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/ownerStatusCopyAdmission.test.mjs tests/memberContinuityAdmission.test.mjs tests/frontendTypeClosureAdmission.test.mjs tests/researchSourceContracts.test.mjs tests/ownerTradingLab.test.mjs tests/ownerTradingLabUI.test.mjs tests/ownerCockpit.test.mjs tests/recommendationV2UI.test.mjs tests/vnextMemberContinuity.test.mjs tests/vnextMember.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs tests/finnhubQuarterlyProbe.test.mjs tests/ownerReleaseReviewPackage.test.mjs tests/providerCapabilityOwnerBoundary.test.mjs tests/accountReportSchedule.test.mjs tests/accountSubscriberProjection.test.mjs tests/providerCapabilityReviewUi.test.mjs tests/ownerAccountAnalysisNavigation.test.mjs tests/analysisIntelligenceUI.test.mjs tests/accountDashboardIdentity.test.mjs tests/accountHistoricalFallback.test.mjs tests/stockOfficialActuals.test.mjs tests/recommendationFinancialActualsCandidate.test.mjs tests/recommendationEventAlignment.test.mjs tests/r9FunctionalSourceClosure.test.mjs
+        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/ownerRegimeDisplayAdmission.test.mjs tests/memberContinuityAdmission.test.mjs tests/ownerTradingLab.test.mjs tests/ownerTradingLabUI.test.mjs tests/ownerCockpit.test.mjs tests/recommendationV2UI.test.mjs tests/vnextMemberContinuity.test.mjs tests/vnextMember.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs tests/finnhubQuarterlyProbe.test.mjs tests/providerCapabilityOwnerBoundary.test.mjs tests/accountReportSchedule.test.mjs tests/accountSubscriberProjection.test.mjs tests/providerCapabilityReviewUi.test.mjs tests/ownerAccountAnalysisNavigation.test.mjs tests/analysisIntelligenceUI.test.mjs tests/accountDashboardIdentity.test.mjs tests/accountHistoricalFallback.test.mjs tests/stockOfficialActuals.test.mjs tests/recommendationFinancialActualsCandidate.test.mjs tests/recommendationEventAlignment.test.mjs
       - env:
           NODE_OPTIONS: --experimental-strip-types
         run: npm run type-check
@@ -95,7 +112,8 @@ jobs:
         env:
           NODE_OPTIONS: --experimental-strip-types
           MA_ISOLATED_DB_TMPFS: '1'
-      - name: Preserve historical B24 source package and add the current single-file Owner copy repair
+      - name: Preserve historical a360 B24 and Owner-copy source packages without relabeling current regime code
+        working-directory: build/owner-regime-historical-base
         env:
           NODE_OPTIONS: --experimental-strip-types
           MEMBER_UI_ARTIFACT_DIR: ${{ runner.temp }}/morning-alpha-frontend-type-closure-ui
@@ -125,16 +143,38 @@ jobs:
           const stage=join(dir,'historical-b24');
           for(const file of files){const target=join(stage,file.path);mkdirSync(dirname(target),{recursive:true});writeFileSync(target,readFileSync(file.path),{flag:'wx',mode:0o600});}
           execFileSync('zip',['-X','-q',archive,...files.map(f=>f.path)],{cwd:stage});
-          const receipt={head,source_view:'IMMUTABLE_B24_PRE_OWNER_COPY',source_operations:24,archive_sha256:sha(readFileSync(archive)),production_authorized:false,frontend_closure_receipt:{path:'docs/operations/evidence/frontend-type-closure-20261018.json',sha256:sha(readFileSync('docs/operations/evidence/frontend-type-closure-20261018.json'))},prior_member_receipt:{path:closure.website.predecessor_path,sha256:closure.website.predecessor_sha256},excluded_non_frontend_build_sources:closure.website.removed_build_only_paths,files};
+          const receipt={head,source_base:'a3602de17198dd9b769a16671ed97c4763e21cd8',source_view:'IMMUTABLE_B24_PRE_OWNER_COPY',source_operations:24,archive_sha256:sha(readFileSync(archive)),production_authorized:false,frontend_closure_receipt:{path:'docs/operations/evidence/frontend-type-closure-20261018.json',sha256:sha(readFileSync('docs/operations/evidence/frontend-type-closure-20261018.json'))},prior_member_receipt:{path:closure.website.predecessor_path,sha256:closure.website.predecessor_sha256},excluded_non_frontend_build_sources:closure.website.removed_build_only_paths,files};
           writeFileSync(join(dir,'receipt.json'),JSON.stringify(receipt,null,2)+'\n',{flag:'wx',mode:0o600});
           const current=verifyOwnerStatusCopy(),repair=ownerStatusCopyWebsiteOperations();
           if(repair.length!==1||repair[0].path!=='src/pages/admin/analysis/OwnerCockpit.tsx')throw Error('OWNER_COPY_EXACT_SCOPE');
-          // This new archive uses the actual current physical source.
+          // This historical archive uses the immutable a360 physical source.
           const repairArchive=join(dir,'owner-status-copy-source.zip');
           if(existsSync(repairArchive))throw Error('OWNER_COPY_ARTIFACT_EXISTS');
           execFileSync('zip',['-X','-q',repairArchive,...repair.map(file=>file.path)]);
-          const repairReceipt={head,source_operations:1,archive_sha256:sha(readFileSync(repairArchive)),production_authorized:false,source_receipt:'docs/operations/evidence/owner-status-copy-20261019.json',files:repair,predecessor_website:current.predecessor_website};
+          const repairReceipt={head,source_base:'a3602de17198dd9b769a16671ed97c4763e21cd8',source_view:'HISTORICAL_OWNER_STATUS_COPY_A360',source_operations:1,archive_sha256:sha(readFileSync(repairArchive)),production_authorized:false,source_receipt:'docs/operations/evidence/owner-status-copy-20261019.json',files:repair,predecessor_website:current.predecessor_website};
           writeFileSync(join(dir,'owner-status-copy-receipt.json'),JSON.stringify(repairReceipt,null,2)+'\n',{flag:'wx',mode:0o600});
+          NODE
+      - name: Package the exact current single-file Owner regime label repair
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+          MEMBER_UI_ARTIFACT_DIR: ${{ runner.temp }}/morning-alpha-frontend-type-closure-ui
+          MEMBER_UI_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync,writeFileSync,existsSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          import {execFileSync} from 'node:child_process';
+          import {join} from 'node:path';
+          import {verifyOwnerRegimeDisplay,ownerRegimeDisplayWebsiteOperations} from './tests/helpers/ownerRegimeDisplayAdmission.mjs';
+          const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+          const manifest=verifyOwnerRegimeDisplay(),files=ownerRegimeDisplayWebsiteOperations();
+          const dir=process.env.MEMBER_UI_ARTIFACT_DIR,head=process.env.MEMBER_UI_HEAD;
+          assert.match(dir,/^\/[A-Za-z0-9_./-]+$/);assert.match(head,/^[a-f0-9]{40}$/);
+          assert.equal(files.length,1);assert.equal(files[0].path,'src/features/research/cockpit.ts');
+          const archive=join(dir,'owner-regime-display-source.zip');assert(!existsSync(archive));
+          execFileSync('zip',['-X','-q',archive,...files.map(file=>file.path)]);
+          writeFileSync(join(dir,'owner-regime-display-receipt.json'),JSON.stringify({head,source_view:'CURRENT_OWNER_REGIME_DISPLAY_SOURCE',source_operations:1,archive_sha256:sha(readFileSync(archive)),production_authorized:false,source_receipt:'docs/operations/evidence/owner-regime-display-20261019.json',files,protected_sources:manifest.protected_sources},null,2)+'\n',{flag:'wx',mode:0o600});
           NODE
       - uses: actions/upload-artifact@v4
         with:

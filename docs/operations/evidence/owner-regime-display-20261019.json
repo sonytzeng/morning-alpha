@@ -1,0 +1,56 @@
+{
+  "schema": "MORNING_ALPHA_OWNER_REGIME_DISPLAY_V1",
+  "base": "a3602de17198dd9b769a16671ed97c4763e21cd8",
+  "files": [
+    {
+      "path": "src/features/research/cockpit.ts",
+      "mode": "100644",
+      "before_sha256": "0a7045339e65a1b4784a5c8351b37768a240dd08aac76f979002dc0c1be7b3a3",
+      "after_sha256": "5fcbb18d73af49674914de59fd1c3f88eda62d8be98e83af0a072d343f38ea65"
+    },
+    {
+      "path": "tests/ownerCockpit.test.mjs",
+      "mode": "100644",
+      "before_sha256": "709d8104a9612def7f4ae1602646bacaaa2a773b4b88fe6598b1c15236702529",
+      "after_sha256": "2eb47cb345b6edc91248d859f5ffdaa248454208b26bb5ac1e8431e7bbf25cec"
+    }
+  ],
+  "protected_sources": [
+    {
+      "path": "src/pages/admin/analysis/OwnerCockpit.tsx",
+      "mode": "100644",
+      "sha256": "45ce7e4e776b9ffb7250b7603255928f839d8e8bb27c30b11afdc19f383e29fd"
+    },
+    {
+      "path": "src/lib/publicMarketReadModel.ts",
+      "mode": "100644",
+      "sha256": "9f99fd79e0dcbf1e10fcfabd12896230f4d77ca5a30c3f3560f50af45dc4684e"
+    }
+  ],
+  "predecessor": {
+    "path": "docs/operations/evidence/core-member-integration-20261019-priced-in-coverage.json",
+    "sha256": "06e83cf19c0a9753426ea385338810757506b8886a6280d602493500fe91c2ff"
+  },
+  "website": {
+    "operation_count": 1,
+    "operations": [
+      {
+        "path": "src/features/research/cockpit.ts",
+        "mode": "100644",
+        "operation": "MODIFY",
+        "classification": "CLIENT_UI_MARKET_REGIME_LABEL_ONLY",
+        "expected_live_before_sha256": "0a7045339e65a1b4784a5c8351b37768a240dd08aac76f979002dc0c1be7b3a3",
+        "target_sha256": "5fcbb18d73af49674914de59fd1c3f88eda62d8be98e83af0a072d343f38ea65",
+        "source_bytes": 4977
+      }
+    ]
+  },
+  "production_authorized": false,
+  "migration_execution": false,
+  "auth_rls_change": false,
+  "member_rights_activation": false,
+  "caller_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false
+}

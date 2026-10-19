@@ -153,3 +153,56 @@ test('warm decode cache still detects fresh physical bytes, mode, deletion and s
   for(const view of ['core','member'])assert.deepEqual(live.integrationHistoricalRead(view,path,bad),bad);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+test('priced-in outer layer preserves its immutable predecessor and rejects new, unknown and baseline drift',()=>{
+ const prior='docs/operations/evidence/core-member-integration-20261019-owner-quarter-live.json';
+ const m=verifyIntegrationCandidate(),paths=integrationInventory();
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261019-priced-in-coverage.json');
+ assert.deepEqual(integrationPhysicalRead(prior),Buffer.from(git(['show','6c89db33ade7b8f3a57e00da6708afe1958ed8f6:'+prior])));
+ const old=JSON.parse(integrationPhysicalRead(prior));
+ assert.equal(m.files.length,old.files.length+3);
+ for(const path of ['supabase/functions/_shared/decision-v1-evidence.ts','tests/decisionPricedInCoverage.test.mjs']){
+  assert.equal(m.files.find(row=>row.path===path)?.after_sha256,integrationHash(integrationPhysicalRead(path)));
+  const bad=Buffer.concat([integrationPhysicalRead(path),Buffer.from('NEW_LAYER_DRIFT')]);
+  assert.throws(()=>verifyIntegrationCandidate(p=>p===path?bad:integrationPhysicalRead(p),paths),/SOURCE_DRIFT/);
+ }
+ assert.throws(()=>verifyIntegrationCandidate(p=>p===prior?Buffer.concat([integrationPhysicalRead(p),Buffer.from(' ') ]):integrationPhysicalRead(p),paths),/OWNER_QUARTER_LIVE_RECEIPT_DRIFT/);
+ assert.throws(()=>verifyIntegrationCandidate(integrationPhysicalRead,[...paths,'src/unapproved-priced-in.ts']),/UNKNOWN_PATH/);
+ const baseline='AGENTS.md';assert(!m.files.some(row=>row.path===baseline));
+ assert.throws(()=>verifyIntegrationCandidate(p=>p===baseline?Buffer.concat([integrationPhysicalRead(p),Buffer.from('BASELINE_DRIFT')]):integrationPhysicalRead(p),paths),/BASELINE_DRIFT/);
+ const source='supabase/functions/_shared/decision-v1-evidence.ts',good=integrationPhysicalRead(source);
+ assert.deepEqual(integrationHistoricalRead('core',source,good),integrationParentRead('core',source));
+ const injected=Buffer.concat([good,Buffer.from('INJECTED_PRICED_IN_DRIFT')]);
+ assert.deepEqual(integrationHistoricalRead('core',source,injected),injected);
+});
+test('historical artifact CI first admits current source and keeps new V1 regressions in the current checkout',()=>{
+ const source=name=>integrationPhysicalRead('.github/workflows/'+name+'.yml').toString();
+ const core=source('core-member-integration'),quarter=source('owner-quarter-live-candidate');
+ const blocks=text=>text.split(/(?=^      - )/m).filter(block=>/^      - /.test(block));
+ const historical=block=>/^        working-directory: build\/priced-in-historical-base$/m.test(block);
+ const check=(coreText,quarterText)=>{
+  for(const text of [coreText,quarterText]){
+   assert.doesNotMatch(text,/^\s*defaults:/m,'no job-wide historical working directory');
+   const steps=blocks(text),checkouts=steps.filter(block=>/path: build\/priced-in-historical-base/.test(block));assert.equal(checkouts.length,1);
+   const checkout=checkouts[0];assert.match(checkout,/uses: actions\/checkout@v4/);
+   assert.match(checkout,/^          ref: 6c89db33ade7b8f3a57e00da6708afe1958ed8f6$/m);
+   assert.match(checkout,/^          fetch-depth: 0$/m);assert.match(checkout,/^          persist-credentials: false$/m);
+   const admission=steps.find(block=>block.includes('verifyIntegrationCandidate();'));assert(admission);
+   assert(steps.indexOf(admission)<steps.indexOf(checkout),'current source must pass before historical checkout');
+   assert.doesNotMatch(admission,/working-directory:/);assert.match(admission,/from '\.\/tests\/helpers\/integrationAdmission\.mjs'/);
+   assert.match(admission,/node --experimental-strip-types --test tests\/integrationAdmission\.test\.mjs/);
+   const dependencies=steps.filter(block=>/run: npm ci --ignore-scripts/.test(block));assert.equal(dependencies.length,1);assert(historical(dependencies[0]));
+  }
+  const coreSteps=blocks(coreText),quarterSteps=blocks(quarterText);
+  const worker=coreSteps.filter(block=>/c-worker-local-sdk-release-20261019\/materialize\.mjs|tests\/cWorkerLocalSdkRelease\.test\.mjs/.test(block));
+  assert.equal(worker.length,2);assert(worker.every(historical));assert.equal(coreSteps.filter(historical).length,3);
+  const evaluator=coreSteps.find(block=>block.includes('tests/decisionPricedInCoverage.test.mjs'));assert(evaluator);assert(!historical(evaluator));
+  assert.match(evaluator,/tests\/decisionEvidencePipeline\.test\.mjs tests\/recommendationPhase\.test\.mjs tests\/decisionPricedInCoverage\.test\.mjs/);
+  const currentDeno=coreSteps.find(block=>block.includes('deno check --no-lock supabase/functions/get-report-payload/index.ts'));assert(currentDeno);assert(!historical(currentDeno));
+  const artifacts=quarterSteps.filter(block=>/tests\/ownerQuarterLiveRelease\.test\.mjs|owner-quarter-live-release-20261019\/(?:prepare-check-sources|check-typescript)\.mjs|run: deno check/.test(block));
+  assert.equal(artifacts.length,7);assert(artifacts.every(historical));assert.equal(quarterSteps.filter(historical).length,8);
+ };
+ check(core,quarter);
+ assert.throws(()=>check(core.replace('ref: 6c89db33ade7b8f3a57e00da6708afe1958ed8f6','ref: main'),quarter));
+ assert.throws(()=>check(core.replace('      - name: V1 mixed fundamentals, measured price coverage and global refusal regressions','      - name: V1 mixed fundamentals, measured price coverage and global refusal regressions\n        working-directory: build/priced-in-historical-base'),quarter));
+ assert.throws(()=>check(core,quarter.replace('      - name: Admit the complete current source before checking historical quarter artifacts','      - name: Admit the complete current source before checking historical quarter artifacts\n        working-directory: build/priced-in-historical-base')));
+});

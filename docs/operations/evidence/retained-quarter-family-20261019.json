@@ -1,0 +1,155 @@
+{
+  "schema": "RETAINED_QUARTER_FINANCIAL_FAMILY_OFFLINE_ADMISSION_V1",
+  "base": "9de380f6d8473e920e19d955d0782950ed4cae2f",
+  "files": [
+    {
+      "path": "scripts/vnext/research-funnel.mjs",
+      "mode": "100644",
+      "before_sha256": "dbe0d0b16cc7e6f746b939b441cf88040daa521219da0cace0793e8d26e86ccc",
+      "after_sha256": "9e34803f12f8d02c3dd8858a92985818fa16af348423a067af020049f8ca23ba"
+    },
+    {
+      "path": "research/retained-quarter-financials.ts",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "3577cd5ac6e4b7300b2dde022d453fa663134b5e513503df6616fca87fe6d9ba"
+    },
+    {
+      "path": "tests/vnextRetainedQuarterFinancials.test.mjs",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "14b78b0e766b5d2a50ae1c3b13595822a671ee4496ca7d2525442dcfce017bec"
+    }
+  ],
+  "protected_sources": [
+    {
+      "path": "src/features/vnext/contracts.ts",
+      "mode": "100644",
+      "sha256": "0a89f96f209c9c235416a4b060c85b38bb6d6799ad3234ef16156537fd50d579"
+    },
+    {
+      "path": "src/features/vnext/researchFunnel.ts",
+      "mode": "100644",
+      "sha256": "26e0e7e06002834bf7a853d0971147e7e1de40b3daae0cd9c8c10911e1c524c5"
+    },
+    {
+      "path": "src/features/vnext/stockResearch.ts",
+      "mode": "100644",
+      "sha256": "7583c0edca56aa4c225173ab5657ce894529df34efb63d745cab28c73dc887c5"
+    },
+    {
+      "path": "src/features/vnext/dailyAdapter.ts",
+      "mode": "100644",
+      "sha256": "08556661bf9739c947278a3153486c412083eab241fba187bb2b9968d61e622a"
+    },
+    {
+      "path": "src/features/vnext/dailyRuntime.ts",
+      "mode": "100644",
+      "sha256": "c3c3fc74881831295c4cf19970ba77b77182b6c171e5dde1f3db6610666cea48"
+    },
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/index.ts",
+      "mode": "100644",
+      "sha256": "fbc591c736dbc15913feeec381c14433b96004c4f03cce38ae21673af4c6c89d"
+    },
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/handler.ts",
+      "mode": "100644",
+      "sha256": "ea4ceab840aac823ad130e052477dce346a455ce700606c4f80db990c05a4954"
+    },
+    {
+      "path": "supabase/functions/recommendation-v2-forward-worker-v1/index.ts",
+      "mode": "100644",
+      "sha256": "e8c39bb557400b8dbabf76ce841984be4c9ee60b2867bb6602e4dd2260f42c58"
+    },
+    {
+      "path": "supabase/functions/_shared/decision-v1-evidence.ts",
+      "mode": "100644",
+      "sha256": "327928dd61babe767873a38ddc1cd933ce440d0f8fc6c269f4bcc8b4bdd37156"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+      "mode": "100644",
+      "sha256": "5d934bb7c2be21ff66a0043a945b0d91edcbeb2a57166882715e8813da31766e"
+    },
+    {
+      "path": "supabase/migrations/20261010061630_vnext_research_projection_candidate.sql",
+      "mode": "100644",
+      "sha256": "c22d4adb3527326f816627f371327ed7fb00170699f9416efba9f797fdfe31dc"
+    },
+    {
+      "path": "scripts/operations/c-worker-local-sdk-release-20261019/release-catalog-r2.json",
+      "mode": "100644",
+      "sha256": "8ce62c1b492dd6aaf0dd797e5bbe384b241a9e206e930e7f1eccc2e0cdaefb81"
+    }
+  ],
+  "prior_rules": [
+    {
+      "path": "tests/cWorkerRpcDiagnosticsAdmission.test.mjs",
+      "mode": "100644",
+      "sha256": "e797c8faf40c2e377af4d4482a2edfed9b649d24c91c59766ab6cfb40263d82b"
+    },
+    {
+      "path": "tests/cWorkerRpcFailureDiagnostics.integration.mjs",
+      "mode": "100644",
+      "sha256": "7ddec97080ef7597f83915e1ee6f81fbaf257ec00db3e710babed3e31b492c34"
+    },
+    {
+      "path": "tests/helpers/sourceAcquisitionCloseAdmission.mjs",
+      "mode": "100644",
+      "sha256": "431dff1600f8f7e881e68b901bc5a2c5fe715ec231c0976bf04b4eb939d511b2"
+    },
+    {
+      "path": "tests/recommendationV2SourceAcquisitionAdmission.test.mjs",
+      "mode": "100644",
+      "sha256": "939b9f852ee703e8304ae220123a205cd04d09814ab6fbf01caf09c2a8255ede"
+    },
+    {
+      "path": "tests/integrationAdmission.test.mjs",
+      "mode": "100644",
+      "sha256": "539e44ccda3168a0b0fdb13ef8fb700b93e994d763f8f0a8a981c720a56cdcbf"
+    }
+  ],
+  "predecessor": {
+    "path": "docs/operations/evidence/core-member-integration-20261019-c-worker-rpc-diagnostics.json",
+    "sha256": "19e76135465b535652db8eb157428be8e8f460d8fcada4abafe12ae77d105e15"
+  },
+  "scope": {
+    "mode": "OFFLINE_OWNER_RETAINED_SNAPSHOT_REVIEW",
+    "financial_families": [
+      "EPS",
+      "MARGIN",
+      "CAPEX"
+    ],
+    "quarters": 4,
+    "numeric_facts": 12,
+    "source_originals": 4,
+    "private_fact_pack_in_git": false,
+    "new_source_acquisition": false,
+    "production_import": false,
+    "shared_evaluator_change": false,
+    "methodology_promotion": false,
+    "new_forward_or_outcome": false,
+    "remaining_documented_reviews": [
+      "DEMAND",
+      "MOAT",
+      "VALUATION"
+    ],
+    "original_long_contract_supply_chain_still_required": true
+  },
+  "worker": {
+    "new_deployment_payload": false,
+    "preserved_C_candidate_payload_sha256": "c86202f3123aeddefc6ca39efdca0b25cfcadee955527cff7c1a92a7dee6e7d9",
+    "preserved_C_recovery_payload_sha256": "0d88f57588d02cb63ba467a3803b44815110a67ad5712e40903c241806bd02d2",
+    "runtime_files": 44,
+    "payload_files": 74
+  },
+  "production_authorized": false,
+  "migration_execution": false,
+  "auth_rls_change": false,
+  "member_rights_activation": false,
+  "caller_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false
+}

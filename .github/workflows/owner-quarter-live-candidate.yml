@@ -20,7 +20,7 @@ jobs:
           NODE_OPTIONS: --experimental-strip-types
         run: |
           node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
-          node --experimental-strip-types --test tests/cWorkerRpcDiagnosticsAdmission.test.mjs
+          node --experimental-strip-types --test tests/retainedQuarterFamilyAdmission.test.mjs
       - name: Check out the immutable quarter packaging baseline only
         uses: actions/checkout@v4
         with:

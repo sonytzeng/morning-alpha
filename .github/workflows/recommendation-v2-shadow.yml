@@ -26,7 +26,22 @@ jobs:
       - run: deno check --no-lock supabase/functions/recommendation-v2-forward-worker-v1/index.ts supabase/functions/owner-trading-lab-v1/index.ts
       - env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/recommendationV2*.test.mjs
+        run: |
+          # Only the immutable source-admission proof moves to fixed965 in the
+          # Core integration job; every current V2 behavior test still runs here.
+          files=(tests/recommendationV2*.test.mjs)
+          current=()
+          historical=0
+          for file in "${files[@]}"; do
+            if [ "$file" = tests/recommendationV2SourceAcquisitionAdmission.test.mjs ]; then
+              historical=$((historical + 1))
+            else
+              current+=("$file")
+            fi
+          done
+          test "$historical" -eq 1
+          test "${#current[@]}" -eq "$((${#files[@]} - 1))"
+          node --experimental-strip-types --test "${current[@]}"
       - name: Disposable clocked database, no Production connection
         run: |
           docker build -t ma-v2-clock-ci - < tests/fixtures/runtime-sparse-postgres.Dockerfile

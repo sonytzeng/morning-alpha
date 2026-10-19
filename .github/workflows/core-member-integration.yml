@@ -23,7 +23,23 @@ jobs:
           NODE_OPTIONS: --experimental-strip-types
         run: |
           node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
-          node --experimental-strip-types --test tests/integrationAdmission.test.mjs
+          node --experimental-strip-types --test tests/cWorkerRpcDiagnosticsAdmission.test.mjs
+      - name: Current C Worker fixed-SDK diagnostic protocol with denied network ports
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-vm-modules --require ./tests/helpers/cWorkerLocalSdkNetworkDenied.cjs --test --test-concurrency=1 tests/cWorkerRpcFailureDiagnostics.integration.mjs
+      - name: Check out the immutable pre-C-diagnostic source proofs only
+        uses: actions/checkout@v4
+        with:
+          ref: 965263fe15dc672cac6c61af06bfd14d69044dd3
+          path: build/c-worker-rpc-historical-base
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Historical 965 source-acquisition and workflow admission proofs unchanged
+        working-directory: build/c-worker-rpc-historical-base
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/recommendationV2SourceAcquisitionAdmission.test.mjs
       - name: Check out the immutable pre-source-acquisition Owner admission proofs only
         uses: actions/checkout@v4
         with:
@@ -97,7 +113,7 @@ jobs:
         run: node --experimental-strip-types --test --test-concurrency=1 tests/recommendationQuarterActualsCandidate.test.mjs tests/ownerQuarterActualsView.test.mjs tests/recommendationReaderBinding.test.mjs tests/stockOfficialActuals.test.mjs tests/lineDecisionCardV2.test.mjs
       - env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-strip-types --test tests/integrationAdmission.test.mjs tests/recommendationV2SourceAcquisitionAdmission.test.mjs tests/memberContinuityAdmission.test.mjs tests/ownerTradingLab.test.mjs tests/ownerTradingLabUI.test.mjs tests/ownerCockpit.test.mjs tests/recommendationV2UI.test.mjs tests/vnextMemberContinuity.test.mjs tests/vnextMember.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs tests/finnhubQuarterlyProbe.test.mjs tests/providerCapabilityOwnerBoundary.test.mjs tests/accountReportSchedule.test.mjs tests/accountSubscriberProjection.test.mjs tests/providerCapabilityReviewUi.test.mjs tests/ownerAccountAnalysisNavigation.test.mjs tests/analysisIntelligenceUI.test.mjs tests/accountDashboardIdentity.test.mjs tests/accountHistoricalFallback.test.mjs tests/stockOfficialActuals.test.mjs tests/recommendationFinancialActualsCandidate.test.mjs tests/recommendationEventAlignment.test.mjs
+        run: node --experimental-strip-types --test tests/memberContinuityAdmission.test.mjs tests/ownerTradingLab.test.mjs tests/ownerTradingLabUI.test.mjs tests/ownerCockpit.test.mjs tests/recommendationV2UI.test.mjs tests/vnextMemberContinuity.test.mjs tests/vnextMember.test.mjs tests/recommendationHistoricalBatch.test.mjs tests/coreEvidenceCandidateIntegrity.test.mjs tests/stagedReleaseIntegrity.test.mjs tests/vnextIntegrity.test.mjs tests/recommendationMarketInstitutionalCandidate.test.mjs tests/researchOwnerFieldAccess.test.mjs tests/recommendationConsensusCapability.test.mjs tests/finnhubQuarterlyProbe.test.mjs tests/providerCapabilityOwnerBoundary.test.mjs tests/accountReportSchedule.test.mjs tests/accountSubscriberProjection.test.mjs tests/providerCapabilityReviewUi.test.mjs tests/ownerAccountAnalysisNavigation.test.mjs tests/analysisIntelligenceUI.test.mjs tests/accountDashboardIdentity.test.mjs tests/accountHistoricalFallback.test.mjs tests/stockOfficialActuals.test.mjs tests/recommendationFinancialActualsCandidate.test.mjs tests/recommendationEventAlignment.test.mjs
       - env:
           NODE_OPTIONS: --experimental-strip-types
         run: npm run type-check
@@ -111,7 +127,7 @@ jobs:
         with:
           deno-version: v2.x
       - run: deno test --no-lock --allow-read tests/researchOwnerFieldAccess.sdk.test.ts tests/providerCapabilityEntry.sdk.test.ts
-      - run: deno check --no-lock supabase/functions/get-report-payload/index.ts supabase/functions/recommendation-stock-evidence-v1/index.ts supabase/functions/v1-provider-capability-review-v1/index.ts
+      - run: deno check --no-lock supabase/functions/vnext-daily-research-v1/index.ts supabase/functions/get-report-payload/index.ts supabase/functions/recommendation-stock-evidence-v1/index.ts supabase/functions/v1-provider-capability-review-v1/index.ts
       - run: node --experimental-strip-types --test tests/eventAlignmentRefresh.test.mjs tests/recommendationIssuerEventReview.test.mjs tests/r10FunctionalSourceClosure.test.mjs
         env:
           NODE_OPTIONS: --experimental-strip-types

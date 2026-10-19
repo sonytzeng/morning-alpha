@@ -1,0 +1,28 @@
+--- actual-reader56/supabase/functions/get-report-payload/index.ts
++++ reader/supabase/functions/get-report-payload/index.ts
+@@ -1 +1 @@
+-// @deno-types="../_shared/_fixed_reader_sdk/0f74ad419de662a8f6127fe99b6396fbf54ef22ca064b55f2cc2b3bd819c70c6.d.mts"
++// @deno-types="../_shared/_fixed_reader_sdk/83a913f210c2e9de5b06514e2a349a50e1f054af950bd1331cc4bb5d577b099e.d.mts"
+@@ -26,0 +27,2 @@
++import { persistedOwnerQuarterInput } from "../_shared/recommendation-owner-quarter-capsule.ts";
++import { canReadResearchOwnerFields, withoutResearchOwnerReceipt } from "../_shared/research-owner-quarter-field-access.ts";
+@@ -1398 +1400 @@
+-      reports: rows.map(row => buildHistorySummary(row,
++      reports: rows.map(row => buildHistorySummary(withoutResearchOwnerReceipt(row),
+@@ -1491 +1493,5 @@
+-  const payload = buildPayload(report, tier, context);
++  const researchOwnerFieldsAllowed = await canReadResearchOwnerFields({
++    request: req, tier, userId, supabaseUrl,
++    anonKey: Deno.env.get("SUPABASE_ANON_KEY") || "", createClient,
++  });
++  const payload = buildPayload(researchOwnerFieldsAllowed ? report : withoutResearchOwnerReceipt(report), tier, context);
+@@ -1524,0 +1531,9 @@
++  // Separate saved-receipt study only; formal/member decisions above are unchanged.
++  if (researchOwnerFieldsAllowed) {
++    const ownerStudy = await persistedOwnerQuarterInput(realEvidence, decisionIdentity, parseAi(report.ai_strategy_json), { ownerAuthorized: true });
++    payload.owner_market_foundation_candidate = {
++      candidate_only: true, member_publication_approved: false,
++      decision_engine_v1: await sealEvidenceDecision(buildEvidenceDecision(ownerStudy.data, decisionIdentity)),
++      ...(ownerStudy.quarterActuals ? { quarter_actuals: ownerStudy.quarterActuals } : {}),
++    };
++  }

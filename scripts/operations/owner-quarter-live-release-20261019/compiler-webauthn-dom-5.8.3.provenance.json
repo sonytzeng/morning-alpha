@@ -1,0 +1,238 @@
+{
+  "schema": "OFFICIAL_TYPESCRIPT_WEB_AUTHN_COMPILER_TYPES_V1",
+  "upstream_package": "typescript",
+  "version": "5.8.3",
+  "upstream_file": "lib/lib.dom.d.ts",
+  "upstream_sha256": "092c2bfe125ce69dbb1223c85d68d4d2397d7d8411867b5cc03cec902c233763",
+  "upstream_bytes": 1383175,
+  "license": "Apache-2.0",
+  "output": {
+    "name": "scripts/operations/owner-quarter-live-release-20261019/compiler-webauthn-dom-5.8.3.d.ts",
+    "sha256": "a0573b238f6cd00ddb43a0f11f6e7d9de0af038ea11c2b0d0573f9901a7e621d",
+    "bytes": 6779
+  },
+  "roots": [
+    "CredentialCreationOptions",
+    "CredentialRequestOptions",
+    "PublicKeyCredentialRpEntity",
+    "PublicKeyCredentialParameters",
+    "AuthenticatorSelectionCriteria",
+    "AttestationConveyancePreference",
+    "AuthenticationExtensionsClientInputs",
+    "UserVerificationRequirement",
+    "PublicKeyCredentialType",
+    "AuthenticationExtensionsClientOutputs",
+    "AuthenticatorAssertionResponse",
+    "COSEAlgorithmIdentifier",
+    "AuthenticatorAttestationResponse",
+    "PublicKeyCredentialDescriptor",
+    "PublicKeyCredentialCreationOptions",
+    "PublicKeyCredentialRequestOptions",
+    "PublicKeyCredential"
+  ],
+  "existing_platform_types": [
+    "AbortSignal",
+    "ArrayBuffer",
+    "ArrayBufferView",
+    "BufferSource",
+    "Omit",
+    "Partial",
+    "Pick",
+    "Promise",
+    "PromiseLike",
+    "ReadonlyArray",
+    "Record",
+    "Uint8Array"
+  ],
+  "declarations": [
+    {
+      "name": "AuthenticationExtensionsClientInputs",
+      "start": 4672,
+      "end": 4874,
+      "sha256": "fbb3cce1e62b8aef435ee5eba37a90293ae5cafe5c6838cb9fa6f0a171ac132c"
+    },
+    {
+      "name": "AuthenticationExtensionsClientOutputs",
+      "start": 4930,
+      "end": 5126,
+      "sha256": "95bb8f4c2f0e769d7fd0e1676f13a899961dee35c8e54b103599b906cecd1b9b"
+    },
+    {
+      "name": "AuthenticationExtensionsPRFInputs",
+      "start": 5126,
+      "end": 5295,
+      "sha256": "e2815b314e9e3fee939ed85e2bf69728a3e95b80419d83d3bd8f1b4a7bee25c1"
+    },
+    {
+      "name": "AuthenticationExtensionsPRFOutputs",
+      "start": 5295,
+      "end": 5417,
+      "sha256": "961561bb70e7c305666316eb7459d27bfc437020d2ec17839bd07696659c84d2"
+    },
+    {
+      "name": "AuthenticationExtensionsPRFValues",
+      "start": 5417,
+      "end": 5518,
+      "sha256": "f05a26ccc3338abfb424c91fb459629cfe44b57738954eb17adfb5426a4b8e22"
+    },
+    {
+      "name": "AuthenticatorSelectionCriteria",
+      "start": 5518,
+      "end": 5747,
+      "sha256": "cf182a948377d50d90b18a3dedc2c90379b667977a5a5cf401251f2028288129"
+    },
+    {
+      "name": "CredentialCreationOptions",
+      "start": 8854,
+      "end": 8973,
+      "sha256": "40a7e94afc3ab07dd2f70947db27026a2a185e1b76a2ca9457b97f9b471fe103"
+    },
+    {
+      "name": "CredentialPropertiesOutput",
+      "start": 8973,
+      "end": 9033,
+      "sha256": "b0088bb48cbb8601dceb4f99ee64db35ecc892757e66d9395848d799386064b0"
+    },
+    {
+      "name": "CredentialRequestOptions",
+      "start": 9033,
+      "end": 9198,
+      "sha256": "24d7d85f9b1e259f71dd29657a0887f122963aa70a1ad37b27b6bcdf81a6d9e2"
+    },
+    {
+      "name": "PublicKeyCredentialCreationOptions",
+      "start": 31336,
+      "end": 31795,
+      "sha256": "ba17e16be0175b0be0e1d6ed63b77ecf909ae3620e03cae9221c5746f180abb1"
+    },
+    {
+      "name": "PublicKeyCredentialDescriptor",
+      "start": 32270,
+      "end": 32415,
+      "sha256": "c9bd6411a3ae5120b018bcfe81ef450a33982277ea524b34524d48f588c6cda4"
+    },
+    {
+      "name": "PublicKeyCredentialEntity",
+      "start": 32534,
+      "end": 32593,
+      "sha256": "ec08b66a52b77000e7e37cab691dbe813055f571f341d4f7c8d6172b1889ac19"
+    },
+    {
+      "name": "PublicKeyCredentialParameters",
+      "start": 32593,
+      "end": 32707,
+      "sha256": "79932875698ed7c3cc32ef906a9662d74fb5f2c5f130751b08dbaa38db4e04c9"
+    },
+    {
+      "name": "PublicKeyCredentialRequestOptions",
+      "start": 32707,
+      "end": 32989,
+      "sha256": "bb3ceef6b8eb271d4276ca8a69a8ebab39ac3d902a431254b92d5e3e5a47a101"
+    },
+    {
+      "name": "PublicKeyCredentialRpEntity",
+      "start": 33287,
+      "end": 33381,
+      "sha256": "357ec67b9a315eeff01a39adb4ad0c3ac5bdf9eea2cfbdc089da3a7c3f457de7"
+    },
+    {
+      "name": "PublicKeyCredentialUserEntity",
+      "start": 33381,
+      "end": 33507,
+      "sha256": "42ce6d8c86348b183083c64718924401f2e44ad5e60e7167f992e77ba467ae63"
+    },
+    {
+      "name": "AuthenticatorAssertionResponse",
+      "start": 105301,
+      "end": 105992,
+      "sha256": "668d304ee68757bee50b7314430ca8eb540380d3399ede93244bafbddb77c35e"
+    },
+    {
+      "name": "AuthenticatorAttestationResponse",
+      "start": 106132,
+      "end": 107174,
+      "sha256": "ae8b68cd3169b102f65a7493500d2b161bb0d5aef42117e75675931084996296"
+    },
+    {
+      "name": "AuthenticatorResponse",
+      "start": 107320,
+      "end": 107641,
+      "sha256": "1203a68342098445e6715d53692cf8a400d8614aa12462e98bfc173083c0c95b"
+    },
+    {
+      "name": "Credential",
+      "start": 249354,
+      "end": 249727,
+      "sha256": "354d8ca7a39e70b8b114c229215808e8598545c321dc7d0ff11ef4afad74821b"
+    },
+    {
+      "name": "PublicKeyCredential",
+      "start": 825778,
+      "end": 826734,
+      "sha256": "85b3b12e68e80cfcd17a22880107dd698fbd5531dcaae796dd8bf7ec787bb31c"
+    },
+    {
+      "name": "COSEAlgorithmIdentifier",
+      "start": 1364680,
+      "end": 1364719,
+      "sha256": "410bbba0d7bb9f0999ab767c1dcaf92d4474c04767cd68e60b8cce8a81b904ff"
+    },
+    {
+      "name": "PublicKeyCredentialJSON",
+      "start": 1367286,
+      "end": 1367322,
+      "sha256": "ac9ac09f3745bfe9eaeb4f4086d8c884583407a7596abe3083fe817f681a5708"
+    },
+    {
+      "name": "AttestationConveyancePreference",
+      "start": 1368708,
+      "end": 1368794,
+      "sha256": "6e149bfbfea9b2f3c7249e4414bad8a6dee044006f82a169f31a9fa97e5b8c3b"
+    },
+    {
+      "name": "AuthenticatorAttachment",
+      "start": 1369045,
+      "end": 1369107,
+      "sha256": "0b2ad8e407643ce568cd4a99bca64d33ca79c2e275cc9e96d93dd3976b0ef555"
+    },
+    {
+      "name": "AuthenticatorTransport",
+      "start": 1369107,
+      "end": 1369184,
+      "sha256": "a7072003939e4d2cfbf466aac6cfb13a1c1bba26df9435e6d428b6c983951298"
+    },
+    {
+      "name": "CredentialMediationRequirement",
+      "start": 1372103,
+      "end": 1372193,
+      "sha256": "f33dcb7cc12b14154718035168e504504df5e1dda64e68fd9dd2ac32d2db19a5"
+    },
+    {
+      "name": "PublicKeyCredentialType",
+      "start": 1377320,
+      "end": 1377365,
+      "sha256": "95c76d043fdc2855a137630ec8f97ad52325f831e92691cd9d5fb7d474d057e5"
+    },
+    {
+      "name": "ResidentKeyRequirement",
+      "start": 1380757,
+      "end": 1380829,
+      "sha256": "4615b262d19ae706b22ed278a712aaf7ef007cad138e46685552b6e36ec6f863"
+    },
+    {
+      "name": "UserVerificationRequirement",
+      "start": 1382145,
+      "end": 1382222,
+      "sha256": "c21d78177c19f6b3cb93f138596380aa1a66fe99bb8e28f7d4dd41b028eb4dd5"
+    }
+  ],
+  "mechanical_verbatim_extraction": true,
+  "runtime_implementation": false,
+  "only_reader_deno_compiler": true,
+  "sdk_or_function_payload_changed": false,
+  "license_file": {
+    "upstream_sha256": "a7d00bfd54525bc694b6e32f64c7ebcf5e6b7ae3657be5cc12767bce74654a47",
+    "retained_sha256": "527adf9d4c760f7367c2aeffed6a89afba8ba40ea1b0efbc8f56496ad30ea9cf",
+    "normalization": "CRLF_TO_LF_AND_TRAILING_WHITESPACE_ONLY;ALL_LICENSE_WORDS_PRESERVED"
+  }
+}

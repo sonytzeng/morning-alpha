@@ -1,0 +1,11 @@
+--- actual-baseline/supabase/functions/recommendation-stock-evidence-v1/index.ts
++++ producer/supabase/functions/recommendation-stock-evidence-v1/index.ts
+@@ -1 +1,2 @@
+-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
++// @deno-types="../_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.d.mts"
++import { createClient } from '../_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs';
+@@ -11,0 +13 @@
++import { attachOwnerQuarterCapsule } from '../_shared/recommendation-owner-quarter-capsule.ts';
+@@ -66 +68 @@
+-  const proof=await buildRecommendationProof(data,identity,captures,officialActuals);
++  const proof=await attachOwnerQuarterCapsule(await buildRecommendationProof(data,identity,captures,officialActuals),identity,bundle.acquisition_cutoff);

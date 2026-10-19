@@ -1,0 +1,941 @@
+{
+  "schema": "OWNER_QUARTER_ACTUAL15_READER56_SOURCE_REVIEW_V1",
+  "status": "OFFLINE_PRIVACY_FIX_VALIDATED_NEW_HEAD_DENO_AND_PRODUCTION_PENDING",
+  "base": "bd941dc3ead8eb66eeaf2b21ca13acf1c90f98e4",
+  "base_tree": "d14f50b638269749a2286d77f330129208e240e6",
+  "composition_manifest": "docs/operations/evidence/core-member-integration-20261019-owner-quarter-live.json",
+  "preserved_prior_composition": {
+    "path": "docs/operations/evidence/core-member-integration-20261019-owner-quarter-actuals.json",
+    "sha256": "a75db2089b1e248874bfa085f1f0f2871488ecd65b9ee85d17b15d0cbcdb202a",
+    "bytes": 94941,
+    "mode": "100644"
+  },
+  "release_catalog": {
+    "path": "scripts/operations/owner-quarter-live-release-20261019/release-catalog.json",
+    "sha256": "4c224f257a05e0219234cf906ec619b3bc01ec7a40027b0e353b73de4f3ed1d5",
+    "bytes": 554263,
+    "mode": "100644"
+  },
+  "sources": [
+    {
+      "path": ".github/workflows/owner-quarter-live-candidate.yml",
+      "sha256": "69c343b60389125dfdbdcb8ecb1c1136da34e71fe1aa091544e5c7892d9a1a80",
+      "bytes": 2664,
+      "mode": "100644"
+    },
+    {
+      "path": "docs/operations/owner-quarter-live-closure-20261019.md",
+      "sha256": "ba3f8f5a5b05e32759a55b9e510ff57ea67880c736ed5eb732c4f6b1c700ce06",
+      "bytes": 13432,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/baseline/node-type-originals.json.gz",
+      "sha256": "787db57409b2a413d7dfdc6f3db1c647adf62094887342856e984cc816ced0a5",
+      "bytes": 445839,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/baseline/producer15-sdk-source-catalog.json",
+      "sha256": "46cc563621db4a99d4a1b89559aa1db477a92b27238a22042edaae179519c168",
+      "bytes": 15462,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/baseline/producer15-sdk-source-files.json.gz",
+      "sha256": "ef8d805542c3963a2a5b08a7e1f45df9c2456e84bc539d1ffcafd1cf6d34ffaf",
+      "bytes": 165281,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/baseline/producer15-source-catalog.json",
+      "sha256": "d36150ae333a7034f24d1333447dde36fd12ce51194ad7a2493d465e663c1fb0",
+      "bytes": 4709,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/baseline/producer15-source-files.json.gz",
+      "sha256": "5c72657fdfdf84668d5a968f268a75fd2fd5cb2e6ac307dbcf99fc6ee33b043e",
+      "bytes": 52426,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/baseline/reader-type-originals.json.gz",
+      "sha256": "d053579f45f3513ae9a64b030e5d418b69f4093e7a180965dc2e370a432763cb",
+      "bytes": 151919,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/baseline/reader56-source-catalog.json",
+      "sha256": "4ca978d3f4b0f5de966331417376dfb650810b36ac8ce284eedfc3dd168d2e0d",
+      "bytes": 11540,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/baseline/reader56-source-files.json.gz",
+      "sha256": "43aa94c9b8d92728d79b35ab405a893fd161ba7870341bcbdf8bf736646fb4a4",
+      "bytes": 182419,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/baseline/type-closure-catalog.json",
+      "sha256": "eb040e19927e87680951cc9f4245b2ad058469780d4f3d441814e8568a6d2cc2",
+      "bytes": 329853,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/baseline/type-closure-files.json.gz",
+      "sha256": "9df7595d057b597613e5c8c7c0321dd591ba96244649e042e2c7ce9576bdd639",
+      "bytes": 672190,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/check-typescript.mjs",
+      "sha256": "df12a409640046fe38501a18656b3b359085003ffd451d64c6e8b1d243f837e9",
+      "bytes": 3136,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/compiler-typescript-LICENSE.txt",
+      "sha256": "527adf9d4c760f7367c2aeffed6a89afba8ba40ea1b0efbc8f56496ad30ea9cf",
+      "bytes": 9141,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/compiler-webauthn-dom-5.8.3.d.ts",
+      "sha256": "a0573b238f6cd00ddb43a0f11f6e7d9de0af038ea11c2b0d0573f9901a7e621d",
+      "bytes": 6779,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/compiler-webauthn-dom-5.8.3.provenance.json",
+      "sha256": "ae3c03982dbb092603e8cb4290277310c9db333896ea4357bbdce2b01b58d31b",
+      "bytes": 7422,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/entry-edits.json",
+      "sha256": "7a38bdfc508814d20e5ad73329ad7f9709987f7d7bee6bc017c71ef97a9fa7f4",
+      "bytes": 4626,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/materialize.mjs",
+      "sha256": "771f94eee51c496c19c7c16959bd17aaeb489cae71ad053ef935d342c12f0abd",
+      "bytes": 8076,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/prepare-check-sources.mjs",
+      "sha256": "9a543757c93c3269c0614174ceb9453adc3e1f77d1455abc1bf8ea499be9de54",
+      "bytes": 4417,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/producer-entry.patch",
+      "sha256": "9da5950196f89bd26969338204360e67d982ee764fa03464a7e58a4b943b041b",
+      "bytes": 868,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/producer-recovery-entry.patch",
+      "sha256": "b1172e599e2c021f18f0a6f5870bd574eaf2183bce65e750fe2fa5d48f7ef36d",
+      "bytes": 855,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/reader-entry.patch",
+      "sha256": "4755d0f06b3b55c8426b8152288c55a05446d10763912b54c777bc0abcb3d789",
+      "bytes": 1801,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/reader-recovery-entry.patch",
+      "sha256": "2e1a5ab0199e248bafbb4bdd6e4ad2e84c015a820727af2b09016a0fc9148006",
+      "bytes": 816,
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/release-catalog.json",
+      "sha256": "4c224f257a05e0219234cf906ec619b3bc01ec7a40027b0e353b73de4f3ed1d5",
+      "bytes": 554263,
+      "mode": "100644"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-owner-quarter-capsule.ts",
+      "sha256": "12ff24bc99675778a878cf9563fb35d9032aa50b917cde333baeadb044d741cc",
+      "bytes": 4432,
+      "mode": "100644"
+    },
+    {
+      "path": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+      "sha256": "2d548e147f95607dddea3357cb6fe1f8f0f04d2b3ce3ab4d61de9fdc08938831",
+      "bytes": 651,
+      "mode": "100644"
+    },
+    {
+      "path": "tests/helpers/integrationAdmission.mjs",
+      "sha256": "8cbd2bc7f8e37a8991e65db6871df3bb1c3947ca8f43545b6c6b15c2be6ea863",
+      "bytes": 33354,
+      "mode": "100644"
+    },
+    {
+      "path": "tests/helpers/ownerQuarterLiveRuntimeHarness.mjs",
+      "sha256": "3ab6d0a7ec31e543fbd3c00f70a83ef6320ec1c199c3e95d5c013eaed664da11",
+      "bytes": 14482,
+      "mode": "100644"
+    },
+    {
+      "path": "tests/ownerQuarterLiveRelease.test.mjs",
+      "sha256": "a6f6b9e76657f4b8684c8489e44350bb4d37fb8c08c45859c9386c81f958cfbb",
+      "bytes": 8856,
+      "mode": "100644"
+    },
+    {
+      "path": "tests/ownerQuarterLiveRuntime.integration.mjs",
+      "sha256": "618f28da5af309135f4146b4dbdd3f0b9676ca4b17151a5ef05d5b2aab15b6a8",
+      "bytes": 14996,
+      "mode": "100644"
+    }
+  ],
+  "artifacts": [
+    {
+      "variant": "producer",
+      "entrypoint": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "verify_jwt": true,
+      "import_map": false,
+      "counts": {
+        "runtime": 39,
+        "type_only": 176,
+        "static": 36
+      },
+      "payload_sha256": "dd5240c35bd6ebd2bd98d24d3f87086bde62293fea30fa1bc203dd1051f9e69a",
+      "payload_bytes": 3613538,
+      "runtime_js_matches_review_snapshot": true,
+      "runtime_comparison": "UNCHANGED_ENTIRE_PRODUCER_PAYLOAD",
+      "changed_or_added_runtime": [],
+      "sdk_runtime_bytes_unchanged": true
+    },
+    {
+      "variant": "producer-recovery",
+      "entrypoint": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "verify_jwt": true,
+      "import_map": false,
+      "counts": {
+        "runtime": 35,
+        "type_only": 176,
+        "static": 36
+      },
+      "payload_sha256": "1df4876799e6140538cc7f98b4a5a7f94c1b1612ede8392d83c9e93f95f0f1b9",
+      "payload_bytes": 3590027,
+      "runtime_js_matches_review_snapshot": true,
+      "runtime_comparison": "UNCHANGED_ENTIRE_PRODUCER_PAYLOAD",
+      "changed_or_added_runtime": [],
+      "sdk_runtime_bytes_unchanged": true
+    },
+    {
+      "variant": "reader",
+      "entrypoint": "supabase/functions/get-report-payload/index.ts",
+      "verify_jwt": false,
+      "import_map": false,
+      "counts": {
+        "runtime": 56,
+        "type_only": 170,
+        "static": 20
+      },
+      "payload_sha256": "4fc09a67a1cf8821e7a279638c52fa63010e7cb87032957268ab37ec7c47629f",
+      "payload_bytes": 4132296,
+      "runtime_js_matches_review_snapshot": false,
+      "runtime_comparison": "INTENTIONAL_ENTRY_AND_DUAL_JSON_WRAPPER_DELTA; ALL_OTHER_RUNTIME_JS_UNCHANGED",
+      "changed_or_added_runtime": [
+        {
+          "name": "supabase/functions/get-report-payload/index.ts",
+          "before_emitted_sha256": "5305faf3ac75fd02ff56955c576b0d2695996fac9358602c3b4b1b305b2ad555",
+          "after_emitted_sha256": "ca755f44f1fa5f15031d0b841761cf3c5d27a0789945a49de420d23b86989525",
+          "reason": "DUAL_JSON_PRIVATE_CAPSULE_STRIP"
+        },
+        {
+          "name": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+          "before_emitted_sha256": null,
+          "after_emitted_sha256": "d1a99ccefcfe632cff08a3e548393f1832e034d92d42315c78343af07ad97004",
+          "reason": "DUAL_JSON_PRIVATE_CAPSULE_STRIP"
+        }
+      ],
+      "sdk_runtime_bytes_unchanged": true
+    },
+    {
+      "variant": "reader-recovery",
+      "entrypoint": "supabase/functions/get-report-payload/index.ts",
+      "verify_jwt": false,
+      "import_map": false,
+      "counts": {
+        "runtime": 52,
+        "type_only": 170,
+        "static": 20
+      },
+      "payload_sha256": "7d7c1541002aef5e265b30fea9c14153664cbe4599022bce8a62f81c33e3cf8b",
+      "payload_bytes": 4107976,
+      "runtime_js_matches_review_snapshot": false,
+      "runtime_comparison": "INTENTIONAL_ENTRY_AND_DUAL_JSON_WRAPPER_DELTA; ALL_OTHER_RUNTIME_JS_UNCHANGED",
+      "changed_or_added_runtime": [
+        {
+          "name": "supabase/functions/get-report-payload/index.ts",
+          "before_emitted_sha256": "6dcc837d8d6c76ea0f816c2844688336ecd5a38f9b00ca63021716d898ab8223",
+          "after_emitted_sha256": "cc2ae560865adbf4f8f5f80ef1ec7e2d26ff9a3d999bcd835be6eef60f36b4cc",
+          "reason": "DUAL_JSON_PRIVATE_CAPSULE_STRIP"
+        },
+        {
+          "name": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+          "before_emitted_sha256": null,
+          "after_emitted_sha256": "d1a99ccefcfe632cff08a3e548393f1832e034d92d42315c78343af07ad97004",
+          "reason": "DUAL_JSON_PRIVATE_CAPSULE_STRIP"
+        }
+      ],
+      "sdk_runtime_bytes_unchanged": true
+    }
+  ],
+  "baseline": {
+    "producer_files": 20,
+    "reader_files": 50,
+    "hashes_and_retained_full_bytes": true,
+    "fresh_read_only_match": 70,
+    "producer_source_ref": "5f33777836778e3600e4e377fcb3cf4de690fe80",
+    "git_global_sources_unchanged": true
+  },
+  "types": {
+    "official_producer_declarations": 48,
+    "official_reader_declarations": 42,
+    "reader_packages": 8,
+    "reader_license_and_metadata_files": 16,
+    "node_packages": [
+      {
+        "name": "@types/node",
+        "version": "26.0.0"
+      },
+      {
+        "name": "undici-types",
+        "version": "8.3.0"
+      }
+    ],
+    "contract": {
+      "source_ref": "5f33777836778e3600e4e377fcb3cf4de690fe80",
+      "path": "src/features/decision-v1/contract.ts",
+      "sha256": "26f4b8efed797c86616614bdc63136619b5f3112cc0dad9b66bf6c650cfc3715",
+      "bytes": 5427,
+      "runtime_imported": false
+    },
+    "type_only_aliases": 135,
+    "native_type_ports": 60,
+    "function_import_map": false,
+    "separate_compile_only_map": true,
+    "four_separate_programs": true,
+    "external_node_modules_types": 0,
+    "no_fake_sdk_types": true,
+    "no_skip_lib_check": true,
+    "deno_pending": true,
+    "node26_deno_compatibility": "SUPPLEMENTARY_TSC_ONLY; DENO_USES_VERIFIED_BUILTIN_NODE_PORT_AND_COMPILER_ONLY_OFFICIAL_DOM; NEW_HEAD_PENDING",
+    "deno_node_type_strategy": "DENO2_9_7_BUNDLED_LIB_NODE;NO_SECOND_NODE26_AMBIENT;SUPPLEMENTARY_TSC_STILL_ARCHIVED_NODE26",
+    "reader_web_authn": {
+      "schema": "OFFICIAL_TYPESCRIPT_WEB_AUTHN_COMPILER_TYPES_V1",
+      "upstream_package": "typescript",
+      "version": "5.8.3",
+      "upstream_file": "lib/lib.dom.d.ts",
+      "upstream_sha256": "092c2bfe125ce69dbb1223c85d68d4d2397d7d8411867b5cc03cec902c233763",
+      "upstream_bytes": 1383175,
+      "license": "Apache-2.0",
+      "output": {
+        "name": "scripts/operations/owner-quarter-live-release-20261019/compiler-webauthn-dom-5.8.3.d.ts",
+        "sha256": "a0573b238f6cd00ddb43a0f11f6e7d9de0af038ea11c2b0d0573f9901a7e621d",
+        "bytes": 6779
+      },
+      "roots": [
+        "CredentialCreationOptions",
+        "CredentialRequestOptions",
+        "PublicKeyCredentialRpEntity",
+        "PublicKeyCredentialParameters",
+        "AuthenticatorSelectionCriteria",
+        "AttestationConveyancePreference",
+        "AuthenticationExtensionsClientInputs",
+        "UserVerificationRequirement",
+        "PublicKeyCredentialType",
+        "AuthenticationExtensionsClientOutputs",
+        "AuthenticatorAssertionResponse",
+        "COSEAlgorithmIdentifier",
+        "AuthenticatorAttestationResponse",
+        "PublicKeyCredentialDescriptor",
+        "PublicKeyCredentialCreationOptions",
+        "PublicKeyCredentialRequestOptions",
+        "PublicKeyCredential"
+      ],
+      "existing_platform_types": [
+        "AbortSignal",
+        "ArrayBuffer",
+        "ArrayBufferView",
+        "BufferSource",
+        "Omit",
+        "Partial",
+        "Pick",
+        "Promise",
+        "PromiseLike",
+        "ReadonlyArray",
+        "Record",
+        "Uint8Array"
+      ],
+      "declarations": [
+        {
+          "name": "AuthenticationExtensionsClientInputs",
+          "start": 4672,
+          "end": 4874,
+          "sha256": "fbb3cce1e62b8aef435ee5eba37a90293ae5cafe5c6838cb9fa6f0a171ac132c"
+        },
+        {
+          "name": "AuthenticationExtensionsClientOutputs",
+          "start": 4930,
+          "end": 5126,
+          "sha256": "95bb8f4c2f0e769d7fd0e1676f13a899961dee35c8e54b103599b906cecd1b9b"
+        },
+        {
+          "name": "AuthenticationExtensionsPRFInputs",
+          "start": 5126,
+          "end": 5295,
+          "sha256": "e2815b314e9e3fee939ed85e2bf69728a3e95b80419d83d3bd8f1b4a7bee25c1"
+        },
+        {
+          "name": "AuthenticationExtensionsPRFOutputs",
+          "start": 5295,
+          "end": 5417,
+          "sha256": "961561bb70e7c305666316eb7459d27bfc437020d2ec17839bd07696659c84d2"
+        },
+        {
+          "name": "AuthenticationExtensionsPRFValues",
+          "start": 5417,
+          "end": 5518,
+          "sha256": "f05a26ccc3338abfb424c91fb459629cfe44b57738954eb17adfb5426a4b8e22"
+        },
+        {
+          "name": "AuthenticatorSelectionCriteria",
+          "start": 5518,
+          "end": 5747,
+          "sha256": "cf182a948377d50d90b18a3dedc2c90379b667977a5a5cf401251f2028288129"
+        },
+        {
+          "name": "CredentialCreationOptions",
+          "start": 8854,
+          "end": 8973,
+          "sha256": "40a7e94afc3ab07dd2f70947db27026a2a185e1b76a2ca9457b97f9b471fe103"
+        },
+        {
+          "name": "CredentialPropertiesOutput",
+          "start": 8973,
+          "end": 9033,
+          "sha256": "b0088bb48cbb8601dceb4f99ee64db35ecc892757e66d9395848d799386064b0"
+        },
+        {
+          "name": "CredentialRequestOptions",
+          "start": 9033,
+          "end": 9198,
+          "sha256": "24d7d85f9b1e259f71dd29657a0887f122963aa70a1ad37b27b6bcdf81a6d9e2"
+        },
+        {
+          "name": "PublicKeyCredentialCreationOptions",
+          "start": 31336,
+          "end": 31795,
+          "sha256": "ba17e16be0175b0be0e1d6ed63b77ecf909ae3620e03cae9221c5746f180abb1"
+        },
+        {
+          "name": "PublicKeyCredentialDescriptor",
+          "start": 32270,
+          "end": 32415,
+          "sha256": "c9bd6411a3ae5120b018bcfe81ef450a33982277ea524b34524d48f588c6cda4"
+        },
+        {
+          "name": "PublicKeyCredentialEntity",
+          "start": 32534,
+          "end": 32593,
+          "sha256": "ec08b66a52b77000e7e37cab691dbe813055f571f341d4f7c8d6172b1889ac19"
+        },
+        {
+          "name": "PublicKeyCredentialParameters",
+          "start": 32593,
+          "end": 32707,
+          "sha256": "79932875698ed7c3cc32ef906a9662d74fb5f2c5f130751b08dbaa38db4e04c9"
+        },
+        {
+          "name": "PublicKeyCredentialRequestOptions",
+          "start": 32707,
+          "end": 32989,
+          "sha256": "bb3ceef6b8eb271d4276ca8a69a8ebab39ac3d902a431254b92d5e3e5a47a101"
+        },
+        {
+          "name": "PublicKeyCredentialRpEntity",
+          "start": 33287,
+          "end": 33381,
+          "sha256": "357ec67b9a315eeff01a39adb4ad0c3ac5bdf9eea2cfbdc089da3a7c3f457de7"
+        },
+        {
+          "name": "PublicKeyCredentialUserEntity",
+          "start": 33381,
+          "end": 33507,
+          "sha256": "42ce6d8c86348b183083c64718924401f2e44ad5e60e7167f992e77ba467ae63"
+        },
+        {
+          "name": "AuthenticatorAssertionResponse",
+          "start": 105301,
+          "end": 105992,
+          "sha256": "668d304ee68757bee50b7314430ca8eb540380d3399ede93244bafbddb77c35e"
+        },
+        {
+          "name": "AuthenticatorAttestationResponse",
+          "start": 106132,
+          "end": 107174,
+          "sha256": "ae8b68cd3169b102f65a7493500d2b161bb0d5aef42117e75675931084996296"
+        },
+        {
+          "name": "AuthenticatorResponse",
+          "start": 107320,
+          "end": 107641,
+          "sha256": "1203a68342098445e6715d53692cf8a400d8614aa12462e98bfc173083c0c95b"
+        },
+        {
+          "name": "Credential",
+          "start": 249354,
+          "end": 249727,
+          "sha256": "354d8ca7a39e70b8b114c229215808e8598545c321dc7d0ff11ef4afad74821b"
+        },
+        {
+          "name": "PublicKeyCredential",
+          "start": 825778,
+          "end": 826734,
+          "sha256": "85b3b12e68e80cfcd17a22880107dd698fbd5531dcaae796dd8bf7ec787bb31c"
+        },
+        {
+          "name": "COSEAlgorithmIdentifier",
+          "start": 1364680,
+          "end": 1364719,
+          "sha256": "410bbba0d7bb9f0999ab767c1dcaf92d4474c04767cd68e60b8cce8a81b904ff"
+        },
+        {
+          "name": "PublicKeyCredentialJSON",
+          "start": 1367286,
+          "end": 1367322,
+          "sha256": "ac9ac09f3745bfe9eaeb4f4086d8c884583407a7596abe3083fe817f681a5708"
+        },
+        {
+          "name": "AttestationConveyancePreference",
+          "start": 1368708,
+          "end": 1368794,
+          "sha256": "6e149bfbfea9b2f3c7249e4414bad8a6dee044006f82a169f31a9fa97e5b8c3b"
+        },
+        {
+          "name": "AuthenticatorAttachment",
+          "start": 1369045,
+          "end": 1369107,
+          "sha256": "0b2ad8e407643ce568cd4a99bca64d33ca79c2e275cc9e96d93dd3976b0ef555"
+        },
+        {
+          "name": "AuthenticatorTransport",
+          "start": 1369107,
+          "end": 1369184,
+          "sha256": "a7072003939e4d2cfbf466aac6cfb13a1c1bba26df9435e6d428b6c983951298"
+        },
+        {
+          "name": "CredentialMediationRequirement",
+          "start": 1372103,
+          "end": 1372193,
+          "sha256": "f33dcb7cc12b14154718035168e504504df5e1dda64e68fd9dd2ac32d2db19a5"
+        },
+        {
+          "name": "PublicKeyCredentialType",
+          "start": 1377320,
+          "end": 1377365,
+          "sha256": "95c76d043fdc2855a137630ec8f97ad52325f831e92691cd9d5fb7d474d057e5"
+        },
+        {
+          "name": "ResidentKeyRequirement",
+          "start": 1380757,
+          "end": 1380829,
+          "sha256": "4615b262d19ae706b22ed278a712aaf7ef007cad138e46685552b6e36ec6f863"
+        },
+        {
+          "name": "UserVerificationRequirement",
+          "start": 1382145,
+          "end": 1382222,
+          "sha256": "c21d78177c19f6b3cb93f138596380aa1a66fe99bb8e28f7d4dd41b028eb4dd5"
+        }
+      ],
+      "mechanical_verbatim_extraction": true,
+      "runtime_implementation": false,
+      "only_reader_deno_compiler": true,
+      "sdk_or_function_payload_changed": false,
+      "license_file": {
+        "upstream_sha256": "a7d00bfd54525bc694b6e32f64c7ebcf5e6b7ae3657be5cc12767bce74654a47",
+        "retained_sha256": "527adf9d4c760f7367c2aeffed6a89afba8ba40ea1b0efbc8f56496ad30ea9cf",
+        "normalization": "CRLF_TO_LF_AND_TRAILING_WHITESPACE_ONLY;ALL_LICENSE_WORDS_PRESERVED"
+      }
+    }
+  },
+  "validation": {
+    "tests": {
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0,
+      "materializer": 6,
+      "actual_runtime": 12,
+      "all_synthetic_saved_report_fixtures_have_both_json_columns": true
+    },
+    "successor_admission": {
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "rows": 388
+    },
+    "strict_typescript": {
+      "scope": "STRICT_TYPESCRIPT_ACTUAL_MATERIALIZED_ENTRIES_WITH_TRUE_ARCHIVED_DECLARATIONS_NOT_DENO",
+      "results": [
+        {
+          "variant": "producer",
+          "diagnostics": 0,
+          "codes": [],
+          "source_files": 261,
+          "external_node_modules_types": []
+        },
+        {
+          "variant": "producer-recovery",
+          "diagnostics": 0,
+          "codes": [],
+          "source_files": 257,
+          "external_node_modules_types": []
+        },
+        {
+          "variant": "reader",
+          "diagnostics": 0,
+          "codes": [],
+          "source_files": 275,
+          "external_node_modules_types": []
+        },
+        {
+          "variant": "reader-recovery",
+          "diagnostics": 0,
+          "codes": [],
+          "source_files": 271,
+          "external_node_modules_types": []
+        }
+      ]
+    },
+    "lint": "PASS_SCOPED",
+    "deno": "FOUR_PARENT_ARTIFACTS_PASS_AT_E3D421E; TWO_READERS_MODIFIED_NOW_REQUIRING_NEW_EXACT_HEAD_CI",
+    "security": "VALIDATED_DUAL_JSON_PRIVACY_FINDING_FIXED_IN_SOURCE; INDEPENDENT_FINAL_BINDING_PENDING; NO_FORMAL_SECURITY_SCAN",
+    "evidence": [
+      {
+        "kind": "actual_runtime",
+        "path": "build/owner-quarter-dual-json-fix-20261019/FINAL_18_TESTS.log",
+        "sha256": "58b942204b0b7fdbdcbf869a1812e22a59e791235319a8092a077f2dddf85364",
+        "bytes": 5139
+      },
+      {
+        "kind": "strict_types",
+        "path": "build/owner-quarter-dual-json-fix-20261019/FINAL_CLOSED_TYPES_SAFE.json",
+        "sha256": "8c83cbb7b6d43f4e2b3b409d330fde90c29cbd86ac45d012e582c0c41f896b80",
+        "bytes": 533
+      },
+      {
+        "kind": "lint",
+        "path": "build/owner-quarter-dual-json-fix-20261019/FINAL_LINT.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "kind": "actual_reader_red",
+        "path": "build/owner-quarter-candidate/RAW_JSON_PRIVACY_RED.log",
+        "sha256": "128d4a9205fcce2f5afce1a98fb2cd66a50025b2fe442f7a09b9976b0d246678",
+        "bytes": 1265
+      },
+      {
+        "kind": "actual_reader_targeted_green",
+        "path": "build/owner-quarter-dual-json-fix-20261019/RAW_JSON_PRIVACY_GREEN.log",
+        "sha256": "55540f7d2bf72937636fea42c2e35c42e857330939f4f062e47af1e3ecc9ebb6",
+        "bytes": 667
+      },
+      {
+        "kind": "successor_admission",
+        "path": "build/owner-quarter-dual-json-fix-20261019/FINAL_SUCCESSOR_ADMISSION_TESTS.log",
+        "sha256": "a528396e6268cc7300b229e85438c2fbcced5140a69b8896c67e5a578db1e805",
+        "bytes": 3218
+      },
+      {
+        "kind": "runtime_count_packaging",
+        "path": "build/owner-quarter-runtime-count-metadata-20261019/PACKAGING_6_TESTS.log",
+        "sha256": "22de161e695f1327adaead06e184e398dd2466d252ac619b5e31de309d2281f9",
+        "bytes": 1689
+      },
+      {
+        "kind": "runtime_count_scoped_lint",
+        "path": "build/owner-quarter-runtime-count-metadata-20261019/LINT.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "kind": "runtime_count_metadata_admission",
+        "path": "build/owner-quarter-runtime-count-metadata-20261019/ADMISSION_13_TESTS.log",
+        "sha256": "fec08204362f517fc94da26af1f5442c9e6ffc68a93160786beaee03d770e42e",
+        "bytes": 3217
+      }
+    ],
+    "root_application_checks": {
+      "type_check": "PASS",
+      "lint": "PASS",
+      "build": "PASS",
+      "changed_application_sources": false
+    },
+    "review_patch_whitespace": {
+      "original_preflight": "FAIL_PATCH_BLANK_CONTEXT_TRAILING_SPACE_PRESERVED",
+      "correction": "ZERO_CONTEXT_PATCH_SAME_EXACT_ENTRY_EDITS",
+      "independent_patch_roundtrip": "PASS",
+      "runtime_source_changed": false
+    },
+    "initial_actual_deno": {
+      "head": "3fb6546e8ce2135a52ce13294982d0f674886800",
+      "run_id": 39190275844,
+      "job_id": 117861339753,
+      "result": "FAIL_PRODUCER_TS2307_80_OFFICIAL_BARE_REFERENCE_PATHS",
+      "remaining_three": "NOT_EXECUTED",
+      "fix": "EXACT_COMPILE_ONLY_SCOPED_MAP_TO_EXISTING_SEALED_DECLARATIONS",
+      "declaration_and_runtime_bytes_changed": false,
+      "next_head_deno": "PENDING"
+    },
+    "generator_passthrough": {
+      "scope": "READ_ONLY_ACTUAL_GENERATOR248_AND_DB_SOURCE_PLUS5_OFFLINE_PURE_PROJECTION_GROUPS_NOT_PRODUCTION_E2E",
+      "safe_receipt_sha256": "f3081c54891e9ee31a012316786db86f8c305b7157a75f51fde4225ccb0159c9",
+      "reports_json_fields": [
+        "ai_strategy_json",
+        "raw_ai_json"
+      ],
+      "sidecar_private_ancestor_stripped_by_db_projection": true,
+      "writes": 0
+    },
+    "second_actual_deno": {
+      "head": "e60aec8af3b573af58b7f3c2628e79817061b41a",
+      "run_id": 39190572695,
+      "job_id": 117862240266,
+      "variants_checked": 4,
+      "result": "FAIL_DUPLICATED_NODE26_AND_DENO_BUILTIN_AMBIENTS",
+      "aggregate_errors": 748,
+      "fix": "USE_DENO2_9_7_REAL_BUNDLED_LIB_NODE_NOT_SECOND_NODE26_GLOBALS",
+      "skip_lib_check": false,
+      "runtime_and_sdk_declarations_changed": false,
+      "next_head_deno": "PENDING"
+    },
+    "third_actual_deno": {
+      "head": "7f2bbc8fa61d4400563a7d5d72bf85d6f92247b3",
+      "run_id": 39190843203,
+      "job_id": 117863065265,
+      "variants_checked": 4,
+      "result": "FAIL_EXPLICIT_SDK_WRAPPER_NODE_INDEX_PATH_STILL_LOADED_SECOND_AMBIENT",
+      "fix": "ALSO_MAP_EXACT_SEALED_NODE_INDEX_COMPILER_PORT_TO_REAL_DENO_BUILTIN",
+      "runtime_and_sdk_declarations_changed": false,
+      "next_head_deno": "PENDING"
+    },
+    "fourth_actual_deno": {
+      "head": "c8e899e2cc73a8f4224d2f255abd6ec2e4014203",
+      "run_id": 39191083522,
+      "job_id": 117863826517,
+      "producer": "PASS",
+      "producer_recovery": "PASS",
+      "reader": "FAIL_28_MISSING_WEB_AUTHN_STANDARD_TYPES",
+      "reader_recovery": "FAIL_28_MISSING_WEB_AUTHN_STANDARD_TYPES",
+      "fix": "MECHANICAL_VERBATIM_OFFICIAL_TYPESCRIPT5_8_3_WEB_AUTHN_DECLARATION_CLOSURE_FOR_READER_COMPILER_ONLY",
+      "next_head_deno": "PENDING"
+    },
+    "guard_lint": {
+      "first_extra_scoped_lint": "FAIL31_PREEXISTING_NODE_GLOBAL_REFERENCES",
+      "fix": "EXPLICIT_NODE_BUFFER_AND_URL_IMPORTS;NO_ASSERTIONS_REMOVED",
+      "recheck": "PASS_EXPLICIT_NODE_GLOBAL_IMPORTS"
+    },
+    "license_whitespace": {
+      "first_preflight": "FAIL_UPSTREAM_LICENSE_CRLF_TRAILING_SPACE",
+      "fix": "LF_AND_TRAILING_WHITESPACE_NORMALIZED_WITH_ORIGINAL_AND_RETAINED_SHA",
+      "license_words_changed": false
+    },
+    "historical_evidence": [
+      {
+        "kind": "runtime",
+        "path": "build/owner-quarter-candidate/FINAL_17_TESTS.log",
+        "sha256": "1acb2940555a2b0ac49db4cc240681c2c1635fc129bbfaccbd0b0179859d841d",
+        "bytes": 4888
+      },
+      {
+        "kind": "strict_types",
+        "path": "build/owner-quarter-candidate/FINAL_CLOSED_TYPES_SAFE.json",
+        "sha256": "12fcee92a733d8b0e7e8691526cb2682f317d1fcff2fdd4f80cf66a1ec59ca92",
+        "bytes": 533
+      },
+      {
+        "kind": "successor",
+        "path": "build/owner-quarter-candidate/FINAL_SUCCESSOR_ADMISSION_TESTS.log",
+        "sha256": "d53a8dc66994222e479f4dd5151a3d7f7ec8f11e365137adf391caf32ff71f78",
+        "bytes": 3216
+      },
+      {
+        "kind": "lint",
+        "path": "build/owner-quarter-candidate/FINAL_LINT.log",
+        "sha256": "1b69d96ae9257c5843c018095830cc69e96b451b5cc53e8c8487ccb53465677b",
+        "bytes": 1770
+      },
+      {
+        "kind": "baseline_fresh",
+        "path": "/workspace/scratch/866fb527950e/r19-natural-research-20261019/ACTUAL15_READER56_BASELINE_FRESH_MATCH_SAFE.json",
+        "sha256": "b5a2aac2e8f690acfb16d15b86ed16318649c991829643cadaac618bf511a6d3",
+        "bytes": 17826
+      },
+      {
+        "kind": "independent_runtime",
+        "path": "/workspace/scratch/866fb527950e/owner-quarter-runtime-independent-review-20261019/LIMITED_OWNER_QUARTER_RUNTIME_REVIEW_SAFE.json",
+        "sha256": "4444df88dbe17ee1789f4583f22ef001e8f272015cc55e39e6a6a1dbfaed4d7f",
+        "bytes": 14781
+      }
+    ],
+    "final_product_test_sources": [
+      {
+        "path": "tests/helpers/ownerQuarterLiveRuntimeHarness.mjs",
+        "sha256": "3ab6d0a7ec31e543fbd3c00f70a83ef6320ec1c199c3e95d5c013eaed664da11",
+        "bytes": 14482
+      },
+      {
+        "path": "tests/ownerQuarterLiveRuntime.integration.mjs",
+        "sha256": "618f28da5af309135f4146b4dbdd3f0b9676ca4b17151a5ef05d5b2aab15b6a8",
+        "bytes": 14996
+      },
+      {
+        "path": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+        "sha256": "2d548e147f95607dddea3357cb6fe1f8f0f04d2b3ce3ab4d61de9fdc08938831",
+        "bytes": 651
+      }
+    ]
+  },
+  "binding": {
+    "phase": "PREMARKET_ONLY",
+    "scope": "UNIVERSE_72",
+    "source_pack_must_precede_new_proof_cutoff": true,
+    "reader_uses_saved_same_revision_cutoff_only": true,
+    "reader_never_creates_missing_capsule": true,
+    "owner_predicate": "REAL_REQUEST_JWT_AUTH_USER_MATCH_AND_IS_RESEARCH_OWNER_V1_LITERAL_TRUE",
+    "service_role_owner_authorization": false,
+    "nonowner_raw_admin_history_strip": true,
+    "no_new_report_first_existence_or_db_exactly_once_guarantee": true,
+    "existing_idempotency_preserved": true,
+    "database_admin_trust": "EXISTING_PRIVILEGED_ADMIN_BOUNDARY; CURRENT_ADMIN_IS_ENABLED_OWNER; FUTURE_ADMIN_CHANGE_REQUIRES_REVIEW",
+    "report_json_columns": [
+      "ai_strategy_json",
+      "raw_ai_json"
+    ],
+    "dual_object_or_json_string_privacy_strip": true
+  },
+  "recovery": {
+    "producer": "producer-recovery",
+    "reader": "reader-recovery",
+    "after_private_save_never_return_to_unmodified_reader56": true,
+    "preserve_saved_reports": true,
+    "bit_identical_original_eszip": false,
+    "functional_recovery_offline_proven": true,
+    "dual_json_strip_required": true,
+    "prior_candidate_single_ai_strip_is_unsafe_after_dual_json_private_save": true
+  },
+  "holds": {
+    "production_authorized": false,
+    "private_quarter_capture_enabled": false,
+    "market_institutional_capture": false,
+    "formal_source_admission": false,
+    "member_publication": false,
+    "historical_publication": false,
+    "auth_rls_change": false,
+    "cron_change": false,
+    "line_send": false,
+    "payment": false
+  },
+  "remaining": [
+    "Actual Deno CI on all four exact artifacts",
+    "Exact-source production release decision for Reader strip before Producer private save",
+    "Real saved natural Report passthrough and real Owner/nonowner E2E after separately authorized activation",
+    "Formal V1 evidence and commercial source admission remain incomplete; no recommendation threshold change"
+  ],
+  "privacy_fix_parent": {
+    "head": "e3d421e6397f712c90ec7565ae1ca2200bb2264f",
+    "tree": "ccae238923062b7641b616ac037f7280c413e5e2",
+    "prior_four_artifact_deno": "PASS_REPORTED_BY_ROOT_FOR_EXACT_PARENT; MODIFIED_READERS_REQUIRE_NEW_HEAD_CHECK"
+  },
+  "privacy_finding": {
+    "validated": true,
+    "trigger": "Generator248/Atomic save same document into both Report JSON columns; admin_source_report returns full row",
+    "before": "SINGLE_AI_STRIP_LEAKED_RAW_JSON_CAPSULE_TO_NONOWNER_ADMIN",
+    "fix": "CANDIDATE_SPECIFIC_WRAPPER_REUSES_ORIGINAL_STRIP_ON_BOTH_COLUMNS; AUTH_REEXPORTED_UNCHANGED",
+    "actual_route_red": "FAIL_1_OF_1_CONFIRMED",
+    "actual_route_new_green": "PASS_1_OF_1",
+    "coverage": [
+      "object",
+      "JSON string",
+      "nonOwner admin",
+      "Owner check failure/mismatch/nonboolean via dual JSON default fixture",
+      "privacy recovery",
+      "allowed Owner preserves saved private fields",
+      "unrelated diagnostics preserved",
+      "saved Report object unchanged"
+    ],
+    "original_17_tests_were_not_full_privacy_assurance": true,
+    "source_wrapper": {
+      "path": "supabase/functions/_shared/research-owner-quarter-field-access.ts",
+      "sha256": "2d548e147f95607dddea3357cb6fe1f8f0f04d2b3ce3ab4d61de9fdc08938831",
+      "bytes": 651,
+      "mode": "100644"
+    },
+    "formal_security_scan_pass": false,
+    "fix_scope": {
+      "reader_variants": [
+        "reader",
+        "reader-recovery"
+      ],
+      "exact_candidate_entry_to_wrapper_only": true,
+      "original_global_single_column_helper_unchanged": true,
+      "whole_git_reader_and_D_E": "HOLD",
+      "future_private_capture_using_old_global_path": "MUST_ADD_DUAL_JSON_OR_EXPLICITLY_ADMIT_THIS_WRAPPER_AND_REVIEW",
+      "repository_wide_zero_findings_claim": false
+    }
+  },
+  "runtime_count_metadata_correction": {
+    "parent": "8885ab17b70a51785b4e03f79cd16cd900cd0825",
+    "parent_tree": "6f2774ebe1fa80a01d1f5aaf9fd976f871a8dbcd",
+    "scope": "CATALOG_METADATA_AND_PACKAGING_ASSERTIONS_ONLY",
+    "before": {
+      "reader": 55,
+      "reader-recovery": 51
+    },
+    "after": {
+      "reader": 56,
+      "reader-recovery": 52
+    },
+    "agreement": [
+      "runtime_files",
+      "file_roles.runtime",
+      "runtime_emission.files",
+      "actual emitted runtime graph"
+    ],
+    "all_four_payloads_unchanged": {
+      "producer": "dd5240c35bd6ebd2bd98d24d3f87086bde62293fea30fa1bc203dd1051f9e69a",
+      "producer-recovery": "1df4876799e6140538cc7f98b4a5a7f94c1b1612ede8392d83c9e93f95f0f1b9",
+      "reader": "4fc09a67a1cf8821e7a279638c52fa63010e7cb87032957268ab37ec7c47629f",
+      "reader-recovery": "7d7c1541002aef5e265b30fea9c14153664cbe4599022bce8a62f81c33e3cf8b"
+    },
+    "runtime_sources_wrapper_harness_and_type_archives_unchanged": true,
+    "prior_18_runtime_and_four_strict_type_results_retained_without_rerun": true,
+    "packaging_tests": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    },
+    "admission_tests": {
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "rows": 388
+    }
+  }
+}

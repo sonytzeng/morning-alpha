@@ -1,0 +1,292 @@
+{
+  "schema": "OWNER_QUARTER_READER56_RETAINED_BASELINE_V1",
+  "scope": "SOURCE_ONLY_OFFLINE_BASELINE_NOT_DEPLOYMENT_AUTHORIZATION",
+  "function": {
+    "project_id": "cttfzgvhiewfckydcrci",
+    "name": "get-report-payload",
+    "entrypoint_path": "supabase/functions/get-report-payload/index.ts",
+    "version": 56,
+    "verify_jwt": false,
+    "import_map": false,
+    "captured_runtime_bundle_sha256": "c91f0fa4c1eb6ebda521897bdfc37cd48b7b7d0d54005976aa16b19597b7b2b7"
+  },
+  "original_payload": {
+    "sha256": "1d7d33456bcfeeab6fe00ba296f6c37244b9ff56c6958731f025ce0b5f925927",
+    "bytes": 705350,
+    "file_count": 50,
+    "archive_array_preserves_original_payload_order": true
+  },
+  "actual_deployment_receipt": {
+    "path": "r19-market-ui-repair-20261019/READER56_DEPLOYMENT_RECEIPT_SAFE.json",
+    "sha256": "76a9f7c58935dc0b04ca2677ab94cc3d3d41d5026af0f2a21a6047f75e23e9ae",
+    "bytes": 3072,
+    "all50_bytes_exact": true
+  },
+  "archive": {
+    "path": "reader56-source-files.json.gz",
+    "format": "GZIP_UTF8_JSON_ARRAY",
+    "sha256": "43aa94c9b8d92728d79b35ab405a893fd161ba7870341bcbdf8bf736646fb4a4",
+    "bytes": 182419,
+    "uncompressed_sha256": "f2a0851ed0c0e103c12169c248821f5b9265b5d3d065a40bc6cc71364d308909",
+    "uncompressed_bytes": 703866,
+    "gzip_mtime": 0,
+    "gzip_filename": "",
+    "compression_level": 9
+  },
+  "files": [
+    {
+      "name": "shared/public-market-read-model.ts",
+      "sha256": "7bceed56948743e30f42ccab7c8e9ccd129e4874b0a597a820ad980ff79e41d3",
+      "bytes": 53
+    },
+    {
+      "name": "shared/subscriber-state-contract.ts",
+      "sha256": "9e92f6d1d785632d6dd1bd3569ca581d9e14b336bc8342d452b352f0b0b9ef9e",
+      "bytes": 601
+    },
+    {
+      "name": "src/lib/publicMarketReadModel.ts",
+      "sha256": "9f99fd79e0dcbf1e10fcfabd12896230f4d77ca5a30c3f3560f50af45dc4684e",
+      "bytes": 9957
+    },
+    {
+      "name": "src/lib/subscriberReportContract.ts",
+      "sha256": "6c9ce37f7a92d6c2297a9c63bd209d04da2f031263c307ce55402334e9f31e57",
+      "bytes": 35904
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_reader_sdk/0d49e954e715c82dfe006953193188f67aeba9d847e195163500fb5dba53350e.mjs",
+      "sha256": "be07c08a0221f3cc021ce179f3f3865899e7118a499a873609d35313cb6a0338",
+      "bytes": 17678
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_reader_sdk/2123f7bfbf3f9e99bbd1748336ea179e0cf0cfb86320aaa8ee240130b555a7ae.mjs",
+      "sha256": "057369ae09dc5f1287bb7808fb6a50ead08947f9e538a95573ea3786ef6c4fe1",
+      "bytes": 33265
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_reader_sdk/401745afb7fde3346cb0ec043de962bacbe24e141158fa0a27733922e9ade263.mjs",
+      "sha256": "3dcb9464f3a1d04b4ed705b0340f9be7544719936c882eb16651968c87e54b34",
+      "bytes": 105278
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_reader_sdk/436744e4038e5d8051c79f549cd5ffda82baedd6db1ee3e2ab7addecc8e47bc7.mjs",
+      "sha256": "c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9",
+      "bytes": 11226
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_reader_sdk/53f419c5c28d6c38d937e1df1c51a38bcc22be07f2d647214499154df7dbf300.mjs",
+      "sha256": "4fa6e6887cbe24ba93903159879a36806a27cd390eecdd4c3714962d167dcebe",
+      "bytes": 11904
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_reader_sdk/80ac78fd876cc80c4544f1c432249fe631f93e9cedf7026c3cbdf5f3fbc7aaab.mjs",
+      "sha256": "d839d81a2e3966500ca2cdd0c1cb458e9608bacfc91f7bb67a69b2e878dcdb4f",
+      "bytes": 6122
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_reader_sdk/83a913f210c2e9de5b06514e2a349a50e1f054af950bd1331cc4bb5d577b099e.mjs",
+      "sha256": "c894dfc6ceb8b94fd7130937f78af3c7ff83a274e61b5075d617a540dd8e87a0",
+      "bytes": 619
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_reader_sdk/843c5ba51d960f1ed5fafa622c481bebaba2e7133723b3e44c5aede8f4430959.mjs",
+      "sha256": "50b6dc7d5aea96fb93066c1f793aef11087c0cff8c796ad87f33070bf0f427b7",
+      "bytes": 120
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_reader_sdk/d53e1d59903d280110124f1cb53ad308a09ff863af96a4537536ae1e4ec5cf26.mjs",
+      "sha256": "f1d31a0f881e2964f427a0e4715423b9104a603eae40001a8f607dfb5143f47a",
+      "bytes": 3206
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_reader_sdk/d6b2be89db981706b7650148d8cae4f2a8ca09a464a8f7484c197c5dbf0784f5.mjs",
+      "sha256": "d6027443c72c65e6462509fa81bef211649a77430e216c79a6bbabaf227292f8",
+      "bytes": 23254
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_reader_sdk/e67b1e0bbd7d4b53b55facfcee4707b77875789f3796032465233060dad9bebf.mjs",
+      "sha256": "40bd2a70829cd847848baac58e635bacd83fd62188f6624b44e2c295341004eb",
+      "bytes": 25916
+    },
+    {
+      "name": "supabase/functions/_shared/_fixed_reader_sdk/f8da660f90fa33592fad2c9eec1aa25aeb87e2372d78ffa7866036805b024367.mjs",
+      "sha256": "5c7f16d4b145f80bc9b76e3c657854a91a8ef36df29558b35733ebc179d5ca47",
+      "bytes": 261
+    },
+    {
+      "name": "supabase/functions/_shared/bounded-json.ts",
+      "sha256": "5129429836332e4e24cff0c2bae58381cf8b7fd9fd04fa9da556c7ec43ab02be",
+      "bytes": 2013
+    },
+    {
+      "name": "supabase/functions/_shared/canonical-market-state.ts",
+      "sha256": "be04074a69883f46bf686df769feb0ad7896a203db8590649167fa63fbab6ebb",
+      "bytes": 8762
+    },
+    {
+      "name": "supabase/functions/_shared/canonical-runtime-market-status.mjs",
+      "sha256": "e00da0ede67bf366b40422f730e9b49e1d33336f8aaf63b9400553028c3b5fe1",
+      "bytes": 1574
+    },
+    {
+      "name": "supabase/functions/_shared/closing-learning-contract.ts",
+      "sha256": "29d6e62b2246772a261d34376b794de36db8c9d8f44d9f4ba1e80042ec4abe76",
+      "bytes": 21472
+    },
+    {
+      "name": "supabase/functions/_shared/content-intelligence.ts",
+      "sha256": "9aca8df41ebe5edc16da1dfd942895251de2c2cd9095c7311e4eefa58c97556c",
+      "bytes": 24419
+    },
+    {
+      "name": "supabase/functions/_shared/decision-v1-data.ts",
+      "sha256": "7c0ba14f39a52ab216e662ce0cfce80a5c5c64cfdf7a719f4b103be3439a8082",
+      "bytes": 4569
+    },
+    {
+      "name": "supabase/functions/_shared/decision-v1-evidence.ts",
+      "sha256": "2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848",
+      "bytes": 37102
+    },
+    {
+      "name": "supabase/functions/_shared/fetch-checkpoint-evidence.mjs",
+      "sha256": "a0eae0cf9cde35f745e724ab30b86649116e2859ea7cd3b7a160714091f4017b",
+      "bytes": 13264
+    },
+    {
+      "name": "supabase/functions/_shared/intraday-runtime-contract.ts",
+      "sha256": "a4dd6a44f26c403be788f26f9381367866bc0437556bb6ac12debd490f249ce8",
+      "bytes": 8630
+    },
+    {
+      "name": "supabase/functions/_shared/market-calendar-data.json",
+      "sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232",
+      "bytes": 1671
+    },
+    {
+      "name": "supabase/functions/_shared/market-publication-contract.ts",
+      "sha256": "acd4734223b217e3131b089fe65cff4aedeb4da856bd06f83215e3b38f2928bb",
+      "bytes": 21379
+    },
+    {
+      "name": "supabase/functions/_shared/market-report-gate.ts",
+      "sha256": "59b5a98558bdd7a3390fa5bc3fbc90d1956693cd8035ce8278d8f3c44606efa1",
+      "bytes": 10109
+    },
+    {
+      "name": "supabase/functions/_shared/market-runtime-stability.mjs",
+      "sha256": "cf0a0b09839cb227f7010c52f480fe902ef918806108bd6b5817bfd4c8d94783",
+      "bytes": 10736
+    },
+    {
+      "name": "supabase/functions/_shared/market-session-contract.mjs",
+      "sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44",
+      "bytes": 2994
+    },
+    {
+      "name": "supabase/functions/_shared/market-status.ts",
+      "sha256": "d285910516d5ae5e0f55d8ee4314da7b7e21214b766d20cda2853fa775af0737",
+      "bytes": 4766
+    },
+    {
+      "name": "supabase/functions/_shared/member-entitlement.ts",
+      "sha256": "06df34bf03538ab96d704089c706d71118206f2bd1645b3c7d32f529212b0f03",
+      "bytes": 5445
+    },
+    {
+      "name": "supabase/functions/_shared/operational-market-contract.mjs",
+      "sha256": "8ec4d9e2e2dfe61c7aa2393433164f3aa0392fdb78237cb4a6ad3f4e806ce47b",
+      "bytes": 8688
+    },
+    {
+      "name": "supabase/functions/_shared/operational-market-quality.ts",
+      "sha256": "26ebde4463e15fdba46d9a5c8365902cbff9f8a09a2021ec84451b3d994c0d14",
+      "bytes": 1376
+    },
+    {
+      "name": "supabase/functions/_shared/premarket-provider-readiness.mjs",
+      "sha256": "032d9c2521e1214cfa971983644bb10e8f926752134d22f1e123df820ba3770b",
+      "bytes": 1162
+    },
+    {
+      "name": "supabase/functions/_shared/premium-content-gate.ts",
+      "sha256": "c01ea71f06ff85a73af3ad81a805e006d1fbc8a28e76dbf58a4c806684479ee8",
+      "bytes": 10967
+    },
+    {
+      "name": "supabase/functions/_shared/production-architecture-core.mjs",
+      "sha256": "96e94d0c1c32ed3fcbd3f437d5b2449a2242e45ddbabd0a495a3628c4dab508a",
+      "bytes": 36800
+    },
+    {
+      "name": "supabase/functions/_shared/provider-failure-contract.mjs",
+      "sha256": "aaa3037aaf708cc3f76a7d6d856c97034eb0b2f0bbe02c03cc06fb389b01b5f4",
+      "bytes": 4038
+    },
+    {
+      "name": "supabase/functions/_shared/public-handoff-evidence.ts",
+      "sha256": "d8c1f79da827129d330b95342b4aaf4c89087fffef6a827a2126a7407e34ae50",
+      "bytes": 2181
+    },
+    {
+      "name": "supabase/functions/_shared/public-market-projection.ts",
+      "sha256": "897ef2dc2150ebb1dad3c2fa208217f6ebcb15e295750e8eba30557eff642e61",
+      "bytes": 2918
+    },
+    {
+      "name": "supabase/functions/_shared/public-projection-recorder.ts",
+      "sha256": "b3b6aa190b3a59c64e5de9cc2f96ca495578f350143be84dc34c4ffcb13512d0",
+      "bytes": 4559
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-official-actuals.ts",
+      "sha256": "ac1457eb889466931f14f4e9c5a44c3a6000a54a6657cd1c977cb4916714eea5",
+      "bytes": 7627
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-phase.ts",
+      "sha256": "d517fb094ea41a8e70c16c132ca7dc9d48bb5c63efc7d7f36760502697a8e5d6",
+      "bytes": 8256
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-stock-evidence.ts",
+      "sha256": "86be1e626de3bf5c746aa10d5abcfb99dbb8b86c7ab2e6dbb7151335170c47d1",
+      "bytes": 20000
+    },
+    {
+      "name": "supabase/functions/_shared/research-pipeline-contract.ts",
+      "sha256": "ba2c6c8c3fc70018315c2738c09b43aeb7f17e7ff9130a5e2d3d1076eac3db81",
+      "bytes": 11034
+    },
+    {
+      "name": "supabase/functions/_shared/research-quality-gate.ts",
+      "sha256": "18a19d9bdddb1d5c79e3c6a4a5f35031604d7931d7eeb350fd38b3ff8b4a66c6",
+      "bytes": 3714
+    },
+    {
+      "name": "supabase/functions/_shared/runtime-report-state.ts",
+      "sha256": "63d685a82eb0c62a8f2114d5b1ce7aac66d2d6ab1145d9af9b47822625b40816",
+      "bytes": 9569
+    },
+    {
+      "name": "supabase/functions/_shared/taiwan-cash-session-contract.mjs",
+      "sha256": "e001b99094fae902b693ff0f226206dd05e314f779be4674940317d56dc06985",
+      "bytes": 3832
+    },
+    {
+      "name": "supabase/functions/_shared/txf-session-contract.mjs",
+      "sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e",
+      "bytes": 2857
+    },
+    {
+      "name": "supabase/functions/get-report-payload/index.ts",
+      "sha256": "2823e47c932169716f8dde63d7129c47ac12c16c2afb77c87f070b3c22c97052",
+      "bytes": 82283
+    }
+  ],
+  "production_authorized": false,
+  "secret_reads": 0,
+  "http_requests": 0,
+  "source_substitutions": 0
+}

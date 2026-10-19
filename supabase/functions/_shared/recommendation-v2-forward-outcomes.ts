@@ -17,27 +17,46 @@ export async function acquireForwardOutcomeBars(options:{symbols:string[];busine
  const sleep=options.sleep??(ms=>new Promise<void>(r=>setTimeout(r,ms)));
  const captures:Capture[]=[];let permit=Date.parse(options.now());
  for(const symbol of symbols){
-  const capture:Capture={symbol,endpoint:'historical/candles',received_at:options.now(),status:'UNAVAILABLE',rows:[],payload_hash:null};captures.push(capture);
+  const capture:Capture={symbol,endpoint:'historical/candles',received_at:options.now(),status:'UNAVAILABLE',rows:[],payload_hash:null,http_status:null,attempts:0,failure_stage:null};captures.push(capture);
   for(let attempt=0;attempt<2;attempt++){
-   if(options.signal.aborted){capture.status='OUTCOME_SOURCE_DEADLINE';break;}
+   if(options.signal.aborted){capture.status='OUTCOME_SOURCE_DEADLINE';capture.failure_stage='DEADLINE';break;}
    const wait=permit-Date.parse(options.now());if(wait>0)await sleep(Math.min(wait,5000));
    if(permit>Date.parse(options.now())){attempt--;continue;}
    permit=Date.parse(options.now())+1250;
    const url=new URL('https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/'+symbol);
    for(const [k,v] of Object.entries({from,to,timeframe:'D',fields:'open,high,low,close,volume,turnover,change',sort:'asc'}))url.searchParams.set(k,v);
+   let stage:'FETCH'|'BODY'|'PARSER'|'NORMALIZATION'='FETCH';
+   let requestSignal:AbortSignal|null=null;
    try{
-    const response=await options.fetcher(url,{headers:{'X-API-KEY':options.apiKey},redirect:'error',signal:AbortSignal.any([options.signal,AbortSignal.timeout(4000)])});
-    capture.http_status=response.status;capture.attempts=attempt+1;capture.received_at=options.now();
+    capture.attempts=attempt+1;capture.http_status=null;
+    requestSignal=AbortSignal.any([options.signal,AbortSignal.timeout(4000)]);
+    const response=await options.fetcher(url,{headers:{'X-API-KEY':options.apiKey},redirect:'error',signal:requestSignal});
+    capture.http_status=response.status;capture.received_at=options.now();
     if(!response.ok){
-     capture.status=`OUTCOME_PROVIDER_HTTP_${response.status}`;
+     capture.status=`OUTCOME_PROVIDER_HTTP_${response.status}`;capture.failure_stage=response.status===429?'RATE_LIMIT':'PROVIDER_HTTP';
      if(response.status===429){const seconds=Number(response.headers.get('retry-after'));permit=Math.max(permit,Date.parse(options.now())+(Number.isFinite(seconds)&&seconds>0?seconds*1000:60000));}
      if(response.status!==429&&response.status<500)break;continue;
     }
-    const raw=await response.text();if(raw.length>250000){capture.status='OUTCOME_RESPONSE_LIMIT';break;}
+    stage='BODY';const raw=await response.text();if(raw.length>250000){capture.status='OUTCOME_RESPONSE_LIMIT';capture.failure_stage='RESPONSE_CONTRACT';break;}
     capture.received_at=options.now();
-    capture.rows=await normalizeDailyCandles(symbol,JSON.parse(raw),capture.received_at,normalizationDate);
-    capture.status='PASS';break;
-   }catch{capture.status='OUTCOME_SOURCE_UNAVAILABLE';}
+    stage='PARSER';const payload:unknown=JSON.parse(raw);
+    stage='NORMALIZATION';capture.rows=await normalizeDailyCandles(symbol,payload,capture.received_at,normalizationDate);
+    capture.status='PASS';capture.failure_stage=null;break;
+   }catch(error){
+    // Persist only fixed classifications, never exception text, URLs, headers
+    // or response bodies. Contract failures cannot be repaired by an immediate
+    // identical request; leave this immutable capture for the next checkpoint.
+    if(options.signal.aborted){capture.status='OUTCOME_SOURCE_DEADLINE';capture.failure_stage='DEADLINE';break;}
+    const code=error instanceof Error?error.message:'';
+    const contractCodes=['STOCK_CANDLE_CONTRACT_INVALID','STOCK_CANDLE_LIMIT','STOCK_CANDLE_SESSION_INVALID','STOCK_OHLCV_AMOUNT_INVALID','STOCK_FUTURE_EVIDENCE','STOCK_COMPLETED_SESSIONS_INCOMPLETE'];
+    if(stage==='NORMALIZATION'){
+     const known=contractCodes.includes(code);capture.status=known?code:'OUTCOME_NORMALIZATION_FAILED';
+     capture.failure_stage=known&&(code.includes('SESSION')||code.includes('FUTURE'))?'SESSION':'RESPONSE_CONTRACT';break;
+    }
+    if(stage==='PARSER'){capture.status='OUTCOME_PROVIDER_JSON_INVALID';capture.failure_stage='PARSER';break;}
+    capture.status=requestSignal?.aborted||error instanceof Error&&error.name==='TimeoutError'?'OUTCOME_PROVIDER_TIMEOUT':stage==='BODY'?'OUTCOME_RESPONSE_BODY_UNAVAILABLE':'OUTCOME_PROVIDER_TRANSPORT_FAILURE';
+    capture.failure_stage=stage==='BODY'?'RESPONSE_BODY':'TRANSPORT';
+   }
   }
  }
  return captures;

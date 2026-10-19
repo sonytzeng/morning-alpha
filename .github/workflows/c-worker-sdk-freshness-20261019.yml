@@ -1,7 +1,7 @@
 name: C Worker public SDK freshness 20261019 (single opened event)
 on:
   pull_request:
-    types: [opened]
+    types: [synchronize]
     branches: [main]
 permissions:
   contents: read
@@ -19,14 +19,13 @@ jobs:
       HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
       BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
       EVENT_ACTION: ${{ github.event.action }}
-      PUBLIC_CHECK_DIR: ${{ runner.temp }}/c-worker-sdk-public-${{ github.run_id }}
     steps:
-      - name: Refuse every event except this same-repository first opened execution
+      - name: Refuse every event except this same-repository first source-fix synchronize execution
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_EVENT_NAME" = pull_request
-          test "$EVENT_ACTION" = opened
+          test "$EVENT_ACTION" = synchronize
           test "$GITHUB_REPOSITORY" = sonytzeng/morning-alpha
           test "$HEAD_REPOSITORY" = sonytzeng/morning-alpha
           test "$HEAD_BRANCH" = codex/market-regime-compatibility-20261019
@@ -47,9 +46,9 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$HEAD_SHA"
           sha256sum --check <<'HASHES'
-          b29429b4df33aa8f5547e57c03d841d8086311a086e43d97f69fc516d7cf0f39  scripts/operations/sdk-public-freshness-20261019/sdk_public_freshness.py
-          4c9da92507641a0268f7ec595a406556f0cd22469a1f97d6b5ab3f7dbd524145  scripts/operations/sdk-public-freshness-20261019/sdk-freshness-plan.json
-          ff43e7aa7e35330ccecfd74ef38ee413865f884b615458314e3bb774b75a9bf4  scripts/operations/sdk-public-freshness-20261019/test_sdk_public_freshness_offline.py
+          d886e0befe53149a570076dc817f14c0c5771fc55c4c6cbddd45ff1273423006  scripts/operations/sdk-public-freshness-20261019/sdk_public_freshness.py
+          4acb7f13339337b816bc0a2ad11a7c02312031cec413bd819b7f15ec61a3a79d  scripts/operations/sdk-public-freshness-20261019/sdk-freshness-plan.json
+          d028c28226ef2b030aa8be0b3a26146f0383b2e7912c63e302bdf384c5f24608  scripts/operations/sdk-public-freshness-20261019/test_sdk_public_freshness_offline.py
           HASHES
       - name: Offline refusal and bound controls (no HTTP/DNS/TLS)
         shell: bash
@@ -58,6 +57,8 @@ jobs:
           env -i PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8             python3 -I -B -m unittest discover             -s scripts/operations/sdk-public-freshness-20261019 -p test_sdk_public_freshness_offline.py -v
       - name: Execute the new independent fixed public-only check once
         id: freshness
+        env:
+          PUBLIC_CHECK_DIR: ${{ runner.temp }}/c-worker-sdk-public-${{ github.run_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -68,6 +69,6 @@ jobs:
         if: always() && steps.freshness.outcome != 'skipped'
         with:
           name: c-worker-public-sdk-freshness-${{ github.run_id }}
-          path: ${{ env.PUBLIC_CHECK_DIR }}/receipt.json
+          path: ${{ runner.temp }}/c-worker-sdk-public-${{ github.run_id }}/receipt.json
           if-no-files-found: error
           retention-days: 14

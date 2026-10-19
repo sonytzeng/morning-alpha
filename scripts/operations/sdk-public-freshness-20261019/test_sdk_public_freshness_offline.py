@@ -52,7 +52,7 @@ def fake_hang(row,deadline,pipe,stop,lock,index):
     return {"pass":True,"status":200}
 class Checks(unittest.TestCase):
     def context(self):
-        return {"event":"pull_request","action":"opened","repository":c.REPOSITORY,
+        return {"event":"pull_request","action":"synchronize","repository":c.REPOSITORY,
             "head_repository":c.REPOSITORY,"head_branch":c.HEAD_BRANCH,"base_branch":"main",
             "run_id":"1234","run_number":"1","run_attempt":"1",
             "event_head_sha":"a"*40,"actual_head_sha":"a"*40}
@@ -83,8 +83,8 @@ class Checks(unittest.TestCase):
     def test_context_reject_different_head(self):
         x=self.context();x["actual_head_sha"]="b"*40
         with self.assertRaisesRegex(ValueError,"CI_CONTEXT"):c.validate_context(x)
-    def test_context_reject_synchronize(self):
-        x=self.context();x["action"]="synchronize"
+    def test_context_reject_opened(self):
+        x=self.context();x["action"]="opened"
         with self.assertRaisesRegex(ValueError,"CI_CONTEXT"):c.validate_context(x)
     def test_fixed_public_url_only(self):
         for value in ["http://esm.sh/a","https://esm.sh:443/a","https://esm.sh.evil/a",

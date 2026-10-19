@@ -504,7 +504,7 @@
   "head_branch": "codex/market-regime-compatibility-20261019",
   "event": {
     "name": "pull_request",
-    "action": "opened",
+    "action": "synchronize",
     "base_branch": "main",
     "same_repository_only": true,
     "first_workflow_run_only": true,

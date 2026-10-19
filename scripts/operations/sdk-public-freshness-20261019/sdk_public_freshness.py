@@ -15,7 +15,7 @@ import sys
 import time
 from urllib.parse import urljoin, urlsplit
 
-EXPECTED_PLAN_SHA256 = "4c9da92507641a0268f7ec595a406556f0cd22469a1f97d6b5ab3f7dbd524145"
+EXPECTED_PLAN_SHA256 = "4acb7f13339337b816bc0a2ad11a7c02312031cec413bd819b7f15ec61a3a79d"
 REPOSITORY = "sonytzeng/morning-alpha"
 HEAD_BRANCH = "codex/market-regime-compatibility-20261019"
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
@@ -74,7 +74,7 @@ def load_plan(path):
     return p
 
 def validate_context(c):
-    if (c["event"] != "pull_request" or c["action"] != "opened"
+    if (c["event"] != "pull_request" or c["action"] != "synchronize"
             or c["repository"] != REPOSITORY or c["head_repository"] != REPOSITORY
             or c["head_branch"] != HEAD_BRANCH or c["base_branch"] != "main"
             or c["run_number"] != "1" or c["run_attempt"] != "1"
@@ -258,7 +258,7 @@ def main():
         user_agent=plan["user_agent"], production_calls=0, deployment_authorized=False,
         source_or_sdk_modified=False, remote_body_executed=False,
         validity="Only these bytes at this CI time/context; not Supabase resolution or deployed ESZIP identity.",
-        once_scope="First opened event for this fixed workflow identity only; no rename/delete/recreate/rearm.")
+        once_scope="First allowed source-fix synchronize event for this fixed workflow identity only; no rename/delete/recreate/rearm.")
     with output.open("x",encoding="utf-8") as file:
         json.dump(report,file,indent=2)
         file.write("\n")

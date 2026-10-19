@@ -170,7 +170,7 @@ begin
  review_at:=(p_request->>'next_review_at')::timestamptz;
  expiry:=(p_request->>'expires_at')::timestamptz;
  if review_at is null or expiry is null or not isfinite(review_at) or not isfinite(expiry)
-  or review_at<=at_time or expiry<=at_time or review_at>expiry
+  or review_at<=at_time or expiry<=at_time or review_at>expiry or expiry>='10000-01-01 00:00:00+00'::timestamptz
  then raise exception 'ORIGINAL_REVIEW_TIME_INVALID';end if;
  if cardinality(ids)<>(select count(*) from vnext_private.event_sources where id=any(ids))
  then raise exception 'ORIGINAL_REGISTERED_EVIDENCE_MISSING';end if;
@@ -179,6 +179,10 @@ begin
    or e.available_at>cutoff or e.last_verified_at>cutoff or e.last_verified_at>at_time or e.valid_until<=at_time
    or not isfinite(e.published_at) or not isfinite(e.first_seen_at) or not isfinite(e.available_at)
    or not isfinite(e.as_of) or not isfinite(e.last_verified_at) or not isfinite(e.valid_until)
+   -- SQL allows finite years outside the original four-digit ISO contract.
+   -- Reject before persistence; never commit an unreconstructable JS snapshot.
+   or e.as_of<'0001-01-01 00:00:00+00'::timestamptz or e.first_seen_at<'0001-01-01 00:00:00+00'::timestamptz
+   or e.valid_until>='10000-01-01 00:00:00+00'::timestamptz
    or not l.storage_allowed or not l.derived_allowed or l.reviewed_at>cutoff
    or not isfinite(l.reviewed_at) or (l.expires_at is not null and not isfinite(l.expires_at))
    or (l.expires_at is not null and l.expires_at<=at_time)

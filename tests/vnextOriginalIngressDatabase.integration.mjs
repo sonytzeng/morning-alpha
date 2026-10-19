@@ -28,7 +28,7 @@ async function request(role,args){
 const checks=[];let counter=0;
 const fixtureEpoch=Date.now(),fixtureRun=randomUUID(),fixtureRevision=sha('synthetic-shared-source-revision');
 const rpc=async(_name,args)=>{const r=await request('service_role',args);if(r.status!==200)throw Error(r.data.message);return r.data;};
-const fixture=({horizon='SHORT',omit=[],quality='PASS',licensed=true,future=false,sourceLate=false,expired=false,confirmed=false,invalidated=false}={})=>{
+const fixture=({horizon='SHORT',omit=[],quality='PASS',licensed=true,future=false,sourceLate=false,expired=false,confirmed=false,invalidated=false,wideYear=false}={})=>{
  const symbol=String(7000+counter++),id='synthetic:'+symbol+':'+horizon,runid=fixtureRun,now=fixtureEpoch;
  const time=ms=>new Date(now+ms).toISOString(),cutoff=time(-60000),generated=time(-30000),actionable=time(1800000);
  const body={id,business_date:new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(now),mode:'FORWARD_SHADOW',provenance:'RETAINED_REAL_EVIDENCE',symbol,company:'合成隔離公司',horizon,
@@ -44,7 +44,7 @@ const fixture=({horizon='SHORT',omit=[],quality='PASS',licensed=true,future=fals
  const all=HORIZONS[horizon].required,ids=all.filter(k=>!omit.includes(k)).map(k=>sha(symbol+':'+k));
  for(const kind of all.filter(k=>!omit.includes(k))){const eid=sha(symbol+':'+kind);sql(`insert into vnext_private.event_sources(id,symbol,kind,source,source_ref,license_id,published_at,first_seen_at,available_at,as_of,last_verified_at,valid_until,snapshot_hash,classification,quality,relevant,summary)
  values('${eid}','${symbol}','${kind}','SYNTHETIC','https://example.com/evidence','${license}',${quote(time(-100000))},${quote(time(-90000))},${quote(time(sourceLate?-10000:-80000))},${quote(time(-110000))},
- ${quote(time(future?10000:sourceLate?-5000:-70000))},${quote(time(expired?-1000:600000))},'${sha('raw:'+eid)}','CONFIRMED_FACT','${quality}',true,'隔離資料：「量價／消息」並非真實股票。\n測試雜湊與中文');`);}
+ ${quote(time(future?10000:sourceLate?-5000:-70000))},${quote(wideYear?'10000-01-01T00:00:00Z':time(expired?-1000:600000))},'${sha('raw:'+eid)}','CONFIRMED_FACT','${quality}',true,'隔離資料：「量價／消息」並非真實股票。\n測試雜湊與中文');`);}
  const input={schema:'ORIGINAL_OBSERVATION_INGRESS_1',c_prediction_id:id,c_lock_hash:hash,symbol,company:'合成隔離公司',horizon,
   reason:'隔離測試：原始證據獨立檢查，不使用 C 合格標籤。',evidence_ids:ids,
   confirmation_conditions:[{text:'隔離確認條件',state:confirmed?'CONFIRMED':'UNKNOWN',evidence_ids:[ids[0]]}],
@@ -89,9 +89,12 @@ try{
  await lockObservation(receipts[0].observation,receipts[0].evidence);checks.push('Eight real HTTP concurrent writes produce one atomic lock/link/audit; original JS snapshot hash and microsecond DB lock agree');
  const changed={...first.input,reason:'不同內容'};await assert.rejects(()=>persistOriginalObservation(first.key,changed,rpc),/IDEMPOTENCY_CONFLICT/);
  await assert.rejects(()=>persistOriginalObservation(randomUUID(),first.input,rpc),/ALREADY_LINKED/);
- for(const [opts,error] of [[{omit:['INSTITUTIONAL']},'HORIZON_EVIDENCE_INCOMPLETE'],[{quality:'INSUFFICIENT'},'TIME_QUALITY_OR_STORAGE_RIGHTS'],[{licensed:false},'TIME_QUALITY_OR_STORAGE_RIGHTS'],[{future:true},'TIME_QUALITY_OR_STORAGE_RIGHTS'],[{sourceLate:true},'TIME_QUALITY_OR_STORAGE_RIGHTS'],[{expired:true},'TIME_QUALITY_OR_STORAGE_RIGHTS']]){
+ for(const [opts,error] of [[{omit:['INSTITUTIONAL']},'HORIZON_EVIDENCE_INCOMPLETE'],[{quality:'INSUFFICIENT'},'TIME_QUALITY_OR_STORAGE_RIGHTS'],[{licensed:false},'TIME_QUALITY_OR_STORAGE_RIGHTS'],[{future:true},'TIME_QUALITY_OR_STORAGE_RIGHTS'],[{sourceLate:true},'TIME_QUALITY_OR_STORAGE_RIGHTS'],[{expired:true},'TIME_QUALITY_OR_STORAGE_RIGHTS'],[{wideYear:true},'TIME_QUALITY_OR_STORAGE_RIGHTS']]){
   const f=fixture(opts),saved=count();await assert.rejects(()=>persistOriginalObservation(f.key,f.input,rpc),new RegExp(error));assert.equal(count(),saved);
  }checks.push('Missing original evidence, rejected quality, missing storage/derived permission, future verification, post-C-cutoff source and expired source all reject without partial writes');
+ const shifted=fixture(),shiftedBefore=count();shifted.input.expires_at='9999-12-31T23:59:59-01:00';
+ await assert.rejects(()=>persistOriginalObservation(shifted.key,shifted.input,rpc),/ORIGINAL_REVIEW_TIME_INVALID/);assert.equal(count(),shiftedBefore);
+ checks.push('Native finite year10000 source or timezone-shifted expiry outside original ISO range rejects before any business rows');
  const missing=fixture();missing.input.evidence_ids[0]=sha('not-registered');missing.input.confirmation_conditions[0].evidence_ids=[missing.input.evidence_ids[0]];
  await assert.rejects(()=>persistOriginalObservation(missing.key,missing.input,rpc),/REGISTERED_EVIDENCE_MISSING/);
  for(const horizon of ['MEDIUM','LONG']){const f=fixture({horizon});const r=await persistOriginalObservation(f.key,f.input,rpc);assert.equal(r.observation.horizon,horizon);}

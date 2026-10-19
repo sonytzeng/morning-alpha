@@ -35,6 +35,26 @@ IFRS_2017 = "http://xbrl.ifrs.org/taxonomy/2017-03-09/ifrs-full"
 APPROVED_IFRS = frozenset({IFRS_2017, IFRS_2025})
 METRICS = {"BasicEarningsLossPerShare": "basic_eps",
            "DilutedEarningsLossPerShare": "diluted_eps", "Revenue": "revenue"}
+FINANCIAL_PROFILE = "tifrs-fh-direct-v1"
+FINANCIAL_ENTITIES = frozenset({"2881", "2882", "2884", "2885", "2886", "2891", "2892"})
+FINANCIAL_NAMESPACES = frozenset({"http://www.xbrl.org/tifrs/bsci/fh/2020-06-30",
+                                  "http://www.xbrl.org/tifrs/bsci/fh/2025-06-30",
+                                  "http://www.xbrl.org/tifrs/bsci/fh/2026-03-31"})
+# Source labels were independently read from all 21 retained issuer filings.
+# In this exact financial taxonomy NetIncomeLoss labels *net revenue*, while
+# IFRS ProfitLoss is a separate concept. No local-name or English-name guessing.
+# Incomes is only "收益 Revenues"; a gross measurement basis is not established.
+FINANCIAL_METRICS = {
+    "NetIncomeLoss": ("financial_net_revenue", FINANCIAL_NAMESPACES,
+                      "4XXXX", "淨收益", "Net revenue", "FINANCIAL_NET_REVENUE_AS_REPORTED"),
+    "NetInterestIncomeExpense": ("financial_net_interest_revenue", FINANCIAL_NAMESPACES,
+                                 "49600", "利息淨收益", "Net interest revenue (expense)",
+                                 "NET_INTEREST_REVENUE_OR_EXPENSE_AS_REPORTED"),
+    "RevenueFromInterest": ("financial_interest_income", APPROVED_IFRS,
+                            "41000", "利息收入", "Interest income", "INTEREST_INCOME_AS_REPORTED"),
+    "Incomes": ("financial_incomes_as_reported", FINANCIAL_NAMESPACES,
+                "40000", "收益", "Revenues", "FINANCIAL_INCOMES_AS_REPORTED_GROSS_BASIS_NOT_PROVEN"),
+}
 VOID = frozenset("area base br col embed hr img input link meta param source track wbr".split())
 NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_.:-]*")
 QNAME = re.compile(r"([A-Za-z_][A-Za-z0-9_.-]*):([A-Za-z_][A-Za-z0-9_.-]*)\Z")
@@ -183,7 +203,8 @@ def expanded(value: str, namespaces: dict[str, str]) -> tuple[str, str]:
 
 
 class InstanceParser(HTMLParser):
-    def __init__(self, document: str, limits: Limits, *, opaque_notes: bool = False):
+    def __init__(self, document: str, limits: Limits, *, opaque_notes: bool = False,
+                 financial_facts: bool = False):
         super().__init__(convert_charrefs=False)
         self.document, self.limits, self.started = document, limits, time.monotonic()
         self.offsets, total = [0], 0
@@ -194,6 +215,7 @@ class InstanceParser(HTMLParser):
         self.captures: list[Node] = []
         self.tags = self.contexts = self.units = self.facts = 0
         self.opaque_enabled = opaque_notes
+        self.financial_enabled = financial_facts
         self.opaque_frames: dict[int, OpaqueNote] = {}
         self.opaque_notes: list[OpaqueNote] = []
         self.opaque_invalid_bytes = 0
@@ -275,7 +297,8 @@ class InstanceParser(HTMLParser):
             require(self.facts <= self.limits.max_facts, "FACT_LIMIT")
             # Capture only explicit requested metric local names; QName trust
             # is checked separately, including namespace rebinding attacks.
-            selected = attributes.get("name", "").split(":")[-1] in METRICS
+            local = attributes.get("name", "").split(":")[-1]
+            selected = local in METRICS or (self.financial_enabled and local in FINANCIAL_METRICS)
         parent = next((frame[2] for frame in reversed(self.stack) if frame[2] is not None), None)
         node = Node(name, attributes, namespaces) if selected or parent is not None else None
         if node is not None:
@@ -465,6 +488,7 @@ def extract_actuals(data: bytes, receipt: dict[str, Any], *, entity: str, year: 
                     quarter: int, revenue_mode: str = "none", encoding: str = "big5",
                     decode_profile: str = "strict",
                     statement_profile: str = "consolidated",
+                    financial_profile: str = "none",
                     limits: Limits | None = None) -> dict[str, Any]:
     limits = limits or Limits()
     ceilings = Limits()
@@ -479,6 +503,10 @@ def extract_actuals(data: bytes, receipt: dict[str, Any], *, entity: str, year: 
     require(decode_profile in ("strict", OPAQUE_NOTE_PROFILE), "DECODE_PROFILE_UNSUPPORTED")
     require(decode_profile == "strict" or encoding == "cp950", "DECODE_PROFILE_ENCODING_MISMATCH")
     require(statement_profile in ("consolidated", "individual"), "STATEMENT_PROFILE_UNSUPPORTED")
+    require(financial_profile in ("none", FINANCIAL_PROFILE), "FINANCIAL_PROFILE_UNSUPPORTED")
+    if financial_profile != "none":
+        require(entity in FINANCIAL_ENTITIES, "FINANCIAL_ENTITY_NOT_PROFILED")
+        require(statement_profile == "consolidated", "FINANCIAL_STATEMENT_PROFILE_NOT_APPROVED")
     digest = hashlib.sha256(data).hexdigest()
     # Two observed capture schemas, with no preference that could hide a
     # conflicting alias. Every supplied hash/length must match the same bytes.
@@ -522,7 +550,8 @@ def extract_actuals(data: bytes, receipt: dict[str, Any], *, entity: str, year: 
     require("\x00" not in text, "SOURCE_NUL")
     if decode_profile != "strict":
         require(text.encode("cp950", errors="surrogateescape") == data, "OPAQUE_TRANSPORT_NOT_REVERSIBLE")
-    parser = InstanceParser(text, limits, opaque_notes=decode_profile != "strict")
+    parser = InstanceParser(text, limits, opaque_notes=decode_profile != "strict",
+                            financial_facts=financial_profile != "none")
     if decode_profile != "strict":
         strict_transport_markup(text, limits, parser.started)
     parser.feed(text)
@@ -634,6 +663,79 @@ def extract_actuals(data: bytes, receipt: dict[str, Any], *, entity: str, year: 
                        "numeric_facts": parser.facts, "rows": len(rows), "missing": len(missing)},
             "source_admitted": False, "production_evaluation": False,
             "announcement_time_inferred": False, "revenue_profile": revenue_mode}
+    if financial_profile != "none":
+        # Isolated typed result. Neither generic Revenue nor financial profit,
+        # Consensus, source admission or V1 eligibility is inferred from it.
+        financial_candidates = {definition[0]: [] for definition in FINANCIAL_METRICS.values()}
+        financial_blocked: dict[str, list[str]] = {metric: [] for metric in financial_candidates}
+        financial_rejected: dict[str, int] = {}
+        for node in facts:
+            parser.check()
+            local = node.attrs.get("name", "").split(":")[-1]
+            if local not in FINANCIAL_METRICS:
+                continue
+            metric, namespaces, line_code, label_zh, label_en, basis = FINANCIAL_METRICS[local]
+            try:
+                qname = expanded(node.attrs["name"], node.namespaces)
+                require(qname[1] == local and qname[0] in namespaces,
+                        "FINANCIAL_CONCEPT_NAMESPACE_NOT_APPROVED")
+                ref = node.attrs.get("contextRef", "")
+                require(ref in contexts, invalid_contexts.get(ref, "CONTEXT_REF_MISSING"))
+                scope = contexts[ref]
+                require(scope["entity"] == entity, "OTHER_ENTITY")
+                require((scope["start"], scope["end"]) == (start, end), "NOT_EXACT_QUARTER")
+            except ExtractionError as exc:
+                code = str(exc)
+                financial_rejected[code] = financial_rejected.get(code, 0) + 1
+                continue
+            try:
+                unit_ref = node.attrs.get("unitRef", "")
+                require(unit_ref in units, invalid_units.get(unit_ref, "UNIT_REF_MISSING"))
+                require(units[unit_ref] == "TWD", "METRIC_UNIT_MISMATCH")
+                value, lexical = numeric(node)
+                financial_candidates[metric].append({"metric": metric, "entity": entity,
+                    "quarter": f"{year}Q{quarter}", "period_start": start, "period_end": end,
+                    "concept_namespace": qname[0], "concept_local_name": local,
+                    "context_ref": ref, "unit_ref": unit_ref, "unit": "TWD", "currency": "TWD",
+                    "value_decimal": value, "raw_lexical_value": lexical,
+                    "scale": int(node.attrs.get("scale", "0")), "decimals": node.attrs["decimals"],
+                    "direct_single_quarter": True, "measurement_basis": basis,
+                    "profile_definition_evidence": {"statement_line_code": line_code,
+                        "observed_source_label_zh": label_zh, "observed_source_label_en": label_en,
+                        "basis": "EXACT_QNAME_AND_RETAINED_21_SOURCE_LABELS_NOT_RUNTIME_LABEL_INFERENCE"}})
+            except ExtractionError as exc:
+                code = str(exc)
+                financial_blocked[metric].append(code)
+                financial_rejected[code] = financial_rejected.get(code, 0) + 1
+        financial_rows, financial_missing = [], []
+        for metric, values in financial_candidates.items():
+            parser.check()
+            if financial_blocked[metric]:
+                financial_missing.append({"metric": metric, "reason": "INVALID_MATCHING_FACT",
+                                          "details": sorted(set(financial_blocked[metric]))})
+            elif not values:
+                financial_missing.append({"metric": metric, "reason": "DIRECT_QUARTER_FACT_MISSING"})
+            elif len({None if row["value_decimal"] is None else Decimal(row["value_decimal"]) for row in values}) != 1:
+                financial_missing.append({"metric": metric, "reason": "DUPLICATE_FACT_CONFLICT"})
+            elif len({row["concept_namespace"] for row in values}) != 1:
+                financial_missing.append({"metric": metric, "reason": "MIXED_TAXONOMY_NAMESPACE_CONFLICT"})
+            elif values[0]["value_decimal"] is None:
+                financial_missing.append({"metric": metric, "reason": "NIL_FACT"})
+            else:
+                row = values[0]
+                row.update({"duplicate_count": len(values), "source_sha256": digest,
+                    "source_url": url, "received_at": received_at, "available_not_before": received_at,
+                    "announced_at": None, "source_report_period": {"year": int(query["SYEAR"]),
+                        "quarter": int(query["SSEASON"]), "report_id": query["REPORT_ID"]},
+                    "financial_profile": financial_profile,
+                    "consolidation_basis": "NOT_PROVEN_BY_CONTEXT_OR_QUERY",
+                    "source_admitted": False, "generic_revenue_equivalence": False,
+                    "consensus_measurement_basis_equivalence": False, "V1_admission": False})
+                financial_rows.append(row)
+        result.update({"financial_profile": financial_profile, "financial_rows": financial_rows,
+            "financial_missing": financial_missing, "financial_rejections": financial_rejected,
+            "financial_counts": {"rows": len(financial_rows), "missing": len(financial_missing)},
+            "financial_components_summed": False})
     if statement_profile == "individual":
         result["statement_profile"] = "individual"
         result["statement_basis"] = "REQUESTED_INDIVIDUAL_A_WITH_ENTITY_CONTEXT_VERIFIED"
@@ -662,6 +764,7 @@ def main() -> int:
     ap.add_argument("--encoding", choices=("big5", "cp950", "utf-8"), default="big5")
     ap.add_argument("--decode-profile", choices=("strict", OPAQUE_NOTE_PROFILE), default="strict")
     ap.add_argument("--statement-profile", choices=("consolidated", "individual"), default="consolidated")
+    ap.add_argument("--financial-profile", choices=("none", FINANCIAL_PROFILE), default="none")
     ap.add_argument("--revenue-mode", choices=("none", "ifrs-revenue"), default="none")
     args = ap.parse_args()
     require(args.html.stat().st_size <= Limits().max_bytes, "BYTE_LIMIT")
@@ -669,7 +772,7 @@ def main() -> int:
     result = extract_actuals(args.html.read_bytes(), json.loads(args.receipt.read_text()),
         entity=args.entity, year=args.year, quarter=args.quarter, encoding=args.encoding,
         revenue_mode=args.revenue_mode, decode_profile=args.decode_profile,
-        statement_profile=args.statement_profile)
+        statement_profile=args.statement_profile, financial_profile=args.financial_profile)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 

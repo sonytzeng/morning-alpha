@@ -65,7 +65,187 @@ def extract_opaque(data=None, **kwargs):
                              decode_profile=M.OPAQUE_NOTE_PROFILE, **kwargs)
 
 
+def financial_fact(local="NetIncomeLoss", *, namespace=None, value="100.25", attrs=""):
+    namespace = namespace or sorted(M.FINANCIAL_NAMESPACES)[0]
+    return (f'<ix:nonFraction xmlns:fh="{namespace}" name="fh:{local}" contextRef="c" '
+            f'unitRef="twd" decimals="2" format="ixt:numdotdecimal" {attrs}>{value}</ix:nonFraction>')
+
+
+def financial_fixture(*, extra="", namespace=None):
+    facts = [financial_fact(local, namespace=namespace) for local in
+             ("NetIncomeLoss", "NetInterestIncomeExpense", "Incomes")]
+    facts.append(financial_fact("RevenueFromInterest", namespace=M.IFRS_2025))
+    return fixture(extra="".join(facts) + extra).replace(">2330</x:identifier>", ">2881</x:identifier>")
+
+
+def extract_financial(text=None, *, profile=M.FINANCIAL_PROFILE, changes=None, **kwargs):
+    data = (text or financial_fixture()).encode("utf-8")
+    r = receipt(data)
+    r["url"] = r["url"].replace("CO_ID=2330", "CO_ID=2881")
+    r.update(changes or {})
+    return M.extract_actuals(data, r, entity="2881", year=2026, quarter=2, encoding="utf-8",
+                             financial_profile=profile, **kwargs)
+
+
+def financial_rows(result):
+    return {row["metric"]: row for row in result["financial_rows"]}
+
+
 class OfficialInlineXbrlActuals(unittest.TestCase):
+    def test_financial_profile_is_explicit_and_keeps_generic_output_and_semantics_separate(self):
+        default = extract_financial(profile="none")
+        result = extract_financial()
+        self.assertNotIn("financial_rows", default)
+        self.assertEqual({key: value for key, value in result.items() if not key.startswith("financial_")}, default)
+        self.assertEqual(result["financial_counts"], {"rows": 4, "missing": 0})
+        self.assertEqual(set(financial_rows(result)), {"financial_net_revenue", "financial_net_interest_revenue",
+                                                     "financial_interest_income", "financial_incomes_as_reported"})
+        self.assertIn({"metric": "revenue", "reason": "PROFILE_NOT_APPROVED"}, result["missing"])
+        for row in result["financial_rows"]:
+            self.assertEqual(row["entity"], "2881")
+            self.assertEqual(row["unit"], "TWD")
+            self.assertEqual(row["value_decimal"], "100.25")
+            self.assertEqual(row["available_not_before"], row["received_at"])
+            self.assertEqual(row["source_sha256"], result["source_sha256"])
+            self.assertEqual(row["source_report_period"], {"year": 2026, "quarter": 2, "report_id": "C"})
+            self.assertFalse(row["source_admitted"])
+            self.assertFalse(row["generic_revenue_equivalence"])
+            self.assertFalse(row["consensus_measurement_basis_equivalence"])
+            self.assertFalse(row["V1_admission"])
+        net = financial_rows(result)["financial_net_revenue"]
+        self.assertEqual(net["measurement_basis"], "FINANCIAL_NET_REVENUE_AS_REPORTED")
+        self.assertEqual(net["profile_definition_evidence"]["observed_source_label_zh"], "淨收益")
+        self.assertEqual(net["profile_definition_evidence"]["observed_source_label_en"], "Net revenue")
+        self.assertIn("GROSS_BASIS_NOT_PROVEN", financial_rows(result)["financial_incomes_as_reported"]["measurement_basis"])
+
+    def test_financial_profile_rejects_unprofiled_entity_individual_statement_and_unknown_profile(self):
+        for profile in ("auto", "financial", True, None):
+            with self.subTest(profile=profile), self.assertRaisesRegex(M.ExtractionError, "FINANCIAL_PROFILE_UNSUPPORTED"):
+                extract_financial(profile=profile)
+        with self.assertRaisesRegex(M.ExtractionError, "FINANCIAL_ENTITY_NOT_PROFILED"):
+            extract(financial_profile=M.FINANCIAL_PROFILE)
+        with self.assertRaisesRegex(M.ExtractionError, "FINANCIAL_STATEMENT_PROFILE_NOT_APPROVED"):
+            extract_financial(statement_profile="individual")
+        for entity in sorted(M.FINANCIAL_ENTITIES):
+            data = financial_fixture().replace(">2881</x:identifier>", f">{entity}</x:identifier>").encode()
+            r = {**receipt(data), "url": receipt(data)["url"].replace("CO_ID=2330", "CO_ID=" + entity)}
+            result = M.extract_actuals(data, r, entity=entity, year=2026, quarter=2,
+                                      encoding="utf-8", financial_profile=M.FINANCIAL_PROFILE)
+            self.assertEqual(len(result["financial_rows"]), 4)
+
+    def test_financial_qnames_require_exact_observed_namespaces_and_do_not_guess_profit(self):
+        for namespace in sorted(M.FINANCIAL_NAMESPACES):
+            self.assertEqual(len(extract_financial(financial_fixture(namespace=namespace))["financial_rows"]), 4)
+        alias = financial_fixture().replace("xmlns:fh=", "xmlns:other=").replace('name="fh:', 'name="other:')
+        self.assertEqual(len(extract_financial(alias)["financial_rows"]), 4)
+        for namespace in ("urn:fake", M.IFRS_2025, sorted(M.FINANCIAL_NAMESPACES)[0] + "/fake",
+                          "https://www.xbrl.org/tifrs/bsci/fh/2020-06-30",
+                          "http://www.xbrl.org/tifrs/bsci/fh/2024-06-30"):
+            with self.subTest(namespace=namespace):
+                result = extract_financial(financial_fixture(namespace=namespace))
+                self.assertNotIn("financial_net_revenue", financial_rows(result))
+                self.assertEqual(result["financial_rejections"]["FINANCIAL_CONCEPT_NAMESPACE_NOT_APPROVED"], 3)
+        unrelated = financial_fixture().replace('name="fh:NetIncomeLoss"', 'name="fh:ProfitLoss"')
+        result = extract_financial(unrelated)
+        self.assertNotIn("financial_net_revenue", financial_rows(result))
+        self.assertIn({"metric": "financial_net_revenue", "reason": "DIRECT_QUARTER_FACT_MISSING"}, result["financial_missing"])
+        spoof_interest = financial_fixture().replace(f'xmlns:fh="{M.IFRS_2025}" name="fh:RevenueFromInterest"',
+            f'xmlns:fh="{sorted(M.FINANCIAL_NAMESPACES)[0]}" name="fh:RevenueFromInterest"')
+        self.assertNotIn("financial_interest_income", financial_rows(extract_financial(spoof_interest)))
+
+    def test_financial_entity_quarter_dimensions_and_monetary_units_are_required(self):
+        cases = [
+            (financial_fixture().replace(">2881</x:identifier>", ">2882</x:identifier>"), "OTHER_ENTITY"),
+            (financial_fixture().replace("2026-04-01", "2026-01-01"), "NOT_EXACT_QUARTER"),
+            (financial_fixture().replace('<x:period>', '<x:period xsi:nil="true">'), "CONTEXT_PERIOD_ATTRIBUTES_OR_TEXT"),
+            (financial_fixture().replace('unitRef="twd"', 'unitRef="eps"'), "METRIC_UNIT_MISMATCH"),
+        ]
+        for text, code in cases:
+            with self.subTest(code=code):
+                result = extract_financial(text)
+                self.assertEqual(result["financial_rows"], [])
+                self.assertGreater(result["financial_rejections"][code], 0)
+        dimensions = financial_fixture().replace('</x:period>', '</x:period><x:scenario><dim:explicitMember dimension="ifrs:Axis">ifrs:Member</dim:explicitMember></x:scenario>')
+        result = extract_financial(dimensions)
+        self.assertEqual(result["financial_rows"], [])
+        self.assertEqual(result["financial_rejections"]["CONTEXT_DIMENSIONS_UNSUPPORTED"], 4)
+
+    def test_financial_duplicate_conflicts_nil_and_invalid_matching_fact_never_fallback(self):
+        same = extract_financial(financial_fixture(extra=financial_fact()))
+        self.assertEqual(financial_rows(same)["financial_net_revenue"]["duplicate_count"], 2)
+        for extra, reason in [(financial_fact(value="100.26"), "DUPLICATE_FACT_CONFLICT"),
+                              (financial_fact(value="", attrs='xsi:nil="true"'), "DUPLICATE_FACT_CONFLICT"),
+                              (financial_fact(attrs='continuedAt="suffix"'), "INVALID_MATCHING_FACT")]:
+            with self.subTest(reason=reason):
+                result = extract_financial(financial_fixture(extra=extra))
+                self.assertNotIn("financial_net_revenue", financial_rows(result))
+                self.assertTrue(any(row["metric"] == "financial_net_revenue" and row["reason"] == reason for row in result["financial_missing"]))
+        nil = financial_fixture().replace(financial_fact(), financial_fact(value="", attrs='xsi:nil="true"'))
+        result = extract_financial(nil)
+        self.assertIn({"metric": "financial_net_revenue", "reason": "NIL_FACT"}, result["financial_missing"])
+        mixed = financial_fixture(extra=financial_fact(namespace=sorted(M.FINANCIAL_NAMESPACES)[1]))
+        self.assertIn({"metric": "financial_net_revenue", "reason": "MIXED_TAXONOMY_NAMESPACE_CONFLICT"}, extract_financial(mixed)["financial_missing"])
+
+    def test_financial_signed_values_scale_and_explicit_zero_preserve_source_arithmetic(self):
+        text = financial_fixture().replace(financial_fact("NetInterestIncomeExpense"),
+                                            financial_fact("NetInterestIncomeExpense", value="2.50", attrs='sign="-" scale="3"'))
+        result = extract_financial(text)
+        self.assertEqual(financial_rows(result)["financial_net_interest_revenue"]["value_decimal"], "-2500")
+        self.assertFalse(result["financial_components_summed"])
+        zero = financial_fixture().replace(financial_fact(), financial_fact(value="0"))
+        self.assertEqual(financial_rows(extract_financial(zero))["financial_net_revenue"]["value_decimal"], "0")
+        for value, attrs in [("NaN", ""), ("1e99", ""), ("100.25", 'scale="19"'),
+                             ("100.25", 'sign="+"')]:
+            result = extract_financial(financial_fixture().replace(financial_fact(), financial_fact(value=value, attrs=attrs)))
+            self.assertNotIn("financial_net_revenue", financial_rows(result))
+
+    def test_financial_capture_structure_and_limits_are_enforced_only_when_selected(self):
+        for markup in ("<script>100.25</script>", "100.<br/>25", "<ix:exclude>100.25</ix:exclude>"):
+            result = extract_financial(financial_fixture().replace(financial_fact(), financial_fact(value=markup)))
+            self.assertNotIn("financial_net_revenue", financial_rows(result))
+        valid_spans = financial_fixture().replace(financial_fact(), financial_fact(value="<span>100.</span><span>25</span>"))
+        self.assertEqual(financial_rows(extract_financial(valid_spans))["financial_net_revenue"]["value_decimal"], "100.25")
+        damaged = financial_fixture().replace(financial_fact(), financial_fact(value="100.25").replace('</ix:nonFraction>', '</ix:wrong>'))
+        with self.assertRaisesRegex(M.ExtractionError, "CAPTURE_TAG_STRUCTURE_INVALID"):
+            extract_financial(damaged)
+        long_financial = financial_fixture().replace(financial_fact(), financial_fact(value="1" * 9000))
+        self.assertNotIn("financial_rows", extract_financial(long_financial, profile="none"))
+        with self.assertRaisesRegex(M.ExtractionError, "CAPTURE_SIZE_LIMIT"):
+            extract_financial(long_financial)
+        for limits in (replace(M.Limits(), max_facts=4), replace(M.Limits(), seconds=1e-12)):
+            with self.subTest(limits=limits), self.assertRaises(M.ExtractionError):
+                extract_financial(limits=limits)
+
+    def test_financial_selected_fact_cannot_use_opaque_note_transport_to_hide_invalid_bytes(self):
+        good = financial_fixture().encode("cp950")
+        bad = good.replace(financial_fact().encode("cp950"), financial_fact(value="100.OPAQUE_BYTE25").encode("cp950").replace(b"OPAQUE_BYTE", b"\x84"))
+        r = {**receipt(bad), "url": receipt(bad)["url"].replace("CO_ID=2330", "CO_ID=2881")}
+        with self.assertRaisesRegex(M.ExtractionError, "OPAQUE_UNDECODABLE_OUTSIDE_APPROVED_NOTE"):
+            M.extract_actuals(bad, r, entity="2881", year=2026, quarter=2, encoding="cp950",
+                              decode_profile=M.OPAQUE_NOTE_PROFILE, financial_profile=M.FINANCIAL_PROFILE)
+        with self.assertRaisesRegex(M.ExtractionError, "RECEIPT_BYTES_MISMATCH"):
+            extract_financial(changes={"sha256": "0" * 64})
+
+    def test_cli_financial_profile_does_not_auto_activate_and_rejects_unknown_choice(self):
+        data = financial_fixture().encode()
+        r = {**receipt(data), "url": receipt(data)["url"].replace("CO_ID=2330", "CO_ID=2881")}
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            html, captured = directory / "source.html", directory / "receipt.json"
+            html.write_bytes(data)
+            captured.write_text(json.dumps(r))
+            args = [sys.executable, "-B", str(ROOT / "scripts/official-actuals/inline_xbrl.py"),
+                    "--html", str(html), "--receipt", str(captured), "--entity", "2881",
+                    "--year", "2026", "--quarter", "2", "--encoding", "utf-8"]
+            default = subprocess.run(args, capture_output=True, text=True, check=False)
+            self.assertEqual(default.returncode, 0)
+            self.assertNotIn("financial_rows", json.loads(default.stdout))
+            explicit = subprocess.run(args + ["--financial-profile", M.FINANCIAL_PROFILE], capture_output=True, text=True, check=False)
+            self.assertEqual(explicit.returncode, 0)
+            self.assertEqual(len(json.loads(explicit.stdout)["financial_rows"]), 4)
+            refused = subprocess.run(args + ["--financial-profile", "auto"], capture_output=True, text=True, check=False)
+            self.assertEqual(refused.returncode, 2)
+
     def test_direct_exact_typed_values_and_provenance(self):
         result = extract()
         self.assertEqual({key: row["value_decimal"] for key, row in rows(result).items()},

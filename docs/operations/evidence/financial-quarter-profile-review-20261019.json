@@ -1,0 +1,95 @@
+{
+  "schema": "FINANCIAL_DIRECT_QUARTER_PROFILE_REVIEW_V1",
+  "base": "93696ff43006b5145c2d6d347b5a057c1cf8381d",
+  "scope": "OFFLINE_TYPED_SOURCE_EXTRACTION_ONLY",
+  "implementation": [
+    {
+      "path": "scripts/official-actuals/inline_xbrl.py",
+      "sha256": "b9bac33dcbe745c51d649d81d7d5391b74d9a29abd8ae70ef4bfdc214c733428"
+    },
+    {
+      "path": "tests/test_inline_xbrl.py",
+      "sha256": "dc4957e6411af88dcffc6e13eab78edb1c4a9a6c1d7ab80e89f9efb3222ed902"
+    }
+  ],
+  "real_replay": {
+    "path": "/workspace/scratch/866fb527950e/r19-financial-quarter-profile-20261019/FINANCIAL_21_TYPED_PROFILE_REPLAY_SAFE.json",
+    "sha256": "223680272af3bc7283872eb93aeb5c6e01de744ee713da6da8642ddf23007917",
+    "bytes": 264789
+  },
+  "independent_semantics": {
+    "path": "/workspace/scratch/866fb527950e/r18-v1-capability-rootcause-20261019/FINANCIAL_MEASUREMENT_SEMANTICS_AND_COMPARABILITY_SAFE.json",
+    "sha256": "fc4b42e6e4215ff35a4e58c00ad76555ac77c82ffb8e0502084f541cf3cca2dd",
+    "bytes": 41003
+  },
+  "results": {
+    "source_instances": 21,
+    "typed_financial_fact_rows": 66,
+    "financial_metric_counts": {
+      "financial_net_revenue": 21,
+      "financial_net_interest_revenue": 21,
+      "financial_interest_income": 21,
+      "financial_incomes_as_reported": 3
+    },
+    "financial_missing": 18,
+    "missing_reason_counts": {
+      "DIRECT_QUARTER_FACT_MISSING": 18
+    },
+    "financial_null_or_filled_zero_rows": 0,
+    "actual_explicit_zero_financial_fact_rows": 0,
+    "duplicate_fact_counts": {
+      "1": 66
+    },
+    "source_labels_verified_per_concept": {
+      "NetIncomeLoss": 21,
+      "NetInterestIncomeExpense": 21,
+      "RevenueFromInterest": 21,
+      "Incomes": 3
+    },
+    "default_compatibility_sources": 21,
+    "prior_inventory_value_compatibility_sources": 21
+  },
+  "unit_controls": {
+    "passed": 41,
+    "failed": 0,
+    "skipped": 0,
+    "scope": "SYNTHETIC_PROTOCOL_CONTROLS_NOT_PRODUCTION"
+  },
+  "typed_measurements": {
+    "financial_net_revenue": "tifrs-fh NetIncomeLoss = issuer 4XXXX net revenue; not IFRS ProfitLoss",
+    "financial_net_interest_revenue": "49600 net interest revenue or expense; signed as reported",
+    "financial_interest_income": "IFRS RevenueFromInterest = 41000 interest income",
+    "financial_incomes_as_reported": "40000 Incomes / Revenues; gross basis not proven"
+  },
+  "limitations": [
+    "Exact seven observed entities and consolidated C request only. Query alone does not prove all accounting/consolidation bases.",
+    "21 filings cover 2025Q3, 2026Q1, 2026Q2; not a complete consecutive latest four-quarter set.",
+    "Financial measures remain distinct; no generic Revenue alias, component sum, zero fill or estimate-basis equivalence.",
+    "No announcement-time inference, pre-announcement Consensus vintage, V1 source admission, changed thresholds or Production deployment.",
+    "Original Q4 collection stop-control failure remains recorded; no retry or retrospective relabeling."
+  ],
+  "independent_code_review": {
+    "status": "PASS_LIMITED_NO_REPORTABLE_FINDING_NOT_FORMAL_SECURITY_SCAN",
+    "unit_controls": 41,
+    "independent_counterexamples": 68,
+    "default_prior_output_comparisons": 6,
+    "artifact": {
+      "path": "/workspace/scratch/866fb527950e/r18-v1-capability-rootcause-20261019/FINANCIAL_TYPED_PROFILE_LIMITED_CODE_REVIEW_SAFE.json",
+      "sha256": "b791b29e5b382fab784aa0332e1afde8f21d44e5d0861f077700e3db359b30c3",
+      "bytes": 6864
+    }
+  },
+  "production_authorized": false,
+  "production_evaluation": false,
+  "secret_reads": 0,
+  "production_writes": 0,
+  "migration_execution": false,
+  "existing_auth_rls_cron_changes": false,
+  "member_policy_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false,
+  "type_check": "PASS",
+  "lint": "PASS",
+  "build": "PASS"
+}

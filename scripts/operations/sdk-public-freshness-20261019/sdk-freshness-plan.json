@@ -1,0 +1,513 @@
+{
+  "schema": "C_WORKER_INDEPENDENT_CI_PUBLIC_SDK_FRESHNESS_PLAN_V1",
+  "plan_id": "C_WORKER_PUBLIC_SDK_CI_FRESHNESS_20261019_V1",
+  "scope": "NEW_INDEPENDENT_PUBLIC_DEPENDENCY_CHECK_NOT_LOCAL_RETRY_NOT_DEPLOYMENT",
+  "repository": "sonytzeng/morning-alpha",
+  "workflow_path": ".github/workflows/c-worker-sdk-freshness-20261019.yml",
+  "prior_local_fail_receipt_sha256": "b9cf18708e994d4bb096b2569e1aad731adbd663b20f8c5de21301a7f471c792",
+  "original63_catalog_sha256": "bc96827dbfab1ccd24922790ed8f9efe7a344fbbed38fdb6c52b98bd01fb3737",
+  "original5_alias_catalog_sha256": "eb04094115aa0d9613163ff0a85664e019eca69f30e99b4ab4732405323a4363",
+  "repair_args_sha256": "1668a874bf6d48b29fc6b49a774242ac584d6fe7b6ab0f02e130d1328c554bed",
+  "rollback_args_sha256": "61fe22e2d966b76340f5c508344de2f89f22f7971f36a516c2218c112d1a89a9",
+  "user_agent": "Deno/2.9.2",
+  "limits": {
+    "deadline_seconds_per_item": 10,
+    "accepted_body_bytes": 1048576,
+    "concurrency": 2,
+    "http_retry": 0,
+    "logical_items": 68,
+    "canonical_items": 63,
+    "alias_items": 5,
+    "wire_get_max": 73,
+    "sticky_stop": true
+  },
+  "deployment_authorized": false,
+  "production_changed": false,
+  "rows": [
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/denonext/auth-js.mjs",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/denonext/auth-js.mjs",
+      "sha256": "a92d005e4a8a03063aa2c46d7d69161fa776ce1bacccc43daa70e28fe367068e",
+      "bytes": 59678,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/AuthAdminApi.d.ts",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/AuthAdminApi.d.ts",
+      "sha256": "19a5d3f42489d005a53d67ae649f9fef9bf6dd651fc3de5095996df9cbebdca9",
+      "bytes": 175,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/AuthClient.d.ts",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/AuthClient.d.ts",
+      "sha256": "cf0e07748570a1c3b096171cbfbe0acc49b6135d7d618f1ebff4ddfcced1db11",
+      "bytes": 163,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/GoTrueAdminApi.d.ts",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/GoTrueAdminApi.d.ts",
+      "sha256": "76eb2848a2b405dfe11feb8dc9becc67a40de7a3e50ddb715804cbbeffa9429a",
+      "bytes": 3926,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/GoTrueClient.d.ts",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/GoTrueClient.d.ts",
+      "sha256": "e96960d344b09355cd470dd6c3a07c7df01cbbecca98d0912c462be7310f2eb7",
+      "bytes": 20815,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/index.d.ts",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/index.d.ts",
+      "sha256": "017098a784457600a525f787e6a85b574d04c345135af3d9836d99c45db849b9",
+      "bytes": 490,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/error-codes.d.ts",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/error-codes.d.ts",
+      "sha256": "9f0e5dfed47b988b89803ffd97b6706860b3f45f7b34b5693348b22754927db5",
+      "bytes": 2416,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/errors.d.ts",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/errors.d.ts",
+      "sha256": "94ace5a767ffdc10be6cb48f7a23aee8023c96cd21863fb9dcd6aa4dff63b3aa",
+      "bytes": 3570,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/fetch.d.ts",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/fetch.d.ts",
+      "sha256": "ca4a734d6a07f2fb0ff1b24e841dd43f30a726c41f4ffdbf82e363085cba5c4b",
+      "bytes": 1403,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/helpers.d.ts",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/helpers.d.ts",
+      "sha256": "526d7ac29944eb54bc72a79d24c7a79196e86fbfc83e08d296e61d6f9f9465e6",
+      "bytes": 3063,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/locks.d.ts",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/locks.d.ts",
+      "sha256": "f7ffb5344abb316daaa9f54bb0b149f1b0eb0fdff942fc2ffdb702b9e4ddc218",
+      "bytes": 2877,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/solana.d.ts",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/solana.d.ts",
+      "sha256": "1f0721a8a899bedfd30d2094b583b9924106b34e20c19e2c7c8a020cf8899290",
+      "bytes": 5542,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/types.d.ts",
+      "canonical": "https://esm.sh/@supabase/auth-js@2.71.1/dist/module/lib/types.d.ts",
+      "sha256": "5c7ebcaac23e87fe1eb15bc2129904e83d71b14f5ebb8a4929341735c1dbe1fc",
+      "bytes": 37826,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/functions-js@2.4.6/denonext/functions-js.mjs",
+      "canonical": "https://esm.sh/@supabase/functions-js@2.4.6/denonext/functions-js.mjs",
+      "sha256": "d6cc049a0430f428ff0b71a0d3c48d45a243ddd48c68febcdb5cb8a02476a1dc",
+      "bytes": 2978,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/functions-js@2.4.6/dist/module/FunctionsClient.d.ts",
+      "canonical": "https://esm.sh/@supabase/functions-js@2.4.6/dist/module/FunctionsClient.d.ts",
+      "sha256": "1dac62a326bf755ccdd96ca01d587c7b28ac2c7eb9bb2a6342e79301183e6e20",
+      "bytes": 938,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/functions-js@2.4.6/dist/module/index.d.ts",
+      "canonical": "https://esm.sh/@supabase/functions-js@2.4.6/dist/module/index.d.ts",
+      "sha256": "48e129b111f5984ce0b9360f7e150a449c7e108f506266a76c66f60b9c10284c",
+      "bytes": 272,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/functions-js@2.4.6/dist/module/types.d.ts",
+      "canonical": "https://esm.sh/@supabase/functions-js@2.4.6/dist/module/types.d.ts",
+      "sha256": "86c725547d23c971df286d432f88baf0899e49b135a91066c2dc030a8b956cd8",
+      "bytes": 1871,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/node-fetch@2.6.15/denonext/node-fetch.mjs",
+      "canonical": "https://esm.sh/@supabase/node-fetch@2.6.15/denonext/node-fetch.mjs",
+      "sha256": "0bae9052231f4f6dbccc7234d05ea96923dbf967be12f402764580b6bf9f713d",
+      "bytes": 20224,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/node-fetch@2.6.15?target=denonext",
+      "canonical": "https://esm.sh/@supabase/node-fetch@2.6.15?target=denonext",
+      "sha256": "4d28c4ad97328403184353f68434f2b6973971507919e9150297413664919cf3",
+      "bytes": 238,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/denonext/postgrest-js.mjs",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/denonext/postgrest-js.mjs",
+      "sha256": "c3769b11ef02debc78ecf6ab4e152d3cf7dbd05bbbafeb72c160e76cc57cda3c",
+      "bytes": 13511,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/PostgrestBuilder.d.ts",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/PostgrestBuilder.d.ts",
+      "sha256": "5f9174461dfabc1dedcaf44ca00355e6cfd5cd47bb4708196974f5e9adfab264",
+      "bytes": 3773,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/PostgrestClient.d.ts",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/PostgrestClient.d.ts",
+      "sha256": "d12b97fd485ffd16a93eb59e23b3b794032df08e01970efa4a21f96e7ebf163e",
+      "bytes": 3999,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/PostgrestError.d.ts",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/PostgrestError.d.ts",
+      "sha256": "a47cb9d786eb379ee84dcc4ad503002d49320f50c79baf744b773bef79faa511",
+      "bytes": 411,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/PostgrestFilterBuilder.d.ts",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/PostgrestFilterBuilder.d.ts",
+      "sha256": "2a15ebf4e930b4edca06e7e71f6d510ef911c9ba03b46741a1d14d050f11abab",
+      "bytes": 8441,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/PostgrestQueryBuilder.d.ts",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/PostgrestQueryBuilder.d.ts",
+      "sha256": "4c2107226b61748547658010500960aec662171db81bc8b6e07be1e62bf8449d",
+      "bytes": 5189,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/PostgrestTransformBuilder.d.ts",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/PostgrestTransformBuilder.d.ts",
+      "sha256": "716211b4c9853f7c7296a5d77455008a453bbba856d9edd1d009dc4bfec409f6",
+      "bytes": 7164,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/index.d.ts",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/index.d.ts",
+      "sha256": "08ebfdc3b44f14320eaee6344d19c7e05a39707d065bea4a699d90090976775c",
+      "bytes": 1212,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/select-query-parser/parser.d.ts",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/select-query-parser/parser.d.ts",
+      "sha256": "568d16488f1f76cc2751928c14f321781e8e82b02065db495b4394d5b3d4a20f",
+      "bytes": 15729,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/select-query-parser/result.d.ts",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/select-query-parser/result.d.ts",
+      "sha256": "c5a4edd38a03bf1104c47c4aa9917dafce24c5e05b7ecd223e55d0080cb3be48",
+      "bytes": 15367,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/select-query-parser/types.d.ts",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/select-query-parser/types.d.ts",
+      "sha256": "e333be01f32f2b1bb14f221c215c66e4c9850e1ea30acf0fb8ef0201138011ad",
+      "bytes": 2865,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/select-query-parser/utils.d.ts",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/select-query-parser/utils.d.ts",
+      "sha256": "e651f13e95035ea908975e991d0f2521e1a41641c4c2ac0d3f3bb70f2e02f706",
+      "bytes": 18840,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/types.d.ts",
+      "canonical": "https://esm.sh/@supabase/postgrest-js@1.21.4/dist/cjs/types.d.ts",
+      "sha256": "f964bd90f338afcb8196b6cd2d625e78b5e65fc72145269e59821856a223d710",
+      "bytes": 5619,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/realtime-js@2.15.5/denonext/realtime-js.mjs",
+      "canonical": "https://esm.sh/@supabase/realtime-js@2.15.5/denonext/realtime-js.mjs",
+      "sha256": "518bdc73c29b502ba4dcf7ce2dff0ff8c1cbd8e5978f7ea2435af8214ea45dd5",
+      "bytes": 29582,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/RealtimeChannel.d.ts",
+      "canonical": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/RealtimeChannel.d.ts",
+      "sha256": "09a620a84c693da44ba6c4f571ce9355c24f615f69a8e3066461fa0f820f069a",
+      "bytes": 8810,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/RealtimeClient.d.ts",
+      "canonical": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/RealtimeClient.d.ts",
+      "sha256": "634544222cd756f401c200167c34270d676a81fae93c1d8ae39476efbec2b5e3",
+      "bytes": 7320,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/RealtimePresence.d.ts",
+      "canonical": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/RealtimePresence.d.ts",
+      "sha256": "86c7425c97fa416e9d9e5541f12cbef2e26bb3c55d0e88f3133d3a5d5b4ff0f0",
+      "bytes": 1897,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/index.d.ts",
+      "canonical": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/index.d.ts",
+      "sha256": "4f7afd80d0d97b54dfab83bba2c29618aaf20a86d3f91e292d5012b0616441d5",
+      "bytes": 1458,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/lib/constants.d.ts",
+      "canonical": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/lib/constants.d.ts",
+      "sha256": "1f47b873a0c7a9d2e434fc5ad44e9cee315a88c81186b1654b7e922b4663ec8d",
+      "bytes": 994,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/lib/push.d.ts",
+      "canonical": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/lib/push.d.ts",
+      "sha256": "04e245faa4036b2c5a164b17289928c6ff2ed3dae92959c8956dc481b64a5af5",
+      "bytes": 1315,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/lib/serializer.d.ts",
+      "canonical": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/lib/serializer.d.ts",
+      "sha256": "4990f875f6e9a1898655fdba7b822222f8b930bfb7c9253b4f047aa4b05d4ca1",
+      "bytes": 232,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/lib/timer.d.ts",
+      "canonical": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/lib/timer.d.ts",
+      "sha256": "ddf170afd193dc372316ed1f4a087f0e9732a5b8bd9cb9e5c3ac74f1cc676e31",
+      "bytes": 764,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/lib/websocket-factory.d.ts",
+      "canonical": "https://esm.sh/@supabase/realtime-js@2.15.5/dist/module/lib/websocket-factory.d.ts",
+      "sha256": "ec8cceb97e19ca92e678335d62a1ae4df741403df72b2bd9c596488c10a766b0",
+      "bytes": 1376,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/storage-js@2.12.1/denonext/storage-js.mjs",
+      "canonical": "https://esm.sh/@supabase/storage-js@2.12.1/denonext/storage-js.mjs",
+      "sha256": "7a5a47546486972c0627b620e7413300b4e82ac6e26b53d2c31933e13c2d652e",
+      "bytes": 13488,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/StorageClient.d.ts",
+      "canonical": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/StorageClient.d.ts",
+      "sha256": "26895faead25b78db1d0a105f3a5686abafcf1586957d2907b87d76ef0d9518c",
+      "bytes": 622,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/index.d.ts",
+      "canonical": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/index.d.ts",
+      "sha256": "07800a0eea5587ec26d8932a4f5f10871b9e017292ab05b74b27154fb5f98860",
+      "bytes": 176,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/lib/errors.d.ts",
+      "canonical": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/lib/errors.d.ts",
+      "sha256": "5bd303ba885c9abe62022665627f49624d18bdaea4e01d9fea7c76e98f80977d",
+      "bytes": 693,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/lib/fetch.d.ts",
+      "canonical": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/lib/fetch.d.ts",
+      "sha256": "d768cc6921d13b7280eb55122980ade9b1b61b3dc42541b231d339ff8d36690c",
+      "bytes": 1025,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/lib/types.d.ts",
+      "canonical": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/lib/types.d.ts",
+      "sha256": "598b519bdb9b57020861be28c48bcc8f0b2c746b682adabf2ea0df28c3a4926e",
+      "bytes": 4646,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/packages/StorageBucketApi.d.ts",
+      "canonical": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/packages/StorageBucketApi.d.ts",
+      "sha256": "d02b50caef9f83d4b503fdfe167286fe3a803b9fc5e01135df13ad4a320331d6",
+      "bytes": 4634,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/packages/StorageFileApi.d.ts",
+      "canonical": "https://esm.sh/@supabase/storage-js@2.12.1/dist/module/packages/StorageFileApi.d.ts",
+      "sha256": "92d186ec7c266f5f7ce39db9e811ae3c32c50b5a1b36d30fc9fe22e6ecb52216",
+      "bytes": 10661,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/supabase-js@2.57.4",
+      "canonical": "https://esm.sh/@supabase/supabase-js@2.57.4",
+      "sha256": "05a369085eb4a4c99d85ccece97f0cf1e05357122e0e74373da1f0e91b014902",
+      "bytes": 497,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/supabase-js@2.57.4/denonext/supabase-js.mjs",
+      "canonical": "https://esm.sh/@supabase/supabase-js@2.57.4/denonext/supabase-js.mjs",
+      "sha256": "b31f4ec51272218b68cfdcef9de5aa7abd0f1da1262fa0b9377c62eb18fe494b",
+      "bytes": 7439,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/supabase-js@2.57.4/dist/module/SupabaseClient.d.ts",
+      "canonical": "https://esm.sh/@supabase/supabase-js@2.57.4/dist/module/SupabaseClient.d.ts",
+      "sha256": "ebbdd5b8aa018240201900ae640b29f77932476f8fab690645609b7a1cd2618b",
+      "bytes": 7639,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/supabase-js@2.57.4/dist/module/index.d.ts",
+      "canonical": "https://esm.sh/@supabase/supabase-js@2.57.4/dist/module/index.d.ts",
+      "sha256": "873f1bc4e952684d42ba45bc92ea76655984435b0b17f6553e394a1884f822a5",
+      "bytes": 2397,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/supabase-js@2.57.4/dist/module/lib/SupabaseAuthClient.d.ts",
+      "canonical": "https://esm.sh/@supabase/supabase-js@2.57.4/dist/module/lib/SupabaseAuthClient.d.ts",
+      "sha256": "b0c0e4fcd484c47b26ea47fbf778ee829a9cfe40203af678c5df8b7f0af0e518",
+      "bytes": 316,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/supabase-js@2.57.4/dist/module/lib/types.d.ts",
+      "canonical": "https://esm.sh/@supabase/supabase-js@2.57.4/dist/module/lib/types.d.ts",
+      "sha256": "b87756d60a264a17a037392a975f7691f557c3842845883d33153f4d5d5e622b",
+      "bytes": 4864,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@types/phoenix@1.6.7/index.d.ts",
+      "canonical": "https://esm.sh/@types/phoenix@1.6.7/index.d.ts",
+      "sha256": "54d2709d08dc65b1cb180673e8f667f965a41b35be47e9aade190e931f3e29e8",
+      "bytes": 5655,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/tr46@0.0.3/denonext/tr46.mjs",
+      "canonical": "https://esm.sh/tr46@0.0.3/denonext/tr46.mjs",
+      "sha256": "5753ec0a99414f4055f0c1f97691100f13d88e48a8443b00aebb90a512785fa2",
+      "bytes": 266119,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/tr46@0.0.3?target=denonext",
+      "canonical": "https://esm.sh/tr46@0.0.3?target=denonext",
+      "sha256": "19cb9be0f0d418a0c3abb81f2df31f080e9540a04e43b0f699bce1149cba0cbb",
+      "bytes": 130,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/webidl-conversions@3.0.1/denonext/webidl-conversions.mjs",
+      "canonical": "https://esm.sh/webidl-conversions@3.0.1/denonext/webidl-conversions.mjs",
+      "sha256": "238cd0743827707cbc1c2d7c2cf1027dbc536fb53ec9a3fde0ff8026a3ac5385",
+      "bytes": 3205,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/webidl-conversions@3.0.1?target=denonext",
+      "canonical": "https://esm.sh/webidl-conversions@3.0.1?target=denonext",
+      "sha256": "4e20318d50528084616c79d7b3f6e7f0fe7b6d09013bd01b3974d7448d767e29",
+      "bytes": 200,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/whatwg-url@5.0.0/denonext/whatwg-url.mjs",
+      "canonical": "https://esm.sh/whatwg-url@5.0.0/denonext/whatwg-url.mjs",
+      "sha256": "29b16d74ee72624c915745bbd25b617cfd2248c6af0f5120d131e232a9a9af79",
+      "bytes": 24147,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/whatwg-url@5.0.0?target=denonext",
+      "canonical": "https://esm.sh/whatwg-url@5.0.0?target=denonext",
+      "sha256": "f001a2cadf81312d214ca330033f474e74d81a003e21e8c5d70a1f46dc97b02d",
+      "bytes": 252,
+      "kind": "CANONICAL_SOURCE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/node-fetch@^2.6.14?target=denonext",
+      "canonical": "https://esm.sh/@supabase/node-fetch@2.6.15?target=denonext",
+      "sha256": "4d28c4ad97328403184353f68434f2b6973971507919e9150297413664919cf3",
+      "bytes": 238,
+      "kind": "EXACT_REDIRECT_EDGE"
+    },
+    {
+      "url": "https://esm.sh/whatwg-url@^5.0.0?target=denonext",
+      "canonical": "https://esm.sh/whatwg-url@5.0.0?target=denonext",
+      "sha256": "f001a2cadf81312d214ca330033f474e74d81a003e21e8c5d70a1f46dc97b02d",
+      "bytes": 252,
+      "kind": "EXACT_REDIRECT_EDGE"
+    },
+    {
+      "url": "https://esm.sh/webidl-conversions@^3.0.0?target=denonext",
+      "canonical": "https://esm.sh/webidl-conversions@3.0.1?target=denonext",
+      "sha256": "4e20318d50528084616c79d7b3f6e7f0fe7b6d09013bd01b3974d7448d767e29",
+      "bytes": 200,
+      "kind": "EXACT_REDIRECT_EDGE"
+    },
+    {
+      "url": "https://esm.sh/tr46@~0.0.3?target=denonext",
+      "canonical": "https://esm.sh/tr46@0.0.3?target=denonext",
+      "sha256": "19cb9be0f0d418a0c3abb81f2df31f080e9540a04e43b0f699bce1149cba0cbb",
+      "bytes": 130,
+      "kind": "EXACT_REDIRECT_EDGE"
+    },
+    {
+      "url": "https://esm.sh/@supabase/node-fetch@^2.6.13?target=denonext",
+      "canonical": "https://esm.sh/@supabase/node-fetch@2.6.15?target=denonext",
+      "sha256": "4d28c4ad97328403184353f68434f2b6973971507919e9150297413664919cf3",
+      "bytes": 238,
+      "kind": "EXACT_REDIRECT_EDGE"
+    }
+  ],
+  "head_branch": "codex/market-regime-compatibility-20261019",
+  "event": {
+    "name": "pull_request",
+    "action": "opened",
+    "base_branch": "main",
+    "same_repository_only": true,
+    "first_workflow_run_only": true,
+    "first_attempt_only": true
+  }
+}

@@ -1,7 +1,14 @@
 /** Shared read/export contract only. Kept in src for the frontend packager. */
 export const PUBLIC_MARKET_MODEL_VERSION = 'CANONICAL_PUBLIC_MARKET_V1' as const;
 export const PUBLIC_CHECKPOINTS = ['0900', '0930', '1030', '1300', '1410', '1430'] as const;
-export const PUBLIC_REGIMES = { range: '震盪／盤整', trend_up: '多頭趨勢', trend_down: '空頭趨勢', risk_off: '風險退避', high_volatility: '高波動' } as const;
+export const PUBLIC_REGIMES = {
+  range: '震盪／盤整', trend_up: '多頭趨勢', trend_down: '空頭趨勢', risk_off: '風險退避', high_volatility: '高波動',
+  // Preserve historical wire values and the exact current producer vocabulary
+  // from classifyMarketRegime in production-architecture-core.mjs. Regime is
+  // separate from directional bias, action, and publication/evidence status.
+  stress: '壓力市場', volatile_range: '高波動盤整',
+  risk_on_trend: '風險偏好多頭趨勢', risk_off_trend: '風險退避空頭趨勢',
+} as const;
 type Row = Record<string, unknown>;
 const obj = (v: unknown): Row => v && typeof v === 'object' && !Array.isArray(v) ? v as Row : {};
 const str = (v: unknown) => typeof v === 'string' ? v : '';

@@ -1,0 +1,73 @@
+name: C Worker public SDK freshness 20261019 (single opened event)
+on:
+  pull_request:
+    types: [opened]
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: c-worker-public-sdk-freshness-20261019-v1
+  cancel-in-progress: false
+jobs:
+  public-sdk-hashes:
+    if: github.event.pull_request.head.ref == 'codex/market-regime-compatibility-20261019' && github.event.pull_request.head.repo.full_name == 'sonytzeng/morning-alpha'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+      HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+      BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+      EVENT_ACTION: ${{ github.event.action }}
+      PUBLIC_CHECK_DIR: ${{ runner.temp }}/c-worker-sdk-public-${{ github.run_id }}
+    steps:
+      - name: Refuse every event except this same-repository first opened execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = pull_request
+          test "$EVENT_ACTION" = opened
+          test "$GITHUB_REPOSITORY" = sonytzeng/morning-alpha
+          test "$HEAD_REPOSITORY" = sonytzeng/morning-alpha
+          test "$HEAD_BRANCH" = codex/market-regime-compatibility-20261019
+          test "$BASE_BRANCH" = main
+          test "$GITHUB_RUN_NUMBER" = 1
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Bind exact PR head and reviewed checker/catalog/test bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          sha256sum --check <<'HASHES'
+          b29429b4df33aa8f5547e57c03d841d8086311a086e43d97f69fc516d7cf0f39  scripts/operations/sdk-public-freshness-20261019/sdk_public_freshness.py
+          4c9da92507641a0268f7ec595a406556f0cd22469a1f97d6b5ab3f7dbd524145  scripts/operations/sdk-public-freshness-20261019/sdk-freshness-plan.json
+          ff43e7aa7e35330ccecfd74ef38ee413865f884b615458314e3bb774b75a9bf4  scripts/operations/sdk-public-freshness-20261019/test_sdk_public_freshness_offline.py
+          HASHES
+      - name: Offline refusal and bound controls (no HTTP/DNS/TLS)
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -i PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8             python3 -I -B -m unittest discover             -s scripts/operations/sdk-public-freshness-20261019 -p test_sdk_public_freshness_offline.py -v
+      - name: Execute the new independent fixed public-only check once
+        id: freshness
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -i PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8             python3 -I -B scripts/operations/sdk-public-freshness-20261019/sdk_public_freshness.py             --plan scripts/operations/sdk-public-freshness-20261019/sdk-freshness-plan.json             --output "$PUBLIC_CHECK_DIR/receipt.json"             --execute-public-plan             --event "$GITHUB_EVENT_NAME" --action "$EVENT_ACTION"             --repository "$GITHUB_REPOSITORY" --head-repository "$HEAD_REPOSITORY"             --head-branch "$HEAD_BRANCH" --base-branch "$BASE_BRANCH"             --run-id "$GITHUB_RUN_ID" --run-number "$GITHUB_RUN_NUMBER"             --run-attempt "$GITHUB_RUN_ATTEMPT"             --event-head-sha "$HEAD_SHA" --actual-head-sha "$(git rev-parse HEAD)"
+      # This pinned artifact action uses only Actions' managed artifact transport.
+      # No application secret is referenced or passed into the checker.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && steps.freshness.outcome != 'skipped'
+        with:
+          name: c-worker-public-sdk-freshness-${{ github.run_id }}
+          path: ${{ env.PUBLIC_CHECK_DIR }}/receipt.json
+          if-no-files-found: error
+          retention-days: 14

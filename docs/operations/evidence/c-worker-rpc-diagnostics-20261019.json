@@ -1,0 +1,131 @@
+{
+  "schema": "C_WORKER_RPC_DIAGNOSTICS_SOURCE_CANDIDATE_V1",
+  "base": "965263fe15dc672cac6c61af06bfd14d69044dd3",
+  "files": [
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/index.ts",
+      "mode": "100644",
+      "before_sha256": "9260ec345dcb8a6e96c8f65ccc110789ec6d9dc5316fe46c1b229172e8abc792",
+      "after_sha256": "fbc591c736dbc15913feeec381c14433b96004c4f03cce38ae21673af4c6c89d"
+    },
+    {
+      "path": "tests/cWorkerRpcFailureDiagnostics.integration.mjs",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "7ddec97080ef7597f83915e1ee6f81fbaf257ec00db3e710babed3e31b492c34"
+    }
+  ],
+  "protected_sources": [
+    {
+      "path": "src/features/vnext/dailyRuntime.ts",
+      "mode": "100644",
+      "sha256": "c3c3fc74881831295c4cf19970ba77b77182b6c171e5dde1f3db6610666cea48"
+    },
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/handler.ts",
+      "mode": "100644",
+      "sha256": "ea4ceab840aac823ad130e052477dce346a455ce700606c4f80db990c05a4954"
+    },
+    {
+      "path": "supabase/functions/_shared/vnext-daily-hook.ts",
+      "mode": "100644",
+      "sha256": "3903460c835d9fb0df749ebf050409bff56144aafbc6423bf1ac58dfc2a6bea0"
+    },
+    {
+      "path": "scripts/operations/c-worker-local-sdk-release-20261019/release-catalog-r2.json",
+      "mode": "100644",
+      "sha256": "8ce62c1b492dd6aaf0dd797e5bbe384b241a9e206e930e7f1eccc2e0cdaefb81"
+    },
+    {
+      "path": "tests/helpers/cWorkerLocalSdkNetworkDenied.cjs",
+      "mode": "100644",
+      "sha256": "f1a58ff2e105971eb2711dfa6619cb61695bc96b649390af8ae2aa94bd1c9e83"
+    },
+    {
+      "path": "supabase/functions/recommendation-v2-forward-worker-v1/index.ts",
+      "mode": "100644",
+      "sha256": "e8c39bb557400b8dbabf76ce841984be4c9ee60b2867bb6602e4dd2260f42c58"
+    },
+    {
+      "path": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "mode": "100644",
+      "sha256": "41d64e5fa4faaa9c930ce96f7f216f0321c01475e32aa666cd2cd75ed6ffd97e"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-v2-forward-outcomes.ts",
+      "mode": "100644",
+      "sha256": "d3947bcee40e254b821c75107769dfbfe6bde5b70bde7f425cb4dae2a049f100"
+    }
+  ],
+  "prior_rules": [
+    {
+      "path": "tests/helpers/sourceAcquisitionCloseAdmission.mjs",
+      "mode": "100644",
+      "sha256": "431dff1600f8f7e881e68b901bc5a2c5fe715ec231c0976bf04b4eb939d511b2"
+    },
+    {
+      "path": "tests/recommendationV2SourceAcquisitionAdmission.test.mjs",
+      "mode": "100644",
+      "sha256": "939b9f852ee703e8304ae220123a205cd04d09814ab6fbf01caf09c2a8255ede"
+    },
+    {
+      "path": "tests/integrationAdmission.test.mjs",
+      "mode": "100644",
+      "sha256": "539e44ccda3168a0b0fdb13ef8fb700b93e994d763f8f0a8a981c720a56cdcbf"
+    },
+    {
+      "path": "tests/helpers/ownerRegimeDisplayAdmission.mjs",
+      "mode": "100644",
+      "sha256": "a5b4b4688a977cdde95339c3e976ef7c218d2fe8a3374c38788d170446ec37f9"
+    },
+    {
+      "path": "tests/ownerRegimeDisplayAdmission.test.mjs",
+      "mode": "100644",
+      "sha256": "c13e9504e9002720e9afc54691285d26acd3136ffd406131906c0a6b01da5041"
+    },
+    {
+      "path": "tests/cWorkerLocalSdkRelease.test.mjs",
+      "mode": "100644",
+      "sha256": "3bc51d0a0fdf28d6c99723906da3f0c2146586c72fb9aee639ac00a1d82f8c4f"
+    },
+    {
+      "path": "tests/cWorkerLocalSdkRuntime.integration.mjs",
+      "mode": "100644",
+      "sha256": "0bae79f7c3a48f7779489e3607cc14fa729db0f55b619ef1979bfd56b6848632"
+    }
+  ],
+  "predecessor": {
+    "path": "docs/operations/evidence/core-member-integration-20261019-source-acquisition.json",
+    "sha256": "8254b6087673158d6bbf7fa8d2fc51975922627558d7767031330eb7ce8339f2"
+  },
+  "runtime": {
+    "function": "vnext-daily-research-v1",
+    "baseline_version": 2,
+    "verify_jwt": true,
+    "import_map": false,
+    "payload_files": 74,
+    "runtime_files": 44,
+    "unchanged_payload_files": 73,
+    "candidate_payload_sha256": "c86202f3123aeddefc6ca39efdca0b25cfcadee955527cff7c1a92a7dee6e7d9",
+    "recovery_payload_sha256": "0d88f57588d02cb63ba467a3803b44815110a67ad5712e40903c241806bd02d2"
+  },
+  "scope": {
+    "fixed_rpc_names": 3,
+    "fixed_runtime_operations": 13,
+    "unknown_code": "GENERIC",
+    "raw_error_or_request_logging": false,
+    "original_refusal_preserved": true,
+    "timeout_ms": 8000,
+    "business_behavior_change": false,
+    "retry_reset_or_replay": false,
+    "provider_or_worker_invocation": false
+  },
+  "production_authorized": false,
+  "migration_execution": false,
+  "auth_rls_change": false,
+  "member_rights_activation": false,
+  "caller_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false
+}

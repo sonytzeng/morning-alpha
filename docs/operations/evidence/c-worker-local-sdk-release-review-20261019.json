@@ -1,0 +1,251 @@
+{
+  "schema": "C_WORKER_LOCAL_SDK_REPRODUCIBLE_RELEASE_REVIEW_V1",
+  "base_head": "2e2027ba731b3b77eebd9bb9255be25d4708738b",
+  "prior_composition": {
+    "path": "docs/operations/evidence/core-member-integration-20261019-market-regime-r2.json",
+    "sha256": "7d2bbec04634f4e4f915a2b55a28236d44377073b18e4e7a6c7ecc7f09bf184a",
+    "rows": 284,
+    "immutable": true
+  },
+  "selection": "Root selected exact74-file local-SDK technical candidate for Git source preparation; deployment authorization not inherited.",
+  "function": {
+    "project_id": "cttfzgvhiewfckydcrci",
+    "name": "vnext-daily-research-v1",
+    "entrypoint_path": "supabase/functions/vnext-daily-research-v1/index.ts",
+    "verify_jwt": true
+  },
+  "source_scope": {
+    "new_SDK_modules": 15,
+    "new_static_notice_provenance_files": 30,
+    "changed_existing_runtime_file": "supabase/functions/vnext-daily-research-v1/index.ts",
+    "entry_before_sha256": "4fcada158ef706c7a08b665ad1d7e3d2da9faa58aba9887ef5c6bb9d198ea939",
+    "entry_after_sha256": "eb1c601722c6b6c4a36218114a00d7069181ac7e63175ae6200e0364d6301795",
+    "entry_change": "One exact SDK module specifier only; all other entry bytes unchanged.",
+    "current_two_global_V1_fixes_retained": true,
+    "runtime_handler_current_repair_2976_retained": true,
+    "no_full_74file_repository_overwrite": true
+  },
+  "release_catalog": {
+    "path": "scripts/operations/c-worker-local-sdk-release-20261019/release-catalog.json",
+    "sha256": "5ffb58de4a47582b222de4646eb5f75c088f5c47f97b312fb9d5516bab505d76",
+    "bytes": 19892
+  },
+  "materializer": {
+    "path": "scripts/operations/c-worker-local-sdk-release-20261019/materialize.mjs",
+    "fixed_variants": [
+      "repair",
+      "recovery"
+    ],
+    "approved_logic_commit": "5f33777836778e3600e4e377fcb3cf4de690fe80",
+    "repair_historical_logic_paths": [
+      "supabase/functions/_shared/decision-v1-evidence.ts",
+      "supabase/functions/_shared/recommendation-official-actuals.ts"
+    ],
+    "recovery_additional_logic_paths": [
+      "src/features/vnext/dailyRuntime.ts",
+      "supabase/functions/vnext-daily-research-v1/handler.ts"
+    ],
+    "other_source_reads": "Fixed current repository files, exact SHA256/length and regular non-symlink path checks; global current hashes are checked even when historical bytes are emitted.",
+    "git_environment": "Fixed PATH/LC_ALL, no system/global config, no replace objects, no lazy fetch, no terminal prompt or optional locks.",
+    "write_policy": "Two fixed ignored build filenames only, exclusive wx writes, no arbitrary ref/path/destination, refuse symlink output directories.",
+    "repair": {
+      "files": 74,
+      "runtime": 44,
+      "static": 30,
+      "sha256": "a3b1c87f4532057f77355908e4c9ab5dc7de3e601e91aeb23363c2b69f13fd41",
+      "bytes": 901300,
+      "path": "build/c-worker-local-sdk-release-20261019/repair-deploy-args.json"
+    },
+    "functional_fixed_SDK_recovery": {
+      "files": 74,
+      "sha256": "ec4b0f46a70bbbb7c3735bd70880746a3373860ef5db051afd4c04986b113610",
+      "bytes": 899143,
+      "path": "build/c-worker-local-sdk-release-20261019/fixed-sdk-recovery-deploy-args.json",
+      "only_repair_differences": [
+        {
+          "name": "src/features/vnext/dailyRuntime.ts",
+          "sha256": "b2ee9bfd1618b6eb7f85494ae55a1d6dc14693f48571e007d9d6a019f861ae91",
+          "bytes": 10062
+        },
+        {
+          "name": "supabase/functions/vnext-daily-research-v1/handler.ts",
+          "sha256": "ff721bc0a848b5e8cc4e089b440b0d3e179a124c13e8acd7054512047b0a4466",
+          "bytes": 2956
+        }
+      ],
+      "not_original29_or_ESZIP_bit_identical": true
+    }
+  },
+  "preserved_evidence": {
+    "candidate_license_supplement": {
+      "path": "/workspace/scratch/866fb527950e/c-worker-local-sdk-candidate-20261019/LICENSED_CANDIDATE_SUPPLEMENT_SAFE.json",
+      "sha256": "4ce776e83d65e872fc8225da5159a02159cd546f28849986ee53b236f68b6d02",
+      "bytes": 2945
+    },
+    "candidate_source_closure": {
+      "path": "/workspace/scratch/866fb527950e/c-worker-local-sdk-candidate-20261019/SOURCE_CLOSURE_SAFE.json",
+      "sha256": "0e3c633677f73912c55dd9b6194aa501d5695caf58b0f6daa179c6eb42220fe0",
+      "bytes": 6827
+    },
+    "original8_offline_cases": {
+      "path": "/workspace/scratch/866fb527950e/c-worker-local-sdk-candidate-20261019/OFFLINE_LOCAL_SDK_PREFLIGHT_SAFE.json",
+      "sha256": "a11c234d2afb320fd81f0c8df85ddb0340425ad79352f5622ce0f6e1f1d75ec2",
+      "bytes": 8816
+    },
+    "static_scope_independent_review": {
+      "path": "/workspace/scratch/866fb527950e/c-worker-sdk-independent-review-20261019/licensed-static-scope-final-review.json",
+      "sha256": "6163cdc789fcb437a8ce63db0ffd37e99ad3c4e176c8707cb4883ae56a251926",
+      "bytes": 15101
+    },
+    "runtime_closure_independent_review": {
+      "path": "/workspace/scratch/866fb527950e/c-worker-sdk-independent-review-20261019/licensed-runtime-closure-verification.json",
+      "sha256": "3bf4749beec8ef7b83d18a34927f1e5ef6a1b55a06d26900e255d4e8e35e7f0b",
+      "bytes": 6693
+    },
+    "original_remote_SDK_check": "FAIL_CLOSED preserved; no retry, rename, reset, rearm or conversion to PASS. New local packaging is a separate source capability, not remote freshness proof.",
+    "old_original29_rollback": {
+      "sha256": "61fe22e2d966b76340f5c508344de2f89f22f7971f36a516c2218c112d1a89a9",
+      "preserved": true,
+      "operational_limit": "Still depends on remote CDN SDK; not presented as the new operational recovery."
+    }
+  },
+  "notices": {
+    "official_exact_static_texts": 28,
+    "full_upstream_license_files": 9,
+    "runtime_imported": false,
+    "storage_license": "Exact Apache2 full LICENSE and original MIT package metadata both retained; discrepancy not rewritten.",
+    "tr46_license": "Exact0.0.3 upstream lacks full license text; original MIT declaration/author metadata retained, no substitute version or legal completeness claim.",
+    "unused_static_ESZIP_retention_proven": false
+  },
+  "validation": {
+    "runtime_and_packaging": {
+      "status": "PASS",
+      "node": "22.14.0",
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0,
+      "groups": {
+        "packaging_negative_tests": 6,
+        "runtime_static_and_literal_dynamic_graph": 1,
+        "actual_SDK_cases": 8
+      },
+      "command": "node --experimental-vm-modules --require ./tests/helpers/cWorkerLocalSdkNetworkDenied.cjs --test --test-concurrency=1 tests/cWorkerLocalSdkRelease.test.mjs tests/cWorkerLocalSdkRuntime.integration.mjs",
+      "log": {
+        "path": "build/c-worker-local-sdk-checks/materializer6-runtime9-final.log",
+        "sha256": "bf30079d9eae3f360cfecf8f0ca7bfc1519f00d82d83b7780866a32ae3a6a6c0",
+        "bytes": 4141
+      },
+      "actual_cases": "Same reviewed harness runs both exact variants: internal/browser/Owner refusals; valid internal invalid scope422/noRPC; canonical wait30000ms/handoff1; FINISH rejection repair101000ms/handoff1 versus recovery37000ms/handoff0. Synthetic clock and transports only."
+    },
+    "type_check": {
+      "status": "PASS",
+      "log": {
+        "path": "build/c-worker-local-sdk-checks/type-check.log",
+        "sha256": "a9c7d1fe7149e95532c7c3cfb9cffb1cb6af3f02529e56c365a285d82e26ba56",
+        "bytes": 169
+      }
+    },
+    "lint": {
+      "status": "PASS",
+      "log": {
+        "path": "build/c-worker-local-sdk-checks/lint.log",
+        "sha256": "e4e622c76daf347c9a5b600b20d795f21c4a236f93c903e1cbc869c8300f1674",
+        "bytes": 198
+      }
+    },
+    "build": {
+      "status": "PASS",
+      "log": {
+        "path": "build/c-worker-local-sdk-checks/build.log",
+        "sha256": "4ed8367cc379a1bffef39440d52c91379dbbe6ff89c86c4c663bbea6d75162ff",
+        "bytes": 5871
+      }
+    },
+    "historical_guard_regressions": {
+      "status": "PASS",
+      "node": "22.14.0",
+      "passed": 92,
+      "failed": 0,
+      "skipped": 0,
+      "files": [
+        "tests/integrationAdmission.test.mjs",
+        "tests/memberContinuityAdmission.test.mjs",
+        "tests/frontendTypeClosureAdmission.test.mjs",
+        "tests/coreEvidenceCandidateIntegrity.test.mjs",
+        "tests/stagedReleaseIntegrity.test.mjs",
+        "tests/vnextIntegrity.test.mjs",
+        "tests/vnextDailyWiring.test.mjs",
+        "tests/vnextDailyRuntimeRecovery.test.mjs",
+        "tests/ownerReleaseReviewPackage.test.mjs"
+      ],
+      "log": {
+        "path": "build/c-worker-local-sdk-checks/historical-guards-final.log",
+        "sha256": "af0a8893c423a7413137c567423c8f9613e618479a3e90118a3dae1b1f871db6",
+        "bytes": 23175
+      },
+      "all_original_assertions_retained": true,
+      "source_gate_widened": false,
+      "final_metadata_reseal": "Same338path scope; result metadata changes only, then physical admission repeated."
+    },
+    "independent_limited_source_review": {
+      "path": "/workspace/scratch/866fb527950e/c-worker-local-sdk-independent-review-20261019/LIMITED_FIVE_FILE_LOCAL_SDK_REVIEW_SAFE.json",
+      "sha256": "ae345b5780fbd51a4011c897b1379c08bb5d080d0333bab57cef5b26e89fece6",
+      "bytes": 9142,
+      "result": "PASS_WITH_LIMITS",
+      "reportable_findings": 0,
+      "formal_security_scan": false,
+      "composition_or_CI_review_included": false,
+      "additional_physical_controls": 6,
+      "control_counting": "Separate from reused15tests; not summed as mutually independent."
+    },
+    "test_public_compatibility": "VM-specific runtime cases use explicit integration.mjs path so existing tests/*.test.mjs never accidentally runs SourceTextModule without the required flag; no skips or package script changes.",
+    "initial_graph_probe": "Initial new probe mistakenly counted erased import-type declarations as runtime dependencies; graph corrected to inspect emitted JS used by actual VM; final15 cases all executed.",
+    "preseal_count_refusal": "Initial337 estimate was rejected: exact source scope is338 because Worker entry was baseline, not in prior284rows; no manifest accepted that wrong count.",
+    "initial_guard_regression": {
+      "status": "FAIL_PRESERVED",
+      "passed": 91,
+      "failed": 1,
+      "reason": "Existing plain-node CI invariant requires NODE_OPTIONS strip support on every new plain-node step; added exact env to both new steps, original assertion retained.",
+      "log": {
+        "path": "build/c-worker-local-sdk-checks/historical-guards-initial91-of92.log",
+        "sha256": "67397e582004a355eac6a683d82b657058883062946a1dabab97544063bf3072"
+      }
+    }
+  },
+  "CI": {
+    "workflow": ".github/workflows/core-member-integration.yml",
+    "additions": "Fixed repair/recovery materialization under denied network preload, then actual retained SDK and packaging15 tests on fixedNode22.14. Existing checks preserved.",
+    "remote_SDK_gate_modified": false,
+    "remote_CI_run_claimed": false,
+    "new_SDK_downloads": 0
+  },
+  "composition": {
+    "top": "docs/operations/evidence/core-member-integration-20261019-c-worker-local-sdk.json",
+    "expected_rows": 338,
+    "self_included": false,
+    "exact_new_paths_only": true,
+    "old_receipts_unchanged": true,
+    "B24_guards_and_website24_unchanged": true,
+    "changed_files": 56,
+    "physical_inventory": 339
+  },
+  "limits": [
+    "No Production Gateway JWT/Auth/DB/research E2E was executed.",
+    "JavaScript network preload denies normal fetch/http/https/net/tls/DNS ports; it is not an OS sandbox or escape-proof boundary.",
+    "Five literal fallback imports are statically closed; all fallback branches were not dynamically exercised.",
+    "Synthetic logical clocks demonstrate selected FINISH response behavior; process hard-kill recovery is not proved.",
+    "No server ESZIP identity, unused-static-file retention, or deployed runtime behavior is claimed.",
+    "Functional fixed-SDK recovery reproduces original STOP on uncertain FINISH and is not a fix for that original behavior."
+  ],
+  "commit": false,
+  "push": false,
+  "production_deployed": false,
+  "production_authorized": false,
+  "migration_execution": false,
+  "auth_rls_change": false,
+  "member_rights_activation": false,
+  "caller_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false
+}

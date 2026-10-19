@@ -9,7 +9,7 @@ const expected=[
  '.github/workflows/original-observation-ingress.yml','docs/operations/original-observation-ingress-20261019.md',
  'src/features/vnext/contracts.ts','src/features/vnext/engine.ts','src/features/vnext/originalIngress.ts',
  'supabase/migrations/20261019123345_original_observation_ingress_candidate_v1.sql',
- 'tests/coldSourcePriorityAdmission.test.mjs','tests/helpers/integrationAdmission.mjs','tests/originalIngressAdmission.test.mjs',
+ 'tests/coldSourcePriorityAdmission.test.mjs','tests/helpers/integrationAdmission.mjs','tests/originalIngressAdmission.test.mjs','tests/r10FunctionalSourceClosure.test.mjs',
  'tests/vnextContracts.test.mjs','tests/vnextOriginalIngress.test.mjs','tests/vnextOriginalIngressDatabase.integration.mjs','tests/vnextOriginalTimestamp.test.ts',
 ].sort();
 const flags=['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'];
@@ -68,4 +68,7 @@ test('current CI and pinned historical proof are distinct, unconditional and not
  const wrapper=integrationPhysicalRead('tests/coldSourcePriorityAdmission.test.mjs').toString();
  assert(wrapper.includes(ORIGINAL_INGRESS_BASE));assert(wrapper.includes('2f20ae753c8bab656d3d40e47b42d2879a0baa70ce8dd7cce5db96a55b706bbd'));
  assert(wrapper.includes('verifyIntegrationCandidate()'));assert(!wrapper.includes('.skip('));assert.deepEqual(ORIGINAL_INGRESS_DELTAS,expected);
+ const r10=integrationPhysicalRead('tests/r10FunctionalSourceClosure.test.mjs').toString();
+ assert(r10.includes(ORIGINAL_INGRESS_BASE));assert(r10.includes('e11c59ee77a16e28b55c2b0c0ab2aadf84599d72e8cdcb848f0d76f2b8004f69'));
+ assert(r10.includes('verifyIntegrationCandidate()'));assert(!r10.includes('.skip('));
 });

@@ -2410,7 +2410,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "808d616f58ad731622b97fcbe854ff5153c8878cbdda4e7378c1ab347c22f3ee",
+      "after_sha256": "95ba34365871342c9982f7dbc27e570b073a2e5541c0d0261b38ef03dacdb7c4",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2515,7 +2515,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "8ccae11649930c8fe745c4209f74f23b3256be9f6d7182d084728b0c9b1fa692",
+      "after_sha256": "2eb5ad894cf15e669da24250fd6eeaabdd4ae71eb7e498e2f83784725e737e55",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2648,7 +2648,7 @@
     {
       "path": "tests/r10FunctionalSourceClosure.test.mjs",
       "before_sha256": null,
-      "after_sha256": "e11c59ee77a16e28b55c2b0c0ab2aadf84599d72e8cdcb848f0d76f2b8004f69",
+      "after_sha256": "a13d0394bba2b9e22d7e217b9a434eb29333c6d6103e4b9ac9649e2abad0d331",
       "mode": "100644",
       "origin": "composition"
     },

@@ -24,6 +24,7 @@ export const ORIGINAL_INGRESS_DELTAS=Object.freeze([
  'tests/coldSourcePriorityAdmission.test.mjs',
  'tests/helpers/integrationAdmission.mjs',
  'tests/originalIngressAdmission.test.mjs',
+ 'tests/r10FunctionalSourceClosure.test.mjs',
  'tests/vnextContracts.test.mjs',
  'tests/vnextOriginalIngress.test.mjs',
  'tests/vnextOriginalIngressDatabase.integration.mjs',

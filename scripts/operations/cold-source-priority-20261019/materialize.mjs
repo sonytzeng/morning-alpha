@@ -9,7 +9,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 export const BASE='fda6d637ebf35ce545a31ddba3ad2e2b4724e7a8';
 export const CHANGED='src/features/vnext/dailyAdapter.ts';
 export const CATALOG='scripts/operations/cold-source-priority-20261019/release-catalog.json';
-export const CATALOG_SHA256='c3d403fae93ce37f1394d4bcd63af0f59e662a03ef79c53f562da8cf183b354b';
+export const CATALOG_SHA256='52ecf6eb1643d55edef712117b28ffa42d4bc38385dfe4ce36d3290e4a379a11';
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const env=Object.freeze({PATH:'/usr/bin:/bin',LC_ALL:'C',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0',GIT_OPTIONAL_LOCKS:'0'});
 const physical=name=>{

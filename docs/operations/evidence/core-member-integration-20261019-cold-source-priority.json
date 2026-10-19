@@ -198,7 +198,7 @@
     {
       "path": "docs/operations/evidence/cold-source-priority-20261019.json",
       "before_sha256": null,
-      "after_sha256": "19de6c1a4c3d399eda081a67a36ad61782fb9e3384a95befcf262c9b57c7fc08",
+      "after_sha256": "b668ca1800e34c524c00128fa6657ba2df4d91a5a3bd85a2b7c80d9cee1edb56",
       "mode": "100644",
       "origin": "composition"
     },
@@ -933,14 +933,14 @@
     {
       "path": "scripts/operations/cold-source-priority-20261019/materialize.mjs",
       "before_sha256": null,
-      "after_sha256": "7a82ff75a23be157da3e1be5f0d4d7129016951518120ec5234939d7992d9ee4",
+      "after_sha256": "ce2df2e5d694c24e6eb44db55bd845e99a5020a5893571aa7cf78217bbd90e2f",
       "mode": "100644",
       "origin": "composition"
     },
     {
       "path": "scripts/operations/cold-source-priority-20261019/release-catalog.json",
       "before_sha256": null,
-      "after_sha256": "c3d403fae93ce37f1394d4bcd63af0f59e662a03ef79c53f562da8cf183b354b",
+      "after_sha256": "52ecf6eb1643d55edef712117b28ffa42d4bc38385dfe4ce36d3290e4a379a11",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3040,4 +3040,3 @@
   "line_send": false,
   "payment_enabled": false
 }
-

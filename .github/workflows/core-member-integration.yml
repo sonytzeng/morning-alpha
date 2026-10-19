@@ -23,7 +23,23 @@ jobs:
           NODE_OPTIONS: --experimental-strip-types
         run: |
           node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
-          node --experimental-strip-types --test tests/producer15MonthlyAdmission.test.mjs
+          node --experimental-strip-types --test tests/coldSourcePriorityAdmission.test.mjs
+      - name: Current cold source ordering and existing recovery regressions
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextColdSourcePriority.test.mjs tests/vnextDailyRuntimeRecovery.test.mjs
+      - name: Check out the immutable Worker3 and Producer16 source proofs
+        uses: actions/checkout@v4
+        with:
+          ref: fda6d637ebf35ce545a31ddba3ad2e2b4724e7a8
+          path: build/cold-source-priority-historical-base
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Historical fda Producer16 delivery admission unchanged
+        working-directory: build/cold-source-priority-historical-base
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test tests/producer15MonthlyAdmission.test.mjs
       - name: Current exact Producer15 monthly delivery and original parser refusal controls
         env:
           NODE_OPTIONS: --experimental-strip-types
@@ -56,10 +72,13 @@ jobs:
         env:
           NODE_OPTIONS: --experimental-strip-types
         run: node --experimental-strip-types --test tests/cWorkerRpcDiagnosticsAdmission.test.mjs
-      - name: Current C Worker fixed-SDK diagnostic protocol with denied network ports
+      - name: Historical Worker3 fixed-SDK diagnostic protocol with denied network ports
+        working-directory: build/cold-source-priority-historical-base
         env:
           NODE_OPTIONS: --experimental-strip-types
-        run: node --experimental-vm-modules --require ./tests/helpers/cWorkerLocalSdkNetworkDenied.cjs --test --test-concurrency=1 tests/cWorkerRpcFailureDiagnostics.integration.mjs
+        run: |
+          npm ci --ignore-scripts
+          node --experimental-vm-modules --require ./tests/helpers/cWorkerLocalSdkNetworkDenied.cjs --test --test-concurrency=1 tests/cWorkerRpcFailureDiagnostics.integration.mjs
       - name: Check out the immutable pre-C-diagnostic source proofs only
         uses: actions/checkout@v4
         with:
@@ -158,6 +177,11 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+      - name: Materialize and check the exact Worker3 plus source-order-only candidate and recovery
+        run: |
+          node scripts/operations/cold-source-priority-20261019/materialize.mjs candidate
+          node scripts/operations/cold-source-priority-20261019/materialize.mjs recovery
+          deno check --no-lock build/cold-source-priority-20261019-r2/candidate/supabase/functions/vnext-daily-research-v1/index.ts build/cold-source-priority-20261019-r2/recovery/supabase/functions/vnext-daily-research-v1/index.ts
       - run: deno test --no-lock --allow-read tests/researchOwnerFieldAccess.sdk.test.ts tests/providerCapabilityEntry.sdk.test.ts
       - name: Materialize and type-check the exact current Producer15 candidate and recovery
         run: |

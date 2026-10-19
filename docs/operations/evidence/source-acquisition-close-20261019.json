@@ -1,0 +1,144 @@
+{
+  "schema": "MORNING_ALPHA_SOURCE_ACQUISITION_CLOSE_V1",
+  "base": "6b7017fcbb9fa2fd085f9658eca4d6ce382c32a3",
+  "prior_candidate": {
+    "commit": "7cd552903e7c08234f8728aecdf99d495087bc3c",
+    "tree": "b8a08955eafd8e205b83a7e115cd7d2cf674d448"
+  },
+  "files": [
+    {
+      "path": "supabase/functions/_shared/recommendation-monthly-response-sharing.ts",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "f4db375a05303478d5639f958f7b7b6b61739eb025833e88ab95983b61caa7b9"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-v2-forward-outcomes.ts",
+      "mode": "100644",
+      "before_sha256": "6b6f8d16bb9bf66739512674a84c375695f3bc03d1d92d98cc7f1f8e043f83c7",
+      "after_sha256": "d3947bcee40e254b821c75107769dfbfe6bde5b70bde7f425cb4dae2a049f100"
+    },
+    {
+      "path": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "mode": "100644",
+      "before_sha256": "2b4dc7ce5f76f0b1fe0b847590261fb9239a839c4a82404e614bd69dfa625d41",
+      "after_sha256": "41d64e5fa4faaa9c930ce96f7f216f0321c01475e32aa666cd2cd75ed6ffd97e"
+    },
+    {
+      "path": "tests/recommendationV2ForwardOutcomes.test.mjs",
+      "mode": "100644",
+      "before_sha256": "9f35455e1f464bc96ccdc134a840e2b54da67223d6d5f46fa2bb0b4ca07126bb",
+      "after_sha256": "d117ab1cfb193e80b030d4243e98fceb29f24f5448f7f7ac2bac192d2b163ef6"
+    },
+    {
+      "path": "tests/recommendationV2FugleRuntime.test.mjs",
+      "mode": "100644",
+      "before_sha256": "46510466a011b1978749206f24038da51386ee85c81ce900ae823538056dd725",
+      "after_sha256": "d276a68e2c6fcc2774bd2c3e132bf117612aa29b320e7e9242f1fef15df33f18"
+    },
+    {
+      "path": "tests/recommendationV2MonthlyResponseSharing.test.mjs",
+      "mode": "100644",
+      "before_sha256": null,
+      "after_sha256": "aeb7ea65f1c65aa886f2a09aa2f57c6e7aa7d383244023d45e8982061839cc50"
+    }
+  ],
+  "protected_sources": [
+    {
+      "path": "supabase/functions/_shared/decision-v1-evidence.ts",
+      "mode": "100644",
+      "sha256": "327928dd61babe767873a38ddc1cd933ce440d0f8fc6c269f4bcc8b4bdd37156"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+      "mode": "100644",
+      "sha256": "5d934bb7c2be21ff66a0043a945b0d91edcbeb2a57166882715e8813da31766e"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-official-actuals.ts",
+      "mode": "100644",
+      "sha256": "3b166e74cee4515a6a7e3bf726faf418742c5c22112e9363b38b337257d76a0c"
+    },
+    {
+      "path": "supabase/functions/_shared/recommendation-shadow-v2-sources.ts",
+      "mode": "100644",
+      "sha256": "98475003460d215e764bf011aba5fae7a603ba3455e54be547dba75e79e23708"
+    },
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/index.ts",
+      "mode": "100644",
+      "sha256": "9260ec345dcb8a6e96c8f65ccc110789ec6d9dc5316fe46c1b229172e8abc792"
+    },
+    {
+      "path": "supabase/functions/recommendation-v2-forward-worker-v1/index.ts",
+      "mode": "100644",
+      "sha256": "e8c39bb557400b8dbabf76ce841984be4c9ee60b2867bb6602e4dd2260f42c58"
+    }
+  ],
+  "prior_rules": [
+    {
+      "path": "tests/helpers/ownerRegimeDisplayAdmission.mjs",
+      "mode": "100644",
+      "sha256": "a5b4b4688a977cdde95339c3e976ef7c218d2fe8a3374c38788d170446ec37f9"
+    },
+    {
+      "path": "tests/ownerRegimeDisplayAdmission.test.mjs",
+      "mode": "100644",
+      "sha256": "c13e9504e9002720e9afc54691285d26acd3136ffd406131906c0a6b01da5041"
+    },
+    {
+      "path": "tests/helpers/vnextIntegrity.mjs",
+      "mode": "100644",
+      "sha256": "a8299e24647e07fa9dc6eb23f094188d8dcaf3d37633c4666be784b300eb067b"
+    },
+    {
+      "path": "tests/vnextIntegrity.test.mjs",
+      "mode": "100644",
+      "sha256": "cd3efd52bffccf3315d659674ed017fa15f3be642860389c4c8bbdc543c9b68c"
+    },
+    {
+      "path": "tests/integrationAdmission.test.mjs",
+      "mode": "100644",
+      "sha256": "539e44ccda3168a0b0fdb13ef8fb700b93e994d763f8f0a8a981c720a56cdcbf"
+    }
+  ],
+  "predecessor": {
+    "path": "docs/operations/evidence/core-member-integration-20261019-owner-regime-display.json",
+    "sha256": "2c65df89767113c38c43e6536e84dd798b9985d3c68711f5094c9279ffe26a43"
+  },
+  "scope": {
+    "monthly_requests": "TWO_FIXED_OFFICIAL_URLS_ONE_ANONYMOUS_GET_EACH_PER_BUNDLE",
+    "outcome_bars": "OBSERVED_AT_CLOCK_WITH_HORIZON_CUTOFF_ENFORCED",
+    "source_fallback": false,
+    "methodology_change": false,
+    "reset_or_replay": false,
+    "provider_invocation": false
+  },
+  "production_authorized": false,
+  "migration_execution": false,
+  "auth_rls_change": false,
+  "member_rights_activation": false,
+  "caller_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false,
+  "deployment_candidates": {
+    "source_merge_is_deployment": false,
+    "caller": {
+      "function": "recommendation-v2-forward-worker-v1",
+      "baseline_version": 3,
+      "candidate_kind": "SINGLE_OUTCOME_DIAGNOSTIC_DEPENDENCY_ONLY",
+      "sdk": "FIXED_SUPABASE_JS_2.57.4",
+      "entrypoint_or_hook_change": false,
+      "other_declared_sources": "UNCHANGED_BASELINE_21_OF_22",
+      "production_authorized": false
+    },
+    "producer": {
+      "function": "recommendation-stock-evidence-v1",
+      "baseline_version": 15,
+      "candidate_kind": "SAME_BATCH_MONTHLY_RESPONSE_SHARING_SOURCE_ONLY",
+      "deployment_status": "HOLD_EXISTING_UNVERSIONED_SDK_FINGERPRINT_MISMATCH",
+      "production_authorized": false
+    }
+  }
+}

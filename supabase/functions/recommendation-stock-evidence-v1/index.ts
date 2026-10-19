@@ -56,7 +56,7 @@ Deno.serve(async (request:Request)=>{
     // One bounded public market-amount read, shared by the SAME daily lease.
     // Never substitute these TAIEX amounts for individual-stock evidence.
     scope==='SMOKE_2330'||!marketDate||evaluationPhase(started)!=='PREMARKET'?Promise.resolve(null):acquireMarketInstitutionalTwd({date:marketDate,fetcher:fetch,now,signal}),
-   ]).finally(async()=>{try{shadowWork?.stop();cutoff=now();await shadowWork?.complete;}finally{monthly.dispose();}});
+   ]).finally(async()=>{shadowWork?.stop();cutoff=now();await shadowWork?.complete;}).finally(()=>{monthly.dispose();});
    return {business_date:date,acquisition_cutoff:cutoff,captures,officialActuals,companyEvents,marketFlow,acquired:await shadowWork?.complete??null};
   };
   const bundle=scope==='SMOKE_2330'?await acquireBundle():await sharedV2Acquisition({

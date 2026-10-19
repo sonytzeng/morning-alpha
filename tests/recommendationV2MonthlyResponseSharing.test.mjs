@@ -47,7 +47,7 @@ test('one same-bundle anonymous GET feeds both unchanged contracts with original
   assert.match(producer,/const acquireBundle=async\(\)=>\{[\s\S]*?const monthly=createMonthlyResponseSharing/);
   assert.match(producer,/startV2SourceAcquisition\([\s\S]*?fetcher:monthly.fetcher/);
   assert.match(producer,/acquireOfficialActuals\(\{[^\n]*fetcher:monthly.fetcher/);
-  assert.match(producer,/finally\{monthly.dispose\(\);\}/);
+  assert.match(producer,/await shadowWork\?\.complete;\}\)\.finally\(\(\)=>\{monthly.dispose\(\);\}\)/);
  }finally{shared.dispose();}
 });
 

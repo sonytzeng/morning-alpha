@@ -18,6 +18,14 @@ jobs:
       - env:
           NODE_OPTIONS: --experimental-strip-types
         run: npm ci
+      - name: Install the exact current Reader SDK separately from the historical frontend SDK
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: npm install --prefix build/content-os-reader-sdk --no-save @supabase/supabase-js@2.115.0
+      - name: Public market regime projection and exact Reader SDK regressions
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test tests/publicMarketProjection.test.mjs
       - name: Offline official Actuals parser (isolated fixtures only)
         run: python3 -B -m unittest discover -s tests -p test_inline_xbrl.py -v
       - name: V1 complete mixed fundamentals and global refusal regressions

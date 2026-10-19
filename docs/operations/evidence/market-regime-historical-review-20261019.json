@@ -1,0 +1,200 @@
+{
+  "schema": "MARKET_REGIME_HISTORICAL_REVIEW_ADAPTER_R2_V1",
+  "parent_head": "77888f0ed88648790179d00bd511682721fae67f",
+  "prior_composition": {
+    "path": "docs/operations/evidence/core-member-integration-20261019-market-regime.json",
+    "rows": 281,
+    "sha256": "88ddad7247dd98ab1cfe508b32ed39ac21e87e172b359527211ad8fcba52e2fd",
+    "immutable": true
+  },
+  "first_remote_CI_result": {
+    "status": "FAIL_PRESERVED",
+    "reported_by": "ROOT",
+    "pull_request": 268,
+    "head": "77888f0ed88648790179d00bd511682721fae67f",
+    "test": "tests/ownerReleaseReviewPackage.test.mjs",
+    "assertion_line": 81,
+    "cause": "Frozen R8 Reader dependency catalogue correctly expects original publicMarketReadModel bytes; current canonical-regime model was read directly instead of through existing exact historical adapter.",
+    "receipt": {
+      "path": "/workspace/scratch/866fb527950e/r19-market-ci-failure-20261019/FIRST_CI_FAILURE_SAFE.json",
+      "sha256": "ab6cdf17a42c135b83759bfff36d3b2144a4e0b9e7020c559d448557107d5b3c",
+      "bytes": 693,
+      "run_id": 39179779491,
+      "job_id": 117829867772
+    },
+    "not_rewritten_as_PASS": true
+  },
+  "change": {
+    "test": "tests/ownerReleaseReviewPackage.test.mjs",
+    "before_sha256": "c9d20590ba233965f303a06a71b97605bdeb69c7f6f70382fb6899bcd62e67c6",
+    "after_sha256": "67f8622d0b3fc86944c2ac2ff047e63b4fe80f7e9d7740bc752be530b7422f8b",
+    "logic": "Add only exact src/lib/publicMarketReadModel.ts path to existing decision-v1-evidence historical branch; verify complete current candidate first, then integrationHistoricalRead(core,path,rawRead(path)).",
+    "original_assertions_retained": true,
+    "arbitrary_path_restoration": false
+  },
+  "public_model_identity": {
+    "path": "src/lib/publicMarketReadModel.ts",
+    "current_admitted_sha256": "9f99fd79e0dcbf1e10fcfabd12896230f4d77ca5a30c3f3560f50af45dc4684e",
+    "historical_core": "bc48d784487fd5ae63ac2bb9c28d9343de41034f",
+    "historical_sha256": "7eb821c30d873516ebd73aee3c171352eb93af4034218f36d8f3972f140b24d0",
+    "historical_bytes": 9569,
+    "matches_frozen_R8_reader_catalogue": true,
+    "current_runtime_source_modified_in_R2": false
+  },
+  "protected_behavior": [
+    "Complete physical inventory, source hashes, modes, baseline and all immutable receipts admitted first.",
+    "Historical translation requires exact new-seal input bytes and independently rechecks physical bytes/mode.",
+    "Injected changed bytes and unknown paths are not replaced with good historical bytes.",
+    "Old R8 package, 281-row seal and original market-regime review remain byte-for-byte immutable.",
+    "Current canonical regime projection continues to use current model bytes.",
+    "B24 physical guards and 24 operation website package remain unchanged.",
+    "All eight authority flags remain false."
+  ],
+  "scope": {
+    "new_top": "docs/operations/evidence/core-member-integration-20261019-market-regime-r2.json",
+    "rows": 284,
+    "self_included": false,
+    "new_exact_deltas": [
+      "docs/operations/evidence/core-member-integration-20261019-market-regime.json",
+      "docs/operations/market-regime-historical-review-20261019.md",
+      "docs/operations/evidence/market-regime-historical-review-20261019.json"
+    ],
+    "already_listed_modified_sources": [
+      "tests/helpers/integrationAdmission.mjs",
+      "tests/ownerReleaseReviewPackage.test.mjs",
+      ".github/workflows/c-worker-sdk-freshness-20261019.yml",
+      "scripts/operations/sdk-public-freshness-20261019/sdk_public_freshness.py",
+      "scripts/operations/sdk-public-freshness-20261019/sdk-freshness-plan.json",
+      "scripts/operations/sdk-public-freshness-20261019/test_sdk_public_freshness_offline.py"
+    ],
+    "four_SDK_sources_modified": true,
+    "frozen_model_projection_test_capture_helper_modified": false
+  },
+  "validation": {
+    "targeted_tests": {
+      "status": "PASS",
+      "node": "22.14.0",
+      "node_binary": "/workspace/scratch/866fb527950e/core-member-preflight-20261017/build/preflight-tools/node_modules/node-linux-x64/bin/node",
+      "passed": 57,
+      "failed": 0,
+      "skipped": 0,
+      "command": "node --experimental-strip-types --test --test-concurrency=1 tests/ownerReleaseReviewPackage.test.mjs tests/integrationAdmission.test.mjs tests/memberContinuityAdmission.test.mjs tests/frontendTypeClosureAdmission.test.mjs tests/publicMarketProjection.test.mjs",
+      "log": {
+        "path": "build/market-regime-r2-checks/targeted57-node22.log",
+        "sha256": "f92288ec1e309a5e19ca85f9754958fea37e384f8eaad2f26ca47864edd653cb",
+        "bytes": 13846
+      },
+      "final_metadata_reseal": "Same284-path exact source; documentation result update only after tests, then final physical admission repeated."
+    },
+    "independent_limited_review": {
+      "agent": "caller_isolated_checks",
+      "status": "STATIC_SOURCE_REVIEW_PASS",
+      "scope": "Exact test branch plus existing historical helper semantics; all original seven tests/assertions retained.",
+      "formal_security_scan": false,
+      "dynamic_controls": "Not included in this static source-review claim; complete current admission exercised by separately logged57tests."
+    },
+    "type_check_lint_build": "REUSED_PRIOR_PASS_NO_RUNTIME_OR_TYPESCRIPT_SOURCE_CHANGE; no new runs claimed",
+    "prior_review": "docs/operations/evidence/market-regime-compatibility-review-20261019.json",
+    "fresh_SDK_CI": "NOT_REARMED_OR_EXECUTED_BY_THIS_AGENT; source platform/event correction only; no remote run success or non-consumption claimed.",
+    "initial_targeted_tests": {
+      "status": "PASS",
+      "node": "24.19.0",
+      "passed": 57,
+      "failed": 0,
+      "skipped": 0,
+      "command": "node --experimental-strip-types --test --test-concurrency=1 tests/ownerReleaseReviewPackage.test.mjs tests/integrationAdmission.test.mjs tests/memberContinuityAdmission.test.mjs tests/frontendTypeClosureAdmission.test.mjs tests/publicMarketProjection.test.mjs",
+      "log": {
+        "path": "build/market-regime-r2-checks/targeted57-node24.log",
+        "sha256": "2c9211f46427ce907925c403e116dd93bc5dfe3713df62af52f3787a178c3ccb",
+        "bytes": 6321
+      },
+      "scope": "Before pending workflow-platform correction; not final exact-source proof."
+    }
+  },
+  "limitations": [
+    "Historical release-package verification is not Production E2E or deployment authorization.",
+    "Targeted local tests do not convert first-head remote CI FAIL to PASS.",
+    "No runtime code, membership policy, data, Auth/RLS/Cron or source admission changed."
+  ],
+  "commit": false,
+  "push": false,
+  "production_deployed": false,
+  "production_authorized": false,
+  "migration_execution": false,
+  "auth_rls_change": false,
+  "member_rights_activation": false,
+  "caller_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false,
+  "SDK_workflow_platform_correction": {
+    "status": "SOURCE_CORRECTED_NO_REMOTE_RESULT_CLAIM",
+    "defect": "runner.temp was referenced at jobs.<job>.env where runner context is unavailable.",
+    "fix": "Move PUBLIC_CHECK_DIR to execution-step env and artifact path to step with. Align event/action to synchronize for this actual source-fix push.",
+    "same_workflow_path_display_name_plan_id": true,
+    "run_number_required": 1,
+    "run_attempt_required": 1,
+    "run2_rejected_before_HTTP": true,
+    "rename_delete_recreate_rearm": false,
+    "logical_items": 68,
+    "canonical_items": 63,
+    "alias_items": 5,
+    "maximum_wire_GETs": 73,
+    "all_plan_fields_except_event_action_identical": true,
+    "URL_hash_limits_ID_unchanged": true,
+    "first_head_source_and_FAILURE_preserved": true,
+    "files": [
+      {
+        "path": ".github/workflows/c-worker-sdk-freshness-20261019.yml",
+        "before_sha256": "a277ece52e5aafe4ce8f9a667f4df871e892e7862b27ae402490810cecb8728c",
+        "after_sha256": "fbbe045c77a9ce1e448b810ede120b20fceac987c61ecb784e687a67b8fa0461",
+        "bytes": 4302
+      },
+      {
+        "path": "scripts/operations/sdk-public-freshness-20261019/sdk_public_freshness.py",
+        "before_sha256": "b29429b4df33aa8f5547e57c03d841d8086311a086e43d97f69fc516d7cf0f39",
+        "after_sha256": "d886e0befe53149a570076dc817f14c0c5771fc55c4c6cbddd45ff1273423006",
+        "bytes": 13227
+      },
+      {
+        "path": "scripts/operations/sdk-public-freshness-20261019/sdk-freshness-plan.json",
+        "before_sha256": "4c9da92507641a0268f7ec595a406556f0cd22469a1f97d6b5ab3f7dbd524145",
+        "after_sha256": "4acb7f13339337b816bc0a2ad11a7c02312031cec413bd819b7f15ec61a3a79d",
+        "bytes": 23680
+      },
+      {
+        "path": "scripts/operations/sdk-public-freshness-20261019/test_sdk_public_freshness_offline.py",
+        "before_sha256": "ff43e7aa7e35330ccecfd74ef38ee413865f884b615458314e3bb774b75a9bf4",
+        "after_sha256": "d028c28226ef2b030aa8be0b3a26146f0383b2e7912c63e302bdf384c5f24608",
+        "bytes": 8711
+      }
+    ],
+    "limited_review_receipt": {
+      "path": "/workspace/scratch/866fb527950e/c-worker-ci-freshness-proposal-20261019/OFFICIAL_CONTEXT_SOURCE_FIX_VALIDATION_SAFE.json",
+      "sha256": "5aeefa42eb26117cafa3fd4ff812f6294a46d5b33bffdc3f6c166b58c2f4b501",
+      "bytes": 340,
+      "formal_security_scan": false
+    },
+    "offline_tests": {
+      "status": "PASS",
+      "passed": 26,
+      "failed": 0,
+      "skipped": 0,
+      "command": "python -I -B -m unittest discover -s scripts/operations/sdk-public-freshness-20261019 -p test_sdk_public_freshness_offline.py -v",
+      "log": {
+        "path": "build/market-regime-r2-checks/sdk-offline26-r2.log",
+        "sha256": "21b13fb84517616c04f1f4af5691589f848973b75b652abba99d3faeda6ff3a6",
+        "bytes": 2869
+      },
+      "network": false
+    },
+    "platform_validation_does_not_prove_fresh_HTTP_or_ESZIP_or_deployment": true,
+    "final_semantic_correction_review": {
+      "path": "/workspace/scratch/866fb527950e/c-worker-ci-freshness-proposal-20261019/CI_WORKFLOW_SEMANTIC_CORRECTION_REVIEW_SAFE.json",
+      "sha256": "e371e506f67528f5652986d694c3b26d37bfa84032f1490033126f00d29d779a",
+      "bytes": 5908,
+      "formal_security_scan": false,
+      "previous_workflow_executability_interpretation": "SUPERSEDED; original YAML parse/offline controls did not validate platform context placement."
+    }
+  }
+}

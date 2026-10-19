@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {buildPublicMarketReadModel,parsePublicMarketReadModel,PUBLIC_REGIMES,PUBLIC_CHECKPOINTS} from '../src/lib/publicMarketReadModel.ts';
 import {publicMarketInput} from '../supabase/functions/_shared/public-market-projection.ts';
-import {getSubscriberReportProjection} from '../src/lib/subscriberReportContract.ts';
+import {createSubscriberState,getSubscriberReportProjection} from '../src/lib/subscriberReportContract.ts';
+import {classifyMarketRegime} from '../supabase/functions/_shared/production-architecture-core.mjs';
 import {runCapturedContentOs} from './helpers/coreContentOsCapturedReplay.mjs';
 import {publicProjectionCapsule,publicHandoffCapsule,recordPublicProjection} from '../supabase/functions/_shared/public-projection-recorder.ts';
 import {measureHandoffReferences,replayHandoffReferences} from '../supabase/functions/_shared/public-handoff-evidence.ts';
@@ -12,6 +13,32 @@ const clone=x=>structuredClone(x),snapshot=capture.tables.decision_snapshots.fin
 export const input=()=>publicMarketInput(capture.public_response.payload,snapshot,capture.tables.member_content_revisions[0],capture.tables.learning_runs[0],
  {batches:capture.tables.market_checkpoint_batches,proofs:capture.atomic_proofs.map(x=>x.proof)},'2026-10-02T12:30:00Z');
 const project=i=>buildPublicMarketReadModel(i);
+const legacyRegimes=['range','trend_up','trend_down','risk_off','high_volatility'];
+const producerRegimes=['range','stress','volatile_range','risk_on_trend','risk_off_trend'];
+const supportedRegimes=[...new Set([...legacyRegimes,...producerRegimes])];
+
+// Fixed public-contract keys only, exported read-only from the 10/19 Reader's
+// PUBLIC_MARKET_READ_REPLAY_V1 capsule 8a6994f2-d3d1-4793-ae92-7517187d2666,
+// recorded 2026-10-18T23:40:29.771728Z. Its pre-fix expected model was null.
+// No report text, member content, request headers, or credential is retained.
+const currentPremarketInput=()=>({
+ business_date:'2026-10-19',canonical_revision:'a3371739-7998-4c71-8a01-018d294000b3',decision_version:1,
+ member_revision:'58224f2b-d363-4d78-b52c-92327d283341',member_version:1,
+ member_snapshot_id:'a3371739-7998-4c71-8a01-018d294000b3',member_snapshot_version:1,
+ market_regime:'stress',market_direction:'偏弱觀察',action:'WAIT',
+ generated_at:'2026-10-18T23:06:54.353163+00:00',observed_at:'2026-10-18T23:40:28.456Z',
+ publication_verified:true,report_level:'FULL',recommendation_status:'BLOCKED',
+ closing_status:'PENDING',closing_at:null,learning_status:'PENDING',learning_at:null,
+ batches:[{status:'COMMITTED',batch_id:'482db6c6-468b-4f6b-9c97-0fecd765e1c0',checkpoint:'PREMARKET',
+  committed_at:'2026-10-18T23:00:10.628034+00:00',payload_hash:'276550d0532e7526cd498a0e876d7947',
+  business_date:'2026-10-19',correlation_id:'7f581de9-2dca-4c1d-8838-f030ba4080a6',expected_provider_count:11,committed_provider_count:11}],
+ proofs:[{status:'PASS',batch_id:'482db6c6-468b-4f6b-9c97-0fecd765e1c0',contract:'MARKET_CHECKPOINT_ATOMICITY_V1',
+  checkpoint:'PREMARKET',payload_hash:'276550d0532e7526cd498a0e876d7947',business_date:'2026-10-19',
+  correlation_id:'7f581de9-2dca-4c1d-8838-f030ba4080a6',idempotency_key:'market-checkpoint:2026-10-19:PREMARKET:MARKET_CHECKPOINT_PROVIDER_V1',
+  canonical_row_count:11,unbatched_row_count:0,committed_batch_count:1,compatibility_row_count:11,
+  distinct_batch_id_count:1,distinct_provider_count:11,mixed_batch_revision_count:0,compatibility_mismatch_count:0,
+  compatibility_provider_count:11,duplicate_authoritative_provider_count:0,production_2026_09_11_evidence_preserved:true}],
+});
 test('10/2 real frozen evidence produces one canonical read model, not the secondary assessment',()=>{
  const m=project(input());assert(m);assert.equal(m.market_regime,'range');assert.equal(PUBLIC_REGIMES[m.market_regime],'震盪／盤整');
  assert.equal(m.market_direction,'中性偏多');assert.equal(m.action,'WAIT');assert.equal(m.report_level,'DEGRADED');
@@ -25,10 +52,43 @@ test('10/2 real frozen evidence produces one canonical read model, not the secon
   assert.equal(v.marketDecision.bias,'中性偏多');assert.equal(v.runtime.newIntradayEvidence,true);assert.equal(v.closing.outcome,'partial');
   for(const k of PUBLIC_CHECKPOINTS)assert.equal(v.runtime.checkpoints[k].status,'completed');assert.deepEqual(v.publicMarket,m);}
 });
-test('FULL/DEGRADED, recommendation READY/NONE/BLOCKED and three canonical regimes stay independent',()=>{
- for(const market_regime of ['range','trend_up','trend_down'])for(const report_level of ['FULL','DEGRADED'])for(const recommendation_status of ['READY','NONE','BLOCKED']){
+test('FULL/DEGRADED and recommendation READY/NONE/BLOCKED preserve all producer and historical regimes',()=>{
+ for(const market_regime of supportedRegimes)for(const report_level of ['FULL','DEGRADED'])for(const recommendation_status of ['READY','NONE','BLOCKED']){
   const m=project({...input(),market_regime,report_level,recommendation_status});assert(m);assert.equal(m.market_regime,market_regime);
-  assert.equal(m.market_direction,'中性偏多');assert.equal(m.service_availability,'AVAILABLE');assert.equal(m.recommendation_status,recommendation_status);}
+  assert.equal(m.market_direction,'中性偏多');assert.equal(m.service_availability,'AVAILABLE');assert.equal(m.recommendation_status,recommendation_status);
+  assert.deepEqual(parsePublicMarketReadModel(m,{report_date:m.business_date,revision_id:m.canonical_revision,decision_version:m.decision_version,member_revision:m.member_revision}),m);}
+});
+test('public vocabulary covers actual producer classifications without changing direction or action',()=>{
+ const cases=[
+  ['range',{trend_score:0,volatility_score:20,liquidity_score:80,breadth_score:0}],
+  ['stress',{trend_score:0,volatility_score:75,liquidity_score:80,breadth_score:0}],
+  ['stress',{trend_score:0,volatility_score:20,liquidity_score:25,breadth_score:0}],
+  ['volatile_range',{trend_score:20,volatility_score:55,liquidity_score:80,breadth_score:0}],
+  ['risk_on_trend',{trend_score:35,volatility_score:20,liquidity_score:80,breadth_score:15}],
+  ['risk_off_trend',{trend_score:-35,volatility_score:20,liquidity_score:80,breadth_score:-15}],
+ ];
+ for(const [expected,metrics] of cases){const regime=classifyMarketRegime(metrics);assert.equal(regime,expected);assert(Object.hasOwn(PUBLIC_REGIMES,regime));
+  const m=project({...input(),market_regime:regime});assert(m);assert.equal(m.market_direction,'中性偏多');assert.equal(m.action,'WAIT');}
+ for(const regime of ['unknown','STRESS','stress ','toString','__proto__',''])assert.equal(project({...input(),market_regime:regime}),null);
+});
+test('10/19 recorded stress market remains published while stock evidence is independently BLOCKED',()=>{
+ const i=currentPremarketInput(),m=project(i);assert(m);assert.equal(m.market_regime,'stress');assert.equal(PUBLIC_REGIMES[m.market_regime],'壓力市場');
+ assert.equal(m.report_level,'FULL');assert.equal(m.recommendation_status,'BLOCKED');assert.equal(m.market_direction,'偏弱觀察');
+ assert.equal(m.latest_completed_checkpoint,'PREMARKET');assert.equal(m.next_checkpoint,'0900');assert.equal(m.evidence_completeness.core,11);
+ // Synthetic subscriber envelope around the exact typed Recorder input. This
+ // does not turn the fixture into a complete Production report or stock E2E.
+ const state=createSubscriberState({report_date:i.business_date,revision_id:i.canonical_revision,generated_at:i.generated_at,
+  publicationVerified:i.publication_verified,marketEvidenceReady:i.publication_verified,analysisStatus:'READY',isTradingDay:true,
+  confidenceValue:null,recommendationGate:{status:'BLOCKED',eligible:false},closing:null,now:i.observed_at});
+ const p={report_date:i.business_date,today_date:i.business_date,revision_id:i.canonical_revision,generated_at:i.generated_at,
+  canonical_member_revision_id:i.member_revision,subscriber_state:state,
+  canonical_decision:{id:i.canonical_revision,version:i.decision_version,status:'READY',action:i.action,market_bias:i.market_direction},
+  public_market_read_model:m,decision_engine_v1:{action:'INSUFFICIENT_DATA',screening:{universe_count:72,evaluated_count:0,status:'INCOMPLETE'}}};
+ const projection=getSubscriberReportProjection(p);assert.equal(projection.analysisAvailable,true);assert.equal(projection.statusLabel,'市場分析已發布');
+ assert.equal(projection.marketDecision.action,'WAIT');assert.equal(projection.marketDecision.bias,'偏弱觀察');
+ assert.equal(projection.recommendation.available,false);assert.equal(projection.recommendation.status,'BLOCKED');assert.deepEqual(projection.recommendation.items,[]);
+ assert.equal(getSubscriberReportProjection({...p,public_market_read_model:null}).analysisAvailable,false);
+ assert.equal(getSubscriberReportProjection({...p,public_market_read_model:{...m,market_regime:'unknown'}}).analysisAvailable,false);
 });
 test('checkpoint projection increases only on authoritative atomic batches; Closing is separate',()=>{
  for(let n=0;n<=6;n++){const i=clone(input()),keys=['PREMARKET',...PUBLIC_CHECKPOINTS.slice(0,n)];
@@ -42,7 +102,9 @@ for(const [name,mutate]of Object.entries({
  mixed_revision:i=>i.proofs[0].mixed_batch_revision_count=1,duplicate_batch:i=>i.batches.push(clone(i.batches[0])),
  future:i=>i.batches[0].committed_at='2026-10-03T00:00:00Z',missing_proof:i=>i.proofs=[],wrong_correlation:i=>i.proofs[0].correlation_id='wrong',
  no_publication:i=>i.publication_verified=false,partial:i=>i.batches[0].committed_provider_count=10,
-}))test('public projection fail-closed: '+name,()=>{const i=clone(input());mutate(i);assert.equal(project(i),null);});
+}))test('public projection fail-closed for every supported regime: '+name,()=>{
+ for(const market_regime of supportedRegimes){const i={...clone(input()),market_regime};mutate(i);assert.equal(project(i),null);}
+});
 test('malformed/stale/mixed public model cannot fall back to permissive raw aliases',()=>{
  const m=project(input());for(const patch of [{business_date:'2026-09-11'},{canonical_revision:'other'},{updated_at:'2026-10-01T00:00:00Z'},{next_checkpoint:'1430'}]){
   const p={...capture.public_response.payload,public_market_read_model:{...m,...patch}};

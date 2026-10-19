@@ -23,8 +23,9 @@ const rawRead=memberContinuityHistoricalReader(frontendTypeClosureHistoricalRead
 // Current R9 operations/hashes are checked independently by the R9 package test.
 const read=name=>{
  // The separately admitted 2026-10-19 evaluator fix never replaces the frozen
- // Caller/R8 release payload. Live bytes must match the new exact seal first.
- if(name==='supabase/functions/_shared/decision-v1-evidence.ts'){
+ // Caller/R8 release payload. The canonical-regime DTO repair likewise stays
+ // outside that frozen Reader payload. Live bytes must match the exact seal first.
+ if(['supabase/functions/_shared/decision-v1-evidence.ts','src/lib/publicMarketReadModel.ts'].includes(name)){
   verifyIntegrationCandidate();
   return integrationHistoricalRead('core',name,rawRead(name));
  }

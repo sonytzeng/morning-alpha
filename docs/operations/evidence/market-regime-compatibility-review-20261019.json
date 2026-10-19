@@ -1,0 +1,248 @@
+{
+  "schema": "PUBLIC_MARKET_REGIME_COMPATIBILITY_REVIEW_V1",
+  "base_head": "2976f752679263aaaf8b03e2a9474be63b0c1c86",
+  "prior_composition": {
+    "path": "docs/operations/evidence/core-member-integration-20261019-lease-handoff.json",
+    "sha256": "0f029822db26aadadd5c548621a23d746da4c8048f3a51db771418abe08cab79",
+    "files": 271,
+    "immutable_byte_comparison_required": true
+  },
+  "candidate_sources": {
+    "src/lib/publicMarketReadModel.ts": {
+      "before_sha256": "7eb821c30d873516ebd73aee3c171352eb93af4034218f36d8f3972f140b24d0",
+      "after_sha256": "9f99fd79e0dcbf1e10fcfabd12896230f4d77ca5a30c3f3560f50af45dc4684e"
+    },
+    "tests/publicMarketProjection.test.mjs": {
+      "before_sha256": "a4caf4eb4fbdc03003b368d8d87c39061f352056ea3864eb57321a460c0567f4",
+      "after_sha256": "4af383d17bb394181022cad2c47065958814206c5cf1e832fc6b2182470dd024"
+    },
+    "tests/helpers/coreContentOsCapturedReplay.mjs": {
+      "before_sha256": "c8df176c67d37e73057ba3d4c8e66b7d82e6307fb6215818ea0c14bdf9754a4b",
+      "after_sha256": "f34a7b85ee21d7b5a7239ec46f63e7b6ce447ce0a72d225ee2ff5ac2d91326fe"
+    }
+  },
+  "trigger": {
+    "business_date": "2026-10-19",
+    "public_capsule_id": "8a6994f2-d3d1-4793-ae92-7517187d2666",
+    "recorded_at": "2026-10-18T23:40:29.771728Z",
+    "typed_input_receipt": {
+      "path": "/workspace/scratch/866fb527950e/r18-v1-capability-rootcause-20261019/PUBLIC_REPORT_20261019_TYPED_PROJECTION_INPUT_SAFE.json",
+      "sha256": "b5aa973164797ab2dda8b6ab4817032642e99ab92b3829b19a99667f8fdb36f6",
+      "bytes": 2551
+    },
+    "recorded_market_regime": "stress",
+    "publication_verified": true,
+    "report_level": "FULL",
+    "recommendation_status": "BLOCKED",
+    "original_model": null,
+    "range_only_control_original_nonnull": true,
+    "candidate_model_nonnull": true,
+    "full_report_or_member_content_retained": false,
+    "request_headers_or_credentials_retained": false
+  },
+  "change": {
+    "runtime_logic": "Only the PUBLIC_REGIMES value/label map adds the four exact current Producer wire values. All other model/parse functions are byte-identical to parent.",
+    "added_wire_values": [
+      "stress",
+      "volatile_range",
+      "risk_on_trend",
+      "risk_off_trend"
+    ],
+    "preserved_historical_wire_values": [
+      "range",
+      "trend_up",
+      "trend_down",
+      "risk_off",
+      "high_volatility"
+    ],
+    "market_direction_and_action": "UNCHANGED",
+    "subscriber_market_analysis": "Available only when existing publication/identity/atomic proof checks pass.",
+    "V1_recommendation": "BLOCKED remains BLOCKED; no recommendationitems created.",
+    "SDK_fixture": "Historical handlers retain2.57.4; only the exact current GitReader import binds to separate installed2.115.0; one exact SDK per handler.",
+    "SDK_download_performed_this_candidate_work": false
+  },
+  "preserved_checks": [
+    "Existing publication verification",
+    "Canonical/member revision and exact snapshot/version identity",
+    "Exact atomic batch/proof identity, correlation and payloadhash",
+    "11 expected/committed/canonical/distinct providers",
+    "No mixedrevision, duplicatebatch/provider, unbatched or compatibility mismatch",
+    "Existing future/date/stale/malformed timestamp and model refusal behavior",
+    "Unknown/casechanged/space-suffixed/prototype regime refusal",
+    "V1 evidence status, no stockrecommendation promotion",
+    "B24 physical source guard and exact24websiteoperations",
+    "All previous immutable seals"
+  ],
+  "validation": {
+    "initial_recorded_input_replay": {
+      "path": "/workspace/scratch/866fb527950e/r18-v1-capability-rootcause-20261019/PUBLIC_MARKET_REGIME_COMPATIBILITY_REPLAY_SAFE.json",
+      "sha256": "24926fde3c7343bb4c10896dd3c70670dc2a97b2b607a64305acb5a6308105dc",
+      "bytes": 1826,
+      "controls": 165,
+      "failures": 0,
+      "skipped": 0,
+      "scope": "OFFLINE_TYPED_PUBLIC_INPUT_AND_SYNTHETIC_COUNTEREXAMPLES",
+      "original_SDK_mismatch_limitation_preserved_in_receipt": true
+    },
+    "projection_tests": {
+      "command": "node --experimental-strip-types --test tests/publicMarketProjection.test.mjs",
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "path": "build/market-regime-checks/projection20.log",
+        "sha256": "d9d3c3b538bc3d826a92583726a65aa1c92dfdc2997f94f0a5435475505cd837",
+        "bytes": 2113
+      }
+    },
+    "type_check": {
+      "status": "PASS",
+      "command": "npm run type-check",
+      "log": {
+        "path": "build/market-regime-checks/type-check.log",
+        "sha256": "a9c7d1fe7149e95532c7c3cfb9cffb1cb6af3f02529e56c365a285d82e26ba56",
+        "bytes": 169
+      }
+    },
+    "lint": {
+      "status": "PASS",
+      "command": "npm run lint",
+      "log": {
+        "path": "build/market-regime-checks/lint.log",
+        "sha256": "e4e622c76daf347c9a5b600b20d795f21c4a236f93c903e1cbc869c8300f1674",
+        "bytes": 198
+      }
+    },
+    "build": {
+      "status": "PASS",
+      "command": "npm run build",
+      "log": {
+        "path": "build/market-regime-checks/build.log",
+        "sha256": "a1a939288689398737489bda01d0270b1ff83225c719fd12f7abeed8e513d613",
+        "bytes": 6109
+      }
+    },
+    "independent_limited_review": {
+      "path": "/workspace/scratch/866fb527950e/r19-public-market-regime-review-20261019/PUBLIC_MARKET_REGIME_LIMITED_REVIEW_SAFE.json",
+      "sha256": "8e8bf6899b4b1c2294e85a8d35b87dee2e63939c34a6e6a5aa33fabaafa9e8eb",
+      "bytes": 9803,
+      "status": "PASS_NO_SPECIFIC_REPORTABLE_FINDING",
+      "tests": 43,
+      "controls": 2271,
+      "formal_security_scan": false,
+      "production_E2E": false,
+      "reviewed_scope": [
+        "src/lib/publicMarketReadModel.ts",
+        "tests/publicMarketProjection.test.mjs",
+        "tests/helpers/coreContentOsCapturedReplay.mjs"
+      ],
+      "composition_or_future_SDK_CI_files_included": false
+    },
+    "counting_rule": "165 controls,20tests,and independent43tests/2271controls are separate evidence groups; overlap possible; never sum as mutually independent cases.",
+    "integration_member_frontend_admission": {
+      "status": "PASS",
+      "command": "node --experimental-strip-types --test --test-concurrency=1 tests/integrationAdmission.test.mjs tests/memberContinuityAdmission.test.mjs tests/frontendTypeClosureAdmission.test.mjs",
+      "passed": 30,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "path": "build/market-regime-checks/admission3.log",
+        "sha256": "375f4cd4789c66ad869fe2d8bf3d8a23dcf8231b2c5cbb9da79ae96d059a295d",
+        "bytes": 3536
+      },
+      "final_metadata_reseal": "Exact same 281-path scope; documentation result update only after tests; final physical admission repeated."
+    },
+    "independent_fresh_SDK_CI_file": {
+      "status": "SOURCE_PREPARED_PUBLIC_FETCH_NOT_EXECUTED",
+      "files": [
+        {
+          "path": ".github/workflows/c-worker-sdk-freshness-20261019.yml",
+          "sha256": "a277ece52e5aafe4ce8f9a667f4df871e892e7862b27ae402490810cecb8728c"
+        },
+        {
+          "path": "scripts/operations/sdk-public-freshness-20261019/sdk_public_freshness.py",
+          "sha256": "b29429b4df33aa8f5547e57c03d841d8086311a086e43d97f69fc516d7cf0f39"
+        },
+        {
+          "path": "scripts/operations/sdk-public-freshness-20261019/sdk-freshness-plan.json",
+          "sha256": "4c9da92507641a0268f7ec595a406556f0cd22469a1f97d6b5ab3f7dbd524145"
+        },
+        {
+          "path": "scripts/operations/sdk-public-freshness-20261019/test_sdk_public_freshness_offline.py",
+          "sha256": "ff43e7aa7e35330ccecfd74ef38ee413865f884b615458314e3bb774b75a9bf4"
+        }
+      ],
+      "trigger": "pull_request opened only; exact same-repository codex/market-regime-compatibility-20261019 branch; run_number1/attempt1",
+      "logical_items": 68,
+      "canonical_items": 63,
+      "exact_single_hop_alias_items": 5,
+      "maximum_wire_GETs": 73,
+      "operation": "Fixed public esm.sh GET/hash only; no dependencyexecution, appcredentials, Secrets, Supabase, DB, deployment orESZIP test",
+      "prior_local_FAIL_preserved": true,
+      "first_workflow_run_consumed_even_if_preflight_fails": true,
+      "rename_reset_or_automatic_rerun_allowed": false,
+      "root_limited_review": "Root reviewed checker functions and exact workflow scope; not formalSecurityscan",
+      "offline_tests": {
+        "passed": 26,
+        "failed": 0,
+        "skipped": 0,
+        "log": {
+          "path": "build/market-regime-checks/sdk-freshness-offline26.log",
+          "sha256": "fbc5101224105a0653da3bbbd9280ca82aa0989e56cea41a228ae3fd9a5974d6",
+          "bytes": 2879
+        }
+      },
+      "SDK_fresh_fetch_success_claimed": false,
+      "Supabase_or_ESZIP_or_deployment_PASS_claimed": false,
+      "root_review_binding": {
+        "path": "/workspace/scratch/866fb527950e/c-worker-ci-freshness-proposal-20261019/ADOPTED_FOUR_FILE_REVIEW_BINDING_SAFE.json",
+        "sha256": "1d8df6aec5b35158d0ecd8db3384699ca5209f04b9431ad92ccabf12aa4e2fbd",
+        "bytes": 2599,
+        "formal_security_scan": false
+      }
+    },
+    "local_runtime": {
+      "node": "24.19.0",
+      "integration_CI_target_node": "22.14.0",
+      "remote_CI_executed_by_this_agent": false
+    }
+  },
+  "scope": {
+    "new_top_seal": "docs/operations/evidence/core-member-integration-20261019-market-regime.json",
+    "self_included_in_files": false,
+    "exact_new_deltas": [
+      ".github/workflows/c-worker-sdk-freshness-20261019.yml",
+      "docs/operations/evidence/core-member-integration-20261019-lease-handoff.json",
+      "docs/operations/evidence/market-regime-compatibility-review-20261019.json",
+      "docs/operations/market-regime-compatibility-20261019.md",
+      "scripts/operations/sdk-public-freshness-20261019/sdk-freshness-plan.json",
+      "scripts/operations/sdk-public-freshness-20261019/sdk_public_freshness.py",
+      "scripts/operations/sdk-public-freshness-20261019/test_sdk_public_freshness_offline.py",
+      "src/lib/publicMarketReadModel.ts",
+      "tests/helpers/coreContentOsCapturedReplay.mjs",
+      "tests/publicMarketProjection.test.mjs"
+    ],
+    "helper_workflow_changes": "Already composition-listed paths; resealed exact bytes only.",
+    "old_receipts_changed": false,
+    "B24_guard_changed": false
+  },
+  "limitations": [
+    "Recorded typed contract keys and synthetic subscriberenvelope are not a full live Production report.",
+    "Actual-handler tests use precise installed SDKs and loopback DB transport doubles, not real AuthGateway or Production DB.",
+    "Existing gate/timestamp semantics are preserved; no stronger or new validation claimed.",
+    "No Production/browser/runtime-source promotion is performed or proved by this candidate.",
+    "Any later exactSDK CI file must be explicitly listed before final topseal; no inventory auto-admission."
+  ],
+  "rollback": "Reverse this exact source patch; no SQL, report deletion, research reset, Auth/RLS/Cron/rights changes.",
+  "commit": false,
+  "push": false,
+  "production_deployed": false,
+  "production_authorized": false,
+  "migration_execution": false,
+  "auth_rls_change": false,
+  "member_rights_activation": false,
+  "caller_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false
+}

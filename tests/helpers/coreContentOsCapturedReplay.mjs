@@ -37,7 +37,7 @@ export const FIXTURE_SOURCE_TOKEN = 'LOCAL_CONTENT_OS_SOURCE_FIXTURE_NOT_A_SECRE
 export function capturedContentOsHandler(endpoint, { now = '2026-09-21T15:35:30+08:00', env = {}, entrypoint = 'content-os-morning-alpha-source' } = {}) {
   assert.equal(new URL(endpoint).hostname, '127.0.0.1');
   assert.equal(require('@supabase/supabase-js/package.json').version, '2.57.4');
-  const modules = new Map(), diagnostics = [], loadedSources = [];
+  const modules = new Map(), diagnostics = [], loadedSources = [], sdkVersions = new Set();
   let handler; const sidecars=[];
   const environment = { SUPABASE_URL: endpoint, SUPABASE_SERVICE_ROLE_KEY: FIXTURE_SERVICE_KEY,
     CRON_SECRET: FIXTURE_INTERNAL_TOKEN, SONY_CONTENT_OS_SOURCE_TOKEN: FIXTURE_SOURCE_TOKEN, ...env };
@@ -67,8 +67,17 @@ export function capturedContentOsHandler(endpoint, { now = '2026-09-21T15:35:30+
     }
     const localRequire = specifier => {
       if (specifier.startsWith('.')) return load(resolve(dirname(path), specifier));
-      assert(['npm:@supabase/supabase-js@2.57.4','https://esm.sh/@supabase/supabase-js@2'].includes(specifier), 'Only the actual SDK import may be mapped');
-      const sdk = require('@supabase/supabase-js');
+      assert(['npm:@supabase/supabase-js@2.57.4','https://esm.sh/@supabase/supabase-js@2',
+        'https://esm.sh/@supabase/supabase-js@2.115.0'].includes(specifier), 'Only the actual SDK import may be mapped');
+      // The current Reader pins 2.115.0; historical handlers retain 2.57.4.
+      // Install the separate fixed SDK with npm --prefix build/content-os-reader-sdk;
+      // never satisfy a current exact import with the older frontend package.
+      const currentReader = specifier === 'https://esm.sh/@supabase/supabase-js@2.115.0';
+      const sdkRequire = currentReader ? createRequire(resolve(repo, 'build/content-os-reader-sdk/package.json')) : require;
+      const sdkVersion = currentReader ? '2.115.0' : '2.57.4';
+      assert.equal(sdkRequire('@supabase/supabase-js/package.json').version, sdkVersion, 'Exact handler SDK version is required');
+      sdkVersions.add(sdkVersion);
+      const sdk = sdkRequire('@supabase/supabase-js');
       return { ...sdk, createClient: (url, key, options = {}) => {
         assert.equal(url, endpoint); assert.equal(key, FIXTURE_SERVICE_KEY);
         return sdk.createClient(url, key, { ...options, global: { ...options.global, fetch: scopedFetch } });
@@ -81,7 +90,8 @@ export function capturedContentOsHandler(endpoint, { now = '2026-09-21T15:35:30+
   assert(['content-os-morning-alpha-source','get-report-payload'].includes(entrypoint));
   load(resolve(repo, 'supabase/functions/'+entrypoint+'/index.ts'));
   assert.equal(typeof handler, 'function');
-  return { handler, diagnostics, loadedSources, sidecars, clock_kind: 'EXPLICIT_PROCESS_LOCAL_CAPTURE_REPLAY', sdk_version: '2.57.4' };
+  assert.equal(sdkVersions.size, 1, 'Each captured handler must use one exact SDK version');
+  return { handler, diagnostics, loadedSources, sidecars, clock_kind: 'EXPLICIT_PROCESS_LOCAL_CAPTURE_REPLAY', sdk_version: [...sdkVersions][0] };
 }
 
 const field = (row, path) => path.split(/->>?/).reduce((value, key) => value?.[key], row);

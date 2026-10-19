@@ -19,14 +19,14 @@
   "sources": [
     {
       "path": ".github/workflows/owner-quarter-live-candidate.yml",
-      "sha256": "cc128da47d5bd17ffb224a10655c39b9e8ad7e64acd89e6527a846e00405ccd3",
-      "bytes": 2662,
+      "sha256": "69c343b60389125dfdbdcb8ecb1c1136da34e71fe1aa091544e5c7892d9a1a80",
+      "bytes": 2664,
       "mode": "100644"
     },
     {
       "path": "docs/operations/owner-quarter-live-closure-20261019.md",
-      "sha256": "037c2ffc817c2e060e59dc4062c4f9b794c7ec08ee5b54ed8a38d789157ed30a",
-      "bytes": 9339,
+      "sha256": "9e4da3b65e53417db5e0b78a8501f221a18746ae4dc840b3ea053cdfa1540f2d",
+      "bytes": 10040,
       "mode": "100644"
     },
     {
@@ -109,8 +109,8 @@
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/prepare-check-sources.mjs",
-      "sha256": "d020dca5e19ddbe46d91fae9b0987de70cb84bc0c1d05b128fb9d48a0096134a",
-      "bytes": 3453,
+      "sha256": "27da2f40fa9e7328751d3d24cec49856a78234184ec36b91f5bc3a6e7d435bcb",
+      "bytes": 3644,
       "mode": "100644"
     },
     {
@@ -271,7 +271,8 @@
     "no_fake_sdk_types": true,
     "no_skip_lib_check": true,
     "deno_pending": true,
-    "node26_deno_compatibility": "UNPROVEN_UNTIL_EXACT_ARTIFACT_CI"
+    "node26_deno_compatibility": "SECOND_NODE26_AMBIENT_INCOMPATIBLE_NOT_LOADED_IN_DENO;OFFICIAL_NODE26_UNCHANGED_IN_TSC",
+    "deno_node_type_strategy": "DENO2_9_7_BUNDLED_LIB_NODE;NO_SECOND_NODE26_AMBIENT;SUPPLEMENTARY_TSC_STILL_ARCHIVED_NODE26"
   },
   "validation": {
     "tests": {
@@ -391,6 +392,18 @@
       ],
       "sidecar_private_ancestor_stripped_by_db_projection": true,
       "writes": 0
+    },
+    "second_actual_deno": {
+      "head": "e60aec8af3b573af58b7f3c2628e79817061b41a",
+      "run_id": 39190572695,
+      "job_id": 117862240266,
+      "variants_checked": 4,
+      "result": "FAIL_DUPLICATED_NODE26_AND_DENO_BUILTIN_AMBIENTS",
+      "aggregate_errors": 748,
+      "fix": "USE_DENO2_9_7_REAL_BUNDLED_LIB_NODE_NOT_SECOND_NODE26_GLOBALS",
+      "skip_lib_check": false,
+      "runtime_and_sdk_declarations_changed": false,
+      "next_head_deno": "PENDING"
     }
   },
   "binding": {

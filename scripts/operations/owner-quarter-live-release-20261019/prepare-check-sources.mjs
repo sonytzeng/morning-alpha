@@ -41,7 +41,11 @@ for(const variant of VARIANTS){
   }
  }
  assert.equal(referencePaths,80,'QUARTER_FIXED_OFFICIAL_REFERENCE_PATHS');
- const config={nodeModulesDir:'none',imports,scopes,compilerOptions:{types:['./'+catalog.type_compile_ports.node]}};
+ // Deno >=2.8 already supplies lib.node. Use its real built-in Node types
+ // rather than merge the supplementary tsc program's archived Node26 globals
+ // with Deno's own Node/web libraries. No declarations are suppressed.
+ imports.node='node:buffer';
+ const config={nodeModulesDir:'none',imports,scopes};
  writeFileSync(resolve(root,base,'deno.json'),JSON.stringify(config,null,2)+'\n',{flag:'wx',mode:0o600});
  results.push({variant,source_files:payload.files.length,payload_sha256:sha256,compiler_only_reference_paths:referencePaths,entrypoint:base+'/'+payload.entrypoint_path});
 }

@@ -27,7 +27,7 @@ jobs:
       - uses: denoland/setup-deno@v2
         id: deno_setup
         with:
-          deno-version: v2.x
+          deno-version: v2.9.7
       - name: Actual Producer candidate Deno check without remote fetching
         run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/producer/deno.json build/owner-quarter-live-typecheck/producer/supabase/functions/recommendation-stock-evidence-v1/index.ts
       - name: Actual Producer recovery Deno check without remote fetching

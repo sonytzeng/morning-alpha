@@ -1,0 +1,237 @@
+{
+  "schema": "C_WORKER_LOCAL_SDK_R2_DENO_TYPES_AND_COLD_BOOTSTRAP_REVIEW_V1",
+  "parent": "5109221ae1c70405d735e7f3cffa3430a6c888fc",
+  "prior_composition": {
+    "path": "docs/operations/evidence/core-member-integration-20261019-c-worker-local-sdk.json",
+    "sha256": "28a917b3b10f10207f9a5d922ddb752ffe7efe404cc2df97dd6f210b26b3317d",
+    "rows": 338,
+    "immutable": true
+  },
+  "preserved_failures": {
+    "R1_Deno_CI": {
+      "run": 39182810268,
+      "job": 117838988137,
+      "status": "FAIL_PRESERVED",
+      "file": "supabase/functions/vnext-daily-research-v1/index.ts",
+      "line": 5,
+      "error": "TS7006 callback parameters u/i have implicit any because fixed local .mjs lacks prior remote contextual declarations.",
+      "evidence_origin": "Root supplied exact remote CI observation; no prior receipt changed."
+    },
+    "natural_0900_observation": {
+      "origin": "Root read-only production observation",
+      "checkpoint": "0900 COMMITTED11/11",
+      "observed_at_label": "09:01:51",
+      "invocations": 62,
+      "cursor": 284,
+      "source": 286,
+      "reason": "COLD_BOOTSTRAP_NO_LATE_FORWARD",
+      "classification": "After actionable deadline, unbounded lower-only break prevents cursor progress, while incomplete plan queues again.",
+      "production_triggered_by_this_agent": false
+    },
+    "original_remote_SDK_failure": "FAIL/once guard refusal preserved; no gate reset/rename/rearm/new SDK HTTP."
+  },
+  "changes": [
+    {
+      "path": "supabase/functions/vnext-daily-research-v1/index.ts",
+      "sha256": "9260ec345dcb8a6e96c8f65ccc110789ec6d9dc5316fe46c1b229172e8abc792",
+      "bytes": 1335,
+      "before_sha256": "eb1c601722c6b6c4a36218114a00d7069181ac7e63175ae6200e0364d6301795"
+    },
+    {
+      "path": "src/features/vnext/dailyRuntime.ts",
+      "sha256": "c3c3fc74881831295c4cf19970ba77b77182b6c171e5dde1f3db6610666cea48",
+      "bytes": 11492,
+      "before_sha256": "af7f3e84bf279d1d49adc13a56fc06a9029a39a4b42f6a75adaba3c4701f6f9e"
+    },
+    {
+      "path": "tests/vnextDailyRuntimeRecovery.test.mjs",
+      "sha256": "b4bdf66db5679868dbc77898b9e2138d9a33388ec58c4d4492a2a6f501fa326c",
+      "bytes": 21904,
+      "before_sha256": "e7558669ea275c6962277c6104a003dd93a9768775a254c178d8b3a90e09bd40"
+    },
+    {
+      "path": "scripts/operations/c-worker-local-sdk-release-20261019/materialize.mjs",
+      "sha256": "23a66d57647b3057ad120e8dd73ce7008e882b383b72abe4298a3a38b395a02d",
+      "bytes": 7425,
+      "before_sha256": "f5a200530af1a8bf32714704eca3e9ae8375b85d81cb57d136f19b54d88df656"
+    },
+    {
+      "path": "tests/cWorkerLocalSdkRelease.test.mjs",
+      "sha256": "3bc51d0a0fdf28d6c99723906da3f0c2146586c72fb9aee639ac00a1d82f8c4f",
+      "bytes": 6142,
+      "before_sha256": "6cf4002699041941c8e12de456383ee1576d00454ad19d76d9ca6c9c7b812813"
+    }
+  ],
+  "entry_type_fix": {
+    "parameters": "u:Parameters<typeof fetch>[0], i?:Parameters<typeof fetch>[1]",
+    "runtime_emit_exact_R1": true,
+    "as_any_or_check_disable": false
+  },
+  "runtime_fix": {
+    "break_window": "!hasLock && actionable-60000 <= current && current < actionable",
+    "post_cutoff": "Continue only existing bounded source plan; no new late Forward; completed no-lock plan finishes EXPIRED.",
+    "unchanged": [
+      "eight-fetch limit",
+      "wall-clock budget",
+      "source reservation/retry/access-denied handling",
+      "SQL PREDICTIONS time/fence guards",
+      "hasLock216 exact replay",
+      "due Outcome priority",
+      "FINISH lease-uncertainty recovery",
+      "Handler and Auth/continuation identity"
+    ],
+    "new_regression": "Twenty real planned PRICE tasks across three simulated invocations at09:00/09:01/09:02: monotonic cursor,8fetch bound, no PREDICTIONS/CHECKPOINT, new receipt times, final EXPIRED. Original08:59:15 assertions retained plus08:59:00/08:59:59.999 edges."
+  },
+  "R2_catalog": {
+    "path": "scripts/operations/c-worker-local-sdk-release-20261019/release-catalog-r2.json",
+    "sha256": "8ce62c1b492dd6aaf0dd797e5bbe384b241a9e206e930e7f1eccc2e0cdaefb81",
+    "bytes": 19892
+  },
+  "payloads": {
+    "repair": {
+      "files": 74,
+      "sha256": "0d88f57588d02cb63ba467a3803b44815110a67ad5712e40903c241806bd02d2",
+      "bytes": 901426,
+      "only_R1_differences": [
+        "supabase/functions/vnext-daily-research-v1/index.ts",
+        "src/features/vnext/dailyRuntime.ts"
+      ]
+    },
+    "functional_fixed_SDK_recovery": {
+      "files": 74,
+      "sha256": "9be683f3b2a69f00084f68f72727de1dfa8db5d5dbdfe0de0c505aa797ecec32",
+      "bytes": 899200,
+      "only_R1_differences": [
+        "supabase/functions/vnext-daily-research-v1/index.ts"
+      ],
+      "original5f_runtime_handler_retained": true,
+      "not_ESZIP_or_original29_bit_identical": true
+    },
+    "R1_catalog_and_args_unchanged": true,
+    "old_repair_sha256": "a3b1c87f4532057f77355908e4c9ab5dc7de3e601e91aeb23363c2b69f13fd41",
+    "old_recovery_sha256": "ec4b0f46a70bbbb7c3735bd70880746a3373860ef5db051afd4c04986b113610",
+    "SDK15_notice30_and_other_logic_unchanged": true,
+    "two_current_global_V1_fixes_not_reverted": true
+  },
+  "validation": {
+    "materializer_actual_SDK15": {
+      "status": "PASS",
+      "node": "22.14.0",
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "path": "build/c-worker-local-sdk-r2-checks/materializer-runtime15.log",
+        "sha256": "29b7e2ceb4ca68212ab373f81a1e63868ed27bcf2a4fe76c480aaf416556e1b1",
+        "bytes": 4140
+      }
+    },
+    "initial_runtime_regressions": {
+      "status": "PASS_BEFORE_ADDITIONAL_WINDOW_EDGE_ASSERTIONS",
+      "passed": 23,
+      "failed": 0,
+      "log": {
+        "path": "build/c-worker-local-sdk-r2-checks/runtime-recovery.log",
+        "sha256": "12e9640758777375b3f49a1770f8834e5be7e4bb39ded5fe3927209ec9369852",
+        "bytes": 6390
+      }
+    },
+    "final_guards_and_runtime": {
+      "status": "PASS",
+      "node": "22.14.0",
+      "passed": 93,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "path": "build/c-worker-local-sdk-r2-checks/guards-runtime-final.log",
+        "sha256": "b935491abec7fd61d3124d9f89a238335e72142f817ebb285a22972d03c17a80",
+        "bytes": 23436
+      },
+      "includes_final_b4_runtime_boundary_assertions": true,
+      "final_metadata_reseal": "Same342path scope; result metadata update only, then repeat physical admission."
+    },
+    "type_check": {
+      "status": "PASS",
+      "command": "npm run type-check",
+      "log": {
+        "path": "build/c-worker-local-sdk-r2-checks/type-check.log",
+        "sha256": "a9c7d1fe7149e95532c7c3cfb9cffb1cb6af3f02529e56c365a285d82e26ba56",
+        "bytes": 169
+      }
+    },
+    "lint": {
+      "status": "PASS",
+      "command": "npm run lint",
+      "log": {
+        "path": "build/c-worker-local-sdk-r2-checks/lint.log",
+        "sha256": "e4e622c76daf347c9a5b600b20d795f21c4a236f93c903e1cbc869c8300f1674",
+        "bytes": 198
+      }
+    },
+    "build": {
+      "status": "PASS",
+      "command": "npm run build",
+      "log": {
+        "path": "build/c-worker-local-sdk-r2-checks/build.log",
+        "sha256": "b0220e3d2addcc50cd5c328dc19a83c1c8adbd65e60f0e55256e41311c64ea08",
+        "bytes": 6086
+      }
+    },
+    "independent_limited_review": {
+      "path": "/workspace/scratch/866fb527950e/c-worker-local-sdk-r2-independent-review-20261019/LIMITED_R2_SIX_SOURCE_REVIEW_SAFE.json",
+      "sha256": "3f11ca782d31f0d8c914fc8084bb6ec0716d78f40f7d4520427d80cde7c630e0",
+      "bytes": 6315,
+      "result": "PASS_WITH_LIMITS",
+      "reportable_findings": 0,
+      "formal_security_scan": false,
+      "includes_successor_seal_or_Deno_PASS": false,
+      "runtime_initial23_before_additional_window_edge_assertions": true,
+      "final93_evidence_bound_separately": true
+    },
+    "Deno_check": {
+      "local": "NOT_EXECUTED_NO_BINARY",
+      "local_binary_search": "No existing executable found; no elevated access requested.",
+      "official_install_docs": "https://docs.deno.com/runtime/getting_started/installation/",
+      "single_tool_attempt": "npm deno@2.9.7 in fixed ignored prefix; ignore-scripts,fetch-retries0,userconfigdevnull.",
+      "result": "FAIL_ETARGET_NO_MATCHING_NPM_VERSION; stopped immediately, no retry/version substitution.",
+      "log": {
+        "path": "build/c-worker-local-sdk-r2-checks/deno-tool-install.log",
+        "sha256": "7d2de0e387555555b5dd6a5a3f1f49dafc8e929e4221474428ce3cf700e1f500",
+        "bytes": 428
+      },
+      "remote_R2_Deno_check": "PENDING_NEW_EXACT_HEAD_CI; no local or remote Deno PASS claimed."
+    }
+  },
+  "scope": {
+    "new_top": "docs/operations/evidence/core-member-integration-20261019-c-worker-local-sdk-r2.json",
+    "rows": 342,
+    "new_exact_deltas": [
+      "docs/operations/evidence/core-member-integration-20261019-c-worker-local-sdk.json",
+      "scripts/operations/c-worker-local-sdk-release-20261019/release-catalog-r2.json",
+      "docs/operations/c-worker-local-sdk-r2-20261019.md",
+      "docs/operations/evidence/c-worker-local-sdk-r2-review-20261019.json"
+    ],
+    "old_evidence_unchanged": true,
+    "flags_all_false": true,
+    "B24_website24_unchanged": true
+  },
+  "limits": [
+    "Synthetic transports and logical clocks are not natural Production E2E or process hard-kill recovery proof.",
+    "Real Deno type check remains an exact-head CI requirement before deployment.",
+    "Network-denied preload is not an OS sandbox.",
+    "Fixed-SDK recovery intentionally retains original runtime behavior including its original cutoff stop defect; it is an emergency functional rollback, not the repaired branch."
+  ],
+  "commit": false,
+  "push": false,
+  "production_deployed": false,
+  "manual_POST": false,
+  "Cron_reset_or_modified": false,
+  "production_authorized": false,
+  "migration_execution": false,
+  "auth_rls_change": false,
+  "member_rights_activation": false,
+  "caller_activation": false,
+  "research_publication": false,
+  "line_send": false,
+  "payment_enabled": false
+}

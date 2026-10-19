@@ -8,11 +8,11 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 
 const repository=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 const gitEnv=Object.freeze({PATH:'/usr/bin:/bin',LC_ALL:'C',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0',GIT_OPTIONAL_LOCKS:'0'});
-export const RELEASE_CATALOG='scripts/operations/c-worker-local-sdk-release-20261019/release-catalog.json';
-export const RELEASE_CATALOG_SHA256='5ffb58de4a47582b222de4646eb5f75c088f5c47f97b312fb9d5516bab505d76';
+export const RELEASE_CATALOG='scripts/operations/c-worker-local-sdk-release-20261019/release-catalog-r2.json';
+export const RELEASE_CATALOG_SHA256='8ce62c1b492dd6aaf0dd797e5bbe384b241a9e206e930e7f1eccc2e0cdaefb81';
 export const APPROVED_LOGIC_COMMIT='5f33777836778e3600e4e377fcb3cf4de690fe80';
-export const RELEASE_OUTPUT='build/c-worker-local-sdk-release-20261019/repair-deploy-args.json';
-export const RECOVERY_OUTPUT='build/c-worker-local-sdk-release-20261019/fixed-sdk-recovery-deploy-args.json';
+export const RELEASE_OUTPUT='build/c-worker-local-sdk-release-20261019-r2/repair-deploy-args.json';
+export const RECOVERY_OUTPUT='build/c-worker-local-sdk-release-20261019-r2/fixed-sdk-recovery-deploy-args.json';
 export const HISTORICAL_LOGIC=Object.freeze([
  'supabase/functions/_shared/decision-v1-evidence.ts',
  'supabase/functions/_shared/recommendation-official-actuals.ts',
@@ -43,7 +43,7 @@ export function readReleaseCatalog(){
  const c=JSON.parse(bytes);
  exactKeys(c,['schema','repository_base','approved_logic_commit','metadata','payload_sha256','payload_bytes','runtime_files','static_files','files','production_authorized','recovery']);
  assert.equal(c.schema,'C_WORKER_LOCAL_SDK_GIT_RELEASE_V1');
- assert.equal(c.repository_base,'2e2027ba731b3b77eebd9bb9255be25d4708738b');
+ assert.equal(c.repository_base,'5109221ae1c70405d735e7f3cffa3430a6c888fc');
  assert.equal(c.approved_logic_commit,APPROVED_LOGIC_COMMIT);
  assert.equal(c.production_authorized,false);
  assert.equal(c.runtime_files,44);assert.equal(c.static_files,30);assert.equal(c.files.length,74);
@@ -100,7 +100,7 @@ export function writeRelease(variant='repair'){
  variantName(variant);const result=assembleRelease(variant);
  const output=variant==='recovery'?RECOVERY_OUTPUT:RELEASE_OUTPUT;
  // This one fixed ignored destination cannot overwrite an earlier artifact.
- for(const name of ['build','build/c-worker-local-sdk-release-20261019']){
+ for(const name of ['build','build/c-worker-local-sdk-release-20261019-r2']){
   const path=resolve(repository,name);
   try{const stat=lstatSync(path);assert(stat.isDirectory()&&!stat.isSymbolicLink(),'RELEASE_OUTPUT_DIRECTORY');}
   catch(error){if(error.code!=='ENOENT')throw error;mkdirSync(path,{mode:0o700});}

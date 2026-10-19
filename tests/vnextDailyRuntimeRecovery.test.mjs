@@ -96,10 +96,36 @@ test('deadline produces immutable truthful insufficient judgments while cold boo
  assert.equal(a.http.length,0);assert.equal(a.locked.length,216);
  assert(a.locked.every(p=>p.body.research.state==='INSUFFICIENT'&&p.body.locked_at==='2026-10-12T00:59:15Z'));
  assert.equal(a.result.reason,'COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK');
+ for(const at of ['2026-10-12T00:59:00Z','2026-10-12T00:59:59.999Z']){
+  const boundary=await runner({at,plan:await acquisitionPlan(date,companies),cold:true});
+  assert.equal(boundary.http.length,0);assert.equal(boundary.locked.length,216);
+  assert(boundary.locked.every(p=>p.body.research.state==='INSUFFICIENT'&&p.body.locked_at===at));
+  assert.equal(boundary.result.reason,'COLD_BOOTSTRAP_WITH_IMMUTABLE_LOCK');
+ }
 });
 test('after the deadline, newly acquired data cannot be backdated into Forward',async()=>{
  const plan=(await acquisitionPlan(date,companies)).slice(0,1),a=await runner({at:'2026-10-12T02:00:00Z',plan,cursor:1});
  assert.equal(a.locked.length,0);assert.equal(a.result.status,'EXPIRED');assert.equal(a.result.reason,'LATE_ACQUISITION_NOT_FORWARD');
+});
+test('post-cutoff cold bootstrap advances across bounded invocations and expires without any late Forward',async()=>{
+ const plan=(await acquisitionPlan(date,companies)).filter(t=>t.kind==='PRICE').slice(0,20);
+ const requests=new Set();let cursor=0,invocations=0,terminal;
+ while(cursor<plan.length){
+  assert(invocations<3,'twenty tasks must drain under the existing eight-fetch invocation limit');
+  // Include exactly09:00 and later claims, including a resumed nonzero cursor.
+  const at=new Date(Date.parse(date+'T01:00:00Z')+invocations*60000).toISOString();
+  const result=await runner({at,plan,cursor,cold:true});
+  assert(result.http.length>0&&result.http.length<=8);assert(result.run.cursor>cursor);
+  assert.equal(result.locked.length,0);assert(!result.calls.some(c=>c.op==='PREDICTIONS'));
+  assert(!result.calls.some(c=>c.op==='CHECKPOINT'));
+  assert(result.stored.every(r=>r.available_at===at&&r.first_seen_at===at));
+  for(const url of result.http){assert(!requests.has(url));requests.add(url);}
+  cursor=result.run.cursor;invocations++;terminal=result.result;
+  if(cursor<plan.length){assert.equal(terminal.status,'QUEUED');assert.equal(terminal.reason,'ACQUISITION_CONTINUATION');}
+ }
+ assert.equal(invocations,3);assert.equal(requests.size,20);
+ assert.equal(terminal.status,'EXPIRED');assert.equal(terminal.continue,false);
+ assert.equal(terminal.reason,'LATE_ACQUISITION_NOT_FORWARD');
 });
 test('warm prices wait boundedly for the independently published Canonical, not lock a false early market gap',async()=>{
  const plan=(await acquisitionPlan(date,companies)).slice(0,1),a=await runner({at:'2026-10-12T00:02:00Z',plan,cursor:1});

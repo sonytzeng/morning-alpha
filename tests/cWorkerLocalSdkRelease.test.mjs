@@ -1,21 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
-import {spawnSync} from 'node:child_process';
+import {spawnSync,execFileSync} from 'node:child_process';
+import ts from 'typescript';
 import {createHash} from 'node:crypto';
 import {assembleRelease,readReleaseCatalog,HISTORICAL_LOGIC,RELEASE_OUTPUT} from '../scripts/operations/c-worker-local-sdk-release-20261019/materialize.mjs';
 const root=new URL('../',import.meta.url);
 const read=name=>readFileSync(new URL(name,root));
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
-const expected='a3b1c87f4532057f77355908e4c9ab5dc7de3e601e91aeb23363c2b69f13fd41';
-const recoveryExpected='ec4b0f46a70bbbb7c3735bd70880746a3373860ef5db051afd4c04986b113610';
+const expected='0d88f57588d02cb63ba467a3803b44815110a67ad5712e40903c241806bd02d2';
+const recoveryExpected='9be683f3b2a69f00084f68f72727de1dfa8db5d5dbdfe0de0c505aa797ecec32';
 
 test('Git sources reproduce the independent sealed 74-file artifact exactly without reverting current global fixes',()=>{
  const first=assembleRelease(),second=assembleRelease();
- assert.equal(sha(first.bytes),expected);assert.equal(first.bytes.length,901300);assert(first.bytes.equals(second.bytes));
+ assert.equal(sha(first.bytes),expected);assert.equal(first.bytes.length,901426);assert(first.bytes.equals(second.bytes));
  assert.equal(first.payload.files.length,74);assert.equal(new Set(first.payload.files.map(f=>f.name)).size,74);
  assert.equal(first.payload.verify_jwt,true);assert(!('import_map_path'in first.payload));
  assert.equal(first.payload.files.filter(f=>f.name.includes('/licenses/')).length,30);
+ const entry='supabase/functions/vnext-daily-research-v1/index.ts';
+ const oldEntry=execFileSync('git',['--no-replace-objects','show','5109221ae1c70405d735e7f3cffa3430a6c888fc:'+entry],{cwd:root,env:{PATH:'/usr/bin:/bin',LC_ALL:'C',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0'},encoding:'utf8'});
+ const emit=source=>ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ assert.equal(emit(read(entry).toString()),emit(oldEntry),'fetch annotations must erase to the exact R1 entrypoint runtime');
  const old=new Map(first.payload.files.map(f=>[f.name,Buffer.from(f.content)]));
  assert.equal(sha(read(HISTORICAL_LOGIC[0])),'3346acbbac5437ae83db6b1aeb12b4a42600704d5490c3b154ed9ea26e3bec57');
  assert.equal(sha(read(HISTORICAL_LOGIC[1])),'3b166e74cee4515a6a7e3bf726faf418742c5c22112e9363b38b337257d76a0c');
@@ -70,7 +75,7 @@ test('the CLI refuses an arbitrary destination and never overwrites a previous f
 
 test('fixed-SDK recovery differs only in the original lease runtime and handler, with no arbitrary variant or ref',()=>{
  const repair=assembleRelease('repair'),recovery=assembleRelease('recovery');
- assert.equal(recovery.sha256,recoveryExpected);assert.equal(recovery.bytes.length,899143);
+ assert.equal(recovery.sha256,recoveryExpected);assert.equal(recovery.bytes.length,899200);
  assert.equal(recovery.payload.files.length,74);assert.equal(recovery.payload.verify_jwt,true);
  const differences=recovery.payload.files.filter((f,i)=>f.name!==repair.payload.files[i].name||f.content!==repair.payload.files[i].content).map(f=>f.name).sort();
  assert.deepEqual(differences,['src/features/vnext/dailyRuntime.ts','supabase/functions/vnext-daily-research-v1/handler.ts']);

@@ -75,7 +75,8 @@ export async function workDailyRun(id:string,p:RuntimePorts,budgetMs=70000){
   for(let i=r.cursor;i<plan.length&&due.length===0;i++){
    // Lock a truthful partial-evidence evaluation before the existing 09:00
    // deadline. Long-history bootstrap may continue; never backdate its receipts.
-   if(!hasLock&&Date.parse(p.clock())>=Date.parse(r.actionable_at)-60000)break;
+   const current=Date.parse(p.clock()),actionable=Date.parse(r.actionable_at);
+   if(!hasLock&&current>=actionable-60000&&current<actionable)break;
    if(Date.now()+14000>=deadline||fetched>=8)return finish('QUEUED','ACQUISITION_CONTINUATION');
    const receipt=await collect(plan[i]);if(receipt===false)return finish('QUEUED','SOURCE_RETRY_PENDING');
    await rpc('CURSOR',{cursor:i+1});cursor=i+1;

@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-c-worker-local-sdk.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-c-worker-local-sdk-r2.json';
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
 const PRIOR_R2='cc167304814b2223977a36802b2666ea8203ff36';
@@ -45,9 +45,15 @@ const PRIOR_MARKET_REGIME='77888f0ed88648790179d00bd511682721fae67f';
 const FROZEN_MARKET_REGIME_MANIFEST='docs/operations/evidence/core-member-integration-20261019-market-regime.json';
 const PRIOR_MARKET_REGIME_R2='2e2027ba731b3b77eebd9bb9255be25d4708738b';
 const FROZEN_MARKET_REGIME_R2_MANIFEST='docs/operations/evidence/core-member-integration-20261019-market-regime-r2.json';
+const PRIOR_LOCAL_SDK='5109221ae1c70405d735e7f3cffa3430a6c888fc';
+const FROZEN_LOCAL_SDK_MANIFEST='docs/operations/evidence/core-member-integration-20261019-c-worker-local-sdk.json';
 // Explicitly reviewed composition deltas. No patterns, glob, deployment flags,
 // automatic inventory admission or addition to any previous release catalogue.
 export const INTEGRATION_DELTAS=Object.freeze([
+ FROZEN_LOCAL_SDK_MANIFEST,
+ 'scripts/operations/c-worker-local-sdk-release-20261019/release-catalog-r2.json',
+ 'docs/operations/c-worker-local-sdk-r2-20261019.md',
+ 'docs/operations/evidence/c-worker-local-sdk-r2-review-20261019.json',
  FROZEN_MARKET_REGIME_R2_MANIFEST,
  'supabase/functions/_shared/_fixed_c_worker_sdk/0bce189b17b39939428919945e6a261663cfa3fb43d7be83b97eef1655ffa196.mjs',
  'supabase/functions/_shared/_fixed_c_worker_sdk/8474f19a1f21e74abb020fc7894da0ae847ad881f5684adafe32f7d0262077cf.mjs',
@@ -276,6 +282,7 @@ export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=in
  assert.deepEqual(Buffer.from(read(FROZEN_LEASE_HANDOFF_MANIFEST)),frozenReceipt(PRIOR_LEASE_HANDOFF,FROZEN_LEASE_HANDOFF_MANIFEST),'INTEGRATION_LEASE_HANDOFF_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_MARKET_REGIME_MANIFEST)),frozenReceipt(PRIOR_MARKET_REGIME,FROZEN_MARKET_REGIME_MANIFEST),'INTEGRATION_MARKET_REGIME_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_MARKET_REGIME_R2_MANIFEST)),frozenReceipt(PRIOR_MARKET_REGIME_R2,FROZEN_MARKET_REGIME_R2_MANIFEST),'INTEGRATION_MARKET_REGIME_R2_RECEIPT_DRIFT');
+ assert.deepEqual(Buffer.from(read(FROZEN_LOCAL_SDK_MANIFEST)),frozenReceipt(PRIOR_LOCAL_SDK,FROZEN_LOCAL_SDK_MANIFEST),'INTEGRATION_LOCAL_SDK_RECEIPT_DRIFT');
  for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false,'INTEGRATION_FORBIDDEN:'+flag);
  const scope=integrationScope();
  assert.deepEqual(m.files.map(r=>r.path),scope,'INTEGRATION_EXACT_SCOPE');

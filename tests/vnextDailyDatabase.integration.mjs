@@ -16,9 +16,10 @@ const migration='supabase/migrations/20261012054120_vnext_daily_research_runtime
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const name='ma-vnext-wiring-'+process.pid,db=name+'-db',rest=name+'-rest';
 const secret=randomBytes(48).toString('hex'),password=randomBytes(24).toString('hex');
-const env={...process.env,POSTGRES_PASSWORD:password,PGRST_DB_URI:`postgres://authenticator:${password}@${db}:5432/postgres`,PGRST_JWT_SECRET:secret};
+const env={...process.env,POSTGRES_PASSWORD:password,PGPASSWORD:password,PGRST_DB_URI:`postgres://authenticator:${password}@${db}:5432/postgres`,PGRST_JWT_SECRET:secret};
 const run=(a,input)=>execFileSync('docker',a,{env,encoding:'utf8',input,stdio:['pipe','pipe','pipe'],maxBuffer:64e6}).trim();
-const sql=q=>run(['exec','-i',db,'psql','-h','127.0.0.1','-XqAt','-U','postgres','-v','ON_ERROR_STOP=1'],q);
+// Test-local random password only; pass by environment name, never argv value.
+const sql=q=>run(['exec','-i','-e','PGPASSWORD',db,'psql','-h','127.0.0.1','-XqAt','-U','postgres','-v','ON_ERROR_STOP=1'],q);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const token=(role,sub)=>{const h=Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url'),p=Buffer.from(JSON.stringify({role,sub,exp:Math.floor(Date.now()/1000)+3600})).toString('base64url');return h+'.'+p+'.'+createHmac('sha256',secret).update(h+'.'+p).digest('base64url');};
 const port=55840,base='http://127.0.0.1:'+port,workerPort=55841;
@@ -48,8 +49,12 @@ const rpc=async(name,args)=>{
  return r.data;
 };
 try{
- run(['network','create',name]);run(['run','-d','--name',db,'--network',name,'-e','POSTGRES_PASSWORD','postgres:17']);
- let ready=false;for(let i=0;i<60;i++){try{sql('select 1');ready=true;break;}catch{await sleep(300);}}assert(ready);
+ assert(process.env.MA_ISOLATED_DB_TMPFS===undefined||['0','1'].includes(process.env.MA_ISOLATED_DB_TMPFS),'ISOLATED_DB_TMPFS_INVALID');
+ const ephemeralStorage=process.env.MA_ISOLATED_DB_TMPFS==='1'?['--tmpfs','/var/lib/postgresql/data:rw,size=268435456']:[];
+ run(['network','create',name]);run(['run','-d','--name',db,'--network',name,...ephemeralStorage,'-e','POSTGRES_PASSWORD','postgres:17']);
+ let ready=false,readinessCode='UNKNOWN';for(let i=0;i<60;i++){try{sql('select 1');ready=true;break;}catch(error){
+  const message=String(error.stderr??'');readinessCode=/permission denied/i.test(message)?'LOCAL_DOCKER_PERMISSION_DENIED':/no password supplied/i.test(message)?'LOCAL_PASSWORD_ENV_MISSING':/password authentication failed/i.test(message)?'LOCAL_PASSWORD_REJECTED':/connection refused|starting up/i.test(message)?'LOCAL_POSTGRES_NOT_READY':/No such container/i.test(message)?'LOCAL_CONTAINER_MISSING':/executable file|exec failed/i.test(message)?'LOCAL_CONTAINER_EXEC_FAILED':'LOCAL_POSTGRES_UNKNOWN';await sleep(300);
+ }}assert(ready,'LOCAL_DB_UNAVAILABLE:'+readinessCode);
  sql(`create role anon nologin;create role authenticated nologin;create role service_role nologin bypassrls;create role authenticator login password '${password}' noinherit;
  grant anon,authenticated,service_role to authenticator;create schema auth;create schema research_private;
  create function auth.uid() returns uuid language sql stable as $$select (nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub')::uuid$$;

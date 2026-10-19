@@ -1,0 +1,210 @@
+{
+  "schema": "C_COLD_SOURCE_PRIORITY_REVIEW_V1",
+  "base": "fda6d637ebf35ce545a31ddba3ad2e2b4724e7a8",
+  "production_changed": false,
+  "production_authorized": false,
+  "root_cause": {
+    "natural_run": {
+      "business_date": "2026-10-19",
+      "cursor": 284,
+      "plan_count": 1358,
+      "invocations": 512,
+      "state": "BLOCKED",
+      "reason": "INVOCATION_BUDGET_EXHAUSTED",
+      "predictions": 0,
+      "post_cutoff_empty_continuations": 473,
+      "original_rpc_cause": "UNKNOWN_NOT_CLAIMED_FIXED"
+    },
+    "new_fix": "ORDER_ONLY_PREVENT_DEEP_HISTORY_STARVING_CURRENT_HORIZON_SOURCES",
+    "not_claimed": "NO_RECOMMENDATION_PROMOTION_OR_PUBLISHED_CONTENT"
+  },
+  "actual_retained_review": {
+    "schema": "R23_EXISTING_C_RECEIPTS_REVIEW_V1",
+    "mode": "RETAINED_REVIEW_NOT_FORWARD",
+    "cutoff": "2026-10-19T11:30:51.304Z",
+    "source_revision": "564e57e4994f3cadd803f21161795ff23af9850e6bee6927f157afa49e3d8830",
+    "receipt_count": 286,
+    "original_receipt_byte_hashes_verified": 286,
+    "through": "2026-10-16",
+    "universe": 72,
+    "expected_short_sessions": [
+      "2026-09-16",
+      "2026-09-17",
+      "2026-09-18",
+      "2026-09-21",
+      "2026-09-22",
+      "2026-09-23",
+      "2026-09-24",
+      "2026-09-29",
+      "2026-09-30",
+      "2026-10-01",
+      "2026-10-02",
+      "2026-10-05",
+      "2026-10-06",
+      "2026-10-07",
+      "2026-10-08",
+      "2026-10-12",
+      "2026-10-13",
+      "2026-10-14",
+      "2026-10-15",
+      "2026-10-16"
+    ],
+    "short_window_rows": 1440,
+    "complete_short_windows": 72,
+    "missing_short_windows": [],
+    "source_kinds": {
+      "PRICE": 207,
+      "OTC_PRICE": 74,
+      "DIRECTORY": 2,
+      "BENCHMARK": 3
+    },
+    "horizons": {
+      "SHORT": {
+        "scanned": 72,
+        "evaluated": 72,
+        "qualified": 2,
+        "rejected": 70,
+        "insufficient": 0,
+        "reasons": {
+          "CLOSE_NOT_SUPPORTED": 65,
+          "PARTICIPATION_NOT_ELEVATED": 60
+        }
+      },
+      "MEDIUM": {
+        "scanned": 72,
+        "evaluated": 0,
+        "qualified": 0,
+        "rejected": 0,
+        "insufficient": 72,
+        "reasons": {
+          "MISSING_INSTITUTIONAL_10": 72,
+          "MISSING_REVENUE_3": 72
+        }
+      },
+      "LONG": {
+        "scanned": 72,
+        "evaluated": 0,
+        "qualified": 0,
+        "rejected": 0,
+        "insufficient": 72,
+        "reasons": {
+          "MISSING_CAPEX_4": 72,
+          "MISSING_DEMAND_1": 72,
+          "MISSING_EPS_4": 72,
+          "MISSING_MARGIN_4": 72,
+          "MISSING_MOAT_1": 72,
+          "MISSING_VALUATION_1": 72
+        }
+      }
+    },
+    "publication_approved": 0,
+    "forward_sample": 0,
+    "outcome_sample": 0,
+    "production_writes": 0,
+    "interpretation": "C_EXPLORATORY_HYPOTHESIS_NOT_ORIGINAL_RECOMMENDATION",
+    "sourceOrder": {
+      "task_count": 1358,
+      "task_set_sha256": "8bba59488354db89228239cc07075216ea7d843bd3904f99d7bd991bdc8794d6",
+      "before": {
+        "first_revenue": 1168,
+        "first_institutional": 1128
+      },
+      "after": {
+        "first_revenue": 164,
+        "first_institutional": 144
+      }
+    },
+    "raw_values_emitted": false
+  },
+  "production_v1": {
+    "date": "2026-10-19",
+    "universe": 72,
+    "evaluated": 0,
+    "blocked": 72,
+    "ready": 0,
+    "watch": 0,
+    "none": 0,
+    "reason_distribution": {
+      "THREE_INSTITUTIONS_MISSING": 72,
+      "FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING": 72,
+      "SOURCED_COMPANY_CATALYST_MAPPING_MISSING": 72,
+      "EVENT_ALIGNED_PRICE_VOLUME_REACTION_MISSING": 72,
+      "MARKET_REQUIRED_INSTITUTIONAL": 72,
+      "MARKET_REQUIRED_CATALYST": 72
+    },
+    "monthly_actual_coverage": 72,
+    "reported_eps_coverage": 72,
+    "complete_four_quarter_evidence": 0,
+    "consensus": 0,
+    "guidance": 0,
+    "volume_missing": 0
+  },
+  "actual_runtime_readback": {
+    "version": 3,
+    "status": "ACTIVE",
+    "verify_jwt": true,
+    "import_map": false,
+    "ezbr_sha256": "10caad6cea1bc53d91590ae2746dee33391ec64107fc2012b54e968ae3fcb708",
+    "source_files_verified": 44,
+    "sdk": "2.57.4"
+  },
+  "payloads": {
+    "candidate": {
+      "sha256": "34a0fe4a0b17dc56a72c43d7687738047b59d695ae1bbda676b85f321d9c0762",
+      "bytes": 924165
+    },
+    "recovery": {
+      "sha256": "782bf24f65c44a120e6c4e37251116ce910936f0897f08f85d02f3abdea54513",
+      "bytes": 923334
+    }
+  },
+  "scope": {
+    "runtime_files": 44,
+    "static_files": 34,
+    "changed_runtime_files": 1,
+    "changed_file": "src/features/vnext/dailyAdapter.ts",
+    "migration": false,
+    "auth_rls_change": false,
+    "cron_secret_change": false,
+    "producer_reader_caller_change": false,
+    "manual_business_invocation": false,
+    "threshold_change": false,
+    "source_admission": false,
+    "publication": false,
+    "member_entitlement_change": false,
+    "line": false,
+    "payment": false,
+    "type_only_files": 4
+  },
+  "evidence_classification": {
+    "source_texts": "PRIVATE_ORIGINAL_BYTES_VERIFIED_286",
+    "numerical_prices": "NOT_COMMITTED",
+    "real_review": "OFFLINE_RETAINED_NOT_PRODUCTION_FORWARD",
+    "controls": "SYNTHETIC_SEPARATE",
+    "original_r22_named_receipt": "NOT_LOCAL_RETRIEVABLE_CROSS_CHECKED_HANDOFF_AND_FRESH_PRODUCTION",
+    "original_empty_jpeg": "NOT_READ_REOBSERVED_REAL_OWNER_STOCKS"
+  },
+  "validation": {
+    "unit_and_regression": "92_PASS_NODE_22_23_1",
+    "type_check": "PASS",
+    "lint": "PASS",
+    "build": "PASS",
+    "deno_exact_candidate_recovery": "PASS_78_FILES",
+    "fresh_db": "PASS_14_REAL_SQL_HTTP_CHECK_GROUPS_ISOLATED_TMPFS_NOT_PRODUCTION",
+    "security_review": "PENDING",
+    "ci": "PENDING_EXACT_HEAD"
+  },
+  "release_gates": {
+    "merge": false,
+    "deploy": false,
+    "migration": false,
+    "cron": false,
+    "secrets": false,
+    "auth_rls": false,
+    "rights": false,
+    "publication": false,
+    "payment": false
+  },
+  "stock_recommendation_delivered": false
+}
+

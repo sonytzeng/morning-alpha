@@ -1,11 +1,13 @@
+// The immutable B24 assertions use only the exact pre-copy Owner view after
+// full current successor admission; all other source reads stay current.
+import {ownerStatusCopyHistoricalFsRead as readFileSync} from './helpers/ownerStatusCopyAdmission.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {verifyIntegrationCandidate,integrationHistoricalRead} from './helpers/integrationAdmission.mjs';
 import {verifyMemberContinuity,memberContinuityHistoricalReader} from './helpers/memberContinuityAdmission.mjs';
-import {verifyFrontendTypeClosure,frontendTypeClosureHistoricalReader} from './helpers/frontendTypeClosureAdmission.mjs';
+import {verifyHistoricalFrontendTypeClosureForOwnerCopy as verifyFrontendTypeClosure,frontendTypeClosureHistoricalReader} from './helpers/frontendTypeClosureAdmission.mjs';
 verifyFrontendTypeClosure();
 verifyMemberContinuity();
 

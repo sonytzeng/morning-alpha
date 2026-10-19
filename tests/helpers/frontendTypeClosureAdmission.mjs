@@ -8,6 +8,7 @@ import {resolve,dirname,relative} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {verifyIntegrationCandidate,integrationInventory,integrationPhysicalMode} from './integrationAdmission.mjs';
 import {memberContinuityWebsiteOperations} from './memberContinuityAdmission.mjs';
+import {verifyOwnerStatusCopy,ownerStatusCopyHistoricalRead,ownerStatusCopyHistoricalReader} from './ownerStatusCopyAdmission.mjs';
 
 export const FRONTEND_TYPE_CLOSURE_BASE='588e83f3012a31469d5c58b6874ec49c98a2e4b9';
 export const FRONTEND_TYPE_CLOSURE_MANIFEST='docs/operations/evidence/frontend-type-closure-20261018.json';
@@ -94,7 +95,7 @@ function receipt(read=physicalRead){
  assert.deepEqual(manifest.type_equivalence,TYPE_EQUIVALENCE,'FRONTEND_TYPE_EXACT_EQUIVALENCE');
  return {bytes,manifest};
 }
-function expectedWebsite(manifest,read,mode){
+function expectedWebsite(manifest,read,mode,physicalView=physical){
  const old=memberContinuityWebsiteOperations();
  assert.equal(old.length,24);assert.equal(new Set(old.map(row=>row.path)).size,24);
  assert.deepEqual(old.filter(row=>!row.path.startsWith('src/')).map(row=>row.path).sort(),FRONTEND_TYPE_CLOSURE_REMOVED);
@@ -105,7 +106,7 @@ function expectedWebsite(manifest,read,mode){
   assert.equal(hash(bytes),row.after_sha256,'FRONTEND_TYPE_SOURCE:'+row.path);
   assert.equal(mode(row.path),row.mode,'FRONTEND_TYPE_MODE:'+row.path);
   // Check the actual physical file independently of an injected consumer view.
-  const actual=physical(row.path);assert.equal(actual.mode,row.mode,'FRONTEND_TYPE_PHYSICAL_MODE:'+row.path);
+  const actual=physicalView(row.path);assert.equal(actual.mode,row.mode,'FRONTEND_TYPE_PHYSICAL_MODE:'+row.path);
   assert.equal(hash(actual.bytes),row.after_sha256,'FRONTEND_TYPE_PHYSICAL_SOURCE:'+row.path);
   operations.push({path:row.path,mode:row.mode,live_before_sha256:row.path===FRONTEND_TYPE_CLOSURE_DTO?null:FRONTEND_TYPE_CLOSURE_LIVE_BEFORE[row.path],target_sha256:row.after_sha256,
    operation:row.path===FRONTEND_TYPE_CLOSURE_DTO?'ADD':'MODIFY',
@@ -118,7 +119,7 @@ function expectedWebsite(manifest,read,mode){
  assert.equal(operations.filter(row=>row.operation==='MODIFY').length,13);
  assert.equal(operations.filter(row=>row.operation==='ADD').length,11);
  for(const row of operations){
-  const actual=physical(row.path);
+  const actual=physicalView(row.path);
   assert.equal(actual.mode,row.mode,'FRONTEND_TYPE_WEBSITE_MODE:'+row.path);
   assert.equal(hash(actual.bytes),row.target_sha256,'FRONTEND_TYPE_WEBSITE_SOURCE:'+row.path);
   assert.equal(actual.bytes.length,row.source_bytes,'FRONTEND_TYPE_WEBSITE_SIZE:'+row.path);
@@ -141,6 +142,24 @@ export function verifyFrontendTypeClosure(read=physicalRead,paths=integrationInv
 export function frontendTypeClosureWebsiteOperations(){
  const manifest=verifyFrontendTypeClosure();
  return structuredClone(manifest.website.operations);
+}
+
+/** Explicit historical B24 view after the separately sealed current copy fix.
+ * The original physical verifier above deliberately still rejects the changed
+ * Owner source. These exports are for immutable package regressions, never a
+ * current website deployment catalogue or permission to publish old sources.
+ */
+export function verifyHistoricalFrontendTypeClosureForOwnerCopy(read=physicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
+ verifyOwnerStatusCopy(read,paths,mode);
+ const historical=ownerStatusCopyHistoricalReader(read),{bytes:seal,manifest}=receipt(historical);
+ assert.equal(hash(historical(PREDECESSOR)),PREDECESSOR_HASH,'FRONTEND_TYPE_CONTINUITY_RECEIPT');
+ const view=path=>{const actual=physical(path);return {...actual,bytes:ownerStatusCopyHistoricalRead(path,actual.bytes)};};
+ assert.deepEqual(manifest.website,expectedWebsite(manifest,historical,mode,view),'FRONTEND_TYPE_EXACT_WEBSITE');
+ assert.deepEqual(physicalRead(FRONTEND_TYPE_CLOSURE_MANIFEST),seal,'FRONTEND_TYPE_RECEIPT_CHANGED');
+ verifyOwnerStatusCopy();return structuredClone(manifest);
+}
+export function historicalFrontendTypeClosureWebsiteOperationsForOwnerCopy(){
+ return verifyHistoricalFrontendTypeClosureForOwnerCopy().website.operations;
 }
 
 const typedArrayPrototype=Object.getPrototypeOf(Uint8Array.prototype);

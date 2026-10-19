@@ -44,8 +44,8 @@ export default function OwnerCockpit({children}:{children:ReactNode}){
   {loading?<p role="status">正在讀取已保存的市場與研究資料…</p>:null}
   {tab==='today'&&<div className="cockpit-stack"><article className="cockpit-hero"><p className="cockpit-eyebrow">先看市場，再決定要不要研究進場</p><h2>今天有沒有值得研究的買點？</h2>
    {!today.market?<p className="cockpit-lead">今天的分析還在準備，目前先不要使用昨天的結果做今天的判斷。</p>:<><p className="cockpit-lead">{today.market.conclusion}</p><p>{today.market.direction} · {plainRegime(today.market.regime)}</p></>}
-   <div className="cockpit-metrics"><div><span>目前建議</span><strong>{today.market?plainAction(today.market.action):'先等待今天的正式分析'}</strong></div><div><span>值得關注</span><strong>{today.watch===null?'尚未完成今日研究':`${today.watch} 檔`}</strong></div><div><span>符合研究進場條件</span><strong>{today.ready===null?'暫不推定':`${today.ready} 檔`}</strong></div></div>
-   <p className="cockpit-warning">每日自動進場研究尚未啟用。已有的歷史研究不能當成今天的買賣判斷。</p>
+   <div className="cockpit-metrics"><div><span>目前建議</span><strong>{today.market?plainAction(today.market.action):'先等待今天的正式分析'}</strong></div><div><span>進場策略待確認</span><strong>{today.watch===null?'尚未取得今日進場研究結果':`${today.watch} 檔`}</strong></div><div><span>符合研究進場條件</span><strong>{today.ready===null?'暫不推定':`${today.ready} 檔`}</strong></div></div>
+   <p className="cockpit-warning">{today.currentResearch?'已取得今日進場策略研究；待確認名單仍須核對條件，不代表買入指令。':'尚未取得今日進場研究結果。歷史研究不能當成今天的買賣判斷；個股觀察名單不代表進場條件已成立。'}</p>
    <h3>下一步</h3><p>{today.market?.waitReason||'等待今天的分析與可觀察條件，不由舊資料推算進場時機。'}</p>
    <button className="cockpit-primary" onClick={()=>setTab('research')}>查看股票與歷史研究</button>
   </article><div className="cockpit-two"><article className="cockpit-card"><h3>哪些訊號支持？</h3><ReasonList rows={today.market?.supporting||[]} empty="尚無當日可核對的支持理由。"/></article><article className="cockpit-card"><h3>哪些訊號提醒我小心？</h3><ReasonList rows={today.market?.contradicting||[]} empty="尚無當日可核對的風險理由，不代表沒有風險。"/></article></div>
@@ -68,7 +68,7 @@ function Research({data,today,names,onJournal}:{data:ReadData|null;today:string;
   <p>研究範圍 {row?.universe??'尚未取得'} 檔，非全市場。{row?`已檢查 ${row.scanned} 檔。`:''}符合目前篩選：{symbols.length} 檔。</p>
   {!symbols.length?<article className="cockpit-card"><h3>目前沒有符合篩選的研究</h3><p>{row?'可換一個狀態或名稱查詢；這不代表市場沒有機會。':'尚無已保存的進場研究；不補造股票或價格。'}</p></article>:<div className="cockpit-research-grid"><aside className="cockpit-stock-list" aria-label="股票列表">{symbols.map(s=>{const c=candidates.find(c=>c.symbol===s)!;return <button key={s} aria-pressed={symbol===s} onClick={()=>setSelected(s)}><strong>{c.name||'名稱未提供'} {s}</strong><span>{[...new Set(candidates.filter(x=>x.symbol===s).map(x=>entryNames[x.status]))].join('；')}</span></button>;})}</aside>
    <div className="cockpit-stack">{shown.map(c=><StockCard c={c} key={c.strategy} historical={historical} onJournal={onJournal}/> )}</div></div>}
-  <details className="cockpit-card"><summary>查看研究樣本與資料限制</summary><p>事前研究日期：{data?.forward_sample??'未讀取'}；完成結果：{data?.outcome_sample??'未讀取'}。歷史研究不算事前樣本。</p><p>目前資料不足，還不能判斷這套策略是否有效。每日自動研究與進場結果追蹤尚未啟用。</p><p>日線資料無法確認實際成交及同日停損、停利先後，不能當成已實現績效。</p></details>
+  <details className="cockpit-card"><summary>查看研究樣本與資料限制</summary><p>事前研究日期：{data?.forward_sample??'未讀取'}；完成結果：{data?.outcome_sample??'未讀取'}。歷史研究不算事前樣本。</p><p>目前樣本不足，還不能判斷這套進場策略是否有效；個股觀察名單不等於進場條件已成立。</p><p>日線資料無法確認實際成交及同日停損、停利先後，不能當成已實現績效。</p></details>
  </div>;
 }
 function StockCard({c,historical,onJournal}:{c:EntryResult;historical:boolean;onJournal:()=>void}){

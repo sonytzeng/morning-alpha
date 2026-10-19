@@ -1,6 +1,9 @@
+// The immutable B24 assertions use only the exact pre-copy Owner view after
+// full current successor admission; all other source reads stay current.
+import {ownerStatusCopyHistoricalFsRead as readFileSync} from './helpers/ownerStatusCopyAdmission.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync,mkdirSync,mkdtempSync,rmSync,symlinkSync,chmodSync} from 'node:fs';
+import {writeFileSync,mkdirSync,mkdtempSync,rmSync,symlinkSync,chmodSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {join,dirname} from 'node:path';
@@ -8,7 +11,7 @@ import {tmpdir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {FRONTEND_TYPE_CLOSURE_BASE,FRONTEND_TYPE_CLOSURE_MANIFEST,FRONTEND_TYPE_CLOSURE_SOURCES,
  FRONTEND_TYPE_CLOSURE_CONSUMERS,FRONTEND_TYPE_CLOSURE_DTO,FRONTEND_TYPE_CLOSURE_REMOVED,FRONTEND_TYPE_CLOSURE_LIVE_BEFORE,
- verifyFrontendTypeClosure,frontendTypeClosureWebsiteOperations,frontendTypeClosureHistoricalRead,frontendTypeClosureHistoricalReader} from './helpers/frontendTypeClosureAdmission.mjs';
+ verifyHistoricalFrontendTypeClosureForOwnerCopy as verifyFrontendTypeClosure,historicalFrontendTypeClosureWebsiteOperationsForOwnerCopy as frontendTypeClosureWebsiteOperations,frontendTypeClosureHistoricalRead,frontendTypeClosureHistoricalReader} from './helpers/frontendTypeClosureAdmission.mjs';
 import {memberContinuityWebsiteOperations} from './helpers/memberContinuityAdmission.mjs';
 import {integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHistoricalRead,integrationParentRead} from './helpers/integrationAdmission.mjs';
 
@@ -79,7 +82,7 @@ test('forged scope, lineage, authority, operation facts and equality fixture ref
 });
 
 test('existing historical readers restore only exact admitted consumer bytes and preserve injected drift',()=>{
- for(const path of FRONTEND_TYPE_CLOSURE_CONSUMERS){const good=readFileSync(path),bad=Buffer.concat([good,Buffer.from('NEGATIVE_CONSUMER')]);
+ for(const path of FRONTEND_TYPE_CLOSURE_CONSUMERS){const good=integrationPhysicalRead(path),bad=Buffer.concat([good,Buffer.from('NEGATIVE_CONSUMER')]);
   for(const view of ['core','member']){
    assert.deepEqual(integrationHistoricalRead(view,path,good),integrationParentRead(view,path));
    assert.equal(integrationHistoricalRead(view,path,bad),bad);
@@ -114,11 +117,11 @@ async function historicalFixture(){
  const put=(path,bytes)=>{mkdirSync(dirname(join(dir,path)),{recursive:true});writeFileSync(join(dir,path),bytes);};
  const helper='tests/helpers/frontendTypeClosureAdmission.mjs',integration='tests/helpers/integrationAdmission.mjs';
  put('.git',Buffer.from('gitdir: '+git(['rev-parse','--absolute-git-dir']).toString().trim()+'\n'));
- for(const path of [helper,FRONTEND_TYPE_CLOSURE_MANIFEST,contract])put(path,readFileSync(path));
+ for(const path of [helper,'tests/helpers/ownerStatusCopyAdmission.mjs',FRONTEND_TYPE_CLOSURE_MANIFEST,contract])put(path,readFileSync(path));
  // Disposable physical-file fixture only: count every public boundary and
  // independently reject a changed complete live admission. Ordinary tests
  // above use the real full-tree gate, never this substitute.
- put(integration,Buffer.from("export let checks=0;let blocked=false;export const integrationInventory=()=>[];export const integrationPhysicalMode=()=> '100644';export function verifyIntegrationCandidate(){checks++;if(blocked)throw Error('FIXTURE_LIVE_ADMISSION_REJECTED');}export const blockFixtureAdmission=value=>{blocked=value;};\n"));
+ put(integration,Buffer.from("export let checks=0;let blocked=false;export const integrationInventory=()=>[];export const integrationPhysicalMode=()=> '100644';export const integrationPhysicalRead=()=>{throw Error('FIXTURE_UNEXPECTED_OWNER_READ');};export function verifyIntegrationCandidate(){checks++;if(blocked)throw Error('FIXTURE_LIVE_ADMISSION_REJECTED');}export const blockFixtureAdmission=value=>{blocked=value;};\n"));
  put('tests/helpers/memberContinuityAdmission.mjs',Buffer.from("export function memberContinuityWebsiteOperations(){throw Error('FIXTURE_UNEXPECTED_WEBSITE_REBUILD');}\n"));
  return {dir,put,live:await import(pathToFileURL(join(dir,helper)).href),gate:await import(pathToFileURL(join(dir,integration)).href),close:()=>rmSync(dir,{recursive:true,force:true})};
 }

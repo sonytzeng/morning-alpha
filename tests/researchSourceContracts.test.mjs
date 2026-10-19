@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {resolve} from 'node:path';
 import ts from 'typescript';
+import {ownerStatusCopyHistoricalRead} from './helpers/ownerStatusCopyAdmission.mjs';
 
 const BASE='588e83f3012a31469d5c58b6874ec49c98a2e4b9';
 const DTO='src/types/research-source-contracts.ts',FIXTURE='tests/researchSourceContracts.types.ts';
@@ -45,7 +46,9 @@ test('real type comparisons reject schema widening, narrowing, null, tuple, read
 test('the five type-only consumer changes emit byte-identical JavaScript to the immutable baseline',()=>{
  for(const path of CONSUMERS){
   const before=execFileSync('git',['--no-replace-objects','show',BASE+':'+path],{maxBuffer:1024*1024}).toString();
-  const after=readFileSync(path,'utf8');assert.notEqual(after,before,path+' has a reviewed type-only replacement');
+  // Keep the immutable type-only equivalence proof separate from the current
+  // copy change; the exact Owner translation rechecks current admission.
+  const after=ownerStatusCopyHistoricalRead(path,readFileSync(path,'utf8'));assert.notEqual(after,before,path+' has a reviewed type-only replacement');
   const emit=source=>ts.transpileModule(source,{fileName:path,compilerOptions:{...parsed.options,noEmit:false,incremental:false,sourceMap:false,inlineSourceMap:false}}).outputText;
   assert.equal(emit(after),emit(before),path+' runtime output changed');
  }

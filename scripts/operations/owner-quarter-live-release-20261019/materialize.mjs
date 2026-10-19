@@ -12,7 +12,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 const directory='scripts/operations/owner-quarter-live-release-20261019/';
 export const RELEASE_CATALOG=directory+'release-catalog.json';
-export const RELEASE_CATALOG_SHA256='5d8995c7bb690ec7877d096a1fbe261d4c4273115728c7678a6cc679d42070a6';
+export const RELEASE_CATALOG_SHA256='4c224f257a05e0219234cf906ec619b3bc01ec7a40027b0e353b73de4f3ed1d5';
 export const VARIANTS=Object.freeze(['producer','producer-recovery','reader','reader-recovery']);
 const gitEnv=Object.freeze({PATH:'/usr/bin:/bin',LC_ALL:'C',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0',GIT_OPTIONAL_LOCKS:'0'});
 const hash=value=>createHash('sha256').update(value).digest('hex');

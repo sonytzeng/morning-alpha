@@ -12,7 +12,7 @@
   },
   "release_catalog": {
     "path": "scripts/operations/owner-quarter-live-release-20261019/release-catalog.json",
-    "sha256": "5d8995c7bb690ec7877d096a1fbe261d4c4273115728c7678a6cc679d42070a6",
+    "sha256": "4c224f257a05e0219234cf906ec619b3bc01ec7a40027b0e353b73de4f3ed1d5",
     "bytes": 554263,
     "mode": "100644"
   },
@@ -121,7 +121,7 @@
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/materialize.mjs",
-      "sha256": "f5d88a22d699733b1ada16d319b5f9563f68d3a3427e82e34794933260649e81",
+      "sha256": "771f94eee51c496c19c7c16959bd17aaeb489cae71ad053ef935d342c12f0abd",
       "bytes": 8076,
       "mode": "100644"
     },
@@ -157,7 +157,7 @@
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/release-catalog.json",
-      "sha256": "5d8995c7bb690ec7877d096a1fbe261d4c4273115728c7678a6cc679d42070a6",
+      "sha256": "4c224f257a05e0219234cf906ec619b3bc01ec7a40027b0e353b73de4f3ed1d5",
       "bytes": 554263,
       "mode": "100644"
     },
@@ -187,8 +187,8 @@
     },
     {
       "path": "tests/ownerQuarterLiveRelease.test.mjs",
-      "sha256": "6803411d5392dcafe98279201c361e5df3b5e77aabec961d9a881c1ef9fa134f",
-      "bytes": 8354,
+      "sha256": "a6f6b9e76657f4b8684c8489e44350bb4d37fb8c08c45859c9386c81f958cfbb",
+      "bytes": 8856,
       "mode": "100644"
     },
     {
@@ -661,6 +661,24 @@
         "path": "build/owner-quarter-dual-json-fix-20261019/FINAL_SUCCESSOR_ADMISSION_TESTS.log",
         "sha256": "a528396e6268cc7300b229e85438c2fbcced5140a69b8896c67e5a578db1e805",
         "bytes": 3218
+      },
+      {
+        "kind": "runtime_count_packaging",
+        "path": "build/owner-quarter-runtime-count-metadata-20261019/PACKAGING_6_TESTS.log",
+        "sha256": "22de161e695f1327adaead06e184e398dd2466d252ac619b5e31de309d2281f9",
+        "bytes": 1689
+      },
+      {
+        "kind": "runtime_count_scoped_lint",
+        "path": "build/owner-quarter-runtime-count-metadata-20261019/LINT.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "kind": "runtime_count_metadata_admission",
+        "path": "build/owner-quarter-runtime-count-metadata-20261019/ADMISSION_13_TESTS.log",
+        "sha256": "fec08204362f517fc94da26af1f5442c9e6ffc68a93160786beaee03d770e42e",
+        "bytes": 3217
       }
     ],
     "root_application_checks": {
@@ -880,6 +898,44 @@
       "whole_git_reader_and_D_E": "HOLD",
       "future_private_capture_using_old_global_path": "MUST_ADD_DUAL_JSON_OR_EXPLICITLY_ADMIT_THIS_WRAPPER_AND_REVIEW",
       "repository_wide_zero_findings_claim": false
+    }
+  },
+  "runtime_count_metadata_correction": {
+    "parent": "8885ab17b70a51785b4e03f79cd16cd900cd0825",
+    "parent_tree": "6f2774ebe1fa80a01d1f5aaf9fd976f871a8dbcd",
+    "scope": "CATALOG_METADATA_AND_PACKAGING_ASSERTIONS_ONLY",
+    "before": {
+      "reader": 55,
+      "reader-recovery": 51
+    },
+    "after": {
+      "reader": 56,
+      "reader-recovery": 52
+    },
+    "agreement": [
+      "runtime_files",
+      "file_roles.runtime",
+      "runtime_emission.files",
+      "actual emitted runtime graph"
+    ],
+    "all_four_payloads_unchanged": {
+      "producer": "dd5240c35bd6ebd2bd98d24d3f87086bde62293fea30fa1bc203dd1051f9e69a",
+      "producer-recovery": "1df4876799e6140538cc7f98b4a5a7f94c1b1612ede8392d83c9e93f95f0f1b9",
+      "reader": "4fc09a67a1cf8821e7a279638c52fa63010e7cb87032957268ab37ec7c47629f",
+      "reader-recovery": "7d7c1541002aef5e265b30fea9c14153664cbe4599022bce8a62f81c33e3cf8b"
+    },
+    "runtime_sources_wrapper_harness_and_type_archives_unchanged": true,
+    "prior_18_runtime_and_four_strict_type_results_retained_without_rerun": true,
+    "packaging_tests": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    },
+    "admission_tests": {
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "rows": 388
     }
   }
 }

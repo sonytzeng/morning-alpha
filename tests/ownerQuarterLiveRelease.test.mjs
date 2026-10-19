@@ -20,6 +20,8 @@ test('four fixed artifacts reproduce independent byte catalogs and preserve JWT,
   const a=assembleRelease(variant),b=assembleRelease(variant);assert(a.bytes.equals(b.bytes));assert.equal(a.payload.files.length,counts[variant]);
   assert.equal(a.sha256,c.variants[variant].payload_sha256);
   const roles=c.variants[variant].file_roles;assert.equal(roles.runtime+roles.type_only+roles.static,a.payload.files.length);
+  assert.equal(c.variants[variant].runtime_files,roles.runtime,'RUNTIME_COUNT_METADATA_DISAGREES_WITH_ROLES');
+  assert.equal(c.variants[variant].runtime_emission.files.length,roles.runtime,'RUNTIME_COUNT_METADATA_DISAGREES_WITH_EMISSION');
   for(const row of c.variants[variant].runtime_emission.files){const file=a.payload.files.find(f=>f.name===row.name);const emitted=file.name.endsWith('.ts')?ts.transpileModule(file.content,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,removeComments:true}}).outputText:file.content;assert.equal(hash(emitted),row.emitted_sha256,'RUNTIME_TYPE_ERASURE_CHANGED:'+row.name);}assert.equal(a.payload.verify_jwt,variant.startsWith('producer'));assert(!('import_map_path'in a.payload));
   assert.equal(a.payload.files.some(f=>f.name.endsWith('/recommendation-foundation-candidate.ts')||f.name.endsWith('/recommendation-market-institutional-candidate.ts')),false);
   for(const original of variant.startsWith('producer')?c.producer_baseline:c.reader_baseline){
@@ -46,6 +48,8 @@ test('actual emitted local import graphs close exactly with fixed native ports a
     assert(spec.startsWith('.'),'NONLOCAL_RUNTIME_IMPORT:'+spec);const next=posix.normalize(posix.join(posix.dirname(name),spec));assert(sources.has(next),'MISSING_IMPORT:'+next);visit(next);}
   };
   visit(payload.entrypoint_path);const typeNames=new Set(readReleaseCatalog().variants[variant].type_files.map(f=>f.name));const runtime=payload.files.filter(f=>!f.name.includes('/licenses/')&&!typeNames.has(f.name)).map(f=>f.name).sort();assert.deepEqual([...seen].sort(),runtime,variant);
+  const plan=readReleaseCatalog().variants[variant];assert.equal(seen.size,plan.runtime_files,'RUNTIME_COUNT_METADATA_DISAGREES_WITH_GRAPH');
+  assert.deepEqual(plan.runtime_emission.files.map(f=>f.name).sort(),runtime,'RUNTIME_EMISSION_DISAGREES_WITH_GRAPH');
   assert(native.size>0);
  }
 });

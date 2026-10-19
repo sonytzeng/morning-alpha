@@ -1,0 +1,63 @@
+{
+  "schema": "OWNER_QUARTER_FIXED_ENTRY_EDITS_V1",
+  "producer": [
+    {
+      "old": "import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';",
+      "new": "// @deno-types=\"../_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.d.mts\"\nimport { createClient } from '../_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs';"
+    },
+    {
+      "old": "import { sharedV2Acquisition } from '../_shared/recommendation-v2-acquisition-cache.ts';",
+      "new": "import { sharedV2Acquisition } from '../_shared/recommendation-v2-acquisition-cache.ts';\nimport { attachOwnerQuarterCapsule } from '../_shared/recommendation-owner-quarter-capsule.ts';"
+    },
+    {
+      "old": "const proof=await buildRecommendationProof(data,identity,captures,officialActuals);",
+      "new": "const proof=await attachOwnerQuarterCapsule(await buildRecommendationProof(data,identity,captures,officialActuals),identity,bundle.acquisition_cutoff);"
+    }
+  ],
+  "producer-recovery": [
+    {
+      "old": "import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';",
+      "new": "// @deno-types=\"../_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.d.mts\"\nimport { createClient } from '../_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs';"
+    }
+  ],
+  "reader": [
+    {
+      "old": "// @deno-types=\"../_shared/_fixed_reader_sdk/0f74ad419de662a8f6127fe99b6396fbf54ef22ca064b55f2cc2b3bd819c70c6.d.mts\"",
+      "new": "// @deno-types=\"../_shared/_fixed_reader_sdk/83a913f210c2e9de5b06514e2a349a50e1f054af950bd1331cc4bb5d577b099e.d.mts\""
+    },
+    {
+      "old": "import { persistedRecommendationReaderInput } from \"../_shared/recommendation-stock-evidence.ts\";",
+      "new": "import { persistedRecommendationReaderInput } from \"../_shared/recommendation-stock-evidence.ts\";\nimport { persistedOwnerQuarterInput } from \"../_shared/recommendation-owner-quarter-capsule.ts\";\nimport { canReadResearchOwnerFields, withoutResearchOwnerReceipt } from \"../_shared/research-owner-field-access.ts\";"
+    },
+    {
+      "old": "reports: rows.map(row => buildHistorySummary(row,",
+      "new": "reports: rows.map(row => buildHistorySummary(withoutResearchOwnerReceipt(row),"
+    },
+    {
+      "old": "const payload = buildPayload(report, tier, context);",
+      "new": "const researchOwnerFieldsAllowed = await canReadResearchOwnerFields({\n    request: req, tier, userId, supabaseUrl,\n    anonKey: Deno.env.get(\"SUPABASE_ANON_KEY\") || \"\", createClient,\n  });\n  const payload = buildPayload(researchOwnerFieldsAllowed ? report : withoutResearchOwnerReceipt(report), tier, context);"
+    },
+    {
+      "old": "  // Subscriber routes (including Owner browsing them) use one projection. The",
+      "new": "  // Separate saved-receipt study only; formal/member decisions above are unchanged.\n  if (researchOwnerFieldsAllowed) {\n    const ownerStudy = await persistedOwnerQuarterInput(realEvidence, decisionIdentity, parseAi(report.ai_strategy_json), { ownerAuthorized: true });\n    payload.owner_market_foundation_candidate = {\n      candidate_only: true, member_publication_approved: false,\n      decision_engine_v1: await sealEvidenceDecision(buildEvidenceDecision(ownerStudy.data, decisionIdentity)),\n      ...(ownerStudy.quarterActuals ? { quarter_actuals: ownerStudy.quarterActuals } : {}),\n    };\n  }\n  // Subscriber routes (including Owner browsing them) use one projection. The"
+    }
+  ],
+  "reader-recovery": [
+    {
+      "old": "// @deno-types=\"../_shared/_fixed_reader_sdk/0f74ad419de662a8f6127fe99b6396fbf54ef22ca064b55f2cc2b3bd819c70c6.d.mts\"",
+      "new": "// @deno-types=\"../_shared/_fixed_reader_sdk/83a913f210c2e9de5b06514e2a349a50e1f054af950bd1331cc4bb5d577b099e.d.mts\""
+    },
+    {
+      "old": "import { persistedRecommendationReaderInput } from \"../_shared/recommendation-stock-evidence.ts\";",
+      "new": "import { persistedRecommendationReaderInput } from \"../_shared/recommendation-stock-evidence.ts\";\nimport { withoutResearchOwnerReceipt } from \"../_shared/research-owner-field-access.ts\";"
+    },
+    {
+      "old": "reports: rows.map(row => buildHistorySummary(row,",
+      "new": "reports: rows.map(row => buildHistorySummary(withoutResearchOwnerReceipt(row),"
+    },
+    {
+      "old": "const payload = buildPayload(report, tier, context);",
+      "new": "const payload = buildPayload(withoutResearchOwnerReceipt(report), tier, context);"
+    }
+  ]
+}

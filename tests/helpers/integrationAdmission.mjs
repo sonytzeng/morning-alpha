@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-owner-quarter-actuals.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-owner-quarter-live.json';
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
 const PRIOR_R2='cc167304814b2223977a36802b2666ea8203ff36';
@@ -51,9 +51,38 @@ const PRIOR_C_WORKER_LOCAL_SDK_R2='27875d458eb9321ea45c5175b815c878532e81b6';
 const FROZEN_C_WORKER_LOCAL_SDK_R2_MANIFEST='docs/operations/evidence/core-member-integration-20261019-c-worker-local-sdk-r2.json';
 const PRIOR_OWNER_STATUS_COPY='ff88a4ed7ce10116a6fad84110770953941fcd08';
 const FROZEN_OWNER_STATUS_COPY_MANIFEST='docs/operations/evidence/core-member-integration-20261019-owner-status-copy.json';
+const PRIOR_OWNER_QUARTER_ACTUALS='bd941dc3ead8eb66eeaf2b21ca13acf1c90f98e4';
+const FROZEN_OWNER_QUARTER_ACTUALS_MANIFEST='docs/operations/evidence/core-member-integration-20261019-owner-quarter-actuals.json';
 // Explicitly reviewed composition deltas. No patterns, glob, deployment flags,
 // automatic inventory admission or addition to any previous release catalogue.
 export const INTEGRATION_DELTAS=Object.freeze([
+ FROZEN_OWNER_QUARTER_ACTUALS_MANIFEST,
+ '.github/workflows/owner-quarter-live-candidate.yml',
+ 'docs/operations/evidence/owner-quarter-live-review-20261019.json',
+ 'docs/operations/owner-quarter-live-closure-20261019.md',
+ 'scripts/operations/owner-quarter-live-release-20261019/baseline/node-type-originals.json.gz',
+ 'scripts/operations/owner-quarter-live-release-20261019/baseline/producer15-sdk-source-catalog.json',
+ 'scripts/operations/owner-quarter-live-release-20261019/baseline/producer15-sdk-source-files.json.gz',
+ 'scripts/operations/owner-quarter-live-release-20261019/baseline/producer15-source-catalog.json',
+ 'scripts/operations/owner-quarter-live-release-20261019/baseline/producer15-source-files.json.gz',
+ 'scripts/operations/owner-quarter-live-release-20261019/baseline/reader-type-originals.json.gz',
+ 'scripts/operations/owner-quarter-live-release-20261019/baseline/reader56-source-catalog.json',
+ 'scripts/operations/owner-quarter-live-release-20261019/baseline/reader56-source-files.json.gz',
+ 'scripts/operations/owner-quarter-live-release-20261019/baseline/type-closure-catalog.json',
+ 'scripts/operations/owner-quarter-live-release-20261019/baseline/type-closure-files.json.gz',
+ 'scripts/operations/owner-quarter-live-release-20261019/check-typescript.mjs',
+ 'scripts/operations/owner-quarter-live-release-20261019/entry-edits.json',
+ 'scripts/operations/owner-quarter-live-release-20261019/materialize.mjs',
+ 'scripts/operations/owner-quarter-live-release-20261019/prepare-check-sources.mjs',
+ 'scripts/operations/owner-quarter-live-release-20261019/producer-entry.patch',
+ 'scripts/operations/owner-quarter-live-release-20261019/producer-recovery-entry.patch',
+ 'scripts/operations/owner-quarter-live-release-20261019/reader-entry.patch',
+ 'scripts/operations/owner-quarter-live-release-20261019/reader-recovery-entry.patch',
+ 'scripts/operations/owner-quarter-live-release-20261019/release-catalog.json',
+ 'supabase/functions/_shared/recommendation-owner-quarter-capsule.ts',
+ 'tests/helpers/ownerQuarterLiveRuntimeHarness.mjs',
+ 'tests/ownerQuarterLiveRelease.test.mjs',
+ 'tests/ownerQuarterLiveRuntime.integration.mjs',
  FROZEN_OWNER_STATUS_COPY_MANIFEST,
  'src/pages/admin/analysis/LineDecisionPreview.tsx','src/pages/admin/analysis/OwnerQuarterActualsView.tsx',
  'supabase/functions/_shared/recommendation-foundation-candidate.ts',
@@ -302,6 +331,7 @@ export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=in
  assert.deepEqual(Buffer.from(read(FROZEN_LOCAL_SDK_MANIFEST)),frozenReceipt(PRIOR_LOCAL_SDK,FROZEN_LOCAL_SDK_MANIFEST),'INTEGRATION_LOCAL_SDK_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_C_WORKER_LOCAL_SDK_R2_MANIFEST)),frozenReceipt(PRIOR_C_WORKER_LOCAL_SDK_R2,FROZEN_C_WORKER_LOCAL_SDK_R2_MANIFEST),'INTEGRATION_C_WORKER_LOCAL_SDK_R2_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_OWNER_STATUS_COPY_MANIFEST)),frozenReceipt(PRIOR_OWNER_STATUS_COPY,FROZEN_OWNER_STATUS_COPY_MANIFEST),'INTEGRATION_OWNER_STATUS_COPY_RECEIPT_DRIFT');
+ assert.deepEqual(Buffer.from(read(FROZEN_OWNER_QUARTER_ACTUALS_MANIFEST)),frozenReceipt(PRIOR_OWNER_QUARTER_ACTUALS,FROZEN_OWNER_QUARTER_ACTUALS_MANIFEST),'INTEGRATION_OWNER_QUARTER_ACTUALS_RECEIPT_DRIFT');
  for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false,'INTEGRATION_FORBIDDEN:'+flag);
  const scope=integrationScope();
  assert.deepEqual(m.files.map(r=>r.path),scope,'INTEGRATION_EXACT_SCOPE');

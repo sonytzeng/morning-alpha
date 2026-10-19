@@ -1,0 +1,9 @@
+--- actual-baseline/supabase/functions/recommendation-stock-evidence-v1/index.ts
++++ producer-recovery/supabase/functions/recommendation-stock-evidence-v1/index.ts
+@@ -1,4 +1,5 @@
+-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
++// @deno-types="../_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.d.mts"
++import { createClient } from '../_shared/_fixed_c_worker_sdk/f406ade7c66bd35e87d75f47674ac01aed5cfb8e3b822496f8db870f2d596a03.mjs';
+ import { authorizeInternalRequest, internalCredentialsFromEnv } from '../_shared/internal-function-auth.mjs';
+ import { loadDecisionEvidence } from '../_shared/decision-v1-data.ts';
+ import { acquireStockEvidence, buildRecommendationProof, stockAcquisitionCoverage, RECOMMENDATION_UNIVERSE } from '../_shared/recommendation-stock-evidence.ts';

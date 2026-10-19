@@ -1,0 +1,125 @@
+{
+  "schema": "OWNER_QUARTER_PRODUCER15_RETAINED_BASELINE_V1",
+  "scope": "SOURCE_CATALOG_ONLY_NOT_DEPLOYMENT_AUTHORIZATION",
+  "fixed_git_ref": "5f33777836778e3600e4e377fcb3cf4de690fe80",
+  "source_resolution": "FIXED_GIT_BLOBS_ONLY_NO_CURRENT_GLOBAL_SOURCE_SUBSTITUTION",
+  "original_inventory": {
+    "path": "a-caller-release-20261018/producer-live-inventory.json",
+    "sha256": "345dfcf0d55476e9007c4dc3dd1df44d0eff6a576a258ffc7444421728234712",
+    "bytes": 4025
+  },
+  "function": {
+    "slug": "recommendation-stock-evidence-v1",
+    "version": 15,
+    "verify_jwt": true,
+    "import_map": false,
+    "ezbr_sha256": "95bfde704134302f46b48520d56ec31cf0d74b1c90b1d974d6660c28968152b7"
+  },
+  "files": [
+    {
+      "name": "supabase/functions/recommendation-stock-evidence-v1/index.ts",
+      "sha256": "70352af5ec86ca94f4cc00d9c59f3483d1114bc455ca253601e2679f0bf03755",
+      "bytes": 6743
+    },
+    {
+      "name": "supabase/functions/_shared/internal-function-auth.mjs",
+      "sha256": "2a15efde1117cf2f8c1ef3adf376de95c930254902c57f2ec5dbf74ce0f930be",
+      "bytes": 4761
+    },
+    {
+      "name": "supabase/functions/_shared/decision-v1-data.ts",
+      "sha256": "7c0ba14f39a52ab216e662ce0cfce80a5c5c64cfdf7a719f4b103be3439a8082",
+      "bytes": 4569
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-stock-evidence.ts",
+      "sha256": "86be1e626de3bf5c746aa10d5abcfb99dbb8b86c7ab2e6dbb7151335170c47d1",
+      "bytes": 20000
+    },
+    {
+      "name": "supabase/functions/_shared/decision-v1-evidence.ts",
+      "sha256": "2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848",
+      "bytes": 37102
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-phase.ts",
+      "sha256": "d517fb094ea41a8e70c16c132ca7dc9d48bb5c63efc7d7f36760502697a8e5d6",
+      "bytes": 8256
+    },
+    {
+      "name": "supabase/functions/_shared/market-session-contract.mjs",
+      "sha256": "5b41e134ffd98e8eedcff8e782b104c96b7368ad3f455ec7ac2b406e74316d44",
+      "bytes": 2994
+    },
+    {
+      "name": "supabase/functions/_shared/market-calendar-data.json",
+      "sha256": "6585353538e81881b3cecdfa5d982eb70ead06da177e449ec86c385a7ab6d232",
+      "bytes": 1671
+    },
+    {
+      "name": "supabase/functions/_shared/txf-session-contract.mjs",
+      "sha256": "e2fd629da470099a4a4436e8b52aaf097ca22422f95cc6f283d004e8eb646a1e",
+      "bytes": 2857
+    },
+    {
+      "name": "supabase/functions/_shared/market-status.ts",
+      "sha256": "d285910516d5ae5e0f55d8ee4314da7b7e21214b766d20cda2853fa775af0737",
+      "bytes": 4766
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-official-actuals.ts",
+      "sha256": "ac1457eb889466931f14f4e9c5a44c3a6000a54a6657cd1c977cb4916714eea5",
+      "bytes": 7627
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-company-events.ts",
+      "sha256": "4b756d518e88d6d3f7e4cfce9944bcc6a2f3f51577a92b9408fee7618b3713b1",
+      "bytes": 4369
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-stream.ts",
+      "sha256": "5a97379ed1dc8ddd0440e9189e70b1f764b170718a6e85b9726ec3ffc5e61983",
+      "bytes": 1954
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-shadow-v2-sources.ts",
+      "sha256": "98475003460d215e764bf011aba5fae7a603ba3455e54be547dba75e79e23708",
+      "bytes": 24276
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-shadow-v2-runtime.ts",
+      "sha256": "ec562918f999fe07ce4ed7aa682300dbf2957cd24990f3339b1bf4243f7ce1ef",
+      "bytes": 5883
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-shadow-v2-engine.ts",
+      "sha256": "5d934bb7c2be21ff66a0043a945b0d91edcbeb2a57166882715e8813da31766e",
+      "bytes": 16267
+    },
+    {
+      "name": "src/features/research/recommendation-shadow-v2-summary.ts",
+      "sha256": "8ff6744d5b456fbef51191186b87a88b30ccd970e35bf2e11574766560cb3d2d",
+      "bytes": 4680
+    },
+    {
+      "name": "src/features/research/recommendation-v2-forward.ts",
+      "sha256": "cc56810a11ce5f09ba82418a9079457abadee8ee9147cb204ffccec3fe7ac1ee",
+      "bytes": 7132
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-shadow-v2-outcomes.ts",
+      "sha256": "528f41ef339a9d69708514738b10c889149b16f67c35fd8ad3d19a357d19298a",
+      "bytes": 4368
+    },
+    {
+      "name": "supabase/functions/_shared/recommendation-v2-acquisition-cache.ts",
+      "sha256": "a5e5c84e4ef33c8ddf584e6b3e675f03e808086653f92c1bc881c909f61eab6b",
+      "bytes": 1888
+    }
+  ],
+  "all20_equal_fixed_git_ref": true,
+  "sdk_entry_url": "https://esm.sh/@supabase/supabase-js@2.57.4",
+  "production_authorized": false,
+  "secret_reads": 0,
+  "http_requests": 0
+}

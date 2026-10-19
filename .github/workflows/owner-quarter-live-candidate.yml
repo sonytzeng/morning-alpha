@@ -1,0 +1,37 @@
+name: Owner quarter actual deployment candidate
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  actual-source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - run: npm ci --ignore-scripts
+      - name: Exact actual-source packaging and runtime with denied network ports
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-vm-modules --require ./tests/helpers/cWorkerLocalSdkNetworkDenied.cjs --test --test-concurrency=1 tests/ownerQuarterLiveRelease.test.mjs tests/ownerQuarterLiveRuntime.integration.mjs
+      - name: Prepare actual artifacts and the separate compiler-only true-type map
+        run: node scripts/operations/owner-quarter-live-release-20261019/prepare-check-sources.mjs
+      - name: Strict TypeScript on the four actual artifacts, each in its own program
+        run: node scripts/operations/owner-quarter-live-release-20261019/check-typescript.mjs
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Actual Producer candidate Deno check without remote fetching
+        run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/producer/deno.json build/owner-quarter-live-typecheck/producer/supabase/functions/recommendation-stock-evidence-v1/index.ts
+      - name: Actual Producer recovery Deno check without remote fetching
+        run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/producer-recovery/deno.json build/owner-quarter-live-typecheck/producer-recovery/supabase/functions/recommendation-stock-evidence-v1/index.ts
+      - name: Actual Reader candidate Deno check without remote fetching
+        run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/reader/deno.json build/owner-quarter-live-typecheck/reader/supabase/functions/get-report-payload/index.ts
+      - name: Actual Reader privacy recovery Deno check without remote fetching
+        run: deno check --no-lock --no-remote --cached-only --config build/owner-quarter-live-typecheck/reader-recovery/deno.json build/owner-quarter-live-typecheck/reader-recovery/supabase/functions/get-report-payload/index.ts

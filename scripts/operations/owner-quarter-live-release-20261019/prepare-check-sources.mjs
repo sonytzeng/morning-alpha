@@ -2,7 +2,8 @@ import process from 'node:process';
 import console from 'node:console';
 // Fixed ignored build trees for offline actual-entrypoint compile verification.
 import assert from 'node:assert/strict';
-import {lstatSync,mkdirSync,writeFileSync} from 'node:fs';
+import {lstatSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {resolve,dirname,posix} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {assembleRelease,readReleaseCatalog,VARIANTS} from './materialize.mjs';
@@ -49,6 +50,13 @@ for(const variant of VARIANTS){
  // compiler-only ambient port to Deno's builtin library, not a second Node.
  imports['./'+catalog.type_compile_ports.node]='node:buffer';
  const config={nodeModulesDir:'none',imports,scopes};
+ if(variant.startsWith('reader')){
+  const dom=readFileSync(resolve(root,'scripts/operations/owner-quarter-live-release-20261019/compiler-webauthn-dom-5.8.3.d.ts'));
+  assert.equal(createHash('sha256').update(dom).digest('hex'),'a0573b238f6cd00ddb43a0f11f6e7d9de0af038ea11c2b0d0573f9901a7e621d','QUARTER_OFFICIAL_WEB_AUTHN_TYPES_DRIFT');
+  const name='__compiler_only_webauthn_dom.d.ts';
+  writeFileSync(resolve(root,base,name),dom,{flag:'wx',mode:0o600});
+  config.compilerOptions={types:['./'+name]};
+ }
  writeFileSync(resolve(root,base,'deno.json'),JSON.stringify(config,null,2)+'\n',{flag:'wx',mode:0o600});
  results.push({variant,source_files:payload.files.length,payload_sha256:sha256,compiler_only_reference_paths:referencePaths,entrypoint:base+'/'+payload.entrypoint_path});
 }

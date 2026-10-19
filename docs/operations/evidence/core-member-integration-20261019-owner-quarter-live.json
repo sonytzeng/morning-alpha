@@ -387,7 +387,7 @@
     {
       "path": "docs/operations/evidence/owner-quarter-live-review-20261019.json",
       "before_sha256": null,
-      "after_sha256": "78002b0a4184823fa9db73606a7eaf14724dd66f512e0c284b2e396603d71db6",
+      "after_sha256": "ff34a6ca63fb3ba0ec7df6d87a23a705301817a2b6e296def16acbe819161a21",
       "mode": "100644",
       "origin": "composition"
     },
@@ -485,7 +485,7 @@
     {
       "path": "docs/operations/owner-quarter-live-closure-20261019.md",
       "before_sha256": null,
-      "after_sha256": "a32b1c5ea7ed246b759cdfe1c0a1c8182eb4a5303e45db250799e21956e7014d",
+      "after_sha256": "85e73a57851663027010731c9682cec97e8d002fd069bcb1bceac544ef6259a0",
       "mode": "100644",
       "origin": "composition"
     },
@@ -868,6 +868,27 @@
       "origin": "composition"
     },
     {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/compiler-typescript-LICENSE.txt",
+      "before_sha256": null,
+      "after_sha256": "527adf9d4c760f7367c2aeffed6a89afba8ba40ea1b0efbc8f56496ad30ea9cf",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/compiler-webauthn-dom-5.8.3.d.ts",
+      "before_sha256": null,
+      "after_sha256": "a0573b238f6cd00ddb43a0f11f6e7d9de0af038ea11c2b0d0573f9901a7e621d",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "scripts/operations/owner-quarter-live-release-20261019/compiler-webauthn-dom-5.8.3.provenance.json",
+      "before_sha256": null,
+      "after_sha256": "ae3c03982dbb092603e8cb4290277310c9db333896ea4357bbdce2b01b58d31b",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "scripts/operations/owner-quarter-live-release-20261019/entry-edits.json",
       "before_sha256": null,
       "after_sha256": "266fe37eed1f0e399411f5901de5e4b13ea8313620bf7329289112b7417e4a3b",
@@ -884,7 +905,7 @@
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/prepare-check-sources.mjs",
       "before_sha256": null,
-      "after_sha256": "5f4c7909eecba6a1bd219648fc9e4c795ac7fc55814bdd39cf7017b0ae9a2a4e",
+      "after_sha256": "9a543757c93c3269c0614174ceb9453adc3e1f77d1455abc1bf8ea499be9de54",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2116,7 +2137,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "ca07c01a8dfa5b476759f524d78551ea98b743dea6ebf36d9ed46f763622e63a",
+      "after_sha256": "b69b285259b21f0c1c11eedd12f274d9791b1284871c037e032bfdaaaa20d9cc",
       "mode": "100644",
       "origin": "composition"
     },

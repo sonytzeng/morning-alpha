@@ -52,3 +52,5 @@ Root於2026-10-19 02:21Z fresh唯讀核對actual15／56來源，Producer20＋Rea
 第二次實際Deno CI（e60aec8a，run39190572695）已逐一檢查四包，80個path已解析；但自行載入的Node26 ambient與Deno內建Node／Web declarations重複衝突，仍FAIL。Deno官方說明2.8起預載lib.node，因此Deno檢查改用真正內建Node types（bare node type reference對應node:buffer），不再另載Node26 globals；補充tsc program仍獨立使用完整封存Node26，沒有刪型別或skipLibCheck。CI鎖定已實際下載的Deno2.9.7，版本不再浮動。此為編譯器環境相容處理，不改四包runtime、官方SDK宣告或Function importmap；Supabase正式Runtime E2E仍另待驗證。依據：https://docs.deno.com/runtime/fundamentals/node/ 。
 
 第三次Deno CI（7f2bbc8f，run39190843203）揭露SDK wrapper另有明示Node index path，僅處理bare node port仍會載入同一第二套ambient。修正把該唯一封存compiler type入口也精確映到Deno真正內建node:buffer；原wrapper與Node26來源bytes仍不改，tsc仍用原檔。不是刪掉錯誤或宣告PASS，四包完整Deno結果仍待下一精確HEAD驗收。
+
+第四次實際Deno CI（c8e899e2，run39191083522）Producer候選與回復均PASS；兩份Reader各28項錯誤皆為SDK2.115引用的WebAuthn browser types未在Deno標準庫定義。現從既有TypeScript5.8.3官方lib.dom.d.ts逐節點原文抽出30個credential介面／別名與完整依賴，保存原始檔SHA、逐宣告位置／SHA與Apache2授權；不是手寫SDK façade或宣稱Runtime提供WebAuthn。Reader Deno compiler-only補充該標準宣告，原SDK、四包payload與runtime皆不改。current精確scope因此新增3項，從384列變成387列；舊357列封存不改，未知檔／drift仍拒絕。新HEAD Deno與CI仍須通過。

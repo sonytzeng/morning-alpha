@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 import {readFileSync,lstatSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
+import {Buffer} from 'node:buffer';
+import {URL} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
@@ -58,6 +60,9 @@ const FROZEN_OWNER_QUARTER_ACTUALS_MANIFEST='docs/operations/evidence/core-membe
 export const INTEGRATION_DELTAS=Object.freeze([
  FROZEN_OWNER_QUARTER_ACTUALS_MANIFEST,
  '.github/workflows/owner-quarter-live-candidate.yml',
+ 'scripts/operations/owner-quarter-live-release-20261019/compiler-webauthn-dom-5.8.3.d.ts',
+ 'scripts/operations/owner-quarter-live-release-20261019/compiler-webauthn-dom-5.8.3.provenance.json',
+ 'scripts/operations/owner-quarter-live-release-20261019/compiler-typescript-LICENSE.txt',
  'docs/operations/evidence/owner-quarter-live-review-20261019.json',
  'docs/operations/owner-quarter-live-closure-20261019.md',
  'scripts/operations/owner-quarter-live-release-20261019/baseline/node-type-originals.json.gz',

@@ -1,7 +1,24 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import vm from 'node:vm';import ts from 'typescript';
+import React from 'react';import * as jsxRuntime from 'react/jsx-runtime';import {renderToStaticMarkup} from 'react-dom/server';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 function module(p,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(read(p),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,Intl,Date,require:n=>{if(n in extra)return extra[n];throw Error(n);}});return exports;}
 const lab=module('src/features/research/tradingLab.ts'),m=module('src/features/research/cockpit.ts',{'./tradingLab':lab});
+// Render the actual component with explicit saved-state fixtures. Effects are
+// deliberately not executed: this verifies display, not Production/Auth E2E.
+function renderCockpit({market=null,entry=null,tab='today',today='2026-10-19'}={}){
+ let slot=0;const values=[tab,market,entry,{},'',false,today,false],exports={};
+ const react={useEffect(){},useState(initial){const value=slot<values.length?values[slot]:typeof initial==='function'?initial():initial;slot++;return [value,()=>{}];}};
+ const source=ts.transpileModule(read('src/pages/admin/analysis/OwnerCockpit.tsx'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ vm.runInNewContext(source,{exports,Intl,Date,require:name=>{
+  if(name==='react')return react;if(name==='react/jsx-runtime')return jsxRuntime;
+  if(name==='@/features/research/cockpit')return m;if(name==='@/features/research/tradingLab')return lab;
+  if(name==='@/lib/supabase')return {supabase:new Proxy({},{get(){throw Error('DISPLAY_MUST_NOT_REQUEST');}})};
+  if(name==='./CockpitJournal')return {default:()=>null};if(name==='./cockpit.css')return {};
+  throw Error(name);
+ }});
+ return renderToStaticMarkup(React.createElement(exports.default,null,
+  React.createElement('div',{'data-source':'independent-stock-observation'},'2421 WATCH：個股觀察，不能代替進場策略結果')));
+}
 test('first-layer direction vocabulary is Chinese without changing evidence or numbers',()=>{
  const source='SOX DOWN -2.60%；2330 FLAT 0.00%；NVDA UP 1.23%';
  assert.equal(m.plainEvidence(source),'費城半導體指數 下跌 -2.60%；2330 持平 0.00%；輝達 上漲 1.23%');
@@ -14,6 +31,35 @@ test('historical, stale and future research cannot become today opportunities',(
  assert.equal(m.isCurrentResearch({...row,mode:'FORWARD'},'2026-10-09'),false);
  assert.equal(m.isCurrentResearch({...row,mode:'FORWARD',evaluation_time:'2999-01-01'},'2026-10-08'),false);
  const x=m.cockpitToday(null,{...row,mode:'FORWARD',candidates:[...row.candidates,...row.candidates]},'2026-10-08');assert.equal(x.ready,1);
+});
+test('Entry headline never borrows V2 WATCH or legacy Lab activation status',()=>{
+ const market={business_date:'2026-10-19',forward_enabled:false,canonical:{status:'READY',report_date:'2026-10-19',action:'WAIT',generated_text:{daily_sentence:'當日正式市場結論'}},
+  discovery:{watchlist:[{symbol:'2421',status:'WATCH'}]}};
+ const historical={mode:'HISTORICAL_REPLAY',business_date:'2026-10-19',evaluation_time:'2026-10-18T23:00:00Z',candidates:[{symbol:'2330',status:'ENTRY_READY'}]};
+ for(const latest of [null,historical,{...historical,mode:'FORWARD',business_date:'2026-10-18'},
+  {...historical,mode:'FORWARD',evaluation_time:'2999-01-01T00:00:00Z'}]){
+  const result=m.cockpitToday(market,latest,'2026-10-19');assert.equal(result.watch,null);assert.equal(result.ready,null);assert.equal(result.currentResearch,false);
+  const html=renderCockpit({market,entry:latest?{latest}:null});
+  assert.match(html,/2421 WATCH/);assert.match(html,/進場策略待確認<\/span><strong>尚未取得今日進場研究結果/);
+  assert.match(html,/個股觀察名單不代表進場條件已成立/);assert.doesNotMatch(html,/尚未啟用|已取得今日進場策略研究/);
+ }
+});
+test('only current FORWARD Entry symbols drive displayed waiting and ready counts',()=>{
+ const latest={mode:'FORWARD',business_date:'2026-10-19',evaluation_time:'2026-10-18T23:00:00Z',candidates:[
+  {symbol:'2330',status:'WAIT_CONFIRMATION'},{symbol:'2330',status:'WAIT_CONFIRMATION'},
+  {symbol:'2317',status:'ENTRY_READY'},{symbol:'2317',status:'ENTRY_READY'},
+  {symbol:'2421',status:'AVOID_ENTRY'},{symbol:'2454',status:'INSUFFICIENT_EVIDENCE'}]};
+ const result=m.cockpitToday(null,latest,'2026-10-19');assert.equal(result.watch,1);assert.equal(result.ready,1);assert.equal(result.currentResearch,true);
+ const html=renderCockpit({entry:{latest}});assert.match(html,/進場策略待確認<\/span><strong>1 檔/);
+ assert.match(html,/符合研究進場條件<\/span><strong>1 檔/);assert.match(html,/已取得今日進場策略研究/);
+ assert.doesNotMatch(html,/尚未啟用|尚未取得今日進場研究結果/);
+ const empty={...latest,candidates:[]},emptyHtml=renderCockpit({entry:{latest:empty}});
+ assert.match(emptyHtml,/進場策略待確認<\/span><strong>0 檔/);assert.match(emptyHtml,/已取得今日進場策略研究/);
+});
+test('Entry research limitations describe samples without claiming automation is disabled',()=>{
+ const html=renderCockpit({tab:'research'});
+ assert.match(html,/目前樣本不足，還不能判斷這套進場策略是否有效/);
+ assert.match(html,/個股觀察名單不等於進場條件已成立/);assert.doesNotMatch(html,/尚未啟用/);
 });
 test('only same-day READY canonical market is used; Taipei boundary is explicit',()=>{
  assert.equal(m.taipeiToday(new Date('2026-10-08T16:00:00Z')),'2026-10-09');

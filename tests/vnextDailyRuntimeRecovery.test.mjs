@@ -21,13 +21,15 @@ async function checkpoint(){
  {acquire:async()=>acquired,clock:()=>before,outcomes:async()=>({}),publication:async()=>[]});
  assert.equal(state.locks.length,216);assert(await verifyDailyLock(state.locks[0]));return state;
 }
-async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,lockError=null,throughHandler=false,providerWaitSeconds=0,providerStatus=200}={}){
+async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,lockError=null,throughHandler=false,providerWaitSeconds=0,providerStatus=200,
+ leaseUntil,finishError=null,onFinish=()=>{},advanceSleep=()=>{},continuationError=null,claimStatus='ACQUIRED',claimError=null,onClaim=()=>{},rpcErrorOp=null}={}){
  const dirs=await directoryPlan(date),cache=new Map(await Promise.all(dirs.map(async t=>[t.key,await receipt(t,at,{rows:t.exchange==='TWSE'?companies:[]})])));
  const calls=[],http=[],stored=[],locked=[],sources=[...cache.values()];let pending=due,checkpointState=saved,run={id:'isolated-run',business_date:date,
-  actionable_at:date+'T09:00:00+08:00',lease:'isolated-lease',fence:2,plan,cursor,checkpoint:checkpointState};
+  actionable_at:date+'T09:00:00+08:00',lease:'isolated-lease',...(leaseUntil===undefined?{}:{lease_until:leaseUntil}),fence:2,plan,cursor,checkpoint:checkpointState};
  const rpc=async(name,args)=>{
-  if(name==='claim_vnext_daily_research_v1')return {status:'ACQUIRED',run};
+  if(name==='claim_vnext_daily_research_v1'){if(claimError)throw Error(claimError);onClaim();return {status:claimStatus,run};}
   const op=args.p_op,data=args.p_data;calls.push({op,data});
+  if(op===rpcErrorOp)throw Error('DATABASE_RPC_REJECTED');
   if(op==='SOURCE_BEGIN')return cache.has(data.key)?{status:'CACHE',receipt:cache.get(data.key)}:providerWaitSeconds?{status:'WAIT_RETRY',retry_at:new Date(Date.parse(at)+providerWaitSeconds*1000).toISOString()}:cold?{status:'FETCH'}:{status:'CACHE',receipt:await receipt(data,at)};
   if(op==='PLAN'){run.plan=data;return {};}
   if(op==='SOURCE_SAVE'){const r=JSON.parse(data.text);sources.push(r);stored.push(r);return {};}
@@ -40,7 +42,7 @@ async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,loc
   if(op==='PREDICTIONS'){if(lockError)throw Error(lockError);locked.push(...data);return {};}
   if(op==='OUTCOME')return {};
   if(op==='OUTCOME_CHECKED'){pending=pending.filter(p=>p.prediction.id!==data.id);return {};}
-  if(op==='FINISH')return {};
+  if(op==='FINISH'){onFinish();if(finishError)throw Error(finishError);return {};}
   throw Error('UNEXPECTED_TEST_RPC');
  };
  const fetcher=async url=>{
@@ -54,9 +56,9 @@ async function runner({at=before,plan=[],cursor=0,saved={},due=[],cold=false,loc
  if(throughHandler){
   run.id='11111111-1111-4111-8111-111111111111';const tasks=[];
   const response=await handleVnextDaily(new Request('https://isolated.test',{method:'POST',headers:{'x-vnext-internal':'isolated-control-not-production-token'},body:JSON.stringify({run_id:run.id})}),
-   {...ports,cronSecret:'isolated-control-not-production-token',background:p=>tasks.push(p),sleep:async ms=>sleeps.push(ms),continueRun:async id=>continuations.push(id)});
+   {...ports,cronSecret:'isolated-control-not-production-token',background:p=>tasks.push(p),sleep:async ms=>{sleeps.push(ms);advanceSleep(ms);},continueRun:async id=>{continuations.push(id);if(continuationError)throw Error(continuationError);}});
   assert.equal(response.status,202);await Promise.all(tasks);
-  result=calls.findLast(c=>c.op==='FINISH').data;
+  result=calls.findLast(c=>c.op==='FINISH')?.data;
  }else result=await workDailyRun(run.id,ports);
  return {result,calls,http,stored,locked,run,sleeps,continuations,checkpoint:checkpointState};
 }
@@ -135,4 +137,87 @@ test('matured prior outcome sources have an independent close revision, never re
  const outcomes=a.calls.filter(c=>c.op==='OUTCOME');assert.equal(outcomes.length,1);
  assert.equal(outcomes[0].data.result.state,'UNKNOWN');assert.equal(outcomes[0].data.result.performance_eligible,false);
  assert.equal(outcomes[0].data.result.net_return,null);assert.equal(a.locked.length,216);assert.deepEqual(a.checkpoint,saved);
+});
+
+function wallClock(t,at='2026-10-12T00:02:00Z'){
+ let now=Date.parse(at);t.mock.method(Date,'now',()=>now);
+ return {get now(){return now;},advance:ms=>{now+=ms;}};
+}
+test('one rejected FINISH from queued, completed or blocked work returns uncertainty, never a false committed state',async t=>{
+ const clock=wallClock(t),plan=(await acquisitionPlan(date,companies)).slice(0,1),saved=await checkpoint();
+ for(const options of [{at:'2026-10-12T00:02:00Z',plan,cursor:1},{plan,cursor:1,saved},{plan,cursor:1,saved,lockError:'DATABASE_RPC_REJECTED'}]){
+  const leaseUntil=new Date(clock.now+100000).toISOString(),a=await runner({...options,leaseUntil,finishError:'DATABASE_RPC_REJECTED'});
+  assert.equal(a.result.status,'LEASE_RECOVERY_PENDING');assert.equal(a.result.reason,'FINISH_COMMIT_UNCONFIRMED');assert.equal(a.result.continue,true);
+  assert.equal(a.result.lease_until,leaseUntil);assert.equal(Date.parse(a.result.not_before),clock.now+101000);
+  assert.equal(a.calls.filter(c=>c.op==='FINISH').length,1);assert.equal(a.continuations.length,0);assert.equal(a.http.length,0);
+  assert.notEqual(a.result.status,a.calls.find(c=>c.op==='FINISH').data.status);
+ }
+});
+test('a confirmed FINISH keeps its original result even when a recovery-capable lease is present',async t=>{
+ const clock=wallClock(t),plan=(await acquisitionPlan(date,companies)).slice(0,1),a=await runner({at:'2026-10-12T00:02:00Z',plan,cursor:1,leaseUntil:new Date(clock.now+100000).toISOString()});
+ assert.equal(a.result.status,'QUEUED');assert.equal(a.result.reason,'CANONICAL_PUBLICATION_PENDING');assert.equal(a.result.retry_after_seconds,30);
+ assert.equal('not_before' in a.result,false);assert.equal(a.calls.filter(c=>c.op==='FINISH').length,1);assert.equal(a.continuations.length,0);
+});
+test('caught SOURCE_FAIL and FINISH failures preserve cursor and never retry uncertain writes inline',async t=>{
+ const clock=wallClock(t),plan=(await acquisitionPlan(date,companies)).filter(t=>t.kind==='PRICE').slice(0,1);
+ const a=await runner({at:'2026-10-12T00:02:00Z',plan,cold:true,providerStatus:503,rpcErrorOp:'SOURCE_FAIL',finishError:'DATABASE_RPC_REJECTED',leaseUntil:new Date(clock.now+100000).toISOString()});
+ assert.equal(a.result.status,'LEASE_RECOVERY_PENDING');assert.equal(a.run.cursor,0);assert.equal(a.http.length,1);assert.equal(a.stored.length,0);assert.equal(a.locked.length,0);
+ assert.equal(a.calls.filter(c=>c.op==='SOURCE_FAIL').length,1);assert.equal(a.calls.filter(c=>c.op==='FINISH').length,1);
+ assert(!a.calls.some(c=>['CURSOR','PREDICTIONS','OUTCOME'].includes(c.op)));
+});
+test('handler waits out the claimed lease and hands off once after a 37-second FINISH failure',async t=>{
+ const clock=wallClock(t),started=clock.now,plan=(await acquisitionPlan(date,companies)).slice(0,1);
+ const a=await runner({at:'2026-10-12T00:02:00Z',plan,cursor:1,throughHandler:true,leaseUntil:new Date(started+100000).toISOString(),finishError:'DATABASE_RPC_REJECTED',onFinish:()=>clock.advance(37000),advanceSleep:clock.advance});
+ assert.deepEqual(a.sleeps,[64000]);assert.equal(clock.now,started+101000);assert.deepEqual(a.continuations,[a.run.id]);
+ assert.equal(a.calls.filter(c=>c.op==='FINISH').length,1);assert.equal(a.http.length,0);assert.equal(a.locked.length,0);
+});
+test('a worker clock ahead of DB still waits a full SQL lease after receiving the claim',async t=>{
+ const clock=wallClock(t),started=clock.now,plan=(await acquisitionPlan(date,companies)).slice(0,1);
+ const a=await runner({at:'2026-10-12T00:02:00Z',plan,cursor:1,throughHandler:true,leaseUntil:new Date(started+90000).toISOString(),finishError:'DATABASE_RPC_REJECTED',advanceSleep:clock.advance});
+ assert.deepEqual(a.sleeps,[101000]);assert.equal(a.continuations.length,1);
+});
+test('claim response latency cannot move the full-lease recovery floor earlier',async t=>{
+ const clock=wallClock(t),started=clock.now,plan=(await acquisitionPlan(date,companies)).slice(0,1);
+ const a=await runner({at:'2026-10-12T00:02:00Z',plan,cursor:1,throughHandler:true,leaseUntil:new Date(started+100000).toISOString(),finishError:'DATABASE_RPC_REJECTED',
+  onClaim:()=>clock.advance(5000),onFinish:()=>clock.advance(37000),advanceSleep:clock.advance});
+ assert.deepEqual(a.sleeps,[64000]);assert.equal(clock.now,started+106000);assert.equal(a.continuations.length,1);
+});
+test('missing, non-ISO, expired or excessive claimed lease never creates a recovery fallback',async t=>{
+ const clock=wallClock(t),plan=(await acquisitionPlan(date,companies)).slice(0,1);
+ for(const leaseUntil of [undefined,null,0,'0','invalid','2026-10-12',new Date(clock.now-1).toISOString(),new Date(clock.now+100001).toISOString()]){
+  await assert.rejects(()=>runner({at:'2026-10-12T00:02:00Z',plan,cursor:1,leaseUntil,finishError:'DATABASE_RPC_REJECTED'}),/DATABASE_RPC_REJECTED/);
+  const a=await runner({at:'2026-10-12T00:02:00Z',plan,cursor:1,leaseUntil,finishError:'DATABASE_RPC_REJECTED',throughHandler:true});
+  assert.equal(a.calls.filter(c=>c.op==='FINISH').length,1);assert.deepEqual(a.sleeps,[]);assert.deepEqual(a.continuations,[]);
+ }
+});
+test('non-acquired claims and rejected claims cannot enter lease recovery',async t=>{
+ const clock=wallClock(t);
+ for(const claimStatus of ['BUSY','NOT_FOUND','DATE_EXPIRED','BUDGET_EXHAUSTED']){
+  const a=await runner({claimStatus,leaseUntil:new Date(clock.now+100000).toISOString(),throughHandler:true,finishError:'DATABASE_RPC_REJECTED'});
+  assert.equal(a.calls.length,0);assert.deepEqual(a.continuations,[]);assert.deepEqual(a.sleeps,[]);
+ }
+ const a=await runner({claimError:'DATABASE_RPC_REJECTED',throughHandler:true});assert.equal(a.calls.length,0);assert.deepEqual(a.continuations,[]);
+});
+test('insufficient budget, early wake or late wake never triggers an early or unbounded handoff',async t=>{
+ const clock=wallClock(t),plan=(await acquisitionPlan(date,companies)).slice(0,1);
+ for(const mode of ['late_failure','early_wake','late_wake']){
+  const started=clock.now,a=await runner({at:'2026-10-12T00:02:00Z',plan,cursor:1,throughHandler:true,leaseUntil:new Date(started+100000).toISOString(),finishError:'DATABASE_RPC_REJECTED',
+   onFinish:()=>{if(mode==='late_failure')clock.advance(116000);},advanceSleep:ms=>{if(mode==='late_wake')clock.advance(ms+20000);}});
+  assert.equal(a.continuations.length,0);assert.equal(a.calls.filter(c=>c.op==='FINISH').length,1);
+  assert.equal(a.sleeps.length,mode==='late_failure'?0:1);
+ }
+});
+test('FINISH uncertainty never shortens provider backoff; 300 seconds remains outside this background budget',async t=>{
+ const clock=wallClock(t),plan=(await acquisitionPlan(date,companies)).slice(0,1);
+ for(const providerWaitSeconds of [60,300]){
+  const started=clock.now,a=await runner({at:'2026-10-12T00:02:00Z',plan,throughHandler:true,providerWaitSeconds,leaseUntil:new Date(started+100000).toISOString(),finishError:'DATABASE_RPC_REJECTED',advanceSleep:clock.advance});
+  assert.equal(a.http.length,0);assert.equal(a.calls.filter(c=>c.op==='FINISH').length,1);
+  if(providerWaitSeconds===60){assert.deepEqual(a.sleeps,[101000]);assert.equal(a.continuations.length,1);assert(clock.now>=started+60000);}
+  else{assert.deepEqual(a.sleeps,[]);assert.deepEqual(a.continuations,[]);}
+ }
+});
+test('a failed handoff is attempted only once, with no inline FINISH or provider replay',async t=>{
+ const clock=wallClock(t),plan=(await acquisitionPlan(date,companies)).slice(0,1),a=await runner({at:'2026-10-12T00:02:00Z',plan,cursor:1,throughHandler:true,
+  leaseUntil:new Date(clock.now+100000).toISOString(),finishError:'DATABASE_RPC_REJECTED',advanceSleep:clock.advance,continuationError:'VNEXT_CONTINUATION_HTTP_503'});
+ assert.equal(a.continuations.length,1);assert.equal(a.calls.filter(c=>c.op==='FINISH').length,1);assert.equal(a.http.length,0);assert.equal(a.locked.length,0);
 });

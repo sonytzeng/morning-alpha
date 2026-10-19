@@ -1,0 +1,15 @@
+# 研究工作 FINISH 失敗後接續修復（2026-10-19）
+
+10/19 的第一筆自然研究於台北07:00建立，抓取286份來源後停止在第284個工作位置。最後CLAIM在07:14:04，lease於07:15:44到期；07:14:41只有固定分類 DATABASE_RPC_REJECTED，無FINISH提交證據。這是過期的RUNNING租約，不能把上次保留的 ACQUISITION_CONTINUATION 當成目前仍在執行。
+
+正式Worker1的runtime、handler、adapter、index及hook五個來源均與原5f337778和main936相同。問題不是拿未部署候選當正式程式。現有程式只在成功取得工作結果後接續，FINISH的回應失敗會讓背景處理只記錄警告並結束。
+
+本次只在成功取得有效SQL租約、而且FINISH呼叫本身失敗時回傳 LEASE_RECOVERY_PENDING／FINISH_COMMIT_UNCONFIRMED。FINISH不重試；也不宣稱QUEUED、COMPLETE或BLOCKED已提交。接續時間取SQL租約到期加一秒、claim回應後完整101秒及既有provider backoff三者最晚值，避免時鐘差或回應遺失導致提前重領。
+
+handler最多交接一次，保留原120秒背景預算與5秒餘量，醒後重新核對時間。沒有有效租約、非ACQUIRED、預算不足、提前或過晚醒來都不發出接續。SQL仍負責排他租約、fence、512次工作上限、來源三次嘗試及09:00 Forward截止；沒有清除lease、重設批次、新Cron或倒填預測。
+
+22項隔離恢復測試與38組獨立有限反例通過，包括37秒失敗、claim回應延遲、時鐘偏差、provider 60／300秒backoff、一次handoff失敗及不重送FINISH。type-check、lint、build與handler型別驗證通過。這是合成環境證據，不是正式自然研究完成或安全掃描。
+
+此修復不保證平台硬性終止時仍能執行背景處理，也不證明目前正式run已恢復。既有下一個合法自然checkpoint可在過期lease後取得新fence接續；若已過Forward截止，仍不得補跑成當天事前預測。底層RPC失敗的確切原因尚未由固定錯誤分類證明。
+
+本次沒有部署、SQL/Migration、Auth、既有RLS、Cron、Secrets、會員政策、研究公開、付款或LINE變更。原C發布收據不修改；這兩個runtime來源的新指紋不能混入原C核准閉包。回復以本次差異反向提交，無業務資料刪除。

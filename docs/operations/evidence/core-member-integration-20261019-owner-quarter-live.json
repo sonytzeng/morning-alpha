@@ -387,7 +387,7 @@
     {
       "path": "docs/operations/evidence/owner-quarter-live-review-20261019.json",
       "before_sha256": null,
-      "after_sha256": "657994af1103f0cc7efbc68e18289f4c99ba0f260c86f28f2786e6b406669d7c",
+      "after_sha256": "78002b0a4184823fa9db73606a7eaf14724dd66f512e0c284b2e396603d71db6",
       "mode": "100644",
       "origin": "composition"
     },
@@ -485,7 +485,7 @@
     {
       "path": "docs/operations/owner-quarter-live-closure-20261019.md",
       "before_sha256": null,
-      "after_sha256": "9e4da3b65e53417db5e0b78a8501f221a18746ae4dc840b3ea053cdfa1540f2d",
+      "after_sha256": "a32b1c5ea7ed246b759cdfe1c0a1c8182eb4a5303e45db250799e21956e7014d",
       "mode": "100644",
       "origin": "composition"
     },
@@ -884,7 +884,7 @@
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/prepare-check-sources.mjs",
       "before_sha256": null,
-      "after_sha256": "27da2f40fa9e7328751d3d24cec49856a78234184ec36b91f5bc3a6e7d435bcb",
+      "after_sha256": "5f4c7909eecba6a1bd219648fc9e4c795ac7fc55814bdd39cf7017b0ae9a2a4e",
       "mode": "100644",
       "origin": "composition"
     },

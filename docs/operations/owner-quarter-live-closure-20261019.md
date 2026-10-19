@@ -50,3 +50,5 @@ Root於2026-10-19 02:21Z fresh唯讀核對actual15／56來源，Producer20＋Rea
 另已唯讀核對實際Generator248的來源與Atomic／sidecar函式。acquisition可保存至Report的ai_strategy_json與raw_ai_json；member／LINE白名單未選該祖先。既有sidecar先作DB白名單投影，已用純合成SELECT證實移除該祖先；未執行記錄RPC或任何業務寫入。此資料流驗證不取代自然保存、Owner E2E或D範圍發布核准。
 
 第二次實際Deno CI（e60aec8a，run39190572695）已逐一檢查四包，80個path已解析；但自行載入的Node26 ambient與Deno內建Node／Web declarations重複衝突，仍FAIL。Deno官方說明2.8起預載lib.node，因此Deno檢查改用真正內建Node types（bare node type reference對應node:buffer），不再另載Node26 globals；補充tsc program仍獨立使用完整封存Node26，沒有刪型別或skipLibCheck。CI鎖定已實際下載的Deno2.9.7，版本不再浮動。此為編譯器環境相容處理，不改四包runtime、官方SDK宣告或Function importmap；Supabase正式Runtime E2E仍另待驗證。依據：https://docs.deno.com/runtime/fundamentals/node/ 。
+
+第三次Deno CI（7f2bbc8f，run39190843203）揭露SDK wrapper另有明示Node index path，僅處理bare node port仍會載入同一第二套ambient。修正把該唯一封存compiler type入口也精確映到Deno真正內建node:buffer；原wrapper與Node26來源bytes仍不改，tsc仍用原檔。不是刪掉錯誤或宣告PASS，四包完整Deno結果仍待下一精確HEAD驗收。

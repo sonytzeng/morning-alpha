@@ -45,6 +45,9 @@ for(const variant of VARIANTS){
  // rather than merge the supplementary tsc program's archived Node26 globals
  // with Deno's own Node/web libraries. No declarations are suppressed.
  imports.node='node:buffer';
+ // Our sealed SDK wrappers also name this explicit path. Resolve the same
+ // compiler-only ambient port to Deno's builtin library, not a second Node.
+ imports['./'+catalog.type_compile_ports.node]='node:buffer';
  const config={nodeModulesDir:'none',imports,scopes};
  writeFileSync(resolve(root,base,'deno.json'),JSON.stringify(config,null,2)+'\n',{flag:'wx',mode:0o600});
  results.push({variant,source_files:payload.files.length,payload_sha256:sha256,compiler_only_reference_paths:referencePaths,entrypoint:base+'/'+payload.entrypoint_path});

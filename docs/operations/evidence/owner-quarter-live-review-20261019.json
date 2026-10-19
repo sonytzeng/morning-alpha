@@ -25,8 +25,8 @@
     },
     {
       "path": "docs/operations/owner-quarter-live-closure-20261019.md",
-      "sha256": "9e4da3b65e53417db5e0b78a8501f221a18746ae4dc840b3ea053cdfa1540f2d",
-      "bytes": 10040,
+      "sha256": "a32b1c5ea7ed246b759cdfe1c0a1c8182eb4a5303e45db250799e21956e7014d",
+      "bytes": 10431,
       "mode": "100644"
     },
     {
@@ -109,8 +109,8 @@
     },
     {
       "path": "scripts/operations/owner-quarter-live-release-20261019/prepare-check-sources.mjs",
-      "sha256": "27da2f40fa9e7328751d3d24cec49856a78234184ec36b91f5bc3a6e7d435bcb",
-      "bytes": 3644,
+      "sha256": "5f4c7909eecba6a1bd219648fc9e4c795ac7fc55814bdd39cf7017b0ae9a2a4e",
+      "bytes": 3858,
       "mode": "100644"
     },
     {
@@ -402,6 +402,16 @@
       "aggregate_errors": 748,
       "fix": "USE_DENO2_9_7_REAL_BUNDLED_LIB_NODE_NOT_SECOND_NODE26_GLOBALS",
       "skip_lib_check": false,
+      "runtime_and_sdk_declarations_changed": false,
+      "next_head_deno": "PENDING"
+    },
+    "third_actual_deno": {
+      "head": "7f2bbc8fa61d4400563a7d5d72bf85d6f92247b3",
+      "run_id": 39190843203,
+      "job_id": 117863065265,
+      "variants_checked": 4,
+      "result": "FAIL_EXPLICIT_SDK_WRAPPER_NODE_INDEX_PATH_STILL_LOADED_SECOND_AMBIENT",
+      "fix": "ALSO_MAP_EXACT_SEALED_NODE_INDEX_COMPILER_PORT_TO_REAL_DENO_BUILTIN",
       "runtime_and_sdk_declarations_changed": false,
       "next_head_deno": "PENDING"
     }

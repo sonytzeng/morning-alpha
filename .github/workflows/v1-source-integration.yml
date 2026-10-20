@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22.14.0
-      - name: Complete current R5 tree, exact four code deltas over frozen R4, five support paths and immutable 28/35 parent assertions
+      - name: Complete current R6 admission; exact four R5 sources and explicit verified historical CI reuse (no nested replay)
         run: node --experimental-strip-types --test --test-concurrency=1 tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs
       - name: R5 offline exact daily open-data and license-scope synthetic controls only; no source or publication grant
         run: node --experimental-strip-types --test --test-concurrency=1 tests/officialDailyOpenDataCandidate.test.mjs tests/officialDailyLicenseScope.test.mjs
@@ -34,7 +34,7 @@ jobs:
         run: python -B tests/test_issuer_pdf_descriptor.py SyntheticControls -v
       - name: Current capacity, evaluator and loader metadata controls; synthetic only, not Production capacity or source admission
         run: node --experimental-strip-types --test --test-concurrency=1 tests/memberCapacityModel.test.mjs tests/v1FundamentalRevisionSelection.test.mjs tests/v1EarningsMetadataRead.test.mjs
-      - name: Unchanged issuer R9 assertions through fresh complete R5 admission; no source activation
+      - name: Unchanged issuer R9 assertions through fresh complete R6 admission; no source activation
         run: node --experimental-strip-types --test tests/recommendationIssuerEventReview.test.mjs
       - name: Current Registry, Actual-only and response-period controls; not source admission
         run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextContracts.test.mjs tests/vnextOriginalTimestamp.test.ts tests/vnextOriginalIngress.test.mjs tests/vnextOriginalRegistryIngress.test.mjs tests/v1ActualCanonical.test.mjs tests/vnextFinancialResponsePeriod.test.mjs tests/vnextForwardCutoffRuntime.test.mjs

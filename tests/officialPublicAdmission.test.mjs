@@ -2,10 +2,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {readdirSync} from 'node:fs';
 import {
- verifyIntegrationCandidate,createSourceUnionComposition,sourceUnionParentRead,verifySourceUnionPinnedProof,SOURCE_UNION_PARENTS,
+ verifyIntegrationCandidate,createSourceUnionComposition,sourceUnionParentRead,reuseSourceUnionPinnedProof,SOURCE_UNION_PARENTS,
  integrationPhysicalRead,integrationPhysicalMode,integrationInventory,
  integrationHash,integrationHistoricalRead,SOURCE_UNION_R3_FILES,SOURCE_UNION_R3_BASE,SOURCE_UNION_R4_FILES,
- SOURCE_UNION_R5_FILES,FROZEN_SOURCE_UNION_R4,INTEGRATION_MANIFEST,
+ SOURCE_UNION_R5_FILES,FROZEN_SOURCE_UNION_R4,FROZEN_SOURCE_UNION_R5,INTEGRATION_MANIFEST,
 } from './helpers/integrationAdmission.mjs';
 import {assemble as financial,CHANGED,CATALOG} from '../scripts/operations/financial-response-period-20261020/materialize.mjs';
 import {worker4Baseline} from '../scripts/operations/forward-cutoff-20261020/materialize.mjs';
@@ -59,12 +59,12 @@ test('current union manifest mode and Actual source drift remain rejected before
  assert.throws(()=>verifyIntegrationCandidate(q=>q===p?Buffer.concat([integrationPhysicalRead(q),Buffer.from('DRIFT')]):integrationPhysicalRead(q),paths),/SOURCE_DRIFT/);
  assert.throws(()=>verifyIntegrationCandidate(integrationPhysicalRead,paths,q=>q===p?'100755':integrationPhysicalMode(q)),/MODE_DRIFT/);
 });
-test('all original PR284 admission and whole-workflow assertions execute unchanged at645 AFTER current admission', {timeout:150000},()=>{
- const r=verifySourceUnionPinnedProof('actual');assert.equal(r.revision,SOURCE_UNION_PARENTS.actual);assert.equal(r.cleanup,'VERIFIED_REMOVED');
+test('all original PR284 admission and whole-workflow assertions have verified unchanged prior CI evidence at645 AFTER current admission', {timeout:150000},()=>{
+ const r=reuseSourceUnionPinnedProof('actual');assert.equal(r.revision,SOURCE_UNION_PARENTS.actual);assert.equal(r.prior_cleanup_evidence,'VERIFIED_REMOVED_BY_PRIOR_EXECUTION');
 });
-test('older integration whole-workflow assertions run unchanged at the existing CI965 pin, never over current bytes', {timeout:150000},()=>{
- const r=verifySourceUnionPinnedProof('historical');assert.equal(r.revision,'965263fe15dc672cac6c61af06bfd14d69044dd3');
- assert.equal(r.cleanup,'VERIFIED_REMOVED');
+test('older integration whole-workflow assertions have verified unchanged prior CI evidence at the existing CI965 pin, never over current bytes', {timeout:150000},()=>{
+ const r=reuseSourceUnionPinnedProof('historical');assert.equal(r.revision,'965263fe15dc672cac6c61af06bfd14d69044dd3');
+ assert.equal(r.prior_cleanup_evidence,'VERIFIED_REMOVED_BY_PRIOR_EXECUTION');
  const workflow=integrationPhysicalRead('.github/workflows/core-member-integration.yml').toString();
  assert(workflow.includes('ref: '+r.revision));assert(workflow.includes('working-directory: build/c-worker-rpc-historical-base'));
 });
@@ -99,7 +99,9 @@ test('R5 full PR composition adds the old R4 root and three new paths, never a f
  const m=verifyIntegrationCandidate(),old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R4));
  const paths=[...new Set([...old.files.map(r=>r.path),FROZEN_SOURCE_UNION_R4,...SOURCE_UNION_R5_FILES.map(r=>r.path)])].sort();
  assert.equal(old.files.length,515);assert.equal(paths.length,519);
- assert.deepEqual(m.files.map(r=>r.path),paths);assert.deepEqual(integrationInventory(),[...paths,INTEGRATION_MANIFEST].sort());
+ assert.deepEqual(m.files.filter(r=>r.path!==FROZEN_SOURCE_UNION_R5).map(r=>r.path),paths);
+ assert.deepEqual(integrationInventory(),[...paths,FROZEN_SOURCE_UNION_R5,INTEGRATION_MANIFEST].sort());
+ assert.equal(JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R5)).files.length,519,'R5 complete assertion stays frozen, not rewritten');
  const candidate=financial('candidate'),recovery=financial('recovery'),base=worker4Baseline();
  assert.equal(candidate.sha256,'7986f277660d0b9a3500d7f45a32be247f1d1d7514c1590b5db2956ace2fd596');
  assert.deepEqual(recovery.bytes,base.bytes);

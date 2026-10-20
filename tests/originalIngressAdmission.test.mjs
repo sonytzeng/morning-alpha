@@ -1,5 +1,5 @@
-// Current R5 admission is mandatory; R4's original 35 assertions (including its
-// exact R4 manifest/515-row assertions) execute UNCHANGED at immutable dfec.
+// Current R6 admission is mandatory. R4's original 35 assertions and exact
+// R5 repro runner remain immutable; historical CI reuse is NOT current execution.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
@@ -12,16 +12,17 @@ import {
  FROZEN_SOURCE_UNION_R2,SOURCE_UNION_R3_BASE,SOURCE_UNION_R3_FILES,sourceUnionR3Lineage,
  FROZEN_SOURCE_UNION_R3,SOURCE_UNION_R4_BASE,SOURCE_UNION_R4_FILES,sourceUnionR4Lineage,
  FROZEN_SOURCE_UNION_R4,SOURCE_UNION_R5_BASE,SOURCE_UNION_R5_FILES,sourceUnionR5Lineage,readRegularIntegrationFile,
+ FROZEN_SOURCE_UNION_R5,SOURCE_UNION_R6_BASE,SOURCE_UNION_PRIOR_CI,sourceUnionR6Lineage,
  integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,
- createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,verifySourceUnionPinnedProof,
+ createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,reuseSourceUnionPinnedProof,
 } from './helpers/integrationAdmission.mjs';
 const flags=['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'];
-test('R5 complete physical current union pins actual645 and registry1db; R4 row assertions stay at dfec',()=>{
+test('R6 complete physical current union preserves R4/R5 assertions at their immutable parents',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r5.json');
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r6.json');
  assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');
  assert.equal(FROZEN_SOURCE_UNION_NORMALIZER,'docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer.json');
- assert.equal(m.files.length,519);assert.equal(integrationInventory().length,520);
+ assert.equal(m.files.length,520);assert.equal(integrationInventory().length,521);
  assert.deepEqual(SOURCE_UNION_PARENTS,{actual:'64565b5e44568c5c653bd2007992d482df36e60f',registry:'1db13616337633d4765db4650dd27f5dc68c0bd6'});
  assert.equal(REGISTRY_SUPPORT_PARENT,'d74a25d803b6fe6a7dc9e21cef06c3e1306ec559');
  assert.deepEqual(m.source_union,sourceUnionLineage());
@@ -86,9 +87,9 @@ test('the six CI support updates stay at 1db, including image preparation; no fr
  assert(workflow.includes('tests/fixtures/runtime-sparse-postgres.Dockerfile'));
  assert(!workflow.includes('continue-on-error:'));assert(!workflow.includes('secrets.'));
 });
-test('all original Registry admission assertions execute unchanged at exact1db AFTER current admission', {timeout:150000},()=>{
- const r=verifySourceUnionPinnedProof('registry');assert.equal(r.revision,SOURCE_UNION_PARENTS.registry);
- assert.equal(r.cleanup,'VERIFIED_REMOVED');
+test('all original Registry admission assertions have verified unchanged prior CI evidence at exact1db AFTER current admission', {timeout:150000},()=>{
+ const r=reuseSourceUnionPinnedProof('registry');assert.equal(r.revision,SOURCE_UNION_PARENTS.registry);
+ assert.equal(r.prior_cleanup_evidence,'VERIFIED_REMOVED_BY_PRIOR_EXECUTION');
 });
 test('historical normalizer stays exactly two immutable8fbe blobs; current R3 is a separate eight-file versioned delta',()=>{
  assert.equal(SOURCE_UNION_NORMALIZER_BASE,'c1318bfe8d32f774ecbc1ba17787832bb745b489');
@@ -218,10 +219,10 @@ test('R3 CI runs full admission before fixed Python controls, capacity negatives
  assert(workflow.includes('node --experimental-strip-types tests/v1FundamentalRevisionDatabase.integration.mjs'));
  assert(workflow.includes('needs: current-union'));assert(workflow.includes('timeout-minutes: 5'));
 });
-test('all13 original c131 union assertions execute unchanged AFTER current admission with verified cleanup', {timeout:150000},()=>{
- const r=verifySourceUnionPinnedProof('union');assert.equal(r.revision,SOURCE_UNION_NORMALIZER_BASE);
+test('all13 original c131 union assertions have verified unchanged prior CI evidence AFTER current admission with verified cleanup', {timeout:150000},()=>{
+ const r=reuseSourceUnionPinnedProof('union');assert.equal(r.revision,SOURCE_UNION_NORMALIZER_BASE);
  assert.deepEqual(r.tests,['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']);
- assert.equal(r.tests_run,13);assert.equal(r.tests_passed,13);assert.equal(r.cleanup,'VERIFIED_REMOVED');
+ assert.equal(r.prior_tests_total,13);assert.equal(r.prior_tests_passed,13);assert.equal(r.prior_cleanup_evidence,'VERIFIED_REMOVED_BY_PRIOR_EXECUTION');
 });
 test('R3 pins all eight exact sources to8c before/after bytes; only explicit R4 replacements differ in current',()=>{
  const m=verifyIntegrationCandidate(),r3=m.source_union.r3;
@@ -272,8 +273,8 @@ test('R3 base, exact path set, before/after pins and evidence limitations cannot
   const f=fixture();change(f.manifest.source_union.r3);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);
  }
 });
-test('all21 unchanged R2 assertions execute at exact8c AFTER full current R3 admission and clean their clones', {timeout:210000},()=>{
- const r=verifySourceUnionPinnedProof('r2');assert.equal(r.revision,SOURCE_UNION_R3_BASE);assert.equal(r.tests_run,21);assert.equal(r.tests_passed,21);assert.equal(r.cleanup,'VERIFIED_REMOVED');
+test('all21 unchanged R2 assertions reuse verified exact8c evidence under the R4 CI; no new historical execution',()=>{
+ const r=reuseSourceUnionPinnedProof('r2');assert.equal(r.revision,SOURCE_UNION_R3_BASE);assert.equal(r.prior_tests_total,21);assert.equal(r.prior_tests_passed,21);assert.equal(r.prior_cleanup_evidence,'VERIFIED_REMOVED_BY_PRIOR_EXECUTION');
 });
 test('R4 pins exactly four loader/metadata sources over cbb without source rights or Worker activation',()=>{
  const m=verifyIntegrationCandidate(),r4=m.source_union.r4;
@@ -345,9 +346,9 @@ test('R4 CI retains current metadata regression and bounded real JSONB fixture a
  assert(admission>=0&&prepare>admission&&fixture>prepare);
  assert(!workflow.includes('continue-on-error:'));assert(!workflow.includes('secrets.'));
 });
-test('R4 all28 unchanged R3 assertions execute at exact cbb AFTER full current admission and remove clones', {timeout:450000},()=>{
- const r=verifySourceUnionPinnedProof('r3');assert.equal(r.revision,SOURCE_UNION_R4_BASE);
- assert.equal(r.tests_run,28);assert.equal(r.tests_passed,28);assert.equal(r.cleanup,'VERIFIED_REMOVED');
+test('R4 all28 unchanged R3 assertions reuse exact cbb evidence under verified R4 CI; no new clones', {timeout:450000},()=>{
+ const r=reuseSourceUnionPinnedProof('r3');assert.equal(r.revision,SOURCE_UNION_R4_BASE);
+ assert.equal(r.prior_tests_total,28);assert.equal(r.prior_tests_passed,28);assert.equal(r.prior_cleanup_evidence,'VERIFIED_REMOVED_BY_PRIOR_EXECUTION');
 });
 test('R5 pins precisely the four frozen code deltas over dfec and revalidates all R4 source/root bytes',()=>{
  const m=verifyIntegrationCandidate(),r5=m.source_union.r5;
@@ -454,8 +455,41 @@ test('R5 cannot self-approve mutable parents, altered pins/proofs, source rights
  }
  for(const row of SOURCE_UNION_R5_FILES){const f=fixture();f.manifest.source_union.support_paths.push(row.path);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);}
 });
-test('R5 all35 unchanged R4 assertions execute at exact dfec AFTER complete current admission and remove clones', {timeout:870000},()=>{
- const r=verifySourceUnionPinnedProof('r4');assert.equal(r.revision,SOURCE_UNION_R5_BASE);
+test('R6 explicitly reuses all35 exact dfec R4 assertions; does not claim current historical execution', {timeout:870000},()=>{
+ const r=reuseSourceUnionPinnedProof('r4');assert.equal(r.revision,SOURCE_UNION_R5_BASE);
  assert.deepEqual(r.tests,['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']);
- assert.equal(r.tests_run,35);assert.equal(r.tests_passed,35);assert.equal(r.cleanup,'VERIFIED_REMOVED');
+ assert.equal(r.prior_tests_total,35);assert.equal(r.prior_tests_passed,35);assert.equal(r.prior_cleanup_evidence,'VERIFIED_REMOVED_BY_PRIOR_EXECUTION');
+});
+test('R6 preserves the exact R5 root and all four source deltas while classifying historical reuse truthfully',()=>{
+ const m=verifyIntegrationCandidate();assert.deepEqual(m.source_union.r6,sourceUnionR6Lineage());
+ assert.equal(SOURCE_UNION_R6_BASE,'2d59c622ad302148039d0c0a9c5612851e2694f8');
+ assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R5)),'70ca483c3f20a695adb4d49913a8f98b40b96c091ae07b4f8d653f986efa7ca3');
+ const old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R5));
+ assert.deepEqual(m.source_union.r5,old.source_union.r5);assert.equal(old.files.length,519);
+ for(const view of ['actual','registry','historical','union','r2','r3','r4']){
+  const r=reuseSourceUnionPinnedProof(view);
+  assert.equal(r.execution,'REUSED_VERIFIED_PRIOR_CI_NOT_CURRENT_EXECUTION');
+  assert.equal(r.tests_executed_here,0);assert.equal(r.production_verified,false);
+  assert.equal(r.current_source_admission,'VERIFIED_BEFORE_REFERENCE');
+  assert.equal(r.ci_reference.head,SOURCE_UNION_R5_BASE);assert.equal(r.ci_reference.check_run_id,118862262592);
+  assert.equal(r.ci_reference.check_name,'current-union');assert.equal(r.ci_reference.conclusion,'success');
+  assert.equal(r.ci_reference.url,'https://github.com/sonytzeng/morning-alpha/actions/runs/39490554002/job/118862262592');
+  assert.equal(r.ci_reference.reuse_scope,'BYTE_IDENTICAL_IMMUTABLE_PARENT_PROOFS_ONLY_NOT_CURRENT_CODE_OR_PRODUCTION');
+  assert.equal(r.ci_reference.prior_current_skips,0);
+ }
+ assert.throws(()=>reuseSourceUnionPinnedProof('HEAD'),/UNKNOWN_PARENT/);
+ assert.throws(()=>reuseSourceUnionPinnedProof('not-verified-new-head'),/UNKNOWN_PARENT/);
+ assert(Object.isFrozen(SOURCE_UNION_PRIOR_CI));
+});
+test('R6 cannot self-certify a different CI head/result, old root, runtime grant or source interpretation',()=>{
+ for(const mutate of [r=>r.base='HEAD',r=>r.prior_root.sha256='0'.repeat(64),r=>r.prior_ci.head='HEAD',
+  r=>r.prior_ci.conclusion='skipped',r=>r.prior_ci.check_run_id++,r=>r.prior_ci.prior_current_skips=1,
+  r=>r.prior_ci.prior_current_tests=0,r=>r.current_historical_execution=true,r=>r.current_code_tests_required=false,
+  r=>r.original_assertions_preserved_at_exact_parents=false,r=>r.source_admission=true,r=>r.canonical_admission=true,
+  r=>r.production_authorized=true,r=>r.thresholds_changed=true,r=>r.worker_payload_changed=true]){
+  const f=fixture();mutate(f.manifest.source_union.r6);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);
+ }
+ const old=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R6_BASE+':tests/originalIngressAdmission.test.mjs'],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
+ assert(old.includes("verifySourceUnionPinnedProof('r4')"),'original executable assertions and reproducer remain at immutable R5');
+ assert(old.includes('assert.equal(r.tests_run,35);assert.equal(r.tests_passed,35)'));
 });

@@ -13,7 +13,21 @@ import {fileURLToPath} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r5.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r6.json';
+export const FROZEN_SOURCE_UNION_R5='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r5.json';
+export const SOURCE_UNION_R6_BASE='2d59c622ad302148039d0c0a9c5612851e2694f8';
+// Actual provider diagnostics were read by Code Review, not inferred from a
+// receipt authored by a test. Reuse is explicit: no current execution claim.
+// The immutable dfec workflow unconditionally ran all35 admission assertions,
+// including all nested historical proofs. Their sources/pins stay unchanged.
+export const SOURCE_UNION_PRIOR_CI=Object.freeze({
+ head:'dfec08a533f6c6da299ecc879af96fc49cca5d59',
+ check_name:'current-union',check_run_id:118862262592,conclusion:'success',
+ url:'https://github.com/sonytzeng/morning-alpha/actions/runs/39490554002/job/118862262592',
+ verified_by:'mcp__code_review__pull_requests_checks',recorded_at:'2026-10-20T21:47:37Z',
+ prior_current_tests:35,prior_current_skips:0,
+ reuse_scope:'BYTE_IDENTICAL_IMMUTABLE_PARENT_PROOFS_ONLY_NOT_CURRENT_CODE_OR_PRODUCTION',
+});
 export const FROZEN_SOURCE_UNION_R4='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r4.json';
 export const SOURCE_UNION_R5_BASE='dfec08a533f6c6da299ecc879af96fc49cca5d59';
 // Frozen independently from the generated composition. These code-only deltas
@@ -245,6 +259,7 @@ export const INTEGRATION_DELTAS=Object.freeze([
  FROZEN_SOURCE_UNION_R2,...SOURCE_UNION_R3_FILES.map(row=>row.path),
  FROZEN_SOURCE_UNION_R3,...SOURCE_UNION_R4_FILES.map(row=>row.path),
  FROZEN_SOURCE_UNION_R4,...SOURCE_UNION_R5_FILES.map(row=>row.path),
+ FROZEN_SOURCE_UNION_R5,
  FROZEN_PRODUCER15_MONTHLY_MANIFEST,
  'src/features/vnext/dailyAdapter.ts',
  'tests/vnextDailyDatabase.integration.mjs',
@@ -702,7 +717,27 @@ export function sourceUnionLineage(){
   assert.equal(row?.sha256,file.sha256,'UNION_PRIOR_NORMALIZER_PROOF_DRIFT');assert.equal(row?.mode,'100644','UNION_PRIOR_NORMALIZER_PROOF_MODE');}
  return {schema:'V1_SOURCE_UNION_CANDIDATE_1',base:SOURCE_UNION_BASE,parents:{...SOURCE_UNION_PARENTS},
   registry_support:{parent:REGISTRY_SUPPORT_PARENT,paths:[...REGISTRY_SUPPORT_PATHS]},receipts,
-  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),r5:sourceUnionR5Lineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),r5:sourceUnionR5Lineage(),r6:sourceUnionR6Lineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+}
+export function sourceUnionR6Lineage(){
+ const prior_root={revision:SOURCE_UNION_R6_BASE,path:FROZEN_SOURCE_UNION_R5,sha256:'70ca483c3f20a695adb4d49913a8f98b40b96c091ae07b4f8d653f986efa7ca3'};
+ const row=unionBlob(prior_root.revision,prior_root.path);
+ assert.equal(row?.sha256,prior_root.sha256,'UNION_R6_PRIOR_ROOT_DRIFT');assert.equal(row?.mode,'100644');
+ assert.equal(JSON.parse(row.bytes).files.length,519,'UNION_R6_PRIOR_FULL_SCOPE');
+ for(const file of SOURCE_UNION_R5_FILES){
+  const old=unionBlob(SOURCE_UNION_R6_BASE,file.path);
+  assert.equal(old?.sha256,file.after_sha256,'UNION_R6_R5_SOURCE_DRIFT');assert.equal(old?.mode,file.mode);
+ }
+ assert.equal(SOURCE_UNION_PRIOR_CI.head,SOURCE_UNION_R5_BASE);
+ // Independently hard-coded R4 test/helper/workflow identities, including all
+ // prior assertions, are still checked by R5 lineage before any reuse.
+ const proof=sourceUnionR5Lineage().prior_proof;
+ assert.equal(proof.revision,SOURCE_UNION_PRIOR_CI.head);assert.equal(proof.tests,35);
+ return {schema:'V1_SOURCE_UNION_R6_PROOF_TOPOLOGY_1',base:SOURCE_UNION_R6_BASE,prior_root,
+  prior_ci:{...SOURCE_UNION_PRIOR_CI},current_historical_execution:false,
+  current_code_tests_required:true,original_assertions_preserved_at_exact_parents:true,
+  source_admission:false,canonical_admission:false,production_authorized:false,
+  thresholds_changed:false,worker_payload_changed:false,cle_payload_changed:false};
 }
 let unionExpected;
 function sourceUnionExpected(){
@@ -751,6 +786,8 @@ function sourceUnionExpected(){
    assert.equal(expected.get(file.path)?.sha256??null,file.before_sha256,'UNION_R5_BEFORE_COMPOSITION:'+file.path);
    expected.set(file.path,{mode:file.mode,sha256:file.after_sha256});
   }
+  assert(!expected.has(FROZEN_SOURCE_UNION_R5),'UNION_R6_PRIOR_RECEIPT_OVERLAP');
+  expected.set(FROZEN_SOURCE_UNION_R5,unionBlob(SOURCE_UNION_R6_BASE,FROZEN_SOURCE_UNION_R5));
   for(const p of support)expected.delete(p);
   unionExpected=expected;
  }
@@ -815,6 +852,22 @@ export function verifySourceUnionPinnedProof(view){
  verifyIntegrationCandidate();
  const count=view==='r4'?35:view==='r3'?28:view==='union'?13:view==='r2'?21:null;
  return {revision:proof.revision,tests:[...proof.tests],cleanup:'VERIFIED_REMOVED',...(count===null?{}:{tests_run:count,tests_passed:count})};
+}
+/** Reuse only historical proof bodies already executed by the exact R4 CI.
+ * Current code/admission still executes. This does not call the optional
+ * historical reproducer above, spawn a child, create a clone, or fabricate TAP.
+ * No caller-provided result/hash/status can certify a different proof. */
+export function reuseSourceUnionPinnedProof(view){
+ assert(Object.hasOwn(pinnedProofs,view),'UNION_UNKNOWN_PARENT');
+ verifyIntegrationCandidate();
+ const lineage=sourceUnionR6Lineage(),proof=pinnedProofs[view];
+ for(const path of proof.tests)assert(unionBlob(proof.revision,path),'UNION_PRIOR_TEST_MISSING');
+ const count=view==='r4'?35:view==='r3'?28:view==='union'?13:view==='r2'?21:null;
+ return {revision:proof.revision,tests:[...proof.tests],
+  execution:'REUSED_VERIFIED_PRIOR_CI_NOT_CURRENT_EXECUTION',tests_executed_here:0,
+  prior_tests_total:count,prior_tests_passed:count,prior_cleanup_evidence:'VERIFIED_REMOVED_BY_PRIOR_EXECUTION',
+  ci_reference:{...lineage.prior_ci},current_source_admission:'VERIFIED_BEFORE_REFERENCE',
+  production_verified:false};
 }
 export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
  verifySourceUnionBoundary(read,mode);

@@ -10,7 +10,9 @@ import {URL} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-continuous-lifecycle.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-v1-actual-canonical.json';
+const FROZEN_CONTINUOUS_LIFECYCLE='docs/operations/evidence/core-member-integration-20261020-continuous-lifecycle.json';
+const V1_ACTUAL_PARENT='3f494a209079801525a0f6208707c8b3d3d61155';
 export const OFFICIAL_PUBLIC_BASE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
 const PRIOR_CONTINUOUS_BASE='af22f6b77f564cf9374b2a4415632ea8f38ea1c4';
 const FROZEN_OFFICIAL_PUBLIC='docs/operations/evidence/core-member-integration-20261020-official-public.json';
@@ -54,6 +56,28 @@ export const OFFICIAL_PUBLIC_DELTAS=Object.freeze([
  'tests/continuousLearningRelease.test.mjs',
  'tests/vnextContinuousUpdate.test.mjs',
  'supabase/functions/_shared/continuous-learning-fixed-sdk.d.ts',
+ FROZEN_CONTINUOUS_LIFECYCLE,
+ '.github/workflows/v1-actual-canonical.yml',
+ 'docs/operations/v1-actual-canonical-20261020.md',
+ 'docs/operations/evidence/issuer-financial-pdf-20261020.json',
+ 'scripts/official-actuals/issuer-financial-pdf.py',
+ 'scripts/operations/financial-response-period-20261020/materialize.mjs',
+ 'scripts/operations/financial-response-period-20261020/release-catalog.json',
+ 'scripts/vnext/stock-evidence.mjs',
+ 'src/features/vnext/dailyAdapter.ts',
+ 'src/features/vnext/dailyIntelligence.ts',
+ 'src/features/vnext/dailyParsers.mjs',
+ 'src/features/vnext/v1ActualCanonical.ts',
+ 'supabase/migrations/20261020070000_v1_actual_canonical_candidate.sql',
+ 'tests/fixtures/v1ActualCanonical-synthetic.sql',
+ 'tests/v1ActualCanonical.test.mjs',
+ 'tests/v1ActualCanonicalSql.integration.mjs',
+ 'tests/v1FinancialPeriodRelease.test.mjs',
+ 'tests/vnextFinancialResponsePeriod.test.mjs',
+ 'tests/test_issuer_financial_pdf.py',
+ 'tests/vnextColdSourcePriority.test.mjs',
+ 'tests/vnextDailyWiring.test.mjs',
+ 'tests/vnextStockResearch.test.mjs',
 ].sort());
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
@@ -421,6 +445,7 @@ export function integrationScope(){
 }
 function verifyOfficialPublicBoundary(read,mode){
  assert.equal(mode(INTEGRATION_MANIFEST),'100644','INTEGRATION_MANIFEST_MODE_DRIFT');
+ assert.deepEqual(Buffer.from(read(FROZEN_CONTINUOUS_LIFECYCLE)),frozenReceipt(V1_ACTUAL_PARENT,FROZEN_CONTINUOUS_LIFECYCLE),'INTEGRATION_CONTINUOUS_LIFECYCLE_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_OFFICIAL_PUBLIC)),frozenReceipt(PRIOR_CONTINUOUS_BASE,FROZEN_OFFICIAL_PUBLIC),'INTEGRATION_OFFICIAL_PUBLIC_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_COLD_SOURCE)),frozenReceipt(OFFICIAL_PUBLIC_BASE,FROZEN_COLD_SOURCE),'INTEGRATION_COLD_SOURCE_RECEIPT_DRIFT');
  const allowed=new Set(OFFICIAL_PUBLIC_DELTAS);

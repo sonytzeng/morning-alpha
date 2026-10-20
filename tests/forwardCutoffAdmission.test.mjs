@@ -31,7 +31,7 @@ test('Worker4 packaging baseline is rebuilt only from 7bfc fixed sources, never 
 });
 test('complete current composition and exact release catalogue are sealed independently of historical proofs',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createForwardCutoffComposition(),m);
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261020-continuous-lifecycle.json');
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261020-v1-actual-canonical.json');
  assert.equal(new Set(FORWARD_CUTOFF_DELTAS).size,FORWARD_CUTOFF_DELTAS.length);
  for(const p of FORWARD_CUTOFF_DELTAS){assert(!p.includes('*')&&!p.includes('official-actuals')&&!p.includes('recommendation-official-source-join'));assert(OFFICIAL_PUBLIC_DELTAS.includes(p),'forward subset must be admitted by the complete combined source seal');}
  for(const f of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[f],false);
@@ -59,7 +59,7 @@ test('source drift, unknown or missing inventory paths and changed modes fail be
  // Re-sealing a changed executable bit is not permission to change mode.
  assert.throws(()=>createForwardCutoffComposition(read,paths,p=>p===CHANGED?'100755':integrationPhysicalMode(p)),/MODE_DRIFT/);
 });
-test('CI only adds the current timing/admission test; existing workflows, SQL, Auth and evaluator are immutable',()=>{
+test('historical timing workflow, SQL, Auth and evaluator stay immutable; later financial changes have an independent exact seal',()=>{
  const workflow='.github/workflows/core-member-integration.yml',anchor='      - name: Check out the immutable Worker3 and Producer16 source proofs\n';
  const added='      - name: Current forward-cutoff timing and exact-source payload controls\n        env:\n          NODE_OPTIONS: --experimental-strip-types\n        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextForwardCutoffRuntime.test.mjs tests/forwardCutoffAdmission.test.mjs\n';
  const before=readSource(workflow).toString();assert.equal(before.split(anchor).length,2);
@@ -67,11 +67,20 @@ test('CI only adds the current timing/admission test; existing workflows, SQL, A
  const runtimeAdded='      - name: Materialize and check the exact forward-cutoff candidate and Worker4 recovery\n        run: |\n          node scripts/operations/forward-cutoff-20261020/materialize.mjs candidate\n          node scripts/operations/forward-cutoff-20261020/materialize.mjs recovery\n          deno check --no-lock build/forward-cutoff-20261020/candidate/supabase/functions/vnext-daily-research-v1/index.ts build/forward-cutoff-20261020/recovery/supabase/functions/vnext-daily-research-v1/index.ts\n';
  assert.equal(before.split(runtimeAnchor).length,2);
  assert.equal(read(workflow).toString(),before.replace(anchor,added+anchor).replace(runtimeAnchor,runtimeAnchor+runtimeAdded));
+ const financial=JSON.parse(read('scripts/operations/financial-response-period-20261020/release-catalog.json'));
+ const financialOnly=new Set(['src/features/vnext/dailyAdapter.ts','src/features/vnext/dailyIntelligence.ts']);
  for(const path of ['supabase/functions/vnext-daily-research-v1/index.ts','supabase/functions/vnext-daily-research-v1/handler.ts',
   'src/features/vnext/dailyAdapter.ts','src/features/vnext/contracts.ts','src/features/vnext/engine.ts','src/features/vnext/dailyIntelligence.ts','src/features/vnext/researchFunnel.ts',
   'supabase/functions/_shared/decision-v1-evidence.ts','supabase/functions/get-report-payload/index.ts','supabase/functions/line-daily-push/index.ts',
   'supabase/functions/member-access/index.ts','supabase/migrations/20261012054120_vnext_daily_research_runtime_candidate.sql',
-  'supabase/config.toml','package.json','package-lock.json'])assert.deepEqual(read(path),readSource(path),path);
+  'supabase/config.toml','package.json','package-lock.json']){
+  if(financialOnly.has(path)){
+   const row=financial.changes.find(r=>r.path===path);assert(row,path);
+   assert.equal(row.before_sha256,sha(readSource(path)),path+':historical source retained');
+   assert.equal(row.after_sha256,sha(read(path)),path+':explicit later financial source seal');
+   assert.notEqual(row.before_sha256,row.after_sha256,path+':never pretend unchanged');
+  }else assert.deepEqual(read(path),readSource(path),path);
+ }
 });
 test('candidate replaces exactly dailyRuntime while recovery reproduces the complete Worker4 payload',()=>{
  const c=catalog(),a=assemble('candidate'),b=assemble('recovery'),old=worker4Baseline();

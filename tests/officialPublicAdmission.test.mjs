@@ -5,8 +5,8 @@ import {verifyIntegrationCandidate,createOfficialPublicComposition,INTEGRATION_M
 test('complete current source is exact, old receipts intact and all Production flags false',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createOfficialPublicComposition(),m);
  assert.equal(OFFICIAL_PUBLIC_BASE,'7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3');
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261020-continuous-lifecycle.json');
- assert.equal(OFFICIAL_PUBLIC_DELTAS.length,38);
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261020-v1-actual-canonical.json');
+ assert.equal(OFFICIAL_PUBLIC_DELTAS.length,60);
  for(const f of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[f],false);
 });
 test('new source drift, executable-bit drift, unknown files and altered deployment sources refuse',()=>{

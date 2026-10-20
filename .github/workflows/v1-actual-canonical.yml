@@ -1,0 +1,40 @@
+name: V1 Actual canonical candidate
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  v1-actual-canonical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts
+      - name: Current financial period and original source refusal controls
+        run: node --experimental-strip-types --test tests/vnextFinancialResponsePeriod.test.mjs tests/vnextStockResearch.test.mjs tests/vnextColdSourcePriority.test.mjs tests/v1FinancialPeriodRelease.test.mjs
+      - name: Actual-only identifier adapter controls (synthetic)
+        run: node --experimental-strip-types --test tests/v1ActualCanonical.test.mjs
+      - name: Prepare isolated fixed-clock PostgreSQL image
+        run: docker build -t ma-runtime-sparse-ci - < tests/fixtures/runtime-sparse-postgres.Dockerfile
+      - name: Actual canonical transaction, original loader and RLS (Fresh DB, synthetic)
+        run: node --experimental-strip-types --test tests/v1ActualCanonicalSql.integration.mjs
+      - name: Install pinned offline PDF parser libraries
+        run: python -m pip install pypdf==6.10.0 pdfplumber==0.11.9
+      - name: PDF geometry and refusal controls (synthetic, not original replay)
+        run: python tests/test_issuer_financial_pdf.py GeometryControls
+      - run: npm run type-check
+      - run: npm run lint
+      - run: npm run build

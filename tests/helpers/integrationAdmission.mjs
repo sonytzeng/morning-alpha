@@ -10,7 +10,24 @@ import {URL} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-cold-source-priority.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-official-public.json';
+export const OFFICIAL_PUBLIC_BASE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
+const FROZEN_COLD_SOURCE='docs/operations/evidence/core-member-integration-20261019-cold-source-priority.json';
+export const OFFICIAL_PUBLIC_DELTAS=Object.freeze([
+ '.github/workflows/official-public-source.yml',
+ 'docs/operations/official-public-source-wiring-20261020.md',
+ 'docs/operations/evidence/official-public-source-results-20261020.json',
+ 'research/recommendation-official-source-join.ts',
+ 'scripts/official-actuals/acquire-public-evidence.mjs',
+ 'scripts/official-actuals/evaluate-public-v1.mjs',
+ 'tests/officialPublicAcquisition.test.mjs',
+ 'tests/officialPublicV1Evaluation.test.mjs',
+ 'tests/officialV1SourceJoin.test.mjs',
+ 'tests/officialPublicAdmission.test.mjs',
+ 'tests/helpers/integrationAdmission.mjs',
+ 'tests/coldSourcePriorityAdmission.test.mjs',
+ 'tests/r10FunctionalSourceClosure.test.mjs',
+].sort());
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
 const PRIOR_R2='cc167304814b2223977a36802b2666ea8203ff36';
@@ -72,6 +89,8 @@ const FROZEN_PRODUCER15_MONTHLY_MANIFEST='docs/operations/evidence/core-member-i
 // Explicitly reviewed composition deltas. No patterns, glob, deployment flags,
 // automatic inventory admission or addition to any previous release catalogue.
 export const INTEGRATION_DELTAS=Object.freeze([
+ FROZEN_COLD_SOURCE,
+ ...OFFICIAL_PUBLIC_DELTAS,
  FROZEN_PRODUCER15_MONTHLY_MANIFEST,
  'src/features/vnext/dailyAdapter.ts',
  'tests/vnextDailyDatabase.integration.mjs',
@@ -373,7 +392,28 @@ export function integrationScope(){
  }
  return [...fixedScope];
 }
+function verifyOfficialPublicBoundary(read,mode){
+ assert.deepEqual(Buffer.from(read(FROZEN_COLD_SOURCE)),frozenReceipt(OFFICIAL_PUBLIC_BASE,FROZEN_COLD_SOURCE),'INTEGRATION_COLD_SOURCE_RECEIPT_DRIFT');
+ const allowed=new Set(OFFICIAL_PUBLIC_DELTAS);
+ for(const [path,row]of tree(OFFICIAL_PUBLIC_BASE))if(!allowed.has(path)){
+  assert.equal(integrationHash(read(path)),row.sha256,'INTEGRATION_SOURCE_DRIFT:'+path);
+  assert.equal(mode(path),row.mode,'INTEGRATION_BASE_MODE_DRIFT:'+path);
+ }
+}
+export function createOfficialPublicComposition(read=integrationPhysicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
+ verifyOfficialPublicBoundary(read,mode);
+ const scope=integrationScope(),baseline=tree(INTEGRATION_BASE),prior=tree(OFFICIAL_PUBLIC_BASE),allowed=new Set(OFFICIAL_PUBLIC_DELTAS);
+ assert.deepEqual([...paths].sort(),[...scope,INTEGRATION_MANIFEST].sort(),'INTEGRATION_UNKNOWN_PATH');
+ const old=JSON.parse(frozenReceipt(OFFICIAL_PUBLIC_BASE,FROZEN_COLD_SOURCE)),oldRows=new Map(old.files.map(row=>[row.path,row]));
+ return {...old,files:scope.map(path=>{
+  const after_sha256=integrationHash(read(path)),fileMode=mode(path);assert.match(fileMode,/^100(644|755)$/);
+  if(!allowed.has(path)){const frozen=prior.get(path);assert(frozen);assert.equal(after_sha256,frozen.sha256,'INTEGRATION_SOURCE_DRIFT:'+path);assert.equal(fileMode,frozen.mode);}
+  return {path,before_sha256:baseline.get(path)?.sha256??null,after_sha256,mode:fileMode,
+   origin:INTEGRATION_DELTAS.includes(path)?'composition':oldRows.get(path).origin};
+ })};
+}
 export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
+ verifyOfficialPublicBoundary(read,mode);
  const m=JSON.parse(read(INTEGRATION_MANIFEST));
  assert.deepEqual(Object.keys(m).sort(),['schema','base','parents','files','production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'].sort());
  assert.equal(m.schema,'CORE_MEMBER_COMPOSITION_V1');assert.equal(m.base,INTEGRATION_BASE);assert.deepEqual(m.parents,INTEGRATION_PARENTS);

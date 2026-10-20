@@ -1,0 +1,36 @@
+{
+  "schema": "OFFICIAL_PUBLIC_SOURCE_WIRING_SAFE_RESULTS_V1",
+  "base": "7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3",
+  "production_authorized": false,
+  "production_operations": 0,
+  "original_v1_thresholds_changed": false,
+  "pr281_deployment": "HOLD_NOT_INCLUDED",
+  "official_financial_snapshots": {
+    "universe": 72,
+    "captured_symbols": 72,
+    "period": "2026-Q2",
+    "direct_single_quarter_verified": 0,
+    "preannouncement_consensus_versions_obtained": 0,
+    "guidance_obtained": 0,
+    "sources": [
+      {"url": "https://openapi.twse.com.tw/v1/opendata/t187ap06_L_ci", "rows": 54, "http": 200, "first_seen_at": "2026-10-20T00:53:07.187Z", "sha256": "9fa0ce66379face6f4b17a2d159269d1e6504d9719e515c5f583053c306bf806", "license_dataset": "https://data.gov.tw/dataset/91998"},
+      {"url": "https://openapi.twse.com.tw/v1/opendata/t187ap06_L_fh", "rows": 7, "http": 200, "first_seen_at": "2026-10-20T00:53:07.210Z", "sha256": "179765b6de1a04f05046cb5abf587b151d556d3b81f5db3b6fd70588ebfc4e3d", "license_dataset": "https://data.gov.tw/dataset/91999"},
+      {"url": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap06_O_ci", "rows": 11, "http": 200, "first_seen_at": "2026-10-20T00:59:53.836Z", "sha256": "646ae77acc83f7467fd7f665bb64080dfd8e3bfd3c3c36a47c5df9deb54045b2", "license_dataset": "https://data.gov.tw/dataset/94853"}
+    ],
+    "distinct_finance_source_sample_success": "3/3; one observed sample, not uptime",
+    "actual_only_retained_2330_rows_separate": 4,
+    "retained_actual_missing": ["EXACT_ANNOUNCEMENT_VERSION", "PREANNOUNCEMENT_CONSENSUS", "GUIDANCE", "FORMAL_ADMISSION"]
+  },
+  "official_events": {"facts": 12, "companies": 5, "causal_approved": 0, "publication_approved": 0, "datasets": ["https://data.gov.tw/dataset/18415", "https://data.gov.tw/dataset/18418"]},
+  "mops_xbrl": {"attempted": 1, "requested_quarter": "2026-Q3", "http": 200, "bytes": 98, "status": "NO_SUPPORTED_INLINE_XBRL_INSTANCE", "sha256": "54112594858a0455d96e7a520f6c4b07c3f4af6bfac128a0628084e32ba6fa61", "other_quarters": "NOT_ATTEMPTED_NO_BYPASS", "default_live_transport": "DISABLED_PERMISSION_UNVERIFIED"},
+  "v1_isolated_source_join": {"universe": 72, "evaluated": 0, "blocked": 72, "ready": 0, "watch": 0, "none": 0, "retained_last_price_date": "2026-10-16", "not_production_or_forward": true},
+  "market_twd": {"scope": "MARKET_ONLY_NOT_PER_STOCK", "bfi82u_default_get_removed": true, "automation_and_member_rights": "UNVERIFIED_FOR_THIS_RESOURCE", "historical_private_http_observation_preserved": true},
+  "per_stock_twd": {"checked_official_interfaces": "TWSE T86 / TPEx daily institutional trading", "unit": "SHARES_NOT_ACTUAL_TWD", "other_official_products": "NOT_EXCLUDED", "shares_times_price_used": false},
+  "licensing": {"ogl": "https://data.gov.tw/license", "covered_dataset_usage": "CONDITIONAL_ALLOWED_WITH_ATTRIBUTION", "all_provider_or_ir_material_blanket_allowed": false, "member_release_authorized": false, "paid_purchase": false, "new_messages_sent": false},
+  "development_failures_preserved": ["REVISION_ID_FORMAT_REPAIRED", "UNDEFINED_BODY_KEY_PREVENTED_HASH_SAVE_REPAIRED"],
+  "forward_sample": 0,
+  "outcome_sample": 0,
+  "payment": "DISABLED",
+  "commercial_stability": "NOT_SCORED",
+  "stock_recommendation_delivered": false
+}

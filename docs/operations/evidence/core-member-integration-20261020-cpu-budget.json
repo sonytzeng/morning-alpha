@@ -44,7 +44,7 @@
     {
       "path": ".github/workflows/core-member-integration.yml",
       "before_sha256": null,
-      "after_sha256": "06e5eeb6d8f3010125b5355e4ad6105e4fd50d45111369c439bfc0cf23f6e890",
+      "after_sha256": "b02b0d05fcb68bb1cbf2e9f5ceb5f030a692be420f6b2f826e1b6d77254ad88b",
       "mode": "100644",
       "origin": "composition"
     },
@@ -177,7 +177,7 @@
     {
       "path": "docs/operations/cpu-budget-recovery-20261020.md",
       "before_sha256": null,
-      "after_sha256": "f1f44a0a3c031ca859cc0464e2bda6058f63e2572cb479f3fb514c62e8f48747",
+      "after_sha256": "b7994e32894c37ca1757814f026668ca8c1660e07ef949f3fb3a53c5cd787c1c",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2347,7 +2347,7 @@
     {
       "path": "tests/cpuBudgetAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "946dc74ae8be729f8e25fcf9ce0ac51a0c63618a7053b3355dbe83ab84274c5c",
+      "after_sha256": "f6dd8cb250dc6ea9dbdf4f24471a1b77c6edb3f7e8a2772b8b4339f82cc8ad1d",
       "mode": "100644",
       "origin": "composition"
     },

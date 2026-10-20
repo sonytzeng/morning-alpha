@@ -27,13 +27,15 @@ test('CPU repair does not change protected evaluators, identity, business RPC or
   'supabase/functions/vnext-daily-research-v1/index.ts','supabase/functions/vnext-daily-research-v1/handler.ts','supabase/functions/_shared/vnext-daily-hook.ts',
   'supabase/migrations/20261012054120_vnext_daily_research_runtime_candidate.sql','supabase/functions/recommendation-v2-forward-worker-v1/index.ts',
   'supabase/functions/recommendation-stock-evidence-v1/index.ts','supabase/functions/get-report-payload/index.ts','supabase/functions/member-access/index.ts',
-  'supabase/functions/line-daily-push/index.ts','supabase/config.toml','package.json','package-lock.json','tests/coldSourcePriorityAdmission.test.mjs'])assert.deepEqual(read(p),execFileSync('git',['show',base+':'+p],{maxBuffer:8e6}),p);
+  'supabase/functions/line-daily-push/index.ts','supabase/config.toml','package.json','package-lock.json','tests/coldSourcePriorityAdmission.test.mjs','tests/r10FunctionalSourceClosure.test.mjs'])assert.deepEqual(read(p),execFileSync('git',['show',base+':'+p],{maxBuffer:8e6}),p);
  const workflow=read('.github/workflows/core-member-integration.yml').toString();assert(workflow.includes('ref: '+base));
  assert(workflow.includes('working-directory: build/cpu-budget-historical-base'));assert(workflow.includes('tests/vnextDailyCpuBudget.test.mjs'));
  assert(workflow.includes('deno-version: v2.9.7'));
  assert(workflow.includes('deno check --no-lock --node-modules-dir=none supabase/functions/vnext-daily-research-v1/index.ts'));
  for(const line of workflow.split('\n').filter(line=>line.includes('deno check --no-lock')||line.includes('deno test --no-lock')))assert(line.includes('--node-modules-dir=none'));
  assert(workflow.includes('node --test tests/atomicRowForwardFixture.test.mjs'));
+ assert(workflow.includes('name: Current event alignment and issuer review refusal regressions\n        run: node --experimental-strip-types --test tests/eventAlignmentRefresh.test.mjs tests/recommendationIssuerEventReview.test.mjs\n'));
+ assert(workflow.includes('name: Historical R10 immutable A and B24 source closure assertions unchanged\n        working-directory: build/cpu-budget-historical-base\n        run: node --experimental-strip-types --test tests/r10FunctionalSourceClosure.test.mjs\n'));
  const quarter=read('.github/workflows/owner-quarter-live-candidate.yml').toString();
  assert(quarter.includes('node --experimental-strip-types --test tests/cpuBudgetAdmission.test.mjs'));
  assert(quarter.includes('ref: '+base));assert(quarter.includes('working-directory: build/cpu-budget-historical-base'));

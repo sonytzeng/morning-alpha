@@ -215,7 +215,13 @@ jobs:
           node scripts/operations/producer15-monthly-release-20261019/materialize.mjs recovery
           deno check --no-lock --node-modules-dir=none build/producer15-monthly-release-20261019/candidate/supabase/functions/recommendation-stock-evidence-v1/index.ts build/producer15-monthly-release-20261019/recovery/supabase/functions/recommendation-stock-evidence-v1/index.ts
       - run: deno check --no-lock --node-modules-dir=none research/retained-quarter-financials.ts supabase/functions/vnext-daily-research-v1/index.ts supabase/functions/get-report-payload/index.ts supabase/functions/recommendation-stock-evidence-v1/index.ts supabase/functions/v1-provider-capability-review-v1/index.ts
-      - run: node --experimental-strip-types --test tests/eventAlignmentRefresh.test.mjs tests/recommendationIssuerEventReview.test.mjs tests/r10FunctionalSourceClosure.test.mjs
+      - name: Current event alignment and issuer review refusal regressions
+        run: node --experimental-strip-types --test tests/eventAlignmentRefresh.test.mjs tests/recommendationIssuerEventReview.test.mjs
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+      - name: Historical R10 immutable A and B24 source closure assertions unchanged
+        working-directory: build/cpu-budget-historical-base
+        run: node --experimental-strip-types --test tests/r10FunctionalSourceClosure.test.mjs
         env:
           NODE_OPTIONS: --experimental-strip-types
       - run: deno check --no-lock --node-modules-dir=none supabase/functions/_shared/recommendation-financial-actuals-candidate.ts research/recommendation-event-alignment-candidate.ts research/recommendation-issuer-event-review-candidate.ts

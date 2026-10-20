@@ -7,6 +7,7 @@ import {INTEGRATION_MANIFEST,ORIGINAL_INGRESS_BASE,ORIGINAL_INGRESS_DELTAS,FROZE
  createOriginalIngressComposition,verifyIntegrationCandidate} from './helpers/integrationAdmission.mjs';
 const expected=[
  '.github/workflows/original-observation-ingress.yml','docs/operations/original-observation-ingress-20261019.md',
+ '.github/workflows/validate-release.yml','tests/helpers/clockedPsql.mjs',
  'src/features/vnext/contracts.ts','src/features/vnext/engine.ts','src/features/vnext/originalIngress.ts',
  'supabase/migrations/20261019123345_original_observation_ingress_candidate_v1.sql',
  'tests/coldSourcePriorityAdmission.test.mjs','tests/helpers/integrationAdmission.mjs','tests/originalIngressAdmission.test.mjs','tests/r10FunctionalSourceClosure.test.mjs',

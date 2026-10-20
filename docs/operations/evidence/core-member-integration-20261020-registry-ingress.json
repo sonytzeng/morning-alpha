@@ -107,7 +107,7 @@
     {
       "path": ".github/workflows/validate-release.yml",
       "before_sha256": "e3105a1ba7f6a7980acf68a14a1032c8a18f42ef3c04145194d4f9a6e1b2213b",
-      "after_sha256": "3ee3bd2aeb5bf7b785b91b0d69f88082823106e05d906e6e96a5ff5e38f3762a",
+      "after_sha256": "ac3741322f0081969b0a19f04903a984d8aff7422d4e935f5a1ac047a9c7e9f7",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2422,6 +2422,13 @@
       "origin": "composition"
     },
     {
+      "path": "tests/helpers/clockedPsql.mjs",
+      "before_sha256": "116a3f403e05790efa88838ac97790a3e5e79020616cbfde18720531023a63a8",
+      "after_sha256": "2c70ef8e56f138e614bb79087e94e05e5958891acfb3b9f0441307651b44384f",
+      "mode": "100755",
+      "origin": "composition"
+    },
+    {
       "path": "tests/helpers/coreContentOsCapturedReplay.mjs",
       "before_sha256": "c8df176c67d37e73057ba3d4c8e66b7d82e6307fb6215818ea0c14bdf9754a4b",
       "after_sha256": "f34a7b85ee21d7b5a7239ec46f63e7b6ce447ce0a72d225ee2ff5ac2d91326fe",
@@ -2445,7 +2452,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "ae6c7cb4620b13a05adb0b7b4cda2f33f4471aa4db01dfd78d16b726681f9279",
+      "after_sha256": "83cceed7bca68a70ee192020b6f14d57b0080f647b5dbf16fd6e04eed487d008",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2550,7 +2557,7 @@
     {
       "path": "tests/originalIngressAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "3ff644d4b5afa0d7ce92242f2d198cbb42243443e4a7250ce6e5fe926626a4d7",
+      "after_sha256": "cc5c8a1c8c6ad77dc08b33402ab5d35a1237285e602ea6943a95a01988b236dc",
       "mode": "100644",
       "origin": "composition"
     },

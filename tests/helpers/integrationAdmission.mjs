@@ -18,6 +18,8 @@ export const FROZEN_COLD_SOURCE_MANIFEST='docs/operations/evidence/core-member-i
 // Exact candidate engineering scope, not a deployment or source-rights grant.
 export const ORIGINAL_INGRESS_DELTAS=Object.freeze([
  '.github/workflows/original-observation-ingress.yml',
+ '.github/workflows/validate-release.yml',
+ 'tests/helpers/clockedPsql.mjs',
  'docs/operations/original-observation-ingress-20261019.md',
  'src/features/vnext/contracts.ts',
  'src/features/vnext/engine.ts',

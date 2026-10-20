@@ -15,6 +15,7 @@ export const OFFICIAL_PUBLIC_BASE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
 const FROZEN_COLD_SOURCE='docs/operations/evidence/core-member-integration-20261019-cold-source-priority.json';
 export const OFFICIAL_PUBLIC_DELTAS=Object.freeze([
  '.github/workflows/official-public-source.yml',
+ '.github/workflows/validate-release.yml',
  'docs/operations/official-public-source-wiring-20261020.md',
  'docs/operations/evidence/official-public-source-results-20261020.json',
  'research/recommendation-official-source-join.ts',
@@ -25,6 +26,7 @@ export const OFFICIAL_PUBLIC_DELTAS=Object.freeze([
  'tests/officialV1SourceJoin.test.mjs',
  'tests/officialPublicAdmission.test.mjs',
  'tests/helpers/integrationAdmission.mjs',
+ 'tests/helpers/clockedPsql.mjs',
  'tests/coldSourcePriorityAdmission.test.mjs',
  'tests/r10FunctionalSourceClosure.test.mjs',
 ].sort());

@@ -107,7 +107,7 @@
     {
       "path": ".github/workflows/validate-release.yml",
       "before_sha256": "e3105a1ba7f6a7980acf68a14a1032c8a18f42ef3c04145194d4f9a6e1b2213b",
-      "after_sha256": "3ee3bd2aeb5bf7b785b91b0d69f88082823106e05d906e6e96a5ff5e38f3762a",
+      "after_sha256": "ac3741322f0081969b0a19f04903a984d8aff7422d4e935f5a1ac047a9c7e9f7",
       "mode": "100644",
       "origin": "composition"
     },
@@ -604,7 +604,7 @@
     {
       "path": "docs/operations/official-public-source-wiring-20261020.md",
       "before_sha256": null,
-      "after_sha256": "09f48312a580aa8b7cdc46a21be5ac4d344d654a76a3c135652351aa2c583abd",
+      "after_sha256": "6cc724146929c8a9862073899e352cfb8fd5a005fdcca46da971ad278a8424c5",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2394,6 +2394,13 @@
       "origin": "composition"
     },
     {
+      "path": "tests/helpers/clockedPsql.mjs",
+      "before_sha256": "116a3f403e05790efa88838ac97790a3e5e79020616cbfde18720531023a63a8",
+      "after_sha256": "2c70ef8e56f138e614bb79087e94e05e5958891acfb3b9f0441307651b44384f",
+      "mode": "100755",
+      "origin": "composition"
+    },
+    {
       "path": "tests/helpers/coreContentOsCapturedReplay.mjs",
       "before_sha256": "c8df176c67d37e73057ba3d4c8e66b7d82e6307fb6215818ea0c14bdf9754a4b",
       "after_sha256": "f34a7b85ee21d7b5a7239ec46f63e7b6ce447ce0a72d225ee2ff5ac2d91326fe",
@@ -2417,7 +2424,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "a15ff1faba615c67e7450fd6a8763cd32caf8b2a333d8f27f1c567e8b0fca8ef",
+      "after_sha256": "16cab776d9fcdf4a7098d9607e5f8e21fe49f10dcc11102da92335e209ccea98",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2529,7 +2536,7 @@
     {
       "path": "tests/officialPublicAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "800189dd2b9e65ee7503688ee745aa23b8d99c14eb0ef0026ddd7cc5e81426a0",
+      "after_sha256": "9f9f25b925d9ec6767d3f266dfe979e566d88e6157b468ad10f1b2a4524d76e5",
       "mode": "100644",
       "origin": "composition"
     },

@@ -42,6 +42,8 @@
 
 新程式的合成／隔離測試、Deno check、type-check、lint、build 與精確 HEAD CI 分開記錄；未變的 Fresh DB／RLS／會員測試證據可按 exact source 沿用，沒有冒稱新的正式 Free／Premium 登入。此次不增加 SQL／RPC／RLS，也不操作正式業務。
 
+既有 Atomic 歷史測試把 10/20 寫成未來成功案例，實際 CI 到達該日 08:45 後被正式 deadline 正確拒絕。本增量只將該測試導向獨立、無網路的 PostgreSQL 固定時鐘（UTC00:35／台北08:35）；原測試 SHA256 `b8c0bf551c51107a56d82f0abdfb9a6e31c22f341502548f75e46e4a612b67e8`、fixture、Migration 與正式 SQL 皆不改。原斷言完整通過，包含過期歷史拒絕及零寫入；錯誤容器、非隔離網路、非測試 DB、遠端 host 四項均拒絕，專用容器已移除。這是 CI 時間可重現性修復，不是 Production 重播或截止門檻變更。新 HEAD 的遠端 CI 必須另行確認，不能沿用舊綠燈。
+
 ## 發布及回復
 
 **本批 Production NO-GO**：是可重現的來源取得／原 evaluator 接線候選，不是已具完整資料的正式推薦 Producer。沒有要求部署空 Observation 入口、整包 main 或舊依賴。PR281仍獨立 HOLD。正式來源准入、私有 Producer／Reader 變更、原子 Observation 流程、會員公開，各自前置條件未通過前不得部署。

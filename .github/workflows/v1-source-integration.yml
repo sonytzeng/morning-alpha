@@ -1,0 +1,22 @@
+name: V1 source union candidate admission
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  current-union:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - name: Complete current tree, exact parents, six support deltas and immutable parent assertions
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs
+      - name: Current Registry, Actual-only and response-period controls; not source admission
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextContracts.test.mjs tests/vnextOriginalTimestamp.test.ts tests/vnextOriginalIngress.test.mjs tests/vnextOriginalRegistryIngress.test.mjs tests/v1ActualCanonical.test.mjs tests/vnextFinancialResponsePeriod.test.mjs tests/vnextForwardCutoffRuntime.test.mjs

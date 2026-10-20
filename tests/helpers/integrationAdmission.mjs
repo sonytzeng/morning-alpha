@@ -2,15 +2,38 @@
 // are tested at immutable parent trees, only AFTER the complete live tree is
 // admitted here. This is source integrity, never deployment authorization.
 import assert from 'node:assert/strict';
-import {readFileSync,lstatSync} from 'node:fs';
+import {readFileSync,lstatSync,mkdtempSync,rmSync,existsSync,symlinkSync,mkdirSync,readdirSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {Buffer} from 'node:buffer';
 import {URL} from 'node:url';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-v1-actual-canonical.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-v1-source-union.json';
+export const SOURCE_UNION_BASE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
+export const SOURCE_UNION_PARENTS=Object.freeze({actual:'64565b5e44568c5c653bd2007992d482df36e60f',registry:'1db13616337633d4765db4650dd27f5dc68c0bd6'});
+export const REGISTRY_SUPPORT_PARENT='d74a25d803b6fe6a7dc9e21cef06c3e1306ec559';
+export const REGISTRY_SUPPORT_PATHS=Object.freeze([
+ '.github/workflows/original-observation-ingress.yml',
+ 'docs/operations/evidence/core-member-integration-20261020-registry-ingress.json',
+ 'docs/operations/original-registry-ingress-20261020.md',
+ 'tests/fixtures/originalRegistryIngress.mjs',
+ 'tests/vnextOriginalRegistryIngress.test.mjs',
+ 'tests/vnextOriginalRegistryIngressDatabase.integration.mjs',
+].sort());
+export const SOURCE_UNION_SUPPORT=Object.freeze([
+ '.github/workflows/core-member-integration.yml',
+ '.github/workflows/v1-source-integration.yml',
+ 'tests/helpers/integrationAdmission.mjs',
+ 'tests/originalIngressAdmission.test.mjs',
+ 'tests/officialPublicAdmission.test.mjs',
+].sort());
+const FROZEN_ACTUAL='docs/operations/evidence/core-member-integration-20261020-v1-actual-canonical.json';
+const FROZEN_REGISTRY='docs/operations/evidence/core-member-integration-20261020-registry-ingress.json';
 const FROZEN_CONTINUOUS_LIFECYCLE='docs/operations/evidence/core-member-integration-20261020-continuous-lifecycle.json';
 const V1_ACTUAL_PARENT='3f494a209079801525a0f6208707c8b3d3d61155';
 export const OFFICIAL_PUBLIC_BASE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
@@ -79,6 +102,36 @@ export const OFFICIAL_PUBLIC_DELTAS=Object.freeze([
  'tests/vnextDailyWiring.test.mjs',
  'tests/vnextStockResearch.test.mjs',
 ].sort());
+const FROZEN_ORIGINAL_INGRESS='docs/operations/evidence/core-member-integration-20261019-original-ingress.json';
+const ORIGINAL_REGISTRY_PARENT='ccd47f83b06d26f89027e644f31824dfd929b2d4';
+export const ORIGINAL_INGRESS_BASE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
+export const FROZEN_COLD_SOURCE_MANIFEST='docs/operations/evidence/core-member-integration-20261019-cold-source-priority.json';
+// Exact candidate engineering scope, not a deployment or source-rights grant.
+export const ORIGINAL_INGRESS_DELTAS=Object.freeze([
+ '.github/workflows/original-observation-ingress.yml',
+ '.github/workflows/validate-release.yml',
+ 'tests/helpers/clockedPsql.mjs',
+ 'docs/operations/original-observation-ingress-20261019.md',
+ 'src/features/vnext/contracts.ts',
+ 'src/features/vnext/engine.ts',
+ 'src/features/vnext/originalIngress.ts',
+ 'supabase/migrations/20261019123345_original_observation_ingress_candidate_v1.sql',
+ 'tests/coldSourcePriorityAdmission.test.mjs',
+ 'tests/helpers/integrationAdmission.mjs',
+ 'tests/originalIngressAdmission.test.mjs',
+ 'tests/r10FunctionalSourceClosure.test.mjs',
+ 'tests/vnextContracts.test.mjs',
+ 'tests/vnextOriginalIngress.test.mjs',
+ 'tests/vnextOriginalIngressDatabase.integration.mjs',
+ 'tests/vnextOriginalTimestamp.test.ts',
+ FROZEN_ORIGINAL_INGRESS,
+ 'docs/operations/original-registry-ingress-20261020.md',
+ 'src/features/vnext/originalRegistryIngress.ts',
+ 'src/features/vnext/originalRegistryIngress.candidate.sql',
+ 'tests/fixtures/originalRegistryIngress.mjs',
+ 'tests/vnextOriginalRegistryIngress.test.mjs',
+ 'tests/vnextOriginalRegistryIngressDatabase.integration.mjs',
+].sort());
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
 const PRIOR_R2='cc167304814b2223977a36802b2666ea8203ff36';
@@ -142,6 +195,8 @@ const FROZEN_PRODUCER15_MONTHLY_MANIFEST='docs/operations/evidence/core-member-i
 export const INTEGRATION_DELTAS=Object.freeze([
  FROZEN_COLD_SOURCE,
  ...OFFICIAL_PUBLIC_DELTAS,
+ ...ORIGINAL_INGRESS_DELTAS,
+ FROZEN_ACTUAL,FROZEN_REGISTRY,...SOURCE_UNION_SUPPORT,
  FROZEN_PRODUCER15_MONTHLY_MANIFEST,
  'src/features/vnext/dailyAdapter.ts',
  'tests/vnextDailyDatabase.integration.mjs',
@@ -443,36 +498,122 @@ export function integrationScope(){
  }
  return [...fixedScope];
 }
-function verifyOfficialPublicBoundary(read,mode){
- assert.equal(mode(INTEGRATION_MANIFEST),'100644','INTEGRATION_MANIFEST_MODE_DRIFT');
+// Only immutable Git objects define inherited source bytes. The current seal
+// cannot turn a changed Runtime/SQL/catalogue into an approved parent source.
+const unionBlobs=new Map();
+function unionBlob(revision,path){
+ const key=revision+':'+path;
+ if(!unionBlobs.has(key)){
+  const rows=git(['ls-tree','-z',revision,'--',path]).split('\0').filter(Boolean);
+  if(!rows.length){unionBlobs.set(key,null);return null;}
+  assert.equal(rows.length,1);const [meta,name]=rows[0].split('\t'),[mode,type,oid]=meta.split(' ');
+  assert.equal(name,path);assert.equal(type,'blob');assert.match(mode,/^100(644|755)$/);
+  const bytes=execFileSync('git',['--no-replace-objects','cat-file','blob',oid],{cwd:root,maxBuffer:8e6});
+  unionBlobs.set(key,{mode,sha256:integrationHash(bytes),bytes});
+ }
+ return unionBlobs.get(key);
+}
+export function sourceUnionParentRead(view,path){
+ assert(Object.hasOwn(SOURCE_UNION_PARENTS,view),'UNION_UNKNOWN_PARENT');
+ const row=unionBlob(SOURCE_UNION_PARENTS[view],path);assert(row,'UNION_PARENT_ABSENT:'+path);
+ return Buffer.from(row.bytes);
+}
+export function sourceUnionLineage(){
+ const receipts=[
+  {view:'actual',revision:SOURCE_UNION_PARENTS.actual,path:FROZEN_ACTUAL,sha256:'c23aa84a894faf51c536d34d51586a3cca6dd24a6c3d44026a7f5fcb9f54d1ee'},
+  {view:'registry',revision:SOURCE_UNION_PARENTS.registry,path:FROZEN_REGISTRY,sha256:'0fe3ec91a03ebeeec1ac8d3fa00e44aa295bf74dbe25c6a620d55b4e3ea35c06'},
+  {view:'registry_prior',revision:REGISTRY_SUPPORT_PARENT,path:FROZEN_REGISTRY,sha256:'c73698b0e0280e48130e0876e79205c7457916d67fe47d4ff38b1164bf939ba3'},
+ ];
+ for(const r of receipts)assert.equal(unionBlob(r.revision,r.path)?.sha256,r.sha256,'UNION_PINNED_RECEIPT_DRIFT');
+ const historical_proof={revision:'965263fe15dc672cac6c61af06bfd14d69044dd3',path:'tests/integrationAdmission.test.mjs',sha256:'539e44ccda3168a0b0fdb13ef8fb700b93e994d763f8f0a8a981c720a56cdcbf'};
+ assert.equal(unionBlob(historical_proof.revision,historical_proof.path)?.sha256,historical_proof.sha256,'UNION_HISTORICAL_PROOF_DRIFT');
+ return {schema:'V1_SOURCE_UNION_CANDIDATE_1',base:SOURCE_UNION_BASE,parents:{...SOURCE_UNION_PARENTS},
+  registry_support:{parent:REGISTRY_SUPPORT_PARENT,paths:[...REGISTRY_SUPPORT_PATHS]},receipts,
+  historical_proof,support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+}
+let unionExpected;
+function sourceUnionExpected(){
+ if(!unionExpected){
+  assert.equal(git(['merge-base',SOURCE_UNION_PARENTS.actual,SOURCE_UNION_PARENTS.registry]).trim(),SOURCE_UNION_BASE,'UNION_PARENT_FORK');
+  assert.equal(git(['rev-parse',SOURCE_UNION_PARENTS.registry+'^']).trim(),REGISTRY_SUPPORT_PARENT,'UNION_SUPPORT_PARENT');
+  const delta=(a,b)=>git(['diff','--no-renames','--name-only','-z',a,b,'--']).split('\0').filter(Boolean).sort();
+  assert.deepEqual(delta(REGISTRY_SUPPORT_PARENT,SOURCE_UNION_PARENTS.registry),REGISTRY_SUPPORT_PATHS,'UNION_EXACT_SUPPORT_SCOPE');
+  const a=delta(SOURCE_UNION_BASE,SOURCE_UNION_PARENTS.actual),b=delta(SOURCE_UNION_BASE,SOURCE_UNION_PARENTS.registry);
+  const allowed={actual:new Set([...OFFICIAL_PUBLIC_DELTAS,FROZEN_ACTUAL]),registry:new Set([...ORIGINAL_INGRESS_DELTAS,FROZEN_REGISTRY])};
+  for(const [view,paths]of [['actual',a],['registry',b]])for(const p of paths)assert(allowed[view].has(p),'UNION_UNREVIEWED_PARENT_DELTA:'+p);
+  const expected=new Map(tree(SOURCE_UNION_BASE)),support=new Set(SOURCE_UNION_SUPPORT);
+  const equal=(x,y)=>x?.sha256===y?.sha256&&x?.mode===y?.mode;
+  for(const p of new Set([...a,...b])){
+   if(support.has(p))continue;
+   const old=expected.get(p),left=unionBlob(SOURCE_UNION_PARENTS.actual,p),right=unionBlob(SOURCE_UNION_PARENTS.registry,p);
+   const selected=equal(left,right)?left:equal(left,old)?right:equal(right,old)?left:null;
+   assert(selected,'UNION_UNRESOLVED_SOURCE_CONFLICT:'+p);
+   expected.set(p,selected);
+  }
+  for(const p of support)expected.delete(p);
+  unionExpected=expected;
+ }
+ return unionExpected;
+}
+function verifySourceUnionBoundary(read,mode){
+ sourceUnionLineage();
+ for(const [p,row]of sourceUnionExpected()){
+  assert.equal(integrationHash(read(p)),row.sha256,'INTEGRATION_SOURCE_DRIFT:'+p);
+  assert.equal(mode(p),row.mode,'INTEGRATION_MODE_DRIFT:'+p);
+ }
+ for(const p of SOURCE_UNION_SUPPORT)assert.equal(mode(p),'100644','INTEGRATION_MODE_DRIFT:'+p);
+ assert.deepEqual(Buffer.from(read(FROZEN_ORIGINAL_INGRESS)),frozenReceipt(ORIGINAL_REGISTRY_PARENT,FROZEN_ORIGINAL_INGRESS),'INTEGRATION_ORIGINAL_INGRESS_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_CONTINUOUS_LIFECYCLE)),frozenReceipt(V1_ACTUAL_PARENT,FROZEN_CONTINUOUS_LIFECYCLE),'INTEGRATION_CONTINUOUS_LIFECYCLE_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_OFFICIAL_PUBLIC)),frozenReceipt(PRIOR_CONTINUOUS_BASE,FROZEN_OFFICIAL_PUBLIC),'INTEGRATION_OFFICIAL_PUBLIC_RECEIPT_DRIFT');
- assert.deepEqual(Buffer.from(read(FROZEN_COLD_SOURCE)),frozenReceipt(OFFICIAL_PUBLIC_BASE,FROZEN_COLD_SOURCE),'INTEGRATION_COLD_SOURCE_RECEIPT_DRIFT');
- const allowed=new Set(OFFICIAL_PUBLIC_DELTAS);
- // A new seal authorizes only the reviewed content delta, not an executable
- // mode transition. New JS/TS/JSON/docs/workflows are ordinary source files.
- for(const path of allowed)assert.equal(mode(path),tree(OFFICIAL_PUBLIC_BASE).get(path)?.mode??'100644','INTEGRATION_MODE_DRIFT:'+path);
- for(const [path,row]of tree(OFFICIAL_PUBLIC_BASE))if(!allowed.has(path)){
-  assert.equal(integrationHash(read(path)),row.sha256,'INTEGRATION_SOURCE_DRIFT:'+path);
-  assert.equal(mode(path),row.mode,'INTEGRATION_BASE_MODE_DRIFT:'+path);
- }
 }
-export function createOfficialPublicComposition(read=integrationPhysicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
- verifyOfficialPublicBoundary(read,mode);
- const scope=integrationScope(),baseline=tree(INTEGRATION_BASE),prior=tree(OFFICIAL_PUBLIC_BASE),allowed=new Set(OFFICIAL_PUBLIC_DELTAS);
+export function createSourceUnionComposition(read=integrationPhysicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
+ verifySourceUnionBoundary(read,mode);
+ const scope=integrationScope(),baseline=tree(INTEGRATION_BASE);
  assert.deepEqual([...paths].sort(),[...scope,INTEGRATION_MANIFEST].sort(),'INTEGRATION_UNKNOWN_PATH');
- const old=JSON.parse(frozenReceipt(OFFICIAL_PUBLIC_BASE,FROZEN_COLD_SOURCE)),oldRows=new Map(old.files.map(row=>[row.path,row]));
- return {...old,files:scope.map(path=>{
-  const after_sha256=integrationHash(read(path)),fileMode=mode(path);assert.match(fileMode,/^100(644|755)$/);
-  if(!allowed.has(path)){const frozen=prior.get(path);assert(frozen);assert.equal(after_sha256,frozen.sha256,'INTEGRATION_SOURCE_DRIFT:'+path);assert.equal(fileMode,frozen.mode);}
-  return {path,before_sha256:baseline.get(path)?.sha256??null,after_sha256,mode:fileMode,
-   origin:INTEGRATION_DELTAS.includes(path)?'composition':oldRows.get(path).origin};
- })};
+ const old=JSON.parse(frozenReceipt(SOURCE_UNION_BASE,FROZEN_COLD_SOURCE)),oldRows=new Map(old.files.map(r=>[r.path,r]));
+ return {...old,source_union:sourceUnionLineage(),files:scope.map(path=>({
+  path,before_sha256:baseline.get(path)?.sha256??null,after_sha256:integrationHash(read(path)),mode:mode(path),
+  origin:INTEGRATION_DELTAS.includes(path)?'composition':oldRows.get(path).origin,
+ }))};
+}
+// Compatibility names preserve existing consumers, but both now verify the ONE
+// complete current union. Original parent assertions execute only at their pin.
+export const createOriginalIngressComposition=createSourceUnionComposition;
+export const createOfficialPublicComposition=createSourceUnionComposition;
+const pinnedProofs=Object.freeze({
+ actual:{revision:SOURCE_UNION_PARENTS.actual,tests:['tests/officialPublicAdmission.test.mjs','tests/forwardCutoffAdmission.test.mjs']},
+ registry:{revision:SOURCE_UNION_PARENTS.registry,tests:['tests/originalIngressAdmission.test.mjs']},
+ historical:{revision:'965263fe15dc672cac6c61af06bfd14d69044dd3',tests:['tests/integrationAdmission.test.mjs']},
+});
+export function verifySourceUnionPinnedProof(view){
+ assert(Object.hasOwn(pinnedProofs,view),'UNION_UNKNOWN_PARENT');
+ verifyIntegrationCandidate();
+ const proof=pinnedProofs[view];
+ const folder=mkdtempSync(join(tmpdir(),'ma-union-parent-')),checkout=join(folder,'source');
+ const env={PATH:process.env.PATH,LC_ALL:'C',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',
+  GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0',GIT_OPTIONAL_LOCKS:'0'};
+ try{
+  execFileSync('git',['-c','core.hooksPath=/dev/null','clone','--shared','--no-checkout','--',fileURLToPath(root),checkout],{env,stdio:['ignore','pipe','pipe']});
+  execFileSync('git',['-c','core.hooksPath=/dev/null','--no-replace-objects','checkout','--detach',proof.revision],{cwd:checkout,env,stdio:['ignore','pipe','pipe']});
+  for(const p of proof.tests)assert.deepEqual(readFileSync(join(checkout,p)),unionBlob(proof.revision,p).bytes,'UNION_PINNED_PROOF_DRIFT');
+  const modules=new URL('node_modules',root);
+  if(existsSync(modules)){
+   const target=join(checkout,'node_modules');mkdirSync(target);
+   for(const name of readdirSync(modules))symlinkSync(join(fileURLToPath(modules),name),join(target,name));
+  }
+  execFileSync(process.execPath,['--experimental-strip-types','--test','--test-concurrency=1',...proof.tests],{
+   cwd:checkout,env:{...env,NODE_OPTIONS:'--experimental-strip-types'},encoding:'utf8',maxBuffer:8e6,timeout:120000,
+  });
+ }finally{rmSync(folder,{recursive:true,force:true});assert(!existsSync(folder),'UNION_PINNED_CLEANUP_FAILED');}
+ verifyIntegrationCandidate();
+ return {revision:proof.revision,tests:[...proof.tests],cleanup:'VERIFIED_REMOVED'};
 }
 export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
- verifyOfficialPublicBoundary(read,mode);
+ verifySourceUnionBoundary(read,mode);
+ assert.equal(mode(INTEGRATION_MANIFEST),'100644','INTEGRATION_MANIFEST_MODE_DRIFT');
  const m=JSON.parse(read(INTEGRATION_MANIFEST));
- assert.deepEqual(Object.keys(m).sort(),['schema','base','parents','files','production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'].sort());
+ assert.deepEqual(Object.keys(m).sort(),['schema','base','parents','files','source_union','production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'].sort());
+ assert.deepEqual(m.source_union,sourceUnionLineage(),'UNION_LINEAGE_DRIFT');
  assert.equal(m.schema,'CORE_MEMBER_COMPOSITION_V1');assert.equal(m.base,INTEGRATION_BASE);assert.deepEqual(m.parents,INTEGRATION_PARENTS);
  assert.deepEqual(Buffer.from(read(FROZEN_INTEGRATION_MANIFEST)),frozenReceipt(PRIOR_INTEGRATION,FROZEN_INTEGRATION_MANIFEST),'INTEGRATION_PRIOR_RECEIPT_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_R2_MANIFEST)),frozenReceipt(PRIOR_R2,FROZEN_R2_MANIFEST),'INTEGRATION_R2_RECEIPT_DRIFT');

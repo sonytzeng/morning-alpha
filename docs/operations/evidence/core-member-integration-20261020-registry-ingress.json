@@ -611,7 +611,7 @@
     {
       "path": "docs/operations/original-registry-ingress-20261020.md",
       "before_sha256": null,
-      "after_sha256": "1609f6a0a093276e599a023cba74528e3059180b4e6ffdcbcea0009e5ed8a083",
+      "after_sha256": "26e04cfb9741e7876d1244cbe0d9c33898e2b110ccf1759f51642623ab1ace18",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1437,14 +1437,14 @@
     {
       "path": "src/features/vnext/originalRegistryIngress.candidate.sql",
       "before_sha256": null,
-      "after_sha256": "6b9f5532ad4c67d792100fc7f94bbeb41cfdccd7907bf7dea053a98cfea940d2",
+      "after_sha256": "41df5e0d55d8c31b707743cec99f229a83695cb2faf5c084fcbc5343407c4933",
       "mode": "100644",
       "origin": "composition"
     },
     {
       "path": "src/features/vnext/originalRegistryIngress.ts",
       "before_sha256": null,
-      "after_sha256": "c649e489fa2326e298d3056899cfebaa2c77a97d8c0d9b8ba53ff2016937b932",
+      "after_sha256": "5552df72566401bc82738bb22eea82095bf78965b5844dc03824f120905943ad",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2403,7 +2403,7 @@
     {
       "path": "tests/fixtures/originalRegistryIngress.mjs",
       "before_sha256": null,
-      "after_sha256": "99111624ffc45d1afc39cc2da00cdbc7c956c01e03d3346451633a0359527a6b",
+      "after_sha256": "82e123cd68da161cba8510dc76fafd1c1f22fbd6acf832fe02ca5c4d51706fb2",
       "mode": "100644",
       "origin": "composition"
     },
@@ -3054,14 +3054,14 @@
     {
       "path": "tests/vnextOriginalRegistryIngress.test.mjs",
       "before_sha256": null,
-      "after_sha256": "ca09e6684450139251f03bb6b450f7bab86c8467212468bb58f22380217df93a",
+      "after_sha256": "74e4b409cc281802649a87c31f91451cbaefabbde140063ae5e8b791ba27dd48",
       "mode": "100644",
       "origin": "composition"
     },
     {
       "path": "tests/vnextOriginalRegistryIngressDatabase.integration.mjs",
       "before_sha256": null,
-      "after_sha256": "802a8697fc58a99ce3ae7bf2433eb30400027a8da016d0102b669c422bd0b50c",
+      "after_sha256": "32abff3f68d09c93eb88f6a02da0cfd7ae48b349b52156d4c5d7e40a288db9db",
       "mode": "100644",
       "origin": "composition"
     },

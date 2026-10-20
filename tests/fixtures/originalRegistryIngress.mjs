@@ -1,5 +1,5 @@
 // SYNTHETIC ISOLATED CONTROLS ONLY. No real source receipt, right or approval.
-import {createHash} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {HORIZONS,snapshotHash} from '../../src/features/vnext/contracts.ts';
 export const sha=value=>createHash('sha256').update(value).digest('hex');
 export const fixedNow='2026-10-19T00:00:00.123456Z';
@@ -50,7 +50,7 @@ export async function registryFixture({epoch=Date.parse(fixedNow),horizon='SHORT
   c_lock_hash:sha('synthetic-c:'+symbol),symbol,company:'合成隔離公司',horizon,reason:'隔離接線測試，不是正式推薦。',evidence_ids:ids,
   confirmation_conditions:[{text:'等待原始確認',state:'UNKNOWN',evidence_ids:[ids[0]]}],
   invalidation_conditions:[{text:'獨立檢查失效',state:'UNKNOWN',evidence_ids:[ids.at(-1)]}],next_review_at:at(3600000),expires_at:at(7200000)};
- const pins=await Promise.all([...records].map(async([evidence_id,r])=>({evidence_id,record_hash:await snapshotHash(r)})));
+ const pins=await Promise.all([...records].map(async([evidence_id,r])=>({evidence_id,record_hash:await snapshotHash(r),approval_id:randomUUID()})));
  async function response(request=input){
   const evidence=request.evidence_ids.map(id=>structuredClone(records.get(id).evidence)).sort((a,b)=>a.id.localeCompare(b.id));
   const body={id:'original-'+sha(request.c_prediction_id),symbol,company:request.company,horizon,created_at:at(0),

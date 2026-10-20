@@ -1,10 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {createOriginalRegistryIngress,ORIGINAL_REGISTRY_INGRESS_RPC,originalRegistryRowHashes} from '../src/features/vnext/originalRegistryIngress.ts';
+import {createOriginalRegistryIngress,createOriginalRegistryApprovedReader,ORIGINAL_REGISTRY_READ_RPC,ORIGINAL_REGISTRY_INGRESS_RPC,originalRegistryRowHashes} from '../src/features/vnext/originalRegistryIngress.ts';
 import {snapshotHash} from '../src/features/vnext/contracts.ts';
 import {registryFixture,sha,cleanupOriginalRegistryContainer} from './fixtures/originalRegistryIngress.mjs';
 const run=f=>createOriginalRegistryIngress(f.ports)(randomUUID(),f.input);
+test('DB reader is fixed ID-only and does not turn a successful read into writer authority',async()=>{
+ const f=await registryFixture(),calls=[],read=createOriginalRegistryApprovedReader(f.pins,async(name,args)=>{calls.push({name,args});return f.records.get(args.p_evidence_id);});
+ await read(f.input.evidence_ids[0]);assert.equal(calls[0].name,ORIGINAL_REGISTRY_READ_RPC);
+ assert.deepEqual(calls[0].args,{p_evidence_id:f.pins[0].evidence_id,p_version_id:f.pins[0].approval_id});
+ assert.throws(()=>read('f'.repeat(64)),/NOT_APPROVED/);
+ f.ports.pins[0].approval_id=null;assert.throws(()=>createOriginalRegistryIngress(f.ports),/CONFIG_INVALID/);
+});
 async function repin(f){for(const pin of f.pins)pin.record_hash=await snapshotHash(f.records.get(pin.evidence_id));}
 async function rebind(r){
  const {id,...body}=r.receipt;r.receipt.id=await snapshotHash(body);

@@ -13,7 +13,17 @@ import {fileURLToPath} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-v1-source-union-r3.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261021-v1-source-union-r4.json';
+export const FROZEN_SOURCE_UNION_R3='docs/operations/evidence/core-member-integration-20261020-v1-source-union-r3.json';
+export const SOURCE_UNION_R4_BASE='cbb1fa65c925c3d0a5a437ca3d2916db34425cd1';
+// Independently reviewed exact source pins, never copied from a regenerated seal.
+// Four source deltas owned by the main agent; no deployment/source-rights grant.
+export const SOURCE_UNION_R4_FILES=Object.freeze([
+ {path:'supabase/functions/_shared/decision-v1-data.ts',mode:'100644',before_sha256:'7c0ba14f39a52ab216e662ce0cfce80a5c5c64cfdf7a719f4b103be3439a8082',after_sha256:'f6704e447004cb510276f950ab871bbbf987adc51dbcacf8501968bf630d33e8'},
+ {path:'supabase/functions/_shared/decision-v1-evidence.ts',mode:'100644',before_sha256:'007ddabb324fdebaed71551c17653a839dac994d70a6d0b2a6c864855e2720a6',after_sha256:'4bfd1f30c216669a623f22fce573885ce8001d5bffcd3d74443a6b0c67834aa0'},
+ {path:'tests/v1EarningsMetadataRead.test.mjs',mode:'100644',before_sha256:null,after_sha256:'10ea5dfdbbf0ed48284adb51a433846a52a7fb665c9d65d7a49cc8031fb5e9a0'},
+ {path:'tests/v1FundamentalRevisionDatabase.integration.mjs',mode:'100644',before_sha256:'57a848d6c4c1dcf57f267b16fcfc1a64c91bbbcf8e070c4c3a8a66210c6fdd58',after_sha256:'c9b681def92aab2574415fdbac925b7eaae013700ca50eb21f451ab48bc4f04d'},
+].map(Object.freeze));
 export const FROZEN_SOURCE_UNION_R2='docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer-r2.json';
 export const SOURCE_UNION_R3_BASE='8c110263ddcf83e4471dfc8e32adafd1c47c2c40';
 // Independently reviewed exact source pins, independent of the generated current seal.
@@ -223,6 +233,7 @@ export const INTEGRATION_DELTAS=Object.freeze([
  FROZEN_ACTUAL,FROZEN_REGISTRY,...SOURCE_UNION_SUPPORT,
  FROZEN_SOURCE_UNION,FROZEN_SOURCE_UNION_NORMALIZER,...SOURCE_UNION_NORMALIZER_FILES.map(row=>row.path),
  FROZEN_SOURCE_UNION_R2,...SOURCE_UNION_R3_FILES.map(row=>row.path),
+ FROZEN_SOURCE_UNION_R3,...SOURCE_UNION_R4_FILES.map(row=>row.path),
  FROZEN_PRODUCER15_MONTHLY_MANIFEST,
  'src/features/vnext/dailyAdapter.ts',
  'tests/vnextDailyDatabase.integration.mjs',
@@ -592,6 +603,38 @@ export function sourceUnionR3Lineage(){
   capacity_evidence:'SYNTHETIC_LOCAL_SQL_MODEL_NOT_PRODUCTION_10000_MEMBER_PASS',
   evaluator_evidence:'MEMORY_BASIS_CONTROL_AND_FRESH_DB_FIXTURE_NOT_PRODUCTION_ROLE_OR_RAW_PAYLOAD_PROOF'};
 }
+export function sourceUnionR4Lineage(){
+ const prior_root={revision:SOURCE_UNION_R4_BASE,path:FROZEN_SOURCE_UNION_R3,sha256:'0bed00b3d21f3776dc875d505eef45e31e2af546e5cbfa0e798f13e8f1258f56'};
+ const rootRow=unionBlob(prior_root.revision,prior_root.path);
+ assert.equal(rootRow?.sha256,prior_root.sha256,'UNION_R4_PRIOR_ROOT_DRIFT');assert.equal(rootRow?.mode,'100644','UNION_R4_PRIOR_ROOT_MODE');
+ assert.equal(SOURCE_UNION_R4_FILES.length,4,'UNION_R4_EXACT_FOUR');
+ assert.equal(new Set(SOURCE_UNION_R4_FILES.map(row=>row.path)).size,4,'UNION_R4_UNIQUE_PATHS');
+ for(const file of SOURCE_UNION_R4_FILES){
+  assert(!SOURCE_UNION_SUPPORT.includes(file.path),'UNION_R4_SUPPORT_OVERLAP');
+  const old=unionBlob(SOURCE_UNION_R4_BASE,file.path);
+  assert.equal(old?.sha256??null,file.before_sha256,'UNION_R4_BEFORE_DRIFT:'+file.path);
+  if(old)assert.equal(old.mode,'100644','UNION_R4_BEFORE_MODE:'+file.path);
+  assert.equal(file.mode,'100644');assert.match(file.after_sha256,/^[a-f0-9]{64}$/);
+  assert.notEqual(file.after_sha256,file.before_sha256,'UNION_R4_NOT_A_DELTA:'+file.path);
+ }
+ // R3 remains its own immutable eight-file generation, including the old
+ // evaluator/database fixture. Current R4 replacements never rewrite it.
+ for(const file of SOURCE_UNION_R3_FILES){
+  const row=unionBlob(SOURCE_UNION_R4_BASE,file.path);
+  assert.equal(row?.sha256,file.after_sha256,'UNION_R4_R3_SOURCE_DRIFT:'+file.path);assert.equal(row?.mode,file.mode);
+ }
+ const prior_proof={revision:SOURCE_UNION_R4_BASE,tests:28,files:[
+  {path:'tests/helpers/integrationAdmission.mjs',sha256:'47bae9140189a32d4577e5692bb14caa8d9f718d6fcc1292a7dc94ffa65b1f19'},
+  {path:'tests/originalIngressAdmission.test.mjs',sha256:'0b5b29ba23b839c70f77632fdf642cc8855a9b1519842c454afd4f51be8e98d4'},
+  {path:'tests/officialPublicAdmission.test.mjs',sha256:'aabd5b56dfc7513615f58cc0ef1de996b6510bbe5ae53f213571d4f276998635'},
+  {path:'.github/workflows/v1-source-integration.yml',sha256:'8fddb0d38a7f7e9fac0a71ad2d54b0e2862004d0da6b55a674756a2fe4e3948b'},
+ ]};
+ for(const file of prior_proof.files){const row=unionBlob(prior_proof.revision,file.path);assert.equal(row?.sha256,file.sha256,'UNION_R4_PRIOR_PROOF_DRIFT');assert.equal(row?.mode,'100644');}
+ return {schema:'V1_SOURCE_UNION_R4_EXACT_DELTA_1',base:SOURCE_UNION_R4_BASE,prior_root,prior_proof,
+  files:SOURCE_UNION_R4_FILES.map(row=>({...row})),source_admission:false,canonical_admission:false,
+  production_authorized:false,thresholds_changed:false,worker_payload_changed:false,cle_payload_changed:false,
+  evidence:'SYNTHETIC_LOADER_METADATA_AND_FRESH_DB_JSONB_FIXTURE_NOT_PRODUCTION_AUTH_OR_SOURCE_RIGHTS'};
+}
 export function sourceUnionLineage(){
  const receipts=[
   {view:'actual',revision:SOURCE_UNION_PARENTS.actual,path:FROZEN_ACTUAL,sha256:'c23aa84a894faf51c536d34d51586a3cca6dd24a6c3d44026a7f5fcb9f54d1ee'},
@@ -616,7 +659,7 @@ export function sourceUnionLineage(){
   assert.equal(row?.sha256,file.sha256,'UNION_PRIOR_NORMALIZER_PROOF_DRIFT');assert.equal(row?.mode,'100644','UNION_PRIOR_NORMALIZER_PROOF_MODE');}
  return {schema:'V1_SOURCE_UNION_CANDIDATE_1',base:SOURCE_UNION_BASE,parents:{...SOURCE_UNION_PARENTS},
   registry_support:{parent:REGISTRY_SUPPORT_PARENT,paths:[...REGISTRY_SUPPORT_PATHS]},receipts,
-  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
+  historical_proof,prior_normalizer_proof,normalizer:sourceUnionNormalizerLineage(),r3:sourceUnionR3Lineage(),r4:sourceUnionR4Lineage(),support_paths:[...SOURCE_UNION_SUPPORT],source_authorities_shared:false,member_gate_changed:false};
 }
 let unionExpected;
 function sourceUnionExpected(){
@@ -651,6 +694,12 @@ function sourceUnionExpected(){
   expected.set(FROZEN_SOURCE_UNION_R2,unionBlob(SOURCE_UNION_R3_BASE,FROZEN_SOURCE_UNION_R2));
   for(const file of SOURCE_UNION_R3_FILES){
    assert.equal(expected.get(file.path)?.sha256??null,file.before_sha256,'UNION_R3_BEFORE_COMPOSITION:'+file.path);
+   expected.set(file.path,{mode:file.mode,sha256:file.after_sha256});
+  }
+  assert(!expected.has(FROZEN_SOURCE_UNION_R3),'UNION_R4_PRIOR_RECEIPT_OVERLAP');
+  expected.set(FROZEN_SOURCE_UNION_R3,unionBlob(SOURCE_UNION_R4_BASE,FROZEN_SOURCE_UNION_R3));
+  for(const file of SOURCE_UNION_R4_FILES){
+   assert.equal(expected.get(file.path)?.sha256??null,file.before_sha256,'UNION_R4_BEFORE_COMPOSITION:'+file.path);
    expected.set(file.path,{mode:file.mode,sha256:file.after_sha256});
   }
   for(const p of support)expected.delete(p);
@@ -689,6 +738,7 @@ const pinnedProofs=Object.freeze({
  historical:{revision:'965263fe15dc672cac6c61af06bfd14d69044dd3',tests:['tests/integrationAdmission.test.mjs']},
  union:{revision:SOURCE_UNION_NORMALIZER_BASE,tests:['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']},
  r2:{revision:SOURCE_UNION_R3_BASE,tests:['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']},
+ r3:{revision:SOURCE_UNION_R4_BASE,tests:['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']},
 });
 export function verifySourceUnionPinnedProof(view){
  assert(Object.hasOwn(pinnedProofs,view),'UNION_UNKNOWN_PARENT');
@@ -707,13 +757,13 @@ export function verifySourceUnionPinnedProof(view){
    for(const name of readdirSync(modules))symlinkSync(join(fileURLToPath(modules),name),join(target,name));
   }
   const output=execFileSync(process.execPath,['--experimental-strip-types','--test','--test-reporter=tap','--test-concurrency=1',...proof.tests],{
-   cwd:checkout,env:{...env,NODE_OPTIONS:'--experimental-strip-types'},encoding:'utf8',maxBuffer:8e6,timeout:view==='r2'?180000:120000,
+   cwd:checkout,env:{...env,NODE_OPTIONS:'--experimental-strip-types'},encoding:'utf8',maxBuffer:8e6,timeout:view==='r3'?420000:view==='r2'?180000:120000,
   });
-  const count=view==='union'?13:view==='r2'?21:null;
+  const count=view==='r3'?28:view==='union'?13:view==='r2'?21:null;
   if(count!==null)for(const [name,n]of [['tests',count],['pass',count],['fail',0],['cancelled',0],['skipped',0]])assert.match(output,new RegExp('^# '+name+' '+n+'$','m'),'UNION_PRIOR_ALL_ASSERTIONS');
  }finally{rmSync(folder,{recursive:true,force:true});assert(!existsSync(folder),'UNION_PINNED_CLEANUP_FAILED');}
  verifyIntegrationCandidate();
- const count=view==='union'?13:view==='r2'?21:null;
+ const count=view==='r3'?28:view==='union'?13:view==='r2'?21:null;
  return {revision:proof.revision,tests:[...proof.tests],cleanup:'VERIFIED_REMOVED',...(count===null?{}:{tests_run:count,tests_passed:count})};
 }
 export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){

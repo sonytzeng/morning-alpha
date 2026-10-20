@@ -28,6 +28,54 @@ function referenceValues(v: unknown): string[] {
   if (Array.isArray(v)) return v.flatMap(referenceValues);
   const r = obj(v); return ['id', 'source_ref', 'source_url', 'url', 'news_event_id'].flatMap(k => typeof r[k] === 'string' ? [String(r[k])] : []);
 }
+/** Validate explicitly retained measurement identities, not investment quality.
+ * Legacy rows without this metadata retain their old contract; absence is NOT
+ * proof of BASIC, consolidated accounts, a source license, or a single quarter.
+ * Do not compare whole payloads across quarters: dates/values/source IDs differ. */
+function fundamentalMeasurementIssue(rows: Row[]): string | null {
+  const dimensions = new Map<string, Set<string>>();
+  const allowed: Record<string, readonly string[]> = {
+    accounting_basis: ['IFRS_AS_REPORTED'], consolidation: ['CONSOLIDATED', 'INDIVIDUAL'],
+    currency: ['TWD'], revenue_unit: ['TWD'], share_class: ['COMMON_SHARE'],
+    eps_basis: ['BASIC', 'DILUTED'], eps_unit: ['TWD_PER_COMMON_SHARE'],
+  };
+  for (const row of rows) {
+    const raw = obj(row.raw_payload), value = raw.measurement;
+    if (value === undefined || value === null) continue;
+    if (typeof value !== 'object' || Array.isArray(value)) return 'FUNDAMENTAL_MEASUREMENT_BASIS_UNPROVEN';
+    const m = obj(value), has = (key: string) => m[key] !== undefined && m[key] !== null;
+    const [, year, quarter] = str(row.fiscal_period).match(/^(\d{4})-?Q([1-4])$/)!;
+    const start = new Date(Date.UTC(Number(year), (Number(quarter) - 1) * 3, 1)).toISOString().slice(0, 10);
+    const end = new Date(Date.UTC(Number(year), Number(quarter) * 3, 0)).toISOString().slice(0, 10);
+    if (has('period_basis') && m.period_basis !== 'DIRECT_STANDALONE_QUARTER') return 'FUNDAMENTAL_PERIOD_BASIS_UNPROVEN';
+    if (has('symbol') && sym(m.symbol) !== sym(row.symbol)
+      || has('fiscal_year') && finite(m.fiscal_year) !== Number(year)
+      || has('fiscal_quarter') && finite(m.fiscal_quarter) !== Number(quarter)
+      || has('period_start') && m.period_start !== start || has('period_end') && m.period_end !== end) {
+      return 'FUNDAMENTAL_PERIOD_IDENTITY_MISMATCH';
+    }
+    if ((has('period_end') || m.period_basis === 'DIRECT_STANDALONE_QUARTER')
+      && time(row.announced_at) < time(`${end}T00:00:00+08:00`) + DAY) {
+      return 'FUNDAMENTAL_ANNOUNCEMENT_BEFORE_PERIOD_END';
+    }
+    // The existing canonical writer deliberately holds financial net revenue
+    // for a separately reviewed financial-Consensus policy. A Reader cannot
+    // silently turn it into generic nonfinancial revenue.
+    if (has('profile') && m.profile !== 'NONFINANCIAL_IFRS'
+      || has('revenue_definition') && m.revenue_definition !== 'IFRS_REVENUE') return 'FUNDAMENTAL_PROFILE_METHOD_REVIEW_REQUIRED';
+    if (has('revenue_scale') && finite(m.revenue_scale) !== 1) return 'FUNDAMENTAL_MEASUREMENT_BASIS_UNPROVEN';
+    for (const [key, values] of Object.entries(allowed)) {
+      if (!has(key)) continue;
+      if (typeof m[key] !== 'string' || !values.includes(m[key] as string)) return 'FUNDAMENTAL_MEASUREMENT_BASIS_UNPROVEN';
+      const seen = dimensions.get(key) ?? new Set<string>(); seen.add(m[key] as string); dimensions.set(key, seen);
+      if (seen.size > 1) return 'FUNDAMENTAL_MEASUREMENT_BASIS_CONFLICT';
+    }
+    for (const key of ['revenue_actual', 'eps_actual']) {
+      if (has(key) && (finite(m[key]) === null || finite(m[key]) !== finite(row[key]))) return 'FUNDAMENTAL_MEASUREMENT_VALUE_MISMATCH';
+    }
+  }
+  return null;
+}
 export function unavailableDecision(identity: DecisionIdentity, issue = 'INSUFFICIENT_EVIDENCE'): Decision {
   return { schema_version: 'decision-evidence-v1', calibration_status: 'INSUFFICIENT_HISTORY', ...identity,
     market_direction: null, market_regime: null, direction_probability: null, direction_evidence_score: null,
@@ -204,6 +252,8 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
         || Number(r.revenue_actual) < 0 || Number(r.revenue_consensus) <= 0)) return null;
     }
     const four = selected.map(rows => rows[0]), latestRow = four[0];
+    const measurementIssue = fundamentalMeasurementIssue(four);
+    if (measurementIssue) { fundamentalSelectionIssues.set(symbol, measurementIssue); return null; }
     if (asOf - time(latestRow.announced_at) > 120 * DAY) return null;
     if (!['up', 'stable', 'down'].includes(str(latestRow.guidance_direction))) return null;
     const ids = selected.flatMap(rows => rows.map(r => add('earnings_events', r, str(r.provider), str(r.announced_at), str(r.created_at), 'fundamental',

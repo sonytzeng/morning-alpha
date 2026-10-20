@@ -1,4 +1,4 @@
-// Current R3 admission is mandatory; complete old assertions stay at 1db/c131/4469/8c.
+// Current R4 admission is mandatory; complete old assertions stay at fixed parents, including cbb R3.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
@@ -6,16 +6,17 @@ import {
  INTEGRATION_MANIFEST,SOURCE_UNION_PARENTS,SOURCE_UNION_SUPPORT,REGISTRY_SUPPORT_PARENT,REGISTRY_SUPPORT_PATHS,
  FROZEN_SOURCE_UNION,FROZEN_SOURCE_UNION_NORMALIZER,SOURCE_UNION_NORMALIZER_PRIOR_PARENT,SOURCE_UNION_NORMALIZER_BASE,SOURCE_UNION_NORMALIZER_PARENT,SOURCE_UNION_NORMALIZER_FILES,sourceUnionNormalizerLineage,
  FROZEN_SOURCE_UNION_R2,SOURCE_UNION_R3_BASE,SOURCE_UNION_R3_FILES,sourceUnionR3Lineage,
+ FROZEN_SOURCE_UNION_R3,SOURCE_UNION_R4_BASE,SOURCE_UNION_R4_FILES,sourceUnionR4Lineage,
  integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,
  createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,verifySourceUnionPinnedProof,
 } from './helpers/integrationAdmission.mjs';
 const flags=['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'];
 test('one complete physical current union pins actual645 and registry1db, never mutable worktrees',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261020-v1-source-union-r3.json');
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r4.json');
  assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');
  assert.equal(FROZEN_SOURCE_UNION_NORMALIZER,'docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer.json');
- assert.equal(m.files.length,512);assert.equal(integrationInventory().length,513);
+ assert.equal(m.files.length,515);assert.equal(integrationInventory().length,516);
  assert.deepEqual(SOURCE_UNION_PARENTS,{actual:'64565b5e44568c5c653bd2007992d482df36e60f',registry:'1db13616337633d4765db4650dd27f5dc68c0bd6'});
  assert.equal(REGISTRY_SUPPORT_PARENT,'d74a25d803b6fe6a7dc9e21cef06c3e1306ec559');
  assert.deepEqual(m.source_union,sourceUnionLineage());
@@ -160,8 +161,8 @@ test('normalizer parent, base, path set, modes, hashes and authority fields cann
  ]){const f=fixture();change(f.manifest.source_union.normalizer);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);}
  const f=fixture();f.manifest.source_union.support_paths.push(SOURCE_UNION_NORMALIZER_FILES[0].path);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);
 });
-test('all c131/4469/8c roots remain immutable even after new-root rehash or receipt-parent substitution',()=>{
- for(const path of [FROZEN_SOURCE_UNION,FROZEN_SOURCE_UNION_NORMALIZER,FROZEN_SOURCE_UNION_R2]){
+test('all c131/4469/8c/cbb roots remain immutable even after new-root rehash or receipt-parent substitution',()=>{
+ for(const path of [FROZEN_SOURCE_UNION,FROZEN_SOURCE_UNION_NORMALIZER,FROZEN_SOURCE_UNION_R2,FROZEN_SOURCE_UNION_R3]){
   const f=fixture();f.bytes.set(path,Buffer.concat([f.read(path),Buffer.from('\n')]));
   f.manifest.files.find(r=>r.path===path).after_sha256=integrationHash(f.read(path));f.reseal();
   assert.throws(f.verify,/SOURCE_DRIFT/);assert.throws(()=>createSourceUnionComposition(f.read,f.paths,f.mode),/SOURCE_DRIFT/);
@@ -217,12 +218,19 @@ test('all13 original c131 union assertions execute unchanged AFTER current admis
  assert.deepEqual(r.tests,['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']);
  assert.equal(r.tests_run,13);assert.equal(r.tests_passed,13);assert.equal(r.cleanup,'VERIFIED_REMOVED');
 });
-test('R3 pins all eight exact sources to8c before/after bytes without growing the five support paths',()=>{
+test('R3 pins all eight exact sources to8c before/after bytes; only explicit R4 replacements differ in current',()=>{
  const m=verifyIntegrationCandidate(),r3=m.source_union.r3;
  assert.equal(SOURCE_UNION_R3_BASE,'8c110263ddcf83e4471dfc8e32adafd1c47c2c40');
  assert.equal(SOURCE_UNION_SUPPORT.length,5);assert.equal(r3.files.length,8);
  assert.deepEqual(r3.files,SOURCE_UNION_R3_FILES);assert.deepEqual(r3.files.reduce((counts,row)=>(counts[row.group]=(counts[row.group]??0)+1,counts),{}),{pdf:2,capacity:2,delivery:1,evaluator:3});
- for(const row of r3.files){assert(!SOURCE_UNION_SUPPORT.includes(row.path));assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);assert.equal(integrationPhysicalMode(row.path),'100644');}
+ for(const row of r3.files){
+  assert(!SOURCE_UNION_SUPPORT.includes(row.path));
+  const old=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R4_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
+  assert.equal(integrationHash(old),row.after_sha256,'unchanged R3 generation at exact cbb');
+  const replacement=SOURCE_UNION_R4_FILES.find(r=>r.path===row.path);
+  assert.equal(integrationHash(integrationPhysicalRead(row.path)),replacement?.after_sha256??row.after_sha256);
+  assert.equal(integrationPhysicalMode(row.path),'100644');
+ }
  assert.equal(r3.prior_root.path,FROZEN_SOURCE_UNION_R2);assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R2)),'d9252d66bf79c19cc1074bd4817a894dea97339927f286a1bf3554e24bf1ec1a');
  assert.equal(r3.worker_payload_changed,false);assert.equal(r3.cle_payload_changed,false);assert.equal(r3.source_admission,false);assert.equal(r3.canonical_admission,false);
 });
@@ -261,4 +269,78 @@ test('R3 base, exact path set, before/after pins and evidence limitations cannot
 });
 test('all21 unchanged R2 assertions execute at exact8c AFTER full current R3 admission and clean their clones', {timeout:210000},()=>{
  const r=verifySourceUnionPinnedProof('r2');assert.equal(r.revision,SOURCE_UNION_R3_BASE);assert.equal(r.tests_run,21);assert.equal(r.tests_passed,21);assert.equal(r.cleanup,'VERIFIED_REMOVED');
+});
+test('R4 pins exactly four loader/metadata sources over cbb without source rights or Worker activation',()=>{
+ const m=verifyIntegrationCandidate(),r4=m.source_union.r4;
+ assert.equal(SOURCE_UNION_R4_BASE,'cbb1fa65c925c3d0a5a437ca3d2916db34425cd1');
+ assert.deepEqual(r4,sourceUnionR4Lineage());assert.equal(SOURCE_UNION_SUPPORT.length,5);
+ assert.deepEqual(r4.files.map(r=>r.path),[
+  'supabase/functions/_shared/decision-v1-data.ts','supabase/functions/_shared/decision-v1-evidence.ts',
+  'tests/v1EarningsMetadataRead.test.mjs','tests/v1FundamentalRevisionDatabase.integration.mjs',
+ ]);
+ for(const row of r4.files){
+  assert(!SOURCE_UNION_SUPPORT.includes(row.path));assert.equal(integrationPhysicalMode(row.path),'100644');
+  assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);
+ }
+ assert.equal(r4.prior_root.path,FROZEN_SOURCE_UNION_R3);
+ assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R3)),'0bed00b3d21f3776dc875d505eef45e31e2af546e5cbfa0e798f13e8f1258f56');
+ const prior=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R3));assert.equal(prior.files.length,512);
+ assert.deepEqual(m.source_union.r3,prior.source_union.r3,'R3 lineage must never be rewritten to R4 bytes');
+ for(const flag of ['source_admission','canonical_admission','production_authorized','thresholds_changed','worker_payload_changed','cle_payload_changed'])assert.equal(r4[flag],false);
+});
+test('R4 every source rejects warm tamper and reflected root, R3 or R4 hashes',()=>{
+ for(const row of SOURCE_UNION_R4_FILES){
+  const f=fixture();f.verify();f.bytes.set(row.path,Buffer.concat([f.read(row.path),Buffer.from('\nUNREVIEWED_R4')]));
+  const reflected=integrationHash(f.read(row.path));f.manifest.files.find(r=>r.path===row.path).after_sha256=reflected;
+  f.manifest.source_union.r4.files.find(r=>r.path===row.path).after_sha256=reflected;
+  const old=f.manifest.source_union.r3.files.find(r=>r.path===row.path);if(old)old.after_sha256=reflected;
+  f.reseal();assert.throws(f.verify,/SOURCE_DRIFT/);assert.throws(()=>createSourceUnionComposition(f.read,f.paths,f.mode),/SOURCE_DRIFT/);
+ }
+});
+test('R4 all four sources reject missing, executable, symlink, renamed and unknown paths',()=>{
+ for(const row of SOURCE_UNION_R4_FILES){
+  const f=fixture();assert.throws(()=>verifyIntegrationCandidate(p=>{if(p===row.path)throw Error('R4_MISSING');return f.read(p);},f.paths,f.mode),/R4_MISSING/);
+  for(const mode of ['100755','120000']){
+   const g=fixture();g.modes.set(row.path,mode);g.manifest.files.find(r=>r.path===row.path).mode=mode;g.manifest.source_union.r4.files.find(r=>r.path===row.path).mode=mode;g.reseal();assert.throws(g.verify,/MODE_DRIFT/);
+  }
+  const extra=fixture();extra.paths.push(row.path+'.unreviewed');assert.throws(extra.verify,/UNKNOWN_PATH/);
+  const removed=fixture();removed.paths.splice(removed.paths.indexOf(row.path),1);assert.throws(removed.verify,/UNKNOWN_PATH/);
+  const renamed=fixture();renamed.manifest.files.find(r=>r.path===row.path).path+='-renamed';renamed.reseal();assert.throws(renamed.verify,/EXACT_SCOPE/);
+ }
+});
+test('R4 cbb rollback or mixed loader/evaluator generations cannot self-seal',()=>{
+ const existing=SOURCE_UNION_R4_FILES.filter(r=>r.before_sha256!==null);
+ for(const rows of [existing,...existing.map(row=>[row])]){
+  const f=fixture();for(const row of rows){
+   const old=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R4_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
+   f.bytes.set(row.path,old);f.manifest.files.find(r=>r.path===row.path).after_sha256=integrationHash(old);
+   f.manifest.source_union.r4.files.find(r=>r.path===row.path).after_sha256=integrationHash(old);
+  }
+  f.reseal();assert.throws(f.verify,/SOURCE_DRIFT/);
+ }
+});
+test('R4 lineage cannot reflect mutable parents, altered scope, hashes or authorization claims',()=>{
+ for(const change of [r=>r.base='HEAD',r=>r.files.pop(),r=>r.files.push({...r.files[0],path:'UNREVIEWED'}),
+  r=>r.files[0].before_sha256=null,r=>r.files[0].after_sha256='0'.repeat(64),r=>r.files[0].path='src/features/vnext/dailyRuntime.ts',
+  r=>r.prior_root.sha256='0'.repeat(64),r=>r.prior_root.revision=SOURCE_UNION_R3_BASE,r=>r.prior_proof.tests=0,
+  r=>r.prior_proof.files[0].sha256='0'.repeat(64),r=>r.source_admission=true,r=>r.canonical_admission=true,
+  r=>r.production_authorized=true,r=>r.thresholds_changed=true,r=>r.worker_payload_changed=true,r=>r.cle_payload_changed=true,
+  r=>r.evidence='PRODUCTION_AUTH_OR_SOURCE_RIGHTS_PROVED']){
+  const f=fixture();change(f.manifest.source_union.r4);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);
+ }
+ const f=fixture();f.manifest.source_union.support_paths.push(SOURCE_UNION_R4_FILES[0].path);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);
+});
+test('R4 CI retains current metadata regression and bounded real JSONB fixture after complete admission',()=>{
+ verifyIntegrationCandidate();const workflow=integrationPhysicalRead('.github/workflows/v1-source-integration.yml').toString();
+ const gate=workflow.indexOf('run: node --experimental-strip-types --test --test-concurrency=1 tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs');
+ const metadata=workflow.indexOf('tests/v1EarningsMetadataRead.test.mjs');assert(gate>=0&&metadata>gate);
+ assert(workflow.includes('needs: current-union'));assert(workflow.includes('timeout-minutes: 5'));
+ const admission=workflow.indexOf('verifyIntegrationCandidate();'),prepare=workflow.indexOf('run: docker pull postgres:17');
+ const fixture=workflow.indexOf('run: timeout 120s node --experimental-strip-types tests/v1FundamentalRevisionDatabase.integration.mjs');
+ assert(admission>=0&&prepare>admission&&fixture>prepare);
+ assert(!workflow.includes('continue-on-error:'));assert(!workflow.includes('secrets.'));
+});
+test('R4 all28 unchanged R3 assertions execute at exact cbb AFTER full current admission and remove clones', {timeout:450000},()=>{
+ const r=verifySourceUnionPinnedProof('r3');assert.equal(r.revision,SOURCE_UNION_R4_BASE);
+ assert.equal(r.tests_run,28);assert.equal(r.tests_passed,28);assert.equal(r.cleanup,'VERIFIED_REMOVED');
 });

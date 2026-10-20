@@ -4,7 +4,7 @@ import {readdirSync} from 'node:fs';
 import {
  verifyIntegrationCandidate,createSourceUnionComposition,sourceUnionParentRead,verifySourceUnionPinnedProof,SOURCE_UNION_PARENTS,
  integrationPhysicalRead,integrationPhysicalMode,integrationInventory,
- integrationHash,integrationHistoricalRead,SOURCE_UNION_R3_FILES,SOURCE_UNION_R3_BASE,
+ integrationHash,integrationHistoricalRead,SOURCE_UNION_R3_FILES,SOURCE_UNION_R3_BASE,SOURCE_UNION_R4_FILES,
 } from './helpers/integrationAdmission.mjs';
 import {assemble as financial,CHANGED,CATALOG} from '../scripts/operations/financial-response-period-20261020/materialize.mjs';
 import {worker4Baseline} from '../scripts/operations/forward-cutoff-20261020/materialize.mjs';
@@ -34,13 +34,17 @@ test('current union preserves the7986 four-source Worker packet, never mixing or
   const payload=candidate.payload.files.find(f=>f.name===path),old=base.payload.files.find(f=>f.name===path);
   assert.deepEqual(payload,old,'no R3 PDF/capacity/Master/evaluator source delta enters the sealed Worker packet: '+path);
  }
+ for(const {path}of SOURCE_UNION_R4_FILES){
+  const payload=candidate.payload.files.find(f=>f.name===path),old=base.payload.files.find(f=>f.name===path);
+  assert.deepEqual(payload,old,'R4 loader/metadata deltas never enter the sealed7986 Worker packet: '+path);
+ }
  assert.deepEqual(integrationPhysicalRead(CATALOG),sourceUnionParentRead('actual',CATALOG));
  assert.equal(candidate.payload.verify_jwt,true);
 });
-test('R3 admits current evaluator before the unchanged issuer review can reconstruct its exact R9 view',()=>{
+test('R4 admits current evaluator before the unchanged issuer review can reconstruct its exact R9 view',()=>{
  verifyIntegrationCandidate();
  const path='supabase/functions/_shared/decision-v1-evidence.ts',current=integrationPhysicalRead(path);
- assert.equal(integrationHash(current),'007ddabb324fdebaed71551c17653a839dac994d70a6d0b2a6c864855e2720a6');
+ assert.equal(integrationHash(current),SOURCE_UNION_R4_FILES.find(r=>r.path===path).after_sha256);
  assert.equal(integrationHash(integrationHistoricalRead('core',path,current)),'2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848');
  const injected=Buffer.concat([current,Buffer.from('UNREVIEWED_EVALUATOR')]);
  assert.deepEqual(integrationHistoricalRead('core',path,injected),injected,'historical reflection must not erase injected bytes');

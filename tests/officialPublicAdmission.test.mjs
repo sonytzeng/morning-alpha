@@ -5,6 +5,7 @@ import {
  verifyIntegrationCandidate,createSourceUnionComposition,sourceUnionParentRead,verifySourceUnionPinnedProof,SOURCE_UNION_PARENTS,
  integrationPhysicalRead,integrationPhysicalMode,integrationInventory,
  integrationHash,integrationHistoricalRead,SOURCE_UNION_R3_FILES,SOURCE_UNION_R3_BASE,SOURCE_UNION_R4_FILES,
+ SOURCE_UNION_R5_FILES,FROZEN_SOURCE_UNION_R4,INTEGRATION_MANIFEST,
 } from './helpers/integrationAdmission.mjs';
 import {assemble as financial,CHANGED,CATALOG} from '../scripts/operations/financial-response-period-20261020/materialize.mjs';
 import {worker4Baseline} from '../scripts/operations/forward-cutoff-20261020/materialize.mjs';
@@ -93,4 +94,49 @@ test('ALL workflow routes forbid current execution of the old forward root/whole
  const continuous=integrationPhysicalRead('.github/workflows/continuous-research-lifecycle.yml').toString();
  for(const name of ['continuousLearningCore','continuousLearningTemporal','continuousLearningIntegration','continuousLearningRelease','vnextOutcomeCacheRecovery','vnextContinuousUpdate'])assert(continuous.includes('tests/'+name+'.test.mjs'));
  assert(!continuous.includes('working-directory:'),'these actual current continuous tests must remain current');
+});
+test('R5 full PR composition adds the old R4 root and three new paths, never a four-file-only seal or Worker grant',()=>{
+ const m=verifyIntegrationCandidate(),old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R4));
+ const paths=[...new Set([...old.files.map(r=>r.path),FROZEN_SOURCE_UNION_R4,...SOURCE_UNION_R5_FILES.map(r=>r.path)])].sort();
+ assert.equal(old.files.length,515);assert.equal(paths.length,519);
+ assert.deepEqual(m.files.map(r=>r.path),paths);assert.deepEqual(integrationInventory(),[...paths,INTEGRATION_MANIFEST].sort());
+ const candidate=financial('candidate'),recovery=financial('recovery'),base=worker4Baseline();
+ assert.equal(candidate.sha256,'7986f277660d0b9a3500d7f45a32be247f1d1d7514c1590b5db2956ace2fd596');
+ assert.deepEqual(recovery.bytes,base.bytes);
+ for(const {path}of SOURCE_UNION_R5_FILES)for(const packet of [candidate,recovery,base]){
+  assert.equal(packet.payload.files.find(f=>f.name===path),undefined,'R5 source must remain absent from every Worker packet: '+path);
+ }
+ for(const flag of ['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'])assert.equal(m[flag],false);
+});
+test('R5 both CI routes run both new synthetic suites unconditionally AFTER full admission, with no private replay or skip',()=>{
+ verifyIntegrationCandidate();
+ const suites=['tests/officialDailyOpenDataCandidate.test.mjs','tests/officialDailyLicenseScope.test.mjs'];
+ for(const path of ['.github/workflows/v1-source-integration.yml','.github/workflows/core-member-integration.yml']){
+  const workflow=integrationPhysicalRead(path).toString();
+  const admission=workflow.indexOf('tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs');
+  const block=workflow.split(/(?=^      - )/m).find(b=>suites.every(p=>b.includes(p)));
+  assert(block,'both synthetic suites must execute together: '+path);
+  assert(workflow.indexOf(block)>admission&&admission>=0);assert(block.includes('run: node --experimental-strip-types --test --test-concurrency=1 '+suites.join(' ')));
+  assert.doesNotMatch(block,/\bif:|continue-on-error:|secrets\.|--test-skip-pattern|--replay-manifest|\/private\/|realfile/i);
+  assert(workflow.includes('contents: read'));assert.doesNotMatch(workflow,/schedule:|contents: write|supabase deploy|supabase db push/);
+ }
+ for(const path of suites){
+  const text=integrationPhysicalRead(path).toString();
+  assert.doesNotMatch(text,/\btest\.skip\b|\bskip\s*:|\bprocess\.env\b|existsSync\(|\/private\/|realfile/i);
+ }
+});
+test('R5 CI pins Deno2.9.2 and fully type-checks the exact research source offline after admission',()=>{
+ verifyIntegrationCandidate();
+ const workflow=integrationPhysicalRead('.github/workflows/v1-source-integration.yml').toString();
+ const current=workflow.split('  current-union:')[1]?.split('  r3-evaluator-fresh-db:')[0];assert(current);
+ const gate=current.indexOf('tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs');
+ const synthetic=current.indexOf('tests/officialDailyOpenDataCandidate.test.mjs tests/officialDailyLicenseScope.test.mjs');
+ const setup=current.indexOf('uses: denoland/setup-deno@v2');
+ const command='run: deno check --no-config --no-lock --no-remote --deny-import --no-npm --node-modules-dir=none --sloppy-imports research/official-daily-open-data-candidate.ts';
+ const check=current.indexOf(command);
+ assert(gate>=0&&synthetic>gate&&setup>synthetic&&check>setup);
+ assert.match(current,/uses: denoland\/setup-deno@v2\n        with:\n          deno-version: v2\.9\.2\n/);
+ const block=current.split(/(?=^      - )/m).find(b=>b.includes(command));assert(block);
+ assert.doesNotMatch(block,/\bif:|continue-on-error:|--no-check|--allow-|secrets\./);
+ assert.deepEqual(integrationPhysicalRead('src/features/vnext/contracts.ts'),sourceUnionParentRead('registry','src/features/vnext/contracts.ts'));
 });

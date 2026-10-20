@@ -25,6 +25,8 @@ jobs:
           node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
           node --experimental-strip-types --test tests/coldSourcePriorityAdmission.test.mjs
           node --experimental-strip-types --test --test-concurrency=1 tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs
+      - name: R5 offline exact daily open-data and license-scope synthetic controls only; no source or publication grant
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/officialDailyOpenDataCandidate.test.mjs tests/officialDailyLicenseScope.test.mjs
       - name: Current cold source ordering and existing recovery regressions
         env:
           NODE_OPTIONS: --experimental-strip-types

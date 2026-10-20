@@ -1,22 +1,27 @@
-// Current R4 admission is mandatory; complete old assertions stay at fixed parents, including cbb R3.
+// Current R5 admission is mandatory; R4's original 35 assertions (including its
+// exact R4 manifest/515-row assertions) execute UNCHANGED at immutable dfec.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
+import {mkdtempSync,rmSync,symlinkSync,lstatSync,existsSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,basename} from 'node:path';
 import {
  INTEGRATION_MANIFEST,SOURCE_UNION_PARENTS,SOURCE_UNION_SUPPORT,REGISTRY_SUPPORT_PARENT,REGISTRY_SUPPORT_PATHS,
  FROZEN_SOURCE_UNION,FROZEN_SOURCE_UNION_NORMALIZER,SOURCE_UNION_NORMALIZER_PRIOR_PARENT,SOURCE_UNION_NORMALIZER_BASE,SOURCE_UNION_NORMALIZER_PARENT,SOURCE_UNION_NORMALIZER_FILES,sourceUnionNormalizerLineage,
  FROZEN_SOURCE_UNION_R2,SOURCE_UNION_R3_BASE,SOURCE_UNION_R3_FILES,sourceUnionR3Lineage,
  FROZEN_SOURCE_UNION_R3,SOURCE_UNION_R4_BASE,SOURCE_UNION_R4_FILES,sourceUnionR4Lineage,
+ FROZEN_SOURCE_UNION_R4,SOURCE_UNION_R5_BASE,SOURCE_UNION_R5_FILES,sourceUnionR5Lineage,readRegularIntegrationFile,
  integrationInventory,integrationPhysicalRead,integrationPhysicalMode,integrationHash,
  createSourceUnionComposition,verifyIntegrationCandidate,sourceUnionLineage,sourceUnionParentRead,verifySourceUnionPinnedProof,
 } from './helpers/integrationAdmission.mjs';
 const flags=['production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'];
-test('one complete physical current union pins actual645 and registry1db, never mutable worktrees',()=>{
+test('R5 complete physical current union pins actual645 and registry1db; R4 row assertions stay at dfec',()=>{
  const m=verifyIntegrationCandidate();assert.deepEqual(createSourceUnionComposition(),m);
- assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r4.json');
+ assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r5.json');
  assert.equal(FROZEN_SOURCE_UNION,'docs/operations/evidence/core-member-integration-20261020-v1-source-union.json');
  assert.equal(FROZEN_SOURCE_UNION_NORMALIZER,'docs/operations/evidence/core-member-integration-20261020-v1-source-union-normalizer.json');
- assert.equal(m.files.length,515);assert.equal(integrationInventory().length,516);
+ assert.equal(m.files.length,519);assert.equal(integrationInventory().length,520);
  assert.deepEqual(SOURCE_UNION_PARENTS,{actual:'64565b5e44568c5c653bd2007992d482df36e60f',registry:'1db13616337633d4765db4650dd27f5dc68c0bd6'});
  assert.equal(REGISTRY_SUPPORT_PARENT,'d74a25d803b6fe6a7dc9e21cef06c3e1306ec559');
  assert.deepEqual(m.source_union,sourceUnionLineage());
@@ -343,4 +348,114 @@ test('R4 CI retains current metadata regression and bounded real JSONB fixture a
 test('R4 all28 unchanged R3 assertions execute at exact cbb AFTER full current admission and remove clones', {timeout:450000},()=>{
  const r=verifySourceUnionPinnedProof('r3');assert.equal(r.revision,SOURCE_UNION_R4_BASE);
  assert.equal(r.tests_run,28);assert.equal(r.tests_passed,28);assert.equal(r.cleanup,'VERIFIED_REMOVED');
+});
+test('R5 pins precisely the four frozen code deltas over dfec and revalidates all R4 source/root bytes',()=>{
+ const m=verifyIntegrationCandidate(),r5=m.source_union.r5;
+ assert.equal(SOURCE_UNION_R5_BASE,'dfec08a533f6c6da299ecc879af96fc49cca5d59');
+ assert.deepEqual(r5,sourceUnionR5Lineage());assert.equal(SOURCE_UNION_SUPPORT.length,5);
+ assert.deepEqual(r5.files.map(r=>r.path),[
+  'research/official-daily-open-data-candidate.ts','tests/officialDailyOpenDataCandidate.test.mjs',
+  'src/features/vnext/publicationClearance.ts','tests/officialDailyLicenseScope.test.mjs',
+ ]);
+ for(const row of r5.files){
+  assert(!SOURCE_UNION_SUPPORT.includes(row.path));assert.equal(integrationPhysicalMode(row.path),row.mode);
+  assert.equal(integrationHash(integrationPhysicalRead(row.path)),row.after_sha256);
+ }
+ assert.equal(r5.prior_root.path,FROZEN_SOURCE_UNION_R4);
+ assert.equal(integrationHash(integrationPhysicalRead(FROZEN_SOURCE_UNION_R4)),'0ca370d03f4453f410c295880f074acaf703da10912cd1a7a1af874539b69fb4');
+ const old=JSON.parse(integrationPhysicalRead(FROZEN_SOURCE_UNION_R4));assert.equal(old.files.length,515);
+ for(const generation of ['normalizer','r3','r4'])assert.deepEqual(m.source_union[generation],old.source_union[generation]);
+ for(const row of SOURCE_UNION_R4_FILES){
+  const bytes=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R5_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
+  assert.equal(integrationHash(bytes),row.after_sha256);assert.deepEqual(integrationPhysicalRead(row.path),bytes);
+  assert.equal(integrationPhysicalMode(row.path),row.mode);
+ }
+ const oldTest=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R5_BASE+':tests/originalIngressAdmission.test.mjs'],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
+ assert(oldTest.includes("assert.equal(INTEGRATION_MANIFEST,'docs/operations/evidence/core-member-integration-20261021-v1-source-union-r4.json');"));
+ assert(oldTest.includes('assert.equal(m.files.length,515);assert.equal(integrationInventory().length,516);'));
+ for(const flag of ['source_admission','canonical_admission','publication_approval','production_authorized','thresholds_changed','rights_gate_changed','worker_payload_changed','cle_payload_changed'])assert.equal(r5[flag],false);
+});
+test('R5 each source refuses warm tamper even after reflecting hashes into the full root and R5 lineage',()=>{
+ for(const row of SOURCE_UNION_R5_FILES){
+  const f=fixture();f.verify();f.bytes.set(row.path,Buffer.concat([f.read(row.path),Buffer.from('\nUNREVIEWED_R5')]));
+  const reflected=integrationHash(f.read(row.path));f.manifest.files.find(r=>r.path===row.path).after_sha256=reflected;
+  f.manifest.source_union.r5.files.find(r=>r.path===row.path).after_sha256=reflected;f.reseal();
+  assert.throws(f.verify,/SOURCE_DRIFT/);assert.throws(()=>createSourceUnionComposition(f.read,f.paths,f.mode),/SOURCE_DRIFT/);
+ }
+});
+test('R5 every source refuses deletion, executable/symlink mode, renamed and unknown paths',()=>{
+ for(const row of SOURCE_UNION_R5_FILES){
+  const f=fixture(),missing=p=>{if(p===row.path)throw Error('R5_MISSING');return f.read(p);};
+  assert.throws(()=>verifyIntegrationCandidate(missing,f.paths,f.mode),/R5_MISSING/);
+  assert.throws(()=>createSourceUnionComposition(missing,f.paths,f.mode),/R5_MISSING/);
+  for(const mode of ['100755','120000']){
+   const g=fixture();g.modes.set(row.path,mode);g.manifest.files.find(r=>r.path===row.path).mode=mode;
+   g.manifest.source_union.r5.files.find(r=>r.path===row.path).mode=mode;g.reseal();
+   assert.throws(g.verify,/MODE_DRIFT/);assert.throws(()=>createSourceUnionComposition(g.read,g.paths,g.mode),/MODE_DRIFT/);
+  }
+  const extra=fixture();extra.paths.push(row.path+'.unreviewed');assert.throws(extra.verify,/UNKNOWN_PATH/);
+  const removed=fixture();removed.paths.splice(removed.paths.indexOf(row.path),1);assert.throws(removed.verify,/UNKNOWN_PATH/);
+  const renamed=fixture();renamed.manifest.files.find(r=>r.path===row.path).path+='-renamed';renamed.reseal();assert.throws(renamed.verify,/EXACT_SCOPE/);
+ }
+});
+test('R5 each actual filesystem symlink is refused without following an otherwise exact source',()=>{
+ const folder=mkdtempSync(join(tmpdir(),'ma-r5-symlink-'));
+ try{
+  for(const row of SOURCE_UNION_R5_FILES){
+   const link=join(folder,basename(row.path));symlinkSync(new URL('../'+row.path,import.meta.url),link);
+   assert(lstatSync(link).isSymbolicLink());
+   const read=p=>p===row.path?readRegularIntegrationFile(link):integrationPhysicalRead(p);
+   assert.throws(()=>verifyIntegrationCandidate(read),/INTEGRATION_REGULAR_FILE/);
+   assert.throws(()=>createSourceUnionComposition(read),/INTEGRATION_REGULAR_FILE/);
+  }
+ }finally{rmSync(folder,{recursive:true,force:true});assert(!existsSync(folder));}
+});
+test('R5 each dfec rollback and the complete/mixed old generation fail despite forged current hashes',()=>{
+ for(const rows of [SOURCE_UNION_R5_FILES,...SOURCE_UNION_R5_FILES.map(row=>[row])]){
+  const f=fixture(),missing=new Set();
+  for(const row of rows){
+   if(row.before_sha256===null){
+    missing.add(row.path);f.paths.splice(f.paths.indexOf(row.path),1);
+    f.manifest.files.splice(f.manifest.files.findIndex(r=>r.path===row.path),1);
+    f.manifest.source_union.r5.files.splice(f.manifest.source_union.r5.files.findIndex(r=>r.path===row.path),1);
+   }else{
+    const bytes=execFileSync('git',['--no-replace-objects','show',SOURCE_UNION_R5_BASE+':'+row.path],{cwd:new URL('../',import.meta.url)});
+    assert.equal(integrationHash(bytes),row.before_sha256);f.bytes.set(row.path,bytes);
+    f.manifest.files.find(r=>r.path===row.path).after_sha256=integrationHash(bytes);
+    f.manifest.source_union.r5.files.find(r=>r.path===row.path).after_sha256=integrationHash(bytes);
+   }
+  }
+  f.reseal();const read=p=>{if(missing.has(p))throw Error('R5_ROLLBACK_ABSENT');return f.read(p);};
+  assert.throws(()=>verifyIntegrationCandidate(read,f.paths,f.mode),/SOURCE_DRIFT|R5_ROLLBACK_ABSENT/);
+  assert.throws(()=>createSourceUnionComposition(read,f.paths,f.mode),/SOURCE_DRIFT|R5_ROLLBACK_ABSENT/);
+ }
+});
+test('R5 rehashed old R4 root, old R4 sources and substituted historical receipts are never grandfathered',()=>{
+ for(const path of [FROZEN_SOURCE_UNION_R4,...SOURCE_UNION_R4_FILES.map(r=>r.path)]){
+  const f=fixture();f.verify();f.bytes.set(path,Buffer.concat([f.read(path),Buffer.from('\nFORGED_R4')]));
+  const reflected=integrationHash(f.read(path));f.manifest.files.find(r=>r.path===path).after_sha256=reflected;
+  if(path===FROZEN_SOURCE_UNION_R4)f.manifest.source_union.r5.prior_root.sha256=reflected;
+  else f.manifest.source_union.r4.files.find(r=>r.path===path).after_sha256=reflected;
+  f.reseal();assert.throws(f.verify,/SOURCE_DRIFT/);assert.throws(()=>createSourceUnionComposition(f.read,f.paths,f.mode),/SOURCE_DRIFT/);
+  for(const mode of ['100755','120000']){
+   const g=fixture();g.modes.set(path,mode);g.manifest.files.find(r=>r.path===path).mode=mode;g.reseal();assert.throws(g.verify,/MODE_DRIFT/);
+  }
+  assert.throws(()=>verifyIntegrationCandidate(p=>{if(p===path)throw Error('R4_MISSING');return integrationPhysicalRead(p);}),/R4_MISSING/);
+ }
+});
+test('R5 cannot self-approve mutable parents, altered pins/proofs, source rights, rightsGate or Production',()=>{
+ for(const change of [r=>r.base='HEAD',r=>r.base=SOURCE_UNION_R4_BASE,r=>r.files.pop(),r=>r.files.push({...r.files[0],path:'UNREVIEWED'}),
+  r=>r.files[0].before_sha256='0'.repeat(64),r=>r.files[0].after_sha256='0'.repeat(64),r=>r.files[0].path='src/features/vnext/dailyRuntime.ts',
+  r=>r.prior_root.sha256='0'.repeat(64),r=>r.prior_root.revision=SOURCE_UNION_R4_BASE,r=>r.prior_proof.tests=28,
+  r=>r.prior_proof.revision='HEAD',r=>r.prior_proof.files[0].sha256='0'.repeat(64),r=>r.source_admission=true,r=>r.canonical_admission=true,
+  r=>r.publication_approval=true,r=>r.production_authorized=true,r=>r.thresholds_changed=true,r=>r.rights_gate_changed=true,
+  r=>r.worker_payload_changed=true,r=>r.cle_payload_changed=true,r=>r.evidence='REAL_SOURCE_OR_RIGHTS_APPROVED']){
+  const f=fixture();change(f.manifest.source_union.r5);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);
+ }
+ for(const row of SOURCE_UNION_R5_FILES){const f=fixture();f.manifest.source_union.support_paths.push(row.path);f.reseal();assert.throws(f.verify,/LINEAGE_DRIFT/);}
+});
+test('R5 all35 unchanged R4 assertions execute at exact dfec AFTER complete current admission and remove clones', {timeout:870000},()=>{
+ const r=verifySourceUnionPinnedProof('r4');assert.equal(r.revision,SOURCE_UNION_R5_BASE);
+ assert.deepEqual(r.tests,['tests/originalIngressAdmission.test.mjs','tests/officialPublicAdmission.test.mjs']);
+ assert.equal(r.tests_run,35);assert.equal(r.tests_passed,35);assert.equal(r.cleanup,'VERIFIED_REMOVED');
 });

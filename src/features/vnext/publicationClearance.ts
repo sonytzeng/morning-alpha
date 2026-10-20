@@ -6,14 +6,14 @@ import {traceIssues} from './researchFunnel.ts';
 export const CLEARANCE_VERSION='VNEXT_SOURCE_TIME_DOSSIER_1';
 export const LICENSE_REVIEWED_AT='2026-10-11T12:30:00.000Z';
 export const OGL='https://data.gov.tw/license';
-const openResource=(id:string,dataset:string,resource:string)=>({
+const openResource=(id:string,dataset:string,resource:string,reviewedAt=LICENSE_REVIEWED_AT)=>({
  source_id:'DATA_GOV_TW_'+id,dataset,resource,license_type:'OPEN_GOVERNMENT_DATA_LICENSE_1',
  permitted_usage:'僅限該資料集實際釋出資源；遵守顯名與第三人權利條件。',
  commercial_usage:'PERMITTED_WITH_ATTRIBUTION',derivative_usage:'PERMITTED_WITH_ATTRIBUTION',
  redistribution:'PERMITTED_WITH_ATTRIBUTION',attribution_required:true,
  attribution:'原提供機關／年份／資料集名稱與版本／政府資料開放授權條款連結',
  evidence_url:'https://data.gov.tw/dataset/'+id,license_url:OGL,
- review_status:'DATASET_LICENSE_VERIFIED_NOT_HISTORICAL_ENDPOINT_GRANT',reviewed_at:LICENSE_REVIEWED_AT,
+ review_status:'DATASET_LICENSE_VERIFIED_NOT_HISTORICAL_ENDPOINT_GRANT',reviewed_at:reviewedAt,
 });
 export const OPEN_RESOURCES=Object.freeze([
  openResource('11549','上市個股日成交資訊','https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=open_data'),
@@ -23,6 +23,15 @@ export const OPEN_RESOURCES=Object.freeze([
  openResource('56510','上櫃公司每月營業收入','https://mopsfin.twse.com.tw/opendata/t187ap05_O.csv'),
  openResource('91998','上市公司綜合損益表（一般業）','https://mopsfin.twse.com.tw/opendata/t187ap06_L_ci.csv'),
  openResource('18418','上櫃公司每日重大訊息','https://mopsfin.twse.com.tw/opendata/t187ap04_O.csv'),
+]);
+/** New exact current-day resources are a dated addendum, not a rewrite of the
+ * seven historical review records above. A catalog match is NOT a rights grant
+ * installed in the server registry, a session-scope review, or publication. */
+export const CURRENT_DAILY_LICENSE_REVIEWED_AT='2026-10-20T21:12:33Z';
+export const CURRENT_DAILY_OPEN_RESOURCES=Object.freeze([
+ openResource('11370','上櫃股票行情（含等價、零股、盤後、鉅額交易）','https://www.tpex.org.tw/web/stock/aftertrading/DAILY_CLOSE_quotes/stk_quote_result.php?l=zh-tw&o=data',CURRENT_DAILY_LICENSE_REVIEWED_AT),
+ openResource('11371','上櫃股票收盤行情（不含定價）','https://www.tpex.org.tw/web/stock/aftertrading/otc_quotes_no1430/stk_wn1430_result.php?l=zh-tw&se=EW&o=data',CURRENT_DAILY_LICENSE_REVIEWED_AT),
+ openResource('11555','盤後資訊每日收盤行情－大盤統計資訊','https://www.twse.com.tw/exchangeReport/MI_INDEX?response=open_data',CURRENT_DAILY_LICENSE_REVIEWED_AT),
 ]);
 const TWSE_TERMS='https://www.twse.com.tw/zh/terms/use.html';
 const TWSE_INFO='https://www.twse.com.tw/zh/products/information/use.html';
@@ -48,7 +57,7 @@ export function sourceScope(source:string){
  }else if(h==='api.fugle.tw'||h==='developer.fugle.tw'){
   source_id='FUGLE_CONTRACT_REQUIRED';dataset='Fugle行情';terms=['https://developer.fugle.tw/docs/data/intro/'];reason='須核对現有契約是否涵蓋指定會員事實及衍生分析用途；API訂閱不自動等於再散布權。';
  }
- const exact=OPEN_RESOURCES.find(r=>r.resource===source);
+ const exact=[...OPEN_RESOURCES,...CURRENT_DAILY_OPEN_RESOURCES].find(r=>r.resource===source);
  return {source_id:exact?.source_id??source_id,dataset:exact?.dataset??dataset,source,
   license_type:exact?.license_type??'SOURCE_SPECIFIC_SCOPE_PENDING',
   review_status:exact?'EXACT_OPEN_RESOURCE_VERIFIED':'LICENSING_PENDING',
@@ -60,7 +69,7 @@ export function sourceScope(source:string){
   own_analysis:exact?'CONDITIONAL_ON_LICENSE_COMPLIANCE':'PENDING_NOT_A_BLANKET_PROHIBITION',
   evidence_urls:exact?[exact.evidence_url,OGL]:terms,
   related_open_resources:OPEN_RESOURCES.filter(r=>related.some(id=>r.source_id==='DATA_GOV_TW_'+id)),
-  reviewed_at:LICENSE_REVIEWED_AT,confers_publication_approval:false as const};
+  reviewed_at:exact?.reviewed_at??LICENSE_REVIEWED_AT,confers_publication_approval:false as const};
 }
 const valid=(v:string|null)=>v!==null&&Number.isFinite(Date.parse(v));
 function bounds(values:(string|null)[]){const v=values.filter((s):s is string=>valid(s)).sort((a,b)=>Date.parse(a)-Date.parse(b));return {first:v[0]??null,last:v.at(-1)??null};}

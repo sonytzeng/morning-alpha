@@ -71,9 +71,11 @@ test('historical timing workflow, SQL, Auth and evaluator stay immutable; later 
  const financialAdded='      - name: Current financial-period runtime and cold offline SDK refusal controls\n        run: node --experimental-strip-types --test tests/v1FinancialPeriodRelease.test.mjs\n      - name: Check out the immutable 7bfc cold-order payloads, not current financial sources\n        uses: actions/checkout@v4\n        with:\n          ref: 7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3\n          path: build/cold-source-order-immutable-7bfc\n          fetch-depth: 0\n          persist-credentials: false\n';
  assert.equal(before.split(coldAnchor).length,2);
  assert.equal(before.split(coldCheck).length,2);
+ assert.equal(before.split('          deno-version: v2.x\n').length,2);
  assert.equal(read(workflow).toString(),before.replace(anchor,added+anchor).replace(runtimeAnchor,runtimeAnchor+runtimeAdded)
   .replace(coldAnchor,financialAdded+coldAnchor+'        working-directory: build/cold-source-order-immutable-7bfc\n')
-  .replace(coldCheck,coldCheck.replace('deno check --no-lock','deno check --no-config --no-lock --no-remote --deny-import --no-npm --node-modules-dir=none')));
+  .replace(coldCheck,coldCheck.replace('deno check --no-lock','deno check --no-config --no-lock --no-remote --deny-import --no-npm --node-modules-dir=none'))
+  .replace('          deno-version: v2.x\n','          deno-version: v2.9.2\n'));
  const financial=JSON.parse(read('scripts/operations/financial-response-period-20261020/release-catalog.json'));
  const financialOnly=new Set(['src/features/vnext/dailyAdapter.ts','src/features/vnext/dailyIntelligence.ts']);
  for(const path of ['supabase/functions/vnext-daily-research-v1/index.ts','supabase/functions/vnext-daily-research-v1/handler.ts',

@@ -36,6 +36,7 @@ import pdfplumber
 from pypdf import PdfReader
 
 CONTRACT = "issuer-pdf-descriptor-v1"
+BROWSER_RECEIPT = "BROWSER_NATIVE_PUBLIC_DOWNLOAD_RECEIPT_V1"
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 MULTIPLIERS = {"1": "", "1000": "thousand", "1000000": "million", "1000000000": "billion"}
 CURRENCIES = {"TWD": ("new taiwan dollars", "nt$", "ntd"),
@@ -261,12 +262,90 @@ def timestamp(value: object) -> datetime:
         raise DescriptorError("RECEIPT_TIME_INVALID") from None
 
 
+def bind_receipt(document: object, source: dict, selector: str,
+                 allowed_hosts: frozenset[str], fiscal: dict) -> tuple[dict, dict]:
+    """Strict single native capture, not document-URL or source authority.
+
+    Native unknown HTTP is never converted to a successful HTTP observation.
+    No hidden form material or provider headers are accepted in this dialect.
+    """
+    entry = pointer(document, selector)
+    native = type(document) is dict and document.get("contract") == BROWSER_RECEIPT
+    if not native:
+        require(not any(k in entry for k in ("capture_method", "download_status",
+            "visible_control", "source_url_role", "secret_or_hidden_form_material_exported",
+            "provider_response_headers_exported")), "RECEIPT_KIND")
+        require(entry.get("url") == source["url"]
+                and entry.get("sha256") == checked_sha(source["sha256"])
+                and entry.get("raw_path") == source["path"]
+                and type(entry.get("http_status")) is int and entry["http_status"] == 200,
+                "RECEIPT_SOURCE_BINDING")
+        require("http_status_observed" not in entry or entry["http_status_observed"] is True,
+                "RECEIPT_HTTP_OBSERVATION")
+        return entry, {"capture_kind": "HTTP_RESPONSE_RECEIPT", "http_status": 200,
+            "http_status_observed": True, "source_url_role": "DOCUMENT_HTTP_RESPONSE_URL",
+            "source_page_url": None, "raw_document_url": source["url"],
+            "first_seen_basis": "NATIVE_HTTP_RECEIPT", "native_capture": None}
+    envelope = keys(document, {"contract", "source_admission", "quality_admission",
+                               "member_publication", "results"})
+    require(all(envelope[k] is False for k in
+                ("source_admission", "quality_admission", "member_publication")), "NATIVE_ADMISSION_FLAGS")
+    require(type(envelope["results"]) is list and len(envelope["results"]) == 1
+            and selector == "/results/0", "NATIVE_SINGLE_CAPTURE")
+    keys(entry, {"capture_method", "download_status", "url", "source_url_role", "raw_document_url",
+        "request_method", "visible_control", "raw_path", "sha256", "bytes", "http_status",
+        "http_status_observed", "first_seen_at", "first_seen_basis", "available_at",
+        "copy_verified_at", "published_at", "source_version", "revision_chain",
+        "secret_or_hidden_form_material_exported", "provider_response_headers_exported"})
+    require(entry["capture_method"] == "BROWSER_NATIVE_PUBLIC_DOWNLOAD"
+            and entry["request_method"] == "NATIVE_FORM_POST", "NATIVE_CAPTURE_KIND")
+    require(entry["download_status"] == "COMPLETED", "NATIVE_DOWNLOAD_NOT_COMPLETED")
+    require(entry["http_status"] is None and entry["http_status_observed"] is False,
+            "NATIVE_HTTP_MUST_BE_UNKNOWN")
+    require(entry["source_url_role"] == "SOURCE_INDEX_WITH_VISIBLE_DOWNLOAD_CONTROL"
+            and entry["raw_document_url"] is None, "NATIVE_URL_ROLE")
+    require(entry["secret_or_hidden_form_material_exported"] is False
+            and entry["provider_response_headers_exported"] is False, "NATIVE_PRIVATE_EXPORT_FORBIDDEN")
+    require(all(entry[k] is None for k in ("published_at", "source_version", "revision_chain")),
+            "NATIVE_UNOBSERVED_SOURCE_METADATA")
+    page = urlsplit(text(entry["url"]))
+    require(page.scheme == "https" and page.hostname in allowed_hosts and not page.fragment
+            and page.username is None and page.password is None and page.port in (None, 443)
+            and bool(page.path) and not page.path.lower().endswith(".pdf"), "NATIVE_PAGE_URL")
+    require(entry["url"] == source["url"] and entry["raw_path"] == source["path"]
+            and entry["sha256"] == checked_sha(source["sha256"]), "NATIVE_SOURCE_BINDING")
+    require(type(entry["bytes"]) is int and entry["bytes"] > 0, "NATIVE_BYTE_COUNT")
+    control = keys(entry["visible_control"], {"id", "row_label", "role"})
+    require(type(control["id"]) is str
+            and re.fullmatch(r"[A-Za-z][A-Za-z0-9_.:-]{0,127}", control["id"]) is not None
+            and control["role"] == "button", "NATIVE_VISIBLE_CONTROL")
+    require(type(fiscal) is dict and type(fiscal.get("year")) is int
+            and type(fiscal.get("quarter")) is int
+            and control["row_label"] == f"FY{fiscal['year']}_Q{fiscal['quarter']} Consolidated Financial Statements",
+            "NATIVE_VISIBLE_CONTROL_PERIOD")
+    require(entry["first_seen_basis"] == "CONSERVATIVE_FIRST_OBSERVATION_AFTER_BROWSER_NATIVE_DOWNLOAD",
+            "NATIVE_FIRST_SEEN_BASIS")
+    first, available = timestamp(entry["first_seen_at"]), timestamp(entry["available_at"])
+    require(first <= available == timestamp(entry["copy_verified_at"])
+            <= datetime.now(timezone.utc), "NATIVE_TIME_ORDER")
+    return entry, {"capture_kind": BROWSER_RECEIPT, "http_status": None,
+        "http_status_observed": False, "source_url_role": entry["source_url_role"],
+        "source_page_url": entry["url"], "raw_document_url": None,
+        "first_seen_basis": entry["first_seen_basis"],
+        "native_capture": {"capture_method": entry["capture_method"],
+            "request_method": entry["request_method"], "download_status": entry["download_status"],
+            "visible_control": control, "copy_verified_at": entry["copy_verified_at"],
+            "secret_or_hidden_form_material_exported": False,
+            "provider_response_headers_exported": False}}
+
+
 class Document:
     def __init__(self, data: bytes, limits: Limits, started: float):
         self.limits, self.started = limits, started
         require(data.startswith(b"%PDF-"), "PDF_MAGIC")
         reader = PdfReader(BytesIO(data), strict=True)
-        require(not reader.is_encrypted and 0 < len(reader.pages) <= limits.pages, "PDF_PAGE_LIMIT")
+        require(not reader.is_encrypted, "PDF_ENCRYPTED")
+        require(0 < len(reader.pages) <= limits.pages, "PDF_PAGE_LIMIT")
         self.reader = reader
         self.pdf = pdfplumber.open(BytesIO(data))
         self.cache = {}
@@ -325,7 +404,7 @@ def period(doc: Document, obj: object) -> dict:
     require(h["page"] == y["page"] and year_text == str(year), "CURRENT_YEAR_COLUMN")
     month = calendar.month_name[quarter * 3]
     day = calendar.monthrange(year, quarter * 3)[1]
-    require(re.fullmatch(r"three months ended " + month + r"\s+" + str(day) + r",?",
+    require(re.fullmatch(r"(?:for the )?three months ended " + month + r"\s+" + str(day) + r",?",
                          header, re.I) is not None, "DIRECT_THREE_MONTH_HEADER")
     axis = p["column_x"]
     require(type(axis) is list and len(axis) == 2 and all(type(v) in (int, float)
@@ -367,7 +446,7 @@ def revenue_scale(unit: str, currency: str) -> str:
     require(len(scales) <= 1, "REVENUE_SCALE_AMBIGUOUS")
     currency_words = "(?:" + "|".join(re.escape(t) for t in CURRENCIES[currency]) + ")"
     match = re.fullmatch(
-        r"(?:amounts(?: are expressed)? in |unit:\s*|in )?"
+        r"(?:amounts(?: are expressed| expressed)? in |unit:\s*|in )?"
         r"(?:(thousands?|millions?|billions?) of )?" + currency_words
         + r"(?:,? (?:except for earnings per share|unless otherwise stated))?", value)
     require(match is not None, "REVENUE_SCALE_NOT_PROVEN")
@@ -393,16 +472,16 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
     receipt = keys(source["receipt"], {"path", "sha256", "entry_pointer"})
     rr = root.read(Path(text(receipt["path"])), limits.receipt_bytes)
     require(digest(rr) == checked_sha(receipt["sha256"]), "RECEIPT_SHA_MISMATCH")
-    entry = pointer(bounded_json(rr, limits.receipt_bytes, limits), receipt["entry_pointer"])
-    require(entry.get("url") == source["url"] and entry.get("sha256") == checked_sha(source["sha256"])
-            and entry.get("raw_path") == source["path"] and entry.get("http_status") == 200,
-            "RECEIPT_SOURCE_BINDING")
+    entry, capture = bind_receipt(bounded_json(rr, limits.receipt_bytes, limits), source,
+                                 receipt["entry_pointer"], allowed_hosts, d["period"])
     first, available = timestamp(entry.get("first_seen_at")), timestamp(entry.get("available_at"))
     require(first <= available <= datetime.now(timezone.utc), "RECEIPT_TIME_ORDER")
     if entry.get("source_received_at") is not None:
         require(timestamp(entry["source_received_at"]) <= available, "RECEIPT_TIME_ORDER")
     pdf_data = root.read(Path(text(source["path"])), limits.pdf_bytes)
     require(digest(pdf_data) == source["sha256"], "PDF_SHA_MISMATCH")
+    if capture["capture_kind"] == BROWSER_RECEIPT:
+        require(entry["bytes"] == len(pdf_data), "NATIVE_BYTE_COUNT")
     verified = clock()
     doc = Document(pdf_data, limits, started)
     try:
@@ -426,7 +505,9 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
             require(metric in ("revenue", "basic_eps") and metric not in seen, "METRIC_KIND")
             seen.add(metric)
             label, label_loc = doc.select(m["label"])
-            require((metric == "revenue" and re.fullmatch(r"net sales|revenue|revenues", label, re.I) is not None)
+            require((metric == "revenue" and re.fullmatch(
+                        r"(?:net sales|revenue|revenues|operating revenue)(?: ?\(Notes? [A-Za-z0-9() ,]+\))?",
+                        label, re.I) is not None)
                     or (metric == "basic_eps" and re.fullmatch(r"basic earnings per share(?: \(in new taiwan dollars\)| \(NT\$\))?", label, re.I) is not None),
                     "METRIC_LABEL_NOT_EQUIVALENT")
             value, lexical, decimals = number(doc, m["cell"], m["numeric_format"])
@@ -502,6 +583,7 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
             "receipt_entry_pointer": receipt["entry_pointer"], "first_seen_at": entry["first_seen_at"],
             "source_received_at": entry.get("source_received_at"),
             "source_available_at": entry["available_at"], "first_verified_at": verified,
+            **capture,
             "normalization_available_at": completed, "conservative_available_at": completed,
             "time_quality": "NATIVE_RECEIPT_BOUND_AND_CURRENT_NORMALIZATION_NOT_PUBLICATION",
             "announced_at": None, "source_version": None, "revision_chain": None,

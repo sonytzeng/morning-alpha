@@ -236,6 +236,135 @@ class SyntheticControls(unittest.TestCase):
             with contextlib.redirect_stdout(stream),patch.object(M,'Document',SyntheticDocument):code=M.main(argv)
             self.assertEqual(code,expected);summary=json.loads(stream.getvalue());self.assertNotIn('rows',summary);self.assertNotIn('value_decimal',stream.getvalue());self.assertNotIn('15.00',stream.getvalue())
 
+    def native_receipt(self):
+        entry={'capture_method':'BROWSER_NATIVE_PUBLIC_DOWNLOAD','download_status':'COMPLETED',
+            'url':'https://issuer.example/financial-index','source_url_role':'SOURCE_INDEX_WITH_VISIBLE_DOWNLOAD_CONTROL',
+            'raw_document_url':None,'request_method':'NATIVE_FORM_POST',
+            'visible_control':{'id':'download_q3','row_label':'FY2025_Q3 Consolidated Financial Statements','role':'button'},
+            'raw_path':str(self.pdf),'sha256':sha(self.pdf.read_bytes()),'bytes':len(self.pdf.read_bytes()),
+            'http_status':None,'http_status_observed':False,'first_seen_at':'2026-01-01T01:00:00Z',
+            'first_seen_basis':'CONSERVATIVE_FIRST_OBSERVATION_AFTER_BROWSER_NATIVE_DOWNLOAD',
+            'available_at':'2026-01-01T01:00:01Z','copy_verified_at':'2026-01-01T01:00:01Z',
+            'published_at':None,'source_version':None,'revision_chain':None,
+            'secret_or_hidden_form_material_exported':False,'provider_response_headers_exported':False}
+        return {'contract':M.BROWSER_RECEIPT,'source_admission':False,'quality_admission':False,
+                'member_publication':False,'results':[entry]}
+
+    def test_legacy_http_observation_absent_or_strict_true_compatible(self):
+        self.assertTrue(self.run_descriptor()['http_status_observed'])
+        obj=copy.deepcopy(self.receipt_obj);obj['results'][0]['http_status_observed']=True
+        self.put(self.receipt,obj)
+        d=copy.deepcopy(self.d);d['source']['receipt']['sha256']=sha(self.receipt.read_bytes())
+        self.assertTrue(self.run_descriptor(d)['http_status_observed'])
+
+    def test_legacy_explicit_http_observation_non_true_rejected(self):
+        for value in [False,0,None,1,'true',[],{}]:
+            with self.subTest(value=value):
+                obj=copy.deepcopy(self.receipt_obj);obj['results'][0]['http_status_observed']=value
+                self.put(self.receipt,obj)
+                d=copy.deepcopy(self.d);d['source']['receipt']['sha256']=sha(self.receipt.read_bytes())
+                self.rejected(d,'RECEIPT_HTTP_OBSERVATION')
+
+    def install_native(self,obj):
+        self.put(self.receipt,obj)
+        d=copy.deepcopy(self.d);d['source']['url']='https://issuer.example/financial-index'
+        d['source']['receipt']['sha256']=sha(self.receipt.read_bytes())
+        return d
+
+    def test_native_unknown_http_and_index_role_preserved(self):
+        obj=self.native_receipt();d=self.install_native(obj);r=self.run_descriptor(d)
+        self.assertEqual(r['capture_kind'],M.BROWSER_RECEIPT);self.assertIsNone(r['http_status'])
+        self.assertFalse(r['http_status_observed']);self.assertIsNone(r['raw_document_url'])
+        self.assertEqual(r['source_page_url'],d['source']['url'])
+        self.assertEqual(r['source_url_role'],'SOURCE_INDEX_WITH_VISIBLE_DOWNLOAD_CONTROL')
+        self.assertEqual(r['first_seen_basis'],obj['results'][0]['first_seen_basis'])
+        self.assertEqual(r['first_seen_at'],obj['results'][0]['first_seen_at'])
+        self.assertEqual(r['source_available_at'],obj['results'][0]['available_at'])
+        self.assertIsNone(r['source_received_at']);self.assertFalse(r['source_admission'])
+
+    def test_native_capture_and_contract_kind_not_legacy_fallback(self):
+        for target,key,value in [('entry','capture_method','HTTP_GET'),('entry','request_method','POST'),('root','contract','UNKNOWN_NATIVE')]:
+            obj=self.native_receipt();(obj['results'][0] if target=='entry' else obj)[key]=value
+            self.rejected(self.install_native(obj),'NATIVE_CAPTURE_KIND|RECEIPT_KIND')
+
+    def test_native_only_completed_download(self):
+        for status in ['IN_PROGRESS','CANCELLED','FAILED','completed',None]:
+            obj=self.native_receipt();obj['results'][0]['download_status']=status
+            self.rejected(self.install_native(obj),'NATIVE_DOWNLOAD_NOT_COMPLETED')
+
+    def test_native_cannot_forge_http_200_or_observation(self):
+        for key,value in [('http_status',200),('http_status',403),('http_status_observed',True),('http_status_observed',0)]:
+            obj=self.native_receipt();obj['results'][0][key]=value
+            self.rejected(self.install_native(obj),'NATIVE_HTTP_MUST_BE_UNKNOWN')
+
+    def test_native_no_hidden_values_headers_or_unknown_fields(self):
+        for key,value in [('secret_or_hidden_form_material_exported',True),('secret_or_hidden_form_material_exported',{'token':'SYNTHETIC'}),('provider_response_headers_exported',True),('headers',{'x':'SYNTHETIC'}),('hidden',{'x':'SYNTHETIC'})]:
+            obj=self.native_receipt();obj['results'][0][key]=value
+            self.rejected(self.install_native(obj),'NATIVE_PRIVATE_EXPORT_FORBIDDEN|DESCRIPTOR_SCHEMA')
+
+    def test_native_no_document_url_or_role_upgrade(self):
+        for key,value in [('source_url_role','DOCUMENT_URL'),('raw_document_url','https://issuer.example/doc.pdf')]:
+            obj=self.native_receipt();obj['results'][0][key]=value
+            self.rejected(self.install_native(obj),'NATIVE_URL_ROLE')
+
+    def test_native_exact_control_period_and_valid_button(self):
+        for key,value in [('row_label','FY2025_Q4 Consolidated Financial Statements'),('id',''),('role','link')]:
+            obj=self.native_receipt();obj['results'][0]['visible_control'][key]=value
+            self.rejected(self.install_native(obj),'NATIVE_VISIBLE_CONTROL')
+
+    def test_native_hash_bytes_and_location_binding(self):
+        for key,value in [('sha256','0'*64),('bytes',1),('bytes',True),('raw_path',str(self.base/'other.pdf')),('url','https://issuer.example/other-index')]:
+            obj=self.native_receipt();obj['results'][0][key]=value
+            self.rejected(self.install_native(obj),'NATIVE_SOURCE_BINDING|NATIVE_BYTE_COUNT')
+
+    def test_native_page_cannot_be_http_credentials_or_pdf_location(self):
+        for url in ['http://issuer.example/index','https://user@issuer.example/index','https://issuer.example/doc.pdf','https://other.example/index']:
+            obj=self.native_receipt();obj['results'][0]['url']=url;d=self.install_native(obj);d['source']['url']=url
+            self.rejected(d,'SOURCE_HOST_OR_URL|NATIVE_PAGE_URL')
+
+    def test_native_time_basis_and_copy_order(self):
+        for key,value in [('first_seen_at',None),('first_seen_at','2099-01-01T00:00:00Z'),('copy_verified_at','2026-01-01T01:00:02Z'),('first_seen_basis','PRINTED_APPROVAL_DATE')]:
+            obj=self.native_receipt();obj['results'][0][key]=value
+            self.rejected(self.install_native(obj),'RECEIPT_TIME_REQUIRED|NATIVE_TIME_ORDER|NATIVE_FIRST_SEEN_BASIS')
+
+    def test_native_envelope_no_self_approval_or_extra_capture(self):
+        for key,value in [('source_admission',True),('quality_admission',0),('member_publication','false'),('unknown',False)]:
+            obj=self.native_receipt();obj[key]=value
+            self.rejected(self.install_native(obj),'NATIVE_ADMISSION_FLAGS|DESCRIPTOR_SCHEMA')
+        obj=self.native_receipt();obj['results'].append(copy.deepcopy(obj['results'][0]))
+        self.rejected(self.install_native(obj),'NATIVE_SINGLE_CAPTURE')
+
+    def test_native_cannot_claim_publication_or_original_version(self):
+        for key,value in [('published_at','2026-01-01T01:00:00Z'),('source_version','HASH_IS_NOT_VERSION'),('revision_chain',[])]:
+            obj=self.native_receipt();obj['results'][0][key]=value
+            self.rejected(self.install_native(obj),'NATIVE_UNOBSERVED_SOURCE_METADATA')
+
+    def test_native_receipt_and_pdf_still_require_private_modes(self):
+        d=self.install_native(self.native_receipt())
+        self.receipt.chmod(0o600);self.rejected(d,'PRIVATE_INPUT_FILE')
+        self.receipt.chmod(0o400);self.pdf.chmod(0o600)
+        self.rejected(d,'PRIVATE_INPUT_FILE')
+
+    def test_encrypted_and_page_limit_rejections_remain_distinct(self):
+        for encrypted,pages,code in [(True,83,'PDF_ENCRYPTED'),(False,161,'PDF_PAGE_LIMIT')]:
+            reader=type('SyntheticPdfMetadata',(),{'is_encrypted':encrypted,'pages':[None]*pages})()
+            with patch.object(M,'PdfReader',return_value=reader),patch.object(M.pdfplumber,'open') as opened:
+                with self.assertRaisesRegex(M.DescriptorError,code):
+                    M.Document(b'%PDF-SYNTHETIC',M.Limits(),time.monotonic())
+                opened.assert_not_called()
+
+    def test_observed_operating_revenue_and_expressed_unit_labels_only(self):
+        revenue_label='Operating revenue(Notes (4)(w) and (6))'
+        unit='AMOUNTS EXPRESSED IN THOUSANDS OF NEW TAIWAN DOLLARS'
+        class LabelDialect(SyntheticDocument):
+            def __init__(self,*a):
+                super().__init__(*a);self.items[1][1]=(200,40,'For the Three Months Ended September 30')
+                self.items[1][3]=(10,80,unit);self.items[1][4]=(10,100,revenue_label)
+        d=copy.deepcopy(self.d);d['period']['header']['text']='For the Three Months Ended September 30'
+        d['metrics'][0]['label']['text']=revenue_label;d['metrics'][0]['unit_proof']['text']=unit
+        self.assertEqual(len(self.run_descriptor(d,LabelDialect)['rows']),2)
+        d['metrics'][0]['multiplier']='1';self.rejected(d,'REVENUE_SCALE_NOT_PROVEN',LabelDialect)
+
 
 def local_replay(argv):
     """Explicit local command, never counted as public unittest PASS/skip."""

@@ -24,6 +24,7 @@ jobs:
         run: |
           node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs';verifyIntegrationCandidate();"
           node --experimental-strip-types --test tests/cpuBudgetAdmission.test.mjs
+          node --experimental-strip-types --test tests/workerCpuPeriodUnionAdmission.test.mjs
       - name: Check out immutable Worker4 ordering and release proofs
         uses: actions/checkout@v4
         with:
@@ -40,6 +41,10 @@ jobs:
         env:
           NODE_OPTIONS: --experimental-strip-types
         run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextDailyCpuBudget.test.mjs
+      - name: Current response-period, forward-cutoff and Outcome-cache controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextFinancialResponsePeriod.test.mjs tests/vnextForwardCutoffRuntime.test.mjs tests/vnextOutcomeCacheRecovery.test.mjs tests/vnextDailyWiring.test.mjs
       - name: Current cold source ordering and existing recovery regressions
         env:
           NODE_OPTIONS: --experimental-strip-types
@@ -208,6 +213,13 @@ jobs:
           node scripts/operations/cpu-budget-recovery-20261020/materialize.mjs candidate
           node scripts/operations/cpu-budget-recovery-20261020/materialize.mjs recovery
           deno check --no-lock --node-modules-dir=none supabase/functions/vnext-daily-research-v1/index.ts build/cpu-budget-recovery-20261020/candidate/supabase/functions/vnext-daily-research-v1/index.ts build/cpu-budget-recovery-20261020/recovery/supabase/functions/vnext-daily-research-v1/index.ts
+      - name: Materialize and check the exact CPU plus response-period union
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: |
+          node scripts/operations/worker-cpu-period-union-20261021/materialize.mjs candidate
+          node scripts/operations/worker-cpu-period-union-20261021/materialize.mjs recovery
+          deno check --no-lock --node-modules-dir=none build/worker-cpu-period-union-20261021/candidate/supabase/functions/vnext-daily-research-v1/index.ts build/worker-cpu-period-union-20261021/recovery/supabase/functions/vnext-daily-research-v1/index.ts
       - run: deno test --no-lock --node-modules-dir=none --allow-read tests/researchOwnerFieldAccess.sdk.test.ts tests/providerCapabilityEntry.sdk.test.ts
       - name: Materialize and type-check the exact current Producer15 candidate and recovery
         run: |

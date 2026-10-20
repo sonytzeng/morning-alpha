@@ -12,7 +12,8 @@ export type DailyRequest = {
  provenance: 'RETAINED_REAL_EVIDENCE' | 'SYNTHETIC_CONTROL'; core_ready: boolean; core_busy: boolean;
  source_revision: string; source_hash: string; actionable_at: string;
 };
-export type AcquiredResearch = {inputs: FunnelInput[]; entry: EntryInput | null; evidence_cutoff: string; snapshot_hash: string};
+export type AcquiredResearch = {inputs: FunnelInput[]; entry: EntryInput | null; evidence_cutoff: string; snapshot_hash: string;
+ source_issues?:{kind:string;key:string;reason:string}[]};
 export type DailyLock = {
  id: string; business_date: string; mode: DailyRequest['mode']; provenance: DailyRequest['provenance'];
  symbol: string; company: string; horizon: Horizon; strategy_version: string; entry_version: string;

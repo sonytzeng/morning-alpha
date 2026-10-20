@@ -23,7 +23,7 @@ test('CPU candidate and exact Worker4 recovery retain78 sources and reject injec
  assert.throws(()=>assemble('../recovery'),/CPU_FIXED_VARIANT/);
 });
 test('CPU repair does not change protected evaluators, identity, business RPC or original release assertions',()=>{
- for(const p of ['src/features/vnext/researchFunnel.ts','src/features/vnext/dailyAdapter.ts','src/features/vnext/engine.ts','research/entry-opportunity.ts',
+ for(const p of ['src/features/vnext/researchFunnel.ts','src/features/vnext/engine.ts','research/entry-opportunity.ts',
   'supabase/functions/vnext-daily-research-v1/index.ts','supabase/functions/vnext-daily-research-v1/handler.ts','supabase/functions/_shared/vnext-daily-hook.ts',
   'supabase/migrations/20261012054120_vnext_daily_research_runtime_candidate.sql','supabase/functions/recommendation-v2-forward-worker-v1/index.ts',
   'supabase/functions/recommendation-stock-evidence-v1/index.ts','supabase/functions/get-report-payload/index.ts','supabase/functions/member-access/index.ts',

@@ -48,20 +48,20 @@ test('large runtime saves original input once and resumes stages without source 
   if(op==='DUE_OUTCOMES')return [];
   if(op==='SOURCES'){sourceReads++;return [...cache.values(),price];}
   if(op==='ENTRY_SOURCE'){entryReads++;return {market:{value:{direction:'偏空',regime:'range'},source_ref:'SYNTHETIC_MARKET',observed_at:at,available_at:at}};}
-  if(op==='CHECKPOINT'){if(sourceRevision!==null)assert.equal(data.acquired?.snapshot_hash,sourceRevision,'SOURCE_REVISION_IMMUTABLE');run.checkpoint=structuredClone(data);sourceRevision=data.acquired?.snapshot_hash??null;savedStages.push(data.completed??[]);return {};}
+  if(op==='CHECKPOINT'){if(sourceRevision!==null)assert.equal(data.acquired?.snapshot_hash,sourceRevision,'SOURCE_REVISION_IMMUTABLE');run.checkpoint=structuredClone(data);sourceRevision=data.acquired?.snapshot_hash??null;savedStages.push([...(data.completed??[])]);return {};}
   if(op==='PREDICTIONS'){committed++;committedHashes.push(...data.map(r=>r.hash));return {};}
   if(op==='FINISH')return {};
   throw Error('UNEXPECTED_'+op);
  }};
  const reasons=[];for(let n=0;n<6;n++){const result=await workDailyRun(run.id,ports);reasons.push(result.reason);if(result.status==='COMPLETE')break;assert.equal(result.status,'QUEUED');assert.equal(committed,0);}
- assert.deepEqual(reasons,['ACQUISITION_PREPARED','EVALUATION_CONTINUATION','EVALUATION_CONTINUATION','EVALUATION_CONTINUATION',null]);
+ assert.deepEqual(reasons,['FORWARD_PREPARATION_CONTINUATION','FORWARD_PREPARATION_CONTINUATION','FORWARD_PREPARATION_CONTINUATION',null]);
  assert.equal(sourceReads,1);assert.equal(entryReads,1);assert.equal(committed,1);assert.equal(new Set(committedHashes).size,216);assert.equal(run.checkpoint.finished,true);
  assert.deepEqual(run.checkpoint.completed,['ACQUISITION','RESEARCH','ENTRY','PREDICTION_LOCK','OUTCOME','PUBLICATION']);
  assert(savedStages.some(x=>x.length===0));assert.equal(run.checkpoint.acquired.evidence_cutoff,at);
  const completed=structuredClone(run.checkpoint),writes=savedStages.length;
  run.checkpoint={key:completed.key,request_hash:'0'.repeat(64),attempts:{ACQUISITION:1},completed:[],finished:false};sourceRevision=null;
  const legacy=structuredClone(run.checkpoint),refused=await workDailyRun(run.id,ports);
- assert.equal(refused.status,'BLOCKED');assert.equal(refused.reason,'IDEMPOTENCY_SCOPE_CONFLICT');assert.deepEqual(run.checkpoint,legacy);assert.equal(savedStages.length,writes);assert.equal(committed,1);
+ assert.equal(refused.status,'BLOCKED');assert.equal(refused.reason,'CHECKPOINT_ACQUIRED_MISSING');assert.deepEqual(run.checkpoint,legacy);assert.equal(savedStages.length,writes);assert.equal(committed,1);
  run.checkpoint={acquired:completed.acquired};sourceRevision=completed.acquired.snapshot_hash;
  const late=await workDailyRun(run.id,{...ports,clock:()=>date+'T01:00:00.000Z'});
  assert.equal(late.status,'EXPIRED');assert.equal(committed,1,'prepared input cannot create a late Forward');

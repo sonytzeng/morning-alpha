@@ -4,19 +4,22 @@ import {readFileSync,lstatSync,mkdirSync,writeFileSync} from 'node:fs';
 import {resolve,dirname,posix} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
-import {assemble as worker4} from '../cold-source-priority-20261019/materialize.mjs';
+import {execFileSync} from 'node:child_process';
+import {assemble as coldSource} from '../cold-source-priority-20261019/materialize.mjs';
 import {verifyIntegrationCandidate} from '../../../tests/helpers/integrationAdmission.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 const changed=Object.freeze(['src/features/vnext/contracts.ts','src/features/vnext/dailyIntelligence.ts','src/features/vnext/dailyRuntime.ts']);
 const sha=b=>createHash('sha256').update(b).digest('hex');
+const worker4=name=>execFileSync('git',['--no-replace-objects','show','7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3:'+name],{cwd:root,stdio:['ignore','pipe','pipe'],maxBuffer:8e6});
+const cpuCandidate=name=>execFileSync('git',['--no-replace-objects','show','b0ed47c8a10b784a7388c27dbd0b069692f460c3:'+name],{cwd:root,stdio:['ignore','pipe','pipe'],maxBuffer:8e6});
 const physical=name=>{assert.equal(posix.normalize(name),name);assert(!name.startsWith('/')&&!name.split('/').includes('..'));
  let p=root;for(const [i,part]of name.split('/').entries()){p=resolve(p,part);const s=lstatSync(p);assert(!s.isSymbolicLink());assert(i===name.split('/').length-1?s.isFile():s.isDirectory());}return readFileSync(p);};
 const directory=name=>{assert.equal(posix.normalize(name),name);assert(!name.startsWith('/')&&!name.split('/').includes('..'));let p=root;
  for(const part of name.split('/')){p=resolve(p,part);try{mkdirSync(p,{mode:0o700});}catch(e){if(e.code!=='EEXIST')throw e;}const s=lstatSync(p);assert(s.isDirectory()&&!s.isSymbolicLink(),'CPU_OUTPUT_DIRECTORY');}return p;};
-export function assemble(variant='candidate',read=physical){
+export function assemble(variant='candidate',read=cpuCandidate){
  assert(['candidate','recovery'].includes(variant),'CPU_FIXED_VARIANT');verifyIntegrationCandidate();
  const bytes=physical('scripts/operations/cpu-budget-recovery-20261020/release-catalog.json');assert.equal(sha(bytes),'f9cd885ea5f3f145ff9e2a788243e7a185d5d9756b5cb87f54ce34acb7010080','CPU_CATALOG_DRIFT');
- const c=JSON.parse(bytes),baseline=worker4();assert.equal(c.schema,'C_CPU_BUDGET_RECOVERY_RELEASE_V1');assert.deepEqual(c.changed_runtime,changed);assert.equal(c.files.length,78);assert.equal(c.production_authorized,false);
+ const c=JSON.parse(bytes),baseline=coldSource('candidate',worker4);assert.equal(c.schema,'C_CPU_BUDGET_RECOVERY_RELEASE_V1');assert.deepEqual(c.changed_runtime,changed);assert.equal(c.files.length,78);assert.equal(c.production_authorized,false);
  assert.equal(c.baseline.version,4);assert.equal(c.baseline.runtime_files,44);assert.equal(c.baseline.sdk,'2.57.4');assert.equal(c.metadata.verify_jwt,true);
  const files=baseline.payload.files.map((f,i)=>{const row=c.files[i];assert.equal(row.name,f.name);assert.equal(sha(f.content),row.before_sha256,'CPU_BASE_DRIFT');assert.equal(Buffer.byteLength(f.content),row.before_bytes);
   const candidate=changed.includes(f.name)?Buffer.from(read(f.name)):Buffer.from(f.content);assert.equal(sha(candidate),row.after_sha256,'CPU_CURRENT_DRIFT');assert.equal(candidate.length,row.after_bytes);

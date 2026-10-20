@@ -15,7 +15,8 @@ export const ADAPTER_VERSION='VNEXT_DAILY_OFFICIAL_1';
 export type Company={symbol:string;company:string;exchange:Exchange;industry:string};
 export type SourceTask={key:string;kind:string;url:string;format:'json'|'text';scope:string;
  symbols:string[];exchange?:Exchange;month?:string;date?:string;period?:string;year?:number;quarter?:number;
- from?:string;through?:string;form?:Record<string,string>;action_index?:number;max_age_days:number};
+ from?:string;through?:string;form?:Record<string,string>;action_index?:number;max_age_days:number;
+ financial_response_contract?:'MOPS_RESPONSE_PERIOD_V1'};
 export type SourceReceipt={task:SourceTask;first_seen_at:string;available_at:string;published_at:null;as_of:string;
  version:string;raw_hash:string;payload_hash:string;payload:Record<string,unknown>;status:'OK'|'UNAVAILABLE';reason:string|null};
 const day=(at:string)=>new Date(Date.parse(at)+8*3600000).toISOString().slice(0,10);
@@ -50,7 +51,7 @@ export async function acquisitionPlan(date:string,companies:Company[]):Promise<S
    add({kind:'INSTITUTIONAL',date:d,exchange,symbols,format:'json',url:exchange==='TWSE'?`https://www.twse.com.tw/rwd/zh/fund/T86?date=${d.replaceAll('-','')}&selectType=ALL&response=json`:`https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&se=EW&t=D&d=${roc}&o=json`},d===through?1:7);}
   const quarterIndex=y*4+Math.floor((m-1)/3)-1;
   for(let i=0;i<10;i++){const q=quarterIndex-i,year=Math.floor(q/4),quarter=q%4+1;
-   for(const [kind,path] of [['FINANCIAL_YTD','04'],['CASHFLOW_YTD','20']])add({kind,year,quarter,exchange,symbols,format:'text',url:`https://mopsov.twse.com.tw/mops/web/ajax_t163sb${path}`,form:{encodeURIComponent:'1',firstin:'1',off:'1',step:'1',isQuery:'Y',TYPEK:market,year:String(year-1911),season:String(quarter).padStart(2,'0')}},i<2?1:7);}
+   for(const [kind,path] of [['FINANCIAL_YTD','04'],['CASHFLOW_YTD','20']])add({kind,year,quarter,exchange,symbols,format:'text',financial_response_contract:'MOPS_RESPONSE_PERIOD_V1',url:`https://mopsov.twse.com.tw/mops/web/ajax_t163sb${path}`,form:{encodeURIComponent:'1',firstin:'1',off:'1',step:'1',isQuery:'Y',TYPEK:market,year:String(year-1911),season:String(quarter).padStart(2,'0')}},i<2?1:7);}
  }
  for(const c of companies)for(let i=0;i<2;i++){const d=new Date(Date.UTC(y,m-1-i,1)),year=d.getUTCFullYear(),month=d.getUTCMonth()+1,from=d.toISOString().slice(0,10),end=new Date(Date.UTC(year,month,0)).toISOString().slice(0,10),to=end<date?end:date;
   add({kind:'EVENT',url:'https://mops.twse.com.tw/mops/api/t05st01',format:'json',symbols:[c.symbol],year,month:String(month),from,through:to,form:{companyId:c.symbol,year:String(year-1911),month:String(month),firstDay:'1',lastDay:String(Number(to.slice(8)))}});}
@@ -134,7 +135,25 @@ export async function assembleDaily(date:string,companies:Company[],receipts:Sou
  const dates=sessionsBefore(date),through=dates.at(-1)!;
  if(day(cutoff)!==date)throw Error('CUTOFF_DATE_MISMATCH');
  const valid=receipts.filter(r=>r.status==='OK');for(const r of valid)if(Date.parse(r.available_at)>Date.parse(cutoff)||r.payload_hash!==await snapshotHash(r.payload))throw Error('SOURCE_REVISION_INVALID');
- const records=(k:string)=>valid.filter(r=>r.task.kind===k).flatMap(r=>Array.isArray(r.payload.rows)?r.payload.rows as Record<string,unknown>[]:[]);
+ const sourceIssues:{kind:string;key:string;reason:string}[]=[];
+ // Old immutable receipts remain preserved, but a request-derived quarter is
+ // not upgraded by merely loading it through the newer adapter. Only future
+ // versioned tasks with matching source proof may contribute financial facts.
+ const admitted=valid.filter(r=>{
+  if(!['FINANCIAL_YTD','CASHFLOW_YTD'].includes(r.task.kind))return true;
+  const rows=Array.isArray(r.payload.rows)?r.payload.rows as Record<string,unknown>[]:[];
+  const matched=r.task.financial_response_contract==='MOPS_RESPONSE_PERIOD_V1'&&rows.length>0&&rows.every(row=>{
+   const period=object(row.source_period);
+   return row.period_verification==='RESPONSE_REPORT_HEADING_MATCHED_REQUEST'
+    &&period.year===r.task.year&&period.quarter===r.task.quarter
+    &&row.period===`${r.task.year}-Q${r.task.quarter}`&&row.basis==='AS_REPORTED_YTD'
+    &&row.standalone_quarter_actual===false&&row.kind===r.task.kind
+    &&r.task.symbols.includes(String(row.symbol));
+  });
+  if(!matched)sourceIssues.push({kind:r.task.kind,key:r.task.key,reason:'FINANCIAL_RESPONSE_PERIOD_UNPROVEN'});
+  return matched;
+ });
+ const records=(k:string)=>admitted.filter(r=>r.task.kind===k).flatMap(r=>Array.isArray(r.payload.rows)?r.payload.rows as Record<string,unknown>[]:[]);
  const allBars=[...records('PRICE'),...records('OTC_PRICE')],facts=[...records('REVENUE'),...records('INSTITUTIONAL'),...records('FINANCIAL_YTD'),...records('CASHFLOW_YTD')];
  const inputs:FunnelInput[]=companies.map(c=>({symbol:c.symbol,company:c.company,cutoff,through,next_session:date,expected_sessions:dates,
   bars:allBars.filter(b=>b.symbol===c.symbol&&dates.includes(String(b.date))).sort((a,b)=>String(a.date).localeCompare(String(b.date))) as DailyBar[],
@@ -145,5 +164,5 @@ export async function assembleDaily(date:string,companies:Company[],receipts:Sou
   const revenue=i.facts.filter(f=>f.kind==='REVENUE').sort((a,b)=>(a.period??'').localeCompare(b.period??'')).at(-1);
   const fundamental=revenue&&typeof revenue.values.yoy_percent==='number'&&typeof revenue.values.mom_percent==='number'?{value:{revenue_yoy:revenue.values.yoy_percent,revenue_mom:revenue.values.mom_percent,eps_actual:null},source_ref:revenue.source,observed_at:revenue.as_of!,available_at:revenue.available_at!}:null;
   return {symbol:i.symbol,name:i.company,bars:i.bars.slice(-20).map(b=>({...b,source_ref:b.source,available_at:b.available_at!})),fundamental,relative_strength:null,sector_return:null,events_reviewed:null,v2_status:null};})};
- const body={inputs,entry,evidence_cutoff:cutoff};return {...body,snapshot_hash:await snapshotHash(body)};
+ const body={inputs,entry,evidence_cutoff:cutoff,...(sourceIssues.length?{source_issues:sourceIssues}:{})};return {...body,snapshot_hash:await snapshotHash(body)};
 }

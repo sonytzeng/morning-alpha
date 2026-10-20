@@ -157,19 +157,58 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
     return factor((selected.reduce((s, r) => s + Number(r.net_amount), 0) / gross + 1) / 2, ids, '(sum(net_amount)/sum(buy_amount+sell_amount)+1)/2; same date/currency, all three institutions');
   };
   const totalFlow = flowsFor('TAIEX', str(taiwan[0]?.row.trading_date));
+  const fundamentalSelectionIssues = new Map<string, string>();
   const fundamentals = (symbol: string) => {
+    // Select the observed quarter/version universe BEFORE testing expectation
+    // completeness. Otherwise a newer Actual-only revision disappears here and
+    // an older optimistic full row silently becomes the current assessment.
     const rs = data.earnings.filter(r => sym(r.symbol) === symbol && known(r, 'announced_at', 'created_at') && str(r.source_ref) && str(r.provider)
-      && asOf - time(r.announced_at) <= 550 * DAY && [r.revenue_actual, r.revenue_consensus, r.eps_actual, r.eps_consensus].every(v => finite(v) !== null))
-      .sort((a, b) => time(b.announced_at) - time(a.announced_at));
-    const quarters = rs.slice(0, 4).map(r => str(r.fiscal_period).match(/^(\d{4})-?Q([1-4])$/)).map(m => m ? Number(m[1]) * 4 + Number(m[2]) : NaN);
-    if (rs.length < 4 || quarters.some((q, i) => !Number.isFinite(q) || i > 0 && quarters[i - 1] - q !== 1)
-      || rs.slice(0, 4).some(r => !url(r.source_ref) || Number(r.revenue_actual) < 0 || Number(r.revenue_consensus) <= 0)
-      || asOf - time(rs[0].announced_at) > 120 * DAY) return null;
-    const four = rs.slice(0, 4), latestRow = four[0];
+      && asOf - time(r.announced_at) <= 550 * DAY);
+    const groups = new Map<number, Row[]>(), identities = new Map<string, Row>();
+    for (const row of rs) {
+      const prior = identities.get(str(row.id));
+      if (prior && (time(prior.created_at) !== time(row.created_at)
+        || prior.provider !== row.provider || prior.source_ref !== row.source_ref
+        || prior.announced_at !== row.announced_at || prior.fiscal_period !== row.fiscal_period
+        || ['revenue_actual','revenue_consensus','eps_actual','eps_consensus','guidance_direction'].some(k => prior[k] !== row[k])
+        || JSON.stringify(prior.raw_payload ?? null) !== JSON.stringify(row.raw_payload ?? null))) {
+        fundamentalSelectionIssues.set(symbol, 'FUNDAMENTAL_ROW_ID_CONFLICT'); return null;
+      }
+      identities.set(str(row.id), row);
+      const period = str(row.fiscal_period).match(/^(\d{4})-?Q([1-4])$/);
+      if (!period) return null;
+      const ordinal = Number(period[1]) * 4 + Number(period[2]);
+      groups.set(ordinal, [...(groups.get(ordinal) ?? []), row]);
+    }
+    const quarters = [...groups.keys()].sort((a, b) => b - a).slice(0, 4);
+    if (quarters.length < 4 || quarters.some((q, i) => i > 0 && quarters[i - 1] - q !== 1)) return null;
+    const selected = quarters.map(q => groups.get(q)!.slice().sort((a, b) => str(a.id).localeCompare(str(b.id))));
+    for (const rows of selected) {
+      const first = rows[0];
+      // The legacy read contract has no supersession/measurement authority.
+      // Coalesce only identical projections of the SAME source and release;
+      // equal numbers from different providers/URLs are not equivalence proof.
+      // Revisions with changed values or missing fields must be reconciled by
+      // the independent source producer, never blended inside this evaluator.
+      if (rows.some(r => r.provider !== first.provider || url(r.source_ref) !== url(first.source_ref)
+        || time(r.announced_at) !== time(first.announced_at))) {
+        fundamentalSelectionIssues.set(symbol, 'FUNDAMENTAL_SOURCE_EQUIVALENCE_UNPROVEN'); return null;
+      }
+      const numeric = ['revenue_actual', 'revenue_consensus', 'eps_actual', 'eps_consensus'] as const;
+      if (rows.some(r => numeric.some(k => finite(r[k]) !== finite(first[k]))
+        || str(r.guidance_direction) !== str(first.guidance_direction)
+        || JSON.stringify(r.raw_payload ?? null) !== JSON.stringify(first.raw_payload ?? null))) {
+        fundamentalSelectionIssues.set(symbol, 'FUNDAMENTAL_REVISION_UNRESOLVED'); return null;
+      }
+      if (rows.some(r => !str(r.id) || !url(r.source_ref) || numeric.some(k => finite(r[k]) === null)
+        || Number(r.revenue_actual) < 0 || Number(r.revenue_consensus) <= 0)) return null;
+    }
+    const four = selected.map(rows => rows[0]), latestRow = four[0];
+    if (asOf - time(latestRow.announced_at) > 120 * DAY) return null;
     if (!['up', 'stable', 'down'].includes(str(latestRow.guidance_direction))) return null;
-    const ids = four.map(r => add('earnings_events', r, str(r.provider), str(r.announced_at), str(r.created_at), 'fundamental',
+    const ids = selected.flatMap(rows => rows.map(r => add('earnings_events', r, str(r.provider), str(r.announced_at), str(r.created_at), 'fundamental',
       `${symbol} ${str(r.fiscal_period)} 營收 ${Number(r.revenue_actual)}／預期 ${Number(r.revenue_consensus)}，EPS ${Number(r.eps_actual)}／預期 ${Number(r.eps_consensus)}`,
-      { revenue_actual: Number(r.revenue_actual), revenue_consensus: Number(r.revenue_consensus), eps_actual: Number(r.eps_actual), eps_consensus: Number(r.eps_consensus), guidance: str(r.guidance_direction) }, url(r.source_ref)));
+      { revenue_actual: Number(r.revenue_actual), revenue_consensus: Number(r.revenue_consensus), eps_actual: Number(r.eps_actual), eps_consensus: Number(r.eps_consensus), guidance: str(r.guidance_direction) }, url(r.source_ref))));
     const damaged = latestRow.guidance_direction === 'down' || (Number(latestRow.revenue_actual) < Number(latestRow.revenue_consensus) && Number(latestRow.eps_actual) < Number(latestRow.eps_consensus));
     const intact = four.every(r => Number(r.revenue_actual) >= Number(r.revenue_consensus) && Number(r.eps_actual) >= Number(r.eps_consensus)) && latestRow.guidance_direction !== 'down';
     return { damaged, intact, ids, latest: latestRow };
@@ -185,7 +224,10 @@ export function buildEvidenceDecision(data: EvidenceData, identity: DecisionIden
     if (series.slice(-20).some(p => p.volume === null || p.volume <= 0) || series.length < 20) reasons.push('20_DAILY_VOLUMES_MISSING');
     const inst = flowsFor(symbol, str(q?.row.trading_date));
     if (!inst) reasons.push('THREE_INSTITUTIONS_MISSING');
-    if (!f) reasons.push('FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING');
+    if (!f) {
+      reasons.push('FOUR_QUARTER_FUNDAMENTAL_EVIDENCE_MISSING');
+      const issue = fundamentalSelectionIssues.get(symbol); if (issue) reasons.push(issue);
+    }
     const mapping = data.mappings.filter(m => sym(m.stock_symbol) === symbol && known(m, 'created_at', 'created_at')).find(m => {
       const c = data.catalysts.find(c => c.id === m.catalyst_id && known(c, 'event_at', 'created_at'));
       return c && news.some(n => referenceValues(c.source_refs).some(ref => ref === n.row.id || ref === n.row.source_url))

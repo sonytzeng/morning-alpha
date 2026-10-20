@@ -4,6 +4,7 @@ import {readdirSync} from 'node:fs';
 import {
  verifyIntegrationCandidate,createSourceUnionComposition,sourceUnionParentRead,verifySourceUnionPinnedProof,SOURCE_UNION_PARENTS,
  integrationPhysicalRead,integrationPhysicalMode,integrationInventory,
+ integrationHash,integrationHistoricalRead,SOURCE_UNION_R3_FILES,SOURCE_UNION_R3_BASE,
 } from './helpers/integrationAdmission.mjs';
 import {assemble as financial,CHANGED,CATALOG} from '../scripts/operations/financial-response-period-20261020/materialize.mjs';
 import {worker4Baseline} from '../scripts/operations/forward-cutoff-20261020/materialize.mjs';
@@ -22,15 +23,31 @@ test('current union preserves the7986 four-source Worker packet, never mixing or
  const different=candidate.payload.files.filter((f,i)=>f.content!==base.payload.files[i].content).map(f=>f.name).sort();
  assert.deepEqual(different,[...CHANGED].sort());assert.equal(different.length,4);
  for(const path of CHANGED)assert.deepEqual(integrationPhysicalRead(path),sourceUnionParentRead('actual',path));
- for(const p of ['src/features/vnext/contracts.ts','src/features/vnext/engine.ts']){
+ for(const p of ['src/features/vnext/contracts.ts','src/features/vnext/engine.ts','supabase/functions/_shared/decision-v1-evidence.ts']){
   const payload=candidate.payload.files.find(f=>f.name===p),old=base.payload.files.find(f=>f.name===p);
   if(old){
    assert(payload,'existing Worker dependency must remain present');assert.equal(payload.content,old.content);
    assert.notEqual(payload.content,integrationPhysicalRead(p).toString(),'OriginalObservation changes must not enter the sealed Worker packet');
   }else assert.equal(payload,undefined,'a dependency absent from Worker4 must stay excluded: '+p);
  }
+ for(const {path}of SOURCE_UNION_R3_FILES){
+  const payload=candidate.payload.files.find(f=>f.name===path),old=base.payload.files.find(f=>f.name===path);
+  assert.deepEqual(payload,old,'no R3 PDF/capacity/Master/evaluator source delta enters the sealed Worker packet: '+path);
+ }
  assert.deepEqual(integrationPhysicalRead(CATALOG),sourceUnionParentRead('actual',CATALOG));
  assert.equal(candidate.payload.verify_jwt,true);
+});
+test('R3 admits current evaluator before the unchanged issuer review can reconstruct its exact R9 view',()=>{
+ verifyIntegrationCandidate();
+ const path='supabase/functions/_shared/decision-v1-evidence.ts',current=integrationPhysicalRead(path);
+ assert.equal(integrationHash(current),'007ddabb324fdebaed71551c17653a839dac994d70a6d0b2a6c864855e2720a6');
+ assert.equal(integrationHash(integrationHistoricalRead('core',path,current)),'2ef106edc162fb28b7579322dff9b89057b184a2166f51ce57ed31781190d848');
+ const injected=Buffer.concat([current,Buffer.from('UNREVIEWED_EVALUATOR')]);
+ assert.deepEqual(integrationHistoricalRead('core',path,injected),injected,'historical reflection must not erase injected bytes');
+ assert.throws(()=>verifyIntegrationCandidate(p=>p===path?injected:integrationPhysicalRead(p)),/SOURCE_DRIFT/);
+ for(const p of ['tests/recommendationIssuerEventReview.test.mjs','research/recommendation-issuer-event-review-candidate.ts'])assert.deepEqual(integrationPhysicalRead(p),sourceUnionParentRead('actual',p));
+ const r3=verifyIntegrationCandidate().source_union.r3;assert.equal(r3.base,SOURCE_UNION_R3_BASE);
+ assert.equal(r3.evaluator_evidence,'MEMORY_BASIS_CONTROL_AND_FRESH_DB_FIXTURE_NOT_PRODUCTION_ROLE_OR_RAW_PAYLOAD_PROOF');
 });
 test('current union manifest mode and Actual source drift remain rejected before packaging',()=>{
  const paths=integrationInventory(),p='src/features/vnext/v1ActualCanonical.ts';

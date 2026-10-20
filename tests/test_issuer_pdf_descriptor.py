@@ -5,6 +5,8 @@ Separate local replay (not part of unittest discovery or GitHub PASS counts):
     --manifest-sha256 SHA --private-root DIR --outdir PRIVATE_SUBDIR
 The private manifest pins descriptors and independent private reference receipts.
 No original, descriptor, reference value or personal data is embedded in Git.
+Optional Q4 replay uses --q4-descriptor/--q4-descriptor-sha256 and
+--q4-reference/--q4-reference-sha256. The old annual-table rejection is retained.
 """
 from __future__ import annotations
 import argparse
@@ -365,10 +367,211 @@ class SyntheticControls(unittest.TestCase):
         self.assertEqual(len(self.run_descriptor(d,LabelDialect)['rows']),2)
         d['metrics'][0]['multiplier']='1';self.rejected(d,'REVENUE_SCALE_NOT_PROVEN',LabelDialect)
 
+    def q4_fixture(self):
+        annual=self.base/'annual.pdf';self.put(annual,b'%PDF-SYNTHETIC-ANNUAL')
+        ar=self.base/'annual-receipt.json'
+        entry=copy.deepcopy(self.receipt_obj['results'][0]);entry.update(url='https://issuer.example/annual.pdf',raw_path=str(annual),sha256=sha(annual.read_bytes()),bytes=len(annual.read_bytes()),period='2025Q4')
+        self.put(ar,{'results':[entry]})
+        review=self.base/'review.json'
+        self.qr={'contract':'INDEPENDENT_FINANCIAL_SOURCE_QUALITY_REVIEW_V1','symbol':'SYNTHETIC',
+            'review_scope':'DIRECT_QUARTER_REVENUE_AND_BASIC_ORDINARY_EPS_ONLY',
+            'review_process':'INDEPENDENT_OF_EXTRACTION_AND_RECOMMENDATION_ENGINE',
+            'recorded_at':'2026-01-01T01:00:02Z','source_admission':False,'quality_authority_installed':False,
+            'member_publication':False,'canonical_write':False,'formal_v1_evaluation':False,'legal_reuse_approval':None,
+            'quarters':[{'period':'2025Q4','quality_status':'QUALITY_PASS','fields':['revenue','basic_ordinary_eps'],
+                'statement_sha256':sha(annual.read_bytes()),'short_fs_sha256':sha(self.pdf.read_bytes()),
+                'evidence_pages':{'short_fs':1,'ordinary_eps_policy':2,'accounting':3}}]}
+        self.put(review,self.qr)
+        main=copy.deepcopy(self.receipt_obj);main['results'][0].update(bytes=len(self.pdf.read_bytes()),period='2025Q4');self.put(self.receipt,main)
+        d=copy.deepcopy(self.d);d['contract']=M.Q4_CONTRACT;d['source']['receipt']['sha256']=sha(self.receipt.read_bytes())
+        d['period']={'year':2025,'quarter':4,'header':label(1,200,40,'For the Fourth quarter of year 2025'),
+            'quarter_label':label(1,220,65,'4Q 2025',60),'column_x':[200,300]}
+        d['annual_policy_proof']={'source':{'path':str(annual),'url':'https://issuer.example/annual.pdf','sha256':sha(annual.read_bytes()),
+            'receipt':{'path':str(ar),'sha256':sha(ar.read_bytes()),'entry_pointer':'/results/0'}},
+            'issuer_name':copy.deepcopy(d['issuer_name']),'identity':copy.deepcopy(d['identity']),
+            'annual_period':label(1,200,40,'For the years ended December 31, 2025 and 2024'),
+            'policy':label(2,10,10,'Basic earnings per share is calculated by dividing net profit for the year attributable to ordinary equity owners of the parent entity by the weighted average number of ordinary shares outstanding during the year.'),
+            'independent_review':{'path':str(review),'sha256':sha(review.read_bytes()),'entry_pointer':'/quarters/0'}}
+        d['accounting']['proof']=label(3,10,10,'The consolidated financial statements have been prepared in accordance with IFRS as endorsed by FSC.')
+        d['metrics'][0]['multiplier']='1000000';d['metrics'][0]['unit_proof']['text']='Unit: Millions of New Taiwan dollars'
+        d['metrics'][1]['label']['text']='Basic Earnings Per Share (NTD)';d['metrics'][1]['unit_proof']=copy.deepcopy(d['metrics'][1]['label'])
+        d['metrics'][1]['share_proof']={'kind':M.Q4_SHARE_PROOF}
+        class Q4Document(SyntheticDocument):
+            def __init__(self,data,*args):
+                super().__init__(data,*args)
+                self.cache={}
+                if data.endswith(b'ANNUAL'):
+                    self.items[1][1]=(200,40,d['annual_policy_proof']['annual_period']['text'])
+                    self.items[2][0]=(10,10,d['annual_policy_proof']['policy']['text'])
+                    self.items[3][0]=(10,10,'The consolidated financial statements have been prepared in accordance with IFRS as endorsed by FSC.')
+                else:
+                    self.items[1][1]=(200,40,'For the Fourth quarter of year 2025');self.items[1][2]=(220,65,'4Q 2025')
+                    self.items[1][3]=(10,80,'Unit: Millions of New Taiwan dollars');self.items[1][6]=(10,130,'Basic Earnings Per Share (NTD)')
+        return d,Q4Document
+
+    def q4_review_change(self,d,key,value,*,root=False):
+        q=copy.deepcopy(self.qr);(q if root else q['quarters'][0])[key]=value
+        p=Path(d['annual_policy_proof']['independent_review']['path']);self.put(p,q)
+        d=copy.deepcopy(d);d['annual_policy_proof']['independent_review']['sha256']=sha(p.read_bytes());return d
+
+    def test_q4_versioned_direct_cells_and_review_not_authority(self):
+        d,doc=self.q4_fixture();r=self.run_descriptor(d,doc)
+        self.assertEqual([x['fiscal_period'] for x in r['rows']],['2025Q4','2025Q4'])
+        self.assertEqual([x['value_decimal'] for x in r['rows']],['123456000000','15.00'])
+        self.assertEqual(r['rows'][1]['share_proof']['share_class'],'ORDINARY')
+        self.assertFalse(r['rows'][1]['share_proof']['denominator_formula_checked'])
+        self.assertFalse(r['annual_policy_evidence']['annual_values_extracted'])
+        for key in ['source_admission','quality_admission','member_publication']:self.assertIs(r[key],False)
+        self.assertIsNone(r['announced_at']);self.assertIsNone(r['source_version'])
+
+    def test_q4_requires_explicit_version_not_old_contract(self):
+        d,doc=self.q4_fixture();d['contract']=M.CONTRACT;self.rejected(d,'DESCRIPTOR_SCHEMA',doc)
+        d['contract']='issuer-pdf-direct-q4-annual-policy-v2';self.rejected(d,'DESCRIPTOR_SCHEMA|DESCRIPTOR_CONTRACT',doc)
+
+    def test_q4_wrong_quarter_or_comparative_column_rejected(self):
+        d,doc=self.q4_fixture()
+        for value in ['3Q 2025','4Q 2024','2025','2025 YoY%']:
+            class Wrong(doc):
+                def __init__(self,*a):super().__init__(*a);self.items[1][2]=(220,65,value)
+            changed=copy.deepcopy(d);changed['period']['quarter_label']['text']=value
+            self.rejected(changed,'CURRENT_Q4_COLUMN',Wrong)
+
+    def test_q4_annual_ytd_header_cannot_be_quarter(self):
+        d,doc=self.q4_fixture()
+        for value in ['For the years ended December 31, 2025 and 2024','Nine Months Ended December 31','For the Fourth quarter of year 2024']:
+            class Wrong(doc):
+                def __init__(self,*a):super().__init__(*a);self.items[1][1]=(200,40,value)
+            changed=copy.deepcopy(d);changed['period']['header']['text']=value
+            self.rejected(changed,'DIRECT_Q4_HEADER',Wrong)
+
+    def test_q4_no_annual_cells_or_borrowed_currency(self):
+        d,doc=self.q4_fixture();d['metrics'][0]['cell']['page']=2;self.rejected(d,'CELL_PERIOD_PAGE',doc)
+        d,doc=self.q4_fixture();d['metrics'][1]['currency']='USD';self.rejected(d,'CURRENCY_NOT_PROVEN|EPS_CURRENCY_PROOF_CONFLICT',doc)
+
+    def test_q4_explicit_scale_cannot_be_ignored(self):
+        for scale in ['1','1000']:
+            d,doc=self.q4_fixture();d['metrics'][0]['multiplier']=scale;self.rejected(d,'REVENUE_SCALE_NOT_PROVEN',doc)
+
+    def test_q4_review_hash_period_and_both_original_bindings(self):
+        for key,value in [('period','2025Q3'),('quality_status','PENDING'),('statement_sha256','0'*64),('short_fs_sha256','0'*64),('fields',['revenue'])]:
+            d,doc=self.q4_fixture();self.rejected(self.q4_review_change(d,key,value),'INDEPENDENT_REVIEW_BINDING',doc)
+        d,doc=self.q4_fixture();d['annual_policy_proof']['independent_review']['sha256']='0'*64
+        self.rejected(d,'INDEPENDENT_REVIEW_SHA',doc)
+
+    def test_q4_review_pages_time_and_authority_flags(self):
+        d,doc=self.q4_fixture();self.rejected(self.q4_review_change(d,'evidence_pages',{'short_fs':1,'ordinary_eps_policy':1,'accounting':3}),'INDEPENDENT_REVIEW_PAGES',doc)
+        for key,value,code in [('recorded_at','2026-01-01T00:00:00Z','INDEPENDENT_REVIEW_TIME'),('quality_authority_installed',True,'INDEPENDENT_REVIEW_NOT_AUTHORITY'),('symbol','OTHER','INDEPENDENT_REVIEW_IDENTITY')]:
+            d,doc=self.q4_fixture();self.rejected(self.q4_review_change(d,key,value,root=True),code,doc)
+
+    def test_q4_annual_receipt_hash_and_bytes_bound(self):
+        d,doc=self.q4_fixture();d['annual_policy_proof']['source']['receipt']['sha256']='0'*64
+        self.rejected(d,'ANNUAL_RECEIPT_SHA',doc)
+        d,doc=self.q4_fixture();p=Path(d['annual_policy_proof']['source']['receipt']['path']);q=json.loads(p.read_bytes());q['results'][0]['bytes']=1;self.put(p,q);d['annual_policy_proof']['source']['receipt']['sha256']=sha(p.read_bytes())
+        self.rejected(d,'ANNUAL_SOURCE_BYTES',doc)
+
+    def test_q4_other_issuer_year_policy_and_non_ifrs_rejected(self):
+        for target,value,code in [('issuer_name','OTHER ISSUER','ANNUAL_ISSUER_CONFLICT'),('annual_period','For the years ended June 30, 2025 and 2024','ANNUAL_CALENDAR_YEAR'),('policy','Basic earnings per share uses preference shares','ANNUAL_ORDINARY_POLICY')]:
+            d,doc=self.q4_fixture();d['annual_policy_proof'][target]['text']=value
+            # Replace actual synthetic source text too, so these test semantics, not just exact locators.
+            class Wrong(doc):
+                def __init__(self,data,*args):
+                    super().__init__(data,*args)
+                    if data.endswith(b'ANNUAL'):
+                        page=1 if target in ('issuer_name','annual_period') else 2
+                        position=-1 if target=='issuer_name' else 1 if target=='annual_period' else 0
+                        x,y,_=self.items[page][position];self.items[page][position]=(x,y,value)
+            self.rejected(d,code,Wrong)
+        d,doc=self.q4_fixture();d['accounting']['proof']['text']='CONSOLIDATED ONLY'
+        class NoIFRS(doc):
+            def __init__(self,data,*a):
+                super().__init__(data,*a)
+                if data.endswith(b'ANNUAL'):self.items[3][0]=(10,10,'CONSOLIDATED ONLY')
+        self.rejected(d,'ANNUAL_IFRS_PROOF',NoIFRS)
+
+    def test_q4_cannot_skip_metric_share_proof_or_review(self):
+        d,doc=self.q4_fixture();d['metrics']=d['metrics'][:1];self.rejected(d,'Q4_METRIC_PAIR',doc)
+        d,doc=self.q4_fixture();del d['metrics'][1]['share_proof'];self.rejected(d,'DESCRIPTOR_SCHEMA',doc)
+        d,doc=self.q4_fixture();del d['annual_policy_proof']['independent_review'];self.rejected(d,'DESCRIPTOR_SCHEMA',doc)
+
+    def test_q4_axis_cannot_swallow_another_quarter_column(self):
+        d,doc=self.q4_fixture()
+        class ExtraColumn(doc):
+            def __init__(self,data,*args):
+                super().__init__(data,*args)
+                if not data.endswith(b'ANNUAL'):self.items[1].append((320,65,'3Q 2025'))
+        d['period']['column_x']=[200,480]
+        self.rejected(d,'Q4_COLUMN_NOT_ISOLATED',ExtraColumn)
+
+    def test_q4_main_receipt_explicit_bytes_and_period_required(self):
+        for key,value in [('bytes',True),('bytes',1),('period','2025Q3')]:
+            d,doc=self.q4_fixture();q=json.loads(self.receipt.read_bytes());q['results'][0][key]=value
+            self.put(self.receipt,q);d['source']['receipt']['sha256']=sha(self.receipt.read_bytes())
+            self.rejected(d,'Q4_RECEIPT_BINDING',doc)
+
+    def test_q4_annual_receipt_period_time_and_source_hash_required(self):
+        for key,value,code in [('period','2024Q4','ANNUAL_RECEIPT_PERIOD'),('first_seen_at','2099-01-01T00:00:00Z','ANNUAL_RECEIPT_TIME')]:
+            d,doc=self.q4_fixture();p=Path(d['annual_policy_proof']['source']['receipt']['path']);q=json.loads(p.read_bytes());q['results'][0][key]=value
+            self.put(p,q);d['annual_policy_proof']['source']['receipt']['sha256']=sha(p.read_bytes())
+            self.rejected(d,code,doc)
+        d,doc=self.q4_fixture();self.put(Path(d['annual_policy_proof']['source']['path']),b'%PDF-CHANGED-ANNUAL')
+        self.rejected(d,'ANNUAL_SOURCE_SHA',doc)
+
+    def test_q4_review_boolean_page_not_integer_page(self):
+        d,doc=self.q4_fixture();self.rejected(self.q4_review_change(d,'evidence_pages',{'short_fs':True,'ordinary_eps_policy':2,'accounting':3}),'INDEPENDENT_REVIEW_PAGES',doc)
+
+    def test_q4_mention_of_ifrs_not_affirmative_basis(self):
+        d,doc=self.q4_fixture();value='The consolidated financial statements have been prepared in accordance with US GAAP rather than IFRS as endorsed by FSC.'
+        d['accounting']['proof']['text']=value
+        class Mention(doc):
+            def __init__(self,data,*a):
+                super().__init__(data,*a)
+                if data.endswith(b'ANNUAL'):self.items[3][0]=(10,10,value)
+        self.rejected(d,'ANNUAL_IFRS_PROOF',Mention)
+
+    def test_q4_annual_host_and_http_observation_cannot_change(self):
+        d,doc=self.q4_fixture();d['annual_policy_proof']['source']['url']='https://other.example/annual.pdf'
+        self.rejected(d,'ANNUAL_SOURCE_URL',doc)
+        d,doc=self.q4_fixture();p=Path(d['annual_policy_proof']['source']['receipt']['path']);q=json.loads(p.read_bytes());q['results'][0]['http_status_observed']=False
+        self.put(p,q);d['annual_policy_proof']['source']['receipt']['sha256']=sha(p.read_bytes())
+        self.rejected(d,'RECEIPT_HTTP_OBSERVATION',doc)
+
+    def q4_ratio_fixture(self,heading):
+        d,Base=self.q4_fixture()
+        class AdjacentRatio(Base):
+            def __init__(self,data,*args):
+                super().__init__(data,*args)
+                if not data.endswith(b'ANNUAL'):
+                    self.items[1].extend([(320,65,heading),(320,100,'9.5')])
+        d['period']['column_x']=[200,480]
+        return d,AdjacentRatio
+
+    def test_q4_actual_cell_cannot_be_yoy_or_qoq(self):
+        for heading in ['YoY%','QoQ%']:
+            with self.subTest(heading=heading):
+                d,doc=self.q4_ratio_fixture(heading)
+                d['metrics'][0]['cell']={'page':1,'bbox':[320,100,480,110]}
+                self.rejected(d,'CELL_Q4_ACTUAL_COLUMN',doc)
+
+    def test_q4_padded_quarter_locator_cannot_include_ratio(self):
+        d,doc=self.q4_ratio_fixture('YoY%')
+        # Partial overlap does not select the full ratio-header word. The
+        # caption text still matches, so native token bounds must control.
+        d['period']['quarter_label']['bbox']=[200,65,470,75]
+        d['metrics'][0]['cell']={'page':1,'bbox':[320,100,480,110]}
+        self.rejected(d,'CELL_Q4_ACTUAL_COLUMN',doc)
+
+    def test_q4_expanded_axis_keeps_native_actual_cell(self):
+        d,doc=self.q4_ratio_fixture('YoY%');r=self.run_descriptor(d,doc)
+        self.assertEqual(len(r['rows']),2)
+        self.assertEqual(r['period_evidence']['native_actual_column_x'],[220,300])
+        self.assertEqual(r['rows'][0]['value_decimal'],'123456000000')
+
 
 def local_replay(argv):
     """Explicit local command, never counted as public unittest PASS/skip."""
-    ap=argparse.ArgumentParser();ap.add_argument('--replay-manifest',type=Path,required=True);ap.add_argument('--manifest-sha256',required=True);ap.add_argument('--private-root',type=Path,required=True);ap.add_argument('--outdir',type=Path,required=True);args=ap.parse_args(argv)
+    ap=argparse.ArgumentParser();ap.add_argument('--replay-manifest',type=Path,required=True);ap.add_argument('--manifest-sha256',required=True);ap.add_argument('--private-root',type=Path,required=True);ap.add_argument('--outdir',type=Path,required=True)
+    ap.add_argument('--q4-descriptor',type=Path);ap.add_argument('--q4-descriptor-sha256')
+    ap.add_argument('--q4-reference',type=Path);ap.add_argument('--q4-reference-sha256');args=ap.parse_args(argv)
     root=M.PrivateRoot(args.private_root)
     try:
         raw=root.read(args.replay_manifest,M.Limits().json_bytes);M.require(sha(raw)==args.manifest_sha256,'REPLAY_MANIFEST_SHA')
@@ -390,10 +593,36 @@ def local_replay(argv):
             M.require(all(x['label']['text'] and x['source_sha256']==r['source_sha256'] for x in r['rows']),'REPLAY_LABEL_SOURCE')
             payload=(json.dumps(r,ensure_ascii=False,indent=2)+'\n').encode();output=root.write_new(args.outdir,case['output_name'],payload)
             results.append({'period':case['fiscal_period'],'status':'CANDIDATE_ONLY','row_count':len(r['rows']),'output':str(output),'output_sha256':sha(payload),'descriptor_sha256':case['descriptor_sha256'],'source_sha256':r['source_sha256'],'receipt_sha256':r['receipt_sha256'],'reference_hash_label_period_checks':'PASS','first_seen_at':r['first_seen_at'],'source_available_at':r['source_available_at'],'normalization_available_at':r['normalization_available_at']})
-        M.require(sum(x['status']=='CANDIDATE_ONLY' for x in results)==3 and sum(x['status']=='REJECTED' for x in results)==1,'REPLAY_COUNTS')
+        q4_args=[args.q4_descriptor,args.q4_descriptor_sha256,args.q4_reference,args.q4_reference_sha256]
+        M.require(all(x is None for x in q4_args) or all(x is not None for x in q4_args),'Q4_REPLAY_ARGUMENTS')
+        if args.q4_descriptor is not None:
+            r=M.extract(root,args.q4_descriptor,args.q4_descriptor_sha256,frozenset(manifest['source_hosts']))
+            M.require(r.get('descriptor_dialect')==M.Q4_CONTRACT and len(r['rows'])==2,'Q4_REPLAY_DIALECT')
+            rr=root.read(args.q4_reference,M.Limits().receipt_bytes);M.require(sha(rr)==args.q4_reference_sha256,'Q4_REPLAY_REFERENCE_SHA')
+            reference=M.bounded_json(rr,M.Limits().receipt_bytes,M.Limits())
+            refs=[x for x in reference['rows'] if x['fiscal_period']==r['rows'][0]['fiscal_period']]
+            M.require(len(refs)==1,'Q4_REPLAY_REFERENCE_PERIOD');ref=refs[0]
+            M.require(ref['fs_source_sha256']==r['source_sha256'] and ref['fs_source_ref']==r['source_url']
+                      and ref['fs_source_path']==r['source_path'],'Q4_REPLAY_REFERENCE_SOURCE')
+            expected={'revenue':Decimal(ref['quarter_revenue_twd_decimal']),
+                      'basic_eps':Decimal(ref['basic_eps_as_reported_twd_per_share'])}
+            M.require(all(Decimal(x['value_decimal'])==expected[x['metric']] for x in r['rows']),'Q4_REPLAY_REFERENCE_VALUES')
+            M.require(all(x['fiscal_period']==ref['fiscal_period'] and x['label']['page']==1
+                          and x['source_admission'] is False and x['quality_admission'] is False
+                          and x['member_publication'] is False for x in r['rows']),'Q4_REPLAY_ROWS')
+            payload=(json.dumps(r,ensure_ascii=False,indent=2)+'\n').encode();output=root.write_new(args.outdir,'q4-direct-short-actual.json',payload)
+            results.append({'period':ref['fiscal_period'],'status':'CANDIDATE_ONLY','row_count':2,
+                'output':str(output),'output_sha256':sha(payload),'descriptor_sha256':args.q4_descriptor_sha256,
+                'source_sha256':r['source_sha256'],'annual_policy_sha256':r['annual_policy_evidence']['source']['sha256'],
+                'independent_review_sha256':r['annual_policy_evidence']['independent_review']['sha256'],
+                'value_reference_sha256':sha(rr),'value_reference_is_share_class_proof':False,
+                'reference_hash_label_period_checks':'PASS','first_seen_at':r['first_seen_at'],
+                'source_available_at':r['source_available_at'],'normalization_available_at':r['normalization_available_at']})
+        count=4 if args.q4_descriptor is not None else 3
+        M.require(sum(x['status']=='CANDIDATE_ONLY' for x in results)==count and sum(x['status']=='REJECTED' for x in results)==1,'REPLAY_COUNTS')
         safe={'contract':'issuer-descriptor-local-replay-safe-v1','results':results,'normalizer_sha256':sha(SCRIPT.read_bytes()),'test_harness_sha256':sha(Path(__file__).read_bytes()),'public_synthetic_test_count_includes_real_replay':False,'manifest_sha256':sha(raw),'source_admission':False,'quality_admission':False,'member_publication':False,'network_requests':0}
         rb=(json.dumps(safe,indent=2)+'\n').encode();rp=root.write_new(args.outdir,manifest['safe_receipt_name'],rb)
-        print(json.dumps({'real_quarters_normalized':3,'real_metric_rows':6,'q4_rejected':1,'safe_receipt':str(rp),'safe_receipt_sha256':sha(rb),'source_admission':False,'quality_admission':False,'member_publication':False}));return 0
+        print(json.dumps({'real_quarters_normalized':count,'real_metric_rows':count*2,'q4_rejected':1,'legacy_annual_q4_rejected':1,'direct_q4_candidates':count-3,'safe_receipt':str(rp),'safe_receipt_sha256':sha(rb),'source_admission':False,'quality_admission':False,'member_publication':False}));return 0
     finally:root.close()
 
 

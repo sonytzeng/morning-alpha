@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22.14.0
-      - name: Complete current tree, exact parents, six support deltas and immutable parent assertions
+      - name: Complete current R3 tree, exact eight source deltas, unchanged five support paths and immutable parent assertions
         run: node --experimental-strip-types --test --test-concurrency=1 tests/originalIngressAdmission.test.mjs tests/officialPublicAdmission.test.mjs
       - uses: actions/setup-python@v5
         with:
@@ -25,5 +25,27 @@ jobs:
         run: python -m pip install --disable-pip-version-check pypdf==6.10.0 pdfplumber==0.11.9
       - name: Pinned issuer descriptor offline synthetic controls only; no private PDF replay or source admission
         run: python -B tests/test_issuer_pdf_descriptor.py SyntheticControls -v
+      - name: Current capacity boundary negatives and evaluator revision controls; synthetic only, not Production capacity or raw-payload proof
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/memberCapacityModel.test.mjs tests/v1FundamentalRevisionSelection.test.mjs
+      - name: Unchanged issuer R9 assertions through fresh complete R3 admission; no source activation
+        run: node --experimental-strip-types --test tests/recommendationIssuerEventReview.test.mjs
       - name: Current Registry, Actual-only and response-period controls; not source admission
         run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextContracts.test.mjs tests/vnextOriginalTimestamp.test.ts tests/vnextOriginalIngress.test.mjs tests/vnextOriginalRegistryIngress.test.mjs tests/v1ActualCanonical.test.mjs tests/vnextFinancialResponsePeriod.test.mjs tests/vnextForwardCutoffRuntime.test.mjs
+  r3-evaluator-fresh-db:
+    needs: current-union
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - name: Admit this complete current tree before isolated database preparation
+        run: node --input-type=module -e "import {verifyIntegrationCandidate} from './tests/helpers/integrationAdmission.mjs'; verifyIntegrationCandidate();"
+      - name: Explicit local test image preparation only; no Provider or Production endpoint
+        run: docker pull postgres:17
+      - name: Synthetic earnings real-loader fixture; service SELECT-only is not Production ACL evidence
+        run: timeout 120s node --experimental-strip-types tests/v1FundamentalRevisionDatabase.integration.mjs

@@ -36,6 +36,8 @@ import pdfplumber
 from pypdf import PdfReader
 
 CONTRACT = "issuer-pdf-descriptor-v1"
+Q4_CONTRACT = "issuer-pdf-direct-q4-annual-policy-v1"
+Q4_SHARE_PROOF = "reviewed-annual-ordinary-policy-v1"
 BROWSER_RECEIPT = "BROWSER_NATIVE_PUBLIC_DOWNLOAD_RECEIPT_V1"
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 MULTIPLIERS = {"1": "", "1000": "thousand", "1000000": "million", "1000000000": "billion"}
@@ -394,18 +396,27 @@ class Document:
         return actual, obj
 
 
-def period(doc: Document, obj: object) -> dict:
-    p = keys(obj, {"year", "quarter", "header", "year_label", "column_x"})
+def period(doc: Document, obj: object, *, direct_q4: bool = False) -> dict:
+    p = keys(obj, {"year", "quarter", "header", "column_x",
+                   "quarter_label" if direct_q4 else "year_label"})
     year, quarter = p["year"], p["quarter"]
     require(type(year) is int and 2000 <= year <= 2100 and type(quarter) is int
             and 1 <= quarter <= 4, "FISCAL_PERIOD")
     header, h = doc.select(p["header"])
-    year_text, y = doc.select(p["year_label"])
-    require(h["page"] == y["page"] and year_text == str(year), "CURRENT_YEAR_COLUMN")
+    year_text, y = doc.select(p["quarter_label"] if direct_q4 else p["year_label"])
+    if direct_q4:
+        require(quarter == 4 and h["page"] == y["page"] and year_text == f"4Q {year}",
+                "CURRENT_Q4_COLUMN")
+    else:
+        require(h["page"] == y["page"] and year_text == str(year), "CURRENT_YEAR_COLUMN")
     month = calendar.month_name[quarter * 3]
     day = calendar.monthrange(year, quarter * 3)[1]
-    require(re.fullmatch(r"(?:for the )?three months ended " + month + r"\s+" + str(day) + r",?",
-                         header, re.I) is not None, "DIRECT_THREE_MONTH_HEADER")
+    if direct_q4:
+        require(re.fullmatch(r"For the Fourth quarter of year " + str(year), header, re.I)
+                is not None, "DIRECT_Q4_HEADER")
+    else:
+        require(re.fullmatch(r"(?:for the )?three months ended " + month + r"\s+" + str(day) + r",?",
+                             header, re.I) is not None, "DIRECT_THREE_MONTH_HEADER")
     axis = p["column_x"]
     require(type(axis) is list and len(axis) == 2 and all(type(v) in (int, float)
             and math.isfinite(v) for v in axis), "COLUMN_BOUNDS")
@@ -414,7 +425,32 @@ def period(doc: Document, obj: object) -> dict:
             and a <= y["bbox"][0] < y["bbox"][2] <= b
             and h["bbox"][1] <= y["bbox"][1]
             and h["bbox"][0] <= (a + b) / 2 <= h["bbox"][2], "COLUMN_HEADER_ALIGNMENT")
+    if direct_q4:
+        words = doc.page(h["page"])[1]
+        markers = [w for w in words
+                   if y["bbox"][1] - 2 <= w["top"] <= y["bbox"][3] + 2
+                   and re.fullmatch(r"[1-4]Q(?: 20\d{2})?", w["text"])
+                   and a <= (w["x0"] + w["x1"]) / 2 <= b]
+        require(len(markers) == 1 and y["bbox"][0] <= markers[0]["x0"]
+                and markers[0]["x1"] <= y["bbox"][2], "Q4_COLUMN_NOT_ISOLATED")
+        # Derive the actual column from native header tokens, not descriptor
+        # padding/column_x. Ratio headers are column neighbours too.
+        selected = [w for w in words if w["x0"] >= y["bbox"][0] - .05
+                    and w["x1"] <= y["bbox"][2] + .05 and w["top"] >= y["bbox"][1] - .05
+                    and w["bottom"] <= y["bbox"][3] + .05]
+        require(bool(selected) and max(w["top"] for w in selected)
+                - min(w["top"] for w in selected) <= 2, "Q4_COLUMN_NOT_ISOLATED")
+        left, right = min(w["x0"] for w in selected), max(w["x1"] for w in selected)
+        top, bottom = min(w["top"] for w in selected), max(w["bottom"] for w in selected)
+        neighbours = [w for w in words if w not in selected and top - 2 <= w["top"] <= bottom + 2
+                      and re.fullmatch(r"[1-4]Q(?: 20\d{2})?|(?:YoY|QoQ)%?", w["text"], re.I)]
+        require(all(w["x1"] <= left or w["x0"] >= right for w in neighbours),
+                "Q4_COLUMN_NOT_ISOLATED")
+        before, after = [w["x1"] for w in neighbours if w["x1"] <= left], [w["x0"] for w in neighbours if w["x0"] >= right]
+        native_axis = [(max(before) + left) / 2 if before else left,
+                       (right + min(after)) / 2 if after else right]
     return {"year": year, "quarter": quarter, "header": h, "year_label": y,
+            **({"quarter_label": y, "native_actual_column_x": native_axis} if direct_q4 else {}),
             "column_x": axis, "period_start": f"{year}-{quarter * 3 - 2:02d}-01",
             "period_end": f"{year}-{quarter * 3:02d}-{day:02d}"}
 
@@ -435,6 +471,9 @@ def aligned(cell: dict, label: dict, p: dict) -> None:
     x0, top, x1, bottom = cell["bbox"]
     require(p["column_x"][0] <= x0 < x1 <= p["column_x"][1]
             and top > p["year_label"]["bbox"][3], "CELL_CURRENT_COLUMN")
+    if "native_actual_column_x" in p:
+        require(p["native_actual_column_x"][0] <= x0 < x1 <= p["native_actual_column_x"][1],
+                "CELL_Q4_ACTUAL_COLUMN")
     require(label["bbox"][2] < x0 and label["bbox"][1] - 3 <= (top + bottom) / 2
             <= label["bbox"][3] + 3, "CELL_LABEL_ALIGNMENT")
 
@@ -455,14 +494,111 @@ def revenue_scale(unit: str, currency: str) -> str:
                                       "billion": "1000000000"}[scale.rstrip("s")]
 
 
+def annual_policy(root: PrivateRoot, d: dict, issuer: str, allowed_hosts: frozenset[str],
+                  limits: Limits, started: float, main_bytes: int, main_available: datetime) -> dict:
+    """A separate, pinned reviewed-policy dialect; never annual EPS arithmetic.
+
+    The existing independent review must bind BOTH originals and this quarter.
+    Its presence is evidence, not installation of source/quality/rights authority.
+    """
+    a = keys(d["annual_policy_proof"], {"source", "issuer_name", "identity", "annual_period",
+                                       "policy", "independent_review"})
+    source = keys(a["source"], {"path", "url", "sha256", "receipt"})
+    url = urlsplit(text(source["url"]))
+    require(url.scheme == "https" and url.hostname in allowed_hosts
+            and url.hostname == urlsplit(d["source"]["url"]).hostname
+            and url.username is None and url.password is None and url.port in (None, 443)
+            and not url.fragment, "ANNUAL_SOURCE_URL")
+    require(source["path"] != d["source"]["path"]
+            and source["sha256"] != d["source"]["sha256"], "ANNUAL_DISTINCT_ORIGINAL")
+    receipt = keys(source["receipt"], {"path", "sha256", "entry_pointer"})
+    rr = root.read(Path(text(receipt["path"])), limits.receipt_bytes)
+    require(digest(rr) == checked_sha(receipt["sha256"]), "ANNUAL_RECEIPT_SHA")
+    entry, capture = bind_receipt(bounded_json(rr, limits.receipt_bytes, limits), source,
+                                 receipt["entry_pointer"], allowed_hosts, d["period"])
+    first, available = timestamp(entry.get("first_seen_at")), timestamp(entry.get("available_at"))
+    require(first <= available <= datetime.now(timezone.utc), "ANNUAL_RECEIPT_TIME")
+    if entry.get("source_received_at") is not None:
+        require(timestamp(entry["source_received_at"]) <= available, "ANNUAL_RECEIPT_TIME")
+    data = root.read(Path(text(source["path"])), limits.pdf_bytes)
+    require(digest(data) == checked_sha(source["sha256"]), "ANNUAL_SOURCE_SHA")
+    require(type(entry.get("bytes")) is int and entry["bytes"] == len(data)
+            and main_bytes + len(data) <= limits.pdf_bytes, "ANNUAL_SOURCE_BYTES")
+    require(entry.get("period") == f"{d['period']['year']}Q4", "ANNUAL_RECEIPT_PERIOD")
+    review = keys(a["independent_review"], {"path", "sha256", "entry_pointer"})
+    raw = root.read(Path(text(review["path"])), limits.receipt_bytes)
+    require(digest(raw) == checked_sha(review["sha256"]), "INDEPENDENT_REVIEW_SHA")
+    q = bounded_json(raw, limits.receipt_bytes, limits)
+    require(type(q) is dict and q.get("contract") == "INDEPENDENT_FINANCIAL_SOURCE_QUALITY_REVIEW_V1"
+            and q.get("symbol") == d["entity"]
+            and q.get("review_scope") == "DIRECT_QUARTER_REVENUE_AND_BASIC_ORDINARY_EPS_ONLY"
+            and q.get("review_process") == "INDEPENDENT_OF_EXTRACTION_AND_RECOMMENDATION_ENGINE",
+            "INDEPENDENT_REVIEW_IDENTITY")
+    require(all(q.get(k) is False for k in ("source_admission", "quality_authority_installed",
+            "member_publication", "canonical_write", "formal_v1_evaluation"))
+            and q.get("legal_reuse_approval") is None, "INDEPENDENT_REVIEW_NOT_AUTHORITY")
+    require(max(main_available, available) <= timestamp(q.get("recorded_at"))
+            <= datetime.now(timezone.utc), "INDEPENDENT_REVIEW_TIME")
+    r = pointer(q, review["entry_pointer"])
+    require(r.get("period") == f"{d['period']['year']}Q4" and r.get("quality_status") == "QUALITY_PASS"
+            and r.get("fields") == ["revenue", "basic_ordinary_eps"]
+            and r.get("statement_sha256") == source["sha256"]
+            and r.get("short_fs_sha256") == d["source"]["sha256"], "INDEPENDENT_REVIEW_BINDING")
+    pages = r.get("evidence_pages")
+    require(type(pages) is dict and all(type(pages.get(k)) is int for k in
+            ("short_fs", "ordinary_eps_policy", "accounting"))
+            and pages.get("short_fs") == d["period"]["header"]["page"]
+            and pages.get("ordinary_eps_policy") == a["policy"]["page"]
+            and pages.get("accounting") == d["accounting"]["proof"]["page"],
+            "INDEPENDENT_REVIEW_PAGES")
+    doc = Document(data, limits, started)
+    try:
+        name, _ = doc.select(a["issuer_name"])
+        require(name == issuer, "ANNUAL_ISSUER_CONFLICT")
+        identity, _ = doc.select(a["identity"])
+        require(re.search(r"\bconsolidated\b", identity, re.I) is not None
+                and re.search(r"\b(?:not|no)\b|\b(?:un|non)[\s-]*consolidated\b", identity, re.I)
+                is None, "ANNUAL_CONSOLIDATED_IDENTITY")
+        annual, _ = doc.select(a["annual_period"])
+        year = d["period"]["year"]
+        require(re.fullmatch(r"(?:For the )?years ended December 31,? " + str(year)
+                + r" and " + str(year - 1), annual, re.I) is not None, "ANNUAL_CALENDAR_YEAR")
+        policy, _ = doc.select(a["policy"])
+        require(re.fullmatch(r"Basic earnings per share is calculated by dividing net profit for the year "
+            r"attributable to ordinary equity owners of the parent entity by the weighted average number "
+            r"of ordinary shares outstanding during the year\.?", policy, re.I) is not None,
+            "ANNUAL_ORDINARY_POLICY")
+        accounting, _ = doc.select(d["accounting"]["proof"])
+        require(re.fullmatch(r"The consolidated financial statements have been prepared in accordance with "
+            r"(?:the Regulations Governing the Preparation of Financial Reports by Securities Issuers"
+            r"(?: \([“\"]the Regulations[”\"]\))? and )?"
+            r"IFRS as endorsed(?: and became effective)? by FSC\.?", accounting, re.I) is not None,
+            "ANNUAL_IFRS_PROOF")
+        require(len(doc.cache) + 1 <= limits.selected_pages, "SELECTED_PAGE_LIMIT")
+    finally:
+        doc.close()
+    return {"kind": Q4_SHARE_PROOF, "source": source, "source_bytes": len(data),
+        "issuer_name_locator": a["issuer_name"], "identity": a["identity"],
+        "annual_period": a["annual_period"], "policy": a["policy"],
+        "accounting_proof": d["accounting"]["proof"], "independent_review": review,
+        "independent_review_recorded_at": q["recorded_at"],
+        "first_seen_at": entry["first_seen_at"], "source_available_at": entry["available_at"],
+        "source_received_at": entry.get("source_received_at"), **capture,
+        "announced_at": None, "source_version": None, "revision_chain": None,
+        "review_is_admission": False, "annual_values_extracted": False,
+        "source_admission": False, "quality_admission": False, "member_publication": False}
+
+
 def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
             allowed_hosts: frozenset[str], limits: Limits = Limits()) -> dict:
     started = time.monotonic()
     raw = root.read(descriptor, limits.json_bytes)
     require(digest(raw) == checked_sha(descriptor_sha256), "DESCRIPTOR_SHA_MISMATCH")
-    d = keys(bounded_json(raw, limits.json_bytes, limits),
-             {"contract", "entity", "source", "period", "issuer_name", "identity", "accounting", "metrics"})
-    require(d["contract"] == CONTRACT, "DESCRIPTOR_CONTRACT")
+    obj = bounded_json(raw, limits.json_bytes, limits)
+    q4 = type(obj) is dict and obj.get("contract") == Q4_CONTRACT
+    d = keys(obj, {"contract", "entity", "source", "period", "issuer_name", "identity", "accounting", "metrics"}
+             | ({"annual_policy_proof"} if q4 else set()))
+    require(d["contract"] in (CONTRACT, Q4_CONTRACT), "DESCRIPTOR_CONTRACT")
     require(re.fullmatch(r"[A-Za-z0-9_.-]{1,32}", text(d["entity"], 32)) is not None, "ENTITY")
     source = keys(d["source"], {"path", "url", "sha256", "receipt"})
     url = urlsplit(text(source["url"]))
@@ -482,10 +618,13 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
     require(digest(pdf_data) == source["sha256"], "PDF_SHA_MISMATCH")
     if capture["capture_kind"] == BROWSER_RECEIPT:
         require(entry["bytes"] == len(pdf_data), "NATIVE_BYTE_COUNT")
+    if q4:
+        require(type(entry.get("bytes")) is int and entry["bytes"] == len(pdf_data)
+                and entry.get("period") == f"{d['period']['year']}Q4", "Q4_RECEIPT_BINDING")
     verified = clock()
     doc = Document(pdf_data, limits, started)
     try:
-        p = period(doc, d["period"])
+        p = period(doc, d["period"], direct_q4=q4)
         issuer_name, _ = doc.select(d["issuer_name"])
         require(len(issuer_name) <= 256, "ISSUER_NAME_BOUND")
         identity, _ = doc.select(d["identity"])
@@ -495,8 +634,13 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
         accounting = keys(d["accounting"], {"classification", "proof"})
         require(re.fullmatch(r"[A-Z][A-Z0-9_]{0,79}", text(accounting["classification"], 80)) is not None,
                 "ACCOUNTING_CLASSIFICATION")
-        doc.select(accounting["proof"])
+        annual = annual_policy(root, d, issuer_name, allowed_hosts, limits, started, len(pdf_data), available) if q4 else None
+        if not q4:
+            doc.select(accounting["proof"])
         require(type(d["metrics"]) is list and 1 <= len(d["metrics"]) <= 2, "METRIC_COUNT")
+        if q4:
+            require([m.get("metric") for m in d["metrics"] if type(m) is dict] == ["revenue", "basic_eps"],
+                    "Q4_METRIC_PAIR")
         result, seen = [], set()
         for raw_metric in d["metrics"]:
             m = keys(raw_metric, {"metric", "label", "cell", "currency", "multiplier",
@@ -508,11 +652,15 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
             require((metric == "revenue" and re.fullmatch(
                         r"(?:net sales|revenue|revenues|operating revenue)(?: ?\(Notes? [A-Za-z0-9() ,]+\))?",
                         label, re.I) is not None)
-                    or (metric == "basic_eps" and re.fullmatch(r"basic earnings per share(?: \(in new taiwan dollars\)| \(NT\$\))?", label, re.I) is not None),
+                    or (metric == "basic_eps" and re.fullmatch(
+                        r"basic earnings per share \(NTD\)" if q4 else r"basic earnings per share(?: \(in new taiwan dollars\)| \(NT\$\))?",
+                        label, re.I) is not None),
                     "METRIC_LABEL_NOT_EQUIVALENT")
             value, lexical, decimals = number(doc, m["cell"], m["numeric_format"])
             aligned(m["cell"], label_loc, p)
             unit, unit_locator = doc.select(m["unit_proof"])
+            if q4:
+                require(unit_locator["page"] == p["header"]["page"], "Q4_UNIT_PAGE")
             require(m["currency"] in CURRENCIES and any(t in unit.lower() for t in CURRENCIES[m["currency"]]),
                     "CURRENCY_NOT_PROVEN")
             require(type(m["multiplier"]) is str and m["multiplier"] in MULTIPLIERS, "MULTIPLIER")
@@ -520,6 +668,14 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
                 require("share_proof" not in m and revenue_scale(unit, m["currency"]) == m["multiplier"],
                         "REVENUE_SCALE_NOT_PROVEN")
                 share = None
+            elif q4:
+                require(m["currency"] == "TWD" and m["multiplier"] == "1"
+                        and unit_locator == label_loc, "EPS_CURRENCY_PROOF_CONFLICT")
+                proof = keys(m.get("share_proof"), {"kind"})
+                require(proof["kind"] == Q4_SHARE_PROOF, "Q4_SHARE_PROOF_KIND")
+                share = {"share_class": "ORDINARY", "eps_basis": "BASIC", "proof": proof,
+                         "annual_policy_evidence": annual, "denominator_formula_checked": False,
+                         "annual_eps_arithmetic_used": False}
             else:
                 require(m["multiplier"] == "1" and "per share" in label.lower(), "EPS_SCALING")
                 # This bounded proof dialect uses explicit NT$ numerator/note labels.
@@ -564,7 +720,7 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
                 "reported_lexical": lexical, "currency": m["currency"], "multiplier": m["multiplier"],
                 "unit": m["currency"] + ("/ordinary_share" if metric == "basic_eps" else ""),
                 "display_resolution_decimal": str(resolution), "precision_kind": "DISPLAYED_NOT_EXACT",
-                "period_basis": "DIRECT_THREE_MONTHS", "fiscal_period": f"{p['year']}Q{p['quarter']}",
+                "period_basis": "DIRECT_SINGLE_QUARTER_AS_REPORTED" if q4 else "DIRECT_THREE_MONTHS", "fiscal_period": f"{p['year']}Q{p['quarter']}",
                 "period_start": p["period_start"], "period_end": p["period_end"], "scope": "CONSOLIDATED",
                 "label": m["label"], "cell": m["cell"], "unit_proof": m["unit_proof"],
                 "share_proof": share, "source_sha256": source["sha256"],
@@ -588,6 +744,7 @@ def extract(root: PrivateRoot, descriptor: Path, descriptor_sha256: str,
             "time_quality": "NATIVE_RECEIPT_BOUND_AND_CURRENT_NORMALIZATION_NOT_PUBLICATION",
             "announced_at": None, "source_version": None, "revision_chain": None,
             "accounting": accounting, "period_evidence": p, "rows": result,
+            **({"descriptor_dialect": Q4_CONTRACT, "annual_policy_evidence": annual} if q4 else {}),
             "ytd_or_annual_subtraction_used": False, "canonical_writer_invoked": False,
             "source_admission": False, "quality_admission": False, "member_publication": False,
             "legal_reuse_approval": None}

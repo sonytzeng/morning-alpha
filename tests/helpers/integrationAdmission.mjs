@@ -10,7 +10,37 @@ import {URL} from 'node:url';
 export const INTEGRATION_BASE='754850ba1c66329d12eac8e98ab799e0a0c9123e';
 const MEMBER_FORK='cf3b6b21c9e3d022a8132ed3b566b544d290a48f';
 export const INTEGRATION_PARENTS=Object.freeze({core:'bc48d784487fd5ae63ac2bb9c28d9343de41034f',member:'bcf665cad237e9c5e76c9abdd12cc12d5133aaed'});
-export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261019-cold-source-priority.json';
+export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261020-registry-ingress.json';
+const FROZEN_ORIGINAL_INGRESS='docs/operations/evidence/core-member-integration-20261019-original-ingress.json';
+const ORIGINAL_REGISTRY_PARENT='ccd47f83b06d26f89027e644f31824dfd929b2d4';
+export const ORIGINAL_INGRESS_BASE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
+export const FROZEN_COLD_SOURCE_MANIFEST='docs/operations/evidence/core-member-integration-20261019-cold-source-priority.json';
+// Exact candidate engineering scope, not a deployment or source-rights grant.
+export const ORIGINAL_INGRESS_DELTAS=Object.freeze([
+ '.github/workflows/original-observation-ingress.yml',
+ '.github/workflows/validate-release.yml',
+ 'tests/helpers/clockedPsql.mjs',
+ 'docs/operations/original-observation-ingress-20261019.md',
+ 'src/features/vnext/contracts.ts',
+ 'src/features/vnext/engine.ts',
+ 'src/features/vnext/originalIngress.ts',
+ 'supabase/migrations/20261019123345_original_observation_ingress_candidate_v1.sql',
+ 'tests/coldSourcePriorityAdmission.test.mjs',
+ 'tests/helpers/integrationAdmission.mjs',
+ 'tests/originalIngressAdmission.test.mjs',
+ 'tests/r10FunctionalSourceClosure.test.mjs',
+ 'tests/vnextContracts.test.mjs',
+ 'tests/vnextOriginalIngress.test.mjs',
+ 'tests/vnextOriginalIngressDatabase.integration.mjs',
+ 'tests/vnextOriginalTimestamp.test.ts',
+ FROZEN_ORIGINAL_INGRESS,
+ 'docs/operations/original-registry-ingress-20261020.md',
+ 'src/features/vnext/originalRegistryIngress.ts',
+ 'src/features/vnext/originalRegistryIngress.candidate.sql',
+ 'tests/fixtures/originalRegistryIngress.mjs',
+ 'tests/vnextOriginalRegistryIngress.test.mjs',
+ 'tests/vnextOriginalRegistryIngressDatabase.integration.mjs',
+].sort());
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
 const PRIOR_R2='cc167304814b2223977a36802b2666ea8203ff36';
@@ -72,6 +102,8 @@ const FROZEN_PRODUCER15_MONTHLY_MANIFEST='docs/operations/evidence/core-member-i
 // Explicitly reviewed composition deltas. No patterns, glob, deployment flags,
 // automatic inventory admission or addition to any previous release catalogue.
 export const INTEGRATION_DELTAS=Object.freeze([
+ FROZEN_COLD_SOURCE_MANIFEST,
+ ...ORIGINAL_INGRESS_DELTAS,
  FROZEN_PRODUCER15_MONTHLY_MANIFEST,
  'src/features/vnext/dailyAdapter.ts',
  'tests/vnextDailyDatabase.integration.mjs',
@@ -373,7 +405,37 @@ export function integrationScope(){
  }
  return [...fixedScope];
 }
+function verifyOriginalIngressBoundary(read,mode){
+ assert.deepEqual(Buffer.from(read(FROZEN_ORIGINAL_INGRESS)),frozenReceipt(ORIGINAL_REGISTRY_PARENT,FROZEN_ORIGINAL_INGRESS),'INTEGRATION_ORIGINAL_INGRESS_RECEIPT_DRIFT');
+ assert.deepEqual(Buffer.from(read(FROZEN_COLD_SOURCE_MANIFEST)),frozenReceipt(ORIGINAL_INGRESS_BASE,FROZEN_COLD_SOURCE_MANIFEST),'INTEGRATION_COLD_SOURCE_RECEIPT_DRIFT');
+ const allowed=new Set(ORIGINAL_INGRESS_DELTAS);
+ // A newly rehashed composition must not admit unrelated historical drift.
+ // In particular, old catalogues, workflows and authorization receipts stay exact.
+ for(const [path,row] of tree(ORIGINAL_INGRESS_BASE))if(!allowed.has(path)){
+  // Keep the established exact first-line diagnostic contract. The earlier
+  // full-tree guard adds context, but must not masquerade as a legacy failure.
+  assert.equal(integrationHash(read(path)),row.sha256,'INTEGRATION_SOURCE_DRIFT:'+path+'\nINTEGRATION_ORIGINAL_BASE_DRIFT');
+  assert.equal(mode(path),row.mode,'INTEGRATION_ORIGINAL_BASE_MODE:'+path);
+ }
+}
+/** Pure final-seal builder: returns JSON data, never writes or admits missing files.
+ * Call only once all exact candidate paths exist; rerun after every source change.
+ * The composition manifest itself is intentionally outside its own files array. */
+export function createOriginalIngressComposition(read=integrationPhysicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
+ verifyOriginalIngressBoundary(read,mode);
+ const scope=integrationScope(),baseline=tree(INTEGRATION_BASE),prior=tree(ORIGINAL_INGRESS_BASE),allowed=new Set(ORIGINAL_INGRESS_DELTAS);
+ assert.deepEqual([...paths].sort(),[...scope,INTEGRATION_MANIFEST].sort(),'INTEGRATION_UNKNOWN_PATH');
+ const old=JSON.parse(frozenReceipt(ORIGINAL_INGRESS_BASE,FROZEN_COLD_SOURCE_MANIFEST)),oldRows=new Map(old.files.map(row=>[row.path,row]));
+ const files=scope.map(path=>{
+  const after_sha256=integrationHash(read(path)),fileMode=mode(path);assert.match(fileMode,/^100(644|755)$/);
+  if(!allowed.has(path)){const frozen=prior.get(path);assert(frozen,'INTEGRATION_UNREVIEWED_PATH:'+path);assert.equal(after_sha256,frozen.sha256,'INTEGRATION_SOURCE_DRIFT:'+path+'\nINTEGRATION_ORIGINAL_BASE_DRIFT');assert.equal(fileMode,frozen.mode);}
+  return {path,before_sha256:baseline.get(path)?.sha256??null,after_sha256,mode:fileMode,
+   origin:INTEGRATION_DELTAS.includes(path)?'composition':oldRows.get(path).origin};
+ });
+ return {...old,files};
+}
 export function verifyIntegrationCandidate(read=integrationPhysicalRead,paths=integrationInventory(),mode=integrationPhysicalMode){
+ verifyOriginalIngressBoundary(read,mode);
  const m=JSON.parse(read(INTEGRATION_MANIFEST));
  assert.deepEqual(Object.keys(m).sort(),['schema','base','parents','files','production_authorized','migration_execution','auth_rls_change','member_rights_activation','caller_activation','research_publication','line_send','payment_enabled'].sort());
  assert.equal(m.schema,'CORE_MEMBER_COMPOSITION_V1');assert.equal(m.base,INTEGRATION_BASE);assert.deepEqual(m.parents,INTEGRATION_PARENTS);

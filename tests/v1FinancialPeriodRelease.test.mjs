@@ -19,15 +19,21 @@ test('fixed four-file Worker payload retains SDK, JWT, exact rollback and all un
  for(const variant of ['latest','../recovery','deploy'])assert.throws(()=>assemble(variant),/FIXED_VARIANT/);
  assert.throws(()=>assemble('candidate',p=>p===CHANGED[1]?Buffer.concat([read(p),Buffer.from('DRIFT')]):read(p)),/SOURCE_DRIFT/);
 });
-test('fixed runtime and recovery closures pass actual offline Edge type checking, not root/browser substitution',()=>{
+test('fixed runtime and recovery closures pass cold offline Edge checks; type and npm failures remain enforced',()=>{
  const folder=mkdtempSync(join(tmpdir(),'ma-financial-edge-'));
+ const check=(entry,cache)=>execFileSync('deno',['check','--no-config','--no-lock','--no-remote','--deny-import','--no-npm','--node-modules-dir=none',entry],{
+  encoding:'utf8',timeout:30000,stdio:['ignore','pipe','pipe'],
+  env:{PATH:process.env.PATH,HOME:folder,TMPDIR:tmpdir(),DENO_DIR:join(folder,cache),DENO_NO_UPDATE_CHECK:'1'}});
  try{
   for(const variant of ['candidate','recovery']){
    const out=assemble(variant);for(const file of out.payload.files){const path=join(folder,variant,file.name);mkdirSync(dirname(path),{recursive:true});writeFileSync(path,file.content);}
-   const result=execFileSync('deno',['check','--no-config','--no-lock','--no-remote','--deny-import','--no-npm','--node-modules-dir=none',
-    join(folder,variant,out.payload.entrypoint_path)],{encoding:'utf8',timeout:30000,stdio:['ignore','pipe','pipe'],
-     env:{PATH:process.env.PATH,TMPDIR:tmpdir(),DENO_NO_UPDATE_CHECK:'1'}});
+   const result=check(join(folder,variant,out.payload.entrypoint_path),'cold-'+variant);
    assert.doesNotMatch(result,/error:/);
   }
+  const badType=join(folder,'negative-type.ts'),badNpm=join(folder,'negative-npm.ts');
+  writeFileSync(badType,'const value: number = "SYNTHETIC_TYPE_ERROR";\n',{flag:'wx'});
+  writeFileSync(badNpm,'import "npm:morning-alpha-unprovided-control-never@0.0.0";\n',{flag:'wx'});
+  assert.throws(()=>check(badType,'cold-negative-type'),e=>/TS2322/.test(String(e.stderr)),'real type errors must still fail');
+  assert.throws(()=>check(badNpm,'cold-negative-npm'),e=>/npm|NPM/.test(String(e.stderr)),'unprovided npm imports must fail offline');
  }finally{rmSync(folder,{recursive:true,force:true});}
 });

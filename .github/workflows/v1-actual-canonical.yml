@@ -18,7 +18,10 @@ jobs:
           node-version: 22.14.0
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.5.4
+          # 2.8+ bundles lib.node: cold offline checking needs no implicit npm
+          # type bootstrap. SDK/runtime payloads remain byte-identical. 2.5.4
+          # compatibility was separately checked with fixed local Node types.
+          deno-version: v2.9.2
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

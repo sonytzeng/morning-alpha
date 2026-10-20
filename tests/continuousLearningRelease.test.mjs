@@ -7,6 +7,7 @@ import {execFileSync,spawnSync} from 'node:child_process';
 import {createHash,webcrypto} from 'node:crypto';
 import {resolve,dirname,join,posix} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {tmpdir} from 'node:os';
 import vm from 'node:vm';
 import ts from 'typescript';
 import * as actual from '../scripts/operations/continuous-learning-20261020/materialize.mjs';
@@ -16,7 +17,9 @@ const script='scripts/operations/continuous-learning-20261020/materialize.mjs';
 const scriptUrl=new URL('../'+script,import.meta.url).href;
 const sha=b=>createHash('sha256').update(b).digest('hex'),encode=v=>Buffer.from(JSON.stringify(v,null,2)+'\n');
 const physical=name=>readFileSync(resolve(root,name));
-const env={PATH:'/opt/homebrew/bin:/usr/bin:/bin',TMPDIR:'/private/tmp',LC_ALL:'C',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0'};
+// Only the installed tool search path is inherited; no credential-bearing
+// environment is passed to the offline child tools on macOS or Ubuntu CI.
+const env={PATH:process.env.PATH??'/usr/bin:/bin',TMPDIR:tmpdir(),LC_ALL:'C',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_NO_LAZY_FETCH:'1',GIT_TERMINAL_PROMPT:'0'};
 const baseline=name=>execFileSync('git',['--no-replace-objects','show',actual.BASE+':'+name],{cwd:root,env,stdio:['ignore','pipe','pipe'],maxBuffer:8e6});
 // Only this test VM supplies a synthetic admission success and a synthetic
 // catalog seal. Real assemble always calls the real admission helper first.
@@ -33,7 +36,7 @@ const catalog=draft.proposeReleaseCatalog(confirmed,physical),catalogBytes=encod
 const api=packager({seal:sha(catalogBytes),guard:()=>calls.push('ADMISSION')});
 const read=name=>name===actual.CATALOG?catalogBytes:physical(name);
 const candidate=api.assemble('candidate',read),recovery=api.assemble('recovery',read);
-const temporary=mkdtempSync('/private/tmp/ma-cle-release-offline-');
+const temporary=mkdtempSync(join(tmpdir(),'ma-cle-release-offline-'));
 after(()=>rmSync(temporary,{recursive:true,force:true}));
 
 test('proposal confirms fresh source hashes, preserves V17 metadata, and never seals or writes itself',()=>{
@@ -246,7 +249,7 @@ test('actual transformed candidate/recovery entrypoints AND RuntimeDatabase comp
   const folder=join(temporary,variant);mkdirSync(folder);
   for(const f of result.payload.files){const target=join(folder,f.name);mkdirSync(dirname(target),{recursive:true});writeFileSync(target,f.content,{flag:'wx'});}
   const checked=spawnSync('deno',['check','--no-remote','--deny-import','--no-npm','--no-config','--no-lock','--node-modules-dir=none',actual.INDEX,actual.TYPE_CONTRACT,actual.SDK_TYPES],
-   {cwd:folder,env:{PATH:env.PATH,TMPDIR:'/private/tmp',DENO_DIR:join(temporary,'deno-cache'),DENO_NO_UPDATE_CHECK:'1'},encoding:'utf8',timeout:20000,maxBuffer:2e6});
+   {cwd:folder,env:{PATH:env.PATH,TMPDIR:tmpdir(),DENO_DIR:join(temporary,'deno-cache'),DENO_NO_UPDATE_CHECK:'1'},encoding:'utf8',timeout:20000,maxBuffer:2e6});
   if(checked.status!==0)failures.push(variant+' TRANSFORMED_OFFLINE_DENO_CHECK_FAILED\n'+checked.stdout+'\n'+checked.stderr);
   if(checked.status===0){
    const probe=join(folder,'unknown-boundary.ts');

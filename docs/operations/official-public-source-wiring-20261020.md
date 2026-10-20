@@ -2,6 +2,8 @@
 
 這是接續原始交付的獨立來源候選，不是新的推薦方法。基線為 `7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3`。PR #281 的空 Observation 入口、SQL 及 HEAD 完全不在本批；其 Production NO-GO 不變。本批沒有可直接部署的 Function、SQL 或 Caller，不能拿來源工程測試當作會員產品已完成。
 
+後續同一Draft PR另收斂 [C Worker截止修復](forward-cutoff-20261020.md)，其精確payload只改Worker的dailyRuntime，沒有部署本文件的官方資料runner或啟用來源／會員准入。來源工程、限定Worker發布候選與原始產品交付的結論分開，不以其中一項PASS覆蓋其他HOLD。
+
 ## 已實際接入，而非只列調查清單
 
 1. 有界公開擷取器使用固定來源、無憑證 GET、禁止 redirect、位元組／請求／期限上限，拒絕頁立即停止。不落盤公告原文、聯絡人或公司 profile。來源收據保留實際 HTTP bytes 的 SHA256；正規化列與原始 HTTP hash 不混稱。

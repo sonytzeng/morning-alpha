@@ -44,7 +44,7 @@
     {
       "path": ".github/workflows/core-member-integration.yml",
       "before_sha256": null,
-      "after_sha256": "8d8c677cafaee43bbc04ca7300903efa02c64669f5612b00f388a9f93ed66dd3",
+      "after_sha256": "123710b22aba93bbe7d77e25e3091815a9d5f6fdf5368aea47f8aeb5c101fad2",
       "mode": "100644",
       "origin": "composition"
     },
@@ -441,6 +441,13 @@
       "origin": "composition"
     },
     {
+      "path": "docs/operations/evidence/forward-cutoff-acceptance-20261020.json",
+      "before_sha256": null,
+      "after_sha256": "a5285fd54e64f1c4ef47d0ffdba5761dc8f255e0dd12bc9771d87bc26540de5d",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "docs/operations/evidence/frontend-type-closure-20261018.json",
       "before_sha256": null,
       "after_sha256": "56ba246dec7e6bffb840f712483e882a36c3d0bf5266a84d4bc09cae720c0c50",
@@ -581,9 +588,23 @@
       "origin": "composition"
     },
     {
+      "path": "docs/operations/evidence/worker4-exact-readback-20261020.json",
+      "before_sha256": null,
+      "after_sha256": "7d01ded5896cfaecd3f7b41b1f54f2c9b5284f14a9ef3150f6b4112a1edec1e8",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "docs/operations/financial-quarter-profile-20261019.md",
       "before_sha256": null,
       "after_sha256": "95b2e8b71d66ffbee1b3c3f7152908ed8d30da96cf6e15ab0e26d82b78e1f5b6",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "docs/operations/forward-cutoff-20261020.md",
+      "before_sha256": null,
+      "after_sha256": "be36331d9bc502662d3d2ed3a349302a3089c96f081f41042607fe99e54beab4",
       "mode": "100644",
       "origin": "composition"
     },
@@ -604,7 +625,7 @@
     {
       "path": "docs/operations/official-public-source-wiring-20261020.md",
       "before_sha256": null,
-      "after_sha256": "6cc724146929c8a9862073899e352cfb8fd5a005fdcca46da971ad278a8424c5",
+      "after_sha256": "0c07cb2ea5256465fe77aab369d4f12f05fa9097197ca6326f491591110d4c98",
       "mode": "100644",
       "origin": "composition"
     },
@@ -990,6 +1011,20 @@
       "path": "scripts/operations/cold-source-priority-20261019/release-catalog.json",
       "before_sha256": null,
       "after_sha256": "52ecf6eb1643d55edef712117b28ffa42d4bc38385dfe4ce36d3290e4a379a11",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "scripts/operations/forward-cutoff-20261020/materialize.mjs",
+      "before_sha256": null,
+      "after_sha256": "b22d995e495598b6a1297d9cebb898a6ff9e09183c3fa275a0c8c126abba07fa",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
+      "path": "scripts/operations/forward-cutoff-20261020/release-catalog.json",
+      "before_sha256": null,
+      "after_sha256": "55cf5dae1047bf8c20943843006cd786f2d3a3962ba5e95f17cb218a258581c8",
       "mode": "100644",
       "origin": "composition"
     },
@@ -1409,7 +1444,7 @@
     {
       "path": "src/features/vnext/dailyRuntime.ts",
       "before_sha256": "b2ee9bfd1618b6eb7f85494ae55a1d6dc14693f48571e007d9d6a019f861ae91",
-      "after_sha256": "c3c3fc74881831295c4cf19970ba77b77182b6c171e5dde1f3db6610666cea48",
+      "after_sha256": "629489cba95fa427eb5049460fa07148692649fca2714fc9dd4cd99e48eb8201",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2380,6 +2415,13 @@
       "origin": "composition"
     },
     {
+      "path": "tests/forwardCutoffAdmission.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "4e30cbd283be3656b2c3036bb15660f04e8c921b1c1a878c855b42c814022392",
+      "mode": "100644",
+      "origin": "composition"
+    },
+    {
       "path": "tests/frontendTypeClosureAdmission.test.mjs",
       "before_sha256": null,
       "after_sha256": "f16f1330ad43f7c8dce8c492d42b3e5c0568acff8a2c363aa070d0d85152b0d3",
@@ -2424,7 +2466,7 @@
     {
       "path": "tests/helpers/integrationAdmission.mjs",
       "before_sha256": null,
-      "after_sha256": "16cab776d9fcdf4a7098d9607e5f8e21fe49f10dcc11102da92335e209ccea98",
+      "after_sha256": "7539410ded56e2c422803e1ba895355d9f9a5330b61d67319658a9788da96215",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2536,7 +2578,7 @@
     {
       "path": "tests/officialPublicAdmission.test.mjs",
       "before_sha256": null,
-      "after_sha256": "9f9f25b925d9ec6767d3f266dfe979e566d88e6157b468ad10f1b2a4524d76e5",
+      "after_sha256": "e744ab91804b4fec07d95afa016f164456ae714a4958693e61ad5c40bbcd1cf9",
       "mode": "100644",
       "origin": "composition"
     },
@@ -2987,6 +3029,13 @@
       "after_sha256": "bbac197fa1a7b82e04efd0357f8026706ec52c7bbaeb5c2487aacc5c67656145",
       "mode": "100644",
       "origin": "core"
+    },
+    {
+      "path": "tests/vnextForwardCutoffRuntime.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "cb0ef310499dd03d237afb9c3f49679d8050098b367d2de877d3d0d3ea638581",
+      "mode": "100644",
+      "origin": "composition"
     },
     {
       "path": "tests/vnextFoundation.test.mjs",

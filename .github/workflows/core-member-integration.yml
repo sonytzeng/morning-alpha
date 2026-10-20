@@ -28,6 +28,10 @@ jobs:
         env:
           NODE_OPTIONS: --experimental-strip-types
         run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextColdSourcePriority.test.mjs tests/vnextDailyRuntimeRecovery.test.mjs
+      - name: Current forward-cutoff timing and exact-source payload controls
+        env:
+          NODE_OPTIONS: --experimental-strip-types
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/vnextForwardCutoffRuntime.test.mjs tests/forwardCutoffAdmission.test.mjs
       - name: Check out the immutable Worker3 and Producer16 source proofs
         uses: actions/checkout@v4
         with:
@@ -183,6 +187,11 @@ jobs:
           node scripts/operations/cold-source-priority-20261019/materialize.mjs recovery
           deno check --no-lock build/cold-source-priority-20261019-r2/candidate/supabase/functions/vnext-daily-research-v1/index.ts build/cold-source-priority-20261019-r2/recovery/supabase/functions/vnext-daily-research-v1/index.ts
       - run: deno test --no-lock --allow-read tests/researchOwnerFieldAccess.sdk.test.ts tests/providerCapabilityEntry.sdk.test.ts
+      - name: Materialize and check the exact forward-cutoff candidate and Worker4 recovery
+        run: |
+          node scripts/operations/forward-cutoff-20261020/materialize.mjs candidate
+          node scripts/operations/forward-cutoff-20261020/materialize.mjs recovery
+          deno check --no-lock build/forward-cutoff-20261020/candidate/supabase/functions/vnext-daily-research-v1/index.ts build/forward-cutoff-20261020/recovery/supabase/functions/vnext-daily-research-v1/index.ts
       - name: Materialize and type-check the exact current Producer15 candidate and recovery
         run: |
           node scripts/operations/producer15-monthly-release-20261019/materialize.mjs candidate

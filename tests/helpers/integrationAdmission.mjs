@@ -14,6 +14,7 @@ export const INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integrat
 export const OFFICIAL_PUBLIC_BASE='7bfcfcd8fd0dd2fb2303dae58be1a4e0a86485a3';
 const FROZEN_COLD_SOURCE='docs/operations/evidence/core-member-integration-20261019-cold-source-priority.json';
 export const OFFICIAL_PUBLIC_DELTAS=Object.freeze([
+ '.github/workflows/core-member-integration.yml',
  '.github/workflows/official-public-source.yml',
  '.github/workflows/validate-release.yml',
  'docs/operations/official-public-source-wiring-20261020.md',
@@ -29,6 +30,14 @@ export const OFFICIAL_PUBLIC_DELTAS=Object.freeze([
  'tests/helpers/clockedPsql.mjs',
  'tests/coldSourcePriorityAdmission.test.mjs',
  'tests/r10FunctionalSourceClosure.test.mjs',
+ 'docs/operations/forward-cutoff-20261020.md',
+ 'docs/operations/evidence/worker4-exact-readback-20261020.json',
+ 'docs/operations/evidence/forward-cutoff-acceptance-20261020.json',
+ 'scripts/operations/forward-cutoff-20261020/materialize.mjs',
+ 'scripts/operations/forward-cutoff-20261020/release-catalog.json',
+ 'src/features/vnext/dailyRuntime.ts',
+ 'tests/forwardCutoffAdmission.test.mjs',
+ 'tests/vnextForwardCutoffRuntime.test.mjs',
 ].sort());
 const PRIOR_INTEGRATION='8146eb4be02acd1a8ccf55e9b47c48cae762dc5e';
 const FROZEN_INTEGRATION_MANIFEST='docs/operations/evidence/core-member-integration-20261017.json';
@@ -395,8 +404,12 @@ export function integrationScope(){
  return [...fixedScope];
 }
 function verifyOfficialPublicBoundary(read,mode){
+ assert.equal(mode(INTEGRATION_MANIFEST),'100644','INTEGRATION_MANIFEST_MODE_DRIFT');
  assert.deepEqual(Buffer.from(read(FROZEN_COLD_SOURCE)),frozenReceipt(OFFICIAL_PUBLIC_BASE,FROZEN_COLD_SOURCE),'INTEGRATION_COLD_SOURCE_RECEIPT_DRIFT');
  const allowed=new Set(OFFICIAL_PUBLIC_DELTAS);
+ // A new seal authorizes only the reviewed content delta, not an executable
+ // mode transition. New JS/TS/JSON/docs/workflows are ordinary source files.
+ for(const path of allowed)assert.equal(mode(path),tree(OFFICIAL_PUBLIC_BASE).get(path)?.mode??'100644','INTEGRATION_MODE_DRIFT:'+path);
  for(const [path,row]of tree(OFFICIAL_PUBLIC_BASE))if(!allowed.has(path)){
   assert.equal(integrationHash(read(path)),row.sha256,'INTEGRATION_SOURCE_DRIFT:'+path);
   assert.equal(mode(path),row.mode,'INTEGRATION_BASE_MODE_DRIFT:'+path);
